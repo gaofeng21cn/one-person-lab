@@ -15,6 +15,10 @@ import { queryStageAttempt } from './family-runtime-stage-attempt-query.ts';
 import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempt-ledger.ts';
 import { createStageRunLaunchTable } from './family-runtime-stage-run-launch-registry.ts';
 import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
+import {
+  FAMILY_RUNTIME_QUEUE_SCHEMA_VERSION,
+  runFamilyRuntimeQueueSchemaMigration,
+} from './family-runtime-schema-migrations.ts';
 import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
 import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
@@ -27,7 +31,7 @@ import {
 
 export { stableId } from '../../kernel/stable-id.ts';
 
-export const QUEUE_SCHEMA_VERSION = 3;
+export const QUEUE_SCHEMA_VERSION = FAMILY_RUNTIME_QUEUE_SCHEMA_VERSION;
 export const DEFAULT_MAX_ATTEMPTS = 3;
 const RUNTIME_LEDGER_MAX_STRING_LENGTH = 4_096;
 const RUNTIME_LEDGER_MAX_ARRAY_ITEMS = 20;
@@ -169,69 +173,71 @@ export function familyRuntimePaths() {
 }
 
 export function createFamilyRuntimeQueueTables(db: DatabaseSync) {
-  const tables = FAMILY_RUNTIME_QUEUE_PROJECTION_BOUNDARY.tables;
-  const columns = FAMILY_RUNTIME_TASK_COLUMNS;
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS meta (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS ${tables.tasks} (
-      task_id TEXT PRIMARY KEY,
-      domain_id TEXT NOT NULL,
-      task_kind TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      dedupe_key TEXT UNIQUE,
-      priority INTEGER NOT NULL,
-      status TEXT NOT NULL,
-      attempts INTEGER NOT NULL,
-      ${columns.maxAttempts} INTEGER NOT NULL,
-      source TEXT NOT NULL,
-      requires_approval INTEGER NOT NULL,
-      approved_at TEXT,
-      ${columns.leaseOwner} TEXT,
-      ${columns.leaseExpiresAt} TEXT,
-      last_error TEXT,
-      ${columns.deadLetterReason} TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS events (
-      event_id TEXT PRIMARY KEY,
-      task_id TEXT,
-      domain_id TEXT,
-      event_type TEXT NOT NULL,
-      source TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS notifications (
-      notification_id TEXT PRIMARY KEY,
-      task_id TEXT,
-      severity TEXT NOT NULL,
-      title TEXT NOT NULL,
-      body TEXT NOT NULL,
-      channel TEXT NOT NULL,
-      status TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS ${tables.queue_holds} (
-      hold_id TEXT PRIMARY KEY,
-      scope_json TEXT NOT NULL,
-      reason TEXT NOT NULL,
-      source TEXT NOT NULL,
-      status TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_tasks_status_priority ON tasks(status, priority DESC, created_at ASC);
-    CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
-    CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
-    CREATE INDEX IF NOT EXISTS idx_queue_holds_status ON queue_holds(status, updated_at);
-  `);
-  createStageAttemptTable(db);
-  createStageRunLaunchTable(db);
+  return runFamilyRuntimeQueueSchemaMigration(db, () => {
+    const tables = FAMILY_RUNTIME_QUEUE_PROJECTION_BOUNDARY.tables;
+    const columns = FAMILY_RUNTIME_TASK_COLUMNS;
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS meta (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS ${tables.tasks} (
+        task_id TEXT PRIMARY KEY,
+        domain_id TEXT NOT NULL,
+        task_kind TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        dedupe_key TEXT UNIQUE,
+        priority INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        attempts INTEGER NOT NULL,
+        ${columns.maxAttempts} INTEGER NOT NULL,
+        source TEXT NOT NULL,
+        requires_approval INTEGER NOT NULL,
+        approved_at TEXT,
+        ${columns.leaseOwner} TEXT,
+        ${columns.leaseExpiresAt} TEXT,
+        last_error TEXT,
+        ${columns.deadLetterReason} TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS events (
+        event_id TEXT PRIMARY KEY,
+        task_id TEXT,
+        domain_id TEXT,
+        event_type TEXT NOT NULL,
+        source TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS notifications (
+        notification_id TEXT PRIMARY KEY,
+        task_id TEXT,
+        severity TEXT NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        channel TEXT NOT NULL,
+        status TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS ${tables.queue_holds} (
+        hold_id TEXT PRIMARY KEY,
+        scope_json TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        source TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_tasks_status_priority ON tasks(status, priority DESC, created_at ASC);
+      CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
+      CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+      CREATE INDEX IF NOT EXISTS idx_queue_holds_status ON queue_holds(status, updated_at);
+    `);
+    createStageAttemptTable(db);
+    createStageRunLaunchTable(db);
+  });
 }
 
 export function openQueueDb() {
@@ -244,10 +250,6 @@ export function openQueueDb() {
     PRAGMA journal_mode = WAL;
   `);
   createFamilyRuntimeQueueTables(db);
-  db.prepare('INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)').run(
-    'schema_version',
-    String(QUEUE_SCHEMA_VERSION),
-  );
   return { db, paths };
 }
 

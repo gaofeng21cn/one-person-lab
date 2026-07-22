@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { stringValue } from '../../kernel/json-record.ts';
 import {
   assertDomainArtifactCasReadWindowStable,
   observeDomainArtifactCasMaterialization,
@@ -99,6 +100,24 @@ function hostedReadbackCasSyncPending(
       observation_error: observation.error,
     },
   );
+}
+
+function sameWorkspaceHint(value: unknown, workspaceRoot: string) {
+  const hint = stringValue(value);
+  if (!hint) return false;
+  try {
+    return fs.realpathSync.native(hint) === workspaceRoot;
+  } catch {
+    return path.resolve(hint) === workspaceRoot;
+  }
+}
+
+function diagnosticBucket(items: Array<Record<string, unknown>>) {
+  return {
+    status: items.length === 0 ? 'clear' as const : 'attention_required' as const,
+    count: items.length,
+    items,
+  };
 }
 
 export function buildHostedWorkItemReadback(
@@ -204,7 +223,7 @@ export function buildHostedWorkItemReadback(
     hostedReadbackCasSyncPending,
   );
   const consistency = consistencyResults(domainSources, sourceManifest?.manifest.consistency_checks ?? []);
-  const diagnostics = [
+  const domainTruthDiagnostics = [
     ...domainSources
       .filter((source) => source.required && source.status !== 'observed')
       .map((source) => ({
@@ -228,6 +247,60 @@ export function buildHostedWorkItemReadback(
         check_id: check.check_id,
         authority_precedence: check.authority_precedence,
       })),
+  ];
+  const selectedWorkItemIdentityDiagnostics = projection.unresolved_executions
+    .filter((execution) => execution.work_item_scope_id === item.identity.work_item_scope_id)
+    .map((execution) => ({
+      bucket: 'selected_work_item',
+      reason: execution.reason,
+      attempt_ref: execution.attempt_ref,
+      work_item_scope_id: execution.work_item_scope_id,
+      identity_state: execution.identity_state,
+      relationship: 'selected_work_item_scope_referenced_but_execution_quarantined',
+      execution_consumed_by_selected_work_item: false,
+    }));
+  const selectedAttemptRefs = new Set(
+    selectedWorkItemIdentityDiagnostics.map((diagnostic) => diagnostic.attempt_ref),
+  );
+  const workspaceIdentityDiagnostics = projection.unresolved_executions
+    .filter((execution) => !selectedAttemptRefs.has(execution.attempt_ref))
+    .filter((execution) => execution.project_scope_id === item.identity.project_scope_id
+      || sameWorkspaceHint(execution.details.workspace_root_hint, workspaceRoot))
+    .map((execution) => ({
+      bucket: 'workspace_identity',
+      reason: execution.reason,
+      attempt_ref: execution.attempt_ref,
+      project_scope_id: execution.project_scope_id,
+      work_item_scope_id: execution.work_item_scope_id,
+      identity_state: execution.identity_state,
+      relationship: 'workspace_related_execution_without_selected_work_item_binding',
+      execution_consumed_by_selected_work_item: false,
+    }));
+  if (projection.identity_health.status === 'attention_required'
+    && selectedWorkItemIdentityDiagnostics.length === 0
+    && workspaceIdentityDiagnostics.length === 0) {
+    workspaceIdentityDiagnostics.push({
+      bucket: 'workspace_identity',
+      reason: 'projection_execution_identity_attention_not_localized_to_selected_workspace',
+      attempt_ref: projection.identity_health.sample_attempt_refs[0] ?? null,
+      project_scope_id: null,
+      work_item_scope_id: null,
+      identity_state: null,
+      relationship: 'projection_level_identity_attention_not_attributed_to_selected_work_item',
+      execution_consumed_by_selected_work_item: false,
+    });
+  }
+  const domainDiagnostics = domainTruthDiagnostics.map((diagnostic) => ({
+    bucket: 'domain_truth',
+    ...diagnostic,
+  }));
+  const selectedWorkItemBucket = diagnosticBucket(selectedWorkItemIdentityDiagnostics);
+  const workspaceIdentityBucket = diagnosticBucket(workspaceIdentityDiagnostics);
+  const domainTruthBucket = diagnosticBucket(domainDiagnostics);
+  const diagnostics = [
+    ...selectedWorkItemIdentityDiagnostics,
+    ...workspaceIdentityDiagnostics,
+    ...domainDiagnostics,
   ];
   assertDomainArtifactCasReadWindowStable(
     initialCasObservation,
@@ -270,6 +343,12 @@ export function buildHostedWorkItemReadback(
         status: diagnostics.length === 0 ? 'clear' : 'attention_required',
         count: diagnostics.length,
         items: diagnostics,
+        selected_work_item: selectedWorkItemBucket,
+        workspace_identity: {
+          ...workspaceIdentityBucket,
+          projection_identity_health: projection.identity_health,
+        },
+        domain_truth: domainTruthBucket,
       },
       authority_boundary: {
         opl_role: 'hosted_projection_and_exact_domain_source_readback',

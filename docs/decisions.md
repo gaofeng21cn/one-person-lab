@@ -5,6 +5,45 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-21
+
+### 决策：Work-item execution scope 成为多任务并发的唯一目标身份
+
+原因：同一 MAS workspace 可以并发执行多篇 Study；workspace path、Stage 名、provider
+进程、Temporal Workflow ID、Search Attributes 或“最新 artifact”都不能唯一回答一次运行属于
+哪篇论文。旧 StageRun 又可能缺少显式 Study binding，导致 readback 把仍在运行的 Attempt
+投影成另一篇 Study 的 current execution，或显示 `paused / idle / clear` 这类互相矛盾的状态。
+
+影响：
+
+- OPL 持有唯一 canonical `execution_scope` snapshot。`ProjectScope` 是可持久迁移的项目身份；
+  `WorkItemScope` 只由 `project_scope_id + canonical domain_id + domain_work_item_id`
+  推导，不由 workspace path、Stage、Attempt、Workflow 或显示名推导。
+- Domain action 只声明 scope kind 与业务 alias。alias 仅在 ingress 解析一次；缺失、多个 alias
+  值冲突、host inventory 不唯一、canonical root 逃逸或 workspace binding 冲突都在 Workflow
+  创建前 fail closed。MAS 不接收或生成 OPL opaque scope ID。
+- Work-item StageRun、StageAttempt、resume、closeout、artifact/receipt consumption 和 readback
+  必须携带并 exact-match 同一 snapshot/digest。SQLite 保存完整 snapshot 与拆列索引；同一
+  invocation/idempotency key 重用但 scope 或 content digest 不同视为不同意图并拒绝复用。
+- Temporal Search Attributes、memo、OpenTelemetry baggage、日志字段和 Codex `OPL_*` env
+  只传播/检索已持久化身份，不能创建、修复或授权身份。parent/child Workflow 必须校验同一
+  StageRun scope；可观测字段不能替代 ledger exact-match。
+- 旧无 scope StageRun/Attempt 原样迁移为 `identity_unresolved`。它们可在 full diagnostic 中
+  查看，但不能成为某个 WorkItem 的 current/latest/token source，也不能 resume、wake、
+  closeout 或被“同 workspace 最新记录”吸收。迁移不得从 legacy locator alias 猜身份。
+- workspace binding 换路径时继承稳定 `project_scope_id`，因此 WorkItemScope 不变；binding
+  version、workspace root、canonical work-item root 和 inventory digest 仍进入每次 immutable
+  snapshot，用于发现 stale transport，而不改变 WorkItem identity。
+- 该设计采用 [Kubernetes multi-tenancy](https://kubernetes.io/docs/concepts/security/multi-tenancy/)
+  的 admission/authorization 隔离原则；采用
+  [Temporal Workflow identity](https://docs.temporal.io/workflow-execution/workflowid-runid) 与
+  [Search Attributes](https://docs.temporal.io/search-attribute) 的 provider identity/visibility
+  分层；采用 [OpenTelemetry baggage](https://opentelemetry.io/docs/concepts/signals/baggage/)
+  的显式传播边界；并按
+  [AWS idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)
+  与 [Stripe idempotency](https://docs.stripe.com/api/idempotent_requests) 拒绝同 key 不同意图。
+  OPL 只吸收这些工程原则，不引入第二 identity service、authorization plane 或 dashboard。
+
 ## 2026-07-16
 
 ### 决策：FoundryRun 是智能体工程唯一运行事实，OMA 只提供语义决策
@@ -504,11 +543,11 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 ### 决策：科学文献 connector profile 进入 OPL Connect，MAS 保留科研判断与论文权威
 
-原因：OPL Connect 只保留 provider-neutral 的只读 transport、receipt、cache/retry 与 source-ref normalization；具体 provider 的请求协议属于 transport adapter，不应留在 MAS 私有 runtime。Crossref / OpenAlex 作为通用 metadata、coverage 与 citation graph search provider；PubMed ESummary 与 Europe PMC metadata / full-text availability probe 作为已知引用的校验 provider。MAS 与 MAS Scholar Skills 继续承接医学 query strategy、结果取舍、证据判断和论文权威。
+原因：OPL Connect 只保留 provider-neutral 的只读 transport、receipt、cache/retry 与 source-ref normalization；具体 provider 的请求协议属于 transport adapter，不应留在 MAS 私有 runtime。Crossref / OpenAlex 作为通用 metadata、coverage 与 citation graph search provider；PubMed ESearch + ESummary 与 Europe PMC search 作为生物医学发现入口，并继续为已知引用提供 metadata / full-text availability 校验。MAS 与 MAS Scholar Skills 继续承接医学 query strategy、结果取舍、证据判断和论文权威。
 
 影响：
 
-- `opl connect scientific search --provider crossref|openalex --query <query> --limit <n> --json` 是 optional scientific connector profile 的统一 read-only search 入口，返回 normalized source refs、metadata、source URLs、connector invocation ref、ledger receipt candidate ref 和 no-authority boundary。
+- `opl connect scientific search --provider crossref|openalex|pubmed|pmc --query <query> --limit <n> --json` 是 optional scientific connector profile 的统一 read-only search 入口，返回 normalized source refs、PMID / PMCID / DOI、article types、检索计数核对、source URLs、connector invocation ref、ledger receipt candidate ref 和 no-authority boundary。
 - `opl connect references verify` 持有 PubMed / PMC provider invocation、限流重试、cache、identifier / metadata normalization 和 receipt candidate；不恢复 `opl connect pubmed` compatibility command，也不把 provider metadata 当成医学判断。
 - 这些 connector 只调用 provider API 和输出 refs/metadata，不保存全文、不创建 OPL 文献库、不写 MAS paper truth、不签 owner receipt、不创建 typed blocker / human gate，也不声明引用质量、论文进度、publication-ready、domain-ready 或 production-ready。
 - MAS `scout`、`write`、`review`、`figure` 等 stage 主提示词可以优先调用 PubMed refs，并在 metadata、coverage 或 citation graph 缺口时消费 Crossref/OpenAlex fallback refs；医学取舍、证据链、claim-evidence map、review ledger、写作质量和 owner route 仍归 MAS。
@@ -601,15 +640,15 @@ Re-review 采用 finding closure，不得用普通新建议无限重开循环。
 
 ### 决策：标准 Agent 不默认暴露 standalone MCP，MCP 由 OPL Connect 统一精选投影
 
-原因：Codex App 里只有 MAS 出现 MCP 的直接原因是 MAS plugin manifest 曾携带 `mcpServers`，把 MAS 作为独立 plugin MCP 暴露；这会让标准 OPL Agent 的 public surface 因 transport 细节分裂。进一步看，成熟 MCP 工程经验也不支持把完整 CLI 平铺成 MCP 工具：MCP 官方 client best practices、GitHub MCP server、Stripe MCP 和 Speakeasy dynamic toolsets 都把大 surface 通过 progressive discovery、toolsets、search/details/read/write、read-only / exclude / human confirmation 和 lazy schema 控制上下文和权限。OPL 因此选择统一策略：插件/Skill 是当前 Codex App 可见主面，MCP 是 OPL Connect 持有的精选 agent-facing descriptor / invocation surface，未来 unified MCP server 只有经过 runtime 验证后才开放。
+原因：Codex App 里只有 MAS 出现 MCP 的直接原因是 MAS plugin manifest 曾携带 `mcpServers`，把 MAS 作为独立 plugin MCP 暴露；这会让标准 OPL Agent 的 public surface 因 transport 细节分裂。进一步看，成熟 MCP 工程经验也不支持把完整 CLI 平铺成 MCP 工具：MCP 官方 client best practices、GitHub MCP server、Stripe MCP 和 Speakeasy dynamic toolsets 都把大 surface 通过 progressive discovery、toolsets、search/details/read/write、read-only / exclude / human confirmation 和 lazy schema 控制上下文和权限。OPL 因此选择统一策略：插件/Skill 是当前 Codex App 可见主面，MCP 是 OPL Connect 持有的精选 agent-facing descriptor / invocation surface。首个统一 server 已在只读 scientific / references toolset 完成 stdio 协议验证；其他 toolset 和任何 mutation 仍须单独准入。
 
 影响：
 
-- `contracts/opl-framework/foundry-agent-series-contract.json#/skill_mcp_surface_policy` 固定 `standard_agent_standalone_mcp_default_enabled=false`、`standard_agent_plugin_manifest_must_not_expose_mcp_servers=true`、`opl_unified_mcp_projection_owner=one-person-lab` 和 `future_unified_mcp_server_strategy=opl_owned_unified_server_when_runtime_verified`。
+- `contracts/opl-framework/foundry-agent-series-contract.json#/skill_mcp_surface_policy` 固定 `standard_agent_standalone_mcp_default_enabled=false`、`standard_agent_plugin_manifest_must_not_expose_mcp_servers=true`、`opl_unified_mcp_projection_owner=one-person-lab`、`unified_mcp_server_ready=true`、`unified_mcp_server_id=opl-connect` 与 `unified_mcp_server_command=[opl,connect,mcp-stdio]`。
 - CLI/MCP 关系固定为：CLI 是 authoritative broad operator / control / debug / admin surface；MCP 是 curated agent-facing discovery / invocation surface；`all_cli_commands_are_mcp_tools=false`，不得默认 mirror 全量 CLI。
-- `opl connect skills --json` / `opl connect sync-skills --json` 对所有标准 agent 投影同一 `mcp_projection`；`opl foundry inspect --json` 也显示 standalone MCP 默认关闭和 full CLI mirror 禁止。
+- `opl connect skills --json` / `opl connect sync-skills --json` 对所有标准 agent 投影同一 `mcp_projection`；`opl connect sync-skills` 还会在 Codex config 注册 `[mcp_servers.opl-connect]`，并清理旧 MAS/MAG/RCA/OMA/OBF standalone MCP 表。
 - MAS/MAG/RCA/OMA/OBF plugin manifest 不得用 `mcpServers` 暴露 standalone server；repo-local MCP server 只可作为 direct protocol adapter、domain handler target、proof lane、fixture 或 migration/provenance 保留。
-- 未来 OPL unified MCP server 必须按 toolsets / progressive discovery / descriptor-first lazy schema / read-only default / explicit mutation gate 设计；mutation tool 不得绕过 domain owner receipt、typed blocker、human gate、quality/export verdict、artifact authority 或 release verdict。
+- 当前 `opl-connect` 只暴露 `opl_connect_search_tools`、`opl_connect_describe_tool`、`opl_connect_execute_tool` 三个 meta-tools，内部仅有 `scientific_search` 与 `references_verify` 两个只读工具；它们复用 OPL Connect 的权威实现，不复制 provider client。后续 toolset 仍必须按 progressive discovery / descriptor-first lazy schema / read-only default / explicit mutation gate 设计；mutation tool 不得绕过 domain owner receipt、typed blocker、human gate、quality/export verdict、artifact authority 或 release verdict。
 
 ## 2026-07-07
 

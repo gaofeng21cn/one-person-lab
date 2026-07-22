@@ -110,6 +110,7 @@
     "source:modules:public-imports": "node ./scripts/source-module-public-imports.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@temporalio/activity": "^1.18.1",
     "@temporalio/client": "^1.18.1",
     "@temporalio/common": "^1.18.1",
@@ -123,7 +124,7 @@
     "@types/node": "^24.5.2"
   },
   "overrides": {
-    "protobufjs": "7.6.4"
+    "protobufjs": "7.6.5"
   },
   "license": "Apache-2.0",
   "optionalDependencies": {

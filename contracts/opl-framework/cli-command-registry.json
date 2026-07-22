@@ -1771,9 +1771,11 @@
           "required": true,
           "allowed_values": [
             "crossref",
-            "openalex"
+            "openalex",
+            "pubmed",
+            "pmc"
           ],
-          "summary": "Scientific provider id: crossref, openalex."
+          "summary": "Scientific provider id: crossref, openalex, pubmed, pmc."
         },
         {
           "name": "query",
@@ -1816,6 +1818,7 @@
               "status",
               "request",
               "normalized_results",
+              "retrieval_count_reconciliation",
               "result_refs",
               "receipt_refs",
               "provider_receipt_role",
@@ -1838,7 +1841,9 @@
               "provider_id": {
                 "enum": [
                   "crossref",
-                  "openalex"
+                  "openalex",
+                  "pubmed",
+                  "pmc"
                 ]
               },
               "status": {
@@ -1857,7 +1862,9 @@
                   "provider": {
                     "enum": [
                       "crossref",
-                      "openalex"
+                      "openalex",
+                      "pubmed",
+                      "pmc"
                     ]
                   },
                   "query": {
@@ -1884,6 +1891,38 @@
                     "source_urls"
                   ],
                   "additionalProperties": true
+                }
+              },
+              "retrieval_count_reconciliation": {
+                "type": "object",
+                "required": [
+                  "provider_total",
+                  "returned_count",
+                  "requested_limit",
+                  "result_set_complete",
+                  "next_page_available"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider_total": {
+                    "type": ["integer", "null"],
+                    "minimum": 0
+                  },
+                  "returned_count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "requested_limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50
+                  },
+                  "result_set_complete": {
+                    "type": ["boolean", "null"]
+                  },
+                  "next_page_available": {
+                    "type": ["boolean", "null"]
+                  }
                 }
               },
               "result_refs": {

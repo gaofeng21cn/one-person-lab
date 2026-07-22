@@ -31,10 +31,119 @@ import {
 import {
   persistReviewEvidenceArtifactCandidate,
 } from '../../src/modules/runway/family-runtime-review-evidence-artifact.ts';
+import { createWorkItemExecutionScopeSnapshot } from '../../src/modules/workspace/index.ts';
+import { createStageRunLaunchTable } from '../../src/modules/runway/family-runtime-stage-run-launch-registry.ts';
+import {
+  normalizeRuntimeExecutionScopeWrite,
+  persistRuntimeExecutionScope,
+} from '../../src/modules/runway/family-runtime-execution-scope-persistence.ts';
 
 const rubricRefs = ['rubric:quality'];
 const artifactRefs = ['artifact:document-v1'];
 const artifactHashes = ['sha256:document-v1'];
+const reviewWorkspaceRoot = '/tmp/stage-quality-review-receipt';
+
+function workItemExecutionScope(
+  studyId = 'study-001',
+  bindingVersionId = 'binding-version:review-receipt',
+) {
+  fs.mkdirSync(path.join(reviewWorkspaceRoot, 'studies', studyId), { recursive: true });
+  return createWorkItemExecutionScopeSnapshot({
+    projectScopeId: 'project:review-receipt',
+    workspaceBindingId: 'binding:review-receipt',
+    bindingVersionId,
+    domainId: 'redcube_ai',
+    workspaceRoot: reviewWorkspaceRoot,
+    payload: { study_id: studyId },
+    requirement: { kind: 'work_item', alias_fields: ['study_id'] },
+    canonicalWorkItemRoot: path.join(reviewWorkspaceRoot, 'studies', studyId),
+    inventoryDigest: `sha256:${'9'.repeat(64)}`,
+  });
+}
+
+function persistReviewStageRun(
+  db: DatabaseSync,
+  stageRunId: string,
+  scope: ReturnType<typeof workItemExecutionScope>,
+) {
+  createStageRunLaunchTable(db);
+  const normalized = normalizeRuntimeExecutionScopeWrite({
+    domainId: 'redcube_ai', scopeKind: 'work_item', executionScope: scope,
+  });
+  persistRuntimeExecutionScope(db, normalized, 'redcube_ai');
+  const stageRunInput = {
+    scope_kind: 'work_item',
+    execution_scope: scope,
+    workspace_locator: {
+      workspace_root: reviewWorkspaceRoot,
+      execution_scope: scope,
+    },
+  };
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT OR IGNORE INTO stage_run_launches(
+      stage_run_id, stage_run_invocation_id, stage_run_spec_sha256, domain_id, stage_id,
+      workflow_id, scope_kind, project_scope_id, work_item_scope_id, workspace_binding_id,
+      binding_version_id, scope_digest, execution_scope_json, identity_state,
+      stage_run_input_json, launch_status, created_at, updated_at
+    ) VALUES (?, ?, ?, 'redcube_ai', 'review', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'registered', ?, ?)
+  `).run(
+    stageRunId, `invocation:${stageRunId}`, `sha256:${'8'.repeat(64)}`, `workflow:${stageRunId}`,
+    normalized.columns.scope_kind, normalized.columns.project_scope_id,
+    normalized.columns.work_item_scope_id, normalized.columns.workspace_binding_id,
+    normalized.columns.binding_version_id, normalized.columns.scope_digest,
+    normalized.columns.execution_scope_json, normalized.columns.identity_state,
+    JSON.stringify(stageRunInput), now, now,
+  );
+}
+
+function rebindPersistedScope(
+  db: DatabaseSync,
+  table: 'stage_attempts' | 'stage_run_launches',
+  id: string,
+  scope: ReturnType<typeof workItemExecutionScope>,
+) {
+  const normalized = normalizeRuntimeExecutionScopeWrite({
+    domainId: 'redcube_ai', scopeKind: 'work_item', executionScope: scope,
+  });
+  persistRuntimeExecutionScope(db, normalized, 'redcube_ai');
+  const idColumn = table === 'stage_attempts' ? 'stage_attempt_id' : 'stage_run_id';
+  const carrierColumn = table === 'stage_attempts'
+    ? 'workspace_locator_json'
+    : 'stage_run_input_json';
+  const row = db.prepare(`SELECT ${carrierColumn} FROM ${table} WHERE ${idColumn} = ?`)
+    .get(id) as Record<string, unknown> | undefined;
+  assert.ok(row);
+  const carrier = JSON.parse(String(row[carrierColumn])) as Record<string, unknown>;
+  const locator = table === 'stage_attempts'
+    ? carrier
+    : carrier.workspace_locator as Record<string, unknown>;
+  const reboundLocator = {
+    ...locator,
+    workspace_root: scope.workspace_root,
+    ...(Object.hasOwn(locator, 'repo_root') ? { repo_root: scope.workspace_root } : {}),
+    execution_scope: scope,
+  };
+  const reboundCarrier = table === 'stage_attempts'
+    ? reboundLocator
+    : {
+        ...carrier,
+        scope_kind: 'work_item',
+        execution_scope: scope,
+        workspace_locator: reboundLocator,
+      };
+  db.prepare(`UPDATE ${table} SET
+    scope_kind = ?, project_scope_id = ?, work_item_scope_id = ?, workspace_binding_id = ?,
+    binding_version_id = ?, scope_digest = ?, execution_scope_json = ?, identity_state = ?,
+    ${carrierColumn} = ?
+    WHERE ${idColumn} = ?`).run(
+    normalized.columns.scope_kind, normalized.columns.project_scope_id,
+    normalized.columns.work_item_scope_id, normalized.columns.workspace_binding_id,
+    normalized.columns.binding_version_id, normalized.columns.scope_digest,
+    normalized.columns.execution_scope_json, normalized.columns.identity_state,
+    JSON.stringify(reboundCarrier), id,
+  );
+}
 
 function contextBinding(input: {
   role: 'producer' | 'reviewer' | 'repairer' | 're_reviewer';
@@ -109,16 +218,24 @@ function validInitialReviewPair(db: DatabaseSync, input: {
   producerRubricRefs?: string[];
   reviewerRubricRefs?: string[];
   reviewInputSnapshotContext?: Record<string, unknown>;
+  studyId?: string;
+  stageRunId?: string;
+  qualityCycleId?: string;
 } = {}) {
   createStageAttemptTable(db);
+  const executionScope = workItemExecutionScope(input.studyId);
+  const stageRunId = input.stageRunId ?? 'stage-run:review-receipt';
+  persistReviewStageRun(db, stageRunId, executionScope);
   const shared = {
-    domainId: 'redcube' as const,
+    domainId: 'redcube_ai' as const,
     stageId: 'review',
     providerKind: 'temporal' as const,
-    workspaceLocator: { workspace_root: '/tmp/stage-quality-review-receipt' },
+    workspaceLocator: { workspace_root: reviewWorkspaceRoot },
     sourceFingerprint: 'sha256:source',
-    stageRunId: 'stage-run:review-receipt',
-    qualityCycleId: 'quality-cycle:review-receipt',
+    stageRunId,
+    qualityCycleId: input.qualityCycleId ?? 'quality-cycle:review-receipt',
+    scopeKind: 'work_item' as const,
+    executionScope,
     qualityRolePromptRef: 'prompt:quality-role',
     noContextInheritance: true,
     newAttempt: true,
@@ -181,7 +298,7 @@ function bindReviewEvidenceArtifact(
     .update('scholarskills package')
     .digest('hex')}`;
   const executionSpec = {
-    domain_id: 'redcube',
+    domain_id: 'redcube_ai',
     stage_id: 'review',
     quality_rubric_refs: rubricRefs,
     role_prompt_refs: { reviewer: 'prompt:quality-role' },
@@ -291,13 +408,15 @@ function validReReviewPair(db: DatabaseSync, input: {
     repair_evidence_refs: ['evidence:finding-required-repair'],
   }];
   const shared = {
-    domainId: 'redcube' as const,
+    domainId: 'redcube_ai' as const,
     stageId: 'review',
     providerKind: 'temporal' as const,
-    workspaceLocator: { workspace_root: '/tmp/stage-quality-review-receipt' },
+    workspaceLocator: { workspace_root: reviewWorkspaceRoot },
     sourceFingerprint: 'sha256:source',
     stageRunId: 'stage-run:review-receipt',
     qualityCycleId: 'quality-cycle:review-receipt',
+    scopeKind: 'work_item' as const,
+    executionScope: workItemExecutionScope(),
     qualityRolePromptRef: 'prompt:quality-role',
     qualityRubricRefs: rubricRefs,
     noContextInheritance: true,
@@ -355,7 +474,7 @@ function validReReviewPair(db: DatabaseSync, input: {
   return { initial, repairer, reReviewer };
 }
 
-test('ledger materializes an initial review receipt only from exact persisted Attempt truth', () => {
+test('ledger materializes an initial review receipt only from one exact persisted work-item scope', () => {
   const db = new DatabaseSync(':memory:');
   try {
     const pair = validInitialReviewPair(db);
@@ -366,6 +485,124 @@ test('ledger materializes an initial review receipt only from exact persisted At
     assert.deepEqual(receipt.reviewed_artifact_hashes, artifactHashes);
     assert.deepEqual(receipt.rubric_refs, rubricRefs);
     assert.equal(receipt.verdict, 'pass');
+  } finally {
+    db.close();
+  }
+});
+
+test('ledger rejects a forged cross-Study Attempt lineage before materializing a review receipt', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const study001 = validInitialReviewPair(db, {
+      studyId: 'study-001',
+      stageRunId: 'stage-run:study-001',
+      qualityCycleId: 'quality-cycle:study-001',
+    });
+    const study002 = validInitialReviewPair(db, {
+      studyId: 'study-002',
+      stageRunId: 'stage-run:study-002',
+      qualityCycleId: 'quality-cycle:study-002',
+    });
+    db.prepare(`UPDATE stage_attempts
+      SET stage_run_id = ?, quality_cycle_id = ?, parent_attempt_ref = ?
+      WHERE stage_attempt_id = ?`).run(
+      study001.producer.stage_run_id,
+      study001.producer.quality_cycle_id,
+      `opl://stage_attempts/${study001.producer.stage_attempt_id}`,
+      study002.reviewer.stage_attempt_id,
+    );
+    assert.throws(() => materializePersistedStageReviewReceipt(db, {
+      producerAttemptId: study001.producer.stage_attempt_id,
+      reviewerAttemptId: study002.reviewer.stage_attempt_id,
+      rubricRefs,
+      verdict: 'pass',
+    }), (error) => error instanceof FrameworkContractError
+      && error.details?.failure_code === 'stage_review_receipt_execution_scope_mismatch'
+      && error.details?.identity_source === 'reviewer_attempt');
+  } finally {
+    db.close();
+  }
+});
+
+test('ledger rejects a StageRun rebound to another Study scope', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const pair = validInitialReviewPair(db);
+    rebindPersistedScope(db, 'stage_run_launches', pair.producer.stage_run_id!,
+      workItemExecutionScope('study-002'));
+    assert.throws(() => materializeInitialReceipt(db, pair),
+      (error) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'stage_review_receipt_execution_scope_mismatch'
+        && error.details?.identity_source === 'producer_attempt');
+  } finally {
+    db.close();
+  }
+});
+
+test('ledger rejects the same work item under a different scope digest', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const pair = validInitialReviewPair(db);
+    const movedBindingScope = workItemExecutionScope(
+      'study-001', 'binding-version:review-receipt-moved',
+    );
+    assert.equal(movedBindingScope.work_item_scope_id, pair.reviewer.work_item_scope_id);
+    assert.notEqual(movedBindingScope.scope_digest, pair.reviewer.scope_digest);
+    rebindPersistedScope(db, 'stage_attempts', pair.reviewer.stage_attempt_id, movedBindingScope);
+    assert.throws(() => materializeInitialReceipt(db, pair),
+      (error) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'stage_review_receipt_execution_scope_mismatch'
+        && error.details?.identity_source === 'reviewer_attempt');
+  } finally {
+    db.close();
+  }
+});
+
+for (const identityCase of [
+  { source: 'reviewer_attempt', state: 'identity_unresolved' },
+  { source: 'stage_run', state: 'quarantined' },
+] as const) {
+  test(`ledger rejects ${identityCase.state} ${identityCase.source} identity`, () => {
+    const db = new DatabaseSync(':memory:');
+    try {
+      const pair = validInitialReviewPair(db);
+      const table = identityCase.source === 'stage_run' ? 'stage_run_launches' : 'stage_attempts';
+      const idColumn = identityCase.source === 'stage_run' ? 'stage_run_id' : 'stage_attempt_id';
+      const id = identityCase.source === 'stage_run'
+        ? pair.producer.stage_run_id!
+        : pair.reviewer.stage_attempt_id;
+      if (identityCase.state === 'identity_unresolved') {
+        db.prepare(`UPDATE ${table} SET
+          scope_kind = 'identity_unresolved', project_scope_id = NULL,
+          work_item_scope_id = NULL, workspace_binding_id = NULL, binding_version_id = NULL,
+          scope_digest = NULL, execution_scope_json = NULL, identity_state = 'identity_unresolved'
+          WHERE ${idColumn} = ?`).run(id);
+      } else {
+        db.prepare(`UPDATE ${table} SET identity_state = ? WHERE ${idColumn} = ?`)
+          .run(identityCase.state, id);
+      }
+      assert.throws(() => materializeInitialReceipt(db, pair),
+        (error) => error instanceof FrameworkContractError
+          && error.details?.failure_code === 'stage_review_receipt_execution_identity_not_resolved'
+          && error.details?.identity_source === identityCase.source);
+    } finally {
+      db.close();
+    }
+  });
+}
+
+test('ledger rejects a resolved legacy domain scope', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const pair = validInitialReviewPair(db);
+    db.prepare(`UPDATE stage_attempts SET scope_kind = 'domain', project_scope_id = NULL,
+      work_item_scope_id = NULL, workspace_binding_id = NULL, binding_version_id = NULL,
+      scope_digest = NULL, execution_scope_json = NULL WHERE stage_attempt_id = ?`)
+      .run(pair.producer.stage_attempt_id);
+    assert.throws(() => materializeInitialReceipt(db, pair),
+      (error) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'stage_review_receipt_execution_scope_not_work_item'
+        && error.details?.scope_kind === 'domain');
   } finally {
     db.close();
   }

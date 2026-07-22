@@ -121,6 +121,7 @@
         "optional_fields": { "$ref": "#/$defs/stringList" },
         "workspace_locator_fields": { "$ref": "#/$defs/stringList" },
         "human_gate_ids": { "$ref": "#/$defs/stringList" },
+        "execution_scope": { "$ref": "#/$defs/executionScope" },
         "stage_route": { "$ref": "#/$defs/stageRoute" },
         "supported_surfaces": {
           "type": "object",
@@ -182,6 +183,29 @@
           "properties": {
             "kind": { "const": "foundry_binding" },
             "provider_manifest_ref": { "const": "contracts/foundry_provider.json" }
+          }
+        }
+      ]
+    },
+    "executionScope": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "alias_fields"],
+          "properties": {
+            "kind": { "const": "work_item" },
+            "alias_fields": {
+              "allOf": [{ "$ref": "#/$defs/stringList" }, { "minItems": 1 }]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "const": "none" }
           }
         }
       ]

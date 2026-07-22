@@ -9,6 +9,7 @@ import {
   type StageAttemptRow,
 } from './family-runtime-stage-attempt-ledger.ts';
 import { nowIso } from './family-runtime-store.ts';
+import { requireResolvedPersistedStageAttemptIdentity } from './family-runtime-persisted-identity-admission.ts';
 import {
   FAMILY_RUNTIME_TASK_COLUMNS,
   taskLeaseProjectionSelectSql,
@@ -124,10 +125,15 @@ export function syncStageAttemptFromTemporalUnavailableObservation(
     !row
     || row.provider_kind !== 'temporal'
     || row.workflow_id !== observation.workflow_id
-    || !canFailStageAttemptForWorkflowMissing(db, row)
   ) {
     return null;
   }
+  requireResolvedPersistedStageAttemptIdentity({
+    db,
+    stageAttemptId: observation.stage_attempt_id,
+    operation: 'sync_stage_attempt_from_temporal_unavailable_observation',
+  });
+  if (!canFailStageAttemptForWorkflowMissing(db, row)) return null;
   const observedAt = nowIso();
   const providerRun = {
     ...parseStageAttemptJsonObject(row.provider_run_json),

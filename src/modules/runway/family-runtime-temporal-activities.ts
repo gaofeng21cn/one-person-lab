@@ -38,7 +38,16 @@ import {
 import {
   getStageAttemptRow,
   latestStageAttemptCloseoutPacketsByAttempt,
+  stageAttemptToPayload,
 } from './family-runtime-stage-attempt-ledger.ts';
+import { requireSameFamilyRuntimeExecutionIdentity } from './family-runtime-execution-scope.ts';
+import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
+import {
+  requirePersistedStageAttemptActivityIdentity,
+  requirePersistedStageRunActivityIdentity,
+  requireResolvedPersistedStageAttemptIdentity,
+  requireSamePersistedStageRunAttemptIdentity,
+} from './family-runtime-persisted-identity-admission.ts';
 import {
   createStageQualityCycle,
   markStageQualityCycleCurrentAttempt,
@@ -121,6 +130,108 @@ function readNumber(value: unknown) {
 
 function readBoolean(value: unknown) {
   return typeof value === 'boolean' ? value : null;
+}
+
+function withActivityMutationTransaction<T>(
+  db: ReturnType<typeof openQueueDb>['db'],
+  mutation: () => T,
+) {
+  const ownsTransaction = !db.isTransaction;
+  try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    const result = mutation();
+    if (ownsTransaction) db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+function requireRawStageRunMutationAuthority(input: {
+  db: ReturnType<typeof openQueueDb>['db'];
+  stageRunId: string;
+  operation: string;
+}) {
+  const row = input.db.prepare('SELECT * FROM stage_run_launches WHERE stage_run_id = ?').get(
+    input.stageRunId,
+  ) as Record<string, unknown> | undefined;
+  if (!row) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal activity StageRun identity is not registered in the durable launch registry.',
+      {
+        failure_code: 'persisted_runtime_stage_run_not_found',
+        operation: input.operation,
+        stage_run_id: input.stageRunId,
+      },
+    );
+  }
+  requireRuntimeExecutionScopeMutationAllowed(input.db, row, input.operation);
+  return row;
+}
+
+function requirePersistedAttemptActivityIdentity(
+  input: TemporalStageAttemptWorkflowInput,
+  operation: string,
+) {
+  const { db } = openQueueDb();
+  try {
+    const row = getStageAttemptRow(db, input.stage_attempt_id);
+    if (!row) {
+      throw new FrameworkContractError('contract_shape_invalid', 'StageAttempt is not persisted.', {
+        failure_code: 'persisted_runtime_stage_attempt_not_found',
+        stage_attempt_id: input.stage_attempt_id,
+      });
+    }
+    requireRuntimeExecutionScopeMutationAllowed(
+      db,
+      row as unknown as Record<string, unknown>,
+      `${operation}:raw_attempt`,
+    );
+    return requirePersistedStageAttemptActivityIdentity({
+      db,
+      candidateIdentity: input as unknown as Record<string, unknown>,
+      operation,
+    });
+  } finally {
+    db.close();
+  }
+}
+
+function requirePersistedAttemptStageRunIdentity(input: {
+  db: ReturnType<typeof openQueueDb>['db'];
+  attemptRef: string;
+  stageRun: TemporalStageQualityAttemptMaterializationInput['stage_run'];
+  operation: string;
+}) {
+  const attemptId = stageAttemptIdFromRef(input.attemptRef);
+  const row = getStageAttemptRow(input.db, attemptId);
+  if (!row) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage quality artifact producer Attempt is not persisted.',
+      {
+        failure_code: 'artifact_identity_producing_attempt_missing_authority_violation',
+        blocked_reason: 'artifact_identity_producing_attempt_missing_authority_violation',
+        stage_attempt_id: attemptId,
+        stage_run_id: input.stageRun.stage_run_id,
+      },
+    );
+  }
+  requireRuntimeExecutionScopeMutationAllowed(
+    input.db,
+    row as unknown as Record<string, unknown>,
+    input.operation,
+  );
+  const attempt = stageAttemptToPayload(row);
+  requireSameFamilyRuntimeExecutionIdentity({
+    authorityIdentity: input.stageRun as unknown as Record<string, unknown>,
+    candidateIdentity: attempt as unknown as Record<string, unknown>,
+    operation: input.operation,
+    requireStageRunId: true,
+  });
+  return attempt;
 }
 
 function exactRefsFromCloseoutMetadata(value: unknown) {
@@ -280,6 +391,8 @@ function persistedStageQualityAttemptMaterializationReceipt(
           ? { context_manifest: attempt.context_manifest }
           : {}),
       },
+      visibility_search_attributes_upsert_enabled:
+        stageRun.visibility_search_attributes_upsert_enabled === true,
     },
     authority_boundary: {
       opl: 'stage_attempt_identity_and_refs_projection_only',
@@ -767,6 +880,7 @@ function providerRuntimeQualityDebtCloseout(input: {
 }
 
 export async function codexStageActivity(input: TemporalStageAttemptWorkflowInput) {
+  requirePersistedAttemptActivityIdentity(input, 'temporal_codex_stage_activity');
   const observedAt = new Date().toISOString();
   heartbeat({
     stage_attempt_id: input.stage_attempt_id,
@@ -881,6 +995,7 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
 }
 
 export async function domainHandlerDispatchActivity(input: TemporalStageAttemptWorkflowInput) {
+  requirePersistedAttemptActivityIdentity(input, 'temporal_domain_handler_dispatch_activity');
   heartbeat({
     stage_attempt_id: input.stage_attempt_id,
     stage_id: input.stage_id,
@@ -1070,14 +1185,17 @@ export async function stageQualityAttemptMaterializeActivity(
   });
   const { db } = openQueueDb();
   try {
-    createStageAttemptTable(db);
-    createStageQualityCycle(db, {
-      qualityCycleId: input.quality_cycle_id,
+    requireRawStageRunMutationAuthority({
+      db,
       stageRunId: stageRun.stage_run_id,
-      domainId: stageRun.domain_id,
-      stageId: stageRun.stage_id,
-      policy: stageRun.quality_policy,
+      operation: 'temporal_stage_quality_attempt_materialize_activity:raw_stage_run',
     });
+    requirePersistedStageRunActivityIdentity({
+      db,
+      candidateIdentity: stageRun as unknown as Record<string, unknown>,
+      operation: 'temporal_stage_quality_attempt_materialize_activity',
+    });
+    createStageAttemptTable(db);
     const requestedUseBoundaryId = stableId('package-use', [
       'stage_quality_attempt',
       stageRun.stage_run_id,
@@ -1101,12 +1219,51 @@ export async function stageQualityAttemptMaterializeActivity(
       idempotencyBoundaryId: requestedUseBoundaryId,
     });
     if (existingAttempt) {
-      const receipt = persistedStageQualityAttemptMaterializationReceipt(stageRun, existingAttempt);
-      markStageQualityCycleCurrentAttempt(db, {
-        qualityCycleId: input.quality_cycle_id,
-        attemptRef: receipt.attempt_ref,
+      const existingRow = getStageAttemptRow(db, existingAttempt.stage_attempt_id);
+      if (!existingRow) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Persisted StageAttempt disappeared.', {
+          failure_code: 'persisted_runtime_stage_attempt_not_found',
+          stage_attempt_id: existingAttempt.stage_attempt_id,
+        });
+      }
+      requireRuntimeExecutionScopeMutationAllowed(
+        db,
+        existingRow as unknown as Record<string, unknown>,
+        'temporal_stage_quality_attempt_materialize_activity:existing_attempt',
+      );
+      return withActivityMutationTransaction(db, () => {
+        requireRawStageRunMutationAuthority({
+          db,
+          stageRunId: stageRun.stage_run_id,
+          operation: 'temporal_stage_quality_attempt_materialize_activity:existing_stage_run_recheck',
+        });
+        const freshExistingRow = getStageAttemptRow(db, existingAttempt.stage_attempt_id);
+        if (!freshExistingRow) {
+          throw new FrameworkContractError('contract_shape_invalid', 'Persisted StageAttempt disappeared.', {
+            failure_code: 'persisted_runtime_stage_attempt_not_found',
+            stage_attempt_id: existingAttempt.stage_attempt_id,
+          });
+        }
+        requireRuntimeExecutionScopeMutationAllowed(
+          db,
+          freshExistingRow as unknown as Record<string, unknown>,
+          'temporal_stage_quality_attempt_materialize_activity:existing_attempt_recheck',
+        );
+        createStageQualityCycle(db, {
+          qualityCycleId: input.quality_cycle_id,
+          stageRunId: stageRun.stage_run_id,
+          domainId: stageRun.domain_id,
+          stageId: stageRun.stage_id,
+          policy: stageRun.quality_policy,
+        });
+        const currentExistingAttempt = stageAttemptToPayload(freshExistingRow);
+        const receipt = persistedStageQualityAttemptMaterializationReceipt(stageRun, currentExistingAttempt);
+        markStageQualityCycleCurrentAttempt(db, {
+          qualityCycleId: input.quality_cycle_id,
+          attemptRef: receipt.attempt_ref,
+        });
+        return receipt;
       });
-      return receipt;
     }
     const artifactProducerAttemptRef = input.attempt_role === 'producer'
       ? null
@@ -1122,6 +1279,22 @@ export async function stageQualityAttemptMaterializeActivity(
         },
       );
     }
+    const artifactProducerAttempt = artifactProducerAttemptRef
+      ? requirePersistedAttemptStageRunIdentity({
+          db,
+          attemptRef: artifactProducerAttemptRef,
+          stageRun,
+          operation: 'stage_quality_artifact_producer_admission',
+        })
+      : null;
+    const parentAttempt = input.parent_attempt_ref
+      ? requirePersistedAttemptStageRunIdentity({
+          db,
+          attemptRef: input.parent_attempt_ref,
+          stageRun,
+          operation: 'stage_quality_parent_attempt_admission',
+        })
+      : null;
     if (artifactProducerAttemptRef) {
       // Reject stale artifact bytes before package reconciliation can write a new generation.
       verifyStageQualityArtifactIdentityAtAttemptBoundary({
@@ -1132,7 +1305,10 @@ export async function stageQualityAttemptMaterializeActivity(
         workspaceRoot: readString(stageRun.workspace_locator.workspace_root)
           ?? readString(stageRun.workspace_locator.repo_root)
           ?? stageRun.domain_pack_root,
-        expectedProducingAttemptId: stageAttemptIdFromRef(artifactProducerAttemptRef),
+        expectedProducingAttemptId: artifactProducerAttempt!.stage_attempt_id,
+        expectedStageRunId: stageRun.stage_run_id,
+        expectedScopeKind: stageRun.scope_kind,
+        expectedExecutionScope: stageRun.execution_scope,
       });
     }
     const packageReadiness = await (
@@ -1191,7 +1367,10 @@ export async function stageQualityAttemptMaterializeActivity(
           artifactIdentityReceiptRefs: input.artifact_identity_receipt_refs,
           domainId: stageRun.domain_id,
           workspaceRoot,
-          expectedProducingAttemptId: stageAttemptIdFromRef(artifactProducerAttemptRef!),
+          expectedProducingAttemptId: artifactProducerAttempt!.stage_attempt_id,
+          expectedStageRunId: stageRun.stage_run_id,
+          expectedScopeKind: stageRun.scope_kind,
+          expectedExecutionScope: stageRun.execution_scope,
         });
     const executionStagePacketRef = `${executionStageBinding.manifest_ref}`
       + `@sha256:${executionStageBinding.manifest_sha256}`
@@ -1215,6 +1394,8 @@ export async function stageQualityAttemptMaterializeActivity(
       domainId: stageRun.domain_id,
       stageId: stageRun.stage_id,
       workspaceLocator: executionWorkspaceLocator,
+      scopeKind: stageRun.scope_kind ?? (stageRun.execution_scope ? 'work_item' : 'domain'),
+      executionScope: stageRun.execution_scope ?? null,
       sourceFingerprint: stageRun.source_fingerprint,
       executorKind: stageRun.executor_kind,
       stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
@@ -1347,52 +1528,84 @@ export async function stageQualityAttemptMaterializeActivity(
           quality_scope_budget: qualityScopeBudget,
         };
     const contextManifestRef = `opl://stage-quality-context/${stableId('ctx', [contextManifest])}`;
-    const attempt = createStageAttempt(db, {
-      domainId: stageRun.domain_id,
-      stageId: stageRun.stage_id,
-      providerKind: 'temporal',
-      workspaceLocator: executionWorkspaceLocator,
-      idempotencyBoundaryId: requestedUseBoundaryId,
-      sourceFingerprint: stageRun.source_fingerprint ?? undefined,
-      executorKind: stageRun.executor_kind,
-      stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
-      checkpointRefs: executionCheckpointRefs,
-      stageRunId: stageRun.stage_run_id,
-      qualityCycleId: input.quality_cycle_id,
-      attemptRole: input.attempt_role,
-      qualityRoundIndex: input.quality_round_index,
-      parentAttemptRef: input.parent_attempt_ref ?? undefined,
-      inputArtifactRefs: inputArtifactIdentity.artifact_refs,
-      reviewedArtifactHashes: inputArtifactIdentity.artifact_hashes,
-      qualitySourceRefs: executionStageBinding.source_refs,
-      qualityStageGoalRefs: executionStageBinding.stage_goal_refs,
-      qualityLineageRefs,
-      qualityRubricRefs: executionStageBinding.quality_rubric_refs,
-      priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
-      repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
-      qualityContext: {
-        findings: input.findings ?? [],
-        repair_map: input.repair_map ?? [],
-        route_recommendations: input.route_recommendations ?? [],
-        ...(revisionConsumptionContext ? { revision_consumption_context: revisionConsumptionContext } : {}),
-        execution_content_binding: executionContentBinding,
-      },
-      qualityRolePromptRef: rolePromptRef,
-      contextManifestRef,
-      contextManifest,
-      noContextInheritance: true,
-      retryBudget: {
-        ...taskRetryBudgetProjection(3),
-        quality_scope_budget: qualityScopeBudget,
-      },
-      newAttempt: false,
-    }).attempt;
-    const attemptRef = `opl://stage_attempts/${attempt.stage_attempt_id}`;
-    markStageQualityCycleCurrentAttempt(db, {
-      qualityCycleId: input.quality_cycle_id,
-      attemptRef,
+    return withActivityMutationTransaction(db, () => {
+      requireRawStageRunMutationAuthority({
+        db,
+        stageRunId: stageRun.stage_run_id,
+        operation: 'temporal_stage_quality_attempt_materialize_activity:stage_run_recheck',
+      });
+      if (artifactProducerAttemptRef) {
+        requirePersistedAttemptStageRunIdentity({
+          db,
+          attemptRef: artifactProducerAttemptRef,
+          stageRun,
+          operation: 'stage_quality_artifact_producer_admission_recheck',
+        });
+      }
+      if (parentAttempt) {
+        requirePersistedAttemptStageRunIdentity({
+          db,
+          attemptRef: input.parent_attempt_ref!,
+          stageRun,
+          operation: 'stage_quality_parent_attempt_admission_recheck',
+        });
+      }
+      createStageQualityCycle(db, {
+        qualityCycleId: input.quality_cycle_id,
+        stageRunId: stageRun.stage_run_id,
+        domainId: stageRun.domain_id,
+        stageId: stageRun.stage_id,
+        policy: stageRun.quality_policy,
+      });
+      const attempt = createStageAttempt(db, {
+        domainId: stageRun.domain_id,
+        stageId: stageRun.stage_id,
+        scopeKind: stageRun.scope_kind,
+        executionScope: stageRun.execution_scope,
+        providerKind: 'temporal',
+        workspaceLocator: executionWorkspaceLocator,
+        idempotencyBoundaryId: requestedUseBoundaryId,
+        sourceFingerprint: stageRun.source_fingerprint ?? undefined,
+        executorKind: stageRun.executor_kind,
+        stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
+        checkpointRefs: executionCheckpointRefs,
+        stageRunId: stageRun.stage_run_id,
+        qualityCycleId: input.quality_cycle_id,
+        attemptRole: input.attempt_role,
+        qualityRoundIndex: input.quality_round_index,
+        parentAttemptRef: input.parent_attempt_ref ?? undefined,
+        inputArtifactRefs: inputArtifactIdentity.artifact_refs,
+        reviewedArtifactHashes: inputArtifactIdentity.artifact_hashes,
+        qualitySourceRefs: executionStageBinding.source_refs,
+        qualityStageGoalRefs: executionStageBinding.stage_goal_refs,
+        qualityLineageRefs,
+        qualityRubricRefs: executionStageBinding.quality_rubric_refs,
+        priorFindingRefs: (input.findings ?? []).map((finding) => finding.finding_id),
+        repairMapRefs: (input.repair_map ?? []).map((entry) => `repair-map:${entry.finding_id}`),
+        qualityContext: {
+          findings: input.findings ?? [],
+          repair_map: input.repair_map ?? [],
+          route_recommendations: input.route_recommendations ?? [],
+          ...(revisionConsumptionContext ? { revision_consumption_context: revisionConsumptionContext } : {}),
+          execution_content_binding: executionContentBinding,
+        },
+        qualityRolePromptRef: rolePromptRef,
+        contextManifestRef,
+        contextManifest,
+        noContextInheritance: true,
+        retryBudget: {
+          ...taskRetryBudgetProjection(3),
+          quality_scope_budget: qualityScopeBudget,
+        },
+        newAttempt: false,
+      }).attempt;
+      const attemptRef = `opl://stage_attempts/${attempt.stage_attempt_id}`;
+      markStageQualityCycleCurrentAttempt(db, {
+        qualityCycleId: input.quality_cycle_id,
+        attemptRef,
+      });
+      return persistedStageQualityAttemptMaterializationReceipt(stageRun, attempt);
     });
-    return persistedStageQualityAttemptMaterializationReceipt(stageRun, attempt);
   } finally {
     db.close();
   }
@@ -1491,6 +1704,24 @@ export async function stageQualityAttemptSyncActivity(input: TemporalStageQualit
   try {
     createStageAttemptTable(db);
     const stageAttemptId = stageAttemptIdFromRef(input.attempt_ref);
+    const rawAttempt = getStageAttemptRow(db, stageAttemptId);
+    if (!rawAttempt) {
+      throw new FrameworkContractError('contract_shape_invalid', 'StageAttempt is not persisted.', {
+        failure_code: 'persisted_runtime_stage_attempt_not_found',
+        stage_attempt_id: stageAttemptId,
+      });
+    }
+    requireRuntimeExecutionScopeMutationAllowed(
+      db,
+      rawAttempt as unknown as Record<string, unknown>,
+      'temporal_stage_quality_attempt_sync_activity:raw_attempt',
+    );
+    requirePersistedStageAttemptActivityIdentity({
+      db,
+      candidateIdentity: input.workflow_state as unknown as Record<string, unknown>,
+      stageAttemptId,
+      operation: 'temporal_stage_quality_attempt_sync_activity',
+    });
     const syncReceipt = syncStageAttemptFromTemporalTerminalObservation(db, {
       surface_kind: 'temporal_stage_attempt_query_receipt',
       provider_kind: 'temporal',
@@ -1572,9 +1803,43 @@ export async function stageQualityReviewReceiptActivity(input: TemporalStageQual
   const { db } = openQueueDb();
   try {
     createStageAttemptTable(db);
+    const producerAttemptId = stageAttemptIdFromRef(input.producer_attempt_ref);
+    const reviewerAttemptId = stageAttemptIdFromRef(input.reviewer_attempt_ref);
+    for (const [stageAttemptId, operation] of [
+      [producerAttemptId, 'temporal_stage_quality_review_receipt_activity:raw_producer'],
+      [reviewerAttemptId, 'temporal_stage_quality_review_receipt_activity:raw_reviewer'],
+    ] as const) {
+      const row = getStageAttemptRow(db, stageAttemptId);
+      if (!row) {
+        throw new FrameworkContractError('contract_shape_invalid', 'StageAttempt is not persisted.', {
+          failure_code: 'persisted_runtime_stage_attempt_not_found',
+          stage_attempt_id: stageAttemptId,
+        });
+      }
+      requireRuntimeExecutionScopeMutationAllowed(
+        db,
+        row as unknown as Record<string, unknown>,
+        operation,
+      );
+    }
+    const producer = requireResolvedPersistedStageAttemptIdentity({
+      db,
+      stageAttemptId: producerAttemptId,
+      operation: 'temporal_stage_quality_review_receipt_activity:producer',
+    });
+    const reviewer = requireResolvedPersistedStageAttemptIdentity({
+      db,
+      stageAttemptId: reviewerAttemptId,
+      operation: 'temporal_stage_quality_review_receipt_activity:reviewer',
+    });
+    requireSamePersistedStageRunAttemptIdentity({
+      stageRunIdentity: producer as unknown as Record<string, unknown>,
+      stageAttemptIdentity: reviewer as unknown as Record<string, unknown>,
+      operation: 'temporal_stage_quality_review_receipt_activity:pair',
+    });
     const receipt = materializePersistedStageReviewReceipt(db, {
-      producerAttemptId: stageAttemptIdFromRef(input.producer_attempt_ref),
-      reviewerAttemptId: stageAttemptIdFromRef(input.reviewer_attempt_ref),
+      producerAttemptId,
+      reviewerAttemptId,
       rubricRefs: input.rubric_refs,
       verdict: input.verdict,
     });
@@ -1590,6 +1855,44 @@ export async function stageQualityReviewReceiptActivity(input: TemporalStageQual
 export async function stageRunRouteLaunchActivity(
   input: TemporalStageRunRouteLaunchInput,
 ): Promise<TemporalStageRunRouteLaunchReceipt> {
+  const { db } = openQueueDb();
+  try {
+    requireRawStageRunMutationAuthority({
+      db,
+      stageRunId: input.parent_stage_run.stage_run_id,
+      operation: 'temporal_stage_run_route_launch_activity:raw_parent',
+    });
+    const decisiveAttemptId = stageAttemptIdFromRef(input.decisive_attempt_ref);
+    const decisiveAttemptRow = getStageAttemptRow(db, decisiveAttemptId);
+    if (!decisiveAttemptRow) {
+      throw new FrameworkContractError('contract_shape_invalid', 'StageAttempt is not persisted.', {
+        failure_code: 'persisted_runtime_stage_attempt_not_found',
+        stage_attempt_id: decisiveAttemptId,
+      });
+    }
+    requireRuntimeExecutionScopeMutationAllowed(
+      db,
+      decisiveAttemptRow as unknown as Record<string, unknown>,
+      'temporal_stage_run_route_launch_activity:raw_decisive_attempt',
+    );
+    const parentStageRun = requirePersistedStageRunActivityIdentity({
+      db,
+      candidateIdentity: input.parent_stage_run as unknown as Record<string, unknown>,
+      operation: 'temporal_stage_run_route_launch_activity:parent',
+    });
+    const decisiveAttempt = requireResolvedPersistedStageAttemptIdentity({
+      db,
+      stageAttemptId: decisiveAttemptId,
+      operation: 'temporal_stage_run_route_launch_activity:decisive_attempt',
+    });
+    requireSamePersistedStageRunAttemptIdentity({
+      stageRunIdentity: parentStageRun as unknown as Record<string, unknown>,
+      stageAttemptIdentity: decisiveAttempt as unknown as Record<string, unknown>,
+      operation: 'temporal_stage_run_route_launch_activity:lineage',
+    });
+  } finally {
+    db.close();
+  }
   return materializeStageRunRoute(input, {
     findTargetStageRun: (stageRunId) => {
       const { db } = openQueueDb();
@@ -1625,8 +1928,30 @@ export async function stageQualityCycleProjectActivity(
 ) {
   const { db } = openQueueDb();
   try {
-    try {
-      createStageAttemptTable(db);
+    requireRawStageRunMutationAuthority({
+      db,
+      stageRunId: input.stage_run.stage_run_id,
+      operation: 'temporal_stage_quality_cycle_project_activity:raw_stage_run',
+    });
+    requirePersistedStageRunActivityIdentity({
+      db,
+      candidateIdentity: input.stage_run as unknown as Record<string, unknown>,
+      operation: 'temporal_stage_quality_cycle_project_activity',
+    });
+    requireSameFamilyRuntimeExecutionIdentity({
+      authorityIdentity: input.stage_run as unknown as Record<string, unknown>,
+      candidateIdentity: input.state as unknown as Record<string, unknown>,
+      operation: 'temporal_stage_quality_cycle_project_activity:workflow_state',
+      compareWorkflowId: true,
+      requireStageRunId: true,
+    });
+    createStageAttemptTable(db);
+    const projected = withActivityMutationTransaction(db, () => {
+      requireRawStageRunMutationAuthority({
+        db,
+        stageRunId: input.stage_run.stage_run_id,
+        operation: 'temporal_stage_quality_cycle_project_activity:stage_run_recheck',
+      });
       createStageQualityCycle(db, {
         qualityCycleId: input.state.quality_cycle_id,
         stageRunId: input.stage_run.stage_run_id,
@@ -1635,12 +1960,12 @@ export async function stageQualityCycleProjectActivity(
         policy: input.stage_run.quality_policy,
       });
       return projectTemporalStageRunQualityCycle(db, input.state);
-    } finally {
-      recordStageRunClosed(db, {
-        stageRunId: input.stage_run.stage_run_id,
-        terminalStatus: input.state.status,
-      });
-    }
+    });
+    recordStageRunClosed(db, {
+      stageRunId: input.stage_run.stage_run_id,
+      terminalStatus: input.state.status,
+    });
+    return projected;
   } finally {
     db.close();
   }

@@ -31,6 +31,7 @@ test('reference providers materialize PubMed and PMC receipts without domain aut
             pubdate: '2026 Apr',
             fulljournalname: 'Journal of Provider Receipts',
             authors: [{ name: 'Ada Researcher' }],
+            pubtype: ['Journal Article', 'Randomized Controlled Trial'],
             articleids: [
               { idtype: 'doi', value: '10.1234/ncbi-example' },
               { idtype: 'pmc', value: 'PMC7654321' },
@@ -57,6 +58,7 @@ test('reference providers materialize PubMed and PMC receipts without domain aut
             journalTitle: 'Journal of Provider Receipts',
             abstractText: 'Structured provider metadata.',
             authorList: { author: [{ fullName: 'Ada Researcher' }] },
+            pubTypeList: { pubType: ['journal article', 'clinical trial'] },
             inEPMC: 'Y',
             isOpenAccess: 'Y',
           }],
@@ -77,6 +79,10 @@ test('reference providers materialize PubMed and PMC receipts without domain aut
     assert.equal(report.provider_evidence.every((entry) => entry.status === 'matched'), true);
     assert.equal(report.provider_evidence.every((entry) => entry.normalized.pmcid === 'PMC7654321'), true);
     assert.deepEqual(report.provider_evidence[0].metadata.authors, ['Ada Researcher']);
+    assert.deepEqual(report.provider_evidence[0].metadata.article_types, [
+      'Journal Article',
+      'Randomized Controlled Trial',
+    ]);
     assert.equal(report.provider_evidence[0].verification_scope.full_text_available, true);
     assert.equal(report.provider_evidence[0].verification_scope.full_text_body_verified, false);
     assert.equal(report.provider_evidence[1].metadata.abstract, 'Structured provider metadata.');
@@ -84,6 +90,15 @@ test('reference providers materialize PubMed and PMC receipts without domain aut
     assert.equal(report.provider_evidence[1].verification_scope.full_text_body_verified, true);
     assert.equal(report.provider_receipts.length, 2);
     assert.equal(report.no_authority_boundary.can_write_domain_truth, false);
+
+    const inline = await runOplConnectReferenceVerification({
+      references: [{ id: 'inline-ncbi', pmid: '123456' }],
+      providers: ['pubmed'],
+      maxRetries: 0,
+    });
+    assert.equal(inline.opl_connect_reference_verification.request.references_file, null);
+    assert.equal(inline.opl_connect_reference_verification.request.reference_source_kind, 'inline_references');
+    assert.equal(inline.opl_connect_reference_verification.provider_receipts.length, 1);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalPubmedBase === undefined) delete process.env.OPL_CONNECT_PUBMED_EUTILS_BASE;

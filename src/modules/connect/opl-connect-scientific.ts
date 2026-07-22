@@ -1,8 +1,13 @@
 import crypto from 'node:crypto';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import {
+  parseEuropePmcResults,
+  parsePubmedSummary,
+  type NcbiReferenceRecord,
+} from './opl-connect-reference-ncbi.ts';
 
-export type ScientificConnectorProviderId = 'crossref' | 'openalex';
+export type ScientificConnectorProviderId = 'crossref' | 'openalex' | 'pubmed' | 'pmc';
 
 export type ScientificConnectorSearchInput = {
   provider: ScientificConnectorProviderId;
@@ -11,30 +16,39 @@ export type ScientificConnectorSearchInput = {
   timeoutMs?: number;
 };
 
-type NormalizedScientificSourceRef = {
+export type NormalizedScientificSourceRef = {
   source_ref: string;
   source_kind: 'literature_article';
-  source_provider: 'Crossref' | 'OpenAlex';
+  source_provider: 'Crossref' | 'OpenAlex' | 'PubMed' | 'Europe PMC';
   provider_id: ScientificConnectorProviderId;
   doi: string | null;
   pmid: string | null;
+  pmcid: string | null;
   openalex_id: string | null;
   title: string;
   journal: string | null;
   publication_year: string | null;
   authors: string[];
+  article_types: string[];
   source_urls: Record<string, string | null>;
+};
+
+type ScientificConnectorSearchResult = {
+  normalized_results: NormalizedScientificSourceRef[];
+  provider_total: number | null;
 };
 
 type ScientificConnectorProviderAdapter = {
   provider_id: ScientificConnectorProviderId;
   provider_owner: string;
   source_system: string;
-  search: (input: ScientificConnectorSearchInput) => Promise<NormalizedScientificSourceRef[]>;
+  search: (input: ScientificConnectorSearchInput) => Promise<ScientificConnectorSearchResult>;
 };
 
 const DEFAULT_CROSSREF_API_BASE = 'https://api.crossref.org';
 const DEFAULT_OPENALEX_API_BASE = 'https://api.openalex.org';
+const DEFAULT_PUBMED_EUTILS_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
+const DEFAULT_EUROPE_PMC_API_BASE = 'https://www.ebi.ac.uk/europepmc/webservices/rest';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -47,6 +61,13 @@ function asString(value: unknown): string | null {
 
 function asNumberString(value: unknown): string | null {
   return typeof value === 'number' && Number.isFinite(value) ? String(value) : asString(value);
+}
+
+function asNumber(value: unknown): number | null {
+  const normalized = typeof value === 'number' ? value : asString(value);
+  if (normalized === null) return null;
+  const parsed = typeof normalized === 'number' ? normalized : Number(normalized);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function firstString(value: unknown): string | null {
@@ -178,11 +199,13 @@ function normalizeCrossrefItem(item: Record<string, unknown>): NormalizedScienti
     provider_id: 'crossref',
     doi,
     pmid: null,
+    pmcid: null,
     openalex_id: null,
     title: title ?? '',
     journal: firstString(item['container-title']),
     publication_year: crossrefYear(item),
     authors: crossrefAuthors(item),
+    article_types: [],
     source_urls: {
       doi: doi ? `https://doi.org/${doi}` : null,
       crossref: doi ? `https://api.crossref.org/works/${encodeURIComponent(doi)}` : asString(item.URL),
@@ -196,10 +219,14 @@ async function searchCrossref(input: ScientificConnectorSearchInput) {
   url.searchParams.set('rows', String(input.limit));
   const json = asRecord(await fetchJson(url, 'crossref', timeoutMs(input.timeoutMs)));
   const message = asRecord(json.message);
-  return (Array.isArray(message.items) ? message.items : [])
+  const normalizedResults = (Array.isArray(message.items) ? message.items : [])
     .map(asRecord)
     .map(normalizeCrossrefItem)
     .filter((entry): entry is NormalizedScientificSourceRef => Boolean(entry));
+  return {
+    normalized_results: normalizedResults,
+    provider_total: asNumber(message['total-results']),
+  };
 }
 
 function openAlexShortId(value: string | null) {
@@ -221,6 +248,7 @@ function normalizeOpenAlexItem(item: Record<string, unknown>): NormalizedScienti
     provider_id: 'openalex',
     doi,
     pmid: asString(asRecord(item.ids).pmid)?.replace(/^https?:\/\/pubmed\.ncbi\.nlm\.nih\.gov\//i, '').replace(/\/$/, '') ?? null,
+    pmcid: null,
     openalex_id: openalexId,
     title: title ?? '',
     journal: asString(source.display_name),
@@ -228,6 +256,7 @@ function normalizeOpenAlexItem(item: Record<string, unknown>): NormalizedScienti
     authors: Array.isArray(item.authorships)
       ? item.authorships.map(asRecord).map((authorship) => asString(asRecord(authorship.author).display_name)).filter((name): name is string => Boolean(name))
       : [],
+    article_types: [],
     source_urls: {
       openalex: id,
       doi: doi ? `https://doi.org/${doi}` : null,
@@ -240,10 +269,92 @@ async function searchOpenAlex(input: ScientificConnectorSearchInput) {
   url.searchParams.set('search', input.query);
   url.searchParams.set('per-page', String(input.limit));
   const json = asRecord(await fetchJson(url, 'openalex', timeoutMs(input.timeoutMs)));
-  return (Array.isArray(json.results) ? json.results : [])
+  const normalizedResults = (Array.isArray(json.results) ? json.results : [])
     .map(asRecord)
     .map(normalizeOpenAlexItem)
     .filter((entry): entry is NormalizedScientificSourceRef => Boolean(entry));
+  return {
+    normalized_results: normalizedResults,
+    provider_total: asNumber(asRecord(json.meta).count),
+  };
+}
+
+function normalizeBiomedicalRecord(
+  provider: 'pubmed' | 'pmc',
+  record: NcbiReferenceRecord,
+): NormalizedScientificSourceRef | null {
+  const { doi, pmid, pmcid } = record.normalized;
+  const title = record.normalized.title;
+  const providerIdentifier = provider === 'pubmed' ? pmid : pmcid ?? pmid;
+  if (!providerIdentifier || !title) return null;
+  return {
+    source_ref: `${provider}:${providerIdentifier}`,
+    source_kind: 'literature_article',
+    source_provider: provider === 'pubmed' ? 'PubMed' : 'Europe PMC',
+    provider_id: provider,
+    doi,
+    pmid,
+    pmcid,
+    openalex_id: null,
+    title,
+    journal: record.metadata.journal ?? null,
+    publication_year: record.metadata.year ?? null,
+    authors: record.metadata.authors ?? [],
+    article_types: record.metadata.article_types ?? [],
+    source_urls: {
+      doi: doi ? `https://doi.org/${doi}` : null,
+      pubmed: pmid ? `https://pubmed.ncbi.nlm.nih.gov/${pmid}/` : null,
+      pmc: pmcid ? `https://pmc.ncbi.nlm.nih.gov/articles/${pmcid}/` : null,
+      europe_pmc: provider === 'pmc'
+        ? `https://europepmc.org/article/${pmid ? 'MED' : 'PMC'}/${pmid ?? pmcid}`
+        : null,
+    },
+  };
+}
+
+async function searchPubmed(input: ScientificConnectorSearchInput): Promise<ScientificConnectorSearchResult> {
+  const baseUrl = apiBase('OPL_CONNECT_PUBMED_EUTILS_BASE', DEFAULT_PUBMED_EUTILS_BASE);
+  const searchUrl = new URL(`${baseUrl}/esearch.fcgi`);
+  searchUrl.searchParams.set('db', 'pubmed');
+  searchUrl.searchParams.set('term', input.query);
+  searchUrl.searchParams.set('retmode', 'json');
+  searchUrl.searchParams.set('retmax', String(input.limit));
+  const searchPayload = asRecord(await fetchJson(searchUrl, 'pubmed', timeoutMs(input.timeoutMs)));
+  const searchResult = asRecord(searchPayload.esearchresult);
+  const pmids = (Array.isArray(searchResult.idlist) ? searchResult.idlist : [])
+    .map(asString)
+    .filter((entry): entry is string => Boolean(entry));
+  if (pmids.length === 0) {
+    return { normalized_results: [], provider_total: asNumber(searchResult.count) };
+  }
+  const summaryUrl = new URL(`${baseUrl}/esummary.fcgi`);
+  summaryUrl.searchParams.set('db', 'pubmed');
+  summaryUrl.searchParams.set('id', pmids.join(','));
+  summaryUrl.searchParams.set('retmode', 'json');
+  const summaryPayload = await fetchJson(summaryUrl, 'pubmed', timeoutMs(input.timeoutMs));
+  return {
+    normalized_results: pmids
+      .map((pmid) => parsePubmedSummary(summaryPayload, pmid))
+      .filter((record): record is NcbiReferenceRecord => Boolean(record))
+      .map((record) => normalizeBiomedicalRecord('pubmed', record))
+      .filter((entry): entry is NormalizedScientificSourceRef => Boolean(entry)),
+    provider_total: asNumber(searchResult.count),
+  };
+}
+
+async function searchPmc(input: ScientificConnectorSearchInput): Promise<ScientificConnectorSearchResult> {
+  const url = new URL(`${apiBase('OPL_CONNECT_EUROPE_PMC_API_BASE', DEFAULT_EUROPE_PMC_API_BASE)}/search`);
+  url.searchParams.set('query', input.query);
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('resultType', 'core');
+  url.searchParams.set('pageSize', String(input.limit));
+  const payload = asRecord(await fetchJson(url, 'pmc', timeoutMs(input.timeoutMs)));
+  return {
+    normalized_results: parseEuropePmcResults(payload)
+      .map((record) => normalizeBiomedicalRecord('pmc', record))
+      .filter((entry): entry is NormalizedScientificSourceRef => Boolean(entry)),
+    provider_total: asNumber(payload.hitCount),
+  };
 }
 
 const SCIENTIFIC_CONNECTOR_PROVIDER_REGISTRY = [
@@ -258,6 +369,18 @@ const SCIENTIFIC_CONNECTOR_PROVIDER_REGISTRY = [
     provider_owner: 'OPL Connect optional scientific provider adapter',
     source_system: 'OpenAlex Works API',
     search: searchOpenAlex,
+  },
+  {
+    provider_id: 'pubmed',
+    provider_owner: 'OPL Connect biomedical scientific provider adapter',
+    source_system: 'NCBI PubMed ESearch and ESummary',
+    search: searchPubmed,
+  },
+  {
+    provider_id: 'pmc',
+    provider_owner: 'OPL Connect biomedical scientific provider adapter',
+    source_system: 'Europe PMC search API',
+    search: searchPmc,
   },
 ] as const satisfies readonly ScientificConnectorProviderAdapter[];
 
@@ -294,7 +417,8 @@ function resolveProvider(providerId: ScientificConnectorProviderId) {
 
 export async function runOplConnectScientificSearch(input: ScientificConnectorSearchInput) {
   const provider = resolveProvider(input.provider);
-  const normalizedResults = await provider.search(input);
+  const searchResult = await provider.search(input);
+  const normalizedResults = searchResult.normalized_results;
   const digest = queryDigest(input);
   const connectorInvocationRef = `opl://connect/scientific/${input.provider}/search/${digest}`;
   const ledgerReceiptCandidateRef = `opl://ledger/connect/scientific/${input.provider}/search/${digest}`;
@@ -321,6 +445,17 @@ export async function runOplConnectScientificSearch(input: ScientificConnectorSe
         stores_article_bodies: false,
       },
       normalized_results: normalizedResults,
+      retrieval_count_reconciliation: {
+        provider_total: searchResult.provider_total,
+        returned_count: normalizedResults.length,
+        requested_limit: input.limit,
+        result_set_complete: searchResult.provider_total === null
+          ? null
+          : searchResult.provider_total <= normalizedResults.length,
+        next_page_available: searchResult.provider_total === null
+          ? null
+          : searchResult.provider_total > normalizedResults.length,
+      },
       result_refs: normalizedResults.map((entry) => entry.source_ref),
       receipt_refs: {
         connector_invocation_ref: connectorInvocationRef,

@@ -30,6 +30,10 @@ export type WorkItemControlIdentity = {
   work_item_id: string;
 };
 
+type WorkItemControlLookupIdentity = WorkItemControlIdentity & {
+  legacy_project_ids?: string[];
+};
+
 export type WorkItemControlEntry = WorkItemControlIdentity & {
   control_key: string;
   lifecycle_state: WorkItemUserLifecycleState | null;
@@ -331,8 +335,18 @@ export function findWorkItemControl(identity: WorkItemControlIdentity) {
 
 export function buildWorkItemControlResolver(ledger = readWorkItemControlLedger()) {
   const entries = new Map(ledger.items.map((entry) => [entry.control_key, entry]));
-  return (identity: WorkItemControlIdentity): WorkItemControlProjectionRecord => {
-    const entry = entries.get(workItemControlKey(identity));
+  return (identity: WorkItemControlLookupIdentity): WorkItemControlProjectionRecord => {
+    const candidateProjectIds = [
+      identity.project_id,
+      ...(identity.legacy_project_ids ?? []),
+    ];
+    const entry = candidateProjectIds
+      .map((projectId) => entries.get(workItemControlKey({
+        agent_id: identity.agent_id,
+        project_id: projectId,
+        work_item_id: identity.work_item_id,
+      })))
+      .find((candidate) => candidate !== undefined);
     const sourceRef = entry ? `opl://work-item-control/${entry.control_key}` : null;
     const visibilityControlled = entry?.visibility_updated_at !== null
       && entry?.visibility_updated_at !== undefined;

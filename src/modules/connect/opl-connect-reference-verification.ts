@@ -11,7 +11,8 @@ import {
 } from './opl-connect-reference-ncbi.ts';
 
 export type ReferenceVerificationInput = {
-  referencesFile: string;
+  referencesFile?: string;
+  references?: unknown[];
   providers: string[];
   cacheRoot?: string;
   maxRetries: number;
@@ -68,6 +69,7 @@ type ProviderEvidence = {
     journal?: string;
     authors?: string[];
     abstract?: string;
+    article_types?: string[];
   };
   retraction_or_update_flags: Record<string, unknown>;
   verification_scope: Record<string, unknown>;
@@ -130,6 +132,13 @@ export function normalizeReferenceVerificationProviders(
     .map((entry) => entry === 'semantic_scholar' ? 'semantic-scholar' : entry)
     .filter(Boolean);
   const defaults = referenceVerificationProviderIds();
+  if (providers.length > 0 && entries.length === 0) {
+    throw new FrameworkContractError(
+      'codex_command_failed',
+      'OPL Connect reference verification providers must contain at least one non-empty provider.',
+      { supported: defaults },
+    );
+  }
   const unique = [...new Set(entries.length > 0 ? entries : defaults)];
   const allowed = new Set<string>(defaults);
   const unsupported = unique.filter((entry) => !allowed.has(entry));
@@ -142,7 +151,7 @@ export function normalizeReferenceVerificationProviders(
   return unique as ReferenceVerificationProviderId[];
 }
 
-function loadReferences(filePath: string) {
+function loadReferencesFile(filePath: string) {
   const resolved = path.resolve(filePath);
   if (!fs.existsSync(resolved)) {
     throw new FrameworkContractError('codex_command_failed', 'Reference verification requires an existing --references-file.', {
@@ -157,6 +166,31 @@ function loadReferences(filePath: string) {
     });
   }
   return rawReferences.map((entry, index) => normalizeReference(entry, index));
+}
+
+function resolveReferences(input: ReferenceVerificationInput) {
+  const hasFile = typeof input.referencesFile === 'string' && input.referencesFile.trim().length > 0;
+  const hasInline = Array.isArray(input.references);
+  if (hasFile === hasInline) {
+    throw new FrameworkContractError(
+      'codex_command_failed',
+      'Reference verification requires exactly one references file or inline references array.',
+      { input_modes: ['references_file', 'inline_references'] },
+    );
+  }
+  if (hasInline) {
+    return {
+      references: input.references!.map((entry, index) => normalizeReference(entry, index)),
+      sourceKind: 'inline_references' as const,
+      referencesFile: null,
+    };
+  }
+  const referencesFile = path.resolve(input.referencesFile!);
+  return {
+    references: loadReferencesFile(referencesFile),
+    sourceKind: 'references_file' as const,
+    referencesFile,
+  };
 }
 
 function normalizeReference(value: unknown, index: number): ReferenceRecord {
@@ -975,7 +1009,8 @@ function noAuthorityBoundary() {
 }
 
 export async function runOplConnectReferenceVerification(input: ReferenceVerificationInput) {
-  const references = loadReferences(input.referencesFile);
+  const referenceInput = resolveReferences(input);
+  const references = referenceInput.references;
   const providers = normalizeReferenceVerificationProviders(input.providers);
   const providerEvidence: ProviderEvidence[] = [];
   for (const reference of references) {
@@ -1024,7 +1059,8 @@ export async function runOplConnectReferenceVerification(input: ReferenceVerific
       connector_family: 'OPL Connect',
       status: 'completed',
       request: {
-        references_file: path.resolve(input.referencesFile),
+        references_file: referenceInput.referencesFile,
+        reference_source_kind: referenceInput.sourceKind,
         reference_count: references.length,
         providers,
         cache_root: input.cacheRoot ? path.resolve(input.cacheRoot) : null,

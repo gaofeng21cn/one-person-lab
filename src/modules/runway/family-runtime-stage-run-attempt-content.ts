@@ -178,6 +178,8 @@ export function resolveStageRunAttemptExecutorContent(
     spec,
     domainPackRoot,
     workspaceLocator: input.workspace_locator,
+    scopeKind: input.scope_kind ?? (input.execution_scope ? 'work_item' : 'domain'),
+    executionScope: input.execution_scope ?? null,
   });
 
   const expectedStagePrompt = spec.content_bindings.find((entry) => entry.purpose === 'stage_prompt');

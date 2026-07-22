@@ -138,9 +138,15 @@ export type CodexStageRunnerProcessOutputSummary = {
   closeout_rejection_reason?:
     | 'stage_attempt_id_mismatch'
     | 'idempotency_key_mismatch'
-    | 'domain_route_user_stage_log_missing';
+    | 'domain_route_user_stage_log_missing'
+    | 'execution_scope_missing'
+    | 'execution_scope_mismatch'
+    | 'execution_identity_missing'
+    | 'execution_identity_mismatch'
+    | 'execution_identity_unresolved';
   rejected_closeout_stage_attempt_id?: string;
   rejected_closeout_idempotency_key?: string;
+  rejected_closeout_scope_digest?: string;
   provider_error_count?: number;
   provider_error_status_codes?: number[];
   provider_error_messages?: string[];

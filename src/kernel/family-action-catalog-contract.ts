@@ -43,6 +43,15 @@ export interface FamilyActionSourceOfWork {
 
 export type FamilyActionStageRoutePolicy = 'ai_selected_progress_route';
 
+export type FamilyActionExecutionScope =
+  | {
+      kind: 'work_item';
+      alias_fields: string[];
+    }
+  | {
+      kind: 'none';
+    };
+
 export interface FamilyActionStageRoute {
   entry_stage_ref: string;
   required_stage_refs: string[];
@@ -66,6 +75,7 @@ export interface FamilyActionCatalogAction {
   parameter_fields_explicit?: boolean;
   workspace_locator_fields: string[];
   human_gate_ids: string[];
+  execution_scope?: FamilyActionExecutionScope;
   stage_route?: FamilyActionStageRoute;
   supported_surfaces: {
     cli: FamilyActionSurfaceDescriptor | null;
@@ -134,6 +144,7 @@ const ACTION_KEYS = [
   'optional_fields',
   'workspace_locator_fields',
   'human_gate_ids',
+  'execution_scope',
   'stage_route',
   'supported_surfaces',
   'authority_boundary',
@@ -430,6 +441,43 @@ function normalizeExecutionBinding(value: unknown, field: string): FamilyActionE
   throw new Error(`${field}.kind must be handler_ref, stage_binding, or foundry_binding.`);
 }
 
+function normalizeExecutionScope(
+  value: unknown,
+  field: string,
+  parameterFields: ReadonlySet<string>,
+): FamilyActionExecutionScope | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    throw new Error(`${field} must be an object.`);
+  }
+  const kind = requireString(value.kind, `${field}.kind`);
+  if (kind === 'none') {
+    assertKnownKeys(value, ['kind'], field);
+    return { kind: 'none' };
+  }
+  if (kind !== 'work_item') {
+    throw new Error(`${field}.kind must be work_item or none.`);
+  }
+  assertKnownKeys(value, ['kind', 'alias_fields'], field);
+  const aliasFields = requiredStringArray(value.alias_fields, `${field}.alias_fields`);
+  if (aliasFields.length === 0) {
+    throw new Error(`${field}.alias_fields must contain at least one domain identity alias.`);
+  }
+  const undeclaredAliases = aliasFields.filter((aliasField) => {
+    const rootField = aliasField.split('.')[0] ?? '';
+    return !parameterFields.has(rootField);
+  });
+  if (undeclaredAliases.length > 0) {
+    throw new Error(`${field}.alias_fields reference undeclared action parameters: ${undeclaredAliases.join(', ')}`);
+  }
+  return {
+    kind: 'work_item',
+    alias_fields: aliasFields,
+  };
+}
+
 function normalizeFamilyAction(
   value: unknown,
   field: string,
@@ -469,6 +517,11 @@ function normalizeFamilyAction(
   if (missingLocatorFields.length > 0) {
     throw new Error(`${field}.workspace_locator_fields are not declared parameters: ${missingLocatorFields.join(', ')}`);
   }
+  const executionScope = normalizeExecutionScope(
+    value.execution_scope,
+    `${field}.execution_scope`,
+    parameterFields,
+  );
   return {
     action_id: actionId,
     title: requireString(value.title, `${field}.title`),
@@ -484,6 +537,7 @@ function normalizeFamilyAction(
     parameter_fields_explicit: true,
     workspace_locator_fields: workspaceLocatorFields,
     human_gate_ids: requiredStringArray(value.human_gate_ids, `${field}.human_gate_ids`),
+    ...(executionScope ? { execution_scope: executionScope } : {}),
     ...(stageRoute ? { stage_route: stageRoute } : {}),
     supported_surfaces: normalizeSupportedSurfaces(value.supported_surfaces, `${field}.supported_surfaces`),
     authority_boundary: normalizeActionAuthorityBoundary(

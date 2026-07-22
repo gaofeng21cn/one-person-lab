@@ -14,8 +14,17 @@ import {
   buildCurrentOwnerDeltaReadModel,
   writeCurrentOwnerDeltaReadModelProjectionCache,
 } from '../../../../src/modules/ledger/index.ts';
+import {
+  normalizeRuntimeExecutionScopeWrite,
+  persistRuntimeExecutionScope,
+} from '../../../../src/modules/runway/family-runtime-execution-scope-persistence.ts';
+import { createStageRunLaunchTable } from '../../../../src/modules/runway/family-runtime-stage-run-launch-registry.ts';
 import { openQueueDb } from '../../../../src/modules/runway/family-runtime-store.ts';
 import { createStageAttempt, runStageAttemptFixtureActivity } from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
+import {
+  createWorkItemExecutionScopeSnapshot,
+  listWorkspaceBindings,
+} from '../../../../src/modules/workspace/index.ts';
 import { createWorkspaceDescriptorFamilyFixture } from './workspace-domain-test-helper.ts';
 
 const SUMMARY_COMMAND = ['runtime', 'app-operator-drilldown'];
@@ -66,15 +75,76 @@ function seedSummaryStageAttempts(count: number) {
 function seedRunningCurrentWorkUnit(workspaceRoot: string) {
   const { db } = openQueueDb();
   try {
+    const workspaceBinding = listWorkspaceBindings().find((binding) =>
+      binding.project_id === 'medautoscience'
+      && binding.workspace_path === workspaceRoot
+      && binding.status === 'active'
+    );
+    assert.ok(workspaceBinding);
+    const workItemRoot = path.join(workspaceRoot, 'studies', 'study-001');
+    fs.mkdirSync(workItemRoot, { recursive: true });
+    const executionScope = createWorkItemExecutionScopeSnapshot({
+      projectScopeId: workspaceBinding.project_scope_id,
+      workspaceBindingId: workspaceBinding.binding_id,
+      domainId: 'medautoscience',
+      workspaceRoot,
+      payload: { study_id: 'study-001' },
+      requirement: { kind: 'work_item', alias_fields: ['study_id'] },
+      canonicalWorkItemRoot: workItemRoot,
+    });
+    const stageRunId = 'stage-run:current-work-unit-from-study-progress';
+    const persistedScope = normalizeRuntimeExecutionScopeWrite({
+      domainId: 'medautoscience',
+      scopeKind: 'work_item',
+      executionScope,
+    });
+    createStageRunLaunchTable(db);
+    persistRuntimeExecutionScope(db, persistedScope, 'medautoscience');
+    const stageRunInput = {
+      scope_kind: 'work_item',
+      execution_scope: executionScope,
+      workspace_locator: {
+        workspace_root: workspaceRoot,
+        execution_scope: executionScope,
+      },
+    };
+    db.prepare(`
+      INSERT INTO stage_run_launches(
+        stage_run_id, stage_run_invocation_id, stage_run_spec_sha256, domain_id, stage_id,
+        workflow_id, scope_kind, project_scope_id, work_item_scope_id, workspace_binding_id,
+        binding_version_id, scope_digest, execution_scope_json, identity_state,
+        stage_run_input_json, launch_status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'resolved', ?, 'started', ?, ?)
+    `).run(
+      stageRunId,
+      'stage-run-invocation:current-work-unit-from-study-progress',
+      `sha256:${'1'.repeat(64)}`,
+      'medautoscience',
+      'submission_milestone_candidate',
+      'stage-run-workflow:current-work-unit-from-study-progress',
+      persistedScope.columns.scope_kind,
+      persistedScope.columns.project_scope_id,
+      persistedScope.columns.work_item_scope_id,
+      persistedScope.columns.workspace_binding_id,
+      persistedScope.columns.binding_version_id,
+      persistedScope.columns.scope_digest,
+      persistedScope.columns.execution_scope_json,
+      JSON.stringify(stageRunInput),
+      '2026-07-20T00:00:00.000Z',
+      '2026-07-20T00:00:00.000Z',
+    );
     const attempt = createStageAttempt(db, {
       domainId: 'medautoscience',
       stageId: 'submission_milestone_candidate',
       providerKind: 'temporal',
+      stageRunId,
+      scopeKind: 'work_item',
+      executionScope,
       workspaceLocator: {
         workspace_root: workspaceRoot,
         artifact_root: path.join(workspaceRoot, 'artifacts'),
         source_refs: ['source:current-work-unit'],
-        work_unit_id: 'current-work-unit-from-study-progress',
+        work_unit_id: executionScope.domain_work_item_id,
       },
       taskId: 'task-current-work-unit-from-study-progress',
       checkpointRefs: ['checkpoint:current-work-unit'],
@@ -86,6 +156,7 @@ function seedRunningCurrentWorkUnit(workspaceRoot: string) {
       WHERE stage_attempt_id = ?
     `)
       .run(attempt.stage_attempt_id);
+    return `${workspaceBinding.project_scope_id}:${executionScope.domain_work_item_id}`;
   } finally {
     db.close();
   }
@@ -199,9 +270,9 @@ function writeMasWorkItemInventoryFixture(familyWorkspaceRoot: string, workspace
   fs.writeFileSync(descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
   fs.writeFileSync(path.join(workspaceRoot, 'workspace_index.json'), `${JSON.stringify({
     studies: [{
-      study_id: 'current-work-unit-from-study-progress',
+      study_id: 'study-001',
       display_name: 'Current work unit from domain inventory',
-      canonical_study_root: '.',
+      canonical_study_root: 'studies/study-001',
       status: 'active',
       current_stage_id: 'submission_milestone_candidate',
       current_stage_status: 'running',
@@ -352,7 +423,7 @@ test('runtime app operator summary prefers current work-item activity over histo
     assert.equal(boundManifest.workspace_locator.workspace_root, workspaceRoot);
     process.env.OPL_STATE_DIR = stateRoot;
     seedSummaryStageAttempts(1);
-    seedRunningCurrentWorkUnit(workspaceRoot);
+    const expectedWorkUnitId = seedRunningCurrentWorkUnit(workspaceRoot);
 
     const workItemProjection = runCli(['app', 'state', '--profile', 'full'], {
       OPL_STATE_DIR: stateRoot,
@@ -378,10 +449,7 @@ test('runtime app operator summary prefers current work-item activity over histo
       summaryDrilldown.attention_first_payload.owner_delta_first.primary_item.source,
       'domain_current_work_unit',
     );
-    assert.match(
-      summaryDrilldown.current_owner_delta.work_unit_id,
-      /^mas:[a-f0-9]{16}:current-work-unit-from-study-progress$/,
-    );
+    assert.equal(summaryDrilldown.current_owner_delta.work_unit_id, expectedWorkUnitId);
     assert.equal(
       summaryDrilldown.operator_next_action.payload_requirement,
       'domain_current_work_unit_owner_action_or_typed_blocker_required',

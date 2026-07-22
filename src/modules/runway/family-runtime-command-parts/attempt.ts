@@ -273,6 +273,9 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
   let providerKind: FamilyRuntimeProviderKind | undefined;
   let workspaceLocator: string | undefined;
   let workspaceLocatorFile: string | undefined;
+  let scopeKind: 'work_item' | 'domain' | 'system' | undefined;
+  let executionScope: string | undefined;
+  let executionScopeFile: string | undefined;
   let retryBudget: string | undefined;
   let retryBudgetFile: string | undefined;
   let sourceFingerprint: string | undefined;
@@ -325,6 +328,20 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
       return true;
     } else if (token === '--workspace-locator-file' && value) {
       workspaceLocatorFile = value;
+      return true;
+    } else if (token === '--scope-kind' && value) {
+      if (value !== 'work_item' && value !== 'domain' && value !== 'system') {
+        throw new FrameworkContractError('cli_usage_error', `Unsupported execution scope kind: ${value}.`, {
+          allowed_scope_kinds: ['work_item', 'domain', 'system'],
+        });
+      }
+      scopeKind = value;
+      return true;
+    } else if (token === '--execution-scope' && value) {
+      executionScope = value;
+      return true;
+    } else if (token === '--execution-scope-file' && value) {
+      executionScopeFile = value;
       return true;
     } else if (token === '--retry-budget' && value) {
       retryBudget = value;
@@ -401,6 +418,10 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
       actionId,
       providerKind,
       workspaceLocator: parsePayloadArg(workspaceLocator, workspaceLocatorFile),
+      scopeKind,
+      executionScope: executionScope || executionScopeFile
+        ? parsePayloadArg(executionScope, executionScopeFile)
+        : undefined,
       sourceFingerprint,
       executorKind,
       executorBindingRef,

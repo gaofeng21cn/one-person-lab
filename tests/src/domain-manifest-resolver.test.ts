@@ -37,6 +37,7 @@ function createWorkspace() {
 function createBinding(workspacePath: string, manifestCommand: string | null): WorkspaceBinding {
   return {
     binding_id: 'binding-medautoscience',
+    project_scope_id: 'project:binding-medautoscience',
     project_id: 'medautoscience',
     project: 'med-autoscience',
     workspace_path: workspacePath,

@@ -39,6 +39,7 @@ import {
 } from '../family-runtime-domain-route-terminal-sync.ts';
 import { isRuntimeHardStopReason } from '../../../kernel/progress-hard-stop-policy.ts';
 import { persistStageAttemptUsageObservation } from '../family-runtime-stage-attempt-usage-observation.ts';
+import { requireResolvedPersistedStageAttemptIdentity } from '../family-runtime-persisted-identity-admission.ts';
 
 type TemporalStageAttemptTerminalObservation = {
   surface_kind: 'temporal_stage_attempt_query_receipt';
@@ -245,6 +246,21 @@ function temporalNonCompletionBlocker(observation: TemporalStageAttemptTerminalO
   return 'temporal_stage_attempt_not_completed';
 }
 
+function terminalObservationCloseoutIdentity(
+  observation: TemporalStageAttemptTerminalObservation,
+) {
+  const executionScope = observation.query?.execution_scope ?? null;
+  return {
+    stage_attempt_id: observation.stage_attempt_id,
+    ...(observation.query?.stage_run_id
+      ? { stage_run_id: observation.query.stage_run_id }
+      : {}),
+    ...(executionScope
+      ? { execution_scope: executionScope, scope_digest: executionScope.scope_digest }
+      : {}),
+  };
+}
+
 function progressDiagnosticPacketFromTemporalBlocker(input: {
   observation: TemporalStageAttemptTerminalObservation;
   row: StageAttemptRow;
@@ -256,6 +272,7 @@ function progressDiagnosticPacketFromTemporalBlocker(input: {
   }/quality-debt-diagnostics/${encodeURIComponent(input.blocker)}`;
   return {
     surface_kind: 'stage_attempt_closeout_packet',
+    ...terminalObservationCloseoutIdentity(input.observation),
     closeout_refs: [...new Set([...(projected?.closeout_refs ?? []), diagnosticRef])],
     consumed_refs: projected?.consumed_refs ?? [],
     consumed_memory_refs: projected?.consumed_memory_refs ?? [],
@@ -369,6 +386,7 @@ function closeoutPacketFromTemporalCompletedObservation(
       : 'stage_attempt_closeout_packet';
   return normalizeTypedStageCloseoutPacket({
     surface_kind: surfaceKind,
+    ...terminalObservationCloseoutIdentity(observation),
     closeout_refs: closeoutRefs,
     consumed_refs: observation.query.consumed_refs,
     consumed_memory_refs: observation.query.consumed_memory_refs,
@@ -408,6 +426,11 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   if (!row || row.provider_kind !== 'temporal' || row.workflow_id !== observation.workflow_id) {
     return null;
   }
+  requireResolvedPersistedStageAttemptIdentity({
+    db,
+    stageAttemptId: observation.stage_attempt_id,
+    operation: 'sync_stage_attempt_from_temporal_terminal_observation',
+  });
   persistExecutionSessionRef(db, row, observation);
   const observedCostSummary = latestActivityCostSummaryFromTemporalObservation(observation);
   const executionSessionRef = executionSessionRefFromObservation(observation)

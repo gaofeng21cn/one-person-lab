@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import type {
   WorkItemBusinessState,
   WorkItemProjectionDiagnostic,
@@ -23,7 +25,13 @@ export type WorkItemControlResolver = (identity: {
   agent_id: string;
   project_id: string;
   work_item_id: string;
+  legacy_project_ids?: string[];
 }) => WorkItemControlRecord | null;
+
+function legacyPathDerivedProjectId(agentId: string, workspacePath: string) {
+  const digest = createHash('sha256').update(workspacePath).digest('hex').slice(0, 16);
+  return `${agentId}:${digest}`;
+}
 
 export function applyWorkItemControlState(input: {
   items: WorkItemProjectionItem[];
@@ -40,6 +48,10 @@ export function applyWorkItemControlState(input: {
         agent_id: item.identity.agent_id,
         project_id: item.identity.project_id,
         work_item_id: item.identity.work_item_id,
+        legacy_project_ids: [legacyPathDerivedProjectId(
+          item.identity.agent_id,
+          item.identity.workspace_path,
+        )],
       });
     } catch (error) {
       diagnostics.push({

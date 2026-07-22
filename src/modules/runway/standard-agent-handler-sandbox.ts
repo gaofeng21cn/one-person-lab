@@ -8,7 +8,7 @@ import { parseJsonText } from '../../kernel/json-file.ts';
 
 const DEFAULT_HANDLER_TIMEOUT_MS = 120_000;
 const DEFAULT_HANDLER_MAX_BUFFER = 16 * 1024 * 1024;
-const SANDBOX_PROFILE = '(version 1) (allow default) (deny network*) (deny file-write*)';
+const BASE_SANDBOX_PROFILE = '(version 1) (allow default) (deny network*) (deny file-write*)';
 
 export type StandardAgentHandlerBinding =
   | {
@@ -99,16 +99,37 @@ def deny(event, args):
         mode = args[1] if len(args) > 1 else "r"
         if isinstance(mode, str) and any(flag in mode for flag in ("w", "a", "x", "+")):
             raise PermissionError("filesystem write denied")
+        deny_workspace_read(args[0] if args else None)
+    if event in {"os.listdir", "os.scandir", "os.chdir"}:
+        deny_workspace_read(args[0] if args else None)
     if event in {"os.remove", "os.rename", "os.replace", "os.rmdir", "os.mkdir", "os.link", "os.symlink", "os.truncate"}:
         raise PermissionError("filesystem mutation denied")
     if event.startswith("socket.") or event in {"subprocess.Popen", "os.system", "os.posix_spawn", "os.posix_spawnp", "os.exec", "os.fork", "os.forkpty"}:
         raise PermissionError("network or subprocess denied")
 
+def contained(root, candidate):
+    try:
+        return os.path.commonpath((root, candidate)) == root
+    except (TypeError, ValueError):
+        return False
+
+def deny_workspace_read(candidate):
+    if isinstance(candidate, int) or candidate is None:
+        return
+    try:
+        resolved = os.path.realpath(os.fsdecode(os.fspath(candidate)))
+    except (TypeError, ValueError):
+        raise PermissionError("workspace read path is invalid")
+    if contained(workspace_root, resolved) and not any(contained(root, resolved) for root in allowed_read_roots):
+        raise PermissionError("workspace read outside the handler scope denied")
+
 def canonical_text(value):
     return json.dumps(value, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":"))
 
+checkout, module_name, callable_name, workspace_root, workspace_read_root = sys.argv[1:6]
+workspace_root = os.path.realpath(workspace_root)
+allowed_read_roots = tuple(os.path.realpath(root) for root in (checkout, workspace_read_root))
 sys.addaudithook(deny)
-checkout, module_name, callable_name = sys.argv[1:4]
 for candidate in (checkout, os.path.join(checkout, "src"), os.path.join(checkout, "python")):
     if os.path.isdir(candidate):
         sys.path.insert(0, candidate)
@@ -135,6 +156,56 @@ except Exception as error:
 
 function invalid(message: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, details);
+}
+
+function physicalDirectory(value: string, label: string, failureCode: string) {
+  if (!path.isAbsolute(value) || value.includes('\0')) {
+    invalid(`${label} must be an absolute physical directory.`, { path: value });
+  }
+  let realPath: string;
+  try {
+    realPath = fs.realpathSync.native(value);
+  } catch (error) {
+    invalid(`${label} does not exist.`, {
+      path: value,
+      cause: error instanceof Error ? error.message : String(error),
+    });
+  }
+  if (!fs.statSync(realPath!).isDirectory()) {
+    invalid(`${label} must be a directory.`, { path: value });
+  }
+  if (path.resolve(value) !== realPath) {
+    invalid(`${label} must be its current physical canonical path.`, {
+      path: value,
+      resolved_path: realPath,
+      failure_code: failureCode,
+    });
+  }
+  return realPath!;
+}
+
+function canonicalDescendant(root: string, candidate: string) {
+  const relative = path.relative(root, candidate);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function sandboxProfile(input: {
+  checkoutRoot: string;
+  workspaceRoot: string;
+  workspaceReadRoot: string;
+}) {
+  if (input.workspaceReadRoot === input.workspaceRoot) return BASE_SANDBOX_PROFILE;
+  const allowedWorkspaceRoots = [input.workspaceReadRoot];
+  if (canonicalDescendant(input.workspaceRoot, input.checkoutRoot)) {
+    allowedWorkspaceRoots.push(input.checkoutRoot);
+  }
+  const allowed = allowedWorkspaceRoots.length === 1
+    ? `(subpath ${JSON.stringify(allowedWorkspaceRoots[0])})`
+    : `(require-any ${allowedWorkspaceRoots.map((root) => `(subpath ${JSON.stringify(root)})`).join(' ')})`;
+  return [
+    BASE_SANDBOX_PROFILE,
+    `(deny file-read* (require-all (subpath ${JSON.stringify(input.workspaceRoot)}) (require-not ${allowed})))`,
+  ].join(' ');
 }
 
 function containedSourceFile(checkoutRoot: string, relativeFile: string) {
@@ -231,16 +302,36 @@ function processFailure(result: ReturnType<typeof spawnSync>, runtimeKind: strin
 
 export function runStandardAgentHandlerSandbox(input: {
   checkoutRoot: string;
+  workspaceRoot: string;
+  workspaceReadRoot: string;
   binding: StandardAgentHandlerBinding;
   request: unknown;
-  readRoots?: string[];
   timeoutMs?: number;
 }): StandardAgentHandlerSandboxReceipt {
-  const checkoutRoot = fs.realpathSync.native(input.checkoutRoot);
-  const readRoots = [...new Set([
-    checkoutRoot,
-    ...(input.readRoots ?? []).map((entry) => fs.realpathSync.native(entry)),
-  ])];
+  const checkoutRoot = physicalDirectory(
+    input.checkoutRoot,
+    'Standard Agent handler checkout root',
+    'standard_agent_handler_checkout_root_not_canonical',
+  );
+  const workspaceRoot = physicalDirectory(
+    input.workspaceRoot,
+    'Standard Agent handler workspace root',
+    'standard_agent_handler_workspace_root_not_canonical',
+  );
+  const workspaceReadRoot = physicalDirectory(
+    input.workspaceReadRoot,
+    'Standard Agent handler workspace read root',
+    'standard_agent_handler_read_root_not_canonical',
+  );
+  if (!canonicalDescendant(workspaceRoot, workspaceReadRoot)) {
+    invalid('Standard Agent handler workspace read root escapes the workspace.', {
+      workspace_root: workspaceRoot,
+      workspace_read_root: workspaceReadRoot,
+      failure_code: 'standard_agent_handler_read_root_escape',
+    });
+  }
+  const readRoots = [...new Set([checkoutRoot, workspaceReadRoot])];
+  const profile = sandboxProfile({ checkoutRoot, workspaceRoot, workspaceReadRoot });
   const requestBytes = Buffer.from(`${canonicalJsonText(input.request)}\n`, 'utf8');
   const timeout = timeoutMs(input.timeoutMs);
   const commonOptions = {
@@ -260,7 +351,7 @@ export function runStandardAgentHandlerSandbox(input: {
     const target = containedSourceFile(checkoutRoot, input.binding.file);
     const result = spawnSync('/usr/bin/sandbox-exec', [
       '-p',
-      SANDBOX_PROFILE,
+      profile,
       process.execPath,
       '--permission',
       ...readRoots.map((root) => `--allow-fs-read=${root}`),
@@ -293,7 +384,7 @@ export function runStandardAgentHandlerSandbox(input: {
   const python = resolvePython(checkoutRoot);
   const result = spawnSync('/usr/bin/sandbox-exec', [
     '-p',
-    SANDBOX_PROFILE,
+    profile,
     python,
     '-I',
     '-B',
@@ -302,6 +393,8 @@ export function runStandardAgentHandlerSandbox(input: {
     checkoutRoot,
     input.binding.module,
     input.binding.callable,
+    workspaceRoot,
+    workspaceReadRoot,
   ], commonOptions);
   if (result.status !== 0 || result.error) processFailure(result, 'python_audit_hook', timeout);
   const output = parseSingleCanonicalJson(result.stdout ?? '');

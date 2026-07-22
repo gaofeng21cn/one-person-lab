@@ -82,7 +82,9 @@ opl connect doctor --json
 opl foundry interfaces --json
 opl agents interfaces --family-defaults --json
 opl actions export --domain <id> --json
-opl connect scientific search --provider crossref|openalex --query <query> --limit <n> --json
+opl connect scientific search --provider crossref|openalex|pubmed|pmc --query <query> --limit <n> --json
+opl connect references verify --references-file <json> --providers pubmed,pmc --json
+opl connect mcp-stdio
 opl connect skills --json
 opl connect sync-skills --json
 opl connect install --module <agent> --json
@@ -106,7 +108,7 @@ OPL Packages 暴露 Agent Package Core 时，必须把 package core 和 carrier 
 - 单个 package status read 不可用时，projector 仍保留 installed lock 已证明的 installed/exposure truth，但 dependency readiness 与 repair action fail closed 为 `status_unavailable`；status projection 在任何状态下都不发布 activation action。
 - source、focused tests 与 read-model shape 完成只证明 functional implementation；真实 Stable carrier 安装、package update/optimize、Codex config hygiene、reload 后 skill discovery、live launch 和 release/install readback 继续属于独立 release evidence。
 
-Connect 暴露外部资源连接器时，必须保持“平台接入”和“领域判断”分离。`opl connect scientific search --provider crossref|openalex` 是 optional scientific connector profile 的统一只读搜索入口；`opl connect references verify` 另可消费 PubMed、PMC、Semantic Scholar、Crossmark 与 Publisher metadata。PubMed ESummary、Europe PMC core metadata / XML body probe、retry、cache、identifier normalization 和 receipt candidate 属于 Connect transport；`full_text_available` 与 `full_text_body_verified` 必须分开。它们不建立第二文献库、不判断引用质量、不写 MAS paper truth，也不签 owner receipt。MAS 的 scout/write/review/figure 等 Skill 负责医学 query strategy、citation judgment、claim-evidence map、review ledger、论文质量判断和 owner route。
+Connect 暴露外部资源连接器时，必须保持“平台接入”和“领域判断”分离。`opl connect scientific search --provider crossref|openalex|pubmed|pmc` 是 optional scientific connector profile 的统一只读搜索入口；PubMed 使用 ESearch + ESummary，Europe PMC 使用 search API，并保留 PMID / PMCID / DOI、article types 和检索计数核对。`opl connect references verify` 另可消费 PubMed、PMC、Semantic Scholar、Crossmark 与 Publisher metadata。PubMed ESummary、Europe PMC core metadata / XML body probe、retry、cache、identifier normalization 和 receipt candidate 属于 Connect transport；`full_text_available` 与 `full_text_body_verified` 必须分开。`opl connect mcp-stdio` 仅以 progressive search / describe / execute meta-tools 精选暴露同一 scientific / references 实现，不镜像完整 CLI。它们不建立第二文献库、不判断引用质量、不写 MAS paper truth，也不签 owner receipt。MAS 的 scout/write/review/figure 等 Skill 负责医学 query strategy、citation judgment、claim-evidence map、review ledger、论文质量判断和 owner route。
 
 MAS Scholar Skills 兼容 projection 边界：
 

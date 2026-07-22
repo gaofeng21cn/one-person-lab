@@ -117,3 +117,43 @@ test('workspace-bind projects structured locators without deriving private comma
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('workspace-bind preserves project scope when an active workspace moves', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-move-state-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const locatorRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-move-locators-'));
+  const codeRoot = path.join(locatorRoot, 'med-autoscience');
+  const firstWorkspacePath = path.join(locatorRoot, 'Yang', 'DM-CVD-001');
+  const secondWorkspacePath = path.join(locatorRoot, 'Yang', 'DM-CVD-001-moved');
+  const firstProfilePath = path.join(firstWorkspacePath, 'ops', 'profile.toml');
+  const secondProfilePath = path.join(secondWorkspacePath, 'ops', 'profile.toml');
+
+  writeStandardAgentDescriptor(codeRoot);
+  fs.mkdirSync(path.dirname(firstProfilePath), { recursive: true });
+  fs.mkdirSync(path.dirname(secondProfilePath), { recursive: true });
+  fs.writeFileSync(firstProfilePath, '[workspace]\nname = "first"\n', 'utf8');
+  fs.writeFileSync(secondProfilePath, '[workspace]\nname = "moved"\n', 'utf8');
+
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+
+  try {
+    const first = runCli([
+      'workspace', 'bind', '--project', 'medautoscience', '--path', firstWorkspacePath,
+      '--workspace-root', codeRoot, '--profile', firstProfilePath,
+    ], env).workspace_catalog.binding;
+    const second = runCli([
+      'workspace', 'bind', '--project', 'medautoscience', '--path', secondWorkspacePath,
+      '--workspace-root', codeRoot, '--profile', secondProfilePath,
+    ], env).workspace_catalog.binding;
+
+    assert.equal(second.project_scope_id, first.project_scope_id);
+    assert.notEqual(second.binding_id, first.binding_id);
+  } finally {
+    fs.rmSync(locatorRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

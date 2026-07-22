@@ -4,10 +4,29 @@ import type { DatabaseSync } from 'node:sqlite';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import type { WorkItemExecutionScopeSnapshot } from '../workspace/index.ts';
+import {
+  assertRuntimeRowScopeMatchesWrite,
+  createRuntimeExecutionScopeTable,
+  executionScopeColumnsFromRow,
+  executionScopeFromRow,
+  normalizeRuntimeExecutionScopeWrite,
+  persistRuntimeExecutionScope,
+  requireRuntimeExecutionScopeMutationAllowed,
+  type RuntimeExecutionIdentityState,
+  type RuntimeExecutionScopeKind,
+  type RuntimeExecutionScopeWriteKind,
+} from './family-runtime-execution-scope-persistence.ts';
+import {
+  addSqliteColumnIfMissing,
+  readSqliteColumnNames,
+  withImmediateSchemaMigration,
+} from './family-runtime-schema-migrations.ts';
 import {
   requireTemporalStageRunWorkflowInputLaunchable,
   type TemporalStageRunWorkflowInput,
 } from './family-runtime-temporal.ts';
+import { requireNoActiveUnresolvedRuntimeIdentityConflict } from './family-runtime-legacy-identity-admission.ts';
 
 export type StageRunLaunchStatus = 'registered' | 'starting' | 'start_failed' | 'started' | 'closed';
 
@@ -21,6 +40,14 @@ type StageRunLaunchRow = {
   stage_id: string;
   workflow_id: string;
   parent_route_decision_ref: string | null;
+  scope_kind?: RuntimeExecutionScopeKind;
+  project_scope_id?: string | null;
+  work_item_scope_id?: string | null;
+  workspace_binding_id?: string | null;
+  binding_version_id?: string | null;
+  scope_digest?: string | null;
+  execution_scope_json?: string | null;
+  identity_state?: RuntimeExecutionIdentityState;
   stage_run_input_json: string;
   launch_status: StageRunLaunchStatus;
   temporal_start_receipt_json: string | null;
@@ -47,6 +74,7 @@ function parseObject(value: string | null) {
 }
 
 function rowPayload(row: StageRunLaunchRow) {
+  const scopeColumns = executionScopeColumnsFromRow(row);
   return {
     surface_kind: 'opl_stage_run_launch_registry_entry',
     version: 'opl-stage-run-launch-registry-entry.v2',
@@ -57,6 +85,8 @@ function rowPayload(row: StageRunLaunchRow) {
     stage_id: row.stage_id,
     workflow_id: row.workflow_id,
     parent_route_decision_ref: row.parent_route_decision_ref,
+    ...scopeColumns,
+    execution_scope: executionScopeFromRow(row),
     stage_run_input: parseObject(row.stage_run_input_json) as TemporalStageRunWorkflowInput,
     launch_status: row.launch_status,
     temporal_start_receipt: parseObject(row.temporal_start_receipt_json),
@@ -83,43 +113,75 @@ function rowPayload(row: StageRunLaunchRow) {
 
 export function createStageRunLaunchTable(db: DatabaseSync) {
   db.exec('PRAGMA busy_timeout = 5000');
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS stage_run_launches (
-      stage_run_id TEXT PRIMARY KEY,
-      stage_run_invocation_id TEXT NOT NULL,
-      stage_run_spec_sha256 TEXT NOT NULL,
-      domain_id TEXT NOT NULL,
-      stage_id TEXT NOT NULL,
-      workflow_id TEXT NOT NULL UNIQUE,
-      parent_route_decision_ref TEXT,
-      stage_run_input_json TEXT NOT NULL,
-      launch_status TEXT NOT NULL,
-      temporal_start_receipt_json TEXT,
-      terminal_status TEXT,
-      last_start_error TEXT,
-      start_claim_token TEXT,
-      start_claimed_at TEXT,
-      start_lease_expires_at TEXT,
-      start_attempt_count INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      UNIQUE(domain_id, stage_id, stage_run_invocation_id)
-    );
-    CREATE INDEX IF NOT EXISTS idx_stage_run_launches_invocation
-      ON stage_run_launches(domain_id, stage_id, stage_run_invocation_id);
-    CREATE INDEX IF NOT EXISTS idx_stage_run_launches_status
-      ON stage_run_launches(launch_status, updated_at);
-  `);
-  const columns = new Set((db.prepare('PRAGMA table_info(stage_run_launches)').all() as Array<{ name: string }>)
-    .map((entry) => entry.name));
-  for (const [column, definition] of [
-    ['start_claim_token', 'TEXT'],
-    ['start_claimed_at', 'TEXT'],
-    ['start_lease_expires_at', 'TEXT'],
-    ['start_attempt_count', 'INTEGER NOT NULL DEFAULT 0'],
-  ] as const) {
-    if (!columns.has(column)) db.exec(`ALTER TABLE stage_run_launches ADD COLUMN ${column} ${definition}`);
-  }
+  return withImmediateSchemaMigration(db, () => {
+    createRuntimeExecutionScopeTable(db);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stage_run_launches (
+        stage_run_id TEXT PRIMARY KEY,
+        stage_run_invocation_id TEXT NOT NULL,
+        stage_run_spec_sha256 TEXT NOT NULL,
+        domain_id TEXT NOT NULL,
+        stage_id TEXT NOT NULL,
+        workflow_id TEXT NOT NULL UNIQUE,
+        parent_route_decision_ref TEXT,
+        scope_kind TEXT NOT NULL DEFAULT 'identity_unresolved'
+          CHECK(scope_kind IN ('work_item', 'domain', 'system', 'identity_unresolved')),
+        project_scope_id TEXT,
+        work_item_scope_id TEXT,
+        workspace_binding_id TEXT,
+        binding_version_id TEXT,
+        scope_digest TEXT REFERENCES execution_scopes(scope_digest),
+        execution_scope_json TEXT,
+        identity_state TEXT NOT NULL DEFAULT 'identity_unresolved'
+          CHECK(identity_state IN ('resolved', 'identity_unresolved', 'quarantined')),
+        stage_run_input_json TEXT NOT NULL,
+        launch_status TEXT NOT NULL,
+        temporal_start_receipt_json TEXT,
+        terminal_status TEXT,
+        last_start_error TEXT,
+        start_claim_token TEXT,
+        start_claimed_at TEXT,
+        start_lease_expires_at TEXT,
+        start_attempt_count INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(domain_id, stage_id, stage_run_invocation_id)
+      );
+    `);
+    const columns = readSqliteColumnNames(db, 'stage_run_launches');
+    for (const [column, definition] of [
+      ['start_claim_token', 'start_claim_token TEXT'],
+      ['start_claimed_at', 'start_claimed_at TEXT'],
+      ['start_lease_expires_at', 'start_lease_expires_at TEXT'],
+      ['start_attempt_count', 'start_attempt_count INTEGER NOT NULL DEFAULT 0'],
+      [
+        'scope_kind',
+        "scope_kind TEXT NOT NULL DEFAULT 'identity_unresolved' CHECK(scope_kind IN ('work_item', 'domain', 'system', 'identity_unresolved'))",
+      ],
+      ['project_scope_id', 'project_scope_id TEXT'],
+      ['work_item_scope_id', 'work_item_scope_id TEXT'],
+      ['workspace_binding_id', 'workspace_binding_id TEXT'],
+      ['binding_version_id', 'binding_version_id TEXT'],
+      ['scope_digest', 'scope_digest TEXT REFERENCES execution_scopes(scope_digest)'],
+      ['execution_scope_json', 'execution_scope_json TEXT'],
+      [
+        'identity_state',
+        "identity_state TEXT NOT NULL DEFAULT 'identity_unresolved' CHECK(identity_state IN ('resolved', 'identity_unresolved', 'quarantined'))",
+      ],
+    ] as const) {
+      addSqliteColumnIfMissing(db, 'stage_run_launches', columns, column, definition);
+    }
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_stage_run_launches_invocation
+        ON stage_run_launches(domain_id, stage_id, stage_run_invocation_id);
+      CREATE INDEX IF NOT EXISTS idx_stage_run_launches_status
+        ON stage_run_launches(launch_status, updated_at);
+      CREATE INDEX IF NOT EXISTS idx_stage_run_launches_work_item_scope
+        ON stage_run_launches(work_item_scope_id, stage_id, updated_at);
+      CREATE INDEX IF NOT EXISTS idx_stage_run_launches_scope_digest
+        ON stage_run_launches(scope_digest);
+    `);
+  });
 }
 
 function launchRow(db: DatabaseSync, stageRunId: string) {
@@ -148,12 +210,42 @@ export function findStageRunLaunch(db: DatabaseSync, stageRunId: string) {
 export function registerStageRunLaunch(
   db: DatabaseSync,
   input: TemporalStageRunWorkflowInput,
+  scopeInput: {
+    scopeKind?: RuntimeExecutionScopeWriteKind;
+    executionScope?: WorkItemExecutionScopeSnapshot | null;
+  } = {},
 ) {
   const stageRunInput = requireTemporalStageRunWorkflowInputLaunchable(input, {
     revalidateContent: 'historical_evidence',
   });
   createStageRunLaunchTable(db);
   const canonicalInput = canonicalJsonText(stageRunInput);
+  const scope = normalizeRuntimeExecutionScopeWrite({
+    domainId: stageRunInput.domain_id,
+    scopeKind: stageRunInput.scope_kind,
+    executionScope: stageRunInput.execution_scope,
+  });
+  if (scopeInput.scopeKind !== undefined || scopeInput.executionScope !== undefined) {
+    const suppliedScope = normalizeRuntimeExecutionScopeWrite({
+      domainId: stageRunInput.domain_id,
+      scopeKind: scopeInput.scopeKind,
+      executionScope: scopeInput.executionScope,
+    });
+    if (canonicalJsonText(suppliedScope.columns) !== canonicalJsonText(scope.columns)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'StageRun registry scope input conflicts with the StageRun direct execution identity.',
+        {
+          failure_code: 'runtime_execution_scope_conflict',
+          stage_run_id: stageRunInput.stage_run_id,
+          direct_scope_kind: scope.columns.scope_kind,
+          supplied_scope_kind: suppliedScope.columns.scope_kind,
+          direct_scope_digest: scope.columns.scope_digest,
+          supplied_scope_digest: suppliedScope.columns.scope_digest,
+        },
+      );
+    }
+  }
   db.exec('BEGIN IMMEDIATE');
   try {
     const existing = db.prepare(`
@@ -165,6 +257,10 @@ export function registerStageRunLaunch(
       stageRunInput.stage_run_invocation_id,
     ) as StageRunLaunchRow | undefined;
     if (existing) {
+      assertRuntimeRowScopeMatchesWrite(existing, scope, {
+        stage_run_id: existing.stage_run_id,
+        stage_run_invocation_id: stageRunInput.stage_run_invocation_id,
+      });
       if (
         existing.stage_run_id !== stageRunInput.stage_run_id
         || existing.stage_run_spec_sha256 !== stageRunInput.stage_run_spec_sha256
@@ -191,15 +287,30 @@ export function registerStageRunLaunch(
         launch: rowPayload(existing),
       } as const;
     }
+    requireNoActiveUnresolvedRuntimeIdentityConflict({
+      db,
+      domainId: stageRunInput.domain_id,
+      stageId: stageRunInput.stage_id,
+      executionScope: scope.executionScope,
+      operation: 'register_stage_run_launch',
+      candidateStageRunId: stageRunInput.stage_run_id,
+    });
+    persistRuntimeExecutionScope(db, scope, stageRunInput.domain_id);
     requireTemporalStageRunWorkflowInputLaunchable(stageRunInput);
     const createdAt = nowIso();
     db.prepare(`
       INSERT INTO stage_run_launches (
         stage_run_id, stage_run_invocation_id, stage_run_spec_sha256,
         domain_id, stage_id, workflow_id, parent_route_decision_ref,
+        scope_kind, project_scope_id, work_item_scope_id, workspace_binding_id,
+        binding_version_id, scope_digest, execution_scope_json, identity_state,
         stage_run_input_json, launch_status, temporal_start_receipt_json,
         terminal_status, last_start_error, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'registered', NULL, NULL, NULL, ?, ?)
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, 'registered', NULL, NULL, NULL, ?, ?
+      )
     `).run(
       stageRunInput.stage_run_id,
       stageRunInput.stage_run_invocation_id,
@@ -208,6 +319,14 @@ export function registerStageRunLaunch(
       stageRunInput.stage_id,
       stageRunInput.workflow_id,
       stageRunInput.parent_route_decision_ref ?? null,
+      scope.columns.scope_kind,
+      scope.columns.project_scope_id,
+      scope.columns.work_item_scope_id,
+      scope.columns.workspace_binding_id,
+      scope.columns.binding_version_id,
+      scope.columns.scope_digest,
+      scope.columns.execution_scope_json,
+      scope.columns.identity_state,
       canonicalInput,
       createdAt,
       createdAt,
@@ -268,6 +387,7 @@ export function claimStageRunStart(
         { stage_run_id: input.stageRunId },
       );
     }
+    requireRuntimeExecutionScopeMutationAllowed(db, existing, 'claim_stage_run_start');
     if (existing.launch_status === 'started' || existing.launch_status === 'closed') {
       db.exec('COMMIT');
       return {
@@ -286,6 +406,14 @@ export function claimStageRunStart(
         launch: rowPayload(existing),
       } as const;
     }
+    requireNoActiveUnresolvedRuntimeIdentityConflict({
+      db,
+      domainId: existing.domain_id,
+      stageId: existing.stage_id,
+      executionScope: executionScopeFromRow(existing),
+      operation: 'claim_stage_run_start',
+      candidateStageRunId: existing.stage_run_id,
+    });
     const claimedAt = nowIso(now);
     const leaseExpiresAt = nowIso(new Date(now.getTime() + leaseMs));
     const result = db.prepare(`
@@ -352,6 +480,7 @@ export function recordStageRunTemporalStart(
         { stage_run_id: input.stageRunId },
       );
     }
+    requireRuntimeExecutionScopeMutationAllowed(db, row, 'record_stage_run_temporal_start');
     const receipt = input.temporalStartReceipt;
     const workflowId = typeof receipt.workflow_id === 'string' ? receipt.workflow_id.trim() : '';
     const firstExecutionRunId = typeof receipt.first_execution_run_id === 'string'
@@ -431,6 +560,10 @@ export function recordStageRunStartFailure(
   db: DatabaseSync,
   input: { stageRunId: string; claimToken: string; error: unknown; now?: Date },
 ) {
+  createStageRunLaunchTable(db);
+  const row = launchRow(db, input.stageRunId);
+  if (!row) return inspectStageRunLaunch(db, input.stageRunId);
+  requireRuntimeExecutionScopeMutationAllowed(db, row, 'record_stage_run_start_failure');
   const message = input.error instanceof Error ? input.error.message : String(input.error);
   db.prepare(`
     UPDATE stage_run_launches
@@ -467,6 +600,7 @@ export function recordStageRunClosed(
       db.exec('COMMIT');
       return null;
     }
+    requireRuntimeExecutionScopeMutationAllowed(db, row, 'record_stage_run_closed');
     if (row.launch_status === 'closed') {
       if (row.terminal_status && row.terminal_status !== terminalStatus) {
         throw new FrameworkContractError(

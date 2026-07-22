@@ -85,6 +85,7 @@ import {
   packageSkillPromptPrefix,
   sandboxAttemptSkillRuntime,
 } from './family-runtime-attempt-skill-projection.ts';
+import { requireFamilyRuntimeExecutionScope } from './family-runtime-execution-scope.ts';
 
 export {
   normalizeTypedStageCloseoutPacket,
@@ -137,6 +138,30 @@ function executorKindFromAttemptPolicy(attempt: JsonRecord) {
   return normalizeAgentExecutorStageMode(optionalString(executorPolicyFromAttempt(attempt)?.executor_kind));
 }
 
+function closeoutExecutionScopeFromAttempt(attempt: JsonRecord) {
+  if (attempt.scope_kind === 'identity_unresolved' || attempt.identity_state === 'identity_unresolved') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Identity-unresolved StageAttempt cannot produce a typed closeout.',
+      {
+        failure_code: 'runtime_ingress_identity_unresolved',
+        stage_attempt_id: optionalString(attempt.stage_attempt_id),
+      },
+    );
+  }
+  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  const executionScope = requireFamilyRuntimeExecutionScope({
+    scopeKind: attempt.scope_kind,
+    executionScope: attempt.execution_scope,
+    workspaceLocator,
+    domainId: optionalString(attempt.domain_id) ?? optionalString(workspaceLocator.domain_id),
+    operation: 'build_provider_runtime_closeout',
+  }).executionScope;
+  return executionScope
+    ? { execution_scope: executionScope, scope_digest: executionScope.scope_digest }
+    : {};
+}
+
 function codexProjectionRunnerModeFromAttempt(attempt: JsonRecord) {
   const explicitMode = normalizeCodexStageRunnerMode(process.env.OPL_CODEX_STAGE_RUNNER_MODE);
   if (process.env.OPL_CODEX_STAGE_RUNNER_MODE?.trim()) {
@@ -160,6 +185,10 @@ function buildProviderRuntimeCloseoutPacket(input: {
   return normalizeTypedStageCloseoutPacket({
     surface_kind: 'stage_attempt_closeout_packet',
     stage_attempt_id: stageAttemptId,
+    ...(optionalString(input.attempt.stage_run_id)
+      ? { stage_run_id: optionalString(input.attempt.stage_run_id) }
+      : {}),
+    ...closeoutExecutionScopeFromAttempt(input.attempt),
     ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
     closeout_refs: [
       `opl://stage-attempts/${encodeURIComponent(stageAttemptId)}/runtime-blockers/${encodeURIComponent(input.blockedReason)}`,
@@ -219,6 +248,10 @@ function buildRawArtifactProgressCloseoutPacket(input: {
   return normalizeTypedStageCloseoutPacket({
     surface_kind: 'stage_attempt_closeout_packet',
     stage_attempt_id: stageAttemptId,
+    ...(optionalString(input.attempt.stage_run_id)
+      ? { stage_run_id: optionalString(input.attempt.stage_run_id) }
+      : {}),
+    ...closeoutExecutionScopeFromAttempt(input.attempt),
     ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
     closeout_refs: [{
       ref: input.rawArtifact.output_ref,
@@ -418,7 +451,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         })
       : input.attempt;
     const executionProviderEnv = codexStageAttemptEnv({
-      attempt: executionAttempt,
+      attempt: input.attempt,
       stagePacketRef: stagePacketTransportRef,
       workspaceRoot: runInSandbox ? sandboxWorkspaceRoot : workspaceRoot,
     });
@@ -887,6 +920,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
               : {}),
             ...(closeoutRejection.idempotency_key
               ? { rejected_closeout_idempotency_key: closeoutRejection.idempotency_key }
+              : {}),
+            ...(closeoutRejection.scope_digest
+              ? { rejected_closeout_scope_digest: closeoutRejection.scope_digest }
               : {}),
           }
         : {}),

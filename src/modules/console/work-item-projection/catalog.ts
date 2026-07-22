@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -25,11 +24,6 @@ export function canonicalWorkspacePath(workspacePath: string) {
   } catch {
     return resolved;
   }
-}
-
-function stableProjectId(agentId: string, workspacePath: string) {
-  const digest = createHash('sha256').update(workspacePath).digest('hex').slice(0, 16);
-  return `${agentId}:${digest}`;
 }
 
 function newestBinding(bindings: WorkspaceBinding[]) {
@@ -156,40 +150,52 @@ export function buildProjectCatalog(bindings: ReadonlyArray<WorkspaceBinding>) {
   const grouped = new Map<string, WorkspaceBinding[]>();
   for (const binding of bindings) {
     if (binding.status === 'archived') continue;
+    const key = binding.project_scope_id;
+    grouped.set(key, [...(grouped.get(key) ?? []), binding]);
     if (!fs.existsSync(binding.workspace_path)) {
       diagnostics.push({
         reason: 'workspace_binding_path_missing',
         ref: binding.workspace_path,
-        details: { binding_id: binding.binding_id, binding_status: binding.status },
+        details: {
+          binding_id: binding.binding_id,
+          binding_status: binding.status,
+          project_scope_id: binding.project_scope_id,
+        },
       });
-      continue;
     }
-    const agent = resolveStandardAgent(binding.project_id) ?? resolveStandardAgent(binding.project);
-    const agentId = agent?.agent_id ?? binding.project_id;
-    const workspacePath = canonicalWorkspacePath(binding.workspace_path);
-    const key = `${agentId}\u0000${workspacePath}`;
-    grouped.set(key, [...(grouped.get(key) ?? []), binding]);
   }
 
   const projects: ProjectCatalogEntry[] = [];
-  for (const bindingsForPath of grouped.values()) {
-    const selected = newestBinding(bindingsForPath);
+  for (const bindingsForScope of grouped.values()) {
+    const readableBindings = bindingsForScope.filter((binding) => fs.existsSync(binding.workspace_path));
+    if (readableBindings.length === 0) {
+      diagnostics.push({
+        reason: 'project_scope_has_no_readable_workspace_binding',
+        project_id: bindingsForScope[0]?.project_scope_id,
+        details: {
+          project_scope_id: bindingsForScope[0]?.project_scope_id,
+          binding_ids: bindingsForScope.map((binding) => binding.binding_id).sort(),
+        },
+      });
+      continue;
+    }
+    const selected = newestBinding(readableBindings);
     const agent = resolveStandardAgent(selected.project_id) ?? resolveStandardAgent(selected.project);
     const agentId = agent?.agent_id ?? selected.project_id;
     const workspacePath = canonicalWorkspacePath(selected.workspace_path);
-    const projectId = stableProjectId(agentId, workspacePath);
+    const projectScopeId = selected.project_scope_id;
     projects.push({
-      project_id: projectId,
-      scope_id: `project:${projectId}`,
+      project_id: projectScopeId,
+      scope_id: projectScopeId,
       agent_id: agentId,
       agent_display_name: agent?.display_name ?? agentId,
       domain_id: agent?.domain_id ?? selected.project_id,
       display_name: path.basename(workspacePath),
       workspace_path: workspacePath,
-      binding_status: bindingsForPath.some((binding) => binding.status === 'active') ? 'active' : 'inactive',
+      binding_status: readableBindings.some((binding) => binding.status === 'active') ? 'active' : 'inactive',
       selected_binding_id: selected.binding_id,
-      binding_ids: bindingsForPath.map((binding) => binding.binding_id).sort(),
-      source_refs: bindingsForPath.map((binding) => ({
+      binding_ids: bindingsForScope.map((binding) => binding.binding_id).sort(),
+      source_refs: bindingsForScope.map((binding) => ({
         ref_kind: 'projection',
         ref: `workspace-binding:${binding.binding_id}`,
         role: 'workspace_binding',

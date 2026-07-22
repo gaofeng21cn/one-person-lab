@@ -210,7 +210,13 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
     standard_agent_standalone_mcp_default_enabled: false,
     standard_agent_plugin_manifest_must_not_expose_mcp_servers: true,
     opl_unified_mcp_projection_owner: 'one-person-lab',
-    future_unified_mcp_server_strategy: 'opl_owned_unified_server_when_runtime_verified',
+    unified_mcp_server_ready: true,
+    unified_mcp_server_readiness: 'active_runtime_and_protocol_verified',
+    unified_mcp_server_id: 'opl-connect',
+    unified_mcp_server_command: ['opl', 'connect', 'mcp-stdio'],
+    unified_mcp_server_registration_surface: 'opl connect sync-skills',
+    unified_mcp_server_toolsets: ['scientific', 'references'],
+    unified_mcp_server_read_only_default: true,
     domain_repo_mcp_server_role: 'direct_protocol_adapter_or_proof_lane_only',
     cli_mcp_relationship_policy: {
       surface_kind: 'opl_cli_mcp_relationship_policy',
@@ -247,6 +253,7 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       'opl agents run --domain <agent_id> --action <action_id> --json',
       'opl connect skills --json',
       'opl connect sync-skills --json',
+      'opl connect mcp-stdio',
     ],
   },
   contract_version_policy: {

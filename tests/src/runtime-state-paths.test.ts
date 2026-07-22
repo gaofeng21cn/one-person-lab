@@ -30,17 +30,17 @@ test('OPL endpoint catalog advertises current runtime URLs for public resources 
   assert.equal(endpoints.logs, '/pilot/opl/api/opl/sessions/logs');
 });
 
-test('OPL state paths default to the current state dir and ignore old UI adapter state paths', () => {
+test('OPL state paths honor the explicit current state dir and ignore old UI adapter state paths', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-state-paths-'));
   const previousHome = process.env.HOME;
   const previousStateDir = process.env.OPL_STATE_DIR;
 
-  delete process.env.OPL_STATE_DIR;
   process.env.HOME = homeRoot;
 
   try {
     const baseDir = path.join(homeRoot, 'Library', 'Application Support', 'OPL');
     const expectedStateDir = path.join(baseDir, 'state');
+    process.env.OPL_STATE_DIR = expectedStateDir;
     const paths = resolveOplStatePaths();
     assert.equal(paths.state_dir, expectedStateDir);
     assert.equal(paths.developer_supervisor_config_file, path.join(expectedStateDir, 'developer-supervisor.json'));

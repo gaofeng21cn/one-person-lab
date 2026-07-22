@@ -283,6 +283,36 @@ export type WorkItemProjectionDiagnostic = {
   details?: JsonRecord;
 };
 
+export type WorkItemExecutionIdentityHealth = {
+  status: 'clear' | 'attention_required' | 'not_evaluated';
+  execution_count: number;
+  resolved_execution_count: number;
+  unresolved_execution_count: number;
+  conflict_execution_count: number;
+  not_in_inventory_execution_count: number;
+  non_work_item_execution_count: number;
+  reason_counts: Array<{
+    reason: string;
+    count: number;
+  }>;
+  sample_attempt_refs: string[];
+};
+
+export type WorkItemUnresolvedExecution = {
+  attempt_ref: string;
+  stage_run_id: string | null;
+  stage_id: string | null;
+  role: string | null;
+  scope_kind: string | null;
+  identity_state: string | null;
+  reason: string;
+  project_scope_id: string | null;
+  work_item_scope_id: string | null;
+  domain_id: string | null;
+  domain_work_item_id: string | null;
+  details: JsonRecord;
+};
+
 export type WorkItemProjectionV2 = {
   surface_kind: 'opl_work_item_projection';
   schema_version: 'work-item-projection.v2';
@@ -291,6 +321,8 @@ export type WorkItemProjectionV2 = {
   agent_catalog: AgentCatalogEntry[];
   agent_availability: AgentAvailability[];
   project_catalog: ProjectCatalogEntry[];
+  identity_health: WorkItemExecutionIdentityHealth;
+  unresolved_executions: WorkItemUnresolvedExecution[];
   summary: {
     agent_count: number;
     project_count: number;

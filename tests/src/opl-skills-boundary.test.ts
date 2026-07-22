@@ -47,7 +47,6 @@ const allowedMcpProjectionFields = [
   'cli_mcp_relationship_policy',
   'descriptor_ref',
   'domain_repo_mcp_server_role',
-  'future_unified_mcp_server_strategy',
   'legacy_standalone_mcp_servers_retired',
   'mcp_context_budget_policy',
   'mcp_descriptor_must_delegate_to_series_spine',
@@ -57,11 +56,16 @@ const allowedMcpProjectionFields = [
   'standard_agent_standalone_mcp_default_enabled',
   'surface_kind',
   'unified_mcp_projection_owner',
+  'unified_mcp_server_command',
+  'unified_mcp_server_id',
+  'unified_mcp_server_read_only_default',
+  'unified_mcp_server_readiness',
+  'unified_mcp_server_ready',
+  'unified_mcp_server_registration_surface',
+  'unified_mcp_server_toolsets',
 ] as const;
 
 const forbiddenRuntimeMcpReadinessFields = [
-  'unified_mcp_server_ready',
-  'unified_mcp_server_readiness',
   'runtime_server_ready',
   'runtime_server_readiness',
   'runtime_server_url',
@@ -229,7 +233,13 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(pack.mcp_projection.standard_agent_standalone_mcp_default_enabled, false);
     assert.equal(pack.mcp_projection.standard_agent_plugin_manifest_must_not_expose_mcp_servers, true);
     assert.equal(pack.mcp_projection.unified_mcp_projection_owner, 'one-person-lab');
-    assert.equal(pack.mcp_projection.future_unified_mcp_server_strategy, 'opl_owned_unified_server_when_runtime_verified');
+    assert.equal(pack.mcp_projection.unified_mcp_server_ready, true);
+    assert.equal(pack.mcp_projection.unified_mcp_server_readiness, 'active_runtime_and_protocol_verified');
+    assert.equal(pack.mcp_projection.unified_mcp_server_id, 'opl-connect');
+    assert.deepEqual(pack.mcp_projection.unified_mcp_server_command, ['opl', 'connect', 'mcp-stdio']);
+    assert.equal(pack.mcp_projection.unified_mcp_server_registration_surface, 'opl connect sync-skills');
+    assert.deepEqual(pack.mcp_projection.unified_mcp_server_toolsets, ['scientific', 'references']);
+    assert.equal(pack.mcp_projection.unified_mcp_server_read_only_default, true);
     assert.equal(pack.mcp_projection.domain_repo_mcp_server_role, 'direct_protocol_adapter_or_proof_lane_only');
     const cliMcpRelationshipPolicy = pack.mcp_projection.cli_mcp_relationship_policy as Record<string, unknown>;
     const mcpContextBudgetPolicy = pack.mcp_projection.mcp_context_budget_policy as Record<string, unknown>;
@@ -350,8 +360,20 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
 
     assert.equal(result.summary.registered, 5);
     assert.equal(result.summary.removed_standalone_mcp_servers, 2);
+    assert.equal(result.summary.registered_unified_mcp_servers, 1);
+    assert.deepEqual(result.unified_mcp_server, {
+      server_id: 'opl-connect',
+      status: 'registered',
+      owner: 'one-person-lab',
+      transport: 'stdio',
+      command: 'opl',
+      args: ['connect', 'mcp-stdio'],
+      read_only_default: true,
+      progressive_discovery: true,
+    });
     assert.equal(result.summary.removed_superseded_plugin_tables, 4);
     assert.match(config, /\[mcp_servers\.sentrux\]/);
+    assert.match(config, /\[mcp_servers\.opl-connect\]\ncommand = "opl"\nargs = \["connect", "mcp-stdio"\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.med-autoscience\]/);
     assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);

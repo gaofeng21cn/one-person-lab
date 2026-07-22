@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.dev/contracts/execution-scope-snapshot.schema.json",
+  "title": "OPL Execution Scope Snapshot",
+  "description": "Immutable OPL-owned binding between one project, one domain work item, and one workspace binding version. Transport and observability surfaces carry this snapshot but cannot replace its durable exact-match validation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "scope_kind",
+    "project_scope_id",
+    "work_item_scope_id",
+    "domain_id",
+    "domain_work_item_id",
+    "workspace_binding_id",
+    "binding_version_id",
+    "workspace_root",
+    "canonical_work_item_root",
+    "canonical_work_item_root_identity",
+    "inventory_digest",
+    "source_alias_fields",
+    "scope_digest"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_execution_scope_snapshot" },
+    "version": { "const": "opl-execution-scope-snapshot.v2" },
+    "scope_kind": { "const": "work_item" },
+    "project_scope_id": {
+      "type": "string",
+      "pattern": "^project:[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "work_item_scope_id": {
+      "type": "string",
+      "pattern": "^work-item:[a-f0-9]{64}$"
+    },
+    "domain_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "domain_work_item_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "workspace_binding_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "binding_version_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "workspace_root": { "type": "string", "minLength": 1 },
+    "canonical_work_item_root": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
+    },
+    "canonical_work_item_root_identity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "surface_kind",
+            "version",
+            "workspace_device",
+            "workspace_inode",
+            "work_item_device",
+            "work_item_inode"
+          ],
+          "properties": {
+            "surface_kind": { "const": "opl_work_item_root_identity" },
+            "version": { "const": "opl-work-item-root-identity.v1" },
+            "workspace_device": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)$" },
+            "workspace_inode": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)$" },
+            "work_item_device": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)$" },
+            "work_item_inode": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)$" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "inventory_digest": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
+    },
+    "source_alias_fields": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+      }
+    },
+    "scope_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "canonical_work_item_root": { "type": "null" } },
+        "required": ["canonical_work_item_root"]
+      },
+      "then": {
+        "properties": { "canonical_work_item_root_identity": { "type": "null" } }
+      },
+      "else": {
+        "properties": { "canonical_work_item_root_identity": { "type": "object" } }
+      }
+    }
+  ]
+}

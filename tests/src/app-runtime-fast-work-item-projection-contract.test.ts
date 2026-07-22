@@ -28,10 +28,33 @@ test('App Runtime fast producer contract keeps summaries complete and diagnostic
   assert.equal(contract.inventory_policy.archived_work_items_included, true);
   assert.equal(contract.inventory_policy.runtime_history_may_create_work_items, false);
   assert.equal(contract.inventory_policy.legacy_runtime_views_repopulated_from_work_items, false);
+  assert.equal(contract.inventory_policy.project_identity_source, 'workspace_binding.project_scope_id');
+  assert.equal(contract.inventory_policy.workspace_path_is_project_identity, false);
+  assert.equal(contract.execution_identity_policy.authoritative_scope_source, 'attempt.execution_scope');
+  assert.equal(contract.execution_identity_policy.join_key, 'execution_scope.work_item_scope_id');
+  assert.equal(contract.execution_identity_policy.workspace_locator_aliases_may_assign_work_item, false);
+  assert.equal(
+    contract.execution_identity_policy.legacy_locator_execution_scope_policy,
+    'diagnostic_only_identity_unresolved',
+  );
+  assert.equal(contract.execution_identity_policy.unresolved_or_conflicting_execution_is_quarantined, true);
+  assert.deepEqual(contract.execution_identity_policy.stage_run_without_attempt_policy, {
+    record_kind: 'stage_run_without_stage_attempt',
+    scope_source: 'stage_run.execution_scope',
+    projection_effect: 'diagnostic_only',
+    resolved_scope_may_mark_matching_work_item_execution_unknown: true,
+    may_create_attempt_workflow_wake_running_proof_or_usage: false,
+    untrusted_claimed_scope_is_detail_only: true,
+    unresolved_quarantined_or_conflicting_scope_may_assign_work_item: false,
+    diagnostic_details_are_bounded: true,
+  });
   assert.equal(contract.bounded_fast_policy.max_serialized_work_item_summary_bytes_per_item, 16_384);
   assert.equal(contract.bounded_fast_policy.current_projection_acceptance_budget_bytes, 131_072);
   assert.equal(contract.bounded_fast_policy.attempt_ref_limit_per_item, 1);
   assert.equal(contract.bounded_fast_policy.diagnostic_items_embedded, false);
+  assert.equal(contract.bounded_fast_policy.identity_health_summary_embedded, true);
+  assert.equal(contract.bounded_fast_policy.identity_health_sample_attempt_ref_limit, 1);
+  assert.equal(contract.bounded_fast_policy.unresolved_execution_details_embedded, false);
   assert.equal(contract.bounded_fast_policy.condition_details_embedded, false);
   assert.equal(contract.bounded_fast_policy.source_ref_details_embedded, false);
   assert.equal(contract.bounded_fast_policy.token_source_ref_details_embedded, false);

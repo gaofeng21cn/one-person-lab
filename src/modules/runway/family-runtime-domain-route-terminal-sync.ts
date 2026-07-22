@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   record as recordValue,
@@ -15,6 +16,7 @@ import {
   getStageAttemptRow,
   listStageAttemptsForTask,
   stageAttemptToPayload,
+  type StageAttemptRow,
   type StageAttemptStatus,
 } from './family-runtime-stage-attempt-ledger.ts';
 import {
@@ -29,6 +31,7 @@ import {
   FAMILY_RUNTIME_TASK_STATUS,
   taskFailureProjectionSql,
 } from './family-runtime-queue-projection-boundary.ts';
+import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
 
 export const DOMAIN_ROUTE_PROGRESS_OBSERVED_REASON = 'domain_route_consumable_progress_observed';
 export const DOMAIN_ROUTE_NO_CONSUMABLE_ARTIFACT_REASON = 'domain_route_no_consumable_artifact';
@@ -360,6 +363,35 @@ function reconcileTaskRowWithAttempt(
   return true;
 }
 
+function withDomainRouteTerminalMutation<T>(db: DatabaseSync, mutation: () => T) {
+  const ownsTransaction = !db.isTransaction;
+  try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    const result = mutation();
+    if (ownsTransaction) db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+function requirePersistedTerminalAttempt(
+  db: DatabaseSync,
+  stageAttemptId: string,
+  operation: string,
+) {
+  const row = getStageAttemptRow(db, stageAttemptId);
+  if (!row) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Stage attempt is not persisted.', {
+      failure_code: 'persisted_runtime_stage_attempt_not_found',
+      operation,
+      stage_attempt_id: stageAttemptId,
+    });
+  }
+  return row;
+}
+
 export function reconcileDomainRouteTerminalTaskForAttempt(
   db: DatabaseSync,
   input: {
@@ -367,23 +399,33 @@ export function reconcileDomainRouteTerminalTaskForAttempt(
     source: string;
   },
 ) {
-  const row = getStageAttemptRow(db, input.stageAttemptId);
-  if (!row?.task_id) {
-    return { reconciled: false, taskId: null };
-  }
-  const taskRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(row.task_id) as
-    | FamilyRuntimeTaskRow
-    | undefined;
-  if (!taskRow) {
-    return { reconciled: false, taskId: row.task_id };
-  }
-  const reconciled = reconcileTaskRowWithAttempt(
-    db,
-    taskRow,
-    stageAttemptToPayload(row),
-    input.source,
-  );
-  return { reconciled, taskId: row.task_id };
+  return withDomainRouteTerminalMutation(db, () => {
+    const row = getStageAttemptRow(db, input.stageAttemptId);
+    if (!row) {
+      return { reconciled: false, taskId: null };
+    }
+    requireRuntimeExecutionScopeMutationAllowed(
+      db,
+      row,
+      'reconcile_domain_route_terminal_task_for_attempt',
+    );
+    if (!row.task_id) {
+      return { reconciled: false, taskId: null };
+    }
+    const taskRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(row.task_id) as
+      | FamilyRuntimeTaskRow
+      | undefined;
+    if (!taskRow) {
+      return { reconciled: false, taskId: row.task_id };
+    }
+    const reconciled = reconcileTaskRowWithAttempt(
+      db,
+      taskRow,
+      stageAttemptToPayload(row),
+      input.source,
+    );
+    return { reconciled, taskId: row.task_id };
+  });
 }
 
 export function reconcileDomainRouteTerminalTasks(
@@ -391,23 +433,61 @@ export function reconcileDomainRouteTerminalTasks(
   rows: FamilyRuntimeTaskRow[],
   source: string,
 ) {
-  let reconciledCount = 0;
-  const reconciledTaskIds = new Set<string>();
-  for (const row of rows) {
-    if (row.status !== 'running' && row.status !== 'blocked') {
-      continue;
+  return withDomainRouteTerminalMutation(db, () => {
+    const candidates: Array<{
+      task: FamilyRuntimeTaskRow;
+      attempt: StageAttemptRow;
+    }> = [];
+    for (const candidateRow of rows) {
+      const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
+        candidateRow.task_id,
+      ) as FamilyRuntimeTaskRow | undefined;
+      if (!row) {
+        continue;
+      }
+      if (row.status !== 'running' && row.status !== 'blocked') {
+        continue;
+      }
+      const payload = payloadFromTask(row);
+      if (!isDomainRouteStageRouteTask(row, payload)) {
+        continue;
+      }
+      const terminalAttempt = listStageAttemptsForTask(db, row.task_id).find(
+        latestLinkedTerminalStageAttempt(row),
+      );
+      if (!terminalAttempt) {
+        continue;
+      }
+      candidates.push({
+        task: row,
+        attempt: requirePersistedTerminalAttempt(
+          db,
+          terminalAttempt.stage_attempt_id,
+          'reconcile_domain_route_terminal_tasks:read_attempt',
+        ),
+      });
     }
-    const payload = payloadFromTask(row);
-    if (!isDomainRouteStageRouteTask(row, payload)) {
-      continue;
+    for (const candidate of candidates) {
+      requireRuntimeExecutionScopeMutationAllowed(
+        db,
+        candidate.attempt,
+        'reconcile_domain_route_terminal_tasks:admit_attempt',
+      );
     }
-    const terminalAttempt = listStageAttemptsForTask(db, row.task_id).find(
-      latestLinkedTerminalStageAttempt(row),
-    );
-    if (terminalAttempt && reconcileTaskRowWithAttempt(db, row, terminalAttempt, source)) {
-      reconciledCount += 1;
-      reconciledTaskIds.add(row.task_id);
+
+    let reconciledCount = 0;
+    const reconciledTaskIds = new Set<string>();
+    for (const candidate of candidates) {
+      if (reconcileTaskRowWithAttempt(
+        db,
+        candidate.task,
+        stageAttemptToPayload(candidate.attempt),
+        source,
+      )) {
+        reconciledCount += 1;
+        reconciledTaskIds.add(candidate.task.task_id);
+      }
     }
-  }
-  return { reconciledCount, reconciledTaskIds };
+    return { reconciledCount, reconciledTaskIds };
+  });
 }

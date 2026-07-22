@@ -3,6 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import {
   blockLinkedDefaultExecutorTask,
 } from './family-runtime-linked-task-sync.ts';
+import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
 import {
   getStageAttemptRow,
   parseStageAttemptJsonObject,
@@ -94,61 +95,81 @@ export function markStageAttemptCancelRequested(
     temporalCancel?: Record<string, unknown> | null;
   },
 ) {
-  const row = getStageAttemptRow(db, input.stageAttemptId);
-  if (!row || row.provider_kind !== 'temporal') {
-    return null;
-  }
-  if (['completed', 'dead_lettered'].includes(row.status)) {
-    return stageAttemptToPayload(row);
-  }
-  const updatedAt = nowIso();
-  const providerRun = {
-    ...parseStageAttemptJsonObject(row.provider_run_json),
-    provider_kind: 'temporal',
-    workflow_id: row.workflow_id,
-    provider_status: 'cancel_requested',
-    completed_at: updatedAt,
-    last_heartbeat_at: updatedAt,
-    cancel_request: {
+  const ownsTransaction = !db.isTransaction;
+  try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    const row = getStageAttemptRow(db, input.stageAttemptId);
+    if (!row) {
+      if (ownsTransaction) db.exec('COMMIT');
+      return null;
+    }
+    requireRuntimeExecutionScopeMutationAllowed(
+      db,
+      row,
+      'mark_stage_attempt_cancel_requested',
+    );
+    if (row.provider_kind !== 'temporal') {
+      if (ownsTransaction) db.exec('COMMIT');
+      return null;
+    }
+    if (['completed', 'dead_lettered'].includes(row.status)) {
+      if (ownsTransaction) db.exec('COMMIT');
+      return stageAttemptToPayload(row);
+    }
+    const updatedAt = nowIso();
+    const providerRun = {
+      ...parseStageAttemptJsonObject(row.provider_run_json),
+      provider_kind: 'temporal',
+      workflow_id: row.workflow_id,
+      provider_status: 'cancel_requested',
+      completed_at: updatedAt,
+      last_heartbeat_at: updatedAt,
+      cancel_request: {
+        reason: input.reason,
+        source: input.source ?? 'opl-cli',
+        requested_at: updatedAt,
+        temporal_cancel: input.temporalCancel ?? null,
+      },
+    };
+    const activityEvents = appendActivityEventToRow(row, {
+      activity_kind: 'temporal_stage_attempt_cancel_requested',
+      activity_status: 'cancel_requested',
       reason: input.reason,
       source: input.source ?? 'opl-cli',
-      requested_at: updatedAt,
       temporal_cancel: input.temporalCancel ?? null,
-    },
-  };
-  const activityEvents = appendActivityEventToRow(row, {
-    activity_kind: 'temporal_stage_attempt_cancel_requested',
-    activity_status: 'cancel_requested',
-    reason: input.reason,
-    source: input.source ?? 'opl-cli',
-    temporal_cancel: input.temporalCancel ?? null,
-    authority_boundary: {
-      opl: 'provider_attempt_cancellation_transport_only',
-      domain: 'truth_quality_artifact_gate_owner',
-      provider_completion_is_domain_ready: false,
-    },
-  });
-  db.prepare(`
-    UPDATE stage_attempts
-    SET status = 'failed', blocked_reason = 'operator_cancel_requested',
-      provider_run_json = ?, activity_events_json = ?, closeout_receipt_status = NULL,
-      updated_at = ?
-    WHERE stage_attempt_id = ?
-  `).run(JSON.stringify(providerRun), JSON.stringify(activityEvents), updatedAt, input.stageAttemptId);
-  blockLinkedDefaultExecutorTask(db, {
-    row,
-    reason: 'operator_cancel_requested',
-    observedAt: updatedAt,
-    taskDeadLetterReason: 'temporal_stage_attempt_canceled',
-    eventType: 'stage_attempt_cancel_requested_task',
-  });
-  return stageAttemptToPayload({
-    ...row,
-    status: 'failed',
-    blocked_reason: 'operator_cancel_requested',
-    provider_run_json: JSON.stringify(providerRun),
-    activity_events_json: JSON.stringify(activityEvents),
-    closeout_receipt_status: null,
-    updated_at: updatedAt,
-  });
+      authority_boundary: {
+        opl: 'provider_attempt_cancellation_transport_only',
+        domain: 'truth_quality_artifact_gate_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    });
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'failed', blocked_reason = 'operator_cancel_requested',
+        provider_run_json = ?, activity_events_json = ?, closeout_receipt_status = NULL,
+        updated_at = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify(providerRun), JSON.stringify(activityEvents), updatedAt, input.stageAttemptId);
+    blockLinkedDefaultExecutorTask(db, {
+      row,
+      reason: 'operator_cancel_requested',
+      observedAt: updatedAt,
+      taskDeadLetterReason: 'temporal_stage_attempt_canceled',
+      eventType: 'stage_attempt_cancel_requested_task',
+    });
+    const result = stageAttemptToPayload({
+      ...row,
+      status: 'failed',
+      blocked_reason: 'operator_cancel_requested',
+      provider_run_json: JSON.stringify(providerRun),
+      activity_events_json: JSON.stringify(activityEvents),
+      closeout_receipt_status: null,
+      updated_at: updatedAt,
+    });
+    if (ownsTransaction) db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
 }

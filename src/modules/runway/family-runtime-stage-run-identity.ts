@@ -5,9 +5,14 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { stableId } from '../../kernel/stable-id.ts';
 import type { StandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
+import type {
+  FamilyRuntimeExecutionScopeKind,
+  WorkItemExecutionScopeSnapshot,
+} from './family-runtime-execution-scope.ts';
 import {
   buildStageRunImmutableContentBindings,
   canonicalStageRunSha256,
+  requireStageRunImmutableContentBindings,
   revalidateStageRunImmutableContentBindings,
   type StageRunImmutableContentBinding,
 } from './family-runtime-stage-run-identity-parts/content-bindings.ts';
@@ -404,6 +409,8 @@ export function buildStageRunImmutableSpec(input: {
   domainId: FamilyRuntimeDomainId;
   stageId: string;
   workspaceLocator: Record<string, unknown>;
+  scopeKind: FamilyRuntimeExecutionScopeKind;
+  executionScope: WorkItemExecutionScopeSnapshot | null;
   sourceFingerprint: string | null;
   executorKind?: string;
   stageAttemptExecutorPolicy?: Record<string, unknown> | null;
@@ -437,6 +444,8 @@ export function buildStageRunImmutableSpec(input: {
     domainId: input.domainId,
     domainPackRoot: text(input.domainPackRoot, 'domain_pack_root'),
     workspaceRoot,
+    scopeKind: input.scopeKind,
+    executionScope: input.executionScope,
     stageManifest: {
       ref: text(input.binding.manifest_ref, 'stage_manifest_ref'),
       sha256: canonicalStageRunSha256(input.binding.manifest_sha256, 'stage_manifest_sha256'),
@@ -604,8 +613,11 @@ export function revalidateStageRunImmutableSpecContent(input: {
   spec: StageRunImmutableSpec;
   domainPackRoot: string;
   workspaceLocator: Record<string, unknown>;
+  scopeKind: FamilyRuntimeExecutionScopeKind;
+  executionScope: WorkItemExecutionScopeSnapshot | null;
   skipManagedPackBytes?: boolean;
 }) {
+  const contentBindings = requireStageRunImmutableContentBindings(input.spec.content_bindings);
   const required = [
     ['stage_manifest', input.spec.stage_manifest.ref],
     ['quality_policy', input.spec.quality_policy.ref],
@@ -617,15 +629,21 @@ export function revalidateStageRunImmutableSpecContent(input: {
     ...input.spec.source_refs.map((ref) => ['source', ref]),
     ...input.spec.lineage_refs.map((ref) => ['lineage', ref]),
   ] as Array<[StageRunImmutableContentBinding['purpose'], string]>;
-  const missing = required.filter(([purpose, ref]) => !input.spec.content_bindings.some(
+  const missing = required.filter(([purpose, ref]) => !contentBindings.some(
     (binding) => binding.purpose === purpose && binding.ref === ref,
   ));
-  const stagePromptBindings = input.spec.content_bindings.filter((binding) => (
+  const stagePromptBindings = contentBindings.filter((binding) => (
     binding.purpose === 'stage_prompt'
     && input.spec.lineage_refs.includes(binding.ref)
   ));
-  const artifactMissing = input.spec.input_artifacts.filter((artifact) => !input.spec.content_bindings.some(
-    (binding) => binding.ref === artifact.ref && binding.sha256 === artifact.sha256,
+  const artifactMissing = input.spec.input_artifacts.filter((artifact) => !contentBindings.some(
+    (binding) => binding.purpose === 'input_artifact'
+      && binding.ref === artifact.ref
+      && binding.sha256 === artifact.sha256
+      && (
+        binding.verification_kind === 'workspace_file_bytes'
+        || binding.verification_kind === 'trusted_artifact_identity_receipt'
+      ),
   ));
   if (missing.length > 0 || stagePromptBindings.length !== 1 || artifactMissing.length > 0) {
     throw new FrameworkContractError(
@@ -648,7 +666,7 @@ export function revalidateStageRunImmutableSpecContent(input: {
     'stage_goal',
     'lineage',
   ]);
-  const invalidManagedBindings = input.spec.content_bindings.filter((binding) => (
+  const invalidManagedBindings = contentBindings.filter((binding) => (
     managedPurposes.has(binding.purpose)
     && binding.verification_kind !== 'managed_pack_file_bytes'
   ));
@@ -671,7 +689,9 @@ export function revalidateStageRunImmutableSpecContent(input: {
     domainPackRoot: text(input.domainPackRoot, 'domain_pack_root'),
     workspaceRoot: optionalText(input.workspaceLocator.workspace_root)
       ?? optionalText(input.workspaceLocator.repo_root),
-    bindings: input.spec.content_bindings,
+    scopeKind: input.scopeKind,
+    executionScope: input.executionScope,
+    bindings: contentBindings,
     skipManagedPackBytes: input.skipManagedPackBytes,
   });
   return input.spec;

@@ -6,6 +6,7 @@ import {
   type StageAttemptRow,
   type StageAttemptStatus,
 } from '../family-runtime-stage-attempt-ledger.ts';
+import { requireRuntimeExecutionScopeMutationAllowed } from '../family-runtime-execution-scope-persistence.ts';
 import {
   appendActivityEventToRow,
   nowIso,
@@ -28,17 +29,28 @@ export function updateStageAttemptsForTask(
     activityEvent?: Record<string, unknown>;
   },
 ) {
-  const rows = input.stageAttemptIds && input.stageAttemptIds.length > 0
-    ? db.prepare(`
-      SELECT * FROM stage_attempts
-      WHERE task_id = ? AND stage_attempt_id IN (${input.stageAttemptIds.map(() => '?').join(',')})
-    `).all(input.taskId, ...input.stageAttemptIds) as StageAttemptRow[]
-    : db.prepare('SELECT * FROM stage_attempts WHERE task_id = ?').all(input.taskId) as StageAttemptRow[];
-  if (rows.length === 0) {
-    return [];
-  }
-  const updatedAt = nowIso();
-  const attempts = rows.map((row) => {
+  const ownsTransaction = !db.isTransaction;
+  try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    const rows = input.stageAttemptIds && input.stageAttemptIds.length > 0
+      ? db.prepare(`
+        SELECT * FROM stage_attempts
+        WHERE task_id = ? AND stage_attempt_id IN (${input.stageAttemptIds.map(() => '?').join(',')})
+      `).all(input.taskId, ...input.stageAttemptIds) as StageAttemptRow[]
+      : db.prepare('SELECT * FROM stage_attempts WHERE task_id = ?').all(input.taskId) as StageAttemptRow[];
+    for (const row of rows) {
+      requireRuntimeExecutionScopeMutationAllowed(
+        db,
+        row as unknown as Record<string, unknown>,
+        'update_stage_attempts_for_task',
+      );
+    }
+    if (rows.length === 0) {
+      if (ownsTransaction) db.exec('COMMIT');
+      return [];
+    }
+    const updatedAt = nowIso();
+    const attempts = rows.map((row) => {
     const status = input.status === 'completed' ? 'checkpointed' : input.status;
     const checkpointRefs = input.checkpointRefs ?? parseStageAttemptJsonList(row.checkpoint_refs_json).filter(
       (entry): entry is string => typeof entry === 'string',
@@ -89,8 +101,13 @@ export function updateStageAttemptsForTask(
       row.stage_attempt_id,
     );
     return inspectStageAttempt(db, row.stage_attempt_id);
-  });
-  return attempts;
+    });
+    if (ownsTransaction) db.exec('COMMIT');
+    return attempts;
+  } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
 }
 
 export function stageAttemptSummary(db: DatabaseSync) {

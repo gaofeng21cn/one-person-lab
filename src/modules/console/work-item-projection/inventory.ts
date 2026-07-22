@@ -7,6 +7,7 @@ import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 import type { StandardAgentDescriptorInterface } from '../../../kernel/standard-agent-interface.ts';
 import { readStandardAgentDescriptorForDomain } from '../../connect/index.ts';
+import { deriveWorkItemScopeId } from '../../workspace/public/app-state.ts';
 import { projectDomainDetailViewLocators } from '../domain-detail-view-locator.ts';
 import type {
   ProjectCatalogEntry,
@@ -234,6 +235,11 @@ export function readProjectInventory(input: {
     };
     const observedGeneration = generation(mapped);
     const itemId = `${input.project.project_id}:${encodeURIComponent(workItemId)}`;
+    const workItemScopeId = deriveWorkItemScopeId({
+      projectScopeId: input.project.scope_id,
+      domainId: input.project.domain_id,
+      domainWorkItemId: workItemId,
+    });
     const missingReason = 'no_stage_attempt_usage_telemetry_observed';
     const domainBusinessState = rawBusinessStatus
       ? BUSINESS_STATE_BY_STATUS.get(rawBusinessStatus) ?? 'unknown'
@@ -301,7 +307,7 @@ export function readProjectInventory(input: {
         work_item_display_name: displayName,
         work_item_kind: descriptor.interface.workspace_binding.project_kind,
         work_item_root: workItemRoot,
-        work_item_scope_id: `work-item:${itemId}`,
+        work_item_scope_id: workItemScopeId,
         source_kind: 'domain_inventory',
       },
       lifecycle: {

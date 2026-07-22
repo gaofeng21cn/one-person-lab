@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import crypto from 'node:crypto';
+import crypto, { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,6 +16,10 @@ import {
 } from '../../src/kernel/standard-agent-interface.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import { buildAgentCatalog } from '../../src/modules/console/work-item-projection/catalog.ts';
+import {
+  joinAttemptsToWorkItems,
+  readWorkItemStageAttemptsFromDb,
+} from '../../src/modules/console/work-item-projection/execution.ts';
 import { buildAppRuntimeWorkItemProjection } from '../../src/modules/console/app-runtime-work-item-projection.ts';
 import { readStageIndexPresentation } from '../../src/modules/console/work-item-projection/inventory-presentation.ts';
 import { readWorkItemStageAttempts } from '../../src/modules/console/work-item-projection/execution.ts';
@@ -24,12 +28,17 @@ import { buildWorkItemProjectionV2 } from '../../src/modules/console/work-item-p
 import { projectWorkItemPrimaryState } from '../../src/modules/console/work-item-projection/primary-state.ts';
 import { buildStageAttemptRuntimeCurrentness } from '../../src/modules/runway/family-runtime-stage-attempt-runtime-currentness.ts';
 import { createStageAttemptTable } from '../../src/modules/runway/family-runtime-stage-attempt-ledger.ts';
+import {
+  normalizeRuntimeExecutionScopeWrite,
+  persistRuntimeExecutionScope,
+} from '../../src/modules/runway/family-runtime-execution-scope-persistence.ts';
 import { createStageRunLaunchTable } from '../../src/modules/runway/family-runtime-stage-run-launch-registry.ts';
 import {
   setWorkItemControlState,
   setWorkItemVisibilityState,
 } from '../../src/modules/ledger/work-item-control-ledger.ts';
 import type { WorkspaceBinding } from '../../src/modules/workspace/workspace-registry.ts';
+import { createWorkItemExecutionScopeSnapshot } from '../../src/modules/workspace/public/standard-agent-action-runtime.ts';
 
 const MAS_STUDIES = {
   Diabetes: [
@@ -177,9 +186,11 @@ function binding(input: {
   label: string;
   status: 'active' | 'inactive';
   updatedAt?: string;
+  projectScopeId?: string;
 }): WorkspaceBinding {
   return {
     binding_id: input.id,
+    project_scope_id: input.projectScopeId ?? `project:${input.id}`,
     project_id: 'medautoscience',
     project: 'med-autoscience',
     workspace_path: input.root,
@@ -222,11 +233,64 @@ function attempt(input: {
 }) {
   const createdAt = input.createdAt ?? '2026-07-10T00:00:00.000Z';
   const identityField = input.identityField === undefined ? 'work_unit_id' : input.identityField;
+  const bindingId = path.basename(input.root) === 'DM-CVD-Mortality-Risk'
+    ? 'dm-active'
+    : path.basename(input.root) === 'NF-PitNET'
+      ? 'pitnet-active'
+      : 'obesity-inactive';
+  const canonicalWorkItemRoot = path.join(input.root, 'studies', input.workItemId);
+  fs.mkdirSync(canonicalWorkItemRoot, { recursive: true });
+  const executionScope = createWorkItemExecutionScopeSnapshot({
+    projectScopeId: `project:${bindingId}`,
+    workspaceBindingId: bindingId,
+    domainId: 'medautoscience',
+    workspaceRoot: input.root,
+    payload: { work_item_id: input.workItemId },
+    requirement: { kind: 'work_item', alias_fields: ['work_item_id'] },
+    canonicalWorkItemRoot,
+  });
+  const stageRunId = input.stageRunId ?? `sr:${input.id}`;
   return {
     stage_attempt_id: input.id,
     provider_kind: 'temporal',
     workflow_id: `workflow:${input.id}`,
     domain_id: 'medautoscience',
+    ...(identityField === null
+      ? {
+          scope_kind: 'identity_unresolved',
+          identity_state: 'identity_unresolved',
+          project_scope_id: undefined,
+          work_item_scope_id: undefined,
+          workspace_binding_id: undefined,
+          binding_version_id: undefined,
+          scope_digest: undefined,
+          execution_scope: undefined,
+          stage_run_id: input.stageRunId ?? null,
+        }
+      : {
+          scope_kind: 'work_item',
+          identity_state: 'resolved',
+          project_scope_id: executionScope.project_scope_id,
+          work_item_scope_id: executionScope.work_item_scope_id,
+          workspace_binding_id: executionScope.workspace_binding_id,
+          binding_version_id: executionScope.binding_version_id,
+          scope_digest: executionScope.scope_digest,
+          execution_scope: executionScope,
+          stage_run_id: stageRunId,
+          stage_run_join_state: 'joined',
+          stage_run_registered_id: stageRunId,
+          stage_run_domain_id: 'medautoscience',
+          stage_run_stage_id: input.stageId ?? '01-study_intake',
+          stage_run_scope_kind: 'work_item',
+          stage_run_project_scope_id: executionScope.project_scope_id,
+          stage_run_work_item_scope_id: executionScope.work_item_scope_id,
+          stage_run_workspace_binding_id: executionScope.workspace_binding_id,
+          stage_run_binding_version_id: executionScope.binding_version_id,
+          stage_run_scope_digest: executionScope.scope_digest,
+          stage_run_identity_state: 'resolved',
+          stage_run_execution_scope_state: 'present',
+          stage_run_execution_scope: executionScope,
+        }),
     stage_id: input.stageId ?? '01-study_intake',
     workspace_locator: {
       workspace_root: input.root,
@@ -237,7 +301,6 @@ function attempt(input: {
       } : {}),
     },
     executor_kind: 'codex_cli',
-    stage_run_id: input.stageRunId ?? null,
     ...(input.stageRunLaunch ? { stage_run_launch: input.stageRunLaunch } : {}),
     status: input.status,
     retry_budget: input.qualityScopeBudget
@@ -265,6 +328,151 @@ function attempt(input: {
   };
 }
 
+function legacyLocatorAttempt(input: {
+  id: string;
+  root: string;
+  workItemId: string;
+  stageId: string;
+}) {
+  return {
+    stage_attempt_id: input.id,
+    provider_kind: 'temporal',
+    workflow_id: `workflow:${input.id}`,
+    domain_id: 'medautoscience',
+    scope_kind: 'identity_unresolved',
+    identity_state: 'identity_unresolved',
+    stage_id: input.stageId,
+    workspace_locator: {
+      workspace_root: input.root,
+      study_id: input.workItemId,
+    },
+    executor_kind: 'codex_cli',
+    status: 'running',
+    retry_budget: {},
+    attempt_count: 1,
+    provider_run: {
+      provider_status: 'running',
+      started_at: '2026-07-20T00:00:00.000Z',
+      completed_at: null,
+      last_heartbeat_at: '2026-07-20T00:01:00.000Z',
+    },
+    activity_events: [{
+      token_usage: { input_tokens: 9000, output_tokens: 1000, total_tokens: 10000 },
+      usage_status: 'observed',
+    }],
+    route_impact: {},
+    created_at: '2026-07-20T00:00:00.000Z',
+    updated_at: '2026-07-20T00:01:00.000Z',
+  };
+}
+
+type ExecutionScopeFixture = ReturnType<typeof createWorkItemExecutionScopeSnapshot>;
+
+function persistExecutionScopeFixture(db: DatabaseSync, scope: ExecutionScopeFixture) {
+  db.prepare(`
+    INSERT OR IGNORE INTO execution_scopes(
+      scope_digest, scope_kind, project_scope_id, work_item_scope_id, domain_id,
+      workspace_binding_id, binding_version_id, execution_scope_json, identity_state, created_at
+    ) VALUES (?, 'work_item', ?, ?, ?, ?, ?, ?, 'resolved', ?)
+  `).run(
+    scope.scope_digest,
+    scope.project_scope_id,
+    scope.work_item_scope_id,
+    scope.domain_id,
+    scope.workspace_binding_id,
+    scope.binding_version_id,
+    JSON.stringify(scope),
+    '2026-07-20T00:00:00.000Z',
+  );
+}
+
+function persistStageRunFixture(db: DatabaseSync, input: {
+  id: string;
+  stageId: string;
+  scope?: ExecutionScopeFixture;
+  identityState?: 'resolved' | 'identity_unresolved' | 'quarantined';
+}) {
+  if (input.scope) persistExecutionScopeFixture(db, input.scope);
+  const identityState = input.identityState ?? 'resolved';
+  const resolvedScope = input.scope && identityState !== 'identity_unresolved';
+  db.prepare(`
+    INSERT INTO stage_run_launches(
+      stage_run_id, stage_run_invocation_id, stage_run_spec_sha256, domain_id, stage_id,
+      workflow_id, scope_kind, project_scope_id, work_item_scope_id, workspace_binding_id,
+      binding_version_id, scope_digest, execution_scope_json, identity_state,
+      stage_run_input_json, launch_status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', 'started', ?, ?)
+  `).run(
+    input.id,
+    `invocation:${input.id}`,
+    `sha256:${createHash('sha256').update(input.id).digest('hex')}`,
+    input.scope?.domain_id ?? 'medautoscience',
+    input.stageId,
+    `workflow:${input.id}`,
+    resolvedScope ? 'work_item' : 'identity_unresolved',
+    resolvedScope ? input.scope!.project_scope_id : null,
+    resolvedScope ? input.scope!.work_item_scope_id : null,
+    resolvedScope ? input.scope!.workspace_binding_id : null,
+    resolvedScope ? input.scope!.binding_version_id : null,
+    resolvedScope ? input.scope!.scope_digest : null,
+    resolvedScope ? JSON.stringify(input.scope) : null,
+    identityState,
+    '2026-07-20T00:00:00.000Z',
+    '2026-07-20T00:00:00.000Z',
+  );
+}
+
+function persistStageAttemptFixture(db: DatabaseSync, input: {
+  id: string;
+  stageRunId?: string | null;
+  stageId: string;
+  scope: ExecutionScopeFixture;
+  updatedAt: string;
+  tokens?: number;
+}) {
+  persistExecutionScopeFixture(db, input.scope);
+  db.prepare(`
+    INSERT INTO stage_attempts(
+      stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id,
+      workspace_locator_json, executor_kind, stage_run_id, scope_kind, project_scope_id,
+      work_item_scope_id, workspace_binding_id, binding_version_id, scope_digest,
+      execution_scope_json, identity_state, status, checkpoint_refs_json, closeout_refs_json,
+      human_gate_refs_json, retry_budget_json, attempt_count, task_id, provider_receipt_json,
+      provider_run_json, activity_events_json, route_impact_json, created_at, updated_at
+    ) VALUES (
+      ?, ?, 'temporal', ?, ?, ?, '{}', 'codex_cli', ?, 'work_item', ?, ?, ?, ?, ?, ?,
+      'resolved', 'running', '[]', '[]', '[]', '{}', 1, ?, '{}', ?, ?, '{}', ?, ?
+    )
+  `).run(
+    input.id,
+    `idempotency:${input.id}`,
+    `workflow:${input.id}`,
+    input.scope.domain_id,
+    input.stageId,
+    input.stageRunId ?? null,
+    input.scope.project_scope_id,
+    input.scope.work_item_scope_id,
+    input.scope.workspace_binding_id,
+    input.scope.binding_version_id,
+    input.scope.scope_digest,
+    JSON.stringify(input.scope),
+    `task:${input.scope.domain_work_item_id}`,
+    JSON.stringify({
+      provider_status: 'running',
+      started_at: '2026-07-20T00:00:00.000Z',
+      last_heartbeat_at: input.updatedAt,
+    }),
+    input.tokens === undefined
+      ? '[]'
+      : JSON.stringify([{
+          token_usage: { input_tokens: input.tokens, output_tokens: 0, total_tokens: input.tokens },
+          usage_status: 'observed',
+        }]),
+    '2026-07-20T00:00:00.000Z',
+    input.updatedAt,
+  );
+}
+
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-work-item-v2-'));
   const diabetes = path.join(root, 'DM-CVD-Mortality-Risk');
@@ -281,6 +489,7 @@ function fixture() {
       label: 'Diabetes stale duplicate',
       status: 'inactive',
       updatedAt: '2026-07-01T00:00:00.000Z',
+      projectScopeId: 'project:dm-active',
     }),
     binding({ id: 'pitnet-active', root: pitnet, label: 'NF-PitNET', status: 'active' }),
     binding({ id: 'obesity-inactive', root: obesity, label: 'Obesity', status: 'inactive' }),
@@ -374,22 +583,39 @@ function writeCasJournal(stateRoot: string, workspaceRoot: string) {
 }
 
 function persistStageAttempt(db: DatabaseSync, value: ReturnType<typeof attempt>) {
+  const scopeWrite = normalizeRuntimeExecutionScopeWrite({
+    domainId: value.domain_id,
+    scopeKind: value.scope_kind === 'work_item' ? 'work_item' : undefined,
+    executionScope: value.execution_scope ?? null,
+  });
+  persistRuntimeExecutionScope(db, scopeWrite, value.domain_id);
   db.prepare(`
     INSERT INTO stage_attempts (
       stage_attempt_id, idempotency_key, provider_kind, workflow_id,
-      domain_id, stage_id, workspace_locator_json, source_fingerprint,
+      domain_id, scope_kind, project_scope_id, work_item_scope_id,
+      workspace_binding_id, binding_version_id, scope_digest,
+      execution_scope_json, identity_state,
+      stage_id, workspace_locator_json, source_fingerprint,
       executor_kind, stage_run_id, status, checkpoint_refs_json,
       closeout_refs_json, human_gate_refs_json, retry_budget_json,
       attempt_count, task_id, blocked_reason, provider_receipt_json,
       provider_run_json, activity_events_json, route_impact_json,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, '[]', '[]', ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?)
   `).run(
     value.stage_attempt_id,
     `idempotency:${value.stage_attempt_id}`,
     value.provider_kind,
     value.workflow_id,
     value.domain_id,
+    value.scope_kind,
+    value.project_scope_id ?? null,
+    value.work_item_scope_id ?? null,
+    value.workspace_binding_id ?? null,
+    value.binding_version_id ?? null,
+    value.scope_digest ?? null,
+    value.execution_scope ? JSON.stringify(value.execution_scope) : null,
+    value.identity_state,
     value.stage_id,
     JSON.stringify(value.workspace_locator),
     value.executor_kind,
@@ -503,6 +729,757 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
     assert.equal(masAvailability?.last_checked_at, '2026-07-13T00:00:00.000Z');
     assert.equal(projection.agent_availability.every((entry) => entry.availability === 'available'), true);
     assert.equal(projection.items.some((item) => item.identity.source_kind === 'runtime_only'), false);
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('same-workspace same-stage Study attempts join only by exact work_item_scope_id', () => {
+  const input = fixture();
+  try {
+    const snapshotAt = new Date('2026-07-13T00:00:00.000Z');
+    fs.utimesSync(path.join(input.diabetes, 'workspace_index.json'), snapshotAt, snapshotAt);
+    const stageId = '01-study_intake';
+    const first = attempt({
+      id: 'sat-study-001-same-stage',
+      root: input.diabetes,
+      workItemId: '001-dm-cvd-mortality-risk',
+      stageId,
+      status: 'running',
+      createdAt: '2026-07-20T00:00:00.000Z',
+      updatedAt: new Date().toISOString(),
+      tokenUsage: { input_tokens: 80, output_tokens: 20, total_tokens: 100 },
+    });
+    const second = attempt({
+      id: 'sat-study-004-same-stage',
+      root: input.diabetes,
+      workItemId: '004-dpcc-longitudinal-care-inertia-intensification-gap',
+      stageId,
+      status: 'queued',
+      createdAt: '2026-07-20T00:00:00.000Z',
+      updatedAt: '2026-07-20T00:01:00.000Z',
+      tokenUsage: { input_tokens: 150, output_tokens: 50, total_tokens: 200 },
+    });
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      attempts: [first, second],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const study001 = projection.items.find(
+      (item) => item.identity.work_item_id === '001-dm-cvd-mortality-risk',
+    )!;
+    const study004 = projection.items.find(
+      (item) => item.identity.work_item_id === '004-dpcc-longitudinal-care-inertia-intensification-gap',
+    )!;
+
+    assert.notEqual(study001.identity.work_item_scope_id, study004.identity.work_item_scope_id);
+    assert.equal(study001.execution.stage_id, stageId);
+    assert.equal(study004.execution.stage_id, stageId);
+    assert.deepEqual(study001.execution.attempt_ids, ['sat-study-001-same-stage']);
+    assert.deepEqual(study004.execution.attempt_ids, ['sat-study-004-same-stage']);
+    assert.equal(study001.telemetry.cumulative.total_tokens, 100);
+    assert.equal(study004.telemetry.cumulative.total_tokens, 200);
+    assert.equal(projection.identity_health.status, 'clear');
+    assert.equal(projection.identity_health.resolved_execution_count, 2);
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('persisted work-item readback LEFT JOINs the authoritative StageRun execution scope', () => {
+  const input = fixture();
+  const db = new DatabaseSync(':memory:');
+  try {
+    createStageAttemptTable(db);
+    createStageRunLaunchTable(db);
+    const scoped = attempt({
+      id: 'sat-persisted-study-001',
+      root: input.diabetes,
+      workItemId: '001-dm-cvd-mortality-risk',
+      stageId: '01-study_intake',
+      status: 'running',
+      updatedAt: '2026-07-20T00:01:00.000Z',
+    });
+    assert.ok(scoped.execution_scope);
+    const scope = scoped.execution_scope;
+    const stageRunId = 'sr-persisted-study-001';
+    persistStageRunFixture(db, {
+      id: stageRunId,
+      stageId: '01-study_intake',
+      scope,
+    });
+    persistStageAttemptFixture(db, {
+      id: 'sat-persisted-study-001',
+      stageRunId,
+      stageId: '01-study_intake',
+      scope,
+      updatedAt: '2026-07-20T00:01:00.000Z',
+      tokens: 100,
+    });
+
+    const attempts = readWorkItemStageAttemptsFromDb(db);
+    assert.equal(attempts[0]?.stage_run_join_state, 'joined');
+    assert.equal(attempts[0]?.stage_run_registered_id, stageRunId);
+    assert.deepEqual(attempts[0]?.stage_run_execution_scope, scope);
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      attempts,
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const study001 = projection.items.find(
+      (item) => item.identity.work_item_id === '001-dm-cvd-mortality-risk',
+    )!;
+    assert.equal(study001.execution.attempt_id, 'sat-persisted-study-001');
+    assert.equal(study001.telemetry.cumulative.total_tokens, 100);
+    assert.equal(projection.identity_health.status, 'clear');
+  } finally {
+    db.close();
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('StageRun-only records are bounded diagnostics and cannot project idle, current, wake, or tokens', () => {
+  const input = fixture();
+  const db = new DatabaseSync(':memory:');
+  try {
+    createStageAttemptTable(db);
+    createStageRunLaunchTable(db);
+    const study001Carrier = attempt({
+      id: 'sat-scope-carrier-stage-run-only-001',
+      root: input.diabetes,
+      workItemId: '001-dm-cvd-mortality-risk',
+      stageId: '01-study_intake',
+      status: 'running',
+      updatedAt: '2026-07-20T00:00:00.000Z',
+    });
+    const study002Carrier = attempt({
+      id: 'sat-scope-carrier-stage-run-only-002',
+      root: input.diabetes,
+      workItemId: '002-dm-china-us-mortality-attribution',
+      stageId: '01-study_intake',
+      status: 'running',
+      updatedAt: '2026-07-20T00:00:00.000Z',
+    });
+    assert.ok(study001Carrier.execution_scope);
+    assert.ok(study002Carrier.execution_scope);
+    persistStageRunFixture(db, {
+      id: 'sr-stage-run-only-resolved',
+      stageId: '01-study_intake',
+      scope: study001Carrier.execution_scope,
+    });
+    persistStageRunFixture(db, {
+      id: 'sr-stage-run-only-unresolved',
+      stageId: '01-study_intake',
+      identityState: 'identity_unresolved',
+    });
+    persistStageRunFixture(db, {
+      id: 'sr-stage-run-only-quarantined',
+      stageId: '01-study_intake',
+      scope: study002Carrier.execution_scope,
+      identityState: 'quarantined',
+    });
+    persistStageRunFixture(db, {
+      id: 'sr-stage-run-with-archived-attempt',
+      stageId: '01-study_intake',
+      scope: study001Carrier.execution_scope,
+    });
+    persistStageAttemptFixture(db, {
+      id: 'sat-archived-stage-run-attempt',
+      stageRunId: 'sr-stage-run-with-archived-attempt',
+      stageId: '01-study_intake',
+      scope: study001Carrier.execution_scope,
+      updatedAt: '2026-07-20T00:01:00.000Z',
+    });
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'completed', archived_at = '2026-07-20T00:02:00.000Z'
+      WHERE stage_attempt_id = 'sat-archived-stage-run-attempt'
+    `).run();
+
+    const attempts = readWorkItemStageAttemptsFromDb(db);
+    assert.equal(attempts.length, 3);
+    assert.equal(
+      attempts.every((entry) =>
+        entry.projection_record_kind === 'stage_run_without_stage_attempt'
+          && entry.stage_attempt_id === undefined
+      ),
+      true,
+    );
+    assert.equal(
+      attempts.some((entry) => entry.stage_run_id === 'sr-stage-run-with-archived-attempt'),
+      false,
+    );
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      attempts,
+      queueDb: 'in-memory-stage-run-only-fixture',
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const study001 = projection.items.find(
+      (item) => item.identity.work_item_id === '001-dm-cvd-mortality-risk',
+    )!;
+    const study002 = projection.items.find(
+      (item) => item.identity.work_item_id === '002-dm-china-us-mortality-attribution',
+    )!;
+
+    assert.equal(study001.execution.state, 'unknown');
+    assert.equal(study001.execution.diagnostic_reason, 'stage_run_without_stage_attempt');
+    assert.equal(study001.execution.attempt_id, null);
+    assert.deepEqual(study001.execution.attempt_ids, []);
+    assert.equal(study001.execution.workflow_id, null);
+    assert.equal(study001.execution.started_at, null);
+    assert.equal(study001.telemetry.cumulative.total_tokens, null);
+    assert.equal(study001.freshness.state, 'unknown');
+    assert.equal(
+      study001.conditions.some((entry) =>
+        entry.type === 'StageRunAttemptBindingObserved'
+          && entry.status === 'Unknown'
+          && entry.reason === 'stage_run_without_stage_attempt'
+      ),
+      true,
+    );
+    assert.equal(
+      study001.source_refs.some((entry) =>
+        entry.role === 'stage_run_diagnostic_only'
+          && entry.ref.endsWith('#stage_run_launches/sr-stage-run-only-resolved')
+      ),
+      true,
+    );
+    assert.equal(
+      study002.source_refs.some((entry) => entry.role === 'stage_run_diagnostic_only'),
+      false,
+    );
+    assert.equal(projection.summary.running_count, 0);
+    assert.equal(projection.identity_health.status, 'attention_required');
+    assert.equal(projection.identity_health.execution_count, 3);
+    assert.equal(projection.identity_health.resolved_execution_count, 0);
+    assert.equal(projection.identity_health.unresolved_execution_count, 2);
+    assert.equal(projection.identity_health.conflict_execution_count, 1);
+    assert.deepEqual(projection.identity_health.reason_counts, [
+      { reason: 'stage_run_without_attempt_identity_quarantined', count: 1 },
+      { reason: 'stage_run_without_attempt_identity_unresolved', count: 1 },
+      { reason: 'stage_run_without_stage_attempt', count: 1 },
+    ]);
+    assert.equal(projection.unresolved_executions.length, 3);
+    const unresolvedStageRun = projection.unresolved_executions.find(
+      (entry) => entry.attempt_ref === 'stage-run:sr-stage-run-only-unresolved',
+    )!;
+    const quarantinedStageRun = projection.unresolved_executions.find(
+      (entry) => entry.attempt_ref === 'stage-run:sr-stage-run-only-quarantined',
+    )!;
+    assert.equal(unresolvedStageRun.project_scope_id, null);
+    assert.equal(unresolvedStageRun.work_item_scope_id, null);
+    assert.equal(unresolvedStageRun.domain_id, null);
+    assert.equal(quarantinedStageRun.project_scope_id, null);
+    assert.equal(quarantinedStageRun.work_item_scope_id, null);
+    assert.equal(quarantinedStageRun.domain_id, null);
+    assert.equal(
+      (quarantinedStageRun.details.claimed_scope as Record<string, unknown>).work_item_scope_id,
+      study002Carrier.execution_scope.work_item_scope_id,
+    );
+    assert.equal(
+      projection.unresolved_executions.every((entry) =>
+        entry.attempt_ref.startsWith('stage-run:')
+          && entry.details.stage_run_launch_status === 'started'
+      ),
+      true,
+    );
+  } finally {
+    db.close();
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('StageRun-only item diagnostics use stable newest-first ordering for injected records', () => {
+  const input = fixture();
+  const db = new DatabaseSync(':memory:');
+  try {
+    createStageAttemptTable(db);
+    createStageRunLaunchTable(db);
+    const scopeCarrier = attempt({
+      id: 'sat-scope-carrier-stage-run-order',
+      root: input.diabetes,
+      workItemId: '001-dm-cvd-mortality-risk',
+      stageId: '01-study_intake',
+      status: 'running',
+      updatedAt: '2026-07-20T00:00:00.000Z',
+    });
+    assert.ok(scopeCarrier.execution_scope);
+    persistStageRunFixture(db, {
+      id: 'sr-stage-run-only-older',
+      stageId: '01-study_intake',
+      scope: scopeCarrier.execution_scope,
+    });
+    persistStageRunFixture(db, {
+      id: 'sr-stage-run-only-newer',
+      stageId: '01-study_intake',
+      scope: scopeCarrier.execution_scope,
+    });
+    db.prepare(`
+      UPDATE stage_run_launches
+      SET updated_at = ?
+      WHERE stage_run_id = ?
+    `).run('2026-07-20T00:01:00.000Z', 'sr-stage-run-only-newer');
+
+    const attempts = readWorkItemStageAttemptsFromDb(db).reverse();
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      attempts,
+      queueDb: 'in-memory-stage-run-order-fixture',
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const study001 = projection.items.find(
+      (item) => item.identity.work_item_id === '001-dm-cvd-mortality-risk',
+    )!;
+    const condition = study001.conditions.find(
+      (entry) => entry.type === 'StageRunAttemptBindingObserved',
+    )!;
+    const diagnosticRefs = study001.source_refs
+      .filter((entry) => entry.role === 'stage_run_diagnostic_only')
+      .map((entry) => entry.ref);
+
+    assert.equal(condition.last_transition_time, '2026-07-20T00:01:00.000Z');
+    assert.equal(condition.ref?.endsWith('#stage_run_launches/sr-stage-run-only-newer'), true);
+    assert.deepEqual(diagnosticRefs, [
+      'in-memory-stage-run-order-fixture#stage_run_launches/sr-stage-run-only-newer',
+      'in-memory-stage-run-order-fixture#stage_run_launches/sr-stage-run-only-older',
+    ]);
+  } finally {
+    db.close();
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('StageRun-only inventory conflicts keep claimed scope diagnostic-only', () => {
+  const input = fixture();
+  const db = new DatabaseSync(':memory:');
+  try {
+    createStageAttemptTable(db);
+    createStageRunLaunchTable(db);
+    const scopeCarrier = attempt({
+      id: 'sat-scope-carrier-stage-run-inventory-conflict',
+      root: input.diabetes,
+      workItemId: '001-dm-cvd-mortality-risk',
+      stageId: '01-study_intake',
+      status: 'running',
+      updatedAt: '2026-07-20T00:00:00.000Z',
+    });
+    assert.ok(scopeCarrier.execution_scope);
+    persistStageRunFixture(db, {
+      id: 'sr-stage-run-only-inventory-conflict',
+      stageId: '01-study_intake',
+      scope: scopeCarrier.execution_scope,
+    });
+    const [stageRun] = readWorkItemStageAttemptsFromDb(db);
+    assert.ok(stageRun);
+    const inventory = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      attempts: [],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const items = inventory.items.map((item) =>
+      item.identity.work_item_id === '001-dm-cvd-mortality-risk'
+        ? {
+            ...item,
+            identity: { ...item.identity, domain_id: 'conflicting-domain' },
+          }
+        : item
+    );
+
+    const joined = joinAttemptsToWorkItems({
+      items,
+      attempts: [stageRun],
+      queueDb: 'in-memory-stage-run-inventory-conflict-fixture',
+      attemptRefLimit: 8,
+    });
+    const [diagnostic] = joined.unresolved_executions;
+
+    assert.equal(joined.identity_health.conflict_execution_count, 1);
+    assert.equal(diagnostic?.reason, 'stage_run_without_attempt_execution_scope_inventory_conflict');
+    assert.equal(diagnostic?.project_scope_id, null);
+    assert.equal(diagnostic?.work_item_scope_id, null);
+    assert.equal(diagnostic?.domain_id, null);
+    assert.equal(
+      (diagnostic?.details.claimed_scope as Record<string, unknown>).work_item_scope_id,
+      scopeCarrier.execution_scope.work_item_scope_id,
+    );
+    assert.equal(
+      joined.items.find((item) => item.identity.work_item_id === '001-dm-cvd-mortality-risk')
+        ?.source_refs.some((entry) => entry.role === 'stage_run_diagnostic_only'),
+      false,
+    );
+  } finally {
+    db.close();
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('StageRun-only health counts stay complete while diagnostic details remain bounded', () => {
+  const input = fixture();
+  const db = new DatabaseSync(':memory:');
+  try {
+    createStageAttemptTable(db);
+    createStageRunLaunchTable(db);
+    for (let index = 0; index < 101; index += 1) {
+      persistStageRunFixture(db, {
+        id: `sr-stage-run-only-unresolved-${String(index).padStart(3, '0')}`,
+        stageId: '01-study_intake',
+        identityState: 'identity_unresolved',
+      });
+    }
+
+    const attempts = readWorkItemStageAttemptsFromDb(db);
+    assert.equal(attempts.length, 101);
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      attempts,
+      resolveDescriptor: input.resolveDescriptor,
+    });
+
+    assert.equal(projection.identity_health.status, 'attention_required');
+    assert.equal(projection.identity_health.execution_count, 101);
+    assert.equal(projection.identity_health.unresolved_execution_count, 101);
+    assert.deepEqual(projection.identity_health.reason_counts, [{
+      reason: 'stage_run_without_attempt_identity_unresolved',
+      count: 101,
+    }]);
+    assert.equal(projection.unresolved_executions.length, 100);
+    assert.equal(
+      projection.diagnostics.items.filter((entry) =>
+        entry.reason === 'stage_run_without_attempt_identity_unresolved'
+      ).length,
+      100,
+    );
+  } finally {
+    db.close();
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('legacy ledgers without StageRun scope schema stay identity_unresolved diagnostics', () => {
+  const input = fixture();
+  const db = new DatabaseSync(':memory:');
+  try {
+    createStageAttemptTable(db);
+    const scoped = attempt({
+      id: 'sat-legacy-stage-run-schema',
+      root: input.diabetes,
+      workItemId: '002-dm-china-us-mortality-attribution',
+      stageId: '01-study_intake',
+      status: 'running',
+      updatedAt: '2026-07-20T00:01:00.000Z',
+    });
+    assert.ok(scoped.execution_scope);
+    const scope = scoped.execution_scope;
+    persistStageAttemptFixture(db, {
+      id: 'sat-legacy-stage-run-schema',
+      stageRunId: 'sr-legacy-stage-run-schema',
+      stageId: '01-study_intake',
+      scope,
+      updatedAt: '2026-07-20T00:01:00.000Z',
+      tokens: 10_000,
+    });
+
+    const attempts = readWorkItemStageAttemptsFromDb(db);
+    assert.equal(attempts[0]?.stage_run_join_state, 'identity_schema_unavailable');
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      attempts,
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const study002 = projection.items.find(
+      (item) => item.identity.work_item_id === '002-dm-china-us-mortality-attribution',
+    )!;
+    assert.equal(study002.execution.attempt_id, null);
+    assert.equal(study002.telemetry.cumulative.total_tokens, null);
+    assert.equal(projection.identity_health.unresolved_execution_count, 1);
+    assert.deepEqual(projection.identity_health.reason_counts, [{
+      reason: 'stage_attempt_stage_run_identity_unresolved',
+      count: 1,
+    }]);
+    assert.equal(
+      projection.unresolved_executions[0]?.details.stage_run_join_state,
+      'identity_schema_unavailable',
+    );
+  } finally {
+    db.close();
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('StageRun unresolved, quarantined, dangling, and cross-Study bindings cannot drive wake or tokens', () => {
+  const input = fixture();
+  const db = new DatabaseSync(':memory:');
+  try {
+    createStageAttemptTable(db);
+    createStageRunLaunchTable(db);
+    const study001Attempt = attempt({
+      id: 'sat-scope-source-001',
+      root: input.diabetes,
+      workItemId: '001-dm-cvd-mortality-risk',
+      stageId: '01-study_intake',
+      status: 'running',
+      updatedAt: '2026-07-20T00:00:00.000Z',
+    });
+    const study002Attempt = attempt({
+      id: 'sat-scope-source-002',
+      root: input.diabetes,
+      workItemId: '002-dm-china-us-mortality-attribution',
+      stageId: '01-study_intake',
+      status: 'running',
+      updatedAt: '2026-07-20T00:00:00.000Z',
+    });
+    assert.ok(study001Attempt.execution_scope);
+    assert.ok(study002Attempt.execution_scope);
+    const study001Scope = study001Attempt.execution_scope;
+    const study002Scope = study002Attempt.execution_scope;
+    persistStageRunFixture(db, {
+      id: 'sr-study-001-authority',
+      stageId: '01-study_intake',
+      scope: study001Scope,
+    });
+    persistStageRunFixture(db, {
+      id: 'sr-unresolved-legacy',
+      stageId: '01-study_intake',
+      identityState: 'identity_unresolved',
+    });
+    persistStageRunFixture(db, {
+      id: 'sr-quarantined-study-002',
+      stageId: '01-study_intake',
+      scope: study002Scope,
+      identityState: 'quarantined',
+    });
+    [
+      ['sat-cross-study-forged', 'sr-study-001-authority', '2026-07-20T00:05:00.000Z'],
+      ['sat-stage-run-unresolved', 'sr-unresolved-legacy', '2026-07-20T00:04:00.000Z'],
+      ['sat-stage-run-quarantined', 'sr-quarantined-study-002', '2026-07-20T00:03:00.000Z'],
+      ['sat-stage-run-dangling', 'sr-does-not-exist', '2026-07-20T00:02:00.000Z'],
+      ['sat-stage-run-unbound-legacy', null, '2026-07-20T00:01:00.000Z'],
+    ].forEach(([id, stageRunId, updatedAt], index) => persistStageAttemptFixture(db, {
+      id: id!,
+      stageRunId,
+      stageId: '01-study_intake',
+      scope: study002Scope,
+      updatedAt: updatedAt!,
+      tokens: (index + 1) * 1000,
+    }));
+
+    const attempts = readWorkItemStageAttemptsFromDb(db);
+    const forged = attempts.find(
+      (entry) => entry.stage_attempt_id === 'sat-cross-study-forged',
+    );
+    assert.equal(forged?.stage_run_work_item_scope_id, study001Scope.work_item_scope_id);
+    assert.notEqual(forged?.stage_run_work_item_scope_id, forged?.work_item_scope_id);
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      attempts,
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const study002 = projection.items.find(
+      (item) => item.identity.work_item_id === '002-dm-china-us-mortality-attribution',
+    )!;
+    assert.equal(study002.execution.attempt_id, null);
+    assert.deepEqual(study002.execution.attempt_ids, []);
+    assert.equal(study002.execution.current_stage_id, null);
+    assert.equal(study002.telemetry.cumulative.total_tokens, null);
+    assert.equal(projection.identity_health.resolved_execution_count, 0);
+    assert.equal(projection.identity_health.unresolved_execution_count, 2);
+    assert.equal(projection.identity_health.conflict_execution_count, 3);
+    assert.deepEqual(projection.identity_health.reason_counts, [
+      { reason: 'stage_attempt_stage_run_binding_not_found', count: 1 },
+      { reason: 'stage_attempt_stage_run_identity_unresolved', count: 1 },
+      { reason: 'stage_attempt_stage_run_scope_mismatch', count: 1 },
+      { reason: 'stage_run_execution_scope_identity_quarantined', count: 1 },
+      { reason: 'stage_run_execution_scope_identity_unresolved', count: 1 },
+    ]);
+  } finally {
+    db.close();
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('legacy locator aliases remain identity_unresolved and cannot enter fast current or token summaries', () => {
+  const input = fixture();
+  try {
+    const valid = attempt({
+      id: 'sat-study-001-scoped',
+      root: input.diabetes,
+      workItemId: '001-dm-cvd-mortality-risk',
+      stageId: '01-study_intake',
+      status: 'completed',
+      updatedAt: '2026-07-20T00:01:00.000Z',
+      tokenUsage: { input_tokens: 80, output_tokens: 20, total_tokens: 100 },
+    });
+    const legacyScopeCarrier = attempt({
+      id: 'sat-study-002-legacy-scope-carrier',
+      root: input.diabetes,
+      workItemId: '002-dm-china-us-mortality-attribution',
+      stageId: '01-study_intake',
+      status: 'running',
+      updatedAt: '2026-07-20T00:01:00.000Z',
+    });
+    const legacyBase = legacyLocatorAttempt({
+      id: 'sat-study-002-legacy-alias',
+      root: input.diabetes,
+      workItemId: '002-dm-china-us-mortality-attribution',
+      stageId: '01-study_intake',
+    });
+    const legacy = {
+      ...legacyBase,
+      workspace_locator: {
+        ...legacyBase.workspace_locator,
+        execution_scope: legacyScopeCarrier.execution_scope,
+      },
+    };
+    const build = (profile: 'fast' | 'full') => buildWorkItemProjectionV2({
+      profile,
+      bindings: input.bindings,
+      attempts: [valid, legacy],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const fast = build('fast');
+    const study002 = fast.items.find(
+      (item) => item.identity.work_item_id === '002-dm-china-us-mortality-attribution',
+    )!;
+
+    assert.equal(study002.execution.attempt_id, null);
+    assert.equal(study002.telemetry.cumulative.total_tokens, null);
+    assert.deepEqual(fast.identity_health, {
+      status: 'attention_required',
+      execution_count: 2,
+      resolved_execution_count: 1,
+      unresolved_execution_count: 1,
+      conflict_execution_count: 0,
+      not_in_inventory_execution_count: 0,
+      non_work_item_execution_count: 0,
+      reason_counts: [{ reason: 'stage_attempt_legacy_execution_scope_not_admitted', count: 1 }],
+      sample_attempt_refs: ['sat-study-002-legacy-alias'],
+    });
+    assert.deepEqual(fast.unresolved_executions, []);
+    assert.deepEqual(fast.diagnostics.items, []);
+
+    const full = build('full');
+    assert.equal(full.unresolved_executions.length, 1);
+    assert.equal(full.unresolved_executions[0]?.attempt_ref, 'sat-study-002-legacy-alias');
+    assert.deepEqual(full.unresolved_executions[0]?.details.legacy_scope_sources, [
+      'attempt.workspace_locator.execution_scope',
+    ]);
+    assert.deepEqual(full.unresolved_executions[0]?.details.legacy_locator_identity_hints, {
+      study_id: '002-dm-china-us-mortality-attribution',
+    });
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('scope conflicts and work-item scopes absent from inventory are quarantined', () => {
+  const input = fixture();
+  try {
+    const conflict = {
+      ...attempt({
+        id: 'sat-study-001-scope-conflict',
+        root: input.diabetes,
+        workItemId: '001-dm-cvd-mortality-risk',
+        status: 'running',
+        updatedAt: new Date().toISOString(),
+      }),
+      scope_digest: `sha256:${'0'.repeat(64)}`,
+    };
+    const orphan = attempt({
+      id: 'sat-study-999-not-in-inventory',
+      root: input.diabetes,
+      workItemId: '999-not-in-inventory',
+      status: 'running',
+      updatedAt: new Date().toISOString(),
+    });
+    const domainExecution = {
+      stage_attempt_id: 'sat-domain-maintenance',
+      domain_id: 'medautoscience',
+      scope_kind: 'domain',
+      identity_state: 'resolved',
+      status: 'completed',
+    };
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: input.bindings,
+      attempts: [conflict, orphan, domainExecution],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const study001 = projection.items.find(
+      (item) => item.identity.work_item_id === '001-dm-cvd-mortality-risk',
+    )!;
+
+    assert.equal(study001.execution.attempt_id, null);
+    assert.equal(projection.identity_health.status, 'attention_required');
+    assert.equal(projection.identity_health.conflict_execution_count, 1);
+    assert.equal(projection.identity_health.not_in_inventory_execution_count, 1);
+    assert.equal(projection.identity_health.non_work_item_execution_count, 1);
+    assert.equal(projection.unresolved_executions.length, 2);
+    assert.deepEqual(
+      projection.identity_health.reason_counts,
+      [
+        { reason: 'stage_attempt_execution_scope_column_conflict', count: 1 },
+        { reason: 'stage_attempt_work_item_scope_not_in_domain_inventory', count: 1 },
+      ],
+    );
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('workspace move changes the selected binding without changing Project or WorkItem scope', () => {
+  const input = fixture();
+  try {
+    const projectScopeId = 'project:stable-diabetes';
+    const firstBinding = binding({
+      id: 'dm-binding-v1',
+      root: input.diabetes,
+      label: 'Diabetes v1',
+      status: 'active',
+      projectScopeId,
+    });
+    const before = buildWorkItemProjectionV2({
+      bindings: [firstBinding],
+      attempts: [],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const beforeItem = before.items.find(
+      (item) => item.identity.work_item_id === '001-dm-cvd-mortality-risk',
+    )!;
+    const movedRoot = path.join(input.root, 'DM-CVD-Mortality-Risk-Moved');
+    fs.renameSync(input.diabetes, movedRoot);
+    const secondBinding = binding({
+      id: 'dm-binding-v2',
+      root: movedRoot,
+      label: 'Diabetes v2',
+      status: 'active',
+      updatedAt: '2026-07-20T00:00:00.000Z',
+      projectScopeId,
+    });
+    const after = buildWorkItemProjectionV2({
+      bindings: [{ ...firstBinding, status: 'inactive' }, secondBinding],
+      attempts: [],
+      resolveDescriptor: input.resolveDescriptor,
+    });
+    const afterItem = after.items.find(
+      (item) => item.identity.work_item_id === '001-dm-cvd-mortality-risk',
+    )!;
+
+    assert.equal(after.project_catalog.length, 1);
+    assert.equal(after.project_catalog[0]?.selected_binding_id, 'dm-binding-v2');
+    assert.deepEqual(after.project_catalog[0]?.binding_ids, ['dm-binding-v1', 'dm-binding-v2']);
+    assert.equal(beforeItem.identity.project_scope_id, projectScopeId);
+    assert.equal(afterItem.identity.project_scope_id, projectScopeId);
+    assert.equal(beforeItem.identity.work_item_scope_id, afterItem.identity.work_item_scope_id);
+    assert.equal(afterItem.identity.workspace_path, fs.realpathSync.native(movedRoot));
   } finally {
     fs.rmSync(input.root, { recursive: true, force: true });
   }
@@ -830,7 +1807,7 @@ test('WorkItem execution projects provider-confirmed running state across a lagg
   }
 });
 
-test('legacy action request identity recovery is digest-bound and fail-closed', () => {
+test('legacy action request identity remains diagnostic-only even when its digest is valid', () => {
   const input = fixture();
   try {
     const workItemId = '001-dm-cvd-mortality-risk';
@@ -856,17 +1833,18 @@ test('legacy action request identity recovery is digest-bound and fail-closed', 
       resolveDescriptor: input.resolveDescriptor,
     });
     const validItem = validProjection.items.find((item) => item.identity.work_item_id === workItemId)!;
-    assert.equal(validItem.execution.attempt_id, 'sat-legacy-identity-valid');
+    assert.equal(validItem.execution.attempt_id, null);
     assert.equal(
       validItem.source_refs.some((source) =>
         source.role === 'stage_attempt_action_request_identity_evidence'
           && source.ref === `${validRequest.ref}#sha256=${validRequest.sha256}`
       ),
-      true,
+      false,
     );
     assert.equal(validProjection.diagnostics.items.some((diagnostic) =>
-      diagnostic.reason === 'stage_attempt_action_request_identity_recovery_failed'
-    ), false);
+      diagnostic.reason === 'stage_attempt_identity_unresolved'
+        && diagnostic.ref === 'sat-legacy-identity-valid'
+    ), true);
 
     const tampered = attempt({
       id: 'sat-legacy-identity-tampered',
@@ -889,8 +1867,8 @@ test('legacy action request identity recovery is digest-bound and fail-closed', 
     assert.equal(tamperedItem.execution.attempt_id, null);
     assert.equal(
       tamperedProjection.diagnostics.items.some((diagnostic) =>
-        diagnostic.reason === 'stage_attempt_action_request_identity_recovery_failed'
-          && diagnostic.details?.failure_reason === 'action_request_digest_mismatch'
+        diagnostic.reason === 'stage_attempt_identity_unresolved'
+          && diagnostic.ref === 'sat-legacy-identity-tampered'
       ),
       true,
     );
@@ -917,9 +1895,14 @@ test('legacy action request identity recovery is digest-bound and fail-closed', 
     });
     assert.equal(
       escapedProjection.diagnostics.items.some((diagnostic) =>
-        diagnostic.details?.failure_reason === 'action_request_ref_escapes_workspace'
+        diagnostic.reason === 'stage_attempt_identity_unresolved'
+          && diagnostic.ref === 'sat-legacy-identity-escaped'
       ),
       true,
+    );
+    assert.equal(
+      escapedProjection.items.find((item) => item.identity.work_item_id === workItemId)?.execution.attempt_id,
+      null,
     );
 
     const symlinkRun = path.join(input.diabetes, 'control', 'opl', 'action_runs', 'legacy-identity-symlink');
@@ -950,9 +1933,14 @@ test('legacy action request identity recovery is digest-bound and fail-closed', 
     });
     assert.equal(
       symlinkProjection.diagnostics.items.some((diagnostic) =>
-        diagnostic.details?.failure_reason === 'action_request_ref_symbolic_link'
+        diagnostic.reason === 'stage_attempt_identity_unresolved'
+          && diagnostic.ref === 'sat-legacy-identity-symlink'
       ),
       true,
+    );
+    assert.equal(
+      symlinkProjection.items.find((item) => item.identity.work_item_id === workItemId)?.execution.attempt_id,
+      null,
     );
 
     const oversizedPath = path.join(
@@ -987,9 +1975,14 @@ test('legacy action request identity recovery is digest-bound and fail-closed', 
     });
     assert.equal(
       oversizedProjection.diagnostics.items.some((diagnostic) =>
-        diagnostic.details?.failure_reason === 'action_request_ref_too_large'
+        diagnostic.reason === 'stage_attempt_identity_unresolved'
+          && diagnostic.ref === 'sat-legacy-identity-oversized'
       ),
       true,
+    );
+    assert.equal(
+      oversizedProjection.items.find((item) => item.identity.work_item_id === workItemId)?.execution.attempt_id,
+      null,
     );
 
     const conflictingRequest = writeActionRequest(input.diabetes, 'legacy-identity-conflict', {
@@ -1016,7 +2009,8 @@ test('legacy action request identity recovery is digest-bound and fail-closed', 
     });
     assert.equal(
       conflictingProjection.diagnostics.items.some((diagnostic) =>
-        diagnostic.details?.failure_reason === 'action_request_identity_conflicting'
+        diagnostic.reason === 'stage_attempt_identity_unresolved'
+          && diagnostic.ref === 'sat-legacy-identity-conflict'
       ),
       true,
     );
@@ -1358,33 +2352,31 @@ test('human gate action omits empty optional message args and remains schema-val
     const snapshot = new Date(Date.now() - 60_000);
     fs.utimesSync(path.join(input.diabetes, 'workspace_index.json'), snapshot, snapshot);
     const createdAt = new Date().toISOString();
-    const project = (stageId: string | null, humanGateRefs: string[]) => buildWorkItemProjectionV2({
+    const project = (humanGateRefs: string[]) => buildWorkItemProjectionV2({
       profile: 'full',
       bindings: input.bindings,
       packageProjectionItems: input.packageProjectionItems,
       packageStatusById: input.packageStatusById,
-      attempts: [{
-        ...attempt({
-          id: 'sat-human-gate-action-args',
-          root: input.diabetes,
-          workItemId,
-          status: 'human_gate',
-          createdAt,
-          updatedAt: createdAt,
-          humanGateRefs,
-        }),
-        stage_id: stageId,
-      }],
+      attempts: [attempt({
+        id: 'sat-human-gate-action-args',
+        root: input.diabetes,
+        workItemId,
+        status: 'human_gate',
+        createdAt,
+        updatedAt: createdAt,
+        humanGateRefs,
+      })],
       resolveDescriptor: input.resolveDescriptor,
     });
 
-    const withoutOptionalArgs = project(null, []);
+    const withoutOptionalArgs = project([]);
     const item = withoutOptionalArgs.items.find(
       (candidate) => candidate.identity.work_item_id === workItemId,
     )!;
     assert.deepEqual(item.action.message_args, {
       item_id: item.item_id,
       stage_attempt_id: 'sat-human-gate-action-args',
+      stage_id: '01-study_intake',
     });
     assert.equal(JSON.stringify(item.action.message_args).includes('null'), false);
 
@@ -1397,7 +2389,7 @@ test('human gate action omits empty optional message args and remains schema-val
     }, withoutOptionalArgs);
     assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
 
-    const withOptionalArgs = project('01-study_intake', ['human-gate:owner-review']);
+    const withOptionalArgs = project(['human-gate:owner-review']);
     const itemWithOptionalArgs = withOptionalArgs.items.find(
       (candidate) => candidate.identity.work_item_id === workItemId,
     )!;
@@ -1412,33 +2404,28 @@ test('human gate action omits empty optional message args and remains schema-val
   }
 });
 
-test('post-snapshot human_gate identity recovery projects owner decision instead of paused idle', () => {
+test('post-snapshot human_gate from an exact-scoped StageRun projects the owner decision', () => {
   const input = fixture();
   const previousStateDir = process.env.OPL_STATE_DIR;
   try {
     const workItemId = '004-dpcc-longitudinal-care-inertia-intensification-gap';
     const snapshot = new Date(Date.now() - 60_000);
     fs.utimesSync(path.join(input.diabetes, 'workspace_index.json'), snapshot, snapshot);
-    const request = writeActionRequest(input.diabetes, 'legacy-human-gate', {
-      workspace_root: input.diabetes,
-      study_id: workItemId,
-    });
     const createdAt = new Date().toISOString();
-    const stageRunId = 'sr_legacy_human_gate';
+    const stageRunId = 'sr_scoped_human_gate';
     const stageRunLaunch = {
       surface_kind: 'opl_stage_run_launch_registry_entry',
       version: 'opl-stage-run-launch-registry-entry.v2',
       stage_run_id: stageRunId,
-      stage_run_invocation_id: 'stage-run-invocation:legacy-human-gate',
+      stage_run_invocation_id: 'stage-run-invocation:scoped-human-gate',
       stage_run_spec_sha256: 'a'.repeat(64),
       domain_id: 'medautoscience',
       stage_id: '01-study_intake',
-      workflow_id: 'stage-run-workflow:legacy-human-gate',
+      workflow_id: 'stage-run-workflow:scoped-human-gate',
       stage_run_input: {
         workspace_locator: {
           workspace_root: input.diabetes,
-          action_request_ref: request.ref,
-          action_request_sha256: request.sha256,
+          work_item_id: workItemId,
         },
       },
       launch_status: 'closed',
@@ -1447,16 +2434,17 @@ test('post-snapshot human_gate identity recovery projects owner decision instead
       updated_at: createdAt,
     };
     const gateAttempt = attempt({
-      id: 'sat-legacy-human-gate',
+      id: 'sat-scoped-human-gate',
       root: input.diabetes,
       workItemId,
       status: 'completed',
       stageId: '01-study_intake',
-      identityField: null,
       createdAt,
       updatedAt: createdAt,
       stageRunId,
     });
+    assert.ok(gateAttempt.execution_scope);
+    const gateScope = gateAttempt.execution_scope;
     process.env.OPL_STATE_DIR = path.join(input.root, 'opl-state');
     const queueDb = path.join(process.env.OPL_STATE_DIR, 'family-runtime', 'queue.sqlite');
     fs.mkdirSync(path.dirname(queueDb), { recursive: true });
@@ -1469,9 +2457,15 @@ test('post-snapshot human_gate identity recovery projects owner decision instead
         INSERT INTO stage_run_launches (
           stage_run_id, stage_run_invocation_id, stage_run_spec_sha256,
           domain_id, stage_id, workflow_id, parent_route_decision_ref,
+          scope_kind, project_scope_id, work_item_scope_id, workspace_binding_id,
+          binding_version_id, scope_digest, execution_scope_json, identity_state,
           stage_run_input_json, launch_status, temporal_start_receipt_json,
           terminal_status, last_start_error, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, 'closed', NULL, 'human_gate', NULL, ?, ?)
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, NULL,
+          ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, 'closed', NULL, 'human_gate', NULL, ?, ?
+        )
       `).run(
         stageRunId,
         stageRunLaunch.stage_run_invocation_id,
@@ -1479,6 +2473,14 @@ test('post-snapshot human_gate identity recovery projects owner decision instead
         stageRunLaunch.domain_id,
         stageRunLaunch.stage_id,
         stageRunLaunch.workflow_id,
+        'work_item',
+        gateScope.project_scope_id,
+        gateScope.work_item_scope_id,
+        gateScope.workspace_binding_id,
+        gateScope.binding_version_id,
+        gateScope.scope_digest,
+        JSON.stringify(gateScope),
+        'resolved',
         JSON.stringify(stageRunLaunch.stage_run_input),
         createdAt,
         createdAt,
@@ -1501,13 +2503,13 @@ test('post-snapshot human_gate identity recovery projects owner decision instead
     });
     const item = projection.items.find((candidate) => candidate.identity.work_item_id === workItemId)!;
     assert.equal(item.lifecycle.business_state, 'paused');
-    assert.equal(item.execution.attempt_id, 'sat-legacy-human-gate');
+    assert.equal(item.execution.attempt_id, 'sat-scoped-human-gate');
     assert.equal(item.execution.state, 'idle');
     assert.equal(item.execution.stage_status, 'human_gate');
     assert.equal(item.attention.kind, 'user');
     assert.equal(item.attention.reason, 'runtime_human_gate_requires_owner_decision');
     assert.equal(item.action.owner_kind, 'user');
-    assert.equal(item.action.action_ref, 'runtime-human-gate:sat-legacy-human-gate');
+    assert.equal(item.action.action_ref, 'runtime-human-gate:sat-scoped-human-gate');
     assert.equal(item.lifecycle.primary_state, 'awaiting_user_decision');
     assert.equal(item.lifecycle.primary_state_label, '等待你决定');
     assert.equal(item.stage_map.find((stage) => stage.stage_id === '01-study_intake')?.state, 'waiting_user');
@@ -1764,6 +2766,44 @@ test('control lifecycle wins over old execution failure and token usage remains 
       ),
       true,
     );
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
+});
+
+test('path-derived control ledger identity remains readable after project scope migration', () => {
+  const input = fixture();
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(input.root, 'opl-state');
+  try {
+    const workItemId = '001-dm-cvd-mortality-risk';
+    const legacyProjectId = `mas:${createHash('sha256')
+      .update(fs.realpathSync.native(input.diabetes))
+      .digest('hex')
+      .slice(0, 16)}`;
+    setWorkItemControlState({
+      agent_id: 'mas',
+      project_id: legacyProjectId,
+      work_item_id: workItemId,
+      lifecycle_state: 'paused',
+      source: 'legacy_path_identity_fixture',
+    });
+
+    const projection = buildWorkItemProjectionV2({
+      bindings: input.bindings,
+      resolveDescriptor: input.resolveDescriptor,
+      attempts: [],
+    });
+    const item = projection.items.find(
+      (candidate) => candidate.identity.work_item_id === workItemId,
+    )!;
+
+    assert.equal(item.identity.project_id, 'project:dm-active');
+    assert.equal(item.lifecycle.business_state, 'paused');
+    assert.equal(item.lifecycle.source, 'work_item_control_ledger');
+    assert.match(item.lifecycle.control_ref!, new RegExp(encodeURIComponent(legacyProjectId)));
   } finally {
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;

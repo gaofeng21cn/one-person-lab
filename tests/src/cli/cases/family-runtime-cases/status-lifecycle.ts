@@ -47,7 +47,7 @@ test('family-runtime status exposes Temporal provider runtime and SQLite project
     assert.equal(output.family_runtime.periodic_execution.status_command, 'opl family-runtime scheduler status --provider temporal');
     assert.equal(output.family_runtime.periodic_execution.authority_boundary.can_install_domain_daemon, false);
     assert.equal(output.family_runtime.state.stage_attempt_index_db, path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
-    assert.equal(output.family_runtime.state.stage_attempt_index_schema_version, 3);
+    assert.equal(output.family_runtime.state.stage_attempt_index_schema_version, 4);
     assert.equal(
       output.family_runtime.queue_lifecycle_boundary.surface_kind,
       'opl_family_runtime_sqlite_sidecar_projection_boundary',

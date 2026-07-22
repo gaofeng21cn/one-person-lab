@@ -153,6 +153,13 @@ type ScopedPackageMutationInput = {
   targetQuest?: string | null;
 };
 
+function pathIsWithin(root: string, candidate: string) {
+  const relative = path.relative(path.resolve(root), path.resolve(candidate));
+  return relative === '' || (!path.isAbsolute(relative)
+    && relative !== '..'
+    && !relative.startsWith(`..${path.sep}`));
+}
+
 export function admitMasWorkspaceScopedPackageMutation<T extends ScopedPackageMutationInput>(
   command: string,
   input: T,
@@ -162,6 +169,43 @@ export function admitMasWorkspaceScopedPackageMutation<T extends ScopedPackageMu
   const unresolvedExplicitSelection = !packageId
     && Boolean(input.manifestUrl || input.registryUrl || input.agentRoot);
   if (packageId !== 'mas' && !unresolvedExplicitSelection) return input;
+  if (input.scope === 'quest' && input.targetQuest && !input.targetWorkspace) {
+    const targetQuest = path.resolve(input.targetQuest);
+    const containingBindings = listWorkspaceBindings()
+      .filter((binding) => pathIsWithin(binding.workspace_path, targetQuest))
+      .sort((left, right) => right.workspace_path.length - left.workspace_path.length);
+    const mostSpecificRoot = containingBindings[0]?.workspace_path ?? null;
+    const governingBindings = mostSpecificRoot
+      ? containingBindings.filter((binding) =>
+        path.resolve(binding.workspace_path) === path.resolve(mostSpecificRoot))
+      : [];
+    const masBinding = governingBindings.find((binding) =>
+      binding.project_id === 'medautoscience' && binding.status !== 'archived'
+    );
+    if (masBinding) return input;
+
+    const archivedMasBinding = governingBindings.find((binding) =>
+      binding.project_id === 'medautoscience' && binding.status === 'archived'
+    );
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'MAS Scholar Skills quest target must be inside a non-archived MAS workspace binding.',
+      {
+        command,
+        package_id: packageId,
+        requested_scope: input.scope,
+        target_workspace: archivedMasBinding?.workspace_path ?? null,
+        target_quest: targetQuest,
+        binding_status: archivedMasBinding
+          ? 'archived'
+          : governingBindings.length > 0 ? 'wrong_domain' : 'unbound',
+        bound_project_ids: governingBindings.map((binding) => binding.project_id),
+        failure_code: archivedMasBinding
+          ? 'mas_scholar_skills_workspace_binding_archived'
+          : 'mas_scholar_skills_workspace_binding_required',
+      },
+    );
+  }
   if (input.scope !== 'workspace' || !input.targetWorkspace || input.targetQuest) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -172,9 +216,7 @@ export function admitMasWorkspaceScopedPackageMutation<T extends ScopedPackageMu
         requested_scope: input.scope,
         target_workspace: input.targetWorkspace ?? null,
         target_quest: input.targetQuest ?? null,
-        failure_code: input.scope === 'quest'
-          ? 'mas_scholar_skills_quest_scope_not_admitted'
-          : 'mas_scholar_skills_workspace_binding_required',
+        failure_code: 'mas_scholar_skills_workspace_binding_required',
       },
     );
   }

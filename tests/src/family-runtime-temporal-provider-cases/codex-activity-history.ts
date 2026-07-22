@@ -10,9 +10,9 @@ import {
 import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../../src/modules/runway/family-runtime-temporal-activities.ts';
-import type { TemporalStageAttemptWorkflowInput } from '../../../src/modules/runway/family-runtime-temporal.ts';
 import { StageAttemptWorkflow } from '../../../src/modules/runway/family-runtime-temporal-workflows.ts';
 import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environment.ts';
+import { createPersistedTemporalStageAttemptInput } from './persisted-attempt.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -37,27 +37,16 @@ test('Temporal history stores refs-only Codex activity results', async () => {
       workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
       activities,
     });
-    const input: TemporalStageAttemptWorkflowInput = {
-      stage_attempt_id: 'sat_history',
-      workflow_id: 'wf_history',
-      domain_id: 'redcube',
-      stage_id: 'artifact_creation',
-      workspace_locator: { workspace_root: '/tmp/redcube-runtime' },
-      source_fingerprint: 'sha256:history',
-      executor_kind: 'codex_cli',
-      retry_budget: { max_attempts: 3 },
-      task_id: 'task-history',
-      stage_packet_ref: 'packet:history',
-      checkpoint_refs: [],
-      codex_stage_runner: { runner_mode: 'dry_run' },
-      closeout_packet: null,
-    };
+    const input = createPersistedTemporalStageAttemptInput({
+      fixtureId: 'history',
+      checkpointRefs: [],
+    });
 
     const history = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
         args: [input],
         taskQueue,
-        workflowId: `wf-temporal-history-${Date.now()}`,
+        workflowId: input.workflow_id,
       });
       await handle.result();
       return await handle.fetchHistory();

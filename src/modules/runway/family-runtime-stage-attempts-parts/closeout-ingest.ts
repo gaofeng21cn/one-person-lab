@@ -3,8 +3,9 @@ import { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
   normalizeTypedStageCloseoutPacket,
+  validateCloseoutPacketForAttempt,
   type TypedStageCloseoutPacket,
-} from '../family-runtime-codex-stage-runner.ts';
+} from '../family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
 import {
   buildFamilyConflictSubject,
   buildReceiptConflictEnvelope,
@@ -189,9 +190,25 @@ export function ingestStageAttemptCloseout(
     packet: TypedStageCloseoutPacket | Record<string, unknown>;
     costSummary?: Record<string, unknown> | null;
   },
-) {
-  const attempt = inspectStageAttempt(db, input.stageAttemptId);
-  const packet = normalizeTypedStageCloseoutPacket(input.packet);
+  ) {
+    const attempt = inspectStageAttempt(db, input.stageAttemptId);
+    const normalizedPacket = normalizeTypedStageCloseoutPacket(input.packet);
+    const admitted = validateCloseoutPacketForAttempt({
+      closeoutPacket: normalizedPacket,
+      attempt,
+    });
+    if (!admitted.closeoutPacket || admitted.rejection) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'StageAttempt closeout does not match the persisted execution identity.',
+        {
+          failure_code: 'stage_attempt_closeout_identity_rejected',
+          stage_attempt_id: input.stageAttemptId,
+          rejection: admitted.rejection,
+        },
+      );
+    }
+    const packet = admitted.closeoutPacket;
   if (packet.domain_output && packet.domain_output.domain_id !== attempt.domain_id) {
     throw new FrameworkContractError(
       'contract_shape_invalid',

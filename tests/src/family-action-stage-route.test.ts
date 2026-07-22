@@ -138,6 +138,30 @@ test('stage-bound action projects only the canonical OPL hosted command', () => 
   );
 });
 
+test('action catalog accepts explicit work-item scope metadata and rejects undeclared aliases', () => {
+  const scoped = catalogValue(validRoute) as Record<string, any>;
+  scoped.actions[0].required_fields = ['study_id'];
+  scoped.actions[0].execution_scope = {
+    kind: 'work_item',
+    alias_fields: ['study_id'],
+  };
+  const normalized = normalizeFamilyActionCatalog(scoped)!;
+  assert.deepEqual(normalized.actions[0]!.execution_scope, {
+    kind: 'work_item',
+    alias_fields: ['study_id'],
+  });
+
+  const invalid = catalogValue(validRoute) as Record<string, any>;
+  invalid.actions[0].execution_scope = {
+    kind: 'work_item',
+    alias_fields: ['study_id'],
+  };
+  assert.throws(
+    () => normalizeFamilyActionCatalog(invalid),
+    /alias_fields reference undeclared action parameters: study_id/,
+  );
+});
+
 test('handler-bound action stays outside declarative stages and resolves through the canonical registry', () => {
   const normalizedCatalog = catalog(undefined, { binding: 'handler_ref' });
   const registry = normalizeDomainHandlerRegistry({

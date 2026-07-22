@@ -27,6 +27,7 @@ import {
   createStageAttempt,
   createStageAttemptTable,
   inspectStageAttempt,
+  materializePersistedStageReviewReceipt,
   syncStageAttemptFromTemporalTerminalObservation,
   validatePersistedStageReviewIsolation,
 } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
@@ -53,6 +54,13 @@ import { OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE } from '../../src/module
 import {
   STANDARD_AGENT_REGISTRY,
 } from '../../src/kernel/standard-agent-registry.ts';
+import { createWorkItemExecutionScopeSnapshot } from '../../src/modules/workspace/index.ts';
+import { createStageRunLaunchTable } from '../../src/modules/runway/family-runtime-stage-run-launch-registry.ts';
+import { buildStageRouteDecisionIdentity } from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
+import {
+  normalizeRuntimeExecutionScopeWrite,
+  persistRuntimeExecutionScope,
+} from '../../src/modules/runway/family-runtime-execution-scope-persistence.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
 
@@ -65,6 +73,7 @@ function qualityContextBinding(input: {
   artifactHashes?: string[];
   priorFindingRefs?: string[];
   repairMapRefs?: string[];
+  artifactProducerAttemptRef?: string | null;
 }) {
   const artifactIdentity = {
     artifact_refs: input.artifactRefs ?? [],
@@ -104,10 +113,111 @@ function qualityContextBinding(input: {
         ...artifactIdentity,
         no_context_inheritance: true,
       };
-  return {
-    contextManifest,
-    contextManifestRef: buildStageQualityContextManifestRef(contextManifest),
+  const boundContextManifest = {
+    ...contextManifest,
+    ...(input.artifactProducerAttemptRef !== undefined
+      ? { artifact_producer_attempt_ref: input.artifactProducerAttemptRef }
+      : {}),
   };
+  return {
+    contextManifest: boundContextManifest,
+    contextManifestRef: buildStageQualityContextManifestRef(boundContextManifest),
+  };
+}
+
+function persistReviewExecutionScope(db: DatabaseSync, input: {
+  stageRunId: string;
+  stageId: string;
+  workspaceRoot: string;
+  domainId?: 'redcube' | 'redcube_ai';
+  studyId?: string;
+}) {
+  const domainId = input.domainId ?? 'redcube_ai';
+  const studyId = input.studyId ?? 'study-001';
+  fs.mkdirSync(path.join(input.workspaceRoot, 'studies', studyId), { recursive: true });
+  const executionScope = createWorkItemExecutionScopeSnapshot({
+    projectScopeId: 'project:stage-quality-cycle',
+    workspaceBindingId: 'binding:stage-quality-cycle',
+    domainId,
+    workspaceRoot: input.workspaceRoot,
+    canonicalWorkItemRoot: path.join(input.workspaceRoot, 'studies', studyId),
+    payload: { study_id: studyId },
+    requirement: { kind: 'work_item', alias_fields: ['study_id'] },
+  });
+  const normalized = normalizeRuntimeExecutionScopeWrite({
+    domainId,
+    scopeKind: 'work_item',
+    executionScope,
+  });
+  persistRuntimeExecutionScope(db, normalized, domainId);
+  createStageRunLaunchTable(db);
+  const now = new Date().toISOString();
+  const stageRunInput = {
+    scope_kind: 'work_item',
+    execution_scope: executionScope,
+    workspace_locator: {
+      workspace_root: input.workspaceRoot,
+      execution_scope: executionScope,
+    },
+  };
+  db.prepare(`
+    INSERT INTO stage_run_launches(
+      stage_run_id, stage_run_invocation_id, stage_run_spec_sha256, domain_id, stage_id,
+      workflow_id, scope_kind, project_scope_id, work_item_scope_id, workspace_binding_id,
+      binding_version_id, scope_digest, execution_scope_json, identity_state,
+      stage_run_input_json, launch_status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'registered', ?, ?)
+  `).run(
+    input.stageRunId,
+    `invocation:${input.stageRunId}`,
+    `sha256:${'8'.repeat(64)}`,
+    domainId,
+    input.stageId,
+    input.stageRunId.replace(/^stage-run:/, 'workflow:'),
+    normalized.columns.scope_kind,
+    normalized.columns.project_scope_id,
+    normalized.columns.work_item_scope_id,
+    normalized.columns.workspace_binding_id,
+    normalized.columns.binding_version_id,
+    normalized.columns.scope_digest,
+    normalized.columns.execution_scope_json,
+    normalized.columns.identity_state,
+    JSON.stringify(stageRunInput),
+    now,
+    now,
+  );
+  return executionScope;
+}
+
+function persistDomainStageRun(db: DatabaseSync, input: {
+  stageRunId: string;
+  domainId: 'redcube' | 'redcube_ai';
+  stageId: string;
+  workspaceRoot?: string;
+}) {
+  createStageRunLaunchTable(db);
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO stage_run_launches(
+      stage_run_id, stage_run_invocation_id, stage_run_spec_sha256, domain_id, stage_id,
+      workflow_id, scope_kind, project_scope_id, work_item_scope_id, workspace_binding_id,
+      binding_version_id, scope_digest, execution_scope_json, identity_state,
+      stage_run_input_json, launch_status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, 'domain', NULL, NULL, NULL, NULL, NULL, NULL, 'resolved', ?, 'registered', ?, ?)
+  `).run(
+    input.stageRunId,
+    `invocation:${input.stageRunId}`,
+    `sha256:${'7'.repeat(64)}`,
+    input.domainId,
+    input.stageId,
+    input.stageRunId.replace(/^stage-run:/, 'workflow:'),
+    JSON.stringify({
+      scope_kind: 'domain',
+      workspace_locator: { workspace_root: input.workspaceRoot ?? '/tmp/rca-quality-cycle' },
+    }),
+    now,
+    now,
+  );
 }
 
 test('official quality profile is explicit without adding per-agent registry policy', () => {
@@ -780,8 +890,13 @@ test('persisted reviewer attempt proves separate session and isolated context', 
   const db = new DatabaseSync(':memory:');
   try {
     createStageAttemptTable(db);
+    const executionScope = persistReviewExecutionScope(db, {
+      stageRunId: 'stage-run:rca/artifact-creation',
+      stageId: 'artifact_creation',
+      workspaceRoot: '/tmp/rca-quality-cycle',
+    });
     const shared = {
-      domainId: 'redcube' as const,
+      domainId: 'redcube_ai' as const,
       stageId: 'artifact_creation',
       providerKind: 'temporal' as const,
       workspaceLocator: { workspace_root: '/tmp/rca-quality-cycle' },
@@ -791,6 +906,8 @@ test('persisted reviewer attempt proves separate session and isolated context', 
       qualityRolePromptRef: 'prompt:quality-role',
       qualityRubricRefs: ['rubric:visual'],
       noContextInheritance: true,
+      scopeKind: 'work_item' as const,
+      executionScope,
     };
     const producer = createStageAttempt(db, {
       ...shared,
@@ -862,8 +979,13 @@ test('persisted reviewer isolation rejects a shared producer session', () => {
   const db = new DatabaseSync(':memory:');
   try {
     createStageAttemptTable(db);
+    const executionScope = persistReviewExecutionScope(db, {
+      stageRunId: 'stage-run:rca/artifact-creation',
+      stageId: 'artifact_creation',
+      workspaceRoot: '/tmp/rca-quality-cycle',
+    });
     const shared = {
-      domainId: 'redcube' as const,
+      domainId: 'redcube_ai' as const,
       stageId: 'artifact_creation',
       providerKind: 'temporal' as const,
       workspaceLocator: { workspace_root: '/tmp/rca-quality-cycle' },
@@ -874,6 +996,8 @@ test('persisted reviewer isolation rejects a shared producer session', () => {
       qualityRolePromptRef: 'prompt:quality-role',
       qualityRubricRefs: ['rubric:visual'],
       noContextInheritance: true,
+      scopeKind: 'work_item' as const,
+      executionScope,
     };
     const producer = createStageAttempt(db, {
       ...shared,
@@ -937,6 +1061,11 @@ test('Temporal terminal sync persists the observed Codex execution session ident
   const db = new DatabaseSync(':memory:');
   try {
     createStageAttemptTable(db);
+    persistDomainStageRun(db, {
+      stageRunId: 'stage-run:rca/artifact-creation',
+      domainId: 'redcube',
+      stageId: 'artifact_creation',
+    });
     const attempt = createStageAttempt(db, {
       domainId: 'redcube',
       stageId: 'artifact_creation',
@@ -1005,6 +1134,11 @@ test('reviewer StageAttempt cannot launch without context isolation evidence', (
   const db = new DatabaseSync(':memory:');
   try {
     createStageAttemptTable(db);
+    persistDomainStageRun(db, {
+      stageRunId: 'stage-run:rca/artifact-creation',
+      domainId: 'redcube',
+      stageId: 'artifact_creation',
+    });
     const producer = createStageAttempt(db, {
       domainId: 'redcube',
       stageId: 'artifact_creation',
@@ -1192,6 +1326,11 @@ test('StageRun controller quality cycle id is preserved by the SQLite projection
   const db = new DatabaseSync(':memory:');
   try {
     createStageAttemptTable(db);
+    persistDomainStageRun(db, {
+      stageRunId: 'stage-run:rca/artifact-creation',
+      domainId: 'redcube',
+      stageId: 'artifact_creation',
+    });
     const input = {
       qualityCycleId: 'quality-cycle:stage-run:rca/artifact-creation',
       stageRunId: 'stage-run:rca/artifact-creation',
@@ -1203,6 +1342,11 @@ test('StageRun controller quality cycle id is preserved by the SQLite projection
     const second = createStageQualityCycle(db, input);
     assert.equal(first.cycle.quality_cycle_id, input.qualityCycleId);
     assert.equal(second.created, false);
+    persistDomainStageRun(db, {
+      stageRunId: 'stage-run:rca/different-stage-run',
+      domainId: 'redcube',
+      stageId: 'artifact_creation',
+    });
     assert.throws(() => createStageQualityCycle(db, {
       ...input,
       stageRunId: 'stage-run:rca/different-stage-run',
@@ -1214,41 +1358,255 @@ test('StageRun controller quality cycle id is preserved by the SQLite projection
 
 test('Temporal StageRun terminal state idempotently refreshes the SQLite quality drilldown', () => {
   const db = new DatabaseSync(':memory:');
+  const projectionWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-projection-'));
+  const crossScopeWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-cross-scope-'));
   try {
     createStageAttemptTable(db);
+    const executionScope = persistReviewExecutionScope(db, {
+      stageRunId: 'stage-run:rca/artifact-creation',
+      domainId: 'redcube_ai',
+      stageId: 'artifact_creation',
+      workspaceRoot: projectionWorkspaceRoot,
+    });
     const cycle = createStageQualityCycle(db, {
       stageRunId: 'stage-run:rca/artifact-creation',
-      domainId: 'redcube',
+      domainId: 'redcube_ai',
       stageId: 'artifact_creation',
       policy: { formal_review: { required: true, risk_tier: 'high', max_repair_rounds: 3 } },
     }).cycle;
+    const sharedAttempt = {
+      domainId: 'redcube_ai' as const,
+      stageId: 'artifact_creation',
+      providerKind: 'temporal' as const,
+      workspaceLocator: { workspace_root: projectionWorkspaceRoot },
+      sourceFingerprint: 'sha256:projection-source',
+      stageRunId: cycle.stage_run_id,
+      qualityCycleId: cycle.quality_cycle_id,
+      qualityRolePromptRef: 'prompt:quality-role',
+      qualityRubricRefs: ['rubric:visual'],
+      noContextInheritance: true,
+      scopeKind: 'work_item' as const,
+      executionScope,
+      newAttempt: true,
+    };
+    const producer = createStageAttempt(db, {
+      ...sharedAttempt,
+      attemptRole: 'producer',
+      qualityRoundIndex: 0,
+      ...qualityContextBinding({
+        role: 'producer',
+        stageRunId: cycle.stage_run_id,
+        qualityCycleId: cycle.quality_cycle_id,
+        rubricRefs: sharedAttempt.qualityRubricRefs,
+      }),
+    }).attempt;
+    const producerRef = `opl://stage_attempts/${producer.stage_attempt_id}`;
+    const reviewer = createStageAttempt(db, {
+      ...sharedAttempt,
+      attemptRole: 'reviewer',
+      qualityRoundIndex: 0,
+      parentAttemptRef: producerRef,
+      inputArtifactRefs: ['artifact:deck-v1'],
+      reviewedArtifactHashes: ['sha256:deck-v1'],
+      ...qualityContextBinding({
+        role: 'reviewer',
+        stageRunId: cycle.stage_run_id,
+        qualityCycleId: cycle.quality_cycle_id,
+        rubricRefs: sharedAttempt.qualityRubricRefs,
+        artifactRefs: ['artifact:deck-v1'],
+        artifactHashes: ['sha256:deck-v1'],
+        artifactProducerAttemptRef: producerRef,
+      }),
+    }).attempt;
+    bindStageAttemptExecutionSession(db, {
+      stageAttemptId: producer.stage_attempt_id,
+      executionSessionRef: 'codex://threads/projection-producer',
+    });
+    bindStageAttemptExecutionSession(db, {
+      stageAttemptId: reviewer.stage_attempt_id,
+      executionSessionRef: 'codex://threads/projection-reviewer',
+    });
+    db.prepare(`
+      UPDATE stage_attempts SET status = 'completed', route_impact_json = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify({
+      stage_quality_cycle: {
+        artifact_refs: ['artifact:deck-v1'],
+        artifact_hashes: ['sha256:deck-v1'],
+      },
+    }), producer.stage_attempt_id);
+    db.prepare(`
+      UPDATE stage_attempts SET status = 'completed', route_impact_json = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify({
+      stage_quality_cycle: { outcome: 'pass', findings: [] },
+    }), reviewer.stage_attempt_id);
+    const initialReviewReceipt = materializePersistedStageReviewReceipt(db, {
+      producerAttemptId: producer.stage_attempt_id,
+      reviewerAttemptId: reviewer.stage_attempt_id,
+      rubricRefs: sharedAttempt.qualityRubricRefs,
+      verdict: 'pass',
+    });
+    const repairer = createStageAttempt(db, {
+      ...sharedAttempt,
+      attemptRole: 'repairer',
+      qualityRoundIndex: 1,
+      parentAttemptRef: `opl://stage_attempts/${reviewer.stage_attempt_id}`,
+      inputArtifactRefs: ['artifact:deck-v1'],
+      reviewedArtifactHashes: ['sha256:deck-v1'],
+      priorFindingRefs: ['finding:visual-clipping'],
+      ...qualityContextBinding({
+        role: 'repairer',
+        stageRunId: cycle.stage_run_id,
+        qualityCycleId: cycle.quality_cycle_id,
+        rubricRefs: sharedAttempt.qualityRubricRefs,
+        artifactRefs: ['artifact:deck-v1'],
+        artifactHashes: ['sha256:deck-v1'],
+        priorFindingRefs: ['finding:visual-clipping'],
+        artifactProducerAttemptRef: producerRef,
+      }),
+    }).attempt;
+    const repairerRef = `opl://stage_attempts/${repairer.stage_attempt_id}`;
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'completed', route_impact_json = ?
+      WHERE stage_attempt_id = ?
+    `).run(JSON.stringify({
+      stage_quality_cycle: {
+        artifact_refs: ['artifact:deck-v4'],
+        artifact_hashes: ['sha256:deck-v4'],
+        artifact_identity_receipt_refs: ['receipt:deck-v4'],
+      },
+    }), repairer.stage_attempt_id);
+    db.prepare(`
+      INSERT INTO stage_attempt_closeouts(closeout_id, stage_attempt_id, packet_json, created_at)
+      VALUES (?, ?, ?, ?)
+    `).run(
+      'closeout:repairer-projection',
+      repairer.stage_attempt_id,
+      JSON.stringify({
+        closeout_ref_metadata: [{
+          ref: 'artifact:deck-v4',
+          sha256: 'sha256:deck-v4',
+          artifact_identity_receipt_ref: 'receipt:deck-v4',
+        }],
+      }),
+      '2026-07-13T00:00:30.000Z',
+    );
+    const decisiveExecutionContentBindingSha256 = `sha256:${'6'.repeat(64)}`;
+    const reReviewer = createStageAttempt(db, {
+      ...sharedAttempt,
+      attemptRole: 're_reviewer',
+      qualityRoundIndex: 1,
+      parentAttemptRef: repairerRef,
+      inputArtifactRefs: ['artifact:deck-v4'],
+      reviewedArtifactHashes: ['sha256:deck-v4'],
+      priorFindingRefs: ['finding:visual-clipping'],
+      repairMapRefs: ['repair-map:finding:visual-clipping'],
+      qualityContext: {
+        execution_content_binding: {
+          binding_sha256: decisiveExecutionContentBindingSha256,
+        },
+      },
+      ...qualityContextBinding({
+        role: 're_reviewer',
+        stageRunId: cycle.stage_run_id,
+        qualityCycleId: cycle.quality_cycle_id,
+        rubricRefs: sharedAttempt.qualityRubricRefs,
+        artifactRefs: ['artifact:deck-v4'],
+        artifactHashes: ['sha256:deck-v4'],
+        priorFindingRefs: ['finding:visual-clipping'],
+        repairMapRefs: ['repair-map:finding:visual-clipping'],
+        artifactProducerAttemptRef: repairerRef,
+      }),
+    }).attempt;
+    bindStageAttemptExecutionSession(db, {
+      stageAttemptId: reReviewer.stage_attempt_id,
+      executionSessionRef: 'codex://threads/rereview-3',
+    });
+    db.prepare("UPDATE stage_attempts SET status = 'completed' WHERE stage_attempt_id = ?")
+      .run(reReviewer.stage_attempt_id);
+    const reReviewerRef = `opl://stage_attempts/${reReviewer.stage_attempt_id}`;
+    const selectedStageRoute = {
+      decision_kind: 'repeat' as const,
+      target_stage_id: 'artifact_creation',
+      evidence_refs: ['finding:visual-clipping'],
+    };
+    const routeDecisionIdentity = buildStageRouteDecisionIdentity({
+      parentStageRunId: cycle.stage_run_id,
+      decisiveAttemptRef: reReviewerRef,
+      decision: selectedStageRoute,
+    });
+    const targetStageRunId = 'stage-run:rca/artifact-creation-repeat';
+    persistReviewExecutionScope(db, {
+      stageRunId: targetStageRunId,
+      domainId: 'redcube_ai',
+      stageId: 'artifact_creation',
+      workspaceRoot: projectionWorkspaceRoot,
+    });
+    db.prepare(`
+      UPDATE stage_run_launches SET parent_route_decision_ref = ? WHERE stage_run_id = ?
+    `).run(routeDecisionIdentity.parent_route_decision_ref, targetStageRunId);
+    const routeLaunchReceiptForTarget = (targetId: string) => {
+      const target = db.prepare('SELECT * FROM stage_run_launches WHERE stage_run_id = ?')
+        .get(targetId) as Record<string, unknown> | undefined;
+      assert.ok(target);
+      return {
+        surface_kind: 'opl_stage_run_route_launch_receipt' as const,
+        version: 'opl-stage-run-route-launch-receipt.v1' as const,
+        materialization_status: 'launched' as const,
+        parent_stage_run_id: cycle.stage_run_id,
+        decisive_attempt_ref: reReviewerRef,
+        decisive_execution_content_binding_sha256: decisiveExecutionContentBindingSha256,
+        parent_route_decision_ref: routeDecisionIdentity.parent_route_decision_ref,
+        route_decision_sha256: routeDecisionIdentity.route_decision_sha256,
+        decision: selectedStageRoute,
+        target_stage_run_id: String(target.stage_run_id),
+        target_stage_run_invocation_id: String(target.stage_run_invocation_id),
+        target_stage_run_spec_sha256: String(target.stage_run_spec_sha256),
+        target_workflow_id: String(target.workflow_id),
+        durable_launch: {
+          start_status: 'registered',
+          launch: {
+            domain_id: target.domain_id,
+            scope_digest: target.scope_digest ?? null,
+          },
+        },
+        authority_boundary: {
+          semantic_route_decision_owner: 'decisive_codex_attempt' as const,
+          stage_transition_materialization_owner: 'opl_stage_run_controller' as const,
+          opl_can_select_semantic_stage_route: false as const,
+        },
+      };
+    };
+    const routeLaunchReceipt = routeLaunchReceiptForTarget(targetStageRunId);
     const state: TemporalStageRunWorkflowState = {
       surface_kind: 'temporal_stage_run_query',
       provider_kind: 'temporal',
       stage_run_id: cycle.stage_run_id,
       workflow_id: 'workflow:rca/artifact-creation',
       quality_cycle_id: cycle.quality_cycle_id,
-      domain_id: 'redcube',
+      domain_id: 'redcube_ai',
       stage_id: 'artifact_creation',
       status: 'completed_with_quality_debt',
       current_role: null,
       repair_rounds_used: 3,
       max_repair_rounds: 3,
       attempts: [{
-        attempt_role: 're_reviewer', quality_round_index: 3,
-        stage_attempt_id: 'sat-rereview-3', workflow_id: 'wf-rereview-3',
+        attempt_role: 're_reviewer', quality_round_index: 1,
+        stage_attempt_id: reReviewer.stage_attempt_id, workflow_id: reReviewer.workflow_id,
         execution_session_ref: 'codex://threads/rereview-3', status: 'completed',
-        artifact_producer_attempt_ref: 'opl://stage_attempts/sat-repair-3',
+        artifact_producer_attempt_ref: repairerRef,
         artifact_refs: ['artifact:deck-v4'], artifact_hashes: ['sha256:deck-v4'],
-        artifact_identity_receipt_refs: ['artifact:deck-v4'],
+        artifact_identity_receipt_refs: ['receipt:deck-v4'],
       }],
       findings: [{
         finding_id: 'finding:visual-clipping', severity: 'critical', required: true,
         evidence_refs: ['screenshot:slide-7-v4'], repair_expectation: 'Remove clipping.',
       }],
-      repair_map: [], finding_closures: [], review_receipts: [],
+      repair_map: [], finding_closures: [], review_receipts: [initialReviewReceipt],
       artifact_refs: ['artifact:deck-v4'], artifact_hashes: ['sha256:deck-v4'],
-      artifact_identity_receipt_refs: ['artifact:deck-v4'],
+      artifact_identity_receipt_refs: ['receipt:deck-v4'],
       quality_debt_refs: ['quality-debt:finding:visual-clipping'],
       route_quality_debt_refs: [],
       hard_stop_class: null,
@@ -1256,15 +1614,11 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
       human_gate_refs: [],
       source_attempt_ref: null,
       decisive_attempt_role: 're_reviewer',
-      decisive_attempt_ref: 'opl://stage_attempts/sat-rereview-3',
-      selected_stage_route: {
-        decision_kind: 'repeat',
-        target_stage_id: 'artifact_creation',
-        evidence_refs: ['finding:visual-clipping'],
-      },
+      decisive_attempt_ref: reReviewerRef,
+      selected_stage_route: selectedStageRoute,
       route_evidence_refs: ['finding:visual-clipping'],
       route_recommendations: [],
-      next_stage_run_launch: null,
+      next_stage_run_launch: routeLaunchReceipt,
       blocked_reason: null,
       sqlite_projection: { status: 'pending', error: null },
       started_at: '2026-07-13T00:00:00.000Z', updated_at: '2026-07-13T00:01:00.000Z',
@@ -1285,22 +1639,116 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
     assert.deepEqual(second.state, first.state);
     assert.equal((second.state as any).controller_readback.controller_status, 'completed_with_quality_debt');
     assert.equal((second.state as any).controller_readback.attempts[0].attempt_role, 're_reviewer');
+    const persistedCycleRow = () => ({
+      ...db.prepare(`
+        SELECT *
+        FROM stage_quality_cycles WHERE quality_cycle_id = ?
+      `).get(cycle.quality_cycle_id) as Record<string, unknown>,
+    });
+    const expectProjectionRejectedWithoutCycleMutation = (
+      candidate: TemporalStageRunWorkflowState,
+      failureCode: string,
+    ) => {
+      const before = persistedCycleRow();
+      assert.throws(
+        () => projectTemporalStageRunQualityCycle(db, candidate),
+        (error) => error instanceof FrameworkContractError
+          && error.details?.failure_code === failureCode,
+      );
+      assert.deepEqual(persistedCycleRow(), before);
+    };
+
+    const tamperedSummary = structuredClone(state);
+    tamperedSummary.attempts[0]!.artifact_hashes = ['sha256:forged-deck-v4'];
+    expectProjectionRejectedWithoutCycleMutation(
+      tamperedSummary,
+      'stage_quality_cycle_attempt_artifact_identity_mismatch',
+    );
+
+    const forgedReviewReceipt = structuredClone(state);
+    forgedReviewReceipt.review_receipts[0]!.producer_session_ref = 'codex://threads/forged-producer';
+    expectProjectionRejectedWithoutCycleMutation(
+      forgedReviewReceipt,
+      'stage_quality_cycle_review_receipt_content_mismatch',
+    );
+
+    const missingTarget = structuredClone(state);
+    missingTarget.next_stage_run_launch!.target_stage_run_id = 'stage-run:missing-target';
+    expectProjectionRejectedWithoutCycleMutation(
+      missingTarget,
+      'stage_quality_cycle_route_launch_target_mismatch',
+    );
+
+    const crossScopeTargetStageRunId = 'stage-run:rca/cross-scope-target';
+    persistReviewExecutionScope(db, {
+      stageRunId: crossScopeTargetStageRunId,
+      stageId: 'artifact_creation',
+      domainId: 'redcube_ai',
+      studyId: 'study-002',
+      workspaceRoot: crossScopeWorkspaceRoot,
+    });
+    db.prepare(`
+      UPDATE stage_run_launches SET parent_route_decision_ref = ? WHERE stage_run_id = ?
+    `).run(routeDecisionIdentity.parent_route_decision_ref, crossScopeTargetStageRunId);
+    const crossScopeTarget = structuredClone(state);
+    crossScopeTarget.next_stage_run_launch = routeLaunchReceiptForTarget(crossScopeTargetStageRunId);
+    expectProjectionRejectedWithoutCycleMutation(
+      crossScopeTarget,
+      'stage_quality_cycle_route_launch_target_mismatch',
+    );
+
+    const forgedRouteEnvelope = structuredClone(state);
+    forgedRouteEnvelope.next_stage_run_launch!.surface_kind = 'forged_route_launch_receipt' as never;
+    expectProjectionRejectedWithoutCycleMutation(
+      forgedRouteEnvelope,
+      'stage_quality_cycle_route_launch_envelope_mismatch',
+    );
+
+    const conflictingCompleteDecision = {
+      decision_kind: 'complete' as const,
+      evidence_refs: ['finding:visual-clipping'],
+    };
+    const conflictingCompleteIdentity = buildStageRouteDecisionIdentity({
+      parentStageRunId: cycle.stage_run_id,
+      decisiveAttemptRef: reReviewerRef,
+      decision: conflictingCompleteDecision,
+    });
+    const conflictingCompleteRoute = structuredClone(state);
+    conflictingCompleteRoute.next_stage_run_launch = {
+      ...routeLaunchReceipt,
+      materialization_status: 'workflow_complete',
+      parent_route_decision_ref: conflictingCompleteIdentity.parent_route_decision_ref,
+      route_decision_sha256: conflictingCompleteIdentity.route_decision_sha256,
+      decision: conflictingCompleteDecision,
+      target_stage_run_id: null,
+      target_stage_run_invocation_id: null,
+      target_stage_run_spec_sha256: null,
+      target_workflow_id: null,
+      durable_launch: null,
+    };
+    expectProjectionRejectedWithoutCycleMutation(
+      conflictingCompleteRoute,
+      'stage_quality_cycle_route_launch_envelope_mismatch',
+    );
+
     const humanGate = projectTemporalStageRunQualityCycle(db, {
       ...state,
       status: 'human_gate',
       hard_stop_class: 'human_decision_required',
       typed_blocker_refs: [],
       human_gate_refs: ['human-gate:publication-owner'],
-      source_attempt_ref: 'opl://stage_attempts/sat-rereview-3',
+      source_attempt_ref: reReviewerRef,
       blocked_reason: 'publication owner decision required',
     });
     const readback = (humanGate.state as any).controller_readback;
     assert.equal(readback.hard_stop_class, 'human_decision_required');
     assert.deepEqual(readback.typed_blocker_refs, []);
     assert.deepEqual(readback.human_gate_refs, ['human-gate:publication-owner']);
-    assert.equal(readback.source_attempt_ref, 'opl://stage_attempts/sat-rereview-3');
+    assert.equal(readback.source_attempt_ref, reReviewerRef);
   } finally {
     db.close();
+    fs.rmSync(projectionWorkspaceRoot, { recursive: true, force: true });
+    fs.rmSync(crossScopeWorkspaceRoot, { recursive: true, force: true });
   }
 });
 

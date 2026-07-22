@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
 import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
+import { createWorkItemExecutionScopeSnapshot } from '../../src/modules/workspace/index.ts';
 import { parseFamilyRuntimeCommand } from '../../src/modules/runway/family-runtime-command.ts';
 import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
 import { buildPackBoundTemporalStageRunInput } from '../../src/modules/runway/family-runtime-pack-bound-stage-run.ts';
@@ -20,6 +21,7 @@ import {
   deriveStageRunId,
   stageAttemptExecutionContentBindingSha256,
   stageRunSpecSha256,
+  revalidateStageRunImmutableSpecContent,
 } from '../../src/modules/runway/family-runtime-stage-run-identity.ts';
 import { launchRegisteredStageRun } from '../../src/modules/runway/family-runtime-stage-run-launch.ts';
 import { materializeStageRunRoute } from '../../src/modules/runway/family-runtime-stage-run-route-launch.ts';
@@ -34,7 +36,10 @@ import {
 } from '../../src/modules/runway/family-runtime-stage-run-launch-registry.ts';
 import { requireTemporalStageRunWorkflowInputLaunchable } from '../../src/modules/runway/family-runtime-temporal.ts';
 import { stageQualityAttemptMaterializeActivity } from '../../src/modules/runway/family-runtime-temporal-activities.ts';
+import { createStageAttempt } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { createFamilyRuntimeQueueTables, openQueueDb } from '../../src/modules/runway/family-runtime-store.ts';
 import { normalizeStageQualityCyclePolicy } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
+import { runWithWorkItemFileBoundaryInterlock } from './work-item-file-boundary-test-support.ts';
 
 const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-launch-fixture-'));
 const domainPackRoot = path.join(fixtureRoot, 'domain-pack');
@@ -49,6 +54,13 @@ function writeFixture(root: string, ref: string, bytes: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, bytes);
   return { ref, sha256: sha256(bytes), filePath };
+}
+
+function safeIdentityDirectory(value: string) {
+  const readable = value.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80)
+    || 'domain';
+  const digest = crypto.createHash('sha256').update(value).digest('hex').slice(0, 12);
+  return `${readable}-${digest}`;
 }
 
 const manifestFixture = writeFixture(
@@ -184,17 +196,23 @@ function stageRunInput(input: {
     sha256: string;
     identityReceiptRef?: string;
   };
+  executionScope?: ReturnType<typeof createWorkItemExecutionScopeSnapshot>;
 } = {}) {
   const stageId = input.stageId ?? 'intake';
   const fixtureArtifact = artifactFixtures[input.artifactId ?? 'request']!;
   const artifact = input.artifact ?? fixtureArtifact;
+  const locator = input.locator ?? workspaceLocator();
   return buildPackBoundTemporalStageRunInput({
     binding: binding(stageId, input.sourceRefs),
     domainPackRoot,
     domainId: 'medautoscience',
     stageId,
     stageRunInvocationId: input.invocationId ?? 'sri_fixture',
-    workspaceLocator: input.locator ?? workspaceLocator(),
+    workspaceLocator: input.executionScope
+      ? { ...locator, execution_scope: input.executionScope }
+      : locator,
+    scopeKind: input.executionScope ? 'work_item' : 'domain',
+    executionScope: input.executionScope ?? null,
     sourceFingerprint: input.sourceFingerprint ?? artifact.sha256,
     actionId: 'draft-paper',
     taskId: 'task:one',
@@ -204,6 +222,55 @@ function stageRunInput(input: {
       ? [input.artifact.identityReceiptRef]
       : undefined,
   });
+}
+
+function workItemExecutionScope(studyId = 'study-001') {
+  const canonicalWorkItemRoot = path.join(workspaceRoot, 'studies', studyId);
+  fs.mkdirSync(canonicalWorkItemRoot, { recursive: true });
+  return createWorkItemExecutionScopeSnapshot({
+    projectScopeId: 'project:fixture',
+    workspaceBindingId: 'binding:fixture',
+    bindingVersionId: 'binding-version:fixture',
+    domainId: 'medautoscience',
+    workspaceRoot,
+    payload: { study_id: studyId },
+    requirement: { kind: 'work_item', alias_fields: ['study_id'] },
+    canonicalWorkItemRoot,
+    inventoryDigest: `sha256:${'9'.repeat(64)}`,
+  });
+}
+
+function scopedStageRunInput(invocationId: string, studyId = 'study-001') {
+  const scope = workItemExecutionScope(studyId);
+  fs.mkdirSync(scope.canonical_work_item_root!, { recursive: true });
+  const artifact = writeFixture(
+    scope.canonical_work_item_root!,
+    `artifacts/${invocationId}.json`,
+    `${JSON.stringify({ artifact_id: invocationId, study_id: studyId })}\n`,
+  );
+  return {
+    scope,
+    input: stageRunInput({
+      invocationId,
+      executionScope: scope,
+      artifact: {
+        ref: pathToFileURL(artifact.filePath).href,
+        sha256: artifact.sha256,
+      },
+    }),
+  };
+}
+
+function registerStageRunInConfiguredState(stageRun: ReturnType<typeof stageRunInput>) {
+  const { db } = openQueueDb();
+  try {
+    registerStageRunLaunch(db, stageRun, {
+      scopeKind: stageRun.scope_kind,
+      executionScope: stageRun.execution_scope,
+    });
+  } finally {
+    db.close();
+  }
 }
 
 function decisiveExecutionBinding(
@@ -232,18 +299,29 @@ function writeTrustedIdentityReceipt(input: {
   artifactRef: string;
   artifactSha256: string;
   sizeBytes: number;
+  stageRunId: string | null;
+  executionScope?: ReturnType<typeof createWorkItemExecutionScopeSnapshot> | null;
 }) {
   const receipt = {
     surface_kind: 'domain_artifact_identity_receipt',
     version: 'domain-artifact-identity-receipt.v1',
     domain_id: input.domainId,
     stage_attempt_id: input.stageAttemptId,
+    stage_run_id: input.stageRunId,
+    scope_kind: input.executionScope ? 'work_item' : 'domain',
+    work_item_scope_id: input.executionScope?.work_item_scope_id ?? null,
+    scope_digest: input.executionScope?.scope_digest ?? null,
     artifact_ref: input.artifactRef,
     sha256: input.artifactSha256,
     size_bytes: input.sizeBytes,
   };
   const bytes = Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
-  const receiptRoot = path.join(input.stateRoot, 'runtime-state', 'stage-artifact-identities');
+  const receiptRoot = path.join(
+    input.stateRoot,
+    'runtime-state',
+    'domain-artifact-identity-receipts',
+    safeIdentityDirectory(input.domainId),
+  );
   fs.mkdirSync(receiptRoot, { recursive: true });
   const receiptPath = path.join(receiptRoot, `${sha256(bytes).slice('sha256:'.length)}.json`);
   fs.writeFileSync(receiptPath, bytes);
@@ -1150,6 +1228,7 @@ test('trusted content-addressed receipt binds an external source through the imm
       stateRoot,
       domainId: 'medautoscience',
       stageAttemptId: 'sat-external-source-owner',
+      stageRunId: 'sr-external-source-owner',
       artifactRef: sourceRef,
       artifactSha256: sourceSha256,
       sizeBytes: sourceBytes.length,
@@ -1169,6 +1248,55 @@ test('trusted content-addressed receipt binds an external source through the imm
     ));
     assert.equal(sourceBinding?.verification_kind, 'trusted_artifact_identity_receipt');
     assert.equal(sourceBinding?.identity_receipt_ref, receipt.ref);
+    assert.equal(sourceBinding?.producing_stage_run_ref, 'opl://stage-runs/sr-external-source-owner');
+    assert.equal(sourceBinding?.producing_attempt_ref, 'opl://stage-attempts/sat-external-source-owner');
+    assert.equal(sourceBinding?.byte_size, sourceBytes.length);
+
+    for (const [field, value] of [
+      ['producing_stage_run_ref', 'opl://stage-runs/sr-other-owner'],
+      ['producing_attempt_ref', 'opl://stage-attempts/sat-other-owner'],
+      ['byte_size', sourceBytes.length + 1],
+    ] as const) {
+      const tamperedSpec = structuredClone(input.stage_run_spec);
+      const tamperedBinding = tamperedSpec.content_bindings.find((entry) => (
+        entry.purpose === 'source' && entry.ref === sourceRef
+      ));
+      assert.ok(tamperedBinding);
+      (tamperedBinding as any)[field] = value;
+      assert.throws(() => revalidateStageRunImmutableSpecContent({
+        spec: tamperedSpec,
+        domainPackRoot,
+        workspaceLocator: input.workspace_locator,
+        scopeKind: 'domain',
+        executionScope: null,
+      }), (error: any) => {
+        assert.equal(error.details?.failure_code, 'stage_run_artifact_identity_receipt_binding_mismatch');
+        return true;
+      }, field);
+    }
+
+    const missingStageRunReceipt = writeTrustedIdentityReceipt({
+      stateRoot,
+      domainId: 'medautoscience',
+      stageAttemptId: 'sat-external-source-owner',
+      stageRunId: null,
+      artifactRef: sourceRef,
+      artifactSha256: sourceSha256,
+      sizeBytes: sourceBytes.length,
+    });
+    assert.throws(() => stageRunInput({
+      invocationId: 'sri_external_source_receipt_without_stage_run',
+      sourceFingerprint: sourceSha256,
+      sourceRefs: [sourceRef],
+      artifact: {
+        ref: sourceRef,
+        sha256: sourceSha256,
+        identityReceiptRef: missingStageRunReceipt.ref,
+      },
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_artifact_identity_receipt_mismatch');
+      return true;
+    });
 
     const db = new DatabaseSync(':memory:');
     try {
@@ -1185,6 +1313,348 @@ test('trusted content-addressed receipt binds an external source through the imm
     if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateRoot;
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('work-item content bindings reject local root escape and cross-study receipts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-work-item-content-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const studyOne = workItemExecutionScope('study-001');
+    const studyTwo = workItemExecutionScope('study-002');
+    fs.mkdirSync(studyOne.canonical_work_item_root!, { recursive: true });
+    assert.throws(() => stageRunInput({
+      invocationId: 'sri_work_item_root_escape',
+      executionScope: studyOne,
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_artifact_outside_work_item_root');
+      return true;
+    });
+
+    const localArtifact = writeFixture(
+      studyOne.canonical_work_item_root!,
+      'artifacts/input.json',
+      '{"study_id":"study-001"}\n',
+    );
+    const localArtifactRef = pathToFileURL(localArtifact.filePath).href;
+    const localInput = stageRunInput({
+      invocationId: 'sri_work_item_local_artifact',
+      executionScope: studyOne,
+      artifact: { ...localArtifact, ref: localArtifactRef },
+    });
+    const localBinding = localInput.stage_run_spec.content_bindings.find((entry) => (
+      entry.purpose === 'input_artifact' && entry.ref === localArtifactRef
+    ));
+    assert.equal(localBinding?.scope_kind, 'work_item');
+    assert.equal(localBinding?.work_item_scope_id, studyOne.work_item_scope_id);
+    assert.equal(localBinding?.scope_digest, studyOne.scope_digest);
+
+    const localReceipt = writeTrustedIdentityReceipt({
+      stateRoot,
+      domainId: 'medautoscience',
+      stageAttemptId: 'sat-study-001-local-owner',
+      stageRunId: 'sr-study-001-local-owner',
+      executionScope: studyOne,
+      artifactRef: localArtifactRef,
+      artifactSha256: localArtifact.sha256,
+      sizeBytes: fs.statSync(localArtifact.filePath).size,
+    });
+    const receiptBoundLocalInput = stageRunInput({
+      invocationId: 'sri_work_item_local_artifact_with_receipt',
+      executionScope: studyOne,
+      artifact: {
+        ...localArtifact,
+        ref: localArtifactRef,
+        identityReceiptRef: localReceipt.ref,
+      },
+    });
+    const receiptBoundLocalBinding = receiptBoundLocalInput.stage_run_spec.content_bindings.find((entry) => (
+      entry.purpose === 'input_artifact' && entry.ref === localArtifactRef
+    ));
+    assert.equal(receiptBoundLocalBinding?.verification_kind, 'trusted_artifact_identity_receipt');
+    assert.equal(receiptBoundLocalBinding?.identity_receipt_ref, localReceipt.ref);
+    assert.equal(
+      receiptBoundLocalBinding?.producing_stage_run_ref,
+      'opl://stage-runs/sr-study-001-local-owner',
+    );
+
+    const sourceRef = 'https://evidence.example.invalid/study-001/source.json';
+    const sourceBytes = Buffer.from('{"study_id":"study-001"}\n');
+    const sourceSha256 = sha256(sourceBytes);
+    const receipt = writeTrustedIdentityReceipt({
+      stateRoot,
+      domainId: 'medautoscience',
+      stageAttemptId: 'sat-study-001-owner',
+      stageRunId: 'sr-study-001-owner',
+      executionScope: studyOne,
+      artifactRef: sourceRef,
+      artifactSha256: sourceSha256,
+      sizeBytes: sourceBytes.length,
+    });
+    stageRunInput({
+      invocationId: 'sri_work_item_receipt_same_scope',
+      executionScope: studyOne,
+      sourceFingerprint: sourceSha256,
+      sourceRefs: [sourceRef],
+      artifact: { ref: sourceRef, sha256: sourceSha256, identityReceiptRef: receipt.ref },
+    });
+    assert.throws(() => stageRunInput({
+      invocationId: 'sri_work_item_receipt_cross_scope',
+      executionScope: studyTwo,
+      sourceFingerprint: sourceSha256,
+      sourceRefs: [sourceRef],
+      artifact: { ref: sourceRef, sha256: sourceSha256, identityReceiptRef: receipt.ref },
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_artifact_identity_receipt_mismatch');
+      return true;
+    });
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('StageRun build rejects a physical work-item root replacement by another Study', () => {
+  const studyOne = workItemExecutionScope('study-root-rebind-build-001');
+  const studyTwo = workItemExecutionScope('study-root-rebind-build-002');
+  const displacedStudyOneRoot = `${studyOne.canonical_work_item_root}.displaced`;
+  try {
+    fs.mkdirSync(studyOne.canonical_work_item_root!, { recursive: true });
+    fs.mkdirSync(studyTwo.canonical_work_item_root!, { recursive: true });
+    const foreignArtifact = writeFixture(
+      studyTwo.canonical_work_item_root!,
+      'artifacts/rebound.json',
+      '{"study_id":"study-root-rebind-build-002"}\n',
+    );
+    fs.renameSync(studyOne.canonical_work_item_root!, displacedStudyOneRoot);
+    fs.renameSync(studyTwo.canonical_work_item_root!, studyOne.canonical_work_item_root!);
+    const reboundArtifactRef = pathToFileURL(path.join(
+      studyOne.canonical_work_item_root!,
+      'artifacts/rebound.json',
+    )).href;
+
+    assert.throws(() => stageRunInput({
+      invocationId: 'sri_work_item_root_rebind_build',
+      executionScope: studyOne,
+      artifact: { ref: reboundArtifactRef, sha256: foreignArtifact.sha256 },
+    }), (error: any) => {
+      assert.equal(
+        error.details?.failure_code,
+        'stage_run_artifact_work_item_root_identity_drift',
+      );
+      return true;
+    });
+  } finally {
+    fs.rmSync(studyOne.canonical_work_item_root!, { recursive: true, force: true });
+    fs.rmSync(displacedStudyOneRoot, { recursive: true, force: true });
+    fs.rmSync(studyTwo.canonical_work_item_root!, { recursive: true, force: true });
+  }
+});
+
+test('StageRun revalidation rejects a physical work-item root replacement after spec creation', () => {
+  const studyOne = workItemExecutionScope('study-root-rebind-revalidate-001');
+  const studyTwo = workItemExecutionScope('study-root-rebind-revalidate-002');
+  const displacedStudyOneRoot = `${studyOne.canonical_work_item_root}.displaced`;
+  try {
+    fs.mkdirSync(studyOne.canonical_work_item_root!, { recursive: true });
+    fs.mkdirSync(studyTwo.canonical_work_item_root!, { recursive: true });
+    const originalArtifact = writeFixture(
+      studyOne.canonical_work_item_root!,
+      'artifacts/rebound.json',
+      '{"study_id":"study-root-rebind-revalidate-001"}\n',
+    );
+    const input = stageRunInput({
+      invocationId: 'sri_work_item_root_rebind_revalidate',
+      executionScope: studyOne,
+      artifact: {
+        ref: pathToFileURL(originalArtifact.filePath).href,
+        sha256: originalArtifact.sha256,
+      },
+    });
+    writeFixture(
+      studyTwo.canonical_work_item_root!,
+      'artifacts/rebound.json',
+      '{"study_id":"study-root-rebind-revalidate-001"}\n',
+    );
+    fs.renameSync(studyOne.canonical_work_item_root!, displacedStudyOneRoot);
+    fs.renameSync(studyTwo.canonical_work_item_root!, studyOne.canonical_work_item_root!);
+
+    assert.throws(() => revalidateStageRunImmutableSpecContent({
+      spec: input.stage_run_spec,
+      domainPackRoot,
+      workspaceLocator: input.workspace_locator,
+      scopeKind: input.scope_kind ?? (input.execution_scope ? 'work_item' : 'domain'),
+      executionScope: input.execution_scope ?? null,
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_artifact_scope_binding_mismatch');
+      assert.equal(
+        error.details?.boundary_failure_code,
+        'work_item_file_boundary_root_attestation_mismatch',
+      );
+      return true;
+    });
+  } finally {
+    fs.rmSync(studyOne.canonical_work_item_root!, { recursive: true, force: true });
+    fs.rmSync(displacedStudyOneRoot, { recursive: true, force: true });
+    fs.rmSync(studyTwo.canonical_work_item_root!, { recursive: true, force: true });
+  }
+});
+
+test('StageRun rejects an unknown verification kind before it can bypass cross-Study file scope', () => {
+  const studyOne = workItemExecutionScope('study-unknown-kind-001');
+  const studyTwo = workItemExecutionScope('study-unknown-kind-002');
+  try {
+    const sharedBytes = '{"content":"same bytes in two Studies"}\n';
+    const studyOneArtifact = writeFixture(
+      studyOne.canonical_work_item_root!,
+      'artifacts/input.json',
+      sharedBytes,
+    );
+    const studyTwoArtifact = writeFixture(
+      studyTwo.canonical_work_item_root!,
+      'artifacts/input.json',
+      sharedBytes,
+    );
+    const input = stageRunInput({
+      invocationId: 'sri_work_item_unknown_verification_kind',
+      executionScope: studyOne,
+      artifact: {
+        ref: pathToFileURL(studyOneArtifact.filePath).href,
+        sha256: studyOneArtifact.sha256,
+      },
+    });
+    const tamperedSpec = structuredClone(input.stage_run_spec);
+    const inputArtifactBinding = tamperedSpec.content_bindings.find((binding) => (
+      binding.purpose === 'input_artifact'
+    ));
+    assert.ok(inputArtifactBinding);
+    inputArtifactBinding.ref = pathToFileURL(studyTwoArtifact.filePath).href;
+    (inputArtifactBinding as any).verification_kind = 'unregistered_workspace_bytes';
+    tamperedSpec.input_artifacts = [{
+      ref: pathToFileURL(studyTwoArtifact.filePath).href,
+      sha256: studyTwoArtifact.sha256,
+      identity_receipt_ref: null,
+    }];
+    const tamperedInput = {
+      ...input,
+      stage_run_spec: tamperedSpec,
+      stage_run_spec_sha256: stageRunSpecSha256(tamperedSpec),
+      artifact_refs: tamperedSpec.input_artifacts.map((artifact) => artifact.ref),
+      artifact_hashes: tamperedSpec.input_artifacts.map((artifact) => artifact.sha256),
+      artifact_identity_receipt_refs: [],
+    };
+    const db = new DatabaseSync(':memory:');
+    try {
+      assert.throws(() => registerStageRunLaunch(db, tamperedInput), (error: any) => {
+        assert.equal(error.details?.failure_code, 'stage_run_content_verification_kind_invalid');
+        return true;
+      });
+    } finally {
+      db.close();
+    }
+  } finally {
+    fs.rmSync(studyOne.canonical_work_item_root!, { recursive: true, force: true });
+    fs.rmSync(studyTwo.canonical_work_item_root!, { recursive: true, force: true });
+  }
+});
+
+test('StageRun input artifacts cannot be rebound as managed package bytes', () => {
+  const studyOne = workItemExecutionScope('study-managed-kind-bypass-001');
+  try {
+    const localArtifact = writeFixture(
+      studyOne.canonical_work_item_root!,
+      'artifacts/input.json',
+      '{"study_id":"study-managed-kind-bypass-001"}\n',
+    );
+    const input = stageRunInput({
+      invocationId: 'sri_input_artifact_managed_kind_bypass',
+      executionScope: studyOne,
+      artifact: {
+        ref: pathToFileURL(localArtifact.filePath).href,
+        sha256: localArtifact.sha256,
+      },
+    });
+    const managedRef = 'agent/sources/request.md';
+    const managedSha256 = sha256(fs.readFileSync(path.join(domainPackRoot, managedRef)));
+    const tamperedSpec = structuredClone(input.stage_run_spec);
+    const inputArtifactBinding = tamperedSpec.content_bindings.find((binding) => (
+      binding.purpose === 'input_artifact'
+    ));
+    assert.ok(inputArtifactBinding);
+    Object.assign(inputArtifactBinding, {
+      ref: managedRef,
+      sha256: managedSha256,
+      verification_kind: 'managed_pack_file_bytes',
+      identity_receipt_ref: null,
+      producing_attempt_ref: null,
+      scope_kind: null,
+      work_item_scope_id: null,
+      scope_digest: null,
+    });
+    tamperedSpec.input_artifacts = [{
+      ref: managedRef,
+      sha256: managedSha256,
+      identity_receipt_ref: null,
+    }];
+    const tamperedInput = {
+      ...input,
+      stage_run_spec: tamperedSpec,
+      stage_run_spec_sha256: stageRunSpecSha256(tamperedSpec),
+      artifact_refs: [managedRef],
+      artifact_hashes: [managedSha256],
+      artifact_identity_receipt_refs: [],
+    };
+    const db = new DatabaseSync(':memory:');
+    try {
+      assert.throws(() => registerStageRunLaunch(db, tamperedInput), (error: any) => {
+        assert.equal(error.details?.failure_code, 'stage_run_content_binding_authority_mismatch');
+        return true;
+      });
+    } finally {
+      db.close();
+    }
+  } finally {
+    fs.rmSync(studyOne.canonical_work_item_root!, { recursive: true, force: true });
+  }
+});
+
+test('StageRun revalidation classifies file drift independently from root drift', async () => {
+  const studyOne = workItemExecutionScope('study-content-file-drift-001');
+  try {
+    const artifact = writeFixture(
+      studyOne.canonical_work_item_root!,
+      'artifacts/input.json',
+      '{"study_id":"study-content-file-drift-001"}\n',
+    );
+    const input = stageRunInput({
+      invocationId: 'sri_content_file_drift',
+      executionScope: studyOne,
+      artifact: {
+        ref: pathToFileURL(artifact.filePath).href,
+        sha256: artifact.sha256,
+      },
+    });
+    await assert.rejects(() => runWithWorkItemFileBoundaryInterlock({
+      temporaryRoot: workspaceRoot,
+      point: 'after_file_open',
+      mutation: { kind: 'append_file', file_path: artifact.filePath, bytes: 'changed during verification\n' },
+      invoke: () => revalidateStageRunImmutableSpecContent({
+        spec: input.stage_run_spec,
+        domainPackRoot,
+        workspaceLocator: input.workspace_locator,
+        scopeKind: input.scope_kind ?? 'work_item',
+        executionScope: input.execution_scope ?? null,
+        skipManagedPackBytes: true,
+      }),
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_content_changed_during_verification');
+      assert.equal(error.details?.boundary_failure_code, 'work_item_file_boundary_ref_drift');
+      return true;
+    });
+  } finally {
+    fs.rmSync(studyOne.canonical_work_item_root!, { recursive: true, force: true });
   }
 });
 
@@ -1222,6 +1692,7 @@ test('every child Attempt preserves parent evidence and binds the latest executi
   process.env.OPL_STATE_DIR = stateRoot;
   try {
     const input = stageRunInput({ invocationId: 'sri_child_executor_content' });
+    registerStageRunInConfiguredState(input);
     const materialized = await stageQualityAttemptMaterializeActivity({
       stage_run: input,
       quality_cycle_id: 'sqc_child_executor_content',
@@ -1384,6 +1855,7 @@ test('Temporal materialization retry reuses the first child Attempt and package-
   process.env.OPL_STATE_DIR = stateRoot;
   try {
     const stageRun = stageRunInput({ invocationId: 'sri_child_temporal_retry' });
+    registerStageRunInConfiguredState(stageRun);
     const materializationInput = {
       stage_run: stageRun,
       quality_cycle_id: 'sqc_child_temporal_retry',
@@ -1503,6 +1975,232 @@ test('one invocation rejects immutable spec drift and preserves the original reg
   }
 });
 
+test('StageRun and StageAttempt persist one exact work-item execution scope', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    db.exec('PRAGMA foreign_keys = ON');
+    createFamilyRuntimeQueueTables(db);
+    const scope = workItemExecutionScope();
+    fs.mkdirSync(scope.canonical_work_item_root!, { recursive: true });
+    const scopedArtifact = writeFixture(
+      scope.canonical_work_item_root!,
+      'artifacts/request.json',
+      '{"artifact_id":"scoped-request"}\n',
+    );
+    const input = stageRunInput({
+      invocationId: 'sri_execution_scope_binding',
+      executionScope: scope,
+      artifact: {
+        ref: pathToFileURL(scopedArtifact.filePath).href,
+        sha256: scopedArtifact.sha256,
+      },
+    });
+    assert.throws(() => registerStageRunLaunch(db, input, {
+      scopeKind: 'work_item',
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'work_item_execution_scope_missing');
+      return true;
+    });
+
+    const registered = registerStageRunLaunch(db, input, {
+      scopeKind: 'work_item',
+      executionScope: scope,
+    });
+    assert.equal(registered.launch.scope_kind, 'work_item');
+    assert.equal(registered.launch.identity_state, 'resolved');
+    assert.equal(registered.launch.work_item_scope_id, scope.work_item_scope_id);
+    assert.equal(registered.launch.scope_digest, scope.scope_digest);
+    assert.deepEqual(registered.launch.execution_scope, scope);
+
+    const replayed = registerStageRunLaunch(db, input, {
+      scopeKind: 'work_item',
+      executionScope: scope,
+    });
+    assert.equal(replayed.idempotent_replay, true);
+    assert.throws(() => registerStageRunLaunch(db, input, {
+      scopeKind: 'work_item',
+      executionScope: workItemExecutionScope('study-002'),
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'runtime_execution_scope_conflict');
+      return true;
+    });
+
+    const attempt = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'intake',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: workspaceRoot, study_id: 'study-001' },
+      sourceFingerprint: 'scope-attempt-one',
+      stageRunId: input.stage_run_id,
+      scopeKind: 'work_item',
+      executionScope: scope,
+    }).attempt;
+    assert.equal(attempt.stage_run_id, input.stage_run_id);
+    assert.equal(attempt.scope_kind, 'work_item');
+    assert.equal(attempt.identity_state, 'resolved');
+    assert.equal(attempt.scope_digest, scope.scope_digest);
+    assert.deepEqual(attempt.execution_scope, scope);
+
+    assert.throws(() => createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'intake',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: workspaceRoot, study_id: 'study-001' },
+      sourceFingerprint: 'scope-attempt-missing-stage-run',
+      scopeKind: 'work_item',
+      executionScope: scope,
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'work_item_stage_attempt_stage_run_missing');
+      return true;
+    });
+
+    assert.throws(() => createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'intake',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: workspaceRoot, study_id: 'study-002' },
+      sourceFingerprint: 'scope-attempt-cross-study',
+      stageRunId: input.stage_run_id,
+      scopeKind: 'work_item',
+      executionScope: workItemExecutionScope('study-002'),
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_attempt_stage_run_scope_mismatch');
+      return true;
+    });
+
+    const domainAttempt = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'runtime-maintenance',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: workspaceRoot, study_id: 'legacy-display-only' },
+      sourceFingerprint: 'domain-scope-attempt',
+      scopeKind: 'domain',
+    }).attempt;
+    assert.equal(domainAttempt.scope_kind, 'domain');
+    assert.equal(domainAttempt.identity_state, 'resolved');
+    assert.equal(domainAttempt.execution_scope, null);
+    assert.equal(domainAttempt.stage_run_id, null);
+  } finally {
+    db.close();
+  }
+});
+
+test('scoped StageRun registration treats active unresolved runtime aliases as negative-only conflicts', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createFamilyRuntimeQueueTables(db);
+    const legacyAttempt = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'intake',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: workspaceRoot, study_id: 'study-001' },
+      sourceFingerprint: 'sha256:legacy-unresolved-attempt',
+      scopeKind: 'domain',
+    }).attempt;
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'running', scope_kind = 'identity_unresolved', identity_state = 'identity_unresolved'
+      WHERE stage_attempt_id = ?
+    `).run(legacyAttempt.stage_attempt_id);
+
+    const legacyStageRun = stageRunInput({ invocationId: 'sri_legacy_unresolved_release' });
+    registerStageRunLaunch(db, legacyStageRun);
+    db.prepare(`
+      UPDATE stage_run_launches
+      SET launch_status = 'started', scope_kind = 'identity_unresolved', identity_state = 'identity_unresolved'
+      WHERE stage_run_id = ?
+    `).run(legacyStageRun.stage_run_id);
+
+    const candidate = scopedStageRunInput('sri_scoped_release_candidate', 'study-002');
+    assert.throws(() => registerStageRunLaunch(db, candidate.input, {
+      scopeKind: 'work_item',
+      executionScope: candidate.scope,
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'active_unresolved_runtime_identity_conflict');
+      assert.equal(error.details?.legacy_alias_policy, 'negative_admission_only');
+      assert.equal(error.details?.positive_binding_allowed, false);
+      assert.deepEqual(
+        new Set(error.details?.legacy_conflicts.map((entry: any) => entry.runtime_kind)),
+        new Set(['stage_attempt', 'stage_run']),
+      );
+      assert.equal(
+        error.details?.legacy_conflicts.every((entry: any) => entry.workspace_match === 'same_workspace'),
+        true,
+      );
+      return true;
+    });
+    assert.equal(findStageRunLaunch(db, candidate.input.stage_run_id), null);
+    assert.equal(
+      db.prepare('SELECT status FROM stage_attempts WHERE stage_attempt_id = ?')
+        .get(legacyAttempt.stage_attempt_id)?.status,
+      'running',
+    );
+
+    db.prepare("UPDATE stage_attempts SET status = 'completed' WHERE stage_attempt_id = ?")
+      .run(legacyAttempt.stage_attempt_id);
+    db.prepare("UPDATE stage_run_launches SET launch_status = 'closed' WHERE stage_run_id = ?")
+      .run(legacyStageRun.stage_run_id);
+    assert.equal(registerStageRunLaunch(db, candidate.input, {
+      scopeKind: 'work_item',
+      executionScope: candidate.scope,
+    }).registered, true);
+  } finally {
+    db.close();
+  }
+});
+
+test('pre-registered scoped work cannot start or materialize after an unresolved legacy conflict appears', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createFamilyRuntimeQueueTables(db);
+    const candidate = scopedStageRunInput('sri_scoped_release_claim', 'study-002');
+    registerStageRunLaunch(db, candidate.input, {
+      scopeKind: 'work_item',
+      executionScope: candidate.scope,
+    });
+    const legacyAttempt = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'intake',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: workspaceRoot, study_id: 'study-001' },
+      sourceFingerprint: 'sha256:legacy-unresolved-after-registration',
+      scopeKind: 'domain',
+    }).attempt;
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'running', scope_kind = 'identity_unresolved', identity_state = 'identity_unresolved'
+      WHERE stage_attempt_id = ?
+    `).run(legacyAttempt.stage_attempt_id);
+
+    for (const operation of [
+      () => claimStageRunStart(db, { stageRunId: candidate.input.stage_run_id }),
+      () => createStageAttempt(db, {
+        domainId: 'medautoscience',
+        stageId: 'intake',
+        providerKind: 'temporal',
+        workspaceLocator: candidate.input.workspace_locator,
+        sourceFingerprint: 'sha256:scoped-attempt-after-legacy-conflict',
+        stageRunId: candidate.input.stage_run_id,
+        scopeKind: 'work_item',
+        executionScope: candidate.scope,
+      }),
+    ]) {
+      assert.throws(operation, (error: any) => {
+        assert.equal(error.details?.failure_code, 'active_unresolved_runtime_identity_conflict');
+        return true;
+      });
+    }
+    assert.equal(inspectStageRunLaunch(db, candidate.input.stage_run_id).launch_status, 'registered');
+    assert.equal(
+      db.prepare('SELECT COUNT(*) AS count FROM stage_attempts WHERE scope_kind = ?')
+        .get('work_item')?.count,
+      0,
+    );
+  } finally {
+    db.close();
+  }
+});
+
 test('registry validates exact input before write and start receipt cannot reopen a closed Run', () => {
   const db = new DatabaseSync(':memory:');
   try {
@@ -1536,6 +2234,33 @@ test('registry validates exact input before write and start receipt cannot reope
     assert.equal(afterLateStartReceipt.launch_status, 'closed');
     assert.equal(afterLateStartReceipt.terminal_status, 'completed');
     assert.equal(afterLateStartReceipt.temporal_start_receipt?.workflow_status, 'RUNNING');
+  } finally {
+    db.close();
+  }
+});
+
+test('legacy identity-unresolved StageRun cannot launch or recover from historical input', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const current = stageRunInput({ invocationId: 'sri_legacy_identity_unresolved' });
+    const legacy = { ...current } as Record<string, unknown>;
+    delete legacy.scope_kind;
+    delete legacy.execution_scope;
+    registerStageRunLaunch(db, legacy as unknown as ReturnType<typeof stageRunInput>);
+    db.prepare(`
+      UPDATE stage_run_launches
+      SET scope_kind = 'identity_unresolved', identity_state = 'identity_unresolved'
+      WHERE stage_run_id = ?
+    `).run(current.stage_run_id);
+    await assert.rejects(() => launchRegisteredStageRun({
+      db,
+      stageRunInput: legacy as unknown as ReturnType<typeof stageRunInput>,
+      start: false,
+      startWorkflow: async () => ({ workflow_status: 'RUNNING' }),
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'runtime_execution_identity_unresolved');
+      return true;
+    });
   } finally {
     db.close();
   }

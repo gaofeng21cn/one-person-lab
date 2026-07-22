@@ -34,7 +34,44 @@ export {
 } from './repo-source-byproduct-guard.ts';
 export { buildWorkspaceCatalog, getActiveWorkspaceBinding, inspectWorkspacePathCurrentness, listWorkspaceBindings, pruneWorkspaceRegistry, resolveWorkspaceLocator } from './workspace-registry.ts';
 export type { WorkspaceBinding, WorkspacePathCurrentness } from './workspace-registry.ts';
+export {
+  assertSameExecutionScope,
+  createProjectScopeId,
+  createWorkItemExecutionScopeSnapshot,
+  deriveLegacyProjectScopeId,
+  deriveWorkItemScopeId,
+  executionScopeEnvironment,
+  EXECUTION_SCOPE_SNAPSHOT_VERSION,
+  executionScopeSnapshotVersion,
+  LEGACY_EXECUTION_SCOPE_SNAPSHOT_VERSION,
+  requireLegacyWorkItemExecutionScopeSnapshot,
+  requireWorkItemExecutionScopeSnapshot,
+  resolveWorkItemIdentity,
+  WORK_ITEM_IDENTITY_ALIAS_FIELDS,
+} from './execution-scope.ts';
+export type {
+  ExecutionScopeKind,
+  ExecutionScopeRequirement,
+  LegacyWorkItemExecutionScopeSnapshot,
+  NonWorkItemExecutionScopeRequirement,
+  ResolvedWorkItemIdentity,
+  WorkItemExecutionScopeRequirement,
+  WorkItemExecutionScopeSnapshot,
+} from './execution-scope.ts';
 export { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from './workspace-topology.ts';
+export { resolveWorkItemInventoryBinding } from './work-item-inventory-binding.ts';
+export {
+  captureWorkItemRootIdentity,
+  readStableWorkItemFile,
+  requireWorkItemRootIdentity,
+  WORK_ITEM_ROOT_IDENTITY_VERSION,
+  WorkItemFileBoundaryError,
+} from './work-item-file-boundary.ts';
+export type {
+  StableWorkItemFileObservation,
+  WorkItemFileBoundaryFailureCode,
+  WorkItemRootIdentity,
+} from './work-item-file-boundary.ts';
 export {
   commitStandardAgentActionOutput,
   inspectStandardAgentActionRunOutput,

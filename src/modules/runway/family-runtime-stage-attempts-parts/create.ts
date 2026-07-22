@@ -29,6 +29,16 @@ import {
 } from './shared.ts';
 import { taskRetryBudgetProjection } from '../family-runtime-queue-projection-boundary.ts';
 import { requireStageQualityAttemptBoundary } from '../family-runtime-stage-quality-attempt-boundary.ts';
+import type { WorkItemExecutionScopeSnapshot } from '../../workspace/index.ts';
+import {
+  assertRuntimeRowScopeMatchesWrite,
+  normalizeRuntimeExecutionScopeWrite,
+  persistRuntimeExecutionScope,
+  requireRuntimeExecutionScopeMutationAllowed,
+  type RuntimeExecutionScopeWriteKind,
+} from '../family-runtime-execution-scope-persistence.ts';
+import { requireNoActiveUnresolvedRuntimeIdentityConflict } from '../family-runtime-legacy-identity-admission.ts';
+import { requireFamilyRuntimeExecutionScope } from '../family-runtime-execution-scope.ts';
 export type StageAttemptCreateInput = {
   domainId: FamilyRuntimeDomainId;
   stageId: string;
@@ -40,6 +50,8 @@ export type StageAttemptCreateInput = {
   sourceFingerprint?: string;
   executorKind?: string;
   stageAttemptExecutorPolicy?: Record<string, unknown> | null;
+  scopeKind?: RuntimeExecutionScopeWriteKind;
+  executionScope?: WorkItemExecutionScopeSnapshot | null;
   executorBindingRef?: string;
   invocationMode?: string;
   boundedEditRef?: string;
@@ -109,6 +121,8 @@ function stageAttemptBaseIdempotencyKey(input: StageAttemptCreateInput) {
     input.idempotencyWorkspaceLocator ?? input.workspaceLocator,
     input.sourceFingerprint?.trim() || null,
     input.stageAttemptExecutorPolicy ?? null,
+    input.scopeKind ?? null,
+    input.executionScope?.scope_digest ?? null,
     input.taskId?.trim() || null,
     input.stageRunId?.trim() || null,
     input.qualityCycleId?.trim() || null,
@@ -208,6 +222,68 @@ function idempotentStageAttemptResult(existing: StageAttemptRow) {
   };
 }
 
+function assertWorkItemStageRunScope(
+  db: DatabaseSync,
+  input: {
+    domainId: string;
+    stageId: string;
+    stageRunId?: string;
+    scope: ReturnType<typeof normalizeRuntimeExecutionScopeWrite>;
+  },
+) {
+  const stageRunId = input.stageRunId?.trim();
+  if (!stageRunId) {
+    if (input.scope.columns.scope_kind === 'work_item') {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'New work-item scoped StageAttempt requires stageRunId.',
+        { failure_code: 'work_item_stage_attempt_stage_run_missing' },
+      );
+    }
+    return;
+  }
+  const table = db.prepare(`
+    SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_run_launches'
+  `).get();
+  const stageRun = table
+    ? db.prepare('SELECT * FROM stage_run_launches WHERE stage_run_id = ?')
+        .get(stageRunId) as Record<string, unknown> | undefined
+    : undefined;
+  if (!stageRun) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageAttempt with explicit StageRun lineage requires a registered StageRun.',
+      {
+        failure_code: input.scope.columns.scope_kind === 'work_item'
+          ? 'work_item_stage_attempt_stage_run_unregistered'
+          : 'stage_attempt_stage_run_unregistered',
+        stage_run_id: stageRunId,
+      },
+    );
+  }
+  requireRuntimeExecutionScopeMutationAllowed(db, stageRun, 'create_stage_attempt:stage_run');
+  const mismatches = [
+    ['domain_id', input.domainId, stageRun.domain_id],
+    ['stage_id', input.stageId, stageRun.stage_id],
+    ['scope_kind', input.scope.columns.scope_kind, stageRun.scope_kind],
+    ['scope_digest', input.scope.columns.scope_digest, stageRun.scope_digest],
+    ['identity_state', 'resolved', stageRun.identity_state],
+  ].flatMap(([field, expected, actual]) => expected === actual
+    ? []
+    : [{ field, expected, actual }]);
+  if (mismatches.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageAttempt execution scope does not match its registered StageRun.',
+      {
+        failure_code: 'stage_attempt_stage_run_scope_mismatch',
+        stage_run_id: stageRunId,
+        mismatches,
+      },
+    );
+  }
+}
+
 export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateInput) {
   const forbiddenAttemptSemantics = [
     'next_stage_refs', 'requires', 'ensures', 'stage_route', 'sub_stage_graph',
@@ -226,6 +302,11 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   const sourceFingerprint = input.sourceFingerprint?.trim() || null;
   const executorKind = input.executorKind?.trim() || 'codex_cli';
   const stageAttemptExecutorPolicy = input.stageAttemptExecutorPolicy ?? null;
+  const scope = normalizeRuntimeExecutionScopeWrite({
+    domainId: input.domainId,
+    scopeKind: input.scopeKind,
+    executionScope: input.executionScope,
+  });
   let retryBudget: Record<string, unknown> = input.retryBudget ?? taskRetryBudgetProjection(3);
   const taskId = input.taskId?.trim() || null;
   const attemptRole = input.attemptRole ? normalizeStageQualityAttemptRole(input.attemptRole) : null;
@@ -249,6 +330,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     throw new FrameworkContractError('contract_shape_invalid', 'Quality-cycle StageAttempt requires qualityCycleId.');
   }
   let parentAttemptLineage: { stage_run_id: string; quality_cycle_id: string } | null = null;
+  let parentAttemptId: string | null = null;
   if (attemptRole === 'producer') {
     if (qualityRoundIndex !== 0 || input.parentAttemptRef) {
       throw new FrameworkContractError(
@@ -267,7 +349,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
         { attempt_role: attemptRole, quality_round_index: qualityRoundIndex },
       );
     }
-    const parentAttemptId = input.parentAttemptRef.startsWith('opl://stage_attempts/')
+    parentAttemptId = input.parentAttemptRef.startsWith('opl://stage_attempts/')
       ? input.parentAttemptRef.slice('opl://stage_attempts/'.length)
       : '';
     const parent = parentAttemptId
@@ -286,6 +368,11 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
         { parent_attempt_ref: input.parentAttemptRef },
       );
     }
+    requireRuntimeExecutionScopeMutationAllowed(
+      db,
+      parent as unknown as Record<string, unknown>,
+      'create_stage_attempt:parent_attempt',
+    );
     parentAttemptLineage = {
       stage_run_id: parent.stage_run_id!,
       quality_cycle_id: parent.quality_cycle_id!,
@@ -412,6 +499,15 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       SELECT * FROM stage_attempts WHERE idempotency_key = ? ORDER BY created_at ASC LIMIT 1
     `).get(idempotencyKey) as StageAttemptRow | undefined;
     if (existing) {
+      requireRuntimeExecutionScopeMutationAllowed(
+        db,
+        existing as unknown as Record<string, unknown>,
+        'create_stage_attempt:idempotent_existing_attempt',
+      );
+      assertRuntimeRowScopeMatchesWrite(existing, scope, {
+        stage_attempt_id: existing.stage_attempt_id,
+        idempotency_key: idempotencyKey,
+      });
       return idempotentStageAttemptResult(existing);
     }
   }
@@ -434,7 +530,29 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
         input.newAttempt ? newAttemptOrdinal : createdAt,
       ]);
   const workflowId = stableId('wf', [input.domainId, stageId, stageAttemptId]);
-  const workspaceLocator = input.workspaceLocator;
+  const workspaceLocator = scope.executionScope
+    ? { ...input.workspaceLocator, execution_scope: scope.executionScope }
+    : input.workspaceLocator;
+  requireFamilyRuntimeExecutionScope({
+    scopeKind: scope.columns.scope_kind,
+    executionScope: scope.executionScope,
+    workspaceLocator,
+    domainId: input.domainId,
+    operation: 'create_stage_attempt:workspace_locator',
+  });
+  if (
+    scope.executionScope
+    && !(
+      (typeof workspaceLocator.workspace_root === 'string' && workspaceLocator.workspace_root.trim())
+      || (typeof workspaceLocator.repo_root === 'string' && workspaceLocator.repo_root.trim())
+    )
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Work-item StageAttempt workspace locator requires its canonical workspace root.',
+      { failure_code: 'execution_scope_workspace_root_missing' },
+    );
+  }
   const providerReceipt = buildStageAttemptProviderReceipt({
     providerKind,
     stageAttemptId,
@@ -478,6 +596,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       ? JSON.stringify(stageAttemptExecutorPolicy)
       : null,
     stage_run_id: input.stageRunId?.trim() || null,
+    ...scope.columns,
     quality_cycle_id: input.qualityCycleId?.trim() || null,
     attempt_role: attemptRole,
     quality_round_index: qualityRoundIndex,
@@ -515,11 +634,57 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     created_at: createdAt,
     updated_at: createdAt,
   };
+  const ownsTransaction = !db.isTransaction;
   try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    requireNoActiveUnresolvedRuntimeIdentityConflict({
+      db,
+      domainId: input.domainId,
+      stageId,
+      executionScope: scope.executionScope,
+      operation: 'create_stage_attempt',
+      candidateStageRunId: input.stageRunId?.trim() || null,
+      candidateStageAttemptId: stageAttemptId,
+    });
+    persistRuntimeExecutionScope(db, scope, input.domainId);
+    assertWorkItemStageRunScope(db, {
+      domainId: input.domainId,
+      stageId,
+      stageRunId: input.stageRunId,
+      scope,
+    });
+    if (parentAttemptId) {
+      const persistedParent = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+        parentAttemptId,
+      ) as StageAttemptRow | undefined;
+      if (
+        !persistedParent
+        || persistedParent.stage_run_id !== input.stageRunId?.trim()
+        || persistedParent.quality_cycle_id !== input.qualityCycleId?.trim()
+        || persistedParent.domain_id !== input.domainId
+        || persistedParent.stage_id !== stageId
+      ) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Parent StageAttempt lineage changed before child Attempt persistence.',
+          {
+            failure_code: 'stage_attempt_parent_lineage_changed',
+            parent_attempt_ref: input.parentAttemptRef,
+          },
+        );
+      }
+      requireRuntimeExecutionScopeMutationAllowed(
+        db,
+        persistedParent as unknown as Record<string, unknown>,
+        'create_stage_attempt:parent_attempt_recheck',
+      );
+    }
     db.prepare(`
       INSERT INTO stage_attempts(
       stage_attempt_id, idempotency_key, provider_kind, workflow_id, domain_id, stage_id, workspace_locator_json,
-      source_fingerprint, executor_kind, stage_attempt_executor_policy_json, stage_run_id, quality_cycle_id,
+      source_fingerprint, executor_kind, stage_attempt_executor_policy_json, stage_run_id,
+      scope_kind, project_scope_id, work_item_scope_id, workspace_binding_id, binding_version_id,
+      scope_digest, execution_scope_json, identity_state, quality_cycle_id,
       attempt_role, quality_round_index, parent_attempt_ref, input_artifact_refs_json, reviewed_artifact_hashes_json,
       quality_source_refs_json, quality_stage_goal_refs_json, quality_lineage_refs_json,
       quality_rubric_refs_json, prior_finding_refs_json, repair_map_refs_json, quality_context_json,
@@ -531,7 +696,9 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     )
       VALUES (
       @stage_attempt_id, @idempotency_key, @provider_kind, @workflow_id, @domain_id, @stage_id, @workspace_locator_json,
-      @source_fingerprint, @executor_kind, @stage_attempt_executor_policy_json, @stage_run_id, @quality_cycle_id,
+      @source_fingerprint, @executor_kind, @stage_attempt_executor_policy_json, @stage_run_id,
+      @scope_kind, @project_scope_id, @work_item_scope_id, @workspace_binding_id, @binding_version_id,
+      @scope_digest, @execution_scope_json, @identity_state, @quality_cycle_id,
       @attempt_role, @quality_round_index, @parent_attempt_ref, @input_artifact_refs_json, @reviewed_artifact_hashes_json,
       @quality_source_refs_json, @quality_stage_goal_refs_json, @quality_lineage_refs_json,
       @quality_rubric_refs_json, @prior_finding_refs_json, @repair_map_refs_json, @quality_context_json,
@@ -542,12 +709,25 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       @closeout_receipt_status, @created_at, @updated_at
       )
     `).run(row);
+    if (ownsTransaction) db.exec('COMMIT');
   } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
     if (input.idempotencyBoundaryId && !input.newAttempt) {
       const existing = db.prepare(`
         SELECT * FROM stage_attempts WHERE stage_attempt_id = ? AND idempotency_key = ? LIMIT 1
       `).get(stageAttemptId, idempotencyKey) as StageAttemptRow | undefined;
-      if (existing) return idempotentStageAttemptResult(existing);
+      if (existing) {
+        requireRuntimeExecutionScopeMutationAllowed(
+          db,
+          existing as unknown as Record<string, unknown>,
+          'create_stage_attempt:conflict_existing_attempt',
+        );
+        assertRuntimeRowScopeMatchesWrite(existing, scope, {
+          stage_attempt_id: existing.stage_attempt_id,
+          idempotency_key: idempotencyKey,
+        });
+        return idempotentStageAttemptResult(existing);
+      }
     }
     throw error;
   }

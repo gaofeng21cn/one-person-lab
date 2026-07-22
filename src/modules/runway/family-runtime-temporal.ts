@@ -25,6 +25,12 @@ import {
   TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES,
 } from './family-runtime-temporal-visibility.ts';
 import { requireStageQualityAttemptBoundary } from './family-runtime-stage-quality-attempt-boundary.ts';
+import {
+  requireFamilyRuntimeExecutionScope,
+  requireSameFamilyRuntimeExecutionIdentity,
+  type FamilyRuntimeExecutionScopeKind,
+  type WorkItemExecutionScopeSnapshot,
+} from './family-runtime-execution-scope.ts';
 import type {
   StageAttemptExecutionContentBinding,
   TemporalStageRunWorkflowInput,
@@ -67,14 +73,8 @@ export const TEMPORAL_MAX_INLINE_PAYLOAD_BYTES = 128 * 1024;
 
 export const TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTE_NAMES = [
   'OplStageAttemptId',
-  'OplDomainId',
-  'OplStageId',
-  'OplAttemptStatus',
-  'OplStagePhase',
-  'OplBlockedReason',
-  'OplTaskId',
-  'OplSourceFingerprint',
-  'OplExecutorKind',
+  'OplStageRunId',
+  'OplWorkItemScopeId',
 ] as const;
 
 export const TEMPORAL_STAGE_ATTEMPT_SIGNALS = [
@@ -112,7 +112,10 @@ export type TemporalStageAttemptOperatorUpdateReceipt = {
   provider_kind: 'temporal';
   update_status: 'accepted';
   stage_attempt_id: string;
+  stage_run_id?: string | null;
   workflow_id: string;
+  scope_kind?: FamilyRuntimeExecutionScopeKind;
+  execution_scope?: WorkItemExecutionScopeSnapshot | null;
   signal_kind: TemporalStageAttemptSignalKind;
   signal_count: number;
   updated_at: string;
@@ -126,6 +129,8 @@ export type TemporalStageAttemptOperatorUpdateReceipt = {
 export type TemporalStageAttemptWorkflowInput = {
   stage_attempt_id: string;
   workflow_id: string;
+  scope_kind?: FamilyRuntimeExecutionScopeKind;
+  execution_scope?: WorkItemExecutionScopeSnapshot | null;
   domain_id: FamilyRuntimeDomainId;
   stage_id: string;
   workspace_locator: Record<string, unknown>;
@@ -190,7 +195,10 @@ export type TemporalStageAttemptWorkflowState = {
   surface_kind: 'temporal_stage_attempt_query';
   provider_kind: 'temporal';
   stage_attempt_id: string;
+  stage_run_id?: string | null;
   workflow_id: string;
+  scope_kind?: FamilyRuntimeExecutionScopeKind;
+  execution_scope?: WorkItemExecutionScopeSnapshot | null;
   domain_id: FamilyRuntimeDomainId;
   stage_id: string;
   status: 'registered' | 'running' | 'checkpointed' | 'blocked' | 'human_gate' | 'completed' | 'failed';
@@ -604,6 +612,9 @@ export function buildTemporalStageAttemptWorkflowInput(
     domain_id: FamilyRuntimeDomainId;
     stage_id: string;
     workspace_locator: Record<string, unknown>;
+    scope_kind?: unknown;
+    execution_scope?: unknown;
+    identity_state?: unknown;
     source_fingerprint: string | null;
     executor_kind: string;
     stage_run_id?: string | null;
@@ -630,13 +641,29 @@ export function buildTemporalStageAttemptWorkflowInput(
     checkpoint_refs?: unknown[];
   },
 ): TemporalStageAttemptWorkflowInput {
+  requireSameFamilyRuntimeExecutionIdentity({
+    authorityIdentity: attempt as unknown as Record<string, unknown>,
+    candidateIdentity: attempt as unknown as Record<string, unknown>,
+    operation: 'build_temporal_stage_attempt_input',
+    compareStageAttemptId: true,
+    compareWorkflowId: true,
+  });
   const checkpointRefs = Array.isArray(attempt.checkpoint_refs)
     ? attempt.checkpoint_refs.filter((entry: unknown): entry is string => typeof entry === 'string')
     : [];
   const executorKind = attempt.executor_kind;
+  const executionScope = requireFamilyRuntimeExecutionScope({
+    scopeKind: attempt.scope_kind,
+    executionScope: attempt.execution_scope,
+    workspaceLocator: attempt.workspace_locator,
+    domainId: attempt.domain_id,
+    operation: 'build_temporal_stage_attempt_input',
+  });
   return guardTemporalStageAttemptWorkflowInputPayload({
     stage_attempt_id: attempt.stage_attempt_id,
     workflow_id: attempt.workflow_id,
+    scope_kind: executionScope.scopeKind,
+    execution_scope: executionScope.executionScope,
     domain_id: attempt.domain_id,
     stage_id: attempt.stage_id,
     workspace_locator: attempt.workspace_locator,
@@ -702,6 +729,13 @@ export function buildTemporalStageAttemptWorkflowInput(
 
 export function requireTemporalStageAttemptWorkflowInputLaunchable(input: TemporalStageAttemptWorkflowInput) {
   requireStageQualityAttemptBoundary(input as unknown as Record<string, unknown>);
+  requireFamilyRuntimeExecutionScope({
+    scopeKind: input.scope_kind,
+    executionScope: input.execution_scope,
+    workspaceLocator: input.workspace_locator,
+    domainId: input.domain_id,
+    operation: 'launch_temporal_stage_attempt',
+  });
   const workspaceRoot = typeof input.workspace_locator.workspace_root === 'string' && input.workspace_locator.workspace_root.trim()
     ? input.workspace_locator.workspace_root.trim()
     : typeof input.workspace_locator.repo_root === 'string' && input.workspace_locator.repo_root.trim()
@@ -727,6 +761,13 @@ export function requireTemporalStageRunWorkflowInputLaunchable(
   input: TemporalStageRunWorkflowInput,
   options: { revalidateContent?: boolean | 'historical_evidence' } = {},
 ) {
+  requireFamilyRuntimeExecutionScope({
+    scopeKind: input.scope_kind,
+    executionScope: input.execution_scope,
+    workspaceLocator: input.workspace_locator,
+    domainId: input.domain_id,
+    operation: 'launch_temporal_stage_run',
+  });
   for (const [field, value] of Object.entries({
     stage_run_id: input.stage_run_id,
     stage_run_invocation_id: input.stage_run_invocation_id,
@@ -886,6 +927,8 @@ export function requireTemporalStageRunWorkflowInputLaunchable(
       spec,
       domainPackRoot: input.domain_pack_root,
       workspaceLocator: input.workspace_locator,
+      scopeKind: input.scope_kind ?? (input.execution_scope ? 'work_item' : 'domain'),
+      executionScope: input.execution_scope ?? null,
       skipManagedPackBytes: options.revalidateContent === 'historical_evidence',
     });
   }

@@ -47,12 +47,44 @@
     "archived_work_items_included": true,
     "runtime_history_may_create_work_items": false,
     "legacy_runtime_views_repopulated_from_work_items": false,
-    "workspace_binding_deduplication_required": true
+    "workspace_binding_deduplication_required": true,
+    "project_identity_source": "workspace_binding.project_scope_id",
+    "workspace_path_is_project_identity": false
+  },
+  "execution_identity_policy": {
+    "authoritative_scope_source": "attempt.execution_scope",
+    "join_key": "execution_scope.work_item_scope_id",
+    "cross_checks": [
+      "execution_scope.project_scope_id",
+      "execution_scope.domain_id",
+      "execution_scope.domain_work_item_id",
+      "execution_scope.scope_digest",
+      "identity_state"
+    ],
+    "workspace_locator_aliases_may_assign_work_item": false,
+    "legacy_locator_execution_scope_policy": "diagnostic_only_identity_unresolved",
+    "unresolved_or_conflicting_execution_is_quarantined": true,
+    "stage_run_without_attempt_policy": {
+      "record_kind": "stage_run_without_stage_attempt",
+      "scope_source": "stage_run.execution_scope",
+      "projection_effect": "diagnostic_only",
+      "resolved_scope_may_mark_matching_work_item_execution_unknown": true,
+      "may_create_attempt_workflow_wake_running_proof_or_usage": false,
+      "untrusted_claimed_scope_is_detail_only": true,
+      "unresolved_quarantined_or_conflicting_scope_may_assign_work_item": false,
+      "diagnostic_details_are_bounded": true
+    },
+    "non_work_item_scope_kinds": [
+      "domain",
+      "system"
+    ]
   },
   "default_summary_axes": [
     "identity.agent_id",
     "identity.project_id",
     "identity.work_item_id",
+    "identity.work_item_scope_id",
+    "identity_health",
     "lifecycle.primary_state",
     "visibility.state",
     "execution.state",
@@ -81,6 +113,9 @@
     "attempt_ref_limit_per_item": 1,
     "diagnostic_details": "lazy",
     "diagnostic_items_embedded": false,
+    "identity_health_summary_embedded": true,
+    "identity_health_sample_attempt_ref_limit": 1,
+    "unresolved_execution_details_embedded": false,
     "condition_details_embedded": false,
     "source_ref_details_embedded": false,
     "token_source_ref_details_embedded": false,

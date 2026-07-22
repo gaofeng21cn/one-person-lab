@@ -10,6 +10,7 @@ export type NcbiReferenceMetadata = {
   journal?: string;
   authors?: string[];
   abstract?: string;
+  article_types?: string[];
 };
 
 export type NcbiReferenceRecord = {
@@ -66,6 +67,12 @@ function compactMetadata(metadata: NcbiReferenceMetadata): NcbiReferenceMetadata
   ));
 }
 
+function stringList(value: unknown) {
+  return (Array.isArray(value) ? value : [value])
+    .map(asString)
+    .filter((entry): entry is string => Boolean(entry));
+}
+
 export function parsePubmedSummary(payload: unknown, requestedPmid: string): NcbiReferenceRecord | null {
   const result = asRecord(asRecord(payload).result);
   const uids = Array.isArray(result.uids) ? result.uids.map(asString).filter(Boolean) : [];
@@ -90,43 +97,56 @@ export function parsePubmedSummary(payload: unknown, requestedPmid: string): Ncb
       year: yearFromText(asString(entry.pubdate)) ?? undefined,
       journal: asString(entry.fulljournalname) ?? asString(entry.source) ?? undefined,
       authors,
+      article_types: stringList(entry.pubtype),
     }),
     normalized: { doi, pmid: uid, pmcid, title },
     fullTextAvailable: Boolean(pmcid),
   };
 }
 
-export function parseEuropePmcSearch(payload: unknown): NcbiReferenceRecord | null {
+export function parseEuropePmcResults(payload: unknown): NcbiReferenceRecord[] {
   const resultList = asRecord(asRecord(payload).resultList);
   const results = Array.isArray(resultList.result) ? resultList.result : [];
-  const entry = asRecord(results[0]);
-  if (Object.keys(entry).length === 0) return null;
-  const doi = normalizeDoi(asString(entry.doi));
-  const pmid = asString(entry.pmid) ?? asString(entry.id);
-  const pmcid = normalizePmcid(asString(entry.pmcid));
-  const title = asString(entry.title);
-  const authorList = asRecord(entry.authorList);
-  const authors = (Array.isArray(authorList.author) ? authorList.author : [])
-    .map((author) => asString(asRecord(author).fullName) ?? asString(asRecord(author).collectiveName))
-    .filter((author): author is string => Boolean(author));
-  const fullTextAvailable = entry.inEPMC === 'Y'
-    || entry.isOpenAccess === 'Y'
-    || pmcid !== null;
-  return {
-    identifiers: {
-      doi,
-      pmid,
-      pmcid,
-      europe_pmc: asString(entry.id),
-    },
-    metadata: compactMetadata({
-      title: title ?? undefined,
-      year: yearFromText(asString(entry.pubYear) ?? asString(entry.firstPublicationDate)) ?? undefined,
-      journal: asString(entry.journalTitle) ?? undefined,
-      authors,
-      abstract: asString(entry.abstractText) ?? undefined,
-    }),
-    normalized: { doi, pmid, pmcid, title },
-    fullTextAvailable,
-  };
+  return results.map(asRecord).flatMap((entry) => {
+    if (Object.keys(entry).length === 0) return [];
+    const source = asString(entry.source)?.toUpperCase() ?? null;
+    const providerId = asString(entry.id);
+    const doi = normalizeDoi(asString(entry.doi));
+    const pmid = asString(entry.pmid)
+      ?? (source === 'MED' || (providerId !== null && /^\d+$/.test(providerId)) ? providerId : null);
+    const pmcid = normalizePmcid(
+      asString(entry.pmcid)
+        ?? (source === 'PMC' || providerId?.toUpperCase().startsWith('PMC') ? providerId : null),
+    );
+    const title = asString(entry.title);
+    const authorList = asRecord(entry.authorList);
+    const authors = (Array.isArray(authorList.author) ? authorList.author : [])
+      .map((author) => asString(asRecord(author).fullName) ?? asString(asRecord(author).collectiveName))
+      .filter((author): author is string => Boolean(author));
+    const fullTextAvailable = entry.inEPMC === 'Y'
+      || entry.isOpenAccess === 'Y'
+      || pmcid !== null;
+    return [{
+      identifiers: {
+        doi,
+        pmid,
+        pmcid,
+        europe_pmc: providerId,
+      },
+      metadata: compactMetadata({
+        title: title ?? undefined,
+        year: yearFromText(asString(entry.pubYear) ?? asString(entry.firstPublicationDate)) ?? undefined,
+        journal: asString(entry.journalTitle) ?? undefined,
+        authors,
+        abstract: asString(entry.abstractText) ?? undefined,
+        article_types: stringList(asRecord(entry.pubTypeList).pubType),
+      }),
+      normalized: { doi, pmid, pmcid, title },
+      fullTextAvailable,
+    }];
+  });
+}
+
+export function parseEuropePmcSearch(payload: unknown): NcbiReferenceRecord | null {
+  return parseEuropePmcResults(payload)[0] ?? null;
 }

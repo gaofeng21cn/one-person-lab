@@ -42,6 +42,20 @@ import {
   stageRunSpecSha256,
   type StageRunImmutableSpec,
 } from './family-runtime-stage-run-identity.ts';
+import {
+  createRuntimeExecutionScopeTable,
+  executionScopeColumnsFromRow,
+  executionScopeFromRow,
+  requireRuntimeExecutionScopeMutationAllowed,
+  type RuntimeExecutionIdentityState,
+  type RuntimeExecutionScopeKind,
+} from './family-runtime-execution-scope-persistence.ts';
+import {
+  addSqliteColumnIfMissing,
+  readSqliteColumnNames,
+  withImmediateSchemaMigration,
+} from './family-runtime-schema-migrations.ts';
+import { requireWorkItemExecutionScopeSnapshot } from '../workspace/index.ts';
 
 export type StageAttemptStatus =
   | 'queued'
@@ -65,6 +79,14 @@ export type StageAttemptRow = {
   executor_kind: string;
   stage_attempt_executor_policy_json?: string | null;
   stage_run_id?: string | null;
+  scope_kind?: RuntimeExecutionScopeKind;
+  project_scope_id?: string | null;
+  work_item_scope_id?: string | null;
+  workspace_binding_id?: string | null;
+  binding_version_id?: string | null;
+  scope_digest?: string | null;
+  execution_scope_json?: string | null;
+  identity_state?: RuntimeExecutionIdentityState;
   quality_cycle_id?: string | null;
   attempt_role?: string | null;
   quality_round_index?: number | null;
@@ -129,21 +151,11 @@ function parseJsonList(value: string) {
   return Array.isArray(parsed) ? parsed : [];
 }
 
-function readColumnNames(db: DatabaseSync, tableName: string) {
-  return new Set(
-    (db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>).map((row) => row.name),
-  );
-}
-
-function addColumnIfMissing(db: DatabaseSync, tableName: string, columns: Set<string>, name: string, ddl: string) {
-  if (!columns.has(name)) {
-    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${ddl}`);
-    columns.add(name);
-  }
-}
-
 export function createStageAttemptTable(db: DatabaseSync) {
-  db.exec(`
+  db.exec('PRAGMA busy_timeout = 5000');
+  return withImmediateSchemaMigration(db, () => {
+    createRuntimeExecutionScopeTable(db);
+    db.exec(`
     CREATE TABLE IF NOT EXISTS stage_attempts (
       stage_attempt_id TEXT PRIMARY KEY,
       idempotency_key TEXT NOT NULL,
@@ -156,6 +168,16 @@ export function createStageAttemptTable(db: DatabaseSync) {
       executor_kind TEXT NOT NULL,
       stage_attempt_executor_policy_json TEXT,
       stage_run_id TEXT,
+      scope_kind TEXT NOT NULL DEFAULT 'identity_unresolved'
+        CHECK(scope_kind IN ('work_item', 'domain', 'system', 'identity_unresolved')),
+      project_scope_id TEXT,
+      work_item_scope_id TEXT,
+      workspace_binding_id TEXT,
+      binding_version_id TEXT,
+      scope_digest TEXT REFERENCES execution_scopes(scope_digest),
+      execution_scope_json TEXT,
+      identity_state TEXT NOT NULL DEFAULT 'identity_unresolved'
+        CHECK(identity_state IN ('resolved', 'identity_unresolved', 'quarantined')),
       quality_cycle_id TEXT,
       attempt_role TEXT,
       quality_round_index INTEGER,
@@ -227,43 +249,77 @@ export function createStageAttemptTable(db: DatabaseSync) {
     );
     CREATE INDEX IF NOT EXISTS idx_stage_quality_cycles_stage_run
       ON stage_quality_cycles(stage_run_id, stage_id, updated_at);
-  `);
-  const columns = readColumnNames(db, 'stage_attempts');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'idempotency_key', "idempotency_key TEXT NOT NULL DEFAULT ''");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'provider_run_json', "provider_run_json TEXT NOT NULL DEFAULT '{}'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'activity_events_json', "activity_events_json TEXT NOT NULL DEFAULT '[]'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'route_impact_json', "route_impact_json TEXT NOT NULL DEFAULT '{}'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'closeout_receipt_status', 'closeout_receipt_status TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'stage_attempt_executor_policy_json', 'stage_attempt_executor_policy_json TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'stage_run_id', 'stage_run_id TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_cycle_id', 'quality_cycle_id TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'attempt_role', 'attempt_role TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_round_index', 'quality_round_index INTEGER');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'parent_attempt_ref', 'parent_attempt_ref TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'input_artifact_refs_json', "input_artifact_refs_json TEXT NOT NULL DEFAULT '[]'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'reviewed_artifact_hashes_json', "reviewed_artifact_hashes_json TEXT NOT NULL DEFAULT '[]'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_source_refs_json', "quality_source_refs_json TEXT NOT NULL DEFAULT '[]'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_stage_goal_refs_json', "quality_stage_goal_refs_json TEXT NOT NULL DEFAULT '[]'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_lineage_refs_json', "quality_lineage_refs_json TEXT NOT NULL DEFAULT '[]'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_rubric_refs_json', "quality_rubric_refs_json TEXT NOT NULL DEFAULT '[]'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'prior_finding_refs_json', "prior_finding_refs_json TEXT NOT NULL DEFAULT '[]'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'repair_map_refs_json', "repair_map_refs_json TEXT NOT NULL DEFAULT '[]'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_context_json', "quality_context_json TEXT NOT NULL DEFAULT '{}'");
-  addColumnIfMissing(db, 'stage_attempts', columns, 'quality_role_prompt_ref', 'quality_role_prompt_ref TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'execution_session_ref', 'execution_session_ref TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'usage_observation_json', 'usage_observation_json TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'context_manifest_ref', 'context_manifest_ref TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'context_manifest_json', 'context_manifest_json TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'no_context_inheritance', 'no_context_inheritance INTEGER');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'archived_at', 'archived_at TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'archived_reason', 'archived_reason TEXT');
-  addColumnIfMissing(db, 'stage_attempts', columns, 'archived_source', 'archived_source TEXT');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_stage_attempts_idempotency ON stage_attempts(idempotency_key)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_stage_attempts_archived ON stage_attempts(archived_at, updated_at)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_stage_attempts_quality_cycle ON stage_attempts(stage_run_id, quality_cycle_id, quality_round_index, attempt_role)');
+    `);
+    const columns = readSqliteColumnNames(db, 'stage_attempts');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'idempotency_key', "idempotency_key TEXT NOT NULL DEFAULT ''");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'provider_run_json', "provider_run_json TEXT NOT NULL DEFAULT '{}'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'activity_events_json', "activity_events_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'route_impact_json', "route_impact_json TEXT NOT NULL DEFAULT '{}'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'closeout_receipt_status', 'closeout_receipt_status TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'stage_attempt_executor_policy_json', 'stage_attempt_executor_policy_json TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'stage_run_id', 'stage_run_id TEXT');
+    addSqliteColumnIfMissing(
+      db,
+      'stage_attempts',
+      columns,
+      'scope_kind',
+      "scope_kind TEXT NOT NULL DEFAULT 'identity_unresolved' CHECK(scope_kind IN ('work_item', 'domain', 'system', 'identity_unresolved'))",
+    );
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'project_scope_id', 'project_scope_id TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'work_item_scope_id', 'work_item_scope_id TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'workspace_binding_id', 'workspace_binding_id TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'binding_version_id', 'binding_version_id TEXT');
+    addSqliteColumnIfMissing(
+      db,
+      'stage_attempts',
+      columns,
+      'scope_digest',
+      'scope_digest TEXT REFERENCES execution_scopes(scope_digest)',
+    );
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'execution_scope_json', 'execution_scope_json TEXT');
+    addSqliteColumnIfMissing(
+      db,
+      'stage_attempts',
+      columns,
+      'identity_state',
+      "identity_state TEXT NOT NULL DEFAULT 'identity_unresolved' CHECK(identity_state IN ('resolved', 'identity_unresolved', 'quarantined'))",
+    );
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_cycle_id', 'quality_cycle_id TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'attempt_role', 'attempt_role TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_round_index', 'quality_round_index INTEGER');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'parent_attempt_ref', 'parent_attempt_ref TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'input_artifact_refs_json', "input_artifact_refs_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'reviewed_artifact_hashes_json', "reviewed_artifact_hashes_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_source_refs_json', "quality_source_refs_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_stage_goal_refs_json', "quality_stage_goal_refs_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_lineage_refs_json', "quality_lineage_refs_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_rubric_refs_json', "quality_rubric_refs_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'prior_finding_refs_json', "prior_finding_refs_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'repair_map_refs_json', "repair_map_refs_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_context_json', "quality_context_json TEXT NOT NULL DEFAULT '{}'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_role_prompt_ref', 'quality_role_prompt_ref TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'execution_session_ref', 'execution_session_ref TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'usage_observation_json', 'usage_observation_json TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'context_manifest_ref', 'context_manifest_ref TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'context_manifest_json', 'context_manifest_json TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'no_context_inheritance', 'no_context_inheritance INTEGER');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'archived_at', 'archived_at TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'archived_reason', 'archived_reason TEXT');
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'archived_source', 'archived_source TEXT');
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_stage_attempts_idempotency ON stage_attempts(idempotency_key);
+      CREATE INDEX IF NOT EXISTS idx_stage_attempts_archived ON stage_attempts(archived_at, updated_at);
+      CREATE INDEX IF NOT EXISTS idx_stage_attempts_quality_cycle
+        ON stage_attempts(stage_run_id, quality_cycle_id, quality_round_index, attempt_role);
+      CREATE INDEX IF NOT EXISTS idx_stage_attempts_work_item_scope
+        ON stage_attempts(work_item_scope_id, stage_id, updated_at);
+      CREATE INDEX IF NOT EXISTS idx_stage_attempts_scope_digest ON stage_attempts(scope_digest);
+    `);
+  });
 }
 
 export function stageAttemptToPayload(row: StageAttemptRow) {
+  const scopeColumns = executionScopeColumnsFromRow(row);
   const retryBudget = parseJsonObject(row.retry_budget_json);
   const providerRun = parseJsonObject(row.provider_run_json);
   const activityEvents = parseJsonList(row.activity_events_json);
@@ -311,6 +367,8 @@ export function stageAttemptToPayload(row: StageAttemptRow) {
     executor_kind: row.executor_kind,
     stage_attempt_executor_policy: hasStageAttemptExecutorPolicy ? stageAttemptExecutorPolicy : null,
     stage_run_id: row.stage_run_id ?? null,
+    ...scopeColumns,
+    execution_scope: executionScopeFromRow(row),
     quality_cycle_id: row.quality_cycle_id ?? null,
     attempt_role: row.attempt_role ?? null,
     quality_round_index: row.quality_round_index ?? null,
@@ -373,6 +431,7 @@ export function bindStageAttemptExecutionSession(db: DatabaseSync, input: {
       stage_attempt_id: input.stageAttemptId,
     });
   }
+  requireRuntimeExecutionScopeMutationAllowed(db, row, 'bind_stage_attempt_execution_session');
   const executionSessionRef = input.executionSessionRef.trim();
   if (!executionSessionRef) {
     throw new FrameworkContractError('contract_shape_invalid', 'executionSessionRef must be non-empty.');
@@ -552,7 +611,84 @@ function persistedEnvelopeRecordList(
   return value as Array<Record<string, unknown>>;
 }
 
-function requireSameReviewIdentity(producer: StageAttemptRow, reviewer: StageAttemptRow) {
+function requireResolvedReviewScope(row: Record<string, unknown>, identitySource: string) {
+  const columns = executionScopeColumnsFromRow(row);
+  if (columns.identity_state !== 'resolved') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt requires resolved execution identity.',
+      {
+        failure_code: 'stage_review_receipt_execution_identity_not_resolved',
+        identity_source: identitySource,
+        identity_state: columns.identity_state,
+        scope_kind: columns.scope_kind,
+      },
+    );
+  }
+  if (columns.scope_kind !== 'work_item') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt requires work-item execution scope.',
+      {
+        failure_code: 'stage_review_receipt_execution_scope_not_work_item',
+        identity_source: identitySource,
+        scope_kind: columns.scope_kind,
+      },
+    );
+  }
+  if (!columns.work_item_scope_id || !columns.scope_digest) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt work-item execution identity is incomplete.',
+      {
+        failure_code: 'stage_review_receipt_execution_scope_incomplete',
+        identity_source: identitySource,
+        work_item_scope_id: columns.work_item_scope_id,
+        scope_digest: columns.scope_digest,
+      },
+    );
+  }
+  const scope = executionScopeFromRow(row);
+  if (!scope) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt work-item execution scope snapshot is missing.',
+      {
+        failure_code: 'stage_review_receipt_execution_scope_missing',
+        identity_source: identitySource,
+      },
+    );
+  }
+  return requireWorkItemExecutionScopeSnapshot(scope);
+}
+
+function requireExactReviewScope(
+  expected: ReturnType<typeof requireWorkItemExecutionScopeSnapshot>,
+  actual: ReturnType<typeof requireWorkItemExecutionScopeSnapshot>,
+  identitySource: string,
+) {
+  const fields = ['scope_kind', 'work_item_scope_id', 'scope_digest'] as const;
+  const mismatches = fields.flatMap((field) => expected[field] === actual[field]
+    ? []
+    : [{ field, expected: expected[field], actual: actual[field] }]);
+  if (mismatches.length > 0 || !exactCanonicalValue(expected, actual)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt execution scope does not exactly match the persisted StageRun.',
+      {
+        failure_code: 'stage_review_receipt_execution_scope_mismatch',
+        identity_source: identitySource,
+        mismatches,
+      },
+    );
+  }
+}
+
+function requireSameReviewIdentity(
+  db: DatabaseSync,
+  producer: StageAttemptRow,
+  reviewer: StageAttemptRow,
+) {
   const identityFields = ['domain_id', 'stage_id', 'stage_run_id', 'quality_cycle_id'] as const;
   const mismatches = identityFields.filter((field) =>
     !producer[field]
@@ -566,6 +702,58 @@ function requireSameReviewIdentity(producer: StageAttemptRow, reviewer: StageAtt
       { mismatched_fields: mismatches },
     );
   }
+  const producerScope = requireResolvedReviewScope(producer, 'producer_attempt');
+  const reviewerScope = requireResolvedReviewScope(reviewer, 'reviewer_attempt');
+  const hasStageRunRegistry = db.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'stage_run_launches'",
+  ).get();
+  const stageRun = hasStageRunRegistry
+    ? db.prepare('SELECT * FROM stage_run_launches WHERE stage_run_id = ?')
+      .get(reviewer.stage_run_id!) as Record<string, unknown> | undefined
+    : undefined;
+  if (!stageRun) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt requires the persisted authoritative StageRun launch identity.',
+      {
+        failure_code: 'stage_review_receipt_stage_run_unregistered',
+        stage_run_id: reviewer.stage_run_id,
+      },
+    );
+  }
+  const stageRunIdentityFields = ['domain_id', 'stage_id'] as const;
+  const stageRunIdentityMismatches = stageRunIdentityFields.flatMap((field) =>
+    stageRun[field] === reviewer[field]
+      ? []
+      : [{ field, expected: stageRun[field], actual: reviewer[field] }]);
+  if (stageRunIdentityMismatches.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt Attempts do not match the persisted StageRun identity.',
+      {
+        failure_code: 'stage_review_receipt_stage_run_identity_mismatch',
+        stage_run_id: reviewer.stage_run_id,
+        mismatches: stageRunIdentityMismatches,
+      },
+    );
+  }
+  const stageRunScope = requireResolvedReviewScope(stageRun, 'stage_run');
+  const registeredScope = db.prepare('SELECT * FROM execution_scopes WHERE scope_digest = ?')
+    .get(stageRunScope.scope_digest) as Record<string, unknown> | undefined;
+  if (!registeredScope) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Review receipt StageRun scope is absent from the persisted execution-scope registry.',
+      {
+        failure_code: 'stage_review_receipt_execution_scope_unregistered',
+        scope_digest: stageRunScope.scope_digest,
+      },
+    );
+  }
+  const registryScope = requireResolvedReviewScope(registeredScope, 'execution_scope_registry');
+  requireExactReviewScope(stageRunScope, registryScope, 'execution_scope_registry');
+  requireExactReviewScope(stageRunScope, producerScope, 'producer_attempt');
+  requireExactReviewScope(stageRunScope, reviewerScope, 'reviewer_attempt');
 }
 
 function requirePersistedQualityContextManifest(row: StageAttemptRow) {
@@ -758,7 +946,7 @@ function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedSta
   if (!producer || !reviewer) {
     throw new FrameworkContractError('contract_shape_invalid', 'Review receipt requires both persisted Attempts.');
   }
-  requireSameReviewIdentity(producer, reviewer);
+  requireSameReviewIdentity(db, producer, reviewer);
   const { reviewerRole } = requireReviewRolePair(producer, reviewer);
   requirePersistedQualityContextManifest(producer);
   const reviewerContextManifest = requirePersistedQualityContextManifest(reviewer);

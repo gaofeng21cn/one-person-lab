@@ -385,6 +385,32 @@ export function buildPublicCommandSpecs(
     },
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
+    'connect mcp-stdio': {
+      usage: 'opl connect mcp-stdio',
+      summary: 'Serve the curated read-only OPL Connect MCP toolset over stdio.',
+      examples: ['opl connect mcp-stdio'],
+      group: 'connect',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['connect mcp-stdio']);
+        return {
+          version: 'g2',
+          opl_connect_mcp_stdio: {
+            surface_kind: 'opl_connect_mcp_stdio_interface',
+            server_id: 'opl-connect',
+            transport: 'stdio',
+            runtime_command: ['opl', 'connect', 'mcp-stdio'],
+            tool_exposure: 'curated_progressive_read_only',
+            authority_boundary: {
+              can_write_domain_truth: false,
+              can_sign_owner_receipt: false,
+              can_create_typed_blocker: false,
+              can_claim_reference_truth: false,
+              can_claim_publication_readiness: false,
+            },
+          },
+        };
+      },
+    },
     'quality details': {
       usage:
         'opl quality details --root <repo_path> [--format <json|markdown>] [--limit <n>] [--focus <auto|depth|equality|modularity|redundancy|test_gaps|rules>] [--compare-ref <git_ref>]',

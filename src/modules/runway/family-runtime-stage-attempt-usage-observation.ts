@@ -11,6 +11,7 @@ import {
   partialExecutorUsageObservation,
   type ExecutorUsageObservation,
 } from './family-runtime-codex-session-usage.ts';
+import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
 
 type UsageObservationRow = {
   stage_attempt_id: string;
@@ -249,15 +250,18 @@ export function persistStageAttemptUsageObservation(db: DatabaseSync, input: {
   sourceFallbackRef?: string;
   workerSourceCurrent?: boolean | null;
 }) {
-  const row = db.prepare(`
-    SELECT stage_attempt_id, execution_session_ref, usage_observation_json
-    FROM stage_attempts WHERE stage_attempt_id = ?
-  `).get(input.stageAttemptId) as UsageObservationRow | undefined;
-  if (!row) {
-    throw new FrameworkContractError('cli_usage_error', 'Stage attempt not found.', {
-      stage_attempt_id: input.stageAttemptId,
-    });
-  }
+  const ownsTransaction = !db.isTransaction;
+  try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    const row = db.prepare(`
+      SELECT * FROM stage_attempts WHERE stage_attempt_id = ?
+    `).get(input.stageAttemptId) as (UsageObservationRow & Record<string, unknown>) | undefined;
+    if (!row) {
+      throw new FrameworkContractError('cli_usage_error', 'Stage attempt not found.', {
+        stage_attempt_id: input.stageAttemptId,
+      });
+    }
+    requireRuntimeExecutionScopeMutationAllowed(db, row, 'persist_stage_attempt_usage_observation');
   const executionSessionRef = input.executionSessionRef?.trim()
     || row.execution_session_ref
     || null;
@@ -306,9 +310,15 @@ export function persistStageAttemptUsageObservation(db: DatabaseSync, input: {
       WHERE stage_attempt_id = ?
     `).run(executionSessionRef, selectedJson, input.observedAt, input.stageAttemptId);
   }
-  return {
-    observation: selected,
-    idempotent_noop: idempotentNoop,
-    authoritative_source_count: 1,
-  };
+    const result = {
+      observation: selected,
+      idempotent_noop: idempotentNoop,
+      authoritative_source_count: 1,
+    };
+    if (ownsTransaction) db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
 }

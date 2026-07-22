@@ -2,11 +2,11 @@ import type { Connection } from '@temporalio/client';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stringValue } from '../../kernel/json-record.ts';
+import type { WorkItemExecutionScopeSnapshot } from '../workspace/public/standard-agent-action-runtime.ts';
 import {
   resolveTemporalAddress,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
-  type TemporalStageAttemptWorkflowInput,
 } from './family-runtime-temporal.ts';
 import {
   type TemporalWorkerPaths,
@@ -16,9 +16,15 @@ import {
   resolveTemporalAddressForPaths,
 } from './family-runtime-temporal-service.ts';
 
+export {
+  buildTemporalStageAttemptMemo,
+  buildTemporalStageAttemptSearchAttributes,
+} from './family-runtime-temporal-visibility-payload.ts';
+
 type JsonRecord = Record<string, unknown>;
 type SearchAttributeType = 'Keyword' | 'Text' | 'Int' | 'Double' | 'Bool' | 'Datetime' | 'KeywordList';
 const TEMPORAL_VISIBILITY_INSPECTION_CONNECT_TIMEOUT_MS = 1_000;
+export const TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT = 10;
 
 const INDEXED_VALUE_TYPE: Record<SearchAttributeType, number> = {
   Text: 1,
@@ -32,14 +38,8 @@ const INDEXED_VALUE_TYPE: Record<SearchAttributeType, number> = {
 
 export const TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES = [
   { name: 'OplStageAttemptId', type: 'Keyword', source: 'stage_attempt_id' },
-  { name: 'OplDomainId', type: 'Keyword', source: 'domain_id' },
-  { name: 'OplStageId', type: 'Keyword', source: 'stage_id' },
-  { name: 'OplAttemptStatus', type: 'Keyword', source: 'provider_status_initial' },
-  { name: 'OplStagePhase', type: 'Keyword', source: 'workflow_current_phase' },
-  { name: 'OplBlockedReason', type: 'Keyword', source: 'short_blocked_reason' },
-  { name: 'OplTaskId', type: 'Keyword', source: 'task_id' },
-  { name: 'OplSourceFingerprint', type: 'Keyword', source: 'source_fingerprint' },
-  { name: 'OplExecutorKind', type: 'Keyword', source: 'executor_kind' },
+  { name: 'OplStageRunId', type: 'Keyword', source: 'stage_run_id' },
+  { name: 'OplWorkItemScopeId', type: 'Keyword', source: 'execution_scope.work_item_scope_id' },
 ] as const satisfies ReadonlyArray<{
   name: string;
   type: SearchAttributeType;
@@ -120,6 +120,8 @@ function temporalSearchAttributeRefs() {
 
 export function temporalStageAttemptTypedSearchAttributes(input: {
   stageAttemptId: string;
+  stageRunId?: string | null;
+  executionScope?: WorkItemExecutionScopeSnapshot | null;
   domainId: string;
   stageId: string;
   status?: string | null;
@@ -129,43 +131,40 @@ export function temporalStageAttemptTypedSearchAttributes(input: {
   sourceFingerprint?: string | null;
   executorKind: string;
 }) {
-  const blockedReason = stringValue(input.blockedReason);
   return {
     OplStageAttemptId: [input.stageAttemptId],
-    OplDomainId: [input.domainId],
-    OplStageId: [input.stageId],
-    OplAttemptStatus: [input.status ?? 'registered'],
-    OplStagePhase: [input.stagePhase ?? input.status ?? 'registered'],
-    OplBlockedReason: blockedReason ? [blockedReason] : [],
-    OplTaskId: input.taskId ? [input.taskId] : [],
-    OplSourceFingerprint: input.sourceFingerprint ? [input.sourceFingerprint] : [],
-    OplExecutorKind: [input.executorKind],
+    OplStageRunId: input.stageRunId ? [input.stageRunId] : [],
+    OplWorkItemScopeId: input.executionScope ? [input.executionScope.work_item_scope_id] : [],
   };
 }
 
-export function buildTemporalStageAttemptSearchAttributes(input: TemporalStageAttemptWorkflowInput) {
+export function buildTemporalStageRunSearchAttributes(
+  input: import('./family-runtime-temporal-stage-run.ts').TemporalStageRunWorkflowInput,
+) {
   return {
-    OplStageAttemptId: [input.stage_attempt_id],
-    OplDomainId: [input.domain_id],
-    OplStageId: [input.stage_id],
-    OplAttemptStatus: ['registered'],
-    OplStagePhase: ['registered'],
-    OplBlockedReason: input.provider_blocker?.blocked_reason ? [input.provider_blocker.blocked_reason] : [],
-    OplTaskId: input.task_id ? [input.task_id] : [],
-    OplSourceFingerprint: input.source_fingerprint ? [input.source_fingerprint] : [],
-    OplExecutorKind: [input.executor_kind],
+    OplStageAttemptId: [],
+    OplStageRunId: [input.stage_run_id],
+    OplWorkItemScopeId: input.execution_scope ? [input.execution_scope.work_item_scope_id] : [],
   };
 }
 
-export function buildTemporalStageAttemptMemo(input: TemporalStageAttemptWorkflowInput) {
+export function buildTemporalStageRunMemo(
+  input: import('./family-runtime-temporal-stage-run.ts').TemporalStageRunWorkflowInput,
+) {
   return {
-    surface_kind: 'opl_temporal_stage_attempt_memo',
+    surface_kind: 'opl_temporal_stage_run_memo',
     owner: 'one-person-lab',
-    stage_attempt_id: input.stage_attempt_id,
+    stage_run_id: input.stage_run_id,
+    scope_kind: input.scope_kind ?? (input.execution_scope ? 'work_item' : 'domain'),
+    project_scope_id: input.execution_scope?.project_scope_id ?? null,
+    work_item_scope_id: input.execution_scope?.work_item_scope_id ?? null,
+    workspace_binding_id: input.execution_scope?.workspace_binding_id ?? null,
+    scope_digest: input.execution_scope?.scope_digest ?? null,
     domain_id: input.domain_id,
     stage_id: input.stage_id,
     executor_kind: input.executor_kind,
     task_id: input.task_id ?? null,
+    source_fingerprint: input.source_fingerprint ?? null,
   };
 }
 
@@ -179,18 +178,44 @@ export function buildTemporalStageAttemptVisibilityReadiness(
   const observed = input.observedCustomAttributes
     ? normalizeCustomAttributes(input.observedCustomAttributes)
     : null;
+  const conflicting = observed
+    ? TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES.filter((attribute) =>
+      Object.hasOwn(observed, attribute.name) && observed[attribute.name] !== attribute.type
+    )
+    : [];
   const missing = observed
     ? TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES.filter((attribute) =>
       observed[attribute.name] !== attribute.type
     )
     : unindexedTestServer ? [] : TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES;
+  const absent = observed
+    ? TEMPORAL_STAGE_ATTEMPT_SEARCH_ATTRIBUTES.filter((attribute) =>
+      !Object.hasOwn(observed, attribute.name)
+    )
+    : [];
+  const presentKeywordNames = observed
+    ? Object.entries(observed)
+      .filter(([, type]) => type === 'Keyword')
+      .map(([name]) => name)
+    : [];
+  const projectedKeywordCount = observed
+    ? presentKeywordNames.length + absent.filter((attribute) => attribute.type === 'Keyword').length
+    : null;
+  const keywordCapacityExceeded = projectedKeywordCount !== null
+    && projectedKeywordCount > TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT;
   const readinessStatus = input.inspectionError
     ? 'inspection_failed'
     : unindexedTestServer
       ? 'test_server_unindexed_visibility'
       : observed
-      ? missing.length === 0 ? 'ready' : 'missing_search_attributes'
+      ? conflicting.length > 0
+        ? 'search_attribute_type_conflict'
+        : keywordCapacityExceeded
+          ? 'search_attribute_capacity_exceeded'
+          : missing.length === 0 ? 'ready' : 'missing_search_attributes'
       : 'not_verified';
+  const migrationRequired = readinessStatus === 'search_attribute_type_conflict'
+    || readinessStatus === 'search_attribute_capacity_exceeded';
   return {
     surface_kind: 'temporal_stage_attempt_visibility_readiness',
     provider_kind: 'temporal',
@@ -201,20 +226,38 @@ export function buildTemporalStageAttemptVisibilityReadiness(
     address_source: input.addressSource ?? (address ? 'environment' : 'not_configured'),
     required_search_attributes: requiredSearchAttributesSummary(namespace, address),
     observed_custom_attributes: observed,
+    keyword_capacity: {
+      limit: TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT,
+      present_count: observed ? presentKeywordNames.length : null,
+      missing_required_count: observed ? absent.length : null,
+      projected_count: projectedKeywordCount,
+      capacity_status: keywordCapacityExceeded ? 'capacity_exceeded' : observed ? 'within_limit' : 'not_verified',
+      automatic_remove_allowed: false,
+    },
     unindexed_visibility_allowed_for_test_server: unindexedTestServer,
+    conflicting_search_attributes: conflicting.map((attribute) => ({
+      ...attribute,
+      observed_type: observed?.[attribute.name] ?? null,
+    })),
     missing_search_attributes: missing.map((attribute) => ({
       ...attribute,
       repair_command: repairCommand(attribute.name, attribute.type, namespace, address),
     })),
-    repair_action: missing.length > 0 || input.inspectionError
+    repair_action: missing.length > 0 || input.inspectionError || migrationRequired
       ? {
           action_id: input.inspectionError
             ? 'inspect_temporal_search_attributes'
-            : 'install_temporal_stage_attempt_search_attributes',
-          commands: missing.length > 0
+            : migrationRequired
+              ? 'migrate_temporal_visibility_namespace'
+              : 'install_temporal_stage_attempt_search_attributes',
+          commands: migrationRequired
+            ? []
+            : missing.length > 0
             ? missing.map((attribute) => repairCommand(attribute.name, attribute.type, namespace, address))
             : requiredSearchAttributesSummary(namespace, address).map((attribute) => attribute.repair_command),
-          next_check: 'opl family-runtime worker status --provider temporal',
+          next_check: migrationRequired
+            ? 'provision a fresh Temporal namespace, install the required attributes, then read back readiness before routing new workflows'
+            : 'opl family-runtime worker status --provider temporal',
         }
       : null,
     inspection_error: input.inspectionError ?? null,
@@ -243,6 +286,8 @@ export function temporalTestServerAllowsUnindexedVisibility() {
 export function buildTemporalStageAttemptVisibility(input: {
   providerKind: string;
   stageAttemptId: string;
+  stageRunId?: string | null;
+  executionScope?: WorkItemExecutionScopeSnapshot | null;
   workflowId: string;
   domainId: string;
   stageId: string;
@@ -432,6 +477,33 @@ export async function ensureTemporalStageAttemptVisibilityReady(
     taskQueue,
     observedCustomAttributes: observed,
   });
+  if (readiness.readiness_status === 'search_attribute_type_conflict') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal stage attempt visibility Search Attributes conflict with installed attribute types.',
+      {
+        failure_code: 'temporal_search_attribute_type_conflict',
+        provider_kind: 'temporal',
+        namespace,
+        conflicting_search_attributes: readiness.conflicting_search_attributes,
+        repair_action: readiness.repair_action,
+      },
+    );
+  }
+  if (readiness.readiness_status === 'search_attribute_capacity_exceeded') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal Keyword Search Attribute capacity would be exceeded before required attributes are installed.',
+      {
+        failure_code: 'temporal_search_attribute_capacity_exceeded',
+        provider_kind: 'temporal',
+        namespace,
+        keyword_capacity: readiness.keyword_capacity,
+        missing_search_attributes: readiness.missing_search_attributes,
+        repair_action: readiness.repair_action,
+      },
+    );
+  }
   if (readiness.missing_search_attributes.length === 0) {
     return readiness;
   }
@@ -465,7 +537,7 @@ export async function ensureTemporalStageAttemptVisibilityReady(
     taskQueue,
     observedCustomAttributes: refreshed,
   });
-  if (refreshedReadiness.missing_search_attributes.length > 0) {
+  if (refreshedReadiness.readiness_status !== 'ready') {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Temporal stage attempt visibility Search Attributes remain missing after install.',

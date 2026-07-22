@@ -71,6 +71,10 @@ import {
   providerBlockerFromCodexResult,
 } from './family-runtime-temporal-history-summary.ts';
 import { isStageRunQualityAttempt, requireGenericResumeAllowed, requireStageQualityAttemptBoundary, requireStageRunAttemptContentBindingVersion } from './family-runtime-stage-quality-attempt-boundary.ts';
+import {
+  buildTemporalStageAttemptMemo,
+  buildTemporalStageAttemptSearchAttributes,
+} from './family-runtime-temporal-visibility-payload.ts';
 
 export {
   FoundryRunWorkflow,
@@ -179,6 +183,106 @@ function asRecord(value: unknown) {
     : {};
 }
 
+type WorkflowScopeCarrier = {
+  scope_kind?: unknown;
+  execution_scope?: unknown;
+};
+
+const WORKFLOW_EXECUTION_SCOPE_FIELDS = [
+  'surface_kind',
+  'version',
+  'scope_kind',
+  'project_scope_id',
+  'work_item_scope_id',
+  'domain_id',
+  'domain_work_item_id',
+  'workspace_binding_id',
+  'binding_version_id',
+  'workspace_root',
+  'canonical_work_item_root',
+  'inventory_digest',
+  'source_alias_fields',
+  'scope_digest',
+] as const;
+
+function workflowScopeKind(value: WorkflowScopeCarrier) {
+  return value.scope_kind ?? (value.execution_scope ? 'work_item' : 'domain');
+}
+
+function comparableWorkflowScopeField(value: unknown) {
+  return Array.isArray(value) ? JSON.stringify(value) : value;
+}
+
+function assertWorkflowExecutionScopeIdentity(input: {
+  expected: WorkflowScopeCarrier;
+  actual: WorkflowScopeCarrier;
+  operation: string;
+}) {
+  const expectedKind = workflowScopeKind(input.expected);
+  const actualKind = workflowScopeKind(input.actual);
+  const mismatches: Array<{ field: string; expected: unknown; actual: unknown }> = [];
+  if (expectedKind !== actualKind) {
+    mismatches.push({ field: 'scope_kind', expected: expectedKind, actual: actualKind });
+  }
+  const expectedScope = asRecord(input.expected.execution_scope);
+  const actualScope = asRecord(input.actual.execution_scope);
+  if (expectedKind === 'work_item' || actualKind === 'work_item') {
+    const expectedKeys = Object.keys(expectedScope).sort();
+    const actualKeys = Object.keys(actualScope).sort();
+    if (JSON.stringify(expectedKeys) !== JSON.stringify(actualKeys)) {
+      mismatches.push({ field: 'execution_scope.keys', expected: expectedKeys, actual: actualKeys });
+    }
+    for (const field of WORKFLOW_EXECUTION_SCOPE_FIELDS) {
+      const expected = comparableWorkflowScopeField(expectedScope[field]);
+      const actual = comparableWorkflowScopeField(actualScope[field]);
+      if (expected !== actual) mismatches.push({ field, expected, actual });
+    }
+  } else if (Object.keys(expectedScope).length > 0 || Object.keys(actualScope).length > 0) {
+    mismatches.push({
+      field: 'execution_scope',
+      expected: Object.keys(expectedScope).length > 0 ? expectedScope : null,
+      actual: Object.keys(actualScope).length > 0 ? actualScope : null,
+    });
+  }
+  if (mismatches.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal workflow execution scope lineage is inconsistent.',
+      {
+        failure_code: 'temporal_workflow_execution_scope_mismatch',
+        operation: input.operation,
+        mismatches,
+      },
+    );
+  }
+}
+
+function assertWorkflowAttemptIdentity(input: {
+  expected: TemporalStageAttemptWorkflowInput;
+  actual: TemporalStageAttemptWorkflowState;
+}) {
+  const mismatches = [
+    ['stage_attempt_id', input.expected.stage_attempt_id, input.actual.stage_attempt_id],
+    ['workflow_id', input.expected.workflow_id, input.actual.workflow_id],
+    ['domain_id', input.expected.domain_id, input.actual.domain_id],
+    ['stage_id', input.expected.stage_id, input.actual.stage_id],
+  ].flatMap(([field, expected, actual]) => expected === actual
+    ? []
+    : [{ field, expected, actual }]);
+  if (mismatches.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal child StageAttempt returned a different runtime identity.',
+      { failure_code: 'temporal_child_attempt_identity_mismatch', mismatches },
+    );
+  }
+  assertWorkflowExecutionScopeIdentity({
+    expected: input.expected,
+    actual: input.actual,
+    operation: 'stage_run_child_attempt_result',
+  });
+}
+
 function finiteNonNegativeInteger(value: unknown) {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
 }
@@ -269,6 +373,9 @@ function upsertStageAttemptVisibility(input: {
   if (!input.enabled || !patched('opl-stage-attempt-visibility-status-v1')) {
     return;
   }
+  if (patched('opl-stage-attempt-minimal-visibility-index-v1')) {
+    return;
+  }
   upsertSearchAttributes({
     OplAttemptStatus: [input.status],
     OplStagePhase: [input.phase],
@@ -300,7 +407,11 @@ function validateCloseoutPacketForWorkflow(input: {
   const closeoutAttemptId = typeof closeoutPacket.stage_attempt_id === 'string' && closeoutPacket.stage_attempt_id.trim()
     ? closeoutPacket.stage_attempt_id.trim()
     : null;
-  if (closeoutAttemptId && closeoutAttemptId !== input.workflowInput.stage_attempt_id) {
+  const workItemScoped = workflowScopeKind(input.workflowInput) === 'work_item';
+  if (
+    (closeoutAttemptId && closeoutAttemptId !== input.workflowInput.stage_attempt_id)
+    || (workItemScoped && !closeoutAttemptId)
+  ) {
     return {
       closeoutPacket: null,
       providerBlocker: {
@@ -314,10 +425,103 @@ function validateCloseoutPacketForWorkflow(input: {
       },
     };
   }
+  const closeoutStageRunId = typeof closeoutPacket.stage_run_id === 'string' && closeoutPacket.stage_run_id.trim()
+    ? closeoutPacket.stage_run_id.trim()
+    : null;
+  if (
+    (closeoutStageRunId && closeoutStageRunId !== (input.workflowInput.stage_run_id ?? null))
+    || (workItemScoped && !closeoutStageRunId)
+  ) {
+    return {
+      closeoutPacket: null,
+      providerBlocker: {
+        blocked_reason: closeoutStageRunId
+          ? 'typed_closeout_stage_run_id_mismatch'
+          : 'typed_closeout_stage_run_id_missing',
+        route_impact: {
+          provider_blocker_reason: closeoutStageRunId
+            ? 'typed_closeout_stage_run_id_mismatch'
+            : 'typed_closeout_stage_run_id_missing',
+          provider_blocker_surface: 'codex_stage_activity.closeout_packet.stage_run_id',
+          expected_stage_run_id: input.workflowInput.stage_run_id ?? null,
+          actual_stage_run_id: closeoutStageRunId,
+        },
+      },
+    };
+  }
+  if (workItemScoped) {
+    const expectedScope = asRecord(input.workflowInput.execution_scope);
+    const closeoutScope = asRecord(closeoutPacket.execution_scope);
+    const actualScopeDigest = typeof closeoutPacket.scope_digest === 'string'
+      ? closeoutPacket.scope_digest
+      : typeof closeoutScope.scope_digest === 'string'
+        ? closeoutScope.scope_digest
+        : null;
+    if (actualScopeDigest !== expectedScope.scope_digest) {
+      return {
+        closeoutPacket: null,
+        providerBlocker: {
+          blocked_reason: actualScopeDigest
+            ? 'typed_closeout_execution_scope_mismatch'
+            : 'typed_closeout_execution_scope_missing',
+          route_impact: {
+            provider_blocker_reason: actualScopeDigest
+              ? 'typed_closeout_execution_scope_mismatch'
+              : 'typed_closeout_execution_scope_missing',
+            provider_blocker_surface: 'codex_stage_activity.closeout_packet.scope_digest',
+            expected_scope_digest: expectedScope.scope_digest ?? null,
+            actual_scope_digest: actualScopeDigest,
+          },
+        },
+      };
+    }
+    if (Object.keys(closeoutScope).length > 0) {
+      try {
+        assertWorkflowExecutionScopeIdentity({
+          expected: input.workflowInput,
+          actual: { scope_kind: 'work_item', execution_scope: closeoutScope },
+          operation: 'typed_closeout',
+        });
+      } catch {
+        return {
+          closeoutPacket: null,
+          providerBlocker: {
+            blocked_reason: 'typed_closeout_execution_scope_mismatch',
+            route_impact: {
+              provider_blocker_reason: 'typed_closeout_execution_scope_mismatch',
+              provider_blocker_surface: 'codex_stage_activity.closeout_packet.execution_scope',
+              expected_scope_digest: expectedScope.scope_digest ?? null,
+              actual_scope_digest: actualScopeDigest,
+            },
+          },
+        };
+      }
+    }
+  }
   return { closeoutPacket, providerBlocker: null };
 }
 
-function validateOperatorActionPayload(signal: TemporalStageAttemptSignalPayload) {
+function validateOperatorActionPayload(
+  signal: TemporalStageAttemptSignalPayload,
+  workflowInput?: TemporalStageAttemptWorkflowInput,
+) {
+  if (workflowInput && workflowScopeKind(workflowInput) === 'work_item') {
+    const expectedScope = asRecord(workflowInput.execution_scope);
+    const mismatches = [
+      ['stage_attempt_id', workflowInput.stage_attempt_id, signal.payload.stage_attempt_id],
+      ['stage_run_id', workflowInput.stage_run_id ?? null, signal.payload.stage_run_id],
+      ['scope_digest', expectedScope.scope_digest ?? null, signal.payload.scope_digest],
+    ].flatMap(([field, expected, actual]) => expected === actual
+      ? []
+      : [{ field, expected, actual: actual ?? null }]);
+    if (mismatches.length > 0) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal operator ingress does not match the work-item StageAttempt identity.',
+        { failure_code: 'temporal_operator_ingress_identity_mismatch', mismatches },
+      );
+    }
+  }
   if (signal.signal_kind === 'human_gate') {
     const humanGateRef = typeof signal.payload.human_gate_ref === 'string'
       ? signal.payload.human_gate_ref.trim()
@@ -365,7 +569,10 @@ export async function StageAttemptWorkflow(
     surface_kind: 'temporal_stage_attempt_query',
     provider_kind: 'temporal',
     stage_attempt_id: input.stage_attempt_id,
+    stage_run_id: input.stage_run_id ?? null,
     workflow_id: input.workflow_id,
+    scope_kind: input.scope_kind ?? (input.execution_scope ? 'work_item' : 'domain'),
+    execution_scope: input.execution_scope ?? null,
     domain_id: input.domain_id,
     stage_id: input.stage_id,
     status: 'registered',
@@ -389,10 +596,18 @@ export async function StageAttemptWorkflow(
         query: 'StageAttemptQuery',
         search_attribute_refs: {
           OplStageAttemptId: input.stage_attempt_id,
-          OplDomainId: input.domain_id,
-          OplStageId: input.stage_id,
-          OplExecutorKind: input.executor_kind,
-          OplTaskId: input.task_id ?? null,
+          OplStageRunId: input.stage_run_id ?? null,
+          OplWorkItemScopeId: input.execution_scope?.work_item_scope_id ?? null,
+        },
+        workflow_identity: {
+          project_scope_id: input.execution_scope?.project_scope_id ?? null,
+          work_item_scope_id: input.execution_scope?.work_item_scope_id ?? null,
+          workspace_binding_id: input.execution_scope?.workspace_binding_id ?? null,
+          scope_digest: input.execution_scope?.scope_digest ?? null,
+          domain_id: input.domain_id,
+          stage_id: input.stage_id,
+          executor_kind: input.executor_kind,
+          task_id: input.task_id ?? null,
           source_fingerprint: input.source_fingerprint ?? null,
         },
       },
@@ -459,6 +674,13 @@ export async function StageAttemptWorkflow(
     };
     updateVisibility('resume_requested');
   };
+  const validateAndRecord = (
+    signal: TemporalStageAttemptSignalPayload,
+    record: (value: TemporalStageAttemptSignalPayload) => void,
+  ) => {
+    validateOperatorActionPayload(signal, input);
+    record(signal);
+  };
   let forbiddenGenericResume: TemporalStageAttemptSignalPayload | null = null;
   const rejectGenericResume = (signal: TemporalStageAttemptSignalPayload) => {
     forbiddenGenericResume = signal;
@@ -479,10 +701,13 @@ export async function StageAttemptWorkflow(
     ? requireGenericResumeAllowed(input as unknown as Record<string, unknown>, 'resume')
     : undefined;
   setHandler(stageAttemptQuery, () => state);
-  setHandler(humanGateSignal, recordSignal);
-  setHandler(ownerReceiptSignal, recordSignal);
-  setHandler(userInstructionSignal, recordSignal);
-  setHandler(resumeSignal, stageRunQualityAttempt && currentStageRunAttemptProtocol ? rejectGenericResume : recordResume);
+  setHandler(humanGateSignal, (signal) => validateAndRecord(signal, recordSignal));
+  setHandler(ownerReceiptSignal, (signal) => validateAndRecord(signal, recordSignal));
+  setHandler(userInstructionSignal, (signal) => validateAndRecord(signal, recordSignal));
+  setHandler(resumeSignal, (signal) => validateAndRecord(
+    signal,
+    stageRunQualityAttempt && currentStageRunAttemptProtocol ? rejectGenericResume : recordResume,
+  ));
   setHandler(
     stageAttemptOperatorUpdate,
     (signal) => {
@@ -496,7 +721,10 @@ export async function StageAttemptWorkflow(
         provider_kind: 'temporal',
         update_status: 'accepted',
         stage_attempt_id: state.stage_attempt_id,
+        stage_run_id: state.stage_run_id ?? null,
         workflow_id: state.workflow_id,
+        scope_kind: state.scope_kind,
+        execution_scope: state.execution_scope,
         signal_kind: signal.signal_kind,
         signal_count: state.signals.length,
         updated_at: state.updated_at,
@@ -509,7 +737,7 @@ export async function StageAttemptWorkflow(
     },
     {
       validator: (signal) => {
-        validateOperatorActionPayload(signal);
+        validateOperatorActionPayload(signal, input);
         if (currentStageRunAttemptProtocol) requireGenericResumeAllowed(input as unknown as Record<string, unknown>, signal.signal_kind);
       },
     },
@@ -959,6 +1187,8 @@ export async function StageRunWorkflow(
     provider_kind: 'temporal',
     stage_run_id: input.stage_run_id,
     workflow_id: input.workflow_id,
+    scope_kind: input.scope_kind ?? (input.execution_scope ? 'work_item' : 'domain'),
+    execution_scope: input.execution_scope ?? null,
     quality_cycle_id: qualityCycleId,
     domain_id: input.domain_id,
     stage_id: input.stage_id,
@@ -1108,6 +1338,11 @@ export async function StageRunWorkflow(
       opl_stage_review_receipt_ref: attemptInput.oplStageReviewReceiptRef,
     });
     const childInput = materialized.workflow_input;
+    assertWorkflowExecutionScopeIdentity({
+      expected: input,
+      actual: childInput,
+      operation: 'stage_run_materialized_child_attempt',
+    });
     const childContextManifest = asRecord(asRecord(childInput.quality_context).context_manifest);
     const reviewInputSnapshotQualityDebtRef = typeof childContextManifest
       .review_input_snapshot_quality_debt_receipt_ref === 'string'
@@ -1132,7 +1367,24 @@ export async function StageRunWorkflow(
     const result = await executeChild(StageAttemptWorkflow, {
       args: [childInput],
       workflowId: childInput.workflow_id,
+      staticSummary: childInput.execution_scope?.domain_work_item_id
+        ? `${childInput.execution_scope.domain_work_item_id} / ${childInput.stage_id} / ${childInput.stage_attempt_id}`
+        : `OPL ${childInput.stage_id} / ${childInput.stage_attempt_id}`,
+      staticDetails: [
+        ...(childInput.execution_scope?.domain_work_item_id
+          ? [`Work item: ${childInput.execution_scope.domain_work_item_id}`]
+          : []),
+        `Stage: ${childInput.stage_id}`,
+        `Attempt: ${childInput.stage_attempt_id}`,
+        `StageRun: ${childInput.stage_run_id ?? 'none'}`,
+        `Domain: ${childInput.domain_id}`,
+      ].join('\n'),
+      memo: buildTemporalStageAttemptMemo(childInput),
+      ...(childInput.visibility_search_attributes_upsert_enabled === true
+        ? { searchAttributes: buildTemporalStageAttemptSearchAttributes(childInput) }
+        : {}),
     });
+    assertWorkflowAttemptIdentity({ expected: childInput, actual: result });
     await stageQualityAttemptSyncActivity({
       attempt_ref: materialized.attempt_ref,
       workflow_state: result,

@@ -130,6 +130,8 @@ test('family-runtime registry parser reuses shared option walking without changi
       actionId: 'engineer-agent',
       providerKind: undefined,
       workspaceLocator: { workspace_root: '/tmp/oma' },
+      scopeKind: undefined,
+      executionScope: undefined,
       sourceFingerprint: undefined,
       executorKind: undefined,
       executorBindingRef: undefined,

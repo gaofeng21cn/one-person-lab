@@ -90,6 +90,7 @@ test('hidden capability packages keep immutable cache but leave global Codex sur
   const unboundWorkspace = path.join(root, 'unbound-workspace');
   const wrongDomainWorkspace = path.join(root, 'wrong-domain-workspace');
   const archivedMasWorkspace = path.join(root, 'archived-mas-workspace');
+  const nestedWrongDomainWorkspace = path.join(masWorkspace, 'wrong-domain-workspace');
   const manifestPath = writeCapabilityProvider(providerRoot);
   const configPath = path.join(codexHome, 'config.toml');
   const canonicalMarketplaceId = 'mas-scholar-skills-local';
@@ -107,6 +108,7 @@ test('hidden capability packages keep immutable cache but leave global Codex sur
     unboundWorkspace,
     wrongDomainWorkspace,
     archivedMasWorkspace,
+    nestedWrongDomainWorkspace,
   ]) {
     fs.mkdirSync(workspace, { recursive: true });
   }
@@ -131,6 +133,13 @@ test('hidden capability packages keep immutable cache but leave global Codex sur
       project: 'med-autoscience',
       workspacePath: archivedMasWorkspace,
       status: 'archived',
+    },
+    {
+      bindingId: 'mag-nested-wrong-domain',
+      projectId: 'medautogrant',
+      project: 'med-autogrant',
+      workspacePath: nestedWrongDomainWorkspace,
+      status: 'active',
     },
   ]);
   fs.writeFileSync(configPath, [
@@ -229,20 +238,58 @@ test('hidden capability packages keep immutable cache but leave global Codex sur
       assert.throws(
         () => admitMasWorkspaceScopedPackageMutation('packages activate', {
           packageId: 'mas',
+          scope: 'quest',
+          targetQuest: path.join(nestedWrongDomainWorkspace, 'quest'),
+        }),
+        (error: any) =>
+          error?.details?.failure_code === 'mas_scholar_skills_workspace_binding_required'
+          && error?.details?.binding_status === 'wrong_domain'
+          && error?.details?.bound_project_ids?.[0] === 'medautogrant',
+      );
+      assert.throws(
+        () => admitMasWorkspaceScopedPackageMutation('packages activate', {
+          packageId: 'mas',
           scope: 'workspace',
           targetWorkspace: archivedMasWorkspace,
         }),
         (error: any) =>
           error?.details?.failure_code === 'mas_scholar_skills_workspace_binding_archived',
       );
+      const admittedQuest = admitMasWorkspaceScopedPackageMutation('packages activate', {
+        packageId: 'mas',
+        scope: 'quest' as const,
+        targetQuest: path.join(masWorkspace, 'quest'),
+      });
+      assert.equal(admittedQuest.targetQuest, path.join(masWorkspace, 'quest'));
       assert.throws(
         () => admitMasWorkspaceScopedPackageMutation('packages activate', {
           packageId: 'mas',
           scope: 'quest',
-          targetQuest: path.join(masWorkspace, 'quest'),
+          targetQuest: path.join(unboundWorkspace, 'quest'),
         }),
         (error: any) =>
-          error?.details?.failure_code === 'mas_scholar_skills_quest_scope_not_admitted',
+          error?.details?.failure_code === 'mas_scholar_skills_workspace_binding_required'
+          && error?.details?.binding_status === 'unbound',
+      );
+      assert.throws(
+        () => admitMasWorkspaceScopedPackageMutation('packages activate', {
+          packageId: 'mas',
+          scope: 'quest',
+          targetQuest: path.join(wrongDomainWorkspace, 'quest'),
+        }),
+        (error: any) =>
+          error?.details?.failure_code === 'mas_scholar_skills_workspace_binding_required'
+          && error?.details?.binding_status === 'wrong_domain',
+      );
+      assert.throws(
+        () => admitMasWorkspaceScopedPackageMutation('packages activate', {
+          packageId: 'mas',
+          scope: 'quest',
+          targetQuest: path.join(archivedMasWorkspace, 'quest'),
+        }),
+        (error: any) =>
+          error?.details?.failure_code === 'mas_scholar_skills_workspace_binding_archived'
+          && error?.details?.binding_status === 'archived',
       );
       for (const workspace of [unboundWorkspace, wrongDomainWorkspace, archivedMasWorkspace]) {
         assert.equal(fs.existsSync(path.join(workspace, '.codex', 'skills')), false);

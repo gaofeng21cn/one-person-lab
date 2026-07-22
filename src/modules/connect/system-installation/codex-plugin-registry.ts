@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { resolveStandardAgent } from '../../../kernel/standard-agent-registry.ts';
+import { OPL_CONNECT_MCP_SERVER_ID } from '../opl-connect-mcp-tools.ts';
 import type { OplModuleId } from './shared.ts';
 
 export type CodexPluginRegistryPackId = OplModuleId | 'scholarskills';
@@ -70,6 +71,16 @@ export type CodexPluginRegistryItem = {
 export type CodexPluginRegistryResult = {
   surface_id: 'opl_codex_plugin_registry';
   codex_config_path: string;
+  unified_mcp_server: {
+    server_id: typeof OPL_CONNECT_MCP_SERVER_ID;
+    status: 'registered';
+    owner: 'one-person-lab';
+    transport: 'stdio';
+    command: 'opl';
+    args: ['connect', 'mcp-stdio'];
+    read_only_default: true;
+    progressive_discovery: true;
+  };
   items: CodexPluginRegistryItem[];
   summary: {
     total: number;
@@ -79,6 +90,7 @@ export type CodexPluginRegistryResult = {
     removed_standalone_mcp_servers: number;
     removed_superseded_plugin_tables: number;
     removed_superseded_plugin_paths: string[];
+    registered_unified_mcp_servers: 1;
   };
 };
 
@@ -482,6 +494,33 @@ export function unregisterLocalCodexPlugin(
   fs.writeFileSync(configPath, `${text.trimEnd()}\n`, 'utf8');
 }
 
+function registerOplConnectMcpServer(configPath: string): CodexPluginRegistryResult['unified_mcp_server'] {
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  const current = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
+  const tableHeaders = [
+    `[mcp_servers.${OPL_CONNECT_MCP_SERVER_ID}]`,
+    `[mcp_servers.${quoteTomlTableSegment(OPL_CONNECT_MCP_SERVER_ID)}]`,
+  ];
+  const withoutStaleServer = removeTomlTables(current, (header) => tableHeaders.some(
+    (tableHeader) => header === tableHeader || header.startsWith(`${tableHeader.slice(0, -1)}.`),
+  ));
+  const text = upsertTomlTable(withoutStaleServer.text, tableHeaders[0], [
+    'command = "opl"',
+    'args = ["connect", "mcp-stdio"]',
+  ]);
+  fs.writeFileSync(configPath, text, 'utf8');
+  return {
+    server_id: OPL_CONNECT_MCP_SERVER_ID,
+    status: 'registered',
+    owner: 'one-person-lab',
+    transport: 'stdio',
+    command: 'opl',
+    args: ['connect', 'mcp-stdio'],
+    read_only_default: true,
+    progressive_discovery: true,
+  };
+}
+
 export function registerOplFamilyCodexPlugins(
   selectedPacks: CodexPluginRegistryPackId[],
   moduleRepoPaths: Map<CodexPluginRegistryPackId, string>,
@@ -571,9 +610,12 @@ export function registerOplFamilyCodexPlugins(
     });
   }
 
+  const unifiedMcpServer = registerOplConnectMcpServer(codexConfigPath);
+
   return {
     surface_id: 'opl_codex_plugin_registry',
     codex_config_path: codexConfigPath,
+    unified_mcp_server: unifiedMcpServer,
     items,
     summary: {
       total: items.length,
@@ -583,6 +625,7 @@ export function registerOplFamilyCodexPlugins(
       removed_standalone_mcp_servers: removedStandaloneMcpServers,
       removed_superseded_plugin_tables: removedSupersededPluginTables,
       removed_superseded_plugin_paths: removedSupersededPluginPaths,
+      registered_unified_mcp_servers: 1,
     },
   };
 }

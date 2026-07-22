@@ -158,6 +158,8 @@ export type FamilyRuntimeCommandInput =
       actionId?: string;
       providerKind?: FamilyRuntimeProviderKind;
       workspaceLocator: Record<string, unknown>;
+      scopeKind?: 'work_item' | 'domain' | 'system';
+      executionScope?: Record<string, unknown>;
       sourceFingerprint?: string;
       executorKind?: string;
       executorBindingRef?: string;

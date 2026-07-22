@@ -446,6 +446,13 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       'command = "node"',
       'args = ["/Users/test/redcube-ai/apps/redcube-mcp/dist/server.js"]',
       '',
+      '[mcp_servers.opl-connect]',
+      'command = "/legacy/opl"',
+      'args = ["retired-mcp"]',
+      '',
+      '[mcp_servers.opl-connect.env]',
+      'LEGACY_OPL_CONNECT = "must-be-removed"',
+      '',
     ].join('\n'),
     'utf8',
   );
@@ -552,6 +559,9 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 5);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
+    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered_unified_mcp_servers, 1);
+    assert.equal(output.skill_sync.codex_plugin_registry.unified_mcp_server.server_id, 'opl-connect');
+    assert.deepEqual(output.skill_sync.codex_plugin_registry.unified_mcp_server.args, ['connect', 'mcp-stdio']);
     const masPlugin = output.skill_sync.codex_plugin_registry.items.find(
       (entry: { plugin_id: string }) => entry.plugin_id === 'med-autoscience',
     );
@@ -606,6 +616,8 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
+    assert.match(config, /\[mcp_servers\.opl-connect\]\ncommand = "opl"\nargs = \["connect", "mcp-stdio"\]/);
+    assert.doesNotMatch(config, /retired-mcp|\/legacy\/opl|LEGACY_OPL_CONNECT/);
     assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);
     assert.match(config, /\[plugins\."med-autogrant@med-autogrant-local"\]/);
     assert.match(config, /\[plugins\."redcube-ai@redcube-ai-local"\]/);

@@ -4,6 +4,7 @@ import { buildCodexStageActivityInput } from '../family-runtime-codex-stage-runn
 import {
   type StageAttemptRow,
 } from '../family-runtime-stage-attempt-ledger.ts';
+import { requireRuntimeExecutionScopeMutationAllowed } from '../family-runtime-execution-scope-persistence.ts';
 import {
   appendActivityEventToRow,
   normalizeJsonList,
@@ -21,12 +22,20 @@ export function runStageAttemptFixtureActivity(
     closeoutPacket?: Record<string, unknown>;
   },
 ) {
-  const attempt = inspectStageAttempt(db, input.stageAttemptId);
-  const startedAt = nowIso();
-  const checkpointRefs = normalizeJsonList(input.checkpointRefs);
-  const currentRow = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
-    input.stageAttemptId,
-  ) as StageAttemptRow;
+  const ownsTransaction = !db.isTransaction;
+  try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    const attempt = inspectStageAttempt(db, input.stageAttemptId);
+    const currentRow = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+      input.stageAttemptId,
+    ) as StageAttemptRow;
+    requireRuntimeExecutionScopeMutationAllowed(
+      db,
+      currentRow as unknown as Record<string, unknown>,
+      'run_stage_attempt_fixture_activity',
+    );
+    const startedAt = nowIso();
+    const checkpointRefs = normalizeJsonList(input.checkpointRefs);
   const providerRun = {
     ...attempt.provider_run,
     provider_kind: attempt.provider_kind,
@@ -66,15 +75,21 @@ export function runStageAttemptFixtureActivity(
       })
     : null;
   const finalAttempt = inspectStageAttempt(db, input.stageAttemptId);
-  return {
-    provider_fixture_run: {
-      provider_completion: closeout ? 'completed' : 'checkpointed',
-      domain_ready_verdict: closeout?.closeout.packet.domain_ready_verdict ?? null,
-      started_at: startedAt,
-    },
-    activity,
-    attempt_before: attempt,
-    attempt: finalAttempt,
-    closeout,
-  };
+    const result = {
+      provider_fixture_run: {
+        provider_completion: closeout ? 'completed' : 'checkpointed',
+        domain_ready_verdict: closeout?.closeout.packet.domain_ready_verdict ?? null,
+        started_at: startedAt,
+      },
+      activity,
+      attempt_before: attempt,
+      attempt: finalAttempt,
+      closeout,
+    };
+    if (ownsTransaction) db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
 }

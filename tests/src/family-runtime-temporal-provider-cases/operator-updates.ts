@@ -4,6 +4,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { Worker } from '@temporalio/worker';
+import {
+  defaultPayloadConverter,
+  fromPayloadsAtIndex,
+} from '@temporalio/common/lib/converter/payload-converter.js';
 
 import * as activities from '../../../src/modules/runway/family-runtime-temporal-activities.ts';
 import { signalTemporalStageAttemptWorkflow } from '../../../src/modules/runway/family-runtime-temporal-provider.ts';
@@ -77,6 +81,63 @@ function qualityWorkflowInput(): TemporalStageAttemptWorkflowInput {
   };
 }
 
+function workflowSemanticActivities() {
+  return {
+    ...activities,
+    codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
+      surface_kind: 'temporal_codex_stage_activity_receipt',
+      activity_kind: 'codex_stage_activity',
+      activity_status: 'completed',
+      stage_attempt_id: input.stage_attempt_id,
+      stage_id: input.stage_id,
+      checkpoint_refs: input.checkpoint_refs ?? [],
+      closeout_packet: input.closeout_packet,
+    }),
+    domainHandlerDispatchActivity: async (input: TemporalStageAttemptWorkflowInput) => {
+      const closeoutRefs = Array.isArray(input.closeout_packet?.closeout_refs)
+        ? input.closeout_packet.closeout_refs.filter(
+            (entry): entry is string => typeof entry === 'string' && Boolean(entry),
+          )
+        : [];
+      return {
+        surface_kind: 'temporal_domain_handler_dispatch_receipt',
+        activity_kind: 'domain_handler_dispatch_activity',
+        activity_status: 'completed',
+        stage_attempt_id: input.stage_attempt_id,
+        domain_id: input.domain_id,
+        closeout_refs: closeoutRefs,
+        consumed_refs: [],
+        consumed_memory_refs: [],
+        writeback_receipt_refs: [],
+        rejected_writes: [],
+        next_owner: input.domain_id,
+        domain_ready_verdict: 'domain_gate_pending',
+        route_impact: {},
+      };
+    },
+  };
+}
+
+function patchIds(history: { events?: Array<Record<string, any>> | null }) {
+  return (history.events ?? [])
+    .filter((event) => event.markerRecordedEventAttributes?.markerName === 'core_patch')
+    .flatMap((event) => Object.values(
+      event.markerRecordedEventAttributes?.details ?? {},
+    ) as Array<{ payloads?: any[] }>)
+    .map((details) => fromPayloadsAtIndex<{ id?: string }>(
+      defaultPayloadConverter,
+      0,
+      details.payloads,
+    )?.id)
+    .filter((value): value is string => typeof value === 'string');
+}
+
+function upsertedSearchAttributeNames(history: { events?: Array<Record<string, any>> | null }) {
+  return (history.events ?? []).flatMap((event) => Object.keys(
+    event.upsertWorkflowSearchAttributesEventAttributes?.searchAttributes?.indexedFields ?? {},
+  ));
+}
+
 test('Temporal StageAttemptWorkflow acks operator actions through Updates', async () => {
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-update-test-${Date.now()}`;
@@ -86,11 +147,14 @@ test('Temporal StageAttemptWorkflow acks operator actions through Updates', asyn
       namespace: testEnv.namespace,
       taskQueue,
       workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities,
+      activities: workflowSemanticActivities(),
     });
     const result = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [workflowInput()],
+        args: [{
+          ...workflowInput(),
+          visibility_search_attributes_upsert_enabled: true,
+        }],
         taskQueue,
         workflowId: `wf-temporal-update-test-${Date.now()}`,
       });
@@ -101,7 +165,8 @@ test('Temporal StageAttemptWorkflow acks operator actions through Updates', asyn
           source: 'test-update',
         }],
       });
-      return { ack, finalState: await handle.result() };
+      const finalState = await handle.result();
+      return { ack, finalState, history: await handle.fetchHistory() };
     });
 
     assert.equal(result.ack.update_status, 'accepted');
@@ -109,6 +174,11 @@ test('Temporal StageAttemptWorkflow acks operator actions through Updates', asyn
     assert.equal(result.ack.signal_count, 1);
     assert.deepEqual(result.finalState.human_gate_refs, ['gate:update-review']);
     assert.equal(result.finalState.signals[0].source, 'test-update');
+    assert.ok(patchIds(result.history).includes('opl-stage-attempt-minimal-visibility-index-v1'));
+    assert.deepEqual(
+      upsertedSearchAttributeNames(result.history).filter((name) => name.startsWith('Opl')),
+      [],
+    );
   } finally {
     await testEnv.teardown();
   }
@@ -123,7 +193,7 @@ test('Temporal StageAttemptWorkflow rejects invalid operator Updates before muta
       namespace: testEnv.namespace,
       taskQueue,
       workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities,
+      activities: workflowSemanticActivities(),
     });
     const result = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {

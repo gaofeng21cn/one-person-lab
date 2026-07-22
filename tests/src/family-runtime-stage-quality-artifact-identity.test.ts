@@ -8,14 +8,19 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
+import { createWorkItemExecutionScopeSnapshot } from '../../src/modules/workspace/execution-scope.ts';
 import { buildPackBoundTemporalStageRunInput } from '../../src/modules/runway/family-runtime-pack-bound-stage-run.ts';
 import { stageQualityAttemptMaterializeActivity } from '../../src/modules/runway/family-runtime-temporal-activities.ts';
+import { createStageAttempt } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { registerStageRunLaunch } from '../../src/modules/runway/family-runtime-stage-run-launch-registry.ts';
+import { openQueueDb } from '../../src/modules/runway/family-runtime-store.ts';
 import { normalizeStageQualityCyclePolicy } from '../../src/modules/stagecraft/stage-quality-cycle.ts';
 import {
   verifyStageQualityArtifactIdentityAtAttemptBoundary,
   verifyStageQualityCloseoutArtifactIdentity,
 } from '../../src/modules/runway/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
 import type { TypedStageCloseoutPacket } from '../../src/modules/runway/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+import { runWithWorkItemFileBoundaryInterlock } from './work-item-file-boundary-test-support.ts';
 
 function sha256(value: Buffer | string) {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -147,6 +152,22 @@ function producerCloseout(input: {
       domain: 'truth_quality_artifact_gate_owner',
     },
   };
+}
+
+function workItemScope(workspaceRoot: string, workItemId: string) {
+  const canonicalWorkItemRoot = path.join(workspaceRoot, 'studies', workItemId);
+  fs.mkdirSync(canonicalWorkItemRoot, { recursive: true });
+  return createWorkItemExecutionScopeSnapshot({
+    projectScopeId: 'project:artifact-scope-test',
+    workspaceBindingId: 'binding:artifact-scope-test',
+    bindingVersionId: 'binding-version:artifact-scope-test',
+    domainId: 'medautoscience',
+    workspaceRoot,
+    canonicalWorkItemRoot,
+    inventoryDigest: `sha256:${sha256(workItemId)}`,
+    payload: { study_id: workItemId },
+    requirement: { kind: 'work_item', alias_fields: ['study_id'] },
+  });
 }
 
 const attempt = {
@@ -375,20 +396,337 @@ test('artifact identity preserves ref-hash pairs and permits equal hashes for di
   }
 });
 
+test('artifact receipts cannot cross work-item scope or fall back to a domain consumer', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-artifact-scope-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const studyOne = workItemScope(root, 'study-001');
+    const studyTwo = workItemScope(root, 'study-002');
+    fs.mkdirSync(studyOne.canonical_work_item_root!, { recursive: true });
+    fs.mkdirSync(studyTwo.canonical_work_item_root!, { recursive: true });
+    const artifactPath = path.join(studyOne.canonical_work_item_root!, 'artifact.txt');
+    const bytes = Buffer.from('study 001 exact bytes\n');
+    fs.writeFileSync(artifactPath, bytes);
+    const artifactRef = pathToFileURL(artifactPath).href;
+    const producerAttempt = {
+      stage_attempt_id: 'sat-study-001-producer',
+      stage_run_id: 'sr-study-001',
+      domain_id: 'medautoscience',
+      stage_id: 'baseline',
+      attempt_role: 'producer',
+      scope_kind: 'work_item',
+      execution_scope: studyOne,
+      identity_state: 'resolved',
+      workspace_locator: { workspace_root: root, execution_scope: studyOne },
+    };
+    const siblingArtifactPath = path.join(studyTwo.canonical_work_item_root!, 'artifact.txt');
+    const siblingBytes = Buffer.from('study 002 exact bytes\n');
+    fs.writeFileSync(siblingArtifactPath, siblingBytes);
+    assert.throws(() => verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: {
+        ...producerCloseout({
+          artifactRef: pathToFileURL(siblingArtifactPath).href,
+          artifactHash: sha256(siblingBytes),
+        }),
+        stage_attempt_id: producerAttempt.stage_attempt_id,
+      },
+      attempt: producerAttempt,
+      workspaceRoot: root,
+    }), (error) => error instanceof FrameworkContractError
+      && error.details?.blocked_reason === 'artifact_ref_outside_work_item_root_authority_violation');
+    const symlinkDirectory = path.join(studyOne.canonical_work_item_root!, 'linked-study');
+    fs.symlinkSync(studyTwo.canonical_work_item_root!, symlinkDirectory, 'dir');
+    assert.throws(() => verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: {
+        ...producerCloseout({
+          artifactRef: pathToFileURL(path.join(symlinkDirectory, 'artifact.txt')).href,
+          artifactHash: sha256(siblingBytes),
+        }),
+        stage_attempt_id: producerAttempt.stage_attempt_id,
+      },
+      attempt: producerAttempt,
+      workspaceRoot: root,
+    }), (error) => error instanceof FrameworkContractError
+      && error.details?.blocked_reason === 'artifact_ref_outside_work_item_root_authority_violation');
+    const outsideArtifactPath = path.join(root, 'outside-study-artifact.txt');
+    fs.writeFileSync(outsideArtifactPath, 'outside study bytes\n');
+    const symlinkArtifactPath = path.join(studyOne.canonical_work_item_root!, 'symlink-escape.txt');
+    fs.symlinkSync(outsideArtifactPath, symlinkArtifactPath);
+    assert.throws(() => verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: {
+        ...producerCloseout({
+          artifactRef: pathToFileURL(symlinkArtifactPath).href,
+          artifactHash: sha256(fs.readFileSync(outsideArtifactPath)),
+        }),
+        stage_attempt_id: producerAttempt.stage_attempt_id,
+      },
+      attempt: producerAttempt,
+      workspaceRoot: root,
+    }), (error) => error instanceof FrameworkContractError
+      && error.details?.blocked_reason === 'artifact_ref_outside_work_item_root_authority_violation');
+    const verified = verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: {
+        ...producerCloseout({ artifactRef, artifactHash: sha256(bytes) }),
+        stage_attempt_id: producerAttempt.stage_attempt_id,
+      },
+      attempt: producerAttempt,
+      workspaceRoot: root,
+    });
+    const receiptRef = String(verified?.closeout_ref_metadata?.[0]?.artifact_identity_receipt_ref);
+    const receipt = JSON.parse(fs.readFileSync(new URL(receiptRef), 'utf8'));
+    assert.equal(receipt.stage_run_id, producerAttempt.stage_run_id);
+    assert.equal(receipt.scope_kind, 'work_item');
+    assert.equal(receipt.work_item_scope_id, studyOne.work_item_scope_id);
+    assert.equal(receipt.scope_digest, studyOne.scope_digest);
+
+    verifyStageQualityArtifactIdentityAtAttemptBoundary({
+      artifactRefs: [artifactRef],
+      artifactHashes: [sha256(bytes)],
+      artifactIdentityReceiptRefs: [receiptRef],
+      domainId: producerAttempt.domain_id,
+      workspaceRoot: root,
+      expectedProducingAttemptId: producerAttempt.stage_attempt_id,
+      expectedStageRunId: producerAttempt.stage_run_id,
+      expectedScopeKind: 'work_item',
+      expectedExecutionScope: studyOne,
+    });
+    for (const expected of [
+      { expectedScopeKind: 'work_item' as const, expectedExecutionScope: studyTwo },
+      { expectedScopeKind: 'domain' as const, expectedExecutionScope: null },
+    ]) {
+      assert.throws(() => verifyStageQualityArtifactIdentityAtAttemptBoundary({
+        artifactRefs: [artifactRef],
+        artifactHashes: [sha256(bytes)],
+        artifactIdentityReceiptRefs: [receiptRef],
+        domainId: producerAttempt.domain_id,
+        workspaceRoot: root,
+        expectedProducingAttemptId: producerAttempt.stage_attempt_id,
+        expectedStageRunId: producerAttempt.stage_run_id,
+        ...expected,
+      }), (error) => error instanceof FrameworkContractError
+        && error.details?.blocked_reason === 'artifact_identity_receipt_mismatch_authority_violation');
+    }
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('artifact transport rejects a physical work-item root replacement by another Study', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-artifact-root-rebind-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const studyOne = workItemScope(root, 'study-001');
+    const studyTwo = workItemScope(root, 'study-002');
+    fs.mkdirSync(studyOne.canonical_work_item_root!, { recursive: true });
+    fs.mkdirSync(studyTwo.canonical_work_item_root!, { recursive: true });
+    const studyTwoArtifact = path.join(studyTwo.canonical_work_item_root!, 'artifact.txt');
+    const studyTwoBytes = Buffer.from('study 002 bytes behind rebound root\n');
+    fs.writeFileSync(studyTwoArtifact, studyTwoBytes);
+
+    const displacedStudyOneRoot = `${studyOne.canonical_work_item_root}.displaced`;
+    fs.renameSync(studyOne.canonical_work_item_root!, displacedStudyOneRoot);
+    fs.renameSync(studyTwo.canonical_work_item_root!, studyOne.canonical_work_item_root!);
+    const reboundArtifactRef = pathToFileURL(
+      path.join(studyOne.canonical_work_item_root!, 'artifact.txt'),
+    ).href;
+    const producerAttempt = {
+      stage_attempt_id: 'sat-study-001-rebound',
+      stage_run_id: 'sr-study-001-rebound',
+      domain_id: 'medautoscience',
+      stage_id: 'baseline',
+      attempt_role: 'producer',
+      scope_kind: 'work_item',
+      execution_scope: studyOne,
+      identity_state: 'resolved',
+      workspace_locator: { workspace_root: root, execution_scope: studyOne },
+    };
+
+    assert.throws(() => verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: {
+        ...producerCloseout({
+          artifactRef: reboundArtifactRef,
+          artifactHash: sha256(studyTwoBytes),
+        }),
+        stage_attempt_id: producerAttempt.stage_attempt_id,
+      },
+      attempt: producerAttempt,
+      workspaceRoot: root,
+    }), (error) => error instanceof FrameworkContractError
+      && error.details?.blocked_reason === 'artifact_work_item_root_identity_drift_authority_violation');
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('artifact transport rejects a work-item root rebound during byte verification', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-artifact-root-drift-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const studyOne = workItemScope(root, 'study-001');
+    const studyTwo = workItemScope(root, 'study-002');
+    fs.mkdirSync(studyOne.canonical_work_item_root!, { recursive: true });
+    fs.mkdirSync(studyTwo.canonical_work_item_root!, { recursive: true });
+    const artifactPath = path.join(studyOne.canonical_work_item_root!, 'artifact.txt');
+    const artifactBytes = Buffer.from('study 001 bytes observed through an open descriptor\n');
+    fs.writeFileSync(artifactPath, artifactBytes);
+    const displacedStudyOneRoot = `${studyOne.canonical_work_item_root}.displaced`;
+    const producerAttempt = {
+      stage_attempt_id: 'sat-study-001-root-drift',
+      stage_run_id: 'sr-study-001-root-drift',
+      domain_id: 'medautoscience',
+      stage_id: 'baseline',
+      attempt_role: 'producer',
+      scope_kind: 'work_item',
+      execution_scope: studyOne,
+      identity_state: 'resolved',
+      workspace_locator: { workspace_root: root, execution_scope: studyOne },
+    };
+
+    await assert.rejects(() => runWithWorkItemFileBoundaryInterlock({
+      temporaryRoot: root,
+      point: 'after_file_open',
+      mutation: {
+        kind: 'replace_root_with_symlink',
+        root_path: studyOne.canonical_work_item_root!,
+        displaced_path: displacedStudyOneRoot,
+        target_path: studyTwo.canonical_work_item_root!,
+      },
+      invoke: () => verifyStageQualityCloseoutArtifactIdentity({
+        closeoutPacket: {
+          ...producerCloseout({
+            artifactRef: pathToFileURL(artifactPath).href,
+            artifactHash: sha256(artifactBytes),
+          }),
+          stage_attempt_id: producerAttempt.stage_attempt_id,
+        },
+        attempt: producerAttempt,
+        workspaceRoot: root,
+      }),
+    }), (error) => error instanceof FrameworkContractError
+      && error.details?.blocked_reason === 'artifact_work_item_root_identity_drift_authority_violation');
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('artifact transport classifies in-place file drift separately from root authority drift', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-artifact-file-drift-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const studyOne = workItemScope(root, 'study-001');
+    const artifactPath = path.join(studyOne.canonical_work_item_root!, 'artifact.txt');
+    const artifactBytes = Buffer.from('stable bytes before in-place drift\n');
+    fs.writeFileSync(artifactPath, artifactBytes);
+    const producerAttempt = {
+      stage_attempt_id: 'sat-study-001-file-drift',
+      stage_run_id: 'sr-study-001-file-drift',
+      domain_id: 'medautoscience',
+      stage_id: 'baseline',
+      attempt_role: 'producer',
+      scope_kind: 'work_item',
+      execution_scope: studyOne,
+      identity_state: 'resolved',
+      workspace_locator: { workspace_root: root, execution_scope: studyOne },
+    };
+    await assert.rejects(() => runWithWorkItemFileBoundaryInterlock({
+      temporaryRoot: root,
+      point: 'after_file_open',
+      mutation: { kind: 'append_file', file_path: artifactPath, bytes: 'changed during verification\n' },
+      invoke: () => verifyStageQualityCloseoutArtifactIdentity({
+        closeoutPacket: {
+          ...producerCloseout({
+            artifactRef: pathToFileURL(artifactPath).href,
+            artifactHash: sha256(artifactBytes),
+          }),
+          stage_attempt_id: producerAttempt.stage_attempt_id,
+        },
+        attempt: producerAttempt,
+        workspaceRoot: root,
+      }),
+    }), (error) => error instanceof FrameworkContractError
+      && error.details?.blocked_reason === 'artifact_changed_during_identity_verification'
+      && error.details?.hard_stop_class === 'stale_or_mismatched_stage_identity');
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('artifact transport classifies a missing scoped file as unreadable', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-artifact-missing-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const studyOne = workItemScope(root, 'study-001');
+    const missingPath = path.join(studyOne.canonical_work_item_root!, 'missing.txt');
+    const producerAttempt = {
+      stage_attempt_id: 'sat-study-001-missing',
+      stage_run_id: 'sr-study-001-missing',
+      domain_id: 'medautoscience',
+      stage_id: 'baseline',
+      attempt_role: 'producer',
+      scope_kind: 'work_item',
+      execution_scope: studyOne,
+      identity_state: 'resolved',
+      workspace_locator: { workspace_root: root, execution_scope: studyOne },
+    };
+    assert.throws(() => verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: {
+        ...producerCloseout({
+          artifactRef: pathToFileURL(missingPath).href,
+          artifactHash: sha256('missing bytes'),
+        }),
+        stage_attempt_id: producerAttempt.stage_attempt_id,
+      },
+      attempt: producerAttempt,
+      workspaceRoot: root,
+    }), (error) => error instanceof FrameworkContractError
+      && error.details?.blocked_reason === 'artifact_ref_unreadable');
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('reviewer materialization revalidates current artifact bytes before creating a fresh Attempt', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-review-boundary-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = path.join(root, 'state');
   try {
+    const stageRun = materializationStageRunInput(root);
     const artifactPath = path.join(root, 'artifact.txt');
     const original = Buffer.from('producer bytes accepted at closeout\n');
     fs.writeFileSync(artifactPath, original);
     const artifactRef = pathToFileURL(artifactPath).href;
-    const producerAttempt = {
-      ...attempt,
-      domain_id: 'redcube',
-      stage_attempt_id: 'sat-review-boundary-producer',
-    };
+    const { db } = openQueueDb();
+    registerStageRunLaunch(db, stageRun, {
+      scopeKind: stageRun.scope_kind,
+      executionScope: stageRun.execution_scope,
+    });
+    const persistedProducerAttempt = createStageAttempt(db, {
+      domainId: stageRun.domain_id,
+      stageId: stageRun.stage_id,
+      providerKind: 'temporal',
+      workspaceLocator: stageRun.workspace_locator,
+      scopeKind: stageRun.scope_kind,
+      executionScope: stageRun.execution_scope,
+      stageRunId: stageRun.stage_run_id,
+      newAttempt: true,
+    }).attempt;
+    db.close();
+    const producerAttempt = { ...persistedProducerAttempt, attempt_role: 'producer' };
     const verified = verifyStageQualityCloseoutArtifactIdentity({
       closeoutPacket: {
         ...producerCloseout({ artifactRef, artifactHash: sha256(original) }),
@@ -409,7 +747,7 @@ test('reviewer materialization revalidates current artifact bytes before creatin
         artifact_refs: [artifactRef],
         artifact_hashes: [sha256(original)],
         artifact_identity_receipt_refs: [receiptRef],
-        stage_run: materializationStageRunInput(root),
+        stage_run: stageRun,
       }),
       (error) => error instanceof FrameworkContractError
         && error.details?.blocked_reason === 'artifact_byte_identity_mismatch',

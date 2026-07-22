@@ -109,6 +109,13 @@ function createSessionArgs(workspace: string, sessionId: string) {
   ];
 }
 
+function bindMasWorkspace(workspace: string, env: Record<string, string>) {
+  fs.mkdirSync(workspace, { recursive: true });
+  runCli([
+    'workspace', 'bind', '--project', 'medautoscience', '--path', workspace,
+  ], env);
+}
+
 function assertNoAttemptWasQueued(stateRoot: string, env: Record<string, string>) {
   const attempts = runCli([
     'family-runtime', 'attempt', 'list', '--domain', 'medautoscience', '--full',
@@ -291,7 +298,8 @@ test('family-runtime keeps duplicate create idempotent and refreshes the scope a
 
 test('family-runtime quest first start activates every Skill while a new attempt use boundary restores drift', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-quest-package-scope-'));
-  const quest = path.join(root, 'quest');
+  const workspace = path.join(root, 'workspace');
+  const quest = path.join(workspace, 'quest');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0', {
     specialtySkillIds: scholarSkillsSpecialtySkillIds,
   });
@@ -307,6 +315,7 @@ test('family-runtime quest first start activates every Skill while a new attempt
     ...releaseSet.env,
   };
   try {
+    bindMasWorkspace(workspace, env);
     const notInstalled = runCliFailure(createQuestArgs(quest), env);
     assert.equal(notInstalled.payload.error.details.failure_code, 'agent_package_operational_readiness_blocked');
     assert.equal(notInstalled.payload.error.details.launch_blocked_reason, 'package_not_installed');

@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { createWorkItemExecutionScopeSnapshot } from '../../../src/modules/workspace/execution-scope.ts';
 import { preflightDomainWorkspaceCheckoutCurrentness } from '../../../src/modules/runway/family-runtime-checkout-currentness.ts';
 import { createFakeCodexFixture } from '../cli/helpers.ts';
 import { runPublicCodexStageRunner } from '../family-runtime-codex-stage-runner-helpers.ts';
@@ -46,9 +47,25 @@ function materializeCheckoutCurrentnessProfile(repoRoot: string) {
 }
 
 test('formal quality Attempt uses one same-thread closeout-only resume without consuming Review budget', async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-protocol-work-item-'));
+  const canonicalWorkItemRoot = path.join(workspaceRoot, 'studies', 'study-001');
+  fs.mkdirSync(canonicalWorkItemRoot, { recursive: true });
+  const executionScope = createWorkItemExecutionScopeSnapshot({
+    projectScopeId: 'project:protocol-closeout',
+    workspaceBindingId: 'binding:protocol-closeout',
+    bindingVersionId: 'binding-version:protocol-closeout',
+    domainId: 'example-domain',
+    workspaceRoot,
+    canonicalWorkItemRoot,
+    inventoryDigest: `sha256:${'a'.repeat(64)}`,
+    payload: { work_item_id: 'study-001' },
+    requirement: { kind: 'work_item', alias_fields: ['work_item_id'] },
+  });
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
     stage_attempt_id: 'sat-protocol-closeout-resume',
+    stage_run_id: 'sr-protocol-closeout-resume',
+    scope_digest: executionScope.scope_digest,
     closeout_refs: ['review:protocol-closeout'],
     consumed_refs: ['artifact:reviewed'],
     consumed_memory_refs: [],
@@ -72,6 +89,7 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
   fs.rmSync(invocationLog, { force: true });
   const script = [
     'if [ "$1" = "exec" ] && [ "${2:-}" = "resume" ]; then',
+    '  printf "resume:%s\\n" "$PWD" >> ' + JSON.stringify(invocationLog),
     '  printf "%s\\n" "$*" >> ' + JSON.stringify(invocationLog),
     '  printf \'{"type":"thread.started","thread_id":"thread-protocol-closeout"}\\n\'',
     '  printf "%s\\n" ' + JSON.stringify(resumeEvent),
@@ -79,6 +97,7 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     '  exit 0',
     'fi',
     'if [ "$1" = "exec" ]; then',
+    '  printf "initial:%s\\n" "$PWD" >> ' + JSON.stringify(invocationLog),
     '  printf \'{"type":"thread.started","thread_id":"thread-protocol-closeout"}\\n\'',
     '  printf \'{"type":"item.completed","item":{"type":"agent_message","id":"initial","text":"review completed but closeout omitted"}}\\n\'',
     '  printf \'{"type":"turn.completed"}\\n\'',
@@ -105,7 +124,10 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
         quality_round_index: 0,
         stage_id: 'review',
         domain_id: 'example-domain',
-        workspace_locator: { workspace_root: fixtureRoot },
+        scope_kind: 'work_item',
+        execution_scope: executionScope,
+        identity_state: 'resolved',
+        workspace_locator: { workspace_root: workspaceRoot, execution_scope: executionScope },
         checkpoint_refs: ['packet:review'],
       },
       runnerMode: 'codex_cli',
@@ -140,6 +162,9 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     assert.match(invocation, /kind "stage_attempt_closeout_packet"/);
     assert.match(invocation, /exact sha256, and exact size_bytes when known/);
     assert.match(invocation, /Never output typed_closeout_ref_metadata/);
+    const expectedExecutorCwd = fs.realpathSync(canonicalWorkItemRoot);
+    assert.ok(invocation.includes(`initial:${expectedExecutorCwd}\n`));
+    assert.ok(invocation.includes(`resume:${expectedExecutorCwd}\n`));
   } finally {
     restoreEnv('OPL_CODEX_BIN', previousBin);
     restoreEnv('OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS', previousRecoveryTimeout);
@@ -147,6 +172,7 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     restoreEnv('OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS', previousProtocolResumeTimeout);
     fs.rmSync(invocationLog, { force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 

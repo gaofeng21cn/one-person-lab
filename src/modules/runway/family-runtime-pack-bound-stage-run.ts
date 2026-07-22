@@ -2,6 +2,9 @@ import type { StandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal.ts';
 import {
+  requireFamilyRuntimeExecutionScope,
+} from './family-runtime-execution-scope.ts';
+import {
   buildStageRunImmutableSpec,
   deriveStageRunId,
   deriveStageRunWorkflowId,
@@ -25,8 +28,17 @@ export function buildPackBoundTemporalStageRunInput(input: {
   artifactIdentityReceiptRefs?: string[];
   actionId?: string | null;
   taskId?: string | null;
+  scopeKind?: unknown;
+  executionScope?: unknown;
   checkoutCurrentnessAdmission?: Record<string, unknown> | null;
 }): TemporalStageRunWorkflowInput {
+  const executionScope = requireFamilyRuntimeExecutionScope({
+    scopeKind: input.scopeKind,
+    executionScope: input.executionScope,
+    workspaceLocator: input.workspaceLocator,
+    domainId: input.domainId,
+    operation: 'build_pack_bound_stage_run',
+  });
   const stageRunId = deriveStageRunId({
     domainId: input.domainId,
     stageId: input.stageId,
@@ -41,6 +53,8 @@ export function buildPackBoundTemporalStageRunInput(input: {
     domainId: input.domainId,
     stageId: input.stageId,
     workspaceLocator: input.workspaceLocator,
+    scopeKind: executionScope.scopeKind,
+    executionScope: executionScope.executionScope,
     sourceFingerprint: input.sourceFingerprint,
     executorKind: input.executorKind,
     stageAttemptExecutorPolicy: input.stageAttemptExecutorPolicy,
@@ -61,6 +75,8 @@ export function buildPackBoundTemporalStageRunInput(input: {
     stage_run_invocation_id: input.stageRunInvocationId,
     stage_run_spec_sha256: stageRunSpecSha256(stageRunSpec),
     stage_run_spec: stageRunSpec,
+    scope_kind: executionScope.scopeKind,
+    execution_scope: executionScope.executionScope,
     parent_route_decision_ref: input.parentRouteDecisionRef ?? null,
     workflow_id: deriveStageRunWorkflowId(stageRunId),
     domain_id: input.domainId,

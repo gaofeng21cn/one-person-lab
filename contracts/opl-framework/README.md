@@ -69,6 +69,7 @@ These schema files are the machine-readable OPL target architecture surface. The
 
 ### Stage Artifact Unit
 
+- `execution-scope-snapshot.schema.json`: immutable OPL-owned ProjectScope + domain WorkItemScope + workspace binding-version snapshot. StageRun, Attempt, Temporal, Codex, artifact, receipt, resume, and readback surfaces carry the same snapshot and exact-match its digest; workspace paths and Search Attributes remain locators/observability only, while legacy unscoped execution is quarantined instead of guessed into a Work Item.
 - `stage-run-kernel-contract.json`: durable refs-only StageRun invocation/spec identity, pre-start launch registry and recovery, transport/event-log/read-model, currentness, quality budget, failure diagnostics, and domain authority boundary.
 - `stage-manifest.schema.json`: Stage Folder manifest shape for required roles, produced role artifacts, input/output refs, receipt/blocker refs, content hashes, current pointer, lineage, and authority boundary.
 - `role-artifact-ref.schema.json`: refs-only semantic role artifact pointer with content hash and lineage; role is the interface, not file name.

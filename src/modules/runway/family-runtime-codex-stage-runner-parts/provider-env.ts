@@ -1,5 +1,7 @@
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
+import { executionScopeEnvironment } from '../../workspace/index.ts';
 import { stageAttemptPackageClosureIdentity } from '../family-runtime-stage-run-identity.ts';
+import { requireFamilyRuntimeExecutionScope } from '../family-runtime-execution-scope.ts';
 import { isRecord, type JsonRecord } from './shared.ts';
 
 function readRecordList(value: unknown) {
@@ -53,15 +55,25 @@ export function codexStageAttemptEnv(input: {
     ?? (stageAttemptId ? `temporal://attempt/${encodeURIComponent(stageAttemptId)}` : null);
   const sourceFingerprint = optionalString(input.attempt.source_fingerprint);
   const idempotencyKey = optionalString(input.attempt.idempotency_key);
-  const stageRunId = optionalString(workspaceLocator.stage_run_id);
+  const stageRunId = optionalString(input.attempt.stage_run_id);
   const stageManifestRef = optionalString(workspaceLocator.stage_manifest_ref);
+  const executionScope = requireFamilyRuntimeExecutionScope({
+    scopeKind: input.attempt.scope_kind,
+    executionScope: input.attempt.execution_scope,
+    workspaceLocator,
+    domainId: optionalString(input.attempt.domain_id) ?? optionalString(workspaceLocator.domain_id),
+    operation: 'codex_stage_attempt_env',
+  }).executionScope;
   const binding = executionContentBinding(input.attempt);
   const spec = isRecord(binding.spec) ? binding.spec : null;
   const content = spec && isRecord(spec.package_closure)
     ? stageAttemptPackageClosureIdentity(binding)
     : null;
+  const scopeEnvironment = executionScope ? executionScopeEnvironment(executionScope) : {};
   return {
     OPL_STAGE_ATTEMPT_ID: optionalString(input.attempt.stage_attempt_id) ?? undefined,
+    OPL_STAGE_RUN_ID: stageRunId ?? undefined,
+    ...scopeEnvironment,
     OPL_STAGE_ATTEMPT_REF: stageAttemptId
       ? `opl://stage_attempts/${stageAttemptId}`
       : undefined,
@@ -103,7 +115,6 @@ export function codexStageAttemptEnv(input: {
     OPL_PROVIDER_ATTEMPT_REF: providerAttemptRef ?? undefined,
     OPL_SOURCE_FINGERPRINT: sourceFingerprint ?? undefined,
     OPL_IDEMPOTENCY_KEY: idempotencyKey ?? undefined,
-    OPL_STAGE_RUN_ID: stageRunId ?? undefined,
     OPL_STAGE_MANIFEST_REF: stageManifestRef ?? undefined,
   };
 }

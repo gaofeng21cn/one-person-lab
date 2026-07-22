@@ -13,6 +13,10 @@ import {
 } from '../../kernel/family-action-catalog-contract.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { normalizeFoundryProviderManifest } from '../foundry/index.ts';
+import {
+  requireWorkItemExecutionScopeSnapshot,
+  type WorkItemExecutionScopeSnapshot,
+} from '../workspace/public/standard-agent-action-runtime.ts';
 import type { HostedAgentRuntimeBindingProvenance } from './hosted-agent-runtime-binding.ts';
 
 const ACTION_RUN_STATE_RELATIVE_ROOT = 'control/opl/action_run_state';
@@ -54,6 +58,7 @@ export type StandardAgentActionRunPlan = {
   package_use_binding: Record<string, unknown> | null;
   hosted_runtime_binding_ref: string;
   execution_kind: 'handler_ref' | 'stage_binding' | 'foundry_binding';
+  execution_scope: WorkItemExecutionScopeSnapshot | null;
   catalog: FamilyActionCatalog;
   handler_registry: DomainHandlerRegistry | null;
   foundry_provider_manifest: Record<string, unknown> | null;
@@ -503,6 +508,7 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
     'package_use_binding',
     'hosted_runtime_binding_ref',
     'execution_kind',
+    'execution_scope',
     'catalog',
     'handler_registry',
     'foundry_provider_manifest',
@@ -598,6 +604,17 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
       fail('Standard Agent action run plan effective_payload does not match frozen request bytes.');
     }
   }
+  const executionScope = value.execution_scope === undefined || value.execution_scope === null
+    ? null
+    : requireWorkItemExecutionScopeSnapshot(value.execution_scope);
+  const workItemScopeRequired = action?.execution_scope?.kind === 'work_item';
+  if ((workItemScopeRequired && !executionScope) || (!workItemScopeRequired && executionScope)) {
+    fail('Standard Agent action run plan execution scope conflicts with its selected action.', {
+      action_id: actionId,
+      execution_scope_kind: action?.execution_scope?.kind ?? 'legacy_unspecified',
+      execution_scope_present: Boolean(executionScope),
+    });
+  }
   const foundryProvider = value.foundry_provider_manifest;
   if (
     (executionKind === 'foundry_binding'
@@ -629,6 +646,7 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
   const canonicalDomainId = text(value.canonical_domain_id, 'plan.canonical_domain_id');
   const runtimeDomainId = text(value.runtime_domain_id, 'plan.runtime_domain_id');
   const targetDomainId = text(value.target_domain_id, 'plan.target_domain_id');
+  const planWorkspaceRoot = text(value.workspace_root, 'plan.workspace_root');
   const requiredAcceptedDomainIds = [...new Set([
     canonicalDomainId,
     runtimeDomainId,
@@ -644,13 +662,28 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
       target_domain_id: targetDomainId,
     });
   }
+  if (
+    executionScope
+    && (
+      executionScope.domain_id !== runtimeDomainId
+      || executionScope.workspace_root !== planWorkspaceRoot
+    )
+  ) {
+    fail('Standard Agent action run plan execution scope conflicts with its runtime identity.', {
+      action_id: actionId,
+      scope_domain_id: executionScope.domain_id,
+      runtime_domain_id: runtimeDomainId,
+      scope_workspace_root: executionScope.workspace_root,
+      workspace_root: planWorkspaceRoot,
+    });
+  }
   return {
     ...value,
     run_id: runId,
     canonical_domain_id: canonicalDomainId,
     accepted_domain_ids: acceptedDomainIds,
     action_id: actionId,
-    workspace_root: text(value.workspace_root, 'plan.workspace_root'),
+    workspace_root: planWorkspaceRoot,
     checkout_root: text(value.checkout_root, 'plan.checkout_root'),
     runtime_domain_id: runtimeDomainId,
     target_domain_id: targetDomainId,
@@ -661,6 +694,7 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
       'plan.hosted_runtime_binding_ref',
     ),
     execution_kind: executionKind,
+    execution_scope: executionScope,
     catalog: catalog!,
     handler_registry: handlerRegistry,
     foundry_provider_manifest: normalizedFoundryProvider,

@@ -1,5 +1,7 @@
 import type { CodexExecEvent } from '../codex.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
+import { requireFamilyRuntimeExecutionScope } from '../family-runtime-execution-scope.ts';
 import { codexStageAttemptEnv } from './provider-env.ts';
 import {
   resolveStandardAgentStagePrompt,
@@ -58,14 +60,59 @@ export function normalizeCodexStageRunnerMode(value?: string | null): CodexStage
   return normalized === 'live_dry_run' ? 'live_dry_run' : 'dry_run';
 }
 
-export function workspaceRootFromAttempt(attempt: JsonRecord) {
+function workspaceTransportRootFromAttempt(attempt: JsonRecord) {
   const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
   return optionalString(workspaceLocator.workspace_root) ?? optionalString(workspaceLocator.repo_root);
 }
 
+export function workspaceRootFromAttempt(attempt: JsonRecord) {
+  const identityState = optionalString(attempt.identity_state);
+  if (
+    identityState === 'identity_unresolved'
+    || identityState === 'quarantined'
+    || attempt.scope_kind === 'identity_unresolved'
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Identity-unresolved or quarantined Attempts cannot enter the executor workspace.',
+      {
+        failure_code: 'runtime_execution_identity_unresolved',
+        blocked_reason: 'codex_cli_execution_identity_unresolved',
+        stage_attempt_id: optionalString(attempt.stage_attempt_id),
+      },
+    );
+  }
+  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  const executionScope = requireFamilyRuntimeExecutionScope({
+    scopeKind: attempt.scope_kind,
+    executionScope: attempt.execution_scope,
+    workspaceLocator,
+    domainId: optionalString(attempt.domain_id),
+    operation: 'resolve_stage_attempt_executor_workspace',
+    requireWorkspaceTransportCopy: false,
+  });
+  if (executionScope.executionScope) {
+    const canonicalWorkItemRoot = optionalString(executionScope.executionScope.canonical_work_item_root);
+    if (!canonicalWorkItemRoot) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Work-item Attempt executor requires a canonical work-item root.',
+        {
+          failure_code: 'work_item_canonical_root_missing',
+          blocked_reason: 'codex_cli_work_item_root_missing',
+          stage_attempt_id: optionalString(attempt.stage_attempt_id),
+          work_item_scope_id: executionScope.executionScope.work_item_scope_id,
+        },
+      );
+    }
+    return canonicalWorkItemRoot;
+  }
+  return workspaceTransportRootFromAttempt(attempt);
+}
+
 function domainPackRootFromAttempt(attempt: JsonRecord) {
   const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
-  return optionalString(workspaceLocator.domain_pack_root) ?? workspaceRootFromAttempt(attempt);
+  return optionalString(workspaceLocator.domain_pack_root) ?? workspaceTransportRootFromAttempt(attempt);
 }
 
 function workspaceLocatorFromAttempt(attempt: JsonRecord) {
@@ -121,13 +168,19 @@ function effectiveStagePromptLines(input: {
   ];
 }
 
-function providerAuthorizationPromptLines(input: { attempt: JsonRecord; stagePacketRef?: string | null }) {
-  const workspaceRoot = workspaceRootFromAttempt(input.attempt);
+function providerAuthorizationPromptLines(input: {
+  attempt: JsonRecord;
+  stagePacketRef?: string | null;
+  providerIdentityAttempt?: JsonRecord;
+  providerWorkspaceRoot?: string | null;
+}) {
+  const identityAttempt = input.providerIdentityAttempt ?? input.attempt;
+  const workspaceRoot = input.providerWorkspaceRoot ?? workspaceRootFromAttempt(identityAttempt);
   if (!workspaceRoot) {
     return [];
   }
   const env = codexStageAttemptEnv({
-    attempt: input.attempt,
+    attempt: identityAttempt,
     stagePacketRef: resolvedStagePacketRef(input) ?? 'unavailable',
     workspaceRoot,
   });
@@ -141,6 +194,18 @@ function providerAuthorizationPromptLines(input: { attempt: JsonRecord; stagePac
     'These refs identify this provider attempt for transport and observability; they do not authorize semantic routing, domain truth, artifact, quality, or readiness claims.',
     JSON.stringify(Object.fromEntries(entries)),
   ];
+}
+
+function typedCloseoutScopeBindingLines(attempt: JsonRecord) {
+  const scope = isRecord(attempt.execution_scope) ? attempt.execution_scope : null;
+  const scopeDigest = optionalString(scope?.scope_digest);
+  const stageRunId = optionalString(attempt.stage_run_id);
+  return scopeDigest
+    ? [
+        ...(stageRunId ? [`Any typed closeout packet must use stage_run_id "${stageRunId}" exactly.`] : []),
+        `Any typed closeout packet must use scope_digest "${scopeDigest}" exactly.`,
+      ]
+    : [];
 }
 
 function qualityAttemptPromptLines(
@@ -277,6 +342,8 @@ function qualityAttemptPromptLines(
 
 export function runnerPromptFor(input: {
   attempt: JsonRecord;
+  providerIdentityAttempt?: JsonRecord;
+  providerWorkspaceRoot?: string | null;
   stagePacketRef?: string | null;
   effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
   effectiveQualityRolePrompt?: ReturnType<typeof readStandardAgentQualityRolePromptFile> | null;
@@ -296,6 +363,7 @@ export function runnerPromptFor(input: {
     ...qualityAttemptPromptLines(input.attempt, input.effectiveQualityRolePrompt),
     ...effectiveStagePromptLines(input),
     ...providerAuthorizationPromptLines(input),
+    ...typedCloseoutScopeBindingLines(input.providerIdentityAttempt ?? input.attempt),
     ...domainStageRoutePromptLines({
       attempt: input.attempt,
       workspaceLocator: workspaceLocatorFromAttempt(input.attempt),
@@ -313,6 +381,8 @@ export function runnerPromptForExecution(input: CodexStageRunnerInput, execution
   return runnerPromptFor({
     ...input,
     attempt: executionAttempt,
+    providerIdentityAttempt: input.attempt,
+    providerWorkspaceRoot: workspaceRootFromAttempt(executionAttempt),
     effectiveStagePrompt: effectiveStagePromptFor(input),
   });
 }
@@ -327,6 +397,7 @@ export function protocolCloseoutResumePrompt(attempt: JsonRecord) {
     'Bind the closeout to the existing Attempt and exact artifacts already produced. Output one JSON object and no prose.',
     'Use surface_kind "stage_attempt_closeout_packet" exactly. Do not use "opl_stage_attempt_typed_closeout" or any other surface alias.',
     `Use stage_attempt_id "${attemptId}" exactly.`,
+    ...typedCloseoutScopeBindingLines(attempt),
     'Use a non-empty closeout_refs array containing only refs for artifacts or receipts that already exist from this Attempt.',
     'For every artifact ref in closeout_refs, include a matching refs-only object in closeout_ref_metadata with the identical ref (or uri) and exact sha256. Do not bind an input-only ref as a substitute for a produced artifact.',
     'If this Attempt already wrote its complete typed closeout packet and the first response only referenced it in prose, include exactly one closeout_ref_metadata entry with kind "stage_attempt_closeout_packet", its local workspace ref, exact sha256, and exact size_bytes when known. OPL may hydrate only that exact workspace-bound packet after stable byte and Attempt-identity verification.',

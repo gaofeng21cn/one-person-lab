@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { loadFrameworkContracts } from '../charter/index.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import { preflightDomainWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
   parseFamilyRuntimeCommand,
@@ -71,6 +72,10 @@ import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-
 import { resolveStandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
 import { buildPackBoundTemporalStageRunInput } from './family-runtime-pack-bound-stage-run.ts';
 import {
+  bindTrustedCliFamilyRuntimeIngressIdentity,
+  requireFamilyRuntimeExecutionScope,
+} from './family-runtime-execution-scope.ts';
+import {
   buildCliStageRunInvocationId,
   deriveStageRunId,
   explicitStageRunInvocationId,
@@ -82,12 +87,122 @@ import { findStageRunLaunch } from './family-runtime-stage-run-launch-registry.t
 import { materializeReviewerInputSnapshot } from './family-runtime-reviewer-input-snapshot.ts';
 import { persistReviewEvidenceArtifactCandidate } from './family-runtime-review-evidence-artifact.ts';
 import { preflightFamilyRuntimeDomainLifecycleAdmission } from './family-runtime-domain-lifecycle-admission.ts';
+import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
+
+function parsedRuntimeRecord(value: unknown) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  try {
+    const parsed = parseJsonText(value);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function rawStageAttemptMutationAuthority(
+  db: DatabaseSync,
+  stageAttemptId: string,
+  operation: string,
+) {
+  const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+    stageAttemptId,
+  ) as Record<string, unknown> | undefined;
+  if (!row) {
+    throw new FrameworkContractError('cli_usage_error', 'Stage attempt not found.', {
+      stage_attempt_id: stageAttemptId,
+      operation,
+    });
+  }
+  requireRuntimeExecutionScopeMutationAllowed(db, row, operation);
+  return row;
+}
+
+function stageAttemptAllowsRuntimeRefresh(
+  db: DatabaseSync,
+  stageAttemptId: string,
+  operation: string,
+) {
+  try {
+    rawStageAttemptMutationAuthority(db, stageAttemptId, operation);
+    return true;
+  } catch (error) {
+    if (
+      error instanceof FrameworkContractError
+      && error.details?.failure_code === 'runtime_execution_identity_unresolved'
+    ) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+function runtimeRowWorkspaceRoot(row: Record<string, unknown>) {
+  const locator = parsedRuntimeRecord(row.workspace_locator_json);
+  if (locator) {
+    return typeof locator.workspace_root === 'string'
+      ? locator.workspace_root.trim()
+      : typeof locator.repo_root === 'string'
+        ? locator.repo_root.trim()
+        : null;
+  }
+  const stageRunInput = parsedRuntimeRecord(row.stage_run_input_json);
+  const stageRunLocator = isRecord(stageRunInput?.workspace_locator)
+    ? stageRunInput.workspace_locator
+    : null;
+  return typeof stageRunLocator?.workspace_root === 'string'
+    ? stageRunLocator.workspace_root.trim()
+    : typeof stageRunLocator?.repo_root === 'string'
+      ? stageRunLocator.repo_root.trim()
+      : null;
+}
+
+function requireCurrentRuntimeRowsBeforeLaunchSideEffects(input: {
+  db: DatabaseSync;
+  domainId: string;
+  stageId: string;
+  workspaceRoot: string | null;
+  operation: string;
+}) {
+  for (const table of ['stage_attempts', 'stage_run_launches'] as const) {
+    const exists = input.db.prepare(
+      'SELECT name FROM sqlite_master WHERE type = \'table\' AND name = ?',
+    ).get(table);
+    if (!exists) continue;
+    const statusPredicate = table === 'stage_attempts'
+      ? "status NOT IN ('completed', 'failed', 'dead_lettered') AND archived_at IS NULL"
+      : "launch_status <> 'closed'";
+    const rows = input.db.prepare(`
+      SELECT * FROM ${table}
+      WHERE domain_id = ? AND stage_id = ? AND ${statusPredicate}
+    `).all(input.domainId, input.stageId) as Record<string, unknown>[];
+    for (const row of rows) {
+      try {
+        const admission = requireRuntimeExecutionScopeMutationAllowed(input.db, row, input.operation);
+        const rowWorkspaceRoot = admission.executionScope?.workspace_root ?? runtimeRowWorkspaceRoot(row);
+        if (input.workspaceRoot && rowWorkspaceRoot && rowWorkspaceRoot !== input.workspaceRoot) continue;
+      } catch (error) {
+        if (
+          error instanceof FrameworkContractError
+          && error.details?.failure_code === 'runtime_execution_identity_unresolved'
+        ) {
+          const rowWorkspaceRoot = typeof error.details.workspace_root === 'string'
+            ? error.details.workspace_root
+            : null;
+          if (input.workspaceRoot && rowWorkspaceRoot && rowWorkspaceRoot !== input.workspaceRoot) continue;
+        }
+        throw error;
+      }
+    }
+  }
+}
 
 function stageRunReplayBusinessIdentity(
   input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
 ) {
   const spec = input.stage_run_spec;
   return {
+    scope_kind: input.scope_kind ?? (input.execution_scope ? 'work_item' : 'domain'),
+    execution_scope: input.execution_scope ?? null,
     domain_id: spec.domain_id,
     stage_id: spec.stage_id,
     action_id: spec.action_id,
@@ -125,6 +240,8 @@ function stageRunReplayRequestBusinessIdentity(input: {
   checkpointRefs?: string[];
   inputArtifactRefs?: string[];
   inputArtifactHashes?: string[];
+  scopeKind?: 'work_item' | 'domain' | 'system';
+  executionScope?: Record<string, unknown> | null;
 }) {
   const artifactRefs = Array.isArray(input.inputArtifactRefs)
     ? input.inputArtifactRefs
@@ -170,6 +287,8 @@ function stageRunReplayRequestBusinessIdentity(input: {
     ...(input.boundedEditRef ? { bounded_edit_ref: input.boundedEditRef } : {}),
   };
   return {
+    scope_kind: input.scopeKind ?? (input.executionScope ? 'work_item' : 'domain'),
+    execution_scope: input.executionScope ?? null,
     domain_id: input.domainId,
     stage_id: input.stageId.trim(),
     action_id: input.actionId?.trim() || null,
@@ -202,6 +321,13 @@ async function syncTemporalStageAttemptsForTask(
     if (attempt.status === 'completed' && attempt.closeout_receipt_status) {
       continue;
     }
+    if (!stageAttemptAllowsRuntimeRefresh(
+      db,
+      attempt.stage_attempt_id,
+      'sync_temporal_stage_attempts_for_task',
+    )) {
+      continue;
+    }
     const temporalQuery = await queryTemporalStageAttemptReadModel(attempt, { paths });
     syncStageAttemptFromTemporalTerminalObservation(db, temporalQuery);
   }
@@ -227,6 +353,14 @@ export async function runFamilyRuntime(
       ) => Promise<Record<string, unknown>>;
       queryWorkflow?: (
         input: { workflowId: string },
+        context: { paths: ReturnType<typeof familyRuntimePaths> },
+      ) => Promise<Record<string, unknown>>;
+      cancelWorkflow?: (
+        input: {
+          attempt: ReturnType<typeof inspectStageAttempt>;
+          reason: string;
+          source?: string;
+        },
         context: { paths: ReturnType<typeof familyRuntimePaths> },
       ) => Promise<Record<string, unknown>>;
     };
@@ -497,6 +631,30 @@ export async function runFamilyRuntime(
       return runFamilyRuntimeStageArtifactCommand(parsed.input);
     }
     if (parsed.mode === 'attempt_create') {
+      const runtimeExecutionScope = requireFamilyRuntimeExecutionScope({
+        scopeKind: parsed.input.scopeKind,
+        executionScope: parsed.input.executionScope,
+        workspaceLocator: parsed.input.workspaceLocator,
+        domainId: parsed.input.domainId,
+        operation: 'family_runtime_attempt_create',
+      });
+      const scopedAttemptInput = {
+        ...parsed.input,
+        scopeKind: runtimeExecutionScope.scopeKind,
+        executionScope: runtimeExecutionScope.executionScope,
+      };
+      requireCurrentRuntimeRowsBeforeLaunchSideEffects({
+        db,
+        domainId: parsed.input.domainId,
+        stageId: parsed.input.stageId,
+        workspaceRoot: runtimeExecutionScope.executionScope?.workspace_root
+          ?? (typeof parsed.input.workspaceLocator.workspace_root === 'string'
+            ? parsed.input.workspaceLocator.workspace_root.trim()
+            : typeof parsed.input.workspaceLocator.repo_root === 'string'
+              ? parsed.input.workspaceLocator.repo_root.trim()
+              : null),
+        operation: 'family_runtime_attempt_create_preflight',
+      });
       const usesExplicitStageRunIdentity = Boolean(
         parsed.input.newStageRun
         || parsed.input.stageRunInvocationId
@@ -506,8 +664,13 @@ export async function runFamilyRuntime(
       );
       const existingAttempt = usesExplicitStageRunIdentity
         ? null
-        : findIdempotentStageAttempt(db, parsed.input);
+        : findIdempotentStageAttempt(db, scopedAttemptInput);
       if (existingAttempt && !parsed.input.start) {
+        rawStageAttemptMutationAuthority(
+          db,
+          existingAttempt.stage_attempt_id,
+          'family_runtime_attempt_create_idempotent_replay',
+        );
         return {
           version: 'g2',
           family_runtime_stage_attempt: {
@@ -540,7 +703,7 @@ export async function runFamilyRuntime(
       const existingStageRunLaunch = findStageRunLaunch(db, stageRunId);
       if (existingStageRunLaunch && canonicalJsonText(
         stageRunReplayBusinessIdentity(existingStageRunLaunch.stage_run_input),
-      ) !== canonicalJsonText(stageRunReplayRequestBusinessIdentity(parsed.input))) {
+      ) !== canonicalJsonText(stageRunReplayRequestBusinessIdentity(scopedAttemptInput))) {
         throw new FrameworkContractError(
           'contract_shape_invalid',
           'StageRun invocation is already bound to a different immutable spec.',
@@ -715,6 +878,8 @@ export async function runFamilyRuntime(
             artifactHashes: parsed.input.inputArtifactHashes,
             actionId: parsed.input.actionId,
             taskId,
+            scopeKind: runtimeExecutionScope.scopeKind,
+            executionScope: runtimeExecutionScope.executionScope,
             checkoutCurrentnessAdmission: checkoutCurrentnessPreflight,
           });
         const durableLaunch = await launchRegisteredStageRun({
@@ -790,7 +955,7 @@ export async function runFamilyRuntime(
             attempt: existingAttempt,
           }
         : createStageAttempt(db, {
-            ...parsed.input,
+            ...scopedAttemptInput,
             workspaceLocator: useBoundWorkspaceLocator,
             idempotencyWorkspaceLocator: parsed.input.workspaceLocator,
             blockedReason,
@@ -861,6 +1026,7 @@ export async function runFamilyRuntime(
       };
     }
     if (parsed.mode === 'attempt_start') {
+      rawStageAttemptMutationAuthority(db, parsed.stageAttemptId, 'family_runtime_attempt_start_preflight');
       const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
       if (attempt.attempt_role) {
         throw new FrameworkContractError(
@@ -912,6 +1078,7 @@ export async function runFamilyRuntime(
               : null,
             domainPackRoot: refreshedDomainPackRoot || null,
           });
+      rawStageAttemptMutationAuthority(db, parsed.stageAttemptId, 'family_runtime_attempt_start_provider_preflight');
       const reboundPackRoot = typeof reboundAttempt.workspace_locator.domain_pack_root === 'string'
         ? reboundAttempt.workspace_locator.domain_pack_root.trim()
         : '';
@@ -953,14 +1120,20 @@ export async function runFamilyRuntime(
       };
     }
     if (parsed.mode === 'attempt_cancel') {
+      rawStageAttemptMutationAuthority(db, parsed.stageAttemptId, 'family_runtime_attempt_cancel_preflight');
       const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
-      const { cancelTemporalStageAttemptWorkflow } = await temporalProviderModule();
-      const temporal_cancel = await cancelTemporalStageAttemptWorkflow({
-        attempt,
-        reason: parsed.reason,
-        source: parsed.source,
-        paths,
-      });
+      const temporal_cancel = options.stageRunRuntime?.cancelWorkflow
+        ? await options.stageRunRuntime.cancelWorkflow({
+            attempt,
+            reason: parsed.reason,
+            source: parsed.source,
+          }, { paths })
+        : await (await temporalProviderModule()).cancelTemporalStageAttemptWorkflow({
+            attempt,
+            reason: parsed.reason,
+            source: parsed.source,
+            paths,
+          });
       markStageAttemptCancelRequested(db, {
         stageAttemptId: parsed.stageAttemptId,
         reason: parsed.reason,
@@ -1048,8 +1221,15 @@ export async function runFamilyRuntime(
     }
     if (parsed.mode === 'attempt_inspect') {
       const currentAttempt = inspectStageAttempt(db, parsed.stageAttemptId);
-      const temporal_query = await queryTemporalStageAttemptReadModel(currentAttempt, { paths });
-      syncStageAttemptFromTemporalTerminalObservation(db, temporal_query);
+      const mayRefresh = stageAttemptAllowsRuntimeRefresh(
+        db,
+        parsed.stageAttemptId,
+        'family_runtime_attempt_inspect_refresh',
+      );
+      const temporal_query = mayRefresh
+        ? await queryTemporalStageAttemptReadModel(currentAttempt, { paths })
+        : null;
+      if (mayRefresh) syncStageAttemptFromTemporalTerminalObservation(db, temporal_query);
       return {
         version: 'g2',
         family_runtime_stage_attempt: {
@@ -1064,8 +1244,15 @@ export async function runFamilyRuntime(
     if (parsed.mode === 'attempt_query') {
       const localQuery = queryStageAttempt(db, parsed.stageAttemptId);
       const attempt = localQuery.stage_attempt_query.attempt;
-      const temporal_query = await queryTemporalStageAttemptReadModel(attempt, { paths });
-      syncStageAttemptFromTemporalTerminalObservation(db, temporal_query);
+      const mayRefresh = stageAttemptAllowsRuntimeRefresh(
+        db,
+        parsed.stageAttemptId,
+        'family_runtime_attempt_query_refresh',
+      );
+      const temporal_query = mayRefresh
+        ? await queryTemporalStageAttemptReadModel(attempt, { paths })
+        : null;
+      if (mayRefresh) syncStageAttemptFromTemporalTerminalObservation(db, temporal_query);
       const projectedQuery = await queryStageAttemptWithCurrentProviderReadiness(db, parsed.stageAttemptId, paths, {
         managedProviderProjection: readManagedProviderProjectionSummary(),
       }, {
@@ -1089,6 +1276,7 @@ export async function runFamilyRuntime(
       };
     }
     if (parsed.mode === 'attempt_signal') {
+      rawStageAttemptMutationAuthority(db, parsed.stageAttemptId, 'family_runtime_attempt_signal_preflight');
       const currentAttempt = inspectStageAttempt(db, parsed.stageAttemptId);
       if (currentAttempt.provider_kind !== 'temporal') {
         throw new FrameworkContractError('cli_usage_error', 'Temporal signal requires a temporal stage attempt.', {
@@ -1096,14 +1284,19 @@ export async function runFamilyRuntime(
           provider_kind: currentAttempt.provider_kind,
         });
       }
+      const signalPayload = bindTrustedCliFamilyRuntimeIngressIdentity({
+        runtimeIdentity: currentAttempt,
+        ingressPayload: parsed.payload,
+        operation: `trusted_cli_signal_stage_attempt:${parsed.signalKind}`,
+      });
       const temporal_signal = await (await temporalProviderModule()).signalTemporalStageAttemptWorkflow({
         attempt: currentAttempt,
         signalKind: parsed.signalKind,
-        payload: parsed.payload,
+        payload: signalPayload,
         source: parsed.source,
         paths,
       });
-      const result = signalStageAttempt(db, parsed);
+      const result = signalStageAttempt(db, { ...parsed, payload: signalPayload });
       insertEvent(db, {
         taskId: result.attempt.task_id,
         domainId: result.attempt.domain_id,
@@ -1126,6 +1319,7 @@ export async function runFamilyRuntime(
       };
     }
     if (parsed.mode === 'attempt_fixture_run') {
+      rawStageAttemptMutationAuthority(db, parsed.stageAttemptId, 'family_runtime_attempt_fixture_preflight');
       const result = runStageAttemptFixtureActivity(db, parsed);
       insertEvent(db, {
         taskId: result.attempt.task_id,

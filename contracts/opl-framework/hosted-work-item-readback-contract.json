@@ -20,6 +20,16 @@
       "conditions",
       "freshness"
     ],
+    "execution_identity_readback": {
+      "authoritative_scope_source": "attempt.execution_scope",
+      "join_key": "execution_scope.work_item_scope_id",
+      "selected_work_item_bucket": "diagnostics.selected_work_item",
+      "workspace_identity_bucket": "diagnostics.workspace_identity",
+      "domain_truth_bucket": "diagnostics.domain_truth",
+      "unresolved_execution_may_be_attributed_from_locator_alias": false,
+      "workspace_related_unresolved_execution_keeps_overall_status_clear": false,
+      "quarantined_execution_can_update_selected_execution": false
+    },
     "domain_truth_source_policy": "workspace_declared_refs_only",
     "source_values_are_projected_exactly": true,
     "source_sha256_and_mtime_are_observation_metadata_only": true,

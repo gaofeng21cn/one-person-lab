@@ -1,8 +1,42 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import type { preflightDomainWorkspaceCheckoutCurrentness } from '../family-runtime-checkout-currentness.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { requireRuntimeExecutionScopeMutationAllowed } from '../family-runtime-execution-scope-persistence.ts';
+import { requireFamilyRuntimeExecutionScope } from '../family-runtime-execution-scope.ts';
 import { inspectStageAttempt } from '../family-runtime-stage-attempts.ts';
 import { nowIso } from '../family-runtime-store.ts';
+
+function withStageAttemptMutationAdmission<T>(
+  db: DatabaseSync,
+  stageAttemptId: string,
+  operation: string,
+  mutation: (
+    row: Record<string, unknown>,
+    admission: ReturnType<typeof requireRuntimeExecutionScopeMutationAllowed>,
+  ) => T,
+) {
+  const ownsTransaction = !db.isTransaction;
+  try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+      stageAttemptId,
+    ) as Record<string, unknown> | undefined;
+    if (!row) {
+      throw new FrameworkContractError('cli_usage_error', 'Stage attempt not found.', {
+        stage_attempt_id: stageAttemptId,
+        operation,
+      });
+    }
+    const admission = requireRuntimeExecutionScopeMutationAllowed(db, row, operation);
+    const result = mutation(row, admission);
+    if (ownsTransaction) db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
+}
 
 export function temporalStartProviderRun(
   attempt: { provider_run: Record<string, unknown> },
@@ -32,16 +66,24 @@ export function recordTemporalStartOnAttempt(
   attempt: { stage_attempt_id: string; provider_run: Record<string, unknown> },
   temporalStart: unknown,
 ) {
-  const providerRun = temporalStartProviderRun(attempt, temporalStart);
-  if (!providerRun) {
+  if (!temporalStart || typeof temporalStart !== 'object' || Array.isArray(temporalStart)) {
     return;
   }
-  const updatedAt = nowIso();
-  db.prepare(`
-    UPDATE stage_attempts
-    SET provider_run_json = ?, updated_at = ?
-    WHERE stage_attempt_id = ?
-  `).run(JSON.stringify(providerRun), updatedAt, attempt.stage_attempt_id);
+  withStageAttemptMutationAdmission(
+    db,
+    attempt.stage_attempt_id,
+    'record_stage_attempt_temporal_start',
+    () => {
+      const current = inspectStageAttempt(db, attempt.stage_attempt_id);
+      const providerRun = temporalStartProviderRun(current, temporalStart)!;
+      const updatedAt = nowIso();
+      return db.prepare(`
+        UPDATE stage_attempts
+        SET provider_run_json = ?, updated_at = ?
+        WHERE stage_attempt_id = ?
+      `).run(JSON.stringify(providerRun), updatedAt, attempt.stage_attempt_id);
+    },
+  );
 }
 
 export function persistStageAttemptLaunchBinding<T extends {
@@ -57,39 +99,54 @@ export function persistStageAttemptLaunchBinding<T extends {
     domainPackRoot: string | null;
   },
 ) {
-  const updatedAt = nowIso();
-  const providerRun = {
-    ...attempt.provider_run,
-    execution_package_use_context: {
-      status: 'attempt_launch_binding_persisted',
-      recorded_at: updatedAt,
-      package_use_binding: input.packageUseBinding,
-      domain_pack_root: input.domainPackRoot,
-    },
-  };
-  const reservation = db.prepare(`
-    UPDATE stage_attempts
-    SET workspace_locator_json = ?, provider_run_json = ?, updated_at = ?
-    WHERE stage_attempt_id = ?
-      AND COALESCE(json_extract(
-        provider_run_json,
-        '$.execution_package_use_context.status'
-      ), '') = ''
-      AND COALESCE(json_extract(provider_run_json, '$.first_execution_run_id'), '') = ''
-  `).run(
-    JSON.stringify(input.workspaceLocator),
-    JSON.stringify(providerRun),
-    updatedAt,
+  return withStageAttemptMutationAdmission(
+    db,
     attempt.stage_attempt_id,
+    'persist_stage_attempt_launch_binding',
+    (row, admission) => {
+      requireFamilyRuntimeExecutionScope({
+        scopeKind: admission.columns.scope_kind,
+        executionScope: admission.executionScope,
+        workspaceLocator: input.workspaceLocator,
+        domainId: typeof row.domain_id === 'string' ? row.domain_id : null,
+        operation: 'persist_stage_attempt_launch_binding:workspace_locator',
+      });
+      const current = inspectStageAttempt(db, attempt.stage_attempt_id);
+      const updatedAt = nowIso();
+      const providerRun = {
+        ...current.provider_run,
+        execution_package_use_context: {
+          status: 'attempt_launch_binding_persisted',
+          recorded_at: updatedAt,
+          package_use_binding: input.packageUseBinding,
+          domain_pack_root: input.domainPackRoot,
+        },
+      };
+      const reservation = db.prepare(`
+        UPDATE stage_attempts
+        SET workspace_locator_json = ?, provider_run_json = ?, updated_at = ?
+        WHERE stage_attempt_id = ?
+          AND COALESCE(json_extract(
+            provider_run_json,
+            '$.execution_package_use_context.status'
+          ), '') = ''
+          AND COALESCE(json_extract(provider_run_json, '$.first_execution_run_id'), '') = ''
+      `).run(
+        JSON.stringify(input.workspaceLocator),
+        JSON.stringify(providerRun),
+        updatedAt,
+        attempt.stage_attempt_id,
+      );
+      if (reservation.changes === 0) {
+        return inspectStageAttempt(db, attempt.stage_attempt_id);
+      }
+      return {
+        ...current,
+        workspace_locator: input.workspaceLocator,
+        provider_run: providerRun,
+      };
+    },
   );
-  if (reservation.changes === 0) {
-    return inspectStageAttempt(db, attempt.stage_attempt_id);
-  }
-  return {
-    ...attempt,
-    workspace_locator: input.workspaceLocator,
-    provider_run: providerRun,
-  };
 }
 
 type CheckoutCurrentnessPreflight = ReturnType<typeof preflightDomainWorkspaceCheckoutCurrentness>;

@@ -27,9 +27,12 @@ import {
 import {
   buildTemporalStageAttemptMemo,
   buildTemporalStageAttemptSearchAttributes,
+  buildTemporalStageRunMemo,
+  buildTemporalStageRunSearchAttributes,
   ensureTemporalStageAttemptVisibilityReady,
   temporalTestServerAllowsUnindexedVisibility,
 } from '../family-runtime-temporal-visibility.ts';
+import { assertTemporalWorkflowMemoIdentity } from '../family-runtime-temporal-identity.ts';
 import {
   stageAttemptOperatorUpdate,
   stageRunQuery,
@@ -57,24 +60,40 @@ export async function startTemporalStageRunWorkflow(
     ? resolveTemporalWorkerTaskQueue(options.paths)
     : resolveTemporalTaskQueue();
   if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
-  return withTemporalClient(async (client) => {
-    let workflowId = workflowInput.workflow_id;
+  return withTemporalClient(async (client, connection) => {
+    const visibilityReadiness = await ensureTemporalStageAttemptVisibilityReady(connection, {
+      namespace: resolveTemporalNamespace(),
+      address: resolveTemporalAddressForPaths(options.paths).address,
+      taskQueue,
+    });
+    const launchInput: TemporalStageRunWorkflowInput = {
+      ...workflowInput,
+      visibility_search_attributes_upsert_enabled: visibilityReadiness.readiness_status === 'ready',
+    };
+    let workflowId = launchInput.workflow_id;
     let firstExecutionRunId: string;
     let workflowStatus = 'RUNNING';
     let recoveredExisting = false;
     try {
       const handle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageRunWorkflow', {
-        args: [workflowInput],
+        args: [launchInput],
         taskQueue,
-        workflowId: workflowInput.workflow_id,
-        staticSummary: `OPL StageRun ${workflowInput.stage_run_id}`,
+        workflowId: launchInput.workflow_id,
+        memo: buildTemporalStageRunMemo(launchInput),
+        ...temporalTestServerAllowsUnindexedVisibility()
+          ? {}
+          : { searchAttributes: buildTemporalStageRunSearchAttributes(launchInput) },
+        staticSummary: `OPL StageRun ${launchInput.stage_run_id}`,
         staticDetails: [
-          `StageRun: ${workflowInput.stage_run_id}`,
-          `Invocation: ${workflowInput.stage_run_invocation_id}`,
-          `Spec: ${workflowInput.stage_run_spec_sha256}`,
-          `Domain: ${workflowInput.domain_id}`,
-          `Stage: ${workflowInput.stage_id}`,
-          `Quality rounds: ${workflowInput.quality_policy.formal_review.max_repair_rounds}`,
+          ...(launchInput.execution_scope?.domain_work_item_id
+            ? [`Work item: ${launchInput.execution_scope.domain_work_item_id}`]
+            : []),
+          `StageRun: ${launchInput.stage_run_id}`,
+          `Invocation: ${launchInput.stage_run_invocation_id}`,
+          `Spec: ${launchInput.stage_run_spec_sha256}`,
+          `Domain: ${launchInput.domain_id}`,
+          `Stage: ${launchInput.stage_id}`,
+          `Quality rounds: ${launchInput.quality_policy.formal_review.max_repair_rounds}`,
         ].join('\n'),
         workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
         workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
@@ -82,12 +101,24 @@ export async function startTemporalStageRunWorkflow(
       workflowId = handle.workflowId;
       firstExecutionRunId = handle.firstExecutionRunId;
       const description = await withTemporalRpcDeadline(client, () => handle.describe(), options);
+      assertTemporalWorkflowMemoIdentity({
+        workflowId: description.workflowId,
+        memo: description.memo,
+        expected: launchInput as TemporalStageRunWorkflowInput & Record<string, unknown>,
+        operation: 'start_temporal_stage_run',
+      });
       workflowStatus = description.status.name;
       firstExecutionRunId = firstExecutionRunId || description.runId;
     } catch (error) {
       if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
-      const existing = client.workflow.getHandle(workflowInput.workflow_id);
+      const existing = client.workflow.getHandle(launchInput.workflow_id);
       const description = await withTemporalRpcDeadline(client, () => existing.describe(), options);
+      assertTemporalWorkflowMemoIdentity({
+        workflowId: description.workflowId,
+        memo: description.memo,
+        expected: launchInput as TemporalStageRunWorkflowInput & Record<string, unknown>,
+        operation: 'recover_existing_temporal_stage_run',
+      });
       workflowId = description.workflowId;
       firstExecutionRunId = description.runId;
       workflowStatus = description.status.name;
@@ -96,15 +127,17 @@ export async function startTemporalStageRunWorkflow(
     return {
       surface_kind: 'temporal_stage_run_start_receipt',
       provider_kind: 'temporal',
-      stage_run_id: workflowInput.stage_run_id,
-      stage_run_invocation_id: workflowInput.stage_run_invocation_id,
-      stage_run_spec_sha256: workflowInput.stage_run_spec_sha256,
+      stage_run_id: launchInput.stage_run_id,
+      stage_run_invocation_id: launchInput.stage_run_invocation_id,
+      stage_run_spec_sha256: launchInput.stage_run_spec_sha256,
       workflow_id: workflowId,
       first_execution_run_id: firstExecutionRunId,
       workflow_status: workflowStatus,
       recovered_existing_execution: recoveredExisting,
+      execution_scope: launchInput.execution_scope ?? null,
       task_queue: taskQueue,
-      max_repair_rounds: workflowInput.quality_policy.formal_review.max_repair_rounds,
+      visibility_readiness: visibilityReadiness,
+      max_repair_rounds: launchInput.quality_policy.formal_review.max_repair_rounds,
       authority_boundary: {
         opl: 'durable_quality_loop_orchestration_and_refs_transport_only',
         domain: 'review_findings_repair_artifact_and_quality_verdict_owner',
@@ -124,6 +157,12 @@ export async function describeTemporalStageRunWorkflow(
     const handle = client.workflow.getHandle(workflowInput.workflow_id);
     try {
       const description = await withTemporalRpcDeadline(client, () => handle.describe(), options);
+      assertTemporalWorkflowMemoIdentity({
+        workflowId: description.workflowId,
+        memo: description.memo,
+        expected: workflowInput as TemporalStageRunWorkflowInput & Record<string, unknown>,
+        operation: 'describe_temporal_stage_run',
+      });
       return {
         surface_kind: 'temporal_stage_run_observation_receipt',
         provider_kind: 'temporal',
@@ -209,12 +248,20 @@ export async function startTemporalStageAttemptWorkflow(
         ? {}
         : { searchAttributes: buildTemporalStageAttemptSearchAttributes(launchInput) },
     }), options);
+    const description = await withTemporalRpcDeadline(client, () => handle.describe(), options);
+    assertTemporalWorkflowMemoIdentity({
+      workflowId: description.workflowId,
+      memo: description.memo,
+      expected: launchInput as TemporalStageAttemptWorkflowInput & Record<string, unknown>,
+      operation: 'start_temporal_stage_attempt',
+    });
     return {
       surface_kind: 'temporal_stage_attempt_start_receipt',
       provider_kind: 'temporal',
       stage_attempt_id: attempt.stage_attempt_id,
       workflow_id: handle.workflowId,
       first_execution_run_id: handle.firstExecutionRunId,
+      execution_scope: launchInput.execution_scope ?? null,
       eagerly_started: handle.eagerlyStarted,
       namespace: resolveTemporalNamespace(),
       task_queue: taskQueue,
@@ -246,8 +293,18 @@ export async function signalTemporalStageAttemptWorkflow(input: {
     input.attempt as unknown as Record<string, unknown>,
     input.signalKind,
   );
+  const expectedInput = requireTemporalStageAttemptWorkflowInputLaunchable(
+    buildTemporalStageAttemptWorkflowInput(input.attempt),
+  );
   return withTemporalClient(async (client) => {
     const handle = client.workflow.getHandle(input.attempt.workflow_id);
+    const description = await withTemporalRpcDeadline(client, () => handle.describe(), { paths: input.paths });
+    assertTemporalWorkflowMemoIdentity({
+      workflowId: description.workflowId,
+      memo: description.memo,
+      expected: expectedInput as TemporalStageAttemptWorkflowInput & Record<string, unknown>,
+      operation: 'signal_temporal_stage_attempt',
+    });
     const signal: TemporalStageAttemptSignalPayload = {
       signal_kind: input.signalKind,
       payload: input.payload,

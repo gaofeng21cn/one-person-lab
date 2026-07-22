@@ -390,16 +390,26 @@ export function queryStageAttempt(
     writebackReceiptRefs,
     routeImpact: attempt.route_impact,
   });
+  const executionIdentityResolved = attempt.identity_state === 'resolved'
+    && attempt.scope_kind !== 'identity_unresolved';
   return {
     stage_attempt_query: {
       surface_kind: 'stage_attempt_query',
       attempt,
       workflow_contract: workflowContract,
       workflow_input:
-        attempt.provider_kind === 'temporal'
+        attempt.provider_kind === 'temporal' && executionIdentityResolved
           ? buildTemporalStageAttemptWorkflowInput(attempt)
           : null,
-      codex_stage_activity: buildCodexStageActivityInput({ attempt }),
+      codex_stage_activity: executionIdentityResolved
+        ? buildCodexStageActivityInput({ attempt })
+        : null,
+      execution_identity_admission: {
+        identity_state: attempt.identity_state,
+        scope_kind: attempt.scope_kind,
+        launch_allowed: executionIdentityResolved,
+        blocked_reason: executionIdentityResolved ? null : 'runtime_execution_identity_unresolved',
+      },
       attempt_launch_envelope: attemptLaunchEnvelope,
       closeout_refs_only_contract: closeoutRefsOnlyContract,
       lifecycle_primitives: lifecyclePrimitives,

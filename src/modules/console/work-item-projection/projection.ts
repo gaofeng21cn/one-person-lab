@@ -198,6 +198,18 @@ export function buildWorkItemProjectionV2(
       agent_catalog: agents,
       agent_availability: availability,
       project_catalog: projectCatalog.projects,
+      identity_health: {
+        status: 'not_evaluated',
+        execution_count: 0,
+        resolved_execution_count: 0,
+        unresolved_execution_count: 0,
+        conflict_execution_count: 0,
+        not_in_inventory_execution_count: 0,
+        non_work_item_execution_count: 0,
+        reason_counts: [],
+        sample_attempt_refs: [],
+      },
+      unresolved_executions: [],
       summary: {
         agent_count: agents.length,
         project_count: projectCatalog.projects.length,
@@ -268,7 +280,6 @@ export function buildWorkItemProjectionV2(
   diagnostics.push(...ledger.diagnostics);
   const joined = joinAttemptsToWorkItems({
     items: controlled.items,
-    projects: projectCatalog.projects,
     attempts: ledger.attempts,
     qualityCycles: ledger.quality_cycles,
     queueDb: ledger.queue_db,
@@ -342,6 +353,8 @@ export function buildWorkItemProjectionV2(
     agent_catalog: agents,
     agent_availability: availability,
     project_catalog: projectCatalog.projects,
+    identity_health: joined.identity_health,
+    unresolved_executions: profile === 'full' ? joined.unresolved_executions : [],
     summary: {
       agent_count: agents.length,
       project_count: projectCatalog.projects.length,

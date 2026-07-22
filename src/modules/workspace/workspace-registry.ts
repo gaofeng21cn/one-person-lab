@@ -20,6 +20,7 @@ import {
 import { readPackageManagedStandardAgentDescriptor } from '../connect/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { listWorkspaceAgentProfiles } from './workspace-agent-defaults.ts';
+import { createProjectScopeId, deriveLegacyProjectScopeId } from './execution-scope.ts';
 
 type BoundWorkspaceLocator = {
   surface_kind: string;
@@ -37,6 +38,7 @@ type DirectEntryLocator = {
 
 export type WorkspaceBinding = {
   binding_id: string;
+  project_scope_id: string;
   project_id: string;
   project: string;
   workspace_path: string;
@@ -72,6 +74,7 @@ export type WorkspaceCatalogAction =
 
 type WorkspaceRegistryOptions = {
   projectId: string;
+  projectScopeId?: string;
   workspacePath: string;
   label?: string;
   entryCommand?: string;
@@ -160,9 +163,14 @@ function readWorkspaceRegistryFile(): WorkspaceRegistryFile {
 }
 
 function normalizeWorkspaceBinding(binding: Partial<WorkspaceBinding>): WorkspaceBinding {
+  const bindingId = String(binding.binding_id);
+  const projectId = String(binding.project_id);
   const normalized: WorkspaceBinding = {
-    binding_id: String(binding.binding_id),
-    project_id: String(binding.project_id),
+    binding_id: bindingId,
+    project_scope_id: typeof binding.project_scope_id === 'string' && binding.project_scope_id.trim()
+      ? binding.project_scope_id.trim()
+      : deriveLegacyProjectScopeId({ bindingId, projectId }),
+    project_id: projectId,
     project: String(binding.project),
     workspace_path: String(binding.workspace_path),
     label: normalizeOptionalString(String(binding.label ?? '')),
@@ -788,12 +796,66 @@ export function bindWorkspace(
   const registry = readWorkspaceRegistryFile();
   const project = findAllowedProject(contracts, options.projectId);
   const absolutePath = normalizeWorkspacePath(options.workspacePath);
+  const requestedProjectScopeId = normalizeOptionalString(options.projectScopeId);
   const existing = registry.bindings.find((binding) =>
     binding.project_id === options.projectId && binding.workspace_path === absolutePath,
   );
+  const activeProjectBinding = registry.bindings.find((binding) =>
+    binding.project_id === options.projectId && binding.status === 'active',
+  );
+  const nonArchivedProjectScopes = [
+    ...new Set(registry.bindings
+      .filter((binding) => binding.project_id === options.projectId && binding.status !== 'archived')
+      .map((binding) => binding.project_scope_id)),
+  ];
+  const inheritedProjectScopeId = requestedProjectScopeId
+    ?? existing?.project_scope_id
+    ?? activeProjectBinding?.project_scope_id
+    ?? (nonArchivedProjectScopes.length === 1 ? nonArchivedProjectScopes[0] : null);
+  if (!requestedProjectScopeId && !existing && !activeProjectBinding && nonArchivedProjectScopes.length > 1) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Workspace binding cannot infer a unique project scope from legacy bindings.',
+      {
+        failure_code: 'workspace_project_scope_ambiguous',
+        project_id: project.project_id,
+        project_scope_ids: nonArchivedProjectScopes.sort(),
+      },
+    );
+  }
+  const conflictingScopeOwner = requestedProjectScopeId
+    ? registry.bindings.find((binding) =>
+      binding.project_scope_id === requestedProjectScopeId
+      && binding.project_id !== project.project_id
+    )
+    : null;
+  if (conflictingScopeOwner) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Workspace project scope is already owned by a different project surface.',
+      {
+        project_scope_id: requestedProjectScopeId,
+        requested_project_id: project.project_id,
+        existing_project_id: conflictingScopeOwner.project_id,
+        existing_binding_id: conflictingScopeOwner.binding_id,
+      },
+    );
+  }
+  if (existing && requestedProjectScopeId && existing.project_scope_id !== requestedProjectScopeId) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Workspace binding cannot be rebound to a different project scope.',
+      {
+        binding_id: existing.binding_id,
+        existing_project_scope_id: existing.project_scope_id,
+        requested_project_scope_id: requestedProjectScopeId,
+      },
+    );
+  }
   const timestamp = nowIso();
   const binding = existing ?? {
     binding_id: randomUUID(),
+    project_scope_id: inheritedProjectScopeId ?? createProjectScopeId(),
     project_id: project.project_id,
     project: project.project,
     workspace_path: absolutePath,

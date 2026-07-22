@@ -300,14 +300,8 @@
       ],
       "required_search_attributes": [
         "OplStageAttemptId",
-        "OplDomainId",
-        "OplStageId",
-        "OplAttemptStatus",
-        "OplStagePhase",
-        "OplBlockedReason",
-        "OplTaskId",
-        "OplSourceFingerprint",
-        "OplExecutorKind"
+        "OplStageRunId",
+        "OplWorkItemScopeId"
       ],
       "visibility_payload_policy": "refs_and_indexable_summary_only_no_transcript_artifact_memory_or_domain_body",
       "fixture_mode_allowed_without_temporal_server": true
@@ -478,14 +472,8 @@
       "required_for_provider": "temporal",
       "search_attributes": [
         "OplStageAttemptId",
-        "OplDomainId",
-        "OplStageId",
-        "OplAttemptStatus",
-        "OplStagePhase",
-        "OplBlockedReason",
-        "OplTaskId",
-        "OplSourceFingerprint",
-        "OplExecutorKind"
+        "OplStageRunId",
+        "OplWorkItemScopeId"
       ],
       "payload_policy": "refs_and_indexable_summary_only_no_transcript_artifact_memory_or_domain_body"
     },

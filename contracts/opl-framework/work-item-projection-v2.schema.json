@@ -3,7 +3,7 @@
   "$id": "https://one-person-lab.dev/contracts/work-item-projection-v2.schema.json",
   "title": "OPL Work Item Projection V2",
   "type": "object",
-  "required": ["surface_kind", "schema_version", "profile", "generated_at", "agent_catalog", "agent_availability", "project_catalog", "summary", "items", "diagnostics", "detail_policy", "authority_boundary"],
+  "required": ["surface_kind", "schema_version", "profile", "generated_at", "agent_catalog", "agent_availability", "project_catalog", "identity_health", "unresolved_executions", "summary", "items", "diagnostics", "detail_policy", "authority_boundary"],
   "properties": {
     "surface_kind": { "const": "opl_work_item_projection" },
     "schema_version": { "const": "work-item-projection.v2" },
@@ -20,6 +20,11 @@
     "project_catalog": {
       "type": "array",
       "items": { "$ref": "#/$defs/projectCatalogEntry" }
+    },
+    "identity_health": { "$ref": "#/$defs/executionIdentityHealth" },
+    "unresolved_executions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/unresolvedExecution" }
     },
     "summary": {
       "type": "object",
@@ -79,9 +84,65 @@
       "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "profile": { "const": "fast" } } },
+      "then": { "properties": { "unresolved_executions": { "maxItems": 0 } } }
+    }
+  ],
   "additionalProperties": false,
   "$defs": {
     "nullableString": { "type": ["string", "null"] },
+    "executionIdentityHealth": {
+      "type": "object",
+      "required": ["status", "execution_count", "resolved_execution_count", "unresolved_execution_count", "conflict_execution_count", "not_in_inventory_execution_count", "non_work_item_execution_count", "reason_counts", "sample_attempt_refs"],
+      "properties": {
+        "status": { "enum": ["clear", "attention_required", "not_evaluated"] },
+        "execution_count": { "type": "integer", "minimum": 0 },
+        "resolved_execution_count": { "type": "integer", "minimum": 0 },
+        "unresolved_execution_count": { "type": "integer", "minimum": 0 },
+        "conflict_execution_count": { "type": "integer", "minimum": 0 },
+        "not_in_inventory_execution_count": { "type": "integer", "minimum": 0 },
+        "non_work_item_execution_count": { "type": "integer", "minimum": 0 },
+        "reason_counts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["reason", "count"],
+            "properties": {
+              "reason": { "type": "string", "minLength": 1 },
+              "count": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "sample_attempt_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "unresolvedExecution": {
+      "type": "object",
+      "required": ["attempt_ref", "stage_run_id", "stage_id", "role", "scope_kind", "identity_state", "reason", "project_scope_id", "work_item_scope_id", "domain_id", "domain_work_item_id", "details"],
+      "properties": {
+        "attempt_ref": { "type": "string", "minLength": 1 },
+        "stage_run_id": { "$ref": "#/$defs/nullableString" },
+        "stage_id": { "$ref": "#/$defs/nullableString" },
+        "role": { "$ref": "#/$defs/nullableString" },
+        "scope_kind": { "$ref": "#/$defs/nullableString" },
+        "identity_state": { "$ref": "#/$defs/nullableString" },
+        "reason": { "type": "string", "minLength": 1 },
+        "project_scope_id": { "$ref": "#/$defs/nullableString" },
+        "work_item_scope_id": { "$ref": "#/$defs/nullableString" },
+        "domain_id": { "$ref": "#/$defs/nullableString" },
+        "domain_work_item_id": { "$ref": "#/$defs/nullableString" },
+        "details": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
     "qualityBudget": {
       "type": "object",
       "required": [

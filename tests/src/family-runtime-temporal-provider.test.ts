@@ -28,10 +28,17 @@ import {
   buildTemporalStageAttemptReplayGateForTest,
 } from '../../src/modules/runway/family-runtime-temporal-provider.ts';
 import {
+  buildTemporalStageAttemptMemo,
   buildTemporalStageAttemptSearchAttributes,
   buildTemporalStageAttemptVisibilityReadiness,
+  buildTemporalStageRunSearchAttributes,
+  TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT,
 } from '../../src/modules/runway/family-runtime-temporal-visibility.ts';
+import type { TemporalStageRunWorkflowInput } from '../../src/modules/runway/family-runtime-temporal-stage-run.ts';
 import { createTemporalTestWorkflowEnvironment } from './temporal-test-environment.ts';
+import {
+  createPersistedTemporalStageAttemptInput,
+} from './family-runtime-temporal-provider-cases/persisted-attempt.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -69,14 +76,8 @@ test('Temporal stage attempt contract exposes Codex runner total and no-output b
   assert.equal(contract.operator_action_updates[0], 'StageAttemptOperatorUpdate');
   assert.deepEqual(contract.required_search_attributes, [
     'OplStageAttemptId',
-    'OplDomainId',
-    'OplStageId',
-    'OplAttemptStatus',
-    'OplStagePhase',
-    'OplBlockedReason',
-    'OplTaskId',
-    'OplSourceFingerprint',
-    'OplExecutorKind',
+    'OplStageRunId',
+    'OplWorkItemScopeId',
   ]);
 });
 test('Temporal visibility readiness requires OPL stage attempt Search Attributes', () => {
@@ -86,6 +87,24 @@ test('Temporal visibility readiness requires OPL stage attempt Search Attributes
   });
   const ready = buildTemporalStageAttemptVisibilityReadiness({
     namespace: 'opl-test',
+    observedCustomAttributes: {
+      OplStageAttemptId: 'Keyword',
+      OplStageRunId: 'Keyword',
+      OplWorkItemScopeId: 'Keyword',
+    },
+  });
+
+  assert.equal(blocked.readiness_status, 'missing_search_attributes');
+  assert.equal(blocked.repair_action?.action_id, 'install_temporal_stage_attempt_search_attributes');
+  assert.equal(ready.readiness_status, 'ready');
+  assert.deepEqual(ready.missing_search_attributes, []);
+  assert.equal(ready.keyword_capacity.limit, TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT);
+  assert.equal(ready.keyword_capacity.projected_count, 3);
+});
+
+test('Temporal visibility readiness blocks legacy Keyword capacity before repair mutation', () => {
+  const readiness = buildTemporalStageAttemptVisibilityReadiness({
+    namespace: 'opl-legacy-nine',
     observedCustomAttributes: {
       OplStageAttemptId: 'Keyword',
       OplDomainId: 'Keyword',
@@ -99,10 +118,47 @@ test('Temporal visibility readiness requires OPL stage attempt Search Attributes
     },
   });
 
-  assert.equal(blocked.readiness_status, 'missing_search_attributes');
-  assert.equal(blocked.repair_action?.action_id, 'install_temporal_stage_attempt_search_attributes');
-  assert.equal(ready.readiness_status, 'ready');
-  assert.deepEqual(ready.missing_search_attributes, []);
+  assert.equal(readiness.readiness_status, 'search_attribute_capacity_exceeded');
+  assert.deepEqual(readiness.keyword_capacity, {
+    limit: 10,
+    present_count: 9,
+    missing_required_count: 2,
+    projected_count: 11,
+    capacity_status: 'capacity_exceeded',
+    automatic_remove_allowed: false,
+  });
+  assert.equal(readiness.repair_action?.action_id, 'migrate_temporal_visibility_namespace');
+  assert.deepEqual(readiness.repair_action?.commands, []);
+
+  const saturatedButReady = buildTemporalStageAttemptVisibilityReadiness({
+    namespace: 'opl-saturated-ready',
+    observedCustomAttributes: {
+      OplStageAttemptId: 'Keyword',
+      OplStageRunId: 'Keyword',
+      OplWorkItemScopeId: 'Keyword',
+      LegacyOne: 'Keyword',
+      LegacyTwo: 'Keyword',
+      LegacyThree: 'Keyword',
+      LegacyFour: 'Keyword',
+      LegacyFive: 'Keyword',
+      LegacySix: 'Keyword',
+      LegacySeven: 'Keyword',
+    },
+  });
+  assert.equal(saturatedButReady.readiness_status, 'ready');
+  assert.equal(saturatedButReady.keyword_capacity.projected_count, 10);
+
+  const typeConflict = buildTemporalStageAttemptVisibilityReadiness({
+    namespace: 'opl-type-conflict',
+    observedCustomAttributes: {
+      OplStageAttemptId: 'Text',
+      OplStageRunId: 'Keyword',
+      OplWorkItemScopeId: 'Keyword',
+    },
+  });
+  assert.equal(typeConflict.readiness_status, 'search_attribute_type_conflict');
+  assert.equal(typeConflict.conflicting_search_attributes[0]?.name, 'OplStageAttemptId');
+  assert.deepEqual(typeConflict.repair_action?.commands, []);
 });
 
 test('Temporal workflow start Search Attributes are array-valued even when optional fields are absent', () => {
@@ -113,10 +169,36 @@ test('Temporal workflow start Search Attributes are array-valued even when optio
     provider_blocker: null,
   });
 
-  assert.deepEqual(attributes.OplBlockedReason, []);
-  assert.deepEqual(attributes.OplTaskId, []);
-  assert.deepEqual(attributes.OplSourceFingerprint, []);
+  assert.deepEqual(Object.keys(attributes).sort(), [
+    'OplStageAttemptId',
+    'OplStageRunId',
+    'OplWorkItemScopeId',
+  ]);
   assert.equal(Object.values(attributes).every(Array.isArray), true);
+  assert.equal(Object.keys(attributes).length, 3);
+  const memo = buildTemporalStageAttemptMemo(workflowInput());
+  assert.equal(memo.domain_id, 'redcube');
+  assert.equal(memo.stage_id, 'artifact_creation');
+  assert.equal(memo.task_id, 'task-temporal-owner-test');
+  assert.equal(memo.source_fingerprint, 'sha256:runtime-owner');
+});
+
+test('Temporal StageRun start Search Attributes use the same three-key index budget', () => {
+  const attributes = buildTemporalStageRunSearchAttributes({
+    stage_run_id: 'sr_temporal_index_budget',
+    execution_scope: {
+      project_scope_id: 'project-dm-cvd',
+      work_item_scope_id: 'work-item-002',
+      workspace_binding_id: 'workspace-dm-cvd',
+      scope_digest: 'sha256:scope-002',
+    },
+  } as TemporalStageRunWorkflowInput);
+
+  assert.deepEqual(attributes, {
+    OplStageAttemptId: [],
+    OplStageRunId: ['sr_temporal_index_budget'],
+    OplWorkItemScopeId: ['work-item-002'],
+  });
 });
 
 test('Temporal StageAttemptWorkflow retries short idempotent activities without retrying Codex activity', async () => {
@@ -191,6 +273,7 @@ test('Temporal StageAttemptWorkflow carries a no-output diagnostic forward when 
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-blocked-test-${Date.now()}`;
   try {
+    const input = createPersistedTemporalStageAttemptInput({ fixtureId: 'no-output' });
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
@@ -200,9 +283,9 @@ test('Temporal StageAttemptWorkflow carries a no-output diagnostic forward when 
     });
     const result = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [{ ...workflowInput(), closeout_packet: null }],
+        args: [input],
         taskQueue,
-        workflowId: `wf-temporal-blocked-test-${Date.now()}`,
+        workflowId: input.workflow_id,
       });
       return await handle.result();
     });
@@ -229,6 +312,7 @@ test('Temporal StageAttemptWorkflow carries Codex runner protocol diagnostics as
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-runner-blocker-test-${Date.now()}`;
   try {
+    const input = createPersistedTemporalStageAttemptInput({ fixtureId: 'runner-protocol-diagnostic' });
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
@@ -256,9 +340,9 @@ test('Temporal StageAttemptWorkflow carries Codex runner protocol diagnostics as
     });
     const result = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [{ ...workflowInput(), closeout_packet: null }],
+        args: [input],
         taskQueue,
-        workflowId: `wf-temporal-runner-blocker-test-${Date.now()}`,
+        workflowId: input.workflow_id,
       });
       return await handle.result();
     });
@@ -278,7 +362,7 @@ test('Temporal StageAttemptWorkflow carries Codex runner protocol diagnostics as
       'codex_cli_unsupported_function_call',
     );
     assert.deepEqual(result.closeout_refs, [
-      'opl://stage-attempts/sat_temporal_test/quality-debt-diagnostics/codex_cli_unsupported_function_call',
+      `opl://stage-attempts/${input.stage_attempt_id}/quality-debt-diagnostics/codex_cli_unsupported_function_call`,
     ]);
     assert.equal(result.completion_boundary.provider_completion_is_domain_ready, false);
   } finally {
@@ -290,6 +374,7 @@ test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a differ
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-attempt-stale-closeout-test-${Date.now()}`;
   try {
+    const input = createPersistedTemporalStageAttemptInput({ fixtureId: 'stale-closeout' });
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
@@ -317,9 +402,9 @@ test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a differ
     });
     const result = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [{ ...workflowInput(), closeout_packet: null }],
+        args: [input],
         taskQueue,
-        workflowId: `wf-temporal-stale-closeout-test-${Date.now()}`,
+        workflowId: input.workflow_id,
       });
       return await handle.result();
     });
@@ -327,7 +412,7 @@ test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a differ
     assert.equal(result.status, 'blocked');
     assert.equal(result.completion_boundary.provider_completion, 'not_completed');
     assert.deepEqual(result.closeout_refs, [
-      'opl://stage-attempts/sat_temporal_test/runtime-blockers/typed_closeout_stage_attempt_id_mismatch',
+      `opl://stage-attempts/${input.stage_attempt_id}/runtime-blockers/typed_closeout_stage_attempt_id_mismatch`,
     ]);
     const dispatchEvent = result.activity_events.find(
       (event) => event.activity_kind === 'domain_handler_dispatch_activity',
@@ -345,7 +430,33 @@ test('Temporal replay gate accepts production workflow history', async () => {
     const worker = await Worker.create({
       connection: testEnv.nativeConnection, namespace: testEnv.namespace, taskQueue,
       workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities,
+      activities: {
+        ...activities,
+        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
+          surface_kind: 'temporal_codex_stage_activity_receipt',
+          activity_kind: 'codex_stage_activity',
+          activity_status: 'completed',
+          stage_attempt_id: input.stage_attempt_id,
+          stage_id: input.stage_id,
+          checkpoint_refs: input.checkpoint_refs ?? [],
+          closeout_packet: input.closeout_packet,
+        }),
+        domainHandlerDispatchActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
+          surface_kind: 'temporal_domain_handler_dispatch_receipt',
+          activity_kind: 'domain_handler_dispatch_activity',
+          activity_status: 'completed',
+          stage_attempt_id: input.stage_attempt_id,
+          domain_id: input.domain_id,
+          closeout_refs: ['receipt:replay'],
+          consumed_refs: [],
+          consumed_memory_refs: [],
+          writeback_receipt_refs: [],
+          rejected_writes: [],
+          next_owner: input.domain_id,
+          domain_ready_verdict: 'domain_gate_pending',
+          route_impact: {},
+        }),
+      },
     });
     const workflowId = `wf-temporal-replay-test-${Date.now()}`;
     const history = await worker.runUntil(async () => {

@@ -6,6 +6,16 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { ensureOplStateDir } from '../../../kernel/runtime-state-paths.ts';
+import {
+  readStableWorkItemFile,
+  type WorkItemRootIdentity,
+  WorkItemFileBoundaryError,
+} from '../../workspace/index.ts';
+import {
+  requireFamilyRuntimeExecutionScope,
+  type FamilyRuntimeExecutionScopeKind,
+  type WorkItemExecutionScopeSnapshot,
+} from '../family-runtime-execution-scope.ts';
 import type { TypedStageCloseoutPacket } from './closeout-normalization.ts';
 import { isRecord, type JsonRecord } from './shared.ts';
 
@@ -20,9 +30,19 @@ type OplTransportArtifactIdentityReceipt = {
   version: 'opl-transport-artifact-identity-receipt.v1';
   domain_id: string;
   stage_attempt_id: string;
+  stage_run_id: string | null;
+  scope_kind: FamilyRuntimeExecutionScopeKind;
+  work_item_scope_id: string | null;
+  scope_digest: string | null;
   artifact_ref: string;
   sha256: string;
   size_bytes: number | null;
+};
+
+type ArtifactExecutionIdentity = {
+  stageRunId: string | null;
+  scopeKind: FamilyRuntimeExecutionScopeKind;
+  executionScope: WorkItemExecutionScopeSnapshot | null;
 };
 
 type StableFileObservation = {
@@ -57,6 +77,65 @@ function artifactIdentityError(input: {
     artifact_ref: input.artifactRef,
     ...(input.details ?? {}),
   });
+}
+
+function artifactExecutionIdentity(input: {
+  runtimeIdentity: JsonRecord;
+  operation: string;
+}): ArtifactExecutionIdentity {
+  const identityState = optionalString(input.runtimeIdentity.identity_state);
+  if (
+    identityState === 'identity_unresolved'
+    || identityState === 'quarantined'
+    || input.runtimeIdentity.scope_kind === 'identity_unresolved'
+  ) {
+    throw artifactIdentityError({
+      message: 'Identity-unresolved or quarantined Attempts cannot issue artifact identity receipts.',
+      blockedReason: 'artifact_identity_runtime_scope_unresolved_authority_violation',
+      hardStopClass: 'authority_boundary_violation',
+      artifactRef: optionalString(input.runtimeIdentity.stage_attempt_id) ?? 'missing',
+      details: {
+        identity_state: identityState ?? 'identity_unresolved',
+        scope_kind: input.runtimeIdentity.scope_kind ?? 'identity_unresolved',
+        operation: input.operation,
+      },
+    });
+  }
+  const workspaceLocator = isRecord(input.runtimeIdentity.workspace_locator)
+    ? input.runtimeIdentity.workspace_locator
+    : null;
+  const scope = requireFamilyRuntimeExecutionScope({
+    scopeKind: input.runtimeIdentity.scope_kind,
+    executionScope: input.runtimeIdentity.execution_scope,
+    workspaceLocator,
+    domainId: optionalString(input.runtimeIdentity.domain_id),
+    operation: input.operation,
+    requireWorkspaceTransportCopy: false,
+  });
+  const stageRunId = optionalString(input.runtimeIdentity.stage_run_id);
+  if (scope.scopeKind === 'work_item' && !stageRunId) {
+    throw artifactIdentityError({
+      message: 'Work-item artifact identity requires an exact producing StageRun.',
+      blockedReason: 'artifact_identity_stage_run_missing_authority_violation',
+      hardStopClass: 'authority_boundary_violation',
+      artifactRef: optionalString(input.runtimeIdentity.stage_attempt_id) ?? 'missing',
+      details: { operation: input.operation },
+    });
+  }
+  if (scope.executionScope && !optionalString(scope.executionScope.canonical_work_item_root)) {
+    throw artifactIdentityError({
+      message: 'Work-item artifact identity requires a canonical work-item root.',
+      blockedReason: 'artifact_identity_work_item_root_missing_authority_violation',
+      hardStopClass: 'authority_boundary_violation',
+      artifactRef: optionalString(input.runtimeIdentity.stage_attempt_id) ?? 'missing',
+      details: { operation: input.operation },
+    });
+  }
+  return {
+    stageRunId,
+    scopeKind: scope.scopeKind,
+    executionScope: scope.executionScope,
+  };
 }
 
 function localPathForRef(ref: string, workspaceRoot: string) {
@@ -305,6 +384,7 @@ function verifyIdentityReceipt(input: {
   workspaceRoot: string;
   domainId: string;
   expectedAttemptId?: string;
+  expectedIdentity: ArtifactExecutionIdentity;
   artifactRef: string;
   artifactSha256: string;
 }) {
@@ -314,10 +394,25 @@ function verifyIdentityReceipt(input: {
     ? 'opl-transport-artifact-identity-receipt.v1'
     : 'domain-artifact-identity-receipt.v1';
   const receiptAttemptId = optionalString(receipt.stage_attempt_id);
+  const receiptStageRunId = optionalString(receipt.stage_run_id);
+  const receiptScopeKind = optionalString(receipt.scope_kind)
+    ?? (optionalString(receipt.scope_digest) || optionalString(receipt.work_item_scope_id)
+      ? 'work_item'
+      : 'domain');
+  const expectedScope = input.expectedIdentity.executionScope;
+  const receiptScopeMatches = expectedScope
+    ? receiptScopeKind === 'work_item'
+      && receipt.work_item_scope_id === expectedScope.work_item_scope_id
+      && receipt.scope_digest === expectedScope.scope_digest
+    : receiptScopeKind === input.expectedIdentity.scopeKind
+      && !optionalString(receipt.work_item_scope_id)
+      && !optionalString(receipt.scope_digest);
   const valid = receipt.version === expectedVersion
     && receipt.domain_id === input.domainId
     && Boolean(receiptAttemptId)
     && (!input.expectedAttemptId || receiptAttemptId === input.expectedAttemptId)
+    && receiptStageRunId === input.expectedIdentity.stageRunId
+    && receiptScopeMatches
     && receipt.artifact_ref === input.artifactRef
     && canonicalSha256(receipt.sha256, 'artifact_identity_receipt.sha256') === input.artifactSha256
     && (receipt.size_bytes === null
@@ -325,11 +420,21 @@ function verifyIdentityReceipt(input: {
       || (typeof receipt.size_bytes === 'number' && Number.isSafeInteger(receipt.size_bytes) && receipt.size_bytes >= 0));
   if (!valid) {
     throw artifactIdentityError({
-      message: 'Artifact identity receipt does not exactly bind the domain, producing Attempt, ref, and hash.',
+      message: 'Artifact identity receipt does not exactly bind the domain, StageRun, scope, producing Attempt, ref, and hash.',
       blockedReason: 'artifact_identity_receipt_mismatch_authority_violation',
       hardStopClass: 'authority_boundary_violation',
       artifactRef: input.artifactRef,
-      details: { artifact_identity_receipt_ref: input.receiptRef },
+      details: {
+        artifact_identity_receipt_ref: input.receiptRef,
+        expected_stage_run_id: input.expectedIdentity.stageRunId,
+        actual_stage_run_id: receiptStageRunId,
+        expected_scope_kind: input.expectedIdentity.scopeKind,
+        actual_scope_kind: receiptScopeKind,
+        expected_work_item_scope_id: expectedScope?.work_item_scope_id ?? null,
+        actual_work_item_scope_id: optionalString(receipt.work_item_scope_id),
+        expected_scope_digest: expectedScope?.scope_digest ?? null,
+        actual_scope_digest: optionalString(receipt.scope_digest),
+      },
     });
   }
   return receipt;
@@ -393,10 +498,91 @@ function verifyCurrentArtifactBytes(input: {
   artifactSha256: string;
   workspaceRoot: string;
   declaredSizeBytes?: number | null;
+  canonicalWorkItemRoot?: string | null;
+  canonicalWorkItemRootIdentity?: WorkItemRootIdentity | null;
+  scopeWorkspaceRoot?: string | null;
 }) {
   const localPath = localPathForRef(input.artifactRef, input.workspaceRoot);
   if (!localPath) return null;
-  const observed = observeStableFile({ filePath: localPath, artifactRef: input.artifactRef });
+  let observed: StableFileObservation;
+  if (input.canonicalWorkItemRoot) {
+    if (!input.canonicalWorkItemRootIdentity) {
+      throw artifactIdentityError({
+        message: 'Canonical work-item root is missing its frozen physical identity.',
+        blockedReason: 'artifact_work_item_root_identity_drift_authority_violation',
+        hardStopClass: 'authority_boundary_violation',
+        artifactRef: input.artifactRef,
+        details: { canonical_work_item_root: input.canonicalWorkItemRoot },
+      });
+    }
+    try {
+      const scoped = readStableWorkItemFile({
+        workspaceRoot: input.scopeWorkspaceRoot ?? input.workspaceRoot,
+        canonicalWorkItemRoot: input.canonicalWorkItemRoot,
+        expectedRootIdentity: input.canonicalWorkItemRootIdentity,
+        filePath: localPath,
+        ref: input.artifactRef,
+      });
+      observed = {
+        sha256: scoped.sha256.slice('sha256:'.length),
+        sizeBytes: scoped.byte_size,
+        bytes: null,
+      };
+    } catch (error) {
+      if (!(error instanceof WorkItemFileBoundaryError)) throw error;
+      if (
+        error.failureCode === 'work_item_file_boundary_escape'
+        || error.failureCode === 'work_item_file_boundary_ref_invalid'
+      ) {
+        throw artifactIdentityError({
+          message: 'Work-item artifact bytes are outside the canonical work-item root.',
+          blockedReason: 'artifact_ref_outside_work_item_root_authority_violation',
+          hardStopClass: 'authority_boundary_violation',
+          artifactRef: input.artifactRef,
+          details: {
+            resolved_path: localPath,
+            canonical_work_item_root: input.canonicalWorkItemRoot,
+            boundary_failure_code: error.failureCode,
+          },
+        });
+      }
+      if (error.failureCode === 'work_item_file_boundary_ref_unreadable') {
+        throw artifactIdentityError({
+          message: 'Artifact identity points to an unreadable local file.',
+          blockedReason: 'artifact_ref_unreadable',
+          artifactRef: input.artifactRef,
+          details: {
+            resolved_path: localPath,
+            boundary_failure_code: error.failureCode,
+          },
+        });
+      }
+      if (error.failureCode === 'work_item_file_boundary_ref_drift') {
+        throw artifactIdentityError({
+          message: 'Artifact bytes changed while their identity was being verified.',
+          blockedReason: 'artifact_changed_during_identity_verification',
+          artifactRef: input.artifactRef,
+          details: {
+            resolved_path: localPath,
+            boundary_failure_code: error.failureCode,
+          },
+        });
+      }
+      throw artifactIdentityError({
+        message: 'Canonical work-item root or artifact path changed after execution scope freeze.',
+        blockedReason: 'artifact_work_item_root_identity_drift_authority_violation',
+        hardStopClass: 'authority_boundary_violation',
+        artifactRef: input.artifactRef,
+        details: {
+          resolved_path: localPath,
+          canonical_work_item_root: input.canonicalWorkItemRoot,
+          boundary_failure_code: error.failureCode,
+        },
+      });
+    }
+  } else {
+    observed = observeStableFile({ filePath: localPath, artifactRef: input.artifactRef });
+  }
   if (observed.sha256 !== input.artifactSha256) {
     throw artifactIdentityError({
       message: 'Stage quality artifact SHA does not match the current stable local file bytes.',
@@ -426,6 +612,9 @@ export function verifyStageQualityArtifactIdentityAtAttemptBoundary(input: {
   domainId: string;
   workspaceRoot: string;
   expectedProducingAttemptId: string;
+  expectedStageRunId?: string | null;
+  expectedScopeKind?: FamilyRuntimeExecutionScopeKind;
+  expectedExecutionScope?: WorkItemExecutionScopeSnapshot | null;
 }) {
   const expectedProducingAttemptId = optionalString(input.expectedProducingAttemptId);
   if (!expectedProducingAttemptId) {
@@ -436,6 +625,15 @@ export function verifyStageQualityArtifactIdentityAtAttemptBoundary(input: {
       artifactRef: optionalString(Array.isArray(input.artifactRefs) ? input.artifactRefs[0] : null) ?? 'missing',
     });
   }
+  const expectedIdentity = artifactExecutionIdentity({
+    runtimeIdentity: {
+      domain_id: input.domainId,
+      stage_run_id: input.expectedStageRunId ?? null,
+      scope_kind: input.expectedScopeKind ?? (input.expectedExecutionScope ? 'work_item' : 'domain'),
+      execution_scope: input.expectedExecutionScope ?? null,
+    },
+    operation: 'verify_stage_quality_artifact_attempt_boundary',
+  });
   const pairs = exactArtifactPairs({
     artifactRefs: input.artifactRefs,
     artifactHashes: input.artifactHashes,
@@ -472,6 +670,7 @@ export function verifyStageQualityArtifactIdentityAtAttemptBoundary(input: {
       workspaceRoot: input.workspaceRoot,
       domainId: input.domainId,
       expectedAttemptId: expectedProducingAttemptId,
+      expectedIdentity,
       artifactRef: pair.artifactRef,
       artifactSha256: pair.artifactSha256,
     });
@@ -480,6 +679,10 @@ export function verifyStageQualityArtifactIdentityAtAttemptBoundary(input: {
       artifactSha256: pair.artifactSha256,
       workspaceRoot: input.workspaceRoot,
       declaredSizeBytes: typeof receipt.size_bytes === 'number' ? receipt.size_bytes : null,
+      canonicalWorkItemRoot: expectedIdentity.executionScope?.canonical_work_item_root ?? null,
+      canonicalWorkItemRootIdentity:
+        expectedIdentity.executionScope?.canonical_work_item_root_identity ?? null,
+      scopeWorkspaceRoot: expectedIdentity.executionScope?.workspace_root ?? null,
     });
     return receiptRef;
   });
@@ -517,6 +720,10 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
   const pairs = exactArtifactPairs({ artifactRefs: declaredRefs, artifactHashes: declaredHashes });
   const domainId = optionalString(input.attempt.domain_id) ?? 'unknown-domain';
   const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
+  const executionIdentity = artifactExecutionIdentity({
+    runtimeIdentity: input.attempt,
+    operation: 'verify_stage_quality_closeout_artifact_identity',
+  });
 
   const nextMetadata = pairs.map(({ artifactRef, artifactSha256 }) => {
     const metadataIndex = metadata.findIndex((entry) => entry.ref === artifactRef || entry.uri === artifactRef);
@@ -534,6 +741,10 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
       artifactSha256,
       workspaceRoot: input.workspaceRoot,
       declaredSizeBytes: typeof entry.size_bytes === 'number' ? entry.size_bytes : null,
+      canonicalWorkItemRoot: executionIdentity.executionScope?.canonical_work_item_root ?? null,
+      canonicalWorkItemRootIdentity:
+        executionIdentity.executionScope?.canonical_work_item_root_identity ?? null,
+      scopeWorkspaceRoot: executionIdentity.executionScope?.workspace_root ?? null,
     });
     if (observed) {
       const receiptRef = persistTransportIdentityReceipt({
@@ -541,6 +752,10 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
         version: 'opl-transport-artifact-identity-receipt.v1',
         domain_id: domainId,
         stage_attempt_id: attemptId,
+        stage_run_id: executionIdentity.stageRunId,
+        scope_kind: executionIdentity.scopeKind,
+        work_item_scope_id: executionIdentity.executionScope?.work_item_scope_id ?? null,
+        scope_digest: executionIdentity.executionScope?.scope_digest ?? null,
         artifact_ref: artifactRef,
         sha256: observed.sha256,
         size_bytes: observed.sizeBytes,
@@ -568,6 +783,7 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
       workspaceRoot: input.workspaceRoot,
       domainId,
       expectedAttemptId: attemptId,
+      expectedIdentity: executionIdentity,
       artifactRef,
       artifactSha256,
     });

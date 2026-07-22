@@ -525,6 +525,8 @@ export function buildConnectCommandSpecs(
       examples: [
         'opl connect scientific search --provider crossref --query "clinical prediction model" --json',
         'opl connect scientific search --provider openalex --query "causal inference EHR" --json',
+        'opl connect scientific search --provider pubmed --query "randomized trial hypertension" --json',
+        'opl connect scientific search --provider pmc --query "OPEN_ACCESS:Y AND cancer immunotherapy" --json',
       ],
       group: 'connect',
       help_surface: 'default',

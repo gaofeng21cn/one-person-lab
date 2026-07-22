@@ -21,6 +21,7 @@ export type StandardAgentInventoryProjection = {
   source_kind: 'workspace_relative_json';
   relative_path: string;
   items_pointer: string;
+  work_item_root_template?: string;
   field_map: {
     display_name?: string;
     next_action?: string;
@@ -154,7 +155,7 @@ function inventoryProjection(value: unknown, sourceRef: string): StandardAgentIn
   }
   assertKnownKeys(
     value,
-    ['source_kind', 'relative_path', 'items_pointer', 'field_map'],
+    ['source_kind', 'relative_path', 'items_pointer', 'work_item_root_template', 'field_map'],
     'inventory_projection',
     sourceRef,
   );
@@ -186,6 +187,25 @@ function inventoryProjection(value: unknown, sourceRef: string): StandardAgentIn
       items_pointer: itemsPointer,
     });
   }
+  const workItemRootTemplate = value.work_item_root_template === undefined
+    ? null
+    : stringValue(
+        value.work_item_root_template,
+        'inventory_projection.work_item_root_template',
+        sourceRef,
+      );
+  if (
+    workItemRootTemplate
+    && (
+      path.isAbsolute(workItemRootTemplate)
+      || workItemRootTemplate.split(/[\\/]+/).includes('..')
+    )
+  ) {
+    invalid('Standard Agent interface work-item root template must stay inside the workspace.', sourceRef, {
+      field: 'inventory_projection.work_item_root_template',
+      work_item_root_template: workItemRootTemplate,
+    });
+  }
   const fieldMap = value.field_map;
   if (!isRecord(fieldMap)) {
     invalid('Standard Agent interface inventory_projection field_map must be an object.', sourceRef, {
@@ -209,6 +229,7 @@ function inventoryProjection(value: unknown, sourceRef: string): StandardAgentIn
     source_kind: 'workspace_relative_json',
     relative_path: relativePath,
     items_pointer: itemsPointer,
+    ...(workItemRootTemplate ? { work_item_root_template: workItemRootTemplate } : {}),
     field_map: {
       ...Object.fromEntries(INVENTORY_FIELD_KEYS.map((field) => [
         field,

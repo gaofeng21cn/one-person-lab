@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-import { isRecord } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   insertEvent,
@@ -13,7 +13,11 @@ import {
   FAMILY_RUNTIME_TASK_STATUS,
   taskFailureProjectionSql,
 } from './family-runtime-queue-projection-boundary.ts';
-import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
+import {
+  getStageAttemptRow,
+  type StageAttemptRow,
+} from './family-runtime-stage-attempt-ledger.ts';
+import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
 import {
   isStageNativeOwnerActionFromDomainProfile,
   stageAttemptRowHasStageNativeProgressOrOwnerAnswerFromDomainProfile,
@@ -144,7 +148,34 @@ function isMissingStageNativeProgressOrOwnerAnswer(task: LinkedTask, row: StageA
     });
 }
 
-export function markLinkedDefaultExecutorTaskCompleted(
+function withAdmittedDurableStageAttempt<T>(
+  db: DatabaseSync,
+  stageAttemptId: string,
+  operation: string,
+  mutation: (row: StageAttemptRow) => T,
+) {
+  const ownsTransaction = !db.isTransaction;
+  try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    const row = getStageAttemptRow(db, stageAttemptId);
+    if (!row) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Stage attempt is not persisted.', {
+        failure_code: 'persisted_runtime_stage_attempt_not_found',
+        operation,
+        stage_attempt_id: stageAttemptId,
+      });
+    }
+    requireRuntimeExecutionScopeMutationAllowed(db, row, operation);
+    const result = mutation(row);
+    if (ownsTransaction) db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+function markLinkedDefaultExecutorTaskCompletedForDurableRow(
   db: DatabaseSync,
   input: {
     row: StageAttemptRow;
@@ -209,7 +240,25 @@ export function markLinkedDefaultExecutorTaskCompleted(
   });
 }
 
-export function blockLinkedDefaultExecutorTask(
+export function markLinkedDefaultExecutorTaskCompleted(
+  db: DatabaseSync,
+  input: {
+    row: StageAttemptRow;
+    observedAt: string;
+  },
+) {
+  return withAdmittedDurableStageAttempt(
+    db,
+    input.row.stage_attempt_id,
+    'mark_linked_default_executor_task_completed',
+    (row) => markLinkedDefaultExecutorTaskCompletedForDurableRow(db, {
+      ...input,
+      row,
+    }),
+  );
+}
+
+function blockLinkedDefaultExecutorTaskForDurableRow(
   db: DatabaseSync,
   input: {
     row: StageAttemptRow;
@@ -272,4 +321,29 @@ export function blockLinkedDefaultExecutorTask(
       task_dead_letter_reason: input.taskDeadLetterReason,
     },
   });
+}
+
+export function blockLinkedDefaultExecutorTask(
+  db: DatabaseSync,
+  input: {
+    row: StageAttemptRow;
+    reason: string;
+    observedAt: string;
+    taskDeadLetterReason:
+      | 'temporal_stage_attempt_failed'
+      | 'temporal_stage_attempt_not_completed'
+      | 'temporal_stage_attempt_start_failed'
+      | 'temporal_stage_attempt_canceled';
+    eventType: string;
+  },
+) {
+  return withAdmittedDurableStageAttempt(
+    db,
+    input.row.stage_attempt_id,
+    'block_linked_default_executor_task',
+    (row) => blockLinkedDefaultExecutorTaskForDurableRow(db, {
+      ...input,
+      row,
+    }),
+  );
 }

@@ -64,6 +64,49 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
     true,
   );
   assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.work_item_local_file_boundary_owner,
+    'workspace',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy
+      .work_item_local_file_requires_physical_canonical_root,
+    true,
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.work_item_root_physical_attestation,
+    'workspace_and_work_item_device_inode_bound_into_scope_digest',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy
+      .work_item_local_file_symlink_path_components_allowed,
+    false,
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy
+      .work_item_root_or_file_identity_drift_during_read,
+    'typed_fail_closed_before_launch_or_receipt',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.content_binding_shape,
+    'exact_closed_enum',
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.unknown_content_binding_verification_kind,
+    'typed_fail_closed_before_file_read',
+  );
+  assert.deepEqual(
+    value.durable_stage_run_launch.content_binding_policy.input_artifact_binding_kinds,
+    ['workspace_file_bytes', 'trusted_artifact_identity_receipt'],
+  );
+  assert.deepEqual(
+    value.durable_stage_run_launch.content_binding_policy.trusted_receipt_immutable_lineage_fields,
+    ['producing_stage_run_ref', 'producing_attempt_ref', 'byte_size'],
+  );
+  assert.equal(
+    value.durable_stage_run_launch.content_binding_policy.trusted_receipt_lineage_revalidated_before_use,
+    true,
+  );
+  assert.equal(
     value.durable_stage_run_launch.content_binding_policy.child_attempt_binding_version,
     'opl-stage-run-attempt-content-binding.v1',
   );
@@ -90,6 +133,22 @@ test('StageRun contract is passive transport and Codex owns semantic routing', (
   );
   assert.ok(value.durable_stage_run_launch.stage_run_spec_sha256.excludes.includes('checked_at'));
   assert.equal(value.durable_stage_run_launch.launch_registry.table, 'stage_run_launches');
+  assert.deepEqual(
+    value.durable_stage_run_launch.execution_scope_binding,
+    {
+      schema_ref: 'contracts/opl-framework/execution-scope-snapshot.schema.json',
+      authoritative_persistence:
+        'sqlite_stage_run_and_attempt_rows_plus_immutable_execution_scopes_registry',
+      work_item_scope_requires_snapshot: true,
+      domain_or_system_scope_allows_null_snapshot: true,
+      alias_resolution_timing: 'once_at_host_ingress_before_workflow_creation',
+      stage_run_attempt_parent_child_resume_closeout_exact_scope_digest: true,
+      same_invocation_or_idempotency_key_different_scope: 'typed_fail_closed_different_intent',
+      workspace_path_search_attributes_memo_baggage_logs_and_env_are_authority: false,
+      legacy_unscoped_state: 'identity_unresolved',
+      legacy_unscoped_can_be_current_resumed_woken_or_closed_out: false,
+    },
+  );
   assert.equal(
     value.durable_stage_run_launch.launch_registry.validate_identity_and_spec_before_registry_write,
     true,

@@ -279,6 +279,9 @@ test('framework readiness keeps mutation-guarded provider SLO tail out of operat
     const readiness = runCli(['framework', 'readiness', '--family-defaults'], {
       HOME: homeRoot,
       OPL_STATE_DIR: '',
+      NODE_TEST_CONTEXT: '',
+      JEST_WORKER_ID: '',
+      VITEST_WORKER_ID: '',
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
       OPL_TEMPORAL_ADDRESS: temporalAddress,

@@ -1,6 +1,11 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
+  requireWorkItemExecutionScopeSnapshot,
+  type WorkItemExecutionScopeSnapshot,
+} from '../../workspace/public/standard-agent-action-runtime.ts';
+import { requireFamilyRuntimeIngressIdentity } from '../family-runtime-execution-scope.ts';
+import {
   isRecord,
   readRecordList,
   readStringList,
@@ -10,8 +15,11 @@ import {
 export type TypedStageCloseoutPacket = {
   surface_kind: 'stage_attempt_closeout_packet' | 'stage_memory_closeout_packet' | 'domain_stage_closeout_packet';
   stage_attempt_id?: string;
+  stage_run_id?: string;
   idempotency_key?: string;
   closeout_id?: string;
+  scope_digest?: string;
+  execution_scope?: WorkItemExecutionScopeSnapshot;
   closeout_refs: string[];
   closeout_ref_metadata?: JsonRecord[];
   consumed_refs: string[];
@@ -93,9 +101,16 @@ export type StageCloseoutPacketRejection = {
   reason:
     | 'stage_attempt_id_mismatch'
     | 'idempotency_key_mismatch'
-    | 'domain_route_user_stage_log_missing';
-  stage_attempt_id: string | null;
+    | 'domain_route_user_stage_log_missing'
+    | 'execution_scope_missing'
+    | 'execution_scope_mismatch'
+    | 'execution_identity_missing'
+    | 'execution_identity_mismatch'
+    | 'execution_identity_unresolved';
+    stage_attempt_id: string | null;
+    stage_run_id: string | null;
   idempotency_key: string | null;
+  scope_digest: string | null;
 };
 
 function isDomainRouteAttempt(attempt: JsonRecord) {
@@ -258,12 +273,32 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
   }
   const uniqueCloseoutRefs = [...new Set(closeoutRefs)];
   const domainOutput = normalizeDomainOutput(value.domain_output, uniqueCloseoutRefs);
+  const executionScope = value.execution_scope === undefined || value.execution_scope === null
+    ? null
+    : requireWorkItemExecutionScopeSnapshot(value.execution_scope);
+  const explicitScopeDigest = optionalString(value.scope_digest);
+  if (executionScope && explicitScopeDigest && executionScope.scope_digest !== explicitScopeDigest) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Typed stage closeout scope_digest conflicts with its execution_scope snapshot.',
+      {
+        failure_code: 'typed_closeout_execution_scope_mismatch',
+        expected_scope_digest: executionScope.scope_digest,
+        actual_scope_digest: explicitScopeDigest,
+      },
+    );
+  }
 
   return {
     surface_kind: surfaceKind,
     ...(optionalString(value.stage_attempt_id) ? { stage_attempt_id: optionalString(value.stage_attempt_id)! } : {}),
+    ...(optionalString(value.stage_run_id) ? { stage_run_id: optionalString(value.stage_run_id)! } : {}),
     ...(optionalString(value.idempotency_key) ? { idempotency_key: optionalString(value.idempotency_key)! } : {}),
     ...(optionalString(value.closeout_id) ? { closeout_id: optionalString(value.closeout_id)! } : {}),
+    ...(executionScope ? { execution_scope: executionScope } : {}),
+    ...(executionScope || explicitScopeDigest
+      ? { scope_digest: executionScope?.scope_digest ?? explicitScopeDigest! }
+      : {}),
     closeout_refs: uniqueCloseoutRefs,
     ...(closeoutRefEntries.metadata.length + explicitCloseoutRefMetadata.metadata.length > 0
       ? {
@@ -312,7 +347,9 @@ export function validateCloseoutPacketForAttempt(input: {
       rejection: {
         reason: 'stage_attempt_id_mismatch' as const,
         stage_attempt_id: closeoutPacket.stage_attempt_id,
+        stage_run_id: closeoutPacket.stage_run_id ?? null,
         idempotency_key: closeoutPacket.idempotency_key ?? null,
+        scope_digest: closeoutPacket.scope_digest ?? null,
       },
     };
   }
@@ -323,7 +360,38 @@ export function validateCloseoutPacketForAttempt(input: {
       rejection: {
         reason: 'idempotency_key_mismatch' as const,
         stage_attempt_id: closeoutPacket.stage_attempt_id ?? null,
+        stage_run_id: closeoutPacket.stage_run_id ?? null,
         idempotency_key: closeoutPacket.idempotency_key,
+        scope_digest: closeoutPacket.scope_digest ?? null,
+      },
+    };
+  }
+  try {
+    requireFamilyRuntimeIngressIdentity({
+      runtimeIdentity: input.attempt,
+      ingressIdentity: closeoutPacket as unknown as Record<string, unknown>,
+      operation: 'validate_typed_closeout',
+    });
+  } catch (error) {
+    if (!(error instanceof FrameworkContractError)) throw error;
+    const failureCode = error.details?.failure_code;
+    const reason = failureCode === 'runtime_ingress_identity_unresolved'
+      ? 'execution_identity_unresolved'
+      : failureCode === 'runtime_ingress_identity_missing'
+        ? 'execution_identity_missing'
+        : failureCode === 'runtime_ingress_identity_mismatch'
+          ? 'execution_identity_mismatch'
+          : failureCode === 'runtime_ingress_execution_scope_missing'
+            ? 'execution_scope_missing'
+            : 'execution_scope_mismatch';
+    return {
+      closeoutPacket: null,
+      rejection: {
+        reason,
+        stage_attempt_id: closeoutPacket.stage_attempt_id ?? null,
+        stage_run_id: closeoutPacket.stage_run_id ?? null,
+        idempotency_key: closeoutPacket.idempotency_key ?? null,
+        scope_digest: closeoutPacket.scope_digest ?? null,
       },
     };
   }
@@ -333,7 +401,9 @@ export function validateCloseoutPacketForAttempt(input: {
       rejection: {
         reason: 'domain_route_user_stage_log_missing' as const,
         stage_attempt_id: closeoutPacket.stage_attempt_id ?? null,
+        stage_run_id: closeoutPacket.stage_run_id ?? null,
         idempotency_key: closeoutPacket.idempotency_key ?? null,
+        scope_digest: closeoutPacket.scope_digest ?? null,
       },
     };
   }

@@ -5,7 +5,6 @@ import { isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { record, stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
-import { resolveStandardAgent } from '../../../kernel/standard-agent-registry.ts';
 import {
   buildStageAttemptRuntimeCurrentness,
   buildStageAttemptUsageProjection,
@@ -13,23 +12,24 @@ import {
   openFamilyRuntimeSqlite,
 } from '../../runway/public/app-state.ts';
 import { canonicalWorkspacePath } from './catalog.ts';
-import { systemRepairAction } from './inventory-presentation.ts';
 import {
-  explicitAttemptWorkItemId,
-  hasExplicitAttemptWorkItemIdentity,
-  recoverLegacyAttemptIdentity,
-} from './legacy-attempt-identity.ts';
+  inspectAttemptExecutionIdentity,
+  type AttemptExecutionIdentityInspection,
+} from './execution-identity.ts';
+import { systemRepairAction } from './inventory-presentation.ts';
 import { withProjectedWorkItemPrimaryState } from './primary-state.ts';
 import type {
-  ProjectCatalogEntry,
   TokenObservation,
   WorkItemCondition,
   WorkItemExecutionState,
   WorkItemProjectionDiagnostic,
   WorkItemProjectionItem,
+  WorkItemUnresolvedExecution,
 } from './types.ts';
 
 const MAX_DIAGNOSTIC_ATTEMPTS = 100;
+const STAGE_RUN_DIAGNOSTIC_ONLY_RECORD_KIND = 'stage_run_without_stage_attempt';
+const STAGE_RUN_WITHOUT_ATTEMPT_REASON = 'stage_run_without_stage_attempt';
 const QUEUED_STATUSES = new Set(['created', 'pending', 'queued', 'scheduled']);
 const SUCCEEDED_STATUSES = new Set(['completed', 'succeeded', 'closed']);
 const FAILED_STATUSES = new Set(['blocked', 'dead_lettered', 'failed']);
@@ -39,6 +39,19 @@ const LIVE_STAGE_ATTEMPT_STATUSES = new Set([
   'checkpointed',
   'human_gate',
 ]);
+const STAGE_RUN_EXECUTION_IDENTITY_COLUMNS = [
+  'stage_run_id',
+  'domain_id',
+  'stage_id',
+  'scope_kind',
+  'project_scope_id',
+  'work_item_scope_id',
+  'workspace_binding_id',
+  'binding_version_id',
+  'scope_digest',
+  'execution_scope_json',
+  'identity_state',
+] as const;
 
 function normalizedStatus(value: unknown) {
   return stringValue(value)?.toLowerCase().replace(/[\s-]+/g, '_') ?? 'unknown';
@@ -57,18 +70,6 @@ function attemptStageRunLaunch(attempt: JsonRecord) {
     && stringValue(launch.stage_id) === stringValue(attempt.stage_id)
     ? launch
     : {};
-}
-
-function attemptWorkspaceLocator(attempt: JsonRecord) {
-  const stageRunInput = record(attemptStageRunLaunch(attempt).stage_run_input);
-  return {
-    ...record(stageRunInput.workspace_locator),
-    ...record(attempt.workspace_locator),
-  };
-}
-
-function attemptWorkspacePath(attempt: JsonRecord) {
-  return stringValue(attemptWorkspaceLocator(attempt).workspace_root);
 }
 
 function effectiveAttemptStatus(attempt: JsonRecord) {
@@ -90,15 +91,18 @@ function attemptObservedAt(attempt: JsonRecord) {
     ?? stringValue(attempt.created_at);
 }
 
-function attemptAgentId(attempt: JsonRecord) {
-  const domainId = stringValue(attempt.domain_id);
-  return domainId ? resolveStandardAgent(domainId)?.agent_id ?? domainId : null;
-}
-
 function newestFirst(left: JsonRecord, right: JsonRecord) {
   const updated = Date.parse(attemptObservedAt(right) ?? '') - Date.parse(attemptObservedAt(left) ?? '');
   if (Number.isFinite(updated) && updated !== 0) return updated;
   return (stringValue(right.stage_attempt_id) ?? '').localeCompare(stringValue(left.stage_attempt_id) ?? '');
+}
+
+function newestStageRunDiagnosticFirst(left: JsonRecord, right: JsonRecord) {
+  const leftObservedAt = stringValue(left.updated_at) ?? stringValue(left.created_at);
+  const rightObservedAt = stringValue(right.updated_at) ?? stringValue(right.created_at);
+  const updated = Date.parse(rightObservedAt ?? '') - Date.parse(leftObservedAt ?? '');
+  if (Number.isFinite(updated) && updated !== 0) return updated;
+  return (stringValue(right.stage_run_id) ?? '').localeCompare(stringValue(left.stage_run_id) ?? '');
 }
 
 function usageProjection(attempt: JsonRecord, scope: string) {
@@ -380,6 +384,267 @@ function humanGateAction(
   };
 }
 
+type StageRunExecutionIdentityJoinRow = {
+  projection_stage_attempt_id: unknown;
+  attempt_stage_run_id: unknown;
+  registered_stage_run_id: unknown;
+  stage_run_domain_id: unknown;
+  stage_run_stage_id: unknown;
+  stage_run_scope_kind: unknown;
+  stage_run_project_scope_id: unknown;
+  stage_run_work_item_scope_id: unknown;
+  stage_run_workspace_binding_id: unknown;
+  stage_run_binding_version_id: unknown;
+  stage_run_scope_digest: unknown;
+  stage_run_execution_scope_json: unknown;
+  stage_run_identity_state: unknown;
+};
+
+type StageRunWithoutAttemptRow = Omit<
+  StageRunExecutionIdentityJoinRow,
+  'projection_stage_attempt_id' | 'attempt_stage_run_id'
+> & {
+  stage_run_launch_status: unknown;
+  stage_run_terminal_status: unknown;
+  stage_run_last_start_error: unknown;
+  stage_run_created_at: unknown;
+  stage_run_updated_at: unknown;
+};
+
+function sqliteTableColumns(
+  db: Parameters<typeof listStageAttempts>[0],
+  tableName: 'stage_attempts' | 'stage_run_launches',
+) {
+  return new Set((db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>)
+    .map((column) => column.name));
+}
+
+function stageRunIdentityUnavailable(attempt: JsonRecord) {
+  return {
+    ...attempt,
+    stage_run_join_state: 'identity_schema_unavailable',
+    stage_run_registered_id: null,
+    stage_run_execution_scope_state: 'unavailable',
+    stage_run_execution_scope: null,
+  } as JsonRecord;
+}
+
+function parseStageRunExecutionScope(value: unknown) {
+  const json = stringValue(value);
+  if (!json) {
+    return { state: 'missing', snapshot: null } as const;
+  }
+  try {
+    return { state: 'present', snapshot: JSON.parse(json) as unknown } as const;
+  } catch {
+    return { state: 'invalid_json', snapshot: null } as const;
+  }
+}
+
+function stageRunExecutionIdentityProjection(row: StageRunExecutionIdentityJoinRow) {
+  const attemptStageRunId = stringValue(row.attempt_stage_run_id);
+  const registeredStageRunId = stringValue(row.registered_stage_run_id);
+  if (!attemptStageRunId) {
+    return {
+      stage_run_join_state: 'attempt_unbound',
+      stage_run_registered_id: null,
+      stage_run_execution_scope_state: 'missing',
+      stage_run_execution_scope: null,
+    } as const;
+  }
+  if (!registeredStageRunId) {
+    return {
+      stage_run_join_state: 'stage_run_not_found',
+      stage_run_registered_id: null,
+      stage_run_execution_scope_state: 'missing',
+      stage_run_execution_scope: null,
+    } as const;
+  }
+  const snapshot = parseStageRunExecutionScope(row.stage_run_execution_scope_json);
+  return {
+    stage_run_join_state: 'joined',
+    stage_run_registered_id: registeredStageRunId,
+    stage_run_domain_id: stringValue(row.stage_run_domain_id),
+    stage_run_stage_id: stringValue(row.stage_run_stage_id),
+    stage_run_scope_kind: stringValue(row.stage_run_scope_kind),
+    stage_run_project_scope_id: stringValue(row.stage_run_project_scope_id),
+    stage_run_work_item_scope_id: stringValue(row.stage_run_work_item_scope_id),
+    stage_run_workspace_binding_id: stringValue(row.stage_run_workspace_binding_id),
+    stage_run_binding_version_id: stringValue(row.stage_run_binding_version_id),
+    stage_run_scope_digest: stringValue(row.stage_run_scope_digest),
+    stage_run_identity_state: stringValue(row.stage_run_identity_state),
+    stage_run_execution_scope_state: snapshot.state,
+    stage_run_execution_scope: snapshot.snapshot,
+  } as const;
+}
+
+function stageRunWithoutAttemptProjection(row: StageRunWithoutAttemptRow): JsonRecord {
+  const stageRunId = stringValue(row.registered_stage_run_id);
+  const snapshot = parseStageRunExecutionScope(row.stage_run_execution_scope_json);
+  return {
+    projection_record_kind: STAGE_RUN_DIAGNOSTIC_ONLY_RECORD_KIND,
+    stage_run_id: stageRunId,
+    domain_id: stringValue(row.stage_run_domain_id),
+    stage_id: stringValue(row.stage_run_stage_id),
+    scope_kind: stringValue(row.stage_run_scope_kind),
+    project_scope_id: stringValue(row.stage_run_project_scope_id),
+    work_item_scope_id: stringValue(row.stage_run_work_item_scope_id),
+    workspace_binding_id: stringValue(row.stage_run_workspace_binding_id),
+    binding_version_id: stringValue(row.stage_run_binding_version_id),
+    scope_digest: stringValue(row.stage_run_scope_digest),
+    execution_scope: snapshot.snapshot,
+    identity_state: stringValue(row.stage_run_identity_state),
+    stage_run_join_state: STAGE_RUN_DIAGNOSTIC_ONLY_RECORD_KIND,
+    stage_run_registered_id: stageRunId,
+    stage_run_domain_id: stringValue(row.stage_run_domain_id),
+    stage_run_stage_id: stringValue(row.stage_run_stage_id),
+    stage_run_scope_kind: stringValue(row.stage_run_scope_kind),
+    stage_run_project_scope_id: stringValue(row.stage_run_project_scope_id),
+    stage_run_work_item_scope_id: stringValue(row.stage_run_work_item_scope_id),
+    stage_run_workspace_binding_id: stringValue(row.stage_run_workspace_binding_id),
+    stage_run_binding_version_id: stringValue(row.stage_run_binding_version_id),
+    stage_run_scope_digest: stringValue(row.stage_run_scope_digest),
+    stage_run_identity_state: stringValue(row.stage_run_identity_state),
+    stage_run_execution_scope_state: snapshot.state,
+    stage_run_execution_scope: snapshot.snapshot,
+    stage_run_launch_status: stringValue(row.stage_run_launch_status),
+    stage_run_terminal_status: stringValue(row.stage_run_terminal_status),
+    stage_run_last_start_error: stringValue(row.stage_run_last_start_error),
+    created_at: stringValue(row.stage_run_created_at),
+    updated_at: stringValue(row.stage_run_updated_at),
+  };
+}
+
+function isStageRunWithoutAttemptProjection(value: JsonRecord) {
+  return value.projection_record_kind === STAGE_RUN_DIAGNOSTIC_ONLY_RECORD_KIND;
+}
+
+function inspectStageRunWithoutAttemptIdentity(value: JsonRecord) {
+  return inspectAttemptExecutionIdentity({
+    ...value,
+    stage_run_join_state: 'joined',
+  });
+}
+
+function stageRunWithoutAttemptDiagnosticInspection(
+  stageRun: JsonRecord,
+  identityInspection: AttemptExecutionIdentityInspection,
+): AttemptExecutionIdentityInspection {
+  const stageRunId = stringValue(stageRun.stage_run_id) ?? 'unknown-stage-run';
+  const identityState = stringValue(stageRun.stage_run_identity_state)
+    ?? stringValue(stageRun.identity_state);
+  const scopeKind = stringValue(stageRun.stage_run_scope_kind)
+    ?? stringValue(stageRun.scope_kind);
+  const quarantined = identityState === 'quarantined';
+  const unresolved = identityState === 'identity_unresolved'
+    || scopeKind === 'identity_unresolved'
+    || identityInspection.category === 'identity_unresolved';
+  const reason = quarantined
+    ? 'stage_run_without_attempt_identity_quarantined'
+    : identityInspection.category === 'identity_conflict'
+      ? 'stage_run_without_attempt_identity_conflict'
+      : unresolved
+        ? 'stage_run_without_attempt_identity_unresolved'
+        : STAGE_RUN_WITHOUT_ATTEMPT_REASON;
+  return {
+    ...identityInspection,
+    category: quarantined || identityInspection.category === 'identity_conflict'
+      ? 'identity_conflict'
+      : 'identity_unresolved',
+    reason,
+    attempt_ref: `stage-run:${stageRunId}`,
+    details: {
+      ...identityInspection.details,
+      projection_record_kind: STAGE_RUN_DIAGNOSTIC_ONLY_RECORD_KIND,
+      stage_run_identity_reason: identityInspection.reason,
+      stage_run_launch_status: stringValue(stageRun.stage_run_launch_status),
+      stage_run_terminal_status: stringValue(stageRun.stage_run_terminal_status),
+      stage_run_last_start_error: stringValue(stageRun.stage_run_last_start_error),
+    },
+  };
+}
+
+export function readWorkItemStageAttemptsFromDb(
+  db: Parameters<typeof listStageAttempts>[0],
+): JsonRecord[] {
+  const attempts = listStageAttempts(db, { archived: 'exclude' }).filter(isRecord);
+  const attemptColumns = sqliteTableColumns(db, 'stage_attempts');
+  const stageRunTable = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stage_run_launches'",
+  ).get();
+  if (!attemptColumns.has('stage_run_id') || !stageRunTable) {
+    return attempts.map(stageRunIdentityUnavailable);
+  }
+  const stageRunColumns = sqliteTableColumns(db, 'stage_run_launches');
+  if (STAGE_RUN_EXECUTION_IDENTITY_COLUMNS.some((column) => !stageRunColumns.has(column))) {
+    return attempts.map(stageRunIdentityUnavailable);
+  }
+  const joinedRows = db.prepare(`
+    SELECT
+      attempts.stage_attempt_id AS projection_stage_attempt_id,
+      attempts.stage_run_id AS attempt_stage_run_id,
+      stage_runs.stage_run_id AS registered_stage_run_id,
+      stage_runs.domain_id AS stage_run_domain_id,
+      stage_runs.stage_id AS stage_run_stage_id,
+      stage_runs.scope_kind AS stage_run_scope_kind,
+      stage_runs.project_scope_id AS stage_run_project_scope_id,
+      stage_runs.work_item_scope_id AS stage_run_work_item_scope_id,
+      stage_runs.workspace_binding_id AS stage_run_workspace_binding_id,
+      stage_runs.binding_version_id AS stage_run_binding_version_id,
+      stage_runs.scope_digest AS stage_run_scope_digest,
+      stage_runs.execution_scope_json AS stage_run_execution_scope_json,
+      stage_runs.identity_state AS stage_run_identity_state
+    FROM stage_attempts AS attempts
+    LEFT JOIN stage_run_launches AS stage_runs
+      ON stage_runs.stage_run_id = attempts.stage_run_id
+    WHERE attempts.archived_at IS NULL
+  `).all() as StageRunExecutionIdentityJoinRow[];
+  const stageRunIdentityByAttempt = new Map(joinedRows.map((row) => [
+    stringValue(row.projection_stage_attempt_id) ?? '',
+    stageRunExecutionIdentityProjection(row),
+  ]));
+  const projectedAttempts = attempts.map((attempt) => ({
+    ...attempt,
+    ...(stageRunIdentityByAttempt.get(stringValue(attempt.stage_attempt_id) ?? '')
+      ?? {
+        stage_run_join_state: 'projection_join_missing',
+        stage_run_registered_id: null,
+        stage_run_execution_scope_state: 'unavailable',
+        stage_run_execution_scope: null,
+      }),
+  }));
+  const stageRunsWithoutAttempts = db.prepare(`
+    SELECT
+      stage_runs.stage_run_id AS registered_stage_run_id,
+      stage_runs.domain_id AS stage_run_domain_id,
+      stage_runs.stage_id AS stage_run_stage_id,
+      stage_runs.scope_kind AS stage_run_scope_kind,
+      stage_runs.project_scope_id AS stage_run_project_scope_id,
+      stage_runs.work_item_scope_id AS stage_run_work_item_scope_id,
+      stage_runs.workspace_binding_id AS stage_run_workspace_binding_id,
+      stage_runs.binding_version_id AS stage_run_binding_version_id,
+      stage_runs.scope_digest AS stage_run_scope_digest,
+      stage_runs.execution_scope_json AS stage_run_execution_scope_json,
+      stage_runs.identity_state AS stage_run_identity_state,
+      stage_runs.launch_status AS stage_run_launch_status,
+      stage_runs.terminal_status AS stage_run_terminal_status,
+      stage_runs.last_start_error AS stage_run_last_start_error,
+      stage_runs.created_at AS stage_run_created_at,
+      stage_runs.updated_at AS stage_run_updated_at
+    FROM stage_run_launches AS stage_runs
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM stage_attempts AS attempts
+      WHERE attempts.stage_run_id = stage_runs.stage_run_id
+    )
+    ORDER BY stage_runs.updated_at DESC, stage_runs.stage_run_id DESC
+  `).all() as StageRunWithoutAttemptRow[];
+  return [
+    ...projectedAttempts,
+    ...stageRunsWithoutAttempts.map(stageRunWithoutAttemptProjection),
+  ];
+}
+
 export function readWorkItemStageAttempts() {
   const queueDb = path.join(resolveOplStatePaths().state_dir, 'family-runtime', 'queue.sqlite');
   if (!fs.existsSync(queueDb)) {
@@ -462,7 +727,7 @@ export function readWorkItemStageAttempts() {
         }
       }
     }
-    const attempts = listStageAttempts(db, { archived: 'exclude' }).filter(isRecord).map((attempt) => {
+    const attempts = readWorkItemStageAttemptsFromDb(db).map((attempt) => {
       const stageRunId = stringValue(attempt.stage_run_id);
       const stageRunLaunch = stageRunId ? stageRunLaunchById.get(stageRunId) : null;
       return stageRunLaunch ? { ...attempt, stage_run_launch: stageRunLaunch } : attempt;
@@ -491,116 +756,259 @@ export function readWorkItemStageAttempts() {
 
 export function joinAttemptsToWorkItems(input: {
   items: WorkItemProjectionItem[];
-  projects: ProjectCatalogEntry[];
   attempts: JsonRecord[];
   qualityCycles?: JsonRecord[];
   queueDb: string;
   attemptRefLimit: number;
 }) {
   const diagnostics: WorkItemProjectionDiagnostic[] = [];
-  const projectByPath = new Map(input.projects.map((project) => [canonicalWorkspacePath(project.workspace_path), project]));
-  const itemByIdentity = new Map(input.items.map((item) => [
-    `${item.identity.project_id}\u0000${item.identity.work_item_id}`,
-    item,
-  ]));
+  const itemByScope = new Map(input.items.map((item) => [item.identity.work_item_scope_id, item]));
   const grouped = new Map<string, JsonRecord[]>();
-  const recoveredIdentityByAttempt = new Map<JsonRecord, {
-    actionRequestRef: string;
-    actionRequestSha256: string;
-  }>();
+  const diagnosticStageRunsByItem = new Map<string, JsonRecord[]>();
+  const unresolvedExecutions: WorkItemUnresolvedExecution[] = [];
+  const reasonCounts = new Map<string, number>();
+  let resolvedExecutionCount = 0;
+  let unresolvedExecutionCount = 0;
+  let conflictExecutionCount = 0;
+  let notInInventoryExecutionCount = 0;
+  let nonWorkItemExecutionCount = 0;
   const qualityCycleById = new Map(
     (input.qualityCycles ?? []).map((cycle) => [stringValue(cycle.quality_cycle_id), cycle]),
   );
-  for (const attempt of input.attempts) {
-    const identityAttempt = {
-      ...attempt,
-      workspace_locator: attemptWorkspaceLocator(attempt),
-    };
-    const workspacePath = attemptWorkspacePath(identityAttempt);
-    let workItemId = explicitAttemptWorkItemId(identityAttempt);
-    if (!workspacePath) {
-      if (diagnostics.length < MAX_DIAGNOSTIC_ATTEMPTS) {
-        diagnostics.push({
-          reason: 'stage_attempt_missing_explicit_workspace_or_work_item_identity',
-          ref: stringValue(attempt.stage_attempt_id) ?? undefined,
-        });
-      }
-      continue;
-    }
-    if (!workItemId && hasExplicitAttemptWorkItemIdentity(identityAttempt)) {
-      if (diagnostics.length < MAX_DIAGNOSTIC_ATTEMPTS) {
-        diagnostics.push({
-          reason: 'stage_attempt_explicit_work_item_identity_conflicting',
-          ref: stringValue(attempt.stage_attempt_id) ?? undefined,
-        });
-      }
-      continue;
-    }
-    if (!workItemId) {
-      const locator = record(identityAttempt.workspace_locator);
-      const recovered = recoverLegacyAttemptIdentity({
-        workspaceRoot: workspacePath,
-        actionRequestRef: stringValue(locator.action_request_ref),
-        actionRequestSha256: stringValue(locator.action_request_sha256),
-      });
-      if (!recovered.identity || recovered.failure) {
-        if (diagnostics.length < MAX_DIAGNOSTIC_ATTEMPTS) {
-          diagnostics.push({
-            reason: 'stage_attempt_action_request_identity_recovery_failed',
-            ref: stringValue(attempt.stage_attempt_id) ?? undefined,
-            details: {
-              failure_reason: recovered.failure?.reason ?? 'unknown_identity_recovery_failure',
-              ...(recovered.failure?.details ?? {}),
-            },
-          });
+
+  const recordIdentityProblem = (
+    attempt: JsonRecord,
+    inspection: AttemptExecutionIdentityInspection,
+    reason: string,
+    details: JsonRecord = {},
+    scopeAttribution: 'trusted' | 'untrusted_claim' = 'trusted',
+  ) => {
+    reasonCounts.set(reason, (reasonCounts.get(reason) ?? 0) + 1);
+    const scope = scopeAttribution === 'trusted' ? inspection.scope : null;
+    const claimedScope = scopeAttribution === 'untrusted_claim'
+      ? {
+          scope_kind: inspection.scope?.scope_kind ?? stringValue(attempt.scope_kind),
+          project_scope_id: inspection.scope?.project_scope_id ?? stringValue(attempt.project_scope_id),
+          work_item_scope_id: inspection.scope?.work_item_scope_id ?? stringValue(attempt.work_item_scope_id),
+          domain_id: inspection.scope?.domain_id ?? stringValue(attempt.domain_id),
+          domain_work_item_id: inspection.scope?.domain_work_item_id ?? null,
+          workspace_binding_id: inspection.scope?.workspace_binding_id
+            ?? stringValue(attempt.workspace_binding_id),
+          binding_version_id: inspection.scope?.binding_version_id
+            ?? stringValue(attempt.binding_version_id),
+          scope_digest: inspection.scope?.scope_digest ?? stringValue(attempt.scope_digest),
         }
-        continue;
-      }
-      workItemId = recovered.identity.workItemId;
-      recoveredIdentityByAttempt.set(attempt, {
-        actionRequestRef: recovered.identity.actionRequestRef,
-        actionRequestSha256: recovered.identity.actionRequestSha256,
+      : null;
+    if (unresolvedExecutions.length < MAX_DIAGNOSTIC_ATTEMPTS) {
+      const locator = record(attempt.workspace_locator);
+      const legacyIdentityHints = Object.fromEntries([
+        'work_item_id',
+        'study_id',
+        'quest_id',
+        'work_unit_id',
+        'task_or_work_unit_ref',
+        'task_ref',
+      ].flatMap((field) => {
+        const value = stringValue(locator[field]);
+        return value ? [[field, value]] : [];
+      }));
+      unresolvedExecutions.push({
+        attempt_ref: inspection.attempt_ref,
+        stage_run_id: stringValue(attempt.stage_run_id),
+        stage_id: stringValue(attempt.stage_id),
+        role: stringValue(attempt.attempt_role)
+          ?? stringValue(attempt.quality_role)
+          ?? stringValue(attempt.role),
+        scope_kind: inspection.scope_kind,
+        identity_state: inspection.identity_state,
+        reason,
+        project_scope_id: scope?.project_scope_id
+          ?? (scopeAttribution === 'trusted' ? stringValue(attempt.project_scope_id) : null),
+        work_item_scope_id: scope?.work_item_scope_id
+          ?? (scopeAttribution === 'trusted' ? stringValue(attempt.work_item_scope_id) : null),
+        domain_id: scope?.domain_id
+          ?? (scopeAttribution === 'trusted' ? stringValue(attempt.domain_id) : null),
+        domain_work_item_id: scope?.domain_work_item_id ?? null,
+        details: {
+          ...inspection.details,
+          ...details,
+          ...(claimedScope ? { claimed_scope: claimedScope } : {}),
+          ...(stringValue(locator.workspace_root)
+            ? { workspace_root_hint: stringValue(locator.workspace_root)! }
+            : {}),
+          ...(Object.keys(legacyIdentityHints).length > 0
+            ? { legacy_locator_identity_hints: legacyIdentityHints }
+            : {}),
+        },
       });
     }
-    const project = projectByPath.get(canonicalWorkspacePath(workspacePath));
-    if (!project) {
-      if (diagnostics.length < MAX_DIAGNOSTIC_ATTEMPTS) {
-        diagnostics.push({
-          reason: 'stage_attempt_workspace_not_in_project_catalog',
-          work_item_id: workItemId,
-          ref: workspacePath,
-        });
-      }
-      continue;
-    }
-    if (attemptAgentId(attempt) !== project.agent_id) {
+    if (diagnostics.length < MAX_DIAGNOSTIC_ATTEMPTS) {
       diagnostics.push({
-        reason: 'stage_attempt_agent_project_identity_mismatch',
-        agent_id: attemptAgentId(attempt) ?? undefined,
-        project_id: project.project_id,
-        work_item_id: workItemId,
+        reason,
+        project_id: scope?.project_scope_id,
+        work_item_id: scope?.domain_work_item_id,
+        ref: inspection.attempt_ref,
+        details: {
+          scope_kind: inspection.scope_kind,
+          identity_state: inspection.identity_state,
+          work_item_scope_id: scope?.work_item_scope_id ?? null,
+          ...inspection.details,
+          ...details,
+          ...(claimedScope ? { claimed_scope: claimedScope } : {}),
+        },
       });
-      continue;
     }
-    const item = itemByIdentity.get(`${project.project_id}\u0000${workItemId}`);
-    if (!item) {
-      if (diagnostics.length < MAX_DIAGNOSTIC_ATTEMPTS) {
-        diagnostics.push({
-          reason: 'stage_attempt_work_item_not_in_domain_inventory',
-          agent_id: project.agent_id,
-          project_id: project.project_id,
-          work_item_id: workItemId,
-        });
+  };
+
+  for (const attempt of input.attempts) {
+    const diagnosticStageRun = isStageRunWithoutAttemptProjection(attempt);
+    const identityInspection = diagnosticStageRun
+      ? inspectStageRunWithoutAttemptIdentity(attempt)
+      : inspectAttemptExecutionIdentity(attempt);
+    const inspection = diagnosticStageRun
+      ? stageRunWithoutAttemptDiagnosticInspection(attempt, identityInspection)
+      : identityInspection;
+    if (diagnosticStageRun && identityInspection.category !== 'work_item') {
+      if (inspection.category === 'identity_conflict') {
+        conflictExecutionCount += 1;
+      } else {
+        unresolvedExecutionCount += 1;
       }
+      recordIdentityProblem(attempt, inspection, inspection.reason, {}, 'untrusted_claim');
       continue;
     }
+    if (!diagnosticStageRun && inspection.category === 'not_work_item_scoped') {
+      nonWorkItemExecutionCount += 1;
+      continue;
+    }
+    if (!diagnosticStageRun && inspection.category === 'identity_unresolved') {
+      unresolvedExecutionCount += 1;
+      recordIdentityProblem(attempt, inspection, inspection.reason);
+      continue;
+    }
+    if (!diagnosticStageRun && (inspection.category === 'identity_conflict' || !inspection.scope)) {
+      conflictExecutionCount += 1;
+      recordIdentityProblem(attempt, inspection, inspection.reason);
+      continue;
+    }
+    if (!inspection.scope) {
+      conflictExecutionCount += 1;
+      recordIdentityProblem(attempt, inspection, 'stage_run_without_attempt_identity_conflict');
+      continue;
+    }
+    const scope = inspection.scope;
+    const item = itemByScope.get(scope.work_item_scope_id);
+    if (!item) {
+      notInInventoryExecutionCount += 1;
+      const reason = diagnosticStageRun
+        ? 'stage_run_without_attempt_work_item_scope_not_in_domain_inventory'
+        : 'stage_attempt_work_item_scope_not_in_domain_inventory';
+      recordIdentityProblem(
+        attempt,
+        inspection,
+        reason,
+        {},
+        diagnosticStageRun ? 'untrusted_claim' : 'trusted',
+      );
+      continue;
+    }
+    const inventoryMismatches = [
+      ['project_scope_id', item.identity.project_scope_id, scope.project_scope_id],
+      ['work_item_scope_id', item.identity.work_item_scope_id, scope.work_item_scope_id],
+      ['domain_id', item.identity.domain_id, scope.domain_id],
+      ['domain_work_item_id', item.identity.work_item_id, scope.domain_work_item_id],
+    ].flatMap(([field, expected, actual]) => expected === actual
+      ? []
+      : [{ field, expected, actual }]);
+    if (inventoryMismatches.length > 0) {
+      conflictExecutionCount += 1;
+      const reason = diagnosticStageRun
+        ? 'stage_run_without_attempt_execution_scope_inventory_conflict'
+        : 'stage_attempt_execution_scope_inventory_conflict';
+      recordIdentityProblem(
+        attempt,
+        inspection,
+        reason,
+        { mismatches: inventoryMismatches },
+        diagnosticStageRun ? 'untrusted_claim' : 'trusted',
+      );
+      continue;
+    }
+    if (diagnosticStageRun) {
+      unresolvedExecutionCount += 1;
+      recordIdentityProblem(attempt, inspection, inspection.reason);
+      diagnosticStageRunsByItem.set(item.item_id, [
+        ...(diagnosticStageRunsByItem.get(item.item_id) ?? []),
+        attempt,
+      ]);
+      continue;
+    }
+    resolvedExecutionCount += 1;
     grouped.set(item.item_id, [...(grouped.get(item.item_id) ?? []), attempt]);
   }
+
+  const applyDiagnosticStageRuns = (item: WorkItemProjectionItem): WorkItemProjectionItem => {
+    const stageRuns = [...(diagnosticStageRunsByItem.get(item.item_id) ?? [])]
+      .sort(newestStageRunDiagnosticFirst);
+    if (stageRuns.length === 0) return item;
+    const latestStageRun = stageRuns[0]!;
+    const latestStageRunId = stringValue(latestStageRun.stage_run_id) ?? 'unknown-stage-run';
+    const observedAt = stringValue(latestStageRun.updated_at)
+      ?? stringValue(latestStageRun.created_at)
+      ?? item.freshness.inventory_observed_at;
+    const hasCurrentAttempt = item.execution.attempt_id !== null;
+    return withProjectedWorkItemPrimaryState({
+      ...item,
+      execution: hasCurrentAttempt
+        ? item.execution
+        : {
+            ...item.execution,
+            state: 'unknown',
+            updated_at: observedAt,
+            running_proof_status: 'not_applicable',
+            diagnostic_reason: STAGE_RUN_WITHOUT_ATTEMPT_REASON,
+          },
+      conditions: [
+        ...item.conditions,
+        condition({
+          type: 'StageRunAttemptBindingObserved',
+          status: 'Unknown',
+          reason: STAGE_RUN_WITHOUT_ATTEMPT_REASON,
+          message: 'A persisted StageRun has no StageAttempt, so execution currentness is unresolved.',
+          owner: 'opl_framework',
+          severity: 'warning',
+          last_transition_time: observedAt,
+          observed_generation: item.lifecycle.observed_generation,
+          ref: `${input.queueDb}#stage_run_launches/${latestStageRunId}`,
+        }),
+      ],
+      freshness: hasCurrentAttempt
+        ? item.freshness
+        : {
+            ...item.freshness,
+            state: 'unknown',
+            execution_observed_at: observedAt,
+            last_transition_time: observedAt,
+            reason: STAGE_RUN_WITHOUT_ATTEMPT_REASON,
+          },
+      source_refs: [
+        ...item.source_refs,
+        ...stageRuns.slice(0, input.attemptRefLimit).flatMap((stageRun) => {
+          const stageRunId = stringValue(stageRun.stage_run_id);
+          return stageRunId ? [{
+            ref_kind: 'sqlite' as const,
+            ref: `${input.queueDb}#stage_run_launches/${stageRunId}`,
+            role: 'stage_run_diagnostic_only',
+          }] : [];
+        }),
+      ],
+    });
+  };
 
   const items: WorkItemProjectionItem[] = input.items.map((item): WorkItemProjectionItem => {
     const attempts = [...(grouped.get(item.item_id) ?? [])].sort(newestFirst);
     if (attempts.length === 0) {
-      return withProjectedWorkItemPrimaryState({
+      return applyDiagnosticStageRuns(withProjectedWorkItemPrimaryState({
         ...item,
         conditions: [
           condition({
@@ -624,7 +1032,7 @@ export function joinAttemptsToWorkItems(input: {
             observed_generation: item.lifecycle.observed_generation,
           }),
         ],
-      });
+      }));
     }
     const latest = attempts[0]!;
     const latestExecution = executionState(latest);
@@ -830,7 +1238,7 @@ export function joinAttemptsToWorkItems(input: {
       })] : []),
     ];
 
-    return withProjectedWorkItemPrimaryState({
+    return applyDiagnosticStageRuns(withProjectedWorkItemPrimaryState({
       ...item,
       execution: {
         state: currentExecutionState,
@@ -935,14 +1343,6 @@ export function joinAttemptsToWorkItems(input: {
           role: 'stage_attempt_execution_evidence',
         })),
         ...attempts.slice(0, input.attemptRefLimit).flatMap((attempt) => {
-          const recovered = recoveredIdentityByAttempt.get(attempt);
-          return recovered ? [{
-            ref_kind: 'file' as const,
-            ref: `${recovered.actionRequestRef}#sha256=${recovered.actionRequestSha256}`,
-            role: 'stage_attempt_action_request_identity_evidence',
-          }] : [];
-        }),
-        ...attempts.slice(0, input.attemptRefLimit).flatMap((attempt) => {
           const launch = attemptStageRunLaunch(attempt);
           const stageRunId = stringValue(launch.stage_run_id);
           return stageRunId ? [{
@@ -952,7 +1352,29 @@ export function joinAttemptsToWorkItems(input: {
           }] : [];
         }),
       ],
-    });
+    }));
   });
-  return { items, diagnostics };
+  const identityProblemCount = unresolvedExecutionCount
+    + conflictExecutionCount
+    + notInInventoryExecutionCount;
+  return {
+    items,
+    diagnostics,
+    identity_health: {
+      status: identityProblemCount === 0 ? 'clear' as const : 'attention_required' as const,
+      execution_count: input.attempts.length,
+      resolved_execution_count: resolvedExecutionCount,
+      unresolved_execution_count: unresolvedExecutionCount,
+      conflict_execution_count: conflictExecutionCount,
+      not_in_inventory_execution_count: notInInventoryExecutionCount,
+      non_work_item_execution_count: nonWorkItemExecutionCount,
+      reason_counts: [...reasonCounts.entries()]
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((left, right) => left.reason.localeCompare(right.reason)),
+      sample_attempt_refs: unresolvedExecutions
+        .slice(0, Math.max(1, input.attemptRefLimit))
+        .map((execution) => execution.attempt_ref),
+    },
+    unresolved_executions: unresolvedExecutions,
+  };
 }

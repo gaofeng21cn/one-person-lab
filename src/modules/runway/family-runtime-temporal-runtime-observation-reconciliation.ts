@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stringValue } from '../../kernel/json-record.ts';
 import {
   listStageAttemptRows,
@@ -8,6 +9,7 @@ import {
 import { syncStageAttemptFromTemporalTerminalObservation } from './family-runtime-stage-attempts-parts/temporal-terminal-observation.ts';
 import { insertEvent, type familyRuntimePaths } from './family-runtime-store.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
+import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
 
 type JsonRecord = Record<string, unknown>;
 type RuntimePaths = Pick<ReturnType<typeof familyRuntimePaths>, 'root'>;
@@ -102,7 +104,27 @@ function reconciliationCandidates(
   const launchStatuses = stageRunLaunchStatuses(db);
   const candidates = listStageAttemptRows(db)
     .filter((row) => row.provider_kind === 'temporal' && RECONCILABLE_LEDGER_STATUSES.has(row.status));
-  const eligible = candidates.filter((row) => {
+  let identityUnresolvedTotal = 0;
+  const admitted = candidates.filter((row) => {
+    try {
+      requireRuntimeExecutionScopeMutationAllowed(
+        db,
+        row as unknown as Record<string, unknown>,
+        'select_temporal_stage_attempt_runtime_observation_candidate',
+      );
+      return true;
+    } catch (error) {
+      if (
+        error instanceof FrameworkContractError
+        && error.details?.failure_code === 'runtime_execution_identity_unresolved'
+      ) {
+        identityUnresolvedTotal += 1;
+        return false;
+      }
+      throw error;
+    }
+  });
+  const eligible = admitted.filter((row) => {
     const launchStatus = row.stage_run_id ? launchStatuses.get(row.stage_run_id) : null;
     if (launchStatus) return RECONCILABLE_STAGE_RUN_LAUNCH_STATUSES.has(launchStatus);
     const updatedAtMs = Date.parse(row.updated_at);
@@ -112,12 +134,42 @@ function reconciliationCandidates(
   return {
     attempts: eligible.slice(0, candidateLimit).map(stageAttemptToPayload),
     candidate_total: candidates.length,
+    identity_unresolved_total: identityUnresolvedTotal,
     eligible_total: eligible.length,
     deferred_total: candidates.length - Math.min(eligible.length, candidateLimit),
     limited_total: Math.max(0, eligible.length - candidateLimit),
     candidate_limit: candidateLimit,
     legacy_lookback_ms: legacyLookbackMs,
   };
+}
+
+function withReconciliationAttemptMutation<T>(
+  db: DatabaseSync,
+  stageAttemptId: string,
+  operation: string,
+  mutation: () => T,
+) {
+  const ownsTransaction = !db.isTransaction;
+  try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
+      stageAttemptId,
+    ) as Record<string, unknown> | undefined;
+    if (!row) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Stage attempt disappeared before reconciliation.', {
+        failure_code: 'persisted_runtime_stage_attempt_not_found',
+        operation,
+        stage_attempt_id: stageAttemptId,
+      });
+    }
+    requireRuntimeExecutionScopeMutationAllowed(db, row, operation);
+    const result = mutation();
+    if (ownsTransaction) db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
 }
 
 function effectiveRuntimeStatus(workflowStatus: string | null, queryStatus: string | null) {
@@ -264,35 +316,42 @@ function persistRuntimeObservation(
   db: DatabaseSync,
   observation: TemporalStageAttemptRuntimeObservation,
 ) {
-  const result = db.prepare(`
-    UPDATE stage_attempts
-    SET provider_run_json = json_set(
-      CASE WHEN json_valid(provider_run_json) THEN provider_run_json ELSE '{}' END,
-      '$.runtime_observation',
-      json(?)
-    )
-    WHERE stage_attempt_id = ?
-      AND provider_kind = 'temporal'
-      AND workflow_id = ?
-      AND status IN ('queued', 'running', 'checkpointed', 'human_gate')
-      AND (
-        stage_run_id IS NULL
-        OR NOT EXISTS (
-          SELECT 1 FROM stage_run_launches
-          WHERE stage_run_launches.stage_run_id = stage_attempts.stage_run_id
-        )
-        OR EXISTS (
-          SELECT 1 FROM stage_run_launches
-          WHERE stage_run_launches.stage_run_id = stage_attempts.stage_run_id
-            AND stage_run_launches.launch_status IN ('registered', 'starting', 'started')
-        )
-      )
-  `).run(
-    JSON.stringify(observation),
+  return withReconciliationAttemptMutation(
+    db,
     observation.stage_attempt_id,
-    observation.workflow_id,
+    'persist_temporal_stage_attempt_runtime_observation',
+    () => {
+      const result = db.prepare(`
+        UPDATE stage_attempts
+        SET provider_run_json = json_set(
+          CASE WHEN json_valid(provider_run_json) THEN provider_run_json ELSE '{}' END,
+          '$.runtime_observation',
+          json(?)
+        )
+        WHERE stage_attempt_id = ?
+          AND provider_kind = 'temporal'
+          AND workflow_id = ?
+          AND status IN ('queued', 'running', 'checkpointed', 'human_gate')
+          AND (
+            stage_run_id IS NULL
+            OR NOT EXISTS (
+              SELECT 1 FROM stage_run_launches
+              WHERE stage_run_launches.stage_run_id = stage_attempts.stage_run_id
+            )
+            OR EXISTS (
+              SELECT 1 FROM stage_run_launches
+              WHERE stage_run_launches.stage_run_id = stage_attempts.stage_run_id
+                AND stage_run_launches.launch_status IN ('registered', 'starting', 'started')
+            )
+          )
+      `).run(
+        JSON.stringify(observation),
+        observation.stage_attempt_id,
+        observation.workflow_id,
+      );
+      return result.changes === 1;
+    },
   );
-  return result.changes === 1;
 }
 
 function errorMessage(error: unknown) {
@@ -360,7 +419,12 @@ export async function reconcileTemporalStageAttemptRuntimeObservations(
           continue;
         }
         if (!isSuccessfulTemporalQuery(temporalQuery)) {
-          syncStageAttemptFromTemporalTerminalObservation(db, temporalQuery);
+          withReconciliationAttemptMutation(
+            db,
+            attempt.stage_attempt_id,
+            'sync_temporal_stage_attempt_unavailable_observation',
+            () => syncStageAttemptFromTemporalTerminalObservation(db, temporalQuery),
+          );
           const unavailable = record(temporalQuery);
           results.push({
             stage_attempt_id: attempt.stage_attempt_id,
@@ -371,7 +435,12 @@ export async function reconcileTemporalStageAttemptRuntimeObservations(
           continue;
         }
         if (requiresTerminalProjectionSync(temporalQuery)) {
-          syncStageAttemptFromTemporalTerminalObservation(db, temporalQuery);
+          withReconciliationAttemptMutation(
+            db,
+            attempt.stage_attempt_id,
+            'sync_temporal_stage_attempt_terminal_observation',
+            () => syncStageAttemptFromTemporalTerminalObservation(db, temporalQuery),
+          );
           results.push({
             stage_attempt_id: attempt.stage_attempt_id,
             workflow_id: attempt.workflow_id,
@@ -420,8 +489,9 @@ export async function reconcileTemporalStageAttemptRuntimeObservations(
     observation_surface_kind: TEMPORAL_STAGE_ATTEMPT_RUNTIME_OBSERVATION_SURFACE_KIND,
     observation_source: TEMPORAL_STAGE_ATTEMPT_RUNTIME_OBSERVATION_SOURCE,
     ttl_ms: ttlMs,
-    candidate_policy: 'active_stage_runs_or_recent_legacy_attempts_bounded',
+    candidate_policy: 'current_execution_identity_active_stage_runs_bounded',
     candidate_total: selection.candidate_total,
+    identity_unresolved_total: selection.identity_unresolved_total,
     eligible_total: selection.eligible_total,
     selected_total: attempts.length,
     deferred_total: selection.deferred_total,

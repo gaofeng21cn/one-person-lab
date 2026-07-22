@@ -10,6 +10,7 @@ import {
   recordStageRunTemporalStart,
   registerStageRunLaunch,
 } from './family-runtime-stage-run-launch-registry.ts';
+import { requirePersistedStageRunActivityIdentity } from './family-runtime-persisted-identity-admission.ts';
 
 const TERMINAL_TEMPORAL_WORKFLOW_STATUSES = new Set([
   'COMPLETED',
@@ -50,7 +51,15 @@ export async function launchRegisteredStageRun(input: {
       workspaceLocator: input.stageRunInput.workspace_locator,
     });
   }
-  const registration = registerStageRunLaunch(input.db, input.stageRunInput);
+  const registration = registerStageRunLaunch(input.db, input.stageRunInput, {
+    scopeKind: input.stageRunInput.scope_kind,
+    executionScope: input.stageRunInput.execution_scope,
+  });
+  requirePersistedStageRunActivityIdentity({
+    db: input.db,
+    candidateIdentity: input.stageRunInput as unknown as Record<string, unknown>,
+    operation: 'launch_registered_stage_run',
+  });
   let launch = registration.launch;
   const receipt = (startStatus: 'registered' | 'existing' | 'starting' | 'started' | 'recovered', options: {
     launch?: typeof launch;

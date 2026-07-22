@@ -37,17 +37,23 @@ function setRuntimeEnv(input: {
   stateRoot: string;
   temporalAddress: string;
   temporalNamespace?: string;
+  allowUnindexedVisibility?: boolean;
 }) {
   const previous = {
     OPL_STATE_DIR: process.env.OPL_STATE_DIR,
     OPL_TEMPORAL_ADDRESS: process.env.OPL_TEMPORAL_ADDRESS,
     OPL_TEMPORAL_NAMESPACE: process.env.OPL_TEMPORAL_NAMESPACE,
     TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
+    OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY:
+      process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY,
   };
   process.env.OPL_STATE_DIR = input.stateRoot;
   process.env.OPL_TEMPORAL_ADDRESS = input.temporalAddress;
   process.env.OPL_TEMPORAL_NAMESPACE = input.temporalNamespace ?? 'default';
   process.env.TEMPORAL_ADDRESS = '';
+  if (input.allowUnindexedVisibility) {
+    process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY = '1';
+  }
   return () => {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];
@@ -67,6 +73,7 @@ test('family-runtime Temporal start treats a missing stage packet as nonblocking
     stateRoot,
     temporalAddress: testEnv.address,
     temporalNamespace: testEnv.namespace ?? 'default',
+    allowUnindexedVisibility: true,
   });
   try {
     const runtime = packageLaunchRuntime();

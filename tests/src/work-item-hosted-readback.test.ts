@@ -64,6 +64,18 @@ function fixtureProjection(workspaceRoot: string, workItemRoot: string): WorkIte
     agent_catalog: [],
     agent_availability: [],
     project_catalog: [],
+    identity_health: {
+      status: 'clear',
+      execution_count: 0,
+      resolved_execution_count: 0,
+      unresolved_execution_count: 0,
+      conflict_execution_count: 0,
+      not_in_inventory_execution_count: 0,
+      non_work_item_execution_count: 0,
+      reason_counts: [],
+      sample_attempt_refs: [],
+    },
+    unresolved_executions: [],
     summary: {
       agent_count: 1,
       project_count: 1,
@@ -377,6 +389,65 @@ test('hosted work-item readback fails closed on CAS recovery journal and recover
   }
 });
 
+test('hosted readback surfaces same-workspace unresolved execution without assigning it to the selected Study', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hosted-readback-identity-'));
+  const itemRoot = path.join(root, 'studies/study-003');
+  try {
+    fs.mkdirSync(itemRoot, { recursive: true });
+    const projection = fixtureProjection(root, itemRoot);
+    projection.identity_health = {
+      status: 'attention_required',
+      execution_count: 2,
+      resolved_execution_count: 1,
+      unresolved_execution_count: 1,
+      conflict_execution_count: 0,
+      not_in_inventory_execution_count: 0,
+      non_work_item_execution_count: 0,
+      reason_counts: [{ reason: 'stage_attempt_identity_unresolved', count: 1 }],
+      sample_attempt_refs: ['sat-study-002-legacy'],
+    };
+    projection.unresolved_executions = [{
+      attempt_ref: 'sat-study-002-legacy',
+      stage_run_id: 'sr-study-002',
+      stage_id: 'baseline_and_evidence_setup',
+      role: 'producer',
+      scope_kind: 'identity_unresolved',
+      identity_state: 'identity_unresolved',
+      reason: 'stage_attempt_identity_unresolved',
+      project_scope_id: null,
+      work_item_scope_id: null,
+      domain_id: 'medautoscience',
+      domain_work_item_id: null,
+      details: {
+        workspace_root_hint: root,
+        legacy_locator_identity_hints: { study_id: 'study-002' },
+      },
+    }];
+
+    const output = buildHostedWorkItemReadback({
+      workspaceRoot: root,
+      workItemId: 'study-003',
+      agentId: 'mas',
+      profile: 'full',
+    }, { projection });
+    const readback = output.hosted_work_item_readback;
+
+    assert.equal(readback.runtime.execution.attempt_id, 'sat_fixture');
+    assert.equal(readback.diagnostics.status, 'attention_required');
+    assert.equal(readback.diagnostics.selected_work_item.status, 'clear');
+    assert.equal(readback.diagnostics.selected_work_item.count, 0);
+    assert.equal(readback.diagnostics.workspace_identity.status, 'attention_required');
+    assert.equal(readback.diagnostics.workspace_identity.items[0]?.attempt_ref, 'sat-study-002-legacy');
+    assert.equal(
+      readback.diagnostics.workspace_identity.items[0]?.execution_consumed_by_selected_work_item,
+      false,
+    );
+    assert.equal(readback.diagnostics.domain_truth.status, 'clear');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('hosted readback contract retires private control-plane compatibility authority', () => {
   const contract = parseJsonText(fs.readFileSync(
     path.join(process.cwd(), 'contracts/opl-framework/hosted-work-item-readback-contract.json'),
@@ -386,4 +457,12 @@ test('hosted readback contract retires private control-plane compatibility autho
   assert.equal(contract.retirement_migration.private_dispatch_compatibility_authority_allowed, false);
   assert.equal(contract.authority_boundary.app_state_is_domain_quality_authority, false);
   assert.equal(contract.authority_boundary.can_authorize_quality_verdict, false);
+  assert.equal(
+    contract.projection_model.execution_identity_readback.unresolved_execution_may_be_attributed_from_locator_alias,
+    false,
+  );
+  assert.equal(
+    contract.projection_model.execution_identity_readback.quarantined_execution_can_update_selected_execution,
+    false,
+  );
 });

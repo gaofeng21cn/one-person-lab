@@ -51,6 +51,8 @@ const authorityBoundary = {
 function routeReplayBusinessIdentity(input: TemporalStageRunWorkflowInput) {
   const spec = input.stage_run_spec;
   return {
+    scope_kind: input.scope_kind ?? (input.execution_scope ? 'work_item' : 'domain'),
+    execution_scope: input.execution_scope ?? null,
     domain_id: spec.domain_id,
     stage_id: spec.stage_id,
     action_id: spec.action_id,
@@ -75,6 +77,9 @@ function expectedRouteReplayBusinessIdentity(input: {
 }) {
   const parentSpec = input.parentStageRun.stage_run_spec;
   return {
+    scope_kind: input.parentStageRun.scope_kind
+      ?? (input.parentStageRun.execution_scope ? 'work_item' : 'domain'),
+    execution_scope: input.parentStageRun.execution_scope ?? null,
     domain_id: parentSpec.domain_id,
     stage_id: input.targetStageId,
     action_id: parentSpec.action_id,
@@ -338,6 +343,8 @@ export async function materializeStageRunRoute(
     artifactIdentityReceiptRefs: input.artifact_identity_receipt_refs,
     actionId: parentStageRun.action_id,
     taskId: parentStageRun.task_id,
+    scopeKind: parentStageRun.scope_kind,
+    executionScope: parentStageRun.execution_scope,
   });
   let durableLaunch: Record<string, unknown>;
   try {

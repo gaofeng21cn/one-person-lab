@@ -4,8 +4,8 @@ Owner: OPL Connect
 Purpose: `reference_verification_connector_support`
 State: active connector surface
 Machine boundary: 机器真相以 `opl connect references verify` CLI、
-`src/modules/connect/opl-connect-reference-verification.ts`、CLI command registry
-和 focused CLI tests 为准。本文只做人读操作说明。
+`opl connect scientific search` CLI、`opl connect mcp-stdio`、对应 Connect source、CLI
+command registry 和 focused CLI/MCP tests 为准。本文只做人读操作说明。
 
 `opl connect references verify` 用于把 reference list 交给 provider 做只读
 metadata / identifier 校验，并返回 provider receipt candidate、cache metadata
@@ -15,8 +15,15 @@ metadata / identifier 校验，并返回 provider receipt candidate、cache meta
 ## 命令面
 
 ```bash
+opl connect scientific search --provider pubmed --query "randomized trial hypertension" --limit 20 --json
+opl connect scientific search --provider pmc --query "OPEN_ACCESS:Y AND hypertension" --limit 20 --json
 opl connect references verify --references-file references.json --providers crossref,openalex,pubmed,pmc,semantic-scholar,crossmark,publisher --cache-root .cache/opl-connect --max-retries 1 --json
 ```
+
+PubMed discovery 使用 ESearch 取得 PMID 与总命中数，再用 ESummary 取得 DOI、
+PMCID、题名、期刊、年份、作者和 article types；Europe PMC discovery 使用 search
+API。两者都返回 `retrieval_count_reconciliation`，明确 provider 总数、当前返回数、
+请求上限以及是否存在下一页。它们是 bounded discovery，不在未执行分页时声称穷尽检索。
 
 输入文件可以是数组，也可以是：
 
@@ -44,6 +51,23 @@ Publisher provider 通过 DOI resolver 读取 publisher landing page metadata。
 `full_text_available=true` 只表示 PMC provider metadata 声明存在全文；只有实际
 返回 article XML 才能写 `full_text_body_verified=true`。任何 provider 命中都不
 写成 reference truth。
+
+## MCP 面
+
+`opl connect sync-skills` 在 Codex config 注册：
+
+```toml
+[mcp_servers.opl-connect]
+command = "opl"
+args = ["connect", "mcp-stdio"]
+```
+
+server 只暴露 `opl_connect_search_tools`、`opl_connect_describe_tool` 和
+`opl_connect_execute_tool`。先发现并描述内部 `scientific_search` 或
+`references_verify`，再执行；reference verification 通过 inline `references`
+数组传参，不需要临时文件。MCP 与 CLI 委托同一 Connect 实现和 no-authority
+boundary。空 provider、未知 provider、空引用或缺少 DOI/PMID/PMCID/title 的引用会
+fail closed，不能退化成默认全 provider 查询。
 
 ## 输出
 

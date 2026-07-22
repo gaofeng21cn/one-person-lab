@@ -12,6 +12,10 @@ import type {
   StageRouteDecision,
 } from '../stagecraft/index.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
+import type {
+  FamilyRuntimeExecutionScopeKind,
+  WorkItemExecutionScopeSnapshot,
+} from './family-runtime-execution-scope.ts';
 import type { StageRunImmutableSpec } from './family-runtime-stage-run-identity.ts';
 
 export type TemporalStageRunQualityRolePromptRefs = {
@@ -37,6 +41,8 @@ export type TemporalStageRunWorkflowInput = {
   stage_run_invocation_id: string;
   stage_run_spec_sha256: string;
   stage_run_spec: StageRunImmutableSpec;
+  scope_kind?: FamilyRuntimeExecutionScopeKind;
+  execution_scope?: WorkItemExecutionScopeSnapshot | null;
   parent_route_decision_ref: string | null;
   workflow_id: string;
   domain_id: FamilyRuntimeDomainId;
@@ -64,6 +70,7 @@ export type TemporalStageRunWorkflowInput = {
   artifact_hashes?: string[];
   artifact_identity_receipt_refs?: string[];
   lineage_refs?: string[];
+  visibility_search_attributes_upsert_enabled?: boolean;
 };
 
 export type TemporalStageRunRouteLaunchInput = {
@@ -152,6 +159,8 @@ export type TemporalStageRunWorkflowState = {
   provider_kind: 'temporal';
   stage_run_id: string;
   workflow_id: string;
+  scope_kind?: FamilyRuntimeExecutionScopeKind;
+  execution_scope?: WorkItemExecutionScopeSnapshot | null;
   quality_cycle_id: string;
   domain_id: FamilyRuntimeDomainId;
   stage_id: string;

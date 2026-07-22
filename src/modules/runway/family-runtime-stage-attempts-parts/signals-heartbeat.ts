@@ -16,6 +16,8 @@ import {
   nowIso,
 } from './shared.ts';
 import { inspectStageAttempt } from './inspect.ts';
+import { requireFamilyRuntimeIngressIdentity } from '../family-runtime-execution-scope.ts';
+import { requireResolvedPersistedStageAttemptIdentity } from '../family-runtime-persisted-identity-admission.ts';
 
 export function signalStageAttempt(
   db: DatabaseSync,
@@ -27,6 +29,11 @@ export function signalStageAttempt(
   },
 ) {
   const attempt = inspectStageAttempt(db, input.stageAttemptId);
+  requireFamilyRuntimeIngressIdentity({
+    runtimeIdentity: attempt,
+    ingressIdentity: input.payload,
+    operation: `signal_stage_attempt:${input.signalKind}`,
+  });
   const createdAt = nowIso();
   const signal = {
     signal_id: stableId('sig', [input.stageAttemptId, input.signalKind, input.payload, createdAt]),
@@ -122,6 +129,11 @@ export function recordStageAttemptActivityHeartbeat(
   if (!row) {
     return null;
   }
+  requireResolvedPersistedStageAttemptIdentity({
+    db,
+    stageAttemptId: input.stageAttemptId,
+    operation: 'record_stage_attempt_activity_heartbeat',
+  });
   if (!['queued', 'running'].includes(row.status)) {
     return inspectStageAttempt(db, input.stageAttemptId);
   }

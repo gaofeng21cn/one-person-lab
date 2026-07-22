@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
+import { defineSearchAttributeKey } from '@temporalio/common';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 
 import {
@@ -142,17 +143,77 @@ test('family-runtime temporal provider repair installs visibility Search Attribu
     assert.equal(workerRepair.authority_boundary.can_write_domain_truth, false);
     assert.deepEqual(repair.installed_search_attributes, [
       'OplStageAttemptId',
-      'OplDomainId',
-      'OplStageId',
-      'OplAttemptStatus',
-      'OplStagePhase',
-      'OplBlockedReason',
-      'OplTaskId',
-      'OplSourceFingerprint',
-      'OplExecutorKind',
+      'OplStageRunId',
+      'OplWorkItemScopeId',
     ]);
     assert.equal(repair.visibility_readiness.readiness_status, 'ready');
+    const readback = await testEnv.connection.operatorService.listSearchAttributes({
+      namespace: testEnv.namespace ?? 'default',
+    });
+    assert.deepEqual(Object.keys(readback.customAttributes ?? {}).sort(), [
+      'OplStageAttemptId',
+      'OplStageRunId',
+      'OplWorkItemScopeId',
+    ]);
     assert.equal(fs.existsSync(queueDb), true);
+  } finally {
+    await testEnv.teardown();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal provider repair rejects legacy Keyword capacity before mutation', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-capacity-'));
+  const legacySearchAttributeNames = [
+    'OplStageAttemptId',
+    'OplDomainId',
+    'OplStageId',
+    'OplAttemptStatus',
+    'OplStagePhase',
+    'OplBlockedReason',
+    'OplTaskId',
+    'OplSourceFingerprint',
+    'OplExecutorKind',
+  ];
+  const testEnv = await TestWorkflowEnvironment.createLocal({
+    server: {
+      searchAttributes: legacySearchAttributeNames.map((name) =>
+        defineSearchAttributeKey(name, 'KEYWORD')
+      ),
+    },
+  });
+  try {
+    const namespace = testEnv.namespace ?? 'default';
+    const before = await testEnv.connection.operatorService.listSearchAttributes({ namespace });
+    const failure = runCliFailure(
+      ['family-runtime', 'repair', '--provider', 'temporal'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: testEnv.address,
+        OPL_TEMPORAL_NAMESPACE: namespace,
+        OPL_TEMPORAL_WORKER_STATUS: 'ready',
+      }),
+    );
+    const after = await testEnv.connection.operatorService.listSearchAttributes({ namespace });
+
+    assert.equal(failure.status, 3);
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(
+      failure.payload.error.details.failure_code,
+      'temporal_search_attribute_capacity_exceeded',
+    );
+    assert.deepEqual(failure.payload.error.details.keyword_capacity, {
+      limit: 10,
+      present_count: 9,
+      missing_required_count: 2,
+      projected_count: 11,
+      capacity_status: 'capacity_exceeded',
+      automatic_remove_allowed: false,
+    });
+    assert.deepEqual(
+      Object.keys(after.customAttributes ?? {}).sort(),
+      Object.keys(before.customAttributes ?? {}).sort(),
+    );
+    assert.deepEqual(Object.keys(after.customAttributes ?? {}).sort(), [...legacySearchAttributeNames].sort());
   } finally {
     await testEnv.teardown();
     fs.rmSync(stateRoot, { recursive: true, force: true });

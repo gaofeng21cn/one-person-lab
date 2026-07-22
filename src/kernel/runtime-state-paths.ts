@@ -50,6 +50,60 @@ function normalizeExplicitStateDir() {
   return process.env.OPL_STATE_DIR?.trim() || null;
 }
 
+const NODE_TEST_CONTEXT_ENV_KEYS = [
+  'NODE_TEST_CONTEXT',
+  'JEST_WORKER_ID',
+  'VITEST_WORKER_ID',
+] as const;
+
+function canonicalizeForContainment(value: string) {
+  const absolute = path.resolve(value);
+  const missing: string[] = [];
+  let existing = absolute;
+  while (!fs.existsSync(existing)) {
+    const parent = path.dirname(existing);
+    if (parent === existing) return absolute;
+    missing.unshift(path.basename(existing));
+    existing = parent;
+  }
+  let canonicalExisting = existing;
+  try {
+    canonicalExisting = fs.realpathSync(existing);
+  } catch {
+    // The lexical path is the best available evidence when realpath is unavailable.
+  }
+  return path.join(canonicalExisting, ...missing);
+}
+
+function isWithin(parent: string, child: string) {
+  const relative = path.relative(
+    canonicalizeForContainment(parent),
+    canonicalizeForContainment(child),
+  );
+  return relative === ''
+    || (relative !== '..'
+      && !relative.startsWith(`..${path.sep}`)
+      && !path.isAbsolute(relative));
+}
+
+function isHermeticRepoTempState(stateDir: string) {
+  const tempRoot = process.env.OPL_REPO_TEMP_ROOT?.trim();
+  return process.env.OPL_REPO_TEMP_ENV_ACTIVE?.trim() === '1'
+    && Boolean(tempRoot)
+    && isWithin(tempRoot as string, stateDir);
+}
+
+function assertExplicitTestStateDir(explicitStateDir: string | null, stateDir: string) {
+  const testContextKey = NODE_TEST_CONTEXT_ENV_KEYS.find((key) => process.env[key]?.trim());
+  if (explicitStateDir || !testContextKey || isHermeticRepoTempState(stateDir)) return;
+
+  const error = new Error(
+    `OPL_STATE_DIR is required when ${testContextKey} is present; refusing implicit shared OPL state access.`,
+  );
+  error.name = 'OplStateAdmissionError';
+  throw error;
+}
+
 function normalizeDockerDataDir() {
   return process.env.OPL_DATA_DIR?.trim() || process.env.AIONUI_DATA_DIR?.trim() || null;
 }
@@ -63,6 +117,7 @@ export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): O
     : dockerDataDir
       ? path.join(path.resolve(dockerDataDir), 'opl', 'state')
     : path.join(homeDir, 'Library', 'Application Support', 'OPL', 'state');
+  assertExplicitTestStateDir(explicitStateDir, stateDir);
 
   return {
     home_dir: homeDir,

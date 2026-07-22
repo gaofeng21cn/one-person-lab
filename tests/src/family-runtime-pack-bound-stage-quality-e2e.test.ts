@@ -16,6 +16,7 @@ import {
   ensureOplAgentPackageScopeActivation,
   runOplAgentPackageStatus,
 } from '../../src/modules/connect/agent-package-registry.ts';
+import { createWorkItemExecutionScopeSnapshot } from '../../src/modules/workspace/index.ts';
 import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
 import { resolveStageRunAttemptExecutorContent } from '../../src/modules/runway/family-runtime-stage-run-attempt-content.ts';
 import {
@@ -259,6 +260,17 @@ function restoreEnv(previous: Map<string, string | undefined>) {
 test('pack-bound CLI launch persists isolated review attempts and terminal quality projection', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-bound-quality-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-bound-quality-workspace-'));
+  const workItemRoot = path.join(workspaceRoot, 'studies', 'study-001');
+  fs.mkdirSync(workItemRoot, { recursive: true });
+  const executionScope = createWorkItemExecutionScopeSnapshot({
+    projectScopeId: 'project:pack-bound-quality-e2e',
+    workspaceBindingId: 'workspace-binding:pack-bound-quality-e2e',
+    domainId: 'medautoscience',
+    workspaceRoot,
+    canonicalWorkItemRoot: workItemRoot,
+    payload: { study_id: 'study-001' },
+    requirement: { kind: 'work_item', alias_fields: ['study_id'] },
+  });
   const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-bound-family-workspace-'));
   const packRoot = createPackFixture();
   const useBinding = packageUseBinding(packRoot);
@@ -286,7 +298,7 @@ Close findings using the latest package.
   let activeUseBinding = useBinding;
   const observedAttemptInputs: TemporalStageAttemptWorkflowInput[] = [];
   const artifactBytes = Buffer.from('pack-bound-draft-v1');
-  const artifactPath = path.join(workspaceRoot, 'draft.txt');
+  const artifactPath = path.join(workItemRoot, 'draft.txt');
   fs.writeFileSync(artifactPath, artifactBytes);
   const artifactRef = pathToFileURL(artifactPath).href;
   const artifactHash = crypto.createHash('sha256').update(artifactBytes).digest('hex');
@@ -302,6 +314,7 @@ Close findings using the latest package.
     'TEMPORAL_ADDRESS',
     'OPL_TEMPORAL_NAMESPACE',
     'OPL_TEMPORAL_TASK_QUEUE',
+    'OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY',
   ];
   const previousEnv = new Map(envKeys.map((key) => [key, process.env[key]]));
   process.env.OPL_STATE_DIR = stateRoot;
@@ -310,6 +323,7 @@ Close findings using the latest package.
   delete process.env.TEMPORAL_ADDRESS;
   process.env.OPL_TEMPORAL_NAMESPACE = namespace;
   process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+  process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY = '1';
   registerAgentPackageReadinessPort({
     readStatus: () => ({
       opl_agent_package_status: {
@@ -338,6 +352,8 @@ Close findings using the latest package.
             closeoutPacket: {
               surface_kind: 'stage_attempt_closeout_packet',
               stage_attempt_id: attempt.stage_attempt_id,
+              stage_run_id: attempt.stage_run_id!,
+              scope_digest: attempt.execution_scope?.scope_digest,
               closeout_refs: [artifactRef],
               closeout_ref_metadata: [{ ref: artifactRef, sha256: artifactHash }],
               consumed_refs: [],
@@ -363,6 +379,8 @@ Close findings using the latest package.
         : {
             surface_kind: 'stage_attempt_closeout_packet' as const,
             stage_attempt_id: attempt.stage_attempt_id,
+            stage_run_id: attempt.stage_run_id!,
+            scope_digest: attempt.execution_scope?.scope_digest,
             closeout_refs: [`codex-closeout:${attempt.stage_attempt_id}`],
           };
       const receipt = {
@@ -428,7 +446,17 @@ Close findings using the latest package.
         '--provider',
         'temporal',
         '--workspace-locator',
-        JSON.stringify({ workspace_root: workspaceRoot, domain_pack_root: packRoot }),
+        JSON.stringify({
+          workspace_root: workspaceRoot,
+          domain_pack_root: packRoot,
+          study_id: 'study-001',
+          work_item_root: workItemRoot,
+          execution_scope: executionScope,
+        }),
+        '--scope-kind',
+        'work_item',
+        '--execution-scope',
+        JSON.stringify(executionScope),
         '--source-fingerprint',
         'sha256:e69550085779bc9bd1bf36c55d7f3bf244254c3c8c8a8799ae97e55b86786289',
         '--start',
@@ -466,6 +494,8 @@ Close findings using the latest package.
 
     assert.equal(launch.temporal_start.task_queue, taskQueue);
     assert.equal(stageRunInput.domain_pack_root, packRoot);
+    assert.equal(stageRunInput.scope_kind, 'work_item');
+    assert.deepEqual(stageRunInput.execution_scope, executionScope);
     assert.equal(stageRunInput.stage_manifest_ref, 'agent/stages/manifest.json');
     assert.equal(stageRunInput.stage_manifest_sha256, manifestHash);
     assert.equal(stageRunInput.quality_policy_ref,
@@ -523,6 +553,13 @@ Close findings using the latest package.
       attempt.stage_run_id === stageRunInput.stage_run_id
     ));
     assert.deepEqual(firstRunAttemptInputs.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+    assert.equal(
+      firstRunAttemptInputs.every((attempt) => (
+        attempt.scope_kind === 'work_item'
+        && attempt.execution_scope?.scope_digest === executionScope.scope_digest
+      )),
+      true,
+    );
     assert.equal(
       (firstRunAttemptInputs[0]?.execution_content_binding?.spec.package_closure as any)
         ?.root_package?.package_version,

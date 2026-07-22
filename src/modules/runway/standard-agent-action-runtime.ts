@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import path from 'node:path';
 
 import { canonicalJsonBytes, canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError, isRecord, type ErrorCode } from '../../kernel/contract-validation.ts';
@@ -9,6 +10,7 @@ import {
 } from '../../kernel/family-action-catalog-contract.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { assertRepoJsonSchemaPayload } from '../../kernel/repo-json-schema.ts';
+import { readStandardAgentDescriptorInterface } from '../../kernel/standard-agent-interface.ts';
 import {
   readFoundryProviderManifest,
   validateDesignRequest,
@@ -18,10 +20,16 @@ import { startTemporalFoundryRunWorkflow } from './foundry-temporal-control.ts';
 import { compileStandardAgentStageManifest } from '../pack/public/standard-agent-action-runtime.ts';
 import {
   commitStandardAgentActionOutput,
+  createWorkItemExecutionScopeSnapshot,
   inspectStandardAgentActionRunOutput,
   inspectStoredStandardAgentActionRunOutput,
+  listWorkspaceBindings,
   prepareStandardAgentActionRunRequest,
   readStandardAgentActionStoredBytes,
+  requireWorkItemExecutionScopeSnapshot,
+  resolveWorkItemInventoryBinding,
+  resolveWorkItemIdentity,
+  type WorkItemExecutionScopeSnapshot,
 } from '../workspace/public/standard-agent-action-runtime.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
 import { buildHostedActionStageRunInvocationId } from './family-runtime-stage-run-identity.ts';
@@ -92,6 +100,7 @@ type StandardAgentActionContext = {
   foundryRequest: ReturnType<typeof validateDesignRequest> | null;
   foundryProvider: FoundryProviderManifest | null;
   inputValidation: Record<string, unknown>;
+  executionScope: WorkItemExecutionScopeSnapshot | null;
 };
 
 type StandardAgentStageActionLaunch = {
@@ -107,6 +116,7 @@ type StandardAgentStageActionLaunch = {
   request_ref: string;
   stage_run_invocation_id: string;
   expected_domain_output_schema_ref: string;
+  execution_scope: WorkItemExecutionScopeSnapshot | null;
   temporal_stage_run: Record<string, unknown>;
   temporal_stage_run_query: Record<string, unknown> | null;
   temporal_stage_run_query_error: ReturnType<typeof observationFailure> | null;
@@ -261,6 +271,95 @@ function actionWorkItemIdentityLocator(
       ? [[field, value.trim()]]
       : [];
   }));
+}
+
+function resolveActionExecutionScope(input: {
+  action: FamilyActionCatalogAction;
+  payload: Record<string, unknown>;
+  workspaceRoot: string;
+  checkoutRoot: string;
+  runtimeDomainId: string;
+  acceptedProjectIds: readonly string[];
+}) {
+  if (!input.action.execution_scope || input.action.execution_scope.kind === 'none') return null;
+  const workspaceRoot = path.resolve(input.workspaceRoot);
+  const pathBindings = listWorkspaceBindings().filter((binding) =>
+    binding.status !== 'archived' && path.resolve(binding.workspace_path) === workspaceRoot
+  );
+  if (pathBindings.length === 0) {
+    fail('Work-item scoped Standard Agent action requires an explicit workspace registry binding.', {
+      failure_code: 'execution_scope_workspace_binding_missing',
+      workspace_root: workspaceRoot,
+      action_id: input.action.action_id,
+    });
+  }
+  const acceptedProjectIds = new Set(input.acceptedProjectIds);
+  const candidates = pathBindings.filter((binding) => acceptedProjectIds.has(binding.project_id));
+  if (candidates.length === 0) {
+    fail('Workspace binding conflicts with the Standard Agent runtime domain.', {
+      failure_code: 'execution_scope_workspace_binding_conflict',
+      workspace_root: workspaceRoot,
+      accepted_project_ids: [...acceptedProjectIds].sort(),
+      observed_bindings: pathBindings.map((binding) => ({
+        binding_id: binding.binding_id,
+        project_id: binding.project_id,
+        project_scope_id: binding.project_scope_id,
+      })),
+    });
+  }
+  if (candidates.length !== 1) {
+    fail('Work-item scoped Standard Agent action resolves to multiple workspace bindings.', {
+      failure_code: 'execution_scope_workspace_binding_ambiguous',
+      workspace_root: workspaceRoot,
+      candidate_bindings: candidates.map((binding) => ({
+        binding_id: binding.binding_id,
+        project_id: binding.project_id,
+        project_scope_id: binding.project_scope_id,
+      })),
+    });
+  }
+  const binding = candidates[0]!;
+  const resolvedIdentity = resolveWorkItemIdentity({
+    payload: input.payload,
+    aliasFields: input.action.execution_scope.alias_fields,
+  });
+  const descriptor = readStandardAgentDescriptorInterface(input.checkoutRoot);
+  const inventoryDeclaration = descriptor?.interface.inventory_projection ?? null;
+  if (!descriptor || !inventoryDeclaration) {
+    fail('Work-item scoped Standard Agent action requires a domain-owned inventory projection.', {
+      failure_code: 'work_item_inventory_declaration_missing',
+      checkout_root: input.checkoutRoot,
+      action_id: input.action.action_id,
+    });
+  }
+  const descriptorDomainIds = new Set([
+    descriptor.domain_id,
+    descriptor.interface.runtime.runtime_domain_id,
+  ]);
+  if (![...descriptorDomainIds].some((domainId) => acceptedProjectIds.has(domainId))) {
+    fail('Domain inventory descriptor conflicts with the Standard Agent runtime identity.', {
+      failure_code: 'work_item_inventory_descriptor_domain_mismatch',
+      descriptor_domain_ids: [...descriptorDomainIds].sort(),
+      accepted_project_ids: [...acceptedProjectIds].sort(),
+    });
+  }
+  const inventoryBinding = resolveWorkItemInventoryBinding({
+    workspaceRoot,
+    declaration: inventoryDeclaration,
+    domainWorkItemId: resolvedIdentity.domain_work_item_id,
+  });
+  return createWorkItemExecutionScopeSnapshot({
+    projectScopeId: binding.project_scope_id,
+    workspaceBindingId: binding.binding_id,
+    bindingVersionId: binding.binding_id,
+    domainId: input.runtimeDomainId,
+    workspaceRoot,
+    payload: input.payload,
+    requirement: input.action.execution_scope,
+    expectedDomainWorkItemId: resolvedIdentity.domain_work_item_id,
+    canonicalWorkItemRoot: inventoryBinding.canonical_work_item_root,
+    inventoryDigest: inventoryBinding.inventory_digest,
+  });
 }
 
 function storedBytesRef(value: { ref: string; sha256: string; byte_size: number }) {
@@ -481,6 +580,54 @@ function assertCompletionIdentity(input: {
   }
 }
 
+function handlerExecutionScope(input: {
+  action: FamilyActionCatalogAction;
+  executionScope: WorkItemExecutionScopeSnapshot | null;
+  workspaceRoot: string;
+  payload: Record<string, unknown>;
+}) {
+  if (input.action.execution_scope?.kind !== 'work_item') {
+    if (input.executionScope) {
+      fail('Unscoped Handler action must not carry a work-item execution scope.', {
+        action_id: input.action.action_id,
+        failure_code: 'standard_agent_handler_unexpected_execution_scope',
+      });
+    }
+    return {
+      executionScope: null,
+      workspaceReadRoot: input.workspaceRoot,
+    } as const;
+  }
+  if (!input.executionScope) {
+    fail('Work-item Handler action requires an execution scope.', {
+      action_id: input.action.action_id,
+      failure_code: 'standard_agent_handler_execution_scope_missing',
+    });
+  }
+  const executionScope = requireWorkItemExecutionScopeSnapshot(input.executionScope);
+  if (
+    executionScope.workspace_root !== input.workspaceRoot
+    || executionScope.canonical_work_item_root === null
+  ) {
+    fail('Work-item Handler action requires a canonical read root in the current workspace.', {
+      action_id: input.action.action_id,
+      failure_code: 'standard_agent_handler_read_scope_unresolved',
+      scope_workspace_root: executionScope.workspace_root,
+      workspace_root: input.workspaceRoot,
+      canonical_work_item_root: executionScope.canonical_work_item_root,
+    });
+  }
+  resolveWorkItemIdentity({
+    payload: input.payload,
+    aliasFields: input.action.execution_scope.alias_fields,
+    expectedDomainWorkItemId: executionScope.domain_work_item_id,
+  });
+  return {
+    executionScope,
+    workspaceReadRoot: executionScope.canonical_work_item_root,
+  } as const;
+}
+
 function handlerSandboxSummary(
   binding: DomainHandlerRegistry['handlers'][number]['binding'],
 ) {
@@ -538,6 +685,9 @@ function persistedStageActionLaunch(input: {
     || typeof persisted.request_ref !== 'string'
     || typeof persisted.stage_run_invocation_id !== 'string'
     || typeof persisted.expected_domain_output_schema_ref !== 'string'
+    || (persisted.execution_scope !== undefined
+      && persisted.execution_scope !== null
+      && !isRecord(persisted.execution_scope))
     || !isRecord(persisted.temporal_stage_run)
     || (persisted.temporal_stage_run_query !== null && !isRecord(persisted.temporal_stage_run_query))
     || (persisted.temporal_stage_run_query_error !== null && !isRecord(persisted.temporal_stage_run_query_error))
@@ -551,7 +701,12 @@ function persistedStageActionLaunch(input: {
       output_ref: input.stored.output.ref,
     });
   }
-  return persisted as unknown as StandardAgentStageActionLaunch;
+  return {
+    ...persisted,
+    execution_scope: persisted.execution_scope === undefined || persisted.execution_scope === null
+      ? null
+      : requireWorkItemExecutionScopeSnapshot(persisted.execution_scope),
+  } as unknown as StandardAgentStageActionLaunch;
 }
 
 function stageActionWorkflowId(launch: StandardAgentStageActionLaunch) {
@@ -664,8 +819,17 @@ function replayCompletedHandlerAction(input: {
   startedAt: string;
   binding: StandardAgentActionRunBinding;
   completion: StandardAgentActionRunCompletion;
+  action: FamilyActionCatalogAction;
+  executionScope: WorkItemExecutionScopeSnapshot | null;
+  workspaceRoot: string;
   recordLedger: typeof actionLedger;
 }) {
+  const scope = handlerExecutionScope({
+    action: input.action,
+    executionScope: input.executionScope,
+    workspaceRoot: input.workspaceRoot,
+    payload: input.runtimeInput.payload,
+  });
   const replay = input.completion.completed_handler_replay;
   if (
     input.binding.run_id !== input.runId
@@ -734,6 +898,7 @@ function replayCompletedHandlerAction(input: {
       domain_id: input.binding.canonical_domain_id,
       action_id: input.binding.action_id,
       binding_ref: input.completion.binding_ref,
+      execution_scope: scope.executionScope,
       package_use_binding: replay.package_use_binding,
       input_schema_ref: replay.input_schema_ref,
       output_schema_validation: replay.output_schema_validation,
@@ -1068,10 +1233,17 @@ async function runHandlerAction(input: {
   packageUseBinding: unknown;
   runtimeBindingRef: string;
   startedAt: string;
+  executionScope: WorkItemExecutionScopeSnapshot | null;
   runHandler: typeof runStandardAgentHandlerSandbox;
   applyDomainArtifactCas: typeof applyDomainArtifactCasMaterialization;
   recordLedger: typeof actionLedger;
 }) {
+  const scope = handlerExecutionScope({
+    action: input.action,
+    executionScope: input.executionScope,
+    workspaceRoot: input.workspaceRoot,
+    payload: input.runtimeInput.payload,
+  });
   const handlerRef = input.action.execution_binding.kind === 'handler_ref'
     ? input.action.execution_binding.handler_ref
     : fail('Handler action has an invalid execution binding.');
@@ -1256,6 +1428,7 @@ async function runHandlerAction(input: {
       domain_id: input.domainId,
       action_id: input.action.action_id,
       binding_ref: handlerRef,
+      execution_scope: scope.executionScope,
       package_use_binding: input.packageUseBinding,
       input_schema_ref: input.action.input_schema_ref,
       output_schema_validation: outputValidation,
@@ -1273,9 +1446,10 @@ async function runHandlerAction(input: {
   try {
     receipt = input.runHandler({
       checkoutRoot: input.checkoutRoot,
+      workspaceRoot: input.workspaceRoot,
+      workspaceReadRoot: scope.workspaceReadRoot,
       binding: handler.binding,
       request: input.runtimeInput.payload,
-      readRoots: [input.workspaceRoot],
       timeoutMs: input.runtimeInput.timeoutMs,
     });
   } catch (error) {
@@ -1489,6 +1663,7 @@ async function runHandlerAction(input: {
     domain_id: input.domainId,
     action_id: input.action.action_id,
     binding_ref: handlerRef,
+    execution_scope: scope.executionScope,
     package_use_binding: input.packageUseBinding,
     input_schema_ref: input.action.input_schema_ref,
     output_schema_validation: outputValidation,
@@ -1522,6 +1697,7 @@ async function runStageAction(input: {
   startedAt: string;
   runStageRuntime: typeof runFamilyRuntime;
   recordLedger: typeof actionLedger;
+  executionScope: WorkItemExecutionScopeSnapshot | null;
 }) {
   const executionBinding = input.action.execution_binding;
   const stageRoute = input.action.stage_route;
@@ -1538,6 +1714,7 @@ async function runStageAction(input: {
   const workspaceLocator = canonicalJsonText({
     workspace_root: input.workspaceRoot,
     ...actionWorkItemIdentityLocator(input.action, input.payload),
+    ...(input.executionScope ? { execution_scope: input.executionScope } : {}),
     domain_pack_root: input.checkoutRoot,
     ...(input.packageUseBinding ? { package_use_binding: input.packageUseBinding } : {}),
     standard_agent_action_run_ref: prepared.action_run_ref,
@@ -1615,6 +1792,13 @@ async function runStageAction(input: {
         resolved_runtime_binding_ref: input.runtimeBindingRef,
       });
     }
+    if (canonicalJsonText(persisted.execution_scope) !== canonicalJsonText(input.executionScope)) {
+      fail('Existing Stage action launch is bound to a different execution scope.', {
+        run_id: input.runId,
+        persisted_scope_digest: persisted.execution_scope?.scope_digest ?? null,
+        resolved_scope_digest: input.executionScope?.scope_digest ?? null,
+      });
+    }
     completion ??= persistCompletion(input.workspaceRoot, {
       ...completionBase({
         runId: input.runId,
@@ -1679,6 +1863,14 @@ async function runStageAction(input: {
         'temporal',
         '--workspace-locator',
         workspaceLocator,
+        ...(input.executionScope
+          ? [
+              '--scope-kind',
+              'work_item',
+              '--execution-scope',
+              canonicalJsonText(input.executionScope),
+            ]
+          : []),
         '--source-fingerprint',
         prepared.request.sha256,
         '--invocation-mode',
@@ -1732,6 +1924,7 @@ async function runStageAction(input: {
         request_ref: prepared.request.ref,
         stage_run_invocation_id: stageRunInvocationId,
         expected_domain_output_schema_ref: input.action.output_schema_ref,
+        execution_scope: input.executionScope,
         temporal_stage_run: created,
         temporal_stage_run_query: query,
         temporal_stage_run_query_error: queryError,
@@ -1867,6 +2060,18 @@ function buildLiveActionContext(input: {
     input.runtimeInput.payload,
     input.runtimeBinding.workspace_root,
   );
+  const executionScope = resolveActionExecutionScope({
+    action,
+    payload,
+    workspaceRoot: input.runtimeBinding.workspace_root,
+    checkoutRoot: input.runtimeBinding.checkout_root,
+    runtimeDomainId: input.runtimeBinding.runtime_domain_id,
+    acceptedProjectIds: [
+      input.runtimeBinding.runtime_domain_id,
+      input.runtimeBinding.target_domain_id,
+      ...input.runtimeBinding.catalog_target_domain_ids,
+    ],
+  });
   if (action.execution_binding.kind === 'stage_binding') {
     (input.dependencies.compileStageManifest ?? compileStandardAgentStageManifest)(
       input.runtimeBinding.checkout_root,
@@ -1901,6 +2106,7 @@ function buildLiveActionContext(input: {
     foundryRequest,
     foundryProvider,
     inputValidation,
+    executionScope,
   };
 }
 
@@ -2099,6 +2305,27 @@ function requestFromFrozenPlan(input: {
   const payload = input.plan.effective_payload
     ? structuredClone(input.plan.effective_payload)
     : normalizedPayload(action, input.runtimeInput.payload, input.plan.workspace_root);
+  const executionScope = input.plan.execution_scope
+    ? requireWorkItemExecutionScopeSnapshot(input.plan.execution_scope)
+    : null;
+  if (action.execution_scope?.kind === 'work_item') {
+    if (!executionScope) {
+      fail('Frozen work-item action plan is missing its execution scope.', {
+        run_id: input.plan.run_id,
+        action_id: action.action_id,
+      });
+    }
+    resolveWorkItemIdentity({
+      payload,
+      aliasFields: action.execution_scope.alias_fields,
+      expectedDomainWorkItemId: executionScope.domain_work_item_id,
+    });
+  } else if (executionScope) {
+    fail('Frozen unscoped action plan must not carry a work-item execution scope.', {
+      run_id: input.plan.run_id,
+      action_id: action.action_id,
+    });
+  }
   const requestBytes = canonicalJsonBytes(payload);
   const requestSha256 = sha256(requestBytes);
   if (
@@ -2130,6 +2357,7 @@ function requestFromFrozenPlan(input: {
       foundryRequest,
       foundryProvider,
       inputValidation: input.plan.input_schema_validation,
+      executionScope,
     } satisfies StandardAgentActionContext,
   };
 }
@@ -2153,7 +2381,15 @@ async function executeActionContext(input: {
   context: StandardAgentActionContext;
   dependencies: RuntimeDependencies;
 }) {
-  const { action, registry, payload, foundryRequest, foundryProvider, inputValidation } = input.context;
+  const {
+    action,
+    registry,
+    payload,
+    foundryRequest,
+    foundryProvider,
+    inputValidation,
+    executionScope,
+  } = input.context;
   const lifecycleAdmission = preflightStandardAgentDomainLifecycleAdmission({
     action,
     payload,
@@ -2197,6 +2433,7 @@ async function executeActionContext(input: {
         acceptedDomainIds: input.acceptedDomainIds,
         requestPayloadSha256: input.requestPayloadSha256,
         inputSchemaValidation: inputValidation,
+        executionScope,
         checkoutRoot: input.checkoutRoot,
         runHandler: input.dependencies.runHandler ?? runStandardAgentHandlerSandbox,
         applyDomainArtifactCas: input.dependencies.applyDomainArtifactCas ?? applyDomainArtifactCasMaterialization,
@@ -2208,6 +2445,7 @@ async function executeActionContext(input: {
           payload,
           checkoutRoot: input.checkoutRoot,
           runtimeDomainId: input.runtimeDomainId,
+          executionScope,
           runStageRuntime: input.dependencies.runStageRuntime ?? runFamilyRuntime,
           recordLedger: input.dependencies.recordLedger ?? actionLedger,
         })
@@ -2265,6 +2503,9 @@ export async function runStandardAgentAction(
         startedAt: frozenPlan.started_at,
         binding: frozenBinding,
         completion,
+        action: frozen.context.action,
+        executionScope: frozen.context.executionScope,
+        workspaceRoot: frozenPlan.workspace_root,
         recordLedger: dependencies.recordLedger ?? actionLedger,
       });
     }
@@ -2289,36 +2530,9 @@ export async function runStandardAgentAction(
     });
   }
   if (frozenBinding && completion?.execution_kind === 'handler_ref' && completion.status === 'completed') {
-    const legacyBinding = frozenBinding;
-    const legacyRuntimeBinding = await standardAgentRuntimeResolver(dependencies).resolvePinned({
-      provenance: legacyBinding.hosted_runtime_binding,
-      provenance_ref: legacyBinding.hosted_runtime_binding_ref,
-      workspaceRoot: input.workspaceRoot,
-    });
-    assertRequestedDomainMatchesBinding(input.domainId, legacyRuntimeBinding);
-    if (
-      legacyBinding.run_id !== runId
-      || legacyBinding.canonical_domain_id !== legacyRuntimeBinding.agent_id
-      || legacyBinding.action_id !== input.actionId
-      || legacyBinding.hosted_runtime_binding_ref !== legacyRuntimeBinding.provenance_ref
-      || canonicalJsonText(legacyBinding.hosted_runtime_binding)
-        !== canonicalJsonText(legacyRuntimeBinding.provenance)
-    ) fail('Hosted Agent action request conflicts with its frozen legacy run binding.', { run_id: runId });
-    const legacyAction = readHostedAgentRuntimeActionContracts(
-      legacyRuntimeBinding.checkout_root,
-    ).catalog.actions.find((action) => action.action_id === legacyBinding.action_id)
-      ?? fail('Frozen legacy Standard Agent action is absent from its pinned action catalog.', {
-        run_id: runId,
-        action_id: legacyBinding.action_id,
-      });
-    assertStandardAgentActionInvocationSurface(legacyAction, invocationContext);
-    return replayCompletedHandlerAction({
-      runtimeInput: input,
-      runId,
-      startedAt: observedAt,
-      binding: legacyBinding,
-      completion,
-      recordLedger: dependencies.recordLedger ?? actionLedger,
+    fail('Completed legacy Handler replay has unresolved execution scope identity.', {
+      run_id: runId,
+      failure_code: 'standard_agent_handler_replay_execution_scope_unresolved',
     });
   }
 
@@ -2396,6 +2610,7 @@ export async function runStandardAgentAction(
       package_use_binding: packageUseBinding(runtimeBinding.package_use_binding),
       hosted_runtime_binding_ref: runtimeBinding.provenance_ref,
       execution_kind: liveContext.action.execution_binding.kind,
+      execution_scope: liveContext.executionScope,
       catalog: liveContext.catalog,
       handler_registry: liveContext.registry,
       foundry_provider_manifest: liveContext.foundryProvider as unknown as Record<string, unknown> | null,

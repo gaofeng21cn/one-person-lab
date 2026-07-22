@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { Worker } from '@temporalio/worker';
 
+import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
 import './family-runtime-temporal-terminal-sync-cases/attempt-precedence.ts';
 import {
   createStageAttempt,
@@ -45,6 +46,51 @@ function createGenericDomainHandlerAttempt(db: Parameters<typeof createStageAtte
 function taskState(db: Parameters<typeof createStageAttempt>[0], taskId: string) {
   return db.prepare('SELECT status, last_error, dead_letter_reason FROM tasks WHERE task_id = ?').get(taskId) as { status: string; last_error: string | null; dead_letter_reason: string | null };
 }
+
+test('identity-unresolved attempts reject Temporal terminal and unavailable sync without mutation', () => {
+  withStageAttemptDb((db) => {
+    const attempt = createStageAttempt(db, {
+      domainId: 'redcube',
+      stageId: 'artifact_creation',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: '/tmp/redcube-runtime' },
+      sourceFingerprint: 'sha256:legacy-unresolved-terminal-sync',
+      executorKind: 'codex_cli',
+    }).attempt;
+    db.prepare(`
+      UPDATE stage_attempts
+      SET scope_kind = 'identity_unresolved', identity_state = 'identity_unresolved', status = 'running'
+      WHERE stage_attempt_id = ?
+    `).run(attempt.stage_attempt_id);
+    const before = inspectStageAttempt(db, attempt.stage_attempt_id);
+    const isUnresolvedExecutionError = (error: unknown) => error instanceof FrameworkContractError
+      && error.details?.failure_code === 'runtime_execution_identity_unresolved';
+
+    assert.throws(() => syncStageAttemptFromTemporalTerminalObservation(db,
+      completedTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+        createdAt: new Date().toISOString(),
+        domainId: attempt.domain_id,
+        stageId: attempt.stage_id,
+        checkpointRef: 'checkpoint:legacy-unresolved-terminal-sync',
+        nextOwner: attempt.domain_id,
+      })), isUnresolvedExecutionError);
+    assert.throws(() => syncStageAttemptFromTemporalTerminalObservation(db,
+      missingWorkflowObservation({
+        stageAttemptId: attempt.stage_attempt_id,
+        workflowId: attempt.workflow_id,
+      })), isUnresolvedExecutionError);
+
+    assert.deepEqual(inspectStageAttempt(db, attempt.stage_attempt_id), before);
+    const readback = queryStageAttempt(db, attempt.stage_attempt_id).stage_attempt_query;
+    assert.deepEqual(readback.closeouts, []);
+    assert.equal(readback.attempt.identity_state, 'identity_unresolved');
+    assert.equal(readback.workflow_input, null);
+    assert.equal(readback.codex_stage_activity, null);
+    assert.equal(readback.execution_identity_admission.launch_allowed, false);
+  });
+});
 
 for (const [name, taskStatus, attemptStatus, providerStatus] of [
   ['unclaimed', 'queued', 'queued', 'registered'],

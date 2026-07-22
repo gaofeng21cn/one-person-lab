@@ -11,9 +11,13 @@ import {
   inspectStageAttempt,
   listStageAttempts,
   listStageAttemptCloseouts,
+  listStageAttemptSignals,
   queryStageAttempt,
+  recordStageAttemptActivityHeartbeat,
+  signalStageAttempt,
 } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
 import { setStageAttemptArchived } from '../../src/modules/runway/family-runtime-stage-attempt-ledger.ts';
+import { buildTemporalStageAttemptWorkflowInput } from '../../src/modules/runway/family-runtime-temporal.ts';
 
 function withAttempt(fn: (db: DatabaseSync, attemptId: string) => void) {
   const db = new DatabaseSync(':memory:');
@@ -54,6 +58,55 @@ test('stage attempt closeout replay is idempotent and conflicting receipts fail 
         && (error.details.receipt_conflict as Record<string, unknown>).fail_closed === true,
     );
     assert.deepEqual(inspectStageAttempt(db, attemptId).closeout_refs, ['receipt:artifact-handoff']);
+  });
+});
+
+test('identity-unresolved attempts reject start, signals, heartbeat, and closeout without ledger writes', () => {
+  withAttempt((db, attemptId) => {
+    db.prepare(`
+      UPDATE stage_attempts
+      SET scope_kind = 'identity_unresolved', identity_state = 'identity_unresolved',
+        status = 'blocked', blocked_reason = 'legacy_execution_identity_unresolved'
+      WHERE stage_attempt_id = ?
+    `).run(attemptId);
+    const before = inspectStageAttempt(db, attemptId);
+    const isUnresolvedExecutionError = (error: unknown) => error instanceof FrameworkContractError
+      && error.details?.failure_code === 'runtime_execution_identity_unresolved';
+
+    assert.throws(
+      () => buildTemporalStageAttemptWorkflowInput(before),
+      isUnresolvedExecutionError,
+    );
+    assert.throws(
+      () => signalStageAttempt(db, {
+        stageAttemptId: attemptId,
+        signalKind: 'resume',
+        payload: {},
+      }),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'runtime_ingress_identity_unresolved',
+    );
+    assert.throws(
+      () => recordStageAttemptActivityHeartbeat(db, {
+        stageAttemptId: attemptId,
+        heartbeatKind: 'runner_output',
+      }),
+      isUnresolvedExecutionError,
+    );
+    assert.throws(
+      () => ingestStageAttemptCloseout(db, {
+        stageAttemptId: attemptId,
+        packet: closeoutPacket(),
+      }),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'stage_attempt_closeout_identity_rejected'
+        && (error.details?.rejection as Record<string, unknown> | undefined)?.reason
+          === 'execution_identity_unresolved',
+    );
+
+    assert.deepEqual(inspectStageAttempt(db, attemptId), before);
+    assert.deepEqual(listStageAttemptSignals(db, attemptId), []);
+    assert.deepEqual(listStageAttemptCloseouts(db, attemptId), []);
   });
 });
 

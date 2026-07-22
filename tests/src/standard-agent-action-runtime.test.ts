@@ -28,6 +28,103 @@ function root(prefix: string) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 
+function writeWorkspaceRegistry(input: {
+  stateRoot: string;
+  workspaceRoot: string;
+  bindingId?: string;
+  projectScopeId?: string;
+}) {
+  fs.mkdirSync(input.stateRoot, { recursive: true });
+  fs.writeFileSync(path.join(input.stateRoot, 'workspace-registry.json'), `${JSON.stringify({
+    version: 'g2',
+    bindings: [{
+      binding_id: input.bindingId ?? 'binding:medautoscience:test',
+      project_scope_id: input.projectScopeId ?? 'project:medautoscience:test',
+      project_id: 'medautoscience',
+      project: 'Med Auto Science',
+      workspace_path: fs.realpathSync.native(input.workspaceRoot),
+      label: 'Scoped action fixture',
+      status: 'active',
+      direct_entry: {
+        command: null,
+        manifest_command: null,
+        url: null,
+        workspace_locator: null,
+      },
+      created_at: '2026-07-21T00:00:00.000Z',
+      updated_at: '2026-07-21T00:00:00.000Z',
+      archived_at: null,
+    }],
+  })}\n`);
+}
+
+function writeWorkItemInventory(input: {
+  checkoutRoot: string;
+  workspaceRoot: string;
+  studies: Array<{ studyId: string; root: string }>;
+}) {
+  fs.mkdirSync(path.join(input.checkoutRoot, 'contracts'), { recursive: true });
+  fs.writeFileSync(path.join(input.checkoutRoot, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
+    domain_id: 'medautoscience',
+    standard_agent_interface: {
+      version: 'opl_standard_agent_interface.v1',
+      inventory_projection: {
+        source_kind: 'workspace_relative_json',
+        relative_path: 'workspace_index.json',
+        items_pointer: '/studies',
+        work_item_root_template: 'studies/{study_id}',
+        field_map: {
+          work_item_id: 'study_id',
+          work_item_root: 'canonical_study_root',
+          business_status: 'status',
+          current_stage_id: 'current_stage_id',
+          current_stage_status: 'current_stage_status',
+          package_status: 'package_status',
+          lifecycle_ref: 'lifecycle_ref',
+        },
+      },
+      stage_catalog: null,
+      domain_detail_views: [],
+      workspace_binding: {
+        locator_surface_kind: 'fixture_workspace_locator',
+        default_profile_id: 'portfolio',
+        workspace_kind: 'medical_research_workspace',
+        project_kind: 'study',
+        project_collection_label: 'studies',
+        default_workspace_id: 'fixture-workspace',
+        default_project_id: 'fixture-study',
+        required_locator_fields: ['workspace_root'],
+        optional_locator_fields: [],
+      },
+      runtime: {
+        runtime_domain_id: 'medautoscience',
+        registration_ref: null,
+      },
+      progress: { deliverable_delta_aliases: [], platform_delta_aliases: [] },
+      routing: {
+        explicit_aliases: [],
+        workstream_ids: [],
+        intent_signals: [],
+        ambiguity_policy: 'explicit_action_required',
+      },
+    },
+  })}\n`);
+  for (const study of input.studies) {
+    fs.mkdirSync(path.resolve(input.workspaceRoot, study.root), { recursive: true });
+  }
+  fs.writeFileSync(path.join(input.workspaceRoot, 'workspace_index.json'), `${JSON.stringify({
+    studies: input.studies.map((study) => ({
+      study_id: study.studyId,
+      canonical_study_root: study.root,
+      status: 'active',
+      current_stage_id: null,
+      current_stage_status: null,
+      package_status: 'not_ready',
+      lifecycle_ref: 'control/lifecycle.json',
+    })),
+  })}\n`);
+}
+
 function sha256(bytes: string | Buffer) {
   return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 }
@@ -992,6 +1089,375 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('work-item scoped Stage actions resolve one binding before Temporal and isolate Studies in one root', async () => {
+  const checkoutRoot = root('opl-scoped-stage-action-checkout-');
+  const workspaceRoot = root('opl-scoped-stage-action-workspace-');
+  const stateRoot = root('opl-scoped-stage-action-state-');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  const calls: string[][] = [];
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    writeWorkspaceRegistry({ stateRoot, workspaceRoot });
+    writeWorkItemInventory({
+      checkoutRoot,
+      workspaceRoot,
+      studies: [
+        { studyId: 'study-a', root: 'studies/study-a' },
+        { studyId: 'study-b', root: 'studies/study-b' },
+      ],
+    });
+    const stageAction = {
+      ...action({
+        actionId: 'launch-scoped',
+        executionBinding: { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+        stageRoute: {
+          entry_stage_ref: 'intake',
+          required_stage_refs: ['intake'],
+          optional_stage_refs: [],
+          terminal_stage_refs: ['intake'],
+          route_policy: 'ai_selected_progress_route',
+        },
+      }),
+      required_fields: ['workspace_root', 'study_id', 'value'],
+      optional_fields: ['work_item_id'],
+      execution_scope: { kind: 'work_item', alias_fields: ['study_id', 'work_item_id'] },
+    };
+    writeContracts(checkoutRoot, [stageAction]);
+    fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'input.schema.json'), `${JSON.stringify({
+      $id: 'https://fixture.local/input.schema.json',
+      type: 'object',
+      required: ['workspace_root', 'study_id', 'value'],
+      properties: {
+        workspace_root: { type: 'string', minLength: 1 },
+        study_id: { type: 'string', minLength: 1 },
+        work_item_id: { type: 'string', minLength: 1 },
+        value: { type: 'integer' },
+      },
+      additionalProperties: false,
+    })}\n`);
+    const runStageRuntime: typeof runFamilyRuntime = async (args) => {
+      calls.push(args);
+      if (args[0] === 'attempt') {
+        return {
+          family_runtime_stage_run: {
+            stage_run_input: { workflow_id: `wf-${calls.length}` },
+            blocked_reason: null,
+            temporal_start: { start_status: 'started' },
+          },
+        } as never;
+      }
+      return { family_runtime_stage_run_query: { status: 'running' } } as never;
+    };
+    const runStudy = async (studyId: string) => await runStandardAgentAction({
+      domainId: 'mas',
+      actionId: 'launch-scoped',
+      workspaceRoot,
+      payload: { value: 3, study_id: studyId, work_item_id: studyId },
+      runId: `scope-${studyId}`,
+    }, {
+      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
+      compileStageManifest: (() => ({})) as never,
+      recordLedger,
+      runStageRuntime,
+    });
+    const studyA = (await runStudy('study-a')).standard_agent_action_run;
+    const studyB = (await runStudy('study-b')).standard_agent_action_run;
+    assert.equal(studyA.execution_kind, 'stage_binding');
+    assert.equal(studyB.execution_kind, 'stage_binding');
+    if (studyA.execution_kind !== 'stage_binding' || studyB.execution_kind !== 'stage_binding') assert.fail();
+    assert.equal(studyA.execution_scope?.workspace_binding_id, 'binding:medautoscience:test');
+    assert.equal(studyB.execution_scope?.workspace_binding_id, 'binding:medautoscience:test');
+    assert.notEqual(studyA.execution_scope?.work_item_scope_id, studyB.execution_scope?.work_item_scope_id);
+    assert.notEqual(studyA.execution_scope?.scope_digest, studyB.execution_scope?.scope_digest);
+    assert.equal(
+      studyA.execution_scope?.canonical_work_item_root,
+      fs.realpathSync.native(path.join(workspaceRoot, 'studies', 'study-a')),
+    );
+    assert.match(studyA.execution_scope?.inventory_digest ?? '', /^sha256:[a-f0-9]{64}$/u);
+    const createCalls = calls.filter((args) => args[0] === 'attempt');
+    assert.deepEqual(createCalls.map((args) => args[args.indexOf('--scope-kind') + 1]), [
+      'work_item',
+      'work_item',
+    ]);
+    assert.deepEqual(createCalls.map((args) => JSON.parse(
+      args[args.indexOf('--execution-scope') + 1]!,
+    ).scope_digest), [
+      studyA.execution_scope?.scope_digest,
+      studyB.execution_scope?.scope_digest,
+    ]);
+    const locators = createCalls.map((args) => JSON.parse(
+      args[args.indexOf('--workspace-locator') + 1]!,
+    ) as Record<string, unknown>);
+    assert.deepEqual(locators.map((locator) => (
+      locator.execution_scope as Record<string, unknown>
+    ).scope_digest), [
+      studyA.execution_scope?.scope_digest,
+      studyB.execution_scope?.scope_digest,
+    ]);
+    assert.equal(inspectStandardAgentActionRunPlan({
+      workspaceRoot,
+      runId: 'scope-study-a',
+    })?.execution_scope?.scope_digest, studyA.execution_scope?.scope_digest);
+
+    const callsBeforeConflict = calls.length;
+    await assert.rejects(
+      runStandardAgentAction({
+        domainId: 'mas',
+        actionId: 'launch-scoped',
+        workspaceRoot,
+        payload: { value: 3, study_id: 'study-a', work_item_id: 'study-b' },
+        runId: 'scope-conflict',
+      }, {
+        resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
+        compileStageManifest: (() => ({})) as never,
+        recordLedger,
+        runStageRuntime,
+      }),
+      (error: unknown) => {
+        assert.equal((error as { details?: Record<string, unknown> }).details?.failure_code, 'work_item_identity_conflict');
+        return true;
+      },
+    );
+    assert.equal(calls.length, callsBeforeConflict);
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('work-item Handler actions restrict reads to one Study and replay the exact execution scope', async () => {
+  const checkoutRoot = root('opl-scoped-handler-action-checkout-');
+  const workspaceRoot = root('opl-scoped-handler-action-workspace-');
+  const stateRoot = root('opl-scoped-handler-action-state-');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  const handlerInputs: Array<Parameters<typeof runStandardAgentHandlerSandbox>[0]> = [];
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    writeWorkspaceRegistry({ stateRoot, workspaceRoot });
+    writeWorkItemInventory({
+      checkoutRoot,
+      workspaceRoot,
+      studies: [
+        { studyId: 'study-a', root: 'studies/study-a' },
+        { studyId: 'study-b', root: 'studies/study-b' },
+      ],
+    });
+    const handlerAction = {
+      ...action({
+        actionId: 'inspect-scoped',
+        executionBinding: { kind: 'handler_ref', handler_ref: 'handler:fixture.inspect_scoped' },
+      }),
+      required_fields: ['workspace_root', 'study_id', 'value', 'target'],
+      optional_fields: ['work_item_id'],
+      execution_scope: { kind: 'work_item', alias_fields: ['study_id', 'work_item_id'] },
+    };
+    writeContracts(checkoutRoot, [handlerAction], {
+      surface_kind: 'domain_handler_registry',
+      version: 'domain-handler-registry.v1',
+      handlers: [{
+        handler_id: 'fixture.inspect_scoped',
+        binding: { kind: 'python_callable', module: 'sample.handler', callable: 'evaluate' },
+      }],
+    });
+    fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'input.schema.json'), `${JSON.stringify({
+      $id: 'https://fixture.local/input.schema.json',
+      type: 'object',
+      required: ['workspace_root', 'study_id', 'value', 'target'],
+      properties: {
+        workspace_root: { type: 'string', minLength: 1 },
+        study_id: { type: 'string', minLength: 1 },
+        work_item_id: { type: 'string', minLength: 1 },
+        value: { type: 'integer' },
+        target: { type: 'string', minLength: 1 },
+      },
+      additionalProperties: false,
+    })}\n`);
+    fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'output.schema.json'), `${JSON.stringify({
+      $id: 'https://fixture.local/output.schema.json',
+      type: 'object',
+      required: ['accepted', 'value'],
+      properties: {
+        accepted: { const: true },
+        value: { type: 'string' },
+      },
+      additionalProperties: false,
+    })}\n`);
+    fs.mkdirSync(path.join(checkoutRoot, 'src', 'sample'), { recursive: true });
+    fs.writeFileSync(path.join(checkoutRoot, 'src', 'sample', '__init__.py'), '');
+    fs.writeFileSync(path.join(checkoutRoot, 'src', 'sample', 'handler.py'), [
+      'def evaluate(request):',
+      '    with open(request["target"], encoding="utf-8") as handle:',
+      '        return {"accepted": True, "value": handle.read()}',
+      '',
+    ].join('\n'));
+    const studyARoot = fs.realpathSync.native(path.join(workspaceRoot, 'studies', 'study-a'));
+    const studyBRoot = fs.realpathSync.native(path.join(workspaceRoot, 'studies', 'study-b'));
+    const studyAFile = path.join(studyARoot, 'evidence.txt');
+    const studyBFile = path.join(studyBRoot, 'evidence.txt');
+    fs.writeFileSync(studyAFile, 'study-a-evidence');
+    fs.writeFileSync(studyBFile, 'study-b-secret');
+    const dependencies = {
+      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
+      runHandler: (input: Parameters<typeof runStandardAgentHandlerSandbox>[0]) => {
+        handlerInputs.push(input);
+        return runStandardAgentHandlerSandbox(input);
+      },
+      recordLedger,
+    };
+    const request = (input: {
+      runId: string;
+      studyId: string;
+      target: string;
+      workItemId?: string;
+    }) => ({
+      domainId: 'mas',
+      actionId: 'inspect-scoped',
+      workspaceRoot,
+      payload: {
+        value: 1,
+        study_id: input.studyId,
+        ...(input.workItemId ? { work_item_id: input.workItemId } : {}),
+        target: input.target,
+      },
+      runId: input.runId,
+    });
+
+    const first = await runStandardAgentAction(request({
+      runId: 'scoped-handler-study-a',
+      studyId: 'study-a',
+      target: studyAFile,
+    }), dependencies);
+    const replay = await runStandardAgentAction(request({
+      runId: 'scoped-handler-study-a',
+      studyId: 'study-a',
+      target: studyAFile,
+    }), dependencies);
+    const firstRun = first.standard_agent_action_run;
+    const replayRun = replay.standard_agent_action_run;
+    assert.equal(firstRun.execution_kind, 'handler_ref');
+    assert.equal(replayRun.execution_kind, 'handler_ref');
+    if (firstRun.execution_kind !== 'handler_ref' || replayRun.execution_kind !== 'handler_ref') assert.fail();
+    assert.deepEqual(firstRun.result, { accepted: true, value: 'study-a-evidence' });
+    assert.deepEqual(replayRun.result, firstRun.result);
+    assert.deepEqual(replayRun.execution_scope, firstRun.execution_scope);
+    assert.equal(firstRun.execution_scope?.domain_work_item_id, 'study-a');
+    assert.equal(firstRun.execution_scope?.canonical_work_item_root, studyARoot);
+    assert.equal(handlerInputs.length, 1);
+    assert.equal(handlerInputs[0]?.workspaceRoot, fs.realpathSync.native(workspaceRoot));
+    assert.equal(handlerInputs[0]?.workspaceReadRoot, studyARoot);
+    assert.deepEqual(
+      inspectStandardAgentActionRunPlan({ workspaceRoot, runId: 'scoped-handler-study-a' })?.execution_scope,
+      firstRun.execution_scope,
+    );
+
+    await assert.rejects(
+      runStandardAgentAction(request({
+        runId: 'scoped-handler-sibling-read',
+        studyId: 'study-a',
+        target: studyBFile,
+      }), dependencies),
+      (error: unknown) => {
+        assert.equal(
+          (error as { details?: Record<string, unknown> }).details?.failure_code,
+          'standard_agent_handler_execution_failed',
+        );
+        return true;
+      },
+    );
+    assert.equal(handlerInputs.at(-1)?.workspaceReadRoot, studyARoot);
+
+    const callsBeforeIdentityConflict = handlerInputs.length;
+    await assert.rejects(
+      runStandardAgentAction(request({
+        runId: 'scoped-handler-identity-conflict',
+        studyId: 'study-a',
+        workItemId: 'study-b',
+        target: studyAFile,
+      }), dependencies),
+      (error: unknown) => {
+        assert.equal(
+          (error as { details?: Record<string, unknown> }).details?.failure_code,
+          'work_item_identity_conflict',
+        );
+        return true;
+      },
+    );
+    assert.equal(handlerInputs.length, callsBeforeIdentityConflict);
+
+    await runStandardAgentAction(request({
+      runId: 'scoped-handler-legacy-replay',
+      studyId: 'study-a',
+      target: studyAFile,
+    }), dependencies);
+    const legacyStateRoot = path.join(
+      workspaceRoot,
+      'control',
+      'opl',
+      'action_run_state',
+      'scoped-handler-legacy-replay',
+    );
+    const legacyBindingPath = path.join(legacyStateRoot, 'binding.json');
+    const legacyBinding = JSON.parse(fs.readFileSync(legacyBindingPath, 'utf8')) as Record<string, unknown>;
+    legacyBinding.version = 'opl-standard-agent-action-run-binding.v1';
+    delete legacyBinding.plan_sha256;
+    delete legacyBinding.plan_byte_size;
+    fs.writeFileSync(legacyBindingPath, canonicalJsonBytes(legacyBinding));
+    fs.rmSync(path.join(legacyStateRoot, 'plan.json'));
+    const callsBeforeLegacyReplay = handlerInputs.length;
+    await assert.rejects(
+      runStandardAgentAction(request({
+        runId: 'scoped-handler-legacy-replay',
+        studyId: 'study-a',
+        target: studyAFile,
+      }), dependencies),
+      (error: unknown) => {
+        assert.equal(
+          (error as { details?: Record<string, unknown> }).details?.failure_code,
+          'standard_agent_handler_replay_execution_scope_unresolved',
+        );
+        return true;
+      },
+    );
+    assert.equal(handlerInputs.length, callsBeforeLegacyReplay);
+
+    const planPath = path.join(
+      workspaceRoot,
+      'control',
+      'opl',
+      'action_run_state',
+      'scoped-handler-study-a',
+      'plan.json',
+    );
+    const bindingPath = path.join(path.dirname(planPath), 'binding.json');
+    const tamperedPlan = JSON.parse(fs.readFileSync(planPath, 'utf8')) as Record<string, unknown>;
+    const tamperedBinding = JSON.parse(fs.readFileSync(bindingPath, 'utf8')) as Record<string, unknown>;
+    delete tamperedPlan.execution_scope;
+    const tamperedPlanBytes = canonicalJsonBytes(tamperedPlan);
+    tamperedBinding.plan_sha256 = crypto.createHash('sha256').update(tamperedPlanBytes).digest('hex');
+    tamperedBinding.plan_byte_size = tamperedPlanBytes.byteLength;
+    fs.writeFileSync(planPath, tamperedPlanBytes);
+    fs.writeFileSync(bindingPath, canonicalJsonBytes(tamperedBinding));
+    await assert.rejects(
+      runStandardAgentAction(request({
+        runId: 'scoped-handler-study-a',
+        studyId: 'study-a',
+        target: studyAFile,
+      }), dependencies),
+      /execution scope conflicts with its selected action/i,
+    );
+    assert.equal(handlerInputs.length, callsBeforeLegacyReplay);
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
