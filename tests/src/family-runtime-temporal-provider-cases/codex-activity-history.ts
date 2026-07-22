@@ -57,6 +57,47 @@ test('Temporal history stores refs-only Codex activity results', async () => {
       assert.equal(receipt[field], undefined, `${field} must not enter Temporal history`);
     }
     assert.equal(JSON.stringify(receipt).includes('command_preview'), false);
+    assert.equal(receipt.coordination_observation?.status, 'not_started');
+    assert.equal(
+      receipt.coordination_observation?.stage_attempt_ref,
+      `opl://stage_attempts/${encodeURIComponent(input.stage_attempt_id)}`,
+    );
+    assert.equal(
+      receipt.coordination_observation?.workflow_ref,
+      `temporal://workflows/${encodeURIComponent(input.workflow_id)}`,
+    );
+    assert.equal(receipt.coordination_observation?.execution_session_ref, null);
+    assert.equal(receipt.coordination_observation?.latest_receipt_ref, null);
+    assert.equal(receipt.coordination_observation?.emitted_event_count, 0);
+    assert.equal(receipt.coordination_observation?.heartbeat_count, 0);
+    assert.deepEqual(
+      Object.keys(receipt.coordination_observation ?? {}).sort(),
+      [
+        'authority_boundary',
+        'emitted_event_count',
+        'execution_session_ref',
+        'failure_codes',
+        'heartbeat_count',
+        'latest_activity_state',
+        'latest_receipt_ref',
+        'schema_version',
+        'stage_attempt_ref',
+        'status',
+        'surface_kind',
+        'terminal_state',
+        'workflow_ref',
+      ],
+    );
+    assert.deepEqual(
+      Object.keys(receipt.coordination_observation?.authority_boundary ?? {}).sort(),
+      [
+        'can_change_stage_attempt',
+        'can_change_work_item_lifecycle',
+        'can_write_domain_truth',
+        'coordination_is_execution_proof',
+        'projection_only',
+      ],
+    );
   } finally {
     await testEnv.teardown();
   }

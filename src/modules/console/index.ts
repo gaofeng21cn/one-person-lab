@@ -20,3 +20,4 @@ export * from './framework-semantic-hygiene.ts';
 export * from './private-platform-residue-owner-decisions.ts';
 export * from './stage-candidate-portfolio.ts';
 export * from './standard-domain-agent-template-consumption.ts';
+export * from './work-item-execution-session-observer.ts';

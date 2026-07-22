@@ -9,6 +9,7 @@ export {
 } from './foundry-temporal-activities.ts';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { createTemporalStageActivitySessionObserver } from '../console/index.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,
   requireTemporalStageRunWorkflowInputLaunchable,
@@ -881,6 +882,8 @@ function providerRuntimeQualityDebtCloseout(input: {
 
 export async function codexStageActivity(input: TemporalStageAttemptWorkflowInput) {
   requirePersistedAttemptActivityIdentity(input, 'temporal_codex_stage_activity');
+  const coordinationObserver = createTemporalStageActivitySessionObserver(input);
+  const cancellationSignal = Context.current().cancellationSignal;
   const observedAt = new Date().toISOString();
   heartbeat({
     stage_attempt_id: input.stage_attempt_id,
@@ -904,6 +907,7 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
       heartbeatKind: 'codex_stage_activity_supervision',
       checkpointRefs: input.checkpoint_refs ?? [],
     });
+    coordinationObserver.heartbeat();
   }, DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS);
   try {
     const executorContent = resolveStageRunAttemptExecutorContent(input);
@@ -916,7 +920,7 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
       timeoutMs: input.codex_stage_runner?.timeout_ms ?? DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
       noOutputTimeoutMs: input.codex_stage_runner?.no_output_timeout_ms
         ?? DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
-      signal: Context.current().cancellationSignal,
+      signal: cancellationSignal,
       onRunnerProgress(event) {
         const executionSessionRef = event.event_kind === 'thread.started' && event.value
           ? `codex://threads/${event.value}`
@@ -935,8 +939,26 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
           executionSessionRef,
           checkpointRefs: input.checkpoint_refs ?? [],
         });
+        coordinationObserver.onRunnerProgress(event);
       },
     });
+    const runnerReceiptRecord = runnerReceipt as unknown as Record<string, unknown>;
+    const runnerStatus = isRecord(runnerReceiptRecord.runner_status)
+      ? runnerReceiptRecord.runner_status
+      : {};
+    const processOutputSummary = isRecord(runnerReceiptRecord.process_output_summary)
+      ? runnerReceiptRecord.process_output_summary
+      : {};
+    const exitCode = readNumber(runnerStatus.exit_code);
+    const timeoutReason = readString(processOutputSummary.timeout_reason);
+    const coordinationTerminalState = cancellationSignal.aborted
+        || timeoutReason === 'activity_cancelled'
+      ? 'cancelled'
+      : exitCode !== null && exitCode !== 0 || timeoutReason
+        ? 'failed'
+        : 'completed';
+    coordinationObserver.terminal(coordinationTerminalState);
+    const coordinationObservation = coordinationObserver.summary();
     const activityReceipt = {
       surface_kind: 'temporal_codex_stage_activity_receipt',
       activity_kind: 'codex_stage_activity',
@@ -947,6 +969,7 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
       checkpoint_refs: input.checkpoint_refs ?? [],
       stage_packet_ref: input.stage_packet_ref ?? null,
       ...runnerReceipt,
+      coordination_observation: coordinationObservation,
       authority_boundary: {
         opl: 'activity_packet_and_receipt_transport_only',
         domain: 'truth_quality_artifact_gate_owner',
@@ -954,9 +977,12 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
     };
     return {
       ...codexActivityEventForTemporalHistory(activityReceipt),
+      coordination_observation: coordinationObservation,
       closeout_packet: compactCloseoutPacketForTemporalResult(closeoutPacketFromRunnerReceipt(runnerReceipt)),
     };
   } catch (error) {
+    coordinationObserver.terminal(cancellationSignal.aborted ? 'cancelled' : 'failed');
+    const coordinationObservation = coordinationObserver.summary();
     const blockedReason = error instanceof FrameworkContractError
       && typeof error.details?.blocked_reason === 'string'
       && error.details.blocked_reason.trim()
@@ -986,7 +1012,9 @@ export async function codexStageActivity(input: TemporalStageAttemptWorkflowInpu
           blocked_reason: blockedReason,
           pre_codex_typed_preflight_blocker: true,
         },
+        coordination_observation: coordinationObservation,
       }),
+      coordination_observation: coordinationObservation,
       closeout_packet: null,
     };
   } finally {
