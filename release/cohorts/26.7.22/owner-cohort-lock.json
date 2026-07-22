@@ -1,12 +1,12 @@
 {
   "surface_kind": "opl_package_owner_cohort_lock.v1",
-  "generated_at": "2026-07-22T13:44:53.432Z",
+  "generated_at": "2026-07-22T17:31:43.000Z",
   "packages": {
     "mas": {
       "package_id": "mas",
       "repo_name": "med-autoscience",
       "repo_url": "https://github.com/gaofeng21cn/med-autoscience.git",
-      "source_commit": "56c6e238203f915944b00388ccb189d73b45c70e"
+      "source_commit": "e806c166a91250bdcc675fafa1078dbb86d0cc15"
     },
     "mag": {
       "package_id": "mag",
@@ -36,7 +36,7 @@
       "package_id": "mas-scholar-skills",
       "repo_name": "mas-scholar-skills",
       "repo_url": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
-      "source_commit": "aa034030b1c9f482923b1bbdbd4500369d7e0123"
+      "source_commit": "86ea7ae57b14479fbe305f5aa648eca3684dd0d3"
     },
     "opl-flow": {
       "package_id": "opl-flow",
