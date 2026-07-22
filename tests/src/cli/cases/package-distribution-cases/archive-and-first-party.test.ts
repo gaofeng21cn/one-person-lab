@@ -1081,8 +1081,11 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
 test('MAS Scholar Skills provider manifest separates core Skill exports from module contract ids', () => {
   const schemaPath = path.join(repoRoot, 'contracts/opl-framework/capability-package-manifest.schema.json');
   const manifestPath = path.join(repoRoot, 'contracts/opl-framework/packages/mas-scholar-skills.json');
+  const catalogPath = path.join(repoRoot, 'contracts/opl-framework/bundled-full-runtime-package-catalog.json');
   const schema = parseJsonText(fs.readFileSync(schemaPath, 'utf8')) as Record<string, any>;
   const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, any>;
+  const catalog = parseJsonText(fs.readFileSync(catalogPath, 'utf8')) as Record<string, any>;
+  const catalogEntry = catalog.packages['mas-scholar-skills'];
   assert.doesNotThrow(() => assertJsonSchemaPayload({
     schemaId: schema.$id,
     schema,
@@ -1091,10 +1094,11 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   const normalized = normalizeCapabilityPackageManifest(manifest, manifestPath);
   const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
-  assert.equal(manifest.version, '0.2.14');
+  assert.equal(manifest.version, catalogEntry.package_version);
   assert.equal(manifest.primary_consumer.version_requirement, '>=0.2.0 <0.3.0');
   assert.equal(manifest.content_lock.canonicalization, 'ordered_path_length_file_length_bytes');
-  assert.equal(manifest.content_lock.digest, 'sha256:9f5358f141fc45051651e82ea573e7c779112e25eb95d1e074b5dd5249288451');
+  assert.equal(manifest.content_lock.digest, payload.content_lock.digest);
+  assert.equal(manifest.codex_surface.carrier_source_commit, catalogEntry.owner_source_commit);
   assert.equal(normalized.required_skill_ids.length, 35);
   assert.equal(normalized.capability_provider?.module_export_ids.length, 10);
   assert.equal(normalized.capability_provider?.exports.filter((entry) => entry.install_mode === 'core_required').length, 11);
@@ -1102,7 +1106,7 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   assert.equal(normalized.optional_skill_refs.length, 1);
   assert.equal(payload.package_id, manifest.package_id);
   assert.equal(payload.package_version, manifest.version);
-  assert.equal(payload.source_commit, '6b1ab913239059783c446772d1763e2ed355272f');
+  assert.equal(payload.source_commit, manifest.codex_surface.carrier_source_commit);
   assert.deepEqual(
     payload.files.map((entry: Record<string, any>) => entry.path).sort(),
     manifest.content_lock.paths.slice().sort(),

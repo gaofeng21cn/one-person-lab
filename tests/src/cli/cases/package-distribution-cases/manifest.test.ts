@@ -17,6 +17,11 @@ import { readBundledCodexDefaultProfile } from '../../../../../src/kernel/local-
 const codexDefaultProfile = readBundledCodexDefaultProfile();
 
 test('packages manifest exposes canonical Release Set coordinates for Package install updates', () => {
+  const catalog = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/bundled-full-runtime-package-catalog.json'),
+    'utf8',
+  )) as Record<string, any>;
+  const scholarCatalogEntry = catalog.packages['mas-scholar-skills'];
   const output = runCli(['connect', 'packages', 'manifest'], {
     OPL_RELEASE_SET_GENERATION: '26.4.27',
     OPL_PACKAGES_OWNER: 'gaofeng21cn',
@@ -454,9 +459,11 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   assert.ok(omaCodexStandaloneDistribution);
   assert.equal(omaCodexStandaloneDistribution.distribution_shape, 'generated_carrier_surface');
   assert.equal(omaCodexStandaloneDistribution.package_manifest_ref, 'contracts/opl-framework/packages/oma.json');
+  const scholarArtifact = output.packages_manifest.packages.package_artifacts['mas-scholar-skills'];
+  assert.equal(scholarArtifact.package_version, scholarCatalogEntry.package_version);
   assert.equal(
-    output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:0.2.14',
+    scholarArtifact.artifact,
+    `ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:${scholarCatalogEntry.package_version}`,
   );
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_id, 'opl-flow');
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_version, '0.1.24');

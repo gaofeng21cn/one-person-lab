@@ -51,33 +51,66 @@ function copyRef(sourceRoot: string, targetRoot: string, ref: string) {
   fs.copyFileSync(source, target);
 }
 
-function committedSurfaceFixture(t: TestContext) {
+function committedSurfaceFixture(
+  t: TestContext,
+  packageAuthority: 'release-set' | 'catalog' = 'release-set',
+) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-cohort-closure-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   copyRef(repoRoot, root, catalogRef);
   copyRef(repoRoot, root, releaseSetRef);
   copyRef(repoRoot, root, ownerLockRef);
-  const catalog = readJson(path.join(repoRoot, catalogRef));
+  if (packageAuthority === 'catalog') {
+    const catalog = readJson(path.join(repoRoot, catalogRef));
+    for (const packageId of packageIds) {
+      const entry = catalog.packages[packageId];
+      copyRef(repoRoot, root, `contracts/opl-framework/${entry.manifest_ref}`);
+      copyRef(repoRoot, root, `contracts/opl-framework/${entry.payload_manifest_ref}`);
+    }
+    return root;
+  }
+
+  const releaseSet = readJson(path.join(root, releaseSetRef));
   for (const packageId of packageIds) {
-    const entry = catalog.packages[packageId];
-    copyRef(repoRoot, root, `contracts/opl-framework/${entry.manifest_ref}`);
-    copyRef(repoRoot, root, `contracts/opl-framework/${entry.payload_manifest_ref}`);
+    const member = releaseSet.components.packages.members[packageId];
+    copyRef(repoRoot, root, member.payload_manifest_ref);
+    const payload = readJson(path.join(root, member.payload_manifest_ref));
+    const manifest = readJson(path.join(repoRoot, member.manifest_ref));
+    // The frozen digest proves this identity-only reconstruction is byte-exact.
+    manifest.version = member.version;
+    manifest.codex_surface.carrier_source_commit = member.source_commit;
+    manifest.codex_surface.plugin_payload_manifest_url = path.posix.relative(
+      path.posix.dirname(member.manifest_ref),
+      member.payload_manifest_ref,
+    );
+    if (manifest.content_lock !== undefined) {
+      manifest.content_lock.digest = payload.content_lock.digest;
+    }
+    const manifestPath = path.join(root, member.manifest_ref);
+    writeJson(manifestPath, manifest);
+    assert.equal(sha256(fs.readFileSync(manifestPath)), member.manifest_sha256);
+    assert.equal(
+      sha256(fs.readFileSync(path.join(root, member.payload_manifest_ref))),
+      member.payload_manifest_sha256,
+    );
   }
   return root;
 }
 
 function freezeRequest(root: string): ReleaseBundleFreezeRequest {
-  const catalog = readJson(path.join(root, catalogRef));
+  const releaseSet = readJson(path.join(root, releaseSetRef));
+  const ownerLock = readJson(path.join(root, ownerLockRef));
   const packages = Object.fromEntries(packageIds.map((packageId) => {
-    const entry = catalog.packages[packageId];
+    const member = releaseSet.components.packages.members[packageId];
+    const owner = ownerLock.packages[packageId];
     return [packageId, {
       package_id: packageId,
-      version: entry.package_version,
-      owner_source_commit: entry.owner_source_commit,
-      manifest_ref: `contracts/opl-framework/${entry.manifest_ref}`,
-      manifest_sha256: entry.manifest_sha256,
-      payload_manifest_ref: `contracts/opl-framework/${entry.payload_manifest_ref}`,
-      payload_manifest_sha256: entry.payload_manifest_sha256,
+      version: member.version,
+      owner_source_commit: owner.source_commit,
+      manifest_ref: member.manifest_ref,
+      manifest_sha256: member.manifest_sha256,
+      payload_manifest_ref: member.payload_manifest_ref,
+      payload_manifest_sha256: member.payload_manifest_sha256,
     }];
   }));
   const releaseSetPath = path.join(root, releaseSetRef);
@@ -131,7 +164,30 @@ test('committed 26.7.21 cohort closes catalog, owner lock, manifests, and payloa
   const catalog = readBundledFullRuntimePackageCatalog();
   assert.deepEqual([...catalog.entries.keys()].sort(), [...packageIds].sort());
   assert.match(catalog.catalogSha256, /^sha256:[0-9a-f]{64}$/);
-  const closure = assertReleaseBundleFreezeInputs(freezeRequest(root), root);
+  const catalogPath = path.join(root, catalogRef);
+  const movingCatalog = readJson(catalogPath);
+  movingCatalog.packages['mas-scholar-skills'].package_version = '0.2.15';
+  movingCatalog.packages['mas-scholar-skills'].owner_source_commit = 'f'.repeat(40);
+  writeJson(catalogPath, movingCatalog);
+  const request = freezeRequest(root);
+  const releaseSet = readJson(path.join(root, releaseSetRef));
+  const ownerLock = readJson(path.join(root, ownerLockRef));
+  const scholarMember = releaseSet.components.packages.members['mas-scholar-skills'];
+  assert.equal(scholarMember.version, '0.2.14');
+  assert.equal(request.packages['mas-scholar-skills'].version, scholarMember.version);
+  assert.equal(
+    request.packages['mas-scholar-skills'].owner_source_commit,
+    ownerLock.packages['mas-scholar-skills'].source_commit,
+  );
+  assert.notEqual(
+    request.packages['mas-scholar-skills'].version,
+    movingCatalog.packages['mas-scholar-skills'].package_version,
+  );
+  assert.notEqual(
+    request.packages['mas-scholar-skills'].owner_source_commit,
+    movingCatalog.packages['mas-scholar-skills'].owner_source_commit,
+  );
+  const closure = assertReleaseBundleFreezeInputs(request, root);
   assert.equal(closure.releaseSetSha256, sha256(fs.readFileSync(path.join(root, releaseSetRef))));
   assert.equal(closure.ownerCohortLockSha256, sha256(fs.readFileSync(path.join(root, ownerLockRef))));
   assert.deepEqual(Object.keys(closure.packages).sort(), [...packageIds].sort());
@@ -152,19 +208,21 @@ test('committed cohort rejects owner lock byte drift before freeze', (t) => {
 
 test('committed cohort rejects Release Set member digest drift before freeze', (t) => {
   const root = committedSurfaceFixture(t);
+  const request = freezeRequest(root);
   const releaseSetPath = path.join(root, releaseSetRef);
   const releaseSet = readJson(releaseSetPath);
   releaseSet.components.packages.members.mas.manifest_sha256 = `sha256:${'0'.repeat(64)}`;
   writeJson(releaseSetPath, releaseSet);
+  request.framework_release_set.digest = sha256(fs.readFileSync(releaseSetPath));
   assert.throws(
-    () => assertReleaseBundleFreezeInputs(freezeRequest(root), root),
+    () => assertReleaseBundleFreezeInputs(request, root),
     (error: unknown) => error instanceof FrameworkContractError
       && /does not transitively bind the Package identity/.test(error.message),
   );
 });
 
 test('bundled catalog rejects its own manifest digest drift', (t) => {
-  const root = committedSurfaceFixture(t);
+  const root = committedSurfaceFixture(t, 'catalog');
   const catalogPath = path.join(root, catalogRef);
   const catalog = readJson(catalogPath);
   catalog.packages.mas.manifest_sha256 = `sha256:${'0'.repeat(64)}`;
