@@ -61,12 +61,12 @@
     "mas-scholar-skills": {
       "package_id": "mas-scholar-skills",
       "package_role": "framework_capability_package",
-      "package_version": "0.2.15",
-      "owner_source_commit": "5c1015a90cfd937d01f69b419ddbcce84398891a",
+      "package_version": "0.2.16",
+      "owner_source_commit": "aa034030b1c9f482923b1bbdbd4500369d7e0123",
       "manifest_ref": "packages/mas-scholar-skills.json",
-      "manifest_sha256": "sha256:ad5cd963dfff86239488f57a2f790f5845ee30acec37c140836eb4bc133083bd",
-      "payload_manifest_ref": "packages/payloads/mas-scholar-skills-0.2.15.json",
-      "payload_manifest_sha256": "sha256:f839ac42f64fbc06a2031483dc5207b23bff71f51925b26e5fbb16d158f969dc",
+      "manifest_sha256": "sha256:b297296b8e8d0047e6213a8f88d2a793c3f462d1537e1752b8185cec00e08707",
+      "payload_manifest_ref": "packages/payloads/mas-scholar-skills-0.2.16.json",
+      "payload_manifest_sha256": "sha256:e9a5c81b82f18990e3d17c6fb9eca4a3ad75cabd835a9eee0f5b3a1d9555aab9",
       "runtime_module_relative_path": "modules/mas-scholar-skills"
     },
     "opl-flow": {
