@@ -218,6 +218,10 @@ test('framework packages workflow is release-gated and manually repairable witho
       < dailyPackageWorkflow.indexOf('app_commit=""'),
   );
   assert.match(dailyPackageWorkflow, /npm run packages:daily-check/);
+  assert.match(dailyPackageWorkflow, /--fallback-stage candidate_manifest_build/);
+  assert.match(dailyPackageWorkflow, /candidate_built=false/);
+  assert.match(dailyPackageWorkflow, /retained_previous_stable/);
+  assert.match(dailyPackageWorkflow, /force_publish cannot bypass latest-stable fallback/);
   assert.match(dailyPackageWorkflow, /one-person-lab-manifest:latest-stable/);
   assert.match(dailyPackageWorkflow, /test -n "\$current"/);
   assert.match(dailyPackageWorkflow, /--previous-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"/);
@@ -277,7 +281,18 @@ function writeDailyCatalogFixture(root: string, name: string, packages: Record<s
       owner_source_commit: entry.commit ?? null,
     }],
   }]));
-  fs.writeFileSync(target, `${JSON.stringify({ packages: { package_catalog: packageCatalog } }, null, 2)}\n`);
+  const componentIds = ['opl-base', 'opl-app', ...Object.keys(packages)];
+  fs.writeFileSync(target, `${JSON.stringify({
+    release_set_generation: '26.7.12',
+    release_set: {
+      surface_kind: 'opl_release_set.v2',
+      generation: '26.7.12',
+      component_count: componentIds.length,
+      component_ids: componentIds,
+      components: {},
+    },
+    packages: { package_catalog: packageCatalog },
+  }, null, 2)}\n`);
   return target;
 }
 
@@ -324,6 +339,7 @@ test('daily package detector publishes only version-bumped changed packages and 
   for (const [filePath, sourceCommit] of [[baseCommitCurrent, 'c'.repeat(40)], [baseCommitCandidate, 'd'.repeat(40)]]) {
     const payload = parseJsonText(fs.readFileSync(filePath, 'utf8')) as Record<string, any>;
     payload.release_set = {
+      ...payload.release_set,
       components: {
         base: { version: '0.2.2', source_commit: sourceCommit },
         app: { version: '26.7.13', source_commit: 'e'.repeat(40), artifact_digest: `sha256:${'4'.repeat(64)}` },
@@ -363,12 +379,17 @@ test('daily package detector publishes only version-bumped changed packages and 
     mas: { version: '0.1.0-alpha.4', digest: `sha256:${'3'.repeat(64)}` },
     mag: { version: '0.1.0', digest: `sha256:${'2'.repeat(64)}` },
   });
-  assert.throws(() => execFileSync(process.execPath, [
+  const unbumpedOutput = parseJsonText(execFileSync(process.execPath, [
     path.join(repoRoot, 'scripts/package-channel-daily-check.mjs'),
     '--candidate-manifest', unbumped,
     '--current-manifest', current,
     '--release-set-generation', '26.7.12',
-  ], { encoding: 'utf8' }), /package content changed without a package version bump: mas/);
+  ], { encoding: 'utf8' })) as Record<string, any>;
+  assert.equal(unbumpedOutput.status, 'retained_previous_stable');
+  assert.equal(unbumpedOutput.publish_required, false);
+  assert.deepEqual(unbumpedOutput.changed_packages, []);
+  assert.deepEqual(unbumpedOutput.observed_changed_packages, ['mas']);
+  assert.deepEqual(unbumpedOutput.fallback.blocking_components, ['mas']);
 });
 
 function writeFakeGh(tempRoot: string, packageVersions: Record<string, unknown[]>, missingPackages = new Set<string>()) {

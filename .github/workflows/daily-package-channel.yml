@@ -165,29 +165,68 @@ jobs:
           if [ -n "${{ steps.current.outputs.current_manifest }}" ]; then
             args+=(--previous-manifest "${{ steps.current.outputs.current_manifest }}")
           fi
-          npm run packages:manifest -- "${args[@]}"
+          build_log="$RUNNER_TEMP/opl-daily-candidate-build.log"
+          set +e
+          npm run packages:manifest -- "${args[@]}" 2>&1 | tee "$build_log"
+          build_status="${PIPESTATUS[0]}"
+          set -e
+          if [ "$build_status" -ne 0 ]; then
+            current_manifest="${{ steps.current.outputs.current_manifest }}"
+            if [ -z "$current_manifest" ]; then
+              echo "::error::Candidate build failed and no latest-stable Release Set exists for fallback."
+              exit "$build_status"
+            fi
+            mkdir -p dist/opl-daily-packages
+            cp "$build_log" dist/opl-daily-packages/candidate-build.log
+            npm run packages:daily-check -- \
+              --current-manifest "$current_manifest" \
+              --release-set-generation "$OPL_RELEASE_SET_GENERATION" \
+              --fallback-stage candidate_manifest_build \
+              --fallback-exit-code "$build_status" \
+              --fallback-log dist/opl-daily-packages/candidate-build.log \
+              --summary-path dist/opl-daily-packages/daily-package-channel-summary.json
+            echo "candidate_built=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Candidate build failed; retaining the previous latest-stable Release Set."
+            exit 0
+          fi
+          echo "candidate_built=true" >> "$GITHUB_OUTPUT"
 
       - name: Compare package channel fingerprints
         id: decide
         shell: bash
         run: |
           set -euo pipefail
-          args=(
-            --candidate-manifest dist/opl-daily-packages/opl-channel-manifest.json
-            --release-set-generation "$OPL_RELEASE_SET_GENERATION"
-            --summary-path dist/opl-daily-packages/daily-package-channel-summary.json
-          )
-          if [ -n "${{ steps.current.outputs.current_manifest }}" ]; then
-            args+=(--current-manifest "${{ steps.current.outputs.current_manifest }}")
+          summary=dist/opl-daily-packages/daily-package-channel-summary.json
+          if [ "${{ steps.app.outputs.candidate_built }}" = true ]; then
+            args=(
+              --candidate-manifest dist/opl-daily-packages/opl-channel-manifest.json
+              --release-set-generation "$OPL_RELEASE_SET_GENERATION"
+              --summary-path "$summary"
+            )
+            if [ -n "${{ steps.current.outputs.current_manifest }}" ]; then
+              args+=(--current-manifest "${{ steps.current.outputs.current_manifest }}")
+            fi
+            npm run packages:daily-check -- "${args[@]}"
+          else
+            test -f "$summary"
           fi
-          npm run packages:daily-check -- "${args[@]}"
-          publish_required="$(node -e "console.log(JSON.parse(require('fs').readFileSync('dist/opl-daily-packages/daily-package-channel-summary.json', 'utf8')).publish_required ? 'true' : 'false')")"
-          if [ "${{ github.event.inputs.force_publish || 'false' }}" = true ]; then
+          summary_status="$(jq -r .status "$summary")"
+          publish_required="$(jq -r .publish_required "$summary")"
+          if [ "${{ github.event.inputs.force_publish || 'false' }}" = true ] \
+            && [ "$summary_status" != retained_previous_stable ]; then
             publish_required=true
+          elif [ "${{ github.event.inputs.force_publish || 'false' }}" = true ]; then
+            echo "::warning::force_publish cannot bypass latest-stable fallback."
           fi
           echo "publish_required=$publish_required" >> "$GITHUB_OUTPUT"
-          changed_packages_json="$(node -e "console.log(JSON.stringify(JSON.parse(require('fs').readFileSync('dist/opl-daily-packages/daily-package-channel-summary.json', 'utf8')).changed_packages))")"
+          changed_packages_json="$(jq -c .changed_packages "$summary")"
           echo "changed_packages_json=$changed_packages_json" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Daily package channel"
+            echo "- Status: \`$summary_status\`"
+            echo "- Publish required: \`$publish_required\`"
+            echo "- Retained components: \`$(jq -c .retained_components "$summary")\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload daily package-channel candidate evidence
         uses: actions/upload-artifact@v7

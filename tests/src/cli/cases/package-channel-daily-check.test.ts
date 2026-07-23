@@ -20,6 +20,9 @@ function writeManifest(filePath: string, input: {
       release_set_generation: input.version,
       release_set: {
         surface_kind: 'opl_release_set.v2',
+        generation: input.version,
+        component_count: 3,
+        component_ids: ['opl-base', 'opl-app', 'mas'],
         components: {
           base: {
             component_id: 'opl-base',
@@ -163,7 +166,7 @@ test('daily package channel check bootstraps all Packages when latest-stable doe
   assert.deepEqual(summary.changed_packages, ['mas']);
 });
 
-test('daily Release Set check fails closed when Base content changes without a version bump', () => {
+test('daily Release Set check retains latest-stable when Base content changes without a version bump', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
   const candidate = path.join(tempRoot, 'candidate.json');
   const current = path.join(tempRoot, 'current.json');
@@ -185,11 +188,76 @@ test('daily Release Set check fails closed when Base content changes without a v
     frameworkSha: 'f'.repeat(64),
   });
 
-  assert.throws(() => runDailyCheck([
+  const summary = runDailyCheck([
     '--candidate-manifest', candidate,
     '--current-manifest', current,
     '--release-set-generation', '26.6.3',
-  ]), /component content changed without a version bump: opl-base/);
+  ]);
+  assert.equal(summary.status, 'retained_previous_stable');
+  assert.equal(summary.reason, 'unversioned_component_change');
+  assert.equal(summary.publish_required, false);
+  assert.deepEqual(summary.changed_components, []);
+  assert.deepEqual(summary.observed_changed_components, ['opl-base']);
+  assert.deepEqual(summary.retained_components, ['opl-base', 'opl-app', 'mas']);
+  assert.deepEqual(summary.fallback.blocking_components, ['opl-base']);
+  assert.equal(summary.fallback.retained_release_set_generation, '26.6.3');
+  assert.equal(summary.fallback.current_manifest_verified, true);
+});
+
+test('daily package channel emits LKG evidence for a failed candidate build', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
+  const current = path.join(tempRoot, 'current.json');
+  const detailLog = path.join(tempRoot, 'candidate-build.log');
+  const summaryPath = path.join(tempRoot, 'summary.json');
+  writeManifest(current, {
+    version: '26.6.3',
+    generatedAt: '2026-06-02T00:00:00.000Z',
+    moduleHead: 'a'.repeat(40),
+    moduleSha: 'b'.repeat(64),
+  });
+  fs.writeFileSync(detailLog, 'version_bump_required: mas\n', 'utf8');
+
+  const summary = runDailyCheck([
+    '--current-manifest', current,
+    '--release-set-generation', '26.6.4',
+    '--fallback-stage', 'candidate_manifest_build',
+    '--fallback-exit-code', '1',
+    '--fallback-log', detailLog,
+    '--summary-path', summaryPath,
+  ]);
+  assert.equal(summary.status, 'retained_previous_stable');
+  assert.equal(summary.reason, 'candidate_build_failed');
+  assert.equal(summary.publish_required, false);
+  assert.deepEqual(summary.changed_packages, []);
+  assert.deepEqual(summary.retained_components, ['opl-base', 'opl-app', 'mas']);
+  assert.equal(summary.fallback.exit_code, 1);
+  assert.equal(summary.fallback.detail_log, 'candidate-build.log');
+  assert.equal(summary.fallback.retained_release_set_generation, '26.6.3');
+  assert.deepEqual(parseJsonText(fs.readFileSync(summaryPath, 'utf8')), summary);
+});
+
+test('daily package channel cannot fall back without a current stable manifest', () => {
+  assert.throws(() => runDailyCheck([
+    '--release-set-generation', '26.6.4',
+    '--fallback-stage', 'candidate_manifest_build',
+    '--fallback-exit-code', '1',
+  ]), /Usage:/);
+});
+
+test('daily package channel rejects a malformed current manifest instead of treating it as LKG', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
+  const current = path.join(tempRoot, 'current.json');
+  fs.writeFileSync(current, `${JSON.stringify({
+    release_set_generation: '26.6.3',
+    release_set: { surface_kind: 'unknown_release_set' },
+  })}\n`, 'utf8');
+
+  assert.throws(() => runDailyCheck([
+    '--current-manifest', current,
+    '--release-set-generation', '26.6.4',
+    '--fallback-stage', 'candidate_manifest_build',
+    '--fallback-exit-code', '1',
+  ]), /not a verified opl_release_set\.v2 LKG/);
 });
 
 test('daily Release Set check publishes versioned Base changes without rebuilding Packages', () => {

@@ -309,6 +309,10 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/publish_required == 'true'/.test(dailySource), 'Daily workflow must skip publication when unchanged', failures);
   assertCondition(/promotion_target:\s*candidate/.test(dailySource), 'Daily workflow may promote candidate only', failures);
   assertCondition(/owner_cohort_artifact_name/.test(dailySource), 'Daily detection must pass the frozen owner cohort into publication', failures);
+  assertCondition(dailySource.includes('--fallback-stage candidate_manifest_build')
+    && dailySource.includes('candidate_built=false')
+    && dailySource.includes('retained_previous_stable')
+    && dailySource.includes('force_publish cannot bypass latest-stable fallback'), 'Daily detection must retain latest-stable on candidate failure without allowing force publish to bypass fallback', failures);
   assertCondition(/app_version:\s*\$\{\{ steps\.app\.outputs\.app_version \}\}/.test(dailySource)
     && /app_version:\s*\$\{\{ needs\.detect-package-channel-change\.outputs\.app_version \}\}/.test(dailySource), 'Daily publication must bind the exact App version selected during detection', failures);
   assertCondition(/expected_framework_source_commit:\s*\$\{\{ github\.sha \}\}/.test(dailySource), 'Daily publication must bind packages.yml to its exact Framework workflow commit', failures);
