@@ -446,7 +446,7 @@ test('standard Agent manifests declare managed runtime source carriers while cap
   }
 });
 
-test('MAS package exposes ScholarSkills as an optional managed capability dependency', () => {
+test('MAS package exposes ScholarSkills as a required managed capability dependency', () => {
   const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'mas.json');
   const manifestPayload = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as {
     codex_surface: { bundled_capability_package_ids: string[] };
@@ -473,8 +473,8 @@ test('MAS package exposes ScholarSkills as an optional managed capability depend
   assert.deepEqual(manifestPayload.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
   assert.equal(dependency?.module_id, 'scholarskills');
   assert.equal(dependency?.kind, 'framework_capability_package');
-  assert.equal(dependency?.required, false);
-  assert.equal(dependency?.dependency_kind, 'optional_enhancement');
+  assert.equal(dependency?.required, true);
+  assert.equal(dependency?.dependency_kind, 'hard_runtime_dependency');
   assert.equal(dependency?.consumer_profile_id, 'mas-medical-paper.v1');
   assert.equal(dependency?.version_requirement, '>=0.2.12 <0.3.0');
   assert.equal(dependency?.opl_distribution, 'managed_dependency');

@@ -180,7 +180,7 @@ function lockIndex(locks: AgentPackageLock[]): AgentPackageLockIndex {
   };
 }
 
-test('Full runtime reconciliation does not auto-install optional Scholar and preserves an explicit install', async () => {
+test('Full runtime reconciliation installs required Scholar only through the selected MAS closure', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-full-runtime-reconciliation-'));
   const runtimeHome = path.join(root, 'runtime');
   const physicalRoot = path.join(root, 'physical');
@@ -194,10 +194,13 @@ test('Full runtime reconciliation does not auto-install optional Scholar and pre
       writeMaterializedLock(physicalRoot, entry, catalog),
     ]),
   );
-  let installCalls = 0;
+  const installCalls: Array<{ packageId: string; dependencyPackageIds: string[] }> = [];
   const installPackage = async (input: { packageId: string }) => {
-    installCalls += 1;
     const dependencyPackageLocks = closure(catalog, input.packageId).map((packageId) => locks.get(packageId)!);
+    installCalls.push({
+      packageId: input.packageId,
+      dependencyPackageIds: dependencyPackageLocks.map((lock) => lock.package_id),
+    });
     return {
       version: 'g2',
       opl_agent_package_install: {
@@ -223,16 +226,25 @@ test('Full runtime reconciliation does not auto-install optional Scholar and pre
     assert.equal(first.retryable, false);
     assert.equal(first.blocks_plain_codex, false);
     assert.equal(first.summary.total, 7);
-    assert.equal(first.summary.installed_package_count, 6);
-    assert.equal(first.summary.materialized_package_count, 6);
-    assert.equal(first.summary.failed_package_count, 1);
+    assert.equal(first.summary.installed_package_count, 7);
+    assert.equal(first.summary.materialized_package_count, 7);
+    assert.equal(first.summary.failed_package_count, 0);
     assert.equal(first.summary.root_package_count, 6);
     assert.deepEqual(first.root_package_ids, ['mag', 'mas', 'obf', 'oma', 'opl-flow', 'rca']);
-    assert.equal(installCalls, 6);
+    assert.equal(installCalls.length, 6);
+    assert.deepEqual(
+      installCalls.find((call) => call.packageId === 'mag')?.dependencyPackageIds,
+      ['mag'],
+    );
+    assert.deepEqual(
+      installCalls.find((call) => call.packageId === 'mas')?.dependencyPackageIds,
+      ['mas-scholar-skills', 'mas'],
+    );
+    assert.equal(installCalls.some((call) => call.packageId === 'mas-scholar-skills'), false);
     const scholar = first.items.find((item) => item.package_id === 'mas-scholar-skills');
-    assert.equal(scholar?.status, 'lock_missing');
+    assert.equal(scholar?.status, 'installed');
 
-    installCalls = 0;
+    installCalls.length = 0;
     const current = await reconcileBundledFullRuntimePackagesIfAvailable(
       { OPL_FULL_RUNTIME_HOME: runtimeHome },
       {
@@ -249,31 +261,38 @@ test('Full runtime reconciliation does not auto-install optional Scholar and pre
       current.items.find((item) => item.package_id === 'mas-scholar-skills')?.status,
       'already_installed',
     );
-    assert.equal(installCalls, 0);
+    assert.equal(installCalls.length, 0);
 
-    const missingEntry = catalog.entries.get('obf')!;
-    fs.rmSync(path.join(runtimeHome, missingEntry.runtimeModuleRelativePath), {
-      recursive: true,
-      force: true,
-    });
-    const partial = await reconcileBundledFullRuntimePackagesIfAvailable(
+    installCalls.length = 0;
+    const catalogWithoutMas = {
+      ...catalog,
+      entries: new Map(
+        [...catalog.entries].filter(([packageId]) => packageId !== 'mas'),
+      ),
+    };
+    const withoutMas = await reconcileBundledFullRuntimePackagesIfAvailable(
       { OPL_FULL_RUNTIME_HOME: runtimeHome },
       {
         installPackage: installPackage as any,
-        readCatalog: () => catalog,
+        readCatalog: () => catalogWithoutMas,
         readInstalledLocks: () => lockIndex([]),
       },
     );
-    assert.ok(partial);
-    assert.equal(partial.status, 'partial');
-    assert.equal(partial.retryable, true);
-    assert.equal(partial.blocks_plain_codex, false);
-    assert.equal(
-      partial.root_installs.find((item) => item.package_id === 'obf')?.status,
-      'failed',
+    assert.ok(withoutMas);
+    assert.equal(withoutMas.status, 'completed');
+    assert.deepEqual(withoutMas.root_package_ids, ['mag', 'obf', 'oma', 'opl-flow', 'rca']);
+    assert.deepEqual(
+      installCalls.map((call) => call.packageId),
+      ['mag', 'obf', 'oma', 'opl-flow', 'rca'],
     );
-    assert.equal(partial.summary.completed_root_count, 5);
-    assert.equal(partial.summary.failed_root_count, 1);
+    assert.equal(installCalls.some((call) => call.packageId === 'mas-scholar-skills'), false);
+    assert.equal(
+      withoutMas.items.find((item) => item.package_id === 'mas-scholar-skills')?.status,
+      'lock_missing',
+    );
+    assert.equal(withoutMas.summary.root_package_count, 5);
+    assert.equal(withoutMas.summary.installed_package_count, 5);
+    assert.equal(withoutMas.summary.failed_package_count, 1);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

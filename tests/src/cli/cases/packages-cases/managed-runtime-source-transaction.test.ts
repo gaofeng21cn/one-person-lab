@@ -1586,6 +1586,7 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
 
 test('MAS package install probes its declarative source carrier instead of a retired private CLI', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mas-source-state-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mas-source-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mas-source-fixture-'));
   const pluginSourcePath = createPluginSourceFixture();
   const modulesRoot = path.join(fixtureRoot, 'modules');
@@ -1619,6 +1620,8 @@ test('MAS package install probes its declarative source carrier instead of a ret
     const env = {
       OPL_STATE_DIR: stateDir,
       OPL_MODULES_ROOT: modulesRoot,
+      HOME: homeDir,
+      CODEX_HOME: path.join(homeDir, '.codex'),
       ...fixtureEnv,
     };
 
@@ -1640,6 +1643,9 @@ test('MAS package install probes its declarative source carrier instead of a ret
       installed.opl_agent_package_install.package_lock.managed_runtime_source.handler_probe_command,
       expectedProbe,
     );
+    const fixtureConfigPath = path.join(env.CODEX_HOME, 'config.toml');
+    assert.equal(fs.existsSync(fixtureConfigPath), true);
+    assert.match(fs.readFileSync(fixtureConfigPath, 'utf8'), /opl-agent-fixture\.mas-local/);
     assert.doesNotMatch(
       installed.opl_agent_package_install.package_lock.managed_runtime_source.handler_probe_command.join(' '),
       /med_autoscience\.cli|run-python-clean/,
@@ -1675,6 +1681,7 @@ test('MAS package install probes its declarative source carrier instead of a ret
     assert.equal(repairedStatus.opl_agent_package_status.runtime_source_readiness.status, 'current');
   } finally {
     removeFixtureTree(stateDir);
+    fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(pluginSourcePath, { recursive: true, force: true });
   }

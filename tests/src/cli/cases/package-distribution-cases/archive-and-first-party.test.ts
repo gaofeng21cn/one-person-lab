@@ -1002,9 +1002,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   const manifest = manifests.mas;
   const expectedReleases: Record<string, { version: string; sourceCommit: string; payloadRef: string }> = {
     mas: {
-      version: '0.2.18',
-      sourceCommit: 'aabb69eb2d89abdc2b5061b56db5bbc10b5a953a',
-      payloadRef: 'payloads/mas-0.2.18.json',
+      version: '0.2.19',
+      sourceCommit: 'e3ea83decbbe25555a746576781032fe0fa46efc',
+      payloadRef: 'payloads/mas-0.2.19.json',
     },
     mag: {
       version: '0.3.5',
@@ -1031,7 +1031,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.2.18');
+  assert.equal(manifest.version, '0.2.19');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
@@ -1062,8 +1062,8 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
     [
       {
         package_id: 'mas',
-        required: false,
-        dependency_kind: 'optional_enhancement',
+        required: true,
+        dependency_kind: 'hard_runtime_dependency',
         consumer_profile_id: 'mas-medical-paper.v1',
       },
       {
@@ -1307,7 +1307,7 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
   assert.equal(
     normalizeFirstPartyAgentPackageManifest(manifest)
       .capability_dependencies[0].dependency_kind,
-    'optional_enhancement',
+    'hard_runtime_dependency',
   );
   const optionalManifest = structuredClone(manifest);
   delete optionalManifest.distribution_payload;

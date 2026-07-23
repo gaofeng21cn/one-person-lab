@@ -409,7 +409,7 @@ test('bundled catalog rejects its own manifest digest drift', (t) => {
   );
 });
 
-test('bundled catalog excludes optional enhancements from closure without relaxing member integrity', (t) => {
+test('bundled catalog includes required dependencies without relaxing member integrity', (t) => {
   const root = committedSurfaceFixture(t, 'catalog');
   const catalogPath = path.join(root, catalogRef);
   const catalog = readJson(catalogPath);
@@ -427,7 +427,7 @@ test('bundled catalog excludes optional enhancements from closure without relaxi
   });
 
   const selected = readBundledFullRuntimePackageCatalog();
-  assert.deepEqual(selected.entries.get('mas')?.dependencyPackageIds, []);
+  assert.deepEqual(selected.entries.get('mas')?.dependencyPackageIds, ['mas-scholar-skills']);
   assert.deepEqual(selected.entries.get('mag')?.dependencyPackageIds, []);
   assert.ok(selected.entries.has('mas-scholar-skills'));
 
