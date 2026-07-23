@@ -9,7 +9,8 @@ export const RELEASE_BUNDLE_PACKAGE_IDS = [
 ] as const;
 
 export type ReleaseBundlePackageId = typeof RELEASE_BUNDLE_PACKAGE_IDS[number];
-export type ReleaseBundleTrackName = 'standard' | 'full';
+export const RELEASE_BUNDLE_TRACK_NAMES = ['standard', 'webui', 'full'] as const;
+export type ReleaseBundleTrackName = 'standard' | 'webui' | 'full';
 export type ReleaseBundleExecutor = 'local' | 'remote';
 export type ReleaseBundleStableOperation = 'standard' | 'resume_standard' | 'append_full';
 export type ReleaseBundleCanonicalOperation = 'standard' | 'append_full';
@@ -68,6 +69,17 @@ export type ReleaseBundleTrackPlan = {
   updater_metadata_allowed: boolean;
 };
 
+export type ReleaseBundleSourceCutoff = {
+  observed_at: string;
+  policy: 'single_read_at_freeze_admission';
+  frozen_base_release_set: {
+    generation: string;
+    digest: string;
+  } | null;
+  post_freeze_remote_refresh_allowed: false;
+  later_authority_advancement_invalidates_bundle: false;
+};
+
 export type ReleaseBundleFreezeRequest = {
   surface_kind: 'opl_release_bundle_freeze_request.v1';
   schema_ref: 'contracts/opl-framework/release-bundle-freeze-request.schema.json';
@@ -95,7 +107,12 @@ export type ReleaseBundleFreezeRequest = {
     markdown: string;
     evidence: Record<string, unknown>;
   };
-  tracks: Record<ReleaseBundleTrackName, ReleaseBundleTrackPlan>;
+  source_cutoff?: ReleaseBundleSourceCutoff;
+  tracks: {
+    standard: ReleaseBundleTrackPlan;
+    webui?: ReleaseBundleTrackPlan;
+    full: ReleaseBundleTrackPlan;
+  };
 };
 
 export type ReleaseBundle = {
@@ -110,6 +127,7 @@ export type ReleaseBundle = {
     markdown_sha256: string;
     evidence_sha256: string;
   };
+  source_cutoff?: ReleaseBundleSourceCutoff;
   tracks: ReleaseBundleFreezeRequest['tracks'];
   policy: {
     build_once: true;
@@ -119,6 +137,16 @@ export type ReleaseBundle = {
     prepared_notes_required_before_build: true;
     publish_may_generate_notes: false;
     latest_required_track: 'standard';
+    latest_required_tracks?: ['standard', 'webui'];
+    source_cutoff_frozen_once?: true;
+    post_freeze_remote_refresh_allowed?: false;
+    later_authority_advancement_invalidates_bundle?: false;
+    cohort_invalidation_causes?: [
+      'frozen_byte_or_digest_drift',
+      'artifact_build_or_integrity_failure',
+      'explicit_security_revocation_bound_to_frozen_ref_or_digest',
+    ];
+    all_other_live_currentness_drift_invalidates_bundle?: false;
     full_additive_only: true;
     full_updates_updater_metadata: false;
   };
@@ -196,6 +224,10 @@ export type ReleaseBundleCheckpointStage =
   | 'frozen'
   | 'standard_built'
   | 'standard_qualified'
+  | 'webui_built'
+  | 'webui_qualified'
+  | 'stable_built'
+  | 'stable_qualified'
   | 'full_built'
   | 'full_qualified';
 
@@ -229,7 +261,11 @@ export type ReleaseBundleCheckpoint = {
     append_full: ReleaseBundleOperationControl | null;
   };
   active_unknown_markers?: ReleaseBundleUnknownOutcomeMarker[];
-  tracks: Record<ReleaseBundleTrackName, ReleaseBundleCheckpointTrack>;
+  tracks: {
+    standard: ReleaseBundleCheckpointTrack;
+    webui?: ReleaseBundleCheckpointTrack;
+    full: ReleaseBundleCheckpointTrack;
+  };
   entries: ReleaseBundleCheckpointEntry[];
   policy: {
     portable_between_executors: true;

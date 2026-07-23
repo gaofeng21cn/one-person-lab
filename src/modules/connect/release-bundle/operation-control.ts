@@ -19,6 +19,7 @@ import {
 } from './store.ts';
 import type {
   ReleaseBundleCanonicalOperation,
+  ReleaseBundle,
   ReleaseBundleOperationControl,
   ReleaseBundleOperationInput,
   ReleaseBundleOperationInvocation,
@@ -45,6 +46,12 @@ export function releaseBundleOperationTrack(
   operation: ReleaseBundleStableOperation,
 ): ReleaseBundleTrackName {
   return operation === 'append_full' ? 'full' : 'standard';
+}
+
+export function releaseBundleOperationTracks(
+  operation: ReleaseBundleStableOperation,
+): readonly ReleaseBundleTrackName[] {
+  return operation === 'append_full' ? ['full'] : ['standard', 'webui'];
 }
 
 function nowMilliseconds(value?: string | Date) {
@@ -147,7 +154,11 @@ function assertDeadlineActive(
   }
 }
 
-function assertAppendFullAdmission(paths: StorePaths, control: ReleaseBundleOperationControl) {
+function assertAppendFullAdmission(
+  paths: StorePaths,
+  bundle: ReleaseBundle,
+  control: ReleaseBundleOperationControl,
+) {
   const standardControl = readReleaseBundleOperationControl(paths, 'standard');
   if (!standardControl) {
     fail('append_full requires the immutable Standard operation control.');
@@ -158,9 +169,17 @@ function assertAppendFullAdmission(paths: StorePaths, control: ReleaseBundleOper
       append_full_operation_id: control.operation_id,
     });
   }
-  const verification = readReleaseBundleOperation(paths, 'verify', 'standard');
-  if (!verification || !['complete', 'idempotent'].includes(verification.status)) {
-    fail('append_full requires a qualified Standard checkpoint before admission.');
+  const requiredTracks = (['standard', 'webui'] as const).filter(
+    (track) => bundle.tracks[track]?.required_for_latest,
+  );
+  for (const track of requiredTracks) {
+    const verification = readReleaseBundleOperation(paths, 'verify', track);
+    if (!verification || !['complete', 'idempotent'].includes(verification.status)) {
+      fail('append_full requires a qualified Standard checkpoint and every Stable carrier track before admission.', {
+        missing_track: track,
+        required_tracks: requiredTracks,
+      });
+    }
   }
 }
 
@@ -181,7 +200,7 @@ function admitReleaseBundleOperationUnlocked(
     });
   }
   if (!current && canonicalOperation === 'append_full') {
-    assertAppendFullAdmission(stored.paths, candidate);
+    assertAppendFullAdmission(stored.paths, stored.bundle, candidate);
   }
   if (current) assertExactControl(current, candidate, input.releaseOperation);
   assertDeadlineActive(current ?? candidate, input.now);
@@ -260,11 +279,11 @@ export function assertReleaseBundleOperationTrack(
   operation: ReleaseBundleStableOperation,
   track: ReleaseBundleTrackName,
 ) {
-  const expected = releaseBundleOperationTrack(operation);
-  if (track !== expected) {
+  const allowed = releaseBundleOperationTracks(operation);
+  if (!allowed.includes(track)) {
     fail('Release Bundle operation cannot act on the requested track.', {
       release_operation: operation,
-      expected_track: expected,
+      allowed_tracks: allowed,
       received_track: track,
     });
   }

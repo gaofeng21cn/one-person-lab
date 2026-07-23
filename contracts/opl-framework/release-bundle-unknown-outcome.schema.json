@@ -35,7 +35,7 @@
       "type": ["string", "null"],
       "enum": ["track_assets", "external_target", null]
     },
-    "track": { "enum": ["standard", "full"] },
+    "track": { "enum": ["standard", "webui", "full"] },
     "remote_target": {
       "type": "string",
       "minLength": 3,

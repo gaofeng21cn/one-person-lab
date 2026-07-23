@@ -15,6 +15,7 @@ function parseOptions(argv) {
     promotionRequestId: '', releaseGate: '', sourceAppRunId: '', frameworkRepository: '',
     frameworkRunId: '', frameworkRunAttempt: '', expectedAppVersion: '',
     expectedAppSourceCommit: '', expectedAppArtifactDigest: '', anonymousReadback: false,
+    frozenBaseReleaseSetGeneration: '', frozenBaseReleaseSetDigest: '',
   };
   parseRequiredValueOptions(argv, {
     '--release-manifest': (value) => { options.releaseManifest = path.resolve(value); },
@@ -31,6 +32,8 @@ function parseOptions(argv) {
     '--expected-app-version': (value) => { options.expectedAppVersion = value.trim(); },
     '--expected-app-source-commit': (value) => { options.expectedAppSourceCommit = value.trim(); },
     '--expected-app-artifact-digest': (value) => { options.expectedAppArtifactDigest = value.trim(); },
+    '--frozen-base-release-set-generation': (value) => { options.frozenBaseReleaseSetGeneration = value.trim().replace(/^v/, ''); },
+    '--frozen-base-release-set-digest': (value) => { options.frozenBaseReleaseSetDigest = value.trim(); },
     '--anonymous-readback': (value) => {
       if (!['true', 'false'].includes(value)) throw new Error(`Invalid anonymous readback value: ${value}`);
       options.anonymousReadback = value === 'true';
@@ -42,6 +45,18 @@ function parseOptions(argv) {
   if (!['candidate', 'latest-stable'].includes(options.target)) throw new Error(`Invalid promotion target: ${options.target}`);
   if (!REQUEST_PATTERN.test(options.promotionRequestId)) throw new Error(`Invalid promotion request id: ${options.promotionRequestId}`);
   if (!DIGEST_PATTERN.test(options.carrierDigest)) throw new Error(`Invalid carrier digest: ${options.carrierDigest}`);
+  const hasFrozenGeneration = Boolean(options.frozenBaseReleaseSetGeneration);
+  const hasFrozenDigest = Boolean(options.frozenBaseReleaseSetDigest);
+  if (hasFrozenGeneration !== hasFrozenDigest) {
+    throw new Error('Frozen base Release Set generation and digest must be provided together');
+  }
+  if (hasFrozenGeneration) {
+    const bootstrap = options.frozenBaseReleaseSetGeneration === 'none'
+      && options.frozenBaseReleaseSetDigest === 'none';
+    const exact = /^[0-9]{2}\.[0-9]{1,2}\.[0-9]{1,2}(?:-r[1-9][0-9]*)?$/.test(options.frozenBaseReleaseSetGeneration)
+      && DIGEST_PATTERN.test(options.frozenBaseReleaseSetDigest);
+    if (!bootstrap && !exact) throw new Error('Invalid frozen base Release Set identity');
+  }
   if (!options.anonymousReadback) throw new Error('Promotion receipt requires --anonymous-readback');
   return options;
 }
@@ -54,12 +69,24 @@ function exactComponent(component) {
   if (!component?.component_id || !version || !SHA_PATTERN.test(sourceCommit) || !artifactRef || !DIGEST_PATTERN.test(artifactDigest)) {
     throw new Error(`Incomplete Release Set component: ${component?.component_id ?? 'unknown'}`);
   }
+  const carriers = Array.isArray(component.carriers) ? component.carriers : [];
+  for (const carrier of carriers) {
+    if (!['macos_standard', 'docker_webui'].includes(carrier?.carrier_id)
+      || !['release_asset', 'oci_image'].includes(carrier?.carrier_kind)
+      || typeof carrier?.ref !== 'string' || !carrier.ref
+      || !DIGEST_PATTERN.test(String(carrier?.digest ?? ''))
+      || !Number.isSafeInteger(carrier?.size) || carrier.size <= 0
+      || !['standard', 'webui-full'].includes(carrier?.package_profile)) {
+      throw new Error(`Invalid Release Set carrier on component ${component.component_id}`);
+    }
+  }
   return {
     component_id: component.component_id,
     version,
     source_commit: sourceCommit,
     artifact_ref: artifactRef,
     artifact_digest: artifactDigest,
+    ...(carriers.length > 0 ? { carriers } : {}),
   };
 }
 
@@ -83,6 +110,17 @@ function main() {
   assertExpected('App artifact digest', options.expectedAppArtifactDigest, app.artifact_digest);
   if (options.target === 'latest-stable' && releaseSet.components.app.release_status !== 'published') {
     throw new Error('latest-stable promotion requires a published App component');
+  }
+  if (options.target === 'latest-stable') {
+    const carrierIds = (app.carriers ?? []).map((carrier) => carrier.carrier_id).sort();
+    const carriersById = Object.fromEntries((app.carriers ?? []).map((carrier) => [carrier.carrier_id, carrier]));
+    if (JSON.stringify(carrierIds) !== JSON.stringify(['docker_webui', 'macos_standard'])
+      || carriersById.macos_standard?.carrier_kind !== 'release_asset'
+      || carriersById.macos_standard?.package_profile !== 'standard'
+      || carriersById.docker_webui?.carrier_kind !== 'oci_image'
+      || carriersById.docker_webui?.package_profile !== 'webui-full') {
+      throw new Error('latest-stable App carriers must contain the exact macos_standard release asset and docker_webui OCI image');
+    }
   }
   const base = exactComponent(releaseSet.components?.base);
   const packages = Object.fromEntries(Object.entries(releaseSet.components?.packages?.members ?? {})
@@ -110,6 +148,18 @@ function main() {
       run_attempt: options.frameworkRunAttempt,
     },
     source_app_run_id: options.sourceAppRunId || null,
+    ...(options.frozenBaseReleaseSetGeneration ? {
+      source_cutoff: {
+        policy: 'single_read_at_freeze_admission',
+        frozen_base_release_set: options.frozenBaseReleaseSetGeneration === 'none'
+          ? null
+          : {
+              generation: options.frozenBaseReleaseSetGeneration,
+              digest: options.frozenBaseReleaseSetDigest,
+            },
+        later_authority_advancement_invalidates_receipt: false,
+      },
+    } : {}),
     app,
     components: { base, packages },
     anonymous_readback: { status: 'verified', verified_refs: verifiedRefs },

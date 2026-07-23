@@ -101,9 +101,30 @@
         "source_commit": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
         "artifact_ref": { "type": ["string", "null"] },
         "artifact_digest": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
-        "artifact_status": { "type": "string", "minLength": 1 }
+        "artifact_status": { "type": "string", "minLength": 1 },
+        "carriers": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/carrier" }
+        }
       },
       "additionalProperties": true
+    },
+    "carrier": {
+      "type": "object",
+      "required": ["carrier_id", "carrier_kind", "ref", "digest", "size", "package_profile"],
+      "properties": {
+        "carrier_id": { "enum": ["macos_standard", "docker_webui"] },
+        "carrier_kind": { "enum": ["release_asset", "oci_image"] },
+        "ref": { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "size": { "type": "integer", "minimum": 1 },
+        "package_profile": { "enum": ["standard", "webui-full"] },
+        "content_fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": true

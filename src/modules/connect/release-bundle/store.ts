@@ -413,7 +413,13 @@ export function stageReleaseBundleAssets(input: {
   executorReceipt: ReleaseBundleExecutorReceipt;
 }) {
   const { bundle, paths, executorReceipt } = input;
-  const expectedNames = [...bundle.tracks[executorReceipt.track].required_asset_names].sort();
+  const trackPlan = bundle.tracks[executorReceipt.track];
+  if (!trackPlan) {
+    fail('Release Bundle executor receipt names a track that is not frozen in this Bundle.', {
+      track: executorReceipt.track,
+    });
+  }
+  const expectedNames = [...trackPlan.required_asset_names].sort();
   const receivedNames = executorReceipt.assets.map((asset) => asset.name).sort();
   if (JSON.stringify(receivedNames) !== JSON.stringify(expectedNames)) {
     fail('Release Bundle build receipt must provide the exact closed track asset set.', {
@@ -641,7 +647,7 @@ export function listReleaseBundleUnknownOutcomes(
 ) {
   const markers: ReleaseBundleUnknownOutcomeMarker[] = [];
   for (const operation of ['build', 'publish'] as const) {
-    for (const track of ['standard', 'full'] as const) {
+    for (const track of ['standard', 'webui', 'full'] as const) {
       const marker = readReleaseBundleUnknownOutcome(paths, operation, track);
       if (marker) markers.push(marker);
     }

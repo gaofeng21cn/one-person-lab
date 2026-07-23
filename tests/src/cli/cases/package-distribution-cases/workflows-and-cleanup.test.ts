@@ -37,8 +37,9 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(releaseFrameworkCommitInputs[0][1], /^        required: true$/m);
   assert.match(releaseFrameworkCommitInputs[0][1], /^        type: string$/m);
   assert.doesNotMatch(releaseFrameworkCommitInputs[0][1], /^        default:/m);
+  assert.match(workflow, /EXPECTED_FRAMEWORK_SOURCE_COMMIT: \$\{\{ inputs\.expected_framework_source_commit \}\}/);
+  assert.match(releaseCallerWorkflow, /needs\.resolve-auto-promotion\.outputs\.expected_framework_source_commit/);
   for (const source of [workflow, releaseCallerWorkflow]) {
-    assert.match(source, /EXPECTED_FRAMEWORK_SOURCE_COMMIT: \$\{\{ inputs\.expected_framework_source_commit \}\}/);
     assert.match(source, /\[\[ "\$expected" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
     assert.doesNotMatch(source, /\[ "\$GITHUB_SHA" != "\$expected" \]/);
     assert.doesNotMatch(source, /\[ -z "\$expected" \]/);
@@ -69,6 +70,28 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(releaseCallerWorkflow, /components\.packages\.members/);
   assert.match(releaseCallerWorkflow, /components\.base\.artifact_digest/);
   assert.match(releaseCallerWorkflow, /expected_carrier_digest/);
+  assert.match(releaseCallerWorkflow, /workflow_run:[\s\S]*workflows: \[Publish OPL Package Release Set, Daily OPL Package Channel\]/);
+  assert.match(releaseCallerWorkflow, /resolve-auto-promotion:[\s\S]*needs: \[publish-candidate\]/);
+  assert.match(releaseCallerWorkflow, /needs\.publish-candidate\.result == 'success'/);
+  assert.match(releaseCallerWorkflow, /gh api --paginate --slurp/);
+  assert.match(releaseCallerWorkflow, /SOURCE_HEAD_SHA/);
+  assert.match(releaseCallerWorkflow, /exactly one attested candidate receipt artifact/);
+  assert.match(releaseCallerWorkflow, /environment: release-stable/);
+  assert.match(releaseCallerWorkflow, /Verify protected Stable environment/);
+  assert.match(releaseCallerWorkflow, /release-stable must exist before dispatch/);
+  assert.match(releaseCallerWorkflow, /protection_rules \| length/);
+  assert.match(releaseCallerWorkflow, /deployment-branch-policies\?per_page=100/);
+  assert.match(releaseCallerWorkflow, /no protection rule or exact allowed branch policy/);
+  assert.match(releaseCallerWorkflow, /"docker_webui"[\s\S]*"macos_standard"/);
+  assert.match(releaseCallerWorkflow, /"mag", "mas", "mas-scholar-skills", "obf", "oma", "opl-flow", "rca"/);
+  for (const inputName of ['frozen_base_release_set_generation', 'frozen_base_release_set_digest']) {
+    const packageInputs = [...workflow.matchAll(new RegExp(`^      ${inputName}:\\n((?:^        [^\\n]*\\n?)*)`, 'gm'))];
+    assert.equal(packageInputs.length, 2);
+    for (const [, block] of packageInputs) assert.match(block, /^        required: true$/m);
+    const promotionInputs = [...releaseCallerWorkflow.matchAll(new RegExp(`^      ${inputName}:\\n((?:^        [^\\n]*\\n?)*)`, 'gm'))];
+    assert.equal(promotionInputs.length, 1);
+    assert.match(promotionInputs[0][1], /^        required: true$/m);
+  }
   assert.match(releaseCallerWorkflow, /promotion_request_id/);
   assert.match(releaseCallerWorkflow, /write-release-promotion-receipt\.mjs/);
   const releaseCallerHeader = releaseCallerWorkflow.slice(0, releaseCallerWorkflow.indexOf('\njobs:'));
@@ -98,17 +121,15 @@ test('framework packages workflow is release-gated and manually repairable witho
   }
   assert.match(workflow, /--anonymous/);
   assert.match(workflow, /--expected-digest/);
-  assert.match(workflow, /one-person-lab-manifest:latest-stable/);
+  assert.doesNotMatch(workflow, /one-person-lab-manifest:latest-stable/);
+  assert.match(workflow, /oras pull "\$\{carrier\}@\$\{base_digest\}"/);
+  assert.match(workflow, /generation_digest=.*oras manifest fetch --descriptor "\$\{carrier\}:\$\{base_generation\}"/);
   assert.match(workflow, /OPL_PREVIOUS_PACKAGE_MANIFEST/);
   assert.match(workflow, /args\+=\(--previous-manifest "\$OPL_PREVIOUS_PACKAGE_MANIFEST"\)/);
-  for (const source of [workflow, dailyPackageWorkflow]) {
-    assert.match(source, /previous_app_version="\$\(jq -r '\.release_set\.components\.app\.version'/);
-    assert.match(source, /gh release view "v\$previous_app_version"/);
-    assert.match(source, /jq -e '\.isDraft == false and \.isPrerelease == false and \.publishedAt != null'/);
-    assert.match(source, /Previous latest-stable App release v\$previous_app_version is unavailable or no longer stable/);
-    assert.ok(source.indexOf('gh release view "v$previous_app_version"') < source.indexOf('gh release list --repo gaofeng21cn/one-person-lab-app'));
-  }
-  assert.ok(workflow.indexOf('Fetch previous latest-stable Release Set') < workflow.indexOf('Build Package archives and Release Set manifests'));
+  assert.doesNotMatch(workflow, /gh release list --repo gaofeng21cn\/one-person-lab-app/);
+  assert.doesNotMatch(workflow, /resolving the latest published stable App release/);
+  assert.match(workflow, /app_version="\$\(jq -r '\.release_set\.components\.app\.version'/);
+  assert.ok(workflow.indexOf('Bind frozen base Release Set') < workflow.indexOf('Build Package archives and Release Set manifests'));
   assert.ok(workflow.indexOf('Verify exact release roots') < workflow.indexOf('Resolve immutable OPL App component'));
   assert.match(workflow, /OPL_RELEASE_HARNESS_ROOT: \$\{\{ github\.workspace \}\}\/\.release-harness/);
   assert.match(workflow, /OPL_FRAMEWORK_SOURCE_ROOT: \$\{\{ github\.workspace \}\}\/\.framework-source/);
@@ -144,6 +165,17 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /oras tag .* candidate/);
   assert.doesNotMatch(workflow, /oras tag .* latest-stable/);
   assert.match(releaseCallerWorkflow, /oras tag .* latest-stable/);
+  assert.match(releaseCallerWorkflow, /promote_channel_ref\(\)/);
+  assert.match(releaseCallerWorkflow, /assert_channel_cas_eligible\(\)/);
+  assert.match(releaseCallerWorkflow, /opl-stable-promotion-plan\.tsv/);
+  assert.match(releaseCallerWorkflow, /Stable channel conflict/);
+  assert.match(releaseCallerWorkflow, /if ! oras tag "\$\{ref\}@\$\{target_digest\}" latest-stable/);
+  assert.match(releaseCallerWorkflow, /Reconciled an unknown tag result/);
+  assert.match(releaseCallerWorkflow, /not the exact target after bounded readback/);
+  assert.ok(
+    releaseCallerWorkflow.indexOf('assert_channel_cas_eligible "$ref"')
+      < releaseCallerWorkflow.indexOf('promote_channel_ref "$ref"'),
+  );
   assert.doesNotMatch(workflow, /oras tag .*\slatest\s*$/m);
   assert.match(workflow, /changed_packages_json/);
   assert.match(workflow, /Resolve changed Package publication plan/);
@@ -196,7 +228,7 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(dailyPackageWorkflow, /cancel-in-progress: false/);
   assert.match(dailyPackageWorkflow, /base="\$\(date -u \+'%y\.%-m\.%-d'\)"/);
   assert.match(dailyPackageWorkflow, /oras repo tags/);
-  assert.doesNotMatch(dailyPackageWorkflow, /if ! oras repo tags/);
+  assert.doesNotMatch(dailyPackageWorkflow, /if ! oras repo tags "ghcr\.io\/\$\{\{ github\.repository_owner \}\}\/one-person-lab-manifest"/);
   assert.match(dailyPackageWorkflow, /release-set-generation\.mjs/);
   assert.match(dailyPackageWorkflow, /workflow_dispatch:/);
   assert.match(dailyPackageWorkflow, /force_publish:/);
@@ -222,8 +254,16 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(dailyPackageWorkflow, /candidate_built=false/);
   assert.match(dailyPackageWorkflow, /retained_previous_stable/);
   assert.match(dailyPackageWorkflow, /force_publish cannot bypass latest-stable fallback/);
-  assert.match(dailyPackageWorkflow, /one-person-lab-manifest:latest-stable/);
-  assert.match(dailyPackageWorkflow, /test -n "\$current"/);
+  assert.match(dailyPackageWorkflow, /\$\{carrier\}:latest-stable/);
+  assert.match(dailyPackageWorkflow, /oras pull "\$\{carrier\}@\$\{frozen_digest\}"/);
+  assert.match(dailyPackageWorkflow, /frozen_base_release_set_generation/);
+  assert.match(dailyPackageWorkflow, /frozen_base_release_set_digest/);
+  assert.match(dailyPackageWorkflow, /bootstrap is forbidden on an availability error/);
+  assert.match(dailyPackageWorkflow, /latest-stable exists but its exact digest could not be resolved/);
+  assert.match(dailyPackageWorkflow, /release_manifests\[@\]/);
+  assert.match(dailyPackageWorkflow, /\.release_set\.bom_status == "complete"/);
+  assert.doesNotMatch(dailyPackageWorkflow, /Previous latest-stable App release/);
+  assert.match(dailyPackageWorkflow, /app_version="\$\(jq -r '\.release_set\.components\.app\.version'/);
   assert.match(dailyPackageWorkflow, /--previous-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"/);
   assert.ok(dailyPackageWorkflow.indexOf('Fetch current latest-stable Release Set manifest') < dailyPackageWorkflow.indexOf('Build candidate Package archives and Release Set manifest'));
   assert.match(dailyPackageWorkflow, /args\+=\(--current-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"\)/);

@@ -243,6 +243,25 @@ test('package archive builder writes channel manifest checksums git source and r
     size: 10,
     content_type: 'application/octet-stream',
   }));
+  const appCarriers = [
+    {
+      carrier_id: 'macos_standard',
+      carrier_kind: 'release_asset',
+      ref: appArtifacts[1]!.ref,
+      digest: appArtifacts[1]!.digest,
+      size: appArtifacts[1]!.size,
+      package_profile: 'standard',
+    },
+    {
+      carrier_id: 'docker_webui',
+      carrier_kind: 'oci_image',
+      ref: `ghcr.io/gaofeng21cn/one-person-lab-webui@sha256:${'7'.repeat(64)}`,
+      digest: `sha256:${'7'.repeat(64)}`,
+      size: 20,
+      package_profile: 'webui-full',
+      content_fingerprint: `sha256:${'8'.repeat(64)}`,
+    },
+  ];
   fs.writeFileSync(appComponentManifest, `${JSON.stringify({
     surface_kind: 'opl_app_component_manifest.v1',
     component_id: 'opl-app',
@@ -253,6 +272,7 @@ test('package archive builder writes channel manifest checksums git source and r
     release_status: 'published',
     primary_artifact: appArtifacts[1],
     artifacts: appArtifacts,
+    carriers: appCarriers,
     component_manifest_ref: 'opl+github-release://gaofeng21cn/one-person-lab-app/v26.7.12',
     component_manifest_digest: `sha256:${'6'.repeat(64)}`,
   }, null, 2)}\n`, 'utf8');
@@ -429,6 +449,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_set.component_count, 9);
   assert.equal(manifest.release_set.components.packages.package_count, 7);
   assert.equal(manifest.release_set.components.app.version, '26.7.12');
+  assert.deepEqual(manifest.release_set.components.app.carriers, appCarriers);
   assert.equal(manifest.packages.package_artifacts.mag.package_version, '0.3.0');
   assert.equal(manifest.release_set.components.packages.members.mag.version, '0.3.0');
   assert.equal(
@@ -730,7 +751,7 @@ test('package archive builder writes channel manifest checksums git source and r
     path.join(repoRoot, 'scripts/write-release-promotion-receipt.mjs'),
     '--release-manifest', releaseManifestPath,
     '--output', promotionReceiptPath,
-    '--target', 'candidate',
+    '--target', 'latest-stable',
     '--carrier-ref', 'ghcr.io/gaofeng21cn/one-person-lab-manifest:26.4.31',
     '--carrier-digest', `sha256:${'b'.repeat(64)}`,
     '--promotion-request-id', 'test-release-saga',
@@ -756,6 +777,7 @@ test('package archive builder writes channel manifest checksums git source and r
   }, promotionReceipt));
   assert.equal(promotionReceipt.surface_kind, 'opl_release_set_promotion_receipt.v1');
   assert.equal(promotionReceipt.carrier.digest, `sha256:${'b'.repeat(64)}`);
+  assert.deepEqual(promotionReceipt.app.carriers, appCarriers);
   assert.equal(promotionReceipt.anonymous_readback.verified_refs.length, 9);
   assert.match(checksums, /one-person-lab-framework-0\.3\.5\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.framework_core.source_archive.sha256));

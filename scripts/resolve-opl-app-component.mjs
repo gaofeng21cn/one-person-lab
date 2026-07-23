@@ -74,6 +74,17 @@ function immutableArtifactLock(artifact) {
   };
 }
 
+function legacyMacosCarrier(primary) {
+  return {
+    carrier_id: 'macos_standard',
+    carrier_kind: 'release_asset',
+    ref: primary.ref,
+    digest: primary.digest,
+    size: primary.size,
+    package_profile: 'standard',
+  };
+}
+
 function buildComponent(options) {
   const release = readJsonFile(options.releaseJson);
   const tag = typeof release.tagName === 'string' ? release.tagName.trim() : '';
@@ -105,6 +116,7 @@ function buildComponent(options) {
     primary_artifact: primary,
     artifacts,
     component_manifest_ref: `https://github.com/${options.repo}/releases/download/${tag}/opl-app-component-manifest.json`,
+    carriers: [legacyMacosCarrier(primary)],
   };
   if (options.ownerManifest) {
     const owner = readJsonFile(options.ownerManifest);
@@ -121,6 +133,7 @@ function buildComponent(options) {
       primary_artifact: owner.primary_artifact,
       artifacts: owner.artifacts,
       component_manifest_ref: owner.component_manifest_ref,
+      carriers: owner.carriers,
     };
     if (owner.component_manifest_digest !== sha256Payload(JSON.stringify(ownerCore))) {
       throw new Error('OPL App owner manifest digest does not bind its exact core');
@@ -148,10 +161,12 @@ function buildComponent(options) {
         throw new Error('OPL App owner manifest artifact lock does not match release readback');
       }
     }
+    const carriers = Array.isArray(owner.carriers) ? owner.carriers : [legacyMacosCarrier(primary)];
     return {
       ...projectedCore,
+      carriers,
       release_status: release.isDraft ? 'draft' : 'published',
-      component_manifest_digest: sha256Payload(JSON.stringify(projectedCore)),
+      component_manifest_digest: sha256Payload(JSON.stringify({ ...projectedCore, carriers })),
     };
   }
   return {

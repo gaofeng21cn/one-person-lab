@@ -219,6 +219,12 @@ export function freezeReleaseBundle(input: {
       release_set_path: inputs.releaseSetPath,
       owner_cohort_lock_path: inputs.ownerCohortLockPath,
       inputs_verified_before_freeze: true,
+      source_cutoff: bundle.source_cutoff ?? null,
+      source_cutoff_frozen_once: Boolean(bundle.source_cutoff),
+      post_freeze_remote_refresh_allowed:
+        bundle.source_cutoff?.post_freeze_remote_refresh_allowed ?? null,
+      later_authority_advancement_invalidates_bundle:
+        bundle.source_cutoff?.later_authority_advancement_invalidates_bundle ?? null,
     },
   });
   const recorded = recordReleaseBundleOperation(installed.paths, receipt);
@@ -585,6 +591,31 @@ function trackAssetsConfirmed(receipt: ReturnType<typeof readReleaseBundleOperat
   return receipt.status === 'complete' && receipt.details.publication_scope === undefined;
 }
 
+function stableRequiredTrackNames(bundle: ReleaseBundle): ReleaseBundleTrackName[] {
+  return (['standard', 'webui'] as const).filter(
+    (track) => bundle.tracks[track]?.required_for_latest,
+  );
+}
+
+function assertStablePromotionBarrier(
+  stored: ReturnType<typeof readStoredReleaseBundle>,
+  activeExternalMarker: ReleaseBundleUnknownOutcomeMarker | null,
+) {
+  const requiredTracks = stableRequiredTrackNames(stored.bundle);
+  for (const requiredTrack of requiredTracks) {
+    assertTrackQualified(stored, requiredTrack);
+    const publication = latestPublicationState(stored, requiredTrack);
+    const confirmedByActiveAttempt = activeExternalMarker?.publication_scope === 'external_target'
+      && activeExternalMarker.track === requiredTrack;
+    if (!trackAssetsConfirmed(publication) && !confirmedByActiveAttempt) {
+      fail('Stable external projection requires completed track asset publication first for every immutable carrier.', {
+        missing_track: requiredTrack,
+        required_tracks: requiredTracks,
+      });
+    }
+  }
+}
+
 function publishWithReceipt(input: ReleaseBundleOperationInput & ReleaseBundleOperationInvocation & {
   executorReceiptPath: string;
   reconcile: boolean;
@@ -620,6 +651,9 @@ function publishWithReceipt(input: ReleaseBundleOperationInput & ReleaseBundleOp
   const trackAssetsConfirmedBeforeExternalAttempt = previousTrackAssetsConfirmed
     || marker?.publication_scope === 'external_target';
   if (publicationScope === 'external_target') {
+    if (stored.bundle.tracks[track]?.required_for_latest) {
+      assertStablePromotionBarrier(stored, marker);
+    }
     if (!trackAssetsConfirmedBeforeExternalAttempt) {
       fail('External target publication requires completed track asset publication first.', {
         track,
@@ -860,6 +894,7 @@ export function readReleaseBundleStatus(input: ReleaseBundleOperationInput) {
   const stored = readStoredReleaseBundle(input.bundleDigest, input.storeRoot);
   const markers = listReleaseBundleUnknownOutcomes(stored.paths);
   const standard = trackStatus(stored, 'standard', markers);
+  const webui = stored.bundle.tracks.webui ? trackStatus(stored, 'webui', markers) : null;
   const full = trackStatus(stored, 'full', markers);
   const controls = readReleaseBundleOperationControls(stored.paths);
   const legacyReadOnly = releaseBundleLegacyCheckpointReadOnly(stored.paths);
@@ -882,8 +917,18 @@ export function readReleaseBundleStatus(input: ReleaseBundleOperationInput) {
       operation_control_compatible: !legacyReadOnly,
       live_mutation_allowed: !legacyReadOnly && markers.length === 0,
       active_unknown_markers: markers,
-      tracks: { standard, full },
-      latest_eligible: standard.verified && standard.published && !standard.reconcile_required,
+      tracks: { standard, ...(webui ? { webui } : {}), full },
+      stable_promotion_barrier: {
+        required_tracks: stableRequiredTrackNames(stored.bundle),
+        satisfied: stableRequiredTrackNames(stored.bundle).every((track) => {
+          const status = track === 'standard' ? standard : webui;
+          return Boolean(status?.verified && status.published && !status.reconcile_required);
+        }),
+      },
+      latest_eligible: stableRequiredTrackNames(stored.bundle).every((track) => {
+        const status = track === 'standard' ? standard : webui;
+        return Boolean(status?.verified && status.published && !status.reconcile_required);
+      }),
     },
   };
 }

@@ -444,8 +444,31 @@ function assertFreezeSemantics(request: ReleaseBundleFreezeRequest) {
       });
     }
   }
-  for (const track of ['standard', 'full'] as const) {
-    const names = request.tracks[track].required_asset_names;
+  if (Boolean(request.source_cutoff) !== Boolean(request.tracks.webui)) {
+    fail('Release Bundle source cutoff and WebUI carrier track must be introduced together.', {
+      source_cutoff_present: Boolean(request.source_cutoff),
+      webui_track_present: Boolean(request.tracks.webui),
+    });
+  }
+  if (request.source_cutoff) {
+    assertCanonicalUtcTimestamp(
+      request.source_cutoff.observed_at,
+      'Release Bundle source cutoff observation',
+    );
+    const frozenBase = request.source_cutoff.frozen_base_release_set;
+    if (frozenBase && (
+      !/^[0-9]{2}\.[0-9]{1,2}\.[0-9]{1,2}(?:-r[1-9][0-9]*)?$/.test(frozenBase.generation)
+      || !/^sha256:[0-9a-f]{64}$/.test(frozenBase.digest)
+    )) {
+      fail('Release Bundle frozen base Release Set identity is invalid.');
+    }
+  }
+  for (const track of (request.tracks.webui
+    ? ['standard', 'webui', 'full'] as const
+    : ['standard', 'full'] as const)) {
+    const plan = request.tracks[track];
+    if (!plan) fail('Release Bundle track plan is missing.', { track });
+    const names = plan.required_asset_names;
     for (const name of names) assertAssetName(name, track);
     if (names.length !== new Set(names).size) {
       fail('Release Bundle track contains duplicate asset names.', { track });
@@ -466,9 +489,11 @@ export function readReleaseBundleFreezeRequest(filePath: string): ReleaseBundleF
 }
 
 function normalizedTrack(request: ReleaseBundleFreezeRequest, track: ReleaseBundleTrackName) {
+  const plan = request.tracks[track];
+  if (!plan) fail('Release Bundle track plan is missing.', { track });
   return {
-    ...request.tracks[track],
-    required_asset_names: [...request.tracks[track].required_asset_names].sort(),
+    ...plan,
+    required_asset_names: [...plan.required_asset_names].sort(),
   };
 }
 
@@ -486,8 +511,10 @@ export function releaseBundleCore(request: ReleaseBundleFreezeRequest) {
       markdown_sha256: sha256(request.prepared_notes.markdown),
       evidence_sha256: sha256(canonicalJsonBytes(notesEvidence)),
     },
+    ...(request.source_cutoff ? { source_cutoff: request.source_cutoff } : {}),
     tracks: {
       standard: normalizedTrack(request, 'standard'),
+      ...(request.tracks.webui ? { webui: normalizedTrack(request, 'webui') } : {}),
       full: normalizedTrack(request, 'full'),
     },
     policy: {
@@ -498,6 +525,22 @@ export function releaseBundleCore(request: ReleaseBundleFreezeRequest) {
       prepared_notes_required_before_build: true as const,
       publish_may_generate_notes: false as const,
       latest_required_track: 'standard' as const,
+      ...(request.source_cutoff ? {
+        latest_required_tracks: ['standard', 'webui'] as ['standard', 'webui'],
+        source_cutoff_frozen_once: true as const,
+        post_freeze_remote_refresh_allowed: false as const,
+        later_authority_advancement_invalidates_bundle: false as const,
+        cohort_invalidation_causes: [
+          'frozen_byte_or_digest_drift',
+          'artifact_build_or_integrity_failure',
+          'explicit_security_revocation_bound_to_frozen_ref_or_digest',
+        ] as [
+          'frozen_byte_or_digest_drift',
+          'artifact_build_or_integrity_failure',
+          'explicit_security_revocation_bound_to_frozen_ref_or_digest',
+        ],
+        all_other_live_currentness_drift_invalidates_bundle: false as const,
+      } : {}),
       full_additive_only: true as const,
       full_updates_updater_metadata: false as const,
     },
@@ -518,6 +561,31 @@ export function assertReleaseBundle(value: unknown): asserts value is ReleaseBun
   assertSchema(bundleSchema as Record<string, unknown>, RELEASE_BUNDLE_SCHEMA_REF, value);
   if (!isRecord(value)) fail('Release Bundle must be a JSON object.');
   const bundle = value as ReleaseBundle;
+  if (Boolean(bundle.source_cutoff) !== Boolean(bundle.tracks.webui)) {
+    fail('Frozen Release Bundle source cutoff and WebUI carrier track must be present together.');
+  }
+  if (bundle.source_cutoff) {
+    assertCanonicalUtcTimestamp(
+      bundle.source_cutoff.observed_at,
+      'Frozen Release Bundle source cutoff observation',
+    );
+    if (
+      bundle.policy.source_cutoff_frozen_once !== true
+      || bundle.policy.post_freeze_remote_refresh_allowed !== false
+      || bundle.policy.later_authority_advancement_invalidates_bundle !== false
+      || bundle.policy.all_other_live_currentness_drift_invalidates_bundle !== false
+      || canonicalJsonBytes(bundle.policy.cohort_invalidation_causes).compare(canonicalJsonBytes([
+        'frozen_byte_or_digest_drift',
+        'artifact_build_or_integrity_failure',
+        'explicit_security_revocation_bound_to_frozen_ref_or_digest',
+      ])) !== 0
+      || canonicalJsonBytes(bundle.policy.latest_required_tracks).compare(
+        canonicalJsonBytes(['standard', 'webui']),
+      ) !== 0
+    ) {
+      fail('Frozen Release Bundle cutoff policy does not bind the unified Stable carrier barrier.');
+    }
+  }
   const { bundle_digest: digest, ...core } = bundle;
   const actual = sha256(canonicalJsonBytes(core));
   if (digest !== actual) {
@@ -627,7 +695,9 @@ export function assertReleaseBundleUnknownOutcomeMarker(
   }
   if (
     (marker.operation_kind === 'append_full' && marker.track !== 'full')
-    || (marker.operation_kind !== 'append_full' && marker.track !== 'standard')
+    || (marker.operation_kind !== 'append_full'
+      && marker.track !== 'standard'
+      && marker.track !== 'webui')
   ) {
     fail('Release Bundle unknown marker operation and track do not match.', {
       operation_kind: marker.operation_kind,
@@ -693,7 +763,10 @@ export function assertReleaseBundleCheckpoint(
       });
     }
     const control = controls?.[marker.operation_kind];
-    if (!control || control.operation_id !== marker.operation_id || control.track !== marker.track) {
+    const trackAllowed = marker.operation_kind === 'append_full'
+      ? marker.track === 'full'
+      : marker.track === 'standard' || marker.track === 'webui';
+    if (!control || control.operation_id !== marker.operation_id || !trackAllowed) {
       fail('Release Bundle checkpoint unknown marker does not match its immutable operation control.', {
         marker_digest: marker.marker_digest,
         operation_id: marker.operation_id,

@@ -46,7 +46,7 @@ const appendFullOperation = {
 type MutableCheckpointFixture = {
   checkpoint_digest: string;
   bundle_digest: string;
-  tracks: Record<'standard' | 'full', {
+  tracks: Record<'standard' | 'webui' | 'full', {
     built: boolean;
     verified: boolean;
     asset_names: string[];
@@ -58,7 +58,7 @@ type MutableCheckpointFixture = {
   entries: Array<{
     path: string;
     role: string;
-    track: 'standard' | 'full' | null;
+    track: 'standard' | 'webui' | 'full' | null;
     asset_name: string | null;
     size_bytes: number;
     sha256: string;
@@ -325,17 +325,46 @@ function fixtureRequest(
   };
 }
 
+function unifiedStableRequest(sourceRoot: string) {
+  const request = fixtureRequest(sourceRoot);
+  return {
+    ...request,
+    source_cutoff: {
+      observed_at: '2026-07-21T00:00:00.000Z',
+      policy: 'single_read_at_freeze_admission' as const,
+      frozen_base_release_set: {
+        generation: '26.7.20',
+        digest: `sha256:${'e'.repeat(64)}`,
+      },
+      post_freeze_remote_refresh_allowed: false as const,
+      later_authority_advancement_invalidates_bundle: false as const,
+    },
+    tracks: {
+      standard: request.tracks.standard,
+      webui: {
+        required_asset_names: ['webui-carrier-manifest.json'],
+        required_for_latest: true,
+        additive_only: false,
+        updater_metadata_allowed: false,
+      },
+      full: request.tracks.full,
+    },
+  };
+}
+
 function writeQualification(input: {
   root: string;
   bundle: ReturnType<typeof fixtureRequest>;
   bundleDigest: string;
-  track?: 'standard' | 'full';
+  track?: 'standard' | 'webui' | 'full';
   subject?: { name: string; bytes: string };
 }) {
   const track = input.track ?? 'standard';
   const subject = input.subject ?? (track === 'standard'
     ? { name: 'standard.dmg', bytes: 'standard dmg' }
-    : { name: 'full.dmg', bytes: 'full dmg' });
+    : track === 'webui'
+      ? { name: 'webui-carrier-manifest.json', bytes: '{"digest":"sha256:webui"}' }
+      : { name: 'full.dmg', bytes: 'full dmg' });
   const receiptPath = path.join(input.root, `${track}-qualification.json`);
   writeJson(receiptPath, {
     surface_kind: 'opl_release_bundle_qualification_receipt.v1',
@@ -386,10 +415,26 @@ function createFixture(options: { admitStandard?: boolean; standardAssetNames?: 
   return { root, sourceRoot, storeRoot, requestPath, request, frozen };
 }
 
+function createUnifiedStableFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-unified-stable-bundle-'));
+  const sourceRoot = path.join(root, 'source');
+  const storeRoot = path.join(root, 'store');
+  const requestPath = path.join(root, 'freeze.json');
+  const request = unifiedStableRequest(sourceRoot);
+  writeJson(requestPath, request);
+  const frozen = freezeReleaseBundle({ requestPath, sourceRoot, storeRoot });
+  admitReleaseBundleOperation({
+    bundleDigest: frozen.release_bundle_freeze.bundle_digest,
+    storeRoot,
+    ...standardOperation,
+  });
+  return { root, sourceRoot, storeRoot, requestPath, request, frozen };
+}
+
 function writeBuildReceipt(input: {
   root: string;
   bundleDigest: string;
-  track?: 'standard' | 'full';
+  track?: 'standard' | 'webui' | 'full';
   executor?: 'local' | 'remote';
   attemptId?: string;
   outcome?: 'complete' | 'unknown';
@@ -405,7 +450,9 @@ function writeBuildReceipt(input: {
   const assets = outcome === 'unknown' ? [] : (input.assets ?? (
     track === 'standard'
       ? [{ name: 'standard.dmg', bytes: 'standard dmg' }, { name: 'latest.yml', bytes: 'updater' }]
-      : [{ name: 'full.dmg', bytes: 'full dmg' }, { name: 'full-manifest.json', bytes: '{}' }]
+      : track === 'webui'
+        ? [{ name: 'webui-carrier-manifest.json', bytes: '{"digest":"sha256:webui"}' }]
+        : [{ name: 'full.dmg', bytes: 'full dmg' }, { name: 'full-manifest.json', bytes: '{}' }]
   )).map((asset) => {
     const assetPath = path.join(input.root, `${input.attemptId ?? 'build'}-${asset.name}`);
     fs.writeFileSync(assetPath, asset.bytes);
@@ -439,7 +486,7 @@ function writeBuildReceipt(input: {
 function writeRemoteInspection(input: {
   root: string;
   bundleDigest: string;
-  track?: 'standard' | 'full';
+  track?: 'standard' | 'webui' | 'full';
   executor?: 'local' | 'remote';
   attemptId: string;
   outcome?: 'complete' | 'unknown';
@@ -612,6 +659,235 @@ test('freeze fails before build when a Package payload or Release Set input drif
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('unified Stable freeze binds one cutoff and later authority advancement cannot refresh the cohort', () => {
+  const fixture = createUnifiedStableFixture();
+  try {
+    const first = fixture.frozen.release_bundle_freeze;
+    assert.deepEqual(first.bundle.source_cutoff, fixture.request.source_cutoff);
+    assert.deepEqual(first.receipt.details.source_cutoff, fixture.request.source_cutoff);
+    assert.equal(first.receipt.details.source_cutoff_frozen_once, true);
+    assert.equal(first.bundle.policy.post_freeze_remote_refresh_allowed, false);
+    assert.equal(first.bundle.policy.later_authority_advancement_invalidates_bundle, false);
+    assert.equal(first.bundle.policy.all_other_live_currentness_drift_invalidates_bundle, false);
+    assert.deepEqual(first.bundle.policy.cohort_invalidation_causes, [
+      'frozen_byte_or_digest_drift',
+      'artifact_build_or_integrity_failure',
+      'explicit_security_revocation_bound_to_frozen_ref_or_digest',
+    ]);
+    assert.deepEqual(first.bundle.source_cutoff.frozen_base_release_set, {
+      generation: '26.7.20',
+      digest: `sha256:${'e'.repeat(64)}`,
+    });
+    assert.deepEqual(first.bundle.policy.latest_required_tracks, ['standard', 'webui']);
+
+    const laterRequest = unifiedStableRequest(fixture.sourceRoot);
+    laterRequest.source_cutoff.frozen_base_release_set = {
+      generation: '26.7.21',
+      digest: `sha256:${'f'.repeat(64)}`,
+    };
+    const laterRequestPath = path.join(fixture.root, 'later-freeze.json');
+    writeJson(laterRequestPath, laterRequest);
+    const later = freezeReleaseBundle({
+      requestPath: laterRequestPath,
+      sourceRoot: fixture.sourceRoot,
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_freeze;
+    assert.notEqual(later.bundle_digest, first.bundle_digest);
+
+    // The source projection may advance after freeze; all later stages consume stored exact bytes.
+    fs.writeFileSync(
+      path.join(fixture.sourceRoot, fixture.request.framework_release_set.manifest_ref),
+      '{"surface_kind":"later_authority_state"}\n',
+      'utf8',
+    );
+    const webuiBuild = buildReleaseBundle({
+      bundleDigest: first.bundle_digest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest: first.bundle_digest,
+        track: 'webui',
+        attemptId: 'cutoff-webui-build',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    assert.equal(webuiBuild.release_bundle_build.status, 'complete');
+    assert.equal(
+      readReleaseBundleStatus({ bundleDigest: first.bundle_digest, storeRoot: fixture.storeRoot })
+        .release_bundle_status.bundle.source_cutoff?.observed_at,
+      '2026-07-21T00:00:00.000Z',
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('unified Stable requires cutoff and WebUI track to be introduced together', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-unified-stable-pair-'));
+  try {
+    const sourceRoot = path.join(root, 'source');
+    const missingCutoff = unifiedStableRequest(sourceRoot);
+    delete (missingCutoff as { source_cutoff?: typeof missingCutoff.source_cutoff }).source_cutoff;
+    const missingCutoffPath = path.join(root, 'missing-cutoff.json');
+    writeJson(missingCutoffPath, missingCutoff);
+    assertTypedContractFailure(
+      () => freezeReleaseBundle({
+        requestPath: missingCutoffPath,
+        sourceRoot,
+        storeRoot: path.join(root, 'missing-cutoff-store'),
+      }),
+      /source cutoff and WebUI carrier track must be introduced together/,
+    );
+
+    const missingWebui = fixtureRequest(sourceRoot) as ReturnType<typeof fixtureRequest> & {
+      source_cutoff: ReturnType<typeof unifiedStableRequest>['source_cutoff'];
+    };
+    missingWebui.source_cutoff = unifiedStableRequest(sourceRoot).source_cutoff;
+    const missingWebuiPath = path.join(root, 'missing-webui.json');
+    writeJson(missingWebuiPath, missingWebui);
+    assertTypedContractFailure(
+      () => freezeReleaseBundle({
+        requestPath: missingWebuiPath,
+        sourceRoot,
+        storeRoot: path.join(root, 'missing-webui-store'),
+      }),
+      /source cutoff and WebUI carrier track must be introduced together/,
+    );
+
+    const missingFrozenBase = unifiedStableRequest(sourceRoot) as Record<string, any>;
+    delete missingFrozenBase.source_cutoff.frozen_base_release_set;
+    const missingFrozenBasePath = path.join(root, 'missing-frozen-base.json');
+    writeJson(missingFrozenBasePath, missingFrozenBase);
+    assertTypedContractFailure(
+      () => freezeReleaseBundle({
+        requestPath: missingFrozenBasePath,
+        sourceRoot,
+        storeRoot: path.join(root, 'missing-frozen-base-store'),
+      }),
+      /JSON Schema validation/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Desktop and WebUI qualify in either order and share one Stable promotion barrier', () => {
+  const fixture = createUnifiedStableFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        track: 'webui',
+        attemptId: 'webui-first-build',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'webui',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+        track: 'webui',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    buildReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'desktop-second-build',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    verifyReleaseBundle({
+      bundleDigest,
+      track: 'standard',
+      qualificationReceiptPath: writeQualification({
+        root: fixture.root,
+        bundle: fixture.request,
+        bundleDigest,
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+
+    const qualifiedCheckpoint = exportReleaseBundleCheckpoint({
+      bundleDigest,
+      outputDirectory: path.join(fixture.root, 'stable-qualified-checkpoint'),
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_checkpoint_export;
+    assert.equal(qualifiedCheckpoint.checkpoint_stage, 'stable_qualified');
+
+    publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'desktop-carrier-published',
+        assets: [
+          { name: 'standard.dmg', bytes: 'standard dmg' },
+          { name: 'latest.yml', bytes: 'updater' },
+        ],
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    let status = readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+      .release_bundle_status;
+    assert.equal(status.latest_eligible, false);
+    assert.deepEqual(status.stable_promotion_barrier.required_tracks, ['standard', 'webui']);
+    assert.equal(status.stable_promotion_barrier.satisfied, false);
+    assertTypedContractFailure(
+      () => publishReleaseBundle({
+        bundleDigest,
+        executorReceiptPath: writeRemoteInspection({
+          root: fixture.root,
+          bundleDigest,
+          attemptId: 'premature-unified-promotion',
+          remoteTarget: 'framework-release-set:latest-stable',
+          publicationScope: 'external_target',
+        }),
+        storeRoot: fixture.storeRoot,
+      }),
+      /every immutable carrier/,
+    );
+
+    publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        track: 'webui',
+        attemptId: 'webui-carrier-published',
+        assets: [{ name: 'webui-carrier-manifest.json', bytes: '{"digest":"sha256:webui"}' }],
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    status = readReleaseBundleStatus({ bundleDigest, storeRoot: fixture.storeRoot })
+      .release_bundle_status;
+    assert.equal(status.latest_eligible, true);
+    assert.equal(status.stable_promotion_barrier.satisfied, true);
+
+    const promoted = publishReleaseBundle({
+      bundleDigest,
+      executorReceiptPath: writeRemoteInspection({
+        root: fixture.root,
+        bundleDigest,
+        attemptId: 'unified-stable-promotion',
+        remoteTarget: 'framework-release-set:latest-stable',
+        publicationScope: 'external_target',
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    assert.equal(promoted.release_bundle_publish.status, 'complete');
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
   }
 });
 

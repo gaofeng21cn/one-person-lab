@@ -36,10 +36,17 @@ import type {
   ReleaseBundleOperationReceipt,
   ReleaseBundleTrackName,
   ReleaseBundleUnknownOutcomeMarker,
+  ReleaseBundle,
 } from './types.ts';
 
 const BUFFER_SIZE = 1024 * 1024;
-const TRACKS = ['standard', 'full'] as const;
+function bundleTrackNames(bundle: ReleaseBundle): ReleaseBundleTrackName[] {
+  return bundle.tracks.webui ? ['standard', 'webui', 'full'] : ['standard', 'full'];
+}
+
+function stableRequiredTrackNames(bundle: ReleaseBundle): ReleaseBundleTrackName[] {
+  return bundleTrackNames(bundle).filter((track) => bundle.tracks[track]?.required_for_latest);
+}
 
 type Snapshot = {
   path: string;
@@ -189,10 +196,16 @@ function checkpointAssetManifestBytes(input: {
 }
 
 function derivedStage(
-  tracks: Record<ReleaseBundleTrackName, ReleaseBundleCheckpointTrack>,
+  tracks: ReleaseBundleCheckpoint['tracks'],
 ): ReleaseBundleCheckpointStage {
   if (tracks.full.verified) return 'full_qualified';
   if (tracks.full.built) return 'full_built';
+  if (tracks.webui) {
+    if (tracks.standard.verified && tracks.webui.verified) return 'stable_qualified';
+    if (tracks.standard.built && tracks.webui.built) return 'stable_built';
+    if (tracks.webui.verified) return 'webui_qualified';
+    if (tracks.webui.built) return 'webui_built';
+  }
   if (tracks.standard.verified) return 'standard_qualified';
   if (tracks.standard.built) return 'standard_built';
   return 'frozen';
@@ -326,8 +339,12 @@ function assertCheckpointSemantics(input: ReturnType<typeof readCheckpointJson>)
     fail('Release Bundle checkpoint asset manifests require a track.');
   }
 
-  for (const track of TRACKS) {
+  if (Boolean(checkpoint.tracks.webui) !== Boolean(bundleValue.tracks.webui)) {
+    fail('Release Bundle checkpoint track set differs from its immutable Bundle.');
+  }
+  for (const track of bundleTrackNames(bundleValue)) {
     const plan = checkpoint.tracks[track];
+    if (!plan) fail('Release Bundle checkpoint is missing a frozen track.', { track });
     if (plan.verified && !plan.built) fail('A verified checkpoint track must also be built.', { track });
     const assetEntries = entryByRole(checkpoint, 'track_asset', track);
     const assetNames = assetEntries.map((entry) => entry.asset_name).sort();
@@ -338,7 +355,9 @@ function assertCheckpointSemantics(input: ReturnType<typeof readCheckpointJson>)
     if (JSON.stringify(assetNames) !== JSON.stringify(declared)) {
       fail('Checkpoint track asset entries do not match the track plan.', { track });
     }
-    const required = plan.built ? [...bundleValue.tracks[track].required_asset_names].sort() : [];
+    const bundlePlan = bundleValue.tracks[track];
+    if (!bundlePlan) fail('Release Bundle checkpoint names an unfrozen track.', { track });
+    const required = plan.built ? [...bundlePlan.required_asset_names].sort() : [];
     if (JSON.stringify(declared) !== JSON.stringify(required)) {
       fail('Checkpoint built track does not contain the exact closed Bundle asset set.', { track });
     }
@@ -408,8 +427,11 @@ function assertCheckpointSemantics(input: ReturnType<typeof readCheckpointJson>)
       fail('Unverified checkpoint track must not contain qualification evidence.', { track });
     }
   }
-  if (checkpoint.tracks.full.built && !checkpoint.tracks.standard.verified) {
-    fail('Full checkpoint bytes require a verified Standard track.');
+  if (
+    checkpoint.tracks.full.built
+    && stableRequiredTrackNames(bundleValue).some((track) => !checkpoint.tracks[track]?.verified)
+  ) {
+    fail('Full checkpoint bytes require every Stable carrier track to be verified.');
   }
   if (checkpoint.checkpoint_stage !== derivedStage(checkpoint.tracks)) {
     fail('Release Bundle checkpoint stage does not match its completed track state.');
@@ -424,8 +446,11 @@ function assertCheckpointSemantics(input: ReturnType<typeof readCheckpointJson>)
     if (controls.append_full && !controls.standard) {
       fail('append_full checkpoint control requires the immutable Standard operation control.');
     }
-    if (controls.append_full && !checkpoint.tracks.standard.verified) {
-      fail('append_full checkpoint control requires a qualified Standard track.');
+    if (
+      controls.append_full
+      && stableRequiredTrackNames(bundleValue).some((track) => !checkpoint.tracks[track]?.verified)
+    ) {
+      fail('append_full checkpoint control requires every Stable carrier track to be qualified.');
     }
     if (
       controls.standard
@@ -437,7 +462,10 @@ function assertCheckpointSemantics(input: ReturnType<typeof readCheckpointJson>)
   }
   for (const marker of checkpoint.active_unknown_markers ?? []) {
     const control = controls?.[marker.operation_kind];
-    if (!control || control.operation_id !== marker.operation_id || control.track !== marker.track) {
+    const trackAllowed = marker.operation_kind === 'append_full'
+      ? marker.track === 'full'
+      : marker.track === 'standard' || marker.track === 'webui';
+    if (!control || control.operation_id !== marker.operation_id || !trackAllowed) {
       fail('Checkpoint unknown marker does not match its immutable operation control.', {
         marker_digest: marker.marker_digest,
       });
@@ -478,13 +506,19 @@ function exportReleaseBundleCheckpointUnlocked(input: {
       checkpointEntry({ root: temporary, source: stored.paths.bundle, relativePath: 'bundle.json', role: 'bundle' }),
       checkpointEntry({ root: temporary, source: stored.paths.notes, relativePath: 'notes.md', role: 'prepared_notes' }),
     ];
-    const tracks = {} as Record<ReleaseBundleTrackName, ReleaseBundleCheckpointTrack>;
-    for (const track of TRACKS) {
+    const tracks = {} as ReleaseBundleCheckpoint['tracks'];
+    for (const track of bundleTrackNames(stored.bundle)) {
       const staged = readStagedReleaseBundleAssets(stored.paths, track);
       const qualification = qualificationPath(stored.paths, track);
       if (qualification && !staged) fail('Verified track has no staged assets.', { track });
-      if (track === 'full' && staged && !qualificationPath(stored.paths, 'standard')) {
-        fail('Full checkpoint bytes require a verified Standard track.');
+      if (
+        track === 'full'
+        && staged
+        && stableRequiredTrackNames(stored.bundle).some(
+          (requiredTrack) => !qualificationPath(stored.paths, requiredTrack),
+        )
+      ) {
+        fail('Full checkpoint bytes require every Stable carrier track to be verified.');
       }
       const trackAssetEntries: ReleaseBundleCheckpointEntry[] = [];
       for (const asset of staged?.assets ?? []) {
@@ -671,8 +705,9 @@ function importReleaseBundleCheckpointUnlocked(input: {
     });
   }
   if (previous?.details.checkpoint_digest === source.checkpoint.checkpoint_digest) {
-    for (const track of TRACKS) {
+    for (const track of bundleTrackNames(bundle)) {
       const expected = source.checkpoint.tracks[track];
+      if (!expected) fail('Imported checkpoint is missing a frozen track.', { track });
       const staged = readStagedReleaseBundleAssets(installed.paths, track);
       if (expected.built !== Boolean(staged)) {
         fail('Imported Release Bundle store no longer matches its checkpoint stage.', { track });
@@ -720,8 +755,9 @@ function importReleaseBundleCheckpointUnlocked(input: {
   const liveMutationCompatible = Boolean(source.checkpoint.operation_controls)
     && !releaseBundleLegacyCheckpointReadOnly(installed.paths);
 
-  for (const track of TRACKS) {
+  for (const track of bundleTrackNames(bundle)) {
     const checkpointTrack = source.checkpoint.tracks[track];
+    if (!checkpointTrack) fail('Imported checkpoint is missing a frozen track.', { track });
     if (!checkpointTrack.built) continue;
     const assets = source.checkpoint.entries
       .filter((entry) => entry.role === 'track_asset' && entry.track === track)
@@ -753,7 +789,7 @@ function importReleaseBundleCheckpointUnlocked(input: {
         qualificationReceiptPath: path.join(source.root, checkpointTrack.qualification_receipt_path!),
         storeRoot: input.storeRoot,
         operationControl: source.checkpoint.operation_controls?.[
-          track === 'standard' ? 'standard' : 'append_full'
+          track === 'full' ? 'append_full' : 'standard'
         ] ?? null,
       });
     }

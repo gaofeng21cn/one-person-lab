@@ -144,6 +144,20 @@ function readAppComponentManifest(manifestPath) {
     || component.artifacts.length === 0) {
     throw new Error(`Invalid OPL App component manifest: ${manifestPath}`);
   }
+  if (Array.isArray(component.carriers)) {
+    const ids = component.carriers.map((carrier) => carrier?.carrier_id).sort();
+    const byId = Object.fromEntries(component.carriers.map((carrier) => [carrier?.carrier_id, carrier]));
+    if (JSON.stringify(ids) !== JSON.stringify(['docker_webui', 'macos_standard'])
+      || component.carriers.some((carrier) => !/^sha256:[0-9a-f]{64}$/.test(carrier?.digest ?? '')
+        || typeof carrier?.ref !== 'string' || !carrier.ref
+        || !Number.isSafeInteger(carrier?.size) || carrier.size <= 0)
+      || byId.macos_standard?.carrier_kind !== 'release_asset'
+      || byId.macos_standard?.package_profile !== 'standard'
+      || byId.docker_webui?.carrier_kind !== 'oci_image'
+      || byId.docker_webui?.package_profile !== 'webui-full') {
+      throw new Error(`Invalid OPL App carrier set: ${manifestPath}`);
+    }
+  }
   return component;
 }
 

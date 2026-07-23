@@ -1,7 +1,10 @@
 name: Promote OPL Release Set
-run-name: OPL ${{ inputs.promotion_target }} ${{ inputs.release_set_generation }} / ${{ inputs.promotion_request_id || github.run_id }}
+run-name: OPL ${{ github.event_name == 'workflow_run' && 'auto latest-stable' || inputs.promotion_target }} ${{ inputs.release_set_generation }} / ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || inputs.promotion_request_id || github.run_id }}
 
 on:
+  workflow_run:
+    workflows: [Publish OPL Package Release Set, Daily OPL Package Channel]
+    types: [completed]
   workflow_dispatch:
     inputs:
       release_set_generation:
@@ -10,6 +13,14 @@ on:
         type: string
       expected_framework_source_commit:
         description: Exact 40-character Framework source commit that this workflow must execute
+        required: true
+        type: string
+      frozen_base_release_set_generation:
+        description: Release Set generation observed once at freeze admission, or none for bootstrap
+        required: true
+        type: string
+      frozen_base_release_set_digest:
+        description: Exact OCI digest observed with the frozen base generation, or none for bootstrap
         required: true
         type: string
       release_gate:
@@ -55,6 +66,7 @@ on:
         default: ''
 
 permissions:
+  actions: read
   contents: read
   packages: write
   id-token: write
@@ -64,6 +76,167 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
+  resolve-auto-promotion:
+    name: Resolve exact attested candidate receipt
+    needs: [publish-candidate]
+    if: >-
+      always()
+      && (
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+        || (github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'candidate' && needs.publish-candidate.result == 'success')
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+    outputs:
+      eligible: ${{ steps.receipt.outputs.eligible }}
+      release_set_generation: ${{ steps.receipt.outputs.release_set_generation }}
+      expected_framework_source_commit: ${{ steps.receipt.outputs.expected_framework_source_commit }}
+      app_version: ${{ steps.receipt.outputs.app_version }}
+      expected_app_source_commit: ${{ steps.receipt.outputs.expected_app_source_commit }}
+      expected_app_artifact_digest: ${{ steps.receipt.outputs.expected_app_artifact_digest }}
+      expected_carrier_digest: ${{ steps.receipt.outputs.expected_carrier_digest }}
+      promotion_request_id: ${{ steps.receipt.outputs.promotion_request_id }}
+      source_app_run_id: ${{ steps.receipt.outputs.source_app_run_id }}
+      frozen_base_release_set_generation: ${{ steps.receipt.outputs.frozen_base_release_set_generation }}
+      frozen_base_release_set_digest: ${{ steps.receipt.outputs.frozen_base_release_set_digest }}
+      source_head_sha: ${{ steps.receipt.outputs.source_head_sha }}
+    steps:
+      - name: Verify triggering run and candidate receipt
+        id: receipt
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || github.run_id }}
+          SOURCE_HEAD_REPOSITORY: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name || github.repository }}
+          SOURCE_HEAD_BRANCH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name }}
+          SOURCE_HEAD_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          SOURCE_EVENT: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event || github.event_name }}
+        run: |
+          set -euo pipefail
+          echo "eligible=false" >> "$GITHUB_OUTPUT"
+          [ "$SOURCE_HEAD_REPOSITORY" = "$GITHUB_REPOSITORY" ] || {
+            echo "::error::Automatic Package promotion rejects a foreign source repository."
+            exit 1
+          }
+          [ "$SOURCE_HEAD_BRANCH" = main ] || {
+            echo "::error::Automatic Package promotion requires a successful main-branch candidate run."
+            exit 1
+          }
+          case "$SOURCE_EVENT" in
+            schedule|workflow_dispatch) ;;
+            *)
+              echo "::error::Automatic Package promotion rejects source event ${SOURCE_EVENT}."
+              exit 1
+              ;;
+          esac
+          [[ "$SOURCE_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          artifacts="$RUNNER_TEMP/opl-candidate-artifacts.json"
+          gh api --paginate --slurp \
+            "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100" > "$artifacts"
+          mapfile -t candidate_artifacts < <(jq -r \
+            '.[] | .artifacts[]
+              | select(.expired == false
+                and (.name | startswith("opl-release-promotion-receipt-") and endswith("-candidate")))
+              | [.id, .name]
+              | @tsv' "$artifacts")
+          if [ "${#candidate_artifacts[@]}" -eq 0 ]; then
+            echo "::notice::Successful source run produced no attested candidate receipt; no Stable promotion is eligible."
+            exit 0
+          fi
+          [ "${#candidate_artifacts[@]}" -eq 1 ] || {
+            echo "::error::Automatic promotion requires exactly one attested candidate receipt artifact."
+            exit 1
+          }
+          IFS=$'\t' read -r artifact_id artifact_name <<<"${candidate_artifacts[0]}"
+          [[ "$artifact_id" =~ ^[1-9][0-9]*$ ]]
+          root="$RUNNER_TEMP/opl-attested-candidate"
+          mkdir -p "$root"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id/zip" > "$root/candidate.zip"
+          unzip -q "$root/candidate.zip" -d "$root/receipt"
+          mapfile -t receipt_files < <(find "$root/receipt" -type f -name opl-release-promotion-receipt.json -print)
+          [ "${#receipt_files[@]}" -eq 1 ] || {
+            echo "::error::Candidate receipt artifact must contain exactly one promotion receipt."
+            exit 1
+          }
+          receipt="${receipt_files[0]}"
+          jq -e \
+            --arg repo "$GITHUB_REPOSITORY" \
+            --arg run "$SOURCE_RUN_ID" \
+            --arg carrier_prefix "ghcr.io/${GITHUB_REPOSITORY_OWNER}/one-person-lab-manifest:" \
+            'def digest: type == "string" and test("^sha256:[0-9a-f]{64}$");
+             def sha: type == "string" and test("^[0-9a-f]{40}$");
+             def generation: type == "string" and test("^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(-r[1-9][0-9]*)?$");
+             def version: type == "string" and test("^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$");
+             def exact_component:
+               (.component_id | type == "string" and length > 0)
+               and (.version | version)
+               and (.source_commit | sha)
+               and (.artifact_ref | type == "string" and length > 0)
+               and (.artifact_digest | digest);
+             .surface_kind == "opl_release_set_promotion_receipt.v1"
+              and .status == "published_immutable_candidate"
+              and .promotion_target == "candidate"
+              and (.promotion_request_id | type == "string" and test("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"))
+              and (.release_set_generation | generation)
+              and .carrier.immutable_ref == ($carrier_prefix + .release_set_generation)
+              and (.carrier.digest | digest)
+              and .carrier.channel_ref == ($carrier_prefix + "candidate")
+              and .framework_run.repository == $repo
+              and .framework_run.run_id == $run
+              and (.framework_run.run_attempt | type == "string" and test("^[1-9][0-9]*$"))
+              and ((.source_app_run_id == null)
+                or (.source_app_run_id | type == "string" and test("^[1-9][0-9]*$")))
+              and .anonymous_readback.status == "verified"
+              and (.anonymous_readback.verified_refs | type == "array" and length == 9
+                and all(.[]; type == "string" and length > 0))
+              and .source_cutoff.policy == "single_read_at_freeze_admission"
+              and .source_cutoff.later_authority_advancement_invalidates_receipt == false
+              and ((.source_cutoff.frozen_base_release_set == null)
+                or ((.source_cutoff.frozen_base_release_set.generation | generation)
+                  and (.source_cutoff.frozen_base_release_set.digest | digest)))
+              and .components.base.component_id == "opl-base"
+              and (.components.base | exact_component)
+              and .app.component_id == "opl-app"
+              and (.app.version | generation)
+              and (.app | exact_component)
+              and (.app.carriers | type == "array" and length == 2)
+              and ((.app.carriers
+                | map({carrier_id, carrier_kind, package_profile})
+                | sort_by(.carrier_id)) == [
+                  {"carrier_id":"docker_webui","carrier_kind":"oci_image","package_profile":"webui-full"},
+                  {"carrier_id":"macos_standard","carrier_kind":"release_asset","package_profile":"standard"}
+                ])
+              and all(.app.carriers[];
+                (.ref | type == "string" and length > 0)
+                and (.digest | digest)
+                and (.size | type == "number" and . > 0 and floor == .)
+                and ((has("content_fingerprint") | not) or (.content_fingerprint | digest)))
+              and ((.components.packages | keys | sort) == [
+                "mag", "mas", "mas-scholar-skills", "obf", "oma", "opl-flow", "rca"
+              ])
+              and all(.components.packages[]; exact_component)' \
+            "$receipt" >/dev/null
+          frozen_generation="$(jq -r '.source_cutoff.frozen_base_release_set.generation // "none"' "$receipt")"
+          frozen_digest="$(jq -r '.source_cutoff.frozen_base_release_set.digest // "none"' "$receipt")"
+          {
+            echo "eligible=true"
+            echo "release_set_generation=$(jq -r .release_set_generation "$receipt")"
+            echo "expected_framework_source_commit=$(jq -r .components.base.source_commit "$receipt")"
+            echo "app_version=$(jq -r .app.version "$receipt")"
+            echo "expected_app_source_commit=$(jq -r .app.source_commit "$receipt")"
+            echo "expected_app_artifact_digest=$(jq -r .app.artifact_digest "$receipt")"
+            echo "expected_carrier_digest=$(jq -r .carrier.digest "$receipt")"
+            echo "promotion_request_id=$(jq -r .promotion_request_id "$receipt")"
+            echo "source_app_run_id=$(jq -r '.source_app_run_id // ""' "$receipt")"
+            echo "frozen_base_release_set_generation=$frozen_generation"
+            echo "frozen_base_release_set_digest=$frozen_digest"
+            echo "source_head_sha=$SOURCE_HEAD_SHA"
+          } >> "$GITHUB_OUTPUT"
+          echo "Resolved ${artifact_name} (artifact ${artifact_id}) for protected Stable promotion."
+
   publish-candidate:
     name: Publish new immutable candidate
     if: github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'candidate'
@@ -76,25 +249,64 @@ jobs:
       promotion_request_id: ${{ inputs.promotion_request_id }}
       source_app_run_id: ${{ inputs.source_app_run_id }}
       expected_framework_source_commit: ${{ inputs.expected_framework_source_commit }}
+      frozen_base_release_set_generation: ${{ inputs.frozen_base_release_set_generation }}
+      frozen_base_release_set_digest: ${{ inputs.frozen_base_release_set_digest }}
       expected_app_source_commit: ${{ inputs.expected_app_source_commit }}
       expected_app_artifact_digest: ${{ inputs.expected_app_artifact_digest }}
 
   promote-exact-release-set:
     name: Promote exact immutable BOM to latest-stable
-    if: inputs.promotion_target == 'latest-stable'
+    needs: [resolve-auto-promotion]
+    if: >-
+      always()
+      && (
+        (github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable')
+        || (needs.resolve-auto-promotion.result == 'success' && needs.resolve-auto-promotion.outputs.eligible == 'true')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: release-stable
     concurrency:
       group: opl-package-publication-${{ github.repository_owner }}
       cancel-in-progress: false
     steps:
+      - name: Verify protected Stable environment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          environment_json="$RUNNER_TEMP/opl-release-stable-environment.json"
+          gh api "repos/$GITHUB_REPOSITORY/environments/release-stable" > "$environment_json" || {
+            echo "::error::release-stable must exist before dispatch; refusing an auto-created unprotected environment."
+            exit 1
+          }
+          protection_rule_count="$(jq -r '.protection_rules | length' "$environment_json")"
+          protected_branches="$(jq -r '.deployment_branch_policy.protected_branches // false' "$environment_json")"
+          custom_branch_policies="$(jq -r '.deployment_branch_policy.custom_branch_policies // false' "$environment_json")"
+          if [ "$protection_rule_count" -gt 0 ] || [ "$protected_branches" = true ]; then
+            exit 0
+          fi
+          if [ "$custom_branch_policies" = true ]; then
+            branch_policies="$RUNNER_TEMP/opl-release-stable-branch-policies.json"
+            gh api --paginate --slurp \
+              "repos/$GITHUB_REPOSITORY/environments/release-stable/deployment-branch-policies?per_page=100" \
+              > "$branch_policies"
+            jq -e --arg branch "$GITHUB_REF_NAME" \
+              'any(.[] | .branch_policies[]; .name == $branch)' "$branch_policies" >/dev/null && exit 0
+          fi
+          echo "::error::release-stable has no protection rule or exact allowed branch policy."
+          exit 1
+
       - name: Checkout OPL
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve-auto-promotion.outputs.eligible == 'true' && needs.resolve-auto-promotion.outputs.source_head_sha || github.sha }}
 
       - name: Validate frozen Framework source input
         shell: bash
         env:
-          EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
+          EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.expected_framework_source_commit || needs.resolve-auto-promotion.outputs.expected_framework_source_commit }}
         run: |
           set -euo pipefail
           expected="$EXPECTED_FRAMEWORK_SOURCE_COMMIT"
@@ -115,13 +327,23 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
+          EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.expected_framework_source_commit || needs.resolve-auto-promotion.outputs.expected_framework_source_commit }}
+          RESOLVED_RELEASE_SET_GENERATION: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.release_set_generation || needs.resolve-auto-promotion.outputs.release_set_generation }}
+          RESOLVED_APP_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.app_version || needs.resolve-auto-promotion.outputs.app_version }}
+          RESOLVED_APP_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.expected_app_source_commit || needs.resolve-auto-promotion.outputs.expected_app_source_commit }}
+          RESOLVED_APP_ARTIFACT_DIGEST: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.expected_app_artifact_digest || needs.resolve-auto-promotion.outputs.expected_app_artifact_digest }}
+          RESOLVED_CARRIER_DIGEST: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.expected_carrier_digest || needs.resolve-auto-promotion.outputs.expected_carrier_digest }}
+          RESOLVED_PROMOTION_REQUEST_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.promotion_request_id || needs.resolve-auto-promotion.outputs.promotion_request_id }}
+          RESOLVED_SOURCE_APP_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.source_app_run_id || needs.resolve-auto-promotion.outputs.source_app_run_id }}
+          RESOLVED_FROZEN_BASE_GENERATION: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.frozen_base_release_set_generation || needs.resolve-auto-promotion.outputs.frozen_base_release_set_generation }}
+          RESOLVED_FROZEN_BASE_DIGEST: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.frozen_base_release_set_digest || needs.resolve-auto-promotion.outputs.frozen_base_release_set_digest }}
+          RESOLVED_RELEASE_GATE: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.release_gate || 'attested_candidate_auto_promotion' }}
         run: |
           set -euo pipefail
-          generation="${{ inputs.release_set_generation }}"
+          generation="$RESOLVED_RELEASE_SET_GENERATION"
           generation="${generation#v}"
           [[ "$generation" =~ ^[0-9]{2}\.[0-9]{1,2}\.[0-9]{1,2}(-r[1-9][0-9]*)?$ ]]
-          request_id="${{ inputs.promotion_request_id }}"
+          request_id="$RESOLVED_PROMOTION_REQUEST_ID"
           if [ -z "$request_id" ]; then request_id="run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"; fi
           [[ "$request_id" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]]
           owner="${{ github.repository_owner }}"
@@ -132,39 +354,177 @@ jobs:
           descriptor="$(oras manifest fetch --descriptor "${carrier}:${generation}")"
           carrier_digest="$(jq -r .digest <<<"$descriptor")"
           [[ "$carrier_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-          expected_carrier_digest="${{ inputs.expected_carrier_digest }}"
-          [ -z "$expected_carrier_digest" ] || [ "$carrier_digest" = "$expected_carrier_digest" ]
+          expected_carrier_digest="$RESOLVED_CARRIER_DIGEST"
+          [[ "$expected_carrier_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [ "$carrier_digest" = "$expected_carrier_digest" ]
           oras pull "${carrier}@${carrier_digest}" --output "$root"
-          release_manifest="$(find "$root" -name opl-release-manifest.json -print -quit)"
-          channel_manifest="$(find "$root" -name opl-channel-manifest.json -print -quit)"
-          test -n "$release_manifest" && test -n "$channel_manifest"
+          mapfile -t release_manifests < <(find "$root" -type f -name opl-release-manifest.json -print)
+          mapfile -t channel_manifests < <(find "$root" -type f -name opl-channel-manifest.json -print)
+          [ "${#release_manifests[@]}" -eq 1 ] && [ "${#channel_manifests[@]}" -eq 1 ] || {
+            echo "::error::Candidate carrier must contain exactly one release manifest and one channel manifest."
+            exit 1
+          }
+          release_manifest="${release_manifests[0]}"
+          channel_manifest="${channel_manifests[0]}"
           test "$(jq -r .release_set_generation "$release_manifest")" = "$generation"
           test "$(jq -r '.release_set.components.base.source_commit' "$release_manifest")" = "$EXPECTED_FRAMEWORK_SOURCE_COMMIT"
+          jq -e '
+            .release_set.surface_kind == "opl_release_set.v2"
+            and .release_set.bom_status == "complete"
+            and .release_set.components.app.release_status == "published"
+            and ((.release_set.components.app.carriers
+              | map({carrier_id, carrier_kind, package_profile})
+              | sort_by(.carrier_id)) == [
+                {"carrier_id":"docker_webui","carrier_kind":"oci_image","package_profile":"webui-full"},
+                {"carrier_id":"macos_standard","carrier_kind":"release_asset","package_profile":"standard"}
+              ])
+            and ((.release_set.components.packages.members | keys | sort)
+              == ["mag", "mas", "mas-scholar-skills", "obf", "oma", "opl-flow", "rca"])
+          ' "$release_manifest" >/dev/null
           app_version="$(jq -r '.release_set.components.app.version' "$release_manifest")"
           app_commit="$(jq -r '.release_set.components.app.source_commit' "$release_manifest")"
           app_digest="$(jq -r '.release_set.components.app.artifact_digest' "$release_manifest")"
-          expected_app_version="${{ inputs.app_version }}"
+          expected_app_version="$RESOLVED_APP_VERSION"
           expected_app_version="${expected_app_version#v}"
           [ -z "$expected_app_version" ] || [ "$app_version" = "$expected_app_version" ]
-          [ -z "${{ inputs.expected_app_source_commit }}" ] || [ "$app_commit" = "${{ inputs.expected_app_source_commit }}" ]
-          [ -z "${{ inputs.expected_app_artifact_digest }}" ] || [ "$app_digest" = "${{ inputs.expected_app_artifact_digest }}" ]
+          [ -z "$RESOLVED_APP_SOURCE_COMMIT" ] || [ "$app_commit" = "$RESOLVED_APP_SOURCE_COMMIT" ]
+          [ -z "$RESOLVED_APP_ARTIFACT_DIGEST" ] || [ "$app_digest" = "$RESOLVED_APP_ARTIFACT_DIGEST" ]
           OPL_PACKAGE_PROMOTION_TARGET=latest-stable node scripts/finalize-package-channel-digests.mjs \
             --release-manifest "$release_manifest" \
             --channel-manifest "$channel_manifest" \
             --check
 
+          base_generation="$RESOLVED_FROZEN_BASE_GENERATION"
+          base_generation="${base_generation#v}"
+          base_carrier_digest="$RESOLVED_FROZEN_BASE_DIGEST"
+          base_release_manifest=""
+          if [ "$base_generation" = none ] || [ "$base_carrier_digest" = none ]; then
+            [ "$base_generation" = none ] && [ "$base_carrier_digest" = none ] || {
+              echo "::error::Frozen base generation and digest must both be none for bootstrap."
+              exit 1
+            }
+          else
+            [[ "$base_generation" =~ ^[0-9]{2}\.[0-9]{1,2}\.[0-9]{1,2}(-r[1-9][0-9]*)?$ ]]
+            [[ "$base_carrier_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+            observed_base_digest="$(oras manifest fetch --descriptor "${carrier}:${base_generation}" | jq -r .digest)"
+            [ "$observed_base_digest" = "$base_carrier_digest" ] || {
+              echo "::error::Frozen base ${base_generation} digest drifted."
+              exit 1
+            }
+            base_root="$RUNNER_TEMP/opl-base-release-set"
+            mkdir -p "$base_root"
+            oras pull "${carrier}@${base_carrier_digest}" --output "$base_root"
+            mapfile -t base_release_manifests < <(find "$base_root" -type f -name opl-release-manifest.json -print)
+            [ "${#base_release_manifests[@]}" -eq 1 ] || {
+              echo "::error::Frozen predecessor carrier must contain exactly one release manifest."
+              exit 1
+            }
+            base_release_manifest="${base_release_manifests[0]}"
+            jq -e --arg generation "$base_generation" \
+              '.release_set.surface_kind == "opl_release_set.v2"
+                and .release_set.bom_status == "complete"
+                and .release_set_generation == $generation
+                and .release_set.generation == $generation' \
+              "$base_release_manifest" >/dev/null
+          fi
+
+          read_channel_digest() {
+            local tagged_ref="$1" repository tag descriptor_file error_file tags_file
+            repository="${tagged_ref%:*}"
+            tag="${tagged_ref##*:}"
+            descriptor_file="$(mktemp "$RUNNER_TEMP/opl-channel-descriptor.XXXXXX")"
+            error_file="$(mktemp "$RUNNER_TEMP/opl-channel-descriptor-error.XXXXXX")"
+            if oras manifest fetch --descriptor "$tagged_ref" > "$descriptor_file" 2> "$error_file"; then
+              jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))' "$descriptor_file"
+              return 0
+            fi
+            tags_file="$(mktemp "$RUNNER_TEMP/opl-channel-tags.XXXXXX")"
+            if ! oras repo tags "$repository" > "$tags_file"; then
+              echo "::error::Unable to verify current Stable channel for ${tagged_ref}." >&2
+              return 1
+            fi
+            if grep -Fxq "$tag" "$tags_file"; then
+              echo "::error::Stable tag ${tagged_ref} exists but its exact digest could not be resolved." >&2
+              return 1
+            fi
+          }
+          assert_channel_cas_eligible() {
+            local ref="$1" frozen_digest="$2" target_digest="$3" current_digest
+            current_digest="$(read_channel_digest "${ref}:latest-stable")"
+            if [ "$current_digest" = "$target_digest" ]; then
+              return 0
+            fi
+            if [ "$frozen_digest" = none ]; then
+              [ -z "$current_digest" ] || {
+                echo "::error::Stable channel conflict for ${ref}: freeze observed no value, now ${current_digest}."
+                return 1
+              }
+            elif [ "$current_digest" != "$frozen_digest" ]; then
+              echo "::error::Stable channel conflict for ${ref}: expected frozen ${frozen_digest}, got ${current_digest:-missing}."
+              return 1
+            fi
+          }
+          promote_channel_ref() {
+            local ref="$1" frozen_digest="$2" target_digest="$3" current_digest
+            current_digest="$(read_channel_digest "${ref}:latest-stable")"
+            if [ "$current_digest" = "$target_digest" ]; then
+              return 0
+            fi
+            if [ "$frozen_digest" = none ]; then
+              [ -z "$current_digest" ] || {
+                echo "::error::Stable channel conflict for ${ref}: freeze observed no value, now ${current_digest}."
+                return 1
+              }
+            elif [ "$current_digest" != "$frozen_digest" ]; then
+              echo "::error::Stable channel conflict for ${ref}: expected frozen ${frozen_digest}, got ${current_digest:-missing}."
+              return 1
+            fi
+            if ! oras tag "${ref}@${target_digest}" latest-stable; then
+              current_digest="$(read_channel_digest "${ref}:latest-stable")"
+              [ "$current_digest" = "$target_digest" ] || {
+                echo "::error::Stable tag result for ${ref} is not the exact target after bounded readback."
+                return 1
+              }
+              echo "::notice::Reconciled an unknown tag result for ${ref} to the exact target digest."
+            fi
+          }
+
+          promotion_plan="$RUNNER_TEMP/opl-stable-promotion-plan.tsv"
+          : > "$promotion_plan"
           while IFS=$'\t' read -r package_id digest; do
             image="ghcr.io/${owner}/one-person-lab-packages/${package_id}"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
             test "$(oras manifest fetch --descriptor "${image}@${digest}" | jq -r .digest)" = "$digest"
-            oras tag "${image}@${digest}" latest-stable
+            if [ -n "$base_release_manifest" ]; then
+              frozen_digest="$(jq -r --arg id "$package_id" '.release_set.components.packages.members[$id].artifact_digest' "$base_release_manifest")"
+              [[ "$frozen_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+            else
+              frozen_digest=none
+            fi
+            printf '%s\t%s\t%s\n' "$image" "$frozen_digest" "$digest" >> "$promotion_plan"
           done < <(jq -r '.release_set.components.packages.members | to_entries[] | [.key, .value.artifact_digest] | @tsv' "$release_manifest")
 
           base_ref="$(jq -r '.release_set.components.base.artifact_ref' "$release_manifest")"
           base_image="${base_ref%:*}"
           base_digest="$(jq -r '.release_set.components.base.artifact_digest' "$release_manifest")"
+          [[ "$base_image" == ghcr.io/* ]] && [[ "$base_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           test "$(oras manifest fetch --descriptor "${base_image}@${base_digest}" | jq -r .digest)" = "$base_digest"
-          oras tag "${base_image}@${base_digest}" latest-stable
-          oras tag "${carrier}@${carrier_digest}" latest-stable
+          if [ -n "$base_release_manifest" ]; then
+            frozen_framework_digest="$(jq -r '.release_set.components.base.artifact_digest' "$base_release_manifest")"
+            [[ "$frozen_framework_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          else
+            frozen_framework_digest=none
+          fi
+          printf '%s\t%s\t%s\n' "$base_image" "$frozen_framework_digest" "$base_digest" >> "$promotion_plan"
+          printf '%s\t%s\t%s\n' "$carrier" "$base_carrier_digest" "$carrier_digest" >> "$promotion_plan"
+          [ "$(wc -l < "$promotion_plan" | tr -d ' ')" = 9 ]
+
+          while IFS=$'\t' read -r ref frozen_digest target_digest; do
+            assert_channel_cas_eligible "$ref" "$frozen_digest" "$target_digest"
+          done < "$promotion_plan"
+          while IFS=$'\t' read -r ref frozen_digest target_digest; do
+            promote_channel_ref "$ref" "$frozen_digest" "$target_digest"
+          done < "$promotion_plan"
 
           oras logout ghcr.io
           verify_public_digest() {
@@ -191,14 +551,16 @@ jobs:
             --carrier-ref "${carrier}:${generation}" \
             --carrier-digest "$carrier_digest" \
             --promotion-request-id "$request_id" \
-            --release-gate "${{ inputs.release_gate }}" \
-            --source-app-run-id "${{ inputs.source_app_run_id }}" \
+            --release-gate "$RESOLVED_RELEASE_GATE" \
+            --source-app-run-id "$RESOLVED_SOURCE_APP_RUN_ID" \
             --framework-repository "$GITHUB_REPOSITORY" \
             --framework-run-id "$GITHUB_RUN_ID" \
             --framework-run-attempt "$GITHUB_RUN_ATTEMPT" \
-            --expected-app-version "${{ inputs.app_version }}" \
-            --expected-app-source-commit "${{ inputs.expected_app_source_commit }}" \
-            --expected-app-artifact-digest "${{ inputs.expected_app_artifact_digest }}" \
+            --expected-app-version "$RESOLVED_APP_VERSION" \
+            --expected-app-source-commit "$RESOLVED_APP_SOURCE_COMMIT" \
+            --expected-app-artifact-digest "$RESOLVED_APP_ARTIFACT_DIGEST" \
+            --frozen-base-release-set-generation "$RESOLVED_FROZEN_BASE_GENERATION" \
+            --frozen-base-release-set-digest "$RESOLVED_FROZEN_BASE_DIGEST" \
             --anonymous-readback true
           echo "OPL_PROMOTION_REQUEST_ID=$request_id" >> "$GITHUB_ENV"
           echo "OPL_PROMOTION_RECEIPT_PATH=$receipt_root/opl-release-promotion-receipt.json" >> "$GITHUB_ENV"

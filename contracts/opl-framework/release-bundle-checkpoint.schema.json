@@ -32,6 +32,10 @@
         "frozen",
         "standard_built",
         "standard_qualified",
+        "webui_built",
+        "webui_qualified",
+        "stable_built",
+        "stable_qualified",
         "full_built",
         "full_qualified"
       ]
@@ -87,6 +91,7 @@
       "required": ["standard", "full"],
       "properties": {
         "standard": { "$ref": "#/$defs/track" },
+        "webui": { "$ref": "#/$defs/track" },
         "full": { "$ref": "#/$defs/track" }
       }
     },
@@ -137,7 +142,7 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
         },
         "operation_kind": { "enum": ["standard", "append_full"] },
-        "track": { "enum": ["standard", "full"] },
+        "track": { "enum": ["standard", "webui", "full"] },
         "operation_started_at": {
           "type": "string",
           "format": "date-time",
@@ -184,7 +189,7 @@
           "type": ["string", "null"],
           "enum": ["track_assets", "external_target", null]
         },
-        "track": { "enum": ["standard", "full"] },
+        "track": { "enum": ["standard", "webui", "full"] },
         "remote_target": {
           "type": "string",
           "minLength": 3,
@@ -257,7 +262,7 @@
         "role": {
           "enum": ["bundle", "prepared_notes", "track_asset", "track_asset_manifest", "qualification_receipt"]
         },
-        "track": { "type": ["string", "null"], "enum": ["standard", "full", null] },
+        "track": { "type": ["string", "null"], "enum": ["standard", "webui", "full", null] },
         "asset_name": { "type": ["string", "null"], "maxLength": 255 },
         "size_bytes": { "type": "integer", "minimum": 1 },
         "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }

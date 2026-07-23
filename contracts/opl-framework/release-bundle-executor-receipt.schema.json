@@ -30,7 +30,7 @@
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
-    "track": { "enum": ["standard", "full"] },
+    "track": { "enum": ["standard", "webui", "full"] },
     "outcome": { "enum": ["complete", "unknown"] },
     "release_operation": { "enum": ["standard", "resume_standard", "append_full"] },
     "operation_id": {

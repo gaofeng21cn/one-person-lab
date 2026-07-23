@@ -31,7 +31,7 @@
       "enum": ["frozen", "complete", "idempotent", "upload_required", "reconcile_only", "late_observation"]
     },
     "bundle_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "track": { "type": ["string", "null"], "enum": ["standard", "full", null] },
+    "track": { "type": ["string", "null"], "enum": ["standard", "webui", "full", null] },
     "executor": { "type": ["string", "null"], "enum": ["local", "remote", null] },
     "attempt_id": { "type": ["string", "null"] },
     "recorded_at": { "type": "string", "format": "date-time" },
@@ -80,7 +80,7 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
         },
         "operation_kind": { "enum": ["standard", "append_full"] },
-        "track": { "enum": ["standard", "full"] },
+        "track": { "enum": ["standard", "webui", "full"] },
         "operation_started_at": { "type": "string", "format": "date-time" },
         "operation_deadline_at": { "type": "string", "format": "date-time" }
       }
@@ -116,7 +116,7 @@
           "type": ["string", "null"],
           "enum": ["track_assets", "external_target", null]
         },
-        "track": { "enum": ["standard", "full"] },
+        "track": { "enum": ["standard", "webui", "full"] },
         "remote_target": { "type": "string", "minLength": 3 },
         "prior_mutation_attempt_id": { "type": "string", "minLength": 1 },
         "executor": { "enum": ["local", "remote"] }

@@ -76,6 +76,7 @@
         "evidence": { "type": "object" }
       }
     },
+    "source_cutoff": { "$ref": "#/$defs/sourceCutoff" },
     "tracks": {
       "type": "object",
       "additionalProperties": false,
@@ -89,6 +90,18 @@
                 "required_for_latest": { "const": true },
                 "additive_only": { "const": false },
                 "updater_metadata_allowed": { "const": true }
+              }
+            }
+          ]
+        },
+        "webui": {
+          "allOf": [
+            { "$ref": "#/$defs/track" },
+            {
+              "properties": {
+                "required_for_latest": { "const": true },
+                "additive_only": { "const": false },
+                "updater_metadata_allowed": { "const": false }
               }
             }
           ]
@@ -112,6 +125,44 @@
     "digest": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sourceCutoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observed_at",
+        "policy",
+        "frozen_base_release_set",
+        "post_freeze_remote_refresh_allowed",
+        "later_authority_advancement_invalidates_bundle"
+      ],
+      "properties": {
+        "observed_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+        },
+        "policy": { "const": "single_read_at_freeze_admission" },
+        "frozen_base_release_set": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["generation", "digest"],
+              "properties": {
+                "generation": {
+                  "type": "string",
+                  "pattern": "^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(?:-r[1-9][0-9]*)?$"
+                },
+                "digest": { "$ref": "#/$defs/digest" }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "post_freeze_remote_refresh_allowed": { "const": false },
+        "later_authority_advancement_invalidates_bundle": { "const": false }
+      }
     },
     "gitSha": {
       "type": "string",

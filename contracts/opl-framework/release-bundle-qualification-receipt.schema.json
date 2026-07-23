@@ -19,7 +19,7 @@
       "const": "contracts/opl-framework/release-bundle-qualification-receipt.schema.json"
     },
     "bundle_digest": { "$ref": "#/$defs/digest" },
-    "track": { "enum": ["standard", "full"] },
+    "track": { "enum": ["standard", "webui", "full"] },
     "subject": {
       "type": "object",
       "additionalProperties": false,

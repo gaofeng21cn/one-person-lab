@@ -56,6 +56,16 @@ type ComponentArtifact = {
   content_type: string;
 };
 
+export type AppComponentCarrier = {
+  carrier_id: 'macos_standard' | 'docker_webui';
+  carrier_kind: 'release_asset' | 'oci_image';
+  ref: string;
+  digest: string;
+  size: number;
+  package_profile: 'standard' | 'webui-full';
+  content_fingerprint?: string;
+};
+
 export type AppComponentInput = {
   surface_kind: 'opl_app_component_manifest.v1';
   component_id: 'opl-app';
@@ -66,6 +76,7 @@ export type AppComponentInput = {
   release_status: 'draft' | 'published';
   primary_artifact: ComponentArtifact;
   artifacts: ComponentArtifact[];
+  carriers?: AppComponentCarrier[];
   component_manifest_ref: string;
   component_manifest_digest: string;
 };
@@ -236,6 +247,7 @@ function buildAppComponent(input: AppComponentInput | null | undefined) {
       component_manifest_ref: null,
       component_manifest_digest: null,
       artifacts: [],
+      carriers: [],
     };
   }
   return {
@@ -252,6 +264,14 @@ function buildAppComponent(input: AppComponentInput | null | undefined) {
     component_manifest_ref: input.component_manifest_ref,
     component_manifest_digest: input.component_manifest_digest,
     artifacts: input.artifacts,
+    carriers: input.carriers ?? [{
+      carrier_id: 'macos_standard',
+      carrier_kind: 'release_asset',
+      ref: input.primary_artifact.ref,
+      digest: input.primary_artifact.digest,
+      size: input.primary_artifact.size,
+      package_profile: 'standard',
+    }],
   };
 }
 

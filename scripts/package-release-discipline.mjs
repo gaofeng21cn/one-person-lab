@@ -197,6 +197,10 @@ function validateWorkflow(manifest, manifestPath, failures) {
   const packageFrameworkCommitInputs = workflowInputBlocks(source, 'expected_framework_source_commit');
   assertCondition(packageFrameworkCommitInputs.length === 2
     && packageFrameworkCommitInputs.every(isRequiredStringInput), 'Package workflow must require one non-default Framework source commit for both dispatch and workflow_call', failures);
+  for (const inputName of ['frozen_base_release_set_generation', 'frozen_base_release_set_digest']) {
+    const inputBlocks = workflowInputBlocks(source, inputName);
+    assertCondition(inputBlocks.length === 2 && inputBlocks.every(isRequiredStringInput), `Package workflow must require ${inputName} for both dispatch and workflow_call`, failures);
+  }
   assertCondition(source.includes('ref: ${{ github.sha }}')
     && source.includes('path: .release-harness')
     && source.includes('ref: ${{ inputs.expected_framework_source_commit }}')
@@ -261,17 +265,32 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/generation_ref="\$\{carrier\}:\$\{OPL_RELEASE_SET_GENERATION\}"/.test(source), 'Catalog carrier must use immutable Release Set generation', failures);
   assertCondition(/oras tag .* candidate/.test(source) && !/oras tag .* latest-stable/.test(source), 'Package build workflow must publish candidate only', failures);
   assertCondition(!/:latest(?:["'\s]|$)/m.test(source), 'Package workflow must not publish or consume bare latest', failures);
+  assertCondition(!/one-person-lab-manifest:latest-stable/.test(source)
+    && !/gh release list --repo gaofeng21cn\/one-person-lab-app/.test(source)
+    && /oras pull "\$\{carrier\}@\$\{base_digest\}"/.test(source), 'Candidate publication must consume only the frozen base generation and digest without chasing authority', failures);
 
   assertCondition(!/\n\s*release:\s*\n/.test(releaseSource), 'Stable promotion must not have a second GitHub Release event writer', failures);
   assertCondition(/workflow_dispatch:/.test(releaseSource), 'Stable promotion must retain an explicit dispatch owner surface', failures);
   const releaseFrameworkCommitInputs = workflowInputBlocks(releaseSource, 'expected_framework_source_commit');
   assertCondition(releaseFrameworkCommitInputs.length === 1
     && releaseFrameworkCommitInputs.every(isRequiredStringInput), 'Release promotion must require one non-default Framework source commit', failures);
+  for (const inputName of ['frozen_base_release_set_generation', 'frozen_base_release_set_digest']) {
+    const inputBlocks = workflowInputBlocks(releaseSource, inputName);
+    assertCondition(inputBlocks.length === 1 && inputBlocks.every(isRequiredStringInput), `Release promotion must require ${inputName}`, failures);
+  }
   assertCondition(/expected_framework_source_commit:\s*\$\{\{ inputs\.expected_framework_source_commit \}\}/.test(releaseSource), 'Candidate caller must pass the exact Framework source commit into packages.yml', failures);
-  assertCondition(releaseSource.includes('EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}')
+  assertCondition(releaseSource.includes('needs.resolve-auto-promotion.outputs.expected_framework_source_commit')
     && releaseSource.includes('[[ "$expected" =~ ^[0-9a-f]{40}$ ]]')
     && releaseSource.includes(".release_set.components.base.source_commit")
     && !releaseSource.includes('[ "$GITHUB_SHA" != "$expected" ]'), 'Stable promotion must validate the exact frozen Framework component without conflating it with the workflow harness', failures);
+  assertCondition(/workflow_run:[\s\S]*workflows:\s*\[Publish OPL Package Release Set, Daily OPL Package Channel\]/.test(releaseSource)
+    && /resolve-auto-promotion:[\s\S]*needs:\s*\[publish-candidate\]/.test(releaseSource)
+    && /needs\.publish-candidate\.result == 'success'/.test(releaseSource)
+    && /gh api --paginate --slurp/.test(releaseSource)
+    && /SOURCE_HEAD_SHA/.test(releaseSource)
+    && /exactly one attested candidate receipt artifact/.test(releaseSource)
+    && /"mag", "mas", "mas-scholar-skills", "obf", "oma", "opl-flow", "rca"/.test(releaseSource)
+    && /"docker_webui"[\s\S]*"macos_standard"/.test(releaseSource), 'Every successful candidate entry point must resolve one complete exact-identity attested receipt before Stable promotion', failures);
   const releaseCheckoutIndex = releaseSource.indexOf('- name: Checkout OPL');
   const releaseSourceGateIndex = releaseSource.indexOf('- name: Validate frozen Framework source input');
   const releaseSetupIndex = releaseSource.indexOf('- name: Setup Node.js');
@@ -282,24 +301,43 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/oras pull "\$\{carrier\}@\$\{carrier_digest\}"/.test(releaseSource), 'Stable promotion must pull the exact immutable catalog digest', failures);
   assertCondition(/components\.packages\.members/.test(releaseSource) && /components\.base\.artifact_digest/.test(releaseSource), 'Stable promotion must retag exact Package and Base digests', failures);
   assertCondition(/expected_carrier_digest/.test(releaseSource) && /promotion_request_id/.test(releaseSource), 'Stable promotion must bind the App saga request and candidate digest', failures);
+  assertCondition(/promote_channel_ref\(\)/.test(releaseSource)
+    && /assert_channel_cas_eligible\(\)/.test(releaseSource)
+    && /opl-stable-promotion-plan\.tsv/.test(releaseSource)
+    && /Stable channel conflict/.test(releaseSource)
+    && /base_carrier_digest/.test(releaseSource)
+    && releaseSource.indexOf('assert_channel_cas_eligible "$ref"') < releaseSource.indexOf('promote_channel_ref "$ref"'), 'Stable promotion must preflight then CAS every moving projection against the frozen predecessor', failures);
+  assertCondition(/if ! oras tag "\$\{ref\}@\$\{target_digest\}" latest-stable/.test(releaseSource)
+    && /Reconciled an unknown tag result/.test(releaseSource)
+    && /not the exact target after bounded readback/.test(releaseSource), 'Stable promotion must reconcile an unknown tag result by exact readback without redispatch', failures);
+  assertCondition(/environment:\s*release-stable/.test(releaseSource)
+    && /Verify protected Stable environment/.test(releaseSource)
+    && /release-stable must exist before dispatch/.test(releaseSource)
+    && /protection_rules \| length/.test(releaseSource)
+    && /deployment-branch-policies\?per_page=100/.test(releaseSource)
+    && /no protection rule or exact allowed branch policy/.test(releaseSource)
+    && /RESOLVED_CARRIER_DIGEST/.test(releaseSource)
+    && /\[ "\$carrier_digest" = "\$expected_carrier_digest" \]/.test(releaseSource), 'Stable mutation must remain protected and bind the exact candidate carrier digest', failures);
   assertCondition(/write-release-promotion-receipt\.mjs/.test(releaseSource), 'Stable promotion must publish a machine-readable receipt', failures);
   assertCondition(/schedule:[\s\S]*cron:/.test(dailySource), 'Daily Package workflow must remain scheduled', failures);
   assertCondition(/concurrency:[\s\S]*group:\s*opl-daily-package-channel-\$\{\{ github\.repository_owner \}\}[\s\S]*cancel-in-progress:\s*false/.test(dailySource), 'Daily Package workflow must serialize Release Set generation allocation', failures);
   assertCondition(/release_set_generation:/.test(dailySource) && /--release-set-generation/.test(dailySource), 'Daily workflow must use Release Set generation vocabulary', failures);
   assertCondition(/oras repo tags/.test(dailySource) && /release-set-generation\.mjs/.test(dailySource), 'Daily workflow must allocate a new immutable same-day revision', failures);
-  assertCondition(!/if ! oras repo tags/.test(dailySource), 'Daily Release Set generation must fail closed when tag readback fails', failures);
+  assertCondition(!/if ! oras repo tags "ghcr\.io\/\$\{\{ github\.repository_owner \}\}\/one-person-lab-manifest"/.test(dailySource), 'Daily Release Set generation must fail closed when tag readback fails', failures);
   assertCondition(/OPL_PACKAGE_RELEASE_GATE:\s*daily_package_channel_detection/.test(dailySource), 'Daily detection build must carry an explicit candidate-only release gate', failures);
   assertCondition(/--owner-cohort-mode\s+framework-projection/.test(dailySource), 'Daily detection must freeze Framework-selected owner commits instead of unrelated owner HEADs', failures);
-  assertCondition(/one-person-lab-manifest:latest-stable/.test(dailySource), 'Daily workflow must compare with latest-stable', failures);
-  for (const [label, workflowSource] of [['Package', source], ['Daily', dailySource]]) {
-    assertCondition(
-      workflowSource.includes('gh release view "v$previous_app_version"')
-        && workflowSource.includes("jq -e '.isDraft == false and .isPrerelease == false and .publishedAt != null'")
-        && workflowSource.includes('Previous latest-stable App release v$previous_app_version is unavailable or no longer stable'),
-      `${label} workflow must recover when the previous stable App release is unavailable`,
-      failures,
-    );
-  }
+  assertCondition(/\$\{carrier\}:latest-stable/.test(dailySource)
+    && /oras pull "\$\{carrier\}@\$\{frozen_digest\}"/.test(dailySource)
+    && /frozen_base_release_set_generation/.test(dailySource)
+    && /frozen_base_release_set_digest/.test(dailySource)
+    && /bootstrap is forbidden on an availability error/.test(dailySource)
+    && /latest-stable exists but its exact digest could not be resolved/.test(dailySource)
+    && /release_manifests\[@\]/.test(dailySource)
+    && /\.release_set\.bom_status == "complete"/.test(dailySource), 'Daily admission must distinguish verified absence from availability, identity, and digest failure before freezing one exact predecessor', failures);
+  assertCondition(!source.includes('Previous latest-stable App release')
+    && !dailySource.includes('Previous latest-stable App release')
+    && /app_version="\$\(jq -r '\.release_set\.components\.app\.version'/.test(source)
+    && /app_version="\$\(jq -r '\.release_set\.components\.app\.version'/.test(dailySource), 'Package workflows must retain the App bound by the frozen base instead of chasing a newer release', failures);
   assertCondition(
     /owner_manifest=""[\s\S]*gh release download[\s\S]*app_commit=""[\s\S]*if \[ -n "\$owner_manifest" \]; then[\s\S]*jq -r \.source_commit "\$owner_manifest"[\s\S]*if \[ -z "\$app_commit" \]; then[\s\S]*gh api "repos\/gaofeng21cn\/one-person-lab-app\/commits\/v\$app_version"/.test(dailySource),
     'Daily App resolution must prefer the published owner component manifest and use tag readback only as fallback',
