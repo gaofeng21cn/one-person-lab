@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/package-repository-index.schema.json",
+  "title": "OPL Package Repository Index",
+  "description": "Framework-owned aggregation index for independently published immutable Package versions. Source adapters contribute candidates; the compatibility resolver owns target currentness; the installed lock owns machine truth.",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "index_id",
+    "generated_at",
+    "authority_boundary",
+    "source_adapters",
+    "packages"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_package_repository_index.v1"
+    },
+    "schema_version": {
+      "const": "package-repository-index.v1"
+    },
+    "index_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_boundary": {
+      "type": "object",
+      "required": [
+        "repository_index_owner",
+        "package_version_owner",
+        "source_adapter_role",
+        "currentness_owner",
+        "installed_truth_owner",
+        "runtime_truth_owner",
+        "release_set_role"
+      ],
+      "properties": {
+        "repository_index_owner": {
+          "const": "opl_framework"
+        },
+        "package_version_owner": {
+          "const": "package_owner"
+        },
+        "source_adapter_role": {
+          "const": "candidate_transport_only"
+        },
+        "currentness_owner": {
+          "const": "framework_compatibility_resolver"
+        },
+        "installed_truth_owner": {
+          "const": "exact_installed_lock"
+        },
+        "runtime_truth_owner": {
+          "const": "immutable_materialized_bytes"
+        },
+        "release_set_role": {
+          "const": "reproducible_snapshot_not_currentness_authority"
+        }
+      },
+      "additionalProperties": false
+    },
+    "source_adapters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source_adapter"
+      },
+      "minItems": 1
+    },
+    "packages": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/package_entry"
+      }
+    },
+    "package_catalog_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "source_adapter": {
+      "type": "object",
+      "required": [
+        "adapter_id",
+        "adapter_kind",
+        "candidate_only"
+      ],
+      "properties": {
+        "adapter_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "adapter_kind": {
+          "enum": [
+            "oci",
+            "external_registry",
+            "direct_manifest",
+            "developer_checkout",
+            "offline_seed",
+            "release_set_v1_bridge"
+          ]
+        },
+        "candidate_only": {
+          "const": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "package_entry": {
+      "type": "object",
+      "required": [
+        "package_id",
+        "package_role",
+        "versions"
+      ],
+      "properties": {
+        "package_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "package_role": {
+          "enum": [
+            "standard_agent",
+            "framework_capability_package",
+            "workflow_profile"
+          ]
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/package_version"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "package_version": {
+      "type": "object",
+      "required": [
+        "package_version",
+        "manifest_url",
+        "manifest_sha256",
+        "compatibility",
+        "publication"
+      ],
+      "properties": {
+        "package_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+        },
+        "manifest_url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "compatibility": {
+          "$ref": "#/$defs/compatibility"
+        },
+        "publication": {
+          "$ref": "#/$defs/publication"
+        }
+      },
+      "additionalProperties": true
+    },
+    "compatibility": {
+      "type": "object",
+      "required": [
+        "declaration_status",
+        "base_abi_range"
+      ],
+      "properties": {
+        "declaration_status": {
+          "enum": [
+            "declared",
+            "legacy_unspecified"
+          ]
+        },
+        "base_abi_range": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "capability_abi": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "declaration_status": {
+                "const": "declared"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "base_abi_range": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "base_abi_range": {
+                "const": null
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "publication": {
+      "type": "object",
+      "required": [
+        "owner",
+        "stability",
+        "immutable"
+      ],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stability": {
+          "enum": [
+            "stable",
+            "prerelease",
+            "retired"
+          ]
+        },
+        "immutable": {
+          "const": true
+        },
+        "published_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_adapter_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}
