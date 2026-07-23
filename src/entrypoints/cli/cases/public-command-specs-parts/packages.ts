@@ -560,7 +560,7 @@ export function buildPackagesCommandSpecs(
       summary: 'Reconcile one installed OPL Package from its locked local source without catalog or network access.',
       examples: ['opl packages optimize opl-flow --json'],
       group: 'packages',
-      help_surface: 'default',
+      help_surface: 'diagnostic_drilldown',
       handler: (args) => runOplAgentPackageOptimize(admitMasWorkspaceScopedPackageMutation(
         'packages optimize',
         parsePackageAction('packages optimize', args, getCommandSpec('packages optimize')),
