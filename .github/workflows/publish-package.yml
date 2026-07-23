@@ -1,0 +1,240 @@
+name: Publish one OPL Package
+run-name: Package ${{ inputs.package_id }} ${{ inputs.expected_package_version }} / ${{ inputs.publication_request_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_id:
+        description: Canonical Package id
+        required: true
+        type: choice
+        options: [mag, mas, mas-scholar-skills]
+      expected_package_version:
+        description: Exact stable SemVer selected by canonical Framework main
+        required: true
+        type: string
+      expected_owner_source_commit:
+        description: Exact owner commit selected by canonical Framework main
+        required: true
+        type: string
+      expected_framework_source_commit:
+        description: Exact Framework main commit that owns the Package projection
+        required: true
+        type: string
+      expected_latest_stable_predecessor:
+        description: Exact latest-stable digest observed before dispatch
+        required: true
+        type: string
+      publication_request_id:
+        description: Unique publication correlation id
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: opl-package-publication-${{ inputs.package_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish-package:
+    runs-on: ubuntu-latest
+    environment: release-stable
+    permissions:
+      contents: read
+      packages: write
+    env:
+      PACKAGE_ID: ${{ inputs.package_id }}
+      EXPECTED_PACKAGE_VERSION: ${{ inputs.expected_package_version }}
+      EXPECTED_OWNER_SOURCE_COMMIT: ${{ inputs.expected_owner_source_commit }}
+      EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
+      EXPECTED_LATEST_STABLE_PREDECESSOR: ${{ inputs.expected_latest_stable_predecessor }}
+      PUBLICATION_REQUEST_ID: ${{ inputs.publication_request_id }}
+      OCI_SOURCE_URL: https://github.com/${{ github.repository }}
+      PACKAGES_OWNER: ${{ github.repository_owner }}
+    steps:
+      - name: Checkout exact Framework source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Set up ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Prepare exact Package layers
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_OWNER_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_PACKAGE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$EXPECTED_LATEST_STABLE_PREDECESSOR" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$PUBLICATION_REQUEST_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$ ]]
+          [ "$GITHUB_SHA" = "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" ]
+          [ "$(git rev-parse HEAD)" = "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" ]
+
+          case "$PACKAGE_ID" in
+            mag) owner_repo="gaofeng21cn/med-autogrant"; repo_name="med-autogrant" ;;
+            mas) owner_repo="gaofeng21cn/med-autoscience"; repo_name="med-autoscience" ;;
+            mas-scholar-skills) owner_repo="gaofeng21cn/mas-scholar-skills"; repo_name="mas-scholar-skills" ;;
+            *) echo "::error::Unsupported Package id: $PACKAGE_ID"; exit 2 ;;
+          esac
+
+          manifest="contracts/opl-framework/packages/${PACKAGE_ID}.json"
+          payload_ref="$(jq -er '.codex_surface.plugin_payload_manifest_url // .plugin_payload_manifest_url' "$manifest")"
+          payload="contracts/opl-framework/packages/${payload_ref}"
+          [ "$(jq -r .package_id "$manifest")" = "$PACKAGE_ID" ]
+          [ "$(jq -r .version "$manifest")" = "$EXPECTED_PACKAGE_VERSION" ]
+          [ "$(jq -r '.codex_surface.carrier_source_commit // .source_commit' "$manifest")" = "$EXPECTED_OWNER_SOURCE_COMMIT" ]
+          [ "$(jq -r .package_id "$payload")" = "$PACKAGE_ID" ]
+          [ "$(jq -r .package_version "$payload")" = "$EXPECTED_PACKAGE_VERSION" ]
+          [ "$(jq -r .source_commit "$payload")" = "$EXPECTED_OWNER_SOURCE_COMMIT" ]
+
+          git clone --filter=blob:none --no-checkout "https://github.com/${owner_repo}.git" .owner-source
+          git -C .owner-source fetch --depth=1 origin \
+            "$EXPECTED_OWNER_SOURCE_COMMIT" \
+            "refs/tags/v${EXPECTED_PACKAGE_VERSION}:refs/tags/v${EXPECTED_PACKAGE_VERSION}"
+          git -C .owner-source checkout --detach "$EXPECTED_OWNER_SOURCE_COMMIT"
+          [ "$(git -C .owner-source cat-file -t "refs/tags/v${EXPECTED_PACKAGE_VERSION}")" = tag ]
+          [ "$(git -C .owner-source rev-parse "v${EXPECTED_PACKAGE_VERSION}^{}")" = "$EXPECTED_OWNER_SOURCE_COMMIT" ]
+          node --experimental-strip-types scripts/package-source-projection-gate.mjs \
+            --package-id "$PACKAGE_ID" \
+            --owner-root .owner-source
+
+          package_root="dist/package"
+          mkdir -p "$package_root"
+          archive="$package_root/${PACKAGE_ID}-${EXPECTED_PACKAGE_VERSION}.tar.gz"
+          git -C .owner-source archive --format=tar.gz --prefix="${repo_name}/" \
+            -o "$GITHUB_WORKSPACE/$archive" "$EXPECTED_OWNER_SOURCE_COMMIT"
+          cp "$manifest" "$package_root/package-manifest.json"
+          cp "$payload" "$package_root/payload-manifest.json"
+
+          image="ghcr.io/${PACKAGES_OWNER}/one-person-lab-packages/${PACKAGE_ID}"
+          {
+            echo "PACKAGE_ROOT=$package_root"
+            echo "PACKAGE_ARCHIVE=$archive"
+            echo "PACKAGE_IMAGE=$image"
+            echo "IMMUTABLE_REF=${image}:${EXPECTED_PACKAGE_VERSION}"
+            echo "LATEST_STABLE_REF=${image}:latest-stable"
+          } >> "$GITHUB_ENV"
+
+      - name: Authenticate protected Package publisher
+        shell: bash
+        run: echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish immutable Package and advance its channel
+        shell: bash
+        run: |
+          set -euo pipefail
+          preflight_args=(
+            --artifact-type application/vnd.onepersonlab.package.v1
+            --source-url "$OCI_SOURCE_URL"
+            --layer "${PACKAGE_ARCHIVE}=application/vnd.onepersonlab.package.source.v1+gzip"
+            --layer "${PACKAGE_ROOT}/package-manifest.json=application/vnd.onepersonlab.package.manifest.v1+json"
+            --layer "${PACKAGE_ROOT}/payload-manifest.json=application/vnd.onepersonlab.package.payload.v1+json"
+          )
+
+          immutable_preflight="$(node scripts/oci-publication-preflight.mjs --ref "$IMMUTABLE_REF" "${preflight_args[@]}")"
+          immutable_action="$(jq -r .action <<<"$immutable_preflight")"
+          if [ "$immutable_action" = reuse ]; then
+            digest="$(jq -er .digest <<<"$immutable_preflight")"
+            immutable_result="reused_identical"
+          else
+            set +e
+            push_result="$(oras push --format json "$IMMUTABLE_REF" \
+              --artifact-type application/vnd.onepersonlab.package.v1 \
+              --annotation "org.opencontainers.image.source=${OCI_SOURCE_URL}" \
+              "${PACKAGE_ARCHIVE}:application/vnd.onepersonlab.package.source.v1+gzip" \
+              "${PACKAGE_ROOT}/package-manifest.json:application/vnd.onepersonlab.package.manifest.v1+json" \
+              "${PACKAGE_ROOT}/payload-manifest.json:application/vnd.onepersonlab.package.payload.v1+json" 2>&1)"
+            push_status=$?
+            set -e
+            if [ "$push_status" -eq 0 ]; then
+              digest="$(jq -er .digest <<<"$push_result")"
+              immutable_result="published"
+            else
+              immutable_reconcile="$(node scripts/oci-publication-preflight.mjs --ref "$IMMUTABLE_REF" "${preflight_args[@]}")"
+              [ "$(jq -r .action <<<"$immutable_reconcile")" = reuse ]
+              digest="$(jq -er .digest <<<"$immutable_reconcile")"
+              immutable_result="reconciled_after_unknown"
+            fi
+          fi
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+          node scripts/oci-publication-preflight.mjs --ref "$IMMUTABLE_REF" "${preflight_args[@]}" \
+            --verify-only --expected-digest "$digest" --anonymous
+          node scripts/oci-publication-preflight.mjs --ref "${PACKAGE_IMAGE}@${digest}" "${preflight_args[@]}" \
+            --verify-only --expected-digest "$digest" --anonymous
+
+          first_stable_digest="$(oras manifest fetch --descriptor "$LATEST_STABLE_REF" | jq -er .digest)"
+          if [ "$first_stable_digest" = "$digest" ]; then
+            stable_result="already_current"
+          else
+            [ "$first_stable_digest" = "$EXPECTED_LATEST_STABLE_PREDECESSOR" ]
+            second_stable_digest="$(oras manifest fetch --descriptor "$LATEST_STABLE_REF" | jq -er .digest)"
+            [ "$second_stable_digest" = "$EXPECTED_LATEST_STABLE_PREDECESSOR" ]
+            set +e
+            oras tag "${PACKAGE_IMAGE}@${digest}" latest-stable
+            tag_status=$?
+            set -e
+            stable_result="advanced"
+            if [ "$tag_status" -ne 0 ]; then
+              node scripts/oci-publication-preflight.mjs --ref "$LATEST_STABLE_REF" "${preflight_args[@]}" \
+                --verify-only --expected-digest "$digest" --anonymous
+              stable_result="reconciled_after_unknown"
+            fi
+          fi
+          node scripts/oci-publication-preflight.mjs --ref "$LATEST_STABLE_REF" "${preflight_args[@]}" \
+            --verify-only --expected-digest "$digest" --anonymous
+
+          archive_digest="sha256:$(sha256sum "$PACKAGE_ARCHIVE" | cut -d' ' -f1)"
+          manifest_digest="sha256:$(sha256sum "$PACKAGE_ROOT/package-manifest.json" | cut -d' ' -f1)"
+          payload_digest="sha256:$(sha256sum "$PACKAGE_ROOT/payload-manifest.json" | cut -d' ' -f1)"
+          content_lock="$(jq -r '.content_lock.digest // empty' "$PACKAGE_ROOT/payload-manifest.json")"
+          if [ -z "$content_lock" ]; then
+            content_lock="$(jq -r '.content_lock.digest // empty' "$PACKAGE_ROOT/package-manifest.json")"
+          fi
+          jq -n \
+            --arg package_id "$PACKAGE_ID" \
+            --arg version "$EXPECTED_PACKAGE_VERSION" \
+            --arg owner_commit "$EXPECTED_OWNER_SOURCE_COMMIT" \
+            --arg framework_commit "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" \
+            --arg request_id "$PUBLICATION_REQUEST_ID" \
+            --arg immutable_ref "$IMMUTABLE_REF" \
+            --arg latest_ref "$LATEST_STABLE_REF" \
+            --arg predecessor "$EXPECTED_LATEST_STABLE_PREDECESSOR" \
+            --arg digest "$digest" \
+            --arg archive_digest "$archive_digest" \
+            --arg manifest_digest "$manifest_digest" \
+            --arg payload_digest "$payload_digest" \
+            --arg content_lock "$content_lock" \
+            --arg immutable_result "$immutable_result" \
+            --arg stable_result "$stable_result" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg run_id "$GITHUB_RUN_ID" \
+            --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
+            '{surface_kind:"opl_package_publication_receipt.v1",status:"published_and_verified",
+              publication_request_id:$request_id,package:{package_id:$package_id,version:$version,
+              owner_source_commit:$owner_commit,framework_source_commit:$framework_commit},
+              content:{source_archive_digest:$archive_digest,manifest_digest:$manifest_digest,
+              payload_manifest_digest:$payload_digest,content_lock:($content_lock | if length > 0 then . else null end)},
+              immutable:{ref:$immutable_ref,digest:$digest,result:$immutable_result},
+              latest_stable:{ref:$latest_ref,predecessor_digest:$predecessor,digest:$digest,result:$stable_result},
+              anonymous_readback:{status:"verified",refs:[$immutable_ref,($immutable_ref|split(":")[0:-1]|join(":"))+"@"+$digest,$latest_ref]},
+              mutation_boundary:{registry_atomic_cas_claim:false,
+              controls:["protected_environment","single_package_concurrency","double_predecessor_inspect","anonymous_readback"]},
+              workflow:{repository:$repository,run_id:$run_id,run_attempt:$run_attempt,environment:"release-stable"}}' \
+            > "$PACKAGE_ROOT/publication-receipt.json"
+          sha256sum "$PACKAGE_ROOT/publication-receipt.json" > "$PACKAGE_ROOT/publication-receipt.sha256"
+
+      - name: Upload Package publication receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: opl-package-publication-${{ inputs.package_id }}-${{ inputs.expected_package_version }}-${{ inputs.publication_request_id }}
+          path: |
+            dist/package/publication-receipt.json
+            dist/package/publication-receipt.sha256
+          if-no-files-found: error
+          retention-days: 30

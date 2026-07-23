@@ -281,6 +281,32 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.doesNotMatch(dailyPackageWorkflow, /one-person-lab-webui/);
 });
 
+test('single-Package publication is protected, selector-bound, and readback-only after unknown results', () => {
+  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
+
+  assert.match(workflow, /^  workflow_dispatch:$/m);
+  assert.doesNotMatch(workflow, /^\s+(?:workflow_call|workflow_run|schedule):$/m);
+  assert.match(workflow, /^permissions: \{\}$/m);
+  assert.match(workflow, /^    environment: release-stable$/m);
+  assert.match(workflow, /^    permissions:\n      contents: read\n      packages: write$/m);
+  assert.match(workflow, /options: \[mag, mas, mas-scholar-skills\]/);
+  assert.match(workflow, /group: opl-package-publication-\$\{\{ inputs\.package_id \}\}/);
+  assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /\[\[ "\$GITHUB_REF" == "refs\/heads\/main" \]\]/);
+  assert.match(workflow, /\[ "\$GITHUB_SHA" = "\$EXPECTED_FRAMEWORK_SOURCE_COMMIT" \]/);
+  assert.match(workflow, /scripts\/package-source-projection-gate\.mjs/);
+  assert.match(workflow, /scripts\/oci-publication-preflight\.mjs/);
+  assert.ok(workflow.indexOf('immutable_preflight=') < workflow.indexOf('oras push --format json'));
+  assert.ok(workflow.indexOf('first_stable_digest=') < workflow.indexOf('second_stable_digest='));
+  assert.ok(workflow.indexOf('second_stable_digest=') < workflow.indexOf('oras tag '));
+  assert.match(workflow, /immutable_result="reconciled_after_unknown"/);
+  assert.match(workflow, /stable_result="reconciled_after_unknown"/);
+  assert.match(workflow, /registry_atomic_cas_claim:false/);
+  assert.match(workflow, /--expected-digest "\$digest" --anonymous/g);
+  assert.doesNotMatch(workflow, /one-person-lab-manifest|opl update apply|opl packages update/);
+  assert.doesNotMatch(workflow, /release-set|opl-app|opl-base/i);
+});
+
 test('daily Release Set generation allocates the next immutable same-day revision', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-set-generation-'));
   const tags = path.join(root, 'tags.txt');
