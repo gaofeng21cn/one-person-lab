@@ -4,10 +4,10 @@
   "package_id": "mas",
   "display_name": "Med Auto Science",
   "publisher": "one-person-lab",
-  "version": "0.2.17",
+  "version": "0.2.18",
   "owner_language_version": {
     "scheme": "pep440",
-    "value": "0.2.17"
+    "value": "0.2.18"
   },
   "source": "first_party",
   "registry_entry": {
@@ -46,8 +46,8 @@
   },
   "codex_surface": {
     "plugin_id": "med-autoscience",
-    "plugin_payload_manifest_url": "payloads/mas-0.2.17.json",
-    "carrier_source_commit": "e806c166a91250bdcc675fafa1078dbb86d0cc15",
+    "plugin_payload_manifest_url": "payloads/mas-0.2.18.json",
+    "carrier_source_commit": "aabb69eb2d89abdc2b5061b56db5bbc10b5a953a",
     "standalone_distribution": "repo_carrier_source",
     "required_skill_ids": [
       "med-autoscience"
@@ -82,9 +82,11 @@
       "module_id": "scholarskills",
       "package_id": "mas-scholar-skills",
       "kind": "framework_capability_package",
-      "required": true,
+      "required": false,
+      "dependency_kind": "optional_enhancement",
       "version_requirement": ">=0.2.12 <0.3.0",
       "capability_abi": "mas-scholar-skills.v1",
+      "consumer_profile_id": "mas-medical-paper.v1",
       "required_export_ids": [
         "mas-scholar-skills",
         "medical-manuscript-writing",
@@ -110,15 +112,12 @@
         "mas-scholar-skills.reference-provider-adapters",
         "mas-scholar-skills.scientific-search-adapters"
       ],
-      "manifest_url": "mas-scholar-skills.json",
-      "version_policy": "compatible_channel_manifest",
       "codex_distribution": "bundled",
       "opl_distribution": "managed_dependency",
       "developer_distribution": "source_checkout",
       "required_for": [
-        "workspace_or_quest_codex_discovery",
-        "mas_operational_readiness",
-        "all_mas_medical_research_workflows"
+        "preferred_professional_method_support",
+        "preferred_medical_research_quality_support"
       ],
       "install_owner": "one-person-lab",
       "install_update_source": "ghcr_capability_packages_channel",

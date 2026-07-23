@@ -118,6 +118,7 @@
     "skills/medical-display-qc/SKILL.md",
     "skills/medical-display-qc/fixtures/figure-numbering-one-owner.json",
     "skills/medical-display-qc/fixtures/layout_qc_regression.json",
+    "skills/medical-display-qc/fixtures/semantic_artist_flow_regression.json",
     "skills/medical-display-qc/kernel.py",
     "skills/medical-causal-inference-plan/SKILL.md",
     "skills/medical-causal-inference-plan/kernel.py",

@@ -1002,14 +1002,14 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   const manifest = manifests.mas;
   const expectedReleases: Record<string, { version: string; sourceCommit: string; payloadRef: string }> = {
     mas: {
-      version: '0.2.17',
-      sourceCommit: 'e806c166a91250bdcc675fafa1078dbb86d0cc15',
-      payloadRef: 'payloads/mas-0.2.17.json',
+      version: '0.2.18',
+      sourceCommit: 'aabb69eb2d89abdc2b5061b56db5bbc10b5a953a',
+      payloadRef: 'payloads/mas-0.2.18.json',
     },
     mag: {
-      version: '0.3.4',
-      sourceCommit: 'c62c09c8b52fc13bdf0b2725189c2bec6ed82772',
-      payloadRef: 'payloads/mag-0.3.4.json',
+      version: '0.3.5',
+      sourceCommit: 'd707f4a46880ee1b195e43a40169165507a585b4',
+      payloadRef: 'payloads/mag-0.3.5.json',
     },
     rca: {
       version: '0.2.8',
@@ -1031,7 +1031,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.2.17');
+  assert.equal(manifest.version, '0.2.18');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
@@ -1052,7 +1052,28 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifests.rca.codex_surface.standalone_distribution, 'repo_carrier_source');
   assert.equal(manifests.oma.codex_surface.standalone_distribution, 'generated_carrier_surface');
   assert.equal(manifests.obf.codex_surface.standalone_distribution, 'generated_carrier_surface');
-  assert.deepEqual(manifests.mag.capability_dependencies, []);
+  assert.deepEqual(
+    [manifests.mas, manifests.mag].map((sourceManifest) => ({
+      package_id: sourceManifest.package_id,
+      required: sourceManifest.capability_dependencies[0].required,
+      dependency_kind: sourceManifest.capability_dependencies[0].dependency_kind,
+      consumer_profile_id: sourceManifest.capability_dependencies[0].consumer_profile_id,
+    })),
+    [
+      {
+        package_id: 'mas',
+        required: false,
+        dependency_kind: 'optional_enhancement',
+        consumer_profile_id: 'mas-medical-paper.v1',
+      },
+      {
+        package_id: 'mag',
+        required: false,
+        dependency_kind: 'optional_enhancement',
+        consumer_profile_id: 'mag-medical-grant.v1',
+      },
+    ],
+  );
   assert.deepEqual(manifests.rca.capability_dependencies, []);
   Object.values(manifests).forEach((sourceManifest) => {
     const expectedRelease = expectedReleases[sourceManifest.package_id];
@@ -1115,14 +1136,17 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
     sourceRef: 'contracts/opl-framework/capability-package-manifest.schema.json',
   }, manifest));
   const normalized = normalizeCapabilityPackageManifest(manifest, manifestPath);
-  assert.equal(manifest.package_role, 'required_agent_capability_package');
+  assert.equal(manifest.package_role, 'framework_capability_package');
   assert.equal(normalized.package_role, 'framework_capability_package');
-  assert.equal(
-    normalizeCapabilityPackageManifest({
-      ...manifest,
-      package_role: 'framework_capability_package',
-    }, manifestPath).package_role,
-    'framework_capability_package',
+  assert.deepEqual(
+    manifest.consumer_profiles.map((profile: Record<string, any>) => ({
+      profile_id: profile.profile_id,
+      consumer_agent_id: profile.consumer_agent_id,
+    })),
+    [
+      { profile_id: 'mas-medical-paper.v1', consumer_agent_id: 'mas' },
+      { profile_id: 'mag-medical-grant.v1', consumer_agent_id: 'mag' },
+    ],
   );
   assert.throws(
     () => normalizeCapabilityPackageManifest({
@@ -1134,7 +1158,8 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
   assert.equal(manifest.version, catalogEntry.package_version);
-  assert.equal(manifest.primary_consumer.version_requirement, '>=0.2.12 <0.3.0');
+  assert.deepEqual(manifest.consumer_policy.supported_required_by, []);
+  assert.deepEqual(manifest.consumer_policy.supported_optional_consumer_agent_ids, ['mas', 'mag']);
   assert.equal(manifest.content_lock.canonicalization, 'ordered_path_length_file_length_bytes');
   assert.equal(manifest.content_lock.digest, payload.content_lock.digest);
   assert.equal(manifest.codex_surface.carrier_source_commit, catalogEntry.owner_source_commit);
@@ -1282,7 +1307,7 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
   assert.equal(
     normalizeFirstPartyAgentPackageManifest(manifest)
       .capability_dependencies[0].dependency_kind,
-    'hard_runtime_dependency',
+    'optional_enhancement',
   );
   const optionalManifest = structuredClone(manifest);
   delete optionalManifest.distribution_payload;
@@ -1330,6 +1355,7 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
     {
       ...manifest.capability_dependencies[0],
       required: false,
+      dependency_kind: undefined,
     },
   ]) {
     assert.throws(() => assertJsonSchemaPayload({

@@ -6,23 +6,23 @@
     "mas": {
       "package_id": "mas",
       "package_role": "standard_agent",
-      "package_version": "0.2.17",
-      "owner_source_commit": "e806c166a91250bdcc675fafa1078dbb86d0cc15",
+      "package_version": "0.2.18",
+      "owner_source_commit": "aabb69eb2d89abdc2b5061b56db5bbc10b5a953a",
       "manifest_ref": "packages/mas.json",
-      "manifest_sha256": "sha256:8bed4c3f0a0ceebd0ecd49a5ef06ba2f5e55c712b19a5137153f7ac8148a4242",
-      "payload_manifest_ref": "packages/payloads/mas-0.2.17.json",
-      "payload_manifest_sha256": "sha256:56a7cbb6c74b1eccd5461a1df2b327376b742e1a40a2ca2c82fff6827fd741b8",
+      "manifest_sha256": "sha256:a0fb68c644d9afdf857d5e4ae172dffe4c611cc03043d812c3a748b71743bf5e",
+      "payload_manifest_ref": "packages/payloads/mas-0.2.18.json",
+      "payload_manifest_sha256": "sha256:9196dbe988c87ed8eb1954f06679c535c6086f3098bdf7c8b8d7768a777649f7",
       "runtime_module_relative_path": "modules/mas"
     },
     "mag": {
       "package_id": "mag",
       "package_role": "standard_agent",
-      "package_version": "0.3.4",
-      "owner_source_commit": "c62c09c8b52fc13bdf0b2725189c2bec6ed82772",
+      "package_version": "0.3.5",
+      "owner_source_commit": "d707f4a46880ee1b195e43a40169165507a585b4",
       "manifest_ref": "packages/mag.json",
-      "manifest_sha256": "sha256:f57822620c084b20b0fde6b84b233c4ddc3d6bf61a547e148f6f5a90a24626bb",
-      "payload_manifest_ref": "packages/payloads/mag-0.3.4.json",
-      "payload_manifest_sha256": "sha256:8e3dfe8917dc86359b206c2c3746771f0abfa925bdaebcc327aa30cc3a7b5d46",
+      "manifest_sha256": "sha256:aa6b49a22fa44b87e5f7864bedb8fe275760a064963d96689d188047f751064f",
+      "payload_manifest_ref": "packages/payloads/mag-0.3.5.json",
+      "payload_manifest_sha256": "sha256:7f54a9b652084151c622bdeb5776e71d74bd58ea9907c33f6aae55d98d9b9270",
       "runtime_module_relative_path": "modules/mag"
     },
     "rca": {
@@ -61,12 +61,12 @@
     "mas-scholar-skills": {
       "package_id": "mas-scholar-skills",
       "package_role": "framework_capability_package",
-      "package_version": "0.2.18",
-      "owner_source_commit": "86ea7ae57b14479fbe305f5aa648eca3684dd0d3",
+      "package_version": "0.2.20",
+      "owner_source_commit": "679f5735f5b5b9db45ad4b45178faf2aeb7e4190",
       "manifest_ref": "packages/mas-scholar-skills.json",
-      "manifest_sha256": "sha256:b25f932aa8399938327810ae613081288410ef87938e9176c86e88731a8f4984",
-      "payload_manifest_ref": "packages/payloads/mas-scholar-skills-0.2.18.json",
-      "payload_manifest_sha256": "sha256:73a6d02c3b410055bc88cf78a64b7eb744fd73b87a9c295c8beeb9d7899de1bf",
+      "manifest_sha256": "sha256:cb513800a9a7974ec126248b8ce6faf9d9d27a10eefebb3a29f359a4a82a7762",
+      "payload_manifest_ref": "packages/payloads/mas-scholar-skills-0.2.20.json",
+      "payload_manifest_sha256": "sha256:bb19bfcc9503dcfc85e6ea293193374133bb00366e76a7ae430771e19f1a9b67",
       "runtime_module_relative_path": "modules/mas-scholar-skills"
     },
     "opl-flow": {

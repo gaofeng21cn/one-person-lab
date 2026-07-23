@@ -4,7 +4,7 @@
   "package_id": "mag",
   "display_name": "Med Auto Grant",
   "publisher": "one-person-lab",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "source": "first_party",
   "registry_entry": {
     "registry_kind": "first_party_agent_package_registry_entry",
@@ -42,13 +42,15 @@
   },
   "codex_surface": {
     "plugin_id": "med-autogrant",
-    "plugin_payload_manifest_url": "payloads/mag-0.3.4.json",
-    "carrier_source_commit": "c62c09c8b52fc13bdf0b2725189c2bec6ed82772",
+    "plugin_payload_manifest_url": "payloads/mag-0.3.5.json",
+    "carrier_source_commit": "d707f4a46880ee1b195e43a40169165507a585b4",
     "standalone_distribution": "repo_carrier_source",
     "required_skill_ids": [
       "med-autogrant"
     ],
-    "bundled_capability_package_ids": [],
+    "bundled_capability_package_ids": [
+      "mas-scholar-skills"
+    ],
     "user_install_action_count": 1
   },
   "runtime_source_carrier": {
@@ -100,5 +102,52 @@
       ]
     }
   },
-  "capability_dependencies": []
+  "capability_dependencies": [
+    {
+      "module_id": "scholarskills",
+      "package_id": "mas-scholar-skills",
+      "kind": "framework_capability_package",
+      "required": false,
+      "dependency_kind": "optional_enhancement",
+      "version_requirement": ">=0.2.19 <0.3.0",
+      "capability_abi": "mas-scholar-skills.v1",
+      "consumer_profile_id": "mag-medical-grant.v1",
+      "required_export_ids": [
+        "medical-research-lit",
+        "medical-statistical-review",
+        "medical-methodology-planner",
+        "medical-evidence-integrity-reviewer",
+        "medical-evidence-synthesis-and-claim-map",
+        "medical-reference-integrity-auditor"
+      ],
+      "required_module_ids": [
+        "mas-scholar-skills.lit",
+        "mas-scholar-skills.stats",
+        "mas-scholar-skills.review",
+        "mas-scholar-skills.data",
+        "mas-scholar-skills.reference-provider-adapters",
+        "mas-scholar-skills.scientific-search-adapters"
+      ],
+      "codex_distribution": "bundled",
+      "opl_distribution": "managed_dependency",
+      "developer_distribution": "source_checkout",
+      "required_for": [
+        "mag_professional_grant_research",
+        "mag_methodology_and_statistical_review",
+        "mag_evidence_and_reference_integrity"
+      ],
+      "install_owner": "one-person-lab",
+      "install_update_source": "ghcr_capability_packages_channel",
+      "sync_scopes": [
+        "workspace",
+        "quest"
+      ],
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_write_runtime_queue": false
+      }
+    }
+  ]
 }

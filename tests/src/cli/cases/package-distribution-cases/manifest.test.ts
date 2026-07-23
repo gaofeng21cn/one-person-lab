@@ -312,10 +312,10 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.mas.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.17',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.18',
   );
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_id, 'mas');
-  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.2.17');
+  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.2.18');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.module_id, 'medautoscience');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.repo_name, 'med-autoscience');
   assert.equal(Object.hasOwn(output.packages_manifest.packages.package_artifacts.mas, 'module_id'), false);
