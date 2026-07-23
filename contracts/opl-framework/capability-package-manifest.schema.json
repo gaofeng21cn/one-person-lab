@@ -66,6 +66,36 @@
       },
       "additionalProperties": true
     },
+    "consumer_profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "profile_id",
+          "consumer_agent_id",
+          "required_export_ids",
+          "required_module_ids"
+        ],
+        "properties": {
+          "profile_id": { "type": "string", "minLength": 1 },
+          "consumer_agent_id": { "type": "string", "minLength": 1 },
+          "required_export_ids": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "required_module_ids": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "uniqueItems": true
+    },
     "content_lock": {
       "type": "object",
       "required": ["algorithm", "canonicalization", "paths", "digest"],

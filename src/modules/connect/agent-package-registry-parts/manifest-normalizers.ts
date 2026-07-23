@@ -93,6 +93,12 @@ function normalizeCapabilityDependencies(
       entry.capability_abi,
       `capability_dependencies[${index}].capability_abi`,
     );
+    const consumerProfileId = entry.consumer_profile_id === undefined
+      ? null
+      : assertStringValue(
+          entry.consumer_profile_id,
+          `capability_dependencies[${index}].consumer_profile_id`,
+        );
     const requiredExportIds = uniqueStrings(stringList(entry.required_export_ids));
     const requiredModuleIds = uniqueStrings(stringList(entry.required_module_ids));
     if (!required || requiredExportIds.length === 0 || requiredModuleIds.length === 0) {
@@ -110,6 +116,7 @@ function normalizeCapabilityDependencies(
       required,
       version_requirement: versionRequirement,
       capability_abi: capabilityAbi,
+      consumer_profile_id: consumerProfileId,
       required_export_ids: requiredExportIds,
       required_module_ids: requiredModuleIds,
       bootstrap_manifest_url: bootstrapManifestRef
@@ -129,6 +136,68 @@ function normalizeCapabilityDependencies(
     });
   }
   return dependencies;
+}
+
+function normalizeCapabilityConsumerProfiles(
+  value: unknown,
+  exports: AgentPackageCapabilityProvider['exports'],
+  moduleExportIds: string[],
+): AgentPackageCapabilityProvider['consumer_profiles'] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability provider consumer_profiles must be an array.', {
+      failure_code: 'agent_package_capability_consumer_profile_invalid',
+    });
+  }
+  const rawProfiles = recordList(value);
+  if (rawProfiles.length !== value.length) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability provider consumer profiles must be objects.', {
+      failure_code: 'agent_package_capability_consumer_profile_invalid',
+    });
+  }
+  const exportIds = new Set(exports.map((entry) => entry.export_id));
+  const availableModuleIds = new Set(moduleExportIds);
+  const profiles = rawProfiles.map((entry, index) => {
+    const profileId = assertStringValue(entry.profile_id, `consumer_profiles[${index}].profile_id`);
+    const consumerAgentId = canonicalManifestIdentity(
+      entry.consumer_agent_id,
+      `consumer_profiles[${index}].consumer_agent_id`,
+    );
+    const requiredExportIds = uniqueStrings(stringList(entry.required_export_ids));
+    const requiredModuleIds = uniqueStrings(stringList(entry.required_module_ids));
+    const missingExportIds = requiredExportIds.filter((exportId) => !exportIds.has(exportId));
+    const missingModuleIds = requiredModuleIds.filter((moduleId) => !availableModuleIds.has(moduleId));
+    if (
+      requiredExportIds.length === 0
+      || requiredModuleIds.length === 0
+      || missingExportIds.length > 0
+      || missingModuleIds.length > 0
+    ) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Capability consumer profile must reference exported Skills and modules.', {
+        profile_id: profileId,
+        consumer_agent_id: consumerAgentId,
+        missing_required_export_ids: missingExportIds,
+        missing_required_module_ids: missingModuleIds,
+        failure_code: 'agent_package_capability_consumer_profile_invalid',
+      });
+    }
+    return {
+      profile_id: profileId,
+      consumer_agent_id: consumerAgentId,
+      required_export_ids: requiredExportIds,
+      required_module_ids: requiredModuleIds,
+    };
+  });
+  const duplicateProfileIds = profiles
+    .map((entry) => entry.profile_id)
+    .filter((profileId, index, values) => values.indexOf(profileId) !== index);
+  if (duplicateProfileIds.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability consumer profile ids must be unique.', {
+      duplicate_profile_ids: uniqueStrings(duplicateProfileIds),
+      failure_code: 'agent_package_capability_consumer_profile_invalid',
+    });
+  }
+  return profiles;
 }
 
 function normalizeManagedVersionCatalogSource(
@@ -198,7 +267,17 @@ function normalizeCapabilityProvider(value: unknown): AgentPackageCapabilityProv
     }
   }
   const moduleExportIds = uniqueStrings(stringList(value.module_export_ids));
-  return { capability_abi: capabilityAbi, exports, module_export_ids: moduleExportIds };
+  const consumerProfiles = normalizeCapabilityConsumerProfiles(
+    value.consumer_profiles,
+    exports,
+    moduleExportIds,
+  );
+  return {
+    capability_abi: capabilityAbi,
+    exports,
+    module_export_ids: moduleExportIds,
+    consumer_profiles: consumerProfiles,
+  };
 }
 
 function normalizedRelativePath(value: unknown, field: string) {
@@ -870,6 +949,20 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
     });
   }
   const codexSurface = isRecord(payload.codex_surface) ? payload.codex_surface : {};
+  const capabilityExports = [...coreSkillIds.map((skillId) => ({
+    export_id: skillId,
+    skill_id: skillId,
+    install_mode: 'core_required' as const,
+  })), ...specialtySkillIds.map((skillId) => ({
+    export_id: skillId,
+    skill_id: skillId,
+    install_mode: 'optional_named_specialty' as const,
+  }))];
+  const consumerProfiles = normalizeCapabilityConsumerProfiles(
+    payload.consumer_profiles,
+    capabilityExports,
+    coreModuleIds,
+  );
   const carrierAuthority = normalizeCarrierSourceAuthority(payload, codexSurface, manifestUrl);
   const pluginId = stringValue(codexSurface.plugin_id) ?? packageId;
   const pluginSourceRef = stringValue(codexSurface.plugin_source_path);
@@ -920,16 +1013,9 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
     capability_dependencies: [],
     capability_provider: {
       capability_abi: capabilityAbi,
-      exports: [...coreSkillIds.map((skillId) => ({
-        export_id: skillId,
-        skill_id: skillId,
-        install_mode: 'core_required' as const,
-      })), ...specialtySkillIds.map((skillId) => ({
-        export_id: skillId,
-        skill_id: skillId,
-        install_mode: 'optional_named_specialty' as const,
-      }))],
+      exports: capabilityExports,
       module_export_ids: coreModuleIds,
+      consumer_profiles: consumerProfiles,
     },
     content_digest: contentDigest,
     content_lock_canonicalization: contentLockCanonicalization,

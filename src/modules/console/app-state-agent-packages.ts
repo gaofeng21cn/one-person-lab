@@ -19,6 +19,9 @@ const HARD_DEPENDENCY_FAILURE_REASONS = new Set([
   'dependency_lock_missing',
   'dependency_disabled',
   'capability_abi_mismatch',
+  'consumer_profile_missing',
+  'consumer_profile_consumer_mismatch',
+  'consumer_profile_requirements_mismatch',
   'required_exports_missing',
   'required_modules_missing',
 ]);
@@ -71,6 +74,7 @@ function dependencyCheck(
     installed_version: provider?.package_version ?? check.installed_version,
     version_satisfied: versionSatisfied,
     capability_abi: check.capability_abi,
+    consumer_profile_id: check.consumer_profile_id ?? null,
     installed_capability_abi: installedCapabilityAbi,
     abi_satisfied: abiSatisfied,
     required_export_ids: requiredExportIds,

@@ -193,6 +193,9 @@ function normalizeCapabilityDependency(value: unknown): ModuleCapabilityDependen
     })(),
     version_requirement: requiredString(value.version_requirement, 'capability_dependencies.version_requirement'),
     capability_abi: requiredString(value.capability_abi, 'capability_dependencies.capability_abi'),
+    ...(typeof value.consumer_profile_id === 'string'
+      ? { consumer_profile_id: requiredString(value.consumer_profile_id, 'capability_dependencies.consumer_profile_id') }
+      : {}),
     required_export_ids: requireStringList(value.required_export_ids, 'capability_dependencies.required_export_ids'),
     required_module_ids: requireStringList(value.required_module_ids, 'capability_dependencies.required_module_ids'),
     ...(typeof value.manifest_url === 'string' ? { manifest_url: value.manifest_url } : {}),

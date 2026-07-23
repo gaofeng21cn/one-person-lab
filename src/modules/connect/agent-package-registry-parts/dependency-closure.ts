@@ -24,6 +24,9 @@ const DEPENDENCY_HARD_FAILURE_REASONS = new Set([
   'dependency_lock_missing',
   'dependency_disabled',
   'capability_abi_mismatch',
+  'consumer_profile_missing',
+  'consumer_profile_consumer_mismatch',
+  'consumer_profile_requirements_mismatch',
   'required_exports_missing',
   'required_modules_missing',
 ]);
@@ -106,10 +109,69 @@ export function verifyManifestContentLock(manifest: AgentPackageManifest) {
   }
 }
 
+function sameStringSet(left: string[], right: string[]) {
+  return left.length === right.length && left.every((entry) => right.includes(entry));
+}
+
+function capabilityProfileCompatibility(
+  dependency: AgentPackageCapabilityDependency,
+  provider: Pick<AgentPackageManifest, 'capability_provider'>,
+  consumerAgentId: string | null,
+) {
+  const providerCapability = provider.capability_provider;
+  const profileId = dependency.consumer_profile_id ?? null;
+  if (!profileId) {
+    const providerExports = new Set(providerCapability?.exports
+      .filter((entry) => entry.install_mode === 'core_required')
+      .map((entry) => entry.export_id) ?? []);
+    const providerModules = new Set(providerCapability?.module_export_ids ?? []);
+    return {
+      reasons: [] as string[],
+      missingExports: dependency.required_export_ids.filter((exportId) => !providerExports.has(exportId)),
+      missingModules: dependency.required_module_ids.filter((moduleId) => !providerModules.has(moduleId)),
+    };
+  }
+
+  const profile = providerCapability?.consumer_profiles
+    ?.find((entry) => entry.profile_id === profileId);
+  if (!profile) {
+    return {
+      reasons: ['consumer_profile_missing'],
+      missingExports: [...dependency.required_export_ids],
+      missingModules: [...dependency.required_module_ids],
+    };
+  }
+
+  const reasons: string[] = [];
+  if (profile.consumer_agent_id !== consumerAgentId) {
+    reasons.push('consumer_profile_consumer_mismatch');
+  }
+  if (
+    !sameStringSet(profile.required_export_ids, dependency.required_export_ids)
+    || !sameStringSet(profile.required_module_ids, dependency.required_module_ids)
+  ) {
+    reasons.push('consumer_profile_requirements_mismatch');
+  }
+  const providerExports = new Set(providerCapability?.exports.map((entry) => entry.export_id) ?? []);
+  const providerModules = new Set(providerCapability?.module_export_ids ?? []);
+  const missingExports = [...new Set([
+    ...profile.required_export_ids.filter((exportId) => !dependency.required_export_ids.includes(exportId)),
+    ...dependency.required_export_ids.filter((exportId) => !profile.required_export_ids.includes(exportId)),
+    ...profile.required_export_ids.filter((exportId) => !providerExports.has(exportId)),
+  ])];
+  const missingModules = [...new Set([
+    ...profile.required_module_ids.filter((moduleId) => !dependency.required_module_ids.includes(moduleId)),
+    ...dependency.required_module_ids.filter((moduleId) => !profile.required_module_ids.includes(moduleId)),
+    ...profile.required_module_ids.filter((moduleId) => !providerModules.has(moduleId)),
+  ])];
+  return { reasons, missingExports, missingModules };
+}
+
 export function validateCapabilityProvider(
   dependency: AgentPackageCapabilityDependency,
   provider: AgentPackageManifest,
   manifestSha256: string,
+  consumerAgentId: string | null = null,
 ): AgentPackageResolvedDependency {
   const reasons: string[] = [];
   const currentnessObservations: string[] = [];
@@ -118,12 +180,10 @@ export function validateCapabilityProvider(
     currentnessObservations.push('version_requirement_unsatisfied');
   }
   if (provider.capability_provider?.capability_abi !== dependency.capability_abi) reasons.push('capability_abi_mismatch');
-  const providerExports = new Set(provider.capability_provider?.exports
-    .filter((entry) => entry.install_mode === 'core_required')
-    .map((entry) => entry.export_id) ?? []);
-  const missingExports = dependency.required_export_ids.filter((exportId) => !providerExports.has(exportId));
-  const providerModules = new Set(provider.capability_provider?.module_export_ids ?? []);
-  const missingModules = dependency.required_module_ids.filter((moduleId) => !providerModules.has(moduleId));
+  const profileCompatibility = capabilityProfileCompatibility(dependency, provider, consumerAgentId);
+  reasons.push(...profileCompatibility.reasons);
+  const missingExports = profileCompatibility.missingExports;
+  const missingModules = profileCompatibility.missingModules;
   if (missingExports.length > 0) reasons.push('required_exports_missing');
   if (missingModules.length > 0) reasons.push('required_modules_missing');
   if (reasons.length > 0) {
@@ -133,6 +193,8 @@ export function validateCapabilityProvider(
       version_requirement: dependency.version_requirement,
       expected_capability_abi: dependency.capability_abi,
       provider_capability_abi: provider.capability_provider?.capability_abi ?? null,
+      consumer_agent_id: consumerAgentId,
+      consumer_profile_id: dependency.consumer_profile_id ?? null,
       missing_required_export_ids: missingExports,
       missing_required_module_ids: missingModules,
       reasons,
@@ -146,6 +208,7 @@ export function validateCapabilityProvider(
     required: dependency.required,
     version_requirement: dependency.version_requirement,
     capability_abi: dependency.capability_abi,
+    consumer_profile_id: dependency.consumer_profile_id ?? null,
     required_export_ids: dependency.required_export_ids,
     required_module_ids: dependency.required_module_ids,
     installed_version: provider.version,
@@ -215,15 +278,15 @@ export function dependencyReadiness(
       if (provider.exposure_state === 'disabled') reasons.push('dependency_disabled');
       if (!versionSatisfiesRequirement(provider.package_version, dependency.version_requirement)) reasons.push('version_requirement_unsatisfied');
       if (provider.capability_provider?.capability_abi !== dependency.capability_abi) reasons.push('capability_abi_mismatch');
-      const exports = new Set(provider.capability_provider?.exports
-        .filter((entry) => entry.install_mode === 'core_required')
-        .map((entry) => entry.export_id) ?? []);
-      if (dependency.required_export_ids.some((exportId) => !exports.has(exportId))) reasons.push('required_exports_missing');
-      const modules = new Set(provider.capability_provider?.module_export_ids ?? []);
-      if (dependency.required_module_ids.some((moduleId) => !modules.has(moduleId))) reasons.push('required_modules_missing');
+      const profileCompatibility = capabilityProfileCompatibility(dependency, provider, lock.agent_id);
+      reasons.push(...profileCompatibility.reasons);
+      if (profileCompatibility.missingExports.length > 0) reasons.push('required_exports_missing');
+      if (profileCompatibility.missingModules.length > 0) reasons.push('required_modules_missing');
       if (!resolved) {
         reasons.push('dependency_not_locked_in_closure');
       } else if (
+        (resolved.consumer_profile_id ?? null) !== (dependency.consumer_profile_id ?? null)
+        ||
         resolved.installed_version !== provider.package_version
         || resolved.manifest_sha256 !== provider.manifest_sha256
         || (resolved.owner_source_commit ?? null) !== (provider.owner_source_commit ?? null)
@@ -240,6 +303,7 @@ export function dependencyReadiness(
       required: dependency.required,
       version_requirement: dependency.version_requirement,
       capability_abi: dependency.capability_abi,
+      consumer_profile_id: dependency.consumer_profile_id ?? null,
       required_export_ids: dependency.required_export_ids,
       required_module_ids: dependency.required_module_ids,
       installed_version: provider?.package_version ?? null,
@@ -248,11 +312,10 @@ export function dependencyReadiness(
       status: (!provider ? 'missing' : hardFailureReasons.length > 0 ? 'incompatible' : 'current') as 'missing' | 'incompatible' | 'current',
       reasons,
       missing_required_export_ids: provider
-        ? dependency.required_export_ids.filter((exportId) => !(provider.capability_provider?.exports
-            .some((entry) => entry.install_mode === 'core_required' && entry.export_id === exportId) ?? false))
+        ? capabilityProfileCompatibility(dependency, provider, lock.agent_id).missingExports
         : dependency.required_export_ids,
       missing_required_module_ids: provider
-        ? dependency.required_module_ids.filter((moduleId) => !(provider.capability_provider?.module_export_ids.includes(moduleId) ?? false))
+        ? capabilityProfileCompatibility(dependency, provider, lock.agent_id).missingModules
         : dependency.required_module_ids,
     };
   });

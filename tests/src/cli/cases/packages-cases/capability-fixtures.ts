@@ -167,6 +167,12 @@ export function writeCapabilityProvider(
     coreSkillIds?: string[];
     moduleIds?: string[];
     specialtySkillIds?: string[];
+    consumerProfiles?: Array<{
+      profile_id: string;
+      consumer_agent_id: string;
+      required_export_ids: string[];
+      required_module_ids: string[];
+    }>;
   } = {},
 ) {
   const packageId = options.packageId ?? 'mas-scholar-skills';
@@ -218,6 +224,7 @@ export function writeCapabilityProvider(
       optional_skills_installed_by_default: true,
       default_materialization_policy: 'all_exported_skills',
     },
+    consumer_profiles: options.consumerProfiles ?? [],
     content_lock: {
       algorithm: 'sha256',
       canonicalization: 'ordered_path_nul_file_bytes',
@@ -432,24 +439,31 @@ export function writeMasConsumer(
     packageCatalogRef?: string;
     packageId?: string;
     providerPackageId?: string;
+    agentId?: string;
+    pluginId?: string;
+    consumerProfileId?: string;
+    requiredExportIds?: string[];
+    requiredModuleIds?: string[];
   } = {},
 ) {
   const packageVersion = version.replace(/^(\d+\.\d+\.\d+)a(\d+)$/, '$1-alpha.$2');
-  const pluginRoot = path.join(root, 'plugins', 'med-autoscience');
+  const agentId = options.agentId ?? 'mas';
+  const pluginId = options.pluginId ?? (agentId === 'mas' ? 'med-autoscience' : agentId);
+  const pluginRoot = path.join(root, 'plugins', pluginId);
   fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
-  fs.mkdirSync(path.join(pluginRoot, 'skills', 'med-autoscience'), { recursive: true });
+  fs.mkdirSync(path.join(pluginRoot, 'skills', pluginId), { recursive: true });
   fs.writeFileSync(path.join(pluginRoot, '.codex-plugin', 'plugin.json'), formatJsonPayload({
-    name: 'med-autoscience',
+    name: pluginId,
     version: packageVersion,
   }));
   fs.writeFileSync(
-    path.join(pluginRoot, 'skills', 'med-autoscience', 'SKILL.md'),
-    '# Med Auto Science\n',
+    path.join(pluginRoot, 'skills', pluginId, 'SKILL.md'),
+    `# ${pluginId}\n`,
   );
   const manifestPath = path.join(root, 'mas.json');
   fs.writeFileSync(manifestPath, formatJsonPayload({
     surface_kind: 'opl_agent_package_manifest.v1',
-    agent_id: 'mas',
+    agent_id: agentId,
     package_id: options.packageId ?? 'mas',
     display_name: 'Med Auto Science',
     publisher: 'one-person-lab',
@@ -467,9 +481,9 @@ export function writeMasConsumer(
     } : {}),
     carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
     codex_surface: {
-      plugin_id: 'med-autoscience',
+      plugin_id: pluginId,
       plugin_source_path: pluginRoot,
-      required_skill_ids: ['med-autoscience'],
+      required_skill_ids: [pluginId],
     },
     ...(options.runtimeSourceCarrier ? {
       runtime_source_carrier: {
@@ -484,8 +498,9 @@ export function writeMasConsumer(
       required: true,
       version_requirement: '>=0.1.0 <0.2.0',
       capability_abi: 'mas-scholar-skills.v1',
-      required_export_ids: scholarSkillsCoreSkillIds,
-      required_module_ids: scholarSkillsModuleIds,
+      ...(options.consumerProfileId ? { consumer_profile_id: options.consumerProfileId } : {}),
+      required_export_ids: options.requiredExportIds ?? scholarSkillsCoreSkillIds,
+      required_module_ids: options.requiredModuleIds ?? scholarSkillsModuleIds,
       bootstrap_manifest_url: providerManifestPath,
       ...(options.capabilityCatalogRef ? {
         dependency_source: {

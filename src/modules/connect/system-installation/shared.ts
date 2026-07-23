@@ -66,6 +66,7 @@ export type ModuleCapabilityDependency = {
   required: true;
   version_requirement: string;
   capability_abi: string;
+  consumer_profile_id?: string;
   required_export_ids: readonly string[];
   required_module_ids: readonly string[];
   manifest_url?: string;

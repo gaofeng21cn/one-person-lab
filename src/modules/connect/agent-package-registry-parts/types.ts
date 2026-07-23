@@ -418,6 +418,7 @@ export type AgentPackageCapabilityDependency = {
   required: boolean;
   version_requirement: string;
   capability_abi: string;
+  consumer_profile_id?: string | null;
   required_export_ids: string[];
   required_module_ids: string[];
   bootstrap_manifest_url: string | null;
@@ -430,10 +431,18 @@ export type AgentPackageCapabilityExport = {
   install_mode: 'core_required' | 'optional_named_specialty';
 };
 
+export type AgentPackageCapabilityConsumerProfile = {
+  profile_id: string;
+  consumer_agent_id: string;
+  required_export_ids: string[];
+  required_module_ids: string[];
+};
+
 export type AgentPackageCapabilityProvider = {
   capability_abi: string;
   exports: AgentPackageCapabilityExport[];
   module_export_ids: string[];
+  consumer_profiles?: AgentPackageCapabilityConsumerProfile[];
 };
 
 export type AgentPackageResolvedDependency = {
@@ -441,6 +450,7 @@ export type AgentPackageResolvedDependency = {
   required: boolean;
   version_requirement: string;
   capability_abi: string;
+  consumer_profile_id?: string | null;
   required_export_ids: string[];
   required_module_ids: string[];
   installed_version: string;
@@ -459,6 +469,7 @@ export type AgentPackageDependencyReadinessItem = {
   required: boolean;
   version_requirement: string;
   capability_abi: string;
+  consumer_profile_id: string | null;
   required_export_ids: string[];
   required_module_ids: string[];
   installed_version: string | null;
@@ -505,6 +516,7 @@ export type AgentPackageScopeMaterialization = {
   target_root: string;
   provider_package_id: string;
   provider_lock_ref: string;
+  consumer_profile_id?: string | null;
   transaction_id: string;
   required_skill_ids: string[];
   managed_skill_ids: string[];

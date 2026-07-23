@@ -843,7 +843,12 @@ async function applyManifestPackageLock(
         };
       }
       const provider = await preparePackage(dependencySelection, prepared.trustTier, catalogVersion);
-      const resolved = validateCapabilityProvider(dependency, provider.manifest, provider.manifestSha256);
+      const resolved = validateCapabilityProvider(
+        dependency,
+        provider.manifest,
+        provider.manifestSha256,
+        prepared.manifest.agent_id,
+      );
       resolved.manifest_url = dependencySelection.manifestUrl;
       await visit(provider);
     }
@@ -984,6 +989,7 @@ async function applyManifestPackageLock(
         required: dependency.required,
         version_requirement: dependency.version_requirement,
         capability_abi: dependency.capability_abi,
+        consumer_profile_id: dependency.consumer_profile_id ?? null,
         required_export_ids: dependency.required_export_ids,
         required_module_ids: dependency.required_module_ids,
         installed_version: providerLock.package_version,
@@ -1060,6 +1066,7 @@ async function applyManifestPackageLock(
           scopeMaterializations.push(materializeCapabilityScope({
             provider,
             providerLockRef: providerLock.lock_ref,
+            consumerProfileId: dependency.consumer_profile_id ?? null,
             scope: target.scope,
             targetRoot: target.targetRoot,
             transactionId: sha256Text(`${transactionId}\n${dependency.package_id}\n${target.scope}\n${target.targetRoot}`),
@@ -2332,6 +2339,7 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
           if (!provider) continue;
           const materialization = materializeCapabilityScopeFromLock({
             provider,
+            consumerProfileId: scopeRecord.consumer_profile_id ?? null,
             scope: scopeRecord.scope,
             targetRoot: scopeRecord.target_root,
             transactionId: scopeRecord.transaction_id,
@@ -2442,6 +2450,7 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
       }
       const materialization = materializeCapabilityScopeFromLock({
         provider,
+        consumerProfileId: record.consumer_profile_id ?? null,
         scope: record.scope,
         targetRoot: record.target_root,
         transactionId: sha256Text(`${transactionId}\n${provider.package_id}\n${record.scope}\n${record.target_root}`),
@@ -2805,6 +2814,7 @@ async function ensureOplAgentPackageScopeActivationUnlocked(input: AgentPackageP
       }
       materializations.push(materializeCapabilityScopeFromLock({
         provider,
+        consumerProfileId: dependency.consumer_profile_id ?? null,
         scope: input.scope!,
         targetRoot,
         transactionId: sha256Text(`${transactionId}\n${dependency.package_id}`),

@@ -100,15 +100,29 @@ function skillTreeDigest(root: string, skillIds: string[]) {
   return `sha256:${sha256Text(records.join('\0'))}`;
 }
 
-function coreSkillIds(provider: AgentPackageManifest) {
-  return provider.capability_provider?.exports
+function profileRequiredSkillIds(
+  provider: Pick<AgentPackageManifest, 'capability_provider'>,
+  consumerProfileId: string | null,
+) {
+  const capabilityProvider = provider.capability_provider;
+  const profile = consumerProfileId
+    ? capabilityProvider?.consumer_profiles?.find((entry) => entry.profile_id === consumerProfileId)
+    : null;
+  const requiredExportIds = profile?.required_export_ids ?? capabilityProvider?.exports
     .filter((entry) => entry.install_mode === 'core_required')
-    .map((entry) => entry.skill_id) ?? [];
+    .map((entry) => entry.export_id) ?? [];
+  return requiredExportIds.flatMap((exportId) => {
+    const exportedSkill = capabilityProvider?.exports.find((entry) => entry.export_id === exportId);
+    return exportedSkill ? [exportedSkill.skill_id] : [];
+  });
 }
 
-function specialtySkillIds(provider: AgentPackageManifest) {
+function specialtySkillIds(
+  provider: Pick<AgentPackageManifest, 'capability_provider'>,
+  requiredIds: string[],
+) {
   return provider.capability_provider?.exports
-    .filter((entry) => entry.install_mode === 'optional_named_specialty')
+    .filter((entry) => !requiredIds.includes(entry.skill_id))
     .map((entry) => entry.skill_id) ?? [];
 }
 
@@ -218,21 +232,23 @@ export function materializeCapabilityScope(input: {
   targetRoot: string;
   transactionId: string;
   providerLockRef: string;
+  consumerProfileId?: string | null;
   dryRun: boolean;
   retainTransactionBackup?: boolean;
   previousMaterialization?: AgentPackageScopeMaterialization | null;
 }): AgentPackageScopeMaterialization {
   const sourceRoot = input.provider.plugin_source_path;
-  const requiredSkillIds = coreSkillIds(input.provider);
-  const specialtyIds = specialtySkillIds(input.provider);
-  const managedSkillIds = [...requiredSkillIds, ...specialtyIds];
+  const profileId = input.consumerProfileId ?? null;
+  const requiredIds = profileRequiredSkillIds(input.provider, profileId);
+  const specialtyIds = specialtySkillIds(input.provider, requiredIds);
+  const managedSkillIds = [...requiredIds, ...specialtyIds];
   safeScopePathSegment(input.transactionId, 'transaction_id');
   for (const skillId of managedSkillIds) safeScopePathSegment(skillId, 'managed_skill_ids[]');
-  if (!sourceRoot || requiredSkillIds.length === 0) {
+  if (!sourceRoot || requiredIds.length === 0) {
     throw new FrameworkContractError('contract_shape_invalid', 'Capability provider cannot materialize a scope without a physical core-skill source.', {
       provider_package_id: input.provider.package_id,
       plugin_source_path: sourceRoot,
-      required_skill_ids: requiredSkillIds,
+      required_skill_ids: requiredIds,
       failure_code: 'agent_package_scope_provider_source_missing',
     });
   }
@@ -248,7 +264,7 @@ export function materializeCapabilityScope(input: {
     }
   }
   const sourceSkillsRoot = path.join(sourceRoot, 'skills');
-  const coreDigest = skillTreeDigest(sourceSkillsRoot, requiredSkillIds);
+  const coreDigest = skillTreeDigest(sourceSkillsRoot, requiredIds);
   const contentDigest = skillTreeDigest(sourceSkillsRoot, managedSkillIds);
   const retiredSkillIds = (input.previousMaterialization?.managed_skill_ids ?? [])
     .filter((skillId) => !managedSkillIds.includes(skillId))
@@ -334,8 +350,9 @@ export function materializeCapabilityScope(input: {
     target_root: input.targetRoot,
     provider_package_id: input.provider.package_id,
     provider_lock_ref: input.providerLockRef,
+    consumer_profile_id: profileId,
     transaction_id: input.transactionId,
-    required_skill_ids: requiredSkillIds,
+    required_skill_ids: requiredIds,
     managed_skill_ids: managedSkillIds,
     specialty_skill_ids: specialtyIds,
     retired_skill_ids: retiredSkillIds,
@@ -508,6 +525,7 @@ export function materializeCapabilityScopeFromLock(input: {
   scope: 'workspace' | 'quest';
   targetRoot: string;
   transactionId: string;
+  consumerProfileId?: string | null;
   dryRun: boolean;
   retainTransactionBackup?: boolean;
   previousMaterialization?: AgentPackageScopeMaterialization | null;
@@ -620,36 +638,35 @@ export function scopeMaterializationReadiness(
   const providerReadiness = lock.capability_dependencies.map((dependency) => {
     const record = records.find((entry) => entry.provider_package_id === dependency.package_id) ?? null;
     const provider = index.packages.find((entry) => entry.package_id === dependency.package_id) ?? null;
-    const requiredSkillIds = record?.required_skill_ids
-      ?? provider?.capability_provider?.exports
-        .filter((entry) => entry.install_mode === 'core_required')
-        .map((entry) => entry.skill_id)
-      ?? [];
-    const specialtyIds = record?.specialty_skill_ids
-      ?? provider?.capability_provider?.exports
-        .filter((entry) => entry.install_mode === 'optional_named_specialty')
-        .map((entry) => entry.skill_id)
-      ?? [];
-    const managedSkillIds = [...requiredSkillIds, ...specialtyIds];
-    const materializedSkillIds = requiredSkillIds.filter((skillId) =>
+    const profileId = dependency.consumer_profile_id ?? null;
+    const requiredIds = provider ? profileRequiredSkillIds(provider, profileId) : [];
+    const specialtyIds = provider ? specialtySkillIds(provider, requiredIds) : [];
+    const managedSkillIds = [...requiredIds, ...specialtyIds];
+    const materializedSkillIds = requiredIds.filter((skillId) =>
       fs.existsSync(path.join(targetSkillsRoot, skillId, 'SKILL.md')));
     const materializedSpecialtyIds = specialtyIds.filter((skillId) =>
       fs.existsSync(path.join(targetSkillsRoot, skillId, 'SKILL.md')));
-    const coreActualDigest = materializedSkillIds.length === requiredSkillIds.length
-      ? skillTreeDigest(targetSkillsRoot, requiredSkillIds)
+    const coreActualDigest = materializedSkillIds.length === requiredIds.length
+      ? skillTreeDigest(targetSkillsRoot, requiredIds)
       : null;
-    const fullActualDigest = materializedSkillIds.length === requiredSkillIds.length
+    const fullActualDigest = materializedSkillIds.length === requiredIds.length
       && materializedSpecialtyIds.length === specialtyIds.length
       ? skillTreeDigest(targetSkillsRoot, managedSkillIds)
       : null;
-    const status = materializedSkillIds.length !== requiredSkillIds.length
+    const recordProfileMatches = !record
+      || (
+        (record.consumer_profile_id ?? null) === profileId
+        && record.required_skill_ids.length === requiredIds.length
+        && record.required_skill_ids.every((skillId) => requiredIds.includes(skillId))
+      );
+    const status = materializedSkillIds.length !== requiredIds.length
       ? 'missing'
-      : !provider
+      : !provider || !recordProfileMatches
           ? 'incompatible'
         : 'current';
     return {
       record,
-      requiredSkillIds,
+      requiredSkillIds: requiredIds,
       specialtyIds,
       materializedSkillIds,
       materializedSpecialtyIds,

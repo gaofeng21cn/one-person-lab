@@ -21,6 +21,25 @@ import {
 
 const FIXTURE_CONSUMER_PACKAGE_ID = 'fixture.mas';
 const FIXTURE_PROVIDER_PACKAGE_ID = 'fixture.mas-scholar-skills';
+const MAG_CONSUMER_PROFILE_ID = 'mag-medical-grant.v1';
+const MAG_REQUIRED_SKILL_IDS = [
+  'medical-research-lit',
+  'medical-statistical-review',
+  'medical-methodology-planner',
+  'medical-evidence-integrity-reviewer',
+  'medical-evidence-synthesis-and-claim-map',
+  'medical-reference-integrity-auditor',
+];
+const MAG_REQUIRED_MODULE_IDS = [
+  'mas-scholar-skills.lit',
+  'mas-scholar-skills.stats',
+  'mas-scholar-skills.review',
+  'mas-scholar-skills.data',
+  'mas-scholar-skills.reference-provider-adapters',
+  'mas-scholar-skills.scientific-search-adapters',
+];
+const MAG_PROVIDER_MODULE_IDS = [...new Set([...moduleIds, ...MAG_REQUIRED_MODULE_IDS])];
+const MAG_SPECIALTY_SKILL_IDS = MAG_REQUIRED_SKILL_IDS.filter((skillId) => !coreSkillIds.includes(skillId));
 
 function bindMasWorkspace(workspace: string, env: Record<string, string>) {
   fs.mkdirSync(workspace, { recursive: true });
@@ -195,6 +214,118 @@ test('MAS package lifecycle atomically installs and repairs its 11-core capabili
     assert.equal(receiptMissing.opl_agent_package_status.launch_allowed, true);
     assert.equal(receiptMissing.opl_agent_package_status.launch_blocked_reason, null);
     assert.equal(receiptMissing.opl_agent_package_status.repair_action, null);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('MAG consumer profile promotes its six grant Skills into a profile-specific readiness floor', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mag-consumer-profile-'));
+  const workspace = path.join(root, 'workspace');
+  const providerManifestPath = writeFixtureCapabilityProvider(path.join(root, 'provider'), '0.1.0', {
+    moduleIds: MAG_PROVIDER_MODULE_IDS,
+    specialtySkillIds: MAG_SPECIALTY_SKILL_IDS,
+    consumerProfiles: [{
+      profile_id: MAG_CONSUMER_PROFILE_ID,
+      consumer_agent_id: 'mag',
+      required_export_ids: MAG_REQUIRED_SKILL_IDS,
+      required_module_ids: MAG_REQUIRED_MODULE_IDS,
+    }],
+  });
+  const consumerManifestPath = writeRawMasConsumer(
+    path.join(root, 'consumer'),
+    providerManifestPath,
+    '0.1.0a4',
+    {
+      packageId: 'fixture.mag',
+      providerPackageId: FIXTURE_PROVIDER_PACKAGE_ID,
+      agentId: 'mag',
+      pluginId: 'med-autogrant',
+      consumerProfileId: MAG_CONSUMER_PROFILE_ID,
+      requiredExportIds: MAG_REQUIRED_SKILL_IDS,
+      requiredModuleIds: MAG_REQUIRED_MODULE_IDS,
+    },
+  );
+  const env = {
+    OPL_STATE_DIR: path.join(root, 'state'),
+    CODEX_HOME: path.join(root, 'codex-home'),
+  };
+  try {
+    bindMasWorkspace(workspace, env);
+    const installed = await runCliAsync([
+      'packages', 'install', '--manifest-url', consumerManifestPath,
+      '--trust-tier', 'first_party', '--scope', 'workspace', '--target-workspace', workspace,
+    ], env) as any;
+    const lock = installed.opl_agent_package_install.package_lock;
+    assert.equal(lock.capability_dependencies[0].consumer_profile_id, MAG_CONSUMER_PROFILE_ID);
+    assert.equal(lock.resolved_dependencies[0].consumer_profile_id, MAG_CONSUMER_PROFILE_ID);
+    assert.deepEqual(
+      lock.scope_materializations[0].required_skill_ids.slice().sort(),
+      MAG_REQUIRED_SKILL_IDS.slice().sort(),
+    );
+    assert.equal(
+      fs.existsSync(path.join(workspace, '.codex', 'skills', 'medical-methodology-planner', 'SKILL.md')),
+      true,
+    );
+
+    fs.rmSync(
+      path.join(workspace, '.codex', 'skills', 'medical-methodology-planner'),
+      { recursive: true, force: true },
+    );
+    const missing = runCli([
+      'packages', 'status', '--package-id', 'fixture.mag',
+      '--scope', 'workspace', '--target-workspace', workspace,
+    ], env) as any;
+    assert.equal(missing.opl_agent_package_status.materialization_readiness.status, 'missing');
+    assert.deepEqual(
+      missing.opl_agent_package_status.materialization_readiness.core_readiness.required_skill_ids.slice().sort(),
+      MAG_REQUIRED_SKILL_IDS.slice().sort(),
+    );
+    assert.equal(missing.opl_agent_package_status.operational_ready, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('consumer profile cannot be selected by a different Agent', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-consumer-profile-owner-'));
+  const workspace = path.join(root, 'workspace');
+  const providerManifestPath = writeFixtureCapabilityProvider(path.join(root, 'provider'), '0.1.0', {
+    moduleIds: MAG_PROVIDER_MODULE_IDS,
+    specialtySkillIds: MAG_SPECIALTY_SKILL_IDS,
+    consumerProfiles: [{
+      profile_id: MAG_CONSUMER_PROFILE_ID,
+      consumer_agent_id: 'mag',
+      required_export_ids: MAG_REQUIRED_SKILL_IDS,
+      required_module_ids: MAG_REQUIRED_MODULE_IDS,
+    }],
+  });
+  const consumerManifestPath = writeRawMasConsumer(
+    path.join(root, 'consumer'),
+    providerManifestPath,
+    '0.1.0a4',
+    {
+      packageId: 'fixture.mas-profile-mismatch',
+      providerPackageId: FIXTURE_PROVIDER_PACKAGE_ID,
+      agentId: 'fixture-mas',
+      pluginId: 'fixture-mas',
+      consumerProfileId: MAG_CONSUMER_PROFILE_ID,
+      requiredExportIds: MAG_REQUIRED_SKILL_IDS,
+      requiredModuleIds: MAG_REQUIRED_MODULE_IDS,
+    },
+  );
+  const env = {
+    OPL_STATE_DIR: path.join(root, 'state'),
+    CODEX_HOME: path.join(root, 'codex-home'),
+  };
+  try {
+    bindMasWorkspace(workspace, env);
+    const failed = runCliFailure([
+      'packages', 'install', '--manifest-url', consumerManifestPath,
+      '--trust-tier', 'first_party', '--scope', 'workspace', '--target-workspace', workspace,
+    ], env);
+    assert.equal(failed.payload.error.details.failure_code, 'agent_package_dependency_incompatible');
+    assert.deepEqual(failed.payload.error.details.reasons, ['consumer_profile_consumer_mismatch']);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
