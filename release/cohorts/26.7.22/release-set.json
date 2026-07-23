@@ -19,7 +19,7 @@
   "owner_cohort_lock": {
     "surface_kind": "opl_package_owner_cohort_lock.v1",
     "ref": "owner-cohort-lock.json",
-    "digest": "sha256:079d7710b2c39bc49a7df0ec3e52a4d3c72735db2b78700049d8ca4581323351",
+    "digest": "sha256:388b1a696f7a2c2965fbdf358e8490ecc8f7f1a58d4781d3cf286ef56a3b60b2",
     "package_ids": [
       "mag",
       "mas",
@@ -156,15 +156,15 @@
         "opl-flow": {
           "component_id": "opl-flow",
           "component_kind": "package",
-          "version": "0.1.24",
-          "source_commit": "ea94cbc5d660caf870fefe2842fd0157fca52bd0",
-          "artifact_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/opl-flow:0.1.24",
+          "version": "0.1.25",
+          "source_commit": "a693d7e51d9585106d8433e0cd19f5228cf9c110",
+          "artifact_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/opl-flow:0.1.25",
           "artifact_digest": null,
           "artifact_status": "pending_remote_verification",
           "manifest_ref": "contracts/opl-framework/packages/opl-flow.json",
-          "manifest_sha256": "sha256:9c109ccad6d4af130424e905d68fa2da47c664b4f744a88ed4fb71f2a21607d8",
-          "payload_manifest_ref": "contracts/opl-framework/packages/payloads/opl-flow-0.1.24.json",
-          "payload_manifest_sha256": "sha256:cb0b352fc82ec7d97a3f04c5f4b08477688d9f41570d27fc3351d610e37e6610"
+          "manifest_sha256": "sha256:1120fe6e1030a904f8da4b34800f7b5dcee1e76e6ec0644c25d4168755917d6f",
+          "payload_manifest_ref": "contracts/opl-framework/packages/payloads/opl-flow-0.1.25.json",
+          "payload_manifest_sha256": "sha256:feee833d4d375cc6065e2c8e70528d67943eba8fcef7018f7c265da68a975ed6"
         }
       }
     }

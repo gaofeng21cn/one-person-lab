@@ -1,6 +1,6 @@
 {
   "surface_kind": "opl_package_owner_cohort_lock.v1",
-  "generated_at": "2026-07-22T17:31:43.000Z",
+  "generated_at": "2026-07-23T01:54:33.000Z",
   "packages": {
     "mas": {
       "package_id": "mas",
@@ -42,7 +42,7 @@
       "package_id": "opl-flow",
       "repo_name": "opl-flow",
       "repo_url": "https://github.com/gaofeng21cn/opl-flow.git",
-      "source_commit": "ea94cbc5d660caf870fefe2842fd0157fca52bd0"
+      "source_commit": "a693d7e51d9585106d8433e0cd19f5228cf9c110"
     }
   }
 }

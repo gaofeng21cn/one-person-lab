@@ -104,6 +104,9 @@ function committedSurfaceFixture(
     if (packageId === 'mas-scholar-skills' && member.version === '0.2.14') {
       manifest.primary_consumer.version_requirement = '>=0.2.0 <0.3.0';
     }
+    if (packageId === 'opl-flow' && member.version === '0.1.24') {
+      manifest.codex_surface.required_skill_ids = ['opl-flow'];
+    }
     const manifestPath = path.join(root, member.manifest_ref);
     writeJson(manifestPath, manifest);
     assert.equal(sha256(fs.readFileSync(manifestPath)), member.manifest_sha256);

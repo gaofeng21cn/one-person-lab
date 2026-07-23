@@ -10,6 +10,8 @@
     "contracts/workflow-policy.schema.json",
     "profile/manifest.json",
     "profile/modules/01-user-preferences.md",
+    "skills/coordinate-concurrent-tasks/SKILL.md",
+    "skills/coordinate-concurrent-tasks/agents/openai.yaml",
     "skills/opl-flow/SKILL.md",
     "skills/opl-flow/agents/openai.yaml",
     "templates/AGENTS.md",

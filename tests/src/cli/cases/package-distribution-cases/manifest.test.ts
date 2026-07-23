@@ -466,11 +466,11 @@ test('packages manifest exposes canonical Release Set coordinates for Package in
     `ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:${scholarCatalogEntry.package_version}`,
   );
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_id, 'opl-flow');
-  assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_version, '0.1.24');
+  assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].package_version, '0.1.25');
   assert.equal(output.packages_manifest.packages.package_artifacts['opl-flow'].codex_standalone_distribution, null);
   assert.equal(
     output.packages_manifest.packages.package_artifacts['opl-flow'].artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/opl-flow:0.1.24',
+    'ghcr.io/gaofeng21cn/one-person-lab-packages/opl-flow:0.1.25',
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].scope,
