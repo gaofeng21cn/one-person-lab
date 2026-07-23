@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { readJsonFile } from './script-json-boundary.mjs';
 import { parseRequiredValueOptions } from './required-value-options.mjs';
@@ -10,6 +11,8 @@ const PACKAGE_REMOTE_PUBLISH_STATUS = 'publication_workflow_configured_pending_r
 const PACKAGE_WORKFLOW_PATH = '.github/workflows/packages.yml';
 const PACKAGE_RELEASE_CALLER_WORKFLOW_PATH = '.github/workflows/release-package-channel.yml';
 const PACKAGE_DAILY_WORKFLOW_PATH = '.github/workflows/daily-package-channel.yml';
+const PACKAGE_STABLE_WORKFLOW_PATH = '.github/workflows/publish-package.yml';
+const RELEASE_HARNESS_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function parseCliOptions(argv) {
   const parsed = { manifest: null, promotionTarget: 'candidate' };
@@ -189,9 +192,11 @@ function validateWorkflow(manifest, manifestPath, failures) {
   const workflowPath = path.resolve(packageRoot, manifest.release_automation?.artifact_build?.workflow ?? PACKAGE_WORKFLOW_PATH);
   const releasePath = path.resolve(packageRoot, PACKAGE_RELEASE_CALLER_WORKFLOW_PATH);
   const dailyPath = path.resolve(packageRoot, PACKAGE_DAILY_WORKFLOW_PATH);
+  const packageStablePath = path.resolve(RELEASE_HARNESS_ROOT, PACKAGE_STABLE_WORKFLOW_PATH);
   const source = fs.existsSync(workflowPath) ? fs.readFileSync(workflowPath, 'utf8') : '';
   const releaseSource = fs.existsSync(releasePath) ? fs.readFileSync(releasePath, 'utf8') : '';
   const dailySource = fs.existsSync(dailyPath) ? fs.readFileSync(dailyPath, 'utf8') : '';
+  const packageStableSource = fs.existsSync(packageStablePath) ? fs.readFileSync(packageStablePath, 'utf8') : '';
 
   assertCondition(!/\n\s*push:\n/.test(source), 'package workflow must not restore tag-push publishing', failures);
   assertCondition(!/docker\/build-push-action|one-person-lab-webui|webui-image:/.test(source), 'Package workflow must not publish App WebUI', failures);
@@ -303,17 +308,31 @@ function validateWorkflow(manifest, manifestPath, failures) {
     && releaseSourceGateIndex < releaseSetupIndex, 'Stable Framework source gate must run immediately after checkout and before retag work', failures);
   assertCondition(/release_set_generation:/.test(releaseSource) && /promote-exact-release-set:/.test(releaseSource), 'Release caller must promote an explicit immutable generation', failures);
   assertCondition(/oras pull "\$\{carrier\}@\$\{carrier_digest\}"/.test(releaseSource), 'Stable promotion must pull the exact immutable catalog digest', failures);
-  assertCondition(/components\.packages\.members/.test(releaseSource) && /components\.base\.artifact_digest/.test(releaseSource), 'Stable promotion must retag exact Package and Base digests', failures);
+  assertCondition(/components\.packages\.members/.test(releaseSource)
+    && /components\.base\.artifact_digest/.test(releaseSource)
+    && /oras manifest fetch --descriptor "\$\{image\}@\$\{digest\}"/.test(releaseSource)
+    && /oras manifest fetch --descriptor "\$\{base_image\}@\$\{base_digest\}"/.test(releaseSource), 'Release Set promotion must validate every immutable Package and Base BOM member', failures);
+  assertCondition(/printf '%s\\t%s\\t%s\\n' "\$carrier" "\$base_carrier_digest" "\$carrier_digest" >> "\$promotion_plan"/.test(releaseSource)
+    && /\[ "\$\(wc -l < "\$promotion_plan" \| tr -d ' '\)" -eq 1 \]/.test(releaseSource)
+    && !/printf '%s\\t%s\\t%s\\n' "\$(?:image|base_image)"/.test(releaseSource)
+    && !/verify_public_digest "\$\{(?:image|base_image)\}:latest-stable"/.test(releaseSource)
+    && /verify_public_digest "ghcr\.io\/\$\{owner\}\/one-person-lab-packages\/\$\{package_id\}@\$\{digest\}"/.test(releaseSource)
+    && /verify_public_digest "\$\{base_image\}@\$\{base_digest\}"/.test(releaseSource), 'Release Set promotion must move only its carrier while anonymously verifying immutable component bytes', failures);
   assertCondition(/expected_carrier_digest/.test(releaseSource) && /promotion_request_id/.test(releaseSource), 'Stable promotion must bind the App saga request and candidate digest', failures);
   assertCondition(/promote_channel_ref\(\)/.test(releaseSource)
     && /assert_channel_cas_eligible\(\)/.test(releaseSource)
     && /opl-stable-promotion-plan\.tsv/.test(releaseSource)
     && /Stable channel conflict/.test(releaseSource)
     && /base_carrier_digest/.test(releaseSource)
-    && releaseSource.indexOf('assert_channel_cas_eligible "$ref"') < releaseSource.indexOf('promote_channel_ref "$ref"'), 'Stable promotion must preflight then CAS every moving projection against the frozen predecessor', failures);
+    && /group:\s*opl-release-set-snapshot-\$\{\{ github\.repository_owner \}\}/.test(releaseSource)
+    && releaseSource.indexOf('assert_channel_cas_eligible "$ref"') < releaseSource.indexOf('promote_channel_ref "$ref"'), 'Stable promotion must preflight then CAS the snapshot carrier against the frozen predecessor', failures);
   assertCondition(/if ! oras tag "\$\{ref\}@\$\{target_digest\}" latest-stable/.test(releaseSource)
     && /Reconciled an unknown tag result/.test(releaseSource)
     && /not the exact target after bounded readback/.test(releaseSource), 'Stable promotion must reconcile an unknown tag result by exact readback without redispatch', failures);
+  assertCondition(/group:\s*opl-package-publication-\$\{\{ inputs\.package_id \}\}/.test(packageStableSource)
+    && /environment:\s*release-stable/.test(packageStableSource)
+    && /oras tag "\$\{PACKAGE_IMAGE\}@\$\{digest\}" latest-stable/.test(packageStableSource)
+    && /--ref "\$LATEST_STABLE_REF"[\s\S]*--verify-only --expected-digest "\$digest" --anonymous/.test(packageStableSource), 'Each Package stable channel must remain owned and verified by the single-Package publisher', failures);
   assertCondition(/environment:\s*release-stable/.test(releaseSource)
     && /Verify protected Stable environment/.test(releaseSource)
     && /release-stable must exist before dispatch/.test(releaseSource)

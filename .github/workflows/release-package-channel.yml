@@ -248,7 +248,7 @@ jobs:
     timeout-minutes: 15
     environment: release-stable
     concurrency:
-      group: opl-package-publication-${{ github.repository_owner }}
+      group: opl-release-set-snapshot-${{ github.repository_owner }}
       cancel-in-progress: false
     steps:
       - name: Verify protected Stable environment
@@ -470,17 +470,6 @@ jobs:
             image="ghcr.io/${owner}/one-person-lab-packages/${package_id}"
             [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
             test "$(oras manifest fetch --descriptor "${image}@${digest}" | jq -r .digest)" = "$digest"
-            if [ -n "$base_release_manifest" ]; then
-              frozen_digest="$(jq -r --arg id "$package_id" '.release_set.components.packages.members[$id].artifact_digest' "$base_release_manifest")"
-              [[ "$frozen_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-              if [ "$frozen_digest" = "$digest" ]; then
-                echo "::notice::Package ${package_id} is unchanged; retaining its existing latest-stable digest."
-                continue
-              fi
-            else
-              frozen_digest=none
-            fi
-            printf '%s\t%s\t%s\n' "$image" "$frozen_digest" "$digest" >> "$promotion_plan"
           done < <(jq -r '.release_set.components.packages.members | to_entries[] | [.key, .value.artifact_digest] | @tsv' "$release_manifest")
 
           base_ref="$(jq -r '.release_set.components.base.artifact_ref' "$release_manifest")"
@@ -488,16 +477,10 @@ jobs:
           base_digest="$(jq -r '.release_set.components.base.artifact_digest' "$release_manifest")"
           [[ "$base_image" == ghcr.io/* ]] && [[ "$base_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           test "$(oras manifest fetch --descriptor "${base_image}@${base_digest}" | jq -r .digest)" = "$base_digest"
-          if [ -n "$base_release_manifest" ]; then
-            frozen_framework_digest="$(jq -r '.release_set.components.base.artifact_digest' "$base_release_manifest")"
-            [[ "$frozen_framework_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-          else
-            frozen_framework_digest=none
-          fi
-          printf '%s\t%s\t%s\n' "$base_image" "$frozen_framework_digest" "$base_digest" >> "$promotion_plan"
-          # This explicit compatibility workflow promotes a complete tested/offline snapshot.
+          # Package and Base channels are owned by their independent publishers.
+          # This workflow validates their immutable BOM members and moves only the snapshot carrier.
           printf '%s\t%s\t%s\n' "$carrier" "$base_carrier_digest" "$carrier_digest" >> "$promotion_plan"
-          [ "$(wc -l < "$promotion_plan" | tr -d ' ')" -ge 2 ]
+          [ "$(wc -l < "$promotion_plan" | tr -d ' ')" -eq 1 ]
 
           while IFS=$'\t' read -r ref frozen_digest target_digest; do
             assert_channel_cas_eligible "$ref" "$frozen_digest" "$target_digest"
@@ -518,9 +501,9 @@ jobs:
             return 1
           }
           while IFS=$'\t' read -r package_id digest; do
-            verify_public_digest "ghcr.io/${owner}/one-person-lab-packages/${package_id}:latest-stable" "$digest"
+            verify_public_digest "ghcr.io/${owner}/one-person-lab-packages/${package_id}@${digest}" "$digest"
           done < <(jq -r '.release_set.components.packages.members | to_entries[] | [.key, .value.artifact_digest] | @tsv' "$release_manifest")
-          verify_public_digest "${base_image}:latest-stable" "$base_digest"
+          verify_public_digest "${base_image}@${base_digest}" "$base_digest"
           verify_public_digest "${carrier}:latest-stable" "$carrier_digest"
           receipt_root="$RUNNER_TEMP/opl-release-promotion-receipt"
           mkdir -p "$receipt_root"

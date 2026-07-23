@@ -23,6 +23,7 @@ test('framework packages workflow is release-gated and manually repairable witho
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/packages.yml'), 'utf8');
   const releaseCallerWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/release-package-channel.yml'), 'utf8');
   const dailyPackageWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/daily-package-channel.yml'), 'utf8');
+  const packageStableWorkflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
 
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /workflow_call:/);
@@ -103,7 +104,7 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.doesNotMatch(releaseCallerHeader, /\nconcurrency:/);
   assert.match(
     exactPromotionJob,
-    /concurrency:\s*\n\s*group: opl-package-publication-\$\{\{ github\.repository_owner \}\}\s*\n\s*cancel-in-progress: false/,
+    /concurrency:\s*\n\s*group: opl-release-set-snapshot-\$\{\{ github\.repository_owner \}\}\s*\n\s*cancel-in-progress: false/,
   );
   assert.doesNotMatch(workflow, /\n  push:\n/);
   assert.doesNotMatch(workflow, /webui-image:/);
@@ -174,9 +175,31 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(releaseCallerWorkflow, /if ! oras tag "\$\{ref\}@\$\{target_digest\}" latest-stable/);
   assert.match(releaseCallerWorkflow, /Reconciled an unknown tag result/);
   assert.match(releaseCallerWorkflow, /not the exact target after bounded readback/);
+  assert.match(releaseCallerWorkflow, /group:\s*opl-release-set-snapshot-\$\{\{ github\.repository_owner \}\}/);
+  assert.match(releaseCallerWorkflow, /oras manifest fetch --descriptor "\$\{image\}@\$\{digest\}"/);
+  assert.match(releaseCallerWorkflow, /oras manifest fetch --descriptor "\$\{base_image\}@\$\{base_digest\}"/);
+  assert.match(
+    releaseCallerWorkflow,
+    /printf '%s\\t%s\\t%s\\n' "\$carrier" "\$base_carrier_digest" "\$carrier_digest" >> "\$promotion_plan"/,
+  );
+  assert.match(releaseCallerWorkflow, /\[ "\$\(wc -l < "\$promotion_plan" \| tr -d ' '\)" -eq 1 \]/);
+  assert.doesNotMatch(releaseCallerWorkflow, /printf '%s\\t%s\\t%s\\n' "\$(?:image|base_image)"/);
+  assert.doesNotMatch(releaseCallerWorkflow, /verify_public_digest "\$\{(?:image|base_image)\}:latest-stable"/);
+  assert.match(
+    releaseCallerWorkflow,
+    /verify_public_digest "ghcr\.io\/\$\{owner\}\/one-person-lab-packages\/\$\{package_id\}@\$\{digest\}"/,
+  );
+  assert.match(releaseCallerWorkflow, /verify_public_digest "\$\{base_image\}@\$\{base_digest\}"/);
   assert.ok(
     releaseCallerWorkflow.indexOf('assert_channel_cas_eligible "$ref"')
       < releaseCallerWorkflow.indexOf('promote_channel_ref "$ref"'),
+  );
+  assert.match(packageStableWorkflow, /group:\s*opl-package-publication-\$\{\{ inputs\.package_id \}\}/);
+  assert.match(packageStableWorkflow, /environment:\s*release-stable/);
+  assert.match(packageStableWorkflow, /oras tag "\$\{PACKAGE_IMAGE\}@\$\{digest\}" latest-stable/);
+  assert.match(
+    packageStableWorkflow,
+    /--ref "\$LATEST_STABLE_REF"[\s\S]*--verify-only --expected-digest "\$digest" --anonymous/,
   );
   assert.doesNotMatch(workflow, /oras tag .*\slatest\s*$/m);
   assert.match(workflow, /changed_packages_json/);
