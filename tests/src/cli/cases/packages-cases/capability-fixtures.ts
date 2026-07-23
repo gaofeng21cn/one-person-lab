@@ -241,7 +241,11 @@ export function writeCapabilityProvider(
   return manifestPath;
 }
 
-export function writePackageCatalog(root: string, manifestPaths: string[]) {
+export function writePackageCatalog(
+  root: string,
+  manifestPaths: string[],
+  options: { corruptInlineManifestPackageId?: string } = {},
+) {
   fs.mkdirSync(root, { recursive: true });
   const packages: Record<string, { package_id: string; package_role: string; selected_version: string; versions: any[] }> = {};
   const artifactManifests: Record<string, Record<string, unknown>> = {};
@@ -393,6 +397,12 @@ export function writePackageCatalog(root: string, manifestPaths: string[]) {
     entry.selected_version = manifest.version;
     entry.versions.push(version);
     packages[packageId] = entry;
+  }
+  const corruptInlineManifest = options.corruptInlineManifestPackageId
+    ? packages[options.corruptInlineManifestPackageId]?.versions[0]
+    : null;
+  if (corruptInlineManifest?.manifest_json) {
+    corruptInlineManifest.manifest_json = `${corruptInlineManifest.manifest_json} `;
   }
   const catalogPath = path.join(root, 'capability-catalog.json');
   fs.writeFileSync(catalogPath, formatJsonPayload({

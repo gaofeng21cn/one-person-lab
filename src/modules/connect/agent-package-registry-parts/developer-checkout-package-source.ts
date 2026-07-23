@@ -140,6 +140,33 @@ function normalizeDeveloperOwnerManifest(input: {
     }, input.manifestPath);
   }
 
+  if (isRecord(input.payload)
+    && input.payload.surface_kind === 'opl_capability_package_manifest.v2'
+    && !isRecord(input.payload.content_lock)) {
+    const exports = isRecord(input.payload.exports) ? input.payload.exports : {};
+    const contentLockPaths = [
+      ...(Array.isArray(exports.core_skill_ids) ? exports.core_skill_ids : []),
+      ...(Array.isArray(exports.specialty_skill_ids) ? exports.specialty_skill_ids : []),
+    ]
+      .filter((skillId): skillId is string => typeof skillId === 'string' && skillId.length > 0)
+      .map((skillId) => `skills/${skillId}/SKILL.md`);
+    const normalized = normalizePackageManifest({
+      ...input.payload,
+      content_lock: {
+        algorithm: 'sha256',
+        canonicalization: CANONICAL_PACKAGE_CONTENT_LOCK,
+        digest: `sha256:${'0'.repeat(64)}`,
+        paths: contentLockPaths,
+      },
+    }, input.manifestPath);
+    return {
+      ...normalized,
+      content_digest: null,
+      content_lock_canonicalization: null,
+      content_lock_paths: [],
+    };
+  }
+
   return normalizePackageManifest(input.payload, input.manifestPath);
 }
 

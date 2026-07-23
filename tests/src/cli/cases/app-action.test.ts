@@ -433,7 +433,9 @@ test('generic package activation action returns the launch binding at the App bo
     assert.equal(fs.existsSync(path.join(requiredWorkspace, '.codex', 'skills')), false);
 
     consumerLock.capability_dependencies[0].required = false;
+    consumerLock.capability_dependencies[0].dependency_kind = 'optional_enhancement';
     consumerLock.resolved_dependencies[0].required = false;
+    consumerLock.resolved_dependencies[0].dependency_kind = 'optional_enhancement';
     fs.writeFileSync(lockPath, `${JSON.stringify(lockIndex, null, 2)}\n`);
     const optionalWorkspace = path.join(root, 'optional-workspace');
     const optionalActivation = (await runCliAsync([
@@ -449,7 +451,7 @@ test('generic package activation action returns the launch binding at the App bo
     assert.equal(optionalActivation.launch_allowed, true);
     assert.equal(optionalActivation.launch_blocked_reason, null);
     assert.equal(optionalActivation.package_status.package_dependency_readiness.operational_ready, true);
-    assert.equal(optionalActivation.package_status.materialization_readiness.status, 'incompatible');
+    assert.equal(optionalActivation.package_status.materialization_readiness.status, 'not_required');
     assert.equal(optionalActivation.launch_state, 'degraded');
     assert.equal(optionalActivation.launch_state_reason, 'optional_dependency_missing');
     assert.deepEqual({

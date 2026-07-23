@@ -726,7 +726,7 @@ test('developer checkout policy tracks Release Set currentness without accepting
       (entry: any) => entry.component_id === 'opl_packages',
     );
     const target = adapter.result.targets.find((entry: any) => entry.target_id === 'mas');
-    assert.equal(target.status, 'completed');
+    assert.equal(target.status, 'completed', JSON.stringify(target, null, 2));
     assert.equal(target.action, 'source_reconcile');
     assert.equal(target.currentness.status, 'update_available');
     assert.ok(target.currentness.reasons.includes('package_version_changed'));
@@ -743,6 +743,136 @@ test('developer checkout policy tracks Release Set currentness without accepting
         ['mas', '0.1.1', 'developer_checkout_override'],
         ['mas-scholar-skills', '0.1.1', 'developer_checkout_override'],
       ],
+    );
+  } finally {
+    removeFixtureTree(root);
+  }
+});
+
+test('fresh Developer install admits owner checkout manifests without channel payload or content lock', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-developer-direct-admission-'));
+  const homeDir = path.join(root, 'home');
+  const stateDir = path.join(root, 'state');
+  const workspace = path.join(root, 'workspace');
+  const masCheckout = path.join(root, 'workspace', 'med-autoscience');
+  const scholarCheckout = path.join(root, 'workspace', 'mas-scholar-skills');
+  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0');
+  const providerPayload = JSON.parse(fs.readFileSync(providerManifest, 'utf8'));
+  delete providerPayload.content_lock;
+  fs.writeFileSync(providerManifest, formatJsonPayload(providerPayload));
+  const masManifest = writeMasConsumer(path.join(root, 'mas'), providerManifest, '0.1.0');
+  const commonEnv = {
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_STATE_DIR: stateDir,
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masCheckout,
+    OPL_MODULE_PATH_SCHOLARSKILLS: scholarCheckout,
+  };
+  fs.mkdirSync(masCheckout, { recursive: true });
+  fs.mkdirSync(scholarCheckout, { recursive: true });
+  fs.mkdirSync(workspace, { recursive: true });
+  writeDeveloperCapabilityCheckoutClosure({
+    masCheckout,
+    scholarCheckout,
+    masManifestPath: masManifest,
+    providerManifestPath: providerManifest,
+  });
+
+  try {
+    const installed = runCli(['packages', 'install', 'mas'], commonEnv) as any;
+    assert.equal(installed.opl_agent_package_install.status, 'installed');
+    assert.deepEqual(
+      installed.opl_agent_package_install.dependency_package_locks.map(
+        (lock: any) => [lock.package_id, lock.source_kind],
+      ),
+      [
+        ['mas-scholar-skills', 'developer_checkout_override'],
+        ['mas', 'developer_checkout_override'],
+      ],
+    );
+    assert.equal(
+      installed.opl_agent_package_install.dependency_package_locks.every(
+        (lock: any) => lock.release_channel_ref === null && lock.artifact_digest === null,
+      ),
+      true,
+    );
+    assert.equal(
+      fs.existsSync(path.join(stateDir, 'agent-package-release-catalog-cache.json')),
+      false,
+    );
+
+    const status = runCli(['packages', 'status', '--package-id', 'mas'], commonEnv) as any;
+    assert.equal(status.opl_agent_package_status.operational_ready, true);
+    assert.equal(status.opl_agent_package_status.launch_allowed, true);
+    runCli(['workspace', 'bind', '--project', 'medautoscience', '--path', workspace], commonEnv);
+    const activation = runCli([
+      'packages', 'activate', 'mas',
+      '--scope', 'workspace', '--target-workspace', workspace,
+    ], commonEnv) as any;
+    assert.equal(activation.opl_agent_package_activation.package_lock.source_kind, 'developer_checkout_override');
+    assert.equal(activation.opl_agent_package_activation.package_use_binding.root_package.package_id, 'mas');
+  } finally {
+    removeFixtureTree(root);
+  }
+});
+
+test('bad optional inline catalog entry stays diagnostic and does not block consumer install use or launch', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-optional-inline-diagnostic-'));
+  const homeDir = path.join(root, 'home');
+  const stateDir = path.join(root, 'state');
+  const workspace = path.join(root, 'workspace');
+  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0');
+  const masManifest = writeMasConsumer(path.join(root, 'mas'), providerManifest, '0.1.0', {
+    required: false,
+    dependencyKind: 'optional_enhancement',
+  });
+  const releaseSet = writeCapabilityCatalog(
+    path.join(root, 'release-set'),
+    [masManifest, providerManifest],
+    { corruptInlineManifestPackageId: 'mas-scholar-skills' },
+  );
+  const commonEnv = {
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_STATE_DIR: stateDir,
+    ...releaseSet.env,
+  };
+  fs.mkdirSync(workspace, { recursive: true });
+
+  try {
+    const installed = runCli(['packages', 'install', 'mas'], commonEnv) as any;
+    assert.equal(installed.opl_agent_package_install.status, 'installed');
+    assert.deepEqual(
+      installed.opl_agent_package_install.dependency_package_locks.map(
+        (lock: any) => lock.package_id,
+      ),
+      ['mas'],
+    );
+    assert.deepEqual(installed.opl_agent_package_install.package_lock.resolved_dependencies, []);
+
+    const status = runCli(['packages', 'status', '--package-id', 'mas'], commonEnv) as any;
+    const readiness = status.opl_agent_package_status.package_dependency_readiness;
+    assert.equal(readiness.status, 'missing');
+    assert.equal(readiness.operational_ready, true);
+    assert.deepEqual(readiness.dependencies[0].reasons, [
+      'dependency_lock_missing',
+    ]);
+    assert.equal(status.opl_agent_package_status.operational_ready, true);
+    assert.equal(status.opl_agent_package_status.launch_allowed, true);
+
+    runCli(['workspace', 'bind', '--project', 'medautoscience', '--path', workspace], commonEnv);
+    const activation = runCli([
+      'packages', 'activate', 'mas',
+      '--scope', 'workspace', '--target-workspace', workspace,
+    ], commonEnv) as any;
+    assert.equal(activation.opl_agent_package_activation.launch_state, 'degraded');
+    assert.equal(
+      activation.opl_agent_package_activation.launch_state_reason,
+      'optional_dependency_missing',
+    );
+    assert.deepEqual(
+      activation.opl_agent_package_activation.package_use_binding.provider_packages,
+      [],
     );
   } finally {
     removeFixtureTree(root);

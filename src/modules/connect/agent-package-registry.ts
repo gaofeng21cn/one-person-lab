@@ -51,6 +51,7 @@ import {
 } from './agent-package-registry-parts/dependency-closure.ts';
 import {
   catalogManifestPayload,
+  catalogPayloadManifestJson,
   fetchManagedPackageCatalog,
   selectCapabilityCatalogVersion,
   selectManagedCatalogPackageVersion,
@@ -517,6 +518,43 @@ async function applyManifestPackageLock(
       )
     );
   const firstParty = shouldUseFirstPartyCatalog ? firstPartyOwner : null;
+  const rootSourcePolicy = firstParty && packageId
+    ? resolveAgentPackageEffectiveSourcePolicy(packageId)
+    : null;
+  const requestedRootDeveloperCheckoutPath = packageId
+    ? input.agentRoots?.[packageId] ?? stringValue(input.agentRoot)
+    : null;
+  const developerRootSelection = Boolean(
+    firstParty
+    && rootSourcePolicy?.desired_source_kind === 'developer_checkout_override',
+  );
+  if (developerRootSelection && !rootSourcePolicy?.developer_checkout_available) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer Mode selected a package checkout that is not available.', {
+      package_id: packageId,
+      module_id: rootSourcePolicy?.module_id ?? null,
+      checkout_path: rootSourcePolicy?.developer_checkout_path ?? null,
+      source_policy_reason: rootSourcePolicy?.reason ?? null,
+      failure_code: 'agent_package_developer_checkout_unavailable',
+    });
+  }
+  if (developerRootSelection
+    && requestedRootDeveloperCheckoutPath
+    && rootSourcePolicy?.developer_checkout_path
+    && path.resolve(requestedRootDeveloperCheckoutPath) !== path.resolve(rootSourcePolicy.developer_checkout_path)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'First-party Package developer checkout must match the effective module source policy.', {
+      package_id: packageId,
+      requested_checkout_path: path.resolve(requestedRootDeveloperCheckoutPath),
+      required_checkout_path: path.resolve(rootSourcePolicy.developer_checkout_path),
+      source_policy_reason: rootSourcePolicy.reason,
+      failure_code: 'first_party_package_developer_checkout_path_mismatch',
+    });
+  }
+  const developerRootSource = developerRootSelection
+      ? loadDeveloperCheckoutPackageSource(
+        packageId!,
+        requestedRootDeveloperCheckoutPath ?? rootSourcePolicy!.developer_checkout_path!,
+      )
+    : null;
   let catalog = bundledFullRuntimeCatalog?.catalog ?? options.catalog ?? null;
   let rootVersion = bundledFullRuntimeCatalog
     ? selectManagedCatalogPackageVersion(bundledFullRuntimeCatalog.catalog, trustedBundledInstall!.packageId)
@@ -525,15 +563,9 @@ async function applyManifestPackageLock(
     ?? (trustedBundledInstall ? null : firstParty?.catalogSource ?? null);
   let channelRef = bundledFullRuntimeCatalog?.catalogRef ?? options.channelRef ?? null;
   let channelDigest = bundledFullRuntimeCatalog?.catalogSha256 ?? options.channelDigest ?? null;
-  const developerRootReconcile = Boolean(
-    options.sourceReconcile
-    && packageId
-    && resolveAgentPackageEffectiveSourcePolicy(packageId).desired_source_kind
-      === 'developer_checkout_override',
-  );
   if (firstParty
     && !trustedBundledInstall
-    && !developerRootReconcile
+    && !developerRootSelection
     && (!catalog || !rootVersion)) {
     const fetched = await fetchManagedPackageCatalog(firstParty.catalogSource);
     catalog = fetched.catalog;
@@ -542,7 +574,7 @@ async function applyManifestPackageLock(
     channelRef = fetched.channel_ref;
     channelDigest = fetched.channel_digest;
   }
-  if (firstParty && rootVersion && !trustedBundledInstall) {
+  if (firstParty && rootVersion && !trustedBundledInstall && !developerRootSelection) {
     assertFirstPartyPackageCatalogVersion(firstParty.canonicalId, rootVersion);
   }
   const selection = trustedBundledInstall
@@ -550,6 +582,14 @@ async function applyManifestPackageLock(
         registryUrl: null,
         packageId: trustedBundledInstall.packageId,
         manifestUrl: bundledFullRuntimeCatalog!.entries.get(trustedBundledInstall.packageId)!.manifestUrl,
+        trustTier: firstParty!.trustTier,
+        registryEntry: null,
+      }
+    : developerRootSource
+    ? {
+        registryUrl: null,
+        packageId,
+        manifestUrl: developerRootSource.source.owner_manifest_path,
         trustTier: firstParty!.trustTier,
         registryEntry: null,
       }
@@ -582,17 +622,46 @@ async function applyManifestPackageLock(
     inheritedTrustTier?: string,
     catalogVersion?: ManagedCatalogVersion | null,
   ): Promise<PreparedPackage> {
-    if (firstParty && catalogVersion && !trustedBundledInstall) {
+    const selectedFirstPartyOwner = nextSelection.packageId
+      ? resolveFirstPartyPackageCatalog(nextSelection.packageId)
+      : null;
+    const selectedSourcePolicy = selectedFirstPartyOwner
+      ? resolveAgentPackageEffectiveSourcePolicy(selectedFirstPartyOwner.canonicalId)
+      : null;
+    const selectedDeveloperCheckoutPath = selectedSourcePolicy?.desired_source_kind
+      === 'developer_checkout_override'
+      && selectedSourcePolicy.developer_checkout_available
+      ? input.agentRoots?.[selectedFirstPartyOwner!.canonicalId]
+        ?? (selectedFirstPartyOwner!.canonicalId === packageId ? stringValue(input.agentRoot) : null)
+        ?? selectedSourcePolicy.developer_checkout_path
+      : null;
+    const selectedDeveloperSource = selectedDeveloperCheckoutPath
+      ? developerRootSource?.ownerManifest.package_id === selectedFirstPartyOwner?.canonicalId
+        ? developerRootSource
+        : loadDeveloperCheckoutPackageSource(
+            selectedFirstPartyOwner!.canonicalId,
+            selectedDeveloperCheckoutPath,
+          )
+      : null;
+    if (firstParty && catalogVersion && !trustedBundledInstall && !selectedDeveloperSource) {
       assertFirstPartyPackageCatalogVersion(nextSelection.packageId ?? firstParty.canonicalId, catalogVersion);
     }
-    const inlinePayload = catalogVersion ? catalogManifestPayload(catalogVersion) : null;
-    const fetched = inlinePayload
+    const inlinePayload = catalogVersion && !selectedDeveloperSource
+      ? catalogManifestPayload(catalogVersion)
+      : null;
+    const fetched = selectedDeveloperSource
+      ? {
+          payload: null,
+          source_sha256: selectedDeveloperSource.source.owner_manifest_sha256,
+        }
+      : inlinePayload
       ? {
           payload: inlinePayload,
           source_sha256: catalogVersion!.manifest_sha256.replace(/^sha256:/, ''),
         }
       : await fetchJsonSource(nextSelection.manifestUrl);
     if (catalogVersion
+      && !selectedDeveloperSource
       && `sha256:${fetched.source_sha256.replace(/^sha256:/, '')}` !== catalogVersion.manifest_sha256) {
       throw new FrameworkContractError('contract_shape_invalid', 'Managed catalog manifest bytes do not match the selected digest.', {
         package_id: nextSelection.packageId,
@@ -600,20 +669,20 @@ async function applyManifestPackageLock(
         failure_code: 'agent_package_catalog_manifest_digest_mismatch',
       });
     }
-    let manifest = normalizePackageManifest(fetched.payload, nextSelection.manifestUrl);
+    let manifest = selectedDeveloperSource?.ownerManifest
+      ?? normalizePackageManifest(fetched.payload, nextSelection.manifestUrl);
     const manifestFirstPartyOwner = resolveFirstPartyPackageCatalog(manifest.package_id);
     const trustedBundledManifestSelection = Boolean(
       trustedBundledInstall
       && bundledFullRuntimeCatalog?.entries.get(manifest.package_id)?.manifestUrl === nextSelection.manifestUrl,
     );
-    const developerSourceReconcile = Boolean(
-      options.sourceReconcile
-      && resolveAgentPackageEffectiveSourcePolicy(manifest.package_id).desired_source_kind
+    const developerSourceSelection = Boolean(
+      resolveAgentPackageEffectiveSourcePolicy(manifest.package_id).desired_source_kind
         === 'developer_checkout_override',
     );
     if (manifestFirstPartyOwner
       && !(firstParty && catalogVersion && catalogSource)
-      && !developerSourceReconcile
+      && !developerSourceSelection
       && !trustedBundledManifestSelection) {
       throw new FrameworkContractError('contract_shape_invalid', 'Canonical first-party package manifests must come from the Framework-owned Release Set catalog.', {
         package_id: manifestFirstPartyOwner.canonicalId,
@@ -629,7 +698,7 @@ async function applyManifestPackageLock(
         failure_code: 'agent_package_catalog_package_id_mismatch',
       });
     }
-    if (catalogVersion && manifest.version !== catalogVersion.package_version) {
+    if (catalogVersion && !selectedDeveloperSource && manifest.version !== catalogVersion.package_version) {
       throw new FrameworkContractError('contract_shape_invalid', 'Managed catalog selection and package manifest version must match.', {
         package_id: manifest.package_id,
         catalog_package_version: catalogVersion.package_version,
@@ -638,6 +707,7 @@ async function applyManifestPackageLock(
       });
     }
     if (catalogVersion?.content_digest
+      && !selectedDeveloperSource
       && manifestContentDigest(manifest, fetched.source_sha256) !== catalogVersion.content_digest) {
       throw new FrameworkContractError('contract_shape_invalid', 'Managed catalog content digest does not match the selected package manifest.', {
         package_id: manifest.package_id,
@@ -686,10 +756,11 @@ async function applyManifestPackageLock(
     let manifestSha256 = fetched.source_sha256;
     let developerCheckoutPayloadFiles: ReturnType<typeof loadDeveloperCheckoutPackageSource>['payloadFiles'] | null = null;
     if (policySourceKind === 'developer_checkout_override' && developerCheckoutPath) {
-      const developerSource = loadDeveloperCheckoutPackageSource(
-        manifest.package_id,
-        developerCheckoutPath,
-      );
+      const developerSource = selectedDeveloperSource
+        ?? loadDeveloperCheckoutPackageSource(
+          manifest.package_id,
+          developerCheckoutPath,
+        );
       manifest = mergeDeveloperCheckoutPackageManifest({
         base: manifest,
         owner: developerSource.ownerManifest,
@@ -707,9 +778,10 @@ async function applyManifestPackageLock(
     if (catalogVersion?.payload_manifest_json
       && !trustedBundledInstall
       && policySourceKind !== 'developer_checkout_override') {
+      const payloadManifestJson = catalogPayloadManifestJson(catalogVersion)!;
       inlinePayloadRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-inline-package-payload-'));
       const payloadPath = path.join(inlinePayloadRoot, 'payload.json');
-      fs.writeFileSync(payloadPath, catalogVersion.payload_manifest_json, 'utf8');
+      fs.writeFileSync(payloadPath, payloadManifestJson, 'utf8');
       manifest = { ...manifest, plugin_source_path: null, plugin_payload_manifest_url: payloadPath };
     }
     const immutableSelection = trustedBundledInstall || policySourceKind === 'developer_checkout_override'
@@ -791,7 +863,7 @@ async function applyManifestPackageLock(
         ? input.sourceKind
         : trustedBundledManifestSelection
           ? firstParty!.sourceKind
-        : firstParty && (catalogVersion || developerSourceReconcile) ? policySourceKind : input.sourceKind,
+        : firstParty && (catalogVersion || developerSourceSelection) ? policySourceKind : input.sourceKind,
       nextSelection.manifestUrl,
     );
     return {
@@ -843,77 +915,84 @@ async function applyManifestPackageLock(
       });
     }
     visiting.add(prepared.manifest.package_id);
-    for (const dependency of prepared.manifest.capability_dependencies) {
-      let dependencySelection: Awaited<ReturnType<typeof resolveManifestSelection>>;
-      let catalogVersion: ManagedCatalogVersion | null = null;
-      const dependencySourcePolicy = resolveAgentPackageEffectiveSourcePolicy(dependency.package_id);
-      if (options.sourceReconcile
-        && dependencySourcePolicy.desired_source_kind === 'developer_checkout_override'
-        && dependencySourcePolicy.developer_checkout_available
-        && dependencySourcePolicy.developer_checkout_path) {
-        const developerDependency = loadDeveloperCheckoutPackageSource(
-          dependency.package_id,
-          dependencySourcePolicy.developer_checkout_path,
-        );
-        dependencySelection = {
-          registryUrl: null,
-          packageId: dependency.package_id,
-          manifestUrl: developerDependency.source.owner_manifest_path,
-          trustTier: prepared.trustTier,
-          registryEntry: null,
-        };
-      } else if (catalog) {
-        catalogVersion = selectCapabilityCatalogVersion(catalog, dependency);
-        dependencySelection = {
-          registryUrl: prepared.selection.registryUrl,
-          packageId: dependency.package_id,
-          manifestUrl: catalogVersion.manifest_url,
-          trustTier: prepared.trustTier,
-          registryEntry: null,
-        };
-      } else if (dependency.bootstrap_manifest_url) {
-        dependencySelection = {
-          registryUrl: prepared.selection.registryUrl,
-          packageId: dependency.package_id,
-          manifestUrl: dependency.bootstrap_manifest_url,
-          trustTier: prepared.trustTier,
-          registryEntry: null,
-        };
-      } else if (prepared.selection.registryUrl) {
-        dependencySelection = await resolveManifestSelection({
-          registryUrl: prepared.selection.registryUrl,
-          packageId: dependency.package_id,
-        });
-      } else {
-        const installedDependency = index.packages.find((entry) => entry.package_id === dependency.package_id);
-        if (!installedDependency) {
-          throw new FrameworkContractError('contract_shape_invalid', 'Required capability dependency has no resolvable provider manifest.', {
-            package_id: prepared.manifest.package_id,
-            dependency_package_id: dependency.package_id,
-            failure_code: 'agent_package_dependency_manifest_unresolved',
-          });
+    try {
+      for (const dependency of prepared.manifest.capability_dependencies) {
+        try {
+          let dependencySelection: Awaited<ReturnType<typeof resolveManifestSelection>>;
+          let catalogVersion: ManagedCatalogVersion | null = null;
+          const dependencySourcePolicy = resolveAgentPackageEffectiveSourcePolicy(dependency.package_id);
+          if (dependencySourcePolicy.desired_source_kind === 'developer_checkout_override'
+            && dependencySourcePolicy.developer_checkout_available
+            && dependencySourcePolicy.developer_checkout_path) {
+            const developerDependency = loadDeveloperCheckoutPackageSource(
+              dependency.package_id,
+              dependencySourcePolicy.developer_checkout_path,
+            );
+            dependencySelection = {
+              registryUrl: null,
+              packageId: dependency.package_id,
+              manifestUrl: developerDependency.source.owner_manifest_path,
+              trustTier: prepared.trustTier,
+              registryEntry: null,
+            };
+          } else if (catalog) {
+            catalogVersion = selectCapabilityCatalogVersion(catalog, dependency);
+            dependencySelection = {
+              registryUrl: prepared.selection.registryUrl,
+              packageId: dependency.package_id,
+              manifestUrl: catalogVersion.manifest_url,
+              trustTier: prepared.trustTier,
+              registryEntry: null,
+            };
+          } else if (dependency.bootstrap_manifest_url) {
+            dependencySelection = {
+              registryUrl: prepared.selection.registryUrl,
+              packageId: dependency.package_id,
+              manifestUrl: dependency.bootstrap_manifest_url,
+              trustTier: prepared.trustTier,
+              registryEntry: null,
+            };
+          } else if (prepared.selection.registryUrl) {
+            dependencySelection = await resolveManifestSelection({
+              registryUrl: prepared.selection.registryUrl,
+              packageId: dependency.package_id,
+            });
+          } else {
+            const installedDependency = index.packages.find((entry) => entry.package_id === dependency.package_id);
+            if (!installedDependency) {
+              throw new FrameworkContractError('contract_shape_invalid', 'Required capability dependency has no resolvable provider manifest.', {
+                package_id: prepared.manifest.package_id,
+                dependency_package_id: dependency.package_id,
+                failure_code: 'agent_package_dependency_manifest_unresolved',
+              });
+            }
+            dependencySelection = {
+              registryUrl: null,
+              packageId: dependency.package_id,
+              manifestUrl: installedDependency.manifest_url,
+              trustTier: installedDependency.trust_tier,
+              registryEntry: null,
+            };
+          }
+          const provider = await preparePackage(dependencySelection, prepared.trustTier, catalogVersion);
+          const resolved = validateCapabilityProvider(
+            dependency,
+            provider.manifest,
+            provider.manifestSha256,
+            prepared.manifest.agent_id,
+          );
+          resolved.manifest_url = dependencySelection.manifestUrl;
+          await visit(provider);
+        } catch (error) {
+          if (!dependency.required && dependency.dependency_kind === 'optional_enhancement') continue;
+          throw error;
         }
-        dependencySelection = {
-          registryUrl: null,
-          packageId: dependency.package_id,
-          manifestUrl: installedDependency.manifest_url,
-          trustTier: installedDependency.trust_tier,
-          registryEntry: null,
-        };
       }
-      const provider = await preparePackage(dependencySelection, prepared.trustTier, catalogVersion);
-      const resolved = validateCapabilityProvider(
-        dependency,
-        provider.manifest,
-        provider.manifestSha256,
-        prepared.manifest.agent_id,
-      );
-      resolved.manifest_url = dependencySelection.manifestUrl;
-      await visit(provider);
+      preparedById.set(prepared.manifest.package_id, prepared);
+      ordered.push(prepared);
+    } finally {
+      visiting.delete(prepared.manifest.package_id);
     }
-    visiting.delete(prepared.manifest.package_id);
-    preparedById.set(prepared.manifest.package_id, prepared);
-    ordered.push(prepared);
   }
   await visit(root);
   const previousClosureLocks = installedClosurePrestate(index, ordered);
@@ -1054,16 +1133,17 @@ async function applyManifestPackageLock(
 
   const builtLocks = new Map<string, AgentPackageLock>();
   for (const prepared of ordered) {
-    const resolvedDependencies = prepared.manifest.capability_dependencies.map((dependency) => {
+    const resolvedDependencies = prepared.manifest.capability_dependencies.flatMap((dependency) => {
       const providerLock = builtLocks.get(dependency.package_id);
       if (!providerLock) {
+        if (!dependency.required && dependency.dependency_kind === 'optional_enhancement') return [];
         throw new FrameworkContractError('contract_shape_invalid', 'Resolved dependency lock is missing from the prepared closure.', {
           package_id: prepared.manifest.package_id,
           dependency_package_id: dependency.package_id,
           failure_code: 'agent_package_dependency_lock_missing',
         });
       }
-      return {
+      return [{
         package_id: dependency.package_id,
         required: dependency.required,
         dependency_kind: dependency.dependency_kind,
@@ -1081,7 +1161,7 @@ async function applyManifestPackageLock(
         carrier_authority: providerLock.carrier_authority ?? null,
         content_digest: providerLock.content_digest,
         package_lock_ref: providerLock.lock_ref,
-      };
+      }];
     });
     const carrierAuthority = preparedCarrierAuthority(prepared, channelRef, channelDigest);
     builtLocks.set(prepared.manifest.package_id, buildLock({
@@ -3287,7 +3367,12 @@ function missingDependencyProviderIsOptional(
 ) {
   const declared = lock.capability_dependencies.find((entry) => entry.package_id === packageId);
   const resolved = lock.resolved_dependencies.find((entry) => entry.package_id === packageId);
-  return declared?.required === false && resolved?.required === false;
+  return declared?.required === false
+    && (declared.dependency_kind === undefined || declared.dependency_kind === 'optional_enhancement')
+    && (!resolved || (
+      resolved.required === false
+      && (resolved.dependency_kind === undefined || resolved.dependency_kind === 'optional_enhancement')
+    ));
 }
 
 function resolvedProviderLocksForUse(

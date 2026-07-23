@@ -67,7 +67,7 @@ function comparePackageVersions(left: string, right: string) {
   return String(a[3]).localeCompare(String(b[3]), 'en', { numeric: true });
 }
 
-function normalizeCatalogVersion(value: unknown, entry: Record<string, unknown>): ManagedCatalogVersion | null {
+function normalizeCatalogVersion(value: unknown): ManagedCatalogVersion | null {
   if (!isRecord(value)) return null;
   const packageVersion = stringValue(value.package_version);
   const manifest = isRecord(value.package_manifest) ? value.package_manifest : {};
@@ -83,24 +83,6 @@ function normalizeCatalogVersion(value: unknown, entry: Record<string, unknown>)
     ? value.payload_manifest_json
     : null;
   const payloadManifestSha256 = normalizedSha256(value.payload_manifest_sha256);
-  if (manifestJson && sha256(manifestJson) !== manifestSha256) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog inline manifest digest is invalid.', {
-      package_id: stringValue(entry.package_id),
-      package_version: packageVersion,
-      expected_manifest_sha256: manifestSha256,
-      actual_manifest_sha256: sha256(manifestJson),
-      failure_code: 'agent_package_catalog_manifest_digest_mismatch',
-    });
-  }
-  if (payloadManifestJson && (!payloadManifestSha256 || sha256(payloadManifestJson) !== payloadManifestSha256)) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog inline payload manifest digest is invalid.', {
-      package_id: stringValue(entry.package_id),
-      package_version: packageVersion,
-      expected_payload_manifest_sha256: payloadManifestSha256,
-      actual_payload_manifest_sha256: sha256(payloadManifestJson),
-      failure_code: 'agent_package_catalog_payload_manifest_digest_mismatch',
-    });
-  }
   return {
     package_version: packageVersion,
     capability_abi: stringValue(value.capability_abi),
@@ -140,7 +122,7 @@ export function normalizeManagedPackageCatalog(payload: unknown): ManagedPackage
   for (const [packageId, rawEntry] of Object.entries(packageCatalog)) {
     if (!isRecord(rawEntry) || !Array.isArray(rawEntry.versions)) continue;
     const versions = recordList(rawEntry.versions)
-      .map((entry) => normalizeCatalogVersion(entry, { ...rawEntry, package_id: packageId }))
+      .map((entry) => normalizeCatalogVersion(entry))
       .filter((entry): entry is ManagedCatalogVersion => Boolean(entry))
       .sort((left, right) => comparePackageVersions(right.package_version, left.package_version));
     if (versions.length === 0) continue;
@@ -271,6 +253,32 @@ export function selectCapabilityCatalogVersion(
 }
 
 export function catalogManifestPayload(version: ManagedCatalogVersion) {
-  if (version.manifest_json) return parseJsonText(version.manifest_json);
+  if (version.manifest_json) {
+    const actualManifestSha256 = sha256(version.manifest_json);
+    if (actualManifestSha256 !== version.manifest_sha256) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog inline manifest digest is invalid.', {
+        package_version: version.package_version,
+        expected_manifest_sha256: version.manifest_sha256,
+        actual_manifest_sha256: actualManifestSha256,
+        failure_code: 'agent_package_catalog_manifest_digest_mismatch',
+      });
+    }
+    return parseJsonText(version.manifest_json);
+  }
   return null;
+}
+
+export function catalogPayloadManifestJson(version: ManagedCatalogVersion) {
+  if (!version.payload_manifest_json) return null;
+  const actualPayloadManifestSha256 = sha256(version.payload_manifest_json);
+  if (!version.payload_manifest_sha256
+    || actualPayloadManifestSha256 !== version.payload_manifest_sha256) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog inline payload manifest digest is invalid.', {
+      package_version: version.package_version,
+      expected_payload_manifest_sha256: version.payload_manifest_sha256,
+      actual_payload_manifest_sha256: actualPayloadManifestSha256,
+      failure_code: 'agent_package_catalog_payload_manifest_digest_mismatch',
+    });
+  }
+  return version.payload_manifest_json;
 }
