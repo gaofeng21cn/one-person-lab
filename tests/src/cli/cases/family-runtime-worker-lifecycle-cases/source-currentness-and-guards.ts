@@ -201,6 +201,7 @@ test('Temporal worker mutation guard blocks developer checkout against default s
   );
   const previousHome = process.env.HOME;
   const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousNodeTestContext = process.env.NODE_TEST_CONTEXT;
   const previousAllow = process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER;
   try {
     fs.mkdirSync(path.dirname(modulePath), { recursive: true });
@@ -213,6 +214,7 @@ test('Temporal worker mutation guard blocks developer checkout against default s
     fs.writeFileSync(path.join(devRoot, '.git', 'refs', 'heads', 'main'), 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n');
 
     process.env.HOME = homeRoot;
+    delete process.env.NODE_TEST_CONTEXT;
     delete process.env.OPL_STATE_DIR;
     delete process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER;
 
@@ -311,6 +313,11 @@ test('Temporal worker mutation guard blocks developer checkout against default s
       delete process.env.OPL_STATE_DIR;
     } else {
       process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    if (previousNodeTestContext === undefined) {
+      delete process.env.NODE_TEST_CONTEXT;
+    } else {
+      process.env.NODE_TEST_CONTEXT = previousNodeTestContext;
     }
     if (previousAllow === undefined) {
       delete process.env.OPL_ALLOW_DEVELOPER_CHECKOUT_SHARED_WORKER;
