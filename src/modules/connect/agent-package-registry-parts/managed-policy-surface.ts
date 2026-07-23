@@ -41,7 +41,7 @@ type HistoricalFingerprints = {
 };
 
 type OplFlowPolicy = {
-  schema: 'opl_flow_workflow_policy.v1' | 'opl_flow_workflow_policy.v2';
+  schema: 'opl_flow_workflow_policy.v1' | 'opl_flow_workflow_policy.v2' | 'opl_flow_workflow_policy.v3';
   package: { id: string; version: string; owner: string; kind: string };
   workflow_generation: string;
   provides: AgentPackageManagedPolicyDependency[];
@@ -172,17 +172,20 @@ function normalizeDependency(
   const kind = value.kind;
   const offlineBundle = value.offline_bundle;
   const activation = value.activation;
-  const supportedKinds = schema === 'opl_flow_workflow_policy.v2'
+  const supportedKinds = schema !== 'opl_flow_workflow_policy.v1'
     ? ['base', 'codex_skill', 'codex_plugin', 'mcp_server', 'cli', 'runtime_capability']
     : ['base', 'codex_skill', 'cli', 'runtime_capability'];
+  const openComposition = schema === 'opl_flow_workflow_policy.v3';
   if (
     typeof value.id !== 'string'
     || !value.id.trim()
     || !supportedKinds.includes(String(kind))
-    || !['none', 'full'].includes(String(offlineBundle))
+    || (!openComposition && !['none', 'full'].includes(String(offlineBundle)))
+    || (offlineBundle !== undefined && !['none', 'full'].includes(String(offlineBundle)))
     || typeof value.online_install_default !== 'boolean'
     || !['always', 'task_routed', 'explicit'].includes(String(activation))
-    || typeof value.source !== 'string'
+    || (!openComposition && typeof value.source !== 'string')
+    || (value.source !== undefined && typeof value.source !== 'string')
   ) {
     throw new FrameworkContractError('contract_shape_invalid', `${field} has an invalid dependency shape.`, {
       field,
@@ -197,6 +200,25 @@ function normalizeDependency(
     conflict_policy: value.conflict_policy,
     credential_policy: value.credential_policy,
   };
+  if (schema === 'opl_flow_workflow_policy.v3' && (
+    (value.owner !== undefined && (typeof value.owner !== 'string' || !value.owner.trim()))
+    || (value.version_requirement !== undefined
+      && (typeof value.version_requirement !== 'string' || !value.version_requirement.trim()))
+    || (value.install_source !== undefined
+      && (typeof value.install_source !== 'string' || !value.install_source.trim()))
+    || (value.lifecycle_owner !== undefined
+      && (typeof value.lifecycle_owner !== 'string' || !value.lifecycle_owner.trim()))
+    || (value.conflict_policy !== undefined
+      && !['managed_reconcile', 'preserve_user_surface', 'fail_closed_on_collision']
+        .includes(String(value.conflict_policy)))
+    || (value.credential_policy !== undefined
+      && !['none', 'user_or_provider_owned_not_bundled'].includes(String(value.credential_policy)))
+  )) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} has invalid optional lifecycle hints.`, {
+      field,
+      failure_code: 'agent_package_managed_policy_invalid',
+    });
+  }
   if (schema === 'opl_flow_workflow_policy.v2' && (
     typeof v2Fields.owner !== 'string'
     || !v2Fields.owner.trim()
@@ -218,10 +240,12 @@ function normalizeDependency(
   return {
     id: value.id.trim(),
     kind: kind as AgentPackageManagedPolicyDependency['kind'],
-    offline_bundle: offlineBundle as AgentPackageManagedPolicyDependency['offline_bundle'],
+    ...(offlineBundle === undefined
+      ? {}
+      : { offline_bundle: offlineBundle as AgentPackageManagedPolicyDependency['offline_bundle'] }),
     online_install_default: value.online_install_default,
     activation: activation as AgentPackageManagedPolicyDependency['activation'],
-    source: value.source,
+    ...(value.source === undefined ? {} : { source: value.source }),
     ...(schema === 'opl_flow_workflow_policy.v2'
       ? {
           owner: String(v2Fields.owner).trim(),
@@ -231,7 +255,34 @@ function normalizeDependency(
           conflict_policy: v2Fields.conflict_policy as NonNullable<AgentPackageManagedPolicyDependency['conflict_policy']>,
           credential_policy: v2Fields.credential_policy as NonNullable<AgentPackageManagedPolicyDependency['credential_policy']>,
         }
-      : {}),
+      : schema === 'opl_flow_workflow_policy.v3'
+        ? {
+            ...(value.owner === undefined ? {} : { owner: String(value.owner).trim() }),
+            ...(value.version_requirement === undefined
+              ? {}
+              : { version_requirement: String(value.version_requirement).trim() }),
+            ...(value.install_source === undefined
+              ? {}
+              : { install_source: String(value.install_source).trim() }),
+            ...(value.lifecycle_owner === undefined
+              ? {}
+              : { lifecycle_owner: String(value.lifecycle_owner).trim() }),
+            ...(value.conflict_policy === undefined
+              ? {}
+              : {
+                  conflict_policy: value.conflict_policy as NonNullable<
+                    AgentPackageManagedPolicyDependency['conflict_policy']
+                  >,
+                }),
+            ...(value.credential_policy === undefined
+              ? {}
+              : {
+                  credential_policy: value.credential_policy as NonNullable<
+                    AgentPackageManagedPolicyDependency['credential_policy']
+                  >,
+                }),
+          }
+        : {}),
   };
 }
 
@@ -320,7 +371,8 @@ function normalizePolicy(
   }
   const schema = payload.schema;
   if (
-    !['opl_flow_workflow_policy.v1', 'opl_flow_workflow_policy.v2'].includes(String(schema))
+    !['opl_flow_workflow_policy.v1', 'opl_flow_workflow_policy.v2', 'opl_flow_workflow_policy.v3']
+      .includes(String(schema))
     || payload.package.id !== identity.packageId
     || payload.package.version !== identity.packageVersion
     || payload.package.owner !== 'opl-flow'
@@ -359,7 +411,7 @@ function normalizePolicy(
   const normalizeDependencies = (value: unknown, field: string) => Array.isArray(value)
     ? value.map((entry, index) => normalizeDependency(entry, `${field}[${index}]`, normalizedSchema))
     : [];
-  const provides = normalizedSchema === 'opl_flow_workflow_policy.v2'
+  const provides = normalizedSchema !== 'opl_flow_workflow_policy.v1'
     ? normalizeDependencies(payload.provides, 'provides')
     : [];
   const requires = normalizeDependencies(payload.requires, 'requires');
@@ -424,7 +476,7 @@ function assertProvidedCapabilities(
   policy: OplFlowPolicy,
   identity: Pick<ManagedPolicyIdentity, 'pluginId' | 'requiredSkillIds'>,
 ) {
-  if (policy.schema !== 'opl_flow_workflow_policy.v2') return;
+  if (policy.schema === 'opl_flow_workflow_policy.v1') return;
   const pluginIds = policy.provides.filter((entry) => entry.kind === 'codex_plugin').map((entry) => entry.id);
   const skillIds = policy.provides.filter((entry) => entry.kind === 'codex_skill').map((entry) => entry.id).sort();
   const requiredSkillIds = [...identity.requiredSkillIds].sort();
@@ -761,29 +813,62 @@ export function noManagedPolicyMigration(note: string): AgentPackageManagedPolic
   };
 }
 
-function managedPolicyDependencySelection(dependencies: AgentPackageManagedPolicyDependency[]) {
-  const selected = dependencies.filter((entry) => entry.online_install_default);
-  const unsupported = selected.filter((entry) => {
-    if (entry.kind === 'base') return entry.id !== 'opl-base';
-    if (entry.kind === 'codex_skill') return false;
-    if (entry.kind === 'cli') return entry.id !== 'officecli' && entry.id !== 'mineru-open-api';
-    return true;
+function managedPolicyDependencySelection(input: {
+  schema: OplFlowPolicy['schema'];
+  requires: AgentPackageManagedPolicyDependency[];
+  recommends: AgentPackageManagedPolicyDependency[];
+}) {
+  const selected = [
+    ...input.requires.map((dependency) => ({ dependency, required: true })),
+    ...input.recommends.map((dependency) => ({ dependency, required: false })),
+  ].filter((entry) => entry.dependency.online_install_default);
+  const managedSkillDependencies = selected.flatMap(({ dependency, required }) => {
+    if (dependency.kind !== 'codex_skill') return [];
+    if (
+      dependency.source?.startsWith('skills-manager:')
+      && dependency.source.slice('skills-manager:'.length) !== dependency.id
+    ) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Managed policy Skill source identity is invalid.', {
+        dependency_key: dependencyKey(dependency),
+        source: dependency.source,
+        failure_code: 'agent_package_managed_policy_dependency_identity_mismatch',
+      });
+    }
+    return [{
+      id: dependency.id,
+      source: dependency.source,
+      versionRequirement: dependency.version_requirement,
+      installSource: dependency.install_source,
+      required,
+    }];
   });
-  if (unsupported.length > 0) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Managed policy dependency has no lifecycle adapter.', {
-      dependency_keys: unsupported.map(dependencyKey),
-      failure_code: 'agent_package_managed_policy_dependency_adapter_missing',
-    });
+  if (input.schema !== 'opl_flow_workflow_policy.v3') {
+    const unsupported = selected
+      .map(({ dependency }) => dependency)
+      .filter((dependency) => {
+        if (dependency.kind === 'base') return dependency.id !== 'opl-base';
+        if (dependency.kind === 'codex_skill') return false;
+        if (dependency.kind === 'cli') return dependency.id !== 'officecli'
+          && dependency.id !== 'mineru-open-api';
+        return true;
+      });
+    if (unsupported.length > 0) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Managed policy dependency has no lifecycle adapter.', {
+        dependency_keys: unsupported.map(dependencyKey),
+        failure_code: 'agent_package_managed_policy_dependency_adapter_missing',
+      });
+    }
   }
   return {
-    dependencies: selected,
+    dependencies: selected.map(({ dependency }) => dependency),
     skillIds: selected
-      .filter((entry) => entry.kind === 'codex_skill')
-      .map((entry) => entry.id),
+      .filter(({ dependency }) => dependency.kind === 'codex_skill')
+      .map(({ dependency }) => dependency.id),
     toolIds: selected
-      .filter((entry) => entry.kind === 'cli'
-        && (entry.id === 'officecli' || entry.id === 'mineru-open-api'))
-      .map((entry) => entry.id as 'officecli' | 'mineru-open-api'),
+      .filter(({ dependency }) => dependency.kind === 'cli'
+        && (dependency.id === 'officecli' || dependency.id === 'mineru-open-api'))
+      .map(({ dependency }) => dependency.id as 'officecli' | 'mineru-open-api'),
+    managedSkillDependencies,
   };
 }
 
@@ -884,24 +969,23 @@ export function materializeManagedPolicySurface(input: {
         }
       }
     }
-    const { dependencies, skillIds, toolIds } = managedPolicyDependencySelection([
-      ...policy.requires,
-      ...policy.recommends,
-    ]);
+    const {
+      dependencies,
+      skillIds,
+      toolIds,
+      managedSkillDependencies,
+    } = managedPolicyDependencySelection({
+      schema: policy.schema,
+      requires: policy.requires,
+      recommends: policy.recommends,
+    });
     const dependencySync = syncOplCompanionSkills(home, {
       mode: input.dryRun ? 'ask_to_apply' : 'managed',
       skillIds,
       toolIds,
+      managedSkillDependencies,
       networkAccess: input.companionNetworkAccess,
     });
-    const synchronizedSkillIds = new Set(dependencySync.items.map((entry) => entry.skill_id));
-    const unsupportedSkillIds = skillIds.filter((skillId) => !synchronizedSkillIds.has(skillId));
-    if (unsupportedSkillIds.length > 0) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Managed policy Skill has no lifecycle adapter.', {
-        dependency_keys: unsupportedSkillIds.map((skillId) => `codex_skill:${skillId}`),
-        failure_code: 'agent_package_managed_policy_dependency_adapter_missing',
-      });
-    }
     const dependencyWrites = dependencySync.items.some((entry) => ['synced', 'installed'].includes(entry.status))
       || dependencySync.tools.some((entry) => entry.action === 'install' || entry.action === 'update');
     const writesPerformed = !input.dryRun && (actions.length > 0 || dependencyWrites);
@@ -1065,21 +1149,22 @@ export function managedPolicyCurrentness(
     if (expectedPolicySha256 && inspection.policySha256 !== expectedPolicySha256) {
       return invalid('Managed policy bytes no longer match the installed package transaction.');
     }
-    const { skillIds, toolIds } = managedPolicyDependencySelection([
-      ...inspection.policy.requires,
-      ...inspection.policy.recommends,
-    ]);
+    const {
+      skillIds,
+      toolIds,
+      managedSkillDependencies,
+    } = managedPolicyDependencySelection({
+      schema: inspection.policy.schema,
+      requires: inspection.policy.requires,
+      recommends: inspection.policy.recommends,
+    });
     const dependencySync = syncOplCompanionSkills(inspection.home, {
       mode: 'observe',
       skillIds,
       toolIds,
+      managedSkillDependencies,
       networkAccess: 'forbidden',
     });
-    const synchronizedSkillIds = new Set(dependencySync.items.map((entry) => entry.skill_id));
-    const unsupportedSkillIds = skillIds.filter((skillId) => !synchronizedSkillIds.has(skillId));
-    if (unsupportedSkillIds.length > 0) {
-      return invalid(`Managed policy Skill has no lifecycle adapter: ${unsupportedSkillIds.join(', ')}.`);
-    }
     const dependencyDriftReasons = dependencySyncDriftReasons(dependencySync, skillIds, toolIds);
     const conflictDrifted = inspection.detectedConflicts.length > 0;
     const drifted = conflictDrifted || dependencyDriftReasons.length > 0;

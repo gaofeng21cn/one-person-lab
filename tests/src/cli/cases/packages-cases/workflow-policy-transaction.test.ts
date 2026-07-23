@@ -16,13 +16,15 @@ function writeOplFlowPackage(
   options: {
     includeRemoteCompanions?: boolean;
     includeManagedSkillCompanion?: boolean;
+    includeMissingManagedSkillCompanion?: boolean;
     includeKindCollision?: boolean;
     includeUnsupportedDefaultMcp?: boolean;
-    policyVersion?: 'v1' | 'v2';
+    policyVersion?: 'v1' | 'v2' | 'v3';
   } = {},
 ) {
   const sourceRoot = path.join(root, 'fixture.opl-flow-source');
   const v2 = options.policyVersion === 'v2';
+  const v3 = options.policyVersion === 'v3';
   const dependency = (
     value: Record<string, unknown>,
     overrides: Record<string, unknown> = {},
@@ -73,7 +75,7 @@ function writeOplFlowPackage(
           source: 'fixture-remote',
         }),
       ]
-    : options.includeManagedSkillCompanion
+      : options.includeManagedSkillCompanion
       ? [
           dependency({
             id: 'ui-ux-pro-max',
@@ -116,15 +118,19 @@ function writeOplFlowPackage(
             ]
           : [];
   const policy = {
-    schema: v2 ? 'opl_flow_workflow_policy.v2' : 'opl_flow_workflow_policy.v1',
+    schema: v2
+      ? 'opl_flow_workflow_policy.v2'
+      : v3
+        ? 'opl_flow_workflow_policy.v3'
+        : 'opl_flow_workflow_policy.v1',
     package: { id: 'fixture.opl-flow', version: '0.1.16', owner: 'opl-flow', kind: 'workflow_profile' },
     workflow_generation: 'model-native-test',
-    ...(v2 ? {
+    ...(v2 || v3 ? {
       provides: [
         dependency({
           id: 'fixture.opl-flow',
           kind: 'codex_plugin',
-          offline_bundle: 'full',
+          ...(v2 ? { offline_bundle: 'full' } : {}),
           online_install_default: true,
           activation: 'always',
           source: 'package:fixture.opl-flow',
@@ -136,7 +142,7 @@ function writeOplFlowPackage(
         ...['fixture.opl-flow', 'codex-ops-kit'].map((skillId) => dependency({
           id: skillId,
           kind: 'codex_skill',
-          offline_bundle: 'full',
+          ...(v2 ? { offline_bundle: 'full' } : {}),
           online_install_default: true,
           activation: 'task_routed',
           source: `package:fixture.opl-flow/skills/${skillId}`,
@@ -146,25 +152,41 @@ function writeOplFlowPackage(
           install_source: 'package_payload',
         })),
       ],
-      installation_convergence: {
-        standard_target_closure: 'workflow_policy_release_lock',
-        full_target_closure: 'workflow_policy_release_lock',
-        standard_source: 'online_exact_release_lock',
-        full_source: 'embedded_exact_release_lock',
-        final_projection_equivalence_required: true,
-        default_dependencies_require_full_bundle: true,
-        secrets_bundled: false,
-        user_third_party_surfaces_policy: 'preserve',
-      },
+      ...(v2 ? {
+        installation_convergence: {
+          standard_target_closure: 'workflow_policy_release_lock',
+          full_target_closure: 'workflow_policy_release_lock',
+          standard_source: 'online_exact_release_lock',
+          full_source: 'embedded_exact_release_lock',
+          final_projection_equivalence_required: true,
+          default_dependencies_require_full_bundle: true,
+          secrets_bundled: false,
+          user_third_party_surfaces_policy: 'preserve',
+        },
+      } : {}),
     } : {}),
-    requires: [dependency({
-      id: 'opl-base',
-      kind: 'base',
-      offline_bundle: 'full',
-      online_install_default: true,
-      activation: 'always',
-      source: 'fixture',
-    })],
+    requires: [
+      dependency({
+        id: 'opl-base',
+        kind: 'base',
+        offline_bundle: 'full',
+        online_install_default: true,
+        activation: 'always',
+        source: 'fixture',
+      }),
+      ...(options.includeMissingManagedSkillCompanion
+        ? [dependency({
+            id: 'agent-reach',
+            kind: 'codex_skill',
+            owner: 'agent-reach',
+            version_requirement: '^1',
+            install_source: 'skills-manager',
+            online_install_default: true,
+            activation: 'task_routed',
+            source: 'skills-manager:agent-reach',
+          })]
+        : []),
+    ],
     recommends: recommendations,
     compatible_optional: [],
     conflicts: [
@@ -293,10 +315,16 @@ function writeOplFlowPackage(
       'migration_policy',
       'historical_fingerprints',
       'codex_model_policy',
-      ...(v2 ? ['provides', 'installation_convergence'] : []),
+      ...(v2 ? ['provides', 'installation_convergence'] : v3 ? ['provides'] : []),
     ],
     properties: {
-      schema: { const: v2 ? 'opl_flow_workflow_policy.v2' : 'opl_flow_workflow_policy.v1' },
+      schema: {
+        const: v2
+          ? 'opl_flow_workflow_policy.v2'
+          : v3
+            ? 'opl_flow_workflow_policy.v3'
+            : 'opl_flow_workflow_policy.v1',
+      },
       package: { type: 'object' },
       provides: { type: 'array' },
       installation_convergence: { type: 'object' },
@@ -371,6 +399,102 @@ test('workflow policy v2 fails closed when a default dependency has no lifecycle
     assert.deepEqual(failure.payload.error.details.dependency_keys, ['mcp_server:fixture-mcp']);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('workflow policy v3 reuses any compatible managed Skill without lock or payload metadata', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-policy-v3-existing-skill-'));
+  const home = path.join(root, 'home');
+  const managerSkillRoot = path.join(home, '.skills-manager', 'skills', 'agent-reach');
+  const env = {
+    HOME: home,
+    CODEX_HOME: path.join(home, '.codex'),
+    OPL_STATE_DIR: path.join(root, 'state'),
+    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+  };
+  try {
+    writeFile(
+      path.join(managerSkillRoot, 'SKILL.md'),
+      '---\nname: agent-reach\ndescription: Generic managed Skill fixture.\n---\n\n# Agent Reach\n',
+    );
+    const installed = await runCliAsync([
+      'packages',
+      'install',
+      '--manifest-url',
+      writeOplFlowPackage(root, {
+        policyVersion: 'v3',
+        includeMissingManagedSkillCompanion: true,
+      }),
+      '--trust-tier',
+      'first_party',
+    ], env) as any;
+    const migration = installed.opl_agent_package_install.physical_surface.workflow_policy_migration;
+    const dependency = migration.dependencies.find((entry: { id: string }) => entry.id === 'agent-reach');
+    assert.deepEqual(dependency, {
+      id: 'agent-reach',
+      kind: 'codex_skill',
+      owner: 'agent-reach',
+      version_requirement: '^1',
+      install_source: 'skills-manager',
+      online_install_default: true,
+      activation: 'task_routed',
+      source: 'skills-manager:agent-reach',
+    });
+    assert.equal('offline_bundle' in dependency, false);
+    assert.equal(
+      fs.realpathSync(path.join(env.CODEX_HOME, 'skills', 'agent-reach')),
+      fs.realpathSync(managerSkillRoot),
+    );
+    assert.equal(
+      fs.realpathSync(path.join(home, '.agents', 'skills', 'agent-reach')),
+      fs.realpathSync(managerSkillRoot),
+    );
+    assert.equal(migration.dependency_sync.items[0].status, 'synced');
+    assert.equal(migration.dependency_sync.items[0].source_authority, 'skills_manager');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+  }
+});
+
+test('workflow policy v3 projects a generic install action when a required Skill is absent', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-policy-v3-missing-skill-'));
+  const home = path.join(root, 'home');
+  const env = {
+    HOME: home,
+    CODEX_HOME: path.join(home, '.codex'),
+    OPL_STATE_DIR: path.join(root, 'state'),
+    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+  };
+  try {
+    const installed = await runCliAsync([
+      'packages',
+      'install',
+      '--manifest-url',
+      writeOplFlowPackage(root, {
+        policyVersion: 'v3',
+        includeMissingManagedSkillCompanion: true,
+      }),
+      '--trust-tier',
+      'first_party',
+    ], env) as any;
+    const migration = installed.opl_agent_package_install.physical_surface.workflow_policy_migration;
+    assert.equal(migration.dependency_sync.items[0].skill_id, 'agent-reach');
+    assert.equal(migration.dependency_sync.items[0].status, 'missing_source');
+    assert.equal(migration.dependency_sync.items[0].action, 'install');
+    assert.match(migration.dependency_sync.items[0].note, /Requested version: \^1/);
+    assert.match(migration.dependency_sync.items[0].note, /Preferred source: skills-manager/);
+
+    const status = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
+    const packageReadback = status.opl_agent_package_status.owner_route_readback.packages[0];
+    assert.equal(status.opl_agent_package_status.operational_ready, true);
+    assert.equal(packageReadback.lifecycle_ux.status, 'installed');
+    assert.equal(packageReadback.materializer.managed_policy_currentness.status, 'drifted');
+    assert.equal(
+      packageReadback.materializer.managed_policy_currentness.dependency_sync.items[0].action,
+      'install',
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
 });
 

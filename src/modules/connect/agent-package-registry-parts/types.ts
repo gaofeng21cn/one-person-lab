@@ -338,13 +338,13 @@ export type AgentPackageManagedPolicySurfaceConfig = {
 export type AgentPackageManagedPolicyDependency = {
   id: string;
   kind: 'base' | 'codex_skill' | 'codex_plugin' | 'mcp_server' | 'cli' | 'runtime_capability';
-  offline_bundle: 'none' | 'full';
+  offline_bundle?: 'none' | 'full';
   online_install_default: boolean;
   activation: 'always' | 'task_routed' | 'explicit';
-  source: string;
+  source?: string;
   owner?: string;
   version_requirement?: string;
-  install_source?: 'package_payload' | 'framework_managed_release_lock' | 'codex_builtin' | 'user_managed';
+  install_source?: string;
   lifecycle_owner?: string;
   conflict_policy?: 'managed_reconcile' | 'preserve_user_surface' | 'fail_closed_on_collision';
   credential_policy?: 'none' | 'user_or_provider_owned_not_bundled';

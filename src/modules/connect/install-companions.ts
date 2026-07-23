@@ -50,7 +50,7 @@ export type OplCompanionSkillSyncItem = {
   target_path: string;
   agents_target_path: string;
   status: OplCompanionSkillActionStatus;
-  action: 'none' | 'symlink' | 'clone_and_symlink' | 'update_and_symlink' | 'discover_only';
+  action: 'none' | 'install' | 'symlink' | 'clone_and_symlink' | 'update_and_symlink' | 'discover_only';
   source_authority: OplCompanionSkillSourceAuthority;
   source_payload_sha256: string | null;
   installed_payload_sha256: string | null;
@@ -87,6 +87,7 @@ export type OplRecommendedSkill = {
   label: string;
   required: boolean;
   source: 'skills_manager' | 'codex_builtin' | 'github';
+  managed_dependency?: boolean;
   expected_paths: string[];
   install_source_paths?: string[];
   status: OplCompanionSkillStatus;
@@ -94,6 +95,14 @@ export type OplRecommendedSkill = {
   install_hint: string;
   update_hint?: string;
   supports: string[];
+};
+
+export type OplManagedSkillDependency = {
+  id: string;
+  source?: string;
+  versionRequirement?: string;
+  installSource?: string;
+  required: boolean;
 };
 
 export type OplGuiShellSurface = {
@@ -739,6 +748,7 @@ function ensureRecommendedSkillSource(
 ): OplCompanionSkillSourceCandidate | null {
   const installed = pickFirstExistingSkillSource(skill.install_source_paths ?? skill.expected_paths);
   if (installed) return installed;
+  if (skill.managed_dependency) return null;
 
   if (skill.skill_id === 'ui-ux-pro-max') {
     const managed = materializeUiUxProMaxSkillSource(home, networkAccess);
@@ -822,7 +832,11 @@ function buildObservedCompanionItem(
     return buildFreshCompanionItem(home, skill, {
       source: null,
       status: mode === 'ask_to_apply' ? 'planned' : 'missing_source',
-      action: skill.source === 'codex_builtin' ? 'discover_only' : 'none',
+      action: skill.source === 'codex_builtin'
+        ? 'discover_only'
+        : skill.managed_dependency
+          ? 'install'
+          : 'none',
       note: skill.install_hint,
     });
   }
@@ -865,10 +879,11 @@ function buildNoApplyCompanionResult(
   mode: OplCompanionSkillApplyMode,
   skillIds?: string[],
   toolIds?: OplCompanionToolId[],
+  managedSkillDependencies: OplManagedSkillDependency[] = [],
 ): OplCompanionSkillSyncResult {
   const selectedSkills = skillIds ? new Set(skillIds) : null;
   const selectedTools = toolIds ? new Set(toolIds) : null;
-  const items = buildOplRecommendedSkills(home)
+  const items = buildOplRecommendedSkills(home, managedSkillDependencies)
     .filter((skill) => !selectedSkills || selectedSkills.has(skill.skill_id))
     .map((skill) => buildObservedCompanionItem(home, skill, mode));
   const tools = [resolveOfficeCliTool(home), resolveMineruOpenApiTool(home)]
@@ -936,16 +951,23 @@ export function syncOplCompanionSkills(
     skillIds: string[];
     toolIds: OplCompanionToolId[];
     networkAccess: OplCompanionNetworkAccess;
+    managedSkillDependencies: OplManagedSkillDependency[];
   }> = {},
 ): OplCompanionSkillSyncResult {
   const mode = options.mode ?? 'observe';
   if (mode !== 'managed') {
-    return buildNoApplyCompanionResult(home, mode, options.skillIds, options.toolIds);
+    return buildNoApplyCompanionResult(
+      home,
+      mode,
+      options.skillIds,
+      options.toolIds,
+      options.managedSkillDependencies,
+    );
   }
 
   const codexSkillsDir = resolveCodexSkillsDir(home);
   const selectedSkills = options.skillIds ? new Set(options.skillIds) : null;
-  const recommendedSkills = buildOplRecommendedSkills(home)
+  const recommendedSkills = buildOplRecommendedSkills(home, options.managedSkillDependencies)
     .filter((skill) => !selectedSkills || selectedSkills.has(skill.skill_id));
   const items: OplCompanionSkillSyncItem[] = [];
   const selectedTools = options.toolIds ? new Set(options.toolIds) : null;
@@ -963,7 +985,7 @@ export function syncOplCompanionSkills(
       items.push(buildFreshCompanionItem(home, skill, {
         source: null,
         status: 'missing_source',
-        action: 'none',
+        action: skill.managed_dependency ? 'install' : 'none',
         note: skill.install_hint,
       }));
       continue;
@@ -1021,7 +1043,10 @@ export function syncOplCompanionSkills(
   return buildCompanionResult(home, mode, items, tools);
 }
 
-export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommendedSkill[] {
+export function buildOplRecommendedSkills(
+  home = resolveHomeDir(),
+  managedSkillDependencies: OplManagedSkillDependency[] = [],
+): OplRecommendedSkill[] {
   const codexHome = resolveCodexHome(home);
   const skillsManagerHome = path.join(home, '.skills-manager');
   const packagedSkillsRoot = resolvePackagedSkillsRoot();
@@ -1030,11 +1055,32 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
     'mineru-open-api': Boolean(resolveMineruOpenApiTool(home)),
   };
 
-  const specs = buildOplRecommendedSkillSpecs({
-    codexHome,
-    skillsManagerHome,
-    packagedSkillsRoot,
-  });
+  const managedSpecs = managedSkillDependencies.map((dependency): Omit<OplRecommendedSkill, 'status'> => ({
+    skill_id: dependency.id,
+    label: dependency.id,
+    required: dependency.required,
+    source: 'skills_manager',
+    managed_dependency: true,
+    expected_paths: [
+      path.join(skillsManagerHome, 'skills', dependency.id, 'SKILL.md'),
+      ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, dependency.id, 'SKILL.md')] : []),
+    ],
+    install_hint: [
+      `Install or otherwise provide a compatible ${dependency.source ?? dependency.id} Skill.`,
+      dependency.versionRequirement ? `Requested version: ${dependency.versionRequirement}.` : null,
+      dependency.installSource ? `Preferred source: ${dependency.installSource}.` : null,
+    ].filter(Boolean).join(' '),
+    supports: [dependency.id],
+  }));
+  const managedIds = new Set(managedSpecs.map((entry) => entry.skill_id));
+  const specs = [
+    ...buildOplRecommendedSkillSpecs({
+      codexHome,
+      skillsManagerHome,
+      packagedSkillsRoot,
+    }).filter((entry) => !managedIds.has(entry.skill_id)),
+    ...managedSpecs,
+  ];
 
   return specs.map((spec) => {
     const expectedPaths = spec.source === 'codex_builtin'
