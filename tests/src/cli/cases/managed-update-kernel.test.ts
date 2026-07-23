@@ -1192,6 +1192,18 @@ test('public update apply retains successful bundled roots when another root res
     const family = createFakeFamilySkillWorkspace(captureRoot);
     const companionEnv = createFakeCompanionInstallEnv(homeRoot);
     const companionToolBin = writeFakeCompanionToolBinaries(homeRoot);
+    const managedOfficeCliSkillRoot = path.join(homeRoot, '.skills-manager', 'skills', 'officecli');
+    fs.mkdirSync(path.dirname(managedOfficeCliSkillRoot), { recursive: true });
+    fs.cpSync(companionEnv.OPL_OFFICECLI_SOURCE_ROOT, managedOfficeCliSkillRoot, { recursive: true });
+    fs.mkdirSync(stateRoot, { recursive: true });
+    writeJsonPayload(path.join(stateRoot, 'developer-supervisor.json'), {
+      version: 'g1',
+      enabled: 'on',
+      mode: 'developer_apply_safe',
+      auto_enable_github_login: 'fixture-user',
+      updated_at: new Date(0).toISOString(),
+      source: 'user_config',
+    });
     const codexFixture = createFakeCodexFixture(`
 if [ "$1" = "--version" ]; then
   echo "codex-cli 0.134.0"
@@ -1435,14 +1447,11 @@ exit 0
     };
     const packageUnitPrestate = packageMutationUnitFingerprint({
       stateRoot,
-      packageIds: ['mas', 'mas-scholar-skills'],
+      packageIds: ['mas'],
       rootPackageId: 'mas',
     });
     const preFaultLocks = readJsonFile(path.join(stateRoot, 'agent-package-locks.json')) as any;
     const preFaultMasLock = preFaultLocks.packages.find((entry: any) => entry.package_id === 'mas');
-    const preFaultScholarLock = preFaultLocks.packages.find(
-      (entry: any) => entry.package_id === 'mas-scholar-skills',
-    );
     const scopeSkillsPreFault = pathBytesDigest(path.join(scopeRoot, '.codex', 'skills'));
     const componentLedgerPath = path.join(stateRoot, 'managed-update-component-receipts.json');
     const componentReceiptCountBeforeFault = (readJsonFile(componentLedgerPath) as any).receipts.length;
@@ -1482,7 +1491,7 @@ exit 0
     assert.equal(failedMas.result.package_mutation_unit.local_prestate_restored, true);
     assert.deepEqual(packageMutationUnitFingerprint({
       stateRoot,
-      packageIds: ['mas', 'mas-scholar-skills'],
+      packageIds: ['mas'],
       rootPackageId: 'mas',
     }), packageUnitPrestate);
     assert.equal(pathBytesDigest(path.join(scopeRoot, '.codex', 'skills')), scopeSkillsPreFault);
@@ -1497,9 +1506,18 @@ exit 0
       locksAfterPartial.packages.find((entry: any) => entry.package_id === 'mas'),
       preFaultMasLock,
     );
-    assert.deepEqual(
-      locksAfterPartial.packages.find((entry: any) => entry.package_id === 'mas-scholar-skills'),
-      preFaultScholarLock,
+    const updatedScholarLock = locksAfterPartial.packages.find(
+      (entry: any) => entry.package_id === 'mas-scholar-skills',
+    );
+    assert.equal(
+      updatedScholarLock.owner_source_commit,
+      faultCatalog.sourceCommits['mas-scholar-skills'],
+    );
+    assert.equal(
+      locksAfterPartial.packages.find((entry: any) => entry.package_id === 'mag')
+        .resolved_dependencies.find((entry: any) => entry.package_id === 'mas-scholar-skills')
+        .manifest_sha256,
+      updatedScholarLock.manifest_sha256,
     );
     assert.equal((readJsonFile(componentLedgerPath) as any).receipts.length, componentReceiptCountBeforeFault + 1);
     assert.equal(partial.managed_update.execution.receipt_record.recorded_receipt_count, 1);
@@ -1718,16 +1736,22 @@ exit 0
     const finalMasLkg = finalLocks.last_known_good_transactions.find((entry: any) => (
       entry.root_package_id === 'mas'
     ));
-    assert.equal(finalMasLkg.closure_digest, preFaultMasLock.dependency_closure_digest);
     assert.deepEqual(
       finalMasLkg.package_locks.map((entry: any) => entry.package_id),
       ['mas-scholar-skills', 'mas'],
     );
+    const finalMasLkgScholar = finalMasLkg.package_locks[0];
+    const finalMasLkgRoot = finalMasLkg.package_locks[1];
+    assert.deepEqual(finalMasLkgRoot, preFaultMasLock);
+    assert.equal(
+      finalMasLkgScholar.owner_source_commit,
+      faultCatalog.sourceCommits['mas-scholar-skills'],
+    );
     assert.equal(
       new Set(finalMasLkg.package_locks.map((entry: any) => entry.dependency_transaction_id)).size,
-      1,
+      2,
     );
-    assert.equal(finalMasLkg.package_locks[1].dependency_transaction_id, preFaultMasLock.dependency_transaction_id);
+    assert.equal(finalMasLkgRoot.dependency_transaction_id, preFaultMasLock.dependency_transaction_id);
     const lifecycle = readJsonFile(path.join(stateRoot, 'agent-package-lifecycle-ledger.json')) as any;
     const managedReceipts = lifecycle.receipts.filter((entry: any) => (
       entry.action === 'update'

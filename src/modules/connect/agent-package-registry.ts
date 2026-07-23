@@ -518,7 +518,7 @@ async function applyManifestPackageLock(
       )
     );
   const firstParty = shouldUseFirstPartyCatalog ? firstPartyOwner : null;
-  const rootSourcePolicy = firstParty && packageId
+  const rootSourcePolicy = firstParty && packageId && !trustedBundledInstall
     ? resolveAgentPackageEffectiveSourcePolicy(packageId)
     : null;
   const requestedRootDeveloperCheckoutPath = packageId
@@ -625,7 +625,7 @@ async function applyManifestPackageLock(
     const selectedFirstPartyOwner = nextSelection.packageId
       ? resolveFirstPartyPackageCatalog(nextSelection.packageId)
       : null;
-    const selectedSourcePolicy = selectedFirstPartyOwner
+    const selectedSourcePolicy = selectedFirstPartyOwner && !trustedBundledInstall
       ? resolveAgentPackageEffectiveSourcePolicy(selectedFirstPartyOwner.canonicalId)
       : null;
     const selectedDeveloperCheckoutPath = selectedSourcePolicy?.desired_source_kind
@@ -677,7 +677,8 @@ async function applyManifestPackageLock(
       && bundledFullRuntimeCatalog?.entries.get(manifest.package_id)?.manifestUrl === nextSelection.manifestUrl,
     );
     const developerSourceSelection = Boolean(
-      resolveAgentPackageEffectiveSourcePolicy(manifest.package_id).desired_source_kind
+      !trustedBundledManifestSelection
+      && resolveAgentPackageEffectiveSourcePolicy(manifest.package_id).desired_source_kind
         === 'developer_checkout_override',
     );
     if (manifestFirstPartyOwner
@@ -920,8 +921,10 @@ async function applyManifestPackageLock(
         try {
           let dependencySelection: Awaited<ReturnType<typeof resolveManifestSelection>>;
           let catalogVersion: ManagedCatalogVersion | null = null;
-          const dependencySourcePolicy = resolveAgentPackageEffectiveSourcePolicy(dependency.package_id);
-          if (dependencySourcePolicy.desired_source_kind === 'developer_checkout_override'
+          const dependencySourcePolicy = trustedBundledInstall
+            ? null
+            : resolveAgentPackageEffectiveSourcePolicy(dependency.package_id);
+          if (dependencySourcePolicy?.desired_source_kind === 'developer_checkout_override'
             && dependencySourcePolicy.developer_checkout_available
             && dependencySourcePolicy.developer_checkout_path) {
             const developerDependency = loadDeveloperCheckoutPackageSource(
