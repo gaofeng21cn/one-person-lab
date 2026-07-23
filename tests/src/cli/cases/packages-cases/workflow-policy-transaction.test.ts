@@ -13,68 +13,159 @@ function writeFile(filePath: string, content: string) {
 
 function writeOplFlowPackage(
   root: string,
-  options: { includeRemoteCompanions?: boolean; includeManagedSkillCompanion?: boolean } = {},
+  options: {
+    includeRemoteCompanions?: boolean;
+    includeManagedSkillCompanion?: boolean;
+    includeKindCollision?: boolean;
+    includeUnsupportedDefaultMcp?: boolean;
+    policyVersion?: 'v1' | 'v2';
+  } = {},
 ) {
   const sourceRoot = path.join(root, 'fixture.opl-flow-source');
+  const v2 = options.policyVersion === 'v2';
+  const dependency = (
+    value: Record<string, unknown>,
+    overrides: Record<string, unknown> = {},
+  ) => ({
+    ...value,
+    ...(v2 ? {
+      owner: 'fixture-owner',
+      version_requirement: 'release_lock_exact',
+      install_source: 'framework_managed_release_lock',
+      lifecycle_owner: 'opl-framework',
+      conflict_policy: 'managed_reconcile',
+      credential_policy: 'none',
+      ...overrides,
+    } : {}),
+  });
+  const recommendations = options.includeRemoteCompanions
+    ? [
+        dependency({
+          id: 'officecli',
+          kind: 'cli',
+          offline_bundle: 'full',
+          online_install_default: true,
+          activation: 'task_routed',
+          source: 'fixture-remote',
+        }),
+        dependency({
+          id: 'mineru-open-api',
+          kind: 'cli',
+          offline_bundle: 'full',
+          online_install_default: true,
+          activation: 'task_routed',
+          source: 'fixture-remote',
+        }),
+        dependency({
+          id: 'ui-ux-pro-max',
+          kind: 'codex_skill',
+          offline_bundle: 'full',
+          online_install_default: true,
+          activation: 'explicit',
+          source: 'fixture-remote',
+        }),
+        dependency({
+          id: 'mineru-document-extractor',
+          kind: 'codex_skill',
+          offline_bundle: 'full',
+          online_install_default: true,
+          activation: 'explicit',
+          source: 'fixture-remote',
+        }),
+      ]
+    : options.includeManagedSkillCompanion
+      ? [
+          dependency({
+            id: 'ui-ux-pro-max',
+            kind: 'codex_skill',
+            offline_bundle: 'full',
+            online_install_default: true,
+            activation: 'explicit',
+            source: 'skills-manager:ui-ux-pro-max',
+          }),
+        ]
+      : options.includeKindCollision
+        ? [
+            dependency({
+              id: 'officecli',
+              kind: 'codex_skill',
+              offline_bundle: 'full',
+              online_install_default: true,
+              activation: 'task_routed',
+              source: 'fixture-remote',
+            }),
+            dependency({
+              id: 'officecli',
+              kind: 'cli',
+              offline_bundle: 'full',
+              online_install_default: true,
+              activation: 'task_routed',
+              source: 'fixture-remote',
+            }),
+          ]
+        : options.includeUnsupportedDefaultMcp
+          ? [
+              dependency({
+                id: 'fixture-mcp',
+                kind: 'mcp_server',
+                offline_bundle: 'full',
+                online_install_default: true,
+                activation: 'task_routed',
+                source: 'fixture-mcp',
+              }, { credential_policy: 'user_or_provider_owned_not_bundled' }),
+            ]
+          : [];
   const policy = {
-    schema: 'opl_flow_workflow_policy.v1',
+    schema: v2 ? 'opl_flow_workflow_policy.v2' : 'opl_flow_workflow_policy.v1',
     package: { id: 'fixture.opl-flow', version: '0.1.16', owner: 'opl-flow', kind: 'workflow_profile' },
     workflow_generation: 'model-native-test',
-    requires: [{
+    ...(v2 ? {
+      provides: [
+        dependency({
+          id: 'fixture.opl-flow',
+          kind: 'codex_plugin',
+          offline_bundle: 'full',
+          online_install_default: true,
+          activation: 'always',
+          source: 'package:fixture.opl-flow',
+        }, {
+          owner: 'opl-flow',
+          version_requirement: '=0.1.16',
+          install_source: 'package_payload',
+        }),
+        ...['fixture.opl-flow', 'codex-ops-kit'].map((skillId) => dependency({
+          id: skillId,
+          kind: 'codex_skill',
+          offline_bundle: 'full',
+          online_install_default: true,
+          activation: 'task_routed',
+          source: `package:fixture.opl-flow/skills/${skillId}`,
+        }, {
+          owner: 'opl-flow',
+          version_requirement: '=0.1.16',
+          install_source: 'package_payload',
+        })),
+      ],
+      installation_convergence: {
+        standard_target_closure: 'workflow_policy_release_lock',
+        full_target_closure: 'workflow_policy_release_lock',
+        standard_source: 'online_exact_release_lock',
+        full_source: 'embedded_exact_release_lock',
+        final_projection_equivalence_required: true,
+        default_dependencies_require_full_bundle: true,
+        secrets_bundled: false,
+        user_third_party_surfaces_policy: 'preserve',
+      },
+    } : {}),
+    requires: [dependency({
       id: 'opl-base',
       kind: 'base',
       offline_bundle: 'full',
       online_install_default: true,
       activation: 'always',
       source: 'fixture',
-    }],
-    recommends: options.includeRemoteCompanions
-      ? [
-          {
-            id: 'officecli',
-            kind: 'cli',
-            offline_bundle: 'full',
-            online_install_default: true,
-            activation: 'task_routed',
-            source: 'fixture-remote',
-          },
-          {
-            id: 'mineru-open-api',
-            kind: 'cli',
-            offline_bundle: 'full',
-            online_install_default: true,
-            activation: 'task_routed',
-            source: 'fixture-remote',
-          },
-          {
-            id: 'ui-ux-pro-max',
-            kind: 'codex_skill',
-            offline_bundle: 'full',
-            online_install_default: true,
-            activation: 'explicit',
-            source: 'fixture-remote',
-          },
-          {
-            id: 'mineru-document-extractor',
-            kind: 'codex_skill',
-            offline_bundle: 'full',
-            online_install_default: true,
-            activation: 'explicit',
-            source: 'fixture-remote',
-          },
-        ]
-      : options.includeManagedSkillCompanion
-        ? [
-            {
-              id: 'ui-ux-pro-max',
-              kind: 'codex_skill',
-              offline_bundle: 'full',
-              online_install_default: true,
-              activation: 'explicit',
-              source: 'skills-manager:ui-ux-pro-max',
-            },
-          ]
-      : [],
+    })],
+    recommends: recommendations,
     compatible_optional: [],
     conflicts: [
       {
@@ -191,10 +282,24 @@ function writeOplFlowPackage(
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     $id: 'https://example.test/fixture.opl-flow-workflow-policy.schema.json',
     type: 'object',
-    required: ['schema', 'package', 'requires', 'recommends', 'compatible_optional', 'conflicts', 'retires', 'migration_policy', 'historical_fingerprints', 'codex_model_policy'],
+    required: [
+      'schema',
+      'package',
+      'requires',
+      'recommends',
+      'compatible_optional',
+      'conflicts',
+      'retires',
+      'migration_policy',
+      'historical_fingerprints',
+      'codex_model_policy',
+      ...(v2 ? ['provides', 'installation_convergence'] : []),
+    ],
     properties: {
-      schema: { const: 'opl_flow_workflow_policy.v1' },
+      schema: { const: v2 ? 'opl_flow_workflow_policy.v2' : 'opl_flow_workflow_policy.v1' },
       package: { type: 'object' },
+      provides: { type: 'array' },
+      installation_convergence: { type: 'object' },
       requires: { type: 'array' },
       recommends: { type: 'array' },
       compatible_optional: { type: 'array' },
@@ -207,6 +312,67 @@ function writeOplFlowPackage(
   }));
   return manifestPath;
 }
+
+test('workflow policy v2 preserves (kind, id) dependency identity and converges through known adapters', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-policy-v2-'));
+  const env = {
+    HOME: path.join(root, 'home'),
+    CODEX_HOME: path.join(root, 'home', '.codex'),
+    OPL_STATE_DIR: path.join(root, 'state'),
+    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+  };
+  try {
+    const preview = runCli([
+      'packages',
+      'install',
+      '--manifest-url',
+      writeOplFlowPackage(root, { policyVersion: 'v2', includeKindCollision: true }),
+      '--trust-tier',
+      'first_party',
+      '--dry-run',
+    ], env) as any;
+    const migration = preview.opl_agent_package_install.package_lock.physical_surface.workflow_policy_migration;
+    assert.equal(migration.status, 'validated_no_write');
+    assert.deepEqual(migration.dependency_ids, ['opl-base', 'officecli']);
+    assert.deepEqual(
+      migration.dependencies.map((entry: { kind: string; id: string }) => `${entry.kind}:${entry.id}`),
+      ['base:opl-base', 'codex_skill:officecli', 'cli:officecli'],
+    );
+    assert.equal(migration.dependencies.every((entry: { lifecycle_owner?: string }) => (
+      entry.lifecycle_owner === 'opl-framework'
+    )), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('workflow policy v2 fails closed when a default dependency has no lifecycle adapter', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-policy-v2-adapter-'));
+  const env = {
+    HOME: path.join(root, 'home'),
+    CODEX_HOME: path.join(root, 'home', '.codex'),
+    OPL_STATE_DIR: path.join(root, 'state'),
+    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+  };
+  try {
+    const failure = runCliFailure([
+      'packages',
+      'install',
+      '--manifest-url',
+      writeOplFlowPackage(root, { policyVersion: 'v2', includeUnsupportedDefaultMcp: true }),
+      '--trust-tier',
+      'first_party',
+      '--dry-run',
+    ], env);
+    assert.equal(
+      failure.payload.error.details.failure_code,
+      'agent_package_managed_policy_dependency_adapter_missing',
+    );
+    assert.deepEqual(failure.payload.error.details.dependency_keys, ['mcp_server:fixture-mcp']);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('generic OPL package transaction owns OPL Flow policy migration without inventing a fresh-install rollback generation', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-package-transaction-'));

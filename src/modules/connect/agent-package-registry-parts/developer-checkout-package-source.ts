@@ -103,7 +103,7 @@ function normalizeDeveloperOwnerManifest(input: {
   if (input.spec.owner_manifest_kind === 'workflow_profile') {
     const policy = isRecord(input.payload) ? input.payload : null;
     const policyPackage = policy && isRecord(policy.package) ? policy.package : null;
-    if (policy?.schema !== 'opl_flow_workflow_policy.v1'
+    if (!['opl_flow_workflow_policy.v1', 'opl_flow_workflow_policy.v2'].includes(String(policy?.schema))
       || policyPackage?.id !== input.spec.package_id
       || policyPackage.kind !== 'workflow_profile'
       || !stringValue(policyPackage.version)) {

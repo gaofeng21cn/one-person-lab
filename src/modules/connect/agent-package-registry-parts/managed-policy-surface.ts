@@ -41,9 +41,10 @@ type HistoricalFingerprints = {
 };
 
 type OplFlowPolicy = {
-  schema: 'opl_flow_workflow_policy.v1';
+  schema: 'opl_flow_workflow_policy.v1' | 'opl_flow_workflow_policy.v2';
   package: { id: string; version: string; owner: string; kind: string };
   workflow_generation: string;
+  provides: AgentPackageManagedPolicyDependency[];
   requires: AgentPackageManagedPolicyDependency[];
   recommends: AgentPackageManagedPolicyDependency[];
   compatible_optional: AgentPackageManagedPolicyDependency[];
@@ -52,6 +53,7 @@ type OplFlowPolicy = {
   migration_policy: Record<string, unknown>;
   historical_fingerprints: HistoricalFingerprints;
   codex_model_policy: Record<string, unknown>;
+  installation_convergence: Record<string, unknown> | null;
 };
 
 type InventoryItem = {
@@ -65,6 +67,7 @@ type ManagedPolicyIdentity = {
   packageId: string;
   packageVersion: string;
   pluginId: string | null;
+  requiredSkillIds: string[];
   config: NonNullable<AgentPackageManifest['managed_policy_surface']>;
 };
 
@@ -155,7 +158,11 @@ function stringArray(value: unknown, field: string, allowEmpty = false) {
   return normalized;
 }
 
-function normalizeDependency(value: unknown, field: string): AgentPackageManagedPolicyDependency {
+function normalizeDependency(
+  value: unknown,
+  field: string,
+  schema: OplFlowPolicy['schema'],
+): AgentPackageManagedPolicyDependency {
   if (!isRecord(value)) {
     throw new FrameworkContractError('contract_shape_invalid', `${field} must be an object.`, {
       field,
@@ -165,9 +172,13 @@ function normalizeDependency(value: unknown, field: string): AgentPackageManaged
   const kind = value.kind;
   const offlineBundle = value.offline_bundle;
   const activation = value.activation;
+  const supportedKinds = schema === 'opl_flow_workflow_policy.v2'
+    ? ['base', 'codex_skill', 'codex_plugin', 'mcp_server', 'cli', 'runtime_capability']
+    : ['base', 'codex_skill', 'cli', 'runtime_capability'];
   if (
     typeof value.id !== 'string'
-    || !['base', 'codex_skill', 'cli', 'runtime_capability'].includes(String(kind))
+    || !value.id.trim()
+    || !supportedKinds.includes(String(kind))
     || !['none', 'full'].includes(String(offlineBundle))
     || typeof value.online_install_default !== 'boolean'
     || !['always', 'task_routed', 'explicit'].includes(String(activation))
@@ -178,14 +189,98 @@ function normalizeDependency(value: unknown, field: string): AgentPackageManaged
       failure_code: 'agent_package_managed_policy_invalid',
     });
   }
+  const v2Fields = {
+    owner: value.owner,
+    version_requirement: value.version_requirement,
+    install_source: value.install_source,
+    lifecycle_owner: value.lifecycle_owner,
+    conflict_policy: value.conflict_policy,
+    credential_policy: value.credential_policy,
+  };
+  if (schema === 'opl_flow_workflow_policy.v2' && (
+    typeof v2Fields.owner !== 'string'
+    || !v2Fields.owner.trim()
+    || typeof v2Fields.version_requirement !== 'string'
+    || !v2Fields.version_requirement.trim()
+    || !['package_payload', 'framework_managed_release_lock', 'codex_builtin', 'user_managed']
+      .includes(String(v2Fields.install_source))
+    || typeof v2Fields.lifecycle_owner !== 'string'
+    || !v2Fields.lifecycle_owner.trim()
+    || !['managed_reconcile', 'preserve_user_surface', 'fail_closed_on_collision']
+      .includes(String(v2Fields.conflict_policy))
+    || !['none', 'user_or_provider_owned_not_bundled'].includes(String(v2Fields.credential_policy))
+  )) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} is missing v2 lifecycle metadata.`, {
+      field,
+      failure_code: 'agent_package_managed_policy_invalid',
+    });
+  }
   return {
-    id: value.id,
+    id: value.id.trim(),
     kind: kind as AgentPackageManagedPolicyDependency['kind'],
     offline_bundle: offlineBundle as AgentPackageManagedPolicyDependency['offline_bundle'],
     online_install_default: value.online_install_default,
     activation: activation as AgentPackageManagedPolicyDependency['activation'],
     source: value.source,
+    ...(schema === 'opl_flow_workflow_policy.v2'
+      ? {
+          owner: String(v2Fields.owner).trim(),
+          version_requirement: String(v2Fields.version_requirement).trim(),
+          install_source: v2Fields.install_source as NonNullable<AgentPackageManagedPolicyDependency['install_source']>,
+          lifecycle_owner: String(v2Fields.lifecycle_owner).trim(),
+          conflict_policy: v2Fields.conflict_policy as NonNullable<AgentPackageManagedPolicyDependency['conflict_policy']>,
+          credential_policy: v2Fields.credential_policy as NonNullable<AgentPackageManagedPolicyDependency['credential_policy']>,
+        }
+      : {}),
   };
+}
+
+function dependencyKey(value: Pick<AgentPackageManagedPolicyDependency, 'kind' | 'id'>) {
+  return `${value.kind}:${value.id}`;
+}
+
+function assertUniqueDependencyIdentities(
+  dependencies: AgentPackageManagedPolicyDependency[],
+  field: string,
+) {
+  const keys = dependencies.map(dependencyKey);
+  const duplicates = [...new Set(keys.filter((key, index) => keys.indexOf(key) !== index))];
+  if (duplicates.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} contains duplicate (kind, id) identities.`, {
+      field,
+      duplicate_dependency_keys: duplicates,
+      failure_code: 'agent_package_managed_policy_dependency_identity_duplicate',
+    });
+  }
+}
+
+function normalizeInstallationConvergence(value: unknown) {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'installation_convergence must be an object.', {
+      failure_code: 'agent_package_managed_policy_convergence_invalid',
+    });
+  }
+  const expected = {
+    standard_target_closure: 'workflow_policy_release_lock',
+    full_target_closure: 'workflow_policy_release_lock',
+    standard_source: 'online_exact_release_lock',
+    full_source: 'embedded_exact_release_lock',
+    final_projection_equivalence_required: true,
+    default_dependencies_require_full_bundle: true,
+    secrets_bundled: false,
+    user_third_party_surfaces_policy: 'preserve',
+  };
+  for (const [field, expectedValue] of Object.entries(expected)) {
+    if (value[field] !== expectedValue) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Managed policy installation convergence is invalid.', {
+        field: `installation_convergence.${field}`,
+        expected: expectedValue,
+        actual: value[field],
+        failure_code: 'agent_package_managed_policy_convergence_invalid',
+      });
+    }
+  }
+  return value;
 }
 
 function normalizeGroups(value: unknown, field: string) {
@@ -223,8 +318,9 @@ function normalizePolicy(
       failure_code: 'agent_package_managed_policy_invalid',
     });
   }
+  const schema = payload.schema;
   if (
-    payload.schema !== 'opl_flow_workflow_policy.v1'
+    !['opl_flow_workflow_policy.v1', 'opl_flow_workflow_policy.v2'].includes(String(schema))
     || payload.package.id !== identity.packageId
     || payload.package.version !== identity.packageVersion
     || payload.package.owner !== 'opl-flow'
@@ -238,6 +334,7 @@ function normalizePolicy(
       failure_code: 'agent_package_managed_policy_identity_mismatch',
     });
   }
+  const normalizedSchema = schema as OplFlowPolicy['schema'];
   const expectedMigrationPolicy = {
     trigger: 'explicit_opl_flow_install_update_optimize_or_generic_app_post_update_reconcile',
     default_action: 'backup_disable_and_remove_from_discovery',
@@ -259,19 +356,53 @@ function normalizePolicy(
     }
   }
   const fingerprints = payload.historical_fingerprints;
+  const normalizeDependencies = (value: unknown, field: string) => Array.isArray(value)
+    ? value.map((entry, index) => normalizeDependency(entry, `${field}[${index}]`, normalizedSchema))
+    : [];
+  const provides = normalizedSchema === 'opl_flow_workflow_policy.v2'
+    ? normalizeDependencies(payload.provides, 'provides')
+    : [];
+  const requires = normalizeDependencies(payload.requires, 'requires');
+  const recommends = normalizeDependencies(payload.recommends, 'recommends');
+  const compatibleOptional = normalizeDependencies(payload.compatible_optional, 'compatible_optional');
+  assertUniqueDependencyIdentities(provides, 'provides');
+  assertUniqueDependencyIdentities([...requires, ...recommends, ...compatibleOptional], 'dependencies');
+  if (normalizedSchema === 'opl_flow_workflow_policy.v2') {
+    const invalidProvided = provides.filter((entry) => (
+      !['codex_plugin', 'codex_skill'].includes(entry.kind)
+      || !entry.online_install_default
+      || entry.offline_bundle !== 'full'
+      || entry.install_source !== 'package_payload'
+      || entry.lifecycle_owner !== 'opl-framework'
+      || entry.credential_policy !== 'none'
+    ));
+    if (provides.length === 0 || invalidProvided.length > 0) {
+      throw new FrameworkContractError('contract_shape_invalid', 'v2 provided capabilities must be package-carried Codex surfaces.', {
+        invalid_provided_capability_keys: invalidProvided.map(dependencyKey),
+        failure_code: 'agent_package_managed_policy_provides_invalid',
+      });
+    }
+    const invalidDefaultDependencies = [...requires, ...recommends].filter((entry) => (
+      entry.online_install_default && (
+        entry.offline_bundle !== 'full'
+        || entry.lifecycle_owner !== 'opl-framework'
+      )
+    ));
+    if (invalidDefaultDependencies.length > 0) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Default dependencies must converge through Framework in Standard and Full.', {
+        invalid_dependency_keys: invalidDefaultDependencies.map(dependencyKey),
+        failure_code: 'agent_package_managed_policy_default_closure_invalid',
+      });
+    }
+  }
   return {
-    schema: 'opl_flow_workflow_policy.v1',
+    schema: normalizedSchema,
     package: payload.package as OplFlowPolicy['package'],
     workflow_generation: String(payload.workflow_generation ?? ''),
-    requires: Array.isArray(payload.requires)
-      ? payload.requires.map((entry, index) => normalizeDependency(entry, `requires[${index}]`))
-      : [],
-    recommends: Array.isArray(payload.recommends)
-      ? payload.recommends.map((entry, index) => normalizeDependency(entry, `recommends[${index}]`))
-      : [],
-    compatible_optional: Array.isArray(payload.compatible_optional)
-      ? payload.compatible_optional.map((entry, index) => normalizeDependency(entry, `compatible_optional[${index}]`))
-      : [],
+    provides,
+    requires,
+    recommends,
+    compatible_optional: compatibleOptional,
     conflicts: normalizeGroups(payload.conflicts, 'conflicts'),
     retires: normalizeGroups(payload.retires, 'retires'),
     migration_policy: payload.migration_policy,
@@ -283,7 +414,34 @@ function normalizePolicy(
       legacy_prompt_ids: stringArray(fingerprints.legacy_prompt_ids, 'historical_fingerprints.legacy_prompt_ids'),
     },
     codex_model_policy: payload.codex_model_policy,
+    installation_convergence: normalizedSchema === 'opl_flow_workflow_policy.v2'
+      ? normalizeInstallationConvergence(payload.installation_convergence)
+      : null,
   };
+}
+
+function assertProvidedCapabilities(
+  policy: OplFlowPolicy,
+  identity: Pick<ManagedPolicyIdentity, 'pluginId' | 'requiredSkillIds'>,
+) {
+  if (policy.schema !== 'opl_flow_workflow_policy.v2') return;
+  const pluginIds = policy.provides.filter((entry) => entry.kind === 'codex_plugin').map((entry) => entry.id);
+  const skillIds = policy.provides.filter((entry) => entry.kind === 'codex_skill').map((entry) => entry.id).sort();
+  const requiredSkillIds = [...identity.requiredSkillIds].sort();
+  if (
+    pluginIds.length !== 1
+    || pluginIds[0] !== identity.pluginId
+    || skillIds.length !== requiredSkillIds.length
+    || skillIds.some((skillId, index) => skillId !== requiredSkillIds[index])
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'v2 provided capabilities do not match the package carrier.', {
+      policy_plugin_ids: pluginIds,
+      manifest_plugin_id: identity.pluginId,
+      policy_skill_ids: skillIds,
+      manifest_required_skill_ids: requiredSkillIds,
+      failure_code: 'agent_package_managed_policy_provides_mismatch',
+    });
+  }
 }
 
 function idAliases(value: string) {
@@ -475,6 +633,7 @@ function inspectManagedPolicySurface(input: {
     sourceRef: schemaPath,
   }, policyPayload);
   const policy = normalizePolicy(policyPayload, input.identity);
+  assertProvidedCapabilities(policy, input.identity);
   const groups = [...policy.conflicts, ...policy.retires];
   const groupByAlias = new Map(groups.flatMap((group) =>
     group.discovery_ids.flatMap((id) => idAliases(id).map((alias) => [alias, group] as const))));
@@ -604,6 +763,18 @@ export function noManagedPolicyMigration(note: string): AgentPackageManagedPolic
 
 function managedPolicyDependencySelection(dependencies: AgentPackageManagedPolicyDependency[]) {
   const selected = dependencies.filter((entry) => entry.online_install_default);
+  const unsupported = selected.filter((entry) => {
+    if (entry.kind === 'base') return entry.id !== 'opl-base';
+    if (entry.kind === 'codex_skill') return false;
+    if (entry.kind === 'cli') return entry.id !== 'officecli' && entry.id !== 'mineru-open-api';
+    return true;
+  });
+  if (unsupported.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed policy dependency has no lifecycle adapter.', {
+      dependency_keys: unsupported.map(dependencyKey),
+      failure_code: 'agent_package_managed_policy_dependency_adapter_missing',
+    });
+  }
   return {
     dependencies: selected,
     skillIds: selected
@@ -630,6 +801,7 @@ export function materializeManagedPolicySurface(input: {
       packageId: input.manifest.package_id,
       packageVersion: input.manifest.version,
       pluginId: input.manifest.plugin_id,
+      requiredSkillIds: input.manifest.required_skill_ids,
       config,
     },
     sourceRoot: input.sourceRoot,
@@ -722,6 +894,14 @@ export function materializeManagedPolicySurface(input: {
       toolIds,
       networkAccess: input.companionNetworkAccess,
     });
+    const synchronizedSkillIds = new Set(dependencySync.items.map((entry) => entry.skill_id));
+    const unsupportedSkillIds = skillIds.filter((skillId) => !synchronizedSkillIds.has(skillId));
+    if (unsupportedSkillIds.length > 0) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Managed policy Skill has no lifecycle adapter.', {
+        dependency_keys: unsupportedSkillIds.map((skillId) => `codex_skill:${skillId}`),
+        failure_code: 'agent_package_managed_policy_dependency_adapter_missing',
+      });
+    }
     const dependencyWrites = dependencySync.items.some((entry) => ['synced', 'installed'].includes(entry.status))
       || dependencySync.tools.some((entry) => entry.action === 'install' || entry.action === 'update');
     const writesPerformed = !input.dryRun && (actions.length > 0 || dependencyWrites);
@@ -876,6 +1056,7 @@ export function managedPolicyCurrentness(
         packageId: lock.package_id,
         packageVersion: lock.package_version,
         pluginId: surface.plugin_id,
+        requiredSkillIds: lock.bundled_required_skill_ids,
         config,
       },
       sourceRoot,
@@ -894,6 +1075,11 @@ export function managedPolicyCurrentness(
       toolIds,
       networkAccess: 'forbidden',
     });
+    const synchronizedSkillIds = new Set(dependencySync.items.map((entry) => entry.skill_id));
+    const unsupportedSkillIds = skillIds.filter((skillId) => !synchronizedSkillIds.has(skillId));
+    if (unsupportedSkillIds.length > 0) {
+      return invalid(`Managed policy Skill has no lifecycle adapter: ${unsupportedSkillIds.join(', ')}.`);
+    }
     const dependencyDriftReasons = dependencySyncDriftReasons(dependencySync, skillIds, toolIds);
     const conflictDrifted = inspection.detectedConflicts.length > 0;
     const drifted = conflictDrifted || dependencyDriftReasons.length > 0;
