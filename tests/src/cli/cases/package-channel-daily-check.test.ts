@@ -101,7 +101,7 @@ test('daily package channel check skips when package source fingerprints are unc
   ]);
 
   assert.equal(summary.status, 'skipped');
-  assert.equal(summary.reason, 'release_set_components_unchanged');
+  assert.equal(summary.reason, 'packages_unchanged');
   assert.equal(summary.publish_required, false);
   assert.equal(summary.release_set_generation, '26.6.3');
   assert.deepEqual(summary.changed_packages, []);
@@ -137,7 +137,7 @@ test('daily package channel check publishes when a package source fingerprint ch
   ]);
 
   assert.equal(summary.status, 'publish_required');
-  assert.equal(summary.reason, 'release_set_component_changed');
+  assert.equal(summary.reason, 'package_changed');
   assert.equal(summary.publish_required, true);
   assert.deepEqual(summary.changed_packages, ['mas']);
 });
@@ -166,7 +166,7 @@ test('daily package channel check bootstraps all Packages when latest-stable doe
   assert.deepEqual(summary.changed_packages, ['mas']);
 });
 
-test('daily Release Set check retains latest-stable when Base content changes without a version bump', () => {
+test('daily Package check reports an unversioned Base change without blocking Package publication', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
   const candidate = path.join(tempRoot, 'candidate.json');
   const current = path.join(tempRoot, 'current.json');
@@ -193,15 +193,13 @@ test('daily Release Set check retains latest-stable when Base content changes wi
     '--current-manifest', current,
     '--release-set-generation', '26.6.3',
   ]);
-  assert.equal(summary.status, 'retained_previous_stable');
-  assert.equal(summary.reason, 'unversioned_component_change');
+  assert.equal(summary.status, 'skipped');
+  assert.equal(summary.reason, 'non_package_ecosystem_changed');
   assert.equal(summary.publish_required, false);
-  assert.deepEqual(summary.changed_components, []);
+  assert.deepEqual(summary.changed_components, ['opl-base']);
   assert.deepEqual(summary.observed_changed_components, ['opl-base']);
-  assert.deepEqual(summary.retained_components, ['opl-base', 'opl-app', 'mas']);
-  assert.deepEqual(summary.fallback.blocking_components, ['opl-base']);
-  assert.equal(summary.fallback.retained_release_set_generation, '26.6.3');
-  assert.equal(summary.fallback.current_manifest_verified, true);
+  assert.deepEqual(summary.non_package_changed_components, ['opl-base']);
+  assert.equal(summary.publication_scope, 'packages_only');
 });
 
 test('daily package channel emits LKG evidence for a failed candidate build', () => {
@@ -260,7 +258,7 @@ test('daily package channel rejects a malformed current manifest instead of trea
   ]), /not a verified opl_release_set\.v2 LKG/);
 });
 
-test('daily Release Set check publishes versioned Base changes without rebuilding Packages', () => {
+test('daily Package check treats versioned Base changes as snapshot diagnostics', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
   const candidate = path.join(tempRoot, 'candidate.json');
   const current = path.join(tempRoot, 'current.json');
@@ -279,9 +277,79 @@ test('daily Release Set check publishes versioned Base changes without rebuildin
     '--current-manifest', current,
     '--release-set-generation', '26.6.3-r2',
   ]);
-  assert.equal(summary.publish_required, true);
+  assert.equal(summary.status, 'skipped');
+  assert.equal(summary.reason, 'non_package_ecosystem_changed');
+  assert.equal(summary.publish_required, false);
   assert.deepEqual(summary.changed_packages, []);
   assert.deepEqual(summary.changed_components, ['opl-base']);
+  assert.deepEqual(summary.non_package_changed_components, ['opl-base']);
+});
+
+test('daily Package check publishes an independent Package when Base also changes', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-daily-check-'));
+  const candidate = path.join(tempRoot, 'candidate.json');
+  const current = path.join(tempRoot, 'current.json');
+  writeManifest(candidate, {
+    version: '26.6.3-r3', generatedAt: '2026-06-03T00:00:00.000Z',
+    moduleHead: 'c'.repeat(40), moduleSha: 'd'.repeat(64), packageVersion: '0.1.1',
+    frameworkVersion: '0.2.0', frameworkHead: 'c'.repeat(40), frameworkSha: 'd'.repeat(64),
+  });
+  writeManifest(current, {
+    version: '26.6.3', generatedAt: '2026-06-02T00:00:00.000Z',
+    moduleHead: 'a'.repeat(40), moduleSha: 'b'.repeat(64), packageVersion: '0.1.0',
+    frameworkVersion: '0.1.0', frameworkHead: 'e'.repeat(40), frameworkSha: 'f'.repeat(64),
+  });
+  const summary = runDailyCheck([
+    '--candidate-manifest', candidate,
+    '--current-manifest', current,
+    '--release-set-generation', '26.6.3-r3',
+  ]);
+  assert.equal(summary.status, 'publish_required');
+  assert.equal(summary.reason, 'package_changed');
+  assert.equal(summary.publish_required, true);
+  assert.deepEqual(summary.changed_packages, ['mas']);
+  assert.deepEqual(summary.non_package_changed_components, ['opl-base']);
+  assert.deepEqual(summary.observed_changed_components, ['mas', 'opl-base']);
+  assert.equal(summary.publication_scope, 'packages_only');
+});
+
+test('daily Package check reads projection manifests without building Package archives', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-projection-check-'));
+  const packageRoot = path.join(tempRoot, 'contracts/opl-framework/packages');
+  const payloadRoot = path.join(packageRoot, 'payloads');
+  const current = path.join(tempRoot, 'current.json');
+  fs.mkdirSync(payloadRoot, { recursive: true });
+  fs.writeFileSync(path.join(packageRoot, 'mas.json'), `${JSON.stringify({
+    package_id: 'mas',
+    version: '0.1.1',
+    codex_surface: {
+      plugin_payload_manifest_url: 'payloads/mas-0.1.1.json',
+      carrier_source_commit: 'c'.repeat(40),
+    },
+  })}\n`, 'utf8');
+  fs.writeFileSync(path.join(payloadRoot, 'mas-0.1.1.json'), `${JSON.stringify({
+    package_id: 'mas',
+    package_version: '0.1.1',
+    source_commit: 'c'.repeat(40),
+    content_lock: { digest: `sha256:${'d'.repeat(64)}` },
+  })}\n`, 'utf8');
+  writeManifest(current, {
+    version: '26.6.3',
+    generatedAt: '2026-06-02T00:00:00.000Z',
+    moduleHead: 'a'.repeat(40),
+    moduleSha: 'b'.repeat(64),
+    packageVersion: '0.1.0',
+  });
+
+  const summary = runDailyCheck([
+    '--projection-root', tempRoot,
+    '--current-manifest', current,
+    '--release-set-generation', '26.6.3-r4',
+  ]);
+  assert.equal(summary.publish_required, true);
+  assert.deepEqual(summary.changed_packages, ['mas']);
+  assert.deepEqual(summary.non_package_changed_components, ['opl-app', 'opl-base']);
+  assert.equal(summary.publication_scope, 'packages_only');
 });
 
 test('daily package channel check fails closed when no current channel manifest is available', () => {

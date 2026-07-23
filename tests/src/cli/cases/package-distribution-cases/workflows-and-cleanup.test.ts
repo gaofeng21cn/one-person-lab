@@ -38,7 +38,7 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(releaseFrameworkCommitInputs[0][1], /^        type: string$/m);
   assert.doesNotMatch(releaseFrameworkCommitInputs[0][1], /^        default:/m);
   assert.match(workflow, /EXPECTED_FRAMEWORK_SOURCE_COMMIT: \$\{\{ inputs\.expected_framework_source_commit \}\}/);
-  assert.match(releaseCallerWorkflow, /needs\.resolve-auto-promotion\.outputs\.expected_framework_source_commit/);
+  assert.match(releaseCallerWorkflow, /EXPECTED_FRAMEWORK_SOURCE_COMMIT: \$\{\{ inputs\.expected_framework_source_commit \}\}/);
   for (const source of [workflow, releaseCallerWorkflow]) {
     assert.match(source, /\[\[ "\$expected" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
     assert.doesNotMatch(source, /\[ "\$GITHUB_SHA" != "\$expected" \]/);
@@ -55,7 +55,7 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.ok(releaseCallerWorkflow.indexOf('Validate frozen Framework source input') < releaseCallerWorkflow.indexOf('Setup Node.js'));
   assert.match(releaseCallerWorkflow, /\.release_set\.components\.base\.source_commit/);
   assert.match(releaseCallerWorkflow, /expected_framework_source_commit:\s*\$\{\{ inputs\.expected_framework_source_commit \}\}/);
-  assert.match(dailyPackageWorkflow, /expected_framework_source_commit:\s*\$\{\{ github\.sha \}\}/);
+  assert.doesNotMatch(dailyPackageWorkflow, /expected_framework_source_commit:\s*\$\{\{ github\.sha \}\}/);
   assert.match(workflow, /release_gate:\s*\n\s*description:/);
   assert.match(workflow, /release_set_generation:/);
   assert.match(workflow, /generation="\$\{generation#v\}"/);
@@ -70,7 +70,7 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(releaseCallerWorkflow, /components\.packages\.members/);
   assert.match(releaseCallerWorkflow, /components\.base\.artifact_digest/);
   assert.match(releaseCallerWorkflow, /expected_carrier_digest/);
-  assert.match(releaseCallerWorkflow, /workflow_run:[\s\S]*workflows: \[Publish OPL Package Release Set, Daily OPL Package Channel\]/);
+  assert.doesNotMatch(releaseCallerWorkflow, /workflow_run:/);
   assert.match(releaseCallerWorkflow, /resolve-auto-promotion:[\s\S]*needs: \[publish-candidate\]/);
   assert.match(releaseCallerWorkflow, /needs\.publish-candidate\.result == 'success'/);
   assert.match(releaseCallerWorkflow, /gh api --paginate --slurp/);
@@ -82,8 +82,9 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(releaseCallerWorkflow, /protection_rules \| length/);
   assert.match(releaseCallerWorkflow, /deployment-branch-policies\?per_page=100/);
   assert.match(releaseCallerWorkflow, /no protection rule or exact allowed branch policy/);
-  assert.match(releaseCallerWorkflow, /"docker_webui"[\s\S]*"macos_standard"/);
-  assert.match(releaseCallerWorkflow, /"mag", "mas", "mas-scholar-skills", "obf", "oma", "opl-flow", "rca"/);
+  assert.match(releaseCallerWorkflow, /\.app\.carriers \| type == "array" and length > 0/);
+  assert.match(releaseCallerWorkflow, /\.components\.packages \| type == "object" and length > 0/);
+  assert.doesNotMatch(releaseCallerWorkflow, /"mag", "mas", "mas-scholar-skills", "obf", "oma", "opl-flow", "rca"/);
   for (const inputName of ['frozen_base_release_set_generation', 'frozen_base_release_set_digest']) {
     const packageInputs = [...workflow.matchAll(new RegExp(`^      ${inputName}:\\n((?:^        [^\\n]*\\n?)*)`, 'gm'))];
     assert.equal(packageInputs.length, 2);
@@ -233,27 +234,15 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(dailyPackageWorkflow, /workflow_dispatch:/);
   assert.match(dailyPackageWorkflow, /force_publish:/);
   assert.match(dailyPackageWorkflow, /force_publish[\s\S]*publish_required=true/);
-  assert.match(dailyPackageWorkflow, /npm run packages:manifest/);
+  assert.doesNotMatch(dailyPackageWorkflow, /npm run packages:manifest/);
   assert.match(dailyPackageWorkflow, /OPL_PACKAGE_RELEASE_GATE:\s*daily_package_channel_detection/);
-  assert.match(dailyPackageWorkflow, /--owner-cohort-mode\s+framework-projection/);
-  assert.match(dailyPackageWorkflow, /owner_manifest=""/);
-  assert.match(
-    dailyPackageWorkflow,
-    /if \[ -n "\$owner_manifest" \]; then\s+app_commit="\$\(jq -r \.source_commit "\$owner_manifest"\)"/,
-  );
-  assert.match(
-    dailyPackageWorkflow,
-    /if \[ -z "\$app_commit" \]; then\s+app_commit="\$\(gh api "repos\/gaofeng21cn\/one-person-lab-app\/commits\/v\$app_version" --jq \.sha\)"/,
-  );
-  assert.ok(
-    dailyPackageWorkflow.indexOf('gh release download "v$app_version"')
-      < dailyPackageWorkflow.indexOf('app_commit=""'),
-  );
+  assert.match(dailyPackageWorkflow, /--projection-root \./);
+  assert.doesNotMatch(dailyPackageWorkflow, /--owner-cohort-mode/);
+  assert.doesNotMatch(dailyPackageWorkflow, /gh release (?:list|view|download) --repo gaofeng21cn\/one-person-lab-app/);
   assert.match(dailyPackageWorkflow, /npm run packages:daily-check/);
-  assert.match(dailyPackageWorkflow, /--fallback-stage candidate_manifest_build/);
-  assert.match(dailyPackageWorkflow, /candidate_built=false/);
-  assert.match(dailyPackageWorkflow, /retained_previous_stable/);
-  assert.match(dailyPackageWorkflow, /force_publish cannot bypass latest-stable fallback/);
+  assert.doesNotMatch(dailyPackageWorkflow, /--fallback-stage candidate_manifest_build/);
+  assert.doesNotMatch(dailyPackageWorkflow, /candidate_built=false/);
+  assert.doesNotMatch(dailyPackageWorkflow, /retained_previous_stable/);
   assert.match(dailyPackageWorkflow, /\$\{carrier\}:latest-stable/);
   assert.match(dailyPackageWorkflow, /oras pull "\$\{carrier\}@\$\{frozen_digest\}"/);
   assert.match(dailyPackageWorkflow, /frozen_base_release_set_generation/);
@@ -263,20 +252,19 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(dailyPackageWorkflow, /release_manifests\[@\]/);
   assert.match(dailyPackageWorkflow, /\.release_set\.bom_status == "complete"/);
   assert.doesNotMatch(dailyPackageWorkflow, /Previous latest-stable App release/);
-  assert.match(dailyPackageWorkflow, /app_version="\$\(jq -r '\.release_set\.components\.app\.version'/);
-  assert.match(dailyPackageWorkflow, /--previous-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"/);
-  assert.ok(dailyPackageWorkflow.indexOf('Fetch current latest-stable Release Set manifest') < dailyPackageWorkflow.indexOf('Build candidate Package archives and Release Set manifest'));
+  assert.doesNotMatch(dailyPackageWorkflow, /app_version=/);
+  assert.ok(dailyPackageWorkflow.indexOf('Fetch current latest-stable Release Set manifest') < dailyPackageWorkflow.indexOf('Build Package projection fingerprint'));
   assert.match(dailyPackageWorkflow, /args\+=\(--current-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"\)/);
-  assert.match(dailyPackageWorkflow, /uses:\s+\.\/\.github\/workflows\/packages\.yml/);
-  assert.match(dailyPackageWorkflow, /release_gate:.*daily_package_channel_forced.*daily_package_channel_changed/);
-  assert.match(dailyPackageWorkflow, /publish_required == 'true'/);
+  assert.doesNotMatch(dailyPackageWorkflow, /uses:\s+\.\/\.github\/workflows\/packages\.yml/);
+  assert.match(dailyPackageWorkflow, /Package publication scope:.*packages_only/);
+  assert.match(dailyPackageWorkflow, /non_package_changed_components_json/);
+  assert.match(dailyPackageWorkflow, /publish_required="\$\(jq -r \.publish_required/);
+  assert.doesNotMatch(dailyPackageWorkflow, /publish_required == 'true'/);
   assert.doesNotMatch(dailyPackageWorkflow, /publish_required="true"/);
   assert.match(dailyPackageWorkflow, /changed_packages_json:/);
   assert.match(dailyPackageWorkflow, /owner_cohort_artifact_name:/);
-  assert.match(dailyPackageWorkflow, /app_version: \$\{\{ steps\.app\.outputs\.app_version \}\}/);
-  assert.match(dailyPackageWorkflow, /app_version: \$\{\{ needs\.detect-package-channel-change\.outputs\.app_version \}\}/);
-  assert.match(dailyPackageWorkflow, /echo "app_version=\$app_version" >> "\$GITHUB_OUTPUT"/);
-  assert.match(dailyPackageWorkflow, /promotion_target:\s*candidate/);
+  assert.doesNotMatch(dailyPackageWorkflow, /app_version:/);
+  assert.doesNotMatch(dailyPackageWorkflow, /promotion_target:\s*candidate/);
   assert.doesNotMatch(dailyPackageWorkflow, /\n\s*push:\n/);
   assert.doesNotMatch(dailyPackageWorkflow, /one-person-lab-webui/);
 });
@@ -426,6 +414,7 @@ test('daily package detector publishes only version-bumped changed packages and 
   ], { encoding: 'utf8' })) as Record<string, any>;
   assert.equal(baseCommitOnlyOutput.publish_required, false);
   assert.deepEqual(baseCommitOnlyOutput.changed_components, []);
+  assert.deepEqual(baseCommitOnlyOutput.non_package_changed_components, []);
 
   const bumped = writeDailyCatalogFixture(root, 'bumped.json', {
     mas: { version: '0.1.0', digest: `sha256:${'3'.repeat(64)}` },

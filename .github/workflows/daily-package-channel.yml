@@ -10,16 +10,14 @@ on:
         required: false
         type: string
       force_publish:
-        description: Publish even when the package source fingerprint is unchanged
+        description: Mark owner publication required even when Package fingerprints are unchanged
         required: false
         type: boolean
         default: false
 
 permissions:
   contents: read
-  packages: write
-  id-token: write
-  attestations: write
+  packages: read
 
 concurrency:
   group: opl-daily-package-channel-${{ github.repository_owner }}
@@ -37,8 +35,9 @@ jobs:
       publish_required: ${{ steps.decide.outputs.publish_required }}
       release_set_generation: ${{ steps.generation.outputs.release_set_generation }}
       changed_packages_json: ${{ steps.decide.outputs.changed_packages_json }}
+      non_package_changed_components_json: ${{ steps.decide.outputs.non_package_changed_components_json }}
+      publication_scope: ${{ steps.decide.outputs.publication_scope }}
       owner_cohort_artifact_name: ${{ steps.generation.outputs.owner_cohort_artifact_name }}
-      app_version: ${{ steps.app.outputs.app_version }}
       frozen_base_release_set_generation: ${{ steps.current.outputs.frozen_base_release_set_generation }}
       frozen_base_release_set_digest: ${{ steps.current.outputs.frozen_base_release_set_digest }}
     steps:
@@ -141,123 +140,53 @@ jobs:
             echo "frozen_base_release_set_digest=$frozen_digest"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build candidate Package archives and Release Set manifest
-        id: app
+      - name: Build Package projection fingerprint
+        id: projection
         shell: bash
         env:
           OPL_PACKAGE_RELEASE_GATE: daily_package_channel_detection
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          app_version=""
-          if [ -n "${{ steps.current.outputs.current_manifest }}" ] \
-            && [ "$(jq -r '.release_set.surface_kind // empty' '${{ steps.current.outputs.current_manifest }}')" = opl_release_set.v2 ]; then
-            app_version="$(jq -r '.release_set.components.app.version' '${{ steps.current.outputs.current_manifest }}')"
-          fi
-          if [ -z "$app_version" ]; then
-            # Bootstrap performs its one App authority read inside this admission job.
-            app_version="$(gh release list --repo gaofeng21cn/one-person-lab-app --limit 50 \
-              --json tagName,isDraft,isPrerelease,publishedAt \
-              --jq '[.[] | select(.isDraft == false and .isPrerelease == false and .publishedAt != null)][0].tagName' | sed 's/^v//')"
-          fi
-          [[ "$app_version" =~ ^[0-9]{2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]
-          gh release view "v$app_version" --repo gaofeng21cn/one-person-lab-app \
-            --json tagName,isDraft,isPrerelease,publishedAt,targetCommitish,assets,url \
-            > "$RUNNER_TEMP/opl-app-release.json"
-          echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
-          owner_manifest=""
-          mkdir -p "$RUNNER_TEMP/opl-app-owner-component"
-          if gh release download "v$app_version" --repo gaofeng21cn/one-person-lab-app \
-            --pattern opl-app-component-manifest.json --dir "$RUNNER_TEMP/opl-app-owner-component"; then
-            owner_manifest="$RUNNER_TEMP/opl-app-owner-component/opl-app-component-manifest.json"
-          else
-            echo "::notice::Historical App release has no owner component manifest; using exact public tag readback."
-          fi
-          app_commit=""
-          if [ -n "$owner_manifest" ]; then
-            app_commit="$(jq -r .source_commit "$owner_manifest")"
-          fi
-          if [ -z "$app_commit" ]; then
-            app_commit="$(gh api "repos/gaofeng21cn/one-person-lab-app/commits/v$app_version" --jq .sha)"
-          fi
-          [[ "$app_commit" =~ ^[0-9a-f]{40}$ ]]
-          component_args=(
-            --release-json "$RUNNER_TEMP/opl-app-release.json" \
-            --source-commit "$app_commit" \
-            --output "$RUNNER_TEMP/opl-app-component-manifest.json"
-          )
-          [ -z "$owner_manifest" ] || component_args+=(--owner-manifest "$owner_manifest")
-          node scripts/resolve-opl-app-component.mjs "${component_args[@]}"
+          mkdir -p dist/opl-daily-packages
           args=(
+            --projection-root .
             --release-set-generation "$OPL_RELEASE_SET_GENERATION"
-            --owner "$OPL_PACKAGES_OWNER"
-            --out-dir dist/opl-daily-packages
-            --owner-cohort-mode framework-projection
-            --app-component-manifest "$RUNNER_TEMP/opl-app-component-manifest.json"
+            --summary-path dist/opl-daily-packages/daily-package-channel-summary.json
           )
           if [ -n "${{ steps.current.outputs.current_manifest }}" ]; then
-            args+=(--previous-manifest "${{ steps.current.outputs.current_manifest }}")
+            args+=(--current-manifest "${{ steps.current.outputs.current_manifest }}")
           fi
-          build_log="$RUNNER_TEMP/opl-daily-candidate-build.log"
-          set +e
-          npm run packages:manifest -- "${args[@]}" 2>&1 | tee "$build_log"
-          build_status="${PIPESTATUS[0]}"
-          set -e
-          if [ "$build_status" -ne 0 ]; then
-            current_manifest="${{ steps.current.outputs.current_manifest }}"
-            if [ -z "$current_manifest" ]; then
-              echo "::error::Candidate build failed and no latest-stable Release Set exists for fallback."
-              exit "$build_status"
-            fi
-            mkdir -p dist/opl-daily-packages
-            cp "$build_log" dist/opl-daily-packages/candidate-build.log
-            npm run packages:daily-check -- \
-              --current-manifest "$current_manifest" \
-              --release-set-generation "$OPL_RELEASE_SET_GENERATION" \
-              --fallback-stage candidate_manifest_build \
-              --fallback-exit-code "$build_status" \
-              --fallback-log dist/opl-daily-packages/candidate-build.log \
-              --summary-path dist/opl-daily-packages/daily-package-channel-summary.json
-            echo "candidate_built=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Candidate build failed; retaining the previous latest-stable Release Set."
-            exit 0
-          fi
-          echo "candidate_built=true" >> "$GITHUB_OUTPUT"
+          npm run packages:daily-check -- "${args[@]}"
 
-      - name: Compare package channel fingerprints
+      - name: Compare independent Package fingerprints
         id: decide
         shell: bash
         run: |
           set -euo pipefail
           summary=dist/opl-daily-packages/daily-package-channel-summary.json
-          if [ "${{ steps.app.outputs.candidate_built }}" = true ]; then
-            args=(
-              --candidate-manifest dist/opl-daily-packages/opl-channel-manifest.json
-              --release-set-generation "$OPL_RELEASE_SET_GENERATION"
-              --summary-path "$summary"
-            )
-            if [ -n "${{ steps.current.outputs.current_manifest }}" ]; then
-              args+=(--current-manifest "${{ steps.current.outputs.current_manifest }}")
-            fi
-            npm run packages:daily-check -- "${args[@]}"
-          else
-            test -f "$summary"
-          fi
+          test -f "$summary"
           summary_status="$(jq -r .status "$summary")"
           publish_required="$(jq -r .publish_required "$summary")"
-          if [ "${{ github.event.inputs.force_publish || 'false' }}" = true ] \
-            && [ "$summary_status" != retained_previous_stable ]; then
+          if [ "${{ github.event.inputs.force_publish || 'false' }}" = true ]; then
             publish_required=true
-          elif [ "${{ github.event.inputs.force_publish || 'false' }}" = true ]; then
-            echo "::warning::force_publish cannot bypass latest-stable fallback."
           fi
           echo "publish_required=$publish_required" >> "$GITHUB_OUTPUT"
           changed_packages_json="$(jq -c .changed_packages "$summary")"
           echo "changed_packages_json=$changed_packages_json" >> "$GITHUB_OUTPUT"
+          non_package_changed_components_json="$(jq -c '.non_package_changed_components // []' "$summary")"
+          echo "non_package_changed_components_json=$non_package_changed_components_json" >> "$GITHUB_OUTPUT"
+          publication_scope="$(jq -r '.publication_scope // "packages_only"' "$summary")"
+          [ "$publication_scope" = packages_only ] || {
+            echo "::error::Package publication scope drifted: $publication_scope"
+            exit 1
+          }
+          echo "publication_scope=$publication_scope" >> "$GITHUB_OUTPUT"
           {
             echo "### Daily package channel"
             echo "- Status: \`$summary_status\`"
             echo "- Publish required: \`$publish_required\`"
+            echo "- Package publication scope: \`packages_only\`"
+            echo "- Non-Package diagnostics: \`$non_package_changed_components_json\`"
             echo "- Retained components: \`$(jq -c .retained_components "$summary")\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -267,20 +196,3 @@ jobs:
           name: opl-daily-package-channel-candidate-${{ steps.generation.outputs.release_set_generation }}
           path: dist/opl-daily-packages
           if-no-files-found: error
-
-  publish-daily-package-channel:
-    name: Publish changed daily package channel
-    needs: detect-package-channel-change
-    if: needs.detect-package-channel-change.outputs.publish_required == 'true'
-    uses: ./.github/workflows/packages.yml
-    with:
-      release_set_generation: ${{ needs.detect-package-channel-change.outputs.release_set_generation }}
-      expected_framework_source_commit: ${{ github.sha }}
-      frozen_base_release_set_generation: ${{ needs.detect-package-channel-change.outputs.frozen_base_release_set_generation }}
-      frozen_base_release_set_digest: ${{ needs.detect-package-channel-change.outputs.frozen_base_release_set_digest }}
-      app_version: ${{ needs.detect-package-channel-change.outputs.app_version }}
-      release_gate: ${{ inputs.force_publish && 'daily_package_channel_forced' || 'daily_package_channel_changed' }}
-      changed_packages_json: ${{ needs.detect-package-channel-change.outputs.changed_packages_json }}
-      promotion_target: candidate
-      promotion_request_id: daily-${{ needs.detect-package-channel-change.outputs.release_set_generation }}
-      owner_cohort_artifact_name: ${{ needs.detect-package-channel-change.outputs.owner_cohort_artifact_name }}

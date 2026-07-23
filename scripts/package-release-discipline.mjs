@@ -5,7 +5,6 @@ import path from 'node:path';
 import { readJsonFile } from './script-json-boundary.mjs';
 import { parseRequiredValueOptions } from './required-value-options.mjs';
 
-const CANONICAL_PACKAGE_IDS = ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills', 'opl-flow'];
 const PACKAGE_WORKFLOW_TRIGGER_POLICY = 'release_gate_workflow_call_or_manual_dispatch';
 const PACKAGE_REMOTE_PUBLISH_STATUS = 'publication_workflow_configured_pending_remote_verification';
 const PACKAGE_WORKFLOW_PATH = '.github/workflows/packages.yml';
@@ -132,13 +131,13 @@ function validateManifest(manifest, promotionTarget = 'candidate') {
   assertCondition(releaseSet?.owner_cohort_lock?.surface_kind === 'opl_package_owner_cohort_lock.v1', 'Release Set must bind an owner cohort lock', failures);
   assertCondition(releaseSet?.owner_cohort_lock?.ref === 'owner-cohort-lock.json', 'Owner cohort lock ref drifted', failures);
   assertCondition(isDigest(releaseSet?.owner_cohort_lock?.digest), 'Owner cohort lock digest is invalid', failures);
-  assertCondition(JSON.stringify([...(releaseSet?.owner_cohort_lock?.package_ids ?? [])].sort()) === JSON.stringify([...CANONICAL_PACKAGE_IDS].sort()), 'Owner cohort lock must bind the canonical seven', failures);
+  assertCondition(JSON.stringify([...(releaseSet?.owner_cohort_lock?.package_ids ?? [])].sort()) === JSON.stringify(packageIds), 'Owner cohort lock must bind exactly the Package ids in this snapshot', failures);
   assertCondition(typeof releaseSet?.catalog_carrier === 'string' && releaseSet.catalog_carrier.includes(`one-person-lab-manifest:${generation}`), 'Release Set catalog carrier ref drifted', failures);
   assertCondition(releaseSet?.promotion_evidence_status === 'requires_remote_tag_readback', 'Release Set must not pre-claim channel promotion', failures);
-  assertCondition(JSON.stringify(packageIds) === JSON.stringify([...CANONICAL_PACKAGE_IDS].sort()), 'Package artifact ids must be the canonical seven', failures);
-  assertCondition(releaseSet?.component_count === CANONICAL_PACKAGE_IDS.length + 2, 'Release Set BOM must contain Base, App, and seven Packages', failures);
-  assertCondition(JSON.stringify(Object.keys(releaseSet?.components?.packages?.members ?? {}).sort()) === JSON.stringify([...CANONICAL_PACKAGE_IDS].sort()), 'Release Set Package collection must contain the canonical seven', failures);
-  assertCondition(releaseSet?.components?.packages?.package_count === CANONICAL_PACKAGE_IDS.length, 'Release Set Package count must be seven', failures);
+  assertCondition(packageIds.length > 0, 'Release Set must contain at least one Package', failures);
+  assertCondition(JSON.stringify(Object.keys(releaseSet?.components?.packages?.members ?? {}).sort()) === JSON.stringify(packageIds), 'Release Set Package collection must match Package artifact ids', failures);
+  assertCondition(releaseSet?.component_count === packageIds.length + 2, 'Release Set BOM must contain Base, App, and every Package snapshot member', failures);
+  assertCondition(releaseSet?.components?.packages?.package_count === packageIds.length, 'Release Set Package count must match the snapshot', failures);
   assertCondition(releaseSet?.components?.app?.component_id === 'opl-app', 'Release Set App component is missing', failures);
   assertCondition(/^\d{2}\.\d{1,2}\.\d{1,2}$/.test(releaseSet?.components?.app?.version ?? ''), 'Release Set App version must be CalVer', failures);
   assertCondition(isGitSha(releaseSet?.components?.app?.source_commit), 'Release Set App source commit is invalid', failures);
@@ -162,15 +161,19 @@ function validateManifest(manifest, promotionTarget = 'candidate') {
   assertCondition(automation?.daily_package_channel?.force_publish_input === 'force_publish', 'Daily force repair input drifted', failures);
   assertCondition(automation?.cleanup?.protected_tags?.includes('candidate') && automation?.cleanup?.protected_tags?.includes('latest-stable'), 'Cleanup must protect both moving tags', failures);
 
-  for (const packageId of CANONICAL_PACKAGE_IDS) {
+  for (const packageId of packageIds) {
     validatePackageArtifact(packageId, packageArtifacts[packageId], releaseSet?.components?.packages?.members?.[packageId], failures);
     if (promotionTarget === 'latest-stable') {
       assertCondition(!String(packageArtifacts[packageId]?.package_version ?? '').includes('-'), `${packageId}: latest-stable cannot select a prerelease Package`, failures);
     }
   }
-  assertCondition(packageArtifacts['mas-scholar-skills']?.scope === 'framework_capability_package', 'MAS Scholar Skills role drifted', failures);
-  assertCondition(packageArtifacts['opl-flow']?.scope === 'runtime_dependency', 'OPL Flow workflow-profile role drifted', failures);
-  assertCondition(packageArtifacts['opl-flow']?.codex_standalone_distribution === null, 'OPL Flow must not be projected as a standalone Agent package', failures);
+  if (packageArtifacts['mas-scholar-skills']) {
+    assertCondition(packageArtifacts['mas-scholar-skills']?.scope === 'framework_capability_package', 'MAS Scholar Skills role drifted', failures);
+  }
+  if (packageArtifacts['opl-flow']) {
+    assertCondition(packageArtifacts['opl-flow']?.scope === 'runtime_dependency', 'OPL Flow workflow-profile role drifted', failures);
+    assertCondition(packageArtifacts['opl-flow']?.codex_standalone_distribution === null, 'OPL Flow must not be projected as a standalone Agent package', failures);
+  }
   validateFrameworkCore(manifest.packages?.framework_core, releaseSet?.components?.base, failures);
 
   const nativeHelper = manifest.packages?.native_helper;
@@ -279,18 +282,19 @@ function validateWorkflow(manifest, manifestPath, failures) {
     assertCondition(inputBlocks.length === 1 && inputBlocks.every(isRequiredStringInput), `Release promotion must require ${inputName}`, failures);
   }
   assertCondition(/expected_framework_source_commit:\s*\$\{\{ inputs\.expected_framework_source_commit \}\}/.test(releaseSource), 'Candidate caller must pass the exact Framework source commit into packages.yml', failures);
-  assertCondition(releaseSource.includes('needs.resolve-auto-promotion.outputs.expected_framework_source_commit')
+  assertCondition(releaseSource.includes('EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}')
     && releaseSource.includes('[[ "$expected" =~ ^[0-9a-f]{40}$ ]]')
     && releaseSource.includes(".release_set.components.base.source_commit")
-    && !releaseSource.includes('[ "$GITHUB_SHA" != "$expected" ]'), 'Stable promotion must validate the exact frozen Framework component without conflating it with the workflow harness', failures);
-  assertCondition(/workflow_run:[\s\S]*workflows:\s*\[Publish OPL Package Release Set, Daily OPL Package Channel\]/.test(releaseSource)
+    && !releaseSource.includes('[ "$GITHUB_SHA" != "$expected" ]'), 'Snapshot promotion must validate the exact frozen Framework component without conflating it with the workflow harness', failures);
+  assertCondition(!/workflow_run:/.test(releaseSource)
     && /resolve-auto-promotion:[\s\S]*needs:\s*\[publish-candidate\]/.test(releaseSource)
+    && /inputs\.promotion_target == 'candidate'/.test(releaseSource)
     && /needs\.publish-candidate\.result == 'success'/.test(releaseSource)
     && /gh api --paginate --slurp/.test(releaseSource)
     && /SOURCE_HEAD_SHA/.test(releaseSource)
     && /exactly one attested candidate receipt artifact/.test(releaseSource)
-    && /"mag", "mas", "mas-scholar-skills", "obf", "oma", "opl-flow", "rca"/.test(releaseSource)
-    && /"docker_webui"[\s\S]*"macos_standard"/.test(releaseSource), 'Every successful candidate entry point must resolve one complete exact-identity attested receipt before Stable promotion', failures);
+    && /components\.packages\.members/.test(releaseSource)
+    && /if:\s*inputs\.promotion_target == 'latest-stable'/.test(releaseSource), 'Release Set snapshots must be explicit, while candidate receipts remain exact-identity validated', failures);
   const releaseCheckoutIndex = releaseSource.indexOf('- name: Checkout OPL');
   const releaseSourceGateIndex = releaseSource.indexOf('- name: Validate frozen Framework source input');
   const releaseSetupIndex = releaseSource.indexOf('- name: Setup Node.js');
@@ -324,8 +328,10 @@ function validateWorkflow(manifest, manifestPath, failures) {
   assertCondition(/release_set_generation:/.test(dailySource) && /--release-set-generation/.test(dailySource), 'Daily workflow must use Release Set generation vocabulary', failures);
   assertCondition(/oras repo tags/.test(dailySource) && /release-set-generation\.mjs/.test(dailySource), 'Daily workflow must allocate a new immutable same-day revision', failures);
   assertCondition(!/if ! oras repo tags "ghcr\.io\/\$\{\{ github\.repository_owner \}\}\/one-person-lab-manifest"/.test(dailySource), 'Daily Release Set generation must fail closed when tag readback fails', failures);
-  assertCondition(/OPL_PACKAGE_RELEASE_GATE:\s*daily_package_channel_detection/.test(dailySource), 'Daily detection build must carry an explicit candidate-only release gate', failures);
-  assertCondition(/--owner-cohort-mode\s+framework-projection/.test(dailySource), 'Daily detection must freeze Framework-selected owner commits instead of unrelated owner HEADs', failures);
+  assertCondition(/OPL_PACKAGE_RELEASE_GATE:\s*daily_package_channel_detection/.test(dailySource), 'Daily reconciliation must carry an explicit read-only Package gate', failures);
+  assertCondition(/--projection-root\s+\./.test(dailySource)
+    && !/npm run packages:manifest/.test(dailySource)
+    && !/--owner-cohort-mode/.test(dailySource), 'Daily reconciliation must compare projected Package identity without building Package archives', failures);
   assertCondition(/\$\{carrier\}:latest-stable/.test(dailySource)
     && /oras pull "\$\{carrier\}@\$\{frozen_digest\}"/.test(dailySource)
     && /frozen_base_release_set_generation/.test(dailySource)
@@ -335,25 +341,22 @@ function validateWorkflow(manifest, manifestPath, failures) {
     && /release_manifests\[@\]/.test(dailySource)
     && /\.release_set\.bom_status == "complete"/.test(dailySource), 'Daily admission must distinguish verified absence from availability, identity, and digest failure before freezing one exact predecessor', failures);
   assertCondition(!source.includes('Previous latest-stable App release')
-    && !dailySource.includes('Previous latest-stable App release')
     && /app_version="\$\(jq -r '\.release_set\.components\.app\.version'/.test(source)
-    && /app_version="\$\(jq -r '\.release_set\.components\.app\.version'/.test(dailySource), 'Package workflows must retain the App bound by the frozen base instead of chasing a newer release', failures);
-  assertCondition(
-    /owner_manifest=""[\s\S]*gh release download[\s\S]*app_commit=""[\s\S]*if \[ -n "\$owner_manifest" \]; then[\s\S]*jq -r \.source_commit "\$owner_manifest"[\s\S]*if \[ -z "\$app_commit" \]; then[\s\S]*gh api "repos\/gaofeng21cn\/one-person-lab-app\/commits\/v\$app_version"/.test(dailySource),
-    'Daily App resolution must prefer the published owner component manifest and use tag readback only as fallback',
-    failures,
-  );
+    && !/gh release (?:list|view|download) --repo gaofeng21cn\/one-person-lab-app/.test(dailySource), 'Daily Package reconciliation must not resolve or bind App currentness', failures);
   assertCondition(/force_publish[\s\S]*publish_required=true/.test(dailySource), 'force_publish must be consumed as an explicit Release Set repair', failures);
-  assertCondition(/publish_required == 'true'/.test(dailySource), 'Daily workflow must skip publication when unchanged', failures);
-  assertCondition(/promotion_target:\s*candidate/.test(dailySource), 'Daily workflow may promote candidate only', failures);
-  assertCondition(/owner_cohort_artifact_name/.test(dailySource), 'Daily detection must pass the frozen owner cohort into publication', failures);
-  assertCondition(dailySource.includes('--fallback-stage candidate_manifest_build')
-    && dailySource.includes('candidate_built=false')
-    && dailySource.includes('retained_previous_stable')
-    && dailySource.includes('force_publish cannot bypass latest-stable fallback'), 'Daily detection must retain latest-stable on candidate failure without allowing force publish to bypass fallback', failures);
-  assertCondition(/app_version:\s*\$\{\{ steps\.app\.outputs\.app_version \}\}/.test(dailySource)
-    && /app_version:\s*\$\{\{ needs\.detect-package-channel-change\.outputs\.app_version \}\}/.test(dailySource), 'Daily publication must bind the exact App version selected during detection', failures);
-  assertCondition(/expected_framework_source_commit:\s*\$\{\{ github\.sha \}\}/.test(dailySource), 'Daily publication must bind packages.yml to its exact Framework workflow commit', failures);
+  assertCondition(/publish_required="\$\(jq -r \.publish_required/.test(dailySource)
+    && !/publish_required == 'true'/.test(dailySource), 'Daily workflow must report publication need without dispatching a coupled publisher', failures);
+  assertCondition(!/uses:\s*\.\/\.github\/workflows\/packages\.yml/.test(dailySource)
+    && !/promotion_target:\s*candidate/.test(dailySource)
+    && /publication_scope/.test(dailySource)
+    && /packages_only/.test(dailySource), 'Daily workflow must remain reconciliation-only and delegate stable publication to the single-Package owner workflow', failures);
+  assertCondition(/owner_cohort_artifact_name/.test(dailySource), 'Daily reconciliation must preserve a snapshot evidence artifact name', failures);
+  assertCondition(!dailySource.includes('--fallback-stage candidate_manifest_build')
+    && !dailySource.includes('candidate_built=false')
+    && !dailySource.includes('retained_previous_stable')
+    && !dailySource.includes('force_publish cannot bypass latest-stable fallback'), 'Daily Package reconciliation must fail closed instead of falling back from an archive build it no longer performs', failures);
+  assertCondition(!/app_version:/.test(dailySource), 'Daily reconciliation must not pass App identity into Package publication', failures);
+  assertCondition(!/expected_framework_source_commit:\s*\$\{\{ github\.sha \}\}/.test(dailySource), 'Daily reconciliation must not dispatch the coupled Release Set publisher', failures);
   assertCondition(!/:latest(?:["'\s]|$)/m.test(dailySource), 'Daily Package workflow must not use bare latest', failures);
 }
 
@@ -370,7 +373,7 @@ function main() {
     status: 'passed',
     manifest: options.manifest,
     release_set_generation: manifest.release_set_generation,
-    package_ids: CANONICAL_PACKAGE_IDS,
+    package_ids: Object.keys(manifest.packages?.package_artifacts ?? {}).sort(),
     release_automation: manifest.release_automation,
   }, null, 2));
 }

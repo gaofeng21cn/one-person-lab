@@ -14,6 +14,7 @@ function parseCliOptions(argv) {
     fallbackExitCode: null,
     fallbackLog: null,
     fallbackStage: null,
+    projectionRoot: null,
     releaseSetGeneration: null,
     summaryPath: null,
   };
@@ -38,6 +39,9 @@ function parseCliOptions(argv) {
     '--fallback-stage': (value) => {
       parsed.fallbackStage = value.trim();
     },
+    '--projection-root': (value) => {
+      parsed.projectionRoot = path.resolve(value);
+    },
     '--release-set-generation': (value) => {
       parsed.releaseSetGeneration = value.trim();
     },
@@ -47,9 +51,10 @@ function parseCliOptions(argv) {
   });
 
   if (!parsed.releaseSetGeneration
-    || (!parsed.candidateManifest && !parsed.fallbackStage)
+    || (!parsed.candidateManifest && !parsed.projectionRoot && !parsed.fallbackStage)
+    || (parsed.candidateManifest && parsed.projectionRoot)
     || (parsed.fallbackStage && (!parsed.currentManifest || !parsed.fallbackExitCode))) {
-    throw new Error('Usage: package-channel-daily-check.mjs [--candidate-manifest <path> | --fallback-stage <stage> --fallback-exit-code <code>] [--fallback-log <path>] [--current-manifest <path>] --release-set-generation <yy.m.d[-rN]> [--summary-path <path>]');
+    throw new Error('Usage: package-channel-daily-check.mjs [--candidate-manifest <path> | --projection-root <path> | --fallback-stage <stage> --fallback-exit-code <code>] [--fallback-log <path>] [--current-manifest <path>] --release-set-generation <yy.m.d[-rN]> [--summary-path <path>]');
   }
 
   return parsed;
@@ -80,6 +85,61 @@ function readCurrentStableManifest(filePath) {
     throw new Error(`Current channel manifest is not a verified opl_release_set.v2 LKG: ${filePath}`);
   }
   return manifest;
+}
+
+function projectionManifest(rootPath, releaseSetGeneration) {
+  const packageRoot = path.join(rootPath, 'contracts', 'opl-framework', 'packages');
+  const entries = fs.readdirSync(packageRoot, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+    .map((entry) => path.join(packageRoot, entry.name))
+    .map((manifestPath) => readJson(manifestPath))
+    .filter((manifest) => typeof manifest.package_id === 'string' && typeof manifest.version === 'string');
+  if (entries.length === 0) {
+    throw new Error(`No Package projections found under ${packageRoot}`);
+  }
+  const packageCatalog = {};
+  for (const manifest of entries) {
+    const packageId = manifest.package_id;
+    const version = manifest.version;
+    const payloadRef = manifest.codex_surface?.plugin_payload_manifest_url
+      ?? manifest.plugin_payload_manifest_url;
+    if (!/^[a-z][a-z0-9-]*$/.test(packageId)
+      || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)
+      || typeof payloadRef !== 'string') {
+      throw new Error(`Invalid Package projection identity: ${packageId ?? 'unknown'}`);
+    }
+    const payloadPath = path.join(packageRoot, payloadRef);
+    const payload = readJson(payloadPath);
+    const ownerSourceCommit = manifest.codex_surface?.carrier_source_commit
+      ?? manifest.source_commit;
+    const contentDigest = payload.content_lock?.digest;
+    if (payload.package_id !== packageId
+      || payload.package_version !== version
+      || payload.source_commit !== ownerSourceCommit
+      || !/^[0-9a-f]{40}$/.test(ownerSourceCommit ?? '')
+      || !/^sha256:[0-9a-f]{64}$/.test(contentDigest ?? '')) {
+      throw new Error(`Package projection and payload identity disagree: ${packageId}`);
+    }
+    packageCatalog[packageId] = {
+      package_id: packageId,
+      selected_version: version,
+      versions: [{
+        package_version: version,
+        selection_status: 'selected_for_release_set',
+        package_content_digest: contentDigest,
+        owner_source_commit: ownerSourceCommit,
+      }],
+    };
+  }
+  return {
+    release_set_generation: releaseSetGeneration,
+    release_set: {
+      surface_kind: 'opl_release_set.v2',
+      generation: releaseSetGeneration,
+      component_ids: Object.keys(packageCatalog).sort(),
+    },
+    packages: { package_catalog: packageCatalog },
+  };
 }
 
 function packageFingerprint(manifest) {
@@ -153,6 +213,13 @@ function changedPackages(candidateFingerprint, currentFingerprint) {
     .sort();
 }
 
+function nonPackageFingerprint(fingerprint) {
+  return Object.fromEntries(
+    Object.entries(fingerprint)
+      .filter(([componentId]) => componentId === 'opl-base' || componentId === 'opl-app'),
+  );
+}
+
 function fallbackSummary(options, current, input) {
   const retainedReleaseSetGeneration = current.release_set_generation
     ?? current.release_set?.generation
@@ -164,12 +231,15 @@ function fallbackSummary(options, current, input) {
     publish_required: false,
     release_set_generation: options.releaseSetGeneration,
     candidate_manifest: options.candidateManifest,
+    projection_root: options.projectionRoot,
     current_manifest: options.currentManifest,
     changed_packages: [],
     changed_packages_json: '[]',
     observed_changed_packages: input.observedChangedPackages ?? [],
     changed_components: [],
     observed_changed_components: input.observedChangedComponents ?? [],
+    non_package_changed_components: input.nonPackageChangedComponents ?? [],
+    publication_scope: 'packages_only',
     retained_components: [...current.release_set.component_ids],
     fallback: {
       strategy: 'retain_previous_stable_release_set',
@@ -200,7 +270,9 @@ function buildFailureSummary(options) {
 }
 
 function buildSummary(options) {
-  const candidate = readJson(options.candidateManifest);
+  const candidate = options.projectionRoot
+    ? projectionManifest(options.projectionRoot, options.releaseSetGeneration)
+    : readJson(options.candidateManifest);
   const current = options.currentManifest
     ? readCurrentStableManifest(options.currentManifest)
     : null;
@@ -214,42 +286,44 @@ function buildSummary(options) {
     ? ecosystemFingerprint(current)
     : {};
   const changedEcosystemComponents = changedComponents(candidateEcosystemFingerprint, currentEcosystemFingerprint);
+  const changedNonPackageComponents = changedComponents(
+    nonPackageFingerprint(candidateEcosystemFingerprint),
+    nonPackageFingerprint(currentEcosystemFingerprint),
+  );
   const unversionedChanges = changed.filter((packageId) => (
     currentFingerprint[packageId]
     && candidateFingerprint[packageId]
     && currentFingerprint[packageId].package_version === candidateFingerprint[packageId].package_version
     && currentFingerprint[packageId].package_content_digest !== candidateFingerprint[packageId].package_content_digest
   ));
-  const unversionedComponents = changedEcosystemComponents.filter((componentId) => (
-    currentEcosystemFingerprint[componentId]
-    && candidateEcosystemFingerprint[componentId]
-    && currentEcosystemFingerprint[componentId].version === candidateEcosystemFingerprint[componentId].version
-    && currentEcosystemFingerprint[componentId].content_digest !== candidateEcosystemFingerprint[componentId].content_digest
-  ));
   const blockingComponents = [...new Set([
     ...unversionedChanges,
-    ...unversionedComponents,
   ])].sort();
   if (blockingComponents.length > 0) {
     return fallbackSummary(options, current, {
       reason: 'unversioned_component_change',
       observedChangedPackages: changed,
       observedChangedComponents: changedEcosystemComponents,
+      nonPackageChangedComponents: changedNonPackageComponents,
       blockingComponents,
       stage: 'candidate_fingerprint_validation',
     });
   }
+  const packagePublishRequired = changed.length > 0;
   return {
     surface_kind: 'opl_package_channel_daily_summary.v1',
-    status: changedEcosystemComponents.length > 0 ? 'publish_required' : 'skipped',
+    status: packagePublishRequired ? 'publish_required' : 'skipped',
     reason: !options.currentManifest
       ? 'package_channel_bootstrap'
-      : changedEcosystemComponents.length > 0
-        ? 'release_set_component_changed'
-        : 'release_set_components_unchanged',
-    publish_required: changedEcosystemComponents.length > 0,
+      : packagePublishRequired
+        ? 'package_changed'
+        : changedNonPackageComponents.length > 0
+          ? 'non_package_ecosystem_changed'
+          : 'packages_unchanged',
+    publish_required: packagePublishRequired,
     release_set_generation: options.releaseSetGeneration,
     candidate_manifest: options.candidateManifest,
+    projection_root: options.projectionRoot,
     current_manifest: options.currentManifest ?? null,
     changed_packages: changed,
     changed_packages_json: JSON.stringify(changed),
@@ -258,6 +332,8 @@ function buildSummary(options) {
     current_fingerprint: currentFingerprint,
     changed_components: changedEcosystemComponents,
     observed_changed_components: changedEcosystemComponents,
+    non_package_changed_components: changedNonPackageComponents,
+    publication_scope: 'packages_only',
     retained_components: [],
     fallback: null,
     candidate_ecosystem_fingerprint: candidateEcosystemFingerprint,

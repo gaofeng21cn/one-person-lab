@@ -1,10 +1,7 @@
-name: Promote OPL Release Set
-run-name: OPL ${{ github.event_name == 'workflow_run' && 'auto latest-stable' || inputs.promotion_target }} ${{ inputs.release_set_generation }} / ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || inputs.promotion_request_id || github.run_id }}
+name: Manage OPL Release Set Snapshot
+run-name: OPL snapshot ${{ inputs.promotion_target }} ${{ inputs.release_set_generation }} / ${{ inputs.promotion_request_id || github.run_id }}
 
 on:
-  workflow_run:
-    workflows: [Publish OPL Package Release Set, Daily OPL Package Channel]
-    types: [completed]
   workflow_dispatch:
     inputs:
       release_set_generation:
@@ -29,7 +26,7 @@ on:
         type: string
         default: manual_release_gate
       promotion_target:
-        description: Build candidate or promote the exact existing BOM to latest-stable
+        description: Build a candidate snapshot or explicitly promote the exact tested/offline snapshot
         required: false
         type: choice
         options: [candidate, latest-stable]
@@ -77,14 +74,12 @@ env:
 
 jobs:
   resolve-auto-promotion:
-    name: Resolve exact attested candidate receipt
+    name: Validate exact attested candidate receipt
     needs: [publish-candidate]
     if: >-
       always()
-      && (
-        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
-        || (github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'candidate' && needs.publish-candidate.result == 'success')
-      )
+      && inputs.promotion_target == 'candidate'
+      && needs.publish-candidate.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -109,11 +104,11 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          SOURCE_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || github.run_id }}
-          SOURCE_HEAD_REPOSITORY: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name || github.repository }}
-          SOURCE_HEAD_BRANCH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name }}
-          SOURCE_HEAD_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-          SOURCE_EVENT: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event || github.event_name }}
+          SOURCE_RUN_ID: ${{ github.run_id }}
+          SOURCE_HEAD_REPOSITORY: ${{ github.repository }}
+          SOURCE_HEAD_BRANCH: ${{ github.ref_name }}
+          SOURCE_HEAD_SHA: ${{ github.sha }}
+          SOURCE_EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
           echo "eligible=false" >> "$GITHUB_OUTPUT"
@@ -190,7 +185,7 @@ jobs:
               and ((.source_app_run_id == null)
                 or (.source_app_run_id | type == "string" and test("^[1-9][0-9]*$")))
               and .anonymous_readback.status == "verified"
-              and (.anonymous_readback.verified_refs | type == "array" and length == 9
+              and (.anonymous_readback.verified_refs | type == "array" and length >= 3
                 and all(.[]; type == "string" and length > 0))
               and .source_cutoff.policy == "single_read_at_freeze_admission"
               and .source_cutoff.later_authority_advancement_invalidates_receipt == false
@@ -202,21 +197,13 @@ jobs:
               and .app.component_id == "opl-app"
               and (.app.version | generation)
               and (.app | exact_component)
-              and (.app.carriers | type == "array" and length == 2)
-              and ((.app.carriers
-                | map({carrier_id, carrier_kind, package_profile})
-                | sort_by(.carrier_id)) == [
-                  {"carrier_id":"docker_webui","carrier_kind":"oci_image","package_profile":"webui-full"},
-                  {"carrier_id":"macos_standard","carrier_kind":"release_asset","package_profile":"standard"}
-                ])
+              and (.app.carriers | type == "array" and length > 0)
               and all(.app.carriers[];
                 (.ref | type == "string" and length > 0)
                 and (.digest | digest)
                 and (.size | type == "number" and . > 0 and floor == .)
                 and ((has("content_fingerprint") | not) or (.content_fingerprint | digest)))
-              and ((.components.packages | keys | sort) == [
-                "mag", "mas", "mas-scholar-skills", "obf", "oma", "opl-flow", "rca"
-              ])
+              and (.components.packages | type == "object" and length > 0)
               and all(.components.packages[]; exact_component)' \
             "$receipt" >/dev/null
           frozen_generation="$(jq -r '.source_cutoff.frozen_base_release_set.generation // "none"' "$receipt")"
@@ -255,14 +242,8 @@ jobs:
       expected_app_artifact_digest: ${{ inputs.expected_app_artifact_digest }}
 
   promote-exact-release-set:
-    name: Promote exact immutable BOM to latest-stable
-    needs: [resolve-auto-promotion]
-    if: >-
-      always()
-      && (
-        (github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable')
-        || (needs.resolve-auto-promotion.result == 'success' && needs.resolve-auto-promotion.outputs.eligible == 'true')
-      )
+    name: Promote explicit tested/offline snapshot
+    if: inputs.promotion_target == 'latest-stable'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: release-stable
@@ -301,12 +282,12 @@ jobs:
       - name: Checkout OPL
         uses: actions/checkout@v6
         with:
-          ref: ${{ needs.resolve-auto-promotion.outputs.eligible == 'true' && needs.resolve-auto-promotion.outputs.source_head_sha || github.sha }}
+          ref: ${{ github.sha }}
 
       - name: Validate frozen Framework source input
         shell: bash
         env:
-          EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.expected_framework_source_commit || needs.resolve-auto-promotion.outputs.expected_framework_source_commit }}
+          EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
         run: |
           set -euo pipefail
           expected="$EXPECTED_FRAMEWORK_SOURCE_COMMIT"
@@ -327,17 +308,17 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.expected_framework_source_commit || needs.resolve-auto-promotion.outputs.expected_framework_source_commit }}
-          RESOLVED_RELEASE_SET_GENERATION: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.release_set_generation || needs.resolve-auto-promotion.outputs.release_set_generation }}
-          RESOLVED_APP_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.app_version || needs.resolve-auto-promotion.outputs.app_version }}
-          RESOLVED_APP_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.expected_app_source_commit || needs.resolve-auto-promotion.outputs.expected_app_source_commit }}
-          RESOLVED_APP_ARTIFACT_DIGEST: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.expected_app_artifact_digest || needs.resolve-auto-promotion.outputs.expected_app_artifact_digest }}
-          RESOLVED_CARRIER_DIGEST: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.expected_carrier_digest || needs.resolve-auto-promotion.outputs.expected_carrier_digest }}
-          RESOLVED_PROMOTION_REQUEST_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.promotion_request_id || needs.resolve-auto-promotion.outputs.promotion_request_id }}
-          RESOLVED_SOURCE_APP_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.source_app_run_id || needs.resolve-auto-promotion.outputs.source_app_run_id }}
-          RESOLVED_FROZEN_BASE_GENERATION: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.frozen_base_release_set_generation || needs.resolve-auto-promotion.outputs.frozen_base_release_set_generation }}
-          RESOLVED_FROZEN_BASE_DIGEST: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.frozen_base_release_set_digest || needs.resolve-auto-promotion.outputs.frozen_base_release_set_digest }}
-          RESOLVED_RELEASE_GATE: ${{ github.event_name == 'workflow_dispatch' && inputs.promotion_target == 'latest-stable' && inputs.release_gate || 'attested_candidate_auto_promotion' }}
+          EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
+          RESOLVED_RELEASE_SET_GENERATION: ${{ inputs.release_set_generation }}
+          RESOLVED_APP_VERSION: ${{ inputs.app_version }}
+          RESOLVED_APP_SOURCE_COMMIT: ${{ inputs.expected_app_source_commit }}
+          RESOLVED_APP_ARTIFACT_DIGEST: ${{ inputs.expected_app_artifact_digest }}
+          RESOLVED_CARRIER_DIGEST: ${{ inputs.expected_carrier_digest }}
+          RESOLVED_PROMOTION_REQUEST_ID: ${{ inputs.promotion_request_id }}
+          RESOLVED_SOURCE_APP_RUN_ID: ${{ inputs.source_app_run_id }}
+          RESOLVED_FROZEN_BASE_GENERATION: ${{ inputs.frozen_base_release_set_generation }}
+          RESOLVED_FROZEN_BASE_DIGEST: ${{ inputs.frozen_base_release_set_digest }}
+          RESOLVED_RELEASE_GATE: ${{ inputs.release_gate }}
         run: |
           set -euo pipefail
           generation="$RESOLVED_RELEASE_SET_GENERATION"
@@ -372,14 +353,8 @@ jobs:
             .release_set.surface_kind == "opl_release_set.v2"
             and .release_set.bom_status == "complete"
             and .release_set.components.app.release_status == "published"
-            and ((.release_set.components.app.carriers
-              | map({carrier_id, carrier_kind, package_profile})
-              | sort_by(.carrier_id)) == [
-                {"carrier_id":"docker_webui","carrier_kind":"oci_image","package_profile":"webui-full"},
-                {"carrier_id":"macos_standard","carrier_kind":"release_asset","package_profile":"standard"}
-              ])
-            and ((.release_set.components.packages.members | keys | sort)
-              == ["mag", "mas", "mas-scholar-skills", "obf", "oma", "opl-flow", "rca"])
+            and (.release_set.components.app.carriers | type == "array" and length > 0)
+            and (.release_set.components.packages.members | type == "object" and length > 0)
           ' "$release_manifest" >/dev/null
           app_version="$(jq -r '.release_set.components.app.version' "$release_manifest")"
           app_commit="$(jq -r '.release_set.components.app.source_commit' "$release_manifest")"
@@ -498,6 +473,10 @@ jobs:
             if [ -n "$base_release_manifest" ]; then
               frozen_digest="$(jq -r --arg id "$package_id" '.release_set.components.packages.members[$id].artifact_digest' "$base_release_manifest")"
               [[ "$frozen_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+              if [ "$frozen_digest" = "$digest" ]; then
+                echo "::notice::Package ${package_id} is unchanged; retaining its existing latest-stable digest."
+                continue
+              fi
             else
               frozen_digest=none
             fi
@@ -516,8 +495,9 @@ jobs:
             frozen_framework_digest=none
           fi
           printf '%s\t%s\t%s\n' "$base_image" "$frozen_framework_digest" "$base_digest" >> "$promotion_plan"
+          # This explicit compatibility workflow promotes a complete tested/offline snapshot.
           printf '%s\t%s\t%s\n' "$carrier" "$base_carrier_digest" "$carrier_digest" >> "$promotion_plan"
-          [ "$(wc -l < "$promotion_plan" | tr -d ' ')" = 9 ]
+          [ "$(wc -l < "$promotion_plan" | tr -d ' ')" -ge 2 ]
 
           while IFS=$'\t' read -r ref frozen_digest target_digest; do
             assert_channel_cas_eligible "$ref" "$frozen_digest" "$target_digest"
