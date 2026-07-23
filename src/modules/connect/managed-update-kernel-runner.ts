@@ -1,5 +1,8 @@
-import { syncFamilySkillPacks } from './opl-skills.ts';
-import { runOplAgentPackageBulkUpdate } from './agent-package-registry.ts';
+import { spawnSync } from 'node:child_process';
+
+import {
+  runOplAgentPackageBulkUpdate,
+} from './agent-package-registry.ts';
 import { reconcileBaseManagedDependencies } from './base-managed-dependencies.ts';
 import {
   buildOplModules,
@@ -9,6 +12,7 @@ import {
 } from './system-installation/modules.ts';
 import { rollbackManagedModulePackageChannel } from './system-installation/module-package-channel.ts';
 import { runOplStartupMaintenance } from './system-installation/startup-maintenance.ts';
+import { reconcileBundledFullRuntimePackagesIfAvailable } from './system-installation/full-runtime-package-reconciliation.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
@@ -73,18 +77,6 @@ function nestedString(value: unknown, key: string) {
   return isRecord(value) ? stringValue(value[key]) : null;
 }
 
-function readSkipReason(entry: Record<string, unknown>) {
-  const installerResult = nestedRecord(entry, 'installer_result');
-  const workspaceOrQuest = nestedRecord(installerResult, 'workspace_or_quest_local_skill');
-  return nestedString(workspaceOrQuest, 'skip_reason');
-}
-
-function isExpectedTargetBoundScholarSkillsSkip(entry: Record<string, unknown>) {
-  return nestedString(entry, 'domain_id') === 'scholarskills'
-    && nestedString(entry, 'sync_status') === 'skipped'
-    && readSkipReason(entry) === 'workspace_or_quest_target_required';
-}
-
 function adapterResultRef(componentId: string, operation: ManagedUpdateKernelInput['operation'], payload: Record<string, unknown> | null) {
   const explicitRef = nestedString(payload, 'receipt_ref');
   if (explicitRef) {
@@ -95,6 +87,18 @@ function adapterResultRef(componentId: string, operation: ManagedUpdateKernelInp
     return resultRef;
   }
   return `opl://managed-update-adapter/${componentId}/${operation}/${new Date().toISOString()}`;
+}
+
+function frameworkCommit() {
+  const explicit = process.env.OPL_FRAMEWORK_REVISION?.trim();
+  if (explicit && /^[0-9a-f]{40}$/i.test(explicit)) return explicit.toLowerCase();
+  const result = spawnSync('git', ['rev-parse', 'HEAD'], {
+    cwd: resolveProjectRoot(),
+    encoding: 'utf8',
+    stdio: 'pipe',
+  });
+  const commit = result.status === 0 ? result.stdout.trim() : '';
+  return /^[0-9a-f]{40}$/i.test(commit) ? commit.toLowerCase() : null;
 }
 
 function runtimeAdapterReceiptRef(operation: ManagedUpdateKernelInput['operation']) {
@@ -227,52 +231,70 @@ function buildAgentPackagePostApplyActions(
     ];
   }
 
-  const skillSync = syncFamilySkillPacks({
-    companionMode: 'observe',
-  }) as unknown as Record<string, unknown>;
-  const skillSyncPayload = nestedRecord(skillSync, 'skill_sync');
-  const skillSyncSummary = nestedRecord(skillSyncPayload, 'summary');
-  const skillSyncPacks = records(skillSyncPayload?.packs);
-  const unexpectedSkippedCount = skillSyncPacks
-    .filter((entry) => nestedString(entry, 'sync_status') === 'skipped')
-    .filter((entry) => !isExpectedTargetBoundScholarSkillsSkip(entry))
-    .length;
-  const syncedCount = Number(skillSyncSummary?.synced ?? 0);
-  const skillSyncStatus: ManagedUpdateOwnerPostApplyAction['status'] = unexpectedSkippedCount > 0 && syncedCount === 0
-          ? 'manual_required'
-          : 'completed';
+  const bundledReconciliation = nestedRecord(reconcileResult, 'bundled_full_runtime_reconciliation');
+  const reconciliation = bundledReconciliation ?? reconcileResult;
+  const reconciliationItems = records(reconciliation.items);
+  const reconciliationRoots = records(reconciliation.root_installs);
+  const targetItems = records(reconcileResult.targets);
+  const currentStatuses = new Set(['installed', 'already_installed']);
+  const rootStatuses = new Set(['completed', 'current', 'skipped']);
+  const closureVerified = bundledReconciliation
+    ? reconciliation.status === 'completed'
+      && reconciliationItems.length > 0
+      && reconciliationItems.every((entry) => currentStatuses.has(nestedString(entry, 'status') ?? ''))
+      && reconciliationRoots.length > 0
+      && reconciliationRoots.every((entry) => rootStatuses.has(nestedString(entry, 'status') ?? ''))
+    : targetItems.length > 0
+      && targetItems.every((entry) => ['completed', 'current', 'validated'].includes(
+        nestedString(entry, 'status') ?? '',
+      ));
+  const currentnessStatus: ManagedUpdateOwnerPostApplyAction['status'] = closureVerified
+    ? 'completed'
+    : 'manual_required';
+  const currentness = {
+    surface_kind: 'opl_managed_bundled_package_closure_currentness.v1',
+    status: closureVerified ? 'current' : 'incomplete',
+    writes_performed: false,
+    catalog_ref: nestedString(reconciliation, 'catalog_ref'),
+    catalog_sha256: nestedString(reconciliation, 'catalog_sha256'),
+    root_package_ids: Array.isArray(reconciliation.root_package_ids)
+      ? reconciliation.root_package_ids
+      : [],
+    items: bundledReconciliation ? reconciliationItems : targetItems,
+  };
 
   return [
     {
       action_id: 'reconcile_packages',
-      command_ref: 'opl packages update --json',
-      status: 'completed',
+      command_ref: 'opl packages status --json',
+      status: currentnessStatus,
       result_ref: adapterResultRef('capability_packages', operation, reconcileResult),
       result: reconcileResult,
     },
     {
       action_id: 'sync_skills',
       command_ref: 'opl packages status --json',
-      status: skillSyncStatus,
-      result_ref: adapterResultRef('opl_packages', operation, skillSyncPayload),
-      result: skillSyncPayload,
+      status: currentnessStatus,
+      result_ref: adapterResultRef('opl_packages', operation, currentness),
+      result: currentness,
     },
     {
       action_id: 'sync_codex_skill_plugin_projection',
       command_ref: 'opl packages status --json',
-      status: skillSyncStatus,
-      result_ref: adapterResultRef('opl_packages', operation, skillSyncPayload),
+      status: currentnessStatus,
+      result_ref: adapterResultRef('opl_packages', operation, currentness),
       result: {
-        source: 'capability_packages_post_apply',
+        source: 'bundled_package_transaction_currentness_readback',
+        writes_performed: false,
         scholarskills_source: {
           source: 'capability_packages_target',
           status: 'maintained_by_package_update',
           package_channel_auto_update: true,
         },
-        skill_sync_summary: skillSyncSummary,
+        package_closure_currentness: currentness,
         target_bound_package_scope_activation: {
-          status: skillSyncPacks.some(isExpectedTargetBoundScholarSkillsSkip)
-            ? 'automatic_on_workspace_or_quest_activation'
+          status: bundledReconciliation
+            ? 'maintained_by_package_scope_materialization'
             : 'not_applicable',
           lifecycle_owner: 'opl_packages',
           status_command_ref: 'opl packages status --package-id mas --scope <workspace|quest> --json',
@@ -332,7 +354,10 @@ function buildAgentPackageStatusDetail(input: {
   };
 }
 
-async function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']): Promise<AdapterExecutionResult> {
+async function runAgentPackageAdapter(
+  operation: ManagedUpdateKernelInput['operation'],
+  useBundledFullRuntimePlane: boolean,
+): Promise<AdapterExecutionResult> {
   if (operation === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
     const modules = buildOplModules().modules.modules.filter((module) => module.default_install);
     const targets: Record<string, unknown>[] = [];
@@ -417,17 +442,47 @@ async function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['opera
     };
   }
 
-  const bulkUpdate = await runOplAgentPackageBulkUpdate();
-  const bulkResult = bulkUpdate.opl_agent_package_bulk_update;
-  const packageTargets = bulkResult.targets as Record<string, unknown>[];
+  const bundledReconciliation = operation === 'apply' && useBundledFullRuntimePlane
+      ? await reconcileBundledFullRuntimePackagesIfAvailable(process.env, {
+        lifecycleAction: 'update',
+        operationId: adapterResultRef('opl_packages', operation, null),
+        requireSourceRoots: true,
+      })
+    : null;
+  const bundledTargets = bundledReconciliation
+    ? records(bundledReconciliation.root_installs).map((entry) => ({
+        target_type: 'package',
+        ...entry,
+        reason: entry.status === 'skipped'
+          ? 'bundled_full_runtime_target_current'
+          : entry.status === 'completed'
+            ? 'bundled_full_runtime_target_applied'
+            : entry.status === 'manual_required'
+              ? 'bundled_full_runtime_target_manual_required_without_mutation'
+              : 'bundled_full_runtime_target_failed_with_local_rollback',
+      }))
+    : null;
+  const bulkUpdate = bundledTargets === null ? await runOplAgentPackageBulkUpdate() : null;
+  const bulkResult = bulkUpdate?.opl_agent_package_bulk_update ?? null;
+  const packageTargets = bundledTargets ?? (bulkResult?.targets as Record<string, unknown>[] ?? []);
   const targets: Record<string, unknown>[] = packageTargets.length > 0
     ? [...packageTargets]
-    : reconcileLegacyChannelTargets();
+    : bundledReconciliation
+      ? [{
+          target_type: 'package_closure',
+          target_id: 'bundled_full_runtime_packages',
+          status: 'failed',
+          reason: 'bundled_full_runtime_reconciliation_incomplete',
+          action: 'update',
+          result: bundledReconciliation,
+        }]
+      : reconcileLegacyChannelTargets();
   const manualCount = targets.filter((target) => target.status === 'manual_required').length;
   const completedCount = targets.filter((target) => target.status === 'completed').length;
   const validatedCount = targets.filter((target) => target.status === 'validated').length;
   const changedCount = completedCount + validatedCount;
-  const currentCount = targets.filter((target) => target.status === 'current').length;
+  const currentCount = targets.filter((target) =>
+    target.status === 'current' || target.status === 'skipped').length;
   const failedCount = targets.filter((target) => target.status === 'failed').length;
   const baseStatus: AdapterExecutionResult['status'] = failedCount > 0
     ? changedCount > 0 ? 'partial_failure' : 'failed'
@@ -443,6 +498,7 @@ async function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['opera
       : 'projection_only';
   const postApplyActions = changedCount > 0 ? buildAgentPackagePostApplyActions(operation, {
     surface_kind: 'capability_packages_adapter_result',
+    bundled_full_runtime_reconciliation: bundledReconciliation,
     targets,
     summary: {
       total_targets_count: targets.length,
@@ -481,10 +537,16 @@ async function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['opera
   });
   const result = {
     surface_kind: 'capability_packages_adapter_result',
+    framework_commit: bundledReconciliation ? frameworkCommit() : null,
+    catalog_ref: bundledReconciliation ? stringValue(bundledReconciliation.catalog_ref) : null,
+    catalog_sha256: bundledReconciliation ? stringValue(bundledReconciliation.catalog_sha256) : null,
+    bundled_full_runtime_reconciliation: bundledReconciliation,
     apply_mode: applyMode,
     app_background_safe: applyMode === 'auto_apply' && failedCount === 0 && !postApplyFailed,
-    auto_apply_scope: packageTargets.length > 0
-      ? 'clean_digest_locked_installed_root_packages_only'
+    auto_apply_scope: bundledTargets !== null
+      ? 'catalog_owned_bundled_full_runtime_root_packages_only'
+      : packageTargets.length > 0
+        ? 'clean_digest_locked_installed_root_packages_only'
       : 'legacy_explicit_channel_roots_only',
     status_detail: statusDetail,
     reload_guidance: reloadGuidance,
@@ -530,7 +592,7 @@ async function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['opera
     status_detail: statusDetail,
     reload_guidance: reloadGuidance,
     post_apply_actions: postApplyActions,
-    write_receipt: changedCount > 0 || failedCount > 0 || manualCount > 0,
+    write_receipt: changedCount > 0 || manualCount > 0 || failedCount > 0,
   };
 }
 
@@ -538,13 +600,17 @@ async function runAdapter(
   contracts: FrameworkContracts,
   operation: ManagedUpdateKernelInput['operation'],
   componentId: string,
+  useBundledFullRuntimePlane: boolean,
 ): Promise<AdapterExecutionResult> {
   try {
     if (componentId === 'opl_base') {
       return await runRuntimeSubstrateAdapter(contracts, operation);
     }
     if (componentId === 'opl_packages') {
-      return await runAgentPackageAdapter(operation);
+      return await runAgentPackageAdapter(
+        operation,
+        useBundledFullRuntimePlane,
+      );
     }
     return {
       component_id: componentId,
@@ -691,14 +757,28 @@ export async function runManagedUpdateKernelOperation(
     receiptId: input.receiptId,
   });
   try {
-    const componentIds = selectedManagedUpdateComponentIds(input, initialProjection.managed_update.components);
+    const selectedComponentIds = selectedManagedUpdateComponentIds(
+      input,
+      initialProjection.managed_update.components,
+    );
+    const packageComponent = initialProjection.managed_update.components.find((component) =>
+      component.component_id === 'opl_packages');
+    const bundledPackageApply = Boolean(packageComponent
+      && isRecord(packageComponent.current)
+      && isRecord(packageComponent.current.bundled_full_runtime_catalog));
+    const componentIds = selectedComponentIds;
     const results: AdapterExecutionResult[] = [];
     const componentsById = new Map(
       initialProjection.managed_update.components.map((component) => [component.component_id, component]),
     );
     for (const componentId of componentIds) {
       const component = componentsById.get(componentId);
-      const result = await runAdapter(contracts, input.operation, componentId);
+      const result = await runAdapter(
+        contracts,
+        input.operation,
+        componentId,
+        bundledPackageApply,
+      );
       results.push(component ? bindOwnerExecutionResult(component, result) : result);
     }
     const receipts = results
@@ -713,7 +793,6 @@ export async function runManagedUpdateKernelOperation(
       })
       .filter((receipt): receipt is ManagedUpdateComponentReceiptInput => Boolean(receipt));
     const receiptRecord = recordManagedUpdateComponentReceipts(receipts);
-    lock.release();
     const refreshedProjection = await buildManagedUpdateKernelProjection(contracts, {
       ...input,
       refreshReleaseCatalog: false,
@@ -746,8 +825,9 @@ export async function runManagedUpdateKernelOperation(
       lock,
     );
   } catch (error) {
-    lock.release();
     throw error;
+  } finally {
+    lock.release();
   }
 }
 

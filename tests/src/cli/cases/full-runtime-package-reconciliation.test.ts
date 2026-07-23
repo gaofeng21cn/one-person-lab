@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { isRecord } from '../../../../src/kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../../../src/kernel/contract-validation.ts';
 import { parseJsonText } from '../../../../src/kernel/json-file.ts';
 import {
   readBundledFullRuntimePackageCatalog,
@@ -19,6 +19,7 @@ import { reconcileBundledFullRuntimePackagesIfAvailable } from '../../../../src/
 
 function manifestProjection(entry: BundledFullRuntimeCatalogEntry) {
   const manifest = parseJsonText(entry.manifestJson) as Record<string, any>;
+  const payload = parseJsonText(entry.payloadManifestJson) as Record<string, any>;
   const codexSurface = isRecord(manifest.codex_surface) ? manifest.codex_surface : {};
   const pluginId = String(codexSurface.plugin_id ?? entry.packageId);
   const rawRequiredSkillIds: unknown = manifest.surface_kind === 'opl_capability_package_manifest.v2'
@@ -34,12 +35,14 @@ function manifestProjection(entry: BundledFullRuntimeCatalogEntry) {
     pluginId,
     requiredSkillIds,
     scopedOnly: codexSurface.codex_default_exposure === false,
+    contentDigest: String(payload.content_lock?.digest ?? ''),
   };
 }
 
 function writeMaterializedLock(
   root: string,
   entry: BundledFullRuntimeCatalogEntry,
+  catalog: BundledFullRuntimePackageCatalog,
 ): AgentPackageLock {
   const projection = manifestProjection(entry);
   const packageRoot = path.join(root, entry.packageId);
@@ -96,6 +99,16 @@ function writeMaterializedLock(
     manifest_url: entry.manifestUrl,
     manifest_sha256: entry.manifestSha256.replace(/^sha256:/, ''),
     owner_source_commit: entry.ownerSourceCommit,
+    carrier_authority: {
+      surface_kind: 'opl_agent_package_carrier_authority.v1',
+      status: 'verified',
+      catalog_ref: catalog.catalogRef,
+      catalog_sha256: catalog.catalogSha256,
+      catalog_owner_source_commit: entry.ownerSourceCommit,
+      manifest_carrier_source_commit: entry.ownerSourceCommit,
+      payload_source_commit: entry.ownerSourceCommit,
+      verified_source_commit: entry.ownerSourceCommit,
+    },
     permission_scope_sha256: 'fixture',
     lock_ref: `opl://fixture/${entry.packageId}/lock`,
     physical_surface: {
@@ -136,7 +149,7 @@ function writeMaterializedLock(
     resolved_dependencies: [],
     dependency_closure_digest: `fixture-${entry.packageId}`,
     dependency_transaction_id: `fixture-${entry.packageId}`,
-    content_digest: `fixture-${entry.packageId}`,
+    content_digest: projection.contentDigest,
     content_lock_paths: [],
     scope_materializations: [],
     runtime_source_carrier: null,
@@ -176,7 +189,10 @@ test('Full runtime reconciliation closes seven packages while keeping Scholar gl
     fs.mkdirSync(path.join(runtimeHome, entry.runtimeModuleRelativePath), { recursive: true });
   }
   const locks = new Map(
-    [...catalog.entries.values()].map((entry) => [entry.packageId, writeMaterializedLock(physicalRoot, entry)]),
+    [...catalog.entries.values()].map((entry) => [
+      entry.packageId,
+      writeMaterializedLock(physicalRoot, entry, catalog),
+    ]),
   );
   let installCalls = 0;
   const installPackage = async (input: { packageId: string }) => {
@@ -238,7 +254,7 @@ test('Full runtime reconciliation closes seven packages while keeping Scholar gl
       recursive: true,
       force: true,
     });
-    const incomplete = await reconcileBundledFullRuntimePackagesIfAvailable(
+    const partial = await reconcileBundledFullRuntimePackagesIfAvailable(
       { OPL_FULL_RUNTIME_HOME: runtimeHome },
       {
         installPackage: installPackage as any,
@@ -246,14 +262,170 @@ test('Full runtime reconciliation closes seven packages while keeping Scholar gl
         readInstalledLocks: () => lockIndex([]),
       },
     );
-    assert.ok(incomplete);
-    assert.equal(incomplete.status, 'incomplete');
-    assert.equal(incomplete.retryable, true);
-    assert.equal(incomplete.blocks_plain_codex, false);
+    assert.ok(partial);
+    assert.equal(partial.status, 'partial');
+    assert.equal(partial.retryable, true);
+    assert.equal(partial.blocks_plain_codex, false);
     assert.equal(
-      incomplete.items.find((item) => item.package_id === 'obf')?.status,
-      'source_missing',
+      partial.root_installs.find((item) => item.package_id === 'obf')?.status,
+      'failed',
     );
+    assert.equal(partial.summary.completed_root_count, 5);
+    assert.equal(partial.summary.failed_root_count, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('managed Full runtime reconciliation retains successful roots around a package-local failure', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-full-runtime-managed-fail-open-'));
+  const runtimeHome = path.join(root, 'runtime');
+  const physicalRoot = path.join(root, 'physical');
+  const catalog = readBundledFullRuntimePackageCatalog();
+  for (const entry of catalog.entries.values()) {
+    fs.mkdirSync(path.join(runtimeHome, entry.runtimeModuleRelativePath), { recursive: true });
+  }
+  const currentLocks = new Map([...catalog.entries.values()].map((entry) => [
+    entry.packageId,
+    writeMaterializedLock(physicalRoot, entry, catalog),
+  ]));
+  const staleLocks = [...currentLocks.values()].map((lock) => ({
+    ...structuredClone(lock),
+    package_version: '0.0.0',
+    manifest_sha256: '0'.repeat(64),
+    content_digest: `sha256:${'0'.repeat(64)}`,
+    carrier_authority: lock.carrier_authority
+      ? {
+          ...lock.carrier_authority,
+          catalog_ref: 'file:///stale/catalog.json',
+          catalog_sha256: `sha256:${'0'.repeat(64)}`,
+        }
+      : null,
+  }));
+  const updateCalls: Array<Record<string, any>> = [];
+  const verifiedRoots: string[] = [];
+  const successfulUpdate = async (input: Record<string, any>) => {
+    const dependencyPackageLocks = closure(catalog, input.packageId).map(
+      (packageId) => currentLocks.get(packageId)!,
+    );
+    await input.verifyAppliedPackageLocks(dependencyPackageLocks);
+    verifiedRoots.push(input.packageId);
+    return {
+      version: 'g2',
+      opl_agent_package_update: {
+        surface_kind: 'opl_agent_package_update',
+        status: 'updated',
+        dry_run: false,
+        package_lock: currentLocks.get(input.packageId)!,
+        physical_surface: currentLocks.get(input.packageId)!.physical_surface,
+        lifecycle_receipt: {
+          action: 'update',
+          action_status: 'completed',
+          trigger: 'managed_update_kernel_apply',
+          initiator: 'opl_managed_update_kernel',
+        },
+        dependency_transaction_id: `fixture-${input.packageId}`,
+        dependency_closure_digest: `fixture-${input.packageId}`,
+        dependency_package_locks: dependencyPackageLocks,
+      },
+    } as any;
+  };
+  const updatePackage = async (input: Record<string, any>) => {
+    updateCalls.push(input);
+    if (input.packageId === 'mas') {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Fixture package mutation rolled back locally.',
+        {
+          package_id: input.packageId,
+          dependency_package_ids: closure(catalog, input.packageId),
+          package_mutation_status: 'rolled_back',
+          local_prestate_restored: true,
+          failure_code: 'agent_package_bundled_full_runtime_package_rolled_back',
+        },
+      );
+    }
+    return await successfulUpdate(input);
+  };
+
+  try {
+    const updated = await reconcileBundledFullRuntimePackagesIfAvailable(
+      { OPL_FULL_RUNTIME_HOME: runtimeHome },
+      {
+        lifecycleAction: 'update',
+        operationId: 'opl://fixture/managed-bundled-update',
+        updatePackage: updatePackage as any,
+        readCatalog: () => catalog,
+        readInstalledLocks: () => lockIndex(staleLocks),
+      },
+    );
+    assert.ok(updated);
+    assert.equal(updated.status, 'partial');
+    assert.equal(updated.orchestration_policy, 'fail_open_per_root_package');
+    assert.equal(updated.package_mutation_policy, 'fail_closed_per_required_dependency_closure');
+    assert.equal(updated.lifecycle_action, 'update');
+    assert.equal(updateCalls.length, 6);
+    assert.deepEqual(
+      updateCalls.map((entry) => entry.packageId),
+      ['mag', 'mas', 'obf', 'oma', 'opl-flow', 'rca'],
+    );
+    assert.deepEqual(
+      updateCalls.map((entry) => entry.operationId),
+      Array(6).fill('opl://fixture/managed-bundled-update'),
+    );
+    assert.deepEqual(verifiedRoots, ['mag', 'obf', 'oma', 'opl-flow', 'rca']);
+    assert.deepEqual(
+      updated.root_installs.map((entry) => entry.target_id),
+      ['mag', 'mas', 'obf', 'oma', 'opl-flow', 'rca'],
+    );
+    assert.deepEqual(
+      updated.root_installs.map((entry) => entry.status),
+      ['completed', 'failed', 'completed', 'completed', 'completed', 'completed'],
+    );
+    assert.equal(updated.root_installs.every((entry) => entry.action === 'update'), true);
+    const failedMas = updated.root_installs.find((entry) => entry.target_id === 'mas')!;
+    assert.equal((failedMas.result as any).package_mutation_unit.status, 'rolled_back');
+    assert.equal((failedMas.result as any).package_mutation_unit.local_prestate_restored, true);
+    assert.equal(updated.summary.completed_root_count, 5);
+    assert.equal(updated.summary.failed_root_count, 1);
+
+    verifiedRoots.length = 0;
+    const unproven = await reconcileBundledFullRuntimePackagesIfAvailable(
+      { OPL_FULL_RUNTIME_HOME: runtimeHome },
+      {
+        lifecycleAction: 'update',
+        operationId: 'opl://fixture/managed-bundled-unproven-failure',
+        updatePackage: (async (input: Record<string, any>) => {
+          if (input.packageId === 'mas') throw new Error('Fixture failure without local restore evidence.');
+          return await successfulUpdate(input);
+        }) as any,
+        readCatalog: () => catalog,
+        readInstalledLocks: () => lockIndex(staleLocks),
+      },
+    );
+    assert.ok(unproven);
+    const unprovenMas = unproven.root_installs.find((entry) => entry.target_id === 'mas')!;
+    assert.equal((unprovenMas.result as any).package_mutation_unit.status, 'unknown');
+    assert.equal((unprovenMas.result as any).package_mutation_unit.local_prestate_restored, null);
+    assert.equal((unprovenMas.result as any).package_mutation_unit.mutation_started, null);
+    assert.deepEqual(verifiedRoots, ['mag', 'obf', 'oma', 'opl-flow', 'rca']);
+
+    updateCalls.length = 0;
+    const current = await reconcileBundledFullRuntimePackagesIfAvailable(
+      { OPL_FULL_RUNTIME_HOME: runtimeHome },
+      {
+        lifecycleAction: 'update',
+        operationId: 'opl://fixture/managed-bundled-current',
+        updatePackage: updatePackage as any,
+        readCatalog: () => catalog,
+        readInstalledLocks: () => lockIndex([...currentLocks.values()]),
+      },
+    );
+    assert.ok(current);
+    assert.equal(current.status, 'completed');
+    assert.equal(updateCalls.length, 0);
+    assert.equal(current.root_installs.every((entry) => entry.status === 'skipped'), true);
+    assert.equal(current.root_installs.every((entry) => entry.action === null), true);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

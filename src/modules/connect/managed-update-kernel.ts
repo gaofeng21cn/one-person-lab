@@ -1,5 +1,6 @@
 import { readOplUpdateChannel, readOplWorkspaceRoot } from '../../kernel/system-preferences.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import { resolveCodexVersion } from './system-installation/engine-helpers.ts';
 import { buildOplModules } from './system-installation/modules.ts';
 import {
@@ -53,6 +54,7 @@ import {
 } from './agent-package-registry-parts/release-catalog-cache.ts';
 import { resolveAgentPackageEffectiveSourcePolicy } from './agent-package-registry-parts/source-policy.ts';
 import { selectManagedCatalogPackageVersion } from './agent-package-registry-parts/capability-reconciliation.ts';
+import { readBundledFullRuntimePackageCatalog } from './agent-package-registry-parts/bundled-full-runtime-catalog.ts';
 import type { FirstPartyDirectoryCatalogSnapshot } from './agent-package-registry-parts/directory.ts';
 import { asRecord, booleanValue, stringValue } from './managed-update-kernel-parts/shared.ts';
 
@@ -122,14 +124,19 @@ function buildCapabilityPackagesComponent(
     git: entry.git ?? null,
   }));
   const installedPackages = readInstalledOplAgentPackageLocks();
+  const bundledCatalog = readBundledFullRuntimePackageCatalog();
   const dependencyIds = new Set(installedPackages.flatMap((lock) =>
     (lock.resolved_dependencies ?? []).map((dependency) => dependency.package_id)));
   const packageStates = installedPackages
     .filter((lock) => !dependencyIds.has(lock.package_id))
     .map((lock) => {
       const firstParty = resolveFirstPartyPackageCatalog(lock.package_id);
-      const sourcePolicy = resolveAgentPackageEffectiveSourcePolicy(lock.package_id, { profile: 'fast' });
+      const sourcePolicy = resolveAgentPackageEffectiveSourcePolicy(lock.package_id, {
+        profile: 'fast',
+        installedSourceKind: lock.source_kind,
+      });
       const developerSourceSelected = sourcePolicy.desired_source_kind === 'developer_checkout_override';
+      const bundledSourceSelected = sourcePolicy.desired_source_kind === 'bundled_full_runtime_modules';
       let developerTarget = null;
       let developerTargetInvalid = false;
       if (firstParty
@@ -151,6 +158,7 @@ function buildCapabilityPackagesComponent(
         && lock.source_kind !== sourcePolicy.desired_source_kind
         && (
           sourcePolicy.desired_source_kind === 'first_party_managed_cohort'
+          || sourcePolicy.desired_source_kind === 'bundled_full_runtime_modules'
           || sourcePolicy.developer_checkout_available
         ),
       );
@@ -173,6 +181,41 @@ function buildCapabilityPackagesComponent(
           ownerManifest: developerTarget.ownerManifest,
           source: developerTarget.source,
         });
+      } else if (bundledSourceSelected && firstParty) {
+        try {
+          const catalogEntry = bundledCatalog.entries.get(lock.package_id)!;
+          const payload = asRecord(parseJsonText(catalogEntry.payloadManifestJson));
+          const contentLock = asRecord(payload?.content_lock);
+          target = {
+            ...selectManagedCatalogPackageVersion(bundledCatalog.catalog, lock.package_id),
+            content_digest: stringValue(contentLock, 'digest'),
+          };
+          const identityCurrentness = agentPackageTargetCurrentness({
+            lock,
+            target,
+            desiredSourceKind: 'bundled_full_runtime_modules',
+          });
+          const carrierReasons = [
+            lock.owner_source_commit === catalogEntry.ownerSourceCommit
+              ? null
+              : 'owner_source_commit_changed',
+            lock.carrier_authority?.catalog_ref === bundledCatalog.catalogRef
+              ? null
+              : 'carrier_catalog_ref_changed',
+            lock.carrier_authority?.catalog_sha256 === bundledCatalog.catalogSha256
+              ? null
+              : 'carrier_catalog_digest_changed',
+          ].filter((reason): reason is string => reason !== null);
+          currentness = carrierReasons.length === 0
+            ? identityCurrentness
+            : {
+                ...identityCurrentness,
+                status: 'update_available',
+                reasons: [...identityCurrentness.reasons, ...carrierReasons],
+              };
+        } catch {
+          target = null;
+        }
       } else if (!developerSourceSelected && firstParty && releaseCatalog) {
         try {
           target = selectManagedCatalogPackageVersion(releaseCatalog.catalog, lock.package_id);
@@ -206,9 +249,11 @@ function buildCapabilityPackagesComponent(
                   : 'installed_identity_matches_release_set_target'
                 : developerTarget
                   ? 'developer_checkout_target_differs'
-                  : releaseCatalog
-                  ? 'release_set_target_differs'
-                  : 'release_set_refresh_required'),
+                  : bundledSourceSelected
+                    ? 'bundled_full_runtime_catalog_target_differs'
+                    : releaseCatalog
+                      ? 'release_set_target_differs'
+                      : 'release_set_refresh_required'),
         source_kind: lock.source_kind,
         source_policy: sourcePolicy,
         manifest_sha256: lock.manifest_sha256,
@@ -230,12 +275,20 @@ function buildCapabilityPackagesComponent(
             }
           : target
             ? {
-                source_kind: 'first_party_managed_cohort',
+                source_kind: bundledSourceSelected
+                  ? 'bundled_full_runtime_modules'
+                  : 'first_party_managed_cohort',
                 package_version: target.package_version,
                 manifest_sha256: target.manifest_sha256,
                 content_digest: target.content_digest,
                 artifact_digest: target.artifact_digest,
                 source_artifact_ref: target.source_artifact_ref,
+                catalog_ref: bundledSourceSelected
+                  ? bundledCatalog.catalogRef
+                  : releaseCatalog?.catalog_ref ?? null,
+                catalog_digest: bundledSourceSelected
+                  ? bundledCatalog.catalogSha256
+                  : releaseCatalog?.catalog_digest ?? null,
               }
             : null,
       };
@@ -269,6 +322,11 @@ function buildCapabilityPackagesComponent(
   ];
   const cleanManagedScopeSafe = cleanManagedTargetsCount > 0;
   const autoApplyEligible = cleanManagedScopeSafe && action !== 'none';
+  const managedBundledRootCount = packageStates.filter((entry) =>
+    entry.source_policy.desired_source_kind === 'bundled_full_runtime_modules').length;
+  const packageApplyCommand = managedBundledRootCount > 0
+    ? 'opl update apply --json'
+    : 'opl packages update --json';
   const reloadRecommended = autoApplyEligible;
   const reloadGuidance: ManagedUpdateReloadGuidance = reloadRecommended
     ? {
@@ -353,6 +411,12 @@ function buildCapabilityPackagesComponent(
         catalog_digest: releaseCatalog.catalog_digest,
         checked_at: releaseCatalog.checked_at,
       } : null,
+      bundled_full_runtime_catalog: managedBundledRootCount > 0 ? {
+        catalog_ref: bundledCatalog.catalogRef,
+        catalog_digest: bundledCatalog.catalogSha256,
+        root_package_count: packageStates.length,
+        managed_root_package_count: managedBundledRootCount,
+      } : null,
     },
     target: state === 'current'
       ? null
@@ -396,7 +460,7 @@ function buildCapabilityPackagesComponent(
       eligible: autoApplyEligible,
       app_background_safe: cleanManagedScopeSafe,
       scope: packageStates.length > 0 ? 'clean_digest_locked_installed_root_packages_only' : 'legacy_explicit_channel_roots_only',
-      command_ref: autoApplyEligible ? 'opl packages update --json' : null,
+      command_ref: autoApplyEligible ? packageApplyCommand : null,
       blocked_reasons: manualCount > 0
         ? ['manual_required_targets_are_detect_only_and_skipped']
         : [],
@@ -435,7 +499,7 @@ function buildCapabilityPackagesComponent(
           : [
             controlledCommand(
               'update_packages',
-              'opl packages update --json',
+              packageApplyCommand,
               'Resolve package dependency closures and refresh their managed Codex projections.',
             ),
           ],
@@ -461,6 +525,7 @@ function buildCapabilityPackagesComponent(
     notes: [
       'GHCR package channel is the ordinary non-development source for managed capability packages.',
       'Developer checkout content remains protected while its Package lock is compared with and reprojected from the Release Set target.',
+      'App-carried bundled Full runtime locks are compared with the canonical bundled catalog and updated only through the managed update kernel.',
       'Package-channel freshness does not claim domain readiness, artifact authority, quality verdict, or export readiness.',
     ],
   });

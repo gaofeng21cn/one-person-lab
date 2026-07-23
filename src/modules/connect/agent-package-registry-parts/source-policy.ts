@@ -5,7 +5,11 @@ import { resolveOplInstallUpdateSourcePolicy } from '../system-installation/modu
 export type AgentPackageEffectiveSourcePolicy = {
   package_id: string;
   module_id: string | null;
-  desired_source_kind: 'developer_checkout_override' | 'first_party_managed_cohort' | null;
+  desired_source_kind:
+    | 'developer_checkout_override'
+    | 'first_party_managed_cohort'
+    | 'bundled_full_runtime_modules'
+    | null;
   effective_install_update_source: string;
   configured_by: string;
   reason: string;
@@ -16,7 +20,10 @@ export type AgentPackageEffectiveSourcePolicy = {
 
 export function resolveAgentPackageEffectiveSourcePolicy(
   packageId: string,
-  input: { profile?: 'fast' | 'full' } = {},
+  input: {
+    profile?: 'fast' | 'full';
+    installedSourceKind?: string | null;
+  } = {},
 ): AgentPackageEffectiveSourcePolicy {
   const canonicalId = canonicalAgentPackageId(packageId) ?? packageId;
   const spec = getOplPackageSpecs().find((entry) => entry.package_id === canonicalId);
@@ -36,26 +43,39 @@ export function resolveAgentPackageEffectiveSourcePolicy(
 
   const module = resolveOplInstallUpdateSourcePolicy(spec, { profile: input.profile ?? 'full' });
   const sourcePolicy = module.source_policy;
+  const installedBundledSource = input.installedSourceKind === 'bundled_full_runtime_modules';
   const developerSelected = sourcePolicy.effective_install_update_source === 'git_checkout';
   const checkoutPath = developerSelected ? module.developer_checkout_path : null;
   const checkoutAvailable = developerSelected && module.developer_checkout_available;
   return {
     package_id: canonicalId,
     module_id: spec.module_id,
-    desired_source_kind: developerSelected
-      ? 'developer_checkout_override'
-      : sourcePolicy.effective_install_update_source === 'package_channel'
-        ? 'first_party_managed_cohort'
-        : null,
-    effective_install_update_source: sourcePolicy.effective_install_update_source,
-    configured_by: sourcePolicy.configured_by,
-    reason: developerSelected && !checkoutAvailable
-      ? `${sourcePolicy.configured_by}:developer_checkout_unavailable`
-      : sourcePolicy.fallback_reason
-        ? `${sourcePolicy.configured_by}:${sourcePolicy.fallback_reason}`
-        : sourcePolicy.configured_by,
+    desired_source_kind: installedBundledSource
+      ? 'bundled_full_runtime_modules'
+      : developerSelected
+        ? 'developer_checkout_override'
+        : sourcePolicy.effective_install_update_source === 'package_channel'
+          ? 'first_party_managed_cohort'
+          : sourcePolicy.effective_install_update_source === 'full_runtime'
+            ? 'bundled_full_runtime_modules'
+            : null,
+    effective_install_update_source: installedBundledSource
+      ? 'managed_bundled_catalog'
+      : sourcePolicy.effective_install_update_source,
+    configured_by: installedBundledSource
+      ? 'installed_bundled_catalog_authority'
+      : sourcePolicy.configured_by,
+    reason: installedBundledSource
+      ? 'installed_bundled_catalog_authority'
+      : developerSelected && !checkoutAvailable
+        ? `${sourcePolicy.configured_by}:developer_checkout_unavailable`
+        : sourcePolicy.fallback_reason
+          ? `${sourcePolicy.configured_by}:${sourcePolicy.fallback_reason}`
+          : sourcePolicy.configured_by,
     developer_checkout_path: checkoutPath,
     developer_checkout_available: checkoutAvailable,
-    package_channel_auto_update: sourcePolicy.package_channel_auto_update,
+    package_channel_auto_update: installedBundledSource
+      ? false
+      : sourcePolicy.package_channel_auto_update,
   };
 }

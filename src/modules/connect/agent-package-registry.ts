@@ -3,9 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { deriveAgentPackageLaunchState } from '../../kernel/agent-package-launch-state.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import { stringValue } from '../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
 import { canonicalAgentPackageId, publicAgentPackageSelector } from './agent-package-identity.ts';
 import {
   assertFirstPartyPackageCatalogVersion,
@@ -80,6 +82,7 @@ import {
 import {
   assertBundledFullRuntimePackageRoots,
   readBundledFullRuntimePackageCatalog,
+  type BundledFullRuntimeCatalogEntry,
 } from './agent-package-registry-parts/bundled-full-runtime-catalog.ts';
 import {
   agentPackageCarrierReceiptAuthorityStatus,
@@ -205,6 +208,52 @@ type TrustedBundledFullRuntimeInstall = {
   agentRoot: string;
   packageRoots: Record<string, string>;
 };
+
+type BundledFullRuntimeAgentPackageInput = {
+  packageId: string;
+  agentRoot: string;
+  packageRoots?: Record<string, string>;
+  dryRun?: boolean;
+};
+
+type ManagedBundledFullRuntimeAgentPackageInput = BundledFullRuntimeAgentPackageInput & {
+  operationId: string;
+  verifyAppliedPackageLocks: (
+    locks: AgentPackageLock[],
+  ) => void | Promise<void>;
+};
+
+type BundledFullRuntimePathSnapshot = {
+  targetPath: string;
+  snapshotPath: string;
+  existed: boolean;
+  missingAncestorPaths: string[];
+};
+
+type BundledFullRuntimePackageSnapshot = {
+  root: string;
+  paths: BundledFullRuntimePathSnapshot[];
+};
+
+function bundledFullRuntimePayloadContentDigest(entry: BundledFullRuntimeCatalogEntry) {
+  const payload = parseJsonText(entry.payloadManifestJson);
+  const contentLock = isRecord(payload) && isRecord(payload.content_lock)
+    ? payload.content_lock
+    : null;
+  const digest = stringValue(contentLock?.digest);
+  if (!digest || !/^sha256:[0-9a-f]{64}$/.test(digest)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Bundled Full runtime package payload has no canonical content lock digest.',
+      {
+        package_id: entry.packageId,
+        payload_manifest_url: entry.payloadManifestUrl,
+        failure_code: 'agent_package_bundled_payload_content_lock_missing',
+      },
+    );
+  }
+  return digest;
+}
 
 function preparedOwnerSourceCommit(prepared: PreparedPackage) {
   if (prepared.sourceKind === 'developer_checkout_override') {
@@ -370,7 +419,7 @@ async function applyManifestPackageLock(
     ? readBundledFullRuntimePackageCatalog()
     : null;
   if (input.sourceKind === 'bundled_full_runtime_modules' && !trustedBundledInstall) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Bundled Full runtime package sources are restricted to the internal configure-codex reconciliation.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'Bundled Full runtime package sources are restricted to the internal managed Package reconciliation.', {
       package_id: packageId,
       source_kind: input.sourceKind,
       failure_code: 'agent_package_bundled_full_runtime_source_internal_only',
@@ -380,7 +429,11 @@ async function applyManifestPackageLock(
     const catalogEntry = bundledFullRuntimeCatalog?.entries.get(trustedBundledInstall.packageId) ?? null;
     const expectedManifestUrl = catalogEntry?.manifestUrl ?? null;
     const selectedPackageRoot = stringValue(trustedBundledInstall.packageRoots[trustedBundledInstall.packageId]);
-    if (action !== 'install'
+    const trustedManagedUpdate = action === 'update'
+      && input.provenance?.trigger === 'managed_update_kernel_apply'
+      && input.provenance.initiator === 'opl_managed_update_kernel'
+      && input.provenance.source_policy === 'bundled_full_runtime_modules';
+    if ((action !== 'install' && !trustedManagedUpdate)
       || packageId !== trustedBundledInstall.packageId
       || input.sourceKind !== 'bundled_full_runtime_modules'
       || stringValue(input.manifestUrl) !== expectedManifestUrl
@@ -393,6 +446,8 @@ async function applyManifestPackageLock(
         manifest_url: stringValue(input.manifestUrl),
         expected_manifest_url: expectedManifestUrl,
         selected_package_root: selectedPackageRoot,
+        lifecycle_action: action,
+        managed_update_provenance_valid: trustedManagedUpdate,
         failure_code: 'agent_package_bundled_full_runtime_selection_invalid',
       });
     }
@@ -433,7 +488,7 @@ async function applyManifestPackageLock(
         package_id: existingLock.package_id,
         action,
         failure_code: 'agent_package_bundled_full_runtime_internal_reconcile_required',
-        recovery_action: 'rerun the OPL App configure-codex workflow with the complete Full runtime package roots',
+        recovery_action: 'run opl update plan --json, then opl update apply --json with the complete catalog-owned Full runtime package roots and verify opl packages status --json',
       },
     );
   }
@@ -679,6 +734,10 @@ async function applyManifestPackageLock(
           catalogEntry,
           packageRoot,
         });
+        manifest = {
+          ...manifest,
+          content_digest: bundledFullRuntimePayloadContentDigest(catalogEntry),
+        };
       } else {
         manifest = await resolveManifestPhysicalSource(
           manifest,
@@ -867,10 +926,29 @@ async function applyManifestPackageLock(
         action === 'install' && !options.sourceReconcile ? 'install' : 'update',
       );
     }
-    materializePhysicalCodexSurface(prepared.manifest, true, {
+    const physicalPreview = materializePhysicalCodexSurface(prepared.manifest, true, {
       keepMigrationIds: input.keepMigrationIds,
       developerCheckoutPayloadFiles: prepared.developerCheckoutPayloadFiles ?? undefined,
+      companionNetworkAccess: trustedBundledInstall ? 'forbidden' : undefined,
     });
+    if (trustedBundledInstall && action === 'update') {
+      const serviceConflicts = physicalPreview.workflow_policy_migration.detected_conflicts
+        .filter((entry) => entry.surface_kind === 'service');
+      const profileRequiresOwnerMerge = physicalPreview.profile_migration.status === 'semantic_merge_required';
+      if (profileRequiresOwnerMerge || serviceConflicts.length > 0) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Managed bundled package update requires an owner-visible profile or service migration.',
+          {
+            package_id: prepared.manifest.package_id,
+            profile_migration_status: physicalPreview.profile_migration.status,
+            service_conflicts: serviceConflicts,
+            mutation_started: false,
+            failure_code: 'agent_package_bundled_managed_surface_manual_required',
+          },
+        );
+      }
+    }
   }
 
   const frameworkLink = input.agentRoot && !trustedBundledInstall
@@ -885,6 +963,7 @@ async function applyManifestPackageLock(
         materializePhysicalCodexSurface(prepared.manifest, input.dryRun === true, {
           keepMigrationIds: input.keepMigrationIds,
           developerCheckoutPayloadFiles: prepared.developerCheckoutPayloadFiles ?? undefined,
+          companionNetworkAccess: trustedBundledInstall ? 'forbidden' : undefined,
         }),
       );
     }
@@ -1495,12 +1574,21 @@ function agentPackageInstallReadback(
   };
 }
 
-async function runOplBundledFullRuntimeAgentPackageInstallUnlocked(input: {
-  packageId: string;
-  agentRoot: string;
-  packageRoots?: Record<string, string>;
-  dryRun?: boolean;
-}) {
+async function runOplBundledFullRuntimeAgentPackageLifecycleUnlocked(
+  input: BundledFullRuntimeAgentPackageInput,
+  action: 'install',
+  provenance?: AgentPackageInstallInput['provenance'],
+): Promise<ReturnType<typeof agentPackageInstallReadback>>;
+async function runOplBundledFullRuntimeAgentPackageLifecycleUnlocked(
+  input: BundledFullRuntimeAgentPackageInput,
+  action: 'update',
+  provenance?: AgentPackageInstallInput['provenance'],
+): Promise<ReturnType<typeof agentPackageUpdateReadback>>;
+async function runOplBundledFullRuntimeAgentPackageLifecycleUnlocked(
+  input: BundledFullRuntimeAgentPackageInput,
+  action: 'install' | 'update',
+  provenance?: AgentPackageInstallInput['provenance'],
+) {
   const packageId = canonicalAgentPackageId(input.packageId);
   const firstParty = resolveFirstPartyPackageCatalog(packageId);
   const agentRoot = stringValue(input.agentRoot);
@@ -1526,29 +1614,481 @@ async function runOplBundledFullRuntimeAgentPackageInstallUnlocked(input: {
       return canonicalId && root ? [[canonicalId, path.resolve(root)]] : [];
     }));
   packageRoots[packageId] = path.resolve(agentRoot);
-  const installInput: AgentPackageInstallInput = {
+  const lifecycleInput: AgentPackageInstallInput = {
     packageId,
     manifestUrl: catalogEntry.manifestUrl,
     trustTier: firstParty.trustTier,
     sourceKind: 'bundled_full_runtime_modules',
     agentRoot,
     dryRun: input.dryRun === true,
+    provenance,
   };
-  const result = await applyManifestPackageLock(installInput, 'install', {
+  const result = await applyManifestPackageLock(lifecycleInput, action, {
     trustedBundledFullRuntimeInstall: { packageId, agentRoot, packageRoots },
   });
-  return agentPackageInstallReadback(installInput, result);
+  return action === 'update'
+    ? agentPackageUpdateReadback(lifecycleInput, result)
+    : agentPackageInstallReadback(lifecycleInput, result);
 }
 
-export async function runOplBundledFullRuntimeAgentPackageInstall(input: {
-  packageId: string;
-  agentRoot: string;
-  packageRoots?: Record<string, string>;
-  dryRun?: boolean;
+function records(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+}
+
+function managedBundledDependencySnapshotPaths(surface: AgentPackagePhysicalSurface) {
+  const dependencySync = surface.workflow_policy_migration.dependency_sync;
+  return isRecord(dependencySync)
+    ? records(dependencySync.items).flatMap((entry) => [
+        stringValue(entry.target_path),
+        stringValue(entry.agents_target_path),
+      ].flatMap((candidate) => candidate ? [candidate] : []))
+    : [];
+}
+
+function managedBundledLegacyPluginPaths(lock: AgentPackageLock) {
+  const surface = lock.physical_surface;
+  const agent = resolveStandardAgent(lock.package_id);
+  if (!surface?.plugin_id || !agent) return [];
+  const marketplaceIds = [...new Set([
+    `${agent.agent_id}-local`,
+    `opl-agent-${agent.agent_id}-local`,
+  ])].filter((marketplaceId) => marketplaceId !== surface.marketplace_id);
+  const stateDir = resolveOplStatePaths().state_dir;
+  return marketplaceIds.flatMap((marketplaceId) => [
+    path.join(stateDir, 'codex-plugin-marketplaces', marketplaceId),
+    path.join(surface.codex_home, 'plugins', 'cache', marketplaceId),
+  ]);
+}
+
+function managedBundledLockSnapshotPaths(lock: AgentPackageLock) {
+  const surface = lock.physical_surface;
+  const scopePaths = (lock.scope_materializations ?? []).flatMap((entry) => {
+    const skillIds = [...new Set([
+      ...entry.managed_skill_ids,
+      ...entry.retired_skill_ids,
+    ])];
+    return [
+      ...skillIds.map((skillId) => path.join(entry.target_root, '.codex', 'skills', skillId)),
+      path.join(
+        entry.target_root,
+        '.codex',
+        '.opl-package-transactions',
+        entry.transaction_id,
+      ),
+    ];
+  });
+  if (!surface) return scopePaths;
+  const profile = surface.profile_migration;
+  const managedPolicy = surface.workflow_policy_migration;
+  return [
+    surface.codex_config_path,
+    surface.codex_plugin_cache_path,
+    surface.marketplace_root,
+    surface.plugin_payload_cache_path,
+    ...(surface.profile_config ? [path.join(surface.codex_home, 'state', lock.package_id)] : []),
+    profile.target_path,
+    profile.receipt_path,
+    profile.merge_packet_path,
+    ...profile.authoring_source_paths,
+    ...profile.mutation_actions.flatMap((entry) => [entry.target_path, entry.backup_ref]),
+    ...(surface.managed_policy_config
+      ? [path.join(resolveOplStatePaths().state_dir, 'agent-package-transactions', lock.package_id)]
+      : []),
+    managedPolicy.backup_root,
+    ...managedPolicy.detected_conflicts.map((entry) => entry.physical_ref),
+    ...managedPolicy.actions.flatMap((entry) => [entry.source_ref, entry.backup_ref]),
+    ...managedBundledDependencySnapshotPaths(surface),
+    ...managedBundledLegacyPluginPaths(lock),
+    ...scopePaths,
+  ].flatMap((candidate) => candidate ? [candidate] : []);
+}
+
+function bundledFullRuntimeAffectedLocks(input: {
+  index: AgentPackageLockIndex;
+  rootPackageIds: string[];
+  prospectiveLocks: AgentPackageLock[];
 }) {
+  const rootIds = new Set(input.rootPackageIds);
+  const prospectiveIds = new Set(input.prospectiveLocks.map((lock) => lock.package_id));
+  const previousTransactionIds = new Set(input.index.packages
+    .filter((lock) => rootIds.has(lock.package_id))
+    .map((lock) => lock.dependency_transaction_id));
+  const previous = [
+    ...input.index.packages.filter((lock) =>
+      prospectiveIds.has(lock.package_id)
+      || previousTransactionIds.has(lock.dependency_transaction_id)),
+    ...(input.index.last_known_good_transactions ?? [])
+      .filter((entry) => rootIds.has(entry.root_package_id))
+      .flatMap((entry) => entry.package_locks),
+  ];
+  const byLockRef = new Map([...previous, ...input.prospectiveLocks]
+    .map((lock) => [lock.lock_ref, lock]));
+  return [...byLockRef.values()];
+}
+
+function canonicalBundledFullRuntimeSnapshotPath(
+  candidate: string,
+  allowManagedEntrypointSymlink: boolean,
+) {
+  const resolved = path.resolve(candidate);
+  const targetStat = lstatOrNull(resolved);
+  if (targetStat?.isSymbolicLink()) {
+    if (!allowManagedEntrypointSymlink) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Managed bundled package transaction refuses a symbolic-link mutation target.',
+        {
+          target_path: resolved,
+          failure_code: 'agent_package_bundled_transaction_target_symlink_unsafe',
+        },
+      );
+    }
+    return path.join(fs.realpathSync.native(path.dirname(resolved)), path.basename(resolved));
+  }
+  if (targetStat) return fs.realpathSync.native(resolved);
+
+  const missingNames: string[] = [];
+  let current = resolved;
+  while (true) {
+    const parent = path.dirname(current);
+    missingNames.push(path.basename(current));
+    const parentStat = lstatOrNull(parent);
+    if (parentStat) {
+      const followed = fs.statSync(parent);
+      if (!followed.isDirectory()) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Managed bundled package transaction refuses a mutation target below a non-directory ancestor.',
+          {
+            target_path: resolved,
+            unsafe_ancestor_path: parent,
+            failure_code: 'agent_package_bundled_transaction_ancestor_unsafe',
+          },
+        );
+      }
+      return path.join(fs.realpathSync.native(parent), ...missingNames.reverse());
+    }
+    if (parent === current) return resolved;
+    current = parent;
+  }
+}
+
+function minimalBundledFullRuntimeSnapshotPaths(
+  candidates: string[],
+  managedEntrypointPaths: Set<string>,
+) {
+  const resolved = [...new Set(candidates.map((candidate) =>
+    canonicalBundledFullRuntimeSnapshotPath(
+      candidate,
+      managedEntrypointPaths.has(path.resolve(candidate)),
+    )))]
+    .sort((left, right) => left.length - right.length || left.localeCompare(right));
+  return resolved.filter((candidate, index) => !resolved.slice(0, index).some((parent) => {
+    const relative = path.relative(parent, candidate);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  }));
+}
+
+function lstatOrNull(targetPath: string) {
+  try {
+    return fs.lstatSync(targetPath);
+  } catch (error) {
+    if (isRecord(error) && error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+function bundledFullRuntimeMissingAncestors(targetPath: string) {
+  const missing: string[] = [];
+  let current = path.dirname(targetPath);
+  while (true) {
+    const stat = lstatOrNull(current);
+    if (stat) {
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Managed bundled package transaction refuses a writable path below a symbolic-link or non-directory ancestor.',
+          {
+            target_path: targetPath,
+            unsafe_ancestor_path: current,
+            failure_code: 'agent_package_bundled_transaction_ancestor_unsafe',
+          },
+        );
+      }
+    } else {
+      missing.push(current);
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return missing;
+}
+
+function copyBundledFullRuntimeSnapshotPath(sourcePath: string, targetPath: string) {
+  const stat = fs.lstatSync(sourcePath);
+  if (stat.isSymbolicLink()) {
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.symlinkSync(fs.readlinkSync(sourcePath), targetPath, 'junction');
+    return;
+  }
+  fs.cpSync(sourcePath, targetPath, {
+    recursive: stat.isDirectory(),
+    preserveTimestamps: true,
+    dereference: false,
+    verbatimSymlinks: true,
+  });
+}
+
+function bundledFullRuntimeSnapshotPathMatches(snapshotPath: string, targetPath: string): boolean {
+  const snapshotStat = lstatOrNull(snapshotPath);
+  const targetStat = lstatOrNull(targetPath);
+  if (!snapshotStat || !targetStat) return snapshotStat === targetStat;
+  if ((snapshotStat.mode & 0o7777) !== (targetStat.mode & 0o7777)) return false;
+  if (snapshotStat.isSymbolicLink() || targetStat.isSymbolicLink()) {
+    return snapshotStat.isSymbolicLink()
+      && targetStat.isSymbolicLink()
+      && fs.readlinkSync(snapshotPath) === fs.readlinkSync(targetPath);
+  }
+  if (snapshotStat.isDirectory() || targetStat.isDirectory()) {
+    if (!snapshotStat.isDirectory() || !targetStat.isDirectory()) return false;
+    const snapshotEntries = fs.readdirSync(snapshotPath).sort();
+    const targetEntries = fs.readdirSync(targetPath).sort();
+    return snapshotEntries.length === targetEntries.length
+      && snapshotEntries.every((entry, indexValue) => (
+        entry === targetEntries[indexValue]
+        && bundledFullRuntimeSnapshotPathMatches(
+          path.join(snapshotPath, entry),
+          path.join(targetPath, entry),
+        )
+      ));
+  }
+  if (!snapshotStat.isFile() || !targetStat.isFile()) return false;
+  return snapshotStat.size === targetStat.size
+    && fs.readFileSync(snapshotPath).equals(fs.readFileSync(targetPath));
+}
+
+function captureBundledFullRuntimePackageSnapshot(input: {
+  index: AgentPackageLockIndex;
+  rootPackageId: string;
+  prospectiveLocks: AgentPackageLock[];
+}) {
+  const statePaths = resolveOplStatePaths();
+  const affectedLocks = bundledFullRuntimeAffectedLocks({
+    index: input.index,
+    rootPackageIds: [input.rootPackageId],
+    prospectiveLocks: input.prospectiveLocks,
+  });
+  const managedEntrypointPaths = new Set(affectedLocks.flatMap((lock) => {
+    const surface = lock.physical_surface;
+    return surface ? managedBundledDependencySnapshotPaths(surface).map((candidate) => path.resolve(candidate)) : [];
+  }));
+  const targetPaths = minimalBundledFullRuntimeSnapshotPaths([
+    statePaths.agent_package_lock_file,
+    statePaths.agent_package_lifecycle_ledger_file,
+    ...affectedLocks.flatMap(managedBundledLockSnapshotPaths),
+  ], managedEntrypointPaths);
+  const snapshotRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-bundled-package-update-'));
+  try {
+    const paths = targetPaths.map((targetPath, indexValue): BundledFullRuntimePathSnapshot => {
+      const snapshotPath = path.join(snapshotRoot, String(indexValue));
+      const stat = lstatOrNull(targetPath);
+      const existed = stat !== null;
+      const missingAncestorPaths = bundledFullRuntimeMissingAncestors(targetPath);
+      if (stat) copyBundledFullRuntimeSnapshotPath(targetPath, snapshotPath);
+      return { targetPath, snapshotPath, existed, missingAncestorPaths };
+    });
+    return { root: snapshotRoot, paths } satisfies BundledFullRuntimePackageSnapshot;
+  } catch (error) {
+    fs.rmSync(snapshotRoot, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+function makeBundledFullRuntimeSnapshotPathWritable(targetPath: string) {
+  if (!fs.existsSync(targetPath)) return;
+  const stat = fs.lstatSync(targetPath);
+  if (stat.isSymbolicLink()) return;
+  if (!stat.isDirectory()) {
+    fs.chmodSync(targetPath, 0o600);
+    return;
+  }
+  fs.chmodSync(targetPath, 0o700);
+  for (const entry of fs.readdirSync(targetPath)) {
+    makeBundledFullRuntimeSnapshotPathWritable(path.join(targetPath, entry));
+  }
+}
+
+function restoreBundledFullRuntimePackageSnapshot(snapshot: BundledFullRuntimePackageSnapshot) {
+  for (const entry of snapshot.paths) {
+    makeBundledFullRuntimeSnapshotPathWritable(entry.targetPath);
+    fs.rmSync(entry.targetPath, { recursive: true, force: true });
+    if (!entry.existed) continue;
+    fs.mkdirSync(path.dirname(entry.targetPath), { recursive: true });
+    copyBundledFullRuntimeSnapshotPath(entry.snapshotPath, entry.targetPath);
+  }
+  const missingAncestors = [...new Set(snapshot.paths.flatMap((entry) => entry.missingAncestorPaths))]
+    .sort((left, right) => right.length - left.length || right.localeCompare(left));
+  for (const ancestor of missingAncestors) {
+    const stat = lstatOrNull(ancestor);
+    if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) continue;
+    if (fs.readdirSync(ancestor).length === 0) fs.rmdirSync(ancestor);
+  }
+}
+
+function cleanupBundledFullRuntimePackageSnapshot(snapshot: BundledFullRuntimePackageSnapshot) {
+  try {
+    makeBundledFullRuntimeSnapshotPathWritable(snapshot.root);
+    fs.rmSync(snapshot.root, { recursive: true, force: true });
+  } catch {
+    // Temporary snapshot cleanup cannot change the committed transaction outcome.
+  }
+}
+
+function rollbackBundledFullRuntimePackage(
+  snapshot: BundledFullRuntimePackageSnapshot,
+) {
+  try {
+    restoreBundledFullRuntimePackageSnapshot(snapshot);
+    const mismatches = snapshot.paths.filter((entry) => (
+      entry.existed
+        ? !bundledFullRuntimeSnapshotPathMatches(entry.snapshotPath, entry.targetPath)
+        : lstatOrNull(entry.targetPath) !== null
+    )).map((entry) => entry.targetPath);
+    if (mismatches.length > 0) {
+      throw new Error(`Restored snapshot mismatch: ${mismatches.join(', ')}`);
+    }
+  } catch (error) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Managed bundled Full runtime package mutation unit could not restore its local prestate.',
+      {
+        package_mutation_status: 'rollback_failed',
+        local_prestate_restored: false,
+        mutation_started: true,
+        rollback_error: error instanceof Error ? error.message : String(error),
+        failure_code: 'agent_package_bundled_full_runtime_package_rollback_failed',
+      },
+    );
+  }
+}
+
+function managedBundledFullRuntimeProvenance(operationId: string) {
+  return {
+    trigger: 'managed_update_kernel_apply',
+    initiator: 'opl_managed_update_kernel',
+    source_policy: 'bundled_full_runtime_modules',
+    source_policy_reason: 'full_runtime_override:managed_update_kernel_apply',
+    operation_id: operationId,
+    correlation_id: operationId,
+  } satisfies AgentPackageInstallInput['provenance'];
+}
+
+export async function runOplBundledFullRuntimeAgentPackageInstall(
+  input: BundledFullRuntimeAgentPackageInput,
+) {
   return withAgentPackageLifecycleTransaction(
     input.dryRun === true,
-    () => runOplBundledFullRuntimeAgentPackageInstallUnlocked(input),
+    () => runOplBundledFullRuntimeAgentPackageLifecycleUnlocked(input, 'install'),
+  );
+}
+
+export async function runOplBundledFullRuntimeAgentPackageUpdate(
+  input: ManagedBundledFullRuntimeAgentPackageInput,
+) {
+  const packageId = canonicalAgentPackageId(input.packageId) ?? input.packageId;
+  const operationId = stringValue(input.operationId) ?? '';
+  if (!packageId || !operationId || typeof input.verifyAppliedPackageLocks !== 'function') {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Managed bundled Full runtime update requires package, operation, and final-verifier identities.',
+      {
+        package_id: packageId,
+        operation_id: operationId,
+        final_verifier_present: typeof input.verifyAppliedPackageLocks === 'function',
+        mutation_started: false,
+        failure_code: 'agent_package_bundled_full_runtime_managed_input_incomplete',
+      },
+    );
+  }
+  const candidate: BundledFullRuntimeAgentPackageInput = {
+    packageId,
+    agentRoot: input.agentRoot,
+    packageRoots: input.packageRoots,
+    dryRun: input.dryRun,
+  };
+  return withAgentPackageLifecycleTransaction(
+    false,
+    async () => {
+      const originalIndex = readLockIndex();
+      const provenance = managedBundledFullRuntimeProvenance(operationId);
+      const preview = await runOplBundledFullRuntimeAgentPackageLifecycleUnlocked(
+        { ...candidate, dryRun: true },
+        'update',
+        provenance,
+      );
+      const prospectiveLocks = preview.opl_agent_package_update.dependency_package_locks;
+      const snapshot = captureBundledFullRuntimePackageSnapshot({
+        index: originalIndex,
+        rootPackageId: packageId,
+        prospectiveLocks,
+      });
+      try {
+        const result = await runOplBundledFullRuntimeAgentPackageLifecycleUnlocked(
+          candidate,
+          'update',
+          provenance,
+        );
+        await input.verifyAppliedPackageLocks(
+          result.opl_agent_package_update.dependency_package_locks,
+        );
+        return result;
+      } catch (error) {
+        try {
+          rollbackBundledFullRuntimePackage(snapshot);
+        } catch (rollbackError) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Managed bundled Full runtime package mutation failed and its local prestate could not be proven restored.',
+            {
+              package_id: packageId,
+              dependency_package_ids: prospectiveLocks.map((lock) => lock.package_id),
+              package_mutation_status: 'rollback_failed',
+              local_prestate_restored: false,
+              mutation_started: true,
+              original_error: error instanceof FrameworkContractError
+                ? error.toJSON()
+                : { message: error instanceof Error ? error.message : String(error) },
+              rollback_error: rollbackError instanceof FrameworkContractError
+                ? rollbackError.toJSON()
+                : { message: rollbackError instanceof Error
+                    ? rollbackError.message
+                    : String(rollbackError) },
+              failure_code: 'agent_package_bundled_full_runtime_package_rollback_failed',
+            },
+          );
+        }
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Managed bundled Full runtime package mutation failed and restored only its package-local prestate.',
+          {
+            package_id: packageId,
+            dependency_package_ids: prospectiveLocks.map((lock) => lock.package_id),
+            package_mutation_status: 'rolled_back',
+            local_prestate_restored: true,
+            mutation_started: true,
+            original_error: error instanceof FrameworkContractError
+              ? error.toJSON()
+              : { message: error instanceof Error ? error.message : String(error) },
+            failure_code: 'agent_package_bundled_full_runtime_package_rolled_back',
+          },
+        );
+      } finally {
+        cleanupBundledFullRuntimePackageSnapshot(snapshot);
+      }
+    },
   );
 }
 

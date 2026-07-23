@@ -114,6 +114,40 @@ function developerPackageLock(
   };
 }
 
+function bundledPackageLockFixture(packageId: 'mag') {
+  const catalog = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/bundled-full-runtime-package-catalog.json'),
+    'utf8',
+  )) as Record<string, any>;
+  const entry = catalog.packages[packageId];
+  const manifest = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework', entry.manifest_ref),
+    'utf8',
+  )) as Record<string, any>;
+  return {
+    surface_kind: 'opl_agent_package_lock',
+    package_id: packageId,
+    agent_id: packageId,
+    package_role: entry.package_role,
+    display_name: manifest.display_name,
+    publisher: manifest.publisher,
+    package_version: '0.0.0',
+    source_kind: 'bundled_full_runtime_modules',
+    manifest_url: `file://${path.join(repoRoot, 'contracts/opl-framework', entry.manifest_ref)}`,
+    manifest_sha256: '0'.repeat(64),
+    content_digest: `sha256:${'0'.repeat(64)}`,
+    artifact_digest: null,
+    owner_source_commit: '0'.repeat(40),
+    lock_ref: `opl://agent-package-lock/${packageId}/0.0.0/rootless-fixture`,
+    physical_surface: { status: 'materialized', failure_reason: null },
+    resolved_dependencies: [],
+    carrier_authority: {
+      catalog_ref: 'file:///stale/bundled-full-runtime-package-catalog.json',
+      catalog_sha256: `sha256:${'0'.repeat(64)}`,
+    },
+  };
+}
+
 test('managed update contract exposes only OPL Base, OPL App, and OPL Packages lifecycle owners', () => {
   const contract = readManagedUpdateKernelContract();
 
@@ -154,6 +188,65 @@ test('managed update contract exposes only OPL Base, OPL App, and OPL Packages l
     'artifact_digest',
   ]);
   assert.equal(packages.auto_apply.current_noop_receipt_policy, 'do_not_write_component_receipt');
+  assert.equal(packages.auto_apply.bundled_full_runtime_command_ref, 'opl update apply --json');
+  const bundled = packages.bundled_full_runtime_reconciliation;
+  assert.equal(
+    bundled.top_level_selection_policy,
+    'component_neutral_selected_managed_update_components',
+  );
+  assert.equal(bundled.package_adapter_component_id, 'opl_packages');
+  assert.equal(bundled.bundled_source_plane_scope, 'opl_packages_adapter_only');
+  assert.deepEqual(bundled.top_level_components_forced_or_excluded, []);
+  assert.deepEqual(bundled.root_package_ids_exact, ['mag', 'mas', 'obf', 'oma', 'opl-flow', 'rca']);
+  assert.deepEqual(bundled.dependency_closure_package_ids_exact, [
+    'mag', 'mas', 'mas-scholar-skills', 'obf', 'oma', 'opl-flow', 'rca',
+  ]);
+  assert.equal(bundled.source_root_authority.required_for_public_apply, true);
+  assert.equal(
+    bundled.source_root_authority.missing_or_incomplete_policy,
+    'fail_closed_without_generic_package_fallback',
+  );
+  assert.equal(bundled.orchestration.failure_policy, 'fail_open_per_root_package');
+  assert.equal(bundled.orchestration.successful_root_policy, 'commit_and_retain');
+  assert.equal(bundled.orchestration.continuation_policy, 'continue_independent_remaining_roots');
+  assert.deepEqual(bundled.orchestration.aggregate_status_values, ['completed', 'partial', 'failed']);
+  assert.deepEqual(bundled.orchestration.target_status_values, [
+    'completed', 'failed', 'manual_required', 'skipped',
+  ]);
+  assert.equal(
+    bundled.package_mutation_unit.failure_policy,
+    'fail_closed_with_local_prestate_restored',
+  );
+  assert.equal(
+    bundled.package_mutation_unit.commit_point,
+    'after_catalog_and_materialized_lock_final_verification',
+  );
+  assert.equal(
+    bundled.package_mutation_unit.rollback_success_evidence,
+    'restored_snapshot_paths_mechanically_match_local_prestate',
+  );
+  assert.equal(
+    bundled.package_mutation_unit.unproven_restore_reporting,
+    'local_prestate_restored_is_false_or_null_never_true',
+  );
+  assert.equal(
+    bundled.package_mutation_unit.package_lifecycle_exclusion.release_policy,
+    'release_before_the_next_independent_root',
+  );
+  assert.equal(bundled.post_apply_currentness.writes_performed, false);
+  assert.equal(bundled.post_apply_currentness.command_ref, 'opl packages status --json');
+  assert.equal(bundled.post_apply_currentness.ordinary_package_update_guidance_allowed, false);
+  assert.equal(
+    bundled.execution_receipt_authority.target_receipt_ref_field,
+    'target.result.lifecycle_receipt.receipt_ref',
+  );
+  assert.equal(
+    bundled.execution_receipt_authority.component_aggregate_binding_field,
+    'component_receipt.adapter_result_ref',
+  );
+  assert.equal(bundled.execution_receipt_authority.duplicate_target_receipt_ref_list, false);
+  assert.equal(bundled.recovery.configure_codex_allowed, false);
+  assert.equal(bundled.recovery.command_ref.includes('configure-codex'), false);
   assert.equal(
     packages.partial_outcome_policy,
     'apply_all_eligible_targets_run_post_apply_when_any_target_changed_and_report_current_changed_manual_failed_separately',
@@ -361,6 +454,124 @@ test('generic apply selects only eligible background-safe components while expli
 
   assert.deepEqual(selectedManagedUpdateComponentIds({ operation: 'apply' }, components), ['opl_packages']);
   assert.deepEqual(selectedManagedUpdateComponentIds({ operation: 'apply', componentId: 'opl_base' }, components), ['opl_base']);
+});
+
+test('canonical bundled projection freezes root6 closure7 and OPL Flow policy v2', () => {
+  const catalog = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/bundled-full-runtime-package-catalog.json'),
+    'utf8',
+  )) as Record<string, any>;
+  const flow = catalog.packages['opl-flow'];
+  const manifest = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework', flow.manifest_ref),
+    'utf8',
+  )) as Record<string, any>;
+  const payload = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework', flow.payload_manifest_ref),
+    'utf8',
+  )) as Record<string, any>;
+
+  assert.deepEqual(Object.keys(catalog.packages).sort(), [
+    'mag', 'mas', 'mas-scholar-skills', 'obf', 'oma', 'opl-flow', 'rca',
+  ]);
+  assert.equal(flow.package_version, '0.1.25');
+  assert.equal(manifest.version, '0.1.25');
+  assert.equal(manifest.profile_surface.existing_profile_policy, 'semantic_merge_required');
+  assert.equal(manifest.managed_policy_surface.policy_kind, 'opl_flow_workflow_policy');
+  assert.deepEqual(manifest.codex_surface.required_skill_ids, ['coordinate-concurrent-tasks', 'opl-flow']);
+  assert.equal(payload.surface_kind, 'opl_package_payload_manifest.v2');
+  assert.equal(payload.source_commit, flow.owner_source_commit);
+  assert.match(payload.content_lock.digest, /^sha256:[0-9a-f]{64}$/);
+});
+
+test('component-neutral apply runs eligible Base and bundled Packages while missing package roots fail closed', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-rootless-bundled-'));
+  const homeDir = path.join(root, 'home');
+  const stateDir = path.join(root, 'state');
+  const codexHome = path.join(homeDir, '.codex');
+  const codexBin = path.join(root, 'codex');
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(
+    codexBin,
+    '#!/bin/sh\necho "codex-cli 0.134.0"\n',
+    { mode: 0o755 },
+  );
+  const lockPath = path.join(stateDir, 'agent-package-locks.json');
+  const lockBytes = formatJsonPayload({
+    surface_kind: 'opl_agent_package_lock_index',
+    version: 'opl-agent-package-lock-index.v1',
+    packages: [bundledPackageLockFixture('mag')],
+    last_known_good_transactions: [],
+  });
+  fs.writeFileSync(lockPath, lockBytes);
+  const env = {
+    HOME: homeDir,
+    CODEX_HOME: codexHome,
+    OPL_STATE_DIR: stateDir,
+    OPL_CODEX_BIN: codexBin,
+    OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+    OPL_FRAMEWORK_UPDATE_SOURCE: '',
+    OPL_FRAMEWORK_UPDATE_ARCHIVE: '',
+    OPL_MODULE_SOURCE_MODE: 'package_channel',
+    OPL_FULL_RUNTIME_HOME: '',
+    OPL_FULL_RUNTIME_MODULE_OVERRIDES: '',
+    OPL_FLOW_REPO_ROOT: '',
+    OPL_MODULE_PATH_MEDAUTOGRANT: '',
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: '',
+    OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS: '',
+    OPL_MODULE_PATH_OPLBOOKFORGE: '',
+    OPL_MODULE_PATH_OPLMETAAGENT: '',
+    OPL_MODULE_PATH_OPLFLOW: '',
+    OPL_MODULE_PATH_REDCUBE: '',
+  };
+
+  try {
+    const output = runCli(['update', 'apply'], env) as Record<string, any>;
+    assert.deepEqual(
+      output.managed_update.components.map((entry: Record<string, unknown>) => entry.component_id),
+      ['opl_base', 'opl_packages'],
+    );
+    assert.deepEqual(
+      output.managed_update.execution.adapter_results.map(
+        (entry: Record<string, unknown>) => entry.component_id,
+      ),
+      ['opl_base', 'opl_packages'],
+    );
+    const baseAdapter = output.managed_update.execution.adapter_results.find(
+      (entry: Record<string, unknown>) => entry.component_id === 'opl_base',
+    );
+    const adapter = output.managed_update.execution.adapter_results.find(
+      (entry: Record<string, unknown>) => entry.component_id === 'opl_packages',
+    );
+    assert.equal(baseAdapter.adapter_id, 'runtime_substrate_adapter');
+    assert.equal(adapter.adapter_id, 'capability_packages_adapter');
+    const reconciliation = adapter.result.bundled_full_runtime_reconciliation;
+    assert.equal(adapter.status, 'failed');
+    assert.equal(adapter.result.auto_apply_scope, 'catalog_owned_bundled_full_runtime_root_packages_only');
+    assert.equal(reconciliation.status, 'failed');
+    assert.equal(reconciliation.orchestration_policy, 'fail_open_per_root_package');
+    assert.equal(
+      reconciliation.failures[0].failure_code,
+      'full_runtime_package_source_authority_incomplete',
+    );
+    assert.deepEqual(adapter.result.targets.map((entry: Record<string, unknown>) => entry.target_id), [
+      'mag', 'mas', 'obf', 'oma', 'opl-flow', 'rca',
+    ]);
+    assert.equal(
+      adapter.result.targets.every((entry: Record<string, unknown>) => entry.status === 'failed'),
+      true,
+    );
+    assert.equal(
+      output.managed_update.execution.receipt_record.receipts.some(
+        (entry: Record<string, unknown>) => entry.component_id === 'opl_packages',
+      ),
+      true,
+    );
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), lockBytes);
+    assert.equal(fs.existsSync(path.join(stateDir, 'managed-update-component-receipts.json')), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('developer Framework source override is visible but excluded from generic background apply', async () => {

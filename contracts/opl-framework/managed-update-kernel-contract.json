@@ -158,7 +158,7 @@
     "states": [
       {
         "state_id": "auto_apply",
-        "meaning": "Framework may fetch, verify, stage, activate package content, run post-apply hooks, and write a component receipt without asking when an installed digest-locked Package target is clean.",
+        "meaning": "Framework may fetch, verify, stage, activate package content, run post-apply hooks, and write a component receipt without asking when an installed digest-locked Package target is clean, including an App-carried bundled Full runtime closure selected by the canonical bundled catalog.",
         "allowed_component_classes": [
           "opl_packages"
         ],
@@ -270,7 +270,8 @@
         "owner": "one-person-lab-managed-modules",
         "examples": [
           "domain_module_package_channel",
-          "framework_capability_package_channel"
+          "framework_capability_package_channel",
+          "catalog_owned_bundled_full_runtime_packages"
         ],
         "not_installation_carrier": true,
         "not_domain_truth": true
@@ -464,13 +465,14 @@
       "adapter_id": "capability_packages_adapter",
       "owner": "one-person-lab-managed-modules",
       "role": "Installed OPL Package lock reconciliation through the canonical package lifecycle",
-      "authority": "Each installed root package lock selects its manifest/channel target; digest and package lifecycle receipt identify installed content.",
+      "authority": "Each installed root package lock selects its manifest/channel target; App-carried bundled roots select the canonical bundled Full runtime catalog; digest and package lifecycle receipt identify installed content.",
       "default_policy": "silent_background_for_clean_digest_locked_installed_packages",
-      "mutation_scope": "installed_root_package_locks_only",
+      "mutation_scope": "installed_root_package_locks_or_catalog_owned_bundled_full_runtime_root_closure_only",
       "source_policy": {
         "authority": "effective Developer Mode and per-package source preference",
         "developer_checkout_effect": "compare_installed_lock_to_live_release_set_target_then_relock_and_reproject_from_the_exact_effective_checkout_without_overwriting_checkout_content",
         "managed_effect": "compare_installed_lock_to_release_set_target_then_apply_only_when_identity_differs",
+        "bundled_full_runtime_effect": "compare bundled locks to canonical catalog manifest payload content owner and catalog authority then independently update each selected root and its required dependency closure through opl update apply",
         "external_package_effect": "manual_explicit_update_only"
       },
       "release_catalog_cache_policy": {
@@ -495,6 +497,7 @@
         "mode": "auto_apply",
         "app_background_safe": true,
         "command_ref": "opl packages update --json",
+        "bundled_full_runtime_command_ref": "opl update apply --json",
         "eligible_scope": "clean_digest_locked_installed_root_package_locks_only",
         "eligible_when": [
           "installed root package lock exists",
@@ -512,6 +515,110 @@
           "package lifecycle update failed without overwriting the installed lock"
         ],
         "current_noop_receipt_policy": "do_not_write_component_receipt"
+      },
+      "bundled_full_runtime_reconciliation": {
+        "authority_surface": "contracts/opl-framework/bundled-full-runtime-package-catalog.json",
+        "public_apply_command": "opl update apply --json",
+        "public_selector": null,
+        "top_level_selection_policy": "component_neutral_selected_managed_update_components",
+        "package_adapter_component_id": "opl_packages",
+        "bundled_source_plane_scope": "opl_packages_adapter_only",
+        "top_level_components_forced_or_excluded": [],
+        "root_package_ids_exact": [
+          "mag",
+          "mas",
+          "obf",
+          "oma",
+          "opl-flow",
+          "rca"
+        ],
+        "dependency_closure_package_ids_exact": [
+          "mag",
+          "mas",
+          "mas-scholar-skills",
+          "obf",
+          "oma",
+          "opl-flow",
+          "rca"
+        ],
+        "currentness_identity_fields": [
+          "source_kind",
+          "package_version",
+          "manifest_sha256",
+          "content_digest",
+          "owner_source_commit",
+          "carrier_authority.catalog_ref",
+          "carrier_authority.catalog_sha256"
+        ],
+        "managed_lifecycle_action": "update",
+        "managed_provenance": {
+          "trigger": "managed_update_kernel_apply",
+          "initiator": "opl_managed_update_kernel",
+          "source_policy": "bundled_full_runtime_modules"
+        },
+        "execution_receipt_authority": {
+          "framework_commit_field": "result.framework_commit",
+          "catalog_ref_field": "result.catalog_ref",
+          "catalog_sha256_field": "result.catalog_sha256",
+          "target_receipt_ref_field": "target.result.lifecycle_receipt.receipt_ref",
+          "component_aggregate_binding_field": "component_receipt.adapter_result_ref",
+          "duplicate_target_receipt_ref_list": false
+        },
+        "source_root_authority": {
+          "required_for_public_apply": true,
+          "accepted_authority": "catalog_exact_explicit_roots_or_controlled_full_runtime_carrier",
+          "missing_or_incomplete_policy": "fail_closed_without_generic_package_fallback"
+        },
+        "post_apply_currentness": {
+          "writes_performed": false,
+          "command_ref": "opl packages status --json",
+          "ordinary_package_update_guidance_allowed": false
+        },
+        "recovery": {
+          "command_ref": "opl update plan --json, then opl update apply --json, then opl packages status --json",
+          "configure_codex_allowed": false
+        },
+        "orchestration": {
+          "failure_policy": "fail_open_per_root_package",
+          "successful_root_policy": "commit_and_retain",
+          "failed_root_policy": "rollback_only_the_failed_root_and_its_required_dependency_closure",
+          "continuation_policy": "continue_independent_remaining_roots",
+          "aggregate_status_values": [
+            "completed",
+            "partial",
+            "failed"
+          ],
+          "target_status_values": [
+            "completed",
+            "failed",
+            "manual_required",
+            "skipped"
+          ],
+          "component_receipt_policy": "record_partial_aggregate_with_per_target_lifecycle_and_rollback_details"
+        },
+        "package_mutation_unit": {
+          "scope": "one_root_package_and_its_required_dependency_closure",
+          "failure_policy": "fail_closed_with_local_prestate_restored",
+          "snapshot_policy": "exact_paths_written_by_this_package_unit_only",
+          "commit_point": "after_catalog_and_materialized_lock_final_verification",
+          "rollback_success_evidence": "restored_snapshot_paths_mechanically_match_local_prestate",
+          "unproven_restore_reporting": "local_prestate_restored_is_false_or_null_never_true",
+          "excluded_snapshot_surfaces": [
+            "other_root_packages",
+            "managed_update_component_receipt_ledger",
+            "unrelated_home_or_codex_home_ancestor_trees"
+          ],
+          "package_lifecycle_exclusion": {
+            "required": true,
+            "scope": "single_package_preview_snapshot_apply_verify_and_local_commit_or_rollback",
+            "release_policy": "release_before_the_next_independent_root"
+          }
+        },
+        "caller_action_policy": {
+          "system_configure_and_startup_reconciliation": "install",
+          "managed_update_kernel_apply": "update"
+        },
+        "explicit_public_bundled_source_policy": "fail_closed_internal_only"
       },
       "transaction_status_fields": [
         "projection_status",
