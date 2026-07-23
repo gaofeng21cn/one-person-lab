@@ -1,6 +1,7 @@
 import {
   assertReleaseBundleFreezeInputs,
   buildFrozenReleaseBundle,
+  isAppStandardReleaseBundle,
   readReleaseBundleExecutorReceipt,
   readReleaseBundleFreezeRequest,
   readReleaseBundleQualificationReceipt,
@@ -208,16 +209,27 @@ export function freezeReleaseBundle(input: {
     details: {
       bundle_path: installed.paths.bundle,
       notes_path: installed.paths.notes,
-      framework_release_set_digest: bundle.framework_release_set.digest,
-      package_payload_manifest_sha256: Object.fromEntries(
-        RELEASE_BUNDLE_PACKAGE_IDS.map((packageId) => [
-          packageId,
-          bundle.packages[packageId].payload_manifest_sha256,
-        ]),
-      ),
+      ...(isAppStandardReleaseBundle(bundle)
+        ? {
+            identity_mode: bundle.identity_mode,
+            package_compatibility: bundle.package_compatibility,
+          }
+        : {
+            framework_release_set_digest: bundle.framework_release_set.digest,
+            package_payload_manifest_sha256: Object.fromEntries(
+              RELEASE_BUNDLE_PACKAGE_IDS.map((packageId) => [
+                packageId,
+                bundle.packages[packageId].payload_manifest_sha256,
+              ]),
+            ),
+          }),
       source_root: inputs.sourceRoot,
-      release_set_path: inputs.releaseSetPath,
-      owner_cohort_lock_path: inputs.ownerCohortLockPath,
+      ...('releaseSetPath' in inputs
+        ? {
+            release_set_path: inputs.releaseSetPath,
+            owner_cohort_lock_path: inputs.ownerCohortLockPath,
+          }
+        : {}),
       inputs_verified_before_freeze: true,
       source_cutoff: bundle.source_cutoff ?? null,
       source_cutoff_frozen_once: Boolean(bundle.source_cutoff),
@@ -397,18 +409,27 @@ export function buildReleaseBundle(input: ReleaseBundleOperationInput & ReleaseB
 }
 
 function expectedQualificationCohort(bundle: ReleaseBundle) {
-  return {
+  const sources = {
     app_sha: bundle.sources.app.source_commit,
     shell_sha: bundle.sources.shell.source_commit,
     framework_sha: bundle.sources.framework.source_commit,
-    framework_release_set_digest: bundle.framework_release_set.digest,
-    package_payload_manifest_sha256: Object.fromEntries(
-      RELEASE_BUNDLE_PACKAGE_IDS.map((packageId) => [
-        packageId,
-        bundle.packages[packageId].payload_manifest_sha256,
-      ]),
-    ),
   };
+  return isAppStandardReleaseBundle(bundle)
+    ? {
+        ...sources,
+        identity_mode: bundle.identity_mode,
+        package_compatibility: bundle.package_compatibility,
+      }
+    : {
+        ...sources,
+        framework_release_set_digest: bundle.framework_release_set.digest,
+        package_payload_manifest_sha256: Object.fromEntries(
+          RELEASE_BUNDLE_PACKAGE_IDS.map((packageId) => [
+            packageId,
+            bundle.packages[packageId].payload_manifest_sha256,
+          ]),
+        ),
+      };
 }
 
 function assertQualificationBinding(input: {

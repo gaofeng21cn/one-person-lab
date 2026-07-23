@@ -20,6 +20,15 @@ export const RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS = [
   'qualification_harness',
   'shell_webui_source',
 ] as const;
+export const RELEASE_BUNDLE_APP_STANDARD_FROZEN_BUILD_INPUT_IDS = [
+  'app_source',
+  'base_image',
+  'codex_cli',
+  'dockerfile',
+  'framework_seed',
+  'qualification_harness',
+  'shell_webui_source',
+] as const;
 export type ReleaseBundleFrozenBuildInputId =
   typeof RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS[number];
 export const RELEASE_BUNDLE_TRACK_NAMES = ['standard', 'webui', 'full'] as const;
@@ -100,7 +109,12 @@ export type ReleaseBundleFrozenBuildInput = {
   size_bytes: number;
 };
 
-export type ReleaseBundleFreezeRequest = {
+export type ReleaseBundlePackageCompatibility = {
+  abi: 'opl_packages.v1';
+  version_range: string;
+};
+
+type ReleaseBundleFreezeRequestCommon = {
   surface_kind: 'opl_release_bundle_freeze_request.v1';
   schema_ref: 'contracts/opl-framework/release-bundle-freeze-request.schema.json';
   release: {
@@ -115,12 +129,6 @@ export type ReleaseBundleFreezeRequest = {
     repo: string;
     source_commit: string;
   }>;
-  framework_release_set: {
-    generation: string;
-    manifest_ref: string;
-    digest: string;
-  };
-  packages: Record<ReleaseBundlePackageId, ReleaseBundlePackageIdentity>;
   prepared_notes: {
     source: 'prepared_ai';
     format: 'markdown';
@@ -136,21 +144,41 @@ export type ReleaseBundleFreezeRequest = {
   };
 };
 
-export type ReleaseBundle = {
+export type ReleaseBundleFreezeRequest = ReleaseBundleFreezeRequestCommon & {
+  identity_mode?: never;
+  package_compatibility?: never;
+  framework_release_set: {
+    generation: string;
+    manifest_ref: string;
+    digest: string;
+  };
+  packages: Record<ReleaseBundlePackageId, ReleaseBundlePackageIdentity>;
+};
+
+export type ReleaseBundleAppStandardFreezeRequest = ReleaseBundleFreezeRequestCommon & {
+  identity_mode: 'app_standard_compatibility';
+  package_compatibility: ReleaseBundlePackageCompatibility;
+  framework_release_set?: never;
+  packages?: never;
+};
+
+export type ReleaseBundleFreezeRequestDocument =
+  | ReleaseBundleFreezeRequest
+  | ReleaseBundleAppStandardFreezeRequest;
+
+type ReleaseBundleCommon = {
   surface_kind: 'opl_release_bundle.v1';
   schema_ref: 'contracts/opl-framework/release-bundle.schema.json';
   bundle_digest: string;
-  release: ReleaseBundleFreezeRequest['release'];
-  sources: ReleaseBundleFreezeRequest['sources'];
-  framework_release_set: ReleaseBundleFreezeRequest['framework_release_set'];
-  packages: ReleaseBundleFreezeRequest['packages'];
-  prepared_notes: ReleaseBundleFreezeRequest['prepared_notes'] & {
+  release: ReleaseBundleFreezeRequestCommon['release'];
+  sources: ReleaseBundleFreezeRequestCommon['sources'];
+  prepared_notes: ReleaseBundleFreezeRequestCommon['prepared_notes'] & {
     markdown_sha256: string;
     evidence_sha256: string;
   };
   source_cutoff?: ReleaseBundleSourceCutoff;
   frozen_build_inputs?: ReleaseBundleFrozenBuildInput[];
-  tracks: ReleaseBundleFreezeRequest['tracks'];
+  tracks: ReleaseBundleFreezeRequestCommon['tracks'];
   policy: {
     build_once: true;
     verify_and_promote_many: true;
@@ -173,6 +201,22 @@ export type ReleaseBundle = {
     full_updates_updater_metadata: false;
   };
 };
+
+export type ReleaseBundleLegacy = ReleaseBundleCommon & {
+  identity_mode?: never;
+  package_compatibility?: never;
+  framework_release_set: ReleaseBundleFreezeRequest['framework_release_set'];
+  packages: ReleaseBundleFreezeRequest['packages'];
+};
+
+export type ReleaseBundleAppStandard = ReleaseBundleCommon & {
+  identity_mode: 'app_standard_compatibility';
+  package_compatibility: ReleaseBundlePackageCompatibility;
+  framework_release_set?: never;
+  packages?: never;
+};
+
+export type ReleaseBundle = ReleaseBundleLegacy | ReleaseBundleAppStandard;
 
 export type ReleaseBundleExecutorAsset = {
   name: string;
@@ -200,7 +244,7 @@ export type ReleaseBundleExecutorReceipt = {
 
 export type StoredReleaseBundleAsset = Required<ReleaseBundleExecutorAsset>;
 
-export type ReleaseBundleQualificationReceipt = {
+type ReleaseBundleQualificationReceiptCommon = {
   surface_kind: 'opl_release_bundle_qualification_receipt.v1';
   schema_ref: 'contracts/opl-framework/release-bundle-qualification-receipt.schema.json';
   bundle_digest: string;
@@ -210,13 +254,6 @@ export type ReleaseBundleQualificationReceipt = {
     size_bytes: number;
     sha256: string;
   };
-  cohort: {
-    app_sha: string;
-    shell_sha: string;
-    framework_sha: string;
-    framework_release_set_digest: string;
-    package_payload_manifest_sha256: Record<ReleaseBundlePackageId, string>;
-  };
   qualification: {
     kind: 'installed_artifact';
     result: 'passed';
@@ -225,6 +262,36 @@ export type ReleaseBundleQualificationReceipt = {
     evidence_refs: string[];
   };
 };
+
+type ReleaseBundleQualificationSourceCohort = {
+  app_sha: string;
+  shell_sha: string;
+  framework_sha: string;
+};
+
+export type ReleaseBundleLegacyQualificationReceipt =
+  ReleaseBundleQualificationReceiptCommon & {
+    cohort: ReleaseBundleQualificationSourceCohort & {
+      identity_mode?: never;
+      package_compatibility?: never;
+      framework_release_set_digest: string;
+      package_payload_manifest_sha256: Record<ReleaseBundlePackageId, string>;
+    };
+  };
+
+export type ReleaseBundleAppStandardQualificationReceipt =
+  ReleaseBundleQualificationReceiptCommon & {
+    cohort: ReleaseBundleQualificationSourceCohort & {
+      identity_mode: 'app_standard_compatibility';
+      package_compatibility: ReleaseBundlePackageCompatibility;
+      framework_release_set_digest?: never;
+      package_payload_manifest_sha256?: never;
+    };
+  };
+
+export type ReleaseBundleQualificationReceipt =
+  | ReleaseBundleLegacyQualificationReceipt
+  | ReleaseBundleAppStandardQualificationReceipt;
 
 export type ReleaseBundleOperationReceipt = {
   surface_kind: 'opl_release_bundle_operation_receipt.v1';

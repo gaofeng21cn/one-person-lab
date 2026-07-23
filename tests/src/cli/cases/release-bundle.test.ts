@@ -409,9 +409,40 @@ function unifiedStableRequest(sourceRoot: string) {
   };
 }
 
+function appStandardRequest(sourceRoot: string) {
+  const legacy = unifiedStableRequest(sourceRoot);
+  const {
+    framework_release_set: _frameworkReleaseSet,
+    packages: _packages,
+    ...request
+  } = legacy;
+  return {
+    ...request,
+    identity_mode: 'app_standard_compatibility' as const,
+    package_compatibility: {
+      abi: 'opl_packages.v1' as const,
+      version_range: '>=0.1.0 <1.0.0',
+    },
+    source_cutoff: {
+      ...request.source_cutoff,
+      frozen_base_release_set: null,
+    },
+    frozen_build_inputs: request.frozen_build_inputs.filter(
+      (input) => input.id !== 'first_party_packages' && input.id !== 'opl_flow',
+    ),
+  };
+}
+
+function isAppStandardFixtureRequest(
+  request: ReturnType<typeof fixtureRequest> | ReturnType<typeof appStandardRequest>,
+): request is ReturnType<typeof appStandardRequest> {
+  return 'identity_mode' in request
+    && request.identity_mode === 'app_standard_compatibility';
+}
+
 function writeQualification(input: {
   root: string;
-  bundle: ReturnType<typeof fixtureRequest>;
+  bundle: ReturnType<typeof fixtureRequest> | ReturnType<typeof appStandardRequest>;
   bundleDigest: string;
   track?: 'standard' | 'webui' | 'full';
   subject?: { name: string; bytes: string };
@@ -422,6 +453,22 @@ function writeQualification(input: {
     : track === 'webui'
       ? { name: 'webui-carrier-manifest.json', bytes: '{"digest":"sha256:webui"}' }
       : { name: 'full.dmg', bytes: 'full dmg' });
+  const packageBinding = (() => {
+    if (isAppStandardFixtureRequest(input.bundle)) {
+      return {
+        identity_mode: input.bundle.identity_mode,
+        package_compatibility: input.bundle.package_compatibility,
+      };
+    }
+    const legacy = input.bundle;
+    return {
+      framework_release_set_digest: legacy.framework_release_set.digest,
+      package_payload_manifest_sha256: Object.fromEntries(packageIds.map((packageId) => [
+        packageId,
+        legacy.packages[packageId].payload_manifest_sha256,
+      ])),
+    };
+  })();
   const receiptPath = path.join(input.root, `${track}-qualification.json`);
   writeJson(receiptPath, {
     surface_kind: 'opl_release_bundle_qualification_receipt.v1',
@@ -437,11 +484,7 @@ function writeQualification(input: {
       app_sha: input.bundle.sources.app.source_commit,
       shell_sha: input.bundle.sources.shell.source_commit,
       framework_sha: input.bundle.sources.framework.source_commit,
-      framework_release_set_digest: input.bundle.framework_release_set.digest,
-      package_payload_manifest_sha256: Object.fromEntries(packageIds.map((packageId) => [
-        packageId,
-        input.bundle.packages[packageId].payload_manifest_sha256,
-      ])),
+      ...packageBinding,
     },
     qualification: {
       kind: 'installed_artifact',
@@ -602,6 +645,9 @@ test('freeze computes one canonical digest over sources, seven package payloads,
     assert.match(first.bundle_digest, /^sha256:[0-9a-f]{64}$/);
     assert.equal(second.bundle_digest, first.bundle_digest);
     assert.equal(second.status, 'idempotent');
+    if (first.bundle.identity_mode === 'app_standard_compatibility') {
+      assert.fail('Legacy fixture unexpectedly produced an App Standard compatibility Bundle.');
+    }
     assert.equal(
       first.bundle.packages.mas.payload_manifest_sha256,
       fixture.request.packages.mas.payload_manifest_sha256,
@@ -626,6 +672,116 @@ test('freeze computes one canonical digest over sources, seven package payloads,
     assert.equal(status.release_bundle_status.bundle_digest, first.bundle_digest);
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('App Standard freeze binds source refs and Package compatibility without Release Set or Package digests', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-app-standard-'));
+  try {
+    const sourceRoot = path.join(root, 'source');
+    const storeRoot = path.join(root, 'store');
+    const request = appStandardRequest(sourceRoot);
+    const requestPath = path.join(root, 'freeze.json');
+    writeJson(requestPath, request);
+    const frozen = freezeReleaseBundle({ requestPath, sourceRoot, storeRoot })
+      .release_bundle_freeze;
+    assert.equal(frozen.bundle.identity_mode, 'app_standard_compatibility');
+    assert.deepEqual(frozen.bundle.package_compatibility, {
+      abi: 'opl_packages.v1',
+      version_range: '>=0.1.0 <1.0.0',
+    });
+    assert.equal('framework_release_set' in frozen.bundle, false);
+    assert.equal('packages' in frozen.bundle, false);
+    assert.equal('framework_release_set_digest' in frozen.receipt.details, false);
+    assert.equal('package_payload_manifest_sha256' in frozen.receipt.details, false);
+    assert.equal('release_set_path' in frozen.receipt.details, false);
+    assert.equal('owner_cohort_lock_path' in frozen.receipt.details, false);
+    assert.deepEqual(
+      frozen.bundle.frozen_build_inputs?.map((input) => input.id),
+      [
+        'app_source',
+        'base_image',
+        'codex_cli',
+        'dockerfile',
+        'framework_seed',
+        'qualification_harness',
+        'shell_webui_source',
+      ],
+    );
+
+    admitReleaseBundleOperation({
+      bundleDigest: frozen.bundle_digest,
+      storeRoot,
+      ...standardOperation,
+    });
+    buildReleaseBundle({
+      bundleDigest: frozen.bundle_digest,
+      executorReceiptPath: writeBuildReceipt({
+        root,
+        bundleDigest: frozen.bundle_digest,
+      }),
+      storeRoot,
+    });
+    const qualificationReceiptPath = writeQualification({
+      root,
+      bundle: request,
+      bundleDigest: frozen.bundle_digest,
+    });
+    const verified = verifyReleaseBundle({
+      bundleDigest: frozen.bundle_digest,
+      qualificationReceiptPath,
+      storeRoot,
+    });
+    assert.equal(verified.release_bundle_verify.status, 'complete');
+    const qualification = parseJsonText(
+      fs.readFileSync(qualificationReceiptPath, 'utf8'),
+    ) as Record<string, any>;
+    assert.equal(qualification.cohort.identity_mode, 'app_standard_compatibility');
+    assert.deepEqual(qualification.cohort.package_compatibility, request.package_compatibility);
+    assert.equal('framework_release_set_digest' in qualification.cohort, false);
+    assert.equal('package_payload_manifest_sha256' in qualification.cohort, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('App Standard freeze rejects legacy Package authority fields, Package digest inputs, and invalid ranges', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-app-standard-invalid-'));
+  try {
+    const sourceRoot = path.join(root, 'source');
+    for (const [name, mutate] of [
+      ['legacy-authority', (request: Record<string, any>) => {
+        request.framework_release_set = { generation: '26.7.23', manifest_ref: 'release.json', digest: digest('legacy') };
+      }],
+      ['package-digest-input', (request: Record<string, any>) => {
+        request.frozen_build_inputs.splice(4, 0, {
+          id: 'first_party_packages',
+          ref: 'release-set-generation:26.7.23',
+          digest: digest('packages'),
+          size_bytes: 105,
+        });
+      }],
+      ['invalid-range', (request: Record<string, any>) => {
+        request.package_compatibility.version_range = '>=1.0.0 <0.1.0';
+      }],
+    ] as const) {
+      const request = structuredClone(appStandardRequest(sourceRoot)) as Record<string, any>;
+      mutate(request);
+      const requestPath = path.join(root, `${name}.json`);
+      writeJson(requestPath, request);
+      assertTypedContractFailure(
+        () => freezeReleaseBundle({
+          requestPath,
+          sourceRoot,
+          storeRoot: path.join(root, `${name}-store`),
+        }),
+        name === 'invalid-range'
+          ? /compatibility range must have an increasing upper bound/
+          : /JSON Schema validation/,
+      );
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

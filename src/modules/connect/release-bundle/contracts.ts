@@ -17,12 +17,14 @@ import { FrameworkContractError, isRecord } from '../../../kernel/contract-valid
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { assertJsonSchemaPayload } from '../../../kernel/schema-registry.ts';
 import {
+  RELEASE_BUNDLE_APP_STANDARD_FROZEN_BUILD_INPUT_IDS,
   RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS,
   RELEASE_BUNDLE_PACKAGE_IDS,
   type ReleaseBundle,
+  type ReleaseBundleAppStandardFreezeRequest,
   type ReleaseBundleCheckpoint,
   type ReleaseBundleExecutorReceipt,
-  type ReleaseBundleFreezeRequest,
+  type ReleaseBundleFreezeRequestDocument,
   type ReleaseBundleOperationControl,
   type ReleaseBundleOperationReceipt,
   type ReleaseBundleQualificationReceipt,
@@ -200,11 +202,30 @@ function requireRecord(value: unknown, label: string) {
   return value;
 }
 
+export function isAppStandardFreezeRequest(
+  request: ReleaseBundleFreezeRequestDocument,
+): request is ReleaseBundleAppStandardFreezeRequest {
+  return request.identity_mode === 'app_standard_compatibility';
+}
+
+export function isAppStandardReleaseBundle(
+  bundle: ReleaseBundle,
+): bundle is Extract<ReleaseBundle, { identity_mode: 'app_standard_compatibility' }> {
+  return bundle.identity_mode === 'app_standard_compatibility';
+}
+
 export function assertReleaseBundleFreezeInputs(
-  request: ReleaseBundleFreezeRequest,
+  request: ReleaseBundleFreezeRequestDocument,
   selectedSourceRoot?: string,
 ) {
   const root = sourceRootPath(selectedSourceRoot);
+  if (isAppStandardFreezeRequest(request)) {
+    return {
+      sourceRoot: root,
+      identityMode: request.identity_mode,
+      packageCompatibility: request.package_compatibility,
+    };
+  }
   const releaseSetSource = readBoundJsonReference(
     root,
     request.framework_release_set.manifest_ref,
@@ -418,17 +439,22 @@ function assertAssetName(name: string, track: ReleaseBundleTrackName) {
   }
 }
 
-function assertFrozenBuildInputs(request: ReleaseBundleFreezeRequest | ReleaseBundle) {
+function assertFrozenBuildInputs(
+  request: ReleaseBundleFreezeRequestDocument | ReleaseBundle,
+) {
   const inputs = request.frozen_build_inputs;
   if (!inputs) return;
-  if (inputs.length !== RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS.length) {
+  const expectedIds = request.identity_mode === 'app_standard_compatibility'
+    ? RELEASE_BUNDLE_APP_STANDARD_FROZEN_BUILD_INPUT_IDS
+    : RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS;
+  if (inputs.length !== expectedIds.length) {
     fail('Release Bundle frozen build inputs must contain every allowed input exactly once.', {
-      expected_ids: RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS,
+      expected_ids: expectedIds,
       actual_ids: inputs.map((input) => input.id),
     });
   }
   inputs.forEach((input, index) => {
-    const expectedId = RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS[index];
+    const expectedId = expectedIds[index];
     if (input.id !== expectedId) {
       fail('Release Bundle frozen build inputs must use the canonical ID order.', {
         index,
@@ -456,7 +482,29 @@ function assertFrozenBuildInputs(request: ReleaseBundleFreezeRequest | ReleaseBu
   });
 }
 
-function assertFreezeSemantics(request: ReleaseBundleFreezeRequest) {
+function assertPackageCompatibility(
+  compatibility: ReleaseBundleAppStandardFreezeRequest['package_compatibility'],
+) {
+  const match = /^>=(\d+)\.(\d+)\.(\d+) <(\d+)\.(\d+)\.(\d+)$/.exec(
+    compatibility.version_range,
+  );
+  if (!match) {
+    fail('Release Bundle Package compatibility range is invalid.');
+  }
+  const lower = match.slice(1, 4).map(Number);
+  const upper = match.slice(4, 7).map(Number);
+  let comparison = 0;
+  for (let index = 0; index < lower.length; index += 1) {
+    if (lower[index]! === upper[index]!) continue;
+    comparison = lower[index]! < upper[index]! ? -1 : 1;
+    break;
+  }
+  if (comparison !== -1) {
+    fail('Release Bundle Package compatibility range must have an increasing upper bound.');
+  }
+}
+
+function assertFreezeSemantics(request: ReleaseBundleFreezeRequestDocument) {
   if (request.release.version !== request.release.display_version) {
     fail('Release Bundle version compatibility alias must equal display_version.', {
       version: request.release.version,
@@ -475,12 +523,16 @@ function assertFreezeSemantics(request: ReleaseBundleFreezeRequest) {
       prerelease: request.release.prerelease,
     });
   }
-  for (const packageId of RELEASE_BUNDLE_PACKAGE_IDS) {
-    if (request.packages[packageId].package_id !== packageId) {
-      fail('Release Bundle package map key does not match package identity.', {
-        package_id: packageId,
-        declared_package_id: request.packages[packageId].package_id,
-      });
+  if (isAppStandardFreezeRequest(request)) {
+    assertPackageCompatibility(request.package_compatibility);
+  } else {
+    for (const packageId of RELEASE_BUNDLE_PACKAGE_IDS) {
+      if (request.packages[packageId].package_id !== packageId) {
+        fail('Release Bundle package map key does not match package identity.', {
+          package_id: packageId,
+          declared_package_id: request.packages[packageId].package_id,
+        });
+      }
     }
   }
   const unifiedStableFlags = [
@@ -522,19 +574,24 @@ function assertFreezeSemantics(request: ReleaseBundleFreezeRequest) {
   }
 }
 
-export function readReleaseBundleFreezeRequest(filePath: string): ReleaseBundleFreezeRequest {
+export function readReleaseBundleFreezeRequest(
+  filePath: string,
+): ReleaseBundleFreezeRequestDocument {
   const value = readJsonObject(filePath, 'Release Bundle freeze request');
   assertSchema(
     freezeRequestSchema as Record<string, unknown>,
     RELEASE_BUNDLE_FREEZE_REQUEST_SCHEMA_REF,
     value,
   );
-  const request = value as ReleaseBundleFreezeRequest;
+  const request = value as ReleaseBundleFreezeRequestDocument;
   assertFreezeSemantics(request);
   return request;
 }
 
-function normalizedTrack(request: ReleaseBundleFreezeRequest, track: ReleaseBundleTrackName) {
+function normalizedTrack(
+  request: ReleaseBundleFreezeRequestDocument,
+  track: ReleaseBundleTrackName,
+) {
   const plan = request.tracks[track];
   if (!plan) fail('Release Bundle track plan is missing.', { track });
   return {
@@ -543,15 +600,22 @@ function normalizedTrack(request: ReleaseBundleFreezeRequest, track: ReleaseBund
   };
 }
 
-export function releaseBundleCore(request: ReleaseBundleFreezeRequest) {
+export function releaseBundleCore(request: ReleaseBundleFreezeRequestDocument) {
   const notesEvidence = request.prepared_notes.evidence;
   return {
     surface_kind: 'opl_release_bundle.v1' as const,
     schema_ref: RELEASE_BUNDLE_SCHEMA_REF,
     release: request.release,
     sources: request.sources,
-    framework_release_set: request.framework_release_set,
-    packages: request.packages,
+    ...(isAppStandardFreezeRequest(request)
+      ? {
+          identity_mode: request.identity_mode,
+          package_compatibility: request.package_compatibility,
+        }
+      : {
+          framework_release_set: request.framework_release_set,
+          packages: request.packages,
+        }),
     prepared_notes: {
       ...request.prepared_notes,
       markdown_sha256: sha256(request.prepared_notes.markdown),
@@ -596,7 +660,9 @@ export function releaseBundleCore(request: ReleaseBundleFreezeRequest) {
   };
 }
 
-export function buildFrozenReleaseBundle(request: ReleaseBundleFreezeRequest): ReleaseBundle {
+export function buildFrozenReleaseBundle(
+  request: ReleaseBundleFreezeRequestDocument,
+): ReleaseBundle {
   const core = releaseBundleCore(request);
   const bundle = {
     ...core,

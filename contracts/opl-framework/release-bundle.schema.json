@@ -10,8 +10,6 @@
     "bundle_digest",
     "release",
     "sources",
-    "framework_release_set",
-    "packages",
     "prepared_notes",
     "tracks",
     "policy"
@@ -31,6 +29,35 @@
           ]
         }
       }
+    },
+    {
+      "oneOf": [
+        {
+          "required": ["framework_release_set", "packages"],
+          "not": {
+            "anyOf": [
+              { "required": ["identity_mode"] },
+              { "required": ["package_compatibility"] }
+            ]
+          },
+          "properties": {
+            "frozen_build_inputs": { "$ref": "#/$defs/legacyFrozenBuildInputs" }
+          }
+        },
+        {
+          "required": ["identity_mode", "package_compatibility"],
+          "not": {
+            "anyOf": [
+              { "required": ["framework_release_set"] },
+              { "required": ["packages"] }
+            ]
+          },
+          "properties": {
+            "identity_mode": { "const": "app_standard_compatibility" },
+            "frozen_build_inputs": { "$ref": "#/$defs/appStandardFrozenBuildInputs" }
+          }
+        }
+      ]
     }
   ],
   "properties": {
@@ -48,6 +75,8 @@
         "framework": { "$ref": "#/$defs/source" }
       }
     },
+    "identity_mode": { "const": "app_standard_compatibility" },
+    "package_compatibility": { "$ref": "#/$defs/packageCompatibility" },
     "framework_release_set": { "$ref": "#/$defs/releaseSet" },
     "packages": {
       "type": "object",
@@ -92,23 +121,7 @@
       }
     },
     "source_cutoff": { "$ref": "#/$defs/sourceCutoff" },
-    "frozen_build_inputs": {
-      "type": "array",
-      "minItems": 9,
-      "maxItems": 9,
-      "prefixItems": [
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "app_source" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "base_image" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "codex_cli" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "dockerfile" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "first_party_packages" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "framework_seed" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "opl_flow" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "qualification_harness" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "shell_webui_source" } } }] }
-      ],
-      "items": false
-    },
+    "frozen_build_inputs": {},
     "tracks": {
       "type": "object",
       "additionalProperties": false,
@@ -192,6 +205,21 @@
     }
   },
   "$defs": {
+    "appStandardFrozenBuildInputs": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "prefixItems": [
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "app_source" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "base_image" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "codex_cli" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "dockerfile" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "framework_seed" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "qualification_harness" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "shell_webui_source" } } }] }
+      ],
+      "items": false
+    },
     "digest": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
@@ -217,6 +245,35 @@
         "ref": { "$ref": "#/$defs/ref" },
         "digest": { "$ref": "#/$defs/digest" },
         "size_bytes": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+      }
+    },
+    "legacyFrozenBuildInputs": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "prefixItems": [
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "app_source" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "base_image" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "codex_cli" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "dockerfile" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "first_party_packages" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "framework_seed" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "opl_flow" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "qualification_harness" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "shell_webui_source" } } }] }
+      ],
+      "items": false
+    },
+    "packageCompatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["abi", "version_range"],
+      "properties": {
+        "abi": { "const": "opl_packages.v1" },
+        "version_range": {
+          "type": "string",
+          "pattern": "^>=[0-9]+\\.[0-9]+\\.[0-9]+ <[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
       }
     },
     "sourceCutoff": {

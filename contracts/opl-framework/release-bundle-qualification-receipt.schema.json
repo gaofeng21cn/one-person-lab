@@ -33,17 +33,39 @@
     "cohort": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "app_sha",
-        "shell_sha",
-        "framework_sha",
-        "framework_release_set_digest",
-        "package_payload_manifest_sha256"
+      "required": ["app_sha", "shell_sha", "framework_sha"],
+      "oneOf": [
+        {
+          "required": [
+            "framework_release_set_digest",
+            "package_payload_manifest_sha256"
+          ],
+          "not": {
+            "anyOf": [
+              { "required": ["identity_mode"] },
+              { "required": ["package_compatibility"] }
+            ]
+          }
+        },
+        {
+          "required": ["identity_mode", "package_compatibility"],
+          "not": {
+            "anyOf": [
+              { "required": ["framework_release_set_digest"] },
+              { "required": ["package_payload_manifest_sha256"] }
+            ]
+          },
+          "properties": {
+            "identity_mode": { "const": "app_standard_compatibility" }
+          }
+        }
       ],
       "properties": {
         "app_sha": { "$ref": "#/$defs/gitSha" },
         "shell_sha": { "$ref": "#/$defs/gitSha" },
         "framework_sha": { "$ref": "#/$defs/gitSha" },
+        "identity_mode": { "const": "app_standard_compatibility" },
+        "package_compatibility": { "$ref": "#/$defs/packageCompatibility" },
         "framework_release_set_digest": { "$ref": "#/$defs/digest" },
         "package_payload_manifest_sha256": {
           "type": "object",
@@ -95,6 +117,18 @@
   },
   "$defs": {
     "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "gitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+    "gitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "packageCompatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["abi", "version_range"],
+      "properties": {
+        "abi": { "const": "opl_packages.v1" },
+        "version_range": {
+          "type": "string",
+          "pattern": "^>=[0-9]+\\.[0-9]+\\.[0-9]+ <[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+      }
+    }
   }
 }
