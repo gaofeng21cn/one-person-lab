@@ -3693,7 +3693,8 @@
               "conditions",
               "recommended_action",
               "lifecycle_ux",
-              "lifecycle_receipts",
+              "lifecycle_receipt_count",
+              "lifecycle_receipt_summary",
               "owner_route_readback",
               "authority_boundary"
             ],
@@ -3744,6 +3745,35 @@
                     }
                   }
                 }
+              },
+              "lifecycle_receipt_summary": {
+                "type": "object",
+                "required": [
+                  "surface_kind",
+                  "package_id",
+                  "total_count",
+                  "latest_receipt_ref",
+                  "latest_receipt",
+                  "current_receipts",
+                  "history_included",
+                  "history_detail_surface",
+                  "order"
+                ],
+                "additionalProperties": true,
+                "properties": {
+                  "surface_kind": {
+                    "const": "opl_agent_package_lifecycle_receipt_summary.v1"
+                  },
+                  "history_included": {
+                    "const": false
+                  },
+                  "order": {
+                    "const": "newest_first_ledger_order"
+                  },
+                  "current_receipts": {
+                    "type": "array"
+                  }
+                }
               }
             }
           }
@@ -3791,6 +3821,32 @@
           "value_kind": "string",
           "required": false,
           "summary": "Quest root whose Codex discovery surface is inspected."
+        },
+        {
+          "name": "include-history",
+          "flag": "--include-history",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Explicitly include one bounded newest-first lifecycle receipt history page."
+        },
+        {
+          "name": "cursor",
+          "flag": "--cursor",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Opaque lifecycle history cursor returned by the preceding page; requires --include-history."
+        },
+        {
+          "name": "limit",
+          "flag": "--limit",
+          "value_kind": "integer",
+          "required": false,
+          "default": 20,
+          "allowed_range": {
+            "min": 1,
+            "max": 100
+          },
+          "summary": "Maximum lifecycle receipts in the explicit history page; requires --include-history."
         }
       ],
       "output_schema": {
@@ -3811,11 +3867,75 @@
               "status",
               "installed_package_count",
               "installed_packages",
-              "lifecycle_receipts",
+              "lifecycle_receipt_summary",
               "owner_route_readback",
               "authority_boundary"
             ],
-            "additionalProperties": true
+            "additionalProperties": true,
+            "properties": {
+              "lifecycle_receipt_summary": {
+                "type": "object",
+                "required": [
+                  "surface_kind",
+                  "package_id",
+                  "total_count",
+                  "latest_receipt_ref",
+                  "latest_receipt",
+                  "current_receipts",
+                  "history_included",
+                  "history_detail_surface",
+                  "order"
+                ],
+                "additionalProperties": true,
+                "properties": {
+                  "surface_kind": {
+                    "const": "opl_agent_package_lifecycle_receipt_summary.v1"
+                  },
+                  "history_included": {
+                    "type": "boolean"
+                  },
+                  "order": {
+                    "const": "newest_first_ledger_order"
+                  },
+                  "current_receipts": {
+                    "type": "array"
+                  }
+                }
+              },
+              "lifecycle_history": {
+                "type": "object",
+                "required": [
+                  "surface_kind",
+                  "package_id",
+                  "total_count",
+                  "page_count",
+                  "order",
+                  "limit",
+                  "cursor",
+                  "next_cursor",
+                  "has_more",
+                  "receipts"
+                ],
+                "additionalProperties": true,
+                "properties": {
+                  "surface_kind": {
+                    "const": "opl_agent_package_lifecycle_history_page.v1"
+                  },
+                  "order": {
+                    "const": "newest_first_ledger_order"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "receipts": {
+                    "type": "array",
+                    "maxItems": 100
+                  }
+                }
+              }
+            }
           }
         }
       },

@@ -332,8 +332,10 @@ test('use-boundary catalog refresh has a short total budget and launches the LKG
     delete persistedUseReceipt.use_binding.reconciliation_issue.refresh_timeout_ms;
     fs.writeFileSync(ledgerPath, formatJsonPayload(ledger));
 
-    const status = await runCliAsync(['packages', 'status', '--package-id', 'mas'], env) as any;
-    const legacyUseReceipt = status.opl_agent_package_status.lifecycle_receipts.find(
+    const status = await runCliAsync([
+      'packages', 'status', '--package-id', 'mas', '--include-history', '--limit', '20',
+    ], env) as any;
+    const legacyUseReceipt = status.opl_agent_package_status.lifecycle_history.receipts.find(
       (entry: any) => entry.receipt_ref === activation.package_use_binding.use_receipt_ref,
     );
     assert.equal(

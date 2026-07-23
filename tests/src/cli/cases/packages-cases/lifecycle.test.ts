@@ -586,6 +586,9 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
         'status',
         '--package-id',
         'third.party.research',
+        '--include-history',
+        '--limit',
+        '20',
       ], env) as {
         opl_agent_package_status: {
           status: string;
@@ -594,7 +597,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
           recommended_action: string | null;
           lifecycle_ux: { status: string; recommended_action: string | null };
           home_shortcut_preferences: Array<{ shortcut_id: string; visible: boolean; sort_order: number | null; source: string }>;
-          lifecycle_receipts: Array<{ action: string }>;
+          lifecycle_history: { receipts: Array<{ action: string }> };
           owner_route_readback: {
             selected_package_id: string;
             packages: Array<{
@@ -623,7 +626,7 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
         null,
       );
       assert.deepEqual(
-        status.opl_agent_package_status.lifecycle_receipts.map((receipt) => receipt.action),
+        status.opl_agent_package_status.lifecycle_history.receipts.map((receipt) => receipt.action),
         ['enable', 'disable', 'unhide', 'hide', 'repair', 'update', 'install', 'manifest_validate'],
       );
 
@@ -659,20 +662,23 @@ test('packages fetches registry URL, validates manifest, and writes lock receipt
         'status',
         '--package-id',
         'third.party.research',
+        '--include-history',
+        '--limit',
+        '20',
       ], env) as {
         opl_agent_package_status: {
           status: string;
           installed_package_count: number;
           conditions: Array<{ condition_id: string; action_ref: string | null }>;
           recommended_action: string | null;
-          lifecycle_receipts: Array<{ action: string }>;
+          lifecycle_history: { receipts: Array<{ action: string }> };
         };
       };
       assert.equal(afterUninstall.opl_agent_package_status.status, 'not_installed');
       assert.equal(afterUninstall.opl_agent_package_status.installed_package_count, 0);
       assert.equal(afterUninstall.opl_agent_package_status.conditions[0].condition_id, 'package_not_installed');
       assert.equal(afterUninstall.opl_agent_package_status.recommended_action, 'install_from_manifest_url');
-      assert.equal(afterUninstall.opl_agent_package_status.lifecycle_receipts[0].action, 'uninstall');
+      assert.equal(afterUninstall.opl_agent_package_status.lifecycle_history.receipts[0].action, 'uninstall');
     }, agentPackageManifest({ pluginSourcePath }));
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });

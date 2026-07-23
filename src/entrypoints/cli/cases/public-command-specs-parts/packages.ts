@@ -374,29 +374,52 @@ export function buildPackagesCommandSpecs(
   const specs: Record<string, CommandSpec> = {
     'packages list': {
       usage: 'opl packages list',
-      summary: 'Browse the OPL Package catalog merged with installed state, actions, projections, and lifecycle receipts.',
+      summary: 'Browse the OPL Package catalog with installed state, actions, projections, and compact lifecycle receipt refs.',
       examples: ['opl packages list --json'],
       group: 'packages',
       help_surface: 'default',
       handler: () => listOplAgentPackages(),
     },
     'packages status': {
-      usage: 'opl packages status [--package-id <id>] [--scope workspace|quest --target-workspace <path>|--target-quest <path>]',
-      summary: 'Read package lock, projection, migration, and lifecycle receipt status.',
-      examples: ['opl packages status --package-id mas --json'],
+      usage: 'opl packages status [--package-id <id>] [--scope workspace|quest --target-workspace <path>|--target-quest <path>] [--include-history [--cursor <cursor>] [--limit <1-100>]]',
+      summary: 'Read compact package lock, projection, migration, and lifecycle receipt status; history is explicit and paginated.',
+      examples: [
+        'opl packages status --package-id mas --json',
+        'opl packages status --package-id mas --include-history --limit 20 --json',
+      ],
       group: 'packages',
       help_surface: 'diagnostic_drilldown',
       handler: (args) => {
+        const spec = getCommandSpec('packages status');
         const parsed = parseRegisteredCommandOptions(
           'packages status',
           args,
-          getCommandSpec('packages status'),
+          spec,
         );
+        const includeHistory = parsed['include-history'] === true;
+        const historyPageOptionUsed = args.some((arg) =>
+          arg === '--cursor'
+          || arg.startsWith('--cursor=')
+          || arg === '--limit'
+          || arg.startsWith('--limit=')
+        );
+        if (!includeHistory && historyPageOptionUsed) {
+          throw buildUsageError(
+            'packages status requires --include-history when --cursor or --limit is provided.',
+            spec,
+            {
+              required: ['--include-history'],
+            },
+          );
+        }
         return runOplAgentPackageStatus({
           packageId: readOptionalString(parsed['package-id']),
           scope: readOptionalString(parsed.scope) as 'workspace' | 'quest' | null,
           targetWorkspace: readOptionalString(parsed['target-workspace']),
           targetQuest: readOptionalString(parsed['target-quest']),
+          includeHistory,
+          historyCursor: readOptionalString(parsed.cursor),
+          historyLimit: parsed.limit as number | undefined,
         });
       },
     },

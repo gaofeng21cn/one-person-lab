@@ -4229,7 +4229,162 @@ export type OplAgentPackageStatusInput = {
   targetQuest?: string | null;
   recoverRuntimeSource?: boolean;
   detail?: 'fast' | 'full';
+  includeHistory?: boolean;
+  historyCursor?: string | null;
+  historyLimit?: number;
 };
+
+const DEFAULT_PACKAGE_LIFECYCLE_HISTORY_LIMIT = 20;
+const MAX_PACKAGE_LIFECYCLE_HISTORY_LIMIT = 100;
+
+function lifecycleReceiptSummary(receipt: AgentPackageLifecycleReceipt | null) {
+  return receipt
+    ? {
+        receipt_ref: receipt.receipt_ref,
+        package_id: receipt.package_id,
+        action: receipt.action,
+        action_status: receipt.action_status,
+        recorded_at: receipt.recorded_at,
+        writes_performed: receipt.writes_performed,
+        package_lock_ref: receipt.package_lock_ref,
+        rollback_ref: receipt.rollback_ref,
+      }
+    : null;
+}
+
+function relevantLifecycleReceipts(
+  receipts: AgentPackageLifecycleReceipt[],
+  packageId: string | null,
+) {
+  return receipts.filter((receipt) => !packageId || receipt.package_id === packageId);
+}
+
+function lifecycleReceiptSummaryReadback(input: {
+  receipts: AgentPackageLifecycleReceipt[];
+  locks: AgentPackageLock[];
+  packageId: string | null;
+  historyIncluded?: boolean;
+}) {
+  const relevantReceipts = relevantLifecycleReceipts(input.receipts, input.packageId);
+  const receiptsByRef = new Map(
+    input.receipts.map((receipt) => [receipt.receipt_ref, receipt]),
+  );
+  const latestReceipt = relevantReceipts[0] ?? null;
+  return {
+    surface_kind: 'opl_agent_package_lifecycle_receipt_summary.v1',
+    package_id: input.packageId,
+    total_count: relevantReceipts.length,
+    latest_receipt_ref: latestReceipt?.receipt_ref ?? null,
+    latest_receipt: lifecycleReceiptSummary(latestReceipt),
+    current_receipts: input.locks.map((lock) => ({
+      package_id: lock.package_id,
+      receipt_ref: lock.action_receipt_id,
+      receipt: lifecycleReceiptSummary(receiptsByRef.get(lock.action_receipt_id) ?? null),
+    })),
+    history_included: input.historyIncluded === true,
+    history_detail_surface: 'opl packages status [--package-id <package_id>] --include-history [--cursor <cursor>] [--limit <1-100>] --json',
+    order: 'newest_first_ledger_order',
+  };
+}
+
+function packageLifecycleHistoryCursor(input: {
+  packageId: string | null;
+  receiptRef: string;
+}) {
+  return Buffer.from(JSON.stringify({
+    version: 1,
+    package_id: input.packageId,
+    receipt_ref: input.receiptRef,
+  })).toString('base64url');
+}
+
+function decodePackageLifecycleHistoryCursor(cursor: string, packageId: string | null) {
+  try {
+    const decoded = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as {
+      version?: unknown;
+      package_id?: unknown;
+      receipt_ref?: unknown;
+    };
+    if (
+      decoded.version !== 1
+      || decoded.package_id !== packageId
+      || typeof decoded.receipt_ref !== 'string'
+      || decoded.receipt_ref.length === 0
+    ) {
+      throw new Error('cursor shape or package filter mismatch');
+    }
+    return decoded.receipt_ref;
+  } catch (error) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Agent package lifecycle history cursor is invalid for the selected package filter.',
+      {
+        package_id: packageId,
+        failure_code: 'agent_package_lifecycle_history_cursor_invalid',
+        cause: error instanceof Error ? error.message : String(error),
+      },
+    );
+  }
+}
+
+function packageLifecycleHistoryPage(input: {
+  receipts: AgentPackageLifecycleReceipt[];
+  packageId: string | null;
+  cursor?: string | null;
+  limit?: number;
+}) {
+  const limit = input.limit ?? DEFAULT_PACKAGE_LIFECYCLE_HISTORY_LIMIT;
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_PACKAGE_LIFECYCLE_HISTORY_LIMIT) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Agent package lifecycle history limit must be an integer from 1 to ${MAX_PACKAGE_LIFECYCLE_HISTORY_LIMIT}.`,
+      {
+        limit,
+        allowed_range: { min: 1, max: MAX_PACKAGE_LIFECYCLE_HISTORY_LIMIT },
+        failure_code: 'agent_package_lifecycle_history_limit_invalid',
+      },
+    );
+  }
+  const relevantReceipts = relevantLifecycleReceipts(input.receipts, input.packageId);
+  const afterReceiptRef = input.cursor
+    ? decodePackageLifecycleHistoryCursor(input.cursor, input.packageId)
+    : null;
+  const cursorIndex = afterReceiptRef
+    ? relevantReceipts.findIndex((receipt) => receipt.receipt_ref === afterReceiptRef)
+    : -1;
+  if (afterReceiptRef && cursorIndex < 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Agent package lifecycle history cursor no longer resolves in the immutable ledger.',
+      {
+        package_id: input.packageId,
+        cursor_receipt_ref: afterReceiptRef,
+        failure_code: 'agent_package_lifecycle_history_cursor_not_found',
+      },
+    );
+  }
+  const startIndex = cursorIndex + 1;
+  const receipts = relevantReceipts.slice(startIndex, startIndex + limit);
+  const hasMore = startIndex + receipts.length < relevantReceipts.length;
+  const lastReceipt = receipts.at(-1) ?? null;
+  return {
+    surface_kind: 'opl_agent_package_lifecycle_history_page.v1',
+    package_id: input.packageId,
+    total_count: relevantReceipts.length,
+    page_count: receipts.length,
+    order: 'newest_first_ledger_order',
+    limit,
+    cursor: input.cursor ?? null,
+    next_cursor: hasMore && lastReceipt
+      ? packageLifecycleHistoryCursor({
+          packageId: input.packageId,
+          receiptRef: lastReceipt.receipt_ref,
+        })
+      : null,
+    has_more: hasMore,
+    receipts,
+  };
+}
 
 function readAgentPackageStatusSnapshot() {
   const lockIndex = readLockIndex();
@@ -4376,6 +4531,12 @@ function buildOplAgentPackageStatus(
     degraded_reason: degradedReason,
     unavailable_reason: unavailableReason,
   });
+  const lifecycleReceiptReadback = lifecycleReceiptSummaryReadback({
+    receipts: lifecycleLedger.receipts,
+    locks: installedPackages,
+    packageId: packageId ?? null,
+    historyIncluded: input.includeHistory,
+  });
   return {
     version: 'g2',
     opl_agent_package_status: {
@@ -4406,7 +4567,17 @@ function buildOplAgentPackageStatus(
       allowed_when_blocked: ['status', 'doctor', 'repair'],
       repair_action: repairAction,
       home_shortcut_preferences: homeShortcutPreferences,
-      lifecycle_receipts: lifecycleLedger.receipts.filter((receipt) => !packageId || receipt.package_id === packageId),
+      lifecycle_receipt_summary: lifecycleReceiptReadback,
+      ...(input.includeHistory
+        ? {
+            lifecycle_history: packageLifecycleHistoryPage({
+              receipts: lifecycleLedger.receipts,
+              packageId: packageId ?? null,
+              cursor: input.historyCursor,
+              limit: input.historyLimit,
+            }),
+          }
+        : {}),
       owner_route_readback: input.detail === 'fast'
         ? {
             surface_kind: 'opl_agent_package_owner_route_readback',
@@ -4466,6 +4637,11 @@ export function listOplAgentPackages(input: {
     packages: lockIndex.packages,
     receipts: lifecycleLedger.receipts,
   });
+  const lifecycleReceiptReadback = lifecycleReceiptSummaryReadback({
+    receipts: lifecycleLedger.receipts,
+    locks: lockIndex.packages,
+    packageId: null,
+  });
   const directory = buildAgentPackageDirectory({
     registryCache,
     locks: lockIndex.packages,
@@ -4497,7 +4673,7 @@ export function listOplAgentPackages(input: {
       lifecycle_ux: lifecycleUx,
       home_shortcut_preferences: homeShortcutPreferences,
       lifecycle_receipt_count: lifecycleLedger.receipts.length,
-      lifecycle_receipts: lifecycleLedger.receipts,
+      lifecycle_receipt_summary: lifecycleReceiptReadback,
       owner_route_readback: input.detail === 'fast'
         ? {
             surface_kind: 'opl_agent_package_owner_route_readback',
