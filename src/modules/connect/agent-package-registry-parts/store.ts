@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import {
   readJsonFileOrNull,
-  readJsonReceiptLedger,
+  readJsonFileResult,
   upsertJsonReceipts,
   writeJsonPayloadFile,
   writeJsonReceiptLedger,
@@ -134,38 +134,163 @@ function emptyLifecycleLedger(): AgentPackageLifecycleLedger {
   };
 }
 
-export function readLockIndex(): AgentPackageLockIndex {
-  const parsed = readJsonFileOrNull(resolveOplStatePaths().agent_package_lock_file);
-  if (!isRecord(parsed) || !Array.isArray(parsed.packages)) {
-    return emptyLockIndex();
+type PackageAuthorityKind = 'lock_index' | 'lifecycle_ledger';
+
+function packageAuthorityCorrupt(
+  authorityKind: PackageAuthorityKind,
+  filePath: string,
+  reason: 'invalid_json' | 'invalid_shape',
+  details: Record<string, unknown> = {},
+) {
+  const label = authorityKind === 'lock_index'
+    ? 'Agent package lock index'
+    : 'Agent package lifecycle ledger';
+  return new FrameworkContractError(
+    reason === 'invalid_json' ? 'contract_json_invalid' : 'contract_shape_invalid',
+    `${label} exists but is corrupt; restore or repair it before Package lifecycle mutation.`,
+    {
+      failure_code: authorityKind === 'lock_index'
+        ? 'agent_package_lock_authority_corrupt'
+        : 'agent_package_lifecycle_ledger_authority_corrupt',
+      authority_kind: authorityKind,
+      authority_status: 'corrupt',
+      authority_file: filePath,
+      recovery_required: true,
+      write_allowed: false,
+      reason,
+      ...details,
+    },
+  );
+}
+
+function normalizeLockEntry(
+  value: unknown,
+  filePath: string,
+  field: string,
+  index: number,
+): AgentPackageLock {
+  if (!isRecord(value)) {
+    throw packageAuthorityCorrupt('lock_index', filePath, 'invalid_shape', {
+      field,
+      invalid_entry_index: index,
+    });
+  }
+  const declaredPackageId = stringValue(value.package_id)?.toLowerCase() ?? null;
+  const packageId = canonicalAgentPackageId(declaredPackageId);
+  const lockRef = stringValue(value.lock_ref);
+  const declaredAgentId = stringValue(value.agent_id)?.toLowerCase() ?? null;
+  const agentId = declaredAgentId === null ? null : canonicalAgentPackageId(declaredAgentId);
+  if (
+    packageId !== declaredPackageId
+    || !packageId
+    || !lockRef
+    || (declaredAgentId !== null && agentId !== declaredAgentId)
+  ) {
+    throw packageAuthorityCorrupt('lock_index', filePath, 'invalid_shape', {
+      field,
+      invalid_entry_index: index,
+      declared_package_id: declaredPackageId,
+      declared_agent_id: declaredAgentId,
+    });
   }
   return {
+    ...value,
+    package_id: packageId,
+    agent_id: agentId,
+  } as AgentPackageLock;
+}
+
+function normalizeLockIndex(value: unknown, filePath: string): AgentPackageLockIndex {
+  if (
+    !isRecord(value)
+    || value.surface_kind !== 'opl_agent_package_lock_index'
+    || value.version !== 'opl-agent-package-lock-index.v1'
+    || !Array.isArray(value.packages)
+    || (
+      value.last_known_good_transactions !== undefined
+      && !Array.isArray(value.last_known_good_transactions)
+    )
+  ) {
+    throw packageAuthorityCorrupt('lock_index', filePath, 'invalid_shape');
+  }
+  const packages = value.packages.map((entry, index) =>
+    normalizeLockEntry(entry, filePath, 'packages', index)
+  );
+  const packageIds = packages.map((entry) => entry.package_id);
+  if (new Set(packageIds).size !== packageIds.length) {
+    throw packageAuthorityCorrupt('lock_index', filePath, 'invalid_shape', {
+      field: 'packages',
+      reason_code: 'duplicate_package_id',
+    });
+  }
+  const lastKnownGoodTransactions = (value.last_known_good_transactions ?? []).map((entry, index) => {
+    if (
+      !isRecord(entry)
+      || typeof entry.root_package_id !== 'string'
+      || typeof entry.transaction_id !== 'string'
+      || typeof entry.closure_digest !== 'string'
+      || !Array.isArray(entry.package_locks)
+    ) {
+      throw packageAuthorityCorrupt('lock_index', filePath, 'invalid_shape', {
+        field: 'last_known_good_transactions',
+        invalid_entry_index: index,
+      });
+    }
+    return entry as NonNullable<AgentPackageLockIndex['last_known_good_transactions']>[number];
+  });
+  return {
     ...emptyLockIndex(),
-    packages: recordList(parsed.packages).flatMap((entry) => {
-      const declaredPackageId = stringValue(entry.package_id)?.toLowerCase() ?? null;
-      const packageId = canonicalAgentPackageId(declaredPackageId);
-      const lockRef = stringValue(entry.lock_ref);
-      const declaredAgentId = stringValue(entry.agent_id)?.toLowerCase() ?? null;
-      const agentId = declaredAgentId === null ? null : canonicalAgentPackageId(declaredAgentId);
-      const agentIdentityValid = declaredAgentId === null || agentId === declaredAgentId;
-      return packageId === declaredPackageId && agentIdentityValid && packageId && lockRef
-        ? [{ ...entry, package_id: packageId, agent_id: agentId } as AgentPackageLock]
-        : [];
-    }),
-    last_known_good_transactions: recordList(parsed.last_known_good_transactions ?? [])
-      .filter((entry) => typeof entry.root_package_id === 'string'
-        && typeof entry.transaction_id === 'string'
-        && typeof entry.closure_digest === 'string'
-        && Array.isArray(entry.package_locks)) as AgentPackageLockIndex['last_known_good_transactions'],
+    packages,
+    last_known_good_transactions: lastKnownGoodTransactions,
   };
 }
 
+export function readLockIndex(): AgentPackageLockIndex {
+  const filePath = resolveOplStatePaths().agent_package_lock_file;
+  const result = readJsonFileResult(filePath);
+  if (result.status === 'missing') {
+    return emptyLockIndex();
+  }
+  if (result.status === 'invalid_json') {
+    throw packageAuthorityCorrupt('lock_index', filePath, 'invalid_json', {
+      parse_error: result.error,
+    });
+  }
+  return normalizeLockIndex(result.payload, filePath);
+}
+
 export function readLifecycleLedger(): AgentPackageLifecycleLedger {
-  return readJsonReceiptLedger(
-    resolveOplStatePaths().agent_package_lifecycle_ledger_file,
-    emptyLifecycleLedger,
-    normalizeLifecycleReceipt,
-  );
+  const filePath = resolveOplStatePaths().agent_package_lifecycle_ledger_file;
+  const result = readJsonFileResult(filePath);
+  if (result.status === 'missing') {
+    return emptyLifecycleLedger();
+  }
+  if (result.status === 'invalid_json') {
+    throw packageAuthorityCorrupt('lifecycle_ledger', filePath, 'invalid_json', {
+      parse_error: result.error,
+    });
+  }
+  if (
+    !isRecord(result.payload)
+    || result.payload.surface_kind !== 'opl_agent_package_lifecycle_ledger'
+    || result.payload.version !== 'opl-agent-package-lifecycle-ledger.v1'
+    || !Array.isArray(result.payload.receipts)
+  ) {
+    throw packageAuthorityCorrupt('lifecycle_ledger', filePath, 'invalid_shape');
+  }
+  return {
+    ...emptyLifecycleLedger(),
+    receipts: result.payload.receipts.map((value, index) => {
+      const receipt = normalizeLifecycleReceipt(value);
+      if (!receipt) {
+        throw packageAuthorityCorrupt('lifecycle_ledger', filePath, 'invalid_shape', {
+          field: 'receipts',
+          invalid_entry_index: index,
+        });
+      }
+      return receipt;
+    }),
+  };
 }
 
 export function readRegistryCache() {
@@ -200,7 +325,11 @@ export function writeRegistryCache(cache: AgentPackageRegistryCache) {
 
 export function writeLockIndex(index: AgentPackageLockIndex) {
   const paths = ensureOplStateDir();
-  writeJsonPayloadFile(paths.agent_package_lock_file, index);
+  readLockIndex();
+  writeJsonPayloadFile(
+    paths.agent_package_lock_file,
+    normalizeLockIndex(index, paths.agent_package_lock_file),
+  );
 }
 
 function writeLifecycleLedger(ledger: AgentPackageLifecycleLedger) {
@@ -221,6 +350,7 @@ export function writePackageTransaction(
   receipts: AgentPackageLifecycleReceipt[],
 ) {
   const paths = ensureOplStateDir();
+  readLockIndex();
   const previousLock = fs.existsSync(paths.agent_package_lock_file)
     ? fs.readFileSync(paths.agent_package_lock_file)
     : null;
@@ -228,11 +358,12 @@ export function writePackageTransaction(
     ? fs.readFileSync(paths.agent_package_lifecycle_ledger_file)
     : null;
   const ledger = readLifecycleLedger();
+  const normalizedIndex = normalizeLockIndex(index, paths.agent_package_lock_file);
   upsertJsonReceipts(ledger.receipts, receipts, (entry, next) =>
     entry.receipt_ref === next.receipt_ref
   );
   try {
-    writeJsonPayloadFile(paths.agent_package_lock_file, index);
+    writeJsonPayloadFile(paths.agent_package_lock_file, normalizedIndex);
     writeJsonReceiptLedger(paths.agent_package_lifecycle_ledger_file, ledger);
   } catch (error) {
     if (previousLock) fs.writeFileSync(paths.agent_package_lock_file, previousLock);
@@ -244,7 +375,15 @@ export function writePackageTransaction(
 }
 
 function normalizeLifecycleReceipt(value: unknown): AgentPackageLifecycleReceipt | null {
-  if (!isRecord(value)) {
+  if (
+    !isRecord(value)
+    || value.surface_kind !== 'opl_agent_package_lifecycle_receipt'
+    || value.receipt_status !== 'recorded'
+    || typeof value.recorded_at !== 'string'
+    || typeof value.action !== 'string'
+    || !['completed', 'validated'].includes(String(value.action_status))
+    || typeof value.writes_performed !== 'boolean'
+  ) {
     return null;
   }
   const receiptRef = stringValue(value.receipt_ref);

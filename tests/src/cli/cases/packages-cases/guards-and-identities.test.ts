@@ -901,7 +901,7 @@ test('packages reject external registries that claim canonical public package id
   }
 });
 
-test('packages quarantines legacy external registry identities without hiding built-in packages', () => {
+test('packages fail closed on a legacy noncanonical lock identity without overwriting authority bytes', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-legacy-state-'));
   try {
     fs.writeFileSync(path.join(stateDir, 'agent-package-registry-cache.json'), formatJsonPayload({
@@ -1031,19 +1031,18 @@ test('packages quarantines legacy external registry identities without hiding bu
       ],
     }), 'utf8');
 
-    const directory = (runCli(['packages', 'list'], { OPL_STATE_DIR: stateDir }) as any).opl_agent_packages.directory;
-    const packageIds = directory.entries.map((entry: any) => entry.package_id);
-    assert.deepEqual(
-      ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills', 'opl-flow']
-        .filter((packageId) => !packageIds.includes(packageId)),
-      [],
-    );
-    assert.equal(packageIds.includes('medautoscience'), false);
-    assert.equal(packageIds.includes('bookforge'), false);
-    assert.equal(
-      directory.entries.some((entry: any) => entry.manifest_url?.startsWith('https://example.test/')),
-      false,
-    );
+    const lockPath = path.join(stateDir, 'agent-package-locks.json');
+    const ledgerPath = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
+    const lockBytes = fs.readFileSync(lockPath);
+    const ledgerBytes = fs.readFileSync(ledgerPath);
+    const failure = runCliFailure(['packages', 'list'], { OPL_STATE_DIR: stateDir });
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(failure.payload.error.details.failure_code, 'agent_package_lock_authority_corrupt');
+    assert.equal(failure.payload.error.details.authority_status, 'corrupt');
+    assert.equal(failure.payload.error.details.recovery_required, true);
+    assert.equal(failure.payload.error.details.write_allowed, false);
+    assert.deepEqual(fs.readFileSync(lockPath), lockBytes);
+    assert.deepEqual(fs.readFileSync(ledgerPath), ledgerBytes);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }

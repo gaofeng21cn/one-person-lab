@@ -16,7 +16,10 @@ import {
   test,
 } from './helpers.ts';
 import {
+  readLifecycleLedger,
+  readLockIndex,
   withAgentPackageLifecycleTransaction,
+  writePackageTransaction,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/store.ts';
 import {
   writeCapabilityCatalog,
@@ -42,6 +45,15 @@ async function withProcessEnv<T>(
 
 function lifecycleLockPath(stateDir: string) {
   return path.join(stateDir, 'agent-package-lifecycle.sqlite');
+}
+
+function emptyLockIndex() {
+  return {
+    surface_kind: 'opl_agent_package_lock_index' as const,
+    version: 'opl-agent-package-lock-index.v1' as const,
+    packages: [],
+    last_known_good_transactions: [],
+  };
 }
 
 function assertNoScopeTransactionArtifacts(workspace: string) {
@@ -100,6 +112,64 @@ test('package lifecycle SQLite writer mutex times out on live contention and rec
         { timeoutMs: 100 },
       ), 'successor');
       assert.equal(fs.existsSync(lockPath), true);
+    });
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test('package authority reads allow missing first-install state but reject corrupt files without overwriting bytes', async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-authority-corrupt-state-'));
+  const lockPath = path.join(stateDir, 'agent-package-locks.json');
+  const ledgerPath = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
+  try {
+    await withProcessEnv({ OPL_STATE_DIR: stateDir }, async () => {
+      assert.deepEqual(readLockIndex(), emptyLockIndex());
+      assert.deepEqual(readLifecycleLedger(), {
+        surface_kind: 'opl_agent_package_lifecycle_ledger',
+        version: 'opl-agent-package-lifecycle-ledger.v1',
+        receipts: [],
+      });
+      assert.equal(fs.existsSync(lockPath), false);
+      assert.equal(fs.existsSync(ledgerPath), false);
+
+      const corruptLockBytes = Buffer.from('{"surface_kind":"opl_agent_package_lock_index","packages":[');
+      fs.writeFileSync(lockPath, corruptLockBytes);
+      assert.throws(
+        () => readLockIndex(),
+        (error: any) => error?.code === 'contract_json_invalid'
+          && error?.details?.failure_code === 'agent_package_lock_authority_corrupt'
+          && error?.details?.recovery_required === true
+          && error?.details?.write_allowed === false,
+      );
+      assert.throws(
+        () => writePackageTransaction(emptyLockIndex(), []),
+        (error: any) => error?.details?.failure_code === 'agent_package_lock_authority_corrupt',
+      );
+      assert.deepEqual(fs.readFileSync(lockPath), corruptLockBytes);
+      assert.equal(fs.existsSync(ledgerPath), false);
+
+      fs.writeFileSync(lockPath, formatJsonPayload(emptyLockIndex()));
+      const corruptLedgerBytes = Buffer.from(formatJsonPayload({
+        surface_kind: 'opl_agent_package_lifecycle_ledger',
+        version: 'opl-agent-package-lifecycle-ledger.v1',
+        receipts: [{ receipt_ref: 'missing-required-shape' }],
+      }));
+      fs.writeFileSync(ledgerPath, corruptLedgerBytes);
+      const validLockBytes = fs.readFileSync(lockPath);
+      assert.throws(
+        () => readLifecycleLedger(),
+        (error: any) => error?.code === 'contract_shape_invalid'
+          && error?.details?.failure_code === 'agent_package_lifecycle_ledger_authority_corrupt'
+          && error?.details?.recovery_required === true
+          && error?.details?.write_allowed === false,
+      );
+      assert.throws(
+        () => writePackageTransaction(emptyLockIndex(), []),
+        (error: any) => error?.details?.failure_code === 'agent_package_lifecycle_ledger_authority_corrupt',
+      );
+      assert.deepEqual(fs.readFileSync(lockPath), validLockBytes);
+      assert.deepEqual(fs.readFileSync(ledgerPath), corruptLedgerBytes);
     });
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
