@@ -573,7 +573,7 @@ export async function runOplStartupMaintenance(
           'Startup maintenance refreshes the managed OPL Framework runtime only when an explicit framework update source is configured.',
           'Startup maintenance updates clean OPL-managed module checkouts and syncs repo-local plugin carriers.',
           'Startup maintenance installs or updates MAS Scholar Skills from the managed GHCR capability packages channel so App workspace/quest sync can materialize it into the active paper directory.',
-          'Bundled Full runtime startup reconciles the catalog-derived seven-package closure; MAS Scholar Skills remains hidden globally and is projected only into an explicit MAS workspace or quest.',
+          'Bundled Full runtime startup reconciles the selected catalog dependency closure; MAS Scholar Skills remains hidden globally and is projected only into an explicit MAS workspace or quest.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
           'MAS Scholar Skills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
           'Docker/WebUI startup records image seed, /data, and /projects boundaries in the OPL state install manifest without claiming runtime or domain readiness.',
