@@ -9,6 +9,19 @@ export const RELEASE_BUNDLE_PACKAGE_IDS = [
 ] as const;
 
 export type ReleaseBundlePackageId = typeof RELEASE_BUNDLE_PACKAGE_IDS[number];
+export const RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS = [
+  'app_source',
+  'base_image',
+  'codex_cli',
+  'dockerfile',
+  'first_party_packages',
+  'framework_seed',
+  'opl_flow',
+  'qualification_harness',
+  'shell_webui_source',
+] as const;
+export type ReleaseBundleFrozenBuildInputId =
+  typeof RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS[number];
 export const RELEASE_BUNDLE_TRACK_NAMES = ['standard', 'webui', 'full'] as const;
 export type ReleaseBundleTrackName = 'standard' | 'webui' | 'full';
 export type ReleaseBundleExecutor = 'local' | 'remote';
@@ -80,6 +93,13 @@ export type ReleaseBundleSourceCutoff = {
   later_authority_advancement_invalidates_bundle: false;
 };
 
+export type ReleaseBundleFrozenBuildInput = {
+  id: ReleaseBundleFrozenBuildInputId;
+  ref: string;
+  digest: string;
+  size_bytes: number;
+};
+
 export type ReleaseBundleFreezeRequest = {
   surface_kind: 'opl_release_bundle_freeze_request.v1';
   schema_ref: 'contracts/opl-framework/release-bundle-freeze-request.schema.json';
@@ -108,6 +128,7 @@ export type ReleaseBundleFreezeRequest = {
     evidence: Record<string, unknown>;
   };
   source_cutoff?: ReleaseBundleSourceCutoff;
+  frozen_build_inputs?: ReleaseBundleFrozenBuildInput[];
   tracks: {
     standard: ReleaseBundleTrackPlan;
     webui?: ReleaseBundleTrackPlan;
@@ -128,6 +149,7 @@ export type ReleaseBundle = {
     evidence_sha256: string;
   };
   source_cutoff?: ReleaseBundleSourceCutoff;
+  frozen_build_inputs?: ReleaseBundleFrozenBuildInput[];
   tracks: ReleaseBundleFreezeRequest['tracks'];
   policy: {
     build_once: true;

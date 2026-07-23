@@ -17,6 +17,7 @@ import { FrameworkContractError, isRecord } from '../../../kernel/contract-valid
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { assertJsonSchemaPayload } from '../../../kernel/schema-registry.ts';
 import {
+  RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS,
   RELEASE_BUNDLE_PACKAGE_IDS,
   type ReleaseBundle,
   type ReleaseBundleCheckpoint,
@@ -417,6 +418,44 @@ function assertAssetName(name: string, track: ReleaseBundleTrackName) {
   }
 }
 
+function assertFrozenBuildInputs(request: ReleaseBundleFreezeRequest | ReleaseBundle) {
+  const inputs = request.frozen_build_inputs;
+  if (!inputs) return;
+  if (inputs.length !== RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS.length) {
+    fail('Release Bundle frozen build inputs must contain every allowed input exactly once.', {
+      expected_ids: RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS,
+      actual_ids: inputs.map((input) => input.id),
+    });
+  }
+  inputs.forEach((input, index) => {
+    const expectedId = RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS[index];
+    if (input.id !== expectedId) {
+      fail('Release Bundle frozen build inputs must use the canonical ID order.', {
+        index,
+        expected_id: expectedId,
+        actual_id: input.id,
+      });
+    }
+    if (!input.ref.trim() || input.ref !== input.ref.trim()) {
+      fail('Release Bundle frozen build input ref must be non-empty and canonical.', {
+        input_id: input.id,
+      });
+    }
+    if (!DIGEST.test(input.digest)) {
+      fail('Release Bundle frozen build input digest must be an exact sha256 digest.', {
+        input_id: input.id,
+        digest: input.digest,
+      });
+    }
+    if (!Number.isSafeInteger(input.size_bytes) || input.size_bytes <= 0) {
+      fail('Release Bundle frozen build input size must be a positive safe integer.', {
+        input_id: input.id,
+        size_bytes: input.size_bytes,
+      });
+    }
+  });
+}
+
 function assertFreezeSemantics(request: ReleaseBundleFreezeRequest) {
   if (request.release.version !== request.release.display_version) {
     fail('Release Bundle version compatibility alias must equal display_version.', {
@@ -444,12 +483,19 @@ function assertFreezeSemantics(request: ReleaseBundleFreezeRequest) {
       });
     }
   }
-  if (Boolean(request.source_cutoff) !== Boolean(request.tracks.webui)) {
-    fail('Release Bundle source cutoff and WebUI carrier track must be introduced together.', {
+  const unifiedStableFlags = [
+    Boolean(request.source_cutoff),
+    Boolean(request.tracks.webui),
+    Boolean(request.frozen_build_inputs),
+  ];
+  if (new Set(unifiedStableFlags).size !== 1) {
+    fail('Release Bundle source cutoff and WebUI carrier track must be introduced together with frozen build inputs.', {
       source_cutoff_present: Boolean(request.source_cutoff),
       webui_track_present: Boolean(request.tracks.webui),
+      frozen_build_inputs_present: Boolean(request.frozen_build_inputs),
     });
   }
+  assertFrozenBuildInputs(request);
   if (request.source_cutoff) {
     assertCanonicalUtcTimestamp(
       request.source_cutoff.observed_at,
@@ -512,6 +558,9 @@ export function releaseBundleCore(request: ReleaseBundleFreezeRequest) {
       evidence_sha256: sha256(canonicalJsonBytes(notesEvidence)),
     },
     ...(request.source_cutoff ? { source_cutoff: request.source_cutoff } : {}),
+    ...(request.frozen_build_inputs
+      ? { frozen_build_inputs: request.frozen_build_inputs }
+      : {}),
     tracks: {
       standard: normalizedTrack(request, 'standard'),
       ...(request.tracks.webui ? { webui: normalizedTrack(request, 'webui') } : {}),
@@ -561,9 +610,15 @@ export function assertReleaseBundle(value: unknown): asserts value is ReleaseBun
   assertSchema(bundleSchema as Record<string, unknown>, RELEASE_BUNDLE_SCHEMA_REF, value);
   if (!isRecord(value)) fail('Release Bundle must be a JSON object.');
   const bundle = value as ReleaseBundle;
-  if (Boolean(bundle.source_cutoff) !== Boolean(bundle.tracks.webui)) {
-    fail('Frozen Release Bundle source cutoff and WebUI carrier track must be present together.');
+  const unifiedStableFlags = [
+    Boolean(bundle.source_cutoff),
+    Boolean(bundle.tracks.webui),
+    Boolean(bundle.frozen_build_inputs),
+  ];
+  if (new Set(unifiedStableFlags).size !== 1) {
+    fail('Frozen Release Bundle source cutoff, WebUI carrier track, and frozen build inputs must be present together.');
   }
+  assertFrozenBuildInputs(bundle);
   if (bundle.source_cutoff) {
     assertCanonicalUtcTimestamp(
       bundle.source_cutoff.observed_at,

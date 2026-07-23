@@ -14,6 +14,23 @@
     "prepared_notes",
     "tracks"
   ],
+  "allOf": [
+    {
+      "if": {
+        "required": ["tracks"],
+        "properties": { "tracks": { "required": ["webui"] } }
+      },
+      "then": { "required": ["source_cutoff", "frozen_build_inputs"] },
+      "else": {
+        "not": {
+          "anyOf": [
+            { "required": ["source_cutoff"] },
+            { "required": ["frozen_build_inputs"] }
+          ]
+        }
+      }
+    }
+  ],
   "properties": {
     "surface_kind": { "const": "opl_release_bundle_freeze_request.v1" },
     "schema_ref": {
@@ -77,6 +94,23 @@
       }
     },
     "source_cutoff": { "$ref": "#/$defs/sourceCutoff" },
+    "frozen_build_inputs": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "prefixItems": [
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "app_source" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "base_image" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "codex_cli" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "dockerfile" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "first_party_packages" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "framework_seed" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "opl_flow" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "qualification_harness" } } }] },
+        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "shell_webui_source" } } }] }
+      ],
+      "items": false
+    },
     "tracks": {
       "type": "object",
       "additionalProperties": false,
@@ -125,6 +159,29 @@
     "digest": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "frozenBuildInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ref", "digest", "size_bytes"],
+      "properties": {
+        "id": {
+          "enum": [
+            "app_source",
+            "base_image",
+            "codex_cli",
+            "dockerfile",
+            "first_party_packages",
+            "framework_seed",
+            "opl_flow",
+            "qualification_harness",
+            "shell_webui_source"
+          ]
+        },
+        "ref": { "$ref": "#/$defs/ref" },
+        "digest": { "$ref": "#/$defs/digest" },
+        "size_bytes": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+      }
     },
     "sourceCutoff": {
       "type": "object",

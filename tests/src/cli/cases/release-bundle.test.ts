@@ -327,6 +327,7 @@ function fixtureRequest(
 
 function unifiedStableRequest(sourceRoot: string) {
   const request = fixtureRequest(sourceRoot);
+  const baseImageDigest = digest('webui-base-image');
   return {
     ...request,
     source_cutoff: {
@@ -339,6 +340,62 @@ function unifiedStableRequest(sourceRoot: string) {
       post_freeze_remote_refresh_allowed: false as const,
       later_authority_advancement_invalidates_bundle: false as const,
     },
+    frozen_build_inputs: [
+      {
+        id: 'app_source' as const,
+        ref: request.sources.app.source_commit,
+        digest: digest('app-source-archive'),
+        size_bytes: 101,
+      },
+      {
+        id: 'base_image' as const,
+        ref: `docker.io/library/node@${baseImageDigest}`,
+        digest: baseImageDigest,
+        size_bytes: 102,
+      },
+      {
+        id: 'codex_cli' as const,
+        ref: '@openai/codex@1.2.3',
+        digest: digest('codex-cli-tarball'),
+        size_bytes: 103,
+      },
+      {
+        id: 'dockerfile' as const,
+        ref: 'shells/aionui/Dockerfile',
+        digest: digest('webui-dockerfile'),
+        size_bytes: 104,
+      },
+      {
+        id: 'first_party_packages' as const,
+        ref: `release-set-generation:${request.framework_release_set.generation}`,
+        digest: request.framework_release_set.digest,
+        size_bytes: 105,
+      },
+      {
+        id: 'framework_seed' as const,
+        ref: request.sources.framework.source_commit,
+        digest: digest('framework-seed'),
+        size_bytes: 106,
+      },
+      {
+        id: 'opl_flow' as const,
+        ref: request.packages['opl-flow'].owner_source_commit,
+        digest: request.packages['opl-flow'].payload_manifest_sha256,
+        size_bytes: 107,
+      },
+      {
+        id: 'qualification_harness' as const,
+        ref: 'scripts/validate-webui-runtime-image.ts',
+        digest: digest('qualification-harness'),
+        size_bytes: 108,
+      },
+      {
+        id: 'shell_webui_source' as const,
+        ref: request.sources.shell.source_commit,
+        digest: digest('shell-webui-source-archive'),
+        size_bytes: 109,
+      },
+    ],
     tracks: {
       standard: request.tracks.standard,
       webui: {
@@ -667,8 +724,11 @@ test('unified Stable freeze binds one cutoff and later authority advancement can
   try {
     const first = fixture.frozen.release_bundle_freeze;
     assert.deepEqual(first.bundle.source_cutoff, fixture.request.source_cutoff);
+    assert.deepEqual(first.bundle.frozen_build_inputs, fixture.request.frozen_build_inputs);
     assert.deepEqual(first.receipt.details.source_cutoff, fixture.request.source_cutoff);
+    assert.deepEqual(first.receipt.details.frozen_build_inputs, fixture.request.frozen_build_inputs);
     assert.equal(first.receipt.details.source_cutoff_frozen_once, true);
+    assert.equal(first.receipt.details.frozen_build_inputs_frozen_once, true);
     assert.equal(first.bundle.policy.post_freeze_remote_refresh_allowed, false);
     assert.equal(first.bundle.policy.later_authority_advancement_invalidates_bundle, false);
     assert.equal(first.bundle.policy.all_other_live_currentness_drift_invalidates_bundle, false);
@@ -682,6 +742,17 @@ test('unified Stable freeze binds one cutoff and later authority advancement can
       digest: `sha256:${'e'.repeat(64)}`,
     });
     assert.deepEqual(first.bundle.policy.latest_required_tracks, ['standard', 'webui']);
+
+    const changedInputRequest = unifiedStableRequest(fixture.sourceRoot);
+    changedInputRequest.frozen_build_inputs[2].digest = digest('later-codex-cli-tarball');
+    const changedInputRequestPath = path.join(fixture.root, 'changed-input-freeze.json');
+    writeJson(changedInputRequestPath, changedInputRequest);
+    const changedInput = freezeReleaseBundle({
+      requestPath: changedInputRequestPath,
+      sourceRoot: fixture.sourceRoot,
+      storeRoot: fixture.storeRoot,
+    }).release_bundle_freeze;
+    assert.notEqual(changedInput.bundle_digest, first.bundle_digest);
 
     const laterRequest = unifiedStableRequest(fixture.sourceRoot);
     laterRequest.source_cutoff.frozen_base_release_set = {
@@ -724,7 +795,7 @@ test('unified Stable freeze binds one cutoff and later authority advancement can
   }
 });
 
-test('unified Stable requires cutoff and WebUI track to be introduced together', () => {
+test('unified Stable requires cutoff, WebUI track, and frozen build inputs together', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-unified-stable-pair-'));
   try {
     const sourceRoot = path.join(root, 'source');
@@ -738,7 +809,7 @@ test('unified Stable requires cutoff and WebUI track to be introduced together',
         sourceRoot,
         storeRoot: path.join(root, 'missing-cutoff-store'),
       }),
-      /source cutoff and WebUI carrier track must be introduced together/,
+      /JSON Schema validation/,
     );
 
     const missingWebui = fixtureRequest(sourceRoot) as ReturnType<typeof fixtureRequest> & {
@@ -753,7 +824,7 @@ test('unified Stable requires cutoff and WebUI track to be introduced together',
         sourceRoot,
         storeRoot: path.join(root, 'missing-webui-store'),
       }),
-      /source cutoff and WebUI carrier track must be introduced together/,
+      /JSON Schema validation/,
     );
 
     const missingFrozenBase = unifiedStableRequest(sourceRoot) as Record<string, any>;
@@ -770,6 +841,94 @@ test('unified Stable requires cutoff and WebUI track to be introduced together',
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('unified Stable rejects missing, duplicate, unknown, noncanonical, or malformed frozen build inputs', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-unified-stable-build-inputs-'));
+  try {
+    const sourceRoot = path.join(root, 'source');
+    const cases: Array<{
+      name: string;
+      mutate: (request: Record<string, any>) => void;
+      message: RegExp;
+    }> = [
+      {
+        name: 'missing',
+        mutate: (request) => delete request.frozen_build_inputs,
+        message: /JSON Schema validation/,
+      },
+      {
+        name: 'duplicate-id',
+        mutate: (request) => { request.frozen_build_inputs[1].id = 'app_source'; },
+        message: /JSON Schema validation/,
+      },
+      {
+        name: 'unknown-id',
+        mutate: (request) => { request.frozen_build_inputs[1].id = 'future_live_input'; },
+        message: /JSON Schema validation/,
+      },
+      {
+        name: 'noncanonical-order',
+        mutate: (request) => {
+          [request.frozen_build_inputs[0], request.frozen_build_inputs[1]] =
+            [request.frozen_build_inputs[1], request.frozen_build_inputs[0]];
+        },
+        message: /JSON Schema validation/,
+      },
+      {
+        name: 'invalid-digest',
+        mutate: (request) => { request.frozen_build_inputs[0].digest = 'sha256:invalid'; },
+        message: /JSON Schema validation/,
+      },
+      {
+        name: 'zero-size',
+        mutate: (request) => { request.frozen_build_inputs[0].size_bytes = 0; },
+        message: /JSON Schema validation/,
+      },
+      {
+        name: 'blank-ref',
+        mutate: (request) => { request.frozen_build_inputs[0].ref = ' '; },
+        message: /ref must be non-empty and canonical/,
+      },
+    ];
+    for (const contractCase of cases) {
+      const request = structuredClone(unifiedStableRequest(sourceRoot)) as Record<string, any>;
+      contractCase.mutate(request);
+      const requestPath = path.join(root, `${contractCase.name}.json`);
+      writeJson(requestPath, request);
+      assertTypedContractFailure(
+        () => freezeReleaseBundle({
+          requestPath,
+          sourceRoot,
+          storeRoot: path.join(root, `${contractCase.name}-store`),
+        }),
+        contractCase.message,
+      );
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('post-freeze frozen build input digest or size drift fails before any stage runs', () => {
+  const fixture = createUnifiedStableFixture();
+  try {
+    const first = fixture.frozen.release_bundle_freeze;
+    const frozenBytes = fs.readFileSync(first.bundle_path, 'utf8');
+    for (const field of ['digest', 'size_bytes'] as const) {
+      const storedBundle = parseJsonText(frozenBytes) as Record<string, any>;
+      storedBundle.frozen_build_inputs[0][field] = field === 'digest'
+        ? digest('substituted-app-source')
+        : storedBundle.frozen_build_inputs[0].size_bytes + 1;
+      writeJson(first.bundle_path, storedBundle);
+      assertTypedContractFailure(
+        () => readReleaseBundleStatus({ bundleDigest: first.bundle_digest, storeRoot: fixture.storeRoot }),
+        /canonical digest does not match its immutable core/,
+      );
+    }
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
   }
 });
 

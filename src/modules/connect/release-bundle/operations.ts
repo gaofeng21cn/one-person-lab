@@ -221,6 +221,8 @@ export function freezeReleaseBundle(input: {
       inputs_verified_before_freeze: true,
       source_cutoff: bundle.source_cutoff ?? null,
       source_cutoff_frozen_once: Boolean(bundle.source_cutoff),
+      frozen_build_inputs: bundle.frozen_build_inputs ?? null,
+      frozen_build_inputs_frozen_once: Boolean(bundle.frozen_build_inputs),
       post_freeze_remote_refresh_allowed:
         bundle.source_cutoff?.post_freeze_remote_refresh_allowed ?? null,
       later_authority_advancement_invalidates_bundle:
