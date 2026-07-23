@@ -8,7 +8,7 @@ on:
         description: Canonical Package id
         required: true
         type: choice
-        options: [mag, mas, mas-scholar-skills]
+        options: [mas, mag, rca, oma, obf, mas-scholar-skills, opl-flow]
       expected_package_version:
         description: Exact stable SemVer selected by canonical Framework main
         required: true
@@ -75,14 +75,15 @@ jobs:
           [ "$GITHUB_SHA" = "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" ]
           [ "$(git rev-parse HEAD)" = "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" ]
 
-          case "$PACKAGE_ID" in
-            mag) owner_repo="gaofeng21cn/med-autogrant"; repo_name="med-autogrant" ;;
-            mas) owner_repo="gaofeng21cn/med-autoscience"; repo_name="med-autoscience" ;;
-            mas-scholar-skills) owner_repo="gaofeng21cn/mas-scholar-skills"; repo_name="mas-scholar-skills" ;;
-            *) echo "::error::Unsupported Package id: $PACKAGE_ID"; exit 2 ;;
-          esac
-
           manifest="contracts/opl-framework/packages/${PACKAGE_ID}.json"
+          source_repo="$(jq -er .source_repo "$manifest")"
+          if [[ "$source_repo" =~ ^https://github\.com/([^/]+)/([^/]+)\.git$ ]]; then
+            owner_repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+            repo_name="${BASH_REMATCH[2]}"
+          else
+            echo "::error::Package source_repo must be a canonical GitHub HTTPS repository: $source_repo"
+            exit 2
+          fi
           payload_ref="$(jq -er '.codex_surface.plugin_payload_manifest_url // .plugin_payload_manifest_url' "$manifest")"
           payload="contracts/opl-framework/packages/${payload_ref}"
           [ "$(jq -r .package_id "$manifest")" = "$PACKAGE_ID" ]

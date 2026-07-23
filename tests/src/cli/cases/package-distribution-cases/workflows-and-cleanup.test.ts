@@ -17,6 +17,7 @@ import {
   nextReleaseSetGeneration,
   parseReleaseSetGeneration,
 } from '../../../../../scripts/release-set-generation.mjs';
+import { getOplPackageSpecs } from '../../../../../src/modules/connect/package-distribution.ts';
 
 test('framework packages workflow is release-gated and manually repairable without WebUI publishing', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/packages.yml'), 'utf8');
@@ -271,13 +272,37 @@ test('framework packages workflow is release-gated and manually repairable witho
 
 test('single-Package publication is protected, selector-bound, and readback-only after unknown results', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
+  const publisherPackageIds = ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills', 'opl-flow'];
+  const packageSpecs = getOplPackageSpecs();
 
   assert.match(workflow, /^  workflow_dispatch:$/m);
   assert.doesNotMatch(workflow, /^\s+(?:workflow_call|workflow_run|schedule):$/m);
   assert.match(workflow, /^permissions: \{\}$/m);
   assert.match(workflow, /^    environment: release-stable$/m);
   assert.match(workflow, /^    permissions:\n      contents: read\n      packages: write$/m);
-  assert.match(workflow, /options: \[mag, mas, mas-scholar-skills\]/);
+  assert.deepEqual(packageSpecs.map((spec) => spec.package_id), publisherPackageIds);
+  assert.match(workflow, new RegExp(`options: \\[${publisherPackageIds.join(', ')}\\]`));
+  for (const spec of packageSpecs) {
+    const manifest = parseJsonText(
+      fs.readFileSync(path.join(repoRoot, spec.package_manifest_ref), 'utf8'),
+    ) as Record<string, unknown>;
+    assert.equal(manifest.package_id, spec.package_id);
+    assert.equal(manifest.source_repo, spec.repo_url);
+  }
+  assert.doesNotMatch(workflow, /case "\$PACKAGE_ID" in/);
+  assert.match(workflow, /source_repo="\$\(jq -er \.source_repo "\$manifest"\)"/);
+  assert.match(workflow, /\^https:\/\/github\\\.com\/\(\[\^\/\]\+\)\/\(\[\^\/\]\+\)\\\.git\$/);
+  for (const ownerRepo of [
+    'gaofeng21cn/med-autoscience',
+    'gaofeng21cn/med-autogrant',
+    'gaofeng21cn/mas-scholar-skills',
+    'gaofeng21cn/opl-flow',
+    'gaofeng21cn/opl-meta-agent',
+    'gaofeng21cn/opl-bookforge',
+    'gaofeng21cn/redcube-ai',
+  ]) {
+    assert.doesNotMatch(workflow, new RegExp(ownerRepo));
+  }
   assert.match(workflow, /group: opl-package-publication-\$\{\{ inputs\.package_id \}\}/);
   assert.match(workflow, /cancel-in-progress: false/);
   assert.match(workflow, /\[\[ "\$GITHUB_REF" == "refs\/heads\/main" \]\]/);
