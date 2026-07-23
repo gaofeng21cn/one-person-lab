@@ -84,7 +84,32 @@ function normalizeCapabilityDependencies(
   }
   const dependencies = entries.map((entry, index) => {
     const packageId = canonicalManifestIdentity(entry.package_id, `capability_dependencies[${index}].package_id`);
-    const required = entry.required === true;
+    if (typeof entry.required !== 'boolean') {
+      throw new FrameworkContractError('contract_shape_invalid', 'Agent package capability dependency required must be a boolean.', {
+        manifest_url: manifestUrl,
+        package_id: packageId,
+        dependency_index: index,
+        failure_code: 'agent_package_capability_dependency_invalid',
+      });
+    }
+    const required = entry.required;
+    const dependencyKind = entry.dependency_kind === undefined && required
+      ? 'hard_runtime_dependency'
+      : entry.dependency_kind;
+    const expectedDependencyKind: AgentPackageCapabilityDependency['dependency_kind'] = required
+      ? 'hard_runtime_dependency'
+      : 'optional_enhancement';
+    if (dependencyKind !== expectedDependencyKind) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Agent package capability dependency required and dependency_kind must agree.', {
+        manifest_url: manifestUrl,
+        package_id: packageId,
+        dependency_index: index,
+        required,
+        expected_dependency_kind: expectedDependencyKind,
+        actual_dependency_kind: dependencyKind,
+        failure_code: 'agent_package_capability_dependency_invalid',
+      });
+    }
     const versionRequirement = assertStringValue(
       entry.version_requirement,
       `capability_dependencies[${index}].version_requirement`,
@@ -101,8 +126,8 @@ function normalizeCapabilityDependencies(
         );
     const requiredExportIds = uniqueStrings(stringList(entry.required_export_ids));
     const requiredModuleIds = uniqueStrings(stringList(entry.required_module_ids));
-    if (!required || requiredExportIds.length === 0 || requiredModuleIds.length === 0) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Required capability dependencies must declare required=true, required_export_ids, and required_module_ids.', {
+    if (requiredExportIds.length === 0 || requiredModuleIds.length === 0) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Capability dependencies must declare required_export_ids and required_module_ids.', {
         manifest_url: manifestUrl,
         package_id: packageId,
         dependency_index: index,
@@ -114,6 +139,7 @@ function normalizeCapabilityDependencies(
     return {
       package_id: packageId,
       required,
+      dependency_kind: expectedDependencyKind,
       version_requirement: versionRequirement,
       capability_abi: capabilityAbi,
       consumer_profile_id: consumerProfileId,
@@ -864,6 +890,15 @@ export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl
   if (!isRecord(payload) || payload.surface_kind !== 'opl_capability_package_manifest.v2') {
     throw new FrameworkContractError('contract_shape_invalid', 'Capability package manifest must use opl_capability_package_manifest.v2.', {
       manifest_url: manifestUrl,
+      failure_code: 'invalid_capability_package_manifest',
+    });
+  }
+  // Published legacy manifests are input-compatible; normalized package state remains role-neutral.
+  if (payload.package_role !== 'framework_capability_package'
+    && payload.package_role !== 'required_agent_capability_package') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package manifest package_role must be framework_capability_package.', {
+      manifest_url: manifestUrl,
+      package_role: payload.package_role,
       failure_code: 'invalid_capability_package_manifest',
     });
   }

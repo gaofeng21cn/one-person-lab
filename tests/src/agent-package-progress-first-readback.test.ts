@@ -9,6 +9,10 @@ import {
   ownerRouteReadback,
 } from '../../src/modules/connect/agent-package-registry-parts/readback.ts';
 import {
+  dependencyReadiness,
+  requiredDependents,
+} from '../../src/modules/connect/agent-package-registry-parts/dependency-closure.ts';
+import {
   scopeMaterializationReadiness,
 } from '../../src/modules/connect/agent-package-registry-parts/scope-materialization.ts';
 import {
@@ -90,14 +94,23 @@ test('carrier receipt and policy currentness drift remain observations', () => {
   assert.equal(carrierCondition?.status, 'ok');
   assert.equal(carrierCondition?.action_ref, null);
   assert.match(carrierCondition?.reason ?? '', /lifecycle_receipt_missing/);
-  const ownerReadback = ownerRouteReadback({
-    selectedPackageId: 'fixture.mas',
-    packages: [{ packageId: 'fixture.mas', lock, receipt: null }],
-  }).packages[0];
-  assert.equal(ownerReadback.carrier_authority_readiness.status, 'invalid');
-  assert.equal(ownerReadback.operational_ready, true);
-  assert.equal(ownerReadback.launch_allowed, true);
-  assert.equal(ownerReadback.launch_blocked_reason, null);
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-progress-readback-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateDir;
+  try {
+    const ownerReadback = ownerRouteReadback({
+      selectedPackageId: 'fixture.mas',
+      packages: [{ packageId: 'fixture.mas', lock, receipt: null }],
+    }).packages[0];
+    assert.equal(ownerReadback.carrier_authority_readiness.status, 'invalid');
+    assert.equal(ownerReadback.operational_ready, true);
+    assert.equal(ownerReadback.launch_allowed, true);
+    assert.equal(ownerReadback.launch_blocked_reason, null);
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
 
   const policyDrift = agentPackageLifecycleUxReadback({
     packageId: 'fixture.opl-flow',
@@ -218,6 +231,159 @@ test('scope readiness observes digest receipt and provider lock drift but still 
   } finally {
     fs.rmSync(targetRoot, { recursive: true, force: true });
   }
+});
+
+test('optional enhancement materialization stays outside the atomic package scope', () => {
+  const targetRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-optional-scope-readback-'));
+  const dependency = {
+    package_id: 'fixture.optional-provider',
+    required: false,
+    dependency_kind: 'optional_enhancement',
+    version_requirement: '>=1.0.0 <2.0.0',
+    capability_abi: 'fixture.optional.v1',
+    consumer_profile_id: null,
+    required_export_ids: ['optional-core'],
+    required_module_ids: ['optional.module'],
+    bootstrap_manifest_url: null,
+    dependency_source: null,
+  } as const;
+  const consumer = {
+    package_id: 'fixture.consumer',
+    capability_dependencies: [dependency],
+    resolved_dependencies: [{
+      ...dependency,
+      installed_version: '1.0.0',
+      manifest_url: 'file:///fixture/optional-provider.json',
+      manifest_sha256: 'a'.repeat(64),
+      content_digest: `sha256:${'b'.repeat(64)}`,
+      package_lock_ref: 'opl://fixture/optional-provider',
+    }],
+    scope_materializations: [],
+  } as unknown as AgentPackageLock;
+  const provider = {
+    package_id: 'fixture.optional-provider',
+    lock_ref: 'opl://fixture/optional-provider',
+    capability_provider: {
+      capability_abi: 'fixture.optional.v1',
+      exports: [
+        { export_id: 'optional-core', skill_id: 'optional-core', install_mode: 'core_required' },
+        { export_id: 'optional-specialty', skill_id: 'optional-specialty', install_mode: 'optional_named_specialty' },
+      ],
+      module_export_ids: ['optional.module'],
+      consumer_profiles: [],
+    },
+  } as unknown as AgentPackageLock;
+  const index = {
+    surface_kind: 'opl_agent_package_lock_index',
+    version: 'opl-agent-package-lock-index.v1',
+    packages: [consumer, provider],
+  } satisfies AgentPackageLockIndex;
+
+  try {
+    const unscoped = scopeMaterializationReadiness(consumer, index, {});
+    assert.equal(unscoped.status, 'not_required');
+    assert.equal(unscoped.core_readiness.status, 'not_required');
+    assert.equal(unscoped.repair_command, null);
+
+    const missing = scopeMaterializationReadiness(consumer, index, {
+      scope: 'workspace',
+      targetWorkspace: targetRoot,
+    });
+    assert.equal(missing.status, 'not_required');
+    assert.equal(missing.core_readiness.status, 'not_required');
+    assert.deepEqual(missing.core_readiness.required_skill_ids, []);
+    assert.equal(missing.specialty_exposure.status, 'not_required');
+    assert.deepEqual(missing.specialty_exposure.missing_skill_ids, []);
+  } finally {
+    fs.rmSync(targetRoot, { recursive: true, force: true });
+  }
+});
+
+test('optional enhancement provider failures stay diagnostic while hard dependencies remain closed', () => {
+  const dependency = {
+    package_id: 'fixture.optional-provider',
+    required: false,
+    dependency_kind: 'optional_enhancement',
+    version_requirement: '>=1.0.0 <2.0.0',
+    capability_abi: 'fixture.optional.v1',
+    consumer_profile_id: null,
+    required_export_ids: ['optional-core'],
+    required_module_ids: ['optional.module'],
+    bootstrap_manifest_url: null,
+    dependency_source: null,
+  } as const;
+  const consumer = {
+    package_id: 'fixture.consumer',
+    agent_id: 'fixture.consumer',
+    capability_dependencies: [dependency],
+    resolved_dependencies: [],
+  } as unknown as AgentPackageLock;
+  const index = (packages: AgentPackageLock[]) => ({
+    surface_kind: 'opl_agent_package_lock_index' as const,
+    version: 'opl-agent-package-lock-index.v1' as const,
+    packages,
+  }) satisfies AgentPackageLockIndex;
+
+  const missing = dependencyReadiness(consumer, index([consumer]));
+  assert.equal(missing.status, 'missing');
+  assert.equal(missing.operational_ready, true);
+  assert.equal(missing.dependencies[0].required, false);
+
+  const compatibleProvider = {
+    package_id: dependency.package_id,
+    package_version: '1.0.0',
+    manifest_sha256: 'a'.repeat(64),
+    content_digest: `sha256:${'b'.repeat(64)}`,
+    lock_ref: 'opl://fixture/optional-provider',
+    capability_provider: {
+      capability_abi: dependency.capability_abi,
+      exports: [{
+        export_id: 'optional-core',
+        skill_id: 'optional-core',
+        install_mode: 'core_required',
+      }],
+      module_export_ids: ['optional.module'],
+      consumer_profiles: [],
+    },
+  } as unknown as AgentPackageLock;
+  const disabled = dependencyReadiness(consumer, index([
+    consumer,
+    { ...compatibleProvider, exposure_state: 'disabled' },
+  ]));
+  assert.equal(disabled.status, 'incompatible');
+  assert.equal(disabled.operational_ready, true);
+  assert.ok(disabled.dependencies[0].reasons.includes('dependency_disabled'));
+
+  const incompatible = dependencyReadiness(consumer, index([
+    consumer,
+    {
+      ...compatibleProvider,
+      capability_provider: {
+        ...compatibleProvider.capability_provider!,
+        capability_abi: 'fixture.optional.v2',
+      },
+    },
+  ]));
+  assert.equal(incompatible.status, 'incompatible');
+  assert.equal(incompatible.operational_ready, true);
+  assert.ok(incompatible.dependencies[0].reasons.includes('capability_abi_mismatch'));
+  assert.deepEqual(requiredDependents(index([consumer, compatibleProvider]), dependency.package_id), []);
+
+  const hardConsumer = {
+    ...consumer,
+    capability_dependencies: [{
+      ...dependency,
+      required: true,
+      dependency_kind: 'hard_runtime_dependency',
+    }],
+  } as unknown as AgentPackageLock;
+  const hardMissing = dependencyReadiness(hardConsumer, index([hardConsumer]));
+  assert.equal(hardMissing.status, 'missing');
+  assert.equal(hardMissing.operational_ready, false);
+  assert.deepEqual(
+    requiredDependents(index([hardConsumer, compatibleProvider]), dependency.package_id),
+    ['fixture.consumer'],
+  );
 });
 
 function makeTreeWritable(root: string) {

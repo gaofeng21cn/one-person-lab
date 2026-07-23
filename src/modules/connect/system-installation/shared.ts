@@ -63,7 +63,8 @@ export type ModuleCapabilityDependency = {
   module_id: OplModuleId;
   package_id: string;
   kind: 'framework_capability_package';
-  required: true;
+  required: boolean;
+  dependency_kind: 'hard_runtime_dependency' | 'optional_enhancement';
   version_requirement: string;
   capability_abi: string;
   consumer_profile_id?: string;

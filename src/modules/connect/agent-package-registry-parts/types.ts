@@ -416,6 +416,7 @@ export type AgentPackageManagedPolicyCurrentness = {
 export type AgentPackageCapabilityDependency = {
   package_id: string;
   required: boolean;
+  dependency_kind: 'hard_runtime_dependency' | 'optional_enhancement';
   version_requirement: string;
   capability_abi: string;
   consumer_profile_id?: string | null;
@@ -448,6 +449,7 @@ export type AgentPackageCapabilityProvider = {
 export type AgentPackageResolvedDependency = {
   package_id: string;
   required: boolean;
+  dependency_kind: 'hard_runtime_dependency' | 'optional_enhancement';
   version_requirement: string;
   capability_abi: string;
   consumer_profile_id?: string | null;

@@ -268,3 +268,52 @@ test('bundled catalog rejects its own manifest digest drift', (t) => {
     },
   );
 });
+
+test('bundled catalog excludes optional enhancements from closure without relaxing member integrity', (t) => {
+  const root = committedSurfaceFixture(t, 'catalog');
+  const catalogPath = path.join(root, catalogRef);
+  const catalog = readJson(catalogPath);
+  const manifestRoot = path.join(root, 'contracts', 'opl-framework');
+  const magManifestPath = path.join(manifestRoot, catalog.packages.mag.manifest_ref);
+  const masManifestPath = path.join(manifestRoot, catalog.packages.mas.manifest_ref);
+  const magManifest = readJson(magManifestPath);
+  const masManifest = readJson(masManifestPath);
+  const optionalScholarDependency = structuredClone(masManifest.capability_dependencies[0]);
+  optionalScholarDependency.required = false;
+  optionalScholarDependency.dependency_kind = 'optional_enhancement';
+  magManifest.capability_dependencies = [optionalScholarDependency];
+  writeJson(magManifestPath, magManifest);
+  catalog.packages.mag.manifest_sha256 = sha256(fs.readFileSync(magManifestPath));
+  writeJson(catalogPath, catalog);
+
+  const previousFaultGate = process.env.OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED;
+  const previousCatalog = process.env.OPL_TEST_BUNDLED_FULL_RUNTIME_PACKAGE_CATALOG;
+  process.env.OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED = '1';
+  process.env.OPL_TEST_BUNDLED_FULL_RUNTIME_PACKAGE_CATALOG = catalogPath;
+  t.after(() => {
+    if (previousFaultGate === undefined) delete process.env.OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED;
+    else process.env.OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED = previousFaultGate;
+    if (previousCatalog === undefined) delete process.env.OPL_TEST_BUNDLED_FULL_RUNTIME_PACKAGE_CATALOG;
+    else process.env.OPL_TEST_BUNDLED_FULL_RUNTIME_PACKAGE_CATALOG = previousCatalog;
+  });
+
+  const selected = readBundledFullRuntimePackageCatalog();
+  assert.deepEqual(selected.entries.get('mag')?.dependencyPackageIds, []);
+  assert.ok(selected.entries.has('mas-scholar-skills'));
+
+  const scholarPayloadPath = path.join(
+    manifestRoot,
+    catalog.packages['mas-scholar-skills'].payload_manifest_ref,
+  );
+  fs.appendFileSync(scholarPayloadPath, '\n');
+  assert.throws(
+    () => readBundledFullRuntimePackageCatalog(),
+    (error: unknown) => {
+      const details = error instanceof FrameworkContractError ? error.details : undefined;
+      return details?.failure_code === 'agent_package_bundled_full_runtime_catalog_invalid'
+        && details.package_id === 'mas-scholar-skills'
+        && Array.isArray(details.mismatches)
+        && details.mismatches.includes('payload_manifest_sha256');
+    },
+  );
+});

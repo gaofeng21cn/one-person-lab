@@ -5,6 +5,35 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-23
+
+### 决策：专业能力包默认可随包提供，但不因此成为 Agent 运行硬依赖
+
+原因：Provider 身份、默认分发、consumer 兼容性和运行硬依赖曾被压进同一个
+`required_agent_capability_package` / dependency closure 语义，导致专业 Skill 缺失或版本漂移
+反向阻断 Agent admission、Stage route、launch、卸载和日常开发投影；同时 owner source 的普通
+变更被误当成正式 Release payload 变更，放大版本、digest、catalog 和 payload 的维护成本。
+
+影响：
+
+- 专业能力 Provider 的通用身份是 `framework_capability_package`。旧
+  `required_agent_capability_package` 仅作已发布 manifest 的兼容输入，读取后不得获得 required
+  语义；新 manifest 不再写该值。
+- `bundled_capability_package_ids` 只表示默认分发便利。consumer 是否硬依赖 Provider 只由
+  `required + dependency_kind` 决定：`required=true` 只能是 `hard_runtime_dependency`，
+  `required=false` 只能是 `optional_enhancement`。
+- 只有 hard dependency 进入安装、更新、激活、lock、Full runtime root 和 all-or-rollback
+  closure。optional enhancement 缺失、不兼容、disabled 或未物化时，consumer 继续运行，
+  readback 只记录 diagnostic / quality debt；不得据此创建 domain typed blocker、令
+  `operational_ready=false`、禁止 launch 或阻止 Provider 卸载。
+- Provider 只返回 refs-only candidates。consumer domain owner 负责消费、拒绝或 route back，
+  Provider 完成、缺失或 currentness 都不能写 domain truth、选择 Stage route、签 owner receipt
+  或声明 quality / export / publication / submission readiness。
+- 不可变 package payload、exact digest、Release Set 与 Full 离线包 inventory 只属于正式
+  stable/Release/Full 分发 authority。Developer Mode 和普通 owner-source 集成使用当前可读
+  source bytes 与既有 LKG；未进入正式 release 的版本不得迫使 Framework stable projection
+  bump、生成 tracked payload 或重写已发布 catalog bytes。
+
 ## 2026-07-21
 
 ### 决策：Work-item execution scope 成为多任务并发的唯一目标身份

@@ -181,16 +181,33 @@ function normalizeCapabilityDependency(value: unknown): ModuleCapabilityDependen
       field: 'capability_dependencies.sync_scopes',
     });
   }
+  if (typeof value.required !== 'boolean') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package capability dependency must declare required as a boolean.', {
+      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+      field: 'capability_dependencies.required',
+    });
+  }
+  const dependencyKind = value.dependency_kind === undefined && value.required
+    ? 'hard_runtime_dependency'
+    : value.dependency_kind;
+  const expectedDependencyKind: ModuleCapabilityDependency['dependency_kind'] = value.required
+    ? 'hard_runtime_dependency'
+    : 'optional_enhancement';
+  if (dependencyKind !== expectedDependencyKind) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package capability dependency required and dependency_kind must agree.', {
+      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+      field: 'capability_dependencies.dependency_kind',
+      required: value.required,
+      expected_dependency_kind: expectedDependencyKind,
+      actual_dependency_kind: dependencyKind,
+    });
+  }
   return {
     module_id: requiredString(value.module_id, 'capability_dependencies.module_id') as ModuleCapabilityDependency['module_id'],
     package_id: requiredString(value.package_id, 'capability_dependencies.package_id'),
     kind: 'framework_capability_package',
-    required: value.required === true ? true : (() => {
-      throw new FrameworkContractError('contract_shape_invalid', 'Agent package capability dependency must be required.', {
-        contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
-        field: 'capability_dependencies.required',
-      });
-    })(),
+    required: value.required,
+    dependency_kind: expectedDependencyKind,
     version_requirement: requiredString(value.version_requirement, 'capability_dependencies.version_requirement'),
     capability_abi: requiredString(value.capability_abi, 'capability_dependencies.capability_abi'),
     ...(typeof value.consumer_profile_id === 'string'

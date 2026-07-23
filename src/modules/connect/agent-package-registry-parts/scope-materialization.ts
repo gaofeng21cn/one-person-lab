@@ -599,7 +599,9 @@ export function scopeMaterializationReadiness(
   index: AgentPackageLockIndex,
   input: ScopeInput,
 ): AgentPackageMaterializationReadiness {
-  if ((lock.capability_dependencies ?? []).length === 0) {
+  const requiredDependencies = (lock.capability_dependencies ?? []).filter((dependency) =>
+    dependency.required !== false);
+  if (requiredDependencies.length === 0) {
     return {
       status: 'not_required',
       scope: input.scope ?? null,
@@ -635,7 +637,7 @@ export function scopeMaterializationReadiness(
   const records = (lock.scope_materializations ?? []).filter((entry) =>
     entry.scope === scope && entry.target_root === targetRoot);
   const targetSkillsRoot = path.join(targetRoot, '.codex', 'skills');
-  const providerReadiness = lock.capability_dependencies.map((dependency) => {
+  const providerReadiness = requiredDependencies.map((dependency) => {
     const record = records.find((entry) => entry.provider_package_id === dependency.package_id) ?? null;
     const provider = index.packages.find((entry) => entry.package_id === dependency.package_id) ?? null;
     const profileId = dependency.consumer_profile_id ?? null;

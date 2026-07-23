@@ -210,7 +210,7 @@ export function writeCapabilityProvider(
     publisher: 'one-person-lab',
     version,
     source: 'test_provider',
-    package_role: 'required_agent_capability_package',
+    package_role: 'framework_capability_package',
     capability_abi: {
       id: capabilityAbi,
       version: '1.0.0',
@@ -444,10 +444,13 @@ export function writeMasConsumer(
     consumerProfileId?: string;
     requiredExportIds?: string[];
     requiredModuleIds?: string[];
+    required?: boolean;
+    dependencyKind?: 'hard_runtime_dependency' | 'optional_enhancement';
   } = {},
 ) {
   const packageVersion = version.replace(/^(\d+\.\d+\.\d+)a(\d+)$/, '$1-alpha.$2');
   const agentId = options.agentId ?? 'mas';
+  const dependencyRequired = options.required ?? true;
   const pluginId = options.pluginId ?? (agentId === 'mas' ? 'med-autoscience' : agentId);
   const pluginRoot = path.join(root, 'plugins', pluginId);
   fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
@@ -495,7 +498,9 @@ export function writeMasConsumer(
       module_id: 'scholarskills',
       package_id: options.providerPackageId ?? 'mas-scholar-skills',
       kind: 'framework_capability_package',
-      required: true,
+      required: dependencyRequired,
+      dependency_kind: options.dependencyKind
+        ?? (dependencyRequired ? 'hard_runtime_dependency' : 'optional_enhancement'),
       version_requirement: '>=0.1.0 <0.2.0',
       capability_abi: 'mas-scholar-skills.v1',
       ...(options.consumerProfileId ? { consumer_profile_id: options.consumerProfileId } : {}),

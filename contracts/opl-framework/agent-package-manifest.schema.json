@@ -561,7 +561,13 @@
             "const": "framework_capability_package"
           },
           "required": {
-            "const": true
+            "type": "boolean"
+          },
+          "dependency_kind": {
+            "enum": [
+              "hard_runtime_dependency",
+              "optional_enhancement"
+            ]
           },
           "version_requirement": {
             "type": "string",
@@ -668,6 +674,49 @@
             "additionalProperties": false
           }
         },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "required": {
+                  "const": true
+                }
+              },
+              "required": [
+                "required"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dependency_kind": {
+                  "const": "hard_runtime_dependency"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "required": {
+                  "const": false
+                }
+              },
+              "required": [
+                "required"
+              ]
+            },
+            "then": {
+              "required": [
+                "dependency_kind"
+              ],
+              "properties": {
+                "dependency_kind": {
+                  "const": "optional_enhancement"
+                }
+              }
+            }
+          }
+        ],
         "additionalProperties": true
       }
     },

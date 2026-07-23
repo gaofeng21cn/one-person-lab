@@ -16,6 +16,7 @@ import {
 import { assertJsonSchemaPayload } from '../../../../../src/kernel/schema-registry.ts';
 import {
   normalizeCapabilityPackageManifest,
+  normalizePackageManifest,
   normalizeWorkflowProfilePackageManifest,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
 
@@ -1114,6 +1115,22 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
     sourceRef: 'contracts/opl-framework/capability-package-manifest.schema.json',
   }, manifest));
   const normalized = normalizeCapabilityPackageManifest(manifest, manifestPath);
+  assert.equal(manifest.package_role, 'required_agent_capability_package');
+  assert.equal(normalized.package_role, 'framework_capability_package');
+  assert.equal(
+    normalizeCapabilityPackageManifest({
+      ...manifest,
+      package_role: 'framework_capability_package',
+    }, manifestPath).package_role,
+    'framework_capability_package',
+  );
+  assert.throws(
+    () => normalizeCapabilityPackageManifest({
+      ...manifest,
+      package_role: 'optional_agent_capability_package',
+    }, manifestPath),
+    /package_role must be framework_capability_package/,
+  );
   const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
   assert.equal(manifest.version, catalogEntry.package_version);
@@ -1262,6 +1279,82 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
     }).distribution_payload?.install_truth,
     'resolved_digest_lock',
   );
+  assert.equal(
+    normalizeFirstPartyAgentPackageManifest(manifest)
+      .capability_dependencies[0].dependency_kind,
+    'hard_runtime_dependency',
+  );
+  const optionalManifest = structuredClone(manifest);
+  delete optionalManifest.distribution_payload;
+  optionalManifest.capability_dependencies = [{
+    ...manifest.capability_dependencies[0],
+    required: false,
+    dependency_kind: 'optional_enhancement',
+  }];
+  assert.deepEqual(
+    normalizeFirstPartyAgentPackageManifest(optionalManifest)
+      .capability_dependencies.map((dependency) => ({
+        required: dependency.required,
+        dependency_kind: dependency.dependency_kind,
+      })),
+    [{ required: false, dependency_kind: 'optional_enhancement' }],
+  );
+  assert.deepEqual(
+    normalizePackageManifest(optionalManifest, 'file:///tmp/optional-agent-package.json')
+      .capability_dependencies.map((dependency) => ({
+        required: dependency.required,
+        dependency_kind: dependency.dependency_kind,
+      })),
+    [{ required: false, dependency_kind: 'optional_enhancement' }],
+  );
+  const schema = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/agent-package-manifest.schema.json'),
+    'utf8',
+  )) as Record<string, any>;
+  assert.doesNotThrow(() => assertJsonSchemaPayload({
+    schemaId: schema.$id,
+    schema,
+    sourceRef: 'contracts/opl-framework/agent-package-manifest.schema.json',
+  }, optionalManifest));
+  for (const dependency of [
+    {
+      ...manifest.capability_dependencies[0],
+      required: true,
+      dependency_kind: 'optional_enhancement',
+    },
+    {
+      ...manifest.capability_dependencies[0],
+      required: false,
+      dependency_kind: 'hard_runtime_dependency',
+    },
+    {
+      ...manifest.capability_dependencies[0],
+      required: false,
+    },
+  ]) {
+    assert.throws(() => assertJsonSchemaPayload({
+      schemaId: schema.$id,
+      schema,
+      sourceRef: 'contracts/opl-framework/agent-package-manifest.schema.json',
+    }, {
+      ...manifest,
+      capability_dependencies: [dependency],
+    }));
+    assert.throws(
+      () => normalizeFirstPartyAgentPackageManifest({
+        ...manifest,
+        capability_dependencies: [dependency],
+      }),
+      /required and dependency_kind must agree/,
+    );
+    assert.throws(
+      () => normalizePackageManifest({
+        ...manifest,
+        capability_dependencies: [dependency],
+      }, 'file:///tmp/invalid-agent-package.json'),
+      /required and dependency_kind must agree/,
+    );
+  }
   assert.throws(
     () => normalizeFirstPartyAgentPackageManifest({
       ...manifest,

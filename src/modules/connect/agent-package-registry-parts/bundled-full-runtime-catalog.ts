@@ -84,7 +84,10 @@ function manifestCapabilityAbi(manifest: Record<string, unknown>) {
 function manifestDependencyPackageIds(manifest: Record<string, unknown>) {
   return Array.isArray(manifest.capability_dependencies)
     ? manifest.capability_dependencies.flatMap((candidate) => (
-        isRecord(candidate) && stringValue(candidate.package_id)
+        isRecord(candidate)
+          && candidate.required === true
+          && candidate.dependency_kind !== 'optional_enhancement'
+          && stringValue(candidate.package_id)
           ? [stringValue(candidate.package_id)!]
           : []
       ))

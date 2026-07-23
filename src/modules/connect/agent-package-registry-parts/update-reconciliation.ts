@@ -262,7 +262,8 @@ export function firstPartyCatalogClosure(
         failure_code: 'agent_package_catalog_package_id_mismatch',
       });
     }
-    for (const dependency of manifest.capability_dependencies) {
+    for (const dependency of manifest.capability_dependencies.filter((entry) =>
+      entry.required !== false)) {
       const dependencyPolicy = resolveAgentPackageEffectiveSourcePolicy(dependency.package_id);
       const dependencyVersion = dependencyPolicy.desired_source_kind === 'developer_checkout_override'
         ? null
