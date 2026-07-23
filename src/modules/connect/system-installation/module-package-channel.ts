@@ -226,7 +226,7 @@ function fetchGhcrToken(imageRef: OciImageRef, timeoutMs?: number) {
 
 function fetchOciManifest(imageRef: OciImageRef, token: string, timeoutMs?: number) {
   const manifestUrl = `https://${imageRef.registry}/v2/${imageRef.repository}/manifests/${imageRef.tag}`;
-  const payload = runCurl([
+  const raw = runCurl([
     '-fsSL',
     '-H',
     `Authorization: Bearer ${token}`,
@@ -234,8 +234,11 @@ function fetchOciManifest(imageRef: OciImageRef, token: string, timeoutMs?: numb
     'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
     manifestUrl,
   ], 'oci_manifest', { image: imageRef.image, tag: imageRef.tag }, true, timeoutMs);
-  const parsed = parseJsonText(payload);
-  return isRecord(parsed) ? parsed as { layers?: OciLayer[] } : {};
+  const parsed = parseJsonText(raw);
+  return {
+    payload: isRecord(parsed) ? parsed as { layers?: OciLayer[] } : {},
+    descriptor_digest: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
+  };
 }
 
 function fetchPinnedOciManifest(imageRef: OciImageRef, token: string, expectedDigest: string) {
@@ -604,7 +607,7 @@ export function readOplPackageChannelManifestWithMetadata(
   };
   const token = fetchGhcrToken(imageRef, remainingTimeoutMs());
   const manifest = fetchOciManifest(imageRef, token, remainingTimeoutMs());
-  const layer = selectLayer(manifest, CHANNEL_MANIFEST_LAYER_MEDIA_TYPE, 'opl-channel-manifest.json');
+  const layer = selectLayer(manifest.payload, CHANNEL_MANIFEST_LAYER_MEDIA_TYPE, 'opl-channel-manifest.json');
   if (!layer?.digest) {
     throw new FrameworkContractError('contract_shape_invalid', 'OPL package-channel manifest layer is missing.', {
       image: imageRef.image,
@@ -617,11 +620,23 @@ export function readOplPackageChannelManifestWithMetadata(
     fetchOciBlob(imageRef, token, layer.digest, manifestPath, remainingTimeoutMs());
     const raw = fs.readFileSync(manifestPath);
     const parsed = readJsonPayloadFile(manifestPath);
+    const channelManifestLayerDigest = `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`;
+    if (channelManifestLayerDigest !== layer.digest) {
+      throw new FrameworkContractError('contract_shape_invalid', 'OPL package-channel manifest layer digest mismatch.', {
+        image: imageRef.image,
+        tag: imageRef.tag,
+        expected_channel_manifest_layer_digest: layer.digest,
+        actual_channel_manifest_layer_digest: channelManifestLayerDigest,
+        failure_code: 'opl_package_channel_manifest_layer_digest_mismatch',
+      });
+    }
     return {
       payload: isRecord(parsed) ? parsed as OplChannelManifest : {},
       channel_ref: `${imageRef.image}:${imageRef.tag}`,
+      release_set_descriptor_digest: manifest.descriptor_digest,
+      channel_manifest_layer_digest: channelManifestLayerDigest,
       layer_digest: layer.digest,
-      source_sha256: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
+      source_sha256: channelManifestLayerDigest,
       checked_at: nowIso(),
     };
   } finally {

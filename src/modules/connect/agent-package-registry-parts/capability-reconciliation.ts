@@ -158,6 +158,27 @@ export function normalizeManagedPackageCatalog(payload: unknown): ManagedPackage
   return result;
 }
 
+export function managedPackageCatalogDigest(payload: unknown) {
+  if (!isRecord(payload) || !isRecord(payload.packages)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog must declare packages.package_catalog.', {
+      failure_code: 'agent_package_catalog_invalid',
+    });
+  }
+  const packageCatalog = isRecord(payload.packages.package_catalog)
+    ? payload.packages.package_catalog
+    : payload.packages;
+  const actualDigest = sha256(JSON.stringify(packageCatalog));
+  const declaredDigest = normalizedSha256(payload.package_catalog_digest);
+  if (declaredDigest && declaredDigest !== actualDigest) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Managed package catalog digest is invalid.', {
+      expected_package_catalog_digest: declaredDigest,
+      actual_package_catalog_digest: actualDigest,
+      failure_code: 'agent_package_catalog_digest_mismatch',
+    });
+  }
+  return actualDigest;
+}
+
 export async function fetchManagedPackageCatalog(
   source: AgentPackageManagedVersionCatalogSource,
   input: { timeoutMs?: number } = {},
@@ -166,6 +187,8 @@ export async function fetchManagedPackageCatalog(
     ? await fetchJsonSource(source.catalog_ref, input).then((result) => ({
         ...result,
         channel_ref: source.catalog_ref,
+        release_set_descriptor_digest: null,
+        channel_manifest_layer_digest: `sha256:${result.source_sha256.replace(/^sha256:/, '')}`,
         channel_digest: `sha256:${result.source_sha256.replace(/^sha256:/, '')}`,
         checked_at: new Date().toISOString(),
       }))
@@ -175,15 +198,22 @@ export async function fetchManagedPackageCatalog(
           payload: channel.payload,
           source_sha256: channel.source_sha256,
           channel_ref: channel.channel_ref,
-          channel_digest: channel.layer_digest,
+          release_set_descriptor_digest: channel.release_set_descriptor_digest,
+          channel_manifest_layer_digest: channel.channel_manifest_layer_digest,
+          channel_digest: channel.channel_manifest_layer_digest,
           checked_at: channel.checked_at,
         };
       })();
+  const packageCatalogDigest = managedPackageCatalogDigest(fetched.payload);
   return {
     catalog: normalizeManagedPackageCatalog(fetched.payload),
     catalog_payload: fetched.payload,
     source_sha256: fetched.source_sha256,
     channel_ref: fetched.channel_ref,
+    release_set_descriptor_digest: fetched.release_set_descriptor_digest,
+    channel_manifest_layer_digest: fetched.channel_manifest_layer_digest,
+    package_catalog_digest: packageCatalogDigest,
+    // Existing package locks bind the channel-manifest layer, not the OCI descriptor.
     channel_digest: fetched.channel_digest,
     checked_at: fetched.checked_at,
   };

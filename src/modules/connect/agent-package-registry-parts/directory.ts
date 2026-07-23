@@ -78,6 +78,10 @@ export type FirstPartyDirectoryCatalogSnapshot = {
   catalog: ManagedPackageCatalog;
   freshness: 'live' | 'cached' | 'last_known_good';
   catalog_ref: string;
+  release_set_descriptor_digest: string | null;
+  channel_manifest_layer_digest: string;
+  package_catalog_digest: string;
+  /** Internal compatibility alias for package locks that bind the channel-manifest layer. */
   catalog_digest: string | null;
   checked_at: string;
 };
@@ -314,18 +318,21 @@ export async function enrichRegistryCacheManifestMetadata(cache: AgentPackageReg
 }
 
 function firstPartyDirectorySources(snapshot: FirstPartyDirectoryCatalogSnapshot | null): DirectorySource[] {
+  const liveVerified = snapshot?.freshness === 'live';
   return getOplPackageSpecs().map((spec) => {
     const selected = snapshot
       ? selectManagedCatalogPackageVersion(snapshot.catalog, spec.package_id)
       : null;
     if (selected) assertFirstPartyPackageCatalogVersion(spec.package_id, selected);
-    const currentnessStatus = snapshot?.freshness === 'live'
+    const currentnessStatus = liveVerified
       ? 'live_release_set'
       : snapshot?.freshness === 'cached'
         ? 'cached_release_set'
         : snapshot?.freshness === 'last_known_good'
           ? 'last_known_good_release_set'
-          : 'framework_projection_only';
+          : snapshot
+            ? 'last_known_good_release_set'
+            : 'framework_projection_only';
     return {
       package_id: spec.package_id,
       display_name: spec.label,
@@ -347,9 +354,9 @@ function firstPartyDirectorySources(snapshot: FirstPartyDirectoryCatalogSnapshot
       registry_source_ref: selected ? snapshot!.catalog_ref : spec.package_manifest_ref,
       version_currentness: {
         status: currentnessStatus,
-        live_verified: snapshot?.freshness === 'live',
+        live_verified: liveVerified,
         source_ref: snapshot?.catalog_ref ?? spec.package_manifest_ref,
-        source_digest: snapshot?.catalog_digest ?? null,
+        source_digest: snapshot?.channel_manifest_layer_digest ?? null,
         checked_at: snapshot?.checked_at ?? null,
       },
       release_target: selected,
@@ -859,7 +866,9 @@ export function buildAgentPackageDirectory(input: {
       status: input.firstPartyCatalog?.freshness ?? 'unknown',
       live_verified: input.firstPartyCatalog?.freshness === 'live',
       catalog_ref: input.firstPartyCatalog?.catalog_ref ?? null,
-      catalog_digest: input.firstPartyCatalog?.catalog_digest ?? null,
+      release_set_descriptor_digest: input.firstPartyCatalog?.release_set_descriptor_digest ?? null,
+      channel_manifest_layer_digest: input.firstPartyCatalog?.channel_manifest_layer_digest ?? null,
+      package_catalog_digest: input.firstPartyCatalog?.package_catalog_digest ?? null,
       checked_at: input.firstPartyCatalog?.checked_at ?? null,
     },
     detail: input.detail,

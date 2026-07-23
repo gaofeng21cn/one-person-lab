@@ -232,6 +232,78 @@ function validateReceipt(value, target, expectation) {
   return receipt;
 }
 
+function validatePackageSelectionResults(value, candidate) {
+  const selections = record(value, 'package_selection_results_invalid', 'Package selection results');
+  exactKeys(selections, PACKAGE_IDS, 'package_selection_results_invalid', 'Package selection results');
+  const fields = [
+    'result',
+    'result_receipt_digest',
+    'selected_artifact_digest',
+    'selected_artifact_ref',
+    'selected_version',
+    'source_cutoff',
+    'update_status',
+    'verified_lkg',
+  ];
+  for (const packageId of PACKAGE_IDS) {
+    const selection = record(
+      selections[packageId],
+      'package_selection_results_invalid',
+      `Package selection ${packageId}`,
+    );
+    exactKeys(selection, fields, 'package_selection_results_invalid', `Package selection ${packageId}`);
+    const selected = candidate.components.packages[packageId];
+    same(selection.selected_version, selected.version, 'package_selection_identity_mismatch', `${packageId} selected version`);
+    same(selection.selected_artifact_ref, selected.artifact_ref, 'package_selection_identity_mismatch', `${packageId} selected artifact ref`);
+    same(selection.selected_artifact_digest, selected.artifact_digest, 'package_selection_identity_mismatch', `${packageId} selected artifact digest`);
+    exactString(
+      String(selection.result_receipt_digest ?? ''),
+      DIGEST_PATTERN,
+      'package_selection_results_invalid',
+      `${packageId} result receipt digest`,
+    );
+    sameJson(
+      selection.source_cutoff,
+      candidate.source_cutoff,
+      'package_selection_identity_mismatch',
+      `${packageId} source cutoff`,
+    );
+    if (selection.result === 'advanced') {
+      same(selection.update_status, 'completed', 'package_selection_results_invalid', `${packageId} update status`);
+      same(selection.verified_lkg, null, 'package_selection_results_invalid', `${packageId} verified LKG`);
+      continue;
+    }
+    same(selection.result, 'reused_verified_lkg', 'package_selection_results_invalid', `${packageId} result`);
+    if (!['failed', 'unavailable'].includes(selection.update_status)) {
+      reject(
+        'package_selection_results_invalid',
+        `${packageId} reused LKG update status must be failed or unavailable.`,
+      );
+    }
+    const lkg = record(
+      selection.verified_lkg,
+      'package_selection_results_invalid',
+      `${packageId} verified LKG`,
+    );
+    exactKeys(
+      lkg,
+      ['artifact_digest', 'artifact_ref', 'receipt_digest', 'status'],
+      'package_selection_results_invalid',
+      `${packageId} verified LKG`,
+    );
+    same(lkg.status, 'verified', 'package_selection_results_invalid', `${packageId} verified LKG status`);
+    same(lkg.artifact_ref, selected.artifact_ref, 'package_selection_identity_mismatch', `${packageId} verified LKG artifact ref`);
+    same(lkg.artifact_digest, selected.artifact_digest, 'package_selection_identity_mismatch', `${packageId} verified LKG artifact digest`);
+    exactString(
+      String(lkg.receipt_digest ?? ''),
+      DIGEST_PATTERN,
+      'package_selection_results_invalid',
+      `${packageId} verified LKG receipt digest`,
+    );
+  }
+  return selections;
+}
+
 function validateReceipts(candidate, promotion) {
   same(promotion.carrier.digest, candidate.carrier.digest, 'promotion_identity_mismatch', 'Candidate/promotion carrier digest');
   same(promotion.release_set_generation, candidate.release_set_generation, 'promotion_identity_mismatch', 'Candidate/promotion generation');
@@ -363,16 +435,39 @@ function validateRemoteReadback(value, promotion) {
   return readback;
 }
 
-function validateAppReadback(value, promotion) {
+function validateAppReadback(value, promotion, digests) {
   const packages = record(value.opl_agent_packages, 'app_readback_invalid', 'App Package readback');
   same(packages.surface_kind, 'opl_agent_package_readback', 'app_readback_invalid', 'App Package surface_kind');
   const directory = record(packages.directory, 'app_readback_invalid', 'App Package directory');
   const currentness = record(directory.first_party_release_currentness, 'app_readback_invalid', 'App release currentness');
   same(currentness.status, 'live', 'app_not_live_verified', 'App catalog freshness');
   same(currentness.live_verified, true, 'app_not_live_verified', 'App live verification');
+  if ('catalog_digest' in currentness) {
+    reject('app_legacy_digest_domain_invalid', 'App live currentness must not expose the legacy ambiguous catalog_digest.');
+  }
   same(currentness.catalog_ref, promotion.carrier.channel_ref, 'app_catalog_identity_mismatch', 'App catalog ref');
-  same(currentness.catalog_digest, promotion.carrier.digest, 'app_catalog_digest_mismatch', 'App catalog digest');
+  same(
+    currentness.release_set_descriptor_digest,
+    promotion.carrier.digest,
+    'app_release_set_descriptor_digest_mismatch',
+    'App Release Set descriptor digest',
+  );
+  same(
+    currentness.channel_manifest_layer_digest,
+    digests.channelManifestLayerDigest,
+    'app_channel_manifest_layer_digest_mismatch',
+    'App channel manifest layer digest',
+  );
+  same(
+    currentness.package_catalog_digest,
+    digests.packageCatalogDigest,
+    'app_package_catalog_digest_mismatch',
+    'App embedded Package catalog digest',
+  );
   if (!Array.isArray(directory.entries)) reject('app_readback_invalid', 'App Package directory entries are required.');
+  const packageVersions = {};
+  const packageArtifactDigests = {};
+  const packageSourceDigests = {};
   for (const packageId of PACKAGE_IDS) {
     const matches = directory.entries.filter((item) => item?.package_id === packageId);
     if (matches.length !== 1) reject('incomplete_app_package_set', `App readback must contain Package ${packageId} exactly once.`);
@@ -383,11 +478,24 @@ function validateAppReadback(value, promotion) {
     same(entry.stable_version, expected.version, 'app_package_identity_mismatch', `${packageId} stable version`);
     same(entry.version_currentness?.status, 'live_release_set', 'app_not_live_verified', `${packageId} currentness status`);
     same(entry.version_currentness?.live_verified, true, 'app_not_live_verified', `${packageId} live verification`);
-    same(entry.version_currentness?.source_digest, promotion.carrier.digest, 'app_catalog_digest_mismatch', `${packageId} catalog digest`);
+    same(
+      entry.version_currentness?.source_digest,
+      digests.channelManifestLayerDigest,
+      'app_channel_manifest_layer_digest_mismatch',
+      `${packageId} channel manifest layer digest`,
+    );
     same(entry.release_target?.package_version, expected.version, 'app_package_identity_mismatch', `${packageId} release target version`);
     same(entry.release_target?.artifact_digest, expected.artifact_digest, 'app_package_digest_mismatch', `${packageId} release target digest`);
+    packageVersions[packageId] = entry.selected_version;
+    packageArtifactDigests[packageId] = entry.release_target.artifact_digest;
+    packageSourceDigests[packageId] = entry.version_currentness.source_digest;
   }
-  return currentness;
+  return {
+    currentness,
+    packageVersions,
+    packageArtifactDigests,
+    packageSourceDigests,
+  };
 }
 
 function compactComponents(receipt) {
@@ -420,13 +528,20 @@ function main() {
   const candidate = validateReceipt(candidateEvidence.value, 'candidate', expectation);
   const promotion = validateReceipt(promotionEvidence.value, 'latest-stable', expectation);
   validateReceipts(candidate, promotion);
+  const packageSelectionResults = validatePackageSelectionResults(
+    expectation.package_selection_results,
+    candidate,
+  );
   validateAttestations(attestationEvidence.value, candidate, candidateEvidence.digest, expectation);
   const { releaseSet, catalogDigest } = validateManifests(releaseEvidence.value, channelEvidence.value, candidate);
   validateRemoteReadback(remoteEvidence.value, promotion);
-  const appCurrentness = validateAppReadback(appEvidence.value, promotion);
+  const appReadback = validateAppReadback(appEvidence.value, promotion, {
+    channelManifestLayerDigest: channelEvidence.digest,
+    packageCatalogDigest: catalogDigest,
+  });
 
   const capsule = {
-    surface_kind: 'opl_package_latest_stable_verification_capsule.v1',
+    surface_kind: 'opl_package_latest_stable_verification_capsule.v2',
     status: 'verified',
     evidence_class: expectation.evidence_class,
     baseline: {
@@ -437,7 +552,8 @@ function main() {
     release_set: {
       generation: candidate.release_set_generation,
       immutable_ref: candidate.carrier.immutable_ref,
-      carrier_digest: candidate.carrier.digest,
+      release_set_descriptor_digest: candidate.carrier.digest,
+      channel_manifest_layer_digest: channelEvidence.digest,
       bom_digest: releaseSet.bom_digest,
       package_catalog_digest: catalogDigest,
       promotion_request_id: candidate.promotion_request_id,
@@ -453,10 +569,16 @@ function main() {
       app_readback: appEvidence.digest,
     },
     components: compactComponents(promotion),
+    package_selection_results: packageSelectionResults,
     app_consumption: {
-      live_verified: appCurrentness.live_verified,
-      catalog_ref: appCurrentness.catalog_ref,
-      catalog_digest: appCurrentness.catalog_digest,
+      live_verified: appReadback.currentness.live_verified,
+      catalog_ref: appReadback.currentness.catalog_ref,
+      release_set_descriptor_digest: appReadback.currentness.release_set_descriptor_digest,
+      channel_manifest_layer_digest: appReadback.currentness.channel_manifest_layer_digest,
+      package_catalog_digest: appReadback.currentness.package_catalog_digest,
+      package_versions: appReadback.packageVersions,
+      package_artifact_digests: appReadback.packageArtifactDigests,
+      package_source_digests: appReadback.packageSourceDigests,
     },
     verified_invariants: [
       'candidate_receipt_exact_identity',
@@ -464,7 +586,10 @@ function main() {
       'promotion_receipt_exact_identity',
       'complete_nine_component_release_set',
       'nine_latest_stable_digests',
-      'catalog_manifest_digest_closure',
+      'release_set_descriptor_digest_closure',
+      'channel_manifest_layer_digest_closure',
+      'embedded_package_catalog_digest_closure',
+      'per_package_selection_receipt_closure',
       'app_live_catalog_consumption',
     ],
   };
@@ -476,7 +601,9 @@ function main() {
     output: options.output,
     capsule_sha256: sha256(bytes),
     release_set_generation: capsule.release_set.generation,
-    carrier_digest: capsule.release_set.carrier_digest,
+    release_set_descriptor_digest: capsule.release_set.release_set_descriptor_digest,
+    channel_manifest_layer_digest: capsule.release_set.channel_manifest_layer_digest,
+    package_catalog_digest: capsule.release_set.package_catalog_digest,
   })}\n`);
 }
 

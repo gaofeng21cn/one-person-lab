@@ -8,6 +8,7 @@ import {
   formatJsonPayload,
   fs,
   os,
+  parseJsonText,
   path,
   removeFixtureTree,
   runCli,
@@ -15,6 +16,7 @@ import {
   test,
 } from './helpers.ts';
 import { resolveFirstPartyPackageCatalog } from '../../../../../src/modules/connect/agent-package-first-party.ts';
+import { refreshFirstPartyPackageCatalogSnapshot } from '../../../../../src/modules/connect/agent-package-registry-parts/release-catalog-cache.ts';
 import { materializeAgentPackageSkillProjection } from '../../../../../src/modules/connect/agent-package-registry-parts/skill-projection.ts';
 import {
   normalizeOplReleaseChannelTag,
@@ -179,41 +181,47 @@ function writeFirstPartyCatalogFixture(
   const manifestSha256 = `sha256:${crypto.createHash('sha256').update(manifestJson).digest('hex')}`;
   const payloadManifestSha256 = `sha256:${crypto.createHash('sha256').update(payloadManifestJson).digest('hex')}`;
   const channelManifestPath = path.join(blobRoot, 'channel-manifest.json');
+  const packageCatalog = {
+    'opl-flow': {
+      package_id: 'opl-flow',
+      package_role: 'workflow_profile',
+      selected_version: version,
+      versions: [{
+        package_version: version,
+        selection_status: 'selected_for_release_set',
+        manifest_url: `opl+oci://${sourceArtifactRef}#/package-manifest.json`,
+        manifest_sha256: manifestSha256,
+        manifest_json: manifestJson,
+        content_digest: manifestSha256,
+        payload_digest: payloadManifestSha256,
+        payload_manifest_json: payloadManifestJson,
+        payload_manifest_sha256: payloadManifestSha256,
+        source_artifact_ref: sourceArtifactRef,
+        artifact_digest: artifactDigest,
+        artifact_status: 'published_immutable',
+        package_content_digest: `sha256:${archiveSha256}`,
+        owner_source_commit: ownerSourceCommit,
+        dependency_package_ids: [],
+      }],
+    },
+  };
+  const packageCatalogDigest = `sha256:${crypto.createHash('sha256').update(JSON.stringify(packageCatalog)).digest('hex')}`;
   fs.writeFileSync(channelManifestPath, formatJsonPayload({
     release_set_generation: `fixture-${version}`,
     packages: {
-      package_catalog: {
-        'opl-flow': {
-          package_id: 'opl-flow',
-          package_role: 'workflow_profile',
-          selected_version: version,
-          versions: [{
-            package_version: version,
-            selection_status: 'selected_for_release_set',
-            manifest_url: `opl+oci://${sourceArtifactRef}#/package-manifest.json`,
-            manifest_sha256: manifestSha256,
-            manifest_json: manifestJson,
-            content_digest: manifestSha256,
-            payload_digest: payloadManifestSha256,
-            payload_manifest_json: payloadManifestJson,
-            payload_manifest_sha256: payloadManifestSha256,
-            source_artifact_ref: sourceArtifactRef,
-            artifact_digest: artifactDigest,
-            artifact_status: 'published_immutable',
-            package_content_digest: `sha256:${archiveSha256}`,
-            owner_source_commit: ownerSourceCommit,
-            dependency_package_ids: [],
-          }],
-        },
-      },
+      package_catalog: packageCatalog,
     },
+    package_catalog_digest: packageCatalogDigest,
   }));
   const channelDigest = `sha256:${crypto.createHash('sha256').update(fs.readFileSync(channelManifestPath)).digest('hex')}`;
+  const channelDescriptor = {
+    schemaVersion: 2,
+    layers: [{ mediaType: CHANNEL_MANIFEST_LAYER_MEDIA_TYPE, digest: channelDigest }],
+  };
+  const channelDescriptorDigest = `sha256:${crypto.createHash('sha256').update(JSON.stringify(channelDescriptor)).digest('hex')}`;
   const curlLogPath = path.join(root, 'curl.jsonl');
   const manifests = {
-    'fixture/one-person-lab-manifest': {
-      layers: [{ mediaType: CHANNEL_MANIFEST_LAYER_MEDIA_TYPE, digest: channelDigest }],
-    },
+    'fixture/one-person-lab-manifest': channelDescriptor,
     'fixture/one-person-lab-packages/opl-flow': packageArtifactManifest,
   };
   const blobs = {
@@ -254,6 +262,8 @@ function writeFirstPartyCatalogFixture(
     },
     artifactDigest,
     channelDigest,
+    channelDescriptorDigest,
+    packageCatalogDigest,
     manifestSha256,
     sourceArtifactRef,
     curlLogPath,
@@ -318,6 +328,44 @@ test('release channels normalize stable and preview aliases and reject bare late
   } finally {
     if (previousManifestRef === undefined) delete process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF;
     else process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF = previousManifestRef;
+  }
+});
+
+test('live Release Set refresh persists explicit descriptor, layer, and embedded catalog digests', async () => {
+  const fixture = writeFirstPartyCatalogFixture('0.2.0', '1'.repeat(40));
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-release-cache-'));
+  const environment = {
+    ...fixture.env,
+    OPL_STATE_DIR: stateDir,
+  };
+  const previous = Object.fromEntries(
+    Object.keys(environment).map((key) => [key, process.env[key]]),
+  );
+  try {
+    Object.assign(process.env, environment);
+    const snapshot = await refreshFirstPartyPackageCatalogSnapshot('opl-flow');
+    assert.equal(snapshot.freshness, 'live');
+    assert.equal(snapshot.release_set_descriptor_digest, fixture.channelDescriptorDigest);
+    assert.equal(snapshot.channel_manifest_layer_digest, fixture.channelDigest);
+    assert.equal(snapshot.package_catalog_digest, fixture.packageCatalogDigest);
+    assert.equal(snapshot.catalog_digest, fixture.channelDigest);
+
+    const cache = parseJsonText(fs.readFileSync(
+      path.join(stateDir, 'agent-package-release-catalog-cache.json'),
+      'utf8',
+    )) as any;
+    assert.equal(cache.surface_kind, 'opl_agent_package_release_catalog_cache.v2');
+    assert.equal(cache.release_set_descriptor_digest, fixture.channelDescriptorDigest);
+    assert.equal(cache.channel_manifest_layer_digest, fixture.channelDigest);
+    assert.equal(cache.package_catalog_digest, fixture.packageCatalogDigest);
+    assert.equal('catalog_digest' in cache, false);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixture.root, { recursive: true, force: true });
   }
 });
 

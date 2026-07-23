@@ -35,12 +35,20 @@ function writeJson(filePath: string, value: unknown) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-function packageRef(packageId: string) {
-  return `ghcr.io/gaofeng21cn/one-person-lab-packages/${packageId}:${PACKAGE_VERSIONS[packageId]}`;
+function packageRef(packageId: string, packageVersions = PACKAGE_VERSIONS) {
+  return `ghcr.io/gaofeng21cn/one-person-lab-packages/${packageId}:${packageVersions[packageId]}`;
 }
 
-function fixture(root: string) {
+function fixture(
+  root: string,
+  input: {
+    packageVersions?: Record<string, string>;
+    lkgPackageId?: string;
+    lkgUpdateStatus?: 'failed' | 'unavailable';
+  } = {},
+) {
   fs.mkdirSync(root, { recursive: true });
+  const packageVersions = { ...PACKAGE_VERSIONS, ...input.packageVersions };
   const generation = '26.7.23';
   const requestId = 'daily-26.7.23';
   const baselineDigest = 'sha256:c1089f46917e3113caae4b63dc662faf651ab83a76b10945c2c1ef506ea954f8';
@@ -80,9 +88,9 @@ function fixture(root: string) {
   };
   const members = Object.fromEntries(PACKAGE_IDS.map((packageId) => [packageId, {
     component_id: packageId,
-    version: PACKAGE_VERSIONS[packageId],
+    version: packageVersions[packageId],
     source_commit: sourceSha(packageId),
-    artifact_ref: packageRef(packageId),
+    artifact_ref: packageRef(packageId, packageVersions),
     artifact_digest: digest(packageId),
   }]));
   const sourceCutoff = {
@@ -93,6 +101,26 @@ function fixture(root: string) {
     },
     later_authority_advancement_invalidates_receipt: false,
   };
+  const packageSelectionResults = Object.fromEntries(PACKAGE_IDS.map((packageId) => {
+    const reusedLkg = packageId === input.lkgPackageId;
+    return [packageId, {
+      result: reusedLkg ? 'reused_verified_lkg' : 'advanced',
+      update_status: reusedLkg ? input.lkgUpdateStatus ?? 'failed' : 'completed',
+      selected_version: members[packageId].version,
+      selected_artifact_ref: members[packageId].artifact_ref,
+      selected_artifact_digest: members[packageId].artifact_digest,
+      result_receipt_digest: digest(`${packageId}-selection-result`),
+      source_cutoff: structuredClone(sourceCutoff),
+      verified_lkg: reusedLkg
+        ? {
+            status: 'verified',
+            artifact_ref: members[packageId].artifact_ref,
+            artifact_digest: members[packageId].artifact_digest,
+            receipt_digest: digest(`${packageId}-verified-lkg`),
+          }
+        : null,
+    }];
+  }));
   const receipt = (target: 'candidate' | 'latest-stable', runId: string) => {
     const channelRef = `ghcr.io/gaofeng21cn/one-person-lab-manifest:${target}`;
     const verifiedRefs = [
@@ -150,11 +178,11 @@ function fixture(root: string) {
   const releaseManifest = { release_set_generation: generation, release_set: releaseSet };
   const packageCatalog = Object.fromEntries(PACKAGE_IDS.map((packageId) => [packageId, {
     package_id: packageId,
-    selected_version: PACKAGE_VERSIONS[packageId],
+    selected_version: packageVersions[packageId],
     versions: [{
-      package_version: PACKAGE_VERSIONS[packageId],
+      package_version: packageVersions[packageId],
       selection_status: 'selected_for_release_set',
-      source_artifact_ref: packageRef(packageId),
+      source_artifact_ref: packageRef(packageId, packageVersions),
       artifact_digest: digest(packageId),
       artifact_status: 'published_immutable',
     }],
@@ -165,6 +193,7 @@ function fixture(root: string) {
     packages: { package_catalog: packageCatalog },
     package_catalog_digest: digest(JSON.stringify(packageCatalog)),
   };
+  const channelManifestLayerDigest = digest(`${JSON.stringify(channelManifest, null, 2)}\n`);
   const expectation = {
     surface_kind: 'opl_package_latest_stable_expectation.v1',
     evidence_class: 'fixture',
@@ -178,7 +207,8 @@ function fixture(root: string) {
     },
     framework: { version: '0.3.5', source_commit: sourceHead },
     app: { version: app.version, source_commit: app.source_commit, artifact_digest: app.artifact_digest },
-    packages: structuredClone(PACKAGE_VERSIONS),
+    packages: structuredClone(packageVersions),
+    package_selection_results: packageSelectionResults,
   };
   const candidatePath = path.join(root, 'candidate.json');
   writeJson(candidatePath, candidate);
@@ -252,22 +282,24 @@ function fixture(root: string) {
           status: 'live',
           live_verified: true,
           catalog_ref: catalogRef,
-          catalog_digest: carrierDigest,
+          release_set_descriptor_digest: carrierDigest,
+          channel_manifest_layer_digest: channelManifestLayerDigest,
+          package_catalog_digest: channelManifest.package_catalog_digest,
           checked_at: '2026-07-23T00:00:00.000Z',
         },
         entries: PACKAGE_IDS.map((packageId) => ({
           package_id: packageId,
           source_kind: 'first_party_release_catalog',
-          selected_version: PACKAGE_VERSIONS[packageId],
-          stable_version: PACKAGE_VERSIONS[packageId],
+          selected_version: packageVersions[packageId],
+          stable_version: packageVersions[packageId],
           version_currentness: {
             status: 'live_release_set',
             live_verified: true,
             source_ref: catalogRef,
-            source_digest: carrierDigest,
+            source_digest: channelManifestLayerDigest,
           },
           release_target: {
-            package_version: PACKAGE_VERSIONS[packageId],
+            package_version: packageVersions[packageId],
             artifact_digest: members[packageId].artifact_digest,
           },
         })),
@@ -305,10 +337,17 @@ function args(paths: Record<string, string>, output = paths.output) {
   ];
 }
 
-function tempFixture(t: any) {
+function tempFixture(
+  t: any,
+  input: {
+    packageVersions?: Record<string, string>;
+    lkgPackageId?: string;
+    lkgUpdateStatus?: 'failed' | 'unavailable';
+  } = {},
+) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-latest-stable-verifier-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  return { root, paths: fixture(root) };
+  return { root, paths: fixture(root, input) };
 }
 
 function run(paths: Record<string, string>, output = paths.output) {
@@ -350,12 +389,61 @@ test('latest-stable verifier closes exact receipts, attestations, remote tags, c
   assert.equal(capsule.components.base.version, '0.3.5');
   assert.equal(capsule.components.packages['opl-flow'].version, '0.1.25');
   assert.equal(capsule.app_consumption.live_verified, true);
+  assert.equal(capsule.surface_kind, 'opl_package_latest_stable_verification_capsule.v2');
+  assert.equal(capsule.release_set.release_set_descriptor_digest, digest('candidate-26.7.23'));
+  assert.equal(capsule.release_set.channel_manifest_layer_digest, digest(fs.readFileSync(paths.channel)));
+  assert.equal(capsule.release_set.package_catalog_digest, capsule.app_consumption.package_catalog_digest);
+  assert.equal('catalog_digest' in capsule.app_consumption, false);
+  assert.deepEqual(capsule.app_consumption.package_versions, PACKAGE_VERSIONS);
+  assert.equal(capsule.app_consumption.package_artifact_digests.mas, digest('mas'));
+  assert.equal(capsule.app_consumption.package_source_digests.mas, capsule.release_set.channel_manifest_layer_digest);
+  assert.equal(capsule.package_selection_results.mas.result, 'advanced');
   assert.deepEqual(
     fs.readdirSync(root).filter((name) => fs.statSync(path.join(root, name)).isDirectory()),
     [],
   );
   const requestedCapsule = process.env.OPL_VERIFIER_CAPSULE_OUTPUT;
   if (requestedCapsule) fs.copyFileSync(paths.output, requestedCapsule);
+});
+
+test('latest-stable verifier accepts one verified immutable LKG member while other Packages advance', (t) => {
+  const { paths } = tempFixture(t, {
+    packageVersions: { mag: '0.3.3' },
+    lkgPackageId: 'mag',
+  });
+  const result = run(paths);
+  const capsule = parseJsonText(fs.readFileSync(paths.output, 'utf8')) as Record<string, any>;
+  assert.equal(result.status, 'verified');
+  assert.equal(capsule.components.packages.mag.version, '0.3.3');
+  assert.equal(capsule.components.packages.mag.artifact_ref, packageRef('mag', { ...PACKAGE_VERSIONS, mag: '0.3.3' }));
+  assert.equal(capsule.components.packages.mag.artifact_digest, digest('mag'));
+  assert.equal(capsule.components.packages.mas.version, '0.2.17');
+  assert.equal(capsule.components.packages['mas-scholar-skills'].version, '0.2.18');
+  assert.equal(capsule.package_selection_results.mag.result, 'reused_verified_lkg');
+  assert.equal(capsule.package_selection_results.mag.update_status, 'failed');
+  assert.equal(capsule.package_selection_results.mag.verified_lkg.status, 'verified');
+  assert.equal(
+    capsule.package_selection_results.mag.verified_lkg.artifact_digest,
+    capsule.components.packages.mag.artifact_digest,
+  );
+  assert.equal(capsule.package_selection_results.mas.result, 'advanced');
+  assert.equal(capsule.app_consumption.live_verified, true);
+});
+
+test('latest-stable verifier rejects incomplete, mismatched, or unverified Package selection evidence', async (t) => {
+  const missing = tempFixture(t).paths;
+  mutate(missing.expectation, (value) => { delete value.package_selection_results.rca; });
+  rejectRun(missing, 'package_selection_results_invalid');
+  const cutoffDrift = tempFixture(t).paths;
+  mutate(cutoffDrift.expectation, (value) => {
+    value.package_selection_results.mas.source_cutoff.frozen_base_release_set.digest = digest('wrong-cutoff');
+  });
+  rejectRun(cutoffDrift, 'package_selection_identity_mismatch');
+  const lkgDrift = tempFixture(t, { lkgPackageId: 'mag' }).paths;
+  mutate(lkgDrift.expectation, (value) => {
+    value.package_selection_results.mag.verified_lkg.artifact_digest = digest('wrong-lkg');
+  });
+  rejectRun(lkgDrift, 'package_selection_identity_mismatch');
 });
 
 test('latest-stable verifier rejects a missing candidate receipt', (t) => {
@@ -391,9 +479,12 @@ test('latest-stable verifier rejects promotion identity drift', (t) => {
   rejectRun(paths, 'promotion_identity_mismatch');
 });
 
-test('latest-stable verifier rejects an incomplete nine-component Release Set', (t) => {
+test('latest-stable verifier rejects an incomplete nine-component Release Set even with a force bypass claim', (t) => {
   const { paths } = tempFixture(t);
-  mutate(paths.candidate, (value) => { delete value.components.packages.rca; });
+  mutate(paths.candidate, (value) => {
+    delete value.components.packages.rca;
+    value.force_publish = true;
+  });
   rejectRun(paths, 'incomplete_release_set');
 });
 
@@ -414,18 +505,45 @@ test('latest-stable verifier distinguishes explicit not-found from unknown avail
   rejectRun(paths, 'remote_not_found');
 });
 
-test('latest-stable verifier rejects cached App fixtures and catalog digest drift', async (t) => {
+test('latest-stable verifier rejects cached App fixtures and all three digest-domain drifts', async (t) => {
   const cached = tempFixture(t).paths;
   mutate(cached.app, (value) => {
     value.opl_agent_packages.directory.first_party_release_currentness.status = 'cached';
     value.opl_agent_packages.directory.first_party_release_currentness.live_verified = false;
   });
   rejectRun(cached, 'app_not_live_verified');
-  const digestDrift = tempFixture(t).paths;
-  mutate(digestDrift.app, (value) => {
-    value.opl_agent_packages.directory.first_party_release_currentness.catalog_digest = digest('stale-catalog');
+  const descriptorDrift = tempFixture(t).paths;
+  mutate(descriptorDrift.app, (value) => {
+    value.opl_agent_packages.directory.first_party_release_currentness.release_set_descriptor_digest = digest('stale-descriptor');
   });
-  rejectRun(digestDrift, 'app_catalog_digest_mismatch');
+  rejectRun(descriptorDrift, 'app_release_set_descriptor_digest_mismatch');
+  const descriptorMissing = tempFixture(t).paths;
+  mutate(descriptorMissing.app, (value) => {
+    delete value.opl_agent_packages.directory.first_party_release_currentness.release_set_descriptor_digest;
+  });
+  rejectRun(descriptorMissing, 'app_release_set_descriptor_digest_mismatch');
+  const layerDrift = tempFixture(t).paths;
+  mutate(layerDrift.app, (value) => {
+    value.opl_agent_packages.directory.first_party_release_currentness.channel_manifest_layer_digest = digest('stale-layer');
+  });
+  rejectRun(layerDrift, 'app_channel_manifest_layer_digest_mismatch');
+  const catalogDrift = tempFixture(t).paths;
+  mutate(catalogDrift.app, (value) => {
+    value.opl_agent_packages.directory.first_party_release_currentness.package_catalog_digest = digest('stale-package-catalog');
+  });
+  rejectRun(catalogDrift, 'app_package_catalog_digest_mismatch');
+});
+
+test('latest-stable verifier rejects a legacy digest cache projected as live', (t) => {
+  const { paths } = tempFixture(t);
+  mutate(paths.app, (value) => {
+    const currentness = value.opl_agent_packages.directory.first_party_release_currentness;
+    currentness.catalog_digest = currentness.channel_manifest_layer_digest;
+    delete currentness.release_set_descriptor_digest;
+    delete currentness.channel_manifest_layer_digest;
+    delete currentness.package_catalog_digest;
+  });
+  rejectRun(paths, 'app_legacy_digest_domain_invalid');
 });
 
 test('latest-stable verifier rejects App Package artifact drift and incomplete consumption', async (t) => {

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
 import {
@@ -21,6 +22,7 @@ import {
 import { getOplPackageSpecs } from '../../../../../src/modules/connect/package-distribution.ts';
 import { normalizeRegistry } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
 import { fetchAndValidateRegistry } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
+import { readFirstPartyPackageCatalogSnapshot } from '../../../../../src/modules/connect/agent-package-registry-parts/release-catalog-cache.ts';
 import { listOplAgentPackages } from '../../../../../src/modules/connect/agent-package-registry.ts';
 
 const CANONICAL_PACKAGE_ROLES = new Set([
@@ -222,6 +224,9 @@ test('first-party Directory versions come only from the managed Release Set sele
       catalog: versions,
       freshness: 'live',
       catalog_ref: 'ghcr.io/fixture/one-person-lab-manifest:latest-stable',
+      release_set_descriptor_digest: `sha256:${'7'.repeat(64)}`,
+      channel_manifest_layer_digest: `sha256:${'8'.repeat(64)}`,
+      package_catalog_digest: `sha256:${'9'.repeat(64)}`,
       catalog_digest: `sha256:${'8'.repeat(64)}`,
       checked_at: '2026-07-15T00:00:00.000Z',
     },
@@ -232,7 +237,68 @@ test('first-party Directory versions come only from the managed Release Set sele
   assert.equal(flow.stable_version, '0.1.19');
   assert.equal(flow.version_currentness.status, 'live_release_set');
   assert.equal(flow.version_currentness.live_verified, true);
+  assert.equal(flow.version_currentness.source_digest, `sha256:${'8'.repeat(64)}`);
   assert.equal(directory.first_party_release_currentness.status, 'live');
+  assert.equal(directory.first_party_release_currentness.release_set_descriptor_digest, `sha256:${'7'.repeat(64)}`);
+  assert.equal(directory.first_party_release_currentness.channel_manifest_layer_digest, `sha256:${'8'.repeat(64)}`);
+  assert.equal(directory.first_party_release_currentness.package_catalog_digest, `sha256:${'9'.repeat(64)}`);
+  assert.equal('catalog_digest' in directory.first_party_release_currentness, false);
+  const runtimeOnlyDirectory = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [],
+    detail: 'fast',
+    firstPartyCatalog: {
+      catalog: versions,
+      freshness: 'live',
+      catalog_ref: 'https://fixture.example/packages.json',
+      release_set_descriptor_digest: null,
+      channel_manifest_layer_digest: `sha256:${'8'.repeat(64)}`,
+      package_catalog_digest: `sha256:${'9'.repeat(64)}`,
+      catalog_digest: `sha256:${'8'.repeat(64)}`,
+      checked_at: '2026-07-15T00:00:00.000Z',
+    },
+  });
+  assert.equal(runtimeOnlyDirectory.first_party_release_currentness.status, 'live');
+  assert.equal(runtimeOnlyDirectory.first_party_release_currentness.live_verified, true);
+  assert.equal(runtimeOnlyDirectory.first_party_release_currentness.release_set_descriptor_digest, null);
+});
+
+test('legacy v1 Release Set cache remains non-live and never invents a descriptor digest', () => {
+  const fixture = isolatedPackageEnv('opl-package-directory-legacy-release-cache');
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const packageCatalog = {};
+  const catalogPayload = {
+    surface_kind: 'opl_package_catalog.v1',
+    packages: { package_catalog: packageCatalog },
+  };
+  const legacyLayerDigest = `sha256:${'a'.repeat(64)}`;
+  try {
+    process.env.OPL_STATE_DIR = fixture.env.OPL_STATE_DIR;
+    fs.mkdirSync(fixture.env.OPL_STATE_DIR, { recursive: true });
+    fs.writeFileSync(
+      path.join(fixture.env.OPL_STATE_DIR, 'agent-package-release-catalog-cache.json'),
+      formatJsonPayload({
+        surface_kind: 'opl_agent_package_release_catalog_cache.v1',
+        catalog_ref: 'ghcr.io/fixture/one-person-lab-manifest:latest-stable',
+        catalog_digest: legacyLayerDigest,
+        checked_at: new Date().toISOString(),
+        catalog_payload: catalogPayload,
+      }),
+    );
+    const snapshot = readFirstPartyPackageCatalogSnapshot();
+    assert.ok(snapshot);
+    assert.equal(snapshot.freshness, 'cached');
+    assert.equal(snapshot.release_set_descriptor_digest, null);
+    assert.equal(snapshot.channel_manifest_layer_digest, legacyLayerDigest);
+    assert.equal(
+      snapshot.package_catalog_digest,
+      `sha256:${crypto.createHash('sha256').update(JSON.stringify(packageCatalog)).digest('hex')}`,
+    );
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
 });
 
 test('external package catalogs preserve third-party selection and reject first-party identity collisions', () => {
