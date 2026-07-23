@@ -180,7 +180,7 @@ function lockIndex(locks: AgentPackageLock[]): AgentPackageLockIndex {
   };
 }
 
-test('Full runtime reconciliation closes seven packages while keeping Scholar globally hidden', async () => {
+test('Full runtime reconciliation does not auto-install optional Scholar and preserves an explicit install', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-full-runtime-reconciliation-'));
   const runtimeHome = path.join(root, 'runtime');
   const physicalRoot = path.join(root, 'physical');
@@ -223,16 +223,14 @@ test('Full runtime reconciliation closes seven packages while keeping Scholar gl
     assert.equal(first.retryable, false);
     assert.equal(first.blocks_plain_codex, false);
     assert.equal(first.summary.total, 7);
-    assert.equal(first.summary.installed_package_count, 7);
-    assert.equal(first.summary.materialized_package_count, 7);
+    assert.equal(first.summary.installed_package_count, 6);
+    assert.equal(first.summary.materialized_package_count, 6);
+    assert.equal(first.summary.failed_package_count, 1);
     assert.equal(first.summary.root_package_count, 6);
+    assert.deepEqual(first.root_package_ids, ['mag', 'mas', 'obf', 'oma', 'opl-flow', 'rca']);
     assert.equal(installCalls, 6);
     const scholar = first.items.find((item) => item.package_id === 'mas-scholar-skills');
-    assert.equal(scholar?.status, 'installed');
-    assert.equal('exposure_state' in scholar! ? scholar.exposure_state : null, 'hidden');
-    assert.equal('marketplace_id' in scholar! ? scholar.marketplace_id : 'missing', null);
-    assert.equal('marketplace_plugin_path' in scholar! ? scholar.marketplace_plugin_path : 'missing', null);
-    assert.ok('codex_plugin_cache_path' in scholar! && scholar.codex_plugin_cache_path);
+    assert.equal(scholar?.status, 'lock_missing');
 
     installCalls = 0;
     const current = await reconcileBundledFullRuntimePackagesIfAvailable(
@@ -247,6 +245,10 @@ test('Full runtime reconciliation closes seven packages while keeping Scholar gl
     assert.equal(current.status, 'completed');
     assert.equal(current.summary.installed, 0);
     assert.equal(current.summary.already_installed, 7);
+    assert.equal(
+      current.items.find((item) => item.package_id === 'mas-scholar-skills')?.status,
+      'already_installed',
+    );
     assert.equal(installCalls, 0);
 
     const missingEntry = catalog.entries.get('obf')!;
