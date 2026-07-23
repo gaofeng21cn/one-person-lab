@@ -52,6 +52,19 @@ function isolatedPackageEnv(prefix: string) {
   };
 }
 
+async function withIsolatedStateDir<T>(prefix: string, run: () => T | Promise<T>): Promise<T> {
+  const fixture = isolatedPackageEnv(prefix);
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = fixture.env.OPL_STATE_DIR;
+    return await run();
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(fixture.home, { recursive: true, force: true });
+  }
+}
+
 function registryPayload(manifestUrl: string, packageRole: string | null = 'standard_agent') {
   return {
     registry_id: 'directory-test-registry',
@@ -188,7 +201,8 @@ test('Developer Mode selects every available first-party Package checkout', () =
   }
 });
 
-test('first-party Directory versions come only from the managed Release Set selector', () => {
+test('first-party Directory versions come only from the managed Release Set selector', () =>
+  withIsolatedStateDir('opl-package-directory-release-selector', () => {
   const versions = new Map(getOplPackageSpecs().map((spec) => {
     const packageVersion = spec.package_id === 'opl-flow' ? '0.1.19' : spec.selected_version;
     const sourceArtifactRef = `ghcr.io/fixture/one-person-lab-packages/${spec.package_id}:${packageVersion}`;
@@ -261,7 +275,7 @@ test('first-party Directory versions come only from the managed Release Set sele
   assert.equal(runtimeOnlyDirectory.first_party_release_currentness.status, 'live');
   assert.equal(runtimeOnlyDirectory.first_party_release_currentness.live_verified, true);
   assert.equal(runtimeOnlyDirectory.first_party_release_currentness.release_set_descriptor_digest, null);
-});
+  }));
 
 test('legacy v1 Release Set cache remains non-live and never invents a descriptor digest', () => {
   const fixture = isolatedPackageEnv('opl-package-directory-legacy-release-cache');
@@ -301,7 +315,8 @@ test('legacy v1 Release Set cache remains non-live and never invents a descripto
   }
 });
 
-test('external package catalogs preserve third-party selection and reject first-party identity collisions', () => {
+test('external package catalogs preserve third-party selection and reject first-party identity collisions', () =>
+  withIsolatedStateDir('opl-package-directory-external-catalog', () => {
   const manifestJson = formatJsonPayload(agentPackageManifest());
   const manifestUrl = 'file:///tmp/third-party-research.json';
   const catalog = {
@@ -484,9 +499,10 @@ test('external package catalogs preserve third-party selection and reject first-
     assert.equal(Object.hasOwn(actual.recommended_action_ref?.payload ?? {}, 'manifest_url'), false);
     assert.equal(Object.hasOwn(actual.recommended_action_ref?.payload ?? {}, 'trust_tier'), false);
   }
-});
+  }));
 
-test('external registries preserve external claims and reject first-party authority', async () => {
+test('external registries preserve external claims and reject first-party authority', async () =>
+  withIsolatedStateDir('opl-package-directory-external-registry', async () => {
   const fixture = isolatedPackageEnv('opl-package-directory-first-party-registry-collision');
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
@@ -632,9 +648,10 @@ exit 1
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(fixture.home, { recursive: true, force: true });
   }
-});
+  }));
 
-test('registry manifest enrichment admits third-party packages and rejects role or manifest drift', async () => {
+test('registry manifest enrichment admits third-party packages and rejects role or manifest drift', async () =>
+  withIsolatedStateDir('opl-package-directory-registry-enrichment', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-directory-registry-'));
   const manifestPath = path.join(root, 'manifest.json');
   const manifestUrl = pathToFileURL(manifestPath).toString();
@@ -708,7 +725,7 @@ test('registry manifest enrichment admits third-party packages and rejects role 
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
-});
+  }));
 
 test('registry refresh rejects declared version drift without writing cache or receipt', () => {
   for (const [field, failureCode] of [
@@ -987,7 +1004,8 @@ test('scope-less list and App workspace context project different activation sta
   }
 });
 
-test('installed-only directory entries retain persisted role and consume canonical readiness', () => {
+test('installed-only directory entries retain persisted role and consume canonical readiness', () =>
+  withIsolatedStateDir('opl-package-directory-installed-only', () => {
   const lock = {
     surface_kind: 'opl_agent_package_lock',
     package_id: 'third.party.workflow',
@@ -1174,4 +1192,4 @@ test('installed-only directory entries retain persisted role and consume canonic
     ['agent_package_activate', 'agent_package_repair'],
   );
   assertRecommendedActionMatchesAvailable(failedStatus);
-});
+  }));

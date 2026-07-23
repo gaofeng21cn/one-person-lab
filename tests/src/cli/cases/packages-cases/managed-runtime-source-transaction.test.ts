@@ -417,7 +417,9 @@ test('OMA developer snapshot binds package identity and stays ready through its 
 });
 
 test('developer checkout source switch does not validate a displaced managed carrier', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-developer-source-switch-state-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-developer-source-switch-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
   const developerCheckout = path.join(fixtureRoot, 'med-autogrant');
   const displacedCheckout = path.join(fixtureRoot, 'managed-med-autogrant');
   fs.mkdirSync(path.join(developerCheckout, 'scripts'), { recursive: true });
@@ -469,6 +471,7 @@ test('developer checkout source switch does not validate a displaced managed car
   };
 
   try {
+    process.env.OPL_STATE_DIR = stateDir;
     const preview = applyManagedRuntimeSourceCarrier({
       config: {
         carrier_kind: 'opl_managed_module_source',
@@ -486,6 +489,9 @@ test('developer checkout source switch does not validate a displaced managed car
     assert.equal(preview.after?.source_mode, 'developer_checkout');
     assert.equal(preview.after?.status, 'validated_no_write');
   } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
