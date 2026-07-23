@@ -83,6 +83,7 @@ type SyncFamilySkillPacksOptions = ReadFamilySkillPacksOptions & {
   targetQuest?: string;
   targetRoot?: string;
   companionMode?: OplCompanionSkillApplyMode;
+  invocation?: 'explicit_legacy_migration';
 };
 
 const FOUNDRY_AGENT_SERIES_CONTRACT_REF = 'contracts/opl-framework/foundry-agent-series-contract.json';
@@ -900,6 +901,13 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     version: 'g2',
     skill_sync: {
       surface_id: 'opl_skill_sync',
+      compatibility_boundary: options.invocation === 'explicit_legacy_migration'
+        ? {
+            mode: 'explicit_legacy_migration',
+            automatic_invocation_allowed: false,
+            steady_state_authority: 'opl_package_lifecycle',
+          }
+        : null,
       workspace_root: resolveDefaultFamilyWorkspaceRoot(),
       home: resolvedHome ?? process.env.HOME ?? null,
       packs,

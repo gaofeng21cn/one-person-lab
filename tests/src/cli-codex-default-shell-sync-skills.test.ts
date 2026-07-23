@@ -370,6 +370,7 @@ test('opl connect sync-skills refuses to mirror legacy test skill stubs', () => 
   try {
     const output = runCli(['connect', 'sync-skills', '--domain', 'medautoscience'], {
       HOME: homeDir,
+      OPL_STATE_DIR: path.join(homeDir, 'state'),
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
 
@@ -406,10 +407,16 @@ test('opl connect sync-skills materializes MAS without an overlay or repo instal
     const output = runCli(['connect', 'sync-skills', '--domain', 'mas'], {
       HOME: homeDir,
       CODEX_HOME: codexHome,
+      OPL_STATE_DIR: path.join(homeDir, 'state'),
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
     const pack = output.skill_sync.packs[0];
 
+    assert.deepEqual(output.skill_sync.compatibility_boundary, {
+      mode: 'explicit_legacy_migration',
+      automatic_invocation_allowed: false,
+      steady_state_authority: 'opl_package_lifecycle',
+    });
     assert.equal(pack.domain_id, 'medautoscience');
     assert.equal(pack.installer_found, false);
     assert.equal(pack.installer_path, '');
@@ -432,6 +439,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
   const homeDir = path.join(captureDir, 'home');
   const codexHome = path.join(homeDir, '.codex');
+  const stateDir = path.join(homeDir, 'state');
   fs.mkdirSync(codexHome, { recursive: true });
   fs.writeFileSync(
     path.join(codexHome, 'config.toml'),
@@ -460,6 +468,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     const output = runCli(['connect', 'sync-skills'], {
       HOME: homeDir,
       CODEX_HOME: codexHome,
+      OPL_STATE_DIR: stateDir,
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
 
@@ -579,9 +588,6 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       true,
     );
     assert.equal(fs.existsSync(path.join(masWrapperPluginPath, 'assets', 'icon.svg')), true);
-    const stateDir = process.env.OPL_STATE_DIR
-      ? path.resolve(process.env.OPL_STATE_DIR)
-      : path.join(homeDir, 'Library', 'Application Support', 'OPL', 'state');
     for (const item of output.skill_sync.codex_plugin_registry.items) {
       assert.equal(
         item.marketplace_root,
@@ -645,6 +651,7 @@ test('opl connect sync-skills refuses standard agent plugin MCP drift', () => {
     const output = runCli(['connect', 'sync-skills', '--domain', 'mas'], {
       HOME: homeDir,
       CODEX_HOME: codexHome,
+      OPL_STATE_DIR: path.join(homeDir, 'state'),
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
 
@@ -680,6 +687,7 @@ test('opl connect sync-skills follows Developer Mode sibling checkouts over mana
     const output = runCli(['connect', 'sync-skills'], {
       HOME: homeDir,
       CODEX_HOME: codexHome,
+      OPL_STATE_DIR: path.join(homeDir, 'state'),
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
       OPL_MODULES_ROOT: modulesRoot,
       OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({ login: 'gaofeng21cn' }),
@@ -717,7 +725,7 @@ test('opl connect sync-skills follows Developer Mode sibling checkouts over mana
   }
 });
 
-test('installed opl launcher syncs family skill packs before opening the raw Codex product entry', () => {
+test('installed opl launcher does not run legacy family skill migration before raw Codex entry', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-skill-sync-'));
   const homeDir = path.join(captureDir, 'home');
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
@@ -736,6 +744,12 @@ exit 0
 
     assert.equal(result.stdout, 'CODEX ENTRY\n');
     assert.equal(fs.existsSync(syncLogPath), false);
+    assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'config.toml')), false);
+    assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'plugins')), false);
+    assert.equal(
+      fs.existsSync(path.join(homeDir, 'Library', 'Application Support', 'OPL', 'state', 'codex-plugin-carriers')),
+      false,
+    );
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });

@@ -16,7 +16,6 @@ import {
 } from '../../../../src/modules/connect/agent-package-registry-parts/readback.ts';
 import {
   runCliWithStdin,
-  runCliWithStdinFailure,
 } from './system-install-fixtures.ts';
 
 const codexDefaultProfile = readBundledCodexDefaultProfile();
@@ -268,21 +267,23 @@ test('bundled Full runtime catalog owns the canonical seven and fails closed on 
   );
 });
 
-test('system configure-codex fails closed before package lock writes when Full runtime misses ScholarSkills', () => {
+test('system configure-codex ignores Package roots and leaves reconciliation to startup maintenance', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-missing-scholar-home-'));
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-missing-scholar-capture-'));
   const fixture = buildFullRuntimeFamilyFixture({ captureDir, homeRoot });
   try {
     fs.rmSync(fixture.bundledCatalog.scholarRoot, { recursive: true, force: true });
-    const failure = runCliWithStdinFailure(
+    const output = runCliWithStdin(
       ['system', 'configure-codex', '--api-key-stdin'],
       'secret-family-key\n',
       fixture.env,
     ) as any;
-    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
-    assert.equal(failure.payload.error.details.failure_code, 'agent_package_bundled_dependency_root_missing');
-    assert.equal(failure.payload.error.details.package_id, 'mas-scholar-skills');
+    assert.equal(output.codex_config.status, 'completed');
+    assert.equal(Object.hasOwn(output.codex_config, 'skill_sync'), false);
+    assert.equal(Object.hasOwn(output.codex_config, 'companion_skill_sync'), false);
+    assert.equal(Object.hasOwn(output.codex_config, 'agent_package_sync'), false);
     assert.equal(fs.existsSync(path.join(fixture.env.OPL_STATE_DIR, 'agent-package-locks.json')), false);
+    assert.equal(fs.existsSync(path.join(fixture.env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json')), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(captureDir, { recursive: true, force: true });
@@ -637,7 +638,7 @@ test('system configure-codex completes a plugin-only Codex config created during
   }
 });
 
-test('system configure-codex syncs packaged Full companion skills after API key setup', () => {
+test('system configure-codex does not sync packaged Full companion skills', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-full-skills-home-'));
   const runtimeHome = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'runtime', 'current');
   const packagedSkillsRoot = path.join(runtimeHome, 'skills');
@@ -688,18 +689,10 @@ test('system configure-codex syncs packaged Full companion skills after API key 
         OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
         PATH: `${toolBin}:/usr/bin:/bin`,
       },
-    ) as {
-      codex_config: {
-        companion_skill_sync: {
-          mode: string;
-          items: Array<{ skill_id: string; status: string; action: string }>;
-          tools: Array<{ tool_id: string; status: string; action: string; binary_path: string | null }>;
-        };
-      };
-    };
+    ) as any;
 
-    assert.equal(output.codex_config.companion_skill_sync.mode, 'managed');
-    const itemById = new Map(output.codex_config.companion_skill_sync.items.map((item) => [item.skill_id, item]));
+    assert.equal(output.codex_config.status, 'completed');
+    assert.equal(Object.hasOwn(output.codex_config, 'companion_skill_sync'), false);
     for (const skillId of [
       'officecli',
       'officecli-docx',
@@ -712,28 +705,14 @@ test('system configure-codex syncs packaged Full companion skills after API key 
       'ui-ux-pro-max',
       'mineru-document-extractor',
     ]) {
-      assert.equal(itemById.get(skillId)?.status, 'synced');
-      assert.equal(itemById.get(skillId)?.action, 'symlink');
-      assert.equal(fs.existsSync(path.join(codexHome, 'skills', skillId, 'SKILL.md')), true);
+      assert.equal(fs.existsSync(path.join(codexHome, 'skills', skillId, 'SKILL.md')), false);
     }
-    assert.deepEqual(
-      output.codex_config.companion_skill_sync.tools.map((entry) => [
-        entry.tool_id,
-        entry.status,
-        entry.action,
-        entry.binary_path,
-      ]),
-      [
-        ['officecli', 'ready', 'none', path.join(toolBin, 'officecli')],
-        ['mineru-open-api', 'ready', 'none', path.join(toolBin, 'mineru-open-api')],
-      ],
-    );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
 
-test('system configure-codex syncs Full runtime family Codex plugins after API key setup', () => {
+test('system configure-codex delegates Full runtime Package and carrier reconciliation to startup maintenance', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-family-plugins-home-'));
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-family-plugins-capture-'));
   const fixture = buildFullRuntimeFamilyFixture({ captureDir, homeRoot });
@@ -745,40 +724,21 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
       ['system', 'configure-codex', '--api-key-stdin'],
       'secret-family-key\n',
       fixture.env,
-    ) as {
-      codex_config: {
-        skill_sync: {
-          packs: Array<{ domain_id: string; sync_status: string; installer_result: Record<string, unknown> | null }>;
-          codex_plugin_registry: {
-            summary: { registered: number; missing_marketplace: number };
-            items: Array<{ module_id: string; status: string; repo_path: string }>;
-          };
-        };
-        agent_package_sync: {
-          status: string;
-          summary: { total: number; installed: number; already_installed: number };
-          items: Array<{ package_id: string; status: string; package_lock_ref?: string }>;
-        };
-      };
-    };
+    ) as any;
 
-    assert.equal(output.codex_config.skill_sync.codex_plugin_registry.summary.registered, 4);
-    assert.equal(output.codex_config.skill_sync.codex_plugin_registry.summary.missing_marketplace, 0);
-    assert.deepEqual(output.codex_config.agent_package_sync.summary, {
-      total: 5,
-      installed: 5,
-      already_installed: 0,
-    });
-    assert.deepEqual(
-      output.codex_config.agent_package_sync.items.map((item) => item.package_id),
-      ['mas', 'mag', 'rca', 'oma', 'obf'],
-    );
-    assert.equal(
-      output.codex_config.agent_package_sync.items.every((item) => item.package_lock_ref?.startsWith('opl://agent-package-lock/')),
-      true,
-    );
+    const lockPath = path.join(fixture.env.OPL_STATE_DIR, 'agent-package-locks.json');
+    assert.equal(output.codex_config.status, 'completed');
+    assert.equal(Object.hasOwn(output.codex_config, 'skill_sync'), false);
+    assert.equal(Object.hasOwn(output.codex_config, 'agent_package_sync'), false);
+    assert.equal(fs.existsSync(lockPath), false);
+    const configAfterConfigure = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
+    assert.doesNotMatch(configAfterConfigure, /\[plugins\./);
+
+    const startup = runCli(['system', 'startup-maintenance'], fixture.env) as any;
+    assert.equal(startup.system_action.status, 'completed');
+    assert.equal(fs.existsSync(lockPath), true);
     const lockIndex = parseJsonText(fs.readFileSync(
-      path.join(homeRoot, 'opl-state', 'agent-package-locks.json'),
+      lockPath,
       'utf8',
     )) as Record<string, any>;
     assert.deepEqual(
@@ -796,21 +756,6 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
     assert.equal(scholarLock.carrier_authority.verified_source_commit, scholarLock.owner_source_commit);
     assert.equal(scholarLock.managed_runtime_source, null);
     assert.equal(fs.realpathSync(bundledCatalog.scholarRoot).startsWith(fs.realpathSync(runtimeHome)), true);
-    assert.deepEqual(
-      output.codex_config.skill_sync.packs.map((pack) => [pack.domain_id, pack.sync_status]),
-      [
-        ['medautoscience', 'synced'],
-        ['medautogrant', 'synced'],
-        ['redcube', 'synced'],
-        ['oplmetaagent', 'synced'],
-      ],
-    );
-    const omaPack = output.codex_config.skill_sync.packs.find((pack) => pack.domain_id === 'oplmetaagent');
-    assert.equal(
-      (omaPack?.installer_result?.materialized_codex_plugin_carrier as { source?: string } | undefined)?.source,
-      'opl_standard_agent_primary_skill_codex_plugin',
-    );
-
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
     assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);
     assert.match(config, /\[plugins\."med-autogrant@med-autogrant-local"\]/);
@@ -831,19 +776,6 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
       assert.match(wrapperSkill, new RegExp(`^name:\\s*${pluginId}$`, 'm'));
       assert.match(config, new RegExp(`\\[marketplaces\\.${marketplaceId}\\]\\nsource_type = "local"\\nsource = "${marketplaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
     }
-    assert.equal(
-      fs.existsSync(path.join(
-        homeRoot,
-        'opl-state',
-        'codex-plugin-carriers',
-        'opl-meta-agent-local',
-        'plugins',
-        'opl-meta-agent',
-        '.codex-plugin',
-        'plugin.json',
-      )),
-      true,
-    );
     assert.equal(fs.existsSync(familyWorkspace.syncLogPath), false);
 
     for (const action of ['update', 'repair']) {
@@ -854,7 +786,6 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
       );
     }
 
-    const lockPath = path.join(fixture.env.OPL_STATE_DIR, 'agent-package-locks.json');
     const expectedMasOwnerSourceCommit = masLock.owner_source_commit;
     const expectedMasCarrierAuthority = structuredClone(masLock.carrier_authority);
     const driftedLockIndex = parseJsonText(fs.readFileSync(lockPath, 'utf8')) as Record<string, any>;
@@ -862,13 +793,9 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
     driftedMasLock.owner_source_commit = 'f'.repeat(40);
     writeJson(lockPath, driftedLockIndex);
 
-    const reconciled = runCliWithStdin(
-      ['system', 'configure-codex', '--api-key-stdin'],
-      'secret-family-key\n',
-      fixture.env,
-    ) as any;
+    const reconciled = runCli(['system', 'startup-maintenance'], fixture.env) as any;
     assert.equal(
-      reconciled.codex_config.agent_package_sync.items.find(
+      reconciled.system_action.details.full_runtime_package_reconciliation.items.find(
         (item: Record<string, any>) => item.package_id === 'mas',
       )?.status,
       'installed',

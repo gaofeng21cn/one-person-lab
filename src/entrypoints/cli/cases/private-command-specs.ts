@@ -298,7 +298,7 @@ export function buildInternalCommandSpecs(
     },
     'skill-sync': {
       usage: 'opl skill sync [--domain <domain_id>] [--scope <codex|workspace|quest>] [--target-workspace <path>] [--target-quest <path>] [--target-root <path>] [--home <home_path>] [--quiet]',
-      summary: 'Sync family skill packs to their declared target scope without changing default Codex runtime semantics.',
+      summary: 'Run the explicit legacy family skill carrier migration; Package lifecycle remains the steady-state authority.',
       examples: [
         'opl skill sync',
         'opl skill sync --domain medautoscience',
@@ -318,6 +318,7 @@ export function buildInternalCommandSpecs(
           targetQuest: parsed.targetQuest,
           targetRoot: parsed.targetRoot,
           companionMode: parsed.companionMode,
+          invocation: 'explicit_legacy_migration',
         });
       },
     },

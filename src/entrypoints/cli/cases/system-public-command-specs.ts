@@ -1,14 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../../kernel/local-codex-defaults.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from '../../../modules/console/index.ts';
-import { syncOplCompanionSkills } from '../../../modules/connect/install-companions.ts';
-import { syncFamilySkillPacks } from '../../../modules/connect/opl-skills.ts';
-import {
-  runOplBundledFullRuntimeAgentPackageInstall,
-} from '../../../modules/connect/agent-package-registry.ts';
-import { readBundledFullRuntimePackageCatalog } from '../../../modules/connect/agent-package-registry-parts/bundled-full-runtime-catalog.ts';
 import { buildOplSystemDependencyDoctor } from '../../../modules/connect/system-installation/dependency-doctor.ts';
 import { buildOplDockerWebuiDoctor } from '../../../modules/connect/system-installation/docker-webui-doctor.ts';
 import { buildOplEnvironment } from '../../../modules/connect/system-installation/environment.ts';
@@ -41,122 +32,6 @@ async function readStdinText() {
     input += chunk;
   }
   return input;
-}
-
-function resolvePackagedFullSkillsRoot() {
-  const explicit = process.env.OPL_PACKAGED_SKILLS_ROOT?.trim();
-  const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
-  const candidates = [
-    explicit || null,
-    runtimeHome ? path.join(runtimeHome, 'skills') : null,
-  ];
-  return candidates.find((candidate) => (
-    Boolean(candidate)
-    && fs.existsSync(path.join(candidate!, 'officecli', 'SKILL.md'))
-  )) ?? null;
-}
-
-function syncPackagedFullCompanionSkillsIfAvailable() {
-  const packagedSkillsRoot = resolvePackagedFullSkillsRoot();
-  if (!packagedSkillsRoot) {
-    return null;
-  }
-
-  const previousDisableRemoteInstall = process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL;
-  process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL = '1';
-  try {
-    return syncOplCompanionSkills(undefined, {
-      mode: 'managed',
-    });
-  } finally {
-    if (previousDisableRemoteInstall === undefined) {
-      delete process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL;
-    } else {
-      process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL = previousDisableRemoteInstall;
-    }
-  }
-}
-
-const FULL_RUNTIME_FAMILY_MODULE_ENV = [
-  { domain: 'medautoscience', env: 'OPL_MODULE_PATH_MEDAUTOSCIENCE' },
-  { domain: 'medautogrant', env: 'OPL_MODULE_PATH_MEDAUTOGRANT' },
-  { domain: 'redcube', env: 'OPL_MODULE_PATH_REDCUBE' },
-  { domain: 'oplmetaagent', env: 'OPL_MODULE_PATH_OPLMETAAGENT' },
-] as const;
-
-const FULL_RUNTIME_AGENT_PACKAGE_MANIFESTS = [
-  { packageId: 'mas', env: 'OPL_MODULE_PATH_MEDAUTOSCIENCE' },
-  { packageId: 'mag', env: 'OPL_MODULE_PATH_MEDAUTOGRANT' },
-  { packageId: 'rca', env: 'OPL_MODULE_PATH_REDCUBE' },
-  { packageId: 'oma', env: 'OPL_MODULE_PATH_OPLMETAAGENT' },
-  { packageId: 'obf', env: 'OPL_MODULE_PATH_OPLBOOKFORGE' },
-] as const;
-
-const FULL_RUNTIME_PACKAGE_ROOT_ENV = [
-  ...FULL_RUNTIME_AGENT_PACKAGE_MANIFESTS,
-  { packageId: 'mas-scholar-skills', env: 'OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS' },
-  { packageId: 'opl-flow', env: 'OPL_FLOW_REPO_ROOT' },
-] as const;
-
-function syncFullRuntimeFamilyCodexPluginsIfAvailable() {
-  const domains = FULL_RUNTIME_FAMILY_MODULE_ENV
-    .filter((entry) => process.env[entry.env]?.trim())
-    .map((entry) => entry.domain);
-
-  if (domains.length === 0) {
-    return null;
-  }
-
-  return syncFamilySkillPacks({
-    domains,
-    companionMode: 'observe',
-  });
-}
-
-async function syncFullRuntimeAgentPackageLocksIfAvailable() {
-  const targets = FULL_RUNTIME_AGENT_PACKAGE_MANIFESTS.filter((entry) => process.env[entry.env]?.trim());
-  if (targets.length === 0) {
-    return null;
-  }
-
-  const packageRoots: Record<string, string> = Object.fromEntries(FULL_RUNTIME_PACKAGE_ROOT_ENV.flatMap((entry) => {
-    const root = process.env[entry.env]?.trim();
-    return root ? [[entry.packageId, path.resolve(root)]] : [];
-  }));
-  const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
-  if (runtimeHome) {
-    for (const entry of readBundledFullRuntimePackageCatalog().entries.values()) {
-      const runtimeRoot = path.resolve(runtimeHome, entry.runtimeModuleRelativePath);
-      if (!packageRoots[entry.packageId] && fs.existsSync(runtimeRoot)) {
-        packageRoots[entry.packageId] = runtimeRoot;
-      }
-    }
-  }
-  const items = [];
-  for (const target of targets) {
-    const runtimeSourceRoot = path.resolve(process.env[target.env]!.trim());
-    const result = await runOplBundledFullRuntimeAgentPackageInstall({
-      packageId: target.packageId,
-      agentRoot: runtimeSourceRoot,
-      packageRoots,
-    });
-    items.push({
-      package_id: target.packageId,
-      status: result.opl_agent_package_install.status,
-      package_lock_ref: result.opl_agent_package_install.package_lock.lock_ref,
-    });
-  }
-
-  return {
-    surface_id: 'opl_full_runtime_agent_package_lock_sync',
-    status: 'completed',
-    summary: {
-      total: items.length,
-      installed: items.filter((item) => item.status === 'installed').length,
-      already_installed: 0,
-    },
-    items,
-  };
 }
 
 function buildNoArgSpec(
@@ -232,7 +107,7 @@ export function buildPublicSystemCommandSpecs(
 
   const systemConfigureCodexSpec: CommandSpec = {
     usage: 'opl system configure-codex --api-key-stdin',
-    summary: 'Write the local Codex provider config from the OPL default endpoint, App-owned install fallback, and an API key read from stdin.',
+    summary: 'Write only the local Codex provider config and API key; Package and carrier reconciliation remain owned by startup maintenance and managed update.',
     examples: ['printf "%s" "$OPL_CODEX_API_KEY" | opl system configure-codex --api-key-stdin'],
     group: 'system',
     handler: async (args) => {
@@ -248,9 +123,6 @@ export function buildPublicSystemCommandSpecs(
       const bootstrap = bootstrapLocalCodexDefaults({
         provider_api_key: apiKey,
       });
-      const familySkillSync = syncFullRuntimeFamilyCodexPluginsIfAvailable();
-      const companionSkillSync = syncPackagedFullCompanionSkillsIfAvailable();
-      const agentPackageSync = await syncFullRuntimeAgentPackageLocksIfAvailable();
       return {
         version: 'g2',
         codex_config: {
@@ -270,9 +142,6 @@ export function buildPublicSystemCommandSpecs(
               ? bootstrap.management_receipt_path
               : null,
           },
-          ...(familySkillSync ? { skill_sync: familySkillSync.skill_sync } : {}),
-          ...(companionSkillSync ? { companion_skill_sync: companionSkillSync } : {}),
-          ...(agentPackageSync ? { agent_package_sync: agentPackageSync } : {}),
         },
       };
     },

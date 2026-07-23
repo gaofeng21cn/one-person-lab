@@ -29,15 +29,6 @@ run_opl_mcp_stdio() {
   exec node "$ROOT_DIR/dist/entrypoints/mcp-stdio.js"
 }
 
-invoke_opl() {
-  if [[ -f "$ROOT_DIR/src/entrypoints/cli.ts" ]]; then
-    node --experimental-strip-types "$ROOT_DIR/src/entrypoints/cli.ts" "$@"
-    return
-  fi
-
-  node "$ROOT_DIR/dist/entrypoints/cli.js" "$@"
-}
-
 print_framework_version() {
   node -e '
 const fs = require("node:fs");
@@ -59,16 +50,7 @@ run_codex() {
   exec codex "$@"
 }
 
-maybe_sync_family_skills() {
-  if [[ "${OPL_SKIP_SKILL_SYNC:-}" == "1" ]]; then
-    return
-  fi
-
-  invoke_opl connect sync-skills --quiet >/dev/null
-}
-
 if [[ "$#" -eq 0 ]]; then
-  maybe_sync_family_skills
   run_codex
 fi
 
@@ -81,7 +63,6 @@ case "$1" in
     ;;
   exec)
     shift
-    maybe_sync_family_skills
     if [[ -n "${OPL_EXECUTOR_KIND:-}" ]]; then
       run_opl exec "$@"
     fi
@@ -93,7 +74,6 @@ case "$1" in
     run_codex exec "$@"
     ;;
   resume)
-    maybe_sync_family_skills
     run_codex "$@"
     ;;
   ask)
@@ -131,7 +111,6 @@ case "$1" in
     if [[ "$1" == @* ]]; then
       run_opl "$@"
     fi
-    maybe_sync_family_skills
     run_codex "$@"
     ;;
 esac

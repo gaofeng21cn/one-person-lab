@@ -413,6 +413,7 @@ exit 65
     const result = runEntryPathRaw(binPath, ['update', 'status', '--json'], {
       OPL_CODEX_BIN: codexPath,
       OPL_SKIP_SKILL_SYNC: '1',
+      OPL_STATE_DIR: path.join(fixtureRoot, 'state'),
     });
 
     const payload = parseJsonText(result.stdout) as Record<string, any>;
