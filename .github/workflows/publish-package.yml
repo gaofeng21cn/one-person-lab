@@ -50,7 +50,6 @@ jobs:
       EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
       EXPECTED_LATEST_STABLE_PREDECESSOR: ${{ inputs.expected_latest_stable_predecessor }}
       PUBLICATION_REQUEST_ID: ${{ inputs.publication_request_id }}
-      OCI_SOURCE_URL: https://github.com/${{ github.repository }}
       PACKAGES_OWNER: ${{ github.repository_owner }}
     steps:
       - name: Checkout exact Framework source
@@ -119,6 +118,7 @@ jobs:
             echo "PACKAGE_IMAGE=$image"
             echo "IMMUTABLE_REF=${image}:${EXPECTED_PACKAGE_VERSION}"
             echo "LATEST_STABLE_REF=${image}:latest-stable"
+            echo "OCI_SOURCE_URL=${source_repo%.git}"
           } >> "$GITHUB_ENV"
 
       - name: Authenticate protected Package publisher

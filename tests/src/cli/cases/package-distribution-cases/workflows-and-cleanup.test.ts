@@ -315,6 +315,8 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.doesNotMatch(workflow, /case "\$PACKAGE_ID" in/);
   assert.match(workflow, /source_repo="\$\(jq -er \.source_repo "\$manifest"\)"/);
   assert.match(workflow, /\^https:\/\/github\\\.com\/\(\[\^\/\]\+\)\/\(\[\^\/\]\+\)\\\.git\$/);
+  assert.match(workflow, /echo "OCI_SOURCE_URL=\$\{source_repo%\.git\}"/);
+  assert.doesNotMatch(workflow, /OCI_SOURCE_URL: https:\/\/github\.com\/\$\{\{ github\.repository \}\}/);
   for (const ownerRepo of [
     'gaofeng21cn/med-autoscience',
     'gaofeng21cn/med-autogrant',
