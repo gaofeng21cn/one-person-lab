@@ -306,7 +306,12 @@ test('hosted work-item readback keeps runtime projection and domain truth author
           authority_scope: 'derived_non_authority',
           relative_path: 'manuscript/delivery_manifest.json',
           required: false,
-          summary_fields: { submission_clearance: '/can_submit' },
+          summary_fields: {
+            submission_clearance: [
+              '/authority/submission_ready',
+              '/can_submit'
+            ]
+          },
           currentness_anchor_relative_path: 'control/lifecycle.json'
         }
       ],
@@ -339,6 +344,55 @@ test('hosted work-item readback keeps runtime projection and domain truth author
     assert.equal(readback.domain_truth_sources.consistency_checks[0]?.authority_precedence, 'lifecycle');
     assert.equal(readback.authority_boundary.app_state_is_domain_quality_authority, false);
     assert.equal(readback.authority_boundary.can_authorize_quality_publication_or_submission, false);
+
+    writeJson(path.join(itemRoot, 'manuscript/delivery_manifest.json'), {
+      authority: { submission_ready: null },
+      can_submit: true
+    });
+    const explicitNull = buildHostedWorkItemReadback({
+      workspaceRoot: root,
+      workItemId: 'study-003',
+      agentId: 'mas',
+      sourceManifestPath: manifestPath,
+      profile: 'full'
+    }, { projection: fixtureProjection(root, itemRoot) });
+    assert.equal(
+      explicitNull.hosted_work_item_readback.domain_truth_sources.sources[1]
+        ?.summary.submission_clearance,
+      null,
+    );
+
+    const invalidManifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, any>;
+    invalidManifest.sources[1].summary_fields.submission_clearance = [];
+    writeJson(manifestPath, invalidManifest);
+    assert.throws(
+      () => buildHostedWorkItemReadback({
+        workspaceRoot: root,
+        workItemId: 'study-003',
+        agentId: 'mas',
+        sourceManifestPath: manifestPath,
+        profile: 'full'
+      }, { projection: fixtureProjection(root, itemRoot) }),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'hosted_work_item_readback_source_contract_invalid',
+    );
+
+    invalidManifest.sources[1].summary_fields.submission_clearance = [
+      '/can_submit',
+      '/can_submit'
+    ];
+    writeJson(manifestPath, invalidManifest);
+    assert.throws(
+      () => buildHostedWorkItemReadback({
+        workspaceRoot: root,
+        workItemId: 'study-003',
+        agentId: 'mas',
+        sourceManifestPath: manifestPath,
+        profile: 'full'
+      }, { projection: fixtureProjection(root, itemRoot) }),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'hosted_work_item_readback_source_contract_invalid',
+    );
 
     const registry = parseJsonText(fs.readFileSync(
       path.join(process.cwd(), 'contracts/opl-framework/cli-command-registry.json'),

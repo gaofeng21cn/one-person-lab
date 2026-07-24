@@ -14,7 +14,7 @@ export type HostedReadbackSourceDeclaration = {
   authority_scope: HostedReadbackAuthorityScope;
   relative_path: string;
   required: boolean;
-  summary_fields: Record<string, string>;
+  summary_fields: Record<string, string | string[]>;
   currentness_anchor_relative_path: string | null;
 };
 
@@ -83,6 +83,23 @@ function relativePath(value: unknown, label: string) {
   return normalized;
 }
 
+function summaryFieldPointer(value: unknown, label: string): string | string[] {
+  const pointers = Array.isArray(value) ? value : [value];
+  if (pointers.length === 0) invalid(`${label} must declare at least one JSON Pointer.`);
+  const normalized = pointers.map((pointer, index) => {
+    const pointerLabel = Array.isArray(value) ? `${label}[${index}]` : label;
+    const result = text(pointer, pointerLabel);
+    if (!result.startsWith('/')) {
+      invalid('Summary field JSON Pointers must start with /.', { field: label, pointer });
+    }
+    return result;
+  });
+  if (new Set(normalized).size !== normalized.length) {
+    invalid(`${label} JSON Pointer fallbacks must be unique.`);
+  }
+  return Array.isArray(value) ? normalized : normalized[0]!;
+}
+
 function sourceDeclaration(value: unknown, index: number): HostedReadbackSourceDeclaration {
   if (!isRecord(value)) invalid('Hosted readback source declarations must be objects.', { index });
   exactKeys(value, [
@@ -101,11 +118,10 @@ function sourceDeclaration(value: unknown, index: number): HostedReadbackSourceD
   }
   if (typeof value.required !== 'boolean') invalid(`sources[${index}].required must be boolean.`);
   if (!isRecord(value.summary_fields)) invalid(`sources[${index}].summary_fields must be an object.`);
-  const summaryFields = Object.fromEntries(Object.entries(value.summary_fields).map(([field, pointer]) => {
-    const normalized = text(pointer, `sources[${index}].summary_fields.${field}`);
-    if (!normalized.startsWith('/')) invalid('Summary field JSON Pointers must start with /.', { field, pointer });
-    return [field, normalized];
-  }));
+  const summaryFields = Object.fromEntries(Object.entries(value.summary_fields).map(([field, pointer]) => [
+    field,
+    summaryFieldPointer(pointer, `sources[${index}].summary_fields.${field}`),
+  ]));
   const anchor = value.currentness_anchor_relative_path === null
     ? null
     : relativePath(value.currentness_anchor_relative_path, `sources[${index}].currentness_anchor_relative_path`);
@@ -165,15 +181,23 @@ function jsonPointer(value: unknown, pointer: string) {
     const segment = rawSegment.replace(/~1/gu, '/').replace(/~0/gu, '~');
     if (Array.isArray(current)) {
       const index = Number(segment);
-      if (!Number.isInteger(index) || index < 0 || index >= current.length) return null;
+      if (!Number.isInteger(index) || index < 0 || index >= current.length) return undefined;
       current = current[index];
     } else if (isRecord(current) && segment in current) {
       current = current[segment];
     } else {
-      return null;
+      return undefined;
     }
   }
   return current;
+}
+
+function firstPresentJsonPointer(value: unknown, pointers: string | string[]) {
+  for (const pointer of Array.isArray(pointers) ? pointers : [pointers]) {
+    const resolved = jsonPointer(value, pointer);
+    if (resolved !== undefined) return resolved;
+  }
+  return null;
 }
 
 export function readHostedReadbackSourceManifest(input: {
@@ -311,7 +335,7 @@ export function observeHostedReadbackSource(input: {
       modified_at: sourceStat.mtime.toISOString(),
       summary: Object.fromEntries(Object.entries(input.declaration.summary_fields).map(([field, pointer]) => [
         field,
-        jsonPointer(parsed, pointer),
+        firstPresentJsonPointer(parsed, pointer),
       ])),
       currentness: {
         state: currentnessState,
