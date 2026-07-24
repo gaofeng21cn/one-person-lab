@@ -312,6 +312,126 @@ test('system startup-maintenance applies OPL Framework runtime artifact from pac
   }
 });
 
+test('Docker WebUI image carrier prevents Framework channel and dependency writes to the data mount', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-framework-image-carrier-'));
+  const dataRoot = path.join(homeRoot, 'data');
+  const targetRoot = path.join(dataRoot, 'opl', 'framework');
+  const seedDir = path.join(homeRoot, 'image', 'seed');
+  const frameworkRoot = path.join(seedDir, 'payload', 'opl_framework');
+  const imageManifestPath = path.join(homeRoot, 'image', 'image-manifest.json');
+  const sourceParent = path.join(homeRoot, 'artifact-source');
+  const sourceRoot = path.join(sourceParent, 'one-person-lab');
+  const archivePath = path.join(homeRoot, 'one-person-lab-framework.tar.gz');
+  const npmLogPath = path.join(homeRoot, 'npm.jsonl');
+  const codexFixture = createCurrentCodexFixture();
+
+  try {
+    writeRuntimeOnlyFrameworkRoot(frameworkRoot, 'image-carried-framework');
+    writeRuntimeOnlyFrameworkRoot(sourceRoot, 'channel-framework-that-must-not-run');
+    execFileSync('tar', ['-czf', archivePath, '-C', sourceParent, 'one-person-lab']);
+    const channel = writeFakeFrameworkChannel({
+      root: path.join(homeRoot, 'channel'),
+      version: '26.7.24-r2',
+      archivePath,
+      archiveSha256: sha256(archivePath),
+    });
+    fs.writeFileSync(path.join(channel.fakeBin, 'npm'), [
+      `#!${process.execPath}`,
+      "const fs = require('node:fs');",
+      `fs.appendFileSync(${JSON.stringify(npmLogPath)}, JSON.stringify(process.argv.slice(2)) + '\\n');`,
+      'process.exit(97);',
+    ].join('\n'), { mode: 0o755 });
+    fs.writeFileSync(imageManifestPath, JSON.stringify({
+      schema: 'dev.onepersonlab.opl-webui-image-manifest.v1',
+      image_role: 'opl_webui_runtime_image',
+      image_profile: 'webui-full',
+      seed_strategy: 'payload_manifest',
+      seed_dir: seedDir,
+    }), 'utf8');
+    fs.writeFileSync(path.join(seedDir, 'metadata.json'), JSON.stringify({
+      schema: 'dev.onepersonlab.opl-webui-image-seed.v1',
+      strategy: 'payload_preheated',
+      image_profile: 'webui-full',
+      applies_to: 'docker-webui-runtime-image',
+      components: [{
+        id: 'opl_framework',
+        version: '26.7.24-r2',
+        source: 'ghcr_image_build_framework_seed',
+        payload_path: 'payload/opl_framework',
+        receipt_kind: 'opl_framework_seed_payload_receipt',
+        source_fingerprint: `git:${'a'.repeat(40)}:${'a'.repeat(40)}`,
+      }],
+    }), 'utf8');
+
+    const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance', '--scope', 'runtime_substrate'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_DATA_DIR: dataRoot,
+      OPL_STATE_DIR: path.join(dataRoot, 'opl', 'state'),
+      OPL_FRAMEWORK_UPDATE_TARGET_ROOT: targetRoot,
+      OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.7.24-r2',
+      OPL_CURL_BIN: path.join(channel.fakeBin, 'curl'),
+      OPL_IMAGE_MANIFEST_PATH: imageManifestPath,
+      OPL_IMAGE_SEED_DIR: seedDir,
+      ...currentCodexEnvironment(codexFixture, [channel.fakeBin]),
+    })) as {
+      system_action: {
+        status: string;
+        details: {
+          framework_summary: {
+            skipped_targets_count: number;
+            manual_required_targets_count: number;
+          };
+          framework_targets: Array<{
+            status: string;
+            reason: string;
+            result: {
+              target_root: string;
+              source_root: string;
+              source_head_sha: string;
+              dependency_install: {
+                status: string;
+                command_preview: string[];
+              };
+              metadata_ref: string;
+            };
+          }>;
+        };
+      };
+    };
+
+    assert.equal(output.system_action.status, 'completed');
+    assert.equal(output.system_action.details.framework_summary.skipped_targets_count, 1);
+    assert.equal(output.system_action.details.framework_summary.manual_required_targets_count, 0);
+    assert.equal(output.system_action.details.framework_targets[0].status, 'skipped');
+    assert.equal(
+      output.system_action.details.framework_targets[0].reason,
+      'framework_runtime_owned_by_webui_image_carrier',
+    );
+    assert.equal(output.system_action.details.framework_targets[0].result.target_root, targetRoot);
+    assert.equal(output.system_action.details.framework_targets[0].result.source_root, frameworkRoot);
+    assert.equal(output.system_action.details.framework_targets[0].result.source_head_sha, 'a'.repeat(40));
+    assert.equal(output.system_action.details.framework_targets[0].result.dependency_install.status, 'skipped');
+    assert.deepEqual(output.system_action.details.framework_targets[0].result.dependency_install.command_preview, []);
+    assert.equal(output.system_action.details.framework_targets[0].result.metadata_ref, path.join(seedDir, 'metadata.json'));
+    assert.equal(fs.existsSync(channel.curlLogPath), false);
+    assert.equal(fs.existsSync(npmLogPath), false);
+    assert.equal(fs.existsSync(targetRoot), false);
+    assert.equal(fs.existsSync(`${targetRoot}.pending`), false);
+    assert.equal(fs.existsSync(`${targetRoot}.previous`), false);
+    assert.deepEqual(
+      fs.existsSync(path.dirname(targetRoot))
+        ? fs.readdirSync(path.dirname(targetRoot)).filter((entry) => entry.startsWith('framework.incoming-'))
+        : [],
+      [],
+    );
+    assert.equal(fs.existsSync(frameworkRoot), true);
+  } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('system startup-maintenance applies package channel framework artifact into Docker data managed root by default', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-framework-docker-data-'));
   const dataRoot = path.join(homeRoot, 'data');

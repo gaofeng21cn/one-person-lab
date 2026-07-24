@@ -26,6 +26,7 @@ import {
   fetchFrameworkArtifactFromChannel,
   readFrameworkChannelEntry,
 } from './framework-self-update-parts/channel-artifact.ts';
+import { resolveDockerWebuiFrameworkCarrier } from './framework-self-update-parts/docker-webui-carrier.ts';
 
 type FrameworkDependencyInstall = {
   required: boolean;
@@ -677,6 +678,24 @@ export function runOplFrameworkSelfUpdate(
   const sourceRootRaw = resolveFrameworkUpdateSource(input.sourceRoot);
   const allowChannelArtifact = input.allowChannelArtifact !== false && !shouldDisableRemoteFrameworkArtifact();
   const archiveOrChannelApplyRequested = Boolean(sourceArchiveRaw || (!sourceRootRaw && allowChannelArtifact));
+  const dockerWebuiCarrier = !sourceArchiveRaw && !sourceRootRaw
+    ? resolveDockerWebuiFrameworkCarrier()
+    : null;
+
+  if (dockerWebuiCarrier) {
+    return buildResult('skipped', 'framework_runtime_owned_by_webui_image_carrier', {
+      target_root: targetRoot,
+      source_root: dockerWebuiCarrier.frameworkRoot,
+      source_head_sha: dockerWebuiCarrier.sourceHeadSha,
+      source_archive: null,
+      source_archive_sha256: null,
+      previous_root: null,
+      rollback_ref: null,
+      copied_file_count: 0,
+      dependency_install: skippedDependencyInstall(false),
+      metadata_ref: dockerWebuiCarrier.seedMetadataPath,
+    });
+  }
 
   if (!sourceArchiveRaw && !sourceRootRaw && !allowChannelArtifact) {
     return buildResult('skipped', 'framework_update_channel_not_requested', {
