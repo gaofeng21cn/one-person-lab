@@ -2,6 +2,7 @@ import {
   assert,
   buildManifestCommand,
   createFamilyContractsFixtureRoot,
+  createGitModuleRemoteFixture,
   fs,
   loadFamilyManifestFixtures,
   os,
@@ -168,6 +169,7 @@ function bindMasWorkspace(input: {
   workspaceRoot: string;
   profilePath: string;
   familyWorkspaceRoot: string;
+  modulePath: string;
 }) {
   const manifest = structuredClone(loadFamilyManifestFixtures().medautoscience) as Record<string, any>;
   manifest.workspace_locator = {
@@ -201,6 +203,8 @@ function bindMasWorkspace(input: {
     OPL_STATE_DIR: input.stateRoot,
     OPL_CONTRACTS_DIR: input.fixtureContractsRoot,
     OPL_FAMILY_WORKSPACE_ROOT: input.familyWorkspaceRoot,
+    OPL_MODULES_ROOT: path.join(input.stateRoot, 'modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: input.modulePath,
   });
 }
 
@@ -248,8 +252,8 @@ function writeMasWorkItemInventoryFixture(familyWorkspaceRoot: string, workspace
     'domain_descriptor.json',
   );
   const descriptor = JSON.parse(fs.readFileSync(descriptorPath, 'utf8')) as Record<string, any>;
-  descriptor.domain_id = 'mas';
-  descriptor.standard_agent_interface.runtime.runtime_domain_id = 'mas';
+  descriptor.kind = 'agent';
+  descriptor.package_id = 'mas';
   descriptor.standard_agent_interface.inventory_projection = {
     source_kind: 'workspace_relative_json',
     relative_path: 'workspace_index.json',
@@ -404,6 +408,23 @@ test('runtime app operator summary prefers current work-item activity over histo
   fs.mkdirSync(profileDir, { recursive: true });
   fs.writeFileSync(profilePath, 'workspace_name = "summary-current-work-unit"\n');
   writeMasWorkItemInventoryFixture(descriptorFixture.familyRoot, workspaceRoot);
+  const selectedModuleFixture = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'contracts/domain_descriptor.json': fs.readFileSync(path.join(
+        descriptorFixture.familyRoot,
+        'med-autoscience',
+        'contracts',
+        'domain_descriptor.json',
+      ), 'utf8'),
+    },
+  });
+  const cliEnv = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
+    OPL_MODULES_ROOT: path.join(stateRoot, 'modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: selectedModuleFixture.sourceRoot,
+  };
 
   try {
     bindMasWorkspace({
@@ -412,12 +433,9 @@ test('runtime app operator summary prefers current work-item activity over histo
       workspaceRoot,
       profilePath,
       familyWorkspaceRoot: descriptorFixture.familyRoot,
+      modulePath: selectedModuleFixture.sourceRoot,
     });
-    const boundManifest = runCli(['domain', 'manifests'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
-    }).domain_manifests.projects.find(
+    const boundManifest = runCli(['domain', 'manifests'], cliEnv).domain_manifests.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'medautoscience',
     ).manifest;
     assert.equal(boundManifest.workspace_locator.workspace_root, workspaceRoot);
@@ -425,21 +443,16 @@ test('runtime app operator summary prefers current work-item activity over histo
     seedSummaryStageAttempts(1);
     const expectedWorkUnitId = seedRunningCurrentWorkUnit(workspaceRoot);
 
-    const workItemProjection = runCli(['app', 'state', '--profile', 'full'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
-    }).app_state.operator.workbench.work_item_projection_v2;
+    const workItemProjection = runCli(
+      ['app', 'state', '--profile', 'full'],
+      cliEnv,
+    ).app_state.operator.workbench.work_item_projection_v2;
     const projectionDiagnostics = JSON.stringify(workItemProjection.diagnostics.items);
     assert.equal(workItemProjection.summary.project_count, 1, projectionDiagnostics);
     assert.equal(workItemProjection.summary.work_item_count, 1, projectionDiagnostics);
     assert.equal(workItemProjection.summary.running_count, 1, projectionDiagnostics);
 
-    const summaryDrilldown = runCli(SUMMARY_COMMAND, {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
-    }).app_operator_drilldown;
+    const summaryDrilldown = runCli(SUMMARY_COMMAND, cliEnv).app_operator_drilldown;
 
     assert.equal(
       summaryDrilldown.attention_first_payload.owner_delta_first.summary.domain_current_work_unit_count,
@@ -489,6 +502,7 @@ test('runtime app operator summary prefers current work-item activity over histo
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(selectedModuleFixture.fixtureRoot, { recursive: true, force: true });
     descriptorFixture.cleanup();
   }
 });
