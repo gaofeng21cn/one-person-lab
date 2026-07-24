@@ -6,6 +6,7 @@ import {
   assertFirstPartyPackageCatalogVersion,
   resolveFirstPartyPackageCatalog,
 } from '../agent-package-first-party.ts';
+import { getAgentPackageManifestByModuleId } from '../agent-package-manifests.ts';
 import { getOplPackageSpecs } from '../package-distribution.ts';
 import {
   selectManagedCatalogPackageVersion,
@@ -47,6 +48,12 @@ type PackageStatusReadback = {
   currentness_detail_deferred?: boolean;
 };
 
+type DirectoryCapabilityMetadata = {
+  source: 'normalized_owner_manifest' | 'validated_registry_manifest' | 'installed_package_lock';
+  required_skill_ids: string[];
+  optional_skill_refs: string[];
+};
+
 type DirectorySource = {
   package_id: string;
   display_name: string;
@@ -64,6 +71,7 @@ type DirectorySource = {
   version_source_ref: string;
   source_kind: 'first_party_framework_projection' | 'first_party_release_catalog' | 'agent_package_registry_cache' | 'installed_package_lock';
   registry_source_ref: string | null;
+  capability_metadata: DirectoryCapabilityMetadata | null;
   release_target: ManagedCatalogVersion | null;
   version_currentness: {
     status: 'live_release_set' | 'cached_release_set' | 'last_known_good_release_set' | 'framework_projection_only' | 'registry_cache' | 'installed_lock_only';
@@ -116,6 +124,8 @@ function manifestDirectoryMetadata(payload: unknown, manifestUrl: string) {
     tags: uniqueStrings([...stringList(raw.tags), role, manifest.source]),
     package_role: role,
     selected_version: manifest.version,
+    required_skill_ids: [...manifest.required_skill_ids],
+    optional_skill_refs: [...manifest.optional_skill_refs],
   };
 }
 
@@ -235,8 +245,8 @@ export function normalizePackageCatalogRegistry(
       trust_tier: declaredTrustTier,
       starter_default: rawEntry.starter_default === true,
       codex_visible_entry: null,
-      required_skill_ids: [],
-      optional_skill_ids: [],
+      required_skill_ids: metadata.required_skill_ids,
+      optional_skill_ids: metadata.optional_skill_refs,
       home_shortcut_ids: [],
       display_policy: null,
       ordinary_user_source: null,
@@ -311,6 +321,8 @@ export async function enrichRegistryCacheManifestMetadata(cache: AgentPackageReg
       package_role: metadata.package_role,
       selected_version: metadata.selected_version,
       stable_version: entry.stable_version ?? metadata.selected_version,
+      required_skill_ids: metadata.required_skill_ids,
+      optional_skill_ids: metadata.optional_skill_refs,
       manifest_validation: 'fetched_manifest' as const,
     };
   }));
@@ -320,6 +332,17 @@ export async function enrichRegistryCacheManifestMetadata(cache: AgentPackageReg
 function firstPartyDirectorySources(snapshot: FirstPartyDirectoryCatalogSnapshot | null): DirectorySource[] {
   const liveVerified = snapshot?.freshness === 'live';
   return getOplPackageSpecs().map((spec) => {
+    const ownerManifest = spec.module_id === 'oplflow'
+      ? null
+      : getAgentPackageManifestByModuleId(spec.module_id);
+    const capabilityMetadata: DirectoryCapabilityMetadata | null = spec.package_role === 'standard_agent'
+      && ownerManifest
+      ? {
+          source: 'normalized_owner_manifest',
+          required_skill_ids: [...ownerManifest.codex_surface.required_skill_ids],
+          optional_skill_refs: [],
+        }
+      : null;
     const selected = snapshot
       ? selectManagedCatalogPackageVersion(snapshot.catalog, spec.package_id)
       : null;
@@ -352,6 +375,7 @@ function firstPartyDirectorySources(snapshot: FirstPartyDirectoryCatalogSnapshot
         : `${spec.package_manifest_ref}#/version`,
       source_kind: selected ? 'first_party_release_catalog' : 'first_party_framework_projection',
       registry_source_ref: selected ? snapshot!.catalog_ref : spec.package_manifest_ref,
+      capability_metadata: capabilityMetadata,
       version_currentness: {
         status: currentnessStatus,
         live_verified: liveVerified,
@@ -365,6 +389,16 @@ function firstPartyDirectorySources(snapshot: FirstPartyDirectoryCatalogSnapshot
 }
 
 function registryDirectorySource(cache: AgentPackageRegistryCache, entry: AgentPackageRegistryEntry): DirectorySource {
+  const capabilityMetadata: DirectoryCapabilityMetadata | null = entry.package_role === 'standard_agent'
+    && (entry.manifest_validation === 'fetched_manifest'
+      || entry.manifest_validation === 'catalog_inline_manifest')
+    && entry.required_skill_ids.length > 0
+    ? {
+        source: 'validated_registry_manifest',
+        required_skill_ids: [...entry.required_skill_ids],
+        optional_skill_refs: [...entry.optional_skill_ids],
+      }
+    : null;
   return {
     package_id: entry.package_id,
     display_name: entry.display_name,
@@ -382,6 +416,7 @@ function registryDirectorySource(cache: AgentPackageRegistryCache, entry: AgentP
     version_source_ref: entry.version_source_ref,
     source_kind: 'agent_package_registry_cache',
     registry_source_ref: cache.registry_url,
+    capability_metadata: capabilityMetadata,
     version_currentness: {
       status: 'registry_cache',
       live_verified: false,
@@ -394,6 +429,16 @@ function registryDirectorySource(cache: AgentPackageRegistryCache, entry: AgentP
 }
 
 function lockDirectorySource(lock: AgentPackageLock, packageRole: AgentPackageRole | null): DirectorySource {
+  const capabilityMetadata: DirectoryCapabilityMetadata | null = packageRole === 'standard_agent'
+    && Array.isArray(lock.bundled_required_skill_ids)
+    && lock.bundled_required_skill_ids.length > 0
+    && Array.isArray(lock.optional_skill_refs)
+    ? {
+        source: 'installed_package_lock',
+        required_skill_ids: [...lock.bundled_required_skill_ids],
+        optional_skill_refs: [...lock.optional_skill_refs],
+      }
+    : null;
   return {
     package_id: lock.package_id,
     display_name: lock.display_name,
@@ -411,6 +456,7 @@ function lockDirectorySource(lock: AgentPackageLock, packageRole: AgentPackageRo
     version_source_ref: `${lock.manifest_url}#/version`,
     source_kind: 'installed_package_lock',
     registry_source_ref: null,
+    capability_metadata: capabilityMetadata,
     version_currentness: {
       status: 'installed_lock_only',
       live_verified: false,
@@ -748,6 +794,9 @@ export function buildAgentPackageDirectory(input: {
       description: source.description,
       tags: source.tags,
       package_role: effectiveSource.package_role,
+      capability_metadata: effectiveSource.package_role === 'standard_agent'
+        ? effectiveSource.capability_metadata
+        : null,
       role_state: {
         status: !installed
           ? roleKnown ? 'declared' : 'migration_required'

@@ -128,7 +128,14 @@ exit 1
     }
     const flow = directory.entries.find((entry: any) => entry.package_id === 'opl-flow');
     const scholarSkills = directory.entries.find((entry: any) => entry.package_id === 'mas-scholar-skills');
+    const mas = directory.entries.find((entry: any) => entry.package_id === 'mas');
+    assert.deepEqual(mas.capability_metadata, {
+      source: 'normalized_owner_manifest',
+      required_skill_ids: ['med-autoscience'],
+      optional_skill_refs: [],
+    });
     assert.equal(flow.package_role, 'workflow_profile');
+    assert.equal(flow.capability_metadata, null);
     assert.equal(flow.projected_version, '0.1.25');
     assert.equal(flow.selected_version, null);
     assert.equal(flow.stable_version, null);
@@ -137,6 +144,7 @@ exit 1
     assert.equal(flow.version_currentness.live_verified, false);
     assert.equal(directory.first_party_release_currentness.status, 'unknown');
     assert.equal(scholarSkills.package_role, 'framework_capability_package');
+    assert.equal(scholarSkills.capability_metadata, null);
 
     for (const profile of ['fast', 'full'] as const) {
       const appState = runCli(['app', 'state', '--profile', profile], {
@@ -345,8 +353,19 @@ test('external package catalogs preserve third-party selection and reject first-
   assert.equal(cache.entries[0].selected_version, '1.2.3');
   assert.equal(cache.entries[0].stable_version, '1.2.3');
   assert.equal(cache.entries[0].manifest_validation, 'catalog_inline_manifest');
+  assert.deepEqual(cache.entries[0].required_skill_ids, ['third-party-research']);
+  assert.deepEqual(cache.entries[0].optional_skill_ids, ['officecli-docx']);
   assert.equal(cache.entries[0].source, 'third_party');
   assert.equal(cache.entries[0].trust_tier, 'third_party_verified');
+  assert.deepEqual(buildAgentPackageDirectory({
+    registryCache: cache,
+    locks: [],
+    detail: 'fast',
+  }).entries.find((entry) => entry.package_id === 'third.party.research')?.capability_metadata, {
+    source: 'validated_registry_manifest',
+    required_skill_ids: ['third-party-research'],
+    optional_skill_refs: ['officecli-docx'],
+  });
 
   for (const [source, trustTier] of [
     ['organization_registry', 'organization_verified'],
@@ -662,17 +681,29 @@ test('registry manifest enrichment admits third-party packages and rejects role 
       tags: ['literature', 'analysis'],
     }));
     const cache = normalizeRegistry(registryPayload(manifestUrl), 'file:///tmp/registry.json', 'registry-sha');
+    assert.equal(buildAgentPackageDirectory({
+      registryCache: cache,
+      locks: [],
+      detail: 'fast',
+    }).entries.find((entry) => entry.package_id === 'third.party.research')?.capability_metadata, null);
     const enriched = await enrichRegistryCacheManifestMetadata(cache);
     assert.equal(enriched.entries[0].package_role, 'standard_agent');
     assert.equal(enriched.entries[0].selected_version, '1.2.3');
     assert.equal(enriched.entries[0].stable_version, '1.2.3');
     assert.equal(enriched.entries[0].manifest_validation, 'fetched_manifest');
+    assert.deepEqual(enriched.entries[0].required_skill_ids, ['third-party-research']);
+    assert.deepEqual(enriched.entries[0].optional_skill_ids, ['officecli-docx']);
     assert.equal(enriched.entries[0].tags.includes('literature'), true);
     const directoryEntry = buildAgentPackageDirectory({
       registryCache: enriched,
       locks: [],
       detail: 'fast',
     }).entries.find((entry) => entry.package_id === 'third.party.research')!;
+    assert.deepEqual(directoryEntry.capability_metadata, {
+      source: 'validated_registry_manifest',
+      required_skill_ids: ['third-party-research'],
+      optional_skill_refs: ['officecli-docx'],
+    });
     const installAction = directoryEntry.recommended_action_ref;
     assert.ok(installAction);
     assert.deepEqual(installAction.payload, {
@@ -952,6 +983,7 @@ test('scope-less list and App workspace context project different activation sta
     }));
     const scopeLess = listOplAgentPackages({ detail: 'fast', readStatus: statusReader as any })
       .opl_agent_packages.directory.entries.find((entry) => entry.package_id === lock.package_id)!;
+    assert.equal(scopeLess.capability_metadata, null);
     assert.equal(scopeLess.activated, false);
     assert.equal(scopeLess.readiness.status, 'ready');
     assert.equal(scopeLess.readiness.operational_ready, true);
@@ -1035,6 +1067,7 @@ test('installed-only directory entries retain persisted role and consume canonic
     }),
   }).entries.find((entry) => entry.package_id === lock.package_id)!;
   assert.equal(ready.package_role, 'workflow_profile');
+  assert.equal(ready.capability_metadata, null);
   assert.equal(ready.activated, true);
   assert.equal(ready.readiness.status, 'verification_deferred');
   assert.equal(ready.readiness.verification_deferred, true);
@@ -1043,6 +1076,24 @@ test('installed-only directory entries retain persisted role and consume canonic
   assert.equal(ready.recommended_action_ref, null);
   assert.equal(ready.available_actions.some((action) => action.action_id === 'agent_package_activate'), true);
   assertRecommendedActionMatchesAvailable(ready);
+
+  const installedAgent = buildAgentPackageDirectory({
+    registryCache: null,
+    locks: [{
+      ...lock,
+      package_id: 'third.party.installed-agent',
+      agent_id: 'third.party.installed-agent',
+      package_role: 'standard_agent',
+      bundled_required_skill_ids: ['installed-agent'],
+      optional_skill_refs: ['optional-installed-skill'],
+    }],
+    detail: 'fast',
+  }).entries.find((entry) => entry.package_id === 'third.party.installed-agent')!;
+  assert.deepEqual(installedAgent.capability_metadata, {
+    source: 'installed_package_lock',
+    required_skill_ids: ['installed-agent'],
+    optional_skill_refs: ['optional-installed-skill'],
+  });
 
   const fullyVerified = buildAgentPackageDirectory({
     registryCache: null,
