@@ -138,10 +138,61 @@ function exactTreeDigest(root: string) {
   return crypto.createHash('sha256').update(exactTreeInventory(root).join('\n')).digest('hex');
 }
 
+function writeMasPackageRuntimeFixture(root: string, version: string) {
+  fs.writeFileSync(path.join(root, 'pyproject.toml'), [
+    '[build-system]',
+    'requires = ["setuptools>=69"]',
+    'build-backend = "setuptools.build_meta"',
+    '',
+    '[project]',
+    'name = "med-autoscience"',
+    `version = "${version}"`,
+    'requires-python = ">=3.12"',
+    '',
+    '[project.scripts]',
+    'mas-foundry-owner-gate = "med_autoscience.authority_handlers.foundry_owner_gate:main"',
+    '',
+    '[tool.setuptools.packages.find]',
+    'where = ["src"]',
+    'include = ["med_autoscience*"]',
+    '',
+  ].join('\n'));
+  fs.writeFileSync(path.join(root, 'README.md'), `# MAS ${version}\n`);
+  const packageRoot = path.join(root, 'src', 'med_autoscience', 'authority_handlers');
+  fs.mkdirSync(packageRoot, { recursive: true });
+  fs.writeFileSync(path.join(root, 'src', 'med_autoscience', '__init__.py'), '');
+  fs.writeFileSync(path.join(root, 'src', 'med_autoscience', 'authority_handlers', '__init__.py'), '');
+  fs.writeFileSync(
+    path.join(packageRoot, 'foundry_owner_gate.py'),
+    'def main():\n    raise SystemExit(0)\n',
+  );
+}
+
+function writeFakeMasUv(binRoot: string, fail = false) {
+  fs.mkdirSync(binRoot, { recursive: true });
+  fs.writeFileSync(path.join(binRoot, 'uv'), [
+    '#!/usr/bin/env node',
+    "const fs = require('node:fs');",
+    "const path = require('node:path');",
+    'const args = process.argv.slice(2);',
+    "if (args[0] !== 'tool' || args[1] !== 'install' || !process.env.UV_TOOL_DIR) { console.error('invalid fake uv invocation'); process.exit(72); }",
+    ...(fail ? ['process.exit(73);'] : [
+      'const sourceRoot = args.at(-1);',
+      "for (const ref of ['pyproject.toml', 'README.md', 'src/med_autoscience/authority_handlers/foundry_owner_gate.py']) {",
+      "  if (!fs.existsSync(path.join(sourceRoot, ref)) || !fs.statSync(path.join(sourceRoot, ref)).isFile()) { console.error(`missing copied MAS input: ${ref}`); process.exit(74); }",
+      '}',
+      "const target = path.join(process.env.UV_TOOL_DIR, 'med-autoscience', 'bin', 'mas-foundry-owner-gate');",
+      'fs.mkdirSync(path.dirname(target), { recursive: true });',
+      "fs.writeFileSync(target, '#!/usr/bin/env bash\\nif [[ \"${1:-}\" == \"--help\" ]]; then printf \"MAS OwnerGate verifier\\\\n\"; exit 0; fi\\nexit 64\\n', { mode: 0o755 });",
+    ]),
+  ].join('\n'), { mode: 0o755 });
+}
+
 function writeOrdinaryUserMasRelease(root: string, version: string) {
   const provider = writeCapabilityProvider(path.join(root, 'provider'), version);
   const masRoot = path.join(root, 'mas');
   const mas = writeMasConsumer(masRoot, provider, version, { runtimeSourceCarrier: true });
+  writeMasPackageRuntimeFixture(masRoot, version);
   const runtimeFiles = [
     'contracts/action_catalog.json',
     'contracts/domain_handler_registry.json',
@@ -156,7 +207,9 @@ function writeOrdinaryUserMasRelease(root: string, version: string) {
   const primarySkillPath = path.join(masRoot, 'agent', 'primary_skill', 'SKILL.md');
   fs.mkdirSync(path.dirname(primarySkillPath), { recursive: true });
   fs.writeFileSync(primarySkillPath, `# MAS ${version}\n`);
-  return writeCapabilityCatalog(path.join(root, 'release-set'), [mas, provider]);
+  const release = writeCapabilityCatalog(path.join(root, 'release-set'), [mas, provider]);
+  writeFakeMasUv(release.env.PATH.split(path.delimiter)[0]!);
+  return release;
 }
 
 function writeStandardAgentPackProbeFixture(root: string, version: string) {
@@ -1646,7 +1699,7 @@ test('Packages recovers durable runtime-source markers after interrupted apply a
   }
 });
 
-test('MAS package install probes its declarative source carrier instead of a retired private CLI', () => {
+test('MAS package install prepares a physical OwnerGate executable without mutating its source carrier', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mas-source-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mas-source-home-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mas-source-fixture-'));
@@ -1665,6 +1718,18 @@ test('MAS package install probes its declarative source carrier instead of a ret
         module_id: 'medautoscience',
       },
     }));
+    const masRuntimeRoot = path.join(fixtureRoot, 'mas-runtime-input');
+    fs.mkdirSync(masRuntimeRoot, { recursive: true });
+    writeMasPackageRuntimeFixture(masRuntimeRoot, '0.1.0');
+    const masRuntimeFiles = exactTreeInventory(masRuntimeRoot)
+      .filter((entry) => entry.startsWith('file\0'))
+      .map((entry) => {
+        const sourcePath = entry.split('\0')[1]!;
+        return {
+          sourcePath,
+          content: fs.readFileSync(path.join(masRuntimeRoot, sourcePath)),
+        };
+      });
     const fixtureEnv = writeManagedRuntimeSourceFixture({
       root: fixtureRoot,
       moduleId: 'medautoscience',
@@ -1677,8 +1742,10 @@ test('MAS package install probes its declarative source carrier instead of a ret
         { sourcePath: 'contracts/pack_compiler_input.json', content: '{}\n' },
         { sourcePath: 'agent/stages/manifest.json', content: '{}\n' },
         { sourcePath: 'agent/primary_skill/SKILL.md', content: '# MAS\n' },
+        ...masRuntimeFiles,
       ],
     });
+    writeFakeMasUv(path.join(fixtureRoot, 'bin'));
     const env = {
       OPL_STATE_DIR: stateDir,
       OPL_MODULES_ROOT: modulesRoot,
@@ -1691,6 +1758,40 @@ test('MAS package install probes its declarative source carrier instead of a ret
       'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
     ], env) as any;
     const checkoutPath = path.join(modulesRoot, 'med-autoscience');
+    const installedSource = installed.opl_agent_package_install.package_lock.managed_runtime_source;
+    assert.equal(computePackageChannelTreeSha256(checkoutPath), installedSource.tree_sha256);
+    assert.equal(fs.existsSync(path.join(checkoutPath, '.venv')), false);
+    assert.equal(fs.existsSync(path.join(checkoutPath, 'src', 'med_autoscience.egg-info')), false);
+    assert.ok(installedSource.preparation_root);
+    assert.equal(
+      path.dirname(installedSource.preparation_root),
+      path.join(stateDir, 'agent-package-runtime-envs', 'medautoscience'),
+    );
+    assert.match(path.basename(installedSource.preparation_root), /^[0-9a-f]{64}$/);
+    const ownerGateBin = path.join(
+      installedSource.preparation_root,
+      'uv-tools',
+      'med-autoscience',
+      'bin',
+      'mas-foundry-owner-gate',
+    );
+    const ownerGateStat = fs.lstatSync(ownerGateBin);
+    assert.equal(ownerGateStat.isFile(), true);
+    assert.equal(ownerGateStat.isSymbolicLink(), false);
+    assert.notEqual(ownerGateStat.mode & 0o111, 0);
+    assert.equal(
+      fs.realpathSync(ownerGateBin),
+      path.join(
+        fs.realpathSync(path.join(installedSource.preparation_root, 'uv-tools')),
+        'med-autoscience',
+        'bin',
+        'mas-foundry-owner-gate',
+      ),
+    );
+    assert.equal(
+      fs.existsSync(path.join(installedSource.preparation_root, 'uv-tools', 'package-source', 'pyproject.toml')),
+      true,
+    );
     const expectedProbe = [
       'node',
       '-e',
@@ -1702,14 +1803,14 @@ test('MAS package install probes its declarative source carrier instead of a ret
       path.join(checkoutPath, 'agent', 'primary_skill', 'SKILL.md'),
     ];
     assert.deepEqual(
-      installed.opl_agent_package_install.package_lock.managed_runtime_source.handler_probe_command,
+      installedSource.handler_probe_command,
       expectedProbe,
     );
     const fixtureConfigPath = path.join(env.CODEX_HOME, 'config.toml');
     assert.equal(fs.existsSync(fixtureConfigPath), true);
     assert.match(fs.readFileSync(fixtureConfigPath, 'utf8'), /opl-agent-fixture\.mas-local/);
     assert.doesNotMatch(
-      installed.opl_agent_package_install.package_lock.managed_runtime_source.handler_probe_command.join(' '),
+      installedSource.handler_probe_command.join(' '),
       /med_autoscience\.cli|run-python-clean/,
     );
 
@@ -1741,6 +1842,48 @@ test('MAS package install probes its declarative source carrier instead of a ret
     );
     const repairedStatus = runCli(['packages', 'status', '--package-id', FIXTURE_MAS_PACKAGE_ID], env) as any;
     assert.equal(repairedStatus.opl_agent_package_status.runtime_source_readiness.status, 'current');
+
+    const lockBytes = fs.readFileSync(lockPath);
+    const sourceTreeBeforeFailedUpdate = computePackageChannelTreeSha256(checkoutPath);
+    const runtimeEnvBeforeFailedUpdate = exactTreeInventory(path.join(
+      stateDir,
+      'agent-package-runtime-envs',
+      'medautoscience',
+    ));
+    const failedFixtureEnv = writeManagedRuntimeSourceFixture({
+      root: fixtureRoot,
+      moduleId: 'medautoscience',
+      repoName: 'med-autoscience',
+      version: '0.1.1',
+      sourceHeadSha: 'mas-owner-probe-v2',
+      sourceFiles: [
+        { sourcePath: 'contracts/action_catalog.json', content: '{"version":2}\n' },
+        { sourcePath: 'contracts/domain_handler_registry.json', content: '{}\n' },
+        { sourcePath: 'contracts/pack_compiler_input.json', content: '{}\n' },
+        { sourcePath: 'agent/stages/manifest.json', content: '{}\n' },
+        { sourcePath: 'agent/primary_skill/SKILL.md', content: '# MAS v2\n' },
+        ...masRuntimeFiles,
+      ],
+    });
+    writeFakeMasUv(path.join(fixtureRoot, 'bin'), true);
+    const failedUpdate = runCliFailure(
+      ['packages', 'update', '--package-id', FIXTURE_MAS_PACKAGE_ID],
+      { ...env, ...failedFixtureEnv },
+    );
+    assert.equal(
+      failedUpdate.payload.error.details.failure_code,
+      'agent_package_runtime_source_preparation_failed',
+    );
+    assert.deepEqual(fs.readFileSync(lockPath), lockBytes);
+    assert.equal(computePackageChannelTreeSha256(checkoutPath), sourceTreeBeforeFailedUpdate);
+    assert.deepEqual(
+      exactTreeInventory(path.join(stateDir, 'agent-package-runtime-envs', 'medautoscience')),
+      runtimeEnvBeforeFailedUpdate,
+    );
+    assert.equal(fs.existsSync(ownerGateBin), true);
+
+    runCli(['packages', 'uninstall', '--package-id', FIXTURE_MAS_PACKAGE_ID], env);
+    assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-runtime-envs', 'medautoscience')), false);
   } finally {
     removeFixtureTree(stateDir);
     fs.rmSync(homeDir, { recursive: true, force: true });

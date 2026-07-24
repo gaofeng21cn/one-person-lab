@@ -102,6 +102,59 @@ function buildMasSourceCarrierProbe(checkoutPath: string) {
   ]);
 }
 
+function buildMasPackageBootstrapCommand(checkoutPath: string) {
+  const pyprojectPath = path.join(checkoutPath, 'pyproject.toml');
+  const readmePath = path.join(checkoutPath, 'README.md');
+  const packageSourcePath = path.join(checkoutPath, 'src', 'med_autoscience');
+  const sourceProbe = buildMasSourceCarrierProbe(checkoutPath);
+  return {
+    command: getShellBinary(),
+    args: ['-c', [
+      'set -euo pipefail',
+      'test -n "${UV_TOOL_DIR:-}"',
+      `test -f ${shellQuote(pyprojectPath)} && test ! -L ${shellQuote(pyprojectPath)}`,
+      `test -f ${shellQuote(readmePath)} && test ! -L ${shellQuote(readmePath)}`,
+      `test -d ${shellQuote(packageSourcePath)} && test ! -L ${shellQuote(packageSourcePath)}`,
+      `test -z "$(find ${shellQuote(packageSourcePath)} -type l -print -quit)"`,
+      'OPL_MAS_PREPARATION_ROOT="$(dirname "$UV_TOOL_DIR")"',
+      'OPL_MAS_PACKAGE_SOURCE_ROOT="$UV_TOOL_DIR/package-source"',
+      'trap \'rm -rf "$OPL_MAS_PREPARATION_ROOT"\' ERR',
+      'rm -rf "$OPL_MAS_PACKAGE_SOURCE_ROOT"',
+      'mkdir -p "$OPL_MAS_PACKAGE_SOURCE_ROOT/src/med_autoscience"',
+      `cp ${shellQuote(pyprojectPath)} "$OPL_MAS_PACKAGE_SOURCE_ROOT/pyproject.toml"`,
+      `cp ${shellQuote(readmePath)} "$OPL_MAS_PACKAGE_SOURCE_ROOT/README.md"`,
+      `cp -R ${shellQuote(`${packageSourcePath}/.`)} "$OPL_MAS_PACKAGE_SOURCE_ROOT/src/med_autoscience/"`,
+      buildPythonCommandShim(),
+      'if ! command -v uv >/dev/null 2>&1; then',
+      '  command -v curl >/dev/null 2>&1 || { echo "Missing uv and curl; cannot bootstrap MAS package tooling." >&2; exit 127; }',
+      '  curl -LsSf https://astral.sh/uv/install.sh | sh',
+      '  export PATH="$HOME/.local/bin:$PATH"',
+      'fi',
+      'command -v uv >/dev/null 2>&1',
+      'uv tool install --managed-python --python 3.12 --force "$OPL_MAS_PACKAGE_SOURCE_ROOT"',
+      [sourceProbe.command, ...sourceProbe.args].map(shellQuote).join(' '),
+      'OPL_MAS_OWNER_GATE_BIN="$UV_TOOL_DIR/med-autoscience/bin/mas-foundry-owner-gate"',
+      'node -e \'const fs=require("node:fs"),path=require("node:path");const [bin,root]=process.argv.slice(1);const stat=fs.lstatSync(bin);const expected=path.join(fs.realpathSync(root),"med-autoscience","bin","mas-foundry-owner-gate");if(!stat.isFile()||stat.isSymbolicLink()||fs.realpathSync(bin)!==expected)process.exit(1);fs.accessSync(bin,fs.constants.X_OK)\' "$OPL_MAS_OWNER_GATE_BIN" "$UV_TOOL_DIR"',
+      '"$OPL_MAS_OWNER_GATE_BIN" --help >/dev/null',
+    ].join('\n')],
+  };
+}
+
+function buildMasPackageHealthCheckCommand(checkoutPath: string) {
+  const sourceProbe = buildMasSourceCarrierProbe(checkoutPath);
+  return {
+    command: getShellBinary(),
+    args: ['-c', [
+      'set -euo pipefail',
+      [sourceProbe.command, ...sourceProbe.args].map(shellQuote).join(' '),
+      'test -n "${UV_TOOL_DIR:-}"',
+      'OPL_MAS_OWNER_GATE_BIN="$UV_TOOL_DIR/med-autoscience/bin/mas-foundry-owner-gate"',
+      'node -e \'const fs=require("node:fs"),path=require("node:path");const [bin,root]=process.argv.slice(1);const stat=fs.lstatSync(bin);const expected=path.join(fs.realpathSync(root),"med-autoscience","bin","mas-foundry-owner-gate");if(!stat.isFile()||stat.isSymbolicLink()||fs.realpathSync(bin)!==expected)process.exit(1);fs.accessSync(bin,fs.constants.X_OK)\' "$OPL_MAS_OWNER_GATE_BIN" "$UV_TOOL_DIR"',
+      '"$OPL_MAS_OWNER_GATE_BIN" --help >/dev/null',
+    ].join('\n')],
+  };
+}
+
 function buildStandardAgentPackProbe(checkoutPath: string) {
   return buildRequiredFilesProbe(checkoutPath, [
     path.join('contracts', 'action_catalog.json'),
@@ -162,7 +215,9 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     default_install: true,
     description: 'Research Foundry in medicine: study execution, paper drafting, progress narration, and deliverable files.',
     bootstrap_command: (checkoutPath) => buildMasSourceCarrierProbe(checkoutPath),
+    package_bootstrap_command: (checkoutPath) => buildMasPackageBootstrapCommand(checkoutPath),
     health_check_command: (checkoutPath) => buildMasSourceCarrierProbe(checkoutPath),
+    package_health_check_command: (checkoutPath) => buildMasPackageHealthCheckCommand(checkoutPath),
     runtime_probe_command: (checkoutPath) => buildMasSourceCarrierProbe(checkoutPath),
     skill_sync_domain: 'medautoscience',
     capability_dependencies: getCapabilityDependenciesForModule('medautoscience'),
