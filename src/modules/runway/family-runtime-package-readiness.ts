@@ -53,7 +53,6 @@ export function packageLaunchHardStopReason(packageStatus: any) {
     'dependency_lock_missing',
     'dependency_disabled',
     'package_id_mismatch',
-    'capability_abi_mismatch',
     'required_exports_missing',
     'required_modules_missing',
   ]);

@@ -30,7 +30,11 @@ test('package launch stops only for missing required capability while metadata d
       operational_ready: true,
       dependencies: [{
         required: true,
-        reasons: ['version_requirement_unsatisfied', 'dependency_closure_digest_mismatch'],
+        reasons: [
+          'version_requirement_unsatisfied',
+          'dependency_closure_digest_mismatch',
+          'capability_abi_mismatch',
+        ],
       }],
     },
     materialization_readiness: {
@@ -43,7 +47,6 @@ test('package launch stops only for missing required capability while metadata d
     'dependency_lock_missing',
     'dependency_disabled',
     'package_id_mismatch',
-    'capability_abi_mismatch',
     'required_exports_missing',
     'required_modules_missing',
   ]) {
