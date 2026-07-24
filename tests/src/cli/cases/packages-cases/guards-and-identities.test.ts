@@ -331,7 +331,7 @@ test('repair migrates legacy Framework manifests to one stable catalog selection
     assert.equal(previewLock.manifest_url, 'opl+oci://ghcr.io/fixture/one-person-lab-packages/rca:0.2.1#/package-manifest.json');
     assert.equal(previewLock.source_artifact_ref, 'ghcr.io/fixture/one-person-lab-packages/rca:0.2.1');
     assert.equal(previewLock.artifact_digest, stableFixtureEnv.OPL_FIXTURE_ARTIFACT_DIGEST);
-    assert.equal(previewLock.managed_update_source.catalog_ref, 'ghcr.io/fixture/one-person-lab-manifest:latest-stable');
+    assert.equal(previewLock.managed_update_source.catalog_ref, 'ghcr.io/fixture/one-person-lab-packages/rca:latest-stable');
     assert.equal(previewLock.managed_runtime_source.channel_version, '0.2.1');
     assert.equal(previewLock.managed_runtime_source.source_git_head_sha, stableSourceHead);
     assert.equal(

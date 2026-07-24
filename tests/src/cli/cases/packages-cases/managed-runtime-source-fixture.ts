@@ -4,6 +4,8 @@ import crypto from 'node:crypto';
 import { fs, path } from './helpers.ts';
 
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
+const PACKAGE_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.manifest.v1+json';
+const PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.payload.v1+json';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 
 function sha256(filePath: string) {
@@ -155,12 +157,30 @@ export function writeManagedRuntimeSourceFixture(input: {
   const payloadManifestDigest = payloadManifestJson
     ? `sha256:${crypto.createHash('sha256').update(payloadManifestJson).digest('hex')}`
     : null;
+  const manifestLayerPath = manifestJson ? path.join(blobRoot, 'package-manifest.json') : null;
+  const payloadLayerPath = payloadManifestJson ? path.join(blobRoot, 'payload-manifest.json') : null;
+  if (manifestJson && manifestLayerPath) fs.writeFileSync(manifestLayerPath, manifestJson);
+  if (payloadManifestJson && payloadLayerPath) {
+    fs.writeFileSync(payloadLayerPath, payloadManifestJson);
+  }
   const packageArtifactManifest = {
     schemaVersion: 2,
-    layers: [{
-      mediaType: PACKAGE_LAYER_MEDIA_TYPE,
-      digest: `sha256:${archiveDigest}`,
-    }],
+    layers: [
+      {
+        mediaType: PACKAGE_LAYER_MEDIA_TYPE,
+        digest: `sha256:${archiveDigest}`,
+      },
+      ...(manifestDigest ? [{
+        mediaType: PACKAGE_MANIFEST_LAYER_MEDIA_TYPE,
+        digest: manifestDigest,
+        annotations: { 'org.opencontainers.image.title': 'package-manifest.json' },
+      }] : []),
+      ...(payloadManifestDigest ? [{
+        mediaType: PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE,
+        digest: payloadManifestDigest,
+        annotations: { 'org.opencontainers.image.title': 'payload-manifest.json' },
+      }] : []),
+    ],
   };
   const artifactDigest = `sha256:${crypto.createHash('sha256').update(JSON.stringify(packageArtifactManifest)).digest('hex')}`;
   const channelManifest = {
@@ -213,6 +233,8 @@ export function writeManagedRuntimeSourceFixture(input: {
   const blobs = {
     [`sha256:${channelDigest}`]: channelManifestPath,
     [`sha256:${archiveDigest}`]: archivePath,
+    ...(manifestDigest && manifestLayerPath ? { [manifestDigest]: manifestLayerPath } : {}),
+    ...(payloadManifestDigest && payloadLayerPath ? { [payloadManifestDigest]: payloadLayerPath } : {}),
   };
   fs.writeFileSync(path.join(fakeBin, 'curl'), [
     '#!/usr/bin/env node',

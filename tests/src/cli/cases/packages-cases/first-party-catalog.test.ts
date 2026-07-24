@@ -23,6 +23,7 @@ import {
   resolveOplReleaseManifestRef,
 } from '../../../../../src/modules/connect/system-installation/release-channel.ts';
 import {
+  commitDeveloperCheckout,
   updateDeveloperCapabilityCheckoutClosure,
   writeCapabilityCatalog,
   writeDeveloperCapabilityCheckoutClosure,
@@ -31,7 +32,132 @@ import {
 } from './capability-fixtures.ts';
 
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
+const PACKAGE_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.manifest.v1+json';
+const PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.payload.v1+json';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
+
+function writeMasOwnerGateFixture(checkoutPath: string, binRoot: string) {
+  const packageRoot = path.join(checkoutPath, 'src', 'med_autoscience', 'authority_handlers');
+  const uvToolDir = path.join(path.dirname(binRoot), 'uv-tools');
+  const ownerGateBin = path.join(
+    uvToolDir,
+    'med-autoscience',
+    'bin',
+    'mas-foundry-owner-gate',
+  );
+  fs.mkdirSync(packageRoot, { recursive: true });
+  fs.writeFileSync(path.join(checkoutPath, 'pyproject.toml'), [
+    '[build-system]',
+    'requires = ["setuptools>=69"]',
+    'build-backend = "setuptools.build_meta"',
+    '',
+    '[project]',
+    'name = "med-autoscience"',
+    'version = "0.1.0"',
+    '',
+    '[project.scripts]',
+    'mas-foundry-owner-gate = "med_autoscience.authority_handlers.foundry_owner_gate:main"',
+    '',
+  ].join('\n'));
+  fs.writeFileSync(path.join(checkoutPath, 'README.md'), '# MAS developer fixture\n');
+  fs.writeFileSync(path.join(checkoutPath, 'src', 'med_autoscience', '__init__.py'), '');
+  fs.writeFileSync(path.join(packageRoot, '__init__.py'), '');
+  fs.writeFileSync(path.join(packageRoot, 'foundry_owner_gate.py'), 'def main():\n    raise SystemExit(0)\n');
+  fs.mkdirSync(path.dirname(ownerGateBin), { recursive: true });
+  fs.writeFileSync(ownerGateBin, '#!/usr/bin/env bash\nexit 0\n', { mode: 0o755 });
+  fs.mkdirSync(binRoot, { recursive: true });
+  fs.writeFileSync(path.join(binRoot, 'uv'), [
+    '#!/usr/bin/env node',
+    "const fs = require('node:fs');",
+    "const path = require('node:path');",
+    "const target = path.join(process.env.UV_TOOL_DIR, 'med-autoscience', 'bin', 'mas-foundry-owner-gate');",
+    'fs.mkdirSync(path.dirname(target), { recursive: true });',
+    "fs.writeFileSync(target, '#!/usr/bin/env bash\\nexit 0\\n', { mode: 0o755 });",
+  ].join('\n'), { mode: 0o755 });
+  return { UV_TOOL_DIR: uvToolDir };
+}
+
+function writePackageOwnerChannelFixture(input: {
+  root: string;
+  binRoot: string;
+  catalogPath: string;
+  packageIds: string[];
+}) {
+  const catalog = parseJsonText(fs.readFileSync(input.catalogPath, 'utf8')) as any;
+  const packageCatalog = catalog.packages.package_catalog;
+  const blobRoot = path.join(input.root, 'owner-channel-blobs');
+  const manifests: Record<string, unknown> = {};
+  const blobs: Record<string, string> = {};
+  fs.mkdirSync(blobRoot, { recursive: true });
+  fs.mkdirSync(input.binRoot, { recursive: true });
+  for (const packageId of input.packageIds) {
+    const version = packageCatalog[packageId]?.versions?.[0];
+    assert.ok(version, `missing fixture catalog entry for ${packageId}`);
+    const manifestPath = path.join(blobRoot, `${packageId}-manifest.json`);
+    const payloadPath = path.join(blobRoot, `${packageId}-payload.json`);
+    fs.writeFileSync(manifestPath, version.manifest_json);
+    fs.writeFileSync(payloadPath, version.payload_manifest_json);
+    const payload = parseJsonText(version.payload_manifest_json) as any;
+    const sourcePath = path.join(
+      path.dirname(input.catalogPath),
+      'release-set-artifacts',
+      `${payload.package_source.archive_root}.tar.gz`,
+    );
+    assert.equal(fs.existsSync(sourcePath), true, sourcePath);
+    manifests[`fixture/one-person-lab-packages/${packageId}`] = {
+      schemaVersion: 2,
+      layers: [
+        { mediaType: PACKAGE_LAYER_MEDIA_TYPE, digest: version.package_content_digest },
+        {
+          mediaType: PACKAGE_MANIFEST_LAYER_MEDIA_TYPE,
+          digest: version.manifest_sha256,
+          annotations: { 'org.opencontainers.image.title': 'package-manifest.json' },
+        },
+        {
+          mediaType: PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE,
+          digest: version.payload_manifest_sha256,
+          annotations: { 'org.opencontainers.image.title': 'payload-manifest.json' },
+        },
+      ],
+    };
+    blobs[version.package_content_digest] = sourcePath;
+    blobs[version.manifest_sha256] = manifestPath;
+    blobs[version.payload_manifest_sha256] = payloadPath;
+  }
+  const curlLogPath = path.join(input.root, 'owner-channel-curl.jsonl');
+  fs.writeFileSync(path.join(input.binRoot, 'curl'), [
+    '#!/usr/bin/env node',
+    "const fs = require('node:fs');",
+    'const args = process.argv.slice(2);',
+    `fs.appendFileSync(${JSON.stringify(curlLogPath)}, JSON.stringify(args) + '\\n');`,
+    "const url = args.find((arg) => arg.startsWith('http://') || arg.startsWith('https://')) || '';",
+    "if (url.includes('/token?')) { process.stdout.write(JSON.stringify({ token: 'fixture' })); process.exit(0); }",
+    `const manifests = ${JSON.stringify(manifests)};`,
+    `const blobs = ${JSON.stringify(blobs)};`,
+    "if (url.includes('/manifests/')) {",
+    "  const match = url.match(/\\/v2\\/(.+)\\/manifests\\//);",
+    '  const payload = match ? manifests[match[1]] : null;',
+    '  if (!payload) process.exit(22);',
+    '  process.stdout.write(JSON.stringify(payload));',
+    '  process.exit(0);',
+    '}',
+    "if (url.includes('/blobs/')) {",
+    "  const digest = decodeURIComponent(url.slice(url.lastIndexOf('/') + 1));",
+    "  const outIndex = args.indexOf('-o');",
+    '  if (!blobs[digest] || outIndex < 0) process.exit(22);',
+    '  fs.copyFileSync(blobs[digest], args[outIndex + 1]);',
+    '  process.exit(0);',
+    '}',
+    'process.exit(22);',
+  ].join('\n'), { mode: 0o755 });
+  return {
+    env: {
+      OPL_PACKAGES_OWNER: 'fixture',
+      PATH: `${input.binRoot}${path.delimiter}${process.env.PATH ?? ''}`,
+    },
+    curlLogPath,
+  };
+}
 
 function writeFirstPartyCatalogFixture(
   version: string,
@@ -100,12 +226,6 @@ function writeFirstPartyCatalogFixture(
   execFileSync('tar', ['-czf', archivePath, 'opl-flow'], { cwd: sourceParent });
   const archiveSha256 = crypto.createHash('sha256').update(fs.readFileSync(archivePath)).digest('hex');
   const sourceArtifactRef = `ghcr.io/fixture/one-person-lab-packages/opl-flow:${version}`;
-  const packageArtifactManifest = {
-    schemaVersion: 2,
-    layers: [{ mediaType: PACKAGE_LAYER_MEDIA_TYPE, digest: `sha256:${archiveSha256}` }],
-  };
-  const packageArtifactManifestJson = JSON.stringify(packageArtifactManifest);
-  const artifactDigest = `sha256:${crypto.createHash('sha256').update(packageArtifactManifestJson).digest('hex')}`;
   const manifest = {
     surface_kind: 'opl_workflow_profile_package_manifest.v1',
     package_id: 'opl-flow',
@@ -180,6 +300,28 @@ function writeFirstPartyCatalogFixture(
   const payloadManifestJson = formatJsonPayload(payload);
   const manifestSha256 = `sha256:${crypto.createHash('sha256').update(manifestJson).digest('hex')}`;
   const payloadManifestSha256 = `sha256:${crypto.createHash('sha256').update(payloadManifestJson).digest('hex')}`;
+  const manifestPath = path.join(blobRoot, 'package-manifest.json');
+  const payloadManifestPath = path.join(blobRoot, 'payload-manifest.json');
+  fs.writeFileSync(manifestPath, manifestJson);
+  fs.writeFileSync(payloadManifestPath, payloadManifestJson);
+  const packageArtifactManifest = {
+    schemaVersion: 2,
+    layers: [
+      { mediaType: PACKAGE_LAYER_MEDIA_TYPE, digest: `sha256:${archiveSha256}` },
+      {
+        mediaType: PACKAGE_MANIFEST_LAYER_MEDIA_TYPE,
+        digest: manifestSha256,
+        annotations: { 'org.opencontainers.image.title': 'package-manifest.json' },
+      },
+      {
+        mediaType: PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE,
+        digest: payloadManifestSha256,
+        annotations: { 'org.opencontainers.image.title': 'payload-manifest.json' },
+      },
+    ],
+  };
+  const packageArtifactManifestJson = JSON.stringify(packageArtifactManifest);
+  const artifactDigest = `sha256:${crypto.createHash('sha256').update(packageArtifactManifestJson).digest('hex')}`;
   const channelManifestPath = path.join(blobRoot, 'channel-manifest.json');
   const packageCatalog = {
     'opl-flow': {
@@ -227,6 +369,8 @@ function writeFirstPartyCatalogFixture(
   const blobs = {
     [channelDigest]: channelManifestPath,
     [`sha256:${archiveSha256}`]: archivePath,
+    [manifestSha256]: manifestPath,
+    [payloadManifestSha256]: payloadManifestPath,
   };
   fs.writeFileSync(path.join(fakeBin, 'curl'), [
     '#!/usr/bin/env node',
@@ -331,7 +475,7 @@ test('release channels normalize stable and preview aliases and reject bare late
   }
 });
 
-test('live Release Set refresh persists explicit descriptor, layer, and embedded catalog digests', async () => {
+test('live owner refresh stays ephemeral and does not request the shared manifest', async () => {
   const fixture = writeFirstPartyCatalogFixture('0.2.0', '1'.repeat(40));
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-release-cache-'));
   const environment = {
@@ -345,20 +489,21 @@ test('live Release Set refresh persists explicit descriptor, layer, and embedded
     Object.assign(process.env, environment);
     const snapshot = await refreshFirstPartyPackageCatalogSnapshot('opl-flow');
     assert.equal(snapshot.freshness, 'live');
-    assert.equal(snapshot.release_set_descriptor_digest, fixture.channelDescriptorDigest);
-    assert.equal(snapshot.channel_manifest_layer_digest, fixture.channelDigest);
-    assert.equal(snapshot.package_catalog_digest, fixture.packageCatalogDigest);
-    assert.equal(snapshot.catalog_digest, fixture.channelDigest);
-
-    const cache = parseJsonText(fs.readFileSync(
+    assert.equal(snapshot.catalog_ref, 'ghcr.io/fixture/one-person-lab-packages/opl-flow:latest-stable');
+    assert.equal(snapshot.release_set_descriptor_digest, fixture.artifactDigest);
+    assert.equal(snapshot.channel_manifest_layer_digest, fixture.artifactDigest);
+    assert.match(snapshot.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
+    assert.equal(snapshot.catalog_digest, fixture.artifactDigest);
+    assert.equal(fs.existsSync(
       path.join(stateDir, 'agent-package-release-catalog-cache.json'),
-      'utf8',
-    )) as any;
-    assert.equal(cache.surface_kind, 'opl_agent_package_release_catalog_cache.v2');
-    assert.equal(cache.release_set_descriptor_digest, fixture.channelDescriptorDigest);
-    assert.equal(cache.channel_manifest_layer_digest, fixture.channelDigest);
-    assert.equal(cache.package_catalog_digest, fixture.packageCatalogDigest);
-    assert.equal('catalog_digest' in cache, false);
+    ), false);
+    const reads = fs.readFileSync(fixture.curlLogPath, 'utf8').trim().split('\n');
+    assert.equal(
+      reads.filter((line) =>
+        line.includes('/one-person-lab-packages/opl-flow/manifests/latest-stable')).length,
+      1,
+    );
+    assert.equal(reads.filter((line) => line.includes('/one-person-lab-manifest/')).length, 0);
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];
@@ -448,7 +593,7 @@ test('first-party identities reject explicit registries and unowned manifest bod
   }
 });
 
-test('first-party install and update lock one Release Set catalog member by version commit and digest', () => {
+test('first-party install and update read one owner channel without shared-manifest currentness', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-catalog-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-catalog-home-'));
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-catalog-workspace-'));
@@ -483,23 +628,27 @@ test('first-party install and update lock one Release Set catalog member by vers
     assert.equal(installedLock.owner_source_commit, '1'.repeat(40));
     assert.equal(installedLock.source_artifact_ref, first.sourceArtifactRef);
     assert.equal(installedLock.artifact_digest, first.artifactDigest);
-    assert.equal(installedLock.release_channel_ref, 'ghcr.io/fixture/one-person-lab-manifest:latest-stable');
-    assert.equal(installedLock.release_channel_digest, first.channelDigest);
+    assert.equal(installedLock.release_channel_ref, 'ghcr.io/fixture/one-person-lab-packages/opl-flow:latest-stable');
+    assert.equal(installedLock.release_channel_digest, first.artifactDigest);
     assert.equal(installedLock.manifest_sha256, first.manifestSha256.replace(/^sha256:/, ''));
     assert.equal(installedLock.content_digest, first.manifestSha256);
     assert.equal(
       installedLock.managed_update_source.catalog_ref,
-      'ghcr.io/fixture/one-person-lab-manifest:latest-stable',
+      'ghcr.io/fixture/one-person-lab-packages/opl-flow:latest-stable',
     );
     assert.equal(installedLock.physical_surface.status, 'materialized');
     assert.equal(
       fs.readFileSync(path.join(installedLock.physical_surface.codex_plugin_cache_path, 'skills', 'opl-flow', 'SKILL.md'), 'utf8'),
       '# OPL Flow\n\nFirst-party catalog fixture.\n',
     );
-    const firstChannelReads = fs.readFileSync(first.curlLogPath, 'utf8')
+    const firstOwnerReads = fs.readFileSync(first.curlLogPath, 'utf8')
       .split('\n')
-      .filter((line) => line.includes('/one-person-lab-manifest/manifests/latest-stable'));
-    assert.equal(firstChannelReads.length, 1);
+      .filter((line) => line.includes('/one-person-lab-packages/opl-flow/manifests/latest-stable'));
+    assert.equal(firstOwnerReads.length, 1);
+    assert.equal(
+      fs.readFileSync(first.curlLogPath, 'utf8').includes('/one-person-lab-manifest/'),
+      false,
+    );
 
     const activated = runCli([
       'packages', 'activate', 'opl-flow', '--scope', 'workspace', '--target-workspace', workspace,
@@ -520,7 +669,7 @@ test('first-party install and update lock one Release Set catalog member by vers
     assert.equal(updatedLock.owner_source_commit, '2'.repeat(40));
     assert.equal(updatedLock.source_artifact_ref, second.sourceArtifactRef);
     assert.equal(updatedLock.artifact_digest, second.artifactDigest);
-    assert.equal(updatedLock.release_channel_digest, second.channelDigest);
+    assert.equal(updatedLock.release_channel_digest, second.artifactDigest);
     assert.equal(updatedLock.manifest_sha256, second.manifestSha256.replace(/^sha256:/, ''));
     assert.equal(updated.opl_agent_package_update.lifecycle_receipt.owner_source_commit, '2'.repeat(40));
     assert.equal(updated.opl_agent_package_update.lifecycle_receipt.artifact_digest, second.artifactDigest);
@@ -572,8 +721,10 @@ test('first-party install rejects a catalog member without an immutable owner co
       ...fixture.env,
     });
     assert.equal(failure.payload.error.code, 'contract_shape_invalid');
-    assert.equal(failure.payload.error.details.failure_code, 'first_party_package_catalog_selection_invalid');
-    assert.deepEqual(failure.payload.error.details.failures, ['owner_source_commit_invalid']);
+    assert.equal(
+      failure.payload.error.details.failure_code,
+      'agent_package_manifest_carrier_source_commit_invalid',
+    );
   } finally {
     removeFixtureTree(stateDir);
     fs.rmSync(fixture.root, { recursive: true, force: true });
@@ -613,7 +764,7 @@ test('first-party activation keeps the installed LKG when the next catalog membe
     assert.equal(activation.package_use_binding.freshness_mode, 'offline_lkg');
     assert.equal(
       activation.package_use_binding.reconciliation_issue.failure_code,
-      'first_party_package_catalog_selection_invalid',
+      'agent_package_capability_channel_unavailable',
     );
     assert.equal(JSON.parse(fs.readFileSync(pluginPath, 'utf8')).version, '0.2.0');
   } finally {
@@ -638,12 +789,15 @@ test('developer checkout policy tracks Release Set currentness without accepting
   const nextProvider = writeCapabilityProvider(path.join(root, 'next-provider'), '0.1.1');
   const nextMas = writeMasConsumer(path.join(root, 'next-mas'), nextProvider, '0.1.1');
   const nextReleaseSet = writeCapabilityCatalog(path.join(root, 'next-release-set'), [nextMas, nextProvider]);
+  const fakeBin = path.join(root, 'bin');
   const commonEnv = {
     HOME: homeDir,
     CODEX_HOME: path.join(homeDir, '.codex'),
     OPL_STATE_DIR: stateDir,
     OPL_MODULE_PATH_MEDAUTOSCIENCE: masCheckout,
     OPL_MODULE_PATH_SCHOLARSKILLS: scholarCheckout,
+    PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+    UV_TOOL_DIR: path.join(root, 'uv-tools'),
   };
   fs.mkdirSync(masCheckout, { recursive: true });
   fs.mkdirSync(scholarCheckout, { recursive: true });
@@ -654,6 +808,8 @@ test('developer checkout policy tracks Release Set currentness without accepting
     masManifestPath: oldMas,
     providerManifestPath: oldProvider,
   });
+  writeMasOwnerGateFixture(masCheckout, fakeBin);
+  commitDeveloperCheckout(masCheckout, 'add owner gate fixture');
 
   try {
     const pathFailure = runCliFailure([
@@ -761,12 +917,15 @@ test('fresh Developer install admits owner checkout manifests without channel pa
   delete providerPayload.content_lock;
   fs.writeFileSync(providerManifest, formatJsonPayload(providerPayload));
   const masManifest = writeMasConsumer(path.join(root, 'mas'), providerManifest, '0.1.0');
+  const fakeBin = path.join(root, 'bin');
   const commonEnv = {
     HOME: homeDir,
     CODEX_HOME: path.join(homeDir, '.codex'),
     OPL_STATE_DIR: stateDir,
     OPL_MODULE_PATH_MEDAUTOSCIENCE: masCheckout,
     OPL_MODULE_PATH_SCHOLARSKILLS: scholarCheckout,
+    PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+    UV_TOOL_DIR: path.join(root, 'uv-tools'),
   };
   fs.mkdirSync(masCheckout, { recursive: true });
   fs.mkdirSync(scholarCheckout, { recursive: true });
@@ -777,6 +936,8 @@ test('fresh Developer install admits owner checkout manifests without channel pa
     masManifestPath: masManifest,
     providerManifestPath: providerManifest,
   });
+  writeMasOwnerGateFixture(masCheckout, fakeBin);
+  commitDeveloperCheckout(masCheckout, 'add owner gate fixture');
 
   try {
     const installed = runCli(['packages', 'install', 'mas'], commonEnv) as any;
@@ -821,6 +982,7 @@ test('bad optional inline catalog entry stays diagnostic and does not block cons
   const homeDir = path.join(root, 'home');
   const stateDir = path.join(root, 'state');
   const workspace = path.join(root, 'workspace');
+  const fakeBin = path.join(root, 'bin');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0');
   const masManifest = writeMasConsumer(path.join(root, 'mas'), providerManifest, '0.1.0', {
     required: false,
@@ -831,11 +993,19 @@ test('bad optional inline catalog entry stays diagnostic and does not block cons
     [masManifest, providerManifest],
     { corruptInlineManifestPackageId: 'mas-scholar-skills' },
   );
+  writeMasOwnerGateFixture(path.dirname(masManifest), fakeBin);
+  const ownerChannel = writePackageOwnerChannelFixture({
+    root,
+    binRoot: fakeBin,
+    catalogPath: releaseSet.catalogPath,
+    packageIds: ['mas'],
+  });
   const commonEnv = {
     HOME: homeDir,
     CODEX_HOME: path.join(homeDir, '.codex'),
     OPL_STATE_DIR: stateDir,
     ...releaseSet.env,
+    ...ownerChannel.env,
   };
   fs.mkdirSync(workspace, { recursive: true });
 
@@ -859,6 +1029,13 @@ test('bad optional inline catalog entry stays diagnostic and does not block cons
     ]);
     assert.equal(status.opl_agent_package_status.operational_ready, true);
     assert.equal(status.opl_agent_package_status.launch_allowed, true);
+    const networkReads = fs.readFileSync(ownerChannel.curlLogPath, 'utf8');
+    assert.equal(
+      networkReads.includes('/one-person-lab-packages/mas/manifests/latest-stable'),
+      true,
+    );
+    assert.equal(networkReads.includes('/one-person-lab-packages/mas-scholar-skills/'), false);
+    assert.equal(networkReads.includes('/one-person-lab-manifest/'), false);
 
     runCli(['workspace', 'bind', '--project', 'medautoscience', '--path', workspace], commonEnv);
     const activation = runCli([
@@ -879,6 +1056,63 @@ test('bad optional inline catalog entry stays diagnostic and does not block cons
   }
 });
 
+test('MAS owner refresh reads only MAS and required ScholarSkills owner channels', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-required-owner-closure-'));
+  const homeDir = path.join(root, 'home');
+  const stateDir = path.join(root, 'state');
+  const fakeBin = path.join(root, 'bin');
+  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0');
+  const masManifest = writeMasConsumer(path.join(root, 'mas'), providerManifest, '0.1.0');
+  const releaseSet = writeCapabilityCatalog(
+    path.join(root, 'release-set'),
+    [masManifest, providerManifest],
+  );
+  writeMasOwnerGateFixture(path.dirname(masManifest), fakeBin);
+  const ownerChannel = writePackageOwnerChannelFixture({
+    root,
+    binRoot: fakeBin,
+    catalogPath: releaseSet.catalogPath,
+    packageIds: ['mas', 'mas-scholar-skills'],
+  });
+  const env = {
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_STATE_DIR: stateDir,
+    ...releaseSet.env,
+    ...ownerChannel.env,
+  };
+
+  try {
+    const installed = runCli(['packages', 'install', 'mas'], env) as any;
+    const locks = installed.opl_agent_package_install.dependency_package_locks;
+    assert.deepEqual(locks.map((lock: any) => lock.package_id), [
+      'mas-scholar-skills',
+      'mas',
+    ]);
+    assert.deepEqual(
+      locks.map((lock: any) => lock.release_channel_ref),
+      [
+        'ghcr.io/fixture/one-person-lab-packages/mas-scholar-skills:latest-stable',
+        'ghcr.io/fixture/one-person-lab-packages/mas:latest-stable',
+      ],
+    );
+    const reads = fs.readFileSync(ownerChannel.curlLogPath, 'utf8');
+    for (const packageId of ['mas', 'mas-scholar-skills']) {
+      assert.equal(
+        reads.split('\n').filter((line) =>
+          line.includes(`/one-person-lab-packages/${packageId}/manifests/latest-stable`)).length,
+        1,
+      );
+    }
+    assert.equal(reads.includes('/one-person-lab-manifest/'), false);
+    for (const packageId of ['mag', 'rca', 'oma', 'obf', 'opl-flow']) {
+      assert.equal(reads.includes(`/one-person-lab-packages/${packageId}/`), false);
+    }
+  } finally {
+    removeFixtureTree(root);
+  }
+});
+
 test('single-package developer update reconciles from the live Release Set and becomes a byte-stable no-op', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-single-developer-update-'));
   const homeDir = path.join(root, 'home');
@@ -892,6 +1126,7 @@ test('single-package developer update reconciles from the live Release Set and b
   const nextProvider = writeCapabilityProvider(path.join(root, 'next-provider'), '0.1.1');
   const nextMas = writeMasConsumer(path.join(root, 'next-mas'), nextProvider, '0.1.1');
   const nextReleaseSet = writeCapabilityCatalog(path.join(root, 'next-release-set'), [nextMas, nextProvider]);
+  const fakeBin = path.join(root, 'bin');
   const lockFile = path.join(stateDir, 'agent-package-locks.json');
   const ledgerFile = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
   const releaseCatalogCache = path.join(stateDir, 'agent-package-release-catalog-cache.json');
@@ -903,6 +1138,8 @@ test('single-package developer update reconciles from the live Release Set and b
     OPL_STATE_DIR: stateDir,
     OPL_MODULE_PATH_MEDAUTOSCIENCE: masCheckout,
     OPL_MODULE_PATH_SCHOLARSKILLS: scholarCheckout,
+    PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+    UV_TOOL_DIR: path.join(root, 'uv-tools'),
   };
   fs.mkdirSync(masCheckout, { recursive: true });
   fs.mkdirSync(scholarCheckout, { recursive: true });
@@ -913,6 +1150,8 @@ test('single-package developer update reconciles from the live Release Set and b
     masManifestPath: oldMas,
     providerManifestPath: oldProvider,
   });
+  writeMasOwnerGateFixture(masCheckout, fakeBin);
+  commitDeveloperCheckout(masCheckout, 'add owner gate fixture');
   fs.writeFileSync(masSentinel, 'developer MAS source\n');
   fs.writeFileSync(scholarSentinel, 'developer ScholarSkills source\n');
 

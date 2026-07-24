@@ -1,14 +1,18 @@
-import { isRecord } from '../../../kernel/contract-validation.ts';
-import { readJsonFileOrNull, writeJsonPayloadFile } from '../../../kernel/json-file.ts';
+import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
+import {
+  parseJsonText,
+  readJsonFileOrNull,
+} from '../../../kernel/json-file.ts';
 import { stringValue } from '../../../kernel/json-record.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
+import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { resolveFirstPartyPackageCatalog } from '../agent-package-first-party.ts';
 import {
-  fetchManagedPackageCatalog,
   managedPackageCatalogDigest,
   normalizeManagedPackageCatalog,
 } from './capability-reconciliation.ts';
 import type { FirstPartyDirectoryCatalogSnapshot } from './directory.ts';
+import { normalizePackageManifest } from './manifest-normalizers.ts';
+import { readOplPackageArtifactWithMetadata } from '../system-installation/module-package-channel.ts';
 
 const LIVE_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SHA256_DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
@@ -127,33 +131,121 @@ export async function refreshFirstPartyPackageCatalogSnapshot(
   packageId = 'mas',
   input: { persist?: boolean; timeoutMs?: number } = {},
 ): Promise<FirstPartyDirectoryCatalogSnapshot> {
-  const owner = resolveFirstPartyPackageCatalog(packageId);
-  if (!owner) throw new Error(`Unknown first-party OPL Package: ${packageId}`);
-  const fetched = await fetchManagedPackageCatalog(owner.catalogSource, {
-    timeoutMs: input.timeoutMs,
-  });
-  const cache: ReleaseCatalogCacheV2 = {
-    surface_kind: 'opl_agent_package_release_catalog_cache.v2',
-    catalog_ref: fetched.channel_ref,
-    release_set_descriptor_digest: fetched.release_set_descriptor_digest,
-    channel_manifest_layer_digest: fetched.channel_manifest_layer_digest,
-    package_catalog_digest: fetched.package_catalog_digest,
-    checked_at: fetched.checked_at,
-    catalog_payload: fetched.catalog_payload,
-  };
-  if (input.persist !== false) {
-    const paths = ensureOplStateDir();
-    writeJsonPayloadFile(paths.agent_package_release_catalog_cache_file, cache);
+  if (!resolveFirstPartyPackageCatalog(packageId)) {
+    throw new Error(`Unknown first-party OPL Package: ${packageId}`);
   }
+  const packageCatalog: Record<string, unknown> = {};
+  const visited = new Set<string>();
+  let rootDescriptorDigest: string | null = null;
+  let rootCheckedAt = new Date().toISOString();
+  const visit = (selectedPackageId: string) => {
+    if (visited.has(selectedPackageId)) return;
+    visited.add(selectedPackageId);
+    const selectedOwner = resolveFirstPartyPackageCatalog(selectedPackageId);
+    if (!selectedOwner) {
+      throw new FrameworkContractError('contract_shape_invalid', 'First-party Package required closure contains an unknown Package.', {
+        root_package_id: packageId,
+        package_id: selectedPackageId,
+        failure_code: 'first_party_package_dependency_unknown',
+      });
+    }
+    const selectedOwnerMatch = selectedOwner.catalogSource.catalog_ref.match(
+      /^ghcr\.io\/([^/]+)\/one-person-lab-manifest(?::|@)/,
+    );
+    if (!selectedOwnerMatch) {
+      throw new FrameworkContractError('contract_shape_invalid', 'First-party Package owner could not be derived from its compatibility catalog ref.', {
+        root_package_id: packageId,
+        package_id: selectedPackageId,
+        catalog_ref: selectedOwner.catalogSource.catalog_ref,
+        failure_code: 'first_party_package_owner_ref_invalid',
+      });
+    }
+    const latestStableRef = `ghcr.io/${selectedOwnerMatch[1]}/one-person-lab-packages/${selectedPackageId}:latest-stable`;
+    const artifact = readOplPackageArtifactWithMetadata(latestStableRef, {
+      timeoutMs: input.timeoutMs,
+    });
+    const manifestPayload = parseJsonText(artifact.manifest_json);
+    const payloadManifest = parseJsonText(artifact.payload_manifest_json);
+    const manifest = normalizePackageManifest(
+      manifestPayload,
+      `opl+oci://${latestStableRef}#/package-manifest.json`,
+    );
+    if (manifest.package_id !== selectedPackageId
+      || !isRecord(payloadManifest)
+      || payloadManifest.package_id !== selectedPackageId
+      || payloadManifest.package_version !== manifest.version) {
+      throw new FrameworkContractError('contract_shape_invalid', 'First-party Package artifact identity is inconsistent.', {
+        root_package_id: packageId,
+        package_id: selectedPackageId,
+        manifest_package_id: manifest.package_id,
+        manifest_version: manifest.version,
+        payload_package_id: isRecord(payloadManifest) ? payloadManifest.package_id : null,
+        payload_package_version: isRecord(payloadManifest) ? payloadManifest.package_version : null,
+        failure_code: 'first_party_package_artifact_identity_mismatch',
+      });
+    }
+    const sourceArtifactRef = latestStableRef.replace(/:latest-stable$/, `:${manifest.version}`);
+    const ownerSourceCommit = stringValue(payloadManifest.source_commit)
+      ?? manifest.source_commit
+      ?? manifest.carrier_source_commit;
+    const dependencyPackageIds = manifest.capability_dependencies
+      .filter((dependency) => dependency.required !== false)
+      .map((dependency) => dependency.package_id);
+    packageCatalog[selectedPackageId] = {
+      package_id: selectedPackageId,
+      package_role: manifest.package_role,
+      selected_version: manifest.version,
+      versions: [{
+        package_version: manifest.version,
+        selection_status: 'selected_for_release_set',
+        manifest_url: `opl+oci://${sourceArtifactRef}#/package-manifest.json`,
+        manifest_sha256: artifact.manifest_layer_digest,
+        manifest_json: artifact.manifest_json,
+        content_digest: manifest.content_digest ?? artifact.manifest_layer_digest,
+        payload_digest: artifact.payload_layer_digest,
+        payload_manifest_json: artifact.payload_manifest_json,
+        payload_manifest_sha256: artifact.payload_layer_digest,
+        source_artifact_ref: sourceArtifactRef,
+        artifact_digest: artifact.descriptor_digest,
+        artifact_status: 'published_immutable',
+        package_content_digest: artifact.source_layer_digest,
+        owner_source_commit: ownerSourceCommit,
+        dependency_package_ids: dependencyPackageIds,
+        capability_abi: manifest.capability_provider?.capability_abi ?? null,
+      }],
+    };
+    if (selectedPackageId === packageId) {
+      rootDescriptorDigest = artifact.descriptor_digest;
+      rootCheckedAt = artifact.checked_at;
+    }
+    for (const dependencyPackageId of dependencyPackageIds) visit(dependencyPackageId);
+  };
+  visit(packageId);
+  if (!rootDescriptorDigest) {
+    throw new FrameworkContractError('contract_shape_invalid', 'First-party Package artifact refresh omitted its root descriptor.', {
+      root_package_id: packageId,
+      failure_code: 'first_party_package_root_descriptor_missing',
+    });
+  }
+  const catalogPayload = {
+    surface_kind: 'opl_package_catalog.v1',
+    packages: { package_catalog: packageCatalog },
+  };
+  const packageCatalogDigest = managedPackageCatalogDigest(catalogPayload);
+  const rootOwner = resolveFirstPartyPackageCatalog(packageId)!;
+  const rootOwnerMatch = rootOwner.catalogSource.catalog_ref.match(
+    /^ghcr\.io\/([^/]+)\/one-person-lab-manifest(?::|@)/,
+  )!;
+  const rootRef = `ghcr.io/${rootOwnerMatch[1]}/one-person-lab-packages/${packageId}:latest-stable`;
   return {
-    catalog: fetched.catalog,
+    catalog: normalizeManagedPackageCatalog(catalogPayload),
     freshness: 'live',
-    catalog_ref: fetched.channel_ref,
-    release_set_descriptor_digest: fetched.release_set_descriptor_digest,
-    channel_manifest_layer_digest: fetched.channel_manifest_layer_digest,
-    package_catalog_digest: fetched.package_catalog_digest,
-    catalog_digest: fetched.channel_manifest_layer_digest,
-    checked_at: fetched.checked_at,
+    catalog_ref: rootRef,
+    release_set_descriptor_digest: rootDescriptorDigest,
+    channel_manifest_layer_digest: rootDescriptorDigest,
+    package_catalog_digest: packageCatalogDigest,
+    catalog_digest: rootDescriptorDigest,
+    checked_at: rootCheckedAt,
   };
 }
 
@@ -164,14 +256,15 @@ export async function resolveFirstPartyPackageCatalogSnapshot(input: {
   timeoutMs?: number;
 }): Promise<FirstPartyDirectoryCatalogSnapshot | null> {
   if (input.refresh) {
+    if (!input.packageId) return readFirstPartyPackageCatalogSnapshot();
     try {
       return await refreshFirstPartyPackageCatalogSnapshot(input.packageId, {
         persist: input.persist,
         timeoutMs: input.timeoutMs,
       });
     } catch {
-      return readFirstPartyPackageCatalogSnapshot();
+      return null;
     }
   }
-  return readFirstPartyPackageCatalogSnapshot();
+  return input.packageId ? null : readFirstPartyPackageCatalogSnapshot();
 }

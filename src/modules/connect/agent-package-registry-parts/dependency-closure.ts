@@ -1,8 +1,4 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
-import {
-  agentPackageCarrierAuthorityStatus,
-  sameAgentPackageCarrierAuthority,
-} from './carrier-authority.ts';
 import { sha256Text } from './shared.ts';
 import {
   LEGACY_PACKAGE_CONTENT_LOCK,
@@ -23,7 +19,6 @@ const DEPENDENCY_HARD_FAILURE_REASONS = new Set([
   'package_id_mismatch',
   'dependency_lock_missing',
   'dependency_disabled',
-  'capability_abi_mismatch',
   'consumer_profile_missing',
   'consumer_profile_consumer_mismatch',
   'consumer_profile_requirements_mismatch',
@@ -174,12 +169,7 @@ export function validateCapabilityProvider(
   consumerAgentId: string | null = null,
 ): AgentPackageResolvedDependency {
   const reasons: string[] = [];
-  const currentnessObservations: string[] = [];
   if (provider.package_id !== dependency.package_id) reasons.push('package_id_mismatch');
-  if (!versionSatisfiesRequirement(provider.version, dependency.version_requirement)) {
-    currentnessObservations.push('version_requirement_unsatisfied');
-  }
-  if (provider.capability_provider?.capability_abi !== dependency.capability_abi) reasons.push('capability_abi_mismatch');
   const profileCompatibility = capabilityProfileCompatibility(dependency, provider, consumerAgentId);
   reasons.push(...profileCompatibility.reasons);
   const missingExports = profileCompatibility.missingExports;
@@ -198,7 +188,6 @@ export function validateCapabilityProvider(
       missing_required_export_ids: missingExports,
       missing_required_module_ids: missingModules,
       reasons,
-      currentness_observations: currentnessObservations,
       failure_code: 'agent_package_dependency_incompatible',
     });
   }
@@ -267,36 +256,15 @@ export function dependencyReadiness(
 ): AgentPackageDependencyReadiness {
   const items = (lock.capability_dependencies ?? []).map((dependency) => {
     const provider = index.packages.find((entry) => entry.package_id === dependency.package_id);
-    const resolved = lock.resolved_dependencies?.find((entry) => entry.package_id === dependency.package_id);
     const reasons: string[] = [];
     if (!provider) {
       reasons.push('dependency_lock_missing');
     } else {
-      const carrierAuthority = agentPackageCarrierAuthorityStatus(provider);
-      if (carrierAuthority.status === 'invalid') {
-        reasons.push(...carrierAuthority.reasons.map((reason) => `carrier_authority_${reason}`));
-      }
       if (provider.exposure_state === 'disabled') reasons.push('dependency_disabled');
-      if (!versionSatisfiesRequirement(provider.package_version, dependency.version_requirement)) reasons.push('version_requirement_unsatisfied');
-      if (provider.capability_provider?.capability_abi !== dependency.capability_abi) reasons.push('capability_abi_mismatch');
       const profileCompatibility = capabilityProfileCompatibility(dependency, provider, lock.agent_id);
       reasons.push(...profileCompatibility.reasons);
       if (profileCompatibility.missingExports.length > 0) reasons.push('required_exports_missing');
       if (profileCompatibility.missingModules.length > 0) reasons.push('required_modules_missing');
-      if (!resolved) {
-        reasons.push('dependency_not_locked_in_closure');
-      } else if (
-        (resolved.consumer_profile_id ?? null) !== (dependency.consumer_profile_id ?? null)
-        ||
-        resolved.installed_version !== provider.package_version
-        || resolved.manifest_sha256 !== provider.manifest_sha256
-        || (resolved.owner_source_commit ?? null) !== (provider.owner_source_commit ?? null)
-        || !sameAgentPackageCarrierAuthority(resolved.carrier_authority, provider.carrier_authority)
-        || resolved.content_digest !== provider.content_digest
-        || resolved.package_lock_ref !== provider.lock_ref
-      ) {
-        reasons.push('dependency_closure_digest_mismatch');
-      }
     }
     const hardFailureReasons = reasons.filter((reason) => DEPENDENCY_HARD_FAILURE_REASONS.has(reason));
     return {

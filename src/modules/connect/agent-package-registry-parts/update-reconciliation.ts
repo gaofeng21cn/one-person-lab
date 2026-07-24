@@ -9,7 +9,6 @@ import {
 } from '../agent-package-first-party.ts';
 import {
   catalogManifestPayload,
-  selectCapabilityCatalogVersion,
   type ManagedCatalogVersion,
   type ManagedPackageCatalog,
 } from './capability-reconciliation.ts';
@@ -210,6 +209,21 @@ export function developerAgentRootsForPackageIds(packageIds: Iterable<string>) {
   }));
 }
 
+export function ownerPackageCatalogVersion(
+  catalog: ManagedPackageCatalog,
+  packageId: string,
+) {
+  const versions = catalog.get(packageId)?.versions ?? [];
+  if (versions.length !== 1) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package owner latest-stable must resolve to one Package identity.', {
+      package_id: packageId,
+      candidate_count: versions.length,
+      failure_code: 'agent_package_owner_channel_identity_invalid',
+    });
+  }
+  return versions[0];
+}
+
 export function firstPartyCatalogClosure(
   catalog: ManagedPackageCatalog | null,
   rootPackageId: string,
@@ -261,7 +275,7 @@ export function firstPartyCatalogClosure(
           assertFirstPartyPackageCatalogVersion(packageId, targetVersion!);
           const payload = catalogManifestPayload(targetVersion!);
           if (!payload) {
-            throw new FrameworkContractError('contract_shape_invalid', 'First-party Release Set package currentness requires an inline manifest.', {
+            throw new FrameworkContractError('contract_shape_invalid', 'First-party Package currentness requires an inline owner manifest.', {
               package_id: packageId,
               package_version: targetVersion!.package_version,
               failure_code: 'agent_package_catalog_inline_manifest_missing',
@@ -271,7 +285,7 @@ export function firstPartyCatalogClosure(
         })();
     if (manifest.package_id !== packageId
       || (!developerTarget && manifest.version !== targetVersion!.package_version)) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Release Set closure manifest identity does not match its catalog selection.', {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package owner closure manifest identity does not match its Package selection.', {
         package_id: packageId,
         manifest_package_id: manifest.package_id,
         package_version: targetVersion?.package_version ?? null,
@@ -285,7 +299,7 @@ export function firstPartyCatalogClosure(
       const dependencyVersion = dependencyPolicy.desired_source_kind === 'developer_checkout_override'
         ? null
         : catalog
-          ? selectCapabilityCatalogVersion(catalog, dependency)
+          ? ownerPackageCatalogVersion(catalog, dependency.package_id)
           : null;
       visit(dependency.package_id, dependencyVersion);
     }

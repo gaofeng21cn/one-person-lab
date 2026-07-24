@@ -9,6 +9,8 @@ import {
 import { resolveOplDomainModuleSpec } from '../../../../../src/modules/connect/system-installation/modules.ts';
 
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
+const PACKAGE_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.manifest.v1+json';
+const PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.payload.v1+json';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 const FIXTURE_PACKAGE_CHANNEL_REF = 'ghcr.io/fixture/one-person-lab-manifest:fixture';
 
@@ -353,12 +355,36 @@ export function writePackageCatalog(
     };
     const payloadManifestJson = formatJsonPayload(payload);
     const payloadDigest = sha256(payloadManifestJson);
+    const manifestLayerPath = path.join(
+      root,
+      'release-set-artifacts',
+      `${packageId}-${manifest.version}-package-manifest.json`,
+    );
+    const payloadLayerPath = path.join(
+      root,
+      'release-set-artifacts',
+      `${packageId}-${manifest.version}-payload-manifest.json`,
+    );
+    fs.writeFileSync(manifestLayerPath, raw);
+    fs.writeFileSync(payloadLayerPath, payloadManifestJson);
     const packageArtifactManifest = {
       schemaVersion: 2,
-      layers: [{
-        mediaType: PACKAGE_LAYER_MEDIA_TYPE,
-        digest: archiveDigest,
-      }],
+      layers: [
+        {
+          mediaType: PACKAGE_LAYER_MEDIA_TYPE,
+          digest: archiveDigest,
+        },
+        {
+          mediaType: PACKAGE_MANIFEST_LAYER_MEDIA_TYPE,
+          digest: manifestDigest,
+          annotations: { 'org.opencontainers.image.title': 'package-manifest.json' },
+        },
+        {
+          mediaType: PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE,
+          digest: payloadDigest,
+          annotations: { 'org.opencontainers.image.title': 'payload-manifest.json' },
+        },
+      ],
     };
     const artifactDigest = sha256(JSON.stringify(packageArtifactManifest));
     const artifactRepository = `fixture/one-person-lab-packages/${packageId}`;
@@ -366,6 +392,8 @@ export function writePackageCatalog(
     artifactManifests[`${artifactRepository}@${manifest.version}`] = packageArtifactManifest;
     artifactManifests[`${artifactRepository}@${artifactDigest}`] = packageArtifactManifest;
     artifactBlobs[archiveDigest] = archivePath;
+    artifactBlobs[manifestDigest] = manifestLayerPath;
+    artifactBlobs[payloadDigest] = payloadLayerPath;
     const version = {
       package_version: manifest.version,
       capability_abi: capabilityAbi,

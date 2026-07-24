@@ -27,6 +27,8 @@ import {
 import { resolveOplReleaseManifestRef } from './release-channel.ts';
 
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
+const PACKAGE_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.manifest.v1+json';
+const PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.payload.v1+json';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 
 type OciImageRef = {
@@ -81,6 +83,17 @@ export type ManagedModulePackageChannelSelection = {
   artifact_status: 'published_immutable';
   package_content_digest: string;
   owner_source_commit: string | null;
+};
+
+export type OplPackageArtifactReadback = {
+  package_ref: string;
+  descriptor_digest: string;
+  source_layer_digest: string;
+  manifest_layer_digest: string;
+  payload_layer_digest: string;
+  manifest_json: string;
+  payload_manifest_json: string;
+  checked_at: string;
 };
 
 export type PackageChannelUpdateStatus = {
@@ -582,6 +595,93 @@ function selectLayer(manifest: { layers?: OciLayer[] }, mediaType: string, title
       ? layers.find((layer) => String(layer.annotations?.['org.opencontainers.image.title'] ?? '').endsWith(titleSuffix))
       : null)
     ?? null;
+}
+
+export function readOplPackageArtifactWithMetadata(
+  declaredRef: string,
+  input: { timeoutMs?: number } = {},
+): OplPackageArtifactReadback {
+  const imageRef = parseImageRef(declaredRef);
+  const totalTimeoutMs = Number.isFinite(input.timeoutMs) && Number(input.timeoutMs) > 0
+    ? Math.floor(Number(input.timeoutMs))
+    : 60_000;
+  const deadline = Date.now() + totalTimeoutMs;
+  const remainingTimeoutMs = () => {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      throw new FrameworkContractError('build_command_failed', 'OPL package artifact refresh exceeded its total time budget.', {
+        image: imageRef.image,
+        tag: imageRef.tag,
+        timeout_ms: totalTimeoutMs,
+        failure_code: 'agent_package_capability_channel_unavailable',
+      });
+    }
+    return remaining;
+  };
+  const token = fetchGhcrToken(imageRef, remainingTimeoutMs());
+  const manifest = fetchOciManifest(imageRef, token, remainingTimeoutMs());
+  const sourceLayer = selectLayer(manifest.payload, PACKAGE_LAYER_MEDIA_TYPE);
+  const packageManifestLayer = selectLayer(
+    manifest.payload,
+    PACKAGE_MANIFEST_LAYER_MEDIA_TYPE,
+    'package-manifest.json',
+  );
+  const payloadManifestLayer = selectLayer(
+    manifest.payload,
+    PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE,
+    'payload-manifest.json',
+  );
+  if (!sourceLayer?.digest || !packageManifestLayer?.digest || !payloadManifestLayer?.digest) {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL package artifact is missing a required source, manifest, or payload layer.', {
+      image: imageRef.image,
+      tag: imageRef.tag,
+      source_layer_digest: sourceLayer?.digest ?? null,
+      manifest_layer_digest: packageManifestLayer?.digest ?? null,
+      payload_layer_digest: payloadManifestLayer?.digest ?? null,
+      failure_code: 'opl_package_artifact_layers_missing',
+    });
+  }
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-artifact-readback-'));
+  try {
+    const readJsonLayer = (name: string, layer: OciLayer) => {
+      const targetPath = path.join(tempRoot, name);
+      fetchOciBlob(imageRef, token, layer.digest!, targetPath, remainingTimeoutMs());
+      const bytes = fs.readFileSync(targetPath);
+      const actualDigest = `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+      if (actualDigest !== layer.digest) {
+        throw new FrameworkContractError('contract_shape_invalid', 'OPL package artifact JSON layer digest mismatch.', {
+          image: imageRef.image,
+          tag: imageRef.tag,
+          layer_name: name,
+          expected_layer_digest: layer.digest,
+          actual_layer_digest: actualDigest,
+          failure_code: 'opl_package_artifact_layer_digest_mismatch',
+        });
+      }
+      const json = bytes.toString('utf8');
+      if (!isRecord(parseJsonText(json))) {
+        throw new FrameworkContractError('contract_shape_invalid', 'OPL package artifact JSON layer must contain an object.', {
+          image: imageRef.image,
+          tag: imageRef.tag,
+          layer_name: name,
+          failure_code: 'opl_package_artifact_layer_invalid',
+        });
+      }
+      return json;
+    };
+    return {
+      package_ref: `${imageRef.image}:${imageRef.tag}`,
+      descriptor_digest: manifest.descriptor_digest,
+      source_layer_digest: sourceLayer.digest,
+      manifest_layer_digest: packageManifestLayer.digest,
+      payload_layer_digest: payloadManifestLayer.digest,
+      manifest_json: readJsonLayer('package-manifest.json', packageManifestLayer),
+      payload_manifest_json: readJsonLayer('payload-manifest.json', payloadManifestLayer),
+      checked_at: nowIso(),
+    };
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 }
 
 export function readOplPackageChannelManifestWithMetadata(

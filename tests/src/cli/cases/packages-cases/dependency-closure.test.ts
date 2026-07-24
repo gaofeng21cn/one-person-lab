@@ -331,10 +331,12 @@ test('consumer profile cannot be selected by a different Agent', () => {
   }
 });
 
-test('MAS accepts a newer capability provider beyond the recorded version range when its ABI and exports remain compatible', async () => {
+test('MAS dependency readiness is presence and callability only, not SemVer or ABI gated', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-dependency-latest-compatible-'));
   const workspace = path.join(root, 'workspace');
-  const providerManifestPath = writeFixtureCapabilityProvider(path.join(root, 'provider'), '0.2.0');
+  const providerManifestPath = writeFixtureCapabilityProvider(path.join(root, 'provider'), '0.2.0', {
+    capabilityAbi: 'mas-scholar-skills.v2',
+  });
   const consumerManifestPath = writeFixtureMasConsumer(path.join(root, 'consumer'), providerManifestPath);
   const env = {
     OPL_STATE_DIR: path.join(root, 'state'),
@@ -360,7 +362,7 @@ test('MAS accepts a newer capability provider beyond the recorded version range 
     assert.equal(readiness.status, 'current');
     assert.equal(readiness.operational_ready, true);
     assert.equal(readiness.dependencies[0].status, 'current');
-    assert.deepEqual(readiness.dependencies[0].reasons, ['version_requirement_unsatisfied']);
+    assert.deepEqual(readiness.dependencies[0].reasons, []);
     assert.equal(status.opl_agent_package_status.status, 'available');
     assert.equal(status.opl_agent_package_status.operational_ready, true);
     assert.equal(status.opl_agent_package_status.launch_allowed, true);
