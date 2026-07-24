@@ -449,16 +449,8 @@ async function applyManifestPackageLock(
     const selectedPackageRoot = stringValue(trustedBundledInstall.packageRoots[trustedBundledInstall.packageId]);
     const trustedBundledUpdate = action === 'update'
       && input.provenance?.source_policy === 'bundled_full_runtime_modules'
-      && (
-        (
-          input.provenance.trigger === 'managed_update_kernel_apply'
-          && input.provenance.initiator === 'opl_managed_update_kernel'
-        )
-        || (
-          input.provenance.trigger === 'package_local_carrier_ensure'
-          && input.provenance.initiator === 'opl_packages'
-        )
-      );
+      && input.provenance.trigger === 'managed_update_kernel_apply'
+      && input.provenance.initiator === 'opl_managed_update_kernel';
     if ((action !== 'install' && !trustedBundledUpdate)
       || packageId !== trustedBundledInstall.packageId
       || input.sourceKind !== 'bundled_full_runtime_modules'
@@ -2095,18 +2087,6 @@ function managedBundledFullRuntimeProvenance(operationId: string) {
   } satisfies AgentPackageInstallInput['provenance'];
 }
 
-function packageLocalBundledFullRuntimeProvenance(packageId: string) {
-  const operationId = `opl://packages/update/${packageId}/${nowIso()}`;
-  return {
-    trigger: 'package_local_carrier_ensure',
-    initiator: 'opl_packages',
-    source_policy: 'bundled_full_runtime_modules',
-    source_policy_reason: 'installed_full_seed:package_local_required_presence_closure',
-    operation_id: operationId,
-    correlation_id: operationId,
-  } satisfies AgentPackageInstallInput['provenance'];
-}
-
 export async function runOplBundledFullRuntimeAgentPackageInstall(
   input: BundledFullRuntimeAgentPackageInput,
 ) {
@@ -2228,12 +2208,39 @@ async function runOplAgentPackageUpdateUnlocked(
         catalog,
         rootPackageId: packageId,
       });
-      return runOplBundledFullRuntimeAgentPackageLifecycleUnlocked({
-        packageId,
-        agentRoot: selection.packageRoots[packageId],
-        packageRoots: selection.packageRoots,
-        dryRun: input.dryRun,
-      }, 'update', packageLocalBundledFullRuntimeProvenance(packageId));
+      const installedById = new Map(index.packages.map((entry) => [entry.package_id, entry]));
+      const closureLocks = selection.closure.flatMap((selectedPackageId) => {
+        const installed = installedById.get(selectedPackageId);
+        return installed ? [installed] : [];
+      });
+      return agentPackageUpdateReadback(input, {
+        status: 'current_noop',
+        lock,
+        physicalSurface: lock.physical_surface,
+        frameworkLink: null,
+        receipt: null,
+        registryEntry: null,
+        closureLocks,
+        closureReceipts: [],
+        dependencyTransactionId: lock.dependency_transaction_id,
+        dependencyClosureDigest: lock.dependency_closure_digest,
+        carrierEnsure: {
+          surface_kind: 'opl_package_carrier_ensure.v1',
+          status: 'present',
+          mode: 'package_local_required_presence',
+          root_package_id: packageId,
+          selected_package_ids: selection.closure,
+          items: selection.closure.map((selectedPackageId) => ({
+            package_id: selectedPackageId,
+            status: 'present',
+            carrier: 'app_managed_runtime',
+            package_root: selection.packageRoots[selectedPackageId],
+          })),
+          version_gate_applied: false,
+          content_digest_gate_applied: false,
+          writes_performed: false,
+        },
+      });
     }
     const sourcePolicy = resolveAgentPackageEffectiveSourcePolicy(packageId);
     assertFirstPartyPackageUpdateSelection(input, firstParty, sourcePolicy);

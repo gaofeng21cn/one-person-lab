@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -293,7 +294,8 @@ export function resolveBundledFullRuntimePackageClosureRoots(input: {
   const packageRoots: Record<string, string> = {};
   for (const packageId of closure) {
     const entry = input.catalog.entries.get(packageId)!;
-    const packageRoot = resolveBundledFullRuntimePackageRoot(entry, env);
+    const packageRoot = resolveBundledFullRuntimePackageRoot(entry, env)
+      ?? resolveInstalledRuntimePackageRoot(entry, env);
     if (!packageRoot) {
       throw new FrameworkContractError(
         'contract_shape_invalid',
@@ -311,20 +313,61 @@ export function resolveBundledFullRuntimePackageClosureRoots(input: {
   return { closure, packageRoots };
 }
 
+function resolveInstalledRuntimePackageRoot(
+  entry: BundledFullRuntimeCatalogEntry,
+  env: NodeJS.ProcessEnv,
+) {
+  const homeDir = stringValue(env.HOME) ?? os.homedir();
+  const stateDir = stringValue(env.OPL_STATE_DIR);
+  const dataDir = stringValue(env.OPL_DATA_DIR) ?? stringValue(env.AIONUI_DATA_DIR);
+  const runtimeRoots = [
+    stringValue(env.OPL_RUNTIME_ROOT),
+    stateDir ? path.join(path.dirname(path.resolve(stateDir)), 'runtime') : null,
+    dataDir ? path.join(path.resolve(dataDir), 'opl', 'runtime') : null,
+    path.join(homeDir, 'Library', 'Application Support', 'OPL', 'runtime'),
+  ];
+  return runtimeRoots
+    .map((runtimeRoot) => {
+      if (!runtimeRoot) return null;
+      const currentRoot = path.resolve(runtimeRoot, 'current');
+      const candidate = path.resolve(currentRoot, entry.runtimeModuleRelativePath);
+      const relative = path.relative(currentRoot, candidate);
+      if (relative === ''
+        || relative === '..'
+        || relative.startsWith(`..${path.sep}`)
+        || path.isAbsolute(relative)) return null;
+      try {
+        if (!fs.lstatSync(candidate).isDirectory()) return null;
+        const realCurrentRoot = fs.realpathSync.native(currentRoot);
+        const realCandidate = fs.realpathSync.native(candidate);
+        const realRelative = path.relative(realCurrentRoot, realCandidate);
+        return realRelative !== ''
+          && realRelative !== '..'
+          && !realRelative.startsWith(`..${path.sep}`)
+          && !path.isAbsolute(realRelative)
+          ? candidate
+          : null;
+      } catch {
+        return null;
+      }
+    })
+    .find((candidate): candidate is string => candidate !== null) ?? null;
+}
+
 export function resolveBundledFullRuntimePackageRoot(
   entry: BundledFullRuntimeCatalogEntry,
   env: NodeJS.ProcessEnv = process.env,
 ) {
   const explicitRoot = stringValue(env[PACKAGE_ROOT_ENV.get(entry.packageId) ?? '']);
-  const runtimeHome = stringValue(env.OPL_FULL_RUNTIME_HOME);
-  const candidate = explicitRoot
-    ? path.resolve(explicitRoot)
-    : runtimeHome
-      ? path.resolve(runtimeHome, entry.runtimeModuleRelativePath)
-      : null;
-  return candidate
+  const fullRuntimeHome = stringValue(env.OPL_FULL_RUNTIME_HOME);
+  const candidates = [
+    explicitRoot ? path.resolve(explicitRoot) : null,
+    fullRuntimeHome
+      ? path.resolve(fullRuntimeHome, entry.runtimeModuleRelativePath)
+      : null,
+  ];
+  return candidates.find((candidate) =>
+    candidate
     && fs.existsSync(candidate)
-    && fs.statSync(candidate).isDirectory()
-    ? candidate
-    : null;
+    && fs.statSync(candidate).isDirectory()) ?? null;
 }

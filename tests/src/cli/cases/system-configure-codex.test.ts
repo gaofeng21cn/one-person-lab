@@ -794,12 +794,73 @@ test('system configure-codex delegates Full runtime Package and carrier reconcil
     );
     assert.equal(fs.readFileSync(lockPath, 'utf8'), lockBytesBeforePackageUpdate);
 
+    const installedModulesRoot = path.join(
+      homeRoot,
+      'Library',
+      'Application Support',
+      'OPL',
+      'runtime',
+      'current',
+      'modules',
+    );
+    fs.mkdirSync(installedModulesRoot, { recursive: true });
+    for (const [packageId, sourceRoot] of [
+      ['mas', path.join(familyWorkspace.workspaceRoot, 'med-autoscience')],
+      ['mas-scholar-skills', bundledCatalog.scholarRoot],
+    ]) {
+      fs.cpSync(
+        sourceRoot,
+        path.join(installedModulesRoot, packageId),
+        { recursive: true },
+      );
+    }
+    const installedRuntimeEnv = {
+      ...fixture.env,
+      OPL_FULL_RUNTIME_HOME: '',
+      OPL_MODULE_PATH_MEDAUTOSCIENCE: '',
+      OPL_MODULE_PATH_MEDAUTOGRANT: '',
+      OPL_MODULE_PATH_REDCUBE: '',
+      OPL_MODULE_PATH_OPLMETAAGENT: '',
+      OPL_MODULE_PATH_OPLBOOKFORGE: '',
+      OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS: '',
+      OPL_FLOW_REPO_ROOT: '',
+    };
+    const installedRuntimePreview = runCli(
+      ['packages', 'update', 'mas', '--dry-run'],
+      installedRuntimeEnv,
+    ) as any;
+    assert.deepEqual(
+      installedRuntimePreview.opl_agent_package_update.dependency_package_locks
+        .map((lock: Record<string, any>) => lock.package_id),
+      ['mas-scholar-skills', 'mas'],
+    );
+    assert.deepEqual(
+      installedRuntimePreview.opl_agent_package_update.carrier_ensure.selected_package_ids,
+      ['mas-scholar-skills', 'mas'],
+    );
+    assert.equal(
+      installedRuntimePreview.opl_agent_package_update.carrier_ensure.version_gate_applied,
+      false,
+    );
+    assert.equal(
+      installedRuntimePreview.opl_agent_package_update.carrier_ensure.content_digest_gate_applied,
+      false,
+    );
+    assert.equal(
+      installedRuntimePreview.opl_agent_package_update.carrier_ensure.writes_performed,
+      false,
+    );
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), lockBytesBeforePackageUpdate);
+
     const packageUpdate = runCli(['packages', 'update', 'mas'], fixture.env) as any;
     assert.deepEqual(
       packageUpdate.opl_agent_package_update.dependency_package_locks
         .map((lock: Record<string, any>) => lock.package_id),
       ['mas-scholar-skills', 'mas'],
     );
+    assert.equal(packageUpdate.opl_agent_package_update.status, 'current_noop');
+    assert.equal(packageUpdate.opl_agent_package_update.lifecycle_receipt, null);
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), lockBytesBeforePackageUpdate);
     const packageIdsAfterPackageUpdate = (parseJsonText(fs.readFileSync(
       lockPath,
       'utf8',

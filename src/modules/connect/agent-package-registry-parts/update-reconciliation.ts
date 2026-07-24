@@ -40,6 +40,22 @@ type AgentPackageUpdateApplicationResult = {
   closureReceipts: AgentPackageLifecycleReceipt[];
   dependencyTransactionId: string;
   dependencyClosureDigest: string;
+  carrierEnsure?: {
+    surface_kind: 'opl_package_carrier_ensure.v1';
+    status: 'present';
+    mode: 'package_local_required_presence';
+    root_package_id: string;
+    selected_package_ids: string[];
+    items: Array<{
+      package_id: string;
+      status: 'present';
+      carrier: 'app_managed_runtime';
+      package_root: string;
+    }>;
+    version_gate_applied: false;
+    content_digest_gate_applied: false;
+    writes_performed: false;
+  };
 };
 
 export type AgentPackageCatalogClosureTarget = {
@@ -96,6 +112,7 @@ export function agentPackageUpdateReadback(
       dependency_transaction_id: result.dependencyTransactionId,
       dependency_closure_digest: result.dependencyClosureDigest,
       dependency_package_locks: result.closureLocks,
+      ...(result.carrierEnsure ? { carrier_ensure: result.carrierEnsure } : {}),
       lock_file: resolveOplStatePaths().agent_package_lock_file,
       lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
       registry_entry: result.registryEntry,
