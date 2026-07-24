@@ -34,7 +34,7 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 | 范围 | 当前完成状态 | 证据边界 |
 | --- | --- | --- |
-| 非 live 功能 / 结构基线 | `opl_package_platform_composition_selected` | 当前唯一 selected gap 是 Package platform-first composition；迁移、功能等价和删除门见 [`opl-package-platform-composition-migration.md`](./opl-package-platform-composition-migration.md)。 |
+| 非 live 功能 / 结构基线 | `opl_package_platform_composition_pending_user_evaluation` | 当前唯一 selected gap 是 Package platform-first composition；本仓 owner 边界见 [`opl-package-platform-composition-migration.md`](./opl-package-platform-composition-migration.md)，跨仓冻结实施计划归 App SSOT。Phase 2 尚未获得用户授权。 |
 | Active Truth 治理 | `single_owner_guard_active` | 本文是唯一 active truth owner，只保留当前 gap、完成口径与下一轮 baton，不保存 dated proof 或 closeout 流水。 |
 | Live / release / production / owner evidence | `deferred_to_evidence_owners` | 继续由 App release、provider long-soak、Brand L5、domain owner receipt、typed blocker 与 human gate 等 owner surface 单独证明。 |
 
@@ -44,7 +44,17 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 当前默认读法：默认 OPL family maintained repo 的非 live 功能/结构基线只能从 fresh repo truth、四份 `contracts/opl-framework/foundry-*.schema.json`、FoundryRun source/tests 与各 domain owner surface 读取。本文不冻结日期、branch、SHA、`origin/main` 状态、receipt id、worktree closeout、workflow run 或某轮 readback。
 
-当前唯一已选中的 active 非 live 功能/结构 gap 是 `opl_package_platform_composition`。Framework 与 App 共同推进 owner GHCR/carrier fresh proof、minimum descriptor/dual-read、Codex adapter 封装、真实非 Codex/中性 adapter、Official Profile、独立 maintenance、动态 Runtime 与 legacy removal；当前 P0 是冻结旧 Package Manager 扩张并建立 retained-consumer inventory。完整写集、顺序和完成门见 [`opl-package-platform-composition-migration.md`](./opl-package-platform-composition-migration.md)。本文只持有 gap/baton，不复制执行计划，也不能把 docs 或 compatibility bridge 写成迁移完成。
+当前唯一已选中的 active 非 live 功能/结构 gap 是
+`opl_package_platform_composition`。Phase 1 只完成 SSOT 与冻结实施计划；用户评估并
+明确批准 Phase 2 前，本文不授权恢复本迁移的封存候选、创建新的迁移实现写集，或
+修改 Package lifecycle managed state。Phase 1 形成期间已由独立 owner canonical 的
+owner-channel currentness/MAS required selection保留为 current truth，不回退也不重复
+实施。本仓
+[`Framework counterpart`](./opl-package-platform-composition-migration.md) 只登记
+owner 边界和兼容面，跨仓唯一工作包、依赖、功能不降级验收与删除顺序归 App 主
+SSOT。本文只持有 gap/baton，不复制执行计划，也不能把 docs、focused tests 或
+compatibility bridge 写成迁移完成。与本迁移写集零交叉且拥有独立 authority 的
+Stable、Latest、Package publication、Foundry 和其他工作不受本阶段门限制。
 
 ## 八条调研建议 Current Tracker
 
@@ -75,7 +85,7 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 | Gap class | Status | Owner | 当前处理 |
 | --- | --- | --- | --- |
-| Package platform-first composition | `selected_planned` | OPL Framework + OPL App | 当前 P0：冻结旧 resolver/lock/payload/receipt/Durable 扩张，完成平台能力与 retained-consumer inventory；按计划逐阶段迁移并在功能等价后删除旧 manager。 |
+| Package platform-first composition | `phase_1_complete_pending_user_evaluation` | OPL Framework + OPL App | owner-channel currentness已是 canonical窄基线；Phase 1已冻结旧 resolver/lock/payload/receipt/Durable扩张、App-state producer migration和后续删除顺序。Phase 2未授权。 |
 | 文档 SSOT / active gap 污染 | `active_governance_guard` | OPL + OPL Doc | 理想态定义保留在 support/reference；active gap 文档只保留当前 gap、完成口径和下一轮 baton；已完成过程进 history。 |
 | Live / release / production / owner evidence | `deferred_evidence_lane` | 对应 evidence owner | 单独走 live evidence 维护入口，不混入本文 active gap。 |
 | 不可逆 cleanup / physical delete | `owner_decision_gated` | 对应 repo owner | 只有 owner decision、no-active-caller、replacement owner、no-forbidden-write 和 tombstone/provenance 齐备时才开 lane。 |
@@ -91,7 +101,11 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 ## Next-Round Agent Prompt
 
-当前默认非 live 功能/结构开发主题是 `opl_package_platform_composition`。执行必须先读取 [`opl-package-platform-composition-migration.md`](./opl-package-platform-composition-migration.md)，并按 `platform proof -> compatibility bridge -> authority/consumer switch -> legacy delete` 推进；不得把计划、docs、测试或未吸收候选写成完成。
+当前默认非 live 功能/结构主题是 `opl_package_platform_composition`，但
+`next_action=等待用户评估与显式 Phase 2 授权`。获得授权后才可读取届时 fresh App
+主 SSOT 和本仓 [`Framework counterpart`](./opl-package-platform-composition-migration.md)，
+重新声明唯一 owner 与 exact write set，并按获准顺序推进。不得把计划、docs、测试或
+未吸收候选写成完成。
 
 若 fresh audit 发现新的非 live gap，使用以下 prompt 形状开启，而不是复用历史清单：
 

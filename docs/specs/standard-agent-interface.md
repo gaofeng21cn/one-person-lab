@@ -15,6 +15,13 @@ ScholarSkills 保持 required。当前 schema、package readiness 和 hosted mat
 段落只作 dual-read compatibility，迁移与删除门见
 [`OPL Package 平台组合迁移计划`](../active/opl-package-platform-composition-migration.md)。
 
+当前机器合同的 `domain_detail_views` 仍只接受兼容用的
+`scientific_reasoning_map`，Framework locator/read model 与 Shell renderer 仍携带
+MAS-specific shape；这是真实 current compatibility，不是通用 typed-view 已落地。
+Phase 2 目标是在 owner descriptor/data 与 Framework 之间建立通用 typed-view
+envelope，未知 `view_kind` 只局部降级，再删除 Framework/App/Shell 的 MAS schema
+镜像。该目标不由本文单独授权，顺序和验收仍归 App 迁移 SSOT。
+
 ## 结论
 
 标准 OPL Agent 通过 domain-owned `contracts/domain_descriptor.json#/standard_agent_interface` 声明基座需要消费的差异数据。OPL 只持有统一 schema、解析、路由投影、workspace binding、progress projection 与 conformance gate；领域仓持有 locator 形态、runtime registration、progress aliases 和显式 routing signals。可执行 action/stage binding 由 OPL hosted runtime ABI 承担，不在这个差异接口中携带命令字符串。
@@ -35,9 +42,25 @@ ScholarSkills 保持 required。当前 schema、package readiness 和 hosted mat
 
 未声明 `stage_catalog` 的旧 Agent 继续按既有 workspace stage index 投影，不产生 catalog diagnostic。声明后 catalog 文件缺失、非法 JSON、items pointer 无法解析、stage entry 缺少 id 或 id 重复都会产生结构化 diagnostic；结构不完整的 catalog 不作为 canonical 骨架。有效 catalog 未包含的 migration/internal workspace stage 不进入默认 `stage_map`，只保留在 stage-index source evidence 和 diagnostic 中。
 
-descriptor discovery 必须消费 `OPL Connect` module source selector 的 canonical checkout。Developer Mode 或显式 path override 已选中 sibling/env checkout 时，只解析该 selected source，inactive managed mirror 不再作为第二 active source 被读取；selected source 自身 descriptor 非法时仍直接 fail closed。selected source 是 managed root 时，package dependency/runtime-source readiness 继续作为门禁，并要求 readiness checkout 与 selected checkout 指向同一位置。
+descriptor discovery 目标从 selected carrier 的 fresh inventory 读取 installed
+`kind=agent` Package。Developer Mode 或显式 path override 选择 Git/local checkout 时，只
+解析该 carrier source，inactive managed mirror 不再作为第二 active source；descriptor
+identity 非法、required Package 缺失、entrypoint/handler/schema 不可调用时只隔离该
+Agent 并 fail closed。现有 managed-root tree digest、lock、scope closure 和
+`runtime_source_readiness` 是 dual-read compatibility，不再是目标 composition gate。
 
-`opl app state` 是跨 Agent 聚合读面：单个 package status 因 stale/invalid contract 失败时，该 package 投影为结构化 `unavailable` 和 attention diagnostic，其余 Agent、project inventory 与 Runtime 页面继续生成。`opl packages status --package-id ...` 等直接 package status/doctor/repair 命令不使用这层聚合隔离，仍对所选 package 的真实 contract 错误 fail closed。
+`opl app state` 是跨 Agent 聚合读面：单个 Package descriptor/carrier readback 因
+unavailable/invalid contract 失败时，该 Package 投影为结构化 `unavailable` 和
+attention diagnostic，其余 Agent、project inventory 与 Runtime 页面继续生成。对单个
+Package 的 direct inspect/action 仍对所选 Package 的真实 identity、presence 或
+callability 错误 fail closed，但不能以跨包 version/ABI/lock closure 阻止合法组合。
+
+当前 owner-channel source selection 已进入 Framework 主线，但 ordinary App Package
+projection 仍从 installed lock 和旧 status读取 ABI/digest、dependency closure、
+materialization、receipt/rollback与 LKG。Phase 2 的第一个 producer migration固定为
+`src/modules/console/app-state-agent-packages.ts` 及其
+`package-status-projection.test.ts`，先把该投影收敛为 fresh
+presence/callability/status/actions；`app-state.ts`不预先纳入写集。
 
 `workspace_binding.entry_command_template`、`workspace_binding.manifest_command_template` 与 `runtime.dispatch_command` 已退役，并因 closed-object 校验 fail closed。domain descriptor 缺失时 Workspace 只保留通用 workspace root locator 或用户显式提供的 command，不重建历史 MAS/MAG/RCA materializer。
 

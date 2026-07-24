@@ -16,10 +16,26 @@ Machine boundary: 本文是跨 repo 人读治理台账。机器真相继续归 O
 当前 OPL 标准智能体与基座按三层读取：
 
 - `OPL Base` 持有 Framework、Temporal-backed provider runtime、stage attempt、attempt ledger、generic transition runner、workspace/source/artifact/memory locator、generated surface、Foundry Kernel 和 lifecycle/projection ledger；标准 Agent 只消费 Base，不反向管理它。
-- compact standard-agent list 固定为 `MAS/MAG/RCA/OMA/OBF`；全称是 Med Auto Science、Med Auto Grant、RedCube AI、OPL Meta Agent、OPL Book Forge。五个 Agent 分别持有自身 domain truth、quality/export verdict、artifact authority、memory accept/reject、owner receipt、typed blocker 和 direct app skill path。
-- `mas-scholar-skills` 是 MAS required capability package，`opl-flow` 是 workflow plugin package；它们由 OPL Packages 管理，但都不是第六个 standard Agent，也不形成独立用户 lifecycle。
+- 当前 first-party 兼容 inventory 已知 `MAS/MAG/RCA/OMA/OBF` 五个 Agent locator；
+  全称是 Med Auto Science、Med Auto Grant、RedCube AI、OPL Meta Agent、OPL Book
+  Forge。这不是固定 membership 或生态上限。每个 Agent 分别持有自身 domain truth、
+  quality/export verdict、artifact authority、memory accept/reject、owner receipt、
+  typed blocker 和 direct app skill path；目标 membership 从实际 installed
+  `kind=agent` descriptor 动态发现。
+- 当前机器兼容分类把 `mas-scholar-skills` 投影为
+  `framework_capability_package`，把 `opl-flow` 投影为
+  `workflow_plugin_package`；它们都不是第六个 standard Agent。Phase 2 目标
+  descriptor 分别统一为 `kind=capability` 和 `kind=workflow`，由各自 owner 持有
+  identity/runtime、配置 carrier 持有物理 lifecycle、Framework 只聚合
+  presence/callability。目标 `kind` 是 Package 分类，不形成平行用户 lifecycle。
 
 当前代码扫描显示，OPL 已有对应的 generic platform classifier 和 scaffold/conformance surface：`opl agents platform-surfaces --family-defaults --json`、`opl agents conformance --family-defaults --json`、`opl agents legacy-cleanup apply ...`、`standard-domain-agent-conformance*`、`agent-platform-surface-ownership.ts`、`runtime-tray-app-operator-drilldown*` 和 `family-runtime-command-parts/*`。这些是 OPL 的 owner surface；它们只输出 classification、migration gate、read model、cleanup ledger 或 refs-only route，不生成 domain ready、quality verdict、artifact authority 或 production ready。
+
+Package source currentness 当前已由 per-owner channel 读取，不再由 shared
+`latest-stable` verifier决定；MAS显式选择的 required root只包含 MAS与
+ScholarSkills。该事实只关闭 source-selection窄面，不改变本 inventory其余兼容事实：
+activation/readiness、App-state、typed views和旧 Manager state仍须按 App主迁移SSOT
+逐项迁移和删除。
 
 严格标准化口径：标准 OPL Agent 的 active source 只保留 declarative domain pack、machine-readable contracts、minimal authority functions、domain handler target、domain-specific implementation 与必要 native helper。repo-local generic control plane、default caller、compat facade、sidecar/status/workbench wrapper、session/queue/lifecycle shell 或 tombstone/provenance code path 不能作为长期组成部分。历史 provenance 进入 `docs/history/**`、提交历史或外部 receipt，不作为 active repo-local surface 保留。
 
