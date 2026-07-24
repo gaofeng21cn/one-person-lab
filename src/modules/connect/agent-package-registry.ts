@@ -2193,9 +2193,8 @@ export async function runOplBundledFullRuntimeAgentPackageUpdate(
   );
 }
 
-async function runOplAgentPackageUpdateUnlocked(
+function tryBundledFullRuntimePackagePresenceReadback(
   input: AgentPackageInstallInput,
-  runtime: { catalogFetchTimeoutMs?: number } = {},
 ) {
   const packageId = canonicalAgentPackageId(stringValue(input.packageId));
   const firstParty = resolveFirstPartyPackageCatalog(packageId);
@@ -2242,6 +2241,22 @@ async function runOplAgentPackageUpdateUnlocked(
         },
       });
     }
+  }
+  return null;
+}
+
+async function runOplAgentPackageUpdateUnlocked(
+  input: AgentPackageInstallInput,
+  runtime: { catalogFetchTimeoutMs?: number } = {},
+) {
+  const bundledPresence = tryBundledFullRuntimePackagePresenceReadback(input);
+  if (bundledPresence) return bundledPresence;
+
+  const packageId = canonicalAgentPackageId(stringValue(input.packageId));
+  const firstParty = resolveFirstPartyPackageCatalog(packageId);
+  if (packageId && firstParty) {
+    const { index } = readRecoveredLockIndex(true);
+    const { lock } = requireInstalledPackage(index, packageId, 'update');
     const sourcePolicy = resolveAgentPackageEffectiveSourcePolicy(packageId);
     assertFirstPartyPackageUpdateSelection(input, firstParty, sourcePolicy);
     const developerRoot = sourcePolicy.desired_source_kind === 'developer_checkout_override';
@@ -2373,6 +2388,8 @@ async function runOplAgentPackageUpdateUnlocked(
 }
 
 export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) {
+  const bundledPresence = tryBundledFullRuntimePackagePresenceReadback(input);
+  if (bundledPresence) return bundledPresence;
   return withAgentPackageLifecycleTransaction(
     input.dryRun === true,
     () => runOplAgentPackageUpdateUnlocked(input),

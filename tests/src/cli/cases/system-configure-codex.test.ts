@@ -852,7 +852,25 @@ test('system configure-codex delegates Full runtime Package and carrier reconcil
     );
     assert.equal(fs.readFileSync(lockPath, 'utf8'), lockBytesBeforePackageUpdate);
 
-    const packageUpdate = runCli(['packages', 'update', 'mas'], fixture.env) as any;
+    const packageLifecycleMutexPaths = [
+      path.join(fixture.env.OPL_STATE_DIR, 'agent-package-lifecycle.sqlite'),
+      path.join(fixture.env.OPL_STATE_DIR, 'agent-package-lifecycle.sqlite-wal'),
+      path.join(fixture.env.OPL_STATE_DIR, 'agent-package-lifecycle.sqlite-shm'),
+    ];
+    for (const filePath of packageLifecycleMutexPaths) {
+      fs.rmSync(filePath, { force: true });
+    }
+    const packageAuthorityPaths = [
+      lockPath,
+      path.join(fixture.env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json'),
+      ...packageLifecycleMutexPaths,
+      path.join(codexHome, 'config.toml'),
+    ];
+    const packageAuthorityBytesBeforeUpdate = new Map(packageAuthorityPaths.map((filePath) => [
+      filePath,
+      fs.existsSync(filePath) ? fs.readFileSync(filePath) : null,
+    ]));
+    const packageUpdate = runCli(['packages', 'update', 'mas'], installedRuntimeEnv) as any;
     assert.deepEqual(
       packageUpdate.opl_agent_package_update.dependency_package_locks
         .map((lock: Record<string, any>) => lock.package_id),
@@ -861,6 +879,13 @@ test('system configure-codex delegates Full runtime Package and carrier reconcil
     assert.equal(packageUpdate.opl_agent_package_update.status, 'current_noop');
     assert.equal(packageUpdate.opl_agent_package_update.lifecycle_receipt, null);
     assert.equal(fs.readFileSync(lockPath, 'utf8'), lockBytesBeforePackageUpdate);
+    for (const [filePath, before] of packageAuthorityBytesBeforeUpdate) {
+      if (before === null) {
+        assert.equal(fs.existsSync(filePath), false, `${filePath} must remain absent`);
+      } else {
+        assert.deepEqual(fs.readFileSync(filePath), before, `${filePath} must remain byte-identical`);
+      }
+    }
     const packageIdsAfterPackageUpdate = (parseJsonText(fs.readFileSync(
       lockPath,
       'utf8',
