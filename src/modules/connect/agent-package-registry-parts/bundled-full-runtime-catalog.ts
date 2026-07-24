@@ -17,6 +17,15 @@ const CATALOG_SCHEMA_REF = 'contracts/opl-framework/bundled-full-runtime-package
 const defaultCatalogPath = fileURLToPath(
   new URL('../../../../contracts/opl-framework/bundled-full-runtime-package-catalog.json', import.meta.url),
 );
+const PACKAGE_ROOT_ENV = new Map<string, string>([
+  ['mas', 'OPL_MODULE_PATH_MEDAUTOSCIENCE'],
+  ['mag', 'OPL_MODULE_PATH_MEDAUTOGRANT'],
+  ['rca', 'OPL_MODULE_PATH_REDCUBE'],
+  ['oma', 'OPL_MODULE_PATH_OPLMETAAGENT'],
+  ['obf', 'OPL_MODULE_PATH_OPLBOOKFORGE'],
+  ['mas-scholar-skills', 'OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS'],
+  ['opl-flow', 'OPL_FLOW_REPO_ROOT'],
+]);
 
 export type BundledFullRuntimeCatalogEntry = {
   packageId: string;
@@ -222,24 +231,9 @@ export function assertBundledFullRuntimePackageRoots(input: {
   rootPackageId: string;
   packageRoots: Record<string, string>;
 }) {
-  const closure: string[] = [];
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
-  const visit = (packageId: string) => {
-    if (visited.has(packageId)) return;
-    if (visiting.has(packageId)) {
-      fail('Bundled Full runtime package catalog contains a dependency cycle.', {
-        root_package_id: input.rootPackageId,
-        package_id: packageId,
-      });
-    }
-    const entry = input.catalog.entries.get(packageId);
-    if (!entry) {
-      fail('Bundled Full runtime package catalog dependency is missing.', {
-        root_package_id: input.rootPackageId,
-        package_id: packageId,
-      });
-    }
+  const closure = bundledFullRuntimePackageClosure(input.catalog, input.rootPackageId);
+  for (const packageId of closure) {
+    const entry = input.catalog.entries.get(packageId)!;
     const packageRoot = stringValue(input.packageRoots[packageId]);
     if (!packageRoot) {
       throw new FrameworkContractError(
@@ -253,12 +247,84 @@ export function assertBundledFullRuntimePackageRoots(input: {
         },
       );
     }
+  }
+  return closure;
+}
+
+function bundledFullRuntimePackageClosure(
+  catalog: BundledFullRuntimePackageCatalog,
+  rootPackageId: string,
+) {
+  const closure: string[] = [];
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (packageId: string) => {
+    if (visited.has(packageId)) return;
+    if (visiting.has(packageId)) {
+      fail('Bundled Full runtime package catalog contains a dependency cycle.', {
+        root_package_id: rootPackageId,
+        package_id: packageId,
+      });
+    }
+    const entry = catalog.entries.get(packageId);
+    if (!entry) {
+      fail('Bundled Full runtime package catalog dependency is missing.', {
+        root_package_id: rootPackageId,
+        package_id: packageId,
+      });
+    }
     visiting.add(packageId);
     for (const dependencyPackageId of entry.dependencyPackageIds) visit(dependencyPackageId);
     visiting.delete(packageId);
     visited.add(packageId);
     closure.push(packageId);
   };
-  visit(input.rootPackageId);
+  visit(rootPackageId);
   return closure;
+}
+
+export function resolveBundledFullRuntimePackageClosureRoots(input: {
+  catalog: BundledFullRuntimePackageCatalog;
+  rootPackageId: string;
+  env?: NodeJS.ProcessEnv;
+}) {
+  const env = input.env ?? process.env;
+  const closure = bundledFullRuntimePackageClosure(input.catalog, input.rootPackageId);
+  const packageRoots: Record<string, string> = {};
+  for (const packageId of closure) {
+    const entry = input.catalog.entries.get(packageId)!;
+    const packageRoot = resolveBundledFullRuntimePackageRoot(entry, env);
+    if (!packageRoot) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Bundled Full runtime Package update requires the selected Package and its required dependencies only.',
+        {
+          root_package_id: input.rootPackageId,
+          package_id: packageId,
+          expected_runtime_module_relative_path: entry.runtimeModuleRelativePath,
+          failure_code: 'agent_package_bundled_dependency_root_missing',
+        },
+      );
+    }
+    packageRoots[packageId] = packageRoot;
+  }
+  return { closure, packageRoots };
+}
+
+export function resolveBundledFullRuntimePackageRoot(
+  entry: BundledFullRuntimeCatalogEntry,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const explicitRoot = stringValue(env[PACKAGE_ROOT_ENV.get(entry.packageId) ?? '']);
+  const runtimeHome = stringValue(env.OPL_FULL_RUNTIME_HOME);
+  const candidate = explicitRoot
+    ? path.resolve(explicitRoot)
+    : runtimeHome
+      ? path.resolve(runtimeHome, entry.runtimeModuleRelativePath)
+      : null;
+  return candidate
+    && fs.existsSync(candidate)
+    && fs.statSync(candidate).isDirectory()
+    ? candidate
+    : null;
 }

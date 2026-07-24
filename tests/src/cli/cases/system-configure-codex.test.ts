@@ -778,13 +778,51 @@ test('system configure-codex delegates Full runtime Package and carrier reconcil
     }
     assert.equal(fs.existsSync(familyWorkspace.syncLogPath), false);
 
-    for (const action of ['update', 'repair']) {
-      const failure = runCliFailure(['packages', action, 'mas'], fixture.env);
-      assert.equal(
-        failure.payload.error.details.failure_code,
-        'agent_package_bundled_full_runtime_internal_reconcile_required',
-      );
-    }
+    const lockBytesBeforePackageUpdate = fs.readFileSync(lockPath, 'utf8');
+    const unrelatedLocksBeforePackageUpdate = (parseJsonText(lockBytesBeforePackageUpdate) as Record<string, any>)
+      .packages.filter((entry: Record<string, any>) =>
+        !['mas', 'mas-scholar-skills'].includes(entry.package_id));
+    const packageUpdatePreview = runCli(
+      ['packages', 'update', 'mas', '--dry-run'],
+      fixture.env,
+    ) as any;
+    assert.equal(packageUpdatePreview.opl_agent_package_update.dry_run, true);
+    assert.deepEqual(
+      packageUpdatePreview.opl_agent_package_update.dependency_package_locks
+        .map((lock: Record<string, any>) => lock.package_id),
+      ['mas-scholar-skills', 'mas'],
+    );
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), lockBytesBeforePackageUpdate);
+
+    const packageUpdate = runCli(['packages', 'update', 'mas'], fixture.env) as any;
+    assert.deepEqual(
+      packageUpdate.opl_agent_package_update.dependency_package_locks
+        .map((lock: Record<string, any>) => lock.package_id),
+      ['mas-scholar-skills', 'mas'],
+    );
+    const packageIdsAfterPackageUpdate = (parseJsonText(fs.readFileSync(
+      lockPath,
+      'utf8',
+    )) as Record<string, any>).packages
+      .map((entry: Record<string, any>) => entry.package_id)
+      .sort();
+    assert.deepEqual(
+      packageIdsAfterPackageUpdate,
+      ['mag', 'mas', 'mas-scholar-skills', 'obf', 'oma', 'rca'],
+    );
+    const unrelatedLocksAfterPackageUpdate = (parseJsonText(fs.readFileSync(
+      lockPath,
+      'utf8',
+    )) as Record<string, any>).packages
+      .filter((entry: Record<string, any>) =>
+        !['mas', 'mas-scholar-skills'].includes(entry.package_id));
+    assert.deepEqual(unrelatedLocksAfterPackageUpdate, unrelatedLocksBeforePackageUpdate);
+
+    const repairFailure = runCliFailure(['packages', 'repair', 'mas'], fixture.env);
+    assert.equal(
+      repairFailure.payload.error.details.failure_code,
+      'agent_package_bundled_full_runtime_internal_reconcile_required',
+    );
 
     const expectedMasOwnerSourceCommit = masLock.owner_source_commit;
     const expectedMasCarrierAuthority = structuredClone(masLock.carrier_authority);

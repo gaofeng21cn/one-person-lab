@@ -9,22 +9,13 @@ import {
 } from '../agent-package-registry.ts';
 import {
   readBundledFullRuntimePackageCatalog,
+  resolveBundledFullRuntimePackageRoot,
   type BundledFullRuntimeCatalogEntry,
   type BundledFullRuntimePackageCatalog,
 } from '../agent-package-registry-parts/bundled-full-runtime-catalog.ts';
 import { managedPolicyCurrentness } from '../agent-package-registry-parts/managed-policy-surface.ts';
 import { readLockIndex } from '../agent-package-registry-parts/store.ts';
 import type { AgentPackageLock, AgentPackageLockIndex } from '../agent-package-registry-parts/types.ts';
-
-const FULL_RUNTIME_PACKAGE_ROOT_ENV = new Map<string, string>([
-  ['mas', 'OPL_MODULE_PATH_MEDAUTOSCIENCE'],
-  ['mag', 'OPL_MODULE_PATH_MEDAUTOGRANT'],
-  ['rca', 'OPL_MODULE_PATH_REDCUBE'],
-  ['oma', 'OPL_MODULE_PATH_OPLMETAAGENT'],
-  ['obf', 'OPL_MODULE_PATH_OPLBOOKFORGE'],
-  ['mas-scholar-skills', 'OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS'],
-  ['opl-flow', 'OPL_FLOW_REPO_ROOT'],
-]);
 
 type FullRuntimePackageInstaller = typeof runOplBundledFullRuntimeAgentPackageInstall;
 type FullRuntimePackageUpdater = typeof runOplBundledFullRuntimeAgentPackageUpdate;
@@ -321,16 +312,8 @@ function resolvePackageRoots(
   const runtimeHome = env.OPL_FULL_RUNTIME_HOME?.trim();
   const roots: Record<string, string> = {};
   for (const entry of catalog.entries.values()) {
-    const envKey = FULL_RUNTIME_PACKAGE_ROOT_ENV.get(entry.packageId);
-    const explicitRoot = envKey ? env[envKey]?.trim() : null;
-    const candidate = explicitRoot
-      ? path.resolve(explicitRoot)
-      : runtimeHome
-        ? path.resolve(runtimeHome, entry.runtimeModuleRelativePath)
-        : null;
-    if (candidate && fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
-      roots[entry.packageId] = candidate;
-    }
+    const candidate = resolveBundledFullRuntimePackageRoot(entry, env);
+    if (candidate) roots[entry.packageId] = candidate;
   }
   return { runtimeHome: runtimeHome ?? null, roots };
 }
@@ -340,11 +323,14 @@ async function reconcileBundledFullRuntimePackages(
   options: FullRuntimePackageReconciliationOptions,
 ) {
   const runtimeHome = env.OPL_FULL_RUNTIME_HOME?.trim();
-  const hasExplicitPackageRoot = [...FULL_RUNTIME_PACKAGE_ROOT_ENV.values()]
-    .some((envKey) => Boolean(env[envKey]?.trim()));
+  const catalog = (options.readCatalog ?? readBundledFullRuntimePackageCatalog)();
+  const hasExplicitPackageRoot = [...catalog.entries.values()]
+    .some((entry) => Boolean(resolveBundledFullRuntimePackageRoot(entry, {
+      ...env,
+      OPL_FULL_RUNTIME_HOME: undefined,
+    })));
   if (!runtimeHome && !hasExplicitPackageRoot && !options.requireSourceRoots) return null;
 
-  const catalog = (options.readCatalog ?? readBundledFullRuntimePackageCatalog)();
   const lifecycleAction = options.lifecycleAction ?? 'install';
   const operationId = options.operationId?.trim()
     || `opl://managed-update/bundled-full-runtime/${normalizedSha256(catalog.catalogSha256)}`;

@@ -83,6 +83,7 @@ import {
 import {
   assertBundledFullRuntimePackageRoots,
   readBundledFullRuntimePackageCatalog,
+  resolveBundledFullRuntimePackageClosureRoots,
   type BundledFullRuntimeCatalogEntry,
 } from './agent-package-registry-parts/bundled-full-runtime-catalog.ts';
 import {
@@ -446,11 +447,19 @@ async function applyManifestPackageLock(
     const catalogEntry = bundledFullRuntimeCatalog?.entries.get(trustedBundledInstall.packageId) ?? null;
     const expectedManifestUrl = catalogEntry?.manifestUrl ?? null;
     const selectedPackageRoot = stringValue(trustedBundledInstall.packageRoots[trustedBundledInstall.packageId]);
-    const trustedManagedUpdate = action === 'update'
-      && input.provenance?.trigger === 'managed_update_kernel_apply'
-      && input.provenance.initiator === 'opl_managed_update_kernel'
-      && input.provenance.source_policy === 'bundled_full_runtime_modules';
-    if ((action !== 'install' && !trustedManagedUpdate)
+    const trustedBundledUpdate = action === 'update'
+      && input.provenance?.source_policy === 'bundled_full_runtime_modules'
+      && (
+        (
+          input.provenance.trigger === 'managed_update_kernel_apply'
+          && input.provenance.initiator === 'opl_managed_update_kernel'
+        )
+        || (
+          input.provenance.trigger === 'package_local_carrier_ensure'
+          && input.provenance.initiator === 'opl_packages'
+        )
+      );
+    if ((action !== 'install' && !trustedBundledUpdate)
       || packageId !== trustedBundledInstall.packageId
       || input.sourceKind !== 'bundled_full_runtime_modules'
       || stringValue(input.manifestUrl) !== expectedManifestUrl
@@ -464,7 +473,7 @@ async function applyManifestPackageLock(
         expected_manifest_url: expectedManifestUrl,
         selected_package_root: selectedPackageRoot,
         lifecycle_action: action,
-        managed_update_provenance_valid: trustedManagedUpdate,
+        bundled_update_provenance_valid: trustedBundledUpdate,
         failure_code: 'agent_package_bundled_full_runtime_selection_invalid',
       });
     }
@@ -2086,6 +2095,18 @@ function managedBundledFullRuntimeProvenance(operationId: string) {
   } satisfies AgentPackageInstallInput['provenance'];
 }
 
+function packageLocalBundledFullRuntimeProvenance(packageId: string) {
+  const operationId = `opl://packages/update/${packageId}/${nowIso()}`;
+  return {
+    trigger: 'package_local_carrier_ensure',
+    initiator: 'opl_packages',
+    source_policy: 'bundled_full_runtime_modules',
+    source_policy_reason: 'installed_full_seed:package_local_required_presence_closure',
+    operation_id: operationId,
+    correlation_id: operationId,
+  } satisfies AgentPackageInstallInput['provenance'];
+}
+
 export async function runOplBundledFullRuntimeAgentPackageInstall(
   input: BundledFullRuntimeAgentPackageInput,
 ) {
@@ -2202,8 +2223,17 @@ async function runOplAgentPackageUpdateUnlocked(
     const { index } = readRecoveredLockIndex(true);
     const { lock } = requireInstalledPackage(index, packageId, 'update');
     if (lock.source_kind === 'bundled_full_runtime_modules') {
-      const result = await applyManifestPackageLock(input, 'update');
-      return agentPackageUpdateReadback(input, result);
+      const catalog = readBundledFullRuntimePackageCatalog();
+      const selection = resolveBundledFullRuntimePackageClosureRoots({
+        catalog,
+        rootPackageId: packageId,
+      });
+      return runOplBundledFullRuntimeAgentPackageLifecycleUnlocked({
+        packageId,
+        agentRoot: selection.packageRoots[packageId],
+        packageRoots: selection.packageRoots,
+        dryRun: input.dryRun,
+      }, 'update', packageLocalBundledFullRuntimeProvenance(packageId));
     }
     const sourcePolicy = resolveAgentPackageEffectiveSourcePolicy(packageId);
     assertFirstPartyPackageUpdateSelection(input, firstParty, sourcePolicy);
