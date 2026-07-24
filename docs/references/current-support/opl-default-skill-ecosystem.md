@@ -5,6 +5,17 @@ Purpose: `references_current_support_opl_default_skill_ecosystem`
 State: `support_reference`
 Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
 
+## 2026-07-24 planned supersession
+
+Package 是安装单元；Skill、Tool、Plugin 和 entrypoint 是 Package 或平台动态发现的
+capability，不建立第二 lifecycle。OPL 不再通过自研 Package lock、payload、LKG、
+materializer、activation transaction 或固定 family plugin registry 定义 Skill
+currentness。MAS 只声明 ScholarSkills required presence；实际 carrier 平台 ensure 后，
+运行边界验证所需 entrypoint 可调用。workspace/quest 暴露策略和 no-authority 规则继续
+有效，但本文后续 35 Skills 全量物化、scope generation、Package transaction 和
+lock/receipt 描述只作 current compatibility。完整迁移见
+[`OPL Package 平台组合迁移计划`](../../active/opl-package-platform-composition-migration.md)。
+
 这份文档说明 OPL App 和 `opl install` 默认维护哪些 skill，以及这些 skill 应该放在哪一层。目标是让 One Person Lab App、原版 Codex App 和命令行 Codex 看到一致的能力生态，同时避免把项目专用 skill 装到系统级。
 
 ## Currentness policy

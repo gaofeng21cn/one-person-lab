@@ -5,11 +5,21 @@ Purpose: `standard_agent_domain_owned_interface_boundary`
 State: `active`
 Machine boundary: `contracts/opl-framework/standard-agent-interface.schema.json`
 
+## 2026-07-24 planned supersession
+
+标准 Agent 目标态只是 installed descriptor 中的 `kind=agent` Package；Skill、Tool、
+Plugin 和 entrypoint 是其可发现 capability。发现必须从实际 carrier 平台的 installed
+inventory 动态产生，不再由 Framework 固定 Agent/Package registry 或 OPL lock、
+materialization、LKG、receipt 决定。依赖只检查 presence/callability；MAS ->
+ScholarSkills 保持 required。当前 schema、package readiness 和 hosted materialization
+段落只作 dual-read compatibility，迁移与删除门见
+[`OPL Package 平台组合迁移计划`](../active/opl-package-platform-composition-migration.md)。
+
 ## 结论
 
 标准 OPL Agent 通过 domain-owned `contracts/domain_descriptor.json#/standard_agent_interface` 声明基座需要消费的差异数据。OPL 只持有统一 schema、解析、路由投影、workspace binding、progress projection 与 conformance gate；领域仓持有 locator 形态、runtime registration、progress aliases 和显式 routing signals。可执行 action/stage binding 由 OPL hosted runtime ABI 承担，不在这个差异接口中携带命令字符串。
 
-这条边界不改变 package 安装与更新 owner。`OPL Connect` 继续按当前 agent package registry、lock、physical materialization、managed update source 和 lifecycle receipt 管理安装；标准接口不新增 installer、plugin lifecycle、legacy `install.sh` 或第二份 package identity。
+迁移期这条边界不直接执行 package 安装与更新；现有 `OPL Connect` registry/lock/materialization/readiness 只能作为兼容输入。目标 install/update/remove owner 是 Codex Plugin Manager、Git 或实际 carrier 平台；标准接口不新增 installer、第二 package identity 或第二状态机。
 
 ## 标准字段
 

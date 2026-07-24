@@ -5,6 +5,51 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-24
+
+### 决策（planned）：Package lifecycle 退回平台能力，OPL 只保留组合与运行薄层
+
+原因：现有 Agent Package Core 把生态 identity、安装来源、版本解析、ABI、exact
+digest、payload、dependency closure、installed lock、LKG、receipt、materialization、
+scope activation 和 crash transaction 收进 OPL 自有状态机。它复制了 Codex Plugin
+Manager、Git 和实际 carrier 平台已经拥有的物理生命周期，并迫使 Framework、App、
+Shell、固定 first-party registry 和 Release Set 共同维护 currentness。功能没有因此更强，
+反而降低自由组合能力并扩大开发、迁移和运维成本。
+
+影响：
+
+- 长期生态模型固定为 `OPL Base ≈ R`、`OPL App ≈ RStudio`、`OPL Package ≈ R
+  Package`。Package 是唯一安装单元；Skill、Tool、Plugin、workflow 和 entrypoint 是
+  descriptor 中可发现 capability，不形成平行 lifecycle。
+- 标准 Agent 只是 `kind=agent` 的普通 Package。新增 Agent 不修改 Framework 的固定
+  Package/Agent/Plugin/Module registry；App starter/default profile 只是可替换产品选择。
+- descriptor 收缩为 `id/kind/requires/optional/entrypoints/home/runtime/custom_views`。
+  dependency 只检查 presence/callability，不比较 SemVer/ABI/exact digest/content lock。
+  MAS -> ScholarSkills 继续是 required dependency，但由实际 carrier 平台 ensure。
+- 稳定 Package/capability/entrypoint identity 只允许向后兼容扩展。breaking interface
+  必须发布新 identity，或由 owner 保留兼容 adapter；旧 identity 只有在 fresh
+  no-active-consumer proof 后才能删除。平台 version 只作展示/provenance，不恢复中央
+  版本 resolver。
+- Codex Plugin Manager、Git 或实际 carrier 平台持有 install/list/update/remove、source
+  currentness 和物理恢复。Framework 目标只保留薄 `ensure/list/update/remove/health`
+  adapter、installed descriptor discovery、Agent Work Item/Temporal execution 聚合和
+  typed custom-view proxy。
+- App 持有 Official Profile、首次安装/显式恢复、Settings、Home preference 与 renderer。
+  首次初始化后 maintenance 只更新平台仍报告为 installed 的 Package；用户删除后不得
+  静默回装。Standard 与 Full 使用同一 installed truth，Full 只多 offline seed。
+- release checksum/attestation、Temporal Worker Versioning 和 domain artifact/evidence
+  digest 保留在原 owner；它们不是 Package lock，也不得成为普通安装或启动门禁。
+- 现有 registry/resolver/lock/payload/LKG/receipt/materializer/scope activation/durable
+  transaction 和 `opl packages` 公共面进入 compatibility-to-delete。必须先完成 platform
+  fresh proof、dual-read、功能等价矩阵、旧数据迁移和 no-active-caller 证明，再物理删除。
+
+本决策 supersede 本文中将 OPL Agent Package Manager、三层 registry、owner SemVer +
+ABI resolver、exact installed lock、LKG、固定七包 cohort、Package materialization 或
+durable Package intent 定义为长期目标的旧决策。历史原文保留用于解释当前实现和迁移，
+但不得再授权新增依赖。完整执行门见
+[`docs/active/opl-package-platform-composition-migration.md`](./active/opl-package-platform-composition-migration.md)。
+目标状态为 `planned`；在 terminal proof 前不能写成当前机器行为或已完成清理。
+
 ## 2026-07-23
 
 ### 决策：专业能力包默认可随包提供，但不因此成为 Agent 运行硬依赖

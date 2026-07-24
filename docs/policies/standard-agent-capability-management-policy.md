@@ -5,6 +5,17 @@ Purpose: `standard_agent_capability_management_policy`
 State: `active_policy`
 Machine boundary: 本文是 OPL family 维护者的人读规范，用来统一能力分层、外置判断、同步边界和 no-authority 口径。机器真相仍归 contracts、source、CLI/API readback、runtime ledger、domain-owned manifest、owner receipt 和真实 workspace / App evidence。
 
+## 2026-07-24 planned supersession
+
+Package 是唯一安装单元；Skill、Tool、Plugin、workflow、primary skill 和其他 entrypoint
+只是 descriptor 可发现 capability，不得形成平行 lifecycle 或 Framework 固定清单。
+capability 是否可用只由实际 carrier discovery + entrypoint callability 判断；Package
+依赖只检查 required/optional presence，不以 version、ABI、lock、payload、LKG、receipt
+或 materialization transaction 准入。本文后续所有 `materializer`、`activation
+transaction`、Package lock/LKG 和固定 ScholarSkills 数量描述仅解释当前兼容实现，不再
+定义目标 policy。迁移 owner 与删除门见
+[`OPL Package 平台组合迁移计划`](../active/opl-package-platform-composition-migration.md)。
+
 ## 适用范围
 
 本文适用于 OPL 标准智能体及其专业能力包、连接器、reference pack、contract module 和 runtime projection 的命名与归属判断。它不把每个能力硬编码成 machine contract，也不替代 MAS/MAG/RCA/OMA/OBF/ScholarSkills 等 owner repo 的 domain truth。

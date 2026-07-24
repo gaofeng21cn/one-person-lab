@@ -5,11 +5,22 @@ Purpose: `brand_module_design`
 State: `support_reference`
 Machine boundary: 本文是人读目标态参考。机器真相继续归 contracts、generated descriptors、CLI/API 行为、plugin/skill manifests、App release artifacts 和 installer evidence。
 
+## 2026-07-24 planned supersession
+
+Connect 的目标是 discovery/delegation，不再持有 Agent Package Core。Package 是唯一
+安装单元；Skill、Tool、Plugin、workflow 和 entrypoint 只是 descriptor 可发现
+capability。Codex Plugin Manager、Git 或实际 carrier 平台持有 install/list/update/remove
+与 currentness；Connect 只投影 descriptors、entrypoints、external connectors 和
+no-authority invocation refs。本文后续 registry/manifest/lock/LKG/lifecycle receipt、
+carrier materialization 和固定 first-party catalog 描述只解释 current compatibility。
+迁移与删除门见
+[`OPL Package 平台组合迁移计划`](../../active/opl-package-platform-composition-migration.md)。
+
 ## 品牌定位
 
-`OPL Connect` 是 OPL 的外部接口与分发模块。它把同一套 OPL / Foundry Agent contracts 派生到 CLI、MCP、Skill/plugin、OpenAI tools、AI SDK tools、Capability Invocation lifecycle descriptors、ToolResultEnvelope descriptors、App actions、Homebrew、installer 和 release artifacts，并承载 OPL Agent Package Core 的 registry / manifest / lock / lifecycle receipt / owner route readback。
+`OPL Connect` 是 OPL 的外部接口、discovery 与 delegation 模块。它把同一套 OPL / Foundry Agent contracts 派生到 CLI、MCP、Skill/plugin、OpenAI tools、AI SDK tools、Capability Invocation lifecycle descriptors、ToolResultEnvelope descriptors、App actions、installer 和 release artifacts；Package 的物理生命周期与 currentness 留在实际 carrier 平台。
 
-一句话：`Connect` 管“外部系统和用户怎样稳定接入同一套 OPL 能力”，其中 Agent Package Core 是 OPL/App 管理智能体 package 的核心；Codex Plugin/local marketplace、OPL App shortcuts、workflow profile、runtime/app release 只是 carrier 或 owner surfaces。
+一句话：`Connect` 管“外部系统和用户怎样发现并调用同一套 OPL 能力”；它不再是 Package Manager，也不维护 Package/Agent/Plugin/Module 固定清单。
 
 ## 设计理念
 

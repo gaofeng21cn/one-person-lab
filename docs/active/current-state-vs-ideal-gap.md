@@ -25,6 +25,7 @@ Live Evidence 后置：release、production、Brand L5、owner-chain scaleout、
 - `med-autoscience`、`med-autogrant`、`redcube-ai` 是标准 OPL domain agent：domain truth、quality verdict、artifact authority、owner receipt、typed blocker 和 human gate 留在各自 owner repo；OPL 只承接 generic stage/runtime/control-plane substrate。
 - `opl-meta-agent` 和 `opl-bookforge` 按标准 OPL Agent / Foundry Agent 目标态维护：domain pack、generated/hosted surface、default path、accepted owner-answer shape、source morphology、retired helper provenance 和 no-forbidden-write guard 清楚。
 - `one-person-lab-app` 是普通用户与 operator 的产品入口：Docker/WebUI beginner path、Settings control plane、runtime proxy、release/operator progress、active shell policy 和 App-owned contract 归 App owner；Framework 只提供受控 read/action surface。
+- Package 生态目标固定为 `OPL Base ≈ R`、`OPL App ≈ RStudio`、`OPL Package ≈ R Package`：Package 是唯一安装单元，标准 Agent 只是 `kind=agent` 的普通 Package；物理 lifecycle 退回实际平台，Framework 只保留动态发现、presence/callability、状态聚合与 Runtime 薄层。
 - Support repos、Aion/Hermes、MAS Scholar Skills、Homebrew、OPL Doc 和 Native Workbench 只按 carrier / support / capability-pack / distribution / GUI candidate 边界读取；它们不成为 framework/domain/App release truth owner，也不替代对应 owner 的 evidence surface。
 
 North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md)、[OPL Family 理想系统评估](../references/runtime-substrate/opl-family-ideal-system-assessment.md)、[OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md) 和核心五件套。本文不复制这些目标态细节，只维护当前 gap 与 baton。
@@ -33,7 +34,7 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 | 范围 | 当前完成状态 | 证据边界 |
 | --- | --- | --- |
-| 非 live 功能 / 结构基线 | `no_active_gap_selected` | 当前未选择 active gap；任何新 gap 都必须由 fresh contracts、source、tests、CLI/read-model 与 owner docs 重新证明。 |
+| 非 live 功能 / 结构基线 | `opl_package_platform_composition_selected` | 当前唯一 selected gap 是 Package platform-first composition；迁移、功能等价和删除门见 [`opl-package-platform-composition-migration.md`](./opl-package-platform-composition-migration.md)。 |
 | Active Truth 治理 | `single_owner_guard_active` | 本文是唯一 active truth owner，只保留当前 gap、完成口径与下一轮 baton，不保存 dated proof 或 closeout 流水。 |
 | Live / release / production / owner evidence | `deferred_to_evidence_owners` | 继续由 App release、provider long-soak、Brand L5、domain owner receipt、typed blocker 与 human gate 等 owner surface 单独证明。 |
 
@@ -43,7 +44,7 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 当前默认读法：默认 OPL family maintained repo 的非 live 功能/结构基线只能从 fresh repo truth、四份 `contracts/opl-framework/foundry-*.schema.json`、FoundryRun source/tests 与各 domain owner surface 读取。本文不冻结日期、branch、SHA、`origin/main` 状态、receipt id、worktree closeout、workflow run 或某轮 readback。
 
-当前没有已选中的 active 非 live 功能/结构 gap。`Evidence-Grounded Decision Agent Profile` 的非 live 功能/结构基线由 profile contract、module-owned source、CLI/readback 和 focused conformance evidence 承载：`contracts/opl-framework/evidence-grounded-decision-agent-profile.json`、`src/modules/pack/evidence-grounded-decision-agent-profile.ts`、各模块 `evidence-grounded-*` source surface、canonical `opl profiles list|inspect|select|conformance --json`、legacy `opl foundry evidence-profile inspect --json` 和 Evidence-Grounded focused tests。Fresh CLI/readback 应显示 `non_live_module_surface_readback_available`、10 个 canonical module surface ids，以及 Pack / Charter / Stagecraft / Runway / Ledger / Connect / Workspace / Atlas / Console / Foundry Kernel 的非-live surface 或 surface ref；profile selector/readback 还必须给 OMA / Foundry Agent builder 返回 selected profile refs、profile requirements 和 conformance gaps。配套结构面还包括 Runway domain-route handoff 的 `can_claim_domain_progress=false` / `can_claim_domain_ready=false` / `can_claim_quality_verdict=false` fail-closed 边界、research-frontier compatibility carrier 到 `stage_candidate_portfolio_refs_projection` 的 canonical refs-only 投影、Connect scientific / PubMed / reference metadata receipt 的 provider-receipt-only role，以及 generic dependency doctor 的 domain profile envelope / no-authority boundary；这些只关闭 false-authority、compatibility 和 provenance 结构缺口。它仍不能声明 live evidence、domain ready、owner verdict、artifact authority、human gate closed、release ready 或 production ready。本文只记录读取入口和 forbidden claims，不保存过程 proof、worktree、branch、receipt 或完成史；若后续发现这些机器面缺失或 drift，必须从 fresh code/contracts/tests/CLI/read-model/docs 审计重新开 lane。
+当前唯一已选中的 active 非 live 功能/结构 gap 是 `opl_package_platform_composition`。Framework 与 App 共同推进 platform fresh proof、minimum descriptor/dual-read、Official Profile、独立 maintenance、动态 Runtime 与 legacy removal；当前 P0 是冻结旧 Package Manager 扩张并建立 retained-consumer inventory。完整写集、顺序和完成门见 [`opl-package-platform-composition-migration.md`](./opl-package-platform-composition-migration.md)。本文只持有 gap/baton，不复制执行计划，也不能把 docs 或 compatibility bridge 写成迁移完成。
 
 ## 八条调研建议 Current Tracker
 
@@ -74,7 +75,7 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 | Gap class | Status | Owner | 当前处理 |
 | --- | --- | --- | --- |
-| 功能 / 结构 gap | `none_selected` | 对应 repo owner | 不维护已完成清单；新 gap 只能由 fresh code/contracts/tests/CLI/read-model/docs 审计重新产生。 |
+| Package platform-first composition | `selected_planned` | OPL Framework + OPL App | 当前 P0：冻结旧 resolver/lock/payload/receipt/Durable 扩张，完成平台能力与 retained-consumer inventory；按计划逐阶段迁移并在功能等价后删除旧 manager。 |
 | 文档 SSOT / active gap 污染 | `active_governance_guard` | OPL + OPL Doc | 理想态定义保留在 support/reference；active gap 文档只保留当前 gap、完成口径和下一轮 baton；已完成过程进 history。 |
 | Live / release / production / owner evidence | `deferred_evidence_lane` | 对应 evidence owner | 单独走 live evidence 维护入口，不混入本文 active gap。 |
 | 不可逆 cleanup / physical delete | `owner_decision_gated` | 对应 repo owner | 只有 owner decision、no-active-caller、replacement owner、no-forbidden-write 和 tombstone/provenance 齐备时才开 lane。 |
@@ -90,7 +91,7 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 ## Next-Round Agent Prompt
 
-当前没有默认非 live 功能/结构开发 prompt。
+当前默认非 live 功能/结构开发主题是 `opl_package_platform_composition`。执行必须先读取 [`opl-package-platform-composition-migration.md`](./opl-package-platform-composition-migration.md)，并按 `platform proof -> compatibility bridge -> authority/consumer switch -> legacy delete` 推进；不得把计划、docs、测试或未吸收候选写成完成。
 
 若 fresh audit 发现新的非 live gap，使用以下 prompt 形状开启，而不是复用历史清单：
 

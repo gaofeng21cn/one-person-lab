@@ -7,6 +7,23 @@ Machine boundary: This document is a human-readable support index for OPL Framew
 
 This directory preserves the active `OPL Framework` runtime and family control-plane contract corpus. `One Person Lab App` and Foundry Agents may consume these contracts, but this directory does not define a second runtime truth for the App or any domain agent.
 
+## Planned package composition boundary
+
+The 2026-07-24 planned target treats Package as the installation unit and
+Skill/Tool/Plugin/workflow/entrypoint as discoverable capabilities. Installation,
+updates, removal, source currentness, and physical recovery belong to Codex Plugin
+Manager, Git, or the actual carrier platform. Framework contracts may expose a thin
+adapter, dynamic installed descriptors, Agent Work Item/Temporal aggregation, and
+typed custom-view data, but must not create a parallel fixed
+Package/Agent/Plugin/Module registry, resolver, installed lock, payload, LKG,
+lifecycle receipt, materializer, or durable package transaction. Dependencies are
+presence/callability only; MAS -> ScholarSkills remains required.
+
+Existing exact managed source, lock, Release Set, materialization, and LKG contracts
+remain current compatibility inputs until the platform proof and dual-read migration
+finish. They are not the long-term target and must not gain new consumers. See
+[`docs/active/opl-package-platform-composition-migration.md`](../../docs/active/opl-package-platform-composition-migration.md).
+
 It is repo-tracked because the current framework needs stable machine-readable inputs for:
 
 - stage-led task selection

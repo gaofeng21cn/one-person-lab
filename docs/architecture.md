@@ -9,6 +9,24 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 `OPL` 的目标不是只做入口聚合或工作台投影，而是完整的 stage-led family agent runtime framework。当前产品认知分成 `OPL Framework`、`One Person Lab App` 和 `Foundry Agents` 三层：Framework 负责开发与运行框架，App 负责普通用户工作台，Foundry Agents 负责领域智能体与交付权威。阶段内最小执行单位是 Agent executor；`Codex CLI` 是当前第一公民 executor。
 
+### Planned：平台组合式 Package 生态
+
+Package 生态的目标读法是 `OPL Base ≈ R`、`OPL App ≈ RStudio`、`OPL Package ≈ R Package`。Package 是唯一安装单元；Skill、Tool、Plugin、workflow 和 entrypoint 是 Package descriptor 中可发现、可调用、可自由组合的 capability，不再拥有平行 lifecycle。标准智能体只是 `kind=agent` 的普通 Package，可以像 MAS -> ScholarSkills 一样声明其他 Package 的 required presence dependency。
+
+长期 Package descriptor 只保留 `id`、`kind`、`requires`、`optional`、`entrypoints`、`home`、`runtime` 和 `custom_views`。`requires` 只检查 dependency 是否已由实际 carrier 平台安装且入口可调用，不比较 SemVer range、ABI range、exact digest 或 content lock。Codex Plugin Manager、Git 或实际 carrier 平台持有 install/list/update/remove 与 source currentness；Framework 不再维护 resolver、installed lock、Package payload、LKG、lifecycle receipt、materializer、scope activation或 durable Package transaction。
+
+稳定 Package/capability/entrypoint identity 是 owner 的兼容承诺，只允许向后兼容扩展。breaking interface 必须发布新 identity，或由 owner 保留兼容 adapter；旧 identity 只有在 fresh no-active-consumer proof 后才能删除。平台 version 可用于展示与 provenance，但不恢复中央版本 resolver。
+
+Framework 目标只保留薄的 `ensure/list/update/remove/health` adapter、installed descriptor discovery、Agent Work Item inventory 与 Temporal execution 聚合，以及 typed custom-view proxy。App 持有可替换 starter/default profile、首次安装/显式恢复、Settings、Home preference 和 renderer：Official Profile 只在首次安装或用户显式恢复时 ensure；日常 maintenance 只更新平台仍报告为 installed 的 Package，不能把用户已经删除的 Package 静默装回。Standard 和 Full 使用同一 installed truth；Full 只多 offline seed bytes，不形成第二套 registry、lock 或 updater。
+
+Agent 自己持有业务 Work Item inventory 和扩展数据接口；Temporal 只持有 execution history/status；App 组合两者。MAS 科研路线通过 Agent-owned typed data view + App-owned renderer 展示，未知 view 安全降级，Package 不向 App 注入任意可执行 UI。新增 Agent 仅需安装并暴露 descriptor，即可进入 Runtime 页面，不修改 Framework 固定数组。
+
+release manifest/checksum/attestation、Temporal Worker Versioning 和 domain artifact/evidence digest 仍由各自 owner 保留；它们不属于 Package lock，也不得成为普通安装或运行门禁。完整迁移、功能等价和物理删除门见 [`docs/active/opl-package-platform-composition-migration.md`](./active/opl-package-platform-composition-migration.md)。该目标当前为 `planned`；在 platform fresh proof 和兼容桥完成前，现有 `opl packages`、lock/receipt/LKG 等只作为 current compatibility implementation，不能据此继续扩张目标架构。
+
+### 当前实现与兼容约束
+
+以下 Package registry、materialization、lock、receipt、LKG、固定 first-party cohort 与 Release Set 描述只解释迁移前机器行为或 release 历史兼容，不再定义长期 Package 架构。非 Package 的 stage/runtime/authority 边界继续有效。
+
 标准 Agent 的实现 profile 只有一份机器真相：`contracts/pack_compiler_input.json#/implementation_profile`，由 OPL Pack compiler、scaffold validator 和 materialization path 消费。它把 identity 固定为 declarative Markdown/JSON pack，允许 helper 按 domain 需要增减但不让 helper 语言改变 Agent 身份；generated surfaces 与 Framework runtime 仍归 OPL，Rust 只保留在 Framework hot path。MAS、MAG、RCA、OMA、OBF 同级消费这一 profile；ScholarSkills 仍是 framework capability package，不得套用标准 domain-agent identity。人读规范与五仓参考矩阵见 `docs/specs/standard-domain-agent-implementation.md`。
 
 标准 Agent 的 hosted interface 采用同一 owner split：domain repo 在 `contracts/domain_descriptor.json#/standard_agent_interface` 或 repo-contained JSON pointer 中声明 workspace defaults/locator、runtime domain/registration ref、progress aliases 和 routing signals；OPL 只持有 `standard-agent-interface.schema.json`、closed-object parser、generated scaffold 和通用 consumer。Connect 先按 module source policy 选出唯一 source channel：普通用户跟随 `latest-stable`，Developer Mode 或 path override 跟随可信本地 checkout；每个 hosted action 和每个新 child Attempt 从该 channel 静默物化并选择最新可运行的不可变 generation，刷新/admission 失败则回退 LKG。lock、receipt、Git/digest/version/currentness 仅记录解析 provenance，不作为相等门禁，也不在 source selector 之外隐式扫描 sibling checkout；显式 `OPL_FAMILY_WORKSPACE_ROOT` 只作为开发/验证 source selector 输入。selected current generation 非法时先尝试 LKG，只有 current/LKG 均不可运行或必需 ABI/export/module/Skill、路径/权限/安全、health/handler probe 失败才 fail closed；App 跨 Agent 聚合只把该真实 hard stop 隔离为 unavailable diagnostic。descriptor 不可用时，Workspace 采用统一 `one_off + standard_agent_workspace + project` baseline；可执行 action/stage 必须通过 OPL hosted binding 进入，缺 binding 时 fail closed。progress 只识别 `deliverable_progress_delta` 与 `platform_repair_delta` 两个 canonical 字段，不推断 paper/grant/visual alias；不得回退到 OPL registry 中的 MAS/MAG/RCA/OMA/OBF 私有命令、workspace profile 或领域 stage-log 字段。
