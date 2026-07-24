@@ -186,6 +186,8 @@ function normalizeDependency(
     || !['always', 'task_routed', 'explicit'].includes(String(activation))
     || (!openComposition && typeof value.source !== 'string')
     || (value.source !== undefined && typeof value.source !== 'string')
+    || (value.source_path !== undefined
+      && (typeof value.source_path !== 'string' || !value.source_path.trim()))
   ) {
     throw new FrameworkContractError('contract_shape_invalid', `${field} has an invalid dependency shape.`, {
       field,
@@ -246,6 +248,7 @@ function normalizeDependency(
     online_install_default: value.online_install_default,
     activation: activation as AgentPackageManagedPolicyDependency['activation'],
     ...(value.source === undefined ? {} : { source: value.source }),
+    ...(value.source_path === undefined ? {} : { source_path: String(value.source_path).trim() }),
     ...(schema === 'opl_flow_workflow_policy.v2'
       ? {
           owner: String(v2Fields.owner).trim(),
@@ -822,26 +825,55 @@ function managedPolicyDependencySelection(input: {
     ...input.requires.map((dependency) => ({ dependency, required: true })),
     ...input.recommends.map((dependency) => ({ dependency, required: false })),
   ].filter((entry) => entry.dependency.online_install_default);
-  const managedSkillDependencies = selected.flatMap(({ dependency, required }) => {
+  const managedSkillDependencies = input.schema === 'opl_flow_workflow_policy.v3'
+    ? selected.flatMap(({ dependency, required }) => {
     if (dependency.kind !== 'codex_skill') return [];
+    const repositoryUrl = dependency.source?.trim() ?? '';
+    const repositorySourcePath = dependency.source_path?.trim() ?? '';
+    const sourcePathSegments = repositorySourcePath.split('/');
     if (
-      dependency.source?.startsWith('skills-manager:')
-      && dependency.source.slice('skills-manager:'.length) !== dependency.id
+      !/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:\.git)?\/?$/.test(repositoryUrl)
+      || !repositorySourcePath
+      || repositorySourcePath.startsWith('/')
+      || repositorySourcePath.includes('\\')
+      || sourcePathSegments.some((segment) => segment === '..')
     ) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Managed policy Skill source identity is invalid.', {
+      throw new FrameworkContractError('contract_shape_invalid', 'Managed policy Skill source must be a public GitHub repository and repository-relative source_path.', {
         dependency_key: dependencyKey(dependency),
         source: dependency.source,
-        failure_code: 'agent_package_managed_policy_dependency_identity_mismatch',
+        source_path: dependency.source_path,
+        failure_code: 'agent_package_managed_policy_dependency_source_invalid',
       });
     }
     return [{
       id: dependency.id,
-      source: dependency.source,
+      sourceMode: 'github' as const,
+      repositoryUrl,
+      repositorySourcePath,
       versionRequirement: dependency.version_requirement,
       installSource: dependency.install_source,
       required,
     }];
-  });
+  })
+    : selected.flatMap(({ dependency, required }) => {
+      if (dependency.kind !== 'codex_skill') return [];
+      const expectedSource = `skills-manager:${dependency.id}`;
+      if (dependency.source?.startsWith('skills-manager:') && dependency.source !== expectedSource) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Legacy managed policy Skill source identity is invalid.', {
+          dependency_key: dependencyKey(dependency),
+          source: dependency.source,
+          failure_code: 'agent_package_managed_policy_dependency_identity_mismatch',
+        });
+      }
+      return [{
+        id: dependency.id,
+        sourceMode: 'observe_existing' as const,
+        legacySource: dependency.source ?? dependency.id,
+        versionRequirement: dependency.version_requirement,
+        installSource: dependency.install_source,
+        required,
+      }];
+    });
   if (input.schema !== 'opl_flow_workflow_policy.v3') {
     const unsupported = selected
       .map(({ dependency }) => dependency)
@@ -1050,9 +1082,34 @@ function noManagedPolicyCurrentness(reason: string): AgentPackageManagedPolicyCu
     enabled_migration_ids: [],
     detected_conflicts: [],
     dependency_sync: null,
+    required_dependencies_operational: true,
+    required_dependency_failure_ids: [],
     repair_command: null,
     reason,
   };
+}
+
+function skillSyncItemCurrent(item: ReturnType<typeof syncOplCompanionSkills>['items'][number]) {
+  const discoverOnly = item.action === 'discover_only';
+  if (discoverOnly) {
+    return item.status === 'available'
+      && item.source_authority !== 'missing'
+      && item.frontmatter_schema_status !== 'invalid'
+      && item.resource_closure_status !== 'incomplete';
+  }
+  if (item.source_authority === 'existing_codex_entry') {
+    return item.status === 'ready'
+      && item.source_payload_sha256 !== null
+      && item.frontmatter_schema_status === 'valid'
+      && item.resource_closure_status === 'complete';
+  }
+  return item.status === 'ready'
+    && item.source_authority !== 'missing'
+    && item.source_payload_sha256 !== null
+    && item.payload_currentness === 'current'
+    && item.frontmatter_schema_status === 'valid'
+    && item.resource_closure_status === 'complete'
+    && item.entrypoint_authority_status === 'converged';
 }
 
 function dependencySyncDriftReasons(
@@ -1068,20 +1125,7 @@ function dependencySyncDriftReasons(
       reasons.push(`missing_skill_readback:${skillId}`);
       continue;
     }
-    const discoverOnly = item.action === 'discover_only';
-    const current = discoverOnly
-      ? item.status === 'available'
-        && item.source_authority !== 'missing'
-        && item.frontmatter_schema_status !== 'invalid'
-        && item.resource_closure_status !== 'incomplete'
-      : item.status === 'ready'
-        && item.source_authority !== 'missing'
-        && item.source_payload_sha256 !== null
-        && item.payload_currentness === 'current'
-        && item.frontmatter_schema_status === 'valid'
-        && item.resource_closure_status === 'complete'
-        && item.entrypoint_authority_status === 'converged';
-    if (!current) reasons.push(`skill_drift:${skillId}`);
+    if (!skillSyncItemCurrent(item)) reasons.push(`skill_drift:${skillId}`);
   }
   const toolsById = new Map(sync.tools.map((entry) => [entry.tool_id, entry]));
   for (const toolId of toolIds) {
@@ -1127,6 +1171,8 @@ export function managedPolicyCurrentness(
     enabled_migration_ids: migration.migration_ids,
     detected_conflicts: [],
     dependency_sync: null,
+    required_dependencies_operational: false,
+    required_dependency_failure_ids: [],
     repair_command: `opl packages repair --package-id ${lock.package_id}`,
     reason,
   });
@@ -1166,6 +1212,17 @@ export function managedPolicyCurrentness(
       networkAccess: 'forbidden',
     });
     const dependencyDriftReasons = dependencySyncDriftReasons(dependencySync, skillIds, toolIds);
+    const requiredSkillIds = inspection.policy.requires
+      .filter((dependency) => dependency.kind === 'codex_skill' && dependency.online_install_default)
+      .map((dependency) => dependency.id);
+    const dependencyItemsById = new Map(
+      dependencySync.items.map((item) => [item.skill_id, item]),
+    );
+    const requiredDependencyFailureIds = requiredSkillIds.filter((skillId) => {
+      const item = dependencyItemsById.get(skillId);
+      return !item || !skillSyncItemCurrent(item);
+    });
+    const requiredDependenciesOperational = requiredDependencyFailureIds.length === 0;
     const conflictDrifted = inspection.detectedConflicts.length > 0;
     const drifted = conflictDrifted || dependencyDriftReasons.length > 0;
     return {
@@ -1180,7 +1237,11 @@ export function managedPolicyCurrentness(
       enabled_migration_ids: inspection.enabledMigrationIds,
       detected_conflicts: inspection.detectedConflicts,
       dependency_sync: dependencySync as unknown as Record<string, unknown>,
-      repair_command: null,
+      required_dependencies_operational: requiredDependenciesOperational,
+      required_dependency_failure_ids: requiredDependencyFailureIds,
+      repair_command: requiredDependenciesOperational
+        ? null
+        : `opl packages repair --package-id ${lock.package_id}`,
       reason: drifted
         ? [
             conflictDrifted

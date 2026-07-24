@@ -4565,9 +4565,12 @@ function buildOplAgentPackageStatus(
     || materializationReadiness.status === 'current'
     || materializationReadiness.status === 'not_required'
     || materializationReadiness.status === 'scope_required';
+  const requiredPolicyDependenciesOperational = policyCurrentness.required_dependencies_operational !== false;
   const managedPolicyOperational = policyCurrentness.status === 'current'
     || policyCurrentness.status === 'not_requested'
-    || policyCurrentness.status === 'drifted';
+    || policyCurrentness.status === 'drifted'
+      ? requiredPolicyDependenciesOperational
+      : false;
   const exposureOperational = selectedLock?.exposure_state !== 'disabled';
   const operationalReady = Boolean(
     selectedLock
@@ -4588,7 +4591,9 @@ function buildOplAgentPackageStatus(
           : !runtimeSourceReadiness.operational_ready
             ? `runtime_source_${runtimeSourceReadiness.status}`
             : !managedPolicyOperational
-              ? `managed_policy_${policyCurrentness.status}`
+              ? requiredPolicyDependenciesOperational
+                ? `managed_policy_${policyCurrentness.status}`
+                : 'managed_policy_required_dependency_unavailable'
               : null;
   const repairAction = selectedLock && launchBlockedReason
     ? !materializationOperational
@@ -4626,7 +4631,9 @@ function buildOplAgentPackageStatus(
       ? 'required_core_skill_missing'
       : !runtimeSourceReadiness.operational_ready
         ? `runtime_source_${runtimeSourceReadiness.status}`
-        : policyCurrentness.status === 'invalid'
+        : !requiredPolicyDependenciesOperational
+          ? 'managed_policy_required_dependency_unavailable'
+          : policyCurrentness.status === 'invalid'
           ? 'managed_policy_invalid'
           : null;
   const degradedReason = unavailableReason

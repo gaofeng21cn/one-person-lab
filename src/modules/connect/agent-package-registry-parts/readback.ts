@@ -156,6 +156,7 @@ export function agentPackageLifecycleUxReadback(input: {
   }
 
   const policyCurrentness = input.managedPolicyCurrentness ?? managedPolicyCurrentness(input.lock);
+  const requiredPolicyDependenciesOperational = policyCurrentness.required_dependencies_operational !== false;
   if (policyCurrentness.status === 'current') {
     conditions.push(lifecycleCondition({
       condition_id: 'managed_policy_current',
@@ -168,9 +169,11 @@ export function agentPackageLifecycleUxReadback(input: {
     conditions.push(lifecycleCondition({
       condition_id: 'managed_policy_drift_detected',
       package_id: input.lock.package_id,
-      status: 'ok',
-      reason: `${policyCurrentness.reason} Currentness drift remains observable but does not block a functionally runnable package generation.`,
-      action_ref: null,
+      status: requiredPolicyDependenciesOperational ? 'ok' : 'attention_needed',
+      reason: requiredPolicyDependenciesOperational
+        ? `${policyCurrentness.reason} Currentness drift remains observable but does not block a functionally runnable package generation.`
+        : `${policyCurrentness.reason} Required managed dependencies block operational readiness until repaired.`,
+      action_ref: requiredPolicyDependenciesOperational ? null : 'repair',
     }));
   } else if (policyCurrentness.status === 'invalid') {
     conditions.push(lifecycleCondition({
@@ -381,9 +384,12 @@ function ownerRouteReadbackItem(input: {
       ? agentPackageCarrierReceiptAuthorityStatus(input.lock, input.receipt)
       : agentPackageCarrierAuthorityStatus(input.lock)
     : { status: 'not_required' as const, reasons: [] as string[] };
+  const requiredPolicyDependenciesOperational = policyCurrentness.required_dependencies_operational !== false;
   const managedPolicyReady = policyCurrentness.status === 'current'
     || policyCurrentness.status === 'not_requested'
-    || policyCurrentness.status === 'drifted';
+    || policyCurrentness.status === 'drifted'
+      ? requiredPolicyDependenciesOperational
+      : false;
   const operationalReady = readiness.operational_ready
     && (materializationReadiness.status === 'current' || materializationReadiness.status === 'not_required')
     && runtimeSourceReadiness.operational_ready
@@ -405,7 +411,9 @@ function ownerRouteReadbackItem(input: {
         : !runtimeSourceReadiness.operational_ready
           ? `runtime_source_${runtimeSourceReadiness.status}`
           : !managedPolicyReady
-            ? `managed_policy_${policyCurrentness.status}`
+            ? requiredPolicyDependenciesOperational
+              ? `managed_policy_${policyCurrentness.status}`
+              : 'managed_policy_required_dependency_unavailable'
             : null,
     allowed_when_blocked: ['status', 'doctor', 'repair'],
     descriptor,

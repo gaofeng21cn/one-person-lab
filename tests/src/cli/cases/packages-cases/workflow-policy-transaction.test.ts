@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+
 import { assert, fs, os, path, runCli, runCliAsync, runCliFailure, test } from '../../helpers.ts';
 import { formatJsonPayload } from '../../../../../src/kernel/json-file.ts';
 import {
@@ -16,6 +18,7 @@ function writeOplFlowPackage(
   options: {
     includeRemoteCompanions?: boolean;
     includeManagedSkillCompanion?: boolean;
+    includeDeprecatedSkillManagerCompanion?: boolean;
     includeMissingManagedSkillCompanion?: boolean;
     includeKindCollision?: boolean;
     includeUnsupportedDefaultMcp?: boolean;
@@ -77,7 +80,7 @@ function writeOplFlowPackage(
           source: 'fixture-remote',
         }),
       ]
-      : options.includeManagedSkillCompanion
+      : options.includeManagedSkillCompanion || options.includeDeprecatedSkillManagerCompanion
       ? [
           dependency({
             id: 'ui-ux-pro-max',
@@ -85,7 +88,10 @@ function writeOplFlowPackage(
             offline_bundle: 'full',
             online_install_default: true,
             activation: 'explicit',
-            source: 'skills-manager:ui-ux-pro-max',
+            source: options.includeDeprecatedSkillManagerCompanion
+              ? 'skills-manager:ui-ux-pro-max'
+              : 'https://github.com/fixture/ui-ux-pro-max',
+            ...(options.includeDeprecatedSkillManagerCompanion ? {} : { source_path: 'skill' }),
           }),
         ]
       : options.includeKindCollision
@@ -178,14 +184,13 @@ function writeOplFlowPackage(
       }),
       ...(options.includeMissingManagedSkillCompanion
         ? [dependency({
-            id: 'agent-reach',
+            id: 'fixture-managed-skill',
             kind: 'codex_skill',
-            owner: 'agent-reach',
-            version_requirement: '^1',
-            install_source: 'skills-manager',
+            owner: 'fixture-owner',
             online_install_default: true,
             activation: 'task_routed',
-            source: 'skills-manager:agent-reach',
+            source: 'https://github.com/fixture/managed-skill',
+            source_path: 'skills/fixture-managed-skill',
           })]
         : []),
     ],
@@ -404,10 +409,11 @@ test('workflow policy v2 fails closed when a default dependency has no lifecycle
   }
 });
 
-test('workflow policy v3 reuses any compatible managed Skill without lock or payload metadata', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-policy-v3-existing-skill-'));
+test('workflow policy v2 observes an existing compatible Skill entrypoint without using its private source', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-policy-v2-private-skill-source-'));
   const home = path.join(root, 'home');
-  const managerSkillRoot = path.join(home, '.skills-manager', 'skills', 'agent-reach');
+  const privateSkillRoot = path.join(home, '.skills-manager', 'skills', 'ui-ux-pro-max');
+  const codexSkillRoot = path.join(home, '.codex', 'skills', 'ui-ux-pro-max');
   const env = {
     HOME: home,
     CODEX_HOME: path.join(home, '.codex'),
@@ -416,9 +422,69 @@ test('workflow policy v3 reuses any compatible managed Skill without lock or pay
   };
   try {
     writeFile(
-      path.join(managerSkillRoot, 'SKILL.md'),
-      '---\nname: agent-reach\ndescription: Generic managed Skill fixture.\n---\n\n# Agent Reach\n',
+      path.join(privateSkillRoot, 'SKILL.md'),
+      '---\nname: ui-ux-pro-max\ndescription: Existing compatible legacy Skill fixture.\n---\n',
     );
+    fs.mkdirSync(path.dirname(codexSkillRoot), { recursive: true });
+    fs.symlinkSync(privateSkillRoot, codexSkillRoot, 'junction');
+    const installed = await runCliAsync([
+      'packages',
+      'install',
+      '--manifest-url',
+      writeOplFlowPackage(root, {
+        policyVersion: 'v2',
+        includeDeprecatedSkillManagerCompanion: true,
+      }),
+      '--trust-tier',
+      'first_party',
+    ], env) as any;
+    const item = installed.opl_agent_package_install.physical_surface
+      .workflow_policy_migration.dependency_sync.items[0];
+    assert.equal(item.status, 'ready');
+    assert.equal(item.action, 'none');
+    assert.equal(item.source_authority, 'existing_codex_entry');
+    assert.equal(fs.realpathSync(codexSkillRoot), fs.realpathSync(privateSkillRoot));
+    assert.equal(fs.existsSync(path.join(home, '.agents', 'skills', 'ui-ux-pro-max')), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('workflow policy v3 installs a GitHub Skill from its declared repository source_path', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-policy-v3-existing-skill-'));
+  const home = path.join(root, 'home');
+  const upstreamRoot = path.join(root, 'upstream');
+  const skillId = 'fixture-managed-skill';
+  const upstreamSkillRoot = path.join(upstreamRoot, 'skills', skillId);
+  const privateManagerSkillRoot = path.join(home, '.skills-manager', 'skills', skillId);
+  const sourceUrl = 'https://github.com/fixture/managed-skill';
+  const env = {
+    HOME: home,
+    CODEX_HOME: path.join(home, '.codex'),
+    OPL_STATE_DIR: path.join(root, 'state'),
+    GIT_CONFIG_COUNT: '1',
+    GIT_CONFIG_KEY_0: `url.file://${upstreamRoot}.insteadOf`,
+    GIT_CONFIG_VALUE_0: sourceUrl,
+  };
+  try {
+    writeFile(
+      path.join(upstreamSkillRoot, 'SKILL.md'),
+      '---\nname: Upstream Display Name\ndescription: Generic GitHub Skill fixture.\n---\n\n# Fixture\n\nSee [guide](references/guide.md).\n',
+    );
+    writeFile(path.join(upstreamSkillRoot, '_meta.json'), `${JSON.stringify({ slug: skillId }, null, 2)}\n`);
+    writeFile(path.join(upstreamSkillRoot, 'references', 'guide.md'), '# Guide\n');
+    writeFile(
+      path.join(privateManagerSkillRoot, 'SKILL.md'),
+      '---\nname: poisoned-private-copy\ndescription: Must not be selected.\n---\n',
+    );
+    execFileSync('git', ['init', upstreamRoot]);
+    execFileSync('git', ['-C', upstreamRoot, 'add', '.']);
+    execFileSync('git', [
+      '-C', upstreamRoot,
+      '-c', 'user.name=Fixture',
+      '-c', 'user.email=fixture@example.com',
+      'commit', '-m', 'fixture upstream',
+    ]);
     const installed = await runCliAsync([
       'packages',
       'install',
@@ -431,28 +497,37 @@ test('workflow policy v3 reuses any compatible managed Skill without lock or pay
       'first_party',
     ], env) as any;
     const migration = installed.opl_agent_package_install.physical_surface.workflow_policy_migration;
-    const dependency = migration.dependencies.find((entry: { id: string }) => entry.id === 'agent-reach');
+    const dependency = migration.dependencies.find((entry: { id: string }) => entry.id === skillId);
     assert.deepEqual(dependency, {
-      id: 'agent-reach',
+      id: skillId,
       kind: 'codex_skill',
-      owner: 'agent-reach',
-      version_requirement: '^1',
-      install_source: 'skills-manager',
+      owner: 'fixture-owner',
       online_install_default: true,
       activation: 'task_routed',
-      source: 'skills-manager:agent-reach',
+      source: sourceUrl,
+      source_path: `skills/${skillId}`,
     });
     assert.equal('offline_bundle' in dependency, false);
+    const codexSkillRoot = path.join(env.CODEX_HOME, 'skills', skillId);
+    const agentsSkillRoot = path.join(home, '.agents', 'skills', skillId);
+    const resolvedSourceRoot = fs.realpathSync(codexSkillRoot);
     assert.equal(
-      fs.realpathSync(path.join(env.CODEX_HOME, 'skills', 'agent-reach')),
-      fs.realpathSync(managerSkillRoot),
+      resolvedSourceRoot.startsWith(
+        fs.realpathSync(path.join(env.CODEX_HOME, 'opl-companion-sources', 'github')),
+      ),
+      true,
+      resolvedSourceRoot,
     );
+    assert.equal(resolvedSourceRoot, fs.realpathSync(agentsSkillRoot));
+    assert.notEqual(resolvedSourceRoot, fs.realpathSync(privateManagerSkillRoot));
     assert.equal(
-      fs.realpathSync(path.join(home, '.agents', 'skills', 'agent-reach')),
-      fs.realpathSync(managerSkillRoot),
+      fs.readFileSync(path.join(resolvedSourceRoot, 'SKILL.md'), 'utf8'),
+      fs.readFileSync(path.join(upstreamSkillRoot, 'SKILL.md'), 'utf8'),
     );
     assert.equal(migration.dependency_sync.items[0].status, 'synced');
-    assert.equal(migration.dependency_sync.items[0].source_authority, 'skills_manager');
+    assert.equal(migration.dependency_sync.items[0].source_authority, 'github_repository');
+    assert.equal(migration.dependency_sync.items[0].frontmatter_schema_status, 'valid');
+    assert.equal(migration.dependency_sync.items[0].resource_closure_status, 'complete');
   } finally {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
@@ -480,19 +555,29 @@ test('workflow policy v3 projects a generic install action when a required Skill
       'first_party',
     ], env) as any;
     const migration = installed.opl_agent_package_install.physical_surface.workflow_policy_migration;
-    assert.equal(migration.dependency_sync.items[0].skill_id, 'agent-reach');
+    assert.equal(migration.dependency_sync.items[0].skill_id, 'fixture-managed-skill');
     assert.equal(migration.dependency_sync.items[0].status, 'missing_source');
     assert.equal(migration.dependency_sync.items[0].action, 'install');
-    assert.match(migration.dependency_sync.items[0].note, /Requested version: \^1/);
-    assert.match(migration.dependency_sync.items[0].note, /Preferred source: skills-manager/);
+    assert.match(migration.dependency_sync.items[0].note, /https:\/\/github\.com\/fixture\/managed-skill/);
+    assert.match(migration.dependency_sync.items[0].note, /skills\/fixture-managed-skill/);
 
     const status = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
     const packageReadback = status.opl_agent_package_status.owner_route_readback.packages[0];
-    assert.equal(status.opl_agent_package_status.operational_ready, true);
-    assert.equal(packageReadback.lifecycle_ux.status, 'installed');
-    assert.equal(packageReadback.materializer.managed_policy_currentness.status, 'drifted');
+    assert.equal(status.opl_agent_package_status.operational_ready, false);
+    assert.equal(status.opl_agent_package_status.status, 'attention_needed');
     assert.equal(
-      packageReadback.materializer.managed_policy_currentness.dependency_sync.items[0].action,
+      status.opl_agent_package_status.launch_blocked_reason,
+      'managed_policy_required_dependency_unavailable',
+    );
+    assert.equal(status.opl_agent_package_status.repair_action, 'opl packages repair --package-id fixture.opl-flow');
+    assert.equal(packageReadback.lifecycle_ux.status, 'attention_needed');
+    assert.equal(packageReadback.lifecycle_ux.recommended_action, 'repair');
+    const currentness = packageReadback.materializer.managed_policy_currentness;
+    assert.equal(currentness.status, 'drifted');
+    assert.equal(currentness.required_dependencies_operational, false);
+    assert.deepEqual(currentness.required_dependency_failure_ids, ['fixture-managed-skill']);
+    assert.equal(
+      currentness.dependency_sync.items[0].action,
       'install',
     );
   } finally {
@@ -602,6 +687,41 @@ test('OPL Flow package lifecycle advances workflow policy v1 v2 v3 and reaches a
         .materializer.managed_policy_currentness.status,
       'current',
     );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+  }
+});
+
+test('workflow policy v3 keeps a missing recommended Skill non-blocking', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-policy-v3-missing-recommended-skill-'));
+  const home = path.join(root, 'home');
+  const env = {
+    HOME: home,
+    CODEX_HOME: path.join(home, '.codex'),
+    OPL_STATE_DIR: path.join(root, 'state'),
+    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+  };
+  try {
+    await runCliAsync([
+      'packages',
+      'install',
+      '--manifest-url',
+      writeOplFlowPackage(root, {
+        policyVersion: 'v3',
+        includeManagedSkillCompanion: true,
+      }),
+      '--trust-tier',
+      'first_party',
+    ], env);
+    const status = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
+    const packageReadback = status.opl_agent_package_status.owner_route_readback.packages[0];
+    const currentness = packageReadback.materializer.managed_policy_currentness;
+    assert.equal(status.opl_agent_package_status.operational_ready, true);
+    assert.equal(status.opl_agent_package_status.launch_blocked_reason, null);
+    assert.equal(currentness.status, 'drifted');
+    assert.equal(currentness.required_dependencies_operational, true);
+    assert.deepEqual(currentness.required_dependency_failure_ids, []);
+    assert.equal(currentness.dependency_sync.items[0].status, 'missing_source');
   } finally {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
@@ -810,33 +930,47 @@ test('managed policy currentness detects and repairs a missing Agents skill entr
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-skill-currentness-'));
   const home = path.join(root, 'home');
   const codexHome = path.join(home, '.codex');
-  const managerSkillRoot = path.join(home, '.skills-manager', 'skills', 'ui-ux-pro-max');
+  const upstreamRoot = path.join(root, 'upstream');
+  const upstreamSkillRoot = path.join(upstreamRoot, 'skill');
+  const sourceUrl = 'https://github.com/fixture/ui-ux-pro-max';
   const codexSkillRoot = path.join(codexHome, 'skills', 'ui-ux-pro-max');
   const agentsSkillRoot = path.join(home, '.agents', 'skills', 'ui-ux-pro-max');
   const env = {
     HOME: home,
     CODEX_HOME: codexHome,
     OPL_STATE_DIR: path.join(root, 'state'),
-    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+    GIT_CONFIG_COUNT: '1',
+    GIT_CONFIG_KEY_0: `url.file://${upstreamRoot}.insteadOf`,
+    GIT_CONFIG_VALUE_0: sourceUrl,
   };
   try {
     writeFile(
-      path.join(managerSkillRoot, 'SKILL.md'),
-      '---\nname: ui-ux-pro-max\ndescription: Skills Manager UI review skill.\n---\n\n# UI UX Pro Max\n',
+      path.join(upstreamSkillRoot, 'SKILL.md'),
+      '---\nname: ui-ux-pro-max\ndescription: GitHub UI review skill.\n---\n\n# UI UX Pro Max\n',
     );
+    execFileSync('git', ['init', upstreamRoot]);
+    execFileSync('git', ['-C', upstreamRoot, 'add', '.']);
+    execFileSync('git', [
+      '-C', upstreamRoot,
+      '-c', 'user.name=Fixture',
+      '-c', 'user.email=fixture@example.com',
+      'commit', '-m', 'fixture upstream',
+    ]);
     const installed = await runCliAsync([
-      'packages', 'install', '--manifest-url', writeOplFlowPackage(root, { includeManagedSkillCompanion: true }),
+      'packages', 'install', '--manifest-url', writeOplFlowPackage(root, {
+        includeManagedSkillCompanion: true,
+        policyVersion: 'v3',
+      }),
       '--trust-tier', 'first_party',
     ], env) as any;
     assert.equal(installed.opl_agent_package_install.status, 'installed');
-    assert.equal(fs.realpathSync(codexSkillRoot), fs.realpathSync(managerSkillRoot));
-    assert.equal(fs.realpathSync(agentsSkillRoot), fs.realpathSync(managerSkillRoot));
+    assert.equal(fs.realpathSync(agentsSkillRoot), fs.realpathSync(codexSkillRoot));
 
     const current = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
     const currentness = current.opl_agent_package_status.owner_route_readback.packages[0]
       .materializer.managed_policy_currentness;
     assert.equal(currentness.status, 'current');
-    assert.equal(currentness.dependency_sync.items[0].source_authority, 'skills_manager');
+    assert.equal(currentness.dependency_sync.items[0].source_authority, 'github_repository');
     assert.equal(currentness.dependency_sync.items[0].payload_currentness, 'current');
     assert.equal(currentness.dependency_sync.items[0].entrypoint_authority_status, 'converged');
 
@@ -856,7 +990,15 @@ test('managed policy currentness detects and repairs a missing Agents skill entr
 
     const repaired = runCli(['packages', 'repair', '--package-id', 'fixture.opl-flow'], env) as any;
     assert.equal(repaired.opl_agent_package_repair.status, 'repaired');
-    assert.equal(fs.realpathSync(agentsSkillRoot), fs.realpathSync(managerSkillRoot));
+    const repairedItem = repaired.opl_agent_package_repair.physical_surface
+      .workflow_policy_migration.dependency_sync.items[0];
+    assert.equal(repairedItem.status, 'synced', JSON.stringify(repairedItem));
+    assert.equal(
+      fs.existsSync(agentsSkillRoot),
+      true,
+      JSON.stringify(repaired.opl_agent_package_repair.physical_surface.workflow_policy_migration, null, 2),
+    );
+    assert.equal(fs.realpathSync(agentsSkillRoot), fs.realpathSync(codexSkillRoot));
     const repairedStatus = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
     assert.equal(
       repairedStatus.opl_agent_package_status.owner_route_readback.packages[0]

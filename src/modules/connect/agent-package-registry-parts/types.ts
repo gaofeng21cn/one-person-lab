@@ -342,6 +342,7 @@ export type AgentPackageManagedPolicyDependency = {
   online_install_default: boolean;
   activation: 'always' | 'task_routed' | 'explicit';
   source?: string;
+  source_path?: string;
   owner?: string;
   version_requirement?: string;
   install_source?: string;
@@ -409,6 +410,8 @@ export type AgentPackageManagedPolicyCurrentness = {
   enabled_migration_ids: string[];
   detected_conflicts: AgentPackageManagedPolicyDetectedConflict[];
   dependency_sync: Record<string, unknown> | null;
+  required_dependencies_operational?: boolean;
+  required_dependency_failure_ids?: string[];
   repair_command: string | null;
   reason: string;
 };

@@ -37,6 +37,7 @@ export type OplCompanionSkillActionStatus = 'planned' | 'ready' | 'missing_sourc
 export type OplCompanionSkillApplyMode = 'observe' | 'ask_to_apply' | 'managed';
 export type OplCompanionSkillSourceAuthority =
   | 'skills_manager'
+  | 'github_repository'
   | 'packaged_runtime'
   | 'framework_materialized_fallback'
   | 'codex_builtin'
@@ -50,7 +51,7 @@ export type OplCompanionSkillSyncItem = {
   target_path: string;
   agents_target_path: string;
   status: OplCompanionSkillActionStatus;
-  action: 'none' | 'install' | 'symlink' | 'clone_and_symlink' | 'update_and_symlink' | 'discover_only';
+  action: 'none' | 'install' | 'package_update_or_repair' | 'symlink' | 'clone_and_symlink' | 'update_and_symlink' | 'discover_only';
   source_authority: OplCompanionSkillSourceAuthority;
   source_payload_sha256: string | null;
   installed_payload_sha256: string | null;
@@ -86,8 +87,11 @@ export type OplRecommendedSkill = {
   skill_id: string;
   label: string;
   required: boolean;
-  source: 'skills_manager' | 'codex_builtin' | 'github';
+  source: 'skills_manager' | 'codex_builtin' | 'github' | 'existing_entrypoint';
   managed_dependency?: boolean;
+  managed_dependency_mode?: 'github' | 'observe_existing';
+  repository_url?: string;
+  repository_source_path?: string;
   expected_paths: string[];
   install_source_paths?: string[];
   status: OplCompanionSkillStatus;
@@ -97,13 +101,24 @@ export type OplRecommendedSkill = {
   supports: string[];
 };
 
-export type OplManagedSkillDependency = {
+type OplManagedSkillDependencyBase = {
   id: string;
-  source?: string;
   versionRequirement?: string;
   installSource?: string;
   required: boolean;
 };
+
+export type OplManagedSkillDependency = OplManagedSkillDependencyBase & (
+  | {
+      sourceMode: 'github';
+      repositoryUrl: string;
+      repositorySourcePath: string;
+    }
+  | {
+      sourceMode: 'observe_existing';
+      legacySource: string;
+    }
+);
 
 export type OplGuiShellSurface = {
   shell_id: 'opl_aion_shell';
@@ -161,6 +176,10 @@ function resolveAgentsSkillsDir(home: string) {
 
 function resolveCompanionSourcesRoot(home: string) {
   return process.env.OPL_COMPANION_SOURCES_ROOT?.trim() || path.join(resolveCodexHome(home), 'opl-companion-sources');
+}
+
+function resolveManagedGithubSourcesRoot(home: string) {
+  return path.join(resolveCompanionSourcesRoot(home), 'github');
 }
 
 function resolvePackagedSkillsRoot() {
@@ -342,7 +361,30 @@ function frontmatterFieldValue(frontmatterLines: string[], key: string) {
   return value.trim();
 }
 
-function validateSkillFrontmatter(content: string, expectedName: string) {
+function normalizedSkillIdentity(value: string) {
+  return value.trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function upstreamSkillSlug(skillRoot: string) {
+  const metadataPath = path.join(skillRoot, '_meta.json');
+  if (!fs.existsSync(metadataPath) || !fs.statSync(metadataPath).isFile()) return null;
+  try {
+    const payload = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    return typeof payload?.slug === 'string' && payload.slug.trim()
+      ? payload.slug.trim()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function validateSkillFrontmatter(
+  content: string,
+  expectedName: string,
+  options: { allowUpstreamIdentity?: boolean; upstreamSlug?: string | null } = {},
+) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
   if (!match) return ['missing_or_invalid_frontmatter'];
   const lines = match[1].split(/\r?\n/);
@@ -358,9 +400,14 @@ function validateSkillFrontmatter(content: string, expectedName: string) {
     if (!keys.includes(required)) errors.push(`missing_frontmatter_field:${required}`);
   }
   const name = frontmatterFieldValue(lines, 'name');
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || name.length > 64) {
+  const upstreamIdentityMatches = options.allowUpstreamIdentity === true
+    && (
+      normalizedSkillIdentity(name) === expectedName
+      || options.upstreamSlug === expectedName
+    );
+  if (!name || ((!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || name.length > 64) && !upstreamIdentityMatches)) {
     errors.push('invalid_frontmatter_name');
-  } else if (name !== expectedName) {
+  } else if (name !== expectedName && !upstreamIdentityMatches) {
     errors.push(`frontmatter_name_mismatch:${name}`);
   }
   const description = frontmatterFieldValue(lines, 'description');
@@ -371,7 +418,11 @@ function validateSkillFrontmatter(content: string, expectedName: string) {
   return errors;
 }
 
-function inspectSkillPayload(skillRoot: string, expectedName: string): SkillPayloadInspection {
+function inspectSkillPayload(
+  skillRoot: string,
+  expectedName: string,
+  options: { allowUpstreamIdentity?: boolean } = {},
+): SkillPayloadInspection {
   const skillPath = path.join(skillRoot, 'SKILL.md');
   if (!fs.existsSync(skillPath) || !fs.statSync(skillPath).isFile()) {
     return {
@@ -383,7 +434,10 @@ function inspectSkillPayload(skillRoot: string, expectedName: string): SkillPayl
     };
   }
   const content = fs.readFileSync(skillPath, 'utf8');
-  const frontmatterErrors = validateSkillFrontmatter(content, expectedName);
+  const frontmatterErrors = validateSkillFrontmatter(content, expectedName, {
+    allowUpstreamIdentity: options.allowUpstreamIdentity,
+    upstreamSlug: options.allowUpstreamIdentity ? upstreamSkillSlug(skillRoot) : null,
+  });
   const resolvedRoot = realPathOrNull(skillRoot) ?? path.resolve(skillRoot);
   const resourcePaths = [...content.matchAll(SKILL_RESOURCE_PATTERN)]
     .map((match) => match[1].replace(/[.,;:)]*$/, ''));
@@ -413,6 +467,7 @@ function skillSourceAuthority(home: string, skillRoot: string): OplCompanionSkil
   const packagedSkillsRoot = resolvePackagedSkillsRoot();
   const candidates: Array<[string | null, OplCompanionSkillSourceAuthority]> = [
     [path.join(home, '.skills-manager', 'skills'), 'skills_manager'],
+    [resolveManagedGithubSourcesRoot(home), 'github_repository'],
     [packagedSkillsRoot, 'packaged_runtime'],
     [resolveCompanionSourcesRoot(home), 'framework_materialized_fallback'],
     [path.join(resolveCodexHome(home), 'plugins', 'cache'), 'codex_builtin'],
@@ -534,8 +589,29 @@ function materializeSingleSkillRoot(sourceRoot: string, targetRoot: string) {
   normalizeMaterializedSkillPermissions(targetRoot);
 }
 
+function canonicalGithubRepositoryUrl(value: string) {
+  return value.trim()
+    .replace(/\/+$/, '')
+    .replace(/\.git$/i, '')
+    .toLowerCase();
+}
+
+function githubRepositoryOriginMatches(repoUrl: string, repoDir: string) {
+  const remoteResult = runGit(['config', '--get', 'remote.origin.url'], repoDir);
+  return remoteResult.exitCode === 0
+    && canonicalGithubRepositoryUrl(remoteResult.stdout) === canonicalGithubRepositoryUrl(repoUrl);
+}
+
 function cloneOrUpdateRepo(repoUrl: string, repoDir: string) {
   if (fs.existsSync(path.join(repoDir, '.git'))) {
+    if (!githubRepositoryOriginMatches(repoUrl, repoDir)) {
+      return {
+        ok: false,
+        status: 'manual_required' as const,
+        note: `Managed companion source origin does not match ${repoUrl}: ${repoDir}`,
+        sourceDigest: null,
+      };
+    }
     const statusResult = runGit(['status', '--porcelain'], repoDir);
     if (statusResult.exitCode !== 0 || statusResult.stdout.trim()) {
       return {
@@ -573,6 +649,79 @@ function cloneOrUpdateRepo(repoUrl: string, repoDir: string) {
     sourceDigest: cloneResult.exitCode === 0
       ? runGit(['rev-parse', 'HEAD'], repoDir).stdout.trim() || null
       : null,
+  };
+}
+
+function managedGithubRepositoryRoot(home: string, repositoryUrl: string) {
+  const digest = crypto.createHash('sha256')
+    .update(canonicalGithubRepositoryUrl(repositoryUrl))
+    .digest('hex')
+    .slice(0, 20);
+  return path.join(resolveManagedGithubSourcesRoot(home), digest);
+}
+
+function materializeManagedGithubSkillSource(
+  home: string,
+  skill: OplRecommendedSkill,
+  networkAccess: OplCompanionNetworkAccess,
+): OplCompanionSkillSourceCandidate | null {
+  if (!skill.repository_url || !skill.repository_source_path) return null;
+  const repoDir = managedGithubRepositoryRoot(home, skill.repository_url);
+  let refresh: ReturnType<typeof cloneOrUpdateRepo> | null = null;
+  if (!remoteCompanionInstallDisabled(networkAccess)) {
+    refresh = cloneOrUpdateRepo(skill.repository_url, repoDir);
+    if (!refresh.ok) {
+      return {
+        report_path: repoDir,
+        link_path: repoDir,
+        refresh_status: 'manual_required',
+        refresh_note: refresh.note,
+        source_digest: null,
+      };
+    }
+  } else {
+    if (!fs.existsSync(path.join(repoDir, '.git'))) return null;
+    if (!githubRepositoryOriginMatches(skill.repository_url, repoDir)) {
+      return {
+        report_path: repoDir,
+        link_path: repoDir,
+        refresh_status: 'manual_required',
+        refresh_note: `Managed companion source origin does not match ${skill.repository_url}: ${repoDir}`,
+        source_digest: null,
+      };
+    }
+  }
+  const sourceRoot = path.resolve(repoDir, skill.repository_source_path);
+  if (!isPathWithin(path.resolve(repoDir), sourceRoot)) return null;
+  const resolvedRepoRoot = realPathOrNull(repoDir);
+  const resolvedSourceRoot = realPathOrNull(sourceRoot);
+  if (
+    resolvedSourceRoot
+    && (!resolvedRepoRoot || !isPathWithin(resolvedRepoRoot, resolvedSourceRoot))
+  ) {
+    return {
+      report_path: sourceRoot,
+      link_path: sourceRoot,
+      refresh_status: 'manual_required',
+      refresh_note: `GitHub repository source_path escapes the repository: ${skill.repository_source_path}`,
+      source_digest: refresh?.sourceDigest ?? null,
+    };
+  }
+  const source = resolveSkillSourceCandidate(sourceRoot);
+  if (!source) {
+    return {
+      report_path: sourceRoot,
+      link_path: sourceRoot,
+      refresh_status: 'manual_required',
+      refresh_note: `GitHub repository source_path does not contain SKILL.md: ${skill.repository_source_path}`,
+      source_digest: refresh?.sourceDigest ?? null,
+    };
+  }
+  return {
+    ...source,
+    refresh_status: refresh?.status ?? 'current',
+    refresh_note: refresh?.note ?? null,
+    source_digest: refresh?.sourceDigest ?? null,
   };
 }
 
@@ -746,9 +895,14 @@ function ensureRecommendedSkillSource(
   skill: OplRecommendedSkill,
   networkAccess: OplCompanionNetworkAccess,
 ): OplCompanionSkillSourceCandidate | null {
+  if (skill.managed_dependency_mode === 'observe_existing') {
+    return pickFirstExistingSkillSource(skill.expected_paths);
+  }
+  if (skill.managed_dependency_mode === 'github') {
+    return materializeManagedGithubSkillSource(home, skill, networkAccess);
+  }
   const installed = pickFirstExistingSkillSource(skill.install_source_paths ?? skill.expected_paths);
   if (installed) return installed;
-  if (skill.managed_dependency) return null;
 
   if (skill.skill_id === 'ui-ux-pro-max') {
     const managed = materializeUiUxProMaxSkillSource(home, networkAccess);
@@ -779,7 +933,9 @@ function buildFreshCompanionItem(
   const agentsTargetPath = path.join(resolveAgentsSkillsDir(home), skill.skill_id);
   const sourceRoot = input.source?.link_path ?? null;
   const builtin = skill.source === 'codex_builtin';
-  const sourceInspection = sourceRoot && !builtin ? inspectSkillPayload(sourceRoot, skill.skill_id) : null;
+  const sourceInspection = sourceRoot && !builtin
+    ? inspectSkillPayload(sourceRoot, skill.skill_id, { allowUpstreamIdentity: skill.source === 'github' })
+    : null;
   const sourceRealPath = sourceRoot ? realPathOrNull(sourceRoot) : null;
   const codexEntryRealPath = realPathOrNull(targetPath);
   const agentsEntryRealPath = realPathOrNull(agentsTargetPath);
@@ -834,6 +990,8 @@ function buildObservedCompanionItem(
       status: mode === 'ask_to_apply' ? 'planned' : 'missing_source',
       action: skill.source === 'codex_builtin'
         ? 'discover_only'
+        : skill.managed_dependency_mode === 'observe_existing'
+          ? 'package_update_or_repair'
         : skill.managed_dependency
           ? 'install'
           : 'none',
@@ -848,7 +1006,9 @@ function buildObservedCompanionItem(
       note: 'Codex bundled skill is available from its plugin cache.',
     });
   }
-  const inspection = inspectSkillPayload(source.link_path, skill.skill_id);
+  const inspection = inspectSkillPayload(source.link_path, skill.skill_id, {
+    allowUpstreamIdentity: skill.source === 'github',
+  });
   if (inspection.errors.length > 0) {
     return buildFreshCompanionItem(home, skill, {
       source,
@@ -863,6 +1023,14 @@ function buildObservedCompanionItem(
     action: 'none',
     note: null,
   });
+  if (skill.managed_dependency_mode === 'observe_existing') {
+    return {
+      ...observed,
+      source_authority: 'existing_codex_entry',
+      entrypoint_authority_status: 'not_applicable',
+      payload_currentness: observed.source_payload_sha256 ? 'current' : 'missing',
+    };
+  }
   if (observed.payload_currentness === 'current'
     && observed.entrypoint_authority_status === 'converged') {
     return observed;
@@ -985,13 +1153,33 @@ export function syncOplCompanionSkills(
       items.push(buildFreshCompanionItem(home, skill, {
         source: null,
         status: 'missing_source',
-        action: skill.managed_dependency ? 'install' : 'none',
+        action: skill.managed_dependency_mode === 'observe_existing'
+          ? 'package_update_or_repair'
+          : skill.managed_dependency ? 'install' : 'none',
         note: skill.install_hint,
       }));
       continue;
     }
 
     try {
+      if (skill.managed_dependency_mode === 'observe_existing') {
+        const inspection = inspectSkillPayload(source.link_path, skill.skill_id);
+        items.push(buildFreshCompanionItem(home, skill, {
+          source,
+          status: inspection.errors.length > 0 ? 'failed' : 'ready',
+          action: 'none',
+          note: inspection.errors.length > 0
+            ? `Existing Skill payload validation failed: ${inspection.errors.join(', ')}`
+            : 'Existing compatible Skill entrypoint observed; legacy policy sources are not used to fetch, copy, or update bytes.',
+        }));
+        const observed = items.at(-1);
+        if (observed) {
+          observed.source_authority = 'existing_codex_entry';
+          observed.entrypoint_authority_status = 'not_applicable';
+          observed.payload_currentness = observed.source_payload_sha256 ? 'current' : 'missing';
+        }
+        continue;
+      }
       if (source.refresh_status === 'manual_required') {
         items.push(buildFreshCompanionItem(home, skill, {
           source,
@@ -1010,7 +1198,9 @@ export function syncOplCompanionSkills(
         }));
         continue;
       }
-      const inspection = inspectSkillPayload(source.link_path, skill.skill_id);
+      const inspection = inspectSkillPayload(source.link_path, skill.skill_id, {
+        allowUpstreamIdentity: skill.source === 'github',
+      });
       if (inspection.errors.length > 0) {
         items.push(buildFreshCompanionItem(home, skill, {
           source,
@@ -1055,23 +1245,44 @@ export function buildOplRecommendedSkills(
     'mineru-open-api': Boolean(resolveMineruOpenApiTool(home)),
   };
 
-  const managedSpecs = managedSkillDependencies.map((dependency): Omit<OplRecommendedSkill, 'status'> => ({
-    skill_id: dependency.id,
-    label: dependency.id,
-    required: dependency.required,
-    source: 'skills_manager',
-    managed_dependency: true,
-    expected_paths: [
-      path.join(skillsManagerHome, 'skills', dependency.id, 'SKILL.md'),
-      ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, dependency.id, 'SKILL.md')] : []),
-    ],
-    install_hint: [
-      `Install or otherwise provide a compatible ${dependency.source ?? dependency.id} Skill.`,
-      dependency.versionRequirement ? `Requested version: ${dependency.versionRequirement}.` : null,
-      dependency.installSource ? `Preferred source: ${dependency.installSource}.` : null,
-    ].filter(Boolean).join(' '),
-    supports: [dependency.id],
-  }));
+  const managedSpecs = managedSkillDependencies.map((dependency): Omit<OplRecommendedSkill, 'status'> => {
+    const github = dependency.sourceMode === 'github';
+    return {
+      skill_id: dependency.id,
+      label: dependency.id,
+      required: dependency.required,
+      source: github ? 'github' : 'existing_entrypoint',
+      managed_dependency: true,
+      managed_dependency_mode: github ? 'github' : 'observe_existing',
+      ...(github
+        ? {
+            repository_url: dependency.repositoryUrl,
+            repository_source_path: dependency.repositorySourcePath,
+          }
+        : {}),
+      expected_paths: github
+        ? [
+            path.join(
+              managedGithubRepositoryRoot(home, dependency.repositoryUrl),
+              dependency.repositorySourcePath,
+              'SKILL.md',
+            ),
+          ]
+        : [
+            path.join(resolveCodexSkillsDir(home), dependency.id, 'SKILL.md'),
+            path.join(resolveAgentsSkillsDir(home), dependency.id, 'SKILL.md'),
+            path.join(home, '.skills-manager', 'skills', dependency.id, 'SKILL.md'),
+          ],
+      install_hint: github
+        ? [
+            `Install ${dependency.id} from ${dependency.repositoryUrl} (${dependency.repositorySourcePath}).`,
+            dependency.versionRequirement ? `Requested version: ${dependency.versionRequirement}.` : null,
+            dependency.installSource ? `Preferred source: ${dependency.installSource}.` : null,
+          ].filter(Boolean).join(' ')
+        : `Update or repair the package to migrate ${dependency.id} to a public repository source; only an existing compatible entrypoint is observed for this legacy policy.`,
+      supports: [dependency.id],
+    };
+  });
   const managedIds = new Set(managedSpecs.map((entry) => entry.skill_id));
   const specs = [
     ...buildOplRecommendedSkillSpecs({
@@ -1083,18 +1294,20 @@ export function buildOplRecommendedSkills(
   ];
 
   return specs.map((spec) => {
-    const expectedPaths = spec.source === 'codex_builtin'
+    const independentlyResolved = spec.source === 'codex_builtin'
+      || spec.managed_dependency === true;
+    const expectedPaths = independentlyResolved
       ? spec.expected_paths
       : [
-        ...spec.expected_paths,
-        path.join(codexHome, 'skills', spec.skill_id, 'SKILL.md'),
-      ];
-    const installSourcePaths = spec.source === 'codex_builtin'
-      ? spec.expected_paths
+          ...spec.expected_paths,
+          path.join(codexHome, 'skills', spec.skill_id, 'SKILL.md'),
+        ];
+    const installSourcePaths = independentlyResolved
+      ? expectedPaths
       : [
-        ...expectedPaths,
-        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, spec.skill_id, 'SKILL.md')] : []),
-      ];
+          ...expectedPaths,
+          ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, spec.skill_id, 'SKILL.md')] : []),
+        ];
     const skillStatus = buildSkillStatus(expectedPaths);
     const toolStatus = spec.required_tools?.every((toolId) => toolReadyById[toolId]) ?? true;
     return {
