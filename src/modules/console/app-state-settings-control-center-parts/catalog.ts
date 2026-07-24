@@ -197,13 +197,13 @@ export const APP_AION_CONSUMER_ONLY_TRUTH_SURFACES: ConsumerOnlyTruthSurface[] =
   {
     surface: 'managed_module_and_capability_packages',
     owner: 'one-person-lab',
-    truth_owner: 'one-person-lab Packages status index and use-boundary current/LKG selection',
+    truth_owner: 'one-person-lab Packages fresh status and presence projection',
     app_aion_role: 'show functional package readiness and package action refs while source carriers remain provenance',
     local_truth_allowed: false,
     current_source_ref: 'app_state.agent_packages.status_index',
     delegated_action_id: 'agent_package_repair',
     receipt_ref_or_typed_blocker_ref: null,
-    blocked_reason: 'repair_only_when_installed_enabled_package_has_no_runnable_current_or_last_known_good_generation',
+    blocked_reason: 'repair_only_when_installed_enabled_package_has_no_fresh_runnable_readback',
     package_descriptor_ref: 'app_state.agent_packages.directory',
     required_visible_refs: [
       'package_descriptor_ref',

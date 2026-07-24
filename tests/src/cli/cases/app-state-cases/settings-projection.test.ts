@@ -114,7 +114,7 @@ test('full Settings projection follows App page ownership without treating activ
   assert.deepEqual(settings.settings_projection.ordinary_sections, ORDINARY_SETTINGS_SECTIONS);
   assert.deepEqual(contract.package_functional_readiness, {
     source_ref: 'app_state.agent_packages.status_index',
-    attention_scope: 'installed_enabled_packages_without_runnable_current_or_last_known_good_generation',
+    attention_scope: 'installed_enabled_packages_without_fresh_runnable_readback',
     disabled_and_uninstalled_packages_are_attention: false,
     runtime_source_carriers_role: 'provenance_only',
     runtime_source_carrier_health_can_enqueue_issue: false,
@@ -300,7 +300,7 @@ test('Settings projects environment-managed workspace roots as read-only', () =>
   assert.equal(workspaceRoot.editable_reason, 'deployment_environment_owns_workspace_root');
 });
 
-test('Settings treats runtime source carrier health as provenance and package generations as functional truth', () => {
+test('Settings treats runtime source carrier health as provenance and fresh package readback as functional truth', () => {
   const baseInput = {
     profile: 'full' as const,
     core: {
@@ -381,13 +381,15 @@ test('Settings treats runtime source carrier health as provenance and package ge
     },
   });
 
-  assert.equal(settings.issue_queue.length, 0);
+  assert.equal(settings.issue_queue.length, 1);
+  assert.deepEqual(settings.issue_queue[0].affected_ids, ['oma']);
+  assert.equal(settings.issue_queue[0].recommended_action_id, 'agent_package_repair');
   assert.equal(settings.status_summary.runtime_source_carrier_health, '0/2');
-  assert.equal(settings.status_summary.agent_package_functional_health, '2/2');
-  assert.equal(settings.settings_projection.sections.agents.items[0].state, 'ready');
-  assert.equal(settings.settings_projection.sections.agents.items[0].next_action, 'none');
-  assert.equal(settings.settings_projection.sections.capabilities.items[0].state, 'available');
-  assert.equal(settings.settings_projection.sections.capabilities.items[0].next_action, 'none');
+  assert.equal(settings.status_summary.agent_package_functional_health, '1/2');
+  assert.equal(settings.settings_projection.sections.agents.items[0].state, 'attention_needed');
+  assert.equal(settings.settings_projection.sections.agents.items[0].next_action, 'agent_package_repair');
+  assert.equal(settings.settings_projection.sections.capabilities.items[0].state, 'attention_needed');
+  assert.equal(settings.settings_projection.sections.capabilities.items[0].next_action, 'agent_package_repair');
   assert.equal(
     settings.task_entries.find((entry) => entry.action_id === 'settings_sync_capabilities')?.state,
     'ready',
@@ -403,7 +405,6 @@ test('Settings treats runtime source carrier health as provenance and package ge
       { id: 'oma', status: 'provenance_observation', observation: 'missing', next_action: 'none' }],
   );
   assert.equal(JSON.stringify(settings.issue_queue).includes('settings_sync_capabilities'), false);
-
   const noRunnableGeneration = buildSettingsControlCenter({
     ...baseInput,
     agentPackages: {

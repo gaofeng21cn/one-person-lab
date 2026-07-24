@@ -78,7 +78,7 @@
   },
   "package_functional_readiness": {
     "source_ref": "app_state.agent_packages.status_index",
-    "attention_scope": "installed_enabled_packages_without_runnable_current_or_last_known_good_generation",
+    "attention_scope": "installed_enabled_packages_without_fresh_runnable_readback",
     "disabled_and_uninstalled_packages_are_attention": false,
     "runtime_source_carriers_role": "provenance_only",
     "runtime_source_carrier_health_can_enqueue_issue": false,
@@ -590,7 +590,7 @@
       },
       {
         "surface": "managed_module_and_capability_packages",
-        "truth_owner": "one-person-lab Packages status index and use-boundary current/LKG selection",
+        "truth_owner": "one-person-lab Packages fresh status and presence projection",
         "app_aion_role": "show functional package readiness and package action refs while source carriers remain provenance",
         "local_truth_allowed": false,
         "required_visible_refs": [

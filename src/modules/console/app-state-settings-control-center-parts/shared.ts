@@ -42,7 +42,7 @@ export function agentPackageFunctionalReadiness(agentPackages: JsonRecord) {
     const runnable = enabled && (
       status.operational_ready === true
       || status.launch_allowed === true
-      || ['available', 'ready', 'verification_deferred', 'using_last_known_good'].includes(statusCode)
+      || ['available', 'ready', 'verification_deferred'].includes(statusCode)
     );
     return {
       package_id: packageId,
