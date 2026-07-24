@@ -1,9 +1,8 @@
 import type { JsonRecord } from '../../kernel/json-record.ts';
 import { deriveAgentPackageLaunchState } from '../../kernel/agent-package-launch-state.ts';
-import {
-  requiredDependents,
-  type AgentPackageLockIndex,
-  type runOplAgentPackageStatus,
+import type {
+  AgentPackageLockIndex,
+  runOplAgentPackageStatus,
 } from '../connect/public/app-state.ts';
 import type { AppStateProfile } from './app-state-profile.ts';
 
@@ -14,199 +13,161 @@ type RawDependencyCheck = RawDependencyReadiness['dependencies'][number];
 const REPAIR_COMMAND_REF =
   'opl app action execute --action agent_package_repair --payload <json> --json';
 
-const HARD_DEPENDENCY_FAILURE_REASONS = new Set([
-  'package_id_mismatch',
-  'dependency_lock_missing',
-  'dependency_disabled',
-  'capability_abi_mismatch',
-  'consumer_profile_missing',
-  'consumer_profile_consumer_mismatch',
-  'consumer_profile_requirements_mismatch',
-  'required_exports_missing',
-  'required_modules_missing',
-]);
-
-function selectedLock(index: AgentPackageLockIndex, packageId: string | null) {
-  return packageId ? index.packages.find((entry) => entry.package_id === packageId) ?? null : null;
+function compactDependencyReason(reason: string) {
+  if (reason === 'dependency_lock_missing') return 'package_missing';
+  if (reason === 'dependency_disabled') return 'package_disabled';
+  if (reason === 'package_id_mismatch') return 'package_identity_mismatch';
+  if (
+    reason === 'consumer_profile_missing'
+    || reason === 'consumer_profile_consumer_mismatch'
+    || reason === 'consumer_profile_requirements_mismatch'
+    || reason === 'required_exports_missing'
+    || reason === 'required_modules_missing'
+  ) {
+    return 'package_not_callable';
+  }
+  if (
+    reason.includes('version')
+    || reason.includes('abi')
+    || reason.includes('digest')
+    || reason.includes('lock')
+    || reason.includes('receipt')
+  ) {
+    return null;
+  }
+  return reason;
 }
 
-function canonicalDependencyStatus(
+function compactDependencyCheck(check: RawDependencyCheck) {
+  const present = check.status !== 'missing';
+  const reasons = [...new Set(
+    (check.reasons ?? [])
+      .map(compactDependencyReason)
+      .filter((reason): reason is string => Boolean(reason)),
+  )];
+  const callable = present && reasons.length === 0;
+  return {
+    package_id: check.package_id,
+    required: check.required !== false,
+    present,
+    callable,
+    status: !present ? 'missing' : callable ? 'callable' : 'unavailable',
+    reasons,
+  };
+}
+
+function compactDependencyReadiness(
   installed: boolean,
   readiness: RawAgentPackageStatus['package_dependency_readiness'],
 ) {
-  if (!installed || !readiness) return 'blocked' as const;
-  const hardFailure = (readiness.dependencies ?? []).some((check) =>
-    check.required !== false
-    && (check.reasons ?? []).some((reason) => HARD_DEPENDENCY_FAILURE_REASONS.has(reason)));
-  return hardFailure ? 'repair_required' as const : 'ready' as const;
-}
-
-function dependencyCheck(
-  check: RawDependencyCheck,
-  index: AgentPackageLockIndex,
-) {
-  const provider = index.packages.find((entry) => entry.package_id === check.package_id) ?? null;
-  const failureReasons = [...(check.reasons ?? [])];
-  const installed = Boolean(provider ?? check.installed_version);
-  const enabled = installed && provider?.exposure_state !== 'disabled'
-    && !failureReasons.includes('dependency_disabled');
-  const versionSatisfied = installed && !failureReasons.includes('version_requirement_unsatisfied');
-  const installedCapabilityAbi = provider?.capability_provider?.capability_abi
-    ?? (check.status === 'current' ? check.capability_abi : null);
-  const abiSatisfied = installed && !failureReasons.includes('capability_abi_mismatch');
-  const requiredExportIds = check.required_export_ids ?? [];
-  const availableExportIds = provider?.capability_provider?.exports.map((entry) => entry.export_id)
-    ?? (check.status === 'current' ? requiredExportIds : []);
-  const exportsSatisfied = installed && !failureReasons.includes('required_exports_missing');
-  const requiredModuleIds = check.required_module_ids ?? [];
-  const availableModuleIds = provider?.capability_provider?.module_export_ids
-    ?? (check.status === 'current' ? requiredModuleIds : []);
-  const modulesSatisfied = installed && !failureReasons.includes('required_modules_missing');
-  const hardFailureReasons = failureReasons.filter((reason) =>
-    HARD_DEPENDENCY_FAILURE_REASONS.has(reason));
-  const physicalSurfaceStatus = provider?.physical_surface?.status ?? null;
+  const checks = (readiness?.dependencies ?? []).map(compactDependencyCheck);
+  const requiredChecks = checks.filter((check) => check.required);
+  const operational = readiness?.operational_ready === true
+    && requiredChecks.every((check) => check.present && check.callable);
   return {
-    package_id: check.package_id,
-    required: check.required,
-    installed,
-    enabled,
-    version_requirement: check.version_requirement,
-    installed_version: provider?.package_version ?? check.installed_version,
-    version_satisfied: versionSatisfied,
-    capability_abi: check.capability_abi,
-    consumer_profile_id: check.consumer_profile_id ?? null,
-    installed_capability_abi: installedCapabilityAbi,
-    abi_satisfied: abiSatisfied,
-    required_export_ids: requiredExportIds,
-    available_export_ids: [...new Set(availableExportIds)].sort(),
-    exports_satisfied: exportsSatisfied,
-    required_module_ids: requiredModuleIds,
-    available_module_ids: [...new Set(availableModuleIds)].sort(),
-    modules_satisfied: modulesSatisfied,
-    content_lock_digest: provider?.content_digest ?? check.content_digest,
-    physical_surface_status: physicalSurfaceStatus,
-    ready: installed && enabled && abiSatisfied && exportsSatisfied && modulesSatisfied
-      && hardFailureReasons.length === 0,
-    hard_failure_reasons: hardFailureReasons,
-    currentness_observations: failureReasons.filter((reason) =>
-      !HARD_DEPENDENCY_FAILURE_REASONS.has(reason)),
-    failure_reasons: failureReasons,
-  };
-}
-
-function dependencyClosure(index: AgentPackageLockIndex, packageId: string | null) {
-  const lock = selectedLock(index, packageId);
-  if (!lock?.dependency_transaction_id || !lock.dependency_closure_digest) return null;
-  const lastKnownGood = index.last_known_good_transactions
-    ?.find((entry) => entry.root_package_id === lock.package_id) ?? null;
-  return {
-    transaction_id: lock.dependency_transaction_id,
-    closure_digest: lock.dependency_closure_digest,
-    last_known_good_transaction_id: lastKnownGood?.transaction_id ?? null,
-    last_known_good_closure_digest: lastKnownGood?.closure_digest ?? null,
-  };
-}
-
-function canonicalDependencyReadiness(
-  status: RawAgentPackageStatus,
-  index: AgentPackageLockIndex,
-) {
-  const lock = selectedLock(index, status.package_id);
-  const rawChecks = status.package_dependency_readiness?.dependencies;
-  const checks = Array.isArray(rawChecks)
-    ? rawChecks.map((entry) => dependencyCheck(entry, index))
-    : [];
-  const requiredChecks = checks.filter((entry) => entry.required);
-  return {
-    status: canonicalDependencyStatus(
-      Boolean(lock ?? status.installed_packages[0]),
-      status.package_dependency_readiness,
-    ),
+    status: !installed ? 'blocked' : operational ? 'ready' : 'attention_needed',
     required_count: requiredChecks.length,
-    ready_count: requiredChecks.filter((entry) => entry.ready).length,
+    present_count: requiredChecks.filter((check) => check.present).length,
+    callable_count: requiredChecks.filter((check) => check.callable).length,
     checks,
-    closure: dependencyClosure(index, status.package_id),
   };
 }
 
-function canonicalRepairAction(
-  installed: boolean,
-  dependencyStatus: 'ready' | 'repair_required' | 'blocked',
-  hardRepairReason: string | null,
-) {
-  const enabled = installed && hardRepairReason !== null;
+function installedPackage(status: RawAgentPackageStatus) {
+  return status.installed_packages[0] ?? null;
+}
+
+function registeredPackageCount(status: RawAgentPackageStatus) {
+  return typeof status.installed_package_count === 'number'
+    ? status.installed_package_count
+    : status.installed_packages.length;
+}
+
+function compactRuntimeSourceReadiness(status: RawAgentPackageStatus) {
+  const readiness = status.runtime_source_readiness;
+  return readiness
+    ? {
+        status: readiness.status,
+        operational_ready: readiness.operational_ready,
+        reason: readiness.reason ?? null,
+      }
+    : null;
+}
+
+function projectedPresence(status: RawAgentPackageStatus) {
+  const registered = registeredPackageCount(status) > 0;
+  const runtimeSource = status.runtime_source_readiness;
+  const physicalPresent = registered && runtimeSource?.operational_ready !== false;
+  const callable = physicalPresent && status.launch_allowed === true;
+  return {
+    registered,
+    installed: physicalPresent,
+    present: physicalPresent,
+    callable,
+    status: !registered
+      ? 'not_installed'
+      : physicalPresent
+        ? 'present'
+        : 'physical_unavailable',
+    reason: callable ? null : status.launch_blocked_reason ?? null,
+  };
+}
+
+function exposureProjection(status: RawAgentPackageStatus, physicallyPresent: boolean) {
+  const exposureStatus = physicallyPresent
+    ? installedPackage(status)?.exposure_state ?? 'visible'
+    : registeredPackageCount(status) > 0
+      ? 'physical_unavailable'
+      : 'not_installed';
+  return {
+    status: exposureStatus,
+    codex_visible: physicallyPresent && exposureStatus === 'visible',
+  };
+}
+
+function repairAction(status: RawAgentPackageStatus, registered: boolean) {
+  const repairAvailable = status.lifecycle_action_refs?.includes('repair') === true;
+  const enabled = registered && repairAvailable && status.operational_ready !== true;
   return {
     action_id: 'agent_package_repair',
     command_ref: REPAIR_COMMAND_REF,
+    owner_command_ref: typeof status.repair_action === 'string' ? status.repair_action : null,
     enabled,
-    reason_code: !installed
-      ? 'package_not_installed'
-      : dependencyStatus === 'repair_required'
-        ? 'dependency_closure_repair_required'
-        : enabled
-          ? hardRepairReason
-          : 'dependency_closure_ready',
+    reason_code: enabled
+      ? status.launch_blocked_reason ?? 'package_attention_needed'
+      : !registered
+        ? 'package_not_installed'
+        : status.operational_ready === true
+          ? 'package_ready'
+          : 'repair_action_unavailable',
   };
 }
 
-function packageHardRepairReason(status: RawAgentPackageStatus) {
-  const hardDependencyReason = status.package_dependency_readiness?.dependencies
-    ?.filter((check) => check.required !== false)
-    .flatMap((check) => check.reasons ?? [])
-    .find((reason) => HARD_DEPENDENCY_FAILURE_REASONS.has(reason));
-  if (hardDependencyReason) return hardDependencyReason;
-  const materialization = status.materialization_readiness;
-  const requiredSkillIds = materialization?.core_readiness?.required_skill_ids
-    ?? materialization?.required_skill_ids
-    ?? [];
-  const materializedSkillIds = new Set(
-    materialization?.core_readiness?.materialized_skill_ids
-      ?? materialization?.materialized_skill_ids
-      ?? [],
-  );
-  const requiredSkillMissing = requiredSkillIds.some((skillId) => !materializedSkillIds.has(skillId));
-  if (requiredSkillMissing) {
-    return 'required_skill_repair_required';
-  }
-  if (materialization?.status === 'missing' && requiredSkillIds.length === 0) {
-    return 'required_skill_repair_required';
-  }
-  if (status.runtime_source_readiness?.operational_ready === false) {
-    return status.runtime_source_readiness.status
-      ? `runtime_source_${status.runtime_source_readiness.status}`
-      : 'runtime_source_repair_required';
-  }
-  if (status.managed_policy_currentness?.status === 'invalid') return 'managed_policy_invalid';
-  return null;
-}
-
-function observationOnlyBlockedReason(
+function ownerLaunchState(
   status: RawAgentPackageStatus,
-  dependencyStatus: 'ready' | 'repair_required' | 'blocked',
+  installed: boolean,
+  exposureStatus: string,
 ) {
-  if (dependencyStatus !== 'ready') return false;
-  const reason = status.launch_blocked_reason;
-  return reason === 'package_dependency_incompatible'
-    || reason === 'carrier_authority_invalid'
-    || reason === 'managed_policy_drifted'
-    || reason === 'codex_reload_required'
-    || reason === 'codex_reload_observed'
-    || reason?.startsWith('scope_materialization_') === true
-    || reason?.includes('currentness') === true
-    || reason?.includes('digest') === true
-    || reason?.includes('reload') === true
-    || reason?.includes('receipt') === true;
-}
-
-function dependentGuard(index: AgentPackageLockIndex, packageId: string | null) {
-  const packageIds = packageId ? requiredDependents(index, packageId) : [];
-  const allowed = packageIds.length === 0;
-  const reasonCode = allowed ? null : 'agent_package_required_by_installed_dependents';
-  return {
-    required_by_package_ids: packageIds,
-    disable: { allowed, reason_code: reasonCode },
-    uninstall: { allowed, reason_code: reasonCode },
-  };
+  if (
+    status.launch_state_schema_version === 'opl-agent-package-launch-state.v1'
+    && (
+      status.launch_state === 'ready'
+      || status.launch_state === 'degraded'
+      || status.launch_state === 'package_unavailable'
+    )
+  ) {
+    return {
+      launch_state_schema_version: status.launch_state_schema_version,
+      launch_state: status.launch_state,
+      launch_state_reason: status.launch_state_reason ?? null,
+    };
+  }
+  return deriveAgentPackageLaunchState({
+    installed,
+    exposure_state: exposureStatus,
+    operational_ready: status.operational_ready === true,
+    launch_blocked_reason: status.launch_blocked_reason,
+  });
 }
 
 export function projectAppAgentPackageStatus(input: {
@@ -214,167 +175,83 @@ export function projectAppAgentPackageStatus(input: {
   profile: AppStateProfile;
   lockIndex: AgentPackageLockIndex;
 }) {
-  const { status, profile, lockIndex } = input;
-  const lock = selectedLock(lockIndex, status.package_id) ?? status.installed_packages[0] ?? null;
-  const installed = Boolean(lock);
-  const exposureStatus = lock?.exposure_state ?? (installed ? 'visible' : 'not_installed');
-  const disabled = exposureStatus === 'disabled';
-  const dependencyReadiness = canonicalDependencyReadiness(status, lockIndex);
-  const rawRepairCommand = typeof status.repair_action === 'string' ? status.repair_action : null;
-  const hardRepairReason = packageHardRepairReason(status);
-  const functionallyRunnable = installed
-    && !disabled
-    && hardRepairReason === null
-    && dependencyReadiness.status === 'ready'
-    && (
-      status.operational_ready === true
-      || status.launch_allowed === true
-      || observationOnlyBlockedReason(status, dependencyReadiness.status)
-    );
-  const operationalReady = functionallyRunnable;
-  const launchAllowed = functionallyRunnable;
-  const positiveReadinessDeferred = profile === 'fast' && functionallyRunnable;
-  const ownerUnavailableReason = status.launch_state === 'package_unavailable'
-    ? status.launch_state_reason
-    : hardRepairReason;
-  const ownerDegradedReason = status.launch_state === 'degraded'
-    ? status.launch_state_reason
-    : functionallyRunnable && status.launch_blocked_reason
-      ? status.launch_blocked_reason
-      : null;
-  const launchState = deriveAgentPackageLaunchState({
-    installed,
-    exposure_state: exposureStatus,
-    operational_ready: functionallyRunnable,
-    launch_blocked_reason: disabled
-      ? 'package_disabled'
-      : functionallyRunnable
-        ? null
-        : status.launch_blocked_reason,
-    degraded_reason: positiveReadinessDeferred
-      ? 'live_verification_deferred'
-      : ownerDegradedReason,
-    unavailable_reason: ownerUnavailableReason,
-  });
-  const canonicalFields = {
-    action_receipt_ref: lock?.action_receipt_id ?? null,
-    rollback_ref: lock?.rollback_ref ?? null,
-    capability_exposure: {
-      status: exposureStatus,
-      codex_visible: exposureStatus === 'visible',
-    },
-    dependency_readiness: dependencyReadiness,
-    repair_action: canonicalRepairAction(installed, dependencyReadiness.status, hardRepairReason),
-    repair_command: hardRepairReason ? rawRepairCommand : null,
-    dependent_guard: dependentGuard(lockIndex, status.package_id),
-  };
-
-  if (profile === 'full') {
-    const { repair_action: _rawRepairAction, ...fullStatus } = status;
-    return {
-      ...fullStatus,
-      ...canonicalFields,
-      status: disabled
-        ? 'attention_needed'
-        : functionallyRunnable && status.status === 'attention_needed'
-          ? 'available'
-          : status.status,
-      operational_ready: operationalReady,
-      launch_allowed: launchAllowed,
-      launch_blocked_reason: disabled
-        ? 'package_disabled'
-        : functionallyRunnable
-          ? null
-          : status.launch_blocked_reason,
-      ...launchState,
-    };
-  }
+  const { status, profile } = input;
+  const presence = projectedPresence(status);
+  const capabilityExposure = exposureProjection(status, presence.present);
+  const launchState = ownerLaunchState(status, presence.installed, capabilityExposure.status);
+  const lifecycleActionRefs = [...(status.lifecycle_action_refs ?? [])];
 
   return {
-    surface_kind: 'opl_agent_package_status_fast_projection',
+    surface_kind: 'opl_agent_package_status_projection',
+    profile,
     package_id: status.package_id,
-    status: disabled
-      ? 'attention_needed'
-      : positiveReadinessDeferred
-        ? 'verification_deferred'
-        : status.status,
-    package_version: lock?.package_version ?? null,
-    installed_version: lock?.package_version ?? null,
-    version: lock?.package_version ?? null,
-    source_kind: lock?.source_kind ?? null,
-    package_lock_ref: lock?.lock_ref ?? null,
-    lock_ref: lock?.lock_ref ?? null,
-    physical_surface: lock?.physical_surface ?? null,
-    codex_visible: exposureStatus === 'visible',
-    ...canonicalFields,
-    package_dependency_readiness: status.package_dependency_readiness,
-    materialization_readiness: status.materialization_readiness,
-    runtime_source_readiness: {
-      ...status.runtime_source_readiness,
-      ...(positiveReadinessDeferred ? { status: 'verification_deferred' } : {}),
-      operational_ready: false,
-      verification_mode: 'persisted_lock_and_path_fast_projection',
-      live_verification_deferred: true,
-      live_verification_surface: 'opl packages status --package-id <package_id> --json',
+    status: status.status,
+    installed_package_count: presence.installed ? 1 : 0,
+    registered_package_count: registeredPackageCount(status),
+    presence,
+    capability_exposure: capabilityExposure,
+    codex_visible: capabilityExposure.codex_visible,
+    conditions: status.conditions ?? [],
+    recommended_action: status.recommended_action ?? null,
+    lifecycle_action_refs: lifecycleActionRefs,
+    actions: {
+      available: lifecycleActionRefs,
+      recommended: status.recommended_action ?? null,
+      execute_surface: 'opl app action execute --action <action_id> --payload <json> --json',
     },
-    operational_ready: false,
+    dependency_readiness: compactDependencyReadiness(
+      presence.installed,
+      status.package_dependency_readiness,
+    ),
+    runtime_source_readiness: compactRuntimeSourceReadiness(status),
+    operational_ready: presence.installed && status.operational_ready === true,
     operational_ready_scope: status.operational_ready_scope,
-    launch_allowed: false,
-    launch_blocked_reason: disabled
-      ? 'package_disabled'
-      : positiveReadinessDeferred
-        ? 'live_verification_deferred'
-        : status.launch_blocked_reason,
+    launch_allowed: presence.callable,
+    launch_blocked_reason: presence.callable ? null : status.launch_blocked_reason,
     ...launchState,
     allowed_when_blocked: status.allowed_when_blocked,
-    currentness_detail_deferred: true,
-    detail_surface: 'opl packages status --package-id <package_id> --json',
+    repair_action: repairAction(status, presence.registered),
+    home_shortcut_preferences: status.home_shortcut_preferences,
+    detail_surface: `opl packages status --package-id ${status.package_id ?? '<package_id>'} --json`,
   };
 }
 
 export function unavailableAgentPackageCanonicalFields(
   packageId: string,
-  lockIndex: AgentPackageLockIndex,
+  _lockIndex: AgentPackageLockIndex,
 ) {
-  const guard = dependentGuard(lockIndex, packageId);
-  const lock = selectedLock(lockIndex, packageId);
-  const installed = Boolean(lock);
-  const exposureStatus = lock?.exposure_state ?? (installed ? 'visible' : 'unavailable');
-  const reasonCode = guard.required_by_package_ids.length > 0
-    ? 'agent_package_required_by_installed_dependents'
-    : 'package_status_unavailable';
   return {
     ...deriveAgentPackageLaunchState({
-      installed,
-      exposure_state: exposureStatus,
+      installed: false,
+      exposure_state: 'unavailable',
       operational_ready: false,
       launch_blocked_reason: 'package_status_read_failed',
-      degraded_reason: installed ? 'package_status_read_failed' : null,
     }),
-    action_receipt_ref: lock?.action_receipt_id ?? null,
-    rollback_ref: lock?.rollback_ref ?? null,
+    presence: {
+      registered: null,
+      installed: null,
+      present: null,
+      callable: false,
+      status: 'unknown',
+      reason: 'package_status_read_failed',
+    },
     capability_exposure: {
-      status: exposureStatus,
-      codex_visible: exposureStatus === 'visible',
+      status: 'unknown',
+      codex_visible: false,
     },
     dependency_readiness: {
-      status: 'blocked',
-      required_count: 0,
-      ready_count: 0,
+      status: 'unavailable',
+      required_count: null,
+      present_count: null,
+      callable_count: null,
       checks: [],
-      closure: null,
     },
     repair_action: {
       action_id: 'agent_package_repair',
       command_ref: REPAIR_COMMAND_REF,
+      owner_command_ref: null,
       enabled: false,
       reason_code: 'status_unavailable',
-    },
-    repair_command: null,
-    dependent_guard: {
-      required_by_package_ids: guard.required_by_package_ids,
-      disable: { allowed: false, reason_code: reasonCode },
-      uninstall: { allowed: false, reason_code: reasonCode },
     },
     package_id: packageId,
   } satisfies JsonRecord;
