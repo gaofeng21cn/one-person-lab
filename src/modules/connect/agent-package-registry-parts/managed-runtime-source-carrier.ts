@@ -545,7 +545,12 @@ function prepareRuntimeSource(
       }
       : {}),
   };
-  if (managedPackageScope) fs.mkdirSync(commandEnv.HOME!, { recursive: true });
+  if (managedPackageScope) {
+    if (includeBootstrap && preparationIdentity !== null) {
+      makeDeveloperCheckoutRuntimeSnapshotWritable(preparationRoot);
+    }
+    fs.mkdirSync(commandEnv.HOME!, { recursive: true });
+  }
   const bootstrapSpec = spec.package_bootstrap_command?.(checkoutPath) ?? null;
   const bootstrap = includeBootstrap && bootstrapSpec
     ? runRequiredCommand(
@@ -1584,6 +1589,9 @@ export function rollbackManagedRuntimeSourceMutation(mutation: ManagedRuntimeSou
     }
     if (mutation.after?.preparation_root
       && mutation.after.preparation_root !== mutation.before?.preparation_root) {
+      if (mutation.after.preparation_scope === 'developer_snapshot_root') {
+        makeDeveloperCheckoutRuntimeSnapshotWritable(mutation.after.preparation_root);
+      }
       fs.rmSync(mutation.after.preparation_root, { recursive: true, force: true });
     }
     clearTransactionMarker(mutation);
@@ -1621,6 +1629,9 @@ export function rollbackManagedRuntimeSourceMutation(mutation: ManagedRuntimeSou
       }
     }
     if (mutation.after?.preparation_root) {
+      if (mutation.after.preparation_scope === 'developer_snapshot_root') {
+        makeDeveloperCheckoutRuntimeSnapshotWritable(mutation.after.preparation_root);
+      }
       fs.rmSync(mutation.after.preparation_root, { recursive: true, force: true });
     }
     clearTransactionMarker(mutation);
@@ -1648,6 +1659,9 @@ export function rollbackManagedRuntimeSourceMutation(mutation: ManagedRuntimeSou
   }
   if (mutation.after?.preparation_root
     && mutation.after.preparation_root !== mutation.before?.preparation_root) {
+    if (mutation.after.preparation_scope === 'developer_snapshot_root') {
+      makeDeveloperCheckoutRuntimeSnapshotWritable(mutation.after.preparation_root);
+    }
     fs.rmSync(mutation.after.preparation_root, { recursive: true, force: true });
   }
   clearTransactionMarker(mutation);

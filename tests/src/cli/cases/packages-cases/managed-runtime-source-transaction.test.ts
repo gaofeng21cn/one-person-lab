@@ -518,6 +518,31 @@ test('MAS developer snapshot reuses its physical OwnerGate preparation and prese
     assert.equal(ownerGateStat.isSymbolicLink(), false);
     assert.notEqual(ownerGateStat.mode & 0o111, 0);
 
+    const copiedPackageSource = path.join(
+      installed.after.preparation_root,
+      'uv-tools',
+      'package-source',
+      'src',
+      'med_autoscience',
+      'authority_handlers',
+      'foundry_owner_gate.py',
+    );
+    assert.equal(fs.statSync(copiedPackageSource).mode & 0o222, 0);
+    const repaired = applyManagedRuntimeSourceCarrier({
+      config: carrier,
+      previous: installed.after,
+      action: 'repair',
+      dryRun: false,
+      packageId: FIXTURE_MAS_PACKAGE_ID,
+      transactionId: 'mas-developer-runtime-repair',
+      sourceKind: 'developer_checkout_override',
+      checkoutPath,
+    });
+    assert.equal(repaired.kind, 'none');
+    assert.equal(repaired.after?.preparation_root, installed.after.preparation_root);
+    assert.equal(fs.existsSync(copiedPackageSource), true);
+    assert.notEqual(fs.statSync(ownerGateBin).mode & 0o111, 0);
+
     writeFakeMasUv(binRoot, true);
     const reused = applyManagedRuntimeSourceCarrier({
       config: carrier,
