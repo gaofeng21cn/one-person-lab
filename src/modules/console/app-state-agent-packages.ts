@@ -31,7 +31,6 @@ function compactDependencyReason(reason: string) {
     || reason.includes('abi')
     || reason.includes('digest')
     || reason.includes('lock')
-    || reason.includes('receipt')
   ) {
     return null;
   }

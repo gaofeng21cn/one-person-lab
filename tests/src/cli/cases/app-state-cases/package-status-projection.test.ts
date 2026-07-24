@@ -340,6 +340,43 @@ test('presence-only dependency projection ignores legacy version ABI digest obse
   assert.equal(JSON.stringify(projected).includes('sha256:legacy-content'), false);
 });
 
+test('dependency projection does not hide unsupported receipt-shaped reasons', () => {
+  const statuses = buildAppAgentPackageStatuses({
+    packageIds: ['mas'],
+    profile: 'fast',
+    lockIndex: lockIndex(),
+    readStatus: (() => installedStatus({
+      packageId: 'mas',
+      dependencyReadiness: {
+        status: 'incompatible',
+        operational_ready: true,
+        dependencies: [{
+          package_id: 'mas-scholar-skills',
+          required: true,
+          status: 'incompatible',
+          reasons: ['legacy_receipt_mismatch'],
+        }],
+      },
+    })) as any,
+  });
+  const projected = statuses.mas as any;
+
+  assert.deepEqual(projected.dependency_readiness, {
+    status: 'attention_needed',
+    required_count: 1,
+    present_count: 1,
+    callable_count: 0,
+    checks: [{
+      package_id: 'mas-scholar-skills',
+      required: true,
+      present: true,
+      callable: false,
+      status: 'unavailable',
+      reasons: ['legacy_receipt_mismatch'],
+    }],
+  });
+});
+
 test('missing or disabled required packages remain local presence blockers', () => {
   const dependencyReadiness = {
     status: 'missing',
