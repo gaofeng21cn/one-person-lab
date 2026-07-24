@@ -6,12 +6,7 @@ import {
   isRecord,
 } from '../../../kernel/contract-validation.ts';
 
-export const APP_DOMAIN_DETAIL_VIEWS_V2_CAPABILITY_ID = 'opl_app.domain_detail_views.v2';
-
-const ACCEPTED_DETAIL_SCHEMA_VERSIONS = [
-  'scientific-reasoning-map.v1',
-  'scientific-reasoning-map.v2',
-] as const;
+export const APP_TYPED_DOMAIN_VIEWS_V3_CAPABILITY_ID = 'opl_app.typed_domain_views.v3';
 
 function fail(filePath: string, field: string, message: string): never {
   throw new FrameworkContractError('contract_shape_invalid', message, { file: filePath, field });
@@ -43,19 +38,20 @@ function exactStringList(value: unknown, expected: readonly string[], field: str
   return actual;
 }
 
-function detailSchemaVersions(
+function typedViewSchema(
   schema: unknown,
   path: readonly string[],
   filePath: string,
 ) {
   let current = record(schema, 'schema', filePath);
   for (const segment of path) current = record(current[segment], segment, filePath);
-  return exactStringList(
-    current.enum,
-    ACCEPTED_DETAIL_SCHEMA_VERSIONS,
-    `${path.join('.')}.enum`,
-    filePath,
-  );
+  const properties = record(current.properties, `${path.join('.')}.properties`, filePath);
+  const viewKind = record(properties.view_kind, `${path.join('.')}.properties.view_kind`, filePath);
+  exactString(viewKind.type, 'string', `${path.join('.')}.properties.view_kind.type`, filePath);
+  const schemaRef = record(properties.schema_ref, `${path.join('.')}.properties.schema_ref`, filePath);
+  const schemaVersion = record(properties.schema_version, `${path.join('.')}.properties.schema_version`, filePath);
+  exactString(schemaRef.type, 'string', `${path.join('.')}.properties.schema_ref.type`, filePath);
+  exactString(schemaVersion.type, 'string', `${path.join('.')}.properties.schema_version.type`, filePath);
 }
 
 export function validateAppRuntimeFastWorkItemProjectionContract(input: {
@@ -81,7 +77,7 @@ export function validateAppRuntimeFastWorkItemProjectionContract(input: {
   );
   const ids = exactStringList(
     capabilities.ids,
-    [APP_DOMAIN_DETAIL_VIEWS_V2_CAPABILITY_ID],
+    [APP_TYPED_DOMAIN_VIEWS_V3_CAPABILITY_ID],
     'compatibility_capabilities.ids',
     input.filePath,
   );
@@ -101,7 +97,7 @@ export function validateAppRuntimeFastWorkItemProjectionContract(input: {
   const definition = definitions[0]!;
   exactString(
     definition.capability_id,
-    APP_DOMAIN_DETAIL_VIEWS_V2_CAPABILITY_ID,
+    APP_TYPED_DOMAIN_VIEWS_V3_CAPABILITY_ID,
     'compatibility_capabilities.definitions[0].capability_id',
     input.filePath,
   );
@@ -120,10 +116,22 @@ export function validateAppRuntimeFastWorkItemProjectionContract(input: {
     'projection_contract_ref',
     input.filePath,
   );
-  exactStringList(
-    definition.accepted_descriptor_schema_versions,
-    ACCEPTED_DETAIL_SCHEMA_VERSIONS,
-    'accepted_descriptor_schema_versions',
+  exactString(
+    definition.descriptor_membership_source,
+    'installed_present_kind_agent_descriptor',
+    'descriptor_membership_source',
+    input.filePath,
+  );
+  exactString(
+    definition.accepted_view_contract,
+    'generic_view_kind_plus_schema_ref_or_legacy_schema_version',
+    'accepted_view_contract',
+    input.filePath,
+  );
+  exactString(
+    definition.payload_validation_boundary,
+    'bounded_json_revision_and_owner_task_binding_only',
+    'payload_validation_boundary',
     input.filePath,
   );
   if (!Array.isArray(definition.missing_descriptor_projection)
@@ -151,14 +159,14 @@ export function validateAppRuntimeFastWorkItemProjectionContract(input: {
     }
   }
 
-  detailSchemaVersions(
+  typedViewSchema(
     input.standardAgentInterfaceSchema,
-    ['properties', 'domain_detail_views', 'items', 'properties', 'schema_version'],
+    ['properties', 'domain_detail_views', 'items'],
     input.filePath,
   );
-  detailSchemaVersions(
+  typedViewSchema(
     input.workItemProjectionSchema,
-    ['$defs', 'domainDetailView', 'properties', 'schema_version'],
+    ['$defs', 'domainDetailView'],
     input.filePath,
   );
   if (!input.publicAppCommandIds.includes('app view read')) {

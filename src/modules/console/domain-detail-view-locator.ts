@@ -10,7 +10,9 @@ export function projectDomainDetailViewLocators(input: {
     item_id: input.itemId,
     view_id: declaration.view_id,
     view_kind: declaration.view_kind,
-    schema_version: declaration.schema_version,
+    ...(declaration.title ? { title: declaration.title } : {}),
+    ...(declaration.schema_ref ? { schema_ref: declaration.schema_ref } : {}),
+    ...(declaration.schema_version ? { schema_version: declaration.schema_version } : {}),
     availability: input.workItemRoot ? 'unread' : 'missing',
   }));
 }

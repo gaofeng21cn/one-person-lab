@@ -20,20 +20,19 @@
   },
   "compatibility_capabilities": {
     "ids": [
-      "opl_app.domain_detail_views.v2"
+      "opl_app.typed_domain_views.v3"
     ],
     "definitions": [
       {
-        "capability_id": "opl_app.domain_detail_views.v2",
+        "capability_id": "opl_app.typed_domain_views.v3",
         "producer_owner": "one-person-lab",
         "state_surface": "opl app state --profile fast --json#app_state.operator.workbench.work_item_projection_v2",
         "state_field": "items[].domain_detail_views",
         "descriptor_contract_ref": "contracts/opl-framework/standard-agent-interface.schema.json#/properties/domain_detail_views",
         "projection_contract_ref": "contracts/opl-framework/work-item-projection-v2.schema.json#/$defs/domainDetailView",
-        "accepted_descriptor_schema_versions": [
-          "scientific-reasoning-map.v1",
-          "scientific-reasoning-map.v2"
-        ],
+        "descriptor_membership_source": "installed_present_kind_agent_descriptor",
+        "accepted_view_contract": "generic_view_kind_plus_schema_ref_or_legacy_schema_version",
+        "payload_validation_boundary": "bounded_json_revision_and_owner_task_binding_only",
         "missing_descriptor_projection": [],
         "lazy_read_command": "opl app view read --item-id <canonical-item-id> --view-id <view-id> [--if-revision <n>] --json",
         "lazy_read_surface_kind": "opl_domain_detail_view",

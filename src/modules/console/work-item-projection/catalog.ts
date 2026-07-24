@@ -4,11 +4,6 @@ import path from 'node:path';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 import type { StandardAgentDescriptorInterface } from '../../../kernel/standard-agent-interface.ts';
-import {
-  resolveStandardAgent,
-  STANDARD_AGENT_REGISTRY,
-  STANDARD_AGENT_SERIES_MEMBERSHIP,
-} from '../../../kernel/standard-agent-registry.ts';
 import type { WorkspaceBinding } from '../../workspace/public/app-state.ts';
 import type {
   AgentAvailability,
@@ -37,8 +32,31 @@ function newestBinding(bindings: WorkspaceBinding[]) {
 function packageItemForAgent(agentId: string, packageItems: ReadonlyArray<JsonRecord>) {
   return packageItems.find((item) => {
     const packageId = stringValue(item.package_id) ?? stringValue(item.agent_id) ?? '';
-    return resolveStandardAgent(packageId)?.agent_id === agentId;
+    return packageId === agentId;
   }) ?? null;
+}
+
+function projectedPresence(status: JsonRecord | undefined) {
+  const presence = isRecord(status?.presence) ? status.presence : null;
+  if (typeof presence?.present === 'boolean') return presence.present;
+  return typeof status?.installed_package_count === 'number'
+    ? status.installed_package_count > 0
+    : status?.status === 'installed' || status?.status === 'present';
+}
+
+function projectedCallable(status: JsonRecord | undefined) {
+  const presence = isRecord(status?.presence) ? status.presence : null;
+  return typeof presence?.callable === 'boolean' ? presence.callable : status?.launch_allowed === true;
+}
+
+function descriptorIdentities(descriptor: StandardAgentDescriptorInterface) {
+  return [
+    descriptor.agent_id ?? '',
+    descriptor.package_id ?? '',
+    descriptor.domain_id,
+    descriptor.interface.runtime.runtime_domain_id,
+    ...descriptor.interface.routing.explicit_aliases,
+  ].map((value) => value.trim().toLowerCase().replace(/[^a-z0-9]/g, '')).filter(Boolean);
 }
 
 export function buildAgentCatalog(input: {
@@ -53,25 +71,29 @@ export function buildAgentCatalog(input: {
   const packageItems = input.packageItems ?? [];
   const agents: AgentCatalogEntry[] = [];
   const availability: AgentAvailability[] = [];
-  for (const agent of STANDARD_AGENT_REGISTRY) {
-    if (agent.series_membership !== STANDARD_AGENT_SERIES_MEMBERSHIP) continue;
+  for (const packageId of Object.keys(input.packageStatusById ?? {}).sort()) {
+    const packageStatus = input.packageStatusById?.[packageId];
+    if (!projectedPresence(packageStatus)) continue;
+    const descriptor = input.descriptorByAgent?.get(packageId) ?? null;
+    if (descriptor?.kind !== 'agent') continue;
+    const agentId = descriptor.agent_id ?? packageId;
+    const descriptorPackageId = descriptor.package_id ?? packageId;
+    const displayName = descriptor.display_name ?? agentId;
     agents.push({
-      agent_id: agent.agent_id,
-      domain_id: agent.domain_id,
-      display_name: agent.display_name,
-      short_label: agent.short_label,
-      package_id: agent.agent_id,
-      scope_id: `agent:${agent.agent_id}`,
+      agent_id: agentId,
+      domain_id: descriptor.domain_id,
+      display_name: displayName,
+      short_label: agentId.toUpperCase(),
+      package_id: descriptorPackageId,
+      scope_id: `agent:${agentId}`,
     });
-    const packageItem = packageItemForAgent(agent.agent_id, packageItems);
-    const descriptorChecked = input.descriptorByAgent?.has(agent.agent_id) ?? false;
-    const descriptor = input.descriptorByAgent?.get(agent.agent_id) ?? null;
+    const packageItem = packageItemForAgent(packageId, packageItems);
+    const descriptorChecked = input.descriptorByAgent?.has(packageId) ?? false;
     const descriptorStatus = descriptor
       ? 'readable'
       : descriptorChecked
         ? 'unreadable'
         : 'not_checked';
-    const packageStatus = input.packageStatusById?.[agent.agent_id];
     const packageStatusUnavailable = packageStatus?.status === 'unavailable'
       || isRecord(packageStatus?.status_read_error);
     const capabilityExposure = isRecord(packageStatus?.capability_exposure)
@@ -93,14 +115,15 @@ export function buildAgentCatalog(input: {
         : input.packageStatusById && !packageStatus
           ? 'package_not_installed'
           : 'package_launch_readiness_not_projected';
-    const packageInstalled = Boolean(packageStatus) && !packageStatusUnavailable;
+    const packageInstalled = projectedPresence(packageStatus) && !packageStatusUnavailable;
+    const callable = projectedCallable(packageStatus);
     const state: AgentAvailability['availability'] = packageStatusUnavailable
       ? 'unavailable'
       : !packageInstalled
         ? 'unavailable'
         : profile === 'fast'
           ? codexVisible === false ? 'attention_required' : 'available'
-          : launchAllowed === true ? 'available' : 'attention_required';
+          : callable ? 'available' : 'attention_required';
     const reason = packageStatusUnavailable
       ? 'package_status_read_failed'
       : state === 'unavailable'
@@ -109,19 +132,19 @@ export function buildAgentCatalog(input: {
           ? codexVisible === false
             ? 'package_installed_but_not_visible_to_codex'
             : 'package_installed_and_visible'
-          : launchAllowed === true
+          : callable
             ? 'package_launch_allowed'
             : launchReason;
     availability.push({
-      agent_id: agent.agent_id,
-      domain_id: agent.domain_id,
-      display_name: agent.display_name,
+      agent_id: agentId,
+      domain_id: descriptor.domain_id,
+      display_name: displayName,
       availability: state,
       reason,
       last_checked_at: checkedAt,
       source: profile === 'fast' ? 'package_directory' : 'package_status',
       independent_from_work_item_state: true,
-      package_id: agent.agent_id,
+      package_id: descriptorPackageId,
       source_ref: stringValue(packageStatus?.package_lock_ref)
         ?? stringValue(packageStatus?.lock_ref)
         ?? stringValue(packageItem?.source_path)
@@ -145,7 +168,10 @@ export function buildAgentCatalog(input: {
   return { agents, availability };
 }
 
-export function buildProjectCatalog(bindings: ReadonlyArray<WorkspaceBinding>) {
+export function buildProjectCatalog(
+  bindings: ReadonlyArray<WorkspaceBinding>,
+  descriptors: ReadonlyArray<StandardAgentDescriptorInterface> = [],
+) {
   const diagnostics: WorkItemProjectionDiagnostic[] = [];
   const grouped = new Map<string, WorkspaceBinding[]>();
   for (const binding of bindings) {
@@ -180,16 +206,20 @@ export function buildProjectCatalog(bindings: ReadonlyArray<WorkspaceBinding>) {
       continue;
     }
     const selected = newestBinding(readableBindings);
-    const agent = resolveStandardAgent(selected.project_id) ?? resolveStandardAgent(selected.project);
-    const agentId = agent?.agent_id ?? selected.project_id;
+    const requested = [selected.project_id, selected.project]
+      .map((value) => value.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+    const descriptor = descriptors.find((candidate) =>
+      descriptorIdentities(candidate).some((identity) => requested.includes(identity))
+    ) ?? null;
+    const agentId = descriptor?.agent_id ?? selected.project_id;
     const workspacePath = canonicalWorkspacePath(selected.workspace_path);
     const projectScopeId = selected.project_scope_id;
     projects.push({
       project_id: projectScopeId,
       scope_id: projectScopeId,
       agent_id: agentId,
-      agent_display_name: agent?.display_name ?? agentId,
-      domain_id: agent?.domain_id ?? selected.project_id,
+      agent_display_name: descriptor?.display_name ?? agentId,
+      domain_id: descriptor?.domain_id ?? selected.project_id,
       display_name: path.basename(workspacePath),
       workspace_path: workspacePath,
       binding_status: readableBindings.some((binding) => binding.status === 'active') ? 'active' : 'inactive',

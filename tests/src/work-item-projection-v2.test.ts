@@ -61,7 +61,11 @@ const MAS_STUDIES = {
 function masDescriptor(): StandardAgentDescriptorInterface {
   return {
     repo_dir: '/fixture/med-autoscience',
-    domain_id: 'mas',
+    kind: 'agent',
+    agent_id: 'mas',
+    package_id: 'mas',
+    domain_id: 'medautoscience',
+    display_name: 'Med Auto Science',
     interface: parseStandardAgentInterface({
       version: STANDARD_AGENT_INTERFACE_VERSION,
       inventory_projection: {
@@ -93,17 +97,41 @@ function masDescriptor(): StandardAgentDescriptorInterface {
         optional_locator_fields: [],
       },
       runtime: {
-        runtime_domain_id: 'mas',
+        runtime_domain_id: 'medautoscience',
         registration_ref: 'contracts/domain_route_profile.json',
       },
       progress: { deliverable_delta_aliases: [], platform_delta_aliases: [] },
       routing: {
-        explicit_aliases: ['mas'],
+        explicit_aliases: ['mas', 'medautoscience', 'med-autoscience'],
         workstream_ids: ['medical_research'],
         intent_signals: ['medical research'],
         ambiguity_policy: 'require_explicit_domain_selection',
       },
     }, 'fixture:mas#/standard_agent_interface'),
+  };
+}
+
+function identityDescriptor(agentId: string): StandardAgentDescriptorInterface {
+  return {
+    repo_dir: `/fixture/${agentId}`,
+    kind: 'agent',
+    agent_id: agentId,
+    package_id: agentId,
+    domain_id: `${agentId}-domain`,
+    display_name: `${agentId.toUpperCase()} Agent`,
+    interface: {
+      ...masDescriptor().interface,
+      inventory_projection: null,
+      stage_catalog: null,
+      domain_detail_views: [],
+      runtime: { runtime_domain_id: `${agentId}-domain`, registration_ref: null },
+      routing: {
+        explicit_aliases: [agentId, `${agentId}-domain`],
+        workstream_ids: [],
+        intent_signals: [],
+        ambiguity_policy: 'require_explicit_domain_selection',
+      },
+    },
   };
 }
 
@@ -494,7 +522,8 @@ function fixture() {
     binding({ id: 'pitnet-active', root: pitnet, label: 'NF-PitNET', status: 'active' }),
     binding({ id: 'obesity-inactive', root: obesity, label: 'Obesity', status: 'inactive' }),
   ];
-  const packageProjectionItems = ['mas', 'mag', 'rca', 'oma', 'obf'].map((packageId) => ({
+  const packageIds = ['mas', 'mag', 'rca', 'oma', 'obf', 'synthetic-agent'];
+  const packageProjectionItems = packageIds.map((packageId) => ({
     package_id: packageId,
     source_present: true,
     source_health_status: 'current',
@@ -519,7 +548,11 @@ function fixture() {
     bindings,
     packageProjectionItems,
     packageStatusById,
-    resolveDescriptor: (agentId: string) => agentId === 'mas' ? masDescriptor() : null,
+    resolveDescriptor: (agentId: string) => ['mas', 'medautoscience', 'med-autoscience'].includes(agentId)
+      ? masDescriptor()
+      : packageIds.includes(agentId)
+        ? identityDescriptor(agentId)
+        : null,
   };
 }
 
@@ -719,8 +752,9 @@ test('WorkItemProjection V2 discovers MAS 3 projects and 9 studies independently
       deliveredItem?.action.summary,
       'Provide missing submission metadata, or explicitly wake the study for revision.',
     );
-    assert.equal(projection.agent_catalog.length, 5);
-    assert.equal(projection.agent_availability.length, 5);
+    assert.equal(projection.agent_catalog.length, 6);
+    assert.equal(projection.agent_availability.length, 6);
+    assert.equal(projection.agent_catalog.some((entry) => entry.agent_id === 'synthetic-agent'), true);
     const masAvailability = projection.agent_availability.find((entry) => entry.agent_id === 'mas');
     assert.equal(masAvailability?.inventory_descriptor.status, 'readable');
     assert.equal(masAvailability?.package_launch_readiness.status, 'unknown');
@@ -3085,10 +3119,10 @@ test('agent availability is package health only in fast and full profiles', () =
   }]));
   const descriptorByAgent = new Map<string, StandardAgentDescriptorInterface | null>([
     ['mas', masDescriptor()],
-    ['mag', null],
-    ['rca', null],
-    ['oma', null],
-    ['obf', null],
+    ['mag', identityDescriptor('mag')],
+    ['rca', identityDescriptor('rca')],
+    ['oma', identityDescriptor('oma')],
+    ['obf', identityDescriptor('obf')],
   ]);
   const fast = buildAgentCatalog({
     profile: 'fast',
@@ -3100,7 +3134,7 @@ test('agent availability is package health only in fast and full profiles', () =
   assert.equal(fast.every((entry) => entry.availability === 'available'), true);
   assert.equal(fast.every((entry) => entry.last_checked_at === '2026-07-13T08:00:00.000Z'), true);
   assert.equal(fast.every((entry) => entry.independent_from_work_item_state), true);
-  assert.equal(fast.find((entry) => entry.agent_id === 'mag')?.inventory_descriptor.status, 'unreadable');
+  assert.equal(fast.find((entry) => entry.agent_id === 'mag')?.inventory_descriptor.status, 'readable');
 
   const fullStatuses = Object.fromEntries(Object.entries(fastStatuses).map(([packageId, status]) => [packageId, {
     ...status,
@@ -3117,11 +3151,11 @@ test('agent availability is package health only in fast and full profiles', () =
   }).availability;
   assert.equal(full.find((entry) => entry.agent_id === 'mas')?.availability, 'available');
   assert.equal(full.find((entry) => entry.agent_id === 'mag')?.availability, 'attention_required');
-  assert.equal(full.find((entry) => entry.agent_id === 'obf')?.availability, 'unavailable');
+  assert.equal(full.find((entry) => entry.agent_id === 'obf'), undefined);
   assert.equal(full.every((entry) => entry.source === 'package_status'), true);
 });
 
-test('deferred inventory keeps startup catalogs without resolving domain descriptors', () => {
+test('deferred inventory resolves producer identity but isolates one descriptor failure', () => {
   const input = fixture();
   let descriptorReadCount = 0;
   try {
@@ -3131,15 +3165,18 @@ test('deferred inventory keeps startup catalogs without resolving domain descrip
       packageProjectionItems: input.packageProjectionItems,
       packageStatusById: input.packageStatusById,
       inventoryDetail: 'deferred',
-      resolveDescriptor: () => {
+      resolveDescriptor: (agentId) => {
         descriptorReadCount += 1;
-        throw new Error('deferred inventory must not resolve domain descriptors');
+        if (agentId === 'rca') throw new Error('synthetic producer read failure');
+        return input.resolveDescriptor(agentId);
       },
       generatedAt: '2026-07-13T00:00:00.000Z',
     });
-    assert.equal(descriptorReadCount, 0);
+    assert.equal(descriptorReadCount, 6);
     assert.equal(projection.project_catalog.length, 3);
-    assert.equal(projection.agent_catalog.length > 0, true);
+    assert.equal(projection.agent_catalog.length, 5);
+    assert.equal(projection.agent_catalog.some((entry) => entry.agent_id === 'rca'), false);
+    assert.equal(projection.agent_catalog.some((entry) => entry.agent_id === 'synthetic-agent'), true);
     assert.deepEqual(projection.items, []);
     assert.equal(projection.detail_policy.inventory_detail, 'deferred');
     assert.equal(projection.detail_policy.all_work_item_summaries_included, false);

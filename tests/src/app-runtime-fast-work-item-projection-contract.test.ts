@@ -7,7 +7,7 @@ import { buildPublicAppCommandSpecs } from '../../src/entrypoints/cli/cases/app-
 import { buildAppRuntimeWorkItemProjection } from '../../src/modules/console/app-runtime-work-item-projection.ts';
 import { APP_RUNTIME_STATE_PROFILE_V1_CAPABILITY_ID } from '../../src/modules/console/app-runtime-state.ts';
 import {
-  APP_DOMAIN_DETAIL_VIEWS_V2_CAPABILITY_ID,
+  APP_TYPED_DOMAIN_VIEWS_V3_CAPABILITY_ID,
   validateAppRuntimeFastWorkItemProjectionContract,
 } from '../../src/modules/charter/contract-validators/app-runtime-fast-work-item-projection-contract.ts';
 
@@ -122,7 +122,7 @@ test('App Runtime producer never defers fast inventory even with no registered p
   assert.deepEqual(projection.diagnostics.items, []);
 });
 
-test('App Runtime publishes a producer-owned domain detail view compatibility capability', () => {
+test('App Runtime publishes descriptor-driven typed domain views', () => {
   const contract = readJson(CONTRACT_REF);
   const commandIds = Object.keys(buildPublicAppCommandSpecs(() => {
     throw new Error('Contract loading is not needed to enumerate App commands.');
@@ -137,11 +137,15 @@ test('App Runtime publishes a producer-owned domain detail view compatibility ca
   });
 
   assert.deepEqual(contract.compatibility_capabilities.ids, [
-    APP_DOMAIN_DETAIL_VIEWS_V2_CAPABILITY_ID,
+    APP_TYPED_DOMAIN_VIEWS_V3_CAPABILITY_ID,
   ]);
-  assert.deepEqual(
-    contract.compatibility_capabilities.definitions[0].accepted_descriptor_schema_versions,
-    ['scientific-reasoning-map.v1', 'scientific-reasoning-map.v2'],
+  assert.equal(
+    contract.compatibility_capabilities.definitions[0].descriptor_membership_source,
+    'installed_present_kind_agent_descriptor',
+  );
+  assert.equal(
+    contract.compatibility_capabilities.definitions[0].payload_validation_boundary,
+    'bounded_json_revision_and_owner_task_binding_only',
   );
   assert.equal(
     contract.compatibility_capabilities.definitions[0].legacy_consumer_policy.consumer_may_ignore_capability,
@@ -164,7 +168,7 @@ test('App Runtime publishes a producer-owned domain detail view compatibility ca
 
 test('App Runtime capability validator rejects an unrecognized compatibility id', () => {
   const contract = structuredClone(readJson(CONTRACT_REF));
-  contract.compatibility_capabilities.ids = ['opl_app.domain_detail_views.v3'];
+  contract.compatibility_capabilities.ids = ['opl_app.typed_domain_views.v4'];
 
   assert.throws(() => validateAppRuntimeFastWorkItemProjectionContract({
     filePath: CONTRACT_REF,
@@ -172,5 +176,5 @@ test('App Runtime capability validator rejects an unrecognized compatibility id'
     standardAgentInterfaceSchema: readJson('contracts/opl-framework/standard-agent-interface.schema.json'),
     workItemProjectionSchema: readJson('contracts/opl-framework/work-item-projection-v2.schema.json'),
     publicAppCommandIds: ['app view read'],
-  }), /compatibility_capabilities.ids must remain opl_app\.domain_detail_views\.v2/);
+  }), /compatibility_capabilities.ids must remain opl_app\.typed_domain_views\.v3/);
 });

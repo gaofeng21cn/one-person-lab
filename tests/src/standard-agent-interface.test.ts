@@ -15,6 +15,7 @@ import {
   STANDARD_AGENT_INTERFACE_VERSION,
 } from '../../src/kernel/standard-agent-interface.ts';
 import {
+  readInstalledStandardAgentDescriptorForDomain,
   readPackageManagedStandardAgentDescriptor,
   readStandardAgentDescriptorForDomain,
   resolveStandardAgentContractCheckout,
@@ -276,40 +277,53 @@ test('standard Agent interface accepts a repo-relative Stage Catalog declaration
   );
 });
 
-test('standard Agent interface accepts optional work-item detail view declarations', () => {
+test('standard Agent interface accepts generic typed work-item view declarations', () => {
   const value = {
     ...fixture(),
     domain_detail_views: [
       {
-        view_id: 'scientific-reasoning',
-        view_kind: 'scientific_reasoning_map',
-        schema_version: 'scientific-reasoning-map.v1',
+        view_id: 'research-roadmap',
+        view_kind: 'research_roadmap',
+        title: 'Research roadmap',
+        schema_ref: 'contracts/schemas/research-roadmap.schema.json',
         source_kind: 'work_item_relative_json',
         relative_path: 'artifacts/research_trajectory/snapshot.json',
+        revision_pointer: '/metadata/revision',
+        owner_task_binding: {
+          task_id_pointer: '/task/id',
+          task_ref_pointer: '/task/ref',
+          task_ref_template: 'task:{task_id}',
+        },
       },
     ],
   };
 
   const schemaRef = 'contracts/opl-framework/standard-agent-interface.schema.json';
   const schema = parseJsonText(fs.readFileSync(path.join(process.cwd(), schemaRef), 'utf8')) as Record<string, unknown>;
-  for (const schemaVersion of ['scientific-reasoning-map.v1', 'scientific-reasoning-map.v2'] as const) {
-    const candidate = structuredClone(value);
-    candidate.domain_detail_views[0]!.schema_version = schemaVersion;
-    const parsed = parseStandardAgentInterface(candidate, 'fixture.json#/standard_agent_interface');
-    assert.deepEqual(parsed.domain_detail_views, candidate.domain_detail_views);
-    const validation = validateJsonSchemaPayload({
-      schemaId: 'opl.standard_agent_interface.v1',
-      schema,
-      sourceRef: schemaRef,
-    }, candidate);
-    assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
-  }
+  const parsed = parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface');
+  assert.deepEqual(parsed.domain_detail_views, [{
+    ...value.domain_detail_views[0],
+    schema_version: null,
+  }]);
+  const validation = validateJsonSchemaPayload({
+    schemaId: 'opl.standard_agent_interface.v1',
+    schema,
+    sourceRef: schemaRef,
+  }, value);
+  assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
 
-  const unsupportedVersion = structuredClone(value);
-  unsupportedVersion.domain_detail_views[0]!.schema_version = 'scientific-reasoning-map.v3';
+  const missingSchema = structuredClone(value) as any;
+  delete missingSchema.domain_detail_views[0]!.schema_ref;
   assert.throws(
-    () => parseStandardAgentInterface(unsupportedVersion, 'fixture.json#/standard_agent_interface'),
-    /domain detail view declaration is unsupported/,
+    () => parseStandardAgentInterface(missingSchema, 'fixture.json#/standard_agent_interface'),
+    /must declare schema_ref or schema_version/,
+  );
+
+  const invalidPointer = structuredClone(value);
+  invalidPointer.domain_detail_views[0]!.revision_pointer = 'metadata/revision';
+  assert.throws(
+    () => parseStandardAgentInterface(invalidPointer, 'fixture.json#/standard_agent_interface'),
+    /JSON pointer must be absolute/,
   );
 
   const escaped = structuredClone(value);
@@ -456,7 +470,7 @@ test('package dependency and runtime source readiness gate descriptor discovery 
       deliverable: ['deliverable_progress_delta', 'fixture_deliverable_delta'],
       platform: ['platform_repair_delta', 'fixture_platform_delta'],
     });
-    assert.equal(statusReads.length, statusReadCountBeforeKeySet + 1);
+    assert.equal(statusReads.length, statusReadCountBeforeKeySet + 2);
     const observedDeveloperDriftReader = ((input: { packageId?: string | null }) => {
       const readback = statusReader(input);
       if (input.packageId === 'mas') {
@@ -554,6 +568,43 @@ test('known domain discovery probes only its matching managed package', () => {
   readStandardAgentDescriptorForDomain('medautoscience', statusReader, () => null);
 
   assert.deepEqual(statusReads, ['mas']);
+});
+
+test('installed Agent discovery is presence-only while launch compatibility remains gated', () => {
+  const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-interface-present-'));
+  try {
+    writeStandardAgentDescriptor(repoDir, {
+      ...standardAgentDescriptor('fixture-agent'),
+      kind: 'agent',
+      agent_id: 'fixture-agent',
+      package_id: 'fixture-agent',
+    });
+    const statusReader = (() => ({
+      opl_agent_package_status: {
+        installed_package_count: 1,
+        package_dependency_readiness: {
+          status: 'missing',
+          operational_ready: false,
+        },
+        runtime_source_readiness: {
+          status: 'incompatible',
+          operational_ready: false,
+          checkout_path: repoDir,
+          reason: 'managed_runtime_source_lock_mismatch',
+        },
+      },
+    })) as PackageStatusReaderFixture;
+
+    assert.equal(
+      fs.realpathSync.native(
+        readInstalledStandardAgentDescriptorForDomain('fixture-agent', statusReader, () => null)?.repo_dir ?? '',
+      ),
+      fs.realpathSync.native(repoDir),
+    );
+    assert.equal(readStandardAgentDescriptorForDomain('fixture-agent', statusReader, () => null), null);
+  } finally {
+    fs.rmSync(repoDir, { recursive: true, force: true });
+  }
 });
 
 test('standard Agent contract checkout prefers the OPL-selected developer source', () => {

@@ -74,9 +74,43 @@ function descriptorMatchesTarget(
   descriptor: StandardAgentDescriptorInterface,
   target: string,
 ) {
-  return [descriptor.domain_id, descriptor.interface.runtime.runtime_domain_id]
+  return [
+    descriptor.agent_id ?? '',
+    descriptor.package_id ?? '',
+    descriptor.domain_id,
+    descriptor.interface.runtime.runtime_domain_id,
+    ...descriptor.interface.routing.explicit_aliases,
+  ]
     .map(normalizedIdentity)
     .includes(target);
+}
+
+function currentDescriptorForPackage(
+  packageId: string,
+  readStatus: PackageStatusReader,
+) {
+  try {
+    const descriptor = currentDescriptorFromStatus(packageId, readStatus);
+    return descriptor?.kind === 'agent' && descriptorMatchesTarget(descriptor, normalizedIdentity(packageId))
+      ? descriptor
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function presentDescriptorForPackage(
+  packageId: string,
+  readStatus: PackageStatusReader,
+) {
+  try {
+    const descriptor = presentDescriptorFromStatus(packageId, readStatus);
+    return descriptor?.kind === 'agent' && descriptorMatchesTarget(descriptor, normalizedIdentity(packageId))
+      ? descriptor
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function packageIdsForAliases(packageIds: readonly string[]) {
@@ -153,6 +187,25 @@ function currentDescriptorFromStatus(
   return resolution.checkout_path
     ? readStandardAgentDescriptorInterface(resolution.checkout_path)
     : null;
+}
+
+function presentDescriptorFromStatus(
+  packageId: string,
+  readStatus: PackageStatusReader,
+): StandardAgentDescriptorInterface | null {
+  let status: ReturnType<PackageStatusReader>['opl_agent_package_status'];
+  try {
+    status = readStatus({ packageId, recoverRuntimeSource: false }).opl_agent_package_status;
+  } catch {
+    return null;
+  }
+  if (typeof status.installed_package_count !== 'number' || status.installed_package_count < 1) {
+    return null;
+  }
+  const checkoutPath = typeof status.runtime_source_readiness?.checkout_path === 'string'
+    ? canonicalCheckoutPath(status.runtime_source_readiness.checkout_path)
+    : null;
+  return checkoutPath ? readStandardAgentDescriptorInterface(checkoutPath) : null;
 }
 
 function pathsReferToSameLocation(left: string, right: string) {
@@ -246,6 +299,22 @@ function descriptorFromSelectedModule(
     descriptor: selected.resolution?.checkout_path
       ? readStandardAgentDescriptorInterface(selected.resolution.checkout_path)
       : null,
+  };
+}
+
+function presentDescriptorFromSelectedModule(
+  agent: typeof STANDARD_AGENT_REGISTRY[number],
+  readSelectedModule: SelectedModuleSourceReader,
+) {
+  const selected = readSelectedModule(agent.domain_id);
+  if (!selected) return { source_selected: false as const, descriptor: null };
+  if (!selected.installed || selected.health_status === 'invalid_checkout') {
+    return { source_selected: true as const, descriptor: null };
+  }
+  const checkoutPath = canonicalCheckoutPath(selected.checkout_path);
+  return {
+    source_selected: true as const,
+    descriptor: checkoutPath ? readStandardAgentDescriptorInterface(checkoutPath) : null,
   };
 }
 
@@ -410,6 +479,10 @@ export function readStandardAgentDescriptorForDomain(
     }
     return null;
   }
+  if (directMatches.length === 0) {
+    const directPackageDescriptor = currentDescriptorForPackage(domainId, readStatus);
+    if (directPackageDescriptor) return directPackageDescriptor;
+  }
   for (const agent of directMatches.length > 0 ? directMatches : standardAgents) {
     const descriptor = currentDescriptorFromStatus(agent.agent_id, readStatus);
     if (
@@ -421,7 +494,41 @@ export function readStandardAgentDescriptorForDomain(
   }
   return configuredDescriptors().find((descriptor) => directMatches.length > 0
     ? directMatches.some((agent) => descriptorMatchesAgent(descriptor, agent))
-    : descriptorMatchesTarget(descriptor, target)) ?? null;
+    : descriptor.kind === 'agent' && descriptorMatchesTarget(descriptor, target)) ?? null;
+}
+
+export function readInstalledStandardAgentDescriptorForDomain(
+  domainId: string,
+  readStatus: PackageStatusReader = runOplAgentPackageStatus,
+  readSelectedModule: SelectedModuleSourceReader = defaultSelectedModuleSource,
+): StandardAgentDescriptorInterface | null {
+  const target = normalizedIdentity(domainId);
+  const standardAgents = STANDARD_AGENT_REGISTRY.filter((agent) =>
+    agent.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+  );
+  const directMatches = standardAgents.filter((agent) =>
+    registryIdentities(agent).some((identity) => normalizedIdentity(identity) === target)
+  );
+  for (const agent of directMatches) {
+    const selected = presentDescriptorFromSelectedModule(agent, readSelectedModule);
+    if (!selected.source_selected) continue;
+    if (
+      selected.descriptor?.kind === 'agent'
+      && descriptorMatchesAgent(selected.descriptor, agent)
+    ) return selected.descriptor;
+    return null;
+  }
+  if (directMatches.length === 0) {
+    const directPackageDescriptor = presentDescriptorForPackage(domainId, readStatus);
+    if (directPackageDescriptor) return directPackageDescriptor;
+  }
+  for (const agent of directMatches) {
+    const descriptor = presentDescriptorFromStatus(agent.agent_id, readStatus);
+    if (descriptor?.kind === 'agent' && descriptorMatchesAgent(descriptor, agent)) return descriptor;
+  }
+  return configuredDescriptors().find((descriptor) => descriptor.kind === 'agent' && (directMatches.length > 0
+    ? directMatches.some((agent) => descriptorMatchesAgent(descriptor, agent))
+    : descriptorMatchesTarget(descriptor, target))) ?? null;
 }
 
 export function standardAgentProgressDeltaKeySet(

@@ -1,5 +1,6 @@
 import type { JsonRecord } from '../../../kernel/json-record.ts';
-import { readStandardAgentDescriptorForDomain } from '../../connect/index.ts';
+import type { StandardAgentDescriptorInterface } from '../../../kernel/standard-agent-interface.ts';
+import { readInstalledStandardAgentDescriptorForDomain } from '../../connect/standard-agent-interface-discovery.ts';
 import { buildWorkItemControlResolver } from '../../ledger/index.ts';
 import {
   observeDomainArtifactCasMaterialization,
@@ -25,12 +26,41 @@ import {
 import { withProjectedWorkItemPrimaryState } from './primary-state.ts';
 import type {
   WorkItemCondition,
+  ProjectCatalogEntry,
   WorkItemProjectionItem,
   WorkItemProjectionV2,
 } from './types.ts';
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function normalizedIdentity(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function descriptorIdentities(descriptor: StandardAgentDescriptorInterface) {
+  return [
+    descriptor.agent_id ?? '',
+    descriptor.package_id ?? '',
+    descriptor.domain_id,
+    descriptor.interface.runtime.runtime_domain_id,
+    ...descriptor.interface.routing.explicit_aliases,
+  ].map(normalizedIdentity).filter(Boolean);
+}
+
+function projectWithDescriptor(
+  project: ProjectCatalogEntry,
+  descriptor: StandardAgentDescriptorInterface | null,
+): ProjectCatalogEntry {
+  if (descriptor?.kind !== 'agent') return project;
+  const agentId = descriptor.agent_id ?? project.agent_id;
+  return {
+    ...project,
+    agent_id: agentId,
+    agent_display_name: descriptor.display_name ?? agentId,
+    domain_id: descriptor.domain_id,
+  };
 }
 
 function lifecycleConditions(item: WorkItemProjectionItem): WorkItemCondition[] {
@@ -191,13 +221,38 @@ export function buildWorkItemProjectionV2(
 ): WorkItemProjectionV2 {
   const profile = options.profile ?? 'full';
   const generatedAt = options.generatedAt ?? nowIso();
-  const projectCatalog = buildProjectCatalog(options.bindings ?? listWorkspaceBindings());
+  const descriptorCache = new Map<string, ReturnType<InventoryDescriptorResolver>>();
+  const descriptorResolver = options.resolveDescriptor ?? readInstalledStandardAgentDescriptorForDomain;
+  const resolveDescriptor = (agentId: string) => {
+    const cacheKey = normalizedIdentity(agentId);
+    if (!descriptorCache.has(cacheKey)) {
+      try {
+        const descriptor = descriptorResolver(agentId);
+        descriptorCache.set(cacheKey, descriptor);
+        descriptorCache.set(agentId, descriptor);
+        if (descriptor) {
+          for (const identity of descriptorIdentities(descriptor)) {
+            if (!descriptorCache.has(identity)) descriptorCache.set(identity, descriptor);
+          }
+        }
+      } catch {
+        descriptorCache.set(cacheKey, null);
+      }
+    }
+    return descriptorCache.get(cacheKey) ?? null;
+  };
+  const bindings = options.bindings ?? listWorkspaceBindings();
   if (options.inventoryDetail === 'deferred') {
+    for (const packageId of Object.keys(options.packageStatusById ?? {})) resolveDescriptor(packageId);
+    const installedDescriptors = [...new Set(descriptorCache.values())]
+      .filter((descriptor): descriptor is NonNullable<typeof descriptor> => descriptor?.kind === 'agent');
+    const projectCatalog = buildProjectCatalog(bindings, installedDescriptors);
     const { agents, availability } = buildAgentCatalog({
       profile,
       checkedAt: generatedAt,
       packageItems: options.packageProjectionItems,
       packageStatusById: options.packageStatusById,
+      descriptorByAgent: descriptorCache,
     });
     return {
       surface_kind: 'opl_work_item_projection',
@@ -256,24 +311,27 @@ export function buildWorkItemProjectionV2(
       },
     };
   }
+  const rawProjectCatalog = buildProjectCatalog(bindings);
+  const projectCatalog = {
+    projects: [] as ProjectCatalogEntry[],
+    diagnostics: rawProjectCatalog.diagnostics,
+  };
   const inventoryItems: WorkItemProjectionItem[] = [];
   const diagnostics = [...projectCatalog.diagnostics];
   const casObservationByWorkspace = new Map<string, DomainArtifactCasMaterializationReadObservation>();
-  const descriptorCache = new Map<string, ReturnType<InventoryDescriptorResolver>>();
-  const descriptorResolver = options.resolveDescriptor ?? readStandardAgentDescriptorForDomain;
-  const resolveDescriptor = (agentId: string) => {
-    if (!descriptorCache.has(agentId)) {
-      descriptorCache.set(agentId, descriptorResolver(agentId));
-    }
-    return descriptorCache.get(agentId) ?? null;
-  };
-  for (const project of projectCatalog.projects) {
-    const observation = observeDomainArtifactCasMaterialization({ workspaceRoot: project.workspace_path });
-    casObservationByWorkspace.set(project.workspace_path, observation);
+  for (const rawProject of rawProjectCatalog.projects) {
+    const observation = observeDomainArtifactCasMaterialization({ workspaceRoot: rawProject.workspace_path });
+    casObservationByWorkspace.set(rawProject.workspace_path, observation);
+    const project = projectWithDescriptor(rawProject, resolveDescriptor(rawProject.agent_id));
+    projectCatalog.projects.push(project);
     const inventory = readProjectInventory({ project, resolveDescriptor });
     inventoryItems.push(...inventory.items);
     diagnostics.push(...inventory.diagnostics);
   }
+  projectCatalog.projects.sort((left, right) =>
+    left.agent_id.localeCompare(right.agent_id) || left.display_name.localeCompare(right.display_name)
+  );
+  for (const packageId of Object.keys(options.packageStatusById ?? {})) resolveDescriptor(packageId);
   const controlled = applyWorkItemControlState({
     items: inventoryItems,
     findWorkItemControl: options.findWorkItemControl ?? buildWorkItemControlResolver(),

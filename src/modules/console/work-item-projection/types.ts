@@ -66,8 +66,10 @@ export type DomainDetailViewAvailability =
 export type DomainDetailViewLocator = {
   item_id: string;
   view_id: string;
-  view_kind: 'scientific_reasoning_map';
-  schema_version: 'scientific-reasoning-map.v1' | 'scientific-reasoning-map.v2';
+  view_kind: string;
+  title?: string;
+  schema_ref?: string;
+  schema_version?: string;
   availability: DomainDetailViewAvailability;
   revision?: number;
   digest?: string;

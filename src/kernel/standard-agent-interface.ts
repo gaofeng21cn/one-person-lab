@@ -49,10 +49,28 @@ export type StandardAgentStageCatalogDeclaration = {
 
 export type StandardAgentDomainDetailViewDeclaration = {
   view_id: string;
-  view_kind: 'scientific_reasoning_map';
-  schema_version: 'scientific-reasoning-map.v1' | 'scientific-reasoning-map.v2';
+  view_kind: string;
+  title: string | null;
+  schema_ref: string | null;
+  schema_version: string | null;
   source_kind: 'work_item_relative_json';
   relative_path: string;
+  revision_pointer: string;
+  owner_task_binding: {
+    task_id_pointer: string;
+    task_ref_pointer: string;
+    task_ref_template: string;
+  } | null;
+};
+
+export type StandardAgentTaskProvider = {
+  inventory_ref: string | null;
+  business_lifecycle_owner: string | null;
+  temporal_execution_ref: {
+    source_kind: string;
+    join_field: 'work_item_scope_id';
+  } | null;
+  views: StandardAgentDomainDetailViewDeclaration[];
 };
 
 export type StandardAgentInterface = {
@@ -89,7 +107,12 @@ export type StandardAgentInterface = {
 
 export type StandardAgentDescriptorInterface = {
   repo_dir: string;
+  kind?: 'agent' | null;
+  agent_id?: string | null;
+  package_id?: string | null;
   domain_id: string;
+  display_name?: string | null;
+  task_provider?: StandardAgentTaskProvider | null;
   interface: StandardAgentInterface;
 };
 
@@ -322,7 +345,17 @@ function domainDetailViews(value: unknown, sourceRef: string): StandardAgentDoma
     }
     assertKnownKeys(
       entry,
-      ['view_id', 'view_kind', 'schema_version', 'source_kind', 'relative_path'],
+      [
+        'view_id',
+        'view_kind',
+        'title',
+        'schema_ref',
+        'schema_version',
+        'source_kind',
+        'relative_path',
+        'revision_pointer',
+        'owner_task_binding',
+      ],
       `domain_detail_views.${index}`,
       sourceRef,
     );
@@ -334,14 +367,24 @@ function domainDetailViews(value: unknown, sourceRef: string): StandardAgentDoma
       });
     }
     seen.add(viewId);
-    if (entry.view_kind !== 'scientific_reasoning_map'
-      || !['scientific-reasoning-map.v1', 'scientific-reasoning-map.v2'].includes(String(entry.schema_version))
-      || entry.source_kind !== 'work_item_relative_json') {
+    if (entry.source_kind !== 'work_item_relative_json') {
       invalid('Standard Agent interface domain detail view declaration is unsupported.', sourceRef, {
         field: `domain_detail_views.${index}`,
         view_kind: entry.view_kind ?? null,
         schema_version: entry.schema_version ?? null,
         source_kind: entry.source_kind ?? null,
+      });
+    }
+    const viewKind = stringValue(entry.view_kind, `domain_detail_views.${index}.view_kind`, sourceRef);
+    const schemaRef = entry.schema_ref === undefined || entry.schema_ref === null
+      ? null
+      : stringValue(entry.schema_ref, `domain_detail_views.${index}.schema_ref`, sourceRef);
+    const schemaVersion = entry.schema_version === undefined || entry.schema_version === null
+      ? null
+      : stringValue(entry.schema_version, `domain_detail_views.${index}.schema_version`, sourceRef);
+    if (!schemaRef && !schemaVersion) {
+      invalid('Standard Agent interface domain detail view must declare schema_ref or schema_version.', sourceRef, {
+        field: `domain_detail_views.${index}`,
       });
     }
     const relativePath = stringValue(
@@ -357,12 +400,81 @@ function domainDetailViews(value: unknown, sourceRef: string): StandardAgentDoma
     }
     return {
       view_id: viewId,
-      view_kind: 'scientific_reasoning_map',
-      schema_version: entry.schema_version as StandardAgentDomainDetailViewDeclaration['schema_version'],
+      view_kind: viewKind,
+      title: entry.title === undefined || entry.title === null
+        ? null
+        : stringValue(entry.title, `domain_detail_views.${index}.title`, sourceRef),
+      schema_ref: schemaRef,
+      schema_version: schemaVersion,
       source_kind: 'work_item_relative_json',
       relative_path: relativePath,
+      revision_pointer: entry.revision_pointer === undefined
+        ? '/revision'
+        : jsonPointer(entry.revision_pointer, `domain_detail_views.${index}.revision_pointer`, sourceRef),
+      owner_task_binding: ownerTaskBinding(
+        entry.owner_task_binding,
+        `domain_detail_views.${index}.owner_task_binding`,
+        sourceRef,
+      ),
     };
   });
+}
+
+function jsonPointer(value: unknown, field: string, sourceRef: string) {
+  const pointer = stringValue(value, field, sourceRef);
+  if (!pointer.startsWith('/')) {
+    invalid('Standard Agent typed view JSON pointer must be absolute.', sourceRef, { field, pointer });
+  }
+  return pointer;
+}
+
+function ownerTaskBinding(value: unknown, field: string, sourceRef: string) {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)) invalid('Standard Agent typed view owner task binding must be an object.', sourceRef, { field });
+  assertKnownKeys(value, ['task_id_pointer', 'task_ref_pointer', 'task_ref_template'], field, sourceRef);
+  return {
+    task_id_pointer: jsonPointer(value.task_id_pointer, `${field}.task_id_pointer`, sourceRef),
+    task_ref_pointer: jsonPointer(value.task_ref_pointer, `${field}.task_ref_pointer`, sourceRef),
+    task_ref_template: stringValue(value.task_ref_template, `${field}.task_ref_template`, sourceRef),
+  };
+}
+
+function taskProvider(value: unknown, sourceRef: string): StandardAgentTaskProvider | null {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)) invalid('Standard Agent task_provider must be an object.', sourceRef, { field: 'task_provider' });
+  assertKnownKeys(
+    value,
+    ['inventory_ref', 'business_lifecycle_owner', 'temporal_execution_ref', 'views'],
+    'task_provider',
+    sourceRef,
+  );
+  const temporal = value.temporal_execution_ref;
+  if (temporal !== undefined && temporal !== null && !isRecord(temporal)) {
+    invalid('Standard Agent task_provider temporal_execution_ref must be an object.', sourceRef);
+  }
+  if (isRecord(temporal)) {
+    assertKnownKeys(temporal, ['source_kind', 'join_field'], 'task_provider.temporal_execution_ref', sourceRef);
+    if (temporal.join_field !== 'work_item_scope_id') {
+      invalid('Standard Agent task_provider Temporal join must remain opaque work_item_scope_id.', sourceRef, {
+        join_field: temporal.join_field ?? null,
+      });
+    }
+  }
+  return {
+    inventory_ref: value.inventory_ref === undefined || value.inventory_ref === null
+      ? null
+      : stringValue(value.inventory_ref, 'task_provider.inventory_ref', sourceRef),
+    business_lifecycle_owner: value.business_lifecycle_owner === undefined || value.business_lifecycle_owner === null
+      ? null
+      : stringValue(value.business_lifecycle_owner, 'task_provider.business_lifecycle_owner', sourceRef),
+    temporal_execution_ref: isRecord(temporal)
+      ? {
+          source_kind: stringValue(temporal.source_kind, 'task_provider.temporal_execution_ref.source_kind', sourceRef),
+          join_field: 'work_item_scope_id',
+        }
+      : null,
+    views: domainDetailViews(value.views, `${sourceRef}#/task_provider`),
+  };
 }
 
 export function parseStandardAgentInterface(value: unknown, sourceRef: string): StandardAgentInterface {
@@ -569,10 +681,32 @@ export function readStandardAgentDescriptorInterface(repoDir: string): StandardA
   if (!isRecord(descriptor)) return null;
   const resolved = descriptorInterfacePayload(repoDir, descriptorPath, descriptor);
   if (!resolved) return null;
+  const parsedInterface = parseStandardAgentInterface(resolved.payload, resolved.source_ref);
+  const parsedTaskProvider = taskProvider(descriptor.task_provider, descriptorPath);
+  const kind = descriptor.kind === undefined || descriptor.kind === null
+    ? null
+    : descriptor.kind === 'agent'
+      ? 'agent'
+      : invalid('Standard Agent descriptor kind must be agent.', descriptorPath, { kind: descriptor.kind });
+  const agentId = descriptor.agent_id === undefined || descriptor.agent_id === null
+    ? null
+    : stringValue(descriptor.agent_id, 'agent_id', descriptorPath);
+  const packageId = descriptor.package_id === undefined || descriptor.package_id === null
+    ? agentId
+    : stringValue(descriptor.package_id, 'package_id', descriptorPath);
   return {
     repo_dir: path.resolve(repoDir),
+    kind,
+    agent_id: agentId,
+    package_id: packageId,
     domain_id: stringValue(descriptor.domain_id, 'domain_id', descriptorPath),
-    interface: parseStandardAgentInterface(resolved.payload, resolved.source_ref),
+    display_name: descriptor.domain_label === undefined || descriptor.domain_label === null
+      ? null
+      : stringValue(descriptor.domain_label, 'domain_label', descriptorPath),
+    task_provider: parsedTaskProvider,
+    interface: parsedTaskProvider?.views.length
+      ? { ...parsedInterface, domain_detail_views: parsedTaskProvider.views }
+      : parsedInterface,
   };
 }
 
@@ -593,6 +727,10 @@ export function assertStandardAgentDescriptorIdentity(
   const accepted = [
     expected.project,
     expected.domain_id ?? '',
+    descriptor.agent_id ?? '',
+    descriptor.package_id ?? '',
+    descriptor.interface.runtime.runtime_domain_id,
+    ...descriptor.interface.routing.explicit_aliases,
     ...(registryEntry
       ? [
           registryEntry.agent_id,
@@ -605,7 +743,9 @@ export function assertStandardAgentDescriptorIdentity(
         ]
       : []),
   ].map(normalizedIdentity).filter(Boolean);
-  if (!accepted.includes(normalizedIdentity(descriptor.domain_id))) {
+  if (![descriptor.domain_id, descriptor.agent_id ?? '', descriptor.package_id ?? '']
+    .map(normalizedIdentity)
+    .some((identity) => accepted.includes(identity))) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Standard Agent descriptor identity does not match the selected project.',

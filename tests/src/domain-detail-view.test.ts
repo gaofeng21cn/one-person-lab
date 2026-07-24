@@ -17,7 +17,7 @@ import type { WorkItemProjectionV2 } from '../../src/modules/console/work-item-p
 
 const ITEM_ID = 'mas:workspace:project:study-001';
 const STUDY_ID = 'study-001';
-const VIEW_ID = 'scientific-reasoning';
+const VIEW_ID = 'research-roadmap';
 const SNAPSHOT_PATH = 'artifacts/research_trajectory/snapshot.json';
 const V2_KEYS = [
   'surface_kind',
@@ -41,14 +41,25 @@ const V2_KEYS = [
 function descriptor(relativePath = SNAPSHOT_PATH): StandardAgentDescriptorInterface {
   return {
     repo_dir: '/fixture/med-autoscience',
+    kind: 'agent',
+    agent_id: 'mas',
+    package_id: 'mas',
     domain_id: 'medautoscience',
     interface: {
       domain_detail_views: [{
         view_id: VIEW_ID,
-        view_kind: 'scientific_reasoning_map',
-        schema_version: 'scientific-reasoning-map.v2',
+        view_kind: 'research_roadmap',
+        title: 'Research roadmap',
+        schema_ref: 'contracts/schemas/v2/mas-research-trajectory-snapshot-v2.schema.json',
+        schema_version: null,
         source_kind: 'work_item_relative_json',
         relative_path: relativePath,
+        revision_pointer: '/revision',
+        owner_task_binding: {
+          task_id_pointer: '/study_id',
+          task_ref_pointer: '/study_ref/ref',
+          task_ref_template: 'mas-study:{task_id}',
+        },
       }],
     },
   } as StandardAgentDescriptorInterface;
@@ -236,8 +247,9 @@ test('fast projection exposes only the exact descriptor locator and never reads 
   }), [{
     item_id: ITEM_ID,
     view_id: VIEW_ID,
-    view_kind: 'scientific_reasoning_map',
-    schema_version: 'scientific-reasoning-map.v2',
+    view_kind: 'research_roadmap',
+    title: 'Research roadmap',
+    schema_ref: 'contracts/schemas/v2/mas-research-trajectory-snapshot-v2.schema.json',
     availability: 'unread',
   }]);
   assert.equal(projectDomainDetailViewLocators({
@@ -285,13 +297,14 @@ test('domain inventory wires descriptor locators into each projected work item',
   assert.deepEqual(inventory.items[0]?.domain_detail_views, [{
     item_id: `mas:fixture:${STUDY_ID}`,
     view_id: VIEW_ID,
-    view_kind: 'scientific_reasoning_map',
-    schema_version: 'scientific-reasoning-map.v2',
+    view_kind: 'research_roadmap',
+    title: 'Research roadmap',
+    schema_ref: 'contracts/schemas/v2/mas-research-trajectory-snapshot-v2.schema.json',
     availability: 'unread',
   }]);
 }));
 
-test('lazy read returns the exact MAS v2 payload without rewriting medical text', () => withRoot((root) => {
+test('lazy read returns the exact owner payload without parsing or rewriting domain fields', () => withRoot((root) => {
   const expected = snapshot();
   writeSnapshot(root, expected);
   const result = read(root);
@@ -301,6 +314,10 @@ test('lazy read returns the exact MAS v2 payload without rewriting medical text'
   assert.equal(result.generation, result.revision);
   assert.equal(result.not_modified, false);
   assert.match(result.digest ?? '', /^sha256:[a-f0-9]{64}$/);
+  assert.equal(
+    result.payload_schema_ref,
+    'contracts/schemas/v2/mas-research-trajectory-snapshot-v2.schema.json',
+  );
   assert.deepEqual(Object.keys(result.payload ?? {}), V2_KEYS);
   assert.deepEqual(result.payload, expected);
   assert.equal(
@@ -341,16 +358,21 @@ test('missing roots and files produce a lightweight missing envelope', () => wit
   }
 }));
 
-test('v2 shape, version, revision, and item identity failures are typed', () => withRoot((root) => {
-  const missingField = snapshot() as Record<string, unknown>;
-  delete missingField.medical_narrative;
-  const invalidCases = [
-    missingField,
+test('revision and owner task identity failures are typed while owner schema stays opaque', () => withRoot((root) => {
+  const ownerSchemaChanges = [
     { ...snapshot(), unexpected: true },
-    { ...snapshot(), version: 'mas-research-trajectory-snapshot.v1' },
-    { ...snapshot(), revision: 0 },
-    { ...snapshot(), revision: 9_007_199_254_740_992 },
+    { ...snapshot(), version: 'owner-new-schema.v9' },
     { ...snapshot(), medical_narrative: null },
+    { ...snapshot(), nodes: 'owner-defined-shape' },
+  ];
+  for (const candidate of ownerSchemaChanges) {
+    writeSnapshot(root, candidate);
+    assert.equal(read(root).availability, 'available');
+  }
+  const invalidCases = [
+    { ...snapshot(), revision: -1 },
+    { ...snapshot(), revision: 9_007_199_254_740_992 },
+    { ...snapshot(), revision: '4' },
   ];
   for (const candidate of invalidCases) {
     writeSnapshot(root, candidate);
@@ -365,16 +387,13 @@ test('v2 shape, version, revision, and item identity failures are typed', () => 
   assert.equal(stale.availability, 'stale');
   assert.equal(stale.conditions[0]?.reason, 'domain_detail_item_identity_mismatch');
 
-  for (const studyRef of [
-    { kind: 'artifact', ref: `mas-study:${STUDY_ID}` },
-    { kind: 'mas_study', ref: 'mas-study:study-002' },
-  ]) {
-    writeSnapshot(root, { ...snapshot(), study_ref: studyRef });
-    assert.equal(read(root).availability, 'stale');
-  }
+  writeSnapshot(root, { ...snapshot(), study_ref: { kind: 'artifact', ref: `mas-study:${STUDY_ID}` } });
+  assert.equal(read(root).availability, 'available');
+  writeSnapshot(root, { ...snapshot(), study_ref: { kind: 'mas_study', ref: 'mas-study:study-002' } });
+  assert.equal(read(root).availability, 'stale');
 }));
 
-test('graph identity, endpoints, current focus, and route refs must remain drawable', () => withRoot((root) => {
+test('unknown owner view shapes remain opaque to Framework readback', () => withRoot((root) => {
   const duplicateNode = snapshot();
   duplicateNode.nodes[1]!.id = duplicateNode.nodes[0]!.id;
   const missingEndpoint = snapshot();
@@ -397,7 +416,7 @@ test('graph identity, endpoints, current focus, and route refs must remain drawa
     nonDrawableNode,
   ]) {
     writeSnapshot(root, candidate);
-    assert.equal(read(root).availability, 'invalid');
+    assert.equal(read(root).availability, 'available');
   }
 }));
 

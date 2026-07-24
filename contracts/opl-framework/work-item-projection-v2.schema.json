@@ -310,12 +310,14 @@
     },
     "domainDetailView": {
       "type": "object",
-      "required": ["item_id", "view_id", "view_kind", "schema_version", "availability"],
+      "required": ["item_id", "view_id", "view_kind", "availability"],
       "properties": {
         "item_id": { "type": "string", "minLength": 1 },
         "view_id": { "type": "string", "minLength": 1 },
-        "view_kind": { "const": "scientific_reasoning_map" },
-        "schema_version": { "enum": ["scientific-reasoning-map.v1", "scientific-reasoning-map.v2"] },
+        "view_kind": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "schema_ref": { "type": "string", "minLength": 1 },
+        "schema_version": { "type": "string", "minLength": 1 },
         "availability": { "enum": ["unread", "available", "missing", "stale", "invalid", "read_error"] },
         "revision": { "type": "integer", "minimum": 0 },
         "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }

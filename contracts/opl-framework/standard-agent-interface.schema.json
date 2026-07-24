@@ -59,14 +59,31 @@
       "uniqueItems": true,
       "items": {
         "type": "object",
-        "required": ["view_id", "view_kind", "schema_version", "source_kind", "relative_path"],
+        "required": ["view_id", "view_kind", "source_kind", "relative_path"],
         "properties": {
           "view_id": { "type": "string", "minLength": 1 },
-          "view_kind": { "const": "scientific_reasoning_map" },
-          "schema_version": { "enum": ["scientific-reasoning-map.v1", "scientific-reasoning-map.v2"] },
+          "view_kind": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "schema_ref": { "type": "string", "minLength": 1 },
+          "schema_version": { "type": "string", "minLength": 1 },
           "source_kind": { "const": "work_item_relative_json" },
-          "relative_path": { "type": "string", "minLength": 1 }
+          "relative_path": { "type": "string", "minLength": 1 },
+          "revision_pointer": { "type": "string", "pattern": "^/" },
+          "owner_task_binding": {
+            "type": "object",
+            "required": ["task_id_pointer", "task_ref_pointer", "task_ref_template"],
+            "properties": {
+              "task_id_pointer": { "type": "string", "pattern": "^/" },
+              "task_ref_pointer": { "type": "string", "pattern": "^/" },
+              "task_ref_template": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
         },
+        "anyOf": [
+          { "required": ["schema_ref"] },
+          { "required": ["schema_version"] }
+        ],
         "additionalProperties": false
       }
     },

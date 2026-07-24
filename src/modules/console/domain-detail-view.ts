@@ -13,11 +13,6 @@ import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts'
 import type { WorkItemProjectionV2 } from './work-item-projection/types.ts';
 
 const MAX_DETAIL_VIEW_BYTES = 8_388_608;
-const SNAPSHOT_VERSION_BY_VIEW_SCHEMA = {
-  'scientific-reasoning-map.v1': 'mas-research-trajectory-snapshot.v1',
-  'scientific-reasoning-map.v2': 'mas-research-trajectory-snapshot.v2',
-} as const;
-
 type DescriptorResolver = (agentId: string) => StandardAgentDescriptorInterface | null;
 type DomainDetailViewDependencies = {
   projection?: WorkItemProjectionV2;
@@ -44,25 +39,6 @@ type UnavailableReadResult = {
   digest: string | null;
 };
 type ReadResult = AvailableReadResult | UnavailableReadResult;
-
-const V2_SNAPSHOT_KEYS = [
-  'surface_kind',
-  'version',
-  'study_id',
-  'study_ref',
-  'revision',
-  'status',
-  'summary',
-  'current_focus',
-  'active_branch',
-  'current_focus_node_refs',
-  'active_branch_node_refs',
-  'nodes',
-  'edges',
-  'medical_narrative',
-  'source_refs',
-  'conditions',
-] as const;
 
 function fail(code: 'cli_usage_error' | 'contract_shape_invalid', message: string, details: Record<string, unknown>): never {
   throw new FrameworkContractError(code, message, details);
@@ -290,61 +266,19 @@ function nonNegativeInteger(value: unknown) {
   return Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : null;
 }
 
-function validGraph(payload: Record<string, unknown>) {
-  if (!Array.isArray(payload.nodes) || !Array.isArray(payload.edges)) return false;
-  const nodeIds = payload.nodes.map((node) => isRecord(node)
-    && typeof node.id === 'string'
-    && Boolean(node.id.trim())
-    && typeof node.kind === 'string'
-    && Boolean(node.kind.trim())
-    && typeof node.label === 'string'
-    && Boolean(node.label.trim())
-    && typeof node.status === 'string'
-    && Boolean(node.status.trim())
-    && typeof node.summary === 'string'
-    && Boolean(node.summary.trim())
-    ? node.id
-    : null);
-  if (nodeIds.some((id) => id === null) || new Set(nodeIds).size !== nodeIds.length) return false;
-  const known = new Set(nodeIds);
-  const edgeIds = new Set<string>();
-  for (const edge of payload.edges) {
-    if (!isRecord(edge)
-      || typeof edge.id !== 'string'
-      || !edge.id.trim()
-      || edgeIds.has(edge.id)
-      || typeof edge.source !== 'string'
-      || typeof edge.target !== 'string'
-      || typeof edge.kind !== 'string'
-      || !edge.kind.trim()
-      || typeof edge.label !== 'string'
-      || !edge.label.trim()
-      || typeof edge.status !== 'string'
-      || !edge.status.trim()
-      || !known.has(edge.source)
-      || !known.has(edge.target)) return false;
-    edgeIds.add(edge.id);
+function pointerValue(value: unknown, pointer: string) {
+  let current = value;
+  for (const segment of pointer.replace(/^\//, '').split('/').filter(Boolean)) {
+    const key = segment.replace(/~1/g, '/').replace(/~0/g, '~');
+    if (!isRecord(current) && !Array.isArray(current)) return undefined;
+    if (!(key in current)) return undefined;
+    current = current[key as keyof typeof current];
   }
-  return true;
+  return current;
 }
 
-function exactKeys(value: Record<string, unknown>, keys: readonly string[]) {
-  return Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
-}
-
-function typedStudyRef(value: unknown) {
-  return isRecord(value)
-    && exactKeys(value, ['kind', 'ref'])
-    && typeof value.kind === 'string'
-    && Boolean(value.kind.trim())
-    && typeof value.ref === 'string'
-    && Boolean(value.ref.trim());
-}
-
-function stringRefs(value: unknown, knownNodeIds: Set<string>): value is string[] {
-  return Array.isArray(value)
-    && value.every((entry) => typeof entry === 'string' && knownNodeIds.has(entry))
-    && new Set(value).size === value.length;
+function taskRefFromTemplate(template: string, taskId: string) {
+  return template.replaceAll('{task_id}', taskId);
 }
 
 function validateSnapshot(
@@ -353,39 +287,8 @@ function validateSnapshot(
   digest: string,
 ): ReadResult {
   if (!isRecord(value)) return unavailable('invalid', 'domain_detail_source_root_invalid');
-  const expectedVersion = SNAPSHOT_VERSION_BY_VIEW_SCHEMA[declaration.schema_version];
-  if (value.surface_kind !== 'mas_research_trajectory_snapshot' || value.version !== expectedVersion) {
-    return unavailable('invalid', 'domain_detail_source_schema_unsupported');
-  }
-  if (typeof value.study_id !== 'string' || !value.study_id.trim()) {
-    return unavailable('invalid', 'domain_detail_source_identity_invalid');
-  }
-  if (declaration.schema_version === 'scientific-reasoning-map.v2'
-    && (!exactKeys(value, V2_SNAPSHOT_KEYS) || !typedStudyRef(value.study_ref))) {
-    return unavailable('invalid', 'domain_detail_source_v2_contract_invalid');
-  }
-  if (!isRecord(value.summary)
-    || !isRecord(value.current_focus)
-    || !isRecord(value.active_branch)
-    || (declaration.schema_version === 'scientific-reasoning-map.v2' && !isRecord(value.medical_narrative))
-    || !Array.isArray(value.source_refs)
-    || !Array.isArray(value.conditions)
-    || !validGraph(value)) {
-    return unavailable('invalid', 'domain_detail_source_shape_invalid');
-  }
-  const nodeIds = new Set((value.nodes as Array<Record<string, unknown>>).map((node) => String(node.id)));
-  if (declaration.schema_version === 'scientific-reasoning-map.v2' && (
-    typeof value.current_focus.node_id !== 'string'
-    || !nodeIds.has(value.current_focus.node_id)
-    || !stringRefs(value.current_focus_node_refs, nodeIds)
-    || value.current_focus_node_refs.length === 0
-    || !stringRefs(value.active_branch_node_refs, nodeIds)
-    || value.active_branch_node_refs.length === 0
-  )) {
-    return unavailable('invalid', 'domain_detail_source_route_refs_invalid');
-  }
-  const revision = nonNegativeInteger(value.revision);
-  if (revision === null || (declaration.schema_version === 'scientific-reasoning-map.v2' && revision === 0)) {
+  const revision = nonNegativeInteger(pointerValue(value, declaration.revision_pointer));
+  if (revision === null) {
     return unavailable('invalid', 'domain_detail_source_revision_invalid');
   }
   return {
@@ -445,15 +348,14 @@ export function buildDomainDetailViewReadback(
   const result = item.identity.work_item_root
     ? readBoundedJson(item.identity.workspace_path, item.identity.work_item_root, declaration)
     : unavailable('missing', 'domain_detail_work_item_root_missing');
-  const studyRef = result.availability === 'available' && isRecord(result.payload.study_ref)
-    ? result.payload.study_ref
-    : null;
-  if (result.availability === 'available' && (
-    result.payload.study_id !== item.identity.work_item_id
-    || studyRef?.kind !== 'mas_study'
-    || studyRef.ref !== `mas-study:${item.identity.work_item_id}`
-  )) {
-    return envelope(input, declaration, staleResult(result, 'domain_detail_item_identity_mismatch'));
+  const ownerBinding = declaration.owner_task_binding;
+  if (result.availability === 'available' && ownerBinding) {
+    const taskId = pointerValue(result.payload, ownerBinding.task_id_pointer);
+    const taskRef = pointerValue(result.payload, ownerBinding.task_ref_pointer);
+    if (taskId !== item.identity.work_item_id
+      || taskRef !== taskRefFromTemplate(ownerBinding.task_ref_template, item.identity.work_item_id)) {
+      return envelope(input, declaration, staleResult(result, 'domain_detail_item_identity_mismatch'));
+    }
   }
   const conditionalRevision = input.ifRevision ?? input.ifGeneration ?? null;
   if (result.availability === 'available'
@@ -485,7 +387,8 @@ function envelope(
     generation: revision,
     ...(result.digest ? { digest: result.digest } : {}),
     not_modified: notModified,
-    payload_schema: declaration.schema_version,
+    ...(declaration.schema_ref ? { payload_schema_ref: declaration.schema_ref } : {}),
+    ...(declaration.schema_version ? { payload_schema: declaration.schema_version } : {}),
     payload: notModified ? null : result.payload,
     conditions: [condition(result.availability, result.reason)],
   };
