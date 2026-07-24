@@ -457,6 +457,119 @@ test('explicit developer checkout records provenance and runs an immutable manag
   }
 });
 
+test('MAS developer snapshot reuses its physical OwnerGate preparation and preserves it when a new snapshot fails', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mas-developer-runtime-state-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-mas-developer-runtime-source-'));
+  const checkoutPath = path.join(fixtureRoot, 'med-autoscience');
+  const binRoot = path.join(fixtureRoot, 'bin');
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousPath = process.env.PATH;
+  fs.mkdirSync(checkoutPath, { recursive: true });
+  writeMasPackageRuntimeFixture(checkoutPath, '0.1.0');
+  for (const relativePath of [
+    'contracts/action_catalog.json',
+    'contracts/domain_handler_registry.json',
+    'contracts/pack_compiler_input.json',
+    'agent/stages/manifest.json',
+  ]) {
+    const targetPath = path.join(checkoutPath, relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, '{}\n');
+  }
+  const primarySkillPath = path.join(checkoutPath, 'agent', 'primary_skill', 'SKILL.md');
+  fs.mkdirSync(path.dirname(primarySkillPath), { recursive: true });
+  fs.writeFileSync(primarySkillPath, '# MAS\n');
+  runGit(checkoutPath, ['init', '-q']);
+  runGit(checkoutPath, ['config', 'user.email', 'fixture@example.com']);
+  runGit(checkoutPath, ['config', 'user.name', 'Fixture']);
+  runGit(checkoutPath, ['add', '.']);
+  runGit(checkoutPath, ['commit', '-qm', 'MAS developer runtime v1']);
+  writeFakeMasUv(binRoot);
+  process.env.OPL_STATE_DIR = stateDir;
+  process.env.PATH = `${binRoot}${path.delimiter}${previousPath ?? ''}`;
+
+  try {
+    const carrier = {
+      carrier_kind: 'opl_managed_module_source' as const,
+      module_id: 'medautoscience',
+    };
+    const installed = applyManagedRuntimeSourceCarrier({
+      config: carrier,
+      previous: null,
+      action: 'install',
+      dryRun: false,
+      packageId: FIXTURE_MAS_PACKAGE_ID,
+      transactionId: 'mas-developer-runtime-v1',
+      sourceKind: 'developer_checkout_override',
+      checkoutPath,
+    });
+    assert.ok(installed.after?.preparation_root);
+    finalizeManagedRuntimeSourceMutation(installed);
+    const installedState = structuredClone(installed.after);
+    const ownerGateBin = path.join(
+      installed.after.preparation_root,
+      'uv-tools',
+      'med-autoscience',
+      'bin',
+      'mas-foundry-owner-gate',
+    );
+    const ownerGateStat = fs.lstatSync(ownerGateBin);
+    assert.equal(ownerGateStat.isFile(), true);
+    assert.equal(ownerGateStat.isSymbolicLink(), false);
+    assert.notEqual(ownerGateStat.mode & 0o111, 0);
+
+    writeFakeMasUv(binRoot, true);
+    const reused = applyManagedRuntimeSourceCarrier({
+      config: carrier,
+      previous: installed.after,
+      action: 'update',
+      dryRun: false,
+      packageId: FIXTURE_MAS_PACKAGE_ID,
+      transactionId: 'mas-developer-runtime-reuse',
+      sourceKind: 'developer_checkout_override',
+      checkoutPath,
+    });
+    assert.equal(reused.kind, 'none');
+    assert.equal(reused.after?.checkout_path, installedState.checkout_path);
+    assert.equal(reused.after?.preparation_root, installedState.preparation_root);
+    assert.deepEqual(reused.after?.bootstrap_command, installedState.bootstrap_command);
+    assert.equal(fs.existsSync(ownerGateBin), true);
+    assert.equal(managedRuntimeSourceReadiness(reused.after).status, 'current');
+
+    const snapshotModuleRoot = path.dirname(installedState.checkout_path);
+    const preparationModuleRoot = path.dirname(installedState.preparation_root!);
+    const snapshotsBeforeFailure = exactTreeInventory(snapshotModuleRoot);
+    const preparationsBeforeFailure = exactTreeInventory(preparationModuleRoot);
+    fs.writeFileSync(path.join(checkoutPath, 'README.md'), '# MAS 0.1.1\n');
+    runGit(checkoutPath, ['add', 'README.md']);
+    runGit(checkoutPath, ['commit', '-qm', 'MAS developer runtime v2']);
+    assert.throws(() => applyManagedRuntimeSourceCarrier({
+      config: carrier,
+      previous: reused.after,
+      action: 'update',
+      dryRun: false,
+      packageId: FIXTURE_MAS_PACKAGE_ID,
+      transactionId: 'mas-developer-runtime-v2-failed',
+      sourceKind: 'developer_checkout_override',
+      checkoutPath,
+    }), (error: any) => error?.details?.failure_code === 'agent_package_runtime_source_preparation_failed');
+    assert.deepEqual(reused.after, installedState);
+    assert.deepEqual(exactTreeInventory(snapshotModuleRoot), snapshotsBeforeFailure);
+    assert.deepEqual(exactTreeInventory(preparationModuleRoot), preparationsBeforeFailure);
+    assert.equal(fs.existsSync(ownerGateBin), true);
+    assert.equal(managedRuntimeSourceReadiness(reused.after).status, 'current');
+    const transactionRoot = path.join(stateDir, 'agent-package-runtime-transactions');
+    assert.equal(fs.existsSync(transactionRoot) ? fs.readdirSync(transactionRoot).length : 0, 0);
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    if (previousPath === undefined) delete process.env.PATH;
+    else process.env.PATH = previousPath;
+    removeFixtureTree(stateDir);
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('OMA developer snapshot binds package identity and stays ready through its Foundry pack probe', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-oma-developer-snapshot-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-oma-source-'));

@@ -777,7 +777,7 @@ test('provider retirement removes only unchanged package-owned Skills and preser
   }
 });
 
-test('family-runtime use boundary always uses verified LKG when the update channel is offline', async () => {
+test('family-runtime use boundary reads owner channels when the legacy shared snapshot is offline', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-use-offline-'));
   const workspace = path.join(root, 'workspace');
   const provider = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0');
@@ -810,19 +810,25 @@ test('family-runtime use boundary always uses verified LKG when the update chann
       createSessionArgs(workspace, 'strict-offline'),
       strictEnv,
     ).attempt;
-    assert.equal(strict.workspace_locator.package_use_binding.freshness_mode, 'offline_lkg');
-    assert.equal(strict.workspace_locator.package_use_binding.latest_verified, false);
+    assert.equal(strict.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
+    assert.equal(strict.workspace_locator.package_use_binding.latest_verified, true);
+    assert.equal(strict.workspace_locator.package_use_binding.reconciliation_issue, null);
     assert.equal(
-      strict.workspace_locator.package_use_binding.reconciliation_issue.failure_code,
-      'agent_package_capability_channel_unavailable',
+      strict.workspace_locator.package_use_binding.root_package.source_artifact_ref,
+      'ghcr.io/fixture/one-person-lab-packages/mas:0.1.0-alpha.4',
+    );
+    assert.equal(
+      strict.workspace_locator.package_use_binding.provider_packages[0].source_artifact_ref,
+      'ghcr.io/fixture/one-person-lab-packages/mas-scholar-skills:0.1.0',
     );
 
     const offline = createThenBindAtStart(
       createSessionArgs(workspace, 'offline-lkg'),
       env,
     ).attempt;
-    assert.equal(offline.workspace_locator.package_use_binding.freshness_mode, 'offline_lkg');
-    assert.equal(offline.workspace_locator.package_use_binding.latest_verified, false);
+    assert.equal(offline.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
+    assert.equal(offline.workspace_locator.package_use_binding.latest_verified, true);
+    assert.equal(offline.workspace_locator.package_use_binding.reconciliation_issue, null);
     assert.match(offline.workspace_locator.package_use_binding.use_receipt_ref, /^opl:\/\/agent-package\/use\//);
   } finally {
     removeFixtureTree(root);
@@ -877,7 +883,7 @@ test('family-runtime treats lifecycle and prior use receipt metadata as observat
   }
 });
 
-test('family-runtime use boundary keeps the LKG when the catalog has no compatible retained provider', async () => {
+test('family-runtime use boundary keeps a required provider callable without an ABI compatibility gate', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-use-incompatible-'));
   const workspace = path.join(root, 'workspace');
   const providerV1 = writeCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
@@ -902,10 +908,16 @@ test('family-runtime use boundary keeps the LKG when the catalog has no compatib
       createSessionArgs(workspace, 'incompatible-provider'),
       env,
     ).attempt;
-    assert.equal(attempt.workspace_locator.package_use_binding.freshness_mode, 'offline_lkg');
+    assert.equal(attempt.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
+    assert.equal(attempt.workspace_locator.package_use_binding.latest_verified, true);
+    assert.equal(attempt.workspace_locator.package_use_binding.reconciliation_issue, null);
     assert.equal(
-      attempt.workspace_locator.package_use_binding.reconciliation_issue.failure_code,
-      'agent_package_capability_no_compatible_version',
+      attempt.workspace_locator.package_use_binding.provider_packages[0].package_version,
+      '0.2.0',
+    );
+    assert.equal(
+      attempt.workspace_locator.package_use_binding.provider_packages[0].source_artifact_ref,
+      'ghcr.io/fixture/one-person-lab-packages/mas-scholar-skills:0.2.0',
     );
   } finally {
     removeFixtureTree(root);

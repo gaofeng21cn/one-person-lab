@@ -505,20 +505,29 @@ function prepareRuntimeSource(
   checkoutPath: string,
   includeBootstrap: boolean,
   packageProbeOnly = false,
+  preparationIdentity: string | null = null,
 ) {
   const spec = resolveOplDomainModuleSpec(moduleId);
   const lifecycle = readPackageChannelLifecycle(checkoutPath, spec);
-  if (!lifecycle) {
+  if (!lifecycle && preparationIdentity === null) {
     throw sourceFailure('Managed runtime source preparation requires package-channel lifecycle metadata.', {
       module_id: moduleId,
       checkout_path: checkoutPath,
+    });
+  }
+  const preparationKey = preparationIdentity ?? lifecycle!.current.tree_sha256;
+  if (!SHA256_HEX.test(preparationKey)) {
+    throw sourceFailure('Managed runtime source preparation identity is invalid.', {
+      module_id: moduleId,
+      checkout_path: checkoutPath,
+      preparation_identity: preparationKey,
     });
   }
   const preparationRoot = path.join(
     ensureOplStateDir(resolveOplStatePaths()).state_dir,
     'agent-package-runtime-envs',
     moduleId,
-    lifecycle.current.tree_sha256,
+    preparationKey,
   );
   const managedPackageScope = includeBootstrap || packageProbeOnly;
   const commandEnv = {
@@ -537,11 +546,12 @@ function prepareRuntimeSource(
       : {}),
   };
   if (managedPackageScope) fs.mkdirSync(commandEnv.HOME!, { recursive: true });
-  const bootstrap = includeBootstrap
+  const bootstrapSpec = spec.package_bootstrap_command?.(checkoutPath) ?? null;
+  const bootstrap = includeBootstrap && bootstrapSpec
     ? runRequiredCommand(
       moduleId,
       checkoutPath,
-      spec.package_bootstrap_command?.(checkoutPath) ?? spec.bootstrap_command?.(checkoutPath) ?? null,
+      bootstrapSpec,
       'bootstrap',
       commandEnv,
     )
@@ -1166,7 +1176,45 @@ export function applyManagedRuntimeSourceCarrier(input: {
       expectedSourceIdentity: input.expectedDeveloperSourceIdentity,
     });
     let after: AgentPackageManagedRuntimeSourceState;
+    let preparation: ReturnType<typeof prepareRuntimeSource> | null = null;
+    const snapshotIdentity = snapshot.runtimeSnapshotSha256;
+    if (!snapshotIdentity) {
+      if (snapshot.created) {
+        makeDeveloperCheckoutRuntimeSnapshotWritable(snapshot.snapshotPath);
+        fs.rmSync(snapshot.snapshotPath, { recursive: true, force: true });
+      }
+      throw sourceFailure('Developer runtime snapshot is missing its immutable preparation identity.', {
+        module_id: input.config.module_id,
+        checkout_path: snapshot.snapshotPath,
+      });
+    }
+    const sameSnapshot = input.previous
+      && path.resolve(input.previous.checkout_path) === path.resolve(snapshot.snapshotPath);
+    const preparationRoot = path.join(
+      ensureOplStateDir(resolveOplStatePaths()).state_dir,
+      'agent-package-runtime-envs',
+      input.config.module_id,
+      snapshotIdentity,
+    );
+    const reusablePreparation = Boolean(
+      input.action !== 'repair'
+      &&
+      sameSnapshot
+      && input.previous?.preparation_root
+      && path.resolve(input.previous.preparation_root) === path.resolve(preparationRoot),
+    );
     try {
+      preparation = prepareRuntimeSource(
+        input.config.module_id,
+        snapshot.snapshotPath,
+        !reusablePreparation && Boolean(spec.package_bootstrap_command),
+        true,
+        snapshotIdentity,
+      );
+      if (reusablePreparation) {
+        preparation.bootstrap_command = input.previous!.bootstrap_command;
+        preparation.package_prepare_command = input.previous!.package_prepare_command ?? null;
+      }
       after = buildDeveloperCheckoutRuntimeSourceState({
         config: input.config,
         checkoutPath: snapshot.snapshotPath,
@@ -1175,16 +1223,25 @@ export function applyManagedRuntimeSourceCarrier(input: {
         sourceCheckoutPath: checkoutPath,
         sourceIdentity: snapshot.sourceIdentity,
         runtimeSnapshotSha256: snapshot.runtimeSnapshotSha256,
+        preparation,
       });
     } catch (error) {
+      if (!reusablePreparation) {
+        const failedPreparationRoot = preparation?.preparation_root ?? preparationRoot;
+        makeDeveloperCheckoutRuntimeSnapshotWritable(failedPreparationRoot);
+        fs.rmSync(failedPreparationRoot, {
+          recursive: true,
+          force: true,
+          maxRetries: 3,
+          retryDelay: 50,
+        });
+      }
       if (snapshot.created) {
         makeDeveloperCheckoutRuntimeSnapshotWritable(snapshot.snapshotPath);
         fs.rmSync(snapshot.snapshotPath, { recursive: true, force: true });
       }
       throw error;
     }
-    const sameSnapshot = input.previous
-      && path.resolve(input.previous.checkout_path) === path.resolve(snapshot.snapshotPath);
     const mutation = sameSnapshot ? null : transactionMutation({
       kind: 'installed_fresh',
       packageId: input.packageId ?? input.config.module_id,

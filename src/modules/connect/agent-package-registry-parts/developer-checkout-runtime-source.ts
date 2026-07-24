@@ -322,47 +322,6 @@ export function materializeDeveloperCheckoutRuntimeSnapshot(input: {
   };
 }
 
-function commandDigest(stdout: string, stderr: string) {
-  return `sha256:${crypto.createHash('sha256').update(stdout).update('\0').update(stderr).digest('hex')}`;
-}
-
-function runRequiredProbe(
-  moduleId: string,
-  checkoutPath: string,
-  commandSpec: { command: string; args: string[] } | null,
-  step: 'health_check' | 'handler_probe',
-) {
-  if (!commandSpec) {
-    throw sourceFailure(`Developer checkout runtime source is missing its ${step} command.`, {
-      module_id: moduleId,
-      checkout_path: checkoutPath,
-      step,
-    });
-  }
-  const result = runCommand(commandSpec.command, commandSpec.args, checkoutPath, {
-    timeoutMs: 10 * 60 * 1000,
-    maxBuffer: 64 * 1024 * 1024,
-    env: process.env,
-  });
-  if (result.exitCode !== 0 || result.timedOut) {
-    throw new FrameworkContractError('build_command_failed', `Developer checkout runtime source ${step} failed.`, {
-      module_id: moduleId,
-      checkout_path: checkoutPath,
-      step,
-      command: [commandSpec.command, ...commandSpec.args],
-      exit_code: result.exitCode,
-      timed_out: result.timedOut === true,
-      stdout: result.stdout,
-      stderr: result.stderr,
-      failure_code: 'agent_package_runtime_source_preparation_failed',
-    });
-  }
-  return {
-    command: [commandSpec.command, ...commandSpec.args],
-    outputSha256: commandDigest(result.stdout, result.stderr),
-  };
-}
-
 export function buildDeveloperCheckoutRuntimeSourceState(input: {
   config: AgentPackageManagedRuntimeSourceCarrier;
   checkoutPath: string;
@@ -371,6 +330,16 @@ export function buildDeveloperCheckoutRuntimeSourceState(input: {
   sourceCheckoutPath?: string;
   sourceIdentity?: ReturnType<typeof readDeveloperCheckoutSourceIdentity>;
   runtimeSnapshotSha256?: string | null;
+  preparation?: Pick<AgentPackageManagedRuntimeSourceState,
+    'preparation_status'
+    | 'bootstrap_command'
+    | 'package_prepare_command'
+    | 'health_check_command'
+    | 'handler_probe_command'
+    | 'health_output_sha256'
+    | 'handler_probe_output_sha256'
+    | 'preparation_root'
+    | 'preparation_scope'>;
 }): AgentPackageManagedRuntimeSourceState {
   const spec = resolveOplDomainModuleSpec(input.config.module_id);
   const immutableSnapshot = Boolean(input.sourceCheckoutPath);
@@ -391,12 +360,12 @@ export function buildDeveloperCheckoutRuntimeSourceState(input: {
       checkout_path: input.checkoutPath,
     });
   }
-  const healthResult = input.dryRun
-    ? null
-    : runRequiredProbe(input.config.module_id, input.checkoutPath, health, 'health_check');
-  const handlerResult = input.dryRun
-    ? null
-    : runRequiredProbe(input.config.module_id, input.checkoutPath, handler, 'handler_probe');
+  if (!input.dryRun && !input.preparation) {
+    throw sourceFailure('Developer checkout runtime source is missing its carrier-owned preparation result.', {
+      module_id: input.config.module_id,
+      checkout_path: input.checkoutPath,
+    });
+  }
   const identity = input.sourceIdentity
     ?? readDeveloperCheckoutSourceIdentity(input.sourceCheckoutPath ?? input.checkoutPath);
   return {
@@ -416,14 +385,14 @@ export function buildDeveloperCheckoutRuntimeSourceState(input: {
     tree_sha256: identity.tree_sha256,
     runtime_snapshot_sha256: input.runtimeSnapshotSha256 ?? null,
     rollback_ref: null,
-    preparation_status: input.dryRun ? 'validated_no_write' : 'completed',
-    bootstrap_command: null,
-    package_prepare_command: null,
-    health_check_command: [health.command, ...health.args],
-    handler_probe_command: [handler.command, ...handler.args],
-    health_output_sha256: healthResult?.outputSha256 ?? null,
-    handler_probe_output_sha256: handlerResult?.outputSha256 ?? null,
-    preparation_root: null,
+    preparation_status: input.preparation?.preparation_status ?? 'validated_no_write',
+    bootstrap_command: input.preparation?.bootstrap_command ?? null,
+    package_prepare_command: input.preparation?.package_prepare_command ?? null,
+    health_check_command: input.preparation?.health_check_command ?? [health.command, ...health.args],
+    handler_probe_command: input.preparation?.handler_probe_command ?? [handler.command, ...handler.args],
+    health_output_sha256: input.preparation?.health_output_sha256 ?? null,
+    handler_probe_output_sha256: input.preparation?.handler_probe_output_sha256 ?? null,
+    preparation_root: input.preparation?.preparation_root ?? null,
     preparation_scope: input.sourceCheckoutPath ? 'developer_snapshot_root' : 'developer_checkout_root',
   };
 }

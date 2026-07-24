@@ -806,6 +806,38 @@ export function writeDeveloperCapabilityCheckoutClosure(input: {
     path.join(input.masCheckout, 'plugins', 'med-autoscience', 'skills', 'med-autoscience', 'helper.txt'),
     'MAS developer helper A\n',
   );
+  fs.writeFileSync(path.join(input.masCheckout, 'pyproject.toml'), [
+    '[build-system]',
+    'requires = ["setuptools>=69"]',
+    'build-backend = "setuptools.build_meta"',
+    '',
+    '[project]',
+    'name = "med-autoscience"',
+    `version = "${masManifest.version}"`,
+    'requires-python = ">=3.12"',
+    '',
+    '[project.scripts]',
+    'mas-foundry-owner-gate = "med_autoscience.authority_handlers.foundry_owner_gate:main"',
+    '',
+    '[tool.setuptools.packages.find]',
+    'where = ["src"]',
+    'include = ["med_autoscience*"]',
+    '',
+  ].join('\n'));
+  fs.writeFileSync(path.join(input.masCheckout, 'README.md'), `# MAS ${masManifest.version}\n`);
+  const authorityHandlerRoot = path.join(
+    input.masCheckout,
+    'src',
+    'med_autoscience',
+    'authority_handlers',
+  );
+  fs.mkdirSync(authorityHandlerRoot, { recursive: true });
+  fs.writeFileSync(path.join(input.masCheckout, 'src', 'med_autoscience', '__init__.py'), '');
+  fs.writeFileSync(path.join(authorityHandlerRoot, '__init__.py'), '');
+  fs.writeFileSync(
+    path.join(authorityHandlerRoot, 'foundry_owner_gate.py'),
+    'def main():\n    raise SystemExit(0)\n',
+  );
 
   fs.mkdirSync(path.join(input.scholarCheckout, 'contracts'), { recursive: true });
   fs.copyFileSync(

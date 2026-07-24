@@ -986,9 +986,28 @@ test('system configure-codex delegates Full runtime Package and carrier reconcil
     writeJson(ledgerPath, ledger);
 
     const receiptMissing = runCli(['packages', 'status', '--package-id', 'mas'], fixture.env) as any;
-    assert.equal(receiptMissing.opl_agent_package_status.status, 'available');
-    assert.equal(receiptMissing.opl_agent_package_status.operational_ready, true);
-    assert.equal(receiptMissing.opl_agent_package_status.launch_allowed, true);
+    assert.equal(receiptMissing.opl_agent_package_status.status, 'attention_needed');
+    assert.equal(receiptMissing.opl_agent_package_status.operational_ready, false);
+    assert.equal(receiptMissing.opl_agent_package_status.launch_allowed, false);
+    assert.equal(
+      receiptMissing.opl_agent_package_status.launch_blocked_reason,
+      'runtime_source_incompatible',
+    );
+    assert.equal(receiptMissing.opl_agent_package_status.package_dependency_readiness.status, 'current');
+    assert.equal(receiptMissing.opl_agent_package_status.package_dependency_readiness.operational_ready, true);
+    assert.equal(receiptMissing.opl_agent_package_status.runtime_source_readiness.status, 'incompatible');
+    assert.equal(
+      receiptMissing.opl_agent_package_status.runtime_source_readiness.reason,
+      'managed_runtime_source_probe_failed',
+    );
+    assert.equal(
+      receiptMissing.opl_agent_package_status.runtime_source_readiness.actual_tree_sha256,
+      receiptMissing.opl_agent_package_status.runtime_source_readiness.expected_tree_sha256,
+    );
+    assert.equal(currentMasLock.managed_runtime_source.preparation_scope, 'preexisting_read_only_probe');
+    assert.equal(currentMasLock.managed_runtime_source.preparation_root, null);
+    assert.deepEqual(currentMasLock.managed_runtime_source.health_check_command, []);
+    assert.deepEqual(currentMasLock.managed_runtime_source.handler_probe_command, []);
     assert.equal(receiptMissing.opl_agent_package_status.carrier_authority_readiness.status, 'invalid');
     assert.equal(receiptMissing.opl_agent_package_status.lifecycle_ux.status, 'available');
     const carrierObservation = receiptMissing.opl_agent_package_status.conditions.find(
@@ -1010,12 +1029,26 @@ test('system configure-codex delegates Full runtime Package and carrier reconcil
     assert.equal(bound.binding.workspace_path, workspace);
     assert.equal(boundProject.active_binding.binding_id, bound.binding.binding_id);
     assert.equal(boundProject.bindings[0].workspace_path_currentness.status, 'current');
-    const activation = runCli([
+    const activationFailure = runCliFailure([
       'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
-    ], fixture.env) as any;
-    assert.equal(activation.opl_agent_package_activation.operational_ready, true);
-    assert.equal(activation.opl_agent_package_activation.launch_allowed, true);
-    assert.equal(activation.opl_agent_package_activation.package_use_binding.use_boundary_id.length > 0, true);
+    ], fixture.env);
+    assert.equal(activationFailure.status, 3);
+    assert.equal(
+      activationFailure.payload.error.details.failure_code,
+      'agent_package_scope_activation_blocked',
+    );
+    assert.equal(
+      activationFailure.payload.error.details.launch_blocked_reason,
+      'runtime_source_incompatible',
+    );
+    assert.equal(
+      activationFailure.payload.error.details.package_dependency_readiness.status,
+      'current',
+    );
+    assert.equal(
+      activationFailure.payload.error.details.package_dependency_readiness.operational_ready,
+      true,
+    );
   } finally {
     removeFixtureTree(homeRoot);
     fs.rmSync(captureDir, { recursive: true, force: true });
