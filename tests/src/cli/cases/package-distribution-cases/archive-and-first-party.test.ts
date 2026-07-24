@@ -1002,9 +1002,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   const manifest = manifests.mas;
   const expectedReleases: Record<string, { version: string; sourceCommit: string; payloadRef: string }> = {
     mas: {
-      version: '0.2.19',
-      sourceCommit: 'e3ea83decbbe25555a746576781032fe0fa46efc',
-      payloadRef: 'payloads/mas-0.2.19.json',
+      version: '0.2.20',
+      sourceCommit: '24740b3c117c177ba272247780977361b0bfb6e3',
+      payloadRef: 'payloads/mas-0.2.20.json',
     },
     mag: {
       version: '0.3.5',
@@ -1031,7 +1031,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.2.19');
+  assert.equal(manifest.version, '0.2.20');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
@@ -1285,6 +1285,28 @@ test('first-party agent package manifest rejects unknown Codex carrier distribut
     }),
     /standalone_distribution is invalid/,
   );
+});
+
+test('bundled Full MAS snapshot keeps its frozen manifest bytes while ordinary publication advances', () => {
+  const catalog = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/bundled-full-runtime-package-catalog.json'),
+    'utf8',
+  )) as Record<string, any>;
+  const frozenRef = catalog.packages.mas.manifest_ref;
+  const frozenPath = path.join(repoRoot, 'contracts/opl-framework', frozenRef);
+  const frozenBytes = fs.readFileSync(frozenPath);
+  const frozenManifest = parseJsonText(frozenBytes.toString('utf8')) as Record<string, any>;
+  const ordinaryManifest = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/packages/mas.json'),
+    'utf8',
+  )) as Record<string, any>;
+
+  assert.equal(frozenRef, 'packages/mas-0.2.19.json');
+  assert.equal(crypto.createHash('sha256').update(frozenBytes).digest('hex'),
+    '12e3ec3f3307a083d490179656a455605d1e040e96cc77b379f9b9b4daf59a20');
+  assert.equal(frozenManifest.version, '0.2.19');
+  assert.equal(frozenManifest.codex_surface.plugin_payload_manifest_url, 'payloads/mas-0.2.19.json');
+  assert.equal(ordinaryManifest.version, '0.2.20');
 });
 
 test('MAS first-party agent package manifest fails closed for unsafe dependency declarations', () => {
