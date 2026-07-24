@@ -13,11 +13,23 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 Package 生态的目标读法是 `OPL Base ≈ R`、`OPL App ≈ RStudio`、`OPL Package ≈ R Package`。Package 是唯一安装单元；Skill、Tool、Plugin、workflow 和 entrypoint 是 Package descriptor 中可发现、可调用、可自由组合的 capability，不再拥有平行 lifecycle。标准智能体只是 `kind=agent` 的普通 Package，可以像 MAS -> ScholarSkills 一样声明其他 Package 的 required presence dependency。
 
-长期 Package descriptor 只保留 `id`、`kind`、`requires`、`optional`、`entrypoints`、`home`、`runtime` 和 `custom_views`。`requires` 只检查 dependency 是否已由实际 carrier 平台安装且入口可调用，不比较 SemVer range、ABI range、exact digest 或 content lock。Codex Plugin Manager、Git 或实际 carrier 平台持有 install/list/update/remove 与 source currentness；Framework 不再维护 resolver、installed lock、Package payload、LKG、lifecycle receipt、materializer、scope activation或 durable Package transaction。
+长期必须把三个正交维度分开：
+
+```text
+OPL Package = executor-neutral identity + capabilities + presence dependencies
+Carrier     = OCI / Codex Plugin Manager / Git / local / offline platform adapter
+Executor    = Codex CLI / Claude Code / Hermes Agent / future executor
+```
+
+长期 Package descriptor 只保留 `id`、`kind`、`requires`、`optional`、`entrypoints`、`executor_adapters`、`home`、`runtime` 和 `custom_views`。`requires` 只检查 dependency identity 已存在且入口可调用，不比较 SemVer range、ABI range、exact digest 或 content lock。carrier-specific plugin id、marketplace、cache、path 和 executor route status 不能进入 Package identity。
+
+每个 first-party Package owner 在自己的 `ghcr.io/<owner>/one-person-lab-packages/<canonical-id>` repository 发布完整官方 Package runtime，并独立推进自己的 `latest-stable`。OPL Base 只保留薄 OCI download/install/update adapter，以及对 OCI、Git/local、offline 和其他真实 carrier 的 fresh installed/callable 聚合；不再维护中央 resolver、installed lock、Package payload、LKG、lifecycle receipt、materializer、scope activation或 durable Package transaction。`ghcr.io/<owner>/one-person-lab-manifest:latest-stable` 只服务 Full、离线、集成测试和 QA 的组合快照，不定义普通 Package currentness。
+
+Codex Plugin Manager 是首个 carrier adapter，只拥有 Codex plugin/config/cache 的原生投影和 lifecycle；它不是 Package identity、installed truth 或生态 authority，也不能用仅 Plugin 安装替代完整 Package runtime。Git/local/external carrier 可以替代官方 OCI source，但必须投影同一个 Package identity。Framework 只能从各 native carrier 的 fresh readback 聚合 installed truth；完整 runtime bytes 不可读时报告 `physical_unavailable`，不能由 descriptor、App metadata 或残留 Plugin cache 伪造 installed。
 
 稳定 Package/capability/entrypoint identity 是 owner 的兼容承诺，只允许向后兼容扩展。breaking interface 必须发布新 identity，或由 owner 保留兼容 adapter；旧 identity 只有在 fresh no-active-consumer proof 后才能删除。平台 version 可用于展示与 provenance，但不恢复中央版本 resolver。
 
-Framework 目标只保留薄的 `ensure/list/update/remove/health` adapter、installed descriptor discovery、Agent Work Item inventory 与 Temporal execution 聚合，以及 typed custom-view proxy。App 持有可替换 starter/default profile、首次安装/显式恢复、Settings、Home preference 和 renderer：Official Profile 只在首次安装或用户显式恢复时 ensure；日常 maintenance 只更新平台仍报告为 installed 的 Package，不能把用户已经删除的 Package 静默装回。Standard 和 Full 使用同一 installed truth；Full 只多 offline seed bytes，不形成第二套 registry、lock 或 updater。
+Framework 目标只保留 OCI 和其他 native carrier 的薄 adapter、carrier-neutral installed descriptor discovery、Agent Work Item inventory 与 Temporal execution 聚合、executor route readiness，以及 typed custom-view proxy。Package 安装状态与 executor route 状态必须分开：切换 Codex CLI、Claude Code 或 Hermes 只刷新对应 route，不重装 Package，也不丢 Settings/Home preference、required dependency presence、Work Item 或 typed view；缺 adapter 只使该 route unavailable。App 持有可替换 starter/default profile、首次安装/显式恢复、Settings、Home preference 和 renderer：Official Profile 只在首次安装或用户显式恢复时 ensure；日常 maintenance 只更新 native carrier 仍报告为 installed 的 Package，不能把用户已经删除的 Package 静默装回。Standard 和 Full 使用同一 installed truth；Full 只多 offline seed bytes，不形成第二套 registry、lock 或 updater。
 
 Agent 自己持有业务 Work Item inventory 和扩展数据接口；Temporal 只持有 execution history/status；App 组合两者。MAS 科研路线通过 Agent-owned typed data view + App-owned renderer 展示，未知 view 安全降级，Package 不向 App 注入任意可执行 UI。新增 Agent 仅需安装并暴露 descriptor，即可进入 Runtime 页面，不修改 Framework 固定数组。
 

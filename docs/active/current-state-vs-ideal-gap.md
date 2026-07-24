@@ -25,7 +25,7 @@ Live Evidence 后置：release、production、Brand L5、owner-chain scaleout、
 - `med-autoscience`、`med-autogrant`、`redcube-ai` 是标准 OPL domain agent：domain truth、quality verdict、artifact authority、owner receipt、typed blocker 和 human gate 留在各自 owner repo；OPL 只承接 generic stage/runtime/control-plane substrate。
 - `opl-meta-agent` 和 `opl-bookforge` 按标准 OPL Agent / Foundry Agent 目标态维护：domain pack、generated/hosted surface、default path、accepted owner-answer shape、source morphology、retired helper provenance 和 no-forbidden-write guard 清楚。
 - `one-person-lab-app` 是普通用户与 operator 的产品入口：Docker/WebUI beginner path、Settings control plane、runtime proxy、release/operator progress、active shell policy 和 App-owned contract 归 App owner；Framework 只提供受控 read/action surface。
-- Package 生态目标固定为 `OPL Base ≈ R`、`OPL App ≈ RStudio`、`OPL Package ≈ R Package`：Package 是唯一安装单元，标准 Agent 只是 `kind=agent` 的普通 Package；物理 lifecycle 退回实际平台，Framework 只保留动态发现、presence/callability、状态聚合与 Runtime 薄层。
+- Package 生态目标固定为 `OPL Base ≈ R`、`OPL App ≈ RStudio`、`OPL Package ≈ R Package`：Package 是唯一安装单元，标准 Agent 只是 `kind=agent` 的普通 Package；每个 owner 以独立 GHCR `latest-stable` 发布完整 runtime，shared manifest 只服务 Full/offline/integration/QA；Package identity、carrier 与 executor route 相互独立，Framework 只保留薄 OCI/native adapter、carrier-neutral installed aggregation、presence/callability 与 Runtime 投影。
 - Support repos、Aion/Hermes、MAS Scholar Skills、Homebrew、OPL Doc 和 Native Workbench 只按 carrier / support / capability-pack / distribution / GUI candidate 边界读取；它们不成为 framework/domain/App release truth owner，也不替代对应 owner 的 evidence surface。
 
 North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md)、[OPL Family 理想系统评估](../references/runtime-substrate/opl-family-ideal-system-assessment.md)、[OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md) 和核心五件套。本文不复制这些目标态细节，只维护当前 gap 与 baton。
@@ -44,7 +44,7 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 当前默认读法：默认 OPL family maintained repo 的非 live 功能/结构基线只能从 fresh repo truth、四份 `contracts/opl-framework/foundry-*.schema.json`、FoundryRun source/tests 与各 domain owner surface 读取。本文不冻结日期、branch、SHA、`origin/main` 状态、receipt id、worktree closeout、workflow run 或某轮 readback。
 
-当前唯一已选中的 active 非 live 功能/结构 gap 是 `opl_package_platform_composition`。Framework 与 App 共同推进 platform fresh proof、minimum descriptor/dual-read、Official Profile、独立 maintenance、动态 Runtime 与 legacy removal；当前 P0 是冻结旧 Package Manager 扩张并建立 retained-consumer inventory。完整写集、顺序和完成门见 [`opl-package-platform-composition-migration.md`](./opl-package-platform-composition-migration.md)。本文只持有 gap/baton，不复制执行计划，也不能把 docs 或 compatibility bridge 写成迁移完成。
+当前唯一已选中的 active 非 live 功能/结构 gap 是 `opl_package_platform_composition`。Framework 与 App 共同推进 owner GHCR/carrier fresh proof、minimum descriptor/dual-read、Codex adapter 封装、真实非 Codex/中性 adapter、Official Profile、独立 maintenance、动态 Runtime 与 legacy removal；当前 P0 是冻结旧 Package Manager 扩张并建立 retained-consumer inventory。完整写集、顺序和完成门见 [`opl-package-platform-composition-migration.md`](./opl-package-platform-composition-migration.md)。本文只持有 gap/baton，不复制执行计划，也不能把 docs 或 compatibility bridge 写成迁移完成。
 
 ## 八条调研建议 Current Tracker
 

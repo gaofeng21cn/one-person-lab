@@ -7,11 +7,14 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 顶层定位
 
-- Planned Package 生态固定为 `OPL Base ≈ R`、`OPL App ≈ RStudio`、`OPL Package ≈ R Package`。Package 是唯一安装单元；Skill、Tool、Plugin、workflow 和 entrypoint 只是 Package 可发现 capability，不得建立平行 lifecycle 或固定清单。
+- Planned Package 生态固定为 `OPL Base ≈ R`、`OPL App ≈ RStudio`、`OPL Package ≈ R Package`。Package 是唯一安装单元；Skill、Tool、Plugin、MCP、workflow 和 entrypoint 只是 Package 可发现 capability，不得建立平行 lifecycle 或固定清单。Package identity、carrier 与 executor route 必须保持正交。
 - 标准 Agent 只是 `kind=agent` 的普通 Package。Framework 不得维护固定 Package/Agent/Plugin/Module registry；App starter/default profile 是可替换产品选择，不是 Framework admission 或能力上限。
 - Package required/optional dependency 只检查 presence 和 declared entrypoint callability。禁止把 SemVer range、ABI range、exact digest、content lock、Base/App commit 或 Release Set cohort 作为普通 Package 安装、更新或运行门禁。MAS -> ScholarSkills 的 required presence dependency 必须保留。
 - 稳定 Package/capability/entrypoint identity 只能向后兼容扩展。breaking interface 必须使用新 identity，或由 owner 保留兼容 adapter；旧 identity 只有在 fresh no-active-consumer proof 后才能删除。平台 version 只作展示/provenance，不得恢复中央版本 resolver。
-- Package 物理生命周期优先归 Codex Plugin Manager、Git 或实际 carrier 平台。Framework 只有在 fresh platform gap proof 证明用户功能会降级时，才能保留单一薄 adapter；不得新建或扩展 resolver、OPL installed lock、Package payload、LKG、lifecycle receipt、materializer、scope activation或 durable Package transaction。
+- 每个 first-party Package 的完整官方 runtime 只由 owner 的独立 GHCR repository 发布，owner 独立推进该 Package 的 `latest-stable`。共享 `one-person-lab-manifest:latest-stable` 只允许服务 Full/offline/integration/QA 快照，不得成为普通安装、更新或 currentness authority。
+- OPL Base 只保留薄 OCI download/install/update adapter 和 carrier-neutral fresh installed aggregation。Codex Plugin Manager 只持有 Codex plugin/config/cache 投影，是首个 carrier adapter，不是 Package identity、installed truth 或生态 authority；Plugin 子集、App metadata、descriptor 和残留 cache 都不得替代完整 Package runtime 或伪造 installed。
+- Git/local/external/offline carrier 可替代官方 OCI source，但必须保留同一个 Package identity。Framework 只有在 fresh platform gap proof 证明用户功能会降级时，才能保留单一薄 adapter；不得新建或扩展 resolver、OPL installed lock、Package payload、LKG、lifecycle receipt、materializer、scope activation或 durable Package transaction。
+- executor adapter 只决定对应 route 的 callability。切换或缺失 Codex CLI、Claude Code、Hermes 等 executor adapter 不得重装 Package，也不得丢失偏好、任务、依赖或 typed views；缺失只局部降级对应 route，完整物理 runtime 缺失时必须报告 `physical_unavailable`。
 - App Official Profile 只在首次安装或用户显式恢复时 ensure。日常 maintenance 只能从平台 installed inventory 枚举并独立更新仍安装的 Package；用户删除后不得静默回装，单 Package 失败不得阻塞 Base、App 或其他 Package。
 - OPL Base 持有通用 runtime、动态 descriptor discovery、Agent Work Item/Temporal execution 聚合和 typed custom-view proxy；App 持有 starter profile、Settings、Home preference 与 renderer；Agent 持有业务 Work Item 和 custom-view data；Temporal 持有 execution truth。任一 owner 不得镜像其他 owner 的状态机。
 - Standard 与 Full 使用同一 installed inventory；Full 只可提供 offline seed，不得形成第二 Package registry、lock、payload 或 updater。Homebrew、App、Docker/WebUI 和其他 carrier 只管理各自对象，不定义 Package 生态 currentness。
