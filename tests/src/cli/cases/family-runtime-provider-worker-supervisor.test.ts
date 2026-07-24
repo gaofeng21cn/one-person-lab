@@ -87,8 +87,16 @@ test('provider-worker supervisor persists an explicit Temporal namespace and omi
     const values = providerWorkerSupervisorEnvironmentVariables(paths, environment);
     const projection = providerWorkerSupervisorEnvironmentProjection(paths, environment);
     const plist = buildProviderWorkerSupervisorPlist(paths, environment);
+    const pathToPlist = path.join(root, 'provider-worker.plist');
+    writeFileSync(pathToPlist, plist);
+    const persistedProjection = providerWorkerSupervisorEnvironmentProjection(
+      paths,
+      { OPL_TEMPORAL_NAMESPACE: 'wrong-process-namespace' },
+      pathToPlist,
+    );
     assert.equal(values.OPL_TEMPORAL_NAMESPACE, 'opl-foundry');
     assert.equal(projection.OPL_TEMPORAL_NAMESPACE, 'opl-foundry');
+    assert.equal(persistedProjection.OPL_TEMPORAL_NAMESPACE, 'opl-foundry');
     assert.equal(plistEnvironmentValue(plist, 'OPL_TEMPORAL_NAMESPACE'), 'opl-foundry');
   } finally {
     rmSync(root, { recursive: true, force: true });

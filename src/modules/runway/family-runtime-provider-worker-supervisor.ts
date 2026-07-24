@@ -229,8 +229,16 @@ export function providerWorkerSupervisorEnvironmentVariables(
 export function providerWorkerSupervisorEnvironmentProjection(
   paths: RuntimePaths,
   environment: ProviderWorkerSupervisorEnvironment = process.env,
+  persistedPlistPath?: string,
 ) {
   const values = providerWorkerSupervisorEnvironmentVariables(paths, environment);
+  if (persistedPlistPath !== undefined) {
+    delete values[TEMPORAL_NAMESPACE];
+    const temporalNamespace = persistedTemporalNamespace(persistedPlistPath);
+    if (temporalNamespace) {
+      values[TEMPORAL_NAMESPACE] = temporalNamespace;
+    }
+  }
   delete values[FOUNDRY_OWNER_GATE_BIN];
   delete values[FOUNDRY_OWNER_GATE_ARGS];
   delete values[FOUNDRY_OWNER_GATE_TIMEOUT_MS];
@@ -257,6 +265,18 @@ function persistedOwnerGateEnvironment(pathToPlist: string) {
     if (match?.[1] !== undefined) values[key] = decodeXml(match[1]);
   }
   return values;
+}
+
+function persistedTemporalNamespace(pathToPlist: string) {
+  if (!fs.existsSync(pathToPlist)) return null;
+  const plist = fs.readFileSync(pathToPlist, 'utf8');
+  const match = plist.match(new RegExp(
+    `<key>${TEMPORAL_NAMESPACE}</key>\\s*<string>([\\s\\S]*?)</string>`,
+  ));
+  if (match?.[1] === undefined) return null;
+  return configuredTemporalNamespace({
+    [TEMPORAL_NAMESPACE]: decodeXml(match[1]),
+  });
 }
 
 function persistedOwnerGateProjection(pathToPlist: string) {
@@ -388,7 +408,11 @@ function basePayload(input: {
     supervisor_role: 'provider_worker_process_supervisor',
     supervisor_owner: 'opl_provider_runtime_manager',
     command: workerSupervisorCommandForDisplay(),
-    environment_variables: providerWorkerSupervisorEnvironmentProjection(input.paths),
+    environment_variables: providerWorkerSupervisorEnvironmentProjection(
+      input.paths,
+      process.env,
+      pathToPlist,
+    ),
     foundry_owner_gate: input.foundryOwnerGate
       ?? providerWorkerFoundryOwnerGateEnvironment().projection,
     health_check_command: providerSloTriggerCommandForDisplay(),
