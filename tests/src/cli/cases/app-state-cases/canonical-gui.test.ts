@@ -53,7 +53,19 @@ exit 1
       assert.equal(Object.hasOwn(carrier, 'install_origin'), false);
       assert.equal(typeof carrier.source_present, 'boolean');
     }
+    const directoryPackageIds = output.app_state.agent_packages.directory.entries
+      .map((entry: any) => entry.package_id);
     assert.equal(output.app_state.agent_packages.status_index.installed_package_count, 0);
+    assert.deepEqual(
+      Object.keys(output.app_state.agent_packages.status_index.packages),
+      directoryPackageIds,
+    );
+    assert.equal(
+      output.app_state.agent_packages.status_index.diagnostics.every(
+        (entry: any) => directoryPackageIds.includes(entry.package_id),
+      ),
+      true,
+    );
     assert.equal(output.app_state.agent_packages.storage_inventory.status, 'unavailable');
     assert.equal(output.app_state.agent_packages.storage_inventory.bytes, null);
     assert.equal(output.app_state.agent_packages.storage_inventory.owner_route, '/settings/agents');

@@ -10,7 +10,6 @@ import {
 import {
   buildOplDeveloperModeSurface,
   buildOplModules,
-  CANONICAL_OPL_PACKAGE_IDS,
   canonicalAgentPackageId,
   compactStorageOwnerInventorySnapshot,
   compactStorageOwnerProjection,
@@ -985,10 +984,9 @@ export async function buildOplAppState(input: {
     readStatus: readAgentPackageStatus,
   }).opl_agent_packages;
   const workspaceBindings = listWorkspaceBindings();
-  const packageIds = [...new Set([
-    ...CANONICAL_OPL_PACKAGE_IDS,
-    ...agentPackagesReadback.directory.entries.map((entry) => entry.package_id),
-  ])];
+  const packageIds = [...new Set(
+    agentPackagesReadback.directory.entries.map((entry) => entry.package_id),
+  )];
   const agentPackageStatuses = buildAppAgentPackageStatuses({
     packageIds,
     profile,
