@@ -1350,6 +1350,7 @@ export function removeManagedRuntimeSourceCarrier(input: {
   transactionId: string;
   dryRun: boolean;
   packageId?: string;
+  retainLastKnownGood?: boolean;
 }): ManagedRuntimeSourceMutation {
   if (!input.state) {
     return {
@@ -1362,7 +1363,7 @@ export function removeManagedRuntimeSourceCarrier(input: {
     };
   }
   const current = validateCurrentState(input.state);
-  if (input.state.ownership === 'preexisting_adopted') {
+  if (input.state.ownership === 'preexisting_adopted' || input.retainLastKnownGood === true) {
     return {
       kind: 'none',
       module_id: input.state.module_id,
@@ -1424,10 +1425,15 @@ export function restoreManagedRuntimeSourceCarrier(input: {
     });
   }
   if (!input.current) {
-    throw sourceFailure('Managed runtime source rollback cannot restore a source without a current package-channel generation.', {
-      module_id: input.restored.module_id,
-      checkout_path: input.restored.checkout_path,
-    });
+    const restored = validateCurrentState(input.restored);
+    return {
+      kind: 'none',
+      module_id: restored.module_id,
+      checkout_path: restored.checkout_path,
+      before: null,
+      after: { ...restored, status: input.dryRun ? 'validated_no_write' : 'current' },
+      staged_removal_paths: [],
+    };
   }
   if (path.resolve(input.current.checkout_path) !== path.resolve(input.restored.checkout_path)) {
     const current = validateCurrentState(input.current);
@@ -1594,6 +1600,10 @@ export function finalizeManagedRuntimeSourceMutation(
   mutation: ManagedRuntimeSourceMutation,
   options: { ignoreTestFailure?: boolean } = {},
 ) {
+  if (mutation.kind === 'none') {
+    clearTransactionMarker(mutation);
+    return { status: 'not_required' as const, cleanup_paths: [] };
+  }
   const cleanupPaths = [
     ...mutation.staged_removal_paths.map((entry) => entry.backup),
     ...(mutation.repair_displaced_path ? [mutation.repair_displaced_path] : []),

@@ -20,11 +20,13 @@ function writeOplFlowPackage(
     includeKindCollision?: boolean;
     includeUnsupportedDefaultMcp?: boolean;
     policyVersion?: 'v1' | 'v2' | 'v3';
+    packageVersion?: string;
   } = {},
 ) {
   const sourceRoot = path.join(root, 'fixture.opl-flow-source');
   const v2 = options.policyVersion === 'v2';
   const v3 = options.policyVersion === 'v3';
+  const packageVersion = options.packageVersion ?? '0.1.16';
   const dependency = (
     value: Record<string, unknown>,
     overrides: Record<string, unknown> = {},
@@ -123,7 +125,7 @@ function writeOplFlowPackage(
       : v3
         ? 'opl_flow_workflow_policy.v3'
         : 'opl_flow_workflow_policy.v1',
-    package: { id: 'fixture.opl-flow', version: '0.1.16', owner: 'opl-flow', kind: 'workflow_profile' },
+    package: { id: 'fixture.opl-flow', version: packageVersion, owner: 'opl-flow', kind: 'workflow_profile' },
     workflow_generation: 'model-native-test',
     ...(v2 || v3 ? {
       provides: [
@@ -136,7 +138,7 @@ function writeOplFlowPackage(
           source: 'package:fixture.opl-flow',
         }, {
           owner: 'opl-flow',
-          version_requirement: '=0.1.16',
+          version_requirement: `=${packageVersion}`,
           install_source: 'package_payload',
         }),
         ...['fixture.opl-flow', 'codex-ops-kit'].map((skillId) => dependency({
@@ -148,7 +150,7 @@ function writeOplFlowPackage(
           source: `package:fixture.opl-flow/skills/${skillId}`,
         }, {
           owner: 'opl-flow',
-          version_requirement: '=0.1.16',
+          version_requirement: `=${packageVersion}`,
           install_source: 'package_payload',
         })),
       ],
@@ -256,7 +258,7 @@ function writeOplFlowPackage(
   writeFile(path.join(sourceRoot, 'contracts', 'workflow-policy.json'), formatJsonPayload(policy));
   writeFile(path.join(sourceRoot, '.codex-plugin', 'plugin.json'), formatJsonPayload({
     name: 'fixture.opl-flow',
-    version: '0.1.16',
+    version: packageVersion,
     skills: './skills/',
   }));
   for (const skillId of ['fixture.opl-flow', 'codex-ops-kit']) {
@@ -273,7 +275,7 @@ function writeOplFlowPackage(
     package_id: 'fixture.opl-flow',
     display_name: 'OPL Flow',
     publisher: 'one-person-lab',
-    version: '0.1.16',
+    version: packageVersion,
     source: 'first_party',
     carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
     codex_surface: {
@@ -492,6 +494,113 @@ test('workflow policy v3 projects a generic install action when a required Skill
     assert.equal(
       packageReadback.materializer.managed_policy_currentness.dependency_sync.items[0].action,
       'install',
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+  }
+});
+
+test('OPL Flow package lifecycle advances workflow policy v1 v2 v3 and reaches a fixed point', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fixture.opl-flow-policy-history-'));
+  const stateDir = path.join(root, 'state');
+  const env = {
+    HOME: path.join(root, 'home'),
+    CODEX_HOME: path.join(root, 'home', '.codex'),
+    OPL_STATE_DIR: stateDir,
+    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+  };
+  try {
+    const manifestPath = writeOplFlowPackage(root, {
+      policyVersion: 'v1',
+      packageVersion: '0.1.24',
+    });
+    const installed = await runCliAsync([
+      'packages', 'install', '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+    ], env) as any;
+    assert.equal(installed.opl_agent_package_install.package_lock.package_version, '0.1.24');
+
+    writeOplFlowPackage(root, {
+      policyVersion: 'v2',
+      packageVersion: '0.1.25',
+    });
+    const updatedV2 = runCli([
+      'packages', 'update', 'fixture.opl-flow',
+      '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+    ], env) as any;
+    assert.equal(updatedV2.opl_agent_package_update.package_lock.package_version, '0.1.25');
+
+    writeOplFlowPackage(root, {
+      policyVersion: 'v3',
+      packageVersion: '0.1.26',
+    });
+    const updatedV3 = runCli([
+      'packages', 'update', 'fixture.opl-flow',
+      '--manifest-url', manifestPath, '--trust-tier', 'first_party',
+    ], env) as any;
+    const v3Lock = updatedV3.opl_agent_package_update.package_lock;
+    assert.equal(v3Lock.package_version, '0.1.26');
+    assert.equal(
+      JSON.parse(fs.readFileSync(
+        path.join(v3Lock.physical_surface.codex_plugin_cache_path, 'contracts', 'workflow-policy.json'),
+        'utf8',
+      )).schema,
+      'opl_flow_workflow_policy.v3',
+    );
+
+    const lockPath = path.join(stateDir, 'agent-package-locks.json');
+    const ledgerPath = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
+    const beforeFixedPoint = {
+      lock: fs.readFileSync(lockPath),
+      ledger: fs.readFileSync(ledgerPath),
+    };
+    for (let iteration = 0; iteration < 2; iteration += 1) {
+      const status = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
+      assert.equal(status.opl_agent_package_status.operational_ready, true);
+      assert.equal(
+        status.opl_agent_package_status.owner_route_readback.packages[0]
+          .materializer.managed_policy_currentness.status,
+        'current',
+      );
+    }
+    assert.deepEqual(fs.readFileSync(lockPath), beforeFixedPoint.lock);
+    assert.deepEqual(fs.readFileSync(ledgerPath), beforeFixedPoint.ledger);
+
+    const workflowProfileIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    workflowProfileIndex.packages.find(
+      (entry: any) => entry.package_id === 'fixture.opl-flow',
+    ).package_role = 'workflow_profile';
+    fs.writeFileSync(lockPath, formatJsonPayload(workflowProfileIndex));
+    const v3CachePath = v3Lock.physical_surface.codex_plugin_cache_path;
+    const uninstalled = runCli([
+      'packages', 'uninstall', '--package-id', 'fixture.opl-flow',
+    ], env) as any;
+    assert.equal(uninstalled.opl_agent_package_uninstall.status, 'uninstalled');
+    assert.equal(fs.existsSync(v3CachePath), true);
+    const uninstalledIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    assert.equal(
+      uninstalledIndex.packages.some((entry: any) => entry.package_id === 'fixture.opl-flow'),
+      false,
+    );
+    assert.ok(uninstalledIndex.last_known_good_transactions.some(
+      (entry: any) =>
+        entry.root_package_id === 'fixture.opl-flow'
+        && entry.package_locks.some((lock: any) => lock.package_id === 'fixture.opl-flow'),
+    ));
+    fs.rmSync(path.join(root, 'fixture.opl-flow-source'), { recursive: true, force: true });
+
+    const recovered = runCli([
+      'packages', 'rollback', '--package-id', 'fixture.opl-flow',
+    ], env) as any;
+    assert.equal(recovered.opl_agent_package_rollback.status, 'rolled_back');
+    assert.equal(recovered.opl_agent_package_rollback.package_lock.package_version, '0.1.26');
+    const recoveredStatus = runCli([
+      'packages', 'status', '--package-id', 'fixture.opl-flow',
+    ], env) as any;
+    assert.equal(recoveredStatus.opl_agent_package_status.operational_ready, true);
+    assert.equal(
+      recoveredStatus.opl_agent_package_status.owner_route_readback.packages[0]
+        .materializer.managed_policy_currentness.status,
+      'current',
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });

@@ -773,10 +773,32 @@ test('last-known-good generations are retained per root package', async () => {
       transaction_id: `transaction-${index}`,
       closure_digest: `digest-${index}`,
       package_locks: [],
-    })).concat(masLkg);
+    })).concat([
+      masLkg,
+      structuredClone(masLkg),
+      structuredClone(masLkg),
+      structuredClone(masLkg),
+    ]);
     fs.writeFileSync(lockPath, formatJsonPayload(lockIndex));
 
     assert.equal(runCli(['packages', 'rollback', FIXTURE_CONSUMER_PACKAGE_ID], env).opl_agent_package_rollback.status, 'rolled_back');
+    const rolledBackIndex = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    const identities = rolledBackIndex.last_known_good_transactions.map((entry: any) =>
+      JSON.stringify([
+        entry.root_package_id,
+        entry.transaction_id,
+        entry.closure_digest,
+        ...entry.package_locks
+          .map((lock: any) => `${lock.package_id}:${lock.lock_ref}`)
+          .sort(),
+      ]));
+    assert.equal(new Set(identities).size, identities.length);
+    assert.equal(
+      rolledBackIndex.last_known_good_transactions.filter(
+        (entry: any) => entry.root_package_id === FIXTURE_CONSUMER_PACKAGE_ID,
+      ).length,
+      1,
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

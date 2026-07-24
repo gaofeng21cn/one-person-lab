@@ -973,7 +973,7 @@ function verifyImmutablePluginCache(manifest: AgentPackageManifest, cachePath: s
   validateMaterializedRequiredSkills(cachedManifest, cachePath);
 }
 
-function materializeImmutablePluginCache(input: {
+export function materializeImmutablePluginCache(input: {
   manifest: AgentPackageManifest;
   sourcePath: string;
   targetPath: string;
@@ -994,15 +994,18 @@ function materializeImmutablePluginCache(input: {
       return true;
     }
   }
+  if (input.manifest.developer_checkout_source) {
+    copyDeveloperCheckoutSurface(
+      input.targetPath,
+      input.manifest,
+      input.developerCheckoutPayloadFiles,
+    );
+    verifyImmutablePluginCache(input.manifest, input.targetPath);
+    return true;
+  }
   const stagePath = `${input.targetPath}.stage-${process.pid}-${crypto.randomBytes(8).toString('hex')}`;
   try {
-    if (input.manifest.developer_checkout_source) {
-      copyDeveloperCheckoutSurface(
-        stagePath,
-        input.manifest,
-        input.developerCheckoutPayloadFiles,
-      );
-    } else if (input.manifest.content_lock_paths.length > 0) {
+    if (input.manifest.content_lock_paths.length > 0) {
       copyContentLockPaths(input.sourcePath, stagePath, input.manifest.content_lock_paths);
     } else {
       copyDirectory(input.sourcePath, stagePath);

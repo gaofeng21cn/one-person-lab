@@ -30,6 +30,8 @@ import {
   recoverManagedRuntimeSourceTransactions,
   rollbackManagedRuntimeSourceMutation,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/managed-runtime-source-carrier.ts';
+import { materializeImmutablePluginCache } from '../../../../../src/modules/connect/agent-package-registry-parts/physical-surface.ts';
+import { developerCheckoutPayloadDigest } from '../../../../../src/modules/connect/agent-package-registry-parts/developer-checkout-package-source.ts';
 import {
   computePackageChannelTreeSha256,
   readPackageChannelLifecycle,
@@ -42,6 +44,60 @@ const FIXTURE_MAS_PACKAGE_ID = 'fixture.mas';
 const FIXTURE_MAG_PACKAGE_ID = 'fixture.mag';
 const FIXTURE_RCA_PACKAGE_ID = 'fixture.rca';
 const FIXTURE_PROVIDER_PACKAGE_ID = 'fixture.mas-scholar-skills';
+
+test('developer plugin cache publishes one stage directly into its immutable generation', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-developer-plugin-stage-'));
+  const targetPath = path.join(root, 'cache', 'fixture.plugin', '0.1.26-dev');
+  const payloadFiles = [
+    {
+      path: '.codex-plugin/plugin.json',
+      content: Buffer.from(formatJsonPayload({ name: 'fixture.plugin', version: '0.1.26' })),
+      mode: '100644' as const,
+    },
+    {
+      path: 'skills/fixture.plugin/SKILL.md',
+      content: Buffer.from('# Fixture Plugin\n'),
+      mode: '100644' as const,
+    },
+  ];
+  const renameCalls: Array<{ from: string; to: string }> = [];
+  const originalRenameSync = fs.renameSync;
+  fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+    renameCalls.push({ from: String(from), to: String(to) });
+    originalRenameSync(from, to);
+  }) as typeof fs.renameSync;
+  try {
+    const created = materializeImmutablePluginCache({
+      manifest: {
+        package_id: 'fixture.plugin',
+        required_skill_ids: ['fixture.plugin'],
+        content_lock_paths: [],
+        developer_checkout_source: {
+          copy_paths: payloadFiles.map((entry) => entry.path),
+          copy_file_modes: Object.fromEntries(payloadFiles.map((entry) => [entry.path, entry.mode])),
+          payload_digest: developerCheckoutPayloadDigest(payloadFiles),
+        },
+      } as any,
+      sourcePath: root,
+      targetPath,
+      developerCheckoutPayloadFiles: payloadFiles,
+    });
+    assert.equal(created, true);
+    assert.deepEqual(renameCalls.map((entry) => entry.to), [targetPath]);
+    assert.match(
+      path.basename(renameCalls[0].from),
+      new RegExp(`^\\.${path.basename(targetPath)}\\.stage-`),
+    );
+    assert.equal(fs.existsSync(targetPath), true);
+    assert.equal(
+      fs.readdirSync(path.dirname(targetPath)).some((entry) => entry.includes('.stage-')),
+      false,
+    );
+  } finally {
+    fs.renameSync = originalRenameSync;
+    removeFixtureTree(root);
+  }
+});
 
 function bindMasWorkspace(workspace: string, env: Record<string, string>) {
   fs.mkdirSync(workspace, { recursive: true });

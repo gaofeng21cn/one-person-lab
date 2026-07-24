@@ -126,6 +126,7 @@ import {
   resolveFirstPartyPackageCatalogSnapshot,
 } from './agent-package-registry-parts/release-catalog-cache.ts';
 import { resolveAgentPackageEffectiveSourcePolicy } from './agent-package-registry-parts/source-policy.ts';
+import { packageRoleFromInstalledLock } from './agent-package-registry-parts/package-role.ts';
 import {
   loadDeveloperCheckoutPackageSource,
   mergeDeveloperCheckoutPackageManifest,
@@ -360,11 +361,26 @@ function retainLastKnownGoodPerRoot(
   next: AgentPackageLastKnownGood,
 ) {
   const counts = new Map<string, number>();
+  const identities = new Set<string>();
   return [next, ...entries].filter((entry) => {
+    const identity = lastKnownGoodIdentity(entry);
+    if (identities.has(identity)) return false;
+    identities.add(identity);
     const count = counts.get(entry.root_package_id) ?? 0;
     counts.set(entry.root_package_id, count + 1);
     return count < 4;
   });
+}
+
+function lastKnownGoodIdentity(entry: AgentPackageLastKnownGood) {
+  return [
+    entry.root_package_id,
+    entry.transaction_id,
+    entry.closure_digest,
+    ...entry.package_locks
+      .map((lock) => `${lock.package_id}:${lock.lock_ref}`)
+      .sort(),
+  ].join('\0');
 }
 
 function installedLockClosure(index: AgentPackageLockIndex, root: AgentPackageLock) {
@@ -2775,7 +2791,6 @@ export async function runOplAgentPackageOptimize(input: AgentPackagePackageActio
 function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInput) {
   const packageId = requirePackageId(input.packageId, 'rollback');
   const { index } = readRecoveredLockIndex(input.dryRun === true);
-  const { lock } = requireInstalledPackage(index, packageId, 'rollback');
   assertNoRequiredInstalledDependents(index, packageId, 'rollback');
   const lastKnownGood = (index.last_known_good_transactions ?? [])
     .find((entry) => entry.root_package_id === packageId);
@@ -2790,12 +2805,24 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
     });
   }
   const restoredLocks = structuredClone(lastKnownGood.package_locks);
-  const latestReceipt = readLifecycleLedger().receipts.find((entry) =>
-    entry.receipt_ref === lock.action_receipt_id);
-  if (latestReceipt?.action === 'optimize') {
+  const installedLock = index.packages.find((entry) => entry.package_id === packageId) ?? null;
+  const restoredRoot = restoredLocks.find((entry) => entry.package_id === packageId);
+  if (!installedLock && !restoredRoot) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package rollback last-known-good generation does not contain its root package lock.', {
+      package_id: packageId,
+      transaction_id: lastKnownGood.transaction_id,
+      failure_code: 'agent_package_last_known_good_root_missing',
+    });
+  }
+  const lock = installedLock ?? restoredRoot!;
+  const latestReceipt = installedLock
+    ? readLifecycleLedger().receipts.find((entry) =>
+        entry.receipt_ref === installedLock.action_receipt_id)
+    : null;
+  if (installedLock && latestReceipt?.action === 'optimize') {
     const result = rollbackInstalledPackageOptimization({
       index,
-      root: lock,
+      root: installedLock,
       generation: lastKnownGood,
       optimizeReceipt: latestReceipt,
       action: input,
@@ -2828,10 +2855,12 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
       },
     };
   }
-  const currentLocks = index.packages.filter((entry) =>
-    entry.package_id === packageId || entry.dependency_transaction_id === lock.dependency_transaction_id);
+  const currentLocks = installedLock
+    ? index.packages.filter((entry) =>
+        entry.package_id === packageId
+        || entry.dependency_transaction_id === installedLock.dependency_transaction_id)
+    : [];
   const currentIds = new Set(currentLocks.map((entry) => entry.package_id));
-  const restoredRoot = restoredLocks.find((entry) => entry.package_id === packageId);
   if (!restoredRoot) {
     restoreManagedRuntimeSourceCarrier({
       current: lock.managed_runtime_source,
@@ -2934,7 +2963,8 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
           ...nextIndex.packages.filter((entry) => !currentIds.has(entry.package_id) && !restoredIds.has(entry.package_id)),
         ];
         nextIndex.last_known_good_transactions = retainLastKnownGoodPerRoot(
-          (nextIndex.last_known_good_transactions ?? []).filter((entry) => entry !== lastKnownGood),
+          (nextIndex.last_known_good_transactions ?? []).filter((entry) =>
+            lastKnownGoodIdentity(entry) !== lastKnownGoodIdentity(lastKnownGood)),
           {
           root_package_id: packageId,
           transaction_id: lock.dependency_transaction_id,
@@ -3001,7 +3031,7 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
     };
   }
   restoreManagedRuntimeSourceCarrier({
-    current: lock.managed_runtime_source,
+    current: installedLock?.managed_runtime_source ?? null,
     restored: restoredRoot.managed_runtime_source,
     transactionId: `rollback-${lock.dependency_transaction_id.slice(0, 16)}`,
     dryRun: true,
@@ -3120,7 +3150,7 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
         restoredPhysicalSurfaces.set(restoredLock.package_id, surface);
       }
       runtimeSourceMutation = restoreManagedRuntimeSourceCarrier({
-        current: lock.managed_runtime_source,
+        current: installedLock?.managed_runtime_source ?? null,
         restored: restoredRoot.managed_runtime_source,
         transactionId: `rollback-${lock.dependency_transaction_id.slice(0, 16)}`,
         dryRun: false,
@@ -3133,15 +3163,20 @@ function runOplAgentPackageRollbackUnlocked(input: AgentPackagePackageActionInpu
         ...restoredLocks,
         ...nextIndex.packages.filter((entry) => !currentIds.has(entry.package_id) && !restoredIds.has(entry.package_id)),
       ];
-      nextIndex.last_known_good_transactions = retainLastKnownGoodPerRoot(
-        (nextIndex.last_known_good_transactions ?? []).filter((entry) => entry !== lastKnownGood),
-        {
-        root_package_id: packageId,
-        transaction_id: lock.dependency_transaction_id,
-        closure_digest: lock.dependency_closure_digest,
-        package_locks: structuredClone(currentLocks),
-        },
-      );
+      const remainingLastKnownGood = (nextIndex.last_known_good_transactions ?? [])
+        .filter((entry) =>
+          lastKnownGoodIdentity(entry) !== lastKnownGoodIdentity(lastKnownGood));
+      nextIndex.last_known_good_transactions = currentLocks.length > 0
+        ? retainLastKnownGoodPerRoot(
+            remainingLastKnownGood,
+            {
+              root_package_id: packageId,
+              transaction_id: lock.dependency_transaction_id,
+              closure_digest: lock.dependency_closure_digest,
+              package_locks: structuredClone(currentLocks),
+            },
+          )
+        : remainingLastKnownGood;
       writePackageTransaction(nextIndex, receipts);
     } catch (error) {
       if (runtimeSourceMutation) rollbackManagedRuntimeSourceMutation(runtimeSourceMutation);
@@ -3991,6 +4026,25 @@ function runOplAgentPackageUninstallUnlocked(input: AgentPackagePackageActionInp
   const { index } = readRecoveredLockIndex(input.dryRun === true);
   assertNoRequiredInstalledDependents(index, packageId, 'uninstall');
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'uninstall');
+  const retainLastKnownGood = packageRoleFromInstalledLock(lock) === 'workflow_profile';
+  const retainedGeneration = retainLastKnownGood
+    ? (() => {
+        const retainedClosure = installedLockClosure(index, lock);
+        const retainedClosureDigest = dependencyClosureDigest(retainedClosure);
+        return {
+          root_package_id: packageId,
+          transaction_id: sha256Text([
+            'lkg-snapshot',
+            'uninstall',
+            packageId,
+            retainedClosureDigest,
+            ...retainedClosure.map((entry) => entry.lock_ref).sort(),
+          ].join('\n')),
+          closure_digest: retainedClosureDigest,
+          package_locks: retainedClosure,
+        } satisfies AgentPackageLastKnownGood;
+      })()
+    : null;
   const physicalSurface = removePhysicalCodexSurface(
     lock.physical_surface,
     input.dryRun === true,
@@ -4004,6 +4058,7 @@ function runOplAgentPackageUninstallUnlocked(input: AgentPackagePackageActionInp
       transactionId: packageActionSourceSha256('uninstall', lock).slice(0, 16),
       dryRun: input.dryRun === true,
       packageId,
+      retainLastKnownGood,
     });
   } catch (error) {
     if (!input.dryRun) rematerializePhysicalCodexSurfaceFromLock(lock, false);
@@ -4044,8 +4099,13 @@ function runOplAgentPackageUninstallUnlocked(input: AgentPackagePackageActionInp
   if (!input.dryRun) {
     const nextIndex = structuredClone(index);
     nextIndex.packages.splice(lockIndex, 1);
-    nextIndex.last_known_good_transactions = (nextIndex.last_known_good_transactions ?? [])
-      .filter((entry) => entry.root_package_id !== packageId);
+    nextIndex.last_known_good_transactions = retainedGeneration
+      ? retainLastKnownGoodPerRoot(
+          nextIndex.last_known_good_transactions ?? [],
+          retainedGeneration,
+        )
+      : (nextIndex.last_known_good_transactions ?? [])
+          .filter((entry) => entry.root_package_id !== packageId);
     try {
       writePackageTransaction(nextIndex, [receipt]);
     } catch (error) {

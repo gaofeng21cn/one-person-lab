@@ -50,11 +50,26 @@ function retainLastKnownGoodPerRoot(
   next: AgentPackageLastKnownGood,
 ) {
   const counts = new Map<string, number>();
+  const identities = new Set<string>();
   return [next, ...entries].filter((entry) => {
+    const identity = lastKnownGoodIdentity(entry);
+    if (identities.has(identity)) return false;
+    identities.add(identity);
     const count = counts.get(entry.root_package_id) ?? 0;
     counts.set(entry.root_package_id, count + 1);
     return count < 4;
   });
+}
+
+function lastKnownGoodIdentity(entry: AgentPackageLastKnownGood) {
+  return [
+    entry.root_package_id,
+    entry.transaction_id,
+    entry.closure_digest,
+    ...entry.package_locks
+      .map((lock) => `${lock.package_id}:${lock.lock_ref}`)
+      .sort(),
+  ].join('\0');
 }
 
 function installedClosure(index: AgentPackageLockIndex, root: AgentPackageLock) {
