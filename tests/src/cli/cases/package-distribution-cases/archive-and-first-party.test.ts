@@ -1017,9 +1017,9 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
       payloadRef: 'payloads/rca-0.2.8.json',
     },
     oma: {
-      version: '0.4.3',
-      sourceCommit: 'd58fee532bc0ccce4b7a4f1c5a5e521dd2e50a41',
-      payloadRef: 'payloads/oma-0.4.3.json',
+      version: '0.4.4',
+      sourceCommit: '2bd3b2eb4053af0dbd845052b18e251f77683acd',
+      payloadRef: 'payloads/oma-0.4.4.json',
     },
     obf: {
       version: '0.3.6',
@@ -1307,6 +1307,28 @@ test('bundled Full MAS snapshot keeps its frozen manifest bytes while ordinary p
   assert.equal(frozenManifest.version, '0.2.19');
   assert.equal(frozenManifest.codex_surface.plugin_payload_manifest_url, 'payloads/mas-0.2.19.json');
   assert.equal(ordinaryManifest.version, '0.2.20');
+});
+
+test('bundled Full OMA snapshot keeps its frozen manifest bytes while ordinary publication advances', () => {
+  const catalog = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/bundled-full-runtime-package-catalog.json'),
+    'utf8',
+  )) as Record<string, any>;
+  const frozenRef = catalog.packages.oma.manifest_ref;
+  const frozenPath = path.join(repoRoot, 'contracts/opl-framework', frozenRef);
+  const frozenBytes = fs.readFileSync(frozenPath);
+  const frozenManifest = parseJsonText(frozenBytes.toString('utf8')) as Record<string, any>;
+  const ordinaryManifest = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/packages/oma.json'),
+    'utf8',
+  )) as Record<string, any>;
+
+  assert.equal(frozenRef, 'packages/oma-0.4.3.json');
+  assert.equal(crypto.createHash('sha256').update(frozenBytes).digest('hex'),
+    '1bcf5bc6a1998bc90c82dd9127267cb14d25a5d0d5f8756ddd24ed0265af473c');
+  assert.equal(frozenManifest.version, '0.4.3');
+  assert.equal(frozenManifest.codex_surface.plugin_payload_manifest_url, 'payloads/oma-0.4.3.json');
+  assert.equal(ordinaryManifest.version, '0.4.4');
 });
 
 test('MAS first-party agent package manifest fails closed for unsafe dependency declarations', () => {
