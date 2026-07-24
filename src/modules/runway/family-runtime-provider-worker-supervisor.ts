@@ -34,7 +34,9 @@ type ProviderWorkerSupervisorEnvironment = NodeJS.ProcessEnv;
 const FOUNDRY_OWNER_GATE_BIN = 'OPL_FOUNDRY_OWNER_GATE_BIN';
 const FOUNDRY_OWNER_GATE_ARGS = 'OPL_FOUNDRY_OWNER_GATE_ARGS';
 const FOUNDRY_OWNER_GATE_TIMEOUT_MS = 'OPL_FOUNDRY_OWNER_GATE_TIMEOUT_MS';
+const TEMPORAL_NAMESPACE = 'OPL_TEMPORAL_NAMESPACE';
 const MAX_PERSISTED_OWNER_GATE_TIMEOUT_MS = 300_000;
+const MAX_PERSISTED_TEMPORAL_NAMESPACE_LENGTH = 255;
 const FOUNDRY_OWNER_GATE_ENVIRONMENT_KEYS = [
   FOUNDRY_OWNER_GATE_BIN,
   FOUNDRY_OWNER_GATE_ARGS,
@@ -108,6 +110,27 @@ function configuredOwnerGateTimeout(environment: ProviderWorkerSupervisorEnviron
     );
   }
   return String(timeoutMs);
+}
+
+function configuredTemporalNamespace(environment: ProviderWorkerSupervisorEnvironment) {
+  const raw = environment[TEMPORAL_NAMESPACE];
+  if (raw === undefined) return null;
+  if (/[\u0000-\u001F\u007F]/u.test(raw)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `${TEMPORAL_NAMESPACE} must not contain control characters.`,
+      { failure_code: 'temporal_namespace_supervisor_environment_invalid' },
+    );
+  }
+  const namespace = raw.trim();
+  if (!namespace || namespace.length > MAX_PERSISTED_TEMPORAL_NAMESPACE_LENGTH) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `${TEMPORAL_NAMESPACE} must be between 1 and ${MAX_PERSISTED_TEMPORAL_NAMESPACE_LENGTH} characters.`,
+      { failure_code: 'temporal_namespace_supervisor_environment_invalid' },
+    );
+  }
+  return namespace;
 }
 
 export function providerWorkerFoundryOwnerGateEnvironment(
@@ -194,6 +217,10 @@ export function providerWorkerSupervisorEnvironmentVariables(
   const temporalAddress = environment.OPL_TEMPORAL_ADDRESS?.trim() || environment.TEMPORAL_ADDRESS?.trim();
   if (temporalAddress) {
     values.OPL_TEMPORAL_ADDRESS = temporalAddress;
+  }
+  const temporalNamespace = configuredTemporalNamespace(environment);
+  if (temporalNamespace) {
+    values[TEMPORAL_NAMESPACE] = temporalNamespace;
   }
   Object.assign(values, providerWorkerFoundryOwnerGateEnvironment(environment).persisted);
   return values;

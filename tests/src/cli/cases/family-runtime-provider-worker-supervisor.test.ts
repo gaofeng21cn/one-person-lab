@@ -73,6 +73,51 @@ test('provider-worker supervisor omits every OwnerGate variable when BIN is abse
   }
 });
 
+test('provider-worker supervisor persists an explicit Temporal namespace and omits it otherwise', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-namespace-supervisor-'));
+  try {
+    const paths = runtimePaths(root);
+    const omitted = providerWorkerSupervisorEnvironmentVariables(paths, {});
+    assert.equal(Object.hasOwn(omitted, 'OPL_TEMPORAL_NAMESPACE'), false);
+    assert.doesNotMatch(buildProviderWorkerSupervisorPlist(paths, {}), /OPL_TEMPORAL_NAMESPACE/);
+
+    const environment = {
+      OPL_TEMPORAL_NAMESPACE: '  opl-foundry  ',
+    };
+    const values = providerWorkerSupervisorEnvironmentVariables(paths, environment);
+    const projection = providerWorkerSupervisorEnvironmentProjection(paths, environment);
+    const plist = buildProviderWorkerSupervisorPlist(paths, environment);
+    assert.equal(values.OPL_TEMPORAL_NAMESPACE, 'opl-foundry');
+    assert.equal(projection.OPL_TEMPORAL_NAMESPACE, 'opl-foundry');
+    assert.equal(plistEnvironmentValue(plist, 'OPL_TEMPORAL_NAMESPACE'), 'opl-foundry');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('provider-worker supervisor rejects invalid Temporal namespaces before plist construction', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-namespace-supervisor-invalid-'));
+  try {
+    const paths = runtimePaths(root);
+    for (const namespace of [
+      '',
+      '   ',
+      'opl\nfoundry',
+      'opl\tfoundry',
+      'x'.repeat(256),
+    ]) {
+      assert.throws(
+        () => buildProviderWorkerSupervisorPlist(paths, {
+          OPL_TEMPORAL_NAMESPACE: namespace,
+        }),
+        /OPL_TEMPORAL_NAMESPACE/,
+      );
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('provider-worker supervisor persists canonical MAS OwnerGate argv without exposing it in projection', () => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'opl-owner-gate-supervisor-configured-'));
   try {
