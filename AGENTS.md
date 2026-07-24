@@ -10,7 +10,7 @@
 - Package 依赖只声明 required/optional presence 与可调用入口，不新增 SemVer/ABI/exact digest 门禁。MAS -> ScholarSkills 的 required dependency 必须保留，但由实际 carrier 平台 ensure。
 - 稳定 Package/capability/entrypoint identity 只能做向后兼容扩展；breaking interface 必须发布新 identity，或由 owner 保留兼容 adapter。旧 identity 只有在 fresh no-active-consumer proof 后才能删除，不能用中央版本 resolver 代替 owner 兼容责任。
 - 每个 first-party Package owner 在自己的 GHCR repository 发布完整官方 Package runtime，并独立推进自己的 `latest-stable`；`one-person-lab-manifest:latest-stable` 只允许作为 Full/offline/integration/QA 快照，不得参与普通安装、更新或 currentness。
-- OPL Base 只保留薄 OCI download/install/update adapter 和 carrier-neutral fresh installed aggregation；Codex Plugin Manager 只负责 Codex plugin/config/cache 投影，是首个 carrier adapter，不是 Package identity、installed truth 或生态 authority，也不得用 Plugin 子集替代完整 Package runtime。
+- OPL Base 只保留薄 OCI download/verify/bytes-handoff adapter 和 carrier-neutral fresh installed aggregation；配置的 carrier 或 Package runtime adapter 执行 install/update/remove。Codex Plugin Manager 只负责 Codex plugin/config/cache 投影，是首个 carrier adapter，不是 Package identity、完整 installed truth 或生态 authority，也不得用 Plugin 子集替代完整 Package runtime。
 - executor route 只描述已安装 Package 能否被 Codex CLI、Claude Code、Hermes 等 executor 调用。切换或缺少某个 executor adapter 不得重装 Package、丢失偏好/任务/依赖/typed views，且只局部降级该 route；完整物理 runtime 缺失时必须报告 `physical_unavailable`。
 - Git/local/external/offline carrier 可以替代官方 OCI source，但不得建立平行 Package identity 或 currentness。未经 fresh platform gap proof，不得新增 resolver、installed lock、payload/content lock、LKG、lifecycle receipt、materializer、scope activation 或 durable package transaction。
 - App Official Profile 只在首次安装或用户显式恢复时 ensure；日常 maintenance 只更新平台仍报告为 installed 的 Package，用户删除后不得静默回装。

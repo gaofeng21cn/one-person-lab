@@ -5,7 +5,7 @@ Purpose: `specs_opl_domain_onboarding_contract`
 State: `active_spec_support`
 Machine boundary: 本文是人读 spec 支撑材料。机器可读行为继续归 contracts、schema、source、CLI/API 行为、runtime ledger、生成产物和 semantic human_doc ids。
 
-> Currentness rule: 本文只定义候选 domain-agent admission 的审查合同，不冻结当前已收录 Agent、workstream 数量或候选清单。当前 `src/kernel/standard-agent-registry.ts` 只是在迁移期提供身份与成员资格兼容投影；目标 identity 归 Package owner descriptor，Framework discovery 归平台 installed inventory，官方 starter membership 归 App Official Profile。可调用性继续由 selected carrier 与 owner-owned descriptor/action/stage contracts 证明。`domains.json`、`workstreams.json` 与 `task-topology.json` 只描述 workspace/runtime/legacy topology 和候选 workstream，不得作为标准 Agent 的发现白名单。迁移门见 [`../active/opl-package-platform-composition-migration.md`](../active/opl-package-platform-composition-migration.md)。
+> Currentness rule: 本文只定义候选 domain-agent admission 的审查合同，不冻结当前已收录 Agent、workstream 数量或候选清单。Package identity 与公开能力归 owner descriptor；Framework 从配置的 carrier fresh readback 动态发现 installed descriptor，App Official Profile 只声明首次安装或显式恢复时的 starter roots。当前 `src/kernel/standard-agent-registry.ts` 只是迁移期兼容投影，不再拥有成员资格。依赖准入只检查 required identity 存在且入口可调用，不比较 Package version、ABI、lock、payload 或 digest。`domains.json`、`workstreams.json` 与 `task-topology.json` 只描述 workspace/runtime/legacy topology 和候选 workstream，不得作为标准 Agent 的发现白名单。迁移门见 [`../active/opl-package-platform-composition-migration.md`](../active/opl-package-platform-composition-migration.md)。
 
 ## 目的
 
@@ -30,7 +30,7 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 ## 机器可读配套工件
 
 - [`../contracts/opl-framework/standard-agent-admission-gates.json`](../../contracts/opl-framework/standard-agent-admission-gates.json)
-- [`../src/kernel/standard-agent-registry.ts`](../../src/kernel/standard-agent-registry.ts)（迁移期兼容投影，目标由 installed descriptor 替代）
+- [`../src/kernel/standard-agent-registry.ts`](../../src/kernel/standard-agent-registry.ts)（迁移期兼容投影，目标由 owner descriptor + installed discovery 替代）
 - [`../contracts/opl-framework/domains.json`](../../contracts/opl-framework/domains.json)
 - [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
 - [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
@@ -38,12 +38,12 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 - `opl agents descriptors --json`
 - `opl agents descriptor --domain <domain> --json`
 
-迁移期 registry 与 owner contracts 把已收录标准 Agent 的身份、公开 action 和 stage pack 落成 generated surface；目标态由动态 installed descriptor 发现，registry 不再拥有 membership。
+迁移期 registry 与 owner contracts 把既有标准 Agent 的身份、公开 action 和 stage pack 落成 generated surface；目标态由 owner descriptor 和动态 installed discovery 驱动，registry 不再拥有 membership。
 它们不会授予 OPL domain truth，也不会自动收录候选 workstream。
-`standard-agent-admission-gates.json` 是本文 admission package 的机器可读 gate 面：它要求正式收录前至少覆盖 identity、domain truth owner、generated surface default entry、standard pack ABI、stage artifact contract、execution model、authority boundary、owner receipt boundary、typed blocker boundary 与 human gate false-authority；它只冻结 gate 与 false-authority 语义，不声明任何当前或候选 domain ready / production ready。
-`opl agents descriptors` 是 registry-derived 的统一公共 descriptor projection，覆盖每个 `standard_domain_agent` 成员；selected checkout 与 owner contracts 决定各成员是 resolved 还是返回 typed blocker。Workspace-bound legacy manifest/skeleton 只作为 descriptor 中的嵌套诊断信息，不决定 membership、公开可发现性、action 或 Stage 合同。Descriptor projection 仍不读取或嵌入 domain memory 正文、prompt 长正文、route 判断或 quality verdict。
+`standard-agent-admission-gates.json` 是本文 admission package 的机器可读 gate 面：它要求 owner descriptor 在正式公开前至少覆盖 identity、domain truth owner、generated surface default entry、stage/action interface、stage artifact contract、execution model、authority boundary、owner receipt boundary、typed blocker boundary 与 human gate false-authority；它只冻结接口与 false-authority 语义，不声明任何当前或候选 domain ready / production ready，也不形成跨 Package 版本门禁。
+`opl agents descriptors` 是 owner descriptor + installed carrier readback 的统一公共投影；任意已安装且 descriptor 可读的 `kind=agent` Package 都可以进入发现面，不需要 Framework 新增 Package id。selected carrier 与 owner contracts 决定各成员是 callable 还是返回 typed blocker。Workspace-bound legacy manifest/skeleton 只作为 descriptor 中的嵌套诊断信息，不决定 membership、公开可发现性、action 或 Stage 合同。Descriptor projection 仍不读取或嵌入 domain memory 正文、prompt 长正文、route 判断或 quality verdict。
 公开 scaffold 或 domain-direction hint 可以帮助说明 candidate path，但在真实 domain-agent boundary package 落地前，它们仍然只算 top-level signal。
-这条规则的适用对象必须从 live machine surfaces 读取：standard Agent registry 列出已注册 Agent；selected checkout 与 owner contracts 决定其当前 generated/hosted surface 是否可用；`workstreams.json` 只列出 active workstream，`domains.json` 只保留 workspace/runtime/legacy domain manifest 配置，`task-topology.json` 的 `under_definition` / `not_registered` / `candidate_domain_agent_pending` entry 与 candidate backlog 共同说明仍在 formal inclusion 之下的 candidate lane。当前机器面把 `Grant Ops` 归入已收录 `MedAutoGrant` Agent；候选 lane 仍需要完整 admission package 才能进入 registry。
+这条规则的适用对象必须从 live machine surfaces 读取：配置的 carrier 列出 installed Package，Framework 读取其 owner descriptor 并验证公开入口可调用；`workstreams.json` 只列出 active workstream，`domains.json` 只保留 workspace/runtime/legacy domain manifest 配置，`task-topology.json` 的 `under_definition` / `not_registered` / `candidate_domain_agent_pending` entry 与 candidate backlog 共同说明仍在 formal inclusion 之下的 candidate lane。候选 lane 仍需要完整 owner descriptor 和 admission package，但不需要进入 Framework 共享成员清单。
 
 ## 执行模型审查配套文档
 
@@ -66,7 +66,7 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 
 一个新 domain 只有在下面这些条件都满足时，才能被 `OPL` 正式收录：
 
-- 它的 registry identity 是显式的
+- 它的 Package identity 与 owner descriptor 是显式的
 - 它的 truth ownership 是显式的
 - 它的 public domain-agent entry 与内部 harness boundary 是显式的
 - 它的 review surface 是显式的
@@ -87,13 +87,13 @@ Domain-agent admission 以当前活跃 framework 合同集为审查依据：
 
 ## 必需的 Onboarding Package
 
-### 1. Registry Material
+### 1. Owner Descriptor And Installed Discovery
 
-一个新 domain 必须提供完整 registry package。
+一个新 domain 必须在自己的 Package 中提供完整 owner descriptor；不要求 Framework 或 App 先增加共享 registry entry。
 
-#### 必需的 standard Agent registry entry
+#### 必需的 owner descriptor
 
-候选必须在 shared standard Agent registry 中定义稳定身份、别名、package/module locator 与 series membership，并在 owner repo 中提供 `domain_descriptor`、`action_catalog` 和 stage manifest。标准 Agent 的公开发现不得依赖 `domains.json` 条目。
+候选必须在 owner repo / Package 中定义稳定 Package identity、别名、capability 与 entrypoint，并提供 `domain_descriptor`、`action_catalog` 和 stage manifest。配置的 carrier 安装该 Package 后，Framework 必须能从 fresh installed readback 读取 descriptor 并验证公开入口可调用。标准 Agent 的公开发现不得依赖 `domains.json`、Framework 固定数组、App allowlist 或 Full 快照成员资格。
 
 Owner domain descriptor 必须完整定义活跃 domain-agent 字段：
 
@@ -109,7 +109,7 @@ Owner domain descriptor 必须完整定义活跃 domain-agent 字段：
 - `owned_workstreams`
 - `non_opl_families`
 
-#### 条件必需的 workspace/workstream registry entry
+#### 条件必需的 workspace/workstream topology entry
 
 只有当新 Agent 同时引入 OPL workspace/runtime topology 或新的 OPL workstream 时，才需要更新 `domains.json`、`workstreams.json` 或 `task-topology.json`。这些配置不参与 standard Agent discovery。新 workstream entry 覆盖全部 `G1` 字段：
 
@@ -282,8 +282,8 @@ Onboarding package 必须说明：
 
 一个 domain 只有在下面全部成立时，才算可被 `OPL` 正式收录：
 
-1. **Registry complete**  
-   必需 registry entry 已存在，且内部一致。
+1. **Owner descriptor and discovery complete**
+   必需 owner descriptor 已存在，配置的 carrier 能 fresh 发现 Package，且 required dependency identity 存在、公开入口可调用。该门不比较 Package version、ABI、lock、payload 或 digest。
 
 2. **Boundary explicit**  
    该 domain README 与 `OPL` 顶层文档都能无歧义地描述它。
@@ -315,7 +315,7 @@ Onboarding package 必须说明：
 
 下面这些做法都不允许：
 
-- 在 boundary package 还不存在时，就先把 domain 名字加入 `OPL` 导航
+- 在 owner descriptor 和 boundary package 还不存在时，就先把 domain 名字加入 `OPL` 导航
 - 在 truth ownership 还是“以后再定”的情况下就收录 domain
 - 把现有 domain harness 误当成自动定义了一个新 domain-agent entry
 - 把 family 或 profile 名误当成已经自动定义了顶层 workstream
