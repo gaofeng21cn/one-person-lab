@@ -22,6 +22,7 @@ import {
   normalizeOplReleaseChannelTag,
   resolveOplReleaseManifestRef,
 } from '../../../../../src/modules/connect/system-installation/release-channel.ts';
+import { computePackageChannelTreeSha256 } from '../../../../../src/modules/connect/system-installation/module-package-channel.ts';
 import {
   commitDeveloperCheckout,
   updateDeveloperCapabilityCheckoutClosure,
@@ -157,6 +158,76 @@ function writePackageOwnerChannelFixture(input: {
     },
     curlLogPath,
   };
+}
+
+function writeOmaOwnerReleaseFixture(input: {
+  root: string;
+  generation: string;
+  completeRuntime?: boolean;
+}) {
+  const sourceRoot = path.join(input.root, 'oma-source');
+  const manifestPath = path.join(sourceRoot, 'oma.json');
+  const requiredRuntimeFiles = [
+    'contracts/action_catalog.json',
+    'contracts/domain_descriptor.json',
+    ...(input.completeRuntime === false ? [] : ['contracts/foundry_provider.json']),
+    'contracts/pack_compiler_input.json',
+    'agent/stages/manifest.json',
+    'agent/primary_skill/SKILL.md',
+  ];
+  fs.mkdirSync(path.join(sourceRoot, '.codex-plugin'), { recursive: true });
+  fs.mkdirSync(path.join(sourceRoot, 'skills', 'opl-meta-agent'), { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, '.codex-plugin', 'plugin.json'), formatJsonPayload({
+    name: 'opl-meta-agent',
+    version: '0.4.3',
+  }));
+  fs.writeFileSync(
+    path.join(sourceRoot, 'skills', 'opl-meta-agent', 'SKILL.md'),
+    '# OPL Meta Agent fixture\n',
+  );
+  fs.writeFileSync(path.join(sourceRoot, 'fixture-generation.txt'), `${input.generation}\n`);
+  for (const relativePath of requiredRuntimeFiles) {
+    const targetPath = path.join(sourceRoot, relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(
+      targetPath,
+      relativePath.endsWith('.md')
+        ? `# ${input.generation}\n`
+        : formatJsonPayload({ fixture_generation: input.generation }),
+    );
+  }
+  fs.writeFileSync(manifestPath, formatJsonPayload({
+    ...agentPackageManifest({
+      packageId: 'oma',
+      agentId: 'oma',
+      pluginId: 'opl-meta-agent',
+      distributionPayload: null,
+    }),
+    display_name: 'OPL Meta Agent fixture',
+    publisher: 'one-person-lab',
+    version: '0.4.3',
+    source: 'first_party',
+    codex_surface: {
+      plugin_id: 'opl-meta-agent',
+      required_skill_ids: ['opl-meta-agent'],
+    },
+    runtime_source_carrier: {
+      carrier_kind: 'opl_managed_module_source',
+      module_id: 'oplmetaagent',
+    },
+    capability_dependencies: [],
+  }));
+  const releaseSet = writeCapabilityCatalog(
+    path.join(input.root, 'release-set'),
+    [manifestPath],
+  );
+  const ownerChannel = writePackageOwnerChannelFixture({
+    root: input.root,
+    binRoot: path.join(input.root, 'bin'),
+    catalogPath: releaseSet.catalogPath,
+    packageIds: ['oma'],
+  });
+  return { releaseSet, ownerChannel };
 }
 
 function writeFirstPartyCatalogFixture(
@@ -679,6 +750,200 @@ test('first-party install and update read one owner channel without shared-manif
     fs.rmSync(workspace, { recursive: true, force: true });
     fs.rmSync(first.root, { recursive: true, force: true });
     fs.rmSync(second.root, { recursive: true, force: true });
+  }
+});
+
+test('identity-drifted bundled OMA reconciles only through its owner package channel', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-oma-bundled-reconcile-'));
+  const stateDir = path.join(root, 'state');
+  const homeDir = path.join(root, 'home');
+  const modulesRoot = path.join(root, 'modules');
+  const workspace = path.join(root, 'workspace');
+  const initial = writeOmaOwnerReleaseFixture({
+    root: path.join(root, 'initial'),
+    generation: 'initial',
+  });
+  const incomplete = writeOmaOwnerReleaseFixture({
+    root: path.join(root, 'incomplete'),
+    generation: 'incomplete',
+    completeRuntime: false,
+  });
+  const next = writeOmaOwnerReleaseFixture({
+    root: path.join(root, 'next'),
+    generation: 'next',
+  });
+  const lockPath = path.join(stateDir, 'agent-package-locks.json');
+  const ledgerPath = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
+  const lifecycleSqlitePath = path.join(stateDir, 'agent-package-lifecycle.sqlite');
+  const transactionRoot = path.join(stateDir, 'agent-package-runtime-transactions');
+  const commonEnv = {
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_STATE_DIR: stateDir,
+    OPL_MODULES_ROOT: modulesRoot,
+    OPL_MODULE_SOURCE_MODE: 'package_channel',
+  };
+  const fileDigest = (filePath: string) => fs.existsSync(filePath)
+    ? crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')
+    : null;
+  const transactionResidue = () => fs.existsSync(transactionRoot)
+    ? fs.readdirSync(transactionRoot)
+    : [];
+
+  try {
+    fs.mkdirSync(workspace, { recursive: true });
+    const installed = runCli(['packages', 'install', 'oma'], {
+      ...commonEnv,
+      ...initial.releaseSet.env,
+      ...initial.ownerChannel.env,
+    }) as any;
+    const installedLock = installed.opl_agent_package_install.package_lock;
+    const bundledRuntimeRoot = installedLock.managed_runtime_source.checkout_path;
+    const pluginRoot = installedLock.physical_surface.codex_plugin_cache_path;
+    fs.chmodSync(bundledRuntimeRoot, 0o755);
+    fs.writeFileSync(path.join(bundledRuntimeRoot, 'opl-runtime-module.json'), formatJsonPayload({
+      marker_version: 1,
+      module_id: 'oplmetaagent',
+      repo_name: 'opl-meta-agent',
+      packaged_runtime: true,
+      package_channel: false,
+      source_git: { head_sha: installedLock.managed_runtime_source.source_git_head_sha },
+    }));
+    const legacyIndex = parseJsonText(fs.readFileSync(lockPath, 'utf8')) as any;
+    const legacyLock = legacyIndex.packages.find((entry: any) => entry.package_id === 'oma');
+    legacyLock.source_kind = 'bundled_full_runtime_modules';
+    Object.assign(legacyLock.managed_runtime_source, {
+      ownership: 'preexisting_adopted',
+      source_mode: 'bundled_full_runtime',
+      channel_version: null,
+      artifact_ref: null,
+      layer_digest: null,
+      source_archive_sha256: null,
+      tree_sha256: computePackageChannelTreeSha256(bundledRuntimeRoot),
+      rollback_ref: null,
+      preparation_status: 'validated_no_write',
+      bootstrap_command: null,
+      package_prepare_command: null,
+      preparation_root: null,
+      preparation_scope: 'preexisting_read_only_probe',
+    });
+    fs.writeFileSync(lockPath, formatJsonPayload(legacyIndex));
+
+    const initialReads = fs.readFileSync(initial.ownerChannel.curlLogPath, 'utf8');
+    const current = runCli(['packages', 'update', 'oma'], {
+      ...commonEnv,
+      ...initial.releaseSet.env,
+      ...initial.ownerChannel.env,
+      OPL_MODULE_PATH_OPLMETAAGENT: bundledRuntimeRoot,
+    }) as any;
+    assert.equal(current.opl_agent_package_update.status, 'current_noop');
+    assert.equal(fs.readFileSync(initial.ownerChannel.curlLogPath, 'utf8'), initialReads);
+
+    fs.writeFileSync(path.join(bundledRuntimeRoot, 'unrecorded-owner-write.txt'), 'drift\n');
+    const stateSnapshot = () => ({
+      lock: fileDigest(lockPath),
+      ledger: fileDigest(ledgerPath),
+      sqlite: fileDigest(lifecycleSqlitePath),
+      sqliteWal: fileDigest(`${lifecycleSqlitePath}-wal`),
+      sqliteShm: fileDigest(`${lifecycleSqlitePath}-shm`),
+      runtimeTree: computePackageChannelTreeSha256(bundledRuntimeRoot),
+      pluginTree: computePackageChannelTreeSha256(pluginRoot),
+    });
+    const legacySnapshot = stateSnapshot();
+
+    const preview = runCli(['packages', 'update', 'oma', '--dry-run'], {
+      ...commonEnv,
+      ...next.releaseSet.env,
+      ...next.ownerChannel.env,
+    }) as any;
+    assert.equal(preview.opl_agent_package_update.status, 'validated_no_write');
+    assert.equal(preview.opl_agent_package_update.reconciliation_action, 'source_reconcile');
+    assert.equal(preview.opl_agent_package_update.package_lock.source_kind, 'first_party_managed_cohort');
+    assert.deepEqual(stateSnapshot(), legacySnapshot);
+    assert.deepEqual(transactionResidue(), []);
+
+    const ownerManifestLayer = path.join(root, 'next', 'owner-channel-blobs', 'oma-manifest.json');
+    const ownerManifestLayerBytes = fs.readFileSync(ownerManifestLayer);
+    fs.rmSync(ownerManifestLayer);
+    const downloadFailure = runCliFailure(['packages', 'update', 'oma'], {
+      ...commonEnv,
+      ...next.releaseSet.env,
+      ...next.ownerChannel.env,
+    });
+    fs.writeFileSync(ownerManifestLayer, ownerManifestLayerBytes);
+    assert.ok(downloadFailure.payload.error);
+    assert.deepEqual(stateSnapshot(), legacySnapshot);
+    assert.deepEqual(transactionResidue(), []);
+
+    const prepareFailure = runCliFailure(['packages', 'update', 'oma'], {
+      ...commonEnv,
+      ...incomplete.releaseSet.env,
+      ...incomplete.ownerChannel.env,
+    });
+    assert.equal(
+      prepareFailure.payload.error.details.failure_code,
+      'agent_package_runtime_source_preparation_failed',
+    );
+    assert.deepEqual(stateSnapshot(), legacySnapshot);
+    assert.deepEqual(transactionResidue(), []);
+
+    const applyFailure = runCliFailure([
+      'packages', 'update', 'oma',
+      '--scope', 'workspace', '--target-workspace', workspace,
+    ], {
+      ...commonEnv,
+      ...next.releaseSet.env,
+      ...next.ownerChannel.env,
+      OPL_TEST_RUNTIME_SOURCE_FAULTS_ENABLED: '1',
+      OPL_TEST_CAPABILITY_RECONCILIATION_FAIL_AFTER_SCOPE: '1',
+    });
+    assert.equal(
+      applyFailure.payload.error.details.failure_code,
+      'test_capability_reconciliation_interrupted',
+    );
+    assert.deepEqual(stateSnapshot(), legacySnapshot);
+    assert.deepEqual(transactionResidue(), []);
+
+    const updated = runCli(['packages', 'update', 'oma'], {
+      ...commonEnv,
+      ...next.releaseSet.env,
+      ...next.ownerChannel.env,
+    }) as any;
+    const updatedLock = updated.opl_agent_package_update.package_lock;
+    assert.equal(updated.opl_agent_package_update.status, 'updated');
+    assert.equal(updated.opl_agent_package_update.reconciliation_action, 'source_reconcile');
+    assert.equal(updatedLock.source_kind, 'first_party_managed_cohort');
+    assert.equal(
+      updatedLock.release_channel_ref,
+      'ghcr.io/fixture/one-person-lab-packages/oma:latest-stable',
+    );
+    assert.equal(updatedLock.managed_runtime_source.source_mode, 'package_channel');
+    assert.notEqual(updatedLock.managed_runtime_source.checkout_path, bundledRuntimeRoot);
+    assert.equal(fs.readFileSync(
+      path.join(bundledRuntimeRoot, 'unrecorded-owner-write.txt'),
+      'utf8',
+    ), 'drift\n');
+    assert.deepEqual(transactionResidue(), []);
+
+    const networkReads = [
+      next.ownerChannel.curlLogPath,
+      incomplete.ownerChannel.curlLogPath,
+    ].flatMap((logPath) => fs.existsSync(logPath)
+      ? fs.readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean)
+      : []);
+    assert.equal(networkReads.some((line) => line.includes('/one-person-lab-manifest/')), false);
+    for (const packageId of ['mas', 'mag', 'rca', 'obf', 'opl-flow', 'mas-scholar-skills']) {
+      assert.equal(
+        networkReads.some((line) => line.includes(`/one-person-lab-packages/${packageId}/`)),
+        false,
+      );
+    }
+    assert.equal(
+      networkReads.some((line) => line.includes('/one-person-lab-packages/oma/manifests/latest-stable')),
+      true,
+    );
+  } finally {
+    removeFixtureTree(root);
   }
 });
 

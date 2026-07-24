@@ -517,7 +517,14 @@ async function applyManifestPackageLock(
   const existingLock = packageId
     ? index.packages.find((entry) => entry.package_id === packageId)
     : null;
-  if (existingLock?.source_kind === 'bundled_full_runtime_modules' && !trustedBundledInstall) {
+  const bundledFullRuntimeSourceReconcile = existingLock?.source_kind === 'bundled_full_runtime_modules'
+    && options.sourceReconcile === true
+    && input.sourceKind === 'first_party_managed_cohort'
+    && Boolean(firstPartyOwner)
+    && hasResolvedCatalogSelection;
+  if (existingLock?.source_kind === 'bundled_full_runtime_modules'
+    && !trustedBundledInstall
+    && !bundledFullRuntimeSourceReconcile) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Bundled Full runtime packages must be reconciled from the App-carried local source closure.',
@@ -2239,6 +2246,11 @@ function tryBundledFullRuntimePackagePresenceReadback(
     const { index } = readRecoveredLockIndex(true);
     const { lock } = requireInstalledPackage(index, packageId, 'update');
     if (lock.source_kind === 'bundled_full_runtime_modules') {
+      const runtimeSourceReadiness = managedRuntimeSourceReadiness(
+        lock.managed_runtime_source,
+        lock.runtime_source_carrier,
+      );
+      if (!runtimeSourceReadiness.operational_ready) return null;
       const catalog = readBundledFullRuntimePackageCatalog();
       const selection = resolveBundledFullRuntimePackageClosureRoots({
         catalog,
