@@ -239,21 +239,12 @@ test('concurrent package activation preserves distinct workspaces and avoids sha
     liveOwner.exec('PRAGMA journal_mode = WAL;');
     liveOwner.exec('BEGIN IMMEDIATE;');
     try {
-      const lkgActivation = await runCliAsync([
+      const contention = runCliFailure([
         'packages', 'activate', 'mas',
         '--scope', 'workspace', '--target-workspace', sharedWorkspace,
-      ], env) as any;
-      assert.equal(lkgActivation.opl_agent_package_activation.status, 'using_last_known_good');
-      assert.equal(lkgActivation.opl_agent_package_activation.writes_performed, false);
-      assert.equal(lkgActivation.opl_agent_package_activation.launch_allowed, true);
-      assert.equal(
-        lkgActivation.opl_agent_package_activation.package_use_binding.refresh_outcome,
-        'recovered_last_known_good',
-      );
-      assert.equal(
-        lkgActivation.opl_agent_package_activation.package_use_binding.reconciliation_issue.failure_code,
-        'agent_package_lifecycle_lock_timeout',
-      );
+      ], env);
+      assert.equal(contention.payload.error.code, 'runtime_state_lock_timeout');
+      assert.equal(contention.payload.error.details.failure_code, 'agent_package_lifecycle_lock_timeout');
     } finally {
       liveOwner.exec('ROLLBACK;');
       liveOwner.close();
@@ -263,18 +254,19 @@ test('concurrent package activation preserves distinct workspaces and avoids sha
       '--scope', 'workspace', '--target-workspace', sharedWorkspace,
     ], env) as any;
     assert.equal(recoveredActivation.opl_agent_package_activation.launch_allowed, true);
-    assert.notEqual(recoveredActivation.opl_agent_package_activation.status, 'using_last_known_good');
+    assert.equal(recoveredActivation.opl_agent_package_activation.status, 'already_activated');
   } finally {
     removeFixtureTree(root);
   }
 });
 
-test('use-boundary catalog refresh has a short total budget and launches the LKG when the channel hangs', async () => {
+test('use boundary never calls a hanging package channel and uses the installed carrier', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-use-refresh-budget-'));
   const stateDir = path.join(root, 'state');
   const homeDir = path.join(root, 'home');
   const workspace = path.join(root, 'workspace');
   const hangingBin = path.join(root, 'hanging-bin');
+  const curlMarker = path.join(root, 'curl-called');
   const provider = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0');
   const consumer = writeMasConsumer(path.join(root, 'consumer'), provider, '0.1.0');
   const releaseSet = writeCapabilityCatalog(path.join(root, 'release-set'), [consumer, provider]);
@@ -294,6 +286,7 @@ test('use-boundary catalog refresh has a short total budget and launches the LKG
       path.join(hangingBin, 'curl'),
       [
         '#!/bin/sh',
+        `touch ${JSON.stringify(curlMarker)}`,
         'while :; do :; done',
         '',
       ].join('\n'),
@@ -306,42 +299,25 @@ test('use-boundary catalog refresh has a short total budget and launches the LKG
     ], {
       ...env,
       PATH: `${hangingBin}:${env.PATH}`,
-      OPL_TEST_AGENT_PACKAGE_USE_REFRESH_TIMEOUT_MS: '500',
     }) as any;
     const activation = activated.opl_agent_package_activation;
 
     assert.equal(activation.launch_allowed, true);
     assert.equal(activation.operational_ready, true);
-    assert.equal(activation.package_use_binding.latest_verified, false);
-    assert.equal(activation.package_use_binding.freshness_mode, 'offline_lkg');
-    assert.equal(activation.package_use_binding.refresh_outcome, 'recovered_last_known_good');
-    assert.equal(
-      activation.package_use_binding.reconciliation_issue.failure_code,
-      'agent_package_capability_channel_unavailable',
-    );
-    assert.equal(
-      activation.package_use_binding.reconciliation_issue.refresh_timeout_ms,
-      500,
-    );
-
-    const ledgerPath = path.join(stateDir, 'agent-package-lifecycle-ledger.json');
-    const ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8')) as any;
-    const persistedUseReceipt = ledger.receipts.find(
-      (entry: any) => entry.receipt_ref === activation.package_use_binding.use_receipt_ref,
-    );
-    delete persistedUseReceipt.use_binding.reconciliation_issue.refresh_timeout_ms;
-    fs.writeFileSync(ledgerPath, formatJsonPayload(ledger));
+    assert.equal(activation.package_use_binding.source_selection, 'installed_package_lock');
+    assert.equal(activation.package_use_binding.network_accessed, false);
+    assert.equal(activation.package_use_binding.remote_dependency_policy, 'forbidden');
+    assert.equal(fs.existsSync(curlMarker), false);
 
     const status = await runCliAsync([
       'packages', 'status', '--package-id', 'mas', '--include-history', '--limit', '20',
     ], env) as any;
-    const legacyUseReceipt = status.opl_agent_package_status.lifecycle_history.receipts.find(
+    const useReceipt = status.opl_agent_package_status.lifecycle_history.receipts.find(
       (entry: any) => entry.receipt_ref === activation.package_use_binding.use_receipt_ref,
     );
-    assert.equal(
-      Object.hasOwn(legacyUseReceipt.use_binding.reconciliation_issue, 'refresh_timeout_ms'),
-      false,
-    );
+    assert.equal(useReceipt.source_selection, 'installed_package_lock');
+    assert.equal(useReceipt.network_accessed, false);
+    assert.equal(useReceipt.remote_dependency_policy, 'forbidden');
   } finally {
     removeFixtureTree(root);
   }

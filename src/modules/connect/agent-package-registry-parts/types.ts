@@ -843,19 +843,9 @@ export type AgentPackageUseBinding = {
     developer_checkout_source?: AgentPackageDeveloperCheckoutSource | null;
   }>;
   dependency_closure_digest: string;
-  freshness_mode: 'channel_verified' | 'source_reconciled' | 'offline_lkg';
-  latest_verified: boolean;
-  checked_at: string;
-  refresh_outcome: 'updated' | 'current' | 'recovered_last_known_good';
-  channel_ref: string | null;
-  channel_digest: string | null;
-  reconciliation_issue?: {
-    status: 'update_failed_using_last_known_good';
-    source: 'developer_checkout' | 'package_channel' | 'mixed';
-    failure_code: string | null;
-    refresh_timeout_ms?: number;
-    message: string;
-  } | null;
+  source_selection: 'installed_package_lock';
+  network_accessed: false;
+  remote_dependency_policy: 'forbidden';
   scope: 'workspace' | 'quest';
   target_root: string;
   skill_projection?: AgentPackageSkillProjection | null;

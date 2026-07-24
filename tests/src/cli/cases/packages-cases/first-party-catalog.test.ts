@@ -731,7 +731,7 @@ test('first-party install rejects a catalog member without an immutable owner co
   }
 });
 
-test('first-party activation keeps the installed LKG when the next catalog member is invalid', () => {
+test('first-party activation uses the installed package without reading an invalid next catalog member', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-activation-state-'));
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-activation-home-'));
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-activation-workspace-'));
@@ -752,6 +752,10 @@ test('first-party activation keeps the installed LKG when the next catalog membe
       '.codex-plugin',
       'plugin.json',
     );
+    const installedLock = installed.opl_agent_package_install.package_lock;
+    const invalidCatalogReadsBefore = fs.existsSync(invalidFixture.curlLogPath)
+      ? fs.readFileSync(invalidFixture.curlLogPath, 'utf8').trim()
+      : '';
 
     const activation = runCli([
       'packages', 'activate', 'opl-flow',
@@ -761,11 +765,14 @@ test('first-party activation keeps the installed LKG when the next catalog membe
       ...invalidFixture.env,
     }).opl_agent_package_activation;
     assert.equal(activation.package_lock.package_version, '0.2.0');
-    assert.equal(activation.package_use_binding.freshness_mode, 'offline_lkg');
-    assert.equal(
-      activation.package_use_binding.reconciliation_issue.failure_code,
-      'agent_package_capability_channel_unavailable',
-    );
+    assert.equal(activation.package_use_binding.source_selection, 'installed_package_lock');
+    assert.equal(activation.package_use_binding.network_accessed, false);
+    assert.equal(activation.package_use_binding.remote_dependency_policy, 'forbidden');
+    assert.equal(activation.package_use_binding.root_package.package_lock_ref, installedLock.lock_ref);
+    const invalidCatalogReadsAfter = fs.existsSync(invalidFixture.curlLogPath)
+      ? fs.readFileSync(invalidFixture.curlLogPath, 'utf8').trim()
+      : '';
+    assert.equal(invalidCatalogReadsAfter, invalidCatalogReadsBefore);
     assert.equal(JSON.parse(fs.readFileSync(pluginPath, 'utf8')).version, '0.2.0');
   } finally {
     removeFixtureTree(stateDir);

@@ -180,7 +180,6 @@ import type {
   AgentPackageProfileApplyInput,
   AgentPackageRepairInput,
   AgentPackageRegistryRefreshInput,
-  AgentPackageUseBinding,
 } from './agent-package-registry-parts/types.ts';
 
 export type {
@@ -3230,171 +3229,6 @@ export async function runOplAgentPackageRollback(input: AgentPackagePackageActio
   );
 }
 
-type PackageUseReconciliation = {
-  freshnessMode: AgentPackageUseBinding['freshness_mode'];
-  latestVerified: boolean;
-  updated: boolean;
-  refreshOutcome: AgentPackageUseBinding['refresh_outcome'];
-  channelRef: string | null;
-  channelDigest: string | null;
-  checkedAt: string;
-  reconciliationIssue: AgentPackageUseBinding['reconciliation_issue'];
-};
-
-const PACKAGE_USE_REFRESH_TIMEOUT_MS = 3_000;
-
-function packageUseRefreshTimeoutMs() {
-  const injected = Number(process.env.OPL_TEST_AGENT_PACKAGE_USE_REFRESH_TIMEOUT_MS);
-  return Number.isFinite(injected) && injected > 0
-    ? Math.floor(injected)
-    : PACKAGE_USE_REFRESH_TIMEOUT_MS;
-}
-
-function packageUseReconciliationSource(lock: AgentPackageLock) {
-  const index = readLockIndex();
-  const closure = [
-    lock,
-    ...index.packages.filter((entry) =>
-      lock.resolved_dependencies.some((dependency) => dependency.package_id === entry.package_id)),
-  ];
-  const sourceKinds = new Set(closure.map((entry) => entry.source_kind));
-  if ([...sourceKinds].every((kind) => kind === 'developer_checkout_override')) {
-    return 'developer_checkout' as const;
-  }
-  if (sourceKinds.has('developer_checkout_override')) return 'mixed' as const;
-  return 'package_channel' as const;
-}
-
-function packageUseLastKnownGood(
-  lock: AgentPackageLock,
-  error: unknown,
-  refreshTimeoutMs: number,
-): PackageUseReconciliation {
-  const failureCode = error instanceof FrameworkContractError
-    && typeof error.details?.failure_code === 'string'
-    ? error.details.failure_code
-    : null;
-  const message = error instanceof Error ? error.message : String(error);
-  return {
-    freshnessMode: 'offline_lkg',
-    latestVerified: false,
-    updated: false,
-    refreshOutcome: 'recovered_last_known_good',
-    channelRef: lock.managed_update_source?.catalog_ref ?? null,
-    channelDigest: null,
-    checkedAt: nowIso(),
-    reconciliationIssue: {
-      status: 'update_failed_using_last_known_good',
-      source: packageUseReconciliationSource(lock),
-      failure_code: failureCode,
-      refresh_timeout_ms: refreshTimeoutMs,
-      message,
-    },
-  };
-}
-
-function isPackageLifecycleLockTimeout(error: unknown): error is FrameworkContractError {
-  return error instanceof FrameworkContractError
-    && error.details?.failure_code === 'agent_package_lifecycle_lock_timeout';
-}
-
-async function reconcilePackageClosureForUse(
-  input: AgentPackagePackageActionInput,
-  lock: AgentPackageLock,
-): Promise<PackageUseReconciliation> {
-  const refreshTimeoutMs = packageUseRefreshTimeoutMs();
-  const firstParty = resolveFirstPartyPackageCatalog(lock.package_id);
-  if (firstParty && lock.source_kind !== 'bundled_full_runtime_modules') {
-    try {
-      const update = await runOplAgentPackageUpdateUnlocked({
-        packageId: lock.package_id,
-        dryRun: input.dryRun === true,
-        scope: input.scope,
-        targetWorkspace: input.targetWorkspace,
-        targetQuest: input.targetQuest,
-      }, {
-        catalogFetchTimeoutMs: refreshTimeoutMs,
-      });
-      const readback = update.opl_agent_package_update;
-      const closureCurrentness = Array.isArray(readback.closure_currentness)
-        ? readback.closure_currentness
-        : [];
-      const hasDeveloperSource = closureCurrentness.some((entry: any) =>
-        entry?.source_policy?.desired_source_kind === 'developer_checkout_override');
-      const hasManagedSource = closureCurrentness.some((entry: any) =>
-        entry?.source_policy?.desired_source_kind === 'first_party_managed_cohort');
-      const updateRequired = readback.currentness?.status !== 'current';
-      return {
-        freshnessMode: hasDeveloperSource ? 'source_reconciled' : 'channel_verified',
-        latestVerified: !hasManagedSource || readback.release_catalog_freshness === 'live',
-        updated: updateRequired && input.dryRun !== true,
-        refreshOutcome: updateRequired && input.dryRun !== true ? 'updated' : 'current',
-        channelRef: readback.release_catalog_ref ?? null,
-        channelDigest: readback.release_catalog_digest ?? null,
-        checkedAt: readback.release_catalog_checked_at ?? nowIso(),
-        reconciliationIssue: null,
-      };
-    } catch (error) {
-      return packageUseLastKnownGood(lock, error, refreshTimeoutMs);
-    }
-  }
-
-  const source = lock.managed_update_source;
-  if (!source) {
-    return packageUseLastKnownGood(
-      lock,
-      new FrameworkContractError('codex_command_failed', 'No managed package channel is available for this installed package.', {
-        package_id: lock.package_id,
-        failure_code: 'agent_package_capability_channel_unavailable',
-      }),
-      refreshTimeoutMs,
-    );
-  }
-  try {
-    const fetched = await fetchManagedPackageCatalog(source, {
-      timeoutMs: refreshTimeoutMs,
-    });
-    const rootVersion = selectRootCatalogVersion(fetched.catalog, lock);
-    const providerVersions = lock.capability_dependencies.map((dependency) =>
-      selectCapabilityCatalogVersion(fetched.catalog, dependency));
-    const installedById = new Map(readLockIndex().packages.map((entry) => [entry.package_id, entry]));
-    const updateRequired = rootVersion.manifest_sha256.replace(/^sha256:/, '') !== lock.manifest_sha256
-      || lock.capability_dependencies.some((dependency, index) => (
-        providerVersions[index].manifest_sha256.replace(/^sha256:/, '')
-          !== installedById.get(dependency.package_id)?.manifest_sha256
-      ));
-    if (updateRequired && !input.dryRun) {
-      await applyManifestPackageLock({
-        packageId: lock.package_id,
-        manifestUrl: rootVersion.manifest_url,
-        trustTier: lock.trust_tier,
-        sourceKind: lock.source_kind,
-        scope: input.scope,
-        targetWorkspace: input.targetWorkspace,
-        targetQuest: input.targetQuest,
-      }, 'update', {
-        catalog: fetched.catalog,
-        rootVersion,
-        catalogSource: source,
-        channelRef: fetched.channel_ref,
-        channelDigest: fetched.channel_digest,
-      });
-    }
-    return {
-      freshnessMode: 'channel_verified',
-      latestVerified: true,
-      updated: updateRequired && input.dryRun !== true,
-      refreshOutcome: updateRequired && input.dryRun !== true ? 'updated' : 'current',
-      channelRef: fetched.channel_ref,
-      channelDigest: fetched.channel_digest,
-      checkedAt: fetched.checked_at,
-      reconciliationIssue: null,
-    };
-  } catch (error) {
-    return packageUseLastKnownGood(lock, error, refreshTimeoutMs);
-  }
-}
-
 function missingDependencyProviderIsOptional(
   lock: AgentPackageLock,
   packageId: string,
@@ -3428,9 +3262,6 @@ function resolvedProviderLocksForUse(
 
 async function ensureOplAgentPackageScopeActivationUnlocked(input: AgentPackagePackageActionInput) {
   const packageId = requirePackageId(input.packageId, 'activate');
-  const recovered = readRecoveredLockIndex(input.dryRun === true);
-  const initial = requireInstalledPackage(recovered.index, packageId, 'activate');
-  const reconciliation = await reconcilePackageClosureForUse(input, initial.lock);
   const index = readLockIndex();
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'activate');
   const targetRoot = packageScopeTarget(input);
@@ -3606,13 +3437,9 @@ async function ensureOplAgentPackageScopeActivationUnlocked(input: AgentPackageP
     },
     provider_packages: providerPackages,
     dependency_closure_digest: activatedLock.dependency_closure_digest,
-    freshness_mode: reconciliation.freshnessMode,
-    latest_verified: reconciliation.latestVerified,
-    checked_at: reconciliation.checkedAt,
-    refresh_outcome: reconciliation.refreshOutcome,
-    channel_ref: reconciliation.channelRef,
-    channel_digest: reconciliation.channelDigest,
-    reconciliation_issue: reconciliation.reconciliationIssue,
+    source_selection: 'installed_package_lock' as const,
+    network_accessed: false as const,
+    remote_dependency_policy: 'forbidden' as const,
     scope: input.scope,
     target_root: targetRoot,
     skill_projection: skillProjection,
@@ -3647,6 +3474,9 @@ async function ensureOplAgentPackageScopeActivationUnlocked(input: AgentPackageP
     releaseChannelRef: activatedLock.release_channel_ref ?? null,
     releaseChannelDigest: activatedLock.release_channel_digest ?? null,
     useBinding,
+    sourceSelection: 'installed_package_lock',
+    networkAccessed: false,
+    remoteDependencyPolicy: 'forbidden',
   });
   useBinding.use_receipt_ref = useReceipt.receipt_ref;
   useReceipt.use_binding = useBinding;
@@ -3673,157 +3503,48 @@ async function ensureOplAgentPackageScopeActivationUnlocked(input: AgentPackageP
     materialization_readiness: materializationReadiness,
     package_use_binding: useBinding,
     use_receipt: useReceipt,
-    closure_reconciliation: reconciliation,
-  };
-}
-
-function packageUseLastKnownGoodFallback(
-  input: AgentPackagePackageActionInput,
-  error: FrameworkContractError,
-) {
-  const packageId = requirePackageId(input.packageId, 'activate');
-  const index = readLockIndex();
-  const { lock } = requireInstalledPackage(index, packageId, 'activate');
-  const targetRoot = packageScopeTarget(input);
-  if (!input.scope || !targetRoot) throw error;
-
-  const materializationReadiness = scopeMaterializationReadiness(lock, index, input);
-  const reconciliation = packageUseLastKnownGood(lock, error, packageUseRefreshTimeoutMs());
-  const resolvedProviderLocks = resolvedProviderLocksForUse(
-    lock,
-    index,
-    'Package LKG use requires every required dependency provider lock.',
-  );
-  const providerPackages = resolvedProviderLocks.map((provider) => {
-    return {
-      package_id: provider.package_id,
-      package_version: provider.package_version,
-      owner_language_version: provider.owner_language_version,
-      package_lock_ref: provider.lock_ref,
-      manifest_sha256: provider.manifest_sha256,
-      content_digest: provider.content_digest,
-      source_artifact_ref: provider.source_artifact_ref ?? null,
-      artifact_digest: provider.artifact_digest ?? null,
-      owner_source_commit: provider.owner_source_commit ?? null,
-      carrier_authority: provider.carrier_authority ?? null,
-      source_kind: provider.source_kind,
-      developer_checkout_source: provider.developer_checkout_source ?? null,
-    };
-  });
-  const skillProjection = materializeAgentPackageSkillProjection({
-    root: lock,
-    providers: resolvedProviderLocks,
-    dryRun: false,
-  });
-  const useBinding: AgentPackageUseBinding = {
-    surface_kind: 'opl_agent_package_use_binding.v1',
-    use_boundary_id: input.useBoundaryId
-      ?? sha256Text(`${packageId}\n${input.scope}\n${targetRoot}\n${Date.now()}`),
-    use_receipt_ref: '',
-    root_package: {
-      package_id: lock.package_id,
-      package_version: lock.package_version,
-      owner_language_version: lock.owner_language_version,
-      package_lock_ref: lock.lock_ref,
-      manifest_sha256: lock.manifest_sha256,
-      content_digest: lock.content_digest,
-      source_artifact_ref: lock.source_artifact_ref ?? null,
-      artifact_digest: lock.artifact_digest ?? null,
-      owner_source_commit: lock.owner_source_commit ?? null,
-      carrier_authority: lock.carrier_authority ?? null,
-      source_kind: lock.source_kind,
-      developer_checkout_source: lock.developer_checkout_source ?? null,
-    },
-    provider_packages: providerPackages,
-    dependency_closure_digest: lock.dependency_closure_digest,
-    freshness_mode: reconciliation.freshnessMode,
-    latest_verified: reconciliation.latestVerified,
-    checked_at: reconciliation.checkedAt,
-    refresh_outcome: reconciliation.refreshOutcome,
-    channel_ref: reconciliation.channelRef,
-    channel_digest: reconciliation.channelDigest,
-    reconciliation_issue: reconciliation.reconciliationIssue,
-    scope: input.scope,
-    target_root: targetRoot,
-    skill_projection: skillProjection,
-    core_skill_tree_digest: skillProjection?.core_digest ?? materializationReadiness.actual_digest,
-    skill_tree_digest: skillProjection?.full_export_digest
-      ?? lock.scope_materializations.find((entry) =>
-        entry.scope === input.scope && entry.target_root === targetRoot)?.full_export_digest
-      ?? null,
-    core_readiness: materializationReadiness.core_readiness,
-    specialty_exposure: materializationReadiness.specialty_exposure,
-  };
-  useBinding.use_receipt_ref = packageReceiptRef({
-    action: 'use',
-    packageId,
-    sourceSha256: sha256Text(JSON.stringify(useBinding)),
-  });
-  const packageStatus = runOplAgentPackageStatus({
-    packageId,
-    scope: input.scope,
-    targetWorkspace: input.targetWorkspace,
-    targetQuest: input.targetQuest,
-  }).opl_agent_package_status;
-  return {
-    status: 'using_last_known_good' as const,
-    package_id: packageId,
-    writes_performed: false,
-    scope_materializations: [],
-    lifecycle_receipt: null,
-    package_lock: lock,
-    materialization_readiness: materializationReadiness,
-    package_use_binding: useBinding,
-    use_receipt: null,
-    closure_reconciliation: reconciliation,
-    package_status: packageStatus,
   };
 }
 
 export async function ensureOplAgentPackageScopeActivation(input: AgentPackagePackageActionInput) {
-  try {
-    return await withAgentPackageLifecycleTransaction(
-      input.dryRun === true,
-      async () => {
-        const beforeStatus = runOplAgentPackageStatus({
-          packageId: input.packageId,
-          scope: input.scope,
-          targetWorkspace: input.targetWorkspace,
-          targetQuest: input.targetQuest,
-        }).opl_agent_package_status;
-        const preflightHardStopReason = packageActivationPreflightHardStopReason(beforeStatus);
-        if (preflightHardStopReason) {
-          throw new FrameworkContractError(
-            'contract_shape_invalid',
-            'Package activation is blocked by the current package lifecycle state.',
-            {
-              package_id: input.packageId,
-              launch_blocked_reason: preflightHardStopReason,
-              allowed_when_blocked: beforeStatus.allowed_when_blocked,
-              package_dependency_readiness: beforeStatus.package_dependency_readiness,
-              materialization_readiness: beforeStatus.materialization_readiness,
-              repair_action: beforeStatus.repair_action,
-              failure_code: 'agent_package_scope_activation_blocked',
-            },
-          );
-        }
-        const activation = await ensureOplAgentPackageScopeActivationUnlocked(input);
-        const packageStatus = runOplAgentPackageStatus({
-          packageId: input.packageId,
-          scope: input.scope,
-          targetWorkspace: input.targetWorkspace,
-          targetQuest: input.targetQuest,
-        }).opl_agent_package_status;
-        return {
-          ...activation,
-          package_status: packageStatus,
-        };
-      },
-    );
-  } catch (error) {
-    if (input.dryRun === true || !isPackageLifecycleLockTimeout(error)) throw error;
-    return packageUseLastKnownGoodFallback(input, error);
-  }
+  return withAgentPackageLifecycleTransaction(
+    input.dryRun === true,
+    async () => {
+      const beforeStatus = runOplAgentPackageStatus({
+        packageId: input.packageId,
+        scope: input.scope,
+        targetWorkspace: input.targetWorkspace,
+        targetQuest: input.targetQuest,
+      }).opl_agent_package_status;
+      const preflightHardStopReason = packageActivationPreflightHardStopReason(beforeStatus);
+      if (preflightHardStopReason) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Package activation is blocked by the current package lifecycle state.',
+          {
+            package_id: input.packageId,
+            launch_blocked_reason: preflightHardStopReason,
+            allowed_when_blocked: beforeStatus.allowed_when_blocked,
+            package_dependency_readiness: beforeStatus.package_dependency_readiness,
+            materialization_readiness: beforeStatus.materialization_readiness,
+            repair_action: beforeStatus.repair_action,
+            failure_code: 'agent_package_scope_activation_blocked',
+          },
+        );
+      }
+      const activation = await ensureOplAgentPackageScopeActivationUnlocked(input);
+      const packageStatus = runOplAgentPackageStatus({
+        packageId: input.packageId,
+        scope: input.scope,
+        targetWorkspace: input.targetWorkspace,
+        targetQuest: input.targetQuest,
+      }).opl_agent_package_status;
+      return {
+        ...activation,
+        package_status: packageStatus,
+      };
+    },
+  );
 }
 
 async function runOplAgentPackageActivateUnlocked(input: AgentPackagePackageActionInput) {

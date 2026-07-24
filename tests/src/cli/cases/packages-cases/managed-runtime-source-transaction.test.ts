@@ -1083,7 +1083,7 @@ test('bundled Full runtime source requires a matching carrier marker and rejects
   }
 });
 
-test('ordinary-user latest-stable use advances MAS and ScholarSkills by immutable V1 V2 V3 generations', () => {
+test('ordinary-user explicit update advances MAS and ScholarSkills by immutable V1 V2 V3 generations', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-ordinary-generation-history-'));
   const stateDir = path.join(root, 'state');
   const homeDir = path.join(root, 'home');
@@ -1212,6 +1212,27 @@ test('ordinary-user latest-stable use advances MAS and ScholarSkills by immutabl
       assert.equal(exactTreeDigest(generationPath), v2Digests[key]);
     }
 
+    const activationBeforeV3 = runCli([
+      'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
+    ], {
+      ...commonEnv,
+      ...releaseV3.env,
+    }) as any;
+    const installedV2Binding = activationBeforeV3.opl_agent_package_activation.package_use_binding;
+    assert.equal(activationBeforeV3.opl_agent_package_activation.status, 'already_activated');
+    assert.equal(installedV2Binding.source_selection, 'installed_package_lock');
+    assert.equal(installedV2Binding.network_accessed, false);
+    assert.equal(installedV2Binding.remote_dependency_policy, 'forbidden');
+    assert.equal(installedV2Binding.root_package.package_version, '0.1.1');
+    assert.equal(installedV2Binding.provider_packages.find(
+      (entry: any) => entry.package_id === 'mas-scholar-skills',
+    ).package_version, '0.1.1');
+
+    const updatedV3 = runCli(['packages', 'update', 'mas'], {
+      ...commonEnv,
+      ...releaseV3.env,
+    }) as any;
+    assert.equal(updatedV3.opl_agent_package_update.package_lock.package_version, '0.1.2');
     const activationV3 = runCli([
       'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
     ], {
@@ -1219,9 +1240,9 @@ test('ordinary-user latest-stable use advances MAS and ScholarSkills by immutabl
       ...releaseV3.env,
     }) as any;
     const useBinding = activationV3.opl_agent_package_activation.package_use_binding;
-    assert.equal(activationV3.opl_agent_package_activation.status, 'already_activated');
-    assert.equal(useBinding.refresh_outcome, 'updated');
-    assert.equal(useBinding.latest_verified, true);
+    assert.equal(useBinding.source_selection, 'installed_package_lock');
+    assert.equal(useBinding.network_accessed, false);
+    assert.equal(useBinding.remote_dependency_policy, 'forbidden');
     assert.equal(useBinding.root_package.package_version, '0.1.2');
     assert.equal(useBinding.provider_packages.find(
       (entry: any) => entry.package_id === 'mas-scholar-skills',

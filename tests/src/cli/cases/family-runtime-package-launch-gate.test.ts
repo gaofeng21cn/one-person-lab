@@ -155,6 +155,23 @@ function createThenBindAtStart(
   };
 }
 
+function assertInstalledOnlyUseBinding(binding: any) {
+  assert.equal(binding.source_selection, 'installed_package_lock');
+  assert.equal(binding.network_accessed, false);
+  assert.equal(binding.remote_dependency_policy, 'forbidden');
+  for (const legacyField of [
+    'freshness_mode',
+    'latest_verified',
+    'checked_at',
+    'refresh_outcome',
+    'channel_ref',
+    'channel_digest',
+    'reconciliation_issue',
+  ]) {
+    assert.equal(Object.hasOwn(binding, legacyField), false, legacyField);
+  }
+}
+
 test('family-runtime attempt create fails closed when the canonical domain package is not installed', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-package-not-installed-'));
   const workspace = path.join(root, 'workspace');
@@ -419,7 +436,7 @@ test('family-runtime quest first start activates every Skill while a new attempt
   }
 });
 
-test('family-runtime use boundary reconciles the highest compatible provider and freezes an existing attempt', async () => {
+test('family-runtime invocation keeps the installed provider until an explicit update', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-use-reconcile-'));
   const workspace = path.join(root, 'workspace');
   const providerV1 = writeCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0', {
@@ -459,7 +476,7 @@ test('family-runtime use boundary reconciles the highest compatible provider and
       createSessionArgs(workspace, 'paper-session-a'),
       env,
     ).attempt;
-    assert.equal(created.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
+    assertInstalledOnlyUseBinding(created.workspace_locator.package_use_binding);
     assert.match(created.workspace_locator.package_use_binding.use_receipt_ref, /^opl:\/\/agent-package\/use\//);
     assert.equal(created.workspace_locator.package_use_binding.provider_packages[0].package_version, '0.1.1');
     assert.match(created.workspace_locator.package_use_binding.provider_packages[0].artifact_digest, /^sha256:[0-9a-f]{64}$/);
@@ -522,15 +539,21 @@ test('family-runtime use boundary reconciles the highest compatible provider and
     assert.notEqual(startFailure.payload.error.details?.failure_code, 'agent_package_pinned_closure_changed');
     assert.equal(fs.existsSync(helper), false);
 
-    const nextSession = createThenBindAtStart(
+    const installedSession = createThenBindAtStart(
       createSessionArgs(workspace, 'paper-session-b'),
       env,
     ).attempt;
-    assert.equal(nextSession.workspace_locator.package_use_binding.root_package.package_version, '0.1.1');
-    assert.equal(nextSession.workspace_locator.package_use_binding.provider_packages[0].package_version, '0.1.2');
-    assert.equal(nextSession.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
-    assert.equal(nextSession.workspace_locator.package_use_binding.latest_verified, true);
-    assert.equal(nextSession.workspace_locator.package_use_binding.reconciliation_issue, null);
+    assert.equal(installedSession.workspace_locator.package_use_binding.root_package.package_version, '0.1.0');
+    assert.equal(installedSession.workspace_locator.package_use_binding.provider_packages[0].package_version, '0.1.1');
+    assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.1/);
+
+    runCli(['packages', 'update', 'mas'], env);
+    const updatedSession = createThenBindAtStart(
+      createSessionArgs(workspace, 'paper-session-c'),
+      env,
+    ).attempt;
+    assert.equal(updatedSession.workspace_locator.package_use_binding.root_package.package_version, '0.1.1');
+    assert.equal(updatedSession.workspace_locator.package_use_binding.provider_packages[0].package_version, '0.1.2');
     assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.2/);
 
     const resumedFailure = runCliFailure([
@@ -547,7 +570,7 @@ test('family-runtime use boundary reconciles the highest compatible provider and
   }
 });
 
-test('family-runtime silently reconciles helper-only developer checkout changes before a new invocation', async () => {
+test('family-runtime absorbs developer checkout changes only after an explicit update', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-developer-use-reconcile-'));
   const workspaceA = path.join(root, 'workspace-a');
   const workspaceB = path.join(root, 'workspace-b');
@@ -581,9 +604,7 @@ test('family-runtime silently reconciles helper-only developer checkout changes 
     const firstProvider = firstLocks.packages.find(
       (entry: any) => entry.package_id === 'mas-scholar-skills',
     );
-    assert.equal(firstBinding.freshness_mode, 'source_reconciled');
-    assert.equal(firstBinding.latest_verified, true);
-    assert.equal(firstBinding.reconciliation_issue, null);
+    assertInstalledOnlyUseBinding(firstBinding);
     assert.equal(firstProvider.developer_checkout_source.source_git_head_sha, fixture.scholarHead);
     assert.equal(firstProvider.source_artifact_ref, null);
     assert.equal(firstProvider.artifact_digest, null);
@@ -594,7 +615,28 @@ test('family-runtime silently reconciles helper-only developer checkout changes 
       createSessionArgs(workspaceB, 'developer-b'),
       env,
     ).attempt;
-    const binding = second.workspace_locator.package_use_binding;
+    const installedBinding = second.workspace_locator.package_use_binding;
+    const installedProvider = installedBinding.provider_packages.find(
+      (entry: any) => entry.package_id === 'mas-scholar-skills',
+    );
+    assertInstalledOnlyUseBinding(installedBinding);
+    assert.equal(installedProvider.developer_checkout_source.source_git_head_sha, fixture.scholarHead);
+    assert.equal(installedProvider.content_digest, firstProvider.content_digest);
+    assert.match(
+      fs.readFileSync(path.join(workspaceB, '.codex', 'skills', 'medical-manuscript-writing', 'helper.txt'), 'utf8'),
+      /helper 0\.1\.0/,
+    );
+
+    bindMasWorkspace(workspaceB, env);
+    runCli([
+      'packages', 'update', 'mas',
+      '--scope', 'workspace', '--target-workspace', workspaceB,
+    ], env);
+    const third = createThenBindAtStart(
+      createSessionArgs(workspaceB, 'developer-c'),
+      env,
+    ).attempt;
+    const binding = third.workspace_locator.package_use_binding;
     const nextLocks = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
     const nextProvider = nextLocks.packages.find(
       (entry: any) => entry.package_id === 'mas-scholar-skills',
@@ -602,10 +644,6 @@ test('family-runtime silently reconciles helper-only developer checkout changes 
     const boundProvider = binding.provider_packages.find(
       (entry: any) => entry.package_id === 'mas-scholar-skills',
     );
-    assert.equal(binding.freshness_mode, 'source_reconciled');
-    assert.equal(binding.latest_verified, true);
-    assert.equal(binding.refresh_outcome, 'updated');
-    assert.equal(binding.reconciliation_issue, null);
     assert.equal(boundProvider.source_kind, 'developer_checkout_override');
     assert.equal(boundProvider.developer_checkout_source.source_git_head_sha, scholarHeadB);
     assert.equal(boundProvider.source_artifact_ref, null);
@@ -641,7 +679,7 @@ test('family-runtime silently reconciles helper-only developer checkout changes 
   }
 });
 
-test('family-runtime keeps the developer LKG when the latest checkout is incomplete', async () => {
+test('family-runtime ignores an incomplete checkout until an explicit update', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-developer-use-lkg-'));
   const workspace = path.join(root, 'fresh-workspace');
   const masCheckout = path.join(root, 'workspace', 'med-autoscience');
@@ -680,16 +718,7 @@ test('family-runtime keeps the developer LKG when the latest checkout is incompl
       env,
     ).attempt;
     const binding = attempt.workspace_locator.package_use_binding;
-    assert.equal(binding.freshness_mode, 'offline_lkg');
-    assert.equal(binding.latest_verified, false);
-    assert.equal(binding.refresh_outcome, 'recovered_last_known_good');
-    assert.equal(binding.reconciliation_issue.status, 'update_failed_using_last_known_good');
-    assert.equal(binding.reconciliation_issue.source, 'developer_checkout');
-    assert.equal(
-      binding.reconciliation_issue.failure_code,
-      'agent_package_developer_checkout_source_invalid',
-    );
-    assert.ok(binding.reconciliation_issue.message.length > 0);
+    assertInstalledOnlyUseBinding(binding);
     const afterLocks = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
     const afterProvider = afterLocks.packages.find(
       (entry: any) => entry.package_id === 'mas-scholar-skills',
@@ -724,19 +753,17 @@ test('family-runtime keeps the developer LKG when the latest checkout is incompl
       ),
       'nested developer fixture A\n',
     );
-    const ledger = JSON.parse(fs.readFileSync(
-      path.join(env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json'),
-      'utf8',
-    ));
-    const useReceipt = ledger.receipts.find((entry: any) =>
-      entry.receipt_ref === binding.use_receipt_ref);
-    assert.deepEqual(useReceipt.use_binding.reconciliation_issue, binding.reconciliation_issue);
+    const updateFailure = runCliFailure(['packages', 'update', 'mas'], env);
+    assert.equal(
+      updateFailure.payload.error.details.failure_code,
+      'agent_package_developer_checkout_source_invalid',
+    );
   } finally {
     removeFixtureTree(root);
   }
 });
 
-test('provider retirement removes only unchanged package-owned Skills and preserves user-modified projections', async () => {
+test('explicit provider update removes only unchanged package-owned Skills and preserves user-modified projections', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-retirement-'));
   const workspaceA = path.join(root, 'workspace-a');
   const workspaceB = path.join(root, 'workspace-b');
@@ -767,6 +794,9 @@ test('provider retirement removes only unchanged package-owned Skills and preser
     fs.appendFileSync(userModifiedSkill, '\nUser-owned local note.\n');
 
     writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV1, providerV2]);
+    createThenBindAtStart(createSessionArgs(workspaceA, 'retirement-a-still-v1'), env);
+    assert.equal(fs.existsSync(path.join(workspaceA, '.codex', 'skills', retiredSkill)), true);
+    runCli(['packages', 'update', 'mas'], env);
     createThenBindAtStart(createSessionArgs(workspaceA, 'retirement-a-v2'), env);
 
     assert.equal(fs.existsSync(path.join(workspaceA, '.codex', 'skills', retiredSkill)), false);
@@ -777,7 +807,7 @@ test('provider retirement removes only unchanged package-owned Skills and preser
   }
 });
 
-test('family-runtime use boundary reads owner channels when the legacy shared snapshot is offline', async () => {
+test('family-runtime use boundary ignores owner channels when the legacy shared snapshot is offline', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-use-offline-'));
   const workspace = path.join(root, 'workspace');
   const provider = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0');
@@ -810,9 +840,7 @@ test('family-runtime use boundary reads owner channels when the legacy shared sn
       createSessionArgs(workspace, 'strict-offline'),
       strictEnv,
     ).attempt;
-    assert.equal(strict.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
-    assert.equal(strict.workspace_locator.package_use_binding.latest_verified, true);
-    assert.equal(strict.workspace_locator.package_use_binding.reconciliation_issue, null);
+    assertInstalledOnlyUseBinding(strict.workspace_locator.package_use_binding);
     assert.equal(
       strict.workspace_locator.package_use_binding.root_package.source_artifact_ref,
       'ghcr.io/fixture/one-person-lab-packages/mas:0.1.0-alpha.4',
@@ -826,9 +854,7 @@ test('family-runtime use boundary reads owner channels when the legacy shared sn
       createSessionArgs(workspace, 'offline-lkg'),
       env,
     ).attempt;
-    assert.equal(offline.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
-    assert.equal(offline.workspace_locator.package_use_binding.latest_verified, true);
-    assert.equal(offline.workspace_locator.package_use_binding.reconciliation_issue, null);
+    assertInstalledOnlyUseBinding(offline.workspace_locator.package_use_binding);
     assert.match(offline.workspace_locator.package_use_binding.use_receipt_ref, /^opl:\/\/agent-package\/use\//);
   } finally {
     removeFixtureTree(root);
@@ -883,7 +909,7 @@ test('family-runtime treats lifecycle and prior use receipt metadata as observat
   }
 });
 
-test('family-runtime use boundary keeps a required provider callable without an ABI compatibility gate', async () => {
+test('family-runtime keeps the installed provider callable without an ABI compatibility gate', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-use-incompatible-'));
   const workspace = path.join(root, 'workspace');
   const providerV1 = writeCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
@@ -908,23 +934,32 @@ test('family-runtime use boundary keeps a required provider callable without an 
       createSessionArgs(workspace, 'incompatible-provider'),
       env,
     ).attempt;
-    assert.equal(attempt.workspace_locator.package_use_binding.freshness_mode, 'channel_verified');
-    assert.equal(attempt.workspace_locator.package_use_binding.latest_verified, true);
-    assert.equal(attempt.workspace_locator.package_use_binding.reconciliation_issue, null);
+    assertInstalledOnlyUseBinding(attempt.workspace_locator.package_use_binding);
     assert.equal(
       attempt.workspace_locator.package_use_binding.provider_packages[0].package_version,
-      '0.2.0',
+      '0.1.0',
     );
     assert.equal(
       attempt.workspace_locator.package_use_binding.provider_packages[0].source_artifact_ref,
-      'ghcr.io/fixture/one-person-lab-packages/mas-scholar-skills:0.2.0',
+      'ghcr.io/fixture/one-person-lab-packages/mas-scholar-skills:0.1.0',
+    );
+
+    runCli(['packages', 'update', 'mas'], env);
+    const updatedAttempt = createThenBindAtStart(
+      createSessionArgs(workspace, 'updated-provider'),
+      env,
+    ).attempt;
+    assertInstalledOnlyUseBinding(updatedAttempt.workspace_locator.package_use_binding);
+    assert.equal(
+      updatedAttempt.workspace_locator.package_use_binding.provider_packages[0].package_version,
+      '0.2.0',
     );
   } finally {
     removeFixtureTree(root);
   }
 });
 
-test('family-runtime use reconciliation rolls provider and scope back after an injected mid-transaction failure', async () => {
+test('family-runtime does not enter explicit update reconciliation during invocation', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-capability-use-rollback-'));
   const workspace = path.join(root, 'workspace');
   const providerV1 = writeCapabilityProvider(path.join(root, 'provider-v1'), '0.1.0');
@@ -950,7 +985,7 @@ test('family-runtime use reconciliation rolls provider and scope back after an i
     assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.0/);
     writeCapabilityCatalog(path.dirname(catalog), [consumer, providerV1, providerV2]);
 
-    const recovered = createThenBindAtStart(
+    const installedAttempt = createThenBindAtStart(
       createSessionArgs(workspace, 'faulted-session'),
       env,
       {
@@ -958,11 +993,7 @@ test('family-runtime use reconciliation rolls provider and scope back after an i
         OPL_TEST_CAPABILITY_RECONCILIATION_FAIL_AFTER_SCOPE: '1',
       },
     ).attempt;
-    assert.equal(recovered.workspace_locator.package_use_binding.freshness_mode, 'offline_lkg');
-    assert.equal(
-      recovered.workspace_locator.package_use_binding.reconciliation_issue.failure_code,
-      'test_capability_reconciliation_interrupted',
-    );
+    assertInstalledOnlyUseBinding(installedAttempt.workspace_locator.package_use_binding);
     assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.0/);
     const lockIndex = JSON.parse(fs.readFileSync(path.join(env.OPL_STATE_DIR, 'agent-package-locks.json'), 'utf8'));
     assert.equal(lockIndex.packages.find((entry: any) => entry.package_id === 'mas-scholar-skills').package_version, '0.1.0');
@@ -971,6 +1002,16 @@ test('family-runtime use reconciliation rolls provider and scope back after an i
     ], env).family_runtime_stage_attempts;
     assert.equal(attempts.summary.total, 2);
     assert.ok(attempts.attempts.some((entry: any) => entry.stage_attempt_id === baselineAttempt.stage_attempt_id));
+
+    const updateFailure = runCliFailure(['packages', 'update', 'mas'], {
+      ...env,
+      OPL_TEST_CAPABILITY_RECONCILIATION_FAIL_AFTER_SCOPE: '1',
+    });
+    assert.equal(
+      updateFailure.payload.error.details.failure_code,
+      'test_capability_reconciliation_interrupted',
+    );
+    assert.match(fs.readFileSync(helper, 'utf8'), /0\.1\.0/);
   } finally {
     removeFixtureTree(root);
   }
