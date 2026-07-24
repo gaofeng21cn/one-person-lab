@@ -1,3 +1,6 @@
+import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+
 import {
   assert,
   canonicalAgentPackageId,
@@ -293,6 +296,135 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.doesNotMatch(dailyPackageWorkflow, /one-person-lab-webui/);
 });
 
+test('single-Package payload materialization binds exact physical archive provenance', () => {
+  const root = fs.realpathSync(fs.mkdtempSync(
+    path.join(os.tmpdir(), 'opl-package-payload-materialization-'),
+  ));
+  const materializer = path.join(repoRoot, 'scripts/materialize-package-payload.mjs');
+  const sourceCommit = 'a'.repeat(40);
+  const packageId = 'example-agent';
+  const packageVersion = '1.2.3';
+  const archiveRoot = 'example-agent';
+  const artifactRef = `ghcr.io/example/one-person-lab-packages/${packageId}:${packageVersion}`;
+  const filePath = 'skills/example-plugin/SKILL.md';
+  const sourceRoot = 'plugins/example-plugin';
+  const fileBytes = Buffer.from('# Example\n', 'utf8');
+  const fileSha256 = `sha256:${crypto.createHash('sha256').update(fileBytes).digest('hex')}`;
+  const input = path.join(root, 'payload.json');
+  const stage = path.join(root, 'stage');
+  const archive = path.join(root, 'example-agent-1.2.3.tar.gz');
+  const payload = {
+    surface_kind: 'opl_package_payload_manifest.v2',
+    schema_ref: 'contracts/opl-framework/package-payload-manifest-v2.schema.json',
+    package_id: packageId,
+    plugin_id: 'example-plugin',
+    package_version: packageVersion,
+    source_repo: 'https://github.com/example/example-agent.git',
+    source_commit: sourceCommit,
+    source_root: sourceRoot,
+    content_lock: {
+      algorithm: 'sha256',
+      canonicalization: 'ordered_path_length_file_length_bytes',
+      digest: `sha256:${'b'.repeat(64)}`,
+    },
+    files: [{
+      path: filePath,
+      mode: '100644',
+      source_url: `https://raw.githubusercontent.com/example/example-agent/${sourceCommit}/${sourceRoot}/${filePath}`,
+      sha256: fileSha256,
+    }],
+  };
+  fs.mkdirSync(path.join(stage, archiveRoot, sourceRoot, path.dirname(filePath)), { recursive: true });
+  fs.writeFileSync(path.join(stage, archiveRoot, sourceRoot, filePath), fileBytes);
+  fs.writeFileSync(input, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  execFileSync('tar', ['-czf', archive, '-C', stage, archiveRoot]);
+  const archiveSha256 = `sha256:${crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex')}`;
+  const baseArgs = [
+    '--experimental-strip-types',
+    materializer,
+    '--input', input,
+    '--archive', archive,
+    '--artifact-ref', artifactRef,
+    '--archive-sha256', archiveSha256,
+    '--archive-root', archiveRoot,
+    '--package-id', packageId,
+    '--package-version', packageVersion,
+    '--source-commit', sourceCommit,
+  ];
+  const run = (name: string, args = baseArgs) => spawnSync(
+    process.execPath,
+    [...args, '--output', path.join(root, `${name}.json`)],
+    { encoding: 'utf8' },
+  );
+
+  try {
+    const success = run('materialized');
+    assert.equal(success.status, 0, success.stderr);
+    const receipt = parseJsonText(success.stdout) as Record<string, any>;
+    const materialized = parseJsonText(
+      fs.readFileSync(path.join(root, 'materialized.json'), 'utf8'),
+    ) as Record<string, any>;
+    assert.equal(receipt.status, 'materialized');
+    assert.equal(receipt.archive_sha256, archiveSha256);
+    assert.equal(receipt.file_count, 1);
+    assert.deepEqual(materialized.package_source, {
+      transport: 'same_oci_artifact_source_archive',
+      artifact_ref: artifactRef,
+      archive_sha256: archiveSha256,
+      archive_root: archiveRoot,
+    });
+    assert.deepEqual(materialized.files, [{
+      path: filePath,
+      mode: '100644',
+      sha256: fileSha256,
+      source_path: `${sourceRoot}/${filePath}`,
+      source_artifact_ref: artifactRef,
+    }]);
+
+    const missingArchiveRootArgs = [...baseArgs];
+    missingArchiveRootArgs.splice(missingArchiveRootArgs.indexOf('--archive-root'), 2);
+    const missingArchiveRoot = run('missing-archive-root', missingArchiveRootArgs);
+    assert.equal(missingArchiveRoot.status, 1);
+    assert.match(missingArchiveRoot.stderr, /Missing required options: --archive-root/);
+
+    const wrongArtifactArgs = [...baseArgs];
+    wrongArtifactArgs[wrongArtifactArgs.indexOf('--artifact-ref') + 1] = `${artifactRef}-wrong`;
+    const wrongArtifact = run('wrong-artifact', wrongArtifactArgs);
+    assert.equal(wrongArtifact.status, 1);
+    assert.match(wrongArtifact.stderr, /Artifact ref does not match the exact owner Package selection/);
+
+    const wrongArchiveShaArgs = [...baseArgs];
+    wrongArchiveShaArgs[wrongArchiveShaArgs.indexOf('--archive-sha256') + 1] = `sha256:${'0'.repeat(64)}`;
+    const wrongArchiveSha = run('wrong-archive-sha', wrongArchiveShaArgs);
+    assert.equal(wrongArchiveSha.status, 1);
+    assert.match(wrongArchiveSha.stderr, /Archive SHA-256 mismatch/);
+
+    const wrongRootArgs = [...baseArgs];
+    wrongRootArgs[wrongRootArgs.indexOf('--archive-root') + 1] = 'other-root';
+    const wrongRoot = run('wrong-root', wrongRootArgs);
+    assert.equal(wrongRoot.status, 1);
+    assert.match(wrongRoot.stderr, /Archive root does not match the Package owner repository/);
+
+    const invalidInput = path.join(root, 'invalid-schema-input.json');
+    fs.writeFileSync(invalidInput, `${JSON.stringify({ ...payload, schema_ref: 'wrong-schema' })}\n`);
+    const invalidSchemaArgs = [...baseArgs];
+    invalidSchemaArgs[invalidSchemaArgs.indexOf('--input') + 1] = invalidInput;
+    const invalidSchema = run('invalid-schema', invalidSchemaArgs);
+    assert.equal(invalidSchema.status, 1);
+    assert.match(invalidSchema.stderr, /Payload input failed.*package-payload-manifest-v2\.schema\.json/);
+
+    const symlinkInput = path.join(root, 'symlink-input.json');
+    fs.symlinkSync(input, symlinkInput);
+    const symlinkArgs = [...baseArgs];
+    symlinkArgs[symlinkArgs.indexOf('--input') + 1] = symlinkInput;
+    const symlinkFailure = run('symlink-failure', symlinkArgs);
+    assert.equal(symlinkFailure.status, 1);
+    assert.match(symlinkFailure.stderr, /Cannot open physical payload input/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('single-Package publication is protected, selector-bound, and readback-only after unknown results', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
   const publisherPackageIds = ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills', 'opl-flow'];
@@ -333,6 +465,13 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.match(workflow, /\[\[ "\$GITHUB_REF" == "refs\/heads\/main" \]\]/);
   assert.match(workflow, /\[ "\$GITHUB_SHA" = "\$EXPECTED_FRAMEWORK_SOURCE_COMMIT" \]/);
   assert.match(workflow, /scripts\/package-source-projection-gate\.mjs/);
+  assert.match(workflow, /scripts\/materialize-package-payload\.mjs/);
+  assert.match(workflow, /--artifact-ref "\$\{image\}:\$\{EXPECTED_PACKAGE_VERSION\}"/);
+  assert.match(workflow, /--archive-sha256 "\$archive_sha256"/);
+  assert.match(workflow, /--archive-root "\$repo_name"/);
+  assert.doesNotMatch(workflow, /cp "\$payload" "\$package_root\/payload-manifest\.json"/);
+  assert.ok(workflow.indexOf('git -C .owner-source archive') < workflow.indexOf('scripts/materialize-package-payload.mjs'));
+  assert.ok(workflow.indexOf('scripts/materialize-package-payload.mjs') < workflow.indexOf('immutable_preflight='));
   assert.match(workflow, /scripts\/oci-publication-preflight\.mjs/);
   assert.ok(workflow.indexOf('immutable_preflight=') < workflow.indexOf('oras push --format json'));
   assert.ok(workflow.indexOf('first_stable_digest=') < workflow.indexOf('second_stable_digest='));

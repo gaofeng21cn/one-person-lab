@@ -109,9 +109,19 @@ jobs:
           git -C .owner-source archive --format=tar.gz --prefix="${repo_name}/" \
             -o "$GITHUB_WORKSPACE/$archive" "$EXPECTED_OWNER_SOURCE_COMMIT"
           cp "$manifest" "$package_root/package-manifest.json"
-          cp "$payload" "$package_root/payload-manifest.json"
-
           image="ghcr.io/${PACKAGES_OWNER}/one-person-lab-packages/${PACKAGE_ID}"
+          archive_sha256="sha256:$(sha256sum "$archive" | cut -d' ' -f1)"
+          node --experimental-strip-types scripts/materialize-package-payload.mjs \
+            --input "$payload" \
+            --output "$package_root/payload-manifest.json" \
+            --archive "$archive" \
+            --artifact-ref "${image}:${EXPECTED_PACKAGE_VERSION}" \
+            --archive-sha256 "$archive_sha256" \
+            --archive-root "$repo_name" \
+            --package-id "$PACKAGE_ID" \
+            --package-version "$EXPECTED_PACKAGE_VERSION" \
+            --source-commit "$EXPECTED_OWNER_SOURCE_COMMIT"
+
           {
             echo "PACKAGE_ROOT=$package_root"
             echo "PACKAGE_ARCHIVE=$archive"
