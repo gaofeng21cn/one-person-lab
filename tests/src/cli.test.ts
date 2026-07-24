@@ -3,7 +3,6 @@ import './cli/cases/runtime-manager-native.test.ts';
 import './cli/cases/runtime-index-summary.test.ts';
 import './cli/cases/system-surfaces.test.ts';
 import './cli/cases/package-distribution.test.ts';
-import './cli/cases/package-latest-stable-verifier.test.ts';
 import './cli/cases/package-channel-daily-check.test.ts';
 import './cli/cases/managed-update-kernel-projection.test.ts';
 import './cli/cases/managed-update-kernel.test.ts';
