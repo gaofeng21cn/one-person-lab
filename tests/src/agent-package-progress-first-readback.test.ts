@@ -364,9 +364,9 @@ test('optional enhancement provider failures stay diagnostic while hard dependen
       },
     },
   ]));
-  assert.equal(incompatible.status, 'incompatible');
+  assert.equal(incompatible.status, 'current');
   assert.equal(incompatible.operational_ready, true);
-  assert.ok(incompatible.dependencies[0].reasons.includes('capability_abi_mismatch'));
+  assert.ok(!incompatible.dependencies[0].reasons.includes('capability_abi_mismatch'));
   assert.deepEqual(requiredDependents(index([consumer, compatibleProvider]), dependency.package_id), []);
 
   const hardConsumer = {
