@@ -62,6 +62,21 @@ function managedCheckoutFromStatus(packageStatus: any, packageId: string) {
   return checkoutRoot!;
 }
 
+function assertInitialManagedRuntimeSourceLaunchable(packageStatus: any, packageId: string) {
+  if ((packageStatus?.installed_package_count ?? 0) === 0) return;
+  const source = packageStatus?.runtime_source_readiness;
+  if (!source || source.operational_ready === true) return;
+  blocked('Standard Agent action launch requires an installed package with an operational runtime source.', {
+    package_id: packageId,
+    launch_allowed: packageStatus?.launch_allowed ?? false,
+    launch_blocked_reason: source.reason ?? `runtime_source_${source.status ?? 'unavailable'}`,
+    package_dependency_readiness: packageStatus?.package_dependency_readiness ?? null,
+    materialization_readiness: packageStatus?.materialization_readiness ?? null,
+    runtime_source_readiness: source,
+    repair_action: packageStatus?.repair_action ?? null,
+  });
+}
+
 export async function resolveStandardAgentManagedCheckout(input: {
   domainId: string;
   workspaceRoot: string;
@@ -85,6 +100,7 @@ export async function resolveStandardAgentManagedCheckout(input: {
   const packageId = agent.agent_id;
   const scope = { scope: 'workspace' as const, targetWorkspace: workspaceRoot };
   const initialStatus = packageReadiness.readStatus({ packageId, ...scope }).opl_agent_package_status;
+  assertInitialManagedRuntimeSourceLaunchable(initialStatus, packageId);
   const useBoundaryId = input.useBoundaryId ?? stableId('package-use', [
     packageId,
     workspaceRoot,

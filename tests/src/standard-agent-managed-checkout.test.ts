@@ -52,6 +52,42 @@ test('managed checkout resolver uses package activation and exact current runtim
   assert.equal(activationCalls, 1);
 });
 
+test('managed checkout resolver rejects an installed runtime source identity mismatch before scope activation', async () => {
+  const { workspaceRoot, checkoutRoot } = fixture();
+  let activationCalls = 0;
+  await assert.rejects(resolveStandardAgentManagedCheckout({
+    domainId: 'oma',
+    workspaceRoot,
+    packageReadiness: {
+      readStatus: () => ({
+        opl_agent_package_status: status(checkoutRoot, {
+          launch_allowed: false,
+          launch_blocked_reason: 'managed_runtime_source_identity_mismatch',
+          runtime_source_readiness: {
+            status: 'incompatible',
+            operational_ready: false,
+            reason: 'managed_runtime_source_identity_mismatch',
+            checkout_path: checkoutRoot,
+            expected_tree_sha256: 'expected-tree-sha',
+            actual_tree_sha256: 'actual-tree-sha',
+          },
+        }),
+      }),
+      ensureScopeActivation: async () => {
+        activationCalls += 1;
+        throw new Error('scope activation must not run for an untrusted runtime source');
+      },
+    },
+  }), (error: any) => {
+    assert.equal(error?.details?.failure_code, 'standard_agent_managed_checkout_not_launchable');
+    assert.equal(error?.details?.launch_blocked_reason, 'managed_runtime_source_identity_mismatch');
+    assert.equal(error?.details?.runtime_source_readiness?.expected_tree_sha256, 'expected-tree-sha');
+    assert.equal(error?.details?.runtime_source_readiness?.actual_tree_sha256, 'actual-tree-sha');
+    return true;
+  });
+  assert.equal(activationCalls, 0);
+});
+
 test('managed checkout resolver keeps the activation binding and runtime snapshot in one generation', async () => {
   const { workspaceRoot, checkoutRoot: firstCheckoutRoot } = fixture();
   const secondCheckoutRoot = path.join(path.dirname(firstCheckoutRoot), 'managed-source-v2');

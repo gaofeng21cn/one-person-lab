@@ -3,7 +3,13 @@ export {
   FoundryOperationResultUnavailableError,
   FoundryTransientActivityError,
 } from './kernel.ts';
-export type { FoundryAdvanceRunStepOptions, FoundryRunInspection, OwnerDecision } from './kernel.ts';
+export type {
+  FoundryAdvanceRunStepOptions,
+  FoundryOwnerDecisionReadback,
+  FoundryRunInspection,
+  FoundryRunTerminalReadback,
+  OwnerDecision,
+} from './kernel.ts';
 export type {
   ActivationPointer,
   ActivationTransaction,

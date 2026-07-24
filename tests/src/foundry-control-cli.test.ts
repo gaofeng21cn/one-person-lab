@@ -6,7 +6,10 @@ import { buildFoundryCommandSpecs } from '../../src/entrypoints/cli/cases/public
 test('Foundry operator CLI exposes only status, Owner decisions, cancel, versions, and rollback', async () => {
   const calls: Array<{ operation: string; input: unknown; options?: unknown }> = [];
   const control = {
-    inspectRun: async (runId: string) => ({ run: { run_id: runId, state: 'accepted' } }),
+    inspectRun: async (runId: string) => ({
+      run: { run_id: runId, state: 'accepted' },
+      terminal_readback: { terminal: false, state: 'accepted' },
+    }),
     submitOwnerDecision: async (input: unknown, options: unknown) => {
       calls.push({ operation: 'decision', input, options });
       return { run: { state: 'canary' } };
@@ -35,7 +38,10 @@ test('Foundry operator CLI exposes only status, Owner decisions, cancel, version
     'foundry versions',
   ]);
   assert.deepEqual(await specs['foundry status'].handler(['--run-id', 'run:fixture']), {
-    foundry_run: { run: { run_id: 'run:fixture', state: 'accepted' } },
+    foundry_run: {
+      run: { run_id: 'run:fixture', state: 'accepted' },
+      terminal_readback: { terminal: false, state: 'accepted' },
+    },
   });
   await specs['foundry approve'].handler([
     '--run-id', 'run:fixture',

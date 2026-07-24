@@ -534,6 +534,12 @@ test('file-backed Foundry create, evolve, hosted invoke, and rollback preserve e
     JSON.stringify(await events.read('run:foundry-e2e:create')),
   );
   assert.equal(created.run.generation, 0);
+  assert.equal(created.terminal_readback.terminal, true);
+  assert.equal(created.terminal_readback.active_version_matches_run, true);
+  assert.deepEqual(
+    created.terminal_readback.owner_decisions.map((decision) => decision.action),
+    ['approve_canary', 'approve_active'],
+  );
   const createActivation = await versions.activation(TARGET_AGENT_ID, TARGET_DOMAIN_ID);
   assert.equal(createActivation.revision, 1);
   assert.ok(createActivation.active_version_digest);
@@ -543,6 +549,18 @@ test('file-backed Foundry create, evolve, hosted invoke, and rollback preserve e
     TARGET_DOMAIN_ID,
   );
   assert.ok(versionV1);
+  assert.equal(
+    created.terminal_readback.qualified_agent_version?.version_digest,
+    versionV1.version_digest,
+  );
+  assert.equal(
+    created.terminal_readback.activation_transaction?.to_version_digest,
+    versionV1.version_digest,
+  );
+  assert.equal(
+    created.terminal_readback.runtime_binding_verification?.version_digest,
+    versionV1.version_digest,
+  );
 
   const invokedV1 = invocationObservation(await runStandardAgentAction({
     domainId: TARGET_AGENT_ID,

@@ -9,6 +9,7 @@ import { canonicalJsonBytes } from '../../src/kernel/canonical-json.ts';
 import { resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
 import type { StandardAgentStageQualityRuntimeBinding } from '../../src/modules/pack/index.ts';
 import { runFamilyRuntime } from '../../src/modules/runway/family-runtime.ts';
+import { resolveStandardAgentManagedCheckout } from '../../src/modules/runway/standard-agent-managed-checkout.ts';
 import type {
   HostedAgentRuntimeBindingResolver,
   HostedAgentRuntimeBindingProvenance,
@@ -2127,6 +2128,60 @@ test('Hosted Foundry action starts one OPL-owned FoundryRun and replays immutabl
     assert.equal(starts, 1);
     assert.equal(currentBindingResolutions, 1);
     assert.equal(pinnedBindingResolutions, 0);
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('Hosted Foundry action rejects an untrusted OMA runtime source before activation or FoundryRun start', async () => {
+  const checkoutRoot = root('opl-foundry-action-mismatched-oma-checkout-');
+  const workspaceRoot = root('opl-foundry-action-mismatched-oma-workspace-');
+  let activationCalls = 0;
+  let starts = 0;
+  try {
+    await assert.rejects(runStandardAgentAction({
+      domainId: 'oma',
+      actionId: 'engineer-agent',
+      workspaceRoot,
+      payload: {},
+      runId: 'foundry-mismatched-oma-runtime-source',
+    }, {
+      resolveManagedCheckout: async (input) => resolveStandardAgentManagedCheckout({
+        ...input,
+        packageReadiness: {
+          readStatus: () => ({
+            opl_agent_package_status: {
+              installed_package_count: 1,
+              launch_allowed: false,
+              launch_blocked_reason: 'managed_runtime_source_identity_mismatch',
+              runtime_source_readiness: {
+                status: 'incompatible',
+                operational_ready: false,
+                reason: 'managed_runtime_source_identity_mismatch',
+                checkout_path: checkoutRoot,
+                expected_tree_sha256: 'expected-oma-tree-sha',
+                actual_tree_sha256: 'actual-oma-tree-sha',
+              },
+            },
+          }),
+          ensureScopeActivation: async () => {
+            activationCalls += 1;
+            throw new Error('scope activation must not run for an untrusted OMA runtime source');
+          },
+        },
+      }),
+      startFoundryRun: async () => {
+        starts += 1;
+        throw new Error('FoundryRun must not start for an untrusted OMA runtime source');
+      },
+    }), (error: any) => {
+      assert.equal(error?.details?.failure_code, 'standard_agent_managed_checkout_not_launchable');
+      assert.equal(error?.details?.launch_blocked_reason, 'managed_runtime_source_identity_mismatch');
+      return true;
+    });
+    assert.equal(activationCalls, 0);
+    assert.equal(starts, 0);
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });

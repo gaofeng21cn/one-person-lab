@@ -526,6 +526,63 @@ test('FoundryKernel verifies exact OwnerGate coverage before appending an author
   assert.equal(replay.run.revision, approved.run.revision);
 });
 
+test('FoundryKernel exposes exact terminal adoption receipts through public status readback', async () => {
+  const { kernel } = harness();
+  const completed = await activateCreateRun(kernel, 'run:r3-terminal-readback');
+
+  assert.equal(completed.run.state, 'completed_active');
+  assert.equal(completed.terminal_readback.terminal, true);
+  assert.equal(completed.terminal_readback.active_version_matches_run, true);
+  assert.equal(
+    completed.terminal_readback.qualified_agent_version?.version_digest,
+    completed.run.version_digest,
+  );
+  assert.equal(completed.terminal_readback.owner_decisions.length, 2);
+  assert.deepEqual(
+    completed.terminal_readback.owner_decisions.map((decision) => decision.action),
+    ['approve_canary', 'approve_active'],
+  );
+  for (const decision of completed.terminal_readback.owner_decisions) {
+    assert.equal(decision.decision, 'approve');
+    assert.equal(decision.expected_revision, decision.event_revision - 1);
+    assert.equal(
+      decision.receipt_ref,
+      `opl://foundry/owner-authority-receipts/${decision.receipt_digest}`,
+    );
+  }
+  assert.equal(
+    completed.terminal_readback.activation_transaction?.to_version_digest,
+    completed.run.version_digest,
+  );
+  assert.equal(
+    completed.terminal_readback.activation_transaction?.next_revision,
+    completed.activation.revision,
+  );
+  assert.equal(
+    completed.terminal_readback.runtime_binding_verification?.version_digest,
+    completed.run.version_digest,
+  );
+  assert.equal(
+    completed.terminal_readback.runtime_binding_verification?.runtime_binding_ref,
+    completed.terminal_readback.activation_transaction?.runtime_binding_verification.runtime_binding_ref,
+  );
+  assert.deepEqual(
+    Object.keys(completed.terminal_readback.qualified_agent_version ?? {}).sort(),
+    [
+      'blueprint_digest',
+      'candidate_digest',
+      'candidate_ref',
+      'created_at',
+      'qualification_digest',
+      'surface_kind',
+      'target_agent_id',
+      'target_domain_id',
+      'version_digest',
+      'version_id',
+    ],
+  );
+});
+
 test('FoundryKernel rejects authority selected outside the Framework-owned target policy', async () => {
   const { kernel, events } = harness();
   await kernel.startRun({ request: request(), run_id: 'run:untrusted-owner-authority' });
