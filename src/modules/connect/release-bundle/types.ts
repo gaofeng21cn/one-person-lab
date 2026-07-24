@@ -118,7 +118,7 @@ type ReleaseBundleFreezeRequestCommon = {
   surface_kind: 'opl_release_bundle_freeze_request.v1';
   schema_ref: 'contracts/opl-framework/release-bundle-freeze-request.schema.json';
   release: {
-    channel: 'stable' | 'nightly';
+    channel: 'stable' | 'nightly' | 'preview';
     version: string;
     display_version: string;
     updater_version: string;

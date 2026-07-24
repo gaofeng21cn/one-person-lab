@@ -802,6 +802,53 @@ test('freeze rejects a compatibility version alias that differs from display_ver
   }
 });
 
+test('freeze keeps publication quality separate from GitHub prerelease visibility', () => {
+  for (const [channel, prerelease] of [
+    ['stable', false],
+    ['preview', false],
+    ['nightly', true],
+  ] as const) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), `opl-release-bundle-${channel}-visibility-`));
+    try {
+      const sourceRoot = path.join(root, 'source');
+      const request = fixtureRequest(sourceRoot);
+      request.release.channel = channel;
+      request.release.prerelease = prerelease;
+      const requestPath = path.join(root, 'freeze.json');
+      writeJson(requestPath, request);
+      const frozen = freezeReleaseBundle({ requestPath, sourceRoot, storeRoot: path.join(root, 'store') });
+      assert.equal(frozen.release_bundle_freeze.bundle.release.channel, channel);
+      assert.equal(frozen.release_bundle_freeze.bundle.release.prerelease, prerelease);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
+
+test('freeze rejects channel visibility mismatches', () => {
+  for (const [channel, prerelease] of [
+    ['stable', true],
+    ['preview', true],
+    ['nightly', false],
+  ] as const) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), `opl-release-bundle-${channel}-visibility-mismatch-`));
+    try {
+      const sourceRoot = path.join(root, 'source');
+      const request = fixtureRequest(sourceRoot);
+      request.release.channel = channel;
+      request.release.prerelease = prerelease;
+      const requestPath = path.join(root, 'freeze.json');
+      writeJson(requestPath, request);
+      assert.throws(
+        () => freezeReleaseBundle({ requestPath, sourceRoot, storeRoot: path.join(root, 'store') }),
+        /prerelease state must match the selected channel visibility/,
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
+
 test('freeze rejects an invalid updater machine identity before computing a Bundle digest', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-updater-version-'));
   try {

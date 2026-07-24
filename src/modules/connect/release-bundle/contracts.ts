@@ -517,10 +517,12 @@ function assertFreezeSemantics(request: ReleaseBundleFreezeRequestDocument) {
       tag: request.release.tag,
     });
   }
-  if (request.release.prerelease !== (request.release.channel === 'nightly')) {
-    fail('Release Bundle prerelease state must match the selected channel.', {
+  const expectedPrerelease = request.release.channel === 'nightly';
+  if (request.release.prerelease !== expectedPrerelease) {
+    fail('Release Bundle prerelease state must match the selected channel visibility.', {
       channel: request.release.channel,
       prerelease: request.release.prerelease,
+      expected_prerelease: expectedPrerelease,
     });
   }
   if (isAppStandardFreezeRequest(request)) {

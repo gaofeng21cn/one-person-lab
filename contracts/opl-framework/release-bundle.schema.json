@@ -323,7 +323,7 @@
       "additionalProperties": false,
       "required": ["channel", "version", "display_version", "updater_version", "tag", "prerelease"],
       "properties": {
-        "channel": { "enum": ["stable", "nightly"] },
+        "channel": { "enum": ["stable", "nightly", "preview"] },
         "version": {
           "type": "string",
           "pattern": "^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(?:-[0-9A-Za-z.-]+)?$"
