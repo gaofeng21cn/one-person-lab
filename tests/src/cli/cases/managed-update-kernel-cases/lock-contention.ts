@@ -7,6 +7,7 @@ import {
   spawn,
   test,
 } from '../../helpers.ts';
+import { FrameworkContractError } from '../../../../../src/kernel/contract-validation.ts';
 import { acquireManagedUpdateLock } from '../../../../../src/modules/connect/managed-update-lock.ts';
 
 test('packages update reports lock contention without running a parallel writer', () => {
@@ -87,7 +88,13 @@ test('managed update reclaims a recent lock whose owner process is gone', () => 
     const receipt = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
     assert.equal(receipt.pid, process.pid);
     assert.equal(receipt.process_identity.pid, process.pid);
-    assert.equal(typeof receipt.process_identity.proc_start_time_ticks, 'string');
+    if (process.platform === 'linux') {
+      assert.equal(typeof receipt.process_identity.proc_start_time_ticks, 'string');
+      assert.equal(typeof receipt.process_identity.boot_id, 'string');
+    } else {
+      assert.equal(receipt.process_identity.proc_start_time_ticks, null);
+      assert.equal(receipt.process_identity.boot_id, null);
+    }
     lock.release();
     assert.equal(fs.existsSync(lockFile), false);
   } finally {
@@ -99,7 +106,7 @@ test('managed update reclaims a recent lock whose owner process is gone', () => 
   }
 });
 
-test('same pid with a different process identity is reclaimed', () => {
+test('same pid handling follows the available process identity', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-same-pid-'));
   const stateRoot = path.join(homeRoot, 'state');
   fs.mkdirSync(stateRoot, { recursive: true });
@@ -125,6 +132,15 @@ test('same pid with a different process identity is reclaimed', () => {
   process.env.OPL_STATE_DIR = stateRoot;
   process.env.HOME = homeRoot;
   try {
+    if (process.platform !== 'linux') {
+      assert.throws(
+        () => acquireManagedUpdateLock({ operation: 'apply' }),
+        (error: unknown) => error instanceof FrameworkContractError
+          && error.code === 'managed_update_lock_contention',
+      );
+      assert.equal(fs.existsSync(lockFile), true);
+      return;
+    }
     const lock = acquireManagedUpdateLock({ operation: 'apply' });
     assert.equal(lock.status, 'acquired');
     lock.release();
