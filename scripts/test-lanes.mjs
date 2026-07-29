@@ -487,6 +487,7 @@ const lanes = {
       'tests/src/family-orchestration.test.ts',
       'tests/src/runtime-task-companions.test.ts',
       'tests/src/skill-catalog.test.ts',
+      'tests/src/agent-package-home-localization.test.ts',
       'tests/src/opl-skills-boundary.test.ts',
       'tests/src/automation-companions.test.ts',
     ], {
