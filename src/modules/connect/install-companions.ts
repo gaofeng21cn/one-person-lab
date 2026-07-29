@@ -47,6 +47,8 @@ export type OplCompanionSkillSourceAuthority =
 
 export type OplCompanionSkillSyncItem = {
   skill_id: string;
+  scope: 'global_user' | 'domain_project';
+  owner: string;
   source_path: string | null;
   target_path: string;
   agents_target_path: string;
@@ -85,6 +87,8 @@ export type OplCompanionSkillSyncResult = {
 
 export type OplRecommendedSkill = {
   skill_id: string;
+  scope: 'global_user' | 'domain_project';
+  owner: string;
   label: string;
   required: boolean;
   source: 'skills_manager' | 'codex_builtin' | 'github' | 'existing_entrypoint';
@@ -957,6 +961,8 @@ function buildFreshCompanionItem(
 
   return {
     skill_id: skill.skill_id,
+    scope: skill.scope,
+    owner: skill.owner,
     source_path: input.source?.report_path ?? null,
     target_path: targetPath,
     agents_target_path: agentsTargetPath,
@@ -1245,6 +1251,8 @@ export function buildOplRecommendedSkills(
     const github = dependency.sourceMode === 'github';
     return {
       skill_id: dependency.id,
+      scope: 'domain_project',
+      owner: 'declared-domain-owner',
       label: dependency.id,
       required: dependency.required,
       source: github ? 'github' : 'existing_entrypoint',
@@ -1308,6 +1316,8 @@ export function buildOplRecommendedSkills(
     const toolStatus = spec.required_tools?.every((toolId) => toolReadyById[toolId]) ?? true;
     return {
       ...spec,
+      scope: spec.scope ?? 'global_user',
+      owner: spec.owner ?? 'one-person-lab',
       expected_paths: expectedPaths,
       install_source_paths: installSourcePaths,
       status: skillStatus === 'ready' && toolStatus ? 'ready' : 'missing',

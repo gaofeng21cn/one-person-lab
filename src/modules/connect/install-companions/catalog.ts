@@ -27,6 +27,8 @@ export function buildOplRecommendedSkillSpecs(options: {
   return [
     {
       skill_id: 'officecli',
+      scope: 'global_user',
+      owner: 'one-person-lab',
       label: 'officecli core skill',
       required: false,
       source: 'skills_manager',
@@ -40,6 +42,8 @@ export function buildOplRecommendedSkillSpecs(options: {
     },
     {
       skill_id: 'ui-ux-pro-max',
+      scope: 'global_user',
+      owner: 'one-person-lab',
       label: 'UI UX Pro Max skill',
       required: false,
       source: 'skills_manager',
@@ -52,6 +56,8 @@ export function buildOplRecommendedSkillSpecs(options: {
     },
     {
       skill_id: 'mineru-document-extractor',
+      scope: 'global_user',
+      owner: 'one-person-lab',
       label: 'MinerU document extraction skill',
       required: false,
       source: 'skills_manager',
@@ -65,6 +71,8 @@ export function buildOplRecommendedSkillSpecs(options: {
     },
     {
       skill_id: 'officecli-docx',
+      scope: 'global_user',
+      owner: 'one-person-lab',
       label: 'officecli Word skill',
       required: false,
       source: 'skills_manager',
@@ -78,6 +86,8 @@ export function buildOplRecommendedSkillSpecs(options: {
     },
     {
       skill_id: 'officecli-pptx',
+      scope: 'global_user',
+      owner: 'one-person-lab',
       label: 'officecli PowerPoint skill',
       required: false,
       source: 'skills_manager',
@@ -91,6 +101,8 @@ export function buildOplRecommendedSkillSpecs(options: {
     },
     {
       skill_id: 'officecli-xlsx',
+      scope: 'global_user',
+      owner: 'one-person-lab',
       label: 'officecli Excel skill',
       required: false,
       source: 'skills_manager',
@@ -104,6 +116,8 @@ export function buildOplRecommendedSkillSpecs(options: {
     },
     {
       skill_id: 'officecli-academic-paper',
+      scope: 'global_user',
+      owner: 'one-person-lab',
       label: 'officecli academic paper skill',
       required: false,
       source: 'skills_manager',
@@ -117,6 +131,8 @@ export function buildOplRecommendedSkillSpecs(options: {
     },
     {
       skill_id: 'officecli-data-dashboard',
+      scope: 'global_user',
+      owner: 'one-person-lab',
       label: 'officecli data dashboard skill',
       required: false,
       source: 'skills_manager',
@@ -130,6 +146,8 @@ export function buildOplRecommendedSkillSpecs(options: {
     },
     {
       skill_id: 'officecli-financial-model',
+      scope: 'global_user',
+      owner: 'one-person-lab',
       label: 'officecli financial model skill',
       required: false,
       source: 'skills_manager',
@@ -143,6 +161,8 @@ export function buildOplRecommendedSkillSpecs(options: {
     },
     {
       skill_id: 'officecli-pitch-deck',
+      scope: 'global_user',
+      owner: 'one-person-lab',
       label: 'officecli pitch deck skill',
       required: false,
       source: 'skills_manager',
@@ -154,6 +174,20 @@ export function buildOplRecommendedSkillSpecs(options: {
       install_hint: 'Install the upstream-owned officecli-pitch-deck skill for investor presentation workflows.',
       supports: ['pptx', 'pitch_deck', 'fundraising'],
     },
+    {
+      skill_id: 'skill-creator',
+      scope: 'global_user',
+      owner: 'openai-primary-runtime',
+      label: 'Codex Skill Creator helper',
+      required: false,
+      source: 'codex_builtin',
+      expected_paths: [
+        path.join(codexHome, 'skills', '.system', 'skill-creator', 'SKILL.md'),
+        ...primaryRuntimeSkillPaths(codexHome, 'openai-bundled', 'skill-creator'),
+      ],
+      install_hint: 'Discover the Codex Skill Creator helper from the user-level Codex skills root; do not project it into a domain workspace.',
+      supports: ['skill_authoring'],
+    },
     ...([
       ['documents', 'Official Codex Documents capability'],
       ['presentations', 'Official Codex Presentations capability'],
@@ -161,6 +195,8 @@ export function buildOplRecommendedSkillSpecs(options: {
       ['pdf', 'Official Codex PDF capability'],
     ] as const).map(([skillId, label]) => ({
       skill_id: skillId,
+      scope: 'global_user' as const,
+      owner: 'openai-primary-runtime',
       label,
       required: false,
       source: 'codex_builtin' as const,

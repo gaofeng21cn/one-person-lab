@@ -217,6 +217,8 @@ test('managed companion sync prefers Skills Manager packages over fallback mater
       assert.equal(itemById.get(skillId)?.source_path, path.join(managerSkillRoot, 'SKILL.md'));
       assert.equal(item?.status, 'synced');
       assert.equal(item?.source_authority, 'skills_manager');
+      assert.equal(item?.scope, 'global_user');
+      assert.ok(item?.owner);
       assert.equal(item?.payload_currentness, 'current');
       assert.equal(item?.frontmatter_schema_status, 'valid');
       assert.equal(item?.resource_closure_status, 'complete');
@@ -239,6 +241,34 @@ test('managed companion sync prefers Skills Manager packages over fallback mater
     assert.equal(observedOffice.status, 'ready');
     assert.equal(observedOffice.source_payload_sha256, officeBefore);
     assert.equal(observedOffice.payload_currentness, 'current');
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+  }
+});
+
+test('companion status exposes the user-level Codex skill-creator helper without project projection', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-creator-global-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const skillRoot = path.join(codexHome, 'skills', '.system', 'skill-creator');
+  fs.mkdirSync(skillRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(skillRoot, 'SKILL.md'),
+    '---\nname: skill-creator\ndescription: Codex helper.\n---\n\n# skill-creator\n',
+    'utf8',
+  );
+
+  try {
+    const output = runCli(['skill', 'companion', 'status'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      PATH: '/usr/bin:/bin',
+    }) as any;
+    const item = output.companion_skills.items.find((entry: any) => entry.skill_id === 'skill-creator');
+    assert.equal(item?.status, 'available');
+    assert.equal(item?.scope, 'global_user');
+    assert.equal(item?.owner, 'openai-primary-runtime');
+    assert.equal(item?.agents_entry_realpath, null);
+    assert.equal(fs.existsSync(path.join(homeRoot, '.agents', 'skills', 'skill-creator')), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
