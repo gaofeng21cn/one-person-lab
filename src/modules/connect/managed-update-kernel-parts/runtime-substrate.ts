@@ -177,10 +177,17 @@ export function buildRuntimeSubstrateComponent(
     auto_apply: {
       mode: 'controlled_apply',
       eligible: state !== 'current' && !developerSourceOverride,
-      app_background_safe: state !== 'current' && !developerSourceOverride,
+      app_background_safe: false,
       scope: 'app_owned_runtime_root_only',
-      command_ref: state === 'current' || developerSourceOverride ? null : 'opl update apply --json',
-      blocked_reasons: developerSourceOverride ? ['developer_framework_source_override_detect_only'] : [],
+      command_ref: state === 'current' || developerSourceOverride
+        ? null
+        : 'opl system startup-maintenance --json',
+      blocked_reasons: [
+        ...(state !== 'current' && !developerSourceOverride
+          ? ['explicit_controlled_apply_required']
+          : []),
+        ...(developerSourceOverride ? ['developer_framework_source_override_detect_only'] : []),
+      ],
     },
     status_detail: detail,
     post_apply_guidance: {

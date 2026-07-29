@@ -621,8 +621,10 @@ test('component-neutral apply runs bundled Packages while missing package roots 
   const homeDir = path.join(root, 'home');
   const stateDir = path.join(root, 'state');
   const codexHome = path.join(homeDir, '.codex');
-  const codexBin = path.join(root, 'codex');
+  const runtimeRoot = path.join(root, 'runtime');
+  const codexBin = path.join(runtimeRoot, 'current', 'bin', 'codex');
   fs.mkdirSync(stateDir, { recursive: true });
+  fs.mkdirSync(path.dirname(codexBin), { recursive: true });
   fs.writeFileSync(
     codexBin,
     '#!/bin/sh\necho "codex-cli 0.134.0"\n',
@@ -641,7 +643,8 @@ test('component-neutral apply runs bundled Packages while missing package roots 
     CODEX_HOME: codexHome,
     OPL_STATE_DIR: stateDir,
     OPL_CODEX_BIN: codexBin,
-    OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+    OPL_RUNTIME_ROOT: runtimeRoot,
+    OPL_CODEX_CLI_LATEST_VERSION: '0.135.0',
     OPL_FRAMEWORK_UPDATE_SOURCE: '',
     OPL_FRAMEWORK_UPDATE_ARCHIVE: '',
     OPL_MODULE_SOURCE_MODE: 'package_channel',
@@ -658,6 +661,17 @@ test('component-neutral apply runs bundled Packages while missing package roots 
   };
 
   try {
+    const plan = runCli(['update', 'plan'], env) as Record<string, any>;
+    const base = plan.managed_update.components.find(
+      (entry: Record<string, unknown>) => entry.component_id === 'opl_base',
+    );
+    assert.equal(base.state, 'update_available');
+    assert.equal(base.auto_apply.mode, 'controlled_apply');
+    assert.equal(base.auto_apply.eligible, true);
+    assert.equal(base.auto_apply.app_background_safe, false);
+    assert.equal(base.auto_apply.command_ref, 'opl system startup-maintenance --json');
+    assert.deepEqual(base.auto_apply.blocked_reasons, ['explicit_controlled_apply_required']);
+
     const output = runCli(['update', 'apply'], env) as Record<string, any>;
     assert.deepEqual(
       output.managed_update.components.map((entry: Record<string, unknown>) => entry.component_id),
