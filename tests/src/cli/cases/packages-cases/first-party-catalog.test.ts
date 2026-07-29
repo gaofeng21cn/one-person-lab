@@ -1149,7 +1149,10 @@ test('developer checkout policy stays explicit and is not a managed-update autho
     );
     assert.equal(previewPackages.current.projection_source, 'native_module_directory');
     assert.equal(Object.hasOwn(previewPackages.current, 'package_lock_states'), false);
+    assert.equal(previewPackages.state, 'skipped_manual_required');
     assert.equal(previewPackages.plan.action, 'manual_review');
+    assert.equal(previewPackages.auto_apply.eligible, false);
+    assert.equal(previewPackages.auto_apply.command_ref, null);
     assert.equal(fs.readFileSync(releaseCatalogCache, 'utf8'), cachedOldReleaseSet);
 
     const updated = runCli(['update', 'apply'], nextEnv) as any;

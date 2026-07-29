@@ -135,19 +135,21 @@ function buildCapabilityPackagesComponent(
   const cleanManagedTargetsCount = bundledReconciliationRequired
     ? Math.max(targetStates.length, 1)
     : nativeUpdateCount;
-  const state: ManagedUpdateComponentState = failedWithRepairCount > 0
-      ? 'failed_with_repair'
-      : updateCount > 0
-        ? 'update_available'
-        : manualCount > 0
-          ? 'skipped_manual_required'
+  // A visible developer or dirty checkout fences the complete component. Keep
+  // other module states diagnostic-only until the owner resolves that boundary.
+  const state: ManagedUpdateComponentState = manualCount > 0
+      ? 'skipped_manual_required'
+      : failedWithRepairCount > 0
+        ? 'failed_with_repair'
+        : updateCount > 0
+          ? 'update_available'
           : 'current';
-  const action = failedWithRepairCount > 0
-      ? 'install'
-      : updateCount > 0
-        ? 'update'
-        : manualCount > 0
-          ? 'manual_review'
+  const action = manualCount > 0
+      ? 'manual_review'
+      : failedWithRepairCount > 0
+        ? 'install'
+        : updateCount > 0
+          ? 'update'
           : 'none';
   const postApplyHooks = [
     'reconcile_packages',
