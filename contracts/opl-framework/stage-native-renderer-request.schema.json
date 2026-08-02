@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/stage-native-renderer-request.schema.json",
+  "schema_id": "opl.stage_native_renderer_request.v1",
+  "surface_kind": "opl_stage_native_renderer_request_schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["surface_kind", "schema_version", "stage_run_id", "attempt_id", "capability_ref", "tool", "cwd", "input_root", "output_root", "argv"],
+  "properties": {
+    "surface_kind": { "const": "opl_stage_native_renderer_request" },
+    "schema_version": { "const": "stage-native-renderer.v1" },
+    "stage_run_id": { "type": "string", "minLength": 1 },
+    "attempt_id": { "type": "string", "minLength": 1 },
+    "capability_ref": { "const": "macos.native_renderer" },
+    "tool": { "enum": ["qlmanage", "soffice", "render_docx.py"] },
+    "tool_path": { "type": "string", "minLength": 1 },
+    "cwd": { "type": "string", "minLength": 1 },
+    "input_root": { "type": "string", "minLength": 1 },
+    "output_root": { "type": "string", "minLength": 1 },
+    "argv": { "type": "array", "items": { "type": "string" } },
+    "env": { "type": "object", "additionalProperties": { "type": "string" } },
+    "timeout_seconds": { "type": "number", "exclusiveMinimum": 0, "maximum": 3600 },
+    "tool_version": { "type": "string", "minLength": 1 }
+  },
+  "allOf": [{
+    "if": { "properties": { "tool": { "const": "render_docx.py" } } },
+    "then": { "required": ["tool_path"] }
+  }]
+}

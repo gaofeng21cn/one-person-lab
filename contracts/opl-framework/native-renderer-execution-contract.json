@@ -1,0 +1,32 @@
+{
+  "surface_kind": "opl_native_renderer_execution_contract",
+  "version": "opl-native-renderer-execution-contract.v1",
+  "owner": "one-person-lab/OPL Runway native_helper_carrier",
+  "purpose": "Execute a Stage/Attempt-declared macOS native renderer through the OPL native-helper carrier without entering the Codex Seatbelt.",
+  "request_surface": "opl_stage_native_renderer_request",
+  "request_schema_ref": "contracts/opl-framework/stage-native-renderer-request.schema.json",
+  "allowed_tools": ["qlmanage", "soffice", "render_docx.py"],
+  "tool_resolution": {
+    "qlmanage": ["/usr/bin/qlmanage"],
+    "soffice": ["/Applications/LibreOffice.app/Contents/MacOS/soffice", "/Applications/LibreOffice.app/Contents/MacOS/soffice.bin", "/usr/local/bin/soffice", "/opt/homebrew/bin/soffice"],
+    "render_docx.py": "Stage/Attempt must bind an exact non-symlink tool_path named render_docx.py inside cwd or input_root; execute only by an allowlisted python3"
+  },
+  "execution_boundary": {
+    "shell": false,
+    "carrier": "native_helper_carrier",
+    "execution_route": "opl_runway/native_helper_carrier",
+    "entered_codex_seatbelt": false,
+    "stage_sandbox": "workspace-write"
+  },
+  "binding_requirements": ["stage_run_id", "attempt_id", "cwd", "input_root", "output_root", "argv", "env", "env_sha256", "timeout_seconds", "tool_version", "executable_sha256"],
+  "fail_closed_on": ["non_allowlisted_tool", "arbitrary_executable", "cwd_escape", "input_root_escape", "output_root_escape", "symlink_root", "symlink_input", "symlink_output", "symlink_executable", "shell_request", "undeclared_env", "tool_version_mismatch", "nonzero_exit", "timeout"],
+  "authority_boundary": {
+    "framework_owns_process_lifecycle": true,
+    "framework_owns_renderer_body": false,
+    "can_write_domain_truth": false,
+    "can_sign_owner_receipt": false,
+    "can_authorize_visual_quality": false,
+    "can_authorize_pdf_receipt": false,
+    "can_authorize_export_readiness": false
+  }
+}

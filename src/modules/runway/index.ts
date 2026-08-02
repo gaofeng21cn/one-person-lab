@@ -137,6 +137,7 @@ export { requireStageQualityAttemptBoundary } from './family-runtime-stage-quali
 export { summarizeStageProgressLogs } from './family-runtime-stage-progress-log.ts';
 export type { StageProgressLogProjection } from './family-runtime-stage-progress-log.ts';
 export { buildNativeHelperHealthStatus, runNativeHelperRepairAction } from './native-helper-runtime.ts';
+export { runNativeRenderer, runNativeRendererCommand } from './native-renderer-carrier.ts';
 export { buildNativeIndexSummary } from './native-index-summary.ts';
 export type { OplEndpoints, OplRuntimeEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 export { buildOplRuntimeEndpoints } from '../../kernel/opl-runtime-endpoints.ts';

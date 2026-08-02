@@ -6,7 +6,7 @@ import {
 import { runPackNativeHelperProbeCommand } from '../../../../modules/pack/native-helper-probe.ts';
 import { materializeArtifactProjectionRequestFile } from '../../../../modules/pack/artifact-projection-materialization.ts';
 import { provisionSubmissionResource } from '../../../../modules/pack/submission-resource-provisioning.ts';
-import { runPackNativeHelperExecutionCommand } from '../../../../modules/runway/index.ts';
+import { runNativeRendererCommand, runPackNativeHelperExecutionCommand } from '../../../../modules/runway/index.ts';
 import {
   runGenericPackCheckCommand,
   runGenericPackGalleryCommand,
@@ -181,10 +181,11 @@ export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): R
       handler: runPackBundleCheckCommand,
     },
     'pack native-helper': {
-      usage: 'opl pack native-helper <probe|run>',
+      usage: 'opl pack native-helper <probe|render|run>',
       summary: 'Probe or execute a declared domain-owned native helper without claiming domain authority.',
       examples: [
         'opl pack native-helper probe --descriptor contracts/native-helper.json --json',
+        'opl pack native-helper render --request stage-native-renderer-request.json --json',
         'opl pack native-helper run --catalog contracts/runtime-program/python-native-helper-catalog.json --helper deck_review --request request.json --json',
       ],
       group: 'brand-pack',
@@ -193,6 +194,11 @@ export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): R
           command: 'pack native-helper probe',
           usage: 'opl pack native-helper probe --descriptor <path>',
           summary: 'Resolve declared helper content and required commands into a content-bound no-authority receipt.',
+        },
+        {
+          command: 'pack native-helper render',
+          usage: 'opl pack native-helper render --request <request.json>',
+          summary: 'Execute one Stage/Attempt-declared macOS native renderer through the OPL native-helper carrier.',
         },
         {
           command: 'pack native-helper run',
@@ -211,6 +217,13 @@ export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): R
       examples: ['opl pack native-helper probe --descriptor contracts/native-helper.json --json'],
       group: 'brand-pack',
       handler: runPackNativeHelperProbeCommand,
+    },
+    'pack native-helper render': {
+      usage: 'opl pack native-helper render --request <request.json>',
+      summary: 'Execute one Stage/Attempt-declared macOS native renderer through the OPL native-helper carrier.',
+      examples: ['opl pack native-helper render --request stage-native-renderer-request.json --json'],
+      group: 'brand-pack',
+      handler: runNativeRendererCommand,
     },
     'pack native-helper run': {
       usage: 'opl pack native-helper run --catalog <catalog.json> --helper <id> --request <request.json>',
