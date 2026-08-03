@@ -1,9 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import {
   compactCloseoutPacketForTemporalResult,
 } from '../../../src/modules/runway/family-runtime-temporal-activities.ts';
+import {
+  createWorkItemExecutionScopeSnapshot,
+} from '../../../src/modules/workspace/execution-scope.ts';
 
 test('Temporal Codex activity compacts typed closeout packets before activity completion', () => {
   const largeCloseout = {
@@ -68,6 +74,43 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   assert.equal(JSON.stringify(compacted).includes('must-not-enter-temporal-completion'), false);
   assert.ok(compacted.temporal_payload_policy.retained_fields.includes('domain_output'));
   assert.ok(Buffer.byteLength(JSON.stringify(compacted), 'utf8') < 20_000);
+});
+
+test('Temporal Codex activity preserves work-item StageRun identity in compacted closeout packets', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-closeout-identity-'));
+  const canonicalWorkItemRoot = path.join(workspaceRoot, 'studies', 'study-001');
+  fs.mkdirSync(canonicalWorkItemRoot, { recursive: true });
+  try {
+    const executionScope = createWorkItemExecutionScopeSnapshot({
+      projectScopeId: 'project:temporal-closeout-identity',
+      workspaceBindingId: 'binding:temporal-closeout-identity',
+      bindingVersionId: 'binding-version:temporal-closeout-identity',
+      domainId: 'medautoscience',
+      workspaceRoot,
+      canonicalWorkItemRoot,
+      inventoryDigest: `sha256:${'1'.repeat(64)}`,
+      payload: { study_id: 'study-001' },
+      requirement: { kind: 'work_item', alias_fields: ['study_id'] },
+    });
+    const compacted = compactCloseoutPacketForTemporalResult({
+      surface_kind: 'stage_attempt_closeout_packet',
+      stage_attempt_id: 'sat_temporal_closeout_identity',
+      stage_run_id: 'sr_temporal_closeout_identity',
+      execution_scope: executionScope,
+      scope_digest: executionScope.scope_digest,
+      closeout_refs: ['receipt:temporal-closeout-identity'],
+    });
+
+    assert.ok(compacted);
+    assert.equal(compacted.stage_run_id, 'sr_temporal_closeout_identity');
+    assert.equal(compacted.scope_digest, executionScope.scope_digest);
+    assert.deepEqual(compacted.execution_scope, executionScope);
+    assert.ok(compacted.temporal_payload_policy.retained_fields.includes('stage_run_id'));
+    assert.ok(compacted.temporal_payload_policy.retained_fields.includes('scope_digest'));
+    assert.ok(compacted.temporal_payload_policy.retained_fields.includes('execution_scope'));
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
 });
 
 test('Temporal Codex activity rejects object closeout refs carrying nested body metadata', () => {

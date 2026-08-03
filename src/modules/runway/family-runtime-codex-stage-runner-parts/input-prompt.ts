@@ -398,6 +398,7 @@ export function protocolCloseoutResumePrompt(attempt: JsonRecord) {
     'Use surface_kind "stage_attempt_closeout_packet" exactly. Do not use "opl_stage_attempt_typed_closeout" or any other surface alias.',
     `Use stage_attempt_id "${attemptId}" exactly.`,
     ...typedCloseoutScopeBindingLines(attempt),
+    'If this Attempt has quality-cycle artifact identity, keep it under route_impact.stage_quality_cycle.artifact_refs and route_impact.stage_quality_cycle.artifact_hashes. Do not put artifact_refs or artifact_hashes at the top level; preserve the exact existing refs and hashes without inventing or altering them.',
     'Use a non-empty closeout_refs array containing only refs for artifacts or receipts that already exist from this Attempt.',
     'For every artifact ref in closeout_refs, include a matching refs-only object in closeout_ref_metadata with the identical ref (or uri) and exact sha256. Do not bind an input-only ref as a substitute for a produced artifact.',
     'If this Attempt already wrote its complete typed closeout packet and the first response only referenced it in prose, include exactly one closeout_ref_metadata entry with kind "stage_attempt_closeout_packet", its local workspace ref, exact sha256, and exact size_bytes when known. OPL may hydrate only that exact workspace-bound packet after stable byte and Attempt-identity verification.',
