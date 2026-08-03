@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { canonicalJsonBytes, canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError, isRecord, type ErrorCode } from '../../kernel/contract-validation.ts';
@@ -613,6 +615,69 @@ function actionWorkItemIdentityLocator(
       ? [[field, value.trim()]]
       : [];
   }));
+}
+
+function workItemStageInputArtifacts(
+  payload: Record<string, unknown>,
+  executionScope: WorkItemExecutionScopeSnapshot | null,
+) {
+  if (!executionScope || !Array.isArray(payload.input_refs)) return [];
+  if (!executionScope.canonical_work_item_root) {
+    fail('Hosted work-item Stage action input_refs require a canonical work-item root.', {
+      failure_code: 'standard_agent_stage_input_artifact_work_item_root_missing',
+      work_item_scope_id: executionScope.work_item_scope_id,
+    });
+  }
+  const workspaceRoot = path.resolve(executionScope.workspace_root);
+  const workItemRoot = path.resolve(executionScope.canonical_work_item_root);
+  const byRef = new Map<string, string>();
+  for (const entry of payload.input_refs) {
+    if (!isRecord(entry)) continue;
+    const ref = typeof entry.ref === 'string' ? entry.ref.trim() : '';
+    const artifactSha256 = typeof entry.sha256 === 'string' ? entry.sha256.trim() : '';
+    if (!ref || !/^sha256:[a-f0-9]{64}$/.test(artifactSha256)) continue;
+    let candidatePath: string;
+    try {
+      candidatePath = ref.startsWith('file:')
+        ? fileURLToPath(ref)
+        : path.isAbsolute(ref)
+          ? ref
+          : /^[A-Za-z][A-Za-z0-9+.-]*:/.test(ref)
+            ? ''
+            : path.resolve(workspaceRoot, ref);
+    } catch {
+      continue;
+    }
+    if (!candidatePath) continue;
+    let physicalWorkItemRoot = workItemRoot;
+    let physicalCandidatePath = path.resolve(candidatePath);
+    try {
+      physicalWorkItemRoot = fs.realpathSync.native(workItemRoot);
+      physicalCandidatePath = fs.realpathSync.native(candidatePath);
+    } catch {
+      // The immutable StageRun binder performs the authoritative readability
+      // and physical-root check; retain lexical classification for its typed error.
+    }
+    const relative = path.relative(physicalWorkItemRoot, physicalCandidatePath);
+    if (
+      relative === '..'
+      || relative.startsWith(`..${path.sep}`)
+      || path.isAbsolute(relative)
+    ) continue;
+    const existing = byRef.get(ref);
+    if (existing && existing !== artifactSha256) {
+      fail('Hosted Stage action input_refs bind one work-item artifact ref to conflicting hashes.', {
+        failure_code: 'standard_agent_stage_input_artifact_hash_conflict',
+        artifact_ref: ref,
+        existing_sha256: existing,
+        received_sha256: artifactSha256,
+      });
+    }
+    byRef.set(ref, artifactSha256);
+  }
+  return [...byRef.entries()]
+    .map(([ref, sha256]) => ({ ref, sha256 }))
+    .sort((left, right) => left.ref.localeCompare(right.ref) || left.sha256.localeCompare(right.sha256));
 }
 
 function resolveActionExecutionScope(input: {
@@ -2084,6 +2149,7 @@ async function runStageAction(input: {
     runId: input.runId,
     actionRunRef: prepared.action_run_ref,
   });
+  const inputArtifacts = workItemStageInputArtifacts(input.payload, input.executionScope);
 
   const replayStored = async (
     existing: NonNullable<ReturnType<typeof inspectStandardAgentActionRunOutput>>,
@@ -2232,7 +2298,12 @@ async function runStageAction(input: {
         '--checkpoint-ref',
         prepared.request.ref,
         ...(input.executionScope
-          ? []
+          ? inputArtifacts.flatMap((artifact) => [
+              '--input-artifact-ref',
+              artifact.ref,
+              '--input-artifact-sha256',
+              artifact.sha256,
+            ])
           : [
               '--input-artifact-ref',
               prepared.request.ref,

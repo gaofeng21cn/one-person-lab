@@ -1519,7 +1519,7 @@ test('work-item hosted Stage binds its workspace action request as control check
         },
       }),
       required_fields: ['workspace_root', 'study_id', 'value'],
-      optional_fields: ['work_item_id'],
+      optional_fields: ['work_item_id', 'input_refs'],
       execution_scope: { kind: 'work_item', alias_fields: ['study_id', 'work_item_id'] },
     };
     writeContracts(checkoutRoot, [stageAction]);
@@ -1532,10 +1532,32 @@ test('work-item hosted Stage binds its workspace action request as control check
         study_id: { type: 'string', minLength: 1 },
         work_item_id: { type: 'string', minLength: 1 },
         value: { type: 'integer' },
+        input_refs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['kind', 'ref', 'sha256'],
+            properties: {
+              kind: { type: 'string', minLength: 1 },
+              ref: { type: 'string', minLength: 1 },
+              sha256: { type: 'string', pattern: '^sha256:[a-f0-9]{64}$' },
+            },
+            additionalProperties: false,
+          },
+        },
       },
       additionalProperties: false,
     })}\n`);
+    const candidatePath = path.join(workspaceRoot, 'studies', 'study-control', 'candidate.json');
+    const candidateBytes = '{"candidate":"exact"}\n';
+    fs.writeFileSync(candidatePath, candidateBytes);
+    const externalPath = path.join(stateRoot, 'external-context.json');
+    const externalBytes = '{"context":"request-only"}\n';
+    fs.writeFileSync(externalPath, externalBytes);
+    const candidateRef = `file://${fs.realpathSync.native(candidatePath)}`;
+    const externalRef = `file://${fs.realpathSync.native(externalPath)}`;
     let startedStageRun: Record<string, any> | null = null;
+    let startWorkflowCount = 0;
     const firstExecutionRunIds = new Map<string, string>();
     const runStageRuntime: typeof runFamilyRuntime = async (args) => await runFamilyRuntime(args, {
       stageRunRuntime: {
@@ -1546,6 +1568,7 @@ test('work-item hosted Stage binds its workspace action request as control check
         } as never),
         resolveStageBinding: () => stageBinding,
         startWorkflow: async (input) => {
+          startWorkflowCount += 1;
           startedStageRun = input as unknown as Record<string, any>;
           const firstExecutionRunId = `run-${input.stage_run_id}`;
           firstExecutionRunIds.set(input.workflow_id, firstExecutionRunId);
@@ -1575,6 +1598,10 @@ test('work-item hosted Stage binds its workspace action request as control check
         value: 3,
         study_id: 'study-control',
         work_item_id: 'study-control',
+        input_refs: [
+          { kind: 'candidate', ref: candidateRef, sha256: sha256(candidateBytes) },
+          { kind: 'external_context', ref: externalRef, sha256: sha256(externalBytes) },
+        ],
       },
       runId: 'scoped-control-run',
     }, {
@@ -1603,7 +1630,17 @@ test('work-item hosted Stage binds its workspace action request as control check
       )),
       true,
     );
-    assert.deepEqual(observedStartedStageRun.stage_run_spec.input_artifacts, []);
+    assert.deepEqual(observedStartedStageRun.stage_run_spec.input_artifacts, [{
+      ref: candidateRef,
+      sha256: sha256(candidateBytes),
+      identity_receipt_ref: null,
+    }]);
+    assert.equal(
+      observedStartedStageRun.stage_run_spec.input_artifacts.some(
+        (artifact: Record<string, unknown>) => artifact.ref === externalRef,
+      ),
+      false,
+    );
     const requestBindings = observedStartedStageRun.stage_run_spec.content_bindings.filter(
       (binding: Record<string, unknown>) => binding.ref === requestRef,
     );
@@ -1615,6 +1652,36 @@ test('work-item hosted Stage binds its workspace action request as control check
       requestBindings.map((binding: Record<string, unknown>) => binding.verification_kind),
       ['opl_control_file_bytes', 'opl_control_file_bytes'],
     );
+    await assert.rejects(
+      runStandardAgentAction({
+        domainId: 'mas',
+        actionId: 'launch-scoped-control',
+        workspaceRoot,
+        payload: {
+          value: 4,
+          study_id: 'study-control',
+          work_item_id: 'study-control',
+          input_refs: [
+            { kind: 'candidate', ref: candidateRef, sha256: sha256(candidateBytes) },
+            { kind: 'candidate', ref: candidateRef, sha256: `sha256:${'0'.repeat(64)}` },
+          ],
+        },
+        runId: 'scoped-control-conflicting-artifact-hash',
+      }, {
+        resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
+        compileStageManifest: (() => ({})) as never,
+        recordLedger,
+        runStageRuntime,
+      }),
+      (error: unknown) => {
+        assert.equal(
+          (error as { details?: Record<string, unknown> }).details?.failure_code,
+          'standard_agent_stage_input_artifact_hash_conflict',
+        );
+        return true;
+      },
+    );
+    assert.equal(startWorkflowCount, 1);
   } finally {
     if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateRoot;

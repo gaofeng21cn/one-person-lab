@@ -59,6 +59,14 @@ test('hosted action persistence and ledger distinguish Stage launch from complet
     contract.stage_execution.work_item_scoped_request_ref_bound_as_opl_control_checkpoint,
     true,
   );
+  assert.deepEqual(contract.stage_execution.work_item_scoped_payload_input_ref_binding, {
+    source_field: 'payload.input_refs[]',
+    eligible_ref: 'exact_sha256_bound_local_file_physically_inside_canonical_work_item_root',
+    eligible_ref_bound_as_input_artifact: true,
+    external_non_file_or_unhashed_ref_bound_as_input_artifact: false,
+    ineligible_ref_remains_in_action_request_checkpoint: true,
+    same_ref_conflicting_hashes: 'fail_closed_before_stage_launch',
+  });
   assert.equal(
     contract.stage_execution.stage_run_invocation_id_source,
     'domain_id_plus_entry_stage_plus_action_id_plus_run_id_plus_action_run_ref',
