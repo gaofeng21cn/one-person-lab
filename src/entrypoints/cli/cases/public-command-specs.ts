@@ -624,10 +624,11 @@ export function buildPublicCommandSpecs(
     },
     'agents evidence apply': agentsEvidenceApplySpec,
     'agents run': cloneCommandSpec(commandSpecs['agents run'], {
-      usage: 'opl agents run --domain <agent> --action <action_id> --workspace <absolute_path> [--payload <json> | --payload-file <path>] [--run-id <id>] [--timeout-ms <ms>]',
+      usage: 'opl agents run --domain <agent> --action <action_id> --workspace <absolute_path> [--payload <json> | --payload-file <path>] [--run-id <id>] [--timeout-ms <ms>] [--executor-provider <provider>] [--executor-model <model>] [--executor-reasoning-effort <effort>]',
       examples: [
         'opl agents run --domain obf --action shape-storyline --workspace /path/to/book --payload \'{"workspace_root":"/path/to/book"}\'',
         'opl agents run --domain mas --action study-progress --workspace /path/to/workspace --payload-file request.json --json',
+        'opl agents run --domain mas --action manuscript_authoring --workspace /path/to/workspace --payload-file request.json --executor-provider gflab --executor-model gpt-5.6-luna --executor-reasoning-effort high --json',
       ],
       group: 'domain',
     }),

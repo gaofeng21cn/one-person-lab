@@ -163,6 +163,9 @@ export type FamilyRuntimeCommandInput =
       sourceFingerprint?: string;
       executorKind?: string;
       executorBindingRef?: string;
+      executorProvider?: string;
+      executorModel?: string;
+      executorReasoningEffort?: string;
       invocationMode?: 'invocation' | 'authoring';
       boundedEditRef?: string;
       taskId?: string;

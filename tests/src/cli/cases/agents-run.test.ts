@@ -14,6 +14,9 @@ test('agents run parses a strict hosted action request', () => {
     '--payload', '{"study_id":"study-1"}',
     '--run-id', 'run-1',
     '--timeout-ms', '2500',
+    '--executor-provider', 'gflab',
+    '--executor-model', 'gpt-5.6-luna',
+    '--executor-reasoning-effort', 'high',
   ], spec);
   assert.deepEqual(parsed, {
     domainId: 'mas',
@@ -22,6 +25,12 @@ test('agents run parses a strict hosted action request', () => {
     payload: { study_id: 'study-1' },
     runId: 'run-1',
     timeoutMs: 2500,
+    stageAttemptExecutorPolicy: {
+      executor_kind: 'codex_cli',
+      provider: 'gflab',
+      model: 'gpt-5.6-luna',
+      reasoning_effort: 'high',
+    },
   });
 });
 

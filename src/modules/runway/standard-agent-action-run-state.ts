@@ -44,6 +44,13 @@ export type StandardAgentActionRunBinding =
   | StandardAgentActionRunBindingV1
   | StandardAgentActionRunBindingV2;
 
+export type StandardAgentStageAttemptExecutorPolicy = {
+  executor_kind: 'codex_cli';
+  provider?: string;
+  model?: string;
+  reasoning_effort?: string;
+};
+
 export type StandardAgentActionRunPlan = {
   surface_kind: 'opl_standard_agent_action_run_plan';
   version: 'opl-standard-agent-action-run-plan.v2';
@@ -70,6 +77,7 @@ export type StandardAgentActionRunPlan = {
   request_byte_size: number;
   input_schema_validation: Record<string, unknown>;
   timeout_ms: number | null;
+  stage_attempt_executor_policy?: StandardAgentStageAttemptExecutorPolicy;
   started_at: string;
 };
 
@@ -255,6 +263,45 @@ function canonicalStringList(value: unknown, field: string) {
 function nullableText(value: unknown, field: string) {
   if (value === null) return null;
   return text(value, field);
+}
+
+function stageAttemptExecutorPolicy(
+  value: unknown,
+  executionKind: unknown,
+): StandardAgentStageAttemptExecutorPolicy | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) {
+    fail('plan.stage_attempt_executor_policy must be an object.');
+  }
+  if (executionKind !== 'stage_binding') {
+    fail('plan.stage_attempt_executor_policy is valid only for Stage-bound actions.');
+  }
+  exactKeys(value, [
+    'executor_kind',
+    'provider',
+    'model',
+    'reasoning_effort',
+  ], 'plan.stage_attempt_executor_policy');
+  if (value.executor_kind !== 'codex_cli') {
+    fail('plan.stage_attempt_executor_policy.executor_kind must be codex_cli.');
+  }
+  return {
+    executor_kind: 'codex_cli',
+    ...(value.provider === undefined
+      ? {}
+      : { provider: text(value.provider, 'plan.stage_attempt_executor_policy.provider') }),
+    ...(value.model === undefined
+      ? {}
+      : { model: text(value.model, 'plan.stage_attempt_executor_policy.model') }),
+    ...(value.reasoning_effort === undefined
+      ? {}
+      : {
+          reasoning_effort: text(
+            value.reasoning_effort,
+            'plan.stage_attempt_executor_policy.reasoning_effort',
+          ),
+        }),
+  };
 }
 
 function sha256Digest(value: unknown, field: string) {
@@ -516,6 +563,7 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
     'request_byte_size',
     'input_schema_validation',
     'timeout_ms',
+    'stage_attempt_executor_policy',
     'started_at',
   ], 'Standard Agent action run plan');
   if (
@@ -543,6 +591,10 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
   ) {
     fail('Standard Agent action run plan is invalid.');
   }
+  const executorPolicy = stageAttemptExecutorPolicy(
+    value.stage_attempt_executor_policy,
+    value.execution_kind,
+  );
   let catalog: FamilyActionCatalog;
   try {
     const catalogInput = structuredClone(value.catalog);
@@ -704,6 +756,7 @@ function planRecord(value: Record<string, unknown>): StandardAgentActionRunPlan 
     request_byte_size: Number(value.request_byte_size),
     input_schema_validation: value.input_schema_validation,
     timeout_ms: value.timeout_ms === null ? null : Number(value.timeout_ms),
+    ...(executorPolicy ? { stage_attempt_executor_policy: executorPolicy } : {}),
     started_at: text(value.started_at, 'plan.started_at'),
   } as StandardAgentActionRunPlan;
 }

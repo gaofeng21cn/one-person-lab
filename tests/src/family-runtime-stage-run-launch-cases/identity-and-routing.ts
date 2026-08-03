@@ -392,3 +392,60 @@ test('registered StageRun replay does not refresh package readiness or resolve a
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('attempt create freezes one CLI-selected Codex executor policy into the StageRun immutable spec', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-executor-policy-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const result = await runFamilyRuntime([
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'intake',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      JSON.stringify({ workspace_root: workspaceRoot, domain_pack_root: domainPackRoot }),
+      '--source-fingerprint',
+      manifestFixture.sha256,
+      '--stage-run-invocation-id',
+      'sri_luna_stage_policy',
+      '--executor-provider',
+      'gflab',
+      '--executor-model',
+      'gpt-5.6-luna',
+      '--executor-reasoning-effort',
+      'high',
+    ], {
+      stageRunRuntime: {
+        ensurePackageLaunchReady: async () => ({
+          runtime_source_readiness: {
+            checkout_path: domainPackRoot,
+            operational_ready: true,
+          },
+          package_use_binding: packageUseBinding(),
+        }) as any,
+        resolveStageBinding: () => binding(),
+      },
+    }) as any;
+
+    const stageRunInput = result.family_runtime_stage_run.stage_run_input;
+    assert.deepEqual(stageRunInput.stage_attempt_executor_policy, {
+      executor_kind: 'codex_cli',
+      provider: 'gflab',
+      model: 'gpt-5.6-luna',
+      reasoning_effort: 'high',
+    });
+    assert.deepEqual(
+      stageRunInput.stage_run_spec.stage_attempt_executor_policy,
+      stageRunInput.stage_attempt_executor_policy,
+    );
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

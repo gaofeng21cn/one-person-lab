@@ -487,6 +487,25 @@ test('Hosted Handler action validates schemas, runs the callable, and persists e
       /timeout conflicts with its frozen run plan/i,
     );
     assert.equal(handlerCalls, 1);
+    await assert.rejects(
+      runStandardAgentAction({
+        domainId: 'mas',
+        actionId: 'evaluate',
+        workspaceRoot,
+        payload: { value: 7 },
+        runId: 'handler-policy-run',
+        stageAttemptExecutorPolicy: {
+          executor_kind: 'codex_cli',
+          model: 'gpt-5.6-luna',
+        },
+      } as never, dependencies),
+      /executor policy is valid only for Stage-bound actions/,
+    );
+    assert.equal(handlerCalls, 1);
+    assert.equal(inspectStandardAgentActionRunPlan({
+      workspaceRoot,
+      runId: 'handler-policy-run',
+    }), null);
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -1185,7 +1204,25 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
       additionalProperties: false,
     })}\n`);
 
-    const result = await runStandardAgentAction({
+    const dependencies = {
+      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
+      compileStageManifest: (() => ({})) as never,
+      recordLedger,
+      runStageRuntime: async (args: string[]) => {
+        calls.push(args);
+        if (args[0] === 'attempt') {
+          return {
+            family_runtime_stage_run: {
+              stage_run_input: { workflow_id: 'wf-stage-run' },
+              blocked_reason: null,
+              temporal_start: { start_status: 'started' },
+            },
+          } as never;
+        }
+        return { family_runtime_stage_run_query: { status: 'running' } } as never;
+      },
+    };
+    const request = {
       domainId: 'mas',
       actionId: 'launch',
       workspaceRoot,
@@ -1196,24 +1233,14 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
         quest_id: 'quest-001',
       },
       runId: 'stage-run',
-    }, {
-      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
-      compileStageManifest: (() => ({})) as never,
-      recordLedger,
-      runStageRuntime: async (args) => {
-        calls.push(args);
-        if (args[0] === 'attempt') {
-          return {
-            family_runtime_stage_run: {
-              stage_run_input: { workflow_id: 'wf-stage-run' },
-              blocked_reason: null,
-              temporal_start: { start_status: 'started' },
-            },
-          };
-        }
-        return { family_runtime_stage_run_query: { status: 'running' } };
+      stageAttemptExecutorPolicy: {
+        executor_kind: 'codex_cli',
+        provider: 'gflab',
+        model: 'gpt-5.6-luna',
+        reasoning_effort: 'high',
       },
-    });
+    } as const;
+    const result = await runStandardAgentAction(request as never, dependencies);
     const run = result.standard_agent_action_run;
     assert.equal(run.execution_kind, 'stage_binding');
     if (run.execution_kind !== 'stage_binding') assert.fail('expected stage action result');
@@ -1238,12 +1265,87 @@ test('Hosted Stage action passes a SHA-bound request ref into Temporal StageRun 
     const artifactRefIndex = calls[0].indexOf('--input-artifact-ref');
     const artifactHashIndex = calls[0].indexOf('--input-artifact-sha256');
     const sourceFingerprintIndex = calls[0].indexOf('--source-fingerprint');
+    assert.deepEqual(calls[0].slice(
+      calls[0].indexOf('--executor-provider'),
+      calls[0].indexOf('--executor-reasoning-effort') + 2,
+    ), [
+      '--executor-provider',
+      'gflab',
+      '--executor-model',
+      'gpt-5.6-luna',
+      '--executor-reasoning-effort',
+      'high',
+    ]);
     assert.equal(calls[0][artifactRefIndex + 1], calls[0][checkpointIndex + 1]);
     assert.equal(calls[0][artifactHashIndex + 1], calls[0][sourceFingerprintIndex + 1]);
     assert.deepEqual(run.temporal_stage_run_query, {
       family_runtime_stage_run_query: { status: 'running' },
     });
     assert.equal(run.temporal_stage_run_query_error, null);
+    const createCallsBeforeReplay = calls.filter(
+      (args) => args[0] === 'attempt' && args[1] === 'create',
+    ).length;
+    const replay = await runStandardAgentAction(request as never, dependencies);
+    const replayRun = replay.standard_agent_action_run;
+    assert.equal(replayRun.execution_kind, 'stage_binding');
+    if (replayRun.execution_kind !== 'stage_binding') assert.fail('expected Stage action replay');
+    assert.equal(replayRun.stage_run_invocation_id, run.stage_run_invocation_id);
+    assert.equal(replayRun.output.sha256, run.output.sha256);
+    assert.equal(calls.filter(
+      (args) => args[0] === 'attempt' && args[1] === 'create',
+    ).length, createCallsBeforeReplay);
+    const frozenPlan = inspectStandardAgentActionRunPlan({
+      workspaceRoot,
+      runId: 'stage-run',
+    }) as unknown as Record<string, unknown> | null;
+    assert.deepEqual(frozenPlan?.stage_attempt_executor_policy, request.stageAttemptExecutorPolicy);
+    const callsBeforeConflict = calls.length;
+    await assert.rejects(
+      runStandardAgentAction({
+        ...request,
+        stageAttemptExecutorPolicy: {
+          ...request.stageAttemptExecutorPolicy,
+          model: 'gpt-5.6-sol',
+        },
+      } as never, dependencies),
+      /executor policy conflicts with its frozen run plan/,
+    );
+    assert.equal(calls.length, callsBeforeConflict);
+
+    const stateRoot = path.join(
+      workspaceRoot,
+      'control',
+      'opl',
+      'action_run_state',
+      'stage-run',
+    );
+    const planPath = path.join(stateRoot, 'plan.json');
+    const bindingPath = path.join(stateRoot, 'binding.json');
+    const originalPlan = JSON.parse(fs.readFileSync(planPath, 'utf8')) as Record<string, any>;
+    const originalBinding = JSON.parse(fs.readFileSync(bindingPath, 'utf8')) as Record<string, any>;
+    for (const invalidCase of [
+      {
+        policy: { ...request.stageAttemptExecutorPolicy, unexpected: true },
+        error: /contains unexpected fields/,
+      },
+      {
+        policy: { ...request.stageAttemptExecutorPolicy, model: ' ' },
+        error: /model must be a non-empty string/,
+      },
+    ]) {
+      const tamperedPlan = structuredClone(originalPlan);
+      const tamperedBinding = structuredClone(originalBinding);
+      tamperedPlan.stage_attempt_executor_policy = invalidCase.policy;
+      const tamperedPlanBytes = canonicalJsonBytes(tamperedPlan);
+      tamperedBinding.plan_sha256 = crypto.createHash('sha256').update(tamperedPlanBytes).digest('hex');
+      tamperedBinding.plan_byte_size = tamperedPlanBytes.byteLength;
+      fs.writeFileSync(planPath, tamperedPlanBytes);
+      fs.writeFileSync(bindingPath, canonicalJsonBytes(tamperedBinding));
+      assert.throws(
+        () => inspectStandardAgentActionRunPlan({ workspaceRoot, runId: 'stage-run' }),
+        invalidCase.error,
+      );
+    }
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -1736,6 +1838,10 @@ test('Hosted Stage action replays one durable registry launch and starts a later
     assert.equal(firstRun.hosted_runtime_binding_ref, v1Snapshot.provenance_ref);
     assert.equal(replayRun.hosted_runtime_binding_ref, v1Snapshot.provenance_ref);
     assert.equal(laterRun.hosted_runtime_binding_ref, v2Snapshot.provenance_ref);
+    assert.equal(inspectStandardAgentActionRunPlan({
+      workspaceRoot,
+      runId: 'hosted-one',
+    })?.stage_attempt_executor_policy, undefined);
     assert.equal(stageRuntimeCreateCalls, 2);
     assert.deepEqual(startedWorkflowIds.length, 2);
     assert.equal(new Set(startedWorkflowIds).size, 2);

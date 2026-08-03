@@ -51,6 +51,7 @@ import {
   type StandardAgentActionRunBinding,
   type StandardAgentActionRunCompletion,
   type StandardAgentActionRunPlan,
+  type StandardAgentStageAttemptExecutorPolicy,
 } from './standard-agent-action-run-state.ts';
 import { recordStandardAgentActionRunEvent } from './standard-agent-action-run-recorder.ts';
 import { runStandardAgentHandlerSandbox } from './standard-agent-handler-sandbox.ts';
@@ -75,6 +76,7 @@ type StandardAgentActionRuntimeInput = {
   payload: Record<string, unknown>;
   runId?: string;
   timeoutMs?: number;
+  stageAttemptExecutorPolicy?: StandardAgentStageAttemptExecutorPolicy;
 };
 
 const INTERNAL_STANDARD_AGENT_ACTION_INVOCATION = Symbol('internal_standard_agent_action_invocation');
@@ -537,6 +539,7 @@ function originalInvocationSha256(input: {
   workspaceRoot: string;
   requestPayloadSha256: string;
   timeoutMs: number | null;
+  stageAttemptExecutorPolicy?: Record<string, unknown>;
 }) {
   return sha256(canonicalJsonBytes({
     canonical_domain_id: input.domainId,
@@ -545,7 +548,25 @@ function originalInvocationSha256(input: {
     workspace_root: input.workspaceRoot,
     request_payload_sha256: input.requestPayloadSha256,
     timeout_ms: input.timeoutMs,
+    ...(input.stageAttemptExecutorPolicy
+      ? { stage_attempt_executor_policy: input.stageAttemptExecutorPolicy }
+      : {}),
   }));
+}
+
+function assertStageAttemptExecutorPolicySurface(input: {
+  action: FamilyActionCatalogAction;
+  stageAttemptExecutorPolicy?: StandardAgentActionRuntimeInput['stageAttemptExecutorPolicy'];
+}) {
+  if (
+    input.stageAttemptExecutorPolicy
+    && input.action.execution_binding.kind !== 'stage_binding'
+  ) {
+    fail('Hosted Agent executor policy is valid only for Stage-bound actions.', {
+      action_id: input.action.action_id,
+      execution_kind: input.action.execution_binding.kind,
+    });
+  }
 }
 
 function packageUseBinding(value: unknown) {
@@ -2030,6 +2051,7 @@ async function runStageAction(input: {
   runStageRuntime: typeof runFamilyRuntime;
   recordLedger: typeof actionLedger;
   executionScope: WorkItemExecutionScopeSnapshot | null;
+  stageAttemptExecutorPolicy?: StandardAgentActionRuntimeInput['stageAttemptExecutorPolicy'];
 }) {
   const executionBinding = input.action.execution_binding;
   const stageRoute = input.action.stage_route;
@@ -2215,6 +2237,15 @@ async function runStageAction(input: {
         prepared.request.sha256,
         '--stage-run-invocation-id',
         stageRunInvocationId,
+        ...(input.stageAttemptExecutorPolicy?.provider
+          ? ['--executor-provider', input.stageAttemptExecutorPolicy.provider]
+          : []),
+        ...(input.stageAttemptExecutorPolicy?.model
+          ? ['--executor-model', input.stageAttemptExecutorPolicy.model]
+          : []),
+        ...(input.stageAttemptExecutorPolicy?.reasoning_effort
+          ? ['--executor-reasoning-effort', input.stageAttemptExecutorPolicy.reasoning_effort]
+          : []),
         '--start',
       ]);
       launchRpcReturned = true;
@@ -2612,6 +2643,14 @@ function requestFromFrozenPlan(input: {
       frozen_timeout_ms: input.plan.timeout_ms,
     });
   }
+  if (
+    canonicalJsonText(input.runtimeInput.stageAttemptExecutorPolicy ?? null)
+    !== canonicalJsonText(input.plan.stage_attempt_executor_policy ?? null)
+  ) {
+    fail('Hosted Agent action executor policy conflicts with its frozen run plan.', {
+      run_id: input.plan.run_id,
+    });
+  }
   const action = input.plan.catalog.actions.find(
     (candidate) => candidate.action_id === input.plan.action_id,
   ) ?? fail('Frozen Standard Agent action plan is missing its selected action.', {
@@ -2625,6 +2664,7 @@ function requestFromFrozenPlan(input: {
     workspaceRoot: input.plan.workspace_root,
     requestPayloadSha256,
     timeoutMs: requestedTimeoutMs,
+    stageAttemptExecutorPolicy: input.runtimeInput.stageAttemptExecutorPolicy,
   });
   if (
     input.plan.original_invocation_sha256 !== undefined
@@ -2778,6 +2818,7 @@ async function executeActionContext(input: {
           checkoutRoot: input.checkoutRoot,
           runtimeDomainId: input.runtimeDomainId,
           executionScope,
+          stageAttemptExecutorPolicy: input.runtimeInput.stageAttemptExecutorPolicy,
           runStageRuntime: input.dependencies.runStageRuntime ?? runFamilyRuntime,
           recordLedger: input.dependencies.recordLedger ?? actionLedger,
         })
@@ -2899,6 +2940,10 @@ export async function runStandardAgentAction(
     dependencies,
   });
   assertStandardAgentActionInvocationSurface(liveContext.action, invocationContext, liveContext.registry);
+  assertStageAttemptExecutorPolicySurface({
+    action: liveContext.action,
+    stageAttemptExecutorPolicy: input.stageAttemptExecutorPolicy,
+  });
   const requestPayloadSha256 = sha256(canonicalJsonBytes(input.payload));
   const timeoutMs = canonicalTimeoutMs(input.timeoutMs);
   const invocationSha256 = originalInvocationSha256({
@@ -2908,6 +2953,7 @@ export async function runStandardAgentAction(
     workspaceRoot: runtimeBinding.workspace_root,
     requestPayloadSha256,
     timeoutMs,
+    stageAttemptExecutorPolicy: input.stageAttemptExecutorPolicy,
   });
   const materializedContext = await materializeLifecycleAdmissionContext({
     runtimeInput: input,
@@ -2957,6 +3003,9 @@ export async function runStandardAgentAction(
       request_byte_size: liveRequestBytes.byteLength,
       input_schema_validation: liveContext.inputValidation,
       timeout_ms: timeoutMs,
+      ...(input.stageAttemptExecutorPolicy
+        ? { stage_attempt_executor_policy: input.stageAttemptExecutorPolicy }
+        : {}),
       started_at: observedAt,
     };
     const planBytes = canonicalJsonBytes(plan);

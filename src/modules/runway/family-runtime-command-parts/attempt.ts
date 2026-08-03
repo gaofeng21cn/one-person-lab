@@ -281,6 +281,9 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
   let sourceFingerprint: string | undefined;
   let executorKind: string | undefined;
   let executorBindingRef: string | undefined;
+  let executorProvider: string | undefined;
+  let executorModel: string | undefined;
+  let executorReasoningEffort: string | undefined;
   let invocationMode: 'invocation' | 'authoring' | undefined;
   let boundedEditRef: string | undefined;
   let taskId: string | undefined;
@@ -358,6 +361,15 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
     } else if (token === '--executor-binding-ref' && value) {
       executorBindingRef = value;
       return true;
+    } else if (token === '--executor-provider' && value) {
+      executorProvider = value;
+      return true;
+    } else if (token === '--executor-model' && value) {
+      executorModel = value;
+      return true;
+    } else if (token === '--executor-reasoning-effort' && value) {
+      executorReasoningEffort = value;
+      return true;
     } else if (token === '--invocation-mode' && value) {
       if (value !== 'invocation' && value !== 'authoring') {
         throw new FrameworkContractError('cli_usage_error', `Unsupported family-runtime attempt invocation mode: ${value}.`, {
@@ -425,6 +437,9 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
       sourceFingerprint,
       executorKind,
       executorBindingRef,
+      executorProvider,
+      executorModel,
+      executorReasoningEffort,
       invocationMode,
       boundedEditRef,
       taskId,

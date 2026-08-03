@@ -47,6 +47,9 @@ export function parseAgentsRunArgs(
     'payload-file': { type: 'string' },
     'run-id': { type: 'string' },
     'timeout-ms': { type: 'string' },
+    'executor-provider': { type: 'string' },
+    'executor-model': { type: 'string' },
+    'executor-reasoning-effort': { type: 'string' },
   });
   const domainId = values.domain as string | undefined;
   const actionId = values.action as string | undefined;
@@ -63,6 +66,17 @@ export function parseAgentsRunArgs(
       timeout_ms: rawTimeout,
     });
   }
+  const executorProvider = values['executor-provider'] as string | undefined;
+  const executorModel = values['executor-model'] as string | undefined;
+  const executorReasoningEffort = values['executor-reasoning-effort'] as string | undefined;
+  const stageAttemptExecutorPolicy = executorProvider || executorModel || executorReasoningEffort
+    ? {
+        executor_kind: 'codex_cli' as const,
+        ...(executorProvider ? { provider: executorProvider } : {}),
+        ...(executorModel ? { model: executorModel } : {}),
+        ...(executorReasoningEffort ? { reasoning_effort: executorReasoningEffort } : {}),
+      }
+    : undefined;
   return {
     domainId,
     actionId,
@@ -74,5 +88,6 @@ export function parseAgentsRunArgs(
     ),
     runId: values['run-id'] as string | undefined,
     timeoutMs,
+    stageAttemptExecutorPolicy,
   };
 }

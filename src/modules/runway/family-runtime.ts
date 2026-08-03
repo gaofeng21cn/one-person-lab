@@ -234,6 +234,9 @@ function stageRunReplayRequestBusinessIdentity(input: {
   sourceFingerprint?: string;
   executorKind?: string;
   executorBindingRef?: string;
+  executorProvider?: string;
+  executorModel?: string;
+  executorReasoningEffort?: string;
   invocationMode?: string;
   boundedEditRef?: string;
   parentRouteDecisionRef?: string;
@@ -281,11 +284,7 @@ function stageRunReplayRequestBusinessIdentity(input: {
     .sort((left, right) => left.ref.localeCompare(right.ref) || left.sha256.localeCompare(right.sha256));
   const checkpointRefs = normalizedReplayStringList(input.checkpointRefs);
   const stagePacketRef = checkpointRefs[0] ?? null;
-  const stageAttemptExecutorPolicy = {
-    ...(input.executorBindingRef ? { executor_binding_ref: input.executorBindingRef } : {}),
-    ...(input.invocationMode ? { invocation_mode: input.invocationMode } : {}),
-    ...(input.boundedEditRef ? { bounded_edit_ref: input.boundedEditRef } : {}),
-  };
+  const stageAttemptExecutorPolicy = stageAttemptExecutorPolicyFromAttemptCreateInput(input);
   return {
     scope_kind: input.scopeKind ?? (input.executionScope ? 'work_item' : 'domain'),
     execution_scope: input.executionScope ?? null,
@@ -304,6 +303,31 @@ function stageRunReplayRequestBusinessIdentity(input: {
     checkpoint_refs: stagePacketRef
       ? checkpointRefs.filter((ref) => ref !== stagePacketRef)
       : checkpointRefs,
+  };
+}
+
+function stageAttemptExecutorPolicyFromAttemptCreateInput(input: {
+  executorKind?: string;
+  executorBindingRef?: string;
+  executorProvider?: string;
+  executorModel?: string;
+  executorReasoningEffort?: string;
+  invocationMode?: string;
+  boundedEditRef?: string;
+}) {
+  const hasExplicitCodexSelection = Boolean(
+    input.executorProvider || input.executorModel || input.executorReasoningEffort,
+  );
+  return {
+    ...(hasExplicitCodexSelection
+      ? { executor_kind: input.executorKind?.trim() || 'codex_cli' }
+      : {}),
+    ...(input.executorBindingRef ? { executor_binding_ref: input.executorBindingRef } : {}),
+    ...(input.executorProvider ? { provider: input.executorProvider } : {}),
+    ...(input.executorModel ? { model: input.executorModel } : {}),
+    ...(input.executorReasoningEffort ? { reasoning_effort: input.executorReasoningEffort } : {}),
+    ...(input.invocationMode ? { invocation_mode: input.invocationMode } : {}),
+    ...(input.boundedEditRef ? { bounded_edit_ref: input.boundedEditRef } : {}),
   };
 }
 
@@ -659,6 +683,9 @@ export async function runFamilyRuntime(
         parsed.input.newStageRun
         || parsed.input.stageRunInvocationId
         || parsed.input.parentRouteDecisionRef
+        || parsed.input.executorProvider
+        || parsed.input.executorModel
+        || parsed.input.executorReasoningEffort
         || (parsed.input.inputArtifactRefs?.length ?? 0) > 0
         || (parsed.input.inputArtifactHashes?.length ?? 0) > 0,
       );
@@ -868,11 +895,7 @@ export async function runFamilyRuntime(
             workspaceLocator: useBoundWorkspaceLocator,
             sourceFingerprint,
             executorKind: parsed.input.executorKind,
-            stageAttemptExecutorPolicy: {
-              ...(parsed.input.executorBindingRef ? { executor_binding_ref: parsed.input.executorBindingRef } : {}),
-              ...(parsed.input.invocationMode ? { invocation_mode: parsed.input.invocationMode } : {}),
-              ...(parsed.input.boundedEditRef ? { bounded_edit_ref: parsed.input.boundedEditRef } : {}),
-            },
+            stageAttemptExecutorPolicy: stageAttemptExecutorPolicyFromAttemptCreateInput(parsed.input),
             checkpointRefs: parsed.input.checkpointRefs,
             artifactRefs: parsed.input.inputArtifactRefs,
             artifactHashes: parsed.input.inputArtifactHashes,
