@@ -141,6 +141,8 @@
         "workspace_file_bytes",
         "trusted_artifact_identity_receipt"
       ],
+      "opl_control_checkpoint_binding_kind": "opl_control_file_bytes",
+      "opl_control_checkpoint_can_impersonate_input_artifact": false,
       "trusted_receipt_immutable_lineage_fields": [
         "producing_stage_run_ref",
         "producing_attempt_ref",

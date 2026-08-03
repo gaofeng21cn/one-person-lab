@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { canonicalJsonBytes } from '../../src/kernel/canonical-json.ts';
 import { resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
@@ -1482,6 +1483,138 @@ test('work-item scoped Stage actions resolve one binding before Temporal and iso
       },
     );
     assert.equal(calls.length, callsBeforeConflict);
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('work-item hosted Stage binds its workspace action request as control checkpoint instead of local artifact', async () => {
+  const checkoutRoot = root('opl-scoped-stage-control-checkout-');
+  const workspaceRoot = root('opl-scoped-stage-control-workspace-');
+  const stateRoot = root('opl-scoped-stage-control-state-');
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    writeWorkspaceRegistry({ stateRoot, workspaceRoot });
+    writeWorkItemInventory({
+      checkoutRoot,
+      workspaceRoot,
+      studies: [{ studyId: 'study-control', root: 'studies/study-control' }],
+    });
+    const stageBinding = writeStagePack(checkoutRoot);
+    const stageAction = {
+      ...action({
+        actionId: 'launch-scoped-control',
+        executionBinding: { kind: 'stage_binding', stage_manifest_ref: 'agent/stages/manifest.json' },
+        stageRoute: {
+          entry_stage_ref: 'intake',
+          required_stage_refs: ['intake'],
+          optional_stage_refs: [],
+          terminal_stage_refs: ['intake'],
+          route_policy: 'ai_selected_progress_route',
+        },
+      }),
+      required_fields: ['workspace_root', 'study_id', 'value'],
+      optional_fields: ['work_item_id'],
+      execution_scope: { kind: 'work_item', alias_fields: ['study_id', 'work_item_id'] },
+    };
+    writeContracts(checkoutRoot, [stageAction]);
+    fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'input.schema.json'), `${JSON.stringify({
+      $id: 'https://fixture.local/input.schema.json',
+      type: 'object',
+      required: ['workspace_root', 'study_id', 'value'],
+      properties: {
+        workspace_root: { type: 'string', minLength: 1 },
+        study_id: { type: 'string', minLength: 1 },
+        work_item_id: { type: 'string', minLength: 1 },
+        value: { type: 'integer' },
+      },
+      additionalProperties: false,
+    })}\n`);
+    let startedStageRun: Record<string, any> | null = null;
+    const firstExecutionRunIds = new Map<string, string>();
+    const runStageRuntime: typeof runFamilyRuntime = async (args) => await runFamilyRuntime(args, {
+      stageRunRuntime: {
+        ensurePackageLaunchReady: async () => ({
+          launch_allowed: true,
+          runtime_source_readiness: { checkout_path: checkoutRoot },
+          package_use_binding: stagePackageUseBinding(),
+        } as never),
+        resolveStageBinding: () => stageBinding,
+        startWorkflow: async (input) => {
+          startedStageRun = input as unknown as Record<string, any>;
+          const firstExecutionRunId = `run-${input.stage_run_id}`;
+          firstExecutionRunIds.set(input.workflow_id, firstExecutionRunId);
+          return {
+            workflow_id: input.workflow_id,
+            first_execution_run_id: firstExecutionRunId,
+            workflow_status: 'RUNNING',
+          };
+        },
+        describeWorkflow: async (input) => ({
+          workflow_found: true,
+          workflow_id: input.workflow_id,
+          first_execution_run_id: firstExecutionRunIds.get(input.workflow_id),
+          workflow_status: 'RUNNING',
+        }),
+        queryWorkflow: async ({ workflowId }) => ({
+          workflow_id: workflowId,
+          workflow_status: 'RUNNING',
+        }),
+      },
+    });
+    const result = await runStandardAgentAction({
+      domainId: 'mas',
+      actionId: 'launch-scoped-control',
+      workspaceRoot,
+      payload: {
+        value: 3,
+        study_id: 'study-control',
+        work_item_id: 'study-control',
+      },
+      runId: 'scoped-control-run',
+    }, {
+      resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
+      compileStageManifest: (() => ({})) as never,
+      recordLedger,
+      runStageRuntime,
+    });
+    const run = result.standard_agent_action_run;
+    assert.equal(run.execution_kind, 'stage_binding');
+    if (run.execution_kind !== 'stage_binding') assert.fail('expected scoped Stage action result');
+    assert.equal(run.status, 'started');
+    const observedStartedStageRun = startedStageRun as unknown as Record<string, any>;
+    assert.ok(observedStartedStageRun);
+
+    const requestRef = observedStartedStageRun.workspace_locator.action_request_ref as string;
+    const requestPath = fileURLToPath(requestRef);
+    const canonicalWorkItemRoot = run.execution_scope?.canonical_work_item_root ?? '';
+    assert.equal(requestPath.startsWith(`${canonicalWorkItemRoot}${path.sep}`), false);
+    assert.equal(
+      requestPath.startsWith(path.join(
+        fs.realpathSync.native(workspaceRoot),
+        'control',
+        'opl',
+        'action_runs',
+      )),
+      true,
+    );
+    assert.deepEqual(observedStartedStageRun.stage_run_spec.input_artifacts, []);
+    const requestBindings = observedStartedStageRun.stage_run_spec.content_bindings.filter(
+      (binding: Record<string, unknown>) => binding.ref === requestRef,
+    );
+    assert.deepEqual(
+      requestBindings.map((binding: Record<string, unknown>) => binding.purpose).sort(),
+      ['checkpoint', 'stage_packet'],
+    );
+    assert.deepEqual(
+      requestBindings.map((binding: Record<string, unknown>) => binding.verification_kind),
+      ['opl_control_file_bytes', 'opl_control_file_bytes'],
+    );
   } finally {
     if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateRoot;

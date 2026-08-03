@@ -77,6 +77,7 @@ export {
   inspectStandardAgentActionRunOutput,
   inspectStoredStandardAgentActionRunOutput,
   prepareStandardAgentActionRunRequest,
+  readStandardAgentActionStoredBytes,
   STANDARD_AGENT_ACTION_RUNS_RELATIVE_ROOT,
 } from './standard-agent-action-output.ts';
 export type {

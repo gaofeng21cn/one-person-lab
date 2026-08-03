@@ -1,13 +1,15 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { ensureOplStateDir } from '../../../kernel/runtime-state-paths.ts';
 import { readStandardAgentQualityRolePromptFile } from '../../pack/index.ts';
 import {
+  readStandardAgentActionStoredBytes,
   readStableWorkItemFile,
+  STANDARD_AGENT_ACTION_RUNS_RELATIVE_ROOT,
   WorkItemFileBoundaryError,
 } from '../../workspace/index.ts';
 import type {
@@ -38,6 +40,7 @@ const STAGE_RUN_CONTENT_PURPOSES = [
 const STAGE_RUN_CONTENT_VERIFICATION_KINDS = [
   'managed_pack_file_bytes',
   'workspace_file_bytes',
+  'opl_control_file_bytes',
   'trusted_artifact_identity_receipt',
 ] as const;
 
@@ -74,6 +77,12 @@ type ArtifactIdentity = {
   ref: string;
   sha256: string;
   identity_receipt_ref: string | null;
+};
+
+export type StageRunOplControlArtifactIdentity = {
+  ref: string;
+  sha256: string;
+  action_run_ref: string;
 };
 
 function fail(message: string, details: Record<string, unknown>): never {
@@ -273,6 +282,24 @@ function requireStageRunImmutableContentBinding(
       || scopeDigest !== null
     ) {
       fail('Managed package bindings cannot impersonate scoped input artifact bindings.', {
+        failure_code: 'stage_run_content_binding_authority_mismatch',
+        binding_index: index,
+        purpose,
+        verification_kind: verificationKind,
+      });
+    }
+  } else if (verificationKind === 'opl_control_file_bytes') {
+    if (
+      !['stage_packet', 'checkpoint'].includes(purpose)
+      || byteSize === null
+      || identityReceiptRef !== null
+      || producingStageRunRef !== null
+      || producingAttemptRef !== null
+      || scopeKind !== null
+      || workItemScopeId !== null
+      || scopeDigest !== null
+    ) {
+      fail('OPL control byte bindings are workspace-level checkpoint provenance, not scoped artifacts.', {
         failure_code: 'stage_run_content_binding_authority_mismatch',
         binding_index: index,
         purpose,
@@ -535,6 +562,89 @@ function pathInside(candidateInput: string, rootInput: string) {
   );
 }
 
+function observeOplControlArtifact(input: {
+  artifact: StageRunOplControlArtifactIdentity;
+  workspaceRoot: string | null;
+}) {
+  if (!input.workspaceRoot) {
+    fail('StageRun OPL control checkpoint requires a workspace root.', {
+      failure_code: 'stage_run_opl_control_workspace_missing',
+      artifact_ref: input.artifact.ref,
+      action_run_ref: input.artifact.action_run_ref,
+    });
+  }
+  let workspaceRoot: string;
+  let controlRoot: string;
+  let actionRunPath: string;
+  let requestPath: string;
+  try {
+    workspaceRoot = fs.realpathSync.native(input.workspaceRoot);
+    const declaredControlRoot = path.join(
+      workspaceRoot,
+      ...STANDARD_AGENT_ACTION_RUNS_RELATIVE_ROOT.split('/'),
+    );
+    const controlRootStat = fs.lstatSync(declaredControlRoot);
+    controlRoot = fs.realpathSync.native(declaredControlRoot);
+    if (
+      controlRootStat.isSymbolicLink()
+      || !controlRootStat.isDirectory()
+      || controlRoot !== declaredControlRoot
+    ) {
+      throw new Error('control root is not one canonical physical directory');
+    }
+    const resolvedActionRunPath = localFileForRef(input.artifact.action_run_ref, workspaceRoot);
+    const resolvedRequestPath = localFileForRef(input.artifact.ref, workspaceRoot);
+    if (!resolvedActionRunPath || !resolvedRequestPath) {
+      throw new Error('control refs are not local file refs');
+    }
+    const actionRunStat = fs.lstatSync(resolvedActionRunPath);
+    actionRunPath = fs.realpathSync.native(resolvedActionRunPath);
+    if (
+      actionRunStat.isSymbolicLink()
+      || !actionRunStat.isDirectory()
+      || actionRunPath !== resolvedActionRunPath
+      || path.dirname(actionRunPath) !== controlRoot
+      || !pathInside(actionRunPath, controlRoot)
+      || pathToFileURL(actionRunPath).href !== input.artifact.action_run_ref
+    ) {
+      throw new Error('action run ref is not one direct canonical control child');
+    }
+    requestPath = path.join(actionRunPath, 'request.json');
+    const requestStat = fs.lstatSync(requestPath);
+    if (
+      requestStat.isSymbolicLink()
+      || !requestStat.isFile()
+      || resolvedRequestPath !== requestPath
+      || pathToFileURL(requestPath).href !== input.artifact.ref
+    ) {
+      throw new Error('request ref is not the canonical action request file');
+    }
+  } catch (error) {
+    fail('StageRun OPL control checkpoint is outside its exact action-run authority root.', {
+      failure_code: 'stage_run_opl_control_ref_untrusted',
+      artifact_ref: input.artifact.ref,
+      action_run_ref: input.artifact.action_run_ref,
+      workspace_root: input.workspaceRoot,
+      validation_error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  const stat = fs.lstatSync(requestPath!);
+  const expectedSha256 = canonicalStageRunSha256(
+    input.artifact.sha256,
+    'opl_control_artifact.sha256',
+  );
+  const bytes = readStandardAgentActionStoredBytes({
+    ref: input.artifact.ref,
+    file_path: requestPath!,
+    sha256: expectedSha256.slice('sha256:'.length),
+    byte_size: stat.size,
+  }, 'StageRun OPL control checkpoint');
+  return {
+    sha256: expectedSha256,
+    byteSize: bytes.byteLength,
+  };
+}
+
 function safeIdentityDirectory(value: string) {
   const readable = value.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80)
     || 'domain';
@@ -788,6 +898,47 @@ function observeArtifactBytes(input: {
   }
 }
 
+function bindOplControlArtifact(input: {
+  purpose: StageRunContentPurpose;
+  artifact: StageRunOplControlArtifactIdentity;
+  workspaceRoot: string | null;
+}) {
+  if (!['stage_packet', 'checkpoint'].includes(input.purpose)) {
+    fail('OPL control refs may bind only Stage packet or checkpoint provenance.', {
+      failure_code: 'stage_run_opl_control_purpose_invalid',
+      purpose: input.purpose,
+      artifact_ref: input.artifact.ref,
+    });
+  }
+  const observed = observeOplControlArtifact({
+    artifact: input.artifact,
+    workspaceRoot: input.workspaceRoot,
+  });
+  if (observed.sha256 !== input.artifact.sha256) {
+    fail('StageRun OPL control checkpoint hash does not match its persisted request bytes.', {
+      failure_code: 'stage_run_opl_control_byte_identity_mismatch',
+      artifact_ref: input.artifact.ref,
+      declared_sha256: input.artifact.sha256,
+      observed_sha256: observed.sha256,
+    });
+  }
+  return {
+    purpose: input.purpose,
+    ref: input.artifact.ref,
+    sha256: observed.sha256,
+    byte_size: observed.byteSize,
+    effective_content_sha256: null,
+    effective_content_byte_size: null,
+    verification_kind: 'opl_control_file_bytes' as const,
+    identity_receipt_ref: null,
+    producing_stage_run_ref: null,
+    producing_attempt_ref: null,
+    scope_kind: null,
+    work_item_scope_id: null,
+    scope_digest: null,
+  };
+}
+
 function bindArtifact(input: {
   purpose: StageRunContentPurpose;
   artifact: ArtifactIdentity;
@@ -887,9 +1038,13 @@ export function buildStageRunImmutableContentBindings(input: {
   lineageRefs: string[];
   stagePacketRef: string;
   checkpointRefs: string[];
+  oplControlArtifacts: StageRunOplControlArtifactIdentity[];
   inputArtifacts: ArtifactIdentity[];
 }) {
   const artifacts = new Map(input.inputArtifacts.map((artifact) => [artifact.ref, artifact]));
+  const controlArtifacts = new Map(
+    input.oplControlArtifacts.map((artifact) => [artifact.ref, artifact]),
+  );
   const result: StageRunImmutableContentBinding[] = [];
   const bind = (
     purpose: StageRunContentPurpose,
@@ -897,8 +1052,15 @@ export function buildStageRunImmutableContentBindings(input: {
     expectedSha256?: string | null,
   ) => {
     const artifact = artifacts.get(ref);
+    const controlArtifact = controlArtifacts.get(ref);
     const binding = purpose === 'role_prompt' && !artifact
       ? bindManagedRolePrompt({ domainPackRoot: input.domainPackRoot, ref })
+      : controlArtifact
+      ? bindOplControlArtifact({
+          purpose,
+          artifact: controlArtifact,
+          workspaceRoot: input.workspaceRoot,
+        })
       : artifact
       ? bindArtifact({
           purpose,
@@ -961,10 +1123,14 @@ export function revalidateStageRunImmutableContentBindings(input: {
   workspaceRoot: string | null;
   scopeKind: FamilyRuntimeExecutionScopeKind;
   executionScope: WorkItemExecutionScopeSnapshot | null;
+  oplControlArtifacts: StageRunOplControlArtifactIdentity[];
   bindings: StageRunImmutableContentBinding[];
   skipManagedPackBytes?: boolean;
 }) {
   const bindings = requireStageRunImmutableContentBindings(input.bindings);
+  const controlArtifacts = new Map(
+    input.oplControlArtifacts.map((artifact) => [artifact.ref, artifact]),
+  );
   const seen = new Set<string>();
   for (const binding of bindings) {
     const key = `${binding.purpose}\0${binding.ref}`;
@@ -1027,6 +1193,33 @@ export function revalidateStageRunImmutableContentBindings(input: {
         purpose: binding.purpose,
         ref: binding.ref,
       });
+    }
+    if (binding.verification_kind === 'opl_control_file_bytes') {
+      const controlArtifact = controlArtifacts.get(binding.ref);
+      if (!controlArtifact || controlArtifact.sha256 !== sha256) {
+        fail('StageRun OPL control binding no longer matches its hosted action identity.', {
+          failure_code: 'stage_run_opl_control_binding_mismatch',
+          ref: binding.ref,
+          expected_sha256: sha256,
+          actual_sha256: controlArtifact?.sha256 ?? null,
+        });
+      }
+      const observed = observeOplControlArtifact({
+        artifact: controlArtifact,
+        workspaceRoot: input.workspaceRoot,
+      });
+      if (observed.sha256 !== sha256 || observed.byteSize !== binding.byte_size) {
+        fail('StageRun OPL control request bytes changed after the spec was created.', {
+          failure_code: 'stage_run_content_binding_stale',
+          purpose: binding.purpose,
+          ref: binding.ref,
+          expected_sha256: sha256,
+          observed_sha256: observed.sha256,
+          expected_byte_size: binding.byte_size,
+          observed_byte_size: observed.byteSize,
+        });
+      }
+      continue;
     }
     if (binding.verification_kind === 'trusted_artifact_identity_receipt') {
       if (

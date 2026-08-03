@@ -2231,10 +2231,14 @@ async function runStageAction(input: {
         'invocation',
         '--checkpoint-ref',
         prepared.request.ref,
-        '--input-artifact-ref',
-        prepared.request.ref,
-        '--input-artifact-sha256',
-        prepared.request.sha256,
+        ...(input.executionScope
+          ? []
+          : [
+              '--input-artifact-ref',
+              prepared.request.ref,
+              '--input-artifact-sha256',
+              prepared.request.sha256,
+            ]),
         '--stage-run-invocation-id',
         stageRunInvocationId,
         ...(input.stageAttemptExecutorPolicy?.provider

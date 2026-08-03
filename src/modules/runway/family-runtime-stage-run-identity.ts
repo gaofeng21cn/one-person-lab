@@ -15,6 +15,7 @@ import {
   requireStageRunImmutableContentBindings,
   revalidateStageRunImmutableContentBindings,
   type StageRunImmutableContentBinding,
+  type StageRunOplControlArtifactIdentity,
 } from './family-runtime-stage-run-identity-parts/content-bindings.ts';
 
 export type StageRunImmutableSpec = {
@@ -89,6 +90,55 @@ function optionalSha256(value: unknown, field: string) {
   return value === null || value === undefined || value === ''
     ? null
     : canonicalStageRunSha256(value, field);
+}
+
+function hostedActionOplControlArtifacts(input: {
+  workspaceLocator: Record<string, unknown>;
+  sourceFingerprint: string | null;
+  executionScope: WorkItemExecutionScopeSnapshot | null;
+}): StageRunOplControlArtifactIdentity[] {
+  if (!input.executionScope) return [];
+  const actionRunRef = optionalText(input.workspaceLocator.standard_agent_action_run_ref);
+  const requestRef = optionalText(input.workspaceLocator.action_request_ref);
+  const requestSha256 = optionalText(input.workspaceLocator.action_request_sha256);
+  if (!actionRunRef && !requestRef && !requestSha256) return [];
+  if (!actionRunRef || !requestRef || !requestSha256 || !input.sourceFingerprint) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Work-item hosted action control provenance requires exact action-run, request, and digest fields.',
+      {
+        failure_code: 'stage_run_opl_control_identity_incomplete',
+        standard_agent_action_run_ref: actionRunRef,
+        action_request_ref: requestRef,
+        action_request_sha256: requestSha256,
+        source_fingerprint: input.sourceFingerprint,
+      },
+    );
+  }
+  const canonicalRequestSha256 = canonicalStageRunSha256(
+    requestSha256,
+    'workspace_locator.action_request_sha256',
+  );
+  const canonicalSourceFingerprint = canonicalStageRunSha256(
+    input.sourceFingerprint,
+    'source_fingerprint',
+  );
+  if (canonicalRequestSha256 !== canonicalSourceFingerprint) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Work-item hosted action request digest conflicts with its StageRun source fingerprint.',
+      {
+        failure_code: 'stage_run_opl_control_identity_mismatch',
+        action_request_sha256: canonicalRequestSha256,
+        source_fingerprint: canonicalSourceFingerprint,
+      },
+    );
+  }
+  return [{
+    ref: requestRef,
+    sha256: canonicalRequestSha256,
+    action_run_ref: actionRunRef,
+  }];
 }
 
 function stringList(values: unknown) {
@@ -458,6 +508,11 @@ export function buildStageRunImmutableSpec(input: {
     lineageRefs,
     stagePacketRef: text(input.stagePacketRef, 'stage_packet_ref'),
     checkpointRefs,
+    oplControlArtifacts: hostedActionOplControlArtifacts({
+      workspaceLocator: input.workspaceLocator,
+      sourceFingerprint: input.sourceFingerprint,
+      executionScope: input.executionScope,
+    }),
     inputArtifacts,
   });
   return {
@@ -690,6 +745,11 @@ export function revalidateStageRunImmutableSpecContent(input: {
       ?? optionalText(input.workspaceLocator.repo_root),
     scopeKind: input.scopeKind,
     executionScope: input.executionScope,
+    oplControlArtifacts: hostedActionOplControlArtifacts({
+      workspaceLocator: input.workspaceLocator,
+      sourceFingerprint: input.spec.source_fingerprint,
+      executionScope: input.executionScope,
+    }),
     bindings: contentBindings,
     skipManagedPackBytes: input.skipManagedPackBytes,
   });
