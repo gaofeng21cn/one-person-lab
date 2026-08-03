@@ -187,7 +187,7 @@ function requireCurrentRuntimeRowsBeforeLaunchSideEffects(input: {
         ) {
           const rowWorkspaceRoot = typeof error.details.workspace_root === 'string'
             ? error.details.workspace_root
-            : null;
+            : runtimeRowWorkspaceRoot(row);
           if (input.workspaceRoot && rowWorkspaceRoot && rowWorkspaceRoot !== input.workspaceRoot) continue;
         }
         throw error;

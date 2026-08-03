@@ -449,3 +449,117 @@ test('attempt create freezes one CLI-selected Codex executor policy into the Sta
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('attempt create ignores an active identity-unresolved row owned by another workspace', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cross-workspace-unresolved-'));
+  const otherWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-other-workspace-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const seeded = openQueueDb();
+    const unrelated = createStageAttempt(seeded.db, {
+      domainId: 'medautoscience',
+      stageId: 'intake',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: otherWorkspaceRoot },
+      sourceFingerprint: 'sha256:unrelated-unresolved-runtime-row',
+      scopeKind: 'domain',
+    }).attempt;
+    seeded.db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'running', scope_kind = 'identity_unresolved', identity_state = 'identity_unresolved'
+      WHERE stage_attempt_id = ?
+    `).run(unrelated.stage_attempt_id);
+    seeded.db.close();
+
+    const result = await runFamilyRuntime([
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'intake',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      JSON.stringify({ workspace_root: workspaceRoot, domain_pack_root: domainPackRoot }),
+      '--source-fingerprint',
+      manifestFixture.sha256,
+      '--stage-run-invocation-id',
+      'sri_cross_workspace_unresolved',
+    ], {
+      stageRunRuntime: {
+        ensurePackageLaunchReady: async () => ({
+          runtime_source_readiness: {
+            checkout_path: domainPackRoot,
+            operational_ready: true,
+          },
+          package_use_binding: packageUseBinding(),
+        }) as any,
+        resolveStageBinding: () => binding(),
+      },
+    }) as any;
+
+    assert.equal(result.family_runtime_stage_run.stage_run_input.workspace_locator.workspace_root, workspaceRoot);
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(otherWorkspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('attempt create remains blocked by an active identity-unresolved row in the same workspace', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-same-workspace-unresolved-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const seeded = openQueueDb();
+    const conflicting = createStageAttempt(seeded.db, {
+      domainId: 'medautoscience',
+      stageId: 'intake',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: workspaceRoot },
+      sourceFingerprint: 'sha256:same-workspace-unresolved-runtime-row',
+      scopeKind: 'domain',
+    }).attempt;
+    seeded.db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'running', scope_kind = 'identity_unresolved', identity_state = 'identity_unresolved'
+      WHERE stage_attempt_id = ?
+    `).run(conflicting.stage_attempt_id);
+    seeded.db.close();
+
+    await assert.rejects(
+      runFamilyRuntime([
+        'attempt',
+        'create',
+        '--domain',
+        'medautoscience',
+        '--stage',
+        'intake',
+        '--provider',
+        'temporal',
+        '--workspace-locator',
+        JSON.stringify({ workspace_root: workspaceRoot, domain_pack_root: domainPackRoot }),
+        '--source-fingerprint',
+        manifestFixture.sha256,
+        '--stage-run-invocation-id',
+        'sri_same_workspace_unresolved',
+      ], {
+        stageRunRuntime: {
+          ensurePackageLaunchReady: async () => assert.fail('identity admission must precede package readiness'),
+          resolveStageBinding: () => assert.fail('identity admission must precede binding resolution'),
+        },
+      }),
+      (error: any) => {
+        assert.equal(error.details?.failure_code, 'runtime_execution_identity_unresolved');
+        return true;
+      },
+    );
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
