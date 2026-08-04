@@ -114,10 +114,6 @@ import {
   rollbackManagedRuntimeSourceMutation,
 } from './agent-package-registry-parts/managed-runtime-source-carrier.ts';
 import {
-  agentPackageLifecycleSummaryReadback,
-  withManagedPolicyLifecycleUx,
-} from './agent-package-registry-parts/readback.ts';
-import {
   buildAgentPackageDirectory,
   firstPartyConfiguredCarrierDescriptors,
 } from './agent-package-registry-parts/directory.ts';
@@ -178,7 +174,6 @@ import type {
   AgentPackageStoredHomeShortcutPreference,
   AgentPackageCarrierAuthority,
   AgentPackageInstallInput,
-  AgentPackageLifecycleUxReadback,
   AgentPackageLock,
   AgentPackageLockIndex,
   AgentPackageManifestValidateInput,
@@ -4457,52 +4452,6 @@ function configuredCarrierReadbacks(
   return readbacks;
 }
 
-function configuredCarrierLifecycleUxReadback(
-  carrier: ConfiguredCodexPluginCarrierReadback,
-  legacyPrivateStatePresent: boolean,
-): AgentPackageLifecycleUxReadback {
-  const installed = carrier.status === 'installed';
-  const attention = legacyPrivateStatePresent
-    || carrier.status === 'physical_unavailable'
-    || carrier.executor.status !== 'callable'
-    || carrier.carrier.precedence !== 'exact_single_source';
-  return {
-    status: attention
-      ? 'attention_needed'
-      : installed
-        ? 'installed'
-        : 'not_installed',
-    conditions: [
-      {
-        condition_id: installed
-          ? 'configured_native_carrier_present'
-          : 'package_not_installed',
-        package_id: carrier.package_id,
-        status: installed ? 'ok' : 'attention_needed',
-        reason: installed
-          ? 'Configured native carrier reports the Package selector installed.'
-          : carrier.reason ?? 'Configured native carrier reports the Package selector absent.',
-        action_ref: installed ? null : 'install_from_manifest_url',
-      },
-      ...(attention ? [{
-        condition_id: 'configured_native_carrier_attention_needed' as const,
-        package_id: carrier.package_id,
-        status: 'attention_needed' as const,
-        reason: legacyPrivateStatePresent
-          ? 'Legacy OPL private lifecycle state remains for a Package now observed through its configured native carrier.'
-          : carrier.reason ?? 'Configured native carrier requires attention.',
-        action_ref: installed ? 'agent_package_repair' : 'install_from_manifest_url',
-      }] : []),
-    ],
-    recommended_action: attention
-      ? installed ? 'agent_package_repair' : 'install_from_manifest_url'
-      : null,
-    lifecycle_action_refs: installed
-      ? ['update', 'repair', 'uninstall']
-      : ['install'],
-  };
-}
-
 function emptyStatusLockIndex(): AgentPackageLockIndex {
   return {
     surface_kind: 'opl_agent_package_lock_index',
@@ -4694,10 +4643,6 @@ function buildOplAgentPackageStatus(
   );
   const homeShortcutPreferences = allHomeShortcutPreferences
     .filter((entry) => !packageId || entry.package_id === packageId);
-  const legacyLifecycleUx = agentPackageLifecycleSummaryReadback({
-    selectedPackageId: packageId ?? null,
-    packages: installedPackages,
-  });
   const selectedLock = packageId ? installedPackages[0] ?? null : null;
   const installedDescriptor = packageId
     ? installedCodexPluginDescriptors.get(packageId) ?? null
@@ -4731,13 +4676,6 @@ function buildOplAgentPackageStatus(
         sourceRoot: installedDescriptor.sourcePath,
       })
     : managedPolicyCurrentness(legacySelectedLock);
-  const lifecycleUx = configuredCarrier
-    ? withManagedPolicyLifecycleUx({
-        packageId,
-        base: configuredCarrierLifecycleUxReadback(configuredCarrier, false),
-        currentness: policyCurrentness,
-      })
-    : legacyLifecycleUx;
   const packageDependencyReadiness = legacySelectedLock ? dependencyReadiness(legacySelectedLock, lockIndex) : null;
   const materializationReadiness = legacySelectedLock
     ? scopeMaterializationReadiness(legacySelectedLock, lockIndex, input)
@@ -4926,10 +4864,6 @@ function buildOplAgentPackageStatus(
       configured_carrier: configuredCarrier,
       installed_carrier_readback: installedCarrierReadback,
       installed_readiness: installedReadiness,
-      conditions: lifecycleUx.conditions,
-      recommended_action: lifecycleUx.recommended_action,
-      lifecycle_action_refs: lifecycleUx.lifecycle_action_refs,
-      lifecycle_ux: lifecycleUx,
       package_dependency_readiness: packageDependencyReadiness,
       materialization_readiness: materializationReadiness,
       runtime_source_readiness: runtimeSourceReadiness,

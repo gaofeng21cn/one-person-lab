@@ -48,14 +48,13 @@ test('package read models stay compact without exposing lifecycle history', (con
       'third.party.research',
     ], env) as any;
     const list = runCli(['packages', 'list'], env) as any;
-    assert.equal(status.opl_agent_package_status.lifecycle_action_refs.includes('optimize'), false);
-    assert.equal(status.opl_agent_package_status.lifecycle_ux.status, 'installed');
     for (const retiredSummaryField of [
       'conditions',
       'recommended_action',
       'lifecycle_action_refs',
       'lifecycle_ux',
     ]) {
+      assert.equal(Object.hasOwn(status.opl_agent_package_status, retiredSummaryField), false);
       assert.equal(Object.hasOwn(list.opl_agent_packages, retiredSummaryField), false);
     }
     const directoryEntry = list.opl_agent_packages.directory.entries.find(

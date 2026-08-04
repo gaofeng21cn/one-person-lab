@@ -30,8 +30,6 @@ function installedStatus(input: {
   runtimeReady?: boolean;
   launchAllowed?: boolean;
   launchBlockedReason?: string | null;
-  lifecycleActionRefs?: string[];
-  recommendedAction?: string | null;
   appContributions?: Record<string, unknown> | null;
   operationalReadyScope?: string;
 }) {
@@ -59,15 +57,6 @@ function installedStatus(input: {
         exposure_state: input.exposure ?? 'visible',
         physical_surface: { status: 'materialized' },
       }],
-      conditions: [],
-      recommended_action: input.recommendedAction ?? null,
-      lifecycle_action_refs: input.lifecycleActionRefs ?? [
-        'update',
-        'repair',
-        'uninstall',
-        'hide',
-        'disable',
-      ],
       package_dependency_readiness: input.dependencyReadiness ?? {
         status: 'current',
         operational_ready: true,
@@ -125,6 +114,10 @@ function assertLegacyManagerFieldsAbsent(status: Record<string, unknown>) {
     'rollback_ref',
     'dependent_guard',
     'lifecycle_receipt_summary',
+    'conditions',
+    'recommended_action',
+    'lifecycle_action_refs',
+    'actions',
   ]) {
     assert.equal(Object.hasOwn(status, field), false, `${field} must stay out of the App package projection`);
   }
@@ -202,7 +195,6 @@ test('App package projection accepts arbitrary package ids and trusts fresh owne
     return installedStatus({
       packageId: input.packageId,
       exposure: 'hidden',
-      recommendedAction: 'update',
     });
   }) as any;
   const fast = buildAppAgentPackageStatuses({
@@ -242,14 +234,6 @@ test('App package projection accepts arbitrary package ids and trusts fresh owne
   assert.equal(fullStatus.operational_ready, true);
   assert.equal(fullStatus.launch_allowed, true);
   assert.equal(fullStatus.launch_state, 'ready');
-  assert.equal(fastStatus.recommended_action, 'update');
-  assert.deepEqual(fastStatus.actions.available, [
-    'update',
-    'repair',
-    'uninstall',
-    'hide',
-    'disable',
-  ]);
   assert.deepEqual(fastStatus.presence, fullStatus.presence);
   assert.deepEqual(fastStatus.capability_exposure, fullStatus.capability_exposure);
   assert.deepEqual(fastStatus.dependency_readiness, fullStatus.dependency_readiness);
@@ -263,7 +247,6 @@ test('Fast App status keeps configured native carrier readiness from the same fr
     profile: 'fast',
     readStatus: (() => installedStatus({
       packageId: 'future.owner.package',
-      lifecycleActionRefs: ['update', 'repair', 'uninstall'],
       operationalReadyScope: 'configured_native_carrier_presence_callability_identity_and_precedence',
     })) as any,
   })['future.owner.package'] as any;
@@ -274,8 +257,6 @@ test('Fast App status keeps configured native carrier readiness from the same fr
   assert.equal(status.launch_blocked_reason, null);
   assert.equal(status.launch_state, 'ready');
   assert.equal(Object.hasOwn(status, 'currentness_detail_deferred'), false);
-  assert.deepEqual(status.actions.available, ['update', 'repair', 'uninstall']);
-  assert.equal(status.actions.recommended, null);
   assertLegacyManagerFieldsAbsent(status);
 });
 
@@ -283,7 +264,6 @@ test('Fast App status preserves Flow policy planes and model recommendation from
   const ownerStatus = installedStatus({
     packageId: 'opl-flow',
     operationalReadyScope: 'installed_carrier_presence_callability_and_managed_policy',
-    recommendedAction: 'repair',
   }) as any;
   Object.assign(ownerStatus.opl_agent_package_status, {
     package_operational: {
@@ -594,7 +574,6 @@ test('runtime carrier failure reports physical_unavailable without exposing old 
       runtimeReady: false,
       launchAllowed: false,
       launchBlockedReason: 'runtime_source_incompatible',
-      lifecycleActionRefs: ['repair', 'uninstall'],
     })) as any,
   });
   const projected = statuses.mas as any;

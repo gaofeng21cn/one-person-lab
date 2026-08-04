@@ -738,8 +738,6 @@ test('workflow policy v3 projects a generic install action when a required Skill
       'managed_policy_required_dependency_unavailable',
     );
     assert.equal(status.opl_agent_package_status.repair_action, 'opl packages repair --package-id fixture.opl-flow');
-    assert.equal(status.opl_agent_package_status.lifecycle_ux.status, 'attention_needed');
-    assert.equal(status.opl_agent_package_status.lifecycle_ux.recommended_action, 'repair');
     assert.equal(Object.hasOwn(status.opl_agent_package_status, 'owner_route_readback'), false);
     assert.equal(currentness.status, 'drifted');
     assert.equal(currentness.required_dependencies_operational, false);
@@ -932,13 +930,6 @@ test('workflow policy v4 reports a missing experience baseline as degraded witho
     );
     assert.equal(packageStatus.launch_state, 'degraded');
     assert.equal(packageStatus.launch_state_reason, 'experience_baseline_degraded');
-    assert.equal(packageStatus.recommended_action, 'repair');
-    assert.equal(
-      packageStatus.conditions.some((entry: { condition_id: string; action_ref: string | null }) => (
-        entry.condition_id === 'experience_baseline_degraded' && entry.action_ref === 'repair'
-      )),
-      true,
-    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
@@ -1013,13 +1004,6 @@ test('installed native descriptor projects Flow policy planes and model recommen
     assert.equal(packageStatus.launch_allowed, true);
     assert.equal(packageStatus.launch_state, 'degraded');
     assert.equal(packageStatus.launch_state_reason, 'experience_baseline_degraded');
-    assert.equal(packageStatus.recommended_action, 'repair');
-    assert.equal(
-      packageStatus.conditions.some((entry: { condition_id: string; action_ref: string | null }) => (
-        entry.condition_id === 'experience_baseline_degraded' && entry.action_ref === 'repair'
-      )),
-      true,
-    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
@@ -1067,7 +1051,6 @@ test('workflow policy v4 observes missing specialized capabilities without insta
       status: 'missing',
       reason: 'optional_capability_not_installed',
     }]);
-    assert.equal(packageStatus.recommended_action, null);
   } finally {
     fs.rmSync(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
@@ -1284,9 +1267,6 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
     assert.equal(drifted.opl_agent_package_status.status, 'available');
     assert.equal(drifted.opl_agent_package_status.operational_ready, true);
     assert.equal(drifted.opl_agent_package_status.launch_blocked_reason, null);
-    assert.equal(drifted.opl_agent_package_status.recommended_action, null);
-    assert.equal(drifted.opl_agent_package_status.lifecycle_ux.status, 'installed');
-    assert.equal(drifted.opl_agent_package_status.lifecycle_ux.recommended_action, null);
     assert.equal(driftedCurrentness.status, 'drifted');
     assert.equal(driftedCurrentness.repair_command, null);
     assert.deepEqual(driftedCurrentness.detected_conflicts, [{
@@ -1302,7 +1282,6 @@ test('generic OPL package transaction owns OPL Flow policy migration without inv
     const repairedStatus = runCli(['packages', 'status', '--package-id', 'fixture.opl-flow'], env) as any;
     assert.equal(repairedStatus.opl_agent_package_status.operational_ready, true);
     assert.equal(repairedStatus.opl_agent_package_status.managed_policy_currentness.status, 'current');
-    assert.notEqual(repairedStatus.opl_agent_package_status.lifecycle_ux.recommended_action, 'repair');
 
     const postInstallConfig = [
       'reasoning_effort = "high"',
@@ -1404,9 +1383,6 @@ test('managed policy currentness detects and repairs a missing global Codex skil
     assert.equal(drifted.opl_agent_package_status.status, 'available');
     assert.equal(drifted.opl_agent_package_status.operational_ready, true);
     assert.equal(drifted.opl_agent_package_status.launch_blocked_reason, null);
-    assert.equal(drifted.opl_agent_package_status.recommended_action, null);
-    assert.equal(drifted.opl_agent_package_status.lifecycle_ux.status, 'installed');
-    assert.equal(drifted.opl_agent_package_status.lifecycle_ux.recommended_action, null);
     assert.equal(driftedCurrentness.status, 'drifted');
     assert.equal(driftedCurrentness.dependency_sync.items[0].entrypoint_authority_status, 'missing');
     assert.equal(driftedCurrentness.repair_command, null);

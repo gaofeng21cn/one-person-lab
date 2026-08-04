@@ -1341,12 +1341,7 @@ test('system configure-codex delegates Full runtime Package and carrier reconcil
     assert.deepEqual(currentMasLock.managed_runtime_source.health_check_command, []);
     assert.deepEqual(currentMasLock.managed_runtime_source.handler_probe_command, []);
     assert.equal(statusReadback.opl_agent_package_status.carrier_authority_readiness.status, 'invalid');
-    assert.equal(statusReadback.opl_agent_package_status.lifecycle_ux.status, 'installed');
-    const carrierObservation = statusReadback.opl_agent_package_status.conditions.find(
-      (condition: Record<string, any>) => condition.condition_id === 'configured_native_carrier_present',
-    );
-    assert.equal(carrierObservation?.status, 'ok');
-    assert.equal(carrierObservation?.action_ref, null);
+    assert.equal(statusReadback.opl_agent_package_status.configured_carrier.status, 'installed');
 
     const workspace = path.join(homeRoot, 'workspace');
     fs.mkdirSync(workspace, { recursive: true });

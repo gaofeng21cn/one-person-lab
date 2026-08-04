@@ -93,31 +93,6 @@ export function managedPolicyLifecycleConditions(input: {
   return conditions;
 }
 
-export function withManagedPolicyLifecycleUx(input: {
-  packageId: string | null;
-  base: AgentPackageLifecycleUxReadback;
-  currentness: AgentPackageManagedPolicyCurrentness;
-}): AgentPackageLifecycleUxReadback {
-  const conditions = [
-    ...input.base.conditions,
-    ...managedPolicyLifecycleConditions({
-      packageId: input.packageId,
-      currentness: input.currentness,
-    }),
-  ];
-  const recommendedAction = conditions.find(
-    (condition) => condition.status === 'attention_needed' && condition.action_ref,
-  )?.action_ref ?? input.base.recommended_action;
-  return {
-    ...input.base,
-    status: conditions.some((condition) => condition.status === 'attention_needed')
-      ? 'attention_needed'
-      : input.base.status,
-    conditions,
-    recommended_action: recommendedAction,
-  };
-}
-
 export function agentPackageLifecycleUxReadback(input: {
   packageId: string | null;
   lock?: AgentPackageLock | null;
@@ -238,42 +213,6 @@ export function agentPackageLifecycleUxReadback(input: {
         ? 'validated_no_write'
         : 'installed',
     conditions,
-    recommended_action: recommendedAction,
-    lifecycle_action_refs: [...PACKAGE_LIFECYCLE_ACTION_REFS],
-  };
-}
-
-export function agentPackageLifecycleSummaryReadback(input: {
-  selectedPackageId?: string | null;
-  packages: AgentPackageLock[];
-}): AgentPackageLifecycleUxReadback {
-  if (input.selectedPackageId && input.packages.length === 0) {
-    return agentPackageLifecycleUxReadback({ packageId: input.selectedPackageId });
-  }
-  if (input.packages.length === 0) {
-    return {
-      status: 'available',
-      conditions: [lifecycleCondition({
-        condition_id: 'package_not_installed',
-        package_id: null,
-        status: 'attention_needed',
-        reason: 'No agent packages are installed yet.',
-        action_ref: 'install_from_manifest_url',
-      })],
-      recommended_action: 'install_from_manifest_url',
-      lifecycle_action_refs: ['install'],
-    };
-  }
-  const packageReadbacks = input.packages.map((lock) =>
-    agentPackageLifecycleUxReadback({
-      packageId: lock.package_id,
-      lock,
-    })
-  );
-  const recommendedAction = packageReadbacks.find((entry) => entry.recommended_action)?.recommended_action ?? null;
-  return {
-    status: recommendedAction ? 'attention_needed' : 'available',
-    conditions: packageReadbacks.flatMap((entry) => entry.conditions),
     recommended_action: recommendedAction,
     lifecycle_action_refs: [...PACKAGE_LIFECYCLE_ACTION_REFS],
   };

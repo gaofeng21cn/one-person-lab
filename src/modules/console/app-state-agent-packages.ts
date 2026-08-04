@@ -128,7 +128,7 @@ function exposureProjection(status: RawAgentPackageStatus, physicallyPresent: bo
 }
 
 function repairAction(status: RawAgentPackageStatus, registered: boolean) {
-  const repairAvailable = status.lifecycle_action_refs?.includes('repair') === true;
+  const repairAvailable = status.allowed_when_blocked?.includes('repair') === true;
   const enabled = registered && repairAvailable && status.operational_ready !== true;
   return {
     action_id: 'agent_package_repair',
@@ -238,7 +238,6 @@ export function projectAppAgentPackageStatus(input: {
   const { status, profile } = input;
   const presence = projectedPresence(status);
   const capabilityExposure = exposureProjection(status, presence.present);
-  const lifecycleActionRefs = [...(status.lifecycle_action_refs ?? [])];
   const nativeCarrierReadiness =
     status.operational_ready_scope === 'configured_native_carrier_presence_callability_identity_and_precedence'
     || status.operational_ready_scope === 'installed_carrier_presence_callability_and_managed_policy';
@@ -266,14 +265,6 @@ export function projectAppAgentPackageStatus(input: {
     presence,
     capability_exposure: capabilityExposure,
     codex_visible: capabilityExposure.codex_visible,
-    conditions: status.conditions ?? [],
-    recommended_action: status.recommended_action ?? null,
-    lifecycle_action_refs: lifecycleActionRefs,
-    actions: {
-      available: lifecycleActionRefs,
-      recommended: status.recommended_action ?? null,
-      execute_surface: 'opl app action execute --action <action_id> --payload <json> --json',
-    },
     dependency_readiness: compactDependencyReadiness(
       presence.installed,
       status.package_dependency_readiness,
