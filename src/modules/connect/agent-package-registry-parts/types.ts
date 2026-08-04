@@ -41,38 +41,6 @@ export type AgentPackageLifecycleAction =
   | 'enable'
   | 'disable';
 
-export type AgentPackageLifecycleCondition = {
-  condition_id:
-    | 'package_lock_present'
-    | 'package_not_installed'
-    | 'physical_surface_materialized'
-    | 'physical_surface_not_requested'
-    | 'physical_surface_removed'
-    | 'profile_semantic_merge_required'
-    | 'profile_current'
-    | 'managed_policy_current'
-    | 'managed_policy_drift_detected'
-    | 'experience_baseline_current'
-    | 'experience_baseline_degraded'
-    | 'specialized_capabilities_observed'
-    | 'carrier_authority_current'
-    | 'carrier_authority_invalid'
-    | 'configured_native_carrier_present'
-    | 'configured_native_carrier_attention_needed'
-    | 'codex_reload_observed';
-  package_id: string | null;
-  status: 'ok' | 'attention_needed';
-  reason: string;
-  action_ref: string | null;
-};
-
-export type AgentPackageLifecycleUxReadback = {
-  status: 'available' | 'installed' | 'not_installed' | 'validated_no_write' | 'attention_needed';
-  conditions: AgentPackageLifecycleCondition[];
-  recommended_action: string | null;
-  lifecycle_action_refs: AgentPackageLifecycleAction[];
-};
-
 export type AgentPackageManifestValidateInput = {
   manifestUrl?: string | null;
   registryUrl?: string | null;

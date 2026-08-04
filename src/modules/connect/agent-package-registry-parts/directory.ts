@@ -27,7 +27,6 @@ import type {
 } from './installed-codex-plugin-directory.ts';
 import { normalizePackageManifest } from './manifest-normalizers.ts';
 import { packageRoleFromInstalledLock } from './package-role.ts';
-import { agentPackageLifecycleUxReadback } from './readback.ts';
 import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
 import {
   assertExplicitExternalRegistryClaim,
@@ -679,14 +678,13 @@ function availableActions(
 function recommendedActionId(input: {
   installed: boolean;
   statusAction: string | null;
-  lifecycleAction: string | null;
   availableActionIds: Set<string>;
 }) {
   if (!input.installed) {
     if (input.availableActionIds.has('install_from_manifest_url')) return 'install_from_manifest_url';
     return null;
   }
-  const candidate = input.statusAction ?? input.lifecycleAction;
+  const candidate = input.statusAction;
   const normalized = candidate === 'repair'
     ? 'agent_package_repair'
     : candidate === 'install_from_manifest_url'
@@ -805,7 +803,6 @@ export function buildAgentPackageDirectory(input: {
       && installedRole.role !== source.package_role,
     );
     const roleRepairRequired = installed && (!roleKnown || roleMismatch);
-    const lifecycle = agentPackageLifecycleUxReadback({ packageId: source.package_id, lock: legacyLock });
     let status: PackageStatusReadback = {};
     let statusReadError: { code: string; message: string } | null = null;
     if (carrierReadiness) {
@@ -936,11 +933,6 @@ export function buildAgentPackageDirectory(input: {
           && configuredCarrier.carrier.precedence === 'exact_single_source'
           ? null
           : status.recommended_action ?? null,
-      lifecycleAction: configuredCarrierInstalled
-        && configuredCarrier?.executor.status === 'callable'
-        && configuredCarrier.carrier.precedence === 'exact_single_source'
-        ? null
-        : lifecycle.recommended_action,
       availableActionIds: new Set(actions.map((action) => action.action_id)),
     });
     const readinessStatus = installed && !roleKnown
@@ -1078,9 +1070,6 @@ export function buildAgentPackageDirectory(input: {
       recommended_action_ref: actions.find((action) => action.action_id === recommendedAction) ?? null,
       available_actions: actions,
       legacy_private_lifecycle_state_present: Boolean(configuredCarrier && lock),
-      ...(input.detail === 'full' ? {
-        lifecycle_ux: lifecycle,
-      } : {}),
       authority_boundary: refsOnlyAuthorityBoundary(),
     };
   }).sort((left, right) => left.display_name.localeCompare(right.display_name, 'en'));

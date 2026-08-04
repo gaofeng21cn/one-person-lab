@@ -11,9 +11,6 @@ import {
   assertBundledFullRuntimePackageRoots,
   readBundledFullRuntimePackageCatalog,
 } from '../../../../src/modules/connect/agent-package-registry-parts/bundled-full-runtime-catalog.ts';
-import {
-  agentPackageLifecycleUxReadback,
-} from '../../../../src/modules/connect/agent-package-registry-parts/readback.ts';
 import { computePackageChannelTreeSha256 } from '../../../../src/modules/connect/system-installation/module-package-channel.ts';
 import {
   runCliWithStdin,
@@ -1310,18 +1307,6 @@ test('system configure-codex delegates Full runtime Package and carrier reconcil
     );
     const ledgerPath = path.join(fixture.env.OPL_STATE_DIR, 'agent-package-lifecycle-ledger.json');
     assert.equal(fs.existsSync(ledgerPath), false);
-    const lifecycle = agentPackageLifecycleUxReadback({
-      packageId: 'mas',
-      lock: currentMasLock,
-      receipt: null,
-    });
-    assert.equal(lifecycle.status, 'installed');
-    assert.equal(lifecycle.recommended_action, null);
-    const lifecycleCarrierObservation = lifecycle.conditions.find(
-      (condition) => condition.condition_id === 'carrier_authority_invalid',
-    );
-    assert.equal(lifecycleCarrierObservation?.status, 'ok');
-    assert.equal(lifecycleCarrierObservation?.action_ref, null);
 
     const statusReadback = runCli(['packages', 'status', '--package-id', 'mas'], fixture.env) as any;
     assert.equal(statusReadback.opl_agent_package_status.status, 'available');

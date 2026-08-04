@@ -4,7 +4,6 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { agentPackageLifecycleUxReadback } from '../../src/modules/connect/agent-package-registry-parts/readback.ts';
 import {
   dependencyReadiness,
   requiredDependents,
@@ -28,107 +27,8 @@ import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-h
 import type {
   AgentPackageLock,
   AgentPackageLockIndex,
-  AgentPackageManagedPolicyCurrentness,
   AgentPackageSourceKind,
 } from '../../src/modules/connect/agent-package-registry-parts/types.ts';
-
-function carrierLock() {
-  const ownerSourceCommit = 'a'.repeat(40);
-  const catalogSha256 = `sha256:${'b'.repeat(64)}`;
-  return {
-    package_id: 'fixture.mas',
-    source_kind: 'first_party_managed_cohort',
-    owner_source_commit: ownerSourceCommit,
-    release_channel_ref: 'opl://release-set/stable',
-    release_channel_digest: catalogSha256,
-    carrier_authority: {
-      surface_kind: 'opl_agent_package_carrier_authority.v1',
-      status: 'verified',
-      catalog_ref: 'opl://release-set/stable',
-      catalog_sha256: catalogSha256,
-      catalog_owner_source_commit: ownerSourceCommit,
-      manifest_carrier_source_commit: ownerSourceCommit,
-      payload_source_commit: ownerSourceCommit,
-      verified_source_commit: ownerSourceCommit,
-    },
-    capability_dependencies: [],
-  } as unknown as AgentPackageLock;
-}
-
-function policyCurrentness(status: 'drifted' | 'invalid'): AgentPackageManagedPolicyCurrentness {
-  return {
-    surface_kind: 'opl_package_managed_policy_currentness',
-    status,
-    policy_kind: 'opl_flow_workflow_policy',
-    policy_path: '/tmp/fixture-policy.json',
-    schema_path: '/tmp/fixture-policy.schema.json',
-    expected_policy_sha256: `sha256:${'c'.repeat(64)}`,
-    actual_policy_sha256: status === 'drifted' ? `sha256:${'d'.repeat(64)}` : null,
-    inventory_digest: null,
-    enabled_migration_ids: [],
-    detected_conflicts: [],
-    dependency_sync: null,
-    model_projection: null,
-    capability_strategy: null,
-    repair_command: 'opl packages repair --package-id fixture.opl-flow',
-    reason: status === 'drifted'
-      ? 'Managed policy currentness changed after activation.'
-      : 'Managed policy runtime path is unavailable.',
-  };
-}
-
-test('carrier authority and policy currentness remain independent of lifecycle receipts', () => {
-  const lock = carrierLock();
-  const receiptNeutral = agentPackageLifecycleUxReadback({
-    packageId: 'fixture.mas',
-    lock,
-    receipt: null,
-  });
-  const carrierCondition = receiptNeutral.conditions.find(
-    (condition) => condition.condition_id === 'carrier_authority_current',
-  );
-  assert.equal(receiptNeutral.status, 'installed');
-  assert.equal(receiptNeutral.recommended_action, null);
-  assert.equal(carrierCondition?.status, 'ok');
-  assert.equal(carrierCondition?.action_ref, null);
-  assert.match(carrierCondition?.reason ?? '', /carrier authority are current/);
-
-  const policyDrift = agentPackageLifecycleUxReadback({
-    packageId: 'fixture.opl-flow',
-    lock: {
-      package_id: 'fixture.opl-flow',
-      source_kind: 'registry_manifest',
-      capability_dependencies: [],
-    } as unknown as AgentPackageLock,
-    managedPolicyCurrentness: policyCurrentness('drifted'),
-  });
-  const policyCondition = policyDrift.conditions.find(
-    (condition) => condition.condition_id === 'managed_policy_drift_detected',
-  );
-  assert.equal(policyDrift.status, 'installed');
-  assert.equal(policyDrift.recommended_action, null);
-  assert.equal(policyCondition?.status, 'ok');
-  assert.equal(policyCondition?.action_ref, null);
-});
-
-test('invalid managed policy runtime remains a hard lifecycle condition', () => {
-  const invalidPolicy = agentPackageLifecycleUxReadback({
-    packageId: 'fixture.opl-flow',
-    lock: {
-      package_id: 'fixture.opl-flow',
-      source_kind: 'registry_manifest',
-      capability_dependencies: [],
-    } as unknown as AgentPackageLock,
-    managedPolicyCurrentness: policyCurrentness('invalid'),
-  });
-  const condition = invalidPolicy.conditions.find(
-    (entry) => entry.condition_id === 'managed_policy_drift_detected',
-  );
-  assert.equal(invalidPolicy.status, 'attention_needed');
-  assert.equal(invalidPolicy.recommended_action, 'repair');
-  assert.equal(condition?.status, 'attention_needed');
-  assert.equal(condition?.action_ref, 'repair');
-});
 
 test('scope readiness observes digest and provider lock drift but still requires core Skills', () => {
   const targetRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-scope-readback-'));
