@@ -6,6 +6,10 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { parseJsonText } from '../../../../src/kernel/json-file.ts';
+import {
+  resolveStandardAgent,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../../src/kernel/standard-agent-registry.ts';
 import { canonicalAgentPackageId } from '../../../../src/modules/connect/agent-package-identity.ts';
 import {
   createFamilyRuntimeQueueTables,
@@ -14,6 +18,200 @@ import {
 
 import { repoRoot } from './constants.ts';
 import { createContractsFixtureRoot, readJsonFixture, shellSingleQuote } from './fixtures.ts';
+
+function writeJsonFixture(root: string, relativePath: string, value: unknown) {
+  const targetPath = path.join(root, relativePath);
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.writeFileSync(targetPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+function materializeStandardAgentRuntimeFixture(pluginRoot: string, packageId: string) {
+  const agent = resolveStandardAgent(packageId);
+  if (!agent || agent.series_membership !== STANDARD_AGENT_SERIES_MEMBERSHIP) return;
+
+  const actionId = 'fixture-action';
+  const stageIds = [
+    'fixture-stage',
+    'scout',
+    'artifact_creation',
+    'closeout',
+    'domain_owner/default-executor-dispatch',
+    'reference_build',
+    'request-intake',
+    'context-research',
+    'delivery-planning',
+    'baseline-assessment',
+    'feedback-intake',
+    'optimization',
+    'old_unregistered_stage',
+  ];
+  const stageRefs = [
+    'agent/stages/manifest.json',
+    'agent/stages/fixture-stage.md',
+    'agent/prompts/fixture-stage.md',
+    'agent/knowledge/fixture.md',
+    'agent/quality_gates/fixture.md',
+  ];
+  for (const relativePath of stageRefs.slice(1)) {
+    const targetPath = path.join(pluginRoot, relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, `# ${agent.display_name} fixture ${relativePath}\n`, 'utf8');
+  }
+
+  writeJsonFixture(pluginRoot, 'contracts/domain_descriptor.json', {
+    surface_kind: 'domain_agent_descriptor',
+    schema_version: 1,
+    agent_id: agent.agent_id,
+    package_id: agent.agent_id,
+    domain_id: agent.domain_id,
+    domain_label: agent.display_name,
+    standard_agent_interface: {
+      version: 'opl_standard_agent_interface.v1',
+      workspace_binding: {
+        locator_surface_kind: `${agent.agent_id}_workspace_locator`,
+        default_profile_id: 'one_off',
+        workspace_kind: `${agent.agent_id}_workspace`,
+        project_kind: `${agent.agent_id}_project`,
+        project_collection_label: 'projects',
+        default_workspace_id: `${agent.agent_id}-workspace`,
+        default_project_id: `${agent.agent_id}-project`,
+        required_locator_fields: ['workspace_root'],
+        optional_locator_fields: [],
+      },
+      runtime: {
+        runtime_domain_id: agent.domain_id,
+        registration_ref: null,
+      },
+      progress: {
+        deliverable_delta_aliases: ['deliverable_progress_delta'],
+        platform_delta_aliases: ['platform_repair_delta'],
+      },
+      routing: {
+        explicit_aliases: [agent.agent_id, agent.project],
+        workstream_ids: [`${agent.agent_id}_fixture`],
+        intent_signals: [`${agent.agent_id} fixture`],
+        ambiguity_policy: 'require_explicit_workstream',
+      },
+    },
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+  });
+  writeJsonFixture(pluginRoot, 'contracts/action_catalog.json', {
+    surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v2',
+    catalog_id: `${agent.domain_id}.runtime-fixture.actions`,
+    target_domain_id: agent.domain_id,
+    owner: agent.domain_id,
+    authority_boundary: {
+      domain_truth_owner: agent.domain_id,
+      opl_role: 'projection_consumer_only',
+      write_policy: 'no_domain_truth_writes',
+    },
+    actions: [{
+      action_id: actionId,
+      title: 'Fixture action',
+      summary: 'Exercise the installed Standard Agent fixture ABI.',
+      owner: agent.domain_id,
+      effect: 'mutating',
+      execution_binding: {
+        kind: 'stage_binding',
+        stage_manifest_ref: 'agent/stages/manifest.json',
+      },
+      input_schema_ref: 'contracts/input.schema.json',
+      output_schema_ref: 'contracts/output.schema.json',
+      required_fields: ['workspace_root'],
+      optional_fields: [],
+      workspace_locator_fields: ['workspace_root'],
+      human_gate_ids: [],
+      stage_route: {
+        entry_stage_ref: stageIds[0],
+        required_stage_refs: stageIds,
+        optional_stage_refs: [],
+        terminal_stage_refs: [stageIds[stageIds.length - 1]],
+        route_policy: 'ai_selected_progress_route',
+      },
+      supported_surfaces: {
+        cli: { surface_kind: 'domain_cli' },
+        mcp: { tool_name: `${agent.agent_id}_fixture_action`, surface_kind: 'domain_mcp' },
+        skill: { command_contract_id: `${agent.agent_id}.fixture-action`, surface_kind: 'domain_skill' },
+        product_entry: { action_key: actionId, surface_kind: 'domain_product_entry' },
+        openai: { tool_name: `${agent.agent_id}_fixture_action` },
+        ai_sdk: { tool_name: `${agent.agent_id}_fixture_action` },
+      },
+      authority_boundary: {},
+    }],
+    notes: [],
+  });
+  writeJsonFixture(pluginRoot, 'contracts/domain_handler_registry.json', {
+    surface_kind: 'domain_handler_registry',
+    version: 'domain-handler-registry.v1',
+    handlers: [],
+  });
+  writeJsonFixture(pluginRoot, 'contracts/input.schema.json', {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    properties: { workspace_root: { type: 'string' } },
+    required: ['workspace_root'],
+  });
+  writeJsonFixture(pluginRoot, 'contracts/output.schema.json', {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+  });
+  writeJsonFixture(pluginRoot, 'contracts/owner_receipt_contract.json', {
+    surface_kind: 'owner_receipt_contract',
+  });
+  writeJsonFixture(pluginRoot, 'contracts/pack_compiler_input.json', {
+    surface_kind: 'opl_domain_pack_compiler_input',
+    domain_id: agent.domain_id,
+    canonical_agent_id: agent.agent_id,
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+      domain_can_claim_generated_surface_owner: false,
+    },
+    required_domain_pack_paths: stageRefs,
+  });
+  writeJsonFixture(pluginRoot, 'agent/stages/manifest.json', {
+    surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+    version: 'opl-standard-agent-declarative-stage-manifest.v1',
+    target_domain_id: agent.domain_id,
+    owner: agent.domain_id,
+    authority_boundary: {
+      domain_truth_owner: agent.domain_id,
+      opl_can_write_domain_truth: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+    stages: stageIds.map((stageId) => ({
+      stage_id: stageId,
+      stage_kind: 'intake',
+      title: stageId,
+      display_names: { 'en-US': stageId },
+      summary: 'Exercise the installed Standard Agent fixture ABI.',
+      goal: 'Keep the runtime fixture structurally valid.',
+      policy_ref: 'agent/stages/fixture-stage.md',
+      prompt_ref: 'agent/prompts/fixture-stage.md',
+      knowledge_refs: ['agent/knowledge/fixture.md'],
+      quality_gate_refs: ['agent/quality_gates/fixture.md'],
+      allowed_action_refs: [actionId],
+      requires: ['fixture_request'],
+      ensures: ['fixture_observation'],
+      next_stage_refs: [],
+      trust_lane: 'domain_agent',
+    })),
+  });
+  const primarySkillPath = path.join(pluginRoot, 'agent', 'primary_skill', 'SKILL.md');
+  fs.mkdirSync(path.dirname(primarySkillPath), { recursive: true });
+  fs.writeFileSync(primarySkillPath, `# ${agent.display_name}\n\nRuntime fixture.\n`, 'utf8');
+  const authorityInventoryPath = path.join(pluginRoot, 'runtime', 'authority_functions', 'README.md');
+  fs.mkdirSync(path.dirname(authorityInventoryPath), { recursive: true });
+  fs.writeFileSync(authorityInventoryPath, `# ${agent.display_name} fixture authority functions\n`, 'utf8');
+}
 
 export function installRuntimePackageFixture(stateRoot: string, packageId: string) {
   const canonicalPackageId = canonicalAgentPackageId(packageId);
@@ -75,6 +273,7 @@ export function installRuntimePackageFixture(stateRoot: string, packageId: strin
     'utf8',
   );
   fs.writeFileSync(path.join(pluginRoot, 'opl-package.json'), packageManifestBytes, 'utf8');
+  materializeStandardAgentRuntimeFixture(pluginRoot, canonicalPackageId);
 
   fs.mkdirSync(codexHome, { recursive: true });
   const configPath = path.join(codexHome, 'config.toml');
