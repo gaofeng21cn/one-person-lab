@@ -824,6 +824,50 @@ test('managed-root contract checkout requires matching current package source', 
   }
 });
 
+test('native carrier contract checkout uses the carrier source without runtime source readiness', () => {
+  const carrierRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-native-contract-carrier-'));
+  const statusReader = (() => ({
+    opl_agent_package_status: {
+      installed_package_count: 1,
+      installed_carrier_readback: {
+        kind: 'codex_plugin_manager',
+        identity: 'mas',
+        source_ref: carrierRepo,
+        version: '0.2.24',
+        enabled: true,
+        lifecycle_authority: 'carrier_owned',
+      },
+      installed_readiness: {
+        installed: true,
+        physical_status: 'available',
+        callability: 'callable',
+      },
+      runtime_source_readiness: null,
+      package_dependency_readiness: {
+        status: 'current',
+        operational_ready: true,
+      },
+    },
+  })) as PackageStatusReaderFixture;
+
+  try {
+    const resolution = resolveStandardAgentContractCheckout(
+      'mas',
+      statusReader,
+      () => null,
+      { result: 'typed_resolution' },
+    );
+
+    assert.equal(resolution.status, 'resolved');
+    assert.equal(resolution.launch_allowed, true);
+    assert.equal(resolution.source_status, 'current');
+    assert.equal(resolution.checkout?.source_kind, 'opl_managed_package_checkout');
+    assert.equal(fs.realpathSync.native(resolution.checkout?.checkout_path ?? ''), fs.realpathSync.native(carrierRepo));
+  } finally {
+    fs.rmSync(carrierRepo, { recursive: true, force: true });
+  }
+});
+
 test('typed contract checkout resolution preserves managed runtime source reason', () => {
   const statusReader = (() => ({
     opl_agent_package_status: {

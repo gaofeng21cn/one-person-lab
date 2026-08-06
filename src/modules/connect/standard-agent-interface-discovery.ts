@@ -155,6 +155,29 @@ function currentCheckoutResolutionFromStatus(
 function currentCheckoutResolutionFromPackageStatus(
   status: ReturnType<PackageStatusReader>['opl_agent_package_status'],
 ): CheckoutPathResolution {
+  const nativeCarrier = installedCarrierSourceFromStatus(status);
+  if (nativeCarrier.selected) {
+    if (nativeCarrier.checkout_path) {
+      return {
+        checkout_path: nativeCarrier.checkout_path,
+        source_status: 'current',
+        reason: null,
+      };
+    }
+    const configuredReason = typeof status.configured_carrier?.reason === 'string'
+      && status.configured_carrier.reason.trim()
+      ? status.configured_carrier.reason
+      : null;
+    const readinessReason = status.installed_readiness?.physical_status !== 'available'
+      ? 'installed_native_carrier_unavailable'
+      : status.installed_readiness?.callability !== 'callable'
+        ? 'installed_native_carrier_not_callable'
+        : 'installed_native_carrier_source_missing';
+    return blockedCheckoutPath(
+      configuredReason ?? readinessReason,
+      status.configured_carrier?.status ?? status.installed_readiness?.physical_status ?? null,
+    );
+  }
   const dependencies = status.package_dependency_readiness;
   const source = status.runtime_source_readiness;
   if (status.installed_package_count < 1) {
