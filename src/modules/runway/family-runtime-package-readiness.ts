@@ -41,6 +41,48 @@ function packageScope(locator: Record<string, unknown>): PackageScope | null {
   return workspaceRoot ? { scope: 'workspace', targetWorkspace: workspaceRoot } : null;
 }
 
+/**
+ * Resolve the source root for a launchable package without consulting retired
+ * lifecycle state. A selected native carrier is authoritative; compatibility
+ * runtime source is considered only when no native carrier is present.
+ */
+export function packageRuntimeSourceCheckoutPath(packageReadiness: any): string | null {
+  const installedCarrier = isRecord(packageReadiness?.installed_carrier_readback)
+    ? packageReadiness.installed_carrier_readback
+    : null;
+  const configuredCarrier = isRecord(packageReadiness?.configured_carrier)
+    ? packageReadiness.configured_carrier
+    : null;
+  const nativeCarrierSelected = installedCarrier !== null || configuredCarrier !== null;
+  if (nativeCarrierSelected) {
+    const installedReady = packageReadiness?.installed_readiness;
+    if (
+      installedCarrier?.lifecycle_authority === 'carrier_owned'
+      && installedReady?.installed === true
+      && installedReady?.physical_status === 'available'
+      && installedReady?.callability === 'callable'
+    ) {
+      const sourceRef = optionalString(installedCarrier.source_ref);
+      if (sourceRef) return sourceRef;
+    }
+    if (
+      configuredCarrier?.status === 'installed'
+      && configuredCarrier?.executor?.status === 'callable'
+    ) {
+      const sourcePath = optionalString(configuredCarrier.plugin_source_path);
+      if (sourcePath) return sourcePath;
+    }
+    return null;
+  }
+  const runtimeSource = isRecord(packageReadiness?.runtime_source_readiness)
+    ? packageReadiness.runtime_source_readiness
+    : null;
+  return runtimeSource?.status === 'current'
+    && runtimeSource?.operational_ready === true
+    ? optionalString(runtimeSource.checkout_path)
+    : null;
+}
+
 export function packageLaunchHardStopReason(packageStatus: any) {
   if ((packageStatus?.installed_package_count ?? 0) === 0) {
     return 'package_not_installed';

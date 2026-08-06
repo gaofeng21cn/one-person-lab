@@ -174,7 +174,11 @@ test('controller route materialization starts targets, replays idempotently, and
       packageReadinessCalls += 1;
       return {
         launch_allowed: true,
-        runtime_source_readiness: { checkout_path: routeCurrentPackRoot },
+        runtime_source_readiness: {
+          status: 'current',
+          operational_ready: true,
+          checkout_path: routeCurrentPackRoot,
+        },
         package_use_binding: packageUseBinding({
           packageVersion: packageReadinessCalls === 1 ? '0.2.1' : '0.2.2',
         }),
@@ -355,6 +359,7 @@ test('registered StageRun replay does not refresh package readiness or resolve a
         readinessCalls += 1;
         return {
           runtime_source_readiness: {
+            status: 'current',
             checkout_path: domainPackRoot,
             operational_ready: true,
           },

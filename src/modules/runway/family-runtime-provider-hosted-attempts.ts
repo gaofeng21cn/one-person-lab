@@ -38,7 +38,10 @@ import {
   declaredProviderHostedTaskStageId,
   legacyPersistedProviderHostedTaskStageId,
 } from './family-runtime-provider-hosted-attempts-parts/task-stage-binding.ts';
-import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
+import {
+  ensureFamilyRuntimePackageLaunchReady,
+  packageRuntimeSourceCheckoutPath,
+} from './family-runtime-package-readiness.ts';
 import { preflightFamilyRuntimeDomainLifecycleAdmission } from './family-runtime-domain-lifecycle-admission.ts';
 export {
   DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
@@ -762,9 +765,7 @@ export async function ensureProviderHostedStageAttempt(
       packageUseAttemptOrdinal,
     ]),
   });
-  const domainPackRoot = typeof packageReadiness?.runtime_source_readiness?.checkout_path === 'string'
-    ? packageReadiness.runtime_source_readiness.checkout_path.trim()
-    : '';
+  const domainPackRoot = packageRuntimeSourceCheckoutPath(packageReadiness) ?? '';
   const useBoundWorkspaceLocator = packageReadiness?.package_use_binding
     ? {
         ...workspaceLocator,

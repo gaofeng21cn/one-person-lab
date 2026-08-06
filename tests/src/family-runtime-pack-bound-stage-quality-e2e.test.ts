@@ -338,6 +338,7 @@ Close findings using the latest package.
         launch_allowed: true,
         package_use_binding: activeUseBinding,
         runtime_source_readiness: {
+          status: 'current',
           operational_ready: true,
           checkout_path: activePackRoot,
         },
@@ -347,6 +348,7 @@ Close findings using the latest package.
   const stageRunRuntime = {
     ensurePackageLaunchReady: async () => ({
       runtime_source_readiness: {
+        status: 'current',
         operational_ready: true,
         checkout_path: activePackRoot,
       },
@@ -726,7 +728,11 @@ test('fixed review lane is projected into StageRun identity and derived on repla
   try {
     const runtime = {
       ensurePackageLaunchReady: async () => ({
-        runtime_source_readiness: { operational_ready: true, checkout_path: packRoot },
+        runtime_source_readiness: {
+          status: 'current',
+          operational_ready: true,
+          checkout_path: packRoot,
+        },
         package_use_binding: useBinding,
       }) as never,
     };

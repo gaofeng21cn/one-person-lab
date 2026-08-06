@@ -423,6 +423,7 @@ test('every child Attempt preserves parent evidence and binds the latest executi
   const materializationOptions = {
     ensurePackageLaunchReady: async () => ({
       runtime_source_readiness: {
+        status: 'current',
         checkout_path: executionPackRoot,
         operational_ready: true,
       },
@@ -579,6 +580,7 @@ test('Temporal materialization retry reuses the first child Attempt and package-
       readinessCalls += 1;
       return {
         runtime_source_readiness: {
+          status: 'current',
           checkout_path: snapshot.checkoutRoot,
           operational_ready: true,
         },

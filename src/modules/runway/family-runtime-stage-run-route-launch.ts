@@ -7,7 +7,10 @@ import {
   stageAttemptExecutorPolicyWithReviewLane,
 } from '../pack/index.ts';
 import { buildPackBoundTemporalStageRunInput } from './family-runtime-pack-bound-stage-run.ts';
-import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
+import {
+  ensureFamilyRuntimePackageLaunchReady,
+  packageRuntimeSourceCheckoutPath,
+} from './family-runtime-package-readiness.ts';
 import {
   buildRouteStageRunInvocation,
   buildStageRouteDecisionIdentity,
@@ -383,10 +386,8 @@ export async function materializeStageRunRoute(
     workspaceLocator: parentStageRun.workspace_locator,
     useBoundaryId: stableId('package-use', [invocation.stage_run_invocation_id]),
   });
-  const domainPackRoot = typeof packageReadiness?.runtime_source_readiness?.checkout_path === 'string'
-    && packageReadiness.runtime_source_readiness.checkout_path.trim()
-    ? packageReadiness.runtime_source_readiness.checkout_path.trim()
-    : parentStageRun.domain_pack_root;
+  const domainPackRoot = packageRuntimeSourceCheckoutPath(packageReadiness)
+    ?? parentStageRun.domain_pack_root;
   const targetPlan = resolveRouteTargetLaunchPlan({
     domainId: parentStageRun.domain_id,
     domainPackRoot,

@@ -16,7 +16,10 @@ import {
   writeMasConsumer,
 } from './packages-cases/capability-fixtures.ts';
 import { createFakeCodexPluginManagerFixture } from '../helpers-parts/fixtures.ts';
-import { packageLaunchHardStopReason } from '../../../../src/modules/runway/family-runtime-package-readiness.ts';
+import {
+  packageLaunchHardStopReason,
+  packageRuntimeSourceCheckoutPath,
+} from '../../../../src/modules/runway/family-runtime-package-readiness.ts';
 
 function createArgs(workspace: string) {
   return [
@@ -69,6 +72,66 @@ test('package launch ignores retired materialization readiness while enforcing n
       reason: 'managed_runtime_source_missing',
     },
   }), 'managed_runtime_source_missing');
+});
+
+test('native carrier source is authoritative over compatibility runtime source', () => {
+  assert.equal(packageRuntimeSourceCheckoutPath({
+    installed_carrier_readback: {
+      lifecycle_authority: 'carrier_owned',
+      source_ref: '/tmp/native-carrier',
+    },
+    installed_readiness: {
+      installed: true,
+      physical_status: 'available',
+      callability: 'callable',
+    },
+    configured_carrier: {
+      status: 'installed',
+      executor: { status: 'callable' },
+      plugin_source_path: '/tmp/native-carrier',
+    },
+    runtime_source_readiness: {
+      status: 'current',
+      operational_ready: true,
+      checkout_path: '/tmp/legacy-source',
+    },
+  }), '/tmp/native-carrier');
+});
+
+test('native carrier with missing source fails closed instead of falling back', () => {
+  assert.equal(packageRuntimeSourceCheckoutPath({
+    installed_carrier_readback: {
+      lifecycle_authority: 'carrier_owned',
+      source_ref: null,
+    },
+    installed_readiness: {
+      installed: true,
+      physical_status: 'available',
+      callability: 'callable',
+    },
+    runtime_source_readiness: {
+      status: 'current',
+      operational_ready: true,
+      checkout_path: '/tmp/legacy-source',
+    },
+  }), null);
+});
+
+test('compatibility runtime source is used only without a native carrier', () => {
+  assert.equal(packageRuntimeSourceCheckoutPath({
+    runtime_source_readiness: {
+      status: 'current',
+      operational_ready: true,
+      checkout_path: '/tmp/managed-source',
+    },
+  }), '/tmp/managed-source');
+  assert.equal(packageRuntimeSourceCheckoutPath({
+    runtime_source_readiness: {
+      status: 'incompatible',
+      operational_ready: false,
+      checkout_path: '/tmp/stale-source',
+    },
+  }), null);
 });
 
 test('family-runtime attempt create fails closed when the canonical domain package is not installed', () => {

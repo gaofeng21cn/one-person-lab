@@ -68,7 +68,10 @@ import {
   persistStageAttemptLaunchBinding,
   recordTemporalStartOnAttempt,
 } from './family-runtime-parts/stage-attempt-launch.ts';
-import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
+import {
+  ensureFamilyRuntimePackageLaunchReady,
+  packageRuntimeSourceCheckoutPath,
+} from './family-runtime-package-readiness.ts';
 import { resolveStandardAgentStageQualityRuntimeBinding } from '../pack/index.ts';
 import {
   resolveStandardAgentStageReviewLane,
@@ -772,9 +775,7 @@ export async function runFamilyRuntime(
             ...(parsed.input.start ? { useBoundaryId } : {}),
             ...(pinnedUseBinding ? { pinnedUseBinding } : {}),
           });
-      const managedDomainPackRoot = typeof packageReadiness?.runtime_source_readiness?.checkout_path === 'string'
-        ? packageReadiness.runtime_source_readiness.checkout_path.trim()
-        : '';
+      const managedDomainPackRoot = packageRuntimeSourceCheckoutPath(packageReadiness) ?? '';
       const domainPackRoot = persistedDomainPackRoot
         || (pinnedUseBinding
           ? explicitDomainPackRoot || managedDomainPackRoot
@@ -1101,9 +1102,7 @@ export async function runFamilyRuntime(
               attempt.stage_attempt_id,
             ]),
           });
-      const refreshedDomainPackRoot = typeof packageReadiness?.runtime_source_readiness?.checkout_path === 'string'
-        ? packageReadiness.runtime_source_readiness.checkout_path.trim()
-        : '';
+      const refreshedDomainPackRoot = packageRuntimeSourceCheckoutPath(packageReadiness) ?? '';
       const refreshedWorkspaceLocator = packageReadiness?.package_use_binding
         ? {
             ...attempt.workspace_locator,

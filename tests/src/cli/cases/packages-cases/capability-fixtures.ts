@@ -544,6 +544,11 @@ export function writeMasConsumer(
     path.join(pluginRoot, 'skills', pluginId, 'SKILL.md'),
     `# ${pluginId}\n`,
   );
+  if (configuredCarrier && pluginId === 'med-autoscience') {
+    // A configured native carrier is also the Standard Agent runtime root;
+    // keep its descriptor, stage manifest, and contract surfaces self-contained.
+    writeDeveloperMasRuntimeProbeFixtures(pluginRoot, packageVersion);
+  }
   if (configuredCarrier) {
     fs.mkdirSync(path.join(root, '.agents', 'plugins'), { recursive: true });
     fs.writeFileSync(path.join(root, '.agents', 'plugins', 'marketplace.json'), formatJsonPayload({
@@ -653,6 +658,7 @@ export function commitDeveloperCheckout(checkoutPath: string, message: string) {
 }
 
 function writeDeveloperMasRuntimeProbeFixtures(checkoutPath: string, version: string) {
+  fs.mkdirSync(path.join(checkoutPath, 'contracts'), { recursive: true });
   const writeJson = (relativePath: string, value: unknown) => {
     const targetPath = path.join(checkoutPath, relativePath);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });

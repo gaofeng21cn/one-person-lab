@@ -102,7 +102,10 @@ import {
   stageAttemptExecutionContentBindingSha256,
   stageRunSpecSha256,
 } from './family-runtime-stage-run-identity.ts';
-import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
+import {
+  ensureFamilyRuntimePackageLaunchReady,
+  packageRuntimeSourceCheckoutPath,
+} from './family-runtime-package-readiness.ts';
 
 function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {
   if (isRecord(receipt.closeout_packet)) {
@@ -1351,7 +1354,7 @@ export async function stageQualityAttemptMaterializeActivity(
       workspaceLocator: stageRun.workspace_locator,
       useBoundaryId: requestedUseBoundaryId,
     });
-    const executionDomainPackRoot = readString(packageReadiness?.runtime_source_readiness?.checkout_path)
+    const executionDomainPackRoot = packageRuntimeSourceCheckoutPath(packageReadiness)
       ?? readString(stageRun.workspace_locator.domain_pack_root)
       ?? stageRun.domain_pack_root;
     const executionWorkspaceLocator: Record<string, unknown> = {
