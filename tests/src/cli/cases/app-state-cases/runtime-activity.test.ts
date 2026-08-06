@@ -261,10 +261,9 @@ test('runtime membership follows one installed standard-Agent directory cohort',
       generatedAt: '2026-07-25T00:00:00.000Z',
       listBindings: () => [],
       createPackageStatusReader: () => statusReader,
-      listPackages: ((input: { detail?: string; readStatus?: unknown }) => {
+      listPackages: ((input: { detail?: string }) => {
         directoryReads += 1;
         assert.equal(input.detail, 'fast');
-        assert.equal(input.readStatus, statusReader);
         return {
           opl_agent_packages: {
             directory: {
