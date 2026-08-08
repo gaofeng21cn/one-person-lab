@@ -8,11 +8,112 @@ import { FrameworkContractError } from '../../../src/kernel/contract-validation.
 import { materializeAgentScaffold } from '../../../src/modules/pack/agent-scaffold-materialization.ts';
 import { buildAgentProfileConformance } from '../../../src/modules/pack/agent-profile-spine.ts';
 import {
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+} from '../../../src/modules/pack/standard-agent-implementation-profile.ts';
+import {
+  STANDARD_AGENT_PACK_ABI,
+  STANDARD_AGENT_PACK_ABI_DECLARATION,
+} from '../../../src/modules/pack/standard-agent-pack-abi.ts';
+import { buildStandardDomainAgentScaffold } from '../../../src/modules/pack/standard-domain-agent-scaffold.ts';
+import {
   makeConformantAgentFixture,
   makeSourceDerivedAgentFixture,
   updateSourceDerivedTypedObjectProjections,
   writeJson,
 } from './fixtures.ts';
+
+function readJson(filePath: string) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<string, any>;
+}
+
+function buildMaterializationRequest(
+  root: string,
+  standardAgentPackAbi: Record<string, unknown>,
+) {
+  const domainId = 'materialized-agent';
+  const seedDir = path.join(root, 'seed');
+  buildStandardDomainAgentScaffold({
+    targetDir: seedDir,
+    domainId,
+    domainLabel: 'Materialized Agent',
+  });
+  const packCompilerInput = readJson(path.join(seedDir, 'contracts', 'pack_compiler_input.json'));
+  packCompilerInput.implementation_profile = structuredClone(STANDARD_AGENT_IMPLEMENTATION_PROFILE);
+  packCompilerInput.standard_agent_pack_abi = structuredClone(standardAgentPackAbi);
+  return {
+    surface_kind: 'opl_agent_scaffold_materialization_request',
+    version: 'opl-agent-scaffold-materialization-request.v2',
+    canonical_schema_ref: 'contracts/opl-framework/agent-scaffold-materialization-request.schema.json',
+    producer_agent_id: 'opl-meta-agent',
+    execution_owner: 'one-person-lab/OPL Foundry Kernel',
+    target_identity: {
+      domain_id: domainId,
+      domain_label: 'Materialized Agent',
+      target_agent_ref: `domain-agent:${domainId}`,
+    },
+    overwrite_policy: {
+      mode: 'replace_declared_files_only',
+      allow_existing_target_dir: true,
+      reject_absolute_paths: true,
+      reject_parent_traversal: true,
+      reject_symlink_escape: true,
+      allowed_merge_object_paths: [
+        'contracts/domain_descriptor.json',
+        'contracts/capability_map.json',
+      ],
+    },
+    files: [{
+      path: 'contracts/pack_compiler_input.json',
+      body: `${JSON.stringify(packCompilerInput, null, 2)}\n`,
+      role: 'producer_pack_compiler_input',
+    }],
+    json_projections: [
+      { path: 'contracts/domain_descriptor.json', value: {}, merge_policy: 'merge_object' },
+      { path: 'contracts/capability_map.json', value: {}, merge_policy: 'merge_object' },
+    ],
+    stage_manifest: {
+      path: 'agent/stages/manifest.json',
+      value: readJson(path.join(seedDir, 'agent', 'stages', 'manifest.json')),
+      write_policy: 'replace_declared_files_only',
+    },
+    contracts: [{
+      path: 'contracts/materialized-producer-contract.json',
+      value: { surface_kind: 'materialized_producer_contract' },
+      write_policy: 'replace_declared_files_only',
+    }],
+    pack_compiler_input: {
+      required_domain_pack_path_additions: [],
+    },
+    build_receipt_candidate: {
+      surface_kind: 'opl_foundry_agent_build_receipt_candidate',
+      receipt_ref: 'receipt:materialized-agent/build',
+      producer_agent_id: 'opl-meta-agent',
+    },
+    build_receipt_installation: {
+      expected_build_receipt_ref: 'receipt:materialized-agent/build',
+      receipt_path: 'contracts/agent_build_receipt.json',
+      projection_paths: [
+        'contracts/domain_descriptor.json',
+        'contracts/capability_map.json',
+      ],
+    },
+    validation_requests: [
+      'standard_domain_agent_scaffold',
+      'domain_pack_compiler',
+      'agent_profile_conformance',
+    ],
+    authority_boundary: {
+      producer_authors_agent_building_semantics: true,
+      producer_writes_target_agent_files: false,
+      opl_owns_physical_scaffold_materialization: true,
+      opl_owns_materialized_file_digests: true,
+      opl_owns_final_build_receipt: true,
+      build_receipt_candidate_is_final_receipt: false,
+      opl_can_write_target_domain_truth: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+  };
+}
 
 test('profile conformance checks selected profile refs, stage knowledge refs, and evidence objects', () => {
   const { repoDir, profile } = makeConformantAgentFixture();
@@ -51,6 +152,46 @@ test('scaffold materialization rejects the retired producer-specific v1 request'
       assert.equal(error.message, 'Scaffold materialization request version is unsupported.');
       assert.deepEqual(error.details?.supported_versions, [
         'opl-agent-scaffold-materialization-request.v2',
+      ]);
+      return true;
+    },
+  );
+});
+
+test('scaffold materialization reads an exact legacy ABI but writes only its canonical authority ref', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-materialization-legacy-abi-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const requestPath = path.join(root, 'request.json');
+  const targetDir = path.join(root, 'target');
+  writeJson(requestPath, buildMaterializationRequest(root, STANDARD_AGENT_PACK_ABI));
+
+  materializeAgentScaffold({ requestPath, targetDir });
+
+  const materializedPack = readJson(path.join(targetDir, 'contracts', 'pack_compiler_input.json'));
+  assert.deepEqual(materializedPack.standard_agent_pack_abi, STANDARD_AGENT_PACK_ABI_DECLARATION);
+  assert.equal(Object.hasOwn(materializedPack.standard_agent_pack_abi, 'surface_kind'), false);
+  assert.equal(Object.hasOwn(materializedPack.implementation_profile, 'profile_id'), false);
+});
+
+test('scaffold materialization rejects a non-canonical legacy ABI body', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-materialization-invalid-abi-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const requestPath = path.join(root, 'request.json');
+  writeJson(requestPath, buildMaterializationRequest(root, {
+    ...structuredClone(STANDARD_AGENT_PACK_ABI),
+    owner: 'domain-agent',
+  }));
+
+  assert.throws(
+    () => materializeAgentScaffold({
+      requestPath,
+      targetDir: path.join(root, 'target'),
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof FrameworkContractError);
+      assert.equal(error.message, 'pack_compiler_input.standard_agent_pack_abi is invalid.');
+      assert.deepEqual(error.details?.blockers, [
+        'standard_agent_pack_abi_legacy_inline_must_equal_framework_canonical',
       ]);
       return true;
     },

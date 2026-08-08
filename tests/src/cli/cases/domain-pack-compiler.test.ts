@@ -230,6 +230,50 @@ test('domain pack compiler family-defaults consumes standard repo contracts with
   }
 });
 
+test('repo-local pack compiler blocks missing implementation profile and Standard Agent Pack ABI declarations', () => {
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-missing-declarations-'));
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  const packCompilerInputPath = path.join(
+    workspaceRoot,
+    'med-autoscience',
+    'contracts',
+    'pack_compiler_input.json',
+  );
+  const packCompilerInput = JSON.parse(fs.readFileSync(packCompilerInputPath, 'utf8'));
+  delete packCompilerInput.implementation_profile;
+  delete packCompilerInput.standard_agent_pack_abi;
+  fs.writeFileSync(packCompilerInputPath, `${JSON.stringify(packCompilerInput, null, 2)}\n`, 'utf8');
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_STATE_DIR: stateRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+  };
+
+  try {
+    const mas = runCli(
+      ['agents', 'pack-compiler', 'inspect', '--family-defaults', '--domain', 'mas'],
+      env,
+    ).domain_pack_compiler;
+    assert.equal(mas.compiler_status, 'blocked');
+    assert.ok(mas.blocker_reasons.includes(
+      'implementation_profile:implementation_profile_missing',
+    ));
+    assert.ok(mas.blocker_reasons.includes(
+      'standard_agent_pack_abi:standard_agent_pack_abi_missing',
+    ));
+    assert.equal(
+      mas.pack_compiler_input_projection.implementation_profile_resolution.status,
+      'blocked',
+    );
+    assert.equal(mas.pack_compiler_input_projection.standard_agent_pack_abi.status, 'blocked');
+    assert.equal(mas.generated_interface_bundle.status, 'blocked');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('standard Agent pack compiler uses its owner checkout without changing descriptor manifest timeout', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-timeout-state-'));

@@ -16,6 +16,10 @@ import {
   resolveStandardAgentImplementationProfile,
   validateStandardAgentImplementationProfileDeclaration,
 } from '../pack/public/standard-agent-implementation-profile.ts';
+import {
+  STANDARD_AGENT_PACK_ABI_DECLARATION,
+  resolveStandardAgentPackAbi,
+} from './standard-agent-pack-abi.ts';
 import { STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID } from './standard-agent-execution-profile.ts';
 import { SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS } from './source-derived-agent-design-abi.ts';
 
@@ -527,6 +531,19 @@ function parseWrites(request: Record<string, unknown>, root: string) {
         blockers: profileResolution.blockers,
       });
     }
+    const abiResolution = resolveStandardAgentPackAbi(
+      pack.standard_agent_pack_abi ?? STANDARD_AGENT_PACK_ABI_DECLARATION,
+      {
+        repoDir: root,
+        selectedExecutionProfileId: STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID,
+        required: true,
+      },
+    );
+    if (abiResolution.status !== 'passed') {
+      fail('pack_compiler_input.standard_agent_pack_abi is invalid.', {
+        blockers: abiResolution.blockers,
+      });
+    }
     const normalizedProfileDeclaration = {
       base_profile_ref: STANDARD_AGENT_IMPLEMENTATION_PROFILE_BASE_REF,
       helpers: {
@@ -538,6 +555,7 @@ function parseWrites(request: Record<string, unknown>, root: string) {
       bytes: Buffer.from(formatJsonPayload({
         ...pack,
         implementation_profile: normalizedProfileDeclaration,
+        standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI_DECLARATION,
         required_domain_pack_paths: [...new Set([...current, ...normalized])],
       })),
       role: 'opl_pack_compiler_input_projection',

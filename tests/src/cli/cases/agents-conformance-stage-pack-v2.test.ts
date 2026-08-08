@@ -181,6 +181,29 @@ test('agents conformance blocks a non-canonical Standard Agent Pack ABI authorit
   );
 });
 
+test('agents conformance requires an implementation profile for repo-local standard Agents', () => {
+  const repoDir = buildScaffoldRepo();
+  const packCompilerInputPath = path.join(repoDir, 'contracts/pack_compiler_input.json');
+  const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerInputPath, 'utf8')) as any;
+  delete packCompilerInput.implementation_profile;
+  writeJson(packCompilerInputPath, packCompilerInput);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  const repo = report.reports[0];
+  assert.equal(report.status, 'blocked');
+  assert.equal(repo.status, 'blocked');
+  assert.equal(repo.pack_compiler_checks.status, 'blocked');
+  assert.equal(repo.pack_compiler_checks.implementation_profile_status, 'blocked');
+  assert.ok(repo.pack_compiler_checks.blockers.includes('implementation_profile_missing'));
+  assert.equal(repo.scaffold_validation.stage_pack_v2_validation.status, 'passed');
+});
+
 test('agents conformance only accepts an exact legacy inline Standard Agent Pack ABI', () => {
   const repoDir = buildScaffoldRepo();
   const packCompilerInputPath = path.join(repoDir, 'contracts/pack_compiler_input.json');

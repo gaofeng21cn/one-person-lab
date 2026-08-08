@@ -1,4 +1,5 @@
 import {
+  STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID,
   resolveStandardAgentExecutionProfile,
   resolveStandardAgentImplementationProfile,
 } from '../pack/index.ts';
@@ -32,11 +33,14 @@ export function buildPackCompilerChecks(repoDir: string, canonicalAgentId?: stri
   const packCompilerInput = readJsonFile(repoDir, 'contracts/pack_compiler_input.json');
   const payload = packCompilerInput.payload;
   const executionProfile = resolveStandardAgentExecutionProfile(repoDir);
+  const implementationProfileRequired = canonicalAgentId !== 'mas-scholar-skills'
+    && executionProfile.selected_profile_id === STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID;
   const implementationProfileResolution = resolveStandardAgentImplementationProfile(
     isRecord(payload) ? payload.implementation_profile : undefined,
     {
       repoDir,
       selectedExecutionProfileId: executionProfile.selected_profile_id,
+      required: implementationProfileRequired,
     },
   );
   const canonicalPackRoot = isRecord(payload) ? optionalString(payload.canonical_semantic_pack_root) : null;

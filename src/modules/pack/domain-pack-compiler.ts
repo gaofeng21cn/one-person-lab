@@ -254,6 +254,8 @@ function buildStandardAgentPackAbiProjection(
   const resolution = resolveStandardAgentPackAbi(declaration, {
     repoDir,
     selectedExecutionProfileId,
+    required: repoDir !== undefined
+      && selectedExecutionProfileId === STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID,
   });
   const applicable = resolution.applicability === 'repo_local';
   const canonicalAbi = applicable ? STANDARD_AGENT_PACK_ABI : null;
@@ -474,6 +476,8 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
     {
       repoDir,
       selectedExecutionProfileId,
+      required: repoDir !== undefined
+        && selectedExecutionProfileId === STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID,
     },
   );
   const standardAgentPackAbi = buildStandardAgentPackAbiProjection(
