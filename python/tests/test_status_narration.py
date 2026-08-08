@@ -106,6 +106,18 @@ class StatusNarrationContractTest(unittest.TestCase):
         self.assertEqual(view["next_step"], "补齐作者、单位和伦理号。")
         self.assertEqual(view["current_blockers"], ["作者单位仍待确认。"])
 
+    def test_build_status_narration_human_view_uses_generic_labels_for_domain_owned_stages(self) -> None:
+        view = build_status_narration_human_view(
+            {"recommended_next_stage": "revision"},
+            fallback_current_stage="critique",
+            fallback_next_step="继续领域流程。",
+        )
+
+        self.assertEqual(view["current_stage_label"], "Critique")
+        self.assertEqual(view["recommended_next_stage_label"], "Revision")
+        self.assertEqual(view["stage_summary"], "当前状态：Critique；下一阶段：Revision")
+        self.assertEqual(view["next_step"], "继续领域流程。")
+
     def test_build_status_narration_human_view_humanizes_known_blocker_codes(self) -> None:
         view = build_status_narration_human_view(
             None,
