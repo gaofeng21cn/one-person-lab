@@ -11,10 +11,12 @@ import {
   materializeReferenceBuildFileDigest,
 } from './reference-build-proof.ts';
 import {
-  STANDARD_AGENT_IMPLEMENTATION_PROFILE,
-  validateStandardAgentImplementationProfile,
-  validateStandardAgentImplementationProfileRefs,
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE_BASE_REF,
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION,
+  resolveStandardAgentImplementationProfile,
+  validateStandardAgentImplementationProfileDeclaration,
 } from '../pack/public/standard-agent-implementation-profile.ts';
+import { STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID } from './standard-agent-execution-profile.ts';
 import { SOURCE_DERIVED_AGENT_DESIGN_TYPED_OBJECTS } from './source-derived-agent-design-abi.ts';
 
 export const AGENT_SCAFFOLD_MATERIALIZATION_REQUEST_SCHEMA_REF =
@@ -313,7 +315,7 @@ function preflightMaterializationRequest(request: Record<string, unknown>, targe
 
   const compilerInput = requireObject(request.pack_compiler_input, 'pack_compiler_input');
   if (compilerInput.implementation_profile !== undefined) {
-    const profileValidation = validateStandardAgentImplementationProfile(
+    const profileValidation = validateStandardAgentImplementationProfileDeclaration(
       compilerInput.implementation_profile,
       { required: true },
     );
@@ -480,7 +482,11 @@ function parseWrites(request: Record<string, unknown>, root: string) {
   const compilerInput = requireObject(request.pack_compiler_input, 'pack_compiler_input');
   const implementationProfile = compilerInput.implementation_profile;
   if (implementationProfile !== undefined) {
-    const profileValidation = validateStandardAgentImplementationProfileRefs(implementationProfile, root, { required: true });
+    const profileValidation = resolveStandardAgentImplementationProfile(implementationProfile, {
+      repoDir: root,
+      selectedExecutionProfileId: STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID,
+      required: true,
+    });
     if (profileValidation.status !== 'passed') {
       fail('pack_compiler_input.implementation_profile references are invalid.', {
         blockers: profileValidation.blockers,
@@ -508,11 +514,30 @@ function parseWrites(request: Record<string, unknown>, root: string) {
       fail('contracts/pack_compiler_input.json requires required_domain_pack_paths.');
     }
     const normalized = additions.map((entry, index) => safeRelativePath(entry, `required_domain_pack_path_additions[${index}]`));
+    const profileResolution = resolveStandardAgentImplementationProfile(
+      implementationProfile ?? pack.implementation_profile ?? STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION,
+      {
+        repoDir: root,
+        selectedExecutionProfileId: STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID,
+        required: true,
+      },
+    );
+    if (profileResolution.status !== 'passed' || !profileResolution.effective_profile) {
+      fail('pack_compiler_input.implementation_profile references are invalid.', {
+        blockers: profileResolution.blockers,
+      });
+    }
+    const normalizedProfileDeclaration = {
+      base_profile_ref: STANDARD_AGENT_IMPLEMENTATION_PROFILE_BASE_REF,
+      helpers: {
+        entries: profileResolution.effective_profile.helpers.entries,
+      },
+    };
     add({
       relativePath: packPath,
       bytes: Buffer.from(formatJsonPayload({
         ...pack,
-        implementation_profile: implementationProfile ?? pack.implementation_profile ?? STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+        implementation_profile: normalizedProfileDeclaration,
         required_domain_pack_paths: [...new Set([...current, ...normalized])],
       })),
       role: 'opl_pack_compiler_input_projection',

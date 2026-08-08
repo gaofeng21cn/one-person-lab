@@ -12,14 +12,16 @@ import {
   SCAFFOLD_MARKER,
   STARTER_STAGE_ID,
   STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
-  STANDARD_AGENT_PACK_ABI,
-  STANDARD_AGENT_IMPLEMENTATION_PROFILE,
   STATE_INDEX_KERNEL_ADOPTION_POLICY,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
   STAGE_ARTIFACT_KERNEL_ADOPTION_POLICY,
   STAGE_RUN_KERNEL_PROFILE,
   WORKSPACE_FILE_LIFECYCLE_POLICY,
 } from './standard-domain-agent-scaffold-constants.ts';
+import { STANDARD_AGENT_PACK_ABI_DECLARATION } from './standard-agent-pack-abi.ts';
+import {
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION,
+} from './standard-agent-implementation-profile.ts';
 import { buildStageRunCanaryEvidence } from './standard-domain-agent-scaffold-stage-run-canary.ts';
 import {
   buildStandardAgentPrinciplesAdoption,
@@ -515,8 +517,8 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           required: true,
           enforcement_ref: 'opl-generated:family_stage_control_plane#stage_pack_conformance_version',
         },
-        standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI,
-        implementation_profile: STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+        standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI_DECLARATION,
+        implementation_profile: STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION,
         generated_surface_owner: 'one-person-lab',
         declarative_domain_pack: DECLARATIVE_DOMAIN_PACK,
         minimal_authority_functions: MINIMAL_AUTHORITY_FUNCTIONS,

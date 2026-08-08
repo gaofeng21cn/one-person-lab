@@ -9,6 +9,8 @@ import {
 } from '../../helpers.ts';
 import {
   OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID,
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION,
+  STANDARD_AGENT_PACK_ABI_DECLARATION,
   resolveStandardAgentExecutionProfile,
 } from '../../../../../src/modules/pack/index.ts';
 import {
@@ -67,6 +69,11 @@ function configureHostedProvider(repoDir: string) {
   const descriptor = readJson(descriptorPath);
   descriptor.agent_role = 'foundry_semantic_provider';
   writeJson(descriptorPath, descriptor);
+  const packCompilerInputPath = path.join(repoDir, 'contracts', 'pack_compiler_input.json');
+  const packCompilerInput = readJson(packCompilerInputPath);
+  delete packCompilerInput.implementation_profile;
+  delete packCompilerInput.standard_agent_pack_abi;
+  writeJson(packCompilerInputPath, packCompilerInput);
 }
 
 function removeRepoLocalRuntimeContracts(repoDir: string) {
@@ -173,6 +180,33 @@ test('mixed execution profiles route live evidence to their actual owners', asyn
   assert.equal(hosted.source_command, 'opl foundry status --run-id <run_id> --json');
   assert.equal(repoLocal.evidence_owner, 'domain_owner');
   assert.equal(repoLocal.owner_repo, repoLocalRepo);
+});
+
+test('hosted Foundry profile blocks repo-local profile and ABI declarations', async () => {
+  const repoDir = buildReadyAgentRepo();
+  configureHostedProvider(repoDir);
+  removeRepoLocalRuntimeContracts(repoDir);
+  const packCompilerInputPath = path.join(repoDir, 'contracts', 'pack_compiler_input.json');
+  const packCompilerInput = readJson(packCompilerInputPath);
+  packCompilerInput.implementation_profile = STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION;
+  packCompilerInput.standard_agent_pack_abi = STANDARD_AGENT_PACK_ABI_DECLARATION;
+  writeJson(packCompilerInputPath, packCompilerInput);
+
+  const report = (await runCliReadOnly([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample-provider=${repoDir}`,
+  ])).standard_domain_agent_conformance;
+  const repo = report.reports[0];
+
+  assert.equal(repo.status, 'blocked');
+  assert.ok(repo.blockers.includes(
+    'hosted_execution_profile_must_not_declare_repo_local_implementation_profile',
+  ));
+  assert.ok(repo.blockers.includes(
+    'stage_pack_v2_hosted_execution_profile_must_not_declare_repo_local_standard_agent_pack_abi',
+  ));
 });
 
 test('hosted Foundry profile does not select from agent role alone', () => {

@@ -3,9 +3,12 @@ import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
 import { isRecord } from '../../kernel/contract-validation.ts';
+import { OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID } from './standard-agent-execution-profile.ts';
 
 export const STANDARD_AGENT_IMPLEMENTATION_PROFILE_SCHEMA_REF =
   'contracts/opl-framework/standard-agent-implementation-profile.schema.json';
+export const STANDARD_AGENT_IMPLEMENTATION_PROFILE_BASE_REF =
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE_SCHEMA_REF;
 
 export type StandardAgentHelperRole = 'authority_function' | 'domain_helper' | 'native_helper';
 
@@ -41,6 +44,20 @@ export const STANDARD_AGENT_IMPLEMENTATION_PROFILE = {
   generated_surfaces_owner: 'one-person-lab',
 } as const satisfies StandardAgentImplementationProfile;
 
+export type StandardAgentImplementationProfileDeclaration = {
+  base_profile_ref: typeof STANDARD_AGENT_IMPLEMENTATION_PROFILE_BASE_REF;
+  helpers: {
+    entries: StandardAgentImplementationHelper[];
+  };
+};
+
+export const STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION = {
+  base_profile_ref: STANDARD_AGENT_IMPLEMENTATION_PROFILE_BASE_REF,
+  helpers: {
+    entries: [],
+  },
+} as const satisfies StandardAgentImplementationProfileDeclaration;
+
 const HELPER_ROLES = new Set([
   'authority_function',
   'domain_helper',
@@ -50,6 +67,21 @@ const HELPER_ROLES = new Set([
 export type StandardAgentImplementationProfileValidation = {
   status: 'passed' | 'missing' | 'blocked';
   profile: StandardAgentImplementationProfile | null;
+  blockers: string[];
+};
+
+export type StandardAgentImplementationProfileDeclarationValidation =
+  StandardAgentImplementationProfileValidation & {
+    declaration_kind: 'canonical_ref_delta' | 'legacy_full_profile' | null;
+  };
+
+export type StandardAgentImplementationProfileResolution = {
+  status: 'passed' | 'missing' | 'blocked' | 'not_applicable';
+  applicability: 'repo_local' | 'opl_hosted' | 'profile_resolution_blocked';
+  selected_execution_profile_id: string | null;
+  declaration_kind?: 'canonical_ref_delta' | 'legacy_full_profile' | null;
+  declaration?: unknown;
+  effective_profile: StandardAgentImplementationProfile | null;
   blockers: string[];
 };
 
@@ -195,4 +227,141 @@ export function validateStandardAgentImplementationProfileRefs(
     profile: blockers.length === 0 ? validation.profile : null,
     blockers: [...new Set(blockers)],
   } satisfies StandardAgentImplementationProfileValidation;
+}
+
+export function validateStandardAgentImplementationProfileDeclaration(
+  value: unknown,
+  options: { required?: boolean } = {},
+): StandardAgentImplementationProfileDeclarationValidation {
+  if (value === undefined || value === null) {
+    return {
+      status: options.required ? 'blocked' : 'missing',
+      declaration_kind: null,
+      profile: null,
+      blockers: options.required ? ['implementation_profile_missing'] : [],
+    };
+  }
+
+  if (isRecord(value) && Object.hasOwn(value, 'profile_id')) {
+    const validation = validateStandardAgentImplementationProfile(value, { required: true });
+    return {
+      ...validation,
+      declaration_kind: 'legacy_full_profile',
+    };
+  }
+
+  if (!isRecord(value)) {
+    return {
+      status: 'blocked',
+      declaration_kind: null,
+      profile: null,
+      blockers: ['implementation_profile_declaration_must_be_object'],
+    };
+  }
+
+  const blockers: string[] = [];
+  if (!hasOnlyKeys(value, ['base_profile_ref', 'helpers'])) {
+    blockers.push('implementation_profile_declaration_unknown_field');
+  }
+  if (value.base_profile_ref !== STANDARD_AGENT_IMPLEMENTATION_PROFILE_BASE_REF) {
+    blockers.push('implementation_profile_base_profile_ref_invalid');
+  }
+  const helpers = isRecord(value.helpers) ? value.helpers : null;
+  if (!helpers) {
+    blockers.push('implementation_profile_declaration_helpers_must_be_object');
+  } else if (!hasOnlyKeys(helpers, ['entries'])) {
+    blockers.push('implementation_profile_declaration_helpers_unknown_field');
+  }
+  const entries = helpers?.entries;
+  if (!Array.isArray(entries)) {
+    blockers.push('implementation_profile_helper_entries_must_be_array');
+  }
+  if (blockers.length > 0) {
+    return {
+      status: 'blocked',
+      declaration_kind: 'canonical_ref_delta',
+      profile: null,
+      blockers: [...new Set(blockers)],
+    };
+  }
+
+  const effectiveProfile = {
+    ...STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+    helpers: {
+      ...STANDARD_AGENT_IMPLEMENTATION_PROFILE.helpers,
+      entries,
+    },
+  };
+  const validation = validateStandardAgentImplementationProfile(effectiveProfile, { required: true });
+  return {
+    ...validation,
+    declaration_kind: 'canonical_ref_delta',
+  };
+}
+
+export function resolveStandardAgentImplementationProfile(
+  value: unknown,
+  options: {
+    repoDir?: string;
+    selectedExecutionProfileId: string | null;
+    required?: boolean;
+  },
+): StandardAgentImplementationProfileResolution {
+  if (options.selectedExecutionProfileId === null) {
+    return {
+      status: 'blocked',
+      applicability: 'profile_resolution_blocked',
+      selected_execution_profile_id: null,
+      declaration: value ?? null,
+      effective_profile: null,
+      blockers: ['implementation_profile_execution_profile_selection_blocked'],
+    };
+  }
+  if (options.selectedExecutionProfileId === OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID) {
+    return value === undefined || value === null
+      ? {
+          status: 'not_applicable',
+          applicability: 'opl_hosted',
+          selected_execution_profile_id: options.selectedExecutionProfileId,
+          effective_profile: null,
+          blockers: [],
+        }
+      : {
+          status: 'blocked',
+          applicability: 'opl_hosted',
+          selected_execution_profile_id: options.selectedExecutionProfileId,
+          declaration: value,
+          effective_profile: null,
+          blockers: ['hosted_execution_profile_must_not_declare_repo_local_implementation_profile'],
+        };
+  }
+
+  const validation = validateStandardAgentImplementationProfileDeclaration(value, {
+    required: options.required ?? false,
+  });
+  if (validation.status !== 'passed' || !validation.profile) {
+    return {
+      status: validation.status,
+      applicability: 'repo_local',
+      selected_execution_profile_id: options.selectedExecutionProfileId,
+      declaration_kind: validation.declaration_kind,
+      declaration: value ?? null,
+      effective_profile: null,
+      blockers: validation.blockers,
+    };
+  }
+  const refsValidation = validateStandardAgentImplementationProfileRefs(
+    validation.profile,
+    options.repoDir,
+    { required: true },
+  );
+  return {
+    status: refsValidation.status,
+    applicability: 'repo_local',
+    selected_execution_profile_id: options.selectedExecutionProfileId,
+    declaration_kind: validation.declaration_kind,
+    declaration: value,
+    effective_profile: refsValidation.profile,
+    blockers: refsValidation.blockers,
+  };
 }

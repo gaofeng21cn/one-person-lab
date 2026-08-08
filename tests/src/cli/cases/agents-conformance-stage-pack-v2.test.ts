@@ -1,5 +1,8 @@
 import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
-import { buildStandardDomainAgentScaffold } from '../../../../src/modules/pack/index.ts';
+import {
+  STANDARD_AGENT_PACK_ABI,
+  buildStandardDomainAgentScaffold,
+} from '../../../../src/modules/pack/index.ts';
 
 function writeJson(filePath: string, payload: unknown) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -17,6 +20,18 @@ function buildScaffoldRepo() {
 
 test('agents conformance reports generated stage pack v2 obligations', () => {
   const repoDir = buildScaffoldRepo();
+  const packCompilerInput = parseJsonText(fs.readFileSync(
+    path.join(repoDir, 'contracts', 'pack_compiler_input.json'),
+    'utf8',
+  )) as any;
+  assert.deepEqual(packCompilerInput.implementation_profile, {
+    base_profile_ref: 'contracts/opl-framework/standard-agent-implementation-profile.schema.json',
+    helpers: { entries: [] },
+  });
+  assert.deepEqual(packCompilerInput.standard_agent_pack_abi, {
+    authority_ref:
+      'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/agent_pack_contract/standard_agent_pack_abi',
+  });
   const report = runCli([
     'agents',
     'conformance',
@@ -130,21 +145,13 @@ test('agents conformance blocks generated scaffold repos missing stage pack v2 o
   assert.equal(repo.blockers.includes('stage_pack_v2_missing_tool_affordance_boundary:domain_intake'), true);
 });
 
-test('agents conformance blocks generated scaffold repos missing Standard Agent Pack ABI gates', () => {
+test('agents conformance blocks a non-canonical Standard Agent Pack ABI authority ref', () => {
   const repoDir = buildScaffoldRepo();
   const packCompilerInputPath = path.join(repoDir, 'contracts/pack_compiler_input.json');
   const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerInputPath, 'utf8')) as any;
-  packCompilerInput.standard_agent_pack_abi ??= {
-    required_repo_layout: [
-      { path: 'agent/' },
-      { path: 'contracts/' },
-      { path: 'runtime/authority_functions/' },
-    ],
+  packCompilerInput.standard_agent_pack_abi = {
+    authority_ref: 'contracts/local-standard-agent-pack-abi.json',
   };
-  packCompilerInput.standard_agent_pack_abi.required_repo_layout =
-    packCompilerInput.standard_agent_pack_abi.required_repo_layout.filter(
-      (entry: { path: string }) => entry.path !== 'runtime/authority_functions/',
-    );
   delete packCompilerInput.source_refs.owner_receipt_schema_source_ref;
   delete packCompilerInput.source_refs.authority_functions_source_ref;
   writeJson(packCompilerInputPath, packCompilerInput);
@@ -161,7 +168,7 @@ test('agents conformance blocks generated scaffold repos missing Standard Agent 
   assert.equal(repo.status, 'blocked');
   assert.equal(repo.scaffold_validation.stage_pack_v2_validation.status, 'blocked');
   assert.equal(
-    repo.blockers.includes('stage_pack_v2_standard_agent_pack_abi_missing_repo_layout:runtime/authority_functions/'),
+    repo.blockers.includes('stage_pack_v2_standard_agent_pack_abi_authority_ref_invalid'),
     true,
   );
   assert.equal(
@@ -170,6 +177,31 @@ test('agents conformance blocks generated scaffold repos missing Standard Agent 
   );
   assert.equal(
     repo.blockers.includes('pack_compiler_source_ref_missing:authority_functions_source_ref'),
+    true,
+  );
+});
+
+test('agents conformance only accepts an exact legacy inline Standard Agent Pack ABI', () => {
+  const repoDir = buildScaffoldRepo();
+  const packCompilerInputPath = path.join(repoDir, 'contracts/pack_compiler_input.json');
+  const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerInputPath, 'utf8')) as any;
+  packCompilerInput.standard_agent_pack_abi = structuredClone(STANDARD_AGENT_PACK_ABI);
+  packCompilerInput.standard_agent_pack_abi.l4_entry_gate.can_claim_l5 = true;
+  writeJson(packCompilerInputPath, packCompilerInput);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  const repo = report.reports[0];
+  assert.equal(repo.status, 'blocked');
+  assert.equal(
+    repo.blockers.includes(
+      'stage_pack_v2_standard_agent_pack_abi_legacy_inline_must_equal_framework_canonical',
+    ),
     true,
   );
 });

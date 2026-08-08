@@ -121,6 +121,42 @@
       "additionalProperties": false
     },
     "implementationProfile": {
+      "oneOf": [
+        { "$ref": "#/$defs/implementationProfileDeclaration" },
+        { "$ref": "#/$defs/legacyImplementationProfile" }
+      ]
+    },
+    "implementationProfileDeclaration": {
+      "type": "object",
+      "required": ["base_profile_ref", "helpers"],
+      "properties": {
+        "base_profile_ref": {
+          "const": "contracts/opl-framework/standard-agent-implementation-profile.schema.json"
+        },
+        "helpers": {
+          "type": "object",
+          "required": ["entries"],
+          "properties": {
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["language", "role", "source_roots"],
+                "properties": {
+                  "language": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$", "not": { "const": "rust" } },
+                  "role": { "enum": ["authority_function", "domain_helper", "native_helper"] },
+                  "source_roots": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+/$" }, "uniqueItems": true }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "legacyImplementationProfile": {
       "type": "object",
       "required": ["profile_id", "agent_identity", "pack_formats", "helpers", "generated_surfaces_owner"],
       "properties": {

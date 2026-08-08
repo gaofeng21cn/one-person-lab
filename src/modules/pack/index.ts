@@ -83,14 +83,28 @@ export {
 } from './private-platform-residue-deletion-gate.ts';
 export {
   STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE_BASE_REF,
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION,
   STANDARD_AGENT_IMPLEMENTATION_PROFILE_SCHEMA_REF,
+  resolveStandardAgentImplementationProfile,
   validateStandardAgentImplementationProfile,
+  validateStandardAgentImplementationProfileDeclaration,
   validateStandardAgentImplementationProfileRefs,
 } from './standard-agent-implementation-profile.ts';
 export type {
+  StandardAgentImplementationProfileDeclaration,
+  StandardAgentImplementationProfileDeclarationValidation,
+  StandardAgentImplementationProfileResolution,
   StandardAgentImplementationProfile,
   StandardAgentImplementationProfileValidation,
 } from './standard-agent-implementation-profile.ts';
+export {
+  STANDARD_AGENT_PACK_ABI,
+  STANDARD_AGENT_PACK_ABI_AUTHORITY_REF,
+  STANDARD_AGENT_PACK_ABI_DECLARATION,
+  resolveStandardAgentPackAbi,
+} from './standard-agent-pack-abi.ts';
+export type { StandardAgentPackAbiResolution } from './standard-agent-pack-abi.ts';
 export {
   OPL_PACK_PROVISION_SUBMISSION_RESOURCE_ACTION_ID,
   provisionSubmissionResource,

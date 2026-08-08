@@ -7,11 +7,23 @@ import { STANDARD_PROGRESS_DELTA_POLICY } from './progress-delta.ts';
 import { STANDARD_STAGE_COMPLETION_POLICY } from './stage-completion.ts';
 import { STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './typed-blocker.ts';
 import { STANDARD_USER_STAGE_LOG_CONTRACT } from './user-stage-log.ts';
-import { STANDARD_AGENT_PACK_ABI } from '../../pack/public/standard-agent-pack-abi.ts';
-import { STANDARD_AGENT_IMPLEMENTATION_PROFILE } from '../../pack/public/standard-agent-implementation-profile.ts';
+import {
+  STANDARD_AGENT_PACK_ABI,
+  STANDARD_AGENT_PACK_ABI_DECLARATION,
+} from '../standard-agent-pack-abi.ts';
+import {
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION,
+} from '../../pack/public/standard-agent-implementation-profile.ts';
 
-export { STANDARD_AGENT_PACK_ABI } from '../../pack/public/standard-agent-pack-abi.ts';
-export { STANDARD_AGENT_IMPLEMENTATION_PROFILE } from '../../pack/public/standard-agent-implementation-profile.ts';
+export {
+  STANDARD_AGENT_PACK_ABI,
+  STANDARD_AGENT_PACK_ABI_DECLARATION,
+} from '../standard-agent-pack-abi.ts';
+export {
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION,
+} from '../../pack/public/standard-agent-implementation-profile.ts';
 
 export const OPL_GENERATED_SURFACES = [
   {
@@ -118,7 +130,9 @@ export const AGENT_PACK_CONTRACT = {
   ],
   required_domain_pack_paths_field: 'contracts/pack_compiler_input.json#/required_domain_pack_paths',
   standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI,
+  standard_agent_pack_abi_declaration: STANDARD_AGENT_PACK_ABI_DECLARATION,
   implementation_profile: STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+  implementation_profile_declaration: STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION,
   stage_ref_requirements: [
     'capability_map:contracts/capability_map.json resolver index',
     'prompt_refs:agent/prompts/*',

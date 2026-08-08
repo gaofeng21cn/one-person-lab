@@ -193,6 +193,14 @@ test('domain pack compiler family-defaults consumes standard repo contracts with
     assert.equal(mas.generated_interface_bundle.workbench.status, 'ready_from_stage_control_plane');
     assert.equal(mas.generated_interface_bundle.source_contract_consumption.status, 'ready');
     assert.equal(mas.pack_compiler_input_projection.standard_agent_pack_abi.status, 'passed');
+    assert.equal(
+      mas.pack_compiler_input_projection.standard_agent_pack_abi.declaration_kind,
+      'legacy_inline_abi',
+    );
+    assert.equal(
+      mas.pack_compiler_input_projection.standard_agent_pack_abi.effective_abi.version,
+      'standard-agent-pack-abi.v1',
+    );
     assert.deepEqual(mas.pack_compiler_input_projection.standard_agent_pack_abi.required_repo_layout_paths, [
       'agent/',
       'contracts/',
@@ -205,6 +213,14 @@ test('domain pack compiler family-defaults consumes standard repo contracts with
     assert.equal(
       mas.pack_compiler_input_projection.standard_agent_pack_abi.l5_entry_gate.conformance_pass_counts_as_l5,
       false,
+    );
+    assert.deepEqual(mas.pack_compiler_input_projection.implementation_profile_declaration, {
+      base_profile_ref: 'contracts/opl-framework/standard-agent-implementation-profile.schema.json',
+      helpers: { entries: [] },
+    });
+    assert.equal(
+      mas.pack_compiler_input_projection.implementation_profile.profile_id,
+      'opl.standard_domain_agent.v1',
     );
     assert.equal(mas.authority_boundary.opl_can_write_domain_truth, false);
     assert.equal(mas.authority_boundary.opl_can_authorize_quality_or_export, false);

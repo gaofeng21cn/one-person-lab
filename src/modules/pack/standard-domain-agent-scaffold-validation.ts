@@ -24,7 +24,7 @@ import { validateStageRefs } from './standard-domain-agent-scaffold-validation-p
 import { validateUserStageLogContracts } from './standard-domain-agent-scaffold-validation-parts/user-stage-log.ts';
 import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaffold-validation-parts/foundry-contract.ts';
 import { materializeStandardAgentCapabilityMap } from './standard-agent-capability-map.ts';
-import { validateStandardAgentImplementationProfileRefs } from '../pack/public/standard-agent-implementation-profile.ts';
+import { resolveStandardAgentImplementationProfile } from '../pack/public/standard-agent-implementation-profile.ts';
 import { readStandardAgentInterface } from '../../kernel/standard-agent-interface.ts';
 import {
   OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID,
@@ -324,10 +324,13 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const authority = isRecord(descriptorRecord.authority_boundary) ? descriptorRecord.authority_boundary : {};
   const packCompilerInput = readJsonFileOrNull(path.join(repoDir, 'contracts/pack_compiler_input.json'));
   const packCompilerInputRecord = isRecord(packCompilerInput) ? packCompilerInput : {};
-  const implementationProfileValidation = validateStandardAgentImplementationProfileRefs(
+  const implementationProfileResolution = resolveStandardAgentImplementationProfile(
     packCompilerInputRecord.implementation_profile,
-    repoDir,
-    { required: !hostedFoundryProvider },
+    {
+      repoDir,
+      selectedExecutionProfileId: executionProfile.selected_profile_id,
+      required: !hostedFoundryProvider,
+    },
   );
   const generatedSurfaceHandoff = resolveGeneratedSurfaceHandoffContract(
     readJsonFileOrNull(path.join(repoDir, 'contracts/generated_surface_handoff.json')),
@@ -346,6 +349,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const capabilityMapValidation = validateCapabilityMap(capabilityMap, repoDir);
   const stagePackV2Validation = validateStagePackV2(stageControlPlane, packCompilerInput, stagePackV2Required, {
     repoDir,
+    selectedExecutionProfileId: executionProfile.selected_profile_id,
   });
   const rawAuthorityViolations = [
     authority.opl_can_write_domain_truth === false ? null : 'opl_can_write_domain_truth_must_be_false',
@@ -357,10 +361,11 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     packCompilerInputRecord.domain_repo_can_own_generated_surface === false
       ? null
       : 'pack_compiler_domain_repo_generated_surface_owner_must_be_false',
-    ...(implementationProfileValidation.status === 'passed'
+    ...(implementationProfileResolution.status === 'passed'
+      || implementationProfileResolution.status === 'not_applicable'
       ? []
-      : implementationProfileValidation.status === 'blocked'
-        ? implementationProfileValidation.blockers
+      : implementationProfileResolution.status === 'blocked'
+        ? implementationProfileResolution.blockers
         : ['implementation_profile_missing']),
     generatedSurfaceHandoffRecord.generated_surface_owner === 'one-person-lab'
       ? null
@@ -380,6 +385,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
         generatedSurfaceHandoffRecord.domain_repo_can_own_generated_surface === false
           ? null
           : 'generated_surface_handoff_domain_owner_must_be_false',
+        ...implementationProfileResolution.blockers,
       ].filter(Boolean)
     : rawAuthorityViolations;
   const hostedNonApplicablePackSectionBlockers = new Set(hostedFoundryProvider
@@ -457,7 +463,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       foundry_agent_series_validation: foundryAgentSeriesValidation,
       capability_map_validation: capabilityMapValidation,
       stage_pack_v2_validation: stagePackV2Validation,
-      implementation_profile_validation: implementationProfileValidation,
+      implementation_profile_validation: implementationProfileResolution,
       standard_agent_interface_validation: standardAgentInterfaceValidation,
       functional_privatization_audit_required: true,
       private_functional_surface_policy_validation: {

@@ -1,25 +1,52 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://one-person-lab.local/contracts/opl-framework/standard-agent-implementation-profile.schema.json",
-  "title": "OPL Standard Domain Agent Implementation Profile",
-  "type": "object",
-  "required": [
-    "profile_id",
-    "agent_identity",
-    "pack_formats",
-    "helpers",
-    "generated_surfaces_owner"
+  "title": "OPL Standard Domain Agent Implementation Profile Declaration",
+  "oneOf": [
+    { "$ref": "#/$defs/declaration" },
+    { "$ref": "#/$defs/legacyFullProfile" }
   ],
-  "properties": {
-    "profile_id": { "const": "opl.standard_domain_agent.v1" },
-    "agent_identity": { "const": "declarative_standard_agent_pack" },
-    "pack_formats": { "const": ["markdown", "json"] },
-    "helpers": { "$ref": "#/$defs/helpers" },
-    "generated_surfaces_owner": { "const": "one-person-lab" }
-  },
-  "additionalProperties": false,
   "$defs": {
-    "helpers": {
+    "declaration": {
+      "type": "object",
+      "required": ["base_profile_ref", "helpers"],
+      "properties": {
+        "base_profile_ref": {
+          "const": "contracts/opl-framework/standard-agent-implementation-profile.schema.json"
+        },
+        "helpers": {
+          "type": "object",
+          "required": ["entries"],
+          "properties": {
+            "entries": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/helper" }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "legacyFullProfile": {
+      "type": "object",
+      "required": [
+        "profile_id",
+        "agent_identity",
+        "pack_formats",
+        "helpers",
+        "generated_surfaces_owner"
+      ],
+      "properties": {
+        "profile_id": { "const": "opl.standard_domain_agent.v1" },
+        "agent_identity": { "const": "declarative_standard_agent_pack" },
+        "pack_formats": { "const": ["markdown", "json"] },
+        "helpers": { "$ref": "#/$defs/legacyHelpers" },
+        "generated_surfaces_owner": { "const": "one-person-lab" }
+      },
+      "additionalProperties": false
+    },
+    "legacyHelpers": {
       "type": "object",
       "required": ["optional", "entries", "language_is_identity", "rust_policy"],
       "properties": {

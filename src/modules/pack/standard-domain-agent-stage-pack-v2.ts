@@ -6,9 +6,13 @@ import { optionalString } from '../../kernel/json-file.ts';
 import {
   DEFAULT_STAGE_EXECUTOR_BINDING_REF,
   PACK_COMPILER_CONTRACT,
-  STANDARD_AGENT_PACK_ABI,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
 } from './standard-domain-agent-scaffold-constants.ts';
+import {
+  STANDARD_AGENT_PACK_ABI,
+  resolveStandardAgentPackAbi,
+} from './standard-agent-pack-abi.ts';
+import { STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID } from './standard-agent-execution-profile.ts';
 
 type JsonRecord = Record<string, unknown>;
 const TOOL_AFFORDANCE_CATALOG_ROLE = 'available_affordance_catalog_not_workflow_script';
@@ -151,43 +155,61 @@ function existingRepoLayoutPaths(repoDir: string | null, requiredLayoutPaths: st
   });
 }
 
-function validateStandardAgentPackAbi(packCompilerInput: unknown, enforce: boolean, repoDir: string | null) {
-  const declaration = isRecord(packCompilerInput) && isRecord(packCompilerInput.standard_agent_pack_abi)
+function validateStandardAgentPackAbi(
+  packCompilerInput: unknown,
+  enforce: boolean,
+  repoDir: string | null,
+  selectedExecutionProfileId: string | null,
+) {
+  const declaration = isRecord(packCompilerInput)
     ? packCompilerInput.standard_agent_pack_abi
-    : null;
-  const requiredLayoutPaths = recordPathArray(STANDARD_AGENT_PACK_ABI.required_repo_layout);
-  const declaredLayoutPaths = recordPathArray(declaration?.required_repo_layout);
-  const missingLayoutPaths = requiredLayoutPaths.filter((required) => !declaredLayoutPaths.includes(required));
+    : undefined;
+  const resolution = resolveStandardAgentPackAbi(declaration, {
+    repoDir: repoDir ?? undefined,
+    selectedExecutionProfileId,
+    required: enforce,
+  });
+  const applicable = resolution.applicability === 'repo_local';
+  const canonicalAbi = applicable ? STANDARD_AGENT_PACK_ABI : null;
+  const requiredLayoutPaths = applicable
+    ? recordPathArray(STANDARD_AGENT_PACK_ABI.required_repo_layout)
+    : [];
+  const declaredLayoutPaths = resolution.status === 'passed' ? requiredLayoutPaths : [];
+  const missingLayoutPaths = resolution.status === 'missing' ? requiredLayoutPaths : [];
   const existingLayoutPaths = existingRepoLayoutPaths(repoDir, requiredLayoutPaths);
   const missingPhysicalLayoutPaths = repoDir
     ? requiredLayoutPaths.filter((required) => !existingLayoutPaths.includes(required))
     : [];
   const rawFindings = [
-    declaration ? null : 'stage_pack_v2_standard_agent_pack_abi_missing',
-    optionalString(declaration?.version) === STANDARD_AGENT_PACK_ABI.version
-      ? null
-      : 'stage_pack_v2_standard_agent_pack_abi_version_invalid',
+    resolution.status === 'missing' ? 'stage_pack_v2_standard_agent_pack_abi_missing' : null,
+    ...resolution.blockers.map((blocker) => `stage_pack_v2_${blocker}`),
     ...missingLayoutPaths.map((entry) => `stage_pack_v2_standard_agent_pack_abi_missing_repo_layout:${entry}`),
     ...missingPhysicalLayoutPaths.map((entry) =>
       `stage_pack_v2_standard_agent_pack_abi_missing_physical_repo_layout:${entry}`
     ),
   ].filter((entry): entry is string => Boolean(entry));
+  const blocked = rawFindings.length > 0
+    && (enforce || resolution.applicability !== 'repo_local' || resolution.status === 'blocked');
   return {
-    surface_kind: STANDARD_AGENT_PACK_ABI.surface_kind,
-    version: STANDARD_AGENT_PACK_ABI.version,
-    owner: STANDARD_AGENT_PACK_ABI.owner,
-    status: rawFindings.length === 0 ? 'passed' : enforce ? 'blocked' : 'advisory_missing',
+    surface_kind: canonicalAbi?.surface_kind ?? null,
+    version: canonicalAbi?.version ?? null,
+    owner: canonicalAbi?.owner ?? null,
+    status: rawFindings.length === 0 ? resolution.status : blocked ? 'blocked' : 'advisory_missing',
+    applicability: resolution.applicability,
+    selected_execution_profile_id: resolution.selected_execution_profile_id,
+    declaration: declaration ?? null,
+    effective_abi: resolution.effective_abi,
     required_repo_layout_paths: requiredLayoutPaths,
     declared_repo_layout_paths: declaredLayoutPaths,
     existing_repo_layout_paths: existingLayoutPaths,
     missing_repo_layout_paths: missingLayoutPaths,
     missing_physical_repo_layout_paths: missingPhysicalLayoutPaths,
-    required_stage_pack_shape: STANDARD_AGENT_PACK_ABI.required_stage_pack_shape,
-    l4_entry_gate: STANDARD_AGENT_PACK_ABI.l4_entry_gate,
-    l5_entry_gate: STANDARD_AGENT_PACK_ABI.l5_entry_gate,
-    authority_boundary: STANDARD_AGENT_PACK_ABI.authority_boundary,
-    blockers: enforce ? rawFindings : [],
-    advisory_findings: enforce ? [] : rawFindings,
+    required_stage_pack_shape: canonicalAbi?.required_stage_pack_shape ?? null,
+    l4_entry_gate: canonicalAbi?.l4_entry_gate ?? null,
+    l5_entry_gate: canonicalAbi?.l5_entry_gate ?? null,
+    authority_boundary: canonicalAbi?.authority_boundary ?? null,
+    blockers: blocked ? rawFindings : [],
+    advisory_findings: blocked ? [] : rawFindings,
   };
 }
 
@@ -215,12 +237,17 @@ export function validateStagePackV2(
   stageControlPlane: unknown,
   packCompilerInput: unknown,
   enforce: boolean,
-  options: { repoDir?: string | null } = {},
+  options: { repoDir?: string | null; selectedExecutionProfileId?: string | null } = {},
 ) {
   const plane = isRecord(stageControlPlane) ? stageControlPlane : {};
   const stages = recordArray(plane.stages);
   const packCompilerSourceRefs = validatePackCompilerSourceRefs(packCompilerInput, enforce);
-  const standardAgentPackAbi = validateStandardAgentPackAbi(packCompilerInput, enforce, options.repoDir ?? null);
+  const standardAgentPackAbi = validateStandardAgentPackAbi(
+    packCompilerInput,
+    enforce,
+    options.repoDir ?? null,
+    options.selectedExecutionProfileId ?? STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID,
+  );
   const planeFindings = [
     optionalString(plane.stage_pack_conformance_version) === STANDARD_STAGE_PACK_CONFORMANCE_VERSION
       ? null

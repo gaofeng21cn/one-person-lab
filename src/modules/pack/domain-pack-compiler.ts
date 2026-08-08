@@ -3,7 +3,12 @@ import crypto from 'node:crypto';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   STANDARD_AGENT_PACK_ABI,
+  resolveStandardAgentPackAbi,
 } from './standard-agent-pack-abi.ts';
+import {
+  STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID,
+  resolveStandardAgentExecutionProfile,
+} from './standard-agent-execution-profile.ts';
 import {
   buildGeneratedInterfaceBundle,
   GENERATED_INTERFACE_SOURCE_REFS,
@@ -26,7 +31,7 @@ import {
 } from '../../kernel/json-record.ts';
 import { optionalString } from '../../kernel/json-file.ts';
 import {
-  validateStandardAgentImplementationProfileRefs,
+  resolveStandardAgentImplementationProfile,
 } from './standard-agent-implementation-profile.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -241,35 +246,48 @@ function genericResidueBlocked(summary: JsonRecord) {
     || numberField(summary, 'blocker_count') > 0;
 }
 
-function buildStandardAgentPackAbiProjection(packCompilerInput: JsonRecord | null) {
-  const declaration = isRecord(packCompilerInput?.standard_agent_pack_abi)
-    ? packCompilerInput.standard_agent_pack_abi
-    : null;
-  const requiredRepoLayoutPaths = recordPathList(STANDARD_AGENT_PACK_ABI.required_repo_layout);
-  const declaredRepoLayoutPaths = recordPathList(declaration?.required_repo_layout);
-  const missingRepoLayoutPaths = requiredRepoLayoutPaths.filter((pathRef) =>
-    !declaredRepoLayoutPaths.includes(pathRef)
-  );
-  const findings = [
-    declaration ? null : 'standard_agent_pack_abi_missing',
-    optionalString(declaration?.version) === STANDARD_AGENT_PACK_ABI.version
-      ? null
-      : 'standard_agent_pack_abi_version_invalid',
-    ...missingRepoLayoutPaths.map((pathRef) => `standard_agent_pack_abi_missing_repo_layout:${pathRef}`),
-  ].filter((entry): entry is string => Boolean(entry));
+function buildStandardAgentPackAbiProjection(
+  declaration: unknown,
+  repoDir: string | undefined,
+  selectedExecutionProfileId: string | null,
+) {
+  const resolution = resolveStandardAgentPackAbi(declaration, {
+    repoDir,
+    selectedExecutionProfileId,
+  });
+  const applicable = resolution.applicability === 'repo_local';
+  const canonicalAbi = applicable ? STANDARD_AGENT_PACK_ABI : null;
+  const requiredRepoLayoutPaths = applicable
+    ? recordPathList(STANDARD_AGENT_PACK_ABI.required_repo_layout)
+    : [];
+  const declaredRepoLayoutPaths = resolution.status === 'passed'
+    ? requiredRepoLayoutPaths
+    : [];
+  const missingRepoLayoutPaths = resolution.status === 'missing'
+    ? requiredRepoLayoutPaths
+    : [];
+  const findings = resolution.status === 'missing'
+    ? ['standard_agent_pack_abi_missing']
+    : resolution.blockers;
   return {
-    surface_kind: STANDARD_AGENT_PACK_ABI.surface_kind,
-    version: STANDARD_AGENT_PACK_ABI.version,
-    owner: STANDARD_AGENT_PACK_ABI.owner,
-    status: findings.length === 0 ? 'passed' : 'advisory_missing',
+    surface_kind: canonicalAbi?.surface_kind ?? null,
+    version: canonicalAbi?.version ?? null,
+    owner: canonicalAbi?.owner ?? null,
+    status: resolution.status,
+    applicability: resolution.applicability,
+    selected_execution_profile_id: resolution.selected_execution_profile_id,
+    declaration_kind: resolution.declaration_kind ?? null,
+    declaration: declaration ?? null,
+    effective_abi: resolution.effective_abi,
     required_repo_layout_paths: requiredRepoLayoutPaths,
     declared_repo_layout_paths: declaredRepoLayoutPaths,
     missing_repo_layout_paths: missingRepoLayoutPaths,
-    required_stage_pack_shape: STANDARD_AGENT_PACK_ABI.required_stage_pack_shape,
-    l4_entry_gate: STANDARD_AGENT_PACK_ABI.l4_entry_gate,
-    l5_entry_gate: STANDARD_AGENT_PACK_ABI.l5_entry_gate,
-    authority_boundary: STANDARD_AGENT_PACK_ABI.authority_boundary,
-    advisory_findings: findings,
+    required_stage_pack_shape: canonicalAbi?.required_stage_pack_shape ?? null,
+    l4_entry_gate: canonicalAbi?.l4_entry_gate ?? null,
+    l5_entry_gate: canonicalAbi?.l5_entry_gate ?? null,
+    authority_boundary: canonicalAbi?.authority_boundary ?? null,
+    blockers: resolution.status === 'blocked' ? findings : [],
+    advisory_findings: resolution.status === 'missing' ? findings : [],
   };
 }
 
@@ -447,9 +465,21 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
   const packCompilerInput = isRecord(descriptor.pack_compiler_input_contract)
     ? descriptor.pack_compiler_input_contract
     : null;
-  const implementationProfileValidation = validateStandardAgentImplementationProfileRefs(
+  const repoDir = optionalString(descriptor.repo_dir) ?? undefined;
+  const selectedExecutionProfileId = repoDir
+    ? resolveStandardAgentExecutionProfile(repoDir).selected_profile_id
+    : STANDARD_DOMAIN_AGENT_REPO_LOCAL_RUNTIME_PROFILE_ID;
+  const implementationProfileResolution = resolveStandardAgentImplementationProfile(
     packCompilerInput?.implementation_profile,
-    optionalString(descriptor.repo_dir) ?? '',
+    {
+      repoDir,
+      selectedExecutionProfileId,
+    },
+  );
+  const standardAgentPackAbi = buildStandardAgentPackAbiProjection(
+    packCompilerInput?.standard_agent_pack_abi,
+    repoDir,
+    selectedExecutionProfileId,
   );
   const generatedSurfaces = GENERATED_SURFACES.map((surface) => surfaceProjection(descriptor, surface));
   const missingRequired = generatedSurfaces.flatMap((surface) => surface.missing_descriptor_surfaces);
@@ -457,8 +487,11 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
     ...stringList(descriptor.repo_contract_blockers),
     optionalString(descriptor.manifest_status) === 'resolved' ? null : 'domain_manifest_not_resolved',
     genericResidueBlocked(summary) ? 'functional_privatization_audit_has_generic_residue_or_blocker' : null,
-    implementationProfileValidation.status === 'blocked'
-      ? implementationProfileValidation.blockers.map((reason) => `implementation_profile:${reason}`)
+    implementationProfileResolution.status === 'blocked'
+      ? implementationProfileResolution.blockers.map((reason) => `implementation_profile:${reason}`)
+      : null,
+    standardAgentPackAbi.status === 'blocked'
+      ? standardAgentPackAbi.blockers.map((reason) => `standard_agent_pack_abi:${reason}`)
       : null,
     ...missingRequired.map((surface) => `missing_descriptor_surface:${surface}`),
   ].flatMap((reason) => Array.isArray(reason) ? reason : reason === null ? [] : [reason]);
@@ -493,10 +526,12 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
         skill_catalog_status: statusOf(descriptor.skill_catalog),
       },
       minimal_authority_function_refs: minimalAuthorityFunctionRefs(descriptor),
-      implementation_profile: packCompilerInput?.implementation_profile ?? null,
-      implementation_profile_status: implementationProfileValidation.status,
-      implementation_profile_blockers: implementationProfileValidation.blockers,
-      standard_agent_pack_abi: buildStandardAgentPackAbiProjection(packCompilerInput),
+      implementation_profile: implementationProfileResolution.effective_profile,
+      implementation_profile_declaration: packCompilerInput?.implementation_profile ?? null,
+      implementation_profile_resolution: implementationProfileResolution,
+      implementation_profile_status: implementationProfileResolution.status,
+      implementation_profile_blockers: implementationProfileResolution.blockers,
+      standard_agent_pack_abi: standardAgentPackAbi,
       functional_privatization_summary: summary,
     },
     generated_surface_handoff: {
