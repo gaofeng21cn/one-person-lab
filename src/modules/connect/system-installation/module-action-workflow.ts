@@ -22,7 +22,7 @@ export type DomainModuleRuntimeSpec = DomainModuleSpec & {
   package_health_check_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   runtime_probe_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   exec_command?: (checkoutPath: string, args: string[]) => { command: string; args: string[] } | null;
-  skill_sync_domain?: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
+  skill_sync_domain?: string;
 };
 
 export type ModuleActionStepResult = {

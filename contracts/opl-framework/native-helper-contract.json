@@ -30,7 +30,7 @@
       "opl-bookforge"
     ],
     "domain_truth_owner_registry": {
-      "source_ref": "src/kernel/standard-agent-registry.ts",
+      "source_ref": "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
       "series_membership": "standard_domain_agent",
       "projection_field": "project"
     }

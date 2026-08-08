@@ -847,7 +847,7 @@ test('package archive builder writes channel manifest checksums git source and r
     manifest.packages.package_artifacts['mas-scholar-skills'].package_manifest_ref,
     'contracts/opl-framework/packages/mas-scholar-skills.json',
   );
-  assert.deepEqual(manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas']);
+  assert.deepEqual(manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas', 'mag']);
   assert.match(manifest.packages.package_artifacts['mas-scholar-skills'].source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(checksums, /mas-0\.2\.1\.tar\.gz/);
   assert.match(checksums, /mag-0\.3\.0\.tar\.gz/);
@@ -1315,7 +1315,16 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
   assert.equal(catalogEntry.manifest_ref, 'packages/mas-scholar-skills-0.2.24.json');
-  assert.deepEqual(frozenManifest, manifest);
+  const {
+    publication_projection_order: publicationProjectionOrder,
+    publication_source: publicationSource,
+    compatibility_projection: compatibilityProjection,
+    ...ownerManifestProjection
+  } = manifest;
+  assert.equal(publicationProjectionOrder, 60);
+  assert.equal(publicationSource.module_id, 'scholarskills');
+  assert.equal(compatibilityProjection.registry_short_label, 'ScholarSkills');
+  assert.deepEqual(frozenManifest, ownerManifestProjection);
   assert.equal(manifest.version, catalogEntry.package_version);
   assert.deepEqual(manifest.consumer_policy.supported_required_by, []);
   assert.deepEqual(manifest.consumer_policy.supported_optional_consumer_agent_ids, ['mas', 'mag']);

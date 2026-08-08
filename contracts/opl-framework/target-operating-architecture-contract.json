@@ -996,7 +996,7 @@
   "foundry_agent_os_standard": {
     "pattern_id": "foundry_agent_os_standard.v1",
     "source_pattern_ref": "human_doc:opl_standard_agent_boundary",
-    "standard_agent_registry_ref": "src/kernel/standard-agent-registry.ts",
+    "standard_agent_registry_ref": "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
     "target_shape": "OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry",
     "opl_module_mapping": [
       {

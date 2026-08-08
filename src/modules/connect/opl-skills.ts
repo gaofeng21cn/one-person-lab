@@ -15,6 +15,7 @@ import {
 } from '../pack/index.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode } from './install-companions.ts';
 import {
+  listCodexFamilyPluginPackIds,
   registerOplFamilyCodexPlugins,
   type CodexPluginRegistryPackId,
 } from './system-installation/codex-plugin-registry.ts';
@@ -877,10 +878,11 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     resolveCodexHome,
     writeMaterializedPluginCarrier: writeOplMaterializedPluginCarrier,
   }));
+  const codexPluginPackIds = new Set(listCodexFamilyPluginPackIds());
   const syncedFamilyPluginPacks = packs.filter((pack): pack is SyncFamilySkillPack & { domain_id: CodexPluginRegistryPackId } => (
     pack.sync_status === 'synced'
     && pack.sync_scope === 'codex'
-    && ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'scholarskills'].includes(pack.domain_id)
+    && codexPluginPackIds.has(pack.domain_id)
     && Boolean(pack.registry_repo_root)
   ));
   const codex_plugin_registry = syncedFamilyPluginPacks.length > 0

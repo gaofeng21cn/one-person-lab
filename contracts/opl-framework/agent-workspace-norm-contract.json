@@ -6,7 +6,7 @@
   "scope": "OPL-owned executable workspace norm for standard domain agents declared by the canonical registry",
   "machine_boundary": "This contract fixes the framework-owned workspace precondition, topology, registry, descriptor delegate, user inspection, and authority boundary. Domain agents keep domain truth, source/artifact/memory bodies, owner receipts, typed blockers, and quality/export verdicts.",
   "supported_agent_registry": {
-    "source_ref": "src/kernel/standard-agent-registry.ts",
+    "source_ref": "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
     "series_membership": "standard_domain_agent"
   },
   "default_workspace_precondition": {

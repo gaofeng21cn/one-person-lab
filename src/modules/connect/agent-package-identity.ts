@@ -1,4 +1,5 @@
 import {
+  listProjectedOplPackageIds,
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
@@ -7,17 +8,7 @@ function normalizeAgentPackageAliasKey(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-export const CANONICAL_OPL_PACKAGE_IDS = [
-  'mas',
-  'mag',
-  'rca',
-  'oma',
-  'obf',
-  'mas-scholar-skills',
-  'opl-relay',
-  'opl-persona',
-  'opl-flow',
-] as const;
+export const CANONICAL_OPL_PACKAGE_IDS: readonly string[] = listProjectedOplPackageIds();
 
 const CANONICAL_PACKAGE_IDS = new Map<string, string>([
   ...STANDARD_AGENT_REGISTRY

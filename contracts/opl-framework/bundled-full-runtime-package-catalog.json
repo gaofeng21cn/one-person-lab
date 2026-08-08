@@ -75,7 +75,7 @@
       "package_version": "0.1.42",
       "owner_source_commit": "bd9e5a9b23e5e843bf2f0d33e094b1de11244542",
       "manifest_ref": "packages/opl-flow.json",
-      "manifest_sha256": "sha256:37253b80c2fd40c162d8dec4932b2880d698e22fb21b04f46dd9d1ac20108da6",
+      "manifest_sha256": "sha256:f0ac406cbdcda189fa9da5df0713c73b867c048a90e5c3b0f31db25e455e2a46",
       "payload_manifest_ref": "packages/payloads/opl-flow-0.1.42.json",
       "payload_manifest_sha256": "sha256:ca11aed377310d69f526cc0dcdfd0b7a2313a7c57a597365f19581fcbef605ea",
       "runtime_module_relative_path": "modules/opl-flow"

@@ -64,6 +64,12 @@ const MODULE_WORKFLOW_DEPS = {
   readPackagedModuleMarker,
 };
 
+const LEGACY_RUNTIME_MODULE_ALIASES = new Map([
+  ['mds', 'meddeepscientist'],
+  ['med-deepscientist', 'meddeepscientist'],
+  ['med_deepscientist', 'meddeepscientist'],
+]);
+
 function runManagedWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
   const workflow = runManagedModuleWorkflow(spec, checkoutPath, MODULE_WORKFLOW_DEPS);
   const blocked = Object.values(workflow).some((step) => step.status === 'blocked');
@@ -596,15 +602,9 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
 
 function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
   const normalized = moduleId.trim().toLowerCase();
-  const legacyAliases = new Map<string, OplModuleId>([
-    ['mds', 'meddeepscientist'],
-    ['med-deepscientist', 'meddeepscientist'],
-    ['med_deepscientist', 'meddeepscientist'],
-    ['meddeepscientist', 'meddeepscientist'],
-  ]);
   const canonical = (
     resolveStandardAgent(moduleId)?.module_id.toLowerCase() as OplModuleId | undefined
-  ) ?? legacyAliases.get(normalized) ?? normalized;
+  ) ?? LEGACY_RUNTIME_MODULE_ALIASES.get(normalized) ?? normalized;
   const spec = DOMAIN_MODULE_SPECS.find((entry) => entry.module_id === canonical);
   if (!spec) {
     throw new FrameworkContractError(

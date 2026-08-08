@@ -5,14 +5,18 @@ import { fileURLToPath } from 'node:url';
 
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
-import { resolveStandardAgent } from '../../../kernel/standard-agent-registry.ts';
+import {
+  FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP,
+  loadStandardAgentRegistry,
+  resolveStandardAgent,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../kernel/standard-agent-registry.ts';
 import { OPL_CONNECT_MCP_SERVER_ID } from '../opl-connect-mcp-tools.ts';
-import type { OplModuleId } from './shared.ts';
 
-export type CodexPluginRegistryPackId = OplModuleId | 'scholarskills';
+export type CodexPluginRegistryPackId = string;
 
-type CodexFamilyPluginSpec = {
-  module_id: OplModuleId | null;
+export type CodexFamilyPluginSpec = {
+  module_id: string | null;
   pack_id: CodexPluginRegistryPackId;
   marketplace_id: string;
   plugin_id: string;
@@ -48,7 +52,7 @@ export type LocalCodexPluginMarketplace = {
 };
 
 export type CodexPluginRegistryItem = {
-  module_id: OplModuleId | null;
+  module_id: string | null;
   pack_id: string;
   marketplace_id: string;
   plugin_id: string;
@@ -94,134 +98,72 @@ export type CodexPluginRegistryResult = {
   };
 };
 
-const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
-  {
-    module_id: 'medautoscience',
-    pack_id: 'medautoscience',
-    marketplace_id: 'med-autoscience-local',
-    plugin_id: 'med-autoscience',
-    repo_name: 'med-autoscience',
-    display_name: 'Med Auto Science Local',
+const PLUGIN_COMPATIBILITY_OVERRIDES: Record<string, {
+  category: string;
+  legacy_standalone_mcp_server_ids?: string[];
+}> = {
+  mas: {
     category: 'Research',
-    ownership_kind: 'standard_agent_codex_carrier',
-    distribution_role: 'domain_agent_plugin_pack',
-    framework_owned_capability: false,
-    domain_module: true,
-    brand_module: false,
-    authority_boundary: {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-    },
     legacy_standalone_mcp_server_ids: ['med-autoscience', 'medautosci', 'mas'],
   },
-  {
-    module_id: 'medautogrant',
-    pack_id: 'medautogrant',
-    marketplace_id: 'med-autogrant-local',
-    plugin_id: 'med-autogrant',
-    repo_name: 'med-autogrant',
-    display_name: 'Med Auto Grant Local',
+  mag: {
     category: 'Research',
-    ownership_kind: 'standard_agent_codex_carrier',
-    distribution_role: 'domain_agent_plugin_pack',
-    framework_owned_capability: false,
-    domain_module: true,
-    brand_module: false,
-    authority_boundary: {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-    },
     legacy_standalone_mcp_server_ids: ['med-autogrant', 'medautogrant', 'mag'],
   },
-  {
-    module_id: 'redcube',
-    pack_id: 'redcube',
-    marketplace_id: 'redcube-ai-local',
-    plugin_id: 'redcube-ai',
-    repo_name: 'redcube-ai',
-    display_name: 'RedCube AI Local',
+  rca: {
     category: 'Creative',
-    ownership_kind: 'standard_agent_codex_carrier',
-    distribution_role: 'domain_agent_plugin_pack',
-    framework_owned_capability: false,
-    domain_module: true,
-    brand_module: false,
-    authority_boundary: {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-    },
     legacy_standalone_mcp_server_ids: ['redcube-ai', 'redcube', 'rca'],
   },
-  {
-    module_id: 'oplmetaagent',
-    pack_id: 'oplmetaagent',
-    marketplace_id: 'opl-meta-agent-local',
-    plugin_id: 'opl-meta-agent',
-    repo_name: 'opl-meta-agent',
-    display_name: 'OPL Meta Agent Local',
+  oma: {
     category: 'Productivity',
-    ownership_kind: 'standard_agent_codex_carrier',
-    distribution_role: 'domain_agent_plugin_pack',
-    framework_owned_capability: false,
-    domain_module: true,
-    brand_module: false,
-    authority_boundary: {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-    },
     legacy_standalone_mcp_server_ids: ['opl-meta-agent', 'oplmetaagent', 'oma'],
   },
-  {
-    module_id: 'oplbookforge',
-    pack_id: 'oplbookforge',
-    marketplace_id: 'opl-bookforge-local',
-    plugin_id: 'opl-bookforge',
-    repo_name: 'opl-bookforge',
-    display_name: 'OPL Book Forge Local',
+  obf: {
     category: 'Productivity',
-    ownership_kind: 'standard_agent_codex_carrier',
-    distribution_role: 'domain_agent_plugin_pack',
-    framework_owned_capability: false,
-    domain_module: true,
-    brand_module: false,
-    authority_boundary: {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-    },
     legacy_standalone_mcp_server_ids: ['opl-bookforge', 'oplbookforge', 'bookforge', 'obf'],
   },
-  {
-    module_id: null,
-    pack_id: 'scholarskills',
-    marketplace_id: 'mas-scholar-skills-local',
-    plugin_id: 'mas-scholar-skills',
-    repo_name: 'mas-scholar-skills',
-    display_name: 'MAS Scholar Skills Local',
-    category: 'Productivity',
-    ownership_kind: 'framework_capability_plugin',
-    distribution_role: 'framework_capability_plugin_pack',
-    framework_owned_capability: true,
-    domain_module: false,
-    brand_module: false,
-    authority_boundary: {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-    },
-    legacy_standalone_mcp_server_ids: [],
-  },
-];
+  'mas-scholar-skills': { category: 'Productivity' },
+};
+
+const NO_AUTHORITY = {
+  can_write_domain_truth: false,
+  can_sign_owner_receipt: false,
+  can_create_typed_blocker: false,
+  can_write_runtime_queue: false,
+} as const;
+
+export function buildCodexFamilyPluginSpecs(packageDirectory?: string): CodexFamilyPluginSpec[] {
+  return loadStandardAgentRegistry(packageDirectory).map((entry) => {
+    const compatibility = PLUGIN_COMPATIBILITY_OVERRIDES[entry.agent_id];
+    const capabilityPackage = entry.series_membership === FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP;
+    return {
+      module_id: capabilityPackage ? null : entry.module_id.toLowerCase(),
+      pack_id: entry.module_id.toLowerCase(),
+      marketplace_id: `${entry.project}-local`,
+      plugin_id: entry.plugin_name,
+      repo_name: entry.project,
+      display_name: `${entry.display_name} Local`,
+      category: compatibility?.category ?? 'Productivity',
+      ownership_kind: capabilityPackage
+        ? 'framework_capability_plugin'
+        : 'standard_agent_codex_carrier',
+      distribution_role: capabilityPackage
+        ? 'framework_capability_plugin_pack'
+        : 'domain_agent_plugin_pack',
+      framework_owned_capability: capabilityPackage,
+      domain_module: entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP,
+      brand_module: false,
+      authority_boundary: NO_AUTHORITY,
+      legacy_standalone_mcp_server_ids: compatibility?.legacy_standalone_mcp_server_ids ?? [],
+    };
+  });
+}
+
+export function listCodexFamilyPluginPackIds(packageDirectory?: string) {
+  return buildCodexFamilyPluginSpecs(packageDirectory).map((spec) => spec.pack_id);
+}
+
+const FAMILY_PLUGIN_SPECS = buildCodexFamilyPluginSpecs();
 
 function resolveHomeDir() {
   return process.env.HOME?.trim() || os.homedir();
@@ -406,7 +348,7 @@ function resolvePluginSourcePath(spec: CodexFamilyPluginSpec, repoPath: string) 
 }
 
 function defaultRepoPathForSpec(spec: CodexFamilyPluginSpec, codexConfigPath: string) {
-  if (spec.pack_id === 'scholarskills') {
+  if (spec.framework_owned_capability) {
     return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
   }
   return path.join(path.dirname(path.dirname(path.dirname(codexConfigPath))), spec.repo_name);

@@ -1,17 +1,13 @@
-import bookForgeAgentPackageManifest from '../../../contracts/opl-framework/packages/obf.json' with { type: 'json' };
-import magAgentPackageManifest from '../../../contracts/opl-framework/packages/mag.json' with { type: 'json' };
-import masAgentPackageManifest from '../../../contracts/opl-framework/packages/mas.json' with { type: 'json' };
-import omaAgentPackageManifest from '../../../contracts/opl-framework/packages/oma.json' with { type: 'json' };
-import rcaAgentPackageManifest from '../../../contracts/opl-framework/packages/rca.json' with { type: 'json' };
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { listCurrentPackageProjections } from '../../kernel/standard-agent-registry.ts';
 import { canonicalAgentPackageId } from './agent-package-identity.ts';
 import { normalizePackageManifest } from './agent-package-registry-parts/manifest-normalizers.ts';
 import type { AgentPackagePresentation } from './agent-package-registry-parts/types.ts';
-import type { ModuleCapabilityDependency, OplModuleId } from './system-installation/shared.ts';
+import type { ModuleCapabilityDependency } from './system-installation/shared.ts';
 
 type CodexCarrierDistribution = 'repo_carrier_source' | 'generated_carrier_surface';
 
-type FirstPartyAgentPackageManifest = {
+export type FirstPartyAgentPackageManifest = {
   agent_id: string;
   package_id: string;
   version: string;
@@ -43,6 +39,15 @@ type FirstPartyAgentPackageManifest = {
   dependency_profiles: readonly unknown[];
   capability_dependencies: readonly ModuleCapabilityDependency[];
   presentation: AgentPackagePresentation | null;
+  package_manifest_ref: string;
+  module_id: string;
+  display_name: string;
+  description: string;
+  repo_name: string;
+  repo_url: string;
+  owner_package_manifest_ref: string;
+  owner_plugin_manifest_ref: string;
+  owner_language_version_ref: string | null;
 };
 
 function stringList(value: unknown) {
@@ -248,21 +253,44 @@ function normalizeFirstPartyAgentPackagePresentation(payload: Record<string, unk
   }
 }
 
+function englishPresentationValue(payload: Record<string, unknown>, field: string) {
+  const presentation = isRecord(payload.presentation) ? payload.presentation : {};
+  const values = isRecord(presentation[field]) ? presentation[field] : {};
+  return typeof values['en-US'] === 'string' && values['en-US'].trim()
+    ? values['en-US'].trim()
+    : null;
+}
+
+function repoNameFromUrl(repoUrl: string) {
+  const normalized = repoUrl.replace(/[\\/]+$/, '').replace(/\.git$/, '');
+  return normalized.split(/[\\/]/).at(-1) || repoUrl;
+}
+
 export function normalizeFirstPartyAgentPackageManifest(payload: unknown): FirstPartyAgentPackageManifest {
   if (!isRecord(payload)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must be a JSON object.', {
       contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
     });
   }
+  const agentId = requireCanonicalPackageIdentity(payload.agent_id, 'agent_id');
+  const packageId = requireCanonicalPackageIdentity(payload.package_id, 'package_id');
   if (!isRecord(payload.codex_surface)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must declare codex_surface.', {
       contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
       field: 'codex_surface',
     });
   }
+  if (!isRecord(payload.runtime_source_carrier) || !isRecord(payload.publication_source)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must project runtime carrier and publication source metadata.', {
+      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+      field: 'runtime_source_carrier|publication_source',
+    });
+  }
   const codexSurface = payload.codex_surface;
-  const agentId = requireCanonicalPackageIdentity(payload.agent_id, 'agent_id');
-  const packageId = requireCanonicalPackageIdentity(payload.package_id, 'package_id');
+  const runtimeSourceCarrier = payload.runtime_source_carrier;
+  const publicationSource = payload.publication_source;
+  const repoUrl = requiredString(payload.source_repo, 'source_repo');
+  const displayName = requiredString(payload.display_name, 'display_name');
   const capabilityDependencies = Array.isArray(payload.capability_dependencies)
     ? payload.capability_dependencies.map(normalizeCapabilityDependency)
     : null;
@@ -307,26 +335,42 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
       : [],
     capability_dependencies: capabilityDependencies,
     presentation: normalizeFirstPartyAgentPackagePresentation(payload),
+    package_manifest_ref: `contracts/opl-framework/packages/${packageId}.json`,
+    module_id: requiredString(runtimeSourceCarrier.module_id, 'runtime_source_carrier.module_id'),
+    display_name: displayName,
+    description: englishPresentationValue(payload, 'description_i18n') ?? displayName,
+    repo_name: repoNameFromUrl(repoUrl),
+    repo_url: repoUrl,
+    owner_package_manifest_ref: requiredString(
+      publicationSource.owner_package_manifest_ref,
+      'publication_source.owner_package_manifest_ref',
+    ),
+    owner_plugin_manifest_ref: requiredString(
+      publicationSource.owner_plugin_manifest_ref,
+      'publication_source.owner_plugin_manifest_ref',
+    ),
+    owner_language_version_ref: typeof publicationSource.owner_language_version_ref === 'string'
+      ? requiredString(publicationSource.owner_language_version_ref, 'publication_source.owner_language_version_ref')
+      : null,
   };
 }
 
-const FIRST_PARTY_AGENT_PACKAGE_MANIFESTS: Partial<Record<OplModuleId, FirstPartyAgentPackageManifest>> = {
-  medautoscience: normalizeFirstPartyAgentPackageManifest(masAgentPackageManifest),
-  medautogrant: normalizeFirstPartyAgentPackageManifest(magAgentPackageManifest),
-  redcube: normalizeFirstPartyAgentPackageManifest(rcaAgentPackageManifest),
-  oplmetaagent: normalizeFirstPartyAgentPackageManifest(omaAgentPackageManifest),
-  oplbookforge: normalizeFirstPartyAgentPackageManifest(bookForgeAgentPackageManifest),
-};
-
-export function getAgentPackageManifestByModuleId(moduleId: OplModuleId) {
-  return FIRST_PARTY_AGENT_PACKAGE_MANIFESTS[moduleId] ?? null;
+export function listFirstPartyAgentPackageManifests(packageDirectory?: string) {
+  return listCurrentPackageProjections(packageDirectory)
+    .filter(({ payload }) => payload.surface_kind === 'opl_agent_package_manifest.v1')
+    .map(({ payload }) => normalizeFirstPartyAgentPackageManifest(payload));
 }
 
-export function getCapabilityDependenciesForModule(moduleId: OplModuleId) {
-  return getAgentPackageManifestByModuleId(moduleId)?.capability_dependencies ?? [];
+export function getAgentPackageManifestByModuleId(moduleId: string, packageDirectory?: string) {
+  return listFirstPartyAgentPackageManifests(packageDirectory)
+    .find((manifest) => manifest.module_id === moduleId) ?? null;
+}
+
+export function getCapabilityDependenciesForModule(moduleId: string, packageDirectory?: string) {
+  return getAgentPackageManifestByModuleId(moduleId, packageDirectory)?.capability_dependencies ?? [];
 }
 
 export function listFirstPartyAgentPackageDependencyProfiles() {
-  return Object.values(FIRST_PARTY_AGENT_PACKAGE_MANIFESTS)
-    .flatMap((manifest) => manifest?.dependency_profiles ?? []);
+  return listFirstPartyAgentPackageManifests()
+    .flatMap((manifest) => manifest.dependency_profiles);
 }

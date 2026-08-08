@@ -9,6 +9,12 @@
     "package_id",
     "version",
     "source",
+    "source_repo",
+    "display_name",
+    "publication_projection_order",
+    "publication_source",
+    "runtime_source_carrier",
+    "standard_agent_descriptor_projection",
     "carrier_source_role",
     "codex_surface",
     "capability_dependencies"
@@ -41,6 +47,77 @@
     "source": {
       "type": "string",
       "minLength": 1
+    },
+    "source_repo": {
+      "type": "string",
+      "format": "uri-reference",
+      "minLength": 1
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "publication_projection_order": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "publication_source": {
+      "type": "object",
+      "required": [
+        "owner_package_manifest_ref",
+        "owner_plugin_manifest_ref"
+      ],
+      "properties": {
+        "module_id": { "type": "string", "minLength": 1 },
+        "owner_package_manifest_ref": { "type": "string", "minLength": 1 },
+        "owner_plugin_manifest_ref": { "type": "string", "minLength": 1 },
+        "owner_language_version_ref": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "standard_agent_descriptor_projection": {
+      "type": "object",
+      "required": [
+        "surface_kind",
+        "source_ref",
+        "interface_source_ref",
+        "domain_id",
+        "runtime_domain_id",
+        "explicit_aliases",
+        "compatibility"
+      ],
+      "properties": {
+        "surface_kind": { "const": "opl_standard_agent_descriptor_projection.v1" },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "interface_source_ref": { "type": "string", "minLength": 1 },
+        "domain_id": { "type": "string", "minLength": 1 },
+        "runtime_domain_id": { "type": "string", "minLength": 1 },
+        "short_label": { "type": "string", "minLength": 1 },
+        "explicit_aliases": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "compatibility": {
+          "type": "object",
+          "required": ["registry_domain_id", "owner_aliases"],
+          "properties": {
+            "registry_domain_id": { "type": "string", "minLength": 1 },
+            "aliases": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "uniqueItems": true
+            },
+            "owner_aliases": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     },
     "presentation": {
       "type": "object",

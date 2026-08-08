@@ -6,14 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { OplUpdateChannel } from '../../../kernel/system-preferences.ts';
 
-export type OplModuleId =
-  | 'medautoscience'
-  | 'meddeepscientist'
-  | 'medautogrant'
-  | 'oplmetaagent'
-  | 'oplbookforge'
-  | 'redcube'
-  | 'scholarskills';
+export type OplModuleId = string;
 
 export type OplModuleAction =
   | 'install'

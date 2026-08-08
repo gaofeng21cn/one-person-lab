@@ -5,39 +5,30 @@ import { fileURLToPath } from 'node:url';
 
 import {
   getAgentPackageManifestByModuleId,
-  getCapabilityDependenciesForModule,
+  listFirstPartyAgentPackageManifests,
 } from './agent-package-manifests.ts';
+import { listCurrentPackageProjections } from '../../kernel/standard-agent-registry.ts';
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { readBundledCodexDefaultProfile } from '../../kernel/local-codex-defaults.ts';
 import { MANAGED_UPDATE_OWNER_FIELDS } from './managed-update-owner-boundary.ts';
-import type { ModuleCapabilityDependency, OplModuleId } from './system-installation/shared.ts';
+import type { ModuleCapabilityDependency } from './system-installation/shared.ts';
 
-type PackageSourceId =
-  | 'medautoscience'
-  | 'medautogrant'
-  | 'redcube'
-  | 'oplmetaagent'
-  | 'oplbookforge'
-  | 'scholarskills'
-  | 'oplrelay'
-  | 'oplpersona'
-  | 'oplflow';
-
-type PackageSpec = {
-  module_id: PackageSourceId;
+export type PackageSpec = {
+  module_id: string;
   label: string;
   description: string;
   tags: readonly string[];
   repo_name: string;
   repo_url: string;
   scope: 'domain_module' | 'runtime_dependency' | 'capability_package';
-  package_id: 'mas' | 'mag' | 'rca' | 'oma' | 'obf' | 'mas-scholar-skills' | 'opl-relay' | 'opl-persona' | 'opl-flow';
+  package_id: string;
   package_manifest_ref: string;
   owner_package_manifest_ref: string;
   owner_manifest_kind: 'standard_agent' | 'capability_package' | 'workflow_profile';
   owner_plugin_manifest_ref: string;
   owner_language_version_ref?: string;
   capability_dependencies?: readonly ModuleCapabilityDependency[];
+  version: string;
 };
 
 type BuildPackageManifestInput = Partial<{
@@ -90,140 +81,92 @@ const PACKAGE_REMOTE_PUBLISH_STATUS = 'publication_workflow_configured_pending_r
 const RELEASE_SET_GENERATION_PATTERN = /^\d{2}\.\d{1,2}\.\d{1,2}(?:-r[1-9]\d*)?$/;
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
-const PACKAGE_SPECS: PackageSpec[] = [
-  {
-    module_id: 'medautoscience',
-    label: 'Med Auto Science',
-    description: 'Medical research workflows for evidence, analysis, writing, figures, and submission.',
-    tags: ['medical-research', 'evidence', 'manuscript'],
-    repo_name: 'med-autoscience',
-    repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
-    scope: 'domain_module',
-    package_id: 'mas',
-    package_manifest_ref: 'contracts/opl-framework/packages/mas.json',
-    owner_package_manifest_ref: 'contracts/opl_agent_package_manifest.json',
-    owner_manifest_kind: 'standard_agent',
-    owner_plugin_manifest_ref: 'plugins/med-autoscience/.codex-plugin/plugin.json',
-    owner_language_version_ref: 'pyproject.toml',
-    capability_dependencies: getCapabilityDependenciesForModule('medautoscience'),
-  },
-  {
-    module_id: 'medautogrant',
-    label: 'Med Auto Grant',
-    description: 'Grant planning, drafting, critique, revision, and submission workflows.',
-    tags: ['grant-writing', 'proposal', 'review'],
-    repo_name: 'med-autogrant',
-    repo_url: 'https://github.com/gaofeng21cn/med-autogrant.git',
-    scope: 'domain_module',
-    package_id: 'mag',
-    package_manifest_ref: 'contracts/opl-framework/packages/mag.json',
-    owner_package_manifest_ref: 'contracts/opl_agent_package_manifest.json',
-    owner_manifest_kind: 'standard_agent',
-    owner_plugin_manifest_ref: 'plugins/med-autogrant/.codex-plugin/plugin.json',
-    owner_language_version_ref: 'pyproject.toml',
-  },
-  {
-    module_id: 'redcube',
-    label: 'RedCube AI',
-    description: 'Visual deliverable, presentation, and figure production workflows.',
-    tags: ['visual-deliverables', 'presentations', 'figures'],
-    repo_name: 'redcube-ai',
-    repo_url: 'https://github.com/gaofeng21cn/redcube-ai.git',
-    scope: 'domain_module',
-    package_id: 'rca',
-    package_manifest_ref: 'contracts/opl-framework/packages/rca.json',
-    owner_package_manifest_ref: 'contracts/opl_agent_package_manifest.json',
-    owner_manifest_kind: 'standard_agent',
-    owner_plugin_manifest_ref: 'plugins/redcube-ai/.codex-plugin/plugin.json',
-    owner_language_version_ref: 'package.json',
-  },
-  {
-    module_id: 'oplmetaagent',
-    label: 'OPL Meta Agent',
-    description: 'Agent architecture, baseline, takeover, and OPL conformance workflows.',
-    tags: ['agent-design', 'architecture', 'conformance'],
-    repo_name: 'opl-meta-agent',
-    repo_url: 'https://github.com/gaofeng21cn/opl-meta-agent.git',
-    scope: 'domain_module',
-    package_id: 'oma',
-    package_manifest_ref: 'contracts/opl-framework/packages/oma.json',
-    owner_package_manifest_ref: 'contracts/opl_agent_package_manifest.json',
-    owner_manifest_kind: 'standard_agent',
-    owner_plugin_manifest_ref: 'plugins/opl-meta-agent/.codex-plugin/plugin.json',
-    owner_language_version_ref: 'package.json',
-  },
-  {
-    module_id: 'oplbookforge',
-    label: 'OPL Book Forge',
-    description: 'Long-form book architecture, drafting, review, and publication workflows.',
-    tags: ['book-authoring', 'long-form', 'publishing'],
-    repo_name: 'opl-bookforge',
-    repo_url: 'https://github.com/gaofeng21cn/opl-bookforge.git',
-    scope: 'domain_module',
-    package_id: 'obf',
-    package_manifest_ref: 'contracts/opl-framework/packages/obf.json',
-    owner_package_manifest_ref: 'contracts/opl_agent_package_manifest.json',
-    owner_manifest_kind: 'standard_agent',
-    owner_plugin_manifest_ref: 'plugins/opl-bookforge/.codex-plugin/plugin.json',
-    owner_language_version_ref: 'package.json',
-  },
-  {
-    module_id: 'scholarskills',
-    label: 'MAS Scholar Skills',
-    description: 'Reusable medical research capabilities consumed by Med Auto Science.',
-    tags: ['medical-research', 'capabilities', 'skills'],
-    repo_name: 'mas-scholar-skills',
-    repo_url: 'https://github.com/gaofeng21cn/mas-scholar-skills.git',
-    scope: 'capability_package',
-    package_id: 'mas-scholar-skills',
-    package_manifest_ref: 'contracts/opl-framework/packages/mas-scholar-skills.json',
-    owner_package_manifest_ref: 'contracts/opl_capability_package_manifest.json',
-    owner_manifest_kind: 'capability_package',
-    owner_plugin_manifest_ref: '.codex-plugin/plugin.json',
-  },
-  {
-    module_id: 'oplrelay',
-    label: 'OPL Relay',
-    description: 'Evidence-first mail, relationship context, and review-gated drafting.',
-    tags: ['mail', 'communication', 'evidence', 'apple-mail'],
-    repo_name: 'opl-relay',
-    repo_url: 'https://github.com/gaofeng21cn/opl-relay.git',
-    scope: 'capability_package',
-    package_id: 'opl-relay',
-    package_manifest_ref: 'contracts/opl-framework/packages/opl-relay.json',
-    owner_package_manifest_ref: 'plugins/opl-relay/opl-package.json',
-    owner_manifest_kind: 'capability_package',
-    owner_plugin_manifest_ref: 'plugins/opl-relay/.codex-plugin/plugin.json',
-  },
-  {
-    module_id: 'oplpersona',
-    label: 'OPL Persona',
-    description: 'Evidence-backed PI context, memory, Inbox, and output proposals.',
-    tags: ['persona', 'memory', 'knowledge', 'website'],
-    repo_name: 'opl-persona',
-    repo_url: 'https://github.com/gaofeng21cn/opl-persona.git',
-    scope: 'capability_package',
-    package_id: 'opl-persona',
-    package_manifest_ref: 'contracts/opl-framework/packages/opl-persona.json',
-    owner_package_manifest_ref: 'plugins/opl-persona/opl-package.json',
-    owner_manifest_kind: 'capability_package',
-    owner_plugin_manifest_ref: 'plugins/opl-persona/.codex-plugin/plugin.json',
-  },
-  {
-    module_id: 'oplflow',
-    label: 'OPL Flow',
-    description: 'Recommended OPL workflow profile and managed Codex policy.',
-    tags: ['workflow-profile', 'codex', 'policy'],
-    repo_name: 'opl-flow',
-    repo_url: 'https://github.com/gaofeng21cn/opl-flow.git',
-    scope: 'runtime_dependency',
-    package_id: 'opl-flow',
-    package_manifest_ref: 'contracts/opl-framework/packages/opl-flow.json',
-    owner_package_manifest_ref: 'contracts/workflow-policy.json',
-    owner_manifest_kind: 'workflow_profile',
-    owner_plugin_manifest_ref: '.codex-plugin/plugin.json',
-  },
-];
+function projectionString(payload: Record<string, unknown>, field: string) {
+  const value = payload[field];
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`Package projection must declare ${field}.`);
+  }
+  return value.trim();
+}
+
+function projectionRecord(payload: Record<string, unknown>, field: string) {
+  const value = payload[field];
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function projectionOwnerManifestKind(payload: Record<string, unknown>) {
+  if (payload.surface_kind === 'opl_agent_package_manifest.v1') return 'standard_agent' as const;
+  if (payload.package_role === 'workflow_profile' || payload.surface_kind === 'opl_workflow_profile_package_manifest.v1') {
+    return 'workflow_profile' as const;
+  }
+  return 'capability_package' as const;
+}
+
+function projectionDescription(payload: Record<string, unknown>, fallback: string) {
+  const presentation = projectionRecord(payload, 'presentation');
+  const descriptionI18n = presentation ? projectionRecord(presentation, 'description_i18n') : null;
+  const english = descriptionI18n?.['en-US'];
+  return typeof english === 'string' && english.trim() ? english.trim() : fallback;
+}
+
+export function loadOplPackageSpecs(packageDirectory?: string): PackageSpec[] {
+  const agentManifests = new Map(
+    listFirstPartyAgentPackageManifests(packageDirectory)
+      .map((manifest) => [manifest.package_id, manifest]),
+  );
+  return listCurrentPackageProjections(packageDirectory).map(({ source_ref, payload }) => {
+    const packageId = projectionString(payload, 'package_id');
+    const label = projectionString(payload, 'display_name');
+    const ownerManifestKind = projectionOwnerManifestKind(payload);
+    const agentManifest = agentManifests.get(packageId);
+    const runtimeCarrier = projectionRecord(payload, 'runtime_source_carrier');
+    const publicationSource = projectionRecord(payload, 'publication_source');
+    const moduleId = agentManifest?.module_id
+      ?? (typeof publicationSource?.module_id === 'string' ? publicationSource.module_id : null)
+      ?? (typeof runtimeCarrier?.module_id === 'string' ? runtimeCarrier.module_id : packageId);
+    const repoUrl = projectionString(payload, 'source_repo');
+    const repoName = repoUrl.replace(/[\\/]+$/, '').replace(/\.git$/, '').split(/[\\/]/).at(-1) ?? repoUrl;
+    return {
+      module_id: moduleId,
+      label,
+      description: agentManifest?.description ?? projectionDescription(payload, label),
+      tags: ownerManifestKind === 'standard_agent'
+        ? ['domain-agent']
+        : ownerManifestKind === 'capability_package'
+          ? ['capability-package']
+          : ['workflow-profile'],
+      repo_name: agentManifest?.repo_name ?? repoName,
+      repo_url: agentManifest?.repo_url ?? repoUrl,
+      scope: ownerManifestKind === 'standard_agent'
+        ? 'domain_module'
+        : ownerManifestKind === 'capability_package'
+          ? 'capability_package'
+          : 'runtime_dependency',
+      package_id: packageId,
+      package_manifest_ref: source_ref,
+      owner_package_manifest_ref: agentManifest?.owner_package_manifest_ref
+        ?? (typeof publicationSource?.owner_package_manifest_ref === 'string'
+          ? publicationSource.owner_package_manifest_ref
+          : source_ref),
+      owner_manifest_kind: ownerManifestKind,
+      owner_plugin_manifest_ref: agentManifest?.owner_plugin_manifest_ref
+        ?? (typeof publicationSource?.owner_plugin_manifest_ref === 'string'
+          ? publicationSource.owner_plugin_manifest_ref
+          : '.codex-plugin/plugin.json'),
+      ...(agentManifest?.owner_language_version_ref
+        ? { owner_language_version_ref: agentManifest.owner_language_version_ref }
+        : typeof publicationSource?.owner_language_version_ref === 'string'
+          ? { owner_language_version_ref: publicationSource.owner_language_version_ref }
+          : {}),
+      capability_dependencies: agentManifest?.capability_dependencies ?? [],
+      version: projectionString(payload, 'version'),
+    };
+  });
+}
+
+const PACKAGE_SPECS = loadOplPackageSpecs();
 
 function resolveOwner(inputOwner?: string) {
   if (inputOwner?.trim()) {
@@ -241,8 +184,7 @@ export function normalizeDistributionVersion(value: string) {
 }
 
 function projectedPackageVersion(spec: PackageSpec) {
-  const source = JSON.parse(fs.readFileSync(path.join(repoRoot, spec.package_manifest_ref), 'utf8')) as Record<string, unknown>;
-  return normalizeDistributionVersion(stringValue(source.version) ?? '0.0.0');
+  return normalizeDistributionVersion(spec.version);
 }
 
 function buildPackageRef(owner: string, packageId: string, version: string) {
@@ -433,20 +375,18 @@ function buildPackageReleaseDiscipline(spec: PackageSpec, rollbackVersion: strin
   };
 }
 
-function dependencyOf(moduleId: PackageSourceId) {
+function dependencyOf(moduleId: string) {
   return PACKAGE_SPECS
     .filter((spec) => spec.capability_dependencies?.some((dependency) => dependency.module_id === moduleId))
     .map((spec) => spec.package_id);
 }
 
 function buildCodexStandaloneDistribution(spec: PackageSpec) {
-  if (spec.module_id === 'oplflow') {
+  if (spec.owner_manifest_kind === 'workflow_profile') {
     return null;
   }
-  const agentPackageManifest = (
-    spec.owner_manifest_kind === 'standard_agent' || spec.module_id === 'scholarskills'
-  )
-    ? getAgentPackageManifestByModuleId(spec.module_id as OplModuleId)
+  const agentPackageManifest = spec.owner_manifest_kind === 'standard_agent'
+    ? getAgentPackageManifestByModuleId(spec.module_id)
     : null;
   if (spec.owner_manifest_kind === 'capability_package' && !agentPackageManifest) {
     return {
@@ -689,8 +629,8 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
   };
 }
 
-export function getOplPackageSpecs() {
-  return PACKAGE_SPECS.map((spec) => ({
+export function getOplPackageSpecs(packageDirectory?: string) {
+  return loadOplPackageSpecs(packageDirectory).map((spec) => ({
     ...spec,
     tags: [...spec.tags],
     package_role: packageRole(spec),

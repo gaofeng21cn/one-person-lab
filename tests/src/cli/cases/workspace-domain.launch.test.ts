@@ -34,7 +34,7 @@ function createInstalledRcaCarrierFixture(root: string) {
   fs.mkdirSync(skillRoot, { recursive: true });
   fs.writeFileSync(
     path.join(sourceRoot, '.codex-plugin', 'plugin.json'),
-    `${JSON.stringify({ name: 'redcube-ai', version: '0.2.11' }, null, 2)}\n`,
+    `${JSON.stringify({ name: 'redcube-ai', version: '0.2.11', skills: './skills/' }, null, 2)}\n`,
   );
   fs.writeFileSync(path.join(skillRoot, 'SKILL.md'), '# RedCube AI\n');
   fs.writeFileSync(path.join(sourceRoot, 'opl-package.json'), `${JSON.stringify({
@@ -280,8 +280,13 @@ test('domain launch consumes native carrier readiness without entering legacy sc
   const legacyLockBytes = '{ invalid legacy lock\n';
   const openFixture = createFakeOpenFixture();
   const entryUrl = 'http://127.0.0.1:3310/native-redcube';
+  fs.mkdirSync(path.join(pluginSource, '.codex-plugin'), { recursive: true });
   fs.mkdirSync(skillRoot, { recursive: true });
   fs.mkdirSync(workspace, { recursive: true });
+  fs.writeFileSync(
+    path.join(pluginSource, '.codex-plugin', 'plugin.json'),
+    `${JSON.stringify({ name: 'redcube-ai', version: '0.2.11', skills: './skills/' }, null, 2)}\n`,
+  );
   fs.writeFileSync(path.join(skillRoot, 'SKILL.md'), '# RedCube AI\n');
   fs.writeFileSync(path.join(pluginSource, 'opl-package.json'), `${JSON.stringify({
     surface_kind: 'opl_agent_package_manifest.v1',
@@ -376,7 +381,10 @@ if (args.join(' ') === 'plugin list --json') {
       disabled.payload.error.details.failure_code,
       'agent_package_operational_readiness_blocked',
     );
-    assert.equal(disabled.payload.error.details.launch_blocked_reason, 'carrier_disabled');
+    assert.equal(
+      disabled.payload.error.details.launch_blocked_reason,
+      'configured_native_carrier_disabled',
+    );
     const nativeInvocations = fs.readFileSync(invocationLog, 'utf8').trim().split('\n');
     assert.equal(nativeInvocations.length >= 1, true);
     assert.equal(nativeInvocations.every((command) => command === 'plugin list --json'), true);

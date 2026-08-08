@@ -50,6 +50,25 @@
   },
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/opl-meta-agent.git",
+  "publication_projection_order": 40,
+  "publication_source": {
+    "owner_package_manifest_ref": "contracts/opl_agent_package_manifest.json",
+    "owner_plugin_manifest_ref": "plugins/opl-meta-agent/.codex-plugin/plugin.json",
+    "owner_language_version_ref": "package.json"
+  },
+  "standard_agent_descriptor_projection": {
+    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
+    "source_ref": "contracts/domain_descriptor.json",
+    "interface_source_ref": "contracts/domain_descriptor.json#/standard_agent_interface",
+    "domain_id": "agent_engineering",
+    "runtime_domain_id": "agent_engineering",
+    "explicit_aliases": ["oma", "opl-meta-agent", "agent-engineering"],
+    "compatibility": {
+      "registry_domain_id": "agent_engineering",
+      "aliases": ["agent_engineering", "oplmetaagent", "opl_meta_agent", "meta-agent", "meta_agent", "agent"],
+      "owner_aliases": ["oma", "oplmetaagent", "opl-meta-agent", "meta-agent"]
+    }
+  },
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
   "machine_boundary": "This manifest declares first-party package distribution and OPL-generated Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
   "package_core": {

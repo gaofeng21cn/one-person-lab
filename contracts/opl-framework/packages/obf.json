@@ -48,6 +48,25 @@
   },
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/opl-bookforge.git",
+  "publication_projection_order": 50,
+  "publication_source": {
+    "owner_package_manifest_ref": "contracts/opl_agent_package_manifest.json",
+    "owner_plugin_manifest_ref": "plugins/opl-bookforge/.codex-plugin/plugin.json",
+    "owner_language_version_ref": "package.json"
+  },
+  "standard_agent_descriptor_projection": {
+    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
+    "source_ref": "contracts/domain_descriptor.json",
+    "interface_source_ref": "contracts/domain_descriptor.json#/standard_agent_interface",
+    "domain_id": "opl-bookforge",
+    "runtime_domain_id": "opl-bookforge",
+    "explicit_aliases": ["obf", "opl-bookforge", "bookforge", "book"],
+    "compatibility": {
+      "registry_domain_id": "oplbookforge",
+      "aliases": ["book-forge", "book_forge", "oplbookforge", "opl_bookforge"],
+      "owner_aliases": ["obf", "oplbookforge", "opl-bookforge", "bookforge", "book-forge"]
+    }
+  },
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
   "machine_boundary": "This manifest declares first-party package distribution and OPL-generated Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
   "package_core": {

@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { getCapabilityDependenciesForModule } from '../agent-package-manifests.ts';
+import { listCurrentPackageProjections } from '../../../kernel/standard-agent-registry.ts';
+import { listFirstPartyAgentPackageManifests } from '../agent-package-manifests.ts';
 import { getShellBinary } from './shared.ts';
 import type { DomainModuleRuntimeSpec } from './module-action-workflow.ts';
 
@@ -176,23 +177,71 @@ function buildFoundryAgentPackProbe(checkoutPath: string) {
   ]);
 }
 
-export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
-  {
-    module_id: 'medautoscience',
-    label: 'Med Auto Science',
-    repo_name: 'med-autoscience',
-    repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
-    scope: 'domain_module',
-    default_install: true,
-    description: 'Research Foundry in medicine: study execution, paper drafting, progress narration, and deliverable files.',
+const MODULE_ADAPTER_OVERRIDES: Record<string, Partial<DomainModuleRuntimeSpec>> = {
+  medautoscience: {
     bootstrap_command: (checkoutPath) => buildMasSourceCarrierProbe(checkoutPath),
     package_bootstrap_command: (checkoutPath) => buildMasPackageBootstrapCommand(checkoutPath),
     health_check_command: (checkoutPath) => buildMasSourceCarrierProbe(checkoutPath),
     package_health_check_command: (checkoutPath) => buildMasPackageHealthCheckCommand(checkoutPath),
     runtime_probe_command: (checkoutPath) => buildMasSourceCarrierProbe(checkoutPath),
-    skill_sync_domain: 'medautoscience',
-    capability_dependencies: getCapabilityDependenciesForModule('medautoscience'),
   },
+  medautogrant: {
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
+    ),
+    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
+    package_health_check_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
+    runtime_probe_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
+    exec_command: (checkoutPath, args) => buildPythonCleanRunnerExecCommand(
+      checkoutPath,
+      'med_autogrant.cli',
+      args,
+    ),
+  },
+  redcube: {
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? { command: 'npm', args: ['install'] }
+    ),
+    health_check_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
+      checkoutPath,
+      path.join('scripts', 'opl-module-healthcheck.sh'),
+    ),
+    package_health_check_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
+    runtime_probe_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
+  },
+  oplmetaagent: {
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? { command: 'npm', args: ['install'] }
+    ),
+    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath, 'smoke'),
+    package_health_check_command: (checkoutPath) => buildFoundryAgentPackProbe(checkoutPath),
+    runtime_probe_command: (checkoutPath) => buildFoundryAgentPackProbe(checkoutPath),
+    exec_command: (_checkoutPath, args) => ({
+      command: 'npm',
+      args: ['test', '--', ...args],
+    }),
+  },
+  oplbookforge: {
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? { command: 'npm', args: ['install', '--no-package-lock'] }
+    ),
+    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
+    package_health_check_command: (checkoutPath) => buildBookForgeProbe(checkoutPath),
+    runtime_probe_command: (checkoutPath) => buildBookForgeProbe(checkoutPath),
+    exec_command: (_checkoutPath, args) => ({
+      command: 'npm',
+      args: ['test', '--', ...args],
+    }),
+  },
+};
+
+// MDS is a compatibility-only runtime companion. It is not a Package or Agent
+// membership source and remains isolated until its last legacy caller is retired.
+const LEGACY_RUNTIME_MODULE_ADAPTERS: DomainModuleRuntimeSpec[] = [
   {
     module_id: 'meddeepscientist',
     label: 'Med Deep Scientist',
@@ -207,98 +256,59 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
   },
-  {
-    module_id: 'medautogrant',
-    label: 'Med Auto Grant',
-    repo_name: 'med-autogrant',
-    repo_url: 'https://github.com/gaofeng21cn/med-autogrant.git',
-    scope: 'domain_module',
-    default_install: true,
-    description: 'Grant Foundry for proposal planning, critique, revision, and package assembly.',
-    bootstrap_command: (checkoutPath) => (
-      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
-      ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
-    ),
-    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
-    package_health_check_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
-    runtime_probe_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
-    exec_command: (checkoutPath, args) => buildPythonCleanRunnerExecCommand(
-      checkoutPath,
-      'med_autogrant.cli',
-      args,
-    ),
-    skill_sync_domain: 'medautogrant',
-  },
-  {
-    module_id: 'redcube',
-    label: 'RedCube AI',
-    repo_name: 'redcube-ai',
-    repo_url: 'https://github.com/gaofeng21cn/redcube-ai.git',
-    scope: 'domain_module',
-    default_install: true,
-    description: 'Presentation Ops module for slide decks and other visual deliverables.',
-    bootstrap_command: (checkoutPath) => (
-      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
-      ?? { command: 'npm', args: ['install'] }
-    ),
-    health_check_command: (checkoutPath) => resolveRepoOwnedScriptCommand(
-      checkoutPath,
-      path.join('scripts', 'opl-module-healthcheck.sh'),
-    ),
-    package_health_check_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
-    runtime_probe_command: (checkoutPath) => buildStandardAgentPackProbe(checkoutPath),
-    skill_sync_domain: 'redcube',
-  },
-  {
-    module_id: 'oplmetaagent',
-    label: 'OPL Meta Agent',
-    repo_name: 'opl-meta-agent',
-    repo_url: 'https://github.com/gaofeng21cn/opl-meta-agent.git',
-    scope: 'domain_module',
-    default_install: true,
-    description: 'Foundry Agent for building new OPL-compatible high-value knowledge delivery agents.',
-    bootstrap_command: (checkoutPath) => (
-      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
-      ?? { command: 'npm', args: ['install'] }
-    ),
-    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath, 'smoke'),
-    package_health_check_command: (checkoutPath) => buildFoundryAgentPackProbe(checkoutPath),
-    runtime_probe_command: (checkoutPath) => buildFoundryAgentPackProbe(checkoutPath),
-    exec_command: (_checkoutPath, args) => ({
-      command: 'npm',
-      args: ['test', '--', ...args],
-    }),
-    skill_sync_domain: 'oplmetaagent',
-  },
-  {
-    module_id: 'oplbookforge',
-    label: 'OPL Book Forge',
-    repo_name: 'opl-bookforge',
-    repo_url: 'https://github.com/gaofeng21cn/opl-bookforge.git',
-    scope: 'domain_module',
-    default_install: true,
-    description: 'Book Foundry agent for storyline architecture, chapter drafting, figures, tables, style control, and export handoff.',
-    bootstrap_command: (checkoutPath) => (
-      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
-      ?? { command: 'npm', args: ['install', '--no-package-lock'] }
-    ),
-    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
-    package_health_check_command: (checkoutPath) => buildBookForgeProbe(checkoutPath),
-    runtime_probe_command: (checkoutPath) => buildBookForgeProbe(checkoutPath),
-    exec_command: (_checkoutPath, args) => ({
-      command: 'npm',
-      args: ['test', '--', ...args],
-    }),
-    skill_sync_domain: 'oplbookforge',
-  },
-  {
-    module_id: 'scholarskills',
-    label: 'MAS Scholar Skills',
-    repo_name: 'mas-scholar-skills',
-    repo_url: 'https://github.com/gaofeng21cn/mas-scholar-skills.git',
-    scope: 'capability_package',
-    default_install: false,
-    description: 'External professional Codex skill package consumed by MAS workspaces and quests.',
-    skill_sync_domain: 'scholarskills',
-  },
 ];
+
+function projectionRecord(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function projectionString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+export function buildDomainModuleSpecs(packageDirectory?: string): DomainModuleRuntimeSpec[] {
+  const projections = listCurrentPackageProjections(packageDirectory);
+  const packageProjections = new Map(
+    projections.map(({ payload }) => [projectionString(payload.package_id), payload]),
+  );
+  const agentManifests = listFirstPartyAgentPackageManifests(packageDirectory);
+  const agentSpecs = agentManifests.map((manifest) => ({
+    module_id: manifest.module_id,
+    label: manifest.display_name,
+    repo_name: manifest.repo_name,
+    repo_url: manifest.repo_url,
+    scope: 'domain_module' as const,
+    default_install: true,
+    description: manifest.description,
+    skill_sync_domain: manifest.module_id,
+    capability_dependencies: manifest.capability_dependencies,
+    ...MODULE_ADAPTER_OVERRIDES[manifest.module_id],
+  } satisfies DomainModuleRuntimeSpec));
+
+  const dependencySpecs = [...new Map(agentManifests.flatMap((manifest) =>
+    manifest.capability_dependencies.map((dependency) => [dependency.module_id, dependency] as const)
+  )).values()].map((dependency) => {
+    const payload = packageProjections.get(dependency.package_id);
+    const repoUrl = projectionString(payload?.source_repo) ?? '';
+    const repoName = repoUrl.replace(/[\\/]+$/, '').replace(/\.git$/, '').split(/[\\/]/).at(-1)
+      ?? dependency.package_id;
+    const label = projectionString(payload?.display_name) ?? dependency.package_id;
+    return {
+      module_id: dependency.module_id,
+      label,
+      repo_name: repoName,
+      repo_url: repoUrl,
+      scope: 'capability_package' as const,
+      default_install: false,
+      description: label,
+      skill_sync_domain: dependency.module_id,
+      ...MODULE_ADAPTER_OVERRIDES[dependency.module_id],
+    } satisfies DomainModuleRuntimeSpec;
+  });
+
+  return [...agentSpecs, ...dependencySpecs, ...LEGACY_RUNTIME_MODULE_ADAPTERS];
+}
+
+export const DOMAIN_MODULE_SPECS = buildDomainModuleSpecs();

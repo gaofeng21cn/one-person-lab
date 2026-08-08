@@ -8,7 +8,7 @@
   "standard_agent_registry": {
     "surface_kind": "opl_standard_agent_registry_pointer",
     "version": "standard-agent-registry-pointer.v1",
-    "canonical_registry_ref": "src/kernel/standard-agent-registry.ts",
+    "canonical_registry_ref": "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
     "membership_value": "standard_domain_agent",
     "derived_projection_surfaces": [
       "src/modules/atlas/family-domain-agent-descriptor.ts",

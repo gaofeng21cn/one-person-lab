@@ -11,7 +11,7 @@
     "candidate_backlog_or_direction_signal_can_admit_domain": false,
     "conformance_or_scaffold_signal_can_claim_domain_ready": false,
     "production_readiness_claim_allowed": false,
-    "standard_agent_registry_source_ref": "src/kernel/standard-agent-registry.ts",
+    "standard_agent_registry_source_ref": "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
     "managed_owner_contract_source_refs": [
       "candidate_domain_repo:domain_descriptor",
       "candidate_domain_repo:action_catalog_contract",
@@ -44,7 +44,7 @@
         "required_evidence_refs": [
           "candidate_domain_repo:domain_identity_contract",
           "candidate_domain_repo:public_domain_agent_entry_doc",
-          "src/kernel/standard-agent-registry.ts",
+          "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
           "opl_registry:standard_agent_package_manifest"
         ],
         "forbidden_claims": [
@@ -310,7 +310,7 @@
     "this_contract_claims_existing_domain_ready": false,
     "this_contract_claims_production_ready": false,
     "formal_admission_source_of_truth": [
-      "src/kernel/standard-agent-registry.ts",
+      "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
       "opl_registry:standard_agent_package_manifest",
       "candidate_domain_repo:domain_descriptor",
       "candidate_domain_repo:action_catalog_contract",

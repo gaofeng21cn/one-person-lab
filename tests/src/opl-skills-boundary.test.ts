@@ -197,7 +197,10 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(pack.professional_skill_exposure.default_codex_exposed_count, 0);
     assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents run');
     assert.equal(pack.foundry_agent_series.series_membership, 'standard_domain_agent');
-    assert.equal(pack.foundry_agent_series.standard_agent_registry_ref, 'src/kernel/standard-agent-registry.ts');
+    assert.equal(
+      pack.foundry_agent_series.standard_agent_registry_ref,
+      'contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection',
+    );
     assert.equal(
       pack.foundry_agent_series.default_foundry_command_surface,
       `opl agents run --domain ${pack.foundry_agent_series.foundry_agent_id} --action <action_id>`,

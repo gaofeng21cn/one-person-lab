@@ -141,7 +141,7 @@
     "ordinary_app_fixed_executor": "codex_cli",
     "ordinary_app_builtin_foundry_entry_projection": {
       "surface_kind": "opl_standard_agent_registry_projection_policy",
-      "canonical_registry_ref": "src/kernel/standard-agent-registry.ts",
+      "canonical_registry_ref": "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
       "membership_field": "series_membership",
       "membership_value": "standard_domain_agent",
       "identity_field": "agent_id",

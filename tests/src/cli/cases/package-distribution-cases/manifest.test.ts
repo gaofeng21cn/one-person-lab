@@ -498,5 +498,5 @@ test('packages manifest exposes independent owner currentness and compatibility 
     output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].developer_git_checkout_override.repo_url,
     'https://github.com/gaofeng21cn/mas-scholar-skills.git',
   );
-  assert.deepEqual(output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas']);
+  assert.deepEqual(output.packages_manifest.packages.package_artifacts['mas-scholar-skills'].dependency_of, ['mas', 'mag']);
 });

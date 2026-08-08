@@ -68,7 +68,7 @@ test('standard domain-agent admission gates freeze required package sections as 
   assert.equal(contract.admission_policy.production_readiness_claim_allowed, false);
   assert.equal(
     contract.admission_policy.standard_agent_registry_source_ref,
-    'src/kernel/standard-agent-registry.ts',
+    'contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection',
   );
   assert.deepEqual(contract.admission_policy.managed_owner_contract_source_refs, [
     'candidate_domain_repo:domain_descriptor',

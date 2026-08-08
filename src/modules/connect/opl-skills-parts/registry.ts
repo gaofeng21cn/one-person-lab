@@ -26,12 +26,12 @@ export const FRAMEWORK_CAPABILITY_PACKAGE_AUTHORITY_BOUNDARY = {
 } as const;
 
 export type SkillPackSpec = {
-  domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
-  module_id: 'MEDAUTOSCIENCE' | 'MEDAUTOGRANT' | 'REDCUBE' | 'OPLMETAAGENT' | 'OPLBOOKFORGE' | 'SCHOLARSKILLS';
+  domain_id: string;
+  module_id: string;
   project: string;
   label: string;
   plugin_name: string;
-  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'oma' | 'obf' | 'mas-scholar-skills';
+  canonical_plugin_name: string;
   source_kind: SkillPackSourceKind;
   distribution_role: SkillPackDistributionRole;
   installer_kind: SkillPackInstallerKind;
@@ -139,7 +139,7 @@ let cachedFamilySkillPackSpecs: SkillPackSpec[] | null = null;
 let cachedDomainAliasMap: Map<string, SkillPackSpec['domain_id']> | null = null;
 
 export function listFamilySkillPackSpecs(): SkillPackSpec[] {
-  cachedFamilySkillPackSpecs ??= STANDARD_AGENT_REGISTRY.map((entry) => ({
+  if (!cachedFamilySkillPackSpecs) cachedFamilySkillPackSpecs = STANDARD_AGENT_REGISTRY.map((entry) => ({
     domain_id: entry.module_id.toLowerCase() as SkillPackSpec['domain_id'],
     module_id: entry.module_id,
     project: entry.project,

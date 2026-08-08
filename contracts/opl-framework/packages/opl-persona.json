@@ -6,6 +6,12 @@
   "version": "0.2.2",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/opl-persona.git",
+  "publication_projection_order": 80,
+  "publication_source": {
+    "module_id": "oplpersona",
+    "owner_package_manifest_ref": "plugins/opl-persona/opl-package.json",
+    "owner_plugin_manifest_ref": "plugins/opl-persona/.codex-plugin/plugin.json"
+  },
   "package_role": "capability_package",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "capability_abi": {

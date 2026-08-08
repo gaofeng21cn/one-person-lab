@@ -6,6 +6,24 @@
   "version": "0.2.24",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
+  "publication_projection_order": 60,
+  "publication_source": {
+    "module_id": "scholarskills",
+    "owner_package_manifest_ref": "contracts/opl_capability_package_manifest.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
+  "compatibility_projection": {
+    "registry_short_label": "ScholarSkills",
+    "registry_aliases": [
+      "scholarskills",
+      "scholar-skills",
+      "scholar_skills",
+      "mas-scholar-skills",
+      "mas_scholar_skills",
+      "capability",
+      "capabilities"
+    ]
+  },
   "package_role": "capability_package",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "consumer_policy": {

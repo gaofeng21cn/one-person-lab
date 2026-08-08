@@ -16,7 +16,7 @@
       "source_kind": "managed_standard_agent_contract_checkout",
       "purpose": "resolve any registered standard Agent through the shared registry, selected managed or developer checkout, and owner contracts without requiring a domains.json entry",
       "discovery_chain": [
-        "src/kernel/standard-agent-registry.ts",
+        "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
         "resolveStandardAgentContractCheckout",
         "contracts/domain_descriptor.json",
         "contracts/action_catalog.json",
@@ -46,7 +46,7 @@
     }
   },
   "standard_agent_discovery_contract": {
-    "identity_registry_ref": "src/kernel/standard-agent-registry.ts",
+    "identity_registry_ref": "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
     "included_series_membership": "standard_domain_agent",
     "excluded_series_membership": "capability_package",
     "currentness_resolver": "resolveStandardAgentContractCheckout",

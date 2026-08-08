@@ -409,7 +409,7 @@ test('invalid installed Codex descriptors degrade locally without hiding valid p
   }
 });
 
-test('real directory and status project an unknown installed carrier without legacy lifecycle state', () => {
+test('real directory, status, and App state project an unknown installed Agent without legacy lifecycle state', () => {
   const sourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-installed-plugin-list-source-'));
   const stateFixture = isolatedPackageEnv('installed-plugin-list');
   const binary = path.join(stateFixture.home, 'fake-codex');
@@ -418,50 +418,31 @@ test('real directory and status project an unknown installed carrier without leg
   process.env.OPL_STATE_DIR = stateFixture.env.OPL_STATE_DIR;
   process.env.OPL_CODEX_PLUGIN_BIN = binary;
   try {
-    const packageId = 'unknown.installed.capability';
+    const packageId = 'unknown.installed.agent.readback';
+    const pluginId = 'unknown-installed-agent-readback';
     fs.writeFileSync(
       path.join(sourceRoot, 'opl-package.json'),
-      formatJsonPayload({
-        surface_kind: 'opl_capability_package_manifest.v2',
-        package_id: packageId,
-        display_name: 'Unknown Installed Capability',
-        publisher: 'example-owner',
-        version: '1.0.0',
-        source: 'third_party',
-        package_role: 'capability_package',
-        capability_abi: { id: 'unknown.installed.capability.v1', version: '1.0.0' },
-        exports: {
-          core_skill_ids: ['unknown-capability'],
-          specialty_skill_ids: [],
-          core_module_ids: ['unknown.capability.v1'],
-          optional_skill_policy_ref: 'opl-package.json#/exports',
-          optional_skills_installed_by_default: true,
-          default_materialization_policy: 'all_exported_skills',
-        },
-        content_lock: {
-          algorithm: 'sha256',
-          canonicalization: 'ordered_path_nul_file_bytes',
-          paths: ['skills/unknown-capability/SKILL.md'],
-          digest: 'sha256:'
-            + '0'.repeat(64),
-        },
-        codex_surface: {
-          plugin_id: 'unknown-capability',
-          codex_default_exposure: true,
-        },
-      }),
+      formatJsonPayload(agentPackageManifest({
+        packageId,
+        agentId: pluginId,
+        pluginId,
+      })),
     );
-    fs.mkdirSync(path.join(sourceRoot, 'skills', 'unknown-capability'), { recursive: true });
+    fs.mkdirSync(path.join(sourceRoot, 'skills', pluginId), { recursive: true });
     fs.writeFileSync(
-      path.join(sourceRoot, 'skills', 'unknown-capability', 'SKILL.md'),
-      '# Unknown capability\n',
-      { encoding: 'utf8', flag: 'w' },
+      path.join(sourceRoot, 'skills', pluginId, 'SKILL.md'),
+      '# Unknown installed Agent\n',
+    );
+    fs.mkdirSync(path.join(sourceRoot, '.codex-plugin'), { recursive: true });
+    fs.writeFileSync(
+      path.join(sourceRoot, '.codex-plugin', 'plugin.json'),
+      formatJsonPayload({ name: pluginId, version: '1.2.3', skills: './skills' }),
     );
     fs.writeFileSync(binary, `#!/usr/bin/env node
 process.stdout.write(JSON.stringify({
   installed: [{
-    pluginId: 'unknown-capability@owner-carrier',
-    version: '1.0.0',
+    pluginId: '${pluginId}@owner-carrier',
+    version: '1.2.3',
     installed: true,
     enabled: true,
     source: { source: 'future-carrier', path: ${JSON.stringify(sourceRoot)} },
@@ -479,14 +460,14 @@ process.stdout.write(JSON.stringify({
     assert.equal(entry?.readiness.launch_allowed, true);
     assert.equal(entry?.source_explanation.kind, 'installed_codex_plugin_descriptor');
     assert.equal(entry?.configured_carrier?.status, 'installed');
-    assert.equal(entry?.configured_carrier?.executor.status, 'attention_needed');
+    assert.equal(entry?.configured_carrier?.executor.status, 'callable');
     assert.equal(entry?.installed_carrier_readback?.kind, 'future-carrier');
     assert.deepEqual(
       entry?.available_actions.map((action) => action.action_id),
       ['agent_package_update', 'agent_package_repair', 'agent_package_preferences_set', 'agent_package_uninstall'],
     );
     const status = runOplAgentPackageStatus({ packageId, detail: 'fast' }).opl_agent_package_status;
-    assert.equal(status.status, 'available');
+    assert.equal(status.status, 'available', JSON.stringify(status, null, 2));
     assert.equal(status.installed_package_count, 1);
     assert.equal(status.operational_ready, true);
     assert.equal(status.launch_allowed, true);
@@ -724,13 +705,10 @@ test('owner descriptor contributions normalize and project through an installed 
   };
   try {
     const agentSchemaManifest = {
-      ...agentPackageManifest(),
-      codex_surface: {
-        ...agentPackageManifest().codex_surface,
-        plugin_id: 'third-party-research',
-        carrier_source_commit: 'a'.repeat(40),
-        standalone_distribution: 'repo_carrier_source',
-      },
+      ...(parseJsonText(fs.readFileSync(
+        path.join(repoRoot, 'contracts/opl-framework/packages/mas.json'),
+        'utf8',
+      )) as Record<string, unknown>),
       app_contributions: relayAppContributions,
     };
     const schemaCases = [

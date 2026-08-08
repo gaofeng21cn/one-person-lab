@@ -6,6 +6,12 @@
   "version": "0.5.3",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/opl-relay.git",
+  "publication_projection_order": 70,
+  "publication_source": {
+    "module_id": "oplrelay",
+    "owner_package_manifest_ref": "plugins/opl-relay/opl-package.json",
+    "owner_plugin_manifest_ref": "plugins/opl-relay/.codex-plugin/plugin.json"
+  },
   "package_role": "capability_package",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "capability_abi": {

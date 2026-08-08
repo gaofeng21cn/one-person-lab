@@ -19,6 +19,12 @@
   },
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/opl-flow.git",
+  "publication_projection_order": 90,
+  "publication_source": {
+    "module_id": "oplflow",
+    "owner_package_manifest_ref": "contracts/workflow-policy.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
   "schema_ref": "contracts/opl-framework/workflow-profile-package-manifest.schema.json",
   "machine_boundary": "This first-party OPL Package records OPL Flow package identity and profile migration ownership. It cannot silently overwrite user Codex profiles or claim project, runtime, domain, artifact, or owner-receipt truth.",
   "package_core": {
