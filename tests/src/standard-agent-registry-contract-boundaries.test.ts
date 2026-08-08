@@ -25,7 +25,6 @@ import {
   buildCodexFamilyPluginSpecs,
   listCodexFamilyPluginPackIds,
 } from '../../src/modules/connect/system-installation/codex-plugin-registry.ts';
-import { RELEASE_BUNDLE_PACKAGE_IDS } from '../../src/modules/connect/release-bundle/types.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../..');
 
@@ -181,7 +180,7 @@ test('canonical App-state package identities match the release package specs', (
   );
 });
 
-test('one unknown Agent projection drives runtime registries without mutating the frozen release cohort', () => {
+test('one unknown Agent projection drives all runtime registries', () => {
   const packageDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-unknown-agent-projection-'));
 
   try {
@@ -255,7 +254,6 @@ test('one unknown Agent projection drives runtime registries without mutating th
       ownership_kind: 'standard_agent_codex_carrier',
     }]);
     assert.deepEqual(listCodexFamilyPluginPackIds(packageDirectory), ['futureagent']);
-    assert.equal((RELEASE_BUNDLE_PACKAGE_IDS as readonly string[]).includes('future-agent'), false);
   } finally {
     fs.rmSync(packageDirectory, { recursive: true, force: true });
   }

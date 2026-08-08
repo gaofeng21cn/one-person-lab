@@ -91,25 +91,9 @@
     },
     "packages": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "mas",
-        "mag",
-        "rca",
-        "oma",
-        "obf",
-        "mas-scholar-skills",
-        "opl-flow"
-      ],
-      "properties": {
-        "mas": { "$ref": "#/$defs/package" },
-        "mag": { "$ref": "#/$defs/package" },
-        "rca": { "$ref": "#/$defs/package" },
-        "oma": { "$ref": "#/$defs/package" },
-        "obf": { "$ref": "#/$defs/package" },
-        "mas-scholar-skills": { "$ref": "#/$defs/package" },
-        "opl-flow": { "$ref": "#/$defs/package" }
-      }
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/packageId" },
+      "additionalProperties": { "$ref": "#/$defs/package" }
     },
     "prepared_notes": {
       "type": "object",
@@ -326,9 +310,7 @@
         "payload_manifest_sha256"
       ],
       "properties": {
-        "package_id": {
-          "enum": ["mas", "mag", "rca", "oma", "obf", "mas-scholar-skills", "opl-flow"]
-        },
+        "package_id": { "$ref": "#/$defs/packageId" },
         "version": { "type": "string", "minLength": 1 },
         "owner_source_commit": { "$ref": "#/$defs/gitSha" },
         "manifest_ref": { "$ref": "#/$defs/ref" },
@@ -336,6 +318,10 @@
         "payload_manifest_ref": { "$ref": "#/$defs/ref" },
         "payload_manifest_sha256": { "$ref": "#/$defs/digest" }
       }
+    },
+    "packageId": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
     },
     "assetName": {
       "type": "string",

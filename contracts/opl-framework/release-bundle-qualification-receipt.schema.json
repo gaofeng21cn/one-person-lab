@@ -69,25 +69,9 @@
         "framework_release_set_digest": { "$ref": "#/$defs/digest" },
         "package_payload_manifest_sha256": {
           "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "mas",
-            "mag",
-            "rca",
-            "oma",
-            "obf",
-            "mas-scholar-skills",
-            "opl-flow"
-          ],
-          "properties": {
-            "mas": { "$ref": "#/$defs/digest" },
-            "mag": { "$ref": "#/$defs/digest" },
-            "rca": { "$ref": "#/$defs/digest" },
-            "oma": { "$ref": "#/$defs/digest" },
-            "obf": { "$ref": "#/$defs/digest" },
-            "mas-scholar-skills": { "$ref": "#/$defs/digest" },
-            "opl-flow": { "$ref": "#/$defs/digest" }
-          }
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/packageId" },
+          "additionalProperties": { "$ref": "#/$defs/digest" }
         }
       }
     },
@@ -118,6 +102,10 @@
   "$defs": {
     "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
     "gitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "packageId": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+    },
     "packageCompatibility": {
       "type": "object",
       "additionalProperties": false,

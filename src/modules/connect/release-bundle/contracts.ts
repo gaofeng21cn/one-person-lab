@@ -21,7 +21,6 @@ import { assertJsonSchemaPayload } from '../../../kernel/schema-registry.ts';
 import {
   RELEASE_BUNDLE_APP_STANDARD_FROZEN_BUILD_INPUT_IDS,
   RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS,
-  RELEASE_BUNDLE_PACKAGE_IDS,
   type ReleaseBundle,
   type ReleaseBundleAppStandardFreezeRequest,
   type ReleaseBundleCheckpoint,
@@ -210,6 +209,36 @@ function requireRecord(value: unknown, label: string) {
   return value;
 }
 
+function requirePackageIds(value: unknown, label: string) {
+  if (
+    !Array.isArray(value)
+    || value.length === 0
+    || value.some((item) => (
+      typeof item !== 'string'
+      || !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(item)
+    ))
+    || new Set(value).size !== value.length
+  ) {
+    fail(`${label} must contain unique canonical Package IDs.`);
+  }
+  return value as string[];
+}
+
+function assertExactPackageIds(
+  expectedPackageIds: readonly string[],
+  actualPackageIds: readonly string[],
+  label: string,
+) {
+  const expected = [...expectedPackageIds].sort();
+  const actual = [...actualPackageIds].sort();
+  if (canonicalJsonBytes(actual).compare(canonicalJsonBytes(expected)) !== 0) {
+    fail(`${label} must exactly match the frozen Release Set Package cohort.`, {
+      expected_package_ids: expected,
+      actual_package_ids: actual,
+    });
+  }
+}
+
 export function isAppStandardFreezeRequest(
   request: ReleaseBundleFreezeRequestDocument,
 ): request is ReleaseBundleAppStandardFreezeRequest {
@@ -263,6 +292,18 @@ export function assertReleaseBundleFreezeInputs(
     packageCollection.members,
     'Framework Release Set package members',
   );
+  const packageIds = requirePackageIds(
+    packageCollection.package_ids,
+    'Framework Release Set Package IDs',
+  );
+  if (packageCollection.package_count !== packageIds.length) {
+    fail('Framework Release Set Package count does not match its frozen Package IDs.', {
+      package_count: packageCollection.package_count,
+      package_ids: packageIds,
+    });
+  }
+  assertExactPackageIds(packageIds, Object.keys(members), 'Framework Release Set members');
+  assertExactPackageIds(packageIds, Object.keys(request.packages), 'Release Bundle freeze request');
   if (
     base.source_commit !== null
     && base.source_commit !== request.sources.framework.source_commit
@@ -312,9 +353,15 @@ export function assertReleaseBundleFreezeInputs(
     cohortSource.value.packages,
     'Framework Release Set owner cohort packages',
   );
+  assertExactPackageIds(
+    packageIds,
+    requirePackageIds(cohortBinding.package_ids, 'Framework Release Set owner cohort Package IDs'),
+    'Framework Release Set owner cohort binding',
+  );
+  assertExactPackageIds(packageIds, Object.keys(cohortPackages), 'Framework Release Set owner cohort lock');
 
   const verifiedPackages: Record<string, unknown> = {};
-  for (const packageId of RELEASE_BUNDLE_PACKAGE_IDS) {
+  for (const packageId of packageIds) {
     const identity = request.packages[packageId];
     const expectedManifestRef = `contracts/opl-framework/packages/${packageId}.json`;
     if (identity.manifest_ref !== expectedManifestRef) {
@@ -536,11 +583,11 @@ function assertFreezeSemantics(request: ReleaseBundleFreezeRequestDocument) {
   if (isAppStandardFreezeRequest(request)) {
     assertPackageCompatibility(request.package_compatibility);
   } else {
-    for (const packageId of RELEASE_BUNDLE_PACKAGE_IDS) {
-      if (request.packages[packageId].package_id !== packageId) {
+    for (const [packageId, identity] of Object.entries(request.packages)) {
+      if (identity.package_id !== packageId) {
         fail('Release Bundle package map key does not match package identity.', {
           package_id: packageId,
-          declared_package_id: request.packages[packageId].package_id,
+          declared_package_id: identity.package_id,
         });
       }
     }

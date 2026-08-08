@@ -35,7 +35,6 @@ import {
 } from './operation-control.ts';
 import { releaseBundleOperationReceipt } from './receipt.ts';
 import {
-  RELEASE_BUNDLE_PACKAGE_IDS,
   type ReleaseBundle,
   type ReleaseBundleExecutorReceipt,
   type ReleaseBundleOperationInput,
@@ -217,9 +216,9 @@ export function freezeReleaseBundle(input: {
         : {
             framework_release_set_digest: bundle.framework_release_set.digest,
             package_payload_manifest_sha256: Object.fromEntries(
-              RELEASE_BUNDLE_PACKAGE_IDS.map((packageId) => [
+              Object.entries(bundle.packages).map(([packageId, identity]) => [
                 packageId,
-                bundle.packages[packageId].payload_manifest_sha256,
+                identity.payload_manifest_sha256,
               ]),
             ),
           }),
@@ -424,9 +423,9 @@ function expectedQualificationCohort(bundle: ReleaseBundle) {
         ...sources,
         framework_release_set_digest: bundle.framework_release_set.digest,
         package_payload_manifest_sha256: Object.fromEntries(
-          RELEASE_BUNDLE_PACKAGE_IDS.map((packageId) => [
+          Object.entries(bundle.packages).map(([packageId, identity]) => [
             packageId,
-            bundle.packages[packageId].payload_manifest_sha256,
+            identity.payload_manifest_sha256,
           ]),
         ),
       };

@@ -29,7 +29,7 @@ import {
   assertTypedContractFailure,
 } from './fixtures.ts';
 
-test('freeze computes one canonical digest over sources, seven package payloads, Release Set and prepared AI notes', () => {
+test('freeze computes one canonical digest over sources, frozen Package payloads, Release Set and prepared AI notes', () => {
   const fixture = createFixture();
   try {
     const first = fixture.frozen.release_bundle_freeze;
@@ -67,6 +67,74 @@ test('freeze computes one canonical digest over sources, seven package payloads,
       fixture.storeRoot,
     ], fixture.root);
     assert.equal(status.release_bundle_status.bundle_digest, first.bundle_digest);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('descriptor-added Package flows through freeze and frozen qualification after authority advances', () => {
+  const fixture = createFixture({ additionalPackageIds: ['future-agent'] });
+  try {
+    const frozen = fixture.frozen.release_bundle_freeze;
+    if (frozen.bundle.identity_mode === 'app_standard_compatibility') {
+      assert.fail('Dynamic Package fixture unexpectedly produced an App Standard compatibility Bundle.');
+    }
+    assert.ok('future-agent' in frozen.bundle.packages);
+    const frozenPackageDigests = frozen.receipt.details
+      .package_payload_manifest_sha256 as Record<string, string>;
+    assert.equal(
+      frozenPackageDigests['future-agent'],
+      frozen.bundle.packages['future-agent'].payload_manifest_sha256,
+    );
+
+    fs.writeFileSync(
+      path.join(fixture.sourceRoot, fixture.request.framework_release_set.manifest_ref),
+      '{"surface_kind":"later_authority_state"}\n',
+      'utf8',
+    );
+    const built = buildReleaseBundle({
+      bundleDigest: frozen.bundle_digest,
+      executorReceiptPath: writeBuildReceipt({
+        root: fixture.root,
+        bundleDigest: frozen.bundle_digest,
+      }),
+      storeRoot: fixture.storeRoot,
+    });
+    assert.equal(built.release_bundle_build.status, 'complete');
+
+    const qualificationReceiptPath = writeQualification({
+      root: fixture.root,
+      bundle: frozen.bundle,
+      bundleDigest: frozen.bundle_digest,
+    });
+    const qualification = parseJsonText(
+      fs.readFileSync(qualificationReceiptPath, 'utf8'),
+    ) as Record<string, any>;
+    assert.equal(
+      qualification.cohort.package_payload_manifest_sha256['future-agent'],
+      frozen.bundle.packages['future-agent'].payload_manifest_sha256,
+    );
+    delete qualification.cohort.package_payload_manifest_sha256['future-agent'];
+    writeJson(qualificationReceiptPath, qualification);
+    assertTypedContractFailure(
+      () => verifyReleaseBundle({
+        bundleDigest: frozen.bundle_digest,
+        qualificationReceiptPath,
+        storeRoot: fixture.storeRoot,
+      }),
+      /cohort does not match the immutable Release Bundle inputs/,
+    );
+    writeQualification({
+      root: fixture.root,
+      bundle: frozen.bundle,
+      bundleDigest: frozen.bundle_digest,
+    });
+    const verified = verifyReleaseBundle({
+      bundleDigest: frozen.bundle_digest,
+      qualificationReceiptPath,
+      storeRoot: fixture.storeRoot,
+    });
+    assert.equal(verified.release_bundle_verify.status, 'complete');
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }

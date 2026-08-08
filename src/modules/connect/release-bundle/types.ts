@@ -1,14 +1,4 @@
-export const RELEASE_BUNDLE_PACKAGE_IDS = [
-  'mas',
-  'mag',
-  'rca',
-  'oma',
-  'obf',
-  'mas-scholar-skills',
-  'opl-flow',
-] as const;
-
-export type ReleaseBundlePackageId = typeof RELEASE_BUNDLE_PACKAGE_IDS[number];
+export type ReleaseBundlePackageId = string;
 export const RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS = [
   'app_source',
   'base_image',

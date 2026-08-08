@@ -18,15 +18,6 @@ import type {
 } from '../../../../src/modules/connect/release-bundle/types.ts';
 
 const generation = '26.7.21';
-const packageIds = [
-  'mas',
-  'mag',
-  'rca',
-  'oma',
-  'obf',
-  'mas-scholar-skills',
-  'opl-flow',
-] as const;
 const catalogRef = 'contracts/opl-framework/bundled-full-runtime-package-catalog.json';
 const releaseSetRef = `release/cohorts/${generation}/release-set.json`;
 const ownerLockRef = `release/cohorts/${generation}/owner-cohort-lock.json`;
@@ -51,6 +42,11 @@ function copyRef(sourceRoot: string, targetRoot: string, ref: string, targetRef 
   fs.copyFileSync(source, target);
 }
 
+function releaseSetPackageIds(root: string) {
+  const releaseSet = readJson(path.join(root, releaseSetRef));
+  return releaseSet.components.packages.package_ids as string[];
+}
+
 function committedSurfaceFixture(
   t: TestContext,
   packageAuthority: 'release-set' | 'catalog' = 'release-set',
@@ -62,7 +58,7 @@ function committedSurfaceFixture(
   copyRef(repoRoot, root, ownerLockRef);
   if (packageAuthority === 'catalog') {
     const catalog = readJson(path.join(repoRoot, catalogRef));
-    for (const packageId of packageIds) {
+    for (const packageId of Object.keys(catalog.packages)) {
       const entry = catalog.packages[packageId];
       copyRef(repoRoot, root, `contracts/opl-framework/${entry.manifest_ref}`);
       copyRef(repoRoot, root, `contracts/opl-framework/${entry.payload_manifest_ref}`);
@@ -71,7 +67,7 @@ function committedSurfaceFixture(
   }
 
   const releaseSet = readJson(path.join(root, releaseSetRef));
-  for (const packageId of packageIds) {
+  for (const packageId of releaseSetPackageIds(root)) {
     const member = releaseSet.components.packages.members[packageId];
     const frozenManifestRef = `contracts/opl-framework/packages/${packageId}-${member.version}.json`;
     copyRef(repoRoot, root, frozenManifestRef, member.manifest_ref);
@@ -91,6 +87,7 @@ function committedSurfaceFixture(
 function freezeRequest(root: string): ReleaseBundleFreezeRequest {
   const releaseSet = readJson(path.join(root, releaseSetRef));
   const ownerLock = readJson(path.join(root, ownerLockRef));
+  const packageIds = releaseSetPackageIds(root);
   const packages = Object.fromEntries(packageIds.map((packageId) => {
     const member = releaseSet.components.packages.members[packageId];
     const owner = ownerLock.packages[packageId];
@@ -152,6 +149,7 @@ function freezeRequest(root: string): ReleaseBundleFreezeRequest {
 
 test('committed 26.7.21 cohort closes catalog, owner lock, manifests, and payloads', (t) => {
   const root = committedSurfaceFixture(t);
+  const packageIds = releaseSetPackageIds(root);
   const catalog = readBundledFullRuntimePackageCatalog();
   assert.deepEqual([...catalog.entries.keys()].sort(), [...packageIds].sort());
   assert.match(catalog.catalogSha256, /^sha256:[0-9a-f]{64}$/);
@@ -209,6 +207,28 @@ test('committed cohort rejects Release Set member digest drift before freeze', (
     () => assertReleaseBundleFreezeInputs(request, root),
     (error: unknown) => error instanceof FrameworkContractError
       && /does not transitively bind the Package identity/.test(error.message),
+  );
+});
+
+test('committed cohort rejects freeze request Package key-set drift', (t) => {
+  const root = committedSurfaceFixture(t);
+  const missing = freezeRequest(root);
+  delete missing.packages.mas;
+  assert.throws(
+    () => assertReleaseBundleFreezeInputs(missing, root),
+    (error: unknown) => error instanceof FrameworkContractError
+      && /freeze request must exactly match/.test(error.message),
+  );
+
+  const extra = freezeRequest(root);
+  extra.packages['future-agent'] = {
+    ...extra.packages.mas,
+    package_id: 'future-agent',
+  };
+  assert.throws(
+    () => assertReleaseBundleFreezeInputs(extra, root),
+    (error: unknown) => error instanceof FrameworkContractError
+      && /freeze request must exactly match/.test(error.message),
   );
 });
 

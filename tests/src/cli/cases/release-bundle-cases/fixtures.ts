@@ -24,6 +24,7 @@ import {
   readReleaseBundleStatus,
   reconcileReleaseBundle as reconcileReleaseBundleAuthority,
   verifyReleaseBundle as verifyReleaseBundleAuthority,
+  type ReleaseBundle,
   type ReleaseBundleOperationInvocation,
 } from '../../../../../src/modules/connect/release-bundle/index.ts';
 import {
@@ -138,9 +139,11 @@ function readCheckpointFixture(filePath: string) {
 function fixtureRequest(
   sourceRoot: string,
   standardAssetNames = ['standard.dmg', 'latest.yml'],
+  additionalPackageIds: readonly string[] = [],
 ) {
   const sourceSha = '1'.repeat(40);
-  const repoNames = {
+  const selectedPackageIds = [...new Set([...packageIds, ...additionalPackageIds])];
+  const repoNames: Record<string, string> = {
     mas: 'med-autoscience',
     mag: 'med-autogrant',
     rca: 'redcube-ai',
@@ -148,10 +151,11 @@ function fixtureRequest(
     obf: 'opl-bookforge',
     'mas-scholar-skills': 'mas-scholar-skills',
     'opl-flow': 'opl-flow',
-  } as const;
-  const packages = Object.fromEntries(packageIds.map((packageId, index) => {
+  };
+  const packages = Object.fromEntries(selectedPackageIds.map((packageId, index) => {
     const version = `0.${index + 1}.0`;
-    const ownerSourceCommit = ['4', '5', '6', '7', '8', '9', 'a'][index].repeat(40);
+    const ownerSourceCommit = crypto.createHash('sha1').update(packageId).digest('hex');
+    const repoName = repoNames[packageId] ?? packageId;
     const manifestRef = `contracts/opl-framework/packages/${packageId}.json`;
     const payloadManifestRef = `contracts/opl-framework/packages/payloads/${packageId}-${version}.json`;
     const payloadLeafRef = `payloads/${packageId}-${version}.json`;
@@ -171,7 +175,7 @@ function fixtureRequest(
       package_id: packageId,
       plugin_id: packageId,
       package_version: version,
-      source_repo: `https://github.com/gaofeng21cn/${repoNames[packageId]}.git`,
+      source_repo: `https://github.com/gaofeng21cn/${repoName}.git`,
       source_commit: ownerSourceCommit,
       source_root: '.',
       content_lock: {
@@ -182,7 +186,7 @@ function fixtureRequest(
       files: [{
         path: '.codex-plugin/plugin.json',
         mode: '100644',
-        source_url: `https://raw.githubusercontent.com/gaofeng21cn/${repoNames[packageId]}/${ownerSourceCommit}/.codex-plugin/plugin.json`,
+        source_url: `https://raw.githubusercontent.com/gaofeng21cn/${repoName}/${ownerSourceCommit}/.codex-plugin/plugin.json`,
         sha256: digest(`plugin:${packageId}`),
       }],
     });
@@ -195,8 +199,8 @@ function fixtureRequest(
       payload_manifest_ref: payloadManifestRef,
       payload_manifest_sha256: payloadManifestSha256,
     }];
-  })) as Record<typeof packageIds[number], {
-    package_id: typeof packageIds[number];
+  })) as Record<string, {
+    package_id: string;
     version: string;
     owner_source_commit: string;
     manifest_ref: string;
@@ -208,10 +212,10 @@ function fixtureRequest(
   const cohortDigest = writeJson(path.join(sourceRoot, cohortRef), {
     surface_kind: 'opl_package_owner_cohort_lock.v1',
     generated_at: '2026-07-20T00:00:00.000Z',
-    packages: Object.fromEntries(packageIds.map((packageId) => [packageId, {
+    packages: Object.fromEntries(selectedPackageIds.map((packageId) => [packageId, {
       package_id: packageId,
-      repo_name: repoNames[packageId],
-      repo_url: `https://github.com/gaofeng21cn/${repoNames[packageId]}.git`,
+      repo_name: repoNames[packageId] ?? packageId,
+      repo_url: `https://github.com/gaofeng21cn/${repoNames[packageId] ?? packageId}.git`,
       source_commit: packages[packageId].owner_source_commit,
     }])),
   });
@@ -220,15 +224,15 @@ function fixtureRequest(
     surface_kind: 'opl_release_set.v2',
     schema_ref: 'contracts/opl-framework/release-set-v2.schema.json',
     generation: '26.7.20',
-    component_count: 9,
-    component_ids: ['opl-base', 'opl-app', ...packageIds],
+    component_count: selectedPackageIds.length + 2,
+    component_ids: ['opl-base', 'opl-app', ...selectedPackageIds],
     bom_status: 'planned',
     bom_digest: null,
     owner_cohort_lock: {
       surface_kind: 'opl_package_owner_cohort_lock.v1',
       ref: 'owner-cohort-lock.json',
       digest: cohortDigest,
-      package_ids: [...packageIds],
+      package_ids: [...selectedPackageIds],
     },
     update_decision: {
       comparison_key: 'component_id+version+artifact_digest',
@@ -261,9 +265,9 @@ function fixtureRequest(
       },
       packages: {
         component_kind: 'package_collection',
-        package_count: 7,
-        package_ids: [...packageIds],
-        members: Object.fromEntries(packageIds.map((packageId) => [packageId, {
+        package_count: selectedPackageIds.length,
+        package_ids: [...selectedPackageIds],
+        members: Object.fromEntries(selectedPackageIds.map((packageId) => [packageId, {
           component_id: packageId,
           component_kind: 'package',
           version: packages[packageId].version,
@@ -327,8 +331,8 @@ function fixtureRequest(
   };
 }
 
-function unifiedStableRequest(sourceRoot: string) {
-  const request = fixtureRequest(sourceRoot);
+function unifiedStableRequest(sourceRoot: string, additionalPackageIds: readonly string[] = []) {
+  const request = fixtureRequest(sourceRoot, undefined, additionalPackageIds);
   const baseImageDigest = digest('webui-base-image');
   return {
     ...request,
@@ -435,16 +439,21 @@ function appStandardRequest(sourceRoot: string) {
   };
 }
 
+type QualificationBundle =
+  | ReturnType<typeof fixtureRequest>
+  | ReturnType<typeof appStandardRequest>
+  | ReleaseBundle;
+
 function isAppStandardFixtureRequest(
-  request: ReturnType<typeof fixtureRequest> | ReturnType<typeof appStandardRequest>,
-): request is ReturnType<typeof appStandardRequest> {
+  request: QualificationBundle,
+): request is Extract<QualificationBundle, { identity_mode: 'app_standard_compatibility' }> {
   return 'identity_mode' in request
     && request.identity_mode === 'app_standard_compatibility';
 }
 
 function writeQualification(input: {
   root: string;
-  bundle: ReturnType<typeof fixtureRequest> | ReturnType<typeof appStandardRequest>;
+  bundle: QualificationBundle;
   bundleDigest: string;
   track?: 'standard' | 'webui' | 'full';
   subject?: { name: string; bytes: string };
@@ -465,9 +474,11 @@ function writeQualification(input: {
     const legacy = input.bundle;
     return {
       framework_release_set_digest: legacy.framework_release_set.digest,
-      package_payload_manifest_sha256: Object.fromEntries(packageIds.map((packageId) => [
+      package_payload_manifest_sha256: Object.fromEntries(Object.entries(legacy.packages).map((
+        [packageId, identity],
+      ) => [
         packageId,
-        legacy.packages[packageId].payload_manifest_sha256,
+        identity.payload_manifest_sha256,
       ])),
     };
   })();
@@ -499,12 +510,20 @@ function writeQualification(input: {
   return receiptPath;
 }
 
-function createFixture(options: { admitStandard?: boolean; standardAssetNames?: string[] } = {}) {
+function createFixture(options: {
+  admitStandard?: boolean;
+  standardAssetNames?: string[];
+  additionalPackageIds?: readonly string[];
+} = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-'));
   const sourceRoot = path.join(root, 'source');
   const storeRoot = path.join(root, 'store');
   const requestPath = path.join(root, 'freeze.json');
-  const request = fixtureRequest(sourceRoot, options.standardAssetNames);
+  const request = fixtureRequest(
+    sourceRoot,
+    options.standardAssetNames,
+    options.additionalPackageIds,
+  );
   writeJson(requestPath, request);
   const frozen = freezeReleaseBundle({ requestPath, sourceRoot, storeRoot });
   if (options.admitStandard !== false) {
