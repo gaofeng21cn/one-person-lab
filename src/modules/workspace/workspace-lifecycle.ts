@@ -37,7 +37,6 @@ import {
   type WorkspaceProjectIndexEntry,
 } from './workspace-topology.ts';
 import {
-  findWorkspaceAgentProfile,
   type WorkspaceAgentProfile,
 } from './workspace-agent-defaults.ts';
 import {
@@ -823,6 +822,7 @@ function fleetEntryForBinding(
       },
     );
   }
+  const indexContext = readValidatedWorkspaceIndex(workspacePath);
   return {
     ...base,
     fleet_status: fleetStatus,
@@ -837,7 +837,7 @@ function fleetEntryForBinding(
       workspaceId: report.workspace_id,
       title: report.title,
       workspacePath,
-      agent: findWorkspaceAgentProfile(report.agent.agent_id),
+      agent: indexContext.agent,
       profile: {
         workspace_mode: report.topology.workspace_mode,
         project_collection_path: report.topology.project_collection_path,

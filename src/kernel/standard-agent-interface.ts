@@ -86,6 +86,7 @@ export type StandardAgentInterface = {
     workspace_kind: string;
     project_kind: string;
     project_collection_label: string;
+    project_collection_path: string | null;
     default_workspace_id: string;
     default_project_id: string;
     required_locator_fields: StandardAgentLocatorField[];
@@ -165,6 +166,21 @@ function stringValue(value: unknown, field: string, sourceRef: string) {
     invalid(`Standard Agent interface field ${field} must be a non-empty string.`, sourceRef, { field });
   }
   return value.trim();
+}
+
+function workspaceRelativePath(value: unknown, field: string, sourceRef: string) {
+  const relativePath = stringValue(value, field, sourceRef);
+  if (
+    path.isAbsolute(relativePath)
+    || relativePath.includes('\\')
+    || relativePath.split('/').some((segment) => !segment || segment === '.' || segment === '..')
+  ) {
+    invalid(`Standard Agent interface field ${field} must be a canonical workspace-relative path.`, sourceRef, {
+      field,
+      relative_path: relativePath,
+    });
+  }
+  return relativePath;
 }
 
 function stringArray(value: unknown, field: string, sourceRef: string) {
@@ -532,6 +548,7 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
     'workspace_kind',
     'project_kind',
     'project_collection_label',
+    'project_collection_path',
     'default_workspace_id',
     'default_project_id',
     'required_locator_fields',
@@ -599,6 +616,13 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
         'workspace_binding.project_collection_label',
         sourceRef,
       ),
+      project_collection_path: workspaceBinding.project_collection_path === undefined
+        ? null
+        : workspaceRelativePath(
+            workspaceBinding.project_collection_path,
+            'workspace_binding.project_collection_path',
+            sourceRef,
+          ),
       default_workspace_id: stringValue(
         workspaceBinding.default_workspace_id,
         'workspace_binding.default_workspace_id',

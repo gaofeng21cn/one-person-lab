@@ -143,7 +143,10 @@ function topologyContract() {
   return value;
 }
 
-export function profileFromTopologyContract(profileId: WorkspaceProfileId): TopologyProfile {
+export function profileFromTopologyContract(
+  profileId: WorkspaceProfileId,
+  projectCollectionPath?: string,
+): TopologyProfile {
   const contract = topologyContract();
   const defaultProfiles = contract.default_profiles;
   if (!isRecord(defaultProfiles)) {
@@ -179,7 +182,7 @@ export function profileFromTopologyContract(profileId: WorkspaceProfileId): Topo
   }
   return {
     workspace_mode: workspaceMode,
-    project_collection_path: String(profile.project_collection_path),
+    project_collection_path: projectCollectionPath ?? String(profile.project_collection_path),
     series_capable_skeleton: (profile as Record<string, unknown>).series_capable_skeleton === true,
     profile_role: 'canonical',
     canonical_profile_id:

@@ -15,12 +15,15 @@ import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../../../src/kernel/standard-agent-registry.ts';
+import { readStandardAgentDescriptorInterface } from '../../../../src/kernel/standard-agent-interface.ts';
 import { validateJsonSchemaPayload } from '../../../../src/kernel/schema-registry.ts';
+import { resolveWorkItemInventoryBinding } from '../../../../src/modules/workspace/work-item-inventory-binding.ts';
 import {
   writeCapabilityCatalog,
   writeCapabilityProvider,
   writeMasConsumer,
 } from './packages-cases/capability-fixtures.ts';
+import { createWorkspaceDescriptorFamilyFixture } from './workspace-domain-test-helper.ts';
 
 import './workspace-domain-initializer-cases/bookforge-artifact-lifecycle.ts';
 import './workspace-domain-initializer-cases/resource-provenance.ts';
@@ -118,6 +121,87 @@ test('workspace init uses generic one-off topology without a current domain desc
     assert.equal(workspaceIndex.authority_boundary.opl_can_write_domain_truth, false);
     assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_collection_path, 'projects');
   } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace init honors an installed MAS study collection and keeps the generic projects ledger', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-study-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-study-root-'));
+  const descriptorFixture = createWorkspaceDescriptorFamilyFixture(['mas']);
+
+  try {
+    const initialized = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'mas',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'dm-cvd',
+      '--project-id',
+      'study-001',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
+    }).workspace_initialization;
+
+    const workspacePath = path.join(workspaceRoot, 'dm-cvd');
+    const index = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    const workspaceYaml = fs.readFileSync(path.join(workspacePath, 'workspace.yaml'), 'utf8');
+
+    assert.equal(initialized.profile.workspace_mode, 'portfolio');
+    assert.equal(initialized.profile.project_collection_path, 'studies');
+    assert.equal(initialized.project_root, path.join(workspacePath, 'studies', 'study-001'));
+    assert.deepEqual(index.studies, [{
+      study_id: 'study-001',
+      canonical_study_root: 'studies/study-001',
+    }]);
+    assert.equal(index.projects[0].project_root, 'studies/study-001');
+    assert.match(workspaceYaml, /\nstudies:\n/u);
+    assert.doesNotMatch(workspaceYaml, /\nprojects:\n/u);
+
+    index.studies[0].status = 'active';
+    index.studies[0].package_status = 'not_ready';
+    index.studies.push({
+      study_id: 'mas-provisioned-study',
+      canonical_study_root: 'studies/mas-provisioned-study',
+      status: 'qualification_only',
+    });
+    fs.mkdirSync(path.join(workspacePath, 'studies', 'mas-provisioned-study'));
+    fs.writeFileSync(
+      path.join(workspacePath, 'workspace_index.json'),
+      `${JSON.stringify(index, null, 2)}\n`,
+    );
+    runCli([
+      'workspace', 'ensure',
+      '--agent', 'mas',
+      '--workspace', workspacePath,
+      '--project-id', 'study-001',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
+    });
+    const refreshedIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.equal(refreshedIndex.studies[0].status, 'active');
+    assert.equal(refreshedIndex.studies[0].package_status, 'not_ready');
+    assert.deepEqual(refreshedIndex.studies[1], index.studies[1]);
+
+    const descriptor = readStandardAgentDescriptorInterface(
+      path.join(descriptorFixture.familyRoot, 'med-autoscience'),
+    );
+    const binding = resolveWorkItemInventoryBinding({
+      workspaceRoot: workspacePath,
+      declaration: descriptor!.interface.inventory_projection!,
+      domainWorkItemId: 'study-001',
+      managedWorkspaceProjectIds: ['mas', 'medautoscience'],
+    });
+    assert.equal(binding.canonical_work_item_root, fs.realpathSync.native(path.join(workspacePath, 'studies', 'study-001')));
+    assert.match(binding.inventory_ref, /#\/studies\/0$/u);
+  } finally {
+    descriptorFixture.cleanup();
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }

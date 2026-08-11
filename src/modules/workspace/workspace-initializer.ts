@@ -317,12 +317,14 @@ export function buildWorkspaceYaml(input: {
     `  project_stage_outputs_root: ${yamlScalar(input.profile.project_stage_outputs_root)}`,
     '  shared_resource_roots:',
     ...yamlList(input.profile.shared_resource_roots, '    '),
-    'projects:',
+    `${input.profile.project_collection_path}:`,
   ];
   for (const project of input.projects) {
+    const idField = input.agent.inventory_projection?.field_map.work_item_id ?? 'project_id';
+    const rootField = input.agent.inventory_projection?.field_map.work_item_root ?? 'project_root';
     lines.push(
-      `  - project_id: ${yamlScalar(project.project_id)}`,
-      `    project_root: ${yamlScalar(project.project_root)}`,
+      `  - ${idField}: ${yamlScalar(project.project_id)}`,
+      `    ${rootField}: ${yamlScalar(project.project_root)}`,
       `    stage_outputs_root: ${yamlScalar(project.stage_outputs_root)}`,
     );
   }
@@ -362,6 +364,37 @@ export function buildWorkspaceIndex(input: {
     ? input.existingIndex.profile_binding
     : null;
   const profileEvent = input.profileEvent ?? (input.existingIndex ? 'ensured' : 'initialized');
+  const inventory = input.agent.inventory_projection;
+  const inventoryPointerSegment = inventory?.relative_path === 'workspace_index.json'
+    ? inventory.items_pointer.match(/^\/([^/]+)$/u)?.[1] ?? null
+    : null;
+  const existingDomainItems = inventoryPointerSegment
+    && Array.isArray(input.existingIndex?.[inventoryPointerSegment])
+    ? input.existingIndex[inventoryPointerSegment].filter(isRecord)
+    : [];
+  const projectedDomainItems = inventory
+    ? input.projects.map((project) => ({
+        [inventory.field_map.work_item_id]: project.project_id,
+        [inventory.field_map.work_item_root]: project.project_root,
+      }))
+    : [];
+  const domainInventory = inventory && inventoryPointerSegment
+    ? {
+        [inventoryPointerSegment]: [
+          ...existingDomainItems.map((item) => {
+            const projected = projectedDomainItems.find((candidate) => (
+              candidate[inventory.field_map.work_item_id]
+                === item[inventory.field_map.work_item_id]
+            ));
+            return projected ? { ...item, ...projected } : item;
+          }),
+          ...projectedDomainItems.filter((candidate) => !existingDomainItems.some((item) => (
+            item[inventory.field_map.work_item_id]
+              === candidate[inventory.field_map.work_item_id]
+          ))),
+        ],
+      }
+    : {};
   return {
     surface_kind: 'opl_workspace_index',
     version: 'workspace-index.v1',
@@ -446,6 +479,7 @@ export function buildWorkspaceIndex(input: {
     shared_resource_roots: input.profile.shared_resource_roots,
     shared_resources: buildSharedResources(input.profile),
     projects: input.projects,
+    ...domainInventory,
     user_inspection: {
       ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
       default_stage_outputs: input.stageOutputsRootRef,
@@ -476,6 +510,7 @@ export function buildWorkspaceIndex(input: {
     workspace_norm: buildAgentWorkspaceNormProjection({
       contract: input.contracts.agentWorkspaceNorm,
       agentId: input.agent.agent_id,
+      agentProfile: input.agent,
     }),
     expected_domain_topology_profile: expectedDomainTopologyProfile({
       agent: input.agent,
@@ -498,7 +533,7 @@ export function initializeWorkspace(
   const agent = findWorkspaceAgentProfile(options.agentId);
   const mode = normalizeMode(options.mode);
   const profileId = selectWorkspaceProfileId(agent, mode);
-  const profile = profileFromTopologyContract(profileId);
+  const profile = profileFromTopologyContract(profileId, agent.project_collection_path);
   const workspacePath = resolveWorkspacePath(options, agent);
   const workspaceId = normalizeRequiredSegment(path.basename(workspacePath), 'workspace_id');
   const projectId = normalizeRequiredSegment(
@@ -709,7 +744,7 @@ export function ensureWorkspace(
   if (activeWorkspacePath && activeWorkspaceIndexPath && indexedProject && !options.force) {
     const refreshedIndex = readExistingWorkspaceIndex(activeWorkspaceIndexPath);
     const profileId = profileIdFromWorkspaceIndex(refreshedIndex) ?? selectWorkspaceProfileId(agent, 'auto');
-    const profile = profileFromTopologyContract(profileId);
+    const profile = profileFromTopologyContract(profileId, agent.project_collection_path);
     if (refreshedIndex) {
       assertCompatibleExistingIndex({ existingIndex: refreshedIndex, agent, profileId, profile });
     }

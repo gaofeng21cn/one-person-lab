@@ -96,6 +96,11 @@
         "workspace_kind": { "type": "string", "minLength": 1 },
         "project_kind": { "type": "string", "minLength": 1 },
         "project_collection_label": { "type": "string", "minLength": 1 },
+        "project_collection_path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+        },
         "default_workspace_id": { "type": "string", "minLength": 1 },
         "default_project_id": { "type": "string", "minLength": 1 },
         "required_locator_fields": { "$ref": "#/$defs/locatorFields" },

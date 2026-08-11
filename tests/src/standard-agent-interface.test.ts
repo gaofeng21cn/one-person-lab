@@ -34,6 +34,7 @@ function fixture() {
       workspace_kind: 'fixture_workspace',
       project_kind: 'fixture_project',
       project_collection_label: 'projects',
+      project_collection_path: 'projects',
       default_workspace_id: 'fixture-workspace',
       default_project_id: 'fixture-001',
       required_locator_fields: ['profile_ref'],
@@ -260,6 +261,7 @@ type PackageStatusReaderFixture = Parameters<typeof readStandardAgentDescriptorF
 test('standard Agent interface parses a domain-owned descriptor without domain branching', () => {
   const descriptor = parseStandardAgentInterface(fixture(), 'fixture.json#/standard_agent_interface');
   assert.equal(descriptor.workspace_binding.locator_surface_kind, 'fixture_workspace_locator');
+  assert.equal(descriptor.workspace_binding.project_collection_path, 'projects');
   assert.equal(descriptor.inventory_projection, null);
   assert.equal(descriptor.stage_catalog, null);
   assert.deepEqual(descriptor.domain_detail_views, []);
@@ -281,6 +283,16 @@ test('standard Agent interface parses command-free descriptors with nullable reg
   assert.equal('manifest_command_template' in parsed.workspace_binding, false);
   assert.equal('dispatch_command' in parsed.runtime, false);
   assert.equal(parsed.runtime.registration_ref, null);
+});
+
+test('standard Agent interface rejects unsafe project collection paths', () => {
+  const value = fixture();
+  value.workspace_binding.project_collection_path = '../studies';
+
+  assert.throws(
+    () => parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface'),
+    /canonical workspace-relative path/,
+  );
 });
 
 test('standard Agent interface accepts optional inventory presentation fields', () => {

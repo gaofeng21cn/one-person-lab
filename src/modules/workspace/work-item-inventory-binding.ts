@@ -128,6 +128,7 @@ export function resolveWorkItemInventoryBinding(input: {
     && isRecord(payload)
     && payload.surface_kind === 'opl_workspace_index'
     && payload.version === 'workspace-index.v1'
+    && !Array.isArray(jsonPointer(payload, input.declaration.items_pointer))
   ) {
     const agent = isRecord(payload.agent) ? payload.agent : null;
     const projectId = typeof agent?.project_id === 'string' ? agent.project_id.trim() : '';

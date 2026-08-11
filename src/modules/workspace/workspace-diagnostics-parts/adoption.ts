@@ -139,7 +139,7 @@ export function adoptWorkspace(
   const agent = findWorkspaceAgentProfile(options.agentId);
   const mode = normalizeMode(options.mode);
   const profileId = selectWorkspaceProfileId(agent, mode);
-  const profile = profileFromTopologyContract(profileId);
+  const profile = profileFromTopologyContract(profileId, agent.project_collection_path);
   const workspacePath = resolveAdoptWorkspacePath(options, agent);
   const workspaceId = normalizeRequiredSegment(path.basename(workspacePath), 'workspace_id');
   const projectId = normalizeRequiredSegment(

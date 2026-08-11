@@ -4,13 +4,14 @@ import path from 'node:path';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import {
+  resolveStandardAgent,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../kernel/standard-agent-registry.ts';
+import {
   normalizeWorkspaceProjectEntry,
   WORKSPACE_PROJECT_LIFECYCLE_STATUSES,
 } from './workspace-artifacts.ts';
-import {
-  findWorkspaceAgentProfile,
-  type WorkspaceAgentProfile,
-} from './workspace-agent-defaults.ts';
+import type { WorkspaceAgentProfile } from './workspace-agent-defaults.ts';
 import {
   isWorkspaceProfileId,
   type TopologyProfile,
@@ -66,14 +67,44 @@ export function profileFromIndex(index: Record<string, unknown>): TopologyProfil
 
 export function agentFromIndex(index: Record<string, unknown>): WorkspaceAgentProfile | null {
   const agent = isRecord(index.agent) ? index.agent : null;
-  if (typeof agent?.agent_id !== 'string') {
+  const profile = profileFromIndex(index);
+  const profileId = profileIdFromIndex(index);
+  const displayLabels = isRecord(index.display_labels) ? index.display_labels : null;
+  const registry = typeof agent?.agent_id === 'string'
+    ? resolveStandardAgent(agent.agent_id)
+    : null;
+  if (
+    !agent
+    || !profile
+    || !profileId
+    || !registry
+    || registry.series_membership !== STANDARD_AGENT_SERIES_MEMBERSHIP
+    || ![
+      agent.project_id,
+      agent.project,
+      agent.label,
+      agent.workspace_kind,
+      agent.project_kind,
+    ].every((entry) => typeof entry === 'string' && entry.trim().length > 0)
+  ) {
     return null;
   }
-  try {
-    return findWorkspaceAgentProfile(agent.agent_id);
-  } catch {
-    return null;
-  }
+  return {
+    agent_id: registry.agent_id,
+    project_id: String(agent.project_id),
+    project: String(agent.project),
+    label: String(agent.label),
+    workspace_kind: String(agent.workspace_kind),
+    project_kind: String(agent.project_kind),
+    project_collection_label: typeof displayLabels?.project_collection === 'string'
+      ? displayLabels.project_collection
+      : profile.project_collection_path,
+    project_collection_path: profile.project_collection_path,
+    inventory_projection: null,
+    default_workspace_id: `${registry.agent_id}-workspace`,
+    default_project_id: `${registry.agent_id}-001`,
+    default_profile_id: profileId,
+  };
 }
 
 export function readWorkspaceIndex(indexPath: string) {

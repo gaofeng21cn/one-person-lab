@@ -16,6 +16,7 @@ import {
   buildAgentWorkspaceNormProjection,
 } from '../../src/modules/workspace/agent-workspace-norm.ts';
 import { listWorkspaceAgentProfiles } from '../../src/modules/workspace/workspace-agent-defaults.ts';
+import { findWorkspaceAgentProfile } from '../../src/modules/workspace/workspace-agent-defaults.ts';
 import { profileFromTopologyContract } from '../../src/modules/workspace/workspace-topology.ts';
 import { repoRoot } from './cli/helpers.ts';
 
@@ -30,6 +31,10 @@ function contractFixture() {
 }
 
 test('workspace agent identity and supported agents derive from the standard-agent registry', () => {
+  const stateRoot = fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', 'opl-agent-workspace-norm-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
   const rawContract = rawContractFixture();
   const contract = contractFixture();
   const registryAgents = STANDARD_AGENT_REGISTRY.filter((entry) =>
@@ -78,7 +83,10 @@ test('workspace agent identity and supported agents derive from the standard-age
   );
 
   for (const agent of workspaceAgentProfiles) {
-    const profile = profileFromTopologyContract(agent.default_profile_id);
+    const profile = profileFromTopologyContract(
+      agent.default_profile_id,
+      agent.project_collection_path,
+    );
     assert.deepEqual(
       buildAgentWorkspaceNormProjection({ contract, agentId: agent.agent_id }).domain_topology_profile,
       {
@@ -93,6 +101,11 @@ test('workspace agent identity and supported agents derive from the standard-age
         shared_resource_roots: profile.shared_resource_roots,
       },
     );
+  }
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
@@ -129,6 +142,7 @@ test('workspace norm projection binds an explicit agent repo without reading fam
           workspace_kind: 'scoped_research_workspace',
           project_kind: 'scoped_study',
           project_collection_label: 'studies',
+          project_collection_path: 'studies',
           default_workspace_id: 'scoped-research',
           default_project_id: 'scoped-study-001',
           required_locator_fields: ['workspace_root'],
@@ -160,5 +174,37 @@ test('workspace norm projection binds an explicit agent repo without reading fam
     assert.equal(projection.domain_topology_profile?.profile, 'portfolio');
   } finally {
     fs.rmSync(repoDir, { recursive: true, force: true });
+  }
+});
+
+test('workspace profile discovery fails closed for a selected invalid MAS descriptor', () => {
+  const stateRoot = fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', 'opl-invalid-mas-state-'));
+  const familyRoot = fs.mkdtempSync(path.join(process.env.TMPDIR ?? '/tmp', 'opl-invalid-mas-family-'));
+  const masRoot = path.join(familyRoot, 'med-autoscience');
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousFamilyRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
+  try {
+    fs.mkdirSync(path.join(masRoot, 'contracts'), { recursive: true });
+    fs.writeFileSync(path.join(masRoot, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
+      domain_id: 'medautoscience',
+      standard_agent_interface: {
+        version: 'opl_standard_agent_interface.v1',
+        workspace_binding: { invalid_selected_descriptor: true },
+      },
+    }, null, 2)}\n`);
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = familyRoot;
+
+    assert.throws(
+      () => findWorkspaceAgentProfile('mas'),
+      /workspace_binding|valid contracts\/domain_descriptor\.json/,
+    );
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    if (previousFamilyRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousFamilyRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyRoot, { recursive: true, force: true });
   }
 });

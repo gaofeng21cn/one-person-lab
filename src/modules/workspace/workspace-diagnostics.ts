@@ -215,6 +215,7 @@ function validateIndexSemantics(input: {
     const expectedNorm = buildAgentWorkspaceNormProjection({
       contract: input.contracts.agentWorkspaceNorm,
       agentId: agent?.agent_id ?? null,
+      agentProfile: agent,
     });
     if (norm.norm_id !== expectedNorm.norm_id || norm.version !== expectedNorm.version) {
       addBlocker(blockers, 'workspace_norm_drift', {
