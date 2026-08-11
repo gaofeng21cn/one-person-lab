@@ -286,13 +286,24 @@ test('standard Agent interface parses command-free descriptors with nullable reg
 });
 
 test('standard Agent interface rejects unsafe project collection paths', () => {
-  const value = fixture();
-  value.workspace_binding.project_collection_path = '../studies';
+  const schemaRef = 'contracts/opl-framework/standard-agent-interface.schema.json';
+  const schema = parseJsonText(fs.readFileSync(path.join(process.cwd(), schemaRef), 'utf8')) as Record<string, unknown>;
 
-  assert.throws(
-    () => parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface'),
-    /canonical workspace-relative path/,
-  );
+  for (const projectCollectionPath of ['../studies', '.']) {
+    const value = fixture();
+    value.workspace_binding.project_collection_path = projectCollectionPath;
+
+    assert.throws(
+      () => parseStandardAgentInterface(value, 'fixture.json#/standard_agent_interface'),
+      /canonical workspace-relative path/,
+    );
+    const validation = validateJsonSchemaPayload({
+      schemaId: 'opl.standard_agent_interface.v1',
+      schema,
+      sourceRef: schemaRef,
+    }, value);
+    assert.equal(validation.ok, false, projectCollectionPath);
+  }
 });
 
 test('standard Agent interface accepts optional inventory presentation fields', () => {

@@ -465,6 +465,8 @@ export function buildWorkspaceIndex(input: {
       project: input.agent.project,
       workspace_kind: input.agent.workspace_kind,
       project_kind: input.agent.project_kind,
+      project_collection_label: input.agent.project_collection_label,
+      inventory_projection: input.agent.inventory_projection,
     },
     workspace_topology_profile: {
       contract_ref: WORKSPACE_TOPOLOGY_CONTRACT_REF,

@@ -204,7 +204,10 @@ function locatorFields(value: unknown, field: string, sourceRef: string) {
   return fields as StandardAgentLocatorField[];
 }
 
-function inventoryProjection(value: unknown, sourceRef: string): StandardAgentInventoryProjection | null {
+export function parseStandardAgentInventoryProjection(
+  value: unknown,
+  sourceRef: string,
+): StandardAgentInventoryProjection | null {
   if (value === undefined || value === null) return null;
   if (!isRecord(value)) {
     invalid('Standard Agent interface field inventory_projection must be an object.', sourceRef, {
@@ -599,7 +602,7 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
   }
   return {
     version: STANDARD_AGENT_INTERFACE_VERSION,
-    inventory_projection: inventoryProjection(value.inventory_projection, sourceRef),
+    inventory_projection: parseStandardAgentInventoryProjection(value.inventory_projection, sourceRef),
     stage_catalog: stageCatalog(value.stage_catalog, sourceRef),
     domain_detail_views: domainDetailViews(value.domain_detail_views, sourceRef),
     workspace_binding: {

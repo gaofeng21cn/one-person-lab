@@ -99,7 +99,7 @@
         "project_collection_path": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
         },
         "default_workspace_id": { "type": "string", "minLength": 1 },
         "default_project_id": { "type": "string", "minLength": 1 },

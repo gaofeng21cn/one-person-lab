@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { parseStandardAgentInventoryProjection } from '../../kernel/standard-agent-interface.ts';
 import {
   resolveStandardAgent,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
@@ -73,6 +74,15 @@ export function agentFromIndex(index: Record<string, unknown>): WorkspaceAgentPr
   const registry = typeof agent?.agent_id === 'string'
     ? resolveStandardAgent(agent.agent_id)
     : null;
+  let inventoryProjection: WorkspaceAgentProfile['inventory_projection'] = null;
+  try {
+    inventoryProjection = parseStandardAgentInventoryProjection(
+      agent?.inventory_projection,
+      'workspace_index.json#/agent/inventory_projection',
+    );
+  } catch {
+    return null;
+  }
   if (
     !agent
     || !profile
@@ -100,7 +110,7 @@ export function agentFromIndex(index: Record<string, unknown>): WorkspaceAgentPr
       ? displayLabels.project_collection
       : profile.project_collection_path,
     project_collection_path: profile.project_collection_path,
-    inventory_projection: null,
+    inventory_projection: inventoryProjection,
     default_workspace_id: `${registry.agent_id}-workspace`,
     default_project_id: `${registry.agent_id}-001`,
     default_profile_id: profileId,

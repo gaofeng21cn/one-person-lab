@@ -200,6 +200,28 @@ test('workspace init honors an installed MAS study collection and keeps the gene
     });
     assert.equal(binding.canonical_work_item_root, fs.realpathSync.native(path.join(workspacePath, 'studies', 'study-001')));
     assert.match(binding.inventory_ref, /#\/studies\/0$/u);
+
+    fs.rmSync(path.join(descriptorFixture.familyRoot, 'med-autoscience'), { recursive: true, force: true });
+    runCli([
+      'workspace', 'project', 'lifecycle',
+      '--workspace', workspacePath,
+      '--project-id', 'study-001',
+      '--status', 'locked',
+      '--reason', 'descriptor-drift-regression',
+      '--apply',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
+    });
+    const lifecycleIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    const lifecycleYaml = fs.readFileSync(path.join(workspacePath, 'workspace.yaml'), 'utf8');
+    assert.equal(lifecycleIndex.projects[0].lifecycle.status, 'locked');
+    assert.equal(lifecycleIndex.studies[0].status, 'active');
+    assert.equal(lifecycleIndex.studies[0].package_status, 'not_ready');
+    assert.deepEqual(lifecycleIndex.studies[1], index.studies[1]);
+    assert.match(lifecycleYaml, /\n  - study_id: study-001\n/u);
+    assert.match(lifecycleYaml, /\n    canonical_study_root: studies\/study-001\n/u);
+    assert.doesNotMatch(lifecycleYaml, /\n  - project_id:/u);
   } finally {
     descriptorFixture.cleanup();
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -210,7 +232,7 @@ test('workspace init honors an installed MAS study collection and keeps the gene
 test('workspace init projects the installed MAS professional Skill generation and reuses it', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-skill-generation-'));
   const stateRoot = path.join(root, 'state');
-  const modulesRoot = path.join(stateRoot, 'modules');
+  const modulesRoot = path.join(root, 'plugins');
   const workspaceRoot = path.join(root, 'workspaces');
   const providerManifest = writeCapabilityProvider(path.join(root, 'provider'), '0.1.0', {
     configuredCarrier: true,

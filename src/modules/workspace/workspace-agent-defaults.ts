@@ -121,7 +121,7 @@ export function findWorkspaceAgentProfile(value: string | undefined) {
   }
   if (
     resolution.status === 'blocked'
-    && !['managed_package_not_installed', 'managed_package_status_unavailable'].includes(resolution.reason ?? '')
+    && !['managed_package_not_installed', 'native_carrier_reports_not_installed'].includes(resolution.reason ?? '')
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
