@@ -1338,6 +1338,24 @@ test('descriptor-owned Flow update adopts the exact live owner target and become
     assert.equal(status.opl_agent_package_status.installed_package_count, 1);
     assert.equal(Object.hasOwn(status.opl_agent_package_status, 'installed_packages'), false);
     assert.equal(status.opl_agent_package_status.configured_carrier.installed_version, '0.1.32');
+
+    for (const [args, surfaceKey] of [
+      [['packages', 'update', 'opl-flow'], 'opl_agent_package_update'],
+      [['packages', 'repair', '--package-id', 'opl-flow'], 'opl_agent_package_repair'],
+    ] as const) {
+      const preserved = runCli([...args], {
+        ...currentOwner.env,
+        ...commonEnv,
+      }) as any;
+      const surface = preserved[surfaceKey];
+      assert.equal(surface.status, 'current_noop');
+      assert.equal(surface.currentness.status, 'newer_source_preserved');
+      assert.ok(surface.currentness.reasons.includes('newer_installed_version_preserved'));
+      assert.equal(surface.reconciliation_action, 'preserve_newer_installed_source');
+      assert.equal(surface.observed_version, '0.1.32');
+      assert.equal(surface.target_version, '0.1.31');
+      assert.equal(surface.configured_carrier.plugin_source_path, nextOwner.sourceRoot);
+    }
   } finally {
     removeFixtureTree(root);
     fs.rmSync(currentOwner.root, { recursive: true, force: true });
@@ -2434,6 +2452,119 @@ test('developer native carrier stays intact when the owner artifact has no nativ
     );
     const reads = fs.readFileSync(ownerChannel.curlLogPath, 'utf8');
     assert.equal(reads.includes('/one-person-lab-manifest/'), false);
+  } finally {
+    removeFixtureTree(root);
+  }
+});
+
+test('developer-to-managed transition preserves newer native carriers when the owner target is older', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-first-party-managed-downgrade-guard-'));
+  const homeDir = path.join(root, 'home');
+  const stateDir = path.join(root, 'state');
+  const masCheckout = path.join(root, 'workspace', 'med-autoscience');
+  const scholarCheckout = path.join(root, 'workspace', 'mas-scholar-skills');
+  const newerProvider = writeCapabilityProvider(path.join(root, 'newer-provider'), '0.1.1');
+  addConfiguredCarrierToCapabilityFixture(newerProvider);
+  const newerMas = writeMasConsumer(path.join(root, 'newer-mas'), newerProvider, '0.1.1', {
+    configuredCarrier: true,
+  });
+  const staleProvider = writeCapabilityProvider(path.join(root, 'stale-provider'), '0.1.0');
+  addConfiguredCarrierToCapabilityFixture(staleProvider);
+  const staleMas = writeMasConsumer(path.join(root, 'stale-mas'), staleProvider, '0.1.0', {
+    configuredCarrier: true,
+  });
+  const staleReleaseSet = writeCapabilityCatalog(
+    path.join(root, 'stale-release-set'),
+    [staleMas, staleProvider],
+  );
+  const fakeBin = path.join(root, 'bin');
+  const ownerChannel = writePackageOwnerChannelFixture({
+    root: path.join(root, 'owner-channel'),
+    binRoot: path.join(root, 'owner-channel-bin'),
+    catalogPath: staleReleaseSet.catalogPath,
+    packageIds: ['mas', 'mas-scholar-skills'],
+  });
+  const codex = createFakeCodexPluginManagerFixture(path.join(root, 'fake-codex'));
+  fs.mkdirSync(masCheckout, { recursive: true });
+  fs.mkdirSync(scholarCheckout, { recursive: true });
+  writeDeveloperCapabilityCheckoutClosure({
+    masCheckout,
+    scholarCheckout,
+    masManifestPath: newerMas,
+    providerManifestPath: newerProvider,
+  });
+  writeDeveloperMasCarrierAuthority({
+    masCheckout,
+    scholarCheckout,
+    masManifestPath: newerMas,
+    providerManifestPath: newerProvider,
+  });
+  writeMasOwnerGateFixture(masCheckout, fakeBin);
+  commitDeveloperCheckout(masCheckout, 'newer developer carrier');
+  commitDeveloperCheckout(scholarCheckout, 'newer developer dependency carrier');
+  const commonEnv = {
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+    OPL_STATE_DIR: stateDir,
+    OPL_CODEX_PLUGIN_BIN: codex.codexPath,
+    PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+    UV_TOOL_DIR: path.join(root, 'uv-tools'),
+  };
+  const managedEnv = {
+    ...commonEnv,
+    ...ownerChannel.env,
+    PATH: `${ownerChannel.env.PATH}${path.delimiter}${fakeBin}`,
+    OPL_MODULE_SOURCE_MODE: 'package_channel',
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: '',
+    OPL_MODULE_PATH_SCHOLARSKILLS: '',
+  };
+
+  try {
+    const installed = runCli(['packages', 'install', 'mas'], {
+      ...commonEnv,
+      OPL_MODULE_SOURCE_MODE: 'git_checkout',
+      OPL_MODULE_PATH_MEDAUTOSCIENCE: masCheckout,
+      OPL_MODULE_PATH_SCHOLARSKILLS: scholarCheckout,
+    }) as any;
+    assert.equal(installed.opl_agent_package_install.configured_carrier.installed_version, '0.1.1');
+    assert.deepEqual(
+      installed.opl_agent_package_install.required_dependency_packages.map(
+        (entry: any) => `${entry.package_id}@${entry.observed_version}:${entry.status}`,
+      ),
+      ['mas-scholar-skills@0.1.1:installed'],
+    );
+
+    for (const [args, surfaceKey] of [
+      [['packages', 'update', 'mas'], 'opl_agent_package_update'],
+      [['packages', 'repair', '--package-id', 'mas'], 'opl_agent_package_repair'],
+    ] as const) {
+      const result = runCli([...args], managedEnv) as any;
+      const surface = result[surfaceKey];
+      assert.equal(surface.status, 'current_noop');
+      assert.equal(surface.currentness.status, 'newer_source_preserved');
+      assert.equal(surface.reconciliation_action, 'preserve_newer_installed_source');
+      assert.equal(surface.observed_version, '0.1.1');
+      assert.equal(surface.target_version, '0.1.0');
+      assert.equal(
+        fs.realpathSync(surface.configured_carrier.plugin_source_path),
+        fs.realpathSync(path.join(masCheckout, 'plugins', 'med-autoscience')),
+      );
+      assert.deepEqual(
+        surface.required_dependency_packages.map(
+          (entry: any) => `${entry.package_id}@${entry.observed_version}:${entry.status}`,
+        ),
+        ['mas-scholar-skills@0.1.1:newer_source_preserved'],
+      );
+    }
+
+    const retainedMas = runCli(['packages', 'status', '--package-id', 'mas'], commonEnv) as any;
+    const retainedScholar = runCli(
+      ['packages', 'status', '--package-id', 'mas-scholar-skills'],
+      commonEnv,
+    ) as any;
+    assert.equal(retainedMas.opl_agent_package_status.configured_carrier.installed_version, '0.1.1');
+    assert.equal(retainedScholar.opl_agent_package_status.configured_carrier.installed_version, '0.1.1');
+    assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
   } finally {
     removeFixtureTree(root);
   }

@@ -40,7 +40,7 @@ function readPackageChannelMarker(checkoutPath: string) {
   return parseJsonText(fs.readFileSync(path.join(checkoutPath, 'opl-runtime-module.json'), 'utf8')) as {
     package_channel_lifecycle: {
       staged: { root: string; status: string };
-      current: { root: string; source_git_head_sha: string | null; tree_sha256: string; activated_at: string };
+      current: { root: string; channel_version: string | null; source_git_head_sha: string | null; tree_sha256: string; activated_at: string };
       previous: { root: string; source_git_head_sha: string | null; tree_sha256: string } | null;
       rollback_ref: string | null;
     };
@@ -409,6 +409,22 @@ test('managed module install and update consume the package channel by default',
     assert.equal(noOpMarkerAfter.package_channel_lifecycle.previous?.source_git_head_sha, 'package-channel-sha-v1');
     assert.equal(fs.readFileSync(path.join(`${managedCheckout}.previous`, 'README.md'), 'utf8'), 'med-autoscience package fixture v1\n');
 
+    const downgradeAttempt = runCli(['connect', 'update', '--module', 'medautoscience'], baseEnv) as any;
+    assert.equal(downgradeAttempt.module_action.status, 'completed');
+    assert.equal(downgradeAttempt.module_action.source_reconciliation.status, 'newer_source_preserved');
+    assert.equal(downgradeAttempt.module_action.source_reconciliation.reason, 'target_package_version_is_older');
+    assert.equal(downgradeAttempt.module_action.source_reconciliation.current_version, '26.6.2');
+    assert.equal(downgradeAttempt.module_action.source_reconciliation.target_version, '26.6.1');
+    const preservedMarker = readPackageChannelMarker(managedCheckout);
+    assert.equal(preservedMarker.package_channel_lifecycle.current.channel_version, '26.6.2');
+    assert.equal(preservedMarker.package_channel_lifecycle.current.source_git_head_sha, 'package-channel-sha-v2');
+    assert.equal(
+      preservedMarker.package_channel_lifecycle.current.activated_at,
+      noOpMarkerAfter.package_channel_lifecycle.current.activated_at,
+    );
+    assert.equal(fs.readFileSync(path.join(managedCheckout, 'README.md'), 'utf8'), 'med-autoscience package fixture v2\n');
+    assert.equal(fs.readFileSync(path.join(`${managedCheckout}.previous`, 'README.md'), 'utf8'), 'med-autoscience package fixture v1\n');
+
     const rollback = rollbackManagedModulePackageChannel(MAS_MODULE_SPEC, managedCheckout);
     assert.equal(rollback.status, 'completed');
     assert.equal(rollback.module_id, 'medautoscience');
@@ -429,6 +445,58 @@ test('managed module install and update consume the package channel by default',
     );
     assert.match(rollbackMarker.package_channel_lifecycle.rollback_ref ?? '', /^opl:\/\/managed-module-package-channel\/medautoscience\/rollback\//);
   } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('managed package channel preserves a clean Git checkout ahead of the owner target commit', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-package-channel-git-ahead-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const managedCheckout = path.join(modulesRoot, 'med-autoscience');
+  const remote = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'scripts/opl-module-bootstrap.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
+      'scripts/opl-module-healthcheck.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
+    },
+  });
+  const targetCommit = remote.getHeadSha();
+  const currentCommit = remote.advance('README.md', '# med-autoscience newer owner main\n', 'newer owner main');
+  const staleChannel = writePackageChannelFixture({
+    root: path.join(homeRoot, 'stale-channel'),
+    moduleId: 'medautoscience',
+    repoName: 'med-autoscience',
+    version: '1.9.0',
+    sourceHeadSha: targetCommit,
+  });
+  const env = {
+    HOME: homeRoot,
+    CODEX_HOME: path.join(homeRoot, 'codex-home'),
+    OPL_MODULES_ROOT: modulesRoot,
+    OPL_MODULE_SOURCE_MODE: 'package_channel',
+    OPL_PACKAGES_OWNER: 'owner',
+    OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    PATH: `${staleChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+  };
+
+  try {
+    fs.mkdirSync(modulesRoot, { recursive: true });
+    execFileSync('git', ['clone', remote.remoteRoot, managedCheckout], { encoding: 'utf8' });
+    const update = runCli(['connect', 'update', '--module', 'medautoscience'], env) as any;
+    assert.equal(update.module_action.status, 'completed');
+    assert.equal(update.module_action.source_reconciliation.status, 'newer_source_preserved');
+    assert.equal(update.module_action.source_reconciliation.reason, 'target_source_commit_is_ancestor');
+    assert.equal(update.module_action.source_reconciliation.current_source_commit, currentCommit);
+    assert.equal(update.module_action.source_reconciliation.target_source_commit, targetCommit);
+    assert.equal(update.module_action.source_reconciliation.target_version, '1.9.0');
+    assert.equal(update.module_action.module.git.head_sha, currentCommit);
+    assert.equal(fs.existsSync(path.join(managedCheckout, '.git')), true);
+    assert.equal(fs.existsSync(`${managedCheckout}.previous`), false);
+    assert.equal(
+      fs.readFileSync(path.join(managedCheckout, 'README.md'), 'utf8'),
+      '# med-autoscience newer owner main\n',
+    );
+  } finally {
+    fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });

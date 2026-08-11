@@ -740,6 +740,7 @@ export function runOplModuleAction(
   const spec = findModuleSpecOrThrow(moduleId);
   const current = inspectModule(spec);
   let workflow: ModuleActionWorkflow = buildSkippedWorkflow('Workflow not required for this action.');
+  let sourceReconciliation: ReturnType<typeof installManagedModuleFromPackageChannel> | null = null;
 
   switch (action) {
     case 'install': {
@@ -782,7 +783,7 @@ export function runOplModuleAction(
             2,
           );
         }
-        installManagedModuleFromPackageChannel(spec, current.checkout_path);
+        sourceReconciliation = installManagedModuleFromPackageChannel(spec, current.checkout_path);
         const updated = inspectModule(spec);
         workflow = runManagedWorkflow(spec, updated.checkout_path);
         break;
@@ -903,6 +904,7 @@ export function runOplModuleAction(
       status: 'completed',
       module: inspectModule(spec),
       turnkey: workflow,
+      ...(sourceReconciliation ? { source_reconciliation: sourceReconciliation } : {}),
     },
   };
 }

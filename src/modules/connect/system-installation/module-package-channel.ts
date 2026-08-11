@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { gt, valid } from 'semver';
 
 import {
   FrameworkContractError,
@@ -75,7 +76,7 @@ export type OplPackageArtifactReadback = {
 };
 
 export type PackageChannelUpdateStatus = {
-  status: 'current' | 'update_available';
+  status: 'current' | 'update_available' | 'newer_source_preserved';
   package_id: string;
   current_version: string | null;
   target_version: string;
@@ -772,8 +773,18 @@ function packageChannelUpdateStatus(
   const current = lifecycle.current.channel_version === entry.package_version
     && lifecycle.current.artifact_ref === entry.immutable_artifact_ref
     && currentContentDigest === targetContentDigest;
+  const currentVersion = valid(lifecycle.current.channel_version);
+  const targetVersion = valid(entry.package_version);
+  const newerSourcePreserved = !current
+    && currentVersion !== null
+    && targetVersion !== null
+    && gt(currentVersion, targetVersion);
   return {
-    status: current ? 'current' : 'update_available',
+    status: current
+      ? 'current'
+      : newerSourcePreserved
+        ? 'newer_source_preserved'
+        : 'update_available',
     package_id: entry.package_id,
     current_version: lifecycle.current.channel_version,
     target_version: entry.package_version,
@@ -782,6 +793,24 @@ function packageChannelUpdateStatus(
     current_content_digest: currentContentDigest,
     target_content_digest: targetContentDigest ?? entry.package_content_digest,
   };
+}
+
+function gitCheckoutPreservesNewerOwnerSource(
+  targetPath: string,
+  ownerSourceCommit: string | null,
+) {
+  const currentSourceCommit = readGitHeadSha(targetPath);
+  if (!ownerSourceCommit || !currentSourceCommit || ownerSourceCommit === currentSourceCommit) {
+    return null;
+  }
+  const ancestor = runCommand(
+    'git',
+    ['merge-base', '--is-ancestor', ownerSourceCommit, currentSourceCommit],
+    targetPath,
+  );
+  return ancestor.exitCode === 0
+    ? { current_source_commit: currentSourceCommit, target_source_commit: ownerSourceCommit }
+    : null;
 }
 
 export function readManagedModulePackageChannelUpdateStatus(
@@ -1121,14 +1150,39 @@ export function installManagedModuleFromPackageChannel(
         options.selection.package_version,
       )
     : ownerPackageEntry(spec);
-  if (fs.existsSync(targetPath) && !options.repairTransactionId) {
-    assertCleanPackageChannelRoot(targetPath, spec);
+  if (fs.existsSync(targetPath)) {
+    if (!options.repairTransactionId) assertCleanPackageChannelRoot(targetPath, spec);
     const lifecycle = readPackageChannelLifecycle(targetPath, spec);
-    if (lifecycle && packageChannelUpdateStatus(lifecycle, entry).status === 'current') {
-      return {
-        status: 'current' as const,
-        repair_displaced_path: null,
-      };
+    if (lifecycle) {
+      const currentness = packageChannelUpdateStatus(lifecycle, entry);
+      if (currentness.status === 'newer_source_preserved'
+        || (currentness.status === 'current' && !options.repairTransactionId)) {
+        return {
+          status: currentness.status,
+          reason: currentness.status === 'newer_source_preserved'
+            ? 'target_package_version_is_older'
+            : 'target_package_is_current',
+          current_version: currentness.current_version,
+          target_version: currentness.target_version,
+          repair_displaced_path: null,
+        };
+      }
+    }
+    if (!options.repairTransactionId && fs.existsSync(path.join(targetPath, '.git'))) {
+      const preserved = gitCheckoutPreservesNewerOwnerSource(
+        targetPath,
+        normalizeOptionalString(entry.owner_source_commit),
+      );
+      if (preserved) {
+        return {
+          status: 'newer_source_preserved' as const,
+          reason: 'target_source_commit_is_ancestor',
+          ...preserved,
+          current_version: null,
+          target_version: entry.package_version,
+          repair_displaced_path: null,
+        };
+      }
     }
   }
   const stagePath = packageChannelStageRoot(targetPath);
