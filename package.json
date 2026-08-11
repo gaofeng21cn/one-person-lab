@@ -109,7 +109,7 @@
     "source:modules:public-imports": "node ./scripts/source-module-public-imports.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@playwright/mcp": "0.0.79",
     "@temporalio/activity": "^1.18.1",
     "@temporalio/client": "^1.18.1",
