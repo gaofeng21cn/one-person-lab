@@ -57,6 +57,7 @@ function cliTestEnvOverrides(envOverrides: Record<string, string> = {}) {
     : null;
   return {
     NODE_NO_WARNINGS: '1',
+    OPL_COMPUTER_USE_PLATFORM: 'test-unsupported',
     OPL_STATE_DIR: cliTestStateDir(),
     OPL_DEVELOPER_MODE_GH_BINARY: path.join(cliTestStateDir(), 'missing-gh'),
     OPL_CODEX_PLUGIN_BIN: process.env.OPL_CODEX_PLUGIN_BIN?.trim() || cliTestCodexPluginBin(),

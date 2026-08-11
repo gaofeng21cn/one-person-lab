@@ -2,6 +2,7 @@ import type { AgentWorkspaceNormContract, FrameworkContracts } from '../../kerne
 import { SETTINGS_CONTROL_CENTER_ACTIONS } from './app-state-settings-control-center.ts';
 import { hasExecutableAppContribution } from './app-contribution-broker.ts';
 import {
+  buildManagedComputerUseActionCatalog,
   listAgentPackageLaunchActions,
   listExternalOwnerDelegatedUpdateActions,
 } from '../connect/public/app-state.ts';
@@ -297,6 +298,7 @@ export function buildActionCatalog(
       impact: 'Delegates one update to the verified original package manager; never enters managed background apply.',
     })),
     ...moduleActions,
+    ...buildManagedComputerUseActionCatalog(),
     ...(hasExecutableAppContribution()
       ? [{
           action_id: 'package_contribution_execute',

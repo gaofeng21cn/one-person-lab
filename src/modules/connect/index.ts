@@ -144,6 +144,19 @@ export type {
 } from './opl-connect-scientific.ts';
 export { buildOplDeveloperModeSurface } from './system-installation/developer-mode.ts';
 export { buildOplDockerWebuiDoctor } from './system-installation/docker-webui-doctor.ts';
+export {
+  buildManagedComputerUseActionCatalog,
+  inspectManagedComputerUse,
+  MANAGED_COMPUTER_USE_ACTION_IDS,
+  readManagedComputerUseLock,
+  reconcileManagedComputerUse,
+} from './managed-computer-use.ts';
+export type {
+  ManagedComputerUseActionId,
+  ManagedComputerUseInspection,
+  ManagedComputerUseLock,
+} from './managed-computer-use.ts';
+export { registerOplManagedMcpServer } from './system-installation/codex-plugin-registry.ts';
 export { runOplEngineAction } from './system-installation/engine-actions.ts';
 export { resolveCodexVersion } from './system-installation/engine-helpers.ts';
 export {

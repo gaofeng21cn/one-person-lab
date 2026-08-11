@@ -21,6 +21,10 @@ import {
   useOplGatewayForModelAccess,
   buildAgentPackageStoreStorageInventory,
   buildWebuiDataVolumeStorageInventory,
+  inspectManagedComputerUse,
+  MANAGED_COMPUTER_USE_ACTION_IDS,
+  reconcileManagedComputerUse,
+  type ManagedComputerUseActionId,
 } from '../../connect/index.ts';
 import { runOplSystemAction } from '../../connect/index.ts';
 import { writeOplWorkspaceRootSurface } from '../../connect/index.ts';
@@ -80,7 +84,6 @@ import {
   resolveWorkItemExecutionSessionObservationTarget,
   type ObserveWorkItemExecutionSessionInput,
 } from '../work-item-projection/session-activity.ts';
-
 import type { AppActionExecuteOptions } from './action-execute-parser.ts';
 export { parseAppActionExecuteArgs } from './action-execute-parser.ts';
 
@@ -163,6 +166,25 @@ async function executeDirectAppAction(
 ) {
   const connectionAction = await executeConnectionAppAction(options);
   if (connectionAction) return connectionAction;
+
+  if (MANAGED_COMPUTER_USE_ACTION_IDS.includes(options.actionId as ManagedComputerUseActionId)) {
+    const actionId = options.actionId as ManagedComputerUseActionId;
+    return {
+      delegatedSurface: `opl managed companion ${actionId}`,
+      result: options.dryRun
+        ? {
+          surface_kind: 'opl_managed_computer_use_action_preflight',
+          action_id: actionId,
+          status: 'dry_run',
+          current: inspectManagedComputerUse({ runExternalChecks: false }),
+        }
+        : {
+          surface_kind: 'opl_managed_computer_use_action_result',
+          action_id: actionId,
+          current: reconcileManagedComputerUse(actionId),
+        },
+    };
+  }
 
   if (options.actionId === 'package_contribution_execute') {
     const contribution = packageContributionExecutePayload(options.payload);

@@ -769,6 +769,11 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
         settings_projection_ref: 'app_state.settings_control_center.settings_projection',
         read_model_ref: 'app_state.settings_control_center.app_settings_read_model',
       },
+      managed_companions: {
+        surface_kind: 'opl_managed_companions_workbench_ref.v1',
+        source_ref: 'app_state.managed_companions',
+        computer_use_ref: 'app_state.managed_companions[provider_id=kimi-cu]',
+      },
       ...currentOwnerDeltaTopline,
       user_task_status_summary: userTaskStatusSummary,
       summary_cards: buildSummaryCards(input, userTaskStatusSummary),

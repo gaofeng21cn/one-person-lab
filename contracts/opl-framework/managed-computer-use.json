@@ -1,0 +1,75 @@
+{
+  "schema": "opl_framework_managed_computer_use.v1",
+  "owner": "one-person-lab",
+  "product_identity_source_ref": "one-person-lab-app/contracts/app-release-qualification-input-manifest.json#runtime_payloads.kimi_cu",
+  "product_identity_source_sha256": "5a7c64110f8de56de8c464a26aaf5209f8853dc2ff32f59d069410487b74258a",
+  "provider_id": "kimi-cu",
+  "product_name": "KimiCU",
+  "version": "0.5.4",
+  "archive": {
+    "url": "https://cdn.kimi.com/kimi-computer-use/0.5.4/KimiCU.app.zip",
+    "sha256": "77a7515cf7fd4b7bfa46a95eab0dff7378d00a2c5003bcf7ad93f17667e2808e",
+    "size_bytes": 1498360,
+    "full_seed_relative_path": "runtime-payloads/kimi-cu/0.5.4/KimiCU.app.zip"
+  },
+  "platform": {
+    "os": "darwin",
+    "minimum_version": "14.0",
+    "architectures": ["arm64"]
+  },
+  "bundle": {
+    "bundle_id": "ai.kimi.cu",
+    "team_id": "2J9472RW75",
+    "target_install_path": "/Applications/KimiCU.app",
+    "executable": "/Applications/KimiCU.app/Contents/MacOS/kimi-cu"
+  },
+  "mcp": {
+    "server_id": "kimi-cu",
+    "args": ["mcp"],
+    "required_tools": [
+      "list_apps",
+      "get_app_state",
+      "click",
+      "type_text",
+      "press_key",
+      "scroll",
+      "set_value",
+      "perform_secondary_action",
+      "select_text",
+      "drag"
+    ],
+    "default_enabled": true
+  },
+  "health": {
+    "service_status_args": ["service-status"],
+    "xpc_ping_args": ["xpc-ping"],
+    "permission_status_args": ["doctor"],
+    "mcp_handshake": ["initialize", "tools/list"]
+  },
+  "permission_model": {
+    "required": ["accessibility", "screen_recording"],
+    "missing_state": "permission_required",
+    "ready_requires": [
+      "bundle_identity_verified",
+      "mcp_registered",
+      "service_registered",
+      "xpc_ping_passed",
+      "accessibility_granted",
+      "screen_recording_granted",
+      "mcp_tools_exact"
+    ]
+  },
+  "distribution_parity": {
+    "standard": "download_and_verify_exact_archive",
+    "full": "materialize_and_verify_exact_bundled_seed",
+    "same_identity_required": true,
+    "same_runtime_behavior_required": true,
+    "network_difference_allowed_after_install": false
+  },
+  "action_ids": [
+    "settings_request_computer_use_permissions",
+    "settings_recheck_computer_use",
+    "settings_repair_computer_use",
+    "settings_reinstall_computer_use"
+  ]
+}

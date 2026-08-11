@@ -1,5 +1,5 @@
 import { buildSettingsControlCenter } from '../../../../../src/modules/console/app-state-settings-control-center.ts';
-import { assert, fs, path, repoRoot, test } from '../../helpers.ts';
+import { assert, createFakeCodexFixture, fs, os, path, repoRoot, runCli, test } from '../../helpers.ts';
 
 const ORDINARY_SETTINGS_SECTIONS = [
   'overview',
@@ -454,4 +454,90 @@ test('Settings treats runtime source carrier health as provenance and fresh pack
   assert.equal(noRunnableGeneration.issue_queue[0].recommended_action_id, 'agent_package_repair');
   assert.equal(noRunnableGeneration.settings_projection.sections.agents.items[0].state, 'attention_needed');
   assert.equal(noRunnableGeneration.settings_projection.sections.capabilities.items[0].state, 'attention_needed');
+});
+
+test('fast Settings state projects managed Computer Use without running full health commands', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-settings-computer-use-'));
+  const home = path.join(root, 'home');
+  const stateDir = path.join(root, 'state');
+  const codexHome = path.join(home, '.codex');
+  const appPath = path.join(root, 'KimiCU.app');
+  const contents = path.join(appPath, 'Contents');
+  const executable = path.join(contents, 'MacOS', 'kimi-cu');
+  const invocationLog = path.join(root, 'kimi-invocations.log');
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+exit 1
+`);
+  fs.mkdirSync(path.dirname(executable), { recursive: true });
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(path.join(contents, 'Info.plist'), `<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>ai.kimi.cu</string>
+<key>CFBundleShortVersionString</key><string>0.5.4</string>
+</dict></plist>\n`);
+  fs.writeFileSync(executable, `#!/bin/sh
+echo "$1" >> "${invocationLog}"
+exit 0
+`);
+  fs.chmodSync(executable, 0o755);
+  fs.writeFileSync(path.join(codexHome, 'config.toml'), `[mcp_servers.kimi-cu]
+command = "${executable}"
+args = ["mcp"]
+enabled = true
+`);
+
+  try {
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: home,
+      CODEX_HOME: codexHome,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(root, 'missing-gh'),
+      OPL_COMPUTER_USE_PLATFORM: 'darwin-arm64',
+      OPL_COMPUTER_USE_OS_VERSION: '14.0',
+      OPL_KIMI_CU_INSTALL_PATH: appPath,
+      OPL_KIMI_CU_EXECUTABLE_PATH: executable,
+      OPL_KIMI_CU_TEAM_ID: '2J9472RW75',
+      OPL_KIMI_CU_ARCHITECTURE: 'arm64',
+      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    }) as any;
+    const computerUse = output.app_state.managed_companions.find(
+      (companion: any) => companion.provider_id === 'kimi-cu',
+    );
+    assert.equal(computerUse.installed, true);
+    assert.equal(computerUse.registered, true);
+    assert.equal(computerUse.enabled, true);
+    assert.equal(computerUse.ready, false);
+    assert.equal(computerUse.permission, 'unknown');
+    assert.equal(computerUse.status, 'health_not_checked');
+    assert.equal(computerUse.service.registered, null);
+    assert.equal(computerUse.service.xpc_ping, 'not_checked');
+    assert.deepEqual(computerUse.mcp.observed_tools, []);
+    assert.equal(computerUse.mcp.tools_exact, null);
+    assert.equal(computerUse.permissions.accessibility, 'unknown');
+    assert.equal(computerUse.permissions.screen_recording, 'unknown');
+    assert.equal(fs.existsSync(invocationLog), false);
+    assert.equal(output.app_state.operator.workbench.managed_companions.computer_use_ref,
+      'app_state.managed_companions[provider_id=kimi-cu]');
+    for (const actionId of [
+      'settings_request_computer_use_permissions',
+      'settings_recheck_computer_use',
+      'settings_repair_computer_use',
+      'settings_reinstall_computer_use',
+    ]) {
+      const action = output.app_state.actions.find((candidate: any) => candidate.action_id === actionId);
+      assert.equal(action?.route, `opl app action execute --action ${actionId}`);
+      assert.equal(action?.owner, 'opl_framework');
+      assert.equal(action?.submit_via, 'opl app action execute');
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+  }
 });

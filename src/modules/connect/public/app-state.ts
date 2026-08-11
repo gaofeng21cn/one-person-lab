@@ -24,3 +24,8 @@ export {
   compactStorageOwnerProjection,
   readStorageOwnerInventorySnapshot,
 } from '../storage-owner-inventory-snapshot.ts';
+export {
+  buildManagedComputerUseActionCatalog,
+  inspectManagedComputerUse,
+  readManagedComputerUseLock,
+} from '../managed-computer-use.ts';

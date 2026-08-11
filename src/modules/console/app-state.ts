@@ -15,6 +15,7 @@ import {
   compactStorageOwnerProjection,
   createOplAgentPackageStatusReader,
   listOplAgentPackages,
+  inspectManagedComputerUse,
   readOplFlowDefaultUserInstructions,
   readStorageOwnerInventorySnapshot,
   resolveCodexVersion,
@@ -843,6 +844,7 @@ function compactFastOperatorRuntimeProjection(operator: JsonRecord) {
         'performance_policy',
         'lazy_refs',
         'settings_control_center',
+        'managed_companions',
       ]),
       activity_center: compactActivityCenter,
       default_read_surface_policy: {
@@ -910,6 +912,7 @@ export async function buildOplAppState(input: {
   const release = buildReleaseState();
   const workspaceRoot = readOplWorkspaceRoot();
   const core = buildCoreState(profile);
+  const managedComputerUse = inspectManagedComputerUse({ runExternalChecks: profile === 'full' });
   const rawActions = buildActionCatalog(contracts, { inspectExternalOwners: profile === 'full' });
   const actions = profile === 'fast'
     ? compactFastActionCatalog(rawActions as unknown as JsonRecord[])
@@ -1099,6 +1102,7 @@ export async function buildOplAppState(input: {
       developer_mode: developerMode,
       runtime_source_carriers: runtimeSourceCarriersState,
       agent_packages: agentPackagesProjection,
+      managed_companions: [managedComputerUse],
       opl_agent_packages: profile === 'fast'
         ? compactFastLegacyAgentPackageDirectory(agentPackagesReadback)
         : agentPackagesReadback,

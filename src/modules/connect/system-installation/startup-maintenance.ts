@@ -5,6 +5,11 @@ import {
   type TemporalStartupMaintenanceRuntime,
 } from '../../runway/index.ts';
 import { recordManagedInstallUpdateReceipts } from '../managed-install-update-ledger.ts';
+import {
+  inspectManagedComputerUse,
+  reconcileManagedComputerUse,
+  type ManagedComputerUseInspection,
+} from '../managed-computer-use.ts';
 
 import { buildOplEnvironment } from './environment.ts';
 import { buildDockerWebuiStartupReadback } from './docker-webui-doctor.ts';
@@ -48,6 +53,16 @@ type StartupMaintenanceEngineTarget = {
 type StartupMaintenanceTarget = StartupMaintenanceModuleTarget | StartupMaintenanceEngineTarget;
 type StartupMaintenanceFrameworkTarget = ReturnType<typeof runOplFrameworkSelfUpdate>;
 type StartupMaintenanceCapabilityTarget = StartupMaintenanceModuleTarget;
+type StartupMaintenanceManagedCompanionTarget = {
+  target_type: 'managed_companion';
+  target_id: 'kimi-cu';
+  status: 'completed' | 'skipped' | 'attention_required';
+  reason: string;
+  action: 'repair' | null;
+  result: ManagedComputerUseInspection;
+  error: Record<string, unknown> | null;
+  blocking: false;
+};
 type StartupMaintenanceScope = 'all' | 'runtime_substrate';
 
 function buildTarget(
@@ -355,6 +370,60 @@ function summarizeCapabilityTargets(targets: StartupMaintenanceCapabilityTarget[
   };
 }
 
+export function runManagedComputerUseStartupMaintenance(): StartupMaintenanceManagedCompanionTarget {
+  const before = inspectManagedComputerUse();
+  if (!before.platform.supported) {
+    return {
+      target_type: 'managed_companion',
+      target_id: 'kimi-cu',
+      status: 'skipped',
+      reason: 'unsupported_platform',
+      action: null,
+      result: before,
+      error: null,
+      blocking: false,
+    };
+  }
+  if (before.status === 'ready' || before.status === 'permission_required') {
+    return {
+      target_type: 'managed_companion',
+      target_id: 'kimi-cu',
+      status: 'skipped',
+      reason: before.status === 'ready' ? 'already_ready' : 'installed_permission_required',
+      action: null,
+      result: before,
+      error: null,
+      blocking: false,
+    };
+  }
+
+  try {
+    const result = reconcileManagedComputerUse('settings_repair_computer_use');
+    const materialized = result.status === 'ready' || result.status === 'permission_required';
+    return {
+      target_type: 'managed_companion',
+      target_id: 'kimi-cu',
+      status: materialized ? 'completed' : 'attention_required',
+      reason: materialized ? 'default_managed_companion_reconciled' : 'reconcile_incomplete',
+      action: 'repair',
+      result,
+      error: null,
+      blocking: false,
+    };
+  } catch (error) {
+    return {
+      target_type: 'managed_companion',
+      target_id: 'kimi-cu',
+      status: 'attention_required',
+      reason: 'reconcile_failed',
+      action: 'repair',
+      result: inspectManagedComputerUse({ runExternalChecks: false }),
+      error: normalizeError(error),
+      blocking: false,
+    };
+  }
+}
+
 async function maybeRunEngineStartupMaintenance(
   contracts: FrameworkContracts,
   environment: OplSystemEnvironment,
@@ -455,6 +524,9 @@ export async function runOplStartupMaintenance(
   const capabilityTargets: StartupMaintenanceCapabilityTarget[] = initialModules
     .filter((module) => module.scope === 'capability_package')
     .map((module) => runModuleStartupMaintenance(module));
+  const managedCompanionTargets = process.env.OPL_APP_HOST_KIND?.trim() === 'desktop'
+    ? [runManagedComputerUseStartupMaintenance()]
+    : [];
   const frameworkSummary = summarizeFrameworkTargets(frameworkTargets);
   const engineSummary = summarizeTargets(engineTargets);
   const summary = summarizeTargets(moduleTargets);
@@ -501,10 +573,20 @@ export async function runOplStartupMaintenance(
         framework_summary: frameworkSummary,
         engine_summary: engineSummary,
         capability_summary: capabilitySummary,
+        managed_companion_summary: {
+          total_targets_count: managedCompanionTargets.length,
+          completed_targets_count: managedCompanionTargets.filter((entry) => entry.status === 'completed').length,
+          skipped_targets_count: managedCompanionTargets.filter((entry) => entry.status === 'skipped').length,
+          attention_required_targets_count: managedCompanionTargets.filter(
+            (entry) => entry.status === 'attention_required',
+          ).length,
+          blocking_targets_count: 0,
+        },
         summary,
         framework_targets: frameworkTargets,
         engine_targets: engineTargets,
         capability_targets: capabilityTargets,
+        managed_companion_targets: managedCompanionTargets,
         module_targets: moduleTargets,
         seed_boundary: seedApply.seed_apply,
         docker_webui_startup: {
@@ -574,6 +656,7 @@ export async function runOplStartupMaintenance(
           'Startup maintenance updates clean OPL-managed module checkouts and syncs repo-local plugin carriers.',
           'Startup maintenance installs or updates MAS Scholar Skills from the managed GHCR capability packages channel so App workspace/quest sync can materialize it into the active paper directory.',
           'Bundled Full runtime startup reconciles the selected catalog dependency closure; MAS Scholar Skills remains hidden globally and is projected only into an explicit MAS workspace or quest.',
+          'Desktop macOS startup materializes and registers the pinned KimiCU managed companion by default; missing TCC permission or companion repair failure never blocks the App or ordinary Codex use.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
           'MAS Scholar Skills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
           'Docker/WebUI startup records image seed, /data, and /projects boundaries in the OPL state install manifest without claiming runtime or domain readiness.',

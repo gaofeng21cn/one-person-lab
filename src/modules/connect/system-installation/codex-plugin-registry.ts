@@ -162,7 +162,12 @@ export function listCodexFamilyPluginPackIds(packageDirectory?: string) {
   return buildCodexFamilyPluginSpecs(packageDirectory).map((spec) => spec.pack_id);
 }
 
-const FAMILY_PLUGIN_SPECS = buildCodexFamilyPluginSpecs();
+let familyPluginSpecsCache: CodexFamilyPluginSpec[] | null = null;
+
+function familyPluginSpecs() {
+  familyPluginSpecsCache ??= buildCodexFamilyPluginSpecs();
+  return familyPluginSpecsCache;
+}
 
 function resolveHomeDir() {
   return process.env.HOME?.trim() || os.homedir();
@@ -244,7 +249,7 @@ function resolveFamilyPluginSpec(packageId: string, pluginId: string) {
   if (!agent || agent.plugin_name !== pluginId) {
     return null;
   }
-  return FAMILY_PLUGIN_SPECS.find((spec) =>
+  return familyPluginSpecs().find((spec) =>
     spec.plugin_id === agent.plugin_name && spec.repo_name === agent.project
   ) ?? null;
 }
@@ -520,6 +525,47 @@ function registerOplConnectMcpServer(configPath: string): CodexPluginRegistryRes
   };
 }
 
+export function registerOplManagedMcpServer(input: {
+  configPath: string;
+  serverId: string;
+  command: string;
+  args: readonly string[];
+  enabled?: boolean;
+}) {
+  fs.mkdirSync(path.dirname(input.configPath), { recursive: true });
+  const current = fs.existsSync(input.configPath) ? fs.readFileSync(input.configPath, 'utf8') : '';
+  const tableHeaders = [
+    `[mcp_servers.${input.serverId}]`,
+    `[mcp_servers.${quoteTomlTableSegment(input.serverId)}]`,
+  ];
+  const withoutStaleServer = removeTomlTables(current, (header) => tableHeaders.some(
+    (tableHeader) => header === tableHeader || header.startsWith(`${tableHeader.slice(0, -1)}.`),
+  ));
+  const text = upsertTomlTable(withoutStaleServer.text, tableHeaders[0], [
+    `command = "${escapeTomlString(input.command)}"`,
+    `args = [${input.args.map((arg) => `"${escapeTomlString(arg)}"`).join(', ')}]`,
+    `enabled = ${input.enabled !== false ? 'true' : 'false'}`,
+  ]);
+  const temporaryPath = path.join(
+    path.dirname(input.configPath),
+    `.${path.basename(input.configPath)}.${process.pid}.${Date.now()}.tmp`,
+  );
+  try {
+    fs.writeFileSync(temporaryPath, text, { encoding: 'utf8', mode: 0o600 });
+    fs.renameSync(temporaryPath, input.configPath);
+  } finally {
+    if (fs.existsSync(temporaryPath)) fs.rmSync(temporaryPath, { force: true });
+  }
+  return {
+    config_path: input.configPath,
+    server_id: input.serverId,
+    command: input.command,
+    args: [...input.args],
+    enabled: input.enabled !== false,
+    registered: true,
+  };
+}
+
 export function registerOplFamilyCodexPlugins(
   selectedPacks: CodexPluginRegistryPackId[],
   moduleRepoPaths: Map<CodexPluginRegistryPackId, string>,
@@ -532,7 +578,7 @@ export function registerOplFamilyCodexPlugins(
   let removedSupersededPluginTables = 0;
   const removedSupersededPluginPaths: string[] = [];
 
-  for (const spec of FAMILY_PLUGIN_SPECS) {
+  for (const spec of familyPluginSpecs()) {
     if (!selected.has(spec.pack_id)) {
       continue;
     }
