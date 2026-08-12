@@ -288,6 +288,14 @@ function isSuccessfulTemporalQuery(value: unknown): value is JsonRecord {
     && typeof payload.workflow_id === 'string';
 }
 
+function isTemporalWorkflowAbsentObservation(value: unknown) {
+  const payload = record(value);
+  return payload?.surface_kind === 'temporal_stage_attempt_query_unavailable'
+    && payload.provider_kind === 'temporal'
+    && payload.status === 'unavailable'
+    && payload.reason === 'temporal_workflow_not_started_or_not_found';
+}
+
 function temporalQueryMatchesAttempt(
   value: unknown,
   attempt: { stage_attempt_id: string; workflow_id: string },
@@ -419,13 +427,17 @@ export async function reconcileTemporalStageAttemptRuntimeObservations(
           continue;
         }
         if (!isSuccessfulTemporalQuery(temporalQuery)) {
-          withReconciliationAttemptMutation(
-            db,
-            attempt.stage_attempt_id,
-            'sync_temporal_stage_attempt_unavailable_observation',
-            () => syncStageAttemptFromTemporalTerminalObservation(db, temporalQuery),
-          );
           const unavailable = record(temporalQuery);
+          if (isTemporalWorkflowAbsentObservation(temporalQuery)) {
+            syncStageAttemptFromTemporalTerminalObservation(db, temporalQuery);
+            results.push({
+              stage_attempt_id: attempt.stage_attempt_id,
+              workflow_id: attempt.workflow_id,
+              reconciliation_status: 'workflow_absent',
+              reason: 'temporal_workflow_not_started_or_not_found',
+            });
+            continue;
+          }
           results.push({
             stage_attempt_id: attempt.stage_attempt_id,
             workflow_id: attempt.workflow_id,
@@ -481,7 +493,20 @@ export async function reconcileTemporalStageAttemptRuntimeObservations(
   const terminalProjectedTotal = results.filter(
     (result) => result.reconciliation_status === 'terminal_projected',
   ).length;
-  const failedTotal = results.length - refreshedTotal - terminalProjectedTotal;
+  const availabilityObservedTotal = results.filter(
+    (result) => result.reconciliation_status === 'workflow_absent',
+  ).length;
+  const failedTotal = results.length
+    - refreshedTotal
+    - terminalProjectedTotal
+    - availabilityObservedTotal;
+  const status = failedTotal === 0
+    ? availabilityObservedTotal > 0
+      ? 'completed_with_availability_observations'
+      : 'completed'
+    : refreshedTotal > 0 || availabilityObservedTotal > 0
+      ? 'completed_with_query_failures'
+      : 'query_unavailable';
   const report = {
     surface_kind: 'temporal_stage_attempt_runtime_observation_reconciliation',
     provider_kind: 'temporal' as const,
@@ -501,8 +526,9 @@ export async function reconcileTemporalStageAttemptRuntimeObservations(
     concurrency,
     refreshed_total: refreshedTotal,
     terminal_projected_total: terminalProjectedTotal,
+    availability_observed_total: availabilityObservedTotal,
     failed_total: failedTotal,
-    status: failedTotal === 0 ? 'completed' : refreshedTotal > 0 ? 'completed_with_query_failures' : 'query_unavailable',
+    status,
     results,
     authority_boundary: {
       opl: 'rebuildable_provider_runtime_projection_cache_only',

@@ -2,13 +2,8 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import {
   getStageAttemptRow,
-  parseStageAttemptJsonObject,
-  stageAttemptToPayload,
-  type StageAttemptRow,
 } from './family-runtime-stage-attempt-ledger.ts';
-import { nowIso } from './family-runtime-store.ts';
 import { requireResolvedPersistedStageAttemptIdentity } from './family-runtime-persisted-identity-admission.ts';
-import { appendActivityEventToRow } from './family-runtime-stage-attempts-parts/shared.ts';
 
 type TemporalStageAttemptUnavailableObservation = {
   surface_kind: 'temporal_stage_attempt_query_unavailable';
@@ -35,43 +30,6 @@ function isTemporalStageAttemptUnavailableObservation(
   );
 }
 
-function temporalUnavailableFailureReason(
-  observation: TemporalStageAttemptUnavailableObservation,
-) {
-  if (observation.reason === 'temporal_workflow_not_started_or_not_found') {
-    return 'temporal_workflow_not_started_or_not_found';
-  }
-  return null;
-}
-
-function stageAttemptHasProviderStarted(row: StageAttemptRow) {
-  if (row.executor_kind === 'domain_handler') {
-    return false;
-  }
-  return ['running', 'checkpointed', 'human_gate'].includes(row.status);
-}
-
-function hasRegisteredTemporalQueueAdmission(row: StageAttemptRow) {
-  const providerRun = parseStageAttemptJsonObject(row.provider_run_json);
-  if (
-    !row.task_id
-    || row.provider_kind !== 'temporal'
-    || row.executor_kind !== 'codex_cli'
-    || row.status !== 'queued'
-    || providerRun.provider_status !== 'registered'
-  ) {
-    return false;
-  }
-  return providerRun.provider_kind === 'temporal'
-    && typeof providerRun.task_queue === 'string'
-    && providerRun.task_queue.trim().length > 0;
-}
-
-function canFailStageAttemptForWorkflowMissing(row: StageAttemptRow) {
-  return stageAttemptHasProviderStarted(row)
-    || hasRegisteredTemporalQueueAdmission(row);
-}
-
 export function syncStageAttemptFromTemporalUnavailableObservation(
   db: DatabaseSync,
   observation: unknown,
@@ -79,8 +37,7 @@ export function syncStageAttemptFromTemporalUnavailableObservation(
   if (!isTemporalStageAttemptUnavailableObservation(observation)) {
     return null;
   }
-  const failureReason = temporalUnavailableFailureReason(observation);
-  if (!failureReason) {
+  if (observation.reason !== 'temporal_workflow_not_started_or_not_found') {
     return null;
   }
   const row = getStageAttemptRow(db, observation.stage_attempt_id);
@@ -96,53 +53,5 @@ export function syncStageAttemptFromTemporalUnavailableObservation(
     stageAttemptId: observation.stage_attempt_id,
     operation: 'sync_stage_attempt_from_temporal_unavailable_observation',
   });
-  if (!canFailStageAttemptForWorkflowMissing(row)) return null;
-  const observedAt = nowIso();
-  const providerRun = {
-    ...parseStageAttemptJsonObject(row.provider_run_json),
-    provider_kind: 'temporal',
-    workflow_id: observation.workflow_id,
-    provider_status: 'failed',
-    completed_at: observedAt,
-    last_heartbeat_at: observedAt,
-    terminal_observation: {
-      source: 'temporal_stage_attempt_query_unavailable',
-      workflow_status: null,
-      query_status: observation.status,
-      reason: failureReason,
-    },
-  };
-  const activityEvents = appendActivityEventToRow(row, {
-    activity_kind: 'temporal_stage_attempt_terminal_observation',
-    activity_status: 'failed',
-    workflow_status: null,
-    query_status: observation.status,
-    reason: failureReason,
-    authority_boundary: {
-      opl: 'provider_transport_status_projection_only',
-      domain: 'truth_quality_artifact_gate_owner',
-      provider_completion_is_domain_ready: false,
-    },
-  });
-  db.prepare(`
-    UPDATE stage_attempts
-    SET status = 'failed', blocked_reason = ?, provider_run_json = ?, activity_events_json = ?,
-      closeout_receipt_status = NULL, updated_at = ?
-    WHERE stage_attempt_id = ?
-  `).run(
-    failureReason,
-    JSON.stringify(providerRun),
-    JSON.stringify(activityEvents),
-    observedAt,
-    observation.stage_attempt_id,
-  );
-  return stageAttemptToPayload({
-    ...row,
-    status: 'failed',
-    blocked_reason: failureReason,
-    provider_run_json: JSON.stringify(providerRun),
-    activity_events_json: JSON.stringify(activityEvents),
-    closeout_receipt_status: null,
-    updated_at: observedAt,
-  });
+  return null;
 }

@@ -79,6 +79,21 @@ function completedReceipt(attempt: { stage_attempt_id: string; workflow_id: stri
   };
 }
 
+function missingWorkflowObservation(attempt: { stage_attempt_id: string; workflow_id: string }) {
+  return {
+    surface_kind: 'temporal_stage_attempt_query_unavailable',
+    provider_kind: 'temporal',
+    stage_attempt_id: attempt.stage_attempt_id,
+    workflow_id: attempt.workflow_id,
+    status: 'unavailable',
+    reason: 'temporal_workflow_not_started_or_not_found',
+    error: {
+      code: 'temporal_workflow_not_found',
+      message: 'workflow not found',
+    },
+  } as const;
+}
+
 function bindAttemptToStageRun(
   db: DatabaseSync,
   attempt: { stage_attempt_id: string },
@@ -106,7 +121,7 @@ function bindAttemptToStageRun(
   );
 }
 
-test('Temporal workflow absence fails a registered StageAttempt without a tasks table', () => {
+test('Temporal workflow absence preserves a registered StageAttempt without a tasks table', () => {
   const db = new DatabaseSync(':memory:');
   createStageAttemptTable(db);
   try {
@@ -120,18 +135,14 @@ test('Temporal workflow absence fails a registered StageAttempt without a tasks 
       taskId: 'external-task:temporal-history',
       newAttempt: true,
     }).attempt;
-    const result = syncStageAttemptFromTemporalUnavailableObservation(db, {
-      surface_kind: 'temporal_stage_attempt_query_unavailable',
-      provider_kind: 'temporal',
-      stage_attempt_id: attempt.stage_attempt_id,
-      workflow_id: attempt.workflow_id,
-      status: 'unavailable',
-      reason: 'temporal_workflow_not_started_or_not_found',
-    });
+    const before = inspectStageAttempt(db, attempt.stage_attempt_id);
+    const result = syncStageAttemptFromTemporalUnavailableObservation(
+      db,
+      missingWorkflowObservation(attempt),
+    );
 
-    assert.equal(result?.status, 'failed');
-    assert.equal(result?.task_id, 'external-task:temporal-history');
-    assert.equal(result?.provider_run.provider_status, 'failed');
+    assert.equal(result, null);
+    assert.deepEqual(inspectStageAttempt(db, attempt.stage_attempt_id), before);
     assert.equal(
       db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tasks'").get(),
       undefined,
@@ -139,6 +150,30 @@ test('Temporal workflow absence fails a registered StageAttempt without a tasks 
   } finally {
     db.close();
   }
+});
+
+test('Temporal workflow absence is reported without terminalizing the Attempt', async () => {
+  await withDb(async (db) => {
+    const attempt = createAttempt(db, 'workflow-absent');
+    const before = inspectStageAttempt(db, attempt.stage_attempt_id);
+    const report = await reconcileTemporalStageAttemptRuntimeObservations(db, { root: '/tmp' }, {
+      trigger: 'provider_slo_tick',
+      queryTemporalStageAttemptReadModel: async () => missingWorkflowObservation(attempt),
+    });
+
+    assert.deepEqual(inspectStageAttempt(db, attempt.stage_attempt_id), before);
+    assert.equal(report.refreshed_total, 0);
+    assert.equal(report.terminal_projected_total, 0);
+    assert.equal(report.availability_observed_total, 1);
+    assert.equal(report.failed_total, 0);
+    assert.equal(report.status, 'completed_with_availability_observations');
+    assert.deepEqual(report.results, [{
+      stage_attempt_id: attempt.stage_attempt_id,
+      workflow_id: attempt.workflow_id,
+      reconciliation_status: 'workflow_absent',
+      reason: 'temporal_workflow_not_started_or_not_found',
+    }]);
+  });
 });
 
 test('Temporal running query refreshes a TTL-bound cache without changing ledger status', async () => {
