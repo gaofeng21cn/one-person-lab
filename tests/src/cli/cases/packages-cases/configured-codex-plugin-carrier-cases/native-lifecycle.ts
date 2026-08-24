@@ -253,6 +253,47 @@ test('configured Codex carrier refuses to overwrite concurrent native config cha
   }
 });
 
+test('configured Codex carrier initializes a missing home only before a native mutation', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configured-carrier-first-mutation-'));
+  const codexHome = path.join(root, 'codex-home');
+  const env = { HOME: root, CODEX_HOME: codexHome };
+  const calls: string[][] = [];
+  try {
+    runConfiguredCodexPluginCarrier({
+      descriptor,
+      action: 'list',
+      env,
+      runner: () => {
+        assert.equal(fs.existsSync(codexHome), false);
+        return { status: 0, stdout: pluginList([]), stderr: '', error: null };
+      },
+    });
+    assert.equal(fs.existsSync(codexHome), false);
+
+    runConfiguredCodexPluginCarrier({
+      descriptor: { ...descriptor, carrier: { ...descriptor.carrier, marketplaceSource: null } },
+      action: 'install',
+      env,
+      runner: ({ args }) => {
+        assert.equal(fs.lstatSync(codexHome).isDirectory(), true);
+        calls.push(args);
+        return {
+          status: 0,
+          stdout: args.join(' ') === 'plugin list --json' ? pluginList([]) : JSON.stringify({ status: 'ok' }),
+          stderr: '',
+          error: null,
+        };
+      },
+    });
+    assert.deepEqual(calls, [
+      ['plugin', 'add', pluginSelector, '--json'],
+      ['plugin', 'list', '--json'],
+    ]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('configured Codex carrier ensures a descriptor-owned marketplace before native add', () => {
   const calls: string[][] = [];
   let marketplaceConfigured = false;

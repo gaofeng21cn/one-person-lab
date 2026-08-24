@@ -3,6 +3,7 @@ import { resolveCanonicalOplFamilyMarketplaceId } from '../system-installation/c
 import {
   commandFailure,
   defaultRunner,
+  ensureConfiguredCodexHomeForMutation,
   nativeArgs,
   observedSource,
   parsePluginList,
@@ -380,6 +381,7 @@ export function runConfiguredCodexPluginCarrier(input: {
   const actionArgs = nativeArgs(input.action, input.descriptor.carrier.pluginId);
   const isConfigToggle = input.action === 'enable' || input.action === 'disable';
   const dispatchAction = !isConfigToggle && input.action !== 'list' && input.dryRun !== true;
+  if (dispatchAction) ensureConfiguredCodexHomeForMutation(env);
   const declaredMarketplaceSource = input.descriptor.carrier.marketplaceSource;
   const marketplaceSource = dispatchAction && input.action === 'install'
     ? installPayloadMarketplace({

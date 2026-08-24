@@ -242,6 +242,22 @@ export function localReadbackFailure(failureCode: string, message: string, detai
   throw new FrameworkContractError('contract_shape_invalid', message, { ...details, failure_code: failureCode });
 }
 
+export function ensureConfiguredCodexHomeForMutation(env: NodeJS.ProcessEnv) {
+  const codexHome = configuredCodexHome(env);
+  try {
+    fs.mkdirSync(codexHome, { recursive: true, mode: 0o700 });
+    const stat = fs.lstatSync(codexHome);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('not a real directory');
+    fs.accessSync(codexHome, fs.constants.R_OK | fs.constants.W_OK | fs.constants.X_OK);
+  } catch {
+    localReadbackFailure(
+      'configured_codex_plugin_carrier_codex_home_unavailable',
+      'Configured Codex home cannot be initialized for a Package mutation.',
+      { codex_home: codexHome },
+    );
+  }
+}
+
 export function marketplaceName(pluginId: string) {
   return pluginId.slice(pluginId.lastIndexOf('@') + 1);
 }
