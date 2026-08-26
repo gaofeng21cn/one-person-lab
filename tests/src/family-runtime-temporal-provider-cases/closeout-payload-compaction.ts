@@ -9,6 +9,7 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   const largeCloseout = {
     surface_kind: 'stage_attempt_closeout_packet',
     stage_attempt_id: 'sat_large_temporal_payload',
+    stage_run_id: 'sr_large_temporal_payload',
     idempotency_key: 'idem-large-temporal-payload',
     closeout_refs: [
       'receipt:large-closeout',
@@ -24,6 +25,7 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
     writeback_receipt_refs: ['memory-writeback:receipt-1'],
     rejected_writes: [{ reason: 'domain_truth_write_forbidden', body: 'small ref-only reason' }],
     domain_ready_verdict: 'domain_gate_pending',
+    scope_digest: `sha256:${'a'.repeat(64)}`,
     domain_output: {
       surface_kind: 'domain_owned_stage_output_ref',
       version: 'domain-owned-stage-output-ref.v1',
@@ -42,6 +44,8 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
 
   const compacted = compactCloseoutPacketForTemporalResult(largeCloseout);
   assert.ok(compacted);
+  assert.equal(compacted.stage_run_id, 'sr_large_temporal_payload');
+  assert.equal(compacted.scope_digest, `sha256:${'a'.repeat(64)}`);
   assert.deepEqual(compacted.closeout_refs, [
     'receipt:large-closeout',
     'file:///tmp/redcube-runtime/artifacts/closeout.json',
@@ -67,6 +71,8 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   assert.equal(compacted.temporal_payload_policy.full_closeout_body_omitted, true);
   assert.equal(JSON.stringify(compacted).includes('must-not-enter-temporal-completion'), false);
   assert.ok(compacted.temporal_payload_policy.retained_fields.includes('domain_output'));
+  assert.ok(compacted.temporal_payload_policy.retained_fields.includes('stage_run_id'));
+  assert.ok(compacted.temporal_payload_policy.retained_fields.includes('scope_digest'));
   assert.ok(Buffer.byteLength(JSON.stringify(compacted), 'utf8') < 20_000);
 });
 

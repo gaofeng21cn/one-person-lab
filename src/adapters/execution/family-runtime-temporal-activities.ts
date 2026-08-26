@@ -510,8 +510,10 @@ export function compactCloseoutPacketForTemporalResult(value: unknown) {
   return {
     surface_kind: closeout.surface_kind,
     ...(closeout.stage_attempt_id ? { stage_attempt_id: closeout.stage_attempt_id } : {}),
+    ...(closeout.stage_run_id ? { stage_run_id: closeout.stage_run_id } : {}),
     ...(closeout.idempotency_key ? { idempotency_key: closeout.idempotency_key } : {}),
     ...(closeout.closeout_id ? { closeout_id: closeout.closeout_id } : {}),
+    ...(closeout.scope_digest ? { scope_digest: closeout.scope_digest } : {}),
     closeout_refs: closeout.closeout_refs,
     ...(closeout.closeout_ref_metadata ? { closeout_ref_metadata: closeout.closeout_ref_metadata } : {}),
     consumed_refs: closeout.consumed_refs,
@@ -529,8 +531,10 @@ export function compactCloseoutPacketForTemporalResult(value: unknown) {
       retained_fields: [
         'surface_kind',
         'stage_attempt_id',
+        'stage_run_id',
         'idempotency_key',
         'closeout_id',
+        'scope_digest',
         'closeout_refs',
         'closeout_ref_metadata',
         'consumed_refs',
