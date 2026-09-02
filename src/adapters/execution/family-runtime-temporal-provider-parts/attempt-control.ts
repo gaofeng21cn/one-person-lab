@@ -9,6 +9,7 @@ import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,
   requireTemporalStageAttemptWorkflowInputLaunchable,
+  requireTemporalStageRunRecoveryResume,
   requireTemporalStageRunWorkflowInputLaunchable,
   resolveTemporalNamespace,
   resolveTemporalTaskQueue,
@@ -51,6 +52,43 @@ type StageAttemptPayload = Parameters<typeof buildTemporalStageAttemptWorkflowIn
   workflow_id: string;
   provider_kind: string;
 };
+
+function assertTemporalStageRunRecoveryMemoIdentity(
+  memo: Record<string, unknown> | undefined,
+  input: TemporalStageRunWorkflowInput,
+) {
+  const recovery = requireTemporalStageRunRecoveryResume(input);
+  if (!recovery) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal StageRun recovery start requires recovery resume identity.',
+      { failure_code: 'stage_run_recovery_resume_missing' },
+    );
+  }
+  const observed = memo ?? {};
+  if (
+    observed.recovery_id !== recovery.recovery_id
+    || observed.recovery_quality_cycle_id !== recovery.quality_cycle_id
+    || observed.recovery_producer_attempt_ref !== recovery.producer_attempt_ref
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Temporal StageRun recovery memo conflicts with the requested recovery identity.',
+      {
+        failure_code: 'stage_run_recovery_temporal_identity_conflict',
+        workflow_id: input.workflow_id,
+        recovery_id: recovery.recovery_id,
+        observed_recovery_id: observed.recovery_id ?? null,
+      },
+    );
+  }
+  return recovery;
+}
+
+function temporalWorkflowStatusIsRunning(value: unknown) {
+  const normalized = typeof value === 'string' ? value.toUpperCase() : '';
+  return normalized === 'RUNNING' || normalized.endsWith('_RUNNING');
+}
 
 export async function startTemporalStageRunWorkflow(
   input: TemporalStageRunWorkflowInput,
@@ -145,6 +183,119 @@ export async function startTemporalStageRunWorkflow(
         provider_completion_is_domain_ready: false,
       },
     };
+  }, options);
+}
+
+export async function startTemporalStageRunRecoveryWorkflow(
+  input: TemporalStageRunWorkflowInput,
+  options: TemporalClientOptions = {},
+) {
+  const workflowInput = requireTemporalStageRunWorkflowInputLaunchable(input);
+  const recovery = requireTemporalStageRunRecoveryResume(workflowInput)!;
+  const taskQueue = options.paths
+    ? resolveTemporalWorkerTaskQueue(options.paths)
+    : resolveTemporalTaskQueue();
+  if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
+  return withTemporalClient(async (client, connection) => {
+    const visibilityReadiness = await ensureTemporalStageAttemptVisibilityReady(connection, {
+      namespace: resolveTemporalClientNamespace(options),
+      address: resolveTemporalAddressForPaths(options.paths).address,
+      taskQueue,
+    });
+    const launchInput: TemporalStageRunWorkflowInput = {
+      ...workflowInput,
+      visibility_search_attributes_upsert_enabled: visibilityReadiness.readiness_status === 'ready',
+    };
+    const receiptFromDescription = (
+      description: Awaited<ReturnType<ReturnType<typeof client.workflow.getHandle>['describe']>>,
+      recoveredExistingExecution: boolean,
+    ) => {
+      assertTemporalWorkflowMemoIdentity({
+        workflowId: description.workflowId,
+        memo: description.memo,
+        expected: launchInput as TemporalStageRunWorkflowInput & Record<string, unknown>,
+        operation: 'start_temporal_stage_run_recovery',
+      });
+      assertTemporalStageRunRecoveryMemoIdentity(description.memo, launchInput);
+      return {
+        surface_kind: 'temporal_stage_run_recovery_start_receipt',
+        version: 'opl-temporal-stage-run-recovery-start-receipt.v1',
+        provider_kind: 'temporal',
+        recovery_id: recovery.recovery_id,
+        stage_run_id: launchInput.stage_run_id,
+        stage_run_invocation_id: launchInput.stage_run_invocation_id,
+        stage_run_spec_sha256: launchInput.stage_run_spec_sha256,
+        quality_cycle_id: recovery.quality_cycle_id,
+        producer_attempt_ref: recovery.producer_attempt_ref,
+        workflow_id: description.workflowId,
+        recovery_run_id: description.runId,
+        workflow_status: description.status.name,
+        recovered_existing_execution: recoveredExistingExecution,
+        execution_scope: launchInput.execution_scope ?? null,
+        task_queue: taskQueue,
+        visibility_readiness: visibilityReadiness,
+        authority_boundary: {
+          opl: 'same_stage_run_durable_quality_loop_recovery_only',
+          domain: 'review_findings_repair_artifact_and_quality_verdict_owner',
+          producer_attempt_reexecution_allowed: false,
+        },
+      } as const;
+    };
+
+    const existingHandle = client.workflow.getHandle(launchInput.workflow_id);
+    try {
+      const existing = await withTemporalRpcDeadline(client, () => existingHandle.describe(), options);
+      assertTemporalWorkflowMemoIdentity({
+        workflowId: existing.workflowId,
+        memo: existing.memo,
+        expected: launchInput as TemporalStageRunWorkflowInput & Record<string, unknown>,
+        operation: 'inspect_temporal_stage_run_before_recovery',
+      });
+      if (existing.memo?.recovery_id === recovery.recovery_id) {
+        return receiptFromDescription(existing, true);
+      }
+      if (existing.memo?.recovery_id || temporalWorkflowStatusIsRunning(existing.status.name)) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Temporal StageRun recovery found a different live or recovered execution.',
+          {
+            failure_code: 'stage_run_recovery_temporal_identity_conflict',
+            workflow_id: launchInput.workflow_id,
+            recovery_id: recovery.recovery_id,
+            observed_recovery_id: existing.memo?.recovery_id ?? null,
+            observed_workflow_status: existing.status.name,
+          },
+        );
+      }
+    } catch (error) {
+      if (!(error instanceof WorkflowNotFoundError)) throw error;
+    }
+
+    try {
+      const handle = await withTemporalRpcDeadline(client, () => client.workflow.start('StageRunWorkflow', {
+        args: [launchInput],
+        taskQueue,
+        workflowId: launchInput.workflow_id,
+        memo: buildTemporalStageRunMemo(launchInput),
+        ...temporalTestServerAllowsUnindexedVisibility()
+          ? {}
+          : { searchAttributes: buildTemporalStageRunSearchAttributes(launchInput) },
+        staticSummary: `OPL StageRun recovery ${launchInput.stage_run_id}`,
+        staticDetails: [
+          `StageRun: ${launchInput.stage_run_id}`,
+          `Recovery: ${recovery.recovery_id}`,
+          `Producer Attempt: ${recovery.producer_attempt_ref}`,
+        ].join('\n'),
+        workflowIdConflictPolicy: WorkflowIdConflictPolicy.FAIL,
+        workflowIdReusePolicy: WorkflowIdReusePolicy.ALLOW_DUPLICATE,
+      }), options);
+      const description = await withTemporalRpcDeadline(client, () => handle.describe(), options);
+      return receiptFromDescription(description, false);
+    } catch (error) {
+      if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
+      const existing = await withTemporalRpcDeadline(client, () => existingHandle.describe(), options);
+      return receiptFromDescription(existing, true);
+    }
   }, options);
 }
 

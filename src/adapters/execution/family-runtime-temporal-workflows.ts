@@ -1084,6 +1084,38 @@ function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInput) {
   if (input.stage_role === 'cross_stage_meta_review' && input.quality_policy.formal_review.required) {
     throw new Error('Cross-stage Meta Review Stage cannot recursively require formal Stage Review.');
   }
+  const recovery = input.recovery_resume;
+  if (recovery) {
+    const producer = recovery.producer_attempt_summary;
+    const artifactIdentityMatches = JSON.stringify({
+      artifact_refs: recovery.artifact_refs,
+      artifact_hashes: recovery.artifact_hashes,
+      artifact_identity_receipt_refs: recovery.artifact_identity_receipt_refs,
+    }) === JSON.stringify({
+      artifact_refs: producer?.artifact_refs,
+      artifact_hashes: producer?.artifact_hashes,
+      artifact_identity_receipt_refs: producer?.artifact_identity_receipt_refs,
+    });
+    if (
+      recovery.surface_kind !== 'opl_stage_run_recovery_resume'
+      || recovery.version !== 'opl-stage-run-recovery-resume.v1'
+      || !recovery.recovery_id?.trim()
+      || recovery.quality_cycle_id !== stageRunQualityCycleId(input)
+      || !input.quality_policy.formal_review.required
+      || producer?.attempt_role !== 'producer'
+      || producer.status !== 'completed'
+      || !producer.stage_attempt_id?.trim()
+      || !producer.workflow_id?.trim()
+      || !producer.execution_session_ref?.trim()
+      || recovery.producer_attempt_ref !== `opl://stage_attempts/${producer.stage_attempt_id}`
+      || recovery.artifact_refs.length === 0
+      || recovery.artifact_refs.length !== recovery.artifact_hashes.length
+      || recovery.artifact_refs.length !== recovery.artifact_identity_receipt_refs.length
+      || !artifactIdentityMatches
+    ) {
+      throw new Error('StageRun recovery resume must bind one completed producer and its exact artifact identity.');
+    }
+  }
 }
 
 function stageRunStopped(state: TemporalStageRunWorkflowState) {
@@ -1185,9 +1217,10 @@ export async function StageRunWorkflow(
     { legacyMaxRepairRounds: input.quality_policy.formal_review.max_repair_rounds },
   );
   const qualityCycleId = stageRunQualityCycleId(input);
+  const recoveryResume = input.recovery_resume ?? null;
   const initialArtifactIdentity = normalizeStageQualityArtifactIdentity({
-    artifactRefs: input.artifact_refs ?? [],
-    artifactHashes: input.artifact_hashes ?? [],
+    artifactRefs: recoveryResume?.artifact_refs ?? input.artifact_refs ?? [],
+    artifactHashes: recoveryResume?.artifact_hashes ?? input.artifact_hashes ?? [],
     allowEmpty: true,
   });
   let state = {
@@ -1216,27 +1249,28 @@ export async function StageRunWorkflow(
       token_observation_status: 'missing',
     },
     quality_scope_budget_stop_reason: null,
-    attempts: [],
+    attempts: recoveryResume ? [recoveryResume.producer_attempt_summary] : [],
     findings: [],
     repair_map: [],
     finding_closures: [],
     review_receipts: [],
     artifact_refs: initialArtifactIdentity.artifact_refs,
     artifact_hashes: initialArtifactIdentity.artifact_hashes,
-    artifact_identity_receipt_refs: asStringList(input.artifact_identity_receipt_refs),
+    artifact_identity_receipt_refs: recoveryResume?.artifact_identity_receipt_refs
+      ?? asStringList(input.artifact_identity_receipt_refs),
     quality_debt_refs: [],
     route_quality_debt_refs: [],
     decisive_attempt_role: null,
     decisive_attempt_ref: null,
     selected_stage_route: null,
     route_evidence_refs: [],
-    route_recommendations: [],
+    route_recommendations: recoveryResume?.route_recommendations ?? [],
     next_stage_run_launch: null,
     blocked_reason: null,
     hard_stop_class: null,
     typed_blocker_refs: [],
     human_gate_refs: [],
-    source_attempt_ref: null,
+    source_attempt_ref: recoveryResume?.producer_attempt_ref ?? null,
     sqlite_projection: { status: 'pending', error: null },
     started_at: nowIso(),
     updated_at: nowIso(),
@@ -1246,8 +1280,20 @@ export async function StageRunWorkflow(
       provider_completion_is_domain_ready: false,
     },
   } as TemporalStageRunWorkflowState;
+  if (recoveryResume) {
+    state = {
+      ...state,
+      quality_scope_budget_usage: qualityScopeBudgetUsage(
+        state,
+        formalReviewDeclaredArtifactIdentityEnabled,
+      ),
+    };
+  }
   setHandler(stageRunQuery, () => state);
   const observedSessions = new Set<string>();
+  if (recoveryResume?.producer_attempt_summary.execution_session_ref) {
+    observedSessions.add(recoveryResume.producer_attempt_summary.execution_session_ref);
+  }
   let decisiveExecutionContentBinding: StageAttemptExecutionContentBinding | null = null;
 
   const terminalize = async (nextState: TemporalStageRunWorkflowState) => {
@@ -1734,36 +1780,46 @@ export async function StageRunWorkflow(
   try {
     let parentAttemptRef: string | null = null;
     let currentArtifactProducerAttemptRef: string | null = null;
-    const producer = await runAttempt({
-      role: 'producer',
-      round: 0,
-      artifactRefs: state.artifact_refs,
-      artifactHashes: state.artifact_hashes,
-      artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
-    });
-    parentAttemptRef = producer.attemptRef;
-    currentArtifactProducerAttemptRef = producer.attemptRef;
-    if (stageRunStopped(state)) {
-      if (!producer.executionPolicy.formalReviewRequired && state.status === 'completed_with_quality_debt') {
-        commitTerminalRouteDecision(producer);
+    let reviewInputSnapshotMaterializationRequest: unknown = null;
+    if (recoveryResume) {
+      parentAttemptRef = recoveryResume.producer_attempt_ref;
+      currentArtifactProducerAttemptRef = recoveryResume.producer_attempt_ref;
+      reviewInputSnapshotMaterializationRequest =
+        recoveryResume.review_input_snapshot_materialization_request ?? null;
+    } else {
+      const producer = await runAttempt({
+        role: 'producer',
+        round: 0,
+        artifactRefs: state.artifact_refs,
+        artifactHashes: state.artifact_hashes,
+        artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
+      });
+      parentAttemptRef = producer.attemptRef;
+      currentArtifactProducerAttemptRef = producer.attemptRef;
+      reviewInputSnapshotMaterializationRequest =
+        producer.envelope.review_input_snapshot_materialization_request;
+      if (stageRunStopped(state)) {
+        if (!producer.executionPolicy.formalReviewRequired && state.status === 'completed_with_quality_debt') {
+          commitTerminalRouteDecision(producer);
+        }
+        return terminalize(state);
       }
-      return terminalize(state);
-    }
-    if (!producer.executionPolicy.formalReviewRequired) {
-      commitTerminalRouteDecision(producer);
-      return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+      if (!producer.executionPolicy.formalReviewRequired) {
+        commitTerminalRouteDecision(producer);
+        return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+      }
     }
 
+    const producerAttemptRef = currentArtifactProducerAttemptRef!;
     const review = await runAttempt({
       role: 'reviewer',
       round: 0,
       parentAttemptRef,
-      artifactProducerAttemptRef: currentArtifactProducerAttemptRef,
+      artifactProducerAttemptRef: producerAttemptRef,
       artifactRefs: state.artifact_refs,
       artifactHashes: state.artifact_hashes,
       artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
-      reviewInputSnapshotMaterializationRequest:
-        producer.envelope.review_input_snapshot_materialization_request,
+      reviewInputSnapshotMaterializationRequest,
     });
     parentAttemptRef = review.attemptRef;
     if (stageRunStopped(state)) return terminalize(state);
@@ -1778,7 +1834,7 @@ export async function StageRunWorkflow(
       });
       applyReviewStop(hardStop, review.attemptRef);
       const hardStopReceipt = await stageQualityReviewReceiptActivity({
-        producer_attempt_ref: producer.attemptRef,
+        producer_attempt_ref: producerAttemptRef,
         reviewer_attempt_ref: review.attemptRef,
         rubric_refs: review.executionPolicy.rubricRefs,
         verdict: stageReviewVerdictForOutcome(initialOutcome),
@@ -1800,7 +1856,7 @@ export async function StageRunWorkflow(
       findings: findingList(review.envelope.findings),
     });
     const initialReviewReceipt = await stageQualityReviewReceiptActivity({
-      producer_attempt_ref: producer.attemptRef,
+      producer_attempt_ref: producerAttemptRef,
       reviewer_attempt_ref: review.attemptRef,
       rubric_refs: review.executionPolicy.rubricRefs,
       verdict: stageReviewVerdictForOutcome(initialOutcome),

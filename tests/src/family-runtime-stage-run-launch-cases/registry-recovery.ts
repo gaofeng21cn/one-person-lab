@@ -23,10 +23,12 @@ import {
   launchRegisteredStageRun,
   materializeStageRunRoute,
   claimStageRunStart,
+  claimStageRunRecoveryStart,
   findStageRunLaunch,
   inspectStageRunLaunch,
   recordStageRunClosed,
   recordStageRunStartFailure,
+  recordStageRunTemporalRecoveryStart,
   recordStageRunTemporalStart,
   registerStageRunLaunch,
   requireTemporalStageRunWorkflowInputLaunchable,
@@ -58,6 +60,37 @@ import {
   workerClose,
   waitForBarrierCount,
 } from './shared.ts';
+
+function recoveryWorkflowInput(input: ReturnType<typeof stageRunInput>, recoveryId = 'recovery:closeout') {
+  const artifactHash = `sha256:${'a'.repeat(64)}`;
+  const producerAttemptRef = 'opl://stage_attempts/sat_recovered_producer';
+  return {
+    ...input,
+    recovery_resume: {
+      surface_kind: 'opl_stage_run_recovery_resume' as const,
+      version: 'opl-stage-run-recovery-resume.v1' as const,
+      recovery_id: recoveryId,
+      quality_cycle_id: `quality-cycle:${input.stage_run_id}`,
+      producer_attempt_ref: producerAttemptRef,
+      producer_attempt_summary: {
+        attempt_role: 'producer' as const,
+        quality_round_index: 0,
+        stage_attempt_id: 'sat_recovered_producer',
+        workflow_id: 'wf_recovered_producer',
+        execution_session_ref: 'codex://threads/recovered-producer',
+        artifact_producer_attempt_ref: null,
+        status: 'completed' as const,
+        artifact_refs: ['artifact:recovered'],
+        artifact_hashes: [artifactHash],
+        artifact_identity_receipt_refs: ['artifact-identity:recovered'],
+      },
+      artifact_refs: ['artifact:recovered'],
+      artifact_hashes: [artifactHash],
+      artifact_identity_receipt_refs: ['artifact-identity:recovered'],
+      review_input_snapshot_materialization_request: null,
+    },
+  };
+}
 test('launch registry recovers pre-start and post-start crash windows without duplicate starts', async () => {
   const db = new DatabaseSync(':memory:');
   try {
@@ -149,6 +182,78 @@ test('launch registry recovers pre-start and post-start crash windows without du
     assert.equal(recoveredPostStartFailed.start_status, 'recovered');
     assert.equal(recoveredPostStartFailed.launch.launch_status, 'closed');
     assert.equal(recoveredPostStartFailed.launch.terminal_status, 'failed');
+  } finally {
+    db.close();
+  }
+});
+
+test('closed StageRun claims and records one immutable recovery Run idempotently', () => {
+  const db = new DatabaseSync(':memory:');
+  const input = stageRunInput({ invocationId: 'sri_closeout_recovery' });
+  try {
+    registerStageRunLaunch(db, input);
+    recordStageRunTemporalStart(db, {
+      stageRunId: input.stage_run_id,
+      temporalStartReceipt: temporalStartReceipt(input, 'COMPLETED'),
+    });
+    recordStageRunClosed(db, { stageRunId: input.stage_run_id, terminalStatus: 'completed' });
+    const workflowInput = recoveryWorkflowInput(input);
+    const claim = claimStageRunRecoveryStart(db, {
+      workflowInput,
+      claimToken: 'recovery-claim',
+      now: new Date('2026-09-02T00:00:00.000Z'),
+    });
+    assert.equal(claim.claimed, true);
+    assert.equal(claim.claim_status, 'claimed');
+
+    const concurrent = claimStageRunRecoveryStart(db, {
+      workflowInput,
+      claimToken: 'concurrent-claim',
+      now: new Date('2026-09-02T00:00:01.000Z'),
+    });
+    assert.equal(concurrent.claimed, false);
+    assert.equal(concurrent.claim_status, 'active_starting');
+
+    const recovery = workflowInput.recovery_resume;
+    const recorded = recordStageRunTemporalRecoveryStart(db, {
+      stageRunId: input.stage_run_id,
+      recoveryId: recovery.recovery_id,
+      claimToken: 'recovery-claim',
+      temporalStartReceipt: {
+        surface_kind: 'temporal_stage_run_recovery_start_receipt',
+        version: 'opl-temporal-stage-run-recovery-start-receipt.v1',
+        recovery_id: recovery.recovery_id,
+        stage_run_id: input.stage_run_id,
+        stage_run_invocation_id: input.stage_run_invocation_id,
+        stage_run_spec_sha256: input.stage_run_spec_sha256,
+        quality_cycle_id: recovery.quality_cycle_id,
+        producer_attempt_ref: recovery.producer_attempt_ref,
+        workflow_id: input.workflow_id,
+        recovery_run_id: 'run-closeout-recovery',
+        workflow_status: 'RUNNING',
+      },
+    });
+    assert.equal(recorded.recovery_run.start_status, 'started');
+    assert.equal(
+      recorded.launch.temporal_start_receipt?.first_execution_run_id,
+      `run-${input.stage_run_id}`,
+    );
+
+    const replay = claimStageRunRecoveryStart(db, { workflowInput });
+    assert.equal(replay.claimed, false);
+    assert.equal(replay.claim_status, 'started');
+    assert.equal(replay.recovery_run.temporal_start_receipt?.recovery_run_id, 'run-closeout-recovery');
+    assert.equal(
+      (replay.launch.temporal_start_receipt?.recovery_runs as unknown[]).length,
+      1,
+    );
+
+    assert.throws(() => claimStageRunRecoveryStart(db, {
+      workflowInput: recoveryWorkflowInput(input, 'recovery:different'),
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_recovery_identity_conflict');
+      return true;
+    });
   } finally {
     db.close();
   }

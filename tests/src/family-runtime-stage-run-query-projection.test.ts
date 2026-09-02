@@ -124,15 +124,17 @@ function providerBlockedState() {
   };
 }
 
-test('StageRun query exposes recovered reviewer projection while preserving Temporal live truth', () => {
+test('StageRun query keeps a recovered projection blocked until a durable controller resumes', () => {
   withDb((db) => {
     seedRecoveredProjection(db);
     const provider = providerBlockedState();
     const projected = projectRecoveredStageRunQuery(db, provider);
 
-    assert.equal(projected.status, 'running');
-    assert.equal(projected.current_role, 'reviewer');
-    assert.equal(projected.blocked_reason, null);
+    assert.equal(projected.status, 'blocked');
+    assert.equal(projected.current_role, null);
+    assert.equal(projected.blocked_reason, 'stage_run_execution_resume_required');
+    assert.equal(projected.recovery_ready, true);
+    assert.equal(projected.durable_controller_running, false);
     assert.deepEqual(projected.artifact_refs, [artifactRef]);
     assert.deepEqual(projected.artifact_hashes, [artifactHash]);
     assert.deepEqual(projected.artifact_identity_receipt_refs, [receiptRef]);

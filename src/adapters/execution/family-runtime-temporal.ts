@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 
+import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type { FamilyRuntimeDomainProfiles } from './family-runtime-command.ts';
 import type { FamilyRuntimeDomainId, TemporalStageAttemptSignalKind } from './family-runtime-types.ts';
@@ -33,6 +34,7 @@ import {
 } from './family-runtime-execution-scope.ts';
 import type {
   StageAttemptExecutionContentBinding,
+  TemporalStageRunRecoveryResume,
   TemporalStageRunWorkflowInput,
 } from './family-runtime-temporal-stage-run.ts';
 import {
@@ -51,6 +53,7 @@ export type {
   TemporalStageQualityCycleProjectionInput,
   TemporalStageQualityReviewReceiptInput,
   TemporalStageRunAttemptSummary,
+  TemporalStageRunRecoveryResume,
   TemporalStageRunQualityRolePromptRefs,
   TemporalStageRunRouteLaunchInput,
   TemporalStageRunRouteLaunchReceipt,
@@ -757,6 +760,112 @@ export function requireTemporalStageAttemptWorkflowInputLaunchable(input: Tempor
   return input;
 }
 
+function exactRecoveryStringList(value: unknown, field: string) {
+  if (
+    !Array.isArray(value)
+    || value.length === 0
+    || value.some((entry) => typeof entry !== 'string' || !entry.trim())
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `StageRun recovery resume requires a non-empty ${field} string array.`,
+      { failure_code: 'stage_run_recovery_resume_identity_invalid', field },
+    );
+  }
+  return value as string[];
+}
+
+export function requireTemporalStageRunRecoveryResume(
+  input: TemporalStageRunWorkflowInput,
+): TemporalStageRunRecoveryResume | null {
+  const recovery = input.recovery_resume;
+  if (!recovery) return null;
+  if (
+    recovery.surface_kind !== 'opl_stage_run_recovery_resume'
+    || recovery.version !== 'opl-stage-run-recovery-resume.v1'
+    || typeof recovery.recovery_id !== 'string'
+    || !recovery.recovery_id.trim()
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun recovery resume identity is invalid.',
+      { failure_code: 'stage_run_recovery_resume_identity_invalid' },
+    );
+  }
+  if (!input.quality_policy?.formal_review?.required) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun recovery resume is only valid for a required formal Review.',
+      { failure_code: 'stage_run_recovery_formal_review_not_required' },
+    );
+  }
+  const expectedQualityCycleId = `quality-cycle:${input.stage_run_id}`;
+  const producer = recovery.producer_attempt_summary;
+  if (
+    recovery.quality_cycle_id !== expectedQualityCycleId
+    || !producer
+    || producer.attempt_role !== 'producer'
+    || producer.status !== 'completed'
+    || typeof producer.stage_attempt_id !== 'string'
+    || !producer.stage_attempt_id.trim()
+    || typeof producer.workflow_id !== 'string'
+    || !producer.workflow_id.trim()
+    || typeof producer.execution_session_ref !== 'string'
+    || !producer.execution_session_ref.trim()
+    || recovery.producer_attempt_ref !== `opl://stage_attempts/${producer.stage_attempt_id}`
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun recovery resume does not bind one completed producer Attempt.',
+      {
+        failure_code: 'stage_run_recovery_producer_identity_mismatch',
+        stage_run_id: input.stage_run_id,
+        quality_cycle_id: recovery.quality_cycle_id,
+        producer_attempt_ref: recovery.producer_attempt_ref,
+      },
+    );
+  }
+  const artifactRefs = exactRecoveryStringList(recovery.artifact_refs, 'artifact_refs');
+  const artifactHashes = exactRecoveryStringList(recovery.artifact_hashes, 'artifact_hashes');
+  const receiptRefs = exactRecoveryStringList(
+    recovery.artifact_identity_receipt_refs,
+    'artifact_identity_receipt_refs',
+  );
+  if (
+    artifactRefs.length !== artifactHashes.length
+    || artifactRefs.length !== receiptRefs.length
+    || artifactHashes.some((hash) => !/^sha256:[a-f0-9]{64}$/.test(hash))
+    || canonicalJsonText({
+      artifact_refs: producer.artifact_refs,
+      artifact_hashes: producer.artifact_hashes,
+      artifact_identity_receipt_refs: producer.artifact_identity_receipt_refs,
+    }) !== canonicalJsonText({
+      artifact_refs: artifactRefs,
+      artifact_hashes: artifactHashes,
+      artifact_identity_receipt_refs: receiptRefs,
+    })
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun recovery resume artifact identity does not match the producer Attempt.',
+      { failure_code: 'stage_run_recovery_artifact_identity_mismatch' },
+    );
+  }
+  return recovery;
+}
+
+export function temporalStageRunRecoveryResumeSha256(input: TemporalStageRunWorkflowInput) {
+  const recovery = requireTemporalStageRunRecoveryResume(input);
+  if (!recovery) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun recovery digest requires a recovery resume input.',
+      { failure_code: 'stage_run_recovery_resume_missing' },
+    );
+  }
+  return `sha256:${crypto.createHash('sha256').update(canonicalJsonText(recovery)).digest('hex')}`;
+}
+
 export function requireTemporalStageRunWorkflowInputLaunchable(
   input: TemporalStageRunWorkflowInput,
   options: { revalidateContent?: boolean | 'historical_evidence' } = {},
@@ -933,6 +1042,7 @@ export function requireTemporalStageRunWorkflowInputLaunchable(
       skipManagedPackBytes: options.revalidateContent === 'historical_evidence',
     });
   }
+  requireTemporalStageRunRecoveryResume(input);
   return input;
 }
 

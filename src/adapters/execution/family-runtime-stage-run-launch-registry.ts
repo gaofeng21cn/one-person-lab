@@ -24,6 +24,7 @@ import {
 } from './family-runtime-schema-migrations.ts';
 import {
   requireTemporalStageRunWorkflowInputLaunchable,
+  temporalStageRunRecoveryResumeSha256,
   type TemporalStageRunWorkflowInput,
 } from './family-runtime-temporal.ts';
 import { requireNoActiveUnresolvedRuntimeIdentityConflict } from './family-runtime-legacy-identity-admission.ts';
@@ -71,6 +72,106 @@ function parseObject(value: string | null) {
   return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
     ? parsed as Record<string, unknown>
     : null;
+}
+
+type StageRunRecoveryRun = {
+  surface_kind: 'opl_stage_run_recovery_run';
+  version: 'opl-stage-run-recovery-run.v1';
+  recovery_id: string;
+  recovery_resume_sha256: string;
+  quality_cycle_id: string;
+  producer_attempt_ref: string;
+  recovery_resume: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>;
+  start_status: 'starting' | 'started' | 'start_failed';
+  start_claim_token: string | null;
+  start_claimed_at: string | null;
+  start_lease_expires_at: string | null;
+  start_attempt_count: number;
+  temporal_start_receipt: Record<string, unknown> | null;
+  last_start_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function recoveryRuns(receipt: Record<string, unknown>) {
+  const value = receipt.recovery_runs;
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.some((entry) => !entry || typeof entry !== 'object' || Array.isArray(entry))) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Persisted StageRun recovery receipts are invalid.',
+      { failure_code: 'stage_run_recovery_registry_invalid' },
+    );
+  }
+  return value as StageRunRecoveryRun[];
+}
+
+function stageRunInputWithoutRecovery(input: TemporalStageRunWorkflowInput) {
+  const { recovery_resume: _recoveryResume, ...baseInput } = input;
+  return baseInput;
+}
+
+function requireRecoveryRegistryIdentity(
+  row: StageRunLaunchRow,
+  workflowInput: TemporalStageRunWorkflowInput,
+) {
+  const launchInput = requireTemporalStageRunWorkflowInputLaunchable(workflowInput, {
+    revalidateContent: 'historical_evidence',
+  });
+  const recovery = launchInput.recovery_resume!;
+  const persistedInput = parseObject(row.stage_run_input_json);
+  if (
+    row.launch_status !== 'closed'
+    || !persistedInput
+    || canonicalJsonText(stageRunInputWithoutRecovery(launchInput)) !== canonicalJsonText(persistedInput)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun recovery must reuse one closed registered StageRun and its immutable launch input.',
+      {
+        failure_code: 'stage_run_recovery_launch_identity_mismatch',
+        stage_run_id: row.stage_run_id,
+        launch_status: row.launch_status,
+      },
+    );
+  }
+  return {
+    recovery,
+    recoveryResumeSha256: temporalStageRunRecoveryResumeSha256(launchInput),
+  };
+}
+
+function recoveryEntryIdentityMatches(
+  entry: StageRunRecoveryRun,
+  recovery: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+  recoveryResumeSha256: string,
+) {
+  return entry.recovery_id === recovery.recovery_id
+    && entry.recovery_resume_sha256 === recoveryResumeSha256
+    && entry.quality_cycle_id === recovery.quality_cycle_id
+    && entry.producer_attempt_ref === recovery.producer_attempt_ref
+    && canonicalJsonText(entry.recovery_resume) === canonicalJsonText(recovery);
+}
+
+function activeRecoveryStartingLease(entry: StageRunRecoveryRun, now: Date) {
+  if (entry.start_status !== 'starting' || !entry.start_claim_token || !entry.start_lease_expires_at) return false;
+  const expiresAt = Date.parse(entry.start_lease_expires_at);
+  return Number.isFinite(expiresAt) && expiresAt > now.getTime();
+}
+
+function writeRecoveryRuns(
+  db: DatabaseSync,
+  row: StageRunLaunchRow,
+  receipt: Record<string, unknown>,
+  runs: StageRunRecoveryRun[],
+  now: Date,
+) {
+  db.prepare(`
+    UPDATE stage_run_launches
+    SET temporal_start_receipt_json = ?, updated_at = ?
+    WHERE stage_run_id = ?
+  `).run(canonicalJsonText({ ...receipt, recovery_runs: runs }), nowIso(now), row.stage_run_id);
+  return rowPayload(launchRow(db, row.stage_run_id)!);
 }
 
 function rowPayload(row: StageRunLaunchRow) {
@@ -550,6 +651,277 @@ export function recordStageRunTemporalStart(
     const updated = launchRow(db, input.stageRunId)!;
     db.exec('COMMIT');
     return rowPayload(updated);
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+export function claimStageRunRecoveryStart(
+  db: DatabaseSync,
+  input: {
+    workflowInput: TemporalStageRunWorkflowInput;
+    now?: Date;
+    leaseMs?: number;
+    claimToken?: string;
+  },
+) {
+  createStageRunLaunchTable(db);
+  const now = input.now ?? new Date();
+  const leaseMs = validLeaseMs(input.leaseMs);
+  const claimToken = input.claimToken?.trim() || crypto.randomUUID();
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const row = launchRow(db, input.workflowInput.stage_run_id);
+    if (!row) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'StageRun recovery cannot be claimed before launch registration.',
+        { stage_run_id: input.workflowInput.stage_run_id },
+      );
+    }
+    requireRuntimeExecutionScopeMutationAllowed(db, row, 'claim_stage_run_recovery_start');
+    const { recovery, recoveryResumeSha256 } = requireRecoveryRegistryIdentity(row, input.workflowInput);
+    const receipt = parseObject(row.temporal_start_receipt_json);
+    if (!receipt) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Closed StageRun recovery requires the original Temporal start receipt.',
+        { failure_code: 'stage_run_recovery_original_start_receipt_missing', stage_run_id: row.stage_run_id },
+      );
+    }
+    const runs = recoveryRuns(receipt);
+    if (runs.length > 1) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'One StageRun may have only one closeout recovery execution.',
+        { failure_code: 'stage_run_recovery_registry_invalid', stage_run_id: row.stage_run_id },
+      );
+    }
+    const existing = runs[0];
+    if (existing && !recoveryEntryIdentityMatches(existing, recovery, recoveryResumeSha256)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'StageRun is already bound to a different closeout recovery identity.',
+        {
+          failure_code: 'stage_run_recovery_identity_conflict',
+          stage_run_id: row.stage_run_id,
+          existing_recovery_id: existing.recovery_id,
+          received_recovery_id: recovery.recovery_id,
+        },
+      );
+    }
+    if (existing?.start_status === 'started') {
+      db.exec('COMMIT');
+      return {
+        claimed: false,
+        claim_status: 'started' as const,
+        claim_token: null,
+        recovery_run: existing,
+        launch: rowPayload(row),
+      };
+    }
+    if (existing && activeRecoveryStartingLease(existing, now)) {
+      db.exec('COMMIT');
+      return {
+        claimed: false,
+        claim_status: 'active_starting' as const,
+        claim_token: null,
+        recovery_run: existing,
+        launch: rowPayload(row),
+      };
+    }
+    const claimedAt = nowIso(now);
+    const next: StageRunRecoveryRun = existing
+      ? {
+          ...existing,
+          start_status: 'starting',
+          start_claim_token: claimToken,
+          start_claimed_at: claimedAt,
+          start_lease_expires_at: nowIso(new Date(now.getTime() + leaseMs)),
+          start_attempt_count: existing.start_attempt_count + 1,
+          last_start_error: null,
+          updated_at: claimedAt,
+        }
+      : {
+          surface_kind: 'opl_stage_run_recovery_run',
+          version: 'opl-stage-run-recovery-run.v1',
+          recovery_id: recovery.recovery_id,
+          recovery_resume_sha256: recoveryResumeSha256,
+          quality_cycle_id: recovery.quality_cycle_id,
+          producer_attempt_ref: recovery.producer_attempt_ref,
+          recovery_resume: recovery,
+          start_status: 'starting',
+          start_claim_token: claimToken,
+          start_claimed_at: claimedAt,
+          start_lease_expires_at: nowIso(new Date(now.getTime() + leaseMs)),
+          start_attempt_count: 1,
+          temporal_start_receipt: null,
+          last_start_error: null,
+          created_at: claimedAt,
+          updated_at: claimedAt,
+        };
+    const launch = writeRecoveryRuns(db, row, receipt, [next], now);
+    db.exec('COMMIT');
+    return {
+      claimed: true,
+      claim_status: existing?.start_status === 'starting'
+        ? 'stale_lease_takeover' as const
+        : existing
+          ? 'retry_claimed' as const
+          : 'claimed' as const,
+      claim_token: claimToken,
+      recovery_run: next,
+      launch,
+    };
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+export function recordStageRunTemporalRecoveryStart(
+  db: DatabaseSync,
+  input: {
+    stageRunId: string;
+    recoveryId: string;
+    temporalStartReceipt: Record<string, unknown>;
+    claimToken: string;
+    now?: Date;
+  },
+) {
+  createStageRunLaunchTable(db);
+  const now = input.now ?? new Date();
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const row = launchRow(db, input.stageRunId);
+    if (!row) {
+      throw new FrameworkContractError('contract_shape_invalid', 'StageRun recovery start is not registered.', {
+        stage_run_id: input.stageRunId,
+      });
+    }
+    requireRuntimeExecutionScopeMutationAllowed(db, row, 'record_stage_run_temporal_recovery_start');
+    const receipt = parseObject(row.temporal_start_receipt_json);
+    const runs = receipt ? recoveryRuns(receipt) : [];
+    const existing = runs[0];
+    const temporal = input.temporalStartReceipt;
+    const recoveryRunId = typeof temporal.recovery_run_id === 'string'
+      ? temporal.recovery_run_id.trim()
+      : '';
+    if (
+      !receipt
+      || !existing
+      || existing.recovery_id !== input.recoveryId
+      || temporal.recovery_id !== input.recoveryId
+      || temporal.stage_run_id !== row.stage_run_id
+      || temporal.workflow_id !== row.workflow_id
+      || temporal.quality_cycle_id !== existing.quality_cycle_id
+      || temporal.producer_attempt_ref !== existing.producer_attempt_ref
+      || !recoveryRunId
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal StageRun recovery receipt does not match its durable recovery identity.',
+        {
+          failure_code: 'stage_run_recovery_temporal_start_receipt_identity_mismatch',
+          stage_run_id: row.stage_run_id,
+          recovery_id: input.recoveryId,
+          recovery_run_id: recoveryRunId || null,
+        },
+      );
+    }
+    const existingRunId = typeof existing.temporal_start_receipt?.recovery_run_id === 'string'
+      ? existing.temporal_start_receipt.recovery_run_id
+      : null;
+    if (existing.start_status === 'started') {
+      if (existingRunId !== recoveryRunId) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'One StageRun recovery cannot bind two Temporal Runs.',
+          {
+            failure_code: 'stage_run_recovery_temporal_execution_identity_conflict',
+            stage_run_id: row.stage_run_id,
+            recovery_id: input.recoveryId,
+            existing_recovery_run_id: existingRunId,
+            received_recovery_run_id: recoveryRunId,
+          },
+        );
+      }
+      db.exec('COMMIT');
+      return { launch: rowPayload(row), recovery_run: existing };
+    }
+    if (existing.start_status !== 'starting' || existing.start_claim_token !== input.claimToken) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal StageRun recovery start lost its compare-and-set claim.',
+        {
+          failure_code: 'stage_run_recovery_start_claim_conflict',
+          stage_run_id: row.stage_run_id,
+          recovery_id: input.recoveryId,
+        },
+      );
+    }
+    const updated: StageRunRecoveryRun = {
+      ...existing,
+      start_status: 'started',
+      start_claim_token: null,
+      start_claimed_at: null,
+      start_lease_expires_at: null,
+      temporal_start_receipt: temporal,
+      last_start_error: null,
+      updated_at: nowIso(now),
+    };
+    const launch = writeRecoveryRuns(db, row, receipt, [updated], now);
+    db.exec('COMMIT');
+    return { launch, recovery_run: updated };
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+export function recordStageRunRecoveryStartFailure(
+  db: DatabaseSync,
+  input: {
+    stageRunId: string;
+    recoveryId: string;
+    claimToken: string;
+    error: unknown;
+    now?: Date;
+  },
+) {
+  createStageRunLaunchTable(db);
+  const now = input.now ?? new Date();
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const row = launchRow(db, input.stageRunId);
+    if (!row) throw new FrameworkContractError('contract_shape_invalid', 'StageRun recovery start is not registered.');
+    requireRuntimeExecutionScopeMutationAllowed(db, row, 'record_stage_run_recovery_start_failure');
+    const receipt = parseObject(row.temporal_start_receipt_json);
+    const runs = receipt ? recoveryRuns(receipt) : [];
+    const existing = runs[0];
+    if (
+      !receipt
+      || !existing
+      || existing.recovery_id !== input.recoveryId
+      || existing.start_status !== 'starting'
+      || existing.start_claim_token !== input.claimToken
+    ) {
+      db.exec('COMMIT');
+      return rowPayload(row);
+    }
+    const updated: StageRunRecoveryRun = {
+      ...existing,
+      start_status: 'start_failed',
+      start_claim_token: null,
+      start_claimed_at: null,
+      start_lease_expires_at: null,
+      last_start_error: input.error instanceof Error ? input.error.message : String(input.error),
+      updated_at: nowIso(now),
+    };
+    const launch = writeRecoveryRuns(db, row, receipt, [updated], now);
+    db.exec('COMMIT');
+    return launch;
   } catch (error) {
     db.exec('ROLLBACK');
     throw error;

@@ -166,6 +166,13 @@ export function buildTemporalStageRunMemo(
     executor_kind: input.executor_kind,
     task_id: input.task_id ?? null,
     source_fingerprint: input.source_fingerprint ?? null,
+    ...(input.recovery_resume
+      ? {
+          recovery_id: input.recovery_resume.recovery_id,
+          recovery_quality_cycle_id: input.recovery_resume.quality_cycle_id,
+          recovery_producer_attempt_ref: input.recovery_resume.producer_attempt_ref,
+        }
+      : {}),
   };
 }
 

@@ -124,6 +124,7 @@ async function runController(input: {
     decisionKind: 'advance' | 'route_back';
     targetStageId: string;
   };
+  recoveryResume?: boolean;
 }) {
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
@@ -559,6 +560,32 @@ async function runController(input: {
               : { scope_budget: { max_tokens: input.maxTokens } }),
         },
       });
+      if (input.recoveryResume) {
+        workflowInput.recovery_resume = {
+          surface_kind: 'opl_stage_run_recovery_resume',
+          version: 'opl-stage-run-recovery-resume.v1',
+          recovery_id: `recovery:${input.id}`,
+          quality_cycle_id: `quality-cycle:${workflowInput.stage_run_id}`,
+          producer_attempt_ref: `opl://stage_attempts/sat_${input.id}_producer_0`,
+          producer_attempt_summary: {
+            attempt_role: 'producer',
+            quality_round_index: 0,
+            stage_attempt_id: `sat_${input.id}_producer_0`,
+            workflow_id: `wf_${input.id}_producer_0`,
+            execution_session_ref: `codex://threads/thread-${input.id}-producer-0`,
+            artifact_producer_attempt_ref: null,
+            status: 'completed',
+            artifact_refs: ['artifact:deck-v1'],
+            artifact_hashes: ['sha256:deck-v1'],
+            artifact_identity_receipt_refs: ['artifact-identity:deck-v1'],
+            total_tokens_observed: null,
+          },
+          artifact_refs: ['artifact:deck-v1'],
+          artifact_hashes: ['sha256:deck-v1'],
+          artifact_identity_receipt_refs: ['artifact-identity:deck-v1'],
+          review_input_snapshot_materialization_request: null,
+        };
+      }
       const handle = await testEnv.client.workflow.start(StageRunWorkflow, {
         args: [workflowInput],
         taskQueue,
@@ -571,6 +598,26 @@ async function runController(input: {
     await testEnv.teardown();
   }
 }
+
+test('StageRun recovery resumes at reviewer without rerunning the durable producer', async () => {
+  const { state, attempts, reviewReceiptInputs } = await runController({
+    id: 'recovery-reviewer-resume',
+    closeFindingAfterRound: null,
+    recoveryResume: true,
+    initialReviewerOutcome: 'pass',
+    initialReviewerFindings: 'none',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['reviewer']);
+  assert.deepEqual(state.attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(attempts[0]?.parent_attempt_ref, 'opl://stage_attempts/sat_recovery-reviewer-resume_producer_0');
+  assert.equal(
+    attempts[0]?.artifact_producer_attempt_ref,
+    'opl://stage_attempts/sat_recovery-reviewer-resume_producer_0',
+  );
+  assert.equal(reviewReceiptInputs[0]?.producer_attempt_ref, attempts[0]?.artifact_producer_attempt_ref);
+  assert.equal(state.status, 'completed');
+  assert.equal(state.review_receipts.length, 1);
+});
 
 test('StageRun controller materializes isolated producer-review-repair-re-review child workflows', async () => {
   const { state, attempts } = await runController({ id: 'closure', closeFindingAfterRound: 1 });

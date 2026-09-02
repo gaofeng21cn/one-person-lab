@@ -27,10 +27,13 @@ import { launchRegisteredStageRun } from '../../../src/adapters/execution/family
 import { materializeStageRunRoute } from '../../../src/adapters/execution/family-runtime-stage-run-route-launch.ts';
 import {
   claimStageRunStart,
+  claimStageRunRecoveryStart,
   findStageRunLaunch,
   inspectStageRunLaunch,
   recordStageRunClosed,
   recordStageRunStartFailure,
+  recordStageRunRecoveryStartFailure,
+  recordStageRunTemporalRecoveryStart,
   recordStageRunTemporalStart,
   registerStageRunLaunch,
 } from '../../../src/adapters/execution/family-runtime-stage-run-launch-registry.ts';
@@ -484,10 +487,13 @@ export {
   launchRegisteredStageRun,
   materializeStageRunRoute,
   claimStageRunStart,
+  claimStageRunRecoveryStart,
   findStageRunLaunch,
   inspectStageRunLaunch,
   recordStageRunClosed,
   recordStageRunStartFailure,
+  recordStageRunRecoveryStartFailure,
+  recordStageRunTemporalRecoveryStart,
   recordStageRunTemporalStart,
   registerStageRunLaunch,
   requireTemporalStageRunWorkflowInputLaunchable,

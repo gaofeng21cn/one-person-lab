@@ -376,6 +376,10 @@ export async function runFamilyRuntime(
         input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
         context: { paths: ReturnType<typeof familyRuntimePaths> },
       ) => Promise<Record<string, unknown>>;
+      startRecoveryWorkflow?: (
+        input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
+        context: { paths: ReturnType<typeof familyRuntimePaths> },
+      ) => Promise<Record<string, unknown>>;
       describeWorkflow?: (
         input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
         context: { paths: ReturnType<typeof familyRuntimePaths> },
@@ -497,9 +501,17 @@ export async function runFamilyRuntime(
       return { version: 'g2', family_runtime_stage_run_query: projectedStageRunQuery };
     }
     if (parsed.mode === 'stage_run_recover_closeout') {
-      const recovery = recoverStageRunCloseoutProjection(db, {
+      const recovery = await recoverStageRunCloseoutProjection(db, {
         stageRunId: parsed.stageRunId,
         stageAttemptId: parsed.stageAttemptId,
+      }, {
+        startWorkflow: async (workflowInput) =>
+          options.stageRunRuntime?.startRecoveryWorkflow
+            ? await options.stageRunRuntime.startRecoveryWorkflow(workflowInput, { paths })
+            : await (await temporalProviderModule()).startTemporalStageRunRecoveryWorkflow(
+                workflowInput,
+                { paths },
+              ),
       });
       insertEvent(db, {
         eventType: 'stage_run_closeout_recovered',

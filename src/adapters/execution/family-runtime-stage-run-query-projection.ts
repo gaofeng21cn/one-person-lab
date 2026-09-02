@@ -47,10 +47,9 @@ function parsedRecord(value: unknown) {
  * Reconcile a recoverable local quality-cycle projection into a StageRun query.
  *
  * Temporal remains the provider/lifecycle authority and is returned verbatim in
- * `provider_live_state`.  The effective top-level state is changed only for the
- * narrow, observed closeout-recovery case where the provider is still exposing
- * the historical zero-artifact hard stop and the durable local projection has
- * a fully bound reviewer handoff.
+ * `provider_live_state`. A recovered local artifact projection can make the
+ * StageRun eligible for durable resume, but it cannot claim that a controller or
+ * reviewer is running before Temporal exposes that execution.
  */
 export function projectRecoveredStageRunQuery(
   db: DatabaseSync,
@@ -145,17 +144,19 @@ export function projectRecoveredStageRunQuery(
   const providerLiveState = { ...providerState };
   return {
     ...providerState,
-    // Keep the provider observation intact and explicit; this is an effective
-    // read-model state, not a mutation of Temporal history or terminal status.
+    // Keep the provider observation intact and explicit. Local recovery proves
+    // resumability, not a live durable controller.
     provider_live_state: providerLiveState,
     readback_source: 'temporal_provider_plus_local_quality_cycle_projection',
-    status: 'running',
-    current_role: 'reviewer',
-    blocked_reason: null,
+    status: 'blocked',
+    current_role: null,
+    blocked_reason: 'stage_run_execution_resume_required',
     hard_stop_class: null,
     artifact_refs: artifactRefs,
     artifact_hashes: artifactHashes,
     artifact_identity_receipt_refs: receiptRefs,
+    recovery_ready: true,
+    durable_controller_running: false,
     local_quality_cycle_projection: {
       surface_kind: 'opl_stage_quality_cycle_readback_projection',
       quality_cycle_id: cycle.quality_cycle_id,
@@ -169,6 +170,7 @@ export function projectRecoveredStageRunQuery(
       authority_boundary: {
         temporal_provider_live_state_preserved: true,
         opl_projection_is_not_temporal_history: true,
+        durable_controller_running: false,
         formal_review_pending: true,
       },
     },

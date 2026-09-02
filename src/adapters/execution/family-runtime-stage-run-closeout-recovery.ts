@@ -7,7 +7,10 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 import {
+  claimStageRunRecoveryStart,
   findStageRunLaunch,
+  recordStageRunRecoveryStartFailure,
+  recordStageRunTemporalRecoveryStart,
 } from './family-runtime-stage-run-launch-registry.ts';
 import {
   listStageAttemptCloseouts,
@@ -21,6 +24,7 @@ import {
   projectTemporalStageRunQualityCycle,
 } from './family-runtime-stage-quality-cycle.ts';
 import type { TemporalStageRunWorkflowState } from './family-runtime-temporal-stage-run.ts';
+import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal.ts';
 import {
   recoverFrameworkRawArtifactForAttempt,
 } from './family-runtime-codex-stage-runner-parts/raw-artifact-identity-verification.ts';
@@ -291,9 +295,13 @@ function buildRecoveryWorkflowState(input: {
   } satisfies TemporalStageRunWorkflowState;
 }
 
-export function recoverStageRunCloseoutProjection(db: DatabaseSync, input: {
+export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input: {
   stageRunId: string;
   stageAttemptId: string;
+}, options: {
+  startWorkflow: (input: TemporalStageRunWorkflowInput) => Promise<Record<string, unknown>>;
+  now?: () => Date;
+  startLeaseMs?: number;
 }) {
   const attempt = inspectStageAttempt(db, input.stageAttemptId);
   if (attempt.stage_run_id !== input.stageRunId) {
@@ -395,7 +403,7 @@ export function recoverStageRunCloseoutProjection(db: DatabaseSync, input: {
     packet: correctedPacket,
   });
   const updatedAttempt = inspectStageAttempt(db, input.stageAttemptId);
-  const projected = projectTemporalStageRunQualityCycle(db, buildRecoveryWorkflowState({
+  const recoveryState = buildRecoveryWorkflowState({
     attempt: updatedAttempt,
     launch,
     cycle,
@@ -405,11 +413,45 @@ export function recoverStageRunCloseoutProjection(db: DatabaseSync, input: {
     routeRecommendation: record(verifiedRouteImpact.stage_route_recommendation).decision_kind
       ? record(verifiedRouteImpact.stage_route_recommendation)
       : null,
-  }));
-  const afterCount = Number((db.prepare('SELECT COUNT(*) AS count FROM stage_attempts WHERE stage_run_id = ?').get(input.stageRunId) as { count: number }).count);
-  return {
+  });
+  const projected = projectTemporalStageRunQualityCycle(db, recoveryState);
+  const projectionAttemptCount = Number((db.prepare('SELECT COUNT(*) AS count FROM stage_attempts WHERE stage_run_id = ?').get(input.stageRunId) as { count: number }).count);
+  const producerSummary = recoveryState.attempts[0]!;
+  const recoveryId = stableId('stage-run-recovery', [
+    input.stageRunId,
+    recoveryState.quality_cycle_id,
+    input.stageAttemptId,
+    identity.artifact_refs,
+    identity.artifact_hashes,
+    receiptRefs,
+  ]);
+  const recoveryResume = {
+    surface_kind: 'opl_stage_run_recovery_resume' as const,
+    version: 'opl-stage-run-recovery-resume.v1' as const,
+    recovery_id: recoveryId,
+    quality_cycle_id: recoveryState.quality_cycle_id,
+    producer_attempt_ref: `opl://stage_attempts/${input.stageAttemptId}`,
+    producer_attempt_summary: producerSummary,
+    artifact_refs: identity.artifact_refs,
+    artifact_hashes: identity.artifact_hashes,
+    artifact_identity_receipt_refs: receiptRefs,
+    route_recommendations: recoveryState.route_recommendations,
+    review_input_snapshot_materialization_request:
+      verifiedQuality.review_input_snapshot_materialization_request ?? null,
+  };
+  const workflowInput: TemporalStageRunWorkflowInput = {
+    ...(launch.stage_run_input as TemporalStageRunWorkflowInput),
+    recovery_resume: recoveryResume,
+  };
+  const claim = claimStageRunRecoveryStart(db, {
+    workflowInput,
+    now: options.now?.(),
+    leaseMs: options.startLeaseMs,
+  });
+  const baseReceipt = {
     surface_kind: 'opl_stage_run_closeout_recovery',
-    recovery_status: 'recovered_for_formal_review',
+    version: 'opl-stage-run-closeout-recovery.v2',
+    recovery_id: recoveryId,
     stage_run_id: input.stageRunId,
     stage_attempt_id: input.stageAttemptId,
     previous_closeout_id: latestCloseout.closeout_id,
@@ -423,14 +465,63 @@ export function recoverStageRunCloseoutProjection(db: DatabaseSync, input: {
       terminal_status: launch.terminal_status,
     },
     quality_cycle_projection: projected,
-    formal_review_pending: true,
+    formal_review_required: true,
     attempt_count_before: beforeCount,
-    attempt_count_after: afterCount,
+    attempt_count_after_projection: projectionAttemptCount,
     quality_budget_consumed_by_recovery: false,
     new_stage_run_created: false,
     authority_boundary: {
-      opl: 'same_stage_run_closeout_projection_recovery_only',
+      opl: 'same_stage_run_durable_quality_loop_recovery_only',
       domain: 'formal_review_owner_and_quality_verdict_authority_unchanged',
     },
   };
+  if (!claim.claimed || !claim.claim_token) {
+    const temporalStart = claim.recovery_run.temporal_start_receipt;
+    return {
+      ...baseReceipt,
+      recovery_status: claim.claim_status === 'started'
+        ? 'durable_resume_already_started'
+        : 'durable_resume_starting',
+      idempotent_replay: true,
+      durable_resume: claim.recovery_run,
+      temporal_start: temporalStart,
+      durable_controller_running: temporalStart
+        ? String(temporalStart.workflow_status).toUpperCase().endsWith('RUNNING')
+        : false,
+      formal_review_dispatched: claim.claim_status === 'started',
+    };
+  }
+  try {
+    const temporalStart = await options.startWorkflow(workflowInput);
+    const recorded = recordStageRunTemporalRecoveryStart(db, {
+      stageRunId: input.stageRunId,
+      recoveryId,
+      temporalStartReceipt: temporalStart,
+      claimToken: claim.claim_token,
+      now: options.now?.(),
+    });
+    const producerAttemptCount = Number((db.prepare(`
+      SELECT COUNT(*) AS count FROM stage_attempts
+      WHERE stage_run_id = ? AND attempt_role = 'producer'
+    `).get(input.stageRunId) as { count: number }).count);
+    return {
+      ...baseReceipt,
+      recovery_status: 'durable_resume_started',
+      idempotent_replay: false,
+      durable_resume: recorded.recovery_run,
+      temporal_start: temporalStart,
+      durable_controller_running: String(temporalStart.workflow_status).toUpperCase().endsWith('RUNNING'),
+      formal_review_dispatched: true,
+      producer_attempt_count: producerAttemptCount,
+    };
+  } catch (error) {
+    recordStageRunRecoveryStartFailure(db, {
+      stageRunId: input.stageRunId,
+      recoveryId,
+      claimToken: claim.claim_token,
+      error,
+      now: options.now?.(),
+    });
+    throw error;
+  }
 }

@@ -96,6 +96,7 @@ export {
   cancelTemporalStageAttemptWorkflow,
   describeTemporalStageRunWorkflow,
   signalTemporalStageAttemptWorkflow,
+  startTemporalStageRunRecoveryWorkflow,
   startTemporalStageRunWorkflow,
   queryTemporalStageRunWorkflow,
   startTemporalStageAttemptWorkflow,

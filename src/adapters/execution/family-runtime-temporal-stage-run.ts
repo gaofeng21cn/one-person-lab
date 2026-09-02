@@ -72,6 +72,21 @@ export type TemporalStageRunWorkflowInput = {
   lineage_refs?: string[];
   route_budget?: StageRunRouteBudget | null;
   visibility_search_attributes_upsert_enabled?: boolean;
+  recovery_resume?: TemporalStageRunRecoveryResume;
+};
+
+export type TemporalStageRunRecoveryResume = {
+  surface_kind: 'opl_stage_run_recovery_resume';
+  version: 'opl-stage-run-recovery-resume.v1';
+  recovery_id: string;
+  quality_cycle_id: string;
+  producer_attempt_ref: string;
+  producer_attempt_summary: TemporalStageRunAttemptSummary;
+  artifact_refs: string[];
+  artifact_hashes: string[];
+  artifact_identity_receipt_refs: string[];
+  route_recommendations?: StageQualityRouteRecommendationRecord[];
+  review_input_snapshot_materialization_request?: unknown;
 };
 
 export type StageRunRouteBudget = {
