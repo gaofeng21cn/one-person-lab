@@ -4,6 +4,9 @@ import assert from 'node:assert/strict';
 import {
   compactCloseoutPacketForTemporalResult,
 } from '../../../src/adapters/execution/family-runtime-temporal-activities.ts';
+import {
+  evaluateStageQualityAttemptRoute,
+} from '../../../src/authority/stages/stage-quality-route-selection.ts';
 
 test('Temporal Codex activity compacts typed closeout packets before activity completion', () => {
   const largeCloseout = {
@@ -100,4 +103,64 @@ test('Temporal Codex activity rejects inline domain output payloads', () => {
       payload: { artifact_body: 'must-not-enter-temporal' },
     },
   }), null);
+});
+
+test('Temporal closeout history drops recommendation-only reason from a decisive route', () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:reviewer-closeout'],
+    route_impact: {
+      stage_quality_cycle: { outcome: 'quality_debt', findings: [] },
+      stage_route_decision: {
+        decision_kind: 'advance',
+        target_stage_id: 'baseline_and_evidence_setup',
+        reason: 'Human-readable rationale belongs to recommendations, not decisions.',
+        evidence_refs: ['receipt:reviewer-closeout'],
+      },
+    },
+  };
+  const compacted = compactCloseoutPacketForTemporalResult(closeout);
+
+  assert.ok(compacted);
+  assert.deepEqual(
+    (compacted.route_impact as Record<string, Record<string, unknown>>).stage_route_decision,
+    {
+      decision_kind: 'advance',
+      target_stage_id: 'baseline_and_evidence_setup',
+      evidence_refs: ['receipt:reviewer-closeout'],
+    },
+  );
+  const reviewerAttempt = {
+    attempt_role: 'reviewer',
+    stage_id: 'direction_and_route_selection',
+    context_manifest: {
+      cross_stage_route_selection: {
+        surface_kind: 'opl_stage_run_route_selection_context',
+        version: 'stage-run-route-selection-context.v1',
+        current_attempt_role: 'reviewer',
+        configured_decisive_attempt_roles: ['reviewer', 're_reviewer'],
+        declared_stage_ids: ['direction_and_route_selection', 'baseline_and_evidence_setup'],
+        max_repair_rounds: 3,
+      },
+    },
+  };
+  const accepted = evaluateStageQualityAttemptRoute({
+    attempt: reviewerAttempt,
+    routeImpact: compacted.route_impact,
+  });
+  assert.equal(accepted.decision?.target_stage_id, 'baseline_and_evidence_setup');
+  assert.deepEqual(accepted.decision_rejection_reasons, []);
+
+  const closeoutWithUnknownField = structuredClone(closeout);
+  (closeoutWithUnknownField.route_impact.stage_route_decision as Record<string, unknown>).unexpected = true;
+  const compactedWithUnknownField = compactCloseoutPacketForTemporalResult(closeoutWithUnknownField);
+  assert.ok(compactedWithUnknownField);
+  const rejected = evaluateStageQualityAttemptRoute({
+    attempt: reviewerAttempt,
+    routeImpact: compactedWithUnknownField.route_impact,
+  });
+  assert.equal(rejected.decision, null);
+  assert.ok(rejected.decision_rejection_reasons.includes(
+    'route_selection_contains_unsupported_fields',
+  ));
 });
