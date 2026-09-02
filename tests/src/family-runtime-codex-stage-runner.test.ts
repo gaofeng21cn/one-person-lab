@@ -407,6 +407,60 @@ exit 64
   }
 });
 
+test('Codex stage runner blocks a non-zero empty process exit instead of projecting no-output progress', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  echo "failed to parse model catalog" >&2
+  exit 2
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_nonzero_empty_runner_test',
+        stage_run_id: 'sr_nonzero_empty_runner_test',
+        attempt_role: 'reviewer',
+        domain_id: 'med-autoscience',
+        stage_id: 'analysis-campaign',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:nonzero-empty'],
+      },
+      stagePacketRef: 'packet:nonzero-empty',
+      runnerMode: 'codex_cli',
+      observedAt: '2026-09-02T00:00:00.000Z',
+      timeoutMs: 10_000,
+      env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+      },
+    });
+
+    assert.equal(receipt.runner_status.exit_code, 2);
+    assert.equal(receipt.process_output_summary?.blocked_reason, 'codex_cli_executor_unavailable');
+    assert.equal(receipt.process_output_summary?.raw_stage_artifact, undefined);
+    assert.equal(
+      receipt.closeout_packet?.route_impact?.provider_blocker_reason,
+      'codex_cli_executor_unavailable',
+    );
+    assert.equal(receipt.closeout_packet?.route_impact?.runner_exit_code, 2);
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'opl://stage-attempts/sat_nonzero_empty_runner_test/runtime-blockers/codex_cli_executor_unavailable',
+    ]);
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner passes stage executor policy to live Codex CLI', async () => {
   const capturePath = path.join(os.tmpdir(), `opl-codex-stage-runner-policy-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`

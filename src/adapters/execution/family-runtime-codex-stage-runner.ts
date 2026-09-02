@@ -759,6 +759,8 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       ? 'codex_cli_unsupported_function_call'
       : result.timeoutReason === 'activity_cancelled'
         ? 'codex_cli_activity_cancelled'
+        : result.exitCode !== 0
+          ? 'codex_cli_executor_unavailable'
           : null;
   if (!closeoutPacket && rawStageArtifact) {
     closeoutPacket = buildRawArtifactProgressCloseoutPacket({
@@ -777,6 +779,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       stagePacketRef: stagePacketTransportRef,
       blockedReason: primaryBlockedReason,
       routeImpact: {
+        runner_exit_code: result.exitCode,
         runner_timeout_reason: result.timeoutReason ?? null,
         pending_function_call_count: result.unsupportedFunctionCalls?.length ?? null,
         function_call_names: [...new Set((result.unsupportedFunctionCalls ?? []).map((call) => call.name))],
