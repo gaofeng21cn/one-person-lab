@@ -2056,10 +2056,13 @@ export async function stageQualityCycleProjectActivity(
       });
       return projectTemporalStageRunQualityCycle(db, input.state);
     });
-    recordStageRunClosed(db, {
-      stageRunId: input.stage_run.stage_run_id,
-      terminalStatus: input.state.status,
-    });
+    const launch = findStageRunLaunch(db, input.stage_run.stage_run_id);
+    if (launch?.launch_status !== 'closed') {
+      recordStageRunClosed(db, {
+        stageRunId: input.stage_run.stage_run_id,
+        terminalStatus: input.state.status,
+      });
+    }
     return projected;
   } finally {
     db.close();

@@ -60,6 +60,12 @@ import {
   workerClose,
   waitForBarrierCount,
 } from './shared.ts';
+import {
+  stageQualityCycleProjectActivity,
+} from '../../../src/adapters/execution/family-runtime-temporal-activities.ts';
+import type {
+  TemporalStageRunWorkflowState,
+} from '../../../src/adapters/execution/family-runtime-temporal.ts';
 
 function recoveryWorkflowInput(input: ReturnType<typeof stageRunInput>, recoveryId = 'recovery:closeout') {
   const artifactHash = `sha256:${'a'.repeat(64)}`;
@@ -305,6 +311,94 @@ test('closed StageRun claims and records one immutable recovery Run idempotently
     });
   } finally {
     db.close();
+  }
+});
+
+test('closed StageRun recovery projects quality state without changing its terminal status', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-closed-projection-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  const input = stageRunInput({ invocationId: 'sri_closed_quality_projection' });
+  try {
+    const { db } = openQueueDb();
+    try {
+      registerStageRunLaunch(db, input, {
+        scopeKind: input.scope_kind,
+        executionScope: input.execution_scope,
+      });
+      recordStageRunTemporalStart(db, {
+        stageRunId: input.stage_run_id,
+        temporalStartReceipt: temporalStartReceipt(input, 'COMPLETED'),
+      });
+      recordStageRunClosed(db, {
+        stageRunId: input.stage_run_id,
+        terminalStatus: 'completed_with_quality_debt',
+      });
+    } finally {
+      db.close();
+    }
+
+    const now = '2026-09-02T00:00:00.000Z';
+    const state: TemporalStageRunWorkflowState = {
+      surface_kind: 'temporal_stage_run_query',
+      provider_kind: 'temporal',
+      stage_run_id: input.stage_run_id,
+      workflow_id: input.workflow_id,
+      scope_kind: input.scope_kind,
+      execution_scope: input.execution_scope,
+      quality_cycle_id: `quality-cycle:${input.stage_run_id}`,
+      domain_id: input.domain_id,
+      stage_id: input.stage_id,
+      status: 'completed',
+      current_role: null,
+      repair_rounds_used: 0,
+      max_repair_rounds: input.quality_policy.formal_review.max_repair_rounds,
+      attempts: [],
+      findings: [],
+      repair_map: [],
+      finding_closures: [],
+      review_receipts: [],
+      artifact_refs: [...(input.artifact_refs ?? [])],
+      artifact_hashes: [...(input.artifact_hashes ?? [])],
+      artifact_identity_receipt_refs: [...(input.artifact_identity_receipt_refs ?? [])],
+      quality_debt_refs: [],
+      route_quality_debt_refs: [],
+      decisive_attempt_role: null,
+      decisive_attempt_ref: null,
+      selected_stage_route: null,
+      route_evidence_refs: [],
+      route_recommendations: [],
+      next_stage_run_launch: null,
+      blocked_reason: null,
+      hard_stop_class: null,
+      typed_blocker_refs: [],
+      human_gate_refs: [],
+      source_attempt_ref: null,
+      sqlite_projection: { status: 'pending', error: null },
+      started_at: now,
+      updated_at: now,
+      authority_boundary: {
+        opl: 'durable_quality_loop_orchestration_and_refs_transport_only',
+        domain: 'review_findings_repair_artifact_and_quality_verdict_owner',
+        provider_completion_is_domain_ready: false,
+      },
+    };
+
+    const projection = await stageQualityCycleProjectActivity({ stage_run: input, state });
+    assert.equal((projection.state as any).controller_readback.controller_status, 'completed');
+
+    const { db: readbackDb } = openQueueDb();
+    try {
+      const launch = inspectStageRunLaunch(readbackDb, input.stage_run_id);
+      assert.equal(launch.launch_status, 'closed');
+      assert.equal(launch.terminal_status, 'completed_with_quality_debt');
+    } finally {
+      readbackDb.close();
+    }
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
