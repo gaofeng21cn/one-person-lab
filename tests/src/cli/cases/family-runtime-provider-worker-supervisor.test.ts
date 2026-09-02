@@ -28,6 +28,7 @@ import {
   parseProviderWorkerLauncherRoot,
   rotateBoundedLog,
 } from '../../../../src/adapters/execution/family-runtime-provider-worker-launcher.ts';
+import { providerWorkerLauncherModulePath } from '../../../../src/adapters/execution/family-runtime-provider-worker-supervisor-state.ts';
 
 function runtimePaths(root: string) {
   return {
@@ -90,6 +91,8 @@ test('provider-worker supervisor launches the guarded worker and delegates log o
   try {
     const plist = buildProviderWorkerSupervisorPlist(runtimePaths(root), {});
     assert.match(plist, /family-runtime-provider-worker-launcher\.(?:ts|js)/);
+    assert.match(plist, new RegExp(providerWorkerLauncherModulePath().replaceAll('/', '\\/')));
+    assert.doesNotMatch(plist, /src\/modules\/runway\/family-runtime-provider-worker-launcher/);
     assert.match(plist, /--provider-worker-launcher/);
     assert.match(plist, /<integer>60<\/integer>/);
     assert.match(plist, /<key>ProcessType<\/key>\s*<string>Background<\/string>/);

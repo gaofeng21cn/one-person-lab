@@ -276,7 +276,11 @@ export function buildInternalCommandSpecs(
       runtimeSnapshotProvider,
       atlas: composition.services.atlas,
     }),
-    ...buildPrivateAgentCommandSpecs({ getCommandSpecs, refreshWorkspaceSkills }),
+    ...buildPrivateAgentCommandSpecs({
+      getCommandSpecs,
+      refreshWorkspaceSkills,
+      familyRuntime: composition.services.familyRuntime,
+    }),
     'status dashboard': {
       usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',
       summary: 'Aggregate the current OPL product-runtime view across projects, workspace, and runtime.',

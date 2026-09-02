@@ -329,6 +329,13 @@ function launchctl(
   return runTemporalServiceSupervisorLaunchctl(args, runtime);
 }
 
+function bootoutLoadedSupervisor(runtime: TemporalServiceSupervisorRuntime) {
+  return launchctl([
+    'bootout',
+    `${temporalServiceSupervisorLaunchctlTarget(runtime)}/${TEMPORAL_SERVICE_SUPERVISOR_LABEL}`,
+  ], runtime);
+}
+
 function rollbackInstall(input: {
   paths: RuntimePaths;
   runtime: TemporalServiceSupervisorRuntime;
@@ -338,11 +345,7 @@ function rollbackInstall(input: {
 }) {
   const plistPath = temporalServiceSupervisorPlistPath(input.runtime);
   const configPath = temporalServiceSupervisorConfigPath(input.paths);
-  const cleanupLaunchctl = launchctl([
-    'bootout',
-    temporalServiceSupervisorLaunchctlTarget(input.runtime),
-    plistPath,
-  ], input.runtime);
+  const cleanupLaunchctl = bootoutLoadedSupervisor(input.runtime);
   try {
     restoreFileSnapshot(plistPath, input.plistSnapshot);
     restoreFileSnapshot(configPath, input.configSnapshot);
@@ -475,11 +478,7 @@ async function installSupervisor(
 
     const installed = inspectTemporalServiceSupervisorState(paths, runtime);
     const cleanupLaunchctl = installed.loaded
-      ? launchctl([
-          'bootout',
-          temporalServiceSupervisorLaunchctlTarget(runtime),
-          temporalServiceSupervisorPlistPath(runtime),
-        ], runtime)
+      ? bootoutLoadedSupervisor(runtime)
       : null;
     if (cleanupLaunchctl && !cleanupLaunchctl.ok) {
       const blocked = {
@@ -559,11 +558,7 @@ async function installSupervisor(
   }
 
   if (before.loaded) {
-    const bootout = launchctl([
-      'bootout',
-      temporalServiceSupervisorLaunchctlTarget(runtime),
-      plistPath,
-    ], runtime);
+    const bootout = bootoutLoadedSupervisor(runtime);
     if (!bootout.ok) {
       const payload = basePayload({
         action: 'install',
@@ -684,11 +679,7 @@ async function removeSupervisor(
   }
   let result: TemporalServiceSupervisorLaunchctlResult | null = null;
   if (before.loaded) {
-    result = launchctl([
-      'bootout',
-      temporalServiceSupervisorLaunchctlTarget(runtime),
-      temporalServiceSupervisorPlistPath(runtime),
-    ], runtime);
+    result = bootoutLoadedSupervisor(runtime);
     if (!result.ok) {
       const payload = basePayload({
         action: 'remove',

@@ -146,6 +146,41 @@ test('managed checkout resolver uses one installed descriptor and configured nat
   }
 });
 
+test('managed checkout resolver accepts canonical GitHub source readback and uses the marketplace runtime root', async () => {
+  const { root, workspaceRoot, checkoutRoot } = fixture();
+  try {
+    const marketplaceRoot = path.join(root, 'marketplace');
+    const pluginRoot = path.join(marketplaceRoot, 'plugins', 'med-autoscience');
+    fs.mkdirSync(path.dirname(pluginRoot), { recursive: true });
+    fs.renameSync(checkoutRoot, pluginRoot);
+    fs.mkdirSync(path.join(marketplaceRoot, 'contracts'));
+    fs.copyFileSync(
+      path.join(pluginRoot, 'contracts', 'domain_descriptor.json'),
+      path.join(marketplaceRoot, 'contracts', 'domain_descriptor.json'),
+    );
+    fs.writeFileSync(path.join(marketplaceRoot, '.codex-marketplace-install.json'), `${JSON.stringify({
+      source_type: 'git',
+      source: 'https://github.com/gaofeng21cn/med-autoscience.git',
+    })}\n`);
+    const packageStatus = status(pluginRoot);
+    (packageStatus.configured_carrier as any).carrier.observed_sources[0].marketplace_source =
+      'https://github.com/gaofeng21cn/med-autoscience.git';
+
+    const result = await resolveStandardAgentManagedCheckout({
+      domainId: 'mas',
+      workspaceRoot,
+      packageReadiness: packageReadiness(packageStatus),
+    });
+
+    assert.equal(result.native_runtime.marketplace_source, 'gaofeng21cn/med-autoscience');
+    assert.equal(result.native_runtime.carrier_plugin_source_path, fs.realpathSync(pluginRoot));
+    assert.equal(result.native_runtime.plugin_source_path, fs.realpathSync(marketplaceRoot));
+    assert.equal(result.checkout_root, fs.realpathSync(marketplaceRoot));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('managed checkout resolver accepts an exact owner SemVer carrier readback', async () => {
   const { root, workspaceRoot, checkoutRoot } = fixture();
   try {

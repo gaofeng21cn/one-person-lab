@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
-import { fileURLToPath } from 'node:url';
 
 import { resolveCodexBinary } from './codex.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
@@ -19,6 +18,7 @@ import {
   inspectProviderWorkerSupervisorState,
   legacyProviderSloWatchdogPlistPath,
   LEGACY_PROVIDER_SLO_WATCHDOG_LABEL,
+  providerWorkerLauncherModulePath,
   providerWorkerSupervisorLaunchctlTarget,
   providerWorkerSupervisorPlistPath,
   PROVIDER_WORKER_SUPERVISOR_LABEL,
@@ -180,12 +180,6 @@ function providerSloTriggerCommandForDisplay() {
   return ['opl', 'family-runtime', 'provider-slo', 'tick', '--provider', 'temporal'];
 }
 
-function providerWorkerLauncherModulePath() {
-  const currentModulePath = fileURLToPath(import.meta.url);
-  const extension = path.extname(currentModulePath) || '.js';
-  return path.join(path.dirname(currentModulePath), `family-runtime-provider-worker-launcher${extension}`);
-}
-
 function workerSupervisorProgramArguments(paths: RuntimePaths) {
   const launcherModulePath = providerWorkerLauncherModulePath();
   return [
@@ -290,6 +284,15 @@ function persistedOwnerGateProjection(pathToPlist: string) {
   return providerWorkerFoundryOwnerGateEnvironment(
     persistedOwnerGateEnvironment(pathToPlist),
   ).projection;
+}
+
+function installationEnvironment(pathToPlist: string) {
+  const persistedNamespace = persistedTemporalNamespace(pathToPlist);
+  return {
+    ...persistedOwnerGateEnvironment(pathToPlist),
+    ...(persistedNamespace ? { [TEMPORAL_NAMESPACE]: persistedNamespace } : {}),
+    ...process.env,
+  };
 }
 
 function redactOwnerGateEnvironmentText(value: string) {
@@ -478,7 +481,9 @@ export async function runProviderWorkerSupervisorCommand(
       action: input.action,
       status: !inspection.plist_exists
         ? 'not_installed'
-        : inspection.launchctl_loaded ? 'installed' : 'installed_not_loaded',
+        : !inspection.configuration_current
+          ? 'configuration_drift'
+          : inspection.launchctl_loaded ? 'installed' : 'installed_not_loaded',
       launchctl: inspection.launchctl,
       supervisorState: inspection,
       foundryOwnerGate: persistedOwnerGateProjection(inspection.plist_path),
@@ -487,21 +492,47 @@ export async function runProviderWorkerSupervisorCommand(
 
   if (input.action === 'install') {
     const pathToPlist = providerWorkerSupervisorPlistPath();
-    const plist = buildProviderWorkerSupervisorPlist(paths);
+    const before = inspectProviderWorkerSupervisorState(paths);
+    const plist = buildProviderWorkerSupervisorPlist(paths, installationEnvironment(pathToPlist));
     fs.mkdirSync(path.dirname(pathToPlist), { recursive: true });
     const legacyWatchdog = removeLegacyWatchdog();
+    if (before.launchctl_loaded) {
+      const bootout = runProviderWorkerSupervisorLaunchctl([
+        'bootout',
+        `${providerWorkerSupervisorLaunchctlTarget()}/${PROVIDER_WORKER_SUPERVISOR_LABEL}`,
+      ]);
+      if (!bootout.ok) {
+        const payload = basePayload({
+          paths,
+          action: input.action,
+          status: 'blocked_existing_job_bootout_failed',
+          launchctl: bootout,
+          legacyWatchdog,
+          supervisorState: inspectProviderWorkerSupervisorState(paths),
+        });
+        insertEvent(db, {
+          eventType: 'temporal_provider_worker_supervisor_install',
+          source: 'opl-cli',
+          payload,
+        });
+        return payload;
+      }
+    }
     fs.writeFileSync(pathToPlist, plist);
     const launchctl = runProviderWorkerSupervisorLaunchctl([
       'bootstrap',
       providerWorkerSupervisorLaunchctlTarget(),
       pathToPlist,
     ]);
+    const supervisorState = inspectProviderWorkerSupervisorState(paths);
     const payload = basePayload({
       paths,
       action: input.action,
-      status: launchctl.ok ? 'installed' : 'blocked',
+      status: launchctl.ok && supervisorState.configuration_current ? 'installed' : 'blocked',
       launchctl,
       legacyWatchdog,
+      supervisorState,
+      foundryOwnerGate: persistedOwnerGateProjection(pathToPlist),
     });
     insertEvent(db, {
       eventType: 'temporal_provider_worker_supervisor_install',
@@ -513,11 +544,11 @@ export async function runProviderWorkerSupervisorCommand(
 
   if (input.action === 'remove') {
     const pathToPlist = providerWorkerSupervisorPlistPath();
-    const launchctl = fs.existsSync(pathToPlist)
+    const before = inspectProviderWorkerSupervisorState(paths);
+    const launchctl = before.launchctl_loaded
       ? runProviderWorkerSupervisorLaunchctl([
           'bootout',
-          providerWorkerSupervisorLaunchctlTarget(),
-          pathToPlist,
+          `${providerWorkerSupervisorLaunchctlTarget()}/${PROVIDER_WORKER_SUPERVISOR_LABEL}`,
         ])
       : null;
     fs.rmSync(pathToPlist, { force: true });

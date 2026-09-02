@@ -5,17 +5,20 @@ import {
 } from '../../../../adapters/execution/standard-agent-action-runtime.ts';
 import { resolveStandardAgentManagedCheckout } from '../../../../adapters/execution/standard-agent-managed-checkout.ts';
 import type { WorkspaceSkillProjectionRefresher } from '../../../../authority/workspace/index.ts';
+import type { CordisBaseHeadlessComposition } from '../../../../host/composition-profiles.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 import { parseAgentsRunArgs } from './agents-run.ts';
 
 type PrivateAgentCommandSpecsOptions = {
   getCommandSpecs: () => Record<string, CommandSpec>;
   refreshWorkspaceSkills: WorkspaceSkillProjectionRefresher;
+  familyRuntime: CordisBaseHeadlessComposition['services']['familyRuntime'];
 };
 
 export function buildPrivateAgentCommandSpecs({
   getCommandSpecs,
   refreshWorkspaceSkills,
+  familyRuntime,
 }: PrivateAgentCommandSpecsOptions): Record<string, CommandSpec> {
   return {
     'agents run': {
@@ -28,6 +31,7 @@ export function buildPrivateAgentCommandSpecs({
       handler: (args) => {
         const input = parseAgentsRunArgs(args, getCommandSpecs()['agents run']);
         const dependencies = {
+          runStageRuntime: familyRuntime,
           resolveManagedCheckout: (
             checkoutInput: Parameters<typeof resolveStandardAgentManagedCheckout>[0],
           ) => resolveStandardAgentManagedCheckout({

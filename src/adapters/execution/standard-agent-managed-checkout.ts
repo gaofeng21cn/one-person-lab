@@ -5,6 +5,7 @@ import path from 'node:path';
 import { requireAgentPackageReadinessPort } from '../../kernel/agent-package-readiness-port.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { sameMarketplaceSource } from '../../kernel/marketplace-source-identity.ts';
 import {
   resolveStandardAgent,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
@@ -91,6 +92,31 @@ function runtimeRootContainsDescriptor(root: string, descriptorRef: string) {
   }
 }
 
+function gitMarketplaceRuntimeRoot(
+  pluginSourcePath: string,
+  marketplaceSource: string,
+  descriptorRef: string,
+) {
+  let candidate = path.dirname(pluginSourcePath);
+  while (candidate !== path.dirname(candidate)) {
+    const markerPath = path.join(candidate, '.codex-marketplace-install.json');
+    try {
+      const stat = fs.lstatSync(markerPath);
+      const marker = parseJsonText(fs.readFileSync(markerPath, 'utf8'));
+      if (!stat.isFile() || stat.isSymbolicLink() || !isRecord(marker)) return null;
+      const source = typeof marker.source === 'string' ? marker.source.trim() : '';
+      return source
+        && sameMarketplaceSource(source, marketplaceSource)
+        && runtimeRootContainsDescriptor(candidate, descriptorRef)
+        ? candidate
+        : null;
+    } catch {
+      candidate = path.dirname(candidate);
+    }
+  }
+  return null;
+}
+
 function marketplaceMatches(
   observed: string,
   declared: string,
@@ -99,6 +125,7 @@ function marketplaceMatches(
 ) {
   if (observed === declared) return true;
   if (path.isAbsolute(observed) && path.isAbsolute(declared)) return pathsMatch(observed, declared);
+  if (sameMarketplaceSource(observed, declared)) return true;
   const policyMatches = sourcePolicy?.desired_source_kind === 'developer_checkout_override'
     && sourcePolicy.developer_checkout_available === true
     && typeof sourcePolicy.developer_checkout_path === 'string'
@@ -299,16 +326,32 @@ function nativeRuntimeFromStatus(
     ? realDirectory(sourcePolicy.developer_checkout_path, 'source_policy.developer_checkout_path')
     : null;
   const localCarrierMarketplace = installedCarrierKind === 'local'
+    && path.isAbsolute(observedMarketplaceSource)
     ? realDirectory(observedMarketplaceSource, 'configured_carrier.carrier.observed_sources[0].marketplace_source')
     : null;
-  const runtimeCheckoutRoot = [policyRuntimeCheckout, localCarrierMarketplace, pluginSourcePath]
+  const gitCarrierMarketplace = gitMarketplaceRuntimeRoot(
+    pluginSourcePath,
+    observedMarketplaceSource,
+    descriptor.domain_descriptor_ref,
+  );
+  const runtimeCheckoutRoot = [
+    policyRuntimeCheckout,
+    localCarrierMarketplace,
+    gitCarrierMarketplace,
+    pluginSourcePath,
+  ]
     .filter((candidate): candidate is string => Boolean(candidate))
     .find((candidate) => runtimeRootContainsDescriptor(candidate, descriptor.domain_descriptor_ref));
   if (!runtimeCheckoutRoot) {
     blocked('Standard Agent native carrier does not expose a complete runtime checkout.', {
       package_id: packageId,
       domain_descriptor_ref: descriptor.domain_descriptor_ref,
-      runtime_checkout_candidates: [policyRuntimeCheckout, localCarrierMarketplace, pluginSourcePath]
+      runtime_checkout_candidates: [
+        policyRuntimeCheckout,
+        localCarrierMarketplace,
+        gitCarrierMarketplace,
+        pluginSourcePath,
+      ]
         .filter((candidate): candidate is string => Boolean(candidate)),
     });
   }

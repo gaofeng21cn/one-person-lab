@@ -32,12 +32,20 @@ function supervisorState(paths: { root: string }, installed = true) {
     plist_exists: installed,
     launchctl_loaded: installed,
     launchctl: null,
+    configuration_current: installed,
+    configuration_checks: {
+      plist_root_current: installed,
+      plist_launcher_current: installed,
+      loaded_root_current: true,
+      loaded_launcher_current: true,
+    },
     keep_alive: true,
     run_at_load: true,
     throttle_interval_seconds: 15,
     resident_worker_process: true,
     supervises_family_runtime_root: installed,
     family_runtime_root: paths.root,
+    launcher_module_path: '/tmp/family-runtime-provider-worker-launcher.ts',
     root_match_source: installed ? 'plist' : null,
   };
 }

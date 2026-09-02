@@ -229,6 +229,14 @@ function integerField(text: string, field: string) {
   return Number.parseInt(value, 10);
 }
 
+function pathsMatch(left: string, right: string) {
+  try {
+    return fs.realpathSync(left) === fs.realpathSync(right);
+  } catch {
+    return path.resolve(left) === path.resolve(right);
+  }
+}
+
 export function inspectTemporalServiceSupervisorState(
   paths: RuntimePaths,
   runtime: TemporalServiceSupervisorStateRuntime = {},
@@ -246,6 +254,7 @@ export function inspectTemporalServiceSupervisorState(
       ], runtime)
     : null;
   const processState = launchctl?.ok ? launchctlField(launchctl.stdout, 'state') : null;
+  const loadedJobPath = launchctl?.ok ? launchctlField(launchctl.stdout, 'path') : null;
   const pid = launchctl?.ok ? integerField(launchctl.stdout, 'pid') : null;
   const lastExitStatus = launchctl?.ok ? integerField(launchctl.stdout, 'last exit code') : null;
   const lastExitSignal = launchctl?.ok ? integerField(launchctl.stdout, 'last terminating signal') : null;
@@ -271,6 +280,8 @@ export function inspectTemporalServiceSupervisorState(
     launcher_sha256_current: launcherSignatureCurrent,
     launcher_executable_current: config ? launcherExecutableCurrent(config) : false,
     plist_sha256_current: Boolean(config && fileSha256(plistPath) === config.plist_sha256),
+    loaded_job_path_current: !launchctl?.ok
+      || Boolean(loadedJobPath && pathsMatch(loadedJobPath, plistPath)),
   };
   const configurationCurrent = Object.values(configurationChecks).every(Boolean);
   const launchdError = platform !== 'darwin'
@@ -315,6 +326,7 @@ export function inspectTemporalServiceSupervisorState(
     configuration_checks: configurationChecks,
     launchctl_loaded: launchctl?.ok ?? false,
     launchctl,
+    loaded_job_path: loadedJobPath,
     process_state: processState,
     pid,
     last_exit_status: lastExitStatus,

@@ -90,6 +90,7 @@ function createFakeLaunchctl(options: {
   monotonicNowMs?: () => number;
 } = {}) {
   let loaded = false;
+  let loadedPlistPath: string | null = null;
   let bootstrapCount = 0;
   let pid = 4242;
   let kickstartReadyAtMs: number | null = null;
@@ -115,23 +116,28 @@ function createFakeLaunchctl(options: {
       settleKickstart();
       return kickstartReadyAtMs !== null;
     },
+    setLoadedPlistPath(value: string) {
+      loadedPlistPath = value;
+    },
     run(args: string[]) {
       calls.push(args);
       if (args[0] === 'print') {
         settleKickstart();
         return loaded
           ? kickstartReadyAtMs === null
-            ? launchctlResult(args, true, `state = running\npid = ${pid}\nlast exit code = 0\n`)
-            : launchctlResult(args, true, 'state = waiting\nlast exit code = 0\n')
+            ? launchctlResult(args, true, `path = ${loadedPlistPath}\nstate = running\npid = ${pid}\nlast exit code = 0\n`)
+            : launchctlResult(args, true, `path = ${loadedPlistPath}\nstate = waiting\nlast exit code = 0\n`)
           : launchctlResult(args, false, '', 'Could not find service');
       }
       if (args[0] === 'bootstrap') {
         bootstrapCount += 1;
         loaded = true;
+        loadedPlistPath = args[2] ?? null;
         return launchctlResult(args, true);
       }
       if (args[0] === 'bootout') {
         loaded = false;
+        loadedPlistPath = null;
         return launchctlResult(args, true);
       }
       if (args[0] === 'kickstart') {
@@ -437,6 +443,16 @@ test('Temporal service supervisor installs an idempotent direct-executable launc
     assert.equal(restored.supervisor.configuration_current, true);
     assert.equal(restored.supervisor.ready, true);
 
+    fakeLaunchctl.setLoadedPlistPath('/private/tmp/opl-evidence/temporal-service.plist');
+    const loadedJobDrifted = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'status', runtime);
+    assert.equal(loadedJobDrifted.supervisor.configuration_current, false);
+    assert.equal(loadedJobDrifted.supervisor.configuration_checks.loaded_job_path_current, false);
+    assert.equal(loadedJobDrifted.supervisor.error, 'temporal_service_supervisor_configuration_drift');
+    const reloaded = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'install', runtime);
+    assert.equal(reloaded.status, 'ready');
+    assert.equal(reloaded.supervisor.configuration_checks.loaded_job_path_current, true);
+    assert.equal(fakeLaunchctl.bootstrapCount, 2);
+
     fs.rmSync(plistPath);
     const missingPlist = await inspectTemporalServiceLifecycle(fixture.paths, runtime);
     assert.equal(missingPlist.supervisor.installed, false);
@@ -448,7 +464,7 @@ test('Temporal service supervisor installs an idempotent direct-executable launc
     );
     const reinstalled = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'install', runtime);
     assert.equal(reinstalled.status, 'ready');
-    assert.equal(fakeLaunchctl.bootstrapCount, 2);
+    assert.equal(fakeLaunchctl.bootstrapCount, 3);
 
     const triggered = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'trigger', runtime);
     assert.equal(triggered.status, 'ready');
