@@ -331,6 +331,12 @@ function exactStringArray(value: unknown, input: {
   return value.map((entry) => (entry as string).trim());
 }
 
+function canonicalArtifactHash(value: string) {
+  const normalized = value.trim();
+  const match = normalized.match(/^(?:sha256:)?([a-f0-9]{64})$/i);
+  return match ? `sha256:${match[1]!.toLowerCase()}` : normalized;
+}
+
 function persistedAttemptOutputArtifactIdentity(
   db: DatabaseSync,
   attempt: Record<string, unknown>,
@@ -348,7 +354,7 @@ function persistedAttemptOutputArtifactIdentity(
   const artifactHashes = exactStringArray(envelope.artifact_hashes, {
     stageAttemptId,
     field: 'route_impact_json.stage_quality_cycle.artifact_hashes',
-  });
+  }).map(canonicalArtifactHash);
   if (artifactRefs.length !== artifactHashes.length) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -391,7 +397,8 @@ function persistedAttemptOutputArtifactIdentity(
     const entry = metadata.map(recordValue).find((candidate) => (
       candidate
       && (candidate.ref === artifactRef || candidate.uri === artifactRef)
-      && candidate.sha256 === artifactHashes[index]
+      && typeof candidate.sha256 === 'string'
+      && canonicalArtifactHash(candidate.sha256) === artifactHashes[index]
     ));
     const receiptRef = entry?.artifact_identity_receipt_ref;
     if (typeof receiptRef !== 'string' || !receiptRef.trim()) {

@@ -101,6 +101,8 @@ import { materializeReviewerInputSnapshot } from './family-runtime-reviewer-inpu
 import { persistReviewEvidenceArtifactCandidate } from './family-runtime-review-evidence-artifact.ts';
 import { preflightFamilyRuntimeDomainLifecycleAdmission } from './family-runtime-domain-lifecycle-admission.ts';
 import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
+import { projectRecoveredStageRunQuery } from './family-runtime-stage-run-query-projection.ts';
+import { recoverStageRunCloseoutProjection } from './family-runtime-stage-run-closeout-recovery.ts';
 function parsedRuntimeRecord(value: unknown) {
   if (typeof value !== 'string' || !value.trim()) return null;
   try {
@@ -489,7 +491,22 @@ export async function runFamilyRuntime(
             workflowId: parsed.workflowId,
             paths,
           });
-      return { version: 'g2', family_runtime_stage_run_query: stage_run_query };
+      const projectedStageRunQuery = isRecord(stage_run_query)
+        ? projectRecoveredStageRunQuery(db, stage_run_query)
+        : stage_run_query;
+      return { version: 'g2', family_runtime_stage_run_query: projectedStageRunQuery };
+    }
+    if (parsed.mode === 'stage_run_recover_closeout') {
+      const recovery = recoverStageRunCloseoutProjection(db, {
+        stageRunId: parsed.stageRunId,
+        stageAttemptId: parsed.stageAttemptId,
+      });
+      insertEvent(db, {
+        eventType: 'stage_run_closeout_recovered',
+        source: 'opl-cli',
+        payload: recovery,
+      });
+      return { version: 'g2', family_runtime_stage_run_closeout_recovery: recovery };
     }
     if (parsed.mode === 'status') {
       return await buildFamilyRuntimeStatusPayload(

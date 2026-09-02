@@ -23,6 +23,7 @@ import {
   nowIso,
   stringifyBoundedStageAttemptJson,
 } from './shared.ts';
+import { canonicalJsonText } from '../../../kernel/canonical-json.ts';
 import { inspectStageAttempt } from './inspect.ts';
 import {
   reconcileDomainRouteTerminalTaskForAttempt,
@@ -97,7 +98,14 @@ function attemptAlreadyAbsorbedCloseout(
       ? attempt.closeout_refs.filter((entry): entry is string => typeof entry === 'string')
       : [],
   );
-  return packet.closeout_refs.every((ref) => existingCloseoutRefs.has(ref));
+  if (!packet.closeout_refs.every((ref) => existingCloseoutRefs.has(ref))) {
+    return false;
+  }
+  // A prior closeout may contain the same artifact refs while still carrying
+  // an incomplete route-quality projection. Treat that case as absorbable
+  // only after the normalized route impact is also identical.
+  const normalizedRouteImpact = normalizeRouteImpact(packet, attempt.route_impact, attempt);
+  return canonicalJsonText(normalizedRouteImpact) === canonicalJsonText(attempt.route_impact);
 }
 
 function closeoutReceiptStatusForPacket(packet: TypedStageCloseoutPacket) {

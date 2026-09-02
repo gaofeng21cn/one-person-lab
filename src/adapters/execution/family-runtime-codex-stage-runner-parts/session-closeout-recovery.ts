@@ -15,6 +15,58 @@ import {
 const MAX_CLOSEOUT_SUFFIX_MESSAGES = 64;
 const MAX_CLOSEOUT_SUFFIX_CHARS = 128 * 1024;
 
+function topLevelArtifactIdentity(candidate: JsonRecord) {
+  const entries = Array.isArray(candidate.artifact_refs) ? candidate.artifact_refs : [];
+  const refs = entries.map((entry) => {
+    if (typeof entry === 'string' && entry.trim()) return entry.trim();
+    if (!isRecord(entry)) return null;
+    return typeof entry.ref === 'string' && entry.ref.trim()
+      ? entry.ref.trim()
+      : typeof entry.uri === 'string' && entry.uri.trim()
+        ? entry.uri.trim()
+        : null;
+  });
+  if (refs.length === 0 || refs.some((ref) => !ref)) return null;
+  const explicitHashes = Array.isArray(candidate.artifact_hashes)
+    ? candidate.artifact_hashes
+    : [];
+  const entryHashes = entries.map((entry) => (
+    isRecord(entry) && typeof entry.sha256 === 'string' && entry.sha256.trim()
+      ? entry.sha256.trim()
+      : null
+  ));
+  const hashes = (explicitHashes.length > 0 ? explicitHashes : entryHashes)
+    .map((hash) => typeof hash === 'string' && hash.trim() ? hash.trim() : null);
+  if (hashes.length !== refs.length || hashes.some((hash) => !hash)) return null;
+  return {
+    artifact_refs: refs as string[],
+    artifact_hashes: hashes as string[],
+  };
+}
+
+export function normalizeCodexTransportCloseoutCandidate(candidate: JsonRecord): JsonRecord {
+  const routeImpact = isRecord(candidate.route_impact) ? candidate.route_impact : null;
+  const artifactIdentity = topLevelArtifactIdentity(candidate);
+  if (!routeImpact && !artifactIdentity) return candidate;
+  const stageQualityCycle = routeImpact && isRecord(routeImpact.stage_quality_cycle)
+    ? routeImpact.stage_quality_cycle
+    : {};
+  return {
+    ...candidate,
+    route_impact: {
+      ...(routeImpact ?? {}),
+      ...(artifactIdentity
+        ? {
+            stage_quality_cycle: {
+              ...stageQualityCycle,
+              ...artifactIdentity,
+            },
+          }
+        : {}),
+    },
+  };
+}
+
 function parseJsonRecordEndingAtCodexMessage(messages: string[], endIndex: number): JsonRecord | null {
   let suffix = '';
   for (
