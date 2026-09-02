@@ -71,8 +71,12 @@ export type { CodexStageRunnerInput } from './family-runtime-codex-stage-runner.
 export type { AgentExecutorRequestCompositionFactory } from './composition-factory-ports.ts';
 export {
   codexStageActivity,
+  domainHandlerDispatchActivity,
   schedulerTickActivity,
   stageQualityAttemptMaterializeActivity,
+  stageQualityAttemptSyncActivity,
+  stageQualityCycleProjectActivity,
+  stageQualityReviewReceiptActivity,
   stageRunRouteLaunchActivity,
 } from './family-runtime-temporal-activities.ts';
 export { buildFoundryTemporalActivities } from './foundry-temporal-activities.ts';
