@@ -79,6 +79,7 @@ export {
 export type {
   StageQualityRouteRecommendationRecord,
   StageRouteDecision,
+  StageRouteRecommendation,
 } from './stage-quality-route-selection.ts';
 export { STANDARD_PROGRESS_DELTA_POLICY } from './standard-progress-delta-policy.ts';
 export {
