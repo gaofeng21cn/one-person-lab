@@ -505,6 +505,14 @@ export async function runFamilyRuntime(
         stageRunId: parsed.stageRunId,
         stageAttemptId: parsed.stageAttemptId,
       }, {
+        retryTerminalRecovery: parsed.retryTerminalRecovery,
+        describeWorkflow: async (workflowInput) =>
+          options.stageRunRuntime?.describeWorkflow
+            ? await options.stageRunRuntime.describeWorkflow(workflowInput, { paths })
+            : await (await temporalProviderModule()).describeTemporalStageRunWorkflow(
+                workflowInput,
+                { paths },
+              ),
         startWorkflow: async (workflowInput) =>
           options.stageRunRuntime?.startRecoveryWorkflow
             ? await options.stageRunRuntime.startRecoveryWorkflow(workflowInput, { paths })

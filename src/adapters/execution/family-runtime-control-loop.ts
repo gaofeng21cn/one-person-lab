@@ -197,7 +197,7 @@ function workerRepairActionId(workerReadiness: Record<string, unknown> | null) {
   return stringValue(repairAction?.action_id);
 }
 
-function buildWorkerRestartGuardProjection(input: {
+async function buildWorkerRestartGuardProjection(input: {
   paths: FamilyRuntimePaths;
   workerReadiness: unknown;
   degradedReason: string | null;
@@ -340,7 +340,7 @@ export async function buildFamilyRuntimeControlLoopStatus(
     attemptTotal: attempts.total,
   });
   const schedulerStatus = typeof scheduler.status === 'string' ? scheduler.status : null;
-  const workerRestartGuard = buildWorkerRestartGuardProjection({
+  const workerRestartGuard = await buildWorkerRestartGuardProjection({
     paths,
     workerReadiness: selected.details.worker_readiness,
     degradedReason: selected.degraded_reason,

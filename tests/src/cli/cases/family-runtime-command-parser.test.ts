@@ -220,6 +220,56 @@ test('family-runtime registry parser reuses shared option walking without changi
   });
 });
 
+test('family-runtime StageRun closeout recovery requires an explicit terminal retry flag', () => {
+  assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
+    'stage-run',
+    'recover-closeout',
+    'sr_example',
+    '--attempt',
+    'sat_example',
+  ]), {
+    mode: 'stage_run_recover_closeout',
+    stageRunId: 'sr_example',
+    stageAttemptId: 'sat_example',
+    retryTerminalRecovery: false,
+  });
+
+  assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
+    'stage-run',
+    'recover-closeout',
+    'sr_example',
+    '--attempt',
+    'sat_example',
+    '--retry-terminal-recovery',
+  ]), {
+    mode: 'stage_run_recover_closeout',
+    stageRunId: 'sr_example',
+    stageAttemptId: 'sat_example',
+    retryTerminalRecovery: true,
+  });
+
+  assert.throws(
+    () => parseRegisteredFamilyRuntimeCommand([
+      'stage-run',
+      'recover-closeout',
+      'sr_example',
+      '--attempt',
+      'sat_example',
+      '--retry-any-recovery',
+    ]),
+    (error) => {
+      assert.equal(error instanceof FrameworkContractError, true);
+      const usageError = error as FrameworkContractError;
+      assert.equal(usageError.code, 'cli_usage_error');
+      assert.equal(
+        usageError.details?.usage,
+        'opl family-runtime stage-run recover-closeout <stage_run_id> --attempt <attempt_id> [--retry-terminal-recovery]',
+      );
+      return true;
+    },
+  );
+});
+
 test('family-runtime parser keeps command-specific unknown option payloads', () => {
   assert.throws(
     () => parseRegisteredFamilyRuntimeCommand(['queue', 'list']),

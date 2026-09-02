@@ -97,7 +97,12 @@ export type FamilyRuntimeCommandInput =
     input: Record<string, unknown>;
   }
   | { mode: 'stage_run_query'; workflowId: string }
-  | { mode: 'stage_run_recover_closeout'; stageRunId: string; stageAttemptId: string }
+  | {
+    mode: 'stage_run_recover_closeout';
+    stageRunId: string;
+    stageAttemptId: string;
+    retryTerminalRecovery: boolean;
+  }
   | {
     mode: 'stage_artifact';
     input: {

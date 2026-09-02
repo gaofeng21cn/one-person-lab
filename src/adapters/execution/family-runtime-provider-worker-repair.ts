@@ -1,5 +1,6 @@
 import { listStageAttempts } from './family-runtime-stage-attempt-ledger.ts';
 import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
+import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import {
   inspectProviderWorkerSupervisorState,
   supervisorOwnsFamilyRuntimeRoot,
@@ -27,9 +28,25 @@ export type TemporalWorkerRepairDeps = {
     paths: TemporalWorkerPaths;
     before: TemporalWorkerLifecycle;
   }) => WorkerRestartGuard | Promise<WorkerRestartGuard>;
+  queryTemporalStageAttemptReadModel?: QueryTemporalStageAttemptReadModel;
 };
 
 type StageAttemptPayload = ReturnType<typeof listStageAttempts>[number];
+type QueryTemporalStageAttemptReadModel = (
+  attempt: StageAttemptPayload,
+  options?: Parameters<typeof queryTemporalStageAttemptReadModel>[1],
+) => Promise<unknown>;
+type WorkerRestartAttemptObservation = {
+  stage_attempt_id: string;
+  workflow_id: string;
+  status: string;
+  domain_id: string;
+  stage_id: string;
+  task_id: string | null;
+  classification: 'active' | 'stale_terminal' | 'stale_absent' | 'unresolved';
+  workflow_status: string | null;
+  observation_reason: string;
+};
 
 export type WorkerRestartGuard = {
   surface_kind: 'temporal_worker_source_stale_restart_guard';
@@ -43,13 +60,11 @@ export type WorkerRestartGuard = {
   active_stage_attempt_statuses: string[];
   active_stage_attempts_by_status: Record<string, number>;
   active_stage_attempt_sample_limit: number;
-  active_stage_attempts: Array<{
-    stage_attempt_id: string;
-    status: string;
-    domain_id: string;
-    stage_id: string;
-    task_id: string | null;
-  }>;
+  active_stage_attempts: WorkerRestartAttemptObservation[];
+  stale_stage_attempt_count: number;
+  stale_stage_attempts: WorkerRestartAttemptObservation[];
+  unresolved_stage_attempt_count: number;
+  unresolved_stage_attempts: WorkerRestartAttemptObservation[];
   diagnostic_stage_attempt_count: number;
   diagnostic_stage_attempt_statuses: string[];
   diagnostic_stage_attempts_by_status: Record<string, number>;
@@ -102,9 +117,104 @@ function recordValue(value: unknown) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
+function temporalWorkflowStatus(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim().toUpperCase() : null;
+}
+
+function terminalTemporalWorkflowStatus(value: unknown) {
+  const status = temporalWorkflowStatus(value);
+  return status !== null && [
+    'COMPLETED',
+    'FAILED',
+    'CANCELED',
+    'CANCELLED',
+    'TERMINATED',
+    'TIMED_OUT',
+  ].includes(status);
+}
+
+function temporalWorkflowStatusIsRunning(value: unknown) {
+  const status = temporalWorkflowStatus(value);
+  return status === 'RUNNING' || Boolean(status?.endsWith('_RUNNING'));
+}
+
+function matchingWorkflowAbsenceEvidence(attempt: StageAttemptPayload) {
+  const blocker = recordValue(recordValue(attempt.provider_run)?.absence_repair_blocker);
+  return blocker?.surface_kind === 'opl_temporal_workflow_absence_repair_blocker'
+    && blocker.stage_attempt_id === attempt.stage_attempt_id
+    && blocker.workflow_id === attempt.workflow_id;
+}
+
+function restartAttemptSummary(attempt: StageAttemptPayload) {
+  return {
+    stage_attempt_id: attempt.stage_attempt_id,
+    workflow_id: attempt.workflow_id,
+    status: String(attempt.status),
+    domain_id: String(attempt.domain_id),
+    stage_id: String(attempt.stage_id),
+    task_id: typeof attempt.task_id === 'string' ? attempt.task_id : null,
+  };
+}
+
+async function observeRestartCandidate(
+  paths: TemporalWorkerPaths,
+  attempt: StageAttemptPayload,
+  query: QueryTemporalStageAttemptReadModel,
+): Promise<WorkerRestartAttemptObservation> {
+  const summary = restartAttemptSummary(attempt);
+  try {
+    const observation = recordValue(await query(attempt, { paths }));
+    const workflowStatus = temporalWorkflowStatus(observation?.workflow_status);
+    if (temporalWorkflowStatusIsRunning(workflowStatus)) {
+      return {
+        ...summary,
+        classification: 'active',
+        workflow_status: workflowStatus,
+        observation_reason: 'temporal_workflow_running',
+      };
+    }
+    if (terminalTemporalWorkflowStatus(workflowStatus)) {
+      return {
+        ...summary,
+        classification: 'stale_terminal',
+        workflow_status: workflowStatus,
+        observation_reason: 'temporal_workflow_terminal',
+      };
+    }
+    if (
+      observation?.reason === 'temporal_workflow_not_started_or_not_found'
+      && attempt.execution_session_ref === null
+      && matchingWorkflowAbsenceEvidence(attempt)
+    ) {
+      return {
+        ...summary,
+        classification: 'stale_absent',
+        workflow_status: null,
+        observation_reason: 'temporal_workflow_absent_with_matching_evidence',
+      };
+    }
+    return {
+      ...summary,
+      classification: 'unresolved',
+      workflow_status: workflowStatus,
+      observation_reason: typeof observation?.reason === 'string'
+        ? observation.reason
+        : 'temporal_workflow_observation_inconclusive',
+    };
+  } catch {
+    return {
+      ...summary,
+      classification: 'unresolved',
+      workflow_status: null,
+      observation_reason: 'temporal_workflow_observation_failed',
+    };
+  }
+}
+
 function buildWorkerRestartGuard(input: {
   before: TemporalWorkerLifecycle;
   attempts: StageAttemptPayload[];
+  restartAttemptObservations?: WorkerRestartAttemptObservation[];
   stageAttemptLedgerError?: unknown;
 }) {
   const workerMutationGuard = recordValue(input.before.worker_mutation_guard);
@@ -123,8 +233,13 @@ function buildWorkerRestartGuard(input: {
       stage_id: String(attempt.stage_id),
       task_id: typeof attempt.task_id === 'string' ? attempt.task_id : null,
     }));
-  const activeStageAttempts = diagnosticStageAttempts.filter((attempt) =>
-    WORKER_RESTART_BLOCKING_STAGE_ATTEMPT_STATUSES.has(attempt.status)
+  const restartAttemptObservations = input.restartAttemptObservations ?? [];
+  const activeStageAttempts = restartAttemptObservations.filter((attempt) => attempt.classification === 'active');
+  const staleStageAttempts = restartAttemptObservations.filter((attempt) =>
+    attempt.classification === 'stale_terminal' || attempt.classification === 'stale_absent'
+  );
+  const unresolvedStageAttempts = restartAttemptObservations.filter((attempt) =>
+    attempt.classification === 'unresolved'
   );
   const activeStageAttemptsByStatus = Object.fromEntries(
     [...new Set(activeStageAttempts.map((attempt) => attempt.status))].sort().map((status) => [
@@ -151,6 +266,9 @@ function buildWorkerRestartGuard(input: {
   if (activeStageAttempts.length > 0) {
     blockerIds.push('active_stage_attempts_present');
   }
+  if (unresolvedStageAttempts.length > 0) {
+    blockerIds.push('unresolved_stage_attempts_present');
+  }
   return {
     surface_kind: 'temporal_worker_source_stale_restart_guard',
     guard_status: blockerIds.length === 0 ? 'ready' : 'blocked',
@@ -168,6 +286,10 @@ function buildWorkerRestartGuard(input: {
     active_stage_attempts_by_status: activeStageAttemptsByStatus,
     active_stage_attempt_sample_limit: 20,
     active_stage_attempts: activeStageAttempts.slice(0, 20),
+    stale_stage_attempt_count: staleStageAttempts.length,
+    stale_stage_attempts: staleStageAttempts.slice(0, 20),
+    unresolved_stage_attempt_count: unresolvedStageAttempts.length,
+    unresolved_stage_attempts: unresolvedStageAttempts.slice(0, 20),
     diagnostic_stage_attempt_count: diagnosticStageAttempts.length,
     diagnostic_stage_attempt_statuses: Object.keys(diagnosticStageAttemptsByStatus),
     diagnostic_stage_attempts_by_status: diagnosticStageAttemptsByStatus,
@@ -176,7 +298,11 @@ function buildWorkerRestartGuard(input: {
   } satisfies WorkerRestartGuard;
 }
 
-function inspectWorkerRestartGuardFromState(paths: TemporalWorkerPaths, before: TemporalWorkerLifecycle) {
+async function inspectWorkerRestartGuardFromState(
+  paths: TemporalWorkerPaths,
+  before: TemporalWorkerLifecycle,
+  query: QueryTemporalStageAttemptReadModel = queryTemporalStageAttemptReadModel,
+) {
   const queueDb = 'queue_db' in paths && typeof paths.queue_db === 'string' ? paths.queue_db : null;
   if (!queueDb) {
     return buildWorkerRestartGuard({
@@ -188,7 +314,16 @@ function inspectWorkerRestartGuardFromState(paths: TemporalWorkerPaths, before: 
   let db: FamilyRuntimeSqliteDb | null = null;
   try {
     db = openFamilyRuntimeSqlite(queueDb);
-    return buildWorkerRestartGuard({ before, attempts: listStageAttempts(db) });
+    const attempts = listStageAttempts(db);
+    db.close();
+    db = null;
+    const restartCandidates = attempts.filter((attempt) =>
+      WORKER_RESTART_BLOCKING_STAGE_ATTEMPT_STATUSES.has(String(attempt.status))
+    );
+    const restartAttemptObservations = await Promise.all(
+      restartCandidates.map((attempt) => observeRestartCandidate(paths, attempt, query)),
+    );
+    return buildWorkerRestartGuard({ before, attempts, restartAttemptObservations });
   } catch (error) {
     return buildWorkerRestartGuard({ before, attempts: [], stageAttemptLedgerError: error });
   } finally {
@@ -276,7 +411,11 @@ export async function repairTemporalWorkerLifecycleForProvider(
       inspectProviderWorkerSupervisorState(supervisorPaths as Parameters<typeof inspectProviderWorkerSupervisorState>[0]));
   const inspectWorkerRestartGuard = input.deps?.inspectWorkerRestartGuard
     ?? ((guardInput: { paths: TemporalWorkerPaths; before: TemporalWorkerLifecycle }) =>
-      inspectWorkerRestartGuardFromState(guardInput.paths, guardInput.before));
+      inspectWorkerRestartGuardFromState(
+        guardInput.paths,
+        guardInput.before,
+        input.deps?.queryTemporalStageAttemptReadModel,
+      ));
   const before = await inspectTemporalWorkerLifecycle(paths);
   const repairActionId = workerRepairActionId(before);
   const restartReason = before.lifecycle_status === 'duplicate_worker'

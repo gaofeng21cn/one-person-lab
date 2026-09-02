@@ -263,6 +263,14 @@ test('family-runtime provider-slo blocks stale worker restart while active stage
     let mutations = 0;
     const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
       inspectTemporalWorkerLifecycle: async () => explicitDeveloperSupervisorStaleWorker(),
+      queryTemporalStageAttemptReadModel: async (candidate) => ({
+        surface_kind: 'temporal_stage_attempt_query_receipt',
+        provider_kind: 'temporal',
+        stage_attempt_id: candidate.stage_attempt_id,
+        workflow_id: candidate.workflow_id,
+        run_id: 'run-active',
+        workflow_status: 'RUNNING',
+      }),
       stopTemporalWorkerLifecycle: async () => { mutations += 1; throw new Error('stop should not run'); },
       startTemporalWorkerLifecycle: async () => { mutations += 1; throw new Error('start should not run'); },
     });
@@ -271,6 +279,103 @@ test('family-runtime provider-slo blocks stale worker restart while active stage
     assert.equal(receipt.repair_status, 'blocked');
     assert.deepEqual(receipt.blocker_ids, ['active_stage_attempts_present']);
     assert.equal(receipt.restart_guard?.active_stage_attempts[0]?.stage_attempt_id, attempt.stage_attempt_id);
+  } finally {
+    db?.close();
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime provider-slo ignores a stale running projection after Temporal proves it terminal', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-terminal-attempt-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  let db: DatabaseSync | null = null;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    db = initializeQueueDbForCurrentStateDir();
+    const attempt = createActiveStageAttempt(db);
+    let inspectCount = 0;
+    let stopCount = 0;
+    let startCount = 0;
+    const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
+      inspectTemporalWorkerLifecycle: async () => {
+        inspectCount += 1;
+        return inspectCount === 1 ? explicitDeveloperSupervisorStaleWorker() : temporalWorkerStatus('ready');
+      },
+      queryTemporalStageAttemptReadModel: async (candidate) => ({
+        surface_kind: 'temporal_stage_attempt_query_receipt',
+        provider_kind: 'temporal',
+        stage_attempt_id: candidate.stage_attempt_id,
+        workflow_id: candidate.workflow_id,
+        run_id: 'run-terminal',
+        workflow_status: 'COMPLETED',
+      }),
+      stopTemporalWorkerLifecycle: async () => {
+        stopCount += 1;
+        return {
+          surface_kind: 'temporal_worker_lifecycle_stop',
+          provider_kind: 'temporal',
+          stop_status: 'stopped',
+          stopped_pid: 12347,
+          stop_actions: [],
+          orphan_stopped_pids: [],
+          orphan_stop_incomplete_pids: [],
+          orphan_stop_actions: [],
+          before: explicitDeveloperSupervisorStaleWorker(),
+          status: temporalWorkerStatus('worker_not_ready'),
+        };
+      },
+      startTemporalWorkerLifecycle: async () => {
+        startCount += 1;
+        return temporalWorkerStartedLifecycle();
+      },
+      inspectProviderWorkerSupervisor: async (paths) => supervisorState(paths, false),
+    });
+
+    assert.equal(receipt.repair_status, 'executed');
+    assert.equal(stopCount, 1);
+    assert.equal(startCount, 1);
+    assert.equal(receipt.restart_guard?.active_stage_attempt_count, 0);
+    assert.equal(receipt.restart_guard?.stale_stage_attempt_count, 1);
+    assert.equal(receipt.restart_guard?.stale_stage_attempts[0]?.stage_attempt_id, attempt.stage_attempt_id);
+    assert.equal(receipt.restart_guard?.stale_stage_attempts[0]?.classification, 'stale_terminal');
+  } finally {
+    db?.close();
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime provider-slo keeps inconclusive Temporal observations blocked', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-slo-unresolved-attempt-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  let db: DatabaseSync | null = null;
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    db = initializeQueueDbForCurrentStateDir();
+    const attempt = createActiveStageAttempt(db);
+    let mutations = 0;
+    const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
+      inspectTemporalWorkerLifecycle: async () => explicitDeveloperSupervisorStaleWorker(),
+      queryTemporalStageAttemptReadModel: async (candidate) => ({
+        surface_kind: 'temporal_stage_attempt_query_unavailable',
+        provider_kind: 'temporal',
+        stage_attempt_id: candidate.stage_attempt_id,
+        workflow_id: candidate.workflow_id,
+        status: 'unavailable',
+        reason: 'temporal_stage_attempt_query_timeout',
+      }),
+      stopTemporalWorkerLifecycle: async () => { mutations += 1; throw new Error('stop should not run'); },
+      startTemporalWorkerLifecycle: async () => { mutations += 1; throw new Error('start should not run'); },
+    });
+
+    assert.equal(mutations, 0);
+    assert.equal(receipt.repair_status, 'blocked');
+    assert.deepEqual(receipt.blocker_ids, ['unresolved_stage_attempts_present']);
+    assert.equal(receipt.restart_guard?.unresolved_stage_attempt_count, 1);
+    assert.equal(receipt.restart_guard?.unresolved_stage_attempts[0]?.stage_attempt_id, attempt.stage_attempt_id);
   } finally {
     db?.close();
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;

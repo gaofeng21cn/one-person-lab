@@ -249,6 +249,55 @@ test('closed StageRun claims and records one immutable recovery Run idempotently
     );
 
     assert.throws(() => claimStageRunRecoveryStart(db, {
+      workflowInput,
+      terminalRetry: {
+        recoveryRunId: 'run-closeout-recovery',
+        workflowStatus: 'CONTINUED_AS_NEW',
+      },
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_recovery_terminal_retry_identity_mismatch');
+      return true;
+    });
+
+    const retryClaim = claimStageRunRecoveryStart(db, {
+      workflowInput,
+      claimToken: 'terminal-retry-claim',
+      terminalRetry: {
+        recoveryRunId: 'run-closeout-recovery',
+        workflowStatus: 'COMPLETED',
+      },
+    });
+    assert.equal(retryClaim.claimed, true);
+    assert.equal(retryClaim.claim_status, 'retry_claimed');
+    assert.equal(retryClaim.recovery_run.start_attempt_count, 2);
+    assert.equal(retryClaim.recovery_run.temporal_start_receipt, null);
+    assert.equal(retryClaim.recovery_run.temporal_start_receipt_history?.length, 1);
+
+    const retried = recordStageRunTemporalRecoveryStart(db, {
+      stageRunId: input.stage_run_id,
+      recoveryId: recovery.recovery_id,
+      claimToken: 'terminal-retry-claim',
+      temporalStartReceipt: {
+        surface_kind: 'temporal_stage_run_recovery_start_receipt',
+        version: 'opl-temporal-stage-run-recovery-start-receipt.v1',
+        recovery_id: recovery.recovery_id,
+        stage_run_id: input.stage_run_id,
+        stage_run_invocation_id: input.stage_run_invocation_id,
+        stage_run_spec_sha256: input.stage_run_spec_sha256,
+        quality_cycle_id: recovery.quality_cycle_id,
+        producer_attempt_ref: recovery.producer_attempt_ref,
+        workflow_id: input.workflow_id,
+        recovery_run_id: 'run-closeout-recovery-retry',
+        workflow_status: 'RUNNING',
+      },
+    });
+    assert.equal(
+      retried.recovery_run.temporal_start_receipt?.recovery_run_id,
+      'run-closeout-recovery-retry',
+    );
+    assert.equal(retried.recovery_run.temporal_start_receipt_history?.length, 1);
+
+    assert.throws(() => claimStageRunRecoveryStart(db, {
       workflowInput: recoveryWorkflowInput(input, 'recovery:different'),
     }), (error: any) => {
       assert.equal(error.details?.failure_code, 'stage_run_recovery_identity_conflict');

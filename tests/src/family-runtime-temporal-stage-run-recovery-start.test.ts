@@ -67,6 +67,11 @@ test('Temporal recovery creates one new Run for the same StageRun workflow id an
     assert.equal(replay.recovery_run_id, recovered.recovery_run_id);
     assert.equal(replay.recovered_existing_execution, true);
 
+    await testEnv.client.workflow.getHandle(input.workflow_id).terminate('test-terminal-recovery-retry');
+    const retried = await startTemporalStageRunRecoveryWorkflow(recoveryInput);
+    assert.notEqual(retried.recovery_run_id, recovered.recovery_run_id);
+    assert.equal(retried.recovered_existing_execution, false);
+
     await testEnv.client.workflow.getHandle(input.workflow_id).terminate('test-cleanup');
   } finally {
     for (const key of envKeys) {

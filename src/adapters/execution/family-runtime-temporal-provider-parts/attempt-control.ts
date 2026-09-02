@@ -251,10 +251,16 @@ export async function startTemporalStageRunRecoveryWorkflow(
         expected: launchInput as TemporalStageRunWorkflowInput & Record<string, unknown>,
         operation: 'inspect_temporal_stage_run_before_recovery',
       });
-      if (existing.memo?.recovery_id === recovery.recovery_id) {
+      if (
+        existing.memo?.recovery_id === recovery.recovery_id
+        && temporalWorkflowStatusIsRunning(existing.status.name)
+      ) {
         return receiptFromDescription(existing, true);
       }
-      if (existing.memo?.recovery_id || temporalWorkflowStatusIsRunning(existing.status.name)) {
+      if (
+        (existing.memo?.recovery_id && existing.memo.recovery_id !== recovery.recovery_id)
+        || temporalWorkflowStatusIsRunning(existing.status.name)
+      ) {
         throw new FrameworkContractError(
           'contract_shape_invalid',
           'Temporal StageRun recovery found a different live or recovered execution.',
@@ -315,6 +321,9 @@ export async function describeTemporalStageRunWorkflow(
         expected: workflowInput as TemporalStageRunWorkflowInput & Record<string, unknown>,
         operation: 'describe_temporal_stage_run',
       });
+      if (workflowInput.recovery_resume) {
+        assertTemporalStageRunRecoveryMemoIdentity(description.memo, workflowInput);
+      }
       return {
         surface_kind: 'temporal_stage_run_observation_receipt',
         provider_kind: 'temporal',
@@ -325,6 +334,7 @@ export async function describeTemporalStageRunWorkflow(
         workflow_id: description.workflowId,
         first_execution_run_id: description.runId,
         workflow_status: description.status.name,
+        recovery_id: workflowInput.recovery_resume?.recovery_id ?? null,
       };
     } catch (error) {
       if (!(error instanceof WorkflowNotFoundError)) throw error;

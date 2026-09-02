@@ -300,6 +300,8 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
   stageAttemptId: string;
 }, options: {
   startWorkflow: (input: TemporalStageRunWorkflowInput) => Promise<Record<string, unknown>>;
+  describeWorkflow?: (input: TemporalStageRunWorkflowInput) => Promise<Record<string, unknown>>;
+  retryTerminalRecovery?: boolean;
   now?: () => Date;
   startLeaseMs?: number;
 }) {
@@ -443,7 +445,7 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
     ...(launch.stage_run_input as TemporalStageRunWorkflowInput),
     recovery_resume: recoveryResume,
   };
-  const claim = claimStageRunRecoveryStart(db, {
+  let claim = claimStageRunRecoveryStart(db, {
     workflowInput,
     now: options.now?.(),
     leaseMs: options.startLeaseMs,
@@ -475,6 +477,71 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
       domain: 'formal_review_owner_and_quality_verdict_authority_unchanged',
     },
   };
+  if (
+    !claim.claimed
+    && claim.claim_status === 'started'
+    && options.retryTerminalRecovery === true
+  ) {
+    if (!options.describeWorkflow) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'StageRun terminal recovery retry requires fresh Temporal workflow observation.',
+        { failure_code: 'stage_run_recovery_terminal_retry_observation_missing' },
+      );
+    }
+    const observed = record(await options.describeWorkflow(workflowInput));
+    const persistedRunId = requireString(
+      claim.recovery_run.temporal_start_receipt?.recovery_run_id,
+      'recovery_run.temporal_start_receipt.recovery_run_id',
+    );
+    const observedRunId = requireString(observed.first_execution_run_id, 'workflow_observation.first_execution_run_id');
+    const observedStatus = requireString(observed.workflow_status, 'workflow_observation.workflow_status');
+    if (
+      observed.workflow_found !== true
+      || observed.workflow_id !== workflowInput.workflow_id
+      || observed.recovery_id !== recoveryId
+      || observedRunId !== persistedRunId
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'StageRun terminal recovery retry observation does not match the persisted recovery Run.',
+        {
+          failure_code: 'stage_run_recovery_terminal_retry_identity_mismatch',
+          recovery_id: recoveryId,
+          persisted_recovery_run_id: persistedRunId,
+          observed_recovery_run_id: observedRunId,
+          observed_workflow_status: observedStatus,
+        },
+      );
+    }
+    if (![
+      'COMPLETED',
+      'FAILED',
+      'CANCELED',
+      'CANCELLED',
+      'TERMINATED',
+      'TIMED_OUT',
+    ].includes(observedStatus.toUpperCase())) {
+      return {
+        ...baseReceipt,
+        recovery_status: 'durable_resume_already_started',
+        idempotent_replay: true,
+        durable_resume: claim.recovery_run,
+        temporal_start: claim.recovery_run.temporal_start_receipt,
+        durable_controller_running: observedStatus.toUpperCase().endsWith('RUNNING'),
+        formal_review_dispatched: true,
+      };
+    }
+    claim = claimStageRunRecoveryStart(db, {
+      workflowInput,
+      now: options.now?.(),
+      leaseMs: options.startLeaseMs,
+      terminalRetry: {
+        recoveryRunId: observedRunId,
+        workflowStatus: observedStatus,
+      },
+    });
+  }
   if (!claim.claimed || !claim.claim_token) {
     const temporalStart = claim.recovery_run.temporal_start_receipt;
     return {

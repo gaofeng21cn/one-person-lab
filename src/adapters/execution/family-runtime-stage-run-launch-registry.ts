@@ -88,6 +88,7 @@ type StageRunRecoveryRun = {
   start_lease_expires_at: string | null;
   start_attempt_count: number;
   temporal_start_receipt: Record<string, unknown> | null;
+  temporal_start_receipt_history?: Record<string, unknown>[];
   last_start_error: string | null;
   created_at: string;
   updated_at: string;
@@ -157,6 +158,17 @@ function activeRecoveryStartingLease(entry: StageRunRecoveryRun, now: Date) {
   if (entry.start_status !== 'starting' || !entry.start_claim_token || !entry.start_lease_expires_at) return false;
   const expiresAt = Date.parse(entry.start_lease_expires_at);
   return Number.isFinite(expiresAt) && expiresAt > now.getTime();
+}
+
+function terminalTemporalRecoveryStatus(value: string) {
+  return [
+    'COMPLETED',
+    'FAILED',
+    'CANCELED',
+    'CANCELLED',
+    'TERMINATED',
+    'TIMED_OUT',
+  ].includes(value.trim().toUpperCase());
 }
 
 function writeRecoveryRuns(
@@ -664,6 +676,10 @@ export function claimStageRunRecoveryStart(
     now?: Date;
     leaseMs?: number;
     claimToken?: string;
+    terminalRetry?: {
+      recoveryRunId: string;
+      workflowStatus: string;
+    };
   },
 ) {
   createStageRunLaunchTable(db);
@@ -712,14 +728,37 @@ export function claimStageRunRecoveryStart(
       );
     }
     if (existing?.start_status === 'started') {
-      db.exec('COMMIT');
-      return {
-        claimed: false,
-        claim_status: 'started' as const,
-        claim_token: null,
-        recovery_run: existing,
-        launch: rowPayload(row),
-      };
+      if (!input.terminalRetry) {
+        db.exec('COMMIT');
+        return {
+          claimed: false,
+          claim_status: 'started' as const,
+          claim_token: null,
+          recovery_run: existing,
+          launch: rowPayload(row),
+        };
+      }
+      const existingRunId = typeof existing.temporal_start_receipt?.recovery_run_id === 'string'
+        ? existing.temporal_start_receipt.recovery_run_id
+        : null;
+      if (
+        !existingRunId
+        || existingRunId !== input.terminalRetry.recoveryRunId
+        || !terminalTemporalRecoveryStatus(input.terminalRetry.workflowStatus)
+      ) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'StageRun recovery terminal retry does not match a terminal persisted Temporal Run.',
+          {
+            failure_code: 'stage_run_recovery_terminal_retry_identity_mismatch',
+            stage_run_id: row.stage_run_id,
+            recovery_id: recovery.recovery_id,
+            existing_recovery_run_id: existingRunId,
+            observed_recovery_run_id: input.terminalRetry.recoveryRunId,
+            observed_workflow_status: input.terminalRetry.workflowStatus,
+          },
+        );
+      }
     }
     if (existing && activeRecoveryStartingLease(existing, now)) {
       db.exec('COMMIT');
@@ -740,6 +779,12 @@ export function claimStageRunRecoveryStart(
           start_claimed_at: claimedAt,
           start_lease_expires_at: nowIso(new Date(now.getTime() + leaseMs)),
           start_attempt_count: existing.start_attempt_count + 1,
+          temporal_start_receipt: input.terminalRetry
+            ? null
+            : existing.temporal_start_receipt,
+          temporal_start_receipt_history: input.terminalRetry && existing.temporal_start_receipt
+            ? [...(existing.temporal_start_receipt_history ?? []), existing.temporal_start_receipt]
+            : existing.temporal_start_receipt_history,
           last_start_error: null,
           updated_at: claimedAt,
         }
