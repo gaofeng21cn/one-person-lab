@@ -128,6 +128,7 @@ export type TemporalStageRunRouteLaunchReceipt = {
 
 export type TemporalStageQualityAttemptMaterializationInput = {
   stage_run: TemporalStageRunWorkflowInput;
+  stage_run_workflow_run_id?: string | null;
   quality_cycle_id: string;
   attempt_role: StageQualityAttemptRole;
   quality_round_index: number;

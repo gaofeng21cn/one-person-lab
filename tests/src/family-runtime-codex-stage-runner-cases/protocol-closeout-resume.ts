@@ -73,12 +73,20 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     rejected_writes: [],
     next_owner: null,
     domain_ready_verdict: null,
-    route_impact: {
-      stage_quality_cycle: { outcome: 'pass', findings: [] },
-    },
     authority_boundary: {
       opl: 'closeout_transport_only',
       domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+  const initialQualityOutput = {
+    stage_run_id: 'sr-protocol-closeout-resume',
+    scope_digest: executionScope.scope_digest,
+    attempt_ref: 'opl://stage_attempts/sat-protocol-closeout-resume',
+    attempt_role: 'reviewer',
+    quality_cycle_id: 'quality-cycle:sr-protocol-closeout-resume',
+    no_context_inheritance: true,
+    route_impact: {
+      stage_quality_cycle: { outcome: 'pass', findings: [] },
     },
   };
   const resumeEvent = JSON.stringify({
@@ -99,7 +107,10 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     'if [ "$1" = "exec" ]; then',
     '  printf "initial:%s\\n" "$PWD" >> ' + JSON.stringify(invocationLog),
     '  printf \'{"type":"thread.started","thread_id":"thread-protocol-closeout"}\\n\'',
-    '  printf \'{"type":"item.completed","item":{"type":"agent_message","id":"initial","text":"review completed but closeout omitted"}}\\n\'',
+    '  printf "%s\\n" ' + JSON.stringify(JSON.stringify({
+      type: 'item.completed',
+      item: { type: 'agent_message', id: 'initial', text: JSON.stringify(initialQualityOutput) },
+    })),
     '  printf \'{"type":"turn.completed"}\\n\'',
     '  exit 0',
     'fi',
@@ -143,8 +154,8 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     assert.equal(protocol.counts_as_review, false);
     assert.equal(protocol.consumes_quality_budget, false);
     assert.equal(protocol.may_change_artifact_bytes, false);
-    assert.equal(protocol.initial_route_impact_candidate_observed, false);
-    assert.equal(protocol.initial_route_impact_preserved, false);
+    assert.equal(protocol.initial_route_impact_candidate_observed, true);
+    assert.equal(protocol.initial_route_impact_preserved, true);
     const resumedQuality = receipt.closeout_packet?.route_impact?.stage_quality_cycle as
       | Record<string, unknown>
       | undefined;

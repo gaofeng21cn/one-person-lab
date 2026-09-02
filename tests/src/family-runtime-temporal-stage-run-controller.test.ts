@@ -608,6 +608,7 @@ test('StageRun recovery resumes at reviewer without rerunning the durable produc
     initialReviewerFindings: 'none',
   });
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['reviewer']);
+  assert.match(attempts[0]?.stage_run_workflow_run_id ?? '', /^[0-9a-f-]{36}$/);
   assert.deepEqual(state.attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
   assert.equal(attempts[0]?.parent_attempt_ref, 'opl://stage_attempts/sat_recovery-reviewer-resume_producer_0');
   assert.equal(

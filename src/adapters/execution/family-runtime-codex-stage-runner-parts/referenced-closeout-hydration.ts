@@ -326,13 +326,27 @@ function mergeInitialRouteImpact(input: {
   const candidateAttemptId = optionalString(input.initialCandidate?.stage_attempt_id);
   const attemptIdempotencyKey = optionalString(input.attempt.idempotency_key);
   const candidateIdempotencyKey = optionalString(input.initialCandidate?.idempotency_key);
+  const candidateSurfaceKind = optionalString(input.initialCandidate?.surface_kind);
+  const executionScope = isRecord(input.attempt.execution_scope) ? input.attempt.execution_scope : null;
+  const expectedScopeDigest = optionalString(executionScope?.scope_digest)
+    ?? optionalString(input.attempt.scope_digest);
+  const expectedStageRunId = optionalString(input.attempt.stage_run_id);
+  const expectedAttemptRole = optionalString(input.attempt.attempt_role);
+  const expectedQualityCycleId = optionalString(input.attempt.quality_cycle_id);
+  const candidateIsBoundRawQualityOutput = !candidateSurfaceKind
+    && Boolean(attemptId)
+    && optionalString(input.initialCandidate?.attempt_ref) === `opl://stage_attempts/${attemptId}`
+    && (!expectedStageRunId || optionalString(input.initialCandidate?.stage_run_id) === expectedStageRunId)
+    && (!expectedScopeDigest || optionalString(input.initialCandidate?.scope_digest) === expectedScopeDigest)
+    && (!expectedAttemptRole || optionalString(input.initialCandidate?.attempt_role) === expectedAttemptRole)
+    && (!expectedQualityCycleId || optionalString(input.initialCandidate?.quality_cycle_id) === expectedQualityCycleId);
   if (
     !input.initialCandidate
     || !input.resumedCloseout
-    || !optionalString(input.initialCandidate.surface_kind)
+    || (!candidateSurfaceKind && !candidateIsBoundRawQualityOutput)
     || !initialRouteImpact
     || Object.keys(initialRouteImpact).length === 0
-    || (attemptId && candidateAttemptId !== attemptId)
+    || (candidateSurfaceKind && attemptId && candidateAttemptId !== attemptId)
     || (
       attemptIdempotencyKey
       && candidateIdempotencyKey

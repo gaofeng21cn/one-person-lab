@@ -8,6 +8,7 @@ import {
   proxyActivities,
   setHandler,
   upsertSearchAttributes,
+  workflowInfo,
 } from '@temporalio/workflow';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
@@ -1212,6 +1213,9 @@ export async function StageRunWorkflow(
   const formalReviewDeclaredArtifactIdentityEnabled = patched(
     'opl-stage-run-formal-review-declared-artifact-identity-v1',
   );
+  const recoveryAttemptRunIdentityEnabled = patched(
+    'opl-stage-run-recovery-attempt-run-identity-v1',
+  );
   const qualityScopeBudget = normalizeStageQualityScopeBudget(
     input.quality_policy.formal_review.scope_budget,
     { legacyMaxRepairRounds: input.quality_policy.formal_review.max_repair_rounds },
@@ -1384,6 +1388,9 @@ export async function StageRunWorkflow(
     state = { ...state, status: 'running', current_role: attemptInput.role, updated_at: nowIso() };
     const materialized = await stageQualityAttemptMaterializeActivity({
       stage_run: input,
+      stage_run_workflow_run_id: recoveryResume && recoveryAttemptRunIdentityEnabled
+        ? workflowInfo().runId
+        : null,
       quality_cycle_id: qualityCycleId,
       attempt_role: attemptInput.role,
       quality_round_index: attemptInput.round,

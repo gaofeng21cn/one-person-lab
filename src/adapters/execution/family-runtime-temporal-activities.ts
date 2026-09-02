@@ -1273,6 +1273,7 @@ export async function stageQualityAttemptMaterializeActivity(
     const requestedUseBoundaryId = stableId('package-use', [
       'stage_quality_attempt',
       stageRun.stage_run_id,
+      stageRun.recovery_resume ? readString(input.stage_run_workflow_run_id) : null,
       input.quality_cycle_id,
       input.attempt_role,
       input.quality_round_index,
