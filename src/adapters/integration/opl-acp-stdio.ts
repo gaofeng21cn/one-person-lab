@@ -15,6 +15,7 @@ import {
 } from './opl-acp-bridge.ts';
 import {
   buildCodexExecArgs,
+  buildCodexExecResumeArgs,
   type CodexExecEvent,
   parseCodexExecOutput,
   runCodexCommandStreaming,
@@ -500,25 +501,13 @@ function readMetaResumeSessionId(params: Record<string, unknown>) {
   return readOptionalString(options?.resume);
 }
 
-function buildCodexResumeArgs(sessionId: string, prompt: string) {
-  return [
-    'exec',
-    'resume',
-    '--skip-git-repo-check',
-    '--full-auto',
-    '--json',
-    sessionId,
-    prompt,
-  ];
-}
-
 async function executeBridgePrompt(
   session: BridgeSessionRecord,
   promptText: string,
   writable?: NodeJS.WritableStream,
 ) {
   const args = session.runtimeSessionId
-    ? buildCodexResumeArgs(session.runtimeSessionId, promptText)
+    ? buildCodexExecResumeArgs(session.runtimeSessionId, promptText, { json: true })
     : buildCodexExecArgs(promptText, {
         cwd: session.cwd,
         json: true,

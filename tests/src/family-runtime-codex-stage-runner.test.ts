@@ -180,11 +180,12 @@ test('Codex stage activity command preview binds explicit Codex executor policy'
     },
   });
 
-  assert.deepEqual(activity.runner_status.command_preview.slice(0, 13), [
+  assert.deepEqual(activity.runner_status.command_preview.slice(0, 14), [
     'codex',
     'exec',
     '--skip-git-repo-check',
-    '--full-auto',
+    '--config',
+    'sandbox_mode="workspace-write"',
     '--json',
     '--cd',
     '/tmp/mas',
@@ -514,10 +515,11 @@ exit 64
 
     assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:stage-runner-policy']);
     const capturedArgs = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
-    assert.deepEqual(capturedArgs.slice(0, 12), [
+    assert.deepEqual(capturedArgs.slice(0, 13), [
       'exec',
       '--skip-git-repo-check',
-      '--full-auto',
+      '--config',
+      'sandbox_mode="workspace-write"',
       '--json',
       '--cd',
       fixtureRoot,

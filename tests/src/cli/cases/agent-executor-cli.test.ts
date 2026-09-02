@@ -117,11 +117,12 @@ test('Codex executor receipt exposes model route and local config provenance', (
     assert.equal(proof.codex_binary_source, 'env');
     assert.equal(proof.codex_home, codexHome);
     assert.equal(proof.codex_config_path, path.join(codexHome, 'config.toml'));
-    assert.deepEqual(proof.command_preview.slice(0, 5), [
+    assert.deepEqual(proof.command_preview.slice(0, 6), [
       'codex',
       'exec',
       '--skip-git-repo-check',
-      '--full-auto',
+      '--config',
+      'sandbox_mode="workspace-write"',
       '--json',
     ]);
     assert.equal(proof.command_preview.includes('--model'), true);

@@ -7,6 +7,7 @@ import {
   runDomainCodexPrompt,
   runCodexCommandStreaming,
 } from '../../src/adapters/execution/domain-task-runtime.ts';
+import { buildCodexExecResumeArgs } from '../../src/adapters/execution/codex.ts';
 
 test('Codex exec can carry large prompts over stdin instead of argv', () => {
   const prompt = 'x'.repeat(1024 * 1024);
@@ -14,6 +15,21 @@ test('Codex exec can carry large prompts over stdin instead of argv', () => {
 
   assert.equal(args.at(-1), '-');
   assert.equal(args.includes(prompt), false);
+});
+
+test('Codex exec resume uses an explicit workspace-write sandbox without the removed full-auto flag', () => {
+  const args = buildCodexExecResumeArgs('thread-1', 'continue', { json: true });
+
+  assert.deepEqual(args, [
+    'exec',
+    'resume',
+    '--skip-git-repo-check',
+    '--config',
+    'sandbox_mode="workspace-write"',
+    '--json',
+    'thread-1',
+    'continue',
+  ]);
 });
 
 test('Codex exec isolates package-bound Skills while preserving the real shell home', () => {
@@ -27,6 +43,7 @@ test('Codex exec isolates package-bound Skills while preserving the real shell h
   const configs = args.flatMap((entry, index) => entry === '--config' ? [args[index + 1]] : []);
 
   assert.deepEqual(configs, [
+    'sandbox_mode="workspace-write"',
     'skills.config=[{name="med-autoscience",enabled=false},{path="/state/projection/.agents/skills/med-autoscience/SKILL.md",enabled=true}]',
     'shell_environment_policy.set.HOME="/Users/researcher"',
   ]);

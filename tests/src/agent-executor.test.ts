@@ -272,7 +272,8 @@ exit 64
     assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
       'exec',
       '--skip-git-repo-check',
-      '--full-auto',
+      '--config',
+      'sandbox_mode="workspace-write"',
       '--json',
       '--cd',
       repoRoot,
@@ -317,7 +318,8 @@ exit 0
     assert.deepEqual(receipt.activated_capabilities, ['image_generation']);
     assert.equal(receipt.capabilities.includes('image_generation'), true);
     const args = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
-    assert.deepEqual(args.slice(4, 6), ['--enable', 'image_generation']);
+    const enableIndex = args.indexOf('--enable');
+    assert.deepEqual(args.slice(enableIndex, enableIndex + 2), ['--enable', 'image_generation']);
   } finally {
     previousCodexBin === undefined
       ? delete process.env.OPL_CODEX_BIN

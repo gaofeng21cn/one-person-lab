@@ -71,7 +71,8 @@ exit 64
     assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
       'exec',
       '--skip-git-repo-check',
-      '--full-auto',
+      '--config',
+      'sandbox_mode="workspace-write"',
       '--json',
       '--model',
       'gpt-5.5',

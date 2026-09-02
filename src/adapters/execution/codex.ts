@@ -220,7 +220,12 @@ export function buildCodexExecArgs(
   prompt: string,
   options: CodexExecOptions = {},
 ) {
-  const args = ['exec', '--skip-git-repo-check', '--full-auto'];
+  const args = [
+    'exec',
+    '--skip-git-repo-check',
+    '--config',
+    'sandbox_mode="workspace-write"',
+  ];
 
   if (options.json) {
     args.push('--json');
@@ -271,7 +276,13 @@ export function buildCodexExecResumeArgs(
   prompt: string,
   options: Omit<CodexExecOptions, 'cwd'> = {},
 ) {
-  const args = ['exec', 'resume', '--skip-git-repo-check'];
+  const args = [
+    'exec',
+    'resume',
+    '--skip-git-repo-check',
+    '--config',
+    'sandbox_mode="workspace-write"',
+  ];
 
   if (options.json) {
     args.push('--json');

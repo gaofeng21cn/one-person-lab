@@ -62,7 +62,7 @@ export type CordisAgentExecutorService = {
 export {
   runPackNativeHelperExecutionCommand,
 } from './pack-native-helper-execution.ts';
-export { buildCodexCliPreview, buildCodexExecArgs, parseCodexExecOutput, resolveCodexBinary, runCodexCommand, runCodexCommandStreaming } from './codex.ts';
+export { buildCodexCliPreview, buildCodexExecArgs, buildCodexExecResumeArgs, parseCodexExecOutput, resolveCodexBinary, runCodexCommand, runCodexCommandStreaming } from './codex.ts';
 export type { CodexExecEvent } from './codex.ts';
 export { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidence-ledger.ts';
 export { runFamilyRuntime } from './family-runtime.ts';
