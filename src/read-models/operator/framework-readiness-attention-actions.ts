@@ -1,8 +1,7 @@
 import {
-  appReleaseUserPathPayloadRefHints,
-  appReleaseUserPathPayloadTemplate,
-  appReleaseUserPathPayloadWorkorder,
-} from '../../authority/evidence/index.ts';
+  appReleaseUserPathEvidenceNextStep,
+  frameworkAppReleaseUserPathNextSafeAction,
+} from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
 import {
   countValue as numberValue,
   type JsonRecord,
@@ -16,127 +15,6 @@ function commandRef(args: string[]) {
   return `opl ${args.map((arg) => (
     arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
   )).join(' ')}`;
-}
-
-function runtimeActionExecuteCommand(actionId: string) {
-  return [
-    'runtime',
-    'action',
-    'execute',
-    '--action',
-    actionId,
-    '--payload-file',
-    '<payload.json>',
-  ];
-}
-
-function appReleaseUserPathEvidenceNextStep(evidence: JsonRecord) {
-  const targetSurface = stringValue(evidence.target_surface)
-    ?? 'one_person_lab_app_release_user_path';
-  const pendingVerifyReceiptRefs = stringList(evidence.pending_verify_receipt_refs);
-  const recordArgs = ['runtime', 'app-release-evidence', 'record'];
-  const firstPendingVerifyReceiptRef = pendingVerifyReceiptRefs[0] ?? null;
-  const verifyArgs = firstPendingVerifyReceiptRef
-    ? ['runtime', 'app-release-evidence', 'verify', '--receipt-ref', firstPendingVerifyReceiptRef]
-    : null;
-  const recordRequired = numberValue(evidence.open_gate_count) > 0;
-  const canRecord = recordRequired || evidence.blocked_by_typed_blocker_refs === true;
-  const recordActionId = canRecord
-    ? `app_release_user_path_evidence:${targetSurface}:record`
-    : null;
-  return {
-    step_kind: 'app_release_user_path_evidence',
-    owner: stringValue(evidence.owner) ?? 'one-person-lab',
-    target_surface: targetSurface,
-    status: stringValue(evidence.status),
-    production_user_path_ready: evidence.production_user_path_ready === true,
-    refs_observed_for_all_gates: evidence.refs_observed_for_all_gates === true,
-    release_ready_claimed: evidence.release_ready_claimed === true,
-    production_ready_claimed: evidence.production_ready_claimed === true,
-    open_gate_count: numberValue(evidence.open_gate_count),
-    open_gate_ids: stringList(evidence.open_gate_ids),
-    required_refs_by_gate: recordList(evidence.gate_items).map((gate) => ({
-      gate_id: stringValue(gate.gate_id),
-      status: stringValue(gate.status),
-      required_refs_any_of: stringList(gate.required_refs_any_of),
-      observed_ref_count: numberValue(gate.observed_ref_count),
-      current_contract_status: stringValue(gate.current_contract_status),
-    })),
-    required_return_shapes: stringList(evidence.required_return_shapes),
-    payload_owner: stringValue(evidence.payload_owner)
-      ?? 'app_live_operator_or_release_owner',
-    evidence_ledger_status: stringValue(evidence.evidence_ledger_status),
-    ledger_receipt_ref_count: numberValue(evidence.ledger_receipt_ref_count),
-    recorded_ledger_receipt_ref_count:
-      numberValue(evidence.recorded_ledger_receipt_ref_count),
-    verified_ledger_receipt_ref_count:
-      numberValue(evidence.verified_ledger_receipt_ref_count),
-    pending_verify_receipt_ref_count:
-      numberValue(evidence.pending_verify_receipt_ref_count),
-    pending_verify_receipt_refs: pendingVerifyReceiptRefs,
-    cohort_guard_status: stringValue(record(evidence.cohort_guard).status),
-    selected_cohort_id: stringValue(record(evidence.cohort_guard).selected_cohort_id),
-    candidate_cohort_ids: stringList(record(evidence.cohort_guard).candidate_cohort_ids),
-    receipt_verification_required: pendingVerifyReceiptRefs.length > 0,
-    verification_action_id: pendingVerifyReceiptRefs.length > 0
-      ? `app_release_user_path_evidence:${targetSurface}:verify`
-      : null,
-    verification_command_ref: verifyArgs ? commandRef(verifyArgs) : null,
-    can_submit_verify_to_safe_action_shell: verifyArgs !== null,
-    can_close_without_domain_or_app_payload: pendingVerifyReceiptRefs.length > 0,
-    record_action_id: recordActionId,
-    record_command_ref: canRecord ? commandRef(recordArgs) : null,
-    copyable_runtime_action_execute_commands: recordActionId
-      ? {
-          record_with_payload: runtimeActionExecuteCommand(recordActionId),
-        }
-      : null,
-    can_submit_record_to_safe_action_shell: canRecord,
-    route_requires_domain_or_app_payload: canRecord,
-    payload_template: canRecord
-      ? appReleaseUserPathPayloadTemplate()
-      : null,
-    payload_ref_hints: canRecord
-      ? appReleaseUserPathPayloadRefHints()
-      : null,
-    payload_workorder: canRecord
-      ? appReleaseUserPathPayloadWorkorder(
-          stringList(evidence.required_return_shapes),
-          stringList(evidence.open_gate_ids),
-        )
-      : null,
-    payload_template_policy: canRecord
-      ? 'template_is_empty_by_design_replace_with_real_app_live_release_or_typed_blocker_refs_before_submit'
-      : null,
-    empty_payload_template_is_success_evidence: false,
-    typed_blocker_ref_count: numberValue(evidence.typed_blocker_ref_count),
-    blocked_by_typed_blocker_refs: evidence.blocked_by_typed_blocker_refs === true,
-    owner_acceptance_ref_count: numberValue(evidence.owner_acceptance_ref_count),
-    owner_acceptance_refs: stringList(evidence.owner_acceptance_refs),
-    release_owner_verdict_handoff: record(evidence.release_owner_verdict_handoff),
-    full_detail_section: 'app_release_user_path_evidence',
-    can_execute_domain_action: false,
-    can_create_owner_receipt: false,
-    can_close_domain_ready: false,
-    can_claim_production_ready: false,
-    can_authorize_quality_or_export: false,
-    can_close_app_release_user_path: false,
-  };
-}
-
-function frameworkAppReleaseUserPathNextSafeAction(evidence: JsonRecord) {
-  return {
-    ...appReleaseUserPathEvidenceNextStep(evidence),
-    action_id: 'review_app_release_user_path_evidence',
-    action_kind: 'app_release_user_path_evidence_review',
-    evidence_closure_gate:
-      'app_release_package_screenshot_reload_provider_state_long_operator_gate',
-    full_detail_section:
-      'attention_first_payload.evidence_after_contract.app_release_user_path_evidence',
-    authority: 'operator_attention_only',
-    can_write_domain_truth: false,
-    can_create_typed_blocker: false,
-  };
 }
 
 function developerModeLiveCloseoutEvidenceNextStep(evidence: JsonRecord) {

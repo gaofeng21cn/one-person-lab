@@ -36,6 +36,19 @@ export function uniqueStringList(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
 }
 
+export function boundedJsonValue(value: unknown, field: string): unknown {
+  let encoded: string | undefined;
+  try {
+    encoded = JSON.stringify(value);
+  } catch {
+    throw new TypeError(`${field} must be JSON serializable.`);
+  }
+  if (encoded === undefined || Buffer.byteLength(encoded) > 1024 * 1024) {
+    throw new TypeError(`${field} must be a bounded JSON value.`);
+  }
+  return JSON.parse(encoded) as unknown;
+}
+
 export function firstRef(value: unknown) {
   if (typeof value === 'string' && value.trim()) {
     return value.trim();

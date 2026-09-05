@@ -125,7 +125,7 @@ function firstString(locator: JsonRecord, keys: string[]) {
   return null;
 }
 
-function workspaceTransportFromAttempt(attempt: JsonRecord) {
+export function workspaceTransportFromAttempt(attempt: JsonRecord) {
   const locator = workspaceLocator(attempt);
   const repoUrl = firstString(locator, [
     'git_remote_url',
@@ -306,7 +306,7 @@ async function runRequiredDockerPreparation(input: {
   return result;
 }
 
-function parseStdoutEvents(stdout: string, onRunnerProgress?: (event: RunnerEventSummary) => void) {
+export function parseStdoutEvents(stdout: string, onRunnerProgress?: (event: RunnerEventSummary) => void) {
   if (!onRunnerProgress) {
     return;
   }

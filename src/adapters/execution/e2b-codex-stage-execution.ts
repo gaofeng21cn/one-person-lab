@@ -1,10 +1,6 @@
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import {
-  createCodexExecEventParserState,
-  parseCodexExecEventFromLine,
-} from './codex-exec-events.ts';
 import type { CodexCommandResult } from './codex.ts';
 import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import { isRecord, normalizeTimeoutMs, type JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
@@ -13,6 +9,10 @@ import type { RunnerEventSummary } from './family-runtime-codex-stage-runner-par
 import { agentPackageSkillProjectionFiles } from '../../kernel/agent-package-skill-projection.ts';
 import { sandboxAttemptSkillRuntime } from './family-runtime-attempt-skill-projection.ts';
 import { workspaceTransportDisplayUrl } from './workspace-transport-url.ts';
+import {
+  parseStdoutEvents,
+  workspaceTransportFromAttempt,
+} from './local-codex-stage-sandbox.ts';
 
 type E2bCommandResult = {
   exitCode: number;
@@ -131,39 +131,6 @@ function workspaceLocator(attempt: JsonRecord) {
   return isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
 }
 
-function firstString(locator: JsonRecord, keys: string[]) {
-  for (const key of keys) {
-    const value = optionalString(locator[key]);
-    if (value) {
-      return value;
-    }
-  }
-  return null;
-}
-
-function workspaceTransportFromAttempt(attempt: JsonRecord) {
-  const locator = workspaceLocator(attempt);
-  const repoUrl = firstString(locator, [
-    'git_remote_url',
-    'repo_url',
-    'repository_url',
-    'remote_url',
-    'source_repo_url',
-    'target_repo_url',
-  ]);
-  const checkoutRef = firstString(locator, [
-    'git_ref',
-    'repo_ref',
-    'checkout_ref',
-    'target_ref',
-    'remote_ref',
-    'commit_sha',
-    'source_sha',
-    'revision',
-  ]);
-  return { repoUrl, checkoutRef };
-}
-
 function sandboxWorkspaceRoot(env: Record<string, string | undefined>) {
   return env.OPL_E2B_WORKSPACE_ROOT?.trim() || env.OPL_EXTERNAL_SANDBOX_WORKSPACE_ROOT?.trim() || '/home/user/opl-stage-workspace';
 }
@@ -278,29 +245,6 @@ async function runRequiredE2bPreparation(input: {
     failE2bPreparation({ ...input, result });
   }
   return result;
-}
-
-function parseStdoutEvents(stdout: string, onRunnerProgress?: (event: RunnerEventSummary) => void) {
-  if (!onRunnerProgress) {
-    return;
-  }
-  const state = createCodexExecEventParserState();
-  for (const line of stdout.split(/\r?\n/)) {
-    const event = parseCodexExecEventFromLine(line, state);
-    if (!event) {
-      continue;
-    }
-    onRunnerProgress({
-      event_kind: event.type,
-      value: 'messageId' in event
-        ? event.messageId
-        : 'threadId' in event
-          ? event.threadId
-          : 'toolCallId' in event
-            ? event.toolCallId
-            : null,
-    });
-  }
 }
 
 export function sandboxAttemptForCodex(input: {

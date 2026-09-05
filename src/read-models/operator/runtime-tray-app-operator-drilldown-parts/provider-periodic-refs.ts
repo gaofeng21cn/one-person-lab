@@ -8,18 +8,7 @@ import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
 import { runtimeDomainDaemonReplacementSurfaces } from '../../../adapters/execution/index.ts';
-
-function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = `${value.role ?? ''}:${value.ref}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
+import { uniqueRefs } from './value-utils.ts';
 
 function refsOnlyAuthorityBoundary() {
   return buildAppDrilldownRefsOnlyAuthorityBoundary();

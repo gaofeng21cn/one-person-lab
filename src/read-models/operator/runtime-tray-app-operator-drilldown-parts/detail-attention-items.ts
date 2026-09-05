@@ -4,21 +4,12 @@ import {
   numberValue,
   record,
   recordList,
+  firstString,
   stringList,
   stringValue,
 } from './value-utils.ts';
 
 const DEFAULT_ATTENTION_ITEM_LIMIT = 5;
-
-function firstString(...values: unknown[]) {
-  for (const value of values) {
-    const text = stringValue(value);
-    if (text) {
-      return text;
-    }
-  }
-  return null;
-}
 
 function canonicalOwnerField(...values: unknown[]) {
   const source = firstString(...values);

@@ -12,6 +12,7 @@ import {
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
+import { runtimeActionExecuteCommand } from './value-utils.ts';
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
@@ -450,18 +451,6 @@ function commandRef(args: string[]) {
   return `opl ${args.map((arg) => (
     arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
   )).join(' ')}`;
-}
-
-function runtimeActionExecuteCommand(actionId: string) {
-  return [
-    'runtime',
-    'action',
-    'execute',
-    '--action',
-    actionId,
-    '--payload-file',
-    '<payload.json>',
-  ];
 }
 
 function routeAuthorityBoundary() {

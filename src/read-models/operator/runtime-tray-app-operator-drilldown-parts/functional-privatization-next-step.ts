@@ -6,16 +6,7 @@ import {
   stringValue,
   type JsonRecord,
 } from '../../../kernel/json-record.ts';
-
-function firstString(...values: unknown[]) {
-  for (const value of values) {
-    const text = stringValue(value);
-    if (text) {
-      return text;
-    }
-  }
-  return null;
-}
+import { firstString, runtimeActionExecuteCommand } from './value-utils.ts';
 
 function payloadTemplate() {
   return {
@@ -25,18 +16,6 @@ function payloadTemplate() {
     typed_blocker_refs: [],
     no_regression_evidence_refs: [],
   };
-}
-
-function runtimeActionExecuteCommand(actionId: string) {
-  return [
-    'runtime',
-    'action',
-    'execute',
-    '--action',
-    actionId,
-    '--payload-file',
-    '<payload.json>',
-  ];
 }
 
 function recordActionId(domainId: string | null, moduleId: string | null) {

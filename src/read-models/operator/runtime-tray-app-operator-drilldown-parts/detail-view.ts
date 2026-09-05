@@ -9,6 +9,7 @@ import { buildOwnerHandoffPacket } from './owner-handoff-packet.ts';
 import {
   appReleaseUserPathEvidenceNextStep,
 } from './app-release-user-path.ts';
+import { firstString } from './value-utils.ts';
 import {
   codexAppRuntimeEvidenceNextStep,
 } from './codex-app-runtime-role.ts';
@@ -62,16 +63,6 @@ function markFullRefsObject<T extends JsonRecord, K extends keyof T & string>(va
     total_ref_count: refs.length,
     detail_policy: 'complete_refs_explicit_full_detail',
   };
-}
-
-function firstString(...values: unknown[]) {
-  for (const value of values) {
-    const text = stringValue(value);
-    if (text) {
-      return text;
-    }
-  }
-  return null;
 }
 
 function limitedItems<T>(items: T[]) {

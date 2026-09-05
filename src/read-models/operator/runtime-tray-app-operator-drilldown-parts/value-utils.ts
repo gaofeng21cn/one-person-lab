@@ -1,4 +1,5 @@
 import type { DomainManifestCatalogEntry } from '../../catalog/index.ts';
+export { firstString } from '../runtime-tray-snapshot-utils.ts';
 import {
   countValue as numberValue,
   record,

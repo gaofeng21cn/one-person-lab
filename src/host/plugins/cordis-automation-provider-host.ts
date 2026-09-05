@@ -4,6 +4,7 @@ import {
   buildCordisPluginDescriptor,
   type CordisPluginDescriptor,
 } from '../../authority/packages/index.ts';
+import { boundedJsonValue } from '../../kernel/json-record.ts';
 
 export const CORDIS_AUTOMATION_PROVIDER_HOST_PLUGIN_ID = 'opl-connect-automation-provider-host';
 export const CORDIS_AUTOMATION_PROVIDER_HOST_PLUGIN_API_VERSION = '1.0.0';
@@ -96,19 +97,6 @@ function requiredAutomationKind(value: unknown): CordisAutomationProviderKind {
     throw new TypeError(`Automation provider kind is invalid: ${String(value)}`);
   }
   return value;
-}
-
-function boundedJsonValue(value: unknown, field: string): unknown {
-  let encoded: string | undefined;
-  try {
-    encoded = JSON.stringify(value);
-  } catch {
-    throw new TypeError(`${field} must be JSON serializable.`);
-  }
-  if (encoded === undefined || Buffer.byteLength(encoded) > 1024 * 1024) {
-    throw new TypeError(`${field} must be a bounded JSON value.`);
-  }
-  return JSON.parse(encoded) as unknown;
 }
 
 function resultRecord(value: unknown, field: string): Readonly<Record<string, unknown>> {

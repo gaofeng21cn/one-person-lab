@@ -6,6 +6,7 @@ import {
   stringList,
   stringValue,
 } from '../../kernel/json-record.ts';
+import { firstString } from './runtime-tray-app-operator-drilldown-parts/value-utils.ts';
 
 export const OWNER_DELTA_HANDOFF_TAXONOMY =
   'first-class default summary of who owns the next delta or receipt, derived from owner_delta_first, owner_handoff_packet, and evidence_worklist without creating domain authority';
@@ -18,16 +19,6 @@ export function ownerDeltaHandoffFrameworkReadinessSection(input: {
     source_commands: input.sourceCommands,
     ...input.ownerDeltaHandoffSummary,
   };
-}
-
-function firstString(...values: unknown[]) {
-  for (const value of values) {
-    const text = stringValue(value);
-    if (text) {
-      return text;
-    }
-  }
-  return null;
 }
 
 function hasKeys(value: JsonRecord) {

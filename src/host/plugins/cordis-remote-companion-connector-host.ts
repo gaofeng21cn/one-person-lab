@@ -24,6 +24,7 @@ import {
   buildCordisPluginDescriptor,
   type CordisPluginDescriptor,
 } from '../../authority/packages/index.ts';
+import { boundedJsonValue } from '../../kernel/json-record.ts';
 import { buildAppUiContributionsProjection } from '../../read-models/operator/index.ts';
 
 export const CORDIS_REMOTE_COMPANION_CONNECTOR_HOST_PLUGIN_ID =
@@ -119,19 +120,6 @@ function contributionRef(value: unknown): string {
     throw new TypeError('Remote companion app contribution ref is invalid.');
   }
   return ref;
-}
-
-function boundedJsonValue(value: unknown, field: string): unknown {
-  let encoded: string | undefined;
-  try {
-    encoded = JSON.stringify(value);
-  } catch {
-    throw new TypeError(`${field} must be JSON serializable.`);
-  }
-  if (encoded === undefined || Buffer.byteLength(encoded) > 1024 * 1024) {
-    throw new TypeError(`${field} must be a bounded JSON value.`);
-  }
-  return JSON.parse(encoded) as unknown;
 }
 
 function contributionInput(value: unknown): Readonly<Record<string, unknown>> {

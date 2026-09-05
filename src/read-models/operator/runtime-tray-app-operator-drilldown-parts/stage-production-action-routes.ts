@@ -20,18 +20,7 @@ import {
   STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS,
   STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS,
 } from '../../../authority/stages/index.ts';
-
-function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = `${value.role ?? ''}:${value.ref}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
+import { uniqueRefs } from './value-utils.ts';
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];

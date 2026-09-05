@@ -4,6 +4,7 @@ import {
 } from './authority-boundary.ts';
 import {
   buildOperatorActionRoute,
+  firstString,
   record,
   recordList,
   stringList,
@@ -69,16 +70,6 @@ function currentProviderReadiness(attempt: JsonRecord) {
 
 function workerReadiness(attempt: JsonRecord) {
   return record(record(currentProviderReadiness(attempt).details).worker_readiness);
-}
-
-function firstString(...values: unknown[]) {
-  for (const value of values) {
-    const text = stringValue(value);
-    if (text) {
-      return text;
-    }
-  }
-  return null;
 }
 
 function staleStatus(value: unknown) {

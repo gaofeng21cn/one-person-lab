@@ -4,16 +4,7 @@ import {
   stringValue,
   type JsonRecord,
 } from '../../../kernel/json-record.ts';
-
-function firstString(...values: unknown[]) {
-  for (const value of values) {
-    const text = stringValue(value);
-    if (text) {
-      return text;
-    }
-  }
-  return null;
-}
+import { firstString } from './value-utils.ts';
 
 export function summarizeSelectedSafeAction(action: JsonRecord | null) {
   if (!action) {

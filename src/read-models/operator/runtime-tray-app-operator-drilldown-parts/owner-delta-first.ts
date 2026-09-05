@@ -10,16 +10,7 @@ import {
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
-
-function firstString(...values: unknown[]) {
-  for (const value of values) {
-    const text = stringValue(value);
-    if (text) {
-      return text;
-    }
-  }
-  return null;
-}
+import { firstString } from './value-utils.ts';
 
 function concreteOwner(...values: unknown[]) {
   const generic = 'domain_repository_or_app_live_operator';

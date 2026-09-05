@@ -14,6 +14,7 @@ import {
   stringValue,
 } from '../../kernel/json-record.ts';
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
+import { uniqueRefs } from './runtime-tray-app-operator-drilldown-parts/value-utils.ts';
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
@@ -42,18 +43,6 @@ function domainIdCandidates(...values: Array<string | null | undefined>) {
     ];
   }));
   return candidates;
-}
-
-function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = `${value.role ?? ''}:${value.ref}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
 }
 
 function refsOnlyAuthorityBoundary() {

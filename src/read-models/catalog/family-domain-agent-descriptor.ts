@@ -6,6 +6,7 @@ import type { DomainManifestCatalogEntry, NormalizedDomainManifest } from './dom
 import { buildFamilyActionCatalogParity } from '../../kernel/family-action-catalog-projection.ts';
 import { pickSkillActivationProjection } from './family-domain-catalog.ts';
 import { buildFamilyStageControlPlaneParity } from '../../authority/stages/index.ts';
+import { buildFunctionalSourcePurityTailReadModel } from '../../authority/packages/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
   matchesStandardDomainAgentCatalogEntry,
@@ -225,48 +226,6 @@ function stringArray(value: unknown) {
 
 function arrayValue(value: unknown) {
   return Array.isArray(value) ? value : [];
-}
-
-function buildFunctionalSourcePurityTailReadModel(summary: {
-  total_module_count?: number;
-  standard_domain_pack_inventory_count?: number;
-  authority_function_inventory_count?: number;
-  default_watchlist_count: number;
-  semantic_equivalence_review_count: number;
-  active_private_generic_residue_count: number;
-  blocker_count: number;
-  default_hidden_cleared_count?: number;
-  private_platform_residue_inventory_count: number;
-}) {
-  const defaultActionRequiredCount = Math.max(
-    summary.default_watchlist_count,
-    summary.semantic_equivalence_review_count,
-    summary.active_private_generic_residue_count,
-    summary.blocker_count,
-  );
-  const hasAuditOnlyTail =
-    (summary.default_hidden_cleared_count ?? 0) > 0
-    || summary.private_platform_residue_inventory_count > 0;
-  return {
-    default_action_required_count: defaultActionRequiredCount,
-    action_required_blocker_count: summary.blocker_count,
-    hidden_cleared_audit_ledger_count: summary.default_hidden_cleared_count ?? 0,
-    hidden_cleared_entries_remain_traceable: true,
-    private_platform_residue_inventory_audit_only_count:
-      summary.private_platform_residue_inventory_count,
-    private_platform_residue_inventory_counts_as_action_required: false,
-    private_platform_residue_inventory_counts_as_blocker: false,
-    physical_delete_authorized: false,
-    physical_delete_authority: 'not_authorized_by_descriptor_or_app_read_model',
-    source_purity_tail_status:
-      defaultActionRequiredCount > 0
-        ? 'action_required_tail_open'
-        : hasAuditOnlyTail
-          ? 'audit_only_tail_traceable_no_action_required_blocker'
-          : 'no_source_purity_tail',
-    source_purity_tail_policy:
-      'physical_delete_requires_separate_domain_owner_receipt_or_typed_blocker_no_active_caller_no_forbidden_write_and_replacement_parity',
-  };
 }
 
 function buildActionCatalogProjection(entry: DomainManifestCatalogEntry) {

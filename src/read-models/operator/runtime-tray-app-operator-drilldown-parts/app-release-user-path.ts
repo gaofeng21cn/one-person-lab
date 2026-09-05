@@ -19,6 +19,7 @@ import {
   numberValue,
   record,
   recordList,
+  runtimeActionExecuteCommand,
   stringList,
   stringValue,
 } from './value-utils.ts';
@@ -46,18 +47,6 @@ function commandRef(args: string[]) {
   return `opl ${args.map((arg) => (
     arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
   )).join(' ')}`;
-}
-
-function runtimeActionExecuteCommand(actionId: string) {
-  return [
-    'runtime',
-    'action',
-    'execute',
-    '--action',
-    actionId,
-    '--payload-file',
-    '<payload.json>',
-  ];
 }
 
 export function buildAppReleaseUserPathEvidence(operatorProjection: JsonRecord) {

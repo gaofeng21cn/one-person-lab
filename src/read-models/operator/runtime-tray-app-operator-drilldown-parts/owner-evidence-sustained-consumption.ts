@@ -5,7 +5,13 @@ import {
   type OwnerEvidenceSustainedConsumptionReceipt,
 } from '../../../authority/evidence/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
-import { record, recordList, stringList, stringValue } from './value-utils.ts';
+import {
+  record,
+  recordList,
+  runtimeActionExecuteCommand,
+  stringList,
+  stringValue,
+} from './value-utils.ts';
 
 type OwnerEvidenceSustainedConsumptionRoute = JsonRecord & {
   ref: string;
@@ -211,18 +217,6 @@ function commandRef(args: string[]) {
   return `opl ${args.map((arg) => (
     arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
   )).join(' ')}`;
-}
-
-function runtimeActionExecuteCommand(actionId: string) {
-  return [
-    'runtime',
-    'action',
-    'execute',
-    '--action',
-    actionId,
-    '--payload-file',
-    '<payload.json>',
-  ];
 }
 
 function verifyRuntimeActionExecuteCommand(actionId: string) {
