@@ -16,6 +16,7 @@ import {
   type ExactFile,
   type LifecycleExactByteBindingFields,
   type LocatedLifecycle,
+  type LocatedWorkItemIdentity,
 } from './types.ts';
 
 const DIGEST = /^(?:sha256:)?([a-f0-9]{64})$/u;
@@ -396,11 +397,11 @@ export function jsonPointer(value: unknown, pointer: string) {
   return current;
 }
 
-export function locateLifecycle(input: {
+export function locateWorkItemIdentity(input: {
   checkoutRoot: string;
   workspaceRoot: string;
   workItemId: string;
-}): LocatedLifecycle {
+}): LocatedWorkItemIdentity {
   const descriptor = readStandardAgentDescriptorInterface(input.checkoutRoot);
   const declaration = descriptor?.interface.inventory_projection;
   if (!descriptor || !declaration) {
@@ -412,21 +413,42 @@ export function locateLifecycle(input: {
   const values = jsonPointer(inventory.payload, declaration.items_pointer);
   if (!Array.isArray(values)) blocked('Domain inventory items_pointer does not resolve to an array.');
   const fieldMap = declaration.field_map;
-  const item = values.find((candidate) => (
+  const inventoryItemIndex = values.findIndex((candidate) => (
     isRecord(candidate) && candidate[fieldMap.work_item_id] === input.workItemId
   ));
+  const item = values[inventoryItemIndex];
   if (!isRecord(item)) {
     blocked('Lifecycle-gated work item is absent from the domain inventory.', { work_item_id: input.workItemId });
   }
   const workItemRootValue = text(item[fieldMap.work_item_root], `inventory.${fieldMap.work_item_root}`);
   const workItemRoot = resolveContained(workspaceRoot, workItemRootValue, 'work_item_root');
-  const lifecycleValue = text(item[fieldMap.lifecycle_ref], `inventory.${fieldMap.lifecycle_ref}`);
-  const lifecyclePath = resolveContained(workItemRoot, lifecycleValue, 'lifecycle_ref');
   return {
     descriptorDomainId: descriptor.domain_id,
     inventory,
     inventoryItem: item,
+    inventoryItemIndex,
     workItemRoot,
+  };
+}
+
+export function locateLifecycle(input: {
+  checkoutRoot: string;
+  workspaceRoot: string;
+  workItemId: string;
+}): LocatedLifecycle {
+  const located = locateWorkItemIdentity(input);
+  const descriptor = readStandardAgentDescriptorInterface(input.checkoutRoot)!;
+  const fieldMap = descriptor.interface.inventory_projection!.field_map;
+  const lifecycleValue = text(
+    located.inventoryItem[fieldMap.lifecycle_ref],
+    `inventory.${fieldMap.lifecycle_ref}`,
+  );
+  const lifecyclePath = resolveContained(located.workItemRoot, lifecycleValue, 'lifecycle_ref');
+  return {
+    descriptorDomainId: located.descriptorDomainId,
+    inventory: located.inventory,
+    inventoryItem: located.inventoryItem,
+    workItemRoot: located.workItemRoot,
     lifecycle: exactJsonFile(lifecyclePath, 'canonical domain lifecycle'),
   };
 }

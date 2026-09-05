@@ -13,8 +13,14 @@ export const REQUEST_FIELD_MAP_KEYS = [
   'profile',
   'projection_inventory',
 ] as const;
+export const INITIALIZATION_REQUEST_FIELD_MAP_KEYS = [
+  'authority_context',
+  'work_item_identity',
+  'current_inventory',
+] as const;
 
 export type ReactivationRequestInputField = typeof REQUEST_FIELD_MAP_KEYS[number];
+export type InitializationRequestInputField = typeof INITIALIZATION_REQUEST_FIELD_MAP_KEYS[number];
 
 export type LifecycleProjectionSource = {
   projection_id: string;
@@ -53,6 +59,10 @@ export type StandardAgentLifecycleAdmissionContract = {
   reactivation_projection_sources: LifecycleProjectionSource[];
   reactivation_request_input_field_map: Record<ReactivationRequestInputField, string>;
   exact_byte_binding_fields: LifecycleExactByteBindingFields | null;
+  initialization_action_id: string | null;
+  initialization_receipt_output_field: string | null;
+  initialization_materialization_authorization_output_field: string | null;
+  initialization_request_input_field_map: Record<InitializationRequestInputField, string> | null;
 };
 
 export type ExactFile = {
@@ -69,6 +79,14 @@ export type LocatedLifecycle = {
   inventoryItem: Record<string, unknown>;
   workItemRoot: string;
   lifecycle: ExactFile;
+};
+
+export type LocatedWorkItemIdentity = {
+  descriptorDomainId: string;
+  inventory: ExactFile;
+  inventoryItem: Record<string, unknown>;
+  inventoryItemIndex: number;
+  workItemRoot: string;
 };
 
 export type StandardAgentLifecycleReactivationRequest = {
@@ -102,6 +120,14 @@ export type ParsedStandardAgentLifecycleAdmission =
       domainAuthorityResultSha256: string;
       materializationReceiptRef: string;
       materializationReceiptSha256: string;
+    }
+  | {
+      mode: 'initialization_receipt';
+      value: Record<string, unknown>;
+      domainAuthorityResultRef: string;
+      domainAuthorityResultSha256: string;
+      materializationReceiptRef: string;
+      materializationReceiptSha256: string;
     };
 
 export type StandardAgentLifecycleReactivationBinding = {
@@ -116,5 +142,21 @@ export type StandardAgentLifecycleReactivationBinding = {
 };
 
 export type PreparedStandardAgentLifecycleReactivation = StandardAgentLifecycleReactivationBinding & {
+  handlerPayload: Record<string, unknown>;
+};
+
+export type StandardAgentLifecycleInitializationBinding = {
+  contract: StandardAgentLifecycleAdmissionContract;
+  handlerActionId: string;
+  handlerRunId: string;
+  admissionPayloadField: string;
+  admissionScopeId: string;
+  originalAdmissionRequestRef: string;
+  originalAdmissionRequestSha256: string;
+  ownerLedgerRef: string;
+  workItemId: string;
+};
+
+export type PreparedStandardAgentLifecycleInitialization = StandardAgentLifecycleInitializationBinding & {
   handlerPayload: Record<string, unknown>;
 };

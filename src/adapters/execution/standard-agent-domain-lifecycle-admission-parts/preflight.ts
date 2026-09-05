@@ -25,6 +25,157 @@ import type {
   StandardAgentLifecycleAdmissionContract,
 } from './types.ts';
 
+function validateInitializationAdmission(input: {
+  admission: Extract<ParsedStandardAgentLifecycleAdmission, { mode: 'initialization_receipt' }>;
+  contract: StandardAgentLifecycleAdmissionContract;
+  workspaceRoot: string;
+  domainId: string;
+  materializationDomainId: string;
+  actionId: string;
+  runId: string;
+  originalInvocationSha256: string;
+  workItemId: string;
+  lifecycle: ExactFile;
+  lifecycleState: string;
+  lifecycleGeneration: number;
+}) {
+  if (
+    !input.contract.initialization_action_id
+    || !input.contract.initialization_receipt_output_field
+    || !input.contract.initialization_materialization_authorization_output_field
+  ) blocked('Lifecycle initialization receipt was supplied without a declared initialization authority contract.');
+  const authority = exactAuthorityFile(
+    input.admission.domainAuthorityResultRef,
+    input.workspaceRoot,
+    'domain_authority_result_ref',
+  );
+  if (authority.sha256 !== input.admission.domainAuthorityResultSha256) {
+    blocked('Domain initialization authority result bytes do not match lifecycle_admission.');
+  }
+  const stateRoot = resolveOplStatePaths().state_dir;
+  fs.mkdirSync(stateRoot, { recursive: true });
+  const materialization = exactAuthorityFile(
+    input.admission.materializationReceiptRef,
+    stateRoot,
+    'materialization_receipt_ref',
+  );
+  if (materialization.sha256 !== input.admission.materializationReceiptSha256) {
+    blocked('CAS initialization materialization receipt bytes do not match lifecycle_admission.');
+  }
+  const receipt = materialization.payload;
+  if (
+    receipt.surface_kind !== 'opl_domain_artifact_cas_materialization_receipt'
+    || receipt.version !== 'opl-domain-artifact-cas-materialization-receipt.v1'
+    || receipt.capability_id !== DOMAIN_ARTIFACT_CAS_CAPABILITY_ID
+    || receipt.domain_id !== input.materializationDomainId
+    || receipt.status !== 'materialized'
+    || !isRecord(receipt.transaction)
+    || receipt.transaction.journal_must_be_absent_for_admission !== true
+  ) blocked('CAS initialization materialization receipt identity does not match the lifecycle-gated action.');
+  const requestSha256 = digest(receipt.request_sha256, 'materialization_receipt.request_sha256');
+  if (domainArtifactCasMaterializationInProgress({
+    workspaceRoot: input.workspaceRoot,
+    requestSha256,
+  })) blocked('CAS initialization materialization transaction journal is still in progress.');
+  const domainResult = isRecord(receipt.domain_authority_result) ? receipt.domain_authority_result : null;
+  if (
+    !domainResult
+    || domainResult.action_id !== input.contract.initialization_action_id
+    || domainResult.output_ref !== authority.ref
+    || digest(domainResult.output_sha256, 'receipt.domain_authority_result.output_sha256') !== authority.sha256
+  ) blocked('CAS initialization receipt does not bind the exact domain authority result.');
+  const initialization = authority.payload[input.contract.initialization_receipt_output_field];
+  const authorization = authority.payload[
+    input.contract.initialization_materialization_authorization_output_field
+  ];
+  if (!isRecord(initialization) || !isRecord(authorization)) {
+    blocked('Domain authority result is missing its initialization receipt or CAS authorization.');
+  }
+  const originalRef = text(
+    initialization.original_admission_request_ref,
+    'initialization_receipt.original_admission_request_ref',
+  );
+  const original = exactAuthorityFile(originalRef, input.workspaceRoot, 'original_admission_request_ref');
+  const originalSha256 = digest(
+    initialization.original_admission_request_sha256,
+    'initialization_receipt.original_admission_request_sha256',
+  );
+  if (original.sha256 !== originalSha256) blocked('Initialization receipt original request digest is stale.');
+  const expectedInvocationSha256 = digest(input.originalInvocationSha256, 'original_invocation_sha256');
+  if (
+    original.payload.canonical_domain_id !== input.domainId
+    || original.payload.requested_action_id !== input.actionId
+    || original.payload.requested_run_id !== input.runId
+    || original.payload.work_item_id !== input.workItemId
+    || original.payload.original_invocation_sha256 !== expectedInvocationSha256
+    || initialization.requested_action_id !== input.actionId
+    || initialization.requested_run_id !== input.runId
+    || digest(
+      initialization.original_invocation_sha256,
+      'initialization_receipt.original_invocation_sha256',
+    ) !== expectedInvocationSha256
+  ) blocked('Initialization receipt is not scoped to this exact Stage invocation.');
+  const expectedScopeId = `lifecycle-initialization:${sha256(canonicalJsonBytes({
+    canonical_domain_id: input.domainId,
+    requested_action_id: input.actionId,
+    requested_run_id: input.runId,
+    work_item_id: input.workItemId,
+    original_invocation_sha256: expectedInvocationSha256,
+    original_admission_request_sha256: originalSha256,
+  }))}`;
+  if (initialization.admission_scope_id !== expectedScopeId) {
+    blocked('Initialization receipt admission_scope_id is stale or belongs to another Stage invocation.');
+  }
+  const authorityReceiptRef = text(initialization.receipt_ref, 'initialization_receipt.receipt_ref');
+  const fromState = text(initialization.from_state, 'initialization_receipt.from_state');
+  const fromGeneration = integer(initialization.from_generation, 'initialization_receipt.from_generation');
+  const toState = text(initialization.to_state, 'initialization_receipt.to_state');
+  const toGeneration = integer(initialization.to_generation, 'initialization_receipt.to_generation');
+  if (
+    initialization[input.contract.work_item_id_field] !== input.workItemId
+    || fromState !== 'uninitialized'
+    || fromGeneration !== 0
+    || toState !== input.contract.active_state
+    || toGeneration !== 1
+    || input.lifecycleGeneration !== 1
+    || digest(initialization.lifecycle_sha256, 'initialization_receipt.lifecycle_sha256') !== input.lifecycle.sha256
+    || initialization.stage_body_authorized !== true
+    || initialization.publication_authorized !== false
+    || initialization.submission_authorized !== false
+  ) blocked('Initialization receipt does not bind the generation-zero to generation-one active lifecycle.');
+  if (
+    authorization.authority_receipt_ref !== authorityReceiptRef
+    || receipt.authority_receipt_ref !== authorityReceiptRef
+    || authorization.authorization_ref !== receipt.authorization_ref
+    || digest(authorization.operations_sha256, 'authorization.operations_sha256')
+      !== digest(receipt.operations_sha256, 'materialization_receipt.operations_sha256')
+  ) blocked('CAS authorization and materialization receipt do not preserve initialization authority lineage.');
+  if (!Array.isArray(receipt.operations)) blocked('CAS initialization receipt operations are missing.');
+  const lifecycleOperation = receipt.operations.find((operation) => (
+    isRecord(operation) && operation.target_ref === input.lifecycle.ref
+  ));
+  if (
+    !isRecord(lifecycleOperation)
+    || digest(lifecycleOperation.after_sha256, 'materialization_receipt.operations[].after_sha256')
+      !== input.lifecycle.sha256
+    || lifecycleOperation.after_byte_size !== input.lifecycle.bytes.byteLength
+  ) blocked('CAS initialization receipt does not bind the current canonical lifecycle bytes.');
+  if (input.lifecycleState !== input.contract.active_state) {
+    blocked('Initialization receipt exists but canonical domain lifecycle is still inactive.', {
+      lifecycle_state: input.lifecycleState,
+    });
+  }
+  return {
+    status: 'admitted_by_current_initialization_receipt' as const,
+    lifecycle_ref: input.lifecycle.ref,
+    lifecycle_sha256: input.lifecycle.sha256,
+    lifecycle_generation: input.lifecycleGeneration,
+    initialization_receipt_ref: authorityReceiptRef,
+    materialization_receipt_ref: materialization.ref,
+    admission_scope_id: expectedScopeId,
+  };
+}
+
 function validateMaterializedAdmission(input: {
   admission: Extract<ParsedStandardAgentLifecycleAdmission, { mode: 'materialized_receipt' }>;
   contract: StandardAgentLifecycleAdmissionContract;
@@ -241,8 +392,6 @@ function assertOrdinaryLifecycleAuthority(input: ReturnType<typeof currentStanda
   const forbidden = [
     'stage_body_authorized',
     'business_action_authorized',
-    'publication_authorized',
-    'submission_authorized',
   ].filter((field) => lifecycle[field] === false || boundary?.[field] === false);
   if (
     lifecycle.qualification_only === true
@@ -299,6 +448,22 @@ export function preflightStandardAgentDomainLifecycleAdmission(input: {
     const admission = parseStandardAgentLifecycleAdmission(admissionValue);
     if (admission.mode === 'reactivation_request') {
       blocked('Reactivation request must be authority-evaluated and CAS-materialized before Stage admission.');
+    }
+    if (admission.mode === 'initialization_receipt') {
+      return validateInitializationAdmission({
+        admission,
+        contract,
+        workspaceRoot: input.workspaceRoot,
+        domainId: input.domainId,
+        materializationDomainId: input.materializationDomainId ?? input.domainId,
+        actionId: input.action.action_id,
+        runId: input.runId,
+        originalInvocationSha256: input.originalInvocationSha256,
+        workItemId,
+        lifecycle,
+        lifecycleState,
+        lifecycleGeneration,
+      });
     }
     return validateMaterializedAdmission({
       admission,

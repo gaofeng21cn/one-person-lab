@@ -5,6 +5,7 @@ import {
   DOMAIN_LIFECYCLE_ADMISSION_CAPABILITY_ID,
   DEFAULT_MATERIALIZATION_AUTHORIZATION_FIELD,
   DEFAULT_REACTIVATION_RECEIPT_FIELD,
+  INITIALIZATION_REQUEST_FIELD_MAP_KEYS,
   REQUEST_FIELD_MAP_KEYS,
   type LifecycleProjectionSource,
   type ParsedStandardAgentLifecycleAdmission,
@@ -47,6 +48,10 @@ export function standardAgentLifecycleAdmissionContract(
     'reactivation_projection_sources',
     'reactivation_request_input_field_map',
     'exact_byte_binding_fields',
+    'initialization_action_id',
+    'initialization_receipt_output_field',
+    'initialization_materialization_authorization_output_field',
+    'initialization_request_input_field_map',
   ]);
   const unsupported = Object.keys(value).filter((key) => !allowed.has(key));
   if (unsupported.length > 0) {
@@ -109,6 +114,42 @@ export function standardAgentLifecycleAdmissionContract(
       media_type: 'application/json',
     };
   });
+  const initializationFields = [
+    'initialization_action_id',
+    'initialization_receipt_output_field',
+    'initialization_materialization_authorization_output_field',
+    'initialization_request_input_field_map',
+  ] as const;
+  const initializationFieldCount = initializationFields.filter((field) => value[field] !== undefined).length;
+  if (initializationFieldCount !== 0 && initializationFieldCount !== initializationFields.length) {
+    blocked('lifecycle_admission_contract initialization fields must be declared together.');
+  }
+  let initializationFieldMap = null;
+  if (initializationFieldCount > 0) {
+    const rawInitializationFieldMap = value.initialization_request_input_field_map;
+    if (!isRecord(rawInitializationFieldMap)) {
+      blocked('lifecycle_admission_contract.initialization_request_input_field_map must be an object.');
+    }
+    exactKeys(
+      rawInitializationFieldMap,
+      INITIALIZATION_REQUEST_FIELD_MAP_KEYS,
+      'lifecycle_admission_contract.initialization_request_input_field_map',
+    );
+    initializationFieldMap = Object.fromEntries(INITIALIZATION_REQUEST_FIELD_MAP_KEYS.map((field) => [
+      field,
+      jsonPointerText(
+        rawInitializationFieldMap[field],
+        `lifecycle_admission_contract.initialization_request_input_field_map.${field}`,
+      ),
+    ])) as Record<typeof INITIALIZATION_REQUEST_FIELD_MAP_KEYS[number], string>;
+    const initializationPointers = Object.values(initializationFieldMap);
+    if (
+      new Set(initializationPointers).size !== initializationPointers.length
+      || initializationPointers.some((left) => initializationPointers.some((right) => (
+        left !== right && (left.startsWith(`${right}/`) || right.startsWith(`${left}/`))
+      )))
+    ) blocked('initialization_request_input_field_map pointers must be unique and non-overlapping.');
+  }
   return {
     capability_id: DOMAIN_LIFECYCLE_ADMISSION_CAPABILITY_ID,
     work_item_id_field: text(value.work_item_id_field, 'lifecycle_admission_contract.work_item_id_field'),
@@ -136,6 +177,22 @@ export function standardAgentLifecycleAdmissionContract(
     reactivation_projection_sources: projectionSources,
     reactivation_request_input_field_map: fieldMap,
     exact_byte_binding_fields: lifecycleExactByteBindingFields(value.exact_byte_binding_fields),
+    initialization_action_id: initializationFieldCount === 0
+      ? null
+      : text(value.initialization_action_id, 'lifecycle_admission_contract.initialization_action_id'),
+    initialization_receipt_output_field: initializationFieldCount === 0
+      ? null
+      : text(
+          value.initialization_receipt_output_field,
+          'lifecycle_admission_contract.initialization_receipt_output_field',
+        ),
+    initialization_materialization_authorization_output_field: initializationFieldCount === 0
+      ? null
+      : text(
+          value.initialization_materialization_authorization_output_field,
+          'lifecycle_admission_contract.initialization_materialization_authorization_output_field',
+        ),
+    initialization_request_input_field_map: initializationFieldMap,
   };
 }
 
@@ -221,6 +278,25 @@ export function parseStandardAgentLifecycleAdmission(value: unknown): ParsedStan
     ], 'lifecycle_admission');
     return {
       mode: 'materialized_receipt',
+      value,
+      domainAuthorityResultRef: text(value.domain_authority_result_ref, 'domain_authority_result_ref'),
+      domainAuthorityResultSha256: digest(value.domain_authority_result_sha256, 'domain_authority_result_sha256'),
+      materializationReceiptRef: text(value.materialization_receipt_ref, 'materialization_receipt_ref'),
+      materializationReceiptSha256: digest(value.materialization_receipt_sha256, 'materialization_receipt_sha256'),
+    };
+  }
+  if (value.mode === 'initialization_receipt') {
+    exactKeys(value, [
+      'surface_kind',
+      'version',
+      'mode',
+      'domain_authority_result_ref',
+      'domain_authority_result_sha256',
+      'materialization_receipt_ref',
+      'materialization_receipt_sha256',
+    ], 'lifecycle_admission');
+    return {
+      mode: 'initialization_receipt',
       value,
       domainAuthorityResultRef: text(value.domain_authority_result_ref, 'domain_authority_result_ref'),
       domainAuthorityResultSha256: digest(value.domain_authority_result_sha256, 'domain_authority_result_sha256'),

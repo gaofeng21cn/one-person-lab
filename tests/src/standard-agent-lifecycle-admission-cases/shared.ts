@@ -31,6 +31,7 @@ import {
 import {
   preflightStandardAgentDomainLifecycleAdmission,
   prepareStandardAgentLifecycleReactivation,
+  standardAgentLifecycleInitializationHandlerRunId,
   standardAgentLifecycleAdmissionContract,
   standardAgentLifecycleReactivationHandlerRunId,
 } from
@@ -277,6 +278,14 @@ function writeLifecycleContracts(checkoutRoot: string) {
     reactivation_action_id: 'reactivate_study',
     reactivation_receipt_output_field: 'reactivation_receipt',
     materialization_authorization_output_field: 'mas_lifecycle_cas_mutation_authorization',
+    initialization_action_id: 'initialize_study',
+    initialization_receipt_output_field: 'initialization_receipt',
+    initialization_materialization_authorization_output_field: 'mas_study_initialization_cas_mutation_authorization',
+    initialization_request_input_field_map: {
+      authority_context: '/authority_context',
+      work_item_identity: '/work_item_identity',
+      current_inventory: '/current_inventory',
+    },
     required_wakeup_gate_id: 'explicit_user_wakeup',
     stopped_relaunch_gate_id: 'allow_stopped_relaunch',
     reactivation_projection_sources: [
@@ -358,6 +367,33 @@ function writeLifecycleContracts(checkoutRoot: string) {
       },
     },
   };
+  const initializationAction = {
+    action_id: 'initialize_study',
+    title: 'Initialize study',
+    summary: 'Internal study initialization authority handler.',
+    owner: 'mas',
+    effect: 'read_only',
+    execution_binding: { kind: 'handler_ref', handler_ref: 'handler:fixture.initialize' },
+    execution_scope: { kind: 'work_item', alias_fields: ['work_item_identity.work_item_id'] },
+    input_schema_ref: 'contracts/initialize-input.schema.json',
+    output_schema_ref: 'contracts/initialize-output.schema.json',
+    required_fields: ['authority_context', 'work_item_identity', 'current_inventory'],
+    optional_fields: [],
+    workspace_locator_fields: [],
+    human_gate_ids: [],
+    supported_surfaces: supportedSurfaces(true),
+    authority_boundary: {
+      host_materialization_contract: {
+        capability_id: 'opl_domain_artifact_cas_materialization.v1',
+        request_output_field: 'opl_host_materialization_request',
+        authorization_output_field: 'mas_study_initialization_cas_mutation_authorization',
+        receipt_output_field: 'initialization_receipt',
+        receipt_content_binding_output_field: 'initialization_receipt_content_binding',
+        materialization_scope_sha256_field: 'materialization_scope_sha256',
+        absent_relative_path_preconditions_field: 'absent_relative_path_preconditions',
+      },
+    },
+  };
   const provisioningAction = {
     action_id: 'qualification_work_item_provisioning_authority_evaluate',
     title: 'Qualification provisioning authority',
@@ -416,7 +452,7 @@ function writeLifecycleContracts(checkoutRoot: string) {
       opl_can_write_domain_truth: false,
       provider_completion_is_domain_completion: false,
     },
-    actions: [stageAction, handlerAction, provisioningAction],
+    actions: [stageAction, handlerAction, initializationAction, provisioningAction],
     notes: [],
   }));
   fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'domain_handler_registry.json'), JSON.stringify({
@@ -426,6 +462,10 @@ function writeLifecycleContracts(checkoutRoot: string) {
       {
         handler_id: 'fixture.reactivate',
         binding: { kind: 'typescript_export', file: 'reactivate.ts', export: 'reactivate' },
+      },
+      {
+        handler_id: 'fixture.initialize',
+        binding: { kind: 'typescript_export', file: 'initialize.ts', export: 'initialize' },
       },
       {
         handler_id: 'mas.qualification-work-item-provisioning-authority-evaluate',
@@ -451,6 +491,13 @@ function writeLifecycleContracts(checkoutRoot: string) {
   fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'stage-output.schema.json'), '{"type":"object"}');
   fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'reactivate-input.schema.json'), '{"type":"object"}');
   fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'reactivate-output.schema.json'), '{"type":"object"}');
+  fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'initialize-input.schema.json'), JSON.stringify({
+    type: 'object',
+    required: initializationAction.required_fields,
+    properties: Object.fromEntries(initializationAction.required_fields.map((field) => [field, {}])),
+    additionalProperties: false,
+  }));
+  fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'initialize-output.schema.json'), '{"type":"object"}');
   fs.writeFileSync(
     path.join(checkoutRoot, 'contracts', 'qualification-provisioning-input.schema.json'),
     JSON.stringify({
@@ -472,6 +519,7 @@ function writeLifecycleContracts(checkoutRoot: string) {
         source_kind: 'workspace_relative_json',
         relative_path: 'workspace_index.json',
         items_pointer: '/studies',
+        work_item_root_template: 'studies/{study_id}',
         field_map: {
           work_item_id: 'study_id',
           work_item_root: 'study_root',
@@ -529,6 +577,15 @@ function writeLifecycleWorkspace(workspaceRoot: string) {
     developer_supervisor_mode: 'on',
   });
   return { lifecycle, userAuthority, revisionIntake, profile };
+}
+
+function writeIdentityOnlyLifecycleWorkspace(workspaceRoot: string) {
+  const studyRoot = path.join(workspaceRoot, 'studies', 'study-001');
+  fs.mkdirSync(studyRoot, { recursive: true });
+  const inventory = writeJson(path.join(workspaceRoot, 'workspace_index.json'), {
+    studies: [{ study_id: 'study-001', study_root: 'studies/study-001' }],
+  });
+  return { studyRoot, inventory };
 }
 
 function reactivationAdmission(refs: ReturnType<typeof writeLifecycleWorkspace>, lifecycleSha256 = refs.lifecycle.sha256) {
@@ -745,6 +802,142 @@ function authorityHandler(workspaceRoot: string, onCall: () => void) {
   };
 }
 
+function initializationAuthorityHandler(
+  workspaceRoot: string,
+  onCall: () => void,
+  mutateOutput?: (output: Record<string, any>) => void,
+) {
+  const canonicalWorkspaceRoot = fs.realpathSync.native(workspaceRoot);
+  return (input: { request: unknown }): StandardAgentHandlerSandboxReceipt => {
+    onCall();
+    const request = input.request as Record<string, any>;
+    const authority = request.authority_context;
+    const identity = request.work_item_identity;
+    const currentInventory = request.current_inventory;
+    const lifecycle = {
+      study_id: identity.work_item_id,
+      lifecycle_state: 'active',
+      lifecycle_generation: 1,
+      authority_boundary: {
+        stage_body_authorized: true,
+        publication_authorized: false,
+        submission_authorized: false,
+      },
+    };
+    const lifecycleBytes = canonicalJsonBytes(lifecycle);
+    const lifecycleSha256 = digest(lifecycleBytes);
+    const inventory = structuredClone(currentInventory.record);
+    inventory.studies[currentInventory.selected_item_index] = {
+      ...inventory.studies[currentInventory.selected_item_index],
+      status: 'active',
+      lifecycle_ref: 'control/lifecycle.json',
+    };
+    const inventoryBytes = canonicalJsonBytes(inventory);
+    const receiptRef = `opl://mas/study-initialization/${encodeURIComponent(authority.admission_scope_id)}`;
+    const lifecycleRelativePath = `${identity.canonical_work_item_root}/control/lifecycle.json`;
+    const receiptRelativePath = `${identity.canonical_work_item_root}/control/initialization-receipt.json`;
+    const initializationReceipt = {
+      receipt_ref: receiptRef,
+      study_id: identity.work_item_id,
+      from_state: 'uninitialized',
+      from_generation: 0,
+      to_state: 'active',
+      to_generation: 1,
+      requested_action_id: authority.requested_action_id,
+      requested_run_id: authority.requested_run_id,
+      original_invocation_sha256: authority.original_invocation_sha256,
+      admission_scope_id: authority.admission_scope_id,
+      original_admission_request_ref: authority.original_admission_request_ref,
+      original_admission_request_sha256: authority.original_admission_request_sha256,
+      lifecycle_relative_path: lifecycleRelativePath,
+      lifecycle_sha256: lifecycleSha256,
+      stage_body_authorized: true,
+      publication_authorized: false,
+      submission_authorized: false,
+    };
+    const receiptBytes = canonicalJsonBytes(initializationReceipt);
+    const operations = [
+      {
+        target_relative_path: currentInventory.inventory_ref,
+        precondition: {
+          kind: 'existing_exact',
+          sha256: currentInventory.inventory_sha256,
+          byte_size: currentInventory.inventory_byte_size,
+        },
+        replacement_bytes_base64: inventoryBytes.toString('base64'),
+        replacement_sha256: digest(inventoryBytes),
+        replacement_byte_size: inventoryBytes.byteLength,
+      },
+      {
+        target_relative_path: lifecycleRelativePath,
+        precondition: { kind: 'absent' },
+        replacement_bytes_base64: lifecycleBytes.toString('base64'),
+        replacement_sha256: lifecycleSha256,
+        replacement_byte_size: lifecycleBytes.byteLength,
+      },
+      {
+        target_relative_path: receiptRelativePath,
+        precondition: { kind: 'absent' },
+        replacement_bytes_base64: receiptBytes.toString('base64'),
+        replacement_sha256: digest(receiptBytes),
+        replacement_byte_size: receiptBytes.byteLength,
+      },
+    ];
+    const absentRelativePathPreconditions = [lifecycleRelativePath, receiptRelativePath];
+    const operationsSha256 = digest(canonicalJsonBytes(operations));
+    const materializationScopeSha256 = digest(canonicalJsonBytes({
+      operations,
+      absent_relative_path_preconditions: absentRelativePathPreconditions,
+    }));
+    const requestId = `initialization:${authority.admission_scope_id}`;
+    const authorizationRef = `opl://mas/study-initialization-authorization/${encodeURIComponent(requestId)}`;
+    const output: Record<string, any> = {
+      status: 'authorized',
+      initialization_receipt: initializationReceipt,
+      initialization_receipt_content_binding: {
+        receipt_ref: receiptRef,
+        target_relative_path: receiptRelativePath,
+        sha256: digest(receiptBytes),
+        byte_size: receiptBytes.byteLength,
+      },
+      opl_host_materialization_request: {
+        surface_kind: 'opl_domain_artifact_cas_materialization_request',
+        version: 'opl-domain-artifact-cas-materialization.v1',
+        capability_id: 'opl_domain_artifact_cas_materialization.v1',
+        request_id: requestId,
+        domain_id: 'medautoscience',
+        authorization_ref: authorizationRef,
+        operations_sha256: operationsSha256,
+        materialization_scope_sha256: materializationScopeSha256,
+        absent_relative_path_preconditions: absentRelativePathPreconditions,
+        operations,
+      },
+      mas_study_initialization_cas_mutation_authorization: {
+        authorized: true,
+        authorization_ref: authorizationRef,
+        capability_id: 'opl_domain_artifact_cas_materialization.v1',
+        request_id: requestId,
+        domain_id: 'medautoscience',
+        operations_sha256: operationsSha256,
+        materialization_scope_sha256: materializationScopeSha256,
+        absent_relative_path_preconditions: absentRelativePathPreconditions,
+        authority_receipt_ref: receiptRef,
+        satisfied_gate_ids: [],
+      },
+    };
+    mutateOutput?.(output);
+    return {
+      runtime_kind: 'node_permission_model',
+      sandbox_kind: 'macos_sandbox_exec',
+      exit_code: 0,
+      timed_out: false,
+      stdout_bytes: canonicalJsonBytes(output),
+      stderr: '',
+      output,
+    };
+  };
+}
+
 function refusingAuthorityHandler(
   status: 'typed_blocker' | 'invalid_host_input',
   onCall: () => void,
@@ -825,6 +1018,7 @@ export {
   preflightStandardAgentDomainLifecycleAdmission,
   prepareStandardAgentLifecycleReactivation,
   standardAgentLifecycleAdmissionContract,
+  standardAgentLifecycleInitializationHandlerRunId,
   standardAgentLifecycleReactivationHandlerRunId,
   preflightFamilyRuntimeDomainLifecycleAdmission,
   ensureProviderHostedStageAttempt,
@@ -850,10 +1044,12 @@ export {
   nativeManagedCheckout,
   writeLifecycleContracts,
   writeLifecycleWorkspace,
+  writeIdentityOnlyLifecycleWorkspace,
   reactivationAdmission,
   prepareCanonicalLifecycleAuthorityPayload,
   loadCanonicalMasAuthorityRequest,
   authorityHandler,
+  initializationAuthorityHandler,
   refusingAuthorityHandler,
 };
 

@@ -69,10 +69,13 @@ import {
 } from './domain-artifact-cas-materialization.ts';
 import {
   bindStandardAgentLifecycleReactivation,
+  materializedStandardAgentLifecycleInitializationAdmission,
   materializedStandardAgentLifecycleAdmission,
   preflightStandardAgentDomainLifecycleAdmission,
+  prepareStandardAgentLifecycleInitialization,
   prepareStandardAgentLifecycleReactivation,
   standardAgentLifecycleAdmissionContract,
+  type PreparedStandardAgentLifecycleInitialization,
   type PreparedStandardAgentLifecycleReactivation,
 } from './standard-agent-domain-lifecycle-admission.ts';
 import { fail, sha256 } from './standard-agent-action-runtime-parts/shared.ts';
@@ -1104,11 +1107,103 @@ async function materializeLifecycleAdmissionContext(input: {
   runId: string;
   workspaceRoot: string;
   domainId: string;
+  runtimeDomainId: string;
+  acceptedProjectIds: readonly string[];
   checkoutRoot: string;
   originalInvocationSha256: string;
   context: StandardAgentActionContext;
   dependencies: RuntimeDependencies;
 }) {
+  const initializationBound = prepareStandardAgentLifecycleInitialization({
+    action: input.context.action,
+    payload: input.context.payload,
+    checkoutRoot: input.checkoutRoot,
+    workspaceRoot: input.workspaceRoot,
+    domainId: input.domainId,
+    runId: input.runId,
+    originalInvocationSha256: input.originalInvocationSha256,
+  });
+  if (initializationBound) {
+    const handlerAction = input.context.catalog.actions.find(
+      (candidate) => candidate.action_id === initializationBound.handlerActionId,
+    ) ?? fail('Lifecycle initialization action is absent from the frozen domain catalog.', {
+      initialization_action_id: initializationBound.handlerActionId,
+    });
+    if (
+      handlerAction.execution_binding.kind !== 'handler_ref'
+      || Object.values(handlerAction.supported_surfaces).some((surface) => surface !== null)
+      || !actionDeclaresHostMaterialization(handlerAction)
+    ) fail('Lifecycle initialization action must be an internal registry-bound host-materializing Handler action.', {
+      initialization_action_id: initializationBound.handlerActionId,
+    });
+
+    const childState = inspectStandardAgentActionRunState({
+      workspaceRoot: input.workspaceRoot,
+      runId: initializationBound.handlerRunId,
+    });
+    let prepared: PreparedStandardAgentLifecycleInitialization;
+    if (childState) {
+      if (
+        !childState.plan
+        || childState.plan.action_id !== initializationBound.handlerActionId
+        || !childState.plan.effective_payload
+      ) fail('Existing lifecycle initialization child run lacks its frozen effective Handler payload.', {
+        handler_run_id: initializationBound.handlerRunId,
+      });
+      prepared = {
+        ...initializationBound,
+        handlerPayload: originalInternalHandlerPayload({ action: handlerAction, plan: childState.plan }),
+      };
+    } else {
+      prepared = initializationBound;
+    }
+    const handlerRun = await runStandardAgentAction({
+      domainId: input.domainId,
+      actionId: prepared.handlerActionId,
+      workspaceRoot: input.workspaceRoot,
+      payload: prepared.handlerPayload,
+      runId: prepared.handlerRunId,
+      timeoutMs: input.runtimeInput.timeoutMs,
+    }, input.dependencies, INTERNAL_STANDARD_AGENT_ACTION_INVOCATION);
+    const effectivePayload = {
+      ...input.context.payload,
+      [prepared.admissionPayloadField]: materializedStandardAgentLifecycleInitializationAdmission({
+        prepared,
+        handlerRun,
+      }),
+    };
+    const inputValidation = assertRepoJsonSchemaPayload({
+      repoRoot: input.checkoutRoot,
+      schemaRef: input.context.action.input_schema_ref,
+      payload: effectivePayload,
+      label: `Standard Agent action ${input.context.action.action_id} materialized input`,
+    });
+    const executionScope = resolveActionExecutionScope({
+      action: input.context.action,
+      payload: effectivePayload,
+      workspaceRoot: input.workspaceRoot,
+      checkoutRoot: input.checkoutRoot,
+      runtimeDomainId: input.runtimeDomainId,
+      acceptedProjectIds: input.acceptedProjectIds,
+    });
+    const context = {
+      ...input.context,
+      payload: effectivePayload,
+      inputValidation,
+      executionScope,
+    };
+    const admission = preflightStandardAgentDomainLifecycleAdmission({
+      action: context.action,
+      payload: context.payload,
+      checkoutRoot: input.checkoutRoot,
+      workspaceRoot: input.workspaceRoot,
+      domainId: input.domainId,
+      materializationDomainId: context.catalog.target_domain_id,
+      runId: input.runId,
+      originalInvocationSha256: input.originalInvocationSha256,
+    });
+    return { context, admission };
+  }
   const bound = bindStandardAgentLifecycleReactivation({
     action: input.context.action,
     payload: input.context.payload,
@@ -1546,6 +1641,12 @@ export async function runStandardAgentAction(
     runId,
     workspaceRoot: runtimeBinding.workspace_root,
     domainId: runtimeBinding.agent_id,
+    runtimeDomainId: runtimeBinding.runtime_domain_id,
+    acceptedProjectIds: [
+      runtimeBinding.runtime_domain_id,
+      runtimeBinding.target_domain_id,
+      ...runtimeBinding.catalog_target_domain_ids,
+    ],
     checkoutRoot: runtimeBinding.checkout_root,
     originalInvocationSha256: invocationSha256,
     context: liveContext,
