@@ -79,6 +79,7 @@ export interface FoundryProviderOperationInvoker {
       evidence?: EvidenceBundle;
     };
     activity: FoundryActivityIdentity;
+    provider_source_digest: string;
   }): Promise<unknown>;
 }
 
@@ -276,18 +277,21 @@ export class ManifestFoundryDesignerAdapter implements DesignerPort {
   readonly producer_id: string;
   readonly #checkoutRoot: string;
   readonly #provider: FoundryProviderManifest;
+  readonly #providerSourceDigest: string;
   readonly #invoker: FoundryProviderOperationInvoker;
 
   constructor(input: {
     checkout_root: string;
     provider_manifest_ref?: string;
     provider_manifest?: FoundryProviderManifest;
+    provider_source_digest: string;
     invoker: FoundryProviderOperationInvoker;
   }) {
     this.#checkoutRoot = fs.realpathSync.native(input.checkout_root);
     this.#provider = input.provider_manifest
       ? normalizeFoundryProviderManifest(input.provider_manifest, input.provider_manifest_ref)
       : readFoundryProviderManifest(this.#checkoutRoot, input.provider_manifest_ref);
+    this.#providerSourceDigest = input.provider_source_digest;
     this.#invoker = input.invoker;
     this.producer_id = `foundry-provider:${this.#provider.provider_id}`;
   }
@@ -299,6 +303,7 @@ export class ManifestFoundryDesignerAdapter implements DesignerPort {
       checkout_root: this.#checkoutRoot,
       payload: { request },
       activity,
+      provider_source_digest: this.#providerSourceDigest,
     }));
   }
 
@@ -315,6 +320,7 @@ export class ManifestFoundryDesignerAdapter implements DesignerPort {
       checkout_root: this.#checkoutRoot,
       payload,
       activity,
+      provider_source_digest: this.#providerSourceDigest,
     }));
   }
 }

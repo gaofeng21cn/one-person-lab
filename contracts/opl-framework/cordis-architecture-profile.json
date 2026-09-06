@@ -625,7 +625,8 @@
           ],
           "allowed_profiles": [
             "base-headless",
-            "app-full"
+            "app-full",
+            "foundry-dev"
           ]
         },
         {
@@ -916,6 +917,11 @@
           "plugin_id": "opl-package-host",
           "required": true,
           "reason": "Foundry candidate bindings need a frozen host compatibility context before evaluation."
+        },
+        {
+          "plugin_id": "opl-connect-descriptor-discovery",
+          "required": true,
+          "reason": "Managed Standard Agent workspace Skill projection requires profile-bound descriptor discovery."
         },
         {
           "plugin_id": "opl-foundry-provider-manifest",

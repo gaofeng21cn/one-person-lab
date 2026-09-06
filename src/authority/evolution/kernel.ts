@@ -671,6 +671,42 @@ export class FoundryKernel {
     return this.inspectRun(input.run_id);
   }
 
+  async authorizeCancelRun(input: {
+    run_id: string;
+    expected_revision: number;
+    authority_receipt_ref: string;
+  }): Promise<FoundryRunInspection> {
+    const expected = expectedRevision(input.expected_revision);
+    const authorityRef = requiredRef(input.authority_receipt_ref, 'authority_receipt_ref');
+    const inspection = await this.inspectRun(input.run_id);
+    if (inspection.run.revision !== expected) {
+      const replay = (await this.#events.read(input.run_id)).find((event) =>
+        event.revision === expected + 1
+        && event.event_type === 'foundry_run_cancelled'
+        && event.payload.owner_authority_receipt_ref === authorityRef
+        && typeof event.payload.owner_authority_receipt_digest === 'string');
+      if (replay) return inspection;
+      fail('FoundryRun cancellation revision compare-and-swap failed.', {
+        expected_revision: expected,
+        actual_revision: inspection.run.revision,
+      });
+    }
+    if (FOUNDRY_TERMINAL_STATES.has(inspection.run.state)) {
+      fail('A terminal FoundryRun cannot be cancelled.', { state: inspection.run.state });
+    }
+    await this.#verifyOwnerAuthority({
+      authority_receipt_ref: authorityRef,
+      action: 'cancel',
+      decision: 'cancel',
+      target_agent_id: inspection.request.target_agent_id,
+      target_domain_id: inspection.request.target_domain_id,
+      run_id: inspection.run.run_id,
+      version_digest: inspection.run.version_digest,
+      expected_revision: expected,
+    });
+    return inspection;
+  }
+
   async failRun(input: {
     run_id: string;
     failure_code: string;

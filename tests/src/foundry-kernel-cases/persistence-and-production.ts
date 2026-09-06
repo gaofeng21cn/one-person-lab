@@ -437,6 +437,7 @@ test('Foundry designer ports are producer-neutral across function and manifest a
   });
   const manifestAdapter = new ManifestFoundryDesignerAdapter({
     checkout_root: checkout,
+    provider_source_digest: `sha256:${'a'.repeat(64)}`,
     invoker: {
       invoke: async (input) => input.operation === 'design'
         ? fixture.design(input.payload.request)

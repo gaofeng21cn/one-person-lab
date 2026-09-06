@@ -69,6 +69,27 @@ export function readStandardAgentStagePromptFile(repoDir: string, promptRef: str
   };
 }
 
+export function readStandardAgentManagedTextFile(repoDir: string, fileRef: string) {
+  const filePathRef = fileRef.split('#', 1)[0]!.replace(/@sha256:[a-f0-9]{64}$/i, '');
+  const resolved = resolveStandardAgentRepoFile(repoDir, filePathRef, 'managed package content ref');
+  const bytes = fs.readFileSync(resolved);
+  const content = bytes.toString('utf8');
+  if (bytes.length === 0 || bytes.length > MAX_STAGE_PROMPT_BYTES || !Buffer.from(content, 'utf8').equals(bytes)) {
+    invalid('Managed package content ref must contain a non-empty bounded UTF-8 text body.', {
+      repo_dir: repoDir,
+      file_ref: fileRef,
+      size_bytes: bytes.length,
+      max_size_bytes: MAX_STAGE_PROMPT_BYTES,
+    });
+  }
+  return {
+    ref: fileRef,
+    sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+    size_bytes: bytes.length,
+    content,
+  };
+}
+
 function markdownHeadingSlug(value: string) {
   return value
     .normalize('NFKC')

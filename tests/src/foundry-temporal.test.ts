@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import temporalProto from '@temporalio/proto';
 import { Worker } from '@temporalio/worker';
 
 import {
@@ -30,6 +33,7 @@ import type {
   FoundryEventStore,
   MaterializedCandidate,
 } from '../../src/authority/evolution/ports.ts';
+import type { FoundryProviderManifest } from '../../src/authority/evolution/index.ts';
 import * as registeredActivities from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
 import { buildFoundryTemporalActivities } from '../../src/adapters/execution/foundry-temporal-activities.ts';
 import {
@@ -43,11 +47,62 @@ import type {
   FoundryRunWorkflowInput,
   FoundryRunWorkflowState,
 } from '../../src/adapters/execution/foundry-temporal.ts';
+import type { FoundryProviderOperationCursor } from '../../src/adapters/execution/foundry-provider-stage-run.ts';
 import { createTemporalTestWorkflowEnvironment } from './temporal-test-environment.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const workflowsPath = path.join(repoRoot, 'src/adapters/execution/family-runtime-temporal-workflows.ts');
 const ownerGate = new InMemoryOwnerGate(() => '2026-07-16T00:00:00.000Z');
+const temporalProviderManifest: FoundryProviderManifest = {
+  surface_kind: 'opl_foundry_provider',
+  version: 'opl-foundry-provider.v1',
+  provider_id: 'oma',
+  agent_id: 'oma',
+  package_id: 'oma',
+  domain_id: 'agent_engineering',
+  carrier_slug: 'opl-meta-agent',
+  operations: {
+    design: {
+      input_schema_refs: ['opl://foundry-protocol/DesignRequest'],
+      output_schema_ref: 'opl://foundry-protocol/AgentBlueprint',
+      entry_stage_ref: 'mission-intake',
+      required_stage_refs: ['mission-intake', 'evaluation-design'],
+      optional_stage_refs: [],
+      terminal_stage_ref: 'evaluation-design',
+    },
+    diagnose: {
+      input_schema_refs: [
+        'opl://foundry-protocol/DesignRequest',
+        'opl://foundry-protocol/AgentBlueprint',
+        'opl://foundry-protocol/EvidenceBundle',
+      ],
+      output_schema_ref: 'opl://foundry-protocol/EvolutionProposal',
+      entry_stage_ref: 'evidence-diagnosis',
+      required_stage_refs: ['evidence-diagnosis', 'evolution-proposal'],
+      optional_stage_refs: [],
+      terminal_stage_ref: 'evolution-proposal',
+    },
+  },
+  projection_policy: {
+    public_action_ids: ['engineer-agent'],
+    internal_operations_are_public_actions: false,
+    internal_operations_are_cli_commands: false,
+    internal_operations_are_mcp_tools: false,
+  },
+  authority_boundary: {
+    provider_owns_design_semantics: true,
+    provider_owns_evaluation_semantics: true,
+    provider_owns_evidence_diagnosis: true,
+    provider_owns_evolution_proposals: true,
+    provider_owns_foundry_run_state: false,
+    provider_owns_candidate_materialization: false,
+    provider_owns_evaluation_execution: false,
+    provider_owns_versions_or_activation: false,
+    provider_can_return_patch_or_work_order: false,
+    provider_can_view_protected_test_bodies: false,
+    opl_can_write_target_domain_truth: false,
+  },
+};
 
 function authorizeTemporalMutation(input: {
   inspection: NonNullable<FoundryRunWorkflowState['inspection']>;
@@ -374,6 +429,63 @@ async function within<T>(promise: Promise<T>, timeoutMs: number, message: string
   }
 }
 
+function providerCursor(
+  operationKey: string,
+  input: Partial<Extract<
+    FoundryProviderOperationCursor,
+    { version: 'opl-foundry-provider-operation-cursor.v2' }
+  >> = {},
+): FoundryProviderOperationCursor {
+  const providerManifest = input.provider_manifest ?? temporalProviderManifest;
+  return {
+    surface_kind: 'opl_foundry_provider_operation_cursor',
+    version: 'opl-foundry-provider-operation-cursor.v2',
+    operation_key: operationKey,
+    operation: 'design',
+    provider_id: 'oma',
+    activity_key: 'b'.repeat(64),
+    required_stage_refs: ['mission-intake', 'evaluation-design'],
+    optional_stage_refs: [],
+    terminal_stage_ref: 'evaluation-design',
+    entry_workflow_id: 'workflow:mission-intake',
+    current_workflow_id: 'workflow:mission-intake',
+    current_stage_id: null,
+    visited_path: [],
+    continuation: null,
+    active_attempts: [],
+    artifact_refs: [],
+    artifact_hashes: [],
+    status: 'pending',
+    ...input,
+    provider_manifest: providerManifest,
+    provider_manifest_digest: input.provider_manifest_digest ?? foundryContentDigest(providerManifest),
+    provider_source_digest: input.provider_source_digest ?? `sha256:${'c'.repeat(64)}`,
+    checkout_root: input.checkout_root ?? '/tmp',
+  };
+}
+
+test('current bundle replays pre-durable-provider Foundry cancellation history', async () => {
+  const fixture = fs.readFileSync(path.join(
+    repoRoot,
+    'tests/fixtures/temporal-history/foundry-cancel-pre-durable-provider-v1.json',
+  ));
+  assert.equal(
+    crypto.createHash('sha256').update(fixture).digest('hex'),
+    'cda3a03ef98cb30a2d6dbb85c4031d252b09448c3d1271f9ac144340633934e0',
+  );
+  const parsed = JSON.parse(fixture.toString('utf8')) as { events?: Array<Record<string, any>> };
+  const acceptedUpdates = (parsed.events ?? []).flatMap((event) =>
+    event.workflowExecutionUpdateAcceptedEventAttributes?.acceptedRequest?.input?.name ?? []);
+  const scheduledActivities = (parsed.events ?? []).flatMap((event) =>
+    event.activityTaskScheduledEventAttributes?.activityType?.name ?? []);
+  assert.ok(acceptedUpdates.includes('FoundryCancelUpdate'));
+  assert.equal(scheduledActivities.at(-1), 'foundryCancelRunActivity');
+  assert.equal(scheduledActivities.includes('foundryAuthorizeCancelRunActivity'), false);
+
+  const history = temporalProto.temporal.api.history.v1.History.fromObject(parsed);
+  await Worker.runReplayHistory({ workflowsPath }, history);
+});
+
 test('Temporal FoundryRun survives worker restart and applies query, Update, CAS, and cancel semantics', async () => {
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-foundry-temporal-control-${Date.now()}`;
@@ -470,6 +582,708 @@ test('Temporal FoundryRun survives worker restart and applies query, Update, CAS
       assert.equal(cancelled.inspection?.run.state, 'cancelled');
     });
   } finally {
+    if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal durably resumes a provider StageRun cursor after worker restart without relaunch', async () => {
+  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const taskQueue = `opl-foundry-temporal-provider-resume-${Date.now()}`;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+  const { kernel, events } = passingKernel();
+  const base = buildFoundryTemporalActivities(() => kernel);
+  let allowProgress = false;
+  let launchCalls = 0;
+  let observeCalls = 0;
+  let readCalls = 0;
+  let transientObserveFailuresRemaining = 3;
+  const activities = {
+    ...registeredActivities,
+    ...base,
+    async foundryLaunchProviderOperationActivity(operation: { operation_key: string; phase: string }) {
+      if (operation.phase !== 'design') return null;
+      launchCalls += 1;
+      return providerCursor(operation.operation_key);
+    },
+    async foundryObserveProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      observeCalls += 1;
+      if (!allowProgress) return input.cursor;
+      if (transientObserveFailuresRemaining > 0) {
+        transientObserveFailuresRemaining -= 1;
+        throw new FoundryTransientActivityError('transient provider query failure');
+      }
+      if (input.cursor.version !== 'opl-foundry-provider-operation-cursor.v2') {
+        throw new Error('Expected the generation-bound provider cursor.');
+      }
+      if (input.cursor.current_workflow_id === 'workflow:mission-intake') {
+        return providerCursor(input.cursor.operation_key, {
+          ...input.cursor,
+          current_workflow_id: 'workflow:evaluation-design',
+          visited_path: [{
+            workflow_id: 'workflow:mission-intake',
+            stage_id: 'mission-intake',
+          }],
+          continuation: {
+            from_workflow_id: 'workflow:mission-intake',
+            target_workflow_id: 'workflow:evaluation-design',
+          },
+        });
+      }
+      return providerCursor(input.cursor.operation_key, {
+        ...input.cursor,
+        current_stage_id: 'evaluation-design',
+        visited_path: [
+          ...input.cursor.visited_path,
+          { workflow_id: 'workflow:evaluation-design', stage_id: 'evaluation-design' },
+        ],
+        status: 'terminal',
+      });
+    },
+    async foundryReadProviderOperationTerminalActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      readCalls += 1;
+      return input.cursor;
+    },
+  };
+  const options = { addressOverride: testEnv.address, rpcTimeoutMs: 10_000 };
+  const request = designRequest('temporal-provider-resume-agent');
+  request.delivery_policy = { ...request.delivery_policy, activation_mode: 'qualify_only' };
+  try {
+    const firstWorker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath,
+      activities,
+    });
+    await firstWorker.runUntil(async () => {
+      await startTemporalFoundryRunWorkflow({
+        run_id: 'run-temporal-provider-resume',
+        request,
+      }, options);
+      for (let attempt = 0; attempt < 100 && observeCalls === 0; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      const pending = await queryTemporalFoundryRunWorkflow(
+        'run-temporal-provider-resume',
+        options,
+      );
+      assert.equal(pending.provider_operation_cursor?.status, 'pending');
+      assert.equal(pending.provider_operation_cursor?.current_workflow_id, 'workflow:mission-intake');
+    });
+
+    allowProgress = true;
+    const secondWorker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath,
+      activities,
+    });
+    const { result, history } = await secondWorker.runUntil(async () => {
+      const handle = testEnv.client.workflow.getHandle(
+        foundryTemporalWorkflowId('run-temporal-provider-resume'),
+      );
+      return { result: await handle.result(), history: await handle.fetchHistory() };
+    });
+    assert.equal((result as FoundryRunWorkflowState).inspection?.run.state, 'completed_qualified');
+    assert.equal(launchCalls, 1);
+    assert.equal(readCalls, 1);
+    assert.ok(observeCalls >= 5);
+    assert.equal(transientObserveFailuresRemaining, 0);
+    assert.equal(
+      (await events.read('run-temporal-provider-resume'))
+        .filter((event) => event.event_type === 'blueprint_admitted').length,
+      1,
+    );
+    await Worker.runReplayHistory({ workflowsPath }, history);
+  } finally {
+    if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal unlocks after provider cancellation failure and commits ledger cancellation only after provider stop', async () => {
+  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const taskQueue = `opl-foundry-temporal-provider-cancel-${Date.now()}`;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+  const dependencies = passingKernelDependencies();
+  const kernel = new FoundryKernel(dependencies);
+  const base = buildFoundryTemporalActivities(() => kernel);
+  const order: string[] = [];
+  let releaseLaunch = () => {};
+  let reportLaunch = () => {};
+  const launchGate = new Promise<void>((resolve) => { releaseLaunch = resolve; });
+  const launchEntered = new Promise<void>((resolve) => { reportLaunch = resolve; });
+  let reportAuthorized = () => {};
+  const authorized = new Promise<void>((resolve) => { reportAuthorized = resolve; });
+  let reportObservationAfterFailedCancel = () => {};
+  const observationAfterFailedCancel = new Promise<void>((resolve) => {
+    reportObservationAfterFailedCancel = resolve;
+  });
+  let providerCancelCalls = 0;
+  let failProviderCancel = true;
+  const activities = {
+    ...registeredActivities,
+    ...base,
+    async foundryLaunchProviderOperationActivity(operation: { operation_key: string; phase: string }) {
+      if (operation.phase !== 'design') return null;
+      reportLaunch();
+      await launchGate;
+      return providerCursor(operation.operation_key);
+    },
+    async foundryObserveProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      reportObservationAfterFailedCancel();
+      return input.cursor;
+    },
+    async foundryAuthorizeCancelRunActivity(input: Parameters<typeof base.foundryAuthorizeCancelRunActivity>[0]) {
+      const result = await base.foundryAuthorizeCancelRunActivity(input);
+      order.push('authorized');
+      reportAuthorized();
+      return result;
+    },
+    async foundryCancelProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      providerCancelCalls += 1;
+      if (failProviderCancel) {
+        throw new FoundryTransientActivityError('simulated provider cancellation transport failure');
+      }
+      order.push('provider_cancelled');
+      return input.cursor;
+    },
+    async foundryCancelRunActivity(input: Parameters<typeof base.foundryCancelRunActivity>[0]) {
+      order.push('ledger_cancelled');
+      return base.foundryCancelRunActivity(input);
+    },
+  };
+  const options = { addressOverride: testEnv.address, rpcTimeoutMs: 10_000 };
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath,
+      activities,
+    });
+    await worker.runUntil(async () => {
+      const request = designRequest('temporal-provider-cancel-agent');
+      await startTemporalFoundryRunWorkflow({
+        run_id: 'run-temporal-provider-cancel',
+        request,
+      }, options);
+      await within(launchEntered, 2_000, 'Provider launch did not start.');
+      const designing = await queryTemporalFoundryRunWorkflow(
+        'run-temporal-provider-cancel',
+        options,
+      );
+      await assert.rejects(cancelTemporalFoundryRun({
+        run_id: 'run-temporal-provider-cancel',
+        expected_revision: designing.inspection!.run.revision - 1,
+        authority_receipt_ref: 'opl://owner-receipt/unauthorized',
+      }, options));
+      assert.equal(providerCancelCalls, 0);
+
+      const cancellation = cancelTemporalFoundryRun({
+        run_id: 'run-temporal-provider-cancel',
+        expected_revision: designing.inspection!.run.revision,
+        authority_receipt_ref: authorizeTemporalMutation({
+          inspection: designing.inspection!,
+          action: 'cancel',
+          decision: 'cancel',
+        }),
+      }, options);
+      await within(authorized, 2_000, 'Cancellation was not authorized.');
+      assert.equal(providerCancelCalls, 0);
+      releaseLaunch();
+      await assert.rejects(cancellation);
+      assert.equal(providerCancelCalls, 3);
+      await within(
+        observationAfterFailedCancel,
+        5_000,
+        'Provider observation did not resume after cancellation failure.',
+      );
+      const resumed = await queryTemporalFoundryRunWorkflow(
+        'run-temporal-provider-cancel',
+        options,
+      );
+      assert.equal(resumed.inspection?.run.state, 'designing');
+      assert.deepEqual(
+        (await dependencies.events.read('run-temporal-provider-cancel'))
+          .map((event) => event.event_type),
+        ['foundry_run_accepted', 'design_started'],
+      );
+
+      failProviderCancel = false;
+      const cancelled = await cancelTemporalFoundryRun({
+        run_id: 'run-temporal-provider-cancel',
+        expected_revision: resumed.inspection!.run.revision,
+        authority_receipt_ref: authorizeTemporalMutation({
+          inspection: resumed.inspection!,
+          action: 'cancel',
+          decision: 'cancel',
+        }),
+      }, options);
+      assert.equal(cancelled.inspection?.run.state, 'cancelled');
+      assert.equal(providerCancelCalls, 4);
+      assert.deepEqual(order, ['authorized', 'authorized', 'provider_cancelled', 'ledger_cancelled']);
+      assert.deepEqual(
+        (await dependencies.events.read('run-temporal-provider-cancel'))
+          .map((event) => event.event_type),
+        ['foundry_run_accepted', 'design_started', 'foundry_run_cancelled'],
+      );
+    });
+  } finally {
+    releaseLaunch();
+    if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal terminalizes the FoundryRun when ledger cancellation fails after provider stop', async () => {
+  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const taskQueue = `opl-foundry-temporal-cancel-commit-${Date.now()}`;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+  const dependencies = passingKernelDependencies();
+  const kernel = new FoundryKernel(dependencies);
+  const base = buildFoundryTemporalActivities(() => kernel);
+  let providerCancelled = false;
+  let providerCancelCalls = 0;
+  let ledgerCancelCalls = 0;
+  let observationsAfterProviderCancel = 0;
+  const activities = {
+    ...registeredActivities,
+    ...base,
+    async foundryLaunchProviderOperationActivity(operation: { operation_key: string; phase: string }) {
+      return operation.phase === 'design' ? providerCursor(operation.operation_key) : null;
+    },
+    async foundryObserveProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      if (providerCancelled) observationsAfterProviderCancel += 1;
+      return input.cursor;
+    },
+    async foundryCancelProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      providerCancelCalls += 1;
+      providerCancelled = true;
+      return input.cursor;
+    },
+    async foundryCancelRunActivity() {
+      ledgerCancelCalls += 1;
+      throw new FoundryTransientActivityError('simulated ledger cancellation transport failure');
+    },
+  };
+  const options = { addressOverride: testEnv.address, rpcTimeoutMs: 10_000 };
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath,
+      activities,
+    });
+    await worker.runUntil(async () => {
+      const request = designRequest('temporal-provider-cancel-commit-agent');
+      await startTemporalFoundryRunWorkflow({
+        run_id: 'run-temporal-provider-cancel-commit',
+        request,
+      }, options);
+      let designing: FoundryRunWorkflowState | null = null;
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const observed = await queryTemporalFoundryRunWorkflow(
+          'run-temporal-provider-cancel-commit',
+          options,
+        );
+        if (
+          observed.inspection?.run.state === 'designing'
+          && observed.provider_operation_cursor?.status === 'pending'
+        ) {
+          designing = observed;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      assert.ok(designing, 'Provider operation did not reach a cancellable pending cursor.');
+      await assert.rejects(cancelTemporalFoundryRun({
+        run_id: 'run-temporal-provider-cancel-commit',
+        expected_revision: designing.inspection!.run.revision,
+        authority_receipt_ref: authorizeTemporalMutation({
+          inspection: designing.inspection!,
+          action: 'cancel',
+          decision: 'cancel',
+        }),
+      }, options));
+
+      const terminal = await waitForState(
+        'run-temporal-provider-cancel-commit',
+        'terminal',
+        testEnv.address,
+      );
+      assert.equal(terminal.inspection?.run.state, 'failed');
+      assert.equal(providerCancelCalls, 1);
+      assert.equal(ledgerCancelCalls, 3);
+      assert.equal(observationsAfterProviderCancel, 0);
+      const history = await dependencies.events.read('run-temporal-provider-cancel-commit');
+      assert.deepEqual(history.map((event) => event.event_type), [
+        'foundry_run_accepted',
+        'design_started',
+        'foundry_run_failed',
+      ]);
+      assert.equal(
+        history.at(-1)?.payload.failure_code,
+        'foundry_cancel_commit_failed_after_provider_cancel',
+      );
+    });
+  } finally {
+    if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal does not advance a terminal provider result while cancellation is waiting', async () => {
+  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const taskQueue = `opl-foundry-temporal-provider-read-cancel-${Date.now()}`;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+  const dependencies = passingKernelDependencies();
+  const kernel = new FoundryKernel(dependencies);
+  const base = buildFoundryTemporalActivities(() => kernel);
+  let reportReadStarted = () => {};
+  let releaseRead = () => {};
+  let reportAuthorized = () => {};
+  let reportProviderCancelStarted = () => {};
+  let releaseProviderCancel = () => {};
+  const readStarted = new Promise<void>((resolve) => { reportReadStarted = resolve; });
+  const readGate = new Promise<void>((resolve) => { releaseRead = resolve; });
+  const authorized = new Promise<void>((resolve) => { reportAuthorized = resolve; });
+  const providerCancelStarted = new Promise<void>((resolve) => {
+    reportProviderCancelStarted = resolve;
+  });
+  const providerCancelGate = new Promise<void>((resolve) => { releaseProviderCancel = resolve; });
+  let designAdvanceCalls = 0;
+  const activities = {
+    ...registeredActivities,
+    ...base,
+    async foundryAdvanceRunActivity(input: Parameters<typeof base.foundryAdvanceRunActivity>[0]) {
+      if (input.phase === 'design') designAdvanceCalls += 1;
+      return base.foundryAdvanceRunActivity(input);
+    },
+    async foundryLaunchProviderOperationActivity(operation: { operation_key: string; phase: string }) {
+      return operation.phase === 'design' ? providerCursor(operation.operation_key) : null;
+    },
+    async foundryObserveProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      if (input.cursor.version !== 'opl-foundry-provider-operation-cursor.v2') {
+        throw new Error('Expected the generation-bound provider cursor.');
+      }
+      return providerCursor(input.cursor.operation_key, {
+        ...input.cursor,
+        current_stage_id: 'evaluation-design',
+        visited_path: [
+          { workflow_id: 'workflow:mission-intake', stage_id: 'mission-intake' },
+          { workflow_id: 'workflow:evaluation-design', stage_id: 'evaluation-design' },
+        ],
+        status: 'terminal',
+      });
+    },
+    async foundryReadProviderOperationTerminalActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      reportReadStarted();
+      await readGate;
+      return input.cursor;
+    },
+    async foundryAuthorizeCancelRunActivity(input: Parameters<typeof base.foundryAuthorizeCancelRunActivity>[0]) {
+      const result = await base.foundryAuthorizeCancelRunActivity(input);
+      reportAuthorized();
+      return result;
+    },
+    async foundryCancelProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      reportProviderCancelStarted();
+      await providerCancelGate;
+      return input.cursor;
+    },
+  };
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath,
+      activities,
+    });
+    await worker.runUntil(async () => {
+      const runId = 'run-temporal-provider-read-cancel';
+      const request = designRequest('temporal-provider-read-cancel-agent');
+      await startTemporalFoundryRunWorkflow({ run_id: runId, request }, {
+        addressOverride: testEnv.address,
+        rpcTimeoutMs: 10_000,
+      });
+      await within(readStarted, 2_000, 'Provider terminal read did not start.');
+      const designing = await queryTemporalFoundryRunWorkflow(runId, {
+        addressOverride: testEnv.address,
+        rpcTimeoutMs: 10_000,
+      });
+      const cancellation = cancelTemporalFoundryRun({
+        run_id: runId,
+        expected_revision: designing.inspection!.run.revision,
+        authority_receipt_ref: authorizeTemporalMutation({
+          inspection: designing.inspection!,
+          action: 'cancel',
+          decision: 'cancel',
+        }),
+      }, {
+        addressOverride: testEnv.address,
+        rpcTimeoutMs: 10_000,
+      });
+      await within(authorized, 2_000, 'Cancellation was not authorized during provider read.');
+      releaseRead();
+      await within(providerCancelStarted, 2_000, 'Provider cancellation did not start after read.');
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      assert.equal(designAdvanceCalls, 0);
+      releaseProviderCancel();
+      const cancelled = await cancellation;
+      assert.equal(cancelled.inspection?.run.state, 'cancelled');
+      assert.equal(designAdvanceCalls, 0);
+    });
+  } finally {
+    releaseRead();
+    releaseProviderCancel();
+    if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal completes an overlapping cancel Update before provider continue-as-new', async (t) => {
+  const testEnv = await createTemporalTestWorkflowEnvironment();
+  if (!testEnv.supportsTimeSkipping) {
+    await testEnv.teardown();
+    t.skip('The continue-as-new Update race proof requires Temporal time skipping.');
+    return;
+  }
+  const taskQueue = `opl-foundry-temporal-provider-continue-cancel-${Date.now()}`;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+  const dependencies = passingKernelDependencies();
+  const kernel = new FoundryKernel(dependencies);
+  const base = buildFoundryTemporalActivities(() => kernel);
+  let reportBoundaryObserve = () => {};
+  let releaseBoundaryObserve = () => {};
+  let reportAuthorized = () => {};
+  let reportProviderCancel = () => {};
+  let releaseProviderCancel = () => {};
+  const boundaryObserve = new Promise<void>((resolve) => { reportBoundaryObserve = resolve; });
+  const boundaryObserveGate = new Promise<void>((resolve) => { releaseBoundaryObserve = resolve; });
+  const authorized = new Promise<void>((resolve) => { reportAuthorized = resolve; });
+  const providerCancel = new Promise<void>((resolve) => { reportProviderCancel = resolve; });
+  const providerCancelGate = new Promise<void>((resolve) => { releaseProviderCancel = resolve; });
+  let observeCalls = 0;
+  const activities = {
+    ...registeredActivities,
+    ...base,
+    async foundryLaunchProviderOperationActivity(operation: { operation_key: string; phase: string }) {
+      return operation.phase === 'design' ? providerCursor(operation.operation_key) : null;
+    },
+    async foundryObserveProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      observeCalls += 1;
+      if (observeCalls === 64) {
+        reportBoundaryObserve();
+        await boundaryObserveGate;
+      }
+      return input.cursor;
+    },
+    async foundryAuthorizeCancelRunActivity(input: Parameters<typeof base.foundryAuthorizeCancelRunActivity>[0]) {
+      const result = await base.foundryAuthorizeCancelRunActivity(input);
+      reportAuthorized();
+      return result;
+    },
+    async foundryCancelProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      reportProviderCancel();
+      await providerCancelGate;
+      return input.cursor;
+    },
+  };
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath,
+      activities,
+    });
+    await worker.runUntil(async () => {
+      const runId = 'run-temporal-provider-continue-cancel';
+      const request = designRequest('temporal-provider-continue-cancel-agent');
+      const workflowId = foundryTemporalWorkflowId(runId);
+      const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
+        args: [workflowInput(runId, request)],
+        taskQueue,
+        workflowId,
+      });
+      await testEnv.sleep('6 minutes');
+      await within(boundaryObserve, 2_000, 'The 64th provider observation did not start.');
+      const pending = await queryTemporalFoundryRunWorkflow(runId, {
+        addressOverride: testEnv.address,
+        rpcTimeoutMs: 10_000,
+      });
+      const cancellation = cancelTemporalFoundryRun({
+        run_id: runId,
+        expected_revision: pending.inspection!.run.revision,
+        authority_receipt_ref: authorizeTemporalMutation({
+          inspection: pending.inspection!,
+          action: 'cancel',
+          decision: 'cancel',
+        }),
+      }, {
+        addressOverride: testEnv.address,
+        rpcTimeoutMs: 10_000,
+      });
+      await within(authorized, 2_000, 'Cancellation was not authorized at the history boundary.');
+      releaseBoundaryObserve();
+      await within(providerCancel, 2_000, 'Provider cancellation did not start at the history boundary.');
+      const activeHistory = await handle.fetchHistory();
+      assert.equal(
+        (activeHistory.events ?? []).some((event) =>
+          Boolean(record(event)?.workflowExecutionContinuedAsNewEventAttributes)),
+        false,
+      );
+      releaseProviderCancel();
+      const cancelled = await cancellation;
+      assert.equal(cancelled.inspection?.run.state, 'cancelled');
+      const finalHistory = await handle.fetchHistory();
+      assert.equal(
+        (finalHistory.events ?? []).some((event) =>
+          Boolean(record(event)?.workflowExecutionContinuedAsNewEventAttributes)),
+        false,
+      );
+    });
+  } finally {
+    releaseBoundaryObserve();
+    releaseProviderCancel();
+    if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal bounds provider observation history with continue-as-new and preserves query and cancel', async (t) => {
+  const testEnv = await createTemporalTestWorkflowEnvironment();
+  if (!testEnv.supportsTimeSkipping) {
+    await testEnv.teardown();
+    t.skip('The bounded-history proof requires Temporal time skipping.');
+    return;
+  }
+  const taskQueue = `opl-foundry-temporal-provider-history-${Date.now()}`;
+  const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
+  process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
+  const dependencies = passingKernelDependencies();
+  const kernel = new FoundryKernel(dependencies);
+  const base = buildFoundryTemporalActivities(() => kernel);
+  let launchCalls = 0;
+  let observeCalls = 0;
+  let providerCancelCalls = 0;
+  let startCalls = 0;
+  let reportResumedStart = () => {};
+  let releaseResumedStart = () => {};
+  const resumedStart = new Promise<void>((resolve) => { reportResumedStart = resolve; });
+  const resumedStartGate = new Promise<void>((resolve) => { releaseResumedStart = resolve; });
+  const activities = {
+    ...registeredActivities,
+    ...base,
+    async foundryStartRunActivity(input: Parameters<typeof base.foundryStartRunActivity>[0]) {
+      startCalls += 1;
+      if (startCalls === 2) {
+        reportResumedStart();
+        await resumedStartGate;
+      }
+      return base.foundryStartRunActivity(input);
+    },
+    async foundryLaunchProviderOperationActivity(operation: { operation_key: string; phase: string }) {
+      if (operation.phase !== 'design') return null;
+      launchCalls += 1;
+      return providerCursor(operation.operation_key);
+    },
+    async foundryObserveProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      observeCalls += 1;
+      return input.cursor;
+    },
+    async foundryCancelProviderOperationActivity(input: { cursor: FoundryProviderOperationCursor }) {
+      providerCancelCalls += 1;
+      return input.cursor;
+    },
+  };
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath,
+      activities,
+    });
+    await worker.runUntil(async () => {
+      const runId = 'run-temporal-provider-history';
+      const request = designRequest('temporal-provider-history-agent');
+      const workflowId = foundryTemporalWorkflowId(runId);
+      const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
+        args: [workflowInput(runId, request)],
+        taskQueue,
+        workflowId,
+      });
+      const firstExecutionRunId = handle.firstExecutionRunId;
+      await testEnv.sleep('6 minutes');
+      await within(resumedStart, 2_000, 'Continued execution did not enter its start readback.');
+
+      const firstExecution = testEnv.client.workflow.getHandle(workflowId, firstExecutionRunId);
+      const firstHistory = await firstExecution.fetchHistory();
+      const firstEvents = firstHistory.events ?? [];
+      assert.ok(
+        record(firstEvents.at(-1))?.workflowExecutionContinuedAsNewEventAttributes,
+        `The first provider observation execution did not continue as new: ${JSON.stringify({
+          count: firstEvents.length,
+          last: Object.keys(record(firstEvents.at(-1)) ?? {}),
+          launchCalls,
+          observeCalls,
+        })}`,
+      );
+      assert.ok(firstEvents.length < 1_024, `Unbounded history length: ${firstEvents.length}`);
+      assert.equal(launchCalls, 1);
+      assert.ok(observeCalls >= 64);
+
+      const pending = await queryTemporalFoundryRunWorkflow(runId, {
+        addressOverride: testEnv.address,
+        rpcTimeoutMs: 10_000,
+      });
+      assert.equal(pending.workflow_status, 'starting');
+      assert.equal(pending.provider_operation_cursor?.status, 'pending');
+      assert.equal(pending.provider_operation_cursor?.operation_key.startsWith('opl-foundry-step.v1/'), true);
+
+      const durableInspection = await kernel.inspectRun(runId);
+      const cancellation = cancelTemporalFoundryRun({
+        run_id: runId,
+        expected_revision: durableInspection.run.revision,
+        authority_receipt_ref: authorizeTemporalMutation({
+          inspection: durableInspection,
+          action: 'cancel',
+          decision: 'cancel',
+        }),
+      }, {
+        addressOverride: testEnv.address,
+        rpcTimeoutMs: 10_000,
+      });
+      releaseResumedStart();
+      const cancelled = await cancellation;
+      assert.equal(cancelled.inspection?.run.state, 'cancelled');
+      assert.equal(providerCancelCalls, 1);
+      assert.equal(launchCalls, 1);
+      assert.equal(startCalls, 2);
+      assert.deepEqual(
+        (await dependencies.events.read(runId)).map((event) => event.event_type),
+        ['foundry_run_accepted', 'design_started', 'foundry_run_cancelled'],
+      );
+    });
+  } finally {
+    releaseResumedStart();
     if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
     else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
     await testEnv.teardown();

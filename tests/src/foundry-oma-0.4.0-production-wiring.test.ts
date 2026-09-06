@@ -419,6 +419,7 @@ test('OMA 0.4.0 deterministic local wiring traverses declared StageRun semantics
   const resourceArtifacts = contentKinds.map((kind) => resources[kind]);
   const queriedStages = { design: [] as string[], diagnose: [] as string[] };
   const gateway: FoundryProviderStageRunGateway = {
+    async cancel() {},
     async launch(input) {
       const operation = input.activity.phase;
       assert.ok(operation === 'design' || operation === 'diagnose');
@@ -447,6 +448,7 @@ test('OMA 0.4.0 deterministic local wiring traverses declared StageRun semantics
   };
   const adapter = new ManifestFoundryDesignerAdapter({
     checkout_root: fixtureRoot,
+    provider_source_digest: `sha256:${'a'.repeat(64)}`,
     provider_manifest_ref: 'foundry_provider.json',
     invoker: new StageRunFoundryProviderInvoker({
       gateway,
@@ -509,7 +511,10 @@ test('production composition selects OMA 0.4.0 by default without claiming a liv
     root_override: path.join(root, 'state'),
     resolve_managed_checkout: (async (input: { domainId: string }) => {
       resolvedAgentIds.push(input.domainId);
-      return { checkout_root: checkout };
+      return {
+        checkout_root: checkout,
+        native_runtime: { source_tree_sha256: `sha256:${'a'.repeat(64)}` },
+      };
     }) as never,
     create_foundry_dev_composition: createCordisFoundryDevComposition,
   });

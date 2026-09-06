@@ -80,7 +80,11 @@ export {
   stageRunRouteLaunchActivity,
 } from './family-runtime-temporal-activities.ts';
 export { buildFoundryTemporalActivities } from './foundry-temporal-activities.ts';
-export { createProductionFoundryKernel } from './foundry-production-runtime.ts';
+export {
+  createProductionFoundryKernel,
+  createProductionFoundryProviderOperationCoordinator,
+  createProductionFoundryProviderOperationRuntime,
+} from './foundry-production-runtime.ts';
 export {
   reconcileTemporalRuntimeStartupMaintenance,
   type TemporalStartupMaintenanceRuntime,

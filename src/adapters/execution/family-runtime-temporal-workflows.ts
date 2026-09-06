@@ -4,6 +4,7 @@ import {
   defineSignal,
   defineUpdate,
   executeChild,
+  isCancellation,
   patched,
   proxyActivities,
   setHandler,
@@ -574,6 +575,7 @@ export async function StageAttemptWorkflow(
   input: TemporalStageAttemptWorkflowInput,
 ): Promise<TemporalStageAttemptWorkflowState> {
   const allowLegacyUnboundContent = !patched('opl-stage-run-attempt-content-binding-v1');
+  const cancellationPropagationEnabled = patched('opl-stage-run-child-cancellation-propagation-v1');
   const currentStageRunAttemptProtocol = !allowLegacyUnboundContent;
   const stageRunQualityAttempt = isStageRunQualityAttempt(input as unknown as Record<string, unknown>);
   let state: TemporalStageAttemptWorkflowState = {
@@ -877,6 +879,7 @@ export async function StageAttemptWorkflow(
       dispatchBlockedReason,
     );
   } catch (error) {
+    if (cancellationPropagationEnabled && isCancellation(error)) throw error;
     const errorMessage = error instanceof Error ? error.message : String(error);
     state = {
       ...state,
@@ -1232,6 +1235,7 @@ export async function StageRunWorkflow(
     'opl-stage-run-recovery-attempt-run-identity-v1',
   );
   const progressFirstHandoffEnabled = patched('opl-stage-run-progress-first-handoff-v1');
+  const cancellationPropagationEnabled = patched('opl-stage-run-child-cancellation-propagation-v1');
   const qualityScopeBudget = normalizeStageQualityScopeBudget(
     input.quality_policy.formal_review.scope_budget,
     { legacyMaxRepairRounds: input.quality_policy.formal_review.max_repair_rounds },
@@ -2217,6 +2221,7 @@ export async function StageRunWorkflow(
       updated_at: nowIso(),
     });
   } catch (error) {
+    if (cancellationPropagationEnabled && isCancellation(error)) throw error;
     if (stageRunStopped(state)) return terminalize(state);
     const hardStop = controllerHardStopFromError(error);
     const hardStopTerminates = hardStop

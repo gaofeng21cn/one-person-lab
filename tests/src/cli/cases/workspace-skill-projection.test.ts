@@ -103,6 +103,68 @@ test('installed Skill refresh rejects an implicit descriptor discovery path', ()
   );
 });
 
+test('explicit developer source supplies Skill bytes instead of the older installed carrier', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-skill-source-'));
+  const installedRoot = path.join(fixtureRoot, 'installed');
+  const developerRoot = path.join(fixtureRoot, 'developer');
+  const previous = {
+    OPL_STATE_DIR: process.env.OPL_STATE_DIR,
+    OPL_MODULE_PATH_OPLMETAAGENT: process.env.OPL_MODULE_PATH_OPLMETAAGENT,
+    OPL_FULL_RUNTIME_HOME: process.env.OPL_FULL_RUNTIME_HOME,
+  };
+  process.env.OPL_STATE_DIR = path.join(fixtureRoot, 'state');
+  process.env.OPL_MODULE_PATH_OPLMETAAGENT = developerRoot;
+  delete process.env.OPL_FULL_RUNTIME_HOME;
+  try {
+    rootFixture(installedRoot, ['engineering-method']);
+    rootFixture(developerRoot, ['engineering-method']);
+    writeProfessionalSkill(installedRoot, 'engineering-method', '# Installed policy\n');
+    writeProfessionalSkill(developerRoot, 'engineering-method', '# Selected developer policy\n');
+    const request = {
+      packageId: 'oma',
+      packageStatus: { installed_package_count: 1, launch_allowed: true },
+      descriptorDiscovery: { discover: () => new Map([['oma', {
+        sourcePath: installedRoot,
+        marketplaceSource: installedRoot,
+        manifestPath: path.join(installedRoot, 'opl-package.json'),
+        manifest: {
+          package_role: 'standard_agent', required_skill_ids: ['opl-meta-agent'], capability_dependencies: [],
+        },
+      }]]) as any },
+    };
+    const projected = refreshInstalledAgentPackageWorkspaceSkills(request);
+    assert.ok(projected.projection);
+    const projectedFile = path.join(projected.projection.skills_root, 'engineering-method/SKILL.md');
+    assert.equal(fs.readFileSync(projectedFile, 'utf8'), '# Selected developer policy\n');
+    writeProfessionalSkill(developerRoot, 'engineering-method', '# Newer developer policy\n');
+    const refreshed = refreshInstalledAgentPackageWorkspaceSkills(request);
+    assert.notEqual(refreshed.generation_id, projected.generation_id);
+    assert.equal(fs.readFileSync(projectedFile, 'utf8'), '# Selected developer policy\n');
+
+    fs.unlinkSync(path.join(developerRoot, 'contracts/capability_map.json'));
+    const unavailable = refreshInstalledAgentPackageWorkspaceSkills(request);
+    assert.equal(unavailable.status, 'attention_needed');
+    assert.equal(unavailable.projection, null);
+
+    process.env.OPL_MODULE_PATH_OPLMETAAGENT = path.join(fixtureRoot, 'missing');
+    const missing = refreshInstalledAgentPackageWorkspaceSkills(request);
+    assert.equal(missing.status, 'attention_needed');
+    assert.equal(missing.projection, null);
+
+    const blocked = refreshInstalledAgentPackageWorkspaceSkills({
+      ...request, packageStatus: { installed_package_count: 1, launch_allowed: false },
+    });
+    assert.equal(blocked.status, 'attention_needed');
+    assert.equal(blocked.writes_performed, false);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    removeFixture(fixtureRoot);
+  }
+});
+
 test('standard Agents project required Skills while provider defaults stay explicit', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-skill-closure-'));
   const stateRoot = path.join(fixtureRoot, 'state');

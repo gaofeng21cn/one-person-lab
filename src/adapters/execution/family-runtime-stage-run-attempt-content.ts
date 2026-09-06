@@ -1,6 +1,7 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import {
+  readStandardAgentManagedTextFile,
   readStandardAgentQualityRolePromptFile,
   readStandardAgentStagePromptFile,
 } from '../../authority/packages/index.ts';
@@ -237,8 +238,33 @@ export function resolveStageRunAttemptExecutorContent(
     );
   }
 
+  const managedContent = [
+    { purpose: 'stage_manifest', ref: spec.stage_manifest.ref },
+    { purpose: 'quality_policy', ref: spec.quality_policy.ref },
+    ...spec.quality_rubric_refs.map((ref) => ({ purpose: 'quality_rubric', ref })),
+  ].map((entry) => {
+    const file = readStandardAgentManagedTextFile(domainPackRoot, entry.ref);
+    const binding = spec.content_bindings.find((candidate) => (
+      candidate.purpose === entry.purpose && candidate.ref === entry.ref
+    ));
+    if (!binding || binding.sha256 !== `sha256:${file.sha256}` || binding.byte_size !== file.size_bytes) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'StageRun managed package content hydration does not match its immutable binding.',
+        {
+          failure_code: 'stage_run_managed_content_binding_mismatch',
+          purpose: entry.purpose,
+          ref: entry.ref,
+          expected: binding ?? null,
+          received: { sha256: `sha256:${file.sha256}`, byte_size: file.size_bytes },
+        },
+      );
+    }
+    return { ...entry, ...file, sha256: `sha256:${file.sha256}` };
+  });
   return {
     effectiveStagePrompt: stagePrompt,
     effectiveQualityRolePrompt: rolePrompt,
+    effectiveManagedContent: managedContent,
   };
 }

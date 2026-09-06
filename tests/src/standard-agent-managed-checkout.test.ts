@@ -3,12 +3,48 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { createProductionFoundryKernel } from '../../src/adapters/execution/foundry-production-runtime.ts';
+import { createCordisFoundryDevComposition } from '../../src/host/composition-profiles.ts';
 
 import {
   resolveStandardAgentManagedCheckout as resolveStandardAgentManagedCheckoutProduction,
 } from '../../src/adapters/execution/standard-agent-managed-checkout.ts';
 
 const TREE_SHA256 = 'a'.repeat(64);
+
+test('production Foundry reaches composed Connect discovery through real managed workspace initialization', async () => {
+  const { root, workspaceRoot, checkoutRoot } = fixture();
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const discoveryFailure = new Error('isolated Connect discovery boundary reached');
+  let discoveries = 0;
+  let disposed = false;
+  try {
+    process.env.OPL_STATE_DIR = path.join(root, 'state');
+    await assert.rejects(() => createProductionFoundryKernel({
+      root_override: workspaceRoot,
+      semantic_provider_agent_id: 'mas',
+      resolve_managed_checkout: (input) => resolveStandardAgentManagedCheckoutProduction({
+        ...input,
+        packageReadiness: packageReadiness(status(checkoutRoot)),
+      }),
+      create_foundry_dev_composition: async () => {
+        const composition = await createCordisFoundryDevComposition({
+          connect: { discover: () => { discoveries += 1; throw discoveryFailure; } },
+        });
+        return {
+          ...composition,
+          async dispose() { await composition.dispose(); disposed = true; },
+        };
+      },
+    }), (error) => error === discoveryFailure);
+    assert.equal(discoveries, 1);
+    assert.equal(disposed, true);
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-runtime-'));

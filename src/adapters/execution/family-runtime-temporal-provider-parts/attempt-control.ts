@@ -365,6 +365,61 @@ export async function queryTemporalStageRunWorkflow(input: {
   }, { paths: input.paths });
 }
 
+export async function cancelTemporalStageRunWorkflow(input: {
+  workflowId: string;
+  reason: string;
+  paths?: TemporalWorkerPaths;
+}) {
+  const reason = input.reason.trim();
+  if (!input.workflowId.trim() || !reason) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'Temporal StageRun cancel requires a workflow id and non-empty reason.',
+      { workflow_id: input.workflowId },
+    );
+  }
+  return withTemporalClient(async (client) => {
+    const handle = client.workflow.getHandle(input.workflowId);
+    try {
+      await withTemporalRpcDeadline(client, () => handle.cancel(), { paths: input.paths });
+    } catch (error) {
+      if (!(error instanceof WorkflowNotFoundError)) throw error;
+      return {
+        surface_kind: 'temporal_stage_run_cancel_receipt',
+        provider_kind: 'temporal',
+        workflow_id: input.workflowId,
+        reason,
+        cancel_status: 'workflow_not_started_or_not_found',
+      };
+    }
+    try {
+      await handle.result();
+    } catch {
+      // The execution status below is the authoritative cancellation readback.
+    }
+    const description = await withTemporalRpcDeadline(client, () => handle.describe(), {
+      paths: input.paths,
+    });
+    if (description.status.name !== 'CANCELLED') {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal StageRun cancel did not reach a terminal cancelled execution.',
+        {
+          workflow_id: input.workflowId,
+          workflow_status: description.status.name,
+        },
+      );
+    }
+    return {
+      surface_kind: 'temporal_stage_run_cancel_receipt',
+      provider_kind: 'temporal',
+      workflow_id: input.workflowId,
+      reason,
+      cancel_status: 'cancelled',
+    };
+  }, { paths: input.paths });
+}
+
 export async function startTemporalStageAttemptWorkflow(
   attempt: StageAttemptPayload,
   options: TemporalClientOptions = {},
