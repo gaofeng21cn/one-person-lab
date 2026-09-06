@@ -1,4 +1,6 @@
 import type { CodexExecEvent } from '../codex.ts';
+import stageQualityCycleContract from '../../../../contracts/opl-framework/stage-quality-cycle-contract.json' with { type: 'json' };
+import reviewerSnapshotRequestSchema from '../../../../contracts/opl-framework/reviewer-input-snapshot-materialization-request.schema.json' with { type: 'json' };
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { requireFamilyRuntimeExecutionScope } from '../family-runtime-execution-scope.ts';
@@ -15,6 +17,8 @@ import {
 } from './shared.ts';
 import { domainStageRoutePromptLines } from './stage-route-prompt-profiles.ts';
 import { readPrevalidatedSourceTruthRefs } from '../family-runtime-source-truth-refs.ts';
+import { canonicalReviewTransportSha256, requiredReviewTransportText } from '../family-runtime-review-transport-store.ts';
+import { reviewerSnapshotStageRunInputAuthority } from '../family-runtime-reviewer-input-snapshot.ts';
 
 export type CodexStageRunnerMode = 'dry_run' | 'live_dry_run' | 'codex_cli';
 
@@ -28,6 +32,13 @@ export type CodexStageRunnerInput = {
   stagePacketRef?: string | null;
   effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
   effectiveQualityRolePrompt?: ReturnType<typeof readStandardAgentQualityRolePromptFile> | null;
+  effectiveManagedContent?: Array<{
+    purpose: string;
+    ref: string;
+    sha256: string;
+    size_bytes: number;
+    content: string;
+  }>;
   runnerMode?: string | null;
   observedAt?: string | null;
   timeoutMs?: number | null;
@@ -222,9 +233,38 @@ function typedCloseoutScopeBindingLines(attempt: JsonRecord) {
     : [];
 }
 
+function reviewerSnapshotAuthoringLines(attempt: JsonRecord) {
+  const binding = isRecord(attempt.execution_content_binding) ? attempt.execution_content_binding : {};
+  const spec = isRecord(binding.spec) ? binding.spec : {};
+  const policy = isRecord(spec.stage_attempt_executor_policy) ? spec.stage_attempt_executor_policy : {};
+  const reviewLane = optionalString(policy.review_lane_binding);
+  const attemptId = requiredReviewTransportText(attempt.stage_attempt_id, 'stage_attempt_id');
+  return [
+    'This Stage schedules formal independent Review. Return route_impact.stage_quality_cycle.review_input_snapshot_materialization_request so OPL can freeze the explicitly authorized review content before the reviewer starts.',
+    'The request is transport metadata, not another semantic artifact, a quality verdict, or a review receipt. Copy fixed_request_fields exactly and supply owner_authority_ref and a non-empty members list using this canonical schema.',
+    '<opl_reviewer_snapshot_authoring>',
+    JSON.stringify({
+      fixed_request_fields: {
+        surface_kind: 'opl_reviewer_input_snapshot_materialization_request', schema_version: 2,
+        producer_attempt_ref: `opl://stage_attempts/${attemptId}`,
+        execution_content_binding_sha256: canonicalReviewTransportSha256(binding.binding_sha256, 'execution_content_binding_sha256'),
+        workspace_root: requiredReviewTransportText(workspaceRootFromAttempt(attempt), 'workspace_root'),
+        ...(reviewLane ? { review_lane: reviewLane } : {}),
+      },
+      request_schema: reviewerSnapshotRequestSchema,
+      immutable_stage_run_inputs: reviewerSnapshotStageRunInputAuthority(attempt.stage_run_spec),
+    }),
+    '</opl_reviewer_snapshot_authoring>',
+    'owner_authority_ref must exactly match kind, ref, sha256 and size_bytes of a same-Attempt closeout_ref_metadata entry whose artifact defines the review scope. Use canonical sha256:<64 lowercase hex> hashes in both entries.',
+    'The producer or repairer explicitly selects members. Include the produced artifacts needed for review and every exact StageRun input artifact. Preserve each source_ref, sha256 and size_bytes exactly; external input files are permitted only through their immutable StageRun binding.',
+    'Do not infer snapshot members from artifact_refs, invent an authority ref, omit exact sizes, or put the snapshot request itself in semantic artifact_refs. Do not ask the reviewer to read live workspace files instead of immutable snapshot members.',
+  ];
+}
+
 function qualityAttemptPromptLines(
   attempt: JsonRecord,
   effectiveQualityRolePrompt?: ReturnType<typeof readStandardAgentQualityRolePromptFile> | null,
+  effectiveManagedContent: CodexStageRunnerInput['effectiveManagedContent'] = [],
 ) {
   const attemptRole = optionalString(attempt.attempt_role);
   if (!attemptRole) {
@@ -253,6 +293,8 @@ function qualityAttemptPromptLines(
     ? contextManifest.cross_stage_route_selection
     : {};
   const declaredStageIds = readStringList(routeSelectionContext.declared_stage_ids);
+  const decisiveRoles = readStringList(routeSelectionContext.configured_decisive_attempt_roles);
+  const formalReviewScheduled = decisiveRoles.includes('reviewer') || decisiveRoles.includes('re_reviewer');
   const maxRepairRounds = typeof routeSelectionContext.max_repair_rounds === 'number'
     ? routeSelectionContext.max_repair_rounds
     : null;
@@ -271,6 +313,16 @@ function qualityAttemptPromptLines(
     'A same-thread write-and-check pass is in_thread_refinement only. It is not formal Stage Review and cannot produce a review receipt.',
     `Quality role prompt ref: ${rolePromptRef ?? 'missing'}`,
     `Quality rubric refs: ${JSON.stringify(qualityRubricRefs)}`,
+    ...effectiveManagedContent.flatMap((entry) => [
+      'OPL immutable managed package content follows. Use these exact bound bytes, not live workspace substitutes.',
+      `Managed content purpose: ${entry.purpose}`,
+      `Managed content ref: ${entry.ref}`,
+      `Managed content SHA-256: ${entry.sha256}`,
+      `Managed content size bytes: ${entry.size_bytes}`,
+      '<opl_managed_content>',
+      entry.content,
+      '</opl_managed_content>',
+    ]),
     ...(rolePrompt
       ? [
           `Quality role prompt SHA-256: ${rolePrompt.sha256}`,
@@ -293,6 +345,9 @@ function qualityAttemptPromptLines(
     'A non-decisive Attempt may instead return one route_impact.stage_route_recommendation with the same decision_kind/target/evidence shape plus reason.',
     'Do not return both. Do not use legacy route_back_stage_ref, selected_next_stage_ref, next_stage_ref, or workflow_complete fields.',
     'route_impact.stage_route_contract is controller-owned validation metadata. Do not create or modify it.',
+    ...(formalReviewScheduled && (attemptRole === 'producer' || attemptRole === 'repairer')
+      ? reviewerSnapshotAuthoringLines(attempt)
+      : []),
   ];
   if (attemptRole === 'repairer') {
     return [
@@ -340,6 +395,10 @@ function qualityAttemptPromptLines(
     ...(attemptRole === 're_reviewer'
       ? [
           'This is finding-closure re-review. Evaluate each prior required finding against the repair_map and exact new artifact.',
+          'Use the exact required field names and enum values in this OPL finding-closure contract for non-hard-stop results; aliases do not replace required fields.',
+          '<opl_finding_closure_contract>',
+          JSON.stringify(stageQualityCycleContract.finding_closure_contract),
+          '</opl_finding_closure_contract>',
           'For a non-hard-stop re_reviewer outcome, required route_impact.stage_quality_cycle fields are outcome, finding_closures, repair_regressions, critical_new_findings, and optional_observations.',
           'For outcome=blocked or outcome=human_gate, return only outcome plus the required hard-stop evidence; do not fabricate a finding-closure result.',
           'Only still-open required findings, repair regressions, or critical new findings may trigger another repair round.',
@@ -361,6 +420,7 @@ export function runnerPromptFor(input: {
   stagePacketRef?: string | null;
   effectiveStagePrompt?: StandardAgentStagePromptResolution | null;
   effectiveQualityRolePrompt?: ReturnType<typeof readStandardAgentQualityRolePromptFile> | null;
+  effectiveManagedContent?: CodexStageRunnerInput['effectiveManagedContent'];
 }) {
   const stageId = stageIdFromAttempt(input.attempt);
   const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
@@ -374,7 +434,7 @@ export function runnerPromptFor(input: {
       ? 'Use the domain-owned stage packet as input within the stage skill boundary.'
       : 'No stage packet was supplied. Start from the declared stage id, hydrated stage prompt, workspace context, and any readable prior artifacts; record the missing packet as quality debt rather than stopping.',
     'Return progress through structured events when available.',
-    ...qualityAttemptPromptLines(input.attempt, input.effectiveQualityRolePrompt),
+    ...qualityAttemptPromptLines(input.attempt, input.effectiveQualityRolePrompt, input.effectiveManagedContent),
     ...sourceTruthPromptLines(input.attempt),
     ...effectiveStagePromptLines(input),
     ...providerAuthorizationPromptLines(input),

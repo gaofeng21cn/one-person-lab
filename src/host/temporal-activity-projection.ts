@@ -2,6 +2,8 @@ import {
   buildFoundryTemporalActivities,
   codexStageActivity,
   createProductionFoundryKernel,
+  createProductionFoundryProviderOperationCoordinator,
+  createProductionFoundryProviderOperationRuntime,
   domainHandlerDispatchActivity,
   schedulerTickActivity,
   stageQualityAttemptMaterializeActivity,
@@ -27,9 +29,19 @@ import {
 export function buildCordisTemporalActivities() {
   const createStageRouteComposition = () => createCordisStageRouteComposition();
   return {
-    ...buildFoundryTemporalActivities(() => createProductionFoundryKernel({
-      create_foundry_dev_composition: createCordisFoundryDevComposition,
-    })),
+    ...buildFoundryTemporalActivities(
+      (input) => createProductionFoundryKernel({
+        ...input,
+        create_foundry_dev_composition: createCordisFoundryDevComposition,
+        create_stage_route_composition: createStageRouteComposition,
+      }),
+      (input) => createProductionFoundryProviderOperationRuntime({
+        ...input,
+        create_foundry_dev_composition: createCordisFoundryDevComposition,
+        create_stage_route_composition: createStageRouteComposition,
+      }),
+      () => createProductionFoundryProviderOperationCoordinator(),
+    ),
     codexStageActivity: (input: Parameters<typeof codexStageActivity>[0]) =>
       codexStageActivity(input, {
         createAttemptComposition: ({ attemptRef }) => createCordisRunwayAttemptComposition({

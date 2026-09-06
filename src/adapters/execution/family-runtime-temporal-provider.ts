@@ -35,6 +35,7 @@ import {
   resolveTemporalAddressForPaths,
 } from './family-runtime-temporal-service.ts';
 import {
+  closeDurableTemporalClients,
   requireTemporalAddress,
   resolveTemporalClientNamespace,
   type TemporalClientOptions,
@@ -226,6 +227,7 @@ export async function runTemporalStageAttemptWorkerUntil<T>(fn: () => Promise<T>
     });
     return await worker.runUntil(fn);
   } finally {
+    await closeDurableTemporalClients();
     await nativeConnection.close();
   }
 }
@@ -317,6 +319,7 @@ export async function runTemporalWorkerForeground(paths: TemporalWorkerPaths) {
   } finally {
     process.off('SIGTERM', requestShutdown);
     process.off('SIGINT', requestShutdown);
+    await closeDurableTemporalClients();
     await nativeConnection?.close();
   }
 }

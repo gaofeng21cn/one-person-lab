@@ -12,6 +12,7 @@ import {
   requireExactReviewTransportKeys,
   requireReviewTransportRecord,
   requiredReviewTransportText,
+  resolveExactBoundLocalFile,
   resolveContainedWorkspaceFile,
   reviewTransportError,
   reviewTransportRoots,
@@ -42,7 +43,35 @@ export type ReviewerInputSnapshotAuthorityBinding = {
   execution_content_binding_sha256: string;
   review_lane_binding?: string | null;
   owner_authority_refs: ReviewTransportExactRef[];
+  stage_run_input_authority_refs?: ReviewTransportExactRef[];
 };
+
+export function reviewerSnapshotStageRunInputAuthority(specInput: unknown): ReviewTransportExactRef[] {
+  const spec = requireReviewTransportRecord(specInput, 'execution_spec');
+  const artifacts = spec.input_artifacts ?? [];
+  const bindings = spec.content_bindings ?? [];
+  if (!Array.isArray(artifacts) || !Array.isArray(bindings)) {
+    throw reviewTransportError('reviewer_input_snapshot_input_authority_invalid', 'StageRun input authority must contain artifact and content-binding arrays.');
+  }
+  return artifacts.map((value, index) => {
+    const artifact = requireReviewTransportRecord(value, `input_artifacts[${index}]`);
+    const ref = requiredReviewTransportText(artifact.ref, 'input_artifact.ref');
+    const sha256 = canonicalReviewTransportSha256(artifact.sha256, 'input_artifact.sha256');
+    const matches = bindings.filter((entry) => isRecord(entry)
+      && entry.purpose === 'input_artifact' && entry.ref === ref
+      && canonicalReviewTransportSha256(entry.sha256, 'input_binding.sha256') === sha256);
+    if (matches.length !== 1) {
+      throw reviewTransportError('reviewer_input_snapshot_input_authority_invalid', 'StageRun input requires one exact immutable content binding.', { ref });
+    }
+    const binding = requireReviewTransportRecord(matches[0], 'input_binding');
+    if (binding.verification_kind !== 'workspace_file_bytes'
+      && !(binding.verification_kind === 'trusted_artifact_identity_receipt'
+        && typeof binding.identity_receipt_ref === 'string' && binding.identity_receipt_ref.length > 0)) {
+      throw reviewTransportError('reviewer_input_snapshot_input_authority_invalid', 'StageRun input binding lacks verified bytes or identity receipt.', { ref });
+    }
+    return { kind: 'stage_run_input_artifact', ref, sha256, size_bytes: reviewTransportSize(binding.byte_size, 'input_binding.byte_size') };
+  });
+}
 
 function normalizeExactRef(value: unknown, field: string): ReviewTransportExactRef {
   const exactRef = requireReviewTransportRecord(value, field);
@@ -92,6 +121,9 @@ function normalizeAuthorityBinding(
       'Reviewer input snapshot authority must be present in producer closeout exact-ref metadata.',
     );
   }
+  if (value.stage_run_input_authority_refs !== undefined && !Array.isArray(value.stage_run_input_authority_refs)) {
+    throw reviewTransportError('reviewer_input_snapshot_input_authority_invalid', 'StageRun input authority refs must be an array.');
+  }
   return {
     producer_attempt_ref: normalizeAttemptRef(
       value.producer_attempt_ref,
@@ -109,6 +141,9 @@ function normalizeAuthorityBinding(
         ),
     owner_authority_refs: value.owner_authority_refs.map((ref, index) => (
       normalizeExactRef(ref, `expected_authority.owner_authority_refs[${index}]`)
+    )),
+    stage_run_input_authority_refs: (value.stage_run_input_authority_refs ?? []).map((ref, index) => (
+      normalizeExactRef(ref, `expected_authority.stage_run_input_authority_refs[${index}]`)
     )),
   };
 }
@@ -169,6 +204,16 @@ export function normalizeReviewerInputSnapshotRequest(
   };
   if (expectedAuthority) {
     const expected = normalizeAuthorityBinding(expectedAuthority);
+    const missingInputs = expected.stage_run_input_authority_refs!.filter((ref) => !members.some((member) => (
+      member.source_ref === ref.ref && member.sha256 === ref.sha256 && member.size_bytes === ref.size_bytes
+    )));
+    if (missingInputs.length > 0) {
+      throw reviewTransportError(
+        'reviewer_input_snapshot_stage_run_input_missing',
+        'Reviewer input snapshot must enumerate every immutable StageRun input artifact.',
+        { missing_stage_run_input_refs: missingInputs.map((ref) => ref.ref) },
+      );
+    }
     const authorityMetadataMatch = expected.owner_authority_refs.some((ref) => (
       canonicalJsonText(ref) === canonicalJsonText(normalized.owner_authority_ref)
     ));
@@ -336,9 +381,17 @@ export function materializeReviewerInputSnapshot(
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
 ) {
   const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority);
+  const inputAuthority = expectedAuthority
+    ? normalizeAuthorityBinding(expectedAuthority).stage_run_input_authority_refs!
+    : [];
   let createdObjectCount = 0;
   for (const member of request.members) {
-    const source = resolveContainedWorkspaceFile(request.workspace_root, member.source_ref);
+    const boundInput = inputAuthority.some((ref) => (
+      ref.ref === member.source_ref && ref.sha256 === member.sha256 && ref.size_bytes === member.size_bytes
+    ));
+    const source = boundInput && (member.source_ref.startsWith('file://') || path.isAbsolute(member.source_ref))
+      ? resolveExactBoundLocalFile(member.source_ref)
+      : resolveContainedWorkspaceFile(request.workspace_root, member.source_ref);
     try {
       const existing = persistReviewerSnapshotObject({
         expectedSha256: member.sha256,

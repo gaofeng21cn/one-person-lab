@@ -26,6 +26,7 @@ import { materializeStandardAgentCapabilityMap } from '../../../authority/packag
 import type { CordisConnectDescriptorDiscoveryService } from '../public/descriptor-discovery.ts';
 import { inspectOplModule } from '../system-installation/modules.ts';
 import { sha256Text } from './shared.ts';
+import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
 import {
   discoverCurrentOwnerPackageDescriptors,
   isProjectLocalCapabilityPackage,
@@ -479,6 +480,16 @@ function installedAgentSourceRoot(packageId: string, descriptor: {
   sourcePath: string;
   marketplaceSource: string | null;
 }) {
+  const sourcePolicy = resolveAgentPackageEffectiveSourcePolicy(packageId);
+  if (sourcePolicy.desired_source_kind === 'developer_checkout_override'
+    && sourcePolicy.configured_by !== 'native_git_checkout') {
+    const selectedRoot = sourcePolicy.developer_checkout_available
+      ? realDirectory(sourcePolicy.developer_checkout_path)
+      : null;
+    return selectedRoot && containedRegularFile(selectedRoot, 'contracts/capability_map.json')
+      ? selectedRoot
+      : null;
+  }
   const candidates = [
     realDirectory(descriptor.marketplaceSource),
     ...ancestors(descriptor.sourcePath).map((candidate) => realDirectory(candidate)),

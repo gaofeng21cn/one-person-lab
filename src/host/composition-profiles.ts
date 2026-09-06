@@ -41,7 +41,9 @@ import {
   discoverInstalledPackageDescriptors,
   loadInstalledChannelProviders,
   loadInstalledRemoteCompanionConnectors,
+  refreshInstalledAgentPackageWorkspaceSkills,
 } from '../adapters/integration/index.ts';
+import type { WorkspaceSkillProjectionRefresher } from '../authority/workspace/index.ts';
 import type {
   InstalledRemoteCompanionConnectorAttachment,
   RemoteCompanionActivationContextResolver,
@@ -171,13 +173,14 @@ type CordisAppFullServices = Omit<CordisBaseHeadlessServices, 'childFactories'> 
 
 type CordisFoundryDevServices = Pick<
   CordisBaseHeadlessServices,
-  'charter' | 'atlas' | 'stageBinding' | 'stageContext' | 'packageHost'
+  'charter' | 'atlas' | 'stageBinding' | 'stageContext' | 'descriptorDiscovery' | 'packageHost'
 > & {
   childFactories: Pick<
     CordisBaseHeadlessServices['childFactories'],
     'createRunwayAttemptComposition'
   >;
   foundryProviderManifest: CordisFoundryProviderManifestService;
+  refreshWorkspaceSkills: WorkspaceSkillProjectionRefresher;
   foundryEvaluation: CordisFoundryEvaluationService | null;
 };
 
@@ -606,6 +609,9 @@ export async function createCordisFoundryDevComposition(options: {
   const fibers: CordisFiber[] = [];
   try {
     fibers.push(await ctx.plugin(cordisCharterPolicyPlugin));
+    fibers.push(await ctx.plugin(cordisConnectDescriptorDiscoveryPlugin, {
+      discover: options.connect?.discover ?? discoverInstalledPackageDescriptors,
+    }));
     fibers.push(await ctx.plugin(cordisAtlasCatalogPlugin, options.atlas ?? {}));
     fibers.push(await ctx.plugin(cordisStagecraftContextPlugin));
     fibers.push(await ctx.plugin(cordisPackStageBindingPlugin));
@@ -614,6 +620,10 @@ export async function createCordisFoundryDevComposition(options: {
     if (options.evaluation) {
       fibers.push(await ctx.plugin(cordisFoundryEvaluationAdapterPlugin, options.evaluation));
     }
+    const descriptorDiscovery = requiredService<CordisConnectDescriptorDiscoveryService>(
+      ctx,
+      CORDIS_CONNECT_DESCRIPTOR_DISCOVERY_SERVICE,
+    );
     return {
       profileId: 'foundry-dev',
       ctx,
@@ -622,10 +632,15 @@ export async function createCordisFoundryDevComposition(options: {
         atlas: requiredService(ctx, CORDIS_ATLAS_CATALOG_SERVICE),
         stageBinding: requiredService(ctx, CORDIS_PACK_STAGE_BINDING_SERVICE),
         stageContext: requiredService(ctx, CORDIS_STAGECRAFT_CONTEXT_SERVICE),
+        descriptorDiscovery,
         packageHost: requiredService(ctx, CORDIS_PACKAGE_HOST_SERVICE),
         childFactories: {
           createRunwayAttemptComposition: createCordisRunwayAttemptComposition,
         },
+        refreshWorkspaceSkills: (input) => refreshInstalledAgentPackageWorkspaceSkills({
+          ...input,
+          descriptorDiscovery,
+        }),
         foundryProviderManifest: requiredService(
           ctx,
           CORDIS_FOUNDRY_PROVIDER_MANIFEST_SERVICE,
@@ -636,6 +651,7 @@ export async function createCordisFoundryDevComposition(options: {
       },
       snapshot: profileSnapshot('foundry-dev', [
         CORDIS_CHARTER_POLICY_PLUGIN_DESCRIPTOR,
+        CORDIS_CONNECT_DESCRIPTOR_DISCOVERY_PLUGIN_DESCRIPTOR,
         CORDIS_ATLAS_CATALOG_PLUGIN_DESCRIPTOR,
         ...CORDIS_PACK_STAGECRAFT_PLUGIN_DESCRIPTORS,
         CORDIS_PACKAGE_HOST_PLUGIN_DESCRIPTOR,

@@ -59,6 +59,7 @@ export type {
 } from './standard-agent-stage-manifest.ts';
 export {
   readStandardAgentStagePromptFile,
+  readStandardAgentManagedTextFile,
   resolveStandardAgentStagePrompt,
   readStandardAgentQualityRolePromptFile,
   resolveStandardAgentRepoFile,

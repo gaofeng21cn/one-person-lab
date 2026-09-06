@@ -454,6 +454,25 @@ export function resolveContainedWorkspaceFile(workspaceRootInput: unknown, refIn
   return { workspace_root: workspaceRoot, source_ref: ref, source_path: candidate };
 }
 
+// The caller must first verify this exact ref against a persisted StageRun input binding.
+export function resolveExactBoundLocalFile(refInput: unknown) {
+  const ref = requiredReviewTransportText(refInput, 'source_ref');
+  let candidate: string;
+  try {
+    if (ref.startsWith('file://')) candidate = fileURLToPath(ref);
+    else if (path.isAbsolute(ref)) candidate = ref;
+    else throw new Error('exact StageRun input must be an absolute local ref');
+    candidate = fs.realpathSync.native(candidate);
+  } catch (error) {
+    throw reviewTransportError(
+      'reviewer_input_snapshot_source_unreadable',
+      'Reviewer input snapshot StageRun input is not a readable absolute local file.',
+      { source_ref: ref, read_error: error instanceof Error ? error.message : String(error) },
+    );
+  }
+  return { source_ref: ref, source_path: candidate, workspace_root: path.dirname(candidate) };
+}
+
 export function persistReviewerSnapshotObject(input: {
   sourcePath?: string;
   sourceRef?: string;

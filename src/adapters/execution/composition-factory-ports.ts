@@ -9,6 +9,7 @@ import type {
   AgentExecutionRequest,
 } from './agent-executor.ts';
 import type { CodexStageRunnerInput } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import type { WorkspaceSkillProjectionRefresher } from '../../authority/workspace/index.ts';
 
 export type AgentExecutorService = {
   execute(input: AgentExecutionRequest): Promise<AgentExecutionReceipt>;
@@ -56,6 +57,7 @@ export type RunwayAttemptCompositionFactory = (input: {
 
 export type FoundryDevComposition = {
   services: {
+    refreshWorkspaceSkills: WorkspaceSkillProjectionRefresher;
     foundryProviderManifest: {
       read(checkoutRoot: string, manifestRef?: string): FoundryProviderManifest;
     };

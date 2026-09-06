@@ -12,6 +12,7 @@ import {
   readStandardAgentActionStoredBytes,
 } from '../../../authority/workspace/public/standard-agent-action-runtime.ts';
 import { startTemporalFoundryRunWorkflow } from '../foundry-temporal-control.ts';
+import { admitFoundrySourceMaterials } from '../foundry-source-material.ts';
 import {
   hostedRuntimeExecutionBindingRef,
   type HostedAgentRuntimeBindingProvenance,
@@ -228,6 +229,7 @@ export async function runFoundryAction(input: {
     };
   }
   let foundryRun: Record<string, unknown>;
+  admitFoundrySourceMaterials({ workspaceRoot: input.workspaceRoot, sourceRefs: input.request.source_refs });
   try {
     const started = await (input.startFoundryRun ?? startTemporalFoundryRunWorkflow)({
       request: input.request,

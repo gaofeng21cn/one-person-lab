@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
@@ -6,6 +7,7 @@ import test from 'node:test';
 import { resolveStandardAgentManagedCheckout } from '../../../src/adapters/execution/standard-agent-managed-checkout.ts';
 import type { HostedAgentRuntimeBindingResolver } from '../../../src/adapters/execution/hosted-agent-runtime-binding.ts';
 import { runStandardAgentAction } from '../../../src/adapters/execution/standard-agent-action-runtime.ts';
+import { FileFoundryContentStore } from '../../../src/authority/evidence/index.ts';
 
 import { action, hostedSnapshot, recordLedger, root, writeContracts } from '../standard-agent-action-runtime-shared.ts';
 
@@ -103,6 +105,20 @@ test('Hosted Foundry action starts one OPL-owned FoundryRun and replays immutabl
       },
       delivery_policy: { activation_mode: 'activate', max_generations: 5 },
     };
+    const sourceBytes = Buffer.from('Bound source evidence for an arbitrary target.\n');
+    const sourceDigest = crypto.createHash('sha256').update(sourceBytes).digest('hex');
+    payload.source_refs = [`source-material:sha256:${sourceDigest}`];
+    fs.mkdirSync(path.join(workspaceRoot, 'control/opl/source_materials'), { recursive: true });
+    const sourcePath = path.join(workspaceRoot, 'evidence.txt');
+    fs.writeFileSync(sourcePath, sourceBytes);
+    fs.writeFileSync(path.join(workspaceRoot, `control/opl/source_materials/${sourceDigest}.json`), JSON.stringify({
+      surface_kind: 'opl_workspace_source_material_receipt',
+      version: 'workspace-source-material.v3',
+      source_material_ref: payload.source_refs[0],
+      source_fingerprint_ref: `sha256:${sourceDigest}`,
+      stored_file: { ref: 'evidence.txt', copied: true },
+      original_file: { sha256: sourceDigest, bytes: sourceBytes.length },
+    }));
     const v1Snapshot = hostedSnapshot({ checkoutRoot, workspaceRoot, label: 'foundry-v1' });
     const v2Snapshot = hostedSnapshot({ checkoutRoot, workspaceRoot, label: 'foundry-v2' });
     let activeSnapshot = v1Snapshot;
@@ -124,6 +140,7 @@ test('Hosted Foundry action starts one OPL-owned FoundryRun and replays immutabl
       },
       recordLedger,
       startFoundryRun: async ({ run_id }: { run_id: string }) => {
+        assert.deepEqual(new FileFoundryContentStore().readExact(`opl-content://sha256/${sourceDigest}`), sourceBytes);
         starts += 1;
         return {
           run: {
@@ -140,6 +157,7 @@ test('Hosted Foundry action starts one OPL-owned FoundryRun and replays immutabl
     const first = await runStandardAgentAction({
       domainId: 'mas', actionId: 'engineer-agent', workspaceRoot, payload, runId: 'foundry-hosted-run',
     }, dependencies as never);
+    fs.writeFileSync(sourcePath, 'Mutable source changed after immutable launch.');
     activeSnapshot = v2Snapshot;
     fs.writeFileSync(
       path.join(checkoutRoot, 'contracts', 'foundry_provider.json'),

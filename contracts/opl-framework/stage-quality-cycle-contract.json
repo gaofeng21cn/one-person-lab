@@ -502,11 +502,21 @@
       "evidence_refs",
       "repair_expectation"
     ],
+    "initial_finding_severities": [
+      "critical",
+      "major",
+      "minor"
+    ],
     "repair_map_required_fields": [
       "finding_id",
       "repair_status",
       "changed_artifact_refs",
       "repair_evidence_refs"
+    ],
+    "repair_statuses": [
+      "repaired",
+      "not_repaired",
+      "blocked"
     ],
     "re_review_required_inputs": [
       "prior_findings",
@@ -529,10 +539,20 @@
       ],
       "hard_stop_does_not_require_or_fabricate_closure_result": true
     },
+    "finding_closure_required_fields": [
+      "finding_id",
+      "status",
+      "evidence_refs"
+    ],
     "finding_closure_statuses": [
       "closed",
       "partially_closed",
       "still_open"
+    ],
+    "optional_observation_required_fields": [
+      "observation_id",
+      "evidence_refs",
+      "summary"
     ],
     "next_repair_triggers": [
       "required_finding_not_closed",

@@ -4,11 +4,13 @@ import type {
   FoundryRunState,
   OwnerDecision,
 } from '../../authority/evolution/index.ts';
+import type { FoundryProviderOperationCursor } from './foundry-provider-stage-run.ts';
 
 export const FOUNDRY_RUN_WORKFLOW_NAME = 'FoundryRunWorkflow';
 export const FOUNDRY_RUN_QUERY_NAME = 'FoundryRunQuery';
 export const FOUNDRY_OWNER_DECISION_UPDATE_NAME = 'FoundryOwnerDecisionUpdate';
 export const FOUNDRY_CANCEL_UPDATE_NAME = 'FoundryCancelUpdate';
+export const FOUNDRY_PROVIDER_OPERATION_CURSOR_V2 = 'opl-foundry-provider-operation-cursor.v2';
 
 export type FoundryRunStartInput = {
   run_id: string;
@@ -17,6 +19,7 @@ export type FoundryRunStartInput = {
 
 export type FoundryRunWorkflowInput = FoundryRunStartInput & {
   request_digest: string;
+  provider_operation_cursor?: FoundryProviderOperationCursor | null;
 };
 
 export type FoundryRunWorkflowStatus =
@@ -34,6 +37,7 @@ export type FoundryRunWorkflowState = {
   request_digest: string;
   workflow_status: FoundryRunWorkflowStatus;
   inspection: FoundryRunInspection | null;
+  provider_operation_cursor: FoundryProviderOperationCursor | null;
 };
 
 export type FoundryOwnerDecisionUpdate = OwnerDecision;
@@ -65,6 +69,8 @@ export type FoundryAdvanceRunActivityInput = {
   phase: FoundryAdvanceRunPhase;
   input_digest: string;
   operation_key: string;
+  provider_operation_protocol?: typeof FOUNDRY_PROVIDER_OPERATION_CURSOR_V2;
+  provider_operation_cursor?: FoundryProviderOperationCursor | null;
 };
 
 const ADVANCE_PHASE_BY_STATE: Partial<Record<FoundryRunState, FoundryAdvanceRunPhase>> = {
@@ -119,7 +125,23 @@ export function foundryAdvanceOperationForInspection(
 
 export interface FoundryTemporalActivities {
   foundryStartRunActivity(input: FoundryRunWorkflowInput): Promise<FoundryRunInspection>;
+  foundryAuthorizeCancelRunActivity(input: FoundryCancelUpdate): Promise<FoundryRunInspection>;
   foundryAdvanceRunActivity(input: FoundryAdvanceRunActivityInput): Promise<FoundryRunInspection>;
+  foundryLaunchProviderOperationActivity(
+    input: FoundryAdvanceRunActivityInput,
+  ): Promise<FoundryProviderOperationCursor | null>;
+  foundryObserveProviderOperationActivity(input: {
+    operation: FoundryAdvanceRunActivityInput;
+    cursor: FoundryProviderOperationCursor;
+  }): Promise<FoundryProviderOperationCursor>;
+  foundryReadProviderOperationTerminalActivity(input: {
+    operation: FoundryAdvanceRunActivityInput;
+    cursor: FoundryProviderOperationCursor;
+  }): Promise<FoundryProviderOperationCursor>;
+  foundryCancelProviderOperationActivity(input: {
+    operation: FoundryAdvanceRunActivityInput;
+    cursor: FoundryProviderOperationCursor;
+  }): Promise<FoundryProviderOperationCursor>;
   foundrySubmitOwnerDecisionActivity(input: FoundryOwnerDecisionUpdate): Promise<FoundryRunInspection>;
   foundryCancelRunActivity(input: FoundryCancelUpdate): Promise<FoundryRunInspection>;
   foundryFailRunActivity(input: {

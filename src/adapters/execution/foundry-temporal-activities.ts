@@ -16,14 +16,48 @@ import type {
   FoundryRunWorkflowInput,
   FoundryTemporalActivities,
 } from './foundry-temporal.ts';
-import { foundryAdvanceOperationKey } from './foundry-temporal.ts';
+import {
+  FOUNDRY_PROVIDER_OPERATION_CURSOR_V2,
+  foundryAdvanceOperationKey,
+} from './foundry-temporal.ts';
+import type {
+  FoundryProviderOperationInvocation,
+  FoundryProviderOperationCursor,
+  StageRunFoundryProviderCoordinator,
+} from './foundry-provider-stage-run.ts';
 
-export type FoundryKernelFactory = () => Promise<FoundryKernel> | FoundryKernel;
+export type FoundryKernelFactory = (input?: {
+  provider_operation_cursor?: FoundryProviderOperationCursor | null;
+}) => Promise<FoundryKernel> | FoundryKernel;
 
-async function productionKernel() {
+async function productionKernel(input: {
+  provider_operation_cursor?: FoundryProviderOperationCursor | null;
+} = {}) {
   const runtime = await import('./foundry-production-runtime.ts');
-  return runtime.createProductionFoundryKernel();
+  return runtime.createProductionFoundryKernel(input);
 }
+
+async function productionProviderOperationRuntime(input: FoundryProviderOperationRuntimeFactoryInput) {
+  const runtime = await import('./foundry-production-runtime.ts');
+  return runtime.createProductionFoundryProviderOperationRuntime(input);
+}
+
+export type FoundryProviderOperationRuntimeFactoryInput = {
+  advance_operation: FoundryAdvanceRunActivityInput;
+  inspection: FoundryRunInspection;
+};
+
+export type FoundryProviderOperationRuntime = {
+  coordinator: StageRunFoundryProviderCoordinator;
+  invocation: FoundryProviderOperationInvocation;
+};
+
+export type FoundryProviderOperationRuntimeFactory = (
+  input: FoundryProviderOperationRuntimeFactoryInput,
+) => Promise<FoundryProviderOperationRuntime> | FoundryProviderOperationRuntime;
+
+export type FoundryProviderOperationCoordinatorFactory = () =>
+  Promise<StageRunFoundryProviderCoordinator> | StageRunFoundryProviderCoordinator;
 
 const ADVANCE_SUCCESSORS: Record<FoundryAdvanceRunActivityInput['phase'], ReadonlySet<FoundryRunState>> = {
   start_design: new Set(['designing', 'failed', 'quarantined']),
@@ -64,7 +98,7 @@ function failClosed(message: string, input: FoundryAdvanceRunActivityInput, insp
   });
 }
 
-function validateOperationIdentity(input: FoundryAdvanceRunActivityInput) {
+function validateOperationShape(input: FoundryAdvanceRunActivityInput) {
   if (
     input.surface_kind !== 'opl_temporal_foundry_advance_operation'
     || input.version !== 'opl-temporal-foundry-advance-operation.v1'
@@ -77,9 +111,17 @@ function validateOperationIdentity(input: FoundryAdvanceRunActivityInput) {
     || ADVANCE_STATE_BY_PHASE[input.phase] !== input.expected_state
     || !/^sha256:[a-f0-9]{64}$/.test(input.input_digest)
     || input.operation_key !== foundryAdvanceOperationKey(input)
+    || (
+      input.provider_operation_protocol !== undefined
+      && input.provider_operation_protocol !== FOUNDRY_PROVIDER_OPERATION_CURSOR_V2
+    )
   ) {
     failClosed('Foundry Temporal advance operation identity is invalid.', input);
   }
+}
+
+function validateOperationIdentity(input: FoundryAdvanceRunActivityInput) {
+  validateOperationShape(input);
   const info = Context.current().info;
   if (info.activityId !== input.operation_key) {
     failClosed('Foundry Temporal activityId does not bind the immutable operation key.', input);
@@ -116,16 +158,33 @@ function assertCurrentOperation(
 
 export function buildFoundryTemporalActivities(
   createKernel: FoundryKernelFactory = productionKernel,
+  createProviderOperationRuntime: FoundryProviderOperationRuntimeFactory | null = null,
+  createProviderOperationCoordinator: FoundryProviderOperationCoordinatorFactory | null = null,
 ): FoundryTemporalActivities {
+  const providerRuntime = async (input: FoundryAdvanceRunActivityInput) => {
+    validateOperationShape(input);
+    const kernel = await createKernel();
+    const inspection = await kernel.inspectRun(input.run_id);
+    if (assertCurrentOperation(input, inspection) !== 'execute') {
+      failClosed('Foundry provider operation has already committed its ledger transition.', input, inspection);
+    }
+    if (!createProviderOperationRuntime) return null;
+    return createProviderOperationRuntime({ advance_operation: input, inspection });
+  };
   return {
     async foundryStartRunActivity(input: FoundryRunWorkflowInput) {
       const kernel = await createKernel();
       const started = await kernel.startRun({ request: input.request, run_id: input.run_id });
       return kernel.inspectRun(started.run_id);
     },
+    async foundryAuthorizeCancelRunActivity(input: FoundryCancelUpdate) {
+      return (await createKernel()).authorizeCancelRun(input);
+    },
     async foundryAdvanceRunActivity(input: FoundryAdvanceRunActivityInput) {
       const info = validateOperationIdentity(input);
-      const kernel = await createKernel();
+      const kernel = await createKernel({
+        provider_operation_cursor: input.provider_operation_cursor ?? null,
+      });
       const before = await kernel.inspectRun(input.run_id);
       if (assertCurrentOperation(input, before) === 'recovered') return before;
       try {
@@ -160,6 +219,49 @@ export function buildFoundryTemporalActivities(
         throw error;
       }
     },
+    async foundryLaunchProviderOperationActivity(input) {
+      if (input.phase !== 'design' && input.phase !== 'diagnose') return null;
+      const runtime = await providerRuntime(input);
+      return runtime?.coordinator.launch(
+        runtime.invocation,
+        input.operation_key,
+        input.provider_operation_protocol ?? 'opl-foundry-provider-operation-cursor.v1',
+      ) ?? null;
+    },
+    async foundryObserveProviderOperationActivity(input) {
+      validateOperationShape(input.operation);
+      const coordinator = await createProviderOperationCoordinator?.();
+      if (!coordinator) {
+        failClosed('Foundry provider operation runtime is unavailable.', input.operation);
+      }
+      return coordinator.observe(
+        input.cursor,
+        input.operation.operation_key,
+      );
+    },
+    async foundryReadProviderOperationTerminalActivity(input) {
+      validateOperationShape(input.operation);
+      const coordinator = await createProviderOperationCoordinator?.();
+      if (!coordinator) {
+        failClosed('Foundry provider operation runtime is unavailable.', input.operation);
+      }
+      await coordinator.readTerminal(
+        input.cursor,
+        input.operation.operation_key,
+      );
+      return input.cursor;
+    },
+    async foundryCancelProviderOperationActivity(input) {
+      validateOperationShape(input.operation);
+      const coordinator = await createProviderOperationCoordinator?.();
+      if (!coordinator) {
+        failClosed('Foundry provider operation runtime is unavailable.', input.operation);
+      }
+      return coordinator.cancel(
+        input.cursor,
+        input.operation.operation_key,
+      );
+    },
     async foundrySubmitOwnerDecisionActivity(input: FoundryOwnerDecisionUpdate) {
       return (await createKernel()).submitOwnerDecision(input, { advance: false });
     },
@@ -172,10 +274,22 @@ export function buildFoundryTemporalActivities(
   };
 }
 
-const productionActivities = buildFoundryTemporalActivities();
+const productionActivities = buildFoundryTemporalActivities(
+  productionKernel,
+  productionProviderOperationRuntime,
+  async () => {
+    const runtime = await import('./foundry-production-runtime.ts');
+    return runtime.createProductionFoundryProviderOperationCoordinator();
+  },
+);
 
 export const foundryStartRunActivity = productionActivities.foundryStartRunActivity;
+export const foundryAuthorizeCancelRunActivity = productionActivities.foundryAuthorizeCancelRunActivity;
 export const foundryAdvanceRunActivity = productionActivities.foundryAdvanceRunActivity;
+export const foundryLaunchProviderOperationActivity = productionActivities.foundryLaunchProviderOperationActivity;
+export const foundryObserveProviderOperationActivity = productionActivities.foundryObserveProviderOperationActivity;
+export const foundryReadProviderOperationTerminalActivity = productionActivities.foundryReadProviderOperationTerminalActivity;
+export const foundryCancelProviderOperationActivity = productionActivities.foundryCancelProviderOperationActivity;
 export const foundrySubmitOwnerDecisionActivity = productionActivities.foundrySubmitOwnerDecisionActivity;
 export const foundryCancelRunActivity = productionActivities.foundryCancelRunActivity;
 export const foundryFailRunActivity = productionActivities.foundryFailRunActivity;

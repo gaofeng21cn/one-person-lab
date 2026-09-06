@@ -109,3 +109,61 @@ export async function withTemporalClient<T>(
     await connection.close();
   }
 }
+
+type DurableTemporalClient = {
+  client: Client;
+  connection: Connection;
+};
+
+const durableTemporalClients = new Map<string, Promise<DurableTemporalClient>>();
+
+function durableTemporalClientIdentity(options: TemporalClientOptions) {
+  const address = options.addressOverride
+    ?? (options.paths ? resolveTemporalAddressForPaths(options.paths).address : null)
+    ?? requireTemporalAddress();
+  const namespace = resolveTemporalClientNamespace(options);
+  const connectTimeout = options.connectTimeoutMs ?? resolveTemporalClientConnectTimeoutMs();
+  return {
+    address,
+    namespace,
+    connectTimeout,
+    key: JSON.stringify([address, namespace, connectTimeout]),
+  };
+}
+
+export async function withDurableTemporalClient<T>(
+  fn: (client: Client, connection: Connection) => Promise<T>,
+  options: TemporalClientOptions = {},
+) {
+  const identity = durableTemporalClientIdentity(options);
+  let pending = durableTemporalClients.get(identity.key);
+  if (!pending) {
+    pending = Connection.connect({
+      address: identity.address,
+      connectTimeout: identity.connectTimeout,
+    }).then((connection) => ({
+      connection,
+      client: new Client({ connection, namespace: identity.namespace }),
+    }));
+    durableTemporalClients.set(identity.key, pending);
+    pending.catch(() => {
+      if (durableTemporalClients.get(identity.key) === pending) {
+        durableTemporalClients.delete(identity.key);
+      }
+    });
+  }
+  const durable = await pending;
+  return fn(durable.client, durable.connection);
+}
+
+export async function closeDurableTemporalClients() {
+  const pending = [...durableTemporalClients.values()];
+  durableTemporalClients.clear();
+  await Promise.all(pending.map(async (entry) => {
+    try {
+      await (await entry).connection.close();
+    } catch {
+      // Failed connection attempts own no live channel to close.
+    }
+  }));
+}
