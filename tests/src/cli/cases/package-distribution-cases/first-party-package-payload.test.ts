@@ -715,6 +715,42 @@ test('Git parsing ignores hostile inherited GIT_* variables and binds the worktr
   assert.match(wrongOrigin.stderr, /Git origin does not match/);
 });
 
+test('GitHub SSH transports preserve exact repository binding and reject alternate identities', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-git-transports-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const source = createSourceRepo(root);
+  const authority = createAuthority(root, source);
+  const input = { authority, repo: source.repo, sourceCommit: source.sourceCommit };
+  const accepted = [
+    'git@github.com:example/example-agent.git',
+    'ssh://git@github.com/example/example-agent.git',
+    'ssh://git@github.com:22/example/example-agent.git',
+    'ssh://git@ssh.github.com:443/example/example-agent.git',
+    'https://github.com/example/example-agent',
+  ];
+  for (const remote of accepted) {
+    git(source.repo, ['remote', 'set-url', 'origin', remote]);
+    assert.ok(['created', 'unchanged'].includes(runGenerator(input).status), remote);
+  }
+  for (const remote of [
+    'ssh://git@ssh.github.com:443/another/example-agent.git',
+    'ssh://git@ssh.github.com:443/example/wrong.git',
+    'ssh://git@github.com.attacker.invalid/example/example-agent.git',
+    'ssh://git@ssh.github.com:444/example/example-agent.git',
+    'ssh://user@github.com/example/example-agent.git',
+    'https://github.com/example/%65xample-agent.git',
+    'https://github.com/example/example-agent.git?redirect=1',
+  ]) {
+    git(source.repo, ['remote', 'set-url', 'origin', remote]);
+    const result = runFailure(input);
+    assert.notEqual(result.status, 0, remote);
+    assert.match(result.stderr, /Git origin does not match/);
+  }
+  git(source.repo, ['remote', 'set-url', 'origin', sourceRepoUrl]);
+  git(source.repo, ['config', '--add', 'remote.origin.url', accepted[0]]);
+  assert.match(runFailure(input).stderr, /one canonical GitHub HTTPS or SSH origin/);
+});
+
 test('manifest, allowlist, source repository, output, and committed plugin identities are fail-closed', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-identity-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

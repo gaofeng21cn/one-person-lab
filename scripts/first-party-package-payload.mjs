@@ -499,8 +499,18 @@ function assertRepositoryBinding(repo, sourceRepoUrl) {
   }
   const origin = spawnGit(repo, ['config', '--local', '--get-all', 'remote.origin.url'], 'utf8');
   const originUrls = origin.status === 0 ? origin.stdout.split(/\r?\n/).filter(Boolean) : [];
-  if (originUrls.length !== 1 || originUrls[0] !== sourceRepoUrl) {
-    throw new Error(`Git origin does not match Framework payload source repository: expected=${sourceRepoUrl} actual=${originUrls.join(',') || '<missing>'}`);
+  const expected = parseGithubRepository(sourceRepoUrl, 'Framework source repository');
+  const match = originUrls.length === 1 && /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com(?::22)?\/|ssh:\/\/git@ssh\.github\.com:443\/)([^/]+\/[^/]+?)(?:\.git)?$/.exec(originUrls[0]);
+  let actual = null;
+  if (match) {
+    try {
+      actual = parseGithubRepository(`https://github.com/${match[1]}.git`, 'Git origin');
+    } catch {
+      // Malformed URL paths are not equivalent repository identities.
+    }
+  }
+  if (!actual || actual.owner !== expected.owner || actual.repository !== expected.repository) {
+    throw new Error(`Git origin does not match Framework payload source repository: expected=${sourceRepoUrl}; one canonical GitHub HTTPS or SSH origin is required`);
   }
 }
 
