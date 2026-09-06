@@ -37,6 +37,7 @@ export type OplCompanionToolSyncItem = {
     required_channels: string[];
     ready_channels: string[];
     failed_channels: string[];
+    github_api_check?: 'ready' | 'failed';
   };
 };
 
@@ -365,6 +366,21 @@ function inspectFfmpegPair(
 
 const AGENT_REACH_CORE_CHANNELS = ['web', 'youtube', 'rss', 'github', 'bilibili', 'v2ex'] as const;
 
+function verifyGitHubApiAccess(): boolean {
+  const gh = process.env.OPL_GH_BIN?.trim() || findExecutableInPath('gh');
+  if (!gh) return false;
+  // Doctor deliberately skips gh auth status because it can mutate local state.
+  // Verify the authenticated user with a bounded GET; never initiate a login.
+  const output = runCommandForOutput(gh, ['api', '--hostname', 'github.com', '--method', 'GET', 'user']);
+  try {
+    const user = output ? JSON.parse(output) : null;
+    return Number.isSafeInteger(user?.id) && user.id > 0
+      && typeof user.login === 'string' && user.login.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
 function inspectAgentReachBinary(
   binaryPath: string | null,
   options: { includeHealthCheck?: boolean } = {},
@@ -385,6 +401,12 @@ function inspectAgentReachBinary(
         return Boolean(entry && typeof entry === 'object' && (entry as Record<string, unknown>).status === 'ok');
       })
     : [];
+  const github = doctor?.github;
+  const githubApiCheck = github && typeof github === 'object'
+    && (github as Record<string, unknown>).status === 'warn'
+    ? verifyGitHubApiAccess() ? 'ready' : 'failed'
+    : undefined;
+  if (githubApiCheck === 'ready') readyChannels.push('github');
   const failedChannels = AGENT_REACH_CORE_CHANNELS.filter((channel) => !readyChannels.includes(channel));
   const healthStatus = !doctor ? 'invalid' : failedChannels.length === 0 ? 'ready' : 'degraded';
   return {
@@ -401,6 +423,7 @@ function inspectAgentReachBinary(
       required_channels: [...AGENT_REACH_CORE_CHANNELS],
       ready_channels: readyChannels,
       failed_channels: failedChannels,
+      ...(githubApiCheck ? { github_api_check: githubApiCheck } : {}),
     },
   };
 }
