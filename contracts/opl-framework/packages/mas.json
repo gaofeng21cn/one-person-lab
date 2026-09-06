@@ -1,5 +1,6 @@
 {
   "surface_kind": "opl_agent_package_manifest.v1",
+  "kind": "agent",
   "agent_id": "mas",
   "package_id": "mas",
   "display_name": "Med Auto Science",
@@ -34,65 +35,25 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.2.27",
-  "owner_language_version": {
-    "scheme": "pep440",
-    "value": "0.2.27"
-  },
+  "version": "0.2.28",
   "source": "first_party",
-  "registry_entry": {
-    "registry_kind": "first_party_agent_package_registry_entry",
-    "registry_source_ref": "contracts/opl-framework/packages/mas.json",
-    "base_contract_role": "registry_data_not_base_invariant",
-    "base_contract_invariant": false,
-    "identity_fields": [
-      "package_id",
-      "agent_id",
-      "version"
-    ],
-    "admitted_domain_ref": "contracts/opl-framework/domains.json#medautoscience"
-  },
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
-  "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",
-  "publication_projection_order": 10,
-  "publication_source": {
-    "owner_package_manifest_ref": "contracts/opl_agent_package_manifest.json",
-    "owner_plugin_manifest_ref": "plugins/med-autoscience/plugin.json",
-    "owner_language_version_ref": "pyproject.toml"
-  },
-  "standard_agent_descriptor_projection": {
-    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
-    "source_ref": "contracts/domain_descriptor.json",
-    "interface_source_ref": "contracts/domain_descriptor.json#/standard_agent_interface",
-    "domain_id": "medautoscience",
-    "runtime_domain_id": "medautoscience",
-    "explicit_aliases": ["mas", "medautoscience", "med-autoscience", "med_auto_science", "study"],
-    "compatibility": {
-      "registry_domain_id": "medautoscience",
-      "owner_aliases": ["mas", "medautoscience", "med-autoscience", "med-auto-science"]
-    }
-  },
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
-  "machine_boundary": "This manifest declares first-party package dependencies and distribution projections. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
-  "package_core": {
-    "core_kind": "opl_agent_package_core",
-    "identity_fields": [
-      "package_id",
-      "agent_id",
-      "version"
-    ],
-    "content_identity_fields": [
-      "manifest_sha256",
-      "payload_digest_ref",
-      "required_skill_pack_lock_refs"
-    ],
-    "dependency_source": "manifest_declared_capability_dependencies",
-    "exposure_owner": "opl_connect_agent_package_registry"
-  },
+  "domain_descriptor_ref": "contracts/domain_descriptor.json",
+  "task_provider_ref": "contracts/domain_descriptor.json#/task_provider",
+  "action_catalog_ref": "contracts/action_catalog.json",
+  "view_refs": [
+    "contracts/domain_descriptor.json#/task_provider/views/0"
+  ],
+  "requires": [
+    {
+      "package_id": "mas-scholar-skills",
+      "presence": "required"
+    }
+  ],
+  "machine_boundary": "This repo-local sidecar declares the MAS Package identity, Agent producer surfaces, and required Package presence. The configured carrier owns physical lifecycle; Framework aggregates fresh presence, callability, status, and actions; MAS retains business task, typed-view, artifact, and domain authority.",
   "codex_surface": {
     "plugin_id": "med-autoscience",
-    "plugin_payload_manifest_url": "payloads/mas-0.2.27.json",
-    "carrier_source_commit": "e4784dc5d187d945e0379b72b6afd0265bb03cae",
     "standalone_distribution": "repo_carrier_source",
     "configured_codex_plugin_carrier": {
       "kind": "codex_plugin_manager",
@@ -104,41 +65,57 @@
     "required_skill_ids": [
       "med-autoscience"
     ],
-    "bundled_capability_package_ids": [
+    "required_capability_package_ids": [
       "mas-scholar-skills"
     ],
-    "user_install_action_count": 1
+    "user_install_action_count": 1,
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "./bin/mas-app-contribution"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "plugin_payload_manifest_url": "payloads/mas-0.2.28.json",
+    "carrier_source_commit": "7be9f5c8080a52496cbddf4fbfc9cea870f759f8"
   },
-  "runtime_source_carrier": {
-    "carrier_kind": "opl_managed_module_source",
-    "module_id": "medautoscience"
-  },
-  "carrier_adapters": [
-    {
-      "adapter_kind": "codex_plugin_carrier",
-      "carrier": "codex_plugin",
-      "source_surface": "codex_surface",
-      "projection_role": "package_carrier_adapter",
-      "owns_package_core": false,
-      "owns_domain_truth": false
-    }
-  ],
-  "opl_managed_surface": {
-    "package_shape": "thin_agent_package",
-    "dependency_resolution": "managed_dependency_graph",
-    "dependency_update_policy": "consumer_dependency_closure_transaction",
-    "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "mas.runtime-detail",
+        "view_type": "activity_log",
+        "title_i18n": {
+          "zh-CN": "论文任务详情",
+          "en-US": "Paper mission detail"
+        },
+        "data_ref": "mas.runtime-detail.v1#current",
+        "empty_state_i18n": {
+          "zh-CN": "当前论文任务没有可投影的 MAS 状态",
+          "en-US": "No MAS state is available for the selected paper mission"
+        }
+      }
+    ],
+    "ui": [
+      {
+        "contribution_id": "mas.runtime-detail",
+        "slot": "runtime.detail",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "work_item",
+        "sort_order": 100,
+        "view_id": "mas.runtime-detail"
+      }
+    ]
   },
   "capability_dependencies": [
     {
       "module_id": "scholarskills",
       "package_id": "mas-scholar-skills",
-      "kind": "framework_capability_package",
       "required": true,
-      "dependency_kind": "hard_runtime_dependency",
-      "version_requirement": ">=0.2.12 <0.3.0",
       "capability_abi": "mas-scholar-skills.v1",
-      "consumer_profile_id": "mas-medical-paper.v1",
       "required_export_ids": [
         "mas-scholar-skills",
         "medical-manuscript-writing",
@@ -164,19 +141,6 @@
         "mas-scholar-skills.reference-provider-adapters",
         "mas-scholar-skills.scientific-search-adapters"
       ],
-      "codex_distribution": "bundled",
-      "opl_distribution": "managed_dependency",
-      "developer_distribution": "source_checkout",
-      "required_for": [
-        "preferred_professional_method_support",
-        "preferred_medical_research_quality_support"
-      ],
-      "install_owner": "one-person-lab",
-      "install_update_source": "ghcr_capability_packages_channel",
-      "sync_scopes": [
-        "workspace",
-        "quest"
-      ],
       "authority_boundary": {
         "can_write_domain_truth": false,
         "can_sign_owner_receipt": false,
@@ -184,5 +148,82 @@
         "can_write_runtime_queue": false
       }
     }
-  ]
+  ],
+  "registry_entry": {
+    "registry_kind": "first_party_agent_package_registry_entry",
+    "registry_source_ref": "contracts/opl-framework/packages/mas.json",
+    "base_contract_role": "registry_data_not_base_invariant",
+    "base_contract_invariant": false,
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "admitted_domain_ref": "contracts/opl-framework/domains.json#medautoscience"
+  },
+  "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",
+  "publication_projection_order": 10,
+  "publication_source": {
+    "owner_package_manifest_ref": "contracts/opl_agent_package_manifest.json",
+    "owner_plugin_manifest_ref": "plugins/med-autoscience/plugin.json",
+    "owner_language_version_ref": "pyproject.toml"
+  },
+  "package_core": {
+    "core_kind": "opl_agent_package_core",
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "content_identity_fields": [
+      "manifest_sha256",
+      "payload_digest_ref",
+      "required_skill_pack_lock_refs"
+    ],
+    "dependency_source": "manifest_declared_capability_dependencies",
+    "exposure_owner": "opl_connect_agent_package_registry"
+  },
+  "runtime_source_carrier": {
+    "carrier_kind": "opl_managed_module_source",
+    "module_id": "medautoscience"
+  },
+  "carrier_adapters": [
+    {
+      "adapter_kind": "codex_plugin_carrier",
+      "carrier": "codex_plugin",
+      "source_surface": "codex_surface",
+      "projection_role": "package_carrier_adapter",
+      "owns_package_core": false,
+      "owns_domain_truth": false
+    }
+  ],
+  "opl_managed_surface": {
+    "package_shape": "thin_agent_package",
+    "dependency_resolution": "managed_dependency_graph",
+    "dependency_update_policy": "consumer_dependency_closure_transaction",
+    "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
+  },
+  "standard_agent_descriptor_projection": {
+    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
+    "source_ref": "contracts/domain_descriptor.json",
+    "interface_source_ref": "contracts/domain_descriptor.json#/standard_agent_interface",
+    "domain_id": "medautoscience",
+    "runtime_domain_id": "medautoscience",
+    "explicit_aliases": [
+      "mas",
+      "medautoscience",
+      "med-autoscience",
+      "med_auto_science",
+      "study"
+    ],
+    "compatibility": {
+      "registry_domain_id": "medautoscience",
+      "owner_aliases": [
+        "mas",
+        "medautoscience",
+        "med-autoscience",
+        "med-auto-science"
+      ]
+    }
+  }
 }

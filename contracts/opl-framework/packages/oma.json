@@ -1,7 +1,10 @@
 {
   "surface_kind": "opl_agent_package_manifest.v1",
+  "kind": "agent",
   "agent_id": "oma",
   "package_id": "oma",
+  "domain_id": "agent_engineering",
+  "carrier_slug": "opl-meta-agent",
   "display_name": "OPL Meta Agent",
   "presentation": {
     "display_name_i18n": {
@@ -34,8 +37,31 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "source": "first_party",
+  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
+  "domain_descriptor_ref": "contracts/domain_descriptor.json",
+  "action_catalog_ref": "contracts/action_catalog.json",
+  "view_refs": [],
+  "provider_manifest_ref": "contracts/foundry_provider.json",
+  "codex_surface": {
+    "plugin_id": "opl-meta-agent",
+    "standalone_distribution": "repo_carrier_source",
+    "required_skill_ids": [
+      "opl-meta-agent"
+    ],
+    "user_install_action_count": 1,
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "opl-meta-agent@opl-meta-agent",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/opl-meta-agent",
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/oma:latest-stable"
+    },
+    "plugin_payload_manifest_url": "payloads/oma-0.4.10.json",
+    "carrier_source_commit": "4242d09d7e486c38fd70c130d4d2c577fb7934d8"
+  },
+  "capability_dependencies": [],
   "registry_entry": {
     "registry_kind": "first_party_agent_package_registry_entry",
     "registry_source_ref": "contracts/opl-framework/packages/oma.json",
@@ -48,29 +74,14 @@
     ],
     "admitted_domain_ref": null
   },
-  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/opl-meta-agent.git",
+  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
   "publication_projection_order": 40,
   "publication_source": {
     "owner_package_manifest_ref": "contracts/opl_agent_package_manifest.json",
     "owner_plugin_manifest_ref": "plugins/opl-meta-agent/plugin.json",
     "owner_language_version_ref": "package.json"
   },
-  "standard_agent_descriptor_projection": {
-    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
-    "source_ref": "contracts/domain_descriptor.json",
-    "interface_source_ref": "contracts/domain_descriptor.json#/standard_agent_interface",
-    "domain_id": "agent_engineering",
-    "runtime_domain_id": "agent_engineering",
-    "explicit_aliases": ["oma", "opl-meta-agent", "agent-engineering"],
-    "compatibility": {
-      "registry_domain_id": "agent_engineering",
-      "aliases": ["agent_engineering", "oplmetaagent", "opl_meta_agent", "meta-agent", "meta_agent", "agent"],
-      "owner_aliases": ["oma", "oplmetaagent", "opl-meta-agent", "meta-agent"]
-    }
-  },
-  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
-  "machine_boundary": "This manifest declares first-party package distribution and OPL-generated Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
   "package_core": {
     "core_kind": "opl_agent_package_core",
     "identity_fields": [
@@ -85,24 +96,6 @@
     ],
     "dependency_source": "manifest_declared_capability_dependencies",
     "exposure_owner": "opl_connect_agent_package_registry"
-  },
-  "codex_surface": {
-    "plugin_id": "opl-meta-agent",
-    "plugin_payload_manifest_url": "payloads/oma-0.4.9.json",
-    "carrier_source_commit": "13b9a151c1a05fb384f77ed7439adb3b1ece9c38",
-    "standalone_distribution": "generated_carrier_surface",
-    "configured_codex_plugin_carrier": {
-      "kind": "codex_plugin_manager",
-      "plugin_selector": "opl-meta-agent@opl-meta-agent",
-      "executor_route": "codex_cli",
-      "marketplace_source": "gaofeng21cn/opl-meta-agent",
-      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/oma:latest-stable"
-    },
-    "required_skill_ids": [
-      "opl-meta-agent"
-    ],
-    "bundled_capability_package_ids": [],
-    "user_install_action_count": 1
   },
   "runtime_source_carrier": {
     "carrier_kind": "opl_managed_module_source",
@@ -141,5 +134,34 @@
       "installs_second_temporal_tree": false
     }
   },
-  "capability_dependencies": []
+  "machine_boundary": "This manifest declares first-party package distribution and OPL-generated Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
+  "standard_agent_descriptor_projection": {
+    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
+    "source_ref": "contracts/domain_descriptor.json",
+    "interface_source_ref": "contracts/domain_descriptor.json#/standard_agent_interface",
+    "domain_id": "agent_engineering",
+    "runtime_domain_id": "agent_engineering",
+    "explicit_aliases": [
+      "oma",
+      "opl-meta-agent",
+      "agent-engineering"
+    ],
+    "compatibility": {
+      "registry_domain_id": "agent_engineering",
+      "aliases": [
+        "agent_engineering",
+        "oplmetaagent",
+        "opl_meta_agent",
+        "meta-agent",
+        "meta_agent",
+        "agent"
+      ],
+      "owner_aliases": [
+        "oma",
+        "oplmetaagent",
+        "opl-meta-agent",
+        "meta-agent"
+      ]
+    }
+  }
 }

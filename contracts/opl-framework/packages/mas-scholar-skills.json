@@ -3,27 +3,8 @@
   "package_id": "mas-scholar-skills",
   "display_name": "MAS Scholar Skills",
   "publisher": "one-person-lab",
-  "version": "0.2.30",
+  "version": "0.2.31",
   "source": "first_party_owner_projection",
-  "source_repo": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
-  "publication_projection_order": 60,
-  "publication_source": {
-    "module_id": "scholarskills",
-    "owner_package_manifest_ref": "contracts/opl_capability_package_manifest.json",
-    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
-  },
-  "compatibility_projection": {
-    "registry_short_label": "ScholarSkills",
-    "registry_aliases": [
-      "scholarskills",
-      "scholar-skills",
-      "scholar_skills",
-      "mas-scholar-skills",
-      "mas_scholar_skills",
-      "capability",
-      "capabilities"
-    ]
-  },
   "package_role": "capability_package",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "consumer_policy": {
@@ -478,13 +459,39 @@
       "skills/medical-display-regression-debugger/kernel.py",
       "skills/medical-data-freeze-and-analysis-readiness-reviewer/SKILL.md",
       "skills/medical-data-freeze-and-analysis-readiness-reviewer/kernel.py",
-      "skills/medical-research-portfolio-memory-curator/SKILL.md"
+      "skills/medical-research-portfolio-memory-curator/SKILL.md",
+      "skills/medical-data-governance/references/legacy-mas-data-workspace.md",
+      "skills/medical-figure-design/references/deterministic-render.md",
+      "skills/medical-figure-design/references/figure-contract.md",
+      "skills/medical-figure-design/references/method-quality-reference.md",
+      "skills/medical-figure-design/references/upstream-provenance.md",
+      "skills/medical-figure-design/references/visual-qa.md",
+      "skills/medical-manuscript-review/references/method-quality-reference.md",
+      "skills/medical-manuscript-review/references/prediction-validation-review.md",
+      "skills/medical-manuscript-review/references/registry-review.md",
+      "skills/medical-manuscript-review/references/upstream-provenance.md",
+      "skills/medical-manuscript-writing/references/initial-draft-preflight.md",
+      "skills/medical-manuscript-writing/references/method-quality-reference.md",
+      "skills/medical-manuscript-writing/references/prediction-validation-writing.md",
+      "skills/medical-manuscript-writing/references/registry-writing.md",
+      "skills/medical-manuscript-writing/references/upstream-provenance.md",
+      "skills/medical-research-lit/references/method-quality-reference.md",
+      "skills/medical-research-lit/references/upstream-provenance.md",
+      "skills/medical-statistical-review/references/ehr-registry-review.md",
+      "skills/medical-statistical-review/references/prediction-model-review.md",
+      "skills/medical-submission-prep/references/method-quality-reference.md",
+      "skills/medical-submission-prep/references/publication-layout.md",
+      "skills/medical-submission-prep/references/reviewer-response.md",
+      "skills/medical-submission-prep/references/upstream-provenance.md",
+      "skills/medical-table-design/references/external-validation-tables.md",
+      "skills/medical-table-design/references/method-quality-reference.md",
+      "skills/medical-table-design/references/registry-tables.md",
+      "skills/medical-table-design/references/upstream-provenance.md"
     ],
-    "digest": "sha256:5dbf4ee8a6f64651cf32d7e4510c0e80837f04319b27aac7ed1a4ceba07a9db8"
+    "digest": "sha256:9973c6cc15482f912659fd3a9a977f85321c951b7cbdcdd3a78d14e22c4e94ab"
   },
   "codex_surface": {
     "plugin_id": "mas-scholar-skills",
-    "carrier_source_commit": "64861fef00a9cb17a93a578a22a6a787ef346537",
     "carrier_source_role": "codex_plugin_carrier_not_package_truth",
     "consumer_profiles_ref": "#/consumer_profiles",
     "default_materialized_skill_ids_ref": "#/exports/default_materialized_skill_ids",
@@ -498,7 +505,8 @@
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:latest-stable",
       "executor_route": "codex_cli"
     },
-    "plugin_payload_manifest_url": "payloads/mas-scholar-skills-0.2.30.json"
+    "plugin_payload_manifest_url": "payloads/mas-scholar-skills-0.2.31.json",
+    "carrier_source_commit": "79649d65d5d72421208b72a4d2ac5f724f450e48"
   },
   "authority_boundary": {
     "can_write_domain_truth": false,
@@ -512,6 +520,25 @@
     "can_claim_mag_fundability": false,
     "can_claim_mag_quality_verdict": false,
     "can_claim_mag_export_readiness": false
+  },
+  "source_repo": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
+  "publication_projection_order": 60,
+  "publication_source": {
+    "module_id": "scholarskills",
+    "owner_package_manifest_ref": "contracts/opl_capability_package_manifest.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
+  "compatibility_projection": {
+    "registry_short_label": "ScholarSkills",
+    "registry_aliases": [
+      "scholarskills",
+      "scholar-skills",
+      "scholar_skills",
+      "mas-scholar-skills",
+      "mas_scholar_skills",
+      "capability",
+      "capabilities"
+    ]
   },
   "owner_package_manifest_ref": "contracts/opl_capability_package_manifest.json",
   "owner_package_descriptor_ref": "opl-package.json",

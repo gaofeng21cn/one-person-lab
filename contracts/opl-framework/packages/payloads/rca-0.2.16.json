@@ -1,0 +1,53 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "rca",
+  "plugin_id": "redcube-ai",
+  "package_version": "0.2.16",
+  "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
+  "source_commit": "471039cf8306589928f3b5ee5077dff025655bb5",
+  "source_root": "plugins/redcube-ai",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:db94160896549fb0a35434480d19a898e815763fdfbbf3060b5c352201cccc84"
+  },
+  "files": [
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/471039cf8306589928f3b5ee5077dff025655bb5/plugins/redcube-ai/plugin.json",
+      "sha256": "sha256:4d844843726b97e2ece8738357c87343e6ee732fb1eae4faefc48e42b127c2c7"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/471039cf8306589928f3b5ee5077dff025655bb5/plugins/redcube-ai/.codex-plugin/plugin.json",
+      "sha256": "sha256:395ea91d3b7d42417d8ce854a6a7e38a335c7dded107c3571c069738a6dc2b2f"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/471039cf8306589928f3b5ee5077dff025655bb5/plugins/redcube-ai/opl-package.json",
+      "sha256": "sha256:1eecd1557b6aefed0f804bf94c9e549658b79f04c31e19655f3ed1e2c52bd3e6"
+    },
+    {
+      "path": "assets/icon.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/471039cf8306589928f3b5ee5077dff025655bb5/plugins/redcube-ai/assets/icon.png",
+      "sha256": "sha256:e599c03713aed9f8d7f88047e8d3845062da3d6a9ee073f33a0010ecac8dff5e"
+    },
+    {
+      "path": "skills/redcube-ai/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/471039cf8306589928f3b5ee5077dff025655bb5/plugins/redcube-ai/skills/redcube-ai/SKILL.md",
+      "sha256": "sha256:c75ffdab5a84873bc703220695726723b28776ff8301655388fb681b07022309"
+    },
+    {
+      "path": "skills/redcube-ai/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/471039cf8306589928f3b5ee5077dff025655bb5/plugins/redcube-ai/skills/redcube-ai/agents/openai.yaml",
+      "sha256": "sha256:2b025bb4d41952b5d366c55831ef605355069e2ebd5bc7a6cca1a17d9831f15a"
+    }
+  ]
+}

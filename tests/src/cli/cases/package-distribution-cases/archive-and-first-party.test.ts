@@ -1132,7 +1132,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'mas');
   assert.equal(manifest.agent_id, 'mas');
-  assert.equal(manifest.version, '0.2.27');
+  assert.equal(manifest.version, '0.2.28');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(schema.required.includes('distribution_payload'), false);
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
@@ -1219,10 +1219,11 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
     assert.equal(typeof sourceManifest.presentation.description_i18n['zh-CN'], 'string');
   });
   assert.deepEqual(manifest.codex_surface.required_skill_ids, ['med-autoscience']);
-  assert.deepEqual(manifest.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
+  assert.deepEqual(manifest.codex_surface.required_capability_package_ids, ['mas-scholar-skills']);
+  assert.equal(Object.hasOwn(manifest.codex_surface, 'bundled_capability_package_ids'), false);
   assert.equal(manifests.mag.codex_surface.standalone_distribution, 'repo_carrier_source');
   assert.equal(manifests.rca.codex_surface.standalone_distribution, 'repo_carrier_source');
-  assert.equal(manifests.oma.codex_surface.standalone_distribution, 'generated_carrier_surface');
+  assert.equal(manifests.oma.codex_surface.standalone_distribution, 'repo_carrier_source');
   assert.equal(manifests.obf.codex_surface.standalone_distribution, 'generated_carrier_surface');
   assert.deepEqual(
     [manifests.mas, manifests.mag].map((sourceManifest) => ({
@@ -1235,8 +1236,8 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
       {
         package_id: 'mas',
         required: true,
-        dependency_kind: 'hard_runtime_dependency',
-        consumer_profile_id: 'mas-medical-paper.v1',
+        dependency_kind: undefined,
+        consumer_profile_id: undefined,
       },
       {
         package_id: 'mag',
@@ -1464,7 +1465,7 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   assert.equal(publicationProjectionOrder, 60);
   assert.equal(publicationSource.module_id, 'scholarskills');
   assert.equal(compatibilityProjection.registry_short_label, 'ScholarSkills');
-  assert.equal(manifest.version, '0.2.30');
+  assert.equal(manifest.version, '0.2.31');
   assert.deepEqual(manifest.consumer_policy.supported_required_by, ['mas', 'mag']);
   assert.equal(manifest.consumer_policy.supported_optional_consumer_agent_ids, undefined);
   assert.equal(manifest.content_lock.canonicalization, 'ordered_path_length_file_length_bytes');
@@ -1780,7 +1781,7 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
   assert.equal(
     normalizeFirstPartyAgentPackageManifest(manifest)
       .capability_dependencies[0].kind,
-    'framework_capability_package',
+    'capability_package',
   );
   const minimalManifest = structuredClone(manifest);
   minimalManifest.capability_dependencies = [{
@@ -1813,12 +1814,12 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
       })),
     [{ dependency_kind: 'hard_runtime_dependency', version_requirement: '*' }],
   );
-  const capabilityDependencyKindManifest = structuredClone(manifest);
-  capabilityDependencyKindManifest.capability_dependencies[0].kind = 'capability_package';
+  const legacyDependencyKindManifest = structuredClone(manifest);
+  legacyDependencyKindManifest.capability_dependencies[0].kind = 'framework_capability_package';
   assert.equal(
-    normalizeFirstPartyAgentPackageManifest(capabilityDependencyKindManifest)
+    normalizeFirstPartyAgentPackageManifest(legacyDependencyKindManifest)
       .capability_dependencies[0].kind,
-    'capability_package',
+    'framework_capability_package',
   );
   const optionalManifest = structuredClone(manifest);
   delete optionalManifest.distribution_payload;

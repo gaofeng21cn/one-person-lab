@@ -1,10 +1,10 @@
 {
   "surface_kind": "opl_agent_package_manifest.v1",
+  "kind": "agent",
   "agent_id": "mag",
   "package_id": "mag",
+  "domain_id": "med-autogrant",
   "display_name": "Med Auto Grant",
-  "publisher": "one-person-lab",
-  "version": "0.3.12",
   "presentation": {
     "display_name_i18n": {
       "zh-CN": "Med Auto Grant",
@@ -34,7 +34,80 @@
       }
     ]
   },
+  "publisher": "one-person-lab",
+  "version": "0.3.13",
   "source": "first_party",
+  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
+  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
+  "domain_descriptor_ref": "contracts/domain_descriptor.json",
+  "task_provider_ref": "contracts/domain_descriptor.json#/standard_agent_interface/stage_catalog",
+  "action_catalog_ref": "contracts/action_catalog.json",
+  "view_refs": [],
+  "entrypoints": [],
+  "machine_boundary": "This repo-local sidecar declares OPL Agent Package identity, domain runtime refs, capability presence and callability, and native carrier locators. Per-Package owner publication and currentness remain external to this descriptor.",
+  "codex_surface": {
+    "plugin_id": "med-autogrant",
+    "plugin_source_path": ".",
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "med-autogrant@med-autogrant",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/med-autogrant",
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/mag:latest-stable"
+    },
+    "standalone_distribution": "repo_carrier_source",
+    "required_skill_ids": [
+      "med-autogrant"
+    ],
+    "bundled_capability_package_ids": [
+      "mas-scholar-skills"
+    ],
+    "user_install_action_count": 1,
+    "plugin_payload_manifest_url": "payloads/mag-0.3.13.json",
+    "carrier_source_commit": "e33d4de4571237720ddb1bc2629ae8ac04ba335a"
+  },
+  "capability_dependencies": [
+    {
+      "module_id": "scholarskills",
+      "package_id": "mas-scholar-skills",
+      "kind": "framework_capability_package",
+      "required": true,
+      "dependency_kind": "hard_runtime_dependency",
+      "version_requirement": ">=0.2.25 <0.3.0",
+      "capability_abi": "mas-scholar-skills.v1",
+      "consumer_profile_id": "mag-medical-grant.v1",
+      "provider_manifest_ref": "mas-scholar-skills/contracts/opl_capability_package_manifest.json",
+      "required_export_ids": [
+        "medical-research-lit",
+        "medical-statistical-review",
+        "medical-methodology-planner",
+        "medical-evidence-integrity-reviewer",
+        "medical-evidence-synthesis-and-claim-map",
+        "medical-reference-integrity-auditor"
+      ],
+      "required_module_ids": [
+        "mas-scholar-skills.lit",
+        "mas-scholar-skills.stats",
+        "mas-scholar-skills.review",
+        "mas-scholar-skills.data",
+        "mas-scholar-skills.reference-provider-adapters",
+        "mas-scholar-skills.scientific-search-adapters"
+      ],
+      "availability_policy_ref": "contracts/scholar_skill_binding_contract.json#/availability_policy",
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_write_runtime_queue": false,
+        "can_claim_fundability_verdict": false,
+        "can_claim_quality_verdict": false,
+        "can_claim_export_readiness": false,
+        "can_gate_mag_install": false,
+        "can_gate_mag_stage_route": false,
+        "can_gate_mag_operational_readiness": false
+      }
+    }
+  ],
   "registry_entry": {
     "registry_kind": "first_party_agent_package_registry_entry",
     "registry_source_ref": "contracts/opl-framework/packages/mag.json",
@@ -47,7 +120,6 @@
     ],
     "admitted_domain_ref": "contracts/opl-framework/domains.json#medautogrant"
   },
-  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/med-autogrant.git",
   "publication_projection_order": 20,
   "publication_source": {
@@ -55,33 +127,6 @@
     "owner_plugin_manifest_ref": "plugins/med-autogrant/plugin.json",
     "owner_language_version_ref": "pyproject.toml"
   },
-  "standard_agent_descriptor_projection": {
-    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
-    "source_ref": "contracts/domain_descriptor.json",
-    "interface_source_ref": "contracts/domain_descriptor.json#/standard_agent_interface",
-    "domain_id": "med-autogrant",
-    "runtime_domain_id": "medautogrant",
-    "explicit_aliases": [
-      "mag",
-      "medautogrant",
-      "med-autogrant",
-      "grant"
-    ],
-    "compatibility": {
-      "registry_domain_id": "medautogrant",
-      "aliases": [
-        "med_auto_grant"
-      ],
-      "owner_aliases": [
-        "mag",
-        "medautogrant",
-        "med-autogrant",
-        "med-auto-grant"
-      ]
-    }
-  },
-  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
-  "machine_boundary": "This manifest declares first-party package distribution and Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
   "package_core": {
     "core_kind": "opl_agent_package_core",
     "identity_fields": [
@@ -96,27 +141,6 @@
     ],
     "dependency_source": "manifest_declared_capability_dependencies",
     "exposure_owner": "opl_connect_agent_package_registry"
-  },
-  "codex_surface": {
-    "plugin_id": "med-autogrant",
-    "plugin_payload_manifest_url": "payloads/mag-0.3.12.json",
-    "carrier_source_commit": "258abcad8b1128cebc0cc1a0b76a98f83bda88e3",
-    "standalone_distribution": "repo_carrier_source",
-    "configured_codex_plugin_carrier": {
-      "kind": "codex_plugin_manager",
-      "plugin_selector": "med-autogrant@med-autogrant",
-      "executor_route": "codex_cli",
-      "marketplace_source": "gaofeng21cn/med-autogrant",
-      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/mag:latest-stable"
-    },
-    "required_skill_ids": [
-      "med-autogrant"
-    ],
-    "bundled_capability_package_ids": [
-      "mas-scholar-skills"
-    ],
-    "user_install_action_count": 1,
-    "plugin_source_path": "."
   },
   "runtime_source_carrier": {
     "carrier_kind": "opl_managed_module_source",
@@ -167,46 +191,29 @@
       ]
     }
   },
-  "capability_dependencies": [
-    {
-      "module_id": "scholarskills",
-      "package_id": "mas-scholar-skills",
-      "kind": "framework_capability_package",
-      "required": true,
-      "dependency_kind": "hard_runtime_dependency",
-      "version_requirement": ">=0.2.25 <0.3.0",
-      "capability_abi": "mas-scholar-skills.v1",
-      "consumer_profile_id": "mag-medical-grant.v1",
-      "provider_manifest_ref": "mas-scholar-skills/contracts/opl_capability_package_manifest.json",
-      "required_export_ids": [
-        "medical-research-lit",
-        "medical-statistical-review",
-        "medical-methodology-planner",
-        "medical-evidence-integrity-reviewer",
-        "medical-evidence-synthesis-and-claim-map",
-        "medical-reference-integrity-auditor"
+  "standard_agent_descriptor_projection": {
+    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
+    "source_ref": "contracts/domain_descriptor.json",
+    "interface_source_ref": "contracts/domain_descriptor.json#/standard_agent_interface",
+    "domain_id": "med-autogrant",
+    "runtime_domain_id": "medautogrant",
+    "explicit_aliases": [
+      "mag",
+      "medautogrant",
+      "med-autogrant",
+      "grant"
+    ],
+    "compatibility": {
+      "registry_domain_id": "medautogrant",
+      "aliases": [
+        "med_auto_grant"
       ],
-      "required_module_ids": [
-        "mas-scholar-skills.lit",
-        "mas-scholar-skills.stats",
-        "mas-scholar-skills.review",
-        "mas-scholar-skills.data",
-        "mas-scholar-skills.reference-provider-adapters",
-        "mas-scholar-skills.scientific-search-adapters"
-      ],
-      "availability_policy_ref": "contracts/scholar_skill_binding_contract.json#/availability_policy",
-      "authority_boundary": {
-        "can_write_domain_truth": false,
-        "can_sign_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_write_runtime_queue": false,
-        "can_claim_fundability_verdict": false,
-        "can_claim_quality_verdict": false,
-        "can_claim_export_readiness": false,
-        "can_gate_mag_install": false,
-        "can_gate_mag_stage_route": false,
-        "can_gate_mag_operational_readiness": false
-      }
+      "owner_aliases": [
+        "mag",
+        "medautogrant",
+        "med-autogrant",
+        "med-auto-grant"
+      ]
     }
-  ]
+  }
 }

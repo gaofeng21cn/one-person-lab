@@ -3,8 +3,6 @@
   "agent_id": "rca",
   "package_id": "rca",
   "display_name": "RedCube AI",
-  "publisher": "one-person-lab",
-  "version": "0.2.15",
   "presentation": {
     "display_name_i18n": {
       "zh-CN": "RedCube AI",
@@ -34,7 +32,149 @@
       }
     ]
   },
+  "publisher": "one-person-lab",
+  "version": "0.2.16",
   "source": "first_party",
+  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
+  "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
+  "domain_descriptor_ref": "contracts/domain_descriptor.json",
+  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
+  "source_contract": {
+    "central_manifest_ref": "contracts/opl-framework/packages/rca.json",
+    "central_package_id": "rca",
+    "repo_canonical_agent_id": "rca",
+    "repo_slug": "redcube-ai",
+    "repo_domain_manifest_ref": "contracts/opl_domain_manifest_registration.json",
+    "domain_descriptor_ref": "contracts/domain_descriptor.json",
+    "pack_compiler_input_ref": "contracts/pack_compiler_input.json"
+  },
+  "machine_boundary": "This repo-local sidecar declares RCA package distribution and Codex carrier projection. Ordinary Package currentness follows per-package owner OCI latest-stable -> configured native carrier -> fresh readback. Installed lock, payload, materializer, lifecycle receipt, LKG, rollback, and durable transaction surfaces are compatibility-to-delete and must not be used as Package lifecycle, currentness, or carrier-adoption implementation input. RCA keeps visual truth, route truth, review/export verdict, artifact authority, visual memory body, and owner receipt authority; this manifest does not create a repo-owned generic runtime or package manager.",
+  "codex_surface": {
+    "plugin_id": "redcube-ai",
+    "codex_visible_entry": "redcube-ai",
+    "standalone_distribution": "repo_carrier_source",
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "redcube-ai@redcube-ai",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/redcube-ai",
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/rca:latest-stable"
+    },
+    "required_skill_ids": [
+      "redcube-ai"
+    ],
+    "bundled_capability_package_ids": [],
+    "user_install_action_count": 1,
+    "carrier_source_path": ".",
+    "canonical_primary_skill_source_ref": "agent/primary_skill/SKILL.md",
+    "plugin_carrier_skill_ref": "plugins/redcube-ai/skills/redcube-ai/SKILL.md",
+    "plugin_payload_manifest_url": "payloads/rca-0.2.16.json",
+    "carrier_source_commit": "471039cf8306589928f3b5ee5077dff025655bb5"
+  },
+  "skill_packs": [
+    {
+      "id": "redcube-ai",
+      "source": "repo_local_codex_plugin_carrier",
+      "version": "0.2.16",
+      "install_mode": "bundled_required",
+      "source_ref": "agent/primary_skill/SKILL.md",
+      "carrier_mirror_ref": "plugins/redcube-ai/skills/redcube-ai/SKILL.md",
+      "carrier_projection_contract_ref": "contracts/capability_map.json#/carrier_projection_contract"
+    }
+  ],
+  "entrypoints": [
+    {
+      "entrypoint_id": "codex_primary_skill",
+      "entrypoint_kind": "codex_skill",
+      "source_ref": "agent/primary_skill/SKILL.md",
+      "carrier_ref": "plugins/redcube-ai/skills/redcube-ai/SKILL.md",
+      "authority": "carrier_only_not_domain_truth"
+    },
+    {
+      "entrypoint_id": "hosted_stage_actions",
+      "entrypoint_kind": "opl_hosted_action_catalog",
+      "source_ref": "contracts/action_catalog.json",
+      "authority": "opl_hosted_runtime_rca_domain_semantics"
+    }
+  ],
+  "health_check": {
+    "health_check_id": "rca_repo_local_opl_agent_package_manifest",
+    "checks": [
+      {
+        "check_id": "json_parse",
+        "command": "node -e \"JSON.parse(require('node:fs').readFileSync('contracts/opl_agent_package_manifest.json','utf8'))\""
+      },
+      {
+        "check_id": "opl_manifest_validation",
+        "command": "one-person-lab/bin/opl packages validate-manifest --manifest-url <repo>/contracts/opl_agent_package_manifest.json --json"
+      }
+    ],
+    "does_not_authorize_runtime_ready": true,
+    "does_not_authorize_live_download": true
+  },
+  "permissions": [
+    {
+      "permission_id": "repo_contract_read",
+      "scope": "contracts_and_codex_carrier_refs",
+      "access": "read"
+    },
+    {
+      "permission_id": "artifact_mutation",
+      "scope": "owner_authorized_visual_workspace_only",
+      "access": "requires_rca_artifact_authority_receipt"
+    }
+  ],
+  "codex_visible_entry": "redcube-ai",
+  "required_skill_ids": [
+    "redcube-ai"
+  ],
+  "optional_skill_refs": [],
+  "carrier_adapters": [
+    {
+      "adapter_kind": "codex_plugin_carrier",
+      "carrier": "codex_plugin",
+      "source_surface": "codex_surface",
+      "projection_role": "package_carrier_adapter",
+      "owns_package_core": false,
+      "owns_domain_truth": false
+    }
+  ],
+  "managed_shell": {
+    "clean_runner_profile": {
+      "profile_role": "domain_compatibility_clean_runner",
+      "legacy_env_roots": [
+        {
+          "env_name": "RCA_CLEAN_RUNNER_TMP_ROOT",
+          "fallback_subdir": "rca"
+        }
+      ],
+      "read_only_command_patterns": []
+    }
+  },
+  "authority_boundary": {
+    "repo_manifest_role": "repo_local_package_sidecar",
+    "domain_truth_owner": "redcube_ai",
+    "rca_owns_visual_truth": true,
+    "rca_owns_route_truth": true,
+    "rca_owns_review_export_verdict": true,
+    "rca_owns_artifact_authority": true,
+    "rca_owns_visual_memory_body": true,
+    "rca_owns_owner_receipt": true,
+    "repo_can_own_generic_runtime": false,
+    "repo_can_own_generic_package_manager": false,
+    "manifest_can_write_domain_truth": false,
+    "manifest_can_write_visual_truth": false,
+    "manifest_can_write_visual_memory_body": false,
+    "manifest_can_mutate_artifact_body": false,
+    "manifest_can_authorize_review_export_verdict": false,
+    "manifest_can_sign_owner_receipt": false,
+    "manifest_can_create_typed_blocker": false,
+    "manifest_can_write_runtime_queue": false,
+    "manifest_can_claim_runtime_readiness": false,
+    "manifest_can_claim_release_readiness": false,
+    "manifest_can_claim_live_package_download": false
+  },
+  "capability_dependencies": [],
   "registry_entry": {
     "registry_kind": "first_party_agent_package_registry_entry",
     "registry_source_ref": "contracts/opl-framework/packages/rca.json",
@@ -47,28 +187,12 @@
     ],
     "admitted_domain_ref": "contracts/opl-framework/domains.json#redcube"
   },
-  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
-  "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
   "publication_projection_order": 30,
   "publication_source": {
     "owner_package_manifest_ref": "contracts/opl_agent_package_manifest.json",
     "owner_plugin_manifest_ref": "plugins/redcube-ai/plugin.json",
     "owner_language_version_ref": "package.json"
   },
-  "standard_agent_descriptor_projection": {
-    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
-    "source_ref": "contracts/domain_descriptor.json",
-    "interface_source_ref": "contracts/standard_agent_interface.json#/standard_agent_interface",
-    "domain_id": "redcube_ai",
-    "runtime_domain_id": "redcube_ai",
-    "explicit_aliases": ["rca", "redcube", "redcube-ai", "redcube_ai", "redcubeai", "deck"],
-    "compatibility": {
-      "registry_domain_id": "redcube",
-      "owner_aliases": ["rca", "redcube", "redcubeai", "redcube-ai"]
-    }
-  },
-  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
-  "machine_boundary": "This manifest declares first-party package distribution and Codex carrier projection. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
   "package_core": {
     "core_kind": "opl_agent_package_core",
     "identity_fields": [
@@ -84,55 +208,38 @@
     "dependency_source": "manifest_declared_capability_dependencies",
     "exposure_owner": "opl_connect_agent_package_registry"
   },
-  "codex_surface": {
-    "plugin_id": "redcube-ai",
-    "plugin_payload_manifest_url": "payloads/rca-0.2.15.json",
-    "carrier_source_commit": "99f9b3c5d72dd512ef0a45fd6a2b0647a2d7e1f5",
-    "standalone_distribution": "repo_carrier_source",
-    "configured_codex_plugin_carrier": {
-      "kind": "codex_plugin_manager",
-      "plugin_selector": "redcube-ai@redcube-ai",
-      "executor_route": "codex_cli",
-      "marketplace_source": "gaofeng21cn/redcube-ai",
-      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/rca:latest-stable"
-    },
-    "required_skill_ids": [
-      "redcube-ai"
-    ],
-    "bundled_capability_package_ids": [],
-    "user_install_action_count": 1
-  },
   "runtime_source_carrier": {
     "carrier_kind": "opl_managed_module_source",
     "module_id": "redcube"
   },
-  "carrier_adapters": [
-    {
-      "adapter_kind": "codex_plugin_carrier",
-      "carrier": "codex_plugin",
-      "source_surface": "codex_surface",
-      "projection_role": "package_carrier_adapter",
-      "owns_package_core": false,
-      "owns_domain_truth": false
-    }
-  ],
   "opl_managed_surface": {
     "package_shape": "thin_agent_package",
     "dependency_resolution": "managed_dependency_graph",
     "dependency_update_policy": "independent_package_target",
     "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
   },
-  "managed_shell": {
-    "clean_runner_profile": {
-      "profile_role": "domain_compatibility_clean_runner",
-      "legacy_env_roots": [
-        {
-          "env_name": "RCA_CLEAN_RUNNER_TMP_ROOT",
-          "fallback_subdir": "rca"
-        }
-      ],
-      "read_only_command_patterns": []
+  "standard_agent_descriptor_projection": {
+    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
+    "source_ref": "contracts/domain_descriptor.json",
+    "interface_source_ref": "contracts/standard_agent_interface.json#/standard_agent_interface",
+    "domain_id": "redcube_ai",
+    "runtime_domain_id": "redcube_ai",
+    "explicit_aliases": [
+      "rca",
+      "redcube",
+      "redcube-ai",
+      "redcube_ai",
+      "redcubeai",
+      "deck"
+    ],
+    "compatibility": {
+      "registry_domain_id": "redcube",
+      "owner_aliases": [
+        "rca",
+        "redcube",
+        "redcubeai",
+        "redcube-ai"
+      ]
     }
-  },
-  "capability_dependencies": []
+  }
 }

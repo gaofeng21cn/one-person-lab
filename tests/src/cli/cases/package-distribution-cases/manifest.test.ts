@@ -19,8 +19,12 @@ const codexDefaultProfile = readBundledCodexDefaultProfile();
 
 test('packages manifest exposes independent owner currentness and compatibility snapshot coordinates', () => {
   const packageSpecs = getPublicationAdmittedOplPackageSpecs();
+  const masPackage = packageSpecs.find((spec) => spec.package_id === 'mas');
+  const omaPackage = packageSpecs.find((spec) => spec.package_id === 'oma');
   const scholarPackage = packageSpecs.find((spec) => spec.package_id === 'mas-scholar-skills');
   const flowPackage = packageSpecs.find((spec) => spec.package_id === 'opl-flow');
+  assert.ok(masPackage);
+  assert.ok(omaPackage);
   assert.ok(scholarPackage);
   assert.ok(flowPackage);
   const output = runCli(['connect', 'packages', 'manifest'], {
@@ -258,10 +262,10 @@ test('packages manifest exposes independent owner currentness and compatibility 
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.mas.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:0.2.27',
+    `ghcr.io/gaofeng21cn/one-person-lab-packages/mas:${masPackage.version}`,
   );
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_id, 'mas');
-  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, '0.2.27');
+  assert.equal(output.packages_manifest.packages.package_artifacts.mas.package_version, masPackage.version);
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.module_id, 'medautoscience');
   assert.equal(output.packages_manifest.packages.package_artifacts.mas.carrier_locator.repo_name, 'med-autoscience');
   assert.equal(Object.hasOwn(output.packages_manifest.packages.package_artifacts.mas, 'module_id'), false);
@@ -342,10 +346,10 @@ test('packages manifest exposes independent owner currentness and compatibility 
       {
         module_id: 'scholarskills',
         package_id: 'mas-scholar-skills',
-        kind: 'framework_capability_package',
+        kind: 'capability_package',
         required: true,
         dependency_kind: 'hard_runtime_dependency',
-        version_requirement: '>=0.2.12 <0.3.0',
+        version_requirement: '*',
         capability_abi: 'mas-scholar-skills.v1',
         authority_boundary: {
           can_write_domain_truth: false,
@@ -376,7 +380,7 @@ test('packages manifest exposes independent owner currentness and compatibility 
       distribution_shape: 'repo_carrier_source',
       plugin_id: 'med-autoscience',
       required_skill_ids: ['med-autoscience'],
-      bundled_capability_package_ids: ['mas-scholar-skills'],
+      bundled_capability_package_ids: [],
       carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
       package_manifest_ref: 'contracts/opl-framework/packages/mas.json',
       user_install_action_count: 1,
@@ -401,7 +405,7 @@ test('packages manifest exposes independent owner currentness and compatibility 
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.artifact,
-    'ghcr.io/gaofeng21cn/one-person-lab-packages/oma:0.4.9',
+    `ghcr.io/gaofeng21cn/one-person-lab-packages/oma:${omaPackage.version}`,
   );
   assert.equal(
     output.packages_manifest.packages.package_artifacts.oma.remote_publish_status,
@@ -413,7 +417,7 @@ test('packages manifest exposes independent owner currentness and compatibility 
   );
   const omaCodexStandaloneDistribution = output.packages_manifest.packages.package_artifacts.oma.codex_standalone_distribution;
   assert.ok(omaCodexStandaloneDistribution);
-  assert.equal(omaCodexStandaloneDistribution.distribution_shape, 'generated_carrier_surface');
+  assert.equal(omaCodexStandaloneDistribution.distribution_shape, 'repo_carrier_source');
   assert.equal(omaCodexStandaloneDistribution.package_manifest_ref, 'contracts/opl-framework/packages/oma.json');
   const scholarArtifact = output.packages_manifest.packages.package_artifacts['mas-scholar-skills'];
   assert.equal(scholarArtifact.package_version, scholarPackage.version);
