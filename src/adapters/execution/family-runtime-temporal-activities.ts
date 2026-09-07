@@ -1588,6 +1588,7 @@ export async function stageQualityAttemptMaterializeActivity(
           resolution: resolveReviewerInputSnapshotMaterialization(
             input.review_input_snapshot_materialization_request,
             snapshotAuthorityBinding!,
+            { refs: inputArtifactIdentity.artifact_refs, hashes: inputArtifactIdentity.artifact_hashes },
           ),
         })
       : null;
