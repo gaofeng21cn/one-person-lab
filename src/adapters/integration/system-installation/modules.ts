@@ -92,7 +92,11 @@ function resolveRepoRoot() {
 }
 
 function resolveSiblingWorkspaceRoot() {
-  const workspace = readOplWorkspaceRoot();
+  // Bound Attempts use OPL_WORKSPACE_ROOT for their work item, not the
+  // machine's developer checkout catalog. Keep that scope out of discovery.
+  const workspace = readOplWorkspaceRoot(normalizeOptionalString(process.env.OPL_STAGE_ATTEMPT_ID)
+    ? { ...process.env, OPL_WORKSPACE_ROOT: undefined }
+    : process.env);
   if (workspace.selected_path && workspace.exists && workspace.source !== 'default_home') {
     return workspace.selected_path;
   }
