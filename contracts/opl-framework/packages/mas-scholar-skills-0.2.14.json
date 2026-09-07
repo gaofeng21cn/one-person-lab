@@ -383,7 +383,7 @@
       "skill_ids_ref": "#/exports/all_skill_ids",
       "readiness_skill_ids_ref": "#/exports/core_skill_ids",
       "materialization_policy": "all_exported_skills",
-      "target_path_template": "<scope-root>/.agents/skills/<skill-id>",
+      "target_path_template": "<scope-root>/.codex/skills/<skill-id>",
       "receipt_required": true,
       "readiness_policy": "all_core_skills_current_for_active_scope"
     }

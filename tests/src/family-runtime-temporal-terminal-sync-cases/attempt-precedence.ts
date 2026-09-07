@@ -60,7 +60,8 @@ for (const role of ['reviewer', 're_reviewer'] as const) {
       };
       syncStageAttemptFromTemporalTerminalObservation(db, updated);
       const afterUpdate = inspectStageAttempt(db, attempt.stage_attempt_id);
-      assert.equal(afterUpdate.route_impact.stage_quality_cycle.outcome, 'quality_debt');
+      const updatedCycle = afterUpdate.route_impact.stage_quality_cycle as Record<string, unknown>;
+      assert.equal(updatedCycle.outcome, 'quality_debt');
       assert.ok(afterUpdate.closeout_refs.includes('receipt:domain-closeout'));
     });
   });
