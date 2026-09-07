@@ -10,6 +10,8 @@ import stat
 import subprocess
 from typing import Any
 
+from .artifact_bitmap import BitmapInspectionError, inspect_bitmap
+
 
 class ContainedFileReadError(RuntimeError):
     """A file could not be read through the declared safe-root boundary."""
@@ -36,11 +38,37 @@ def read_contained_regular_file(
 
     if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or max_bytes < 0:
         raise ValueError("max_bytes must be a non-negative integer")
+    root, path, data, _, _ = _inspect_contained_regular_file(
+        root_value, ref_value, max_bytes=max_bytes, collect_bytes=True, resolve_root=True,
+    )
+    return root, path, data
+
+
+def fingerprint_contained_regular_file(
+    root_value: str | Path,
+    ref_value: str | Path,
+) -> tuple[int, str]:
+    """Hash a stable regular file in bounded memory through a physical root."""
+
+    _, _, _, size_bytes, digest = _inspect_contained_regular_file(
+        root_value, ref_value, max_bytes=None, collect_bytes=False, resolve_root=False,
+    )
+    return size_bytes, digest
+
+
+def _inspect_contained_regular_file(
+    root_value: str | Path,
+    ref_value: str | Path,
+    *,
+    max_bytes: int | None,
+    collect_bytes: bool,
+    resolve_root: bool,
+) -> tuple[Path, Path, bytes, int, str]:
     root_input = Path(root_value)
     if not root_input.is_absolute():
         raise ContainedFileReadError("root_not_absolute", "root must be an absolute path")
     try:
-        root = root_input.resolve(strict=True)
+        root = root_input.resolve(strict=True) if resolve_root else root_input
     except OSError as error:
         raise ContainedFileReadError("root_unavailable", str(error)) from error
     if not root.is_dir():
@@ -75,7 +103,13 @@ def read_contained_regular_file(
     descriptor: int | None = None
     try:
         directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        root_before = root.lstat()
+        if not stat.S_ISDIR(root_before.st_mode):
+            raise ContainedFileReadError("root_not_directory", "root must be a physical directory")
         directory_descriptors.append(os.open(root, directory_flags))
+        root_opened = os.fstat(directory_descriptors[-1])
+        if (root_opened.st_dev, root_opened.st_ino) != (root_before.st_dev, root_before.st_ino):
+            raise ContainedFileReadError("identity_changed", "root changed while opening")
         for part in ref.parts[:-1]:
             before_directory = os.stat(
                 part,
@@ -119,7 +153,7 @@ def read_contained_regular_file(
             raise ContainedFileReadError("ref_symlink", f"ref traverses a symlink: {ref_text}")
         if not stat.S_ISREG(before.st_mode):
             raise ContainedFileReadError("not_regular_file", f"ref is not a regular file: {ref_text}")
-        if before.st_size > max_bytes:
+        if max_bytes is not None and before.st_size > max_bytes:
             raise ContainedFileReadError(
                 "file_too_large",
                 f"ref exceeds the {max_bytes}-byte read limit: {before.st_size}",
@@ -134,30 +168,37 @@ def read_contained_regular_file(
             raise ContainedFileReadError("not_regular_file", f"ref is not a regular file: {ref_text}")
         if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
             raise ContainedFileReadError("identity_changed", f"ref changed while opening: {ref_text}")
-        with os.fdopen(descriptor, "rb", closefd=True) as stream:
-            descriptor = None
-            data = stream.read(max_bytes + 1)
-        if len(data) > max_bytes:
-            raise ContainedFileReadError(
-                "file_too_large",
-                f"ref exceeds the {max_bytes}-byte read limit while reading",
-            )
+        digest = hashlib.sha256()
+        size_bytes = 0
+        chunks: list[bytes] = []
+        while chunk := os.read(
+            descriptor,
+            1024 * 1024 if max_bytes is None else min(1024 * 1024, max_bytes - size_bytes + 1),
+        ):
+            size_bytes += len(chunk)
+            if max_bytes is not None and size_bytes > max_bytes:
+                raise ContainedFileReadError(
+                    "file_too_large", f"ref exceeds the {max_bytes}-byte read limit while reading",
+                )
+            digest.update(chunk)
+            if collect_bytes:
+                chunks.append(chunk)
+        after_descriptor = os.fstat(descriptor)
         after = os.stat(
             filename,
             dir_fd=directory_descriptors[-1],
             follow_symlinks=False,
         )
+        def identity(value: os.stat_result) -> tuple[int, int, int, int, int]:
+            return value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns
+
         if (
-            opened.st_dev,
-            opened.st_ino,
-            opened.st_size,
-            opened.st_mtime_ns,
-        ) != (
-            after.st_dev,
-            after.st_ino,
-            after.st_size,
-            after.st_mtime_ns,
-        ) or len(data) != opened.st_size:
+            not stat.S_ISREG(after_descriptor.st_mode)
+            or stat.S_ISLNK(after.st_mode)
+            or identity(opened) != identity(after_descriptor)
+            or identity(opened) != identity(after)
+            or size_bytes != opened.st_size
+        ):
             raise ContainedFileReadError("identity_changed", f"ref changed while reading: {ref_text}")
     except ContainedFileReadError:
         raise
@@ -168,7 +209,7 @@ def read_contained_regular_file(
             os.close(descriptor)
         for directory_descriptor in reversed(directory_descriptors):
             os.close(directory_descriptor)
-    return root, root / ref, data
+    return root, root / ref, b"".join(chunks), size_bytes, f"sha256:{digest.hexdigest()}"
 
 
 def inspect_pdf_fonts(pdf_path: Path, root: Path) -> dict[str, Any]:
@@ -288,7 +329,10 @@ def inspect_png_visual_metrics(
 
 
 __all__ = [
+    "BitmapInspectionError",
     "ContainedFileReadError",
+    "fingerprint_contained_regular_file",
+    "inspect_bitmap",
     "inspect_pdf_fonts",
     "inspect_png_visual_metrics",
     "read_contained_regular_file",

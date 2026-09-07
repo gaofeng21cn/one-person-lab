@@ -408,6 +408,8 @@ function replayCompletedHandlerAction(input: {
   executionScope: WorkItemExecutionScopeSnapshot | null;
   workspaceRoot: string;
   recordLedger: typeof actionLedger;
+  materializationDomainId: string;
+  applyDomainArtifactCas?: typeof applyDomainArtifactCasMaterialization;
 }) {
   const scope = handlerExecutionScope({
     action: input.action,
@@ -459,6 +461,22 @@ function replayCompletedHandlerAction(input: {
   const result = parseJsonText(
     readStandardAgentActionStoredBytes(stored.output, 'completed Handler output').toString('utf8'),
   );
+  const materializes = actionDeclaresHostMaterialization(input.action);
+  const hostMaterialization = materializes
+    ? (input.applyDomainArtifactCas ?? applyDomainArtifactCasMaterialization)({
+        workspaceRoot: input.workspaceRoot,
+        domainId: input.materializationDomainId,
+        actionId: input.binding.action_id,
+        runId: input.runId,
+        handlerRef: input.completion.binding_ref,
+        hostedRuntimeBindingRef: input.binding.hosted_runtime_binding_ref,
+        actionAuthorityBoundary: input.action.authority_boundary,
+        handlerOutput: result,
+        handlerOutputRef: stored.output.ref,
+        handlerOutputSha256: stored.output.sha256,
+        replayOnly: true,
+      })
+    : null;
   const ledger = input.recordLedger({
     runId: input.runId,
     domainId: input.binding.canonical_domain_id,
@@ -490,6 +508,7 @@ function replayCompletedHandlerAction(input: {
       request: stored.request,
       output: stored.output,
       result,
+      ...(materializes ? { host_materialization: hostMaterialization } : {}),
       sandbox: input.completion.sandbox,
       ledger: ledger.ledger_entry,
       authority_boundary: actionAuthorityBoundary(),
@@ -502,6 +521,7 @@ function replayCompletedHandlerAction(input: {
 
 function materializeHandlerOutput(input: {
   action: FamilyActionCatalogAction;
+  checkoutRoot: string;
   workspaceRoot: string;
   requestPayload: Record<string, unknown>;
   materializationDomainId: string;
@@ -513,6 +533,9 @@ function materializeHandlerOutput(input: {
 }, applyMaterialization = applyDomainArtifactCasMaterialization) {
   if (input.action.action_id === QUALIFICATION_PROVISIONING_ACTION_ID) {
     assertQualificationProvisioningOutput({
+      action: input.action,
+      checkoutRoot: input.checkoutRoot,
+      domainId: input.materializationDomainId,
       workspaceRoot: input.workspaceRoot,
       requestPayload: input.requestPayload,
       output: input.output,
@@ -626,6 +649,7 @@ async function runHandlerAction(input: {
         });
         hostMaterialization = materializeHandlerOutput({
           action: input.action,
+          checkoutRoot: input.checkoutRoot,
           workspaceRoot: input.workspaceRoot,
           requestPayload: input.runtimeInput.payload,
           materializationDomainId: input.materializationDomainId,
@@ -727,6 +751,7 @@ async function runHandlerAction(input: {
     });
     hostMaterialization ??= materializeHandlerOutput({
       action: input.action,
+      checkoutRoot: input.checkoutRoot,
       workspaceRoot: input.workspaceRoot,
       requestPayload: input.runtimeInput.payload,
       materializationDomainId: input.materializationDomainId,
@@ -873,6 +898,7 @@ async function runHandlerAction(input: {
   try {
     hostMaterialization = materializeHandlerOutput({
       action: input.action,
+      checkoutRoot: input.checkoutRoot,
       workspaceRoot: input.workspaceRoot,
       requestPayload: input.runtimeInput.payload,
       materializationDomainId: input.materializationDomainId,
@@ -1552,15 +1578,20 @@ export async function runStandardAgentAction(
     : null;
   if (frozenBinding && frozenPlan) {
     const frozen = requestFromFrozenPlan({ runtimeInput: input, plan: frozenPlan });
+    const completedQualificationReplay = invocationContext === QUALIFICATION_PROVISIONING_INVOCATION
+      && frozen.context.action.action_id === QUALIFICATION_PROVISIONING_ACTION_ID
+      && completion?.execution_kind === 'handler_ref'
+      && completion.status === 'completed';
     assertStandardAgentActionInvocationSurface(
       frozen.context.action,
-      invocationContext,
+      completedQualificationReplay ? INTERNAL_STANDARD_AGENT_ACTION_INVOCATION : invocationContext,
       frozen.context.registry,
+      frozenPlan.checkout_root,
     );
     if (
       completion?.execution_kind === 'handler_ref'
       && completion.status === 'completed'
-      && !actionDeclaresHostMaterialization(frozen.context.action)
+      && (!actionDeclaresHostMaterialization(frozen.context.action) || completedQualificationReplay)
     ) {
       return replayCompletedHandlerAction({
         runtimeInput: input,
@@ -1572,6 +1603,8 @@ export async function runStandardAgentAction(
         executionScope: frozen.context.executionScope,
         workspaceRoot: frozenPlan.workspace_root,
         recordLedger: dependencies.recordLedger ?? actionLedger,
+        materializationDomainId: frozen.context.catalog.target_domain_id,
+        applyDomainArtifactCas: dependencies.applyDomainArtifactCas,
       });
     }
     return executeActionContext({
@@ -1622,15 +1655,23 @@ export async function runStandardAgentAction(
   )) {
     fail('Hosted Agent action request conflicts with its frozen legacy run binding.', { run_id: runId });
   }
-  const effectiveRuntimeInput = invocationContext === QUALIFICATION_PROVISIONING_INVOCATION
-    ? { ...input, payload: qualificationProvisioningPayload(input, runtimeBinding.workspace_root) }
-    : input;
+  let effectiveRuntimeInput = input;
+  if (invocationContext === QUALIFICATION_PROVISIONING_INVOCATION) {
+    const { catalog } = readHostedAgentRuntimeActionContracts(
+      runtimeBinding.checkout_root, runtimeBinding.catalog_target_domain_ids,
+    );
+    const action = catalog.actions.find((candidate) => candidate.action_id === input.actionId)
+      ?? fail('Qualification provisioning action is missing from the bound owner catalog.');
+    effectiveRuntimeInput = { ...input, payload: qualificationProvisioningPayload(
+      input, runtimeBinding.workspace_root, action, runtimeBinding.checkout_root,
+    ) };
+  }
   let liveContext = await buildLiveActionContext({
     runtimeInput: effectiveRuntimeInput,
     runtimeBinding,
     dependencies,
   });
-  assertStandardAgentActionInvocationSurface(liveContext.action, invocationContext, liveContext.registry);
+  assertStandardAgentActionInvocationSurface(liveContext.action, invocationContext, liveContext.registry, runtimeBinding.checkout_root);
   const requestPayloadSha256 = sha256(canonicalJsonBytes(input.payload));
   const timeoutMs = canonicalTimeoutMs(input.timeoutMs);
   const invocationSha256 = originalInvocationSha256({
@@ -1771,7 +1812,7 @@ export function runStandardAgentQualificationProvisioning(
   dependencies: RuntimeDependencies = {},
 ) {
   if (input.actionId !== QUALIFICATION_PROVISIONING_ACTION_ID) {
-    fail('Qualification provisioning surface only accepts its exact MAS authority action.', {
+    fail('Qualification provisioning surface only accepts its exact internal authority action.', {
       failure_code: 'qualification_provisioning_action_mismatch',
       action_id: input.actionId,
     });

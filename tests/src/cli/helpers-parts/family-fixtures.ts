@@ -79,6 +79,17 @@ function materializeStandardAgentRuntimeFixture(pluginRoot: string, packageId: s
     package_id: agent.agent_id,
     domain_id: agent.domain_id,
     domain_label: agent.display_name,
+    dispatch_evidence_projection: {
+      work_item_id_field: ({ mas: 'study_id', mag: 'grant_run_id', obf: 'book_id' } as Record<string, string>)[agent.agent_id] ?? 'work_item_id',
+      result_collections: agent.agent_id === 'mas' ? [{
+        field: 'paper_line_owner_chain_results',
+        ref_fields: {
+          domain_receipt_refs: ['owner_receipt_refs'],
+          typed_blocker_refs: ['stable_typed_blocker_refs'],
+          owner_chain_refs: ['progress_delta_refs', 'ai_reviewer_gate_receipt_refs', 'artifact_movement_refs', 'human_gate_or_resume_refs', 'no_forbidden_write_proof_ref'],
+        },
+      }] : [],
+    },
     standard_agent_interface: {
       version: 'opl_standard_agent_interface.v1',
       workspace_binding: {

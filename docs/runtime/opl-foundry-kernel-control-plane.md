@@ -56,6 +56,13 @@ OMA provider manifest 只声明 `design` 和 `diagnose` 两个内部 operation�
 
 跨边界对象只允许 `DesignRequest`、`AgentBlueprint`、`EvidenceBundle` 和 `EvolutionProposal`。它们使用 canonical JSON + SHA-256，不得包含 repo path、命令、queue、lease、attempt、patch、work order、promotion ledger 或保护测试正文。
 
+自然语言目标的理解与 Profile 适用性判断归 OMA 设计 Stage。`opl profiles select`
+只按显式 `--profile` 或规范 `--intent-signal` 精确路由；自由文本仅作为设计依据保留，
+没有显式选择或引用来源时返回 `semantic_profile_selection_required`，由现有
+`engineer-agent` 设计入口处理。Profile 是符合性的最低约束，不是所有领域共用的设计模板。
+引用来源与 pattern packet 继续走 source-derived 路线；与显式 Profile 合用时保留 hybrid
+结果。Framework 继续持有 Profile ABI、查询、符合性验证和能力解析。
+
 ## Operator Surface
 
 ```text

@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { readAgentPackageReadinessPort, registerAgentPackageReadinessPort } from '../../src/kernel/agent-package-readiness-port.ts';
+import { preflightDomainDispatchEvidencePayload } from '../../src/authority/evidence/domain-dispatch-evidence-payload-preflight.ts';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
@@ -77,6 +79,56 @@ function writeStandardAgentDescriptor(repoDir: string, descriptor: object) {
     `${JSON.stringify(descriptor, null, 2)}\n`,
   );
 }
+
+test('domain-owned evidence projection binds custom work-item fields and result refs', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-evidence-'));
+  const previousPort = readAgentPackageReadinessPort();
+  try {
+    const input = {
+      ...standardAgentDescriptor('fixture'),
+      dispatch_evidence_projection: {
+        work_item_id_field: 'case_key',
+        result_collections: [{
+          field: 'case_outcomes',
+          ref_fields: { domain_receipt_refs: ['accepted_refs'] },
+        }],
+      },
+    };
+    writeStandardAgentDescriptor(root, input);
+    const descriptor = readStandardAgentDescriptorInterface(root);
+    assert.ok(descriptor);
+    registerAgentPackageReadinessPort({
+      readStatus: () => ({}),
+      readStandardAgentDescriptorForDomain: (id) => id === 'fixture' ? descriptor : null,
+    });
+    const route = { domain_id: 'fixture', target_identity: { work_item_id: 'case-1' } };
+    const payload = {
+      case_key: 'case-1', case_outcomes: [{ accepted_refs: ['fixture://owner/current'] }],
+    };
+    assert.equal(preflightDomainDispatchEvidencePayload(payload, route).status, 'ready_to_record');
+    const wrong = preflightDomainDispatchEvidencePayload({ ...payload, case_key: 'case-2' }, route);
+    assert.equal(wrong.status, 'blocked');
+    assert.deepEqual(wrong.identity_binding.conflict_fields, ['work_item_id', 'case_key']);
+    const concealedAlias = preflightDomainDispatchEvidencePayload({
+      ...payload, work_item_id: 'case-1', case_key: 'case-2',
+    }, route);
+    assert.equal(concealedAlias.status, 'blocked');
+    assert.ok(concealedAlias.identity_binding.conflict_fields.includes('case_key'));
+    fs.writeFileSync(path.join(root, 'conflicting.json'), JSON.stringify({ work_item_id: 'case-1', case_key: 'case-2' }));
+    const concealedRefAlias = preflightDomainDispatchEvidencePayload({
+      ...payload, domain_receipt_refs: ['conflicting.json'],
+    }, { ...route, workspace_root: root });
+    assert.equal(concealedRefAlias.status, 'blocked');
+    const foreignRoute = { domain_id: 'another-owner', target_identity: { work_item_id: 'case-1' } };
+    assert.equal(preflightDomainDispatchEvidencePayload(payload, foreignRoute).status, 'blocked');
+    input.dispatch_evidence_projection.result_collections[0].field = '../outside';
+    writeStandardAgentDescriptor(root, input);
+    assert.throws(() => readStandardAgentDescriptorInterface(root), /plain JSON field names/);
+  } finally {
+    registerAgentPackageReadinessPort(previousPort ?? { readStatus: () => ({}) });
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 function writeJson(repoDir: string, relativePath: string, payload: object) {
   const filePath = path.join(repoDir, relativePath);

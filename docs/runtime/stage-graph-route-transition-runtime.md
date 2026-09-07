@@ -15,6 +15,8 @@ OPL Framework 只持有 StageRun transport、attempt ledger、queue/provider、d
 
 若终局决定缺失或被拒绝，可消费 artifact 仍保留并形成路由质量债。fallback 先沿当前 action 明确声明的 ordered `required_stage_refs`；action 没有 route 时，只能沿当前 Stage 唯一的 `next_stage_refs`。多个 declared successor 时保持下一 Stage 未选择，manifest 文件排列顺序不能成为隐藏路由器。
 
+Stage 角色、独立 Attempt、预算分支、hard stop、route 输出及 finding/repair/closure 协议由 Framework 在 provider prompt 中统一注入。领域角色片段只补充专业审查范围、质量标准、证据及修复 owner 判断；领域无需重复通用协议文本。Conformance 校验声明的机器策略和角色片段引用，不按提示词关键词判断语义。角色文件及 fragment 仍由既有内容绑定机制保留精确字节和摘要，已绑定的历史内容不会被新的领域文件覆盖。
+
 ## Durable invocation 与物化
 
 `stage_run_id` 只由 `domain_id + stage_id + stage_run_invocation_id` 派生。`stage_run_spec_sha256` 单独绑定不可变的 pack closure、Stage manifest、quality policy、source/checkpoint/input artifact、prompt/rubric/goal/lineage 的实际 byte digest、executor 与 parent route；root package 必须有 content digest，pack 外 source/checkpoint/artifact 必须带可信 content-addressed identity receipt。launch registration/replay、每次 Attempt materialization 和 executor prompt hydration 前都会 fresh 核对这些 binding；`checked_at`、`use_receipt_ref`、checkout path、currentness receipt 等波动观察不参与 Run ID 或 spec hash。

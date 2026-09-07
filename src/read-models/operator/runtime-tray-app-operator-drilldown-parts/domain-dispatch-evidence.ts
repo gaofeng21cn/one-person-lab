@@ -9,7 +9,7 @@ import {
 import {
   listExternalEvidenceReceipts,
 } from '../../../authority/evidence/index.ts';
-import { canonicalOwnerId } from '../../../authority/evidence/index.ts';
+import { canonicalOwnerId, domainDispatchWorkItemIdentity } from '../../../authority/evidence/index.ts';
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
@@ -68,7 +68,7 @@ function domainDispatchIdentity(attempt: JsonRecord) {
     stage_id: stageId,
     workspace_root: stringValue(locator.workspace_root),
     profile,
-    study_id: stringValue(locator.study_id),
+    ...domainDispatchWorkItemIdentity(domainId, locator),
     action_type: stringValue(locator.action_type) ?? stringValue(locator.task_kind),
     dispatch_authority: stringValue(locator.dispatch_authority),
     dispatch_ref: dispatchRef,
@@ -85,13 +85,13 @@ function domainDispatchIdentity(attempt: JsonRecord) {
     stageId === 'domain_owner/default-executor-dispatch'
     && fields.workspace_root
     && profile
-    && fields.study_id
+    && fields.work_item_id
       ? [
           canonicalDomainId,
           stageId,
           fields.workspace_root,
           profile,
-          fields.study_id,
+          fields.work_item_id,
         ].map(identityPart).join('|')
       : null;
   return {
@@ -100,7 +100,7 @@ function domainDispatchIdentity(attempt: JsonRecord) {
       stageId,
       fields.workspace_root,
       profile,
-      fields.study_id,
+      fields.work_item_id ?? null,
       fields.action_type,
       fields.dispatch_authority,
       dispatchRef,
@@ -110,7 +110,7 @@ function domainDispatchIdentity(attempt: JsonRecord) {
       stageId,
       fields.workspace_root,
       profile,
-      fields.study_id,
+      fields.work_item_id ?? null,
       fields.action_type,
       dispatchRef,
     ].map(identityPart).join('|'),
@@ -128,7 +128,7 @@ function targetIdentity(attempt: JsonRecord) {
     stage_attempt_id: stringValue(attempt.stage_attempt_id),
     stage_run_id: executionAuthorization.stage_run_id,
     task_kind: stringValue(locator.task_kind) ?? stringValue(attempt.stage_id),
-    study_id: stringValue(locator.study_id),
+    ...domainDispatchWorkItemIdentity(stringValue(attempt.domain_id), locator),
     source_fingerprint: stringValue(attempt.source_fingerprint),
     domain_source_fingerprint: stringValue(locator.domain_source_fingerprint),
     idempotency_key: executionAuthorization.idempotency_key,

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 import {
@@ -8,13 +9,15 @@ import {
 import { buildProfileCommandSpecs } from '../../../src/entrypoints/cli/cases/public-command-specs-parts/profiles.ts';
 import { profileCatalogEntry } from './fixtures.ts';
 
-test('profile selector chooses evidence-grounded profile for decision-support risk intent', () => {
+test('profile selector chooses explicitly signalled evidence-grounded profile', () => {
   const inspect = buildAgentProfileInspect([
     'evidence_grounded_decision_agent_profile.v1',
   ]).agent_profile_inspect;
   const receipt = buildAgentProfileSelection([
     '--intent',
     'Build a colorectal surgery risk decision support agent with guideline evidence.',
+    '--intent-signal',
+    'risk',
   ]).profile_selection_receipt;
 
   assert.ok(inspect.profile);
@@ -78,6 +81,8 @@ test('profile selector keeps builtin lower-bound and adds source-derived route f
   const receipt = buildAgentProfileSelection([
     '--intent',
     'Build a colorectal surgery risk decision support agent with guideline evidence',
+    '--intent-signal',
+    'risk',
     '--reference-source',
     'paper-ref:uploaded-surgical-risk-agent-framework',
   ]).profile_selection_receipt;
@@ -126,7 +131,83 @@ test('profile selector remains blocked when no builtin match and no reference de
   assert.equal(receipt.status, 'blocked');
   assert.equal(receipt.profile_selection_mode, null);
   assert.deepEqual(receipt.selected_profile_refs, []);
+  assert.deepEqual(receipt.blockers, ['semantic_profile_selection_required']);
+});
+
+test('natural-language intent does not make semantic Profile decisions', () => {
+  for (const intent of [
+    'Build a brisk inventory assistant',
+    'Do not build clinical risk or evidence decision support',
+    'Build clinical diagnosis and guideline evidence decision support',
+    '临床诊断与指南证据辅助决策智能体',
+  ]) {
+    const receipt = buildAgentProfileSelection(['--intent', intent]).profile_selection_receipt;
+    assert.equal(receipt.status, 'blocked', intent);
+    assert.equal(receipt.intent, intent);
+    assert.deepEqual(receipt.matched_trigger_signals, []);
+    assert.deepEqual(receipt.blockers, ['semantic_profile_selection_required']);
+    assert.equal(receipt.authority_boundary.selector_interprets_natural_language, false);
+  }
+});
+
+test('explicit Profile id and ref select through the public handler without language matching', async () => {
+  for (const profile of [
+    'evidence_grounded_decision_agent_profile.v1',
+    'opl-profile:evidence_grounded_decision_agent_profile.v1',
+  ]) {
+    const output = await buildProfileCommandSpecs()['profiles select'].handler([
+      '--intent', '专业工作流', '--profile', profile,
+    ]) as ReturnType<typeof buildAgentProfileSelection>;
+    assert.equal(output.profile_selection_receipt.status, 'selected');
+    assert.equal(output.profile_selection_receipt.selection_basis, 'explicit_profile');
+    assert.equal(output.profile_selection_receipt.requested_profile_ref, profile);
+  }
+});
+
+test('unknown explicit Profile cannot fall back to a signal or reference design route', () => {
+  const receipt = buildAgentProfileSelection([
+    '--intent', 'workflow', '--profile=unknown-profile', '--intent-signal', 'risk',
+    '--reference-source', 'paper-ref:uploaded-framework',
+  ]).profile_selection_receipt;
+  assert.equal(receipt.status, 'blocked');
+  assert.deepEqual(receipt.blockers, ['unknown_profile:unknown-profile']);
+  assert.equal(receipt.source_derived_design_receipt, null);
+  assert.equal(receipt.profile_requirements, null);
+});
+
+test('unmatched explicit signals remain an exact routing mismatch', () => {
+  const receipt = buildAgentProfileSelection([
+    '--intent', 'risk workflow', '--intent-signal', 'brisk',
+  ]).profile_selection_receipt;
+  assert.equal(receipt.status, 'blocked');
   assert.deepEqual(receipt.blockers, ['no_profile_trigger_match']);
+});
+
+test('real Profile CLI preserves semantic deferral, explicit selection and hybrid design', () => {
+  for (const entry of [
+    { args: ['--intent', 'Build a brisk inventory assistant'], status: 'blocked', basis: null },
+    { args: ['--intent', '临床诊断与指南证据辅助决策智能体'], status: 'blocked', basis: null },
+    {
+      args: ['--intent', '专业工作流', '--profile=opl-profile:evidence_grounded_decision_agent_profile.v1',
+        '--reference-source', 'paper-ref:design-evidence'],
+      status: 'selected', basis: 'explicit_profile',
+    },
+  ]) {
+    const result = spawnSync('./bin/opl', ['profiles', 'select', ...entry.args, '--json'], {
+      encoding: 'utf8',
+      env: { ...process.env, OPL_SKIP_SKILL_SYNC: '1' },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const receipt = JSON.parse(result.stdout).profile_selection_receipt;
+    assert.equal(receipt.status, entry.status);
+    assert.equal(receipt.selection_basis, entry.basis);
+    if (entry.status === 'blocked') {
+      assert.deepEqual(receipt.blockers, ['semantic_profile_selection_required']);
+    } else {
+      assert.equal(receipt.profile_selection_mode, 'hybrid');
+      assert.deepEqual(receipt.source_derived_design_receipt.source_refs, ['paper-ref:design-evidence']);
+    }
+  }
 });
 
 test('profile catalog consumes contract-owned profile entry requirements', () => {

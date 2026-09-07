@@ -56,6 +56,7 @@ import {
 } from './workspace-agent-defaults.ts';
 import { bindWorkspace, getActiveWorkspaceBinding } from './workspace-registry.ts';
 import { buildInterfaceProjection } from './workspace-initializer-parts/interfaces.ts';
+import { initializeArtifactLifecycleProfile } from './workspace-artifact-lifecycle-profile.ts';
 
 export type WorkspaceInitializeOptions = {
   agentId?: string;
@@ -648,6 +649,7 @@ export function initializeWorkspace(
     ]) {
       ensureDir(path.join(projectRoot, relativePath), createdDirectories);
     }
+    initializeArtifactLifecycleProfile(projectRoot, agent.agent_id);
     fs.writeFileSync(
       workspaceYamlPath,
       buildWorkspaceYaml({
@@ -842,6 +844,7 @@ export function ensureWorkspace(
         ]) {
           ensureDir(path.join(activeWorkspacePath, relativePath), createdDirectories);
         }
+        initializeArtifactLifecycleProfile(projectRoot, agent.agent_id);
       }
       fs.writeFileSync(
         path.join(activeWorkspacePath, 'workspace.yaml'),

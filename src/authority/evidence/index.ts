@@ -26,7 +26,7 @@ export type {
 } from './current-owner-delta-topline.ts';
 export { buildDomainDispatchEvidenceIdentityGuidance, domainDispatchEvidenceIdentityGuidanceFromRoute } from './domain-dispatch-evidence-identity-guidance.ts';
 export { assertDomainDispatchEvidencePayloadReady, preflightDomainDispatchEvidencePayload } from './domain-dispatch-evidence-payload-preflight.ts';
-export { domainDispatchEvidencePayloadRefs } from './domain-dispatch-evidence-payload-refs.ts';
+export { domainDispatchEvidencePayloadRefs, domainDispatchWorkItemIdentity } from './domain-dispatch-evidence-payload-refs.ts';
 export { buildDomainDispatchEvidenceWorkorderPacket, compactDomainDispatchEvidenceWorkorderAttentionItems, compactDomainDispatchEvidenceWorkorderGroupAttentionItems } from './domain-dispatch-evidence-workorder-packet.ts';
 export { assertDomainOwnerPayloadSummaryReceiptInputReady, domainOwnerPayloadSummaryTargetKey, listDomainOwnerPayloadSummaryReceipts, preflightDomainOwnerPayloadSummaryReceiptInput, recordDomainOwnerPayloadSummaryReceipts, verifyDomainOwnerPayloadSummaryReceipt } from './domain-owner-payload-summary-ledger.ts';
 export type { DomainOwnerPayloadSummaryReceipt, DomainOwnerPayloadSummaryReceiptInput } from './domain-owner-payload-summary-ledger.ts';

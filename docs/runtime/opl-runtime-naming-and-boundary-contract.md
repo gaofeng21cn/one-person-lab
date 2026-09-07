@@ -62,6 +62,14 @@ domain/stage contract
 
 ## 恢复
 
+资格工作项由领域 action 的 `qualification_provisioning_contract` 以仓内引用和 SHA-256
+绑定。领域输入、输出 Schema 持有记录形状及初始业务状态，领域合同声明 identity 字段与
+工作区路径模板；Framework 通过既有 handler registry 调用 owner，并校验精确授权字节、
+工作项身份、回执和三类文件的 CAS 绑定。领域合同字节改变后，旧 action 绑定拒绝继续物化；
+事务日志、单次授权和回滚仍由 Framework 执行。
+已完成资格任务凭冻结运行记录、原始请求和输出、既有 CAS 回执及当前文件字节只读回放，
+无需旧 carrier 或新合同绑定；缺少成功回执时拒绝回放，不能重新物化或补建授权状态。
+
 恢复优先使用同一 StageRun/Attempt identity、provider history、workspace binding 和已有 artifact refs。只有明确无可恢复 state 时才创建新 run。
 
 repair 成功表示运行通道恢复，不表示产物质量或任务完成。不可逆数据、权限、publication 和 owner decision 必须单独守门。

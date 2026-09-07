@@ -159,10 +159,10 @@ test('runtime action execute can apply and verify legacy cleanup plans from App 
 test('runtime action execute records MAS paper-line owner-chain results as refs-only domain dispatch evidence', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-mas-owner-chain-result-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  installRuntimePackageFixture(stateRoot, 'mas');
   const cliEnv = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    OPL_MODULE_PATH_MEDAUTOSCIENCE: installRuntimePackageFixture(stateRoot, 'mas'),
     OPL_PROVIDER_PROOF_WINDOW_SECONDS: '86400',
   };
   const workspaceRoot = createRuntimeWorkspaceFixture(stateRoot, 'mas-owner-chain');

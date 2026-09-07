@@ -13,20 +13,57 @@ import { fail, sha256 } from './shared.ts';
 import {
   DOMAIN_ARTIFACT_CAS_CAPABILITY_ID,
 } from '../domain-artifact-cas-materialization.ts';
+import { containedTarget, readStableFile } from '../domain-artifact-cas-materialization-parts/shared.ts';
 
 export const INTERNAL_STANDARD_AGENT_ACTION_INVOCATION = Symbol('internal_standard_agent_action_invocation');
 export const QUALIFICATION_PROVISIONING_INVOCATION = Symbol('qualification_provisioning_invocation');
 export const QUALIFICATION_PROVISIONING_ACTION_ID =
   'qualification_work_item_provisioning_authority_evaluate' as const;
 
+export function readQualificationProvisioningContract(action: FamilyActionCatalogAction, checkoutRoot: string) {
+  const binding = qualificationRecord(action.authority_boundary?.qualification_provisioning_contract,
+    'qualification_provisioning_contract', ['ref', 'sha256']);
+  const relative = qualificationText(binding.ref, 'qualification_provisioning_contract.ref');
+  if (path.isAbsolute(relative) || relative.includes('\\') || relative.split('/').some((part) => !part || part === '.' || part === '..')) {
+    qualificationProvisioningMismatch('Qualification contract must be a contained repository file.');
+  }
+  const { target } = containedTarget(fs.realpathSync(checkoutRoot), relative, 'qualification contract');
+  const bytes = readStableFile(target, 'qualification contract');
+  if (sha256(bytes) !== qualificationDigest(binding.sha256, 'qualification_provisioning_contract.sha256')) {
+    qualificationProvisioningMismatch('Qualification owner contract differs from its frozen action binding.');
+  }
+  const contract = qualificationObject(parseJsonText(bytes.toString('utf8')), 'qualification owner contract');
+  const profile = qualificationRecord(contract.host_validation_profile, 'host_validation_profile', [
+    'version', 'identity_output_field', 'work_item_id_field', 'work_item_root_field',
+  ]);
+  if (profile.version !== 'opl-qualification-provisioning-host.v1'
+    || contract.action_id !== action.action_id
+    || action.execution_binding.kind !== 'handler_ref'
+    || contract.handler_ref !== action.execution_binding.handler_ref
+    || contract.input_schema_ref !== action.input_schema_ref
+    || contract.output_schema_ref !== action.output_schema_ref
+    || contract.owner !== action.owner) {
+    qualificationProvisioningMismatch('Qualification contract must bind its owner action and schemas.');
+  }
+  const identityOutputField = qualificationText(profile.identity_output_field, 'identity_output_field');
+  const idField = qualificationText(profile.work_item_id_field, 'work_item_id_field');
+  const rootField = qualificationText(profile.work_item_root_field, 'work_item_root_field');
+  const workspace = qualificationObject(contract.workspace_binding, 'workspace_binding');
+  const host = qualificationObject(action.authority_boundary?.host_materialization_contract, 'host_materialization_contract');
+  return { contract, identityOutputField, idField, rootField, workspace, host };
+}
+
 export function assertStandardAgentActionInvocationSurface(
   action: FamilyActionCatalogAction,
   invocationContext?: symbol,
   registry?: DomainHandlerRegistry | null,
+  checkoutRoot?: string,
 ) {
   const internalOnly = Object.values(action.supported_surfaces).every((surface) => surface === null);
   if (invocationContext === QUALIFICATION_PROVISIONING_INVOCATION) {
     assertQualificationProvisioningAction(action, registry ?? null);
+    if (!checkoutRoot) qualificationProvisioningMismatch('Qualification invocation requires its pinned checkout.');
+    readQualificationProvisioningContract(action, checkoutRoot);
     return;
   }
   if (internalOnly && invocationContext !== INTERNAL_STANDARD_AGENT_ACTION_INVOCATION) {
@@ -61,8 +98,6 @@ function assertQualificationProvisioningAction(
     action.action_id !== QUALIFICATION_PROVISIONING_ACTION_ID
     || action.effect !== 'read_only'
     || action.execution_binding.kind !== 'handler_ref'
-    || action.execution_binding.handler_ref
-      !== 'handler:mas.qualification-work-item-provisioning-authority-evaluate'
     || action.execution_scope?.kind !== 'none'
     || Object.values(action.supported_surfaces).some((surface) => surface !== null)
     || JSON.stringify([...action.required_fields].sort()) !== JSON.stringify([...requiredFields].sort())
@@ -71,8 +106,6 @@ function assertQualificationProvisioningAction(
     || !boundary
     || boundary.qualification_only !== true
     || boundary.public_action !== false
-    || boundary.opl_can_derive_or_choose_study_id !== false
-    || boundary.opl_can_write_domain_truth_without_exact_mas_authorization !== false
     || boundary.opl_can_sign_owner_receipt !== false
     || boundary.authorizes_stage_body !== false
     || boundary.authorizes_business_action !== false
@@ -81,17 +114,15 @@ function assertQualificationProvisioningAction(
     || !host
     || host.capability_id !== DOMAIN_ARTIFACT_CAS_CAPABILITY_ID
     || host.request_output_field !== 'opl_host_materialization_request'
-    || host.authorization_output_field !== 'mas_qualification_work_item_cas_mutation_authorization'
+    || typeof host.authorization_output_field !== 'string'
     || host.receipt_output_field !== 'provisioning_receipt'
     || host.receipt_content_binding_output_field !== 'provisioning_receipt_content_binding'
     || host.materialization_scope_sha256_field !== 'materialization_scope_sha256'
     || host.absent_relative_path_preconditions_field !== 'absent_relative_path_preconditions'
     || handler?.binding.kind !== 'python_callable'
-    || handler.binding.module
-      !== 'med_autoscience.authority_handlers.qualification_work_item_provisioning'
-    || handler.binding.callable !== 'evaluate_qualification_work_item_provisioning_authority'
+    || !isRecord(boundary.qualification_provisioning_contract)
   ) {
-    fail('Qualification provisioning requires the exact internal MAS authority and receipt-bound CAS contract.', {
+    fail('Qualification provisioning requires an internal owner-bound authority and receipt-bound CAS contract.', {
       failure_code: 'qualification_provisioning_contract_mismatch',
       action_id: action.action_id,
     });
@@ -144,16 +175,22 @@ function qualificationBytes(value: unknown, label: string) {
 }
 
 export function assertQualificationProvisioningOutput(input: {
+  action: FamilyActionCatalogAction;
+  checkoutRoot: string;
+  domainId: string;
   workspaceRoot: string;
   requestPayload: Record<string, unknown>;
   output: unknown;
 }) {
+  const { contract, identityOutputField, idField, rootField, workspace, host } =
+    readQualificationProvisioningContract(input.action, input.checkoutRoot);
+  if (contract.domain_id !== input.domainId) {
+    qualificationProvisioningMismatch('Qualification contract domain differs from the bound runtime.');
+  }
   const output = qualificationObject(input.output, 'qualification provisioning result');
   if (output.status !== 'authorized') return;
   if (
-    output.surface_kind !== 'mas_qualification_work_item_provisioning_authority_result'
-    || output.schema_version !== 1
-    || output.typed_blocker !== null
+    output.typed_blocker !== null
     || output.error !== null
   ) qualificationProvisioningMismatch('Authorized qualification provisioning result has invalid identity or status fields.');
 
@@ -193,10 +230,8 @@ export function assertQualificationProvisioningOutput(input: {
     sha256(authorityBytes) !== authoritySha256
     || authority.authority_byte_size !== authorityBytes.byteLength
     || canonicalJsonText(parsedAuthority) !== canonicalJsonText(authorityRecord)
-    || authorityRecord.surface_kind !== 'mas_qualification_work_item_provisioning_authority'
-    || authorityRecord.schema_version !== 1
-    || authorityRecord.domain_owner !== 'MedAutoScience'
-    || authorityRecord.domain_id !== 'medautoscience'
+    || authorityRecord.domain_owner !== contract.owner
+    || authorityRecord.domain_id !== contract.domain_id
     || authorityRecord.canonical_workspace_root !== canonicalWorkspaceRoot
     || authorityRecord.qualification_scope !== 'standard_agent_full_vm_qualification'
     || authorityRecord.single_use !== true
@@ -209,33 +244,41 @@ export function assertQualificationProvisioningOutput(input: {
     || authorityRecord.provider_completion_is_domain_completion !== false
   ) qualificationProvisioningMismatch('Qualification authority exact bytes or qualification-only boundary do not match the host request.');
 
-  const identity = qualificationObject(output.study_identity, 'study_identity');
-  const studyId = qualificationText(identity.study_id, 'study_identity.study_id');
-  const studyRoot = `studies/${studyId}`;
-  if (identity.canonical_study_root !== studyRoot) {
-    qualificationProvisioningMismatch('Study identity root does not bind its MAS-provided study_id.');
+  const identity = qualificationObject(output[identityOutputField], identityOutputField);
+  const workItemId = qualificationText(identity[idField], `${identityOutputField}.${idField}`);
+  const expandPath = (template: unknown) => {
+    const value = qualificationText(template, 'workspace path template').replaceAll(`{${idField}}`, workItemId);
+    if (value.includes('{') || value.includes('}') || value.includes('\\') || path.isAbsolute(value)
+      || value.split('/').some((part) => !part || part === '.' || part === '..')) {
+      qualificationProvisioningMismatch('Qualification owner paths must remain contained workspace-relative paths.');
+    }
+    return value;
+  };
+  if (workItemId.includes('/') || workItemId.includes('\\') || workItemId === '.' || workItemId === '..') {
+    qualificationProvisioningMismatch('Qualification work-item identity must be one path component.');
   }
-  const lifecyclePath = `${studyRoot}/control/lifecycle.json`;
-  const receiptPath = `${studyRoot}/artifacts/controller/qualification/provisioning-receipt.json`;
-  const receipt = qualificationObject(output.provisioning_receipt, 'provisioning_receipt');
+  const workItemRoot = expandPath(workspace.work_item_root_template);
+  if (identity[rootField] !== workItemRoot) {
+    qualificationProvisioningMismatch('Work-item root does not bind the owner-provided identity.');
+  }
+  const inventoryPath = expandPath(workspace.workspace_index_target);
+  const lifecyclePath = expandPath(workspace.lifecycle_target_template);
+  const receiptPath = expandPath(workspace.receipt_target_template);
+  const receipt = qualificationObject(output[qualificationText(host.receipt_output_field, 'receipt_output_field')], 'provisioning receipt');
   const authorityRef = qualificationText(authorityRecord.authority_ref, 'qualification_authority.record.authority_ref');
   const receiptFingerprint = qualificationText(receipt.receipt_fingerprint, 'provisioning_receipt.receipt_fingerprint');
   const fingerprint = qualificationDigest(receiptFingerprint, 'provisioning_receipt.receipt_fingerprint');
   if (
-    receipt.surface_kind !== 'mas_qualification_work_item_provisioning_receipt'
-    || receipt.schema_version !== 1
-    || receipt.domain_owner !== 'MedAutoScience'
-    || receipt.domain_id !== 'medautoscience'
+    receipt.domain_owner !== contract.owner
+    || receipt.domain_id !== contract.domain_id
     || receipt.canonical_workspace_root !== canonicalWorkspaceRoot
-    || receipt.study_id !== studyId
-    || receipt.canonical_study_root !== studyRoot
-    || receipt.lifecycle_state !== 'active'
-    || receipt.lifecycle_generation !== 1
+    || receipt[idField] !== workItemId
+    || receipt[rootField] !== workItemRoot
     || receipt.qualification_scope !== 'standard_agent_full_vm_qualification'
     || receipt.qualification_authority_ref !== authorityRef
     || qualificationDigest(receipt.qualification_authority_sha256, 'provisioning_receipt.qualification_authority_sha256') !== authoritySha256
     || receipt.qualification_authority_byte_size !== authorityBytes.byteLength
-    || receipt.workspace_index_ref !== 'workspace_index.json'
+    || receipt.workspace_index_ref !== inventoryPath
     || receipt.lifecycle_relative_path !== lifecyclePath
     || receipt.receipt_relative_path !== receiptPath
     || receipt.single_use !== true
@@ -247,8 +290,8 @@ export function assertQualificationProvisioningOutput(input: {
     || receipt.requires_opl_cas_materialization_receipt !== true
     || receipt.materialization_semantics !== 'journaled_all_or_rollback'
     || receipt.provider_completion_is_domain_completion !== false
-    || receipt.receipt_ref !== `mas-qualification-work-item-provisioning:${fingerprint}`
-  ) qualificationProvisioningMismatch('MAS provisioning receipt does not preserve its exact identity and qualification-only boundary.');
+    || !qualificationText(receipt.receipt_ref, 'receipt_ref').endsWith(`:${fingerprint}`)
+  ) qualificationProvisioningMismatch('Provisioning receipt does not preserve its exact identity and qualification-only boundary.');
   qualificationText(receipt.handler_call_ref, 'provisioning_receipt.handler_call_ref');
   qualificationText(receipt.owner_ledger_ref, 'provisioning_receipt.owner_ledger_ref');
   qualificationText(receipt.issued_at, 'provisioning_receipt.issued_at');
@@ -257,30 +300,28 @@ export function assertQualificationProvisioningOutput(input: {
   }
 
   const binding = qualificationObject(
-    output.provisioning_receipt_content_binding,
+    output[qualificationText(host.receipt_content_binding_output_field, 'receipt_content_binding_output_field')],
     'provisioning_receipt_content_binding',
   );
   const authorization = qualificationObject(
-    output.mas_qualification_work_item_cas_mutation_authorization,
-    'mas_qualification_work_item_cas_mutation_authorization',
+    output[qualificationText(host.authorization_output_field, 'authorization_output_field')],
+    'qualification mutation authorization',
   );
-  const request = qualificationRecord(output.opl_host_materialization_request, 'opl_host_materialization_request', [
+  const request = qualificationRecord(output[qualificationText(host.request_output_field, 'request_output_field')], 'opl_host_materialization_request', [
     'surface_kind', 'version', 'capability_id', 'request_id', 'domain_id', 'authorization_ref',
     'operations_sha256', 'materialization_scope_sha256', 'absent_relative_path_preconditions', 'operations',
   ]);
   const operations = Array.isArray(request.operations) ? request.operations : [];
-  const expectedPaths = ['workspace_index.json', lifecyclePath, receiptPath];
+  const expectedPaths = [inventoryPath, lifecyclePath, receiptPath];
   if (
-    authorization.surface_kind !== 'mas_qualification_work_item_cas_mutation_authorization'
-    || authorization.version !== 'mas-qualification-work-item-cas-mutation-authorization.v1'
-    || authorization.authorized !== true
+    authorization.authorized !== true
     || authorization.authority_receipt_ref !== receipt.receipt_ref
     || request.surface_kind !== 'opl_domain_artifact_cas_materialization_request'
     || request.version !== 'opl-domain-artifact-cas-materialization.v1'
     || request.capability_id !== DOMAIN_ARTIFACT_CAS_CAPABILITY_ID
     || authorization.capability_id !== DOMAIN_ARTIFACT_CAS_CAPABILITY_ID
-    || request.domain_id !== 'medautoscience'
-    || authorization.domain_id !== 'medautoscience'
+    || request.domain_id !== contract.domain_id
+    || authorization.domain_id !== contract.domain_id
     || request.request_id !== authorization.request_id
     || request.authorization_ref !== authorization.authorization_ref
     || request.operations_sha256 !== authorization.operations_sha256
@@ -290,7 +331,7 @@ export function assertQualificationProvisioningOutput(input: {
     || operations.length !== 3
     || canonicalJsonText(operations.map((operation) => isRecord(operation) ? operation.target_relative_path : null))
       !== canonicalJsonText(expectedPaths)
-  ) qualificationProvisioningMismatch('MAS authorization and host request do not bind the exact three-path provisioning transaction.');
+  ) qualificationProvisioningMismatch('Owner authorization and host request do not bind the exact provisioning transaction.');
   const preparedOperations = operations.map((operation, index) => (
     qualificationRecord(operation, `opl_host_materialization_request.operations[${index}]`, [
       'target_relative_path', 'precondition', 'replacement_bytes_base64', 'replacement_sha256',
@@ -314,8 +355,6 @@ export function assertQualificationProvisioningOutput(input: {
       !== qualificationDigest(receipt.workspace_index_after_sha256, 'provisioning_receipt.workspace_index_after_sha256')
     || qualificationDigest(preparedOperations[1]!.replacement_sha256, 'lifecycle replacement_sha256')
       !== qualificationDigest(receipt.lifecycle_sha256, 'provisioning_receipt.lifecycle_sha256')
-    || binding.surface_kind !== 'mas_qualification_work_item_provisioning_receipt_content_binding'
-    || binding.schema_version !== 1
     || binding.receipt_ref !== receipt.receipt_ref
     || binding.target_relative_path !== receiptPath
     || qualificationDigest(binding.sha256, 'provisioning_receipt_content_binding.sha256')
@@ -327,9 +366,19 @@ export function assertQualificationProvisioningOutput(input: {
 export function qualificationProvisioningPayload(
   input: StandardAgentActionRuntimeInput,
   workspaceRoot: string,
+  action: FamilyActionCatalogAction,
+  checkoutRoot: string,
 ) {
   if (input.actionId !== QUALIFICATION_PROVISIONING_ACTION_ID) return input.payload;
-  const workspaceIndexPath = path.join(workspaceRoot, 'workspace_index.json');
+  const { workspace } = readQualificationProvisioningContract(action, checkoutRoot);
+  const inventoryPath = qualificationText(workspace.workspace_index_target, 'workspace_index_target');
+  if (path.isAbsolute(inventoryPath) || inventoryPath.includes('\\')
+    || inventoryPath.split('/').some((part) => !part || part === '.' || part === '..')) {
+    qualificationProvisioningMismatch('Qualification inventory must be a contained workspace-relative file.');
+  }
+  const { target: workspaceIndexPath } = containedTarget(
+    fs.realpathSync(workspaceRoot), inventoryPath, 'qualification inventory', true,
+  );
   let currentWorkspaceIndex: Record<string, unknown>;
   try {
     const stat = fs.lstatSync(workspaceIndexPath);
@@ -339,7 +388,7 @@ export function qualificationProvisioningPayload(
         workspace_index_path: workspaceIndexPath,
       });
     }
-    const bytes = fs.readFileSync(workspaceIndexPath);
+    const bytes = readStableFile(workspaceIndexPath, 'qualification inventory');
     const record = parseJsonText(bytes.toString('utf8'));
     if (!isRecord(record)) {
       fail('Qualification provisioning workspace index must contain a JSON object.', {
@@ -349,7 +398,7 @@ export function qualificationProvisioningPayload(
     }
     currentWorkspaceIndex = {
       exists: true,
-      workspace_index_ref: 'workspace_index.json',
+      workspace_index_ref: inventoryPath,
       workspace_index_sha256: sha256(bytes),
       workspace_index_bytes_base64: bytes.toString('base64'),
       workspace_index_byte_size: bytes.byteLength,
@@ -359,7 +408,7 @@ export function qualificationProvisioningPayload(
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     currentWorkspaceIndex = {
       exists: false,
-      workspace_index_ref: 'workspace_index.json',
+      workspace_index_ref: inventoryPath,
       workspace_index_sha256: null,
       workspace_index_bytes_base64: null,
       workspace_index_byte_size: null,

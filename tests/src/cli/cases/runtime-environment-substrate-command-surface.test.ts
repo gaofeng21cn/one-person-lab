@@ -1,4 +1,5 @@
-import { assert, fs, os, parseJsonText, path, runCli, runCliInCwd, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, runCliFailureInCwd, runCliInCwd, test } from '../helpers.ts';
+import { execFileSync } from 'node:child_process';
 import {
   fastLocalEnvDefaultFields,
   stateEnv,
@@ -6,6 +7,38 @@ import {
 } from './runtime-environment-substrate-helpers.ts';
 
 type Projection = Record<string, any>;
+
+function writeDomainRuntimeProfile(root: string, domainId: string, packageId = 'mas') {
+  const repoDir = path.join(root, packageId);
+  fs.mkdirSync(path.join(repoDir, 'contracts'), { recursive: true });
+  fs.writeFileSync(path.join(repoDir, 'contracts/domain_descriptor.json'), JSON.stringify({
+    kind: 'agent', agent_id: packageId, package_id: packageId, domain_id: domainId,
+    standard_contract_refs: { runtime_environment_requirement_profile: 'contracts/runtime.json' },
+    standard_agent_interface: {
+      version: 'opl_standard_agent_interface.v1',
+      workspace_binding: {
+        locator_surface_kind: 'fixture_workspace_locator', default_profile_id: 'one_off',
+        workspace_kind: 'fixture_workspace', project_kind: 'fixture_project',
+        project_collection_label: 'projects', project_collection_path: 'projects',
+        default_workspace_id: 'fixture-workspace', default_project_id: 'fixture-001',
+        required_locator_fields: ['profile_ref'], optional_locator_fields: ['workspace_root'],
+      },
+      runtime: { runtime_domain_id: domainId, registration_ref: 'contracts/domain_descriptor.json#/runtime' },
+      progress: { deliverable_delta_aliases: ['delta'], platform_delta_aliases: ['platform_delta'] },
+      routing: {
+        explicit_aliases: [packageId], workstream_ids: ['fixture_ops'], intent_signals: ['fixture_delivery'],
+        ambiguity_policy: 'require_explicit_workstream',
+      },
+    },
+  }));
+  const profilePath = path.join(repoDir, 'contracts/runtime.json');
+  fs.writeFileSync(profilePath, JSON.stringify({
+    runtime_profile_sources: {
+      display: { package_id: 'mas-scholar-skills', relative_path: 'packs/custom/runtime.json' },
+    },
+  }));
+  return { repoDir, profilePath };
+}
 
 function assertFields(surface: Projection, expected: Projection) {
   for (const [field, value] of Object.entries(expected)) {
@@ -101,11 +134,14 @@ test('runtime env CLI exposes dry-run projections and false-ready guards', () =>
 
 test('ordinary opl env prepare supplies MAS display defaults without host fallback', () => {
   const scholarSkillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-default-scholarskills-'));
+  execFileSync('git', ['init', '--quiet', scholarSkillsRoot]);
+  const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-default-family-'));
+  const domain = writeDomainRuntimeProfile(familyRoot, 'medautoscience');
   const profilePath = path.join(
     scholarSkillsRoot,
     'packs',
-    'medical-display-core',
-    'renderer_dependency_profile.json',
+    'custom',
+    'runtime.json',
   );
   fs.mkdirSync(path.dirname(profilePath), { recursive: true });
   fs.writeFileSync(profilePath, JSON.stringify({
@@ -123,6 +159,8 @@ test('ordinary opl env prepare supplies MAS display defaults without host fallba
   const env = {
     ...stateEnv('ordinary-default-'),
     OPL_MODULE_PATH_SCHOLARSKILLS: scholarSkillsRoot,
+    OPL_MODULE_PATH_MAS: domain.repoDir,
+    OPL_FAMILY_WORKSPACE_ROOT: familyRoot,
   };
   const paperRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-default-paper-'));
 
@@ -140,13 +178,46 @@ test('ordinary opl env prepare supplies MAS display defaults without host fallba
     assert.equal(readback.prepare.host_package_fallback_allowed, false);
     assert.match(
       readback.prepare.requirement_profile_identity.requirement_profile_ref,
-      /packs\/medical-display-core\/renderer_dependency_profile\.json$/,
+      /packs\/custom\/runtime\.json$/,
     );
     assert.equal(readback.prepare.managed_required_r_packages.includes('ggplot2'), true);
     assert.equal(readback.prepare.run_context_ref, null);
   } finally {
     fs.rmSync(paperRoot, { recursive: true, force: true });
     fs.rmSync(scholarSkillsRoot, { recursive: true, force: true });
+    fs.rmSync(familyRoot, { recursive: true, force: true });
+  }
+});
+
+test('ordinary env prepare consumes arbitrary domain declarations and rejects escaped provider paths', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-domain-source-'));
+  try {
+    const domain = writeDomainRuntimeProfile(root, 'custom-runtime-domain', 'custom-agent');
+    const provider = path.join(root, 'provider');
+    const resource = path.join(provider, 'packs/custom/runtime.json');
+    fs.mkdirSync(path.dirname(resource), { recursive: true });
+    execFileSync('git', ['init', '--quiet', provider]);
+    fs.writeFileSync(resource, JSON.stringify({ profiles: [{
+      profile_id: 'fixture', runtime_binaries: [], language_packages: { r: [], python: [] },
+    }] }));
+    const env = { ...stateEnv('custom-source-'), OPL_FAMILY_WORKSPACE_ROOT: root, OPL_MODULE_PATH_SCHOLARSKILLS: provider };
+    const args = ['env', 'prepare', '--domain', 'custom-runtime-domain', '--profile', 'display'];
+    const readback = runCliInCwd(args, root, env).runtime_environment;
+    assert.equal(readback.prepare.requirement_profile_identity.requirement_profile_ref, fs.realpathSync(resource));
+    for (const relativePath of ['../outside.json', '/outside.json', 'packs/custom/escape.json']) {
+      fs.writeFileSync(path.join(root, 'outside.json'), '{}');
+      if (relativePath.endsWith('escape.json')) fs.symlinkSync(path.join(root, 'outside.json'), path.join(provider, relativePath));
+      fs.writeFileSync(domain.profilePath, JSON.stringify({
+        runtime_profile_sources: { display: { package_id: 'mas-scholar-skills', relative_path: relativePath } },
+      }));
+      const failure = runCliFailureInCwd(args, root, env);
+      assert.match(JSON.stringify(failure), /escapes|repo-relative/, relativePath);
+    }
+    fs.writeFileSync(domain.profilePath, JSON.stringify({ runtime_profile_sources: { display: {} } }));
+    const failure = runCliFailureInCwd(args, root, env);
+    assert.match(JSON.stringify(failure), /provider is unavailable or invalid/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

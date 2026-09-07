@@ -1,5 +1,5 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { domainDispatchEvidencePayloadRefs } from './domain-dispatch-evidence-payload-refs.ts';
+import { domainDispatchEvidencePayloadRefs, domainDispatchWorkItemIdentity } from './domain-dispatch-evidence-payload-refs.ts';
 import {
   record,
   recordList,
@@ -144,35 +144,16 @@ function localJsonRefContent(ref: string, route: JsonRecord) {
   return content ? { ref, ref_path: target.ref_path, fragment: target.fragment, content } : null;
 }
 
-function identityFromOwnerAnswerContent(content: JsonRecord) {
-  const surfaceKind = stringValue(content.surface_kind);
-  const hasOwnerAnswerShape = [
-    'receipt_kind',
-    'domain_blocker',
-    'typed_blocker_ref',
-    'owner_receipt_ref',
-  ].some((field) => content[field] !== undefined);
-  if (
-    !hasOwnerAnswerShape
-    && surfaceKind !== 'stage_attempt_closeout_packet'
-    && surfaceKind !== 'mas_domain_typed_blocker'
-    && surfaceKind !== 'mas_stage_owner_receipt'
-    && surfaceKind !== 'mas_domain_owner_typed_blocker'
-  ) {
-    return {};
-  }
-  return {
-    study_id: stringValue(content.study_id),
-    stage_id: stringValue(content.stage_id),
-    stage_attempt_id: stringValue(content.stage_attempt_id),
-    stage_run_id: stringValue(content.stage_run_id),
-    source_fingerprint: stringValue(content.source_fingerprint),
-    idempotency_key: stringValue(content.idempotency_key),
-    provider_attempt_ref: stringValue(content.provider_attempt_ref),
-  };
-}
-
 function identityFromLocalRefContents(route: JsonRecord, refs: string[]) {
+  const domainId = stringValue(record(route.target_identity).domain_id) ?? stringValue(route.domain_id);
+  const fields = uniqueList([
+    ...Object.keys(record(route.target_identity)),
+    ...Object.keys(domainDispatchWorkItemIdentity(domainId, record(route.target_identity))),
+    'domain_id', 'work_item_id', 'stage_id', 'stage_attempt_id', 'stage_run_id', 'domain_source_fingerprint',
+    'source_fingerprint', 'idempotency_key', 'provider_attempt_ref',
+  ]);
+  const bindsDomainSource = Boolean(stringValue(record(route.target_identity).domain_source_fingerprint)
+    ?? stringValue(route.domain_source_fingerprint));
   const sources = refs
     .map((ref) => localJsonRefContent(ref, route))
     .filter((entry): entry is {
@@ -181,21 +162,25 @@ function identityFromLocalRefContents(route: JsonRecord, refs: string[]) {
       fragment: string | null;
       content: JsonRecord;
     } => Boolean(entry))
-    .map((entry) => ({
-      ref: entry.ref,
-      ref_path: entry.ref_path,
-      fragment: entry.fragment,
-      identity: identityFromOwnerAnswerContent(entry.content),
-    }));
-  const fields = [
-    'study_id',
-    'stage_id',
-    'stage_attempt_id',
-    'stage_run_id',
-    'source_fingerprint',
-    'idempotency_key',
-    'provider_attempt_ref',
-  ] as const;
+    .map((entry) => {
+      const transport = payloadTransportIdentity(entry.content);
+      const normalized: JsonRecord = {
+        ...entry.content,
+        ...domainDispatchWorkItemIdentity(domainId, entry.content),
+        source_fingerprint: stringValue(entry.content.stage_attempt_source_fingerprint)
+          ?? stringValue(entry.content.provider_attempt_source_key)
+          ?? stringValue(transport.source_fingerprint)
+          ?? (bindsDomainSource ? null : payloadSourceFingerprint(entry.content)),
+        domain_source_fingerprint: stringValue(entry.content.domain_source_fingerprint)
+          ?? (bindsDomainSource ? payloadSourceFingerprint(entry.content) : null),
+      };
+      return {
+        ref: entry.ref,
+        ref_path: entry.ref_path,
+        fragment: entry.fragment,
+        identity: Object.fromEntries(fields.map((field) => [field, stringValue(normalized[field])])),
+      };
+    });
   return {
     sources,
     identity: Object.fromEntries(fields.flatMap((field) => {
@@ -221,34 +206,29 @@ function routeTransportIdentity(route: JsonRecord) {
   };
 }
 
-function forbiddenPaperLineOwnerChainPayloadClaims(payload: JsonRecord) {
-  return recordList(payload.paper_line_owner_chain_results).flatMap((result, index) => {
-    const paperLineId = stringValue(result.paper_line_id);
-    const readinessClaims = record(result.readiness_claims);
-    return [
-      ...(result.body_included === true
-        ? [{
-            path: `paper_line_owner_chain_results[${index}].body_included`,
-            paper_line_id: paperLineId,
-            forbidden_value: true,
-            reason: 'opl_domain_dispatch_payload_must_be_body_free',
-          }]
-        : []),
-      ...[
-        'claims_paper_closure',
-        'claims_publication_ready',
-        'claims_artifact_mutation_authorized',
-        'claims_current_package_updated',
-      ].flatMap((field) => readinessClaims[field] === true
-        ? [{
-            path: `paper_line_owner_chain_results[${index}].readiness_claims.${field}`,
-            paper_line_id: paperLineId,
-            forbidden_value: true,
-            reason: 'opl_domain_dispatch_payload_must_not_carry_readiness_or_artifact_authority_claims',
-          }]
-        : []),
-    ];
-  });
+function forbiddenPayloadAuthorityClaims(payload: JsonRecord) {
+  const claims: Array<{ path: string; forbidden_value: boolean; reason: string }> = [];
+  const visit = (value: unknown, prefix: string) => {
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => visit(entry, `${prefix}[${index}]`));
+    } else if (value !== null && typeof value === 'object') {
+      const content = record(value);
+      const fieldPath = (field: string) => prefix ? `${prefix}.${field}` : field;
+      if (content.body_included === true) claims.push({
+        path: fieldPath('body_included'), forbidden_value: true,
+        reason: 'opl_domain_dispatch_payload_must_be_body_free',
+      });
+      for (const [field, claim] of Object.entries(record(content.readiness_claims))) {
+        if (claim === true) claims.push({
+          path: fieldPath(`readiness_claims.${field}`), forbidden_value: true,
+          reason: 'opl_domain_dispatch_payload_must_not_carry_readiness_or_artifact_authority_claims',
+        });
+      }
+      for (const [field, child] of Object.entries(content)) visit(child, fieldPath(field));
+    }
+  };
+  visit(payload, '');
+  return claims;
 }
 
 function payloadTransportIdentity(payload: JsonRecord) {
@@ -273,7 +253,10 @@ const TRANSPORT_CURRENTNESS_IDENTITY_FIELDS = [
 ] as const;
 
 function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIdentity: JsonRecord = {}) {
-  const targetIdentity = record(route.target_identity);
+  const rawTargetIdentity = record(route.target_identity);
+  const domainId = stringValue(rawTargetIdentity.domain_id) ?? stringValue(route.domain_id);
+  const targetIdentity: JsonRecord = { ...rawTargetIdentity, ...domainDispatchWorkItemIdentity(domainId, rawTargetIdentity) };
+  const workItemIdentity = domainDispatchWorkItemIdentity(domainId, payload);
   const authorizationReceiptIdentity = routeTransportIdentity(route);
   const transportIdentity = payloadTransportIdentity(payload);
   const targetDomainSourceFingerprint = stringValue(targetIdentity.domain_source_fingerprint)
@@ -294,7 +277,7 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIde
         ?? stringValue(authorizationReceiptIdentity.stage_run_id),
     ],
     ['task_kind', stringValue(targetIdentity.task_kind)],
-    ['study_id', stringValue(targetIdentity.study_id)],
+    ['work_item_id', stringValue(targetIdentity.work_item_id)],
     ['source_fingerprint', stringValue(targetIdentity.source_fingerprint)
       ?? stringValue(route.stage_attempt_source_fingerprint)
       ?? stringValue(authorizationReceiptIdentity.source_fingerprint)],
@@ -313,6 +296,10 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIde
     ],
     ['profile', stringValue(targetIdentity.profile)],
     ['profile_name', stringValue(targetIdentity.profile_name)],
+    ...Object.entries(targetIdentity).filter(([field]) => ![
+      'domain_id', 'stage_id', 'stage_attempt_id', 'stage_run_id', 'task_kind', 'work_item_id',
+      'source_fingerprint', 'domain_source_fingerprint', 'idempotency_key', 'provider_attempt_ref', 'profile', 'profile_name',
+    ].includes(field)).map(([field, value]) => [field, stringValue(value)] as const),
   ] as const;
   const payloadEntries = [
     ['domain_id', stringValue(payload.domain_id)],
@@ -320,13 +307,19 @@ function identityBindingPreflight(route: JsonRecord, payload: JsonRecord, refIde
     ['stage_attempt_id', stringValue(payload.stage_attempt_id) ?? stringValue(refIdentity.stage_attempt_id)],
     ['stage_run_id', stringValue(payload.stage_run_id) ?? stringValue(transportIdentity.stage_run_id) ?? stringValue(refIdentity.stage_run_id)],
     ['task_kind', stringValue(payload.task_kind) ?? stringValue(payload.recommended_task_kind)],
-    ['study_id', stringValue(payload.study_id) ?? stringValue(refIdentity.study_id)],
+    ['work_item_id', stringValue(workItemIdentity.work_item_id) ?? stringValue(refIdentity.work_item_id)],
     ['source_fingerprint', payloadAttemptSourceFingerprint ?? stringValue(transportIdentity.source_fingerprint) ?? stringValue(refIdentity.source_fingerprint)],
     ['domain_source_fingerprint', payloadDomainSourceFingerprint],
     ['idempotency_key', stringValue(payload.idempotency_key) ?? stringValue(transportIdentity.idempotency_key) ?? stringValue(refIdentity.idempotency_key)],
     ['provider_attempt_ref', stringValue(payload.provider_attempt_ref) ?? stringValue(transportIdentity.provider_attempt_ref) ?? stringValue(refIdentity.provider_attempt_ref)],
     ['profile', stringValue(payload.profile)],
     ['profile_name', stringValue(payload.profile_name)],
+    ...targetEntries.filter(([field]) => ![
+      'domain_id', 'stage_id', 'stage_attempt_id', 'stage_run_id', 'task_kind', 'work_item_id',
+      'source_fingerprint', 'domain_source_fingerprint', 'idempotency_key', 'provider_attempt_ref', 'profile', 'profile_name',
+    ].includes(field)).map(([field]) => [field,
+      stringValue(payload[field]) ?? stringValue(workItemIdentity[field]) ?? stringValue(refIdentity[field]),
+    ] as const),
   ] as const;
   const payloadByField = new Map(payloadEntries);
   type IdentityBindingField = (typeof targetEntries)[number][0];
@@ -381,7 +374,7 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
     noRegressionRefs,
     ownerChainRefs,
     evidenceRefs,
-  } = domainDispatchEvidencePayloadRefs(payload);
+  } = domainDispatchEvidencePayloadRefs(payload, route);
   const allRefs = [
     ...progressArtifactRefs,
     ...domainReceiptRefs,
@@ -403,7 +396,7 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
   const missingRequiredEvidenceRefs = enforcedRequiredEvidenceRefs.filter((ref) => !providedRefs.has(ref));
   const requiredEvidenceRefsCovered = missingRequiredEvidenceRefs.length === 0;
   const forbiddenPlaceholderRefs = allRefs.filter(looksLikePlaceholderRef);
-  const forbiddenPayloadAuthorityClaims = forbiddenPaperLineOwnerChainPayloadClaims(payload);
+  const forbiddenClaims = forbiddenPayloadAuthorityClaims(payload);
   const successCloseoutRefCount =
     domainReceiptRefs.length + ownerChainRefs.length + noRegressionRefs.length;
   const successPathReady = requiredEvidenceRefsCovered && (
@@ -420,11 +413,27 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
       : progressPathReady
         ? 'progress_refs_path'
       : 'blocked';
-  const identityBinding = identityBindingPreflight(route, payload, localOwnerAnswerRefIdentity.identity);
+  const payloadBinding = identityBindingPreflight(route, payload, localOwnerAnswerRefIdentity.identity);
+  const referenceConflicts = localOwnerAnswerRefIdentity.sources.flatMap((source) =>
+    Object.entries(source.identity).flatMap(([field, value]) => {
+      const expected = stringValue(payloadBinding.target_identity[field]);
+      const actual = stringValue(value);
+      return expected && actual && expected !== actual
+        ? [{ field, target_value: expected, payload_value: actual, ref: source.ref }]
+        : [];
+    })
+  );
+  const allConflicts = [...payloadBinding.identity_conflicts, ...referenceConflicts];
+  const identityBinding = {
+    ...payloadBinding,
+    status: allConflicts.length ? 'conflict' : payloadBinding.status,
+    conflict_fields: uniqueList(allConflicts.map((conflict) => conflict.field)),
+    identity_conflicts: allConflicts,
+  };
   const identityConflicts = identityBinding.identity_conflicts;
   const canRecordRefsOnlyReceipt = allRefs.length > 0
     && forbiddenPlaceholderRefs.length === 0
-    && forbiddenPayloadAuthorityClaims.length === 0
+    && forbiddenClaims.length === 0
     && (successPathReady || typedBlockerPathReady || progressPathReady)
     && identityConflicts.length === 0;
   return {
@@ -492,7 +501,7 @@ export function preflightDomainDispatchEvidencePayload(payload: JsonRecord, rout
     required_evidence_refs_covered: requiredEvidenceRefsCovered,
     missing_required_evidence_refs: missingRequiredEvidenceRefs,
     forbidden_placeholder_refs: forbiddenPlaceholderRefs,
-    forbidden_payload_authority_claims: forbiddenPayloadAuthorityClaims,
+    forbidden_payload_authority_claims: forbiddenClaims,
     missing_payload_fields: allRefs.length === 0
       ? ['progress_artifact_ref_or_quality_receipt_ref_or_typed_blocker_ref']
       : successCloseoutRefCount === 0 && typedBlockerRefs.length === 0 && progressArtifactRefs.length === 0

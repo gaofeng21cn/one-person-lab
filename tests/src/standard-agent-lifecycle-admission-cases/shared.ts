@@ -394,6 +394,27 @@ function writeLifecycleContracts(checkoutRoot: string) {
       },
     },
   };
+  const provisioningContract = {
+    owner: 'MedAutoScience',
+    domain_id: 'medautoscience',
+    action_id: 'qualification_work_item_provisioning_authority_evaluate',
+    handler_ref: 'handler:mas.qualification-work-item-provisioning-authority-evaluate',
+    input_schema_ref: 'contracts/qualification-provisioning-input.schema.json',
+    output_schema_ref: 'contracts/qualification-provisioning-output.schema.json',
+    host_validation_profile: {
+      version: 'opl-qualification-provisioning-host.v1',
+      identity_output_field: 'study_identity',
+      work_item_id_field: 'study_id',
+      work_item_root_field: 'canonical_study_root',
+    },
+    workspace_binding: {
+      work_item_root_template: 'studies/{study_id}',
+      workspace_index_target: 'workspace_index.json',
+      lifecycle_target_template: 'studies/{study_id}/control/lifecycle.json',
+      receipt_target_template: 'studies/{study_id}/artifacts/controller/qualification/provisioning-receipt.json',
+    },
+  };
+  const provisioningContractBytes = canonicalJsonBytes(provisioningContract);
   const provisioningAction = {
     action_id: 'qualification_work_item_provisioning_authority_evaluate',
     title: 'Qualification provisioning authority',
@@ -416,6 +437,10 @@ function writeLifecycleContracts(checkoutRoot: string) {
     human_gate_ids: [],
     supported_surfaces: supportedSurfaces(true),
     authority_boundary: {
+      qualification_provisioning_contract: {
+        ref: 'contracts/qualification-provisioning.json',
+        sha256: digest(provisioningContractBytes),
+      },
       qualification_only: true,
       public_action: false,
       opl_can_derive_or_choose_study_id: false,
@@ -437,6 +462,7 @@ function writeLifecycleContracts(checkoutRoot: string) {
     },
   };
   fs.mkdirSync(path.join(checkoutRoot, 'contracts'), { recursive: true });
+  fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'qualification-provisioning.json'), provisioningContractBytes);
   fs.mkdirSync(path.join(checkoutRoot, 'agent', 'stages'), { recursive: true });
   fs.writeFileSync(path.join(checkoutRoot, 'agent', 'stages', 'manifest.json'), '{"stages":["intake","draft"]}');
   fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'action_catalog.json'), JSON.stringify({
@@ -509,7 +535,22 @@ function writeLifecycleContracts(checkoutRoot: string) {
   );
   fs.writeFileSync(
     path.join(checkoutRoot, 'contracts', 'qualification-provisioning-output.schema.json'),
-    '{"type":"object"}',
+    JSON.stringify({
+      type: 'object',
+      properties: {
+        provisioning_receipt: {
+          properties: { lifecycle_state: { const: 'active' }, lifecycle_generation: { const: 1 } },
+        },
+        mas_qualification_work_item_cas_mutation_authorization: {
+          type: 'object',
+          required: ['surface_kind', 'version'],
+          properties: {
+            surface_kind: { const: 'mas_qualification_work_item_cas_mutation_authorization' },
+            version: { const: 'mas-qualification-work-item-cas-mutation-authorization.v1' },
+          },
+        },
+      },
+    }),
   );
   fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'domain_descriptor.json'), JSON.stringify({
     domain_id: 'medautoscience',

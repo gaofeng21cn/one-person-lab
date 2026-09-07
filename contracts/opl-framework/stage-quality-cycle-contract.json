@@ -231,11 +231,11 @@
     "domain_prompt_conformance": {
       "policy_ref": "contracts/stage_quality_cycle_policy.json#/cross_stage_route_selection",
       "applies_only_when_domain_declares_stage_quality_cycle_policy": true,
-      "reviewer_and_re_reviewer_required_markers": [
-        "same_stage_repair_required",
-        "cross_stage_route_back_before_budget_exhaustion"
-      ],
-      "repair_required_prompt_refs_must_carry_both_markers": true,
+      "common_role_protocol_owner": "opl_framework",
+      "common_role_protocol_injection": "provider_attempt_prompt",
+      "domain_role_prompt_scope": "professional_review_scope_quality_criteria_and_semantic_repair_owner_judgment",
+      "reviewer_and_re_reviewer_required_markers": [],
+      "repair_required_prompt_refs_must_carry_both_markers": false,
       "scoped_route_authority_fields_required": [
         "primary_only_decisive_attempt_role",
         "formal_review_decisive_attempt_roles",

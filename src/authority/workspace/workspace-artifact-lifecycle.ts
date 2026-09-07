@@ -8,6 +8,7 @@ import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import type { WorkspaceProjectIndexEntry } from './workspace-topology.ts';
 import { writeJsonArtifact } from './workspace-artifacts.ts';
+import { ARTIFACT_LIFECYCLE_PROFILE_REF, artifactOutputGroups, type ArtifactOutputGroup } from './workspace-artifact-lifecycle-profile.ts';
 import {
   readValidatedWorkspaceIndex,
 } from './workspace-lifecycle.ts';
@@ -19,7 +20,7 @@ export const MEMORY_LIFECYCLE_REF = `${ARTIFACT_LIFECYCLE_DIR}/memory_lifecycle.
 export const OUTPUT_LIFECYCLE_REF = `${ARTIFACT_LIFECYCLE_DIR}/output_lifecycle.json`;
 export const REVIEW_REPAIR_TRANSPORT_REF = `${ARTIFACT_LIFECYCLE_DIR}/review_repair_transport.json`;
 export const ARTIFACT_LIFECYCLE_HEALTH_REF = `${ARTIFACT_LIFECYCLE_DIR}/artifact_lifecycle_health.json`;
-export const ARTIFACT_LIFECYCLE_PROFILE_REF = `${ARTIFACT_LIFECYCLE_DIR}/artifact_lifecycle_profile.json`;
+export { ARTIFACT_LIFECYCLE_PROFILE_REF } from './workspace-artifact-lifecycle-profile.ts';
 export const DOMAIN_REVIEW_REPAIR_HANDOFF_REF = 'handoff/review-repair-transport.json';
 
 type JsonRecord = Record<string, unknown>;
@@ -59,6 +60,7 @@ type ArtifactLifecycleProfile = {
   memory_model: string;
   required_memory_refs: LifecycleRefDescriptor[];
   current_output_refs: LifecycleRefDescriptor[];
+  output_groups: ArtifactOutputGroup[];
   blockers: Array<{
     code: string;
     ref: string;
@@ -193,6 +195,11 @@ function projectFileRecord(workspaceRoot: string, project: WorkspaceProjectIndex
 
 function projectFiles(workspaceRoot: string, project: WorkspaceProjectIndexEntry, relRoot: string, role: string) {
   const prefix = normalizeProjectRef(project, relRoot);
+  const absolute = path.join(workspaceRoot, prefix);
+  if (fs.existsSync(absolute)) {
+    const relative = path.relative(fs.realpathSync(path.join(workspaceRoot, project.project_root)), fs.realpathSync(absolute));
+    if (relative.startsWith('..') || path.isAbsolute(relative)) return [];
+  }
   return listFiles(workspaceRoot, prefix).map((ref) => statRecord(workspaceRoot, ref, role));
 }
 
@@ -209,6 +216,7 @@ function readArtifactLifecycleProfile(
       memory_model: 'not_declared',
       required_memory_refs: [],
       current_output_refs: [],
+      output_groups: [],
       blockers: [],
     };
   }
@@ -219,11 +227,21 @@ function readArtifactLifecycleProfile(
       memory_model: 'invalid',
       required_memory_refs: [],
       current_output_refs: [],
+      output_groups: [],
       blockers: [{
         code: 'artifact_lifecycle_profile_invalid',
         ref,
         reason: 'artifact lifecycle profile must be a JSON object with refs-only descriptors',
       }],
+    };
+  }
+  let outputGroups: ArtifactOutputGroup[];
+  try {
+    outputGroups = artifactOutputGroups(profile.output_groups, path.join(workspaceRoot, project.project_root));
+  } catch (error) {
+    return {
+      ref, status: 'invalid', memory_model: 'invalid', required_memory_refs: [], current_output_refs: [], output_groups: [],
+      blockers: [{ code: 'artifact_lifecycle_profile_invalid', ref, reason: error instanceof Error ? error.message : String(error) }],
     };
   }
   return {
@@ -238,6 +256,7 @@ function readArtifactLifecycleProfile(
       profile.current_output_refs ?? profile.current_refs,
       'current_output_ref',
     ),
+    output_groups: outputGroups,
     blockers: [],
   };
 }
@@ -351,16 +370,17 @@ function buildOutputLifecycle(
   lifecycleProfile: ArtifactLifecycleProfile,
   updatedAt: string,
 ) {
-  const outputGroups = [
-    ['artifacts/manuscript', 'manuscript_artifact'],
-    ['artifacts/review', 'review_artifact'],
-    ['artifacts/figures', 'figure_artifact'],
-    ['artifacts/stage_outputs', 'stage_output_artifact'],
-    ['quality', 'quality_report'],
-    ['receipts', 'owner_or_blocker_receipt'],
-    ['archive', 'retired_artifact'],
-  ] as const;
-  const records = outputGroups.flatMap(([relRoot, role]) => projectFiles(workspaceRoot, project, relRoot, role));
+  const outputGroups = lifecycleProfile.output_groups;
+  const recordsByRef = new Map<string, FileRecord>();
+  const roots = new Set(['artifacts', 'quality', 'receipts', 'archive', ...outputGroups.map((group) => group.ref)]);
+  for (const root of roots) {
+    for (const record of projectFiles(workspaceRoot, project, root, 'output_artifact')) recordsByRef.set(record.ref, record);
+  }
+  const records = [...recordsByRef.values()].sort((left, right) => left.ref.localeCompare(right.ref)).map((record) => {
+    const group = outputGroups.filter((entry) => record.ref.startsWith(`${normalizeProjectRef(project, entry.ref)}/`))
+      .sort((left, right) => right.ref.length - left.ref.length)[0];
+    return group ? { ...record, role: group.role } : record;
+  });
   const currentRefs = lifecycleProfile.current_output_refs.map((entry) => (
     projectFileRecord(workspaceRoot, project, entry.ref, entry.role)
   ));
@@ -371,13 +391,14 @@ function buildOutputLifecycle(
     project_root: project.project_root,
     lifecycle_profile_ref: lifecycleProfile.ref,
     lifecycle_profile_status: lifecycleProfile.status,
+    output_groups: outputGroups,
     artifacts: records,
     current_refs: currentRefs,
     summary: {
       artifact_file_count: records.length,
       current_ref_count: currentRefs.length,
       missing_current_ref_count: currentRefs.filter((entry) => !entry.exists).length,
-      archive_file_count: records.filter((entry) => entry.role === 'retired_artifact').length,
+      archive_file_count: records.filter((entry) => entry.ref.startsWith(`${project.archive_root}/`)).length,
     },
     authority_boundary: {
       output_lifecycle_is_refs_only: true,

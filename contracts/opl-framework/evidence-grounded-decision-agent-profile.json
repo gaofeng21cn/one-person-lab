@@ -29,7 +29,10 @@
     "profile_catalog_is_agent_design_template_source": false,
     "profile_catalog_is_lower_bound_conformance_guardrail": true,
     "catalog_requirements_are_refs_only_shape": true,
-    "reference_design_sources_remain_design_source": true
+    "reference_design_sources_remain_design_source": true,
+    "natural_language_profile_recommendation_owner": "agent_engineering_semantic_provider",
+    "framework_profile_selection_inputs": ["explicit_profile_id_or_ref", "exact_canonical_intent_signals", "reference_design_source_refs"],
+    "framework_selector_interprets_natural_language": false
   },
   "source_of_truth_refs": [
     {

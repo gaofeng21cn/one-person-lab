@@ -5,6 +5,7 @@ import {
   stringValue,
   type JsonRecord,
 } from '../../kernel/json-record.ts';
+import { readStandardAgentDescriptorForDomainFromPackagePort } from '../../kernel/agent-package-readiness-port.ts';
 
 function stringRefs(value: unknown) {
   const scalar = stringValue(value);
@@ -25,8 +26,19 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values)];
 }
 
-function paperLineOwnerChainResults(payload: JsonRecord) {
-  return recordList(payload.paper_line_owner_chain_results);
+export function domainDispatchWorkItemIdentity(
+  domainId: string | null,
+  value: JsonRecord,
+): { work_item_id?: string; [field: string]: string | undefined } {
+  const descriptor = domainId ? readStandardAgentDescriptorForDomainFromPackagePort(domainId) : null;
+  const field = descriptor?.dispatch_evidence_projection?.work_item_id_field
+    ?? descriptor?.interface.inventory_projection?.field_map.work_item_id
+    ?? 'work_item_id';
+  const canonical = stringValue(value.work_item_id) ?? stringValue(value[field]);
+  return canonical ? {
+    work_item_id: canonical,
+    [field]: stringValue(value[field]) ?? canonical,
+  } : {};
 }
 
 function ownerDeltaResults(payload: JsonRecord) {
@@ -37,22 +49,19 @@ function ownerDeltaResults(payload: JsonRecord) {
   return recordList(result);
 }
 
-export function domainDispatchEvidencePayloadRefs(payload: JsonRecord) {
-  const paperLineResults = paperLineOwnerChainResults(payload);
+export function domainDispatchEvidencePayloadRefs(payload: JsonRecord, route: JsonRecord = {}) {
+  const domainId = stringValue(record(route.target_identity).domain_id)
+    ?? stringValue(route.domain_id) ?? stringValue(payload.domain_id);
+  const projection = domainId
+    ? readStandardAgentDescriptorForDomainFromPackagePort(domainId)?.dispatch_evidence_projection
+    : null;
+  const projectedRefs = (role: 'domain_receipt_refs' | 'typed_blocker_refs' | 'owner_chain_refs') =>
+    (projection?.result_collections ?? []).flatMap((collection) =>
+      recordList(payload[collection.field]).flatMap((result) =>
+        (collection.ref_fields[role] ?? []).flatMap((field) => stringRefs(result[field]))
+      )
+    );
   const ownerDeltaResultRefs = ownerDeltaResults(payload);
-  const paperLineOwnerReceiptRefs = paperLineResults.flatMap((result) =>
-    stringList(result.owner_receipt_refs)
-  );
-  const paperLineTypedBlockerRefs = paperLineResults.flatMap((result) =>
-    stringList(result.stable_typed_blocker_refs)
-  );
-  const paperLineOwnerChainRefs = paperLineResults.flatMap((result) => [
-    ...stringList(result.progress_delta_refs),
-    ...stringList(result.ai_reviewer_gate_receipt_refs),
-    ...stringList(result.artifact_movement_refs),
-    ...stringList(result.human_gate_or_resume_refs),
-    ...stringRefs(result.no_forbidden_write_proof_ref),
-  ]);
   const ownerDeltaDomainReceiptRefs = ownerDeltaResultRefs.flatMap((result) => [
     ...stringList(result.owner_receipt_refs),
     ...stringList(result.quality_gate_receipt_refs),
@@ -90,18 +99,18 @@ export function domainDispatchEvidencePayloadRefs(payload: JsonRecord) {
         'receipt_refs',
         'receipt_ref',
       ]),
-      ...paperLineOwnerReceiptRefs,
+      ...projectedRefs('domain_receipt_refs'),
       ...ownerDeltaDomainReceiptRefs,
     ]),
     typedBlockerRefs: uniqueStrings([
       ...refsFromPayload(payload, ['typed_blocker_refs', 'typed_blocker_ref']),
-      ...paperLineTypedBlockerRefs,
+      ...projectedRefs('typed_blocker_refs'),
       ...ownerDeltaTypedBlockerRefs,
     ]),
     noRegressionRefs: refsFromPayload(payload, ['no_regression_refs', 'no_regression_ref']),
     ownerChainRefs: uniqueStrings([
       ...refsFromPayload(payload, ['owner_chain_refs', 'owner_chain_ref']),
-      ...paperLineOwnerChainRefs,
+      ...projectedRefs('owner_chain_refs'),
     ]),
   };
 }

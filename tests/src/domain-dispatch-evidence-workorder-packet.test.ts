@@ -257,7 +257,7 @@ test('domain dispatch workorder packet keeps default summary canonical while pre
   assert.equal(
     packet.workorders.every((workorder) =>
       workorder.identity_binding_guidance.matching_policy
-        === 'study_task_profile_match_is_not_sufficient_payload_identity_must_match_all_comparable_target_fields'
+        === 'work_item_task_profile_match_is_not_sufficient_payload_identity_must_match_all_comparable_target_fields'
     ),
     true,
   );

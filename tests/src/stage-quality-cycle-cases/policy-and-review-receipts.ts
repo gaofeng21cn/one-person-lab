@@ -160,12 +160,12 @@ test('official quality profile is explicit without adding per-agent registry pol
   assert.deepEqual(
     contract.cross_stage_route_selection.domain_prompt_conformance
       .reviewer_and_re_reviewer_required_markers,
-    ['same_stage_repair_required', 'cross_stage_route_back_before_budget_exhaustion'],
+    [],
   );
   assert.equal(
     contract.cross_stage_route_selection.domain_prompt_conformance
       .repair_required_prompt_refs_must_carry_both_markers,
-    true,
+    false,
   );
   assert.deepEqual(
     contract.cross_stage_route_selection.domain_prompt_conformance

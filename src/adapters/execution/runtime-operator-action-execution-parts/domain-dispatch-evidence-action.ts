@@ -8,7 +8,7 @@ export function domainDispatchExternalEvidenceApplyArgs(
   commandOrSurfaceRef: string,
   options: { allowEmptyRecordPayload?: boolean } = {},
 ) {
-  const refs = domainDispatchEvidencePayloadRefs(payload);
+  const refs = domainDispatchEvidencePayloadRefs(payload, route);
   return externalEvidenceApplyArgs(route, {
     ...payload,
     domain_receipt_refs: refs.domainReceiptRefs,
