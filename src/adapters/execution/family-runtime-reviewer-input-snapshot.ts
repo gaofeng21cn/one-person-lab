@@ -444,9 +444,40 @@ function snapshotQualityDebt(reasonCode: string, resumeCondition: string) {
   } as const;
 }
 
+export function completeReviewerSnapshotTransportEnvelope(
+  value: unknown,
+  expectedAuthority: ReviewerInputSnapshotAuthorityBinding,
+  declaredArtifacts: { refs: string[]; hashes: string[] },
+) {
+  const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority);
+  const authority = normalizeAuthorityBinding(expectedAuthority);
+  if (declaredArtifacts.refs.length !== declaredArtifacts.hashes.length) {
+    throw reviewTransportError('reviewer_input_snapshot_artifact_identity_mismatch', 'Declared artifact refs and hashes must align.');
+  }
+  const members = [...request.members];
+  for (const [index, ref] of declaredArtifacts.refs.entries()) {
+    const sha256 = canonicalReviewTransportSha256(declaredArtifacts.hashes[index], 'declared_artifact.sha256');
+    const matches = authority.owner_authority_refs.filter((item) => item.ref === ref && item.sha256 === sha256);
+    if (matches.length !== 1) {
+      throw reviewTransportError('reviewer_input_snapshot_owner_authority_metadata_missing', 'Declared artifact requires exact producer closeout metadata.', { artifact_ref: ref });
+    }
+    const member = matches[0]!;
+    if (members.some((item) => item.sha256 === sha256 && item.size_bytes === member.size_bytes)) continue;
+    // Finalized transport records supplement, but do not redefine, the domain review scope.
+    members.push({
+      member_id: `opl-finalized-artifact-${sha256.slice('sha256:'.length)}`,
+      source_ref: ref,
+      sha256,
+      size_bytes: member.size_bytes,
+    });
+  }
+  return normalizeReviewerInputSnapshotRequest({ ...request, members }, expectedAuthority);
+}
+
 export function resolveReviewerInputSnapshotMaterialization(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
+  declaredArtifacts?: { refs: string[]; hashes: string[] },
 ) {
   if (value === null || value === undefined) {
     return snapshotQualityDebt(
@@ -454,5 +485,8 @@ export function resolveReviewerInputSnapshotMaterialization(
       'materialize the complete owner-provided review scope as an immutable OPL snapshot',
     );
   }
-  return materializeReviewerInputSnapshot(value, expectedAuthority);
+  const envelope = declaredArtifacts && expectedAuthority
+    ? completeReviewerSnapshotTransportEnvelope(value, expectedAuthority, declaredArtifacts)
+    : value;
+  return materializeReviewerInputSnapshot(envelope, expectedAuthority);
 }

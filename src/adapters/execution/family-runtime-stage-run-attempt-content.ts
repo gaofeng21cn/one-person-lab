@@ -4,6 +4,9 @@ import {
   readStandardAgentManagedTextFile,
   readStandardAgentQualityRolePromptFile,
   readStandardAgentStagePromptFile,
+  stageAttemptExecutorPolicyWithReviewLane,
+  resolveStandardAgentStageQualityRuntimeBinding,
+  resolveStandardAgentStageReviewLane,
 } from '../../authority/packages/index.ts';
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
 import {
@@ -23,6 +26,33 @@ export { STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION };
 
 function text(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+export function resolveStageRunAttemptReviewLane(
+  spec: NonNullable<TemporalStageAttemptWorkflowInput['stage_run_spec']>,
+  domainPackRoot: string,
+  requestedReviewLane?: string | null,
+) {
+  const selectedLane = text(spec.stage_attempt_executor_policy?.review_lane_binding);
+  if (selectedLane || !text(requestedReviewLane)) return selectedLane;
+  // Legacy Attempts may omit the projection, but their exact manifest remains authoritative.
+  if (!domainPackRoot.trim()) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Historical Attempt package root is missing.', {
+      failure_code: 'reviewer_input_snapshot_historical_lane_manifest_mismatch',
+    });
+  }
+  const binding = resolveStandardAgentStageQualityRuntimeBinding(domainPackRoot, spec.stage_id);
+  if (!binding || binding.manifest_ref !== spec.stage_manifest.ref
+    || `sha256:${binding.manifest_sha256}` !== spec.stage_manifest.sha256) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Historical Attempt review lane requires its exact bound Stage manifest.',
+      { failure_code: 'reviewer_input_snapshot_historical_lane_manifest_mismatch', stage_id: spec.stage_id },
+    );
+  }
+  return binding.review_lane_binding?.binding_kind === 'fixed'
+    ? resolveStandardAgentStageReviewLane(binding.review_lane_binding, null)
+    : null;
 }
 
 function artifactPairs(refs: unknown, hashes: unknown) {
@@ -95,6 +125,8 @@ export function resolveStageRunAttemptExecutorContent(
       ? text((locatorUseBinding as Record<string, unknown>).use_boundary_id)
       : null;
     const currentPackageClosure = immutablePackageClosureFromWorkspaceLocator(input.workspace_locator);
+    // A new Attempt may acquire a previously unbound lane from the current package.
+    // Existing lane choices and all other executor policy remain parent-bound.
     const stableParentAxes = {
       domain_id: parentSpec.domain_id,
       stage_id: parentSpec.stage_id,
@@ -103,7 +135,10 @@ export function resolveStageRunAttemptExecutorContent(
       workspace_identity: parentSpec.workspace_identity,
       source_fingerprint: parentSpec.source_fingerprint,
       executor_kind: parentSpec.executor_kind,
-      stage_attempt_executor_policy: parentSpec.stage_attempt_executor_policy,
+      stage_attempt_executor_policy: stageAttemptExecutorPolicyWithReviewLane(
+        parentSpec.stage_attempt_executor_policy,
+        null,
+      ),
       parent_route_decision_ref: parentSpec.parent_route_decision_ref,
     };
     const stableExecutionAxes = {
@@ -114,7 +149,10 @@ export function resolveStageRunAttemptExecutorContent(
       workspace_identity: executionBinding.spec.workspace_identity,
       source_fingerprint: executionBinding.spec.source_fingerprint,
       executor_kind: executionBinding.spec.executor_kind,
-      stage_attempt_executor_policy: executionBinding.spec.stage_attempt_executor_policy,
+      stage_attempt_executor_policy: stageAttemptExecutorPolicyWithReviewLane(
+        executionBinding.spec.stage_attempt_executor_policy,
+        null,
+      ),
       parent_route_decision_ref: executionBinding.spec.parent_route_decision_ref,
     };
     if (
@@ -128,6 +166,9 @@ export function resolveStageRunAttemptExecutorContent(
       || !executionUseBoundaryId
       || (locatorUseBoundaryId !== null && executionUseBoundaryId !== locatorUseBoundaryId)
       || canonicalJsonText(stableExecutionAxes) !== canonicalJsonText(stableParentAxes)
+      || (text(parentSpec.stage_attempt_executor_policy?.review_lane_binding) !== null
+        && text(parentSpec.stage_attempt_executor_policy?.review_lane_binding)
+          !== text(executionBinding.spec.stage_attempt_executor_policy?.review_lane_binding))
       || !currentPackageClosure
       || canonicalJsonText(executionBinding.spec.package_closure) !== canonicalJsonText(currentPackageClosure)
     ) {
@@ -154,6 +195,8 @@ export function resolveStageRunAttemptExecutorContent(
     : null;
   if (
     expectedRolePromptRef !== rolePromptRef
+    || canonicalJsonText(spec.stage_attempt_executor_policy ?? null)
+      !== canonicalJsonText(input.stage_attempt_executor_policy ?? null)
     || canonicalJsonText(spec.quality_rubric_refs) !== canonicalJsonText(input.quality_rubric_refs ?? [])
     || spec.stage_packet_ref !== input.stage_packet_ref
     || canonicalJsonText(spec.checkpoint_refs) !== canonicalJsonText(input.checkpoint_refs ?? [])

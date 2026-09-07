@@ -141,9 +141,9 @@ function writeWorkspaceRootFile(selectedPath: string | null) {
   return payload;
 }
 
-export function readOplWorkspaceRoot(): OplWorkspaceRoot {
+export function readOplWorkspaceRoot(env: NodeJS.ProcessEnv = process.env): OplWorkspaceRoot {
   const paths = ensureOplStateDir(resolveOplStatePaths());
-  const envSelectedPath = normalizeOptionalString(process.env.OPL_WORKSPACE_ROOT);
+  const envSelectedPath = normalizeOptionalString(env.OPL_WORKSPACE_ROOT);
   const persisted = readWorkspaceRootFile();
   const selectedPath = envSelectedPath ?? persisted?.selected_path ?? paths.home_dir;
   const source: OplWorkspaceRoot['source'] =

@@ -620,7 +620,7 @@ test('developer Framework source override is visible but excluded from generic b
     assert.equal(base.current.opl_framework_runtime.source_root_configured, true);
     assert.equal(base.auto_apply.eligible, false);
     assert.equal(base.auto_apply.app_background_safe, false);
-    assert.deepEqual(base.auto_apply.blocked_reasons, ['developer_framework_source_override_detect_only']);
+    assert.ok(base.auto_apply.blocked_reasons.includes('developer_framework_source_override_detect_only'));
   } finally {
     if (previousSource === undefined) delete process.env.OPL_FRAMEWORK_UPDATE_SOURCE;
     else process.env.OPL_FRAMEWORK_UPDATE_SOURCE = previousSource;

@@ -14,6 +14,8 @@
 
 Framework 从 native carrier 的 installed descriptor 动态发现 Agent，校验 identity、schema 和 entrypoint。App profile 和 Framework source 不维护成员白名单。
 
+绑定 StageAttempt 的 `OPL_WORKSPACE_ROOT` 表示 work-item 执行目录，不重定位机器的开发包目录。此时模块来源解析沿用持久化 workspace preference，保留显式 module override 和 carrier 来源一致性校验；无绑定调用仍接受 workspace 环境覆盖。
+
 ## Entry points
 
 entrypoint 声明稳定 id、调用方式、输入、输出和 authority boundary。public CLI、MCP、Skill、Host contribution 和 App view 都消费同一 owner entrypoint或projection。

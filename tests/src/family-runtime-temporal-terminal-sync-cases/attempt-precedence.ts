@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   createStageAttempt,
+  ingestStageAttemptCloseout,
   inspectStageAttempt,
   syncStageAttemptFromTemporalTerminalObservation,
 } from '../../../src/adapters/execution/family-runtime-stage-attempts.ts';
@@ -13,12 +14,58 @@ import {
 } from '../../../src/adapters/execution/family-runtime-linked-task-sync.ts';
 import {
   blockedTemporalObservation,
+  completedTemporalObservation,
   createMasDefaultExecutorAttempt,
   createQueueTables,
   failedTemporalObservation,
   insertMasDefaultExecutorTask,
   withStageAttemptDb,
 } from './helpers.ts';
+
+for (const role of ['reviewer', 're_reviewer'] as const) {
+  test(`Accepted ${role} closeout survives a diagnostic with new refs and no verdict`, () => {
+    withStageAttemptDb((db) => {
+      const attempt = createStageAttempt(db, {
+        domainId: 'example', stageId: 'review', providerKind: 'temporal',
+        workspaceLocator: { workspace_root: '/tmp/review-projection' },
+        sourceFingerprint: `sha256:${role}`, executorKind: 'domain_handler',
+      }).attempt;
+      db.prepare('UPDATE stage_attempts SET attempt_role = ? WHERE stage_attempt_id = ?')
+        .run(role, attempt.stage_attempt_id);
+      ingestStageAttemptCloseout(db, {
+        stageAttemptId: attempt.stage_attempt_id,
+        packet: {
+          surface_kind: 'stage_attempt_closeout_packet',
+          stage_attempt_id: attempt.stage_attempt_id,
+          closeout_refs: ['receipt:accepted-review'],
+          route_impact: { stage_quality_cycle: { outcome: 'pass' } },
+        },
+      });
+      const before = inspectStageAttempt(db, attempt.stage_attempt_id);
+      const diagnostic = completedTemporalObservation({
+        stageAttemptId: attempt.stage_attempt_id, workflowId: attempt.workflow_id,
+        createdAt: new Date().toISOString(), domainId: 'example', stageId: 'review',
+      });
+      for (let replay = 0; replay < 2; replay += 1) {
+        syncStageAttemptFromTemporalTerminalObservation(db, diagnostic);
+        const after = inspectStageAttempt(db, attempt.stage_attempt_id);
+        assert.equal(after.status, 'completed');
+        assert.deepEqual(after.route_impact, before.route_impact);
+        assert.deepEqual(after.closeout_refs, before.closeout_refs);
+        assert.equal(after.closeout_receipt_status, 'accepted_typed_closeout');
+      }
+      const updated = {
+        ...diagnostic,
+        query: { ...diagnostic.query, route_impact: { stage_quality_cycle: { outcome: 'quality_debt' } } },
+      };
+      syncStageAttemptFromTemporalTerminalObservation(db, updated);
+      const afterUpdate = inspectStageAttempt(db, attempt.stage_attempt_id);
+      const updatedCycle = afterUpdate.route_impact.stage_quality_cycle as Record<string, unknown>;
+      assert.equal(updatedCycle.outcome, 'quality_debt');
+      assert.ok(afterUpdate.closeout_refs.includes('receipt:domain-closeout'));
+    });
+  });
+}
 
 test('Older terminal failure cannot overwrite newer accepted closeout for the same MAS default executor task', () => {
   withStageAttemptDb((db) => {

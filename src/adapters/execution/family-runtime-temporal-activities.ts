@@ -88,7 +88,11 @@ import {
   materializeOplRevisionTransport,
   revisionTransportContext,
 } from './family-runtime-revision-intake.ts';
-import type { resolveStandardAgentStageQualityRuntimeBinding } from '../../authority/packages/index.ts';
+import {
+  resolveStandardAgentStageReviewLane,
+  stageAttemptExecutorPolicyWithReviewLane,
+  type resolveStandardAgentStageQualityRuntimeBinding,
+} from '../../authority/packages/index.ts';
 import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
 import {
   findStageRunLaunch,
@@ -97,6 +101,7 @@ import {
 import { materializeStageRunRoute } from './family-runtime-stage-run-route-launch.ts';
 import {
   resolveStageRunAttemptExecutorContent,
+  resolveStageRunAttemptReviewLane,
   STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION,
 } from './family-runtime-stage-run-attempt-content.ts';
 import { taskRetryBudgetProjection } from './family-runtime-queue-projection-boundary.ts';
@@ -271,6 +276,7 @@ function reviewerSnapshotAuthorityBinding(
   db: ReturnType<typeof openQueueDb>['db'],
   artifactProducerAttemptRef: string,
   stageRun: ReturnType<typeof requireTemporalStageRunWorkflowInputLaunchable>,
+  requestedReviewLane?: string | null,
 ): ReviewerInputSnapshotAuthorityBinding {
   const producer = getStageAttemptRow(
     db,
@@ -324,13 +330,18 @@ function reviewerSnapshotAuthorityBinding(
     db,
     [producer.stage_attempt_id],
   ).get(producer.stage_attempt_id) ?? {};
-  const stageAttemptExecutorPolicy = isRecord(spec.stage_attempt_executor_policy)
-    ? spec.stage_attempt_executor_policy
-    : null;
+  const producerLocator = persistedJsonRecord(
+    producer.workspace_locator_json,
+    'reviewer_input_snapshot_authority_issuer_locator_invalid',
+  );
   return {
     producer_attempt_ref: artifactProducerAttemptRef,
     execution_content_binding_sha256: bindingSha256,
-    review_lane_binding: readString(stageAttemptExecutorPolicy?.review_lane_binding),
+    review_lane_binding: resolveStageRunAttemptReviewLane(
+      spec as NonNullable<TemporalStageAttemptWorkflowInput['stage_run_spec']>,
+      readString(producerLocator.domain_pack_root) ?? '',
+      requestedReviewLane,
+    ),
     owner_authority_refs: exactRefsFromCloseoutMetadata(
       producerCloseout.closeout_ref_metadata,
     ),
@@ -1498,6 +1509,14 @@ export async function stageQualityAttemptMaterializeActivity(
         ref !== stageRun.stage_packet_ref && ref !== stageRun.stage_run_spec.stage_packet_ref
       )),
     ];
+    const executionReviewLane = resolveStandardAgentStageReviewLane(
+      executionStageBinding.review_lane_binding,
+      readString(stageRun.stage_attempt_executor_policy?.review_lane_binding),
+    );
+    const executionAttemptExecutorPolicy = stageAttemptExecutorPolicyWithReviewLane(
+      stageRun.stage_attempt_executor_policy,
+      executionReviewLane,
+    );
     const executionContentSpec = buildStageRunImmutableSpec({
       binding: executionStageBinding,
       domainPackRoot: executionDomainPackRoot,
@@ -1508,7 +1527,7 @@ export async function stageQualityAttemptMaterializeActivity(
       executionScope: stageRun.execution_scope ?? null,
       sourceFingerprint: stageRun.source_fingerprint,
       executorKind: stageRun.executor_kind,
-      stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
+      stageAttemptExecutorPolicy: executionAttemptExecutorPolicy,
       stagePacketRef: executionStagePacketRef,
       actionId: stageRun.action_id,
       taskId: stageRun.task_id,
@@ -1578,7 +1597,14 @@ export async function stageQualityAttemptMaterializeActivity(
       ? input.attempt_role
       : null;
     const snapshotAuthorityBinding = reviewAttemptRole
-      ? reviewerSnapshotAuthorityBinding(db, artifactProducerAttemptRef!, stageRun)
+      ? reviewerSnapshotAuthorityBinding(
+          db,
+          artifactProducerAttemptRef!,
+          stageRun,
+          isRecord(input.review_input_snapshot_materialization_request)
+            ? readString(input.review_input_snapshot_materialization_request.review_lane)
+            : null,
+        )
       : null;
     const reviewInputSnapshotContext = reviewAttemptRole
       ? buildStageReviewInputSnapshotContext({
@@ -1588,6 +1614,7 @@ export async function stageQualityAttemptMaterializeActivity(
           resolution: resolveReviewerInputSnapshotMaterialization(
             input.review_input_snapshot_materialization_request,
             snapshotAuthorityBinding!,
+            { refs: inputArtifactIdentity.artifact_refs, hashes: inputArtifactIdentity.artifact_hashes },
           ),
         })
       : null;
@@ -1678,7 +1705,7 @@ export async function stageQualityAttemptMaterializeActivity(
         idempotencyBoundaryId: requestedUseBoundaryId,
         sourceFingerprint: stageRun.source_fingerprint ?? undefined,
         executorKind: stageRun.executor_kind,
-        stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
+        stageAttemptExecutorPolicy: executionAttemptExecutorPolicy,
         checkpointRefs: executionCheckpointRefs,
         stageRunId: stageRun.stage_run_id,
         qualityCycleId: input.quality_cycle_id,

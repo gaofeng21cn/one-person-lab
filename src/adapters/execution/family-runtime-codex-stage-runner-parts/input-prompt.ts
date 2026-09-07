@@ -410,10 +410,12 @@ function qualityAttemptPromptLines(
       ? [
           'This is finding-closure re-review. Evaluate each prior required finding against the repair_map and exact new artifact.',
           'For a non-hard-stop re_reviewer outcome, required route_impact.stage_quality_cycle fields are outcome, finding_closures, repair_regressions, critical_new_findings, and optional_observations.',
+          'Each finding_closures entry must contain finding_id for one prior required finding, status exactly closed|partially_closed|still_open, and evidence_refs as a non-empty array of non-empty string refs to evidence actually reviewed in the immutable snapshot. Cover each prior required finding exactly once; never invent evidence refs or omit them for partially_closed or still_open findings.',
           'For outcome=blocked or outcome=human_gate, return only outcome plus the required hard-stop evidence; do not fabricate a finding-closure result.',
           'Only still-open required findings, repair regressions, or critical new findings may trigger another repair round.',
           'A repair regression or critical new finding that triggers repair must be required and receive a finding_id unique across all prior findings and both new-finding collections.',
           'Ordinary new suggestions are optional_observations and must not reopen the loop; they are compatible with outcome=pass or outcome=quality_debt.',
+          'Each optional_observations entry must contain a non-empty observation_id, a non-empty summary string, and evidence_refs as a non-empty array of non-empty string refs. Use summary, not description or rationale aliases; when there are no observations return an empty array.',
         ]
       : [
           'Initial Review must assign stable finding_id, severity, evidence_refs, required status, and repair_expectation.',
