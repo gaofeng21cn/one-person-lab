@@ -418,7 +418,12 @@ export function hydrateReferencedStageAttemptCloseout(input: {
   let hydratedCloseout: TypedStageCloseoutPacket;
   try {
     hydratedCandidate = parseJsonText(observation.bytes.toString('utf8'));
-    hydratedCloseout = normalizeTypedStageCloseoutPacket(hydratedCandidate);
+    const hasOwnRefs = isRecord(hydratedCandidate)
+      && ['closeout_refs', 'closeout_ref', 'receipt_ref', 'packet_ref'].some((key) => Object.hasOwn(hydratedCandidate, key));
+    // The verified outer locator is already an exact closeout ref; the file need not refer to itself.
+    hydratedCloseout = normalizeTypedStageCloseoutPacket(isRecord(hydratedCandidate) && !hasOwnRefs
+      ? { ...hydratedCandidate, closeout_refs: [observation.ref] }
+      : hydratedCandidate);
   } catch (error) {
     hydrationError({
       message: 'Referenced closeout file is not a valid typed Stage Attempt closeout packet.',
