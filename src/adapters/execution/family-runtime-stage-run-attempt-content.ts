@@ -31,12 +31,19 @@ function text(value: unknown) {
 export function resolveStageRunAttemptReviewLane(
   spec: NonNullable<TemporalStageAttemptWorkflowInput['stage_run_spec']>,
   domainPackRoot: string,
+  requestedReviewLane?: string | null,
 ) {
   const selectedLane = text(spec.stage_attempt_executor_policy?.review_lane_binding);
-  if (selectedLane) return selectedLane;
+  if (selectedLane || !text(requestedReviewLane)) return selectedLane;
   // Legacy Attempts may omit the projection, but their exact manifest remains authoritative.
+  if (!domainPackRoot.trim()) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Historical Attempt package root is missing.', {
+      failure_code: 'reviewer_input_snapshot_historical_lane_manifest_mismatch',
+    });
+  }
   const binding = resolveStandardAgentStageQualityRuntimeBinding(domainPackRoot, spec.stage_id);
-  if (!binding || `sha256:${binding.manifest_sha256}` !== spec.stage_manifest.sha256) {
+  if (!binding || binding.manifest_ref !== spec.stage_manifest.ref
+    || `sha256:${binding.manifest_sha256}` !== spec.stage_manifest.sha256) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Historical Attempt review lane requires its exact bound Stage manifest.',

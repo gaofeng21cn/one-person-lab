@@ -276,6 +276,7 @@ function reviewerSnapshotAuthorityBinding(
   db: ReturnType<typeof openQueueDb>['db'],
   artifactProducerAttemptRef: string,
   stageRun: ReturnType<typeof requireTemporalStageRunWorkflowInputLaunchable>,
+  requestedReviewLane?: string | null,
 ): ReviewerInputSnapshotAuthorityBinding {
   const producer = getStageAttemptRow(
     db,
@@ -339,6 +340,7 @@ function reviewerSnapshotAuthorityBinding(
     review_lane_binding: resolveStageRunAttemptReviewLane(
       spec as NonNullable<TemporalStageAttemptWorkflowInput['stage_run_spec']>,
       readString(producerLocator.domain_pack_root) ?? '',
+      requestedReviewLane,
     ),
     owner_authority_refs: exactRefsFromCloseoutMetadata(
       producerCloseout.closeout_ref_metadata,
@@ -1595,7 +1597,14 @@ export async function stageQualityAttemptMaterializeActivity(
       ? input.attempt_role
       : null;
     const snapshotAuthorityBinding = reviewAttemptRole
-      ? reviewerSnapshotAuthorityBinding(db, artifactProducerAttemptRef!, stageRun)
+      ? reviewerSnapshotAuthorityBinding(
+          db,
+          artifactProducerAttemptRef!,
+          stageRun,
+          isRecord(input.review_input_snapshot_materialization_request)
+            ? readString(input.review_input_snapshot_materialization_request.review_lane)
+            : null,
+        )
       : null;
     const reviewInputSnapshotContext = reviewAttemptRole
       ? buildStageReviewInputSnapshotContext({
