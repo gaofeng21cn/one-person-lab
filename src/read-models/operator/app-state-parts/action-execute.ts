@@ -712,7 +712,7 @@ async function executeDirectAppAction(
     const projection = await buildManagedUpdateKernelProjection(contracts, {
       operation: 'status',
       componentId: 'opl_app',
-    });
+    }, { allowExternalProbes: false });
     return {
       delegatedSurface: managedUpdateCommand('status', 'opl_app', { json: false }),
       result: {

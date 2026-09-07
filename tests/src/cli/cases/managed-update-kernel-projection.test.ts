@@ -316,6 +316,22 @@ test('managed update projection can defer App release metadata lookup for fast c
   });
 });
 
+test('App update action preserves the fast consumer network boundary', async () => {
+  await withMacAppCarrierFixture('1.0.0', '1.1.0', async () => {
+    const curlPath = process.env.OPL_CURL_BIN!;
+    const root = path.dirname(path.dirname(curlPath));
+    const marker = path.join(root, 'curl-called');
+    fs.writeFileSync(curlPath, `#!/bin/sh\ntouch ${shellSingleQuote(marker)}\nexit 42\n`);
+    const output = runCli([
+      'app', 'action', 'execute', '--action', 'settings_check_app_update', '--dry-run',
+    ], { HOME: root, OPL_STATE_DIR: path.join(root, 'state') });
+    const action = output.app_action_execution;
+    assert.equal(action.delegated_surface, 'opl app state --profile fast');
+    assert.equal(action.result.managed_update.components[0].current.latest_version_lookup_status, 'not_checked');
+    assert.equal(fs.existsSync(marker), false);
+  });
+});
+
 test('full managed update projection materializes only the three lifecycle owners', async () => {
   const output = await buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
     operation: 'status',
