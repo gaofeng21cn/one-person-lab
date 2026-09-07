@@ -421,6 +421,7 @@ test('every child Attempt preserves parent evidence and binds the latest executi
   const currentUseBinding = packageUseBinding({
     packageVersion: '0.2.2',
   });
+  let currentReviewLane: string | null = null;
   const materializationOptions = {
     ensurePackageLaunchReady: async () => ({
       runtime_source_readiness: {
@@ -435,7 +436,15 @@ test('every child Attempt preserves parent evidence and binds the latest executi
       },
       package_use_binding: currentUseBinding,
     }),
-    resolveStageBinding: () => binding(),
+    resolveStageBinding: () => ({
+      ...binding(),
+      review_lane_binding: currentReviewLane ? {
+        binding_kind: 'fixed' as const,
+        review_lane: currentReviewLane,
+        executor_may_select_lane: false as const,
+        lane_fallback: false as const,
+      } : null,
+    }),
   };
   process.env.OPL_STATE_DIR = stateRoot;
   try {
@@ -537,6 +546,7 @@ test('every child Attempt preserves parent evidence and binds the latest executi
     fs.writeFileSync(currentStagePromptPath, '# intake prompt from current package\n');
 
     // A newer package appearing before the next Attempt is captured as that Attempt's current truth.
+    currentReviewLane = 'statistical';
     fs.appendFileSync(currentRubricPath, 'new rubric rule before next attempt\n');
     fs.writeFileSync(
       currentRolePromptPath,
@@ -555,6 +565,38 @@ test('every child Attempt preserves parent evidence and binds the latest executi
       artifact_identity_receipt_refs: input.artifact_identity_receipt_refs ?? [],
     }, materializationOptions);
     const nextResolved = resolveStageRunAttemptExecutorContent(next.workflow_input);
+    assert.equal(
+      next.workflow_input.execution_content_binding?.spec.stage_attempt_executor_policy?.review_lane_binding,
+      'statistical',
+    );
+    assert.equal(next.workflow_input.stage_attempt_executor_policy?.review_lane_binding, 'statistical');
+    assert.equal(input.stage_run_spec.stage_attempt_executor_policy, null);
+    assert.equal(materialized.workflow_input.execution_content_binding?.spec.stage_attempt_executor_policy, null);
+    assert.equal(next.workflow_input.stage_run_spec_sha256, input.stage_run_spec_sha256);
+    assert.throws(() => resolveStageRunAttemptExecutorContent({
+      ...next.workflow_input,
+      stage_attempt_executor_policy: { review_lane_binding: 'medical' },
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_attempt_execution_content_envelope_mismatch');
+      return true;
+    });
+    const changedParentSpec = structuredClone(next.workflow_input.stage_run_spec!);
+    changedParentSpec.stage_attempt_executor_policy = { review_lane_binding: 'medical' };
+    const changedParentHash = stageRunSpecSha256(changedParentSpec);
+    const changedBinding = {
+      ...next.workflow_input.execution_content_binding!,
+      parent_stage_run_spec_sha256: changedParentHash,
+    };
+    changedBinding.binding_sha256 = stageAttemptExecutionContentBindingSha256(changedBinding);
+    assert.throws(() => resolveStageRunAttemptExecutorContent({
+      ...next.workflow_input,
+      stage_run_spec: changedParentSpec,
+      stage_run_spec_sha256: changedParentHash,
+      execution_content_binding: changedBinding,
+    }), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_attempt_execution_content_binding_mismatch');
+      return true;
+    });
     assert.match(nextResolved.effectiveQualityRolePrompt?.content ?? '', /newer producer policy/);
     assert.notEqual(
       next.workflow_input.execution_content_binding?.spec_sha256,
