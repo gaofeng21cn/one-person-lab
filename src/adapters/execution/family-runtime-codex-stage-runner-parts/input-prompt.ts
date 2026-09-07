@@ -404,6 +404,7 @@ function qualityAttemptPromptLines(
           'For outcome=blocked or outcome=human_gate, return only outcome plus the required hard-stop evidence; do not fabricate a finding-closure result.',
           'Only still-open required findings, repair regressions, or critical new findings may trigger another repair round.',
           'Ordinary new suggestions are optional_observations and must not reopen the loop; they are compatible with outcome=pass or outcome=quality_debt.',
+          'Each optional_observations entry must contain a non-empty observation_id, a non-empty summary string, and evidence_refs as a non-empty array of non-empty string refs. Use summary, not description or rationale aliases; when there are no observations return an empty array.',
         ]
       : [
           'Initial Review must assign stable finding_id, severity, evidence_refs, required status, and repair_expectation.',
