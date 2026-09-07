@@ -88,7 +88,11 @@ import {
   materializeOplRevisionTransport,
   revisionTransportContext,
 } from './family-runtime-revision-intake.ts';
-import type { resolveStandardAgentStageQualityRuntimeBinding } from '../../authority/packages/index.ts';
+import {
+  resolveStandardAgentStageReviewLane,
+  stageAttemptExecutorPolicyWithReviewLane,
+  type resolveStandardAgentStageQualityRuntimeBinding,
+} from '../../authority/packages/index.ts';
 import { launchRegisteredStageRun } from './family-runtime-stage-run-launch.ts';
 import {
   findStageRunLaunch,
@@ -1498,6 +1502,14 @@ export async function stageQualityAttemptMaterializeActivity(
         ref !== stageRun.stage_packet_ref && ref !== stageRun.stage_run_spec.stage_packet_ref
       )),
     ];
+    const executionReviewLane = resolveStandardAgentStageReviewLane(
+      executionStageBinding.review_lane_binding,
+      readString(stageRun.stage_attempt_executor_policy?.review_lane_binding),
+    );
+    const executionAttemptExecutorPolicy = stageAttemptExecutorPolicyWithReviewLane(
+      stageRun.stage_attempt_executor_policy,
+      executionReviewLane,
+    );
     const executionContentSpec = buildStageRunImmutableSpec({
       binding: executionStageBinding,
       domainPackRoot: executionDomainPackRoot,
@@ -1508,7 +1520,7 @@ export async function stageQualityAttemptMaterializeActivity(
       executionScope: stageRun.execution_scope ?? null,
       sourceFingerprint: stageRun.source_fingerprint,
       executorKind: stageRun.executor_kind,
-      stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
+      stageAttemptExecutorPolicy: executionAttemptExecutorPolicy,
       stagePacketRef: executionStagePacketRef,
       actionId: stageRun.action_id,
       taskId: stageRun.task_id,
@@ -1679,7 +1691,7 @@ export async function stageQualityAttemptMaterializeActivity(
         idempotencyBoundaryId: requestedUseBoundaryId,
         sourceFingerprint: stageRun.source_fingerprint ?? undefined,
         executorKind: stageRun.executor_kind,
-        stageAttemptExecutorPolicy: stageRun.stage_attempt_executor_policy,
+        stageAttemptExecutorPolicy: executionAttemptExecutorPolicy,
         checkpointRefs: executionCheckpointRefs,
         stageRunId: stageRun.stage_run_id,
         qualityCycleId: input.quality_cycle_id,
