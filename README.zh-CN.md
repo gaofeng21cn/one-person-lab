@@ -126,10 +126,6 @@ Base/Framework，`one-person-lab-app` 维护 App 产品与发布体验，各 Pac
 | 基金工坊 | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | 基金方向判断、申请书写作、修订准备 | 申请书、提纲、修订包 |
 | 汇报工坊 | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | 讲课、组会、汇报、答辩和项目材料 | 幻灯片、讲稿、汇报材料 |
 | 图书工坊 | [`OPL Book Forge`](https://github.com/gaofeng21cn/opl-bookforge) | 图书、长篇书稿、章节架构和风格控制 | 故事线、章节草稿、图表计划、DOCX/PDF 交接包 |
-| 专利工坊 | 规划中 | 专利申请、技术交底、权利要求和实施例整理 | 技术交底书、专利申请书、权利要求书 |
-| 报奖工坊 | 规划中 | 科技奖励、成果总结和佐证材料组织 | 报奖书、成果总结、佐证材料包 |
-| 论文工坊 | 规划中 | 学位论文装配和答辩准备 | 章节草稿、答辩材料 |
-| 审稿工坊 | 规划中 | 审稿、回复和修回 | 评审意见、回复草稿、修回计划 |
 
 ## 如何开始
 
@@ -143,22 +139,14 @@ Base/Framework，`one-person-lab-app` 维护 App 产品与发布体验，各 Pac
 
 ## 给 Codex / Agent
 
-在新机器上，让 Codex 按 [新机器 Codex 全家桶安装入口](docs/references/current-support/opl-new-machine-codex-bootstrap.md) 自动安装配置 OPL runtime、MAS/MAG/RCA/OMA/Book Forge 智能体可见面、包含 `$opl-doc` 文档治理工作流的 OPL Flow 和推荐 companion tools：
+在新机器上，让 Codex 按 [新机器 Codex 全家桶安装入口](docs/references/current-support/opl-new-machine-codex-bootstrap.md) 自动安装配置 OPL runtime、MAS/MAG/RCA/OMA/Book Forge 智能体可见面、包含 `$software-development` 文档治理工作流的 OPL Flow 和推荐 companion tools：
 
 ```text
 请按 One Person Lab 官方新机器指南，帮我完成这台机器的 OPL 智能体运行环境和 Codex 工作流全家桶安装配置。
 真相来源：https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/references/current-support/opl-new-machine-codex-bootstrap.md
 ```
 
-## 后续开发计划
-
-- 完善桌面应用的首次安装包、更新通道和跨平台发布流程。
-- 继续强化长任务推进能力，让恢复、重试、人工确认、阶段审阅和进度展示更加完整。
-- 将 OPL Meta Agent 的 `engineer-agent` action 作为智能体工坊唯一公开入口，用于提交新建、接管和改进语义；候选物化、评测、版本、canary、activation 与 rollback 归 Foundry Kernel，保护测试正文、最终验收、权限授权和生产采用归目标 owner。
-- 推进研究工坊、基金工坊、汇报工坊和图书工坊的稳定交付体验。
-- 将 Book Forge 作为默认标准 Foundry Agent surface 纳入 OPL Connect / App 可见面，同时继续让书稿质量、导出交接、出版和 production-ready 声明保持 owner-gated。
-- 将专利、报奖、论文、审稿等高价值知识工作纳入同一产品家族。
-- 统一领域智能体的安装、模块发现、技能同步、产物浏览和工作区恢复体验。
+长期方向见 [公开路线图](./docs/public/roadmap.md)，具体实现断点见 [当前差距](./docs/active/current-state-vs-ideal-gap.md)。
 
 ## 技术入口
 
@@ -191,18 +179,7 @@ opl family-runtime attempt list
 
 自动化集成应优先读取 `opl help --json`、`contracts/` 下的机器可读合同，以及各领域智能体导出的投影数据。
 
-### 框架职责
-
-本仓库维护 One Person Lab 的框架层，负责：
-
-- 命令行入口、安装、初始化、诊断和修复。
-- 显式激活、route 编排、阶段控制、认知计算内核边界、交接、回执、人工确认和恢复。
-- 运行时提供者、类型化队列、阶段尝试记录、运行快照和投影消费。
-- 机器可读合同、模块发现、`opl connect exec` 和 Connect skill 同步。
-
-OPL 保持默认 operator / App 读面简单：`opl framework readiness --family-defaults --json` 是 Framework 默认读面，`opl stages readiness --family-defaults --json` 是 Stage 默认聚合面，详细诊断按需请求。Stage 内策略和工具选择由 selected executor 执行。Framework 持有激活、运行时 transport 和投影；domain 仓持有领域 truth 与 verdict；App 仓持有 GUI 和 release truth。
-
-生产在线运行由 Temporal-backed provider 承接；Temporal 是 production online substrate，负责 durable workflow、activity retry/timeout、signal/update、query、visibility 和 event history。local provider 只用于开发、CI 和离线诊断，不能替代 production online readiness。OPL SQLite attempt ledger 记录 stage attempt identity、queue linkage、checkpoint/closeout refs、owner receipt refs、typed blocker refs、human gate 和 dead-letter state；`stage_progress_log` 只是从 Temporal provider refs、OPL ledger refs 和 domain-owned refs 派生的进度投影。其 `user_stage_log` 是标准 OPL Agent 的用户可读进度面：OPL 只投影时间、usage、refs 与显式缺失状态，MAS/MAG/RCA 等 domain agent 用 `stage_work_done` / `changed_stage_surfaces` 提供人话 closeout；缺失时必须显示 `missing_domain_semantic_summary`。Foundry Kernel 消费这些 refs 以执行独立评测、形成 `EvidenceBundle` 并管理候选生命周期，再由 OMA 基于证据诊断并提出 `EvolutionProposal`；候选设计语义归 OMA，物化、版本、canary、activation 与 rollback 归 Foundry Kernel，二者都不拥有 runtime log 或 domain truth。Codex CLI 是当前第一公民执行器；Hermes-Agent、Claude Code 等工具可以作为显式执行器适配器接入，并通过回执与审计信息证明运行过程。
+Framework 持有通用运行、Package 发现和 App 投影；领域仓持有专业事实与裁决，App 持有 GUI 和发布事实。具体分工见 [架构](./docs/architecture.md)，执行语义见 [Runtime](./docs/runtime/README.md)。
 
 ### 文档
 

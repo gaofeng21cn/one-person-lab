@@ -31,7 +31,9 @@ supervision 观察 service、worker、queue 和 source freshness。自动 repair
 
 human gate 必须有明确 owner、reason、所需输入和恢复动作。没有授权时不能自动越过；普通诊断和低风险可恢复操作不应被升级为 human gate。
 
-## State semantics
+## 常用状态读法
+
+以下仅解释常见状态；完整枚举由 [`family-runtime-attempt-contract.json`](../../contracts/opl-framework/family-runtime-attempt-contract.json) 的 `attempt_states` 持有，包括领取、重试、human gate 和 dead-letter 状态。
 
 - `queued`：等待 provider 消费；
 - `running`：Attempt 正在执行；
@@ -52,7 +54,7 @@ Cordis Host 提供进程内 service graph。StageRun 发起后冻结必要的 co
 2. 区分 transport failure、executor failure、owner blocker 和 artifact rejection。
 3. 只对当前 owner 的状态执行 repair。
 4. 保留已有 artifact refs 和 lineage。
-5. 重新运行必须产生新 Attempt identity，并明确关联原 Attempt。
+5. 同 invocation、同 spec 的重放复用已有 Run；显式新运行或新的路由决定才创建新 Run。Attempt 重试和关联由 runtime owner 持有，不能把重复请求当成新任务。详见 [StageRun 身份与路由](../runtime/stage-graph-route-transition-runtime.md#durable-invocation-与物化)。
 
 ## Forbidden claims
 

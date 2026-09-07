@@ -23,6 +23,6 @@ App 不建立第二 Package discovery、provider state 或 domain truth。Framew
 ## 文档
 
 - [公开 surface 索引](./opl-public-surface-index.md)
-- [GUI product boundary](./gui/README.md)
+- [Shell adapter 操作边界](../references/current-support/opl-gui-shell-adapter-boundary.md)
 
 动态页面和用户路径以 App owner contract、installed build 和真实 UI readback 为准。

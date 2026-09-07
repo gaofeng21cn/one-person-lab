@@ -27,7 +27,7 @@ Framework 可以：
 
 Framework 不可以：
 
-- 修改 domain truth 或 artifact body；
+- 未经 domain owner 合同授权修改 domain truth 或 artifact body；
 - 生成专业 verdict；
 - 把 runtime/provider状态当作 domain readiness；
 - 通过固定成员清单决定 domain 是否存在；

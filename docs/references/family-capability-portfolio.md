@@ -34,18 +34,11 @@ capability domain 是用户和产品理解 OPL 能力的标签，不是源码目
 
 ## 当前 Framework 映射
 
-Framework source unit 由 `source-module-map.json` 维护；当前 Cordis profiles 为 `base-headless`、`app-full` 和 `foundry-dev`。`brand-module-registry.json` 和相关 CLI 只提供十项 Framework surface projection，不能冻结整个 Family 的 domain 数量或 owner。
+Framework source unit 由 `source-module-map.json` 维护；当前 Cordis profiles 为 `base-headless`、`app-full` 和 `foundry-dev`。`brand-module-registry.json` 和相关 CLI 只提供 Framework surface projection，不能冻结整个 Family 的 domain 数量或 owner。
 
 Fabric 的实现和 publication 主要属于 Cloud，不要求 Framework 创建对称模块。App 的 Client contribution 也由 App product owner 持有。
 
-## 拆仓与发布门
-
-- 单一 repo、单一 caller、同一生命周期：保留仓内模块。
-- 同仓多 caller、稳定 ABI、需要组合：使用 workspace Package。
-- 跨仓 consumer 或独立 owner：使用独立 repo。
-- 不同发布节奏、独立回滚或外部 consumer：再建立独立 publication。
-
-缺少真实 consumer 和 lifecycle 证据时保持当前层级，不建立候选 registry、空 Package 或预留 publication。
+拓扑晋升条件由 [Package 拓扑](../project.md#package-拓扑) 统一定义。
 
 ## Currentness
 
@@ -53,7 +46,7 @@ Fabric 的实现和 publication 主要属于 Cloud，不要求 Framework 创建�
 
 ```bash
 jq '.domains' contracts/opl-framework/family-capability-domain-registry.json
-./bin/opl brand-modules inspect --json
+./bin/opl brand-modules list --json
 ./bin/opl cordis inspect --json
 ```
 

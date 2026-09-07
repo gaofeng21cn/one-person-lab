@@ -13,7 +13,7 @@
 
 ## Package surfaces
 
-- `opl packages status|install|update|remove|repair`：通过配置 native carrier工作；
+- `opl packages list|install|update|uninstall|repair`：通过配置 native carrier 工作，诊断使用 `packages status`；
 - installed Agent/capability：从 owner descriptor动态发现；
 - Cordis contribution：在受控 Host profile 内装配；
 - owner publication：由 Package repo release surface 持有。

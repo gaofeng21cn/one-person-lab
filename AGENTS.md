@@ -12,6 +12,7 @@
 - Package 依赖只声明 required/optional presence 与可调用入口。稳定 identity 只能兼容扩展；删除旧 identity 前须有 fresh no-active-consumer proof。
 - 平台原生 carrier 负责实际生命周期；Framework 只在已证实的平台缺口处提供薄 adapter，不复制 resolver、lock、payload、LKG 或平行 currentness。
 - 跨仓边界变更以相关 machine-readable contract 和真实 consumer 为依据。默认验证入口：`scripts/verify.sh`。
+- 文档入口与职责见 `docs/README.md`；创建、改写和退役统一遵循 `docs/policies/docs-lifecycle-policy.md`。代码/合同变更同批更新实际主题 owner、引用和生成源，历史通过 Git 追溯。
 
 ## Code Review Rules
 

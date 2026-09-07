@@ -131,10 +131,6 @@ The desktop product follows the Codex App interaction shape and presents MAS, MA
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Grant direction setting, proposal writing, revision preparation | Proposals, outlines, revision packs |
 | `Presentation Foundry` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Lectures, lab talks, reports, defenses, project materials | Slide decks, scripts, presentation packages |
 | `Book Foundry` | [`OPL Book Forge`](https://github.com/gaofeng21cn/opl-bookforge) | Books, long-form manuscripts, chapter architecture, style control | Storylines, chapter drafts, figure/table plans, DOCX/PDF handoff packages |
-| `Patent Foundry` | Planned | Patent applications, invention disclosures, claims, embodiments | Invention disclosures, patent drafts, claim sets |
-| `Award Foundry` | Planned | Awards, achievement summaries, evidence organization | Award applications, summaries, evidence packs |
-| `Thesis Foundry` | Planned | Thesis assembly and defense preparation | Chapter drafts, defense materials |
-| `Review Foundry` | Planned | Review, rebuttal, and revision work | Review comments, response drafts, revision plans |
 
 ## Getting Started
 
@@ -148,22 +144,15 @@ To develop a new domain agent, debug the CLI, or integrate runtime surfaces, ope
 
 ## For Codex / Agents
 
-On a new machine, ask Codex to install the OPL runtime, MAS/MAG/RCA/Book Forge/OMA agent surfaces, OPL Flow (including its bundled `$opl-doc` documentation-governance workflow), and companion tools from the [new-machine Codex bootstrap guide](docs/references/current-support/opl-new-machine-codex-bootstrap.md):
+On a new machine, ask Codex to install the OPL runtime, MAS/MAG/RCA/Book Forge/OMA agent surfaces, OPL Flow (including its bundled `$software-development` documentation-governance workflow), and companion tools from the [new-machine Codex bootstrap guide](docs/references/current-support/opl-new-machine-codex-bootstrap.md):
 
 ```text
 Please follow the official One Person Lab new-machine guide and set up this machine with the OPL agent runtime environment and the complete Codex workflow toolkit.
 Source of truth: https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/references/current-support/opl-new-machine-codex-bootstrap.md
 ```
 
-## Product Roadmap
-
-- Improve the desktop App first-install package, update channel, and cross-platform release workflow.
-- Continue strengthening long-task progress with recovery, retry, human approval, stage review, and clearer progress views.
-- Use OPL Meta Agent's `engineer-agent` action as the only public Agent Foundry entry for create, takeover, and improve semantics; let the Foundry Kernel materialize, evaluate, version, canary, activate, and roll back candidates, with protected-test definitions, final acceptance, permissions, and production adoption owned by the target owner.
-- Stabilize the Research, Grant, Presentation, and Book Foundry user experience.
-- Maintain Book Forge as a default standard Foundry Agent surface in OPL Connect / App while keeping manuscript quality, export handoff, publication, and production-ready claims owner-gated.
-- Bring Patent, Award, Thesis, and Review work into the same product family.
-- Unify module installation, skill sync, artifact browsing, and workspace recovery across domain agents.
+Long-term direction belongs to the [public roadmap](./docs/public/roadmap.md);
+concrete implementation gaps belong to [current gaps](./docs/active/current-state-vs-ideal-gap.md).
 
 ## Technical Entry
 
@@ -196,18 +185,7 @@ opl family-runtime attempt list
 
 Automation should prefer `opl help --json`, machine-readable contracts under `contracts/`, and projection data exported by the domain agents.
 
-### Framework Responsibility
-
-This repository maintains the One Person Lab framework layer:
-
-- CLI entry points for installation, initialization, diagnostics, and repair.
-- Explicit activation, route orchestration, stage control, cognitive computation kernel boundaries, handoff, receipts, human gates, and recovery.
-- Temporal runtime provider, stage-attempt projection, attempt ledger, runtime snapshots, and projection consumption.
-- Machine-readable contracts, module discovery, `opl connect exec`, and Connect skill synchronization.
-
-OPL keeps the default operator and App read path small. `opl framework readiness --family-defaults --json` is the default framework view, and `opl stages readiness --family-defaults --json` is the default stage aggregation; detailed diagnostics are requested explicitly. The selected executor runs each stage's declared strategy and tool affordances. Framework owns activation, runtime transport, and projections; domain repositories own domain truth and verdicts; the App repository owns GUI and release truth.
-
-Temporal-backed provider support is the production online runtime target. Local/offline diagnostics use projection/readback indexes, not provider fallback. Codex CLI is the current first-class executor; Hermes-Agent, Claude Code, and similar tools can enter as explicit executor adapters with receipts and auditability.
+Framework source owns generic runtime, Package discovery and App projections. Domain owners retain professional facts and verdicts; App owns GUI and release truth. See [architecture](./docs/architecture.md) for ownership and [runtime](./docs/runtime/README.md) for execution semantics.
 
 ### Documentation
 

@@ -90,7 +90,7 @@ stage_id
 物理上有三层：
 
 1. **Repo source 层**：domain repo 的 `agent/` 和 `contracts/` 是可审阅单源。这里存 declarative stage manifest、Stage 主提示词、专业 Skill、工具 affordance、知识和质量门；不提交第二份 generated stage plane。
-2. **OPL 生成 / 托管层**：OPL Pack / Stagecraft / Connect 根据合同与 `agent/stages/manifest.json` 生成 `family_stage_control_plane`、CLI、MCP、Skill descriptor、OpenAI / AI SDK tool descriptor、App projection、workspace projection 和 conformance readback；Codex App carrier 统一由 `agent/primary_skill/SKILL.md` 物化为 OPL-owned Codex plugin，不再按 MAS/MAG/RCA 与 OMA/OBF 分两套物理路径。
+2. **OPL 生成 / 托管层**：OPL Pack / Stagecraft / Connect 根据合同与 `agent/stages/manifest.json` 生成 `family_stage_control_plane`、CLI、MCP、Skill descriptor、OpenAI / AI SDK tool descriptor、App projection、workspace projection 和 conformance readback；Codex App carrier 由 `agent/primary_skill/SKILL.md` 物化为 owner Package 的 Codex plugin。
 3. **Workspace 执行层**：Codex、App 或 hosted runner 消费投影后的 prompt、skill、tool descriptor 和 refs。`.agents/skills/` 是 workspace / quest-local Codex discovery projection，不是 domain repo 的 canonical source；`.codex/` 仅保留 OPL 的配置、owner、manifest 和 transaction 元数据。
 
 因此，“Stage 内可以用哪些能力”不是靠把所有文本塞进一个提示词解决，而是靠 Stage 主提示词引用稳定能力面：domain skill declarations、repo-local professional Skill、外置 professional pack、OPL Connect connector、知识 refs、质量门和 receipt shape。AI executor 在 Stage 内做开放式判断；合同只负责边界、证据和接力。

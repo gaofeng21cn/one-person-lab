@@ -53,7 +53,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/main
 ```bash
 opl packages status --json
 opl packages install <package-id> --json
-opl packages status <package-id> --json
+opl packages status --package-id <package-id> --json
 ```
 
 不要把本文中的示例变成固定 starter list。App official profile、用户选择和 installed carrier readback决定实际 Package 集合。

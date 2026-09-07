@@ -30,22 +30,11 @@ OPL 标准智能体采用 AI-first 原则包：AI 负责阶段内的开放式理
 5. `domain_intake_mapping`：`domain_intake` 是 owner-handoff 模式，不是独立 Skill；领域仓负责映射到真实 intake stage。
 6. `workspace_source_intake_shell`：OPL 持有通用 workspace/source intake transport 和 locator shell；领域 source semantics、readiness、provenance 和 task truth 留在 domain 仓。
 7. `owner_delta_progress`：有效推进必须是 deliverable delta、owner receipt、typed blocker、human gate、route-back 或 handoff packet。
-8. `quality_budget_progress_first`：stage 已有可读、可消费 artifact 时，retry、review、repair 和普通质量门只是质量预算；预算耗尽记录 `completed_with_quality_debt` 并推进，债务只阻止 quality/export/publication/submission/production-ready 声明。零 artifact、artifact 损坏、permission/credential、显式 human decision、authority violation、identity/currentness mismatch 才硬停。
+8. `quality_budget_progress_first`：stage 已有可读、可消费 artifact 时，retry、review、repair 和普通质量门只是质量预算；预算耗尽记录 `completed_with_quality_debt` 并推进，债务只阻止 quality/export/publication/submission/production-ready 声明。原始零输出或损坏先物化可消费 diagnostic；连 diagnostic 也无法形成、permission/credential、显式 human decision、authority violation、identity/currentness mismatch 才硬停。完整路由规则见 [Stage graph](../runtime/stage-graph-route-transition-runtime.md)。
 9. `parallel_executor_autonomy`：domain stage 与 professional skill 可以固定专业语义、证据、authority、安全和不可逆动作的前后依赖；executor 在依赖图内自主选择工具、迭代、替代和安全并行，Framework tool catalog 不替领域编排专业流程。
 10. `module_organization`：OPL brand modules 持有 framework primitives；标准智能体是 Declarative Domain Pack + minimal authority functions；capability pack 不承担 domain intake。
 
-## 模块定位
-
-- `charter`：语言、边界、治理决策和原则合同入口。
-- `atlas`：domain/agent/capability registry、owner、状态和生命周期索引。
-- `workspace`：workspace/source intake shell、项目材料、stage output、handoff 与可检查目录结构。
-- `pack`：Declarative Domain Pack、capability ABI、authority ABI、pack compiler、generated/hosted surface。
-- `stagecraft`：stage 设计、cognitive computation、prompt/skill/tool 分层、quality gate 和 StageRun contract。
-- `runway`：provider-backed runtime、attempt admission、progress reconciliation、handoff gate 和 recovery repair。
-- `ledger`：refs-only evidence、receipt、typed blocker、artifact lineage、restore/provenance 和 read-model ledger。
-- `console`：operator cockpit，默认读 `current_owner_delta`、next action、blocker、workspace action 和 evidence drilldown。
-- `foundry`：标准智能体 scaffold、conformance、canary、testing takeover、promotion 和 rollback。
-- `connect`：CLI/MCP/OpenAI/AI SDK/Skill/plugin 等 generated/distributed interface 与 drift detection。
+能力域的名称与职责见 [Family capability portfolio](../references/family-capability-portfolio.md)，本政策只定义原则采用，不维护第二份模块清单。
 
 ## Domain Adoption
 

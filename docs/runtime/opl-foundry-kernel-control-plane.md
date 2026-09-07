@@ -75,3 +75,22 @@ opl foundry rollback
 - Kernel 不写 target domain truth、artifact body、quality acceptance、保护测试正文或生产采用决定。
 - OMA 不写 Kernel state、执行工单、文件 patch、版本或 activation pointer。
 - Target Owner 的决定以独立 authority receipt 进入 Kernel，不属于 OMA 四协议。
+
+## Provider execution identity
+
+Provider StageRun 在已注册的 provider workspace 中运行；Foundry run ID 确定
+`provider-runs/` 下的 Work Item。Workspace snapshot 绑定 project、workspace 和物理
+目录身份。初次设计、诊断和重试延续同一 run scope，不同 Run 不共享写入范围；
+缺失或歧义绑定不能降级成 domain scope。实现入口为
+[`foundry-execution-scope.ts`](../../src/adapters/execution/foundry-execution-scope.ts)。
+
+输入 closure 包含 canonical output schema、已授权 intake receipt 对应的 source bytes，
+以及 hash/size 绑定的 manifest、policy 和 rubric。Review 使用生产者选择且身份已冻结的
+输入 snapshot；缺失 snapshot 不能转成质量通过。
+
+生产 provider 将 launch、observe、read-terminal 与 cancel 分为短 Activity，以 workflow
+等待和 generation-bound cursor 延续长操作。cursor 绑定 request、generation、provider
+source 和 manifest，恢复观察不能重启语义 generation。同步 Invoker 是有界调用接口；
+它不承担生产 workflow 的跨 Stage 等待。
+
+构建验证步骤见 [Package construction acceptance](../delivery/foundry-package-construction-acceptance.md)。

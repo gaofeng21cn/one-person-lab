@@ -2,18 +2,8 @@
 
 本文是维护 `contracts/opl-framework/source-module-map.json` 的操作参考。contract 是 source unit、root 和 dependency policy 的唯一 machine owner。
 
-## 当前 roots
-
-| Root | 职责 |
-| --- | --- |
-| `src/authority` | canonical contracts、Workspace、Package 等规则 |
-| `src/adapters` | native carrier、provider、execution 和 external integration |
-| `src/read-models` | App/operator 的只读 projection |
-| `src/host` | Cordis composition 与 Host service lifecycle |
-| `src/entrypoints` | CLI/API 装配和 dispatch |
-| `src/kernel` | 少量跨层稳定类型与 brand-neutral primitives |
-
-每个文件归属于一个主要 source unit。capability domain、品牌、Package 和 Cordis contribution 不决定物理目录。
+源码层次见 [架构](../architecture.md#source-topology)；每个文件所属 source unit 及允许的
+依赖由 machine map 定义。本页只说明怎样维护该边界。
 
 ## Import 规则
 
@@ -40,7 +30,7 @@
 6. 运行：
 
 ```bash
-./bin/opl source modules --strict-imports --strict-cycles --json
+npm run source:modules -- --strict-imports --strict-cycles
 npm run typecheck
 npm run test:structure
 ```

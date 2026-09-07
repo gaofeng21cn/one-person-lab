@@ -38,7 +38,7 @@ source repo保存contract、schema、locator和deterministic fixture。真实sou
 
 ## App
 
-App只展示workspace/source refs、freshness、blocked reason、owner和inspect/action route。App和Framework都不复制source body或生成domain readiness。
+App只展示workspace/source refs、freshness、blocked reason、owner和inspect/action route。Framework 可按已授权 intake receipt，将 exact-bound source bytes 写入内容存储并传给指定执行者；这属于受控输入传输，不取得 source truth 或 readiness 判断权。普通 App 读面保持 refs-only。具体实现见 [`foundry-source-material.ts`](../../src/adapters/execution/foundry-source-material.ts)。
 
 ## Verification
 
