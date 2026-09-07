@@ -5,6 +5,8 @@ import {
   readStandardAgentQualityRolePromptFile,
   readStandardAgentStagePromptFile,
   stageAttemptExecutorPolicyWithReviewLane,
+  resolveStandardAgentStageQualityRuntimeBinding,
+  resolveStandardAgentStageReviewLane,
 } from '../../authority/packages/index.ts';
 import type { TemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
 import {
@@ -24,6 +26,26 @@ export { STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION };
 
 function text(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+export function resolveStageRunAttemptReviewLane(
+  spec: NonNullable<TemporalStageAttemptWorkflowInput['stage_run_spec']>,
+  domainPackRoot: string,
+) {
+  const selectedLane = text(spec.stage_attempt_executor_policy?.review_lane_binding);
+  if (selectedLane) return selectedLane;
+  // Legacy Attempts may omit the projection, but their exact manifest remains authoritative.
+  const binding = resolveStandardAgentStageQualityRuntimeBinding(domainPackRoot, spec.stage_id);
+  if (!binding || `sha256:${binding.manifest_sha256}` !== spec.stage_manifest.sha256) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Historical Attempt review lane requires its exact bound Stage manifest.',
+      { failure_code: 'reviewer_input_snapshot_historical_lane_manifest_mismatch', stage_id: spec.stage_id },
+    );
+  }
+  return binding.review_lane_binding?.binding_kind === 'fixed'
+    ? resolveStandardAgentStageReviewLane(binding.review_lane_binding, null)
+    : null;
 }
 
 function artifactPairs(refs: unknown, hashes: unknown) {

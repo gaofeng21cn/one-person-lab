@@ -101,6 +101,7 @@ import {
 import { materializeStageRunRoute } from './family-runtime-stage-run-route-launch.ts';
 import {
   resolveStageRunAttemptExecutorContent,
+  resolveStageRunAttemptReviewLane,
   STAGE_RUN_ATTEMPT_CONTENT_BINDING_VERSION,
 } from './family-runtime-stage-run-attempt-content.ts';
 import { taskRetryBudgetProjection } from './family-runtime-queue-projection-boundary.ts';
@@ -328,13 +329,17 @@ function reviewerSnapshotAuthorityBinding(
     db,
     [producer.stage_attempt_id],
   ).get(producer.stage_attempt_id) ?? {};
-  const stageAttemptExecutorPolicy = isRecord(spec.stage_attempt_executor_policy)
-    ? spec.stage_attempt_executor_policy
-    : null;
+  const producerLocator = persistedJsonRecord(
+    producer.workspace_locator_json,
+    'reviewer_input_snapshot_authority_issuer_locator_invalid',
+  );
   return {
     producer_attempt_ref: artifactProducerAttemptRef,
     execution_content_binding_sha256: bindingSha256,
-    review_lane_binding: readString(stageAttemptExecutorPolicy?.review_lane_binding),
+    review_lane_binding: resolveStageRunAttemptReviewLane(
+      spec as NonNullable<TemporalStageAttemptWorkflowInput['stage_run_spec']>,
+      readString(producerLocator.domain_pack_root) ?? '',
+    ),
     owner_authority_refs: exactRefsFromCloseoutMetadata(
       producerCloseout.closeout_ref_metadata,
     ),
