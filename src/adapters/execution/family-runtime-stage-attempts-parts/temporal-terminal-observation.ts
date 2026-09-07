@@ -453,7 +453,11 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     const hasNewTerminalCloseoutRef = terminalCloseoutRefs.some((ref) =>
       !existingCloseoutRefs.includes(ref)
     );
-    if (completedCloseoutPacket && hasNewTerminalCloseoutRef) {
+    // A provider diagnostic can add refs without carrying a review verdict.
+    // It must not replace the already accepted domain review closeout.
+    const carriesReviewOutcome = row.attempt_role !== 'reviewer' && row.attempt_role !== 're_reviewer'
+      || typeof record(record(completedCloseoutPacket?.route_impact).stage_quality_cycle).outcome === 'string';
+    if (completedCloseoutPacket && hasNewTerminalCloseoutRef && carriesReviewOutcome) {
       const synced = ingestStageAttemptCloseout(db, {
         stageAttemptId: observation.stage_attempt_id,
         packet: completedCloseoutPacket,
