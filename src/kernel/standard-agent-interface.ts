@@ -11,6 +11,7 @@ import { resolveContainedRepoJsonFile } from './repo-contained-json-file.ts';
 import { resolveStandardAgent } from './standard-agent-registry.ts';
 import type {
   StandardAgentDescriptorInterface,
+  StandardAgentDispatchEvidenceProjection,
   StandardAgentDomainDetailViewDeclaration,
   StandardAgentInterface,
   StandardAgentInventoryProjection,
@@ -888,9 +889,39 @@ export function readStandardAgentDescriptorInterface(repoDir: string): StandardA
       ? null
       : stringValue(descriptor.domain_label, 'domain_label', descriptorPath),
     task_provider: parsedTaskProvider,
+    dispatch_evidence_projection: dispatchEvidenceProjection(descriptor.dispatch_evidence_projection, descriptorPath),
     interface: parsedTaskProvider?.views.length
       ? { ...parsedInterface, domain_detail_views: parsedTaskProvider.views }
       : parsedInterface,
+  };
+}
+
+function dispatchEvidenceProjection(value: unknown, sourceRef: string): StandardAgentDispatchEvidenceProjection | null {
+  if (value === undefined) return null;
+  if (!isRecord(value)) invalid('Dispatch evidence projection must be an object.', sourceRef);
+  assertKnownKeys(value, ['work_item_id_field', 'result_collections'], 'dispatch_evidence_projection', sourceRef);
+  const fieldName = (value: unknown) => {
+    const field = stringValue(value, 'dispatch_evidence_projection.field', sourceRef);
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(field) || ['constructor', 'prototype'].includes(field)) {
+      invalid('Dispatch evidence projection must use plain JSON field names.', sourceRef, { field });
+    }
+    return field;
+  };
+  const collections = value.result_collections ?? [];
+  if (!Array.isArray(collections)) invalid('Dispatch evidence result_collections must be an array.', sourceRef);
+  return {
+    work_item_id_field: fieldName(value.work_item_id_field),
+    result_collections: collections.map((entry) => {
+      if (!isRecord(entry) || !isRecord(entry.ref_fields)) invalid('Dispatch evidence collection requires ref_fields.', sourceRef);
+      assertKnownKeys(entry, ['field', 'ref_fields'], 'dispatch_evidence_projection.result_collections', sourceRef);
+      assertKnownKeys(entry.ref_fields, ['domain_receipt_refs', 'typed_blocker_refs', 'owner_chain_refs'], 'dispatch_evidence_projection.ref_fields', sourceRef);
+      return {
+        field: fieldName(entry.field),
+        ref_fields: Object.fromEntries(Object.entries(entry.ref_fields).map(([key, fields]) => [
+          key, stringArray(fields, `dispatch_evidence_projection.ref_fields.${key}`, sourceRef).map(fieldName),
+        ])),
+      };
+    }),
   };
 }
 

@@ -27,10 +27,8 @@ const REQUIRED_CROSS_STAGE_ROUTE_SELECTION_FLAGS = {
   same_stage_repair_required_with_budget_remaining_continues_quality_loop: true,
   cross_stage_route_back_requires_narrowest_canonical_owner_stage: true,
 } as const;
-const REQUIRED_REVIEW_ROUTE_PROMPT_MARKERS = [
-  'same_stage_repair_required',
-  'cross_stage_route_back_before_budget_exhaustion',
-] as const;
+// Keep the readback field compatible; common protocol prose is injected by OPL.
+const REQUIRED_REVIEW_ROUTE_PROMPT_MARKERS: string[] = [];
 const REVIEW_ROUTE_ROLES = ['reviewer', 're_reviewer'] as const;
 const AMBIGUOUS_ROUTE_POLICY_FIELDS = [
   'repair_required_with_budget_remaining_route_output',
@@ -137,17 +135,6 @@ function stageQualityPolicyDeclaration(repoDir: string) {
   };
 }
 
-function promptMarkerBlockers(content: string, sourceRef: string, role?: string) {
-  return REQUIRED_REVIEW_ROUTE_PROMPT_MARKERS
-    .filter((marker) => !content.includes(marker))
-    .map((marker) => [
-      'stage_quality_route_prompt_marker_missing',
-      role ?? 'repair_required_prompt',
-      sourceRef,
-      marker,
-    ].join(':'));
-}
-
 export function buildStageQualityRoutePromptAlignmentChecks(repoDir: string) {
   const declaration = stageQualityPolicyDeclaration(repoDir);
   if (declaration.status === 'not_declared') {
@@ -213,8 +200,7 @@ export function buildStageQualityRoutePromptAlignmentChecks(repoDir: string) {
       }
       for (const ref of refs) {
         try {
-          const prompt = readStandardAgentQualityRolePromptFile(repoDir, ref);
-          promptBlockers.push(...promptMarkerBlockers(prompt.content, ref, role));
+          readStandardAgentQualityRolePromptFile(repoDir, ref);
         } catch {
           promptBlockers.push(`stage_quality_route_prompt_ref_invalid:${role}:${ref}`);
         }
@@ -223,22 +209,12 @@ export function buildStageQualityRoutePromptAlignmentChecks(repoDir: string) {
   }
 
   const policyPromptRefs = policy ? referencedPromptFiles(policy) : [];
-  const resolvedPolicyPromptFiles = policyPromptRefs.flatMap((ref) => {
+  for (const ref of policyPromptRefs) {
     try {
-      return [{ ref, absolute_path: resolveStandardAgentRepoFile(repoDir, ref, 'stage_quality_cycle_prompt_ref') }];
+      resolveStandardAgentRepoFile(repoDir, ref, 'stage_quality_cycle_prompt_ref');
     } catch {
       promptBlockers.push(`stage_quality_cycle_prompt_ref_invalid:${ref}`);
-      return [];
     }
-  });
-  const repairRequiredPromptRefs = resolvedPolicyPromptFiles
-    .filter(({ ref, absolute_path }) =>
-      ref.endsWith('.md') && fs.readFileSync(absolute_path, 'utf8').includes('repair_required')
-    )
-    .map(({ ref }) => ref);
-  for (const ref of repairRequiredPromptRefs) {
-    const absolutePath = resolveStandardAgentRepoFile(repoDir, ref, 'stage_quality_cycle_prompt_ref');
-    promptBlockers.push(...promptMarkerBlockers(fs.readFileSync(absolutePath, 'utf8'), ref));
   }
 
   const blockers = unique([
@@ -269,7 +245,7 @@ export function buildStageQualityRoutePromptAlignmentChecks(repoDir: string) {
     observed_cross_stage_route_selection: routeSelection,
     required_review_route_prompt_markers: REQUIRED_REVIEW_ROUTE_PROMPT_MARKERS,
     resolved_role_prompt_refs: resolvedRolePromptRefs,
-    repair_required_prompt_refs: repairRequiredPromptRefs,
+    repair_required_prompt_refs: [] as string[],
     blockers,
   };
 }

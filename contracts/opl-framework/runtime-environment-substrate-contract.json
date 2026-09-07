@@ -370,6 +370,14 @@
     "python_package_environment": "UV_PROJECT_ENVIRONMENT",
     "python_installer": "uv",
     "requirement_profile_selection": "all_profiles_by_default_or_scoped_by_requirement_profile_id",
+    "ordinary_profile_source": {
+      "descriptor_ref_field": "standard_contract_refs.runtime_environment_requirement_profile",
+      "profile_map_field": "runtime_profile_sources",
+      "provider_fields": ["package_id", "relative_path"],
+      "provider_resolution": "selected_package_module_source",
+      "resource_boundary": "provider_repo_contained_json",
+      "explicit_requirement_profile_takes_precedence": true
+    },
     "host_environment_fallback_allowed": false,
     "writes_domain_truth": false,
     "writes_runtime_root": false,

@@ -155,10 +155,11 @@ test('hosted action runtime exposes one receipt-bound qualification provisioning
   assert.equal(provisioning.framework_trusted_route, true);
   assert.equal(provisioning.domain_action_remains_internal_only, true);
   assert.equal(provisioning.shell_direct_internal_handler_invocation_allowed, false);
-  assert.equal(provisioning.input.framework_derives_or_selects_study_id, false);
-  assert.equal(provisioning.domain_output.study_id_pointer,
-    '/standard_agent_action_run/result/study_identity/study_id');
-  assert.equal(provisioning.domain_output.schema_authority, 'installed_mas_output_schema');
+  assert.equal(provisioning.input.framework_derives_or_selects_work_item_id, false);
+  assert.equal(provisioning.domain_output.work_item_id_pointer_source,
+    'owner_contract_host_validation_profile');
+  assert.equal(provisioning.domain_output.schema_authority, 'bound_owner_output_schema');
+  assert.equal(provisioning.owner_contract_binding.changed_contract_bytes_require_new_action_binding, true);
   assert.equal(provisioning.domain_output.framework_validation_scope,
     'workspace_qualification_boundary_and_generic_cas_subset');
   assert.equal(provisioning.domain_output.provisioning_receipt_path_pointer,

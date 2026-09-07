@@ -13,11 +13,10 @@ import {
 test('runtime action execute blocks domain dispatch evidence payloads bound to a different attempt identity', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-domain-dispatch-conflict-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const masModuleRoot = installRuntimePackageFixture(stateRoot, 'mas');
+  installRuntimePackageFixture(stateRoot, 'mas');
   const cliEnv = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    OPL_MODULE_PATH_MEDAUTOSCIENCE: masModuleRoot,
   };
   try {
     const created = runCli([
@@ -89,7 +88,7 @@ test('runtime action execute blocks domain dispatch evidence payloads bound to a
       blockedExecution.payload.error.details.preflight.identity_conflicts.map((
         conflict: { field: string },
       ) => conflict.field),
-      ['study_id', 'source_fingerprint'],
+      ['work_item_id', 'source_fingerprint', 'study_id'],
     );
 
     const afterBlockedDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], cliEnv)
@@ -140,11 +139,10 @@ test('runtime action execute blocks stale local typed blocker refs bound to anot
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-local-blocker-conflict-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-local-blocker-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const masModuleRoot = installRuntimePackageFixture(stateRoot, 'mas');
+  installRuntimePackageFixture(stateRoot, 'mas');
   const cliEnv = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    OPL_MODULE_PATH_MEDAUTOSCIENCE: masModuleRoot,
   };
   try {
     const blockerRef = 'studies/002-dm-china-us-mortality-attribution/artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json';

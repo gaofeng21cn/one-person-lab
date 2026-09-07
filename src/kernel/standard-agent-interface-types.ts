@@ -101,7 +101,16 @@ export type StandardAgentDescriptorInterface = {
   domain_id: string;
   display_name?: string | null;
   task_provider?: StandardAgentTaskProvider | null;
+  dispatch_evidence_projection?: StandardAgentDispatchEvidenceProjection | null;
   interface: StandardAgentInterface;
+};
+
+export type StandardAgentDispatchEvidenceProjection = {
+  work_item_id_field: string;
+  result_collections: Array<{
+    field: string;
+    ref_fields: Partial<Record<'domain_receipt_refs' | 'typed_blocker_refs' | 'owner_chain_refs', string[]>>;
+  }>;
 };
 
 export type StandardAgentSourceMaterialConsumerRoute = {

@@ -22,6 +22,11 @@ import {
   type RuntimeEnvironmentVerifyInput,
 } from '../../../adapters/execution/runtime-environment-substrate.ts';
 import { buildOplModules } from '../../../adapters/integration/index.ts';
+import { readStandardAgentDescriptorForDomainFromPackagePort } from '../../../kernel/agent-package-readiness-port.ts';
+import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
+import { record, stringValue } from '../../../kernel/json-record.ts';
+import { resolveContainedRepoJsonFile } from '../../../kernel/repo-contained-json-file.ts';
+import { resolveStandardAgent } from '../../../kernel/standard-agent-registry.ts';
 import {
   assertNoArgs,
   buildUsageError,
@@ -49,22 +54,33 @@ function currentPlatformId() {
   return `${process.platform}-${process.arch}`;
 }
 
-function externalRequirementProfilePath(domainId?: string, profileId?: string) {
-  if (domainId !== 'mas' || profileId !== 'display') {
-    return null;
+function externalRequirementProfilePath(
+  domainId: string | undefined,
+  profileId: string | undefined,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  if (!domainId || !profileId) return null;
+  const descriptor = readStandardAgentDescriptorForDomainFromPackagePort(domainId);
+  if (!descriptor) return null;
+  const source = record(readJsonPayloadFile(path.join(descriptor.repo_dir, 'contracts/domain_descriptor.json')));
+  const profileRef = stringValue(record(source.standard_contract_refs).runtime_environment_requirement_profile);
+  if (!profileRef) return null;
+  const ownerProfile = resolveContainedRepoJsonFile(descriptor.repo_dir, profileRef, 'Runtime environment requirement profile');
+  const requirements = record(readJsonPayloadFile(ownerProfile.real_path));
+  const sources = record(requirements.runtime_profile_sources);
+  if (!Object.hasOwn(sources, profileId)) return null;
+  const selected = record(sources[profileId]);
+  const packageId = stringValue(selected.package_id);
+  const relativePath = stringValue(selected.relative_path);
+  const dependency = packageId ? resolveStandardAgent(packageId) : null;
+  const provider = dependency?.agent_id === packageId && buildOplModules({ profile: 'fast' }).modules.modules
+    .find((module) => module.module_id === dependency.domain_id);
+  if (!provider || !provider.installed || !relativePath) {
+    throw buildUsageError('The domain-declared runtime profile provider is unavailable or invalid.', spec, {
+      domain_id: domainId, profile_id: profileId, package_id: packageId,
+    });
   }
-  const scholarSkills = buildOplModules({ profile: 'fast' }).modules.modules
-    .find((module) => module.module_id === 'scholarskills');
-  if (!scholarSkills) {
-    return null;
-  }
-  const candidate = path.join(
-    scholarSkills.checkout_path,
-    'packs',
-    'medical-display-core',
-    'renderer_dependency_profile.json',
-  );
-  return fs.existsSync(candidate) && fs.statSync(candidate).isFile() ? candidate : null;
+  return resolveContainedRepoJsonFile(provider.checkout_path, relativePath, 'Runtime profile provider resource').real_path;
 }
 
 function assignRootArg(
@@ -248,7 +264,7 @@ function parsePrepareArgs(
     parsed.platformId ??= currentPlatformId();
     parsed.artifactRoot ??= process.cwd();
     parsed.rootOption ??= '--artifact-root';
-    parsed.requirementProfilePath ??= externalRequirementProfilePath(parsed.domainId, parsed.profileId) ?? undefined;
+    parsed.requirementProfilePath ??= externalRequirementProfilePath(parsed.domainId, parsed.profileId, spec) ?? undefined;
   }
   const required: Array<keyof RuntimeEnvironmentPrepareInput> = [
     'domainId',

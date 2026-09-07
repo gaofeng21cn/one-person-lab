@@ -325,9 +325,9 @@ export function targetsMatch(operations: PreparedOperation[], side: 'before' | '
   return operations.every((operation) => side === 'before' ? beforeMatches(operation) : afterMatches(operation));
 }
 
-export function transactionPaths(workspaceRoot: string, requestSha256: string) {
+export function transactionPaths(workspaceRoot: string, requestSha256: string, replayOnly = false) {
   const configuredStateRoot = resolveOplStatePaths().state_dir;
-  fs.mkdirSync(configuredStateRoot, { recursive: true });
+  if (!replayOnly) fs.mkdirSync(configuredStateRoot, { recursive: true });
   const stateRoot = path.join(
     fs.realpathSync.native(configuredStateRoot),
     'runway',
@@ -348,6 +348,7 @@ export function bindSingleUseRequest(input: {
   paths: TransactionPaths;
   request: CasRequest;
   requestSha256: string;
+  replayOnly?: boolean;
 }) {
   const key = sha256(`${input.request.domain_id}\0${input.request.request_id}`);
   const file = path.join(input.paths.requestBindingRoot, `${key}.json`);
@@ -360,12 +361,14 @@ export function bindSingleUseRequest(input: {
     authorization_ref: input.request.authorization_ref,
   };
   const bytes = Buffer.from(formatJsonPayload(binding));
-  fs.mkdirSync(input.paths.requestBindingRoot, { recursive: true });
-  try {
-    durableExclusiveFile(file, bytes);
-    fsyncDirectory(input.paths.requestBindingRoot);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  if (!input.replayOnly) {
+    fs.mkdirSync(input.paths.requestBindingRoot, { recursive: true });
+    try {
+      durableExclusiveFile(file, bytes);
+      fsyncDirectory(input.paths.requestBindingRoot);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    }
   }
   if (!readStableFile(file, 'CAS single-use request binding').equals(bytes)) {
     fail('CAS request_id is already bound to different exact request bytes.', {

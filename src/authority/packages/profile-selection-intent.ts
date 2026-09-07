@@ -1,5 +1,6 @@
 export type ParsedProfileSelectionArgs = {
   intent: string;
+  profile_ref: string | null;
   intent_signals: string[];
   reference_source_refs: string[];
   reference_design_pattern_packet_refs: string[];
@@ -48,12 +49,24 @@ function pushCsvRefs(target: string[], value: string) {
 
 export function parseProfileSelectionArgs(args: string[]): ParsedProfileSelectionArgs {
   const intentParts: string[] = [];
+  let profileRef: string | null = null;
   const intentSignals: string[] = [];
   const referenceSourceRefs: string[] = [];
   const patternPacketRefs: string[] = [];
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
+    if (arg === '--profile' || arg.startsWith('--profile=')) {
+      const parsed = arg === '--profile'
+        ? takeOptionText(args, index, arg)
+        : { value: arg.slice('--profile='.length).trim(), nextIndex: index };
+      if (!parsed.value || profileRef !== null) {
+        throw new Error('opl profiles select requires one non-empty --profile value.');
+      }
+      profileRef = parsed.value;
+      index = parsed.nextIndex;
+      continue;
+    }
     if (arg === '--intent') {
       const parsed = takeOptionText(args, index, arg);
       intentParts.push(parsed.value);
@@ -99,6 +112,7 @@ export function parseProfileSelectionArgs(args: string[]): ParsedProfileSelectio
 
   return {
     intent: intentParts.join(' ').trim(),
+    profile_ref: profileRef,
     intent_signals: canonicalIntentSignals(intentSignals),
     reference_source_refs: uniqueStrings(referenceSourceRefs),
     reference_design_pattern_packet_refs: uniqueStrings(patternPacketRefs),
@@ -106,14 +120,12 @@ export function parseProfileSelectionArgs(args: string[]): ParsedProfileSelectio
 }
 
 export function matchedProfileTriggerSignals(
-  intent: string,
   intentSignals: string[],
   triggerSignals: string[],
 ): string[] {
-  const normalized = intent.toLowerCase();
-  const explicitSignals = new Set(intentSignals);
+  const explicitSignals = new Set(canonicalIntentSignals(intentSignals));
   return triggerSignals.filter((signal) => {
     const canonicalSignal = signal.toLowerCase();
-    return normalized.includes(canonicalSignal) || explicitSignals.has(canonicalSignal);
+    return explicitSignals.has(canonicalSignal);
   });
 }

@@ -7,6 +7,7 @@ import {
   runCli,
   test,
 } from '../../helpers.ts';
+import { execFileSync } from 'node:child_process';
 
 function readJsonFile(filePath: string) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
@@ -26,6 +27,10 @@ function writeBookForgeLifecycleProfile(projectRoot: string) {
     version: 'workspace-artifact-lifecycle-profile.v1',
     owner: 'domain_project',
     memory_model: 'bookforge_working_episodic_semantic_qc',
+    output_groups: [
+      { ref: 'artifacts/manuscript', role: 'manuscript_artifact' },
+      { ref: 'artifacts/review', role: 'review_artifact' },
+    ],
     required_memory_refs: [
       { ref: 'book-memory/working.md', role: 'book_memory_ref' },
       { ref: 'book-memory/episodic.md', role: 'book_memory_ref' },
@@ -46,6 +51,79 @@ function writeBookForgeLifecycleProfile(projectRoot: string) {
     },
   }, null, 2));
 }
+
+test('workspace init projects owner output groups and keeps existing profiles and generic inventory', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-artifact-groups-'));
+  try {
+    const repo = path.join(root, 'owner');
+    fs.mkdirSync(path.join(repo, 'contracts'), { recursive: true });
+    execFileSync('git', ['init', '--quiet', repo]);
+    fs.writeFileSync(path.join(repo, 'contracts/domain_descriptor.json'), JSON.stringify({
+      domain_id: 'opl-bookforge',
+      standard_contract_refs: { artifact_lifecycle_profile: 'contracts/lifecycle.json' },
+      standard_agent_interface: {
+        version: 'opl_standard_agent_interface.v1',
+        workspace_binding: {
+          locator_surface_kind: 'book_workspace', default_profile_id: 'one_off',
+          workspace_kind: 'book_workspace', project_kind: 'book',
+          project_collection_label: 'projects', project_collection_path: 'projects',
+          default_workspace_id: 'books', default_project_id: 'book-1',
+          required_locator_fields: ['workspace_root'], optional_locator_fields: [],
+        },
+        runtime: { runtime_domain_id: 'opl-bookforge', registration_ref: 'contracts/domain_descriptor.json#/runtime' },
+        progress: { deliverable_delta_aliases: ['delta'], platform_delta_aliases: ['platform_delta'] },
+        routing: { explicit_aliases: ['bookforge'], workstream_ids: ['book'], intent_signals: ['book'], ambiguity_policy: 'require_explicit_workstream' },
+      },
+    }));
+    const declared = { output_groups: [
+      { ref: 'chapters', role: 'owner_chapter' },
+      { ref: 'chapters/accepted', role: 'accepted_chapter' },
+      { ref: 'artifacts/manuscript', role: 'owner_manuscript' },
+    ] };
+    fs.writeFileSync(path.join(repo, 'contracts/lifecycle.json'), JSON.stringify(declared));
+    const env = { OPL_STATE_DIR: path.join(root, 'state'), OPL_MODULE_PATH_OPLBOOKFORGE: repo };
+    const initArgs = ['workspace', 'init', '--agent', 'bookforge', '--workspace-root', root, '--workspace-id', 'books', '--project-id', 'book-1'];
+    runCli(initArgs, env);
+    const workspace = path.join(root, 'books');
+    const project = path.join(workspace, 'projects/book-1');
+    const profile = path.join(project, 'control/opl/artifact_lifecycle/artifact_lifecycle_profile.json');
+    assert.deepEqual(readJsonFile(profile), declared);
+    for (const ref of ['chapters/draft.md', 'chapters/accepted/final.md', 'artifacts/manuscript/book.md', 'artifacts/exports/book.pdf', 'quality/report.json', 'receipts/owner.json', 'archive/old.md']) {
+      fs.mkdirSync(path.dirname(path.join(project, ref)), { recursive: true });
+      fs.writeFileSync(path.join(project, ref), 'fixture');
+    }
+    const readback = () => runCli(['workspace', 'artifact-lifecycle', '--workspace', workspace, '--project-id', 'book-1'], env).workspace_artifact_lifecycle;
+    const declaredOutput = readback().output_lifecycle;
+    assert.equal(declaredOutput.artifacts.filter((entry: any) => entry.ref.includes('/chapters/')).length, 2);
+    assert.equal(declaredOutput.artifacts.find((entry: any) => entry.ref.endsWith('chapters/accepted/final.md')).role, 'accepted_chapter');
+    assert.equal(declaredOutput.artifacts.find((entry: any) => entry.ref.endsWith('artifacts/manuscript/book.md')).role, 'owner_manuscript');
+    assert.equal(declaredOutput.summary.archive_file_count, 1);
+    fs.writeFileSync(profile, JSON.stringify({ memory_model: 'custom_project' }));
+    runCli(initArgs, env);
+    runCli(['workspace', 'ensure', '--agent', 'bookforge', '--project-id', 'book-1'], env);
+    assert.deepEqual(readJsonFile(profile), { memory_model: 'custom_project' });
+    const legacyOutput = readback().output_lifecycle;
+    assert.equal(legacyOutput.artifacts.length, declaredOutput.artifacts.length - 2);
+    assert.ok(legacyOutput.artifacts.every((entry: any) => entry.role === 'output_artifact'));
+    fs.rmSync(profile);
+    assert.equal(readback().output_lifecycle.artifacts.length, legacyOutput.artifacts.length);
+    runCli(['workspace', 'ensure', '--agent', 'bookforge', '--project-id', 'book-1'], env);
+    assert.deepEqual(readJsonFile(profile), declared);
+    fs.writeFileSync(profile, JSON.stringify({ output_groups: [{ ref: '../owner', role: 'outside' }] }));
+    assert.equal(readback().output_lifecycle.lifecycle_profile_status, 'invalid');
+    const outside = path.join(root, 'outside');
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, 'private.md'), 'outside');
+    fs.symlinkSync(outside, path.join(project, 'external'));
+    fs.writeFileSync(profile, JSON.stringify({ output_groups: [{ ref: 'external', role: 'outside' }] }));
+    const invalid = readback();
+    assert.equal(invalid.output_lifecycle.lifecycle_profile_status, 'invalid');
+    assert.ok(invalid.health.blockers.some((entry: any) => entry.code === 'artifact_lifecycle_profile_invalid'));
+    assert.equal(invalid.output_lifecycle.artifacts.length, legacyOutput.artifacts.length);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('workspace artifact-lifecycle materializes refs-only Book Forge artifact projections', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-artifact-lifecycle-state-'));
@@ -160,6 +238,8 @@ test('workspace artifact-lifecycle materializes refs-only Book Forge artifact pr
     assert.equal(output.workspace_artifact_lifecycle.source_passport.summary.source_map_entry_count, 1);
     assert.equal(output.workspace_artifact_lifecycle.memory_lifecycle.summary.missing_required_ref_count, 0);
     assert.equal(output.workspace_artifact_lifecycle.output_lifecycle.summary.missing_current_ref_count, 0);
+    assert.equal(output.workspace_artifact_lifecycle.output_lifecycle.artifacts.find((entry: any) =>
+      entry.ref.endsWith('/artifacts/manuscript/chapter-manifest.json')).role, 'manuscript_artifact');
     assert.equal(output.workspace_artifact_lifecycle.review_repair_transport.status, 'passed');
     assert.equal(
       output.workspace_artifact_lifecycle.review_repair_transport.route_back.target_stage_ref,

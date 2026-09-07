@@ -220,6 +220,7 @@ export function applyDomainArtifactCasMaterialization(input: {
   handlerOutput: unknown;
   handlerOutputRef: string;
   handlerOutputSha256: string;
+  replayOnly?: boolean;
 }, hooks: DomainArtifactCasMaterializationHooks = {}): DomainArtifactCasMaterialization | null {
   const contract = hostContract(input.actionAuthorityBoundary?.host_materialization_contract);
   const output = isRecord(input.handlerOutput) ? input.handlerOutput : null;
@@ -398,8 +399,8 @@ const workspaceRoot = fs.realpathSync.native(input.workspaceRoot);
     absentRelativePathPreconditions,
   });
   assertAbsentPreconditions(independentAbsentPreconditions, 'before_receipt_reuse');
-  const paths = transactionPaths(workspaceRoot, requestSha256);
-  const requestBindingRef = bindSingleUseRequest({ paths, request, requestSha256 });
+  const paths = transactionPaths(workspaceRoot, requestSha256, input.replayOnly);
+  const requestBindingRef = bindSingleUseRequest({ paths, request, requestSha256, replayOnly: input.replayOnly });
   const receiptInput = {
     paths,
     request,
@@ -414,6 +415,10 @@ const workspaceRoot = fs.realpathSync.native(input.workspaceRoot);
     requestBindingRef,
   };
   const prior = existingReceipt(receiptInput);
+  if (input.replayOnly) {
+    if (!prior) fail('Completed action replay requires an existing settled CAS receipt.');
+    return prior;
+  }
   if (prior) {
     writeReadEpoch({
       file: paths.readEpoch,

@@ -45,6 +45,10 @@ progress projection 只回答当前 Stage、最新可验证增量、阻塞、下
 
 quality、export、publication 和 submission 状态由 domain owner显式给出；Framework 不从文件存在、测试通过或模型文本推断。
 
+领域 descriptor 的 `dispatch_evidence_projection` 声明 `work_item_id_field`，以及领域结果集合到 `domain_receipt_refs`、`typed_blocker_refs`、`owner_chain_refs` 的字段映射。Framework 将该字段投影为 `work_item_id`，比较所有已声明的目标身份字段，并逐一检查本地 owner 回执引用；payload 中的正确身份不能覆盖引用文件中的冲突。未提供的 transport 字段继续作为补充提示，不阻止可验证的进度记录。
+
+证据投影只传引用。任意领域结果中的 `body_included=true` 或肯定的 `readiness_claims` 都不能进入这条通用记录路径；专业正文、合法就绪判断和签发权继续由领域 owner 持有。
+
 ## Dependency
 
 required Package 缺失或入口不可调用时，Framework 返回 typed blocker。optional Package 缺失只影响对应 capability，不阻断无关入口。

@@ -8,6 +8,8 @@ import path from 'node:path';
 import {
   readStandardAgentQualityRolePromptFile,
 } from '../../src/authority/packages/standard-agent-stage-prompt.ts';
+import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import contract from '../../contracts/opl-framework/stage-quality-cycle-contract.json' with { type: 'json' };
 
 function promptFixture(t: test.TestContext, content: string) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-role-prompt-'));
@@ -80,4 +82,57 @@ test('quality role prompt fragment fails closed when the section is missing or a
     () => readStandardAgentQualityRolePromptFile(fixture.root, `${fixture.ref}#reviewer`),
     /resolves to multiple Markdown sections/,
   );
+});
+
+test('runner injects the common protocol for every professional role fragment', (t) => {
+  const fixture = promptFixture(t, rolePrompt);
+  for (const role of ['producer', 'reviewer', 'repairer', 're_reviewer']) {
+    const ref = `${fixture.ref}#${role.replace('_', '-')}`;
+    const boundRole = readStandardAgentQualityRolePromptFile(fixture.root, ref);
+    const prompt = runnerPromptFor({
+      attempt: {
+        stage_attempt_id: `sat_protocol_${role}`, stage_id: 'clinical_review',
+        stage_run_id: 'sr_protocol', quality_cycle_id: 'qc_protocol',
+        attempt_role: role, quality_role_prompt_ref: ref,
+        quality_context: { context_manifest: { cross_stage_route_selection: {
+          declared_stage_ids: ['clinical_review', 'evidence'], max_repair_rounds: 0,
+        } } },
+      },
+      effectiveQualityRolePrompt: boundRole,
+    });
+    assert.equal(prompt.split('OPL Stage quality-cycle role contract follows.').length - 1, 1);
+    assert.equal(prompt.split(boundRole.content).length - 1, 1);
+    assert.ok(prompt.includes(`Quality role prompt SHA-256: ${boundRole.sha256}`));
+    assert.ok(prompt.includes('hard_boundary_or_zero_artifact'));
+    assert.ok(prompt.includes('fresh StageAttempt and provider thread'));
+    if (role !== 'producer') {
+      const projected = prompt.match(/<opl_finding_closure_contract>\n([^\n]+)\n<\/opl_finding_closure_contract>/);
+      assert.ok(projected);
+      assert.deepEqual(JSON.parse(projected[1]!), contract.finding_closure_contract);
+      assert.equal(prompt.split('<opl_finding_closure_contract>').length - 1, 1);
+    }
+    if (role === 'reviewer' || role === 're_reviewer') {
+      for (const branch of ['same_stage_repair_required', 'cross_stage_route_back_before_budget_exhaustion', 'final_budget_consumable']) {
+        assert.ok(prompt.includes(branch));
+      }
+      assert.ok(prompt.includes('max_repair_rounds=0'));
+      assert.ok(prompt.includes('Do not edit the reviewed artifact'));
+    }
+  }
+});
+
+test('runner keeps bound historical role bytes and digest after the live supplement changes', (t) => {
+  const fixture = promptFixture(t, rolePrompt);
+  const ref = `${fixture.ref}#reviewer`;
+  const frozen = readStandardAgentQualityRolePromptFile(fixture.root, ref);
+  fs.writeFileSync(path.join(fixture.root, fixture.ref), rolePrompt.replace('Review without editing.', 'Inspect current medical evidence.'), 'utf8');
+  const current = readStandardAgentQualityRolePromptFile(fixture.root, ref);
+  assert.notEqual(current.sha256, frozen.sha256);
+  const prompt = runnerPromptFor({
+    attempt: { stage_attempt_id: 'sat_frozen_protocol', stage_id: 'review', attempt_role: 'reviewer', quality_role_prompt_ref: ref },
+    effectiveQualityRolePrompt: frozen,
+  });
+  assert.ok(prompt.includes(frozen.content));
+  assert.ok(prompt.includes(`Quality role prompt SHA-256: ${frozen.sha256}`));
+  assert.equal(prompt.includes(current.content), false);
 });

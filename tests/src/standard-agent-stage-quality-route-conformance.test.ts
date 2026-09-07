@@ -92,21 +92,19 @@ const alignedRolePrompt = `# Stage Quality Cycle Roles
 
 ## Producer
 
-Produce the Stage artifact. A primary-only producer may be decisive; a formal-Review producer is not.
+Produce the domain artifact.
 
 ## Reviewer
 
-\`same_stage_repair_required\`: while budget remains, repair inside this Stage.
-\`cross_stage_route_back_before_budget_exhaustion\`: when another declared Stage is the narrowest owner, return repair_required plus route_back to that Stage.
+Inspect the medical evidence and identify the canonical defect owner.
 
 ## Repairer
 
-Repair accepted findings without selecting a terminal Stage route.
+Repair the medical evidence within the inherited domain scope.
 
 ## Re Reviewer
 
-\`same_stage_repair_required\`: while budget remains, continue the fresh repair loop in this Stage.
-\`cross_stage_route_back_before_budget_exhaustion\`: when another declared Stage is the narrowest owner, return repair_required plus route_back to that Stage.
+Reassess the affected medical evidence against the original criteria.
 `;
 
 test('stage quality route prompt conformance is inactive for missing or orphan policy files', () => {
@@ -209,7 +207,7 @@ test('stage quality route prompt conformance rejects an ambiguous budget-only re
   );
 });
 
-test('every policy-referenced repair_required prompt must name both repair branches', () => {
+test('policy-referenced prompts need no copies of the Framework repair branches', () => {
   for (const wording of [
     'repair budget remaining',
     'another repair round remains',
@@ -225,14 +223,10 @@ test('every policy-referenced repair_required prompt must name both repair branc
     );
 
     const checks = buildStageQualityRoutePromptAlignmentChecks(repoDir);
-    assert.equal(checks.status, 'blocked');
-    assert.equal(checks.repair_required_prompt_refs.includes(stage.prompt_ref), true);
-    assert.equal(
-      checks.blockers.includes(
-        `stage_quality_route_prompt_marker_missing:repair_required_prompt:${stage.prompt_ref}:same_stage_repair_required`,
-      ),
-      true,
-    );
+    assert.equal(checks.status, 'passed');
+    assert.deepEqual(checks.required_review_route_prompt_markers, []);
+    assert.deepEqual(checks.repair_required_prompt_refs, []);
+    assert.deepEqual(checks.blockers, []);
   }
 
   const unrelatedRepo = buildReadyAgentRepo();
@@ -290,57 +284,28 @@ test('stage quality route prompt conformance accepts a policy symlink that stays
   assert.deepEqual(checks.blockers, []);
 });
 
-test('agents conformance fails closed when a reviewer fragment omits the cross-stage early route-back branch', async () => {
+test('agents conformance accepts professional fragments without protocol copies', async () => {
   const repoDir = buildReadyAgentRepo();
-  writeQualityRoutePolicy(repoDir, alignedRolePrompt.replace(
-    /`cross_stage_route_back_before_budget_exhaustion`[^\n]*\n/,
-    '',
-  ));
-
+  writeQualityRoutePolicy(repoDir, alignedRolePrompt);
   const report = (await runCliReadOnly([
-    'agents',
-    'conformance',
-    '--agent',
-    `sample=${repoDir}`,
+    'agents', 'conformance', '--agent', `sample=${repoDir}`,
   ])).standard_domain_agent_conformance;
   const checks = report.reports[0].stage_quality_route_prompt_alignment_checks;
-
-  assert.equal(report.status, 'blocked');
-  assert.equal(checks.status, 'blocked');
-  assert.equal(
-    checks.blockers.includes(
-      'stage_quality_route_prompt_marker_missing:reviewer:agent/prompts/stage-quality-cycle-roles.md#reviewer:cross_stage_route_back_before_budget_exhaustion',
-    ),
-    true,
-  );
+  assert.equal(checks.status, 'passed');
+  assert.deepEqual(checks.blockers, []);
 });
 
-test('reviewer and re-reviewer fragments each require both route markers', () => {
+test('reviewer and re-reviewer fragment references must still resolve', () => {
   for (const role of [
     { heading: 'Reviewer', role: 'reviewer', fragment: 'reviewer' },
     { heading: 'Re Reviewer', role: 're_reviewer', fragment: 're-reviewer' },
   ]) {
-    for (const marker of [
-      'same_stage_repair_required',
-      'cross_stage_route_back_before_budget_exhaustion',
-    ]) {
-      const sectionStart = alignedRolePrompt.indexOf(`## ${role.heading}`);
-      const sectionEnd = alignedRolePrompt.indexOf('\n## ', sectionStart + 3);
-      const end = sectionEnd === -1 ? alignedRolePrompt.length : sectionEnd;
-      const section = alignedRolePrompt.slice(sectionStart, end);
-      const linePattern = new RegExp(`^.*${marker}.*\\n?`, 'm');
-      const rolePrompt = `${alignedRolePrompt.slice(0, sectionStart)}${section.replace(linePattern, '')}${alignedRolePrompt.slice(end)}`;
-      const repoDir = buildReadyAgentRepo();
-      writeQualityRoutePolicy(repoDir, rolePrompt);
-
-      const checks = buildStageQualityRoutePromptAlignmentChecks(repoDir);
-      assert.equal(checks.status, 'blocked');
-      assert.equal(
-        checks.blockers.includes(
-          `stage_quality_route_prompt_marker_missing:${role.role}:agent/prompts/stage-quality-cycle-roles.md#${role.fragment}:${marker}`,
-        ),
-        true,
-      );
-    }
+    const repoDir = buildReadyAgentRepo();
+    writeQualityRoutePolicy(repoDir, alignedRolePrompt.replace(`## ${role.heading}\n`, `## Missing ${role.heading}\n`));
+    const checks = buildStageQualityRoutePromptAlignmentChecks(repoDir);
+    assert.equal(checks.status, 'blocked');
+    assert.equal(checks.blockers.includes(
+      `stage_quality_route_prompt_ref_invalid:${role.role}:agent/prompts/stage-quality-cycle-roles.md#${role.fragment}`,
+    ), true);
   }
 });

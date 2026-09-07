@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 
 import pytest
 
 from opl_framework.artifact_inspection import (
     ContainedFileReadError,
+    fingerprint_contained_regular_file,
     inspect_pdf_fonts,
     inspect_png_visual_metrics,
     read_contained_regular_file,
@@ -79,3 +81,61 @@ def test_rendered_document_inspection_reports_raw_unavailable_state(
     assert metrics["visual_scan_error"] == "rendered page PNG missing"
     assert "density_status" not in metrics
     assert "trailing_whitespace_status" not in metrics
+
+
+def test_fingerprint_streams_large_files_without_collecting_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    data = b"0123456789" * 400_000
+    artifact = tmp_path / "large.bin"
+    artifact.write_bytes(data)
+    original_read = os.read
+    reads: list[int] = []
+
+    def bounded_read(descriptor: int, size: int) -> bytes:
+        reads.append(size)
+        assert size <= 1024 * 1024
+        return original_read(descriptor, size)
+
+    monkeypatch.setattr(os, "read", bounded_read)
+    assert fingerprint_contained_regular_file(tmp_path, artifact.name) == (len(data), sha256_bytes(data))
+    assert len(reads) > 2
+
+
+@pytest.mark.parametrize("change", ["mutate", "replace"])
+def test_fingerprint_rejects_file_changes_during_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change: str,
+) -> None:
+    artifact = tmp_path / "artifact.bin"
+    artifact.write_bytes(b"original")
+    original_read = os.read
+    changed = False
+
+    def racing_read(descriptor: int, size: int) -> bytes:
+        nonlocal changed
+        result = original_read(descriptor, size)
+        if not changed:
+            changed = True
+            if change == "replace":
+                artifact.unlink()
+            artifact.write_bytes(b"modified")
+        return result
+
+    monkeypatch.setattr(os, "read", racing_read)
+    with pytest.raises(ContainedFileReadError) as raised:
+        fingerprint_contained_regular_file(tmp_path, artifact.name)
+    assert raised.value.code == "identity_changed"
+
+
+def test_fingerprint_rejects_symlink_roots_and_path_components(tmp_path: Path) -> None:
+    root = tmp_path / "physical"
+    root.mkdir()
+    (root / "artifact.bin").write_bytes(b"bytes")
+    link = tmp_path / "linked"
+    link.symlink_to(root, target_is_directory=True)
+    with pytest.raises(ContainedFileReadError) as raised:
+        fingerprint_contained_regular_file(link, "artifact.bin")
+    assert raised.value.code == "root_not_directory"
+    with pytest.raises(ContainedFileReadError) as raised:
+        fingerprint_contained_regular_file(tmp_path, "linked/artifact.bin")
+    assert raised.value.code == "ref_symlink"

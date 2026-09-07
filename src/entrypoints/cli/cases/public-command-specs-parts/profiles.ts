@@ -38,10 +38,10 @@ function aliasedOptionStrings(
 
 export function buildProfileCommandSpecs(): Record<string, CommandSpec> {
   const selectSpec: CommandSpec = {
-    usage: 'opl profiles select --intent <intent text> [--intent-signal <canonical-signal>] [--reference-source <source-ref>] [--pattern-packet <packet-ref>]',
-    summary: 'Return a refs-only profile-selection receipt; canonical intent signals match catalog triggers exactly, while reference sources remain the design source.',
+    usage: 'opl profiles select --intent <intent text> [--profile <profile-id-or-ref>] [--intent-signal <canonical-signal>] [--reference-source <source-ref>] [--pattern-packet <packet-ref>]',
+    summary: 'Return a refs-only selection from an explicit profile or exact canonical intent signals; natural-language interpretation belongs to the Agent engineering provider, while reference sources remain the design source.',
     examples: [
-      'opl profiles select --intent "colorectal surgery risk decision support with guideline evidence" --json',
+      'opl profiles select --intent "colorectal surgery risk decision support with guideline evidence" --intent-signal risk --json',
       'opl profiles select --intent "workshop scheduling agent" --reference-source paper-ref:uploaded-framework --json',
     ],
     group: 'profiles',
@@ -55,6 +55,12 @@ export function buildProfileCommandSpecs(): Record<string, CommandSpec> {
           value_kind: 'string',
           summary: 'Target agent intent text.',
           required: true,
+        },
+        {
+          name: 'profile',
+          flag: '--profile',
+          value_kind: 'string',
+          summary: 'Explicit catalog profile id or ref; overrides intent-signal routing.',
         },
         {
           name: 'intent-signal',
@@ -79,6 +85,9 @@ export function buildProfileCommandSpecs(): Record<string, CommandSpec> {
     handler: (args) => {
       const options = parseRegisteredCommandOptions('profiles select', args, selectSpec);
       const selectionArgs = ['--intent', String(options.intent)];
+      if (typeof options.profile === 'string') {
+        selectionArgs.push('--profile', options.profile);
+      }
       optionStrings(options['intent-signal'])
         .forEach((value) => selectionArgs.push('--intent-signal', value));
       aliasedOptionStrings(options, PROFILE_REFERENCE_SOURCE_OPTIONS)

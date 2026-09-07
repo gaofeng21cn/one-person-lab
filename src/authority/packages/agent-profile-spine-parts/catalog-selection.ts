@@ -646,14 +646,18 @@ export function buildAgentProfileSelection(args: string[]) {
     .map((profile) => ({
       profile,
       matched_trigger_signals: matchedProfileTriggerSignals(
-        intent,
         parsed.intent_signals,
         profile.trigger_signals,
       ),
     }))
-    .filter((candidate) => candidate.matched_trigger_signals.length > 0);
-  const selected = candidates[0] ?? null;
-  const sourceDerivedReceipt = hasReferenceDesignSignal
+    .filter((candidate) => parsed.profile_ref
+      ? candidate.profile.profile_id === parsed.profile_ref || candidate.profile.profile_ref === parsed.profile_ref
+      : candidate.matched_trigger_signals.length > 0);
+  const selectionBlockers = parsed.profile_ref && candidates.length === 0
+    ? [`unknown_profile:${parsed.profile_ref}`]
+    : candidates.length > 1 ? ['ambiguous_profile_selection'] : [];
+  const selected = selectionBlockers.length === 0 ? candidates[0] ?? null : null;
+  const sourceDerivedReceipt = hasReferenceDesignSignal && selectionBlockers.length === 0
     ? buildSourceDerivedDesignReceipt(parsed)
     : null;
   const profileSelectionMode: ProfileSelectionMode | null = selected
@@ -700,7 +704,11 @@ export function buildAgentProfileSelection(args: string[]) {
       version: 'profile-selection-receipt.v1',
       status: selected || sourceDerivedReceipt ? 'selected' : 'blocked',
       intent,
+      requested_profile_ref: parsed.profile_ref,
       intent_signals: parsed.intent_signals,
+      selection_basis: selected
+        ? (parsed.profile_ref ? 'explicit_profile' : 'explicit_intent_signals')
+        : (sourceDerivedReceipt ? 'reference_design_sources' : null),
       profile_selection_mode: profileSelectionMode,
       selected_profile_id: selectedProfileId,
       selected_profile_ref: selectedProfileRef,
@@ -714,9 +722,14 @@ export function buildAgentProfileSelection(args: string[]) {
       stage_archetype_candidates: sourceDerivedReceipt?.stage_archetype_candidates ?? [],
       capability_plan_requirements: sourceDerivedReceipt?.capability_plan_requirements ?? [],
       profile_requirements: profileRequirements,
-      blockers: selected || sourceDerivedReceipt ? [] : ['no_profile_trigger_match'],
+      blockers: selectionBlockers.length > 0
+        ? selectionBlockers
+        : selected || sourceDerivedReceipt ? [] : [
+            parsed.intent_signals.length > 0 ? 'no_profile_trigger_match' : 'semantic_profile_selection_required',
+          ],
       authority_boundary: {
         refs_only: true,
+        selector_interprets_natural_language: false,
         selector_can_write_domain_truth: false,
         selector_can_create_owner_receipt: false,
         selector_can_claim_domain_ready: false,

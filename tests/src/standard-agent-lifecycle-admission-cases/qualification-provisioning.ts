@@ -63,7 +63,8 @@ test('internal-only lifecycle authority action rejects external invocation befor
   }
 });
 
-test('trusted qualification provisioning CLI route materializes MAS bytes and replays idempotently', async () => {
+for (const customIdentity of [false, true]) {
+test(`trusted qualification provisioning materializes owner bytes and replays with ${customIdentity ? 'custom' : 'MAS'} identity`, async () => {
   const fixtureRoot = temporaryRoot('opl-qualification-provisioning-');
   const checkoutRoot = path.join(fixtureRoot, 'checkout');
   const workspaceRoot = path.join(fixtureRoot, 'workspace');
@@ -76,6 +77,29 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
     fs.mkdirSync(workspaceRoot, { recursive: true });
     writeLifecycleContracts(checkoutRoot);
     writeNativeCarrierDescriptor(checkoutRoot);
+    const idField = customIdentity ? 'case_id' : 'study_id';
+    const rootField = customIdentity ? 'case_root' : 'canonical_study_root';
+    const identityField = customIdentity ? 'case_identity' : 'study_identity';
+    const rootDirectory = customIdentity ? 'cases' : 'studies';
+    const lifecycleSuffix = customIdentity ? 'state/current.json' : 'control/lifecycle.json';
+    const receiptSuffix = customIdentity ? 'receipts/provision.json' : 'artifacts/controller/qualification/provisioning-receipt.json';
+    if (customIdentity) {
+      const profilePath = path.join(checkoutRoot, 'contracts', 'qualification-provisioning.json');
+      const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+      profile.host_validation_profile.identity_output_field = identityField;
+      profile.host_validation_profile.work_item_id_field = idField;
+      profile.host_validation_profile.work_item_root_field = rootField;
+      profile.workspace_binding.work_item_root_template = `${rootDirectory}/{${idField}}`;
+      profile.workspace_binding.lifecycle_target_template = `${rootDirectory}/{${idField}}/${lifecycleSuffix}`;
+      profile.workspace_binding.receipt_target_template = `${rootDirectory}/{${idField}}/${receiptSuffix}`;
+      const profileBytes = canonicalJsonBytes(profile);
+      fs.writeFileSync(profilePath, profileBytes);
+      const catalogPath = path.join(checkoutRoot, 'contracts', 'action_catalog.json');
+      const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+      catalog.actions.find((action: { action_id: string }) => action.action_id === profile.action_id)
+        .authority_boundary.qualification_provisioning_contract.sha256 = digest(profileBytes);
+      fs.writeFileSync(catalogPath, JSON.stringify(catalog));
+    }
     const canonicalWorkspaceRoot = fs.realpathSync.native(workspaceRoot);
     const issuedAt = '2026-07-22T00:00:00.000Z';
     const authorityRecord = {
@@ -99,8 +123,9 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
     const authorityBytes = canonicalJsonBytes(authorityRecord);
     const authoritySha256 = digest(authorityBytes);
     const studyId = `qualification-${authoritySha256}`;
-    const studyRoot = `studies/${studyId}`;
-    const receiptRelativePath = `${studyRoot}/artifacts/controller/qualification/provisioning-receipt.json`;
+    const studyRoot = `${rootDirectory}/${studyId}`;
+    const lifecycleRelativePath = `${studyRoot}/${lifecycleSuffix}`;
+    const receiptRelativePath = `${studyRoot}/${receiptSuffix}`;
     const workspaceIndexBytes = canonicalJsonBytes({ studies: [{ study_id: studyId, status: 'qualification_only' }] });
     const lifecycleBytes = canonicalJsonBytes({
       study_id: studyId,
@@ -117,8 +142,8 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
       domain_owner: 'MedAutoScience',
       domain_id: 'medautoscience',
       canonical_workspace_root: canonicalWorkspaceRoot,
-      study_id: studyId,
-      canonical_study_root: studyRoot,
+      [idField]: studyId,
+      [rootField]: studyRoot,
       lifecycle_state: 'active',
       lifecycle_generation: 1,
       qualification_scope: 'standard_agent_full_vm_qualification',
@@ -130,7 +155,7 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
       workspace_index_ref: 'workspace_index.json',
       workspace_index_before_sha256: null,
       workspace_index_after_sha256: `sha256:${digest(workspaceIndexBytes)}`,
-      lifecycle_relative_path: `${studyRoot}/control/lifecycle.json`,
+      lifecycle_relative_path: lifecycleRelativePath,
       lifecycle_sha256: `sha256:${digest(lifecycleBytes)}`,
       receipt_relative_path: receiptRelativePath,
       issued_at: issuedAt,
@@ -148,7 +173,7 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
     };
     const replacements = [
       { relative: 'workspace_index.json', bytes: workspaceIndexBytes },
-      { relative: `${studyRoot}/control/lifecycle.json`, bytes: lifecycleBytes },
+      { relative: lifecycleRelativePath, bytes: lifecycleBytes },
       { relative: receiptRelativePath, bytes: canonicalJsonBytes(receipt) },
     ];
     const operations = replacements.map(({ relative, bytes }) => ({
@@ -170,7 +195,7 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
       surface_kind: 'mas_qualification_work_item_provisioning_authority_result',
       schema_version: 1,
       status: 'authorized',
-      study_identity: { study_id: studyId, canonical_study_root: studyRoot },
+      [identityField]: { [idField]: studyId, [rootField]: studyRoot },
       provisioning_receipt: receipt,
       provisioning_receipt_content_binding: {
         surface_kind: 'mas_qualification_work_item_provisioning_receipt_content_binding',
@@ -257,6 +282,7 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
 
     const tamperCases: Array<{
       label: string;
+      schemaFailure?: boolean;
       mutate: (candidate: typeof output) => void;
     }> = [
       {
@@ -265,11 +291,18 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
       },
       {
         label: 'authorization surface',
+        schemaFailure: true,
         mutate: (candidate) => { delete (candidate.mas_qualification_work_item_cas_mutation_authorization as any).surface_kind; },
       },
       {
         label: 'authorization version',
+        schemaFailure: true,
         mutate: (candidate) => { delete (candidate.mas_qualification_work_item_cas_mutation_authorization as any).version; },
+      },
+      {
+        label: 'owner lifecycle state',
+        schemaFailure: true,
+        mutate: (candidate) => { candidate.provisioning_receipt.lifecycle_state = 'archived'; },
       },
       {
         label: 'operation count',
@@ -291,7 +324,9 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
           ...input,
           runId: `qualification-provisioning-tamper-${index}`,
         }, dependencies),
-        (error: any) => error.details?.failure_code === 'qualification_provisioning_contract_mismatch',
+        (error: any) => tamper.schemaFailure
+          ? error.code === 'contract_shape_invalid' && error.details?.schema_ref === 'contracts/qualification-provisioning-output.schema.json'
+          : error.details?.failure_code === 'qualification_provisioning_contract_mismatch',
         tamper.label,
       );
       assert.equal(materializationCalls, 0, tamper.label);
@@ -301,6 +336,19 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
     }
     handlerOutput = output;
 
+    const ownerContractPath = path.join(checkoutRoot, 'contracts', 'qualification-provisioning.json');
+    const ownerContractBytes = fs.readFileSync(ownerContractPath);
+    const changedContract = JSON.parse(ownerContractBytes.toString('utf8'));
+    changedContract.workspace_binding.lifecycle_target_template = 'unbound/{study_id}.json';
+    fs.writeFileSync(ownerContractPath, JSON.stringify(changedContract));
+    await assert.rejects(
+      runStandardAgentQualificationProvisioning({ ...input, runId: 'qualification-owner-digest-mismatch' }, dependencies),
+      (error: any) => error.details?.failure_code === 'qualification_provisioning_contract_mismatch',
+    );
+    assert.equal(handlerCalls, tamperCases.length);
+    assert.equal(materializationCalls, 0);
+    fs.writeFileSync(ownerContractPath, ownerContractBytes);
+
     const first = await runStandardAgentQualificationProvisioning(input, dependencies);
     const replay = await runStandardAgentQualificationProvisioning(input, dependencies);
     const firstRun = first.standard_agent_action_run;
@@ -308,12 +356,12 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
     assert.ok('result' in firstRun);
     assert.ok('host_materialization' in firstRun);
     assert.ok('host_materialization' in replayRun);
-    const firstResult = firstRun.result as { study_identity: { study_id: string } };
+    const firstResult = firstRun.result as Record<string, Record<string, string>>;
     const firstMaterialization = firstRun.host_materialization as { receipt_path: string } | null;
     const replayMaterialization = replayRun.host_materialization as { receipt_path: string } | null;
     assert.ok(firstMaterialization);
     assert.ok(replayMaterialization);
-    assert.equal(firstResult.study_identity.study_id, studyId);
+    assert.equal(firstResult[identityField]![idField], studyId);
     assert.equal(firstMaterialization.receipt_path, replayMaterialization.receipt_path);
     assert.equal(handlerCalls, tamperCases.length + 1);
     assert.equal(materializationCalls, 2);
@@ -341,9 +389,59 @@ test('trusted qualification provisioning CLI route materializes MAS bytes and re
       workspaceRoot,
       runId: 'qualification-contract-mismatch',
     }), null);
+
+    const runStateRoot = path.join(canonicalWorkspaceRoot, 'control', 'opl', 'action_run_state', input.runId);
+    const planPath = path.join(runStateRoot, 'plan.json');
+    const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+    const frozenAction = plan.catalog.actions.find((candidate: { action_id: string }) => candidate.action_id === input.actionId);
+    delete frozenAction.authority_boundary.qualification_provisioning_contract;
+    const bindingPath = path.join(runStateRoot, 'binding.json');
+    const binding = JSON.parse(fs.readFileSync(bindingPath, 'utf8'));
+    binding.hosted_runtime_binding.action_contracts_sha256 = `sha256:${digest(canonicalJsonBytes({
+      action_catalog: plan.catalog, handler_registry: plan.handler_registry,
+    }))}`;
+    binding.hosted_runtime_binding_ref = `opl://hosted-agent-runtime-binding/sha256/${digest(canonicalJsonBytes(binding.hosted_runtime_binding))}`;
+    plan.hosted_runtime_binding_ref = binding.hosted_runtime_binding_ref;
+    const legacyPlanBytes = canonicalJsonBytes(plan);
+    fs.writeFileSync(planPath, legacyPlanBytes);
+    binding.plan_sha256 = digest(legacyPlanBytes);
+    binding.plan_byte_size = legacyPlanBytes.byteLength;
+    fs.writeFileSync(bindingPath, canonicalJsonBytes(binding));
+    const completionPath = path.join(runStateRoot, 'completion.json');
+    const completion = JSON.parse(fs.readFileSync(completionPath, 'utf8'));
+    completion.hosted_runtime_binding_ref = binding.hosted_runtime_binding_ref;
+    fs.writeFileSync(completionPath, canonicalJsonBytes(completion));
+    const casReceipt = JSON.parse(fs.readFileSync(firstMaterialization.receipt_path, 'utf8'));
+    casReceipt.domain_authority_result.hosted_runtime_binding_ref = binding.hosted_runtime_binding_ref;
+    fs.writeFileSync(firstMaterialization.receipt_path, canonicalJsonBytes(casReceipt));
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+
+    const snapshot = () => [stateRoot, canonicalWorkspaceRoot].flatMap((root) => (
+      fs.readdirSync(root, { recursive: true, encoding: 'utf8' }).sort().map((relative) => {
+        const file = path.join(root, relative);
+        const stat = fs.statSync(file);
+        return [file, stat.mtimeMs, stat.isFile() ? digest(fs.readFileSync(file)) : null];
+      })
+    ));
+    const beforeLegacyReplay = snapshot();
+    const legacyReplay = await runStandardAgentQualificationProvisioning(input, dependencies);
+    assert.ok('result' in legacyReplay.standard_agent_action_run);
+    assert.deepEqual(legacyReplay.standard_agent_action_run.result, firstResult);
+    assert.deepEqual(snapshot(), beforeLegacyReplay, 'completed legacy replay must only read existing CAS state');
+    assert.equal(handlerCalls, tamperCases.length + 1);
+
+    fs.unlinkSync(firstMaterialization.receipt_path);
+    const beforeMissingReceiptReplay = snapshot();
+    await assert.rejects(
+      runStandardAgentQualificationProvisioning(input, dependencies),
+      /existing settled CAS receipt/,
+    );
+    assert.deepEqual(snapshot(), beforeMissingReceiptReplay, 'missing receipt must not recreate CAS state or artifacts');
+    assert.equal(handlerCalls, tamperCases.length + 1);
   } finally {
     if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateRoot;
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
+}
