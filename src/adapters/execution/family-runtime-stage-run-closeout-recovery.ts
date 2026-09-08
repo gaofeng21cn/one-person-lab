@@ -48,14 +48,14 @@ import {
   verifyStageQualityCloseoutArtifactIdentity,
 } from './family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
-import type { StageRouteRecommendation } from '../../authority/stages/stage-quality-route-selection.ts';
 import {
   validateStageQualityFindings,
   validateStageQualityRepairMap,
+  type StageRouteRecommendation,
   type StageQualityFinding,
   type StageQualityRepairMapEntry,
   type StageReviewReceipt,
-} from '../../authority/stages/stage-quality-cycle.ts';
+} from '../../authority/stages/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 
