@@ -619,6 +619,11 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   if (!runInSandbox && !sessionUsageRef) {
     sessionUsageRef = extractCodexSessionUsageRef(recoverCodexExecOutputFromSession(parsed.threadId));
   }
+  const rawStageArtifact = persistRawStageOutput({
+    attempt: input.attempt,
+    content: capturedLastMessage.message ?? parsed.finalMessage ?? recoveredRawMessage,
+    observedAt: input.observedAt,
+  });
   const attemptRole = optionalString(input.attempt.attempt_role);
   if (
     !runInSandbox
@@ -640,7 +645,8 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       );
       const resumeArgs = buildCodexExecResumeArgs(
         parsed.threadId,
-        protocolCloseoutResumePrompt(input.attempt),
+        protocolCloseoutResumePrompt(input.attempt,
+          attemptRole === 'reviewer' || attemptRole === 're_reviewer' ? rawStageArtifact : null),
         {
           ...codexCloseoutCaptureExecOptions({
             codexExecOptions,
@@ -741,11 +747,6 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       value: protocolCloseoutResumeStatus,
     });
   }
-  const rawStageArtifact = persistRawStageOutput({
-    attempt: input.attempt,
-    content: capturedLastMessage.message ?? parsed.finalMessage ?? recoveredRawMessage,
-    observedAt: input.observedAt,
-  });
   const providerErrorSummary = summarizeCodexProviderErrors(result.providerErrors);
   const providerUnavailable =
     result.timeoutReason === 'provider_unavailable'
