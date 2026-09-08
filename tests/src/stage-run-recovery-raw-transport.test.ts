@@ -5,13 +5,15 @@ import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import { findStageRunLaunch } from '../../src/adapters/execution/family-runtime-stage-run-launch-registry.ts';
 import { parseRawOutputForCloseoutRecovery, recoverStageRunCloseoutProjection } from '../../src/adapters/execution/family-runtime-stage-run-closeout-recovery.ts';
 import { createStageAttempt, ingestStageAttemptCloseout, inspectStageAttempt } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
 import { createStageQualityCycle } from '../../src/adapters/execution/family-runtime-stage-quality-cycle.ts';
 import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
 import { createFamilyRuntimeQueueTables, registerStageRunLaunch, recordStageRunTemporalStart, recordStageRunClosed, scopedStageRunInput, temporalStartReceipt } from './family-runtime-stage-run-launch-cases/shared.ts';
 
-test('accepted protocol closeout supersedes parseable stale raw before artifact validation', async () => {
+for (const missingTerminalProjection of [false, true]) {
+test(`accepted protocol closeout supersedes stale raw (missing terminal projection: ${missingTerminalProjection})`, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-accepted-closeout-recovery-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = root;
@@ -50,16 +52,25 @@ test('accepted protocol closeout supersedes parseable stale raw before artifact 
     };
     ingestStageAttemptCloseout(db, { stageAttemptId: attempt.stage_attempt_id, packet });
     recordStageRunTemporalStart(db, { stageRunId: input.stage_run_id, temporalStartReceipt: temporalStartReceipt(input, 'COMPLETED') });
-    recordStageRunClosed(db, { stageRunId: input.stage_run_id, terminalStatus: 'completed_with_quality_debt' });
+    if (!missingTerminalProjection) {
+      recordStageRunClosed(db, { stageRunId: input.stage_run_id, terminalStatus: 'completed_with_quality_debt' });
+    }
     const accepted = inspectStageAttempt(db, attempt.stage_attempt_id);
     assert.equal(accepted.status, 'completed');
     assert.equal(accepted.closeout_receipt_status, 'accepted_typed_closeout');
     await assert.rejects(() => recoverStageRunCloseoutProjection(db, {
       stageRunId: input.stage_run_id, stageAttemptId: attempt.stage_attempt_id,
-    }, { startWorkflow: async () => assert.fail('missing artifact identity must not launch') }), (error: any) => {
+    }, { startWorkflow: async () => assert.fail('missing artifact identity must not launch'),
+      describeWorkflow: async () => ({ ...temporalStartReceipt(input, 'COMPLETED'), workflow_found: true }),
+    }), (error: any) => {
       assert.equal(error.details.failure_code, 'stage_quality_attempt_without_consumable_artifact');
       return true;
     });
+    if (missingTerminalProjection) {
+      const launch = findStageRunLaunch(db, input.stage_run_id)!;
+      assert.equal(launch.launch_status, 'closed');
+      assert.equal(launch.terminal_status, 'completed');
+    }
     assert.deepEqual(fs.readFileSync(new URL(raw.output_ref)), originalBytes);
   } finally {
     db.close();
@@ -68,6 +79,8 @@ test('accepted protocol closeout supersedes parseable stale raw before artifact 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+}
 
 test('recovery does not promote persisted raw transport into domain evidence', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-raw-recovery-'));

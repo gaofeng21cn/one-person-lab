@@ -8,6 +8,7 @@ import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { ensureOplStateDir } from '../../../kernel/runtime-state-paths.ts';
 import {
   captureWorkItemRootIdentity,
+  workItemRootIdentityContinues,
   readStableWorkItemFile,
   requireWorkItemRootIdentity,
   type WorkItemRootIdentity,
@@ -58,6 +59,7 @@ export type VerifiedFrameworkRawProgress = {
 };
 
 export type RecoveredFrameworkRawArtifact = {
+  root_identity_continuation?: { expected: WorkItemRootIdentity; observed: WorkItemRootIdentity };
   output_ref: string;
   metadata_ref: string;
   sha256: string;
@@ -569,7 +571,7 @@ export function recoverFrameworkRawArtifactForAttempt(
     || typeof declaredSizeBytes !== 'number'
     || !Number.isSafeInteger(declaredSizeBytes)
     || declaredSizeBytes <= 0
-    || JSON.stringify(persistedPhysicalLineage) !== JSON.stringify(rootIdentity)
+    || !workItemRootIdentityContinues(persistedPhysicalLineage, rootIdentity)
     || !optionalString(provenance.observed_at)
     || provenance.artifact_is_domain_truth !== false
     || provenance.artifact_is_owner_receipt !== false
@@ -611,6 +613,9 @@ export function recoverFrameworkRawArtifactForAttempt(
     metadata_ref: pathToFileURL(location.metadataPath).href,
     sha256: declaredSha256,
     size_bytes: declaredSizeBytes,
+    ...(persistedPhysicalLineage.boot_uuid && persistedPhysicalLineage.boot_uuid !== rootIdentity.boot_uuid ? {
+      root_identity_continuation: { expected: persistedPhysicalLineage, observed: rootIdentity },
+    } : {}),
   };
 }
 
@@ -756,7 +761,7 @@ export function verifyFrameworkRawProgressEnvelope(input: {
     || provenance.output_ref !== artifactRef
     || provenance.sha256 !== rawHash
     || provenance.size_bytes !== rawSize
-    || JSON.stringify(persistedPhysicalLineage) !== JSON.stringify(rootIdentity)
+    || !workItemRootIdentityContinues(persistedPhysicalLineage, rootIdentity)
     || !optionalString(provenance.observed_at)
     || provenance.artifact_is_domain_truth !== false
     || provenance.artifact_is_owner_receipt !== false

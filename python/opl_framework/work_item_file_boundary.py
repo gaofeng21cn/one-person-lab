@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
+import ctypes
 import hashlib
 import json
 import os
 import stat
 import sys
 import time
+import uuid
 from typing import Any
 
 
 READ_CHUNK_BYTES = 64 * 1024
 ROOT_IDENTITY_VERSION = "opl-work-item-root-identity.v1"
+VOLUME_ROOT_IDENTITY_VERSION = "opl-work-item-root-identity.v2"
 
 
 class BoundaryError(RuntimeError):
@@ -160,6 +163,73 @@ def _root_identity(workspace_stat: os.stat_result, work_item_stat: os.stat_resul
     }
 
 
+def _volume_boot_identity(workspace_descriptor: int, root_descriptor: int) -> dict[str, str] | None:
+    """Read volume UUIDs from the held descriptors, never a second path lookup."""
+    if sys.platform != "darwin":
+        return None
+
+    class AttrList(ctypes.Structure):
+        _fields_ = [("bitmapcount", ctypes.c_uint16), ("reserved", ctypes.c_uint16),
+                    ("common", ctypes.c_uint32), ("volume", ctypes.c_uint32),
+                    ("directory", ctypes.c_uint32), ("file", ctypes.c_uint32),
+                    ("fork", ctypes.c_uint32)]
+
+    try:
+        libc = ctypes.CDLL("/usr/lib/libSystem.B.dylib", use_errno=True)
+        libc.fgetattrlist.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p,
+                                     ctypes.c_size_t, ctypes.c_ulong]
+        libc.fgetattrlist.restype = ctypes.c_int
+        libc.sysctlbyname.argtypes = [ctypes.c_char_p, ctypes.c_void_p,
+                                     ctypes.POINTER(ctypes.c_size_t), ctypes.c_void_p, ctypes.c_size_t]
+        libc.sysctlbyname.restype = ctypes.c_int
+        volumes = []
+        for descriptor in (workspace_descriptor, root_descriptor):
+            # sys/attr.h: ATTR_VOL_INFO | ATTR_VOL_UUID; packed result is length + uuid_t.
+            attrs = AttrList(5, 0, 0, 0x80040000, 0, 0, 0)
+            output = ctypes.create_string_buffer(20)
+            if libc.fgetattrlist(descriptor, ctypes.byref(attrs), output, len(output), 0) != 0:
+                return None
+            if int.from_bytes(output.raw[:4], sys.byteorder) != 20:
+                return None
+            volume = uuid.UUID(bytes=output.raw[4:20])
+            if volume.int == 0:
+                return None
+            volumes.append(str(volume))
+        boot = ctypes.create_string_buffer(128)
+        size = ctypes.c_size_t(len(boot))
+        if libc.sysctlbyname(b"kern.bootsessionuuid", boot, ctypes.byref(size), None, 0) != 0:
+            return None
+        boot_uuid = uuid.UUID(boot.value.decode("ascii"))
+        if boot_uuid.int == 0:
+            return None
+        return {"boot_uuid": str(boot_uuid), "workspace_volume_uuid": volumes[0],
+                "work_item_volume_uuid": volumes[1]}
+    except (OSError, AttributeError, ValueError, UnicodeError):
+        return None
+
+
+def _captured_root_identity(workspace_descriptor: int, root_descriptor: int) -> dict[str, str]:
+    identity = _root_identity(os.fstat(workspace_descriptor), os.fstat(root_descriptor))
+    stable = _volume_boot_identity(workspace_descriptor, root_descriptor)
+    if stable is not None:
+        identity.update(stable)
+        identity["version"] = VOLUME_ROOT_IDENTITY_VERSION
+    return identity
+
+
+def _root_identity_continues(expected: dict[str, str], actual: dict[str, str]) -> bool:
+    if expected["version"] == ROOT_IDENTITY_VERSION:
+        legacy = {key: actual[key] for key in expected}
+        legacy["version"] = ROOT_IDENTITY_VERSION
+        return legacy == expected
+    if actual["version"] != VOLUME_ROOT_IDENTITY_VERSION:
+        return False
+    stable_fields = ("workspace_inode", "work_item_inode", "workspace_volume_uuid", "work_item_volume_uuid")
+    if any(expected[field] != actual[field] for field in stable_fields):
+        return False
+    return expected["boot_uuid"] != actual["boot_uuid"] or expected == actual
+
+
 def _expected_root_identity(value: object) -> dict[str, str]:
     expected_fields = {
         "surface_kind",
@@ -169,12 +239,14 @@ def _expected_root_identity(value: object) -> dict[str, str]:
         "work_item_device",
         "work_item_inode",
     }
+    if isinstance(value, dict) and value.get("version") == VOLUME_ROOT_IDENTITY_VERSION:
+        expected_fields.update(("boot_uuid", "workspace_volume_uuid", "work_item_volume_uuid"))
     if not isinstance(value, dict) or set(value) != expected_fields:
         _fail(
             "work_item_file_boundary_root_invalid",
             "Expected root identity must use its exact canonical shape.",
         )
-    if value.get("surface_kind") != "opl_work_item_root_identity" or value.get("version") != ROOT_IDENTITY_VERSION:
+    if value.get("surface_kind") != "opl_work_item_root_identity" or value.get("version") not in (ROOT_IDENTITY_VERSION, VOLUME_ROOT_IDENTITY_VERSION):
         _fail(
             "work_item_file_boundary_root_invalid",
             "Expected root identity has an unsupported envelope.",
@@ -184,6 +256,16 @@ def _expected_root_identity(value: object) -> dict[str, str]:
         field_value = value[field]
         if not isinstance(field_value, str):
             _fail("work_item_file_boundary_root_invalid", "Expected root identity fields must be strings.", field=field)
+        if field.endswith("_uuid"):
+            try:
+                parsed_uuid = uuid.UUID(field_value)
+                if parsed_uuid.int == 0 or str(parsed_uuid) != field_value:
+                    raise ValueError("non-canonical UUID")
+            except ValueError:
+                _fail("work_item_file_boundary_root_invalid", "Root identity UUID is invalid.", field=field)
+        elif field.endswith(("_device", "_inode")):
+            if not field_value.isascii() or not field_value.isdecimal() or str(int(field_value)) != field_value:
+                _fail("work_item_file_boundary_root_invalid", "Root identity decimal is invalid.", field=field)
         result[field] = field_value
     return result
 
@@ -253,18 +335,20 @@ def _open_roots(request: dict[str, object]) -> tuple[int, int, str, str, list[st
 
 
 def _assert_root_attestation(
-    workspace_stat: os.stat_result,
-    root_stat: os.stat_result,
+    workspace_descriptor: int,
+    root_descriptor: int,
     expected: dict[str, str],
-) -> None:
-    actual = _root_identity(workspace_stat, root_stat)
-    if actual != expected:
+) -> dict[str, str]:
+    actual = _captured_root_identity(workspace_descriptor, root_descriptor)
+    if not _root_identity_continues(expected, actual):
         _fail(
             "work_item_file_boundary_root_attestation_mismatch",
             "Canonical work-item root no longer matches its frozen physical attestation.",
             expected_root_identity=expected,
             actual_root_identity=actual,
+            recovery_requirement="legacy identity drift requires explicit operator re-attestation; never infer volume continuity",
         )
+    return actual
 
 
 def _fresh_root_descriptors(
@@ -382,7 +466,7 @@ def _test_interlock(point: str) -> None:
 def _capture_root_identity(request: dict[str, object]) -> dict[str, object]:
     workspace_descriptor, root_descriptor, _, _, root_components = _open_roots(request)
     try:
-        identity = _root_identity(os.fstat(workspace_descriptor), os.fstat(root_descriptor))
+        identity = _captured_root_identity(workspace_descriptor, root_descriptor)
         _assert_root_mapping_stable(request, workspace_descriptor, root_descriptor, root_components)
         return {"root_identity": identity}
     finally:
@@ -450,7 +534,7 @@ def _read_file(request: dict[str, object]) -> dict[str, object]:
     try:
         workspace_stat = os.fstat(workspace_descriptor)
         root_stat = os.fstat(root_descriptor)
-        _assert_root_attestation(workspace_stat, root_stat, expected)
+        actual_root = _assert_root_attestation(workspace_descriptor, root_descriptor, expected)
         _test_interlock("after_root_open")
         _assert_root_mapping_stable(request, workspace_descriptor, root_descriptor, root_components)
         expected_file_physical = os.path.normpath(os.path.join(root_physical, *file_components))
@@ -538,6 +622,8 @@ def _read_file(request: dict[str, object]) -> dict[str, object]:
             "real_path": expected_file_physical,
             "sha256": f"sha256:{digest.hexdigest()}",
             "byte_size": byte_size,
+            **({"root_identity_continuation": {"expected": expected, "observed": actual_root}}
+               if expected.get("boot_uuid") and expected.get("boot_uuid") != actual_root.get("boot_uuid") else {}),
         }
     finally:
         if file_descriptor >= 0:

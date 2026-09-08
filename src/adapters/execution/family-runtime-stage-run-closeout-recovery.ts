@@ -697,9 +697,12 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
         },
       );
     }
+    const projectedStatus = String(record(cycle.state).status ?? '').toLowerCase();
+    const terminalStatus = ['completed', 'completed_with_quality_debt', 'failed', 'blocked', 'cancelled', 'canceled', 'human_gate']
+      .includes(projectedStatus) ? projectedStatus : observedStatus.toLowerCase();
     effectiveLaunch = recordStageRunClosed(db, {
       stageRunId: input.stageRunId,
-      terminalStatus: String(record(cycle.state).status ?? observedStatus).toLowerCase(),
+      terminalStatus,
     })!;
   }
   const beforeCount = Number((db.prepare('SELECT COUNT(*) AS count FROM stage_attempts WHERE stage_run_id = ?').get(input.stageRunId) as { count: number }).count);

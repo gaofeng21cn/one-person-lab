@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
 import type { TypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+import { recoverFrameworkRawArtifactForAttempt } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/raw-artifact-identity-verification.ts';
 import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
 import { runWithWorkItemFileBoundaryInterlock } from './work-item-file-boundary-test-support.ts';
 
@@ -427,5 +428,34 @@ test('raw receipt creation rejects a concurrent OPL state root rebound before re
           === 'raw_executor_output_state_lineage_authority_violation',
     );
     assert.deepEqual(transportIdentityReceiptFiles(stateRoot), []);
+  });
+});
+
+test('raw recovery uses volume continuity without rewriting prior metadata or accepting changed bytes', { skip: process.platform !== 'darwin' }, () => {
+  withStateRoot('opl-raw-boot-continuity-', (root) => {
+    const attempt = { stage_attempt_id: 'sat-boot-continuity', domain_id: 'example', stage_id: 'review', attempt_role: 'reviewer' };
+    const raw = persistRawStageOutput({ attempt, content: 'original review bytes' })!;
+    const metadataPath = fileURLToPath(raw.metadata_ref);
+    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    assert.equal(metadata.physical_lineage.version, 'opl-work-item-root-identity.v2');
+    const original = structuredClone(metadata.physical_lineage);
+    metadata.physical_lineage.boot_uuid = '11111111-1111-4111-8111-111111111111';
+    metadata.physical_lineage.workspace_device = String(BigInt(original.workspace_device) + 1n);
+    metadata.physical_lineage.work_item_device = String(BigInt(original.work_item_device) + 1n);
+    const persisted = JSON.stringify(metadata);
+    fs.writeFileSync(metadataPath, persisted);
+    const recovered = recoverFrameworkRawArtifactForAttempt(attempt)!;
+    assert.equal(recovered.sha256, raw.sha256);
+    assert.deepEqual(recovered.root_identity_continuation?.expected, metadata.physical_lineage);
+    assert.deepEqual(recovered.root_identity_continuation?.observed, original);
+    assert.equal(fs.readFileSync(metadataPath, 'utf8'), persisted);
+    assert.equal(fs.readFileSync(new URL(raw.output_ref), 'utf8'), 'original review bytes\n');
+    assert.ok(verifyRaw({ packet: rawCloseout(attempt, raw), attempt, workspaceRoot: root }));
+    metadata.physical_lineage.work_item_volume_uuid = '22222222-2222-4222-8222-222222222222';
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata));
+    assert.throws(() => recoverFrameworkRawArtifactForAttempt(attempt), /bound Attempt identity/);
+    fs.writeFileSync(metadataPath, persisted);
+    fs.writeFileSync(new URL(raw.output_ref), 'changed review bytes');
+    assert.throws(() => recoverFrameworkRawArtifactForAttempt(attempt), /bytes do not match/);
   });
 });
