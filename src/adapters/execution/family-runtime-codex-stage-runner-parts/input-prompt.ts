@@ -366,7 +366,7 @@ function qualityAttemptPromptLines(
       ...base,
       'This is a fresh repair Attempt. Repair only the declared required findings within the inherited Stage goal, scope, and authority.',
       'Required route_impact.stage_quality_cycle fields for repairer: repair_map, artifact_refs, artifact_hashes.',
-      'Return a repair_map with one entry for every required stable finding_id, including repair_status, changed_artifact_refs, and repair_evidence_refs, plus exact changed artifact refs and hashes. The repairer cannot close findings or claim a repair passed.',
+      'Return repair_map as an array, not an object keyed by finding id. Include exactly one entry for each required finding, with finding_id, repair_status (repaired|not_repaired|blocked), changed_artifact_refs, and repair_evidence_refs; bind exact changed artifact hashes in closeout_ref_metadata. repaired is the repairer claim only, not independent finding closure. The repairer cannot close findings.',
       'Do not make a terminal Stage transition decision. If the finding belongs elsewhere, return an evidence-backed stage_route_recommendation; the terminal reviewer decides after fresh re-review.',
       'Bind every returned artifact ref to the identical SHA value in typed closeout_ref_metadata. OPL transport verifies local bytes and adds its identity receipt; external artifacts require an independently readable domain identity receipt before re-review.',
     ];

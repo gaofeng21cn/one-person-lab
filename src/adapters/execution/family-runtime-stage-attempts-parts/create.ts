@@ -41,6 +41,7 @@ import {
 } from '../family-runtime-execution-scope-persistence.ts';
 import { requireNoActiveUnresolvedRuntimeIdentityConflict } from '../family-runtime-legacy-identity-admission.ts';
 import { requireFamilyRuntimeExecutionScope } from '../family-runtime-execution-scope.ts';
+import { isRegisteredReviewerRecoveryRepair } from '../family-runtime-stage-run-launch-registry.ts';
 export type StageAttemptCreateInput = {
   domainId: FamilyRuntimeDomainId;
   stageId: string;
@@ -395,9 +396,14 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       && parentRound === 0
     ) || (
       attemptRole === 'repairer'
-      && qualityRoundIndex === 1
       && parentRole === 'reviewer'
       && parentRound === 0
+      && (qualityRoundIndex === 1 || isRegisteredReviewerRecoveryRepair(db, {
+        stageRunId: input.stageRunId!,
+        qualityCycleId: input.qualityCycleId!,
+        reviewerAttemptRef: input.parentAttemptRef!,
+        repairRound: Number(qualityRoundIndex),
+      }))
     ) || (
       attemptRole === 'repairer'
       && Number(qualityRoundIndex) >= 2

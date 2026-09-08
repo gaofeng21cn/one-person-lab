@@ -5,19 +5,20 @@ import contract from '../../contracts/opl-framework/stage-quality-cycle-contract
 import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
 import {
   evaluateStageQualityFindingClosure,
+  validateStageQualityRepairMap,
   type StageQualityFinding,
   type StageQualityFindingClosure,
   type StageQualityRepairMapEntry,
   type StageQualityReReviewResult,
 } from '../../src/authority/stages/stage-quality-cycle.ts';
 
-function promptContract() {
+function promptContract(attemptRole = 're_reviewer') {
   const prompt = runnerPromptFor({
     attempt: {
       stage_attempt_id: 'sat_finding_closure_contract',
       stage_run_id: 'sr_finding_closure_contract',
       quality_cycle_id: 'qc_finding_closure_contract',
-      attempt_role: 're_reviewer',
+      attempt_role: attemptRole,
       quality_round_index: 1,
       stage_id: 'review',
       workspace_locator: { workspace_root: '/tmp/opl-finding-closure-contract' },
@@ -29,6 +30,21 @@ function promptContract() {
   assert.deepEqual(projected, contract.finding_closure_contract);
   return projected;
 }
+
+test('repairer prompt projects repair-map fields and statuses accepted by the validator', () => {
+  const projected = promptContract('repairer');
+  const findings: StageQualityFinding[] = [{
+    finding_id: 'finding:required', severity: 'major', required: true,
+    evidence_refs: ['artifact:original'], repair_expectation: 'Repair the cited defect.',
+  }];
+  for (const status of projected.repair_statuses) {
+    const repairMap = [requiredFields(projected.repair_map_required_fields, {
+      finding_id: findings[0]!.finding_id, repair_status: status,
+      changed_artifact_refs: ['artifact:repaired'], repair_evidence_refs: ['evidence:repair'],
+    }) as StageQualityRepairMapEntry];
+    assert.deepEqual(validateStageQualityRepairMap({ findings, repairMap }), repairMap);
+  }
+});
 
 function requiredFields(fields: string[], values: Record<string, unknown>) {
   return Object.fromEntries(fields.map((field) => {
