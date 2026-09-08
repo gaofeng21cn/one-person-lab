@@ -53,6 +53,8 @@ export type {
 } from './execution-scope.ts';
 export {
   captureWorkItemRootIdentity,
+  attestWorkItemRootIdentity,
+  reattestWorkItemRootIdentity,
   workItemRootIdentityContinues,
   readStableWorkItemFile,
   requireWorkItemRootIdentity,
@@ -60,6 +62,7 @@ export {
 } from './work-item-file-boundary.ts';
 export type {
   WorkItemRootIdentity,
+  WorkItemRootIdentityContinuation,
 } from './work-item-file-boundary.ts';
 export * from './agent-default-caller-delete-read-model.ts';
 export * from './agent-platform-surface-ownership.ts';

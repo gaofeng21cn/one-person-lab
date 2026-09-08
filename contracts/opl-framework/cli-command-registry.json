@@ -23,9 +23,83 @@
     "packages",
     "system codex-config-hygiene",
     "workspace work-item readback",
+    "workspace root reattest",
     "cordis inspect"
   ],
   "commands": {
+    "workspace_root_reattest": {
+      "command_id": "workspace root reattest",
+      "owner": "OPL Framework workspace identity",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "input",
+          "flag": "--input",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Explicit root identity request JSON; not an implicitly trusted mapping."
+        },
+        {
+          "name": "apply",
+          "flag": "--apply",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Persist one immutable current-boot operator attestation."
+        },
+        {
+          "name": "confirm-same-volume-and-directory",
+          "flag": "--confirm-same-volume-and-directory",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Operator confirms continuity of the original volume and directories using supplied evidence."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "binding",
+          "receipt_ref",
+          "receipt_written"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "preview",
+              "accepted"
+            ]
+          },
+          "binding": {
+            "type": "object",
+            "required": [
+              "workspace_root",
+              "canonical_work_item_root",
+              "original_root_identity",
+              "current_root_identity"
+            ]
+          },
+          "receipt_ref": {
+            "type": "string"
+          },
+          "receipt_written": {
+            "type": "boolean"
+          },
+          "receipt": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Framework",
+        "surface": "workspace_physical_identity_reattestation"
+      }
+    },
     "cordis_inspect": {
       "command_id": "cordis inspect",
       "owner": "OPL Framework",

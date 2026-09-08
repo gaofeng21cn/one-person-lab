@@ -39,7 +39,13 @@ Standard Agent 的 canonical primary Skill 按 capability map 和调用者 root 
 
 工作项根和 raw artifact 的物理谱系使用同一 descriptor-relative 边界。支持稳定卷查询的 macOS 文件系统采集 `opl-work-item-root-identity.v2`：持有的目录 descriptor 提供卷 UUID，内核提供 boot UUID；身份同时保留两级 inode 和设备号。同 boot 设备变化仍拒绝；跨 boot 只有两级卷 UUID 与 inode 均相同才接受设备号漂移，读取返回独立的身份延续观察。路径、no-follow、单硬链接、读取前后身份及文件 hash/size 校验持续生效，不改写历史 scope、raw metadata 或 accepted receipt。
 
-不支持稳定卷查询的文件系统继续采集 v1。v1 仅在原设备号和 inode 完全一致时兼容读取，漂移时必须由获授权操作者提供原卷和目录身份的重新证明；Framework 不从当前 boot、相同路径或相同 inode 推断旧卷。v2 缺少当前稳定证据时也拒绝，不回退到仅比较设备号。新身份采集的源码支持不等于已安装环境完成升级或真实重启验收。
+不支持稳定卷查询的文件系统继续采集 v1。v1 在原设备号和 inode 完全一致时兼容读取；设备号漂移的旧身份通过 `opl workspace root reattest` 由获授权操作者重新确认。Framework 不从当前 boot、相同路径或相同 inode 推断旧卷。v2 缺少当前稳定证据时仍拒绝，不回退到仅比较设备号。源码与合成验证不代表已安装环境升级或真实重启验收。
+
+`opl workspace root reattest --input <request.json> --json` 默认只预览，返回当前 descriptor 身份与精确 binding，不写恢复证明。请求使用 `workspace_root`、`canonical_work_item_root` 和历史 `original_root_identity`；后者必须来自原 snapshot 或 raw metadata，不能重新捕获后冒充原身份。raw 的 workspace root 是原 OPL state root，工作项 root 是其原 StageAttempt 目录，两者与领域 work-item root 分别确认。
+
+操作者检查原身份和独立证据、确认仍是原卷与原目录后，将预览中的 `binding.current_root_identity` 写入请求的 `current_root_identity`，附上 `operator` 和 `evidence_ref`，运行 `opl workspace root reattest --input <request.json> --apply --confirm-same-volume-and-directory --json`。命令只接受 v1 原身份、未变化的两级 inode 和当前 v2 卷/boot 证据，并再次捕获当前身份与预览精确比较；不接受 v2 降级、无确认或过期预览。`operator` 与证据引用记录操作者声明，不是由 Framework 推断历史同卷的证明；命令必须由有权确认该原身份的操作者明确调用。
+
+恢复证明由 Framework 写入其 state 下 `work-item-root-reattestations/`，绑定原身份、两个精确目录和完整当前 v2 身份。原身份、路径、卷、inode 或 boot 的任何变化都不匹配；证明不会自动延续到下一 boot。写入原子发布且不覆盖已有证明，重试回读原证明。普通读取只消费这个 owner 存储，不扫描工作区 JSON、不自动登记映射。work-item descriptor 读取、raw 恢复及 raw 正式身份校验共用该入口；读取观察保留原/新身份与 `reattestation_ref`，原 scope、raw metadata、accepted receipt 与内容字节不变。证明不能授权根替换、跨工作项读取、符号链接、硬链接或 hash/size 不匹配的产物。
 
 ### Runtime supervision
 

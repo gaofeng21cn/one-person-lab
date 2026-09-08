@@ -42,6 +42,7 @@ import {
   parseRegisteredCommandOptions,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
+import { buildWorkspaceRootReattestCommandSpec } from './workspace-root-reattest-command-spec.ts';
 
 export function buildWorkspaceInitializeCommandSpecs(
   getContracts: () => FrameworkContracts,
@@ -51,6 +52,7 @@ export function buildWorkspaceInitializeCommandSpecs(
 ): Record<string, CommandSpec> {
   const agentUsage = getContracts().agentWorkspaceNorm.supported_agents.join('|');
   const specs: Record<string, CommandSpec> = {
+    'workspace root reattest': buildWorkspaceRootReattestCommandSpec(),
     'workspace-init': {
       usage:
         `opl workspace init --agent <${agentUsage}> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]`,
