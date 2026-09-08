@@ -366,7 +366,7 @@ function qualityAttemptPromptLines(
       ...base,
       'This is a fresh repair Attempt. Repair only the declared required findings within the inherited Stage goal, scope, and authority.',
       'Required route_impact.stage_quality_cycle fields for repairer: repair_map, artifact_refs, artifact_hashes.',
-      'Return a repair_map with one entry for every required stable finding_id, including repair_status, changed_artifact_refs, and repair_evidence_refs, plus exact changed artifact refs and hashes. The repairer cannot close findings or claim a repair passed.',
+      'Return repair_map as an array, not an object keyed by finding id. Include exactly one entry for each required finding, with finding_id, repair_status (repaired|not_repaired|blocked), changed_artifact_refs, and repair_evidence_refs; bind exact changed artifact hashes in closeout_ref_metadata. repaired is the repairer claim only, not independent finding closure. The repairer cannot close findings.',
       'Do not make a terminal Stage transition decision. If the finding belongs elsewhere, return an evidence-backed stage_route_recommendation; the terminal reviewer decides after fresh re-review.',
       'Bind every returned artifact ref to the identical SHA value in typed closeout_ref_metadata. OPL transport verifies local bytes and adds its identity receipt; external artifacts require an independently readable domain identity receipt before re-review.',
     ];
@@ -477,7 +477,11 @@ export function runnerPromptForExecution(input: CodexStageRunnerInput, execution
   });
 }
 
-export function protocolCloseoutResumePrompt(attempt: JsonRecord) {
+export function protocolCloseoutResumePrompt(attempt: JsonRecord, persistedOutput?: {
+  output_ref: string;
+  sha256: string;
+  size_bytes: number;
+} | null) {
   const attemptId = optionalString(attempt.stage_attempt_id) ?? 'unknown-attempt';
   return [
     'Return only the missing typed OPL closeout JSON for the work already completed in this same Attempt.',
@@ -490,6 +494,11 @@ export function protocolCloseoutResumePrompt(attempt: JsonRecord) {
     ...typedCloseoutScopeBindingLines(attempt),
     'Use a non-empty closeout_refs array containing only refs for artifacts or receipts that already exist from this Attempt.',
     'For every artifact ref in closeout_refs, include a matching refs-only object in closeout_ref_metadata with the identical ref (or uri) and exact sha256. Do not bind an input-only ref as a substitute for a produced artifact.',
+    ...(persistedOutput ? [
+      'OPL already persisted the original output from this Attempt before this protocol-only resume. Its exact locator is:',
+      JSON.stringify({ ref: persistedOutput.output_ref, sha256: persistedOutput.sha256, size_bytes: persistedOutput.size_bytes }),
+      'You may cite this produced output in closeout_refs and closeout_ref_metadata. It is transport evidence only, not an owner receipt or an approved quality verdict. Preserve your original review findings and semantic route; do not treat persistence as quality acceptance.',
+    ] : []),
     'If this Attempt already wrote its complete typed closeout packet and the first response only referenced it in prose, include exactly one closeout_ref_metadata entry with kind "stage_attempt_closeout_packet", its local workspace ref, exact sha256, and exact size_bytes when known. OPL may hydrate only that exact workspace-bound packet after stable byte and Attempt-identity verification.',
     'closeout_ref_metadata objects may contain only ref_kind, kind, uri, sha256, ref, size_bytes, and artifact_identity_receipt_ref.',
     'Never output typed_closeout_ref_metadata or any renamed closeout field.',

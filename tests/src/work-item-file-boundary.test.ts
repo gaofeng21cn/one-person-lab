@@ -142,3 +142,41 @@ test('descriptor boundary rejects in-place growth and pathname replacement', asy
     fs.rmSync(replacementValue.workspaceRoot, { recursive: true, force: true });
   }
 });
+
+test('macOS volume attestation permits cross-boot device drift but preserves legacy and replacement rejection', { skip: process.platform !== 'darwin' }, () => {
+  const value = fixture();
+  try {
+    assert.equal(value.rootIdentity.version, 'opl-work-item-root-identity.v2');
+    const prior = {
+      ...value.rootIdentity,
+      boot_uuid: '11111111-1111-4111-8111-111111111111',
+      workspace_device: String(BigInt(value.rootIdentity.workspace_device) + 1n),
+      work_item_device: String(BigInt(value.rootIdentity.work_item_device) + 1n),
+    };
+    const read = (expectedRootIdentity: typeof value.rootIdentity) => readStableWorkItemFile({
+      workspaceRoot: value.workspaceRoot, canonicalWorkItemRoot: value.studyOneRoot,
+      filePath: value.studyOneFile, ref: value.studyOneFile, expectedRootIdentity,
+    });
+    const recovered = read(prior);
+    assert.equal(recovered.sha256, read(value.rootIdentity).sha256);
+    assert.deepEqual(recovered.root_identity_continuation?.expected, prior);
+    assert.deepEqual(recovered.root_identity_continuation?.observed, value.rootIdentity);
+    for (const invalid of [
+      { ...prior, boot_uuid: value.rootIdentity.boot_uuid },
+      { ...prior, workspace_volume_uuid: '22222222-2222-4222-8222-222222222222' },
+      { ...prior, work_item_volume_uuid: '22222222-2222-4222-8222-222222222222' },
+      { ...prior, work_item_inode: String(BigInt(prior.work_item_inode) + 1n) },
+    ]) {
+      assert.throws(() => read(invalid), (error: unknown) => error instanceof WorkItemFileBoundaryError
+        && error.failureCode === 'work_item_file_boundary_root_attestation_mismatch');
+    }
+    const { boot_uuid: _boot, workspace_volume_uuid: _workspace, work_item_volume_uuid: _item, ...legacy } = prior;
+    assert.throws(() => read({ ...legacy, version: 'opl-work-item-root-identity.v1' }),
+      (error: unknown) => error instanceof WorkItemFileBoundaryError
+        && error.failureCode === 'work_item_file_boundary_root_attestation_mismatch');
+    assert.equal(read({ ...legacy, version: 'opl-work-item-root-identity.v1',
+      workspace_device: value.rootIdentity.workspace_device, work_item_device: value.rootIdentity.work_item_device }).sha256, recovered.sha256);
+  } finally {
+    fs.rmSync(value.workspaceRoot, { recursive: true, force: true });
+  }
+});

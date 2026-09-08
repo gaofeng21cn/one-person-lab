@@ -1102,6 +1102,25 @@ function persistedStageReviewReceiptInputs(db: DatabaseSync, input: PersistedSta
   };
 }
 
+export function reconcilePersistedStageReviewReceipt(db: DatabaseSync, reviewerAttemptId: string) {
+  const reviewer = getStageAttemptRow(db, reviewerAttemptId);
+  if (!reviewer || !['reviewer', 're_reviewer'].includes(reviewer.attempt_role ?? '')
+    || !reviewer.parent_attempt_ref?.startsWith('opl://stage_attempts/')) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Review reconcile requires an existing reviewer and its original producer.');
+  }
+  requireRuntimeExecutionScopeMutationAllowed(db, reviewer, 'reconcile_stage_review_receipt');
+  const outcome = stageQualityOutcomeFromEnvelope({
+    attemptRole: reviewer.attempt_role as 'reviewer' | 're_reviewer',
+    envelope: persistedQualityEnvelope(reviewer),
+  });
+  return materializePersistedStageReviewReceipt(db, {
+    producerAttemptId: reviewer.parent_attempt_ref.slice('opl://stage_attempts/'.length),
+    reviewerAttemptId,
+    rubricRefs: persistedStringList(reviewer.quality_rubric_refs_json, 'reviewer.quality_rubric_refs'),
+    verdict: stageReviewVerdictForOutcome(outcome),
+  });
+}
+
 export function materializePersistedStageReviewReceipt(
   db: DatabaseSync,
   input: PersistedStageReviewReceiptInput,

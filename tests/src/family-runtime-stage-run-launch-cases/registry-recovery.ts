@@ -314,6 +314,93 @@ test('closed StageRun claims and records one immutable recovery Run idempotently
   }
 });
 
+test('terminal recovery accepts only an owner-accepted producer snapshot extension before review starts', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    createFamilyRuntimeQueueTables(db);
+    const input = stageRunInput({ invocationId: 'sri_snapshot_extension' });
+    registerStageRunLaunch(db, input);
+    const producer = createStageAttempt(db, {
+      domainId: input.domain_id, stageId: input.stage_id, providerKind: 'temporal',
+      workspaceLocator: input.workspace_locator, sourceFingerprint: 'snapshot-extension-producer',
+      stageRunId: input.stage_run_id, scopeKind: input.scope_kind,
+      executionScope: input.execution_scope,
+    }).attempt;
+    const previous: any = recoveryWorkflowInput(input);
+    previous.recovery_resume.producer_attempt_ref = `opl://stage_attempts/${producer.stage_attempt_id}`;
+    previous.recovery_resume.producer_attempt_summary.stage_attempt_id = producer.stage_attempt_id;
+    const member = { member_id: 'original', source_ref: 'artifact:recovered', sha256: `sha256:${'a'.repeat(64)}`, size_bytes: 10 };
+    previous.recovery_resume.review_input_snapshot_materialization_request = {
+      surface_kind: 'opl_reviewer_input_snapshot_materialization_request', schema_version: 2,
+      owner_authority_ref: { kind: 'artifact', ref: member.source_ref, sha256: member.sha256, size_bytes: member.size_bytes },
+      producer_attempt_ref: previous.recovery_resume.producer_attempt_ref,
+      execution_content_binding_sha256: `sha256:${'c'.repeat(64)}`,
+      review_lane: 'formal', workspace_root: workspaceRoot, members: [member],
+    };
+    recordStageRunTemporalStart(db, { stageRunId: input.stage_run_id, temporalStartReceipt: temporalStartReceipt(input, 'COMPLETED') });
+    recordStageRunClosed(db, { stageRunId: input.stage_run_id, terminalStatus: 'completed' });
+    const claim = claimStageRunRecoveryStart(db, { workflowInput: previous });
+    recordStageRunTemporalRecoveryStart(db, {
+      stageRunId: input.stage_run_id, recoveryId: previous.recovery_resume.recovery_id,
+      claimToken: claim.claim_token!, temporalStartReceipt: {
+        recovery_id: previous.recovery_resume.recovery_id, stage_run_id: input.stage_run_id,
+        workflow_id: input.workflow_id, quality_cycle_id: previous.recovery_resume.quality_cycle_id,
+        producer_attempt_ref: previous.recovery_resume.producer_attempt_ref, recovery_run_id: 'run-original',
+      },
+    });
+    const next = structuredClone(previous);
+    const resume = next.recovery_resume;
+    resume.recovery_id = 'recovery:extended';
+    resume.artifact_refs.push('artifact:supplement');
+    resume.artifact_hashes.push(`sha256:${'b'.repeat(64)}`);
+    resume.artifact_identity_receipt_refs.push('artifact-identity:supplement');
+    Object.assign(resume.producer_attempt_summary, {
+      artifact_refs: resume.artifact_refs, artifact_hashes: resume.artifact_hashes,
+      artifact_identity_receipt_refs: resume.artifact_identity_receipt_refs,
+    });
+    resume.review_input_snapshot_materialization_request.members.push({
+      member_id: 'supplement', source_ref: 'artifact:supplement', sha256: `sha256:${'b'.repeat(64)}`, size_bytes: 20,
+    });
+    const acceptedQuality = {
+      artifact_refs: resume.artifact_refs, artifact_hashes: resume.artifact_hashes,
+      artifact_identity_receipt_refs: resume.artifact_identity_receipt_refs,
+      review_input_snapshot_materialization_request: resume.review_input_snapshot_materialization_request,
+    };
+    db.prepare("UPDATE stage_attempts SET attempt_role = 'producer', status = 'completed', closeout_receipt_status = 'accepted_typed_closeout', route_impact_json = ? WHERE stage_attempt_id = ?")
+      .run(JSON.stringify({ stage_quality_cycle: acceptedQuality }), producer.stage_attempt_id);
+    const terminalRetry = { recoveryRunId: 'run-original', workflowStatus: 'COMPLETED' };
+    const rejects = (mutate: (candidate: any) => void, retry: any = terminalRetry) => {
+      const candidate = structuredClone(next);
+      mutate(candidate);
+      assert.throws(() => claimStageRunRecoveryStart(db, { workflowInput: candidate, terminalRetry: retry }));
+    };
+    rejects(() => {}, null);
+    rejects(() => {}, { ...terminalRetry, workflowStatus: 'RUNNING' });
+    rejects(() => {}, { ...terminalRetry, recoveryRunId: 'wrong-run' });
+    rejects(candidate => { candidate.recovery_resume.review_input_snapshot_materialization_request.review_lane = 'other'; });
+    rejects(candidate => { candidate.recovery_resume.review_input_snapshot_materialization_request.members[0].size_bytes++; });
+    rejects(candidate => { candidate.recovery_resume.artifact_refs[0] = 'artifact:replacement'; });
+    db.prepare("UPDATE stage_attempts SET closeout_receipt_status = NULL WHERE stage_attempt_id = ?").run(producer.stage_attempt_id);
+    rejects(() => {});
+    db.prepare("UPDATE stage_attempts SET closeout_receipt_status = 'accepted_typed_closeout' WHERE stage_attempt_id = ?").run(producer.stage_attempt_id);
+    const other = createStageAttempt(db, {
+      domainId: input.domain_id, stageId: input.stage_id, providerKind: 'temporal',
+      workspaceLocator: input.workspace_locator, sourceFingerprint: 'snapshot-extension-reviewer',
+      stageRunId: input.stage_run_id, scopeKind: input.scope_kind, executionScope: input.execution_scope,
+    }).attempt;
+    rejects(() => {});
+    db.prepare('DELETE FROM stage_attempts WHERE stage_attempt_id = ?').run(other.stage_attempt_id);
+    const retry = claimStageRunRecoveryStart(db, { workflowInput: next, terminalRetry });
+    assert.equal(retry.claimed, true);
+    assert.equal(retry.recovery_run.temporal_start_receipt_history?.[0]?.recovery_run_id, 'run-original');
+    assert.deepEqual(retry.recovery_run.recovery_resume, resume);
+    assert.equal(claimStageRunRecoveryStart(db, { workflowInput: next }).claimed, false);
+    assert.equal(inspectStageRunLaunch(db, input.stage_run_id).launch_status, 'closed');
+  } finally {
+    db.close();
+  }
+});
+
 test('closed StageRun recovery projects quality state without changing its terminal status', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-closed-projection-'));
   const previousStateRoot = process.env.OPL_STATE_DIR;

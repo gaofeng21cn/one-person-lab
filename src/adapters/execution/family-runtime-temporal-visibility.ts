@@ -170,7 +170,8 @@ export function buildTemporalStageRunMemo(
       ? {
           recovery_id: input.recovery_resume.recovery_id,
           recovery_quality_cycle_id: input.recovery_resume.quality_cycle_id,
-          recovery_producer_attempt_ref: input.recovery_resume.producer_attempt_ref,
+          recovery_producer_attempt_ref: input.recovery_resume.artifact_producer_attempt_ref
+            ?? input.recovery_resume.producer_attempt_ref,
         }
       : {}),
   };

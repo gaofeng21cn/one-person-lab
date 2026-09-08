@@ -1100,15 +1100,19 @@ function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInput) {
   }
   const recovery = input.recovery_resume;
   if (recovery) {
-    const producer = recovery.producer_attempt_summary;
+    const resumeAfterRole = recovery.resume_after_role ?? 'producer';
+    const artifactProducer = recovery.artifact_producer_attempt_summary
+      ?? recovery.producer_attempt_summary;
+    const artifactProducerAttemptRef = recovery.artifact_producer_attempt_ref
+      ?? recovery.producer_attempt_ref;
     const artifactIdentityMatches = JSON.stringify({
       artifact_refs: recovery.artifact_refs,
       artifact_hashes: recovery.artifact_hashes,
       artifact_identity_receipt_refs: recovery.artifact_identity_receipt_refs,
     }) === JSON.stringify({
-      artifact_refs: producer?.artifact_refs,
-      artifact_hashes: producer?.artifact_hashes,
-      artifact_identity_receipt_refs: producer?.artifact_identity_receipt_refs,
+      artifact_refs: artifactProducer?.artifact_refs,
+      artifact_hashes: artifactProducer?.artifact_hashes,
+      artifact_identity_receipt_refs: artifactProducer?.artifact_identity_receipt_refs,
     });
     if (
       recovery.surface_kind !== 'opl_stage_run_recovery_resume'
@@ -1116,18 +1120,19 @@ function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInput) {
       || !recovery.recovery_id?.trim()
       || recovery.quality_cycle_id !== stageRunQualityCycleId(input)
       || !input.quality_policy.formal_review.required
-      || producer?.attempt_role !== 'producer'
-      || producer.status !== 'completed'
-      || !producer.stage_attempt_id?.trim()
-      || !producer.workflow_id?.trim()
-      || !producer.execution_session_ref?.trim()
-      || recovery.producer_attempt_ref !== `opl://stage_attempts/${producer.stage_attempt_id}`
+      || artifactProducer?.attempt_role !== (resumeAfterRole === 'reviewer' ? 'producer' : resumeAfterRole)
+      || !['producer', 'repairer', 'reviewer'].includes(resumeAfterRole)
+      || artifactProducer.status !== 'completed'
+      || !artifactProducer.stage_attempt_id?.trim()
+      || !artifactProducer.workflow_id?.trim()
+      || !artifactProducer.execution_session_ref?.trim()
+      || artifactProducerAttemptRef !== `opl://stage_attempts/${artifactProducer.stage_attempt_id}`
       || recovery.artifact_refs.length === 0
       || recovery.artifact_refs.length !== recovery.artifact_hashes.length
       || recovery.artifact_refs.length !== recovery.artifact_identity_receipt_refs.length
       || !artifactIdentityMatches
     ) {
-      throw new Error('StageRun recovery resume must bind one completed producer and its exact artifact identity.');
+      throw new Error('StageRun recovery resume must bind one completed artifact producer and its exact artifact identity.');
     }
   }
 }
@@ -1242,6 +1247,13 @@ export async function StageRunWorkflow(
   );
   const qualityCycleId = stageRunQualityCycleId(input);
   const recoveryResume = input.recovery_resume ?? null;
+  const recoveryResumeAfterRole = recoveryResume?.resume_after_role ?? 'producer';
+  const recoveryArtifactProducerAttemptRef = recoveryResume?.artifact_producer_attempt_ref
+    ?? recoveryResume?.producer_attempt_ref
+    ?? null;
+  const recoveryArtifactProducerAttemptSummary = recoveryResume?.artifact_producer_attempt_summary
+    ?? recoveryResume?.producer_attempt_summary
+    ?? null;
   const initialArtifactIdentity = normalizeStageQualityArtifactIdentity({
     artifactRefs: recoveryResume?.artifact_refs ?? input.artifact_refs ?? [],
     artifactHashes: recoveryResume?.artifact_hashes ?? input.artifact_hashes ?? [],
@@ -1259,7 +1271,7 @@ export async function StageRunWorkflow(
     stage_id: input.stage_id,
     status: 'registered',
     current_role: null,
-    repair_rounds_used: 0,
+    repair_rounds_used: recoveryResume?.repair_rounds_used ?? 0,
     max_repair_rounds: input.quality_policy.formal_review.max_repair_rounds,
     route_budget: input.route_budget
       ?? input.stage_run_spec?.route_budget
@@ -1273,17 +1285,19 @@ export async function StageRunWorkflow(
       token_observation_status: 'missing',
     },
     quality_scope_budget_stop_reason: null,
-    attempts: recoveryResume ? [recoveryResume.producer_attempt_summary] : [],
-    findings: [],
-    repair_map: [],
+    attempts: recoveryResume
+      ? recoveryResume.prior_attempt_summaries ?? [recoveryArtifactProducerAttemptSummary!]
+      : [],
+    findings: recoveryResume?.findings ?? [],
+    repair_map: recoveryResume?.repair_map ?? [],
     finding_closures: [],
-    review_receipts: [],
+    review_receipts: recoveryResume?.review_receipts ?? [],
     artifact_refs: initialArtifactIdentity.artifact_refs,
     artifact_hashes: initialArtifactIdentity.artifact_hashes,
     artifact_identity_receipt_refs: recoveryResume?.artifact_identity_receipt_refs
       ?? asStringList(input.artifact_identity_receipt_refs),
-    quality_debt_refs: [],
-    route_quality_debt_refs: [],
+    quality_debt_refs: recoveryResume?.quality_debt_refs ?? [],
+    route_quality_debt_refs: recoveryResume?.route_quality_debt_refs ?? [],
     decisive_attempt_role: null,
     decisive_attempt_ref: null,
     selected_stage_route: null,
@@ -1294,7 +1308,7 @@ export async function StageRunWorkflow(
     hard_stop_class: null,
     typed_blocker_refs: [],
     human_gate_refs: [],
-    source_attempt_ref: recoveryResume?.producer_attempt_ref ?? null,
+    source_attempt_ref: recoveryArtifactProducerAttemptRef,
     sqlite_projection: { status: 'pending', error: null },
     started_at: nowIso(),
     updated_at: nowIso(),
@@ -1318,8 +1332,8 @@ export async function StageRunWorkflow(
     ? { ...state, status: 'running' }
     : state);
   const observedSessions = new Set<string>();
-  if (recoveryResume?.producer_attempt_summary.execution_session_ref) {
-    observedSessions.add(recoveryResume.producer_attempt_summary.execution_session_ref);
+  for (const attempt of state.attempts) {
+    if (attempt.execution_session_ref) observedSessions.add(attempt.execution_session_ref);
   }
   let decisiveExecutionContentBinding: StageAttemptExecutionContentBinding | null = null;
 
@@ -1858,9 +1872,12 @@ export async function StageRunWorkflow(
     let parentAttemptRef: string | null = null;
     let currentArtifactProducerAttemptRef: string | null = null;
     let reviewInputSnapshotMaterializationRequest: unknown = null;
+    let findings: StageQualityFinding[] = [];
+    let currentRevisionTransport: ReturnType<typeof revisionTransportFromReceipt> = null;
+    let firstRepairRound = 1;
     if (recoveryResume) {
-      parentAttemptRef = recoveryResume.producer_attempt_ref;
-      currentArtifactProducerAttemptRef = recoveryResume.producer_attempt_ref;
+      parentAttemptRef = recoveryArtifactProducerAttemptRef;
+      currentArtifactProducerAttemptRef = recoveryArtifactProducerAttemptRef;
       reviewInputSnapshotMaterializationRequest =
         recoveryResume.review_input_snapshot_materialization_request ?? null;
     } else {
@@ -1888,7 +1905,181 @@ export async function StageRunWorkflow(
     }
 
     const producerAttemptRef = currentArtifactProducerAttemptRef!;
-    const review = await runAttempt({
+    if (recoveryResume && recoveryResumeAfterRole === 'repairer') {
+      const recoveredRepairAttemptRef = currentArtifactProducerAttemptRef!;
+      const repairMap = repairMapList(recoveryResume.repair_map, state.findings);
+      const reReview = await runAttempt({
+        role: 're_reviewer',
+        round: recoveryResume.repair_rounds_used!,
+        parentAttemptRef,
+        artifactProducerAttemptRef: recoveredRepairAttemptRef,
+        artifactRefs: state.artifact_refs,
+        artifactHashes: state.artifact_hashes,
+        artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
+        findings: state.findings,
+        repairMap,
+        reviewInputSnapshotMaterializationRequest,
+        ...revisionTransportFromReceipt(state.review_receipts.at(-1)!) ?? {},
+      });
+      state = { ...state, repair_map: repairMap };
+      if (stageRunStopped(state)) return terminalize(state);
+      if (progressFirstHandoffEnabled) commitTerminalRouteDecision(reReview);
+      const reReviewOutcome = reReview.outcome;
+      if (!reReviewOutcome) {
+        throw new Error('Completed recovered Re-review Attempt did not expose a canonical quality outcome.');
+      }
+      if (reReviewOutcome === 'blocked' || reReviewOutcome === 'human_gate') {
+        const hardStop = validateStageQualityReviewHardStopOutcome({
+          outcome: reReviewOutcome,
+          envelope: reReview.envelope,
+        });
+        applyReviewStop(hardStop, reReview.attemptRef);
+        const hardStopReceipt = await stageQualityReviewReceiptActivity({
+          producer_attempt_ref: recoveredRepairAttemptRef,
+          reviewer_attempt_ref: reReview.attemptRef,
+          rubric_refs: reReview.executionPolicy.rubricRefs,
+          verdict: stageReviewVerdictForOutcome(reReviewOutcome),
+        });
+        state = {
+          ...state,
+          review_receipts: [...state.review_receipts, hardStopReceipt],
+          quality_debt_refs: [...new Set([
+            ...state.quality_debt_refs,
+            ...(reReview.reviewInputSnapshotQualityDebtRef
+              ? [reReview.reviewInputSnapshotQualityDebtRef]
+              : []),
+          ])],
+        };
+        return terminalize(state);
+      }
+      const reReviewResult: StageQualityReReviewResult = {
+        finding_closures: findingClosureList(reReview.envelope.finding_closures),
+        repair_regressions: findingList(reReview.envelope.repair_regressions, 'repair_regressions'),
+        critical_new_findings: findingList(reReview.envelope.critical_new_findings, 'critical_new_findings'),
+        optional_observations: requiredRecordList(
+          reReview.envelope.optional_observations,
+          'optional_observations',
+        ) as StageQualityReReviewResult['optional_observations'],
+      };
+      const closure = evaluateStageQualityFindingClosure({
+        findings: state.findings,
+        repairMap,
+        reReview: reReviewResult,
+      });
+      validateStageQualityReReviewOutcome({ outcome: reReviewOutcome, closure });
+      const reReviewReceipt = await stageQualityReviewReceiptActivity({
+        producer_attempt_ref: recoveredRepairAttemptRef,
+        reviewer_attempt_ref: reReview.attemptRef,
+        rubric_refs: reReview.executionPolicy.rubricRefs,
+        verdict: stageReviewVerdictForOutcome(reReviewOutcome),
+      });
+      state = {
+        ...state,
+        finding_closures: reReviewResult.finding_closures,
+        review_receipts: [...state.review_receipts, reReviewReceipt],
+        quality_debt_refs: [...new Set([
+          ...state.quality_debt_refs,
+          ...(reReview.reviewInputSnapshotQualityDebtRef
+            ? [reReview.reviewInputSnapshotQualityDebtRef]
+            : []),
+        ])],
+      };
+      if (reReviewOutcome === 'pass') {
+        commitTerminalRouteDecision(reReview);
+        return terminalize({
+          ...state,
+          status: reReview.reviewInputSnapshotQualityDebtRef
+            ? 'completed_with_quality_debt'
+            : 'completed',
+          current_role: null,
+          updated_at: nowIso(),
+        });
+      }
+      if (reReviewOutcome === 'quality_debt') {
+        commitTerminalRouteDecision(reReview);
+        return terminalize({
+          ...state,
+          status: 'completed_with_quality_debt',
+          current_role: null,
+          quality_debt_refs: [...new Set([
+            ...state.quality_debt_refs,
+            ...asStringList(reReview.envelope.quality_debt_refs),
+            qualityFailureRef(input, 'recovered-re-review-quality-debt'),
+          ])],
+          updated_at: nowIso(),
+        });
+      }
+      const openIds = new Set(closure.open_required_finding_ids);
+      findings = [
+        ...state.findings.filter((finding) => openIds.has(finding.finding_id)),
+        ...reReviewResult.repair_regressions,
+        ...reReviewResult.critical_new_findings,
+      ];
+      state = {
+        ...state,
+        findings,
+        repair_rounds_used: recoveryResume.repair_rounds_used!,
+      };
+      currentRevisionTransport = revisionTransportFromReceipt(reReviewReceipt);
+      const reReviewBudgetTerminal = await terminalizeScopeBudgetIfNeeded({
+        sourceAttemptRef: reReview.attemptRef,
+        findings,
+        includeAttemptLimit: true,
+      });
+      if (reReviewBudgetTerminal) return reReviewBudgetTerminal;
+      if (isEarlyRepairRouteBack(reReview)) {
+        return terminalizeEarlyRepairRouteBack(reReview, findings);
+      }
+      const budgetDisposition = classifyStageQualityReReviewBudget({
+        closure,
+        qualityRoundIndex: recoveryResume.repair_rounds_used!,
+        maxRepairRounds: reReview.executionPolicy.maxRepairRounds,
+      });
+      if (budgetDisposition === 'terminal_quality_debt') {
+        if (!hasConsumableArtifact(state)) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Stage quality repair budget exhausted without a consumable artifact.',
+            {
+              hard_stop_class: 'zero_consumable_artifact',
+              blocked_reason: 'stage_quality_budget_exhausted_without_consumable_artifact',
+            },
+          );
+        }
+        commitTerminalRouteDecision(reReview);
+        return terminalize({
+          ...state,
+          status: 'completed_with_quality_debt',
+          current_role: null,
+          quality_debt_refs: [...new Set([
+            ...state.quality_debt_refs,
+            ...findings.map((finding) => `quality-debt:${finding.finding_id}`),
+            qualityFailureRef(input, 'recovered-re-review-repair-budget-exhausted'),
+          ])],
+          updated_at: nowIso(),
+        });
+      }
+      parentAttemptRef = reReview.attemptRef;
+      currentArtifactProducerAttemptRef = recoveredRepairAttemptRef;
+      firstRepairRound = recoveryResume.repair_rounds_used! + 1;
+    }
+    if (recoveryResume && recoveryResumeAfterRole === 'reviewer') {
+      const receipt = state.review_receipts.at(-1);
+      if (receipt?.verdict !== 'repair_required'
+        || receipt.reviewer_attempt_ref !== recoveryResume.reviewer_attempt_ref
+        || receipt.producer_attempt_ref !== producerAttemptRef) {
+        throw new Error('Reviewer recovery requires its original accepted repair-required review.');
+      }
+      findings = validateInitialStageQualityReviewOutcome({ outcome: 'repair_required', findings: state.findings });
+      parentAttemptRef = recoveryResume.reviewer_attempt_ref!;
+      currentRevisionTransport = revisionTransportFromReceipt(receipt);
+      if (!currentRevisionTransport) throw new Error('Reviewer recovery requires its formal revision intake.');
+      firstRepairRound = state.repair_rounds_used + 1;
+      const budgetTerminal = await terminalizeScopeBudgetIfNeeded({ sourceAttemptRef: parentAttemptRef, findings, includeAttemptLimit: true });
+      if (budgetTerminal) return budgetTerminal;
+    }
+    if (!(recoveryResume && ['repairer', 'reviewer'].includes(recoveryResumeAfterRole))) {
+      const review = await runAttempt({
       role: 'reviewer',
       round: 0,
       parentAttemptRef,
@@ -1929,7 +2120,7 @@ export async function StageRunWorkflow(
       };
       return terminalize(state);
     }
-    let findings = validateInitialStageQualityReviewOutcome({
+    findings = validateInitialStageQualityReviewOutcome({
       outcome: initialOutcome,
       findings: findingList(review.envelope.findings),
     });
@@ -1939,7 +2130,7 @@ export async function StageRunWorkflow(
       rubric_refs: review.executionPolicy.rubricRefs,
       verdict: stageReviewVerdictForOutcome(initialOutcome),
     });
-    let currentRevisionTransport = revisionTransportFromReceipt(initialReviewReceipt);
+    currentRevisionTransport = revisionTransportFromReceipt(initialReviewReceipt);
     state = {
       ...state,
       findings,
@@ -1985,22 +2176,23 @@ export async function StageRunWorkflow(
       includeAttemptLimit: true,
     });
     if (initialBudgetTerminal) return initialBudgetTerminal;
-    if (state.max_repair_rounds === 0) {
-      commitTerminalRouteDecision(review);
-      return terminalize({
-        ...state,
-        status: 'completed_with_quality_debt',
-        current_role: null,
-        quality_debt_refs: [...new Set([
-          ...state.quality_debt_refs,
-          ...findings.map((finding) => `quality-debt:${finding.finding_id}`),
-          qualityFailureRef(input, 'initial-review-repair-budget-exhausted'),
-        ])],
-        updated_at: nowIso(),
-      });
+      if (state.max_repair_rounds === 0) {
+        commitTerminalRouteDecision(review);
+        return terminalize({
+          ...state,
+          status: 'completed_with_quality_debt',
+          current_role: null,
+          quality_debt_refs: [...new Set([
+            ...state.quality_debt_refs,
+            ...findings.map((finding) => `quality-debt:${finding.finding_id}`),
+            qualityFailureRef(input, 'initial-review-repair-budget-exhausted'),
+          ])],
+          updated_at: nowIso(),
+        });
+      }
     }
 
-    for (let round = 1; round <= state.max_repair_rounds; round += 1) {
+    for (let round = firstRepairRound; round <= state.max_repair_rounds; round += 1) {
       const repair = await runAttempt({
         role: 'repairer',
         round,

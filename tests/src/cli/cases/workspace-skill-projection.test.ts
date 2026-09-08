@@ -48,6 +48,52 @@ function providerFixture(root: string, skillIds: string[]) {
   }
 }
 
+test('primary Skill bytes are bound under the declared root locator', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-primary-skill-projection-'));
+  const previous = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const agentRoot = path.join(root, 'agent-source');
+    rootFixture(agentRoot, []);
+    const primaryRoot = path.join(agentRoot, 'agent', 'primary_skill');
+    fs.mkdirSync(primaryRoot, { recursive: true });
+    fs.writeFileSync(path.join(primaryRoot, 'SKILL.md'), '# Canonical root\n');
+    fs.mkdirSync(path.join(primaryRoot, 'references'));
+    fs.writeFileSync(path.join(primaryRoot, 'references', 'route.md'), 'Bound reference\n');
+    fs.writeFileSync(path.join(agentRoot, 'contracts', 'capability_map.json'), JSON.stringify({
+      surface_kind: 'opl_standard_agent_capability_map',
+      capabilities: [{
+        capability_id: 'example.primary_skill',
+        capability_kind: 'primary_skill',
+        physical_source_ref: { ref_kind: 'repo_path', ref: 'agent/primary_skill/SKILL.md' },
+      }],
+    }));
+    const input = {
+      rootPackageId: 'example', rootSkillIds: ['example-root'],
+      rootSourceRoot: agentRoot, rootSourceRef: 'example:installed-descriptor',
+    };
+    const first = materializeAgentPackageWorkspaceSkillProjection(input).projection!;
+    assert.deepEqual(first.skill_ids, ['example-root']);
+    assert.deepEqual(first.core_skill_ids, ['example-root']);
+    assert.ok(first.skill_digests['example-root']);
+    assertAgentPackageSkillProjection(first);
+    const runtime = hostAttemptSkillRuntime({ workspace_locator: {
+      native_package_closure: { skill_projection: first },
+    } });
+    assert.equal(runtime?.packageSkillBindings[0].name, 'example-root');
+    assert.equal(fs.readFileSync(runtime!.packageSkillBindings[0].path, 'utf8'), '# Canonical root\n');
+    fs.writeFileSync(path.join(primaryRoot, 'references', 'route.md'), 'Changed reference\n');
+    const second = materializeAgentPackageWorkspaceSkillProjection(input).projection!;
+    assert.notEqual(first.generation_id, second.generation_id);
+    assert.equal(fs.readFileSync(path.join(first.skills_root, 'example-root', 'references', 'route.md'), 'utf8'), 'Bound reference\n');
+    assertAgentPackageSkillProjection(first);
+  } finally {
+    if (previous === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previous;
+    removeFixture(root);
+  }
+});
+
 function numberedSkills(prefix: string, count: number) {
   return Array.from({ length: count }, (_, index) => `${prefix}-${String(index + 1).padStart(2, '0')}`);
 }

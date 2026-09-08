@@ -25,11 +25,21 @@ projection 至少表达 request identity、provider/executor、状态、最新�
 
 已接受正式 closeout 的 reviewer / re_reviewer 不因后到的 provider diagnostic 多出 ref 而重新入库。新的正式结果须携带 review outcome，并继续通过原有校验；无 outcome 的观察只更新 provider 投影。
 
+Standard Agent 的 canonical primary Skill 按 capability map 和调用者 root locator 纳入不可变 Workspace 投影；digest 基于真实物理目录的完整文件树，Attempt 继续绑定具体 generation。
+
 ### Review transport
 
 新 Attempt 可以从当前包获取此前未绑定的固定 review lane；父 spec 和已有显式 lane 保持原绑定。历史 Attempt 仅在请求明确携带 lane 且原 Stage manifest 的 ref/hash 精确匹配时恢复缺失投影，不猜测 controller-required lane。
 
 不可变 reviewer snapshot 保留领域原请求及成员，外层只补入 canonical artifact refs/hashes 与 producer exact metadata 共同绑定的最终文件。引用型 closeout 的外层 locator 通过精确 hash/size 校验后，可以补足内层未声明的自引用；显式空引用仍无效。复审 prompt 说明 closure 的 finding_id、status、非空 evidence_refs，以及 optional observation 的 observation_id、summary 和 evidence_refs，质量判断和证据有效性仍归既有校验与领域 owner。
+
+原 reviewer 响应在同会话的只读协议补全之前持久化，并提供精确 ref/hash/size；该响应仍是传输证据，不自动成为领域 verdict。repairer 必须返回逐 finding 的 `repair_map` 数组，状态为 `repaired|not_repaired|blocked`，独立 closure 仍归 re_reviewer。
+
+### Workspace physical identity
+
+工作项根和 raw artifact 的物理谱系使用同一 descriptor-relative 边界。支持稳定卷查询的 macOS 文件系统采集 `opl-work-item-root-identity.v2`：持有的目录 descriptor 提供卷 UUID，内核提供 boot UUID；身份同时保留两级 inode 和设备号。同 boot 设备变化仍拒绝；跨 boot 只有两级卷 UUID 与 inode 均相同才接受设备号漂移，读取返回独立的身份延续观察。路径、no-follow、单硬链接、读取前后身份及文件 hash/size 校验持续生效，不改写历史 scope、raw metadata 或 accepted receipt。
+
+不支持稳定卷查询的文件系统继续采集 v1。v1 仅在原设备号和 inode 完全一致时兼容读取，漂移时必须由获授权操作者提供原卷和目录身份的重新证明；Framework 不从当前 boot、相同路径或相同 inode 推断旧卷。v2 缺少当前稳定证据时也拒绝，不回退到仅比较设备号。新身份采集的源码支持不等于已安装环境完成升级或真实重启验收。
 
 ### Runtime supervision
 

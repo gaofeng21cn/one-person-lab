@@ -67,6 +67,32 @@
             "work_item_inode": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)$" }
           }
         },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "surface_kind",
+            "version",
+            "workspace_device",
+            "workspace_inode",
+            "work_item_device",
+            "work_item_inode",
+            "boot_uuid",
+            "workspace_volume_uuid",
+            "work_item_volume_uuid"
+          ],
+          "properties": {
+            "surface_kind": { "const": "opl_work_item_root_identity" },
+            "version": { "const": "opl-work-item-root-identity.v2" },
+            "workspace_device": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)$" },
+            "workspace_inode": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)$" },
+            "work_item_device": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)$" },
+            "work_item_inode": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)$" },
+            "boot_uuid": {"type": "string", "pattern": "^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$", "not": {"const": "00000000-0000-0000-0000-000000000000"}},
+            "workspace_volume_uuid": {"type": "string", "pattern": "^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$", "not": {"const": "00000000-0000-0000-0000-000000000000"}},
+            "work_item_volume_uuid": {"type": "string", "pattern": "^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$", "not": {"const": "00000000-0000-0000-0000-000000000000"}}
+          }
+        },
         { "type": "null" }
       ]
     },

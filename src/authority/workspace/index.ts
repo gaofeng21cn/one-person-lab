@@ -53,6 +53,7 @@ export type {
 } from './execution-scope.ts';
 export {
   captureWorkItemRootIdentity,
+  workItemRootIdentityContinues,
   readStableWorkItemFile,
   requireWorkItemRootIdentity,
   WorkItemFileBoundaryError,

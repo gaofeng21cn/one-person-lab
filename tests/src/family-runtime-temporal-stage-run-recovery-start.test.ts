@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
   startTemporalStageRunRecoveryWorkflow,
   startTemporalStageRunWorkflow,
+  describeTemporalStageRunWorkflow,
 } from '../../src/adapters/execution/family-runtime-temporal-provider.ts';
 import { createTemporalTestWorkflowEnvironment } from './temporal-test-environment.ts';
-import { stageRunInput } from './family-runtime-stage-run-launch-cases/shared.ts';
+import { artifactFixtures, domainPackRoot, stageRunInput } from './family-runtime-stage-run-launch-cases/shared.ts';
 
 test('Temporal recovery creates one new Run for the same StageRun workflow id and replays idempotently', async () => {
   const testEnv = await createTemporalTestWorkflowEnvironment();
@@ -24,6 +27,10 @@ test('Temporal recovery creates one new Run for the same StageRun workflow id an
   process.env.OPL_TEMPORAL_NAMESPACE = testEnv.namespace ?? 'default';
   process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
   process.env.OPL_TEMPORAL_TEST_ALLOW_UNINDEXED_VISIBILITY = '1';
+  const promptPath = path.join(domainPackRoot, 'agent/prompts/intake.md');
+  const originalPrompt = fs.readFileSync(promptPath);
+  const artifactPath = artifactFixtures.request!.filePath;
+  const originalArtifact = fs.readFileSync(artifactPath);
   try {
     const input = stageRunInput({ invocationId: 'sri_temporal_recovery_reuse' });
     const original = await startTemporalStageRunWorkflow(input);
@@ -58,6 +65,20 @@ test('Temporal recovery creates one new Run for the same StageRun workflow id an
       },
     };
 
+    fs.appendFileSync(promptPath, 'owner-approved updated package prompt\n');
+    const described = await describeTemporalStageRunWorkflow(input);
+    assert.equal(described.workflow_status, 'TERMINATED');
+    await assert.rejects(() => startTemporalStageRunWorkflow(input), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_content_binding_stale');
+      return true;
+    });
+    fs.appendFileSync(artifactPath, 'tampered workspace evidence\n');
+    await assert.rejects(() => startTemporalStageRunRecoveryWorkflow(recoveryInput), (error: any) => {
+      assert.equal(error.details?.failure_code, 'stage_run_content_binding_stale');
+      assert.equal(error.details?.purpose, 'input_artifact');
+      return true;
+    });
+    fs.writeFileSync(artifactPath, originalArtifact);
     const recovered = await startTemporalStageRunRecoveryWorkflow(recoveryInput);
     assert.equal(recovered.workflow_id, input.workflow_id);
     assert.notEqual(recovered.recovery_run_id, original.first_execution_run_id);
@@ -72,8 +93,25 @@ test('Temporal recovery creates one new Run for the same StageRun workflow id an
     assert.notEqual(retried.recovery_run_id, recovered.recovery_run_id);
     assert.equal(retried.recovered_existing_execution, false);
 
+    const advancedInput: any = structuredClone(recoveryInput);
+    advancedInput.recovery_resume.recovery_id = 'recovery:accepted-supplement';
+    advancedInput.recovery_resume.artifact_producer_attempt_ref = advancedInput.recovery_resume.producer_attempt_ref;
+    advancedInput.recovery_resume.artifact_producer_attempt_summary = advancedInput.recovery_resume.producer_attempt_summary;
+    delete advancedInput.recovery_resume.producer_attempt_ref;
+    delete advancedInput.recovery_resume.producer_attempt_summary;
+    await assert.rejects(() => startTemporalStageRunRecoveryWorkflow(advancedInput));
+    await testEnv.client.workflow.getHandle(input.workflow_id).terminate('test-advance-terminal-recovery');
+    const advanced = await startTemporalStageRunRecoveryWorkflow(advancedInput);
+    assert.equal(advanced.workflow_id, input.workflow_id);
+    assert.notEqual(advanced.recovery_run_id, retried.recovery_run_id);
+    assert.equal(advanced.producer_attempt_ref, advancedInput.recovery_resume.artifact_producer_attempt_ref);
+    const advancedReplay = await startTemporalStageRunRecoveryWorkflow(advancedInput);
+    assert.equal(advancedReplay.recovery_run_id, advanced.recovery_run_id);
+
     await testEnv.client.workflow.getHandle(input.workflow_id).terminate('test-cleanup');
   } finally {
+    fs.writeFileSync(promptPath, originalPrompt);
+    fs.writeFileSync(artifactPath, originalArtifact);
     for (const key of envKeys) {
       const value = previousEnv.get(key);
       if (value === undefined) delete process.env[key];

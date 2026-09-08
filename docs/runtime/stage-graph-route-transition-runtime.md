@@ -23,6 +23,10 @@ Stage 角色、独立 Attempt、预算分支、hard stop、route 输出及 findi
 
 Runway 在启动 Temporal 前，先把 exact StageRun input 写入 `${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_run_launches`。真正调用 provider 前再用带 lease 的 `BEGIN IMMEDIATE` compare-and-swap 收敛 `registered|start_failed|expired starting`；active `starting` caller 只获得幂等 readback。未知成功恢复允许按同一 deterministic workflow id 重投 RPC，所以 provider delivery 是 at-least-once；Temporal `USE_EXISTING + REJECT_DUPLICATE` 保证 execution exactly one。`started` 不得降级，`closed` 永久终局。同 invocation + 同 spec 的 running/closed Run 幂等返回；同 invocation + 不同 spec 以 `stage_run_invocation_spec_conflict` 失败。
 
+正式终态恢复使用原 StageRun、immutable launch 和 quality cycle；从已接受 producer、repair-required reviewer 或 repairer 接续下一角色，保留原 findings、revision intake、审查回执、已用轮数和质量债。恢复使用已接受 typed closeout，原 raw 字节仍独立校验，不用过期可解析响应覆盖已接受协议。历史观察只重新核验真实输入证据，正常包升级不要求覆盖原已绑定包字节。
+
+恢复身份推进须先精确观察原 Temporal Run 已终止，再通过原注册表 CAS 留存先前回执。尚未开始审查的同一已接受 producer 可追加快照成员，旧成员和 artifact identity 必须保留；不能换 lane、workspace、binding 或替换已审证据。运行中的不同恢复身份仍拒绝，新的 Temporal Run 不代表新的业务 StageRun，也不改写原终态。
+
 CLI 默认 invocation 是稳定幂等键；`--new-stage-run` 显式创建新 Run。Hosted action 用 action `run_id + action_run_ref` 建立 invocation。跨 Stage 路由用 parent StageRun、decisive Attempt ref、route decision digest 与 target Stage 建立 invocation，因此同一 route replay 复用目标 Run，后续新决定或 A → B → A route-back 会创建新 Run。
 
 `complete` 只关闭当前 workflow，不启动目标 Run。其他通过 authority/ABI 校验的决定必须由 controller 实际注册并启动目标 StageRun；controller 不得把“记录了 route”冒充“transition 已物化”。

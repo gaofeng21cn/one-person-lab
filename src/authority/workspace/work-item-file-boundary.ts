@@ -56,9 +56,14 @@ export class WorkItemFileBoundaryError extends FrameworkContractError {
 
 export const WORK_ITEM_ROOT_IDENTITY_VERSION = 'opl-work-item-root-identity.v1' as const;
 
+const VOLUME_ROOT_IDENTITY_VERSION = 'opl-work-item-root-identity.v2' as const;
+
 export type WorkItemRootIdentity = {
   surface_kind: 'opl_work_item_root_identity';
-  version: typeof WORK_ITEM_ROOT_IDENTITY_VERSION;
+  version: typeof WORK_ITEM_ROOT_IDENTITY_VERSION | typeof VOLUME_ROOT_IDENTITY_VERSION;
+  boot_uuid?: string;
+  workspace_volume_uuid?: string;
+  work_item_volume_uuid?: string;
   workspace_device: string;
   workspace_inode: string;
   work_item_device: string;
@@ -69,6 +74,7 @@ export type StableWorkItemFileObservation = {
   real_path: string;
   sha256: string;
   byte_size: number;
+  root_identity_continuation?: { expected: WorkItemRootIdentity; observed: WorkItemRootIdentity };
 };
 
 function decimalIdentity(value: unknown, field: string) {
@@ -90,7 +96,11 @@ export function requireWorkItemRootIdentity(value: unknown): WorkItemRootIdentit
     'workspace_inode',
     'work_item_device',
     'work_item_inode',
-  ].sort();
+  ];
+  if (isRecord(value) && value.version === VOLUME_ROOT_IDENTITY_VERSION) {
+    expectedKeys.push('boot_uuid', 'workspace_volume_uuid', 'work_item_volume_uuid');
+  }
+  expectedKeys.sort();
   if (!isRecord(value) || JSON.stringify(Object.keys(value).sort()) !== JSON.stringify(expectedKeys)) {
     throw new WorkItemFileBoundaryError(
       'work_item_file_boundary_root_invalid',
@@ -100,7 +110,7 @@ export function requireWorkItemRootIdentity(value: unknown): WorkItemRootIdentit
   }
   if (
     value.surface_kind !== 'opl_work_item_root_identity'
-    || value.version !== WORK_ITEM_ROOT_IDENTITY_VERSION
+    || (value.version !== WORK_ITEM_ROOT_IDENTITY_VERSION && value.version !== VOLUME_ROOT_IDENTITY_VERSION)
   ) {
     throw new WorkItemFileBoundaryError(
       'work_item_file_boundary_root_invalid',
@@ -110,12 +120,38 @@ export function requireWorkItemRootIdentity(value: unknown): WorkItemRootIdentit
   }
   return {
     surface_kind: 'opl_work_item_root_identity',
-    version: WORK_ITEM_ROOT_IDENTITY_VERSION,
+    version: value.version as WorkItemRootIdentity['version'],
+    ...(value.version === VOLUME_ROOT_IDENTITY_VERSION ? {
+      boot_uuid: identityUuid(value.boot_uuid, 'boot_uuid'),
+      workspace_volume_uuid: identityUuid(value.workspace_volume_uuid, 'workspace_volume_uuid'),
+      work_item_volume_uuid: identityUuid(value.work_item_volume_uuid, 'work_item_volume_uuid'),
+    } : {}),
     workspace_device: decimalIdentity(value.workspace_device, 'workspace_device'),
     workspace_inode: decimalIdentity(value.workspace_inode, 'workspace_inode'),
     work_item_device: decimalIdentity(value.work_item_device, 'work_item_device'),
     work_item_inode: decimalIdentity(value.work_item_inode, 'work_item_inode'),
   };
+}
+
+function identityUuid(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value)
+    || value === '00000000-0000-0000-0000-000000000000') {
+    throw new WorkItemFileBoundaryError('work_item_file_boundary_root_invalid',
+      'Work-item root identity requires a nonzero canonical UUID.', { field });
+  }
+  return value;
+}
+
+export function workItemRootIdentityContinues(expectedValue: WorkItemRootIdentity, actualValue: WorkItemRootIdentity) {
+  const expected = requireWorkItemRootIdentity(expectedValue);
+  const actual = requireWorkItemRootIdentity(actualValue);
+  const sameInodes = expected.workspace_inode === actual.workspace_inode && expected.work_item_inode === actual.work_item_inode;
+  const sameDevices = expected.workspace_device === actual.workspace_device && expected.work_item_device === actual.work_item_device;
+  if (expected.version === WORK_ITEM_ROOT_IDENTITY_VERSION) return sameInodes && sameDevices;
+  return actual.version === VOLUME_ROOT_IDENTITY_VERSION && sameInodes
+    && expected.workspace_volume_uuid === actual.workspace_volume_uuid
+    && expected.work_item_volume_uuid === actual.work_item_volume_uuid
+    && (expected.boot_uuid !== actual.boot_uuid || sameDevices);
 }
 
 function helperFailure(input: {
@@ -321,5 +357,11 @@ export function readStableWorkItemFile(input: {
     real_path: result.real_path,
     sha256: result.sha256,
     byte_size: byteSize,
+    ...(isRecord(result.root_identity_continuation) ? {
+      root_identity_continuation: {
+        expected: requireWorkItemRootIdentity(result.root_identity_continuation.expected),
+        observed: requireWorkItemRootIdentity(result.root_identity_continuation.observed),
+      },
+    } : {}),
   };
 }

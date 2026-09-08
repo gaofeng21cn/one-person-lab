@@ -144,7 +144,7 @@ function containedRegularFile(root: string, relativePath: string) {
   }
 }
 
-function rootProfessionalSkillSources(rootSourceRoot: string, sourceRef: string) {
+function rootProfessionalSkillSources(rootSourceRoot: string, sourceRef: string, rootSkillIds: string[]) {
   const capabilityMapPath = containedRegularFile(rootSourceRoot, 'contracts/capability_map.json');
   if (!capabilityMapPath) {
     throw new FrameworkContractError(
@@ -176,6 +176,24 @@ function rootProfessionalSkillSources(rootSourceRoot: string, sourceRef: string)
     const kind = stringValue(capability.capability_kind) ?? stringValue(capability.surface_role);
     const physical = isRecord(capability.physical_source_ref) ? capability.physical_source_ref : null;
     const relativeSkillFile = stringValue(physical?.ref);
+    if (kind === 'primary_skill' && physical?.ref_kind === 'repo_path'
+      && relativeSkillFile === 'agent/primary_skill/SKILL.md') {
+      const skillFile = containedRegularFile(rootSourceRoot, relativeSkillFile);
+      if (!skillFile) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Installed standard Agent is missing its declared primary Skill.',
+          { source_root: rootSourceRoot, skill_ref: relativeSkillFile,
+            failure_code: 'agent_package_workspace_skill_source_missing' },
+        );
+      }
+      return rootSkillIds.map((skillId) => ({
+        skillId: safeSkillId(skillId),
+        sourceRoot: path.dirname(skillFile),
+        sourceRef: `${sourceRef}#${relativeSkillFile}`,
+        installMode: 'core_required' as const,
+      }));
+    }
     if (kind !== 'professional_skill'
       || physical?.ref_kind !== 'repo_path'
       || !relativeSkillFile
@@ -212,7 +230,7 @@ function buildProjectionPlan(input: {
 }) {
   const selectedSkillIds = new Set((input.selectedSkillIds ?? []).map(safeSkillId));
   const sources = [
-    ...rootProfessionalSkillSources(input.rootSourceRoot, input.rootSourceRef),
+    ...rootProfessionalSkillSources(input.rootSourceRoot, input.rootSourceRef, input.rootSkillIds),
     ...input.providers.flatMap((provider) => provider.exports
       .filter((entry) => (
         (entry.installMode === 'core_required'
@@ -243,7 +261,7 @@ function buildProjectionPlan(input: {
         },
       );
     }
-    const digest = skillDigest(path.dirname(source.sourceRoot), skillId);
+    const digest = skillDigest(path.dirname(source.sourceRoot), skillId, source.sourceRoot);
     const previous = sourceBySkillId.get(skillId);
     if (previous && skillDigests[skillId] !== digest) {
       throw new FrameworkContractError(
