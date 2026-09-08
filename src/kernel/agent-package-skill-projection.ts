@@ -65,8 +65,7 @@ function filesUnder(root: string) {
   return files.sort();
 }
 
-function skillDigest(skillsRoot: string, skillId: string) {
-  const skillRoot = path.join(skillsRoot, skillId);
+function skillDigest(skillsRoot: string, skillId: string, skillRoot = path.join(skillsRoot, skillId)) {
   const records = filesUnder(skillRoot).map((relativePath) => {
     const bytes = fs.readFileSync(path.join(skillRoot, relativePath));
     return `${skillId}/${relativePath}\0${bytes.toString('base64')}`;
