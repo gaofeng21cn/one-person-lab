@@ -130,6 +130,8 @@ async function runController(input: {
     targetStageId: string;
   };
   recoveryResume?: boolean;
+  acceptedReviewerResume?: boolean;
+  acceptedRepairerResume?: boolean;
 }) {
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
@@ -577,7 +579,7 @@ async function runController(input: {
               : { scope_budget: { max_tokens: input.maxTokens } }),
         },
       });
-      if (input.recoveryResume) {
+      if (input.recoveryResume || input.acceptedReviewerResume || input.acceptedRepairerResume) {
         workflowInput.recovery_resume = {
           surface_kind: 'opl_stage_run_recovery_resume',
           version: 'opl-stage-run-recovery-resume.v1',
@@ -602,6 +604,48 @@ async function runController(input: {
           artifact_identity_receipt_refs: ['artifact-identity:deck-v1'],
           review_input_snapshot_materialization_request: null,
         };
+        if (input.acceptedReviewerResume || input.acceptedRepairerResume) {
+          const recovery = workflowInput.recovery_resume;
+          const reviewer = {
+            ...recovery.producer_attempt_summary!,
+            attempt_role: 'reviewer' as const,
+            stage_attempt_id: `sat_${input.id}_reviewer_0`,
+            workflow_id: `wf_${input.id}_reviewer_0`,
+            execution_session_ref: `codex://threads/thread-${input.id}-reviewer-0`,
+          };
+          recovery.resume_after_role = 'reviewer';
+          recovery.reviewer_attempt_ref = `opl://stage_attempts/${reviewer.stage_attempt_id}`;
+          recovery.prior_attempt_summaries = [recovery.producer_attempt_summary!, reviewer];
+          recovery.repair_rounds_used = 1;
+          recovery.findings = [{ finding_id: 'finding:visual-clipping', severity: 'critical', required: true,
+            evidence_refs: ['screenshot:v1'], repair_expectation: 'Remove clipping while preserving the approved claim.' }];
+          recovery.review_receipts = [{
+            ...(await activities.stageQualityReviewReceiptActivity({
+              producer_attempt_ref: recovery.producer_attempt_ref,
+              reviewer_attempt_ref: recovery.reviewer_attempt_ref,
+              verdict: 'repair_required', rubric_refs: ['rubric:visual'],
+            })),
+            revision_transport: {
+              surface_kind: 'opl_revision_transport',
+              opl_revision_intake_ref: { kind: 'opl_revision_intake', ref: 'intake:accepted-review' },
+              opl_stage_review_receipt_ref: { kind: 'opl_stage_review_receipt', ref: 'receipt:accepted-review' },
+            },
+          } as any];
+          if (input.acceptedRepairerResume) {
+            const repairer = {
+              ...recovery.producer_attempt_summary!, attempt_role: 'repairer' as const,
+              stage_attempt_id: `sat_${input.id}_repairer_1`, quality_round_index: 1,
+              workflow_id: `wf_${input.id}_repairer_1`, execution_session_ref: `codex://threads/thread-${input.id}-repairer-1`,
+            };
+            recovery.resume_after_role = 'repairer';
+            delete recovery.reviewer_attempt_ref;
+            recovery.artifact_producer_attempt_ref = `opl://stage_attempts/${repairer.stage_attempt_id}`;
+            recovery.artifact_producer_attempt_summary = repairer;
+            recovery.prior_attempt_summaries.push(repairer);
+            recovery.repair_map = [{ finding_id: 'finding:visual-clipping', repair_status: 'repaired',
+              changed_artifact_refs: ['artifact:deck-v1'], repair_evidence_refs: ['diff:deck-v1'] }];
+          }
+        }
       }
       const handle = await testEnv.client.workflow.start(StageRunWorkflow, {
         args: [workflowInput],
@@ -635,6 +679,27 @@ test('StageRun recovery resumes at reviewer without rerunning the durable produc
   assert.equal(reviewReceiptInputs[0]?.producer_attempt_ref, attempts[0]?.artifact_producer_attempt_ref);
   assert.equal(state.status, 'completed');
   assert.equal(state.review_receipts.length, 1);
+});
+
+test('StageRun accepted reviewer recovery starts the next repair round without repeating producer or reviewer', async () => {
+  const { state, attempts } = await runController({
+    id: 'accepted-reviewer-resume', closeFindingAfterRound: 2, acceptedReviewerResume: true,
+  });
+  assert.deepEqual(attempts.map(attempt => attempt.attempt_role), ['repairer', 're_reviewer']);
+  assert.equal(attempts[0]?.quality_round_index, 2);
+  assert.equal(attempts[0]?.parent_attempt_ref, 'opl://stage_attempts/sat_accepted-reviewer-resume_reviewer_0');
+  assert.equal(attempts[0]?.findings?.[0]?.finding_id, 'finding:visual-clipping');
+  assert.equal(state.status, 'completed');
+});
+
+test('StageRun accepted repairer recovery starts re-review without replaying accepted work', async () => {
+  const { state, attempts } = await runController({
+    id: 'accepted-repairer-resume', closeFindingAfterRound: 1, acceptedRepairerResume: true,
+  });
+  assert.deepEqual(attempts.map(attempt => attempt.attempt_role), ['re_reviewer']);
+  assert.equal(attempts[0]?.quality_round_index, 1);
+  assert.equal(attempts[0]?.parent_attempt_ref, 'opl://stage_attempts/sat_accepted-repairer-resume_repairer_1');
+  assert.equal(state.status, 'completed');
 });
 
 test('StageRun controller materializes isolated producer-review-repair-re-review child workflows', async () => {

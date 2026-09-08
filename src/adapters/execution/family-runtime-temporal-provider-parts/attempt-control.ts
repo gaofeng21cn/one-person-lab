@@ -65,11 +65,13 @@ function assertTemporalStageRunRecoveryMemoIdentity(
       { failure_code: 'stage_run_recovery_resume_missing' },
     );
   }
+  const artifactProducerAttemptRef = recovery.artifact_producer_attempt_ref
+    ?? recovery.producer_attempt_ref;
   const observed = memo ?? {};
   if (
     observed.recovery_id !== recovery.recovery_id
     || observed.recovery_quality_cycle_id !== recovery.quality_cycle_id
-    || observed.recovery_producer_attempt_ref !== recovery.producer_attempt_ref
+    || observed.recovery_producer_attempt_ref !== artifactProducerAttemptRef
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -88,6 +90,17 @@ function assertTemporalStageRunRecoveryMemoIdentity(
 function temporalWorkflowStatusIsRunning(value: unknown) {
   const normalized = typeof value === 'string' ? value.toUpperCase() : '';
   return normalized === 'RUNNING' || normalized.endsWith('_RUNNING');
+}
+
+function temporalWorkflowStatusIsTerminal(value: unknown) {
+  return [
+    'COMPLETED',
+    'FAILED',
+    'CANCELED',
+    'CANCELLED',
+    'TERMINATED',
+    'TIMED_OUT',
+  ].includes(typeof value === 'string' ? value.toUpperCase() : '');
 }
 
 export async function startTemporalStageRunWorkflow(
@@ -190,8 +203,12 @@ export async function startTemporalStageRunRecoveryWorkflow(
   input: TemporalStageRunWorkflowInput,
   options: TemporalClientOptions = {},
 ) {
-  const workflowInput = requireTemporalStageRunWorkflowInputLaunchable(input);
+  const workflowInput = requireTemporalStageRunWorkflowInputLaunchable(input, {
+    revalidateContent: 'historical_evidence',
+  });
   const recovery = requireTemporalStageRunRecoveryResume(workflowInput)!;
+  const artifactProducerAttemptRef = recovery.artifact_producer_attempt_ref
+    ?? recovery.producer_attempt_ref!;
   const taskQueue = options.paths
     ? resolveTemporalWorkerTaskQueue(options.paths)
     : resolveTemporalTaskQueue();
@@ -226,7 +243,7 @@ export async function startTemporalStageRunRecoveryWorkflow(
         stage_run_invocation_id: launchInput.stage_run_invocation_id,
         stage_run_spec_sha256: launchInput.stage_run_spec_sha256,
         quality_cycle_id: recovery.quality_cycle_id,
-        producer_attempt_ref: recovery.producer_attempt_ref,
+        producer_attempt_ref: artifactProducerAttemptRef,
         workflow_id: description.workflowId,
         recovery_run_id: description.runId,
         workflow_status: description.status.name,
@@ -258,8 +275,12 @@ export async function startTemporalStageRunRecoveryWorkflow(
         return receiptFromDescription(existing, true);
       }
       if (
-        (existing.memo?.recovery_id && existing.memo.recovery_id !== recovery.recovery_id)
-        || temporalWorkflowStatusIsRunning(existing.status.name)
+        temporalWorkflowStatusIsRunning(existing.status.name)
+        || (
+          existing.memo?.recovery_id
+          && existing.memo.recovery_id !== recovery.recovery_id
+          && !temporalWorkflowStatusIsTerminal(existing.status.name)
+        )
       ) {
         throw new FrameworkContractError(
           'contract_shape_invalid',
@@ -290,12 +311,16 @@ export async function startTemporalStageRunRecoveryWorkflow(
         staticDetails: [
           `StageRun: ${launchInput.stage_run_id}`,
           `Recovery: ${recovery.recovery_id}`,
-          `Producer Attempt: ${recovery.producer_attempt_ref}`,
+          `Artifact Producer Attempt: ${artifactProducerAttemptRef}`,
         ].join('\n'),
         workflowIdConflictPolicy: WorkflowIdConflictPolicy.FAIL,
         workflowIdReusePolicy: WorkflowIdReusePolicy.ALLOW_DUPLICATE,
       }), options);
-      const description = await withTemporalRpcDeadline(client, () => handle.describe(), options);
+      const startedRun = client.workflow.getHandle(
+        launchInput.workflow_id,
+        handle.firstExecutionRunId,
+      );
+      const description = await withTemporalRpcDeadline(client, () => startedRun.describe(), options);
       return receiptFromDescription(description, false);
     } catch (error) {
       if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
@@ -309,7 +334,9 @@ export async function describeTemporalStageRunWorkflow(
   input: TemporalStageRunWorkflowInput,
   options: TemporalClientOptions = {},
 ) {
-  const workflowInput = requireTemporalStageRunWorkflowInputLaunchable(input);
+  const workflowInput = requireTemporalStageRunWorkflowInputLaunchable(input, {
+    revalidateContent: 'historical_evidence',
+  });
   if (!resolveTemporalAddressForPaths(options.paths).address) requireTemporalAddress();
   return withTemporalClient(async (client) => {
     const handle = client.workflow.getHandle(workflowInput.workflow_id);

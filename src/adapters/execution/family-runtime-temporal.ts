@@ -800,28 +800,34 @@ export function requireTemporalStageRunRecoveryResume(
     );
   }
   const expectedQualityCycleId = `quality-cycle:${input.stage_run_id}`;
-  const producer = recovery.producer_attempt_summary;
+  const resumeAfterRole = recovery.resume_after_role ?? 'producer';
+  const artifactProducer = recovery.artifact_producer_attempt_summary
+    ?? recovery.producer_attempt_summary;
+  const artifactProducerAttemptRef = recovery.artifact_producer_attempt_ref
+    ?? recovery.producer_attempt_ref;
   if (
     recovery.quality_cycle_id !== expectedQualityCycleId
-    || !producer
-    || producer.attempt_role !== 'producer'
-    || producer.status !== 'completed'
-    || typeof producer.stage_attempt_id !== 'string'
-    || !producer.stage_attempt_id.trim()
-    || typeof producer.workflow_id !== 'string'
-    || !producer.workflow_id.trim()
-    || typeof producer.execution_session_ref !== 'string'
-    || !producer.execution_session_ref.trim()
-    || recovery.producer_attempt_ref !== `opl://stage_attempts/${producer.stage_attempt_id}`
+    || !['producer', 'repairer', 'reviewer'].includes(resumeAfterRole)
+    || !artifactProducer
+    || artifactProducer.attempt_role !== (resumeAfterRole === 'reviewer' ? 'producer' : resumeAfterRole)
+    || artifactProducer.status !== 'completed'
+    || typeof artifactProducer.stage_attempt_id !== 'string'
+    || !artifactProducer.stage_attempt_id.trim()
+    || typeof artifactProducer.workflow_id !== 'string'
+    || !artifactProducer.workflow_id.trim()
+    || typeof artifactProducer.execution_session_ref !== 'string'
+    || !artifactProducer.execution_session_ref.trim()
+    || artifactProducerAttemptRef !== `opl://stage_attempts/${artifactProducer.stage_attempt_id}`
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'StageRun recovery resume does not bind one completed producer Attempt.',
+      'StageRun recovery resume does not bind one completed artifact-producing Attempt.',
       {
         failure_code: 'stage_run_recovery_producer_identity_mismatch',
         stage_run_id: input.stage_run_id,
         quality_cycle_id: recovery.quality_cycle_id,
-        producer_attempt_ref: recovery.producer_attempt_ref,
+        resume_after_role: resumeAfterRole,
+        artifact_producer_attempt_ref: artifactProducerAttemptRef,
       },
     );
   }
@@ -836,9 +842,9 @@ export function requireTemporalStageRunRecoveryResume(
     || artifactRefs.length !== receiptRefs.length
     || artifactHashes.some((hash) => !/^sha256:[a-f0-9]{64}$/.test(hash))
     || canonicalJsonText({
-      artifact_refs: producer.artifact_refs,
-      artifact_hashes: producer.artifact_hashes,
-      artifact_identity_receipt_refs: producer.artifact_identity_receipt_refs,
+      artifact_refs: artifactProducer.artifact_refs,
+      artifact_hashes: artifactProducer.artifact_hashes,
+      artifact_identity_receipt_refs: artifactProducer.artifact_identity_receipt_refs,
     }) !== canonicalJsonText({
       artifact_refs: artifactRefs,
       artifact_hashes: artifactHashes,
@@ -847,9 +853,49 @@ export function requireTemporalStageRunRecoveryResume(
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'StageRun recovery resume artifact identity does not match the producer Attempt.',
+      'StageRun recovery resume artifact identity does not match the artifact-producing Attempt.',
       { failure_code: 'stage_run_recovery_artifact_identity_mismatch' },
     );
+  }
+  if (resumeAfterRole === 'reviewer') {
+    const reviewer = recovery.prior_attempt_summaries?.at(-1);
+    const receipt = recovery.review_receipts?.at(-1);
+    if (reviewer?.attempt_role !== 'reviewer' || reviewer.status !== 'completed'
+      || recovery.reviewer_attempt_ref !== `opl://stage_attempts/${reviewer.stage_attempt_id}`
+      || receipt?.reviewer_attempt_ref !== recovery.reviewer_attempt_ref
+      || receipt.producer_attempt_ref !== artifactProducerAttemptRef
+      || receipt.stage_run_id !== input.stage_run_id || receipt.quality_cycle_id !== expectedQualityCycleId
+      || receipt.verdict !== 'repair_required' || !receipt.revision_transport
+      || !Array.isArray(recovery.findings) || recovery.findings.length === 0
+      || receipt.finding_lineage.findings_sha256 !== `sha256:${crypto.createHash('sha256').update(canonicalJsonText(recovery.findings)).digest('hex')}`
+      || !Number.isSafeInteger(recovery.repair_rounds_used) || recovery.repair_rounds_used! < 0
+      || (recovery.repair_map?.length ?? 0) !== 0) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Reviewer recovery must preserve its accepted revision intake and findings.', {
+        failure_code: 'stage_run_recovery_review_lineage_invalid',
+      });
+    }
+  }
+  if (resumeAfterRole === 'repairer') {
+    const attempts = recovery.prior_attempt_summaries;
+    if (
+      !Array.isArray(attempts)
+      || attempts.length < 3
+      || attempts.at(-1)?.stage_attempt_id !== artifactProducer.stage_attempt_id
+      || attempts.at(-1)?.attempt_role !== 'repairer'
+      || !Array.isArray(recovery.findings)
+      || recovery.findings.length === 0
+      || !Array.isArray(recovery.repair_map)
+      || recovery.repair_map.length === 0
+      || !Array.isArray(recovery.review_receipts)
+      || recovery.review_receipts.length === 0
+      || recovery.repair_rounds_used !== artifactProducer.quality_round_index
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Repairer StageRun recovery must preserve the prior quality lineage before re-review.',
+        { failure_code: 'stage_run_recovery_repair_lineage_invalid' },
+      );
+    }
   }
   return recovery;
 }
