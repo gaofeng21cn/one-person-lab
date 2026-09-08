@@ -4,7 +4,70 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
-import { parseRawOutputForCloseoutRecovery } from '../../src/adapters/execution/family-runtime-stage-run-closeout-recovery.ts';
+import { DatabaseSync } from 'node:sqlite';
+import { parseRawOutputForCloseoutRecovery, recoverStageRunCloseoutProjection } from '../../src/adapters/execution/family-runtime-stage-run-closeout-recovery.ts';
+import { createStageAttempt, ingestStageAttemptCloseout, inspectStageAttempt } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
+import { createStageQualityCycle } from '../../src/adapters/execution/family-runtime-stage-quality-cycle.ts';
+import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
+import { createFamilyRuntimeQueueTables, registerStageRunLaunch, recordStageRunTemporalStart, recordStageRunClosed, scopedStageRunInput, temporalStartReceipt } from './family-runtime-stage-run-launch-cases/shared.ts';
+
+test('accepted protocol closeout supersedes parseable stale raw before artifact validation', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-accepted-closeout-recovery-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = root;
+  const db = new DatabaseSync(':memory:');
+  try {
+    createFamilyRuntimeQueueTables(db);
+    const { input } = scopedStageRunInput('sri_accepted_protocol_closeout');
+    registerStageRunLaunch(db, input);
+    const qualityCycleId = 'sqc_accepted_protocol_closeout';
+    createStageQualityCycle(db, {
+      qualityCycleId, stageRunId: input.stage_run_id, domainId: input.domain_id,
+      stageId: input.stage_id, policy: input.quality_policy!,
+    });
+    const created = createStageAttempt(db, {
+      domainId: input.domain_id, stageId: input.stage_id, providerKind: 'temporal',
+      workspaceLocator: input.workspace_locator, sourceFingerprint: 'accepted-protocol-fixture',
+      stageRunId: input.stage_run_id, scopeKind: input.scope_kind, executionScope: input.execution_scope,
+    }).attempt;
+    db.prepare("UPDATE stage_attempts SET attempt_role = 'producer', quality_cycle_id = ?, quality_round_index = 0 WHERE stage_attempt_id = ?")
+      .run(qualityCycleId, created.stage_attempt_id);
+    const attempt = inspectStageAttempt(db, created.stage_attempt_id);
+    const raw = persistRawStageOutput({
+      attempt,
+      content: JSON.stringify({ closeout_packet_sha256: 'a'.repeat(64) }),
+    })!;
+    const originalBytes = fs.readFileSync(new URL(raw.output_ref));
+    const packet = {
+      surface_kind: 'stage_attempt_closeout_packet', closeout_id: 'closeout:accepted-protocol',
+      stage_attempt_id: attempt.stage_attempt_id, stage_run_id: input.stage_run_id,
+      scope_digest: input.execution_scope!.scope_digest,
+      closeout_refs: input.artifact_refs,
+      closeout_ref_metadata: [], consumed_refs: [], consumed_memory_refs: [],
+      writeback_receipt_refs: [], rejected_writes: [], next_owner: null, domain_ready_verdict: null,
+      route_impact: { stage_quality_cycle: { artifact_refs: [], artifact_hashes: [] } },
+      authority_boundary: { opl: 'closeout_transport_only', domain: 'truth_quality_artifact_gate_owner' },
+    };
+    ingestStageAttemptCloseout(db, { stageAttemptId: attempt.stage_attempt_id, packet });
+    recordStageRunTemporalStart(db, { stageRunId: input.stage_run_id, temporalStartReceipt: temporalStartReceipt(input, 'COMPLETED') });
+    recordStageRunClosed(db, { stageRunId: input.stage_run_id, terminalStatus: 'completed_with_quality_debt' });
+    const accepted = inspectStageAttempt(db, attempt.stage_attempt_id);
+    assert.equal(accepted.status, 'completed');
+    assert.equal(accepted.closeout_receipt_status, 'accepted_typed_closeout');
+    await assert.rejects(() => recoverStageRunCloseoutProjection(db, {
+      stageRunId: input.stage_run_id, stageAttemptId: attempt.stage_attempt_id,
+    }, { startWorkflow: async () => assert.fail('missing artifact identity must not launch') }), (error: any) => {
+      assert.equal(error.details.failure_code, 'stage_quality_attempt_without_consumable_artifact');
+      return true;
+    });
+    assert.deepEqual(fs.readFileSync(new URL(raw.output_ref)), originalBytes);
+  } finally {
+    db.close();
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('recovery does not promote persisted raw transport into domain evidence', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-raw-recovery-'));

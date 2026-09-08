@@ -726,7 +726,11 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
     });
   }
   const latestCloseout = readLatestCloseout(db, artifactAttempt.stage_attempt_id);
-  const rawCandidate = acceptedReview ? record(latestCloseout.packet) : normalizeCodexTransportCloseoutCandidate(parseRawOutput(rawArtifact!.output_ref, {
+  // Protocol-only resume can supersede a parseable but incomplete raw response.
+  // Keep its immutable raw binding, then verify the accepted packet's bytes below.
+  const acceptedArtifactCloseout = artifactAttempt.status === 'completed'
+    && artifactAttempt.closeout_receipt_status === 'accepted_typed_closeout';
+  const rawCandidate = acceptedReview || acceptedArtifactCloseout ? record(latestCloseout.packet) : normalizeCodexTransportCloseoutCandidate(parseRawOutput(rawArtifact!.output_ref, {
     attempt,
     latestCloseoutPacket: record(latestCloseout.packet),
   }));
