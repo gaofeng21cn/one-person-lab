@@ -16,6 +16,85 @@ function restoreEnv(name: string, value: string | undefined) {
   else process.env[name] = value;
 }
 
+test('reviewer resume can cite the persisted original response without promoting raw output to a verdict', async () => {
+  const attemptId = 'sat-reviewer-response-only';
+  const initial = {
+    stage_attempt_id: attemptId,
+    attempt_ref: `opl://stage_attempts/${attemptId}`,
+    stage_run_id: 'sr-reviewer-response-only',
+    attempt_role: 'reviewer',
+    quality_cycle_id: 'quality-cycle:sr-reviewer-response-only',
+    route_impact: {
+      stage_quality_cycle: { outcome: 'repair_required', findings: [] },
+      stage_route_recommendation: { decision_kind: 'repeat', target_stage_id: 'review' },
+    },
+  };
+  const script = [
+    'if [ "$1" = "exec" ] && [ "${2:-}" = "resume" ]; then',
+    'node - "$@" <<\'NODE\'',
+    'const fs = require("node:fs");',
+    'const crypto = require("node:crypto");',
+    'const prompt = process.argv.at(-1);',
+    'const locator = prompt.split("\\n").flatMap(line => { try { return [JSON.parse(line)]; } catch { return []; } }).find(value => value.ref && value.sha256 && value.size_bytes);',
+    'if (!locator) process.exit(65);',
+    'const bytes = fs.readFileSync(new URL(locator.ref));',
+    'if (crypto.createHash("sha256").update(bytes).digest("hex") !== locator.sha256 || bytes.length !== locator.size_bytes) process.exit(66);',
+    'if (JSON.parse(bytes).stage_attempt_id !== ' + JSON.stringify(attemptId) + ') process.exit(67);',
+    'const packet = { surface_kind: "stage_attempt_closeout_packet", stage_attempt_id: ' + JSON.stringify(attemptId) + ', closeout_refs: [locator.ref], closeout_ref_metadata: [locator] };',
+    'console.log(JSON.stringify({type:"thread.started", thread_id:"thread-reviewer-response-only"}));',
+    'console.log(JSON.stringify({type:"item.completed",item:{type:"agent_message",id:"resume",text:JSON.stringify(packet)}}));',
+    'console.log(JSON.stringify({type:"turn.completed"}));',
+    'NODE',
+    'exit $?',
+    'fi',
+    'printf \'{"type":"thread.started","thread_id":"thread-reviewer-response-only"}\\n\'',
+    'printf \'{"type":"error","message":"Reconnecting... 1/5 (stream disconnected before completion)"}\\n\'',
+    'printf "%s\\n" ' + JSON.stringify(JSON.stringify({
+      type: 'item.completed',
+      item: { type: 'agent_message', id: 'initial', text: JSON.stringify(initial) },
+    })),
+    'printf \'{"type":"turn.completed"}\\n\'',
+  ].join('\n');
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(script);
+  const previous = Object.fromEntries(['OPL_CODEX_BIN', 'OPL_STATE_DIR', 'OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS', 'OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS']
+    .map(key => [key, process.env[key]]));
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_STATE_DIR = path.join(fixtureRoot, 'opl-state');
+    process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS = '1';
+    process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS = '1';
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: attemptId,
+        stage_run_id: 'sr-reviewer-response-only',
+        quality_cycle_id: 'quality-cycle:sr-reviewer-response-only',
+        attempt_role: 'reviewer',
+        quality_round_index: 0,
+        stage_id: 'review',
+        domain_id: 'example-domain',
+        workspace_locator: { workspace_root: fixtureRoot },
+        checkpoint_refs: ['packet:review'],
+      },
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
+    });
+    const raw = receipt.process_output_summary?.raw_stage_artifact as { output_ref: string; metadata_ref: string };
+    assert.equal(receipt.process_output_summary?.protocol_closeout_resume?.status, 'completed');
+    assert.equal(receipt.process_output_summary?.blocked_reason, undefined);
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [raw.output_ref]);
+    assert.deepEqual(receipt.closeout_packet?.route_impact, initial.route_impact);
+    assert.deepEqual(JSON.parse(fs.readFileSync(new URL(raw.output_ref), 'utf8')), initial);
+    const metadata = JSON.parse(fs.readFileSync(new URL(raw.metadata_ref), 'utf8'));
+    assert.equal(metadata.artifact_is_owner_receipt, false);
+    assert.equal(metadata.artifact_is_quality_verdict, false);
+    assert.notEqual(receipt.closeout_packet?.authority_boundary.opl, 'raw_executor_output_progress_envelope_only');
+  } finally {
+    for (const [key, value] of Object.entries(previous)) restoreEnv(key, value);
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 function materializeCheckoutCurrentnessProfile(repoRoot: string) {
   const contractsRoot = path.join(repoRoot, 'contracts');
   fs.mkdirSync(contractsRoot, { recursive: true });
