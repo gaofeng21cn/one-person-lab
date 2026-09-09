@@ -46,13 +46,6 @@ export function runManagedUpdateKernelOperation(
   });
 }
 
-export const OPL_CONNECT_SOURCE_MODULE = {
-  moduleId: 'connect',
-  brandName: 'OPL Connect',
-  contractRef: 'contracts/opl-framework/source-module-map.json#modules.connect',
-  physicalRoot: 'src/adapters/integration',
-} as const;
-
 export {
   createOplConnection,
   deleteOplConnection,

@@ -29,7 +29,7 @@ User
 - `src/entrypoints`：CLI 与公开调用入口，只做装配和 dispatch。
 - `src/kernel`：少量跨层稳定类型和基础能力，保持 brand-neutral。
 
-跨 unit 调用使用对方公开 entrypoint；entrypoint 不反向持有业务状态，adapter 不成为 authority，read model 不写 owner truth。
+跨 unit 调用使用对方公开 entrypoint；源码身份和职责从责任图读取，entrypoint 只导出实际能力。entrypoint 不反向持有业务状态，adapter 不成为 authority，read model 不写 owner truth。
 
 ## Family capability portfolio
 

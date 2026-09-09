@@ -29,6 +29,8 @@ Standard Agent 的 canonical primary Skill 按 capability map 和调用者 root 
 
 ### Review transport
 
+Framework raw 产物恢复与正式验收共用 metadata 来源校验：精确字段、Attempt/domain/stage 绑定、物理谱系和 authority boundary 由同一读取入口验证。恢复检查 metadata 声明的 hash/size；正式验收还要求它们与 closeout packet 一致，并在 transport receipt 发布前后重新检查文件。
+
 新 Attempt 可以从当前包获取此前未绑定的固定 review lane；父 spec 和已有显式 lane 保持原绑定。历史 Attempt 仅在请求明确携带 lane 且原 Stage manifest 的 ref/hash 精确匹配时恢复缺失投影，不猜测 controller-required lane。
 
 不可变 reviewer snapshot 保留领域原请求及成员，外层只补入 canonical artifact refs/hashes 与 producer exact metadata 共同绑定的最终文件。引用型 closeout 的外层 locator 通过精确 hash/size 校验后，可以补足内层未声明的自引用；显式空引用仍无效。复审 prompt 说明 closure 的 finding_id、status、非空 evidence_refs，以及 optional observation 的 observation_id、summary 和 evidence_refs，质量判断和证据有效性仍归既有校验与领域 owner。

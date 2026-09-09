@@ -502,6 +502,9 @@ function rawArtifactMetadata(input: {
   location: RawExecutorOutputLocation;
   rootIdentity: WorkItemRootIdentity;
   artifactRef: string;
+  attemptId: string;
+  domainId: string | null;
+  stageId: string | null;
 }) {
   const before = readStableRawStateFile({
     ...input,
@@ -527,10 +530,11 @@ function rawArtifactMetadata(input: {
       message: 'Raw executor output metadata changed while its framework provenance was verified.',
     });
   }
+  let provenance: JsonRecord;
   try {
     const parsed: unknown = JSON.parse(bytes.toString('utf8'));
     if (!isRecord(parsed)) throw new Error('metadata is not an object');
-    return parsed;
+    provenance = parsed;
   } catch (error) {
     return rawProvenanceError({
       artifactRef: input.artifactRef,
@@ -538,6 +542,58 @@ function rawArtifactMetadata(input: {
       details: { metadata_error: error instanceof Error ? error.message : String(error) },
     });
   }
+  const authority = isRecord(provenance.authority_boundary) ? provenance.authority_boundary : {};
+  const expectedProvenanceFields = [
+    'artifact_is_consumable_progress_input',
+    'artifact_is_domain_truth',
+    'artifact_is_owner_receipt',
+    'artifact_is_quality_verdict',
+    'authority_boundary',
+    'domain_id',
+    'observed_at',
+    'output_ref',
+    'physical_lineage',
+    'sha256',
+    'size_bytes',
+    'stage_attempt_id',
+    'stage_id',
+    'surface_kind',
+    'version',
+  ].sort();
+  let physicalLineage: WorkItemRootIdentity;
+  try {
+    physicalLineage = requireWorkItemRootIdentity(provenance.physical_lineage);
+  } catch (error) {
+    return rawProvenanceError({
+      artifactRef: input.artifactRef,
+      message: 'Raw executor output metadata has invalid physical lineage.',
+      details: { lineage_error: error instanceof Error ? error.message : String(error) },
+    });
+  }
+  if (
+    JSON.stringify(Object.keys(provenance).sort()) !== JSON.stringify(expectedProvenanceFields)
+    || provenance.surface_kind !== 'opl_raw_stage_output_artifact'
+    || provenance.version !== 'raw-stage-output-artifact.v1'
+    || provenance.domain_id !== input.domainId
+    || provenance.stage_id !== input.stageId
+    || provenance.stage_attempt_id !== input.attemptId
+    || provenance.output_ref !== input.artifactRef
+    || !optionalString(provenance.observed_at)
+    || provenance.artifact_is_domain_truth !== false
+    || provenance.artifact_is_owner_receipt !== false
+    || provenance.artifact_is_quality_verdict !== false
+    || provenance.artifact_is_consumable_progress_input !== true
+    || JSON.stringify(Object.keys(authority).sort()) !== JSON.stringify(['domain', 'opl'])
+    || authority.opl !== 'raw_executor_output_persistence_and_refs_only_envelope'
+    || authority.domain !== 'semantic_interpretation_quality_and_route_back_owner'
+  ) {
+    return rawProvenanceError({
+      artifactRef: input.artifactRef,
+      message: 'Raw executor output metadata does not match its bound Attempt identity.',
+      details: { metadata_ref: pathToFileURL(input.location.metadataPath).href },
+    });
+  }
+  return { provenance, physicalLineage };
 }
 
 export function recoverFrameworkRawArtifactForAttempt(
@@ -559,64 +615,25 @@ export function recoverFrameworkRawArtifactForAttempt(
     });
   }
   const rootIdentity = rawRootIdentity({ location, artifactRef });
-  const provenance = rawArtifactMetadata({ location, rootIdentity, artifactRef });
-  const authority = isRecord(provenance.authority_boundary) ? provenance.authority_boundary : {};
-  const expectedProvenanceFields = [
-    'artifact_is_consumable_progress_input',
-    'artifact_is_domain_truth',
-    'artifact_is_owner_receipt',
-    'artifact_is_quality_verdict',
-    'authority_boundary',
-    'domain_id',
-    'observed_at',
-    'output_ref',
-    'physical_lineage',
-    'sha256',
-    'size_bytes',
-    'stage_attempt_id',
-    'stage_id',
-    'surface_kind',
-    'version',
-  ].sort();
-  let persistedPhysicalLineage: WorkItemRootIdentity;
-  try {
-    persistedPhysicalLineage = requireWorkItemRootIdentity(provenance.physical_lineage);
-  } catch (error) {
-    return rawProvenanceError({
-      artifactRef,
-      message: 'Recovered raw executor output metadata has invalid physical lineage.',
-      details: { lineage_error: error instanceof Error ? error.message : String(error) },
-    });
-  }
+  const { provenance, physicalLineage } = rawArtifactMetadata({
+    location, rootIdentity, artifactRef, attemptId,
+    domainId: optionalString(attempt.domain_id),
+    stageId: optionalString(attempt.stage_id),
+  });
   const declaredSha256 = optionalString(provenance.sha256);
   const declaredSizeBytes = provenance.size_bytes;
   if (
-    JSON.stringify(Object.keys(provenance).sort()) !== JSON.stringify(expectedProvenanceFields)
-    || provenance.surface_kind !== 'opl_raw_stage_output_artifact'
-    || provenance.version !== 'raw-stage-output-artifact.v1'
-    || provenance.domain_id !== optionalString(attempt.domain_id)
-    || provenance.stage_id !== optionalString(attempt.stage_id)
-    || provenance.stage_attempt_id !== attemptId
-    || provenance.output_ref !== artifactRef
-    || !declaredSha256?.match(/^[a-f0-9]{64}$/)
+    !declaredSha256?.match(/^[a-f0-9]{64}$/)
     || typeof declaredSizeBytes !== 'number'
     || !Number.isSafeInteger(declaredSizeBytes)
     || declaredSizeBytes <= 0
-    || !optionalString(provenance.observed_at)
-    || provenance.artifact_is_domain_truth !== false
-    || provenance.artifact_is_owner_receipt !== false
-    || provenance.artifact_is_quality_verdict !== false
-    || provenance.artifact_is_consumable_progress_input !== true
-    || JSON.stringify(Object.keys(authority).sort()) !== JSON.stringify(['domain', 'opl'])
-    || authority.opl !== 'raw_executor_output_persistence_and_refs_only_envelope'
-    || authority.domain !== 'semantic_interpretation_quality_and_route_back_owner'
   ) {
     return rawProvenanceError({
       artifactRef,
       message: 'Recovered raw executor output metadata does not match its bound Attempt identity.',
     });
   }
-  const continuation = rawPhysicalLineageContinuation({ location, artifactRef, expected: persistedPhysicalLineage, actual: rootIdentity });
+  const continuation = rawPhysicalLineageContinuation({ location, artifactRef, expected: physicalLineage, actual: rootIdentity });
   const output = readStableRawStateFile({
     location,
     rootIdentity,
@@ -749,55 +766,12 @@ export function verifyFrameworkRawProgressEnvelope(input: {
     metadataRef: expectedMetadataRef,
   });
   const rootIdentity = rawRootIdentity({ location, artifactRef });
-  const provenance = rawArtifactMetadata({ location, rootIdentity, artifactRef });
-  const provenanceAuthority = isRecord(provenance.authority_boundary)
-    ? provenance.authority_boundary
-    : {};
-  const expectedProvenanceFields = [
-    'artifact_is_consumable_progress_input',
-    'artifact_is_domain_truth',
-    'artifact_is_owner_receipt',
-    'artifact_is_quality_verdict',
-    'authority_boundary',
-    'domain_id',
-    'observed_at',
-    'output_ref',
-    'physical_lineage',
-    'sha256',
-    'size_bytes',
-    'stage_attempt_id',
-    'stage_id',
-    'surface_kind',
-    'version',
-  ].sort();
-  let persistedPhysicalLineage: WorkItemRootIdentity;
-  try {
-    persistedPhysicalLineage = requireWorkItemRootIdentity(provenance.physical_lineage);
-  } catch (error) {
-    return rawProvenanceError({
-      artifactRef,
-      message: 'Raw executor output metadata has an invalid capture-time physical lineage.',
-      details: { lineage_error: error instanceof Error ? error.message : String(error) },
-    });
-  }
+  const { provenance, physicalLineage } = rawArtifactMetadata({
+    location, rootIdentity, artifactRef, attemptId, domainId, stageId,
+  });
   if (
-    JSON.stringify(Object.keys(provenance).sort()) !== JSON.stringify(expectedProvenanceFields)
-    || provenance.surface_kind !== 'opl_raw_stage_output_artifact'
-    || provenance.version !== 'raw-stage-output-artifact.v1'
-    || provenance.domain_id !== domainId
-    || provenance.stage_id !== stageId
-    || provenance.stage_attempt_id !== attemptId
-    || provenance.output_ref !== artifactRef
-    || provenance.sha256 !== rawHash
+    provenance.sha256 !== rawHash
     || provenance.size_bytes !== rawSize
-    || !optionalString(provenance.observed_at)
-    || provenance.artifact_is_domain_truth !== false
-    || provenance.artifact_is_owner_receipt !== false
-    || provenance.artifact_is_quality_verdict !== false
-    || provenance.artifact_is_consumable_progress_input !== true
-    || JSON.stringify(Object.keys(provenanceAuthority).sort()) !== JSON.stringify(['domain', 'opl'])
-    || provenanceAuthority.opl !== 'raw_executor_output_persistence_and_refs_only_envelope'
-    || provenanceAuthority.domain !== 'semantic_interpretation_quality_and_route_back_owner'
   ) {
     return rawProvenanceError({
       artifactRef,
@@ -805,7 +779,7 @@ export function verifyFrameworkRawProgressEnvelope(input: {
       details: { metadata_ref: expectedMetadataRef },
     });
   }
-  rawPhysicalLineageContinuation({ location, artifactRef, expected: persistedPhysicalLineage, actual: rootIdentity });
+  rawPhysicalLineageContinuation({ location, artifactRef, expected: physicalLineage, actual: rootIdentity });
   const output = readStableRawStateFile({
     location,
     rootIdentity,

@@ -1,10 +1,3 @@
-export const OPL_FOUNDRY_SOURCE_MODULE = {
-  moduleId: 'foundry',
-  brandName: 'OPL Foundry',
-  contractRef: 'contracts/opl-framework/source-module-map.json#modules.foundry',
-  physicalRoot: 'src/authority/evolution',
-} as const;
-
 export * from './control.ts';
 export * from './baseline-adoption.ts';
 export * from './designer-adapter.ts';

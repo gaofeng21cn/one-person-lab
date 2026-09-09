@@ -245,6 +245,48 @@ test('raw executor output authority requires exact provenance and canonical non-
   });
 });
 
+test('raw recovery and formal acceptance reject substituted or semantic provenance before publishing a receipt', () => {
+  withStateRoot('opl-raw-shared-provenance-', (root, stateRoot) => {
+    const attempt: RawAttempt = {
+      stage_attempt_id: 'sat-shared-provenance',
+      domain_id: 'medautoscience',
+      stage_id: 'manuscript_authoring',
+      attempt_role: 'producer',
+    };
+    const artifact = persistRawStageOutput({ attempt, content: 'same bytes require the same producing authority' });
+    assert.ok(artifact);
+    const metadataPath = fileURLToPath(artifact.metadata_ref);
+    const original = fs.readFileSync(metadataPath);
+    const metadata = JSON.parse(original.toString('utf8'));
+    const packet = rawCloseout(attempt, artifact);
+    const substitutions = [
+      { ...metadata, domain_id: 'another-domain' },
+      { ...metadata, stage_id: 'another-stage' },
+      { ...metadata, stage_attempt_id: 'another-attempt' },
+      { ...metadata, output_ref: 'file:///another-attempt/raw-executor-output.txt' },
+      { ...metadata, physical_lineage: undefined },
+      { ...metadata, artifact_is_quality_verdict: true },
+      { ...metadata, authority_boundary: { ...metadata.authority_boundary, domain: 'framework' } },
+      { ...metadata, undeclared_owner_receipt: 'receipt:forged' },
+    ];
+    for (const substituted of substitutions) {
+      fs.writeFileSync(metadataPath, JSON.stringify(substituted));
+      for (const invoke of [
+        () => recoverFrameworkRawArtifactForAttempt(attempt),
+        () => verifyRaw({ packet, attempt, workspaceRoot: root }),
+      ]) {
+        assert.throws(invoke, (error) => error instanceof FrameworkContractError
+          && error.details?.blocked_reason === 'raw_executor_output_provenance_mismatch_authority_violation');
+      }
+    }
+    assert.deepEqual(transportIdentityReceiptFiles(stateRoot), []);
+    fs.writeFileSync(metadataPath, original);
+    assert.equal(recoverFrameworkRawArtifactForAttempt(attempt)?.sha256, artifact.sha256);
+    assert.ok(verifyRaw({ packet, attempt, workspaceRoot: root }));
+    assert.deepEqual(fs.readFileSync(metadataPath), original);
+  });
+});
+
 test('raw executor output rejects symlinked ancestry and sibling Attempt substitution', () => {
   withStateRoot('opl-quality-raw-symlink-lineage-', (root) => {
     const firstAttempt: RawAttempt = {

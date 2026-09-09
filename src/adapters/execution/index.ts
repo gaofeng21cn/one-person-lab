@@ -1,10 +1,3 @@
-export const OPL_RUNWAY_SOURCE_MODULE = {
-  moduleId: 'runway',
-  brandName: 'OPL Runway',
-  contractRef: 'contracts/opl-framework/source-module-map.json#source_units/framework.adapters.execution',
-  physicalRoot: 'src/adapters/execution',
-} as const;
-
 export { buildEvidenceGroundedRunwayProfilePolicyReadback } from './evidence-grounded-decision-agent-profile.ts';
 export { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 export { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';

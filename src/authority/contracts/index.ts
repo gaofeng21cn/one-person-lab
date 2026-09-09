@@ -1,10 +1,3 @@
-export const OPL_CHARTER_SOURCE_MODULE = {
-  moduleId: 'charter',
-  brandName: 'OPL Charter',
-  contractRef: 'contracts/opl-framework/source-module-map.json#modules.charter',
-  physicalRoot: 'src/authority/contracts',
-} as const;
-
 // Public cross-module surface generated from existing module consumers.
 export { buildEvidenceGroundedCharterProfileBoundaryReadback } from './evidence-grounded-decision-agent-profile.ts';
 export { buildBrandModuleL5Status } from './brand-module-l5-evidence.ts';

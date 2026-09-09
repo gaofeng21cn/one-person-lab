@@ -1,10 +1,3 @@
-export const OPL_ATLAS_SOURCE_MODULE = {
-  moduleId: 'atlas',
-  brandName: 'OPL Atlas',
-  contractRef: 'contracts/opl-framework/source-module-map.json#modules.atlas',
-  physicalRoot: 'src/read-models/catalog',
-} as const;
-
 // Public cross-module surface generated from existing module consumers.
 export { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 export type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';

@@ -1,10 +1,3 @@
-export const OPL_STAGECRAFT_SOURCE_MODULE = {
-  moduleId: 'stagecraft',
-  brandName: 'OPL Stagecraft',
-  contractRef: 'contracts/opl-framework/source-module-map.json#modules.stagecraft',
-  physicalRoot: 'src/authority/stages',
-} as const;
-
 export type { FamilyStageContextObservation } from './family-stage-control-plane.ts';
 export type CordisAtlasCatalogService = NonNullable<
   NonNullable<Parameters<typeof import('./family-stage-control-plane.ts').buildFamilyStageContextObservation>[2]>['loadDomainManifests']
