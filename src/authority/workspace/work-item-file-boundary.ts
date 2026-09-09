@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 const HELPER_PATH = fileURLToPath(new URL(
   '../../../python/opl_framework/work_item_file_boundary.py',
@@ -74,7 +75,13 @@ export type StableWorkItemFileObservation = {
   real_path: string;
   sha256: string;
   byte_size: number;
-  root_identity_continuation?: { expected: WorkItemRootIdentity; observed: WorkItemRootIdentity };
+  root_identity_continuation?: WorkItemRootIdentityContinuation;
+};
+
+export type WorkItemRootIdentityContinuation = {
+  expected: WorkItemRootIdentity;
+  observed: WorkItemRootIdentity;
+  reattestation_ref?: string;
 };
 
 function decimalIdentity(value: unknown, field: string) {
@@ -310,6 +317,59 @@ export function captureWorkItemRootIdentity(input: {
   return requireWorkItemRootIdentity(result.root_identity);
 }
 
+function continuationObservation(value: unknown): WorkItemRootIdentityContinuation | undefined {
+  if (!isRecord(value)) return undefined;
+  return {
+    expected: requireWorkItemRootIdentity(value.expected),
+    observed: requireWorkItemRootIdentity(value.observed),
+    ...(typeof value.reattestation_ref === 'string' ? { reattestation_ref: value.reattestation_ref } : {}),
+  };
+}
+
+export function attestWorkItemRootIdentity(input: {
+  workspaceRoot: string;
+  canonicalWorkItemRoot: string;
+  expectedRootIdentity: WorkItemRootIdentity;
+}) {
+  const result = runBoundaryHelper({
+    operation: 'attest_root_identity',
+    workspace_root: path.resolve(input.workspaceRoot),
+    canonical_work_item_root: path.resolve(input.canonicalWorkItemRoot),
+    expected_root_identity: requireWorkItemRootIdentity(input.expectedRootIdentity),
+    state_dir: resolveOplStatePaths().state_dir,
+  }, { ref: input.canonicalWorkItemRoot, operation: 'attest_root_identity' });
+  return {
+    root_identity: requireWorkItemRootIdentity(result.root_identity),
+    root_identity_continuation: continuationObservation(result.root_identity_continuation),
+  };
+}
+
+// Explicit operator command only. Normal readers never create or update recovery evidence.
+export function reattestWorkItemRootIdentity(input: {
+  workspaceRoot: string;
+  canonicalWorkItemRoot: string;
+  expectedRootIdentity: WorkItemRootIdentity;
+  expectedCurrentRootIdentity?: WorkItemRootIdentity;
+  operator?: string;
+  evidenceRef?: string;
+  apply?: boolean;
+  confirm?: boolean;
+}) {
+  return runBoundaryHelper({
+    operation: 'reattest_root_identity',
+    workspace_root: path.resolve(input.workspaceRoot),
+    canonical_work_item_root: path.resolve(input.canonicalWorkItemRoot),
+    expected_root_identity: requireWorkItemRootIdentity(input.expectedRootIdentity),
+    expected_current_root_identity: input.expectedCurrentRootIdentity
+      ? requireWorkItemRootIdentity(input.expectedCurrentRootIdentity) : null,
+    state_dir: resolveOplStatePaths().state_dir,
+    operator: input.operator,
+    evidence_ref: input.evidenceRef,
+    apply: input.apply === true,
+    confirm: input.confirm === true,
+  }, { ref: input.canonicalWorkItemRoot, operation: 'reattest_root_identity' });
+}
+
 export function readStableWorkItemFile(input: {
   workspaceRoot: string;
   canonicalWorkItemRoot: string;
@@ -330,6 +390,7 @@ export function readStableWorkItemFile(input: {
   }
   const result = runBoundaryHelper({
     operation: 'read_file',
+    state_dir: resolveOplStatePaths().state_dir,
     workspace_root: path.resolve(input.workspaceRoot),
     canonical_work_item_root: path.resolve(input.canonicalWorkItemRoot),
     expected_root_identity: requireWorkItemRootIdentity(input.expectedRootIdentity),
@@ -358,10 +419,7 @@ export function readStableWorkItemFile(input: {
     sha256: result.sha256,
     byte_size: byteSize,
     ...(isRecord(result.root_identity_continuation) ? {
-      root_identity_continuation: {
-        expected: requireWorkItemRootIdentity(result.root_identity_continuation.expected),
-        observed: requireWorkItemRootIdentity(result.root_identity_continuation.observed),
-      },
+      root_identity_continuation: continuationObservation(result.root_identity_continuation),
     } : {}),
   };
 }

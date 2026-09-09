@@ -7,6 +7,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
+import { captureWorkItemRootIdentity, reattestWorkItemRootIdentity, type WorkItemRootIdentity } from '../../src/authority/workspace/work-item-file-boundary.ts';
 import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
 import type { TypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
 import { recoverFrameworkRawArtifactForAttempt } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/raw-artifact-identity-verification.ts';
@@ -457,5 +458,42 @@ test('raw recovery uses volume continuity without rewriting prior metadata or ac
     fs.writeFileSync(metadataPath, persisted);
     fs.writeFileSync(new URL(raw.output_ref), 'changed review bytes');
     assert.throws(() => recoverFrameworkRawArtifactForAttempt(attempt), /bytes do not match/);
+  });
+});
+
+test('legacy raw recovery and formal identity verification consume the same explicit boot-local attestation', { skip: process.platform !== 'darwin' }, () => {
+  withStateRoot('opl-legacy-raw-reattest-', (root, stateRoot) => {
+    const attempt: RawAttempt = { stage_attempt_id: 'sat-legacy-reattest', domain_id: 'medautoscience',
+      stage_id: 'manuscript_authoring', attempt_role: 'producer' };
+    const artifact = persistRawStageOutput({ attempt, content: 'accepted producer bytes; do not rerun' });
+    assert.ok(artifact);
+    const itemRoot = path.dirname(fileURLToPath(artifact.output_ref));
+    const current = captureWorkItemRootIdentity({ workspaceRoot: stateRoot, canonicalWorkItemRoot: itemRoot });
+    const original: WorkItemRootIdentity = {
+      surface_kind: 'opl_work_item_root_identity', version: 'opl-work-item-root-identity.v1',
+      workspace_inode: current.workspace_inode, work_item_inode: current.work_item_inode,
+      workspace_device: String(BigInt(current.workspace_device) + 1n),
+      work_item_device: String(BigInt(current.work_item_device) + 1n),
+    };
+    const metadataPath = fileURLToPath(artifact.metadata_ref);
+    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    metadata.physical_lineage = original; // Synthetic pre-boot fixture, before acceptance.
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata));
+    const before = fs.readFileSync(metadataPath);
+    const contentBefore = fs.readFileSync(new URL(artifact.output_ref));
+    assert.throws(() => recoverFrameworkRawArtifactForAttempt(attempt), /bound Attempt identity/);
+    assert.throws(() => verifyRaw({ packet: rawCloseout(attempt, artifact), attempt, workspaceRoot: root }), /bound Attempt identity/);
+    const receipt = reattestWorkItemRootIdentity({ workspaceRoot: stateRoot, canonicalWorkItemRoot: itemRoot,
+      expectedRootIdentity: original, expectedCurrentRootIdentity: current, apply: true, confirm: true,
+      operator: 'synthetic-raw-test', evidenceRef: 'fixture:original-root-binding-proof' });
+    const recovered = recoverFrameworkRawArtifactForAttempt(attempt);
+    assert.equal(recovered?.output_ref, artifact.output_ref);
+    assert.equal(recovered?.root_identity_continuation?.reattestation_ref, receipt.receipt_ref);
+    verifyRaw({ packet: rawCloseout(attempt, artifact), attempt, workspaceRoot: root });
+    assert.deepEqual(fs.readFileSync(metadataPath), before);
+    assert.deepEqual(fs.readFileSync(new URL(artifact.output_ref)), contentBefore);
+    fs.writeFileSync(new URL(artifact.output_ref), 'altered bytes');
+    assert.throws(() => recoverFrameworkRawArtifactForAttempt(attempt), /bytes do not match/);
+    assert.throws(() => verifyRaw({ packet: rawCloseout(attempt, artifact), attempt, workspaceRoot: root }), /bytes do not match/);
   });
 });

@@ -38,6 +38,11 @@ export function buildWorkspaceCommandSpecs(
           summary: 'List known project workspace bindings from the OPL workspace registry.',
         },
         {
+          command: 'workspace root reattest',
+          usage: 'opl workspace root reattest --input <request.json> [--apply --confirm-same-volume-and-directory]',
+          summary: 'Explicit current-boot legacy root re-attestation; preview by default.',
+        },
+        {
           command: 'workspace fleet report',
           usage: 'opl workspace fleet report',
           summary: 'Read registry-wide workspace fleet status without executing direct-entry or manifest commands.',
@@ -138,6 +143,7 @@ export function buildWorkspaceCommandSpecs(
       examples: ['opl workspace root doctor'],
       group: 'workspace',
     }),
+    'workspace root reattest': commandSpecs['workspace root reattest'],
     'workspace init': cloneCommandSpec(commandSpecs['workspace-init'], {
       usage: workspaceInitUsage,
       examples: [

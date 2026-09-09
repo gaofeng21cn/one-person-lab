@@ -8,10 +8,12 @@ import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { ensureOplStateDir } from '../../../kernel/runtime-state-paths.ts';
 import {
   captureWorkItemRootIdentity,
+  attestWorkItemRootIdentity,
   workItemRootIdentityContinues,
   readStableWorkItemFile,
   requireWorkItemRootIdentity,
   type WorkItemRootIdentity,
+  type WorkItemRootIdentityContinuation,
   WorkItemFileBoundaryError,
 } from '../../../authority/workspace/index.ts';
 import type { TypedStageCloseoutPacket } from './closeout-normalization.ts';
@@ -59,7 +61,7 @@ export type VerifiedFrameworkRawProgress = {
 };
 
 export type RecoveredFrameworkRawArtifact = {
-  root_identity_continuation?: { expected: WorkItemRootIdentity; observed: WorkItemRootIdentity };
+  root_identity_continuation?: WorkItemRootIdentityContinuation;
   output_ref: string;
   metadata_ref: string;
   sha256: string;
@@ -242,6 +244,35 @@ function assertRawRootIdentity(input: {
     return rawStateLineageError({
       ...input,
       message: 'Raw executor output state or Attempt root no longer matches its frozen physical identity.',
+    });
+  }
+}
+
+function rawPhysicalLineageContinuation(input: {
+  location: RawExecutorOutputLocation;
+  artifactRef: string;
+  expected: WorkItemRootIdentity;
+  actual: WorkItemRootIdentity;
+}): WorkItemRootIdentityContinuation | undefined {
+  if (workItemRootIdentityContinues(input.expected, input.actual)) {
+    return input.expected.boot_uuid && input.expected.boot_uuid !== input.actual.boot_uuid
+      ? { expected: input.expected, observed: input.actual } : undefined;
+  }
+  try {
+    const attested = attestWorkItemRootIdentity({
+      workspaceRoot: input.location.stateRoot,
+      canonicalWorkItemRoot: input.location.attemptRoot,
+      expectedRootIdentity: input.expected,
+    });
+    if (JSON.stringify(attested.root_identity) !== JSON.stringify(input.actual)) {
+      throw new Error('Root identity changed during legacy re-attestation consumption.');
+    }
+    return attested.root_identity_continuation;
+  } catch (error) {
+    return rawProvenanceError({
+      artifactRef: input.artifactRef,
+      message: 'Raw executor output does not match its bound Attempt identity: no matching current-boot re-attestation.',
+      details: { lineage_error: error instanceof Error ? error.message : String(error) },
     });
   }
 }
@@ -571,7 +602,6 @@ export function recoverFrameworkRawArtifactForAttempt(
     || typeof declaredSizeBytes !== 'number'
     || !Number.isSafeInteger(declaredSizeBytes)
     || declaredSizeBytes <= 0
-    || !workItemRootIdentityContinues(persistedPhysicalLineage, rootIdentity)
     || !optionalString(provenance.observed_at)
     || provenance.artifact_is_domain_truth !== false
     || provenance.artifact_is_owner_receipt !== false
@@ -586,6 +616,7 @@ export function recoverFrameworkRawArtifactForAttempt(
       message: 'Recovered raw executor output metadata does not match its bound Attempt identity.',
     });
   }
+  const continuation = rawPhysicalLineageContinuation({ location, artifactRef, expected: persistedPhysicalLineage, actual: rootIdentity });
   const output = readStableRawStateFile({
     location,
     rootIdentity,
@@ -613,9 +644,7 @@ export function recoverFrameworkRawArtifactForAttempt(
     metadata_ref: pathToFileURL(location.metadataPath).href,
     sha256: declaredSha256,
     size_bytes: declaredSizeBytes,
-    ...(persistedPhysicalLineage.boot_uuid && persistedPhysicalLineage.boot_uuid !== rootIdentity.boot_uuid ? {
-      root_identity_continuation: { expected: persistedPhysicalLineage, observed: rootIdentity },
-    } : {}),
+    ...(continuation ? { root_identity_continuation: continuation } : {}),
   };
 }
 
@@ -761,7 +790,6 @@ export function verifyFrameworkRawProgressEnvelope(input: {
     || provenance.output_ref !== artifactRef
     || provenance.sha256 !== rawHash
     || provenance.size_bytes !== rawSize
-    || !workItemRootIdentityContinues(persistedPhysicalLineage, rootIdentity)
     || !optionalString(provenance.observed_at)
     || provenance.artifact_is_domain_truth !== false
     || provenance.artifact_is_owner_receipt !== false
@@ -777,6 +805,7 @@ export function verifyFrameworkRawProgressEnvelope(input: {
       details: { metadata_ref: expectedMetadataRef },
     });
   }
+  rawPhysicalLineageContinuation({ location, artifactRef, expected: persistedPhysicalLineage, actual: rootIdentity });
   const output = readStableRawStateFile({
     location,
     rootIdentity,

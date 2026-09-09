@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import datetime
 import hashlib
 import json
 import os
@@ -338,17 +339,165 @@ def _assert_root_attestation(
     workspace_descriptor: int,
     root_descriptor: int,
     expected: dict[str, str],
+    request: dict[str, object],
 ) -> dict[str, str]:
     actual = _captured_root_identity(workspace_descriptor, root_descriptor)
-    if not _root_identity_continues(expected, actual):
+    if not _root_identity_continues(expected, actual) and not _accepted_reattestation(request, expected, actual):
         _fail(
             "work_item_file_boundary_root_attestation_mismatch",
             "Canonical work-item root no longer matches its frozen physical attestation.",
             expected_root_identity=expected,
             actual_root_identity=actual,
-            recovery_requirement="legacy identity drift requires explicit operator re-attestation; never infer volume continuity",
+            recovery_requirement="legacy v1 drift requires opl workspace root reattest with explicit operator confirmation; never infer volume continuity",
         )
     return actual
+
+
+def _reattestation_binding(request: dict[str, object], expected: dict[str, str], actual: dict[str, str]) -> dict[str, object]:
+    return {
+        "workspace_root": _normalized_absolute(request.get("workspace_root"), "workspace_root", "work_item_file_boundary_root_invalid"),
+        "canonical_work_item_root": _normalized_absolute(request.get("canonical_work_item_root"), "canonical_work_item_root", "work_item_file_boundary_root_invalid"),
+        "original_root_identity": expected,
+        "current_root_identity": actual,
+    }
+
+
+def _reattestation_location(request: dict[str, object], binding: dict[str, object]) -> tuple[str, str]:
+    state = _normalized_absolute(request.get("state_dir"), "state_dir", "work_item_file_boundary_root_invalid")
+    key = hashlib.sha256(json.dumps(binding, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return os.path.join(state, "work-item-root-reattestations"), f"{key}.json"
+
+
+def _read_reattestation(directory: str, filename: str) -> dict[str, object] | None:
+    try:
+        parent, _ = _open_absolute_directory(directory, failure_code="work_item_file_boundary_root_invalid", role="Framework re-attestation store")
+    except FileNotFoundError:
+        return None
+    descriptor = -1
+    try:
+        try:
+            descriptor = os.open(filename, _file_flags(), dir_fd=parent)
+        except FileNotFoundError:
+            return None
+        before = os.fstat(descriptor)
+        _require_regular_single_link(before, file_path=os.path.join(directory, filename))
+        if before.st_size > 64 * 1024:
+            _fail("work_item_file_boundary_root_invalid", "Root re-attestation receipt exceeds its size limit.")
+        data = os.read(descriptor, before.st_size + 1)
+        if len(data) != before.st_size or _stable_file_identity(before) != _stable_file_identity(os.fstat(descriptor)):
+            _fail("work_item_file_boundary_root_drift", "Root re-attestation receipt changed while reading.")
+        value = json.loads(data)
+        if not isinstance(value, dict):
+            raise ValueError("receipt must be an object")
+        return value
+    except (ValueError, UnicodeError) as error:
+        _fail("work_item_file_boundary_root_invalid", "Invalid Framework root re-attestation receipt.", error=str(error))
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        os.close(parent)
+
+
+def _accepted_reattestation(request: dict[str, object], expected: dict[str, str], actual: dict[str, str]) -> str | None:
+    # Only explicit legacy admission may substitute for absent historical volume evidence.
+    if expected["version"] != ROOT_IDENTITY_VERSION or actual["version"] != VOLUME_ROOT_IDENTITY_VERSION:
+        return None
+    if any(expected[key] != actual[key] for key in ("workspace_inode", "work_item_inode")):
+        return None
+    if not request.get("state_dir"):
+        return None
+    binding = _reattestation_binding(request, expected, actual)
+    directory, filename = _reattestation_location(request, binding)
+    receipt = _read_reattestation(directory, filename)
+    if receipt is None:
+        return None
+    keys = {"surface_kind", "version", "binding", "operator", "evidence_ref", "confirmed_at", "same_volume_and_directory_confirmed"}
+    if (set(receipt) != keys or receipt.get("binding") != binding
+            or receipt.get("surface_kind") != "opl_work_item_root_reattestation"
+            or receipt.get("version") != "opl-work-item-root-reattestation.v1"
+            or receipt.get("same_volume_and_directory_confirmed") is not True
+            or any(not isinstance(receipt.get(key), str) or not str(receipt[key]).strip()
+                   for key in ("operator", "evidence_ref", "confirmed_at"))):
+        _fail("work_item_file_boundary_root_invalid", "Root re-attestation does not exactly bind this root and current boot.")
+    return os.path.join(directory, filename)
+
+
+def _attest_root_identity(request: dict[str, object]) -> dict[str, object]:
+    expected = _expected_root_identity(request.get("expected_root_identity"))
+    workspace, root, _, _, components = _open_roots(request)
+    try:
+        actual = _assert_root_attestation(workspace, root, expected, request)
+        _assert_root_mapping_stable(request, workspace, root, components)
+        return {"root_identity": actual, **_continuation_observation(request, expected, actual)}
+    finally:
+        os.close(root)
+        os.close(workspace)
+
+
+def _continuation_observation(request: dict[str, object], expected: dict[str, str], actual: dict[str, str]) -> dict[str, object]:
+    if expected == actual:
+        return {}
+    receipt = None if _root_identity_continues(expected, actual) else _accepted_reattestation(request, expected, actual)
+    if not _root_identity_continues(expected, actual) and receipt is None:
+        _fail("work_item_file_boundary_root_attestation_mismatch", "Root re-attestation is no longer available.")
+    return {"root_identity_continuation": {"expected": expected, "observed": actual,
+            **({"reattestation_ref": receipt} if receipt else {})}}
+
+
+def _reattest_root_identity(request: dict[str, object]) -> dict[str, object]:
+    expected = _expected_root_identity(request.get("expected_root_identity"))
+    workspace, root, _, _, components = _open_roots(request)
+    try:
+        actual = _captured_root_identity(workspace, root)
+        if (expected["version"] != ROOT_IDENTITY_VERSION or actual["version"] != VOLUME_ROOT_IDENTITY_VERSION
+                or any(expected[key] != actual[key] for key in ("workspace_inode", "work_item_inode"))):
+            _fail("work_item_file_boundary_root_attestation_mismatch", "Legacy re-attestation requires unchanged inodes and current stable volume evidence.")
+        binding = _reattestation_binding(request, expected, actual)
+        directory, filename = _reattestation_location(request, binding)
+        _assert_root_mapping_stable(request, workspace, root, components)
+        if request.get("apply") is not True:
+            return {"status": "preview", "binding": binding, "receipt_ref": os.path.join(directory, filename), "receipt_written": False}
+        if request.get("confirm") is not True:
+            _fail("work_item_file_boundary_root_invalid", "Applying legacy re-attestation requires explicit same-volume-and-directory confirmation.")
+        observed = _expected_root_identity(request.get("expected_current_root_identity"))
+        if observed != actual:
+            _fail("work_item_file_boundary_root_attestation_mismatch", "Current root identity changed since operator inspection.")
+        operator = _required_text(request.get("operator"), "operator", "work_item_file_boundary_root_invalid")
+        evidence = _required_text(request.get("evidence_ref"), "evidence_ref", "work_item_file_boundary_root_invalid")
+        receipt = {"surface_kind": "opl_work_item_root_reattestation", "version": "opl-work-item-root-reattestation.v1",
+                   "binding": binding, "operator": operator, "evidence_ref": evidence,
+                   "confirmed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(), "same_volume_and_directory_confirmed": True}
+        receipt_bytes = json.dumps(receipt, sort_keys=True, separators=(",", ":")).encode()
+        if len(receipt_bytes) > 64 * 1024:
+            _fail("work_item_file_boundary_root_invalid", "Root re-attestation receipt exceeds its size limit.")
+        os.makedirs(directory, mode=0o700, exist_ok=True)
+        parent, _ = _open_absolute_directory(directory, failure_code="work_item_file_boundary_root_invalid", role="Framework re-attestation store")
+        temporary = f".{filename}.{uuid.uuid4().hex}.tmp"
+        written = False
+        try:
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW, 0o600, dir_fd=parent)
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(receipt_bytes)
+                stream.flush()
+                os.fsync(stream.fileno())
+            _assert_root_mapping_stable(request, workspace, root, components)
+            try:
+                os.link(temporary, filename, src_dir_fd=parent, dst_dir_fd=parent, follow_symlinks=False)
+                written = True
+            except FileExistsError:
+                pass  # First receipt wins; retries never rewrite operator evidence.
+        finally:
+            os.unlink(temporary, dir_fd=parent)
+            os.fsync(parent)
+            os.close(parent)
+        reference = _accepted_reattestation(request, expected, actual)
+        if reference is None:
+            _fail("work_item_file_boundary_root_attestation_mismatch", "Root re-attestation did not persist.")
+        return {"status": "accepted", "binding": binding, "receipt_ref": reference, "receipt_written": written,
+                "receipt": _read_reattestation(directory, filename)}
+    finally:
+        os.close(root)
+        os.close(workspace)
 
 
 def _fresh_root_descriptors(
@@ -534,7 +683,7 @@ def _read_file(request: dict[str, object]) -> dict[str, object]:
     try:
         workspace_stat = os.fstat(workspace_descriptor)
         root_stat = os.fstat(root_descriptor)
-        actual_root = _assert_root_attestation(workspace_descriptor, root_descriptor, expected)
+        actual_root = _assert_root_attestation(workspace_descriptor, root_descriptor, expected, request)
         _test_interlock("after_root_open")
         _assert_root_mapping_stable(request, workspace_descriptor, root_descriptor, root_components)
         expected_file_physical = os.path.normpath(os.path.join(root_physical, *file_components))
@@ -622,8 +771,7 @@ def _read_file(request: dict[str, object]) -> dict[str, object]:
             "real_path": expected_file_physical,
             "sha256": f"sha256:{digest.hexdigest()}",
             "byte_size": byte_size,
-            **({"root_identity_continuation": {"expected": expected, "observed": actual_root}}
-               if expected.get("boot_uuid") and expected.get("boot_uuid") != actual_root.get("boot_uuid") else {}),
+            **_continuation_observation(request, expected, actual_root),
         }
     finally:
         if file_descriptor >= 0:
@@ -649,6 +797,10 @@ def main() -> int:
         operation = request.get("operation")
         if operation == "capture_root_identity":
             result = _capture_root_identity(request)
+        elif operation == "attest_root_identity":
+            result = _attest_root_identity(request)
+        elif operation == "reattest_root_identity":
+            result = _reattest_root_identity(request)
         elif operation == "read_file":
             result = _read_file(request)
         else:
