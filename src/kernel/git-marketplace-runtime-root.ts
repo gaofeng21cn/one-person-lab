@@ -44,5 +44,18 @@ export function gitMarketplaceRuntimeRoot(
       candidate = path.dirname(candidate);
     }
   }
+  // Marketplace carriers may be materialized without the optional marker. In
+  // that layout the plugin lives under a repository checkout whose root still
+  // carries the declared runtime descriptor. Accept only that explicit
+  // checkout shape; never infer a parent from the plugin name alone.
+  candidate = path.dirname(pluginSourcePath);
+  while (candidate !== path.dirname(candidate)) {
+    if (runtimeRootContainsDescriptor(candidate, descriptorRef)
+      && fs.existsSync(path.join(candidate, 'opl-package.json'))
+      && sameMarketplaceSource(marketplaceSource, 'gaofeng21cn/redcube-ai')) {
+      return candidate;
+    }
+    candidate = path.dirname(candidate);
+  }
   return null;
 }
