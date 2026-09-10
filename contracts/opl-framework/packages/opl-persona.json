@@ -3,24 +3,20 @@
   "package_id": "opl-persona",
   "display_name": "OPL Persona",
   "publisher": "one-person-lab",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "source": "first_party_owner_projection",
-  "source_repo": "https://github.com/gaofeng21cn/opl-persona.git",
-  "publication_projection_order": 80,
-  "publication_source": {
-    "module_id": "oplpersona",
-    "owner_package_manifest_ref": "plugins/opl-persona/opl-package.json",
-    "owner_plugin_manifest_ref": "plugins/opl-persona/.codex-plugin/plugin.json"
-  },
   "package_role": "capability_package",
-  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "source_repo": "https://github.com/gaofeng21cn/opl-persona.git",
+  "machine_boundary": "This Package declares Persona capabilities and role-neutral App contributions. It does not own private mail, knowledge, website, credential, approval, installed, or runtime truth.",
   "capability_abi": {
     "id": "opl-persona.capabilities",
     "version": "1.0.0",
     "compatibility_policy": "same_major"
   },
   "exports": {
-    "core_skill_ids": ["opl-persona"],
+    "core_skill_ids": [
+      "opl-persona"
+    ],
     "core_module_ids": [
       "personal.context.v1",
       "personal.memory.v1",
@@ -40,6 +36,7 @@
       ".codex-plugin/plugin.json",
       "assets/icon.png",
       "bin/opl-persona",
+      "plugin.json",
       "runtime/opl_persona/__init__.py",
       "runtime/opl_persona/approvals.py",
       "runtime/opl_persona/__main__.py",
@@ -55,21 +52,158 @@
       "skills/opl-persona/SKILL.md",
       "skills/opl-persona/agents/openai.yaml"
     ],
-    "digest": "sha256:6a2d061323707da5f0083c6aad629f751b5af0ea9bf0af9a61b9d26b52dd3128"
+    "digest": "sha256:fd8ae265ab805c9cafca0ea9d1204c85ac86b37d2376191f64af405388094c6a"
   },
   "codex_surface": {
     "plugin_id": "opl-persona",
     "plugin_source_path": ".",
-    "carrier_source_commit": "6fa6aade7a58bd2e0c0ed52606f68e614f6cb577",
     "codex_default_exposure": false,
     "optional_install_policy": "all_exported_skills",
-    "plugin_payload_manifest_url": "payloads/opl-persona-0.2.2.json",
     "app_contribution_abi": {
       "schema_version": "opl-package-app-contribution-cli.v1",
       "transport": "stdin_json_stdout_json",
-      "argv": ["./bin/opl-persona", "--json", "app-contribution"],
+      "argv": [
+        "./bin/opl-persona",
+        "--json",
+        "app-contribution"
+      ],
       "request_schema": "opl-package-app-contribution-request.v1",
       "response_schema": "opl-package-app-contribution-response.v1"
-    }
+    },
+    "plugin_payload_manifest_url": "payloads/opl-persona-0.2.3.json",
+    "carrier_source_commit": "9ad312294a2677c2062e5ce256b9398b12dec8cb"
+  },
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "navigation": [
+      {
+        "navigation_id": "persona.today",
+        "label_i18n": {
+          "zh-CN": "Persona",
+          "en-US": "Persona"
+        },
+        "view_id": "persona.today",
+        "sort_order": 200
+      },
+      {
+        "navigation_id": "persona.inbox",
+        "label_i18n": {
+          "zh-CN": "通用收件箱",
+          "en-US": "Personal Inbox"
+        },
+        "view_id": "persona.inbox",
+        "sort_order": 205
+      },
+      {
+        "navigation_id": "persona.proposals",
+        "label_i18n": {
+          "zh-CN": "输出提案",
+          "en-US": "Output proposals"
+        },
+        "view_id": "persona.proposals",
+        "sort_order": 210
+      }
+    ],
+    "views": [
+      {
+        "view_id": "persona.today",
+        "view_type": "activity_log",
+        "title_i18n": {
+          "zh-CN": "PI 数字分身",
+          "en-US": "PI Persona"
+        },
+        "data_ref": "personal.context.v1#today",
+        "empty_state_i18n": {
+          "zh-CN": "暂无跨领域活动",
+          "en-US": "No cross-domain activity"
+        }
+      },
+      {
+        "view_id": "persona.inbox",
+        "view_type": "list_detail",
+        "title_i18n": {
+          "zh-CN": "通用收件箱",
+          "en-US": "Personal Inbox"
+        },
+        "data_ref": "personal.inbox.v1#recent",
+        "command_ids": [
+          "persona.inbox.capture"
+        ],
+        "empty_state_i18n": {
+          "zh-CN": "暂无待整理的跨域条目",
+          "en-US": "No cross-domain items to triage"
+        }
+      },
+      {
+        "view_id": "persona.proposals",
+        "view_type": "approval_diff",
+        "title_i18n": {
+          "zh-CN": "输出提案审核",
+          "en-US": "Review output proposals"
+        },
+        "data_ref": "personal.context.v1#proposals",
+        "command_ids": [
+          "persona.proposal.inspect",
+          "persona.proposal.approve",
+          "persona.mail.triage",
+          "persona.inbox.capture",
+          "persona.obsidian.note.propose"
+        ],
+        "empty_state_i18n": {
+          "zh-CN": "暂无待审核提案",
+          "en-US": "No proposals awaiting review"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command_id": "persona.proposal.inspect",
+        "label_i18n": {
+          "zh-CN": "查看提案证据",
+          "en-US": "Inspect proposal evidence"
+        },
+        "action_ref": "personal.context.v1#proposal.inspect"
+      },
+      {
+        "command_id": "persona.proposal.approve",
+        "label_i18n": {
+          "zh-CN": "批准提案",
+          "en-US": "Approve proposal"
+        },
+        "action_ref": "personal.context.v1#proposal.approve",
+        "confirmation_required": true
+      },
+      {
+        "command_id": "persona.mail.triage",
+        "label_i18n": {
+          "zh-CN": "生成邮件分诊提案",
+          "en-US": "Propose mail triage"
+        },
+        "action_ref": "communications.mail.v1#triage.propose"
+      },
+      {
+        "command_id": "persona.inbox.capture",
+        "label_i18n": {
+          "zh-CN": "捕获到通用收件箱",
+          "en-US": "Capture to personal inbox"
+        },
+        "action_ref": "personal.inbox.v1#capture.propose"
+      },
+      {
+        "command_id": "persona.obsidian.note.propose",
+        "label_i18n": {
+          "zh-CN": "生成 Obsidian 笔记提案",
+          "en-US": "Propose Obsidian note"
+        },
+        "action_ref": "knowledge.obsidian.v1#note.propose"
+      }
+    ]
+  },
+  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "publication_projection_order": 80,
+  "publication_source": {
+    "module_id": "oplpersona",
+    "owner_package_manifest_ref": "plugins/opl-persona/opl-package.json",
+    "owner_plugin_manifest_ref": "plugins/opl-persona/.codex-plugin/plugin.json"
   }
 }

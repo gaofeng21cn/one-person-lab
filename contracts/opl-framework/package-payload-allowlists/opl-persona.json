@@ -8,6 +8,7 @@
     ".codex-plugin/plugin.json",
     "assets/icon.png",
     "bin/opl-persona",
+    "plugin.json",
     "runtime/opl_persona/__init__.py",
     "runtime/opl_persona/approvals.py",
     "runtime/opl_persona/__main__.py",

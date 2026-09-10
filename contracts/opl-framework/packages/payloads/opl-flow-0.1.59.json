@@ -1,0 +1,455 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "opl-flow",
+  "plugin_id": "opl-flow",
+  "package_version": "0.1.59",
+  "source_repo": "https://github.com/gaofeng21cn/opl-flow.git",
+  "source_commit": "f8c87834f3c311b191d2eef462ba961855d8e308",
+  "source_root": ".",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:b86860a226db7d91d1a4e7d3dfc703297d66294985342cfdc155e84a2bfdeb57"
+  },
+  "files": [
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/plugin.json",
+      "sha256": "sha256:ff7065a96f8ab28bb64dbdfd262c247247231bd0b38cb1916b7ac0aab9ec33ab"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/.codex-plugin/plugin.json",
+      "sha256": "sha256:65f8a90e95b4d413dd153863216ecd3c1b630125529cbf9e05c2486db77d94b5"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/opl-package.json",
+      "sha256": "sha256:96254bc4a2e34047557c220247b9a1b118c9f6ce872e5b24fb3fa2f66837931b"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/THIRD_PARTY_NOTICES.md",
+      "sha256": "sha256:0c674e5ebf84c04796e891e6225f9b9fbd9bc85c05cbf6a07e892c7875b2780e"
+    },
+    {
+      "path": "contracts/fleet-telemetry-protocol.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/contracts/fleet-telemetry-protocol.json",
+      "sha256": "sha256:b7f927021d8a1f3cab3fb27ea1510bb75ca8d3a8f0fbf15b880055b41b23e968"
+    },
+    {
+      "path": "contracts/fleet-telemetry-protocol.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/contracts/fleet-telemetry-protocol.schema.json",
+      "sha256": "sha256:d5cb2b9ef2d68698cd2a74691b90c788bf76e47309791afc7a27b89b0e3c88cb"
+    },
+    {
+      "path": "contracts/workflow-policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/contracts/workflow-policy.json",
+      "sha256": "sha256:b7329f97c88498220f5b4f90143d526c2ca41e7ddc7610aea01fd98c3cfcced1"
+    },
+    {
+      "path": "contracts/workflow-policy.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/contracts/workflow-policy.schema.json",
+      "sha256": "sha256:b21786dd38f0f106c581f02259a36ae202829f135d5b48ea3b0b2ef3c257b783"
+    },
+    {
+      "path": "profile/manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/profile/manifest.json",
+      "sha256": "sha256:7f80dc27cf9c504bd2230c385ba18dd8007a813afebbfa67fcfb4b5502f9440c"
+    },
+    {
+      "path": "profile/modules/01-user-preferences.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/profile/modules/01-user-preferences.md",
+      "sha256": "sha256:04fc2b8213c2949f1f7a34b4f8e27621193780aa296b7afbd50288b29559b969"
+    },
+    {
+      "path": "skills/manage-codex-tasks/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/manage-codex-tasks/SKILL.md",
+      "sha256": "sha256:e86391c71aa2a986d3826a9c341577013d02215440cfabc992d84efa9af8bfdc"
+    },
+    {
+      "path": "skills/manage-codex-tasks/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/manage-codex-tasks/agents/openai.yaml",
+      "sha256": "sha256:134df16eb8c5ee24ac739ddca7224c1a43bda346630c03cc86018dbf87888191"
+    },
+    {
+      "path": "skills/manage-codex-tasks/references/coordinate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/manage-codex-tasks/references/coordinate.md",
+      "sha256": "sha256:5f741ebee1eba1a943d22642e51c1c7d501c36be37f8b29fca3f6f0fc5699f9c"
+    },
+    {
+      "path": "skills/manage-codex-tasks/references/migrate-owner.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/manage-codex-tasks/references/migrate-owner.md",
+      "sha256": "sha256:62c7a08d18e6ae9a72d011e7d4573f6c0316c3b9f11987a482f2e865cc34a108"
+    },
+    {
+      "path": "skills/manage-codex-tasks/references/recover.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/manage-codex-tasks/references/recover.md",
+      "sha256": "sha256:b325bc32e9935c4b80d22f58dd2bdbc05db86b556c31582b4be8067dbc8a3295"
+    },
+    {
+      "path": "skills/opl-flow/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/SKILL.md",
+      "sha256": "sha256:e5f21807e4961b7a967d0953f9964e5f8cd7f32933649960e9ff8f9de05d9ac2"
+    },
+    {
+      "path": "skills/opl-flow/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/agents/openai.yaml",
+      "sha256": "sha256:a3f465750186f3c9de51d4660bb9c7ea0767268476294e1db7c28c94930b486d"
+    },
+    {
+      "path": "skills/opl-flow/references/app-integration.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/references/app-integration.md",
+      "sha256": "sha256:4aedebb13dc892423c3bbb306c273f5e021dc31cceaf9161629a880793551fca"
+    },
+    {
+      "path": "skills/opl-flow/references/codex-baseline.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/references/codex-baseline.md",
+      "sha256": "sha256:1bdae902eaab7cbe7e3d173ad1605e096226ea129b5325f66f66ae68c805f5a0"
+    },
+    {
+      "path": "skills/opl-flow/references/fleet/guide.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/references/fleet/guide.md",
+      "sha256": "sha256:7b810ce6342d25389f4103211a0f5fdbdeba625d8b344281d337ab3ee1b6b193"
+    },
+    {
+      "path": "skills/opl-flow/references/ledger-start.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/references/ledger-start.md",
+      "sha256": "sha256:fde7bf1bd3e3728224ef8feddacd1c488616a733e8a3cbb59ee0d0dadba01f01"
+    },
+    {
+      "path": "skills/opl-flow/references/ledger-supervisor.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/references/ledger-supervisor.md",
+      "sha256": "sha256:154519995461b725a4700bfc8aa5c56e6a3d1d73f3ad23fe23d324b5e0def50d"
+    },
+    {
+      "path": "skills/opl-flow/references/package-lifecycle.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/references/package-lifecycle.md",
+      "sha256": "sha256:5ba89a414ac86e9d381418fad8af5a4e9191a6a9164b78a3511b68c9d867da6a"
+    },
+    {
+      "path": "skills/opl-flow/references/package-release.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/references/package-release.md",
+      "sha256": "sha256:f2cf8223fd9cf37404ddedec3a21ccd5e0d0e4ba5f7285e7f7509661439883a6"
+    },
+    {
+      "path": "skills/opl-flow/references/setup-update.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/references/setup-update.md",
+      "sha256": "sha256:4013514bc2d8de3598c955bed03e51e25d017a5b7918f5cfec055db712df1534"
+    },
+    {
+      "path": "skills/opl-flow/references/terminal-readback.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/references/terminal-readback.md",
+      "sha256": "sha256:9ee918de79c206fc79e7badeda7b26d58b5f822d569a3a7fc4727c68f621338c"
+    },
+    {
+      "path": "skills/opl-flow/scripts/package_release.py",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/opl-flow/scripts/package_release.py",
+      "sha256": "sha256:a55b8255c3abe9497c2efbc21c9eeede08ace23a24be1f97d5778d096fb4ea00"
+    },
+    {
+      "path": "skills/software-development/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/SKILL.md",
+      "sha256": "sha256:8c0fef07ca302be24b91c09182d34658f0d3dace4ba528054c87b9e5a038f18c"
+    },
+    {
+      "path": "skills/software-development/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/agents/openai.yaml",
+      "sha256": "sha256:487ca1e441643de21fa5812fadabcd170a67e73c0e56c7216267cf7acabf7d40"
+    },
+    {
+      "path": "skills/software-development/references/architecture/grill/ADR-FORMAT.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/grill/ADR-FORMAT.md",
+      "sha256": "sha256:f1f36cd3f8d3b6474ddd5855da4e233bfc4ae1a1c5024909ccf11871819a41b2"
+    },
+    {
+      "path": "skills/software-development/references/architecture/grill/CONTEXT-FORMAT.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/grill/CONTEXT-FORMAT.md",
+      "sha256": "sha256:b8cc318f2a4285b530e908b6bc43901c3c5cd11100362636bbc4216639bef597"
+    },
+    {
+      "path": "skills/software-development/references/architecture/grill/guide.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/grill/guide.md",
+      "sha256": "sha256:7554826c97fe3e06d1506ed43828909e72dc451bdb34945b5cad4c15dd943fe2"
+    },
+    {
+      "path": "skills/software-development/references/architecture/guide.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/guide.md",
+      "sha256": "sha256:409ca956fd31fcfc33220dcf5afe159ac0f24c0ce6fa4812a74a6e69d04160c4"
+    },
+    {
+      "path": "skills/software-development/references/architecture/improve/DEEPENING.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/improve/DEEPENING.md",
+      "sha256": "sha256:a6a0beab531b6b3846d857c6e6c6980652ab6f4a6ede91b975b6cd0d5d9ddf3a"
+    },
+    {
+      "path": "skills/software-development/references/architecture/improve/INTERFACE-DESIGN.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/improve/INTERFACE-DESIGN.md",
+      "sha256": "sha256:4874a106a969e6726a6021eb5ba02044887eb722cacc222112ed7373bae17dcc"
+    },
+    {
+      "path": "skills/software-development/references/architecture/improve/LANGUAGE.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/improve/LANGUAGE.md",
+      "sha256": "sha256:cca884e09f519775e1b19b130b78910015980ba1bbcb04c19b360b56af50dd19"
+    },
+    {
+      "path": "skills/software-development/references/architecture/improve/guide.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/improve/guide.md",
+      "sha256": "sha256:7a641c3306c2181ed58884599125f2947d5cd7e79b18ee0f530f0a015e702962"
+    },
+    {
+      "path": "skills/software-development/references/architecture/lenses/aposd.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/lenses/aposd.md",
+      "sha256": "sha256:b08d3535f5bef0cbb248c91b371375acddd08583f6f587e01bc00205a77b4caa"
+    },
+    {
+      "path": "skills/software-development/references/architecture/lenses/clean-architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/lenses/clean-architecture.md",
+      "sha256": "sha256:e97a43c0ef3a0f41d2cc2bc04d08355bb26323dd2ae62d6469ba86cd9308ed9e"
+    },
+    {
+      "path": "skills/software-development/references/architecture/lenses/domain-driven-design.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/lenses/domain-driven-design.md",
+      "sha256": "sha256:688fed2abf7a98cfda2eaa43afaa91ec1de4b727913d8d8888af95e1d65a4811"
+    },
+    {
+      "path": "skills/software-development/references/architecture/map.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/map.md",
+      "sha256": "sha256:0dba35f0901a4b20cd41f749133e4818e72228482f3879ffaa74c26a4b467f13"
+    },
+    {
+      "path": "skills/software-development/references/architecture/simplification-audit.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/architecture/simplification-audit.md",
+      "sha256": "sha256:54b4da38e995df1c462fd1d53d451843d12a306e54c997fc06e7c7ad17e68d44"
+    },
+    {
+      "path": "skills/software-development/references/browser-evidence/encode_gif.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/browser-evidence/encode_gif.py",
+      "sha256": "sha256:599f9608e12ce545aeadf2078c9d421b1cf4966063e7cfc444b2217e86f6aafd"
+    },
+    {
+      "path": "skills/software-development/references/browser-evidence/guide.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/browser-evidence/guide.md",
+      "sha256": "sha256:eae5cdbe124bf7ef749300468dd4b61d13bc5073e1c58ff199624d9f9494a693"
+    },
+    {
+      "path": "skills/software-development/references/delivery/guide.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/delivery/guide.md",
+      "sha256": "sha256:5ce9d4308a1aa99953a0131e6652fbc6659ff0b4a2d66c062c2cb1586b464234"
+    },
+    {
+      "path": "skills/software-development/references/delivery/legacy-change.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/delivery/legacy-change.md",
+      "sha256": "sha256:24aa49ac3e029434150cb377d3f03e6e3e5d14f7f76c1730ccf34754244422c4"
+    },
+    {
+      "path": "skills/software-development/references/delivery/pre-push.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/delivery/pre-push.md",
+      "sha256": "sha256:80d91c33b544954300a0a77ea4a0c75b5cdf71ee58ce14a7c11a29bea509c6bb"
+    },
+    {
+      "path": "skills/software-development/references/delivery/production-change.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/delivery/production-change.md",
+      "sha256": "sha256:5c4c90b1ccd65a4101d02927568aa994e5f23cccc8cb932c58c739ccfa05d9b3"
+    },
+    {
+      "path": "skills/software-development/references/docs/decision-records.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/docs/decision-records.md",
+      "sha256": "sha256:0fd24d926316ca4cdd070149c02c08d394f3dffc96067d2855440c917614abf5"
+    },
+    {
+      "path": "skills/software-development/references/docs/governance.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/docs/governance.md",
+      "sha256": "sha256:0f4ae1e3ca499e7195dc86943836c90d65ae5ca5cc69f2a176d6916203739ef5"
+    },
+    {
+      "path": "skills/software-development/references/docs/prose.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/docs/prose.md",
+      "sha256": "sha256:40292518af75422dfc604bd275989db01f487eb0cc6ceb4e4310b53c8ec38209"
+    },
+    {
+      "path": "skills/software-development/references/docs/repository-voice.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/docs/repository-voice.md",
+      "sha256": "sha256:d2c11e33cd98eae25b1eb65cd1adace848520616baae3e33f919d82d50dfc101"
+    },
+    {
+      "path": "skills/software-development/references/docs/site.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/docs/site.md",
+      "sha256": "sha256:9ed4f27b469c742fb17b9afa93a7a8fe723ae99378070f17c0f68f80b36a2137"
+    },
+    {
+      "path": "skills/software-development/references/docs/structure.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/docs/structure.md",
+      "sha256": "sha256:e679b16877cd5102518213890538d3b842bd2f61e14f2c1577644c3bb5032f33"
+    },
+    {
+      "path": "skills/software-development/references/docs/translation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/docs/translation.md",
+      "sha256": "sha256:56c76bb65f22c3a6f856439a7a1d86bbbdabbcf56adcd2856fb888b61708a444"
+    },
+    {
+      "path": "skills/software-development/references/github/patrol/decision-contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/github/patrol/decision-contract.md",
+      "sha256": "sha256:09c3238b8dfd057e66e9a39b79e3624cc2f9526648f440260e1b39408bcf1a42"
+    },
+    {
+      "path": "skills/software-development/references/github/patrol/github_patrol.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/github/patrol/github_patrol.py",
+      "sha256": "sha256:0edd1c41adadc367970f2b4096f54fe0419ac7fe243faa19214053e2748b8709"
+    },
+    {
+      "path": "skills/software-development/references/github/patrol/guide.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/github/patrol/guide.md",
+      "sha256": "sha256:36781361a66fb383be6992bdc7d85eb4eb731ede4b858ca21ae63e7f05b53559"
+    },
+    {
+      "path": "skills/software-development/references/github/stacked-prs/guide.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/github/stacked-prs/guide.md",
+      "sha256": "sha256:d54318579d1e34d4acf0cdeba9ba2b23f0d37bcaa4e33032b2784dc7f31a2787"
+    },
+    {
+      "path": "skills/software-development/references/prototype/LOGIC.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/prototype/LOGIC.md",
+      "sha256": "sha256:da91dc92195c00d5dc33863b8c1a030998025a0f8583ebf2babd770825b7f70c"
+    },
+    {
+      "path": "skills/software-development/references/prototype/UI.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/prototype/UI.md",
+      "sha256": "sha256:d76d565149ee50456c5ddc5e29c27fec8737637874fe5c37d970db085a200b27"
+    },
+    {
+      "path": "skills/software-development/references/prototype/guide.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/prototype/guide.md",
+      "sha256": "sha256:d14bf5b34e04cd22f406cf4dee05c661d7c43cb1edef8a2143e3e73b8a4c5ba4"
+    },
+    {
+      "path": "skills/software-development/references/review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/review.md",
+      "sha256": "sha256:effeb684e472528e6a3fb531a6e90c560ef8a16975f248914ff75db766e30ac3"
+    },
+    {
+      "path": "skills/software-development/references/systems/distributed-data.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/systems/distributed-data.md",
+      "sha256": "sha256:609bf854afdb980b9ec79ae2e1376193c8a358fd4068bfdbfb097aa3d6c76a46"
+    },
+    {
+      "path": "skills/software-development/references/systems/production-reliability.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/skills/software-development/references/systems/production-reliability.md",
+      "sha256": "sha256:8773d1814973aa87800adc6ab0e2d3e5db469bbb366d9025cf6ec21e884fc852"
+    },
+    {
+      "path": "scripts/opl_workflow.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/scripts/opl_workflow.py",
+      "sha256": "sha256:6bdeac546db49c0581abe10429bbabedf158b64a84aba1f1134e473bd44a465f"
+    },
+    {
+      "path": "scripts/opl_fleet.py",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/scripts/opl_fleet.py",
+      "sha256": "sha256:356170f752bc45e0c66390af5ca8932f05cb8a5f7545dd91d0caa9381d3a04ff"
+    },
+    {
+      "path": "scripts/fleet_inventory.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/scripts/fleet_inventory.py",
+      "sha256": "sha256:4503595e7945c4f13640d6ef96e038dfbdb65dc661fabf9ff82dd9bbd5b40023"
+    },
+    {
+      "path": "scripts/worktree_absorption_audit.py",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/scripts/worktree_absorption_audit.py",
+      "sha256": "sha256:2284a72514e568f28e7e9426151d36de991563d8b5522cab52e4a13c44555d04"
+    },
+    {
+      "path": "scripts/worktree_fleet_audit.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/scripts/worktree_fleet_audit.py",
+      "sha256": "sha256:294b9a579c394fa6467102d0ef43e058bc4162d8e12867f60883353a376f0691"
+    },
+    {
+      "path": "scripts/worktree_lifecycle.py",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/scripts/worktree_lifecycle.py",
+      "sha256": "sha256:21ec2263d92163424fded3d69ca867dfe42994fadd1d9996561ff707456abc95"
+    },
+    {
+      "path": "templates/AGENTS.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/templates/AGENTS.md",
+      "sha256": "sha256:04fc2b8213c2949f1f7a34b4f8e27621193780aa296b7afbd50288b29559b969"
+    },
+    {
+      "path": "templates/TASTE.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/f8c87834f3c311b191d2eef462ba961855d8e308/templates/TASTE.md",
+      "sha256": "sha256:87c29ce1397894f4ddc0e2b821a80b367f2862fd03454e5df9d2e3beb94a2b53"
+    }
+  ]
+}
