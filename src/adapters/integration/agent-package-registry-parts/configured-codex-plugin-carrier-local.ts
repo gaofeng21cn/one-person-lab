@@ -10,7 +10,7 @@ import { parseJsonText } from '../../../kernel/json-file.ts';
 import {
   parseTomlDocument,
   renderTomlDocument,
-} from './managed-policy-surface.ts';
+} from './codex-config-document.ts';
 import {
   configuredCodexHome,
   localReadbackFailure,

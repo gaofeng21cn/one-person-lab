@@ -8,7 +8,7 @@ import {
   parseTomlDocument,
   renderTomlDocument,
   type TomlTableBlock,
-} from '../agent-package-registry-parts/managed-policy-surface.ts';
+} from '../agent-package-registry-parts/codex-config-document.ts';
 import { resolveCodexConfigPath } from '../agent-package-registry-parts/shared.ts';
 
 type HygieneReason = 'stale_temporary_marketplace' | 'global_mas_scholar_discovery';
