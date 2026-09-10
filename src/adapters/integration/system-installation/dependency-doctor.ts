@@ -290,9 +290,10 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
 }
 
 function assertKnownProfile(profile: string) {
-  const normalized = dependencyProfiles()
+  const normalizedProfiles = dependencyProfiles()
     .map((entry) => normalizeDependencyProfile(entry))
-    .find((entry): entry is DomainDependencyProfile => entry?.profile_id === profile);
+    .filter((entry): entry is DomainDependencyProfile => Boolean(entry));
+  const normalized = normalizedProfiles.find((entry) => entry.profile_id === profile);
   if (normalized) return normalized;
   throw new FrameworkContractError(
     'cli_usage_error',
