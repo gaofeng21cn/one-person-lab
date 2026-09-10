@@ -52,7 +52,18 @@ export function gitMarketplaceRuntimeRoot(
   while (candidate !== path.dirname(candidate)) {
     if (runtimeRootContainsDescriptor(candidate, descriptorRef)
       && fs.existsSync(path.join(candidate, 'opl-package.json'))
-      && sameMarketplaceSource(marketplaceSource, 'gaofeng21cn/redcube-ai')) {
+      && (() => {
+        try {
+          const owner = parseJsonText(fs.readFileSync(path.join(candidate, 'opl-package.json'), 'utf8'));
+          const declared = isRecord(owner) && isRecord(owner.codex_surface)
+            ? owner.codex_surface.configured_codex_plugin_carrier
+            : null;
+          return isRecord(declared) && typeof declared.marketplace_source === 'string'
+            && sameMarketplaceSource(marketplaceSource, declared.marketplace_source);
+        } catch {
+          return false;
+        }
+      })()) {
       return candidate;
     }
     candidate = path.dirname(candidate);
