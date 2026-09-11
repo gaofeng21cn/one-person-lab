@@ -1,3 +1,4 @@
+import { scopedGatewayWorkspace } from './foundry-kernel-cases/scoped-workspace.ts';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -409,6 +410,7 @@ test('OMA 0.4.0 deterministic local wiring traverses declared StageRun semantics
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-oma-0.4.0-wiring-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const provider = readFoundryProviderManifest(fixtureRoot, 'foundry_provider.json');
+  scopedGatewayWorkspace(t, root, provider.domain_id);
   const request = validateDesignRequest(readJson(path.join(protocolFixtureRoot, 'design-request.json')));
   const resources = transportResources(root);
   const blueprint = transportableBlueprint(request, resources);

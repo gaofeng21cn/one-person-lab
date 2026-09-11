@@ -1240,6 +1240,8 @@ export async function StageRunWorkflow(
     'opl-stage-run-recovery-attempt-run-identity-v1',
   );
   const progressFirstHandoffEnabled = patched('opl-stage-run-progress-first-handoff-v1');
+  const reviewProtocolFailureEnabled = patched('opl-stage-run-review-protocol-failure-v1');
+  const identityFailureSyncEnabled = patched('opl-stage-run-identity-failure-sync-v1');
   const cancellationPropagationEnabled = patched('opl-stage-run-child-cancellation-propagation-v1');
   const qualityScopeBudget = normalizeStageQualityScopeBudget(
     input.quality_policy.formal_review.scope_budget,
@@ -1531,7 +1533,10 @@ export async function StageRunWorkflow(
       observedSessions.add(executionSessionRef);
     }
     const envelope = qualityEnvelopeFromAttempt(result);
-    const outcome = result.status === 'completed'
+    const missingReviewOutcome = reviewProtocolFailureEnabled && reviewRole
+      && result.status === 'completed' && !Object.hasOwn(envelope, 'verdict')
+      && typeof envelope.outcome !== 'string';
+    const outcome = result.status === 'completed' && !missingReviewOutcome
       ? stageQualityAttemptOutcomeFromEnvelope({ attemptRole: attemptInput.role, envelope })
       : null;
     const rawProgress = progressFirstHandoffEnabled
@@ -1546,7 +1551,7 @@ export async function StageRunWorkflow(
       artifactIdentityReceiptRefs: string[];
     };
     try {
-      artifactIdentity = result.status === 'completed' || (!reviewRole && attemptReturnedArtifactIdentity)
+      artifactIdentity = (result.status === 'completed' && !missingReviewOutcome) || (!reviewRole && attemptReturnedArtifactIdentity)
         ? qualityArtifactIdentity(
           result,
           envelope,
@@ -1566,6 +1571,12 @@ export async function StageRunWorkflow(
           };
     } catch (error) {
       if (!formalReviewDeclaredArtifactIdentityEnabled) throw error;
+      if (progressFirstHandoffEnabled && identityFailureSyncEnabled) {
+        await stageQualityAttemptSyncActivity({
+          attempt_ref: materialized.attempt_ref,
+          workflow_state: result,
+        });
+      }
       state = {
         ...state,
         attempts: [...state.attempts, {
@@ -1664,7 +1675,13 @@ export async function StageRunWorkflow(
         };
       }
     }
-    if (result.status === 'human_gate') {
+    if (missingReviewOutcome) {
+      state = {
+        ...state, status: 'blocked', current_role: null,
+        blocked_reason: 'stage_quality_review_outcome_missing',
+        source_attempt_ref: materialized.attempt_ref,
+      };
+    } else if (result.status === 'human_gate') {
       state = {
         ...state,
         status: 'human_gate',
@@ -1695,7 +1712,7 @@ export async function StageRunWorkflow(
             current_role: null,
             blocked_reason: null,
           }
-        : hasConsumableArtifact(state) && !runtimeHardStop
+        : hasConsumableArtifact(state) && !runtimeHardStop && !(reviewProtocolFailureEnabled && reviewRole)
           ? {
             ...state,
             status: 'completed_with_quality_debt',

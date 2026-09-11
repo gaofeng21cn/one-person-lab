@@ -9,10 +9,12 @@ import { admitFoundrySourceMaterials, materializeFoundrySourceArtifacts } from '
 import { FileFoundryContentStore } from '../../src/authority/evidence/index.ts';
 
 function fixture(t: test.TestContext) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-source-'));
+  const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-source-')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const workspaceRoot = path.join(root, 'workspace');
   const storageRoot = path.join(root, 'state');
+  const transportRoot = path.join(root, 'work-item');
+  fs.mkdirSync(transportRoot);
   fs.mkdirSync(path.join(workspaceRoot, 'control/opl/source_materials'), { recursive: true });
   fs.mkdirSync(path.join(workspaceRoot, 'shared/sources'), { recursive: true });
   const bytes = Buffer.from('Source evidence body.\n');
@@ -31,7 +33,7 @@ function fixture(t: test.TestContext) {
   const receiptFile = path.join(workspaceRoot, `control/opl/source_materials/${digest}.json`);
   const writeReceipt = () => fs.writeFileSync(receiptFile, JSON.stringify(receipt));
   writeReceipt();
-  return { root, workspaceRoot, storageRoot, sourceRefs: [ref], bytes, digest, ref, body, receipt, writeReceipt };
+  return { root, workspaceRoot, storageRoot, transportRoot, sourceRefs: [ref], bytes, digest, ref, body, receipt, writeReceipt };
 }
 
 test('Foundry transports exact admitted source bytes without a second binding registry', (t) => {
@@ -87,7 +89,7 @@ test('Foundry fails closed for absent or modified source content and conflicting
 test('Concurrent source transport admits only an identical content-address winner', (t) => {
   const input = fixture(t);
   admitFoundrySourceMaterials(input);
-  const target = path.join(input.storageRoot, 'provider-inputs', `${input.digest}.blob`);
+  const target = path.join(input.transportRoot, 'provider-inputs', `${input.digest}.blob`);
   const existsSync = fs.existsSync;
   t.mock.method(fs, 'existsSync', (file: fs.PathLike) => {
     if (file === target && !existsSync(file)) {
@@ -98,3 +100,38 @@ test('Concurrent source transport admits only an identical content-address winne
   });
   assert.deepEqual(fs.readFileSync(new URL(materializeFoundrySourceArtifacts(input)[0]!.ref)), input.bytes);
 });
+
+
+test('Foundry CAS bytes are transported separately for each work item', (t) => {
+  const input = fixture(t);
+  admitFoundrySourceMaterials(input);
+  const first = materializeFoundrySourceArtifacts(input);
+  const secondRoot = path.join(input.root, 'another-work-item');
+  fs.mkdirSync(secondRoot);
+  const second = materializeFoundrySourceArtifacts({ ...input, transportRoot: secondRoot });
+  assert.notEqual(first[0]!.ref, second[0]!.ref);
+  assert.equal(first[0]!.sha256, second[0]!.sha256);
+  assert.deepEqual(fs.readFileSync(new URL(second[0]!.ref)), input.bytes);
+  assert.equal(fs.existsSync(path.join(input.storageRoot, 'provider-inputs')), false);
+});
+
+for (const location of ['root', 'directory', 'file'] as const) {
+  test(`Foundry source transport rejects a symlink at ${location}`, (t) => {
+    const input = fixture(t);
+    admitFoundrySourceMaterials(input);
+    const outside = path.join(input.root, 'outside');
+    fs.mkdirSync(outside);
+    if (location === 'root') {
+      fs.rmdirSync(input.transportRoot);
+      fs.symlinkSync(outside, input.transportRoot);
+    } else if (location === 'directory') {
+      fs.symlinkSync(outside, path.join(input.transportRoot, 'provider-inputs'));
+    } else {
+      fs.mkdirSync(path.join(input.transportRoot, 'provider-inputs'));
+      fs.writeFileSync(path.join(outside, 'body'), input.bytes);
+      fs.symlinkSync(path.join(outside, 'body'), path.join(input.transportRoot, 'provider-inputs', `${input.digest}.blob`));
+    }
+    assert.throws(() => materializeFoundrySourceArtifacts(input), /physical|invalid bytes/);
+    assert.deepEqual(fs.readdirSync(outside), location === 'file' ? ['body'] : []);
+  });
+}

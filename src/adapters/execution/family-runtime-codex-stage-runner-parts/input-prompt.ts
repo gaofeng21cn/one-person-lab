@@ -225,12 +225,13 @@ function typedCloseoutScopeBindingLines(attempt: JsonRecord) {
   const scope = isRecord(attempt.execution_scope) ? attempt.execution_scope : null;
   const scopeDigest = optionalString(scope?.scope_digest);
   const stageRunId = optionalString(attempt.stage_run_id);
-  return scopeDigest
-    ? [
+  const attemptId = optionalString(attempt.stage_attempt_id);
+  return [
+        'When returning a typed Stage closeout, use surface_kind "stage_attempt_closeout_packet" exactly and a non-empty closeout_refs array. These identify the transport packet, not a quality verdict.',
+        ...(attemptId ? [`Any typed closeout packet must use stage_attempt_id "${attemptId}" exactly.`] : []),
         ...(stageRunId ? [`Any typed closeout packet must use stage_run_id "${stageRunId}" exactly.`] : []),
-        `Any typed closeout packet must use scope_digest "${scopeDigest}" exactly.`,
-      ]
-    : [];
+        ...(scopeDigest ? [`Any typed closeout packet must use scope_digest "${scopeDigest}" exactly.`] : []),
+      ];
 }
 
 function reviewerSnapshotAuthoringLines(attempt: JsonRecord) {

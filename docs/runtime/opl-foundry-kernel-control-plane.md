@@ -95,6 +95,15 @@ Provider StageRun 在已注册的 provider workspace 中运行；Foundry run ID 
 以及 hash/size 绑定的 manifest、policy 和 rubric。Review 使用生产者选择且身份已冻结的
 输入 snapshot；缺失 snapshot 不能转成质量通过。
 
+输入内容的 CAS 身份与运行时运输目录分离：provider input 和 source bytes 写入该 Run 的
+canonical Work Item 下，launch 再核对同一 execution scope。不能将整个 Foundry storage
+root 当作 Attempt 的读取范围；不同 Work Item 即使消费相同内容也各自持有运输副本。
+
+生产者的 raw output 只有通过精确字节及来源校验后才能作为带 quality debt 的进度输入。
+dispatch 必须保留这一来源标记，不能将其改成领域结论。Reviewer 缺少合法 outcome 时，
+保留原始输出作为诊断并阻断审查收尾，不把诊断包装成完成的审查；身份接收失败前同步
+已经结束的 Attempt，使 Stage 与 Attempt 各自保留真实终态。
+
 生产 provider 将 launch、observe、read-terminal 与 cancel 分为短 Activity，以 workflow
 等待和 generation-bound cursor 延续长操作。cursor 绑定 request、generation、provider
 source 和 manifest，恢复观察不能重启语义 generation。同步 Invoker 是有界调用接口；

@@ -457,7 +457,9 @@ test('protocol closeout resume is failed when the returned packet does not bind 
       env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
     });
     assert.equal(receipt.closeout_packet?.stage_attempt_id, 'sat-protocol-rejected');
-    assert.equal(receipt.closeout_packet?.domain_ready_verdict, 'completed_with_quality_debt');
+    assert.equal(receipt.closeout_packet?.domain_ready_verdict, 'domain_gate_pending');
+    assert.equal(receipt.closeout_packet?.route_impact?.provider_blocker_reason, 'stage_quality_review_outcome_missing');
+    assert.equal(receipt.closeout_packet?.route_impact?.stage_quality_cycle, undefined);
     assert.equal(receipt.process_output_summary?.protocol_closeout_resume?.status, 'failed');
     assert.equal(receipt.process_output_summary?.closeout_rejection_reason, 'stage_attempt_id_mismatch');
   } finally {

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { writeFoundryInputArtifact } from './foundry-input-artifact.ts';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { resolveContainedRepoPath } from '../../kernel/repo-contained-json-file.ts';
@@ -57,6 +57,7 @@ export function admitFoundrySourceMaterials(input: {
 export function materializeFoundrySourceArtifacts(input: {
   sourceRefs: string[];
   storageRoot: string;
+  transportRoot: string;
 }) {
   const artifacts: Array<{ source_ref: string; ref: string; sha256: string }> = [];
   for (const sourceRef of input.sourceRefs) {
@@ -64,26 +65,8 @@ export function materializeFoundrySourceArtifacts(input: {
       ?? /^opl-content:\/\/sha256\/([a-f0-9]{64})$/.exec(sourceRef)?.[1];
     if (!digest) continue;
     const bytes = new FileFoundryContentStore(input.storageRoot).readExact(`opl-content://sha256/${digest}`);
-    const directory = path.join(input.storageRoot, 'provider-inputs');
-    fs.mkdirSync(directory, { recursive: true });
-    if (!fs.lstatSync(directory).isDirectory() || fs.lstatSync(directory).isSymbolicLink()) {
-      fail('Foundry source artifact directory must be physical.');
-    }
-    const file = path.join(directory, `${digest}.blob`);
-    if (!fs.existsSync(file)) {
-      try {
-        fs.writeFileSync(file, bytes, { flag: 'wx', mode: 0o600 });
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      }
-    }
-    const stat = fs.lstatSync(file);
-    if (!stat.isFile() || stat.isSymbolicLink()
-      || !fs.realpathSync.native(file).startsWith(`${fs.realpathSync.native(input.storageRoot)}${path.sep}`)
-      || !fs.readFileSync(file).equals(bytes)) {
-      fail('Foundry source artifact content address is occupied by invalid bytes.');
-    }
-    artifacts.push({ source_ref: sourceRef, ref: pathToFileURL(file).href, sha256: digest });
+    const artifact = writeFoundryInputArtifact({ transportRoot: input.transportRoot, bytes, extension: 'blob' });
+    artifacts.push({ source_ref: sourceRef, ...artifact });
   }
   return artifacts;
 }

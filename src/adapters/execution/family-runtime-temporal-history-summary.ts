@@ -85,7 +85,13 @@ function historyProcessOutputSummary(value: unknown) {
   const externalSandboxExecution = sandboxExecution?.execution_substrate === 'external_sandbox'
     ? sandboxExecution
     : null;
+  const resume = recordOrNull(summary.protocol_closeout_resume);
   return {
+    ...(resume ? { protocol_closeout_resume: Object.fromEntries(
+      ['status', 'same_thread', 'thread_id', 'timeout_ms', 'exit_code', 'timeout_reason',
+        'packet_observed', 'closeout_rejection_reason', 'referenced_closeout_hydration_status',
+        'protocol_violation'].filter(key => key in resume).map(key => [key, resume[key]]),
+    ) } : {}),
     ...(typeof summary.exit_code === 'number' ? { exit_code: summary.exit_code } : {}),
     ...(typeof summary.final_message_chars === 'number'
       ? { final_message_chars: summary.final_message_chars }

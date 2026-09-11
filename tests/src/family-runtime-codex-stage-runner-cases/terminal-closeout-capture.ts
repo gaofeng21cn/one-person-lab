@@ -718,3 +718,32 @@ test('Codex closeout selection does not join JSON fragments across an intervenin
 
   assert.equal(selected, null);
 });
+
+for (const role of ['reviewer', 're_reviewer'] as const) {
+  test(`Codex ${role} diagnostic text remains protocol failure rather than quality progress`, async () => {
+    const fixture = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"review-diagnostic"}\\n'
+  printf '{"type":"item.completed","item":{"type":"agent_message","text":"Review unavailable: bound root skill content is missing."}}\\n'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+exit 64
+`);
+    const receipt = await runWithFakeCodex(fixture, {
+      attempt: {
+        stage_attempt_id: `sat_diagnostic_${role}`, stage_id: 'review-stage', attempt_role: role,
+        workspace_locator: { workspace_root: fixture.fixtureRoot },
+      },
+      stagePacketRef: 'packet:review-stage', runnerMode: 'codex_cli', timeoutMs: 10_000,
+    });
+    assert.equal(receipt.process_output_summary?.blocked_reason, 'stage_quality_review_outcome_missing');
+    assert.ok(receipt.process_output_summary?.raw_stage_artifact);
+    assert.equal(receipt.process_output_summary?.progress_closeout_projection?.accepted_progress, null);
+    assert.equal(receipt.process_output_summary?.progress_closeout_projection?.infrastructure_blocker?.blocks_next_stage, true);
+    assert.equal(receipt.closeout_packet?.route_impact?.next_stage_may_start, false);
+    assert.equal(receipt.closeout_packet?.route_impact?.stage_quality_cycle, undefined);
+    assert.notEqual(receipt.closeout_packet?.domain_ready_verdict, 'completed_with_quality_debt');
+    assert.equal(receipt.closeout_packet?.route_impact?.framework_generated_envelope, undefined);
+  });
+}
