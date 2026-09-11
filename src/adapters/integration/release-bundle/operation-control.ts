@@ -173,6 +173,34 @@ function assertNoActiveUnknownOutcome(paths: StorePaths) {
   }
 }
 
+function assertExpiredFullReplacement(
+  paths: StorePaths,
+  bundle: ReleaseBundle,
+  current: ReleaseBundleOperationControl,
+  replacement: ReleaseBundleOperationControl,
+  now?: string | Date,
+) {
+  if (!releaseBundleOperationDeadlineElapsed(current, now)) {
+    fail('append_full cannot replace an active operation window.');
+  }
+  if (current.bundle_digest !== replacement.bundle_digest
+    || current.operation_id === replacement.operation_id
+    || current.operation_kind !== 'append_full' || replacement.operation_kind !== 'append_full'
+    || current.track !== 'full' || replacement.track !== 'full') {
+    fail('Expired Full recovery requires a new operation identity for the exact bundle and Full track.');
+  }
+  const observedAt = nowMilliseconds(now);
+  const startedAt = Date.parse(replacement.operation_started_at);
+  if (startedAt < Date.parse(current.operation_deadline_at) || startedAt > observedAt
+    || Date.parse(replacement.operation_deadline_at) <= observedAt) {
+    fail('Expired Full recovery must start after the prior window and remain active at admission.');
+  }
+  assertAppendFullAdmission(paths, bundle, replacement);
+  if (!readStagedReleaseBundleAssets(paths, 'full')) {
+    fail('Expired Full recovery requires an existing built Full checkpoint.');
+  }
+}
+
 function assertLiveCompatible(paths: StorePaths) {
   if (releaseBundleLegacyCheckpointReadOnly(paths)) {
     fail('A legacy checkpoint without operation control is read-only and cannot drive live mutation.', {
@@ -250,6 +278,11 @@ function admitReleaseBundleOperationUnlocked(
     assertResumeWindowRotation(current, candidate, input.now);
     installed = replaceReleaseBundleOperationControl(stored.paths, current, candidate);
     control = candidate;
+  } else if (current && input.releaseOperation === 'append_full'
+    && !canonicalJsonBytes(current).equals(canonicalJsonBytes(candidate))) {
+    assertExpiredFullReplacement(stored.paths, stored.bundle, current, candidate, input.now);
+    installed = replaceReleaseBundleOperationControl(stored.paths, current, candidate);
+    control = candidate;
   } else {
     if (current) assertExactControl(current, candidate, input.releaseOperation);
     assertDeadlineActive(current ?? candidate, input.now);
@@ -275,6 +308,8 @@ function admitReleaseBundleOperationUnlocked(
       resume_window_rotated: installed.status === 'replaced',
       previous_control_digest: installed.status === 'replaced' ? current?.control_digest ?? null : null,
       resume_of: input.releaseOperation === 'resume_standard' ? control.operation_id : null,
+      expired_full_operation_replaced: installed.status === 'replaced' && input.releaseOperation === 'append_full',
+      previous_operation_id: installed.status === 'replaced' ? current?.operation_id ?? null : null,
       append_full_independent_deadline: input.releaseOperation === 'append_full',
     },
   });

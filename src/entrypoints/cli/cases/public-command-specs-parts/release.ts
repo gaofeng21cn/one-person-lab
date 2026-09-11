@@ -90,7 +90,7 @@ export function buildReleaseCommandSpecs(
     },
     'release operation admit': {
       usage: 'opl release operation admit --bundle <sha256:digest> --operation <standard|resume_standard|append_full> --operation-id <id> --operation-started-at <timestamp> --operation-deadline-at <timestamp> [--store <directory>]',
-      summary: 'Freeze or exactly resume one immutable operation control before any build, verify, or publish plan.',
+      summary: 'Admit an immutable operation control; expired built Full checkpoints may start a new Full operation after every unknown outcome is reconciled.',
       examples: [
         'opl release operation admit --bundle sha256:<digest> --operation standard --operation-id gha-123-standard --operation-started-at 2026-07-21T00:00:00.000Z --operation-deadline-at 2026-07-21T01:30:00.000Z --json',
       ],

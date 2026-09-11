@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://one-person-lab.dev/contracts/opl-framework/release-bundle-operation-control.schema.json",
   "title": "OPL Release Bundle Immutable Operation Control",
+  "description": "Each operation control is immutable. After an append_full window expires, an exact built Full checkpoint with no unresolved external outcome may admit a new operation identity and a fresh active window. Existing candidate bytes, receipts and the Standard control remain preserved.",
   "type": "object",
   "additionalProperties": false,
   "required": [

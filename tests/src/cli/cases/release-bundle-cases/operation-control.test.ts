@@ -248,6 +248,40 @@ test('Standard operation control freezes once, expired resume rotates only its e
   }
 });
 
+test('expired Full recovery requires built bytes and a new bounded identity, then qualifies without rebuilding', () => {
+  const fixture = createFixture();
+  try {
+    const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
+    const common = { bundleDigest, storeRoot: fixture.storeRoot };
+    buildReleaseBundle({ ...common, executorReceiptPath: writeBuildReceipt({ root: fixture.root, bundleDigest }) });
+    const original = { ...appendFullOperation, operationDeadlineAt: '2026-07-21T04:00:00.000Z' };
+    const next = { ...original, operationId: 'operation-append-full-recovery', operationStartedAt: '2026-07-21T04:01:00.000Z', operationDeadlineAt: '2026-07-21T06:01:00.000Z' };
+    const oldControl = admitReleaseBundleOperation({ ...common, ...original, now: '2026-07-21T02:01:00.000Z' }).release_bundle_operation_admit.operation_control;
+    assertTypedContractFailure(() => admitReleaseBundleOperation({ ...common, ...next, now: '2026-07-21T03:00:00.000Z' }), /cannot replace an active operation window/);
+    assertTypedContractFailure(() => admitReleaseBundleOperation({ ...common, ...next, now: '2026-07-21T04:02:00.000Z' }), /existing built Full checkpoint/);
+    buildReleaseBundle({ ...common, ...original, now: '2026-07-21T02:02:00.000Z', executorReceiptPath: writeBuildReceipt({ root: fixture.root, bundleDigest, track: 'full' }) });
+    const before = readReleaseBundleStatus(common).release_bundle_status;
+    for (const invalid of [
+      { ...next, operationId: original.operationId },
+      { ...next, operationStartedAt: '2026-07-21T03:59:00.000Z' },
+      { ...next, operationStartedAt: '2026-07-21T04:03:00.000Z' },
+      { ...next, operationDeadlineAt: '2026-07-21T04:01:30.000Z' },
+    ]) {
+      assertTypedContractFailure(() => admitReleaseBundleOperation({ ...common, ...invalid, now: '2026-07-21T04:02:00.000Z' }), /Expired Full recovery/);
+    }
+    const admitted = admitReleaseBundleOperation({ ...common, ...next, now: '2026-07-21T04:02:00.000Z' }).release_bundle_operation_admit;
+    assert.equal(admitted.receipt.details.previous_control_digest, oldControl.control_digest);
+    assert.equal(admitted.receipt.details.previous_operation_id, original.operationId);
+    assert.equal(admitted.receipt.details.expired_full_operation_replaced, true);
+    assert.equal(admitReleaseBundleOperation({ ...common, ...next, now: '2026-07-21T04:03:00.000Z' }).release_bundle_operation_admit.status, 'idempotent');
+    const after = readReleaseBundleStatus(common).release_bundle_status;
+    assert.deepEqual(after.operation_controls.standard, before.operation_controls.standard);
+    assert.equal(after.tracks.full.built, true);
+    verifyReleaseBundle({ ...common, ...next, now: '2026-07-21T04:04:00.000Z', track: 'full', qualificationReceiptPath: writeQualification({ root: fixture.root, bundle: fixture.request, bundleDigest, track: 'full' }) });
+    assert.equal(readReleaseBundleStatus(common).release_bundle_status.tracks.full.verified, true);
+  } finally { fs.rmSync(fixture.root, { recursive: true, force: true }); }
+});
+
 test('checkpoint preserves exact operation controls while legacy checkpoints remain permanently read-only', () => {
   const fixture = createFixture();
   try {
