@@ -33,7 +33,7 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
@@ -68,14 +68,14 @@
     "carrier_source_path": ".",
     "canonical_primary_skill_source_ref": "agent/primary_skill/SKILL.md",
     "plugin_carrier_skill_ref": "plugins/redcube-ai/skills/redcube-ai/SKILL.md",
-    "plugin_payload_manifest_url": "payloads/rca-0.2.16.json",
-    "carrier_source_commit": "471039cf8306589928f3b5ee5077dff025655bb5"
+    "plugin_payload_manifest_url": "payloads/rca-0.2.17.json",
+    "carrier_source_commit": "b353b05514e1ac587774e4993301d99066c1890a"
   },
   "skill_packs": [
     {
       "id": "redcube-ai",
       "source": "repo_local_codex_plugin_carrier",
-      "version": "0.2.16",
+      "version": "0.2.17",
       "install_mode": "bundled_required",
       "source_ref": "agent/primary_skill/SKILL.md",
       "carrier_mirror_ref": "plugins/redcube-ai/skills/redcube-ai/SKILL.md",

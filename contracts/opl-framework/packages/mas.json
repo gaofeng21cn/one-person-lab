@@ -35,7 +35,7 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.2.28",
+  "version": "0.2.29",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
@@ -78,8 +78,8 @@
       "request_schema": "opl-package-app-contribution-request.v1",
       "response_schema": "opl-package-app-contribution-response.v1"
     },
-    "plugin_payload_manifest_url": "payloads/mas-0.2.28.json",
-    "carrier_source_commit": "7be9f5c8080a52496cbddf4fbfc9cea870f759f8"
+    "plugin_payload_manifest_url": "payloads/mas-0.2.29.json",
+    "carrier_source_commit": "35079baab2a4afbb900189c528c30b39f97099df"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",

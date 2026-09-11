@@ -37,7 +37,7 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "domain_descriptor_ref": "contracts/domain_descriptor.json",
@@ -58,8 +58,8 @@
       "marketplace_source": "gaofeng21cn/opl-meta-agent",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/oma:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/oma-0.4.10.json",
-    "carrier_source_commit": "4242d09d7e486c38fd70c130d4d2c577fb7934d8"
+    "plugin_payload_manifest_url": "payloads/oma-0.4.11.json",
+    "carrier_source_commit": "b78cbd885affcaf60d741032c50aed15ae960ea5"
   },
   "capability_dependencies": [],
   "registry_entry": {
