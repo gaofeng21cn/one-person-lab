@@ -1,3 +1,4 @@
+import { scopedGatewayWorkspace } from './foundry-kernel-cases/scoped-workspace.ts';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -163,6 +164,7 @@ function createBuildFixture(root: string, target: Target, defect?: Defect) {
 test('fixture provider builds distinct domain packages through Kernel admission without evaluation', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-acceptance-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  scopedGatewayWorkspace(t, root, provider.domain_id);
   const candidates = new Set<string>();
   for (const target of [
     { agent: 'fixture-ibd-agent', domain: 'fixture_ibd_evidence', stage: 'answer-evidence', action: 'answer-question' },
@@ -232,6 +234,7 @@ for (const defect of ['missing_bytes', 'hash_mismatch', 'wrong_generation'] as c
   test(`fixture package admission rejects ${defect} without a materialization receipt`, async (t) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-rejection-'));
     t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    scopedGatewayWorkspace(t, root, provider.domain_id);
     const fixture = createBuildFixture(root, {
       agent: 'fixture-rejected-agent', domain: 'fixture_rejected', stage: 'analyse', action: 'run-analysis',
     }, defect);

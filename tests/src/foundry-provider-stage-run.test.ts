@@ -4,8 +4,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import test, { type TestContext } from 'node:test';
+import test from 'node:test';
+import { scopedGatewayWorkspace } from './foundry-kernel-cases/scoped-workspace.ts';
 import { resolveFoundryExecutionScope } from '../../src/adapters/execution/foundry-execution-scope.ts';
+import { buildStageRunImmutableContentBindings } from '../../src/adapters/execution/family-runtime-stage-run-identity-parts/content-bindings.ts';
 import { requireFamilyRuntimeExecutionScope } from '../../src/adapters/execution/family-runtime-execution-scope.ts';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
@@ -87,7 +89,7 @@ const provider: FoundryProviderManifest = {
 
 for (const operation of ['design', 'diagnose'] as const) {
   test(`StageRun ${operation} binds declared output schemas and transport requirements before launch`, async (t) => {
-    const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-output-contract-'));
+    const storageRoot = scopedGatewayWorkspace(t);
     t.after(() => fs.rmSync(storageRoot, { recursive: true, force: true }));
     const declaredProvider = structuredClone(provider);
     declaredProvider.provider_id = 'another-provider';
@@ -141,7 +143,7 @@ for (const operation of ['design', 'diagnose'] as const) {
 }
 
 test('StageRun provider binds admitted source bytes to its actual initial launch', async (t) => {
-  const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-source-launch-'));
+  const storageRoot = scopedGatewayWorkspace(t);
   t.after(() => fs.rmSync(storageRoot, { recursive: true, force: true }));
   const bytes = Buffer.from('An arbitrary source body, transported exactly.\n');
   const content = new FileFoundryContentStore(storageRoot).put(bytes);
@@ -152,6 +154,33 @@ test('StageRun provider binds admitted source bytes to its actual initial launch
     gateway: {
       async launch(input) {
         assert.equal(input.input_artifact_refs.length, 2);
+        const scope = resolveFoundryExecutionScope({ provider, workspace_root: storageRoot, run_id: activity.run_id });
+        for (const ref of input.input_artifact_refs) {
+          assert.ok(fs.realpathSync.native(new URL(ref)).startsWith(`${scope.canonical_work_item_root}${path.sep}`),
+            'provider inputs must be inside the bound Foundry work-item root');
+        }
+        assert.deepEqual(input.execution_scope, scope);
+        const packRoot = path.join(storageRoot, 'test-pack');
+        fs.mkdirSync(packRoot);
+        fs.writeFileSync(path.join(packRoot, 'binding.txt'), 'managed test binding');
+        const bind = (executionScope = scope, hashes = input.input_artifact_hashes) => buildStageRunImmutableContentBindings({
+          domainId: provider.domain_id, domainPackRoot: packRoot, workspaceRoot: storageRoot,
+          scopeKind: 'work_item', executionScope,
+          stageManifest: { ref: 'binding.txt', sha256: crypto.createHash('sha256').update('managed test binding').digest('hex') },
+          qualityPolicyRef: 'binding.txt', stagePromptRef: 'binding.txt',
+          rolePromptRefs: [], qualityRubricRefs: [], stageGoalRefs: [], lineageRefs: [], checkpointRefs: [],
+          stagePacketRef: input.input_artifact_refs[0]!, sourceRefs: input.input_artifact_refs,
+          inputArtifacts: input.input_artifact_refs.map((ref, index) => ({ ref, sha256: `sha256:${hashes[index]!}`, identity_receipt_ref: null })),
+        });
+        const bindings = bind().filter((entry) => entry.purpose === 'input_artifact');
+        assert.equal(bindings.length, 2);
+        assert.ok(bindings.every((entry) => entry.scope_digest === scope.scope_digest));
+        const otherScope = resolveFoundryExecutionScope({ provider, workspace_root: storageRoot, run_id: 'another-foundry-run' });
+        assert.throws(() => bind(otherScope), (error) => error instanceof FrameworkContractError
+          && error.details?.failure_code === 'stage_run_artifact_outside_work_item_root');
+        assert.throws(() => bind(scope, input.input_artifact_hashes.map(() => '0'.repeat(64))),
+          (error) => error instanceof FrameworkContractError
+            && error.details?.failure_code === 'stage_run_artifact_byte_identity_mismatch');
         const activityInput = JSON.parse(fs.readFileSync(new URL(input.input_artifact_refs[0]!), 'utf8'));
         assert.deepEqual(activityInput.source_artifacts, [{
           source_ref: sourceRef,
@@ -174,7 +203,7 @@ test('StageRun provider binds admitted source bytes to its actual initial launch
 });
 
 test('StageRun provider rejects a report wrapping the raw terminal protocol object', async (t) => {
-  const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-output-wrapper-'));
+  const storageRoot = scopedGatewayWorkspace(t);
   t.after(() => fs.rmSync(storageRoot, { recursive: true, force: true }));
   const output = canonicalJsonBytes({
     surface_kind: 'stage_report',
@@ -214,26 +243,6 @@ const activity: FoundryActivityIdentity = {
   input_digest: `sha256:${'1'.repeat(64)}`,
 };
 
-function scopedGatewayWorkspace(t: TestContext) {
-  const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-scope-')));
-  const state = path.join(root, 'state');
-  const workspace = path.join(root, 'workspace');
-  fs.mkdirSync(state); fs.mkdirSync(workspace);
-  const previous = process.env.OPL_STATE_DIR;
-  process.env.OPL_STATE_DIR = state;
-  fs.writeFileSync(path.join(state, 'workspace-registry.json'), JSON.stringify({
-    version: 'g2', bindings: [{
-      binding_id: 'binding:foundry-test', project_scope_id: 'project:foundry-test',
-      project_id: 'oma', project: 'OMA', workspace_path: workspace, status: 'active',
-    }],
-  }));
-  t.after(() => {
-    if (previous === undefined) delete process.env.OPL_STATE_DIR;
-    else process.env.OPL_STATE_DIR = previous;
-    fs.rmSync(root, { recursive: true, force: true });
-  });
-  return workspace;
-}
 
 test('StageRun gateway uses the provider-declared public action instead of an OMA-specific constant', async (t) => {
   const workspaceRoot = scopedGatewayWorkspace(t);
@@ -265,6 +274,7 @@ test('StageRun gateway uses the provider-declared public action instead of an OM
     provider,
     checkout_root: '/managed/provider',
     workspace_root: workspaceRoot,
+    execution_scope: resolveFoundryExecutionScope({ provider, workspace_root: workspaceRoot, run_id: activity.run_id }),
     stage_id: 'mission-intake',
     stage_run_invocation_id: 'sri:provider-action',
     activity,
@@ -295,6 +305,7 @@ test('StageRun gateway forwards the Host Stagecraft composition to the runtime b
     provider,
     checkout_root: '/managed/provider',
     workspace_root: workspaceRoot,
+    execution_scope: resolveFoundryExecutionScope({ provider, workspace_root: workspaceRoot, run_id: activity.run_id }),
     stage_id: 'mission-intake',
     stage_run_invocation_id: 'sri:composition',
     activity,
@@ -304,7 +315,7 @@ test('StageRun gateway forwards the Host Stagecraft composition to the runtime b
   assert.equal(composed, true);
 });
 
-test('StageRun gateway projects authoritative Temporal failure over a stale running query', async () => {
+test('StageRun gateway projects authoritative Temporal failure over a stale running query', async (t) => {
   const client = {
     async withDeadline(_deadline: number, fn: () => Promise<unknown>) {
       return fn();
@@ -350,7 +361,7 @@ test('StageRun gateway projects authoritative Temporal failure over a stale runn
   });
 });
 
-test('StageRun gateway reads the authoritative result after Temporal completion', async () => {
+test('StageRun gateway reads the authoritative result after Temporal completion', async (t) => {
   const terminal = state({
     stage: 'evaluation-design',
     refs: ['file:///terminal.json'],
@@ -491,7 +502,7 @@ function state(input: {
   };
 }
 
-test('StageRun provider coordinator persists a pending cursor and advances one continuation per observation', async () => {
+test('StageRun provider coordinator persists a pending cursor and advances one continuation per observation', async (t) => {
   const queries: string[] = [];
   let entryQueries = 0;
   const gateway: FoundryProviderStageRunGateway = {
@@ -524,7 +535,7 @@ test('StageRun provider coordinator persists a pending cursor and advances one c
   };
   const coordinator = new StageRunFoundryProviderCoordinator({
     gateway,
-    storage_root: fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-provider-coordinator-')),
+    storage_root: scopedGatewayWorkspace(t),
     artifact_reader: { readExact: () => Buffer.from('{}') },
   });
   const invocation = {
@@ -570,7 +581,7 @@ test('StageRun provider coordinator persists a pending cursor and advances one c
   ]);
 });
 
-test('StageRun provider coordinator refuses terminal reads from a pending cursor and cancels its current StageRun', async () => {
+test('StageRun provider coordinator refuses terminal reads from a pending cursor and cancels its current StageRun', async (t) => {
   const cancelled: string[] = [];
   const gateway: FoundryProviderStageRunGateway = {
     async launch() {
@@ -585,7 +596,7 @@ test('StageRun provider coordinator refuses terminal reads from a pending cursor
   };
   const coordinator = new StageRunFoundryProviderCoordinator({
     gateway,
-    storage_root: fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-provider-cancel-')),
+    storage_root: scopedGatewayWorkspace(t),
   });
   const invocation = {
     operation: 'design' as const,
@@ -605,7 +616,7 @@ test('StageRun provider coordinator refuses terminal reads from a pending cursor
   assert.deepEqual(cancelled, ['workflow:mission-intake']);
 });
 
-test('StageRun provider cancellation follows an already-published continuation before cancelling', async () => {
+test('StageRun provider cancellation follows an already-published continuation before cancelling', async (t) => {
   const queried: string[] = [];
   const cancelled: string[] = [];
   const gateway: FoundryProviderStageRunGateway = {
@@ -624,7 +635,7 @@ test('StageRun provider cancellation follows an already-published continuation b
   };
   const coordinator = new StageRunFoundryProviderCoordinator({
     gateway,
-    storage_root: fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-provider-cancel-route-')),
+    storage_root: scopedGatewayWorkspace(t),
   });
   const invocation = {
     operation: 'design' as const,
@@ -642,7 +653,7 @@ test('StageRun provider cancellation follows an already-published continuation b
   assert.equal(cancelledCursor.current_workflow_id, 'workflow:evaluation-design');
 });
 
-test('StageRun provider coordinator rejects a cursor from another immutable operation', async () => {
+test('StageRun provider coordinator rejects a cursor from another immutable operation', async (t) => {
   const gateway: FoundryProviderStageRunGateway = {
     async launch() {
       return { workflow_id: 'workflow:mission-intake' };
@@ -656,7 +667,7 @@ test('StageRun provider coordinator rejects a cursor from another immutable oper
   };
   const coordinator = new StageRunFoundryProviderCoordinator({
     gateway,
-    storage_root: fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-provider-binding-')),
+    storage_root: scopedGatewayWorkspace(t),
   });
   const invocation = {
     operation: 'design' as const,
@@ -685,8 +696,8 @@ test('StageRun provider coordinator rejects a cursor from another immutable oper
   );
 });
 
-test('StageRun provider terminal read persists one exact replay result without relaunching', async () => {
-  const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-provider-replay-'));
+test('StageRun provider terminal read persists one exact replay result without relaunching', async (t) => {
+  const storageRoot = scopedGatewayWorkspace(t);
   const output = canonicalJsonBytes({
     surface_kind: 'opl_foundry_agent_blueprint',
     marker: 'persisted-terminal-output',
@@ -907,7 +918,7 @@ test('StageRun provider invocation follows declared Stages even when observation
           });
     },
   };
-  const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-provider-invoker-'));
+  const storageRoot = scopedGatewayWorkspace(t);
   t.after(() => fs.rmSync(storageRoot, { recursive: true, force: true }));
   fs.writeFileSync(path.join(storageRoot, 'provider-observations'), 'not a directory');
   const invoker = new StageRunFoundryProviderInvoker({
@@ -936,7 +947,7 @@ test('StageRun provider invocation follows declared Stages even when observation
 });
 
 test('StageRun provider preserves observation history across retries and reports the failing attempt', async (t) => {
-  const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-provider-observations-'));
+  const storageRoot = scopedGatewayWorkspace(t);
   t.after(() => fs.rmSync(storageRoot, { recursive: true, force: true }));
   const gateway: FoundryProviderStageRunGateway = {
     async launch() {
@@ -999,7 +1010,7 @@ test('StageRun provider preserves observation history across retries and reports
 });
 
 test('StageRun provider Coordinator accumulates bound observations across coordinator instances', async (t) => {
-  const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-coordinator-observations-'));
+  const storageRoot = scopedGatewayWorkspace(t);
   t.after(() => fs.rmSync(storageRoot, { recursive: true, force: true }));
   let launches = 0;
   let continueStage = false;
@@ -1060,7 +1071,7 @@ test('StageRun provider Coordinator accumulates bound observations across coordi
 });
 
 test('StageRun provider Coordinator reports blocked diagnostics and the exact persisted observation receipt', async (t) => {
-  const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-coordinator-blocked-'));
+  const storageRoot = scopedGatewayWorkspace(t);
   t.after(() => fs.rmSync(storageRoot, { recursive: true, force: true }));
   const gateway: FoundryProviderStageRunGateway = {
     async launch() { return { workflow_id: 'workflow:mission-intake' }; },
@@ -1102,7 +1113,7 @@ test('StageRun provider Coordinator reports blocked diagnostics and the exact pe
 });
 
 test('StageRun provider transports all seven exact content classes into a compiler-complete candidate', async (t) => {
-  const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-provider-seven-class-'));
+  const storageRoot = scopedGatewayWorkspace(t);
   t.after(() => fs.rmSync(storageRoot, { recursive: true, force: true }));
   const resources = Object.fromEntries(CONTENT_KINDS.map((kind) => [
     kind,
@@ -1159,7 +1170,7 @@ test('StageRun provider transports all seven exact content classes into a compil
 });
 
 test('StageRun provider requires current terminal SHA transport even when exact resource bytes are cached', async (t) => {
-  const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-provider-current-transport-'));
+  const storageRoot = scopedGatewayWorkspace(t);
   t.after(() => fs.rmSync(storageRoot, { recursive: true, force: true }));
   const resources = Object.fromEntries(CONTENT_KINDS.map((kind) => [
     kind,
@@ -1202,7 +1213,7 @@ test('StageRun provider requires current terminal SHA transport even when exact 
   }), /did not transport bytes for a content-addressed AgentBlueprint ref/);
 });
 
-test('StageRun provider invocation fails closed when a required semantic Stage is skipped', async () => {
+test('StageRun provider invocation fails closed when a required semantic Stage is skipped', async (t) => {
   const gateway: FoundryProviderStageRunGateway = {
     async launch() {
       return { workflow_id: 'workflow:evaluation-design' };
@@ -1218,7 +1229,7 @@ test('StageRun provider invocation fails closed when a required semantic Stage i
   };
   const invoker = new StageRunFoundryProviderInvoker({
     gateway,
-    storage_root: fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-provider-skip-')),
+    storage_root: scopedGatewayWorkspace(t),
     artifact_reader: {
       readExact: () => canonicalJsonBytes({ surface_kind: 'opl_foundry_agent_blueprint' }),
     },
@@ -1257,6 +1268,7 @@ test('default provider transport cannot read artifacts outside the Foundry stora
   t.after(() => fs.rmSync(container, { recursive: true, force: true }));
   const storageRoot = path.join(container, 'foundry');
   fs.mkdirSync(storageRoot);
+  scopedGatewayWorkspace(t, storageRoot);
   const outside = path.join(container, 'outside.json');
   const bytes = canonicalJsonBytes({ surface_kind: 'opl_foundry_agent_blueprint' });
   fs.writeFileSync(outside, bytes);

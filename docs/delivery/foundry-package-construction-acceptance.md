@@ -2,7 +2,7 @@
 
 This document explains how to verify hosted Package construction. Runtime design
 belongs to the [Foundry control-plane reference](../runtime/opl-foundry-kernel-control-plane.md);
-outstanding live acceptance belongs to the [current gap](../active/current-state-vs-ideal-gap.md).
+remaining implementation gaps belong to the [current gap](../active/current-state-vs-ideal-gap.md).
 
 ## Construction boundary
 
@@ -36,6 +36,7 @@ scripts/run-with-repo-temp-env.sh node --experimental-strip-types --test \
   tests/src/foundry-source-material.test.ts \
   tests/src/foundry-managed-attempt-content.test.ts \
   tests/src/reviewer-snapshot-authoring.test.ts \
+  tests/src/family-runtime-review-protocol-transport.test.ts \
   tests/src/foundry-temporal.test.ts
 ```
 
@@ -52,3 +53,16 @@ owner evidence for any further evaluation, qualification or activation claim.
 
 A failed historical Run remains terminal. Normal observation and continue-as-new
 preserve in-flight execution; they do not authorize rewriting failed ledgers.
+
+An existing isolated run may supply construction evidence when its exact source,
+request, review receipts, immutable snapshots, Temporal history and candidate bytes
+are available. Verify the original files and their bindings before comparing any
+local runtime patch against canonical source. Absorb only the missing behavior and
+retest the affected paths; do not require another complete model run solely because
+the verified run used an explicitly selected developer checkout. Such evidence does
+not verify a different installed native carrier.
+
+Construction ends at the materialization event and its content-addressed candidate
+record. A later evaluation configuration failure does not erase that evidence, and
+must not be relabeled as qualification or activation success. Record an unexercised
+route-back branch as unexercised; never induce a reviewer verdict to fabricate it.

@@ -1133,7 +1133,8 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
         },
       };
     }
-    if (!isRuntimeHardStopReason(providerBlockerReason)) {
+    if (input.attempt_role !== 'reviewer' && input.attempt_role !== 're_reviewer'
+      && !isRuntimeHardStopReason(providerBlockerReason)) {
       return providerRuntimeQualityDebtCloseout({
         stageAttemptId: input.stage_attempt_id,
         domainId: input.domain_id,
@@ -1176,7 +1177,8 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
   const closeout = normalizeTypedStageCloseoutPacket(input.closeout_packet);
   const providerRuntimeReason = providerRuntimeCloseoutReason(closeout);
   if (providerRuntimeReason) {
-    if (!isRuntimeHardStopReason(providerRuntimeReason)) {
+    if (input.attempt_role !== 'reviewer' && input.attempt_role !== 're_reviewer'
+      && !isRuntimeHardStopReason(providerRuntimeReason)) {
       return providerRuntimeQualityDebtCloseout({
         stageAttemptId: input.stage_attempt_id,
         domainId: input.domain_id,
@@ -1235,7 +1237,8 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
       ? { closeout_ref_metadata: closeout.closeout_ref_metadata }
       : {}),
     ...(closeout.domain_output ? { domain_output: closeout.domain_output } : {}),
-    authority_boundary: {
+    authority_boundary: closeout.authority_boundary.opl === 'raw_executor_output_progress_envelope_only'
+      ? closeout.authority_boundary : {
       opl: 'domain_handler_transport_only',
       domain: 'domain_handler_dispatch_and_receipt_owner',
     },

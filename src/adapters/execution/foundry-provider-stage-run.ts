@@ -24,6 +24,8 @@ import { FileFoundryContentStore, foundryStoragePaths } from '../../authority/ev
 import { runFamilyRuntime } from './family-runtime.ts';
 import { materializeFoundrySourceArtifacts } from './foundry-source-material.ts';
 import { resolveFoundryExecutionScope } from './foundry-execution-scope.ts';
+import { writeFoundryInputArtifact } from './foundry-input-artifact.ts';
+import { assertSameExecutionScope, type WorkItemExecutionScopeSnapshot } from '../../authority/workspace/public/standard-agent-action-runtime.ts';
 import {
   appendDistinctStageRunObservation,
   summarizeStageRunObservation,
@@ -142,6 +144,7 @@ export interface FoundryProviderStageRunGateway {
     provider: FoundryProviderManifest;
     checkout_root: string;
     workspace_root: string;
+    execution_scope: WorkItemExecutionScopeSnapshot;
     stage_id: string;
     stage_run_invocation_id: string;
     activity: FoundryActivityIdentity;
@@ -200,6 +203,7 @@ export class OplFoundryProviderStageRunGateway implements FoundryProviderStageRu
       workspace_root: input.workspace_root,
       run_id: input.activity.run_id,
     });
+    assertSameExecutionScope(executionScope, input.execution_scope, { operation: 'foundry_provider_launch' });
     const workspaceLocator = canonicalJsonText({
       workspace_root: executionScope.workspace_root,
       execution_scope: executionScope,
@@ -333,7 +337,7 @@ function defaultTransportRoot(storageRoot: string) {
 }
 
 function writeActivityInput(input: {
-  storageRoot: string;
+  transportRoot: string;
   operation: 'design' | 'diagnose';
   provider: FoundryProviderManifest;
   activity: FoundryActivityIdentity;
@@ -369,19 +373,7 @@ function writeActivityInput(input: {
       ],
     },
   });
-  const digest = sha256(bytes);
-  const directory = path.join(input.storageRoot, 'provider-inputs');
-  const file = path.join(directory, `${digest}.json`);
-  fs.mkdirSync(directory, { recursive: true });
-  if (fs.existsSync(file)) {
-    const stat = fs.lstatSync(file);
-    if (!stat.isFile() || stat.isSymbolicLink() || !fs.readFileSync(file).equals(bytes)) {
-      fail('Foundry provider activity input content address is occupied by different bytes.');
-    }
-  } else {
-    fs.writeFileSync(file, bytes, { flag: 'wx', mode: 0o600 });
-  }
-  return { ref: pathToFileURL(file).href, sha256: digest };
+  return writeFoundryInputArtifact({ transportRoot: input.transportRoot, bytes, extension: 'json' });
 }
 
 function stageRunState(value: unknown) {
@@ -648,25 +640,33 @@ export class StageRunFoundryProviderCoordinator {
   ): Promise<FoundryProviderOperationCursor> {
     const { operation } = assertInvocation(input);
     if (!operationKey.trim()) fail('Foundry provider operation cursor requires an operation key.');
+    const workspaceRoot = fs.realpathSync.native(this.#storageRoot);
+    const executionScope = resolveFoundryExecutionScope({
+      provider: input.provider,
+      workspace_root: workspaceRoot,
+      run_id: input.activity.run_id,
+    });
+    const transportRoot = executionScope.canonical_work_item_root;
+    if (!transportRoot) fail('Foundry provider transport requires a canonical work-item root.');
     const sourceArtifacts = materializeFoundrySourceArtifacts({
       sourceRefs: input.payload.request?.source_refs ?? [],
       storageRoot: this.#storageRoot,
+      transportRoot,
     });
     const activityInput = writeActivityInput({
-      storageRoot: this.#storageRoot,
+      transportRoot,
       operation: input.operation,
       provider: input.provider,
       activity: input.activity,
       payload: input.payload,
       sourceArtifacts,
     });
-    const workspaceRoot = this.#storageRoot;
-    fs.mkdirSync(workspaceRoot, { recursive: true });
     const firstInvocationId = `foundry-sri-${activityKey(input.activity)}-${sha256(operation.entry_stage_ref).slice(0, 12)}`;
     const workflowId = (await this.#gateway.launch({
       provider: input.provider,
       checkout_root: input.checkout_root,
       workspace_root: workspaceRoot,
+      execution_scope: executionScope,
       stage_id: operation.entry_stage_ref,
       stage_run_invocation_id: firstInvocationId,
       activity: input.activity,

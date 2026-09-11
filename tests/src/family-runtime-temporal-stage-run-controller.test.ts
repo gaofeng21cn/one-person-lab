@@ -123,7 +123,7 @@ async function runController(input: {
   queryDuringHandoff?: boolean;
   transientHandoffFailures?: number;
   permanentHandoffFailure?: boolean;
-  rawArtifactProgressRole?: 'producer';
+  rawArtifactProgressRole?: 'producer' | 'reviewer' | 're_reviewer';
   repairRequiredRoute?: {
     role: 'reviewer' | 're_reviewer';
     decisionKind: 'advance' | 'route_back';
@@ -140,6 +140,7 @@ async function runController(input: {
   const reviewReceiptInputs: any[] = [];
   const routeInputs: any[] = [];
   const handoffObservations: any[] = [];
+  const attemptSyncs: any[] = [];
   try {
     const activities = {
       async stageQualityAttemptMaterializeActivity(materialization: TemporalStageQualityAttemptMaterializationInput) {
@@ -255,6 +256,7 @@ async function runController(input: {
         return { projected: true };
       },
       async stageQualityAttemptSyncActivity(syncInput: { attempt_ref: string }) {
+        attemptSyncs.push(syncInput);
         if (input.failAttemptSync) throw new Error('simulated-sqlite-projection-unavailable');
         return {
           synced: true,
@@ -654,7 +656,7 @@ async function runController(input: {
       });
       return await handle.result();
     });
-    return { state, attempts, workflowInputs, reviewReceiptInputs, routeInputs, handoffObservations };
+    return { state, attempts, workflowInputs, reviewReceiptInputs, routeInputs, handoffObservations, attemptSyncs };
   } finally {
     await testEnv.teardown();
   }
@@ -1373,13 +1375,14 @@ test('invalid re-review closure cannot leave a route decision behind', async () 
   assert.ok(state.route_quality_debt_refs.some((ref) => ref.includes('decisive_attempt_route_decision_missing')));
 });
 
-test('reviewer protocol failure terminalizes a consumable producer artifact as quality debt', async () => {
+test('reviewer protocol failure blocks while retaining a consumable producer artifact', async () => {
   const { state, attempts } = await runController({
     id: 'reviewer-failure',
     closeFindingAfterRound: null,
     failRole: 'reviewer',
   });
-  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.status, 'blocked');
+  assert.equal(state.blocked_reason, 'stage_quality_reviewer_not_completed');
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
   assert.deepEqual(state.attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
   assert.equal(state.attempts[1]?.status, 'failed');
@@ -1427,6 +1430,7 @@ test('literal zero artifact hard-stops, while a failed repair preserves prior co
     'opl://stage_attempts/sat_producer-zero-artifact_producer_0',
   );
   assert.equal(zeroArtifact.state.artifact_refs.length, 0);
+  assert.ok(zeroArtifact.attemptSyncs.some(sync => sync.attempt_ref === 'opl://stage_attempts/sat_producer-zero-artifact_producer_0'));
 
   const failedRepair = await runController({
     id: 'repairer-zero-new-artifact',
@@ -1458,3 +1462,20 @@ test('producer artifact without a verified identity receipt cannot enter formal 
   assert.equal(state.artifact_refs.length, 0);
   assert.equal(state.review_receipts.length, 0);
 });
+
+for (const role of ['reviewer', 're_reviewer'] as const) {
+  test(`${role} diagnostic progress without quality outcome blocks without inventing a review`, async () => {
+    const { state, attemptSyncs } = await runController({
+      id: `missing-outcome-${role}`, closeFindingAfterRound: 1, rawArtifactProgressRole: role,
+    });
+    assert.equal(state.status, 'blocked');
+    assert.equal(state.blocked_reason, 'stage_quality_review_outcome_missing');
+    assert.equal(attemptSyncs.at(-1)?.workflow_state.status, 'completed');
+    assert.equal(attemptSyncs.at(-1)?.attempt_ref, `opl://stage_attempts/${state.attempts.at(-1)?.stage_attempt_id}`);
+    assert.equal(state.attempts.at(-1)?.attempt_role, role);
+    assert.equal(state.attempts.at(-1)?.status, 'completed');
+    assert.equal(state.review_receipts.length, role === 'reviewer' ? 0 : 1);
+    assert.equal(state.selected_stage_route, null);
+    assert.ok(!state.quality_debt_refs.some((ref) => ref.includes('Unknown')));
+  });
+}

@@ -763,7 +763,25 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         : result.exitCode !== 0
           ? 'codex_cli_executor_unavailable'
           : null;
-  if (!closeoutPacket && rawStageArtifact) {
+  const reviewRole = input.attempt.attempt_role === 'reviewer' || input.attempt.attempt_role === 're_reviewer';
+  const reviewEnvelope = closeoutPacket?.route_impact?.stage_quality_cycle;
+  const reviewProtocolFailure = reviewRole
+    && (!isRecord(reviewEnvelope) || typeof reviewEnvelope.outcome !== 'string')
+    ? primaryBlockedReason ?? 'stage_quality_review_outcome_missing'
+    : null;
+  if (reviewProtocolFailure) {
+    closeoutPacket = buildProviderRuntimeCloseoutPacket({
+      attempt: input.attempt,
+      stagePacketRef: stagePacketTransportRef,
+      blockedReason: reviewProtocolFailure,
+      routeImpact: {
+        next_stage_may_start: false,
+        runner_exit_code: result.exitCode,
+        runner_timeout_reason: result.timeoutReason ?? null,
+        ...(rawStageArtifact ? { diagnostic_artifact_ref: rawStageArtifact.output_ref } : {}),
+      },
+    });
+  } else if (!closeoutPacket && rawStageArtifact) {
     closeoutPacket = buildRawArtifactProgressCloseoutPacket({
       attempt: input.attempt,
       stagePacketRef: stagePacketTransportRef,
@@ -799,7 +817,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     attempt: input.attempt,
     workspaceRoot,
   });
-  const effectiveBlockedReason = rawStageArtifact ? null : primaryBlockedReason;
+  const effectiveBlockedReason = reviewProtocolFailure ?? (rawStageArtifact ? null : primaryBlockedReason);
   const combinedStdout = [result.stdout, protocolCloseoutResumeResult?.stdout]
     .filter((entry): entry is string => Boolean(entry))
     .join('\n');
@@ -918,6 +936,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         ? {
             protocol_closeout_resume: {
               status: protocolCloseoutResumeStatus,
+              exit_code: protocolCloseoutResumeResult?.exitCode ?? null,
+              timeout_reason: protocolCloseoutResumeResult?.timeoutReason ?? null,
+              packet_observed: protocolCloseoutResumePacketObserved,
+              closeout_rejection_reason: closeoutRejection?.reason ?? null,
               same_thread: true,
               thread_id: protocolCloseoutResumeThreadId,
               timeout_ms: protocolCloseoutResumeTimeoutMs

@@ -419,7 +419,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     return syncStageAttemptFromTemporalUnavailableObservation(db, observation);
   }
   const failureReason = temporalTerminalFailureReason(observation);
-  const nonCompletionBlocker = temporalNonCompletionBlocker(observation);
+  let nonCompletionBlocker = temporalNonCompletionBlocker(observation);
   const row = db.prepare('SELECT * FROM stage_attempts WHERE stage_attempt_id = ?').get(
     observation.stage_attempt_id,
   ) as StageAttemptRow | undefined;
@@ -445,7 +445,13 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       sourceFallbackRef: `stage_attempt:${observation.stage_attempt_id}#usage_observation`,
     });
   }
-  const completedCloseoutPacket = closeoutPacketFromTemporalCompletedObservation(observation);
+  const reviewRole = row.attempt_role === 'reviewer' || row.attempt_role === 're_reviewer';
+  const reviewEnvelope = record(record(record(observation.query?.closeout_packet).route_impact).stage_quality_cycle);
+  const missingReviewOutcome = reviewRole && observation.query?.status === 'completed'
+    && typeof reviewEnvelope.outcome !== 'string';
+  if (missingReviewOutcome) nonCompletionBlocker = 'stage_quality_review_outcome_missing';
+  const completedCloseoutPacket = missingReviewOutcome
+    ? null : closeoutPacketFromTemporalCompletedObservation(observation);
   if (row.status === 'completed' && row.closeout_receipt_status) {
     const existingCloseoutRefs = parseStageAttemptJsonList(row.closeout_refs_json)
       .filter((entry): entry is string => typeof entry === 'string');
@@ -511,7 +517,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     return synced;
   }
   const observedAt = nowIso();
-  if (nonCompletionBlocker && !isRuntimeHardStopReason(nonCompletionBlocker)) {
+  if (nonCompletionBlocker && !reviewRole && !isRuntimeHardStopReason(nonCompletionBlocker)) {
     const synced = ingestStageAttemptCloseout(db, {
       stageAttemptId: observation.stage_attempt_id,
       packet: progressDiagnosticPacketFromTemporalBlocker({
@@ -596,7 +602,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
   if (!failureReason) {
     return null;
   }
-  if (failureReason !== 'temporal_workflow_canceled') {
+  if (!reviewRole && failureReason !== 'temporal_workflow_canceled') {
     const diagnosticRef = `opl://stage-attempts/${observation.stage_attempt_id}/failure-diagnostic`;
     ingestStageAttemptCloseout(db, {
       stageAttemptId: observation.stage_attempt_id,

@@ -51,8 +51,8 @@ type CodexStageRunnerStatus = {
     size_bytes: number;
     body_hydrated_into_executor_prompt: boolean;
   };
-  typed_closeout_required_for_progress: false;
-  raw_artifact_sufficient_for_progress: true;
+  typed_closeout_required_for_progress: boolean;
+  raw_artifact_sufficient_for_progress: boolean;
 };
 
 export type CodexStageRunnerBaseReceipt = {
@@ -67,8 +67,8 @@ export type CodexStageRunnerBaseReceipt = {
     progress_status: 'checkpointed' | 'running';
     stage_id: string;
     stage_packet_ref: string | null;
-    progress_requires_typed_closeout: false;
-    raw_artifact_sufficient_for_progress: true;
+    progress_requires_typed_closeout: boolean;
+    raw_artifact_sufficient_for_progress: boolean;
     thread_id: string | null;
     execution_session_ref: string | null;
     runner_events: RunnerEventSummary[];
@@ -117,6 +117,10 @@ export type CodexStageRunnerProcessOutputSummary = {
   domain_receipt_recovery_ref?: string;
   protocol_closeout_resume?: {
     status: 'completed' | 'failed';
+    exit_code: number | null;
+    timeout_reason: string | null;
+    packet_observed: boolean;
+    closeout_rejection_reason: string | null;
     same_thread: true;
     thread_id: string;
     timeout_ms: number;
@@ -233,8 +237,8 @@ export function buildAgentStageRunnerReceipt(input: {
       stdout_bytes: Buffer.byteLength(input.agentExecutionReceipt.stdout_preview, 'utf8'),
       stderr_bytes: Buffer.byteLength(input.agentExecutionReceipt.stderr_preview, 'utf8'),
       timeout_ms: null,
-      typed_closeout_required_for_progress: false,
-      raw_artifact_sufficient_for_progress: true,
+      typed_closeout_required_for_progress: input.attempt.attempt_role === 'reviewer' || input.attempt.attempt_role === 're_reviewer',
+      raw_artifact_sufficient_for_progress: input.attempt.attempt_role !== 'reviewer' && input.attempt.attempt_role !== 're_reviewer',
     },
     heartbeat_summary: {
       heartbeat_status: 'recorded',
@@ -246,8 +250,8 @@ export function buildAgentStageRunnerReceipt(input: {
       progress_status: input.agentExecutionReceipt.closeout_packet ? 'checkpointed' : 'running',
       stage_id: stageIdFromAttempt(input.attempt),
       stage_packet_ref: input.stagePacketRef ?? null,
-      progress_requires_typed_closeout: false,
-      raw_artifact_sufficient_for_progress: true,
+      progress_requires_typed_closeout: input.attempt.attempt_role === 'reviewer' || input.attempt.attempt_role === 're_reviewer',
+      raw_artifact_sufficient_for_progress: input.attempt.attempt_role !== 'reviewer' && input.attempt.attempt_role !== 're_reviewer',
       thread_id: input.agentExecutionReceipt.session_id,
       execution_session_ref: input.agentExecutionReceipt.session_id
         ? `codex://threads/${input.agentExecutionReceipt.session_id}`
@@ -316,8 +320,8 @@ export function buildCodexStageRunnerReceipt(input: {
       no_output_timeout_ms: input.noOutputTimeoutMs ?? null,
       command_preview: buildCodexCliPreview(args),
       effective_prompt: effectiveStagePromptReadbackFor(input),
-      typed_closeout_required_for_progress: false,
-      raw_artifact_sufficient_for_progress: true,
+      typed_closeout_required_for_progress: input.attempt.attempt_role === 'reviewer' || input.attempt.attempt_role === 're_reviewer',
+      raw_artifact_sufficient_for_progress: input.attempt.attempt_role !== 'reviewer' && input.attempt.attempt_role !== 're_reviewer',
     },
     heartbeat_summary: {
       heartbeat_status: 'recorded',
@@ -329,8 +333,8 @@ export function buildCodexStageRunnerReceipt(input: {
       progress_status: checkpointRefs.length > 0 ? 'checkpointed' : 'running',
       stage_id: stageIdFromAttempt(input.attempt),
       stage_packet_ref: stagePacketRef,
-      progress_requires_typed_closeout: false,
-      raw_artifact_sufficient_for_progress: true,
+      progress_requires_typed_closeout: input.attempt.attempt_role === 'reviewer' || input.attempt.attempt_role === 're_reviewer',
+      raw_artifact_sufficient_for_progress: input.attempt.attempt_role !== 'reviewer' && input.attempt.attempt_role !== 're_reviewer',
       thread_id: input.threadId ?? null,
       execution_session_ref: input.threadId ? `codex://threads/${input.threadId}` : null,
       runner_events: input.runnerEvents ?? [],

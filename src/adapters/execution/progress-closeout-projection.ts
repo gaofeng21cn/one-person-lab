@@ -22,7 +22,9 @@ export function buildProgressCloseoutProjection(input: {
     input.rawArtifactRef
     && optionalString(input.closeoutPacket?.authority_boundary.opl) === 'raw_executor_output_progress_envelope_only',
   );
-  const infrastructureBlocked = Boolean(input.blockedReason && !input.rawArtifactRef);
+  const reviewRole = input.attempt.attempt_role === 'reviewer' || input.attempt.attempt_role === 're_reviewer';
+  const reviewProtocolBlocked = reviewRole && Boolean(input.blockedReason);
+  const infrastructureBlocked = Boolean(input.blockedReason && (!input.rawArtifactRef || reviewRole));
   const projectionStatus = infrastructureBlocked
     ? 'infrastructure_diagnostic' as const
     : derivedFromRawArtifact
@@ -38,7 +40,7 @@ export function buildProgressCloseoutProjection(input: {
     projection_status: projectionStatus,
     stage_attempt_id: stageAttemptId,
     stage_id: stageId,
-    accepted_progress: input.closeoutPacket
+    accepted_progress: input.closeoutPacket && !reviewProtocolBlocked
       ? {
           surface_kind: input.closeoutPacket.surface_kind,
           closeout_ref_count: input.closeoutPacket.closeout_refs.length,
@@ -48,18 +50,18 @@ export function buildProgressCloseoutProjection(input: {
       : null,
     capture_pipeline: {
       terminal_message_json_scan_is_best_effort: true as const,
-      free_text_or_partial_output_is_progress: true as const,
+      free_text_or_partial_output_is_progress: !reviewRole,
       terminal_json_exact_object_required: false as const,
-      parse_failure_is_stage_progression_when_raw_artifact_exists: true as const,
+      parse_failure_is_stage_progression_when_raw_artifact_exists: !reviewRole,
       output_last_message_capture_enabled: input.outputLastMessageCaptureEnabled,
       output_schema_control_plane_enabled: false as const,
       same_session_closeout_enforcement_enabled: false as const,
-      framework_generates_minimal_progress_envelope: true as const,
+      framework_generates_minimal_progress_envelope: !reviewRole,
       session_recovery_status: input.sessionRecoveryStatus,
       session_recovery_attempts: input.sessionRecoveryAttempts,
       domain_receipt_recovery_status: input.domainReceiptRecoveryStatus,
     },
-    quality_debt: input.closeoutRejection || infrastructureBlocked
+    quality_debt: !reviewProtocolBlocked && (input.closeoutRejection || infrastructureBlocked)
       ? {
           finding: input.closeoutRejection
             ? `typed_closeout_${input.closeoutRejection.reason}`
@@ -71,9 +73,9 @@ export function buildProgressCloseoutProjection(input: {
     infrastructure_blocker: infrastructureBlocked
       ? {
           reason: input.blockedReason,
-          raw_artifact_observed: false as const,
+          raw_artifact_observed: Boolean(input.rawArtifactRef),
           blocks_runtime_execution: true as const,
-          blocks_next_stage: false as const,
+          blocks_next_stage: reviewProtocolBlocked,
           diagnostic_may_feed_any_declared_stage: true as const,
         }
       : null,
