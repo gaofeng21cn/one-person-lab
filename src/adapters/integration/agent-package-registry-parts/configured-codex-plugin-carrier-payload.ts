@@ -50,6 +50,7 @@ function packagePayloadProjection(packageId: string, packageDirectory?: string) 
     && !payloadPath.startsWith(`${path.dirname(manifestPath)}${path.sep}`)) return null;
   return {
     payloadPath,
+    ownerManifest: projection.payload,
     pluginId,
     packageVersion: stringValue(projection.payload.version),
     sourceCommit,
@@ -413,6 +414,14 @@ export function installPayloadMarketplace(input: {
         'Configured Package payload content lock does not match its owner manifest.',
         { package_id: input.packageId },
       );
+    }
+    // Some native plugin payloads predate embedded Package descriptors. Carry
+    // their bound owner projection so installed discovery retains Package truth.
+    const ownerManifestPath = path.join(pluginRoot, 'opl-package.json');
+    if (!fs.existsSync(ownerManifestPath)) {
+      fs.writeFileSync(ownerManifestPath, `${JSON.stringify(projection.ownerManifest, null, 2)}\n`, {
+        encoding: 'utf8', mode: 0o644,
+      });
     }
     if (!resolveAgentPluginManifest([pluginRoot], { expectedName: projection.pluginId })) {
       localReadbackFailure(

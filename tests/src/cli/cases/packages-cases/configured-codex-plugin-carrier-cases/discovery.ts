@@ -412,6 +412,10 @@ test('configured first-party carrier installs from a frozen local payload withou
     });
     assert.equal(result.status, 'installed');
     assert.equal(result.executor.status, 'callable');
+    assert.deepEqual(
+      JSON.parse(fs.readFileSync(path.join(marketplaceRoot, 'plugins', pluginId, 'opl-package.json'), 'utf8')),
+      JSON.parse(fs.readFileSync(path.join(packageDirectory, `${packageId}.json`), 'utf8')),
+    );
     assert.equal(fs.existsSync(path.join(
       marketplaceRoot, 'plugins', pluginId, 'skills', pluginId, 'SKILL.md',
     )), true);
@@ -833,6 +837,47 @@ test('current headless owner projection keeps a disabled same-version install ca
     assert.equal(selected.manifest.codex_interaction_mode, 'headless_internal');
     assert.equal(selected.readiness.callability, 'disabled');
     assert.equal(selected.readiness.projection_callability, 'callable');
+  } finally {
+    removeFixtureTree(root);
+  }
+});
+
+test('installed discovery includes internal modules without exposing interactive plugins from that scope', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-internal-discovery-'));
+  const stateDir = path.join(root, 'state');
+  const internalHome = path.join(stateDir, 'internal-package-carrier');
+  const userHome = path.join(root, 'user-codex');
+  const sourcePath = path.join(root, 'internal-module');
+  const interactivePath = path.join(root, 'interactive-plugin');
+  const projectionPath = path.resolve('contracts/opl-framework/packages/opl-fleet-agent.json');
+  const owner = JSON.parse(fs.readFileSync(projectionPath, 'utf8'));
+  const normalized = normalizePackageManifest(owner, pathToFileURL(projectionPath).href);
+  try {
+    fs.mkdirSync(internalHome, { recursive: true });
+    fs.writeFileSync(path.join(internalHome, 'config.toml'), '');
+    writePluginSource(sourcePath, 'internal module', './skills/');
+    fs.writeFileSync(path.join(sourcePath, 'opl-package.json'), formatJsonPayload(owner));
+    writePluginSource(interactivePath, 'interactive plugin', './skills/');
+    fs.writeFileSync(path.join(interactivePath, 'opl-package.json'), formatJsonPayload(installedOwnerDescriptor()));
+    const calls: string[] = [];
+    const discovered = discoverInstalledPackageDescriptors({
+      env: { OPL_STATE_DIR: stateDir, CODEX_HOME: userHome },
+      runner: ({ env }) => {
+        calls.push(env.CODEX_HOME!);
+        return { status: 0, stderr: '', error: null, stdout: pluginList(env.CODEX_HOME === internalHome ? [
+          { pluginId: normalized.configured_codex_plugin_carrier!.carrier.pluginId,
+            version: normalized.version, sourcePath, marketplaceSource: 'gaofeng21cn/opl-fleet-agent', enabled: false },
+          { pluginId: pluginSelector, version: ownerPackageVersion, sourcePath: interactivePath,
+            marketplaceSource: 'fixture-carrier', enabled: true },
+        ] : []) };
+      },
+    });
+    assert.deepEqual(calls, [userHome, internalHome]);
+    const selected = discovered.get('opl-fleet-agent');
+    assert.ok(selected);
+    assert.equal(selected.sourcePath, sourcePath);
+    assert.equal(selected.readiness.projection_callability, 'callable');
+    assert.equal(discovered.has(packageId), false);
   } finally {
     removeFixtureTree(root);
   }

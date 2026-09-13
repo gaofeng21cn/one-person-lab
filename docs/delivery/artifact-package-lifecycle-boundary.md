@@ -35,6 +35,20 @@ Package owner持有descriptor、runtime bytes、version和publication。native c
 
 shared release set或offline bundle可以组合多个Package，但不是普通Package currentness owner。
 
+系统 Codex App 只承载用户直接使用的交互式插件。descriptor 声明
+`codex_surface.interaction_mode = headless_internal` 的内部能力 Package，
+使用 OPL state 下的 `internal-package-carrier` 作为独立 `CODEX_HOME`，仍由
+Codex 原生插件管理器安装、更新和卸载；Framework 聚合两个作用域的真实安装状态，
+不维护第二套 registry、lock 或 currentness。内部作用域不复制用户认证、会话或 Profile。
+
+Weixin 通道、Link Desktop Connector 和 Fleet Agent 是内部模块；Scholar Skills 是
+MAS/MAG 按任务消费的能力包。它们保留 OPL 安装与调用能力，不注册为系统 Codex App
+的插件。Relay、Persona、Flow 和领域 Agent 等交互式入口继续使用用户 Codex 配置。
+已有全局安装迁移时，先验证内部作用域的安装与调用，再通过原生卸载入口移除全局条目。
+App 启动维护自动按当前 owner descriptor 识别并迁移旧的内部 Package，复用已安装文件，
+不依赖历史下载地址。复制、安装或 descriptor 回读失败时保留原安装并报告需要修复；
+没有旧条目时不写入。后台仅暂存更新的维护模式不执行迁移。
+
 ## Publication
 
 独立publication只在真实外部consumer、不同release cadence或独立rollback需求存在时建立。source repo、workspace Package和published artifact是不同层。

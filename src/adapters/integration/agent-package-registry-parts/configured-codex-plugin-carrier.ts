@@ -2,6 +2,7 @@ import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { resolveCanonicalOplFamilyMarketplaceId } from '../system-installation/codex-plugin-registry.ts';
 import {
   commandFailure,
+  configuredPackageCarrierEnv,
   defaultRunner,
   ensureConfiguredCodexHomeForMutation,
   nativeArgs,
@@ -381,7 +382,10 @@ export function runConfiguredCodexPluginCarrier(input: {
     || process.env.OPL_CODEX_PLUGIN_BIN?.trim()
     || 'codex';
   const runner = input.runner ?? defaultRunner;
-  const env = { ...process.env, ...input.env };
+  const env = configuredPackageCarrierEnv(
+    input.descriptor.interactionMode,
+    { ...process.env, ...input.env },
+  );
   const actionArgs = nativeArgs(input.action, input.descriptor.carrier.pluginId);
   const isConfigToggle = input.action === 'enable' || input.action === 'disable';
   const dispatchAction = !isConfigToggle && input.action !== 'list' && input.dryRun !== true;

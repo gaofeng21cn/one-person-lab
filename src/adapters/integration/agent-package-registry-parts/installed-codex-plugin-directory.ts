@@ -29,6 +29,10 @@ import type {
   CodexPluginCommandRunner,
 } from './configured-codex-plugin-carrier.ts';
 import { normalizePackageManifest } from './manifest-normalizers.ts';
+import {
+  configuredCodexHome,
+  internalPackageCodexHome,
+} from './configured-codex-plugin-carrier-native.ts';
 import { sha256Text } from './shared.ts';
 import type {
   AgentPackageConfiguredCodexPluginCarrierDescriptor,
@@ -624,6 +628,7 @@ export function installedDescriptorHasExpectedCodexExposure(
 export function discoverPackageDescriptors(input: {
   packageId?: string | null;
   includeAvailable?: boolean;
+  includeInternal?: boolean;
   binary?: string;
   env?: NodeJS.ProcessEnv;
   runner?: CodexPluginCommandRunner;
@@ -654,14 +659,41 @@ export function discoverPackageDescriptors(input: {
   return discovered;
 }
 
-export function readInstalledCarrierEntries(input: {
+type CarrierDiscoveryInput = {
   packageId?: string | null;
   includeAvailable?: boolean;
+  includeInternal?: boolean;
   binary?: string;
   env?: NodeJS.ProcessEnv;
   runner?: CodexPluginCommandRunner;
   failClosedOnCarrierError?: boolean;
-} = {}) {
+};
+
+export function readInstalledCarrierEntries(input: CarrierDiscoveryInput = {}) {
+  const env = { ...process.env, ...input.env };
+  const entries = readCarrierEntriesFromHome({ ...input, env });
+  const internalHome = internalPackageCodexHome(env);
+  if (input.includeInternal === false || internalHome === configuredCodexHome(env)
+    || !fs.existsSync(path.join(internalHome, 'config.toml'))) return entries;
+
+  const internalEntries = readCarrierEntriesFromHome({
+    ...input,
+    env: { ...env, CODEX_HOME: internalHome },
+  });
+  const owners = discoverCurrentOwnerPackageDescriptors(input);
+  const byPluginId = new Map(entries.map((entry) => [entry.pluginId, entry]));
+  for (const entry of internalEntries) {
+    if (entry.installed === false) continue;
+    const descriptor = readInstalledPackageDescriptor(entry);
+    if (!descriptor) continue;
+    const current = withCurrentOwnerProjection(descriptor, owners.get(descriptor.manifest.package_id));
+    if (current.manifest.codex_interaction_mode !== 'headless_internal') continue;
+    byPluginId.set(entry.pluginId, entry);
+  }
+  return [...byPluginId.values()];
+}
+
+function readCarrierEntriesFromHome(input: CarrierDiscoveryInput) {
   const configuredBinary = input.binary?.trim() || process.env.OPL_CODEX_PLUGIN_BIN?.trim() || null;
   const binary = configuredBinary ?? 'codex';
   const runner = input.runner ?? defaultRunner;
@@ -721,6 +753,7 @@ export function readInstalledCarrierEntries(input: {
 
 export function discoverInstalledPackageDescriptors(input: {
   packageId?: string | null;
+  includeInternal?: boolean;
   binary?: string;
   env?: NodeJS.ProcessEnv;
   runner?: CodexPluginCommandRunner;

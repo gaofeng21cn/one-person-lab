@@ -87,14 +87,15 @@ export function defaultRunner(input: {
 export function createMemoizedCodexPluginListRunner(
   runner: CodexPluginCommandRunner = defaultRunner,
 ): CodexPluginCommandRunner {
-  let pluginListReadback: CodexPluginCommandResult | undefined;
+  const pluginListReadbacks = new Map<string, CodexPluginCommandResult>();
   return (input) => {
     if (input.args.length === 3
       && input.args[0] === 'plugin'
       && input.args[1] === 'list'
       && input.args[2] === '--json') {
-      pluginListReadback ??= runner(input);
-      return pluginListReadback;
+      const key = JSON.stringify([input.binary, configuredCodexHome(input.env)]);
+      if (!pluginListReadbacks.has(key)) pluginListReadbacks.set(key, runner(input));
+      return pluginListReadbacks.get(key)!;
     }
     return runner(input);
   };
@@ -238,6 +239,27 @@ export function configuredCodexHome(env: NodeJS.ProcessEnv) {
   if (configured) return path.resolve(configured);
   const home = env.HOME?.trim() || os.homedir();
   return path.join(path.resolve(home), '.codex');
+}
+
+/** Internal Packages use the native carrier without registering in the user's Codex App. */
+export function internalPackageCodexHome(env: NodeJS.ProcessEnv) {
+  const home = env.HOME?.trim() || os.homedir();
+  const dataDir = env.OPL_DATA_DIR?.trim() || env.AIONUI_DATA_DIR?.trim();
+  const stateDir = env.OPL_STATE_DIR?.trim()
+    ? path.resolve(env.OPL_STATE_DIR)
+    : dataDir
+      ? path.join(path.resolve(dataDir), 'opl', 'state')
+      : path.join(home, 'Library', 'Application Support', 'OPL', 'state');
+  return path.join(stateDir, 'internal-package-carrier');
+}
+
+export function configuredPackageCarrierEnv(
+  interactionMode: 'interactive' | 'headless_internal' | undefined,
+  env: NodeJS.ProcessEnv,
+): NodeJS.ProcessEnv {
+  return interactionMode === 'headless_internal'
+    ? { ...env, CODEX_HOME: internalPackageCodexHome(env) }
+    : env;
 }
 
 export function localReadbackFailure(failureCode: string, message: string, details: Record<string, unknown> = {}): never {

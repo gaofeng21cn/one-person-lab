@@ -252,10 +252,12 @@ test('headless internal carrier stays installed and Framework-callable while Cod
   const configHome = path.join(root, 'codex-home');
   const stateFile = path.join(root, 'plugin-state.json');
   const sourcePath = path.join(root, 'plugin-source');
-  const configPath = path.join(configHome, 'config.toml');
+  const stateDir = path.join(root, 'opl-state');
+  const configPath = path.join(stateDir, 'internal-package-carrier', 'config.toml');
   const headlessDescriptor = { ...descriptor, interactionMode: 'headless_internal' as const };
   const env = {
     CODEX_HOME: configHome,
+    OPL_STATE_DIR: stateDir,
     FIXTURE_PLUGIN_SOURCE: sourcePath,
     FIXTURE_PLUGIN_STATE: stateFile,
   };
@@ -263,7 +265,7 @@ test('headless internal carrier stays installed and Framework-callable while Cod
     writePluginSource(sourcePath, 'headless');
     writeFakeCodex(binary);
     fs.mkdirSync(configHome, { recursive: true });
-    fs.writeFileSync(configPath, '', 'utf8');
+    fs.writeFileSync(path.join(configHome, 'config.toml'), '# User Codex configuration\n', 'utf8');
     fs.writeFileSync(stateFile, JSON.stringify({
       installed: true,
       version: '1.0.1',
@@ -280,6 +282,7 @@ test('headless internal carrier stays installed and Framework-callable while Cod
     assert.equal(repaired.enabled, false);
     assert.equal(repaired.executor.status, 'callable');
     assert.equal(repaired.reason, null);
+    assert.equal(fs.readFileSync(path.join(configHome, 'config.toml'), 'utf8'), '# User Codex configuration\n');
     assert.match(
       fs.readFileSync(configPath, 'utf8'),
       /\[plugins\."third-party-research@fixture-carrier"\]\nenabled = false/,
@@ -299,6 +302,19 @@ test('headless internal carrier stays installed and Framework-callable while Cod
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('native plugin list memoization separates user and internal carrier homes', () => {
+  const calls: string[] = [];
+  const runner = createMemoizedCodexPluginListRunner((input) => {
+    calls.push(input.env.CODEX_HOME!);
+    return { status: 0, stdout: input.env.CODEX_HOME!, stderr: '', error: null };
+  });
+  for (const codexHome of ['/fixture/user-codex', '/fixture/internal-carrier', '/fixture/user-codex']) {
+    const result = runner({ binary: 'codex', args: ['plugin', 'list', '--json'], env: { CODEX_HOME: codexHome } });
+    assert.equal(result.stdout, codexHome);
+  }
+  assert.deepEqual(calls, ['/fixture/user-codex', '/fixture/internal-carrier']);
 });
 
 test('headless internal carrier rejects an enabled same-name source outside its owner selector', () => {
