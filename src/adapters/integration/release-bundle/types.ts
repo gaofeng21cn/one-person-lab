@@ -1,15 +1,3 @@
-export type ReleaseBundlePackageId = string;
-export const RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS = [
-  'app_source',
-  'base_image',
-  'codex_cli',
-  'dockerfile',
-  'first_party_packages',
-  'framework_seed',
-  'opl_flow',
-  'qualification_harness',
-  'shell_webui_source',
-] as const;
 export const RELEASE_BUNDLE_APP_STANDARD_FROZEN_BUILD_INPUT_IDS = [
   'app_source',
   'base_image',
@@ -20,7 +8,7 @@ export const RELEASE_BUNDLE_APP_STANDARD_FROZEN_BUILD_INPUT_IDS = [
   'shell_webui_source',
 ] as const;
 export type ReleaseBundleFrozenBuildInputId =
-  typeof RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS[number];
+  typeof RELEASE_BUNDLE_APP_STANDARD_FROZEN_BUILD_INPUT_IDS[number];
 export const RELEASE_BUNDLE_TRACK_NAMES = ['standard', 'webui', 'full'] as const;
 export type ReleaseBundleTrackName = 'standard' | 'webui' | 'full';
 export type ReleaseBundleExecutor = 'local' | 'remote';
@@ -64,15 +52,6 @@ export type ReleaseBundleUnknownOutcomeMarker = {
   executor: ReleaseBundleExecutor;
 };
 
-export type ReleaseBundlePackageIdentity = {
-  package_id: ReleaseBundlePackageId;
-  version: string;
-  owner_source_commit: string;
-  manifest_ref: string;
-  manifest_sha256: string;
-  payload_manifest_ref: string;
-  payload_manifest_sha256: string;
-};
 
 export type ReleaseBundleTrackPlan = {
   required_asset_names: string[];
@@ -84,10 +63,6 @@ export type ReleaseBundleTrackPlan = {
 export type ReleaseBundleSourceCutoff = {
   observed_at: string;
   policy: 'single_read_at_freeze_admission';
-  frozen_base_release_set: {
-    generation: string;
-    digest: string;
-  } | null;
   post_freeze_remote_refresh_allowed: false;
   later_authority_advancement_invalidates_bundle: false;
 };
@@ -134,26 +109,14 @@ type ReleaseBundleFreezeRequestCommon = {
   };
 };
 
-export type ReleaseBundleFreezeRequest = ReleaseBundleFreezeRequestCommon & {
-  identity_mode?: never;
-  package_compatibility?: never;
-  framework_release_set: {
-    generation: string;
-    manifest_ref: string;
-    digest: string;
-  };
-  packages: Record<ReleaseBundlePackageId, ReleaseBundlePackageIdentity>;
-};
-
 export type ReleaseBundleAppStandardFreezeRequest = ReleaseBundleFreezeRequestCommon & {
   identity_mode: 'app_standard_compatibility';
   package_compatibility: ReleaseBundlePackageCompatibility;
-  framework_release_set?: never;
-  packages?: never;
 };
 
+export type ReleaseBundleFreezeRequest = ReleaseBundleAppStandardFreezeRequest;
+
 export type ReleaseBundleFreezeRequestDocument =
-  | ReleaseBundleFreezeRequest
   | ReleaseBundleAppStandardFreezeRequest;
 
 type ReleaseBundleCommon = {
@@ -192,21 +155,12 @@ type ReleaseBundleCommon = {
   };
 };
 
-export type ReleaseBundleLegacy = ReleaseBundleCommon & {
-  identity_mode?: never;
-  package_compatibility?: never;
-  framework_release_set: ReleaseBundleFreezeRequest['framework_release_set'];
-  packages: ReleaseBundleFreezeRequest['packages'];
-};
-
 export type ReleaseBundleAppStandard = ReleaseBundleCommon & {
   identity_mode: 'app_standard_compatibility';
   package_compatibility: ReleaseBundlePackageCompatibility;
-  framework_release_set?: never;
-  packages?: never;
 };
 
-export type ReleaseBundle = ReleaseBundleLegacy | ReleaseBundleAppStandard;
+export type ReleaseBundle = ReleaseBundleAppStandard;
 
 export type ReleaseBundleExecutorAsset = {
   name: string;
@@ -259,28 +213,15 @@ type ReleaseBundleQualificationSourceCohort = {
   framework_sha: string;
 };
 
-export type ReleaseBundleLegacyQualificationReceipt =
-  ReleaseBundleQualificationReceiptCommon & {
-    cohort: ReleaseBundleQualificationSourceCohort & {
-      identity_mode?: never;
-      package_compatibility?: never;
-      framework_release_set_digest: string;
-      package_payload_manifest_sha256: Record<ReleaseBundlePackageId, string>;
-    };
-  };
-
 export type ReleaseBundleAppStandardQualificationReceipt =
   ReleaseBundleQualificationReceiptCommon & {
     cohort: ReleaseBundleQualificationSourceCohort & {
       identity_mode: 'app_standard_compatibility';
       package_compatibility: ReleaseBundlePackageCompatibility;
-      framework_release_set_digest?: never;
-      package_payload_manifest_sha256?: never;
     };
   };
 
 export type ReleaseBundleQualificationReceipt =
-  | ReleaseBundleLegacyQualificationReceipt
   | ReleaseBundleAppStandardQualificationReceipt;
 
 export type ReleaseBundleOperationReceipt = {

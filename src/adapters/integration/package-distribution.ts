@@ -8,7 +8,7 @@ import {
   listFirstPartyAgentPackageManifests,
 } from './agent-package-manifests.ts';
 import { listCurrentPackageProjections } from '../../kernel/standard-agent-registry.ts';
-import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
+import { getOplReleaseRepo } from './opl-release.ts';
 import { readBundledCodexDefaultProfile } from '../../kernel/local-codex-defaults.ts';
 import { assertJsonSchemaPayload } from '../../kernel/schema-registry.ts';
 import { MANAGED_UPDATE_OWNER_FIELDS } from './managed-update-owner-boundary.ts';
@@ -34,53 +34,17 @@ export type PackageSpec = {
 };
 
 type BuildPackageManifestInput = Partial<{
-  releaseSetGeneration: string;
   generatedAt: string;
   owner: string;
   rollbackVersion: string | null;
   retainVersions: number;
-  appComponent: AppComponentInput | null;
   frameworkVersion: string;
 }>;
-
-type ComponentArtifact = {
-  name: string;
-  ref: string;
-  digest: string;
-  size: number;
-  content_type: string;
-};
-
-export type AppComponentCarrier = {
-  carrier_id: 'macos_standard' | 'docker_webui';
-  carrier_kind: 'release_asset' | 'oci_image';
-  ref: string;
-  digest: string;
-  size: number;
-  package_profile: 'standard' | 'webui-full';
-  content_fingerprint?: string;
-};
-
-export type AppComponentInput = {
-  surface_kind: 'opl_app_component_manifest.v1';
-  component_id: 'opl-app';
-  version: string;
-  source_commit: string;
-  release_tag: string;
-  release_url: string;
-  release_status: 'draft' | 'published';
-  primary_artifact: ComponentArtifact;
-  artifacts: ComponentArtifact[];
-  carriers?: AppComponentCarrier[];
-  component_manifest_ref: string;
-  component_manifest_digest: string;
-};
 
 export type OplPackageManifest = ReturnType<typeof buildOplPackageManifest>;
 
 const PACKAGE_WORKFLOW_TRIGGER_POLICY = 'independent_owner_channel_workflow_call_or_manual_dispatch';
 const PACKAGE_REMOTE_PUBLISH_STATUS = 'publication_workflow_configured_pending_remote_verification';
-const RELEASE_SET_GENERATION_PATTERN = /^\d{2}\.\d{1,2}\.\d{1,2}(?:-r[1-9]\d*)?$/;
 const PACKAGE_PAYLOAD_MANIFEST_SCHEMA_REF = 'contracts/opl-framework/package-payload-manifest-v2.schema.json';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const packagePayloadManifestSchema = JSON.parse(fs.readFileSync(
@@ -244,56 +208,6 @@ function frameworkVersion(explicitVersion?: string) {
   return version;
 }
 
-function buildAppComponent(input: AppComponentInput | null | undefined) {
-  if (!input) {
-    return {
-      component_id: 'opl-app',
-      component_kind: 'app',
-      version: null,
-      source_commit: null,
-      artifact_ref: null,
-      artifact_digest: null,
-      artifact_status: 'pending_app_owner_manifest',
-      release_status: null,
-      component_manifest_ref: null,
-      component_manifest_digest: null,
-      artifacts: [],
-      carriers: [],
-    };
-  }
-  return {
-    component_id: 'opl-app',
-    component_kind: 'app',
-    version: input.version,
-    source_commit: input.source_commit,
-    artifact_ref: input.primary_artifact.ref,
-    artifact_digest: input.primary_artifact.digest,
-    artifact_status: 'published_immutable',
-    release_status: input.release_status,
-    release_tag: input.release_tag,
-    release_url: input.release_url,
-    component_manifest_ref: input.component_manifest_ref,
-    component_manifest_digest: input.component_manifest_digest,
-    artifacts: input.artifacts,
-    carriers: input.carriers ?? [{
-      carrier_id: 'macos_standard',
-      carrier_kind: 'release_asset',
-      ref: input.primary_artifact.ref,
-      digest: input.primary_artifact.digest,
-      size: input.primary_artifact.size,
-      package_profile: 'standard',
-    }],
-  };
-}
-
-export function normalizeReleaseSetGeneration(value: string) {
-  const generation = value.trim().replace(/^v/, '');
-  if (!RELEASE_SET_GENERATION_PATTERN.test(generation)) {
-    throw new Error(`Release Set generation must use YY.M.D or YY.M.D-rN, got: ${value}`);
-  }
-  return generation;
-}
-
 function packageRole(spec: PackageSpec): 'standard_agent' | 'capability_package' | 'workflow_profile' {
   return spec.owner_manifest_kind === 'workflow_profile'
     ? 'workflow_profile'
@@ -311,71 +225,14 @@ function normalizeRetainVersions(value?: number) {
 
 function buildReleaseAutomation(retainVersions: number, rollbackVersion: string | null) {
   return {
-    status: 'active_managed_ghcr_capability_packages',
     package_lifecycle_status: 'active_release_channel',
     workflow_trigger_policy: PACKAGE_WORKFLOW_TRIGGER_POLICY,
     remote_publish_status: PACKAGE_REMOTE_PUBLISH_STATUS,
-    release_manifest_publication_status: 'configured_pending_remote_verification',
-    release_manifest_package: {
-      package_name: 'one-person-lab-manifest',
-      package_channel_status: 'active_release_channel',
-      publication_status: 'publication_workflow_configured',
-      current_install_update_source: 'opl_release_channel_manifest',
-      developer_override_source: 'git_checkout',
-    },
-    channel_manifest: {
-      manifest_kind: 'opl_release_channel_manifest.v1',
-      generated_by: 'scripts/package-archives.mjs',
-      ghcr_ref: 'ghcr.io/<owner>/one-person-lab-manifest:<release_set_generation>',
-      moving_tags: ['candidate', 'latest-stable'],
-      outputs: {
-        release_manifest: 'opl-release-manifest.json',
-        channel_manifest: 'opl-channel-manifest.json',
-        checksums: 'SHA256SUMS',
-      },
-      current_latest_source: 'ghcr_channel_manifest',
-    },
-    artifact_build: {
-      workflow: '.github/workflows/packages.yml',
-      command: 'npm run packages:manifest -- --release-set-generation <yy.m.d[-rN]>',
-      artifact_kind: 'git_archive_source_tarball',
-      publication_mode: 'ghcr_package_channel_and_workflow_artifact',
-      automatic_trigger: 'workflow_call_from_release_gate',
-      manual_repair_trigger: 'workflow_dispatch',
-      required_input: 'release_set_generation',
-    },
-    checksum: {
-      algorithm: 'sha256',
-      recorded_in: ['source_archive.sha256', 'SHA256SUMS'],
-      required_before_publish: true,
-      required_before_prepared_artifact: true,
-    },
-    [MANAGED_UPDATE_OWNER_FIELDS.revertPlan]: {
-      strategy: 'previous_channel_manifest_target',
-      previous_version: rollbackVersion,
-      input: '--previous-manifest <path>',
-      failure_behavior: 'keep_current_git_checkout_or_restore_previous_manifest_target',
-    },
+    artifact_build: { workflow: '.github/workflows/publish-package.yml', required_input: 'package_id' },
     cleanup: {
-      strategy: 'retain_latest_n_versions_and_declared_rollbacks',
       retain_versions: retainVersions,
-      applies_to: ['one-person-lab-packages/*', 'one-person-lab-manifest'],
-      protected_tags: ['candidate', 'latest-stable'],
       execution_mode: 'dry_run_first_explicit_execute_required',
-      destructive_action_requires: 'package_admin_with_delete_packages_scope',
-    },
-    daily_package_channel: {
-      status: 'active_change_detection_with_independent_publication',
-      workflow: '.github/workflows/daily-package-channel.yml',
-      publication_workflow: '.github/workflows/daily-package-channel-publication.yml',
-      schedule: 'daily',
-      generation_template: '<utc_yy.m.d[-rN_auto]>',
-      change_detector: 'scripts/package-channel-daily-check.mjs + scripts/package-owner-channel-plan.mjs',
-      comparison: 'independent_owner_channel_version_and_content_lock',
-      ignored_fields: ['release_set_generation', 'generated_at', 'artifact tag'],
-      no_change_behavior: 'skip_without_publish',
-      publish_gate: 'new_version_with_changed_content_or_verified_channel_bootstrap',
-      manual_repair_trigger: 'workflow_dispatch',
+      protected_tags: ['candidate', 'latest-stable'],
     },
   };
 }
@@ -401,7 +258,6 @@ function buildPackageReleaseDiscipline(spec: PackageSpec, rollbackVersion: strin
       'anonymous_digest_pull_verified',
       'owner_latest_stable_promoted',
       'anonymous_owner_channel_readback_verified',
-      'shared_release_set_not_required_for_ordinary_currentness',
       'developer_git_checkout_override_declared',
       'rollback_target_declared_when_previous_manifest_exists',
     ],
@@ -456,80 +312,14 @@ function buildCodexStandaloneDistribution(spec: PackageSpec) {
 }
 
 export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
-  const releaseSetGeneration = normalizeReleaseSetGeneration(
-    input.releaseSetGeneration
-      ?? process.env.OPL_RELEASE_SET_GENERATION
-      ?? getOplReleaseVersion(),
-  );
   const owner = resolveOwner(input.owner);
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const retainVersions = normalizeRetainVersions(input.retainVersions);
   const rollbackVersion = input.rollbackVersion === undefined ? null : input.rollbackVersion;
   const baseVersion = frameworkVersion(input.frameworkVersion);
-  const packageMembers = Object.fromEntries(PUBLISHED_PACKAGE_SPECS.map((spec) => {
-    const packageVersion = projectedPackageVersion(spec);
-    return [spec.package_id, {
-      component_id: spec.package_id,
-      component_kind: 'package',
-      package_id: spec.package_id,
-      package_role: packageRole(spec),
-      package_version: packageVersion,
-      version: packageVersion,
-      owner_source_commit: null as string | null,
-      source_commit: null as string | null,
-      oci_artifact_ref: buildPackageRef(owner, spec.package_id, packageVersion),
-      artifact_ref: buildPackageRef(owner, spec.package_id, packageVersion),
-      oci_artifact_digest: null as string | null,
-      artifact_digest: null as string | null,
-      artifact_status: 'pending_remote_verification',
-    }];
-  }));
-
   return {
     manifest_version: 1,
-    release_set_generation: releaseSetGeneration,
-    release_set: {
-      surface_kind: 'opl_release_set.v2',
-      schema_ref: 'contracts/opl-framework/release-set-v2.schema.json',
-      generation: releaseSetGeneration,
-      generation_scheme: 'calver_yy.m.d_optional_revision',
-      selection_status: 'selected_ecosystem_components',
-      promotion_evidence_status: 'requires_remote_tag_readback',
-      catalog_carrier: `ghcr.io/${owner}/one-person-lab-manifest:${releaseSetGeneration}`,
-      catalog_carrier_is_package_identity: false,
-      component_count: PUBLISHED_PACKAGE_SPECS.length + 2,
-      component_ids: ['opl-base', 'opl-app', ...PUBLISHED_PACKAGE_SPECS.map((spec) => spec.package_id)],
-      bom_status: 'planned',
-      bom_digest: null as string | null,
-      update_decision: {
-        comparison_key: 'component_id+version+artifact_digest',
-        release_set_revision_affects_component_update: false,
-        unchanged_component_behavior: 'reuse_existing_artifact_digest_without_rebuild_or_reinstall',
-      },
-      channel_pointer_policy: {
-        mutable_tags: ['candidate', 'latest-stable'],
-        promotion_mode: 'retag_exact_immutable_release_set_digest',
-        channel_is_not_bom_content: true,
-      },
-      components: {
-        base: {
-          component_id: 'opl-base',
-          component_kind: 'base',
-          version: baseVersion,
-          source_commit: null as string | null,
-          artifact_ref: buildFrameworkRef(owner, baseVersion),
-          artifact_digest: null as string | null,
-          artifact_status: 'pending_remote_verification',
-        },
-        app: buildAppComponent(input.appComponent),
-        packages: {
-          component_kind: 'package_collection',
-          package_count: PUBLISHED_PACKAGE_SPECS.length,
-          package_ids: PUBLISHED_PACKAGE_SPECS.map((spec) => spec.package_id),
-          members: packageMembers,
-        },
-      },
-    },
+    manifest_role: 'local_package_distribution_projection',
     generated_at: generatedAt,
     package_install_update_source: 'per_package_owner_latest_stable',
     package_consumption_status: 'ordinary_app_users_compose_independent_ghcr_packages',
@@ -553,7 +343,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
         package_lifecycle_status: 'active_release_channel',
         remote_publish_status: PACKAGE_REMOTE_PUBLISH_STATUS,
         package_consumption_status: 'consumed_by_runtime_substrate_updates',
-        current_install_update_source: 'opl_release_channel_manifest',
+        current_install_update_source: 'framework_owner_channel',
         developer_git_checkout_override: {
           repo_url: 'https://github.com/gaofeng21cn/one-person-lab.git',
           ref: 'main',
@@ -565,20 +355,19 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
           package_channel_status: 'active_release_channel',
           package_lifecycle_status: 'active_release_channel',
           workflow_trigger_policy: PACKAGE_WORKFLOW_TRIGGER_POLICY,
-          current_stable_source: 'opl_release_channel_manifest',
+          current_stable_source: 'framework_owner_channel',
           developer_override_source: 'git_checkout',
           required_gates: [
             'source_archive_built_from_head',
             'sha256_recorded',
-            'channel_manifest_written',
+            'framework_version_annotation_written',
             'ghcr_framework_artifact_published',
-            'release_manifest_published',
-            'runtime_substrate_apply_and_rollback_tested',
+                        'runtime_substrate_apply_and_rollback_tested',
           ],
           [MANAGED_UPDATE_OWNER_FIELDS.revertPlan]: rollbackVersion
             ? {
                 version: rollbackVersion,
-                source: 'previous_channel_manifest',
+                source: 'previous_framework_artifact',
               }
             : null,
         },
@@ -786,339 +575,6 @@ export function materializeArchiveBackedPackagePayload(input: {
   };
   assertCanonicalPackagePayloadManifest(materialized, input.payloadRef);
   return materialized;
-}
-
-function dependencyPackageIds(source: Record<string, unknown>) {
-  const dependencies = Array.isArray(source.capability_dependencies) ? source.capability_dependencies : [];
-  return dependencies.map((candidate) => stringRecord(candidate))
-    .filter((candidate): candidate is Record<string, unknown> => candidate !== null)
-    .map((candidate) => stringValue(candidate.package_id))
-    .filter((packageId): packageId is string => packageId !== null)
-    .sort((left, right) => left.localeCompare(right, 'en'));
-}
-
-function buildCurrentPackageCatalog(
-  manifest: OplPackageManifest,
-  packageDirectory = path.join(repoRoot, 'contracts/opl-framework/packages'),
-) {
-  return Object.fromEntries(PUBLISHED_PACKAGE_SPECS.map((spec) => {
-    const manifestPath = path.join(packageDirectory, path.basename(spec.package_manifest_ref));
-    const projectedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
-    const packageEntry = manifest.packages.package_artifacts[spec.package_id];
-    const ownerManifest = packageEntry.owner_package_manifest_json
-      ? JSON.parse(packageEntry.owner_package_manifest_json) as Record<string, unknown>
-      : {};
-    const packageManifest = spec.owner_manifest_kind === 'capability_package'
-      ? {
-          ...projectedManifest,
-          ...ownerManifest,
-          codex_surface: {
-            ...stringRecord(projectedManifest.codex_surface),
-            ...stringRecord(ownerManifest.codex_surface),
-          },
-        }
-      : projectedManifest;
-    const packageId = spec.package_id;
-    const packageVersion = packageEntry.package_version;
-    if (!packageVersion) {
-      throw new Error(`Package manifest ${spec.package_manifest_ref} has no package_id or version.`);
-    }
-    const codexSurface = stringRecord(packageManifest.codex_surface);
-    const payloadRef = codexSurface ? stringValue(codexSurface.plugin_payload_manifest_url) : null;
-    if (!payloadRef) {
-      throw new Error(`Package manifest ${spec.package_manifest_ref} has no payload manifest ref.`);
-    }
-    const payloadPath = path.join(path.dirname(manifestPath), payloadRef);
-    const payload = JSON.parse(fs.readFileSync(payloadPath, 'utf8')) as Record<string, unknown>;
-    const normalizedManifest = {
-      ...packageManifest,
-      package_id: packageId,
-      ...(spec.owner_manifest_kind === 'standard_agent' ? { agent_id: packageId } : {}),
-      version: packageVersion,
-    };
-    const sourceArtifactRef = packageEntry.artifact;
-    const normalizedPayload = materializeArchiveBackedPackagePayload({
-      payload,
-      payloadRef,
-      packageId,
-      packageVersion,
-      ownerSourceCommit: packageEntry.owner_source_commit,
-      sourceArtifactRef,
-      archiveSha256: packageEntry.package_content_digest,
-      archiveRoot: spec.repo_name,
-    });
-    const manifestSource = `${JSON.stringify(normalizedManifest, null, 2)}\n`;
-    const payloadSource = `${JSON.stringify(normalizedPayload, null, 2)}\n`;
-    const contentLock = stringRecord(packageManifest.content_lock);
-    const distributionPayload = stringRecord(packageManifest.distribution_payload);
-    const dependencyIds = dependencyPackageIds(packageManifest);
-    const manifestUrl = `opl+oci://${sourceArtifactRef}#/package-manifest.json`;
-    const manifestSha256 = sha256Payload(manifestSource);
-    const versionEntry = {
-      package_version: packageVersion,
-      selection_status: 'selected_for_release_set',
-      manifest_url: manifestUrl,
-      manifest_sha256: manifestSha256,
-      manifest_json: manifestSource,
-      package_manifest: {
-        ref: manifestUrl,
-        sha256: manifestSha256,
-      },
-      content_digest: stringValue(contentLock?.digest)
-        ?? stringValue(distributionPayload?.payload_digest_ref)
-        ?? manifestSha256,
-      payload_digest: sha256Payload(payloadSource),
-      payload_manifest_json: payloadSource,
-      payload_manifest_sha256: sha256Payload(payloadSource),
-      source_artifact_ref: sourceArtifactRef,
-      artifact_digest: packageEntry.oci_artifact_digest,
-      artifact_status: packageEntry.oci_artifact_status,
-      package_content_digest: packageEntry.package_content_digest,
-      owner_language_version: packageEntry.owner_language_version,
-      owner_source_commit: packageEntry.owner_source_commit,
-      owner_version_tag: packageEntry.owner_version_tag,
-      owner_package_manifest_sha256: packageEntry.owner_package_manifest_sha256,
-      release_gate: packageEntry.release_gate,
-      dependency_package_ids: dependencyIds,
-    };
-    return [packageId, {
-      package_id: packageId,
-      display_name: spec.label,
-      publisher: 'one-person-lab',
-      description: spec.description,
-      tags: [...spec.tags],
-      package_role: packageRole(spec),
-      trust_tier: 'first_party',
-      selected_version: packageVersion,
-      dependency_package_ids: versionEntry.dependency_package_ids,
-      versions: [versionEntry],
-    }];
-  }));
-}
-
-function retainedVersions(previousManifest: unknown, packageId: string) {
-  const root = stringRecord(previousManifest);
-  const packages = stringRecord(root?.packages);
-  const catalog = stringRecord(packages?.package_catalog);
-  const entry = stringRecord(catalog?.[packageId]);
-  return Array.isArray(entry?.versions)
-    ? entry.versions.map((candidate) => stringRecord(candidate)).filter((candidate): candidate is Record<string, unknown> => candidate !== null)
-    : [];
-}
-
-function isRetainableCatalogVersion(candidate: Record<string, unknown>) {
-  const manifest = stringRecord(candidate.package_manifest);
-  const manifestJson = typeof candidate.manifest_json === 'string' ? candidate.manifest_json : null;
-  const manifestSha256 = stringValue(candidate.manifest_sha256);
-  const payloadManifestJson = typeof candidate.payload_manifest_json === 'string'
-    ? candidate.payload_manifest_json
-    : null;
-  let canonicalPayload = false;
-  if (payloadManifestJson) {
-    try {
-      const payload = JSON.parse(payloadManifestJson) as Record<string, unknown>;
-      assertCanonicalPackagePayloadManifest(payload, 'retained payload manifest');
-      canonicalPayload = true;
-    } catch {
-      canonicalPayload = false;
-    }
-  }
-  return Boolean(
-    stringValue(candidate.package_version)
-    && stringValue(candidate.manifest_url)
-    && manifestSha256?.match(/^sha256:[0-9a-f]{64}$/)
-    && manifestJson
-    && sha256Payload(manifestJson) === manifestSha256
-    && stringValue(manifest?.ref)
-    && stringValue(manifest?.sha256) === manifestSha256
-    && stringValue(candidate.content_digest)?.match(/^sha256:[0-9a-f]{64}$/)
-    && stringValue(candidate.payload_digest)?.match(/^sha256:[0-9a-f]{64}$/)
-    && payloadManifestJson
-    && canonicalPayload
-    && sha256Payload(payloadManifestJson) === stringValue(candidate.payload_manifest_sha256)
-    && stringValue(candidate.payload_manifest_sha256) === stringValue(candidate.payload_digest)
-    && stringValue(candidate.source_artifact_ref)
-  );
-}
-
-function comparePackageVersions(left: Record<string, unknown>, right: Record<string, unknown>) {
-  const leftSelected = left.selection_status === 'selected_for_release_set' ? 1 : 0;
-  const rightSelected = right.selection_status === 'selected_for_release_set' ? 1 : 0;
-  if (leftSelected !== rightSelected) {
-    return rightSelected - leftSelected;
-  }
-  const versionOrder = stringValue(right.package_version)?.localeCompare(
-    stringValue(left.package_version) ?? '',
-    'en',
-    { numeric: true, sensitivity: 'base' },
-  ) ?? 0;
-  if (versionOrder !== 0) {
-    return versionOrder;
-  }
-  return (stringValue(left.manifest_url) ?? '').localeCompare(stringValue(right.manifest_url) ?? '', 'en');
-}
-
-function mergePackageCatalog(
-  currentCatalog: ReturnType<typeof buildCurrentPackageCatalog>,
-  previousManifest: unknown,
-  retainVersions: number,
-) {
-  return Object.fromEntries(Object.entries(currentCatalog).map(([packageId, current]) => {
-    const previousVersions = retainedVersions(previousManifest, packageId);
-    const generatedCurrentVersion = current.versions[0];
-    const previousCurrentVersion = previousVersions.find((candidate) => (
-      stringValue(candidate.package_version) === generatedCurrentVersion.package_version
-    ));
-    const immutableIdentityFields = [
-      'package_content_digest',
-      'owner_source_commit',
-      'owner_package_manifest_sha256',
-      'owner_language_version',
-      'owner_version_tag',
-      'source_artifact_ref',
-    ] as const;
-    const immutableIdentityDrift = previousCurrentVersion
-      ? immutableIdentityFields.filter((field) => (
-          (previousCurrentVersion[field] ?? null) !== (generatedCurrentVersion[field] ?? null)
-        ))
-      : [];
-    if (immutableIdentityDrift.length > 0) {
-      throw new Error(
-        `Immutable Package version collision for ${packageId}:${generatedCurrentVersion.package_version}: `
-        + `${immutableIdentityDrift.join(', ')} changed. Bump the owner Package version before publication.`,
-      );
-    }
-    const reusablePublishedVersion = previousCurrentVersion
-      && previousCurrentVersion.artifact_status === 'published_immutable'
-      && /^sha256:[0-9a-f]{64}$/.test(stringValue(previousCurrentVersion.artifact_digest) ?? '')
-      ? previousCurrentVersion
-      : null;
-    if (reusablePublishedVersion && !isRetainableCatalogVersion(reusablePublishedVersion)) {
-      throw new Error(
-        `Published immutable Package version ${packageId}:${generatedCurrentVersion.package_version} `
-        + 'is incomplete in the previous channel manifest.',
-      );
-    }
-    const currentVersion = reusablePublishedVersion
-      ? {
-          ...generatedCurrentVersion,
-          artifact_digest: reusablePublishedVersion.artifact_digest,
-          artifact_status: reusablePublishedVersion.artifact_status,
-          selection_status: 'selected_for_release_set',
-        }
-      : generatedCurrentVersion;
-    const retained = previousVersions
-      .filter(isRetainableCatalogVersion)
-      .map((candidate): Record<string, unknown> => {
-        const retainedVersion: Record<string, unknown> = {
-          ...candidate,
-          selection_status: 'retained_history',
-        };
-        delete retainedVersion.capability_abi;
-        delete retainedVersion.compatibility;
-        delete retainedVersion.dependency_requirements;
-        return retainedVersion;
-      });
-    const byVersion = new Map<string, Record<string, unknown>>();
-    byVersion.set(currentVersion.package_version, currentVersion);
-    for (const candidate of retained) {
-      const version = stringValue(candidate.package_version);
-      if (version && !byVersion.has(version)) {
-        byVersion.set(version, candidate);
-      }
-    }
-    return [packageId, {
-      ...current,
-      dependency_package_ids: Array.isArray(currentVersion.dependency_package_ids)
-        ? currentVersion.dependency_package_ids
-        : current.dependency_package_ids,
-      versions: [...byVersion.values()].sort(comparePackageVersions).slice(0, retainVersions),
-    }];
-  }));
-}
-
-function synchronizeReleaseSetBom(
-  manifest: OplPackageManifest,
-  packageCatalog: ReturnType<typeof mergePackageCatalog>,
-) {
-  const packageArtifacts = manifest.packages.package_artifacts as Record<string, {
-    oci_artifact_digest: string | null;
-    oci_artifact_status: string;
-    remote_publish_status: string;
-  }>;
-  const members = manifest.release_set.components.packages.members as Record<string, {
-    owner_source_commit: string | null;
-    source_commit: string | null;
-    oci_artifact_digest: string | null;
-    artifact_digest: string | null;
-    artifact_status: string;
-  }>;
-  let complete = true;
-  for (const [packageId, catalogEntry] of Object.entries(packageCatalog)) {
-    const selected = catalogEntry.versions.find((candidate) => (
-      candidate.selection_status === 'selected_for_release_set'
-    ));
-    const artifact = packageArtifacts[packageId];
-    const member = members[packageId];
-    if (!selected || !artifact || !member) {
-      complete = false;
-      continue;
-    }
-    const digest = stringValue(selected.artifact_digest);
-    const status = stringValue(selected.artifact_status) ?? 'pending_remote_verification';
-    const ownerSourceCommit = stringValue(selected.owner_source_commit);
-    artifact.oci_artifact_digest = digest;
-    artifact.oci_artifact_status = status;
-    artifact.remote_publish_status = status === 'published_immutable'
-      ? 'verified_reused_immutable_artifact'
-      : PACKAGE_REMOTE_PUBLISH_STATUS;
-    member.owner_source_commit = ownerSourceCommit;
-    member.source_commit = ownerSourceCommit;
-    member.oci_artifact_digest = digest;
-    member.artifact_digest = digest;
-    member.artifact_status = status;
-    if (status !== 'published_immutable'
-      || !/^sha256:[0-9a-f]{64}$/.test(digest ?? '')
-      || !/^[0-9a-f]{40}$/.test(ownerSourceCommit ?? '')) {
-      complete = false;
-    }
-  }
-  const base = manifest.release_set.components.base;
-  const app = manifest.release_set.components.app;
-  const baseComplete = base.artifact_status === 'published_immutable'
-    && /^sha256:[0-9a-f]{64}$/.test(base.artifact_digest ?? '')
-    && /^[0-9a-f]{40}$/.test(base.source_commit ?? '');
-  const appComplete = app.artifact_status === 'published_immutable'
-    && /^sha256:[0-9a-f]{64}$/.test(app.artifact_digest ?? '')
-    && /^[0-9a-f]{40}$/.test(app.source_commit ?? '');
-  manifest.release_set.bom_status = complete && baseComplete && appComplete
-    ? 'complete'
-    : 'pending_remote_verification';
-}
-
-export function buildOplPackageChannelManifest(
-  manifest: OplPackageManifest,
-  previousManifest: unknown = null,
-  packageDirectory = path.join(repoRoot, 'contracts/opl-framework/packages'),
-) {
-  const retainVersions = manifest.release_automation.cleanup.retain_versions;
-  const packageCatalog = mergePackageCatalog(
-    buildCurrentPackageCatalog(manifest, packageDirectory),
-    previousManifest,
-    retainVersions,
-  );
-  synchronizeReleaseSetBom(manifest, packageCatalog);
-  return {
-    ...manifest,
-    manifest_role: 'opl_release_channel_manifest',
-    manifest_role_reason: 'distinct OCI layer for GHCR package-channel publication',
-    package_catalog_surface_kind: 'opl_package_catalog.v1',
-    packages: {
-      ...manifest.packages,
-      package_catalog: packageCatalog,
-    },
-    package_catalog_digest: sha256Payload(JSON.stringify(packageCatalog)),
-  };
 }
 
 export function sha256File(filePath: string) {

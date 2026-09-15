@@ -1,0 +1,112 @@
+name: Publish OPL Framework
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Framework stable SemVer from package.json
+        required: true
+        type: string
+      expected_latest_stable_predecessor:
+        description: Observed Framework channel digest, or none for first publication
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: opl-framework-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: release-stable
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
+        with:
+          cosign-release: v3.1.1
+      - name: Build Framework artifact
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; if(JSON.parse(fs.readFileSync("package.json")).version !== process.env.EXPECTED_VERSION) throw new Error("Framework version mismatch")'
+          npm ci --ignore-scripts
+          npm run framework:archive
+      - name: Publish immutable Framework and advance its channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_PREDECESSOR: ${{ inputs.expected_latest_stable_predecessor }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/one-person-lab-framework"
+          version="$(jq -r .version dist/framework-artifact/framework-artifact.json)"
+          archive="dist/framework-artifact/one-person-lab-framework-${version}.tar.gz"
+          echo "$GH_TOKEN" | oras login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          args=(--artifact-type application/vnd.onepersonlab.framework.v1 --source-url "https://github.com/$GITHUB_REPOSITORY" --layer "$archive=application/vnd.onepersonlab.framework.source.v1+gzip")
+          preflight="$(node scripts/oci-publication-preflight.mjs --ref "$image:$version" "${args[@]}")"
+          if [ "$(jq -r .action <<< "$preflight")" = reuse ]; then
+            digest="$(jq -er .digest <<< "$preflight")"
+          else
+            result="$(oras push --format json "$image:$version" --artifact-type application/vnd.onepersonlab.framework.v1 \
+              --annotation "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+              --annotation "org.opencontainers.image.version=$version" \
+              --annotation "org.opencontainers.image.revision=$GITHUB_SHA" \
+              "$archive:application/vnd.onepersonlab.framework.source.v1+gzip")"
+            digest="$(jq -er '.digest // .descriptor.digest' <<< "$result")"
+          fi
+          for attempt in {1..12}; do
+            if metadata="$(gh api "/users/${GITHUB_REPOSITORY_OWNER}/packages/container/one-person-lab-framework" 2>/dev/null)" \
+              && jq -e --arg repo "$GITHUB_REPOSITORY" '.visibility == "public" and .repository.full_name == $repo' <<< "$metadata" >/dev/null; then
+              break
+            fi
+            gh api --method PATCH /user/packages/container/one-person-lab-framework/visibility -f visibility=public >/dev/null 2>&1 || true
+            if [ "$attempt" -eq 12 ]; then
+              echo "::error::Framework artifact must be public and associated with $GITHUB_REPOSITORY"
+              exit 1
+            fi
+            sleep 5
+          done
+          oras manifest fetch "$image@$digest" | jq -e --arg version "$version" --arg commit "$GITHUB_SHA" \
+            '.annotations["org.opencontainers.image.version"] == $version and .annotations["org.opencontainers.image.revision"] == $commit' >/dev/null
+          node scripts/oci-publication-preflight.mjs --ref "$image@$digest" "${args[@]}" --verify-only --expected-digest "$digest" --anonymous
+          subject="$image@$digest"
+          provenance="$RUNNER_TEMP/framework-provenance.json"
+          sbom="$RUNNER_TEMP/framework-sbom.json"
+          jq -n --arg commit "$GITHUB_SHA" --arg repo "$GITHUB_REPOSITORY" \
+            --arg version "$version" --arg builder "$GITHUB_WORKFLOW_REF" --arg invocation "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            '{buildDefinition:{buildType:"https://onepersonlab.ai/buildtypes/opl-framework/v1",
+              externalParameters:{version:$version},resolvedDependencies:[{uri:("https://github.com/"+$repo),digest:{gitCommit:$commit}}]},
+              runDetails:{builder:{id:$builder},metadata:{invocationId:$invocation}}}' > "$provenance"
+          jq -n --arg version "$version" --arg subject "$subject" \
+            --arg checksum "$(jq -r .sha256 dist/framework-artifact/framework-artifact.json)" \
+            --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{spdxVersion:"SPDX-2.3",dataLicense:"CC0-1.0",SPDXID:"SPDXRef-DOCUMENT",
+              name:("opl-framework-"+$version),documentNamespace:("https://onepersonlab.ai/spdx/framework/"+$checksum),
+              creationInfo:{created:$created,creators:["Tool: publish-framework.yml"]},
+              packages:[{name:"opl-framework",SPDXID:"SPDXRef-Package",versionInfo:$version,
+                downloadLocation:$subject,filesAnalyzed:false,checksums:[{algorithm:"SHA256",checksumValue:$checksum}]}]}' > "$sbom"
+          echo "$GH_TOKEN" | cosign login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          cosign attest --yes --timeout 60s --oidc-provider github-actions --type slsaprovenance1 --predicate "$provenance" "$subject"
+          cosign attest --yes --timeout 60s --oidc-provider github-actions --type spdxjson --predicate "$sbom" "$subject"
+          for kind in slsaprovenance1 spdxjson; do
+            cosign verify-attestation --timeout 60s --type "$kind" \
+              --certificate-identity "https://github.com/$GITHUB_WORKFLOW_REF" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com "$subject" >/dev/null
+          done
+          if current="$(oras resolve "$image:latest-stable" 2> "$RUNNER_TEMP/framework-channel-error")"; then
+            [ "$current" = "$EXPECTED_PREDECESSOR" ] || [ "$current" = "$digest" ]
+          else
+            [ "$EXPECTED_PREDECESSOR" = none ]
+            rg -qi 'manifest unknown|not found|404' "$RUNNER_TEMP/framework-channel-error"
+          fi
+          oras tag "$image@$digest" latest-stable
+          node scripts/oci-publication-preflight.mjs --ref "$image:latest-stable" "${args[@]}" --verify-only --expected-digest "$digest" --anonymous

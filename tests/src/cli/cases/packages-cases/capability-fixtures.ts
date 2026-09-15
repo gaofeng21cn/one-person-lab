@@ -7,8 +7,6 @@ import { resolveOplDomainModuleSpec } from '../../../../../src/adapters/integrat
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const PACKAGE_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.manifest.v1+json';
 const PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.payload.v1+json';
-const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
-const FIXTURE_PACKAGE_CHANNEL_REF = 'ghcr.io/fixture/one-person-lab-manifest:fixture';
 const CANONICAL_PACKAGE_CONTENT_LOCK = 'ordered_path_length_file_length_bytes';
 
 export const scholarSkillsCoreSkillIds = [
@@ -143,13 +141,13 @@ function listFixtureFiles(
   return files.sort((left, right) => left.path.localeCompare(right.path));
 }
 
-function writeReleaseSetCurlFixture(input: {
+function writePackageCurlFixture(input: {
   root: string;
   manifests: Record<string, Record<string, unknown>>;
   blobs: Record<string, string>;
 }) {
   const { root, manifests, blobs } = input;
-  const binRoot = path.join(root, 'release-set-bin');
+  const binRoot = path.join(root, 'package-owner-bin');
   const curlPath = path.join(binRoot, 'curl');
   fs.mkdirSync(binRoot, { recursive: true });
   fs.writeFileSync(curlPath, [
@@ -316,14 +314,13 @@ export function writePackageCatalog(
   options: { corruptInlineManifestPackageId?: string } = {},
 ) {
   fs.mkdirSync(root, { recursive: true });
-  const packages: Record<string, { package_id: string; package_role: string; selected_version: string; versions: any[] }> = {};
   const artifactManifests: Record<string, Record<string, unknown>> = {};
   const artifactBlobs: Record<string, string> = {};
   for (const manifestPath of manifestPaths) {
     const sourceManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const packageId = sourceManifest.package_id;
     const sourceCommit = crypto.createHash('sha256')
-      .update(`release-set:${packageId}:${sourceManifest.version}`)
+      .update(`package-owner:${packageId}:${sourceManifest.version}`)
       .digest('hex')
       .slice(0, 40);
     const pluginId = sourceManifest.codex_surface?.plugin_id
@@ -341,7 +338,7 @@ export function writePackageCatalog(
         managed_update_source: {
           ...sourceManifest.managed_update_source,
           transport: 'opl_oci_channel',
-          catalog_ref: FIXTURE_PACKAGE_CHANNEL_REF,
+          catalog_ref: `ghcr.io/fixture/one-person-lab-packages/${packageId}:latest-stable`,
         },
       } : {}),
       ...(Array.isArray(sourceManifest.capability_dependencies) ? {
@@ -351,7 +348,7 @@ export function writePackageCatalog(
             dependency_source: {
               ...dependency.dependency_source,
               transport: 'opl_oci_channel',
-              catalog_ref: FIXTURE_PACKAGE_CHANNEL_REF,
+              catalog_ref: `ghcr.io/fixture/one-person-lab-packages/${dependency.package_id}:latest-stable`,
             },
           } : {}),
         })),
@@ -378,9 +375,9 @@ export function writePackageCatalog(
     const archiveRoot = typeof runtimeSourceModuleId === 'string'
       ? resolveOplDomainModuleSpec(runtimeSourceModuleId).repo_name
       : `${packageId}-${manifest.version}`;
-    const archiveParent = path.join(root, 'release-set-sources');
+    const archiveParent = path.join(root, 'package-owner-sources');
     const archiveSourceRoot = path.join(archiveParent, archiveRoot);
-    const archivePath = path.join(root, 'release-set-artifacts', `${archiveRoot}.tar.gz`);
+    const archivePath = path.join(root, 'package-owner-artifacts', `${archiveRoot}.tar.gz`);
     fs.rmSync(archiveSourceRoot, { recursive: true, force: true });
     fs.mkdirSync(archiveSourceRoot, { recursive: true });
     fs.mkdirSync(path.dirname(archivePath), { recursive: true });
@@ -424,12 +421,12 @@ export function writePackageCatalog(
     const payloadDigest = sha256(payloadManifestJson);
     const manifestLayerPath = path.join(
       root,
-      'release-set-artifacts',
+      'package-owner-artifacts',
       `${packageId}-${manifest.version}-package-manifest.json`,
     );
     const payloadLayerPath = path.join(
       root,
-      'release-set-artifacts',
+      'package-owner-artifacts',
       `${packageId}-${manifest.version}-payload-manifest.json`,
     );
     fs.writeFileSync(manifestLayerPath, raw);
@@ -461,71 +458,14 @@ export function writePackageCatalog(
     artifactBlobs[archiveDigest] = archivePath;
     artifactBlobs[manifestDigest] = manifestLayerPath;
     artifactBlobs[payloadDigest] = payloadLayerPath;
-    const version = {
-      package_version: manifest.version,
-      capability_abi: capabilityAbi,
-      manifest_url: `opl+oci://${sourceArtifactRef}#/package-manifest.json`,
-      manifest_sha256: manifestDigest,
-      manifest_json: raw,
-      package_manifest: {
-        ref: `opl+oci://${sourceArtifactRef}#/package-manifest.json`,
-        sha256: manifestDigest,
-      },
-      content_digest: manifest.content_lock?.digest ?? manifestDigest,
-      payload_digest: payloadDigest,
-      payload_manifest_json: payloadManifestJson,
-      payload_manifest_sha256: payloadDigest,
-      source_artifact_ref: sourceArtifactRef,
-      artifact_digest: artifactDigest,
-      artifact_status: 'published_immutable',
-      package_content_digest: archiveDigest,
-      owner_source_commit: sourceCommit,
-      dependency_package_ids: manifest.capability_dependencies?.map((entry: any) => entry.package_id) ?? [],
-      selection_status: 'selected_for_release_set',
-    };
-    const entry = packages[packageId] ?? {
-      package_id: packageId,
-      package_role: capabilityAbi ? 'capability_package' : 'standard_agent',
-      selected_version: manifest.version,
-      versions: [],
-    };
-    entry.selected_version = manifest.version;
-    entry.versions.push(version);
-    packages[packageId] = entry;
   }
-  const corruptInlineManifest = options.corruptInlineManifestPackageId
-    ? packages[options.corruptInlineManifestPackageId]?.versions[0]
-    : null;
-  if (corruptInlineManifest?.manifest_json) {
-    corruptInlineManifest.manifest_json = `${corruptInlineManifest.manifest_json} `;
-  }
-  const catalogPath = path.join(root, 'capability-catalog.json');
-  fs.writeFileSync(catalogPath, formatJsonPayload({
-    surface_kind: 'opl_package_catalog.v1',
-    release_set_generation: 'fixture',
-    packages: { package_catalog: packages },
-  }));
-  const catalogDigest = sha256(fs.readFileSync(catalogPath));
-  const channelRepository = 'fixture/one-person-lab-manifest';
-  const channelManifest = {
-    schemaVersion: 2,
-    layers: [{
-      mediaType: CHANNEL_MANIFEST_LAYER_MEDIA_TYPE,
-      digest: catalogDigest,
-    }],
-  };
-  artifactManifests[channelRepository] = channelManifest;
-  artifactManifests[`${channelRepository}@fixture`] = channelManifest;
-  artifactBlobs[catalogDigest] = catalogPath;
-  const binRoot = writeReleaseSetCurlFixture({
+  const binRoot = writePackageCurlFixture({
     root,
     manifests: artifactManifests,
     blobs: artifactBlobs,
   });
   return {
-    catalogPath,
     env: {
-      OPL_PACKAGE_CHANNEL_MANIFEST_REF: FIXTURE_PACKAGE_CHANNEL_REF,
       OPL_PACKAGES_OWNER: 'fixture',
       PATH: `${binRoot}:${process.env.PATH ?? ''}`,
     },

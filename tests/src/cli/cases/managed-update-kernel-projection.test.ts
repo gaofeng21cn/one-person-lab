@@ -482,7 +482,6 @@ exit 2
     OPL_STATE_DIR: stateDir,
     OPL_MODULES_ROOT: path.join(root, 'modules'),
     OPL_CODEX_PLUGIN_BIN: codexFixture.codexPath,
-    OPL_PACKAGE_CHANNEL_MANIFEST_REF: '',
   };
   const previousEnv = new Map(Object.keys(env).map((key) => [key, process.env[key]]));
 

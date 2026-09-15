@@ -243,8 +243,8 @@ test('workspace init projects the installed MAS professional Skill generation an
     configuredCarrier: true,
   });
   writeMasManagedModuleCapabilityMap(modulesRoot);
-  const releaseSet = writeCapabilityCatalog(
-    path.join(root, 'release-set'),
+  const packageChannels = writeCapabilityCatalog(
+    path.join(root, 'package-owners'),
     [consumerManifest, providerManifest],
   );
   const env = {
@@ -253,7 +253,7 @@ test('workspace init projects the installed MAS professional Skill generation an
     CODEX_HOME: path.join(root, 'codex-home'),
     OPL_CODEX_PLUGIN_BIN: createFakeCodexPluginManagerFixture(path.join(root, 'fixture-bin')).codexPath,
     OPL_DEVELOPER_MODE_GITHUB_IDENTITY_FIXTURE: 'opl-managed-package-test',
-    ...releaseSet.env,
+    ...packageChannels.env,
   };
   fs.mkdirSync(env.CODEX_HOME, { recursive: true });
   fs.writeFileSync(path.join(env.CODEX_HOME, 'config.toml'), [

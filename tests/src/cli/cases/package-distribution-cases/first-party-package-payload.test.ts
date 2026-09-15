@@ -40,7 +40,6 @@ type SourceFixture = {
 type AuthorityFixture = {
   manifest: string;
   allowlist: string;
-  ownerCohortLock: string;
   output: string;
 };
 
@@ -214,7 +213,6 @@ function createAuthority(root: string, source: SourceFixture, input: {
   const packagesDir = path.join(root, 'framework', 'packages');
   const manifestPath = path.join(packagesDir, `${id}.json`);
   const allowlistPath = path.join(root, 'framework', 'package-payload-allowlists', `${id}.json`);
-  const ownerCohortLockPath = path.join(root, 'framework', 'owner-cohort-lock.json');
   const manifest = structuredClone(packageTemplates[input.surface ?? 'agent']);
   manifest.package_id = id;
   if (manifest.agent_id !== undefined) manifest.agent_id = id;
@@ -252,22 +250,9 @@ function createAuthority(root: string, source: SourceFixture, input: {
   };
   writeFile(root, path.relative(root, manifestPath), `${JSON.stringify(manifest, null, 2)}\n`);
   writeFile(root, path.relative(root, allowlistPath), `${JSON.stringify(allowlist, null, 2)}\n`);
-  writeFile(root, path.relative(root, ownerCohortLockPath), `${JSON.stringify({
-    surface_kind: 'opl_package_owner_cohort_lock.v1',
-    generated_at: '2026-07-14T00:00:00.000Z',
-    packages: {
-      [id]: {
-        package_id: id,
-        repo_name: new URL(repository).pathname.split('/').at(-1)!.replace(/\.git$/, ''),
-        repo_url: repository,
-        source_commit: source.sourceCommit,
-      },
-    },
-  }, null, 2)}\n`);
   return {
     manifest: manifestPath,
     allowlist: allowlistPath,
-    ownerCohortLock: ownerCohortLockPath,
     output: path.join(packagesDir, 'payloads', `${id}-${version}.json`),
   };
 }
@@ -288,7 +273,6 @@ function generatorArgs(input: {
     generator,
     '--manifest', input.authority.manifest,
     '--allowlist', input.authority.allowlist,
-    '--owner-cohort-lock', input.authority.ownerCohortLock,
     '--repo', input.repo,
     '--source-commit', input.sourceCommit,
     ...(input.check ? ['--check'] : []),
@@ -648,9 +632,6 @@ test('concurrent equal writers converge and changed authority cannot replace the
   writeFile(source.repo, rootedPath(source.sourceRoot, `skills/${pluginId}/SKILL.md`), '# Divergent same-version bytes\n');
   const divergentCommit = commitAll(source.repo, 'divergent same-version payload');
   git(source.repo, ['update-ref', 'refs/remotes/origin/main', divergentCommit]);
-  editJson(authority.ownerCohortLock, (lock) => {
-    lock.packages[packageId].source_commit = divergentCommit;
-  });
   editJson(authority.manifest, (manifest) => {
     manifest.codex_surface.carrier_source_commit = divergentCommit;
   });
@@ -792,7 +773,7 @@ test('manifest, allowlist, source repository, output, and committed plugin ident
       mutate: (authority) => editJson(authority.manifest, (manifest) => {
         manifest.codex_surface.carrier_source_commit = 'f'.repeat(40);
       }),
-      error: /carrier source commit does not match Package owner cohort authority/,
+      error: /carrier source commit does not match Package owner source authority/,
     },
     {
       name: 'conflicting manifest source commit authorities',
@@ -1068,15 +1049,12 @@ test('generator rejects caller commit drift, missing authority objects, unreacha
   assert.match(shortCommit.stderr, /exact lowercase 40-character Git SHA/);
   const wrongFirstWriter = runFailure({ authority, repo: source.repo, sourceCommit: 'f'.repeat(40) });
   assert.notEqual(wrongFirstWriter.status, 0);
-  assert.match(wrongFirstWriter.stderr, /does not match Package owner cohort authority/);
+  assert.match(wrongFirstWriter.stderr, /does not match Package owner source authority/);
   assert.equal(fs.existsSync(authority.output), false);
 
   const missingAuthorityRoot = path.join(root, 'missing');
   const missingSource = createSourceRepo(missingAuthorityRoot);
   const missingAuthority = createAuthority(missingAuthorityRoot, missingSource);
-  editJson(missingAuthority.ownerCohortLock, (lock) => {
-    lock.packages[packageId].source_commit = 'f'.repeat(40);
-  });
   editJson(missingAuthority.manifest, (manifest) => {
     manifest.codex_surface.carrier_source_commit = 'f'.repeat(40);
   });
@@ -1090,9 +1068,6 @@ test('generator rejects caller commit drift, missing authority objects, unreacha
 
   writeFile(source.repo, rootedPath(source.sourceRoot, 'assets/unreachable.txt'), 'unreachable\n');
   const unreachableCommit = commitAll(source.repo, 'unreachable payload source');
-  editJson(authority.ownerCohortLock, (lock) => {
-    lock.packages[packageId].source_commit = unreachableCommit;
-  });
   editJson(authority.manifest, (manifest) => {
     manifest.codex_surface.carrier_source_commit = unreachableCommit;
   });

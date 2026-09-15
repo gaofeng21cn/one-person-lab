@@ -525,7 +525,7 @@ test('publish is idempotent by remote name and digest and unknown results force 
   }
 });
 
-test('verify rejects a qualification receipt bound to a different transitive Package cohort', () => {
+test('verify rejects a qualification receipt bound to a different App source', () => {
   const fixture = createFixture();
   try {
     const bundleDigest = fixture.frozen.release_bundle_freeze.bundle_digest;
@@ -540,7 +540,7 @@ test('verify rejects a qualification receipt bound to a different transitive Pac
       bundleDigest,
     });
     const qualification = JSON.parse(fs.readFileSync(qualificationReceiptPath, 'utf8'));
-    qualification.cohort.package_payload_manifest_sha256.mas = digest('different-package-cohort');
+    qualification.cohort.app_sha = 'f'.repeat(40);
     writeJson(qualificationReceiptPath, qualification);
     assert.throws(
       () => verifyReleaseBundle({

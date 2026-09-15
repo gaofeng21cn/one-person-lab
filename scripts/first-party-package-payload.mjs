@@ -46,13 +46,12 @@ function parseOptions(argv) {
     options: {
       manifest: { type: 'string' },
       allowlist: { type: 'string' },
-      'owner-cohort-lock': { type: 'string' },
       repo: { type: 'string' },
       'source-commit': { type: 'string' },
       check: { type: 'boolean', default: false },
     },
   });
-  const required = ['manifest', 'allowlist', 'owner-cohort-lock', 'repo', 'source-commit'];
+  const required = ['manifest', 'allowlist', 'repo', 'source-commit'];
   const missing = required.filter((name) => typeof values[name] !== 'string' || !values[name].trim());
   if (missing.length > 0) {
     throw new Error(`Missing required options: ${missing.map((name) => `--${name}`).join(', ')}`);
@@ -60,7 +59,6 @@ function parseOptions(argv) {
   return {
     manifest: path.resolve(values.manifest.trim()),
     allowlist: path.resolve(values.allowlist.trim()),
-    ownerCohortLock: path.resolve(values['owner-cohort-lock'].trim()),
     repo: path.resolve(values.repo.trim()),
     sourceCommit: values['source-commit'].trim(),
     check: values.check,
@@ -211,41 +209,11 @@ function parseGithubRepository(value, label) {
   return { owner, repository };
 }
 
-function loadOwnerCohortAuthority(options, packageId, sourceRepoUrl, githubRepository) {
-  const lock = requireObject(
-    readJsonFile(options.ownerCohortLock, 'Package owner cohort lock'),
-    'Package owner cohort lock',
-  );
-  assertSchemaPayload(
-    'contracts/opl-framework/package-owner-cohort-lock.schema.json',
-    lock,
-    'Package owner cohort lock',
-  );
-  const packages = requireObject(lock.packages, 'Package owner cohort lock packages');
-  const entry = requireObject(packages[packageId], `Package owner cohort lock entry ${packageId}`);
-  if (entry.package_id !== packageId
-    || entry.repo_url !== sourceRepoUrl
-    || entry.repo_name !== githubRepository.repository) {
-    throw new Error(
-      `Package owner cohort authority does not match Framework identity: package=${packageId} repo=${sourceRepoUrl}`,
-    );
-  }
-  const expectedCommit = requireString(entry.source_commit, 'Package owner cohort source commit');
-  if (!FULL_GIT_SHA.test(expectedCommit)) {
-    throw new Error(`Package owner cohort source commit must be an exact lowercase 40-character Git SHA: ${expectedCommit}`);
-  }
+function loadOwnerSourceAuthority(options) {
   if (!FULL_GIT_SHA.test(options.sourceCommit)) {
-    throw new Error(`Source commit must be one exact lowercase 40-character Git SHA: ${options.sourceCommit}`);
+    throw new Error('Source commit must be one exact lowercase 40-character Git SHA.');
   }
-  if (options.sourceCommit !== expectedCommit) {
-    throw new Error(
-      `Caller source commit does not match Package owner cohort authority: expected=${expectedCommit} actual=${options.sourceCommit}`,
-    );
-  }
-  return {
-    expectedCommit,
-    remoteRef: EXPECTED_REMOTE_REF,
-  };
+  return { expectedCommit: options.sourceCommit, remoteRef: EXPECTED_REMOTE_REF };
 }
 
 function loadAuthority(options) {
@@ -404,15 +372,10 @@ function loadAuthority(options) {
     allowlist,
     'Framework payload allowlist',
   );
-  const sourceAuthority = loadOwnerCohortAuthority(
-    options,
-    packageId,
-    sourceRepoUrl,
-    githubRepository,
-  );
+  const sourceAuthority = loadOwnerSourceAuthority(options);
   if (manifestSourceCommit !== sourceAuthority.expectedCommit) {
     throw new Error(
-      `Framework package manifest carrier source commit does not match Package owner cohort authority: expected=${sourceAuthority.expectedCommit} actual=${manifestSourceCommit}`,
+      `Framework package manifest carrier source commit does not match Package owner source authority: expected=${sourceAuthority.expectedCommit} actual=${manifestSourceCommit}`,
     );
   }
 
@@ -535,7 +498,7 @@ function assertRemoteReachability(repo, commit, remoteRef) {
   }
   const reachable = spawnGit(repo, ['merge-base', '--is-ancestor', commit, remoteRef], 'utf8');
   if (reachable.status !== 0) {
-    throw new Error(`Package owner cohort source commit is not reachable from ${remoteRef}: ${commit}`);
+    throw new Error(`Package owner source source commit is not reachable from ${remoteRef}: ${commit}`);
   }
 }
 

@@ -33,7 +33,10 @@ Framework可以验证结构、投影和恢复；只有domain owner能promotion�
 
 Package owner持有descriptor、runtime bytes、version和publication。native carrier持有安装/启停/currentness。Framework只下载/验证/hand off owner bytes或调用carrier，并聚合installed/callable。
 
-shared release set或offline bundle可以组合多个Package，但不是普通Package currentness owner。
+Package 不存在共享 Release Set、聚合 `latest-stable` 或整套冻结前置。每个
+Package 只发布自己的 immutable version 与 owner channel；Framework、App 和
+Homebrew 分别消费自己声明的 artifact。消费者可以在安装或运行时自由组合
+不同版本的 Package，不需要等待其他 Package 同步，也不生成组合 currentness。
 
 系统 Codex App 只承载用户直接使用的交互式插件。descriptor 声明
 `codex_surface.interaction_mode = headless_internal` 的内部能力 Package，
@@ -54,6 +57,17 @@ App 启动维护自动按当前 owner descriptor 识别并迁移旧的内部 Pac
 独立publication只在真实外部consumer、不同release cadence或独立rollback需求存在时建立。source repo、workspace Package和published artifact是不同层。
 
 publication完成至少需要owner workflow、immutable ref/digest、可见性和consumer readback。本地build、task branch或Framework catalog不能替代。
+
+发布入口按 owner 分离：Framework 维护 Framework channel，App 维护 App
+release channel，每个 Package 维护自己的 package channel。不生成跨 owner 的组合发布清单、冻结集合或备案指针。App 安装包自身的
+构建来源、签名、公证和制品校验只描述该安装包，不规定外部 Framework
+与 Package 的安装组合，也不能成为其发布前置。
+
+Framework 的入口为 `.github/workflows/publish-framework.yml`；它仅发布
+`one-person-lab-framework:<SemVer>` 并推进该 artifact 自己的 `latest-stable`。
+自更新直接读取 OCI manifest 的 version、revision 和唯一 Framework source layer，
+按 digest 校验下载内容。Homebrew Formula 消费同一 Framework artifact，
+App Cask 消费 App 的发布结果，两者独立推进。
 
 ## App
 

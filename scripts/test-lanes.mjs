@@ -219,7 +219,6 @@ const lanes = {
     sourceTest([
       '{base-managed-dependencies,cli-codex-default-shell,cli-codex-default-shell-sync-skills,runtime-state-paths,family-domain-catalog,family-entry-contracts,family-executor-adapter-contract,handoff-bundle,product-entry-companions,product-entry-runtime,product-entry-agent-executor,family-orchestration,agent-package-home-localization,opl-skills-boundary}.test.ts',
       'cli.test.ts',
-      'cli/cases/package-channel-daily-check.test.ts',
     ], {
       env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
     }),

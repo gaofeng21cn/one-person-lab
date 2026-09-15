@@ -475,7 +475,7 @@ test('MAS launch projects Workspace Skills without private lifecycle materializa
     configuredCarrier: true,
   });
   writeMasCapabilityMap(root);
-  const releaseSet = writeCapabilityCatalog(path.join(root, 'release-set'), [consumerManifest, providerManifest]);
+  const packageChannels = writeCapabilityCatalog(path.join(root, 'package-owners'), [consumerManifest, providerManifest]);
   const openFixture = createFakeOpenFixture();
   const entryUrl = 'http://127.0.0.1:3310/mas';
   const env = {
@@ -483,7 +483,7 @@ test('MAS launch projects Workspace Skills without private lifecycle materializa
     CODEX_HOME: codexHome,
     OPL_OPEN_BIN: openFixture.openPath,
     OPL_DEVELOPER_MODE_GITHUB_IDENTITY_FIXTURE: 'opl-managed-package-test',
-    ...releaseSet.env,
+    ...packageChannels.env,
     OPL_CODEX_PLUGIN_BIN: createPackageCarrierBinary(root),
   };
   fs.mkdirSync(workspace, { recursive: true });
@@ -540,12 +540,12 @@ test('bound quest root reads MAS native carrier without private lifecycle writes
     configuredCarrier: true,
   });
   writeMasCapabilityMap(root);
-  const releaseSet = writeCapabilityCatalog(path.join(root, 'release-set'), [consumerManifest, providerManifest]);
+  const packageChannels = writeCapabilityCatalog(path.join(root, 'package-owners'), [consumerManifest, providerManifest]);
   const env = {
     OPL_STATE_DIR: stateRoot,
     CODEX_HOME: codexHome,
     OPL_DEVELOPER_MODE_GITHUB_IDENTITY_FIXTURE: 'opl-managed-package-test',
-    ...releaseSet.env,
+    ...packageChannels.env,
     OPL_CODEX_PLUGIN_BIN: createPackageCarrierBinary(root),
   };
   fs.mkdirSync(quest, { recursive: true });
@@ -591,13 +591,13 @@ test('workspace bindings reuse the native MAS carrier without per-workspace Skil
     configuredCarrier: true,
   });
   writeMasCapabilityMap(root);
-  const releaseSet = writeCapabilityCatalog(path.join(root, 'release-set'), [consumerManifest, providerManifest]);
+  const packageChannels = writeCapabilityCatalog(path.join(root, 'package-owners'), [consumerManifest, providerManifest]);
   const env = {
     OPL_STATE_DIR: stateRoot,
     CODEX_HOME: codexHome,
     OPL_WORKSPACE_ROOT: workspaceA,
     OPL_DEVELOPER_MODE_GITHUB_IDENTITY_FIXTURE: 'opl-managed-package-test',
-    ...releaseSet.env,
+    ...packageChannels.env,
     OPL_CODEX_PLUGIN_BIN: createPackageCarrierBinary(root),
   };
   fs.mkdirSync(workspaceA, { recursive: true });

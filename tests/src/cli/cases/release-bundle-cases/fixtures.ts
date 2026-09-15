@@ -141,148 +141,8 @@ function fixtureRequest(
   standardAssetNames = ['standard.dmg', 'latest.yml'],
   additionalPackageIds: readonly string[] = [],
 ) {
+  fs.mkdirSync(sourceRoot, { recursive: true });
   const sourceSha = '1'.repeat(40);
-  const selectedPackageIds = [...new Set([...packageIds, ...additionalPackageIds])];
-  const repoNames: Record<string, string> = {
-    mas: 'med-autoscience',
-    mag: 'med-autogrant',
-    rca: 'redcube-ai',
-    oma: 'opl-meta-agent',
-    obf: 'opl-bookforge',
-    'mas-scholar-skills': 'mas-scholar-skills',
-    'opl-flow': 'opl-flow',
-  };
-  const packages = Object.fromEntries(selectedPackageIds.map((packageId, index) => {
-    const version = `0.${index + 1}.0`;
-    const ownerSourceCommit = crypto.createHash('sha1').update(packageId).digest('hex');
-    const repoName = repoNames[packageId] ?? packageId;
-    const manifestRef = `contracts/opl-framework/packages/${packageId}.json`;
-    const payloadManifestRef = `contracts/opl-framework/packages/payloads/${packageId}-${version}.json`;
-    const payloadLeafRef = `payloads/${packageId}-${version}.json`;
-    const manifestSha256 = writeJson(path.join(sourceRoot, manifestRef), {
-      surface_kind: 'opl_agent_package_manifest.v1',
-      package_id: packageId,
-      version,
-      source: 'first_party',
-      codex_surface: {
-        carrier_source_commit: ownerSourceCommit,
-        plugin_payload_manifest_url: payloadLeafRef,
-      },
-    });
-    const payloadManifestSha256 = writeJson(path.join(sourceRoot, payloadManifestRef), {
-      surface_kind: 'opl_package_payload_manifest.v2',
-      schema_ref: 'contracts/opl-framework/package-payload-manifest-v2.schema.json',
-      package_id: packageId,
-      plugin_id: packageId,
-      package_version: version,
-      source_repo: `https://github.com/gaofeng21cn/${repoName}.git`,
-      source_commit: ownerSourceCommit,
-      source_root: '.',
-      content_lock: {
-        algorithm: 'sha256',
-        canonicalization: 'ordered_path_length_file_length_bytes',
-        digest: digest(`content:${packageId}`),
-      },
-      files: [{
-        path: '.codex-plugin/plugin.json',
-        mode: '100644',
-        source_url: `https://raw.githubusercontent.com/gaofeng21cn/${repoName}/${ownerSourceCommit}/.codex-plugin/plugin.json`,
-        sha256: digest(`plugin:${packageId}`),
-      }],
-    });
-    return [packageId, {
-      package_id: packageId,
-      version,
-      owner_source_commit: ownerSourceCommit,
-      manifest_ref: manifestRef,
-      manifest_sha256: manifestSha256,
-      payload_manifest_ref: payloadManifestRef,
-      payload_manifest_sha256: payloadManifestSha256,
-    }];
-  })) as Record<string, {
-    package_id: string;
-    version: string;
-    owner_source_commit: string;
-    manifest_ref: string;
-    manifest_sha256: string;
-    payload_manifest_ref: string;
-    payload_manifest_sha256: string;
-  }>;
-  const cohortRef = 'release/cohorts/26.7.20/owner-cohort-lock.json';
-  const cohortDigest = writeJson(path.join(sourceRoot, cohortRef), {
-    surface_kind: 'opl_package_owner_cohort_lock.v1',
-    generated_at: '2026-07-20T00:00:00.000Z',
-    packages: Object.fromEntries(selectedPackageIds.map((packageId) => [packageId, {
-      package_id: packageId,
-      repo_name: repoNames[packageId] ?? packageId,
-      repo_url: `https://github.com/gaofeng21cn/${repoNames[packageId] ?? packageId}.git`,
-      source_commit: packages[packageId].owner_source_commit,
-    }])),
-  });
-  const releaseSetRef = 'release/cohorts/26.7.20/release-set.json';
-  const releaseSetDigest = writeJson(path.join(sourceRoot, releaseSetRef), {
-    surface_kind: 'opl_release_set.v2',
-    schema_ref: 'contracts/opl-framework/release-set-v2.schema.json',
-    generation: '26.7.20',
-    component_count: selectedPackageIds.length + 2,
-    component_ids: ['opl-base', 'opl-app', ...selectedPackageIds],
-    bom_status: 'planned',
-    bom_digest: null,
-    owner_cohort_lock: {
-      surface_kind: 'opl_package_owner_cohort_lock.v1',
-      ref: 'owner-cohort-lock.json',
-      digest: cohortDigest,
-      package_ids: [...selectedPackageIds],
-    },
-    update_decision: {
-      comparison_key: 'component_id+version+artifact_digest',
-      release_set_revision_affects_component_update: false,
-      unchanged_component_behavior: 'reuse_existing_artifact_digest_without_rebuild_or_reinstall',
-    },
-    channel_pointer_policy: {
-      mutable_tags: ['candidate', 'latest-stable'],
-      promotion_mode: 'retag_exact_immutable_release_set_digest',
-      channel_is_not_bom_content: true,
-    },
-    components: {
-      base: {
-        component_id: 'opl-base',
-        component_kind: 'base',
-        version: '0.3.4',
-        source_commit: null,
-        artifact_ref: null,
-        artifact_digest: null,
-        artifact_status: 'pending_bundle_source_freeze',
-      },
-      app: {
-        component_id: 'opl-app',
-        component_kind: 'app',
-        version: '26.7.20',
-        source_commit: null,
-        artifact_ref: null,
-        artifact_digest: null,
-        artifact_status: 'pending_bundle_source_freeze',
-      },
-      packages: {
-        component_kind: 'package_collection',
-        package_count: selectedPackageIds.length,
-        package_ids: [...selectedPackageIds],
-        members: Object.fromEntries(selectedPackageIds.map((packageId) => [packageId, {
-          component_id: packageId,
-          component_kind: 'package',
-          version: packages[packageId].version,
-          source_commit: packages[packageId].owner_source_commit,
-          artifact_ref: `ghcr.io/example/${packageId}:${packages[packageId].version}`,
-          artifact_digest: null,
-          artifact_status: 'pending_remote_verification',
-          manifest_ref: packages[packageId].manifest_ref,
-          manifest_sha256: packages[packageId].manifest_sha256,
-          payload_manifest_ref: packages[packageId].payload_manifest_ref,
-          payload_manifest_sha256: packages[packageId].payload_manifest_sha256,
-        }])),
-      },
-    },
-  });
   return {
     surface_kind: 'opl_release_bundle_freeze_request.v1',
     schema_ref: 'contracts/opl-framework/release-bundle-freeze-request.schema.json',
@@ -299,12 +159,8 @@ function fixtureRequest(
       shell: { repo: 'opl-aion-shell', source_commit: '2'.repeat(40) },
       framework: { repo: 'one-person-lab', source_commit: '3'.repeat(40) },
     },
-    framework_release_set: {
-      generation: '26.7.20',
-      manifest_ref: releaseSetRef,
-      digest: releaseSetDigest,
-    },
-    packages,
+    identity_mode: 'app_standard_compatibility' as const,
+    package_compatibility: { abi: 'opl_packages.v1' as const, version_range: '>=0.1.0 <1.0.0' },
     prepared_notes: {
       source: 'prepared_ai',
       format: 'markdown',
@@ -339,10 +195,6 @@ function unifiedStableRequest(sourceRoot: string, additionalPackageIds: readonly
     source_cutoff: {
       observed_at: '2026-07-21T00:00:00.000Z',
       policy: 'single_read_at_freeze_admission' as const,
-      frozen_base_release_set: {
-        generation: '26.7.20',
-        digest: `sha256:${'e'.repeat(64)}`,
-      },
       post_freeze_remote_refresh_allowed: false as const,
       later_authority_advancement_invalidates_bundle: false as const,
     },
@@ -372,22 +224,10 @@ function unifiedStableRequest(sourceRoot: string, additionalPackageIds: readonly
         size_bytes: 104,
       },
       {
-        id: 'first_party_packages' as const,
-        ref: `release-set-generation:${request.framework_release_set.generation}`,
-        digest: request.framework_release_set.digest,
-        size_bytes: 105,
-      },
-      {
         id: 'framework_seed' as const,
         ref: request.sources.framework.source_commit,
         digest: digest('framework-seed'),
         size_bytes: 106,
-      },
-      {
-        id: 'opl_flow' as const,
-        ref: request.packages['opl-flow'].owner_source_commit,
-        digest: request.packages['opl-flow'].payload_manifest_sha256,
-        size_bytes: 107,
       },
       {
         id: 'qualification_harness' as const,
@@ -415,29 +255,7 @@ function unifiedStableRequest(sourceRoot: string, additionalPackageIds: readonly
   };
 }
 
-function appStandardRequest(sourceRoot: string) {
-  const legacy = unifiedStableRequest(sourceRoot);
-  const {
-    framework_release_set: _frameworkReleaseSet,
-    packages: _packages,
-    ...request
-  } = legacy;
-  return {
-    ...request,
-    identity_mode: 'app_standard_compatibility' as const,
-    package_compatibility: {
-      abi: 'opl_packages.v1' as const,
-      version_range: '>=0.1.0 <1.0.0',
-    },
-    source_cutoff: {
-      ...request.source_cutoff,
-      frozen_base_release_set: null,
-    },
-    frozen_build_inputs: request.frozen_build_inputs.filter(
-      (input) => input.id !== 'first_party_packages' && input.id !== 'opl_flow',
-    ),
-  };
-}
+function appStandardRequest(sourceRoot: string) { return unifiedStableRequest(sourceRoot); }
 
 type QualificationBundle =
   | ReturnType<typeof fixtureRequest>
@@ -464,24 +282,8 @@ function writeQualification(input: {
     : track === 'webui'
       ? { name: 'webui-carrier-manifest.json', bytes: '{"digest":"sha256:webui"}' }
       : { name: 'full.dmg', bytes: 'full dmg' });
-  const packageBinding = (() => {
-    if (isAppStandardFixtureRequest(input.bundle)) {
-      return {
-        identity_mode: input.bundle.identity_mode,
-        package_compatibility: input.bundle.package_compatibility,
-      };
-    }
-    const legacy = input.bundle;
-    return {
-      framework_release_set_digest: legacy.framework_release_set.digest,
-      package_payload_manifest_sha256: Object.fromEntries(Object.entries(legacy.packages).map((
-        [packageId, identity],
-      ) => [
-        packageId,
-        identity.payload_manifest_sha256,
-      ])),
-    };
-  })();
+  const packageBinding = { identity_mode: input.bundle.identity_mode,
+    package_compatibility: input.bundle.package_compatibility };
   const receiptPath = path.join(input.root, `${track}-qualification.json`);
   writeJson(receiptPath, {
     surface_kind: 'opl_release_bundle_qualification_receipt.v1',

@@ -304,7 +304,7 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
     framework_role: 'compatibility_projection_and_provenance_only',
     github_repo: 'gaofeng21cn/mas-scholar-skills',
     ordinary_install_update_source: 'ghcr_capability_packages_channel',
-    package_channel_manifest_ref: 'ghcr.io/<owner>/one-person-lab-manifest:<tag>',
+    package_channel_manifest_ref: 'ghcr.io/<owner>/one-person-lab-packages/<package_id>:latest-stable',
     package_artifact_ref: 'ghcr.io/<owner>/one-person-lab-packages/mas-scholar-skills:<package_semver>@<artifact_digest>',
     developer_checkout_source: 'Developer Mode or explicit OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT / OPL_MODULE_PATH_SCHOLARSKILLS',
     package_lifecycle_owner: 'opl_packages',

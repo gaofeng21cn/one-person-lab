@@ -1074,7 +1074,6 @@ export function readOplFrameworkRuntimeUpdateStatus(
     channel_lookup_skipped: channelLookupSkipped,
     channel_artifact: channelEntry?.artifact ?? null,
     channel_version: channelEntry?.channel_version ?? null,
-    channel_release_set_generation: channelEntry?.release_set_generation ?? null,
     channel_artifact_digest: channelEntry?.artifact_digest ?? null,
     channel_artifact_current: channelArtifactCurrent,
     channel_source_archive_sha256: channelEntry?.source_archive_sha256 ?? null,

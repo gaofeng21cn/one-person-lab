@@ -6,7 +6,6 @@ import { fs, path } from './helpers.ts';
 const PACKAGE_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.source.v1+gzip';
 const PACKAGE_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.manifest.v1+json';
 const PACKAGE_PAYLOAD_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.package.payload.v1+json';
-const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 
 function sha256(filePath: string) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
@@ -53,7 +52,6 @@ export function writeManagedRuntimeSourceFixture(input: {
   const sourceParent = path.join(input.root, 'source');
   const sourceRoot = path.join(sourceParent, input.repoName);
   const archivePath = path.join(input.root, `${input.repoName}-${input.version}.tar.gz`);
-  const channelManifestPath = path.join(blobRoot, 'channel-manifest.json');
   fs.rmSync(sourceRoot, { recursive: true, force: true });
   fs.mkdirSync(blobRoot, { recursive: true });
   fs.mkdirSync(fakeBin, { recursive: true });
@@ -235,55 +233,10 @@ export function writeManagedRuntimeSourceFixture(input: {
     ],
   };
   const artifactDigest = `sha256:${crypto.createHash('sha256').update(JSON.stringify(packageArtifactManifest)).digest('hex')}`;
-  const channelManifest = {
-    release_set_generation: input.version,
-    package_catalog_surface_kind: 'opl_package_catalog.v1',
-    packages: {
-      package_catalog: {
-        [packageId]: {
-          package_id: packageId,
-          selected_version: input.version,
-          versions: [{
-            package_version: input.version,
-            selection_status: 'selected_for_owner_channel',
-            ...(manifestJson && manifestDigest ? {
-              manifest_url: `opl+oci://${sourceArtifactRef}#/package-manifest.json`,
-              manifest_sha256: manifestDigest,
-              manifest_json: manifestJson,
-              package_manifest: {
-                ref: `opl+oci://${sourceArtifactRef}#/package-manifest.json`,
-                sha256: manifestDigest,
-              },
-              content_digest: manifestDigest,
-            } : {}),
-            ...(payloadManifestJson && payloadManifestDigest ? {
-              payload_digest: payloadManifestDigest,
-              payload_manifest_json: payloadManifestJson,
-              payload_manifest_sha256: payloadManifestDigest,
-            } : {}),
-            source_artifact_ref: sourceArtifactRef,
-            artifact_digest: artifactDigest,
-            artifact_status: 'published_immutable',
-            package_content_digest: `sha256:${archiveDigest}`,
-            owner_source_commit: input.sourceHeadSha,
-          }],
-        },
-      },
-    },
-  };
-  fs.writeFileSync(channelManifestPath, JSON.stringify(channelManifest));
-  const channelDigest = sha256(channelManifestPath);
   const manifests = {
-    'fixture/one-person-lab-manifest': {
-      layers: [{
-        mediaType: CHANNEL_MANIFEST_LAYER_MEDIA_TYPE,
-        digest: `sha256:${channelDigest}`,
-      }],
-    },
     [`fixture/one-person-lab-packages/${packageId}`]: packageArtifactManifest,
   };
   const blobs = {
-    [`sha256:${channelDigest}`]: channelManifestPath,
     [`sha256:${archiveDigest}`]: archivePath,
     ...(manifestDigest && manifestLayerPath ? { [manifestDigest]: manifestLayerPath } : {}),
     ...(payloadManifestDigest && payloadLayerPath ? { [payloadManifestDigest]: payloadLayerPath } : {}),

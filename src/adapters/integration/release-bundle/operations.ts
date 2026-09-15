@@ -208,27 +208,9 @@ export function freezeReleaseBundle(input: {
     details: {
       bundle_path: installed.paths.bundle,
       notes_path: installed.paths.notes,
-      ...(isAppStandardReleaseBundle(bundle)
-        ? {
-            identity_mode: bundle.identity_mode,
-            package_compatibility: bundle.package_compatibility,
-          }
-        : {
-            framework_release_set_digest: bundle.framework_release_set.digest,
-            package_payload_manifest_sha256: Object.fromEntries(
-              Object.entries(bundle.packages).map(([packageId, identity]) => [
-                packageId,
-                identity.payload_manifest_sha256,
-              ]),
-            ),
-          }),
+      identity_mode: bundle.identity_mode,
+      package_compatibility: bundle.package_compatibility,
       source_root: inputs.sourceRoot,
-      ...('releaseSetPath' in inputs
-        ? {
-            release_set_path: inputs.releaseSetPath,
-            owner_cohort_lock_path: inputs.ownerCohortLockPath,
-          }
-        : {}),
       inputs_verified_before_freeze: true,
       source_cutoff: bundle.source_cutoff ?? null,
       source_cutoff_frozen_once: Boolean(bundle.source_cutoff),
@@ -413,22 +395,8 @@ function expectedQualificationCohort(bundle: ReleaseBundle) {
     shell_sha: bundle.sources.shell.source_commit,
     framework_sha: bundle.sources.framework.source_commit,
   };
-  return isAppStandardReleaseBundle(bundle)
-    ? {
-        ...sources,
-        identity_mode: bundle.identity_mode,
-        package_compatibility: bundle.package_compatibility,
-      }
-    : {
-        ...sources,
-        framework_release_set_digest: bundle.framework_release_set.digest,
-        package_payload_manifest_sha256: Object.fromEntries(
-          Object.entries(bundle.packages).map(([packageId, identity]) => [
-            packageId,
-            identity.payload_manifest_sha256,
-          ]),
-        ),
-      };
+  return { ...sources, identity_mode: bundle.identity_mode,
+    package_compatibility: bundle.package_compatibility };
 }
 
 function assertQualificationBinding(input: {

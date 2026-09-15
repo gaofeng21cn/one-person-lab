@@ -68,10 +68,7 @@
     "family:structure-advisory": "node ./scripts/family-structure-advisory.mjs",
     "refactor:patrol:contract": "node ./scripts/refactor-patrol-state.mjs contract",
     "refactor:patrol:validate": "node ./scripts/refactor-patrol-state.mjs validate",
-    "packages:manifest": "node --experimental-strip-types ./scripts/package-archives.mjs",
     "packages:payload": "node ./scripts/first-party-package-payload.mjs",
-    "packages:release-discipline": "node ./scripts/package-release-discipline.mjs",
-    "packages:daily-check": "node ./scripts/package-channel-daily-check.mjs",
     "packages:cleanup-ghcr": "node --experimental-strip-types ./scripts/cleanup-ghcr-package-versions.mjs",
     "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs --workflow-policy ../opl-flow/contracts/workflow-policy.json",
     "flow:capability:compile": "node --experimental-strip-types ./scripts/compile-opl-flow-capability-projections.mjs",
@@ -107,7 +104,8 @@
     "new-machine:codex-bootstrap:docker-smoke": "node ./scripts/new-machine-codex-bootstrap-docker-smoke.mjs",
     "source:modules": "node ./scripts/source-module-boundary.mjs",
     "source:modules:public-imports": "node ./scripts/source-module-public-imports.mjs",
-    "source:packages": "node ./scripts/source-package-boundary.mjs"
+    "source:packages": "node ./scripts/source-package-boundary.mjs",
+    "framework:archive": "node scripts/framework-archive.mjs"
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.1",

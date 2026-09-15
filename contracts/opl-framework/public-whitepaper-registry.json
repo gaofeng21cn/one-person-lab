@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "owner": "OPL Charter + OPL Connect",
-  "purpose": "public_whitepaper_release_set_registry",
+  "purpose": "public_whitepaper_artifact_registry",
   "state": "active",
   "machine_boundary": "Pointer-only registry for the public whitepaper owners, build profiles, and public URLs. A repository may own more than one independently built whitepaper. Each profile owns its source pointer, and each repository workflow owns its watch paths. This registry does not claim product, runtime, domain, publication, or production readiness.",
   "renderer": {

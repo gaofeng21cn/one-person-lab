@@ -744,7 +744,7 @@ test('provider-hosted attempt launch consumes typed capability readout without c
   writeOplDeveloperSupervisorConfig({
     module_source_preferences: { medautoscience: 'managed' },
   });
-  const releaseRoot = path.join(familyRoot, 'release-set');
+  const releaseRoot = path.join(familyRoot, 'package-owners');
   const sourceRoot = path.join(releaseRoot, 'source', 'med-autoscience');
   const ownerSourceCommit = 'a'.repeat(40);
   const packageManifest = {

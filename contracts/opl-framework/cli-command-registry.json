@@ -277,7 +277,7 @@
           "flag": "--source-root",
           "value_kind": "string",
           "required": false,
-          "summary": "Source tree whose exact Release Set, owner cohort lock and Package manifest bytes are verified before freeze."
+          "summary": "Source directory for the App artifact build."
         },
         {
           "name": "store",

@@ -13,6 +13,7 @@ fi
 echo "Unsupported codex fixture command: $*" >&2
 exit 1
 `);
+  fs.symlinkSync(process.execPath, path.join(codexFixture.fixtureRoot, 'node'));
   const updateScript = path.join(homeRoot, 'update-codex.sh');
   fs.writeFileSync(
     updateScript,

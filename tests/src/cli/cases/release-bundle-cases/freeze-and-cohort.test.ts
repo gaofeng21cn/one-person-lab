@@ -29,117 +29,6 @@ import {
   assertTypedContractFailure,
 } from './fixtures.ts';
 
-test('freeze computes one canonical digest over sources, frozen Package payloads, Release Set and prepared AI notes', () => {
-  const fixture = createFixture();
-  try {
-    const first = fixture.frozen.release_bundle_freeze;
-    const second = freezeReleaseBundle({
-      requestPath: fixture.requestPath,
-      sourceRoot: fixture.sourceRoot,
-      storeRoot: fixture.storeRoot,
-    })
-      .release_bundle_freeze;
-    assert.match(first.bundle_digest, /^sha256:[0-9a-f]{64}$/);
-    assert.equal(second.bundle_digest, first.bundle_digest);
-    assert.equal(second.status, 'idempotent');
-    if (first.bundle.identity_mode === 'app_standard_compatibility') {
-      assert.fail('Legacy fixture unexpectedly produced an App Standard compatibility Bundle.');
-    }
-    assert.equal(
-      first.bundle.packages.mas.payload_manifest_sha256,
-      fixture.request.packages.mas.payload_manifest_sha256,
-    );
-    assert.equal(
-      first.bundle.framework_release_set.digest,
-      fixture.request.framework_release_set.digest,
-    );
-    assert.equal(first.bundle.prepared_notes.source, 'prepared_ai');
-    assert.equal(first.bundle.release.version, first.bundle.release.display_version);
-    assert.equal(first.bundle.release.updater_version, '26.7.20');
-    assert.equal(first.bundle.policy.build_once, true);
-    assert.deepEqual(first.bundle.policy.allowed_executors, ['local', 'remote']);
-    const status = runCliInCwd([
-      'release',
-      'status',
-      '--bundle',
-      first.bundle_digest,
-      '--store',
-      fixture.storeRoot,
-    ], fixture.root);
-    assert.equal(status.release_bundle_status.bundle_digest, first.bundle_digest);
-  } finally {
-    fs.rmSync(fixture.root, { recursive: true, force: true });
-  }
-});
-
-test('descriptor-added Package flows through freeze and frozen qualification after authority advances', () => {
-  const fixture = createFixture({ additionalPackageIds: ['future-agent'] });
-  try {
-    const frozen = fixture.frozen.release_bundle_freeze;
-    if (frozen.bundle.identity_mode === 'app_standard_compatibility') {
-      assert.fail('Dynamic Package fixture unexpectedly produced an App Standard compatibility Bundle.');
-    }
-    assert.ok('future-agent' in frozen.bundle.packages);
-    const frozenPackageDigests = frozen.receipt.details
-      .package_payload_manifest_sha256 as Record<string, string>;
-    assert.equal(
-      frozenPackageDigests['future-agent'],
-      frozen.bundle.packages['future-agent'].payload_manifest_sha256,
-    );
-
-    fs.writeFileSync(
-      path.join(fixture.sourceRoot, fixture.request.framework_release_set.manifest_ref),
-      '{"surface_kind":"later_authority_state"}\n',
-      'utf8',
-    );
-    const built = buildReleaseBundle({
-      bundleDigest: frozen.bundle_digest,
-      executorReceiptPath: writeBuildReceipt({
-        root: fixture.root,
-        bundleDigest: frozen.bundle_digest,
-      }),
-      storeRoot: fixture.storeRoot,
-    });
-    assert.equal(built.release_bundle_build.status, 'complete');
-
-    const qualificationReceiptPath = writeQualification({
-      root: fixture.root,
-      bundle: frozen.bundle,
-      bundleDigest: frozen.bundle_digest,
-    });
-    const qualification = parseJsonText(
-      fs.readFileSync(qualificationReceiptPath, 'utf8'),
-    ) as Record<string, any>;
-    assert.equal(
-      qualification.cohort.package_payload_manifest_sha256['future-agent'],
-      frozen.bundle.packages['future-agent'].payload_manifest_sha256,
-    );
-    delete qualification.cohort.package_payload_manifest_sha256['future-agent'];
-    writeJson(qualificationReceiptPath, qualification);
-    assertTypedContractFailure(
-      () => verifyReleaseBundle({
-        bundleDigest: frozen.bundle_digest,
-        qualificationReceiptPath,
-        storeRoot: fixture.storeRoot,
-      }),
-      /cohort does not match the immutable Release Bundle inputs/,
-    );
-    writeQualification({
-      root: fixture.root,
-      bundle: frozen.bundle,
-      bundleDigest: frozen.bundle_digest,
-    });
-    const verified = verifyReleaseBundle({
-      bundleDigest: frozen.bundle_digest,
-      qualificationReceiptPath,
-      storeRoot: fixture.storeRoot,
-    });
-    assert.equal(verified.release_bundle_verify.status, 'complete');
-  } finally {
-    fs.rmSync(fixture.root, { recursive: true, force: true });
-  }
-});
-
 test('App Standard freeze binds source refs and Package compatibility without Release Set or Package digests', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-app-standard-'));
   try {
@@ -372,27 +261,6 @@ test('bin/opl routes release freeze through the Framework public CLI', () => {
   }
 });
 
-test('freeze fails before build when a Package payload or Release Set input drifts', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-drift-'));
-  try {
-    const sourceRoot = path.join(root, 'source');
-    const request = fixtureRequest(sourceRoot);
-    const requestPath = path.join(root, 'freeze.json');
-    writeJson(requestPath, request);
-    fs.appendFileSync(
-      path.join(sourceRoot, request.packages.mas.payload_manifest_ref),
-      ' ',
-      'utf8',
-    );
-    assert.throws(
-      () => freezeReleaseBundle({ requestPath, sourceRoot, storeRoot: path.join(root, 'store') }),
-      /payload manifest mas digest does not match its frozen identity/,
-    );
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
-
 test('unified Stable freeze binds one cutoff and later authority advancement cannot refresh the cohort', () => {
   const fixture = createUnifiedStableFixture();
   try {
@@ -411,10 +279,7 @@ test('unified Stable freeze binds one cutoff and later authority advancement can
       'artifact_build_or_integrity_failure',
       'explicit_security_revocation_bound_to_frozen_ref_or_digest',
     ]);
-    assert.deepEqual(first.bundle.source_cutoff.frozen_base_release_set, {
-      generation: '26.7.20',
-      digest: `sha256:${'e'.repeat(64)}`,
-    });
+
     assert.deepEqual(first.bundle.policy.latest_required_tracks, ['standard', 'webui']);
 
     const changedInputRequest = unifiedStableRequest(fixture.sourceRoot);
@@ -429,10 +294,7 @@ test('unified Stable freeze binds one cutoff and later authority advancement can
     assert.notEqual(changedInput.bundle_digest, first.bundle_digest);
 
     const laterRequest = unifiedStableRequest(fixture.sourceRoot);
-    laterRequest.source_cutoff.frozen_base_release_set = {
-      generation: '26.7.21',
-      digest: `sha256:${'f'.repeat(64)}`,
-    };
+    laterRequest.source_cutoff.observed_at = '2026-07-22T00:00:00.000Z';
     const laterRequestPath = path.join(fixture.root, 'later-freeze.json');
     writeJson(laterRequestPath, laterRequest);
     const later = freezeReleaseBundle({
@@ -444,7 +306,7 @@ test('unified Stable freeze binds one cutoff and later authority advancement can
 
     // The source projection may advance after freeze; all later stages consume stored exact bytes.
     fs.writeFileSync(
-      path.join(fixture.sourceRoot, fixture.request.framework_release_set.manifest_ref),
+      path.join(fixture.sourceRoot, 'unrelated-package.json'),
       '{"surface_kind":"later_authority_state"}\n',
       'utf8',
     );
@@ -502,7 +364,7 @@ test('unified Stable requires cutoff, WebUI track, and frozen build inputs toget
     );
 
     const missingFrozenBase = unifiedStableRequest(sourceRoot) as Record<string, any>;
-    delete missingFrozenBase.source_cutoff.frozen_base_release_set;
+    delete missingFrozenBase.source_cutoff.observed_at;
     const missingFrozenBasePath = path.join(root, 'missing-frozen-base.json');
     writeJson(missingFrozenBasePath, missingFrozenBase);
     assertTypedContractFailure(
@@ -683,7 +545,7 @@ test('Desktop and WebUI qualify in either order and share one Stable promotion b
           root: fixture.root,
           bundleDigest,
           attemptId: 'premature-unified-promotion',
-          remoteTarget: 'framework-release-set:latest-stable',
+          remoteTarget: 'app-release:stable',
           publicationScope: 'external_target',
         }),
         storeRoot: fixture.storeRoot,
@@ -713,7 +575,7 @@ test('Desktop and WebUI qualify in either order and share one Stable promotion b
         root: fixture.root,
         bundleDigest,
         attemptId: 'unified-stable-promotion',
-        remoteTarget: 'framework-release-set:latest-stable',
+        remoteTarget: 'app-release:stable',
         publicationScope: 'external_target',
       }),
       storeRoot: fixture.storeRoot,

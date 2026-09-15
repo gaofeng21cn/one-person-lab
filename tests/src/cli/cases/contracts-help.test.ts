@@ -405,15 +405,15 @@ test('domain selection uses installed owner descriptor routing signals for natur
     const packageManifestJson = `${JSON.stringify(packageManifest, null, 2)}\n`;
     fs.writeFileSync(manifestPath, packageManifestJson);
     fs.writeFileSync(path.join(domainRepo, 'opl-package.json'), packageManifestJson);
-    const releaseSet = writeCapabilityCatalog(path.join(stateRoot, 'release-set'), [manifestPath]);
+    const packageChannels = writeCapabilityCatalog(path.join(stateRoot, 'package-owners'), [manifestPath]);
     const packageEnv = {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, '.codex'),
       OPL_STATE_DIR: stateRoot,
       OPL_MODULES_ROOT: path.join(stateRoot, 'managed-modules'),
-      ...releaseSet.env,
+      ...packageChannels.env,
       OPL_CODEX_PLUGIN_BIN: codexFixture.codexPath,
-      PATH: `${codexFixture.fixtureRoot}${path.delimiter}${releaseSet.env.PATH}`,
+      PATH: `${codexFixture.fixtureRoot}${path.delimiter}${packageChannels.env.PATH}`,
     };
     fs.mkdirSync(packageEnv.CODEX_HOME, { recursive: true });
     fs.writeFileSync(path.join(packageEnv.CODEX_HOME, 'config.toml'), [

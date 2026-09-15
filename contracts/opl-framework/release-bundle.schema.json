@@ -12,77 +12,86 @@
     "sources",
     "prepared_notes",
     "tracks",
-    "policy"
+    "policy",
+    "identity_mode",
+    "package_compatibility"
   ],
   "allOf": [
     {
       "if": {
-        "required": ["tracks"],
-        "properties": { "tracks": { "required": ["webui"] } }
+        "required": [
+          "tracks"
+        ],
+        "properties": {
+          "tracks": {
+            "required": [
+              "webui"
+            ]
+          }
+        }
       },
-      "then": { "required": ["source_cutoff", "frozen_build_inputs"] },
+      "then": {
+        "required": [
+          "source_cutoff",
+          "frozen_build_inputs"
+        ]
+      },
       "else": {
         "not": {
           "anyOf": [
-            { "required": ["source_cutoff"] },
-            { "required": ["frozen_build_inputs"] }
+            {
+              "required": [
+                "source_cutoff"
+              ]
+            },
+            {
+              "required": [
+                "frozen_build_inputs"
+              ]
+            }
           ]
         }
       }
-    },
-    {
-      "oneOf": [
-        {
-          "required": ["framework_release_set", "packages"],
-          "not": {
-            "anyOf": [
-              { "required": ["identity_mode"] },
-              { "required": ["package_compatibility"] }
-            ]
-          },
-          "properties": {
-            "frozen_build_inputs": { "$ref": "#/$defs/legacyFrozenBuildInputs" }
-          }
-        },
-        {
-          "required": ["identity_mode", "package_compatibility"],
-          "not": {
-            "anyOf": [
-              { "required": ["framework_release_set"] },
-              { "required": ["packages"] }
-            ]
-          },
-          "properties": {
-            "identity_mode": { "const": "app_standard_compatibility" },
-            "frozen_build_inputs": { "$ref": "#/$defs/appStandardFrozenBuildInputs" }
-          }
-        }
-      ]
     }
   ],
   "properties": {
-    "surface_kind": { "const": "opl_release_bundle.v1" },
-    "schema_ref": { "const": "contracts/opl-framework/release-bundle.schema.json" },
-    "bundle_digest": { "$ref": "#/$defs/digest" },
-    "release": { "$ref": "#/$defs/release" },
+    "surface_kind": {
+      "const": "opl_release_bundle.v1"
+    },
+    "schema_ref": {
+      "const": "contracts/opl-framework/release-bundle.schema.json"
+    },
+    "bundle_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "release": {
+      "$ref": "#/$defs/release"
+    },
     "sources": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["app", "shell", "framework"],
+      "required": [
+        "app",
+        "shell",
+        "framework"
+      ],
       "properties": {
-        "app": { "$ref": "#/$defs/source" },
-        "shell": { "$ref": "#/$defs/source" },
-        "framework": { "$ref": "#/$defs/source" }
+        "app": {
+          "$ref": "#/$defs/source"
+        },
+        "shell": {
+          "$ref": "#/$defs/source"
+        },
+        "framework": {
+          "$ref": "#/$defs/source"
+        }
       }
     },
-    "identity_mode": { "const": "app_standard_compatibility" },
-    "package_compatibility": { "$ref": "#/$defs/packageCompatibility" },
-    "framework_release_set": { "$ref": "#/$defs/releaseSet" },
-    "packages": {
-      "type": "object",
-      "minProperties": 1,
-      "propertyNames": { "$ref": "#/$defs/packageId" },
-      "additionalProperties": { "$ref": "#/$defs/package" }
+    "identity_mode": {
+      "const": "app_standard_compatibility"
+    },
+    "package_compatibility": {
+      "$ref": "#/$defs/packageCompatibility"
     },
     "prepared_notes": {
       "type": "object",
@@ -96,53 +105,97 @@
         "evidence_sha256"
       ],
       "properties": {
-        "source": { "const": "prepared_ai" },
-        "format": { "const": "markdown" },
-        "markdown": { "type": "string", "minLength": 1 },
-        "markdown_sha256": { "$ref": "#/$defs/digest" },
-        "evidence": { "type": "object" },
-        "evidence_sha256": { "$ref": "#/$defs/digest" }
+        "source": {
+          "const": "prepared_ai"
+        },
+        "format": {
+          "const": "markdown"
+        },
+        "markdown": {
+          "type": "string",
+          "minLength": 1
+        },
+        "markdown_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "evidence": {
+          "type": "object"
+        },
+        "evidence_sha256": {
+          "$ref": "#/$defs/digest"
+        }
       }
     },
-    "source_cutoff": { "$ref": "#/$defs/sourceCutoff" },
-    "frozen_build_inputs": {},
+    "source_cutoff": {
+      "$ref": "#/$defs/sourceCutoff"
+    },
+    "frozen_build_inputs": {
+      "$ref": "#/$defs/appStandardFrozenBuildInputs"
+    },
     "tracks": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["standard", "full"],
+      "required": [
+        "standard",
+        "full"
+      ],
       "properties": {
         "standard": {
           "allOf": [
-            { "$ref": "#/$defs/track" },
+            {
+              "$ref": "#/$defs/track"
+            },
             {
               "properties": {
-                "required_for_latest": { "const": true },
-                "additive_only": { "const": false },
-                "updater_metadata_allowed": { "const": true }
+                "required_for_latest": {
+                  "const": true
+                },
+                "additive_only": {
+                  "const": false
+                },
+                "updater_metadata_allowed": {
+                  "const": true
+                }
               }
             }
           ]
         },
         "webui": {
           "allOf": [
-            { "$ref": "#/$defs/track" },
+            {
+              "$ref": "#/$defs/track"
+            },
             {
               "properties": {
-                "required_for_latest": { "const": true },
-                "additive_only": { "const": false },
-                "updater_metadata_allowed": { "const": false }
+                "required_for_latest": {
+                  "const": true
+                },
+                "additive_only": {
+                  "const": false
+                },
+                "updater_metadata_allowed": {
+                  "const": false
+                }
               }
             }
           ]
         },
         "full": {
           "allOf": [
-            { "$ref": "#/$defs/track" },
+            {
+              "$ref": "#/$defs/track"
+            },
             {
               "properties": {
-                "required_for_latest": { "const": false },
-                "additive_only": { "const": true },
-                "updater_metadata_allowed": { "const": false }
+                "required_for_latest": {
+                  "const": false
+                },
+                "additive_only": {
+                  "const": true
+                },
+                "updater_metadata_allowed": {
+                  "const": false
+                }
               }
             }
           ]
@@ -164,17 +217,45 @@
         "full_updates_updater_metadata"
       ],
       "properties": {
-        "build_once": { "const": true },
-        "verify_and_promote_many": { "const": true },
-        "executor_neutral": { "const": true },
-        "allowed_executors": { "const": ["local", "remote"] },
-        "prepared_notes_required_before_build": { "const": true },
-        "publish_may_generate_notes": { "const": false },
-        "latest_required_track": { "const": "standard" },
-        "latest_required_tracks": { "const": ["standard", "webui"] },
-        "source_cutoff_frozen_once": { "const": true },
-        "post_freeze_remote_refresh_allowed": { "const": false },
-        "later_authority_advancement_invalidates_bundle": { "const": false },
+        "build_once": {
+          "const": true
+        },
+        "verify_and_promote_many": {
+          "const": true
+        },
+        "executor_neutral": {
+          "const": true
+        },
+        "allowed_executors": {
+          "const": [
+            "local",
+            "remote"
+          ]
+        },
+        "prepared_notes_required_before_build": {
+          "const": true
+        },
+        "publish_may_generate_notes": {
+          "const": false
+        },
+        "latest_required_track": {
+          "const": "standard"
+        },
+        "latest_required_tracks": {
+          "const": [
+            "standard",
+            "webui"
+          ]
+        },
+        "source_cutoff_frozen_once": {
+          "const": true
+        },
+        "post_freeze_remote_refresh_allowed": {
+          "const": false
+        },
+        "later_authority_advancement_invalidates_bundle": {
+          "const": false
+        },
         "cohort_invalidation_causes": {
           "const": [
             "frozen_byte_or_digest_drift",
@@ -182,9 +263,15 @@
             "explicit_security_revocation_bound_to_frozen_ref_or_digest"
           ]
         },
-        "all_other_live_currentness_drift_invalidates_bundle": { "const": false },
-        "full_additive_only": { "const": true },
-        "full_updates_updater_metadata": { "const": false }
+        "all_other_live_currentness_drift_invalidates_bundle": {
+          "const": false
+        },
+        "full_additive_only": {
+          "const": true
+        },
+        "full_updates_updater_metadata": {
+          "const": false
+        }
       }
     }
   },
@@ -194,13 +281,104 @@
       "minItems": 7,
       "maxItems": 7,
       "prefixItems": [
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "app_source" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "base_image" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "codex_cli" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "dockerfile" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "framework_seed" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "qualification_harness" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "shell_webui_source" } } }] }
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/frozenBuildInput"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "app_source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/frozenBuildInput"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "base_image"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/frozenBuildInput"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "codex_cli"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/frozenBuildInput"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "dockerfile"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/frozenBuildInput"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "framework_seed"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/frozenBuildInput"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "qualification_harness"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/frozenBuildInput"
+            },
+            {
+              "properties": {
+                "id": {
+                  "const": "shell_webui_source"
+                }
+              }
+            }
+          ]
+        }
       ],
       "items": false
     },
@@ -211,7 +389,12 @@
     "frozenBuildInput": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "ref", "digest", "size_bytes"],
+      "required": [
+        "id",
+        "ref",
+        "digest",
+        "size_bytes"
+      ],
       "properties": {
         "id": {
           "enum": [
@@ -219,41 +402,35 @@
             "base_image",
             "codex_cli",
             "dockerfile",
-            "first_party_packages",
             "framework_seed",
-            "opl_flow",
             "qualification_harness",
             "shell_webui_source"
           ]
         },
-        "ref": { "$ref": "#/$defs/ref" },
-        "digest": { "$ref": "#/$defs/digest" },
-        "size_bytes": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+        "ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
       }
-    },
-    "legacyFrozenBuildInputs": {
-      "type": "array",
-      "minItems": 9,
-      "maxItems": 9,
-      "prefixItems": [
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "app_source" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "base_image" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "codex_cli" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "dockerfile" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "first_party_packages" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "framework_seed" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "opl_flow" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "qualification_harness" } } }] },
-        { "allOf": [{ "$ref": "#/$defs/frozenBuildInput" }, { "properties": { "id": { "const": "shell_webui_source" } } }] }
-      ],
-      "items": false
     },
     "packageCompatibility": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["abi", "version_range"],
+      "required": [
+        "abi",
+        "version_range"
+      ],
       "properties": {
-        "abi": { "const": "opl_packages.v1" },
+        "abi": {
+          "const": "opl_packages.v1"
+        },
         "version_range": {
           "type": "string",
           "pattern": "^>=[0-9]+\\.[0-9]+\\.[0-9]+ <[0-9]+\\.[0-9]+\\.[0-9]+$"
@@ -266,7 +443,6 @@
       "required": [
         "observed_at",
         "policy",
-        "frozen_base_release_set",
         "post_freeze_remote_refresh_allowed",
         "later_authority_advancement_invalidates_bundle"
       ],
@@ -276,26 +452,15 @@
           "format": "date-time",
           "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
         },
-        "policy": { "const": "single_read_at_freeze_admission" },
-        "frozen_base_release_set": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["generation", "digest"],
-              "properties": {
-                "generation": {
-                  "type": "string",
-                  "pattern": "^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(?:-r[1-9][0-9]*)?$"
-                },
-                "digest": { "$ref": "#/$defs/digest" }
-              }
-            },
-            { "type": "null" }
-          ]
+        "policy": {
+          "const": "single_read_at_freeze_admission"
         },
-        "post_freeze_remote_refresh_allowed": { "const": false },
-        "later_authority_advancement_invalidates_bundle": { "const": false }
+        "post_freeze_remote_refresh_allowed": {
+          "const": false
+        },
+        "later_authority_advancement_invalidates_bundle": {
+          "const": false
+        }
       }
     },
     "gitSha": {
@@ -305,9 +470,22 @@
     "release": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["channel", "version", "display_version", "updater_version", "tag", "prerelease"],
+      "required": [
+        "channel",
+        "version",
+        "display_version",
+        "updater_version",
+        "tag",
+        "prerelease"
+      ],
       "properties": {
-        "channel": { "enum": ["stable", "nightly", "preview"] },
+        "channel": {
+          "enum": [
+            "stable",
+            "nightly",
+            "preview"
+          ]
+        },
         "version": {
           "type": "string",
           "pattern": "^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(?:-[0-9A-Za-z.-]+)?$"
@@ -320,30 +498,30 @@
           "type": "string",
           "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
         },
-        "tag": { "type": "string", "minLength": 2 },
-        "prerelease": { "type": "boolean" }
+        "tag": {
+          "type": "string",
+          "minLength": 2
+        },
+        "prerelease": {
+          "type": "boolean"
+        }
       }
     },
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repo", "source_commit"],
+      "required": [
+        "repo",
+        "source_commit"
+      ],
       "properties": {
-        "repo": { "type": "string", "minLength": 1 },
-        "source_commit": { "$ref": "#/$defs/gitSha" }
-      }
-    },
-    "releaseSet": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["generation", "manifest_ref", "digest"],
-      "properties": {
-        "generation": {
+        "repo": {
           "type": "string",
-          "pattern": "^[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}(?:-r[1-9][0-9]*)?$"
+          "minLength": 1
         },
-        "manifest_ref": { "$ref": "#/$defs/ref" },
-        "digest": { "$ref": "#/$defs/digest" }
+        "source_commit": {
+          "$ref": "#/$defs/gitSha"
+        }
       }
     },
     "ref": {
@@ -351,32 +529,6 @@
       "minLength": 1,
       "maxLength": 4096,
       "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^\\u0000-\\u001f\\u007f]+$"
-    },
-    "package": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "package_id",
-        "version",
-        "owner_source_commit",
-        "manifest_ref",
-        "manifest_sha256",
-        "payload_manifest_ref",
-        "payload_manifest_sha256"
-      ],
-      "properties": {
-        "package_id": { "$ref": "#/$defs/packageId" },
-        "version": { "type": "string", "minLength": 1 },
-        "owner_source_commit": { "$ref": "#/$defs/gitSha" },
-        "manifest_ref": { "$ref": "#/$defs/ref" },
-        "manifest_sha256": { "$ref": "#/$defs/digest" },
-        "payload_manifest_ref": { "$ref": "#/$defs/ref" },
-        "payload_manifest_sha256": { "$ref": "#/$defs/digest" }
-      }
-    },
-    "packageId": {
-      "type": "string",
-      "pattern": "^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
     },
     "track": {
       "type": "object",
@@ -392,11 +544,20 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
-        "required_for_latest": { "type": "boolean" },
-        "additive_only": { "type": "boolean" },
-        "updater_metadata_allowed": { "type": "boolean" }
+        "required_for_latest": {
+          "type": "boolean"
+        },
+        "additive_only": {
+          "type": "boolean"
+        },
+        "updater_metadata_allowed": {
+          "type": "boolean"
+        }
       }
     }
   }

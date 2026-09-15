@@ -14,64 +14,69 @@
     "qualification"
   ],
   "properties": {
-    "surface_kind": { "const": "opl_release_bundle_qualification_receipt.v1" },
+    "surface_kind": {
+      "const": "opl_release_bundle_qualification_receipt.v1"
+    },
     "schema_ref": {
       "const": "contracts/opl-framework/release-bundle-qualification-receipt.schema.json"
     },
-    "bundle_digest": { "$ref": "#/$defs/digest" },
-    "track": { "enum": ["standard", "webui", "full"] },
+    "bundle_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "track": {
+      "enum": [
+        "standard",
+        "webui",
+        "full"
+      ]
+    },
     "subject": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["asset_name", "size_bytes", "sha256"],
+      "required": [
+        "asset_name",
+        "size_bytes",
+        "sha256"
+      ],
       "properties": {
-        "asset_name": { "type": "string", "minLength": 1 },
-        "size_bytes": { "type": "integer", "minimum": 1 },
-        "sha256": { "$ref": "#/$defs/digest" }
+        "asset_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/digest"
+        }
       }
     },
     "cohort": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["app_sha", "shell_sha", "framework_sha"],
-      "oneOf": [
-        {
-          "required": [
-            "framework_release_set_digest",
-            "package_payload_manifest_sha256"
-          ],
-          "not": {
-            "anyOf": [
-              { "required": ["identity_mode"] },
-              { "required": ["package_compatibility"] }
-            ]
-          }
-        },
-        {
-          "required": ["identity_mode", "package_compatibility"],
-          "not": {
-            "anyOf": [
-              { "required": ["framework_release_set_digest"] },
-              { "required": ["package_payload_manifest_sha256"] }
-            ]
-          },
-          "properties": {
-            "identity_mode": { "const": "app_standard_compatibility" }
-          }
-        }
+      "required": [
+        "app_sha",
+        "shell_sha",
+        "framework_sha",
+        "identity_mode",
+        "package_compatibility"
       ],
       "properties": {
-        "app_sha": { "$ref": "#/$defs/gitSha" },
-        "shell_sha": { "$ref": "#/$defs/gitSha" },
-        "framework_sha": { "$ref": "#/$defs/gitSha" },
-        "identity_mode": { "const": "app_standard_compatibility" },
-        "package_compatibility": { "$ref": "#/$defs/packageCompatibility" },
-        "framework_release_set_digest": { "$ref": "#/$defs/digest" },
-        "package_payload_manifest_sha256": {
-          "type": "object",
-          "minProperties": 1,
-          "propertyNames": { "$ref": "#/$defs/packageId" },
-          "additionalProperties": { "$ref": "#/$defs/digest" }
+        "app_sha": {
+          "$ref": "#/$defs/gitSha"
+        },
+        "shell_sha": {
+          "$ref": "#/$defs/gitSha"
+        },
+        "framework_sha": {
+          "$ref": "#/$defs/gitSha"
+        },
+        "identity_mode": {
+          "const": "app_standard_compatibility"
+        },
+        "package_compatibility": {
+          "$ref": "#/$defs/packageCompatibility"
         }
       }
     },
@@ -86,32 +91,50 @@
         "evidence_refs"
       ],
       "properties": {
-        "kind": { "const": "installed_artifact" },
-        "result": { "const": "passed" },
-        "installed_artifact_same_bytes": { "const": true },
-        "harness_sha256": { "$ref": "#/$defs/digest" },
+        "kind": {
+          "const": "installed_artifact"
+        },
+        "result": {
+          "const": "passed"
+        },
+        "installed_artifact_same_bytes": {
+          "const": true
+        },
+        "harness_sha256": {
+          "$ref": "#/$defs/digest"
+        },
         "evidence_refs": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     }
   },
   "$defs": {
-    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "gitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "packageId": {
+    "digest": {
       "type": "string",
-      "pattern": "^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
     },
     "packageCompatibility": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["abi", "version_range"],
+      "required": [
+        "abi",
+        "version_range"
+      ],
       "properties": {
-        "abi": { "const": "opl_packages.v1" },
+        "abi": {
+          "const": "opl_packages.v1"
+        },
         "version_range": {
           "type": "string",
           "pattern": "^>=[0-9]+\\.[0-9]+\\.[0-9]+ <[0-9]+\\.[0-9]+\\.[0-9]+$"

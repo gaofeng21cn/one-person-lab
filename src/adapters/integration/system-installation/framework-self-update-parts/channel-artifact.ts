@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import {
@@ -9,15 +8,13 @@ import {
 } from '../../../../kernel/contract-validation.ts';
 import {
   parseJsonText,
-  readJsonPayloadFile,
 } from '../../../../kernel/json-file.ts';
 import { stringValue } from '../../../../kernel/json-record.ts';
-import { resolveOplReleaseManifestRef } from '../release-channel.ts';
+import { resolveFrameworkArtifactRef } from '../release-channel.ts';
 import { sanitizedCurlDiagnostics } from '../curl-diagnostics.ts';
 import { normalizeOptionalString, runCommand } from '../shared.ts';
 
 const FRAMEWORK_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.framework.source.v1+gzip';
-const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
 
 type OciImageRef = {
   registry: string;
@@ -58,7 +55,7 @@ function parseImageRef(raw: string): OciImageRef {
 }
 
 function resolveChannelManifestRef() {
-  return parseImageRef(resolveOplReleaseManifestRef());
+  return parseImageRef(resolveFrameworkArtifactRef());
 }
 
 function runCurl(args: string[], errorKind: string, details: Record<string, unknown>, capture = true) {
@@ -118,7 +115,7 @@ function fetchOciManifest(imageRef: OciImageRef, token: string) {
     manifestUrl,
   ], 'oci_manifest', { image: imageRef.image, tag: imageRef.tag });
   const parsed = parseJsonText(payload);
-  return isRecord(parsed) ? parsed as { layers?: OciLayer[] } : {};
+  return { ...(isRecord(parsed) ? parsed as { artifactType?: string; layers?: OciLayer[]; annotations?: Record<string, string> } : {}), artifactDigest: `sha256:${crypto.createHash('sha256').update(payload).digest('hex')}` };
 }
 
 function fetchPinnedOciManifest(imageRef: OciImageRef, token: string, expectedDigest: string) {
@@ -142,7 +139,7 @@ function fetchPinnedOciManifest(imageRef: OciImageRef, token: string, expectedDi
     });
   }
   const parsed = parseJsonText(raw);
-  return isRecord(parsed) ? parsed as { layers?: OciLayer[] } : {};
+  return isRecord(parsed) ? parsed as { artifactType?: string; layers?: OciLayer[] } : {};
 }
 
 function fetchOciBlob(imageRef: OciImageRef, token: string, digest: string, targetPath: string) {
@@ -157,13 +154,10 @@ function fetchOciBlob(imageRef: OciImageRef, token: string, digest: string, targ
   ], 'oci_blob', { image: imageRef.image, tag: imageRef.tag, digest }, false);
 }
 
-function selectLayer(manifest: { layers?: OciLayer[] }, mediaType: string, titleSuffix?: string) {
-  const layers = Array.isArray(manifest.layers) ? manifest.layers : [];
-  return layers.find((layer) => layer.mediaType === mediaType)
-    ?? (titleSuffix
-      ? layers.find((layer) => String(layer.annotations?.['org.opencontainers.image.title'] ?? '').endsWith(titleSuffix))
-      : null)
-    ?? null;
+function selectLayer(manifest: { artifactType?: string; layers?: OciLayer[] }, mediaType: string) {
+  if (manifest.artifactType !== 'application/vnd.onepersonlab.framework.v1') return null;
+  const layers = Array.isArray(manifest.layers) ? manifest.layers.filter((layer) => layer.mediaType === mediaType) : [];
+  return layers.length === 1 ? layers[0] : null;
 }
 
 function requireFrameworkArtifactDigest(value: string | null | undefined, details: Record<string, unknown>) {
@@ -180,67 +174,27 @@ function requireFrameworkArtifactDigest(value: string | null | undefined, detail
 
 export function readFrameworkChannelEntry() {
   const imageRef = resolveChannelManifestRef();
-  const token = fetchGhcrToken(imageRef);
-  const manifest = fetchOciManifest(imageRef, token);
-  const layer = selectLayer(manifest, CHANNEL_MANIFEST_LAYER_MEDIA_TYPE, 'opl-channel-manifest.json');
-  if (!layer?.digest) {
-    throw new FrameworkContractError('contract_shape_invalid', 'OPL channel manifest layer is missing.', {
-      image: imageRef.image,
-      tag: imageRef.tag,
+  const manifest = fetchOciManifest(imageRef, fetchGhcrToken(imageRef));
+  const layer = selectLayer(manifest, FRAMEWORK_LAYER_MEDIA_TYPE);
+  const version = manifest.annotations?.['org.opencontainers.image.version'];
+  const commit = manifest.annotations?.['org.opencontainers.image.revision'];
+  if (!layer?.digest || !/^sha256:[0-9a-f]{64}$/.test(layer.digest)
+    || !version || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)
+    || !commit || !/^[0-9a-f]{40}$/.test(commit)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Framework artifact must declare its version, source commit and source layer digest.', {
+      image: imageRef.image, tag: imageRef.tag,
     });
   }
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-channel-manifest-'));
-  try {
-    const manifestPath = path.join(tempRoot, 'opl-channel-manifest.json');
-    fetchOciBlob(imageRef, token, layer.digest, manifestPath);
-    const parsedChannelManifest = readJsonPayloadFile(manifestPath);
-    const channelManifest = (isRecord(parsedChannelManifest) ? parsedChannelManifest : {}) as {
-      release_set_generation?: string;
-      release_set?: {
-        surface_kind?: string;
-        components?: {
-          base?: {
-            version?: string;
-            source_commit?: string;
-            artifact_ref?: string;
-            artifact_digest?: string;
-          };
-        };
-      };
-      packages?: {
-        framework_core?: {
-          version?: string;
-          artifact?: string;
-          source_archive?: { sha256?: string };
-          source_git?: { head_sha?: string };
-        };
-      };
-    };
-    const framework = channelManifest.packages?.framework_core;
-    const base = channelManifest.release_set?.surface_kind === 'opl_release_set.v2'
-      ? channelManifest.release_set.components?.base
-      : null;
-    const artifact = normalizeOptionalString(base?.artifact_ref ?? framework?.artifact);
-    if (!artifact) {
-      throw new FrameworkContractError('contract_shape_invalid', 'OPL channel manifest is missing packages.framework_core.artifact.', {
-        channel_version: channelManifest.release_set_generation ?? null,
-      });
-    }
-    const artifactDigest = requireFrameworkArtifactDigest(base?.artifact_digest, {
-      channel_version: channelManifest.release_set_generation ?? null,
-      artifact,
-    });
-    return {
-      channel_version: normalizeOptionalString(base?.version ?? framework?.version ?? channelManifest.release_set_generation),
-      release_set_generation: normalizeOptionalString(channelManifest.release_set_generation),
-      artifact,
-      artifact_digest: artifactDigest,
-      source_archive_sha256: normalizeOptionalString(framework?.source_archive?.sha256),
-      source_git_head_sha: normalizeOptionalString(base?.source_commit ?? framework?.source_git?.head_sha),
-    };
-  } finally {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
+  if (imageRef.tag.startsWith('sha256:') && imageRef.tag !== manifest.artifactDigest) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Framework manifest digest does not match the requested digest.');
   }
+  return {
+    channel_version: version,
+    artifact: `${imageRef.image}@${manifest.artifactDigest}`,
+    artifact_digest: manifest.artifactDigest,
+    source_archive_sha256: layer.digest.slice('sha256:'.length),
+    source_git_head_sha: commit,
+  };
 }
 
 export function fetchFrameworkArtifactFromChannel(
@@ -253,7 +207,7 @@ export function fetchFrameworkArtifactFromChannel(
   });
   const explicitDigest = entry.artifact.match(/@([^/]+)$/)?.[1] ?? null;
   if (explicitDigest && explicitDigest !== artifactDigest) {
-    throw new FrameworkContractError('contract_shape_invalid', 'OPL Framework artifact ref conflicts with the Release Set digest.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'OPL Framework artifact ref conflicts with its channel digest.', {
       artifact_ref: entry.artifact,
       artifact_ref_digest: explicitDigest,
       artifact_digest: artifactDigest,
@@ -264,7 +218,7 @@ export function fetchFrameworkArtifactFromChannel(
   const imageRef = parseImageRef(pinnedArtifactRef);
   const token = fetchGhcrToken(imageRef);
   const manifest = fetchPinnedOciManifest(imageRef, token, artifactDigest);
-  const layer = selectLayer(manifest, FRAMEWORK_LAYER_MEDIA_TYPE, `one-person-lab-framework-${entry.channel_version ?? imageRef.tag}.tar.gz`);
+  const layer = selectLayer(manifest, FRAMEWORK_LAYER_MEDIA_TYPE);
   if (!layer?.digest) {
     throw new FrameworkContractError('contract_shape_invalid', 'OPL Framework runtime artifact layer is missing.', {
       image: imageRef.image,

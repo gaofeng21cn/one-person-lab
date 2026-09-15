@@ -12,15 +12,12 @@ import operationReceiptSchema from '../../../../contracts/opl-framework/release-
 import qualificationReceiptSchema from '../../../../contracts/opl-framework/release-bundle-qualification-receipt.schema.json' with { type: 'json' };
 import unknownOutcomeSchema from '../../../../contracts/opl-framework/release-bundle-unknown-outcome.schema.json' with { type: 'json' };
 import consumerEnvelopeSchema from '../../../../contracts/opl-framework/release-bundle-consumer-envelope.schema.json' with { type: 'json' };
-import ownerCohortLockSchema from '../../../../contracts/opl-framework/package-owner-cohort-lock.schema.json' with { type: 'json' };
-import releaseSetSchema from '../../../../contracts/opl-framework/release-set-v2.schema.json' with { type: 'json' };
 import { canonicalJsonBytes } from '../../../kernel/canonical-json.ts';
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { assertJsonSchemaPayload } from '../../../kernel/schema-registry.ts';
 import {
   RELEASE_BUNDLE_APP_STANDARD_FROZEN_BUILD_INPUT_IDS,
-  RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS,
   type ReleaseBundle,
   type ReleaseBundleAppStandardFreezeRequest,
   type ReleaseBundleCheckpoint,
@@ -196,49 +193,6 @@ function readBoundJsonReference(
   return { ...source, value };
 }
 
-function releaseSetObject(value: Record<string, unknown>) {
-  const candidate = value.surface_kind === 'opl_release_set.v2' ? value : value.release_set;
-  if (!isRecord(candidate) || candidate.surface_kind !== 'opl_release_set.v2') {
-    fail('Framework Release Set manifest must expose opl_release_set.v2.');
-  }
-  return candidate;
-}
-
-function requireRecord(value: unknown, label: string) {
-  if (!isRecord(value)) fail(`${label} must be an object.`);
-  return value;
-}
-
-function requirePackageIds(value: unknown, label: string) {
-  if (
-    !Array.isArray(value)
-    || value.length === 0
-    || value.some((item) => (
-      typeof item !== 'string'
-      || !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(item)
-    ))
-    || new Set(value).size !== value.length
-  ) {
-    fail(`${label} must contain unique canonical Package IDs.`);
-  }
-  return value as string[];
-}
-
-function assertExactPackageIds(
-  expectedPackageIds: readonly string[],
-  actualPackageIds: readonly string[],
-  label: string,
-) {
-  const expected = [...expectedPackageIds].sort();
-  const actual = [...actualPackageIds].sort();
-  if (canonicalJsonBytes(actual).compare(canonicalJsonBytes(expected)) !== 0) {
-    fail(`${label} must exactly match the frozen Release Set Package cohort.`, {
-      expected_package_ids: expected,
-      actual_package_ids: actual,
-    });
-  }
-}
-
 export function isAppStandardFreezeRequest(
   request: ReleaseBundleFreezeRequestDocument,
 ): request is ReleaseBundleAppStandardFreezeRequest {
@@ -251,222 +205,9 @@ export function isAppStandardReleaseBundle(
   return bundle.identity_mode === 'app_standard_compatibility';
 }
 
-export function assertReleaseBundleFreezeInputs(
-  request: ReleaseBundleFreezeRequestDocument,
-  selectedSourceRoot?: string,
-) {
-  const root = sourceRootPath(selectedSourceRoot);
-  if (isAppStandardFreezeRequest(request)) {
-    return {
-      sourceRoot: root,
-      identityMode: request.identity_mode,
-      packageCompatibility: request.package_compatibility,
-    };
-  }
-  const releaseSetSource = readBoundJsonReference(
-    root,
-    request.framework_release_set.manifest_ref,
-    request.framework_release_set.digest,
-    'Framework Release Set manifest',
-  );
-  const releaseSet = releaseSetObject(releaseSetSource.value);
-  assertSchema(
-    releaseSetSchema as Record<string, unknown>,
-    'contracts/opl-framework/release-set-v2.schema.json',
-    releaseSet,
-  );
-  if (releaseSet.generation !== request.framework_release_set.generation) {
-    fail('Framework Release Set generation does not match the freeze request.', {
-      expected_generation: request.framework_release_set.generation,
-      actual_generation: releaseSet.generation,
-    });
-  }
-  const components = requireRecord(releaseSet.components, 'Framework Release Set components');
-  const base = requireRecord(components.base, 'Framework Release Set base component');
-  const app = requireRecord(components.app, 'Framework Release Set app component');
-  const packageCollection = requireRecord(
-    components.packages,
-    'Framework Release Set package collection',
-  );
-  const members = requireRecord(
-    packageCollection.members,
-    'Framework Release Set package members',
-  );
-  const packageIds = requirePackageIds(
-    packageCollection.package_ids,
-    'Framework Release Set Package IDs',
-  );
-  if (packageCollection.package_count !== packageIds.length) {
-    fail('Framework Release Set Package count does not match its frozen Package IDs.', {
-      package_count: packageCollection.package_count,
-      package_ids: packageIds,
-    });
-  }
-  assertExactPackageIds(packageIds, Object.keys(members), 'Framework Release Set members');
-  assertExactPackageIds(packageIds, Object.keys(request.packages), 'Release Bundle freeze request');
-  if (
-    base.source_commit !== null
-    && base.source_commit !== request.sources.framework.source_commit
-  ) {
-    fail('Framework Release Set base source differs from the Bundle Framework source.', {
-      release_set_source_commit: base.source_commit,
-      bundle_source_commit: request.sources.framework.source_commit,
-    });
-  }
-  if (app.source_commit !== null && app.source_commit !== request.sources.app.source_commit) {
-    fail('Framework Release Set App source differs from the Bundle App source.', {
-      release_set_source_commit: app.source_commit,
-      bundle_source_commit: request.sources.app.source_commit,
-    });
-  }
-
-  const cohortBinding = requireRecord(
-    releaseSet.owner_cohort_lock,
-    'Framework Release Set owner cohort lock binding',
-  );
-  if (
-    cohortBinding.surface_kind !== 'opl_package_owner_cohort_lock.v1'
-    || typeof cohortBinding.ref !== 'string'
-    || typeof cohortBinding.digest !== 'string'
-  ) {
-    fail('Framework Release Set owner cohort lock binding is invalid.');
-  }
-  const cohortRef = path.posix.join(
-    path.posix.dirname(request.framework_release_set.manifest_ref),
-    cohortBinding.ref,
-  );
-  const cohortSource = readBoundJsonReference(
-    root,
-    cohortRef,
-    cohortBinding.digest,
-    'Framework Release Set owner cohort lock',
-  );
-  if (cohortSource.value.surface_kind !== 'opl_package_owner_cohort_lock.v1') {
-    fail('Framework Release Set owner cohort lock surface is invalid.');
-  }
-  assertSchema(
-    ownerCohortLockSchema as Record<string, unknown>,
-    'contracts/opl-framework/package-owner-cohort-lock.schema.json',
-    cohortSource.value,
-  );
-  const cohortPackages = requireRecord(
-    cohortSource.value.packages,
-    'Framework Release Set owner cohort packages',
-  );
-  assertExactPackageIds(
-    packageIds,
-    requirePackageIds(cohortBinding.package_ids, 'Framework Release Set owner cohort Package IDs'),
-    'Framework Release Set owner cohort binding',
-  );
-  assertExactPackageIds(packageIds, Object.keys(cohortPackages), 'Framework Release Set owner cohort lock');
-
-  const verifiedPackages: Record<string, unknown> = {};
-  for (const packageId of packageIds) {
-    const identity = request.packages[packageId];
-    const expectedManifestRef = `contracts/opl-framework/packages/${packageId}.json`;
-    if (identity.manifest_ref !== expectedManifestRef) {
-      fail('Release Bundle Package manifest ref is not canonical.', {
-        package_id: packageId,
-        expected_manifest_ref: expectedManifestRef,
-        actual_manifest_ref: identity.manifest_ref,
-      });
-    }
-    const manifestSource = readBoundJsonReference(
-      root,
-      identity.manifest_ref,
-      identity.manifest_sha256,
-      `Release Bundle Package manifest ${packageId}`,
-    );
-    const manifest = manifestSource.value;
-    const codexSurface = requireRecord(
-      manifest.codex_surface,
-      `Release Bundle Package codex surface ${packageId}`,
-    );
-    if (
-      manifest.package_id !== packageId
-      || manifest.version !== identity.version
-      || (manifest.source_commit ?? codexSurface.carrier_source_commit)
-        !== identity.owner_source_commit
-    ) {
-      fail('Release Bundle Package manifest identity differs from the freeze request.', {
-        package_id: packageId,
-      });
-    }
-    if (typeof codexSurface.plugin_payload_manifest_url !== 'string') {
-      fail('Release Bundle Package manifest has no payload manifest ref.', {
-        package_id: packageId,
-      });
-    }
-    const expectedPayloadRef = path.posix.join(
-      path.posix.dirname(identity.manifest_ref),
-      codexSurface.plugin_payload_manifest_url,
-    );
-    if (identity.payload_manifest_ref !== expectedPayloadRef) {
-      fail('Release Bundle Package payload ref differs from its manifest.', {
-        package_id: packageId,
-        expected_payload_manifest_ref: expectedPayloadRef,
-        actual_payload_manifest_ref: identity.payload_manifest_ref,
-      });
-    }
-    const payloadSource = readBoundJsonReference(
-      root,
-      identity.payload_manifest_ref,
-      identity.payload_manifest_sha256,
-      `Release Bundle Package payload manifest ${packageId}`,
-    );
-    const payload = payloadSource.value;
-    if (
-      payload.surface_kind !== 'opl_package_payload_manifest.v2'
-      || payload.package_id !== packageId
-      || payload.package_version !== identity.version
-      || payload.source_commit !== identity.owner_source_commit
-    ) {
-      fail('Release Bundle Package payload identity differs from the freeze request.', {
-        package_id: packageId,
-      });
-    }
-    const cohortEntry = requireRecord(
-      cohortPackages[packageId],
-      `Framework Release Set owner cohort entry ${packageId}`,
-    );
-    const releaseSetMember = requireRecord(
-      members[packageId],
-      `Framework Release Set member ${packageId}`,
-    );
-    const expectedMember = {
-      version: identity.version,
-      source_commit: identity.owner_source_commit,
-      manifest_ref: identity.manifest_ref,
-      manifest_sha256: identity.manifest_sha256,
-      payload_manifest_ref: identity.payload_manifest_ref,
-      payload_manifest_sha256: identity.payload_manifest_sha256,
-    };
-    if (
-      cohortEntry.package_id !== packageId
-      || cohortEntry.source_commit !== identity.owner_source_commit
-      || Object.entries(expectedMember).some(([field, expected]) => releaseSetMember[field] !== expected)
-    ) {
-      fail('Framework Release Set does not transitively bind the Package identity.', {
-        package_id: packageId,
-        expected_member: expectedMember,
-      });
-    }
-    verifiedPackages[packageId] = {
-      manifest_path: manifestSource.path,
-      manifest_sha256: manifestSource.sha256,
-      payload_manifest_path: payloadSource.path,
-      payload_manifest_sha256: payloadSource.sha256,
-      owner_source_commit: identity.owner_source_commit,
-    };
-  }
-  return {
-    sourceRoot: root,
-    releaseSetPath: releaseSetSource.path,
-    releaseSetSha256: releaseSetSource.sha256,
-    ownerCohortLockPath: cohortSource.path,
-    ownerCohortLockSha256: cohortSource.sha256,
-    packages: verifiedPackages,
-  };
+export function assertReleaseBundleFreezeInputs(request: ReleaseBundleFreezeRequestDocument, selectedSourceRoot?: string) {
+  return { sourceRoot: sourceRootPath(selectedSourceRoot), identityMode: request.identity_mode,
+    packageCompatibility: request.package_compatibility };
 }
 
 function assertSchema(
@@ -499,9 +240,7 @@ function assertFrozenBuildInputs(
 ) {
   const inputs = request.frozen_build_inputs;
   if (!inputs) return;
-  const expectedIds = request.identity_mode === 'app_standard_compatibility'
-    ? RELEASE_BUNDLE_APP_STANDARD_FROZEN_BUILD_INPUT_IDS
-    : RELEASE_BUNDLE_FROZEN_BUILD_INPUT_IDS;
+  const expectedIds = RELEASE_BUNDLE_APP_STANDARD_FROZEN_BUILD_INPUT_IDS;
   if (inputs.length !== expectedIds.length) {
     fail('Release Bundle frozen build inputs must contain every allowed input exactly once.', {
       expected_ids: expectedIds,
@@ -580,18 +319,7 @@ function assertFreezeSemantics(request: ReleaseBundleFreezeRequestDocument) {
       expected_prerelease: expectedPrerelease,
     });
   }
-  if (isAppStandardFreezeRequest(request)) {
-    assertPackageCompatibility(request.package_compatibility);
-  } else {
-    for (const [packageId, identity] of Object.entries(request.packages)) {
-      if (identity.package_id !== packageId) {
-        fail('Release Bundle package map key does not match package identity.', {
-          package_id: packageId,
-          declared_package_id: identity.package_id,
-        });
-      }
-    }
-  }
+  assertPackageCompatibility(request.package_compatibility);
   const unifiedStableFlags = [
     Boolean(request.source_cutoff),
     Boolean(request.tracks.webui),
@@ -610,13 +338,7 @@ function assertFreezeSemantics(request: ReleaseBundleFreezeRequestDocument) {
       request.source_cutoff.observed_at,
       'Release Bundle source cutoff observation',
     );
-    const frozenBase = request.source_cutoff.frozen_base_release_set;
-    if (frozenBase && (
-      !/^[0-9]{2}\.[0-9]{1,2}\.[0-9]{1,2}(?:-r[1-9][0-9]*)?$/.test(frozenBase.generation)
-      || !/^sha256:[0-9a-f]{64}$/.test(frozenBase.digest)
-    )) {
-      fail('Release Bundle frozen base Release Set identity is invalid.');
-    }
+
   }
   for (const track of (request.tracks.webui
     ? ['standard', 'webui', 'full'] as const
@@ -664,15 +386,8 @@ export function releaseBundleCore(request: ReleaseBundleFreezeRequestDocument) {
     schema_ref: RELEASE_BUNDLE_SCHEMA_REF,
     release: request.release,
     sources: request.sources,
-    ...(isAppStandardFreezeRequest(request)
-      ? {
-          identity_mode: request.identity_mode,
-          package_compatibility: request.package_compatibility,
-        }
-      : {
-          framework_release_set: request.framework_release_set,
-          packages: request.packages,
-        }),
+    identity_mode: request.identity_mode,
+    package_compatibility: request.package_compatibility,
     prepared_notes: {
       ...request.prepared_notes,
       markdown_sha256: sha256(request.prepared_notes.markdown),

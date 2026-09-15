@@ -147,10 +147,10 @@ test('package.json exposes the native helper doctor and family smoke gates', () 
 });
 
 test('package.json exposes package channel maintenance scripts', () => {
-  assert.equal(packageJson.scripts?.['packages:manifest'], 'node --experimental-strip-types ./scripts/package-archives.mjs');
+  assert.equal(packageJson.scripts?.['packages:manifest'], undefined);
   assert.equal(packageJson.scripts?.['packages:payload'], 'node ./scripts/first-party-package-payload.mjs');
-  assert.equal(packageJson.scripts?.['packages:release-discipline'], 'node ./scripts/package-release-discipline.mjs');
-  assert.equal(packageJson.scripts?.['packages:daily-check'], 'node ./scripts/package-channel-daily-check.mjs');
+  assert.equal(packageJson.scripts?.['packages:release-discipline'], undefined);
+  assert.equal(packageJson.scripts?.['framework:archive'], 'node scripts/framework-archive.mjs');
   assert.equal(packageJson.scripts?.['packages:cleanup-ghcr'], 'node --experimental-strip-types ./scripts/cleanup-ghcr-package-versions.mjs');
 });
 

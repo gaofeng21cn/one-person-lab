@@ -1,7 +1,9 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 
-const DEFAULT_RELEASE_MANIFEST_OWNER = 'gaofeng21cn';
-const RELEASE_MANIFEST_REPOSITORY = 'one-person-lab-manifest';
+const DEFAULT_FRAMEWORK_OWNER = 'gaofeng21cn';
+// Framework channel is an owner channel. It is deliberately independent from
+// App and Package publication; no aggregate Release Set is read here.
+const FRAMEWORK_REPOSITORY = 'one-person-lab-framework';
 
 function optionalString(value: string | null | undefined) {
   const normalized = value?.trim();
@@ -23,7 +25,7 @@ export function normalizeOplReleaseChannelTag(value: string | null | undefined) 
   return tag;
 }
 
-function normalizeManifestRefTag(rawRef: string) {
+function normalizeArtifactRefTag(rawRef: string) {
   const digestSeparator = rawRef.lastIndexOf('@');
   if (digestSeparator > rawRef.lastIndexOf('/')) return rawRef;
   const tagSeparator = rawRef.lastIndexOf(':');
@@ -34,12 +36,12 @@ function normalizeManifestRefTag(rawRef: string) {
   return `${rawRef.slice(0, tagSeparator)}:${tag}`;
 }
 
-export function resolveOplReleaseManifestRef(declaredRef?: string) {
-  const explicitRef = optionalString(process.env.OPL_PACKAGE_CHANNEL_MANIFEST_REF);
-  if (explicitRef) return normalizeManifestRefTag(explicitRef);
-  if (optionalString(declaredRef)) return normalizeManifestRefTag(declaredRef!.trim());
-  const owner = optionalString(process.env.OPL_PACKAGES_OWNER) ?? DEFAULT_RELEASE_MANIFEST_OWNER;
-  const configuredTag = optionalString(process.env.OPL_PACKAGE_CHANNEL_TAG)
-    ?? optionalString(process.env.OPL_PACKAGE_CHANNEL_VERSION);
-  return `ghcr.io/${owner}/${RELEASE_MANIFEST_REPOSITORY}:${normalizeOplReleaseChannelTag(configuredTag)}`;
+export function resolveFrameworkArtifactRef(declaredRef?: string) {
+  const explicitRef = optionalString(process.env.OPL_FRAMEWORK_ARTIFACT_REF);
+  if (explicitRef) return normalizeArtifactRefTag(explicitRef);
+  if (optionalString(declaredRef)) return normalizeArtifactRefTag(declaredRef!.trim());
+  const owner = optionalString(process.env.OPL_PACKAGES_OWNER) ?? DEFAULT_FRAMEWORK_OWNER;
+  const configuredTag = optionalString(process.env.OPL_FRAMEWORK_CHANNEL_TAG)
+    ?? optionalString(process.env.OPL_FRAMEWORK_CHANNEL_VERSION);
+  return `ghcr.io/${owner}/${FRAMEWORK_REPOSITORY}:${normalizeOplReleaseChannelTag(configuredTag)}`;
 }
