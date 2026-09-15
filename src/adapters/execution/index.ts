@@ -17,6 +17,8 @@ export type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-t
 export { inspectFamilyRuntimeProviderWithLifecycle, isFamilyRuntimeProviderKind, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 export { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 export { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
+export { resolveTemporalAddressForPaths } from './family-runtime-temporal-service.ts';
+export { resolveTemporalClientNamespace } from './family-runtime-temporal-client.ts';
 export { deriveCurrentControlStateForAttempt } from './family-runtime-current-control-state.ts';
 export { latestStageAttemptCloseoutPacketsByAttempt, listStageAttemptRows, stageAttemptSignalsByAttempt } from './family-runtime-stage-attempt-ledger.ts';
 export {

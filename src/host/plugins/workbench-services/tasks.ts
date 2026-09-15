@@ -7,8 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { Client, Connection, ScheduleOverlapPolicy, type ScheduleSpec } from '@temporalio/client';
 import { defaultPayloadConverter } from '@temporalio/common';
 import { NativeConnection, Worker } from '@temporalio/worker';
-import { resolveTemporalAddressForPaths } from '../../../adapters/execution/family-runtime-temporal-service.ts';
-import { resolveTemporalClientNamespace } from '../../../adapters/execution/family-runtime-temporal-client.ts';
+import { resolveTemporalAddressForPaths, resolveTemporalClientNamespace } from '../../../adapters/execution/index.ts';
 import type { TaskDefinition, WorkbenchTaskExecutor } from './types.ts';
 
 export async function validateTask(input: Record<string, unknown>): Promise<TaskDefinition> {
