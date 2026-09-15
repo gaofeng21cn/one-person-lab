@@ -173,8 +173,10 @@ function sourceTreePath(ownerRepoPath, sourceRoot, filePath, packageId) {
 }
 
 function readCommitRegularFile({ packageId, ownerRepoPath, sourceCommit, treePath, failureCode }) {
-  const entry = gitValue(ownerRepoPath, ['ls-tree', '--full-tree', sourceCommit, '--', treePath], true);
-  const match = /^([0-9]{6}) blob ([0-9a-f]+)\t(.+)$/.exec(entry ?? '');
+  // NUL output preserves literal Unicode paths regardless of core.quotePath.
+  const result = git(ownerRepoPath, ['ls-tree', '-z', '--full-tree', sourceCommit, '--', treePath], true);
+  const entry = result.status === 0 ? result.stdout : null;
+  const match = /^([0-9]{6}) blob ([0-9a-f]+)\t([^\0]+)\0$/.exec(entry ?? '');
   if (!match || match[3] !== treePath || !allowedPayloadModes.has(match[1])) {
     fail(failureCode, packageId, `source is not a regular carrier file at exact commit: ${sourceCommit}:${treePath}`, {
       source_commit: sourceCommit,
@@ -448,7 +450,9 @@ export function validatePackageSourceProjection({
         actual: entry.mode,
       });
     }
-    const expectedUrl = `https://raw.githubusercontent.com/${coordinates.owner}/${coordinates.repo}/${carrierSourceCommit}/${sourcePath}`;
+    const encodedPath = sourcePath.split('/').map((segment) => encodeURIComponent(segment)
+      .replace(/[!'()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)).join('/');
+    const expectedUrl = `https://raw.githubusercontent.com/${coordinates.owner}/${coordinates.repo}/${carrierSourceCommit}/${encodedPath}`;
     if (entry.source_url !== expectedUrl) {
       fail('payload_source_url_drift', spec.package_id, `payload source URL is not bound to carrier authority: ${relativePath}`, {
         expected: expectedUrl,

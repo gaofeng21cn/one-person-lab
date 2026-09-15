@@ -38,7 +38,7 @@ function git(cwd: string, args: string[]) {
   return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 }
 
-function standardFixture(t: TestContext) {
+function standardFixture(t: TestContext, skillRelativePath = 'skills/med-autoscience/SKILL.md') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-projection-gate-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const ownerRoot = path.join(root, 'owner');
@@ -48,7 +48,7 @@ function standardFixture(t: TestContext) {
   const sourceRoot = 'plugins/med-autoscience';
   const repoUrl = 'https://github.com/example/med-autoscience.git';
   const pluginPath = path.join(ownerRoot, sourceRoot, '.codex-plugin', 'plugin.json');
-  const skillPath = path.join(ownerRoot, sourceRoot, 'skills', 'med-autoscience', 'SKILL.md');
+  const skillPath = path.join(ownerRoot, sourceRoot, skillRelativePath);
   writeJson(path.join(ownerRoot, 'contracts', 'owner-package.json'), {
     package_id: packageId,
     agent_id: packageId,
@@ -78,12 +78,12 @@ function standardFixture(t: TestContext) {
   const payloadPath = path.join(path.dirname(manifestPath), payloadRef);
   const fileSources = [
     { path: '.codex-plugin/plugin.json', absolute: pluginPath },
-    { path: 'skills/med-autoscience/SKILL.md', absolute: skillPath },
+    { path: skillRelativePath, absolute: skillPath },
   ];
   const files = fileSources.map((entry) => ({
     path: entry.path,
     mode: '100644',
-    source_url: `https://raw.githubusercontent.com/example/med-autoscience/${carrierCommit}/${sourceRoot}/${entry.path}`,
+    source_url: `https://raw.githubusercontent.com/example/med-autoscience/${carrierCommit}/${sourceRoot}/${entry.path.split('/').map(encodeURIComponent).join('/')}`,
     sha256: digest(entry.absolute),
   }));
   writeJson(manifestPath, {
@@ -145,6 +145,18 @@ test('package source projection gate binds annotated owner tag, exact commit, UR
   assert.equal(result.owner_head, fixture.head);
   assert.notEqual(result.owner_head, result.owner_source_commit);
   assert.equal(result.owner_version_tag, `v${fixture.version}`);
+  assert.equal(result.file_count, 2);
+});
+
+test('package source projection gate preserves Unicode and spaced carrier paths with Git quoting enabled', (t) => {
+  const fixture = standardFixture(t, 'skills/med-autoscience/医学科普 说明.md');
+  git(fixture.ownerRoot, ['config', 'core.quotePath', 'true']);
+  const result = validatePackageSourceProjection({
+    frameworkRoot: fixture.frameworkRoot,
+    spec: fixture.spec,
+    ownerRepoPath: fixture.ownerRoot,
+  });
+  assert.equal(result.status, 'validated');
   assert.equal(result.file_count, 2);
 });
 
