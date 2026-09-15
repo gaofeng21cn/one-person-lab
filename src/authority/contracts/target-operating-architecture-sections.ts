@@ -320,27 +320,15 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
       actual: defaultOwnerRoutePolicySurfaceKind,
     });
   }
-  const defaultOwnerRoutePolicyAgentIds = expectNonEmptyStringArray(
-    defaultOwnerRoutePolicyRaw.applies_to_agent_ids,
-    'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids',
-    filePath,
-  );
-  const standardDomainAgentIds = listStandardDomainAgentIds();
-  for (const agentId of defaultOwnerRoutePolicyAgentIds) {
-    if (!standardDomainAgentIds.includes(agentId as typeof standardDomainAgentIds[number])) {
-      throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids must reference standard domain agents.', {
-        file: filePath,
-        field: 'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids',
-        actual: agentId,
-      });
-    }
+  if (defaultOwnerRoutePolicyRaw.applies_to_registry_ref !== STANDARD_AGENT_REGISTRY_REF) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Default owner routes must derive membership from the standard Agent registry.', {
+      file: filePath,
+      field: 'foundry_agent_os_standard.default_owner_route_policy.applies_to_registry_ref',
+      expected: STANDARD_AGENT_REGISTRY_REF,
+      actual: defaultOwnerRoutePolicyRaw.applies_to_registry_ref,
+    });
   }
-  requireEveryValue(
-    defaultOwnerRoutePolicyAgentIds,
-    standardDomainAgentIds,
-    'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids',
-    filePath,
-  );
+  const defaultOwnerRoutePolicyAgentIds = listStandardDomainAgentIds();
   const defaultOwnerRouteRoot = expectString(
     defaultOwnerRoutePolicyRaw.default_route_root,
     'foundry_agent_os_standard.default_owner_route_policy.default_route_root',

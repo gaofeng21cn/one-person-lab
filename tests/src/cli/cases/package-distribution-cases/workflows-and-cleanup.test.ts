@@ -309,7 +309,15 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.equal(getOplPackageSpecs().some((spec) => spec.package_id === 'opl-link-desktop-connector'), true);
   assert.equal(publisherPackageIds.includes('opl-channel-weixin'), false);
   assert.equal(publisherPackageIds.includes('opl-link-desktop-connector'), false);
-  assert.match(workflow, new RegExp(`options: \\[${publisherPackageIds.join(', ')}\\]`));
+  assert.doesNotMatch(workflow, /type: choice/);
+  // Exercise the actual shell path guard before manifest resolution.
+  const packageIdGuard = workflow.split('\n').find((line) => line.includes('Invalid Package id'))!.trim();
+  for (const id of [...publisherPackageIds, 'new-agent', '../obf', 'a/b', '']) {
+    const guarded = spawnSync('bash', ['-c', packageIdGuard], {
+      encoding: 'utf8', env: { ...process.env, PACKAGE_ID: id },
+    });
+    assert.equal(guarded.status === 0, Boolean(id) && !id.includes('/'));
+  }
   const linkPublicationGate = spawnSync(process.execPath, [
     '--experimental-strip-types',
     path.join(repoRoot, 'scripts/package-source-projection-gate.mjs'),

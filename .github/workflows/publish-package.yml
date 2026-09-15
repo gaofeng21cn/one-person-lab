@@ -33,8 +33,7 @@ on:
       package_id:
         description: Canonical Package id
         required: true
-        type: choice
-        options: [mas, mag, rca, oma, obf, mas-scholar-skills, opl-relay, opl-persona, opl-flow, opl-fleet-agent]
+        type: string
       expected_package_version:
         description: Exact stable SemVer selected by canonical Framework main
         required: true
@@ -100,6 +99,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          [[ "$PACKAGE_ID" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || { echo "::error::Invalid Package id"; exit 2; }
           manifest="contracts/opl-framework/packages/${PACKAGE_ID}.json"
           source_repo="$(jq -er .source_repo "$manifest")"
           if [[ "$source_repo" =~ ^https://github\.com/([^/]+)/([^/]+)\.git$ ]]; then

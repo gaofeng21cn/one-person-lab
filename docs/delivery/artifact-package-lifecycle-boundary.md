@@ -69,6 +69,20 @@ Framework 的入口为 `.github/workflows/publish-framework.yml`；它仅发布
 按 digest 校验下载内容。Homebrew Formula 消费同一 Framework artifact，
 App Cask 消费 App 的发布结果，两者独立推进。
 
+## 标准智能体的发布入口
+
+MAS、MAG、RCA、OMA、OPL Book Forge 与 OPL Med Cast 统一使用 OCI 软件包发布流程。
+每个软件包复用 `publish-package.yml` 发布不可变版本和自己的 `latest-stable`。
+用户通过 `opl packages install <package-id> --json` 安装，或在 OPL 的软件包界面选择安装；
+原生插件管理器负责实际载体生命周期。
+
+不创建或保留这六个智能体的独立 GitHub Release 页面及附件，也不建立 ZIP、wheel 等
+平行安装包发布脚本。源码的 annotated tag 仍用于绑定正式发布内容；版本说明直接使用
+仓库文档与源码变更记录，不构成第二个发布渠道。README 提供统一安装命令和 OCI 地址。
+
+领域质量、资格、运行可用性与软件包发布分别据实记录。App 等有独立安装制品的产品
+不属于此规则的范围。
+
 ## App
 
 App展示artifact和Package state，发起受控action，并持有App release truth。App不读取domain artifact body来推断quality，也不建立第二Package carrier。

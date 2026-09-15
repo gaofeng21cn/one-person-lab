@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { listStandardDomainAgentIds } from '../../../src/kernel/standard-agent-registry.ts';
 import { loadFrameworkContracts } from '../../../src/authority/contracts/contracts.ts';
 import { validateTargetOperatingArchitecture } from '../../../src/authority/contracts/target-operating-architecture-contract.ts';
 
@@ -15,6 +16,10 @@ test('target operating architecture keeps framework-wide ownership and authority
   }).targetOperatingArchitecture;
 
   assert.equal(contract.contract_kind, 'opl_target_operating_architecture_contract.v1');
+  const standard = contract.foundry_agent_os_standard as typeof contract.foundry_agent_os_standard & {
+    default_owner_route_policy: { applies_to_agent_ids: string[] };
+  };
+  assert.deepEqual(standard.default_owner_route_policy.applies_to_agent_ids, listStandardDomainAgentIds());
   assert.equal(contract.schema_version, 'target-operating-architecture.v1');
   assert.deepEqual(contract.resource_model.resource_shape.required_fields, [
     'apiVersion',

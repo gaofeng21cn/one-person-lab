@@ -1,0 +1,527 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "opl-medcast",
+  "plugin_id": "opl-medcast",
+  "package_version": "0.1.2",
+  "source_repo": "https://github.com/gaofeng21cn/opl-medcast.git",
+  "source_commit": "fa092c75facc7fcf0dd4f458b7132b8cffbaa87c",
+  "source_root": "plugins/opl-medcast",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:26dd35a8fd0bb4b260e318037fff40e7c789c99f8ece09716bb86c2133ae3742"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/.codex-plugin/plugin.json",
+      "sha256": "sha256:0291f70ddc65a7e72782845fb0f7cae388973078e04d94e9b38368a1d403ebfe"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/opl-package.json",
+      "sha256": "sha256:34bb538e11769277449a35079b57b83d72bb4f110472179e03aeae795fda9eff"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/plugin.json",
+      "sha256": "sha256:3105bee4f7f92142544b6814293e90fa8a4117f89906476e353914053ae0523d"
+    },
+    {
+      "path": "skills/opl-medcast/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/SKILL.md",
+      "sha256": "sha256:67d9ec73935022f7e2e5dd2f4f5f15b65b2fa26a5cdbd962cd532773f060841f"
+    },
+    {
+      "path": "skills/opl-medcast/agent/knowledge/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/knowledge/README.md",
+      "sha256": "sha256:e6cf7060b242f92ea337780aaf97b024f722c57bab0a6bdc302b257af156ed1e"
+    },
+    {
+      "path": "skills/opl-medcast/agent/knowledge/domain_boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/knowledge/domain_boundary.md",
+      "sha256": "sha256:f9297b462d1ca895457d514c2da83a4676c581358b3d28d2f6005c632e31bea2"
+    },
+    {
+      "path": "skills/opl-medcast/agent/policies/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/policies/README.md",
+      "sha256": "sha256:f40e3a5fca70d97eae4f5a63f51194130ec49b21eaa7dfb5d9524479edcf949d"
+    },
+    {
+      "path": "skills/opl-medcast/agent/primary_skill/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/primary_skill/SKILL.md",
+      "sha256": "sha256:67d9ec73935022f7e2e5dd2f4f5f15b65b2fa26a5cdbd962cd532773f060841f"
+    },
+    {
+      "path": "skills/opl-medcast/agent/principles/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/principles/README.md",
+      "sha256": "sha256:5166bd48774405f3771fedf378d361c35290cb231a9877404a17a16a423a2542"
+    },
+    {
+      "path": "skills/opl-medcast/agent/principles/domain-specialization.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/principles/domain-specialization.md",
+      "sha256": "sha256:a51541cd4f74e30ab01db77f81d039e9f50ce553c31fb9d50932a6e2702f1ca9"
+    },
+    {
+      "path": "skills/opl-medcast/agent/principles/opl-standard-agent-principles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/principles/opl-standard-agent-principles.md",
+      "sha256": "sha256:8007cad84fa0a58ab5d8f32bbe3527d81ffec5b0c2db24f7475a979b55a61bd7"
+    },
+    {
+      "path": "skills/opl-medcast/agent/professional_skills/medical-video-backends/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/professional_skills/medical-video-backends/SKILL.md",
+      "sha256": "sha256:37da24aa9ff1304ba47ba9844f941e880afa13f5167eb2bdec94b22074a252df"
+    },
+    {
+      "path": "skills/opl-medcast/agent/professional_skills/medical-video-content-planner/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/professional_skills/medical-video-content-planner/SKILL.md",
+      "sha256": "sha256:0630f1c8f883a7dfbf29bc92789b6306a8b761f89f0a6cff045663b7ce6432be"
+    },
+    {
+      "path": "skills/opl-medcast/agent/professional_skills/medical-video-director/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/professional_skills/medical-video-director/SKILL.md",
+      "sha256": "sha256:29f86fd8af7b6a3cbc5c6ca1ce0e3776f77e74f3b6f7d11ec79690c8a724a9fc"
+    },
+    {
+      "path": "skills/opl-medcast/agent/professional_skills/medical-video-release-packager/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/professional_skills/medical-video-release-packager/SKILL.md",
+      "sha256": "sha256:c8d0cd7326d83ddf62237538266065145e704dcf63b2413e25a1d7c8377f5e4b"
+    },
+    {
+      "path": "skills/opl-medcast/agent/professional_skills/medical-video-series-producer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/professional_skills/medical-video-series-producer/SKILL.md",
+      "sha256": "sha256:8206e700126faf9e8556a56e8b367f80eefdbb43753e07b1175b49c0a8bbfabe"
+    },
+    {
+      "path": "skills/opl-medcast/agent/professional_skills/medical-video-visual-qa/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/professional_skills/medical-video-visual-qa/SKILL.md",
+      "sha256": "sha256:fdd9c62b2a822cd058c548694c4e0e1b680246ea9871dc22ea47cd0803d71d49"
+    },
+    {
+      "path": "skills/opl-medcast/agent/prompts/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/prompts/README.md",
+      "sha256": "sha256:7c3f2e6bc0ce9d812d0e5232bee7e9e06aae071bdbbc6efaab34bbd43ff69af6"
+    },
+    {
+      "path": "skills/opl-medcast/agent/prompts/asset-curation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/prompts/asset-curation.md",
+      "sha256": "sha256:36b5faf7019d7123236dbaa71f35f2b135ae33ffca30223560a852cb7f00e85a"
+    },
+    {
+      "path": "skills/opl-medcast/agent/prompts/evidence-plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/prompts/evidence-plan.md",
+      "sha256": "sha256:6422fa28f2bfaf56bc2ac38660bfbd094640e6473d18121ad4d728b8293ef3dd"
+    },
+    {
+      "path": "skills/opl-medcast/agent/prompts/media-production.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/prompts/media-production.md",
+      "sha256": "sha256:0a466ec745296f1bcc6a40394426220855f557b3d9c5a55228af6562e87c1916"
+    },
+    {
+      "path": "skills/opl-medcast/agent/prompts/review-handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/prompts/review-handoff.md",
+      "sha256": "sha256:02d563a74399422f8bd320d7714cda1d97d54d75f0e93a9c157a0fc7bc223670"
+    },
+    {
+      "path": "skills/opl-medcast/agent/prompts/stage-quality-cycle-roles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/prompts/stage-quality-cycle-roles.md",
+      "sha256": "sha256:a0df6f675eb32cee74568ad63a45955d5478efb0305269cef03aacf961c2f0ff"
+    },
+    {
+      "path": "skills/opl-medcast/agent/prompts/story-directing.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/prompts/story-directing.md",
+      "sha256": "sha256:507c62efee1160c394314e8853d8aeea0ae707ad07b09672786a2e22cd8b9203"
+    },
+    {
+      "path": "skills/opl-medcast/agent/prompts/visual-review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/prompts/visual-review.md",
+      "sha256": "sha256:31c2f1e575cac4e21334d714ba91c193adee9d3e27ec38cf800940281559a44a"
+    },
+    {
+      "path": "skills/opl-medcast/agent/quality_gates/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/quality_gates/README.md",
+      "sha256": "sha256:f2e910ba0686266a3727203047546d143e1beb2f9a6f878a6be94e691dbb2cfd"
+    },
+    {
+      "path": "skills/opl-medcast/agent/quality_gates/asset-curation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/quality_gates/asset-curation.md",
+      "sha256": "sha256:d9238eb7f8f08740cdadf972e55dde63ec9956cc6dd23bbe3e0fdfa016f9a983"
+    },
+    {
+      "path": "skills/opl-medcast/agent/quality_gates/domain_acceptance.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/quality_gates/domain_acceptance.md",
+      "sha256": "sha256:2c97dcffe5df288c105f373882357b53a8df8325b7ca7134538b80ee36522208"
+    },
+    {
+      "path": "skills/opl-medcast/agent/quality_gates/evidence-plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/quality_gates/evidence-plan.md",
+      "sha256": "sha256:dbe48d64965a65dff539766d5e8c3dd036927f7fd3f84d4c54697e1df9e3f9f7"
+    },
+    {
+      "path": "skills/opl-medcast/agent/quality_gates/media-production.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/quality_gates/media-production.md",
+      "sha256": "sha256:6800738880a26e7ec902c79aa8bfc0c736cea55c1c44ad32ff919798fb412ca6"
+    },
+    {
+      "path": "skills/opl-medcast/agent/quality_gates/review-handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/quality_gates/review-handoff.md",
+      "sha256": "sha256:f8af0a98453d7c5a012550e1cf4dd70dec720bc39f9fd68ac1887e2fa772d112"
+    },
+    {
+      "path": "skills/opl-medcast/agent/quality_gates/story-directing.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/quality_gates/story-directing.md",
+      "sha256": "sha256:749bfacaad153526c0ce0b899a45fd2927e7bcd54059fb6529025988a8c31942"
+    },
+    {
+      "path": "skills/opl-medcast/agent/quality_gates/visual-review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/quality_gates/visual-review.md",
+      "sha256": "sha256:679cfd4ccf3a3cb0660c1e4387aedaa7e74be99ba255f716089283d16591d8aa"
+    },
+    {
+      "path": "skills/opl-medcast/agent/skills/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/skills/README.md",
+      "sha256": "sha256:6783572446beda9f869ecadaa886c67bba45edd1310136432f2e3f43548db063"
+    },
+    {
+      "path": "skills/opl-medcast/agent/skills/domain_execution.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/skills/domain_execution.md",
+      "sha256": "sha256:c507bd4d293867577ca26850f9ed21c2c3f6f2eb58be8ee7617563ce2aa09ed4"
+    },
+    {
+      "path": "skills/opl-medcast/agent/stages/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/stages/README.md",
+      "sha256": "sha256:9a9f772771a735ff13558b67904aaac5c241ef60c13e00f841f2302f45570fb3"
+    },
+    {
+      "path": "skills/opl-medcast/agent/stages/asset-curation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/stages/asset-curation.md",
+      "sha256": "sha256:e1e89abc118875f9a3cf3848f9d6a4531f9ecb1744ea65e6f25abf60f706490e"
+    },
+    {
+      "path": "skills/opl-medcast/agent/stages/evidence-plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/stages/evidence-plan.md",
+      "sha256": "sha256:b1fee84419b85d8d5bb26f45dd322144352f747f2392199765966841aacf1b67"
+    },
+    {
+      "path": "skills/opl-medcast/agent/stages/manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/stages/manifest.json",
+      "sha256": "sha256:7fafb37e7ac77ee137cdf427a96576c3bd27f84708356b98bad6a297250a713c"
+    },
+    {
+      "path": "skills/opl-medcast/agent/stages/media-production.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/stages/media-production.md",
+      "sha256": "sha256:090f9c8e9522d70b47d8e6e93363d85824a0000aef65869a4ad908785f701b36"
+    },
+    {
+      "path": "skills/opl-medcast/agent/stages/review-handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/stages/review-handoff.md",
+      "sha256": "sha256:acdbb0cfc1e5d47a51e9abae25dd49175d99809499977ae8f6190825c2ca0a64"
+    },
+    {
+      "path": "skills/opl-medcast/agent/stages/story-directing.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/stages/story-directing.md",
+      "sha256": "sha256:470a1db5154ddb1ccdb0aaca5ea849d777495ceba8fe33736e90745b5ece61c3"
+    },
+    {
+      "path": "skills/opl-medcast/agent/stages/visual-review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/stages/visual-review.md",
+      "sha256": "sha256:3805f05c189c259a9cac938bf4e71bb440a95f2892b669645e029c0992233589"
+    },
+    {
+      "path": "skills/opl-medcast/agent/tools/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/tools/README.md",
+      "sha256": "sha256:d85dcd3fd14b963e705d8b57236741f614fe256aed8907c01c8e106a02040486"
+    },
+    {
+      "path": "skills/opl-medcast/agent/tools/domain_affordances.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/agent/tools/domain_affordances.md",
+      "sha256": "sha256:ff383b962b3012658f7c1486a8f4cc49aba74cd3fc99caa9f49a1f72a40c0e0a"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/action_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/action_catalog.json",
+      "sha256": "sha256:cf21398a01950b3478c4094b03243cf79dd192f54fc504653ac51b764d5baa4e"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/artifact_locator_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/artifact_locator_contract.json",
+      "sha256": "sha256:26f04acdb22cbc3fbfb49c4d793121ce391abb4cd743b6ae6b4feb70769a17c6"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/capability_map.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/capability_map.json",
+      "sha256": "sha256:6721884f66ea7355ff594210175f8adc4e37c9ed848ed8cd9ea05a15fe9b32b1"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/domain_descriptor.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/domain_descriptor.json",
+      "sha256": "sha256:b0875afc5b54829c7b385b269dbf68634a72f108eadb4782af88c21682cae638"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/domain_handler_registry.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/domain_handler_registry.json",
+      "sha256": "sha256:3fbd5b938cf5340917051af0e470965b8920d60ec485a6a0ccd4c4374b22f33f"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/foundry_agent_series.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/foundry_agent_series.json",
+      "sha256": "sha256:461af837967b65f7936a6c108f357e62a38704141dbf62d1b9949da5f524530b"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/functional_privatization_audit.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/functional_privatization_audit.json",
+      "sha256": "sha256:7cfce2a939dbfa39f4d91d7174f31ece122caeb588dff14101cddef550165722"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/generated_surface_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/generated_surface_handoff.json",
+      "sha256": "sha256:60e8cc5bdef396117d1476bc6b7f5ddae0f1629f9b1c0df139ecb0a6c5d1a344"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/memory_descriptor.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/memory_descriptor.json",
+      "sha256": "sha256:20f91143e44c0bdd572481b94cd3f5772d42e1f48e1a1fe62c67c5df2e1a2cb6"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/opl_agent_package_manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/opl_agent_package_manifest.json",
+      "sha256": "sha256:957a22da6f6c72f4f88132a5802ee98d93159369aa6ca355f6b37e63d4c419a6"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/owner_receipt_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/owner_receipt_contract.json",
+      "sha256": "sha256:11479b27b9994fdf46f04c6b037fd881a7191b67224f6015826b8f5e29f59eea"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/pack_compiler_input.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/pack_compiler_input.json",
+      "sha256": "sha256:753277844b7a80deb7054730cfcda154dfaf95271a121817e7d0ab73dd29bc50"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/stage_artifact_kernel_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/stage_artifact_kernel_adoption.json",
+      "sha256": "sha256:77ae29bbff1178b24e260283df9b52d8948131959c1698d0fa6965b24f5e387d"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/stage_operating_principles.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/stage_operating_principles.json",
+      "sha256": "sha256:0e946a2039773fa49b46b310c6510bd3280df1ee77ce22d0d97797e4165ce9df"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/stage_quality_cycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/stage_quality_cycle_policy.json",
+      "sha256": "sha256:cac87dcf693f51db5fe4ef4892b3bdc4209bbb2b49dc747e39614ccf1cd9a196"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/stage_run_canary_evidence.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/stage_run_canary_evidence.json",
+      "sha256": "sha256:5cddd2c949de5b7a98e92b0aa602e49d8fb94a4d3c594065eea503a6292f3c29"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/stage_run_kernel_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/stage_run_kernel_profile.json",
+      "sha256": "sha256:9c714df923574e06ff80dc2491e5d5901fe76734aa05f2fc7d042454e8cf3eca"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/standard-agent-principles-adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/standard-agent-principles-adoption.json",
+      "sha256": "sha256:725c7f1799b8c5852fcda1e1a9ceff070ffd8cd47db93d5e8568d11a9797189c"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/workflow.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/workflow.input.schema.json",
+      "sha256": "sha256:0a543e91307b56827155bff7059d4e951bfdbe25117c7cb2e20713aaa531014e"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/workflow.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/workflow.output.schema.json",
+      "sha256": "sha256:a130abd0934fb1cc90835080225c35bbd3ec9553dbd469ab3aabf1cec6da5bb2"
+    },
+    {
+      "path": "skills/opl-medcast/contracts/workspace_lifecycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/contracts/workspace_lifecycle_policy.json",
+      "sha256": "sha256:3162c327ef6f3623957ecf19c372d24781c9c8f2f6a5635b1f3294153ecd333d"
+    },
+    {
+      "path": "skills/opl-medcast/docs/architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/architecture.md",
+      "sha256": "sha256:613d0d323847d7b4c365231ebe449716c50fbb0495bd3c62858ab45185347f42"
+    },
+    {
+      "path": "skills/opl-medcast/docs/backend-sop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/backend-sop.md",
+      "sha256": "sha256:70e11c5da207e7c907bb32a081b881cf38690f7ad3e66104702431600a6fbb01"
+    },
+    {
+      "path": "skills/opl-medcast/docs/decisions.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/decisions.md",
+      "sha256": "sha256:5757204dfef18c4d15470112ffb2de45b1ea0f3f700051c3c2061d8163bbeeb2"
+    },
+    {
+      "path": "skills/opl-medcast/docs/delivery-sop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/delivery-sop.md",
+      "sha256": "sha256:5ee96e8bb8d90e60985a3290a606996f8e9f3980a6915263ee4e75fb8e1a9e2d"
+    },
+    {
+      "path": "skills/opl-medcast/docs/installation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/installation.md",
+      "sha256": "sha256:2d6b7080fc6e23f2c4500b8bf37c7c2b25affab3d04b791cd257d0d0cc2dced6"
+    },
+    {
+      "path": "skills/opl-medcast/docs/invariants.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/invariants.md",
+      "sha256": "sha256:3a8c701e72c1cb81b310d623f8d23951946302c16f976e7fe164f72fdf08250d"
+    },
+    {
+      "path": "skills/opl-medcast/docs/keyframe-library.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/keyframe-library.md",
+      "sha256": "sha256:0aa6f7618483563e387d2ece257940576c8dfc3477ec928714dbd85fc1e8811e"
+    },
+    {
+      "path": "skills/opl-medcast/docs/production-sop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/production-sop.md",
+      "sha256": "sha256:88bc667f6cdbb6dabeac6d7f020e02177c67d30c23dcc5e3b38cde00b21b97df"
+    },
+    {
+      "path": "skills/opl-medcast/docs/project.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/project.md",
+      "sha256": "sha256:fa8f3474002a0381ac93b2212add51d2710ecf01f365586b88a51cb0b046cb9d"
+    },
+    {
+      "path": "skills/opl-medcast/docs/provenance.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/provenance.md",
+      "sha256": "sha256:458b9526689b87c496cfb73c1647a5a948eef61ef93311e9806d422157059fc9"
+    },
+    {
+      "path": "skills/opl-medcast/docs/recovery-sop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/recovery-sop.md",
+      "sha256": "sha256:f2be1642523a00041e9e10b3b2d800f80c9e2fa8e03cb211f9b45354651698e6"
+    },
+    {
+      "path": "skills/opl-medcast/docs/status.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/status.md",
+      "sha256": "sha256:237ecbcbbea47f3900df5934b3ea1b00d39c3f2cfcca2559bbe5bf98236a37b0"
+    },
+    {
+      "path": "skills/opl-medcast/docs/visual-review-sop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/visual-review-sop.md",
+      "sha256": "sha256:0b39ea3d8ebc12a1d04eb311b579b6ac2a82e1e8dea49c80e62aa7fe12dbd43d"
+    },
+    {
+      "path": "skills/opl-medcast/docs/workspace-adapter.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/docs/workspace-adapter.md",
+      "sha256": "sha256:93df158a3c5becfcd685ed85f5b1fe0a2a93d908ea761e786c859143b3c3b99a"
+    },
+    {
+      "path": "skills/opl-medcast/runtime/authority_functions/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/runtime/authority_functions/README.md",
+      "sha256": "sha256:f7e82551060f9708b79868dc1ce7b830bed913694c532a13a972118d02c4f01d"
+    },
+    {
+      "path": "skills/opl-medcast/runtime/fixtures/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/runtime/fixtures/README.md",
+      "sha256": "sha256:93302246b9220462f97009d76bb914970d2da78288979d6363b3fa0209b22546"
+    },
+    {
+      "path": "skills/opl-medcast/runtime/native_helpers/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/runtime/native_helpers/README.md",
+      "sha256": "sha256:b9dc1e2332debabb01d8477233df27f094c18d46494fd5ca79f20d0a6e919c01"
+    },
+    {
+      "path": "skills/opl-medcast/runtime/native_helpers/medcast.native-helper-probe.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/runtime/native_helpers/medcast.native-helper-probe.json",
+      "sha256": "sha256:8c0413f55128b941efc8db746e385b4623a6bebbc4556b5da85ea1472d338be1"
+    },
+    {
+      "path": "skills/opl-medcast/runtime/native_helpers/medcast.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-medcast/fa092c75facc7fcf0dd4f458b7132b8cffbaa87c/plugins/opl-medcast/skills/opl-medcast/runtime/native_helpers/medcast.py",
+      "sha256": "sha256:14509fce539ab4b9027b42e938b192b70ce504d70981c3b8c071e69184bbd25e"
+    }
+  ]
+}

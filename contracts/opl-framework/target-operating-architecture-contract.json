@@ -773,13 +773,7 @@
     },
     "default_owner_route_policy": {
       "surface_kind": "foundry_agent_default_owner_route_policy",
-      "applies_to_agent_ids": [
-        "mas",
-        "mag",
-        "rca",
-        "oma",
-        "obf"
-      ],
+      "applies_to_registry_ref": "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
       "default_route_root": "current_owner_delta",
       "default_execution_resource": "StageRun",
       "generated_surface_entrypoints": [

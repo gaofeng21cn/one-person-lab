@@ -1,0 +1,107 @@
+{
+  "surface_kind": "opl_agent_package_manifest.v1",
+  "agent_id": "opl-medcast",
+  "package_id": "opl-medcast",
+  "display_name": "OPL Med Cast",
+  "publisher": "one-person-lab",
+  "version": "0.1.2",
+  "source": "first_party",
+  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
+  "codex_surface": {
+    "plugin_id": "opl-medcast",
+    "standalone_distribution": "generated_carrier_surface",
+    "required_skill_ids": [
+      "opl-medcast"
+    ],
+    "bundled_capability_package_ids": [],
+    "user_install_action_count": 1,
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "opl-medcast@opl-medcast",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/opl-medcast",
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/opl-medcast:latest-stable"
+    },
+    "plugin_payload_manifest_url": "payloads/opl-medcast-0.1.2.json",
+    "carrier_source_commit": "fa092c75facc7fcf0dd4f458b7132b8cffbaa87c"
+  },
+  "dependency_profiles": [],
+  "capability_dependencies": [],
+  "source_repo": "https://github.com/gaofeng21cn/opl-medcast.git",
+  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "OPL Med Cast",
+      "en-US": "OPL Med Cast"
+    },
+    "description_i18n": {
+      "zh-CN": "医学科普视频规划、制作、视听复核与关键帧资产整理。",
+      "en-US": "Medical education video planning, production, audiovisual review, and keyframe curation."
+    },
+    "session_routing_summary_i18n": {
+      "en-US": "Plan evidence-based medical education videos, direct their stories, review audiovisual quality, and curate reusable keyframes.",
+      "zh-CN": "规划循证医学科普视频，设计叙事与镜头，复核视听质量并整理可复用关键帧。"
+    },
+    "home_shortcuts": []
+  },
+  "publication_projection_order": 60,
+  "publication_source": {
+    "owner_package_manifest_ref": "contracts/opl_agent_package_manifest.json",
+    "owner_plugin_manifest_ref": "plugins/opl-medcast/plugin.json"
+  },
+  "package_core": {
+    "core_kind": "opl_agent_package_core",
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "content_identity_fields": [
+      "manifest_sha256",
+      "payload_digest_ref",
+      "required_skill_pack_lock_refs"
+    ],
+    "dependency_source": "manifest_declared_capability_dependencies",
+    "exposure_owner": "opl_connect_agent_package_registry"
+  },
+  "runtime_source_carrier": {
+    "carrier_kind": "opl_managed_module_source",
+    "module_id": "opl-medcast"
+  },
+  "carrier_adapters": [
+    {
+      "adapter_kind": "codex_plugin_carrier",
+      "carrier": "codex_plugin",
+      "source_surface": "codex_surface",
+      "projection_role": "package_carrier_adapter",
+      "owns_package_core": false,
+      "owns_domain_truth": false
+    }
+  ],
+  "opl_managed_surface": {
+    "package_shape": "thin_agent_package",
+    "dependency_resolution": "managed_dependency_graph",
+    "dependency_update_policy": "independent_package_target",
+    "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
+  },
+  "standard_agent_descriptor_projection": {
+    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
+    "source_ref": "contracts/domain_descriptor.json",
+    "interface_source_ref": "contracts/domain_descriptor.json#/standard_agent_interface",
+    "domain_id": "medical_video",
+    "runtime_domain_id": "medical_video",
+    "explicit_aliases": [
+      "opl-medcast",
+      "OPL Med Cast",
+      "医学科普视频"
+    ],
+    "compatibility": {
+      "registry_domain_id": "medical_video",
+      "aliases": [],
+      "owner_aliases": [
+        "opl-medcast",
+        "medical_video"
+      ]
+    }
+  }
+}
