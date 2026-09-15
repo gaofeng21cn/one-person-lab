@@ -669,3 +669,5 @@ export async function createCordisFoundryDevComposition(options: {
     throw error;
   }
 }
+
+export { startCordisWorkbenchServicesHost } from './plugins/workbench-services/index.ts';
