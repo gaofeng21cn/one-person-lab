@@ -7,7 +7,7 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { sameMarketplaceSource } from '../../kernel/marketplace-source-identity.ts';
 import { gitMarketplaceRuntimeRoot, runtimeRootContainsDescriptor } from '../../kernel/git-marketplace-runtime-root.ts';
-import { acceptedConfiguredCodexPluginIds } from '../integration/system-installation/codex-plugin-registry.ts';
+import { acceptedConfiguredCodexPluginIds } from '../../kernel/codex-plugin-selector.ts';
 import {
   resolveStandardAgent,
   STANDARD_AGENT_SERIES_MEMBERSHIP,

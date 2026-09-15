@@ -11,6 +11,7 @@ import {
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../../kernel/standard-agent-registry.ts';
 import { OPL_CONNECT_MCP_SERVER_ID } from '../opl-connect-mcp-tools.ts';
+export { acceptedConfiguredCodexPluginIds } from '../../../kernel/codex-plugin-selector.ts';
 
 export type CodexPluginRegistryPackId = string;
 
@@ -273,15 +274,6 @@ export function resolveCanonicalOplFamilyMarketplaceId(packageId: string, plugin
 }
 
 /** A package declares its distribution selector; OPL may install its canonical local wrapper. */
-export function acceptedConfiguredCodexPluginIds(packageId: string, declaredPluginId: string) {
-  const pluginName = declaredPluginId.split('@', 1)[0];
-  const marketplaceId = resolveCanonicalOplFamilyMarketplaceId(packageId, pluginName);
-  return new Set([
-    declaredPluginId,
-    ...(marketplaceId ? [`${pluginName}@${marketplaceId}`] : []),
-  ]);
-}
-
 export function removeSupersededOplFamilyCodexConfigTables(
   text: string,
   packageId: string,
