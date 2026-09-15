@@ -4,7 +4,7 @@
   "package_id": "opl-medcast",
   "display_name": "OPL Med Cast",
   "publisher": "one-person-lab",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
@@ -22,8 +22,8 @@
       "marketplace_source": "gaofeng21cn/opl-medcast",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/opl-medcast:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/opl-medcast-0.1.2.json",
-    "carrier_source_commit": "fa092c75facc7fcf0dd4f458b7132b8cffbaa87c"
+    "plugin_payload_manifest_url": "payloads/opl-medcast-0.1.3.json",
+    "carrier_source_commit": "c1bfee6541eaa061a3b71b7436d265b02c3e877a"
   },
   "dependency_profiles": [],
   "capability_dependencies": [],
