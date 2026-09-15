@@ -475,7 +475,7 @@ export function setConfiguredPluginEnabled(input: {
   }
   return replacePluginEnabledTable({
     configPath: path.join(configuredCodexHome(input.env), 'config.toml'),
-    pluginId: input.descriptor.carrier.pluginId,
+    pluginId: selection.entry.pluginId,
     enabled: input.enabled,
     beforeConfigReplace: input.beforeConfigReplace,
   });

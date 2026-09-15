@@ -51,7 +51,8 @@
     "legacy_managed_checkout_fallback_allowed": false,
     "moving_pointer_is_install_truth": false,
     "origin_main_is_implicit_launch_target": false,
-    "failure_policy": "fail_closed_before_handler_or_stage_launch"
+    "failure_policy": "fail_closed_before_handler_or_stage_launch",
+    "selector_identity_policy": {"declared_selector_owner": "installed_owner_descriptor", "accepted_physical_selectors": "declared_selector_or_registry_derived_canonical_local_wrapper", "acceptance_resolver": "acceptedConfiguredCodexPluginIds", "enabled_observed_source_count": 1, "disabled_observations_are_launch_sources": false, "installed_identity_must_equal_selected_observed_identity": true, "runtime_provenance_selector": "selected_physical_selector", "arbitrary_same_name_marketplace_allowed": false}
   },
   "domain_pack_action_abi": {
     "catalog_ref": "contracts/action_catalog.json",

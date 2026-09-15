@@ -1,5 +1,5 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
-import { resolveCanonicalOplFamilyMarketplaceId } from '../system-installation/codex-plugin-registry.ts';
+import { acceptedConfiguredCodexPluginIds } from '../system-installation/codex-plugin-registry.ts';
 import {
   commandFailure,
   configuredPackageCarrierEnv,
@@ -233,14 +233,10 @@ function configuredPluginSelection(input: {
 }) {
   const pluginId = input.descriptor.carrier.pluginId;
   const pluginName = pluginBareName(pluginId);
-  const canonicalMarketplaceId = resolveCanonicalOplFamilyMarketplaceId(
+  const acceptedPluginIds = acceptedConfiguredCodexPluginIds(
     input.descriptor.packageId,
-    pluginName,
-  );
-  const acceptedPluginIds = new Set([
     pluginId,
-    ...(canonicalMarketplaceId ? [`${pluginName}@${canonicalMarketplaceId}`] : []),
-  ]);
+  );
   const installedSameName = input.entries.filter(
     (candidate) => candidate.installed && pluginBareName(candidate.pluginId) === pluginName,
   );

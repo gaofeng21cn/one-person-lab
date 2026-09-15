@@ -7,6 +7,7 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { sameMarketplaceSource } from '../../kernel/marketplace-source-identity.ts';
 import { gitMarketplaceRuntimeRoot, runtimeRootContainsDescriptor } from '../../kernel/git-marketplace-runtime-root.ts';
+import { acceptedConfiguredCodexPluginIds } from '../integration/system-installation/codex-plugin-registry.ts';
 import {
   resolveStandardAgent,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
@@ -218,12 +219,15 @@ function nativeRuntimeFromStatus(
   );
   const installedVersion = text(configured.installed_version, 'configured_carrier.installed_version');
   const observedSources = Array.isArray(carrier.observed_sources) ? carrier.observed_sources : [];
-  const observed = observedSources.length === 1
-    ? record(observedSources[0], 'configured_carrier.carrier.observed_sources[0]')
+  const enabledSources = observedSources.filter((source) => isRecord(source) && source.enabled === true);
+  const observed = enabledSources.length === 1
+    ? record(enabledSources[0], 'configured_carrier.carrier.observed_sources[selected]')
     : blocked('Standard Agent native carrier requires one exact observed source.', {
         package_id: packageId,
         observed_source_count: observedSources.length,
       });
+  const observedPluginId = text(observed.plugin_id, 'configured_carrier.carrier.observed_sources[selected].plugin_id');
+  const acceptedPluginIds = acceptedConfiguredCodexPluginIds(packageId, descriptor.plugin_selector);
   const sourceTreeSha256 = sha256Digest(
     observed.source_tree_sha256,
     'configured_carrier.carrier.observed_sources[0].source_tree_sha256',
@@ -254,7 +258,7 @@ function nativeRuntimeFromStatus(
     )
     || !installedVersionMatchesPackage(installedVersion, descriptor.package_version)
     || !pathsMatch(observedSourcePath, pluginSourcePath)
-    || observed.plugin_id !== pluginSelector
+    || !acceptedPluginIds.has(observedPluginId)
     || observed.installed_version !== installedVersion
     || observed.enabled !== true
     || !marketplaceMatches(
@@ -265,7 +269,7 @@ function nativeRuntimeFromStatus(
     )
     || configured.publication_ref !== descriptor.publication_ref
     || installedCarrier.lifecycle_authority !== 'carrier_owned'
-    || installedCarrier.identity !== pluginSelector
+    || installedCarrier.identity !== observedPluginId
     || installedCarrier.version !== installedVersion
     || installedCarrier.enabled !== true
     || !pathsMatch(text(installedCarrier.source_ref, 'installed_carrier_readback.source_ref'), pluginSourcePath)
@@ -344,6 +348,7 @@ function nativeRuntimeFromStatus(
   }
   return {
     ...descriptor,
+    plugin_selector: observedPluginId,
     carrier_installed_version: installedVersion,
     carrier_plugin_source_path: pluginSourcePath,
     plugin_source_path: runtimeCheckoutRoot,

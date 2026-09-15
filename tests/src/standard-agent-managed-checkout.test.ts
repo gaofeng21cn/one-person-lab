@@ -10,6 +10,8 @@ import {
   resolveStandardAgentManagedCheckout as resolveStandardAgentManagedCheckoutProduction,
 } from '../../src/adapters/execution/standard-agent-managed-checkout.ts';
 
+import { loadStandardAgentRegistry, STANDARD_AGENT_SERIES_MEMBERSHIP } from '../../src/kernel/standard-agent-registry.ts';
+
 const TREE_SHA256 = 'a'.repeat(64);
 
 test('production Foundry reaches composed Connect discovery through real managed workspace initialization', async () => {
@@ -424,3 +426,61 @@ test('managed checkout resolver rejects a plugin-subdirectory descriptor instead
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+// Exercise the same declared-versus-installed identity pair for every discovered Standard Agent.
+for (const agent of loadStandardAgentRegistry().filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)) {
+  test(`managed checkout admits the canonical local wrapper for ${agent.agent_id}`, async () => {
+    const { root, workspaceRoot, checkoutRoot } = fixture();
+    try {
+      const rewrite = (value: unknown) => JSON.parse(JSON.stringify(value)
+        .replaceAll('med-autoscience@med-autoscience', `${agent.plugin_name}@${agent.project}`)
+        .replaceAll('gaofeng21cn/med-autoscience', `gaofeng21cn/${agent.project}`)
+        .replaceAll('one-person-lab-packages/mas:', `one-person-lab-packages/${agent.agent_id}:`)
+        .replaceAll('"mas"', JSON.stringify(agent.agent_id)));
+      const manifestPath = path.join(checkoutRoot, 'opl-package.json');
+      const manifest = rewrite(JSON.parse(fs.readFileSync(manifestPath, 'utf8')));
+      manifest.codex_surface.plugin_id = agent.plugin_name;
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+      const packageStatus = rewrite(status(checkoutRoot));
+      const actualSelector = `${agent.plugin_name}@${agent.project}-local`;
+      const configured = packageStatus.configured_carrier;
+      configured.carrier.observed_sources[0].plugin_id = actualSelector;
+      configured.carrier.observed_sources[0].marketplace_source = root;
+      packageStatus.installed_carrier_readback.kind = 'local';
+      packageStatus.installed_carrier_readback.identity = actualSelector;
+      const result = await resolveStandardAgentManagedCheckout({
+        domainId: agent.agent_id, workspaceRoot,
+        packageReadiness: packageReadiness(packageStatus),
+      });
+      assert.equal(result.native_runtime.plugin_selector, actualSelector);
+      assert.equal(result.native_runtime.manifest_path, fs.realpathSync(manifestPath));
+
+      // A disabled historical copy is visible, but is not a second launch source.
+      configured.carrier.observed_sources.push({
+        ...configured.carrier.observed_sources[0], plugin_id: `${agent.plugin_name}@historical`, enabled: false,
+      });
+      await resolveStandardAgentManagedCheckout({domainId: agent.agent_id, workspaceRoot,
+        packageReadiness: packageReadiness(packageStatus)});
+      configured.carrier.observed_sources[1].enabled = true;
+      await assert.rejects(resolveStandardAgentManagedCheckout({domainId: agent.agent_id, workspaceRoot,
+        packageReadiness: packageReadiness(packageStatus)}), /one exact observed source/);
+      configured.carrier.observed_sources.pop();
+
+      // Same bare name plus an arbitrary local suffix is not an authorized alias.
+      configured.carrier.observed_sources[0].plugin_id = `${agent.plugin_name}@unknown-local`;
+      packageStatus.installed_carrier_readback.identity = `${agent.plugin_name}@unknown-local`;
+      await assert.rejects(resolveStandardAgentManagedCheckout({domainId: agent.agent_id, workspaceRoot,
+        packageReadiness: packageReadiness(packageStatus)}), /identities disagree/);
+      configured.carrier.observed_sources[0].plugin_id = actualSelector;
+      // Physical identity, version, source, and descriptor binding still must agree.
+      await assert.rejects(resolveStandardAgentManagedCheckout({domainId: agent.agent_id, workspaceRoot,
+        packageReadiness: packageReadiness(packageStatus)}), /identities disagree/);
+      packageStatus.installed_carrier_readback.identity = actualSelector;
+      configured.carrier.observed_sources[0].installed_version = '99.0.0';
+      await assert.rejects(resolveStandardAgentManagedCheckout({domainId: agent.agent_id, workspaceRoot,
+        packageReadiness: packageReadiness(packageStatus)}), /identities disagree/);
+    } finally {
+      fs.rmSync(root, {recursive: true, force: true});
+    }
+  });
+}

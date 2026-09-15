@@ -972,3 +972,48 @@ test('preloaded native status reader does not parse or replace a corrupt legacy 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('canonical local wrapper enable and disable target the installed selector, not the distribution selector', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-local-selector-toggle-'));
+  const configHome = path.join(root, 'codex');
+  const source = path.join(root, 'source');
+  const configPath = path.join(configHome, 'config.toml');
+  const actualSelector = 'med-autoscience@med-autoscience-local';
+  const declaredSelector = 'med-autoscience@med-autoscience';
+  try {
+    fs.mkdirSync(configHome);
+    fs.mkdirSync(path.join(source, '.codex-plugin'), {recursive: true});
+    fs.mkdirSync(path.join(source, 'skills', 'med-autoscience'), {recursive: true});
+    fs.writeFileSync(path.join(source, '.codex-plugin/plugin.json'), JSON.stringify({
+      name: 'med-autoscience', version: '0.2.26', skills: './skills/',
+    }));
+    fs.writeFileSync(path.join(source, 'skills/med-autoscience/SKILL.md'), '# MAS\n');
+    fs.writeFileSync(configPath, `[plugins."unrelated@other"]\nenabled = true\n[plugins."${actualSelector}"]\nenabled = true\n`);
+    const wrapperDescriptor = {
+      packageId: 'mas',
+      carrier: {kind: 'codex_plugin_manager' as const, pluginId: declaredSelector, marketplaceSource: null},
+      executor: {route: 'codex_cli' as const, requiredSkillIds: ['med-autoscience']},
+      publicationRef: null,
+    };
+    const runner: CodexPluginCommandRunner = ({args}) => {
+      assert.deepEqual(args, ['plugin', 'list', '--json']);
+      const config = fs.readFileSync(configPath, 'utf8');
+      return {status: 0, stderr: '', error: null, stdout: pluginList([{
+        pluginId: actualSelector, version: '0.2.26', sourcePath: source,
+        marketplaceSource: root,
+        enabled: config.includes(`[plugins."${actualSelector}"]\nenabled = true`),
+      }])};
+    };
+    const disabled = runConfiguredCodexPluginCarrier({descriptor: wrapperDescriptor, action: 'disable', runner, env: {CODEX_HOME: configHome}});
+    assert.equal(disabled.enabled, false);
+    assert.equal(disabled.executor.status, 'attention_needed');
+    const enabled = runConfiguredCodexPluginCarrier({descriptor: wrapperDescriptor, action: 'enable', runner, env: {CODEX_HOME: configHome}});
+    assert.equal(enabled.enabled, true);
+    assert.equal(enabled.executor.status, 'callable');
+    const result = fs.readFileSync(configPath, 'utf8');
+    assert.equal(result.includes(`[plugins."${declaredSelector}"]`), false);
+    assert.ok(result.includes('[plugins."unrelated@other"]\nenabled = true'));
+  } finally {
+    fs.rmSync(root, {recursive: true, force: true});
+  }
+});

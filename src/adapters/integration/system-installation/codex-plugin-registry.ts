@@ -272,6 +272,16 @@ export function resolveCanonicalOplFamilyMarketplaceId(packageId: string, plugin
   return resolveFamilyPluginSpec(packageId, pluginId)?.marketplace_id ?? null;
 }
 
+/** A package declares its distribution selector; OPL may install its canonical local wrapper. */
+export function acceptedConfiguredCodexPluginIds(packageId: string, declaredPluginId: string) {
+  const pluginName = declaredPluginId.split('@', 1)[0];
+  const marketplaceId = resolveCanonicalOplFamilyMarketplaceId(packageId, pluginName);
+  return new Set([
+    declaredPluginId,
+    ...(marketplaceId ? [`${pluginName}@${marketplaceId}`] : []),
+  ]);
+}
+
 export function removeSupersededOplFamilyCodexConfigTables(
   text: string,
   packageId: string,
