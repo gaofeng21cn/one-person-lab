@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 import { Client, Connection, ScheduleOverlapPolicy, type ScheduleSpec } from '@temporalio/client';
 import { defaultPayloadConverter } from '@temporalio/common';
 import { NativeConnection, Worker } from '@temporalio/worker';
-import { familyRuntimePaths } from '../../../adapters/execution/family-runtime-store.ts';
 import { resolveTemporalAddressForPaths } from '../../../adapters/execution/family-runtime-temporal-service.ts';
 import { resolveTemporalClientNamespace } from '../../../adapters/execution/family-runtime-temporal-client.ts';
 import type { TaskDefinition, WorkbenchTaskExecutor } from './types.ts';
@@ -19,7 +18,7 @@ export async function validateTask(input: Record<string, unknown>): Promise<Task
   if (typeof task.prompt !== 'string' || !task.prompt.trim() || task.prompt.length > 32_000) throw Error('Task prompt is required (maximum 32000 characters).');
   if (!path.isAbsolute(task.cwd ?? '') || !(await stat(task.cwd)).isDirectory()) throw Error('Select an existing absolute workspace directory.');
   task.cwd = await realpath(task.cwd);
-  if (![':read-only', ':workspace-write'].includes(task.permissions)) throw Error('Scheduled tasks require read-only or workspace-write permissions.');
+  if (![':read-only', ':workspace'].includes(task.permissions)) throw Error('Scheduled tasks require read-only or workspace-write permissions.');
   if (!Number.isInteger(task.timeoutMinutes) || task.timeoutMinutes < 1 || task.timeoutMinutes > 120) throw Error('Timeout must be 1–120 minutes.');
   if (task.model !== undefined && (typeof task.model !== 'string' || task.model.length > 200)) throw Error('Invalid model.');
   if (task.reasoningEffort !== undefined && !['low', 'medium', 'high', 'xhigh', 'max'].includes(task.reasoningEffort)) throw Error('Invalid reasoning effort.');
@@ -62,7 +61,11 @@ export class PersonalTasks {
   private connecting?: Promise<void>;
   private closed = false;
   readonly prefix: string;
-  constructor(private executor: WorkbenchTaskExecutor, private memoryHome: string, private env: NodeJS.ProcessEnv) {
+  private executor: WorkbenchTaskExecutor;
+  private env: NodeJS.ProcessEnv;
+  private stateDirectory: string;
+  constructor(executor: WorkbenchTaskExecutor, memoryHome: string, env: NodeJS.ProcessEnv, stateDirectory: string) {
+    this.executor = executor; this.env = env; this.stateDirectory = stateDirectory;
     this.prefix = `opl-personal-${createHash('sha256').update(`${hostname()}:${path.resolve(memoryHome)}`).digest('hex').slice(0, 20)}-`;
   }
   async connect() {
@@ -75,7 +78,7 @@ export class PersonalTasks {
     this.status = 'loading';
     try {
       await this.stopWorker();
-      const paths = familyRuntimePaths();
+      const paths = { root: path.join(this.stateDirectory, 'family-runtime') };
       const address = resolveTemporalAddressForPaths(paths, this.env).address;
       if (!address) throw Error('Configure or start the existing Framework Temporal service, then refresh.');
       const namespace = resolveTemporalClientNamespace({ paths, addressOverride: address, env: this.env });
@@ -85,7 +88,7 @@ export class PersonalTasks {
       this.worker = await Worker.create({
         connection: this.native, namespace, taskQueue: this.prefix,
         workflowsPath: fileURLToPath(new URL('./workflows.js', import.meta.url)),
-        activities: this.executor, maxConcurrentActivityTaskExecutions: 4,
+        activities: { ...this.executor, executeTaskMutation: (operation: string, input: Record<string, unknown>) => this.performAction(operation, input, false) }, maxConcurrentActivityTaskExecutions: 4,
         shutdownGraceTime: '5 seconds', shutdownForceTime: '15 seconds',
       });
       this.workerRun = this.worker.run().catch(() => { this.status = 'unavailable'; this.reason = 'Task worker stopped. Refresh to reconnect; existing history is retained.'; });
@@ -108,7 +111,11 @@ export class PersonalTasks {
     await this.connect();
     if (!this.client || this.status !== 'available') throw Error(this.reason);
     try { return await this.client.withDeadline(Date.now() + 10_000, () => fn(this.client!)); }
-    catch (error) { throw error; }
+    catch (error) {
+      const code = (error as { code?: number; cause?: { code?: number } }).code ?? (error as { cause?: { code?: number } }).cause?.code;
+      if ([4, 14].includes(code ?? -1)) { this.status = 'unavailable'; this.reason = 'Temporal read or action failed. Refresh to reconnect; existing schedules are retained.'; }
+      throw error;
+    }
   }
   private id(id: unknown) {
     if (typeof id !== 'string' || !/^[a-z0-9-]{1,64}$/.test(id)) throw Error('Invalid task ID.');
@@ -145,6 +152,23 @@ export class PersonalTasks {
     });
   }
   async action(operation: string, input: Record<string, unknown>, dryRun: boolean) {
+    if (dryRun) return this.performAction(operation, input, true);
+    const id = this.id(input.id);
+    return this.use(async client => {
+      try {
+        const handle = await client.workflow.start('OplPersonalTaskMutationWorkflow', {
+          workflowId: `${id}-mutation`, taskQueue: this.prefix, args: [operation, input],
+          workflowExecutionTimeout: '30 seconds', retry: { maximumAttempts: 1 },
+        });
+        return await handle.result() as Record<string, unknown>;
+      } catch (error) {
+        if ((error as Error).name === 'WorkflowExecutionAlreadyStartedError') throw Error('Another operation is modifying this task. Refresh and retry.');
+        const cause = (error as { cause?: { message?: string; cause?: { message?: string } } }).cause;
+        throw Error(cause?.cause?.message ?? cause?.message ?? (error as Error).message);
+      }
+    });
+  }
+  private async performAction(operation: string, input: Record<string, unknown>, dryRun: boolean) {
     const scheduleId = this.id(input.id);
     if (!['task_create', 'task_update', 'task_pause', 'task_resume', 'task_delete', 'task_run'].includes(operation)) throw Error('Unsupported task operation.');
     const task = ['task_create', 'task_update'].includes(operation) ? await validateTask(input) : undefined;
@@ -177,6 +201,7 @@ export class PersonalTasks {
       } else {
         const next = { ...(task ?? previous), revision: previous.revision + 1, ...(operation === 'task_delete' ? { deleted: true } : {}) };
         schedule.action!.startWorkflow!.input = { payloads: [defaultPayloadConverter.toPayload(next)!] };
+        schedule.action!.startWorkflow!.memo = { fields: { taskId: defaultPayloadConverter.toPayload(next.id)!, title: defaultPayloadConverter.toPayload(next.title)! } };
         if (task) {
           const spec = scheduleSpec(task);
           schedule.spec = { timezoneName: spec.timezone, cronString: spec.cronExpressions, interval: spec.intervals?.map(i => ({ interval: { seconds: Long.fromNumber(Number(i.every) / 1000) } })) };

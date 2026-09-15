@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { realpath } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
+import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { PersonalTasks } from './tasks.ts';
 import { WorkbenchResources } from './resources.ts';
 import type { WorkbenchTaskExecutor } from './types.ts';
@@ -21,11 +22,16 @@ export async function startCordisWorkbenchServicesHost(options: WorkbenchHostOpt
   const home = env.HOME || homedir();
   const codexHome = path.resolve(env.CODEX_HOME || path.join(home, '.codex'));
   const canonicalHome = await realpath(codexHome).catch(() => codexHome);
+  const stateDirectory = env.OPL_STATE_DIR ? path.resolve(env.OPL_STATE_DIR) : resolveOplStatePaths({ dataDir: env.OPL_DATA_DIR }).state_dir;
   const resources = new WorkbenchResources(path.join(canonicalHome, 'memories'), [
     { id: 'codex_logs', path: path.join(canonicalHome, 'log'), owner: 'Codex' },
     ...(env.OPL_STUDIO_LOG_ROOT ? [{ id: 'app_logs', path: path.resolve(env.OPL_STUDIO_LOG_ROOT), owner: 'OPL App carrier' }] : []),
+  ], [
+    { id: 'codex_home', path: canonicalHome, owner: 'Codex' },
+    { id: 'framework_state', path: stateDirectory, owner: 'OPL Framework' },
+    ...(env.OPL_STUDIO_DATA_ROOT ? [{ id: 'app_data', path: path.resolve(env.OPL_STUDIO_DATA_ROOT), owner: 'OPL App carrier' }] : []),
   ]);
-  const tasks = new PersonalTasks(options.executor, canonicalHome, env);
+  const tasks = new PersonalTasks(options.executor, canonicalHome, env, stateDirectory);
   const resourceReads = { memory: { status: 'not_read', reason: 'Open Memory to read current files.' }, storage: { status: 'not_read', reason: 'Open Storage to read current inventory.' } };
   const previews = new Map<string, { fingerprint: string; expires: number; result: Record<string, unknown> }>();
   const dispatch = async (operation: string, input: Record<string, unknown>, dryRun: boolean, preview?: Record<string, unknown>) => {

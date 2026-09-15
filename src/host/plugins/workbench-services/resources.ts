@@ -25,7 +25,12 @@ export class WorkbenchResources {
     }
   }
   private previews = new Map<string, { expires: number; files: InventoryFile[] }>();
-  constructor(readonly memoryRoot: string, readonly cleanupRoots: CleanupRoot[]) {}
+  readonly memoryRoot: string;
+  readonly cleanupRoots: CleanupRoot[];
+  readonly inventoryRoots: CleanupRoot[];
+  constructor(memoryRoot: string, cleanupRoots: CleanupRoot[], inventoryRoots: CleanupRoot[] = []) {
+    this.memoryRoot = memoryRoot; this.cleanupRoots = cleanupRoots; this.inventoryRoots = inventoryRoots;
+  }
 
   private async files(root: string, category: string, notesOnly = false): Promise<InventoryFile[]> {
     await this.assertRoot(root);
@@ -118,6 +123,25 @@ export class WorkbenchResources {
     return { status: 'executed', id: input.id };
   }
 
+  private async summarize(root: CleanupRoot) {
+    let bytes = 0; let count = 0; let truncated = false;
+    const walk = async (directory: string, depth: number) => {
+      if (depth > 6 || count >= 6000) { truncated = true; return; }
+      await this.assertRoot(directory);
+      for (const entry of await readdir(directory, { withFileTypes: true })) {
+        if (count >= 6000) { truncated = true; break; }
+        if (entry.isSymbolicLink()) continue;
+        if (entry.isDirectory()) await walk(path.join(directory, entry.name), depth + 1);
+        else if (entry.isFile()) { const stat = await lstat(path.join(directory, entry.name)); if (!stat.isSymbolicLink()) { bytes += stat.size; count++; } }
+      }
+    };
+    try {
+      if (!existsSync(root.path)) return { id: root.id, owner: root.owner, status: 'not_configured', bytes: null, cleanupAllowed: false };
+      await walk(root.path, 0);
+      return { id: root.id, owner: root.owner, status: truncated ? 'partial' : 'available', bytes, fileCount: count, cleanupAllowed: false, truncated };
+    } catch { return { id: root.id, owner: root.owner, status: 'read_error', bytes: null, cleanupAllowed: false }; }
+  }
+
   async inventory() {
     const categories = await Promise.all(this.cleanupRoots.map(async root => {
       const files = await this.files(root.path, root.id);
@@ -125,7 +149,7 @@ export class WorkbenchResources {
       const reclaimable = files.filter(file => Date.parse(file.modifiedAt) < Date.now() - 86400000);
       return { id: root.id, owner: root.owner, bytes: files.reduce((n, f) => n + f.bytes, 0), reclaimableBytes: reclaimable.reduce((n, f) => n + f.bytes, 0), files: reclaimable };
     }));
-    return { status: 'available', categories, exclusions: ['workspace', 'artifacts', 'credentials', 'sessions', 'memory', 'active_files', 'symbolic_links'] };
+    return { status: 'available', categories, protectedCategories: await Promise.all(this.inventoryRoots.map(root => this.summarize(root))), exclusions: ['workspace', 'artifacts', 'credentials', 'sessions', 'memory', 'active_files', 'symbolic_links'] };
   }
 
   async cleanupPreview(ids: string[]) {
@@ -159,8 +183,8 @@ export class WorkbenchResources {
       try {
         if ((await this.resolve(file.id, root.id, root.path)).revision !== file.revision) throw new Error('Inventory changed.');
         await unlink(target.file); removed.push(file.id);
-      } catch { return { status: 'partial', removed, reason: 'Inventory changed or a file could not be removed; inspect and preview again.' }; }
+      } catch { return { status: 'partial', removed, summary: `${removed.length} files removed before an error. Inspect the remaining inventory and preview again.`, reason: 'Inventory changed or a file could not be removed; inspect and preview again.' }; }
     }
-    return { status: 'executed', removed, owner: 'declared_log_cache_owners' };
+    return { status: 'executed', removed, summary: `${removed.length} inactive log files removed. Protected data was retained.`, owner: 'declared_log_cache_owners' };
   }
 }

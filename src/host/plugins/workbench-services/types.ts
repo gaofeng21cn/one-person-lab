@@ -5,7 +5,7 @@ export type TaskDefinition = {
   cwd: string;
   model?: string;
   reasoningEffort?: string;
-  permissions: ':read-only' | ':workspace-write';
+  permissions: ':read-only' | ':workspace';
   schedule: { kind: 'once' | 'daily' | 'weekly' | 'interval'; at?: string; time?: string; weekdays?: number[]; minutes?: number; timeZone: string };
   timeoutMinutes: number;
   revision: number;
@@ -13,8 +13,8 @@ export type TaskDefinition = {
 export type TaskRunRef = { threadId: string; turnId: string };
 export type TaskReadback = TaskRunRef & { status: string; summary?: string };
 export type WorkbenchTaskExecutor = {
-  createThread(task: TaskDefinition): Promise<{ threadId: string }>;
-  startTask(task: TaskDefinition, thread: { threadId: string }): Promise<TaskRunRef>;
+  createThread(task: TaskDefinition, scheduledAt: number): Promise<{ threadId: string; skipped?: boolean }>;
+  startTask(task: TaskDefinition, thread: { threadId: string }, scheduledAt: number): Promise<TaskRunRef>;
   readTask(ref: TaskRunRef): Promise<TaskReadback>;
   interruptTask(ref: TaskRunRef): Promise<unknown>;
 };

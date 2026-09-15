@@ -1,4 +1,4 @@
-import { ApplicationFailure, CancellationScope, defineQuery, isCancellation, proxyActivities, setHandler, sleep, workflowInfo } from '@temporalio/workflow';
+import { CancellationScope, defineQuery, isCancellation, proxyActivities, setHandler, sleep, workflowInfo } from '@temporalio/workflow';
 import type { TaskDefinition, TaskReadback, TaskRunRef, WorkbenchTaskExecutor } from './types.ts';
 
 const activity = proxyActivities<WorkbenchTaskExecutor>({ startToCloseTimeout: '60 seconds', retry: { maximumAttempts: 1 } });
@@ -11,10 +11,12 @@ export async function OplPersonalTaskWorkflow(task: TaskDefinition): Promise<Tas
   setHandler(personalTaskState, () => state);
   try {
     if (Date.now() - workflowInfo().startTime.getTime() > 300_000) return { threadId: '', turnId: '', status: 'skipped_late' };
-    const thread = await activity.createThread(task);
+    const scheduledAt = workflowInfo().startTime.getTime();
+    const thread = await activity.createThread(task, scheduledAt);
+    if (thread.skipped) return { threadId: '', turnId: '', status: 'skipped_late' };
     ref = { ...thread, turnId: '' };
     state = { ...ref, status: 'starting' };
-    ref = await activity.startTask(task, thread);
+    ref = await activity.startTask(task, thread, scheduledAt);
     state = { ...ref, status: 'running' };
     const deadline = Date.now() + task.timeoutMinutes * 60_000;
     while (Date.now() < deadline) {
@@ -30,4 +32,11 @@ export async function OplPersonalTaskWorkflow(task: TaskDefinition): Promise<Tas
     state = { threadId: ref?.threadId ?? '', turnId: ref?.turnId ?? '', status: isCancellation(error) ? 'cancelled' : 'failed' };
     return { threadId: ref?.threadId ?? '', turnId: ref?.turnId ?? '', status: isCancellation(error) ? 'cancelled' : 'failed', summary: 'Execution failed; inspect the canonical conversation. The task is not automatically replayed.' };
   }
+}
+
+// One active management workflow per task serializes writes across carrier instances.
+// Schedule Update conflict tokens are not enforced by all Temporal servers.
+const mutation = proxyActivities<{ executeTaskMutation(operation: string, input: Record<string, unknown>): Promise<Record<string, unknown>> }>({ startToCloseTimeout: '15 seconds', retry: { maximumAttempts: 1 } });
+export async function OplPersonalTaskMutationWorkflow(operation: string, input: Record<string, unknown>) {
+  return mutation.executeTaskMutation(operation, input);
 }
