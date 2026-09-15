@@ -21,7 +21,7 @@ on:
         required: true
         type: string
       expected_latest_stable_predecessor:
-        description: Exact latest-stable digest observed before dispatch, or none only when the tag is verified absent
+        description: Exact predecessor digest, verified none, or resolve-authenticated for a protected registry read
         required: true
         type: string
       publication_request_id:
@@ -47,7 +47,7 @@ on:
         required: true
         type: string
       expected_latest_stable_predecessor:
-        description: Exact latest-stable digest observed before dispatch, or none only when the tag is verified absent
+        description: Exact predecessor digest, verified none, or resolve-authenticated for a protected registry read
         required: true
         type: string
       publication_request_id:
@@ -134,7 +134,7 @@ jobs:
           [[ "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EXPECTED_OWNER_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EXPECTED_PACKAGE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          [[ "$EXPECTED_LATEST_STABLE_PREDECESSOR" == none || "$EXPECTED_LATEST_STABLE_PREDECESSOR" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$EXPECTED_LATEST_STABLE_PREDECESSOR" == none || "$EXPECTED_LATEST_STABLE_PREDECESSOR" == resolve-authenticated || "$EXPECTED_LATEST_STABLE_PREDECESSOR" =~ ^sha256:[0-9a-f]{64}$ ]]
           [[ "$PUBLICATION_REQUEST_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$ ]]
           [ "$(git rev-parse HEAD)" = "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" ]
           npm ci --ignore-scripts --no-audit --no-fund
@@ -195,6 +195,24 @@ jobs:
       - name: Authenticate protected Package publisher
         shell: bash
         run: echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Resolve predecessor with the protected Package credential
+        if: inputs.expected_latest_stable_predecessor == 'resolve-authenticated'
+        shell: bash
+        run: |
+          set -euo pipefail
+          descriptor="$RUNNER_TEMP/package-predecessor.json"
+          error_file="$RUNNER_TEMP/package-predecessor.error"
+          if oras manifest fetch --descriptor "${PACKAGE_IMAGE}:latest-stable" > "$descriptor" 2> "$error_file"; then
+            predecessor="$(jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))' "$descriptor")"
+          elif grep -Eiq 'manifest unknown|name unknown|not found|404' "$error_file"; then
+            predecessor=none
+          else
+            echo "::error::Authenticated Package predecessor read failed; publication is stopped."
+            cat "$error_file" >&2
+            exit 1
+          fi
+          echo "EXPECTED_LATEST_STABLE_PREDECESSOR=$predecessor" >> "$GITHUB_ENV"
 
       - name: Publish immutable Package and advance its channel
         shell: bash

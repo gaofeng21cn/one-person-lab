@@ -401,6 +401,40 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.doesNotMatch(workflow, /release-set|opl-app|opl-base/i);
 });
 
+test('authenticated predecessor resolution never converts denial into absence', () => {
+  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
+  const step = workflow.split('      - name: Resolve predecessor with the protected Package credential\n')[1]
+    .split('      - name: Publish immutable Package and advance its channel\n')[0];
+  const script = step.split('        run: |\n')[1].split('\n').map((line) => line.slice(10)).join('\n');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-predecessor-'));
+  try {
+    const bin = path.join(root, 'bin');
+    fs.mkdirSync(bin);
+    fs.writeFileSync(path.join(bin, 'oras'), `#!/usr/bin/env node
+const mode = process.env.PREDECESSOR_TEST_MODE;
+if (mode === 'present') console.log(JSON.stringify({ digest: 'sha256:' + 'a'.repeat(64) }));
+else if (mode === 'malformed') console.log(JSON.stringify({ digest: 'invalid' }));
+else { console.error(mode === 'missing' ? 'manifest unknown' : 'denied: requested access is denied'); process.exit(1); }
+`, { mode: 0o755 });
+    for (const mode of ['present', 'missing', 'denied', 'malformed']) {
+      const output = path.join(root, `env-${mode}`);
+      const result = spawnSync('bash', ['-c', script], {
+        encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`,
+          RUNNER_TEMP: root, GITHUB_ENV: output, PACKAGE_IMAGE: 'ghcr.io/example/new-agent',
+          PREDECESSOR_TEST_MODE: mode },
+      });
+      if (mode === 'present' || mode === 'missing') {
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(fs.readFileSync(output, 'utf8').trim(),
+          `EXPECTED_LATEST_STABLE_PREDECESSOR=${mode === 'missing' ? 'none' : 'sha256:' + 'a'.repeat(64)}`);
+      } else {
+        assert.notEqual(result.status, 0);
+        assert.equal(fs.existsSync(output), false);
+      }
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 function writeFakeGh(tempRoot: string, packageVersions: Record<string, unknown[]>, missingPackages = new Set<string>()) {
   const binDir = path.join(tempRoot, 'bin');
   fs.mkdirSync(binDir, { recursive: true });
