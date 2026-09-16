@@ -1,5 +1,6 @@
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
+import { domainModulePathEnvironment } from './shared.ts';
 
 test('system startup-maintenance refreshes Codex CLI before module maintenance when latest is newer', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-codex-home-'));
@@ -49,11 +50,7 @@ exit 1
       OPL_MIN_CODEX_CLI_VERSION: '0.130.0',
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       OPL_CODEX_UPDATE_COMMAND: updateScript,
-      OPL_MODULE_PATH_MEDAUTOSCIENCE: developerCheckout,
-      OPL_MODULE_PATH_MEDAUTOGRANT: developerCheckout,
-      OPL_MODULE_PATH_REDCUBE: developerCheckout,
-      OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
-      OPL_MODULE_PATH_OPLBOOKFORGE: developerCheckout,
+      ...domainModulePathEnvironment(developerCheckout),
       OPL_MODULE_PATH_SCHOLARSKILLS: developerCheckout,
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },

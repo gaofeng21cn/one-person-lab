@@ -4,6 +4,7 @@ import {
   createCurrentCodexFixture,
   createStartupDomainModuleRemotes,
   currentCodexEnvironment,
+  DOMAIN_MODULE_TARGET_COUNT,
   removeStartupDomainModuleRemotes,
   withCliTimeout,
 } from './shared.ts';
@@ -13,7 +14,7 @@ test('system startup-maintenance does not execute legacy module health scripts',
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const logPath = path.join(homeRoot, 'startup-maintenance-timeout.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, medcastRemote } = remotes;
   const codexFixture = createCurrentCodexFixture();
   // Keep normal fixture probes below the timeout even when the full lane is under load.
   const moduleActionStepTimeoutMs = 2_000;
@@ -45,6 +46,7 @@ test('system startup-maintenance does not execute legacy module health scripts',
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLMEDCAST: medcastRemote.remoteRoot,
       OPL_MODULE_ACTION_STEP_TIMEOUT_MS: String(moduleActionStepTimeoutMs),
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...currentCodexEnvironment(codexFixture),
@@ -88,7 +90,10 @@ test('system startup-maintenance does not execute legacy module health scripts',
     const magTarget = targets.get('medautogrant');
     assert.equal(output.system_action.status, 'completed');
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
-    assert.equal(output.system_action.details.summary.completed_targets_count, 5);
+    assert.equal(
+      output.system_action.details.summary.completed_targets_count,
+      DOMAIN_MODULE_TARGET_COUNT,
+    );
     assert.equal(magTarget?.status, 'completed');
     assert.equal(magTarget?.reason, 'module_missing');
     assert.equal(magTarget?.result.turnkey.health_check.status, 'skipped');
@@ -100,7 +105,10 @@ test('system startup-maintenance does not execute legacy module health scripts',
     assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 0);
     assert.deepEqual(output.system_action.details.managed_install_update_receipts.receipt_refs, []);
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
-    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 5);
+    assert.equal(
+      output.system_action.details.plugin_cache_freshness.synced_domain_packs_count,
+      DOMAIN_MODULE_TARGET_COUNT,
+    );
     const startupLog = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '';
     assert.equal(startupLog.includes('mag-health-start'), false);
     assert.equal(startupLog.includes('mag-health-finished'), false);

@@ -61,7 +61,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const logPath = path.join(homeRoot, 'startup-maintenance.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, medcastRemote } = remotes;
   const codexFixture = createCurrentCodexFixture();
   const masDeveloperCheckout = path.join(homeRoot, 'developer-med-autoscience');
 
@@ -77,6 +77,7 @@ test('system startup-maintenance syncs explicit developer checkouts and reports 
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLMEDCAST: medcastRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...currentCodexEnvironment(codexFixture),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },

@@ -1,8 +1,10 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { DOMAIN_MODULE_SPECS } from '../../../../src/adapters/integration/system-installation/module-specs.ts';
 import {
   createCurrentCodexFixture,
   createStartupDomainModuleRemotes,
   currentCodexEnvironment,
+  DOMAIN_MODULE_TARGET_COUNT,
   removeStartupDomainModuleRemotes,
   scholarSkillsPluginFixtureFiles,
   withCliTimeout,
@@ -13,7 +15,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const logPath = path.join(homeRoot, 'startup-maintenance.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, medcastRemote } = remotes;
   const codexFixture = createCurrentCodexFixture();
   try {
     const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
@@ -26,6 +28,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OPLMEDCAST: medcastRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...currentCodexEnvironment(codexFixture),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
@@ -122,7 +125,10 @@ test('system startup-maintenance installs clean managed modules and returns App 
     assert.equal(output.system_action.details.mode, 'clean_managed_environment_startup');
     assert.equal(output.system_action.details.authority_boundary.can_write_domain_truth, false);
     assert.equal(output.system_action.details.authority_boundary.can_install_domain_daemon, false);
-    assert.equal(output.system_action.details.summary.completed_targets_count, 5);
+    assert.equal(
+      output.system_action.details.summary.completed_targets_count,
+      DOMAIN_MODULE_TARGET_COUNT,
+    );
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.equal(output.system_action.details.capability_summary.completed_targets_count, 0);
     assert.equal(output.system_action.details.capability_summary.manual_required_targets_count, 0);
@@ -161,20 +167,19 @@ test('system startup-maintenance installs clean managed modules and returns App 
         target.result.turnkey.skill_sync.status,
         target.result.turnkey.health_check.status,
       ]),
-      [
-        ['medautoscience', 'completed', 'module_missing', 'missing', 'completed', 'skipped'],
-        ['medautogrant', 'completed', 'module_missing', 'missing', 'completed', 'skipped'],
-        ['redcube', 'completed', 'module_missing', 'missing', 'completed', 'skipped'],
-        ['oplmetaagent', 'completed', 'module_missing', 'missing', 'completed', 'skipped'],
-        ['oplbookforge', 'completed', 'module_missing', 'missing', 'completed', 'skipped'],
-      ],
+      DOMAIN_MODULE_SPECS
+        .filter((spec) => spec.scope === 'domain_module')
+        .map((spec) => [spec.module_id, 'completed', 'module_missing', 'missing', 'completed', 'skipped']),
     );
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
     assert.equal(
       output.system_action.details.plugin_cache_freshness.source,
       'module_turnkey_skill_sync',
     );
-    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 5);
+    assert.equal(
+      output.system_action.details.plugin_cache_freshness.synced_domain_packs_count,
+      DOMAIN_MODULE_TARGET_COUNT,
+    );
     assert.equal(output.system_action.details.plugin_cache_freshness.managed_capability_packages_count, 0);
     assert.deepEqual(output.system_action.details.plugin_cache_freshness.managed_capability_packages, []);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);
@@ -193,11 +198,9 @@ test('system startup-maintenance installs clean managed modules and returns App 
         : 'launchd_supervision_not_available_on_non_darwin',
     );
     assert.deepEqual(output.system_action.details.restart_reload_prompt.affected_domains, [
-      'medautoscience',
-      'medautogrant',
-      'redcube',
-      'oplmetaagent',
-      'oplbookforge',
+      ...DOMAIN_MODULE_SPECS
+        .filter((spec) => spec.scope === 'domain_module')
+        .map((spec) => spec.module_id),
     ]);
     const startupLog = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '';
     assert.doesNotMatch(startupLog, /(?:med-autoscience|med-autogrant|redcube-ai|opl-meta-agent|opl-bookforge)-(?:bootstrap|health)/);

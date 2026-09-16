@@ -1,18 +1,23 @@
 import { buildRepoGeneratedInterfaceBundle } from '../../../../src/authority/packages/index.ts';
+import {
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../../src/kernel/standard-agent-registry.ts';
 import { assert, fs, runCli, test } from '../helpers.ts';
 import { buildReadyAgentRepo, retargetReadyRepo } from './agents-conformance-fixtures.ts';
 
 const familyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT ?? '/Users/gaofeng/workspace';
 const familyRepoPath = (repo: string) => `${familyWorkspaceRoot}/${repo}`;
 
+const standardAgents = STANDARD_AGENT_REGISTRY.filter((entry) =>
+  entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+);
+const standardAgentIds = standardAgents.map((entry) => entry.agent_id).sort();
+const allStandardReposAreReady = () => standardAgents
+  .every((entry) => fs.existsSync(`${familyRepoPath(entry.project)}/contracts/domain_descriptor.json`));
+
 test('real family-defaults pack compiler preserves JSON readback when all standard agents are ready', {
-  skip: ![
-    'med-autoscience',
-    'med-autogrant',
-    'redcube-ai',
-    'opl-meta-agent',
-    'opl-bookforge',
-  ].every((repo) => fs.existsSync(`${familyRepoPath(repo)}/contracts/domain_descriptor.json`)),
+  skip: !allStandardReposAreReady(),
 }, () => {
   const report = runCli(
     ['agents', 'pack-compiler', '--family-defaults'],
@@ -23,30 +28,24 @@ test('real family-defaults pack compiler preserves JSON readback when all standa
     domain,
   ]));
 
-  assert.deepEqual([...domains.keys()].sort(), ['mag', 'mas', 'obf', 'oma', 'rca']);
+  assert.deepEqual([...domains.keys()].sort(), standardAgentIds);
   assert.deepEqual({
     total_domain_count: report.summary.total_domain_count,
     ready_domain_count: report.summary.ready_domain_count,
     blocked_domain_count: report.summary.blocked_domain_count,
   }, {
-    total_domain_count: 5,
-    ready_domain_count: 5,
+    total_domain_count: standardAgentIds.length,
+    ready_domain_count: standardAgentIds.length,
     blocked_domain_count: 0,
   });
-  for (const agentId of ['mag', 'mas', 'obf', 'oma', 'rca']) {
+  for (const agentId of standardAgentIds) {
     assert.equal(domains.get(agentId)?.compiler_status, 'ready');
     assert.deepEqual(domains.get(agentId)?.blocker_reasons, []);
   }
 });
 
 test('real family-defaults generated interfaces preserve JSON readback when all standard agents are ready', {
-  skip: ![
-    'med-autoscience',
-    'med-autogrant',
-    'redcube-ai',
-    'opl-meta-agent',
-    'opl-bookforge',
-  ].every((repo) => fs.existsSync(`${familyRepoPath(repo)}/contracts/domain_descriptor.json`)),
+  skip: !allStandardReposAreReady(),
 }, () => {
   const report = runCli(
     ['agents', 'interfaces', '--family-defaults'],
@@ -57,13 +56,13 @@ test('real family-defaults generated interfaces preserve JSON readback when all 
     domain,
   ]));
 
-  assert.deepEqual([...domains.keys()].sort(), ['mag', 'mas', 'obf', 'oma', 'rca']);
+  assert.deepEqual([...domains.keys()].sort(), standardAgentIds);
   assert.deepEqual(report.summary, {
-    total_domain_count: 5,
-    ready_domain_count: 5,
+    total_domain_count: standardAgentIds.length,
+    ready_domain_count: standardAgentIds.length,
     blocked_domain_count: 0,
   });
-  for (const agentId of ['mag', 'mas', 'obf', 'oma', 'rca']) {
+  for (const agentId of standardAgentIds) {
     assert.equal(domains.get(agentId)?.compiler_status, 'ready');
     assert.equal(domains.get(agentId)?.generated_agent_interfaces.status, 'ready');
     assert.deepEqual(domains.get(agentId)?.blocker_reasons, []);

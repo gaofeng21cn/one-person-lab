@@ -5,6 +5,7 @@ import {
   createScholarSkillsRemote,
   createStartupDomainModuleRemotes,
   currentCodexEnvironment,
+  DOMAIN_MODULE_TARGET_COUNT,
   removeStartupDomainModuleRemotes,
   withCliTimeout,
 } from './shared.ts';
@@ -15,7 +16,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
   const onePersonLabRoot = path.join(workspaceRoot, 'one-person-lab');
   const logPath = path.join(homeRoot, 'startup-maintenance-devmode.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, medcastRemote } = remotes;
   const scholarSkillsRemote = createScholarSkillsRemote();
   const codexFixture = createCurrentCodexFixture();
   const siblingCheckouts = {
@@ -24,6 +25,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     redcube: path.join(workspaceRoot, 'redcube-ai'),
     oplmetaagent: path.join(workspaceRoot, 'opl-meta-agent'),
     oplbookforge: path.join(workspaceRoot, 'opl-bookforge'),
+    'opl-medcast': path.join(workspaceRoot, 'opl-medcast'),
     scholarskills: path.join(workspaceRoot, 'mas-scholar-skills'),
   };
 
@@ -34,6 +36,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     runGitFixtureCommand(workspaceRoot, ['clone', rcaRemote.remoteRoot, siblingCheckouts.redcube]);
     runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckouts.oplmetaagent]);
     runGitFixtureCommand(workspaceRoot, ['clone', bookForgeRemote.remoteRoot, siblingCheckouts.oplbookforge]);
+    runGitFixtureCommand(workspaceRoot, ['clone', medcastRemote.remoteRoot, siblingCheckouts['opl-medcast']]);
     runGitFixtureCommand(workspaceRoot, ['clone', scholarSkillsRemote.remoteRoot, siblingCheckouts.scholarskills]);
 
     const output = withCliTimeout('180000', () => runCli(['system', 'startup-maintenance'], {
@@ -50,6 +53,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
           'gaofeng21cn/redcube-ai': 'admin',
           'gaofeng21cn/opl-meta-agent': 'admin',
           'gaofeng21cn/opl-bookforge': 'admin',
+          'gaofeng21cn/opl-medcast': 'admin',
           'gaofeng21cn/mas-scholar-skills': 'admin',
         },
       }),
@@ -111,11 +115,17 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     };
 
     assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.summary.completed_targets_count, 5);
+    assert.equal(
+      output.system_action.details.summary.completed_targets_count,
+      DOMAIN_MODULE_TARGET_COUNT,
+    );
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.equal(output.system_action.details.managed_install_update_receipts.recorded_receipt_count, 0);
     assert.equal(output.system_action.details.plugin_cache_freshness.status, 'freshened');
-    assert.equal(output.system_action.details.plugin_cache_freshness.synced_domain_packs_count, 5);
+    assert.equal(
+      output.system_action.details.plugin_cache_freshness.synced_domain_packs_count,
+      DOMAIN_MODULE_TARGET_COUNT,
+    );
     assert.deepEqual(output.system_action.details.capability_targets, []);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);
 
@@ -134,7 +144,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     }
 
     const startupLog = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '';
-    assert.doesNotMatch(startupLog, /(?:med-autoscience|med-autogrant|redcube-ai|opl-meta-agent|opl-bookforge)-(?:bootstrap|health)/);
+    assert.doesNotMatch(startupLog, /(?:med-autoscience|med-autogrant|redcube-ai|opl-meta-agent|opl-bookforge|opl-medcast)-(?:bootstrap|health)/);
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
     for (const [moduleId, marketplaceId] of [
       ['medautoscience', 'med-autoscience-local'],

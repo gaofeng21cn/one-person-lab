@@ -4,6 +4,30 @@ import {
   writeFakeBookForgeGeneratedSurfacePack,
   writeFakeOmaGeneratedSurfacePack,
 } from '../../../cli-codex-default-shell-helpers.ts';
+import { DOMAIN_MODULE_SPECS } from '../../../../../src/adapters/integration/system-installation/module-specs.ts';
+
+// Startup maintenance targets every registered domain module, so the expected
+// counts follow the module registry instead of a frozen number.
+const DOMAIN_MODULES = DOMAIN_MODULE_SPECS.filter((spec) => spec.scope === 'domain_module');
+
+export const DOMAIN_MODULE_TARGET_COUNT = DOMAIN_MODULES.length;
+
+// Every registered domain module needs an env override in tests that start
+// module maintenance, otherwise the missing one falls back to its declared
+// GitHub URL, which makes the case slow, flaky and network dependent.
+export function domainModuleRepoUrlEnvironment(remoteRoot: string) {
+  return Object.fromEntries(DOMAIN_MODULES.map((spec) => [
+    `OPL_MODULE_REPO_URL_${spec.module_id.toUpperCase()}`,
+    remoteRoot,
+  ]));
+}
+
+export function domainModulePathEnvironment(checkoutPath: string) {
+  return Object.fromEntries(DOMAIN_MODULES.map((spec) => [
+    `OPL_MODULE_PATH_${spec.module_id.toUpperCase()}`,
+    checkoutPath,
+  ]));
+}
 
 const FIXTURE_CODEX_VERSION = '0.134.0';
 const AGENT_PLUGIN_SCHEMA = 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json';
@@ -65,7 +89,8 @@ export function agentPluginManifestFixtureFiles(pluginName: string, prefix = '')
 
 export function createDomainModuleRemote(input: {
   repoName: string;
-  pluginName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge';
+  pluginName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge'
+    | 'opl-medcast';
   installerKind: 'bash' | 'node';
   logPath: string;
 }) {
@@ -332,6 +357,12 @@ export function createStartupDomainModuleRemotes(input: {
     bookForgeRemote: createBookForgeGeneratedSurfaceRemote({
       logPath: input.logPath,
       healthcheckLogPath: input.bookForgeHealthcheckLogPath,
+    }),
+    medcastRemote: createDomainModuleRemote({
+      repoName: 'opl-medcast',
+      pluginName: 'opl-medcast',
+      installerKind: 'node',
+      logPath: input.logPath,
     }),
   };
 }

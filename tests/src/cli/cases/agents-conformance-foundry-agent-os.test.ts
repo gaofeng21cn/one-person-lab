@@ -1,5 +1,9 @@
 import { assert, runCliReadOnly, runCliReadOnlyFailure, test } from '../helpers.ts';
 import {
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../../src/kernel/standard-agent-registry.ts';
+import {
   buildReadyAgentRepo,
   configureReadyCapabilityPackage,
   configureReadyMagMorphology,
@@ -8,7 +12,11 @@ import {
   retargetReadyRepoToMag,
 } from './agents-conformance-fixtures.ts';
 
-const STANDARD_FOUNDRY_DOMAIN_AGENT_IDS = ['mas', 'mag', 'rca', 'oma', 'obf'] as const;
+// Foundry membership follows the standard Agent registry, so a new registered
+// Agent must show up in this conformance readback without editing the list.
+const STANDARD_FOUNDRY_DOMAIN_AGENT_IDS = STANDARD_AGENT_REGISTRY
+  .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
+  .map((entry) => entry.agent_id);
 
 function readyFoundryRepos() {
   const masRepo = buildReadyAgentRepo();
@@ -28,11 +36,14 @@ function readyFoundryRepos() {
   const bookForgeRepo = buildReadyAgentRepo();
   retargetReadyRepo(bookForgeRepo, 'opl-bookforge', 'OPL Book Forge');
 
+  const medcastRepo = buildReadyAgentRepo();
+  retargetReadyRepo(medcastRepo, 'opl-medcast', 'OPL Med Cast');
+
   const scholarSkillsRepo = buildReadyAgentRepo();
   retargetReadyRepo(scholarSkillsRepo, 'mas-scholar-skills', 'MAS Scholar Skills');
   configureReadyCapabilityPackage(scholarSkillsRepo);
 
-  return { masRepo, magRepo, rcaRepo, omaRepo, bookForgeRepo, scholarSkillsRepo };
+  return { masRepo, magRepo, rcaRepo, omaRepo, bookForgeRepo, medcastRepo, scholarSkillsRepo };
 }
 
 test('agents conformance exposes Foundry Agent OS membership without readiness authority', async () => {
@@ -50,6 +61,8 @@ test('agents conformance exposes Foundry Agent OS membership without readiness a
     `oma=${repos.omaRepo}`,
     '--agent',
     `obf=${repos.bookForgeRepo}`,
+    '--agent',
+    `opl-medcast=${repos.medcastRepo}`,
     '--agent',
     `mas-scholar-skills=${repos.scholarSkillsRepo}`,
   ]);
