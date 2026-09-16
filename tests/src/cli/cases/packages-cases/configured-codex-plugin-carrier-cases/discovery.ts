@@ -842,6 +842,104 @@ test('current headless owner projection keeps a disabled same-version install ca
   }
 });
 
+function orderedPathLockDigest(root: string, paths: string[]) {
+  const hash = crypto.createHash('sha256');
+  for (const relativePath of paths) {
+    const pathBytes = Buffer.from(relativePath, 'utf8');
+    const fileBytes = fs.readFileSync(path.join(root, relativePath));
+    const pathLength = Buffer.allocUnsafe(8);
+    const fileLength = Buffer.allocUnsafe(8);
+    pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
+    fileLength.writeBigUInt64BE(BigInt(fileBytes.length));
+    hash.update(pathLength);
+    hash.update(pathBytes);
+    hash.update(fileLength);
+    hash.update(fileBytes);
+  }
+  return `sha256:${hash.digest('hex')}`;
+}
+
+function writeFleetOwnerCheckout(sourcePath: string, lockPaths: string[]) {
+  fs.mkdirSync(path.join(sourcePath, '.codex-plugin'), { recursive: true });
+  fs.mkdirSync(path.join(sourcePath, 'bin'), { recursive: true });
+  fs.mkdirSync(path.join(sourcePath, 'skills', 'opl-fleet-agent', 'agents'), { recursive: true });
+  fs.writeFileSync(path.join(sourcePath, '.codex-plugin', 'plugin.json'), formatJsonPayload({
+    name: 'opl-fleet-agent',
+    version: '0.2.43',
+    description: 'OPL Fleet Agent fixture.',
+    skills: './skills/',
+  }));
+  fs.writeFileSync(path.join(sourcePath, 'plugin.json'), formatJsonPayload({ name: 'opl-fleet-agent' }));
+  fs.writeFileSync(path.join(sourcePath, 'bin', 'opl-fleet-agent.mjs'), '#!/usr/bin/env node\n');
+  fs.writeFileSync(path.join(sourcePath, 'skills', 'opl-fleet-agent', 'SKILL.md'), '# OPL Fleet Agent\n');
+  fs.writeFileSync(
+    path.join(sourcePath, 'skills', 'opl-fleet-agent', 'agents', 'openai.yaml'),
+    'interface:\n  display_name: "OPL Fleet Agent"\n',
+  );
+  return lockPaths;
+}
+
+test('installed descriptor keeps the physical carrier content lock only when the carrier ships every locked file', () => {
+  const projectionPath = path.resolve('contracts', 'opl-framework', 'packages', 'opl-fleet-agent.json');
+  const projectionText = fs.readFileSync(projectionPath, 'utf8');
+  const projected = normalizePackageManifest(parseJsonText(projectionText), pathToFileURL(projectionPath).href);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-physical-content-lock-'));
+  try {
+    // A developer checkout ships every file its own manifest locks, including a
+    // repo-local file the published payload never carries.
+    const checkoutRoot = path.join(root, 'owner-checkout');
+    const ownerLockPaths = writeFleetOwnerCheckout(checkoutRoot, [
+      ...(projected.content_lock_paths ?? []),
+      'repo-local-notes.md',
+    ]);
+    fs.writeFileSync(path.join(checkoutRoot, 'repo-local-notes.md'), '# owner-only notes\n');
+    const ownerManifest = parseJsonText(projectionText) as any;
+    ownerManifest.source = 'first_party_repo_local';
+    ownerManifest.content_lock.paths = ownerLockPaths;
+    ownerManifest.content_lock.digest = orderedPathLockDigest(checkoutRoot, ownerLockPaths);
+    fs.writeFileSync(path.join(checkoutRoot, 'opl-package.json'), formatJsonPayload(ownerManifest));
+
+    // The published payload omits owner-only files, so its own over-declaring
+    // manifest cannot describe those bytes.
+    const payloadRoot = path.join(root, 'published-payload');
+    writeFleetOwnerCheckout(payloadRoot, projected.content_lock_paths ?? []);
+    fs.writeFileSync(path.join(payloadRoot, 'opl-package.json'), formatJsonPayload(ownerManifest));
+
+    const discover = (sourcePath: string) => discoverInstalledPackageDescriptors({
+      packageId: projected.package_id,
+      runner: () => ({
+        status: 0,
+        stdout: pluginList([{
+          pluginId: projected.configured_codex_plugin_carrier!.carrier.pluginId,
+          version: projected.version,
+          sourcePath,
+          marketplaceSource: 'gaofeng21cn/opl-fleet-agent',
+          enabled: false,
+        }]),
+        stderr: '',
+        error: null,
+      }),
+    }).get(projected.package_id);
+
+    const checkout = discover(checkoutRoot);
+    assert.ok(checkout);
+    assert.deepEqual(checkout.manifest.content_lock_paths, ownerLockPaths);
+    assert.equal(checkout.manifest.content_digest, ownerManifest.content_lock.digest);
+    // Identity, carrier and publication still come from the owner projection.
+    assert.equal(checkout.manifest.source, projected.source);
+    assert.equal(checkout.manifest.source_repo, projected.source_repo);
+    assert.equal(checkout.manifest.version, projected.version);
+    assert.equal(checkout.carrier.carrier.pluginId, projected.configured_codex_plugin_carrier?.carrier.pluginId);
+
+    const payload = discover(payloadRoot);
+    assert.ok(payload);
+    assert.deepEqual(payload.manifest.content_lock_paths, projected.content_lock_paths);
+    assert.equal(payload.manifest.content_digest, projected.content_digest);
+  } finally {
+    removeFixtureTree(root);
+  }
+});
+
 test('installed discovery includes internal modules without exposing interactive plugins from that scope', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-internal-discovery-'));
   const stateDir = path.join(root, 'state');

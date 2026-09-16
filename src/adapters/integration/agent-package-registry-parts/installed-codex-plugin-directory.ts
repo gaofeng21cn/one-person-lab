@@ -584,14 +584,52 @@ function withCurrentOwnerProjection(
     && readiness.installed
     && !descriptor.enabled;
   if (projectionCallableWhileDisabled) readiness.projection_callability = 'callable';
+  const physicalLock = physicalContentLock(descriptor, ownerProjection);
   return {
     ...descriptor,
-    manifest: ownerProjection.manifest,
+    manifest: physicalLock
+      ? { ...ownerProjection.manifest, ...physicalLock }
+      : ownerProjection.manifest,
     manifestPath: ownerProjection.manifestPath,
     manifest_sha256: ownerProjection.manifest_sha256,
     carrier: ownerProjection.carrier,
     readiness,
   };
+}
+
+/**
+ * A content lock only describes the bytes it was computed over. The current
+ * owner projection is the SSOT for Package identity, carrier selector and
+ * publication, but its lock describes the published payload. A physical
+ * carrier that ships every file its own manifest locks — a developer checkout,
+ * or any payload that is complete against the owner lock — must keep that lock;
+ * otherwise one module path answers to two content identities and the
+ * installed-runtime-module restart guard reports drift that never happened.
+ *
+ * Published payloads that omit owner-only files keep the projection lock, so
+ * this stays a no-op for a normal installed carrier.
+ */
+function physicalContentLock(
+  descriptor: InstalledPackageDescriptor,
+  ownerProjection: InstalledPackageDescriptor,
+) {
+  const declaredDigest = descriptor.manifest.content_digest;
+  const localPaths = descriptor.manifest.content_lock_paths ?? [];
+  if (!declaredDigest || localPaths.length === 0) return null;
+  const projectedPaths = ownerProjection.manifest.content_lock_paths ?? [];
+  if (localPaths.length === projectedPaths.length
+    && localPaths.every((entry) => projectedPaths.includes(entry))) return null;
+  const packageRoot = path.resolve(descriptor.sourcePath);
+  const complete = localPaths.every((relativePath) => {
+    const candidate = path.resolve(packageRoot, relativePath);
+    if (candidate === packageRoot || !candidate.startsWith(`${packageRoot}${path.sep}`)) return false;
+    try {
+      return fs.statSync(candidate).isFile();
+    } catch {
+      return false;
+    }
+  });
+  return complete ? { content_digest: declaredDigest, content_lock_paths: localPaths } : null;
 }
 
 export function installedDescriptorMatchesConfiguredCarrier(
