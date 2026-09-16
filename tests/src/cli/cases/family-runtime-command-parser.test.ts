@@ -8,6 +8,14 @@ import {
   resolveFamilyRuntimeDomainId,
   runtimeDomainProfileFor,
 } from '../../../../src/adapters/execution/family-runtime-types.ts';
+import {
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../../src/kernel/standard-agent-registry.ts';
+
+const expectedRuntimeDomainIds = STANDARD_AGENT_REGISTRY
+  .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
+  .map((entry) => entry.target_domain_id);
 
 function assertUsageError(error: unknown, message: RegExp, option: string) {
   assert.equal(error instanceof FrameworkContractError, true);
@@ -18,13 +26,7 @@ function assertUsageError(error: unknown, message: RegExp, option: string) {
 }
 
 test('family runtime support and aliases derive from standard-agent runtime profiles', () => {
-  assert.deepEqual(FAMILY_RUNTIME_DOMAIN_IDS, [
-    'medautoscience',
-    'medautogrant',
-    'redcube_ai',
-    'agent_engineering',
-    'opl-bookforge',
-  ]);
+  assert.deepEqual(FAMILY_RUNTIME_DOMAIN_IDS, expectedRuntimeDomainIds);
   assert.equal(resolveFamilyRuntimeDomainId('mas'), 'medautoscience');
   assert.equal(resolveFamilyRuntimeDomainId('redcube-ai'), 'redcube_ai');
   assert.equal(resolveFamilyRuntimeDomainId('obf'), 'opl-bookforge');

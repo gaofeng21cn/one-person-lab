@@ -516,6 +516,9 @@ test('production Foundry resolves a configurable semantic provider and keeps OMA
     observedProviderIds.push(input.domainId);
     return {
       checkout_root: checkout,
+      native_runtime: {
+        source_tree_sha256: `sha256:${'a'.repeat(64)}`,
+      },
     } as Awaited<ReturnType<typeof resolveStandardAgentManagedCheckout>>;
   };
 

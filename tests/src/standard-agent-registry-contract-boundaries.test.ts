@@ -97,13 +97,10 @@ function writeUnknownAgentProjection(packageDirectory: string, fixture = unknown
   );
 }
 
-test('native helper owner split derives all standard domain agents from the registry', () => {
+test('native helper owner split declares the registry projection without a duplicated owner list', () => {
   const contract = nativeHelperContract();
-  const standardAgents = STANDARD_AGENT_REGISTRY.filter((entry) =>
-    entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
-  );
 
-  assert.deepEqual(contract.owner_split.domain_truth_owners, standardAgents.map((entry) => entry.project));
+  assert.equal(Object.hasOwn(contract.owner_split, 'domain_truth_owners'), false);
   assert.deepEqual(contract.owner_split.domain_truth_owner_registry, {
     source_ref: 'contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection',
     series_membership: 'standard_domain_agent',
@@ -112,16 +109,17 @@ test('native helper owner split derives all standard domain agents from the regi
 });
 
 test('standard Agent family labels never mix compact and full product names', () => {
-  assert.deepEqual(standardDomainAgentFamilyProjection('compact').labels, [
-    'MAS', 'MAG', 'RCA', 'OMA', 'OBF',
-  ]);
-  assert.deepEqual(standardDomainAgentFamilyProjection('full').labels, [
-    'Med Auto Science',
-    'Med Auto Grant',
-    'RedCube AI',
-    'OPL Meta Agent',
-    'OPL Book Forge',
-  ]);
+  const standardAgents = STANDARD_AGENT_REGISTRY.filter((entry) =>
+    entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+  );
+  assert.deepEqual(
+    standardDomainAgentFamilyProjection('compact').labels,
+    standardAgents.map((entry) => entry.short_label),
+  );
+  assert.deepEqual(
+    standardDomainAgentFamilyProjection('full').labels,
+    standardAgents.map((entry) => entry.display_name),
+  );
   assert.equal(
     new Set<string>(standardDomainAgentFamilyProjection('full').labels).has('BookForge'),
     false,

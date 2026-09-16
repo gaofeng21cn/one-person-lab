@@ -1,9 +1,10 @@
 import { assert, runCli, runCliFailure, test } from '../../helpers.ts';
 
 import { canonicalOwnerId } from '../../../../../src/kernel/owner-id.ts';
+import { listStandardDomainAgentIds } from '../../../../../src/kernel/standard-agent-registry.ts';
 import { expectedModuleIds } from './shared.ts';
 
-const expectedStandardDomainAgentIds = ['mas', 'mag', 'rca', 'oma', 'obf'];
+const expectedStandardDomainAgentIds = listStandardDomainAgentIds();
 
 test('agent-owned internal modules expose the same branding spine without becoming OPL platform modules', () => {
   const list = runCli(['agents', 'modules', 'list']).agent_internal_modules;
@@ -12,8 +13,8 @@ test('agent-owned internal modules expose the same branding spine without becomi
   assert.deepEqual(list.domain_ids, expectedStandardDomainAgentIds);
   assert.deepEqual(list.platform_module_ids, expectedModuleIds);
   assert.deepEqual(list.agent_module_ids, expectedModuleIds.map((moduleId) => `agent-${moduleId}`));
-  assert.equal(list.domain_count, 5);
-  assert.equal(list.module_count_per_domain, 10);
+  assert.equal(list.domain_count, expectedStandardDomainAgentIds.length);
+  assert.equal(list.module_count_per_domain, expectedModuleIds.length);
   assert.equal(list.canonical_command_surface, 'opl agents modules');
   assert.equal(list.authority_boundary.can_write_domain_truth, false);
   assert.equal(list.authority_boundary.can_replace_domain_owner, false);

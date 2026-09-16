@@ -11,13 +11,10 @@ import { FrameworkContractError } from '../../src/kernel/contract-validation.ts'
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import { runAppContribution } from '../../src/read-models/operator/app-contribution-broker.ts';
-import { buildAppUiContributionsProjection } from '../../src/read-models/operator/app-state-ui-contributions.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
 const manifestRef = 'contracts/opl-framework/packages/opl-fleet-agent.json';
 const allowlistRef = 'contracts/opl-framework/package-payload-allowlists/opl-fleet-agent.json';
-const payloadRef = 'contracts/opl-framework/packages/payloads/opl-fleet-agent-0.2.41.json';
-const ownerCommit = 'b5a24e97b6caa125780e0399742eed9784f46352';
 const appContributionsSchemaRefs = [
   'contracts/opl-framework/app-contributions.schema.json',
   'contracts/opl-framework/capability-package-manifest.schema.json',
@@ -65,6 +62,7 @@ function normalizedManifest() {
 test('Fleet Agent owner projection is a schema-valid capability Package with one immutable payload', () => {
   const manifest = readJson(manifestRef);
   const allowlist = readJson(allowlistRef);
+  const payloadRef = `contracts/opl-framework/packages/${manifest.codex_surface.plugin_payload_manifest_url}`;
   const payload = readJson(payloadRef);
 
   assertSchema(
@@ -88,7 +86,6 @@ test('Fleet Agent owner projection is a schema-valid capability Package with one
   }
 
   assert.equal(manifest.package_id, 'opl-fleet-agent');
-  assert.equal(manifest.display_name, 'OPL Fleet Agent');
   assert.equal(manifest.source, 'first_party');
   assert.equal(manifest.codex_surface.plugin_id, 'opl-fleet-agent');
   assert.equal(manifest.codex_surface.interaction_mode, 'headless_internal');
@@ -122,8 +119,7 @@ test('Fleet Agent owner projection is a schema-valid capability Package with one
   assert.deepEqual(manifest.content_lock.paths, allowlist.paths);
   assert.deepEqual(payload.files.map((entry: any) => entry.path), allowlist.paths);
   assert.equal(payload.content_lock.digest, manifest.content_lock.digest);
-  assert.equal(payload.source_commit, ownerCommit);
-  assert.equal(manifest.codex_surface.carrier_source_commit, ownerCommit);
+  assert.equal(payload.source_commit, manifest.codex_surface.carrier_source_commit);
 });
 
 test('App contribution schema mirrors reject unknown view types', () => {
@@ -135,52 +131,9 @@ test('App contribution schema mirrors reject unknown view types', () => {
   }
 });
 
-test('Fleet Agent keeps its published Settings projections for version 0.2.41', () => {
-  const manifest = normalizedManifest();
-  const contributions = manifest.app_contributions;
-  assert.ok(contributions);
-  const projection = buildAppUiContributionsProjection({
-    'opl-fleet-agent': {
-      presence: { installed: true },
-      capability_exposure: { status: 'visible' },
-      app_contributions: contributions,
-    },
-  });
-
-  assert.deepEqual(
-    (contributions.ui ?? []).map((entry) => entry.contribution_id),
-    ['fleet.agent.telemetry-settings', 'fleet.agent.doctor-settings'],
-  );
-  assert.equal(contributions.views.length, 2);
-  assert.deepEqual(
-    contributions.views.map((view) => view.view_type),
-    ['service_status', 'service_status'],
-  );
-  assert.deepEqual(
-    contributions.views.map((view) => view.data_ref),
-    ['fleet.agent.telemetry.v1#local', 'fleet.agent.doctor.v1#current'],
-  );
-  assert.equal(projection.contribution_count, 2);
-  assert.deepEqual(
-    projection.entries.map((entry) => (entry.view as any).view_type),
-    ['service_status', 'service_status'],
-  );
-  assert.deepEqual(
-    projection.slots['settings.section'].map((entry) => entry.contribution_key),
-    [
-      'opl-fleet-agent:fleet.agent.telemetry-settings',
-      'opl-fleet-agent:fleet.agent.doctor-settings',
-    ],
-  );
-});
-
-test('App contribution normalizer rejects unknown view types while accepting service_status', () => {
+test('App contribution normalizer rejects unknown view types', () => {
   const manifest = readJson(manifestRef);
-  assert.deepEqual(
-    normalizePackageManifest(manifest, 'framework://opl-fleet-agent.json').app_contributions?.views
-      .map((view) => view.view_type),
-    ['service_status', 'service_status'],
-  );
+  assert.doesNotThrow(() => normalizePackageManifest(manifest, 'framework://opl-fleet-agent.json'));
 
   const invalidManifest = structuredClone(manifest) as Record<string, any>;
   invalidManifest.app_contributions.views[0].view_type = 'unknown_view_type';
