@@ -11,6 +11,10 @@ import {
   hasStandardDomainAgentSurface,
 } from '../../src/kernel/standard-domain-agent-family-repos.ts';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../src/adapters/integration/opl-skills.ts';
+import { listFamilySkillPackSpecs } from '../../src/adapters/integration/opl-skills-parts/registry.ts';
+
+const STANDARD_AGENT_PACK_COUNT = listFamilySkillPackSpecs()
+  .filter((spec) => spec.distribution_role === 'domain_agent_plugin_pack').length;
 import {
   binPath,
   createFakeCodexFixture,
@@ -31,26 +35,36 @@ test('opl connect skills discovers the family plugin packs through the configure
       OPL_STATE_DIR: stateDir,
     });
 
-    assert.equal(output.skill_catalog.summary.total, 6);
+    assert.equal(
+      output.skill_catalog.summary.total,
+      listFamilySkillPackSpecs().length,
+    );
     assert.equal(
       output.skill_catalog.summary.ready_to_sync,
       output.skill_catalog.packs.filter((entry: { ready_to_sync: boolean }) => entry.ready_to_sync).length,
     );
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { domain_id: string }) => entry.domain_id),
-      ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'scholarskills'],
+      listFamilySkillPackSpecs().map((spec) => spec.domain_id),
     );
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name),
-      ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills'],
+      listFamilySkillPackSpecs().map((spec) => spec.canonical_plugin_name),
     );
     assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /med-autoscience\/plugins\/med-autoscience\/plugin\.json$/);
     assert.match(output.skill_catalog.packs[0].skill_entry_path, /med-autoscience\/agent\/primary_skill\/SKILL\.md$/);
     assert.deepEqual(
-      output.skill_catalog.packs.slice(0, 5).map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
-      [true, true, true, true, true],
+      output.skill_catalog.packs
+        .slice(0, STANDARD_AGENT_PACK_COUNT)
+        .map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
+      listFamilySkillPackSpecs()
+        .filter((spec) => spec.distribution_role === 'domain_agent_plugin_pack')
+        .map(() => true),
     );
-    for (const pack of output.skill_catalog.packs.slice(0, 5)) {
+    for (const pack of output.skill_catalog.packs.slice(
+      0,
+      STANDARD_AGENT_PACK_COUNT,
+    )) {
       assert.equal(pack.plugin_transport.primary_skill_projection.canonical_source_path, 'agent/primary_skill/SKILL.md');
       assert.equal(pack.plugin_transport.primary_skill_projection.carrier_materialization, 'materialized_full_skill_copy');
       assert.equal(pack.plugin_transport.primary_skill_projection.codex_install_requires_real_skill_md, true);
@@ -283,6 +297,9 @@ test('opl connect skills discovers OPL-managed module installs without OPL_FAMIL
       OPL_REDCUBE_REPO_ROOT: path.join(missingRepoRoot, 'redcube-ai'),
       OPL_OPLMETAAGENT_REPO_ROOT: path.join(missingRepoRoot, 'opl-meta-agent'),
       OPL_OPLBOOKFORGE_REPO_ROOT: path.join(missingRepoRoot, 'opl-bookforge'),
+      // Med Cast derives its lookup key from the module id, which contains a
+      // dash, so the override name is quoted.
+      'OPL_OPL-MEDCAST_REPO_ROOT': path.join(missingRepoRoot, 'opl-medcast'),
       OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: path.join(workspaceRoot, 'mas-scholar-skills'),
     });
 
@@ -648,7 +665,10 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
 
-    assert.equal(output.skill_sync.summary.synced, 5);
+    assert.equal(
+      output.skill_sync.summary.synced,
+      STANDARD_AGENT_PACK_COUNT,
+    );
     assert.equal(output.skill_sync.summary.skipped, 1);
     assert.equal(fs.existsSync(syncLogPath), false);
     for (const [project, plugin] of [
@@ -742,7 +762,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     const generatedBookForgeSkill = fs.readFileSync(bookforgeGeneratedPack.installer_result.materialized_codex_plugin_carrier.skill_entry_path, 'utf8');
     assert.equal(generatedBookForgeSkill, fs.readFileSync(path.join(workspaceRoot, 'opl-bookforge', 'agent', 'primary_skill', 'SKILL.md'), 'utf8'));
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
-    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 5);
+    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, STANDARD_AGENT_PACK_COUNT);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_superseded_plugin_tables, 10);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered_unified_mcp_servers, 1);

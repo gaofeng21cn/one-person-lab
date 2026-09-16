@@ -5,7 +5,10 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import { readFamilySkillPacks } from '../../src/adapters/integration/opl-skills.ts';
-import { normalizeDomainSelection } from '../../src/adapters/integration/opl-skills-parts/registry.ts';
+import {
+  listFamilySkillPackSpecs,
+  normalizeDomainSelection,
+} from '../../src/adapters/integration/opl-skills-parts/registry.ts';
 import { resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
 import { registerOplFamilyCodexPlugins } from '../../src/adapters/integration/system-installation/codex-plugin-registry.ts';
 import type { OplModuleId } from '../../src/adapters/integration/system-installation/shared.ts';
@@ -139,7 +142,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
   const domainIds = catalog.packs.map((pack) => pack.domain_id);
   const pluginNames = catalog.packs.map((pack) => pack.canonical_plugin_name);
 
-  assert.deepEqual(domainIds, ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'scholarskills']);
+  assert.deepEqual(domainIds, listFamilySkillPackSpecs().map((spec) => spec.domain_id));
   assert.equal(domainIds.includes('meddeepscientist'), false);
   assert.equal(pluginNames.includes('deepscientist'), false);
   assert.equal(pluginNames.includes('oma'), true);
@@ -247,6 +250,9 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     } else if (pack.canonical_plugin_name === 'rca') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'rca');
       assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain rca --action <action_id>');
+    } else if (pack.canonical_plugin_name === 'opl-medcast') {
+      assert.equal(pack.foundry_agent_series.brand_cli, 'opl-medcast');
+      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain opl-medcast --action <action_id>');
     } else {
       assert.fail(`unexpected plugin: ${pack.canonical_plugin_name}`);
     }

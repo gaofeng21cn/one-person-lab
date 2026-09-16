@@ -415,6 +415,13 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       scriptBody: null,
     },
     {
+      project: 'opl-medcast',
+      plugin: 'opl-medcast',
+      canonicalPlugin: 'opl-medcast',
+      installer: null,
+      scriptBody: null,
+    },
+    {
       project: 'mas-scholar-skills',
       plugin: 'mas-scholar-skills',
       canonicalPlugin: 'mas-scholar-skills',
@@ -463,6 +470,20 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
         path.join(specialtySkillRoot, 'SKILL.md'),
         '---\nname: medical-single-cell-modeling\ndescription: Single-cell modeling fixture specialist.\n---\n\n# Medical Single-Cell Modeling\n',
       );
+      continue;
+    }
+    if (spec.project === 'opl-medcast') {
+      // OPL Med Cast ships a generated carrier surface like OMA and Book Forge,
+      // so the fixture needs a primary skill plus a repo-local plugin carrier
+      // and no repo-owned installer.
+      fs.mkdirSync(repoRoot, { recursive: true });
+      writeFakePrimarySkill(
+        repoRoot,
+        spec.plugin,
+        'OPL Med Cast Primary Skill',
+        'Use this fixture primary skill to plan and review medical explainer videos through the OPL Med Cast product entry.',
+      );
+      writeFakeRepoLocalPluginCarrier(repoRoot, spec.plugin);
       continue;
     }
     const pluginRoot = path.join(repoRoot, 'plugins', spec.plugin);
