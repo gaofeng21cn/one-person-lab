@@ -1,0 +1,7 @@
+{
+  "browser": {
+    "launchOptions": {
+      "args": ["--disable-features=MacAppCodeSignClone"]
+    }
+  }
+}

@@ -193,6 +193,29 @@ test('fast inspection reads package and registration without spawning Playwright
   }
 });
 
+test('macOS system Chrome repair retains the automation-only clone opt-out', {
+  skip: process.platform !== 'darwin',
+}, () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-browser-clone-policy-'));
+  try {
+    const fixture = createPlaywrightMcpFixture(root);
+    const env = browserEnv(root, fixture.packageRoot);
+    const chrome = path.join(root, 'Google Chrome');
+    fs.writeFileSync(chrome, 'fixture');
+    const projection = withEnv({ ...env, OPL_PLAYWRIGHT_MCP_BROWSER_PATH: chrome }, () =>
+      reconcileManagedBrowserAutomation('settings_repair_browser_automation'));
+    const configIndex = projection.mcp.args.indexOf('--config');
+    assert.notEqual(configIndex, -1);
+    const policy = JSON.parse(fs.readFileSync(projection.mcp.args[configIndex + 1], 'utf8'));
+    assert.deepEqual(policy.browser.launchOptions.args, ['--disable-features=MacAppCodeSignClone']);
+    assert.equal(projection.registered, true);
+    assert.equal(projection.ready, true);
+    assert.equal(projection.browser.host_browser_executable, chrome);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('missing Playwright MCP dependency degrades only its non-blocking startup target', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-browser-automation-missing-'));
   const env = browserEnv(root, path.join(root, 'missing-package'));

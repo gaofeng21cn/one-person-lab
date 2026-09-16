@@ -277,8 +277,18 @@ function runtimeArgs(
   outputDir: string,
   hostBrowserExecutable: string | null,
 ) {
+  // System Chrome clones its signed app bundle on every macOS launch so it
+  // can survive auto-updates. A killed automation process cannot run the
+  // destructor that starts clone cleanup (Chromium crbug.com/379125944).
+  // Scope the opt-out to automated system Chrome; ordinary Chrome is untouched.
+  const macChromeConfig = process.platform === 'darwin'
+    && hostBrowserExecutable
+    && /^Google Chrome(?: Canary)?$/.test(path.basename(hostBrowserExecutable))
+    ? fileURLToPath(new URL('../../../contracts/opl-framework/playwright-macos.json', import.meta.url))
+    : null;
   return [
     ...lock.mcp.args,
+    ...(macChromeConfig ? ['--config', macChromeConfig] : []),
     ...(hostBrowserExecutable ? ['--executable-path', hostBrowserExecutable] : []),
     '--output-dir',
     outputDir,
