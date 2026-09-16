@@ -8,6 +8,9 @@ export type RPackageRequirement = {
   name: string;
   install_source: 'cran' | 'github' | 'bioconductor';
   github_repo?: string;
+  version?: string;
+  minimum_version?: string;
+  required_exports?: string[];
 };
 
 export type PythonPackageRequirement = {
@@ -30,6 +33,8 @@ export interface RuntimeEnvironmentPrepareInput extends RuntimeEnvironmentTarget
   refresh?: boolean;
   requirementProfilePath: string;
   requirementProfileId?: string;
+  requirementProfileIds?: string[];
+  prepareTimeoutMs?: number;
   artifactRoot?: string;
   paperRoot?: string;
   apply?: boolean;

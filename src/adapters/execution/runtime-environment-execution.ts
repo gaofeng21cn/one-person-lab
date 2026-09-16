@@ -1,10 +1,10 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { EnvironmentOperation, EnvironmentInterruptedError, runEnvironmentProcess } from './runtime-environment-process.ts';
 
 type Context = Record<string, any>;
-type Target = { domainId: string; profileId: string; platformId: string; requirementProfilePath?: string; requirementProfileId?: string };
+type Target = { domainId: string; profileId: string; platformId: string; requirementProfilePath?: string; requirementProfileId?: string; requirementProfileIds?: string[] };
 
 export function fileIdentity(filename: string) {
   try {
@@ -22,13 +22,19 @@ export function readPreparedContext(filename: string, target: Target): Context |
   }
   if (context.status !== 'prepared') return null;
   if (target.requirementProfilePath && context.requirement_profile_identity?.requirement_profile_ref !== target.requirementProfilePath) return null;
-  if (target.requirementProfileId && (context.selected_requirement_profile_ids?.length !== 1
-    || context.selected_requirement_profile_ids[0] !== target.requirementProfileId)) return null;
+  const requested = target.requirementProfileIds ?? (target.requirementProfileId ? [target.requirementProfileId] : []);
+  if (requested.length && JSON.stringify([...new Set(requested)].sort()) !== JSON.stringify([...(context.selected_requirement_profile_ids ?? [])].sort())) return null;
   for (const [filename, identity] of Object.entries(context.runtime_file_identities ?? {})) {
     if (JSON.stringify(fileIdentity(filename)) !== JSON.stringify(identity)) return null;
   }
   for (const [filename, digest] of Object.entries(context.requirement_file_digests ?? {})) {
     if (!fs.existsSync(filename) || crypto.createHash('sha256').update(fs.readFileSync(filename)).digest('hex') !== digest) return null;
+  }
+  if (context.environment_ready_ref) {
+    if (!fs.existsSync(context.environment_ready_ref)) return null;
+    const current = JSON.parse(fs.readFileSync(context.environment_ready_ref, 'utf8'));
+    if (current.environment_id !== context.environment_id) return null;
+    context.environment_manifest_ref = current.environment_manifest_ref ?? context.environment_manifest_ref;
   }
   const managedPython = context.managed_python_environment_path;
   if (context.managed_required_python_packages?.length && (!managedPython || !fs.existsSync(path.join(managedPython, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')))) return null;
@@ -47,6 +53,7 @@ function recordedCommand(command: string[]) {
 
 export async function executeInPreparedEnvironment(input: {
   context: Context; artifactRoot: string; command: string[]; cwd: string; timeoutMs?: number;
+  timings?: Record<string, number>; started?: number; cacheOutcome?: string;
 }): Promise<number> {
   const { context } = input;
   const env = { ...process.env, ...context.env_vars } as NodeJS.ProcessEnv;
@@ -66,6 +73,10 @@ export async function executeInPreparedEnvironment(input: {
   const id = crypto.randomUUID();
   const receiptPath = path.join(input.artifactRoot, 'build', 'executions', `${id}.json`);
   const started = Date.now();
+  const operation = new EnvironmentOperation(input.timeoutMs);
+  operation.phase = 'command_execution';
+  env.OPL_ENV_EXECUTION_ID = id;
+  env.OPL_ENV_MANIFEST_REF = String(context.environment_manifest_ref ?? context.lock_ref ?? '');
   const receipt: Context = {
     surface_kind: 'opl_environment_execution', execution_id: id,
     environment_ref: context.environment_manifest_ref ?? context.lock_ref,
@@ -73,6 +84,7 @@ export async function executeInPreparedEnvironment(input: {
     stage_attempt_ref: process.env.OPL_STAGE_ATTEMPT_REF ?? null,
     command: recordedCommand(input.command), executable, cwd: input.cwd,
     started_at: new Date(started).toISOString(), status: 'running',
+    timings_ms: input.timings ?? {}, cache_outcome: input.cacheOutcome ?? 'artifact_hit',
   };
   const save = () => {
     try {
@@ -85,44 +97,25 @@ export async function executeInPreparedEnvironment(input: {
     }
   };
   save();
-  return await new Promise<number>((resolve) => {
-    const child = spawn(executable, input.command.slice(1), {
-      cwd: input.cwd, env, stdio: 'inherit', detached: process.platform !== 'win32',
+  let exitCode = 1;
+  try {
+    const result = await runEnvironmentProcess(executable, input.command.slice(1), { cwd: input.cwd, env, stdio: 'inherit', operation });
+    exitCode = result.status;
+    receipt.signal = result.signal;
+    if (result.status === 127) receipt.error = result.stderr;
+  } catch (error) {
+    exitCode = error instanceof EnvironmentInterruptedError ? error.exitCode : 1;
+    receipt.stop_reason = error instanceof EnvironmentInterruptedError ? error.reason : null;
+    receipt.error = error instanceof Error ? error.message : String(error);
+  } finally {
+    operation.close();
+    const commandMs = performance.now() - operation.started;
+    Object.assign(receipt, { status: exitCode === 0 ? 'completed' : 'failed', exit_code: exitCode,
+      finished_at: new Date().toISOString(), elapsed_ms: commandMs,
+      failure_phase: exitCode ? 'command_execution' : null,
+      timings_ms: { ...input.timings, command: commandMs, total: performance.now() - (input.started ?? operation.started) },
     });
-    let timeout: NodeJS.Timeout | undefined;
-    let killTimer: NodeJS.Timeout | undefined;
-    let stoppedBy: string | null = null;
-    let finished = false;
-    const kill = (signal: NodeJS.Signals) => {
-      try {
-        if (process.platform !== 'win32' && child.pid) process.kill(-child.pid, signal);
-        else child.kill(signal);
-      } catch { /* The process may have already exited. */ }
-    };
-    const stop = (reason: string, signal: NodeJS.Signals) => {
-      stoppedBy ??= reason;
-      kill(signal);
-      killTimer ??= setTimeout(() => kill('SIGKILL'), 2000);
-      killTimer.unref();
-    };
-    const interrupt = () => stop('SIGINT', 'SIGINT');
-    const terminate = () => stop('SIGTERM', 'SIGTERM');
-    process.on('SIGINT', interrupt);
-    process.on('SIGTERM', terminate);
-    const finish = (code: number | null, signal: string | null, error?: string) => {
-      if (finished) return;
-      finished = true;
-      if (stoppedBy) kill('SIGKILL');
-      clearTimeout(timeout); clearTimeout(killTimer);
-      process.off('SIGINT', interrupt); process.off('SIGTERM', terminate);
-      const exitCode = stoppedBy === 'timeout' ? 124 : stoppedBy === 'SIGINT' ? 130 : stoppedBy === 'SIGTERM' ? 143 : code ?? 1;
-      Object.assign(receipt, { status: exitCode === 0 ? 'completed' : 'failed', exit_code: exitCode,
-        signal, stop_reason: stoppedBy, error: error ?? null,
-        finished_at: new Date().toISOString(), elapsed_ms: Date.now() - started });
-      save(); resolve(exitCode);
-    };
-    child.once('error', (error) => finish(127, null, error.message));
-    child.once('close', (code, signal) => finish(code, signal));
-    if (input.timeoutMs) timeout = setTimeout(() => stop('timeout', 'SIGTERM'), input.timeoutMs);
-  });
+    save();
+  }
+  return exitCode;
 }

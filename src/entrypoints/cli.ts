@@ -11,14 +11,16 @@ installCliBrokenPipeExitHandlers();
 const cliEntryDir = path.dirname(fs.realpathSync(fileURLToPath(import.meta.url)));
 const mainModuleExtension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
 const mainModuleUrl = pathToFileURL(path.join(cliEntryDir, 'cli', `main${mainModuleExtension}`)).href;
+const envArgs = process.argv.slice(4);
+const envSeparator = envArgs.indexOf('--');
 if (process.argv[2] === 'env' && process.argv[3] === 'run'
-  && !process.argv.slice(4).includes('--help')) {
+  && !(envSeparator < 0 ? envArgs : envArgs.slice(0, envSeparator)).includes('--help')) {
   const { runEnvironmentCommand } = await import('./cli/cases/runtime-environment-run-command.ts');
   try {
     await runEnvironmentCommand(process.argv.slice(4));
   } catch (error) {
     process.stderr.write(`${JSON.stringify({ error: { code: 'runtime_environment_error', message: error instanceof Error ? error.message : String(error) } })}\n`);
-    process.exitCode = 1;
+    process.exitCode = process.exitCode || 1;
   }
 } else {
   const { main, handleCliMainError } = await import(mainModuleUrl);

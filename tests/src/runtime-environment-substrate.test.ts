@@ -14,7 +14,7 @@ import { installRPackagesIntoManagedLibrary } from '../../src/adapters/execution
 import { preparedDependencyCache } from '../../src/adapters/execution/runtime-environment-substrate-parts/prepared-cache.ts';
 type Json = Record<string, unknown>;
 
-test('matching dependencies share a prepared environment across artifacts and domains; lock edits select a new one', (t) => {
+test('matching dependencies share a prepared environment across artifacts and domains; lock edits select a new one', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-environment-sharing-'));
   const previousState = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = path.join(root, 'state');
@@ -28,12 +28,12 @@ test('matching dependencies share a prepared environment across artifacts and do
   fs.writeFileSync(profile, JSON.stringify({ profiles: [{ profile_id: 'empty', runtime_binaries: [],
     language_packages: { python: [], r: [] }, language_locks: { python: { lock_ref: 'uv.lock' } } }] }));
   fs.writeFileSync(lock, 'version = 1');
-  const prepare = (domain: string, refresh = false) => buildRuntimeEnvironmentPrepareReadback({
+  const prepare = async (domain: string, refresh = false) => (await buildRuntimeEnvironmentPrepareReadback({
     domainId: domain, profileId: domain, platformId: 'test-local', artifactRoot: path.join(root, domain),
     requirementProfilePath: profile, requirementProfileId: 'empty', apply: true, refresh,
-  }).prepare;
-  const first = prepare('mas');
-  const second = prepare('another-domain');
+  })).prepare;
+  const first = await prepare('mas');
+  const second = await prepare('another-domain');
   assert.equal(first.status, 'prepared');
   assert.equal(first.cache_hit, false);
   assert.equal(second.cache_hit, true);
@@ -41,19 +41,19 @@ test('matching dependencies share a prepared environment across artifacts and do
   assert.equal(second.managed_python_environment_path, first.managed_python_environment_path);
   const firstManifestRef = first.environment_manifest_ref as string;
   const firstManifestBytes = fs.readFileSync(firstManifestRef, 'utf8');
-  const refreshed = prepare('mas', true);
+  const refreshed = await prepare('mas', true);
   assert.equal(refreshed.environment_id, first.environment_id);
   assert.equal(fs.readFileSync(firstManifestRef, 'utf8'), firstManifestBytes, 'refresh must preserve historical version evidence');
   assert.equal(path.basename(path.dirname(refreshed.environment_manifest_ref as string)), 'manifests');
   const context = JSON.parse(fs.readFileSync(path.join(root, 'mas/build/dependency_run_context.json'), 'utf8'));
   assert.equal(context.environment_manifest_ref, refreshed.environment_manifest_ref);
   fs.writeFileSync(lock, 'version = 2');
-  const changed = prepare('third-domain');
+  const changed = await prepare('third-domain');
   assert.notEqual(changed.environment_id, first.environment_id);
   assert.equal(changed.cache_hit, false);
 });
 
-test('dependency declaration order does not split the cache but source and version changes do', () => {
+test('dependency declaration order does not split the cache but source and version changes do', async () => {
   const requirements = {
     python: [{ name: 'numpy==2.5.3' }, { name: 'matplotlib==3.11.2' }],
     r: [{ name: 'ComplexHeatmap', install_source: 'bioconductor' }, { name: 'jsonlite', install_source: 'cran' }],
@@ -73,7 +73,7 @@ test('concurrent first preparations serialize and the second process reuses the 
   const worker = `
     import fs from 'node:fs';
     import { acquirePreparationLock } from ${JSON.stringify(moduleUrl)};
-    const release = acquirePreparationLock(${JSON.stringify(root)});
+    const release = await acquirePreparationLock(${JSON.stringify(root)});
     try {
       if (!fs.existsSync(${JSON.stringify(path.join(root, 'ready'))})) {
         fs.appendFileSync(${JSON.stringify(path.join(root, 'installs'))}, 'install\\n');
@@ -94,7 +94,7 @@ test('concurrent first preparations serialize and the second process reuses the 
   assert.equal(fs.existsSync(path.join(root, 'prepare.lock')), false);
 });
 
-test('runtime env prepare carries renv and uv lock refs into output, run-context, and identity', () => {
+test('runtime env prepare carries renv and uv lock refs into output, run-context, and identity', async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-locks-'));
   const paperRoot = path.join(tempRoot, 'paper');
   const profilePath = path.join(tempRoot, 'requirements.json');
@@ -121,7 +121,7 @@ test('runtime env prepare carries renv and uv lock refs into output, run-context
   };
   fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
 
-  const readback = buildRuntimeEnvironmentPrepareReadback({
+  const readback = await buildRuntimeEnvironmentPrepareReadback({
     domainId: 'mas',
     profileId: 'analysis',
     platformId: 'macos-arm64',
@@ -177,7 +177,7 @@ test('runtime env prepare carries renv and uv lock refs into output, run-context
       ],
     }, null, 2)}\n`,
   );
-  const changed = buildRuntimeEnvironmentPrepareReadback({
+  const changed = await buildRuntimeEnvironmentPrepareReadback({
     domainId: 'mas',
     profileId: 'analysis',
     platformId: 'macos-arm64',
@@ -191,7 +191,7 @@ test('runtime env prepare carries renv and uv lock refs into output, run-context
   assert.notEqual(changedPrepare.managed_python_environment_path, firstPythonCacheKey);
 });
 
-test('runtime env prepare preserves Bioconductor package source intent', () => {
+test('runtime env prepare preserves Bioconductor package source intent', async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-bioconductor-'));
   const profilePath = path.join(tempRoot, 'requirements.json');
   fs.writeFileSync(
@@ -211,7 +211,7 @@ test('runtime env prepare preserves Bioconductor package source intent', () => {
     }, null, 2)}\n`,
   );
 
-  const readback = buildRuntimeEnvironmentPrepareReadback({
+  const readback = await buildRuntimeEnvironmentPrepareReadback({
     domainId: 'mas',
     profileId: 'analysis',
     platformId: 'macos-arm64',
@@ -226,7 +226,7 @@ test('runtime env prepare preserves Bioconductor package source intent', () => {
   }]);
 });
 
-test('runtime env forces a host-visible Bioconductor package into the managed R library', () => {
+test('runtime env forces a host-visible Bioconductor package into the managed R library', async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-bioc-install-'));
   const rscriptPath = path.join(tempRoot, 'Rscript');
   const commandLog = path.join(tempRoot, 'install-expression.txt');
@@ -237,7 +237,7 @@ test('runtime env forces a host-visible Bioconductor package into the managed R 
     { mode: 0o755 },
   );
 
-  const receipt = installRPackagesIntoManagedLibrary(
+  const receipt = await installRPackagesIntoManagedLibrary(
     rscriptPath,
     libraryPath,
     [{ name: 'ComplexHeatmap', install_source: 'bioconductor' }],

@@ -175,6 +175,11 @@ function parsePrepareArgs(
     if (token === '--json') {
       return false;
     }
+    if (token === '--prepare-timeout-ms') {
+      parsed.prepareTimeoutMs = Number(requireOptionValue(token, value, spec, 'prepare timeout requires a value'));
+      if (!Number.isFinite(parsed.prepareTimeoutMs) || parsed.prepareTimeoutMs <= 0) throw buildUsageError('prepare timeout must be positive', spec);
+      return true;
+    }
     if (token === '--refresh') {
       parsed.refresh = true;
       return false;
@@ -196,12 +201,13 @@ function parsePrepareArgs(
       return true;
     }
     if (token === '--requirement-profile-id') {
-      parsed.requirementProfileId = requireOptionValue(
+      parsed.requirementProfileIds ??= [];
+      parsed.requirementProfileIds.push(requireOptionValue(
         token,
         value,
         spec,
         'runtime env prepare requires --requirement-profile-id value.',
-      );
+      ));
       return true;
     }
     throw buildUsageError(`Unknown option for runtime env prepare: ${token}.`, spec, {
@@ -232,7 +238,7 @@ function parsePrepareArgs(
 
 export async function prepareEnvironmentForCommand(input: {
   domainId: string; profileId: string; platformId: string; artifactRoot: string;
-  requirementProfilePath?: string; requirementProfileId?: string; refresh?: boolean;
+  requirementProfilePath?: string; requirementProfileId?: string; requirementProfileIds?: string[]; prepareTimeoutMs?: number; refresh?: boolean;
 }) {
   const contextPath = path.join(input.artifactRoot, 'build', 'dependency_run_context.json');
   const previous = fs.existsSync(contextPath) ? record(readJsonPayloadFile(contextPath)) : {};
@@ -242,7 +248,8 @@ export async function prepareEnvironmentForCommand(input: {
   if (!requirementProfilePath) throw new Error('No dependency profile is available; supply --requirement-profile.');
   const requirementProfileId = input.requirementProfileId
     ?? stringValue(previous.requested_requirement_profile_id) ?? undefined;
-  return buildRuntimeEnvironmentPrepareReadback({ ...input, requirementProfilePath, requirementProfileId, apply: true });
+  const requirementProfileIds = input.requirementProfileIds ?? (Array.isArray(previous.requested_requirement_profile_ids) && previous.requested_requirement_profile_ids.length ? previous.requested_requirement_profile_ids as string[] : undefined);
+  return buildRuntimeEnvironmentPrepareReadback({ ...input, requirementProfilePath, requirementProfileId, requirementProfileIds, apply: true });
 }
 
 export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpec> {
@@ -272,13 +279,13 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
         {
           command: 'env prepare',
           usage:
-            'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
+            'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>]... [--prepare-timeout-ms <ms>] --artifact-root <path> [--apply]',
           summary:
             'Prepare declared R/Python dependencies into OPL-managed local environments.',
         },
         {
           command: 'env run',
-          usage: 'opl env run --domain <domain> --profile <profile> --artifact-root <path> -- <command...>',
+          usage: 'opl env run --domain <domain> --profile <profile> --artifact-root <path> [--requirement-profile-id <id>]... [--prepare-timeout-ms <ms>] [--timeout-ms <ms>] -- <command...>',
           summary:
             'Reuse or prepare language dependencies, run a command, and record the environment used.',
         },
@@ -298,20 +305,20 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     },
     'env prepare': {
       usage:
-        'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
+        'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>]... [--prepare-timeout-ms <ms>] --artifact-root <path> [--apply]',
       summary:
         'Prepare declared R/Python dependencies into OPL-managed local environments.',
       examples: [
         'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
       ],
-      handler: (args) => ({
-        runtime_environment: buildRuntimeEnvironmentPrepareReadback(
+      handler: async (args) => ({
+        runtime_environment: await buildRuntimeEnvironmentPrepareReadback(
           parsePrepareArgs(args, commandSpecs['env prepare'], { allowOrdinaryDefaults: true }),
         ),
       }),
     },
     'env run': {
-      usage: 'opl env run --domain <domain> --profile <profile> --artifact-root <path> -- <command...>',
+      usage: 'opl env run --domain <domain> --profile <profile> --artifact-root <path> [--requirement-profile-id <id>]... [--prepare-timeout-ms <ms>] [--timeout-ms <ms>] -- <command...>',
       summary:
         'Reuse or prepare language dependencies, run a command, and record the environment used.',
       examples: [
@@ -333,7 +340,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     'runtime env prepare': {
       usage: 'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> [--apply]',
       summary: 'Prepare reusable language dependencies.', examples: [],
-      handler: (args) => ({ runtime_environment: buildRuntimeEnvironmentPrepareReadback(parsePrepareArgs(args, commandSpecs['runtime env prepare'])) }),
+      handler: async (args) => ({ runtime_environment: await buildRuntimeEnvironmentPrepareReadback(parsePrepareArgs(args, commandSpecs['runtime env prepare'])) }),
     },
     'runtime env cache status': {
       usage: 'opl runtime env cache status', summary: 'Read prepared environment inventory.', examples: [],

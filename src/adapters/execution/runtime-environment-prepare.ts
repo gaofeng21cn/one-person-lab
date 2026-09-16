@@ -1,76 +1,83 @@
+import { EnvironmentOperation, EnvironmentInterruptedError } from './runtime-environment-process.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { acquirePreparationLock, preparedDependencyCache, recordDependencyInventory, requirementFileDigests } from './runtime-environment-substrate-parts/prepared-cache.ts';
 import { baseOrRecommendedRPackages, buildRunContextConsumerPreflight, installPythonPackagesIntoManagedEnv,
   installRPackagesIntoManagedLibrary, installedPythonPackages, installedRPackages, readPrepareProfile,
   requirementProfileIdentity, resolveBinary, runtimeEnvironmentConsumerBoundary, normalizePythonPackageName,
-  pythonExecutableInManagedEnv } from './runtime-environment-substrate-parts/package-profile.ts';
+  pythonExecutableInManagedEnv, unsatisfiedRRequirements } from './runtime-environment-substrate-parts/package-profile.ts';
 import { contentFingerprint, normalizeTarget, relativeArtifactBuildRef, requiredRuntimeArtifactRoot,
-  readJsonObject, writePreparedEnvironmentIndex } from './runtime-environment-substrate-parts/target-state.ts';
+  writeJsonFile, readJsonObject, writePreparedEnvironmentIndex } from './runtime-environment-substrate-parts/target-state.ts';
 import { profileLockHandoff, uniqueRefs } from './runtime-environment-substrate-parts/language-lock-handoff.ts';
 import { baseReadback } from './runtime-environment-substrate-parts/projection-cache.ts';
 import type { JsonRecord, RuntimeEnvironmentPrepareInput } from './runtime-environment-substrate-parts/contract.ts';
 
-export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironmentPrepareInput) {
-  const target = normalizeTarget(input);
-  const artifactRoot = requiredRuntimeArtifactRoot(input);
-  const {
-    profile,
-    selected,
-    selectedRequirementProfileIds,
-    runtimeBinaries,
-    requiredRPackages,
-    requiredRPackageRequirements,
-    requiredPythonPackages,
-    requiredPythonPackageRequirements,
-  } = readPrepareProfile(
-    input.requirementProfilePath,
-    input.requirementProfileId,
-  );
-  const languageLockHandoff = profileLockHandoff(profile, selectedRequirementProfileIds);
-  const requirementLockRefs = uniqueRefs([
-    ...languageLockHandoff.r.lock_refs,
-    ...languageLockHandoff.python.lock_refs,
-  ]);
-  const sourceRequirementRefs = uniqueRefs([
-    path.resolve(input.requirementProfilePath),
-    ...requirementLockRefs,
-    ...languageLockHandoff.r.source_refs,
-    ...languageLockHandoff.r.project_refs,
-    ...languageLockHandoff.python.source_refs,
-    ...languageLockHandoff.python.project_refs,
-  ]);
-  const buildRoot = path.join(path.resolve(artifactRoot), 'build');
-  fs.mkdirSync(buildRoot, { recursive: true });
-
-  const binaryPaths: Record<string, string> = {};
-  const missingBinaries: string[] = [];
-  const requiredRuntimeBinaries = Array.from(new Set([
-    ...runtimeBinaries,
-    ...(requiredPythonPackages.length > 0 ? ['python3', 'uv'] : []),
-  ]));
-  requiredRuntimeBinaries.forEach((binaryName) => {
-    const resolved = resolveBinary(binaryName);
-    if (resolved) {
-      binaryPaths[binaryName] = resolved;
-    } else {
-      missingBinaries.push(binaryName);
-    }
-  });
-
-  const fileDigests = requirementFileDigests(sourceRequirementRefs, input.requirementProfilePath);
-  const cache = preparedDependencyCache({
-    r: requiredRPackageRequirements, python: requiredPythonPackageRequirements,
-    locks: requirementLockRefs.map((ref) => fileDigests[path.isAbsolute(ref) ? ref : path.resolve(path.dirname(input.requirementProfilePath), ref)] ?? ref),
-  }, binaryPaths, input.refresh);
-  const releasePreparation = acquirePreparationLock(cache.root);
+export async function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironmentPrepareInput) {
+  const operation = new EnvironmentOperation(input.prepareTimeoutMs ?? 600000);
+  let buildRoot = '';
+  let manifestPath: string | undefined;
+  let releasePreparation: (() => void) | undefined;
   try {
+    const target = normalizeTarget(input);
+    const artifactRoot = requiredRuntimeArtifactRoot(input);
+    buildRoot = path.join(path.resolve(artifactRoot), 'build');
+    fs.mkdirSync(buildRoot, { recursive: true });
+    const {
+      profile,
+      selected,
+      selectedRequirementProfileIds,
+      runtimeBinaries,
+      requiredRPackages,
+      requiredRPackageRequirements,
+      requiredPythonPackages,
+      requiredPythonPackageRequirements,
+    } = readPrepareProfile(
+      input.requirementProfilePath,
+      input.requirementProfileId,
+      input.requirementProfileIds,
+    );
+    const languageLockHandoff = profileLockHandoff(profile, selectedRequirementProfileIds);
+    const requirementLockRefs = uniqueRefs([
+      ...languageLockHandoff.r.lock_refs,
+      ...languageLockHandoff.python.lock_refs,
+    ]);
+    const sourceRequirementRefs = uniqueRefs([
+      path.resolve(input.requirementProfilePath),
+      ...requirementLockRefs,
+      ...languageLockHandoff.r.source_refs,
+      ...languageLockHandoff.r.project_refs,
+      ...languageLockHandoff.python.source_refs,
+      ...languageLockHandoff.python.project_refs,
+    ]);
+    const binaryPaths: Record<string, string> = {};
+    const missingBinaries: string[] = [];
+    const requiredRuntimeBinaries = Array.from(new Set([
+      ...runtimeBinaries,
+      ...(requiredPythonPackages.length > 0 ? ['python3', 'uv'] : []),
+    ]));
+    requiredRuntimeBinaries.forEach((binaryName) => {
+      const resolved = resolveBinary(binaryName);
+      if (resolved) {
+        binaryPaths[binaryName] = resolved;
+      } else {
+        missingBinaries.push(binaryName);
+      }
+    });
+
+    const fileDigests = requirementFileDigests(sourceRequirementRefs, input.requirementProfilePath);
+    const cache = preparedDependencyCache({
+      r: requiredRPackageRequirements, python: requiredPythonPackageRequirements,
+      locks: requirementLockRefs.map((ref) => fileDigests[path.isAbsolute(ref) ? ref : path.resolve(path.dirname(input.requirementProfilePath), ref)] ?? ref),
+    }, binaryPaths, input.refresh);
+    releasePreparation = await acquirePreparationLock(cache.root, operation);
+    manifestPath = cache.manifestPath;
     cache.manifest = input.refresh ? null : readJsonObject(cache.manifestPath);
     const cacheHit = Boolean(cache.manifest);
     const rscriptPath = binaryPaths.Rscript;
     const baseRPackages = cache.manifest && Array.isArray(cache.manifest.base_r_packages)
       ? new Set(cache.manifest.base_r_packages as string[])
-      : rscriptPath ? baseOrRecommendedRPackages(rscriptPath) : new Set<string>();
+      : rscriptPath && requiredRPackages.length ? await baseOrRecommendedRPackages(rscriptPath, operation) : new Set<string>();
     const managedRPackageRequirements = requiredRPackageRequirements
       .filter((requirement) => !baseRPackages.has(requirement.name));
     const baseRPackageRequirements = requiredRPackageRequirements
@@ -80,16 +87,22 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     const managedLibraryPath = path.join(cache.root, 'R');
     let installedPackages = cache.manifest && fs.existsSync(managedLibraryPath)
       ? new Set(cache.manifest.managed_r_packages as string[])
-      : rscriptPath ? installedRPackages(rscriptPath, managedLibraryPath) : new Set<string>();
+      : rscriptPath && managedRequiredRPackages.length ? await installedRPackages(rscriptPath, managedLibraryPath, operation) : new Set<string>();
     let missingRPackages = rscriptPath
       ? managedRequiredRPackages.filter((packageName) => !installedPackages.has(packageName))
       : managedRequiredRPackages;
+    if (rscriptPath && !cache.manifest) {
+      const unsatisfied = await unsatisfiedRRequirements(rscriptPath, managedLibraryPath, managedRPackageRequirements, operation);
+      missingRPackages = [...new Set([...missingRPackages, ...unsatisfied])];
+    }
+    operation.phase = 'dependency_installation';
     const installReceipt = input.apply && rscriptPath && missingBinaries.length === 0
-      ? installRPackagesIntoManagedLibrary(
+      ? await installRPackagesIntoManagedLibrary(
         rscriptPath,
         managedLibraryPath,
         managedRPackageRequirements,
         missingRPackages,
+        operation,
       )
       : {
         status: input.apply ? 'not_required' : 'not_requested',
@@ -99,28 +112,32 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
         verified_with: 'installed.packages(lib.loc = managed_library_path)',
         stderr: '',
       };
+    operation.phase = 'dependency_validation';
     if (input.apply && rscriptPath && installReceipt.status === 'installed') {
-      installedPackages = installedRPackages(rscriptPath, managedLibraryPath);
-      missingRPackages = managedRequiredRPackages.filter((packageName) => !installedPackages.has(packageName));
+      installedPackages = await installedRPackages(rscriptPath, managedLibraryPath, operation);
+      missingRPackages = [...new Set([...managedRequiredRPackages.filter((packageName) => !installedPackages.has(packageName)),
+        ...await unsatisfiedRRequirements(rscriptPath, managedLibraryPath, managedRPackageRequirements, operation)])];
     }
     const managedPythonEnvironmentPath = path.join(cache.root, 'python');
     const managedPythonPath = pythonExecutableInManagedEnv(managedPythonEnvironmentPath);
     let installedPythonPackageNames = cache.manifest && fs.existsSync(managedPythonPath)
       ? new Set((cache.manifest.managed_python_packages as string[]).map(normalizePythonPackageName))
-      : fs.existsSync(managedPythonPath) ? installedPythonPackages(managedPythonPath) : new Set<string>();
+      : fs.existsSync(managedPythonPath) ? await installedPythonPackages(managedPythonPath, operation) : new Set<string>();
     let missingPythonPackages = requiredPythonPackages.filter(
       (packageName) => !installedPythonPackageNames.has(normalizePythonPackageName(packageName)),
     );
+    operation.phase = 'dependency_installation';
     const pythonInstallReceipt = input.apply
       && requiredPythonPackages.length > 0
       && binaryPaths.python3
       && binaryPaths.uv
       && missingBinaries.length === 0
-      ? installPythonPackagesIntoManagedEnv(
+      ? await installPythonPackagesIntoManagedEnv(
         binaryPaths.uv,
         binaryPaths.python3,
         managedPythonEnvironmentPath,
-        missingPythonPackages,
+        cache.manifest ? missingPythonPackages : requiredPythonPackages,
+        operation,
       )
       : {
         status: input.apply && requiredPythonPackages.length === 0 ? 'not_required' : 'not_requested',
@@ -130,23 +147,25 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
         verified_with: 'importlib.metadata.distributions() in managed Python environment',
         stderr: '',
       };
+    operation.phase = 'dependency_validation';
     if (input.apply && pythonInstallReceipt.status === 'installed' && fs.existsSync(managedPythonPath)) {
-      installedPythonPackageNames = installedPythonPackages(managedPythonPath);
+      installedPythonPackageNames = await installedPythonPackages(managedPythonPath, operation);
       missingPythonPackages = requiredPythonPackages.filter(
         (packageName) => !installedPythonPackageNames.has(normalizePythonPackageName(packageName)),
       );
     }
     const status = missingBinaries.length > 0
       ? 'missing_runtime_binary'
-      : missingRPackages.length > 0 || missingPythonPackages.length > 0
+      : missingRPackages.length > 0 || missingPythonPackages.length > 0 || installReceipt.status === 'failed' || pythonInstallReceipt.status === 'failed'
         ? 'missing_language_package'
         : 'prepared';
     const failureClass = status === 'prepared' ? '' : status;
+    if (status !== 'prepared') fs.rmSync(cache.manifestPath, { force: true });
     if (status === 'prepared' && !cache.manifest) {
-      cache.manifest = recordDependencyInventory(cache, {
+      cache.manifest = await recordDependencyInventory(cache, {
         binaryPaths, rLibrary: managedLibraryPath, python: managedPythonPath,
         rPackages: [...installedPackages], pythonPackages: [...installedPythonPackageNames],
-        baseRPackages: [...baseRPackages],
+        baseRPackages: [...baseRPackages], operation,
       });
     }
     const environmentManifestRef = cache.manifest?.environment_manifest_ref ?? cache.manifestPath;
@@ -185,7 +204,8 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       profile_id: target.profile_id,
       platform_id: target.platform_id,
       dependency_profile_ref: path.resolve(input.requirementProfilePath),
-      requested_requirement_profile_id: input.requirementProfileId ?? null,
+      requested_requirement_profile_id: selectedRequirementProfileIds.length === 1 ? selectedRequirementProfileIds[0] : null,
+      requested_requirement_profile_ids: input.requirementProfileIds ?? (input.requirementProfileId ? [input.requirementProfileId] : []),
       selected_requirement_profile_id: selected.profile_id ?? null,
       selected_requirement_profile_ids: selectedRequirementProfileIds,
       requirement_profile_identity: requirementIdentity,
@@ -240,7 +260,10 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       can_claim_domain_ready: false,
       host_environment_fallback_allowed: false,
     };
+    const timingsMs = { prepare: performance.now() - operation.started, lock_wait: operation.lockWaitMs };
+    const cacheOutcome = input.refresh ? 'refreshed' : cacheHit ? 'shared_hit' : 'prepared';
     const receipt = {
+      timings_ms: timingsMs, cache_outcome: cacheOutcome,
       surface_kind: 'opl_runtime_environment_dependency_receipt',
       version: 'opl-runtime-environment-dependency-receipt.v1',
       status,
@@ -248,11 +271,13 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       host_binary_allowed: true,
       host_package_fallback_allowed: false,
       failure_class: failureClass,
+      failure_phase: status === 'prepared' ? null : installReceipt.status === 'failed' || pythonInstallReceipt.status === 'failed' ? 'dependency_installation' : 'dependency_validation',
       domain_id: target.domain_id,
       profile_id: target.profile_id,
       platform_id: target.platform_id,
       dependency_profile_ref: path.resolve(input.requirementProfilePath),
-      requested_requirement_profile_id: input.requirementProfileId ?? null,
+      requested_requirement_profile_id: selectedRequirementProfileIds.length === 1 ? selectedRequirementProfileIds[0] : null,
+      requested_requirement_profile_ids: input.requirementProfileIds ?? (input.requirementProfileId ? [input.requirementProfileId] : []),
       selected_requirement_profile_id: selected.profile_id ?? null,
       selected_requirement_profile_ids: selectedRequirementProfileIds,
       requirement_profile_identity: requirementIdentity,
@@ -287,14 +312,8 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
         ? buildRunContextConsumerPreflight('bound')
         : buildRunContextConsumerPreflight('missing_run_context'),
     };
-    fs.writeFileSync(
-      path.join(buildRoot, 'dependency_environment_lock.json'),
-      `${JSON.stringify(lockWithDigest, null, 2)}\n`,
-    );
-    fs.writeFileSync(
-      path.join(buildRoot, 'dependency_environment_receipt.json'),
-      `${JSON.stringify(receipt, null, 2)}\n`,
-    );
+    writeJsonFile(path.join(buildRoot, 'dependency_environment_lock.json'), lockWithDigest);
+    writeJsonFile(path.join(buildRoot, 'dependency_environment_receipt.json'), receipt);
 
     let runContext: JsonRecord | null = null;
     if (status !== 'prepared') fs.rmSync(path.join(buildRoot, 'dependency_run_context.json'), { force: true });
@@ -303,6 +322,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
         surface_kind: 'opl_runtime_environment_dependency_run_context',
         environment_id: cache.environmentId,
         environment_manifest_ref: environmentManifestRef,
+        environment_ready_ref: cache.manifestPath,
         runtime_file_identities: cache.runtimeFiles,
         requirement_file_digests: fileDigests,
 
@@ -314,7 +334,8 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
         domain_id: target.domain_id,
         profile_id: target.profile_id,
         platform_id: target.platform_id,
-        requested_requirement_profile_id: input.requirementProfileId ?? null,
+        requested_requirement_profile_id: selectedRequirementProfileIds.length === 1 ? selectedRequirementProfileIds[0] : null,
+        requested_requirement_profile_ids: input.requirementProfileIds ?? (input.requirementProfileId ? [input.requirementProfileId] : []),
         selected_requirement_profile_ids: selectedRequirementProfileIds,
         requirement_profile_identity: requirementIdentity,
         requirement_lock_refs: requirementLockRefs,
@@ -369,10 +390,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       };
       runContext.run_context_fingerprint = contentFingerprint(runContext);
       runContext.execution_fingerprint = runContext.run_context_fingerprint;
-      fs.writeFileSync(
-        path.join(buildRoot, 'dependency_run_context.json'),
-        `${JSON.stringify(runContext, null, 2)}\n`,
-      );
+      writeJsonFile(path.join(buildRoot, 'dependency_run_context.json'), runContext);
       writePreparedEnvironmentIndex({
         domain_id: target.domain_id,
         profile_id: target.profile_id,
@@ -389,11 +407,13 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       ...baseReadback('prepare', input),
       prepare: {
         surface_kind: 'opl_runtime_environment_prepare_readback',
+        timings_ms: timingsMs, cache_outcome: cacheOutcome,
         status,
         environment_tier: 'fast_local_env',
         host_binary_allowed: true,
         host_package_fallback_allowed: false,
         failure_class: failureClass,
+      failure_phase: status === 'prepared' ? null : installReceipt.status === 'failed' || pythonInstallReceipt.status === 'failed' ? 'dependency_installation' : 'dependency_validation',
         package_installation_requested: input.apply === true,
         installed_packages: input.apply === true
           && (installReceipt.status === 'installed' || installReceipt.status === 'not_required')
@@ -402,6 +422,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
         managed_python_environment_path: managedPythonEnvironmentPath,
         environment_id: cache.environmentId,
         environment_manifest_ref: environmentManifestRef,
+        environment_ready_ref: cache.manifestPath,
         cache_hit: cacheHit,
         selected_requirement_profile_ids: selectedRequirementProfileIds,
         requirement_profile_identity: requirementIdentity,
@@ -432,5 +453,23 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       },
       run_context: runContext,
     };
-  } finally { releasePreparation(); }
+  } catch (error) {
+    if (manifestPath) fs.rmSync(manifestPath, { force: true });
+    const failure = error instanceof EnvironmentInterruptedError ? error.phase : operation.phase;
+    if (buildRoot) {
+      fs.rmSync(path.join(buildRoot, 'dependency_run_context.json'), { force: true });
+      writeJsonFile(path.join(buildRoot, 'dependency_environment_receipt.json'), {
+        surface_kind: 'opl_runtime_environment_dependency_receipt', status: 'failed', failure_phase: failure,
+        error: error instanceof Error ? error.message.slice(-32768) : String(error),
+        exit_code: error instanceof EnvironmentInterruptedError ? error.exitCode : 1,
+        timings_ms: { prepare: performance.now() - operation.started, lock_wait: operation.lockWaitMs },
+      });
+    }
+    if (error instanceof EnvironmentInterruptedError) {
+      process.exitCode = error.exitCode;
+      throw new FrameworkContractError('launcher_failed', error.message,
+        { failure_phase: error.phase, stop_reason: error.reason }, error.exitCode);
+    }
+    throw error;
+  } finally { releasePreparation?.(); operation.close(); }
 }

@@ -108,7 +108,9 @@ export function safeSegment(value: string) {
 
 export function writeJsonFile(filePath: string, payload: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+  const temporary = `${filePath}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(payload, null, 2)}\n`);
+  fs.renameSync(temporary, filePath);
 }
 
 export function readJsonObject(filePath: string): JsonRecord | null {

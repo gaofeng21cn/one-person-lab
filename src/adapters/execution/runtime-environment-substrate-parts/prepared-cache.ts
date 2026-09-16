@@ -1,39 +1,50 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { setTimeout as delay } from 'node:timers/promises';
+import { runEnvironmentProcess, type EnvironmentOperation } from '../runtime-environment-process.ts';
 
 import { fileIdentity } from '../runtime-environment-execution.ts';
 import type { JsonRecord } from './contract.ts';
 import { sha256, shortDigest, runtimeEnvironmentStateRoot, writeJsonFile, readJsonObject } from './target-state.ts';
 
 /** Serialize first preparation of a shared environment; execution never takes this lock. */
-export function acquirePreparationLock(root: string) {
+export async function acquirePreparationLock(root: string, operation?: EnvironmentOperation) {
   fs.mkdirSync(root, { recursive: true });
   const lock = path.join(root, 'prepare.lock');
   const deadline = Date.now() + 300_000;
-  while (true) {
-    try {
-      const descriptor = fs.openSync(lock, 'wx');
-      fs.writeFileSync(descriptor, String(process.pid));
-      fs.closeSync(descriptor);
-      return () => fs.rmSync(lock, { force: true });
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  const started = performance.now();
+  const previousPhase = operation?.phase;
+  if (operation) operation.phase = 'lock_wait';
+  try {
+    while (true) {
+      operation?.check();
       try {
-        const owner = Number(fs.readFileSync(lock, 'utf8'));
-        if (owner > 0) {
-          try { process.kill(owner, 0); } catch (error) {
-            if ((error as NodeJS.ErrnoException).code === 'ESRCH') { fs.rmSync(lock, { force: true }); continue; }
-          }
-        }
+        const descriptor = fs.openSync(lock, 'wx');
+        fs.writeFileSync(descriptor, String(process.pid));
+        fs.closeSync(descriptor);
+        if (operation) { operation.lockWaitMs += performance.now() - started; operation.phase = previousPhase!; }
+        return () => fs.rmSync(lock, { force: true });
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
-        throw error;
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+        try {
+          const owner = Number(fs.readFileSync(lock, 'utf8'));
+          if (owner > 0) {
+            try { process.kill(owner, 0); } catch (error) {
+              if ((error as NodeJS.ErrnoException).code === 'ESRCH') { fs.rmSync(lock, { force: true }); continue; }
+            }
+          }
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+          throw error;
+        }
+        if (!operation && Date.now() >= deadline) throw new Error(`Timed out waiting for environment preparation: ${root}`);
+        try { await delay(50, undefined, { signal: operation?.controller.signal }); } catch (error) { operation?.check(); throw error; }
       }
-      if (Date.now() >= deadline) throw new Error(`Timed out waiting for environment preparation: ${root}`);
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
     }
+  } catch (error) {
+    if (operation) operation.lockWaitMs += performance.now() - started;
+    throw error;
   }
 }
 
@@ -62,21 +73,21 @@ export function preparedDependencyCache(requirements: JsonRecord, binaryPaths: R
 }
 
 /** Record resolved versions once when preparing, never on the execution hot path. */
-export function recordDependencyInventory(cache: ReturnType<typeof preparedDependencyCache>, input: {
+export async function recordDependencyInventory(cache: ReturnType<typeof preparedDependencyCache>, input: {
   binaryPaths: Record<string, string>; rLibrary: string; python: string;
-  rPackages: string[]; pythonPackages: string[]; baseRPackages: string[];
+  rPackages: string[]; pythonPackages: string[]; baseRPackages: string[]; operation?: EnvironmentOperation;
 }) {
   const inventory: JsonRecord = {};
   if (input.binaryPaths.Rscript) {
-    const result = spawnSync(input.binaryPaths.Rscript, ['--vanilla', '-e',
-      `cat(R.version.string, "\n"); x <- installed.packages(lib.loc=${JSON.stringify(input.rLibrary)}); if (nrow(x)) cat(paste(x[,"Package"], x[,"Version"], sep="=="), sep="\n")`,
-    ], { encoding: 'utf8' });
+    const result = await runEnvironmentProcess(input.binaryPaths.Rscript, ['--vanilla', '-e',
+      `cat(R.version.string, "\n"); x <- if (dir.exists(${JSON.stringify(input.rLibrary)})) installed.packages(lib.loc=${JSON.stringify(input.rLibrary)}) else matrix(nrow=0, ncol=0); if (nrow(x)) cat(paste(x[,"Package"], x[,"Version"], sep="=="), sep="\n")`,
+    ], { operation: input.operation, encoding: 'utf8' });
     inventory.r = result.status === 0 ? result.stdout.trim().split('\n') : null;
   }
   if (fs.existsSync(input.python)) {
-    const result = spawnSync(input.python, ['-c',
+    const result = await runEnvironmentProcess(input.python, ['-c',
       'import json,sys,importlib.metadata as m; print(json.dumps({"python":sys.version,"packages":sorted((d.metadata["Name"],d.version) for d in m.distributions())}))',
-    ], { encoding: 'utf8' });
+    ], { operation: input.operation, encoding: 'utf8' });
     inventory.python = result.status === 0 ? JSON.parse(result.stdout) : null;
   }
   const manifest = {

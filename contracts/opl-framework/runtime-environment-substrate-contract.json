@@ -32,7 +32,10 @@
     "run_does_not_load_package_catalog_on_cache_hit": true,
     "package_cache_reused_when_dependency_set_changes": true,
     "timeout_and_cancellation": "terminate_process_group",
-    "unsupported_environment_selection": "reject_no_silent_host_fallback"
+    "unsupported_environment_selection": "reject_no_silent_host_fallback",
+    "preparation_timeout_ms_default": 600000,
+    "preparation_cancellation": "asynchronous_process_group",
+    "execution_timeout_is_separate": true
   },
   "dependency_prepare_policy": {
     "status": "uv_and_renv_preparation_with_shared_cache",
@@ -65,7 +68,7 @@
     "bioconductor_installer": "renv",
     "python_package_environment": "UV_PROJECT_ENVIRONMENT",
     "python_installer": "uv",
-    "requirement_profile_selection": "all_profiles_by_default_or_scoped_by_requirement_profile_id",
+    "requirement_profile_selection": "all_profiles_by_default_or_union_of_repeated_requirement_profile_ids",
     "ordinary_profile_source": {
       "descriptor_ref_field": "standard_contract_refs.runtime_environment_requirement_profile",
       "profile_map_field": "runtime_profile_sources",
@@ -85,7 +88,8 @@
     "can_claim_runtime_ready": false,
     "can_claim_domain_ready": false,
     "can_claim_publication_ready": false,
-    "dependency_lock_semantics": "requirement_identity_not_complete_scientific_reproduction_lock"
+    "dependency_lock_semantics": "requirement_identity_not_complete_scientific_reproduction_lock",
+    "version_and_export_verification": "during_preparation_only"
   },
   "run_context_consumer_policy": {
     "status": "fail_closed_consumer_preflight_available",
@@ -138,12 +142,19 @@
       "finished_at",
       "elapsed_ms",
       "exit_code",
-      "stage_attempt_ref"
+      "stage_attempt_ref",
+      "timings_ms",
+      "cache_outcome",
+      "failure_phase"
     ],
     "execution_record_failure_changes_command_outcome": false,
     "credentials_in_environment_variables_recorded": false,
     "full_input_output_hashing_required_for_temporary_tasks": false,
-    "scientific_freeze_owner": "domain_agent"
+    "scientific_freeze_owner": "domain_agent",
+    "child_binding_variables": [
+      "OPL_ENV_EXECUTION_ID",
+      "OPL_ENV_MANIFEST_REF"
+    ]
   },
   "cache_policy": {
     "package_cache_owners": [

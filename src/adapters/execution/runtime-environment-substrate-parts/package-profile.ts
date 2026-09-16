@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { runEnvironmentProcess, type EnvironmentOperation } from '../runtime-environment-process.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -53,15 +53,15 @@ export function resolveBinary(binaryName: string): string | null {
   return null;
 }
 
-export function installedRPackages(rscriptPath: string, libraryPath?: string): Set<string> {
+export async function installedRPackages(rscriptPath: string, libraryPath?: string, operation?: EnvironmentOperation): Promise<Set<string>> {
   const expression = libraryPath
     ? `if (dir.exists(${JSON.stringify(libraryPath)})) cat(paste(rownames(installed.packages(lib.loc = ${JSON.stringify(libraryPath)})), collapse="\\n"))`
     : 'cat(paste(rownames(installed.packages()), collapse="\\n"))';
-  const result = spawnSync(rscriptPath, [
+  const result = await runEnvironmentProcess(rscriptPath, [
     '--vanilla', '-e',
     expression,
   ], {
-    encoding: 'utf8',
+    operation, encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
   });
   if (result.status !== 0) {
@@ -70,18 +70,39 @@ export function installedRPackages(rscriptPath: string, libraryPath?: string): S
   return new Set(result.stdout.split('\n').map((entry) => entry.trim()).filter(Boolean));
 }
 
-export function baseOrRecommendedRPackages(rscriptPath: string): Set<string> {
-  const result = spawnSync(rscriptPath, [
+export async function baseOrRecommendedRPackages(rscriptPath: string, operation?: EnvironmentOperation): Promise<Set<string>> {
+  const result = await runEnvironmentProcess(rscriptPath, [
     '--vanilla', '-e',
     'cat(paste(rownames(installed.packages(priority = c("base", "recommended"))), collapse="\\n"))',
   ], {
-    encoding: 'utf8',
+    operation, encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
   });
   if (result.status !== 0) {
     return new Set();
   }
   return new Set(result.stdout.split('\n').map((entry) => entry.trim()).filter(Boolean));
+}
+
+export async function unsatisfiedRRequirements(rscriptPath: string, libraryPath: string,
+  requirements: RPackageRequirement[], operation?: EnvironmentOperation) {
+  const checked = requirements.filter((entry) => entry.version || entry.minimum_version || entry.required_exports?.length);
+  if (!checked.length) return [];
+  const checks = checked.map((entry) => {
+    const name = JSON.stringify(entry.name);
+    const assertions = [
+      `requireNamespace(${name}, quietly=TRUE)`,
+      ...(entry.version ? [`as.character(packageVersion(${name}, lib.loc=${JSON.stringify(libraryPath)})) == ${JSON.stringify(entry.version)}`] : []),
+      ...(entry.minimum_version ? [`packageVersion(${name}, lib.loc=${JSON.stringify(libraryPath)}) >= package_version(${JSON.stringify(entry.minimum_version)})`] : []),
+      ...(entry.required_exports?.length ? [`all(${rCharacterVector(entry.required_exports)} %in% getNamespaceExports(${name}))`] : []),
+    ];
+    return `if (!tryCatch(${assertions.join(' && ')}, error=function(e) FALSE)) cat(${name}, "\\n", sep="")`;
+  });
+  const result = await runEnvironmentProcess(rscriptPath, ['--vanilla', '-e',
+    `.libPaths(c(${JSON.stringify(libraryPath)}, .Library)); ${checks.join('; ')}`,
+  ], { operation });
+  if (result.status !== 0) throw new Error(`R dependency validation failed: ${result.stderr}`);
+  return result.stdout.trim().split('\n').filter(Boolean);
 }
 
 function rCharacterVector(values: string[]) {
@@ -124,6 +145,9 @@ function rPackageRequirementsFromEntries(value: unknown): RPackageRequirement[] 
       return {
         name,
         install_source: installSource,
+        ...(typeof entry.version === 'string' ? { version: entry.version } : {}),
+        ...(typeof entry.minimum_version === 'string' ? { minimum_version: entry.minimum_version } : {}),
+        ...(Array.isArray(entry.required_exports) ? { required_exports: [...new Set(entry.required_exports as string[])].sort() } : {}),
         ...(installSource === 'github' ? { github_repo: rPackageGithubRepo(entry) } : {}),
       };
     })
@@ -131,22 +155,15 @@ function rPackageRequirementsFromEntries(value: unknown): RPackageRequirement[] 
 }
 
 function uniqueRPackageRequirements(values: RPackageRequirement[]): RPackageRequirement[] {
-  const seen = new Set<string>();
-  const result: RPackageRequirement[] = [];
-  values.forEach((value) => {
-    if (!seen.has(value.name)) {
-      seen.add(value.name);
-      result.push(value);
-      return;
+  const result = new Map<string, RPackageRequirement>();
+  for (const value of values) {
+    const previous = result.get(value.name);
+    if (previous && contentFingerprint(previous) !== contentFingerprint(value)) {
+      throw new Error(`Conflicting R dependency declarations for ${value.name}; select compatible sources and versions.`);
     }
-    if (value.install_source !== 'cran') {
-      const index = result.findIndex((entry) => entry.name === value.name);
-      if (index >= 0) {
-        result[index] = value;
-      }
-    }
-  });
-  return result;
+    result.set(value.name, value);
+  }
+  return [...result.values()];
 }
 
 function pythonPackageRequirementsFromEntries(value: unknown): PythonPackageRequirement[] {
@@ -164,7 +181,7 @@ function uniquePythonPackageRequirements(values: PythonPackageRequirement[]): Py
   const seen = new Set<string>();
   const result: PythonPackageRequirement[] = [];
   values.forEach((value) => {
-    const key = normalizePythonPackageName(value.name);
+    const key = value.name;
     if (!seen.has(key)) {
       seen.add(key);
       result.push(value);
@@ -181,12 +198,12 @@ export function pythonExecutableInManagedEnv(environmentPath: string) {
   return path.join(environmentPath, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 }
 
-export function installedPythonPackages(pythonPath: string): Set<string> {
-  const result = spawnSync(pythonPath, [
+export async function installedPythonPackages(pythonPath: string, operation?: EnvironmentOperation): Promise<Set<string>> {
+  const result = await runEnvironmentProcess(pythonPath, [
     '-c',
     'import importlib.metadata as m; print("\\n".join(d.metadata["Name"] for d in m.distributions() if d.metadata["Name"]))',
   ], {
-    encoding: 'utf8',
+    operation, encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
   });
   if (result.status !== 0) {
@@ -195,11 +212,12 @@ export function installedPythonPackages(pythonPath: string): Set<string> {
   return new Set(result.stdout.split('\n').map(normalizePythonPackageName).filter(Boolean));
 }
 
-export function installPythonPackagesIntoManagedEnv(
+export async function installPythonPackagesIntoManagedEnv(
   uvPath: string,
   pythonPath: string,
   environmentPath: string,
   packages: string[],
+  operation?: EnvironmentOperation,
 ) {
   if (packages.length === 0) {
     return {
@@ -214,19 +232,19 @@ export function installPythonPackagesIntoManagedEnv(
   fs.mkdirSync(path.dirname(environmentPath), { recursive: true });
   const venvResult = fs.existsSync(pythonExecutableInManagedEnv(environmentPath))
     ? { status: 0, stderr: '' }
-    : spawnSync(uvPath, ['venv', environmentPath, '--python', pythonPath], {
-    encoding: 'utf8',
+    : await runEnvironmentProcess(uvPath, ['venv', environmentPath, '--python', pythonPath], {
+    operation, encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
   const managedPythonPath = pythonExecutableInManagedEnv(environmentPath);
   const installResult = venvResult.status === 0
-    ? spawnSync(uvPath, ['pip', 'install', '--python', managedPythonPath, ...packages], {
-      encoding: 'utf8',
+    ? await runEnvironmentProcess(uvPath, ['pip', 'install', '--python', managedPythonPath, ...packages], {
+      operation, encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
     })
     : venvResult;
   const installed = fs.existsSync(managedPythonPath)
-    ? installedPythonPackages(managedPythonPath)
+    ? await installedPythonPackages(managedPythonPath, operation)
     : new Set<string>();
   const failed = packages.filter((packageName) => !installed.has(normalizePythonPackageName(packageName)));
   return {
@@ -239,11 +257,12 @@ export function installPythonPackagesIntoManagedEnv(
   };
 }
 
-export function installRPackagesIntoManagedLibrary(
+export async function installRPackagesIntoManagedLibrary(
   rscriptPath: string,
   libraryPath: string,
   requirements: RPackageRequirement[],
   packages: string[],
+  operation?: EnvironmentOperation,
 ) {
   if (packages.length === 0) {
     return {
@@ -262,19 +281,20 @@ export function installRPackagesIntoManagedLibrary(
       if (!requirement.github_repo) throw new Error(`Missing GitHub source for ${name}.`);
       return requirement.github_repo;
     }
-    return requirement?.install_source === 'bioconductor' ? `bioc::${name}` : name;
+    const ref = requirement?.install_source === 'bioconductor' ? `bioc::${name}` : name;
+    return requirement?.version ? `${ref}@${requirement.version}` : ref;
   });
   const stateRoot = runtimeEnvironmentStateRoot();
   const bootstrap = path.join(stateRoot, 'tools', 'renv', shortDigest(fileIdentity(rscriptPath)));
   fs.mkdirSync(libraryPath, { recursive: true });
   fs.mkdirSync(bootstrap, { recursive: true });
   if (!fs.existsSync(path.join(bootstrap, 'renv', 'DESCRIPTION'))) {
-    const release = acquirePreparationLock(bootstrap);
+    const release = await acquirePreparationLock(bootstrap, operation);
     try {
       if (!fs.existsSync(path.join(bootstrap, 'renv', 'DESCRIPTION'))) {
-        const setup = spawnSync(rscriptPath, ['--vanilla', '-e',
+        const setup = await runEnvironmentProcess(rscriptPath, ['--vanilla', '-e',
           `install.packages("renv", lib=${JSON.stringify(bootstrap)}, repos="https://cloud.r-project.org", quiet=TRUE)`,
-        ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+        ], { operation, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
         if (setup.status !== 0) return { status: 'failed', installed: [], failed: packages,
           managed_library_path: libraryPath, verified_with: 'renv bootstrap', stderr: setup.stderr };
       }
@@ -285,15 +305,15 @@ export function installRPackagesIntoManagedLibrary(
     `options(repos=c(CRAN="https://cloud.r-project.org"))`,
     `renv::install(${rCharacterVector(refs)}, library=${JSON.stringify(libraryPath)}, project=${JSON.stringify(path.dirname(libraryPath))}, prompt=FALSE)`,
   ].join('; ');
-  const result = spawnSync(rscriptPath, ['--vanilla', '-e', expression], {
-    encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+  const result = await runEnvironmentProcess(rscriptPath, ['--vanilla', '-e', expression], {
+    operation, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
     env: { ...process.env,
       RENV_PATHS_ROOT: path.join(stateRoot, 'cache', 'renv-state'),
       RENV_PATHS_CACHE: path.join(stateRoot, 'cache', 'renv'),
       RENV_CONFIG_AUTO_SNAPSHOT: 'FALSE', RENV_CONFIG_PAK_ENABLED: 'FALSE',
     },
   });
-  const installed = installedRPackages(rscriptPath, libraryPath);
+  const installed = await installedRPackages(rscriptPath, libraryPath, operation);
   const failed = packages.filter((packageName) => !installed.has(packageName));
   return {
     status: result.status === 0 && failed.length === 0 ? 'installed' : 'failed',
@@ -317,20 +337,17 @@ function uniqueStrings(values: string[]): string[] {
   return result;
 }
 
-export function readPrepareProfile(profilePath: string, requirementProfileId?: string) {
+export function readPrepareProfile(profilePath: string, requirementProfileId?: string, requirementProfileIds?: string[]) {
   const profile = readJsonPayloadFile(path.resolve(profilePath)) as JsonRecord;
   const profileEntries = objects(profile.profiles);
-  const selectedProfiles = requirementProfileId
-    ? profileEntries.filter((entry) => entry.profile_id === requirementProfileId)
-    : profileEntries;
-  if (requirementProfileId && selectedProfiles.length === 0) {
-    throw new Error(
-      `runtime env prepare could not find requirement profile id ${JSON.stringify(requirementProfileId)} in ${profilePath}`,
-    );
+  const requested = [...new Set(requirementProfileIds ?? (requirementProfileId ? [requirementProfileId] : []))].sort();
+  for (const id of requested) {
+    if (!profileEntries.some((entry) => entry.profile_id === id)) throw new Error(`runtime env prepare could not find requirement profile id ${JSON.stringify(id)} in ${profilePath}`);
   }
+  const selectedProfiles = requested.length ? profileEntries.filter((entry) => requested.includes(String(entry.profile_id))) : profileEntries;
   const selectedRequirementProfileIds = selectedProfiles
     .map((entry) => (typeof entry.profile_id === 'string' ? entry.profile_id.trim() : ''))
-    .filter(Boolean);
+    .filter(Boolean).sort();
   const runtimeBinaries = uniqueStrings(selectedProfiles.flatMap((entry) => (
     objects(entry.runtime_binaries)
       .filter((binary) => binary.required !== false)
