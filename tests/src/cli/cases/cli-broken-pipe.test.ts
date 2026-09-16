@@ -1,5 +1,10 @@
 import { assert, cliPath, repoRoot, spawn, test } from '../helpers.ts';
 
+// The watchdog exists to catch a CLI that hangs on a closed pipe, not to assert
+// startup latency: a loaded host can spend several seconds booting the
+// TypeScript entrypoint. Share the lane's CLI budget instead of hard-coding one.
+const exitWatchdogMs = Number.parseInt(process.env.OPL_CLI_TEST_TIMEOUT_MS ?? '', 10) || 30_000;
+
 test('CLI exits cleanly when stdout pipe closes early', async () => {
   const child = spawn(
     process.execPath,
@@ -24,7 +29,7 @@ test('CLI exits cleanly when stdout pipe closes early', async () => {
   });
   const timeout = setTimeout(() => {
     child.kill('SIGKILL');
-  }, 5_000);
+  }, exitWatchdogMs);
 
   child.stdout?.destroy();
 

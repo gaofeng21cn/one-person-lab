@@ -157,8 +157,12 @@ const fastTemporalStageRunControllerTestFiles = [
   'tests/src/family-runtime-temporal-stage-run-controller-transport.test.ts',
 ];
 
-const fastTemporalHeavyTestFiles = [
+// Each of these starts its own Temporal test server. They run one file at a time
+// so the server's five second connect budget is not consumed by fifteen other
+// suites starting processes beside them.
+const fastIsolatedTemporalTestFiles = [
   'tests/src/family-runtime-pack-bound-stage-quality-e2e.test.ts',
+  'tests/src/family-runtime-temporal-stage-run-recovery-start.test.ts',
 ];
 
 const fastIsolatedCliTestFiles = [
@@ -168,20 +172,33 @@ const fastIsolatedCliTestFiles = [
 ];
 
 const fastNonTemporalHeavyTestFiles = fastTestFiles.filter(
-  (file) => !fastTemporalHeavyTestFiles.includes(file)
+  (file) => !fastIsolatedTemporalTestFiles.includes(file)
     && !fastTemporalStageRunControllerTestFiles.includes(file),
 ).filter(
   (file) => !fastIsolatedCliTestFiles.includes(file),
 );
 
-const readModelGateStartupMaintenanceHeavyTestFiles = [
+// Batches inside one node-test step run one after another, so the batch size
+// decides how much of the file set can execute in parallel. Measured on the fast
+// lane's mixed file set: 20 files per batch spent 163s across 12 serial batches,
+// 54 spent 106s across 4, and a single batch spent 93s. 54 keeps the lane within
+// a few seconds of the theoretical floor while keeping the failure report narrow
+// enough to name the file set that broke.
+const fastNonTemporalHeavyBatchSize = 54;
+
+// These suites read ambient machine state - App carrier probes and startup
+// maintenance locks - through helpers with a one second process budget. Sharing
+// a batch with nineteen other suites can exhaust that budget on a loaded host, so
+// they run one file at a time.
+const readModelGateIsolatedHeavyTestFiles = [
   'tests/src/cli/cases/system-seed-manifest.test.ts',
   'tests/src/cli/cases/system-startup-maintenance.test.ts',
+  'tests/src/cli/cases/managed-update-kernel-projection.test.ts',
 ];
 
 const readModelGateNonTemporalHeavyTestFiles = readModelGateTestFiles.filter(
   (file) => !readModelGateTemporalHeavyTestFiles.includes(file)
-    && !readModelGateStartupMaintenanceHeavyTestFiles.includes(file),
+    && !readModelGateIsolatedHeavyTestFiles.includes(file),
 );
 
 const lanes = {
@@ -196,20 +213,20 @@ const lanes = {
     { kind: 'command', command: process.execPath, args: ['scripts/test-lanes.mjs', 'assert-coverage'] },
     { kind: 'npm', args: ['run', 'build'] },
     { kind: 'command', command: 'scripts/repo-hygiene.sh', args: [] },
-    nodeTest(fastNonTemporalHeavyTestFiles, { batchSize: 20 }),
+    nodeTest(fastNonTemporalHeavyTestFiles, { batchSize: fastNonTemporalHeavyBatchSize }),
     nodeTest(fastIsolatedCliTestFiles, {
       batchSize: 1,
       env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
     }),
     nodeTest(fastTemporalStageRunControllerTestFiles, { batchSize: 4 }),
-    nodeTest(fastTemporalHeavyTestFiles, { batchSize: 1 }),
+    nodeTest(fastIsolatedTemporalTestFiles, { batchSize: 1 }),
   ],
   'read-model-gates': [
     nodeTest(readModelGateNonTemporalHeavyTestFiles, {
       batchSize: 20,
       env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
     }),
-    nodeTest(readModelGateStartupMaintenanceHeavyTestFiles, {
+    nodeTest(readModelGateIsolatedHeavyTestFiles, {
       batchSize: 1,
       env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
     }),
@@ -252,6 +269,93 @@ const lanes = {
     sourceTest(['fresh-install-smoke.test.ts']),
   ],
 };
+
+// `test:full` used to chain the focused lanes, so the 26 test files that several
+// lanes list executed once per lane. The aggregate lane derives its file set from
+// those same lanes and keeps the strictest batch/env configuration per file, so
+// every active test still runs, exactly once.
+const fullLaneConstituentLanes = [
+  'artifact',
+  'fast',
+  'fresh-install',
+  'read-model-gates',
+  'meta',
+  'regression',
+  'integration',
+];
+
+function stepConfiguration(step) {
+  return {
+    batchSize: step.batchSize ?? step.files.length,
+    stripTypes: step.stripTypes !== false,
+    env: step.env ?? {},
+  };
+}
+
+function fullLaneNodeTestSteps() {
+  const fileConfigurations = new Map();
+  for (const laneName of fullLaneConstituentLanes) {
+    for (const step of lanes[laneName] ?? []) {
+      if (step.kind !== 'node-test') {
+        continue;
+      }
+      for (const file of step.files) {
+        const candidate = stepConfiguration(step);
+        const existing = fileConfigurations.get(file);
+        fileConfigurations.set(file, existing
+          ? {
+            batchSize: Math.min(existing.batchSize, candidate.batchSize),
+            stripTypes: existing.stripTypes && candidate.stripTypes,
+            env: { ...existing.env, ...candidate.env },
+          }
+          : candidate);
+      }
+    }
+  }
+
+  const groups = new Map();
+  for (const [file, configuration] of fileConfigurations) {
+    const key = JSON.stringify([configuration.stripTypes, configuration.batchSize, configuration.env]);
+    if (!groups.has(key)) {
+      groups.set(key, { configuration, files: [] });
+    }
+    groups.get(key).files.push(file);
+  }
+  // Keep the order the owning lanes declared: batching decisions, and therefore
+  // per-batch process load, stay identical to running the focused lanes.
+  return [...groups.values()].map(({ configuration, files }) => nodeTest(files, configuration));
+}
+
+function dedupeLaneSteps(steps) {
+  const unique = [];
+  const seen = new Set();
+  for (const step of steps) {
+    const key = JSON.stringify([step.kind, step.command ?? null, step.args ?? null]);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(step);
+  }
+  return unique;
+}
+
+function sharedLaneSteps(laneNames) {
+  return dedupeLaneSteps(laneNames.flatMap((laneName) => (lanes[laneName] ?? [])
+    .filter((step) => step.kind !== 'node-test')));
+}
+
+lanes.full = [
+  ...dedupeLaneSteps([
+    { kind: 'command', command: process.execPath, args: ['scripts/test-lanes.mjs', 'assert-coverage'] },
+    ...sharedLaneSteps(fullLaneConstituentLanes),
+  ]),
+  ...fullLaneNodeTestSteps(),
+  { kind: 'npm', args: ['run', 'typecheck'] },
+  { kind: 'npm', args: ['run', 'lint'] },
+  { kind: 'command', command: 'scripts/verify.sh', args: ['structure'] },
+  { kind: 'command', command: 'scripts/verify.sh', args: ['native'] },
+];
 
 const argv = process.argv.slice(2);
 const command = argv[0] ?? 'help';

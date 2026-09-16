@@ -1,7 +1,10 @@
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 
-const EPHEMERAL_STARTUP_ATTEMPTS = 3;
-const EPHEMERAL_STARTUP_BACKOFF_MS = 500;
+// The bundled test server has a fixed five second connect budget. A loaded host
+// (parallel lane batches, an editor, a VM) can miss that window repeatedly, so
+// keep retrying well past the point where the host is merely busy.
+const EPHEMERAL_STARTUP_ATTEMPTS = 6;
+const EPHEMERAL_STARTUP_BACKOFF_MS = 1000;
 
 function isEphemeralStartupFailure(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -18,8 +21,6 @@ async function startWithRetry(
       if (attempt >= EPHEMERAL_STARTUP_ATTEMPTS || !isEphemeralStartupFailure(error)) {
         throw error;
       }
-      // The bundled test server has a fixed 5s connect budget; under a loaded
-      // host it can miss that window even though nothing is wrong.
       await new Promise((resolve) => setTimeout(resolve, EPHEMERAL_STARTUP_BACKOFF_MS * attempt));
     }
   }
