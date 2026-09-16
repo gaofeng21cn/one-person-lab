@@ -30,9 +30,15 @@ jobs:
           - name: Fast lane
             timeout_minutes: 25
             command: npm run test:fast
+          - name: Smoke lane
+            timeout_minutes: 15
+            command: npm run test:smoke
           - name: Read-model gates
             timeout_minutes: 30
             command: npm run test:read-model-gates
+          - name: Meta lane
+            timeout_minutes: 25
+            command: npm run test:meta
           - name: Regression lane
             timeout_minutes: 30
             command: npm run test:regression
@@ -42,6 +48,9 @@ jobs:
           - name: Fresh-install lane
             timeout_minutes: 15
             command: npm run test:fresh-install
+          - name: Artifact lane
+            timeout_minutes: 20
+            command: npm run test:artifact
 
     steps:
       - name: Checkout
