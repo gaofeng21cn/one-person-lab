@@ -101,16 +101,7 @@ function createCodexConfig(homeDir) {
 }
 
 function createGitModuleFixtures(modulesRoot) {
-  const repoNames = [
-    'med-autoscience',
-    'med-autogrant',
-    'redcube-ai',
-    'opl-meta-agent',
-    'opl-bookforge',
-    'mas-scholar-skills',
-  ];
-
-  for (const repoName of repoNames) {
+  for (const repoName of defaultModuleRepoNames()) {
     const repoPath = path.join(modulesRoot, repoName);
     fs.mkdirSync(repoPath, { recursive: true });
     const result = spawnSync('git', ['init', '-q'], {
@@ -120,6 +111,28 @@ function createGitModuleFixtures(modulesRoot) {
     });
     assert.equal(result.status, 0, result.stderr);
   }
+}
+
+// The clean room needs a checkout for every registered standard Agent, plus the
+// ScholarSkills capability package this scenario installs. Deriving the Agent
+// repos from the Framework package contracts keeps a newly registered Agent
+// from silently turning the ready baseline into a modules-phase run.
+function defaultModuleRepoNames() {
+  const packagesRoot = path.join(repoRoot, 'contracts', 'opl-framework', 'packages');
+  const agentRepoNames = fs.readdirSync(packagesRoot)
+    .filter((name) => name.endsWith('.json') && !/-\d+\.\d+/.test(name))
+    .flatMap((name) => {
+      try {
+        const payload = parseJsonText(fs.readFileSync(path.join(packagesRoot, name), 'utf8'));
+        if (!payload.standard_agent_descriptor_projection || typeof payload.source_repo !== 'string') {
+          return [];
+        }
+        return [payload.source_repo.replace(/\.git$/, '').split('/').at(-1)];
+      } catch {
+        return [];
+      }
+    });
+  return [...new Set([...agentRepoNames, 'mas-scholar-skills'])];
 }
 
 function assertInitializeState(output, expected) {
