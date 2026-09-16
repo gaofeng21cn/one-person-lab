@@ -43,3 +43,28 @@ jobs:
           npm run typecheck
           npm run lint
           npm test
+
+  fast-lane:
+    name: Framework fast lane
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Source validation above stays a fast smoke gate; this job is the PR-layer
+      # owner of the batched source lanes so regressions cannot accumulate between
+      # weekly Verify runs. The full lane matrix remains in Verify.
+      - name: Run the fast lane
+        run: npm run test:fast
