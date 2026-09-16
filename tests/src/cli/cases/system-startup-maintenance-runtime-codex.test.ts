@@ -1,6 +1,9 @@
 import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
-import { withCliTimeout } from './system-startup-maintenance-cases/shared.ts';
+import {
+  domainModulePathEnvironment,
+  withCliTimeout,
+} from './system-startup-maintenance-cases/shared.ts';
 import { rollbackCodexRuntimeGeneration } from '../../../../src/adapters/integration/system-installation/engine-helpers.ts';
 import { codexProtocolFixture } from './system-startup-maintenance-cases/codex-protocol-fixture.ts';
 
@@ -49,6 +52,9 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
 
   fs.mkdirSync(runtimeBin, { recursive: true });
   fs.mkdirSync(fakeBin, { recursive: true });
+  // The PATH below intentionally excludes the developer toolchain, so the
+  // fixture's own `#!/usr/bin/env node` plugin manager needs a local node.
+  fs.symlinkSync(process.execPath, path.join(fakeBin, 'node'));
   fs.writeFileSync(runtimeCodex, '#!/usr/bin/env bash\necho "codex-cli 0.130.0"\n', { mode: 0o755 });
   fs.writeFileSync(runtimeRg, '#!/usr/bin/env bash\necho "rg old"\n', { mode: 0o755 });
   const fullRuntimeSentinels = new Map([
@@ -95,11 +101,7 @@ test('system startup-maintenance applies staged App-owned runtime Codex update w
       OPL_MIN_CODEX_CLI_VERSION: '0.130.0',
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       OPL_APP_PROCESS_INSTANCE_ID: 'app-instance-before-restart',
-      OPL_MODULE_PATH_MEDAUTOSCIENCE: developerCheckout,
-      OPL_MODULE_PATH_MEDAUTOGRANT: developerCheckout,
-      OPL_MODULE_PATH_REDCUBE: developerCheckout,
-      OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
-      OPL_MODULE_PATH_OPLBOOKFORGE: developerCheckout,
+      ...domainModulePathEnvironment(developerCheckout),
       OPL_MODULE_PATH_SCHOLARSKILLS: developerCheckout,
       PATH: `${fakeBin}:/usr/bin:/bin`,
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
@@ -266,6 +268,7 @@ test('system startup-maintenance keeps a compatible external Codex carrier detec
   const developerCheckout = path.join(homeRoot, 'developer-module-checkout');
 
   fs.mkdirSync(externalBin, { recursive: true });
+  fs.symlinkSync(process.execPath, path.join(externalBin, 'node'));
   fs.writeFileSync(
     externalCodex,
     [
@@ -316,11 +319,7 @@ test('system startup-maintenance keeps a compatible external Codex carrier detec
       OPL_MIN_CODEX_CLI_VERSION: '0.130.0',
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       OPL_APP_PROCESS_INSTANCE_ID: 'external-carrier-app-instance',
-      OPL_MODULE_PATH_MEDAUTOSCIENCE: developerCheckout,
-      OPL_MODULE_PATH_MEDAUTOGRANT: developerCheckout,
-      OPL_MODULE_PATH_REDCUBE: developerCheckout,
-      OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
-      OPL_MODULE_PATH_OPLBOOKFORGE: developerCheckout,
+      ...domainModulePathEnvironment(developerCheckout),
       OPL_MODULE_PATH_SCHOLARSKILLS: developerCheckout,
       PATH: `${externalBin}:/usr/bin:/bin`,
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
@@ -382,6 +381,7 @@ test('system startup-maintenance installs missing App-owned runtime Codex on cle
   const developerCheckout = path.join(homeRoot, 'developer-module-checkout');
 
   fs.mkdirSync(fakeBin, { recursive: true });
+  fs.symlinkSync(process.execPath, path.join(fakeBin, 'node'));
   writeFakeNpmRuntimeInstaller(fakeNpm, npmLog);
 
   fs.mkdirSync(developerCheckout, { recursive: true });
@@ -409,11 +409,7 @@ test('system startup-maintenance installs missing App-owned runtime Codex on cle
       OPL_MIN_CODEX_CLI_VERSION: '0.134.0',
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       OPL_APP_PROCESS_INSTANCE_ID: 'clean-install-app-instance',
-      OPL_MODULE_PATH_MEDAUTOSCIENCE: developerCheckout,
-      OPL_MODULE_PATH_MEDAUTOGRANT: developerCheckout,
-      OPL_MODULE_PATH_REDCUBE: developerCheckout,
-      OPL_MODULE_PATH_OPLMETAAGENT: developerCheckout,
-      OPL_MODULE_PATH_OPLBOOKFORGE: developerCheckout,
+      ...domainModulePathEnvironment(developerCheckout),
       OPL_MODULE_PATH_SCHOLARSKILLS: developerCheckout,
       PATH: `${fakeBin}:/usr/bin:/bin`,
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
