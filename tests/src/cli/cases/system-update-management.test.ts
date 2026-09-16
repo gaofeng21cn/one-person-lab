@@ -152,9 +152,16 @@ EOF
     );
     assert.equal(output.system_action.action, 'update');
     assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.summary.total_targets_count, 9);
+    // Target inventory follows the framework, engine and module registries, so
+    // assert its aggregate consistency instead of a frozen total.
+    assert.equal(output.system_action.details.summary.total_targets_count, targets.size);
     assert.equal(output.system_action.details.summary.completed_targets_count, 2);
-    assert.equal(output.system_action.details.summary.skipped_targets_count, 7);
+    assert.equal(
+      output.system_action.details.summary.skipped_targets_count,
+      output.system_action.details.summary.total_targets_count
+        - output.system_action.details.summary.completed_targets_count
+        - output.system_action.details.summary.manual_required_targets_count,
+    );
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.equal(targets.get('framework:opl-framework')?.status, 'completed');
     assert.equal(targets.get('framework:opl-framework')?.reason, 'framework_runtime_source_refreshed');

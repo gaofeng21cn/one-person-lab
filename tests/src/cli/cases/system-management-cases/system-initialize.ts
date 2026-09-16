@@ -1,4 +1,4 @@
-import { assert, assertBlockedDeveloperModeSurface, assertDeveloperModeAction, createCodexConfigFixture, createFakeCodexFixture, createManagedDomainModuleFixtures, fs, os, parseJsonText, path, runCli, runCliRaw, test } from './shared.ts';
+import { assert, assertBlockedDeveloperModeSurface, assertDeveloperModeAction, createCodexConfigFixture, createFakeCodexFixture, createManagedDomainModuleFixtures, DOMAIN_MODULE_SPECS, fs, os, parseJsonText, path, runCli, runCliRaw, test } from './shared.ts';
 
 test('system initialize aggregates environment modules settings workspace and system surfaces', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-home-'));
@@ -196,14 +196,17 @@ exit 1
     assert.equal(domainModulesItem.action_command_ref, 'opl system startup-maintenance');
     assert.equal(typeof domainModulesItem.last_attempt?.observed_at, 'string');
     assert.match(domainModulesItem.next_visible_step, /Core workflows/);
-    assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 7);
+    assert.equal(
+      output.system_initialize.domain_modules.summary.total_modules_count,
+      DOMAIN_MODULE_SPECS.length,
+    );
     assert.deepEqual(output.system_initialize.module_summary, output.system_initialize.domain_modules.summary);
     assert.equal(
       output.system_initialize.domain_modules.summary.total_modules_count,
       output.system_initialize.domain_modules.modules.length,
     );
     assert.equal(output.system_initialize.domain_modules.summary.installed_modules_count >= 0, true);
-    assert.equal(output.system_initialize.domain_modules.modules.length, 7);
+    assert.equal(output.system_initialize.domain_modules.modules.length, DOMAIN_MODULE_SPECS.length);
     assert.equal(output.system_initialize.settings.interaction_mode, 'codex');
     assert.equal(output.system_initialize.settings.execution_mode, 'codex');
     assertBlockedDeveloperModeSurface(output.system_initialize.settings.developer_mode);

@@ -3,18 +3,20 @@ import {
   buildOplDeveloperModeProjection,
   resolveOplDeveloperModeFrameworkCheckout,
 } from '../../../../src/adapters/integration/developer-mode.ts';
+import { listDefaultOplDomainModuleSpecs } from '../../../../src/adapters/integration/system-installation/modules.ts';
 
 const developerModePermissionsFixture = JSON.stringify({
   user: { login: 'gaofeng21cn' },
-  permissions: {
-    'gaofeng21cn/one-person-lab': 'admin',
-    'gaofeng21cn/med-autoscience': 'write',
-    'gaofeng21cn/med-autogrant': 'maintain',
-    'gaofeng21cn/opl-bookforge': 'write',
-    'gaofeng21cn/opl-meta-agent': 'write',
-    'gaofeng21cn/mas-scholar-skills': 'write',
-    'gaofeng21cn/redcube-ai': 'admin',
-  },
+  // Developer Mode authority covers the framework repo plus every default
+  // module repo, so the fixture follows the module registry instead of a
+  // frozen list of five Agents.
+  permissions: Object.fromEntries([
+    ['gaofeng21cn/one-person-lab', 'admin'],
+    ...listDefaultOplDomainModuleSpecs().map((spec) => [
+      `gaofeng21cn/${spec.repo_name}`,
+      'write',
+    ]),
+  ]),
 });
 
 test('workspace root and update channel persist through system settings', () => {

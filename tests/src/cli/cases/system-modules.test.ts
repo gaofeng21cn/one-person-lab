@@ -10,9 +10,9 @@ import {
   test,
 } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { DOMAIN_MODULE_SPECS } from '../../../../src/adapters/integration/system-installation/module-specs.ts';
 import { writeFakeOmaGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 import { parseGitStatusPorcelainV2 } from '../../../../src/adapters/integration/system-installation/module-git.ts';
-import { DOMAIN_MODULE_SPECS } from '../../../../src/adapters/integration/system-installation/module-specs.ts';
 import './system-modules-cases/mds-skill-boundary.ts';
 
 test('git status porcelain v2 parser preserves sync and dirty state', () => {
@@ -154,7 +154,7 @@ test('modules and module actions manage OPL-owned domain module installs and upd
 
   try {
     const initial = runCli(['connect', 'modules'], env) as any;
-    assert.equal(initial.modules.summary.total_modules_count, 7);
+    assert.equal(initial.modules.summary.total_modules_count, DOMAIN_MODULE_SPECS.length);
     const initialMasDependencyReadback = initial.modules.items.find((entry: any) => entry.module_id === 'medautoscience');
     assert.deepEqual(
       initialMasDependencyReadback?.capability_dependencies.map((dependency: any) => ({

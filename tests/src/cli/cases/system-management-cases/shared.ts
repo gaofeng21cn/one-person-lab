@@ -22,9 +22,14 @@ import {
   fs,
   path,
 } from '../../helpers.ts';
+import { DOMAIN_MODULE_SPECS } from '../../../../../src/adapters/integration/system-installation/module-specs.ts';
+
+export { DOMAIN_MODULE_SPECS };
 
 export function createManagedDomainModuleFixtures(modulesRoot: string) {
-  for (const repoName of ['med-autoscience', 'med-deepscientist', 'med-autogrant', 'redcube-ai', 'opl-meta-agent', 'opl-bookforge', 'mas-scholar-skills']) {
+  // Every registered module repo, so a newly registered module is covered by
+  // the managed-root fixture instead of silently reporting as missing.
+  for (const repoName of DOMAIN_MODULE_SPECS.map((spec) => spec.repo_name)) {
     const repoPath = path.join(modulesRoot, repoName);
     fs.mkdirSync(repoPath, { recursive: true });
     const result = spawnSync('git', ['init', '-q'], {

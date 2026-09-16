@@ -8,6 +8,10 @@ import {
 } from '../../../../src/authority/stages/family-stage-derived-lenses.ts';
 import { buildDomainManifestCatalog } from '../../../../src/read-models/catalog/domain-manifest/catalog-builder.ts';
 import { buildCurrentDashboardSurfaceRefs, buildCurrentReadinessProjection } from '../../../../src/read-models/operator/management/readiness.ts';
+import {
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../../src/kernel/standard-agent-registry.ts';
 import { buildOplDashboard } from '../../../../src/read-models/operator/management/runtime-dashboard.ts';
 import { buildWorkspaceCatalog } from '../../../../src/authority/workspace/workspace-registry.ts';
 import {
@@ -227,10 +231,17 @@ test('current readiness projection is derived from current OPL surfaces', () => 
     assert.equal(readiness.surface_id, 'opl_current_readiness_projection');
     assert.equal(readiness.summary.total_projects_count, 3);
     assert.equal(readiness.projects.length, 3);
-    assert.equal(readiness.domain_binding_parity.summary.total_projects_count, 5);
+    const registeredTargetDomainIds = STANDARD_AGENT_REGISTRY
+      .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
+      .map((entry) => entry.domain_id)
+      .sort();
+    assert.equal(
+      readiness.domain_binding_parity.summary.total_projects_count,
+      registeredTargetDomainIds.length,
+    );
     assert.deepEqual(
       readiness.domain_binding_parity.projects.map((entry) => entry.project_id).sort(),
-      ['agent_engineering', 'medautogrant', 'medautoscience', 'oplbookforge', 'redcube'],
+      registeredTargetDomainIds,
     );
     assert.equal(refs.entry_guide_surface.command, 'opl start --project <project_id>');
     assert.equal(refs.readiness_surface.command, 'opl status dashboard');
