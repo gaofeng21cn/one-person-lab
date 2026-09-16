@@ -6,7 +6,7 @@
   "owner": "one-person-lab",
   "purpose": "Define the workspace-local index materialized by OPL workspace init and ensure for standard domain agents, including canonical topology, display labels, shared resources, project stage output roots, and authority boundaries.",
   "state": "active_contract",
-  "machine_boundary": "OPL owns the workspace index shape, topology projection, registry-facing refs, user inspection pointers, and authority false flags. Domain agents own domain truth, source/artifact/memory bodies, owner receipts, typed blockers, quality verdicts, export verdicts, and product-specific workspace semantics.",
+  "machine_boundary": "OPL owns the workspace index shape, topology projection, registry-facing refs, user inspection pointers, and authority false flags. Domain agents own domain truth, source/artifact/memory bodies, owner receipts, typed blockers, quality verdicts, export verdicts, and product-specific workspace semantics. Registered-agent identity is owned by the standard Agent registry: this schema validates the agent_id shape only, and workspace init/validate admit an id through resolveStandardAgent.",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -50,15 +50,10 @@
         "project_kind"
       ],
       "properties": {
-        "agent_id": {
-          "enum": [
-            "mas",
-            "mag",
-            "rca",
-            "oma",
-            "obf"
-          ]
-        },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
         "project_id": {
           "type": "string"
         },
