@@ -14,8 +14,9 @@ export function writeFakeRscript(binDir: string) {
     `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
-const expression = process.argv[3] || '';
-const libMatch = expression.match(/lib\\.loc\\s*=\\s*"([^"]+)"/)
+const expression = process.argv[process.argv.indexOf('-e') + 1] || '';
+const libMatch = expression.match(/library\\s*=\\s*"([^"]+)"/)
+  || expression.match(/lib\\.loc\\s*=\\s*"([^"]+)"/)
   || expression.match(/lib\\s*=\\s*"([^"]+)"/)
   || expression.match(/dir\\.exists\\("([^"]+)"\\)/);
 const libPath = libMatch ? libMatch[1] : '';
@@ -28,16 +29,9 @@ if (expression.includes('priority = c("base", "recommended")')) {
   process.stdout.write('grid\\n');
   process.exit(0);
 }
-if (expression.includes('install_github')) {
-  fs.mkdirSync(libPath, { recursive: true });
-  fs.writeFileSync(markerPath, JSON.stringify(Array.from(new Set([...readPackages(), 'ggconsort']))));
-  process.exit(0);
-}
-if (expression.includes('install.packages')) {
-  const packageMatch = expression.match(/install\\.packages\\(c\\(([^)]*)\\)/);
-  const packages = packageMatch
-    ? packageMatch[1].split(',').map((part) => part.trim().replace(/^"|"$/g, '')).filter(Boolean)
-    : [];
+if (expression.includes('renv::install')) {
+  const packageMatch = expression.match(/renv::install\\(c\\(([^)]*)\\)/);
+  const packages = packageMatch ? packageMatch[1].split(',').map((part) => part.trim().replace(/^"|"$/g, '').replace(/^bioc::/, '').split('/').pop()) : [];
   fs.mkdirSync(libPath, { recursive: true });
   fs.writeFileSync(markerPath, JSON.stringify(Array.from(new Set([...readPackages(), ...packages]))));
   process.exit(0);

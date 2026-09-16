@@ -4,7 +4,9 @@ import path from 'node:path';
 
 import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
 import type { JsonRecord, PythonPackageRequirement, RPackageRequirement } from './contract.ts';
-import { contentFingerprint, objects } from './target-state.ts';
+import { contentFingerprint, objects, runtimeEnvironmentStateRoot, shortDigest } from './target-state.ts';
+import { fileIdentity } from '../runtime-environment-execution.ts';
+import { acquirePreparationLock } from './prepared-cache.ts';
 
 export function requirementProfileIdentity(
   profilePath: string,
@@ -56,7 +58,7 @@ export function installedRPackages(rscriptPath: string, libraryPath?: string): S
     ? `if (dir.exists(${JSON.stringify(libraryPath)})) cat(paste(rownames(installed.packages(lib.loc = ${JSON.stringify(libraryPath)})), collapse="\\n"))`
     : 'cat(paste(rownames(installed.packages()), collapse="\\n"))';
   const result = spawnSync(rscriptPath, [
-    '-e',
+    '--vanilla', '-e',
     expression,
   ], {
     encoding: 'utf8',
@@ -70,7 +72,7 @@ export function installedRPackages(rscriptPath: string, libraryPath?: string): S
 
 export function baseOrRecommendedRPackages(rscriptPath: string): Set<string> {
   const result = spawnSync(rscriptPath, [
-    '-e',
+    '--vanilla', '-e',
     'cat(paste(rownames(installed.packages(priority = c("base", "recommended"))), collapse="\\n"))',
   ], {
     encoding: 'utf8',
@@ -152,7 +154,8 @@ function pythonPackageRequirementsFromEntries(value: unknown): PythonPackageRequ
     .filter((entry) => entry.required !== false)
     .map((entry): PythonPackageRequirement | null => {
       const name = typeof entry.name === 'string' ? entry.name.trim() : '';
-      return name ? { name } : null;
+      const version = typeof entry.version === 'string' ? entry.version.trim() : '';
+      return name ? { name: version ? `${name}${/^[<>=~!]/.test(version) ? '' : '=='}${version}` : name } : null;
     })
     .filter((entry): entry is PythonPackageRequirement => Boolean(entry));
 }
@@ -171,7 +174,7 @@ function uniquePythonPackageRequirements(values: PythonPackageRequirement[]): Py
 }
 
 export function normalizePythonPackageName(value: string) {
-  return value.trim().toLowerCase().replace(/[-_.]+/g, '-');
+  return value.trim().split(/[<>=~!;\[]/, 1)[0].toLowerCase().replace(/[-_.]+/g, '-');
 }
 
 export function pythonExecutableInManagedEnv(environmentPath: string) {
@@ -209,7 +212,9 @@ export function installPythonPackagesIntoManagedEnv(
     };
   }
   fs.mkdirSync(path.dirname(environmentPath), { recursive: true });
-  const venvResult = spawnSync(uvPath, ['venv', environmentPath, '--python', pythonPath], {
+  const venvResult = fs.existsSync(pythonExecutableInManagedEnv(environmentPath))
+    ? { status: 0, stderr: '' }
+    : spawnSync(uvPath, ['venv', environmentPath, '--python', pythonPath], {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
@@ -251,45 +256,41 @@ export function installRPackagesIntoManagedLibrary(
     };
   }
   const requirementsByName = new Map(requirements.map((entry) => [entry.name, entry]));
-  const packagesToInstall = packages.map((packageName) => (
-    requirementsByName.get(packageName) ?? { name: packageName, install_source: 'cran' as const }
-  ));
-  const cranPackages = packagesToInstall
-    .filter((entry) => entry.install_source === 'cran')
-    .map((entry) => entry.name);
-  const githubPackages = packagesToInstall.filter((entry) => entry.install_source === 'github');
-  const bioconductorPackages = packagesToInstall
-    .filter((entry) => entry.install_source === 'bioconductor')
-    .map((entry) => entry.name);
+  const refs = packages.map((name) => {
+    const requirement = requirementsByName.get(name);
+    if (requirement?.install_source === 'github') {
+      if (!requirement.github_repo) throw new Error(`Missing GitHub source for ${name}.`);
+      return requirement.github_repo;
+    }
+    return requirement?.install_source === 'bioconductor' ? `bioc::${name}` : name;
+  });
+  const stateRoot = runtimeEnvironmentStateRoot();
+  const bootstrap = path.join(stateRoot, 'tools', 'renv', shortDigest(fileIdentity(rscriptPath)));
   fs.mkdirSync(libraryPath, { recursive: true });
-  const expression = [
-    `dir.create(${JSON.stringify(libraryPath)}, recursive = TRUE, showWarnings = FALSE)`,
-    `.libPaths(c(${JSON.stringify(libraryPath)}, .libPaths()))`,
-    cranPackages.length > 0
-      ? `install.packages(${rCharacterVector(cranPackages)}, lib = ${JSON.stringify(libraryPath)}, repos = "https://cloud.r-project.org", quiet = TRUE)`
-      : '',
-    bioconductorPackages.length > 0
-      ? [
-        `if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", lib = ${JSON.stringify(libraryPath)}, repos = "https://cloud.r-project.org", quiet = TRUE)`,
-        `BiocManager::install(${rCharacterVector(bioconductorPackages)}, lib = ${JSON.stringify(libraryPath)}, ask = FALSE, update = FALSE, force = TRUE, quiet = TRUE)`,
-      ].join('; ')
-      : '',
-    ...githubPackages.map((entry) => {
-      if (!entry.github_repo) {
-        return `stop("missing github repo for R package ${entry.name}")`;
+  fs.mkdirSync(bootstrap, { recursive: true });
+  if (!fs.existsSync(path.join(bootstrap, 'renv', 'DESCRIPTION'))) {
+    const release = acquirePreparationLock(bootstrap);
+    try {
+      if (!fs.existsSync(path.join(bootstrap, 'renv', 'DESCRIPTION'))) {
+        const setup = spawnSync(rscriptPath, ['--vanilla', '-e',
+          `install.packages("renv", lib=${JSON.stringify(bootstrap)}, repos="https://cloud.r-project.org", quiet=TRUE)`,
+        ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+        if (setup.status !== 0) return { status: 'failed', installed: [], failed: packages,
+          managed_library_path: libraryPath, verified_with: 'renv bootstrap', stderr: setup.stderr };
       }
-      return [
-        `if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes", lib = ${JSON.stringify(libraryPath)}, repos = "https://cloud.r-project.org", quiet = TRUE)`,
-        `remotes::install_github(${JSON.stringify(entry.github_repo)}, lib = ${JSON.stringify(libraryPath)}, dependencies = TRUE, upgrade = "never", quiet = TRUE)`,
-      ].join('; ');
-    }),
-  ].filter(Boolean).join('; ');
-  const result = spawnSync(rscriptPath, ['-e', expression], {
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    env: {
-      ...process.env,
-      R_REMOTES_NO_ERRORS_FROM_WARNINGS: 'true',
+    } finally { release(); }
+  }
+  const expression = [
+    `.libPaths(c(${JSON.stringify(bootstrap)}, .libPaths()))`,
+    `options(repos=c(CRAN="https://cloud.r-project.org"))`,
+    `renv::install(${rCharacterVector(refs)}, library=${JSON.stringify(libraryPath)}, project=${JSON.stringify(path.dirname(libraryPath))}, prompt=FALSE)`,
+  ].join('; ');
+  const result = spawnSync(rscriptPath, ['--vanilla', '-e', expression], {
+    encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+    env: { ...process.env,
+      RENV_PATHS_ROOT: path.join(stateRoot, 'cache', 'renv-state'),
+      RENV_PATHS_CACHE: path.join(stateRoot, 'cache', 'renv'),
+      RENV_CONFIG_AUTO_SNAPSHOT: 'FALSE', RENV_CONFIG_PAK_ENABLED: 'FALSE',
     },
   });
   const installed = installedRPackages(rscriptPath, libraryPath);

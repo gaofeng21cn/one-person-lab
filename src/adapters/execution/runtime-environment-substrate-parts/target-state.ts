@@ -106,58 +106,6 @@ export function safeSegment(value: string) {
   return encodeURIComponent(value).replace(/%/g, '_');
 }
 
-function targetStateRoot(target: ReturnType<typeof normalizeTarget>) {
-  return path.join(
-    runtimeEnvironmentStateRoot(),
-    'targets',
-    safeSegment(target.domain_id),
-    safeSegment(target.profile_id),
-    safeSegment(target.platform_id),
-  );
-}
-
-export function locksRoot(target: ReturnType<typeof normalizeTarget>) {
-  return path.join(targetStateRoot(target), 'locks');
-}
-
-export function bundleRoot(target: ReturnType<typeof normalizeTarget>) {
-  return path.join(targetStateRoot(target), 'bundles');
-}
-
-function runtimeRootsRoot(target: ReturnType<typeof normalizeTarget>) {
-  return path.join(targetStateRoot(target), 'runtime-roots');
-}
-
-function pointerRoot(target: ReturnType<typeof normalizeTarget>) {
-  return path.join(targetStateRoot(target), 'pointers');
-}
-
-export function dependencyLibrariesRoot(target: ReturnType<typeof normalizeTarget>) {
-  return path.join(targetStateRoot(target), 'dependency-libraries');
-}
-
-export function receiptsRoot(target: ReturnType<typeof normalizeTarget>) {
-  return path.join(targetStateRoot(target), 'receipts');
-}
-
-export function cleanupReceiptsRoot() {
-  return path.join(runtimeEnvironmentStateRoot(), 'cleanup-receipts');
-}
-
-export function stateRef(absolutePath: string) {
-  return `opl-runtime-env-state:${path.relative(runtimeEnvironmentStateRoot(), absolutePath)}`;
-}
-
-export function statePathFromRef(ref: unknown): string | null {
-  if (typeof ref !== 'string' || !ref.startsWith('opl-runtime-env-state:')) {
-    return null;
-  }
-  const relative = ref.slice('opl-runtime-env-state:'.length);
-  const resolved = path.resolve(runtimeEnvironmentStateRoot(), relative);
-  const root = path.resolve(runtimeEnvironmentStateRoot());
-  return resolved === root || resolved.startsWith(`${root}${path.sep}`) ? resolved : null;
-}
-
 export function writeJsonFile(filePath: string, payload: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
@@ -176,39 +124,6 @@ export function objects(value: unknown): JsonRecord[] {
   return Array.isArray(value)
     ? value.filter((entry): entry is JsonRecord => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry))
     : [];
-}
-
-function materializationId(bundleManifest: JsonRecord) {
-  const stableLayerRefs = objects(bundleManifest.layer_refs).map((layer) => ({
-    layer_type: layer.layer_type,
-    layer_id: layer.layer_id,
-    cache_key: layer.cache_key,
-    digest: layer.digest,
-  }));
-  return shortDigest({
-    bundle_ref: bundleManifest.bundle_ref,
-    bundle_digest: bundleManifest.bundle_digest,
-    layer_refs: stableLayerRefs,
-  });
-}
-
-export function runtimeRootForBundle(
-  target: ReturnType<typeof normalizeTarget>,
-  bundleManifest: JsonRecord,
-) {
-  return path.join(runtimeRootsRoot(target), materializationId(bundleManifest));
-}
-
-function pointerPath(target: ReturnType<typeof normalizeTarget>, pointer: string) {
-  return path.join(pointerRoot(target), `${pointer}.json`);
-}
-
-function readPointer(target: ReturnType<typeof normalizeTarget>, pointer = 'current') {
-  return readJsonObject(pointerPath(target, pointer));
-}
-
-export function writePointer(target: ReturnType<typeof normalizeTarget>, pointer: string, payload: JsonRecord) {
-  writeJsonFile(pointerPath(target, pointer), payload);
 }
 
 function preparedEnvironmentIndexPath() {

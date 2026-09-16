@@ -113,10 +113,9 @@ export function buildPublicRuntimeCommandSpecs(
     'runtime env':
       cloneCommandSpec(commandSpecs['runtime env'], {
         usage:
-          'opl runtime env <inspect|lock|build|prepare|materialize|verify|cache|doctor|run-context|contract>',
+          'opl runtime env <inspect|prepare|cache|doctor|run-context|contract>',
         examples: [
           'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
-          'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --json',
           'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
           'opl runtime env cache status --json',
         ],
@@ -131,24 +130,6 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
-    'runtime env lock':
-      cloneCommandSpec(commandSpecs['runtime env lock'], {
-        usage:
-          'opl runtime env lock --domain <domain> --profile <profile> --platform <platform>',
-        examples: [
-          'opl runtime env lock --domain mas --profile analysis --platform macos-arm64 --json',
-        ],
-        group: 'runtime',
-      }),
-    'runtime env build':
-      cloneCommandSpec(commandSpecs['runtime env build'], {
-        usage:
-          'opl runtime env build --domain <domain> --profile <profile> --platform <platform>',
-        examples: [
-          'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --json',
-        ],
-        group: 'runtime',
-      }),
     'runtime env prepare':
       cloneCommandSpec(commandSpecs['runtime env prepare'], {
         usage:
@@ -156,22 +137,6 @@ export function buildPublicRuntimeCommandSpecs(
         examples: [
           'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
         ],
-        group: 'runtime',
-      }),
-    'runtime env materialize':
-      cloneCommandSpec(commandSpecs['runtime env materialize'], {
-        usage:
-          'opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--target current|rollback|staged] [--dry-run|--apply]',
-        examples: [
-          'opl runtime env materialize --domain mas --profile analysis --platform macos-arm64 --dry-run --json',
-          'opl runtime env materialize --domain mas --profile analysis --platform macos-arm64 --apply --json',
-        ],
-        group: 'runtime',
-      }),
-    'runtime env verify':
-      cloneCommandSpec(commandSpecs['runtime env verify'], {
-        usage: 'opl runtime env verify --runtime-root <path>',
-        examples: ['opl runtime env verify --runtime-root /path/to/opl/runtime-root --json'],
         group: 'runtime',
       }),
     'runtime env cache status':
@@ -184,15 +149,6 @@ export function buildPublicRuntimeCommandSpecs(
       cloneCommandSpec(commandSpecs['runtime env cache inventory'], {
         usage: 'opl runtime env cache inventory',
         examples: ['opl runtime env cache inventory --json'],
-        group: 'runtime',
-      }),
-    'runtime env cache prune':
-      cloneCommandSpec(commandSpecs['runtime env cache prune'], {
-        usage: 'opl runtime env cache prune [--dry-run|--apply]',
-        examples: [
-          'opl runtime env cache prune --dry-run --json',
-          'opl runtime env cache prune --apply --json',
-        ],
         group: 'runtime',
       }),
     'runtime env doctor':

@@ -3,354 +3,50 @@
   "schema_version": "opl-runtime-environment-substrate.v1",
   "owner": "OPL Framework",
   "state": "active_contract",
-  "implementation_status": "runtime_lock_materializer_cache_prune_run_context_guard_available",
-  "target_planned": true,
-  "purpose": "Define the OPL-owned runtime environment bundle substrate boundary for descriptor, lock, cache, materialization, verification, cleanup, and run-context readbacks without granting domain, App release, or owner-receipt authority.",
+  "implementation_status": "cached_language_environments_and_lightweight_execution",
+  "target_planned": false,
+  "purpose": "Run dependency-bearing temporary tasks efficiently using standard language tools and reusable caches; record resolved environments once and reference them per execution.",
   "ordinary_path": {
-    "input": "domain_environment_intent",
     "ordinary_user_commands": [
       "opl env doctor",
       "opl env prepare",
       "opl env run"
     ],
-    "advanced_operator_surface": "opl runtime env inspect|lock|build|prepare|materialize|verify|cache|doctor|run-context|contract",
-    "steps": [
-      "runtime_environment_descriptor",
-      "runtime_lock",
-      "content_addressed_layers",
-      "runtime_bundle_manifest",
-      "materialized_runtime_root",
-      "receipt_cleanup_rollback"
-    ],
-    "default_mode": "materialize_only_with_explicit_apply_and_receipt",
+    "advanced_operator_surface": "opl runtime env inspect|prepare|cache|doctor|run-context|contract",
     "default_provider_kind": "fast_local_env",
-    "ordinary_entrypoint_policy": "ordinary_users_use_opl_env_doctor_prepare_run_advanced_operators_may_use_opl_runtime_env",
+    "automatic_prepare_on_run": true,
     "domain_agents_declare_dependency_intent_only": true
   },
-  "module_mapping": {
-    "runway": {
-      "role": "runtime_materialization_and_run_consumption",
-      "owner": "OPL Framework"
-    },
-    "pack": {
-      "role": "descriptor_lock_layer_manifest_and_distribution_refs",
-      "owner": "OPL Framework"
-    },
-    "connect": {
-      "role": "cli_app_install_update_entrypoints",
-      "owner": "OPL Framework"
-    },
-    "console": {
-      "role": "operator_projection",
-      "owner": "OPL Framework"
-    },
-    "ledger": {
-      "role": "refs_only_evidence_and_receipt_refs",
-      "owner": "OPL Framework"
-    },
-    "workspace": {
-      "role": "managed_runtime_root_and_workspace_state_separation",
-      "owner": "OPL Framework"
-    },
-    "atlas": {
-      "role": "package_module_registry",
-      "owner": "OPL Framework"
-    },
-    "stagecraft": {
-      "role": "stage_runtime_consumption_refs",
-      "owner": "OPL Framework"
-    },
-    "foundry": {
-      "role": "foundry_kernel_evaluation_environment_consumption",
-      "owner": "OPL Framework"
-    },
-    "charter": {
-      "role": "policy_and_false_ready_boundary",
-      "owner": "OPL Framework"
-    }
-  },
-  "descriptor_contract": {
-    "surface_kind": "opl_runtime_environment_descriptor",
-    "required_fields": [
-      "schema",
-      "domain_id",
-      "profile_id",
-      "platform_id",
-      "environment_profile",
-      "dependency_sources",
-      "toolchain_needs",
-      "authority_boundary"
+  "execution_policy": {
+    "backend": "host_process",
+    "python_tool": "uv",
+    "r_tool": "renv",
+    "cache_identity": [
+      "dependency_requirements_and_sources",
+      "runtime_binary_identity",
+      "referenced_lock_content"
     ],
-    "domain_owned_fields": [
-      "domain_id",
-      "profile_id",
-      "dependency_sources",
-      "study_reproducibility_refs"
-    ],
-    "opl_owned_fields": [
-      "platform_id",
-      "environment_strategy_ref",
-      "runtime_lock_ref",
-      "layer_manifest_refs",
-      "materialization_receipt_ref",
-      "cache_policy_ref"
-    ],
-    "body_policy": "descriptor_refs_only_no_domain_artifact_or_memory_body"
-  },
-  "layer_types": [
-    "base-toolchain",
-    "python-wheelhouse",
-    "opl-framework-runtime",
-    "domain-pack",
-    "companion-skills",
-    "optional-heavy-tools"
-  ],
-  "cache_policy": {
-    "cache_key_inputs": [
-      "descriptor_digest",
-      "platform_id",
-      "python_or_node_lock_digest",
-      "toolchain_digest",
-      "domain_pack_ref",
-      "packager_source_hash",
-      "exclusion_policy_hash"
-    ],
-    "cache_hit_counts_as_ready": false,
-    "cache_miss_counts_as_readiness_failure": false,
-    "materialization_failure_counts_as_runtime_environment_failure": true
-  },
-  "lock_projection_policy": {
-    "status": "projection_and_persisted_lock_available",
-    "deterministic_digest_required": true,
-    "persisted_lock_required_for_runtime_ready": true,
-    "writes_runtime_root": false,
-    "writes_domain_repo": false,
-    "can_claim_runtime_ready": false,
-    "can_claim_domain_ready": false
-  },
-  "bundle_manifest_projection_policy": {
-    "status": "projection_and_persisted_manifest_available",
-    "layer_graph_required": true,
-    "archive_presence_must_be_explicit": true,
-    "all_layer_archives_present_required_for_materialization": true,
-    "dry_run_bundle_manifest_counts_as_runtime_ready": false,
-    "writes_runtime_root": false,
-    "can_claim_runtime_ready": false
-  },
-  "runtime_bundle_producer_policy": {
-    "surface_kind": "opl_runtime_bundle_producer_policy",
-    "status": "build_command_exposes_manifest_lock_and_readback_refs",
-    "producer_kind": "opl-runtime-bundle",
-    "producer_command_ref": "opl-runtime-env-command:build",
-    "producer_command": "opl runtime env build --domain <domain> --profile <profile> --platform <platform>",
-    "manifest_schema_version": "opl-runtime-bundle-manifest.v1",
-    "lock_schema_version": "opl-runtime-bundle-lock.v1",
-    "readback_schema_version": "opl-runtime-bundle-producer-readback.v1",
-    "stable_ref_fields": [
-      "runtime_bundle_producer.producer_readback_ref",
-      "producer_receipt.readback_ref",
-      "bundle_manifest.bundle_ref",
-      "bundle_manifest.bundle_digest",
-      "bundle_manifest.bundle_manifest_state_ref",
-      "bundle_lock.lock_ref",
-      "bundle_lock.lock_digest",
-      "bundle_lock.lock_state_ref"
-    ],
-    "required_consumer_fields": [
-      "target_profile",
-      "target_platform_id",
-      "bundle_manifest_ref",
-      "bundle_lock_ref",
-      "layer_taxonomy",
-      "false_ready_flags",
-      "producer_receipt_ref"
-    ],
-    "layer_taxonomy_source": "layer_types",
-    "app_full_consumer_boundary": {
-      "app_consumes_bundle_manifest_lock_and_readback_refs": true,
-      "app_does_not_own_runtime_dependency_truth": true,
-      "framework_does_not_claim_app_release_ready": true
-    },
-    "consumer_false_ready_flags": [
-      "dry_run_projection_counts_as_runtime_ready",
-      "dry_run_projection_counts_as_domain_ready",
-      "dry_run_projection_counts_as_app_release_ready",
-      "bundle_manifest_exists_counts_as_materialized_runtime",
-      "bundle_lock_exists_counts_as_app_full_release_ready"
-    ],
-    "dry_run_bundle_manifest_counts_as_runtime_ready": false,
-    "dry_run_bundle_manifest_counts_as_app_release_ready": false,
-    "writes_runtime_root": false,
-    "writes_domain_repo": false,
-    "can_claim_runtime_ready": false,
-    "can_claim_domain_ready": false,
-    "can_claim_app_release_ready": false
-  },
-  "external_sandbox_provider_policy": {
-    "surface_kind": "opl_runtime_environment_strategy_policy",
-    "status": "fast_local_env_default_with_local_and_remote_sandbox_providers_deferred",
-    "purpose": "Keep Fast Local Env as the current default for R/Python/MAS display paths through environment profiles, compiler, doctor, and run-context, while treating Local Sandbox/Docker and Remote Sandbox/E2B as explicit post-default providers with receipt and false-ready boundaries.",
-    "supported_provider_kinds": [
-      "fast_local_env",
-      "local_sandbox",
-      "remote_sandbox"
-    ],
-    "default_provider_kind": "fast_local_env",
-    "environment_tiers": [
-      {
-        "tier": "fast_local_env",
-        "role": "current_default_for_r_python_mas_display",
-        "requires_docker": false,
-        "authority_surface": "env_profile_compiler_doctor_run_context"
-      },
-      {
-        "tier": "local_sandbox",
-        "role": "post_default_local_isolation_provider",
-        "provider_examples": [
-          "docker",
-          "devcontainer"
-        ]
-      },
-      {
-        "tier": "remote_sandbox",
-        "role": "post_default_remote_execution_provider",
-        "provider_examples": [
-          "e2b"
-        ]
-      }
-    ],
-    "local_provider_examples": [
-      "docker",
-      "devcontainer"
-    ],
-    "implemented_external_substrates": [
-      "e2b"
-    ],
-    "required_external_sandbox_refs": [
-      "OPL_EXTERNAL_SANDBOX_ENDPOINT",
-      "OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF",
-      "OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF"
-    ],
-    "provider_role": "post_default_execution_isolation_substrate",
-    "e2b_default_dependency": false,
-    "e2b_package_dependency_class": "optional_dependency",
-    "e2b_connect_configuration_assist_only": true,
-    "external_provider_owns": [
-      "isolated_filesystem",
-      "process_execution",
-      "git_workspace",
-      "template_or_image",
-      "snapshot_or_pause_resume",
-      "volume_or_persistent_storage",
-      "network_boundary"
-    ],
-    "opl_keeps_authority_for": [
-      "stage_lifecycle",
-      "stage_attempt_request_and_projection_ledger",
-      "owner_boundary",
-      "receipt_ref_transport",
-      "run_context_binding",
-      "false_ready_guard",
-      "operator_projection"
-    ],
-    "adapter_owned_fields": [
-      "environment_profile",
-      "compiler_profile",
-      "doctor_ref",
-      "run_context_ref",
-      "provider_profile",
-      "credential_ref_preflight",
-      "provider_receipt_ref",
-      "sandbox_binding_ref",
-      "run_context_binding_ref",
-      "false_ready_flags"
-    ],
-    "temporal_replacement": false,
-    "requires_live_provider_receipt_for_ready": true,
-    "required_receipt_kind": "external_sandbox_provider_receipt",
-    "fast_local_env_counts_as_provider_ready": false,
-    "fast_local_env_doctor_counts_as_runtime_ready": false,
-    "fast_local_env_doctor_policy": {
-      "checks_host_binaries": true,
-      "checks_language_packages": true,
-      "emits_system_hints": true,
-      "declares_runtime_ready": false,
-      "declares_domain_ready": false,
-      "declares_app_ready": false,
-      "declares_provider_ready": false
-    },
-    "local_sandbox_provider_readback_policy": {
-      "local_docker_status": "local_docker_preflight_required",
-      "local_devcontainer_status": "local_devcontainer_preflight_required",
-      "template_ref_required": true,
-      "sandbox_binding_ref_requires_live_receipt": true,
-      "required_cli": "docker",
-      "required_image_env": [
-        "OPL_LOCAL_SANDBOX_IMAGE",
-        "OPL_CODEX_STAGE_SANDBOX_IMAGE",
-        "OPL_DEVCONTAINER_IMAGE"
-      ],
-      "workspace_transport_required": "git_clone_or_declared_workspace_mount",
-      "required_receipt_kind": "sandbox_execution_receipt",
-      "live_provider_receipt_required": true,
-      "false_ready_guard": "local_sandbox_preflight_is_not_provider_ready",
-      "local_sandbox_preflight_counts_as_provider_ready": false,
-      "local_sandbox_template_exists_counts_as_provider_ready": false,
-      "local_sandbox_execution_receipt_counts_as_domain_ready": false,
-      "local_sandbox_execution_receipt_counts_as_app_release_ready": false
-    },
-    "run_context_exists_counts_as_runtime_ready": false,
-    "credential_material_read": false,
-    "external_api_called": false,
-    "provider_lifecycle_managed": false,
-    "creates_cloud_resource": false,
-    "template_exists_counts_as_provider_ready": false,
-    "local_template_exists_counts_as_provider_ready": false,
-    "local_sandbox_receipt_counts_as_domain_ready": false,
-    "local_sandbox_receipt_counts_as_app_release_ready": false,
-    "local_sandbox_receipt_counts_as_production_ready": false,
-    "snapshot_exists_counts_as_runtime_ready": false,
-    "provider_receipt_counts_as_domain_ready": false,
-    "writes_domain_truth": false,
-    "can_claim_provider_ready_without_receipt": false,
-    "can_claim_runtime_ready_without_receipt": false,
-    "can_claim_domain_ready": false,
-    "can_claim_app_release_ready": false
-  },
-  "runtime_environment_provider": {
-    "surface_kind": "opl_runtime_environment_provider_contract",
-    "abi_version": "1.0.0",
-    "implemented_provider_ids": [
-      "e2b"
-    ],
-    "selection": "explicit_only",
-    "unsupported_provider_behavior": "fail_closed_no_host_fallback",
-    "temporal_replacement": false,
-    "authority_boundary": {
-      "opl_owns_stage_lifecycle_and_receipt_refs": true,
-      "provider_owns_isolated_execution_environment": true,
-      "provider_writes_domain_truth": false,
-      "provider_claims_runtime_ready": false,
-      "provider_claims_domain_ready": false,
-      "provider_claims_app_release_ready": false
-    }
+    "cache_shared_across_domains_and_artifact_roots": true,
+    "dependency_declaration_order_affects_cache": false,
+    "prepare_only_on_miss_or_requirement_change": true,
+    "run_does_not_load_package_catalog_on_cache_hit": true,
+    "package_cache_reused_when_dependency_set_changes": true,
+    "timeout_and_cancellation": "terminate_process_group",
+    "unsupported_environment_selection": "reject_no_silent_host_fallback"
   },
   "dependency_prepare_policy": {
-    "status": "local_dependency_check_and_opl_managed_package_prepare_available",
+    "status": "uv_and_renv_preparation_with_shared_cache",
     "writes_dependency_lock": true,
     "writes_dependency_receipt": true,
     "writes_run_context_on_success": true,
     "run_context_consumer_preflight": "fail_closed_on_missing_run_context_or_target_mismatch",
     "run_context_identity_required": true,
-    "dependency_lock_counts_as_materialized_runtime_lock": false,
     "installs_packages": "only_when_apply_into_opl_managed_r_library_or_python_uv_environment",
-    "package_presence_verification": "managed_r_library_or_managed_python_environment_only",
+    "package_presence_verification": "once_on_environment_preparation",
     "r_standard_handoff": {
       "tool": "renv",
-      "lock_refs": [
-        "renv.lock"
-      ],
-      "managed_library_environment": "R_LIBS_USER"
+      "managed_library_environment": "R_LIBS_USER",
+      "global_package_cache": true
     },
     "python_standard_handoff": {
       "tool": "uv",
@@ -366,14 +62,17 @@
       "github",
       "bioconductor"
     ],
-    "bioconductor_installer": "BiocManager",
+    "bioconductor_installer": "renv",
     "python_package_environment": "UV_PROJECT_ENVIRONMENT",
     "python_installer": "uv",
     "requirement_profile_selection": "all_profiles_by_default_or_scoped_by_requirement_profile_id",
     "ordinary_profile_source": {
       "descriptor_ref_field": "standard_contract_refs.runtime_environment_requirement_profile",
       "profile_map_field": "runtime_profile_sources",
-      "provider_fields": ["package_id", "relative_path"],
+      "provider_fields": [
+        "package_id",
+        "relative_path"
+      ],
       "provider_resolution": "selected_package_module_source",
       "resource_boundary": "provider_repo_contained_json",
       "explicit_requirement_profile_takes_precedence": true
@@ -385,7 +84,8 @@
     "can_claim_provider_ready": false,
     "can_claim_runtime_ready": false,
     "can_claim_domain_ready": false,
-    "can_claim_publication_ready": false
+    "can_claim_publication_ready": false,
+    "dependency_lock_semantics": "requirement_identity_not_complete_scientific_reproduction_lock"
   },
   "run_context_consumer_policy": {
     "status": "fail_closed_consumer_preflight_available",
@@ -418,25 +118,42 @@
     "can_claim_domain_ready": false,
     "can_claim_app_release_ready": false
   },
-  "materialization_policy": {
-    "default_command_mode": "dry_run",
-    "writes_development_checkout": false,
-    "writes_domain_repo": false,
-    "materializer_landed": true,
-    "writes_runtime_root_only_with_apply": true,
-    "materialization_receipt_required": true,
-    "protect_current_and_rollback_pointers": true,
-    "cleanup_apply_requires_receipt": true
+  "recording_policy": {
+    "environment_manifest": "environment.json identifies the current manifest; run contexts reference preserved manifests/<digest>.json snapshots",
+    "manifest_fields": [
+      "environment_id",
+      "runtime_file_identities",
+      "inventory",
+      "prepared_at"
+    ],
+    "inventory_frequency": "environment_creation_or_explicit_refresh",
+    "execution_records": "artifact-root/build/executions/<uuid>.json",
+    "execution_fields": [
+      "environment_id",
+      "environment_ref",
+      "command",
+      "executable",
+      "cwd",
+      "started_at",
+      "finished_at",
+      "elapsed_ms",
+      "exit_code",
+      "stage_attempt_ref"
+    ],
+    "execution_record_failure_changes_command_outcome": false,
+    "credentials_in_environment_variables_recorded": false,
+    "full_input_output_hashing_required_for_temporary_tasks": false,
+    "scientific_freeze_owner": "domain_agent"
   },
-  "cache_inventory_policy": {
-    "status": "filesystem_inventory_and_prune_receipt_available",
-    "inventory_may_be_empty_without_failure": true,
+  "cache_policy": {
+    "package_cache_owners": [
+      "uv",
+      "renv"
+    ],
+    "prepared_environment_reuse": true,
     "cache_hit_counts_as_ready": false,
     "cache_miss_counts_as_readiness_failure": false,
-    "prune_apply_requires_materialization_receipt": true,
-    "protect_current_and_rollback_pointers": true,
-    "deletes_domain_artifacts": false,
-    "deletes_development_checkout": false
+    "cleanup": "Use standard package-manager cache commands; never delete active environment or research output directories as package-cache entries."
   },
   "authority_boundary": {
     "opl_is_canonical_runtime_environment_owner": true,
@@ -453,56 +170,16 @@
     "can_claim_quality_or_export_verdict": false,
     "can_schedule_domain_stage": false
   },
-  "required_readback_claim_fields": [
-    "implementation_status",
-    "target_planned",
-    "dry_run",
-    "can_claim_runtime_ready",
-    "can_claim_domain_ready",
-    "can_claim_app_release_ready"
-  ],
   "readback_commands": [
     "opl env doctor",
-    "opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]",
-    "opl env run --domain <domain> --profile <profile> [--artifact-root <path>]",
-    "opl runtime env inspect --domain <domain> --profile <profile> --platform <platform>",
-    "opl runtime env lock --domain <domain> --profile <profile> --platform <platform>",
-    "opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox]",
-    "opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]",
-    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox] --dry-run",
-    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox] --apply",
-    "opl runtime env verify --runtime-root <path>",
-    "opl runtime env cache status",
+    "opl env run --domain <domain> --profile <profile> [--requirement-profile <path>] [--artifact-root <path>] [--cwd <path>] [--timeout-ms <ms>] [--refresh] -- <command...>",
+    "opl env prepare --domain <domain> --profile <profile> [--requirement-profile <path>] [--artifact-root <path>] [--refresh] --apply",
     "opl runtime env cache inventory",
-    "opl runtime env cache prune --dry-run",
-    "opl runtime env doctor",
-    "opl runtime env run-context --domain <domain> --profile <profile> [--artifact-root <path>]"
+    "opl runtime env run-context --domain <domain> --profile <profile> --artifact-root <path>"
   ],
   "forbidden_claims": [
-    "runtime_cache_hit_means_ready",
-    "materialization_skeleton_means_runtime_ready",
-    "runtime_environment_receipt_means_domain_ready",
-    "runtime_environment_receipt_means_app_release_ready",
-    "descriptor_exists_means_runtime_materialized",
-    "fast_local_env_means_provider_ready",
-    "fast_local_env_doctor_pass_means_runtime_ready",
-    "run_context_exists_means_runtime_ready",
-    "local_sandbox_template_exists_means_provider_ready",
-    "local_sandbox_receipt_means_domain_ready",
-    "local_sandbox_receipt_means_app_release_ready",
-    "local_sandbox_receipt_means_production_ready",
-    "external_sandbox_template_exists_means_provider_ready",
-    "external_sandbox_snapshot_exists_means_runtime_ready",
-    "external_sandbox_receipt_means_domain_ready",
-    "run_context_exists_means_provider_ready",
-    "missing_run_context_allows_host_environment_fallback",
-    "run_context_target_mismatch_allows_consumer_execution"
-  ],
-  "live_evidence_deferred": [
-    "provider_long_soak",
-    "app_release_cohort",
-    "real_user_path",
-    "domain_owner_chain_live_evidence",
-    "real_paper_or_project_run_evidence"
+    "environment_prepared_means_domain_ready",
+    "cache_hit_means_scientific_result_reproducible",
+    "execution_success_means_publication_ready"
   ]
 }

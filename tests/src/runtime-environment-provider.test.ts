@@ -1,7 +1,5 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
 
 import {
   RUNTIME_ENVIRONMENT_PROVIDER_ABI_VERSION,
@@ -27,11 +25,6 @@ test('runtime environment provider contract exposes E2B as the only implemented 
   assert.equal(contract.selection, 'explicit_only');
   assert.equal(contract.unsupported_provider_behavior, 'fail_closed_no_host_fallback');
   assert.equal(contract.temporal_replacement, false);
-  const substrateContract = JSON.parse(fs.readFileSync(
-    fileURLToPath(new URL('../../contracts/opl-framework/runtime-environment-substrate-contract.json', import.meta.url)),
-    'utf8',
-  )) as Record<string, any>;
-  assert.deepEqual(substrateContract.runtime_environment_provider, contract);
 });
 
 test('runtime environment provider selection is explicit and never silently falls back', () => {
