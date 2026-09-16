@@ -150,8 +150,14 @@ const readModelGateTemporalHeavyTestFiles = [
   'tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts',
 ];
 
+const fastTemporalStageRunControllerTestFiles = [
+  'tests/src/family-runtime-temporal-stage-run-controller-recovery.test.ts',
+  'tests/src/family-runtime-temporal-stage-run-controller-routing.test.ts',
+  'tests/src/family-runtime-temporal-stage-run-controller-outcomes.test.ts',
+  'tests/src/family-runtime-temporal-stage-run-controller-transport.test.ts',
+];
+
 const fastTemporalHeavyTestFiles = [
-  'tests/src/family-runtime-temporal-stage-run-controller.test.ts',
   'tests/src/family-runtime-pack-bound-stage-quality-e2e.test.ts',
 ];
 
@@ -162,7 +168,8 @@ const fastIsolatedCliTestFiles = [
 ];
 
 const fastNonTemporalHeavyTestFiles = fastTestFiles.filter(
-  (file) => !fastTemporalHeavyTestFiles.includes(file),
+  (file) => !fastTemporalHeavyTestFiles.includes(file)
+    && !fastTemporalStageRunControllerTestFiles.includes(file),
 ).filter(
   (file) => !fastIsolatedCliTestFiles.includes(file),
 );
@@ -186,6 +193,7 @@ const lanes = {
     ], { batchSize: 25 }),
   ],
   fast: [
+    { kind: 'command', command: process.execPath, args: ['scripts/test-lanes.mjs', 'assert-coverage'] },
     { kind: 'npm', args: ['run', 'build'] },
     { kind: 'command', command: 'scripts/repo-hygiene.sh', args: [] },
     nodeTest(fastNonTemporalHeavyTestFiles, { batchSize: 20 }),
@@ -193,6 +201,7 @@ const lanes = {
       batchSize: 1,
       env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
     }),
+    nodeTest(fastTemporalStageRunControllerTestFiles, { batchSize: 4 }),
     nodeTest(fastTemporalHeavyTestFiles, { batchSize: 1 }),
   ],
   'read-model-gates': [
@@ -237,7 +246,7 @@ const lanes = {
   ],
   artifact: [
     { kind: 'npm', args: ['run', 'build'] },
-    nodeTest(['tests/built/cli.test.mjs'], { stripTypes: false }),
+    nodeTest(['tests/built/cli.test.mjs', 'tests/built/workbench-temporal.test.mjs'], { stripTypes: false }),
   ],
   'fresh-install': [
     sourceTest(['fresh-install-smoke.test.ts']),

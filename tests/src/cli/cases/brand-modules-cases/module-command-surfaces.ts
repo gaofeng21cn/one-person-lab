@@ -1,16 +1,16 @@
-import { assert, runCli, test } from '../../helpers.ts';
+import { assert, runCliReadOnly, test } from '../../helpers.ts';
 
 import { moduleSurfaceIds } from './shared.ts';
 
-test('each standard non-workspace brand module exposes the generic executable module family', () => {
+test('each standard non-workspace brand module exposes the generic executable module family', async () => {
   const operations = ['status', 'inspect', 'interfaces', 'validate', 'doctor'] as const;
 
   for (const moduleId of moduleSurfaceIds) {
     const surfaceKindPrefix = `opl_${moduleId.replace(/-/g, '_')}`;
-    const outputs = new Map<(typeof operations)[number], ReturnType<typeof runCli>>();
+    const outputs = new Map<(typeof operations)[number], Awaited<ReturnType<typeof runCliReadOnly>>>();
 
     for (const operation of operations) {
-      const output = runCli([moduleId, operation]);
+      const output = await runCliReadOnly([moduleId, operation]);
       outputs.set(operation, output);
       const surface = output.brand_module_surface;
 
@@ -62,12 +62,12 @@ test('each standard non-workspace brand module exposes the generic executable mo
   }
 });
 
-test('workspace keeps its existing validate doctor and interfaces implementations while gaining status and inspect', () => {
-  const statusOutput = runCli(['workspace', 'status']);
-  const inspectOutput = runCli(['workspace', 'inspect']);
+test('workspace keeps its existing validate doctor and interfaces implementations while gaining status and inspect', async () => {
+  const statusOutput = await runCliReadOnly(['workspace', 'status']);
+  const inspectOutput = await runCliReadOnly(['workspace', 'inspect']);
   const status = statusOutput.opl_workspace_status;
   const inspect = inspectOutput.opl_workspace_inspect;
-  const interfaces = runCli(['workspace', 'interfaces']).workspace_interfaces;
+  const interfaces = (await runCliReadOnly(['workspace', 'interfaces'])).workspace_interfaces;
 
   assert.equal(statusOutput.brand_module_surface.surface_kind, 'opl_workspace_brand_module_status');
   assert.equal(statusOutput.brand_module_surface.command_surface_collision_policy, 'preserve_workspace_operational_validate_doctor_interfaces');
