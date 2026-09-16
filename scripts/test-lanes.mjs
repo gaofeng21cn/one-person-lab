@@ -17,6 +17,7 @@ fs.mkdirSync(pythonCacheRoot, { recursive: true });
 const toolTempDir = path.join(pythonCacheRoot, 'tmp');
 fs.mkdirSync(toolTempDir, { recursive: true });
 let testLaneStateRoot = null;
+let testLaneHomeRoot = null;
 if (ownsPythonCacheRoot) {
   process.on('exit', () => {
     fs.rmSync(pythonCacheRoot, { recursive: true, force: true });
@@ -256,7 +257,21 @@ const commandHandlers = {
 
 function runLane(laneName) {
   const steps = requireLane(laneName);
-  steps.forEach((step, index) => runLaneStep(laneName, step, index));
+  const failures = [];
+  steps.forEach((step, index) => {
+    const result = runLaneStep(laneName, step, index);
+    if (result.status === 0) {
+      return;
+    }
+    if (!shouldContinueOnFailure()) {
+      exitOnFailure(result);
+    }
+    failures.push(...describeStepFailures(step, index, result));
+  });
+  if (failures.length > 0) {
+    reportLaneFailures(laneName, failures);
+    process.exit(1);
+  }
 }
 
 function requireLane(laneName) {
@@ -268,8 +283,28 @@ function requireLane(laneName) {
 }
 
 function runLaneStep(laneName, step, stepIndex) {
-  const result = runStep(step, { laneName, stepIndex });
-  exitOnFailure(result);
+  return runStep(step, { laneName, stepIndex });
+}
+
+function shouldContinueOnFailure() {
+  return process.env.OPL_TEST_LANE_CONTINUE === '1' || argv.slice(2).includes('--continue');
+}
+
+function describeStepFailures(step, stepIndex, result) {
+  if (result.failedBatches?.length) {
+    return result.failedBatches.map((batch) =>
+      `step ${stepIndex + 1} (${step.kind}) batch ${batch.batchIndex + 1}/${batch.batchCount}: ${batch.files.join(', ')}`);
+  }
+  return [
+    `step ${stepIndex + 1} (${step.kind})${step.files ? `: ${step.files.join(', ')}` : ''}`,
+  ];
+}
+
+function reportLaneFailures(laneName, failures) {
+  process.stderr.write(
+    `Test lane ${laneName} failed in ${failures.length} step${failures.length === 1 ? '' : 's'} (continued run):\n`,
+  );
+  failures.forEach((failure) => process.stderr.write(`- ${failure}\n`));
 }
 
 function runStep(step, context) {
@@ -301,6 +336,7 @@ export function runNodeTestStep(step, context) {
     }, { env: createTestStepEnv(step.env) });
   }
   const chunks = chunkFiles(step.files, step.batchSize);
+  const failedBatches = [];
   for (const [batchIndex, files] of chunks.entries()) {
     const result = spawnStep(process.execPath, nodeTestArgs({ ...step, files }), {
       ...context,
@@ -310,10 +346,13 @@ export function runNodeTestStep(step, context) {
       batchFiles: files,
     }, { env: createTestStepEnv(step.env) });
     if (result.status !== 0) {
-      return result;
+      failedBatches.push({ batchIndex, batchCount: chunks.length, files });
+      if (!shouldContinueOnFailure()) {
+        return { ...result, failedBatches };
+      }
     }
   }
-  return { status: 0 };
+  return failedBatches.length === 0 ? { status: 0 } : { status: 1, failedBatches };
 }
 
 function createTestStepEnv(stepEnv = {}) {
@@ -324,10 +363,49 @@ function createTestStepEnv(stepEnv = {}) {
     });
   }
   const stateDir = fs.mkdtempSync(path.join(testLaneStateRoot, 'step-'));
+  const homeDir = createTestStepHome();
   return {
     ...stepEnv,
     OPL_STATE_DIR: stateDir,
+    HOME: homeDir,
+    USERPROFILE: homeDir,
+    GIT_CONFIG_GLOBAL: path.join(homeDir, '.gitconfig'),
   };
+}
+
+// A checkout-local HOME keeps lane steps hermetic: descriptor and carrier reads
+// must not consume the invoking user's installed state, and an empty home is
+// orders of magnitude cheaper than a populated one.
+function createTestStepHome() {
+  if (!testLaneHomeRoot) {
+    testLaneHomeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-test-lane-home-'));
+    process.on('exit', () => {
+      fs.rmSync(testLaneHomeRoot, { recursive: true, force: true });
+    });
+  }
+  const homeDir = fs.mkdtempSync(path.join(testLaneHomeRoot, 'home-'));
+  fs.writeFileSync(path.join(homeDir, '.gitconfig'), gitConfigContents(), 'utf8');
+  return homeDir;
+}
+
+function gitConfigContents() {
+  const identity = (key, fallback) => {
+    const result = spawnSync('git', ['config', '--global', key], { encoding: 'utf8' });
+    const value = result.status === 0 ? result.stdout.trim() : '';
+    return value || fallback;
+  };
+  return [
+    '[user]',
+    `\tname = ${identity('user.name', 'OPL Test Lane')}`,
+    `\temail = ${identity('user.email', 'opl-test-lane@example.invalid')}`,
+    '[init]',
+    '\tdefaultBranch = main',
+    '[commit]',
+    '\tgpgsign = false',
+    '[tag]',
+    '\tgpgsign = false',
+    '',
+  ].join('\n');
 }
 
 function chunkFiles(files, size) {
@@ -582,6 +660,9 @@ function printHelp() {
   process.stdout.write('  list\n');
   process.stdout.write(`  run <${Object.keys(lanes).join('|')}>\n`);
   process.stdout.write('  assert-coverage\n');
+  process.stdout.write('\nOptions:\n');
+  process.stdout.write('  --continue   Run every batch after a failure and print the full failure summary\n');
+  process.stdout.write('               (equivalent to OPL_TEST_LANE_CONTINUE=1)\n');
 }
 
 function normalizeRelativePath(filePath) {
