@@ -69,16 +69,25 @@ Framework 的入口为 `.github/workflows/publish-framework.yml`；它仅发布
 按 digest 校验下载内容。Homebrew Formula 消费同一 Framework artifact，
 App Cask 消费 App 的发布结果，两者独立推进。
 
-## 标准智能体的发布入口
+## 软件包的发布入口
 
 MAS、MAG、RCA、OMA、OPL Book Forge 与 OPL Med Cast 统一使用 OCI 软件包发布流程。
 每个软件包复用 `publish-package.yml` 发布不可变版本和自己的 `latest-stable`。
 用户通过 `opl packages install <package-id> --json` 安装，或在 OPL 的软件包界面选择安装；
 原生插件管理器负责实际载体生命周期。
 
-不创建或保留这六个智能体的独立 GitHub Release 页面及附件，也不建立 ZIP、wheel 等
+只要一个 Package 已经进入 OCI 发布流程（在 Framework projection 中声明指向
+`one-person-lab-packages/<package-id>` 的 `publication_ref` 和 `latest-stable`），
+它就只有这一套发布机制：不创建也不保留独立
+GitHub Release 页面及附件，也不建立 ZIP、wheel 等
 平行安装包发布脚本。源码的 annotated tag 仍用于绑定正式发布内容；版本说明直接使用
 仓库文档与源码变更记录，不构成第二个发布渠道。README 提供统一安装命令和 OCI 地址。
+
+该规则覆盖全部 package id，而不只是标准智能体。`opl-flow`、`opl-persona`、
+`opl-relay` 与 `mas-scholar-skills` 的历史 GitHub Release 页面已按此规则退役，
+只保留 annotated tag；它们的版本、安装与更新一律从各自 OCI 的 immutable tag 与
+`latest-stable` 读取。将来为某个 Package 增加新的分发形式前，先确认它是否
+已有 OCI 渠道：有则扩展 OCI 渠道，不再新增第二种机制。
 
 领域质量、资格、运行可用性与软件包发布分别据实记录。App 等有独立安装制品的产品
 不属于此规则的范围。
