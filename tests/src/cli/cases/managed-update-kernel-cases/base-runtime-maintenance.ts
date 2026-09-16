@@ -29,6 +29,9 @@ exit 2
 
   fs.mkdirSync(runtimeBin, { recursive: true });
   fs.mkdirSync(fakeBin, { recursive: true });
+  // The PATH below is a fixture-only toolchain, but the Codex plugin manager
+  // fixture is a `#!/usr/bin/env node` script, so node must stay reachable.
+  fs.symlinkSync(process.execPath, path.join(fakeBin, 'node'));
   fs.writeFileSync(runtimeCodex, '#!/usr/bin/env bash\necho "codex-cli 0.130.0"\n', { mode: 0o755 });
   fs.writeFileSync(runtimeRg, '#!/usr/bin/env bash\necho "rg old"\n', { mode: 0o755 });
   fs.writeFileSync(
