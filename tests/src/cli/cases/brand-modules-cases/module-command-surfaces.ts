@@ -7,9 +7,11 @@ test('each standard non-workspace brand module exposes the generic executable mo
 
   for (const moduleId of moduleSurfaceIds) {
     const surfaceKindPrefix = `opl_${moduleId.replace(/-/g, '_')}`;
+    const outputs = new Map<(typeof operations)[number], ReturnType<typeof runCli>>();
 
     for (const operation of operations) {
       const output = runCli([moduleId, operation]);
+      outputs.set(operation, output);
       const surface = output.brand_module_surface;
 
       assert.equal(surface.surface_kind, `${surfaceKindPrefix}_brand_module_${operation}`);
@@ -30,7 +32,7 @@ test('each standard non-workspace brand module exposes the generic executable mo
     const doctorKey = `${surfaceKindPrefix}_doctor`;
     const interfacesKey = `${surfaceKindPrefix}_interfaces`;
 
-    const status = runCli([moduleId, 'status'])[statusKey];
+    const status = outputs.get('status')![statusKey];
     assert.equal(status.module_id, moduleId);
     assert.equal(status.completion_level, 'L4_structural_baseline');
     assert.equal(status.status, 'valid');
@@ -43,16 +45,16 @@ test('each standard non-workspace brand module exposes the generic executable mo
     assert.equal(status.authority_boundary.can_claim_domain_ready, false);
     assert.equal(status.authority_boundary.can_sign_owner_receipt, false);
 
-    const validation = runCli([moduleId, 'validate'])[validationKey];
+    const validation = outputs.get('validate')![validationKey];
     assert.equal(validation.status, 'valid');
     assert.equal(validation.contract_ref, `contracts/opl-framework/brand-module-surfaces.json#modules.${moduleId}`);
     assert.equal(validation.checks.every((entry: { status: string }) => entry.status === 'pass'), true);
 
-    const doctor = runCli([moduleId, 'doctor'])[doctorKey];
+    const doctor = outputs.get('doctor')![doctorKey];
     assert.equal(doctor.status, 'pass');
     assert.equal(doctor.next_safe_action, null);
 
-    const interfaces = runCli([moduleId, 'interfaces'])[interfacesKey];
+    const interfaces = outputs.get('interfaces')![interfacesKey];
     assert.equal(interfaces.cli.commands.includes(`opl ${moduleId} status --json`), true);
     assert.equal(interfaces.cli.commands.includes(`opl ${moduleId} validate --json`), true);
     assert.equal(interfaces.app.descriptors.some((entry: { action_id: string }) => entry.action_id === `${moduleId.replace(/-/g, '_')}_status`), true);

@@ -1,4 +1,4 @@
-import { assert, fs, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, repoRoot, runCli, runCliFailure, runCliReadOnly, test } from '../helpers.ts';
 import { FrameworkContractError } from '../../../../src/authority/contracts/contracts.ts';
 import type { CommandSpec } from '../../../../src/entrypoints/cli/modules/support.ts';
 import {
@@ -121,7 +121,7 @@ function loadCliCommandRegistryContract() {
   ) as CliCommandRegistryContract;
 }
 
-test('registered command help mirrors the canonical command registry', () => {
+test('registered command help mirrors the canonical command registry', async () => {
   const contract = loadCliCommandRegistryContract();
 
   for (const prefix of ['status', 'runtime manager', 'stages', 'runtime observability', 'update', 'packages', 'release', 'cordis inspect']) {
@@ -130,7 +130,7 @@ test('registered command help mirrors the canonical command registry', () => {
   assert.equal(contract.protected_command_prefixes.includes('connect pubmed'), false);
   assert.equal(Object.hasOwn(contract, 'required_command_ids'), false);
   for (const [command, contractKey, optionNames, owner] of registryCases) {
-    const help = runCli(['help', ...command.split(' ')]).help;
+    const help = (await runCliReadOnly(['help', ...command.split(' ')])).help;
     const contractCommand = contract.commands[contractKey];
 
     assert.equal(help.registry.command_id, command);
@@ -181,7 +181,7 @@ test('Package lifecycle schemas do not expose legacy private retirement state', 
   }
 });
 
-test('Release mutation help examples carry the complete immutable operation identity', () => {
+test('Release mutation help examples carry the complete immutable operation identity', async () => {
   for (const command of [
     'release operation admit',
     'release build',
@@ -189,7 +189,7 @@ test('Release mutation help examples carry the complete immutable operation iden
     'release publish',
     'release reconcile',
   ]) {
-    const help = runCli(['help', ...command.split(' ')]).help;
+    const help = (await runCliReadOnly(['help', ...command.split(' ')])).help;
     assert.equal(help.examples.length > 0, true, command);
     for (const example of help.examples as string[]) {
       for (const flag of [
