@@ -8,6 +8,7 @@ import path from 'node:path';
 import { parseJsonText } from '../../../../src/kernel/json-file.ts';
 import {
   resolveStandardAgent,
+  STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../../../src/kernel/standard-agent-registry.ts';
 import { canonicalAgentPackageId } from '../../../../src/adapters/integration/agent-package-identity.ts';
@@ -401,6 +402,22 @@ export function createRuntimeWorkspaceFixture(stateRoot: string, name: string) {
   const workspaceRoot = path.join(stateRoot, 'workspaces', name);
   fs.mkdirSync(workspaceRoot, { recursive: true });
   return workspaceRoot;
+}
+
+// Family-defaults commands discover the registered Agent repos through
+// OPL_FAMILY_WORKSPACE_ROOT or their sibling directories, which makes any test
+// that calls them depend on the developer's machine. This fixture gives those
+// tests the registered Agent directories they declare instead.
+export function createFamilyWorkspaceFixture(stateRoot: string) {
+  const familyRoot = path.join(stateRoot, 'family-workspace');
+  for (const entry of STANDARD_AGENT_REGISTRY) {
+    writeJsonFixture(familyRoot, path.join(entry.project, 'contracts', 'domain_descriptor.json'), {
+      surface_kind: 'opl_domain_descriptor',
+      domain_id: entry.agent_id,
+      domain_label: entry.agent_id,
+    });
+  }
+  return familyRoot;
 }
 
 export function loadFamilyManifestFixtures() {
