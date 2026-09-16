@@ -18,6 +18,17 @@ async function environment<T>(values: Record<string, string>, run: () => Promise
   }
 }
 
+async function readLoggedFrames(logPath: string) {
+  // The provider writes its first frame as soon as node starts. Under a loaded
+  // test lane that can lag behind a short smoke timeout, so wait for the file
+  // instead of racing the kill.
+  const deadline = Date.now() + 5_000;
+  while (!fs.existsSync(logPath) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return fs.readFileSync(logPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+}
+
 function executable(file: string, content: string) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, content, { mode: 0o755 });
@@ -31,10 +42,12 @@ test('Codex protocol smoke isolates state, accepts read-only handshake and reaps
         const binary = path.join(root, `codex-${mode}`);
         const log = path.join(root, `${mode}.jsonl`);
         executable(binary, codexProtocolFixture('0.141.0', mode, log));
-        const result = await verifyCodexAppServer(binary, mode === 'timeout' ? 1000 : 3000);
+        // Every mode gets the same budget: the timeout mode asserts that a
+        // stalled provider is reaped, not that node can boot within one second.
+        const result = await verifyCodexAppServer(binary, 3000);
         assert.equal(result.verified, mode === 'normal', `${mode}: ${JSON.stringify(result)}`);
         if (mode === 'timeout') assert.equal(result.reason, 'app_server_timeout');
-        const frames = fs.readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+        const frames = await readLoggedFrames(log);
         const identity = frames[0];
         assert.equal(identity.apiKey, undefined);
         assert.notEqual(identity.home, process.env.HOME);
