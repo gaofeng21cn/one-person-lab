@@ -54,9 +54,20 @@ for (const role of ['reviewer', 're_reviewer'] as const) {
         assert.deepEqual(after.closeout_refs, before.closeout_refs);
         assert.equal(after.closeout_receipt_status, 'accepted_typed_closeout');
       }
+      // A real completed observation carries the review outcome inside the
+      // formal closeout packet, and the workflow keeps the query-level
+      // route_impact equal to that packet's route_impact.
+      const updatedRouteImpact = { stage_quality_cycle: { outcome: 'quality_debt' } };
       const updated = {
         ...diagnostic,
-        query: { ...diagnostic.query, route_impact: { stage_quality_cycle: { outcome: 'quality_debt' } } },
+        query: {
+          ...diagnostic.query,
+          route_impact: updatedRouteImpact,
+          closeout_packet: {
+            ...diagnostic.query.closeout_packet,
+            route_impact: updatedRouteImpact,
+          },
+        },
       };
       syncStageAttemptFromTemporalTerminalObservation(db, updated);
       const afterUpdate = inspectStageAttempt(db, attempt.stage_attempt_id);
