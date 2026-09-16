@@ -9,6 +9,17 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
+import { resolveDefaultFamilyWorkspaceRoot } from '../../../../src/kernel/family-workspace-root.ts';
+
+// The dependency profile is owned by Book Forge and the framework resolves its
+// dependency list from that owner descriptor, so these cases need the owner
+// checkout and skip when it is unavailable.
+const ownerDependencyProfileAvailable = fs.existsSync(path.join(
+  resolveDefaultFamilyWorkspaceRoot(),
+  'opl-bookforge',
+  'contracts',
+  'domain_descriptor.json',
+));
 
 function writeExecutable(filePath: string, body: string) {
   fs.writeFileSync(filePath, body, 'utf8');
@@ -58,7 +69,9 @@ function createFakeDependencyBin(options: { missingLatexPackage?: string; marker
   return binDir;
 }
 
-test('system dependency-doctor blocks only the Book Forge proof profile when a required LaTeX package is missing', () => {
+test('system dependency-doctor blocks only the Book Forge proof profile when a required LaTeX package is missing', {
+  skip: !ownerDependencyProfileAvailable,
+}, () => {
   const binDir = createFakeDependencyBin({ missingLatexPackage: 'titlesec.sty' });
   try {
     const manifestSchema = parseJsonText(fs.readFileSync(
@@ -148,7 +161,9 @@ test('system dependency-doctor blocks only the Book Forge proof profile when a r
   }
 });
 
-test('system dependency-maintenance apply can repair fake TeX Live packages through explicit tlmgr route', () => {
+test('system dependency-maintenance apply can repair fake TeX Live packages through explicit tlmgr route', {
+  skip: !ownerDependencyProfileAvailable,
+}, () => {
   const markerPath = path.join(os.tmpdir(), `opl-dependency-doctor-${process.pid}-${Date.now()}.installed`);
   const binDir = createFakeDependencyBin({
     missingLatexPackage: 'titlesec.sty',

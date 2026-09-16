@@ -1,9 +1,13 @@
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { listFirstPartyAgentPackageDependencyProfiles } from '../agent-package-manifests.ts';
+import { listFamilySkillPackSpecs } from '../opl-skills-parts/registry.ts';
+import { resolveRepoRoot } from '../opl-skills-parts/paths.ts';
 
 type DependencyKind = 'executable' | 'latex_package';
 type DependencyRequiredLevel = 'required' | 'optional' | 'legacy_not_required';
@@ -259,7 +263,11 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
     authorityBoundary.can_authorize_domain_readiness !== false ||
     authorityBoundary.can_authorize_artifact_or_export_readiness !== false ||
     authorityBoundary.can_issue_owner_receipt !== false ||
-    dependencies.length === 0 ||
+    // The owner package manifest binds its dependency profile to the domain
+    // source instead of repeating the dependency list (see the Book Forge
+    // contract test), so an empty inline list is valid when the profile points
+    // at an owner descriptor.
+    (dependencies.length === 0 && !value.source_descriptor_ref) ||
     dependencies.some((entry) => !entry)
   ) {
     return null;
@@ -304,6 +312,105 @@ function assertKnownProfile(profile: string) {
     },
     2,
   );
+}
+
+function canonicalJson(value: unknown) {
+  return JSON.stringify(sortJson(value));
+}
+
+function sortJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortJson);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value).sort().map((key) => [key, sortJson(value[key])]),
+  );
+}
+
+function readJsonPointer(payload: unknown, pointer: string) {
+  return pointer
+    .split('/')
+    .filter(Boolean)
+    .reduce<unknown>((current, segment) => {
+      const key = segment.replace(/~1/g, '/').replace(/~0/g, '~');
+      if (Array.isArray(current)) {
+        const index = Number.parseInt(key, 10);
+        return Number.isSafeInteger(index) ? current[index] : undefined;
+      }
+      return isRecord(current) ? current[key] : undefined;
+    }, payload);
+}
+
+function ownerRepoRootFor(profile: DomainDependencyProfile) {
+  const specs = listFamilySkillPackSpecs();
+  const spec = specs.find((entry) => entry.project === profile.domain_truth_owner)
+    ?? specs.find((entry) => entry.domain_id === profile.domain_truth_owner)
+    ?? specs.find((entry) => entry.module_id === profile.domain_truth_owner);
+  if (!spec) return null;
+  const repoRoot = resolveRepoRoot(spec);
+  return fs.existsSync(repoRoot) ? repoRoot : null;
+}
+
+// The domain owner keeps the dependency list in its own descriptor; the package
+// manifest only binds the profile to that source. Resolve the owner bytes and
+// verify the declared digest before any environment check runs.
+function resolveOwnerSourcedDependencies(profile: DomainDependencyProfile) {
+  if (profile.dependencies.length > 0) {
+    return { dependencies: profile.dependencies, source_descriptor_ref: profile.source_descriptor_ref ?? null };
+  }
+  const ref = profile.source_descriptor_ref;
+  const repoRoot = ownerRepoRootFor(profile);
+  if (!ref || !repoRoot) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Dependency profile declares no inline dependencies and its owner source is unavailable.',
+      {
+        profile_id: profile.profile_id,
+        domain_truth_owner: profile.domain_truth_owner,
+        source_descriptor_ref: ref ?? null,
+        resolution: repoRoot ? 'source_unavailable' : 'owner_checkout_missing',
+      },
+    );
+  }
+  const [relativePath, pointer = ''] = ref.split('#');
+  const descriptor = readJsonFileOrNull(path.join(repoRoot, relativePath));
+  const profileBody = readJsonPointer(descriptor, pointer);
+  if (!isRecord(profileBody)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Dependency profile owner source does not expose the referenced dependency profile.',
+      { profile_id: profile.profile_id, source_descriptor_ref: ref },
+    );
+  }
+  const actualSha256 = `sha256:${crypto
+    .createHash('sha256')
+    .update(Buffer.from(canonicalJson(profileBody), 'utf8'))
+    .digest('hex')}`;
+  if (actualSha256 !== profile.source_profile_sha256) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Dependency profile owner source drifted from the declared digest.',
+      {
+        profile_id: profile.profile_id,
+        source_descriptor_ref: ref,
+        expected_source_profile_sha256: profile.source_profile_sha256,
+        actual_source_profile_sha256: actualSha256,
+      },
+    );
+  }
+  const dependencies = Array.isArray(profileBody.dependencies)
+    ? profileBody.dependencies.map((entry) => normalizeDependencyCheckSpec(entry))
+    : [];
+  if (dependencies.length === 0 || dependencies.some((entry) => !entry)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Dependency profile owner source declares no usable dependency list.',
+      { profile_id: profile.profile_id, source_descriptor_ref: ref },
+    );
+  }
+  return {
+    dependencies: dependencies as DependencyProfileCheckSpec[],
+    source_descriptor_ref: `${path.basename(repoRoot)}/${ref}`,
+  };
 }
 
 function buildRepairAction(
@@ -391,7 +498,16 @@ export function buildOplSystemDependencyDoctor(input: { profile?: string } = {})
 } {
   const profile = assertKnownProfile(input.profile ?? '');
 
-  const dependencies = profile.dependencies.map((entry) =>
+  const ownerSourced = resolveOwnerSourcedDependencies(profile);
+  const resolvedProfile: DomainDependencyProfile = {
+    ...profile,
+    dependencies: ownerSourced.dependencies,
+    ...(ownerSourced.source_descriptor_ref
+      ? { source_descriptor_ref: ownerSourced.source_descriptor_ref }
+      : {}),
+  };
+
+  const dependencies = resolvedProfile.dependencies.map((entry) =>
     entry.kind === 'executable' ? checkExecutable(entry) : checkLatexPackage(entry)
   );
   const requiredDependencies = dependencies.filter((entry) => entry.required_level === 'required');
@@ -405,11 +521,11 @@ export function buildOplSystemDependencyDoctor(input: { profile?: string } = {})
     system_dependency_doctor: {
       surface_kind: 'opl_system_dependency_doctor',
       envelope_kind: 'opl_generic_dependency_doctor',
-      profile_id: profile.profile_id,
-      profile,
-      profile_owner: profile.profile_owner,
-      domain_scope: profile.domain_id,
-      opl_role: profile.opl_role,
+      profile_id: resolvedProfile.profile_id,
+      profile: resolvedProfile,
+      profile_owner: resolvedProfile.profile_owner,
+      domain_scope: resolvedProfile.domain_id,
+      opl_role: resolvedProfile.opl_role,
       status: missingRequired.length === 0 ? 'ready' : 'blocked',
       checked_at: new Date().toISOString(),
       dependencies,
@@ -420,7 +536,7 @@ export function buildOplSystemDependencyDoctor(input: { profile?: string } = {})
         missing_optional_dependency_count: missingOptional.length,
         legacy_not_required_dependency_count: legacyDependencies.length,
       },
-      repair_action: buildRepairAction(profile, dependencies, false),
+      repair_action: buildRepairAction(resolvedProfile, dependencies, false),
       authority_boundary: {
         can_write_domain_truth: false,
         can_write_artifact_body: false,
