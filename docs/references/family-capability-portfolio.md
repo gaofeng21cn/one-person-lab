@@ -34,7 +34,7 @@ capability domain 是用户和产品理解 OPL 能力的标签，不是源码目
 
 ## 当前 Framework 映射
 
-Framework source unit 由 `source-module-map.json` 维护；当前 Cordis profiles 为 `base-headless`、`app-full` 和 `foundry-dev`。`brand-module-registry.json` 和相关 CLI 只提供 Framework surface projection，不能冻结整个 Family 的 domain 数量或 owner。
+Framework source unit 由 `contracts/opl-framework/source-module-map.json` 维护；当前 Cordis profiles 为 `base-headless`、`app-full` 和 `foundry-dev`。`contracts/opl-framework/brand-module-registry.json` 和相关 CLI 只提供 Framework surface projection，不能冻结整个 Family 的 domain 数量或 owner。
 
 Fabric 的实现和 publication 主要属于 Cloud，不要求 Framework 创建对称模块。App 的 Client contribution 也由 App product owner 持有。
 

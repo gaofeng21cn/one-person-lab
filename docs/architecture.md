@@ -33,7 +33,7 @@ User
 
 ## Family capability portfolio
 
-`family-capability-domain-registry.json` 描述 OPL Family 的 capability domain、authority surface、Package unit 和 Cordis contribution。它是跨产品认知地图，不是物理源码目录、安装清单或固定插件数量。
+`contracts/opl-framework/family-capability-domain-registry.json` 描述 OPL Family 的 capability domain、authority surface、Package unit 和 Cordis contribution。它是跨产品认知地图，不是物理源码目录、安装清单或固定插件数量。
 
 人读映射见 [Family capability portfolio](./references/family-capability-portfolio.md)。
 

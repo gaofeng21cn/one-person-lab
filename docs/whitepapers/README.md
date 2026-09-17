@@ -21,6 +21,6 @@ narrative section wording or turn the whitepaper into a feature checklist.
 
 This repository's current source:
 
-- `opl-whitepaper.md` (OPL family design and product philosophy)
-- `opl-framework-whitepaper.md` (Framework architecture and design philosophy)
-- `index.md` (family catalog published at `/latest/whitepapers/`)
+- [opl-whitepaper.md](./opl-whitepaper.md) (OPL family design and product philosophy)
+- [opl-framework-whitepaper.md](./opl-framework-whitepaper.md) (Framework architecture and design philosophy)
+- [index.md](./index.md) (family catalog published at `/latest/whitepapers/`)

@@ -26,7 +26,7 @@
 2. 确定唯一新 owner 与公开 entrypoint。
 3. 切换真实 caller。
 4. 同批删除旧 barrel、facade、schema、fixture 和仅保护旧接口的测试。
-5. 更新 `source-module-map.json`。
+5. 更新 `contracts/opl-framework/source-module-map.json`。
 6. 运行：
 
 ```bash

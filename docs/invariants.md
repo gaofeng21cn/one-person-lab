@@ -36,7 +36,7 @@
 
 ## Source
 
-21. `source-module-map.json` 定义源码 owner 和依赖方向；目录对称、品牌名称和文件数量不能替代 responsibility boundary。
+21. `contracts/opl-framework/source-module-map.json` 定义源码 owner 和依赖方向；目录对称、品牌名称和文件数量不能替代 responsibility boundary。
 22. 跨 source unit 通过公开 entrypoint 调用；禁止恢复退役 root、兼容 barrel、无 caller facade 或第二 registry。
 23. 新抽象、新状态和新依赖必须有当前 caller、合同或已观察故障付账。
 24. active caller 切换后，旧 writer、reader、schema、fixture、alias 和测试一起删除，不保留永久 dual path。
