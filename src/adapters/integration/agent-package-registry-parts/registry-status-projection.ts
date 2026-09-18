@@ -4,6 +4,8 @@ import { refsOnlyAuthorityBoundary } from '../../../kernel/refs-only-authority-b
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { compare } from 'semver';
 import path from 'node:path';
+import fs from 'node:fs';
+import { gitMarketplaceRuntimeRoot, runtimeRootContainsDescriptor } from '../../../kernel/git-marketplace-runtime-root.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
 import { isFirstPartyPackage } from '../agent-package-first-party.ts';
 import { githubMarketplaceSourceIdentity, sameMarketplaceSource } from './shared.ts';
@@ -26,6 +28,8 @@ import {
   type ConfiguredCodexPluginCarrierReadback,
 } from './configured-codex-plugin-carrier.ts';
 import { managedPolicyCurrentnessFromDescriptor } from './managed-policy-surface.ts';
+import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
+import { inspectOplModule } from '../system-installation/modules.ts';
 import type { AgentPackageInstallInput } from './types.ts';
 
 export type OplAgentPackageStatusInput = {
@@ -305,11 +309,49 @@ function actionEntries(
     .map((action) => projectDirectoryAction(action, packageId));
 }
 
+export function hostedRuntimeReadiness(descriptor: InstalledPackageDescriptor | null) {
+  const catalogRefs = descriptor?.manifest.package_role === 'standard_agent'
+    ? descriptor.manifest.entrypoints.filter((entry) => entry.entrypoint_kind === 'opl_hosted_action_catalog')
+      .map((entry) => typeof entry.source_ref === 'string' ? entry.source_ref : '')
+    : [];
+  if (!descriptor || catalogRefs.length === 0) {
+    return { status: 'not_declared' as const, ready: true, source_root: null, reason: null };
+  }
+  const policy = resolveAgentPackageEffectiveSourcePolicy(descriptor.manifest.package_id);
+  const explicitDeveloper = policy.desired_source_kind === 'developer_checkout_override'
+    && policy.configured_by !== 'native_git_checkout';
+  let candidates: Array<string | null>;
+  if (explicitDeveloper) {
+    candidates = [policy.developer_checkout_available ? policy.developer_checkout_path : null];
+  } else if (policy.effective_install_update_source === 'full_runtime' && policy.module_id) {
+    const selected = inspectOplModule(policy.module_id, { profile: 'fast' });
+    candidates = [selected.installed && selected.health_status !== 'invalid_checkout' ? selected.checkout_path : null];
+  } else {
+    let sourcePath = descriptor.sourcePath;
+    try { sourcePath = fs.realpathSync(sourcePath); } catch { /* Missing files remain unavailable below. */ }
+    const declaredMarketplace = descriptor.carrier.carrier.marketplaceSource ?? '';
+    const localMarketplace = path.isAbsolute(declaredMarketplace)
+      && descriptor.marketplaceSource === declaredMarketplace
+      && sourcePath.startsWith(`${declaredMarketplace}${path.sep}`) ? declaredMarketplace : null;
+    candidates = [localMarketplace, gitMarketplaceRuntimeRoot(sourcePath,
+      declaredMarketplace, 'contracts/domain_descriptor.json'), sourcePath];
+  }
+  const root = candidates.map((candidate) => {
+    try { return candidate ? fs.realpathSync(candidate) : null; } catch { return null; }
+  }).find((candidate) => candidate && ['contracts/domain_descriptor.json', ...catalogRefs]
+    .every((ref) => ref.length > 0 && runtimeRootContainsDescriptor(candidate, ref))) ?? null;
+  const ready = root !== null;
+  return { status: ready ? 'available' as const : 'unavailable' as const,
+    ready, source_root: ready ? root : null,
+    reason: ready ? null : 'hosted_agent_source_unavailable' };
+}
+
 function directoryEntry(descriptor: InstalledPackageDescriptor) {
   const manifest = descriptor.manifest;
   const installed = descriptor.readiness.installed
     && installedDescriptorMatchesConfiguredCarrier(descriptor);
-  const ready = installed
+  const hosted = hostedRuntimeReadiness(descriptor);
+  const ready = installed && hosted.ready
     && installedDescriptorSupportsFrameworkCalls(descriptor)
     && installedDescriptorHasExpectedCodexExposure(descriptor);
   const codexVisible = installed
@@ -358,12 +400,13 @@ function directoryEntry(descriptor: InstalledPackageDescriptor) {
       status: installed ? 'installed' as const : 'installable' as const,
       installable: !installed,
     },
+    hosted_runtime_readiness: hosted,
     readiness: {
       status: !installed ? 'not_installed' as const : ready ? 'ready' as const : 'attention_needed' as const,
       operational_ready: ready,
       launch_allowed: ready,
       verification_deferred: false,
-      reason: ready ? null : !installed ? 'package_not_installed' : 'native_carrier_not_callable',
+      reason: ready ? null : !installed ? 'package_not_installed' : hosted.reason ?? 'native_carrier_not_callable',
       detail_surface: `opl packages status --package-id ${manifest.package_id} --json`,
       status_read_error: null,
     },
@@ -462,8 +505,10 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
       || managedPolicyCurrentness.status === 'not_requested'
       || managedPolicyCurrentness.status === 'drifted'
   ) && requiredPolicyDependenciesOperational;
+  const hosted = hostedRuntimeReadiness(installedDescriptor);
+  const hostedReady = packageId ? hosted.ready : installedEntries.every((entry) => hostedRuntimeReadiness(entry).ready);
   const operationalReady = Boolean(
-    installed && callable && dependenciesReady && managedPolicyOperational,
+    installed && callable && dependenciesReady && managedPolicyOperational && hostedReady,
   );
   const launchBlockedReason = operationalReady
     ? null
@@ -476,6 +521,8 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
             ? 'carrier_source_unavailable'
             : !callable
               ? 'carrier_disabled'
+              : !hostedReady
+                ? 'hosted_agent_source_unavailable'
               : !requiredPolicyDependenciesOperational
                 ? 'managed_policy_required_dependency_unavailable'
               : !managedPolicyOperational
@@ -525,6 +572,7 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
       installed_readiness: installedDescriptor?.readiness ?? descriptor?.readiness ?? null,
       installed_manifest_sha256: installedDescriptor?.manifest_sha256 ?? null,
       installed_content_digest: installedDescriptor?.manifest.content_digest ?? null,
+      hosted_runtime_readiness: hosted,
       managed_policy_currentness: managedPolicyCurrentness,
       codex_visible: packageId
         ? Boolean(
@@ -544,6 +592,7 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
           ? null
           : !managedPolicyOperational
             ? managedPolicyCurrentness.repair_command
+            : !hostedReady && packageId ? `opl packages install ${packageId} --json`
             : descriptor ? `codex plugin add ${descriptor.carrier.carrier.pluginId}` : null,
       },
       experience_baseline: managedPolicyCurrentness.experience_baseline ?? {
@@ -569,7 +618,8 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
       allowed_when_blocked: ['status', 'repair'],
       repair_action: !managedPolicyOperational
         ? managedPolicyCurrentness.repair_command
-        : descriptor ? `codex plugin add ${descriptor.carrier.carrier.pluginId}` : null,
+        : !hostedReady && packageId ? `opl packages install ${packageId} --json`
+            : descriptor ? `codex plugin add ${descriptor.carrier.carrier.pluginId}` : null,
       home_shortcut_preferences: homeShortcutPreferences,
       files: {
         home_shortcut_preferences_file: resolveOplStatePaths().agent_package_home_shortcut_preferences_file,

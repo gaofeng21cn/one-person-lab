@@ -33,6 +33,15 @@ Framework可以验证结构、投影和恢复；只有domain owner能promotion�
 
 Package owner持有descriptor、runtime bytes、version和publication。native carrier持有安装/启停/currentness。Framework只下载/验证/hand off owner bytes或调用carrier，并聚合installed/callable。
 
+Standard Agent 安装或重新安装时，carrier adapter 从已选择版本的 owner OCI artifact
+读取 manifest、payload 和 source layer，核对身份、源码提交、layer size/SHA-256 及
+carrier content lock。完整源码与最小插件一同保存于原有 marketplace 根，原子替换后再交给
+原生插件管理器；下载临时目录不作为运行根。既有 marketplace marker 记录 artifact/source
+digest，接口发现与 Hosted action 使用同一个父级源码根，不创建独立 Package registry、
+版本指针或源码缓存。缺失声明的 descriptor/action catalog 时，Package status 显示
+`hosted_agent_source_unavailable`，保留 carrier callable 的独立事实，提示重新安装 Package。
+这些检查证明源码与入口文件可用；Temporal、实际 StageRun 和领域业务验收分别回读。
+
 Package 不存在共享 Release Set、聚合 `latest-stable` 或整套冻结前置。每个
 Package 只发布自己的 immutable version 与 owner channel；Framework、App 和
 Homebrew 分别消费自己声明的 artifact。消费者可以在安装或运行时自由组合

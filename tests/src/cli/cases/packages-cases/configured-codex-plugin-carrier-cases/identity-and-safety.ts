@@ -203,6 +203,11 @@ test('required OPL Package status accepts installed local carriers consistently'
     );
     fs.mkdirSync(sourcePath, { recursive: true });
     fs.writeFileSync(path.join(sourcePath, 'opl-package.json'), manifest, 'utf8');
+    if (packageId !== 'mas-scholar-skills') {
+      fs.mkdirSync(path.join(sourcePath, 'contracts'), { recursive: true });
+      fs.writeFileSync(path.join(sourcePath, 'contracts/domain_descriptor.json'), '{}\n');
+      fs.writeFileSync(path.join(sourcePath, 'contracts/action_catalog.json'), '{}\n');
+    }
     if (packageId === 'mas-scholar-skills') {
       const providerManifest = parseJsonText(manifest) as any;
       for (const skillId of providerManifest.exports.all_skill_ids) {
