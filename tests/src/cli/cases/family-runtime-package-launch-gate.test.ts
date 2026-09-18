@@ -182,6 +182,11 @@ test('Git marketplace launch resolves the same verified runtime root as hosted a
   try {
     fs.writeFileSync(marker, JSON.stringify({ source: 'https://github.com/gaofeng21cn/med-autoscience.git' }));
     assert.equal(packageRuntimeSourceCheckoutPath(status), marketplaceRoot);
+    status.configured_carrier.carrier.observed_sources[0].marketplace_source = marketplaceRoot;
+    assert.equal(packageRuntimeSourceCheckoutPath(status), marketplaceRoot);
+    status.configured_carrier.carrier.observed_sources[0].marketplace_source = path.dirname(marketplaceRoot);
+    assert.equal(packageRuntimeSourceCheckoutPath(status), pluginRoot);
+    status.configured_carrier.carrier.observed_sources[0].marketplace_source = marketplaceRoot;
     fs.writeFileSync(marker, JSON.stringify({ source: 'https://github.com/other/foreign.git' }));
     assert.equal(packageRuntimeSourceCheckoutPath(status), pluginRoot);
   } finally {

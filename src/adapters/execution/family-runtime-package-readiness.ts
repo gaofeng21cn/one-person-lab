@@ -62,14 +62,16 @@ function localCarrierRuntimeCheckout(packageStatus: any) {
     const observedSource = optionalString(observed.marketplace_source);
     if (
       !observedSource
-      || !sameMarketplaceSource(observedSource, marketplaceRoot)
       || optionalString(observed.plugin_source_path) !== pluginRoot
       || optionalString(installedCarrier.source_ref) !== pluginRoot
     ) return null;
     try {
-      return gitMarketplaceRuntimeRoot(
-        fs.realpathSync.native(pluginRoot), observedSource, 'contracts/domain_descriptor.json',
+      const root = gitMarketplaceRuntimeRoot(
+        fs.realpathSync.native(pluginRoot), marketplaceRoot, 'contracts/domain_descriptor.json',
       );
+      return sameMarketplaceSource(observedSource, marketplaceRoot)
+        || (root && path.isAbsolute(observedSource) && fs.realpathSync.native(observedSource) === root)
+        ? root : null;
     } catch {
       return null;
     }

@@ -20,6 +20,7 @@ import {
   stringValue,
 } from './configured-codex-plugin-carrier-native.ts';
 import type { AgentPackageConfiguredCodexPluginCarrierDescriptor } from './types.ts';
+import { acquireHostedPackageSource } from './configured-codex-plugin-carrier-source.ts';
 
 function projectedManifestPath(sourceRef: string) {
   return path.isAbsolute(sourceRef)
@@ -324,13 +325,26 @@ export function installPayloadMarketplace(input: {
   const stagingRoot = `${marketplaceRoot}.${process.pid}.${crypto.randomUUID()}.staging`;
   const pluginRoot = path.join(stagingRoot, 'plugins', projection.pluginId);
   const downloaded = new Map<string, Buffer>();
-  const archive = materializeGithubArchive({
+  const hostedSource = acquireHostedPackageSource({
+    packageId: input.packageId,
+    ownerManifest: projection.ownerManifest,
+    payload,
+    env: input.env,
+  });
+  const archive = hostedSource ?? materializeGithubArchive({
     packageId: input.packageId,
     payloadFiles: payload.files.filter(isRecord),
     sourceCommit: projection.sourceCommit,
     env: input.env,
   });
   try {
+    if (hostedSource) {
+      // Keep runtime contracts and the minimal plugin in the same native
+      // marketplace lifetime and atomic replacement; no separate registry.
+      fs.cpSync(hostedSource.sourceRoot, stagingRoot, { recursive: true, errorOnExist: true, force: false });
+      fs.writeFileSync(path.join(stagingRoot, '.codex-marketplace-install.json'),
+        `${JSON.stringify(hostedSource.provenance, null, 2)}\n`, { mode: 0o600 });
+    }
     for (const [index, candidate] of payload.files.entries()) {
       if (!isRecord(candidate)) {
         localReadbackFailure(
