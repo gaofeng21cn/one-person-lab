@@ -89,13 +89,10 @@ test('reviewer snapshot binds a controller-selected lane to immutable readback',
       ),
       'reviewer_input_snapshot_authority_binding_mismatch',
     );
-    assertFailureCode(
-      () => materializeReviewerInputSnapshot(
-        request,
-        expectedAuthority(),
-      ),
-      'reviewer_input_snapshot_authority_binding_mismatch',
-    );
+    const withoutDeclaredLane = materializeReviewerInputSnapshot(request, expectedAuthority());
+    assert.equal(withoutDeclaredLane.manifest.review_lane, undefined);
+    assert.equal(withoutDeclaredLane.review_input_snapshot_binding.review_lane, undefined);
+    assert.deepEqual(withoutDeclaredLane.manifest.members, materialized.manifest.members);
   });
 });
 

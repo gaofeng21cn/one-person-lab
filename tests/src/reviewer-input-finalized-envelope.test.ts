@@ -39,3 +39,28 @@ test('unbound refs, changed hashes and colliding member ids fail closed', () => 
   request.members[0]!.member_id = `opl-finalized-artifact-${finalized.sha256.slice('sha256:'.length)}`;
   assert.throws(() => completeReviewerSnapshotTransportEnvelope(request, authority, artifacts));
 });
+
+// A Stage that declares no review lane binding has no authoritative lane: the resolver that
+// builds this expectation already ignores a requested lane there and yields null. A producer that
+// restates a lane anyway must not fail an otherwise exact request, or the reviewer never starts
+// and the StageRun ends without the decisive route decision the StageRun handoff depends on.
+test('an unauthorized review lane hint is dropped instead of failing an exact request', () => {
+  const { request, authority, artifacts } = fixture();
+  const laneLessAuthority = { ...authority, review_lane_binding: null };
+  const withHint = { ...structuredClone(request), review_lane: 'formal_review' };
+  const result = completeReviewerSnapshotTransportEnvelope(withHint, laneLessAuthority, artifacts);
+  assert.equal(result.review_lane, undefined);
+  assert.equal(result.producer_attempt_ref, authority.producer_attempt_ref);
+  assert.equal(result.execution_content_binding_sha256, authority.execution_content_binding_sha256);
+});
+
+// Dropping is only safe once the lane is genuinely non-authoritative: a hint that contradicts a
+// lane the Stage does declare stays fatal.
+test('a review lane hint that contradicts a declared lane stays fatal', () => {
+  const { request, authority, artifacts } = fixture();
+  const withConflictingHint = { ...structuredClone(request), review_lane: 'formal_review' };
+  assert.throws(
+    () => completeReviewerSnapshotTransportEnvelope(withConflictingHint, authority, artifacts),
+    /does not match its producer Attempt binding and closeout metadata/,
+  );
+});

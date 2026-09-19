@@ -228,7 +228,7 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     const protocol = receipt.process_output_summary?.protocol_closeout_resume as Record<string, unknown>;
     assert.equal(protocol.status, 'completed');
     assert.equal(protocol.same_thread, true);
-    assert.equal(protocol.timeout_ms, 120_000);
+    assert.equal(protocol.timeout_ms, 900_000);
     assert.equal(protocol.creates_stage_attempt, false);
     assert.equal(protocol.counts_as_review, false);
     assert.equal(protocol.consumes_quality_budget, false);

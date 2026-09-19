@@ -187,6 +187,15 @@ export function normalizeReviewerInputSnapshotRequest(
       { member_ids: memberIds },
     );
   }
+  // A review lane is authoritative only when the Stage declares a review lane binding. When it
+  // declares none, the resolver that produces this expectation already ignores a requested lane
+  // and yields null, so a lane hint carries no authority there and must not be able to fail an
+  // otherwise exact request. Only a hint that contradicts a *declared* lane stays fatal.
+  const authoritativeLane = expectedAuthority === undefined
+    ? null
+    : normalizeAuthorityBinding(expectedAuthority).review_lane_binding ?? null;
+  const laneIsAuthoritative = expectedAuthority !== undefined && authoritativeLane !== null;
+  const suppressLaneHint = expectedAuthority !== undefined && authoritativeLane === null;
   const normalized = {
     surface_kind: 'opl_reviewer_input_snapshot_materialization_request' as const,
     schema_version: 2 as const,
@@ -196,7 +205,7 @@ export function normalizeReviewerInputSnapshotRequest(
       request.execution_content_binding_sha256,
       'execution_content_binding_sha256',
     ),
-    ...(request.review_lane === undefined
+    ...(request.review_lane === undefined || suppressLaneHint
       ? {}
       : { review_lane: requiredReviewTransportText(request.review_lane, 'review_lane') }),
     workspace_root: requiredReviewTransportText(request.workspace_root, 'workspace_root'),
@@ -221,7 +230,7 @@ export function normalizeReviewerInputSnapshotRequest(
       normalized.producer_attempt_ref !== expected.producer_attempt_ref
       || normalized.execution_content_binding_sha256
         !== expected.execution_content_binding_sha256
-      || (normalized.review_lane ?? null) !== expected.review_lane_binding
+      || (laneIsAuthoritative && (normalized.review_lane ?? null) !== expected.review_lane_binding)
       || !authorityMetadataMatch
     ) {
       throw reviewTransportError(

@@ -14,6 +14,40 @@ import {
 
 const MAX_CLOSEOUT_SUFFIX_MESSAGES = 64;
 const MAX_CLOSEOUT_SUFFIX_CHARS = 128 * 1024;
+const FENCED_JSON_RECORD_PATTERN = /```[ \t]*(?:json|jsonc)?[ \t]*\r?\n([\s\S]*?)```/g;
+
+function parseJsonRecordText(text: string): JsonRecord | null {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    const parsed = parseJsonText(trimmed);
+    if (isRecord(parsed)) {
+      return parsed;
+    }
+  } catch {
+    // Not a bare JSON document. A provider may still carry the exact record in a
+    // fenced block; those are scanned below without guessing at prose or partial JSON.
+  }
+  const pattern = new RegExp(FENCED_JSON_RECORD_PATTERN.source, 'g');
+  const matches = [...trimmed.matchAll(pattern)];
+  for (let index = matches.length - 1; index >= 0; index -= 1) {
+    const body = matches[index][1]?.trim();
+    if (!body) {
+      continue;
+    }
+    try {
+      const parsed = parseJsonText(body);
+      if (isRecord(parsed)) {
+        return parsed;
+      }
+    } catch {
+      // Keep scanning older fenced blocks; only a complete JSON record is selectable.
+    }
+  }
+  return null;
+}
 
 function topLevelArtifactIdentity(candidate: JsonRecord) {
   const entries = Array.isArray(candidate.artifact_refs) ? candidate.artifact_refs : [];
@@ -78,11 +112,9 @@ function parseJsonRecordEndingAtCodexMessage(messages: string[], endIndex: numbe
     if (suffix.length > MAX_CLOSEOUT_SUFFIX_CHARS) {
       break;
     }
-    try {
-      const parsed = parseJsonText(suffix.trim());
-      if (isRecord(parsed)) return parsed;
-    } catch {
-      // A typed packet may be split only across messages adjacent to this end boundary.
+    const parsed = parseJsonRecordText(suffix);
+    if (parsed) {
+      return parsed;
     }
   }
   return null;
@@ -96,14 +128,18 @@ export function parseTerminalJsonRecordFromCodexMessages(messages: string[]): Js
   return null;
 }
 
-export function parseCloseoutFromCodexMessages(messages: string[]) {
+export function parseCloseoutFromCodexMessages(
+  messages: string[],
+  onNormalizeError?: (error: unknown) => void,
+) {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     if (messages[index].trim().length === 0) continue;
     const candidate = parseJsonRecordEndingAtCodexMessage(messages, index);
     if (!candidate) continue;
     try {
       return normalizeTypedStageCloseoutPacket(candidate);
-    } catch {
+    } catch (error) {
+      onNormalizeError?.(error);
       // Keep scanning older exact JSON objects; only a normalized typed packet is selectable.
     }
   }
@@ -112,6 +148,11 @@ export function parseCloseoutFromCodexMessages(messages: string[]) {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function normalizeCloseoutErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.length > 300 ? `${message.slice(0, 297)}...` : message;
 }
 
 export async function recoverCloseoutFromCodexSessionWithRetry(input: {
@@ -123,6 +164,7 @@ export async function recoverCloseoutFromCodexSessionWithRetry(input: {
   const intervalMs = normalizeTimeoutMs(input.intervalMs, 100);
   const startedAt = Date.now();
   let attempts = 0;
+  let lastNormalizeError: string | null = null;
   let latestRecovered: ReturnType<typeof recoverCodexExecOutputFromSession> = null;
   let latestParsed: ReturnType<typeof parseCodexExecOutput> | null = null;
 
@@ -131,13 +173,16 @@ export async function recoverCloseoutFromCodexSessionWithRetry(input: {
     latestRecovered = recoverCodexExecOutputFromSession(input.threadId);
     if (latestRecovered) {
       latestParsed = parseCodexExecOutput(latestRecovered.output);
-      const closeoutPacket = parseCloseoutFromCodexMessages(latestParsed.messages);
+      const closeoutPacket = parseCloseoutFromCodexMessages(latestParsed.messages, (error) => {
+        lastNormalizeError = normalizeCloseoutErrorMessage(error);
+      });
       if (closeoutPacket) {
         return {
           closeoutPacket,
           recovered: latestRecovered,
           parsed: latestParsed,
           attempts,
+          lastNormalizeError,
           status: 'closeout_found',
         };
       }
@@ -150,6 +195,7 @@ export async function recoverCloseoutFromCodexSessionWithRetry(input: {
         recovered: latestRecovered,
         parsed: latestParsed,
         attempts,
+        lastNormalizeError,
         status: latestRecovered ? 'session_found_without_closeout' : 'session_not_found',
       };
     }

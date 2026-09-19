@@ -58,6 +58,7 @@ import {
   parseCloseoutFromCodexMessages,
   parseTerminalJsonRecordFromCodexMessages,
   recoverCloseoutFromCodexSessionWithRetry,
+  normalizeCloseoutErrorMessage,
 } from './family-runtime-codex-stage-runner-parts/session-closeout-recovery.ts';
 import {
   createCodexCloseoutCapture,
@@ -574,6 +575,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let recoveredFinalMessageChars = 0;
   let sessionRecoveryAttempts = 0;
   let sessionRecoveryStatus: string | null = null;
+  let sessionRecoveryLastNormalizeError: string | null = null;
   let recoveredRawMessage: string | null = null;
   let sessionUsageRef: CodexSessionUsageRef | null = null;
   let domainReceiptRecoveryStatus: string | null = null;
@@ -583,6 +585,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let protocolCloseoutResumeTimeoutMs: number | null = null;
   let protocolCloseoutResumeResult: CodexCommandResult | null = null;
   let protocolCloseoutResumePacketObserved = false;
+  let protocolCloseoutResumeLastNormalizeError: string | null = null;
   let protocolCloseoutResumeInitialRouteImpactPreserved = false;
   let protocolCloseoutReferenceHydrationStatus: 'not_applicable' | 'hydrated' = 'not_applicable';
   let protocolCloseoutReferenceObservation: {
@@ -605,6 +608,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     });
     sessionRecoveryAttempts = recovered.attempts;
     sessionRecoveryStatus = recovered.status;
+    sessionRecoveryLastNormalizeError = recovered.lastNormalizeError ?? null;
     closeoutPacket = recovered.closeoutPacket;
     if (recovered.recovered) {
       recoveredSessionPath = recovered.recovered.sessionPath;
@@ -693,7 +697,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         ?? (resumedCapture.message
           ? parseTerminalJsonRecordFromCodexMessages([resumedCapture.message])
           : null);
-      const resumedCloseout = parseCloseoutFromCodexMessages(resumed.messages) ?? resumedCapture.closeoutPacket;
+      const resumedCloseout = parseCloseoutFromCodexMessages(resumed.messages, (error) => {
+        protocolCloseoutResumeLastNormalizeError = normalizeCloseoutErrorMessage(error);
+      }) ?? resumedCapture.closeoutPacket;
       const resolvedCloseout = resolveProtocolCloseoutResumePacket({
         initialCandidate: initialCloseoutCandidate,
         resumedCloseout,
@@ -924,6 +930,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         ? {
             session_recovery_status: sessionRecoveryStatus,
             session_recovery_attempts: sessionRecoveryAttempts,
+            ...(sessionRecoveryLastNormalizeError
+              ? { session_recovery_last_normalize_error: sessionRecoveryLastNormalizeError }
+              : {}),
           }
         : {}),
       ...(domainReceiptRecoveryStatus
@@ -940,6 +949,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
               timeout_reason: protocolCloseoutResumeResult?.timeoutReason ?? null,
               packet_observed: protocolCloseoutResumePacketObserved,
               closeout_rejection_reason: closeoutRejection?.reason ?? null,
+              ...(protocolCloseoutResumeLastNormalizeError
+                ? { resume_last_closeout_normalize_error: protocolCloseoutResumeLastNormalizeError }
+                : {}),
               same_thread: true,
               thread_id: protocolCloseoutResumeThreadId,
               timeout_ms: protocolCloseoutResumeTimeoutMs

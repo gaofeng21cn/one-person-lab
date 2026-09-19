@@ -362,6 +362,7 @@
       "surface_kind": "domain_owned_stage_output_ref",
       "version": "domain-owned-stage-output-ref.v1",
       "transport_policy": "refs_only_no_domain_output_body_in_temporal_or_opl_ledger",
+      "input_normalization": "validate_identity_then_drop_fields_outside_allowed_fields_before_persistence",
       "required_fields": [
         "domain_id",
         "output_ref"

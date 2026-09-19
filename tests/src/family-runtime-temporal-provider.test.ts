@@ -10,6 +10,7 @@ import './family-runtime-temporal-provider-cases/scheduler-and-readiness.ts';
 import './family-runtime-temporal-provider-cases/codex-activity-history.ts';
 import './family-runtime-temporal-provider-cases/legacy-workflow-replay.ts';
 import { Worker } from '@temporalio/worker';
+import { msToNumber } from '@temporalio/common';
 import { buildCordisTemporalActivities } from '../../src/host/temporal-activity-projection.ts';
 
 import * as activities from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
@@ -20,6 +21,7 @@ import {
 import {
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
+  DEFAULT_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS,
 } from '../../src/adapters/execution/family-runtime-temporal-constants.ts';
 import {
   humanGateSignal,
@@ -111,6 +113,11 @@ test('Temporal stage attempt contract exposes Codex runner total and no-output b
   );
   assert.equal(contract.activity_timeout_policy.short_stage_activities.retry.maximum_attempts, 3);
   assert.equal(contract.activity_timeout_policy.codex_stage_activity.retry.maximum_attempts, 1);
+  assert.ok(
+    msToNumber(contract.activity_timeout_policy.codex_stage_activity.start_to_close_timeout)
+      > DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS + DEFAULT_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS,
+    'The Activity must leave the runner its full closeout recovery budget and transport overhead.',
+  );
   assert.equal(contract.operator_action_updates[0], 'StageAttemptOperatorUpdate');
   assert.deepEqual(contract.required_search_attributes, [
     'OplStageAttemptId',

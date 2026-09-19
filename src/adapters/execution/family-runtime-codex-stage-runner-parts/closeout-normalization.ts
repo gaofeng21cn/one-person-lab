@@ -54,14 +54,6 @@ function normalizeDomainOutput(value: unknown, closeoutRefs: string[]): TypedSta
       field: 'domain_output',
     });
   }
-  const allowedFields = new Set(['surface_kind', 'version', 'domain_id', 'output_ref']);
-  if (Object.keys(value).some((field) => !allowedFields.has(field))) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'domain_output contains unsupported fields; only refs-only output identity is allowed.',
-      { allowed_fields: [...allowedFields] },
-    );
-  }
   const surfaceKind = optionalString(value.surface_kind);
   const version = optionalString(value.version);
   const domainId = optionalString(value.domain_id);
@@ -89,6 +81,11 @@ function normalizeDomainOutput(value: unknown, closeoutRefs: string[]): TypedSta
       { output_ref: outputRef },
     );
   }
+  // Extra fields beyond the refs-only identity (supporting refs, prose, summaries)
+  // are transport noise: they are dropped here, never forwarded. Rejecting the
+  // whole packet over them discards a fully routed closeout and degrades a
+  // finished Stage to a raw progress envelope, which contradicts the
+  // progress-over-abort policy for finished executor work.
   return {
     surface_kind: surfaceKind,
     version,
