@@ -58,6 +58,7 @@ import {
   parseCloseoutFromCodexMessages,
   parseTerminalJsonRecordFromCodexMessages,
   recoverCloseoutFromCodexSessionWithRetry,
+  normalizeCloseoutErrorMessage,
 } from './family-runtime-codex-stage-runner-parts/session-closeout-recovery.ts';
 import {
   createCodexCloseoutCapture,
@@ -121,11 +122,34 @@ function executorPolicyFromAttempt(attempt: JsonRecord): StageAttemptExecutorPol
   return direct;
 }
 
+const CODEX_STAGE_SANDBOX_MODES = ['read-only', 'workspace-write', 'danger-full-access'] as const;
+
+/**
+ * Operator-declared Codex sandbox mode for provider-backed Stage attempts.
+ *
+ * `workspace-write` stays the product default. An embedding host that already
+ * runs inside its own seatbelt cannot host a second one: the inner
+ * `sandbox-exec` answers `sandbox_apply: Operation not permitted` (exit 71)
+ * before any user command runs, so every tool call of the Attempt fails even
+ * though the task itself is fine. Such a host selects a wider mode explicitly
+ * instead of watching the Attempt die.
+ *
+ * The override is read from the operator environment only, never from attempt
+ * or DesignRequest data, so an Attempt cannot widen its own boundary.
+ */
+function codexStageSandboxModeOverride(
+  env: Record<string, string | undefined> = process.env,
+): (typeof CODEX_STAGE_SANDBOX_MODES)[number] | undefined {
+  const value = optionalString(env.OPL_CODEX_STAGE_SANDBOX_MODE);
+  return CODEX_STAGE_SANDBOX_MODES.find((mode) => mode === value);
+}
+
 function codexExecOptionsFromPolicy(policy: StageAttemptExecutorPolicy | null) {
   return {
     model: optionalString(policy?.model) ?? undefined,
     provider: optionalString(policy?.provider) ?? undefined,
     reasoningEffort: optionalString(policy?.reasoning_effort) ?? undefined,
+    sandboxMode: codexStageSandboxModeOverride(),
   };
 }
 
@@ -574,6 +598,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let recoveredFinalMessageChars = 0;
   let sessionRecoveryAttempts = 0;
   let sessionRecoveryStatus: string | null = null;
+  let sessionRecoveryLastNormalizeError: string | null = null;
   let recoveredRawMessage: string | null = null;
   let sessionUsageRef: CodexSessionUsageRef | null = null;
   let domainReceiptRecoveryStatus: string | null = null;
@@ -583,6 +608,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let protocolCloseoutResumeTimeoutMs: number | null = null;
   let protocolCloseoutResumeResult: CodexCommandResult | null = null;
   let protocolCloseoutResumePacketObserved = false;
+  let protocolCloseoutResumeLastNormalizeError: string | null = null;
   let protocolCloseoutResumeInitialRouteImpactPreserved = false;
   let protocolCloseoutReferenceHydrationStatus: 'not_applicable' | 'hydrated' = 'not_applicable';
   let protocolCloseoutReferenceObservation: {
@@ -592,6 +618,18 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   } | null = null;
   const protocolCloseoutResumeViolationKinds = new Set<'command_execution' | 'unsupported_function_call'>();
   let closeoutRejection: ReturnType<typeof validateCloseoutPacketForAttempt>['rejection'] = null;
+  /**
+   * A typed or referenced closeout can still fail identity verification after the
+   * executor produced usable output: an unresolved referenced packet, a raw
+   * envelope that no longer matches the canonical runner shape, a stale byte
+   * identity. Those are transport defects. Letting them escape as an
+   * activity-level `FrameworkContractError` converts a finished Stage into a
+   * pre-executor blocker and loses every artifact the Attempt produced, which
+   * contradicts the framework's own progress policy. The verification still runs
+   * and its failure is still recorded; the Attempt simply degrades to the
+   * canonical raw progress envelope instead of aborting.
+   */
+  let closeoutIdentityVerificationRejection: string | null = null;
   if (
     !runInSandbox
     && !closeoutPacket
@@ -605,6 +643,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     });
     sessionRecoveryAttempts = recovered.attempts;
     sessionRecoveryStatus = recovered.status;
+    sessionRecoveryLastNormalizeError = recovered.lastNormalizeError ?? null;
     closeoutPacket = recovered.closeoutPacket;
     if (recovered.recovered) {
       recoveredSessionPath = recovered.recovered.sessionPath;
@@ -693,7 +732,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         ?? (resumedCapture.message
           ? parseTerminalJsonRecordFromCodexMessages([resumedCapture.message])
           : null);
-      const resumedCloseout = parseCloseoutFromCodexMessages(resumed.messages) ?? resumedCapture.closeoutPacket;
+      const resumedCloseout = parseCloseoutFromCodexMessages(resumed.messages, (error) => {
+        protocolCloseoutResumeLastNormalizeError = normalizeCloseoutErrorMessage(error);
+      }) ?? resumedCapture.closeoutPacket;
       const resolvedCloseout = resolveProtocolCloseoutResumePacket({
         initialCandidate: initialCloseoutCandidate,
         resumedCloseout,
@@ -812,11 +853,44 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       },
     });
   }
-  closeoutPacket = verifyStageQualityCloseoutArtifactIdentity({
-    closeoutPacket,
-    attempt: input.attempt,
-    workspaceRoot,
-  });
+  const alreadyRawProgressEnvelope = closeoutPacket?.authority_boundary?.opl
+    === 'raw_executor_output_progress_envelope_only';
+  try {
+    closeoutPacket = verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket,
+      attempt: input.attempt,
+      workspaceRoot,
+    });
+  } catch (error) {
+    const blockedReason = error instanceof FrameworkContractError
+      && typeof error.details?.blocked_reason === 'string'
+      && error.details.blocked_reason.trim()
+      ? error.details.blocked_reason.trim()
+      : null;
+    // The canonical raw progress envelope is the fallback of last resort; when it is
+    // what already failed, the defect is real and must stay fatal.
+    if (!blockedReason || !rawStageArtifact || alreadyRawProgressEnvelope) throw error;
+    closeoutIdentityVerificationRejection = blockedReason;
+    runnerEvents.push({
+      event_kind: 'closeout_identity_verification.degraded_to_raw_progress',
+      value: blockedReason,
+    });
+    input.onRunnerProgress?.({
+      event_kind: 'closeout_identity_verification.degraded_to_raw_progress',
+      value: blockedReason,
+    });
+    closeoutPacket = buildRawArtifactProgressCloseoutPacket({
+      attempt: input.attempt,
+      stagePacketRef: stagePacketTransportRef,
+      rawArtifact: rawStageArtifact,
+      normalizationFindings: [
+        ...(!stagePacketRef ? ['stage_packet_ref_missing_nonblocking_declared_stage_context_used'] : []),
+        ...(closeoutRejection ? [`typed_closeout_${closeoutRejection.reason}`] : []),
+        `closeout_identity_verification_${blockedReason}`,
+        'typed_closeout_not_required_raw_artifact_advanced',
+      ],
+    });
+  }
   const effectiveBlockedReason = reviewProtocolFailure ?? (rawStageArtifact ? null : primaryBlockedReason);
   const combinedStdout = [result.stdout, protocolCloseoutResumeResult?.stdout]
     .filter((entry): entry is string => Boolean(entry))
@@ -924,6 +998,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         ? {
             session_recovery_status: sessionRecoveryStatus,
             session_recovery_attempts: sessionRecoveryAttempts,
+            ...(sessionRecoveryLastNormalizeError
+              ? { session_recovery_last_normalize_error: sessionRecoveryLastNormalizeError }
+              : {}),
           }
         : {}),
       ...(domainReceiptRecoveryStatus
@@ -940,6 +1017,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
               timeout_reason: protocolCloseoutResumeResult?.timeoutReason ?? null,
               packet_observed: protocolCloseoutResumePacketObserved,
               closeout_rejection_reason: closeoutRejection?.reason ?? null,
+              ...(protocolCloseoutResumeLastNormalizeError
+                ? { resume_last_closeout_normalize_error: protocolCloseoutResumeLastNormalizeError }
+                : {}),
               same_thread: true,
               thread_id: protocolCloseoutResumeThreadId,
               timeout_ms: protocolCloseoutResumeTimeoutMs
@@ -976,6 +1056,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
               ? { rejected_closeout_scope_digest: closeoutRejection.scope_digest }
               : {}),
           }
+        : {}),
+      ...(closeoutIdentityVerificationRejection
+        ? { closeout_identity_verification_rejection_reason: closeoutIdentityVerificationRejection }
         : {}),
     },
   };

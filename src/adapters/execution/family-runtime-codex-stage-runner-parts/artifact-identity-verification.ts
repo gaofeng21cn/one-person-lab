@@ -624,7 +624,11 @@ export function verifyStageQualityArtifactIdentityAtAttemptBoundary(input: {
   domainId: string;
   workspaceRoot: string;
   expectedProducingAttemptId: string;
-  expectedProducingStageId?: string;
+  // Required: the framework-owned raw executor output carries its own physical root, and this
+  // Stage id is what admits that root instead of the canonical work-item root. Omitting it
+  // silently routes framework raw output through the work-item-root boundary check, which
+  // rejects it as an authority violation and strands the StageRun without a route decision.
+  expectedProducingStageId: string;
   expectedStageRunId?: string | null;
   expectedScopeKind?: FamilyRuntimeExecutionScopeKind;
   expectedExecutionScope?: WorkItemExecutionScopeSnapshot | null;

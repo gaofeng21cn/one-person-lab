@@ -127,6 +127,36 @@ function foundryActivityFailureCode(error: unknown) {
   return 'foundry_activity_retry_exhausted';
 }
 
+const GENERIC_TEMPORAL_FAILURE_MESSAGES = new Set([
+  'Activity task failed',
+  'Activity task failed to complete',
+  'Activity task timed out',
+]);
+
+/**
+ * Temporal surfaces an exhausted Activity retry as `Activity task failed` and
+ * hides the reason on the cause chain. Persisting only the wrapper made a
+ * domain-level stop — for example the provider operation ending before its
+ * declared terminal Stage because a decisive Attempt declared no route — read
+ * exactly like a transport outage, which sent readers looking at the wrong
+ * layer. Carry the deepest non-generic cause message into the ledger instead.
+ */
+function foundryActivityFailureMessage(error: unknown) {
+  const messages: string[] = [];
+  let current = error;
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (!current || typeof current !== 'object') break;
+    const failure = current as { message?: unknown; cause?: unknown };
+    if (typeof failure.message === 'string' && failure.message.trim()) {
+      messages.push(failure.message.trim());
+    }
+    current = failure.cause;
+  }
+  return messages.find((message) => !GENERIC_TEMPORAL_FAILURE_MESSAGES.has(message))
+    ?? messages[0]
+    ?? 'Activity task failed';
+}
+
 function transientProviderObservationFailure(error: unknown) {
   let current = error;
   for (let depth = 0; depth < 8; depth += 1) {
@@ -467,7 +497,7 @@ export async function FoundryRunWorkflow(
       ) {
         continue;
       }
-      const message = error instanceof Error ? error.message : String(error);
+      const message = foundryActivityFailureMessage(error);
       adoptInspection(await serialize(
         () => activities.foundryFailRunActivity({
           run_id: input.run_id,

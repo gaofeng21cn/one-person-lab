@@ -342,6 +342,20 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
       }],
     }), 'closeout:repairer-projection');
     assert.deepEqual(projectTemporalStageRunQualityCycle(db, state).state, first.state);
+    // The Temporal transport projection re-issues the same framework progress
+    // envelope under a transport-only authority marker. The durable readback
+    // must still agree with the projected Attempt artifact identity.
+    db.prepare('UPDATE stage_attempt_closeouts SET packet_json = ? WHERE closeout_id = ?').run(JSON.stringify({
+      authority_boundary: {
+        opl: 'temporal_closeout_transport_projection_only',
+        domain: 'truth_quality_artifact_gate_owner',
+      },
+      closeout_ref_metadata: [{
+        ref: 'artifact:deck-v4', ref_kind: 'raw_executor_output',
+        sha256: 'sha256:deck-v4', artifact_identity_receipt_ref: 'receipt:deck-v4',
+      }],
+    }), 'closeout:repairer-projection');
+    assert.deepEqual(projectTemporalStageRunQualityCycle(db, state).state, first.state);
     const persistedCycleRow = () => ({
       ...db.prepare(`
         SELECT *

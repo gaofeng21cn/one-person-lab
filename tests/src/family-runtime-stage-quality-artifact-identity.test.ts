@@ -353,6 +353,7 @@ test('local Stage artifact identity is bound to final bytes and a transport rece
       domainId: attempt.domain_id,
       workspaceRoot: root,
       expectedProducingAttemptId: attempt.stage_attempt_id,
+      expectedProducingStageId: attempt.stage_id,
     });
     assert.throws(
       () => verifyStageQualityArtifactIdentityAtAttemptBoundary({
@@ -362,6 +363,7 @@ test('local Stage artifact identity is bound to final bytes and a transport rece
         domainId: attempt.domain_id,
         workspaceRoot: root,
         expectedProducingAttemptId: 'sat-different-producer',
+        expectedProducingStageId: attempt.stage_id,
       }),
       (error) => error instanceof FrameworkContractError
         && error.details?.blocked_reason === 'artifact_identity_receipt_mismatch_authority_violation',
@@ -375,6 +377,7 @@ test('local Stage artifact identity is bound to final bytes and a transport rece
         domainId: attempt.domain_id,
         workspaceRoot: root,
         expectedProducingAttemptId: attempt.stage_attempt_id,
+      expectedProducingStageId: attempt.stage_id,
       }),
       (error) => error instanceof FrameworkContractError
         && error.details?.blocked_reason === 'artifact_byte_identity_mismatch',
@@ -527,6 +530,7 @@ test('artifact identity preserves ref-hash pairs and permits equal hashes for di
       domainId: attempt.domain_id,
       workspaceRoot: root,
       expectedProducingAttemptId: attempt.stage_attempt_id,
+      expectedProducingStageId: attempt.stage_id,
     });
     assert.deepEqual(identity.artifact_refs, artifactRefs);
     assert.deepEqual(identity.artifact_hashes, [sha256(bytes), sha256(bytes)]);
@@ -628,6 +632,7 @@ test('artifact receipts cannot cross work-item scope or fall back to a domain co
       domainId: producerAttempt.domain_id,
       workspaceRoot: root,
       expectedProducingAttemptId: producerAttempt.stage_attempt_id,
+      expectedProducingStageId: producerAttempt.stage_id,
       expectedStageRunId: producerAttempt.stage_run_id,
       expectedScopeKind: 'work_item',
       expectedExecutionScope: studyOne,
@@ -643,6 +648,7 @@ test('artifact receipts cannot cross work-item scope or fall back to a domain co
         domainId: producerAttempt.domain_id,
         workspaceRoot: root,
         expectedProducingAttemptId: producerAttempt.stage_attempt_id,
+        expectedProducingStageId: producerAttempt.stage_id,
         expectedStageRunId: producerAttempt.stage_run_id,
         ...expected,
       }), (error) => error instanceof FrameworkContractError
