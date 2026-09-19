@@ -1,0 +1,96 @@
+{
+  "surface_kind": "oma_design_basis_admission_review",
+  "version": "oma-design-basis-admission-review.v1",
+  "reviewer_role": "reviewer",
+  "stage_attempt_id": "sat_02f266438e6c97fd83e2bde1",
+  "stage_run_id": "sr_40dcd8592e882b06f2666450",
+  "quality_cycle_id": "quality-cycle:sr_40dcd8592e882b06f2666450",
+  "quality_round_index": 0,
+  "stage_id": "design-basis-admission",
+  "no_context_inheritance": true,
+  "reviewed_input_snapshot": {
+    "manifest_ref": "file:///Users/huangrende/Library/Application%20Support/OPL/state/family-runtime/review-transport/reviewer-input-snapshots/manifests/a54c5d302c7bf28a2dd475d160a84ab8ee7f0cf995cc747eeaeb3c0b39dedc8d.json",
+    "manifest_sha256": "sha256:a54c5d302c7bf28a2dd475d160a84ab8ee7f0cf995cc747eeaeb3c0b39dedc8d",
+    "owner_authority_ref": {
+      "kind": "oma_design_basis_admission",
+      "ref": "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json",
+      "sha256": "sha256:31af758a61f947d949acde6bb7bb8ae5e468413950bdf6aab349c1aabb6b7477",
+      "size_bytes": 87429
+    },
+    "members_verified": [
+      {"member_id": "design-basis-json", "sha256": "sha256:31af758a61f947d949acde6bb7bb8ae5e468413950bdf6aab349c1aabb6b7477", "size_bytes": 87429, "hash_recomputed": true},
+      {"member_id": "design-basis-narrative", "sha256": "sha256:a159f3b5f8808d984cfa5ca4d41eebca2a1f5f33fca7bedd088013e74e37c0b6", "size_bytes": 7728, "hash_recomputed": true},
+      {"member_id": "stage-run-input-mission-intake", "sha256": "sha256:733c1da15bbfca44aab02b9b6558b0eee86cbd9e0a1e069d8ed5964ee70bf15f", "size_bytes": 18103, "hash_recomputed": true},
+      {"member_id": "stage-run-input-provider-activity-input", "sha256": "sha256:9edf2a2d6254ad66d4ff9259ceecf2c888e9e334ab747dba7f29a1bb58bc9911", "size_bytes": 15270, "hash_recomputed": true},
+      {"member_id": "source-material-input-schema", "sha256": "sha256:1e220d210814ba915c6d5eba8abf94bdc05165e497a12d04d2f2116fe5302284", "size_bytes": 504, "hash_recomputed": true},
+      {"member_id": "source-material-output-schema", "sha256": "sha256:49266e55efa94c850d7be3591be535a12e31435fbccc9c22cf4c0bbb68dc3998", "size_bytes": 1366, "hash_recomputed": true},
+      {"member_id": "source-material-answer-schema", "sha256": "sha256:bdc6eaf2dc1993adb79670f0a2ddf05a07bf031822b0ae519b30655dda7314bc", "size_bytes": 1998, "hash_recomputed": true},
+      {"member_id": "source-material-tool-declaration", "sha256": "sha256:7e3dba206cc0c7ea739a0ad0957008dc1e78722325de538d5bd420c6268fcc77", "size_bytes": 633, "hash_recomputed": true},
+      {"member_id": "source-material-corpus-sample", "sha256": "sha256:79e941bf25557b3926b535e2d0a31a492b1d28ac03c27779aaedb70718c65a02", "size_bytes": 15609, "hash_recomputed": true}
+    ]
+  },
+  "independent_verification": {
+    "method_summary_zh": "在隔离评审线程中，从不可变评审快照成员字节重算全部 9 个成员摘要（全部一致），并对准入账簿、要求→证据映射、裁定、模式、假设、排除声明、开放问题与 30 项可重算检查做独立复核；另对 DesignRequest 规范排序紧凑 UTF-8 JSON 摘要、privacy/permission/capability/delivery 逐字一致性、绑定包内容字节身份（10 项）独立重算。",
+    "recomputed": [
+      {"check": "design-request-canonical-digest", "recomputed": "sha256:2c7988fc35cac3dd86cf7387c3747fbbecb11c252321c362703ad8ebdb434370", "declared_in_activity_and_mission_intake": "sha256:2c7988fc35cac3dd86cf7387c3747fbbecb11c252321c362703ad8ebdb434370", "equal": true},
+      {"check": "privacy-requirements-verbatim", "request_values": ["privacy:physician-workflow", "privacy:no-patient-identifiers-in-persistent-traces"], "basis_values": ["privacy:physician-workflow", "privacy:no-patient-identifiers-in-persistent-traces"], "equal": true},
+      {"check": "permission-refs-empty", "request": [], "basis": [], "equal": true},
+      {"check": "capability-refs-verbatim", "equal": true},
+      {"check": "delivery-policy-verbatim", "equal": true},
+      {"check": "acceptance-criteria-count-and-verbatim", "count": 7, "equal": true},
+      {"check": "non-goals-count-and-verbatim", "count": 3, "equal": true},
+      {"check": "objective-verbatim", "equal": true},
+      {"check": "bound-package-content-byte-identity", "checked": ["agent/professional_skills/oma-design-basis-architecture/SKILL.md@sha256:4d60419f...", "agent/stages/design-basis-admission.md@sha256:5f8231f2...", "agent/prompts/design-basis-admission.md@sha256:68d5f83f...", "agent/prompts/stage-quality-cycle-roles.md#producer@sha256:031a71ab...", "agent/quality_gates/foundry-provider-output.md@sha256:36f6fc79...", "agent/stages/manifest.json@sha256:e7849fc0...", "contracts/stage_quality_cycle_policy.json#/stages/design-basis-admission@sha256:8757d1fe...", "agent/knowledge/transferable-agent-practices.md@sha256:f058ecbe...", "agent/knowledge/opl-boundary-policy.md@sha256:bc0ca1ac...", "agent/primary_skill/SKILL.md@sha256:a29bc0a7..."], "all_match": true},
+      {"check": "corpus-sample-derived-facts", "records": 8, "distinct_titles": 1, "distinct_versions": 1, "score_min": 0.3597233543525743, "score_max": 0.3899220701581793, "score_range": 0.030198715805605014, "has_sup_marker": true, "has_table_marker": true, "has_escape_sequences": true}
+    ],
+    "rubric_axis_results": [
+      {"axis": "target_identity_and_bound_input_digests", "result": "pass", "note_zh": "目标身份 ibd-evidence-assistant / ibd_evidence / mode=create / target_version_ref=null 唯一；请求摘要、活动信封、mission-intake 三处一致。"},
+      {"axis": "traceability_of_semantic_claims", "result": "pass", "note_zh": "18 条要求→证据映射逐条绑定 DesignRequest 原文或五个已准入来源字节；假设/排除/开放问题分类清晰，无目标域真值被伪造。"},
+      {"axis": "content_ref_resolution", "result": "pass", "note_zh": "本 Stage 绑定的 10 项包内容字节身份全部重算一致；capability 引用被正确定性为身份而非内容字节。"},
+      {"axis": "preserve_public_cases_gates_thresholds", "result": "pass", "note_zh": "7 条验收判据、2 个 privacy 字符串、permission_refs=[]、cost/latency 门限、delivery_policy 均逐字保留，无削弱或改写。"},
+      {"axis": "authority_boundary", "result": "pass", "note_zh": "无资格/质量/激活/就绪声明；provider_completion_is_qualification=false；无仓库路径、命令、补丁、队列、租约或保护测试体。"},
+      {"axis": "no_new_execution_gate", "result": "pass", "note_zh": "证据限制以显式限制/开放问题携带并分配归属，未被转成新执行门或质量债。"},
+      {"axis": "internal_coherence_of_admitted_set", "result": "fail", "note_zh": "A1 与 A7 就公开动作输入域给出互相否定的陈述，且两者同时登记为支持成立；未记录互斥关系或操作化选择。见 F1。"},
+      {"axis": "profile_fit_semantic_resolution", "result": "pass", "note_zh": "未采用 catalog Profile 作模板；对多语言与否定语境做了显式检查；语义 Profile 选择按 engineer-agent 流程解决，未新增公开动作或运行时。"}
+    ]
+  },
+  "stage_goal_assessment_zh": "Stage 目标「定义什么可支撑设计、什么仍属假设或非目标」总体达成：准入账簿、要求→证据映射、语义裁定、可复用模式评估、假设、排除声明与开放问题齐备，且不含目标域真值伪造或越权声明。唯一未达成点是被准入假设集合的内部一致性：A1 与 A7 在同一开放轴（输入域边界 Q1）上互相否定却同时被登记为成立，使下游 stage-architecture 无法直接采用一组自洽的输入域边界，需回到本 Stage 修复。",
+  "findings": [
+    {
+      "finding_id": "F1-a1-a7-input-domain-contradiction",
+      "severity": "major",
+      "required": true,
+      "evidence_refs": [
+        "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json#/assumption_registry/A1",
+        "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json#/assumption_registry/A7",
+        "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json#/open_questions/Q1",
+        "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.md"
+      ],
+      "repair_expectation": "在本 Stage 产物内显式消解该矛盾，使下游可无重复来源复核地采用自洽边界。可选最小修复：(a) 指明二者互斥并由 Q1 裁定，A1/A7 均降级为「待 Q1 定夺的互斥候选」，不得同时标注为支持成立；或 (b) 依据现有准入证据选定一个作为公开动作的操作边界，将另一个标为已排除/被推翻并给出依据。无论采用 (a) 或 (b)，均须同步修正 assumption_registry 中 A1/A7 的 support_still_holds、falsifier 与 downstream 归属，并在叙述稿第 5 节注明该轴为单值互斥，避免注册两套矛盾边界。此修复不得改变 7 条验收判据、两个 privacy 字符串、permission_refs=[]、门限、delivery_policy 或既有公开用例。",
+      "rationale_zh": "design-basis-admission 的核心交付是「让下一 Stage 无需重复来源复核即可采用」的一组准入判断。A1（公开动作接受任意医生 IBD 证据问题）与 A7（首版仅接受少量明确列出的资质问题，而非任意开放集合）在同一输入域轴上互相否定，且二者的 falsifier 恰好互为对方内容、却同时被登记为支持成立。该矛盾直接影响公开用例划分、受保护类别与充分性判定边界，若不消解，stage-architecture / agent-blueprint-authoring / evaluation-design 将面对两套不可同时成立的边界。Q1 登记该轴为开放并归 stage-architecture 所有，只能说明该轴被延后裁定，不能使两份互相否定的假设同时成立，故本矛盾属本 Stage 产物内部一致性缺陷。"
+    }
+  ],
+  "optional_observations": [
+    {
+      "observation_id": "O1-assumption-support-field-type-inconsistency",
+      "evidence_refs": [
+        "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json#/assumption_registry"
+      ],
+      "summary": "A1..A6/A7 使用布尔 true，而 A3 使用 \"held_as_limitation\"、A7 使用 \"true_as_design_default\"、A8 使用 \"unverified_operational\"，同一字段出现布尔与字符串两种取值。该字段未在任何已声明 schema 中约束，且字符串取值本身携带语义信息，故不构成必检缺陷；若下游需机械比对可统一取值域。"
+    },
+    {
+      "observation_id": "O2-producer-recommended-route-is-advisory",
+      "evidence_refs": [
+        "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json#/recommended_next_stage"
+      ],
+      "summary": "产物内 recommended_next_stage 声明 advance→stage-architecture（并标注 target-agent-assessment 不适用）。这只是 producer 的建议，不构成终端路由；终端路由由本独立评审决定。分类与路由语义正确，无需修复。"
+    }
+  ],
+  "authority_boundary": {
+    "oma": "仅作设计依据准入评审与可复用性/一致性判断。",
+    "opl": "执行及生命周期事实由 OPL 持有（候选编译、独立评测、版本、回执、激活与回滚）。",
+    "target_owner": "ibd_evidence 的目标域真值、权限、质量接受与采纳由目标 Owner 持有。",
+    "provider_completion_is_qualification": false,
+    "note_zh": "本评审不产出领域就绪、质量接受、资格或采纳声明；仅判定本 Stage 产物是否满足 Stage 目标与质量门，并给出同 Stage 修复要求。"
+  }
+}

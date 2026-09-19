@@ -337,6 +337,26 @@ function canonicalArtifactHash(value: string) {
   return match ? `sha256:${match[1]!.toLowerCase()}` : normalized;
 }
 
+const FRAMEWORK_PROGRESS_ENVELOPE_AUTHORITY_MARKERS = new Set<string>([
+  'raw_executor_output_progress_envelope_only',
+  'temporal_closeout_transport_projection_only',
+  'provider_quality_debt_diagnostic_projection_only',
+]);
+
+/**
+ * Mirrors the ledger classification in `closeoutReceiptStatusForPacket`: a
+ * closeout is a framework progress envelope when its route impact is
+ * framework-generated, or when its authority boundary declares one of the
+ * framework envelope markers. Keeping the two in step is what makes the
+ * durable readback agree with the Temporal projection after a transport
+ * projection has re-issued the envelope.
+ */
+function isFrameworkProgressEnvelopePacket(packet: Record<string, unknown>) {
+  if (recordValue(packet.route_impact)?.framework_generated_envelope === true) return true;
+  const marker = recordValue(packet.authority_boundary)?.opl;
+  return typeof marker === 'string' && FRAMEWORK_PROGRESS_ENVELOPE_AUTHORITY_MARKERS.has(marker);
+}
+
 function persistedAttemptOutputArtifactIdentity(
   db: DatabaseSync,
   attempt: Record<string, unknown>,
@@ -358,8 +378,12 @@ function persistedAttemptOutputArtifactIdentity(
     field: 'stage_attempt_closeouts.packet_json',
   });
   const metadata = packet.closeout_ref_metadata;
-  const rawMetadata = recordValue(packet.authority_boundary)?.opl === 'raw_executor_output_progress_envelope_only'
-    && Array.isArray(metadata)
+  // The Temporal transport projection re-issues the same framework progress
+  // envelope under a transport-only authority marker, so the raw executor
+  // output identity has to be recognised from the envelope shape rather than
+  // from a single runner-authored authority marker. The `raw_executor_output`
+  // ref_kind filter below stays the actual safety guard.
+  const rawMetadata = isFrameworkProgressEnvelopePacket(packet) && Array.isArray(metadata)
     ? metadata.map(recordValue).filter((entry) => entry?.ref_kind === 'raw_executor_output')
     : [];
   const artifactRefs = exactStringArray(envelope.artifact_refs ?? rawMetadata.map((entry) => entry?.ref ?? entry?.uri), {

@@ -435,7 +435,7 @@ test('stage attempt closeout preserves canonical object-ref metadata through que
   });
 });
 
-test('stage attempt closeout rejects inline domain output bodies before ledger writes', () => {
+test('stage attempt closeout strips inline domain output bodies before ledger writes', () => {
   withAttempt((db, attemptId) => {
     const outputRef = 'file:///tmp/redcube-runtime/artifacts/closeout.json';
     const packet = {
@@ -451,19 +451,27 @@ test('stage attempt closeout rejects inline domain output bodies before ledger w
       },
     };
 
-    for (const run of [
-      () => normalizeTypedStageCloseoutPacket(packet),
-      () => ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet }),
-    ]) {
-      assert.throws(
-        run,
-        (error) => error instanceof FrameworkContractError
-          && /domain_output contains unsupported fields/.test(error.message),
-      );
-    }
+    // Transport-noise fields (forged verdicts, inline bodies) must never reach
+    // the ledger: normalization strips them and keeps only the refs-only
+    // identity. Stripping keeps a fully routed closeout usable instead of
+    // silently discarding it during session recovery.
+    const normalized = normalizeTypedStageCloseoutPacket(packet);
+    assert.deepEqual(normalized.domain_output, {
+      surface_kind: 'domain_owned_stage_output_ref',
+      version: 'domain-owned-stage-output-ref.v1',
+      domain_id: 'redcube',
+      output_ref: outputRef,
+    });
+
+    ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet: normalized });
     const query = queryStageAttempt(db, attemptId).stage_attempt_query;
-    assert.deepEqual(query.closeouts, []);
-    assert.deepEqual(query.attempt.closeout_refs, []);
+    assert.equal(query.closeouts.length, 1);
+    assert.deepEqual(query.closeouts[0].packet.domain_output, {
+      surface_kind: 'domain_owned_stage_output_ref',
+      version: 'domain-owned-stage-output-ref.v1',
+      domain_id: 'redcube',
+      output_ref: outputRef,
+    });
   });
 });
 
