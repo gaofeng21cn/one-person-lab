@@ -1,0 +1,59 @@
+{
+ "surface_kind": "stage_attempt_closeout_packet",
+ "stage_attempt_id": "sat_02f266438e6c97fd83e2bde1",
+ "stage_run_id": "sr_40dcd8592e882b06f2666450",
+ "scope_digest": "sha256:47dfdf2c19cfe71553e2ea18189275368e27faf73e789947beb4c91742b432bd",
+ "role": "reviewer",
+ "stage_id": "design-basis-admission",
+ "stage_log_summary": "独立评审 design-basis-admission 冻结快照：重算全部 9 个快照成员摘要一致；独立复算 DesignRequest 规范摘要、privacy/permission/capability/delivery 逐字一致性、7 条验收判据与 3 条非目标逐字一致、10 项绑定包内容字节身份、语料样例派生事实。准入账簿/要求→证据映射/裁定/模式/假设/排除/开放问题齐备，无目标域真值伪造、无越权声明、无新增执行门，内容引用解析与权威边界均通过。发现 1 项 major 必检缺陷：A1 与 A7 就公开动作输入域互相否定却同时登记为支持成立，破坏下游「可直接采用」承诺。判定 repair_required（同 Stage 修复），并给出同 Stage 修复建议；本评审不产出资格、质量接受、就绪或采纳声明。",
+ "closeout_refs": [
+  "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/review-design-basis-admission.json"
+ ],
+ "closeout_ref_metadata": [
+  {
+   "ref_kind": "domain_review_artifact",
+   "kind": "oma_design_basis_admission_review",
+   "uri": "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/review-design-basis-admission.json",
+   "ref": "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/review-design-basis-admission.json",
+   "sha256": "sha256:78dcf81f767bdadf5f21b10155165b278a081229ed55409a57823e8acf9a39f7",
+   "size_bytes": 12393
+  }
+ ],
+ "route_impact": {
+  "stage_quality_cycle": {
+   "artifact_refs": [
+    "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json",
+    "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.md"
+   ],
+   "artifact_hashes": [
+    "sha256:31af758a61f947d949acde6bb7bb8ae5e468413950bdf6aab349c1aabb6b7477",
+    "sha256:a159f3b5f8808d984cfa5ca4d41eebca2a1f5f33fca7bedd088013e74e37c0b6"
+   ],
+   "outcome": "repair_required",
+   "findings": [
+    {
+     "finding_id": "F1-a1-a7-input-domain-contradiction",
+     "severity": "major",
+     "required": true,
+     "evidence_refs": [
+      "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json#/assumption_registry/A1",
+      "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json#/assumption_registry/A7",
+      "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json#/open_questions/Q1",
+      "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.md"
+     ],
+     "repair_expectation": "在本 Stage 产物内显式消解该矛盾，使下游可直接采用自洽边界。最小修复：(a) 指明 A1 与 A7 互斥并由 Q1 裁定，二者降级为「待 Q1 定夺的互斥候选」，不得同时标注为支持成立；或 (b) 依据现有准入证据选定一个公开动作输入域边界，将另一个标为被推翻/已排除并给出依据。任一方案均须同步修正 A1/A7 的 support_still_holds、falsifier 与 downstream 归属，并在叙述稿第 5 节注明该轴为单值互斥。修复不得改动 7 条验收判据、两个 privacy 字符串、permission_refs=[]、cost/latency 门限、delivery_policy 或既有公开用例。"
+    }
+   ]
+  },
+  "stage_route_recommendation": {
+   "decision_kind": "repeat",
+   "target_stage_id": "design-basis-admission",
+   "reason": "唯一必检缺陷是本 Stage 产物内部一致性（准入假设集合在输入域轴上自相矛盾），其最窄归属本 Stage：只有本 Stage 能修正 A1/A7 的裁定与归属。输入域边界轴 Q1 的下游归属是 stage-architecture，但 Q1 的延后裁定不能使两份相互否定的假设同时成立，故修复应在本 Stage 完成后再进入 stage-architecture。",
+   "evidence_refs": [
+    "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/review-design-basis-admission.json",
+    "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json#/assumption_registry/A1",
+    "file:///Users/huangrende/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-c2729b7a0dbab65fba9ead186d29e5a1e6f797d96565309395080ce29a264992/design-basis.json#/assumption_registry/A7"
+   ]
+  }
+ }
+}
