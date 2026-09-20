@@ -785,6 +785,13 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         runner_exit_code: result.exitCode,
         runner_timeout_reason: result.timeoutReason ?? null,
         ...(rawStageArtifact ? { diagnostic_artifact_ref: rawStageArtifact.output_ref } : {}),
+        ...(providerErrorSummary.count > 0
+          ? {
+              provider_error_count: providerErrorSummary.count,
+              provider_error_status_codes: providerErrorSummary.statusCodes,
+              provider_error_messages: providerErrorSummary.messages,
+            }
+          : {}),
       },
     });
   } else if (!closeoutPacket && rawStageArtifact) {

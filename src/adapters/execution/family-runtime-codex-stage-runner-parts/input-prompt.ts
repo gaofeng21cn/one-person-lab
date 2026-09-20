@@ -502,6 +502,16 @@ export function protocolCloseoutResumePrompt(attempt: JsonRecord, persistedOutpu
     ...typedCloseoutScopeBindingLines(attempt),
     'Use a non-empty closeout_refs array containing only refs for artifacts or receipts that already exist from this Attempt.',
     'For every artifact ref in closeout_refs, include a matching refs-only object in closeout_ref_metadata with the identical ref (or uri) and exact sha256. Do not bind an input-only ref as a substitute for a produced artifact.',
+    ...(() => {
+      const attemptRole = optionalString(attempt.attempt_role);
+      if (attemptRole !== 'reviewer' && attemptRole !== 're_reviewer') {
+        return [];
+      }
+      return [
+        'This Attempt is a formal independent Review Attempt. Its resumed closeout must still carry route_impact.stage_quality_cycle with outcome (exactly one of: pass, repair_required, quality_debt, blocked, human_gate) and findings, drawn only from the review conclusions already recorded in this Attempt. Do not invent, extend, or re-weigh findings.',
+        'If the Review itself could not be completed before this protocol-only resume, set outcome=blocked and bind canonical boundary evidence (the artifacts and receipts that were verified, plus what remains unverified) in findings. A closeout without route_impact.stage_quality_cycle cannot be accepted for a Review Attempt.',
+      ];
+    })(),
     ...(persistedOutput ? [
       'OPL already persisted the original output from this Attempt before this protocol-only resume. Its exact locator is:',
       JSON.stringify({ ref: persistedOutput.output_ref, sha256: persistedOutput.sha256, size_bytes: persistedOutput.size_bytes }),
