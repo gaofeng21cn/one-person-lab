@@ -216,6 +216,14 @@ function spawnEnvWithOverlay(overlay?: NodeJS.ProcessEnv | Record<string, string
   return env;
 }
 
+export function defaultCodexSandboxModeConfigArg(env: Record<string, string | undefined> = process.env): string {
+  const raw = env.OPL_CODEX_STAGE_SANDBOX_MODE?.trim();
+  const mode = raw === 'read-only' || raw === 'workspace-write' || raw === 'danger-full-access'
+    ? raw
+    : 'workspace-write';
+  return `sandbox_mode=${quoteTomlString(mode)}`;
+}
+
 export function buildCodexExecArgs(
   prompt: string,
   options: CodexExecOptions = {},
@@ -224,7 +232,7 @@ export function buildCodexExecArgs(
     'exec',
     '--skip-git-repo-check',
     '--config',
-    'sandbox_mode="workspace-write"',
+    defaultCodexSandboxModeConfigArg(),
   ];
 
   if (options.json) {
@@ -281,7 +289,7 @@ export function buildCodexExecResumeArgs(
     'resume',
     '--skip-git-repo-check',
     '--config',
-    'sandbox_mode="workspace-write"',
+    defaultCodexSandboxModeConfigArg(),
   ];
 
   if (options.json) {
