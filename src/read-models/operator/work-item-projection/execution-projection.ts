@@ -33,6 +33,7 @@ import type {
   WorkItemProjectionItem,
   WorkItemUnresolvedExecution,
 } from './types.ts';
+import { inspectTemporalRuntimeObservation } from './temporal-runtime-observation.ts';
 
 const QUEUED_STATUSES = new Set(['created', 'pending', 'queued', 'scheduled']);
 const SUCCEEDED_STATUSES = new Set(['completed', 'succeeded', 'closed']);
@@ -172,44 +173,14 @@ function temporalRuntimeObservation(attempt: JsonRecord, providerRun: JsonRecord
   ) {
     return { fresh: false, running: false, reason: 'temporal_runtime_observation_identity_mismatch' };
   }
-  const observedAt = stringValue(observation.observed_at);
-  const expiresAt = stringValue(observation.expires_at);
-  const providerUpdatedAt = stringValue(observation.provider_updated_at);
-  const observedTime = Date.parse(observedAt ?? '');
-  const expiresTime = Date.parse(expiresAt ?? '');
-  const providerUpdatedTime = Date.parse(providerUpdatedAt ?? '');
-  const ttlMs = numberValue(observation.ttl_ms);
-  const now = Date.now();
-  if (
-    !observedAt
-    || !expiresAt
-    || !providerUpdatedAt
-    || !Number.isFinite(observedTime)
-    || !Number.isFinite(expiresTime)
-    || !Number.isFinite(providerUpdatedTime)
-    || ttlMs === null
-    || !Number.isSafeInteger(ttlMs)
-    || ttlMs <= 0
-    || ttlMs > 86_400_000
-    || expiresTime - observedTime !== ttlMs
-    || observedTime > now + 5_000
-    || providerUpdatedTime > now + 5_000
-  ) {
+  const temporal = inspectTemporalRuntimeObservation(observation);
+  if (temporal.status === 'invalid') {
     return { fresh: false, running: false, reason: 'temporal_runtime_observation_time_invalid' };
   }
-  if (expiresTime <= now) {
+  if (temporal.status === 'expired') {
     return { fresh: false, running: false, reason: 'temporal_runtime_observation_expired' };
   }
-  const workflowStatus = normalizedStatus(observation.workflow_status);
-  const queryStatus = normalizedStatus(observation.query_status);
-  const effectiveStatus = normalizedStatus(observation.effective_runtime_status);
-  if (
-    workflowStatus !== 'running'
-    || queryStatus !== 'running'
-    || effectiveStatus !== 'running'
-    || !stringValue(observation.run_id)
-    || observation.provider_completion_is_domain_ready !== false
-  ) {
+  if (temporal.status === 'not_running') {
     return { fresh: false, running: false, reason: 'temporal_runtime_observation_not_running' };
   }
   return { fresh: true, running: true, reason: 'temporal_runtime_observation_running_confirmed' };

@@ -8,6 +8,7 @@ import { FrameworkContractError, isRecord } from "../../../kernel/contract-valid
 import { record, stringValue, type JsonRecord } from "../../../kernel/json-record.ts";
 import { ensureOplStateDir, resolveOplStatePaths } from "../../../kernel/runtime-state-paths.ts";
 import type { WorkItemProjectionDiagnostic, WorkItemProjectionItem } from "./types.ts";
+import { inspectTemporalRuntimeObservation } from "./temporal-runtime-observation.ts";
 
 export type WorkItemSessionActivityKind = "coordination" | "controlled_execution";
 export type WorkItemSessionActivityState =
@@ -28,57 +29,26 @@ const TERMINAL_ACTIVITY_STATES = new Set<WorkItemSessionActivityState>([
   "cancelled",
 ]);
 
-function numberValue(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function normalizedStatus(value: unknown) {
-  return (
-    stringValue(value)
-      ?.toLowerCase()
-      .replace(/[\s-]+/g, "_") ?? "unknown"
-  );
-}
-
 // Keep the controlled-execution reader compatible with the pre-identity authority.
 // Once the identity lineage lands, this delegates to execution.ts again.
 function freshStageAttemptRuntimeObservation(attempt: JsonRecord, now = Date.now()) {
   if (stringValue(attempt.provider_kind) !== "temporal") return null;
   const observation = record(record(attempt.provider_run).runtime_observation);
-  const observedAt = stringValue(observation.observed_at);
-  const expiresAt = stringValue(observation.expires_at);
-  const providerUpdatedAt = stringValue(observation.provider_updated_at);
-  const observedTime = Date.parse(observedAt ?? "");
-  const expiresTime = Date.parse(expiresAt ?? "");
-  const providerUpdatedTime = Date.parse(providerUpdatedAt ?? "");
-  const ttlMs = numberValue(observation.ttl_ms);
   if (
     stringValue(observation.surface_kind) !== "temporal_stage_attempt_runtime_observation" ||
     stringValue(observation.source) !== "temporal_workflow_query" ||
     stringValue(observation.stage_attempt_id) !== stringValue(attempt.stage_attempt_id) ||
-    stringValue(observation.workflow_id) !== stringValue(attempt.workflow_id) ||
-    !observedAt ||
-    !expiresAt ||
-    !providerUpdatedAt ||
-    !Number.isFinite(observedTime) ||
-    !Number.isFinite(expiresTime) ||
-    !Number.isFinite(providerUpdatedTime) ||
-    ttlMs === null ||
-    !Number.isSafeInteger(ttlMs) ||
-    ttlMs <= 0 ||
-    ttlMs > 86_400_000 ||
-    expiresTime - observedTime !== ttlMs ||
-    observedTime > now + MAX_FUTURE_SKEW_MS ||
-    providerUpdatedTime > now + MAX_FUTURE_SKEW_MS ||
-    expiresTime <= now ||
-    normalizedStatus(observation.workflow_status) !== "running" ||
-    normalizedStatus(observation.query_status) !== "running" ||
-    normalizedStatus(observation.effective_runtime_status) !== "running" ||
-    !stringValue(observation.run_id) ||
-    observation.provider_completion_is_domain_ready !== false
+    stringValue(observation.workflow_id) !== stringValue(attempt.workflow_id)
   )
     return null;
-  return { observed_at: observedAt, expires_at: expiresAt, ttl_ms: ttlMs };
+  const temporal = inspectTemporalRuntimeObservation(observation, now);
+  return temporal.status === 'running'
+    ? {
+        observed_at: temporal.observed_at,
+        expires_at: temporal.expires_at,
+        ttl_ms: temporal.ttl_ms,
+      }
+    : null;
 }
 
 export type WorkItemExecutionSessionIdentity = {
