@@ -589,6 +589,42 @@ async function runHandlerAction(input: {
   const handler = input.registry.handlers.find((entry) => entry.handler_id === handlerId)
     ?? fail('Standard Agent action handler is unresolved.', { handler_ref: handlerRef });
   const ledgerBindingRef = hostedRuntimeExecutionBindingRef({ provenance_ref: input.runtimeBindingRef }, handlerRef);
+
+  function persistHandlerCompletion(
+    stored: ReturnType<typeof commitStandardAgentActionOutput>,
+    completion: Pick<StandardAgentActionRunCompletion,
+      'status' | 'failure_disposition' | 'sandbox' | 'error' | 'completed_handler_replay'>,
+  ) {
+    return persistCompletion(input.workspaceRoot, {
+      ...completionBase({
+        runId: input.runId,
+        domainId: input.domainId,
+        actionId: input.action.action_id,
+        executionKind: 'handler_ref',
+        status: completion.status,
+        bindingRef: handlerRef,
+        runtimeBindingRef: input.runtimeBindingRef,
+        stored,
+      }),
+      ...completion,
+    });
+  }
+
+  function materializeOutput(output: unknown, stored: ReturnType<typeof commitStandardAgentActionOutput>) {
+    return materializeHandlerOutput({
+      action: input.action,
+      checkoutRoot: input.checkoutRoot,
+      workspaceRoot: input.workspaceRoot,
+      requestPayload: input.runtimeInput.payload,
+      materializationDomainId: input.materializationDomainId,
+      runId: input.runId,
+      handlerRef,
+      runtimeBindingRef: input.runtimeBindingRef,
+      output,
+      stored,
+    }, input.applyDomainArtifactCas);
+  }
+
   prepareStandardAgentActionRunRequest({
     workspaceRoot: input.workspaceRoot,
     runId: input.runId,
@@ -623,17 +659,8 @@ async function runHandlerAction(input: {
         message: typeof persisted.message === 'string' ? persisted.message : 'Standard Agent handler failed.',
         details: isRecord(persisted.details) ? persisted.details : {},
       };
-      completion ??= persistCompletion(input.workspaceRoot, {
-        ...completionBase({
-          runId: input.runId,
-          domainId: input.domainId,
-          actionId: input.action.action_id,
-          executionKind: 'handler_ref',
-          status: 'failed',
-          bindingRef: handlerRef,
-          runtimeBindingRef: input.runtimeBindingRef,
-          stored: existing,
-        }),
+      completion ??= persistHandlerCompletion(existing, {
+        status: 'failed',
         failure_disposition: 'permanent',
         sandbox: null,
         error,
@@ -647,29 +674,9 @@ async function runHandlerAction(input: {
           payload: persisted,
           label: `Standard Agent action ${input.action.action_id} output`,
         });
-        hostMaterialization = materializeHandlerOutput({
-          action: input.action,
-          checkoutRoot: input.checkoutRoot,
-          workspaceRoot: input.workspaceRoot,
-          requestPayload: input.runtimeInput.payload,
-          materializationDomainId: input.materializationDomainId,
-          runId: input.runId,
-          handlerRef,
-          runtimeBindingRef: input.runtimeBindingRef,
-          output: persisted,
-          stored: existing,
-        }, input.applyDomainArtifactCas);
-        completion = persistCompletion(input.workspaceRoot, {
-          ...completionBase({
-            runId: input.runId,
-            domainId: input.domainId,
-            actionId: input.action.action_id,
-            executionKind: 'handler_ref',
-            status: 'completed',
-            bindingRef: handlerRef,
-            runtimeBindingRef: input.runtimeBindingRef,
-            stored: existing,
-          }),
+        hostMaterialization = materializeOutput(persisted, existing);
+        completion = persistHandlerCompletion(existing, {
+          status: 'completed',
           failure_disposition: null,
           sandbox: handlerSandboxSummary(handler.binding),
           error: null,
@@ -701,17 +708,8 @@ async function runHandlerAction(input: {
             runtimeBindingRef: input.runtimeBindingRef,
           });
         }
-        completion = persistCompletion(input.workspaceRoot, {
-          ...completionBase({
-            runId: input.runId,
-            domainId: input.domainId,
-            actionId: input.action.action_id,
-            executionKind: 'handler_ref',
-            status: 'failed',
-            bindingRef: handlerRef,
-            runtimeBindingRef: input.runtimeBindingRef,
-            stored: existing,
-          }),
+        completion = persistHandlerCompletion(existing, {
+          status: 'failed',
           failure_disposition: 'permanent',
           sandbox: handlerSandboxSummary(handler.binding),
           error: persistedError(error),
@@ -749,18 +747,7 @@ async function runHandlerAction(input: {
       payload: persisted,
       label: `Standard Agent action ${input.action.action_id} output`,
     });
-    hostMaterialization ??= materializeHandlerOutput({
-      action: input.action,
-      checkoutRoot: input.checkoutRoot,
-      workspaceRoot: input.workspaceRoot,
-      requestPayload: input.runtimeInput.payload,
-      materializationDomainId: input.materializationDomainId,
-      runId: input.runId,
-      handlerRef,
-      runtimeBindingRef: input.runtimeBindingRef,
-      output: persisted,
-      stored: existing,
-    }, input.applyDomainArtifactCas);
+    hostMaterialization ??= materializeOutput(persisted, existing);
     return {
       surface_kind: 'opl_standard_agent_action_run',
       version: 'opl-standard-agent-action-run.v1',
@@ -804,17 +791,8 @@ async function runHandlerAction(input: {
       requestBytes: input.requestBytes,
       outputBytes: failureBytes(error),
     });
-    persistCompletion(input.workspaceRoot, {
-      ...completionBase({
-        runId: input.runId,
-        domainId: input.domainId,
-        actionId: input.action.action_id,
-        executionKind: 'handler_ref',
-        status: 'failed',
-        bindingRef: handlerRef,
-        runtimeBindingRef: input.runtimeBindingRef,
-        stored,
-      }),
+    persistHandlerCompletion(stored, {
+      status: 'failed',
       failure_disposition: 'permanent',
       sandbox: null,
       error: persistedError(error),
@@ -851,17 +829,8 @@ async function runHandlerAction(input: {
       requestBytes: input.requestBytes,
       outputBytes: receipt.stdout_bytes,
     });
-    persistCompletion(input.workspaceRoot, {
-      ...completionBase({
-        runId: input.runId,
-        domainId: input.domainId,
-        actionId: input.action.action_id,
-        executionKind: 'handler_ref',
-        status: 'failed',
-        bindingRef: handlerRef,
-        runtimeBindingRef: input.runtimeBindingRef,
-        stored,
-      }),
+    persistHandlerCompletion(stored, {
+      status: 'failed',
       failure_disposition: 'permanent',
       sandbox: {
         runtime_kind: receipt.runtime_kind,
@@ -896,18 +865,7 @@ async function runHandlerAction(input: {
   });
   let hostMaterialization: ReturnType<typeof materializeHandlerOutput>;
   try {
-    hostMaterialization = materializeHandlerOutput({
-      action: input.action,
-      checkoutRoot: input.checkoutRoot,
-      workspaceRoot: input.workspaceRoot,
-      requestPayload: input.runtimeInput.payload,
-      materializationDomainId: input.materializationDomainId,
-      runId: input.runId,
-      handlerRef,
-      runtimeBindingRef: input.runtimeBindingRef,
-      output: receipt.output,
-      stored,
-    }, input.applyDomainArtifactCas);
+    hostMaterialization = materializeOutput(receipt.output, stored);
   } catch (error) {
     if (!(error instanceof FrameworkContractError)) {
       input.recordLedger({
@@ -927,17 +885,8 @@ async function runHandlerAction(input: {
         runtimeBindingRef: input.runtimeBindingRef,
       });
     }
-    persistCompletion(input.workspaceRoot, {
-      ...completionBase({
-        runId: input.runId,
-        domainId: input.domainId,
-        actionId: input.action.action_id,
-        executionKind: 'handler_ref',
-        status: 'failed',
-        bindingRef: handlerRef,
-        runtimeBindingRef: input.runtimeBindingRef,
-        stored,
-      }),
+    persistHandlerCompletion(stored, {
+      status: 'failed',
       failure_disposition: 'permanent',
       sandbox: {
         runtime_kind: receipt.runtime_kind,
@@ -960,17 +909,8 @@ async function runHandlerAction(input: {
     });
     wrapFailure(error, stored);
   }
-  persistCompletion(input.workspaceRoot, {
-    ...completionBase({
-      runId: input.runId,
-      domainId: input.domainId,
-      actionId: input.action.action_id,
-      executionKind: 'handler_ref',
-      status: 'completed',
-      bindingRef: handlerRef,
-      runtimeBindingRef: input.runtimeBindingRef,
-      stored,
-    }),
+  persistHandlerCompletion(stored, {
+    status: 'completed',
     failure_disposition: null,
     sandbox: {
       runtime_kind: receipt.runtime_kind,

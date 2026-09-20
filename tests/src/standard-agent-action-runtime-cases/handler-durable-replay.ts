@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { canonicalJsonBytes } from '../../../src/kernel/canonical-json.ts';
+import { FrameworkContractError } from '../../../src/kernel/contract-validation.ts';
 import {
   inspectStandardAgentActionRunBinding,
   inspectStandardAgentActionRunCompletion,
@@ -15,6 +16,74 @@ import { runStandardAgentAction } from '../../../src/adapters/execution/standard
 import { runStandardAgentHandlerSandbox } from '../../../src/adapters/execution/standard-agent-handler-sandbox.ts';
 
 import { action, hostedSnapshot, managed, recordLedger, root, sha256, writeContracts } from '../standard-agent-action-runtime-shared.ts';
+
+for (const failure of ['handler', 'schema', 'materialization', 'unknown-success'] as const) {
+  test(`Handler ${failure} preserves completion identity and resumes without re-execution`, async () => {
+    const checkoutRoot = root('opl-handler-failure-checkout-');
+    const workspaceRoot = root('opl-handler-failure-workspace-');
+    let handlerCalls = 0;
+    let materializationCalls = 0;
+    try {
+      writeContracts(checkoutRoot, [action({
+        actionId: 'evaluate',
+        executionBinding: { kind: 'handler_ref', handler_ref: 'handler:fixture.evaluate' },
+      })], {
+        surface_kind: 'domain_handler_registry', version: 'domain-handler-registry.v1',
+        handlers: [{
+          handler_id: 'fixture.evaluate',
+          binding: { kind: 'typescript_export', file: 'handler.ts', export: 'evaluate' },
+        }],
+      });
+      fs.writeFileSync(path.join(checkoutRoot, 'handler.ts'), 'export function evaluate() {}\n');
+      const output = failure === 'schema' ? { accepted: 'invalid' } : { accepted: true, value: 7 };
+      const dependencies = {
+        resolveManagedCheckout: managed(checkoutRoot, workspaceRoot) as never,
+        recordLedger,
+        runHandler: () => {
+          handlerCalls += 1;
+          if (failure === 'handler') throw new Error('fixture handler failure');
+          return {
+            runtime_kind: 'node_permission_model' as const, sandbox_kind: 'macos_sandbox_exec' as const,
+            exit_code: 0, timed_out: false, output, stdout_bytes: canonicalJsonBytes(output), stderr: '',
+          };
+        },
+        applyDomainArtifactCas: () => {
+          materializationCalls += 1;
+          if (failure === 'materialization') throw new FrameworkContractError('contract_shape_invalid', 'fixture CAS failure');
+          if (failure === 'unknown-success' && materializationCalls === 1) throw new Error('fixture interrupted CAS');
+          return null;
+        },
+      };
+      const request = { domainId: 'mas', actionId: 'evaluate', workspaceRoot, payload: { value: 7 }, runId: failure };
+      await assert.rejects(runStandardAgentAction(request, dependencies));
+      const completionPath = path.join(workspaceRoot, 'control/opl/action_run_state', failure, 'completion.json');
+      const completion = inspectStandardAgentActionRunCompletion({ workspaceRoot, runId: failure });
+      if (failure === 'unknown-success') {
+        assert.equal(completion, null);
+        const resumed = await runStandardAgentAction(request, dependencies);
+        assert.equal(resumed.standard_agent_action_run.status, 'completed');
+        if (resumed.standard_agent_action_run.execution_kind !== 'handler_ref') assert.fail('expected Handler recovery');
+        assert.deepEqual(resumed.standard_agent_action_run.result, output);
+        assert.equal(inspectStandardAgentActionRunCompletion({ workspaceRoot, runId: failure })?.output_sha256, sha256(canonicalJsonBytes(output)).slice('sha256:'.length));
+      } else {
+        assert.equal(completion?.status, 'failed');
+        assert.equal(completion?.failure_disposition, 'permanent');
+        assert.equal(completion?.run_id, failure);
+        assert.equal(completion?.action_id, 'evaluate');
+        assert.equal(completion?.sandbox === null, failure === 'handler');
+        if (failure !== 'handler') assert.equal(completion?.output_sha256, sha256(canonicalJsonBytes(output)).slice('sha256:'.length));
+        const completionBytes = fs.readFileSync(completionPath);
+        fs.unlinkSync(completionPath);
+        await assert.rejects(runStandardAgentAction(request, dependencies));
+        assert.deepEqual(fs.readFileSync(completionPath), completionBytes);
+      }
+      assert.equal(handlerCalls, 1);
+    } finally {
+      fs.rmSync(checkoutRoot, { recursive: true, force: true });
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+}
 
 test('Hosted Handler action validates schemas, runs the callable, and persists exact bytes', async () => {
   const checkoutRoot = root('opl-action-runtime-checkout-');
