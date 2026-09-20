@@ -956,6 +956,7 @@ function qualityArtifactIdentity(
     artifactHashes: string[];
     artifactIdentityReceiptRefs: string[];
   },
+  structuredReviewerIdentityFailure = false,
 ) {
   const sourceAttemptRef = `opl://stage_attempts/${state.stage_attempt_id}`;
   const declaredArtifactRefs = Array.isArray(value.artifact_refs) ? value.artifact_refs : [];
@@ -1006,6 +1007,17 @@ function qualityArtifactIdentity(
       || JSON.stringify(artifactHashes) !== JSON.stringify(inputIdentity.artifactHashes)
     )
   ) {
+    if (structuredReviewerIdentityFailure) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Reviewer Attempt cannot replace the exact artifact identity it was asked to review.',
+        {
+          hard_stop_class: 'stale_or_mismatched_stage_identity',
+          blocked_reason: 'reviewed_artifact_identity_mismatch',
+          source_attempt_ref: sourceAttemptRef,
+        },
+      );
+    }
     throw new Error('Reviewer Attempt cannot replace the exact artifact identity it was asked to review.');
   }
   if (inputIdentity) return inputIdentity;
@@ -1242,6 +1254,7 @@ export async function StageRunWorkflow(
   const progressFirstHandoffEnabled = patched('opl-stage-run-progress-first-handoff-v1');
   const reviewProtocolFailureEnabled = patched('opl-stage-run-review-protocol-failure-v1');
   const identityFailureSyncEnabled = patched('opl-stage-run-identity-failure-sync-v1');
+  const reviewerIdentityHardStopEnabled = patched('opl-stage-run-reviewer-identity-hard-stop-v1');
   const cancellationPropagationEnabled = patched('opl-stage-run-child-cancellation-propagation-v1');
   const qualityScopeBudget = normalizeStageQualityScopeBudget(
     input.quality_policy.formal_review.scope_budget,
@@ -1563,6 +1576,7 @@ export async function StageRunWorkflow(
                   artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
                 }
               : undefined,
+          reviewerIdentityHardStopEnabled,
           )
         : {
             artifactRefs: attemptInput.artifactRefs,
@@ -1572,10 +1586,21 @@ export async function StageRunWorkflow(
     } catch (error) {
       if (!formalReviewDeclaredArtifactIdentityEnabled) throw error;
       if (progressFirstHandoffEnabled && identityFailureSyncEnabled) {
-        await stageQualityAttemptSyncActivity({
-          attempt_ref: materialized.attempt_ref,
-          workflow_state: result,
-        });
+        try {
+          await stageQualityAttemptSyncActivity({
+            attempt_ref: materialized.attempt_ref,
+            workflow_state: result,
+          });
+        } catch (syncError) {
+          if (!reviewerIdentityHardStopEnabled || !controllerHardStopFromError(error)) throw syncError;
+          state = {
+            ...state,
+            quality_debt_refs: [...new Set([
+              ...state.quality_debt_refs,
+              qualityFailureRef(input, `attempt-sync:${activityFailureReason(syncError)}`),
+            ])],
+          };
+        }
       }
       state = {
         ...state,

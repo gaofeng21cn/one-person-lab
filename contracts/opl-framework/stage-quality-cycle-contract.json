@@ -154,6 +154,7 @@
     "stage_run_spec_quality_policy_and_declared_stage_ids_are_historical_after_creation": true,
     "formal_review_declared_artifact_identity_patch_marker": "opl-stage-run-formal-review-declared-artifact-identity-v1",
     "progress_first_handoff_patch_marker": "opl-stage-run-progress-first-handoff-v1",
+    "reviewer_identity_hard_stop_patch_marker": "opl-stage-run-reviewer-identity-hard-stop-v1",
     "new_attempt_execution_content_binding_is_effective_control_policy": true,
     "formal_review_requirement_source": "producer_attempt_execution_content_binding",
     "repair_budget_source": "latest_materialized_attempt_execution_content_binding",

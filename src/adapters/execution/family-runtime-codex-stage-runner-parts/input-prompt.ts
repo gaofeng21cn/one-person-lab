@@ -402,6 +402,7 @@ function qualityAttemptPromptLines(
         ]
       : []),
     'The review closeout must bind reviewed artifact hashes and declare no_context_inheritance=true.',
+    'For reviewer and re_reviewer, omit stage_quality_cycle.artifact_refs and artifact_hashes to inherit the exact reviewed identity, or echo the Exact artifact refs and Expected artifact hashes above unchanged and in the same order. These fields identify the producer or repairer artifacts, not your review report or immutable snapshot locators. Put your review report in closeout_refs/closeout_ref_metadata and route evidence_refs; it must not replace the reviewed identity.',
     `Repair budget: ${maxRepairRounds ?? 'unavailable'} rounds. First judge the narrowest declared Stage that owns the required work using domain evidence; the controller validates and materializes that judgment.`,
     'same_stage_repair_required: when the current Stage owns the repair and budget remains, outcome=repair_required continues the internal quality loop. Return at most a stage_route_recommendation; the controller creates the next fresh repairer Attempt.',
     'cross_stage_route_back_before_budget_exhaustion: if a different declared Stage is the narrowest owner, a reviewer or re_reviewer may end this StageRun with outcome=repair_required plus stage_route_decision(decision_kind=route_back), a target_stage_id different from the current Stage, and evidence_refs binding the finding and owner diagnosis. This is the only terminal route allowed before repair-budget exhaustion for repair_required.',

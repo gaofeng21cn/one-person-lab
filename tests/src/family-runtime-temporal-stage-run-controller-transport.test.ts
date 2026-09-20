@@ -145,16 +145,67 @@ test('reviewer protocol failure blocks while retaining a consumable producer art
   assert.equal(state.review_receipts.length, 0);
 });
 
-test('reviewer artifact identity drift is rejected without forging a review receipt', async () => {
-  const { state, attempts } = await runController({
-    id: 'reviewer-drift',
-    closeFindingAfterRound: null,
-    reviewerIdentityDrift: true,
+test('reviewer artifact identity drift exposes the boundary even when projection fails', async () => {
+  for (const failAttemptSync of [false, true]) {
+    const { state, attempts, routeInputs } = await runController({
+      id: `reviewer-drift-${failAttemptSync}`,
+      closeFindingAfterRound: null,
+      reviewerIdentityDrift: true,
+      initialReviewerOutcome: 'quality_debt',
+      initialReviewerFindings: 'optional',
+      failAttemptSync,
+    });
+    assert.equal(state.status, 'blocked');
+    assert.equal(state.blocked_reason, 'reviewed_artifact_identity_mismatch');
+    assert.equal(state.hard_stop_class, 'stale_or_mismatched_stage_identity');
+    assert.equal(state.source_attempt_ref, `opl://stage_attempts/${state.attempts[1].stage_attempt_id}`);
+    assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+    assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
+    assert.equal(state.review_receipts.length, 0);
+    assert.equal(state.decisive_attempt_ref, null);
+    assert.equal(state.selected_stage_route, null);
+    assert.equal(routeInputs.length, 0);
+    assert.equal(state.route_quality_debt_refs.length, 0);
+    if (failAttemptSync) {
+      assert.ok(state.quality_debt_refs.some((ref) => ref.includes('simulated-sqlite-projection-unavailable')));
+    }
+  }
+});
+
+test('optional major review debt preserves exact artifact identity and launches the selected route once', async () => {
+  for (const reviewerOmitArtifactIdentity of [false, true]) {
+    const { state, routeInputs } = await runController({
+      id: `reviewer-optional-debt-${reviewerOmitArtifactIdentity}`,
+      closeFindingAfterRound: null,
+      initialReviewerOutcome: 'quality_debt',
+      initialReviewerFindings: 'optional',
+      reviewerOmitArtifactIdentity,
+    });
+    assert.equal(state.status, 'completed_with_quality_debt');
+    assert.equal(state.hard_stop_class, null);
+    assert.equal(state.decisive_attempt_role, 'reviewer');
+    assert.equal(state.selected_stage_route?.decision_kind, 'advance');
+    assert.equal(state.next_stage_run_launch?.target_workflow_id, 'workflow:review_and_revision');
+    assert.equal(routeInputs.length, 1);
+    assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
+    assert.deepEqual(state.artifact_hashes, ['sha256:deck-v1']);
+    assert.equal(state.review_receipts[0].verdict, 'quality_debt');
+    assert.equal(state.findings[0].required, false);
+    assert.equal(state.route_quality_debt_refs.length, 0);
+  }
+});
+
+test('re-review artifact identity drift preserves the repaired artifact and rejects the route', async () => {
+  const { state, routeInputs } = await runController({
+    id: 're-reviewer-drift', closeFindingAfterRound: 1, reReviewerIdentityDrift: true,
   });
-  assert.equal(state.status, 'completed_with_quality_debt');
-  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
-  assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
-  assert.equal(state.review_receipts.length, 0);
+  assert.equal(state.status, 'blocked');
+  assert.equal(state.blocked_reason, 'reviewed_artifact_identity_mismatch');
+  assert.equal(state.hard_stop_class, 'stale_or_mismatched_stage_identity');
+  assert.equal(state.source_attempt_ref, `opl://stage_attempts/${state.attempts[3].stage_attempt_id}`);
+  assert.deepEqual(state.artifact_refs, ['artifact:deck-v2']);
+  assert.equal(state.review_receipts.length, 1);
+  assert.equal(routeInputs.length, 0);
 });
 
 test('producer failure without a consumable artifact hard-stops the StageRun', async () => {
