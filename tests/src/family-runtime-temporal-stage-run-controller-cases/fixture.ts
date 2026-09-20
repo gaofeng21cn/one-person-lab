@@ -105,11 +105,13 @@ export async function runController(input: {
   omitArtifactForRole?: 'producer' | 'repairer';
   omitIdentityReceiptForRole?: TemporalStageQualityAttemptMaterializationInput['attempt_role'];
   reviewerIdentityDrift?: boolean;
+  reReviewerIdentityDrift?: boolean;
+  reviewerOmitArtifactIdentity?: boolean;
   repairerAttemptsTerminalDecision?: boolean;
   terminalRouteTarget?: string;
   invalidReReviewClosure?: boolean;
   initialReviewerOutcome?: StageQualityOutcome;
-  initialReviewerFindings?: 'required' | 'none';
+  initialReviewerFindings?: 'required' | 'none' | 'optional';
   reReviewerOutcome?: StageQualityOutcome;
   reReviewerOptionalObservation?: boolean;
   reReviewerHardStopClass?: string;
@@ -386,7 +388,8 @@ export async function runController(input: {
         const reviewedArtifactVersion = Number(
           attempt.input_artifact_refs?.[0]?.match(/artifact:deck-v(\d+)/)?.[1] ?? 1,
         );
-        const artifactVersion = role === 'reviewer' && input.reviewerIdentityDrift
+        const artifactVersion = (role === 'reviewer' && input.reviewerIdentityDrift)
+          || (role === 're_reviewer' && input.reReviewerIdentityDrift)
           ? 99
           : role === 'producer'
             ? 1
@@ -402,6 +405,7 @@ export async function runController(input: {
             ? (input.reReviewerOutcome ?? (reReviewClosed ? 'pass' : 'repair_required'))
             : 'pass';
         const stageQualityCycle: Record<string, unknown> = role === input.omitArtifactForRole
+          || (role === 'reviewer' && input.reviewerOmitArtifactIdentity)
           ? {}
           : {
               artifact_refs: [`artifact:deck-v${artifactVersion}`],
@@ -434,7 +438,8 @@ export async function runController(input: {
         if (role === 'reviewer') {
           const findingMode = input.initialReviewerFindings
             ?? (['pass', 'quality_debt'].includes(attemptOutcome) ? 'none' : 'required');
-          stageQualityCycle.findings = findingMode === 'none' ? [] : [finding];
+          stageQualityCycle.findings = findingMode === 'none' ? []
+            : [{ ...finding, ...(findingMode === 'optional' ? { severity: 'major', required: false } : {}) }];
         }
         if (role === 'repairer') {
           stageQualityCycle.repair_map = [{

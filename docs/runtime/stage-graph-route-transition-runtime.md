@@ -46,6 +46,8 @@ CLI 默认 invocation 是稳定幂等键；`--new-stage-run` 显式创建新 Run
 
 这些硬停保护执行安全与身份一致性，不评价内容质量，也不选择语义路线。
 
+reviewer / re_reviewer 的 `stage_quality_cycle.artifact_refs` 与 `artifact_hashes` 标识被审的 producer / repairer 产物；可同时省略以继承输入身份，或按原顺序原样回传。审查报告与 immutable snapshot 的读取地址不能替换该身份。身份不符时，新 controller 明确返回 `blocked`、`hard_stop_class=stale_or_mismatched_stage_identity`、`blocked_reason=reviewed_artifact_identity_mismatch` 和原 `source_attempt_ref`，不伪造 review receipt，也不将其降为缺少 route 的质量债。Attempt projection 失败仍单独留存，不能覆盖该身份拒绝原因。身份一致且没有 required findings 的 `quality_debt` 保留 reviewer 的终局 route 并物化后续 StageRun。
+
 ## 当前机器入口
 
 - `contracts/opl-framework/family-runtime-attempt-contract.json`
