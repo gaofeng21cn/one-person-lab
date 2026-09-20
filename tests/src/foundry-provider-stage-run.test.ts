@@ -139,6 +139,14 @@ for (const operation of ['design', 'diagnose'] as const) {
     assert.ok(blueprint.$defs.eval_spec);
     assert.match(contract.transport_requirements.join('\n'), /exactly one raw JSON artifact/);
     assert.match(contract.transport_requirements.join('\n'), /immutable reviewer snapshot/);
+    assert.match(
+      contract.transport_requirements.join('\n'),
+      /route_impact\.stage_quality_cycle\.artifact_refs and route_impact\.stage_quality_cycle\.artifact_hashes/,
+    );
+    assert.match(
+      contract.transport_requirements.join('\n'),
+      /a closeout metadata entry or reviewer snapshot member alone does not transport the bytes/,
+    );
   });
 }
 
