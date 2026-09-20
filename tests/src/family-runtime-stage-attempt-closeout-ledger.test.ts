@@ -510,3 +510,32 @@ test('stage quality closeout rejects role/outcome ABI before ledger writes', () 
     });
   }
 });
+
+test('closeout normalization treats a string execution_scope ref as snapshot-absent (run 10 reviewer packet shape)', () => {
+  const base = {
+    surface_kind: 'stage_attempt_closeout_packet' as const,
+    stage_attempt_id: 'sat_b9eb2b221a24fa890c80a381',
+    stage_run_id: 'sr_1330259fc1e05049f230454b',
+    idempotency_key: 'sat_b9eb2b221a24fa890c80a381',
+    scope_digest: 'sha256:588556da620ae51aea57467eeffd32f120430edd20cfc4af8abc5e1723b15af6',
+    role: 'reviewer',
+    stage_id: 'stage-architecture',
+    closeout_refs: ['file:///stage-artifacts/review-report-stage-architecture.json'],
+    consumed_refs: [], consumed_memory_refs: [], writeback_receipt_refs: [],
+    rejected_writes: [],
+    next_owner: 'agent_engineering',
+    domain_ready_verdict: 'domain_gate_pending' as const,
+  };
+  const normalized = normalizeTypedStageCloseoutPacket({
+    ...base,
+    execution_scope: 'opl://stage_attempts/sat_b9eb2b221a24fa890c80a381',
+  });
+  assert.equal(normalized.execution_scope, undefined);
+  assert.equal(normalized.scope_digest, 'sha256:588556da620ae51aea57467eeffd32f120430edd20cfc4af8abc5e1723b15af6');
+
+  assert.throws(
+    () => normalizeTypedStageCloseoutPacket({ ...base, execution_scope: 42 }),
+    (error) => error instanceof FrameworkContractError
+      && /Execution scope snapshot must be an object\./.test(error.message),
+  );
+});
