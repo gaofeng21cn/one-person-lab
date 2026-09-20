@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -385,6 +386,18 @@ export function readReviewerInputSnapshotManifest(exactRef: unknown) {
   };
 }
 
+// The persisted object's bytes are hash-verified at materialization, so the
+// observed object size is the authoritative metadata; a stale declared
+// size_bytes (model-provided) is corrected before it reaches the manifest.
+function memberWithObservedObjectSize(
+  member: ReviewerInputSnapshotMember,
+  snapshotObjectRoot: string,
+): ReviewerInputSnapshotMember {
+  const objectPath = path.join(snapshotObjectRoot, `${member.sha256.slice('sha256:'.length)}.bin`);
+  const observedSize = fs.statSync(objectPath).size;
+  return observedSize === member.size_bytes ? member : { ...member, size_bytes: observedSize };
+}
+
 export function materializeReviewerInputSnapshot(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
@@ -394,6 +407,8 @@ export function materializeReviewerInputSnapshot(
     ? normalizeAuthorityBinding(expectedAuthority).stage_run_input_authority_refs!
     : [];
   let createdObjectCount = 0;
+  const effectiveMembers: typeof request.members = [];
+  const snapshotObjectRoot = reviewTransportRoots().reviewer_snapshot_object_root;
   for (const member of request.members) {
     const boundInput = inputAuthority.some((ref) => (
       ref.ref === member.source_ref && ref.sha256 === member.sha256 && ref.size_bytes === member.size_bytes
@@ -407,6 +422,7 @@ export function materializeReviewerInputSnapshot(
         expectedSizeBytes: member.size_bytes,
       });
       if (existing.created) createdObjectCount += 1;
+      effectiveMembers.push(memberWithObservedObjectSize(member, snapshotObjectRoot));
       continue;
     } catch (error) {
       const details = error instanceof Error
@@ -424,11 +440,12 @@ export function materializeReviewerInputSnapshot(
       expectedSizeBytes: member.size_bytes,
     });
     if (persisted.created) createdObjectCount += 1;
+    effectiveMembers.push(memberWithObservedObjectSize(member, snapshotObjectRoot));
   }
   const persistedManifest = persistCanonicalReviewTransportJson({
     root: reviewTransportRoots().reviewer_snapshot_manifest_root,
     kind: 'opl_reviewer_input_snapshot_manifest',
-    value: manifestForRequest(request),
+    value: manifestForRequest({ ...request, members: effectiveMembers }),
   });
   const readback = readReviewerInputSnapshotManifest(persistedManifest.exact_ref);
   return {
