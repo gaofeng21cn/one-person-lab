@@ -21,7 +21,7 @@ function normalizedStatus(value: unknown) {
 
 export function inspectTemporalRuntimeObservation(
   observation: JsonRecord,
-  now = Date.now(),
+  nowOverride?: number,
 ): TemporalRuntimeObservationCheck {
   const observedAt = stringValue(observation.observed_at);
   const expiresAt = stringValue(observation.expires_at);
@@ -30,6 +30,7 @@ export function inspectTemporalRuntimeObservation(
   const expiresTime = Date.parse(expiresAt ?? '');
   const providerUpdatedTime = Date.parse(providerUpdatedAt ?? '');
   const ttlMs = numberValue(observation.ttl_ms);
+  const now = nowOverride === undefined ? Date.now() : nowOverride;
   if (
     !observedAt
     || !expiresAt
