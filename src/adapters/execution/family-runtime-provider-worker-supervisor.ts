@@ -223,6 +223,10 @@ export function providerWorkerSupervisorEnvironmentVariables(
   if (temporalNamespace) {
     values[TEMPORAL_NAMESPACE] = temporalNamespace;
   }
+  const modulesRoot = environment.OPL_MODULES_ROOT?.trim();
+  if (modulesRoot) {
+    values.OPL_MODULES_ROOT = path.resolve(modulesRoot);
+  }
   Object.assign(values, providerWorkerFoundryOwnerGateEnvironment(environment).persisted);
   return values;
 }

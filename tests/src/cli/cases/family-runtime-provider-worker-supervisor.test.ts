@@ -196,6 +196,27 @@ test('provider-worker supervisor rejects invalid Temporal namespaces before plis
   }
 });
 
+test('provider-worker supervisor persists an explicit modules root and omits it otherwise', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'opl-modules-root-supervisor-'));
+  try {
+    const paths = runtimePaths(root);
+    const omitted = providerWorkerSupervisorEnvironmentVariables(paths, {});
+    assert.equal(Object.hasOwn(omitted, 'OPL_MODULES_ROOT'), false);
+    assert.doesNotMatch(buildProviderWorkerSupervisorPlist(paths, {}), /OPL_MODULES_ROOT/);
+
+    const modulesRoot = path.join(root, 'codex-plugin-marketplaces');
+    const environment = { OPL_MODULES_ROOT: `  ${modulesRoot}  ` };
+    const values = providerWorkerSupervisorEnvironmentVariables(paths, environment);
+    const projection = providerWorkerSupervisorEnvironmentProjection(paths, environment);
+    const plist = buildProviderWorkerSupervisorPlist(paths, environment);
+    assert.equal(values.OPL_MODULES_ROOT, modulesRoot);
+    assert.equal(projection.OPL_MODULES_ROOT, modulesRoot);
+    assert.equal(plistEnvironmentValue(plist, 'OPL_MODULES_ROOT'), modulesRoot);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('provider-worker supervisor persists canonical MAS OwnerGate argv without exposing it in projection', () => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'opl-owner-gate-supervisor-configured-'));
   try {
