@@ -15,6 +15,7 @@ export type AgentPackageEffectiveSourcePolicy = {
 
 export function resolveAgentPackageEffectiveSourcePolicy(
   packageId: string,
+  options: { profile?: 'fast' | 'full' } = {},
 ): AgentPackageEffectiveSourcePolicy {
   const canonicalId = canonicalAgentPackageId(packageId) ?? packageId;
   const spec = getOplPackageSpecs().find((entry) => entry.package_id === canonicalId);
@@ -31,7 +32,7 @@ export function resolveAgentPackageEffectiveSourcePolicy(
     };
   }
 
-  const module = resolveOplInstallUpdateSourcePolicy(spec, { profile: 'full' });
+  const module = resolveOplInstallUpdateSourcePolicy(spec, { profile: options.profile ?? 'full' });
   const sourcePolicy = module.source_policy;
   const developerSelected = sourcePolicy.effective_install_update_source === 'git_checkout';
   const checkoutPath = developerSelected ? module.developer_checkout_path : null;

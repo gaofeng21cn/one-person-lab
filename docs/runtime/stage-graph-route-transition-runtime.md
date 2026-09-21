@@ -25,6 +25,8 @@ Runway 在启动 Temporal 前，先把 exact StageRun input 写入 `${OPL_STATE_
 
 正式终态恢复使用原 StageRun、immutable launch 和 quality cycle；从已接受 producer、repair-required reviewer 或 repairer 接续下一角色，保留原 findings、revision intake、审查回执、已用轮数和质量债。恢复使用已接受 typed closeout，原 raw 字节仍独立校验，不用过期可解析响应覆盖已接受协议。历史观察只重新核验真实输入证据，正常包升级不要求覆盖原已绑定包字节。
 
+若初次 reviewer 因 `codex_cli_provider_unavailable` 阻断且没有已接受语义 closeout，在外部配额或权限恢复后，可对原 reviewer 执行 `opl family-runtime stage-run recover-closeout <stage_run_id> --attempt <reviewer_attempt_id> --retry-reviewer`。入口要求它仍是当前质量链最后一次 Attempt，并核验同 StageRun 已完成 producer 的 artifact 字节身份；现有恢复控制器创建新的 reviewer Attempt，保留原阻断记录与已用语义修复轮数，不重新运行 producer、不新建 ActionRun。领域 review 文件中的 `pass` 不会被 Framework 推定为已接受 verdict；实际通过与后续 route 仍须由新的正式 Review 给出。human gate、后续已推进的质量链、不同 scope 或已变化 artifact 不可走此入口。
+
 Closeout 恢复接受完整 JSON 对象及完整 JSON 代码块，记录无法归一化的原因。`domain_output` 先验证四字段身份与 `closeout_refs` 绑定，再丢弃额外正文、状态和 verdict；台账只保存 refs-only 身份。原始输出在 Attempt 物化时同时核对 producing Stage，身份或物理路径边界失败仍然终止。Review lane 由 Stage 声明决定：没有绑定时忽略请求中的 lane 提示，有绑定时缺失或冲突仍拒绝。长会话的同线程 closeout 补交默认预算为 900 秒，且仍受 Activity 总时限约束。
 
 恢复身份推进须先精确观察原 Temporal Run 已终止，再通过原注册表 CAS 留存先前回执。尚未开始审查的同一已接受 producer 可追加快照成员，旧成员和 artifact identity 必须保留；不能换 lane、workspace、binding 或替换已审证据。运行中的不同恢复身份仍拒绝，新的 Temporal Run 不代表新的业务 StageRun，也不改写原终态。

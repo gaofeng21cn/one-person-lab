@@ -130,6 +130,7 @@ export async function runController(input: {
     targetStageId: string;
   };
   recoveryResume?: boolean;
+  blockedReviewerResume?: boolean;
   acceptedReviewerResume?: boolean;
   acceptedRepairerResume?: boolean;
 }) {
@@ -584,7 +585,7 @@ export async function runController(input: {
               : { scope_budget: { max_tokens: input.maxTokens } }),
         },
       });
-      if (input.recoveryResume || input.acceptedReviewerResume || input.acceptedRepairerResume) {
+      if (input.recoveryResume || input.blockedReviewerResume || input.acceptedReviewerResume || input.acceptedRepairerResume) {
         workflowInput.recovery_resume = {
           surface_kind: 'opl_stage_run_recovery_resume',
           version: 'opl-stage-run-recovery-resume.v1',
@@ -609,6 +610,15 @@ export async function runController(input: {
           artifact_identity_receipt_refs: ['artifact-identity:deck-v1'],
           review_input_snapshot_materialization_request: null,
         };
+        if (input.blockedReviewerResume) {
+          const recovery = workflowInput.recovery_resume;
+          recovery.prior_attempt_summaries = [recovery.producer_attempt_summary!, {
+            ...recovery.producer_attempt_summary!, attempt_role: 'reviewer', status: 'blocked',
+            stage_attempt_id: `sat_${input.id}_blocked-reviewer_0`,
+            artifact_producer_attempt_ref: recovery.producer_attempt_ref!,
+          }];
+          recovery.repair_rounds_used = 0;
+        }
         if (input.acceptedReviewerResume || input.acceptedRepairerResume) {
           const recovery = workflowInput.recovery_resume;
           const reviewer = {

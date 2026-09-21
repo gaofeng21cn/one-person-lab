@@ -632,5 +632,21 @@
     "opl_can_create_domain_owner_receipt": false,
     "opl_can_create_domain_typed_blocker": false,
     "provider_completion_is_quality_acceptance": false
+  },
+  "provider_blocked_initial_review_retry": {
+    "command": "opl family-runtime stage-run recover-closeout <stage_run_id> --attempt <reviewer_attempt_id> --retry-reviewer",
+    "allowed_role": "reviewer",
+    "required_state": "latest_initial_review_provider_blocked_without_accepted_closeout",
+    "provider_reason": "codex_cli_provider_unavailable",
+    "source": "same_stage_run_accepted_producer_with_verified_artifact_identity",
+    "preserve": [
+      "original_reviewer_attempt_and_provider_blocker",
+      "stage_run_and_quality_cycle_identity",
+      "original_producer_artifact_and_snapshot_request",
+      "semantic_repair_rounds_and_quality_debt"
+    ],
+    "execution": "existing_recovery_controller_materializes_new_reviewer_attempt",
+    "domain_verdict_inference_allowed": false,
+    "raw_domain_review_artifact_is_accepted_closeout": false
   }
 }

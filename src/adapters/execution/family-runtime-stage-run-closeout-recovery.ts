@@ -624,6 +624,7 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
   startWorkflow: (input: TemporalStageRunWorkflowInput) => Promise<Record<string, unknown>>;
   describeWorkflow?: (input: TemporalStageRunWorkflowInput) => Promise<Record<string, unknown>>;
   retryTerminalRecovery?: boolean;
+  retryReviewer?: boolean;
   now?: () => Date;
   startLeaseMs?: number;
 }) {
@@ -708,6 +709,7 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
   const beforeCount = Number((db.prepare('SELECT COUNT(*) AS count FROM stage_attempts WHERE stage_run_id = ?').get(input.stageRunId) as { count: number }).count);
   const recoveryAfterReviewer = attempt.attempt_role === 'reviewer';
   const acceptedReview = recoveryAfterReviewer
+    && attempt.status === 'completed' && attempt.closeout_receipt_status === 'accepted_typed_closeout'
     ? reconcilePersistedStageReviewReceipt(db, input.stageAttemptId)
     : null;
   if (acceptedReview && (attempt.status !== 'completed'
@@ -718,11 +720,77 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
       failure_code: 'stage_run_recovery_review_lineage_invalid',
     });
   }
-  const artifactAttempt = acceptedReview
+  const retryReviewer = options.retryReviewer === true;
+  let retryProducer: ReturnType<typeof inspectStageAttempt> | null = null;
+  if (retryReviewer) {
+    const previousRecoveries = record(effectiveLaunch.temporal_start_receipt).recovery_runs;
+    const previousRecovery = Array.isArray(previousRecoveries) ? record(previousRecoveries[0]) : {};
+    const observationInput = {
+      ...(effectiveLaunch.stage_run_input as TemporalStageRunWorkflowInput),
+      ...(previousRecovery.recovery_resume ? { recovery_resume: previousRecovery.recovery_resume } : {}),
+    } as TemporalStageRunWorkflowInput;
+    const currentRun = record(options.describeWorkflow ? await options.describeWorkflow(observationInput) : null);
+    const expectedRunId = previousRecovery.recovery_resume
+      ? record(previousRecovery.temporal_start_receipt).recovery_run_id
+      : record(effectiveLaunch.temporal_start_receipt).first_execution_run_id;
+    if (!expectedRunId || currentRun.workflow_found !== true
+      || currentRun.workflow_id !== effectiveLaunch.workflow_id
+      || currentRun.first_execution_run_id !== expectedRunId
+      || (previousRecovery.recovery_resume && currentRun.recovery_id !== previousRecovery.recovery_id)
+      || !['COMPLETED', 'FAILED', 'CANCELED', 'CANCELLED', 'TERMINATED', 'TIMED_OUT']
+        .includes(String(currentRun.workflow_status).toUpperCase())) {
+      throw new FrameworkContractError('contract_shape_invalid',
+        'Reviewer retry requires a fresh matching terminal observation of the current StageRun execution.',
+        { failure_code: 'stage_run_recovery_reviewer_retry_execution_not_terminal', stage_run_id: input.stageRunId });
+    }
+    const provider = record(attempt.provider_run);
+    const observation = record(provider.terminal_observation);
+    const prior = record(cycle.state);
+    const summaries = record(prior.controller_readback).attempts;
+    const lastAttempt = Array.isArray(summaries) ? record(summaries.at(-1)) : {};
+    const producerRef = record(attempt.context_manifest).artifact_producer_attempt_ref;
+    if (acceptedReview || attempt.attempt_role !== 'reviewer' || attempt.status !== 'blocked'
+      || attempt.closeout_receipt_status !== null
+      || attempt.blocked_reason !== 'codex_cli_provider_unavailable'
+      || provider.provider_status !== 'blocked' || provider.workflow_id !== attempt.workflow_id
+      || observation.source !== 'temporal_stage_attempt_query'
+      || observation.reason !== 'codex_cli_provider_unavailable'
+      || record(attempt.route_impact).hard_stop_class !== 'permission_or_credential_boundary'
+      || lastAttempt.stage_attempt_id !== input.stageAttemptId
+      || Number(prior.repair_rounds_used ?? 0) !== 0
+      || typeof producerRef !== 'string' || !producerRef.startsWith('opl://stage_attempts/')
+      || attempt.parent_attempt_ref !== producerRef) {
+      throw new FrameworkContractError('contract_shape_invalid',
+        'Reviewer retry requires the latest provider-blocked initial review and no accepted review verdict.',
+        { failure_code: 'stage_run_recovery_reviewer_retry_not_admitted', stage_attempt_id: input.stageAttemptId });
+    }
+    retryProducer = inspectStageAttempt(db, producerRef.slice('opl://stage_attempts/'.length));
+    if (retryProducer.attempt_role !== 'producer' || retryProducer.status !== 'completed'
+      || retryProducer.closeout_receipt_status !== 'accepted_typed_closeout'
+      || retryProducer.stage_run_id !== input.stageRunId
+      || retryProducer.quality_cycle_id !== attempt.quality_cycle_id
+      || retryProducer.stage_id !== attempt.stage_id || retryProducer.domain_id !== attempt.domain_id
+      || retryProducer.execution_scope?.scope_digest !== attempt.execution_scope?.scope_digest) {
+      throw new FrameworkContractError('contract_shape_invalid',
+        'Reviewer retry must bind the original accepted producer in the same StageRun and scope.',
+        { failure_code: 'stage_run_recovery_reviewer_retry_lineage_invalid', stage_attempt_id: input.stageAttemptId });
+    }
+  }
+  if (!retryReviewer && !acceptedReview && attempt.attempt_role === 'reviewer'
+    && attempt.status === 'blocked' && attempt.closeout_receipt_status === null
+    && attempt.blocked_reason === 'codex_cli_provider_unavailable') {
+    throw new FrameworkContractError('contract_shape_invalid',
+      'The provider-blocked reviewer has no accepted semantic closeout. Resolve the provider boundary, then explicitly retry formal review on the original producer.',
+      { failure_code: 'stage_run_recovery_reviewer_closeout_missing', stage_attempt_id: input.stageAttemptId,
+        recovery_command: `opl family-runtime stage-run recover-closeout ${input.stageRunId} --attempt ${input.stageAttemptId} --retry-reviewer`,
+        domain_artifact_verdict_inferred: false });
+  }
+  const artifactAttempt = retryProducer ?? (acceptedReview
     ? inspectStageAttempt(db, acceptedReview.producer_attempt_ref.replace(/^opl:\/\/stage_attempts\//, ''))
-    : attempt;
-  const rawArtifact = acceptedReview ? null : recoverFrameworkRawArtifactForAttempt(attempt);
-  if (!acceptedReview && !rawArtifact) {
+    : attempt);
+  const useAcceptedArtifact = Boolean(acceptedReview || retryReviewer);
+  const rawArtifact = useAcceptedArtifact ? null : recoverFrameworkRawArtifactForAttempt(attempt);
+  if (!useAcceptedArtifact && !rawArtifact) {
     throw new FrameworkContractError('contract_shape_invalid', 'Bound raw executor output is unavailable for recovery.', {
       failure_code: 'raw_executor_output_recovery_failed',
       stage_attempt_id: input.stageAttemptId,
@@ -733,16 +801,24 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
   // Keep its immutable raw binding, then verify the accepted packet's bytes below.
   const acceptedArtifactCloseout = artifactAttempt.status === 'completed'
     && artifactAttempt.closeout_receipt_status === 'accepted_typed_closeout';
-  const rawCandidate = acceptedReview || acceptedArtifactCloseout ? record(latestCloseout.packet) : normalizeCodexTransportCloseoutCandidate(parseRawOutput(rawArtifact!.output_ref, {
+  const rawCandidate = useAcceptedArtifact || acceptedArtifactCloseout ? record(latestCloseout.packet) : normalizeCodexTransportCloseoutCandidate(parseRawOutput(rawArtifact!.output_ref, {
     attempt,
     latestCloseoutPacket: record(latestCloseout.packet),
   }));
-  const rawArtifactAfterRead = acceptedReview ? null : recoverFrameworkRawArtifactForAttempt(attempt);
-  if (!acceptedReview && (!rawArtifactAfterRead || canonicalJsonText(rawArtifactAfterRead) !== canonicalJsonText(rawArtifact))) {
+  const rawArtifactAfterRead = useAcceptedArtifact ? null : recoverFrameworkRawArtifactForAttempt(attempt);
+  if (!useAcceptedArtifact && (!rawArtifactAfterRead || canonicalJsonText(rawArtifactAfterRead) !== canonicalJsonText(rawArtifact))) {
     throw new FrameworkContractError('contract_shape_invalid', 'Raw executor output changed during recovery.', {
       failure_code: 'raw_executor_output_recovery_failed',
       stage_attempt_id: input.stageAttemptId,
     });
+  }
+  if (attempt.attempt_role === 'reviewer' && !acceptedReview && !retryReviewer
+    && !record(record(rawCandidate.route_impact).stage_quality_cycle).outcome) {
+    throw new FrameworkContractError('contract_shape_invalid',
+      'Reviewer semantic closeout is missing. After resolving the provider boundary, retry the formal review on the original producer artifact.',
+      { failure_code: 'stage_run_recovery_reviewer_closeout_missing', stage_attempt_id: input.stageAttemptId,
+        recovery_command: `opl family-runtime stage-run recover-closeout ${input.stageRunId} --attempt ${input.stageAttemptId} --retry-reviewer`,
+        domain_artifact_verdict_inferred: false });
   }
   const identity = artifactIdentity(rawCandidate, artifactAttempt);
   const persistedPacket = record(latestCloseout.packet);
@@ -794,14 +870,14 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
       },
     },
   });
-  const ingested = acceptedReview ? { closeout: { closeout_id: latestCloseout.closeout_id, idempotent_noop: true } } : ingestStageAttemptCloseout(db, {
+  const ingested = useAcceptedArtifact ? { closeout: { closeout_id: latestCloseout.closeout_id, idempotent_noop: true } } : ingestStageAttemptCloseout(db, {
     stageAttemptId: input.stageAttemptId,
     packet: correctedPacket,
   });
   const updatedAttempt = inspectStageAttempt(db, input.stageAttemptId);
   const recoveryState = buildRecoveryWorkflowState({
     db,
-    attempt: updatedAttempt,
+    attempt: retryProducer ?? updatedAttempt,
     launch: effectiveLaunch,
     cycle,
     artifactRefs: identity.artifact_refs,
@@ -812,7 +888,19 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
       ? record(verifiedRouteImpact.stage_route_recommendation)
       : null,
   });
-  const recoveredSummary = recoveryState.attempts.find((entry) => entry.stage_attempt_id === input.stageAttemptId)!;
+  const recoveredSummary = recoveryState.attempts.find((entry) => entry.stage_attempt_id === (retryReviewer ? artifactAttempt.stage_attempt_id : input.stageAttemptId))!;
+  if (retryReviewer) {
+    // Keep the failed review as history. Only the controller creates a new
+    // review identity; no verdict or semantic repair round is reconstructed.
+    recoveryState.attempts = priorAttemptSummaries(db, record(cycle.state), attempt, {
+      ...identity, artifact_identity_receipt_refs: receiptRefs,
+    }).map((summary) => summary.stage_attempt_id === artifactAttempt.stage_attempt_id
+      || summary.artifact_producer_attempt_ref === `opl://stage_attempts/${artifactAttempt.stage_attempt_id}`
+      ? { ...summary, ...identity, artifact_identity_receipt_refs: receiptRefs }
+      : summary);
+    recoveryState.current_role = 'reviewer';
+    recoveryState.source_attempt_ref = `opl://stage_attempts/${input.stageAttemptId}`;
+  }
   const recoveryAfterRepairer = recoveredSummary.attempt_role === 'repairer';
   if (acceptedReview) {
     recoveryState.findings = validateStageQualityFindings(record(record(attempt.route_impact).stage_quality_cycle).findings as StageQualityFinding[]);
@@ -891,6 +979,12 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
       : {
           producer_attempt_ref: artifactProducerAttemptRef,
           producer_attempt_summary: recoveredSummary,
+          ...(retryReviewer ? {
+            prior_attempt_summaries: recoveryState.attempts,
+            repair_rounds_used: recoveryState.repair_rounds_used,
+            quality_debt_refs: recoveryState.quality_debt_refs,
+            route_quality_debt_refs: recoveryState.route_quality_debt_refs,
+          } : {}),
         }),
     artifact_refs: identity.artifact_refs,
     artifact_hashes: identity.artifact_hashes,
@@ -1008,6 +1102,8 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
     },
     quality_cycle_projection: projected,
     formal_review_required: true,
+    reviewer_retry_requested: retryReviewer,
+    original_reviewer_attempt_preserved: retryReviewer,
     attempt_count_before: beforeCount,
     attempt_count_after_projection: projectionAttemptCount,
     quality_budget_consumed_by_recovery: false,

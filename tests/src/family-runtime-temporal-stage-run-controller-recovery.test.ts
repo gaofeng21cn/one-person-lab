@@ -97,3 +97,19 @@ test('StageRun enforces a token cap only when explicitly configured', async () =
   assert.equal(state.quality_scope_budget_stop_reason, 'max_tokens_exhausted');
   assert.equal(state.blocked_reason, null);
 });
+
+
+test('provider review retry keeps the blocked attempt and creates only a new formal reviewer', async () => {
+  const { state, attempts } = await runController({
+    id: 'blocked-review-retry', closeFindingAfterRound: null, blockedReviewerResume: true,
+    initialReviewerOutcome: 'pass', initialReviewerFindings: 'none',
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['reviewer']);
+  assert.match(attempts[0]?.stage_run_workflow_run_id ?? '', /^[0-9a-f-]{36}$/);
+  assert.deepEqual(state.attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer', 'reviewer']);
+  assert.equal(state.attempts[1]?.status, 'blocked');
+  assert.notEqual(state.attempts[1]?.stage_attempt_id, state.attempts[2]?.stage_attempt_id);
+  assert.equal(state.repair_rounds_used, 0);
+  assert.equal(state.review_receipts.length, 1);
+  assert.equal(state.status, 'completed');
+});
