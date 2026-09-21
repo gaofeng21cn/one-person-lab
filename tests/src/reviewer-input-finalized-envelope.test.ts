@@ -64,3 +64,66 @@ test('a review lane hint that contradicts a declared lane stays fatal', () => {
     /does not match its producer Attempt binding and closeout metadata/,
   );
 });
+
+// Run 22 (ibd-oma-create-22) regression: the blueprint producer authored a snapshot
+// request with every fixed field correct but omitted the `members` key entirely. The
+// strict gate then killed the StageRun before the supplement path — which exists
+// precisely to assemble the mandated scope from the closeout's declared artifacts and
+// the Stage's immutable input authority — could run. An absent members key must flow
+// through supplementation instead of failing deterministically.
+test('an absent members key is supplemented from declared artifacts and stage-run inputs', () => {
+  const { source, finalized, authority, artifacts } = fixture();
+  const stageRunInput = {
+    kind: 'artifact',
+    ref: 'file:///workspace/stage-input.json',
+    sha256: `sha256:${'4'.repeat(64)}`,
+    size_bytes: 21,
+  };
+  const laneLessAuthority = { ...authority, review_lane_binding: null, stage_run_input_authority_refs: [stageRunInput] };
+  const membersLess = {
+    surface_kind: 'opl_reviewer_input_snapshot_materialization_request', schema_version: 2,
+    owner_authority_ref: source, producer_attempt_ref: authority.producer_attempt_ref,
+    execution_content_binding_sha256: authority.execution_content_binding_sha256,
+    workspace_root: '/workspace',
+  };
+  const result = completeReviewerSnapshotTransportEnvelope(membersLess, laneLessAuthority, artifacts);
+  assert.equal(result.members.length, 3);
+  const refs = result.members.map((member) => member.source_ref);
+  assert.ok(refs.includes(finalized.ref), 'declared artifacts must be supplemented');
+  assert.ok(refs.includes(stageRunInput.ref), 'immutable stage-run inputs must be supplemented');
+});
+
+// Supplementation must not widen scope on its own: with nothing declared and no
+// immutable stage-run inputs, an empty inventory still fails closed — an empty
+// reviewer snapshot would silently review nothing.
+test('an empty or absent inventory with nothing declared still fails closed', () => {
+  const { source, authority } = fixture();
+  const laneLessAuthority = { ...authority, review_lane_binding: null };
+  const emptyMembers = {
+    surface_kind: 'opl_reviewer_input_snapshot_materialization_request', schema_version: 2,
+    owner_authority_ref: source, producer_attempt_ref: authority.producer_attempt_ref,
+    execution_content_binding_sha256: authority.execution_content_binding_sha256,
+    workspace_root: '/workspace',
+    members: [],
+  };
+  assert.throws(
+    () => completeReviewerSnapshotTransportEnvelope(emptyMembers, laneLessAuthority, { refs: [], hashes: [] }),
+    /non-empty member inventory/,
+  );
+  const membersLess = { ...emptyMembers };
+  delete membersLess.members;
+  assert.throws(
+    () => completeReviewerSnapshotTransportEnvelope(membersLess, laneLessAuthority, { refs: [], hashes: [] }),
+    /non-empty member inventory/,
+  );
+});
+
+// Extraneous keys remain fatal: relaxation covers only the missing members key.
+test('an unknown extra key still fails closed', () => {
+  const { request, authority, artifacts } = fixture();
+  const withExtra = { ...structuredClone(request), extra_field: 'nope' };
+  assert.throws(
+    () => completeReviewerSnapshotTransportEnvelope(withExtra, authority, artifacts),
+    /must use the exact declared fields/,
+  );
+});

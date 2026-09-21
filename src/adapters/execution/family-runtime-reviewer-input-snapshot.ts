@@ -149,10 +149,21 @@ function normalizeAuthorityBinding(
   };
 }
 
+// The finalized transport envelope supplements the member inventory from the
+// producer closeout's declared artifacts and the Stage's immutable input
+// authority before the strict gate applies. The pre-supplement pass therefore
+// accepts an absent or empty member inventory and defers the enumeration
+// checks to the strict re-normalization after supplementation.
+export type ReviewerInputSnapshotNormalizeOptions = {
+  allowIncompleteMembers?: boolean;
+};
+
 export function normalizeReviewerInputSnapshotRequest(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
+  options?: ReviewerInputSnapshotNormalizeOptions,
 ): ReviewerInputSnapshotMaterializationRequest {
+  const allowIncompleteMembers = options?.allowIncompleteMembers === true;
   const request = requireReviewTransportRecord(value, 'reviewer_input_snapshot_request');
   requireExactReviewTransportKeys(request, [
     'surface_kind',
@@ -161,8 +172,8 @@ export function normalizeReviewerInputSnapshotRequest(
     'producer_attempt_ref',
     'execution_content_binding_sha256',
     ...(request.review_lane === undefined ? [] : ['review_lane']),
+    ...(request.members === undefined ? [] : ['members']),
     'workspace_root',
-    'members',
   ], 'reviewer_input_snapshot_request');
   if (
     request.surface_kind !== 'opl_reviewer_input_snapshot_materialization_request'
@@ -173,13 +184,20 @@ export function normalizeReviewerInputSnapshotRequest(
       'Reviewer input snapshot request must use Framework schema 2.',
     );
   }
-  if (!Array.isArray(request.members) || request.members.length === 0) {
+  if (request.members !== undefined && !Array.isArray(request.members)) {
     throw reviewTransportError(
       'reviewer_input_snapshot_members_missing',
       'Reviewer input snapshot request must contain a non-empty member inventory.',
     );
   }
-  const members = request.members.map(normalizeMember);
+  const membersProvidedAndPopulated = Array.isArray(request.members) && request.members.length > 0;
+  if (!membersProvidedAndPopulated && !allowIncompleteMembers) {
+    throw reviewTransportError(
+      'reviewer_input_snapshot_members_missing',
+      'Reviewer input snapshot request must contain a non-empty member inventory.',
+    );
+  }
+  const members = (Array.isArray(request.members) ? request.members : []).map(normalizeMember);
   const memberIds = members.map((member) => member.member_id);
   if (new Set(memberIds).size !== memberIds.length) {
     throw reviewTransportError(
@@ -217,7 +235,7 @@ export function normalizeReviewerInputSnapshotRequest(
     const missingInputs = expected.stage_run_input_authority_refs!.filter((ref) => !members.some((member) => (
       member.source_ref === ref.ref && member.sha256 === ref.sha256 && member.size_bytes === ref.size_bytes
     )));
-    if (missingInputs.length > 0) {
+    if (missingInputs.length > 0 && !allowIncompleteMembers) {
       throw reviewTransportError(
         'reviewer_input_snapshot_stage_run_input_missing',
         'Reviewer input snapshot must enumerate every immutable StageRun input artifact.',
@@ -475,7 +493,7 @@ export function completeReviewerSnapshotTransportEnvelope(
   expectedAuthority: ReviewerInputSnapshotAuthorityBinding,
   declaredArtifacts: { refs: string[]; hashes: string[] },
 ) {
-  const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority);
+  const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority, { allowIncompleteMembers: true });
   const authority = normalizeAuthorityBinding(expectedAuthority);
   if (declaredArtifacts.refs.length !== declaredArtifacts.hashes.length) {
     throw reviewTransportError('reviewer_input_snapshot_artifact_identity_mismatch', 'Declared artifact refs and hashes must align.');
@@ -495,6 +513,20 @@ export function completeReviewerSnapshotTransportEnvelope(
       source_ref: ref,
       sha256,
       size_bytes: member.size_bytes,
+    });
+  }
+  // Immutable StageRun input artifacts are framework-owned bindings, not model-inferred
+  // scope: supplementing them here cannot widen the review scope beyond what the Stage
+  // already froze as its inputs. A producer that omits or under-enumerates its member
+  // inventory therefore still yields the exact mandated scope instead of deterministically
+  // failing the StageRun before the reviewer starts.
+  for (const inputRef of authority.stage_run_input_authority_refs!) {
+    if (members.some((item) => item.sha256 === inputRef.sha256 && item.size_bytes === inputRef.size_bytes)) continue;
+    members.push({
+      member_id: `opl-stage-run-input-${inputRef.sha256.slice('sha256:'.length)}`,
+      source_ref: inputRef.ref,
+      sha256: inputRef.sha256,
+      size_bytes: inputRef.size_bytes,
     });
   }
   return normalizeReviewerInputSnapshotRequest({ ...request, members }, expectedAuthority);
