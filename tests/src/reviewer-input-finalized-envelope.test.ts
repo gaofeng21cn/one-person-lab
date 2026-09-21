@@ -110,7 +110,7 @@ test('an empty or absent inventory with nothing declared still fails closed', ()
     () => completeReviewerSnapshotTransportEnvelope(emptyMembers, laneLessAuthority, { refs: [], hashes: [] }),
     /non-empty member inventory/,
   );
-  const membersLess = { ...emptyMembers };
+  const membersLess: Record<string, unknown> = { ...emptyMembers };
   delete membersLess.members;
   assert.throws(
     () => completeReviewerSnapshotTransportEnvelope(membersLess, laneLessAuthority, { refs: [], hashes: [] }),
