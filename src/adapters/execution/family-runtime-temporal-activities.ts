@@ -268,7 +268,14 @@ export function exactRefsFromCloseoutMetadata(value: unknown) {
       || !Number.isSafeInteger(sizeBytes)
       || sizeBytes < 0
     ) return [];
-    return [{ kind, ref, sha256: `sha256:${digest[1]!.toLowerCase()}`, size_bytes: sizeBytes }];
+    const exactRef = { kind, ref, sha256: `sha256:${digest[1]!.toLowerCase()}`, size_bytes: sizeBytes };
+    // A closeout entry labels one artifact twice: `kind` is the framework artifact
+    // kind and `ref_kind` is the domain role label the closeout author works with.
+    // An entry whose ref, sha256 and size_bytes are exact denotes the same artifact
+    // under either label, so a reviewer-snapshot authority that copies the other
+    // label still binds this exact artifact rather than escaping it.
+    const refKind = readString(entry.ref_kind);
+    return refKind && refKind !== kind ? [exactRef, { ...exactRef, kind: refKind }] : [exactRef];
   });
 }
 

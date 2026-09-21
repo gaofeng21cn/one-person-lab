@@ -158,13 +158,27 @@ export type ReviewerInputSnapshotNormalizeOptions = {
   allowIncompleteMembers?: boolean;
 };
 
+// The snapshot authoring prompt publishes the immutable fields under a
+// `fixed_request_fields` heading. A closeout author may return that heading as a
+// literal key instead of spreading its entries across the request, which names the
+// same request under a shape the exact-field gate cannot see. The heading is folded
+// back into the request so the strict gate judges the request the author meant;
+// every field is still validated exactly afterwards.
+function foldSnapshotRequestHeading(value: unknown) {
+  const request = requireReviewTransportRecord(value, 'reviewer_input_snapshot_request');
+  const heading = isRecord(request.fixed_request_fields) ? request.fixed_request_fields : null;
+  if (heading === null) return request;
+  const { fixed_request_fields: _heading, ...rest } = request;
+  return { ...heading, ...rest };
+}
+
 export function normalizeReviewerInputSnapshotRequest(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
   options?: ReviewerInputSnapshotNormalizeOptions,
 ): ReviewerInputSnapshotMaterializationRequest {
   const allowIncompleteMembers = options?.allowIncompleteMembers === true;
-  const request = requireReviewTransportRecord(value, 'reviewer_input_snapshot_request');
+  const request = foldSnapshotRequestHeading(value);
   requireExactReviewTransportKeys(request, [
     'surface_kind',
     'schema_version',

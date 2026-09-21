@@ -6,7 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
-import { materializeReviewerInputSnapshot, reviewerSnapshotStageRunInputAuthority } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
+import { completeReviewerSnapshotTransportEnvelope, materializeReviewerInputSnapshot, reviewerSnapshotStageRunInputAuthority } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
 import { exactRefsFromCloseoutMetadata } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
 
 const sha = (bytes: string) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
@@ -95,4 +95,56 @@ test('snapshot can freeze an exact bound external input but never an unbound ext
     if (priorState === undefined) delete process.env.OPL_STATE_DIR; else process.env.OPL_STATE_DIR = priorState;
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+// A closeout entry labels one artifact twice: `kind` (framework artifact kind) and
+// `ref_kind` (domain role label). An author that copies the role label, or that returns
+// the prompt's field heading as a literal key, still names the same exact artifact and
+// the same request; neither slip may deterministically kill the StageRun before the
+// reviewer is allowed to start.
+test('snapshot authoring accepts the closeout role label and the published field heading', () => {
+  const artifactRef = 'file:///workspace/design-basis.json';
+  const artifactSha = sha('design basis bytes');
+  const sizeBytes = 18;
+  const closeoutEntry = {
+    kind: 'domain_design_basis_admission',
+    ref_kind: 'oma_design_basis_admission',
+    ref: artifactRef,
+    sha256: artifactSha,
+    size_bytes: sizeBytes,
+  };
+  const ownerAuthorityRefs = exactRefsFromCloseoutMetadata([closeoutEntry]);
+  assert.deepEqual(
+    ownerAuthorityRefs.map((entry) => entry.kind).sort(),
+    ['domain_design_basis_admission', 'oma_design_basis_admission'],
+  );
+  const authority = {
+    producer_attempt_ref: attemptRef,
+    execution_content_binding_sha256: bindingHash,
+    owner_authority_refs: ownerAuthorityRefs,
+    stage_run_input_authority_refs: [],
+  };
+  const member = { member_id: 'design-basis', source_ref: artifactRef, sha256: artifactSha, size_bytes: sizeBytes };
+  const fixedFields = {
+    surface_kind: 'opl_reviewer_input_snapshot_materialization_request',
+    schema_version: 2,
+    producer_attempt_ref: attemptRef,
+    execution_content_binding_sha256: bindingHash,
+    workspace_root: '/tmp/snapshot-authoring',
+  };
+  // The author copied the entry's role label instead of its artifact kind.
+  const ownerAuthorityRef = { kind: 'oma_design_basis_admission', ref: artifactRef, sha256: artifactSha, size_bytes: sizeBytes };
+  const flat = { ...fixedFields, owner_authority_ref: ownerAuthorityRef, members: [member] };
+  const materialized = completeReviewerSnapshotTransportEnvelope(flat, authority, { refs: [], hashes: [] });
+  assert.equal(materialized.owner_authority_ref.kind, 'oma_design_basis_admission');
+  assert.equal(materialized.members.length, 1);
+  // The author returned the published heading as a literal key instead of spreading it.
+  const headed = { fixed_request_fields: fixedFields, owner_authority_ref: ownerAuthorityRef, members: [member] };
+  const materializedFromHeading = completeReviewerSnapshotTransportEnvelope(headed, authority, { refs: [], hashes: [] });
+  assert.deepEqual(materializedFromHeading, materialized);
+  // An unrelated field is still rejected, so the tolerance cannot widen the request.
+  assert.throws(
+    () => completeReviewerSnapshotTransportEnvelope({ ...flat, review_lane_guess: 'x' }, authority, { refs: [], hashes: [] }),
+    /exact declared fields/,
+  );
 });
