@@ -124,6 +124,7 @@ function producerCloseout(input: {
   artifactRef: string;
   artifactHash: string;
   artifactIdentityReceiptRef?: string;
+  sizeBytes?: number;
 }): TypedStageCloseoutPacket {
   return {
     surface_kind: 'stage_attempt_closeout_packet',
@@ -132,6 +133,7 @@ function producerCloseout(input: {
     closeout_ref_metadata: [{
       ref: input.artifactRef,
       sha256: input.artifactHash,
+      ...(input.sizeBytes === undefined ? {} : { size_bytes: input.sizeBytes }),
       ...(input.artifactIdentityReceiptRef
         ? { artifact_identity_receipt_ref: input.artifactIdentityReceiptRef }
         : {}),
@@ -382,6 +384,48 @@ test('local Stage artifact identity is bound to final bytes and a transport rece
       (error) => error instanceof FrameworkContractError
         && error.details?.blocked_reason === 'artifact_byte_identity_mismatch',
     );
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a stale declared size_bytes is tolerated as metadata when the artifact hash matches', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-stale-size-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const artifactPath = path.join(root, 'artifact.txt');
+    const bytes = Buffer.from('exact final artifact bytes\n');
+    fs.writeFileSync(artifactPath, bytes);
+    const artifactRef = pathToFileURL(artifactPath).href;
+    const verified = verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: producerCloseout({
+        artifactRef,
+        artifactHash: sha256(bytes),
+        sizeBytes: bytes.length + 6423,
+      }),
+      attempt,
+      workspaceRoot: root,
+    });
+    const metadata = verified?.closeout_ref_metadata?.[0];
+    assert.equal(metadata?.sha256, sha256(bytes));
+    assert.equal(metadata?.size_bytes, bytes.length);
+    const receipt = JSON.parse(
+      fs.readFileSync(new URL(String(metadata?.artifact_identity_receipt_ref)), 'utf8'),
+    );
+    assert.equal(receipt.sha256, sha256(bytes));
+    assert.equal(receipt.size_bytes, bytes.length);
+    verifyStageQualityArtifactIdentityAtAttemptBoundary({
+      artifactRefs: [artifactRef],
+      artifactHashes: [sha256(bytes)],
+      artifactIdentityReceiptRefs: [String(metadata?.artifact_identity_receipt_ref)],
+      domainId: attempt.domain_id,
+      workspaceRoot: root,
+      expectedProducingAttemptId: attempt.stage_attempt_id,
+      expectedProducingStageId: attempt.stage_id,
+    });
   } finally {
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;
