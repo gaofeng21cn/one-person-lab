@@ -234,6 +234,7 @@ test('family-runtime StageRun closeout recovery requires an explicit terminal re
     stageRunId: 'sr_example',
     stageAttemptId: 'sat_example',
     retryTerminalRecovery: false,
+    retryReviewer: false,
   });
 
   assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
@@ -248,6 +249,15 @@ test('family-runtime StageRun closeout recovery requires an explicit terminal re
     stageRunId: 'sr_example',
     stageAttemptId: 'sat_example',
     retryTerminalRecovery: true,
+    retryReviewer: false,
+  });
+
+  assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
+    'stage-run', 'recover-closeout', 'sr_example', '--attempt', 'sat_example',
+    '--retry-reviewer', '--retry-terminal-recovery',
+  ]), {
+    mode: 'stage_run_recover_closeout', stageRunId: 'sr_example', stageAttemptId: 'sat_example',
+    retryTerminalRecovery: true, retryReviewer: true,
   });
 
   assert.throws(
@@ -265,7 +275,7 @@ test('family-runtime StageRun closeout recovery requires an explicit terminal re
       assert.equal(usageError.code, 'cli_usage_error');
       assert.equal(
         usageError.details?.usage,
-        'opl family-runtime stage-run recover-closeout <stage_run_id> --attempt <attempt_id> [--retry-terminal-recovery]',
+        'opl family-runtime stage-run recover-closeout <stage_run_id> --attempt <attempt_id> [--retry-terminal-recovery] [--retry-reviewer]',
       );
       return true;
     },

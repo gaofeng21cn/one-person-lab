@@ -44,14 +44,14 @@ export function parseStageRunArgs(rest: string[]): FamilyRuntimeCommandInput | n
       !identityOrFlag
       || flags[0] !== '--attempt'
       || !flags[1]
-      || (flags.length > 2 && flags[2] !== '--retry-terminal-recovery')
-      || flags.length > 3
+      || flags.slice(2).some((flag) => !['--retry-terminal-recovery', '--retry-reviewer'].includes(flag))
+      || new Set(flags.slice(2)).size !== flags.slice(2).length
     ) {
       throw new FrameworkContractError(
         'cli_usage_error',
         'family-runtime stage-run recover-closeout requires a StageRun id and an Attempt id.',
         {
-          usage: 'opl family-runtime stage-run recover-closeout <stage_run_id> --attempt <attempt_id> [--retry-terminal-recovery]',
+          usage: 'opl family-runtime stage-run recover-closeout <stage_run_id> --attempt <attempt_id> [--retry-terminal-recovery] [--retry-reviewer]',
         },
       );
     }
@@ -59,7 +59,8 @@ export function parseStageRunArgs(rest: string[]): FamilyRuntimeCommandInput | n
       mode: 'stage_run_recover_closeout',
       stageRunId: identityOrFlag,
       stageAttemptId: flags[1],
-      retryTerminalRecovery: flags[2] === '--retry-terminal-recovery',
+      retryTerminalRecovery: flags.includes('--retry-terminal-recovery'),
+      retryReviewer: flags.includes('--retry-reviewer'),
     };
   }
   return null;

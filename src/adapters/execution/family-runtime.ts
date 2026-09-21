@@ -578,6 +578,7 @@ export async function runFamilyRuntime(
         stageAttemptId: parsed.stageAttemptId,
       }, {
         retryTerminalRecovery: parsed.retryTerminalRecovery,
+        retryReviewer: parsed.retryReviewer,
         describeWorkflow: async (workflowInput) =>
           options.stageRunRuntime?.describeWorkflow
             ? await options.stageRunRuntime.describeWorkflow(workflowInput, { paths })

@@ -103,6 +103,7 @@ export type FamilyRuntimeCommandInput =
     stageRunId: string;
     stageAttemptId: string;
     retryTerminalRecovery: boolean;
+    retryReviewer: boolean;
   }
   | {
     mode: 'stage_artifact';

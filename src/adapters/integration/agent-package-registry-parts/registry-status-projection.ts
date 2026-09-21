@@ -309,7 +309,7 @@ function actionEntries(
     .map((action) => projectDirectoryAction(action, packageId));
 }
 
-export function hostedRuntimeReadiness(descriptor: InstalledPackageDescriptor | null) {
+export function hostedRuntimeReadiness(descriptor: InstalledPackageDescriptor | null, detail: 'fast' | 'full' = 'full') {
   const catalogRefs = descriptor?.manifest.package_role === 'standard_agent'
     ? descriptor.manifest.entrypoints.filter((entry) => entry.entrypoint_kind === 'opl_hosted_action_catalog')
       .map((entry) => typeof entry.source_ref === 'string' ? entry.source_ref : '')
@@ -317,7 +317,7 @@ export function hostedRuntimeReadiness(descriptor: InstalledPackageDescriptor | 
   if (!descriptor || catalogRefs.length === 0) {
     return { status: 'not_declared' as const, ready: true, source_root: null, reason: null };
   }
-  const policy = resolveAgentPackageEffectiveSourcePolicy(descriptor.manifest.package_id);
+  const policy = resolveAgentPackageEffectiveSourcePolicy(descriptor.manifest.package_id, { profile: detail });
   const explicitDeveloper = policy.desired_source_kind === 'developer_checkout_override'
     && policy.configured_by !== 'native_git_checkout';
   let candidates: Array<string | null>;
@@ -346,11 +346,11 @@ export function hostedRuntimeReadiness(descriptor: InstalledPackageDescriptor | 
     reason: ready ? null : 'hosted_agent_source_unavailable' };
 }
 
-function directoryEntry(descriptor: InstalledPackageDescriptor) {
+function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' | 'full') {
   const manifest = descriptor.manifest;
   const installed = descriptor.readiness.installed
     && installedDescriptorMatchesConfiguredCarrier(descriptor);
-  const hosted = hostedRuntimeReadiness(descriptor);
+  const hosted = hostedRuntimeReadiness(descriptor, detail);
   const ready = installed && hosted.ready
     && installedDescriptorSupportsFrameworkCalls(descriptor)
     && installedDescriptorHasExpectedCodexExposure(descriptor);
@@ -422,7 +422,7 @@ function directoryEntry(descriptor: InstalledPackageDescriptor) {
 function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full') {
   const entries = [...snapshot.descriptors.values()]
     .filter((descriptor) => !isProjectLocalCapabilityPackage(descriptor.manifest))
-    .map(directoryEntry)
+    .map((entry) => directoryEntry(entry, detail))
     .sort((left, right) => left.display_name.localeCompare(right.display_name, 'en'));
   return {
     surface_kind: 'opl_agent_package_directory.v1' as const,
@@ -438,6 +438,7 @@ function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full') {
 }
 
 function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: PackageSnapshot) {
+  const detail = input.detail ?? 'full';
   const packageId = canonicalAgentPackageId(input.packageId);
   const descriptor = packageId ? snapshot.descriptors.get(packageId) ?? null : null;
   const installedDescriptor = packageId ? snapshot.installed.get(packageId) ?? null : null;
@@ -505,8 +506,8 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
       || managedPolicyCurrentness.status === 'not_requested'
       || managedPolicyCurrentness.status === 'drifted'
   ) && requiredPolicyDependenciesOperational;
-  const hosted = hostedRuntimeReadiness(installedDescriptor);
-  const hostedReady = packageId ? hosted.ready : installedEntries.every((entry) => hostedRuntimeReadiness(entry).ready);
+  const hosted = hostedRuntimeReadiness(installedDescriptor, detail);
+  const hostedReady = packageId ? hosted.ready : installedEntries.every((entry) => hostedRuntimeReadiness(entry, detail).ready);
   const operationalReady = Boolean(
     installed && callable && dependenciesReady && managedPolicyOperational && hostedReady,
   );
@@ -555,8 +556,8 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
   });
   const homeShortcutPreferences = mergedHomeShortcutPreferences({
     entries: descriptor
-      ? [directoryEntry(descriptor)]
-      : [...snapshot.descriptors.values()].map(directoryEntry),
+      ? [directoryEntry(descriptor, detail)]
+      : [...snapshot.descriptors.values()].map((entry) => directoryEntry(entry, detail)),
   }).filter((entry) => !packageId || entry.package_id === packageId);
   return {
     version: 'g2' as const,
