@@ -516,8 +516,17 @@ export function completeReviewerSnapshotTransportEnvelope(
   for (const [index, ref] of declaredArtifacts.refs.entries()) {
     const sha256 = canonicalReviewTransportSha256(declaredArtifacts.hashes[index], 'declared_artifact.sha256');
     const matches = authority.owner_authority_refs.filter((item) => item.ref === ref && item.sha256 === sha256);
-    if (matches.length !== 1) {
+    if (matches.length === 0) {
       throw reviewTransportError('reviewer_input_snapshot_owner_authority_metadata_missing', 'Declared artifact requires exact producer closeout metadata.', { artifact_ref: ref });
+    }
+    // A closeout entry can label one artifact under both `kind` and `ref_kind`, and
+    // the authority expands that into alias exact refs binding the same bytes. Those
+    // aliases are the same artifact, not an ambiguity: they must agree on the byte
+    // size, and any one of them supplies it. A genuinely unknown artifact still has
+    // zero matches and is rejected above.
+    const memberSizes = new Set(matches.map((item) => item.size_bytes));
+    if (memberSizes.size !== 1) {
+      throw reviewTransportError('reviewer_input_snapshot_owner_authority_metadata_ambiguous', 'Declared artifact matches producer closeout metadata entries with conflicting byte sizes.', { artifact_ref: ref });
     }
     const member = matches[0]!;
     if (members.some((item) => item.sha256 === sha256 && item.size_bytes === member.size_bytes)) continue;

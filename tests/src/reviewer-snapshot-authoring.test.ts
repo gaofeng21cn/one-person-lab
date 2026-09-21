@@ -148,3 +148,63 @@ test('snapshot authoring accepts the closeout role label and the published field
     /exact declared fields/,
   );
 });
+
+test('declared artifacts supplement through dual-label closeout aliases and still reject unknown refs', () => {
+  const artifactRef = 'file:///workspace/design-basis.json';
+  const artifactSha = sha('design basis bytes');
+  const sizeBytes = 18;
+  // A producer may label one entry with both a framework artifact kind and a
+  // domain role label; the authority expands that into two alias exact refs.
+  const ownerAuthorityRefs = exactRefsFromCloseoutMetadata([{
+    kind: 'oma_design_basis_admission',
+    ref_kind: 'stage_artifact',
+    ref: artifactRef,
+    sha256: artifactSha,
+    size_bytes: sizeBytes,
+  }]);
+  assert.equal(ownerAuthorityRefs.length, 2);
+  const authority = {
+    producer_attempt_ref: attemptRef,
+    execution_content_binding_sha256: bindingHash,
+    owner_authority_refs: ownerAuthorityRefs,
+    stage_run_input_authority_refs: [],
+  };
+  const fixedFields = {
+    surface_kind: 'opl_reviewer_input_snapshot_materialization_request',
+    schema_version: 2,
+    producer_attempt_ref: attemptRef,
+    execution_content_binding_sha256: bindingHash,
+    workspace_root: '/tmp/snapshot-authoring',
+  };
+  const flat = {
+    ...fixedFields,
+    owner_authority_ref: ownerAuthorityRefs[0],
+    members: [],
+  };
+  const declared = { refs: [artifactRef], hashes: [artifactSha.slice('sha256:'.length)] };
+  // Regression: the alias expansion used to make this loop throw
+  // reviewer_input_snapshot_owner_authority_metadata_missing because the
+  // uniqueness check counted the two labels of the same artifact as ambiguity.
+  const materialized = completeReviewerSnapshotTransportEnvelope(flat, authority, declared);
+  const supplemented = materialized.members.filter((member) => member.source_ref === artifactRef);
+  assert.equal(supplemented.length, 1);
+  assert.equal(supplemented[0]!.size_bytes, sizeBytes);
+  // A declared ref with no closeout metadata at all is still rejected.
+  assert.throws(
+    () => completeReviewerSnapshotTransportEnvelope(flat, authority, { refs: ['file:///workspace/unknown.json'], hashes: [artifactSha.slice('sha256:'.length)] }),
+    /Declared artifact requires exact producer closeout metadata/,
+  );
+  // Two separate metadata entries binding the same bytes under conflicting sizes
+  // are genuinely ambiguous and must not silently pick one.
+  const conflicting = exactRefsFromCloseoutMetadata([
+    { kind: 'alpha', ref: artifactRef, sha256: artifactSha, size_bytes: 5 },
+    { kind: 'beta', ref: artifactRef, sha256: artifactSha, size_bytes: 6 },
+  ]);
+  assert.equal(conflicting.length, 2);
+  const conflictingAuthority = { ...authority, owner_authority_refs: conflicting };
+  const conflictingRequest = { ...flat, owner_authority_ref: conflicting[0], members: [] };
+  assert.throws(
+    () => completeReviewerSnapshotTransportEnvelope(conflictingRequest, conflictingAuthority, declared),
+    /conflicting byte sizes/,
+  );
+});
