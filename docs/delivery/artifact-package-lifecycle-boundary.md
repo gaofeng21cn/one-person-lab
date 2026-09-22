@@ -43,6 +43,9 @@ digest，接口发现与 Hosted action 使用同一个父级源码根，不创�
 版本指针或源码缓存。缺失声明的 descriptor/action catalog 时，Package status 显示
 `hosted_agent_source_unavailable`，保留 carrier callable 的独立事实，提示重新安装 Package。
 这些检查证明源码与入口文件可用；Temporal、实际 StageRun 和领域业务验收分别回读。
+发布前可运行 `node scripts/verify-package-source-artifacts.ts --package-id <id>`（可重复参数），
+在独立临时目录复用同一下载、归档身份和内容摘要校验，再立即清理。该入口只验证明确选择的
+根包 payload，不注册原生插件、不修改用户安装状态，也不替代依赖安装、登录及 clean-VM 验收。
 已安装在 OPL state 受管 marketplace 目录中的本地插件包，更新和修复复用安装时的
 payload 物化路径，不退回 descriptor 中的 Git 仓库地址另建 marketplace。已有 Git
 carrier 和显式开发目录继续使用原有生命周期，不因存在 payload 声明而切换安装来源。
