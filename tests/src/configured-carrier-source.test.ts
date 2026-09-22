@@ -12,7 +12,7 @@ import { gitMarketplaceRuntimeRoot } from '../../src/kernel/git-marketplace-runt
 const hash = (bytes: Buffer) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 const json = (value: unknown) => Buffer.from(`${JSON.stringify(value)}\n`);
 
-function fixture(fault?: 'digest' | 'identity' | 'symlink') {
+function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'nested-identity' | 'escaping-root' | 'root-identity') {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-acquisition-')));
   const source = path.join(root, 'archive/fixture');
   const packages = path.join(root, 'packages');
@@ -53,6 +53,12 @@ function fixture(fault?: 'digest' | 'identity' | 'symlink') {
     files: [...files].map(([ref, bytes]) => ({ path: ref, mode: '100644', sha256: hash(bytes),
       source_url: `https://raw.githubusercontent.com/owner/fixture/${commit}/plugins/fixture/${ref}` })),
   };
+  if (fault === 'nested-owner' || fault === 'nested-identity' || fault === 'escaping-root') {
+    fs.unlinkSync(path.join(source, 'opl-package.json'));
+  }
+  if (fault === 'nested-identity') write('plugins/fixture/opl-package.json', json({ ...owner, package_id: 'foreign' }));
+  if (fault === 'root-identity') write('opl-package.json', json({ ...owner, package_id: 'foreign' }));
+  if (fault === 'escaping-root') payload.source_root = '../outside';
   fs.writeFileSync(path.join(packages, 'fixture.json'), json(owner));
   fs.writeFileSync(path.join(packages, 'payload.json'), json(payload));
   if (fault === 'symlink') fs.symlinkSync('/tmp', path.join(source, 'escape'));
@@ -106,7 +112,17 @@ test('native marketplace install preserves verified Standard Agent runtime after
   } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
 });
 
-for (const fault of ['digest', 'identity', 'symlink'] as const) {
+test('source acquisition accepts an owner descriptor in the bound plugin source directory', () => {
+  const f = fixture('nested-owner');
+  try {
+    assert.equal(f.install(), f.marketplace);
+    assert.equal(fs.existsSync(path.join(f.marketplace, 'opl-package.json')), false);
+    assert.equal(gitMarketplaceRuntimeRoot(path.join(f.marketplace, 'plugins/fixture'),
+      'owner/fixture', 'contracts/domain_descriptor.json'), f.marketplace);
+  } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+});
+
+for (const fault of ['digest', 'identity', 'symlink', 'nested-identity', 'escaping-root', 'root-identity'] as const) {
   test(`source acquisition rejects ${fault} without replacing an installed marketplace`, () => {
     const f = fixture(fault);
     try {

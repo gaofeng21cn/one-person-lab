@@ -123,7 +123,20 @@ export function acquireHostedPackageSource(input: {
     const extracted = spawnSync('tar', ['-xzf', archivePath, '-C', temporaryRoot], { encoding: 'utf8' });
     if (extracted.status !== 0) return invalid('Package source archive extraction failed.');
     const sourceRoot = path.join(temporaryRoot, archiveRoot);
-    const sourceOwner = json(fs.readFileSync(path.join(sourceRoot, 'opl-package.json')));
+    // Some owners keep their descriptor in the declared plugin source directory.
+    // The payload is already bound to the selected owner, commit and OCI digest.
+    const pluginSourceRoot = stringValue(payload.source_root);
+    const ownerRef = fs.existsSync(path.join(sourceRoot, 'opl-package.json'))
+      ? 'opl-package.json'
+      : pluginSourceRoot && !path.posix.isAbsolute(pluginSourceRoot)
+        && !pluginSourceRoot.includes('\\')
+        && path.posix.normalize(pluginSourceRoot) === pluginSourceRoot
+        && pluginSourceRoot !== '..' && !pluginSourceRoot.startsWith('../')
+        ? path.posix.join(pluginSourceRoot, 'opl-package.json') : null;
+    if (!ownerRef || !runtimeRootContainsDescriptor(sourceRoot, ownerRef)) {
+      return invalid('Package source archive is missing its declared owner descriptor.');
+    }
+    const sourceOwner = json(fs.readFileSync(path.join(sourceRoot, ownerRef)));
     if (sourceOwner.package_id !== input.packageId || sourceOwner.version !== version
       || (sourceOwner.source_repo !== undefined && sourceOwner.source_repo !== owner.source_repo)
       || !runtimeRootContainsDescriptor(sourceRoot, 'contracts/domain_descriptor.json')) {

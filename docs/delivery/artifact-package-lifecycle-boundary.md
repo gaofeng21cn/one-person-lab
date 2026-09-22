@@ -36,7 +36,9 @@ Package owner持有descriptor、runtime bytes、version和publication。native c
 Standard Agent 安装、更新或修复时，carrier adapter 从已选择版本的 owner OCI artifact
 读取 manifest、payload 和 source layer，核对身份、源码提交、layer size/SHA-256 及
 carrier content lock。完整源码与最小插件一同保存于原有 marketplace 根，原子替换后再交给
-原生插件管理器；下载临时目录不作为运行根。既有 marketplace marker 记录 artifact/source
+原生插件管理器。归档中的 Package 描述文件优先读取根目录；根目录未提供时，读取已绑定
+payload `source_root` 下的 `opl-package.json`，仍验证物理路径及 Package 身份，不扫描或猜测其他目录。
+下载临时目录不作为运行根。既有 marketplace marker 记录 artifact/source
 digest，接口发现与 Hosted action 使用同一个父级源码根，不创建独立 Package registry、
 版本指针或源码缓存。缺失声明的 descriptor/action catalog 时，Package status 显示
 `hosted_agent_source_unavailable`，保留 carrier callable 的独立事实，提示重新安装 Package。
