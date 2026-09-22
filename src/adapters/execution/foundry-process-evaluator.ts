@@ -259,7 +259,7 @@ export class UnconfiguredFoundryEvaluationExecutor implements EvaluationExecutor
   } as const;
   readonly #reason: string;
 
-  constructor(reason = 'Foundry Evaluation Runtime has no registered evaluator and reviewer executables.') {
+  constructor(reason = 'Foundry qualification runtime is unavailable. The worker Host must supply a trusted FrozenPlanEvaluationRuntime; external evaluator/reviewer executables provide offline observations only.') {
     this.#reason = reason;
   }
 
@@ -685,7 +685,7 @@ export function configuredFoundryEvaluationExecutor(input: {
   const executionMode = process.env.OPL_FOUNDRY_EVALUATION_MODE?.trim();
   if (!executable || !reviewerExecutable) {
     return new UnconfiguredFoundryEvaluationExecutor(
-      'Foundry Evaluation Runtime requires both OPL_FOUNDRY_EVALUATOR_BIN and OPL_FOUNDRY_REVIEWER_BIN.',
+      'Foundry qualification runtime is unavailable in this worker. The Host must supply a trusted FrozenPlanEvaluationRuntime with a case executor and independent reviewer. OPL_FOUNDRY_EVALUATOR_BIN and OPL_FOUNDRY_REVIEWER_BIN configure offline observations only and cannot qualify a candidate.',
     );
   }
   if (executionMode !== 'offline_projected_pack_observation.v1') {

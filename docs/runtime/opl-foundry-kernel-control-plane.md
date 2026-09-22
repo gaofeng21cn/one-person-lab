@@ -110,3 +110,54 @@ source 和 manifest，恢复观察不能重启语义 generation。同步 Invoker
 它不承担生产 workflow 的跨 Stage 等待。
 
 构建验证步骤见 [Package construction acceptance](../delivery/foundry-package-construction-acceptance.md)。
+
+## Worker 评估运行时组合
+
+`buildCordisTemporalActivities({ trusted_evaluation_runtime })` 是 Foundry 评估与
+canary Activity 的正式进程内宿主入口。Host 在每个 worker 进程构造
+`FrozenPlanEvaluationRuntime`，将原对象传给 Activity builder；使用注册路径时，
+在 worker 解析 Activity projection 前调用
+`registerCordisTemporalActivities({ trusted_evaluation_runtime })`。
+不能先导入默认的 `temporal-worker-bootstrap.ts`：它已经注册不带评估器的默认
+projection，注册仍保持每个进程只有一个 owner。
+
+```ts
+import { FrozenPlanEvaluationRuntime } from '../../src/authority/evolution/index.ts';
+import { buildCordisTemporalActivities } from '../../src/host/temporal-activity-projection.ts';
+
+// 这些端口由可信 Host 提供，不能从生成的 Agent 输出中加载。
+function evaluationActivities(
+  ports: ConstructorParameters<typeof FrozenPlanEvaluationRuntime>[0],
+) {
+  const trusted_evaluation_runtime = new FrozenPlanEvaluationRuntime(ports);
+  return buildCordisTemporalActivities({ trusted_evaluation_runtime });
+}
+// 自行创建 Temporal Worker 的 Host 将 evaluationActivities(ports) 作为
+// Worker.create({ ..., activities }) 的 activities，而不是 workflow 参数。
+```
+
+生产 kernel 继续校验原运行时对象的 Framework 来源。序列化对象、复制的 capability
+标记或包装 adapter 均不能替代该对象。运行时对象、可执行路径和保护用例正文不得进入
+Temporal workflow 输入或 OMA 协议。Host 负责 worker 关闭及所注入端口持有资源的释放。
+
+`EvaluationCaseExecutor` 按冻结计划执行确切 candidate，必要时执行 baseline。
+目标领域 owner 提供真实 Agent 执行适配、保护用例内容及专业验收规则，Framework Host
+负责准入和组合。公开用例返回 case identity、status、score 和 evidence refs；保护执行
+只返回聚合结果、直接 receipt ref 和聚合结果的精确 digest。资源观察来自真实执行。
+`IndependentEvaluationReviewer` 接收这些观察，返回独立 verdict、execution ref、
+findings 和 evidence refs。OMA design/diagnose 不能兼任执行者或审核者；evaluator、
+executor 和 reviewer 三个身份必须互异。
+
+可执行接口样例见
+[`evaluation-and-protocol.ts`](../../tests/src/foundry-kernel-cases/evaluation-and-protocol.ts)，
+生产 Activity 注入验证见
+[`temporal-activity-projection.test.ts`](../../tests/src/temporal-activity-projection.test.ts)。
+这些 fixture 证明接线、隔离及拒绝边界，不证明领域质量。
+
+默认 worker 未内置领域用例执行器和独立 reviewer。没有 Host 组合时，评估在物化后
+继续如实失败；候选包字节仍可独立验证。配置 `OPL_FOUNDRY_EVALUATOR_BIN`、
+`OPL_FOUNDRY_REVIEWER_BIN` 和
+`OPL_FOUNDRY_EVALUATION_MODE=offline_projected_pack_observation.v1` 只启用离线
+投影包观察，其 `pass` 审核在 qualification 上仍被降为 `blocked`，不能使
+`qualify_only` 成功。不存在隐式 `build_only`、事后资格追认或历史失败 Run 改写；
+领域资格结论必须来自所组合端口的真实执行及独立审核证据。
