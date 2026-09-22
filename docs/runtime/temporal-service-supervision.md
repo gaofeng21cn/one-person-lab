@@ -7,6 +7,11 @@ Machine boundary: 本文是 Temporal 本机服务托管的人读运维说明。�
 
 Temporal Server 是 OPL durable workflow 的必要依赖，不是可隐藏的可选诊断项。Desktop macOS 由 OPL-owned launchd supervisor 托管本机 Temporal CLI；Worker supervisor 与 scheduler cadence 仍是两个独立生命周期。
 
+Worker 安装时显式提供的 `OPL_MODULES_ROOT` 和 `OPL_CODEX_STAGE_SANDBOX_MODE` 会写入
+其 launchd 环境。沙箱模式仅接受 `read-only`、`workspace-write`、`danger-full-access`；
+未配置或值无效时保持 `workspace-write`。这是宿主显式配置，Stage 调用中已有的
+`sandboxMode` 仍优先；配置源码或生成 plist 不代表正在运行的 worker 已切换。
+
 ## Desktop macOS
 
 显式维护面如下：

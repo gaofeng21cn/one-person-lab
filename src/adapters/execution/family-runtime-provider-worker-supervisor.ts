@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 
-import { resolveCodexBinary } from './codex.ts';
+import { configuredCodexStageSandboxMode, resolveCodexBinary } from './codex.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
@@ -222,6 +222,10 @@ export function providerWorkerSupervisorEnvironmentVariables(
   const temporalNamespace = configuredTemporalNamespace(environment);
   if (temporalNamespace) {
     values[TEMPORAL_NAMESPACE] = temporalNamespace;
+  }
+  const sandboxMode = configuredCodexStageSandboxMode(environment);
+  if (sandboxMode) {
+    values.OPL_CODEX_STAGE_SANDBOX_MODE = sandboxMode;
   }
   const modulesRoot = environment.OPL_MODULES_ROOT?.trim();
   if (modulesRoot) {

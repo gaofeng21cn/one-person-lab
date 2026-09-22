@@ -216,12 +216,15 @@ function spawnEnvWithOverlay(overlay?: NodeJS.ProcessEnv | Record<string, string
   return env;
 }
 
-export function defaultCodexSandboxModeConfigArg(env: Record<string, string | undefined> = process.env): string {
+export function configuredCodexStageSandboxMode(env: Record<string, string | undefined> = process.env) {
   const raw = env.OPL_CODEX_STAGE_SANDBOX_MODE?.trim();
-  const mode = raw === 'read-only' || raw === 'workspace-write' || raw === 'danger-full-access'
+  return raw === 'read-only' || raw === 'workspace-write' || raw === 'danger-full-access'
     ? raw
-    : 'workspace-write';
-  return `sandbox_mode=${quoteTomlString(mode)}`;
+    : undefined;
+}
+
+export function defaultCodexSandboxModeConfigArg(env: Record<string, string | undefined> = process.env): string {
+  return `sandbox_mode=${quoteTomlString(configuredCodexStageSandboxMode(env) ?? 'workspace-write')}`;
 }
 
 export function buildCodexExecArgs(
