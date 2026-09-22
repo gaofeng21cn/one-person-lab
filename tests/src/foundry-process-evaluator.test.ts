@@ -17,7 +17,7 @@ import {
   type MaterializedCandidate,
 } from '../../src/authority/evolution/index.ts';
 import { foundryEvaluationOperationIdentity } from '../../src/authority/evolution/operation-result.ts';
-import { ProcessFoundryEvaluationExecutor } from '../../src/adapters/execution/foundry-process-evaluator.ts';
+import { configuredFoundryEvaluationExecutor, ProcessFoundryEvaluationExecutor } from '../../src/adapters/execution/foundry-process-evaluator.ts';
 
 const request: DesignRequest = {
   surface_kind: 'opl_foundry_design_request',
@@ -719,4 +719,21 @@ test('process evaluation fails closed without a separately configured reviewer e
     candidate,
     baseline_version: null,
   }), /separately configured reviewer executable/);
+});
+
+
+test('unconfigured worker identifies the Host integration gap without promising qualification from BIN settings', async (t) => {
+  const previous = process.env.OPL_FOUNDRY_EVALUATOR_BIN;
+  delete process.env.OPL_FOUNDRY_EVALUATOR_BIN;
+  t.after(() => {
+    if (previous === undefined) delete process.env.OPL_FOUNDRY_EVALUATOR_BIN;
+    else process.env.OPL_FOUNDRY_EVALUATOR_BIN = previous;
+  });
+  const runtime = configuredFoundryEvaluationExecutor({
+    candidate_pack_resolver: { resolveDirectory: () => { throw new Error('Must not resolve'); } },
+  });
+  assert.equal(runtime.qualification_capability.status, 'unavailable');
+  const input = {} as Parameters<ProcessFoundryEvaluationExecutor['canary']>[0];
+  await assert.rejects(runtime.evaluate(input), /Host must supply a trusted FrozenPlanEvaluationRuntime/);
+  await assert.rejects(runtime.canary(input), /offline observations only and cannot qualify/);
 });

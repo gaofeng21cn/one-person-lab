@@ -1,3 +1,4 @@
+import type { EvaluationExecutor } from '../authority/evolution/index.ts';
 import {
   buildFoundryTemporalActivities,
   codexStageActivity,
@@ -26,12 +27,18 @@ import {
   registerTemporalActivityProjection,
 } from '../kernel/temporal-activity-registration.ts';
 
-export function buildCordisTemporalActivities() {
+export type CordisTemporalActivityOptions = {
+  // Constructed by trusted Host code in this worker process, never a workflow payload.
+  trusted_evaluation_runtime?: EvaluationExecutor;
+};
+
+export function buildCordisTemporalActivities(options: CordisTemporalActivityOptions = {}) {
   const createStageRouteComposition = () => createCordisStageRouteComposition();
   return {
     ...buildFoundryTemporalActivities(
       (input) => createProductionFoundryKernel({
         ...input,
+        trusted_evaluation_runtime: options.trusted_evaluation_runtime,
         create_foundry_dev_composition: createCordisFoundryDevComposition,
         create_stage_route_composition: createStageRouteComposition,
       }),
@@ -63,6 +70,8 @@ export function buildCordisTemporalActivities() {
   };
 }
 
-export function registerCordisTemporalActivities() {
-  registerTemporalActivityProjection(buildCordisTemporalActivities);
+export function registerCordisTemporalActivities(options?: CordisTemporalActivityOptions) {
+  registerTemporalActivityProjection(options
+    ? () => buildCordisTemporalActivities(options)
+    : buildCordisTemporalActivities);
 }

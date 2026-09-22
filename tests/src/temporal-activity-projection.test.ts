@@ -10,11 +10,13 @@ import { MockActivityEnvironment } from '@temporalio/testing';
 
 import {
   foundryContentDigest,
+  FrozenPlanEvaluationRuntime,
+  type EvaluationExecutor,
   readFoundryProviderManifest,
   type AgentBlueprint,
   type DesignRequest,
 } from '../../src/authority/evolution/index.ts';
-import { foundryStoragePaths } from '../../src/authority/evidence/index.ts';
+import { FileFoundryContentStore, foundryStoragePaths } from '../../src/authority/evidence/index.ts';
 import { createProductionFoundryKernel } from '../../src/adapters/execution/foundry-production-runtime.ts';
 import type {
   FoundryProviderOperationCursorV2,
@@ -75,10 +77,21 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
     omaFixtureRoot,
     'foundry-protocol/design-request.json',
   ));
-  const blueprint = readJson<AgentBlueprint>(path.join(
+  const fixtureBlueprint = readJson<AgentBlueprint>(path.join(
     omaFixtureRoot,
     'foundry-protocol/agent-blueprint.json',
   ));
+  const content = new FileFoundryContentStore();
+  const schemaRef = content.put(Buffer.from('{"type":"object"}')).ref;
+  const textRef = content.put(Buffer.from('Synthetic worker wiring fixture.')).ref;
+  const schemaRefs = new Set(fixtureBlueprint.content_refs.schema_refs);
+  const blueprint: AgentBlueprint = JSON.parse(JSON.stringify(fixtureBlueprint), (_key, value) =>
+    typeof value === 'string' && value.startsWith('opl-content://sha256/')
+      ? (schemaRefs.has(value) ? schemaRef : textRef)
+      : value);
+  for (const key of Object.keys(blueprint.content_refs) as Array<keyof AgentBlueprint['content_refs']>) {
+    blueprint.content_refs[key] = [...new Set(blueprint.content_refs[key])];
+  }
   const operation = provider.operations.design;
   const sourceDigest = `sha256:${'a'.repeat(64)}`;
   const cursorBase: Omit<
@@ -162,7 +175,30 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
       runId: 'temporal-run:cordis-frozen-provider-replay',
     },
   });
-  const activities: FoundryTemporalActivities = buildCordisTemporalActivities();
+  let evaluatedCandidate: string | null = null;
+  const runtime = new FrozenPlanEvaluationRuntime({
+    evaluator_id: 'evaluator:worker-wiring',
+    executor: {
+      executor_id: 'executor:worker-wiring',
+      executionRef: () => 'execution:worker-wiring',
+      async runPublicCase(input) {
+        assert.equal(input.subject.kind, 'candidate');
+        if (input.subject.kind === 'candidate') {
+          evaluatedCandidate = input.subject.candidate.candidate_digest;
+        }
+        throw new Error('Fixture executor deliberately refuses domain qualification');
+      },
+      async runProtectedRequirement() { throw new Error('Unexpected protected execution'); },
+      async observeResourceObservations() { throw new Error('Unexpected resource observation'); },
+    },
+    reviewer: {
+      reviewer_id: 'reviewer:worker-wiring',
+      async review() { throw new Error('Unexpected independent review'); },
+    },
+  });
+  const activities: FoundryTemporalActivities = buildCordisTemporalActivities({
+    trusted_evaluation_runtime: runtime,
+  });
   type AdvanceActivity = FoundryTemporalActivities['foundryAdvanceRunActivity'];
   const result = await environment.run<
     Parameters<AdvanceActivity>,
@@ -174,4 +210,39 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
   );
   assert.equal(result.run.state, 'materializing');
   assert.equal(result.run.blueprint_digest, foundryContentDigest(blueprint));
+
+  async function advanceWithCursor(inspection: typeof result) {
+    const next = foundryAdvanceOperationForInspection(inspection);
+    const nextEnvironment = new MockActivityEnvironment({
+      activityType: 'foundryAdvanceRunActivity', activityId: next.operation_key,
+    });
+    return nextEnvironment.run<Parameters<AdvanceActivity>, Awaited<ReturnType<AdvanceActivity>>, AdvanceActivity>(activities.foundryAdvanceRunActivity, {
+      ...next, provider_operation_cursor: cursor,
+    });
+  }
+  const materialized = await advanceWithCursor(result);
+  assert.equal(materialized.run.state, 'evaluating');
+  const evaluated = await advanceWithCursor(materialized);
+  assert.equal(evaluatedCandidate, materialized.run.candidate_digest);
+  assert.equal(evaluated.run.state, 'failed');
+  assert.equal(evaluated.run.evidence_digest, null);
+  assert.equal(evaluated.run.version_digest, null);
+  assert.equal(evaluated.run.candidate_digest, materialized.run.candidate_digest);
+});
+
+test('Cordis worker rejects a claimed qualification runtime without Framework provenance', async () => {
+  const forged: EvaluationExecutor = {
+    evaluator_id: 'evaluator:forged',
+    qualification_capability: {
+      status: 'qualification_grade',
+      execution_mode: 'frozen_plan_evaluation_runtime.v1',
+      protected_fact_authority: 'framework_owned_case_executor',
+    },
+    async evaluate() { throw new Error('Must not run'); },
+    async canary() { throw new Error('Must not run'); },
+  };
+  const activities = buildCordisTemporalActivities({ trusted_evaluation_runtime: forged });
+  await assert.rejects(activities.foundryFailRunActivity({
+    run_id: 'run:forged', failure_code: 'test', failure_message: 'test',
+  }), /Framework-owned FrozenPlan Evaluation Runtime/);
 });
