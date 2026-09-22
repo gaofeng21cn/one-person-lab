@@ -490,7 +490,10 @@ export function persistReviewerSnapshotObject(input: {
     const observed = stableFileObservation(target, pathToFileURL(target).href, {
       trustedRoot: objectRoot,
     });
-    if (observed.sha256 !== input.expectedSha256 || observed.size_bytes !== input.expectedSizeBytes) {
+    // sha256 is the identity anchor: matching bytes prove the persisted object
+    // is intact, so a stale declared size_bytes (model metadata) must not
+    // discard the whole snapshot (run ibd-oma-create-12 terminal failure).
+    if (observed.sha256 !== input.expectedSha256) {
       throw reviewTransportError(
         'reviewer_input_snapshot_object_tampered',
         'Persisted reviewer input snapshot object does not match its expected byte identity.',
@@ -585,7 +588,9 @@ export function persistReviewerSnapshotObject(input: {
         { source_ref: input.sourceRef },
       );
     }
-    if (sha256 !== input.expectedSha256 || sizeBytes !== input.expectedSizeBytes) {
+    // Identity anchor is the fresh sha256 over the copied bytes; a stale
+    // declared size_bytes is model metadata, not tampering.
+    if (sha256 !== input.expectedSha256) {
       throw reviewTransportError(
         'reviewer_input_snapshot_member_identity_mismatch',
         'Reviewer input snapshot source bytes do not match the MAS-provided member identity.',
@@ -610,7 +615,8 @@ export function persistReviewerSnapshotObject(input: {
       const observed = stableFileObservation(target, pathToFileURL(target).href, {
         trustedRoot: objectRoot,
       });
-      if (observed.sha256 !== input.expectedSha256 || observed.size_bytes !== input.expectedSizeBytes) {
+      // Same identity-anchor rule as above: hash decides, size is metadata.
+      if (observed.sha256 !== input.expectedSha256) {
         throw reviewTransportError(
           'reviewer_input_snapshot_object_tampered',
           'Concurrent reviewer input snapshot object has the wrong byte identity.',

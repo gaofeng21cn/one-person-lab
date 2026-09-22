@@ -6,7 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
-import { materializeReviewerInputSnapshot, reviewerSnapshotStageRunInputAuthority } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
+import { completeReviewerSnapshotTransportEnvelope, materializeReviewerInputSnapshot, reviewerSnapshotStageRunInputAuthority } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
 import { exactRefsFromCloseoutMetadata } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
 
 const sha = (bytes: string) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
@@ -95,4 +95,116 @@ test('snapshot can freeze an exact bound external input but never an unbound ext
     if (priorState === undefined) delete process.env.OPL_STATE_DIR; else process.env.OPL_STATE_DIR = priorState;
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+// A closeout entry labels one artifact twice: `kind` (framework artifact kind) and
+// `ref_kind` (domain role label). An author that copies the role label, or that returns
+// the prompt's field heading as a literal key, still names the same exact artifact and
+// the same request; neither slip may deterministically kill the StageRun before the
+// reviewer is allowed to start.
+test('snapshot authoring accepts the closeout role label and the published field heading', () => {
+  const artifactRef = 'file:///workspace/design-basis.json';
+  const artifactSha = sha('design basis bytes');
+  const sizeBytes = 18;
+  const closeoutEntry = {
+    kind: 'domain_design_basis_admission',
+    ref_kind: 'oma_design_basis_admission',
+    ref: artifactRef,
+    sha256: artifactSha,
+    size_bytes: sizeBytes,
+  };
+  const ownerAuthorityRefs = exactRefsFromCloseoutMetadata([closeoutEntry]);
+  assert.deepEqual(
+    ownerAuthorityRefs.map((entry) => entry.kind).sort(),
+    ['domain_design_basis_admission', 'oma_design_basis_admission'],
+  );
+  const authority = {
+    producer_attempt_ref: attemptRef,
+    execution_content_binding_sha256: bindingHash,
+    owner_authority_refs: ownerAuthorityRefs,
+    stage_run_input_authority_refs: [],
+  };
+  const member = { member_id: 'design-basis', source_ref: artifactRef, sha256: artifactSha, size_bytes: sizeBytes };
+  const fixedFields = {
+    surface_kind: 'opl_reviewer_input_snapshot_materialization_request',
+    schema_version: 2,
+    producer_attempt_ref: attemptRef,
+    execution_content_binding_sha256: bindingHash,
+    workspace_root: '/tmp/snapshot-authoring',
+  };
+  // The author copied the entry's role label instead of its artifact kind.
+  const ownerAuthorityRef = { kind: 'oma_design_basis_admission', ref: artifactRef, sha256: artifactSha, size_bytes: sizeBytes };
+  const flat = { ...fixedFields, owner_authority_ref: ownerAuthorityRef, members: [member] };
+  const materialized = completeReviewerSnapshotTransportEnvelope(flat, authority, { refs: [], hashes: [] });
+  assert.equal(materialized.owner_authority_ref.kind, 'oma_design_basis_admission');
+  assert.equal(materialized.members.length, 1);
+  // The author returned the published heading as a literal key instead of spreading it.
+  const headed = { fixed_request_fields: fixedFields, owner_authority_ref: ownerAuthorityRef, members: [member] };
+  const materializedFromHeading = completeReviewerSnapshotTransportEnvelope(headed, authority, { refs: [], hashes: [] });
+  assert.deepEqual(materializedFromHeading, materialized);
+  // An unrelated field is still rejected, so the tolerance cannot widen the request.
+  assert.throws(
+    () => completeReviewerSnapshotTransportEnvelope({ ...flat, review_lane_guess: 'x' }, authority, { refs: [], hashes: [] }),
+    /exact declared fields/,
+  );
+});
+
+test('declared artifacts supplement through dual-label closeout aliases and still reject unknown refs', () => {
+  const artifactRef = 'file:///workspace/design-basis.json';
+  const artifactSha = sha('design basis bytes');
+  const sizeBytes = 18;
+  // A producer may label one entry with both a framework artifact kind and a
+  // domain role label; the authority expands that into two alias exact refs.
+  const ownerAuthorityRefs = exactRefsFromCloseoutMetadata([{
+    kind: 'oma_design_basis_admission',
+    ref_kind: 'stage_artifact',
+    ref: artifactRef,
+    sha256: artifactSha,
+    size_bytes: sizeBytes,
+  }]);
+  assert.equal(ownerAuthorityRefs.length, 2);
+  const authority = {
+    producer_attempt_ref: attemptRef,
+    execution_content_binding_sha256: bindingHash,
+    owner_authority_refs: ownerAuthorityRefs,
+    stage_run_input_authority_refs: [],
+  };
+  const fixedFields = {
+    surface_kind: 'opl_reviewer_input_snapshot_materialization_request',
+    schema_version: 2,
+    producer_attempt_ref: attemptRef,
+    execution_content_binding_sha256: bindingHash,
+    workspace_root: '/tmp/snapshot-authoring',
+  };
+  const flat = {
+    ...fixedFields,
+    owner_authority_ref: ownerAuthorityRefs[0],
+    members: [],
+  };
+  const declared = { refs: [artifactRef], hashes: [artifactSha.slice('sha256:'.length)] };
+  // Regression: the alias expansion used to make this loop throw
+  // reviewer_input_snapshot_owner_authority_metadata_missing because the
+  // uniqueness check counted the two labels of the same artifact as ambiguity.
+  const materialized = completeReviewerSnapshotTransportEnvelope(flat, authority, declared);
+  const supplemented = materialized.members.filter((member) => member.source_ref === artifactRef);
+  assert.equal(supplemented.length, 1);
+  assert.equal(supplemented[0]!.size_bytes, sizeBytes);
+  // A declared ref with no closeout metadata at all is still rejected.
+  assert.throws(
+    () => completeReviewerSnapshotTransportEnvelope(flat, authority, { refs: ['file:///workspace/unknown.json'], hashes: [artifactSha.slice('sha256:'.length)] }),
+    /Declared artifact requires exact producer closeout metadata/,
+  );
+  // Two separate metadata entries binding the same bytes under conflicting sizes
+  // are genuinely ambiguous and must not silently pick one.
+  const conflicting = exactRefsFromCloseoutMetadata([
+    { kind: 'alpha', ref: artifactRef, sha256: artifactSha, size_bytes: 5 },
+    { kind: 'beta', ref: artifactRef, sha256: artifactSha, size_bytes: 6 },
+  ]);
+  assert.equal(conflicting.length, 2);
+  const conflictingAuthority = { ...authority, owner_authority_refs: conflicting };
+  const conflictingRequest = { ...flat, owner_authority_ref: conflicting[0], members: [] };
+  assert.throws(
+    () => completeReviewerSnapshotTransportEnvelope(conflictingRequest, conflictingAuthority, declared),
+    /conflicting byte sizes/,
+  );
 });

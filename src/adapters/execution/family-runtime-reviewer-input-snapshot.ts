@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -148,11 +149,36 @@ function normalizeAuthorityBinding(
   };
 }
 
+// The finalized transport envelope supplements the member inventory from the
+// producer closeout's declared artifacts and the Stage's immutable input
+// authority before the strict gate applies. The pre-supplement pass therefore
+// accepts an absent or empty member inventory and defers the enumeration
+// checks to the strict re-normalization after supplementation.
+export type ReviewerInputSnapshotNormalizeOptions = {
+  allowIncompleteMembers?: boolean;
+};
+
+// The snapshot authoring prompt publishes the immutable fields under a
+// `fixed_request_fields` heading. A closeout author may return that heading as a
+// literal key instead of spreading its entries across the request, which names the
+// same request under a shape the exact-field gate cannot see. The heading is folded
+// back into the request so the strict gate judges the request the author meant;
+// every field is still validated exactly afterwards.
+function foldSnapshotRequestHeading(value: unknown) {
+  const request = requireReviewTransportRecord(value, 'reviewer_input_snapshot_request');
+  const heading = isRecord(request.fixed_request_fields) ? request.fixed_request_fields : null;
+  if (heading === null) return request;
+  const { fixed_request_fields: _heading, ...rest } = request;
+  return { ...heading, ...rest };
+}
+
 export function normalizeReviewerInputSnapshotRequest(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
+  options?: ReviewerInputSnapshotNormalizeOptions,
 ): ReviewerInputSnapshotMaterializationRequest {
-  const request = requireReviewTransportRecord(value, 'reviewer_input_snapshot_request');
+  const allowIncompleteMembers = options?.allowIncompleteMembers === true;
+  const request = foldSnapshotRequestHeading(value);
   requireExactReviewTransportKeys(request, [
     'surface_kind',
     'schema_version',
@@ -160,8 +186,8 @@ export function normalizeReviewerInputSnapshotRequest(
     'producer_attempt_ref',
     'execution_content_binding_sha256',
     ...(request.review_lane === undefined ? [] : ['review_lane']),
+    ...(request.members === undefined ? [] : ['members']),
     'workspace_root',
-    'members',
   ], 'reviewer_input_snapshot_request');
   if (
     request.surface_kind !== 'opl_reviewer_input_snapshot_materialization_request'
@@ -172,13 +198,20 @@ export function normalizeReviewerInputSnapshotRequest(
       'Reviewer input snapshot request must use Framework schema 2.',
     );
   }
-  if (!Array.isArray(request.members) || request.members.length === 0) {
+  if (request.members !== undefined && !Array.isArray(request.members)) {
     throw reviewTransportError(
       'reviewer_input_snapshot_members_missing',
       'Reviewer input snapshot request must contain a non-empty member inventory.',
     );
   }
-  const members = request.members.map(normalizeMember);
+  const membersProvidedAndPopulated = Array.isArray(request.members) && request.members.length > 0;
+  if (!membersProvidedAndPopulated && !allowIncompleteMembers) {
+    throw reviewTransportError(
+      'reviewer_input_snapshot_members_missing',
+      'Reviewer input snapshot request must contain a non-empty member inventory.',
+    );
+  }
+  const members = (Array.isArray(request.members) ? request.members : []).map(normalizeMember);
   const memberIds = members.map((member) => member.member_id);
   if (new Set(memberIds).size !== memberIds.length) {
     throw reviewTransportError(
@@ -216,7 +249,7 @@ export function normalizeReviewerInputSnapshotRequest(
     const missingInputs = expected.stage_run_input_authority_refs!.filter((ref) => !members.some((member) => (
       member.source_ref === ref.ref && member.sha256 === ref.sha256 && member.size_bytes === ref.size_bytes
     )));
-    if (missingInputs.length > 0) {
+    if (missingInputs.length > 0 && !allowIncompleteMembers) {
       throw reviewTransportError(
         'reviewer_input_snapshot_stage_run_input_missing',
         'Reviewer input snapshot must enumerate every immutable StageRun input artifact.',
@@ -385,6 +418,18 @@ export function readReviewerInputSnapshotManifest(exactRef: unknown) {
   };
 }
 
+// The persisted object's bytes are hash-verified at materialization, so the
+// observed object size is the authoritative metadata; a stale declared
+// size_bytes (model-provided) is corrected before it reaches the manifest.
+function memberWithObservedObjectSize(
+  member: ReviewerInputSnapshotMember,
+  snapshotObjectRoot: string,
+): ReviewerInputSnapshotMember {
+  const objectPath = path.join(snapshotObjectRoot, `${member.sha256.slice('sha256:'.length)}.bin`);
+  const observedSize = fs.statSync(objectPath).size;
+  return observedSize === member.size_bytes ? member : { ...member, size_bytes: observedSize };
+}
+
 export function materializeReviewerInputSnapshot(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
@@ -394,6 +439,8 @@ export function materializeReviewerInputSnapshot(
     ? normalizeAuthorityBinding(expectedAuthority).stage_run_input_authority_refs!
     : [];
   let createdObjectCount = 0;
+  const effectiveMembers: typeof request.members = [];
+  const snapshotObjectRoot = reviewTransportRoots().reviewer_snapshot_object_root;
   for (const member of request.members) {
     const boundInput = inputAuthority.some((ref) => (
       ref.ref === member.source_ref && ref.sha256 === member.sha256 && ref.size_bytes === member.size_bytes
@@ -407,6 +454,7 @@ export function materializeReviewerInputSnapshot(
         expectedSizeBytes: member.size_bytes,
       });
       if (existing.created) createdObjectCount += 1;
+      effectiveMembers.push(memberWithObservedObjectSize(member, snapshotObjectRoot));
       continue;
     } catch (error) {
       const details = error instanceof Error
@@ -424,11 +472,12 @@ export function materializeReviewerInputSnapshot(
       expectedSizeBytes: member.size_bytes,
     });
     if (persisted.created) createdObjectCount += 1;
+    effectiveMembers.push(memberWithObservedObjectSize(member, snapshotObjectRoot));
   }
   const persistedManifest = persistCanonicalReviewTransportJson({
     root: reviewTransportRoots().reviewer_snapshot_manifest_root,
     kind: 'opl_reviewer_input_snapshot_manifest',
-    value: manifestForRequest(request),
+    value: manifestForRequest({ ...request, members: effectiveMembers }),
   });
   const readback = readReviewerInputSnapshotManifest(persistedManifest.exact_ref);
   return {
@@ -458,7 +507,7 @@ export function completeReviewerSnapshotTransportEnvelope(
   expectedAuthority: ReviewerInputSnapshotAuthorityBinding,
   declaredArtifacts: { refs: string[]; hashes: string[] },
 ) {
-  const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority);
+  const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority, { allowIncompleteMembers: true });
   const authority = normalizeAuthorityBinding(expectedAuthority);
   if (declaredArtifacts.refs.length !== declaredArtifacts.hashes.length) {
     throw reviewTransportError('reviewer_input_snapshot_artifact_identity_mismatch', 'Declared artifact refs and hashes must align.');
@@ -467,8 +516,17 @@ export function completeReviewerSnapshotTransportEnvelope(
   for (const [index, ref] of declaredArtifacts.refs.entries()) {
     const sha256 = canonicalReviewTransportSha256(declaredArtifacts.hashes[index], 'declared_artifact.sha256');
     const matches = authority.owner_authority_refs.filter((item) => item.ref === ref && item.sha256 === sha256);
-    if (matches.length !== 1) {
+    if (matches.length === 0) {
       throw reviewTransportError('reviewer_input_snapshot_owner_authority_metadata_missing', 'Declared artifact requires exact producer closeout metadata.', { artifact_ref: ref });
+    }
+    // A closeout entry can label one artifact under both `kind` and `ref_kind`, and
+    // the authority expands that into alias exact refs binding the same bytes. Those
+    // aliases are the same artifact, not an ambiguity: they must agree on the byte
+    // size, and any one of them supplies it. A genuinely unknown artifact still has
+    // zero matches and is rejected above.
+    const memberSizes = new Set(matches.map((item) => item.size_bytes));
+    if (memberSizes.size !== 1) {
+      throw reviewTransportError('reviewer_input_snapshot_owner_authority_metadata_ambiguous', 'Declared artifact matches producer closeout metadata entries with conflicting byte sizes.', { artifact_ref: ref });
     }
     const member = matches[0]!;
     if (members.some((item) => item.sha256 === sha256 && item.size_bytes === member.size_bytes)) continue;
@@ -478,6 +536,20 @@ export function completeReviewerSnapshotTransportEnvelope(
       source_ref: ref,
       sha256,
       size_bytes: member.size_bytes,
+    });
+  }
+  // Immutable StageRun input artifacts are framework-owned bindings, not model-inferred
+  // scope: supplementing them here cannot widen the review scope beyond what the Stage
+  // already froze as its inputs. A producer that omits or under-enumerates its member
+  // inventory therefore still yields the exact mandated scope instead of deterministically
+  // failing the StageRun before the reviewer starts.
+  for (const inputRef of authority.stage_run_input_authority_refs!) {
+    if (members.some((item) => item.sha256 === inputRef.sha256 && item.size_bytes === inputRef.size_bytes)) continue;
+    members.push({
+      member_id: `opl-stage-run-input-${inputRef.sha256.slice('sha256:'.length)}`,
+      source_ref: inputRef.ref,
+      sha256: inputRef.sha256,
+      size_bytes: inputRef.size_bytes,
     });
   }
   return normalizeReviewerInputSnapshotRequest({ ...request, members }, expectedAuthority);

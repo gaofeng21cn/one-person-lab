@@ -370,3 +370,34 @@ test('revision transport remains independent from owner authority', () => {
     assert.equal(context.mas_revision_consumption_binding, null);
   });
 });
+
+test('reviewer snapshot materialization treats a stale declared size_bytes as metadata, not tampering (run ibd-oma-create-12)', () => {
+  withFixture(({ workspaceRoot }) => {
+    const bytes = Buffer.from('locked corpus observation bytes\n');
+    fs.writeFileSync(path.join(workspaceRoot, 'corpus.bin'), bytes);
+    const staleSize = bytes.length + 300;
+
+    // Created path: correct sha256 + wrong declared size materializes fine.
+    const createdRequest = requestFor(workspaceRoot, 'corpus.bin', bytes);
+    (createdRequest.members[0] as Record<string, unknown>).size_bytes = staleSize;
+    const created = materializeReviewerInputSnapshot(createdRequest, expectedAuthority());
+    assert.equal(created.materialization_status, 'materialized');
+
+    // Exists path: re-materialization with the same stale size must not throw
+    // reviewer_input_snapshot_object_tampered; bytes are already hash-verified.
+    const again = materializeReviewerInputSnapshot(createdRequest, expectedAuthority());
+    assert.equal(again.materialization_status, 'already_materialized');
+
+    // Fail-closed preserved: a genuine hash mismatch still throws.
+    const wrongBytes = Buffer.from('tampered corpus bytes\n');
+    fs.writeFileSync(path.join(workspaceRoot, 'corpus-2.bin'), wrongBytes);
+    const phantomBytes = Buffer.from('content that was never on disk\n');
+    const wrongHashRequest = requestFor(workspaceRoot, 'corpus-2.bin', bytes);
+    (wrongHashRequest.members[0] as Record<string, unknown>).sha256 = sha256(phantomBytes);
+    (wrongHashRequest.members[0] as Record<string, unknown>).size_bytes = phantomBytes.length;
+    assertFailureCode(
+      () => materializeReviewerInputSnapshot(wrongHashRequest, expectedAuthority()),
+      'reviewer_input_snapshot_member_identity_mismatch',
+    );
+  });
+});

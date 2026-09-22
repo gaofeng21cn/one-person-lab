@@ -19,7 +19,7 @@ export type TypedStageCloseoutPacket = {
   idempotency_key?: string;
   closeout_id?: string;
   scope_digest?: string;
-  execution_scope?: WorkItemExecutionScopeSnapshot;
+  execution_scope?: WorkItemExecutionScopeSnapshot | string;
   closeout_refs: string[];
   closeout_ref_metadata?: JsonRecord[];
   consumed_refs: string[];
@@ -270,9 +270,19 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
   }
   const uniqueCloseoutRefs = [...new Set(closeoutRefs)];
   const domainOutput = normalizeDomainOutput(value.domain_output, uniqueCloseoutRefs);
-  const executionScope = value.execution_scope === undefined || value.execution_scope === null
+  // A model may emit `execution_scope` as an opaque scope ref string (e.g.
+  // "opl://stage_attempts/sat_...") instead of the full snapshot object. Absence
+  // of execution_scope is already contract-legal, so a string ref is treated as
+  // the same "no inline snapshot" shape: dropped here, while the top-level
+  // scope_digest (if present) is preserved and later verified against the
+  // attempt's authoritative execution scope at ingest. Only a non-object
+  // non-string value remains a hard contract failure.
+  const rawExecutionScope: unknown = value.execution_scope;
+  const executionScope = rawExecutionScope === undefined
+    || rawExecutionScope === null
+    || (typeof rawExecutionScope === 'string' && rawExecutionScope.trim().length > 0)
     ? null
-    : requireWorkItemExecutionScopeSnapshot(value.execution_scope);
+    : requireWorkItemExecutionScopeSnapshot(rawExecutionScope);
   const explicitScopeDigest = optionalString(value.scope_digest);
   if (executionScope && explicitScopeDigest && executionScope.scope_digest !== explicitScopeDigest) {
     throw new FrameworkContractError(

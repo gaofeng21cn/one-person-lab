@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   existsSync,
@@ -196,6 +197,27 @@ test('provider-worker supervisor rejects invalid Temporal namespaces before plis
   }
 });
 
+test('provider-worker supervisor persists an explicit modules root and omits it otherwise', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'opl-modules-root-supervisor-'));
+  try {
+    const paths = runtimePaths(root);
+    const omitted = providerWorkerSupervisorEnvironmentVariables(paths, {});
+    assert.equal(Object.hasOwn(omitted, 'OPL_MODULES_ROOT'), false);
+    assert.doesNotMatch(buildProviderWorkerSupervisorPlist(paths, {}), /OPL_MODULES_ROOT/);
+
+    const modulesRoot = path.join(root, 'codex-plugin-marketplaces');
+    const environment = { OPL_MODULES_ROOT: `  ${modulesRoot}  ` };
+    const values = providerWorkerSupervisorEnvironmentVariables(paths, environment);
+    const projection = providerWorkerSupervisorEnvironmentProjection(paths, environment);
+    const plist = buildProviderWorkerSupervisorPlist(paths, environment);
+    assert.equal(values.OPL_MODULES_ROOT, modulesRoot);
+    assert.equal(projection.OPL_MODULES_ROOT, modulesRoot);
+    assert.equal(plistEnvironmentValue(plist, 'OPL_MODULES_ROOT'), modulesRoot);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('provider-worker supervisor persists canonical MAS OwnerGate argv without exposing it in projection', () => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'opl-owner-gate-supervisor-configured-'));
   try {
@@ -304,4 +326,40 @@ test('provider-worker supervisor redacts OwnerGate values from launchctl readbac
   assert.equal(readback?.stdout.includes('/private/receipts'), false);
   assert.equal(readback?.stderr.includes('/private/receipts'), false);
   assert.equal(readback?.stdout.match(/\[redacted\]/g)?.length, 3);
+});
+
+
+test('supervised worker preserves the explicit sandbox mode through plist and fresh Codex argv', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'opl-supervisor-sandbox-'));
+  try {
+    const paths = runtimePaths(root);
+    const codexModule = new URL('../../../../src/adapters/execution/codex.ts', import.meta.url).href;
+    for (const mode of ['read-only', 'workspace-write', 'danger-full-access']) {
+      const environment = { OPL_CODEX_STAGE_SANDBOX_MODE: `  ${mode}  ` };
+      const plist = buildProviderWorkerSupervisorPlist(paths, environment);
+      const persistedMode = plistEnvironmentValue(plist, 'OPL_CODEX_STAGE_SANDBOX_MODE');
+      assert.equal(persistedMode, mode);
+      assert.equal(providerWorkerSupervisorEnvironmentProjection(paths, environment).OPL_CODEX_STAGE_SANDBOX_MODE, mode);
+      const child = spawnSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', `
+        import { buildCodexExecArgs, buildCodexExecResumeArgs } from ${JSON.stringify(codexModule)};
+        console.log(JSON.stringify([
+          buildCodexExecArgs('probe'),
+          buildCodexExecResumeArgs('probe-session', 'probe'),
+          buildCodexExecArgs('probe', { sandboxMode: 'read-only' }),
+        ].map(args => args.filter(arg => arg.startsWith('sandbox_mode=')))));
+      `], { env: { ...process.env, OPL_CODEX_STAGE_SANDBOX_MODE: persistedMode }, encoding: 'utf8' });
+      assert.equal(child.status, 0, child.stderr);
+      assert.deepEqual(JSON.parse(child.stdout), [
+        [`sandbox_mode="${mode}"`], [`sandbox_mode="${mode}"`],
+        [`sandbox_mode="${mode}"`, 'sandbox_mode="read-only"'],
+      ]);
+    }
+    for (const value of [undefined, '', 'invalid-mode']) {
+      const environment = { OPL_CODEX_STAGE_SANDBOX_MODE: value };
+      assert.equal(providerWorkerSupervisorEnvironmentVariables(paths, environment).OPL_CODEX_STAGE_SANDBOX_MODE, undefined);
+      assert.doesNotMatch(buildProviderWorkerSupervisorPlist(paths, environment), /OPL_CODEX_STAGE_SANDBOX_MODE/);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

@@ -15,6 +15,8 @@ import { createStageAttempt } from '../../src/adapters/execution/family-runtime-
 import { registerStageRunLaunch } from '../../src/adapters/execution/family-runtime-stage-run-launch-registry.ts';
 import { openQueueDb } from '../../src/adapters/execution/family-runtime-store.ts';
 import { normalizeStageQualityCyclePolicy } from '../../src/authority/stages/stage-quality-cycle.ts';
+import { buildRawArtifactProgressCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner.ts';
+import { buildStageRunImmutableSpec } from '../../src/adapters/execution/family-runtime-stage-run-identity.ts';
 import {
   verifyStageQualityArtifactIdentityAtAttemptBoundary,
   verifyStageQualityCloseoutArtifactIdentity,
@@ -32,7 +34,7 @@ function safeIdentityDirectory(value: string) {
   return `${readable}-${sha256(value).slice(0, 12)}`;
 }
 
-function materializationStageRunInput(workspaceRoot: string) {
+function stageQualityBindingFixture(workspaceRoot: string) {
   const domainPackRoot = path.join(workspaceRoot, 'domain-pack');
   const fixtureRef = 'agent/stages/manifest.json';
   const fixturePath = path.join(domainPackRoot, fixtureRef);
@@ -77,21 +79,37 @@ function materializationStageRunInput(workspaceRoot: string) {
     manifest_ref: fixtureRef,
     manifest_sha256: fixtureSha256,
   };
+  return { domainPackRoot, binding };
+}
+
+function materializationStageRunInput(
+  workspaceRoot: string,
+  options: {
+    domainId?: string;
+    executionScope?: ReturnType<typeof workItemScope>;
+  } = {},
+) {
+  const domainId = options.domainId ?? 'redcube';
+  const { domainPackRoot, binding } = stageQualityBindingFixture(workspaceRoot);
   return buildPackBoundTemporalStageRunInput({
     binding,
     domainPackRoot,
-    domainId: 'redcube',
+    domainId,
     stageId: 'artifact_creation',
     stageRunInvocationId: 'stage-run-invocation:review-boundary',
+    ...(options.executionScope
+      ? { scopeKind: 'work_item' as const, executionScope: options.executionScope }
+      : {}),
     workspaceLocator: {
       workspace_root: workspaceRoot,
+      ...(options.executionScope ? { execution_scope: options.executionScope } : {}),
       package_use_binding: {
         root_package: {
           package_id: 'redcube',
           package_version: '0.0.0-test',
           owner_language_version: { scheme: 'semver', value: '0.0.0-test' },
           package_lock_ref: 'opl://package-lock/redcube/test',
-          manifest_sha256: fixtureSha256,
+          manifest_sha256: binding.manifest_sha256,
           content_digest: 'a'.repeat(64),
         },
         provider_packages: [],
@@ -124,6 +142,7 @@ function producerCloseout(input: {
   artifactRef: string;
   artifactHash: string;
   artifactIdentityReceiptRef?: string;
+  sizeBytes?: number;
 }): TypedStageCloseoutPacket {
   return {
     surface_kind: 'stage_attempt_closeout_packet',
@@ -132,6 +151,7 @@ function producerCloseout(input: {
     closeout_ref_metadata: [{
       ref: input.artifactRef,
       sha256: input.artifactHash,
+      ...(input.sizeBytes === undefined ? {} : { size_bytes: input.sizeBytes }),
       ...(input.artifactIdentityReceiptRef
         ? { artifact_identity_receipt_ref: input.artifactIdentityReceiptRef }
         : {}),
@@ -211,14 +231,14 @@ function rawExecutorOutputCloseout(input: {
   };
 }
 
-function workItemScope(workspaceRoot: string, workItemId: string) {
+function workItemScope(workspaceRoot: string, workItemId: string, domainId = 'medautoscience') {
   const canonicalWorkItemRoot = path.join(workspaceRoot, 'studies', workItemId);
   fs.mkdirSync(canonicalWorkItemRoot, { recursive: true });
   return createWorkItemExecutionScopeSnapshot({
     projectScopeId: 'project:artifact-scope-test',
     workspaceBindingId: 'binding:artifact-scope-test',
     bindingVersionId: 'binding-version:artifact-scope-test',
-    domainId: 'medautoscience',
+    domainId,
     workspaceRoot,
     canonicalWorkItemRoot,
     inventoryDigest: `sha256:${sha256(workItemId)}`,
@@ -318,6 +338,100 @@ test('framework raw executor output is verified outside the work-item root witho
   }
 });
 
+test('reviewer materialization binds the framework raw executor output outside the work-item root', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-raw-materialize-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'opl-state-outside-workspace');
+  try {
+    const workspaceRoot = path.join(root, 'workspace');
+    const executionScope = workItemScope(workspaceRoot, 'study-raw-materialize');
+    const { domainPackRoot, binding } = stageQualityBindingFixture(workspaceRoot);
+    const stagePacketRef = `${binding.manifest_ref}@sha256:${binding.manifest_sha256}`
+      + `#stage=${encodeURIComponent(binding.stage_id)}`;
+    const workspaceLocator = { workspace_root: workspaceRoot, execution_scope: executionScope };
+    const producerAttempt = {
+      stage_attempt_id: 'sat-study-raw-materialize-producer',
+      stage_run_id: 'sr-study-raw-materialize',
+      domain_id: 'medautoscience',
+      stage_id: binding.stage_id,
+      attempt_role: 'producer',
+      scope_kind: 'work_item',
+      execution_scope: executionScope,
+      identity_state: 'resolved',
+      workspace_locator: workspaceLocator,
+    };
+    // The raw envelope the framework persists when a long producer turn is
+    // interrupted before it writes any stage artifact. It is the only
+    // consumable ref the quality cycle can hand to the reviewer, and it lives
+    // outside the canonical work-item root by framework design.
+    const rawArtifact = persistRawStageOutput({
+      attempt: producerAttempt,
+      content: 'producer narrated its plan instead of writing the stage artifact',
+    });
+    assert.ok(rawArtifact);
+    const verified = verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: buildRawArtifactProgressCloseoutPacket({
+        attempt: producerAttempt,
+        stagePacketRef,
+        rawArtifact,
+        normalizationFindings: ['typed_closeout_not_required_raw_artifact_advanced'],
+      }),
+      attempt: producerAttempt,
+      workspaceRoot,
+    });
+    const receiptRef = String(verified?.closeout_ref_metadata?.[0]?.artifact_identity_receipt_ref);
+    assert.match(receiptRef, /^file:\/\//);
+
+    const spec = buildStageRunImmutableSpec({
+      binding,
+      domainPackRoot,
+      domainId: 'medautoscience',
+      stageId: binding.stage_id,
+      workspaceLocator,
+      scopeKind: 'work_item',
+      executionScope,
+      sourceFingerprint: null,
+      executorKind: 'codex_cli',
+      stagePacketRef,
+      checkpointRefs: [],
+      artifactRefs: [rawArtifact.output_ref],
+      artifactHashes: [rawArtifact.sha256],
+      artifactIdentityReceiptRefs: [receiptRef],
+    });
+    const rawBinding = spec.content_bindings.find((entry) => entry.purpose === 'input_artifact');
+    assert.equal(rawBinding?.ref, rawArtifact.output_ref);
+    assert.equal(rawBinding?.sha256, `sha256:${rawArtifact.sha256}`);
+    assert.equal(rawBinding?.byte_size, rawArtifact.size_bytes);
+
+    // A domain artifact that escapes the canonical work-item root is still rejected.
+    const escapedPath = path.join(workspaceRoot, 'escaped-artifact.json');
+    const escapedBytes = Buffer.from('{"outside":"the work item root"}\n');
+    fs.writeFileSync(escapedPath, escapedBytes);
+    assert.throws(() => buildStageRunImmutableSpec({
+      binding,
+      domainPackRoot,
+      domainId: 'medautoscience',
+      stageId: binding.stage_id,
+      workspaceLocator,
+      scopeKind: 'work_item',
+      executionScope,
+      sourceFingerprint: null,
+      executorKind: 'codex_cli',
+      stagePacketRef,
+      checkpointRefs: [],
+      artifactRefs: [pathToFileURL(escapedPath).href],
+      artifactHashes: [sha256(escapedBytes)],
+      artifactIdentityReceiptRefs: [],
+    }), (error) => error instanceof FrameworkContractError
+      && (error.details as Record<string, unknown> | undefined)?.failure_code
+        === 'stage_run_artifact_outside_work_item_root');
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('local Stage artifact identity is bound to final bytes and a transport receipt', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-artifact-identity-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -382,6 +496,48 @@ test('local Stage artifact identity is bound to final bytes and a transport rece
       (error) => error instanceof FrameworkContractError
         && error.details?.blocked_reason === 'artifact_byte_identity_mismatch',
     );
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a stale declared size_bytes is tolerated as metadata when the artifact hash matches', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-stale-size-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const artifactPath = path.join(root, 'artifact.txt');
+    const bytes = Buffer.from('exact final artifact bytes\n');
+    fs.writeFileSync(artifactPath, bytes);
+    const artifactRef = pathToFileURL(artifactPath).href;
+    const verified = verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: producerCloseout({
+        artifactRef,
+        artifactHash: sha256(bytes),
+        sizeBytes: bytes.length + 6423,
+      }),
+      attempt,
+      workspaceRoot: root,
+    });
+    const metadata = verified?.closeout_ref_metadata?.[0];
+    assert.equal(metadata?.sha256, sha256(bytes));
+    assert.equal(metadata?.size_bytes, bytes.length);
+    const receipt = JSON.parse(
+      fs.readFileSync(new URL(String(metadata?.artifact_identity_receipt_ref)), 'utf8'),
+    );
+    assert.equal(receipt.sha256, sha256(bytes));
+    assert.equal(receipt.size_bytes, bytes.length);
+    verifyStageQualityArtifactIdentityAtAttemptBoundary({
+      artifactRefs: [artifactRef],
+      artifactHashes: [sha256(bytes)],
+      artifactIdentityReceiptRefs: [String(metadata?.artifact_identity_receipt_ref)],
+      domainId: attempt.domain_id,
+      workspaceRoot: root,
+      expectedProducingAttemptId: attempt.stage_attempt_id,
+      expectedProducingStageId: attempt.stage_id,
+    });
   } finally {
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;

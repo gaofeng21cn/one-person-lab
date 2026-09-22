@@ -603,17 +603,14 @@ function verifyCurrentArtifactBytes(input: {
       details: { declared_sha256: input.artifactSha256, observed_sha256: observed.sha256 },
     });
   }
-  if (typeof input.declaredSizeBytes === 'number' && input.declaredSizeBytes !== observed.sizeBytes) {
-    throw artifactIdentityError({
-      message: 'Stage quality artifact size does not match the current stable local file bytes.',
-      blockedReason: 'artifact_byte_identity_mismatch',
-      artifactRef: input.artifactRef,
-      details: {
-        declared_size_bytes: input.declaredSizeBytes,
-        observed_size_bytes: observed.sizeBytes,
-      },
-    });
-  }
+  // A model-declared size_bytes is derived metadata, not identity. sha256 is the
+  // identity anchor: when the declared hash matches the current stable local bytes,
+  // the bytes are proven complete and a stale size declaration (run ibd-oma-create-20:
+  // producer declared 26486/6075 vs actual 20063/3831 with identical hashes) must not
+  // fail the closeout. Callers record the observed size into the verified metadata and
+  // the transport identity receipt, so the stale value never propagates downstream.
+  // Same contract family as the reviewer snapshot fix: stale declared sizes are
+  // metadata, not tampering.
   return observed;
 }
 

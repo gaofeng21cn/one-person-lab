@@ -242,7 +242,7 @@ function reviewerSnapshotAuthoringLines(attempt: JsonRecord) {
   const attemptId = requiredReviewTransportText(attempt.stage_attempt_id, 'stage_attempt_id');
   return [
     'This Stage schedules formal independent Review. Return route_impact.stage_quality_cycle.review_input_snapshot_materialization_request so OPL can freeze the explicitly authorized review content before the reviewer starts.',
-    'The request is transport metadata, not another semantic artifact, a quality verdict, or a review receipt. Copy fixed_request_fields exactly, adding no field it does not contain — in particular omit review_lane when the Stage declares no review lane binding, since the Stage manifest is the only authority for the review lane — and supply owner_authority_ref and a non-empty members list using this canonical schema.',
+    'The request is transport metadata, not another semantic artifact, a quality verdict, or a review receipt. The keys of fixed_request_fields are the request\'s own top-level keys: return them at the top level of the request object, and never nest them under a fixed_request_fields key. Add no field the request schema does not declare — in particular omit review_lane when the Stage declares no review lane binding, since the Stage manifest is the only authority for the review lane — and supply owner_authority_ref and a non-empty members list using this canonical schema.',
     '<opl_reviewer_snapshot_authoring>',
     JSON.stringify({
       fixed_request_fields: {
@@ -256,7 +256,7 @@ function reviewerSnapshotAuthoringLines(attempt: JsonRecord) {
       immutable_stage_run_inputs: reviewerSnapshotStageRunInputAuthority(attempt.stage_run_spec),
     }),
     '</opl_reviewer_snapshot_authoring>',
-    'owner_authority_ref must exactly match kind, ref, sha256 and size_bytes of a same-Attempt closeout_ref_metadata entry whose artifact defines the review scope. Use canonical sha256:<64 lowercase hex> hashes in both entries.',
+    'owner_authority_ref must exactly match kind, ref, sha256 and size_bytes of a same-Attempt closeout_ref_metadata entry whose artifact defines the review scope. A closeout_ref_metadata entry also carries a ref_kind role label; copy that entry\'s kind field and not its ref_kind field. Use canonical sha256:<64 lowercase hex> hashes in both entries.',
     'The producer or repairer explicitly selects members. Include the produced artifacts needed for review and every exact StageRun input artifact. Preserve each source_ref, sha256 and size_bytes exactly; external input files are permitted only through their immutable StageRun binding.',
     'Do not infer snapshot members from artifact_refs, invent an authority ref, omit exact sizes, or put the snapshot request itself in semantic artifact_refs. Do not ask the reviewer to read live workspace files instead of immutable snapshot members.',
   ];
@@ -502,6 +502,16 @@ export function protocolCloseoutResumePrompt(attempt: JsonRecord, persistedOutpu
     ...typedCloseoutScopeBindingLines(attempt),
     'Use a non-empty closeout_refs array containing only refs for artifacts or receipts that already exist from this Attempt.',
     'For every artifact ref in closeout_refs, include a matching refs-only object in closeout_ref_metadata with the identical ref (or uri) and exact sha256. Do not bind an input-only ref as a substitute for a produced artifact.',
+    ...(() => {
+      const attemptRole = optionalString(attempt.attempt_role);
+      if (attemptRole !== 'reviewer' && attemptRole !== 're_reviewer') {
+        return [];
+      }
+      return [
+        'This Attempt is a formal independent Review Attempt. Its resumed closeout must still carry route_impact.stage_quality_cycle with outcome (exactly one of: pass, repair_required, quality_debt, blocked, human_gate) and findings, drawn only from the review conclusions already recorded in this Attempt. Do not invent, extend, or re-weigh findings.',
+        'If the Review itself could not be completed before this protocol-only resume, set outcome=blocked and bind canonical boundary evidence (the artifacts and receipts that were verified, plus what remains unverified) in findings. A closeout without route_impact.stage_quality_cycle cannot be accepted for a Review Attempt.',
+      ];
+    })(),
     ...(persistedOutput ? [
       'OPL already persisted the original output from this Attempt before this protocol-only resume. Its exact locator is:',
       JSON.stringify({ ref: persistedOutput.output_ref, sha256: persistedOutput.sha256, size_bytes: persistedOutput.size_bytes }),

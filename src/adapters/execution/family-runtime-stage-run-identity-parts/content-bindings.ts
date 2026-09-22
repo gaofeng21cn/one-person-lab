@@ -14,6 +14,7 @@ import type {
   FamilyRuntimeExecutionScopeKind,
   WorkItemExecutionScopeSnapshot,
 } from '../family-runtime-execution-scope.ts';
+import { verifyFrameworkRawStageArtifactRef } from '../family-runtime-codex-stage-runner-parts/raw-artifact-identity-verification.ts';
 
 const SHA256_PATTERN = /^(?:sha256:)?([a-f0-9]{64})$/i;
 const URI_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
@@ -752,6 +753,17 @@ function observeArtifactBytes(input: {
   artifactRef: string;
   executionScope: WorkItemExecutionScopeSnapshot | null;
 }) {
+  // A framework-owned raw executor output lives under the OPL runtime-state
+  // root by design, so it can never satisfy the work-item boundary. Its
+  // identity is verified through the framework raw artifact lineage instead;
+  // domain artifacts keep the boundary unchanged.
+  const frameworkRawStageArtifact = verifyFrameworkRawStageArtifactRef({
+    artifactRef: input.artifactRef,
+    filePath: input.filePath,
+  });
+  if (frameworkRawStageArtifact) {
+    return { sha256: frameworkRawStageArtifact.sha256, byteSize: frameworkRawStageArtifact.byteSize };
+  }
   const canonicalWorkItemRoot = input.executionScope?.canonical_work_item_root ?? null;
   if (input.executionScope && !canonicalWorkItemRoot) {
     fail('Work-item StageRun local artifacts must remain inside the canonical work-item root.', {

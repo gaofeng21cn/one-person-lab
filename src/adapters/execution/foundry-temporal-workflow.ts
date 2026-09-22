@@ -72,9 +72,18 @@ const advanceActivities = proxyActivities<FoundryTemporalActivities>({
   },
 });
 
+// Provider-operation activities include the launch path, which materializes the
+// provider operation (StageRun workflow + queue plan) and can legitimately take
+// 1-2 minutes of execution time. A 2-minute schedule-to-close budget left no
+// margin once any schedule-to-start delay occurred, and the premature timeout
+// declaration orphaned the already-launched pipeline (run 23, 2026-09-21).
+// Keep the generous budget so retries can actually be scheduled.
+export const PROVIDER_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT = '10 minutes';
+export const PROVIDER_ACTIVITY_START_TO_CLOSE_TIMEOUT = '5 minutes';
+
 const providerActivities = proxyActivities<FoundryTemporalActivities>({
-  scheduleToCloseTimeout: '2 minutes',
-  startToCloseTimeout: '1 minute',
+  scheduleToCloseTimeout: PROVIDER_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
+  startToCloseTimeout: PROVIDER_ACTIVITY_START_TO_CLOSE_TIMEOUT,
   retry: {
     maximumAttempts: 3,
     initialInterval: '1 second',
