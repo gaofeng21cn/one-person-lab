@@ -60,14 +60,19 @@ export function packageSnapshot(input: { includeAvailable?: boolean } = {}): Pac
   };
 }
 
-export function packageBackgroundUpdatePolicy(descriptor: InstalledPackageDescriptor) {
+export function isManagedPayloadCarrier(descriptor: InstalledPackageDescriptor) {
   const declaredSource = descriptor.carrier.carrier.marketplaceSource;
   const marketplaceId = descriptor.pluginId.split('@')[1];
-  const managedPayloadSource = marketplaceId && descriptor.marketplaceSource && declaredSource
+  return Boolean(marketplaceId && descriptor.marketplaceSource && declaredSource
     && githubMarketplaceSourceIdentity(declaredSource)
     && path.resolve(descriptor.marketplaceSource) === path.join(
       resolveOplStatePaths().state_dir, 'codex-plugin-marketplaces', marketplaceId,
-    );
+    ));
+}
+
+export function packageBackgroundUpdatePolicy(descriptor: InstalledPackageDescriptor) {
+  const declaredSource = descriptor.carrier.carrier.marketplaceSource;
+  const managedPayloadSource = isManagedPayloadCarrier(descriptor);
   const reason = !descriptor.readiness.installed
     ? 'package_not_installed'
     : !isFirstPartyPackage(descriptor.manifest.package_id)

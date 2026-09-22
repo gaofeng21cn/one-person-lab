@@ -20,6 +20,7 @@ import { normalizePackageManifest } from './manifest-normalizers.ts';
 import {
   packageSnapshot,
   packageBackgroundUpdatePolicy,
+  isManagedPayloadCarrier,
   requireDescriptor,
   requirePackageMutationDescriptor,
 } from './registry-status-projection.ts';
@@ -134,6 +135,7 @@ function nativeLifecycleResult(
     descriptor: descriptor.carrier,
     action,
     dryRun: input.dryRun,
+    installedPayloadCarrier: isManagedPayloadCarrier(descriptor),
   });
   if (!input.dryRun && ['install', 'update', 'repair'].includes(action)
     && (configuredCarrier.status !== 'installed' || configuredCarrier.executor.status !== 'callable')) {

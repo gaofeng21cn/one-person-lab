@@ -361,6 +361,7 @@ export function runConfiguredCodexPluginCarrier(input: {
   runner?: CodexPluginCommandRunner;
   beforeConfigReplace?: () => void;
   packageDirectory?: string;
+  installedPayloadCarrier?: boolean;
 }): ConfiguredCodexPluginCarrierReadback {
   assertDescriptor(input.descriptor);
   if (input.action === 'enable' && input.descriptor.interactionMode === 'headless_internal') {
@@ -387,7 +388,12 @@ export function runConfiguredCodexPluginCarrier(input: {
   const dispatchAction = !isConfigToggle && input.action !== 'list' && input.dryRun !== true;
   if (dispatchAction) ensureConfiguredCodexHomeForMutation(env);
   const declaredMarketplaceSource = input.descriptor.carrier.marketplaceSource;
-  const marketplaceSource = dispatchAction && input.action === 'install'
+  // Payload-backed Packages must use the same owner-verified carrier for
+  // install, update and repair. Falling back to the declared Git repository
+  // on update re-adds a different marketplace instead of refreshing the
+  // already installed local payload.
+  const marketplaceSource = dispatchAction && (input.action === 'install'
+    || (input.installedPayloadCarrier === true && configuredCarrierActionNeedsMarketplace(input.action)))
     ? installPayloadMarketplace({
         packageId: input.descriptor.packageId,
         pluginId: input.descriptor.carrier.pluginId,

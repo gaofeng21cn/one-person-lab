@@ -292,7 +292,8 @@ process.stdout.write(JSON.stringify({ installed: [], available: [] }));
   }
 });
 
-test('configured first-party carrier installs from a frozen local payload without Git', () => {
+for (const action of ['install', 'update', 'repair'] as const) {
+test(`configured first-party carrier ${action} uses a frozen local payload without Git`, () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-payload-carrier-install-'));
   const packageDirectory = path.join(root, 'packages');
   const sourceRoot = path.join(root, 'source');
@@ -378,7 +379,8 @@ test('configured first-party carrier installs from a frozen local payload withou
         executor: { route: 'codex_cli', requiredSkillIds: [pluginId] },
         publicationRef: 'ghcr.io/owner/packages/fixture-package:latest-stable',
       },
-      action: 'install',
+      action,
+      installedPayloadCarrier: action !== 'install',
       env: { HOME: root, CODEX_HOME: path.join(root, 'codex-home'), OPL_STATE_DIR: stateDir },
       packageDirectory,
       runner: ({ args }) => {
@@ -430,6 +432,7 @@ test('configured first-party carrier installs from a frozen local payload withou
     removeFixtureTree(root);
   }
 });
+}
 
 test('installed descriptor wins over an available descriptor with the same carrier identity', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-installed-package-precedence-'));
