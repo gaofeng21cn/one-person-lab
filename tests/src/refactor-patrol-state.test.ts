@@ -169,3 +169,57 @@ test('refactor patrol state rejects deletion of user-requested reserve capabilit
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('protected capability organization is allowed without authorizing its deletion', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-refactor-patrol-organization-'));
+  try {
+    const input = path.join(root, 'state.json');
+    const state = validState();
+    Object.assign(state.issue_library[0], {
+      source_provenance_class: 'user_requested',
+      change_kind: 'behavior_preserving_organization',
+    });
+    fs.writeFileSync(input, JSON.stringify(state));
+    assert.equal(run(['validate', '--input', input]).status, 0);
+    state.issue_library[0].tag = 'delete';
+    fs.writeFileSync(input, JSON.stringify(state));
+    assert.equal(run(['validate', '--input', input]).status, 1);
+    state.issue_library[0].tag = 'shrink';
+    Object.assign(state.issue_library[0], { change_kind: 'capability_retirement' });
+    fs.writeFileSync(input, JSON.stringify(state));
+    assert.equal(run(['validate', '--input', input]).status, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('file metrics distinguish aggregate lines from the largest individual file', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-refactor-patrol-files-'));
+  try {
+    const input = path.join(root, 'state.json');
+    const state = validState();
+    const fileMetrics = [
+      { path: 'src/example.ts', before_lines: 1200, after_lines: 500, responsibility: 'Runtime orchestration' },
+      { path: 'src/example-storage.ts', before_lines: 0, after_lines: 720, responsibility: 'Persistence and readback' },
+    ];
+    Object.assign(state.work_packages[0], { file_metrics: fileMetrics });
+    fs.writeFileSync(input, JSON.stringify(state));
+    const result = run(['validate', '--input', input]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual((parseJsonText(result.stdout) as any).file_totals, [{
+      package_id: 'package-1', scope: 'multi_file_total', file_count: 2,
+      before_lines: 1200, after_lines: 1220, largest_after_file_lines: 720,
+    }]);
+    fileMetrics[1].path = fileMetrics[0].path;
+    fs.writeFileSync(input, JSON.stringify(state));
+    const duplicate = run(['validate', '--input', input]);
+    assert.equal(duplicate.status, 1, duplicate.stderr);
+    assert.ok((parseJsonText(duplicate.stdout) as any).errors.includes('duplicate package-1 file id: src/example.ts'));
+    fileMetrics[1].path = 'src/example-storage.ts';
+    fileMetrics[1].after_lines = -1;
+    fs.writeFileSync(input, JSON.stringify(state));
+    assert.equal(run(['validate', '--input', input]).status, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

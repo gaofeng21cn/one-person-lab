@@ -89,6 +89,7 @@
         "owner_surface": { "type": "string", "minLength": 1 },
         "candidate": { "type": "string", "minLength": 1 },
         "tag": { "enum": ["delete", "shrink", "yagni", "stdlib", "native"] },
+        "change_kind": { "enum": ["behavior_preserving_organization", "capability_retirement"] },
         "route": { "enum": ["refactor_patrol", "governance_ssot_handoff", "owner_lane", "develop_and_deliver_owner_lane"] },
         "active_caller_evidence": { "type": "string" },
         "authority_blocker": { "type": ["string", "null"] },
@@ -118,7 +119,19 @@
         "verification_fan_in": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
         "allowed_write_set": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
         "forbidden_write_set": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
-        "package_acceptance_gate": { "type": "string", "minLength": 1 }
+        "package_acceptance_gate": { "type": "string", "minLength": 1 },
+        "file_metrics": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/fileMetric" } }
+      }
+    },
+    "fileMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "before_lines", "after_lines", "responsibility"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "before_lines": { "type": "integer", "minimum": 0 },
+        "after_lines": { "type": "integer", "minimum": 0 },
+        "responsibility": { "type": "string", "minLength": 1 }
       }
     },
     "burnDown": {

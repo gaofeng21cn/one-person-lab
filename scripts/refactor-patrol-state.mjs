@@ -69,6 +69,7 @@ finish({
     remaining: Array.isArray(state.remaining) ? state.remaining.length : 0,
   },
   run_status: state.run_status ?? null,
+  file_totals: errors.length === 0 ? summarizeFileMetrics(state.work_packages) : [],
   errors,
 }, errors.length === 0 ? 0 : 1);
 
@@ -170,6 +171,9 @@ function validateCrossReferences(state) {
 
   validateCandidateReferences(state.work_packages, candidateIds, errors);
   validateCandidateProvenance(state.issue_library, errors);
+  for (const workPackage of state.work_packages) {
+    uniqueIds(workPackage.file_metrics ?? [], 'path', `${workPackage.package_id} file`, errors);
+  }
   validateSelectedPackages(selectedIds, packageIds, burnDownIds, errors);
   validateRunTerminalState(state, selectedIds, errors);
   return errors;
@@ -182,12 +186,24 @@ function validateCandidateProvenance(candidates, errors) {
       candidate.status === 'selected'
       && ['delete', 'shrink'].includes(candidate.tag)
       && protectedProvenance.has(candidate.source_provenance_class)
+      && !(candidate.tag === 'shrink' && candidate.change_kind === 'behavior_preserving_organization')
     ) {
       errors.push(
         `${candidate.id}: ${candidate.source_provenance_class} provenance cannot be selected for ${candidate.tag}`,
       );
     }
   }
+}
+
+function summarizeFileMetrics(workPackages) {
+  return (workPackages ?? []).filter((entry) => entry.file_metrics?.length).map((entry) => ({
+    package_id: entry.package_id,
+    scope: 'multi_file_total',
+    file_count: entry.file_metrics.length,
+    before_lines: entry.file_metrics.reduce((sum, file) => sum + file.before_lines, 0),
+    after_lines: entry.file_metrics.reduce((sum, file) => sum + file.after_lines, 0),
+    largest_after_file_lines: Math.max(...entry.file_metrics.map((file) => file.after_lines)),
+  }));
 }
 
 function validateCandidateReferences(workPackages, candidateIds, errors) {

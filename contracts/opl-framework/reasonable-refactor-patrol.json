@@ -144,12 +144,45 @@
     "fixed_candidate_quota": false,
     "fixed_selected_package_quota": false,
     "fixed_line_budget_percentage": false,
-    "line_budget_role": "maintenance_signal_not_split_or_selection_authority",
+    "line_budget_role": "review_trigger_and_design_signal_not_mechanical_split_authority",
     "mutation_gate": "ssot_aligned_current_owner_known_safe_semantic_boundary_and_repo_native_verification",
     "single_package_policy": "allowed_when_it_is_the_highest_value_coherent_executable_batch",
     "parallelism": "only_when_independent_worktrees_have_distinct_execution_owners_and_verification_fan_in",
     "shared_mutation": "short_single_operation_owner",
     "unselected_backlog": "next_scheduled_run_or_explicit_user_instruction"
+  },
+  "modularity_policy": {
+    "principle": "Keep each source file centered on a cohesive responsibility and split oversized multi-responsibility files along natural semantic boundaries.",
+    "admission_evidence": [
+      "explicit_user_requested_organization",
+      "distinct_responsibilities_with_clear_dependency_direction",
+      "closed_function_or_policy_families_with_known_consumers",
+      "navigation_or_conflict_surface_reduction",
+      "reproducible_duplicate_or_maintenance_failure_when_present"
+    ],
+    "prior_incident_required": false,
+    "owner_presence": "The current owner is the implementation lane, not a reason to retain an oversized file.",
+    "dependency_repair": "When an extraction would introduce a cycle, first consider an existing lower-level primitive or a small shared type/value leaf within the same owner; do not stop solely because the first extraction sketch is cyclic.",
+    "preservation": "Preserve behavior, public facades/exports, identity, errors, ordering, bytes, capability and authority. Protected provenance permits behavior-preserving organization but never authorizes capability retirement.",
+    "acceptance": [
+      "review each original and destination file by responsibility and size",
+      "keep dependency direction explicit and avoid reverse facade imports",
+      "do not relocate a monolith into another oversized helper or constants bucket",
+      "do not use numbered parts or line slices without semantic boundaries",
+      "explain any remaining long cohesive file with source-specific reasons"
+    ],
+    "line_count_is_not": "a universal hard maximum or a substitute for semantic judgment"
+  },
+  "reporting_policy": {
+    "file_metrics": "Record path, before_lines, after_lines and responsibility for every changed or newly introduced source/test file.",
+    "aggregation": "Report per-file rows first; label aggregate numbers explicitly as multi-file totals and include the file count.",
+    "separate_measures": [
+      "largest_original_and_destination_file",
+      "source_and_test_line_deltas",
+      "new_files_and_dependency_tradeoff",
+      "maintained_or_removed_capabilities"
+    ],
+    "state_field": "work_packages[].file_metrics"
   },
   "reuse_first": {
     "order": [
@@ -179,7 +212,11 @@
     "lane_success_as_run_closeout",
     "delete_from_no_caller_without_provenance",
     "delete_user_requested_or_externally_learned_reserve",
-    "treat_unknown_provenance_as_model_invented"
+    "treat_unknown_provenance_as_model_invented",
+    "require_incident_before_owner_held_organization",
+    "move_monolith_into_new_helper_bucket",
+    "numbered_part_or_length_only_split",
+    "report_package_total_as_single_file"
   ],
   "terminal_states": [
     "completed",
