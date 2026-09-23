@@ -90,7 +90,7 @@ export function agentPluginManifestFixtureFiles(pluginName: string, prefix = '')
 export function createDomainModuleRemote(input: {
   repoName: string;
   pluginName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge'
-    | 'opl-medcast';
+    | 'med-autocast';
   installerKind: 'bash' | 'node';
   logPath: string;
 }) {
@@ -358,9 +358,9 @@ export function createStartupDomainModuleRemotes(input: {
       logPath: input.logPath,
       healthcheckLogPath: input.bookForgeHealthcheckLogPath,
     }),
-    medcastRemote: createDomainModuleRemote({
-      repoName: 'opl-medcast',
-      pluginName: 'opl-medcast',
+    autocastRemote: createDomainModuleRemote({
+      repoName: 'med-autocast',
+      pluginName: 'med-autocast',
       installerKind: 'node',
       logPath: input.logPath,
     }),

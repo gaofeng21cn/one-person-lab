@@ -1,0 +1,947 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "med-autocast",
+  "plugin_id": "med-autocast",
+  "package_version": "0.2.0",
+  "source_repo": "https://github.com/gaofeng21cn/med-autocast.git",
+  "source_commit": "8865c2c45931984a30a933c0b1cd29e6fa864ad1",
+  "source_root": "plugins/med-autocast",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:5595c9ec0a95dd7bb251a627e6a46c4e6cad46e9d565f2a5f4e9de311595d6ca"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/.codex-plugin/plugin.json",
+      "sha256": "sha256:b4a9b756f7fcb88bec5bae81415fef60a0ae0f0841ba3048b0af598fb32a1af2"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/opl-package.json",
+      "sha256": "sha256:072a3f2e75cd1a5d1cecc618b576a451dbad69ebc22ccb8c1037f92c990fe3f6"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/plugin.json",
+      "sha256": "sha256:915536e5b67b9b82de24e61ac628724641b109d5b4a6bb090198c502c72854ac"
+    },
+    {
+      "path": "skills/med-autocast/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/SKILL.md",
+      "sha256": "sha256:92517ecb9ab73d964c79f3124a65d0e76b9895523b6a13abe71506646ce357ff"
+    },
+    {
+      "path": "skills/med-autocast/agent/knowledge/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/knowledge/README.md",
+      "sha256": "sha256:e6cf7060b242f92ea337780aaf97b024f722c57bab0a6bdc302b257af156ed1e"
+    },
+    {
+      "path": "skills/med-autocast/agent/knowledge/domain_boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/knowledge/domain_boundary.md",
+      "sha256": "sha256:6c2c00b6f57f4f30c5b3a23975ba62507a5c9d71890a5585ce4dec73eff6981d"
+    },
+    {
+      "path": "skills/med-autocast/agent/policies/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/policies/README.md",
+      "sha256": "sha256:f40e3a5fca70d97eae4f5a63f51194130ec49b21eaa7dfb5d9524479edcf949d"
+    },
+    {
+      "path": "skills/med-autocast/agent/primary_skill/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/primary_skill/SKILL.md",
+      "sha256": "sha256:92517ecb9ab73d964c79f3124a65d0e76b9895523b6a13abe71506646ce357ff"
+    },
+    {
+      "path": "skills/med-autocast/agent/principles/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/principles/README.md",
+      "sha256": "sha256:24632aa143e3e2ef2d8ff170279f535552276816aeb9f898cf32600e7c6b85fa"
+    },
+    {
+      "path": "skills/med-autocast/agent/principles/domain-specialization.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/principles/domain-specialization.md",
+      "sha256": "sha256:a51541cd4f74e30ab01db77f81d039e9f50ce553c31fb9d50932a6e2702f1ca9"
+    },
+    {
+      "path": "skills/med-autocast/agent/principles/opl-standard-agent-principles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/principles/opl-standard-agent-principles.md",
+      "sha256": "sha256:8007cad84fa0a58ab5d8f32bbe3527d81ffec5b0c2db24f7475a979b55a61bd7"
+    },
+    {
+      "path": "skills/med-autocast/agent/professional_skills/medical-video-backends/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/professional_skills/medical-video-backends/SKILL.md",
+      "sha256": "sha256:79c4533709eee5254742f8d4b3dce643a93a637d6a76a4bc1bc4538102584aa2"
+    },
+    {
+      "path": "skills/med-autocast/agent/professional_skills/medical-video-content-planner/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/professional_skills/medical-video-content-planner/SKILL.md",
+      "sha256": "sha256:506a267c2c23069cc523118f909eebe26b67dd5a32f7097c8e9e6b403c9af3dd"
+    },
+    {
+      "path": "skills/med-autocast/agent/professional_skills/medical-video-director/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/professional_skills/medical-video-director/SKILL.md",
+      "sha256": "sha256:82293c3297e055a4d2850353453fe7de2e97535133143285c926618a955c9eaf"
+    },
+    {
+      "path": "skills/med-autocast/agent/professional_skills/medical-video-director/references/h3-prompt-design.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/professional_skills/medical-video-director/references/h3-prompt-design.md",
+      "sha256": "sha256:ecbcfdd62309864d093784890e5ae635b29ca272cdd9a4e7138f20dcfa8dd88b"
+    },
+    {
+      "path": "skills/med-autocast/agent/professional_skills/medical-video-release-packager/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/professional_skills/medical-video-release-packager/SKILL.md",
+      "sha256": "sha256:e782f7ee519bb6e59962538125ef53070a64667eff83c0a742355eaebb7cb3ab"
+    },
+    {
+      "path": "skills/med-autocast/agent/professional_skills/medical-video-series-producer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/professional_skills/medical-video-series-producer/SKILL.md",
+      "sha256": "sha256:8d4a55827c7d5b4333974124f61f23425a968e3fff6fa14f6edba7d966076d4f"
+    },
+    {
+      "path": "skills/med-autocast/agent/professional_skills/medical-video-visual-qa/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/professional_skills/medical-video-visual-qa/SKILL.md",
+      "sha256": "sha256:aa81e2f1087db352cc8335c9791d8f66d25969e86f3366d897de2d0fbab00cd3"
+    },
+    {
+      "path": "skills/med-autocast/agent/prompts/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/prompts/README.md",
+      "sha256": "sha256:7c3f2e6bc0ce9d812d0e5232bee7e9e06aae071bdbbc6efaab34bbd43ff69af6"
+    },
+    {
+      "path": "skills/med-autocast/agent/prompts/asset-curation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/prompts/asset-curation.md",
+      "sha256": "sha256:b1b1760b325a01c21d643c9a4d9bd52d8e6428647d84f668553434aed74890e4"
+    },
+    {
+      "path": "skills/med-autocast/agent/prompts/evidence-plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/prompts/evidence-plan.md",
+      "sha256": "sha256:53504956697d247ddbb3bed5c791d2916b5c58206790738c34518c7dc54ffe07"
+    },
+    {
+      "path": "skills/med-autocast/agent/prompts/media-production.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/prompts/media-production.md",
+      "sha256": "sha256:1b58604984e38c8b5ca417dc79c3474493524177f0484f37ade35766ccdf97ed"
+    },
+    {
+      "path": "skills/med-autocast/agent/prompts/review-handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/prompts/review-handoff.md",
+      "sha256": "sha256:ede044cd84f7505fee3bbd52a62790ae0ca6401dd908d944e8aff786d9a48bbb"
+    },
+    {
+      "path": "skills/med-autocast/agent/prompts/stage-quality-cycle-roles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/prompts/stage-quality-cycle-roles.md",
+      "sha256": "sha256:a0df6f675eb32cee74568ad63a45955d5478efb0305269cef03aacf961c2f0ff"
+    },
+    {
+      "path": "skills/med-autocast/agent/prompts/story-directing.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/prompts/story-directing.md",
+      "sha256": "sha256:204db47ba6e20cbaf6e377183d1b27d7e08422cf7804850f6168a7b35ea1c2c5"
+    },
+    {
+      "path": "skills/med-autocast/agent/prompts/visual-review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/prompts/visual-review.md",
+      "sha256": "sha256:0c933b239182812356bb2e5c37aa34831ea009eeceef52b2802afdeb1ea18346"
+    },
+    {
+      "path": "skills/med-autocast/agent/quality_gates/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/quality_gates/README.md",
+      "sha256": "sha256:f2e910ba0686266a3727203047546d143e1beb2f9a6f878a6be94e691dbb2cfd"
+    },
+    {
+      "path": "skills/med-autocast/agent/quality_gates/asset-curation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/quality_gates/asset-curation.md",
+      "sha256": "sha256:faa16750ada52ee249627cfff449533c98a57633f996d83307b11f646ff62e6f"
+    },
+    {
+      "path": "skills/med-autocast/agent/quality_gates/domain_acceptance.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/quality_gates/domain_acceptance.md",
+      "sha256": "sha256:2c97dcffe5df288c105f373882357b53a8df8325b7ca7134538b80ee36522208"
+    },
+    {
+      "path": "skills/med-autocast/agent/quality_gates/evidence-plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/quality_gates/evidence-plan.md",
+      "sha256": "sha256:a5fb0a901a250d29d4b9d2205eff10e300f94dbcb72e2121ba71689fa5f84d1d"
+    },
+    {
+      "path": "skills/med-autocast/agent/quality_gates/media-production.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/quality_gates/media-production.md",
+      "sha256": "sha256:5945d91b576ca907893b4a1613aa04a124e26e862e362b1a41cada024ec733aa"
+    },
+    {
+      "path": "skills/med-autocast/agent/quality_gates/review-handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/quality_gates/review-handoff.md",
+      "sha256": "sha256:71bdf9afc8d6f1f37dcd11f561d085963a5be7436157d2f2824bb7f9acaf968f"
+    },
+    {
+      "path": "skills/med-autocast/agent/quality_gates/story-directing.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/quality_gates/story-directing.md",
+      "sha256": "sha256:ee1b81c7946a060a6b1837f18dc26ec2f30f63278b504cfe7c0f502242dda57c"
+    },
+    {
+      "path": "skills/med-autocast/agent/quality_gates/visual-review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/quality_gates/visual-review.md",
+      "sha256": "sha256:cebb7d57006752da294627da08575c6462accd5d2fd3ab8aea0228d2a25137bd"
+    },
+    {
+      "path": "skills/med-autocast/agent/skills/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/skills/README.md",
+      "sha256": "sha256:6783572446beda9f869ecadaa886c67bba45edd1310136432f2e3f43548db063"
+    },
+    {
+      "path": "skills/med-autocast/agent/skills/domain_execution.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/skills/domain_execution.md",
+      "sha256": "sha256:c507bd4d293867577ca26850f9ed21c2c3f6f2eb58be8ee7617563ce2aa09ed4"
+    },
+    {
+      "path": "skills/med-autocast/agent/stages/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/stages/README.md",
+      "sha256": "sha256:9a9f772771a735ff13558b67904aaac5c241ef60c13e00f841f2302f45570fb3"
+    },
+    {
+      "path": "skills/med-autocast/agent/stages/asset-curation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/stages/asset-curation.md",
+      "sha256": "sha256:407a258472529b33c2f329f837ebd90b797f198d0d9e71a6e591ff96b72ec675"
+    },
+    {
+      "path": "skills/med-autocast/agent/stages/evidence-plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/stages/evidence-plan.md",
+      "sha256": "sha256:177514f11b971bed2fd87d37f34dacb6c3d3394a3c3b475dfbf512f830a33168"
+    },
+    {
+      "path": "skills/med-autocast/agent/stages/manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/stages/manifest.json",
+      "sha256": "sha256:789743dd18c631d5a90d305752d437841cc09f94a036aa2ba79228a56aad6deb"
+    },
+    {
+      "path": "skills/med-autocast/agent/stages/media-production.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/stages/media-production.md",
+      "sha256": "sha256:d36d10950c654767504ee5f89dcabe1e4c254290cf955f4d01496b4c88235e13"
+    },
+    {
+      "path": "skills/med-autocast/agent/stages/review-handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/stages/review-handoff.md",
+      "sha256": "sha256:f47df1e50c713f83e1f404cf8c42a2ee53a144293050757e4768e121048bc3b5"
+    },
+    {
+      "path": "skills/med-autocast/agent/stages/story-directing.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/stages/story-directing.md",
+      "sha256": "sha256:ec1d4cbd30cf134770909687cbdd677ba7b086d47fd9db5a90c79bc16b5f115c"
+    },
+    {
+      "path": "skills/med-autocast/agent/stages/visual-review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/stages/visual-review.md",
+      "sha256": "sha256:c61bda637eafad24fbef3e6f68c1e95c3c0b20dd501681499ef8fd4c02ccea1d"
+    },
+    {
+      "path": "skills/med-autocast/agent/tools/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/tools/README.md",
+      "sha256": "sha256:396209229b6b19967b6d16826cb7dee0c8d6e7b5faab9b04195ea0cfe9c7afd6"
+    },
+    {
+      "path": "skills/med-autocast/agent/tools/domain_affordances.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/agent/tools/domain_affordances.md",
+      "sha256": "sha256:46bbbaf130b9066b82e040b6135e9abf901458ee35aa932b0a0cc5170e378c70"
+    },
+    {
+      "path": "skills/med-autocast/contracts/action_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/action_catalog.json",
+      "sha256": "sha256:068ce98beeedd5541c1a510ec85e464570a9852494fddf8632650a9b07212af3"
+    },
+    {
+      "path": "skills/med-autocast/contracts/artifact_locator_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/artifact_locator_contract.json",
+      "sha256": "sha256:26f04acdb22cbc3fbfb49c4d793121ce391abb4cd743b6ae6b4feb70769a17c6"
+    },
+    {
+      "path": "skills/med-autocast/contracts/capability_map.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/capability_map.json",
+      "sha256": "sha256:e83b5fe80a53b479fe7a920f18f1b7aeaa619880215855b788192e8d699f743c"
+    },
+    {
+      "path": "skills/med-autocast/contracts/domain_descriptor.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/domain_descriptor.json",
+      "sha256": "sha256:63e1c7ae779ecfa1334e21307f9a5791fc93114ca74ca664ad0d4a4439cf03c2"
+    },
+    {
+      "path": "skills/med-autocast/contracts/domain_handler_registry.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/domain_handler_registry.json",
+      "sha256": "sha256:3fbd5b938cf5340917051af0e470965b8920d60ec485a6a0ccd4c4374b22f33f"
+    },
+    {
+      "path": "skills/med-autocast/contracts/foundry_agent_series.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/foundry_agent_series.json",
+      "sha256": "sha256:9dc7acd7f78bd5e5c9ae9bb471d707d0ca382da143f0bfe70ebadbb6f87dabe5"
+    },
+    {
+      "path": "skills/med-autocast/contracts/functional_privatization_audit.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/functional_privatization_audit.json",
+      "sha256": "sha256:9eb6e7fa8b198f3917eceee5c036cbe5fc656e8eaf5b2762e0b8ab998f073e85"
+    },
+    {
+      "path": "skills/med-autocast/contracts/generated_surface_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/generated_surface_handoff.json",
+      "sha256": "sha256:60e8cc5bdef396117d1476bc6b7f5ddae0f1629f9b1c0df139ecb0a6c5d1a344"
+    },
+    {
+      "path": "skills/med-autocast/contracts/memory_descriptor.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/memory_descriptor.json",
+      "sha256": "sha256:20f91143e44c0bdd572481b94cd3f5772d42e1f48e1a1fe62c67c5df2e1a2cb6"
+    },
+    {
+      "path": "skills/med-autocast/contracts/opl_agent_package_manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/opl_agent_package_manifest.json",
+      "sha256": "sha256:df3c816cd90682267aaa0dd280b6c36f144a6521b20e9c63389d47c6114a1283"
+    },
+    {
+      "path": "skills/med-autocast/contracts/owner_receipt_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/owner_receipt_contract.json",
+      "sha256": "sha256:11479b27b9994fdf46f04c6b037fd881a7191b67224f6015826b8f5e29f59eea"
+    },
+    {
+      "path": "skills/med-autocast/contracts/pack_compiler_input.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/pack_compiler_input.json",
+      "sha256": "sha256:f0487f190daa3514a6d6a177f0c71e6a985e264788ee044d3d92cc2b2a5495b0"
+    },
+    {
+      "path": "skills/med-autocast/contracts/stage_artifact_kernel_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/stage_artifact_kernel_adoption.json",
+      "sha256": "sha256:f9c102b97581dd5bc9ed7e6c317205dc3cb6fdf4284fc0b17344a8e7adcd20ad"
+    },
+    {
+      "path": "skills/med-autocast/contracts/stage_operating_principles.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/stage_operating_principles.json",
+      "sha256": "sha256:835f7838c6c713297c33dffe4bc3a63be4c0c727938615bcab270016ab2a4700"
+    },
+    {
+      "path": "skills/med-autocast/contracts/stage_quality_cycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/stage_quality_cycle_policy.json",
+      "sha256": "sha256:cac87dcf693f51db5fe4ef4892b3bdc4209bbb2b49dc747e39614ccf1cd9a196"
+    },
+    {
+      "path": "skills/med-autocast/contracts/stage_run_canary_evidence.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/stage_run_canary_evidence.json",
+      "sha256": "sha256:5cddd2c949de5b7a98e92b0aa602e49d8fb94a4d3c594065eea503a6292f3c29"
+    },
+    {
+      "path": "skills/med-autocast/contracts/stage_run_kernel_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/stage_run_kernel_profile.json",
+      "sha256": "sha256:2c7f92f032bb668c03420b77190bdc32fa832da45c02e28ce14f41ce4fe3208a"
+    },
+    {
+      "path": "skills/med-autocast/contracts/standard-agent-principles-adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/standard-agent-principles-adoption.json",
+      "sha256": "sha256:c959d6ff65ef5f42f1afe0fd15c610608bc2ed530ac03d6cff8f4d4252dfd5ec"
+    },
+    {
+      "path": "skills/med-autocast/contracts/workflow.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/workflow.input.schema.json",
+      "sha256": "sha256:0a543e91307b56827155bff7059d4e951bfdbe25117c7cb2e20713aaa531014e"
+    },
+    {
+      "path": "skills/med-autocast/contracts/workflow.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/workflow.output.schema.json",
+      "sha256": "sha256:a130abd0934fb1cc90835080225c35bbd3ec9553dbd469ab3aabf1cec6da5bb2"
+    },
+    {
+      "path": "skills/med-autocast/contracts/workspace_lifecycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/contracts/workspace_lifecycle_policy.json",
+      "sha256": "sha256:3162c327ef6f3623957ecf19c372d24781c9c8f2f6a5635b1f3294153ecd333d"
+    },
+    {
+      "path": "skills/med-autocast/docs/architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/architecture.md",
+      "sha256": "sha256:f2fc0dcdb8df8cf1d89eb0e42ad5446e0a2fc7c2dff10befd3dce7403249135f"
+    },
+    {
+      "path": "skills/med-autocast/docs/backend-sop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/backend-sop.md",
+      "sha256": "sha256:70e11c5da207e7c907bb32a081b881cf38690f7ad3e66104702431600a6fbb01"
+    },
+    {
+      "path": "skills/med-autocast/docs/decisions.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/decisions.md",
+      "sha256": "sha256:c881a3cb80139d699fca90c5aa1ad918a65ec4829dafa2b36f98b8d131b2cf6c"
+    },
+    {
+      "path": "skills/med-autocast/docs/delivery-sop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/delivery-sop.md",
+      "sha256": "sha256:70f4fb2fb99d966de44c4af769abecb3ef63076e22c37ad414f9e4ff0804350a"
+    },
+    {
+      "path": "skills/med-autocast/docs/installation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/installation.md",
+      "sha256": "sha256:e17e2cf8dc3358efbce47db5ebf6d973c7e1383efcec935e5c412acc0ee2a321"
+    },
+    {
+      "path": "skills/med-autocast/docs/invariants.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/invariants.md",
+      "sha256": "sha256:3a8c701e72c1cb81b310d623f8d23951946302c16f976e7fe164f72fdf08250d"
+    },
+    {
+      "path": "skills/med-autocast/docs/keyframe-library.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/keyframe-library.md",
+      "sha256": "sha256:dec778e1edaea3f253c4593e87b19dc0309f2b46e815d95277d87d669748002f"
+    },
+    {
+      "path": "skills/med-autocast/docs/production-sop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/production-sop.md",
+      "sha256": "sha256:048858886fc039c1576c0fc689de712f3477dba0b23781fc2a4e1c18689227cf"
+    },
+    {
+      "path": "skills/med-autocast/docs/project.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/project.md",
+      "sha256": "sha256:a653ff6cbb2b0506e1e2479aaa9948d4d93c5e3826a8e991f2c3abee1b0d11a0"
+    },
+    {
+      "path": "skills/med-autocast/docs/provenance.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/provenance.md",
+      "sha256": "sha256:1848939537efd0c9f303fefdebcd35c532e5951442bca745b9ea11a46e9b099b"
+    },
+    {
+      "path": "skills/med-autocast/docs/recovery-sop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/recovery-sop.md",
+      "sha256": "sha256:f2be1642523a00041e9e10b3b2d800f80c9e2fa8e03cb211f9b45354651698e6"
+    },
+    {
+      "path": "skills/med-autocast/docs/status.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/status.md",
+      "sha256": "sha256:95f100aa123558cbecbda938c1c671c28d0b3af83bfaf9b5995af1377f904efd"
+    },
+    {
+      "path": "skills/med-autocast/docs/visual-review-sop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/visual-review-sop.md",
+      "sha256": "sha256:0b39ea3d8ebc12a1d04eb311b579b6ac2a82e1e8dea49c80e62aa7fe12dbd43d"
+    },
+    {
+      "path": "skills/med-autocast/docs/workbench-parity.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/workbench-parity.md",
+      "sha256": "sha256:ec234413ccfa61e495220c4e19a11fdeab85955248caa7ced5a579e03cfe64fc"
+    },
+    {
+      "path": "skills/med-autocast/docs/workspace-adapter.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/docs/workspace-adapter.md",
+      "sha256": "sha256:2a2bb522d7618b657ba3bb6613d91cfe7c6b4634de0ec18589691c7c36a3f5df"
+    },
+    {
+      "path": "skills/med-autocast/runtime/authority_functions/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/authority_functions/README.md",
+      "sha256": "sha256:f7e82551060f9708b79868dc1ce7b830bed913694c532a13a972118d02c4f01d"
+    },
+    {
+      "path": "skills/med-autocast/runtime/fixtures/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/fixtures/README.md",
+      "sha256": "sha256:93302246b9220462f97009d76bb914970d2da78288979d6363b3fa0209b22546"
+    },
+    {
+      "path": "skills/med-autocast/runtime/native_helpers/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/native_helpers/README.md",
+      "sha256": "sha256:f86978eed09a7007a8b44baaed320c5b269daf8bed5f83c9952cd081170dfcea"
+    },
+    {
+      "path": "skills/med-autocast/runtime/native_helpers/med_autocast.native-helper-probe.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/native_helpers/med_autocast.native-helper-probe.json",
+      "sha256": "sha256:a4d56c3211cd148bf5fbc27777934c5bf42848f5bf74ba2f46028806d62684e5"
+    },
+    {
+      "path": "skills/med-autocast/runtime/native_helpers/med_autocast.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/native_helpers/med_autocast.py",
+      "sha256": "sha256:032a2a8366b0ffb2841bf596f84341b107212ec5c41267b5fcd0f0ff6c8e91fb"
+    },
+    {
+      "path": "skills/med-autocast/runtime/native_helpers/workbench_adapter.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/native_helpers/workbench_adapter.py",
+      "sha256": "sha256:62b338e070ea57bf7fe10874e83bda7e92c478ec141eaac8a00a8bcbbcc366ac"
+    },
+    {
+      "path": "skills/med-autocast/runtime/native_helpers/workbench_tool.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/native_helpers/workbench_tool.py",
+      "sha256": "sha256:ca0c0ff6772790ff6eaac47d972d2e4f76be10a7c85663f315270bfb21b12508"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/README.md",
+      "sha256": "sha256:37d4608e8f8eb0b47a42b7b1ef59ab4ad674e5a0325d4a2e39f801a6a3dce730"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/README.md",
+      "sha256": "sha256:62d00eebc19c8341c8c88e2e8cd6840b058b1089261c096cee748556a56bc475"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/config/media_backends.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/config/media_backends.yaml",
+      "sha256": "sha256:997ca870f6da0f2873ce566c7f2f62cbc65454229ca9ff95f9d3445d526e15be"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/README.md",
+      "sha256": "sha256:40d4288164b63581fdd9ced5dcf9b2f3506e56a53d99061f718605f5404a4ba7"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/apply_mac_mlx_overlay.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/apply_mac_mlx_overlay.sh",
+      "sha256": "sha256:97c2ce41748211515d192ffdf853a656e4398f9bbae3d6fcdbabf12737859f77"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/mac-mlx-overlay/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/mac-mlx-overlay/README.md",
+      "sha256": "sha256:51750369e9526d261db088fd1970ee7029e7c90ecf88b3da7953a23e09518863"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/mac-mlx-overlay/comfyui_nodes.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/mac-mlx-overlay/comfyui_nodes.py",
+      "sha256": "sha256:dd0b92d8cfed85365d4448bed0323e54ba76912cc77e3326b5e51a7efee18e01"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/mac-mlx-overlay/minimax_h3_mlx/staged.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/mac-mlx-overlay/minimax_h3_mlx/staged.py",
+      "sha256": "sha256:448f66cc29ed554eaf40ee69883e7bde56fe71f81633219af2d7601de257a1eb"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/prepare_workflow.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/prepare_workflow.py",
+      "sha256": "sha256:484ff3c8ee505ac2b7e44484b3eb95054a2f7b4cb4862301c93624118e0fd511"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/render_service.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/render_service.py",
+      "sha256": "sha256:b55a14636cab873489c5307434401d33823b20b51be5448bbe21089d539181e1"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/run_h3.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/run_h3.sh",
+      "sha256": "sha256:be63969efcd42df31a52bd19917b6e764ede47146380724dd87afe6771704425"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/run_h3_mac.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/run_h3_mac.sh",
+      "sha256": "sha256:b50d9a0f0e46f85a46b1415ec04ad0f5b2ed4f3df7da305837613351637743ee"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/setup_h3.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/setup_h3.sh",
+      "sha256": "sha256:2f11c47d1c382b360240479db9180cc1b3eda39db6c96a8faf2702870bbd4588"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/setup_mac_local.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/setup_mac_local.sh",
+      "sha256": "sha256:8d6b2d9c53da26d173687f8b4837b79aa5afa1616a40f7c74eca04312ec82b7a"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/h3/setup_mac_mlx_36gb.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/h3/setup_mac_mlx_36gb.sh",
+      "sha256": "sha256:0bbfb0ea883af27361c3a78688357f24d0f0c9efa5ea24d026b06601ac4ea484"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/indextts/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/indextts/README.md",
+      "sha256": "sha256:80d9328b2952a1aaf1fd3dc2ee84d1fa80e0b4389c3a6ae9f00685de94acd459"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/backends/indextts/setup_mac.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/backends/indextts/setup_mac.sh",
+      "sha256": "sha256:8492fa5b29fbfbe9b384b6c1faccea43ea16f57df186bbb34b7afcd73995e401"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/01_医学科普内容生产.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/01_%E5%8C%BB%E5%AD%A6%E7%A7%91%E6%99%AE%E5%86%85%E5%AE%B9%E7%94%9F%E4%BA%A7.md",
+      "sha256": "sha256:3c8584cb98fc6ac4d7d8946e94dc6cd56d5c42a6d4ece8c5eede6fbce72bcdff"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/02_视频呈现与制作.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/02_%E8%A7%86%E9%A2%91%E5%91%88%E7%8E%B0%E4%B8%8E%E5%88%B6%E4%BD%9C.md",
+      "sha256": "sha256:84e3be05d2be2e496fc7f5135f86693b84fdd82b50f34f57690cc9538dbe8fcb"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/03_品牌人物呈现策略.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/03_%E5%93%81%E7%89%8C%E4%BA%BA%E7%89%A9%E5%91%88%E7%8E%B0%E7%AD%96%E7%95%A5.md",
+      "sha256": "sha256:99c7ecc0e0b601387b3ca6e84431e69476b9cfca9852af3243d3afe2dd3a9fdf"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/04_医学科普视频系列SOP.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/04_%E5%8C%BB%E5%AD%A6%E7%A7%91%E6%99%AE%E8%A7%86%E9%A2%91%E7%B3%BB%E5%88%97SOP.md",
+      "sha256": "sha256:a3139f3d281e8d57abe153d28df96267efb2a9251b41c608497a51e62f9ffd99"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/05_多后端本地与远程运行.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/05_%E5%A4%9A%E5%90%8E%E7%AB%AF%E6%9C%AC%E5%9C%B0%E4%B8%8E%E8%BF%9C%E7%A8%8B%E8%BF%90%E8%A1%8C.md",
+      "sha256": "sha256:ac7965cec3b8918cdfb875bad6c5090572b2ef77cde2c13434cd8091ead82852"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/06_媒体后端运行SOP.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/06_%E5%AA%92%E4%BD%93%E5%90%8E%E7%AB%AF%E8%BF%90%E8%A1%8CSOP.md",
+      "sha256": "sha256:49404941734bff122309428cb4f6ad5a7c9cdffae43ca23dbc3ff81ecbaa4ecf"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/07_角色与视觉差异化SOP.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/07_%E8%A7%92%E8%89%B2%E4%B8%8E%E8%A7%86%E8%A7%89%E5%B7%AE%E5%BC%82%E5%8C%96SOP.md",
+      "sha256": "sha256:b2b45bce32b962b60f079ce22cbf77c411d4c4368138bfa0d8fdb680b3171ddb"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/08_云视频API接入.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/08_%E4%BA%91%E8%A7%86%E9%A2%91API%E6%8E%A5%E5%85%A5.md",
+      "sha256": "sha256:0087148babcb1da68bf05f68810caf3e714c93b82f9034365d778bac77196900"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/09_工作台配置与档案.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/09_%E5%B7%A5%E4%BD%9C%E5%8F%B0%E9%85%8D%E7%BD%AE%E4%B8%8E%E6%A1%A3%E6%A1%88.md",
+      "sha256": "sha256:c5e1f7f2edcf7dec49fbee0388a2ba89aa3185b917deb91d64c76213b3f1dcf1"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/10_安装与迁移.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/10_%E5%AE%89%E8%A3%85%E4%B8%8E%E8%BF%81%E7%A7%BB.md",
+      "sha256": "sha256:02b86443a6d63507fc0ece98a1a8ff13ce7cccd00882a21f7c68eebd6fbe6480"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/11_解释对应与叙事连续性SOP.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/11_%E8%A7%A3%E9%87%8A%E5%AF%B9%E5%BA%94%E4%B8%8E%E5%8F%99%E4%BA%8B%E8%BF%9E%E7%BB%AD%E6%80%A7SOP.md",
+      "sha256": "sha256:175188ac0e717dd3fae3c9878a01b4e4501e6cd1b4d8ad130ede9bce3db1ff0e"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/12_H3调研与制作策略.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/12_H3%E8%B0%83%E7%A0%94%E4%B8%8E%E5%88%B6%E4%BD%9C%E7%AD%96%E7%95%A5.md",
+      "sha256": "sha256:1e9971786f42d9b9bfe32940899d138080b73ba8aebf01178c068bc0f5a218c1"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/13_剪辑与联合时间轴检查.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/13_%E5%89%AA%E8%BE%91%E4%B8%8E%E8%81%94%E5%90%88%E6%97%B6%E9%97%B4%E8%BD%B4%E6%A3%80%E6%9F%A5.md",
+      "sha256": "sha256:751e8ada013da313c3e5f9be727e1382c2ee63a0e114538d9ab8e9e8dd544f33"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/docs/production-lessons.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/docs/production-lessons.md",
+      "sha256": "sha256:ff454dd362e2f509536b74f25700889adf1ebd1ad64ceeec5ddd6dcb835e8b8e"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/requirements-alignment.txt",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/requirements-alignment.txt",
+      "sha256": "sha256:f984cc0676496ecc717e55ca78f2fc9942fb26c12794d763ec82bde5c64b2112"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/requirements.txt",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/requirements.txt",
+      "sha256": "sha256:2ec843da4c9c71470be131f03436c8ec82d44b720f004476cb60045db0f46435"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/build_controlled_visuals.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/build_controlled_visuals.py",
+      "sha256": "sha256:4e6b6ce99e872b57d90322ff5453e3685f7f7e219c254587f5eff23acb8a771e"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/build_episode_timelines.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/build_episode_timelines.py",
+      "sha256": "sha256:7d58387d7b3c1f6baf5e2f69ced2bc4fe1b550fabd51a88c317ef3c97b9d7e7b"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/build_episode_video.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/build_episode_video.py",
+      "sha256": "sha256:5bf8f99bd128e603a3b1804d9283c9efdbf0a4703ae87606f4b478686ec80b30"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/build_handdrawn_pulse_animation.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/build_handdrawn_pulse_animation.py",
+      "sha256": "sha256:593e905abce470c5dcf103e5cb51407521d9895fcfc1f84f8dd6a45fa64df7d5"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/build_keyframe_library.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/build_keyframe_library.py",
+      "sha256": "sha256:0be831dd94b185a9e574205e7d1a6fe00b3c227f5451195fe5602a6b86218227"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/build_release_packages.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/build_release_packages.py",
+      "sha256": "sha256:caf2eaa2b192e9cd3474418f3358edadabe31a67f923cb2e08d819f10812b4c4"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/build_series_videos.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/build_series_videos.py",
+      "sha256": "sha256:008edcdec756e3e0f47e05f78cc41d8278acd96763f2cb93f3840e7cab45e518"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/build_timeline_review.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/build_timeline_review.py",
+      "sha256": "sha256:c31066c19ba05e3a26c5db9bf57dbc2b5dc87a0c41a878cb4435ebfcec361a43"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/delivery_contract.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/delivery_contract.py",
+      "sha256": "sha256:6e7db37c4771c74b082de21b48d3c47812c5db30154698c87c33bf61a214e023"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/fetch_h3_receipt.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/fetch_h3_receipt.py",
+      "sha256": "sha256:71e4af0b21e31cd3a61bdb78e0c438872afbefeb5e2b96aa097bae825c42a2a9"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/generate_gentle_bgm.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/generate_gentle_bgm.py",
+      "sha256": "sha256:d20b4d782b76afbc27f23c157aac5ff74db022632a387492a6637934b0689a5e"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/media_backend.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/media_backend.py",
+      "sha256": "sha256:20671f8365092218b078201be516d00e1edf0fb36b86b61a0cce7676dbd20af6"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/package_review.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/package_review.py",
+      "sha256": "sha256:71d9ed93f5e89f754df89c26c2c587d6610ab5455f86a21d84d900980723076a"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/qa_series_videos.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/qa_series_videos.py",
+      "sha256": "sha256:ecfe0d108c276ed17a0fbb45bbc89cb9305a167403b923e8936fcb9aed5ebc2f"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/queue_h3_shots.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/queue_h3_shots.py",
+      "sha256": "sha256:e54d6cfe6842c5bcd9bf894df629b67938bf11cbefc72c56e40265225c79a389"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/render_series_h3.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/render_series_h3.py",
+      "sha256": "sha256:88977628b187e41d1714464cd732effa1c01ba40aa143dd684fc38f931bbbc2b"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/render_series_tts.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/render_series_tts.py",
+      "sha256": "sha256:37e0810d2ebad00c416f691a083f53f531843aa4afa582978ec2e1f23ed7fb40"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/setup_workbench.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/setup_workbench.sh",
+      "sha256": "sha256:33edba33bffaefd2beecbbc3ffc245dc4deeb5229b543c9dcfc7522f62b16fe5"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/transcribe_series_whisper.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/transcribe_series_whisper.py",
+      "sha256": "sha256:e705493abac5f02f6d2426d054c9addefce8f364e7db3e0f86512cdfdacb4a57"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/scripts/workbench_config.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/scripts/workbench_config.py",
+      "sha256": "sha256:3fa1f942f6763c91fc9367f9fb47b839dbb7c3b58d46938331277ccb6400f7b5"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/profiles/author_profile.example.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/profiles/author_profile.example.yaml",
+      "sha256": "sha256:2249988952022f6caced778bda0e4eefd65fb96cbd1ae0b4d7032fd84eb14bc5"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/profiles/backend_profile.example.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/profiles/backend_profile.example.yaml",
+      "sha256": "sha256:4c27f935e9d76617e92d3674e68549f91c676c6c33a3536fa7e4828d375836cd"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/series/00_brief.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/series/00_brief.md",
+      "sha256": "sha256:a082eec533cba74f016e6e7fef537419342d90e836bed99d070235828d82668e"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/series/04_series_plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/series/04_series_plan.md",
+      "sha256": "sha256:b710ee478087cd7fad6b52f744b5be847e49646c52ef17e2196c9d279a510024"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/series/06_release_catalog.example.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/series/06_release_catalog.example.yaml",
+      "sha256": "sha256:957e2b9295f0858f56fbfef657a3b833dd3e27bf0fb2df466bc92969a8b374d8"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/series/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/series/README.md",
+      "sha256": "sha256:022927ea663745d52b1aa7a98b1c8b27509ba0155e06229239f646485360d1c1"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/series/episodes/NN_slug/00_episode_brief.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/series/episodes/NN_slug/00_episode_brief.md",
+      "sha256": "sha256:acec462141c08a36febc980872eedd7be6d9a4a1787cb768ccb7331dfd26a117"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/series/episodes/NN_slug/01_narration.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/series/episodes/NN_slug/01_narration.md",
+      "sha256": "sha256:6486e9f6ddde977cfa30b2af075ca66ebace0d5cc18fd0b6fdf60e4fca9dae25"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/series/episodes/NN_slug/02_visual_treatment.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/series/episodes/NN_slug/02_visual_treatment.md",
+      "sha256": "sha256:118187d4a8626a1680b1df89fe74d6906fdeec5359faa2031e5f83fed1e31078"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/series/episodes/NN_slug/03_story_package.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/series/episodes/NN_slug/03_story_package.yaml",
+      "sha256": "sha256:670df0d3997f55adc7aff5ccfa1c8b14cd1b22a239bdd720648499bece16314e"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/series/production_plan.example.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/series/production_plan.example.yaml",
+      "sha256": "sha256:30f94549e23a3349410fcf550c89f0a6f691f0b925ae88b62ed6582c6e5ad118"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/series/visual_delivery_manifest.example.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/series/visual_delivery_manifest.example.json",
+      "sha256": "sha256:c38a5d1ce9df705384b09b5d15c4a25fe33e98d5f278ad26443e97cb2da1df18"
+    },
+    {
+      "path": "skills/med-autocast/runtime/workbench/templates/workbench.example.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autocast/8865c2c45931984a30a933c0b1cd29e6fa864ad1/plugins/med-autocast/skills/med-autocast/runtime/workbench/templates/workbench.example.yaml",
+      "sha256": "sha256:d856df4c57323e955d232848dcbfaa971e4548e1b6c5686c811e8b683a53c55f"
+    }
+  ]
+}

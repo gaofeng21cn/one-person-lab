@@ -16,7 +16,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
   const onePersonLabRoot = path.join(workspaceRoot, 'one-person-lab');
   const logPath = path.join(homeRoot, 'startup-maintenance-devmode.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, medcastRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, autocastRemote } = remotes;
   const scholarSkillsRemote = createScholarSkillsRemote();
   const codexFixture = createCurrentCodexFixture();
   const siblingCheckouts = {
@@ -25,7 +25,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     redcube: path.join(workspaceRoot, 'redcube-ai'),
     oplmetaagent: path.join(workspaceRoot, 'opl-meta-agent'),
     oplbookforge: path.join(workspaceRoot, 'opl-bookforge'),
-    'opl-medcast': path.join(workspaceRoot, 'opl-medcast'),
+    'med-autocast': path.join(workspaceRoot, 'med-autocast'),
     scholarskills: path.join(workspaceRoot, 'mas-scholar-skills'),
   };
 
@@ -36,7 +36,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     runGitFixtureCommand(workspaceRoot, ['clone', rcaRemote.remoteRoot, siblingCheckouts.redcube]);
     runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckouts.oplmetaagent]);
     runGitFixtureCommand(workspaceRoot, ['clone', bookForgeRemote.remoteRoot, siblingCheckouts.oplbookforge]);
-    runGitFixtureCommand(workspaceRoot, ['clone', medcastRemote.remoteRoot, siblingCheckouts['opl-medcast']]);
+    runGitFixtureCommand(workspaceRoot, ['clone', autocastRemote.remoteRoot, siblingCheckouts['med-autocast']]);
     runGitFixtureCommand(workspaceRoot, ['clone', scholarSkillsRemote.remoteRoot, siblingCheckouts.scholarskills]);
 
     const output = withCliTimeout('180000', () => runCli(['system', 'startup-maintenance'], {
@@ -53,7 +53,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
           'gaofeng21cn/redcube-ai': 'admin',
           'gaofeng21cn/opl-meta-agent': 'admin',
           'gaofeng21cn/opl-bookforge': 'admin',
-          'gaofeng21cn/opl-medcast': 'admin',
+          'gaofeng21cn/med-autocast': 'admin',
           'gaofeng21cn/mas-scholar-skills': 'admin',
         },
       }),
@@ -144,7 +144,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     }
 
     const startupLog = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '';
-    assert.doesNotMatch(startupLog, /(?:med-autoscience|med-autogrant|redcube-ai|opl-meta-agent|opl-bookforge|opl-medcast)-(?:bootstrap|health)/);
+    assert.doesNotMatch(startupLog, /(?:med-autoscience|med-autogrant|redcube-ai|opl-meta-agent|opl-bookforge|med-autocast)-(?:bootstrap|health)/);
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
     for (const [moduleId, marketplaceId] of [
       ['medautoscience', 'med-autoscience-local'],

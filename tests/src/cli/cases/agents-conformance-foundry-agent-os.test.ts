@@ -36,14 +36,14 @@ function readyFoundryRepos() {
   const bookForgeRepo = buildReadyAgentRepo();
   retargetReadyRepo(bookForgeRepo, 'opl-bookforge', 'OPL Book Forge');
 
-  const medcastRepo = buildReadyAgentRepo();
-  retargetReadyRepo(medcastRepo, 'opl-medcast', 'OPL Med Cast');
+  const autocastRepo = buildReadyAgentRepo();
+  retargetReadyRepo(autocastRepo, 'med-autocast', 'Med Auto Cast');
 
   const scholarSkillsRepo = buildReadyAgentRepo();
   retargetReadyRepo(scholarSkillsRepo, 'mas-scholar-skills', 'MAS Scholar Skills');
   configureReadyCapabilityPackage(scholarSkillsRepo);
 
-  return { masRepo, magRepo, rcaRepo, omaRepo, bookForgeRepo, medcastRepo, scholarSkillsRepo };
+  return { masRepo, magRepo, rcaRepo, omaRepo, bookForgeRepo, autocastRepo, scholarSkillsRepo };
 }
 
 test('agents conformance exposes Foundry Agent OS membership without readiness authority', async () => {
@@ -62,7 +62,7 @@ test('agents conformance exposes Foundry Agent OS membership without readiness a
     '--agent',
     `obf=${repos.bookForgeRepo}`,
     '--agent',
-    `opl-medcast=${repos.medcastRepo}`,
+    `med-autocast=${repos.autocastRepo}`,
     '--agent',
     `mas-scholar-skills=${repos.scholarSkillsRepo}`,
   ]);

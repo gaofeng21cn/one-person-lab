@@ -14,7 +14,7 @@ test('system startup-maintenance does not execute legacy module health scripts',
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const logPath = path.join(homeRoot, 'startup-maintenance-timeout.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, medcastRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, autocastRemote } = remotes;
   const codexFixture = createCurrentCodexFixture();
   // Keep normal fixture probes below the timeout even when the full lane is under load.
   const moduleActionStepTimeoutMs = 2_000;
@@ -46,7 +46,7 @@ test('system startup-maintenance does not execute legacy module health scripts',
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
-      OPL_MODULE_REPO_URL_OPLMEDCAST: medcastRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_MEDAUTOCAST: autocastRemote.remoteRoot,
       OPL_MODULE_ACTION_STEP_TIMEOUT_MS: String(moduleActionStepTimeoutMs),
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...currentCodexEnvironment(codexFixture),

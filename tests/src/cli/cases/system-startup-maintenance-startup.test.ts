@@ -15,7 +15,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const logPath = path.join(homeRoot, 'startup-maintenance.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, medcastRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, autocastRemote } = remotes;
   const codexFixture = createCurrentCodexFixture();
   try {
     const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
@@ -28,7 +28,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
-      OPL_MODULE_REPO_URL_OPLMEDCAST: medcastRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_MEDAUTOCAST: autocastRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...currentCodexEnvironment(codexFixture),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },

@@ -297,9 +297,7 @@ test('opl connect skills discovers OPL-managed module installs without OPL_FAMIL
       OPL_REDCUBE_REPO_ROOT: path.join(missingRepoRoot, 'redcube-ai'),
       OPL_OPLMETAAGENT_REPO_ROOT: path.join(missingRepoRoot, 'opl-meta-agent'),
       OPL_OPLBOOKFORGE_REPO_ROOT: path.join(missingRepoRoot, 'opl-bookforge'),
-      // Med Cast derives its lookup key from the module id, which contains a
-      // dash, so the override name is quoted.
-      'OPL_OPL-MEDCAST_REPO_ROOT': path.join(missingRepoRoot, 'opl-medcast'),
+      OPL_MEDAUTOCAST_REPO_ROOT: path.join(missingRepoRoot, 'med-autocast'),
       OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: path.join(workspaceRoot, 'mas-scholar-skills'),
     });
 

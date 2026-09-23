@@ -250,9 +250,9 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     } else if (pack.canonical_plugin_name === 'rca') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'rca');
       assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain rca --action <action_id>');
-    } else if (pack.canonical_plugin_name === 'opl-medcast') {
-      assert.equal(pack.foundry_agent_series.brand_cli, 'opl-medcast');
-      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain opl-medcast --action <action_id>');
+    } else if (pack.canonical_plugin_name === 'med-autocast') {
+      assert.equal(pack.foundry_agent_series.brand_cli, 'med-autocast');
+      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain med-autocast --action <action_id>');
     } else {
       assert.fail(`unexpected plugin: ${pack.canonical_plugin_name}`);
     }
