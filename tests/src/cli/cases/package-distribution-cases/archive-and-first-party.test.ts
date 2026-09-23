@@ -655,7 +655,7 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   assert.equal(publicationProjectionOrder, 60);
   assert.equal(publicationSource.module_id, 'scholarskills');
   assert.equal(compatibilityProjection.registry_short_label, 'ScholarSkills');
-  assert.equal(manifest.version, '0.2.31');
+  assert.equal(manifest.version, '0.2.32');
   assert.deepEqual(manifest.consumer_policy.supported_required_by, ['mas', 'mag']);
   assert.equal(manifest.consumer_policy.supported_optional_consumer_agent_ids, undefined);
   assert.equal(manifest.content_lock.canonicalization, 'ordered_path_length_file_length_bytes');

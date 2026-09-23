@@ -33,7 +33,7 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.3.13",
+  "version": "0.3.14",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
@@ -53,8 +53,8 @@
     ],
     "bundled_capability_package_ids": [],
     "user_install_action_count": 1,
-    "plugin_payload_manifest_url": "payloads/obf-0.3.13.json",
-    "carrier_source_commit": "4c8539c8b56b92d9fb04503438032b539cbdca6a"
+    "plugin_payload_manifest_url": "payloads/obf-0.3.14.json",
+    "carrier_source_commit": "16e22458e5c8166ca6d04e277e7ad7d11767d332"
   },
   "dependency_profiles": [
     {

@@ -3,9 +3,17 @@
   "package_id": "mas-scholar-skills",
   "display_name": "MAS Scholar Skills",
   "publisher": "one-person-lab",
-  "version": "0.2.31",
+  "version": "0.2.32",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
+  "connect_skill_sync_policy": {
+    "default_scope": "workspace",
+    "allowed_scopes": [
+      "workspace",
+      "quest"
+    ],
+    "implicit_without_target": "skip"
+  },
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "consumer_policy": {
     "compatibility_commitment": "declared_required_consumer_profiles",
@@ -486,9 +494,12 @@
       "skills/medical-table-design/references/external-validation-tables.md",
       "skills/medical-table-design/references/method-quality-reference.md",
       "skills/medical-table-design/references/registry-tables.md",
-      "skills/medical-table-design/references/upstream-provenance.md"
+      "skills/medical-table-design/references/upstream-provenance.md",
+      "packs/medical-display-core/rlib/medicaldisplaycore/render_session.R",
+      "packs/medical-display-core/tests/benchmark_render_batch.py",
+      "packs/medical-display-core/tests/test_render_session.R"
     ],
-    "digest": "sha256:9973c6cc15482f912659fd3a9a977f85321c951b7cbdcdd3a78d14e22c4e94ab"
+    "digest": "sha256:d1db8c83ca90b0c444c5560b086ed475ec765194ebf5df96c96fa1a0499b824a"
   },
   "codex_surface": {
     "plugin_id": "mas-scholar-skills",
@@ -505,8 +516,8 @@
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/mas-scholar-skills:latest-stable",
       "executor_route": "codex_cli"
     },
-    "plugin_payload_manifest_url": "payloads/mas-scholar-skills-0.2.31.json",
-    "carrier_source_commit": "79649d65d5d72421208b72a4d2ac5f724f450e48"
+    "plugin_payload_manifest_url": "payloads/mas-scholar-skills-0.2.32.json",
+    "carrier_source_commit": "10e9adf0f580670c75e499391a386fc7ea482166"
   },
   "authority_boundary": {
     "can_write_domain_truth": false,

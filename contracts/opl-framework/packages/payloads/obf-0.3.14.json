@@ -1,0 +1,47 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "obf",
+  "plugin_id": "opl-bookforge",
+  "package_version": "0.3.14",
+  "source_repo": "https://github.com/gaofeng21cn/opl-bookforge.git",
+  "source_commit": "16e22458e5c8166ca6d04e277e7ad7d11767d332",
+  "source_root": "plugins/opl-bookforge",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:1eedbcf0e597c9b302ff1bdec2d4a4310e0c09204c004e6f730a0ad0497c1b6e"
+  },
+  "files": [
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/16e22458e5c8166ca6d04e277e7ad7d11767d332/plugins/opl-bookforge/plugin.json",
+      "sha256": "sha256:25b5031fc247f6fe7c9ff149ecc4ea4d457f0f853d86b7bb81b95931e71ebb8b"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/16e22458e5c8166ca6d04e277e7ad7d11767d332/plugins/opl-bookforge/.codex-plugin/plugin.json",
+      "sha256": "sha256:54be00d51c5641d53f04342ade38a5955ad7277434157e92bd5c329136629373"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/16e22458e5c8166ca6d04e277e7ad7d11767d332/plugins/opl-bookforge/opl-package.json",
+      "sha256": "sha256:67ba4accd662539efd735b458904b21299da1239d156feff1bf4b7bc87782343"
+    },
+    {
+      "path": "assets/icon.svg",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/16e22458e5c8166ca6d04e277e7ad7d11767d332/plugins/opl-bookforge/assets/icon.svg",
+      "sha256": "sha256:25c178f543f6a914e2a62d7505ae402a983ab70d85a82dba9df46257be381820"
+    },
+    {
+      "path": "skills/opl-bookforge/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/16e22458e5c8166ca6d04e277e7ad7d11767d332/plugins/opl-bookforge/skills/opl-bookforge/SKILL.md",
+      "sha256": "sha256:6a331fdf223ebd9d7c504759fc8d8e9d8310e91a2e1dfe939b53c5c1610711d3"
+    }
+  ]
+}

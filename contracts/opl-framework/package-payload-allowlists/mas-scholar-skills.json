@@ -167,6 +167,9 @@
     "skills/medical-table-design/references/method-quality-reference.md",
     "skills/medical-table-design/references/registry-tables.md",
     "skills/medical-table-design/references/upstream-provenance.md",
+    "packs/medical-display-core/rlib/medicaldisplaycore/render_session.R",
+    "packs/medical-display-core/tests/benchmark_render_batch.py",
+    "packs/medical-display-core/tests/test_render_session.R",
     "opl-package.json"
   ]
 }
