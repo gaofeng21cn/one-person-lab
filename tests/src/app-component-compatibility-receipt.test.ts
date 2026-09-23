@@ -155,7 +155,7 @@ test('Framework writes a file-bound receipt with exact coverage and producer byt
   );
   assert.equal(produced.receipt.producer_identity.executable_path, cliEntrypoint);
   assert.match(produced.receipt.producer_identity.executable_sha256, /^sha256:[0-9a-f]{64}$/);
-  assert.equal(produced.receipt.producer_identity.framework_version, '0.3.5');
+  assert.equal(produced.receipt.producer_identity.framework_version, '0.3.6');
   assert.equal(produced.receipt.producer_identity.package_ref, pathToFileURL(repoRoot).href);
   assert.deepEqual(
     produced.receipt.coverage.map((entry: JsonRecord) => entry.status),
@@ -182,8 +182,8 @@ test('npm SemVer ranges support complete maintained-library forms and reject inv
   const { produce } = fixture(t);
   const accepted = [
     ['prerelease and build metadata', '>=0.3.5-rc.1+build.7 <0.4.0'],
-    ['build metadata exact range', '0.3.5+producer.7'],
-    ['hyphen range', '0.3.0 - 0.3.5'],
+    ['build metadata exact range', '0.3.6+producer.7'],
+    ['hyphen range', '0.3.0 - 0.3.6'],
     ['partial range', '0.3.x'],
     ['comparator set', '>=0.3.0 <0.4.0'],
     ['OR range', '<0.1.0 || >=0.3.5'],

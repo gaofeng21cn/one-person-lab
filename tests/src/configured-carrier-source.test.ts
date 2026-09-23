@@ -12,7 +12,7 @@ import { gitMarketplaceRuntimeRoot } from '../../src/kernel/git-marketplace-runt
 const hash = (bytes: Buffer) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 const json = (value: unknown) => Buffer.from(`${JSON.stringify(value)}\n`);
 
-function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'nested-identity' | 'escaping-root' | 'root-identity') {
+function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'nested-identity' | 'escaping-root' | 'root-identity' | 'unicode-path') {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-acquisition-')));
   const source = path.join(root, 'archive/fixture');
   const packages = path.join(root, 'packages');
@@ -40,6 +40,7 @@ function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'n
     ['opl-package.json', json(owner)],
     ['skills/fixture/SKILL.md', Buffer.from('# Fixture\n')],
   ]);
+  if (fault === 'unicode-path') files.set('skills/fixture/docs/\u533b\u5b66.md', Buffer.from('# Medical\n'));
   const lock = crypto.createHash('sha256');
   for (const [ref, bytes] of files) {
     write(`plugins/fixture/${ref}`, bytes);
@@ -51,7 +52,7 @@ function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'n
     source_commit: commit, source_repo: owner.source_repo, source_root: 'plugins/fixture',
     content_lock: { digest: `sha256:${lock.digest('hex')}` },
     files: [...files].map(([ref, bytes]) => ({ path: ref, mode: '100644', sha256: hash(bytes),
-      source_url: `https://raw.githubusercontent.com/owner/fixture/${commit}/plugins/fixture/${ref}` })),
+      source_url: `https://raw.githubusercontent.com/owner/fixture/${commit}/plugins/fixture/${ref.split('/').map(encodeURIComponent).join('/')}` })),
   };
   if (fault === 'nested-owner' || fault === 'nested-identity' || fault === 'escaping-root') {
     fs.unlinkSync(path.join(source, 'opl-package.json'));
@@ -119,6 +120,14 @@ test('source acquisition accepts an owner descriptor in the bound plugin source 
     assert.equal(fs.existsSync(path.join(f.marketplace, 'opl-package.json')), false);
     assert.equal(gitMarketplaceRuntimeRoot(path.join(f.marketplace, 'plugins/fixture'),
       'owner/fixture', 'contracts/domain_descriptor.json'), f.marketplace);
+  } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+});
+
+test('source acquisition resolves percent-encoded carrier paths within the archive', () => {
+  const f = fixture('unicode-path');
+  try {
+    assert.equal(f.install(), f.marketplace);
+    assert.equal(fs.readFileSync(path.join(f.marketplace, 'plugins/fixture/skills/fixture/docs/\u533b\u5b66.md'), 'utf8'), '# Medical\n');
   } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
 });
 

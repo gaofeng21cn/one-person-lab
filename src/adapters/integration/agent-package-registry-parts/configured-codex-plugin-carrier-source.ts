@@ -152,7 +152,12 @@ export function acquireHostedPackageSource(input: {
         if (url.hostname !== 'raw.githubusercontent.com' || !url.pathname.startsWith(expectedPrefix)) {
           return invalid('Carrier file must belong to the selected Package source commit.');
         }
-        const relative = url.pathname.slice(expectedPrefix.length);
+        let relative: string;
+        try {
+          relative = decodeURIComponent(url.pathname.slice(expectedPrefix.length));
+        } catch {
+          return invalid('Carrier file path is not valid URL encoding.');
+        }
         if (!runtimeRootContainsDescriptor(sourceRoot, relative)) {
           return invalid('Package source archive is missing a declared carrier file.');
         }
