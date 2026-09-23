@@ -37,6 +37,7 @@ function domainProfile(
   const profile = profileFromTopologyContract(
     agent.default_profile_id,
     agent.project_collection_path,
+    agent.shared_resources,
   );
   return expectedDomainTopologyProfile({
     agent,

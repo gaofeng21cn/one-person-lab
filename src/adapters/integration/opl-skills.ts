@@ -48,6 +48,7 @@ import {
   type InspectFamilySkillPackPluginTransport,
   type SkillPackDistributionRole,
   type SkillPackSyncScope,
+  type SkillPackSyncPolicy,
   type SkillPackSpec,
   type SyncFamilySkillPack,
 } from './opl-skills-parts/registry.ts';
@@ -285,7 +286,7 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   };
 }
 
-function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
+function buildCapabilityPluginDistribution(spec: SkillPackSpec, syncPolicy: SkillPackSyncPolicy) {
   if (spec.domain_id !== 'scholarskills') {
     return null;
   }
@@ -316,8 +317,8 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
     scope_activation: 'automatic_on_workspace_or_quest_activation_and_domain_launch',
     compatibility_projection_not_advertised: true,
     default_sync_scope: 'package_activation_transaction_only',
-    recommended_paper_execution_scopes: ['workspace', 'quest'],
-    codex_scope_requires_explicit_request: true,
+    recommended_paper_execution_scopes: syncPolicy.allowed_scopes.filter((scope) => scope !== 'codex'),
+    codex_scope_requires_explicit_request: !syncPolicy.allowed_scopes.includes('codex'),
     framework_owned_capability: true,
     domain_module: false,
     brand_module: false,
@@ -671,7 +672,8 @@ function inspectFamilySkillPackAtRepoRoot(
     ? standardCodexCarrierReady
     : trackedRepoPluginReady;
   const seriesProjection = buildFoundryAgentSeriesProjection(spec);
-  const capabilityPluginDistribution = buildCapabilityPluginDistribution(spec);
+  const skillSyncPolicy = readSkillSyncPolicy(spec, repoRoot);
+  const capabilityPluginDistribution = buildCapabilityPluginDistribution(spec, skillSyncPolicy);
   const pluginTransport: InspectFamilySkillPackPluginTransport = {
     surface_kind: 'opl_connect_plugin_transport',
     source_kind: spec.source_kind,
@@ -711,6 +713,7 @@ function inspectFamilySkillPackAtRepoRoot(
     plugin_name: spec.plugin_name,
     canonical_plugin_name: spec.canonical_plugin_name,
     distribution_role: spec.distribution_role,
+    skill_sync_policy: skillSyncPolicy,
     agent_series_membership: spec.distribution_role === 'domain_agent_plugin_pack'
       ? 'standard_domain_agent'
       : null,
@@ -778,13 +781,14 @@ export function syncFamilySkillPackFromRepoRoot(
       },
     );
   }
-  const scope = options.scope ?? defaultSyncScopeForSpec(spec);
+  const inspected = inspectFamilySkillPackAtRepoRoot(spec, path.resolve(repoRoot));
+  const scope = options.scope ?? defaultSyncScopeForSpec(inspected);
   const targetRoot = resolveSkillSyncTargetRoot(scope, {
     targetRoot: options.targetRoot,
   });
 
   const result = runSkillPackInstaller(
-    inspectFamilySkillPackAtRepoRoot(spec, path.resolve(repoRoot)),
+    inspected,
     {
       home: normalizeOptionalString(options.home) ?? undefined,
       scope,
@@ -817,8 +821,35 @@ export function syncFamilySkillPackFromRepoRoot(
   return result;
 }
 
-function defaultSyncScopeForSpec(spec: SkillPackSpec): SkillPackSyncScope {
-  return spec.domain_id === 'scholarskills' ? 'workspace' : 'codex';
+function readSkillSyncPolicy(spec: SkillPackSpec, repoRoot: string): SkillPackSyncPolicy {
+  const fallback: SkillPackSyncPolicy = spec.distribution_role === 'framework_capability_plugin_pack'
+    ? { default_scope: 'workspace', allowed_scopes: ['workspace', 'quest'], implicit_without_target: 'skip' }
+    : { default_scope: 'codex', allowed_scopes: ['codex'], implicit_without_target: 'require_target' };
+  const manifestPath = path.join(repoRoot, 'opl-package.json');
+  if (!fs.existsSync(manifestPath)) return fallback;
+  const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8'));
+  if (!isRecord(manifest) || manifest.connect_skill_sync_policy === undefined) return fallback;
+  const policy = manifest.connect_skill_sync_policy;
+  if (!isRecord(policy)
+    || !['codex', 'workspace', 'quest'].includes(String(policy.default_scope))
+    || !Array.isArray(policy.allowed_scopes)
+    || policy.allowed_scopes.length === 0
+    || policy.allowed_scopes.some((scope) => !['codex', 'workspace', 'quest'].includes(String(scope)))
+    || !policy.allowed_scopes.includes(policy.default_scope)
+    || !['skip', 'require_target'].includes(String(policy.implicit_without_target))) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package declares an invalid Connect skill sync policy.', {
+      file: manifestPath,
+    });
+  }
+  return {
+    default_scope: policy.default_scope as SkillPackSyncScope,
+    allowed_scopes: [...new Set(policy.allowed_scopes as SkillPackSyncScope[])],
+    implicit_without_target: policy.implicit_without_target as SkillPackSyncPolicy['implicit_without_target'],
+  };
+}
+
+function defaultSyncScopeForSpec(inspected: InspectFamilySkillPack): SkillPackSyncScope {
+  return inspected.skill_sync_policy.default_scope;
 }
 
 function resolveSkillSyncTargetRoot(
@@ -860,11 +891,11 @@ function requireSkillSyncTargetRoot(
   }
 }
 
-function shouldSkipImplicitScholarSkillsSync(
-  spec: SkillPackSpec,
+function shouldSkipImplicitCapabilitySkillSync(
+  inspected: InspectFamilySkillPack,
   options: SyncFamilySkillPacksOptions,
 ) {
-  return spec.domain_id === 'scholarskills'
+  return inspected.skill_sync_policy.implicit_without_target === 'skip'
     && !options.scope
     && !normalizeOptionalString(options.targetWorkspace)
     && !normalizeOptionalString(options.targetQuest)
@@ -917,19 +948,19 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     targetQuest: options.targetQuest,
     targetRoot: options.targetRoot,
   });
-  for (const { spec } of inspectedPacks) {
-    if (shouldSkipImplicitScholarSkillsSync(spec, options)) {
+  for (const { inspected } of inspectedPacks) {
+    if (shouldSkipImplicitCapabilitySkillSync(inspected, options)) {
       continue;
     }
-    const scope = options.scope ?? defaultSyncScopeForSpec(spec);
-    if ((scope === 'workspace' || scope === 'quest') && spec.domain_id !== 'scholarskills') {
+    const scope = options.scope ?? defaultSyncScopeForSpec(inspected);
+    if ((scope === 'workspace' || scope === 'quest') && !inspected.skill_sync_policy.allowed_scopes.includes(scope)) {
       throw new FrameworkContractError(
         'cli_usage_error',
-        `Workspace/quest-local skill sync is only supported for MAS Scholar Skills, not ${spec.domain_id}.`,
+        `Workspace/quest-local skill sync is unsupported for ${inspected.domain_id}.`,
         {
-          domain_id: spec.domain_id,
+          domain_id: inspected.domain_id,
           requested_scope: scope,
-          allowed_workspace_or_quest_scope_domains: ['scholarskills'],
+          allowed_scopes: inspected.skill_sync_policy.allowed_scopes,
         },
       );
     }
@@ -942,16 +973,16 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
       }),
     );
   }
-  const packs = inspectedPacks.map(({ spec, inspected }) => runSkillPackInstaller(inspected, {
+  const packs = inspectedPacks.map(({ inspected }) => runSkillPackInstaller(inspected, {
     home: resolvedHome ?? undefined,
     ...(() => {
-      if (shouldSkipImplicitScholarSkillsSync(spec, options)) {
+      if (shouldSkipImplicitCapabilitySkillSync(inspected, options)) {
         return {
-          scope: 'workspace' as const,
+          scope: inspected.skill_sync_policy.default_scope,
           targetRoot: null,
         };
       }
-      const scope = options.scope ?? defaultSyncScopeForSpec(spec);
+      const scope = options.scope ?? defaultSyncScopeForSpec(inspected);
       return {
         scope,
         targetRoot: resolveSkillSyncTargetRoot(scope, {

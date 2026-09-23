@@ -83,6 +83,26 @@ function workspaceRelativePath(value: unknown, field: string, sourceRef: string)
   return relativePath;
 }
 
+function parseWorkspaceSharedResources(value: unknown, sourceRef: string) {
+  if (!Array.isArray(value)) {
+    invalid('Standard Agent workspace shared_resources must be an array.', sourceRef);
+  }
+  const resources = value.map((entry, index) => {
+    if (!isRecord(entry)) {
+      invalid('Standard Agent workspace shared resource must be an object.', sourceRef, { index });
+    }
+    assertKnownKeys(entry, ['path', 'role'], `workspace_binding.shared_resources[${index}]`, sourceRef);
+    return {
+      path: workspaceRelativePath(entry.path, `workspace_binding.shared_resources[${index}].path`, sourceRef),
+      role: stringValue(entry.role, `workspace_binding.shared_resources[${index}].role`, sourceRef),
+    };
+  });
+  if (new Set(resources.map((entry) => entry.path)).size !== resources.length) {
+    invalid('Standard Agent workspace shared resource paths must be unique.', sourceRef);
+  }
+  return resources;
+}
+
 function stringArray(value: unknown, field: string, sourceRef: string) {
   if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string' || !entry.trim())) {
     invalid(`Standard Agent interface field ${field} must be an array of non-empty strings.`, sourceRef, { field });
@@ -452,6 +472,7 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
     'project_kind',
     'project_collection_label',
     'project_collection_path',
+    'shared_resources',
     'default_workspace_id',
     'default_project_id',
     'required_locator_fields',
@@ -526,6 +547,9 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
             'workspace_binding.project_collection_path',
             sourceRef,
           ),
+      shared_resources: workspaceBinding.shared_resources === undefined
+        ? null
+        : parseWorkspaceSharedResources(workspaceBinding.shared_resources, sourceRef),
       default_workspace_id: stringValue(
         workspaceBinding.default_workspace_id,
         'workspace_binding.default_workspace_id',

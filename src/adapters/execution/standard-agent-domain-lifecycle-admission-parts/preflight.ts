@@ -270,7 +270,10 @@ function validateMaterializedAdmission(input: {
   if (reactivation.admission_scope_id !== expectedScopeId) {
     blocked('Reactivation receipt admission_scope_id is stale or belongs to another Stage invocation.');
   }
-  const originalAdmission = parseStandardAgentLifecycleAdmission(original.payload.lifecycle_admission);
+  const originalAdmission = parseStandardAgentLifecycleAdmission(
+    original.payload.lifecycle_admission,
+    input.contract.reactivation_reason_code,
+  );
   if (originalAdmission.mode !== 'reactivation_request') {
     blocked('Original lifecycle admission record does not contain a reactivation request.');
   }
@@ -446,7 +449,7 @@ export function preflightStandardAgentDomainLifecycleAdmission(input: {
     return activeLifecycleAdmission(current);
   }
   if (admissionValue !== undefined) {
-    const admission = parseStandardAgentLifecycleAdmission(admissionValue);
+    const admission = parseStandardAgentLifecycleAdmission(admissionValue, contract.reactivation_reason_code);
     if (admission.mode === 'reactivation_request') {
       blocked('Reactivation request must be authority-evaluated and CAS-materialized before Stage admission.');
     }

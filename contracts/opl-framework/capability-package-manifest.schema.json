@@ -32,6 +32,21 @@
     "package_role": {
       "enum": ["capability_package", "framework_capability_package"]
     },
+    "connect_skill_sync_policy": {
+      "type": "object",
+      "required": ["default_scope", "allowed_scopes", "implicit_without_target"],
+      "properties": {
+        "default_scope": { "enum": ["codex", "workspace", "quest"] },
+        "allowed_scopes": {
+          "type": "array",
+          "items": { "enum": ["codex", "workspace", "quest"] },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "implicit_without_target": { "enum": ["skip", "require_target"] }
+      },
+      "additionalProperties": false
+    },
     "capability_abi": {
       "type": "object",
       "required": ["id", "version", "compatibility_policy"],

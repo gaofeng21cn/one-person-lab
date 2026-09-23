@@ -72,6 +72,7 @@ export type StandardAgentInterface = {
     project_kind: string;
     project_collection_label: string;
     project_collection_path: string | null;
+    shared_resources: Array<{ path: string; role: string }> | null;
     default_workspace_id: string;
     default_project_id: string;
     required_locator_fields: StandardAgentLocatorField[];

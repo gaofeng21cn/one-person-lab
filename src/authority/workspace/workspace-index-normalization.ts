@@ -48,12 +48,18 @@ export function profileFromIndex(index: Record<string, unknown>): TopologyProfil
   }
   const mode = profile.workspace_mode;
   const sharedRoots = profile.shared_resource_roots;
+  const containedPath = (value: unknown): value is string => typeof value === 'string'
+    && value.length > 0
+    && !path.isAbsolute(value)
+    && !value.includes('\\')
+    && value.split('/').every((segment) => segment && segment !== '.' && segment !== '..');
   if (
     (mode !== 'one_off' && mode !== 'series' && mode !== 'portfolio')
-    || typeof profile.project_collection_path !== 'string'
-    || typeof profile.project_stage_outputs_root !== 'string'
+    || !containedPath(profile.project_collection_path)
+    || !containedPath(profile.project_stage_outputs_root)
     || !Array.isArray(sharedRoots)
-    || !sharedRoots.every((entry) => typeof entry === 'string')
+    || !sharedRoots.every(containedPath)
+    || new Set(sharedRoots).size !== sharedRoots.length
   ) {
     return null;
   }
@@ -61,6 +67,13 @@ export function profileFromIndex(index: Record<string, unknown>): TopologyProfil
     workspace_mode: mode,
     project_collection_path: profile.project_collection_path,
     shared_resource_roots: sharedRoots,
+    shared_resource_roles: Object.fromEntries(
+      (Array.isArray(index.shared_resources) ? index.shared_resources : [])
+        .filter(isRecord)
+        .filter((entry) => typeof entry.path === 'string'
+          && sharedRoots.includes(entry.path) && typeof entry.role === 'string')
+        .map((entry) => [entry.path, entry.role]),
+    ),
     project_stage_outputs_root: profile.project_stage_outputs_root,
     series_capable_skeleton: profile.series_capable_skeleton === true,
   };
@@ -110,6 +123,10 @@ export function agentFromIndex(index: Record<string, unknown>): WorkspaceAgentPr
       ? displayLabels.project_collection
       : profile.project_collection_path,
     project_collection_path: profile.project_collection_path,
+    shared_resources: profile.shared_resource_roots.map((resourcePath) => ({
+      path: resourcePath,
+      role: profile.shared_resource_roles?.[resourcePath] ?? 'shared_resource',
+    })),
     inventory_projection: inventoryProjection,
     default_workspace_id: `${registry.agent_id}-workspace`,
     default_project_id: `${registry.agent_id}-001`,

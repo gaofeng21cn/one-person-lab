@@ -8,6 +8,11 @@ export type SkillPackInstallerKind = 'bash' | 'node';
 export type SkillPackSourceKind = 'opl_standard_codex_carrier' | 'repo_plugin_installer';
 export type SkillPackDistributionRole = 'domain_agent_plugin_pack' | 'framework_capability_plugin_pack';
 export type SkillPackSyncScope = 'codex' | 'workspace' | 'quest';
+export type SkillPackSyncPolicy = {
+  default_scope: SkillPackSyncScope;
+  allowed_scopes: SkillPackSyncScope[];
+  implicit_without_target: 'skip' | 'require_target';
+};
 export type StandardAgentSeriesMembership = 'standard_domain_agent';
 export type SkillPackSourceKindRole =
   | 'standard_source_model_not_agent_membership_or_status'
@@ -69,6 +74,7 @@ export type InspectFamilySkillPack = {
   plugin_name: string;
   canonical_plugin_name: string;
   distribution_role: SkillPackDistributionRole;
+  skill_sync_policy: SkillPackSyncPolicy;
   agent_series_membership: StandardAgentSeriesMembership | null;
   agent_projection_policy: {
     standard_membership: StandardAgentSeriesMembership;

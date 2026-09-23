@@ -24,6 +24,8 @@ import {
   text,
 } from './shared.ts';
 
+const LEGACY_REACTIVATION_REASON_CODE = 'reviewer_revision_reactivation';
+
 export function standardAgentLifecycleAdmissionContract(
   action: FamilyActionCatalogAction,
 ): StandardAgentLifecycleAdmissionContract | null {
@@ -45,6 +47,7 @@ export function standardAgentLifecycleAdmissionContract(
     'materialization_authorization_output_field',
     'required_wakeup_gate_id',
     'stopped_relaunch_gate_id',
+    'reactivation_reason_code',
     'reactivation_projection_sources',
     'reactivation_request_input_field_map',
     'exact_byte_binding_fields',
@@ -174,6 +177,9 @@ export function standardAgentLifecycleAdmissionContract(
     ),
     required_wakeup_gate_id: optionalContractText(value, 'required_wakeup_gate_id', 'explicit_user_wakeup'),
     stopped_relaunch_gate_id: optionalContractText(value, 'stopped_relaunch_gate_id', 'allow_stopped_relaunch'),
+    reactivation_reason_code: value.reactivation_reason_code === undefined
+      ? LEGACY_REACTIVATION_REASON_CODE
+      : text(value.reactivation_reason_code, 'lifecycle_admission_contract.reactivation_reason_code'),
     reactivation_projection_sources: projectionSources,
     reactivation_request_input_field_map: fieldMap,
     exact_byte_binding_fields: lifecycleExactByteBindingFields(value.exact_byte_binding_fields),
@@ -196,7 +202,10 @@ export function standardAgentLifecycleAdmissionContract(
   };
 }
 
-function parseReactivationRequest(value: unknown): StandardAgentLifecycleReactivationRequest {
+function parseReactivationRequest(
+  value: unknown,
+  expectedReasonCode: string,
+): StandardAgentLifecycleReactivationRequest {
   if (!isRecord(value)) blocked('reactivation_request must be an object.');
   const fields = [
     'user_authority_ref',
@@ -218,8 +227,12 @@ function parseReactivationRequest(value: unknown): StandardAgentLifecycleReactiv
   exactKeys(value, fields, 'reactivation_request');
   const requestedAt = text(value.requested_at, 'reactivation_request.requested_at');
   if (!Number.isFinite(Date.parse(requestedAt))) blocked('reactivation_request.requested_at must be an ISO date-time.');
-  if (value.reason_code !== 'reviewer_revision_reactivation') {
-    blocked('reactivation_request.reason_code is unsupported.', { reason_code: value.reason_code });
+  const reasonCode = text(value.reason_code, 'reactivation_request.reason_code');
+  if (reasonCode !== expectedReasonCode) {
+    blocked('reactivation_request.reason_code does not match the owner contract.', {
+      reason_code: reasonCode,
+      expected_reason_code: expectedReasonCode,
+    });
   }
   return {
     user_authority_ref: text(value.user_authority_ref, 'reactivation_request.user_authority_ref'),
@@ -247,12 +260,15 @@ function parseReactivationRequest(value: unknown): StandardAgentLifecycleReactiv
       'reactivation_request.allow_stopped_relaunch',
     ),
     requested_at: requestedAt,
-    reason_code: 'reviewer_revision_reactivation',
+    reason_code: reasonCode,
     reason_summary: text(value.reason_summary, 'reactivation_request.reason_summary'),
   };
 }
 
-export function parseStandardAgentLifecycleAdmission(value: unknown): ParsedStandardAgentLifecycleAdmission {
+export function parseStandardAgentLifecycleAdmission(
+  value: unknown,
+  expectedReasonCode: string = LEGACY_REACTIVATION_REASON_CODE,
+): ParsedStandardAgentLifecycleAdmission {
   if (!isRecord(value)) blocked('lifecycle_admission must be an object.');
   if (
     value.surface_kind !== 'opl_domain_lifecycle_admission'
@@ -263,7 +279,7 @@ export function parseStandardAgentLifecycleAdmission(value: unknown): ParsedStan
     return {
       mode: 'reactivation_request',
       value,
-      reactivationRequest: parseReactivationRequest(value.reactivation_request),
+      reactivationRequest: parseReactivationRequest(value.reactivation_request, expectedReasonCode),
     };
   }
   if (value.mode === 'materialized_receipt') {

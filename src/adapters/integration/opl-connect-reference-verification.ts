@@ -48,6 +48,13 @@ type MismatchDetail = {
   normalized_expected: string;
   normalized_actual: string;
 };
+type ReferenceMatchAssessment = {
+  match_status: 'identifier_matched' | 'metadata_conflict' | 'provider_found';
+  matched_identifiers: Record<string, string>;
+  mismatch_details: MismatchDetail[];
+  deferred_reason?: string;
+  deferred_code?: 'provider_metadata_conflict' | 'provider_found_without_identifier_match';
+};
 type ProviderEvidence = {
   reference_id: string;
   provider: string;
@@ -833,26 +840,18 @@ function foundEvidence(
     metadata: ProviderEvidence['metadata'];
     retraction_or_update_flags: Record<string, unknown>;
     normalized: Pick<ReferenceRecord, 'doi' | 'pmid' | 'pmcid' | 'title'>;
+    match_assessment?: ReferenceMatchAssessment;
     retry_attempts: RetryAttempt[];
     verification_scope?: Record<string, unknown>;
   },
 ): ProviderEvidenceDraft {
   const providerIdentifiers = compactIdentifiers(input.provider_identifiers);
-  const mismatchDetails = mismatchDetailsForReference(reference, input.normalized);
-  const matchedIdentifiers = matchedIdentifiersForReference(reference, input.normalized);
-  const hasIdentifierMatch = Object.keys(matchedIdentifiers).length > 0;
-  const matchStatus: ProviderMatchStatus = mismatchDetails.length > 0
-    ? 'metadata_conflict'
-    : hasIdentifierMatch
-      ? 'identifier_matched'
-      : 'provider_found';
+  const assessment = input.match_assessment ?? legacyMatchAssessment(reference, input.normalized, providerIdentifiers, input.provider_id);
+  const mismatchDetails = assessment.mismatch_details;
+  const matchedIdentifiers = assessment.matched_identifiers;
+  const matchStatus = assessment.match_status;
   const status = matchStatus === 'identifier_matched' ? 'matched' : 'deferred';
-  const providerSpecificIdentifiers = Object.fromEntries(
-    Object.entries(providerIdentifiers).filter(([key]) => key !== 'doi' && key !== 'pmid'),
-  );
-  const deferredReason = matchStatus === 'metadata_conflict'
-    ? `${input.provider_id} provider metadata conflicts with input reference`
-    : `${input.provider_id} provider returned an item but no DOI/PMID/PMCID identifier matched the input reference`;
+  const deferredReason = assessment.deferred_reason;
   return {
     reference_id: reference.id,
     provider: input.provider,
@@ -863,9 +862,7 @@ function foundEvidence(
     match_status: matchStatus,
     ...(status === 'deferred' ? { deferred_reason: deferredReason } : {}),
     match_basis: input.match_basis,
-    matched_identifiers: status === 'matched'
-      ? compactIdentifiers({ ...matchedIdentifiers, ...providerSpecificIdentifiers })
-      : matchedIdentifiers,
+    matched_identifiers: matchedIdentifiers,
     provider_identifiers: providerIdentifiers,
     mismatch_details: mismatchDetails,
     metadata: input.metadata,
@@ -873,8 +870,8 @@ function foundEvidence(
     verification_scope: input.verification_scope ?? {},
     ...(status === 'deferred' ? {
       error: {
-        code: matchStatus === 'metadata_conflict' ? 'provider_metadata_conflict' : 'provider_found_without_identifier_match',
-        message: deferredReason,
+        code: assessment.deferred_code!,
+        message: deferredReason!,
         details: {
           match_status: matchStatus,
           mismatch_details: mismatchDetails,
@@ -889,6 +886,39 @@ function foundEvidence(
       cache_ref: null,
     },
     retry_attempts: input.retry_attempts,
+  };
+}
+
+function legacyMatchAssessment(
+  reference: ReferenceRecord,
+  normalized: Pick<ReferenceRecord, 'doi' | 'pmid' | 'pmcid' | 'title'>,
+  providerIdentifiers: Record<string, string>,
+  providerId: string,
+): ReferenceMatchAssessment {
+  const mismatchDetails = mismatchDetailsForReference(reference, normalized);
+  const matchedIdentifiers = matchedIdentifiersForReference(reference, normalized);
+  const matchStatus = mismatchDetails.length > 0
+    ? 'metadata_conflict'
+    : Object.keys(matchedIdentifiers).length > 0
+      ? 'identifier_matched'
+      : 'provider_found';
+  return {
+    match_status: matchStatus,
+    matched_identifiers: matchStatus === 'identifier_matched'
+      ? compactIdentifiers({
+          ...matchedIdentifiers,
+          ...Object.fromEntries(Object.entries(providerIdentifiers)
+            .filter(([key]) => key !== 'doi' && key !== 'pmid')),
+        })
+      : matchedIdentifiers,
+    mismatch_details: mismatchDetails,
+    ...(matchStatus === 'metadata_conflict' ? {
+      deferred_reason: `${providerId} provider metadata conflicts with input reference`,
+      deferred_code: 'provider_metadata_conflict' as const,
+    } : matchStatus === 'provider_found' ? {
+      deferred_reason: `${providerId} provider returned an item but no DOI/PMID/PMCID identifier matched the input reference`,
+      deferred_code: 'provider_found_without_identifier_match' as const,
+    } : {}),
   };
 }
 
@@ -973,6 +1003,58 @@ function adapterOptionalString(value: unknown, providerId: ProviderId, field: st
   return value;
 }
 
+function adapterMatchAssessment(value: unknown, providerId: ProviderId): ReferenceMatchAssessment | undefined {
+  if (value === undefined) return undefined;
+  const assessment = asRecord(value);
+  const matchStatus = asString(assessment.match_status);
+  const mismatchDetails = assessment.mismatch_details;
+  if (!['identifier_matched', 'metadata_conflict', 'provider_found'].includes(matchStatus ?? '')
+    || !Array.isArray(mismatchDetails)) {
+    throw new FrameworkContractError(
+      'codex_command_failed',
+      'Reference provider adapter returned an invalid match assessment.',
+      { provider_id: providerId, reason_code: 'reference_provider_adapter_evidence_invalid' },
+    );
+  }
+  const details = mismatchDetails.map((entry): MismatchDetail => {
+    const detail = asRecord(entry);
+    const field = asString(detail.field);
+    if (!['doi', 'pmid', 'pmcid', 'title'].includes(field ?? '')
+      || !['expected', 'actual', 'normalized_expected', 'normalized_actual']
+        .every((key) => typeof detail[key] === 'string')) {
+      throw new FrameworkContractError(
+        'codex_command_failed',
+        'Reference provider adapter returned invalid mismatch details.',
+        { provider_id: providerId, reason_code: 'reference_provider_adapter_evidence_invalid' },
+      );
+    }
+    return detail as MismatchDetail;
+  });
+  const matchedIdentifiers = adapterStringMap(assessment.matched_identifiers, providerId, 'match_assessment.matched_identifiers');
+  const deferredReason = asString(assessment.deferred_reason);
+  const deferredCode = asString(assessment.deferred_code);
+  const valid = matchStatus === 'identifier_matched'
+    ? Object.keys(matchedIdentifiers).length > 0 && details.length === 0 && !deferredReason && !deferredCode
+    : matchStatus === 'metadata_conflict'
+      ? details.length > 0 && Boolean(deferredReason) && deferredCode === 'provider_metadata_conflict'
+      : Object.keys(matchedIdentifiers).length === 0 && details.length === 0
+        && Boolean(deferredReason) && deferredCode === 'provider_found_without_identifier_match';
+  if (!valid) {
+    throw new FrameworkContractError(
+      'codex_command_failed',
+      'Reference provider adapter returned an inconsistent match assessment.',
+      { provider_id: providerId, reason_code: 'reference_provider_adapter_evidence_invalid' },
+    );
+  }
+  return {
+    match_status: matchStatus as ReferenceMatchAssessment['match_status'],
+    matched_identifiers: matchedIdentifiers,
+    mismatch_details: details,
+    ...(deferredReason ? { deferred_reason: deferredReason } : {}),
+    ...(deferredCode ? { deferred_code: deferredCode as ReferenceMatchAssessment['deferred_code'] } : {}),
+  };
+}
+
 function adapterEvidenceToProviderEvidence(
   reference: ReferenceRecord,
   provider: ReferenceProviderDefinition,
@@ -1018,6 +1100,7 @@ function adapterEvidenceToProviderEvidence(
     metadata: asRecord(evidence.metadata) as ProviderEvidence['metadata'],
     retraction_or_update_flags: asRecord(evidence.retraction_or_update_flags),
     normalized,
+    match_assessment: adapterMatchAssessment(evidence.match_assessment, provider.provider_id),
     retry_attempts: retryAttempts,
     verification_scope: {
       ...provider.verification_scope,

@@ -90,7 +90,7 @@ export function bindStandardAgentLifecycleReactivation(input: {
   if (!contract) return null;
   const admissionValue = input.payload[contract.admission_payload_field];
   if (admissionValue === undefined) return null;
-  const admission = parseStandardAgentLifecycleAdmission(admissionValue);
+  const admission = parseStandardAgentLifecycleAdmission(admissionValue, contract.reactivation_reason_code);
   if (admission.mode !== 'reactivation_request') return null;
   const workItemId = text(input.payload[contract.work_item_id_field], contract.work_item_id_field);
   const original = persistOriginalAdmissionRequest({

@@ -288,6 +288,7 @@ function writeLifecycleContracts(checkoutRoot: string) {
     },
     required_wakeup_gate_id: 'explicit_user_wakeup',
     stopped_relaunch_gate_id: 'allow_stopped_relaunch',
+    reactivation_reason_code: 'reviewer_revision_reactivation',
     reactivation_projection_sources: [
       {
         projection_id: 'study_lifecycle_current',

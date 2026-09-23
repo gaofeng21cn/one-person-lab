@@ -56,6 +56,7 @@ export type StandardAgentLifecycleAdmissionContract = {
   materialization_authorization_output_field: string;
   required_wakeup_gate_id: string;
   stopped_relaunch_gate_id: string;
+  reactivation_reason_code: string;
   reactivation_projection_sources: LifecycleProjectionSource[];
   reactivation_request_input_field_map: Record<ReactivationRequestInputField, string>;
   exact_byte_binding_fields: LifecycleExactByteBindingFields | null;
@@ -103,7 +104,7 @@ export type StandardAgentLifecycleReactivationRequest = {
   explicit_user_wakeup: boolean;
   allow_stopped_relaunch: boolean;
   requested_at: string;
-  reason_code: 'reviewer_revision_reactivation';
+  reason_code: string;
   reason_summary: string;
 };
 

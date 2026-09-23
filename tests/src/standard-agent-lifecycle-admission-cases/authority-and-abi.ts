@@ -15,6 +15,26 @@ import {
   loadCanonicalMasAuthorityRequest,
   runStandardAgentHandlerSandbox,
 } from './shared.ts';
+import { parseStandardAgentLifecycleAdmission } from '../../../src/adapters/execution/standard-agent-domain-lifecycle-admission.ts';
+
+test('reactivation reason is selected by the domain contract', () => {
+  const fixtureRoot = temporaryRoot('opl-lifecycle-reason-');
+  try {
+    const admission = reactivationAdmission(writeLifecycleWorkspace(fixtureRoot));
+    admission.reactivation_request.reason_code = 'domain_specific_reactivation';
+    const parsed = parseStandardAgentLifecycleAdmission(admission, 'domain_specific_reactivation');
+    assert.equal(parsed.mode, 'reactivation_request');
+    if (parsed.mode !== 'reactivation_request') throw new Error('Expected a reactivation request.');
+    assert.equal(parsed.reactivationRequest.reason_code, 'domain_specific_reactivation');
+    assert.throws(
+      () => parseStandardAgentLifecycleAdmission(admission, 'reviewer_revision_reactivation'),
+      /does not match the owner contract/,
+    );
+    assert.throws(() => parseStandardAgentLifecycleAdmission(admission), /does not match the owner contract/);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
 
 test('lifecycle reactivation authority context keeps profile only in the top-level profile input', () => {
   const prepared = prepareCanonicalLifecycleAuthorityPayload();
@@ -85,7 +105,12 @@ test('lifecycle reactivation injects every declared exact JSON byte binding and 
     ), 'utf8'));
     const legacyAction = structuredClone(catalog.actions[0]);
     delete legacyAction.authority_boundary.lifecycle_admission_contract.exact_byte_binding_fields;
+    delete legacyAction.authority_boundary.lifecycle_admission_contract.reactivation_reason_code;
     assert.equal(standardAgentLifecycleAdmissionContract(legacyAction)?.exact_byte_binding_fields, null);
+    assert.equal(
+      standardAgentLifecycleAdmissionContract(legacyAction)?.reactivation_reason_code,
+      'reviewer_revision_reactivation',
+    );
 
     const malformedAction = structuredClone(catalog.actions[0]);
     delete malformedAction.authority_boundary.lifecycle_admission_contract

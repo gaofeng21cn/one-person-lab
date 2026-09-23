@@ -6,6 +6,10 @@ import path from 'node:path';
 import test from 'node:test';
 import { readAgentPackageReadinessPort, registerAgentPackageReadinessPort } from '../../src/kernel/agent-package-readiness-port.ts';
 import { preflightDomainDispatchEvidencePayload } from '../../src/authority/evidence/domain-dispatch-evidence-payload-preflight.ts';
+import {
+  buildSharedResources,
+  profileFromTopologyContract,
+} from '../../src/authority/workspace/workspace-topology.ts';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
@@ -58,6 +62,28 @@ function fixture() {
     },
   };
 }
+
+test('domain-owned workspace resources override the framework profile without changing its mode', () => {
+  const resources = [
+    { path: 'shared/sources', role: 'source_intake' },
+    { path: 'shared/grant_memory', role: 'grant_strategy_memory' },
+  ];
+  const declared = parseStandardAgentInterface({
+    ...fixture(),
+    workspace_binding: { ...fixture().workspace_binding, shared_resources: resources },
+  }, 'fixture');
+  const profile = profileFromTopologyContract('one_off', 'projects', declared.workspace_binding.shared_resources);
+  assert.equal(profile.workspace_mode, 'one_off');
+  assert.deepEqual(profile.shared_resource_roots, resources.map((entry) => entry.path));
+  assert.deepEqual(buildSharedResources(profile).map(({ path, role }) => ({ path, role })), resources);
+  assert.throws(() => parseStandardAgentInterface({
+    ...fixture(),
+    workspace_binding: {
+      ...fixture().workspace_binding,
+      shared_resources: [{ path: '../outside', role: 'source_intake' }],
+    },
+  }, 'fixture'), /canonical workspace-relative path/);
+});
 
 function standardAgentDescriptor(domainId: string, interfaceValue = fixture()) {
   return {

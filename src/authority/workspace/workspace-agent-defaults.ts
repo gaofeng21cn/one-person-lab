@@ -31,6 +31,7 @@ export type WorkspaceAgentProfile = {
   project_kind: string;
   project_collection_label: string;
   project_collection_path: string;
+  shared_resources: Array<{ path: string; role: string }> | null;
   inventory_projection: StandardAgentInventoryProjection | null;
   default_workspace_id: string;
   default_project_id: string;
@@ -57,6 +58,7 @@ function workspaceProfile(
     project_kind: declared?.project_kind ?? 'project',
     project_collection_label: declared?.project_collection_label ?? 'projects',
     project_collection_path: declared?.project_collection_path ?? 'projects',
+    shared_resources: declared?.shared_resources ?? null,
     inventory_projection: descriptor?.interface.inventory_projection ?? null,
     default_workspace_id: declared?.default_workspace_id ?? `${entry.agent_id}-workspace`,
     default_project_id: declared?.default_project_id ?? `${entry.agent_id}-001`,

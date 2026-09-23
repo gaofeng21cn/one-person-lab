@@ -21,7 +21,7 @@ test('hosted Standard Agent actions require installed owner descriptor and confi
   const packageGate = contract.native_package_gate;
   const actionAbi = contract.domain_pack_action_abi;
 
-  assert.equal(contract.contract_kind, 'opl_standard_agent_hosted_action_runtime_contract.v1');
+  assert.equal(contract.contract_kind, 'opl_standard_agent_hosted_action_runtime_contract.v2');
   assert.equal(contract.brand_module_ownership.primary_module, 'runway');
   assert.equal(packageGate.ordinary_user_distribution.moving_pointer, 'latest-stable');
   assert.equal(packageGate.ordinary_user_distribution.owner_channel, 'per_package_owner_oci');

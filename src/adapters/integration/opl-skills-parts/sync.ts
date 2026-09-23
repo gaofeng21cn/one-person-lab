@@ -663,7 +663,7 @@ export function runSkillPackInstaller(
     };
   }
 
-  if (inspected.domain_id === 'scholarskills' && options.scope === 'codex') {
+  if (options.scope === 'codex' && !inspected.skill_sync_policy.allowed_scopes.includes('codex')) {
     return {
       ...inspected,
       sync_status: 'skipped',
@@ -675,7 +675,7 @@ export function runSkillPackInstaller(
       installer_result: {
         source: 'project_local_only',
         requested_scope: 'codex',
-        allowed_scopes: ['workspace', 'quest'],
+        allowed_scopes: inspected.skill_sync_policy.allowed_scopes,
         global_codex_write: false,
         reason: 'mas_scholar_skills_is_a_project_local_capability_dependency',
       },

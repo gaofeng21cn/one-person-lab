@@ -158,6 +158,7 @@ function syntheticReferenceStepSchema() {
                   metadata: { type: 'object' },
                   retraction_or_update_flags: { type: 'object' },
                   normalized: { type: 'object' },
+                  match_assessment: { type: 'object' },
                   verification_scope: { type: 'object' },
                 },
                 additionalProperties: false,
@@ -269,6 +270,15 @@ export function runReferenceProviderAdapterStep(request) {
             pmcid: null,
             title: request.reference.title,
           },
+          ...(process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT === '1' ? {
+            match_assessment: {
+              match_status: 'provider_found',
+              matched_identifiers: {},
+              mismatch_details: [],
+              deferred_reason: 'owner held the match',
+              deferred_code: 'provider_found_without_identifier_match',
+            },
+          } : {}),
           verification_scope: { evidence_source: 'synthetic-reference-adapter' },
         },
       },
@@ -281,6 +291,7 @@ export function runReferenceProviderAdapterStep(request) {
   const originalAdapterBase = process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ADAPTER_BASE;
   const originalBadOrigin = process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ADAPTER_BAD_ORIGIN;
   const originalMalformedResult = process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_MALFORMED_RESULT;
+  const originalAssessment = process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT;
   const originalFetch = globalThis.fetch;
   const requests: string[] = [];
   process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ADAPTER_BASE = 'https://adapter.test';
@@ -388,6 +399,8 @@ export function runReferenceProviderAdapterStep(request) {
     else process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ADAPTER_BAD_ORIGIN = originalBadOrigin;
     if (originalMalformedResult === undefined) delete process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_MALFORMED_RESULT;
     else process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_MALFORMED_RESULT = originalMalformedResult;
+    if (originalAssessment === undefined) delete process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT;
+    else process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT = originalAssessment;
     fs.rmSync(sourceRoot, { recursive: true, force: true });
   }
 }
@@ -407,6 +420,23 @@ test('reference verification routes transport and evidence through the installed
     assert.equal(evidence.provider_id, 'synthetic-reference');
     assert.equal(evidence.provider, 'synthetic_receipt');
     assert.equal(evidence.verification_scope.evidence_source, 'synthetic-reference-adapter');
+  });
+});
+
+test('reference verification uses a package match assessment when the installed v1 adapter supplies one', async () => {
+  await withSyntheticReferenceAdapter(async (_requests, installedPackage) => {
+    process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT = '1';
+    const output = await runOplConnectReferenceVerification({
+      references: [{ id: 'owner-assessment', doi: '10.9999/adapter' }],
+      providers: ['synthetic-reference'],
+      maxRetries: 0,
+      installedPackage,
+    });
+    const evidence = output.opl_connect_reference_verification.provider_evidence[0];
+    assert.equal(evidence.lookup_status, 'found');
+    assert.equal(evidence.status, 'deferred');
+    assert.equal(evidence.match_status, 'provider_found');
+    assert.equal(evidence.deferred_reason, 'owner held the match');
   });
 });
 

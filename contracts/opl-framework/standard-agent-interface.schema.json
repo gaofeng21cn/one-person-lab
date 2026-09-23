@@ -101,6 +101,22 @@
           "minLength": 1,
           "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
         },
+        "shared_resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "role"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+              },
+              "role": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        },
         "default_workspace_id": { "type": "string", "minLength": 1 },
         "default_project_id": { "type": "string", "minLength": 1 },
         "required_locator_fields": { "$ref": "#/$defs/locatorFields" },

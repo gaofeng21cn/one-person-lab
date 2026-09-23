@@ -29,6 +29,7 @@ export type TopologyProfile = {
   profile_role?: 'canonical';
   canonical_profile_id?: 'one_off' | 'series' | 'portfolio';
   shared_resource_roots: string[];
+  shared_resource_roles?: Record<string, string>;
   project_stage_outputs_root: string;
 };
 
@@ -146,6 +147,7 @@ function topologyContract() {
 export function profileFromTopologyContract(
   profileId: WorkspaceProfileId,
   projectCollectionPath?: string,
+  declaredResources?: Array<{ path: string; role: string }> | null,
 ): TopologyProfile {
   const contract = topologyContract();
   const defaultProfiles = contract.default_profiles;
@@ -189,7 +191,10 @@ export function profileFromTopologyContract(
       profile.canonical_profile_id === 'series' || profile.canonical_profile_id === 'portfolio'
         ? profile.canonical_profile_id
         : workspaceMode,
-    shared_resource_roots: sharedRoots,
+    shared_resource_roots: declaredResources?.map((resource) => resource.path) ?? sharedRoots,
+    ...(declaredResources ? {
+      shared_resource_roles: Object.fromEntries(declaredResources.map((resource) => [resource.path, resource.role])),
+    } : {}),
     project_stage_outputs_root: String(profile.project_stage_outputs_root),
   };
 }
@@ -314,7 +319,7 @@ export function buildWorkspaceDisplayLabels(
 export function buildSharedResources(profile: TopologyProfile): WorkspaceSharedResourceEntry[] {
   return profile.shared_resource_roots.map((resourcePath) => ({
     path: resourcePath,
-    role: SHARED_RESOURCE_ROLES[resourcePath] ?? 'shared_resource',
+    role: profile.shared_resource_roles?.[resourcePath] ?? SHARED_RESOURCE_ROLES[resourcePath] ?? 'shared_resource',
     manifest_ref: `${resourcePath}/opl_resource_manifest.json`,
     owner: 'workspace_group',
     user_visible: true,

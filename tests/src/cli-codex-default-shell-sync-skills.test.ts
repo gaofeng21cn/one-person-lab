@@ -173,6 +173,33 @@ test('opl connect skills discovers the family plugin packs through the configure
   }
 });
 
+test('capability skill sync reads default and allowed scopes from the owner package manifest', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-owner-policy-'));
+  const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);
+  const manifestPath = path.join(workspaceRoot, 'mas-scholar-skills', 'opl-package.json');
+  const stateDir = path.join(captureDir, 'opl-state');
+  try {
+    const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
+    manifest.connect_skill_sync_policy = {
+      default_scope: 'quest',
+      allowed_scopes: ['quest'],
+      implicit_without_target: 'skip',
+    };
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8');
+    const env = { OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot, OPL_STATE_DIR: stateDir };
+    const catalog = runCli(['connect', 'skills', '--domain', 'mas-scholar-skills'], env);
+    assert.deepEqual(catalog.skill_catalog.packs[0].skill_sync_policy.allowed_scopes, ['quest']);
+    const sync = runCli(['connect', 'sync-skills', '--domain', 'mas-scholar-skills'], env);
+    assert.equal(sync.skill_sync.packs[0].sync_scope, 'quest');
+    assert.equal(sync.skill_sync.packs[0].sync_status, 'skipped');
+    const codex = runCli(['connect', 'sync-skills', '--domain', 'mas-scholar-skills', '--scope', 'codex'], env);
+    assert.deepEqual(codex.skill_sync.packs[0].installer_result.allowed_scopes, ['quest']);
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('nested worktree repo roots resolve the family workspace root without OPL_FAMILY_WORKSPACE_ROOT', () => {
   assert.equal(
     resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/one-person-lab/.worktrees/codex-opl-turnkey'),

@@ -93,6 +93,39 @@ test('workspace ensure refreshes generated refs when reusing an active binding',
   }
 });
 
+test('workspace init preserves registered resources when the Agent declaration changes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-resources-state-'));
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-resources-'));
+  const descriptorFixture = createWorkspaceDescriptorFamilyFixture(['mag']);
+  const descriptorPath = path.join(descriptorFixture.familyRoot, 'med-autogrant', 'contracts', 'domain_descriptor.json');
+  const env = { OPL_STATE_DIR: stateRoot, OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot };
+  const writeResources = (resourcePath: string) => {
+    const descriptor = readJsonFile(descriptorPath);
+    descriptor.standard_agent_interface.workspace_binding.shared_resources = [
+      { path: resourcePath, role: 'grant_memory' },
+    ];
+    fs.writeFileSync(descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
+  };
+
+  try {
+    writeResources('shared/first');
+    runCli(['workspace', 'init', '--agent', 'mag', '--workspace', workspacePath,
+      '--project-id', 'grant-001', '--no-bind'], env);
+    writeResources('shared/second');
+    runCli(['workspace', 'init', '--agent', 'mag', '--workspace', workspacePath,
+      '--project-id', 'grant-002', '--no-bind'], env);
+    const index = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.deepEqual(index.shared_resource_roots, ['shared/first']);
+    assert.equal(index.shared_resources[0].role, 'grant_memory');
+    assert.equal(fs.existsSync(path.join(workspacePath, 'shared/second')), false);
+    assert.equal(index.projects.length, 2);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+    descriptorFixture.cleanup();
+  }
+});
+
 test('workspace validate and doctor inspect generated workspace topology semantics', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-validate-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-validate-root-'));

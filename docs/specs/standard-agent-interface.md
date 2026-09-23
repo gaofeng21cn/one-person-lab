@@ -26,6 +26,11 @@ entrypoint 声明稳定 id、调用方式、输入、输出和 authority boundar
 
 Agent 声明 workspace requirement、locator、Stage/capability contracts 和 runtime registration。Framework 传递明确 scope，创建 StageRun/Attempt，并读取 progress、artifact refs 和 owner answer。
 
+`workspace_binding.shared_resources` 可由 Agent 声明工作区共享目录及其角色，Framework 只校验相对路径并按声明创建。已有工作区的普通 `init/ensure` 沿用索引内的资源拓扑；显式 `adopt` 才按当前 Agent 声明迁移。
+
+Hosted action 的重启原因码由 action catalog 的 `lifecycle_admission_contract.reactivation_reason_code` 声明。Framework 校验请求与该声明一致，持有重放、身份和物化安全边界；新合同的领域原因由 Agent 决定。
+尚未声明该字段的旧 v1 包沿用原 `reviewer_revision_reactivation` 校验，以保持已安装包的重放行为。
+
 ## Capability map
 
 每项 capability 声明：

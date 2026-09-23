@@ -1,5 +1,5 @@
 {
-  "contract_kind": "opl_standard_agent_hosted_action_runtime_contract.v1",
+  "contract_kind": "opl_standard_agent_hosted_action_runtime_contract.v2",
   "surface_kind": "opl_standard_agent_hosted_action_runtime_contract",
   "owner": "one-person-lab",
   "purpose": "Host Standard OPL Agent actions from an installed owner descriptor and its configured native carrier root, or an active Foundry AgentVersion, without restoring Framework-owned Package lifecycle state or moving domain authority into OPL.",
@@ -104,11 +104,11 @@
       "concurrent_inventory_changes_are_not_overwritten": true
     },
     "progress_first": {
-      "unknown_or_insufficient_quality_blocks_research_admission": false,
-      "publication_or_submission_permission_required_for_research_admission": false,
-      "research_admission_grants_publication_or_submission_permission": false,
-      "research_admission_implies_quality_pass": false,
-      "qualification_only_or_explicitly_disallowed_research_is_admitted": false,
+      "unknown_or_insufficient_quality_blocks_stage_admission": false,
+      "quality_or_export_permission_required_for_stage_admission": false,
+      "stage_admission_grants_quality_or_export_permission": false,
+      "stage_admission_implies_quality_pass": false,
+      "qualification_only_or_explicitly_disallowed_work_is_admitted": false,
       "inactive_lifecycle_requires_domain_reactivation_authority": true
     }
   },

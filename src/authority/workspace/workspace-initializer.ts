@@ -57,6 +57,7 @@ import {
 import { bindWorkspace, getActiveWorkspaceBinding } from './workspace-registry.ts';
 import { buildInterfaceProjection } from './workspace-initializer-parts/interfaces.ts';
 import { initializeArtifactLifecycleProfile } from './workspace-artifact-lifecycle-profile.ts';
+import { profileFromIndex } from './workspace-index-normalization.ts';
 
 export type WorkspaceInitializeOptions = {
   agentId?: string;
@@ -211,6 +212,16 @@ function readExistingWorkspaceIndex(filePath: string) {
       },
     );
   }
+}
+
+function requireExistingWorkspaceProfile(index: Record<string, unknown>, indexPath: string) {
+  const profile = profileFromIndex(index);
+  if (!profile) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid', 'Existing workspace topology is invalid.', { file: indexPath },
+    );
+  }
+  return profile;
 }
 
 function assertCompatibleExistingIndex(input: {
@@ -558,8 +569,12 @@ export function initializeWorkspace(
   const agent = findWorkspaceAgentProfile(options.agentId);
   const mode = normalizeMode(options.mode);
   const profileId = selectWorkspaceProfileId(agent, mode);
-  const profile = profileFromTopologyContract(profileId, agent.project_collection_path);
   const workspacePath = resolveWorkspacePath(options, agent);
+  const workspaceIndexPath = path.join(workspacePath, 'workspace_index.json');
+  const existingIndex = options.force ? null : readExistingWorkspaceIndex(workspaceIndexPath);
+  const profile = existingIndex && !options.adoptExistingTopology
+    ? requireExistingWorkspaceProfile(existingIndex, workspaceIndexPath)
+    : profileFromTopologyContract(profileId, agent.project_collection_path, agent.shared_resources);
   const workspaceId = normalizeRequiredSegment(path.basename(workspacePath), 'workspace_id');
   const projectId = normalizeRequiredSegment(
     normalizeOptionalString(options.projectId) ?? agent.default_project_id,
@@ -573,9 +588,7 @@ export function initializeWorkspace(
   const projectRootRef = toWorkspaceRelative(workspacePath, projectRoot);
   const stageOutputsRootRef = toWorkspaceRelative(workspacePath, stageOutputsRoot);
   const workspaceYamlPath = path.join(workspacePath, 'workspace.yaml');
-  const workspaceIndexPath = path.join(workspacePath, 'workspace_index.json');
   const currentProject = workspaceProjectEntry(projectId, projectRootRef, stageOutputsRootRef);
-  const existingIndex = options.force ? null : readExistingWorkspaceIndex(workspaceIndexPath);
   if (existingIndex) {
     assertCompatibleExistingIndex({
       existingIndex,
@@ -789,7 +802,9 @@ export function ensureWorkspace(
   if (activeWorkspacePath && activeWorkspaceIndexPath && indexedProject && !options.force) {
     const refreshedIndex = readExistingWorkspaceIndex(activeWorkspaceIndexPath);
     const profileId = profileIdFromWorkspaceIndex(refreshedIndex) ?? selectWorkspaceProfileId(agent, 'auto');
-    const profile = profileFromTopologyContract(profileId, agent.project_collection_path);
+    const profile = refreshedIndex
+      ? requireExistingWorkspaceProfile(refreshedIndex, activeWorkspaceIndexPath)
+      : profileFromTopologyContract(profileId, agent.project_collection_path, agent.shared_resources);
     if (refreshedIndex) {
       assertCompatibleExistingIndex({ existingIndex: refreshedIndex, agent, profileId, profile });
     }
