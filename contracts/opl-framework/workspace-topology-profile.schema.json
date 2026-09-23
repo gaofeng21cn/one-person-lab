@@ -17,7 +17,6 @@
     "workspace_modes",
     "default_project_stage_outputs_root",
     "default_profiles",
-    "domain_profile_defaults",
     "default_user_inspection_surface",
     "runtime_state_boundary",
     "authority_boundary",
@@ -88,17 +87,6 @@
         }
       }
     },
-    "domain_profile_defaults": {
-      "type": "object",
-      "minProperties": 1,
-      "additionalProperties": {
-        "enum": [
-          "one_off",
-          "series",
-          "portfolio"
-        ]
-      }
-    },
     "default_user_inspection_surface": {
       "type": "object",
       "additionalProperties": true,
@@ -159,8 +147,8 @@
         },
         "shared_resource_roots": {
           "type": "array",
-          "contains": {
-            "const": "shared/sources"
+          "items": {
+            "type": "string"
           }
         },
         "project_stage_outputs_root": {
@@ -186,8 +174,8 @@
         },
         "shared_resource_roots": {
           "type": "array",
-          "contains": {
-            "const": "shared/brand"
+          "items": {
+            "type": "string"
           }
         },
         "project_stage_outputs_root": {
@@ -213,8 +201,8 @@
         },
         "shared_resource_roots": {
           "type": "array",
-          "contains": {
-            "const": "data"
+          "items": {
+            "type": "string"
           }
         },
         "project_stage_outputs_root": {
@@ -355,8 +343,8 @@
           "properties": {
             "shared_roots": {
               "type": "array",
-              "contains": {
-                "const": "shared/brand"
+              "items": {
+                "type": "string"
               }
             },
             "project_collection_path": {
@@ -382,8 +370,8 @@
           "properties": {
             "shared_roots": {
               "type": "array",
-              "contains": {
-                "const": "data"
+              "items": {
+                "type": "string"
               }
             },
             "project_collection_path": {
@@ -424,11 +412,7 @@
           "canonical_profile_id": "one_off",
           "project_collection_path": "projects",
           "series_capable_skeleton": true,
-          "shared_resource_roots": [
-            "shared/sources",
-            "shared/memory",
-            "shared/style_system"
-          ],
+          "shared_resource_roots": [],
           "project_stage_outputs_root": "artifacts/stage_outputs"
         },
         "series": {
@@ -436,13 +420,7 @@
           "profile_role": "canonical",
           "canonical_profile_id": "series",
           "project_collection_path": "projects",
-          "shared_resource_roots": [
-            "shared/sources",
-            "shared/brand",
-            "shared/visual_memory",
-            "shared/style_system",
-            "shared/material_inventory"
-          ],
+          "shared_resource_roots": [],
           "project_stage_outputs_root": "artifacts/stage_outputs"
         },
         "portfolio": {
@@ -450,21 +428,9 @@
           "profile_role": "canonical",
           "canonical_profile_id": "portfolio",
           "project_collection_path": "projects",
-          "shared_resource_roots": [
-            "data",
-            "literature",
-            "memory",
-            "shared/sources"
-          ],
+          "shared_resource_roots": [],
           "project_stage_outputs_root": "artifacts/stage_outputs"
         }
-      },
-      "domain_profile_defaults": {
-        "mas": "portfolio",
-        "mag": "one_off",
-        "rca": "series",
-        "oma": "one_off",
-        "obf": "one_off"
       },
       "default_user_inspection_surface": {
         "ordinary_user_default_surface": "workspace_local_project_stage_outputs",
@@ -502,23 +468,13 @@
           "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
         },
         "series": {
-          "shared_roots": [
-            "shared/sources",
-            "shared/brand",
-            "shared/visual_memory",
-            "shared/style_system",
-            "shared/material_inventory"
-          ],
+          "shared_roots": [],
           "project_collection_path": "projects",
           "project_root_pattern": "projects/<project-id>",
           "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
         },
         "portfolio": {
-          "shared_roots": [
-            "data",
-            "literature",
-            "memory"
-          ],
+          "shared_roots": [],
           "project_collection_path": "projects",
           "project_root_pattern": "projects/<project-id>",
           "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"

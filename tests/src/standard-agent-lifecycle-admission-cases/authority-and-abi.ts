@@ -30,7 +30,6 @@ test('reactivation reason is selected by the domain contract', () => {
       () => parseStandardAgentLifecycleAdmission(admission, 'reviewer_revision_reactivation'),
       /does not match the owner contract/,
     );
-    assert.throws(() => parseStandardAgentLifecycleAdmission(admission), /does not match the owner contract/);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -59,7 +58,7 @@ test('lifecycle reactivation authority context keeps profile only in the top-lev
     fs.rmSync(prepared.fixtureRoot, { recursive: true, force: true });
   }
 });
-test('lifecycle reactivation injects every declared exact JSON byte binding and preserves legacy contracts', () => {
+test('lifecycle reactivation injects every declared exact JSON byte binding and requires the owner contract', () => {
   const prepared = prepareCanonicalLifecycleAuthorityPayload();
   try {
     const assertExactBinding = (
@@ -103,14 +102,11 @@ test('lifecycle reactivation injects every declared exact JSON byte binding and 
       'contracts',
       'action_catalog.json',
     ), 'utf8'));
-    const legacyAction = structuredClone(catalog.actions[0]);
-    delete legacyAction.authority_boundary.lifecycle_admission_contract.exact_byte_binding_fields;
-    delete legacyAction.authority_boundary.lifecycle_admission_contract.reactivation_reason_code;
-    assert.equal(standardAgentLifecycleAdmissionContract(legacyAction)?.exact_byte_binding_fields, null);
-    assert.equal(
-      standardAgentLifecycleAdmissionContract(legacyAction)?.reactivation_reason_code,
-      'reviewer_revision_reactivation',
-    );
+    for (const field of ['exact_byte_binding_fields', 'reactivation_reason_code', 'reactivation_receipt_output_field']) {
+      const incompleteAction = structuredClone(catalog.actions[0]);
+      delete incompleteAction.authority_boundary.lifecycle_admission_contract[field];
+      assert.throws(() => standardAgentLifecycleAdmissionContract(incompleteAction), /must be|missing/i);
+    }
 
     const malformedAction = structuredClone(catalog.actions[0]);
     delete malformedAction.authority_boundary.lifecycle_admission_contract

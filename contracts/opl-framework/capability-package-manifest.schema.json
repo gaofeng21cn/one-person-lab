@@ -12,6 +12,7 @@
     "source",
     "package_role",
     "capability_abi",
+    "connect_skill_sync_policy",
     "exports",
     "content_lock",
     "codex_surface"

@@ -150,7 +150,14 @@
     "route_output_contract": {
       "non_terminal_attempt_field": "route_impact.stage_route_recommendation",
       "terminal_attempt_field": "route_impact.stage_route_decision",
-      "decision_kind_values": ["advance", "skip", "repeat", "reverse", "route_back", "complete"],
+      "decision_kind_values": [
+        "advance",
+        "skip",
+        "repeat",
+        "reverse",
+        "route_back",
+        "complete"
+      ],
       "non_complete_target_must_be_a_declared_stage": true,
       "invalid_route_output_does_not_discard_consumable_progress": true,
       "legacy_terminal_route_fields_forbidden": true
@@ -932,11 +939,7 @@
               "canonical_profile_id": "one_off",
               "project_collection_path": "projects",
               "series_capable_skeleton": true,
-              "shared_resource_roots": [
-                "shared/sources",
-                "shared/memory",
-                "shared/style_system"
-              ],
+              "shared_resource_roots": [],
               "project_stage_outputs_root": "artifacts/stage_outputs"
             },
             "series": {
@@ -944,13 +947,7 @@
               "profile_role": "canonical",
               "canonical_profile_id": "series",
               "project_collection_path": "projects",
-              "shared_resource_roots": [
-                "shared/sources",
-                "shared/brand",
-                "shared/visual_memory",
-                "shared/style_system",
-                "shared/material_inventory"
-              ],
+              "shared_resource_roots": [],
               "project_stage_outputs_root": "artifacts/stage_outputs"
             },
             "portfolio": {
@@ -958,21 +955,9 @@
               "profile_role": "canonical",
               "canonical_profile_id": "portfolio",
               "project_collection_path": "projects",
-              "shared_resource_roots": [
-                "data",
-                "literature",
-                "memory",
-                "shared/sources"
-              ],
+              "shared_resource_roots": [],
               "project_stage_outputs_root": "artifacts/stage_outputs"
             }
-          },
-          "domain_profile_defaults": {
-            "mas": "portfolio",
-            "mag": "one_off",
-            "rca": "series",
-            "oma": "one_off",
-            "obf": "one_off"
           },
           "default_user_inspection_surface": {
             "ordinary_user_default_surface": "workspace_local_project_stage_outputs",
@@ -1010,23 +995,13 @@
               "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
             },
             "series": {
-              "shared_roots": [
-                "shared/sources",
-                "shared/brand",
-                "shared/visual_memory",
-                "shared/style_system",
-                "shared/material_inventory"
-              ],
+              "shared_roots": [],
               "project_collection_path": "projects",
               "project_root_pattern": "projects/<project-id>",
               "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
             },
             "portfolio": {
-              "shared_roots": [
-                "data",
-                "literature",
-                "memory"
-              ],
+              "shared_roots": [],
               "project_collection_path": "projects",
               "project_root_pattern": "projects/<project-id>",
               "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
@@ -1164,7 +1139,6 @@
             ]
           },
           "legacy_skill_command_retired": true,
-          "legacy_standalone_mcp_servers_retired": true,
           "derived_surface_refs": [
             "opl agents run --domain <agent_id> --action <action_id> --json",
             "opl connect skills --json",
@@ -1279,9 +1253,9 @@
                 "owner_receipt_ref",
                 "typed_blocker_ref",
                 "human_gate_ref",
-          "route_back_ref",
-          "negative_result_ref",
-          "no_output_or_failure_diagnostic_ref"
+                "route_back_ref",
+                "negative_result_ref",
+                "no_output_or_failure_diagnostic_ref"
               ]
             },
             {
@@ -1314,13 +1288,13 @@
                 "next_forced_delta"
               ],
               "classification_values": [
-          "deliverable_progress",
-          "negative_result",
-          "progress_diagnostic",
-          "platform_repair",
-          "mixed",
-          "quality_debt",
-          "typed_blocker",
+                "deliverable_progress",
+                "negative_result",
+                "progress_diagnostic",
+                "platform_repair",
+                "mixed",
+                "quality_debt",
+                "typed_blocker",
                 "human_gate",
                 "stop_loss"
               ]
@@ -1528,9 +1502,9 @@
         "owner_receipt_ref",
         "typed_blocker_ref",
         "human_gate_ref",
-          "route_back_ref",
-          "negative_result_ref",
-          "no_output_or_failure_diagnostic_ref"
+        "route_back_ref",
+        "negative_result_ref",
+        "no_output_or_failure_diagnostic_ref"
       ],
       "authority_boundary": {
         "opl_can_decide_domain_completion": false,
@@ -1599,19 +1573,19 @@
         "next_forced_delta"
       ],
       "classification_values": [
-          "deliverable_progress",
-          "negative_result",
-          "progress_diagnostic",
-          "platform_repair",
-          "mixed",
-          "quality_debt",
-          "typed_blocker",
+        "deliverable_progress",
+        "negative_result",
+        "progress_diagnostic",
+        "platform_repair",
+        "mixed",
+        "quality_debt",
+        "typed_blocker",
         "human_gate",
         "stop_loss"
       ],
-        "domain_alias_source": "contracts/domain_descriptor.json#/standard_agent_interface/progress",
-        "deliverable_delta_aliases": {},
-        "platform_delta_aliases": {},
+      "domain_alias_source": "contracts/domain_descriptor.json#/standard_agent_interface/progress",
+      "deliverable_delta_aliases": {},
+      "platform_delta_aliases": {},
       "platform_only_is_not_deliverable_progress": true,
       "missing_delta_policy": "materialize_no_output_or_failure_diagnostic_and_next_forced_delta_without_inventing_domain_work",
       "authority_boundary": {
@@ -1863,11 +1837,7 @@
             "canonical_profile_id": "one_off",
             "project_collection_path": "projects",
             "series_capable_skeleton": true,
-            "shared_resource_roots": [
-              "shared/sources",
-              "shared/memory",
-              "shared/style_system"
-            ],
+            "shared_resource_roots": [],
             "project_stage_outputs_root": "artifacts/stage_outputs"
           },
           "series": {
@@ -1875,13 +1845,7 @@
             "profile_role": "canonical",
             "canonical_profile_id": "series",
             "project_collection_path": "projects",
-            "shared_resource_roots": [
-              "shared/sources",
-              "shared/brand",
-              "shared/visual_memory",
-              "shared/style_system",
-              "shared/material_inventory"
-            ],
+            "shared_resource_roots": [],
             "project_stage_outputs_root": "artifacts/stage_outputs"
           },
           "portfolio": {
@@ -1889,21 +1853,9 @@
             "profile_role": "canonical",
             "canonical_profile_id": "portfolio",
             "project_collection_path": "projects",
-            "shared_resource_roots": [
-              "data",
-              "literature",
-              "memory",
-              "shared/sources"
-            ],
+            "shared_resource_roots": [],
             "project_stage_outputs_root": "artifacts/stage_outputs"
           }
-        },
-        "domain_profile_defaults": {
-          "mas": "portfolio",
-          "mag": "one_off",
-          "rca": "series",
-          "oma": "one_off",
-          "obf": "one_off"
         },
         "default_user_inspection_surface": {
           "ordinary_user_default_surface": "workspace_local_project_stage_outputs",
@@ -1941,23 +1893,13 @@
             "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
           },
           "series": {
-            "shared_roots": [
-              "shared/sources",
-              "shared/brand",
-              "shared/visual_memory",
-              "shared/style_system",
-              "shared/material_inventory"
-            ],
+            "shared_roots": [],
             "project_collection_path": "projects",
             "project_root_pattern": "projects/<project-id>",
             "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
           },
           "portfolio": {
-            "shared_roots": [
-              "data",
-              "literature",
-              "memory"
-            ],
+            "shared_roots": [],
             "project_collection_path": "projects",
             "project_root_pattern": "projects/<project-id>",
             "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
@@ -2095,7 +2037,6 @@
           ]
         },
         "legacy_skill_command_retired": true,
-        "legacy_standalone_mcp_servers_retired": true,
         "derived_surface_refs": [
           "opl agents run --domain <agent_id> --action <action_id> --json",
           "opl connect skills --json",
@@ -2210,9 +2151,9 @@
               "owner_receipt_ref",
               "typed_blocker_ref",
               "human_gate_ref",
-          "route_back_ref",
-          "negative_result_ref",
-          "no_output_or_failure_diagnostic_ref"
+              "route_back_ref",
+              "negative_result_ref",
+              "no_output_or_failure_diagnostic_ref"
             ]
           },
           {
@@ -2245,13 +2186,13 @@
               "next_forced_delta"
             ],
             "classification_values": [
-          "deliverable_progress",
-          "negative_result",
-          "progress_diagnostic",
-          "platform_repair",
-          "mixed",
-          "quality_debt",
-          "typed_blocker",
+              "deliverable_progress",
+              "negative_result",
+              "progress_diagnostic",
+              "platform_repair",
+              "mixed",
+              "quality_debt",
+              "typed_blocker",
               "human_gate",
               "stop_loss"
             ]
@@ -2305,12 +2246,12 @@
             ]
           }
         ],
-          "domain_alias_policy": {
-            "aliases_are_domain_specific_only": true,
-            "source_ref": "contracts/domain_descriptor.json#/standard_agent_interface/progress",
-            "deliverable_delta_aliases": {},
-            "platform_delta_aliases": {}
-          },
+        "domain_alias_policy": {
+          "aliases_are_domain_specific_only": true,
+          "source_ref": "contracts/domain_descriptor.json#/standard_agent_interface/progress",
+          "deliverable_delta_aliases": {},
+          "platform_delta_aliases": {}
+        },
         "authority_boundary": {
           "opl_owns_policy_contract": true,
           "domains_own_truth_quality_artifact_memory_and_receipts": true,

@@ -840,13 +840,13 @@ function foundEvidence(
     metadata: ProviderEvidence['metadata'];
     retraction_or_update_flags: Record<string, unknown>;
     normalized: Pick<ReferenceRecord, 'doi' | 'pmid' | 'pmcid' | 'title'>;
-    match_assessment?: ReferenceMatchAssessment;
+    match_assessment: ReferenceMatchAssessment;
     retry_attempts: RetryAttempt[];
     verification_scope?: Record<string, unknown>;
   },
 ): ProviderEvidenceDraft {
   const providerIdentifiers = compactIdentifiers(input.provider_identifiers);
-  const assessment = input.match_assessment ?? legacyMatchAssessment(reference, input.normalized, providerIdentifiers, input.provider_id);
+  const assessment = input.match_assessment;
   const mismatchDetails = assessment.mismatch_details;
   const matchedIdentifiers = assessment.matched_identifiers;
   const matchStatus = assessment.match_status;
@@ -889,89 +889,6 @@ function foundEvidence(
   };
 }
 
-function legacyMatchAssessment(
-  reference: ReferenceRecord,
-  normalized: Pick<ReferenceRecord, 'doi' | 'pmid' | 'pmcid' | 'title'>,
-  providerIdentifiers: Record<string, string>,
-  providerId: string,
-): ReferenceMatchAssessment {
-  const mismatchDetails = mismatchDetailsForReference(reference, normalized);
-  const matchedIdentifiers = matchedIdentifiersForReference(reference, normalized);
-  const matchStatus = mismatchDetails.length > 0
-    ? 'metadata_conflict'
-    : Object.keys(matchedIdentifiers).length > 0
-      ? 'identifier_matched'
-      : 'provider_found';
-  return {
-    match_status: matchStatus,
-    matched_identifiers: matchStatus === 'identifier_matched'
-      ? compactIdentifiers({
-          ...matchedIdentifiers,
-          ...Object.fromEntries(Object.entries(providerIdentifiers)
-            .filter(([key]) => key !== 'doi' && key !== 'pmid')),
-        })
-      : matchedIdentifiers,
-    mismatch_details: mismatchDetails,
-    ...(matchStatus === 'metadata_conflict' ? {
-      deferred_reason: `${providerId} provider metadata conflicts with input reference`,
-      deferred_code: 'provider_metadata_conflict' as const,
-    } : matchStatus === 'provider_found' ? {
-      deferred_reason: `${providerId} provider returned an item but no DOI/PMID/PMCID identifier matched the input reference`,
-      deferred_code: 'provider_found_without_identifier_match' as const,
-    } : {}),
-  };
-}
-
-function mismatchDetailsForReference(
-  reference: ReferenceRecord,
-  actual: Pick<ReferenceRecord, 'doi' | 'pmid' | 'pmcid' | 'title'>,
-): MismatchDetail[] {
-  const details: MismatchDetail[] = [];
-  addMismatch(details, 'doi', reference.doi, actual.doi, normalizeDoi);
-  addMismatch(details, 'pmid', reference.pmid, actual.pmid, normalizePmid);
-  addMismatch(details, 'pmcid', reference.pmcid, actual.pmcid, normalizePmcid);
-  addMismatch(details, 'title', reference.title, actual.title, normalizeTitleForCompare);
-  return details;
-}
-
-function addMismatch(
-  details: MismatchDetail[],
-  field: MismatchDetail['field'],
-  expected: string | null,
-  actual: string | null,
-  normalize: (value: string | null) => string | null,
-) {
-  const normalizedExpected = normalize(expected);
-  const normalizedActual = normalize(actual);
-  if (!expected || !actual || !normalizedExpected || !normalizedActual || normalizedExpected === normalizedActual) return;
-  details.push({
-    field,
-    expected,
-    actual,
-    normalized_expected: normalizedExpected,
-    normalized_actual: normalizedActual,
-  });
-}
-
-function matchedIdentifiersForReference(
-  reference: ReferenceRecord,
-  actual: Pick<ReferenceRecord, 'doi' | 'pmid' | 'pmcid'>,
-) {
-  return compactIdentifiers({
-    doi: reference.doi && actual.doi && normalizeDoi(reference.doi) === normalizeDoi(actual.doi) ? normalizeDoi(actual.doi) : null,
-    pmid: reference.pmid && actual.pmid && normalizePmid(reference.pmid) === normalizePmid(actual.pmid) ? normalizePmid(actual.pmid) : null,
-    pmcid: reference.pmcid && actual.pmcid && normalizePmcid(reference.pmcid) === normalizePmcid(actual.pmcid) ? normalizePmcid(actual.pmcid) : null,
-  });
-}
-
-function normalizePmid(value: string | null) {
-  return value?.trim() || null;
-}
-
-function normalizeTitleForCompare(value: string | null) {
-  return value?.replace(/\s+/g, ' ').trim().toLowerCase() || null;
-}
-
 function adapterStringMap(value: unknown, providerId: ProviderId, field: string): Record<string, string> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new FrameworkContractError(
@@ -1003,8 +920,7 @@ function adapterOptionalString(value: unknown, providerId: ProviderId, field: st
   return value;
 }
 
-function adapterMatchAssessment(value: unknown, providerId: ProviderId): ReferenceMatchAssessment | undefined {
-  if (value === undefined) return undefined;
+function adapterMatchAssessment(value: unknown, providerId: ProviderId): ReferenceMatchAssessment {
   const assessment = asRecord(value);
   const matchStatus = asString(assessment.match_status);
   const mismatchDetails = assessment.mismatch_details;

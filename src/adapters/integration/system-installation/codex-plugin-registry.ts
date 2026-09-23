@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { resolveAgentPluginManifest } from '../../../kernel/agent-plugin-manifest.ts';
+import { isRecord } from '../../../kernel/contract-validation.ts';
 import {
   FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP,
   loadStandardAgentRegistry,
@@ -22,7 +23,6 @@ export type CodexFamilyPluginSpec = {
   plugin_id: string;
   repo_name: string;
   display_name: string;
-  category: string;
   ownership_kind: 'standard_agent_codex_carrier' | 'framework_capability_plugin';
   distribution_role: 'domain_agent_plugin_pack' | 'framework_capability_plugin_pack';
   framework_owned_capability: boolean;
@@ -34,7 +34,6 @@ export type CodexFamilyPluginSpec = {
     can_create_typed_blocker: false;
     can_write_runtime_queue: false;
   };
-  legacy_standalone_mcp_server_ids: string[];
 };
 
 export type LocalCodexPluginMarketplaceSpec = {
@@ -91,38 +90,10 @@ export type CodexPluginRegistryResult = {
     registered: number;
     missing_marketplace: number;
     missing_plugin_manifest: number;
-    removed_standalone_mcp_servers: number;
     removed_superseded_plugin_tables: number;
     removed_superseded_plugin_paths: string[];
     registered_unified_mcp_servers: 1;
   };
-};
-
-const PLUGIN_COMPATIBILITY_OVERRIDES: Record<string, {
-  category: string;
-  legacy_standalone_mcp_server_ids?: string[];
-}> = {
-  mas: {
-    category: 'Research',
-    legacy_standalone_mcp_server_ids: ['med-autoscience', 'medautosci', 'mas'],
-  },
-  mag: {
-    category: 'Research',
-    legacy_standalone_mcp_server_ids: ['med-autogrant', 'medautogrant', 'mag'],
-  },
-  rca: {
-    category: 'Creative',
-    legacy_standalone_mcp_server_ids: ['redcube-ai', 'redcube', 'rca'],
-  },
-  oma: {
-    category: 'Productivity',
-    legacy_standalone_mcp_server_ids: ['opl-meta-agent', 'oplmetaagent', 'oma'],
-  },
-  obf: {
-    category: 'Productivity',
-    legacy_standalone_mcp_server_ids: ['opl-bookforge', 'oplbookforge', 'bookforge', 'obf'],
-  },
-  'mas-scholar-skills': { category: 'Productivity' },
 };
 
 const NO_AUTHORITY = {
@@ -134,7 +105,6 @@ const NO_AUTHORITY = {
 
 export function buildCodexFamilyPluginSpecs(packageDirectory?: string): CodexFamilyPluginSpec[] {
   return loadStandardAgentRegistry(packageDirectory).map((entry) => {
-    const compatibility = PLUGIN_COMPATIBILITY_OVERRIDES[entry.agent_id];
     const capabilityPackage = entry.series_membership === FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP;
     return {
       module_id: capabilityPackage ? null : entry.module_id.toLowerCase(),
@@ -143,7 +113,6 @@ export function buildCodexFamilyPluginSpecs(packageDirectory?: string): CodexFam
       plugin_id: entry.plugin_name,
       repo_name: entry.project,
       display_name: `${entry.display_name} Local`,
-      category: compatibility?.category ?? 'Productivity',
       ownership_kind: capabilityPackage
         ? 'framework_capability_plugin'
         : 'standard_agent_codex_carrier',
@@ -154,7 +123,6 @@ export function buildCodexFamilyPluginSpecs(packageDirectory?: string): CodexFam
       domain_module: entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP,
       brand_module: false,
       authority_boundary: NO_AUTHORITY,
-      legacy_standalone_mcp_server_ids: compatibility?.legacy_standalone_mcp_server_ids ?? [],
     };
   });
 }
@@ -231,20 +199,6 @@ function quoteTomlTableSegment(value: string) {
   return `"${escapeTomlString(value)}"`;
 }
 
-function buildStandaloneMcpServerTablePrefixes(spec: CodexFamilyPluginSpec) {
-  return spec.legacy_standalone_mcp_server_ids.flatMap((serverId) => [
-    `[mcp_servers.${serverId}]`,
-    `[mcp_servers.${quoteTomlTableSegment(serverId)}]`,
-    `[mcp_servers.${serverId}.`,
-    `[mcp_servers.${quoteTomlTableSegment(serverId)}.`,
-  ]);
-}
-
-function removeStandaloneMcpServerTables(text: string, spec: CodexFamilyPluginSpec) {
-  const prefixes = buildStandaloneMcpServerTablePrefixes(spec);
-  return removeTomlTables(text, (header) => prefixes.some((prefix) => header === prefix || header.startsWith(prefix)));
-}
-
 function resolveFamilyPluginSpec(packageId: string, pluginId: string) {
   const agent = resolveStandardAgent(packageId);
   if (!agent || agent.plugin_name !== pluginId) {
@@ -284,7 +238,6 @@ export function removeSupersededOplFamilyCodexConfigTables(
     return {
       text,
       removed: 0,
-      removed_standalone_mcp_servers: 0,
       removed_superseded_plugin_tables: 0,
     };
   }
@@ -296,11 +249,9 @@ export function removeSupersededOplFamilyCodexConfigTables(
       || (header.startsWith('[plugins."') && header.endsWith(`@${marketplaceId}"]`))
     )
   );
-  const retiredMcp = removeStandaloneMcpServerTables(retiredPlugins.text, spec);
   return {
-    text: retiredMcp.text,
-    removed: retiredPlugins.removed + retiredMcp.removed,
-    removed_standalone_mcp_servers: retiredMcp.removed,
+    text: retiredPlugins.text,
+    removed: retiredPlugins.removed,
     removed_superseded_plugin_tables: retiredPlugins.removed,
   };
 }
@@ -349,6 +300,14 @@ function resolvePluginSourcePath(spec: CodexFamilyPluginSpec, repoPath: string) 
     path.join(repoPath, 'plugins', spec.plugin_id),
     repoPath,
   ], { expectedName: spec.plugin_id });
+}
+
+function pluginCategory(manifest: Record<string, unknown>) {
+  const extensions = manifest.extensions;
+  const openai = isRecord(extensions) ? extensions['com.openai'] : null;
+  const pluginInterface = isRecord(openai) ? openai.interface : null;
+  const category = isRecord(pluginInterface) ? pluginInterface.category : null;
+  return typeof category === 'string' && category.trim() ? category.trim() : 'Productivity';
 }
 
 function defaultRepoPathForSpec(spec: CodexFamilyPluginSpec, codexConfigPath: string) {
@@ -576,7 +535,6 @@ export function registerOplFamilyCodexPlugins(
   const codexConfigPath = resolveCodexConfigPath(home);
   const selected = new Set<string>(selectedPacks);
   const items: CodexPluginRegistryItem[] = [];
-  let removedStandaloneMcpServers = 0;
   let removedSupersededPluginTables = 0;
   const removedSupersededPluginPaths: string[] = [];
 
@@ -615,7 +573,11 @@ export function registerOplFamilyCodexPlugins(
 
     const pluginSourcePath = resolvedPlugin.pluginRoot;
     const marketplaceRoot = path.join(resolveOplStateDir(home), 'codex-plugin-marketplaces', spec.marketplace_id);
-    const marketplace = materializeLocalCodexPluginMarketplace(spec, pluginSourcePath, marketplaceRoot);
+    const marketplace = materializeLocalCodexPluginMarketplace(
+      { ...spec, category: pluginCategory(resolvedPlugin.manifest) },
+      pluginSourcePath,
+      marketplaceRoot,
+    );
     registerLocalCodexPlugin(
       codexConfigPath,
       spec,
@@ -626,7 +588,6 @@ export function registerOplFamilyCodexPlugins(
           spec.pack_id,
           spec.plugin_id,
         );
-        removedStandaloneMcpServers += removal.removed_standalone_mcp_servers;
         removedSupersededPluginTables += removal.removed_superseded_plugin_tables;
         return removal;
       },
@@ -670,7 +631,6 @@ export function registerOplFamilyCodexPlugins(
       registered: items.filter((item) => item.status === 'registered').length,
       missing_marketplace: items.filter((item) => item.status === 'missing_plugin_manifest').length,
       missing_plugin_manifest: items.filter((item) => item.status === 'missing_plugin_manifest').length,
-      removed_standalone_mcp_servers: removedStandaloneMcpServers,
       removed_superseded_plugin_tables: removedSupersededPluginTables,
       removed_superseded_plugin_paths: removedSupersededPluginPaths,
       registered_unified_mcp_servers: 1,

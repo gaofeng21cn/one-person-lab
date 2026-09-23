@@ -107,6 +107,13 @@ function workspaceDescriptorFixture(agent: WorkspaceDescriptorFixtureAgent) {
           workspace_kind: 'visual_production_workspace',
           project_kind: 'slide_deck',
           project_collection_label: 'deliverables',
+          shared_resources: [
+            { path: 'shared/sources', role: 'source_intake' },
+            { path: 'shared/brand', role: 'brand_assets' },
+            { path: 'shared/visual_memory', role: 'visual_memory' },
+            { path: 'shared/style_system', role: 'style_system' },
+            { path: 'shared/material_inventory', role: 'material_inventory' },
+          ],
           default_workspace_id: 'visual-production',
           default_project_id: 'deck-001',
           required_locator_fields: ['workspace_root'],

@@ -1,7 +1,5 @@
 export const DOMAIN_LIFECYCLE_ADMISSION_CAPABILITY_ID = 'opl_domain_lifecycle_admission.v1' as const;
 
-export const DEFAULT_REACTIVATION_RECEIPT_FIELD = 'mas_study_lifecycle_reactivation_receipt';
-export const DEFAULT_MATERIALIZATION_AUTHORIZATION_FIELD = 'mas_lifecycle_cas_mutation_authorization';
 export const REQUEST_FIELD_MAP_KEYS = [
   'work_item_id',
   'reactivation_request',
@@ -59,7 +57,7 @@ export type StandardAgentLifecycleAdmissionContract = {
   reactivation_reason_code: string;
   reactivation_projection_sources: LifecycleProjectionSource[];
   reactivation_request_input_field_map: Record<ReactivationRequestInputField, string>;
-  exact_byte_binding_fields: LifecycleExactByteBindingFields | null;
+  exact_byte_binding_fields: LifecycleExactByteBindingFields;
   initialization_action_id: string | null;
   initialization_receipt_output_field: string | null;
   initialization_materialization_authorization_output_field: string | null;

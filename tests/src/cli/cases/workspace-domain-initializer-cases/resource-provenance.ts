@@ -7,6 +7,7 @@ import {
   runCli,
   test,
 } from '../../helpers.ts';
+import { createRcaWorkspaceDescriptorFixture } from '../workspace-domain-test-helper.ts';
 
 function readJsonFile(filePath: string) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
@@ -15,7 +16,8 @@ function readJsonFile(filePath: string) {
 test('workspace upgrade preserves shared resource provenance records and exposes them in inventory', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-resource-provenance-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-resource-provenance-root-'));
-  const env = { OPL_STATE_DIR: stateRoot };
+  const descriptor = createRcaWorkspaceDescriptorFixture();
+  const env = { OPL_STATE_DIR: stateRoot, OPL_FAMILY_WORKSPACE_ROOT: descriptor.familyRoot };
 
   try {
     runCli([
@@ -62,5 +64,6 @@ test('workspace upgrade preserves shared resource provenance records and exposes
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    descriptor.cleanup();
   }
 });

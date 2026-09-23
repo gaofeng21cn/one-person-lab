@@ -159,18 +159,8 @@ export function bindStandardAgentLifecycleReactivation(input: {
 function injectedExactJsonFile(input: {
   exactFile: ExactFile;
   refField: string;
-  binding: ExactByteBindingFieldMap | null;
-  legacySha256Field: string;
-  legacyIncludesByteSize?: boolean;
+  binding: ExactByteBindingFieldMap;
 }) {
-  if (!input.binding) {
-    return {
-      [input.refField]: input.exactFile.ref,
-      [input.legacySha256Field]: input.exactFile.sha256,
-      ...(input.legacyIncludesByteSize ? { byte_size: input.exactFile.bytes.byteLength } : {}),
-      record: input.exactFile.payload,
-    };
-  }
   return {
     [input.refField]: input.exactFile.ref,
     [input.binding.bytes_base64]: input.exactFile.bytes.toString('base64'),
@@ -221,9 +211,7 @@ function buildProjectionInventory(input: {
       ...injectedExactJsonFile({
         exactFile: current,
         refField: 'ref',
-        binding: input.contract.exact_byte_binding_fields?.projection_target ?? null,
-        legacySha256Field: 'sha256',
-        legacyIncludesByteSize: true,
+        binding: input.contract.exact_byte_binding_fields.projection_target,
       }),
     });
   }
@@ -337,8 +325,7 @@ export function prepareStandardAgentLifecycleReactivation(input: {
         payload: userAuthority.record!,
       },
       refField: 'authority_ref',
-      binding: contract.exact_byte_binding_fields?.user_authority ?? null,
-      legacySha256Field: 'authority_sha256',
+      binding: contract.exact_byte_binding_fields.user_authority,
     }),
     reviewer_revision_intake: injectedExactJsonFile({
       exactFile: {
@@ -349,14 +336,12 @@ export function prepareStandardAgentLifecycleReactivation(input: {
         payload: revisionIntake.record!,
       },
       refField: 'intake_ref',
-      binding: contract.exact_byte_binding_fields?.reviewer_revision_intake ?? null,
-      legacySha256Field: 'intake_sha256',
+      binding: contract.exact_byte_binding_fields.reviewer_revision_intake,
     }),
     current_lifecycle: injectedExactJsonFile({
       exactFile: lifecycle,
       refField: 'lifecycle_ref',
-      binding: contract.exact_byte_binding_fields?.current_lifecycle ?? null,
-      legacySha256Field: 'lifecycle_sha256',
+      binding: contract.exact_byte_binding_fields.current_lifecycle,
     }),
     profile: {
       profile_ref: profile.ref,

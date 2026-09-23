@@ -200,6 +200,25 @@ test('capability skill sync reads default and allowed scopes from the owner pack
   }
 });
 
+test('capability skill sync rejects an installed manifest without its owner policy', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-missing-policy-'));
+  const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);
+  const manifestPath = path.join(workspaceRoot, 'mas-scholar-skills', 'opl-package.json');
+  try {
+    const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
+    delete manifest.connect_skill_sync_policy;
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8');
+    const failure = runCliFailure(['connect', 'skills', '--domain', 'mas-scholar-skills'], {
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+      OPL_STATE_DIR: path.join(captureDir, 'state'),
+    });
+    assert.match(JSON.stringify(failure.payload), /missing a Connect skill sync policy/);
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('nested worktree repo roots resolve the family workspace root without OPL_FAMILY_WORKSPACE_ROOT', () => {
   assert.equal(
     resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/one-person-lab/.worktrees/codex-opl-turnkey'),
@@ -788,7 +807,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(generatedBookForgeSkill, fs.readFileSync(path.join(workspaceRoot, 'opl-bookforge', 'agent', 'primary_skill', 'SKILL.md'), 'utf8'));
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, STANDARD_AGENT_PACK_COUNT);
-    assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
+    assert.equal('removed_standalone_mcp_servers' in output.skill_sync.codex_plugin_registry.summary, false);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_superseded_plugin_tables, 10);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered_unified_mcp_servers, 1);
     assert.equal(output.skill_sync.codex_plugin_registry.unified_mcp_server.server_id, 'opl-connect');
@@ -844,7 +863,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     }
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
     assert.match(config, /\[mcp_servers\.sentrux\]/);
-    assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
+    assert.match(config, /\[mcp_servers\.redcube-ai\]/);
     assert.match(config, /\[mcp_servers\.opl-connect\]\ncommand = "opl"\nargs = \["connect", "mcp-stdio"\]/);
     assert.doesNotMatch(config, /retired-mcp|\/legacy\/opl|LEGACY_OPL_CONNECT/);
     assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);

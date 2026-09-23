@@ -3,8 +3,6 @@ import path from 'node:path';
 import type { FamilyActionCatalogAction } from '../../../kernel/family-action-catalog-contract.ts';
 import {
   DOMAIN_LIFECYCLE_ADMISSION_CAPABILITY_ID,
-  DEFAULT_MATERIALIZATION_AUTHORIZATION_FIELD,
-  DEFAULT_REACTIVATION_RECEIPT_FIELD,
   INITIALIZATION_REQUEST_FIELD_MAP_KEYS,
   REQUEST_FIELD_MAP_KEYS,
   type LifecycleProjectionSource,
@@ -19,12 +17,9 @@ import {
   integer,
   jsonPointerText,
   lifecycleExactByteBindingFields,
-  optionalContractText,
   blocked,
   text,
 } from './shared.ts';
-
-const LEGACY_REACTIVATION_REASON_CODE = 'reviewer_revision_reactivation';
 
 export function standardAgentLifecycleAdmissionContract(
   action: FamilyActionCatalogAction,
@@ -165,21 +160,17 @@ export function standardAgentLifecycleAdmissionContract(
     stopped_state: text(value.stopped_state, 'lifecycle_admission_contract.stopped_state'),
     admission_payload_field: text(value.admission_payload_field, 'lifecycle_admission_contract.admission_payload_field'),
     reactivation_action_id: text(value.reactivation_action_id, 'lifecycle_admission_contract.reactivation_action_id'),
-    reactivation_receipt_output_field: optionalContractText(
-      value,
-      'reactivation_receipt_output_field',
-      DEFAULT_REACTIVATION_RECEIPT_FIELD,
+    reactivation_receipt_output_field: text(
+      value.reactivation_receipt_output_field,
+      'lifecycle_admission_contract.reactivation_receipt_output_field',
     ),
-    materialization_authorization_output_field: optionalContractText(
-      value,
-      'materialization_authorization_output_field',
-      DEFAULT_MATERIALIZATION_AUTHORIZATION_FIELD,
+    materialization_authorization_output_field: text(
+      value.materialization_authorization_output_field,
+      'lifecycle_admission_contract.materialization_authorization_output_field',
     ),
-    required_wakeup_gate_id: optionalContractText(value, 'required_wakeup_gate_id', 'explicit_user_wakeup'),
-    stopped_relaunch_gate_id: optionalContractText(value, 'stopped_relaunch_gate_id', 'allow_stopped_relaunch'),
-    reactivation_reason_code: value.reactivation_reason_code === undefined
-      ? LEGACY_REACTIVATION_REASON_CODE
-      : text(value.reactivation_reason_code, 'lifecycle_admission_contract.reactivation_reason_code'),
+    required_wakeup_gate_id: text(value.required_wakeup_gate_id, 'lifecycle_admission_contract.required_wakeup_gate_id'),
+    stopped_relaunch_gate_id: text(value.stopped_relaunch_gate_id, 'lifecycle_admission_contract.stopped_relaunch_gate_id'),
+    reactivation_reason_code: text(value.reactivation_reason_code, 'lifecycle_admission_contract.reactivation_reason_code'),
     reactivation_projection_sources: projectionSources,
     reactivation_request_input_field_map: fieldMap,
     exact_byte_binding_fields: lifecycleExactByteBindingFields(value.exact_byte_binding_fields),
@@ -267,7 +258,7 @@ function parseReactivationRequest(
 
 export function parseStandardAgentLifecycleAdmission(
   value: unknown,
-  expectedReasonCode: string = LEGACY_REACTIVATION_REASON_CODE,
+  expectedReasonCode: string,
 ): ParsedStandardAgentLifecycleAdmission {
   if (!isRecord(value)) blocked('lifecycle_admission must be an object.');
   if (

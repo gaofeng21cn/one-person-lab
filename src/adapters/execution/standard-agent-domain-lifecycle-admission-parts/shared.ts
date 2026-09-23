@@ -81,10 +81,6 @@ export function exactKeys(value: Record<string, unknown>, expected: readonly str
   }
 }
 
-export function optionalContractText(value: Record<string, unknown>, field: string, fallback: string) {
-  return value[field] === undefined ? fallback : text(value[field], `lifecycle_admission_contract.${field}`);
-}
-
 export function jsonPointerText(value: unknown, field: string) {
   const pointer = text(value, field);
   if (!pointer.startsWith('/') || pointer === '/') blocked(`${field} must be a non-root absolute JSON Pointer.`);
@@ -99,8 +95,7 @@ export function exactByteBindingObjectField(value: unknown, field: string) {
   return name;
 }
 
-export function lifecycleExactByteBindingFields(value: unknown): LifecycleExactByteBindingFields | null {
-  if (value === undefined) return null;
+export function lifecycleExactByteBindingFields(value: unknown): LifecycleExactByteBindingFields {
   if (!isRecord(value)) {
     blocked('lifecycle_admission_contract.exact_byte_binding_fields must be an object.');
   }

@@ -107,7 +107,7 @@ test('target architecture schemas retain sparse identity, required-field, and au
     [roleArtifactRef, ['role', 'artifact_ref', 'content_hash']],
     [ownerReceipt, ['consumed_role_artifacts', 'accepted_delta', 'next_stage_or_owner']],
     [typedBlocker, ['blocked_surface', 'missing_or_failed_input', 'next_safe_action']],
-    [workspaceTopology, ['default_profiles', 'domain_profile_defaults', 'runtime_state_boundary']],
+    [workspaceTopology, ['default_profiles', 'runtime_state_boundary']],
     [workspaceIndex, ['canonical_topology', 'profile_binding', 'topology_events']],
   ] as const) {
     for (const field of requiredFields) {

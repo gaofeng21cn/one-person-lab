@@ -250,7 +250,6 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
       ],
     },
     legacy_skill_command_retired: true,
-    legacy_standalone_mcp_servers_retired: true,
     derived_surface_refs: [
       'opl agents run --domain <agent_id> --action <action_id> --json',
       'opl connect skills --json',

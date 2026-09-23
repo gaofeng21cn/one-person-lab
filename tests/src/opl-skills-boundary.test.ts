@@ -49,7 +49,6 @@ const allowedMcpProjectionFields = [
   'cli_mcp_relationship_policy',
   'descriptor_ref',
   'domain_repo_mcp_server_role',
-  'legacy_standalone_mcp_servers_retired',
   'mcp_context_budget_policy',
   'mcp_descriptor_must_delegate_to_series_spine',
   'plugin_registry_is_canonical_transport',
@@ -113,6 +112,11 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
   const professionalSkillIds = allSkillIds.filter((skillId) => !defaultSkillIds.has(skillId));
   fs.mkdirSync(scholarRoot, { recursive: true });
   fs.writeFileSync(path.join(scholarRoot, 'opl-package.json'), `${JSON.stringify({
+    connect_skill_sync_policy: {
+      default_scope: 'workspace',
+      allowed_scopes: ['workspace', 'quest'],
+      implicit_without_target: 'skip',
+    },
     exports: packageProjection.exports,
     codex_surface: packageProjection.codex_surface,
   }, null, 2)}\n`);
@@ -290,7 +294,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
   }
 });
 
-test('OPL Codex plugin registry removes standalone family MCP server blocks', () => {
+test('OPL Codex plugin registry preserves unmanaged MCP server blocks', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-plugin-registry-home-'));
   const originalCodexHome = process.env.CODEX_HOME;
   const originalOplStateDir = process.env.OPL_STATE_DIR;
@@ -328,6 +332,9 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
           name: pluginId,
           version: '0.1.0',
           skills: './skills/',
+          extensions: { 'com.openai': { interface: {
+            category: pluginId === 'redcube-ai' ? 'Creative' : 'Productivity',
+          } } },
         }, null, 2),
         'utf8',
       );
@@ -392,7 +399,7 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
     const config = fs.readFileSync(configPath, 'utf8');
 
     assert.equal(result.summary.registered, 5);
-    assert.equal(result.summary.removed_standalone_mcp_servers, 2);
+    assert.equal('removed_standalone_mcp_servers' in result.summary, false);
     assert.equal(result.summary.registered_unified_mcp_servers, 1);
     assert.deepEqual(result.unified_mcp_server, {
       server_id: 'opl-connect',
@@ -407,11 +414,14 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
     assert.equal(result.summary.removed_superseded_plugin_tables, 4);
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.match(config, /\[mcp_servers\.opl-connect\]\ncommand = "opl"\nargs = \["connect", "mcp-stdio"\]/);
-    assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
-    assert.doesNotMatch(config, /\[mcp_servers\.med-autoscience\]/);
+    assert.match(config, /\[mcp_servers\.redcube-ai\]/);
+    assert.match(config, /\[mcp_servers\.med-autoscience\]/);
     assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);
     assert.match(config, /\[plugins\."med-autogrant@med-autogrant-local"\]/);
     assert.match(config, /\[plugins\."redcube-ai@redcube-ai-local"\]/);
+    const rcaMarketplace = result.items.find((item) => item.plugin_id === 'redcube-ai');
+    assert.ok(rcaMarketplace);
+    assert.equal(JSON.parse(fs.readFileSync(rcaMarketplace.marketplace_path, 'utf8')).plugins[0].category, 'Creative');
     assert.doesNotMatch(config, /rca@rca-local/);
     assert.doesNotMatch(config, /opl-agent-rca-local/);
     assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);

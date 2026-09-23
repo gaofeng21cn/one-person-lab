@@ -103,9 +103,6 @@ test('workspace init uses generic one-off topology without a current domain desc
     assert.equal(first.workspace_initialization.project_root, path.join(workspacePath, 'projects', 'DM002'));
     assert.equal(second.workspace_initialization.metadata_action, 'appended_project');
     for (const relativePath of [
-      'shared/sources',
-      'shared/memory',
-      'shared/style_system',
       'projects/DM002/artifacts/stage_outputs',
       'projects/DM003/artifacts/stage_outputs',
     ]) {
@@ -113,6 +110,7 @@ test('workspace init uses generic one-off topology without a current domain desc
     }
 
     const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.deepEqual(workspaceIndex.shared_resource_roots, []);
     assert.deepEqual(
       workspaceIndex.projects.map((entry: { project_id: string }) => entry.project_id),
       ['DM002', 'DM003'],

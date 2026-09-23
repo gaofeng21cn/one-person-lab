@@ -151,6 +151,7 @@ function syntheticReferenceStepSchema() {
                   'metadata',
                   'retraction_or_update_flags',
                   'normalized',
+                  'match_assessment',
                 ],
                 properties: {
                   match_basis: { enum: ['doi', 'pmid', 'pmcid', 'title', 'none'] },
@@ -270,15 +271,19 @@ export function runReferenceProviderAdapterStep(request) {
             pmcid: null,
             title: request.reference.title,
           },
-          ...(process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT === '1' ? {
+          ...(process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT === 'missing' ? {} : {
             match_assessment: {
-              match_status: 'provider_found',
-              matched_identifiers: {},
+              match_status: process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT === 'held'
+                ? 'provider_found' : 'identifier_matched',
+              matched_identifiers: process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT === 'held'
+                ? {} : { doi: request.reference.doi },
               mismatch_details: [],
-              deferred_reason: 'owner held the match',
-              deferred_code: 'provider_found_without_identifier_match',
+              ...(process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT === 'held' ? {
+                deferred_reason: 'owner held the match',
+                deferred_code: 'provider_found_without_identifier_match',
+              } : {}),
             },
-          } : {}),
+          }),
           verification_scope: { evidence_source: 'synthetic-reference-adapter' },
         },
       },
@@ -423,9 +428,9 @@ test('reference verification routes transport and evidence through the installed
   });
 });
 
-test('reference verification uses a package match assessment when the installed v1 adapter supplies one', async () => {
+test('reference verification uses the package match assessment', async () => {
   await withSyntheticReferenceAdapter(async (_requests, installedPackage) => {
-    process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT = '1';
+    process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT = 'held';
     const output = await runOplConnectReferenceVerification({
       references: [{ id: 'owner-assessment', doi: '10.9999/adapter' }],
       providers: ['synthetic-reference'],
@@ -437,6 +442,21 @@ test('reference verification uses a package match assessment when the installed 
     assert.equal(evidence.status, 'deferred');
     assert.equal(evidence.match_status, 'provider_found');
     assert.equal(evidence.deferred_reason, 'owner held the match');
+  });
+});
+
+test('reference verification rejects a found result without the package match assessment', async () => {
+  await withSyntheticReferenceAdapter(async (_requests, installedPackage) => {
+    process.env.OPL_CONNECT_SYNTHETIC_REFERENCE_ASSESSMENT = 'missing';
+    const output = await runOplConnectReferenceVerification({
+      references: [{ id: 'missing-assessment', doi: '10.9999/adapter' }],
+      providers: ['synthetic-reference'],
+      maxRetries: 0,
+      installedPackage,
+    });
+    const evidence = output.opl_connect_reference_verification.provider_evidence[0];
+    assert.equal(evidence.lookup_status, 'error');
+    assert.equal(evidence.error?.code, 'reference_provider_adapter_result_schema_invalid');
   });
 });
 

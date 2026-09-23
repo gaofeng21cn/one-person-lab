@@ -277,10 +277,6 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       domain_repo_mcp_server_role: readStringField(skillMcp, 'domain_repo_mcp_server_role'),
       cli_mcp_relationship_policy: cloneJsonRecordField(skillMcp, 'cli_mcp_relationship_policy'),
       mcp_context_budget_policy: cloneJsonRecordField(skillMcp, 'mcp_context_budget_policy'),
-      legacy_standalone_mcp_servers_retired: readBooleanField(
-        skillMcp,
-        'legacy_standalone_mcp_servers_retired',
-      ),
       plugin_registry_is_canonical_transport: true,
     },
   };
@@ -826,9 +822,20 @@ function readSkillSyncPolicy(spec: SkillPackSpec, repoRoot: string): SkillPackSy
     ? { default_scope: 'workspace', allowed_scopes: ['workspace', 'quest'], implicit_without_target: 'skip' }
     : { default_scope: 'codex', allowed_scopes: ['codex'], implicit_without_target: 'require_target' };
   const manifestPath = path.join(repoRoot, 'opl-package.json');
-  if (!fs.existsSync(manifestPath)) return fallback;
+  if (!fs.existsSync(manifestPath)) {
+    if (spec.distribution_role !== 'framework_capability_plugin_pack' || !fs.existsSync(repoRoot)) return fallback;
+    throw new FrameworkContractError('contract_shape_invalid', 'Package is missing its owner manifest.', {
+      file: manifestPath,
+    });
+  }
   const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8'));
-  if (!isRecord(manifest) || manifest.connect_skill_sync_policy === undefined) return fallback;
+  if (!isRecord(manifest) || (spec.distribution_role === 'framework_capability_plugin_pack'
+    && manifest.connect_skill_sync_policy === undefined)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package is missing a Connect skill sync policy.', {
+      file: manifestPath,
+    });
+  }
+  if (manifest.connect_skill_sync_policy === undefined) return fallback;
   const policy = manifest.connect_skill_sync_policy;
   if (!isRecord(policy)
     || !['codex', 'workspace', 'quest'].includes(String(policy.default_scope))

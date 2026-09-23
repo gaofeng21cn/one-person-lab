@@ -1,8 +1,3 @@
-import {
-  STANDARD_AGENT_REGISTRY,
-  STANDARD_AGENT_SERIES_MEMBERSHIP,
-} from './standard-agent-registry.ts';
-
 export const WORKSPACE_TOPOLOGY_CONTRACT_REF =
   'contracts/opl-framework/foundry-agent-series-contract.json#/workspace_topology_profile';
 export const WORKSPACE_PROFILE_VERSION = 'workspace-topology-profile.v2';
@@ -30,7 +25,7 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
       canonical_profile_id: 'one_off',
       project_collection_path: 'projects',
       series_capable_skeleton: true,
-      shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
+      shared_resource_roots: [],
       project_stage_outputs_root: 'artifacts/stage_outputs',
     },
     series: {
@@ -38,13 +33,7 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
       profile_role: 'canonical',
       canonical_profile_id: 'series',
       project_collection_path: 'projects',
-      shared_resource_roots: [
-        'shared/sources',
-        'shared/brand',
-        'shared/visual_memory',
-        'shared/style_system',
-        'shared/material_inventory',
-      ],
+      shared_resource_roots: [],
       project_stage_outputs_root: 'artifacts/stage_outputs',
     },
     portfolio: {
@@ -52,13 +41,10 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
       profile_role: 'canonical',
       canonical_profile_id: 'portfolio',
       project_collection_path: 'projects',
-      shared_resource_roots: ['data', 'literature', 'memory', 'shared/sources'],
+      shared_resource_roots: [],
       project_stage_outputs_root: 'artifacts/stage_outputs',
     },
   },
-  domain_profile_defaults: Object.fromEntries(STANDARD_AGENT_REGISTRY
-    .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
-    .map((entry) => [entry.agent_id, 'one_off'])),
   default_user_inspection_surface: {
     ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
     project_stage_outputs_pattern: '<project-root>/artifacts/stage_outputs/<stage-id>/',
@@ -95,19 +81,13 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
       project_stage_outputs_pattern: 'projects/<project-id>/artifacts/stage_outputs/<stage-id>/',
     },
     series: {
-      shared_roots: [
-        'shared/sources',
-        'shared/brand',
-        'shared/visual_memory',
-        'shared/style_system',
-        'shared/material_inventory',
-      ],
+      shared_roots: [],
       project_collection_path: 'projects',
       project_root_pattern: 'projects/<project-id>',
       project_stage_outputs_pattern: 'projects/<project-id>/artifacts/stage_outputs/<stage-id>/',
     },
     portfolio: {
-      shared_roots: ['data', 'literature', 'memory'],
+      shared_roots: [],
       project_collection_path: 'projects',
       project_root_pattern: 'projects/<project-id>',
       project_stage_outputs_pattern: 'projects/<project-id>/artifacts/stage_outputs/<stage-id>/',

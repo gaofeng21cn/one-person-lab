@@ -202,11 +202,7 @@
         "canonical_profile_id": "one_off",
         "project_collection_path": "projects",
         "series_capable_skeleton": true,
-        "shared_resource_roots": [
-          "shared/sources",
-          "shared/memory",
-          "shared/style_system"
-        ],
+        "shared_resource_roots": [],
         "project_stage_outputs_root": "artifacts/stage_outputs"
       },
       "series": {
@@ -214,13 +210,7 @@
         "profile_role": "canonical",
         "canonical_profile_id": "series",
         "project_collection_path": "projects",
-        "shared_resource_roots": [
-          "shared/sources",
-          "shared/brand",
-          "shared/visual_memory",
-          "shared/style_system",
-          "shared/material_inventory"
-        ],
+        "shared_resource_roots": [],
         "project_stage_outputs_root": "artifacts/stage_outputs"
       },
       "portfolio": {
@@ -228,21 +218,9 @@
         "profile_role": "canonical",
         "canonical_profile_id": "portfolio",
         "project_collection_path": "projects",
-        "shared_resource_roots": [
-          "data",
-          "literature",
-          "memory",
-          "shared/sources"
-        ],
+        "shared_resource_roots": [],
         "project_stage_outputs_root": "artifacts/stage_outputs"
       }
-    },
-    "domain_profile_defaults": {
-      "mas": "portfolio",
-      "mag": "one_off",
-      "rca": "series",
-      "oma": "one_off",
-      "obf": "one_off"
     },
     "default_user_inspection_surface": {
       "ordinary_user_default_surface": "workspace_local_project_stage_outputs",
@@ -280,23 +258,13 @@
         "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
       },
       "series": {
-        "shared_roots": [
-          "shared/sources",
-          "shared/brand",
-          "shared/visual_memory",
-          "shared/style_system",
-          "shared/material_inventory"
-        ],
+        "shared_roots": [],
         "project_collection_path": "projects",
         "project_root_pattern": "projects/<project-id>",
         "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
       },
       "portfolio": {
-        "shared_roots": [
-          "data",
-          "literature",
-          "memory"
-        ],
+        "shared_roots": [],
         "project_collection_path": "projects",
         "project_root_pattern": "projects/<project-id>",
         "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
@@ -434,7 +402,6 @@
       ]
     },
     "legacy_skill_command_retired": true,
-    "legacy_standalone_mcp_servers_retired": true,
     "derived_surface_refs": [
       "opl agents run --domain <agent_id> --action <action_id> --json",
       "opl connect skills --json",

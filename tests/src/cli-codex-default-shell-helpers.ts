@@ -455,6 +455,11 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
         JSON.stringify({ name: spec.canonicalPlugin, skills: './skills/' }, null, 2),
       );
       writeJsonFixture(path.join(repoRoot, 'opl-package.json'), {
+        connect_skill_sync_policy: {
+          default_scope: 'workspace',
+          allowed_scopes: ['workspace', 'quest'],
+          implicit_without_target: 'skip',
+        },
         exports: {
           core_skill_ids: [spec.canonicalPlugin],
           default_materialized_skill_ids: [spec.canonicalPlugin],

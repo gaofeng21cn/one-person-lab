@@ -120,18 +120,6 @@ export function isWorkspaceProfileId(value: unknown): value is WorkspaceProfileI
   return typeof value === 'string' && WORKSPACE_PROFILE_IDS.includes(value as WorkspaceProfileId);
 }
 
-const SHARED_RESOURCE_ROLES: Record<string, string> = {
-  data: 'dataset_root',
-  literature: 'literature_root',
-  memory: 'memory_root',
-  'shared/memory': 'memory_root',
-  'shared/sources': 'source_intake',
-  'shared/brand': 'brand_assets',
-  'shared/visual_memory': 'visual_memory',
-  'shared/style_system': 'style_system',
-  'shared/material_inventory': 'material_inventory',
-};
-
 function topologyContract() {
   const value = WORKSPACE_TOPOLOGY_PROFILE_CONTRACT;
   if (!isRecord(value) || value.surface_kind !== 'opl_workspace_topology_profile') {
@@ -319,7 +307,7 @@ export function buildWorkspaceDisplayLabels(
 export function buildSharedResources(profile: TopologyProfile): WorkspaceSharedResourceEntry[] {
   return profile.shared_resource_roots.map((resourcePath) => ({
     path: resourcePath,
-    role: profile.shared_resource_roles?.[resourcePath] ?? SHARED_RESOURCE_ROLES[resourcePath] ?? 'shared_resource',
+    role: profile.shared_resource_roles?.[resourcePath] ?? 'shared_resource',
     manifest_ref: `${resourcePath}/opl_resource_manifest.json`,
     owner: 'workspace_group',
     user_visible: true,
