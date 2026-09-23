@@ -3,7 +3,7 @@
   "package_id": "opl-relay",
   "display_name": "OPL Relay",
   "publisher": "one-person-lab",
-  "version": "0.5.4",
+  "version": "0.5.6",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-relay.git",
@@ -12,6 +12,13 @@
     "id": "opl-relay.capabilities",
     "version": "1.0.0",
     "compatibility_policy": "same_major"
+  },
+  "connect_skill_sync_policy": {
+    "default_scope": "codex",
+    "allowed_scopes": [
+      "codex"
+    ],
+    "implicit_without_target": "require_target"
   },
   "exports": {
     "core_skill_ids": [
@@ -34,6 +41,7 @@
       ".codex-plugin/plugin.json",
       "assets/icon.png",
       "bin/opl-relay",
+      "openclaw/SKILL.md",
       "plugin.json",
       "runtime/codex_mail_workbench/__init__.py",
       "runtime/codex_mail_workbench/apple_mail.py",
@@ -47,6 +55,7 @@
       "runtime/codex_mail_workbench/message.py",
       "runtime/codex_mail_workbench/paths.py",
       "runtime/codex_mail_workbench/persona.py",
+      "runtime/codex_mail_workbench/server_drafts.py",
       "runtime/codex_mail_workbench/store.py",
       "runtime/codex_mail_workbench/sync.py",
       "runtime/codex_mail_workbench/triage.py",
@@ -54,7 +63,7 @@
       "skills/opl-relay/SKILL.md",
       "skills/opl-relay/agents/openai.yaml"
     ],
-    "digest": "sha256:9cb3d819fa183321eaff6b23a5f35a306ec5038d7ea6b8686fb524602082e8b0"
+    "digest": "sha256:12e93e86ac74c243a7d6effb19187509ac5c0f2a8bb7c30a2530a098128cb8a8"
   },
   "codex_surface": {
     "plugin_id": "opl-relay",
@@ -79,8 +88,8 @@
       "request_schema": "opl-package-app-contribution-request.v1",
       "response_schema": "opl-package-app-contribution-response.v1"
     },
-    "plugin_payload_manifest_url": "payloads/opl-relay-0.5.4.json",
-    "carrier_source_commit": "276e9d0f3154b085d3516b58606749e0a0013984"
+    "plugin_payload_manifest_url": "payloads/opl-relay-0.5.6.json",
+    "carrier_source_commit": "70185474fc291301de78d5167f42c198ccafdaf8"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
