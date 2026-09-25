@@ -77,6 +77,9 @@
     "scripts/worktree_fleet_audit.py",
     "scripts/worktree_lifecycle.py",
     "templates/AGENTS.md",
-    "templates/TASTE.md"
+    "templates/TASTE.md",
+    "skills/software-development/references/grok-build/guide.md",
+    "skills/software-development/references/grok-build/handoff-contract.md",
+    "skills/software-development/scripts/run-grok-build-agent.sh"
   ]
 }
