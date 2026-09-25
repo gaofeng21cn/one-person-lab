@@ -3,7 +3,7 @@
 本仓是 OPL Framework 的实现与机器真相归口；以 `contracts/`、源码、测试和 fresh `opl ... --json` readback 为准。
 
 - Framework 持有通用 runtime、Package activation/discovery、projection、installed aggregation 和 shared contracts；领域 truth、quality verdict、artifact authority 仍归 MAS、MAG、RCA 等领域 owner。
-- One Person Lab App 持有桌面产品、GUI 和发布产品 truth；AionUI 承载当前 Stable Shell，Studio 独立承载 DSH/Cordis Application Host、原生 Codex 与 delivery carrier 实现，已退休的 Hermes 仓只保留 read-only Git provenance。
+- One Person Lab App 持有桌面产品、GUI 和发布产品 truth；Studio 承载当前 Stable/Nightly Desktop、WebUI 与 Docker 的 DSH/Cordis Application Host 和原生 Codex 实现；AionUI 仅保留旧版升级基线与历史来源，已退休的 Hermes 仓只保留 read-only Git provenance。
 - Framework Host 只在 `framework_runtime_package_graph_and_app_projection` 范围内唯一；Studio Host 的范围是 `dsh_profile_plugin_lifecycle_codex_and_delivery_transport_composition`。两个 Host 通过公开 App state/action、authentication 和 channel callback 合同协作，不共享 registry、currentness、session 或内部 service graph，也不得形成第二套 OPL runtime、Package authority、App state/action、domain、product 或 release authority。
 - AionCore 是只读的官方上游依赖，不是 OPL 维护面。不得为解决 OPL 问题建立或维护 AionCore fork、提交 AionCore PR/补丁，或把本地修改版纳入产品；问题必须在 OPL 自有 App/Shell 边界解决，版本升级只采用官方未修改的 release。
 - 不得单独替换或热更新 `/Applications/One Person Lab.app` 内正在运行的 AionCore 二进制。AionCore 升级必须随完整 OPL App 构建和安装完成，并回读 App bundle、AionCore 与 App/Shell 选定的官方 Codex CLI 的实际版本；Codex carrier 的版本和 digest 由当前 App/Shell 合同决定。

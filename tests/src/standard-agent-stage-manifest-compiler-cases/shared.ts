@@ -1,3 +1,4 @@
+import { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -22,6 +23,12 @@ import {
   resolveGeneratedSurfaceHandoffContract,
   STANDARD_GENERATED_SURFACE_HANDOFF_DEFAULTS_PROFILE,
 } from '../../../src/authority/packages/standard-agent-proof-contract-defaults.ts';
+
+const ownedFixtureRoots = new Set<string>();
+after(() => {
+  for (const root of ownedFixtureRoots) fs.rmSync(root, { recursive: true, force: true });
+  ownedFixtureRoots.clear();
+});
 
 type JsonRecord = Record<string, any>;
 
@@ -99,6 +106,7 @@ Re-review.
 
 function fixture(domainId: string, canonicalAgentId = domainId) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-manifest-'));
+  ownedFixtureRoots.add(root);
   const packRefs = [
     'agent/stages/manifest.json',
     'agent/stages/intake.md',

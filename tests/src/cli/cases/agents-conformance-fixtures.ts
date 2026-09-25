@@ -1,8 +1,15 @@
+import { after } from 'node:test';
 import { fs, os, parseJsonText, path, runCli } from '../helpers.ts';
 import {
   buildStandardDomainAgentScaffold,
   compileStandardAgentStageManifest,
 } from '../../../../src/authority/packages/index.ts';
+
+const ownedFixtureRoots = new Set<string>();
+after(() => {
+  for (const root of ownedFixtureRoots) fs.rmSync(root, { recursive: true, force: true });
+  ownedFixtureRoots.clear();
+});
 
 const OPL_DOMAIN_READONLY_AUTHORITY = {
   opl_can_write_domain_truth: false,
@@ -167,6 +174,7 @@ function syncStageManifestFromPlane(repoDir: string, stageControlPlane: Record<s
 
 export function buildReadyAgentRepo() {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-conformance-'));
+  ownedFixtureRoots.add(targetDir);
   buildStandardDomainAgentScaffold({
     targetDir,
     domainId: 'sample-brief-agent',
