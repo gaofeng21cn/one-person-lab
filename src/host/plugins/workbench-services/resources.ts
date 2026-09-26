@@ -6,7 +6,28 @@ import path from 'node:path';
 const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 const MAX_CONTENT = 128 * 1024;
 type InventoryFile = { id: string; category: string; name: string; bytes: number; revision: string; modifiedAt: string; editable?: boolean };
-type CleanupRoot = { id: string; path: string; owner: string };
+type CleanupRoot = { id: string; path: string; owner: string; cleanupMode?: 'inactive_owner_files' | 'stale_cache_files' };
+
+function userLabel(root: CleanupRoot): string {
+  if (root.id === 'codex_logs') return 'Codex logs';
+  if (root.id === 'app_logs') return 'App logs';
+  if (root.id === 'app_cache') return 'App cache';
+  return root.id;
+}
+
+function userSemantics(root: CleanupRoot) {
+  return {
+    user_label: userLabel(root),
+    user_goal: 'release_space',
+    safety: 'safe_after_preview',
+    recoverability: 'not_restorable',
+    action: 'cleanup',
+    impact: {
+      will_change: 'disk_space',
+      will_not_change: ['conversations', 'projects', 'artifacts', 'credentials', 'sessions', 'memory'],
+    },
+  };
+}
 
 export class WorkbenchResources {
   private mutation: Promise<unknown> = Promise.resolve();
@@ -28,8 +49,9 @@ export class WorkbenchResources {
   readonly memoryRoot: string;
   readonly cleanupRoots: CleanupRoot[];
   readonly inventoryRoots: CleanupRoot[];
-  constructor(memoryRoot: string, cleanupRoots: CleanupRoot[], inventoryRoots: CleanupRoot[] = []) {
-    this.memoryRoot = memoryRoot; this.cleanupRoots = cleanupRoots; this.inventoryRoots = inventoryRoots;
+  readonly receiptRoot: string | null;
+  constructor(memoryRoot: string, cleanupRoots: CleanupRoot[], inventoryRoots: CleanupRoot[] = [], receiptRoot: string | null = null) {
+    this.memoryRoot = memoryRoot; this.cleanupRoots = cleanupRoots; this.inventoryRoots = inventoryRoots; this.receiptRoot = receiptRoot;
   }
 
   private async files(root: string, category: string, notesOnly = false): Promise<InventoryFile[]> {
@@ -143,13 +165,52 @@ export class WorkbenchResources {
   }
 
   async inventory() {
+    const startedAt = Date.now();
     const categories = await Promise.all(this.cleanupRoots.map(async root => {
       const files = await this.files(root.path, root.id);
       // Active files are kept. Only owner-declared logs/cache roots are admitted.
       const reclaimable = files.filter(file => Date.parse(file.modifiedAt) < Date.now() - 86400000);
-      return { id: root.id, owner: root.owner, bytes: files.reduce((n, f) => n + f.bytes, 0), reclaimableBytes: reclaimable.reduce((n, f) => n + f.bytes, 0), files: reclaimable };
+      const bytes = files.reduce((n, f) => n + f.bytes, 0);
+      const reclaimableBytes = reclaimable.reduce((n, f) => n + f.bytes, 0);
+      return {
+        id: root.id,
+        owner: root.owner,
+        bytes,
+        reclaimableBytes,
+        retainedBytes: bytes - reclaimableBytes,
+        expectedAfterBytes: bytes - reclaimableBytes,
+        cleanupBoundary: 'owner_declared_root',
+        cleanupMode: root.cleanupMode ?? 'inactive_owner_files',
+        ...userSemantics(root),
+        files: reclaimable,
+      };
     }));
-    return { status: 'available', categories, protectedCategories: await Promise.all(this.inventoryRoots.map(root => this.summarize(root))), exclusions: ['workspace', 'artifacts', 'credentials', 'sessions', 'memory', 'active_files', 'symbolic_links'] };
+    const observedAt = new Date().toISOString();
+    const protectedCategories = await Promise.all(this.inventoryRoots.map(root => this.summarize(root)));
+    const totalBytes = [...categories, ...protectedCategories].reduce((total, category) => total + (category.bytes ?? 0), 0);
+    const reclaimableBytes = categories.reduce((total, category) => total + category.reclaimableBytes, 0);
+    return {
+      schema: 'opl_local_data_lifecycle_inventory.v1',
+      status: 'available',
+      observed_at: observedAt,
+      scan_duration_ms: Math.max(0, Date.now() - startedAt),
+      stale: false,
+      totalBytes,
+      total_bytes: totalBytes,
+      reclaimableBytes,
+      reclaimable_bytes: reclaimableBytes,
+      user_summary: {
+        user_goal: 'release_space',
+        current_state: 'inventoried',
+        next_action: reclaimableBytes > 0 ? 'preview_cleanup' : 'none',
+        expected_after_bytes: totalBytes - reclaimableBytes,
+        recoverability: 'not_restorable',
+      },
+      categories,
+      protectedCategories,
+      exclusions: ['workspace', 'artifacts', 'credentials', 'sessions', 'memory', 'active_files', 'symbolic_links'],
+      restoreSupported: false,
+    };
   }
 
   async cleanupPreview(ids: string[]) {
@@ -161,7 +222,36 @@ export class WorkbenchResources {
     if (this.previews.size > 100) throw new Error('Too many pending previews.');
     const token = randomUUID();
     this.previews.set(token, { files, expires: Date.now() + 300000 });
-    return { status: 'preview', token, files, owner: 'Codex / App log owners', affected_categories: [...new Set(files.map(f => f.category))], summary: `${files.length} files, ${files.reduce((n, f) => n + f.bytes, 0)} bytes; only inactive owner-declared logs.`, next_visible_step: 'Confirm within 5 minutes. Changed files require a new preview.', bytes: files.reduce((n, f) => n + f.bytes, 0), expiresInSeconds: 300 };
+    const selectedBytes = files.reduce((n, f) => n + f.bytes, 0);
+    const categoryTotals = new Map(inventory.categories.map(category => [category.id, category]));
+    const selectedByCategory = new Map<string, number>();
+    for (const file of files) selectedByCategory.set(file.category, (selectedByCategory.get(file.category) ?? 0) + file.bytes);
+    const retainedBytes = [...selectedByCategory].reduce((total, [category, selected]) => total + Math.max(0, (categoryTotals.get(category)?.bytes ?? 0) - selected), 0);
+    const planId = randomUUID();
+    const planHash = hash(JSON.stringify({ planId, files, selectedBytes, retainedBytes, observedAt: inventory.observed_at }));
+    return {
+      status: 'preview',
+      token,
+      plan_id: planId,
+      plan_hash: planHash,
+      files,
+      owner: 'Codex / App log and cache owners',
+      affected_categories: [...new Set(files.map(f => f.category))],
+      summary: `${files.length} files, ${selectedBytes} bytes; only inactive owner-declared logs and caches.`,
+      next_visible_step: 'Confirm within 5 minutes. Changed files require a new preview.',
+      user_goal: 'release_space',
+      current_state: { selected_bytes: selectedBytes, retained_bytes: retainedBytes, inventory_observed_at: inventory.observed_at },
+      expected_state: { released_bytes: selectedBytes, retained_bytes: inventory.total_bytes - selectedBytes, inventory_observed_after: 'required' },
+      impact: { will_change: 'disk_space', will_not_change: ['conversations', 'projects', 'artifacts', 'credentials', 'sessions', 'memory'] },
+      recoverability: 'not_restorable',
+      bytes: selectedBytes,
+      selected_bytes: selectedBytes,
+      retained_bytes: retainedBytes,
+      observed_at: inventory.observed_at,
+      restore_supported: false,
+      receipt_ref: null,
+      expiresInSeconds: 300,
+    };
   }
 
   async cleanupExecute(token: string, confirmed: boolean) {
@@ -185,6 +275,33 @@ export class WorkbenchResources {
         await unlink(target.file); removed.push(file.id);
       } catch { return { status: 'partial', removed, summary: `${removed.length} files removed before an error. Inspect the remaining inventory and preview again.`, reason: 'Inventory changed or a file could not be removed; inspect and preview again.' }; }
     }
-    return { status: 'executed', removed, summary: `${removed.length} inactive log files removed. Protected data was retained.`, owner: 'declared_log_cache_owners' };
+    const receiptRef = `workbench-cleanup:${randomUUID()}`;
+    const receipt = { schema: 'opl_workbench_cleanup_receipt.v1', receipt_ref: receiptRef, removed, removed_count: removed.length, created_at: new Date().toISOString(), restore_supported: false, owner: 'declared_log_cache_owners' };
+    if (this.receiptRoot) {
+      await mkdir(this.receiptRoot, { recursive: true, mode: 0o700 });
+      await writeFile(path.join(this.receiptRoot, `${receiptRef.slice(receiptRef.lastIndexOf(':') + 1)}.json`), `${JSON.stringify(receipt, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+    }
+    let afterInventory: Awaited<ReturnType<WorkbenchResources['inventory']>> | null = null;
+    try { afterInventory = await this.inventory(); } catch { afterInventory = null; }
+    return {
+      status: 'executed',
+      removed,
+      summary: `${removed.length} inactive owner-declared log/cache files removed. Protected data was retained.`,
+      owner: 'declared_log_cache_owners',
+      receipt_ref: receiptRef,
+      restore_supported: false,
+      user_goal: 'release_space',
+      expected_state: { released_files: removed.length, readback: afterInventory ? 'confirmed' : 'unavailable' },
+      terminal_readback: {
+        removed_count: removed.length,
+        receipt_ref: receiptRef,
+        inventory_status: afterInventory ? 'confirmed' : 'unavailable',
+        inventory: afterInventory ? {
+          observed_at: afterInventory.observed_at,
+          total_bytes: afterInventory.total_bytes,
+          reclaimable_bytes: afterInventory.reclaimable_bytes,
+        } : null,
+      },
+    };
   }
 }

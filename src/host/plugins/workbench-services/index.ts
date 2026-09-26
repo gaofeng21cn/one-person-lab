@@ -24,13 +24,15 @@ export async function startCordisWorkbenchServicesHost(options: WorkbenchHostOpt
   const canonicalHome = await realpath(codexHome).catch(() => codexHome);
   const stateDirectory = env.OPL_STATE_DIR ? path.resolve(env.OPL_STATE_DIR) : resolveOplStatePaths({ dataDir: env.OPL_DATA_DIR }).state_dir;
   const resources = new WorkbenchResources(path.join(canonicalHome, 'memories'), [
-    { id: 'codex_logs', path: path.join(canonicalHome, 'log'), owner: 'Codex' },
-    ...(env.OPL_STUDIO_LOG_ROOT ? [{ id: 'app_logs', path: path.resolve(env.OPL_STUDIO_LOG_ROOT), owner: 'OPL App carrier' }] : []),
+    { id: 'codex_logs', path: path.join(canonicalHome, 'log'), owner: 'Codex', cleanupMode: 'inactive_owner_files' as const },
+    ...(env.OPL_STUDIO_LOG_ROOT ? [{ id: 'app_logs', path: path.resolve(env.OPL_STUDIO_LOG_ROOT), owner: 'OPL App carrier', cleanupMode: 'inactive_owner_files' as const }] : []),
+    ...(env.OPL_STUDIO_CACHE_ROOT ? [{ id: 'app_cache', path: path.resolve(env.OPL_STUDIO_CACHE_ROOT), owner: 'OPL App carrier', cleanupMode: 'stale_cache_files' as const }] : []),
   ], [
     { id: 'codex_home', path: canonicalHome, owner: 'Codex' },
     { id: 'framework_state', path: stateDirectory, owner: 'OPL Framework' },
     ...(env.OPL_STUDIO_DATA_ROOT ? [{ id: 'app_data', path: path.resolve(env.OPL_STUDIO_DATA_ROOT), owner: 'OPL App carrier' }] : []),
-  ]);
+    ...((env.OPL_RUNTIME_ROOT || env.OPL_RUNTIME_TOOLCHAIN_ROOT) ? [{ id: 'runtime_substrate', path: path.resolve(env.OPL_RUNTIME_ROOT || env.OPL_RUNTIME_TOOLCHAIN_ROOT!), owner: 'OPL Framework runtime' }] : []),
+  ], path.join(stateDirectory, 'receipts', 'workbench-cleanup'));
   const tasks = new PersonalTasks(options.executor, canonicalHome, env, stateDirectory);
   const resourceReads = { memory: { status: 'not_read', reason: 'Open Memory to read current files.' }, storage: { status: 'not_read', reason: 'Open Storage to read current inventory.' } };
   const previews = new Map<string, { fingerprint: string; expires: number; result: Record<string, unknown> }>();
@@ -46,7 +48,7 @@ export async function startCordisWorkbenchServicesHost(options: WorkbenchHostOpt
       schema_version: 'opl-workbench-services.v1', owner: 'OPL Framework', package_id: WORKBENCH_SERVICE_ID,
       tasks: { status: tasks.status, reason: tasks.reason, read_ref: 'workbench#tasks', history_ref: 'workbench#history', action_refs: writeOps.filter(x => x.startsWith('task_')).map(x => `workbench#${x}`) },
       memory: { ...resourceReads.memory, read_ref: 'workbench#memory', action_refs: ['workbench#memory_correct', 'workbench#memory_update_note', 'workbench#memory_delete_note'], write_policy: 'correction_notes_only' },
-      storage: { ...resourceReads.storage, read_ref: 'workbench#inventory', action_refs: ['workbench#cleanup'], scope: 'owner_declared_inactive_logs' },
+      storage: { ...resourceReads.storage, read_ref: 'workbench#inventory', action_refs: ['workbench#cleanup'], scope: 'owner_declared_inactive_logs_and_stale_caches', restore_supported: false },
     } }),
     async read(request: Request) {
       if (request.package_id !== WORKBENCH_SERVICE_ID || !readOps.some(op => request.ref === `workbench#${op}`)) throw Error('Unknown workbench contribution.');
