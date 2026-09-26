@@ -70,8 +70,11 @@ test('cleanup only removes exact old inventory after preview/confirm, detects ch
     const result = await resources.cleanupExecute(current.token, true);
     assert.equal(result.status, 'executed');
     assert.equal(typeof result.receipt_ref, 'string');
+    assert.ok(result.expected_state);
     assert.equal(result.expected_state.readback, 'confirmed');
+    assert.ok(result.terminal_readback);
     assert.equal(result.terminal_readback.inventory_status, 'confirmed');
+    assert.ok(result.terminal_readback.inventory);
     assert.equal(result.terminal_readback.inventory.reclaimable_bytes, 0);
     const receiptName = `${String(result.receipt_ref).split(':').at(-1)}.json`;
     const receipt = JSON.parse(await readFile(path.join(receiptRoot, receiptName), 'utf8'));
