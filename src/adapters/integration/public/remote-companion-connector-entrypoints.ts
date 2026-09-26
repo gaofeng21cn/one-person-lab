@@ -206,7 +206,18 @@ export async function loadInstalledRemoteCompanionConnectors(
   for (const descriptor of callableDescriptors) {
     for (const entrypoint of remoteCompanionEntrypoints(descriptor)) {
       const modulePath = resolveEntrypointModule(descriptor, entrypoint);
-      const module = await import(pathToFileURL(modulePath).href) as Record<string, unknown>;
+      let module: Record<string, unknown>;
+      try {
+        module = await import(pathToFileURL(modulePath).href) as Record<string, unknown>;
+      } catch (error) {
+        // A development-only connector may ship before its optional transport
+        // dependency is bundled. Keep the Framework composition usable for
+        // other providers and let the App render the connector as unavailable.
+        if (error && typeof error === 'object' && 'code' in error && error.code === 'ERR_MODULE_NOT_FOUND') {
+          continue;
+        }
+        throw error;
+      }
       const connector = createRemoteCompanionConnector(
         descriptor,
         entrypoint,
