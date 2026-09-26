@@ -401,10 +401,14 @@ export const cordisRemoteCompanionConnectorHostPlugin = {
       attach,
       appStatePatch() {
         const packageStatusById = Object.fromEntries([...activeConnectors]
-          .filter(([, active]) => active.status === 'active' && active.connector.remote_companion_access)
+          .filter(([, active]) => active.status === 'active'
+            ? Boolean(active.connector.remote_companion_access)
+            : Boolean(active.attachment.descriptor.manifest.app_contributions?.views.some(
+              (view) => view.view_type === 'remote_companion_access',
+            )))
           .map(([packageId, active]) => [packageId, {
             presence: { installed: true },
-            capability_exposure: { status: 'enabled' },
+            capability_exposure: { status: active.status === 'active' ? 'enabled' : 'unavailable' },
             app_contributions: active.attachment.descriptor.manifest.app_contributions,
           }]));
         return Object.freeze({
@@ -415,6 +419,22 @@ export const cordisRemoteCompanionConnectorHostPlugin = {
         });
       },
       async readRemoteCompanionAccess(input) {
+        const packageId = requiredString(input?.package_id, 'package_id');
+        const unavailable = activeConnectors.get(packageId);
+        if (unavailable?.status === 'unavailable') {
+          const ref = contributionRef(input.ref);
+          const declared = unavailable.attachment.descriptor.manifest.app_contributions?.views
+            .some((view) => view.view_type === 'remote_companion_access' && view.data_ref === ref);
+          if (!declared) {
+            throw new Error(`Remote companion remote_companion_access data ref is not declared: ${packageId}:${ref}`);
+          }
+          return contributionReadback(unavailable, ref, 'read', {
+            schema_version: 'opl-app-remote-companion-access.v1',
+            status: 'unavailable',
+            unavailable_reason: unavailable.unavailable_reason,
+            actions: [],
+          });
+        }
         const { active, controller } = contribution(input);
         const ref = contributionRef(input.ref);
         if (controller.data_ref !== ref) {

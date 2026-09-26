@@ -222,9 +222,11 @@ export function projectLocalCapabilityDependencyReadiness(
 }
 
 function frameworkProjectionRemainsCallableWhileDisabled(
-  manifest: Pick<InstalledPackageManifest, 'package_role' | 'codex_default_exposure' | 'codex_interaction_mode'>,
+  manifest: Pick<InstalledPackageManifest, 'package_role' | 'codex_default_exposure' | 'codex_interaction_mode' | 'codex_surface'>,
 ) {
-  return manifest.codex_interaction_mode === 'headless_internal'
+  const interactionMode = manifest.codex_interaction_mode
+    ?? manifest.codex_surface?.interaction_mode;
+  return interactionMode === 'headless_internal'
     || (manifest.package_role === 'capability_package' && manifest.codex_default_exposure === false);
 }
 
@@ -657,7 +659,9 @@ export function installedDescriptorSupportsFrameworkCalls(
 export function installedDescriptorHasExpectedCodexExposure(
   descriptor: InstalledPackageDescriptor,
 ) {
-  if (descriptor.manifest.codex_interaction_mode === 'headless_internal') {
+  const interactionMode = descriptor.manifest.codex_interaction_mode
+    ?? descriptor.manifest.codex_surface?.interaction_mode;
+  if (interactionMode === 'headless_internal') {
     return !descriptor.enabled;
   }
   return descriptor.enabled;
