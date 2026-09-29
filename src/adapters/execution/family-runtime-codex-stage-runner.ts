@@ -773,7 +773,8 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   const reviewEnvelope = closeoutPacket?.route_impact?.stage_quality_cycle;
   const reviewProtocolFailure = reviewRole
     && (!isRecord(reviewEnvelope) || typeof reviewEnvelope.outcome !== 'string')
-    ? primaryBlockedReason ?? 'stage_quality_review_outcome_missing'
+    ? primaryBlockedReason
+      ?? (closeoutRejection ? `typed_closeout_${closeoutRejection.reason}` : 'stage_quality_review_outcome_missing')
     : null;
   if (reviewProtocolFailure) {
     closeoutPacket = buildProviderRuntimeCloseoutPacket({
