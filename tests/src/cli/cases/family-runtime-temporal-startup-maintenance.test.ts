@@ -78,7 +78,7 @@ function fakeRuntimeHandle(onClose?: () => void) {
   };
 }
 
-test('Temporal startup maintenance is mutation-free outside the Desktop Darwin managed host boundary', async () => {
+test('Temporal startup maintenance does not open the runtime outside a managed Desktop host', async () => {
   let openCount = 0;
   const openRuntime = () => {
     openCount += 1;
@@ -86,7 +86,7 @@ test('Temporal startup maintenance is mutation-free outside the Desktop Darwin m
   };
   const cases = [
     {
-      platform: 'linux' as const,
+      platform: 'win32' as const,
       env: { OPL_APP_HOST_KIND: 'desktop', OPL_APP_PROCESS_INSTANCE_ID: 'desktop-1' },
       reason: 'launchd_supervision_not_available_on_non_darwin',
     },
@@ -147,6 +147,80 @@ test('Temporal startup maintenance is mutation-free outside the Desktop Darwin m
     assert.equal(result.steps.temporal_service_supervisor.status, 'not_applicable');
   }
   assert.equal(openCount, 0);
+});
+
+test('Linux Desktop startup restores the configured local service before Worker and Scheduler', async () => {
+  const order: string[] = [];
+  let serviceStarted = false;
+  let workerStarted = false;
+  let schedulerInstalled = false;
+  let closed = false;
+  const result = await reconcileTemporalRuntimeStartupMaintenance({
+    platform: 'linux', env: { OPL_APP_HOST_KIND: 'desktop' },
+    openRuntime: () => fakeRuntimeHandle(() => { closed = true; }),
+    inspectManagedService: (() => ({ state: { service_kind: 'temporal_cli', address: '127.0.0.1:7233' } })) as never,
+    inspectService: async () => serviceLifecycle({ ready: serviceStarted, required: false }),
+    startService: (async () => { order.push('service'); serviceStarted = true; }) as never,
+    inspectWorker: async () => workerLifecycle(workerStarted),
+    repairWorker: (async (_paths: unknown, input: Record<string, unknown>) => {
+      assert.equal(serviceStarted, true);
+      assert.equal(input.trigger, 'startup_maintenance');
+      assert.equal(input.allowStart, true);
+      assert.equal(input.allowRestart, true);
+      order.push('worker'); workerStarted = true;
+    }) as never,
+    runScheduler: (async (_db: unknown, _paths: unknown, input: { mode: string }) => {
+      assert.equal(workerStarted, true);
+      if (input.mode === 'scheduler_install') { order.push('scheduler'); schedulerInstalled = true; }
+      return schedulerStatus(schedulerInstalled);
+    }) as never,
+  });
+  assert.equal(result.status, 'ready');
+  assert.equal(result.ready, true);
+  assert.equal(result.failed_step, null);
+  assert.deepEqual(order, ['service', 'worker', 'scheduler']);
+  assert.equal(result.authority_boundary.can_install_opl_provider_supervisor, false);
+  assert.equal(closed, true);
+});
+
+test('Linux Desktop startup leaves unconfigured and externally managed services untouched', async () => {
+  for (const state of [null, { service_kind: 'temporal_cli', address: 'temporal.example.test:7233' },
+    { service_kind: 'custom_command', address: 'localhost:7233' }]) {
+    let closed = false;
+    const result = await reconcileTemporalRuntimeStartupMaintenance({
+      platform: 'linux', env: { OPL_APP_HOST_KIND: 'desktop' },
+      openRuntime: () => fakeRuntimeHandle(() => { closed = true; }),
+      inspectManagedService: (() => ({ state })) as never,
+      inspectService: async () => { throw new Error('must not inspect or start an unowned service'); },
+    });
+    assert.equal(result.status, 'not_applicable');
+    assert.equal(result.ready, null);
+    assert.equal(closed, true);
+  }
+  for (const extra of [{ OPL_TEMPORAL_ADDRESS: 'localhost:7233' },
+    { TEMPORAL_ADDRESS: 'remote.example.test:7233' },
+    { OPL_TEMPORAL_SERVICE_START_COMMAND: '/opt/external/service' }]) {
+    const result = await reconcileTemporalRuntimeStartupMaintenance({
+      platform: 'linux', env: { OPL_APP_HOST_KIND: 'desktop', ...extra },
+      openRuntime: () => { throw new Error('must not open runtime for external configuration'); },
+    });
+    assert.equal(result.status, 'not_applicable');
+  }
+});
+
+test('Linux Desktop startup stops before Scheduler when the guarded Worker repair remains blocked', async () => {
+  const result = await reconcileTemporalRuntimeStartupMaintenance({
+    platform: 'linux', env: { OPL_APP_HOST_KIND: 'desktop' },
+    openRuntime: () => fakeRuntimeHandle(),
+    inspectManagedService: (() => ({ state: { service_kind: 'temporal_cli', address: 'localhost:7233' } })) as never,
+    inspectService: async () => serviceLifecycle({ ready: true, required: false }),
+    inspectWorker: async () => workerLifecycle(false, 'worker_source_stale'),
+    repairWorker: (async () => ({ repair_status: 'blocked' })) as never,
+    runScheduler: (async () => { throw new Error('scheduler must not run before Worker readiness'); }) as never,
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.ready, false);
+  assert.equal(result.failed_step, 'temporal_managed_worker');
 });
 
 test('Temporal startup maintenance installs Server then Worker then Scheduler with fresh readback', async () => {

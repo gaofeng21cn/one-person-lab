@@ -24,7 +24,10 @@ import {
 } from './family-runtime-temporal.ts';
 import {
   inspectTemporalServiceLifecycle,
+  inspectDetachedTemporalServiceState,
+  startTemporalServiceLifecycle,
 } from './family-runtime-temporal-service.ts';
+import { reconcileLinuxDesktopTemporal } from './family-runtime-temporal-linux-startup.ts';
 import {
   runTemporalServiceSupervisorCommand,
 } from './family-runtime-temporal-service-supervisor.ts';
@@ -58,6 +61,8 @@ export type TemporalStartupMaintenanceRuntime = {
   now?: () => string;
   openRuntime?: () => RuntimeHandle;
   inspectService?: (paths: RuntimePaths) => Promise<ServiceLifecycle>;
+  inspectManagedService?: typeof inspectDetachedTemporalServiceState;
+  startService?: typeof startTemporalServiceLifecycle;
   runServiceSupervisor?: typeof runTemporalServiceSupervisorCommand;
   runWorkerSupervisor?: typeof runProviderWorkerSupervisorCommand;
   repairWorker?: typeof repairTemporalWorkerLifecycleForProvider;
@@ -289,6 +294,12 @@ export async function reconcileTemporalRuntimeStartupMaintenance(
   const providerKind = env.OPL_FAMILY_RUNTIME_PROVIDER?.trim() || 'temporal';
   const observedAt = runtime.now?.() ?? new Date().toISOString();
   const addressProvenance = resolveTemporalAddressProvenance(env);
+
+  if (platform === 'linux' && hostKind === 'desktop' && providerKind === 'temporal'
+    && !env.OPL_TEMPORAL_SERVICE_START_COMMAND?.trim()
+    && (!addressProvenance.address || addressProvenance.managed_packaged_local_default)) {
+    return reconcileLinuxDesktopTemporal(runtime);
+  }
 
   if (platform !== 'darwin') {
     return notApplicableReceipt({
