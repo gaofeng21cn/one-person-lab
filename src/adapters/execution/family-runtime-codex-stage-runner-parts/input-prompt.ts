@@ -231,6 +231,7 @@ function typedCloseoutScopeBindingLines(attempt: JsonRecord) {
         ...(attemptId ? [`Any typed closeout packet must use stage_attempt_id "${attemptId}" exactly.`] : []),
         ...(stageRunId ? [`Any typed closeout packet must use stage_run_id "${stageRunId}" exactly.`] : []),
         ...(scopeDigest ? [`Any typed closeout packet must use scope_digest "${scopeDigest}" exactly.`] : []),
+        ...(scope ? [`Exact execution_scope snapshot for typed closeout: ${JSON.stringify(scope)}`] : []),
       ];
 }
 

@@ -220,6 +220,15 @@ export async function runStageAction(input: {
   if (executionBinding.kind !== 'stage_binding' || !stageRoute) {
     fail('Stage action has an invalid execution binding.', { action_id: input.action.action_id });
   }
+  // A Stage that declares a controller-required review lane binds the lane at
+  // launch time; the hosted Stage action surface is the controller's entry
+  // point, so a controller-supplied lane must reach attempt creation intact.
+  // The compiled Stage manifest remains the sole authority over which lanes
+  // are legal; the family runtime validates this value against that binding.
+  const requestedReviewLane = typeof input.payload.review_lane === 'string'
+    && input.payload.review_lane.trim()
+    ? input.payload.review_lane.trim()
+    : null;
   const prepared = prepareStandardAgentActionRunRequest({
     workspaceRoot: input.workspaceRoot,
     runId: input.runId,
@@ -411,6 +420,7 @@ export async function runStageAction(input: {
         sourceFingerprint,
         '--invocation-mode',
         'invocation',
+        ...(requestedReviewLane ? ['--review-lane', requestedReviewLane] : []),
         '--checkpoint-ref',
         stageRequest.ref,
         '--input-artifact-ref',
