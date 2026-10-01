@@ -4,7 +4,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {execFileSync} from 'node:child_process';
-import {installTemporalCli} from '../../src/adapters/integration/managed-temporal-cli.mjs';
+import {installTemporalCli} from '../../src/adapters/execution/managed-temporal-cli.mjs';
 
 test('a corrupt upstream archive cannot create a runnable managed CLI',()=>{
  const home=fs.mkdtempSync(path.join(os.tmpdir(),'opl-temporal-corrupt-'));
