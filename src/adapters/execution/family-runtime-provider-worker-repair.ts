@@ -254,7 +254,9 @@ function buildWorkerRestartGuard(input: {
     ]),
   );
   const blockerIds: string[] = [];
-  if (workerMutationGuard?.mutation_guard_status !== 'allowed_explicit_developer_supervisor') {
+  if (workerMutationGuard?.allowed !== true
+    || (workerMutationGuard?.mutation_guard_status !== 'allowed_explicit_developer_supervisor'
+      && workerMutationGuard?.mutation_guard_status !== 'allowed_managed_runtime')) {
     blockerIds.push('developer_supervisor_required');
   }
   if (temporalServiceReachable !== true) {

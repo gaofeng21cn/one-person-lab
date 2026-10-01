@@ -79,3 +79,9 @@ managed updater 触发，所以关闭自动更新时后台服务仍可恢复。
 gh-stack 的能力检查使用原生 `gh stack --version` 调度，并校验扩展的版本签名。
 `gh extension exec` 即使只读取本地版本也会先要求登录；真正的 GitHub 操作在执行时
 仍遵循其认证要求。
+
+
+已安装的 Framework managed runtime 更新后，可以在既有 restart guard 检查通过时
+重启使用旧代码的 worker，不要求开启 Developer Mode。开发源码 checkout 仍须显式
+授权 developer supervisor；服务可达性、进程归属、活动任务和未决 Temporal 查询
+保护继续生效。

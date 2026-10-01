@@ -122,7 +122,9 @@ test('family-runtime provider-slo restarts stale OPL managed Temporal worker bef
     let startCount = 0;
     const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
       inspectTemporalWorkerLifecycle: async () =>
-        startCount === 0 ? explicitDeveloperSupervisorStaleWorker() : temporalWorkerStatus('ready'),
+        startCount === 0 ? temporalWorkerStatus('worker_source_stale', {
+          mutationGuardStatus: 'allowed_managed_runtime', mutationGuardAllowed: true,
+        }) : temporalWorkerStatus('ready'),
       stopTemporalWorkerLifecycle: async () => {
         stopCount += 1;
         return {
@@ -262,7 +264,9 @@ test('family-runtime provider-slo blocks stale worker restart while active stage
     const attempt = createActiveStageAttempt(db);
     let mutations = 0;
     const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
-      inspectTemporalWorkerLifecycle: async () => explicitDeveloperSupervisorStaleWorker(),
+      inspectTemporalWorkerLifecycle: async () => temporalWorkerStatus('worker_source_stale', {
+        mutationGuardStatus: 'allowed_managed_runtime', mutationGuardAllowed: true,
+      }),
       queryTemporalStageAttemptReadModel: async (candidate) => ({
         surface_kind: 'temporal_stage_attempt_query_receipt',
         provider_kind: 'temporal',
@@ -385,7 +389,7 @@ test('family-runtime provider-slo keeps inconclusive Temporal observations block
 });
 
 for (const [name, blockerId, mutationGuardStatus, serverReachable, ledgerReadable] of [
-  ['without explicit developer supervisor', 'developer_supervisor_required', 'allowed_managed_runtime', true, true],
+  ['for a source checkout without explicit developer supervisor', 'developer_supervisor_required', 'blocked_source_checkout', true, true],
   ['when Temporal service is unreachable', 'temporal_service_unreachable', 'allowed_explicit_developer_supervisor', false, true],
   ['when stage attempt ledger is unreadable', 'stage_attempt_ledger_unavailable', 'allowed_explicit_developer_supervisor', true, false],
 ] as const) {
