@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { installTemporalCli } from '../../../scripts/install-temporal-cli.mjs';
+import { installTemporalCli } from '../integration/managed-temporal-cli.mjs';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
