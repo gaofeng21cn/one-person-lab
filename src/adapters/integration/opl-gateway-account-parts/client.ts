@@ -1,3 +1,4 @@
+import { gatewayFetch } from './certificate-transport.ts';
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import {
   OPL_GATEWAY_CONTROL_BASE_URL,
@@ -107,7 +108,7 @@ async function request(path: string, options: RequestOptions = {}) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const response = await fetch(`${controlBaseUrl()}${path}`, {
+      const response = await gatewayFetch(`${controlBaseUrl()}${path}`, {
         method,
         signal: controller.signal,
         redirect: 'error',
@@ -118,7 +119,7 @@ async function request(path: string, options: RequestOptions = {}) {
           ...(options.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
         },
         ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-      });
+      }, { maxBytes: maxResponseBodyBytes(DEFAULT_GATEWAY_MAX_RESPONSE_BODY_BYTES) });
       if (!response.ok) {
         if (method === 'GET' && response.status >= 500 && attempt + 1 < attempts) {
           await waitBeforeGatewayRetry(attempt + 1);
