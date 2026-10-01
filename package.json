@@ -51,6 +51,7 @@
     "packages/package-host/contracts",
     "python/opl_framework",
     "scripts/native-helper.mjs",
+    "scripts/install-temporal-cli.mjs",
     "scripts/native-helper-doctor.mjs",
     "scripts/native-helper-family-smoke.mjs",
     "scripts/compile-opl-flow-capability-projections.mjs"

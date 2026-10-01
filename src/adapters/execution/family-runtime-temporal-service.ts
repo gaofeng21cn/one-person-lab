@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { installTemporalCli } from '../../../scripts/install-temporal-cli.mjs';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
@@ -465,7 +466,16 @@ export async function startTemporalServiceLifecycle(
       status: current,
     };
   }
-  const resolvedLauncher = resolveTemporalServiceLauncher(paths);
+  let resolvedLauncher = resolveTemporalServiceLauncher(paths);
+  const localAddress = parseTemporalAddress(resolveTemporalAddress() ?? '127.0.0.1:7233');
+  if (!resolvedLauncher && process.platform === 'linux' && process.arch === 'x64'
+    && !process.env.OPL_TEMPORAL_CLI_PATH?.trim() && !process.env.OPL_TEMPORAL_SERVICE_START_COMMAND?.trim()
+    && ['127.0.0.1', 'localhost'].includes(localAddress.host)) {
+    const installation = installTemporalCli();
+    if ('path' in installation && typeof installation.path === 'string') {
+      resolvedLauncher = resolveTemporalServiceLauncher(paths, { ...process.env, OPL_TEMPORAL_CLI_PATH: installation.path });
+    }
+  }
   const launcher = resolvedLauncher?.serviceKind === 'temporal_cli'
     ? withTemporalServicePersistentStore(resolvedLauncher, prepareTemporalServiceDatabasePath(paths))
     : resolvedLauncher;
