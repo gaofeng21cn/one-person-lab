@@ -116,7 +116,7 @@ type SystemSeedApplyCliInput = {
 };
 
 type SystemStartupMaintenanceCliInput = {
-  scope?: 'all' | 'runtime_substrate';
+  scope?: 'all' | 'runtime_substrate' | 'runtime_recovery';
 };
 
 type SessionLedgerCliInput = {

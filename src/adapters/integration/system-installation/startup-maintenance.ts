@@ -69,7 +69,7 @@ type StartupMaintenanceManagedCompanionTarget = {
   error: Record<string, unknown> | null;
   blocking: false;
 };
-type StartupMaintenanceScope = 'all' | 'runtime_substrate';
+type StartupMaintenanceScope = 'all' | 'runtime_substrate' | 'runtime_recovery';
 
 function buildTarget(
   module: ModuleStatus,
@@ -579,6 +579,29 @@ async function runStartupMaintenance(
 ) {
   const stageOnly = options.stageOnly === true;
   const scope = stageOnly ? 'runtime_substrate' : options.scope ?? 'all';
+  if (scope === 'runtime_recovery') {
+    const temporal = await reconcileTemporalRuntimeStartupMaintenance(options.temporalRuntime);
+    return {
+      version: 'g2',
+      system_action: {
+        action: 'startup_maintenance' as const,
+        status: temporal.status === 'blocked' ? 'manual_required' : 'completed',
+        update_channel: readOplUpdateChannel().channel,
+        workspace_root: readOplWorkspaceRoot(),
+        details: {
+          surface_kind: 'opl_app_startup_maintenance',
+          mode: 'configured_runtime_recovery', scope, stage_only: false,
+          process_instance_id: process.env.OPL_APP_PROCESS_INSTANCE_ID?.trim() ?? null,
+          temporal_runtime_reconcile: temporal,
+          authority_boundary: {
+            can_update_framework: false, can_update_codex: false, can_update_packages: false,
+            can_install_opl_provider_supervisor: temporal.authority_boundary.can_install_opl_provider_supervisor,
+            can_write_domain_truth: false, can_install_domain_daemon: false,
+          },
+        },
+      },
+    };
+  }
   const pendingRuntimeActivation = stageOnly ? { status: 'deferred_background_maintenance' } : activatePendingCodexRuntimeGeneration();
   const frameworkTargetRoot = resolveFrameworkUpdateTargetRoot(resolveProjectRoot());
   const pendingFrameworkActivation = stageOnly ? { status: 'deferred_background_maintenance' } : activatePendingOplFrameworkRuntime(frameworkTargetRoot);

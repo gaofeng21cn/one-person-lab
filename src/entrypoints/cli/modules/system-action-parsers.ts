@@ -461,8 +461,8 @@ function parseSystemStartupMaintenanceArgs(
 ): SystemStartupMaintenanceCliInput {
   const parsed = parseCommandOptions(args, spec, { scope: { type: 'string' } });
   const scope = parsed.scope as string | undefined;
-  if (scope && scope !== 'all' && scope !== 'runtime_substrate') {
-    throw buildUsageError('system startup-maintenance --scope requires all or runtime_substrate.', spec, {
+  if (scope && scope !== 'all' && scope !== 'runtime_substrate' && scope !== 'runtime_recovery') {
+    throw buildUsageError('system startup-maintenance --scope requires all, runtime_substrate, or runtime_recovery.', spec, {
       option: '--scope',
       value: scope,
     });

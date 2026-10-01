@@ -392,3 +392,34 @@ test('ScholarSkills sync rejects identity drift and unmanaged skill collisions',
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
+
+
+test('runtime recovery does not activate or fetch any runtime update', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-recovery-'));
+  const runtimeRoot = path.join(homeRoot, 'runtime');
+  const frameworkRoot = path.join(homeRoot, 'framework');
+  const sentinel = path.join(homeRoot, 'unchanged-candidate');
+  fs.writeFileSync(sentinel, 'candidate bytes');
+  try {
+    const output = runCli(['system', 'startup-maintenance', '--scope', 'runtime_recovery'], {
+      HOME: homeRoot, OPL_STATE_DIR: path.join(homeRoot, 'state'),
+      OPL_APP_RUNTIME_ROOT: runtimeRoot, OPL_FRAMEWORK_UPDATE_TARGET_ROOT: frameworkRoot,
+      OPL_FRAMEWORK_UPDATE_ARCHIVE: path.join(homeRoot, 'missing-update.tar.gz'),
+      OPL_CODEX_RUNTIME_UPDATE_SOURCE: path.join(homeRoot, 'missing-codex-update'),
+      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+      OPL_APP_HOST_KIND: 'web',
+    }) as { system_action: { status: string; details: {
+      scope: string; mode: string; temporal_runtime_reconcile: { status: string };
+      framework_targets?: unknown; pending_framework_activation?: unknown;
+    } } };
+    assert.equal(output.system_action.status, 'completed');
+    assert.equal(output.system_action.details.scope, 'runtime_recovery');
+    assert.equal(output.system_action.details.mode, 'configured_runtime_recovery');
+    assert.equal(output.system_action.details.temporal_runtime_reconcile.status, 'not_applicable');
+    assert.equal(output.system_action.details.framework_targets, undefined);
+    assert.equal(output.system_action.details.pending_framework_activation, undefined);
+    assert.equal(fs.existsSync(runtimeRoot), false);
+    assert.equal(fs.existsSync(frameworkRoot), false);
+    assert.equal(fs.readFileSync(sentinel, 'utf8'), 'candidate bytes');
+  } finally { fs.rmSync(homeRoot, { recursive: true, force: true }); }
+});

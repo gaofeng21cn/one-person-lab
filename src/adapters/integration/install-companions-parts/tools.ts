@@ -305,11 +305,13 @@ function inspectGhStackEntrypoint(ghPath: string | null, home: string): OplCompa
   if (!ghPath || !fs.existsSync(ghPath) || !fs.statSync(ghPath).isFile()) return null;
   const version = runCommandForOutput(
     ghPath,
-    ['extension', 'exec', 'stack', '--version'],
+    // The native extension dispatch permits its local version probe without a
+    // GitHub login; `gh extension exec` requires authentication before dispatch.
+    ['stack', '--version'],
     5_000,
     { ...process.env, HOME: home },
   );
-  if (!version) return null;
+  if (!version || !/\bgh stack version\s+\d+\.\d+\.\d+\b/.test(version)) return null;
   return withCurrentness({
     tool_id: 'gh-stack',
     binary_path: ghPath,

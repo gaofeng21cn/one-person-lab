@@ -306,7 +306,7 @@ export type OplSystemActionInput = Partial<{
   developerSupervisorModuleId: string;
   developerSupervisorModuleSource: 'auto' | 'managed' | 'developer';
   dependencyProfile: string;
-  startupMaintenanceScope: 'all' | 'runtime_substrate';
+  startupMaintenanceScope: 'all' | 'runtime_substrate' | 'runtime_recovery';
   seedDir: string;
   dataDir: string;
   projectsDir: string;

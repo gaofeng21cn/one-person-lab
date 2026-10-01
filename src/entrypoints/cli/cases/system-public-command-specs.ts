@@ -55,11 +55,12 @@ export function buildPublicSystemCommandSpecs(
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
   const systemStartupMaintenanceSpec: CommandSpec = {
-    usage: 'opl system startup-maintenance [--scope <all|runtime_substrate>]',
+    usage: 'opl system startup-maintenance [--scope <all|runtime_substrate|runtime_recovery>]',
     summary: 'Run App startup maintenance for clean managed modules, image seed state, plugin cache freshness, and reload guidance.',
     examples: [
       'opl system startup-maintenance',
       'opl system startup-maintenance --scope runtime_substrate',
+      'opl system startup-maintenance --scope runtime_recovery',
     ],
     group: 'system',
     handler: async (args) => {
