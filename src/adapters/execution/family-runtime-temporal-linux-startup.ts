@@ -3,14 +3,18 @@ import { inspectDetachedTemporalServiceState, inspectTemporalServiceLifecycle, s
 import { inspectTemporalWorkerLifecycleFast } from './family-runtime-temporal-provider-parts/worker-lifecycle-fast.ts';
 import { repairTemporalWorkerLifecycleForProvider } from './family-runtime-provider-worker-repair.ts';
 import { runTemporalSchedulerCadenceCommand } from './family-runtime-scheduler.ts';
-import type { TemporalStartupMaintenanceRuntime } from './family-runtime-temporal-startup-maintenance.ts';
+import type { TemporalStartupMaintenanceRuntime, TemporalStartupMaintenanceStep } from './family-runtime-temporal-startup-maintenance.ts';
 
 export async function reconcileLinuxDesktopTemporal(runtime: TemporalStartupMaintenanceRuntime) {
   const handle = (runtime.openRuntime ?? openQueueDb)();
   const inspectService = runtime.inspectService ?? inspectTemporalServiceLifecycle;
   const inspectWorker = runtime.inspectWorker ?? inspectTemporalWorkerLifecycleFast;
   const scheduler = runtime.runScheduler ?? runTemporalSchedulerCadenceCommand;
-  const steps: Record<string, unknown> = {};
+  const steps: Record<string, TemporalStartupMaintenanceStep> = {};
+  const step = (ready: boolean, after: unknown): TemporalStartupMaintenanceStep => ({
+    status: ready ? 'ready' : 'blocked', action: 'reconcile', ready,
+    reason: ready ? null : 'runtime_not_ready', before: null, operations: [], after: after ?? null, error: null,
+  });
   let failedStep: string | null = null;
   const receipt = (status: string, reason: string | null = null) => ({
     surface_kind: 'opl_temporal_runtime_startup_reconcile.v1', provider_kind: 'temporal',
@@ -34,7 +38,7 @@ export async function reconcileLinuxDesktopTemporal(runtime: TemporalStartupMain
       await (runtime.startService ?? startTemporalServiceLifecycle)(handle.paths);
     }
     const service = await inspectService(handle.paths);
-    steps[failedStep] = { action: 'reconcile', ready: service.service_status === 'running' && service.server_reachable, after: service };
+    steps[failedStep] = step(service.service_status === 'running' && service.server_reachable, service);
     if (service.service_status !== 'running' || !service.server_reachable) return receipt('blocked', 'managed_service_not_ready');
     failedStep = 'temporal_managed_worker';
     let worker = await inspectWorker(handle.paths);
@@ -44,7 +48,7 @@ export async function reconcileLinuxDesktopTemporal(runtime: TemporalStartupMain
       });
       worker = await inspectWorker(handle.paths);
     }
-    steps[failedStep] = { action: 'reconcile', ready: worker.worker_ready === true && worker.managed_worker_source_current === true, after: worker };
+    steps[failedStep] = step(worker.worker_ready === true && worker.managed_worker_source_current === true, worker);
     if (!worker.worker_ready || !worker.managed_worker_source_current) return receipt('blocked', 'managed_worker_not_ready');
     failedStep = 'temporal_scheduler_cadence';
     let cadence = await scheduler(handle.db, handle.paths, { mode: 'scheduler_status', providerKind: 'temporal' });
@@ -56,7 +60,7 @@ export async function reconcileLinuxDesktopTemporal(runtime: TemporalStartupMain
       await scheduler(handle.db, handle.paths, { mode: 'scheduler_install', providerKind: 'temporal' });
       cadence = await scheduler(handle.db, handle.paths, { mode: 'scheduler_status', providerKind: 'temporal' });
     }
-    steps[failedStep] = { action: 'reconcile', ready: ready(cadence), after: cadence };
+    steps[failedStep] = step(ready(cadence), cadence);
     if (!ready(cadence)) return receipt('blocked', 'scheduler_not_ready');
     failedStep = null;
     return receipt('ready');

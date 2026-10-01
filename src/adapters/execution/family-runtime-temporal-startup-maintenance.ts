@@ -138,6 +138,8 @@ function step(input: {
   };
 }
 
+export type TemporalStartupMaintenanceStep = ReturnType<typeof step>;
+
 function skippedStep(reason: string) {
   return step({
     status: 'skipped_dependency_not_ready',
