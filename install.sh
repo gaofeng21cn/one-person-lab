@@ -471,6 +471,10 @@ if [ "$CARRIER_ONLY" = "1" ]; then
   exit 0
 fi
 
+log "Preparing the local background-service runtime"
+node scripts/install-temporal-cli.mjs
+export PATH="$HOME/.local/bin:$PATH"
+
 log "Running complete One Person Lab setup"
 if command -v opl >/dev/null 2>&1; then
   opl install "$@"

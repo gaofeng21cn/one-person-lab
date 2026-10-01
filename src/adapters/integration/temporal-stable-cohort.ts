@@ -48,6 +48,7 @@ export type TemporalStableCohort = {
     release_url: string;
     embedded_server_version: string;
     darwin_arm64_artifact: { file_name: string; sha256: string };
+    linux_amd64_artifact?: { file_name: string; sha256: string };
   };
   sdk: {
     version: string;
@@ -207,6 +208,11 @@ export function validateTemporalStableCohort(
     source,
   );
   sha256(artifact.sha256, 'cli.darwin_arm64_artifact.sha256', source);
+  if (cli.linux_amd64_artifact !== undefined) {
+    const linuxArtifact = record(cli.linux_amd64_artifact, 'cli.linux_amd64_artifact', source);
+    literal(linuxArtifact.file_name, `temporal_cli_${cliVersion}_linux_amd64.tar.gz`, 'cli.linux_amd64_artifact.file_name', source);
+    sha256(linuxArtifact.sha256, 'cli.linux_amd64_artifact.sha256', source);
+  }
 
   const sdk = record(payload.sdk, 'sdk', source);
   const sdkVersion = release(sdk, 'sdk', 'sdk-typescript', source);

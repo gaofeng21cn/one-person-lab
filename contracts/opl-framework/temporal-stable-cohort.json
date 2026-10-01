@@ -31,6 +31,10 @@
     "darwin_arm64_artifact": {
       "file_name": "temporal_cli_1.8.1_darwin_arm64.tar.gz",
       "sha256": "e942d2ba2634720293bded2a9061ac471a7fd44d883a6704b8d0ecb94995d6a6"
+    },
+    "linux_amd64_artifact": {
+      "file_name": "temporal_cli_1.8.1_linux_amd64.tar.gz",
+      "sha256": "b94417b9a8760b30217f4b881dabce4b16a76a38b5e99e2eca3ce358b8030f06"
     }
   },
   "sdk": {
