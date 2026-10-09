@@ -382,6 +382,13 @@ test('workspace adopt apply performs the topology migration promised by dry-run'
 });
 
 test('workspace upgrade restores generated manifests without moving project roots', () => {
+  const descriptorFixture = createWorkspaceDescriptorFamilyFixture(['mag']);
+  const descriptorPath = path.join(descriptorFixture.familyRoot, 'med-autogrant', 'contracts', 'domain_descriptor.json');
+  const descriptor = readJsonFile(descriptorPath);
+  // Shared resource roots belong to the installed domain descriptor. Declare
+  // the resource this repair scenario needs instead of assuming MAG still has it.
+  descriptor.standard_agent_interface.workspace_binding.shared_resources = [{ path: 'shared/memory', role: 'shared_memory' }];
+  fs.writeFileSync(descriptorPath, JSON.stringify(descriptor));
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-upgrade-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-upgrade-root-'));
 
@@ -399,6 +406,7 @@ test('workspace upgrade restores generated manifests without moving project root
       'grant-001',
     ], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     });
     const workspacePath = path.join(workspaceRoot, 'nsfc-p2c');
     fs.rmSync(path.join(workspacePath, 'shared', 'memory', 'opl_resource_manifest.json'));
@@ -431,6 +439,7 @@ test('workspace upgrade restores generated manifests without moving project root
 
     const dryRun = runCli(['workspace', 'upgrade', '--workspace', workspacePath, '--dry-run'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     });
     assert.equal(dryRun.workspace_upgrade.status, 'dry_run_ready');
     assert.equal(dryRun.workspace_upgrade.write_allowed, false);
@@ -438,6 +447,7 @@ test('workspace upgrade restores generated manifests without moving project root
 
     const applied = runCli(['workspace', 'upgrade', '--workspace', workspacePath, '--apply'], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     });
     assert.equal(applied.workspace_upgrade.status, 'applied');
     assert.equal(applied.workspace_upgrade.authority_boundary.upgrade_moves_project_roots, false);
@@ -462,8 +472,10 @@ test('workspace upgrade restores generated manifests without moving project root
     );
     assert.equal(runCli(['workspace', 'validate', '--workspace', workspacePath], {
       OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
     }).workspace_validation.status, 'passed');
   } finally {
+    descriptorFixture.cleanup();
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
