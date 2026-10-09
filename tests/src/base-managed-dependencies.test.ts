@@ -51,6 +51,12 @@ function githubReleaseFixture(root: string, repository: string, version: string,
   fs.mkdirSync(path.dirname(binary), { recursive: true });
   fs.writeFileSync(binary, [
     '#!/usr/bin/env bash',
+    // OfficeCLI resolves the release tag to an exact source commit before the
+    // latest-version readback is accepted. Keep this entirely in the fixture.
+    `if [ "$*" = "api repos/${repository}/commits/v${version}" ]; then`,
+    `  printf '%s\\n' '{"sha":"${'a'.repeat(40)}"}'`,
+    '  exit 0',
+    'fi',
     `if [ "$*" != "api repos/${repository}/releases/latest" ]; then exit 1; fi`,
     ...(marker ? [`echo called >> '${marker.replaceAll("'", "'\\''")}'`] : []),
     `cat <<'OPL_RELEASE_FIXTURE'`, release, 'OPL_RELEASE_FIXTURE', '',
