@@ -110,7 +110,7 @@
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.1",
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "@playwright/mcp": "0.0.79",
     "@temporalio/activity": "1.20.3",
     "@temporalio/client": "1.20.3",
