@@ -14,3 +14,8 @@ Runtime 文档只解释当前运行对象和运维边界。
 `contracts/opl-framework/dependency-release-sources.json`。需要同时构建源码的依赖声明
 `source_commit_required`：GitHub release 解析准确 tag 的 commit，npm 解析所选发布的
 `gitHead` 并在指定仓库回读。App 消费该不可变结果，不以当前 main 替代发布来源。
+
+Hosted Package source 的归档检查与解包使用同一结构化 tar reader。成员身份按
+PAX/GNU 元数据解析后的实际路径判断，不解析依赖 locale 的命令行列表；合法中文
+文件名可用，越出声明根目录、反斜杠和非普通文件/目录成员仍拒绝。OCI layer 的
+摘要、大小及 owner/carrier/commit 绑定检查保持在 acquisition owner 中。
