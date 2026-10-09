@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -11,7 +12,11 @@ import { bindGatewayKeyToCodex, restoreCodexBinding } from '../../src/adapters/i
 import { inspectGatewayPublicSettings, loginGateway } from '../../src/adapters/integration/opl-gateway-account-parts/client.ts';
 import { buildGatewayInstallation, normalizeGatewayDeviceSlug } from '../../src/adapters/integration/opl-gateway-account-parts/identity.ts';
 import { reconcileGatewayManagedKey } from '../../src/adapters/integration/opl-gateway-account-parts/key-reconcile.ts';
-import { readOrCreateGatewayInstallation } from '../../src/adapters/integration/opl-gateway-account-parts/private-store.ts';
+import {
+  readOrCreateGatewayInstallation,
+  withGatewayAccountLock,
+} from '../../src/adapters/integration/opl-gateway-account-parts/private-store.ts';
+import { resolveOplStatePaths } from '../../src/kernel/runtime-state-paths.ts';
 import {
   OPL_GATEWAY_CONTROL_BASE_URL,
   OPL_GATEWAY_INFERENCE_BASE_URL,
@@ -759,4 +764,166 @@ test('explicit Codex binding failure keeps the managed key reusable for a correc
     await new Promise<void>((resolve) => server.close(() => resolve()));
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Gateway account lock recovery.
+//
+// A crash between creating account.lock and recording its owner used to leave
+// every later Gateway operation waiting out the full 10s deadline and then
+// failing with gateway_account_busy, which the App surfaced as "login failed".
+// Reclaiming such a lock has to be driven by proof that the recorded owner is
+// gone, not by a timer.
+// ---------------------------------------------------------------------------
+
+function exitedProcessId() {
+  // A process that already exited: `process.kill(pid, 0)` fails with ESRCH for it.
+  const child = spawnSync(process.execPath, ['-e', 'process.exit(0)']);
+  assert.ok(typeof child.pid === 'number' && child.pid > 0);
+  return child.pid as number;
+}
+
+async function withIsolatedGatewayState<T>(run: (lockPath: string) => Promise<T>): Promise<T> {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gateway-lock-'));
+  const previous = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const lockPath = resolveOplStatePaths().gateway_account_lock_file;
+    fs.mkdirSync(path.dirname(lockPath), { recursive: true, mode: 0o700 });
+    fs.chmodSync(path.dirname(path.dirname(lockPath)), 0o700);
+    return await run(lockPath);
+  } finally {
+    if (previous === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previous;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+test('a Gateway account lock left by a dead process is reclaimed instead of blocking every operation', async () => {
+  await withIsolatedGatewayState(async (lockPath) => {
+    fs.writeFileSync(lockPath, `${exitedProcessId()}\n`, { mode: 0o600 });
+
+    const started = Date.now();
+    const value = await withGatewayAccountLock(async () => 'ran');
+
+    assert.equal(value, 'ran');
+    // The old rule waited for a five-minute age before reclaiming a lock whose
+    // owner was already gone, and then failed after the ten-second deadline.
+    assert.ok(Date.now() - started < 2_000, `lock recovery took ${Date.now() - started}ms`);
+    assert.equal(fs.existsSync(lockPath), false);
+  });
+});
+
+test('a Gateway account lock held by a live process is honored, then reclaimed when that process exits', async () => {
+  await withIsolatedGatewayState(async (lockPath) => {
+    const owner = spawn(process.execPath, ['-e', 'setInterval(() => {}, 50)'], { stdio: 'ignore' });
+    try {
+      assert.ok(typeof owner.pid === 'number' && owner.pid > 0);
+      const ownerRecord = `${owner.pid}\n`;
+      fs.writeFileSync(lockPath, ownerRecord, { mode: 0o600 });
+
+      let ran = false;
+      const pending = withGatewayAccountLock(async () => { ran = true; return 'ran'; });
+      await sleep(400);
+
+      // A live owner must never be evicted: that is what makes reclaiming safe.
+      assert.equal(ran, false);
+      assert.equal(fs.existsSync(lockPath), true);
+      assert.equal(fs.readFileSync(lockPath, 'utf8'), ownerRecord);
+
+      owner.kill('SIGKILL');
+      await new Promise<void>((resolve) => owner.once('exit', () => resolve()));
+
+      assert.equal(await pending, 'ran');
+      assert.equal(fs.existsSync(lockPath), false);
+    } finally {
+      if (owner.exitCode === null && owner.signalCode === null) owner.kill('SIGKILL');
+    }
+  });
+});
+
+test('an unattributed Gateway account lock is only reclaimed once its owner record cannot predate any holder', async () => {
+  await withIsolatedGatewayState(async (lockPath) => {
+    // An interrupted older writer: the file exists but its owner record was never
+    // completed, so nothing proves the owner is gone.
+    fs.writeFileSync(lockPath, '', { mode: 0o600 });
+
+    let ran = false;
+    const pending = withGatewayAccountLock(async () => { ran = true; return 'ran'; });
+    await sleep(400);
+
+    assert.equal(ran, false);
+    assert.equal(fs.existsSync(lockPath), true);
+
+    fs.rmSync(lockPath, { force: true });
+    assert.equal(await pending, 'ran');
+  });
+});
+
+test('concurrent Gateway account operations stay serialized', async () => {
+  await withIsolatedGatewayState(async () => {
+    const order: string[] = [];
+    const first = withGatewayAccountLock(async () => {
+      order.push('first:start');
+      await sleep(150);
+      order.push('first:end');
+    });
+    const second = withGatewayAccountLock(async () => {
+      order.push('second:start');
+      await sleep(10);
+      order.push('second:end');
+    });
+
+    await Promise.all([first, second]);
+
+    assert.deepEqual(order, ['first:start', 'first:end', 'second:start', 'second:end']);
+  });
+});
+
+test('releasing the lock never removes a lock another process republished', async () => {
+  await withIsolatedGatewayState(async (lockPath) => {
+    const replacement = `${exitedProcessId()}\n`;
+    await withGatewayAccountLock(async () => {
+      // Simulate another process reclaiming and republishing the path while this
+      // operation still holds the previous inode.
+      fs.rmSync(lockPath, { force: true });
+      fs.writeFileSync(lockPath, replacement, { mode: 0o600 });
+    });
+
+    assert.equal(fs.existsSync(lockPath), true);
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), replacement);
+  });
+});
+
+test('dead-owner evidence cannot reclaim a lock replaced during the owner probe', async () => {
+  await withIsolatedGatewayState(async (lockPath) => {
+    const dead = exitedProcessId();
+    fs.writeFileSync(lockPath, `${dead}\n`, { mode: 0o600 });
+    const kill = process.kill;
+    let replaced = false;
+    process.kill = ((pid: number, signal: number) => {
+      if (pid === dead && !replaced) {
+        replaced = true;
+        fs.rmSync(lockPath);
+        fs.writeFileSync(lockPath, `${process.pid}\n`, { mode: 0o600 });
+        throw Object.assign(new Error('old owner exited'), { code: 'ESRCH' });
+      }
+      return kill(pid, signal);
+    }) as typeof process.kill;
+    try {
+      let ran = false;
+      const pending = withGatewayAccountLock(async () => { ran = true; });
+      await sleep(150);
+      assert.equal(replaced, true);
+      assert.equal(ran, false);
+      assert.equal(fs.readFileSync(lockPath, 'utf8'), `${process.pid}\n`);
+      fs.rmSync(lockPath);
+      await pending;
+      assert.equal(ran, true);
+    } finally { process.kill = kill; }
+  });
 });
