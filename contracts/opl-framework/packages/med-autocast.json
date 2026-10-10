@@ -4,7 +4,7 @@
   "package_id": "med-autocast",
   "display_name": "Med Auto Cast",
   "publisher": "one-person-lab",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
@@ -22,8 +22,8 @@
       "marketplace_source": "gaofeng21cn/med-autocast",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/med-autocast-0.2.15.json",
-    "carrier_source_commit": "d78c195580521c08b90cb4c5a23b90c2d7358064"
+    "plugin_payload_manifest_url": "payloads/med-autocast-0.2.16.json",
+    "carrier_source_commit": "02e2731bac3aef1df0c3c5e4569e3981bcd2970c"
   },
   "dependency_profiles": [],
   "capability_dependencies": [],
