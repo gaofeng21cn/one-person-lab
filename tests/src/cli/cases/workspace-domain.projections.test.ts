@@ -101,8 +101,9 @@ test('workspace init preserves registered resources when the Agent declaration c
   const env = { OPL_STATE_DIR: stateRoot, OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot };
   const writeResources = (resourcePath: string) => {
     const descriptor = readJsonFile(descriptorPath);
+    descriptor.standard_agent_interface.workspace_binding.domain_metadata = { label: 'Grant workspace' };
     descriptor.standard_agent_interface.workspace_binding.shared_resources = [
-      { path: resourcePath, role: 'grant_memory' },
+      { path: resourcePath, role: 'grant_memory', description: 'Domain-owned shared memory' },
     ];
     fs.writeFileSync(descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
   };

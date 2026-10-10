@@ -17,6 +17,17 @@
 
 Framework adapter 只负责把通用 Workspace/Stage/Attempt envelope送入 owner entrypoint，并把 refs-only结果投影回来。业务逻辑不复制到 Framework。
 
+标准接口 v1 的 `workspace_binding` 与 `shared_resources` 条目允许附加领域描述，解析时保留，
+不因 Framework 尚未认识这些元信息而阻断入口。Framework 只消费已知字段：共享资源由领域
+声明相对路径与角色，路径不得越出工作区，资源路径不得重复；locator 和已知字段类型仍须有效。
+附加描述不自动成为已支持的执行能力，依赖新行为的消费者须验证真实支持；运行、路由与根接口
+的执行合同仍按其声明校验；已退役的 `entry_command_template`、`manifest_command_template`
+不能作为元信息重新引入。省略可选的 `shared_resources` 时继续使用原有 Profile 默认值。
+
+解析兼容性由 Framework 发布与安装版本决定，单独更新领域 Package 不会修改旧 Framework
+解析器。Framework 与 Package 独立发布和更新，不引入组合锁或跨包冻结；发布入口见
+[Artifact 与 Package Delivery 边界](../delivery/artifact-package-lifecycle-boundary.md)。
+
 领域通过 descriptor 的 `standard_contract_refs.runtime_environment_requirement_profile`
 引用本仓环境需求。该文件的 `runtime_profile_sources` 可按 Profile 声明提供方 `package_id`
 和包内 `relative_path`；Framework 在首次准备时动态解析 Package 来源，并限制资源留在提供方

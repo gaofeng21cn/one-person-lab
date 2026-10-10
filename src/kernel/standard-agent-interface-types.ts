@@ -66,13 +66,14 @@ export type StandardAgentInterface = {
   stage_catalog: StandardAgentStageCatalogDeclaration | null;
   domain_detail_views: StandardAgentDomainDetailViewDeclaration[];
   workspace_binding: {
+    [key: string]: unknown;
     locator_surface_kind: string;
     default_profile_id: 'one_off' | 'series' | 'portfolio';
     workspace_kind: string;
     project_kind: string;
     project_collection_label: string;
     project_collection_path: string | null;
-    shared_resources: Array<{ path: string; role: string }> | null;
+    shared_resources: Array<{ path: string; role: string; [key: string]: unknown }> | null;
     default_workspace_id: string;
     default_project_id: string;
     required_locator_fields: StandardAgentLocatorField[];

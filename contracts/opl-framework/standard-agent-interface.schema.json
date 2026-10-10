@@ -89,6 +89,8 @@
     },
     "workspace_binding": {
       "type": "object",
+      "description": "Known workspace fields drive Framework behavior. Additional domain metadata is preserved without being interpreted or treated as an execution capability. Retired private command templates remain invalid.",
+      "not": { "anyOf": [{ "required": ["entry_command_template"] }, { "required": ["manifest_command_template"] }] },
       "required": ["locator_surface_kind", "default_profile_id", "workspace_kind", "project_kind", "project_collection_label", "default_workspace_id", "default_project_id", "required_locator_fields", "optional_locator_fields"],
       "properties": {
         "locator_surface_kind": { "type": "string", "minLength": 1 },
@@ -114,7 +116,7 @@
               },
               "role": { "type": "string", "minLength": 1 }
             },
-            "additionalProperties": false
+            "additionalProperties": true
           }
         },
         "default_workspace_id": { "type": "string", "minLength": 1 },
@@ -122,7 +124,7 @@
         "required_locator_fields": { "$ref": "#/$defs/locatorFields" },
         "optional_locator_fields": { "$ref": "#/$defs/locatorFields" }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "runtime": {
       "type": "object",

@@ -91,8 +91,8 @@ function parseWorkspaceSharedResources(value: unknown, sourceRef: string) {
     if (!isRecord(entry)) {
       invalid('Standard Agent workspace shared resource must be an object.', sourceRef, { index });
     }
-    assertKnownKeys(entry, ['path', 'role'], `workspace_binding.shared_resources[${index}]`, sourceRef);
     return {
+      ...entry,
       path: workspaceRelativePath(entry.path, `workspace_binding.shared_resources[${index}].path`, sourceRef),
       role: stringValue(entry.role, `workspace_binding.shared_resources[${index}].role`, sourceRef),
     };
@@ -465,19 +465,13 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
     'root',
     sourceRef,
   );
-  assertKnownKeys(workspaceBinding, [
-    'locator_surface_kind',
-    'default_profile_id',
-    'workspace_kind',
-    'project_kind',
-    'project_collection_label',
-    'project_collection_path',
-    'shared_resources',
-    'default_workspace_id',
-    'default_project_id',
-    'required_locator_fields',
-    'optional_locator_fields',
-  ], 'workspace_binding', sourceRef);
+  const retiredWorkspaceCommands = ['entry_command_template', 'manifest_command_template']
+    .filter((field) => Object.hasOwn(workspaceBinding, field));
+  if (retiredWorkspaceCommands.length) {
+    invalid('Standard Agent workspace contains unknown properties for retired private command templates.', sourceRef, {
+      field: 'workspace_binding', unknown_properties: retiredWorkspaceCommands,
+    });
+  }
   assertKnownKeys(runtime, ['runtime_domain_id', 'registration_ref'], 'runtime', sourceRef);
   assertKnownKeys(progress, ['deliverable_delta_aliases', 'platform_delta_aliases'], 'progress', sourceRef);
   assertKnownKeys(routing, [
@@ -527,6 +521,8 @@ export function parseStandardAgentInterface(value: unknown, sourceRef: string): 
     stage_catalog: stageCatalog(value.stage_catalog, sourceRef),
     domain_detail_views: domainDetailViews(value.domain_detail_views, sourceRef),
     workspace_binding: {
+      // Domain metadata is opaque; only the known fields below drive Framework behavior.
+      ...workspaceBinding,
       locator_surface_kind: stringValue(
         workspaceBinding.locator_surface_kind,
         'workspace_binding.locator_surface_kind',
