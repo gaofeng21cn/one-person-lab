@@ -1,0 +1,222 @@
+import type {
+  SettingsCompatibilityRedirect,
+  SettingsControlCenterGroup,
+  SettingsSecondaryRoute,
+  SettingsSection,
+} from './types.ts';
+
+export const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
+  {
+    group_id: 'overview',
+    label: 'Overview',
+    role: 'overall_usability_exceptions_and_next_action_without_owner_detail_duplication',
+    route_id: 'general',
+    action_section_ids: [],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'gateway',
+    label: 'Account & Gateway',
+    role: 'gateway_identity_usage_credentials_and_account_lifecycle',
+    route_id: 'gateway',
+    action_section_ids: ['gateway_account'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'models',
+    label: 'Models',
+    role: 'model_source_selection_reasoning_and_active_codex_cli',
+    route_id: 'access',
+    action_section_ids: ['model_access'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'workspace',
+    label: 'Workspace & Personalization',
+    role: 'workspace_root_app_log_directory_permissions_user_agents_and_app_context_refs',
+    route_id: 'workspace',
+    action_section_ids: ['workspace'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'agents',
+    label: 'Agents',
+    role: 'agent_packages_source_selection_developer_mode_and_home_visibility',
+    route_id: 'agents',
+    action_section_ids: ['packages'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'capabilities',
+    label: 'Capabilities',
+    role: 'flow_managed_and_third_party_skills_plugins_and_connectors',
+    route_id: 'capabilities',
+    action_section_ids: ['capabilities', 'codex_surface'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'resources',
+    label: 'Resources & Connections',
+    role: 'webui_workspace_and_external_resource_connections',
+    route_id: 'resources',
+    action_section_ids: ['connections', 'docker_webui'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'maintenance',
+    label: 'Maintenance',
+    role: 'managed_dependencies_updates_repairs_services_and_diagnostics',
+    route_id: 'environment',
+    action_section_ids: ['updates'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'storage',
+    label: 'Data & Storage',
+    role: 'local_data_usage_safe_cleanup_and_owner_page_references',
+    route_id: 'storage',
+    action_section_ids: ['runtime_roots', 'storage_lifecycle'],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+  {
+    group_id: 'preferences',
+    label: 'Preferences',
+    role: 'appearance_language_startup_behavior',
+    route_id: 'appearance',
+    action_section_ids: [],
+    ordinary_entry_policy: 'top_level_control_center_route',
+  },
+];
+
+export const SETTINGS_CONTROL_CENTER_SECONDARY_ROUTES: SettingsSecondaryRoute[] = [
+  {
+    route_id: 'about',
+    group_id: 'about',
+    parent_route_id: 'settings_control_center',
+    label: 'About',
+    role: 'version_links_and_release_notes',
+    action_section_ids: [],
+    ordinary_entry_policy: 'independent_secondary_page',
+  },
+];
+
+export const SETTINGS_CONTROL_CENTER_COMPATIBILITY_REDIRECTS: SettingsCompatibilityRedirect[] = [
+  {
+    source_route_id: 'advanced',
+    target_route_id: 'environment',
+    target_section_id: 'diagnostics',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+  {
+    source_route_id: 'system',
+    target_route_id: 'environment',
+    target_section_id: 'diagnostics',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+  {
+    source_route_id: 'update',
+    target_route_id: 'environment',
+    target_section_id: 'updates',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+  {
+    source_route_id: 'local-services',
+    target_route_id: 'environment',
+    target_section_id: 'services',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+  {
+    source_route_id: 'theme',
+    target_route_id: 'appearance',
+    target_section_id: 'themes',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+  {
+    source_route_id: 'personalization',
+    target_route_id: 'workspace',
+    target_section_id: 'personalization',
+    resolution_policy: 'resolve_before_render_and_focus_target_section',
+  },
+];
+
+export const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
+  {
+    section_id: 'gateway_account',
+    label: 'OPL Gateway account',
+    description: 'Gateway identity, usage, credential state, and account lifecycle actions.',
+    state: 'available',
+    source_ref: 'app_state.settings_control_center.app_settings_read_model.opl_gateway_account',
+  },
+  {
+    section_id: 'model_access',
+    label: 'Model access',
+    description: 'Codex CLI, configured model profile, API key presence, and Developer Mode authority.',
+    state: 'available',
+    source_ref: 'app_state.core.codex + app_state.developer_mode',
+  },
+  {
+    section_id: 'workspace',
+    label: 'Workspace',
+    description: 'Workspace root, health readback, and user-safe validation entrypoints.',
+    state: 'available',
+    source_ref: 'app_state.paths + app_state.actions#workspace_health',
+  },
+  {
+    section_id: 'connections',
+    label: 'Connections',
+    description: 'Framework-owned connection registry with credential handles and typed configuration status.',
+    state: 'available',
+    source_ref: 'app_state.settings_control_center.connection_registry',
+  },
+  {
+    section_id: 'capabilities',
+    label: 'Agents and capabilities',
+    description: 'Managed OPL Packages, generated assistants, and capability sync actions.',
+    state: 'available',
+    source_ref: 'app_state.agent_packages + app_state.assistants',
+  },
+  {
+    section_id: 'packages',
+    label: 'OPL packages',
+    description: 'OPL Packages channel, release channel, and install/update actions.',
+    state: 'available',
+    source_ref: 'app_state.agent_packages + app_state.release',
+  },
+  {
+    section_id: 'codex_surface',
+    label: 'Codex surface',
+    description: 'Codex-visible skill and plugin readiness reconciled automatically at each use boundary.',
+    state: 'available',
+    source_ref: 'app_state.agent_packages.status_index',
+  },
+  {
+    section_id: 'docker_webui',
+    label: 'Docker WebUI',
+    description: 'One-click install, Codex API key setup, image seed selection, startup maintenance, browser entry, and read-only recovery diagnostics.',
+    state: 'available',
+    source_ref: 'opl install + opl system configure-codex + opl system startup-maintenance + opl system docker-webui doctor',
+  },
+  {
+    section_id: 'updates',
+    label: 'Updates',
+    description: 'App update checks, managed update projection, automatic use-boundary generation selection, and explicit previous-version planning.',
+    state: 'available',
+    source_ref: 'opl update status/check + app_state.release',
+  },
+  {
+    section_id: 'runtime_roots',
+    label: 'Runtime roots',
+    description: 'Workspace root, modules root, state root, and non-mutating cleanup planning.',
+    state: 'available',
+    source_ref: 'app_state.paths',
+  },
+  {
+    section_id: 'storage_lifecycle',
+    label: 'Owner-managed storage inventory',
+    description: 'Lazy Agent Package and WebUI usage inventories plus canonical owner routes.',
+    state: 'available',
+    source_ref: 'app_state.settings_control_center.app_settings_read_model.storage_lifecycle',
+  },
+];
+
+
