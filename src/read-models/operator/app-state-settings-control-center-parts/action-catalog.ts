@@ -505,5 +505,3 @@ export const SETTINGS_ISSUE_CATALOG = [
     recommended_action_id: 'settings_sync_capabilities',
   },
 ] as const;
-
-

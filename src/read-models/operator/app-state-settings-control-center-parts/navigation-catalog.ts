@@ -218,5 +218,3 @@ export const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
     source_ref: 'app_state.settings_control_center.app_settings_read_model.storage_lifecycle',
   },
 ];
-
-
