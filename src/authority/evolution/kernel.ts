@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type {
   AgentBlueprint,
   DesignRequest,
@@ -18,11 +18,8 @@ import {
 } from './protocol.ts';
 import type {
   ActivationRuntime,
-  ActivationRuntimeBindingVerification,
-  ActivationRuntimePreflight,
   ActivationRuntimeTransactionResult,
   ActivationPointer,
-  ActivationTransaction,
   ActivationTransactionKind,
   AgentVersion,
   CandidateCompiler,
@@ -34,14 +31,12 @@ import type {
   MaterializedCandidate,
   OwnerGate,
   OwnerGateAction,
-  OwnerGateDecision,
   OwnerGateVerification,
   OwnerGateVerificationContext,
   VersionRegistry,
 } from './ports.ts';
 import {
   FailClosedOwnerGate,
-  ownerAuthorityReceiptRef,
   validateOwnerGateVerification,
   validateOwnerGateVerificationContext,
 } from './owner-gate.ts';
@@ -59,8 +54,6 @@ import {
 import type { FoundryRunEvent, FoundryRunSnapshot, FoundryRunState } from './state-machine.ts';
 import {
   assertBlueprintSatisfiesDesignRequest,
-  assertEvaluationEvidenceFacts,
-  foundryFrozenEvaluationPlanDigest,
 } from './evaluation-runtime.ts';
 import {
   foundryEvaluationOperationIdentity,
@@ -80,6 +73,30 @@ import {
   type BaselineAdoptionContentRefResolver,
   type BaselineAdoptionPreflightReceipt,
 } from './baseline-adoption.ts';
+import {
+  assertActivationPreflight,
+  assertActivationTransaction,
+  buildRuntimeBindingVerification,
+} from './kernel-parts/activation-verification.ts';
+import {
+  assertEvaluationEvidence,
+  assertMaterializedCandidate,
+  assertRegisteredCandidate,
+} from './kernel-parts/output-validation.ts';
+import {
+  buildFoundryRunTerminalReadback,
+  latestOwnerAuthority,
+} from './kernel-parts/terminal-readback.ts';
+import type {
+  FoundryOwnerDecisionReadback,
+  FoundryRunTerminalReadback,
+} from './kernel-parts/terminal-readback.ts';
+import {
+  expectedRevision,
+  fail,
+  requiredDigest,
+  requiredRef,
+} from './kernel-parts/validation.ts';
 
 type KernelDependencies = {
   designer: DesignerPort;
@@ -105,34 +122,7 @@ export type FoundryRunInspection = {
   terminal_readback: FoundryRunTerminalReadback;
 };
 
-export type FoundryOwnerDecisionReadback = {
-  surface_kind: 'opl_foundry_owner_decision_readback';
-  version: 'opl-foundry-owner-decision-readback.v1';
-  event_id: string;
-  event_revision: number;
-  expected_revision: number;
-  action: OwnerGateAction;
-  decision: OwnerGateDecision;
-  receipt_ref: string;
-  receipt_digest: string;
-  authority_ref: string;
-  verifier_id: string;
-  verification_ref: string;
-  authority_policy_ref: string;
-};
-
-export type FoundryRunTerminalReadback = {
-  surface_kind: 'opl_foundry_run_terminal_readback';
-  version: 'opl-foundry-run-terminal-readback.v1';
-  terminal: boolean;
-  state: FoundryRunState;
-  qualified_agent_version: AgentVersion | null;
-  owner_decisions: FoundryOwnerDecisionReadback[];
-  activation_transaction: ActivationTransaction | null;
-  runtime_binding_verification: ActivationRuntimeBindingVerification | null;
-  current_activation: ActivationPointer;
-  active_version_matches_run: boolean | null;
-};
+export type { FoundryOwnerDecisionReadback, FoundryRunTerminalReadback } from './kernel-parts/terminal-readback.ts';
 
 export type OwnerDecision = {
   run_id: string;
@@ -141,92 +131,12 @@ export type OwnerDecision = {
   authority_receipt_ref: string;
 };
 
-function fail(message: string, details: Record<string, unknown> = {}): never {
-  throw new FrameworkContractError('contract_shape_invalid', message, details);
-}
-
 function systemClock(): FoundryClock {
   return { now: () => new Date().toISOString() };
 }
 
 function targetKey(request: Pick<DesignRequest, 'target_agent_id' | 'target_domain_id'>) {
   return `${request.target_agent_id}\u0000${request.target_domain_id}`;
-}
-
-function requiredRef(value: unknown, field: string) {
-  const normalized = typeof value === 'string' ? value.trim() : '';
-  if (!normalized) fail(`${field} must be a non-empty authority ref.`);
-  return normalized;
-}
-
-function expectedRevision(value: unknown, field = 'expected_revision') {
-  if (!Number.isSafeInteger(value) || Number(value) < 0) {
-    fail(`${field} must be a non-negative safe integer.`, { actual: value });
-  }
-  return Number(value);
-}
-
-function requiredDigest(value: unknown, field: string) {
-  const digest = requiredRef(value, field);
-  if (!/^sha256:[a-f0-9]{64}$/.test(digest)) fail(`${field} must be a SHA-256 digest.`);
-  return digest;
-}
-
-function ownerDecisionReadbacks(events: FoundryRunEvent[]): FoundryOwnerDecisionReadback[] {
-  return events.flatMap((event) => {
-    if (!['owner_approved', 'owner_rejected', 'foundry_run_cancelled'].includes(event.event_type)) return [];
-    const action = requiredRef(event.payload.owner_gate_action, 'owner_gate_action') as OwnerGateAction;
-    const decision = requiredRef(event.payload.owner_gate_decision, 'owner_gate_decision') as OwnerGateDecision;
-    const validDecision = event.event_type === 'owner_approved'
-      ? decision === 'approve' && ['approve_canary', 'approve_active'].includes(action)
-      : event.event_type === 'owner_rejected'
-        ? decision === 'reject' && ['reject_canary', 'reject_active'].includes(action)
-        : decision === 'cancel' && action === 'cancel';
-    if (!validDecision) {
-      fail('FoundryRun owner decision event does not match its verified action.', {
-        event_id: event.event_id,
-        event_type: event.event_type,
-        action,
-        decision,
-      });
-    }
-    const receiptDigest = requiredDigest(
-      event.payload.owner_authority_receipt_digest,
-      'owner_authority_receipt_digest',
-    );
-    const receiptRef = requiredRef(
-      event.payload.owner_authority_receipt_ref,
-      'owner_authority_receipt_ref',
-    );
-    if (ownerAuthorityReceiptRef(receiptDigest) !== receiptRef) {
-      fail('FoundryRun owner decision receipt ref does not match its verified digest.', {
-        event_id: event.event_id,
-        receipt_ref: receiptRef,
-        receipt_digest: receiptDigest,
-      });
-    }
-    return [{
-      surface_kind: 'opl_foundry_owner_decision_readback' as const,
-      version: 'opl-foundry-owner-decision-readback.v1' as const,
-      event_id: event.event_id,
-      event_revision: event.revision,
-      expected_revision: event.revision - 1,
-      action,
-      decision,
-      receipt_ref: receiptRef,
-      receipt_digest: receiptDigest,
-      authority_ref: requiredRef(event.payload.owner_authority_ref, 'owner_authority_ref'),
-      verifier_id: requiredRef(event.payload.owner_authority_verifier_id, 'owner_authority_verifier_id'),
-      verification_ref: requiredRef(
-        event.payload.owner_authority_verification_ref,
-        'owner_authority_verification_ref',
-      ),
-      authority_policy_ref: requiredRef(
-        event.payload.owner_authority_policy_ref,
-        'owner_authority_policy_ref',
-      ),
-    }];
-  });
 }
 
 function isContractFailure(error: unknown) {
@@ -437,96 +347,7 @@ export class FoundryKernel {
     events: FoundryRunEvent[];
     activation: ActivationPointer;
   }): Promise<FoundryRunTerminalReadback> {
-    const qualifiedAgentVersion = input.run.version_digest
-      ? await this.#versions.resolveVersion(
-          input.run.version_digest,
-          input.run.target_agent_id,
-          input.run.target_domain_id,
-        )
-      : null;
-    if (input.run.version_digest && (
-      !qualifiedAgentVersion
-      || qualifiedAgentVersion.version_digest !== input.run.version_digest
-      || qualifiedAgentVersion.target_agent_id !== input.run.target_agent_id
-      || qualifiedAgentVersion.target_domain_id !== input.run.target_domain_id
-    )) {
-      fail('FoundryRun terminal readback cannot resolve its exact qualified AgentVersion.', {
-        run_id: input.run.run_id,
-        version_digest: input.run.version_digest,
-      });
-    }
-
-    const ownerDecisions = ownerDecisionReadbacks(input.events);
-    const activationEvents = input.events.filter((event) => event.event_type === 'activation_completed');
-    if (activationEvents.length > 1) {
-      fail('FoundryRun has more than one activation completion event.', { run_id: input.run.run_id });
-    }
-    const activationEvent = activationEvents[0] ?? null;
-    if ((input.run.state === 'completed_active') !== Boolean(activationEvent)) {
-      fail('FoundryRun terminal state and activation completion receipt disagree.', {
-        run_id: input.run.run_id,
-        state: input.run.state,
-        activation_event_count: activationEvents.length,
-      });
-    }
-
-    let activationTransaction: ActivationTransaction | null = null;
-    if (activationEvent) {
-      const transactionId = requiredRef(
-        activationEvent.payload.activation_transaction_id,
-        'activation_transaction_id',
-      );
-      const history = await this.#versions.activationHistory(
-        input.run.target_agent_id,
-        input.run.target_domain_id,
-      );
-      activationTransaction = history.find((transaction) => transaction.transaction_id === transactionId) ?? null;
-      if (!activationTransaction
-        || activationTransaction.to_version_digest !== input.run.version_digest
-        || activationTransaction.target_agent_id !== input.run.target_agent_id
-        || activationTransaction.target_domain_id !== input.run.target_domain_id) {
-        fail('FoundryRun activation receipt does not resolve to its exact activation transaction.', {
-          run_id: input.run.run_id,
-          transaction_id: transactionId,
-          version_digest: input.run.version_digest,
-        });
-      }
-      if (!isRecord(activationEvent.payload.activation_runtime_binding_verification)
-        || foundryContentDigest(activationEvent.payload.activation_runtime_binding_verification)
-          !== foundryContentDigest(activationTransaction.runtime_binding_verification)
-        || activationEvent.payload.activation_runtime_preflight_ref
-          !== activationTransaction.runtime_binding_verification.preflight_ref
-        || activationEvent.payload.activation_runtime_binding_ref
-          !== activationTransaction.runtime_binding_verification.runtime_binding_ref) {
-        fail('FoundryRun activation receipt does not bind its exact runtime verification.', {
-          run_id: input.run.run_id,
-          transaction_id: transactionId,
-        });
-      }
-      const activeApproval = [...ownerDecisions].reverse().find((decision) => decision.action === 'approve_active');
-      if (ownerGatePolicy(input.run.risk_tier!).active_owner_required
-        && activationTransaction.authority_receipt_ref !== activeApproval?.receipt_ref) {
-        fail('FoundryRun activation transaction does not bind its verified active approval receipt.', {
-          run_id: input.run.run_id,
-          transaction_id: transactionId,
-        });
-      }
-    }
-
-    return {
-      surface_kind: 'opl_foundry_run_terminal_readback',
-      version: 'opl-foundry-run-terminal-readback.v1',
-      terminal: FOUNDRY_TERMINAL_STATES.has(input.run.state),
-      state: input.run.state,
-      qualified_agent_version: qualifiedAgentVersion,
-      owner_decisions: ownerDecisions,
-      activation_transaction: activationTransaction,
-      runtime_binding_verification: activationTransaction?.runtime_binding_verification ?? null,
-      current_activation: input.activation,
-      active_version_matches_run: input.run.version_digest
-        ? input.activation.active_version_digest === input.run.version_digest
-        : null,
-    };
+    return buildFoundryRunTerminalReadback({ ...input, versions: this.#versions });
   }
 
   async advanceUntilPause(runId: string): Promise<FoundryRunInspection> {
@@ -1171,7 +992,7 @@ export class FoundryKernel {
   }
 
   async #activate(inspection: FoundryRunInspection) {
-    const authority = this.#latestOwnerAuthority(await this.#events.read(inspection.run.run_id));
+    const authority = latestOwnerAuthority(await this.#events.read(inspection.run.run_id));
     if (ownerGatePolicy(inspection.run.risk_tier!).active_owner_required && !authority) {
       fail('Owner-gated activation has no verified active approval receipt.');
     }
@@ -1223,8 +1044,8 @@ export class FoundryKernel {
         expected_activation_revision: input.expected_activation_revision,
       }),
     );
-    this.#assertActivationPreflight(preflight, input);
-    const runtimeBindingVerification = this.#runtimeBindingVerification(preflight);
+    assertActivationPreflight(preflight, input);
+    const runtimeBindingVerification = buildRuntimeBindingVerification(preflight);
     const occurredAt = this.#clock.now();
     const transaction = await this.#activity(input.transaction_kind, () => (
       input.transaction_kind === 'activate'
@@ -1247,7 +1068,7 @@ export class FoundryKernel {
             runtime_binding_verification: runtimeBindingVerification,
           })
     ));
-    this.#assertActivationTransaction(transaction, {
+    assertActivationTransaction(transaction, {
       ...input,
       runtime_binding_verification: runtimeBindingVerification,
     });
@@ -1255,88 +1076,6 @@ export class FoundryKernel {
       ...transaction,
       runtime_preflight: preflight,
     };
-  }
-
-  #assertActivationPreflight(
-    preflight: ActivationRuntimePreflight,
-    input: {
-      transaction_kind: ActivationTransactionKind;
-      version: AgentVersion;
-      expected_activation_revision: number;
-    },
-  ) {
-    if (
-      preflight.surface_kind !== 'opl_foundry_activation_runtime_preflight'
-      || preflight.version !== 'opl-foundry-activation-runtime-preflight.v1'
-      || preflight.transaction_kind !== input.transaction_kind
-      || preflight.target_agent_id !== input.version.target_agent_id
-      || preflight.target_domain_id !== input.version.target_domain_id
-      || preflight.version_id !== input.version.version_id
-      || preflight.version_digest !== input.version.version_digest
-      || preflight.candidate_digest !== input.version.candidate_digest
-      || preflight.candidate_ref !== input.version.candidate_ref
-      || preflight.expected_activation_revision !== input.expected_activation_revision
-      || !preflight.preflight_ref.trim()
-      || (preflight.runtime_binding_ref !== undefined && !preflight.runtime_binding_ref.trim())
-    ) {
-      fail('Activation runtime preflight does not bind the exact target AgentVersion and revision.', {
-        expected_version_digest: input.version.version_digest,
-        expected_candidate_digest: input.version.candidate_digest,
-        expected_activation_revision: input.expected_activation_revision,
-      });
-    }
-  }
-
-  #runtimeBindingVerification(
-    preflight: ActivationRuntimePreflight,
-  ): ActivationRuntimeBindingVerification {
-    return {
-      surface_kind: 'opl_foundry_activation_runtime_binding_verification',
-      version: 'opl-foundry-activation-runtime-binding-verification.v1',
-      verification_phase: 'pre_commit',
-      transaction_kind: preflight.transaction_kind,
-      target_agent_id: preflight.target_agent_id,
-      target_domain_id: preflight.target_domain_id,
-      version_id: preflight.version_id,
-      version_digest: preflight.version_digest,
-      candidate_digest: preflight.candidate_digest,
-      candidate_ref: preflight.candidate_ref,
-      expected_activation_revision: preflight.expected_activation_revision,
-      preflight_ref: preflight.preflight_ref,
-      runtime_binding_ref: preflight.runtime_binding_ref ?? preflight.preflight_ref,
-    };
-  }
-
-  #assertActivationTransaction(
-    transaction: ActivationTransaction,
-    input: {
-      transaction_kind: ActivationTransactionKind;
-      version: AgentVersion;
-      expected_activation_revision: number;
-      authority_receipt_ref: string | null;
-      runtime_binding_verification: ActivationRuntimeBindingVerification;
-    },
-  ) {
-    if (
-      transaction.surface_kind !== 'opl_foundry_activation_transaction'
-      || transaction.transaction_kind !== input.transaction_kind
-      || transaction.target_agent_id !== input.version.target_agent_id
-      || transaction.target_domain_id !== input.version.target_domain_id
-      || transaction.to_version_digest !== input.version.version_digest
-      || transaction.previous_revision !== input.expected_activation_revision
-      || transaction.next_revision !== input.expected_activation_revision + 1
-      || transaction.authority_receipt_ref !== input.authority_receipt_ref
-      || foundryContentDigest(transaction.runtime_binding_verification)
-        !== foundryContentDigest(input.runtime_binding_verification)
-      || !transaction.transaction_id.trim()
-      || !Number.isFinite(Date.parse(transaction.occurred_at))
-    ) {
-      fail('Version registry returned an invalid activation transaction.', {
-        expected_transaction_kind: input.transaction_kind,
-        expected_version_digest: input.version.version_digest,
-        expected_activation_revision: input.expected_activation_revision,
-      });
-    }
   }
 
   async #appendJournaledResult(
@@ -1459,19 +1198,7 @@ export class FoundryKernel {
   }
 
   #assertCandidate(inspection: FoundryRunInspection, candidate: MaterializedCandidate) {
-    if (
-      candidate.surface_kind !== 'opl_foundry_materialized_candidate'
-      || candidate.target_agent_id !== inspection.request.target_agent_id
-      || candidate.target_domain_id !== inspection.request.target_domain_id
-      || candidate.blueprint_digest !== inspection.run.blueprint_digest
-      || (inspection.run.candidate_digest !== null
-        && candidate.candidate_digest !== inspection.run.candidate_digest)
-      || !/^sha256:[a-f0-9]{64}$/.test(candidate.candidate_digest)
-      || !/^sha256:[a-f0-9]{64}$/.test(candidate.manifest_digest)
-      || !candidate.candidate_ref.trim()
-    ) {
-      fail('Materialized candidate identity does not match the FoundryRun.');
-    }
+    assertMaterializedCandidate(inspection, candidate);
   }
 
   #assertEvidence(
@@ -1481,36 +1208,15 @@ export class FoundryKernel {
     candidate: MaterializedCandidate,
     baseline: AgentVersion | null,
   ) {
-    assertSameTarget(inspection.request, evidence, 'EvidenceBundle');
-    const expectedFrozenPlanDigest = foundryFrozenEvaluationPlanDigest(blueprint.eval_spec);
-    const reviewerRef = evidence.independent_review.evaluator_ref.trim();
-    const evaluationExecutionRef = evidence.independent_review.evaluation_execution_ref.trim();
-    const reviewExecutionRef = evidence.independent_review.review_execution_ref.trim();
-    if (
-      evidence.blueprint_digest !== inspection.run.blueprint_digest
-      || evidence.candidate_digest !== candidate.candidate_digest
-      || evidence.baseline_version_digest !== (baseline?.version_digest ?? null)
-      || evidence.frozen_test_plan_digest !== expectedFrozenPlanDigest
-      || evidence.provenance.foundry_run_id !== inspection.run.run_id
-      || evidence.provenance.generation !== inspection.run.generation
-      || evidence.provenance.producer_id !== this.#evaluator.evaluator_id
-      || reviewerRef === this.#designer.producer_id.trim()
-      || reviewerRef === this.#evaluator.evaluator_id.trim()
-      || evaluationExecutionRef === reviewExecutionRef
-    ) {
-      fail('EvidenceBundle provenance or content binding is stale.');
-    }
-    if (
-      inspection.run.frozen_test_plan_digest
-      && evidence.frozen_test_plan_digest !== inspection.run.frozen_test_plan_digest
-    ) {
-      fail('EvidenceBundle changed the frozen test plan during a FoundryRun.');
-    }
-    assertEvaluationEvidenceFacts({
+    assertEvaluationEvidence({
       request: inspection.request,
-      spec: blueprint.eval_spec,
+      run: inspection.run,
+      blueprint,
       evidence,
-      baseline_present: baseline !== null,
+      candidate,
+      baseline,
+      designerProducerId: this.#designer.producer_id,
+      evaluatorId: this.#evaluator.evaluator_id,
     });
   }
 
@@ -1519,27 +1225,12 @@ export class FoundryKernel {
     candidate: MaterializedCandidate,
     registered: Awaited<ReturnType<VersionRegistry['register']>>,
   ) {
-    const { version, qualification } = registered;
-    const { version_digest: versionDigest, ...versionBase } = version;
-    const { qualification_digest: qualificationDigest, ...qualificationBase } = qualification;
-    if (
-      version.surface_kind !== 'opl_foundry_agent_version'
-      || qualification.surface_kind !== 'opl_foundry_qualification_record'
-      || version.target_agent_id !== inspection.request.target_agent_id
-      || version.target_domain_id !== inspection.request.target_domain_id
-      || version.blueprint_digest !== inspection.run.blueprint_digest
-      || version.candidate_digest !== candidate.candidate_digest
-      || version.candidate_ref !== candidate.candidate_ref
-      || qualification.target_agent_id !== inspection.request.target_agent_id
-      || qualification.target_domain_id !== inspection.request.target_domain_id
-      || qualification.blueprint_digest !== inspection.run.blueprint_digest
-      || qualification.candidate_digest !== candidate.candidate_digest
-      || version.qualification_digest !== qualification.qualification_digest
-      || foundryContentDigest(versionBase) !== versionDigest
-      || foundryContentDigest(qualificationBase) !== qualificationDigest
-    ) {
-      fail('Version registry changed the qualified materialized candidate binding.');
-    }
+    assertRegisteredCandidate({
+      request: inspection.request,
+      run: inspection.run,
+      candidate,
+      registered,
+    });
   }
 
   #ownerDecisionAction(
@@ -1571,27 +1262,6 @@ export class FoundryKernel {
       owner_gate_action: verification.receipt.action,
       owner_gate_decision: verification.receipt.decision,
     };
-  }
-
-  #latestOwnerAuthority(events: Awaited<ReturnType<FoundryEventStore['read']>>) {
-    for (const event of [...events].reverse()) {
-      if (
-        event.event_type === 'owner_approved'
-        && typeof event.payload.owner_authority_receipt_ref === 'string'
-        && typeof event.payload.owner_authority_receipt_digest === 'string'
-      ) {
-        const digest = requiredDigest(
-          event.payload.owner_authority_receipt_digest,
-          'owner_authority_receipt_digest',
-        );
-        const ref = requiredRef(event.payload.owner_authority_receipt_ref, 'owner_authority_receipt_ref');
-        if (ownerAuthorityReceiptRef(digest) !== ref) {
-          fail('Owner approval event receipt ref does not match its verified digest.');
-        }
-        return { ref, digest };
-      }
-    }
-    return null;
   }
 
   async #activity<T>(operation: string, run: () => Promise<T>): Promise<T> {
