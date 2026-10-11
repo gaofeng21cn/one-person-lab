@@ -400,4 +400,3 @@ export function normalizeRuntimeControl(
         : value,
   };
 }
-
