@@ -4,7 +4,7 @@
   "package_id": "med-autocast",
   "display_name": "Med Auto Cast",
   "publisher": "one-person-lab",
-  "version": "0.2.25",
+  "version": "0.2.26",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
@@ -25,8 +25,8 @@
     "required_capability_package_ids": [
       "mac-media-assets"
     ],
-    "plugin_payload_manifest_url": "payloads/med-autocast-0.2.25.json",
-    "carrier_source_commit": "f22f8a863dc7ac8066458641c8d5ec3b24006b7e"
+    "plugin_payload_manifest_url": "payloads/med-autocast-0.2.26.json",
+    "carrier_source_commit": "cbadc95e571d30ac5a4d70db5799f5a12b467ef8"
   },
   "dependency_profiles": [],
   "capability_dependencies": [
