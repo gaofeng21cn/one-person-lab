@@ -140,7 +140,7 @@ test('Atlas and Console session composition exposes both services and tears them
 test('framework readiness CLI source routes full and compact through the Cordis successor', () => {
   const source = fs.readFileSync(path.join(
     repoRoot,
-    'src/entrypoints/cli/cases/public-command-specs.ts',
+    'src/entrypoints/cli/cases/public-command-specs-parts/framework.ts',
   ), 'utf8');
   assert.match(source, /runCordisFrameworkReadiness\(/);
   assert.doesNotMatch(source, /buildFrameworkReadinessSummary\(/);
