@@ -353,4 +353,3 @@ export function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInp
     }
   }
 }
-

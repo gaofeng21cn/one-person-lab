@@ -27,4 +27,3 @@ export function asRecord(value: unknown) {
 export function stageRunQualityCycleId(input: TemporalStageRunWorkflowInput) {
   return `quality-cycle:${input.stage_run_id}`;
 }
-
