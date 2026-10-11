@@ -12,7 +12,7 @@ import { gitMarketplaceRuntimeRoot } from '../../src/kernel/git-marketplace-runt
 const hash = (bytes: Buffer) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 const json = (value: unknown) => Buffer.from(`${JSON.stringify(value)}\n`);
 
-function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'nested-identity' | 'escaping-root' | 'root-identity' | 'unicode-path') {
+function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'nested-identity' | 'escaping-root' | 'root-identity' | 'unicode-path', capability = false) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-acquisition-')));
   const source = path.join(root, 'archive/fixture');
   const packages = path.join(root, 'packages');
@@ -21,7 +21,7 @@ function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'n
   const commit = '1'.repeat(40);
   const artifact = 'ghcr.io/owner/one-person-lab-packages/fixture:1.0.0';
   const owner = {
-    surface_kind: 'opl_agent_package_manifest.v1', package_id: 'fixture', version: '1.0.0',
+    surface_kind: capability ? 'opl_capability_package_manifest.v2' : 'opl_agent_package_manifest.v1', package_id: 'fixture', version: '1.0.0',
     source_repo: 'https://github.com/owner/fixture.git',
     codex_surface: { plugin_id: 'fixture', carrier_source_commit: commit,
       plugin_payload_manifest_url: 'payload.json', configured_codex_plugin_carrier: {
@@ -32,7 +32,7 @@ function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'n
     const file = path.join(source, ref); fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, bytes);
   };
   write('opl-package.json', json(owner));
-  write('contracts/domain_descriptor.json', json({ domain_id: 'fixture' }));
+  if (!capability) write('contracts/domain_descriptor.json', json({ domain_id: 'fixture' }));
   write('contracts/action_catalog.json', json({ actions: [] }));
   write('agent/stages/manifest.json', json({ stages: [] }));
   const files = new Map([
@@ -78,7 +78,7 @@ function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'n
   ] };
   if (fault === 'digest') blobs.set(sourceLayer.digest, Buffer.from('corrupt'));
   const responses = Object.fromEntries([...blobs].map(([digest, bytes]) => [digest, bytes.toString('base64')]));
-  const script = `#!${process.execPath}\nconst args=process.argv.slice(2); const url=args.at(-1); const blobs=${JSON.stringify(responses)}; if(url.includes('/token?')) process.stdout.write(${JSON.stringify(JSON.stringify({token:'fixture-token'}))}); else if(url.includes('/manifests/')) process.stdout.write(${JSON.stringify(JSON.stringify(manifest))}); else {const b=blobs[url.split('/blobs/')[1]]; if(!b)process.exit(22); process.stdout.write(Buffer.from(b,'base64'));}\n`;
+  const script = `#!${process.execPath}\nconst args=process.argv.slice(2); const url=args.at(-1); const blobs=${JSON.stringify(responses)}; if(url.includes('/token?')) process.stdout.write(${JSON.stringify(JSON.stringify({token:'fixture-token'}))}); else if(url.includes('/manifests/')) process.stdout.write(${JSON.stringify(JSON.stringify(manifest))}); else {const b=blobs[url.split('/blobs/')[1]]; if(!b)process.exit(22); const bytes=Buffer.from(b,'base64'); const output=args.indexOf('--output'); if(output>=0)require('fs').writeFileSync(args[output+1],bytes);else process.stdout.write(bytes);}\n`;
   fs.writeFileSync(path.join(bin, 'curl'), script, { mode: 0o755 });
   const state = path.join(root, 'state');
   const marketplace = path.join(state, 'codex-plugin-marketplaces/fixture');
@@ -174,4 +174,16 @@ test('hosted readiness preserves explicit developer and Full runtime sources', (
     }
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+
+test('capability media source uses the verified OCI archive without a Standard Agent domain descriptor', () => {
+  const f = fixture(undefined, true);
+  try {
+    assert.equal(f.install(), f.marketplace);
+    assert.equal(fs.existsSync(path.join(f.marketplace, 'contracts/domain_descriptor.json')), false);
+    const marker = JSON.parse(fs.readFileSync(path.join(f.marketplace, '.codex-marketplace-install.json'), 'utf8'));
+    assert.equal(marker.source_type, 'oci_source_archive');
+    assert.equal(fs.readFileSync(path.join(f.marketplace, 'plugins/fixture/skills/fixture/SKILL.md'), 'utf8'), '# Fixture\n');
+  } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
 });

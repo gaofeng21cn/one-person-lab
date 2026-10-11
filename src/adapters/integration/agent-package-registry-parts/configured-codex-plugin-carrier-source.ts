@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { runtimeRootContainsDescriptor } from '../../../kernel/git-marketplace-runtime-root.ts';
-import { extractPackageSourceArchive, packageSourceArchiveMembersStayWithinRoot, readPackageSourceArchiveEntries } from './package-source-archive.ts';
+import { MAX_PACKAGE_SOURCE_ARCHIVE_BYTES, packageSourceArchiveDigest, extractPackageSourceArchive, packageSourceArchiveMembersStayWithinRoot, readPackageSourceArchiveEntries } from './package-source-archive.ts';
 import { localReadbackFailure, runConfiguredDownloadWithTransientRetry, stringValue } from './configured-codex-plugin-carrier-native.ts';
 
 const PREFIX = 'application/vnd.onepersonlab.package.';
@@ -37,6 +37,24 @@ function download(url: string, env: NodeJS.ProcessEnv, token?: string) {
       { exit_status: result.status, attempt_count: result.attemptCount });
   }
   return result.stdout;
+}
+
+function downloadArchive(url: string, destination: string, env: NodeJS.ProcessEnv, token: string) {
+  const result = runConfiguredDownloadWithTransientRetry(() => {
+    const response = spawnSync('curl', [
+      '--fail', '--silent', '--show-error', '--location', '--proto', '=https', '--ipv4',
+      '--connect-timeout', '10', '--max-time', '600',
+      '--max-filesize', String(MAX_PACKAGE_SOURCE_ARCHIVE_BYTES),
+      '-H', `Authorization: Bearer ${token}`, '--output', destination, url,
+    ], { env, maxBuffer: MAX_BYTES });
+    return { status: response.status, stdout: response.stdout ?? Buffer.alloc(0),
+      stderr: response.stderr?.toString('utf8') ?? '', error: response.error ?? null };
+  });
+  if (result.status !== 0 || result.error) {
+    return localReadbackFailure('configured_codex_plugin_carrier_source_download_failed',
+      'The selected Package source archive could not be downloaded.',
+      { exit_status: result.status, attempt_count: result.attemptCount });
+  }
 }
 
 function developerCheckoutRoot(packageId: string, owner: Record<string, unknown>, env: NodeJS.ProcessEnv) {
@@ -140,8 +158,9 @@ export function acquireHostedPackageSource(input: {
   const owner = input.ownerManifest;
   const developerSource = acquireDeveloperCheckoutSource(input);
   if (developerSource) return developerSource;
-  // Capability/Profile payloads keep their existing transport and lifetime.
-  if (owner.surface_kind !== 'opl_agent_package_manifest.v1') return null;
+  const standardAgent = owner.surface_kind === 'opl_agent_package_manifest.v1';
+  const capability = owner.surface_kind === 'opl_capability_package_manifest.v2';
+  if (!standardAgent && !capability) return null;
   const surface = isRecord(owner.codex_surface) ? owner.codex_surface : null;
   const carrier = isRecord(surface?.configured_codex_plugin_carrier)
     ? surface.configured_codex_plugin_carrier : null;
@@ -151,7 +170,7 @@ export function acquireHostedPackageSource(input: {
   const match = publication?.match(/^ghcr\.io\/([a-z0-9._-]+\/one-person-lab-packages\/[a-z0-9.-]+):latest-stable$/);
   if (!match || !source || !version || !/^[0-9A-Za-z.+-]+$/.test(version)
     || !match[1].endsWith(`/${input.packageId}`)) {
-    return invalid('Standard Agent source requires its declared Package owner OCI channel.');
+    return invalid('Package source requires its declared owner OCI channel.');
   }
   const image = `ghcr.io/${match[1]}`;
   // The selected owner projection supplies the version. Do not introduce a
@@ -198,7 +217,15 @@ export function acquireHostedPackageSource(input: {
   const temporaryRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hosted-package-')));
   try {
     const archivePath = path.join(temporaryRoot, 'source.tar.gz');
-    fs.writeFileSync(archivePath, blob(sourceLayer));
+    if (typeof sourceLayer.size !== 'number' || !Number.isSafeInteger(sourceLayer.size)
+      || sourceLayer.size < 0 || sourceLayer.size > MAX_PACKAGE_SOURCE_ARCHIVE_BYTES) {
+      return invalid('Package source archive exceeds the bounded media source limit.');
+    }
+    downloadArchive(`https://ghcr.io/v2/${match[1]}/blobs/${sourceLayer.digest}`, archivePath, input.env, token);
+    if (packageSourceArchiveDigest(archivePath) !== sourceLayer.digest
+      || fs.statSync(archivePath).size !== sourceLayer.size) {
+      return invalid('Package source archive digest or size mismatch.');
+    }
     // Enumerate members from the tar headers directly: the system tar CLI
     // octal-escapes non-ASCII names under a non-UTF-8 locale, which would make a
     // physical name look like an injected backslash. See package-source-archive.ts.
@@ -234,8 +261,8 @@ export function acquireHostedPackageSource(input: {
     const sourceOwner = json(fs.readFileSync(path.join(sourceRoot, ownerRef)));
     if (sourceOwner.package_id !== input.packageId || sourceOwner.version !== version
       || (sourceOwner.source_repo !== undefined && sourceOwner.source_repo !== owner.source_repo)
-      || !runtimeRootContainsDescriptor(sourceRoot, 'contracts/domain_descriptor.json')) {
-      return invalid('Package source root does not contain the selected Standard Agent owner descriptor.');
+      || (standardAgent && !runtimeRootContainsDescriptor(sourceRoot, 'contracts/domain_descriptor.json'))) {
+      return invalid('Package source root does not contain the selected owner descriptor.');
     }
     return {
       sourceRoot,

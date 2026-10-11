@@ -2,7 +2,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
@@ -10,6 +10,8 @@ import { Ajv2020 } from 'ajv/dist/2020.js';
 
 import { parseJsonText } from './script-json-boundary.mjs';
 import { materializeArchiveBackedPackagePayload } from '../src/adapters/integration/package-distribution.ts';
+
+import { packageSourceArchiveDigest, readPackageSourceArchiveEntries, packageSourceArchiveMembersStayWithinRoot, extractPackageSourceArchive } from '../src/adapters/integration/agent-package-registry-parts/package-source-archive.ts';
 
 const FRAMEWORK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PAYLOAD_SCHEMA_REF = 'contracts/opl-framework/package-payload-manifest-v2.schema.json';
@@ -183,10 +185,11 @@ function lengthPrefixedContentLock(paths, archiveBytesByPath) {
       throw new Error(`Package content_lock repeats package path ${packagePath}.`);
     }
     seen.add(packagePath);
-    const fileBytes = archiveBytesByPath.get(packagePath);
-    if (!fileBytes) {
+    const filePath = archiveBytesByPath.get(packagePath);
+    if (!filePath) {
       throw new Error(`Package content_lock path is absent from the payload archive: ${packagePath}`);
     }
+    const fileBytes = readPhysicalRegularFile(filePath, 'payload content');
     const pathBytes = Buffer.from(packagePath, 'utf8');
     const pathLength = Buffer.allocUnsafe(8);
     const fileLength = Buffer.allocUnsafe(8);
@@ -201,43 +204,37 @@ function lengthPrefixedContentLock(paths, archiveBytesByPath) {
 }
 
 function verifyArchiveEntries(archivePath, payload, packageManifest, options) {
-  const listing = spawnSync('tar', ['-tzf', archivePath], {
-    encoding: 'utf8',
-    maxBuffer: MAX_FILE_BYTES,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  if (listing.status !== 0) {
-    throw new Error(`Package source archive is not a readable gzip tar archive: ${listing.stderr.trim()}`);
+  const archiveRoot = payload.package_source.archive_root;
+  const entries = readPackageSourceArchiveEntries(archivePath, archiveRoot);
+  if (!packageSourceArchiveMembersStayWithinRoot(entries, archiveRoot)) {
+    throw new Error('Package source archive contains an escaping or non-physical member.');
   }
-  const entries = new Set(listing.stdout.split('\n').filter(Boolean));
-  const archiveBytesByPath = new Map();
-  for (const file of payload.files) {
-    const archivePathRef = `${payload.package_source.archive_root}/${file.source_path}`;
-    if (!entries.has(archivePathRef)) {
-      throw new Error(`Package source archive does not contain payload source_path: ${archivePathRef}`);
+  const temporaryRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-payload-verify-')));
+  try {
+    // Extract once; repeated tar scans are prohibitively expensive for media libraries.
+    extractPackageSourceArchive(archivePath, temporaryRoot);
+    const archivePathsByPath = new Map();
+    for (const file of payload.files) {
+      const archivePathRef = `${archiveRoot}/${file.source_path}`;
+      const filePath = path.resolve(temporaryRoot, archivePathRef);
+      if (!filePath.startsWith(`${temporaryRoot}${path.sep}`)) {
+        throw new Error(`Package payload escapes archive root: ${archivePathRef}`);
+      }
+      const bytes = readPhysicalRegularFile(filePath, 'payload content');
+      const actualSha256 = `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+      if (file.sha256 !== actualSha256) {
+        throw new Error(`Package archive payload SHA-256 mismatch: ${archivePathRef}`);
+      }
+      archivePathsByPath.set(file.path, filePath);
     }
-    const extracted = spawnSync('tar', ['-xOzf', archivePath, archivePathRef], {
-      maxBuffer: MAX_FILE_BYTES,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    if (extracted.status !== 0) {
-      throw new Error(`Cannot read payload source_path from Package archive: ${archivePathRef}`);
-    }
-    const actualSha256 = `sha256:${crypto.createHash('sha256').update(extracted.stdout).digest('hex')}`;
-    if (file.sha256 !== actualSha256) {
-      throw new Error(`Package archive payload SHA-256 mismatch: ${archivePathRef}`);
-    }
-    archiveBytesByPath.set(file.path, extracted.stdout);
-  }
-  const actualContentLock = lengthPrefixedContentLock(
-    packageContentLockPaths(packageManifest, payload, options),
-    archiveBytesByPath,
-  );
-  if (payload.content_lock.digest !== actualContentLock) {
-    throw new Error(
-      `Package archive content_lock mismatch: expected=${payload.content_lock.digest} actual=${actualContentLock}`,
+    const actualContentLock = lengthPrefixedContentLock(
+      packageContentLockPaths(packageManifest, payload, options), archivePathsByPath,
     );
-  }
+    if (payload.content_lock.digest !== actualContentLock) {
+      throw new Error(`Package archive content_lock mismatch: expected=${payload.content_lock.digest} actual=${actualContentLock}`);
+    }
+  } finally { fs.rmSync(temporaryRoot, { recursive: true, force: true }); }
+
 }
 
 function writePhysicalRegularFile(filePath, bytes) {
@@ -291,8 +288,7 @@ function main() {
   if (options.archiveRoot !== source.repo) {
     throw new Error(`Archive root does not match the Package owner repository: expected=${source.repo}`);
   }
-  const archive = readPhysicalRegularFile(options.archive, 'source archive');
-  const actualArchiveSha256 = `sha256:${crypto.createHash('sha256').update(archive).digest('hex')}`;
+  const actualArchiveSha256 = packageSourceArchiveDigest(options.archive);
   if (options.archiveSha256 !== actualArchiveSha256) {
     throw new Error(`Archive SHA-256 mismatch: expected=${options.archiveSha256} actual=${actualArchiveSha256}`);
   }

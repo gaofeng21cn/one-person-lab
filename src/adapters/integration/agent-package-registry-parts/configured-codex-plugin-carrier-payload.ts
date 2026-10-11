@@ -324,7 +324,7 @@ export function installPayloadMarketplace(input: {
   const marketplaceRoot = path.join(stateDir, 'codex-plugin-marketplaces', marketplaceId);
   const stagingRoot = `${marketplaceRoot}.${process.pid}.${crypto.randomUUID()}.staging`;
   const pluginRoot = path.join(stagingRoot, 'plugins', projection.pluginId);
-  const downloaded = new Map<string, Buffer>();
+  const downloaded = new Map<string, string>();
   const hostedSource = acquireHostedPackageSource({
     packageId: input.packageId,
     ownerManifest: projection.ownerManifest,
@@ -341,7 +341,12 @@ export function installPayloadMarketplace(input: {
     if (hostedSource) {
       // Keep runtime contracts and the minimal plugin in the same native
       // marketplace lifetime and atomic replacement; no separate registry.
-      fs.cpSync(hostedSource.sourceRoot, stagingRoot, { recursive: true, errorOnExist: true, force: false });
+      if (projection.ownerManifest.surface_kind === 'opl_agent_package_manifest.v1') {
+        fs.cpSync(hostedSource.sourceRoot, stagingRoot, { recursive: true, errorOnExist: true, force: false });
+      } else {
+        // Capability content lives inside its plugin; do not duplicate a whole media library.
+        fs.mkdirSync(stagingRoot, { recursive: true });
+      }
       fs.writeFileSync(path.join(stagingRoot, '.codex-marketplace-install.json'),
         `${JSON.stringify(hostedSource.provenance, null, 2)}\n`, { mode: 0o600 });
     }
@@ -395,7 +400,7 @@ export function installPayloadMarketplace(input: {
       fs.writeFileSync(destination, bytes, {
         mode: candidate.mode === '100755' ? 0o755 : 0o644,
       });
-      downloaded.set(relativePath, bytes);
+      downloaded.set(relativePath, destination);
     }
 
     const lock = isRecord(payload.content_lock) ? payload.content_lock : null;
@@ -411,7 +416,7 @@ export function installPayloadMarketplace(input: {
       );
     }
     for (const relativePath of contentLockPaths) {
-      const bytes = downloaded.get(relativePath)!;
+      const bytes = fs.readFileSync(downloaded.get(relativePath)!);
       const pathBytes = Buffer.from(relativePath, 'utf8');
       const pathLength = Buffer.allocUnsafe(8);
       const fileLength = Buffer.allocUnsafe(8);
