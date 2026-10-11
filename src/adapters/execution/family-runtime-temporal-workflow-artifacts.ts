@@ -156,4 +156,3 @@ export function repairMapList(value: unknown, findings: StageQualityFinding[]) {
 export function findingClosureList(value: unknown) {
   return requiredRecordList(value, 'finding_closures') as StageQualityFindingClosure[];
 }
-
