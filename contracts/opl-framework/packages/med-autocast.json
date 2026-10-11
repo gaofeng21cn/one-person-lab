@@ -4,7 +4,7 @@
   "package_id": "med-autocast",
   "display_name": "Med Auto Cast",
   "publisher": "one-person-lab",
-  "version": "0.2.19",
+  "version": "0.2.21",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
@@ -22,16 +22,19 @@
       "marketplace_source": "gaofeng21cn/med-autocast",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/med-autocast-0.2.19.json",
-    "carrier_source_commit": "0f2528976aeb13db2b739fb107d9539381d42444"
+    "required_capability_package_ids": [
+      "mac-media-assets"
+    ],
+    "plugin_payload_manifest_url": "payloads/med-autocast-0.2.21.json",
+    "carrier_source_commit": "cdc988e2e4bb5093cf0ae4a7b220b75664256d3e"
   },
   "dependency_profiles": [],
   "capability_dependencies": [
     {
       "module_id": "media-assets",
       "package_id": "mac-media-assets",
-      "required": false,
-      "dependency_kind": "optional_enhancement",
+      "required": true,
+      "dependency_kind": "hard_runtime_dependency",
       "capability_abi": "mac-media-assets.v1",
       "required_export_ids": [
         "mac-media-assets"
@@ -80,6 +83,12 @@
       }
     ]
   },
+  "requires": [
+    {
+      "package_id": "mac-media-assets",
+      "presence": "required"
+    }
+  ],
   "publication_projection_order": 60,
   "publication_source": {
     "owner_package_manifest_ref": "contracts/opl_agent_package_manifest.json",
