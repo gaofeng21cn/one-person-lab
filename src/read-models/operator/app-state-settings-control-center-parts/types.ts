@@ -1,3 +1,5 @@
+import type { MANAGED_UPDATE_OWNER_ACTIONS } from '../../../adapters/integration/index.ts';
+
 export type SettingsActionTaskKind =
   | 'read'
   | 'repair'
@@ -16,9 +18,7 @@ export type SettingsActionTaskKind =
   | 'delete'
   | 'test'
   | 'set_default'
-  | 'status'
-  | 'plan'
-  | 'rollback';
+  | typeof MANAGED_UPDATE_OWNER_ACTIONS.revert;
 
 export type SettingsAction = {
   action_id: string;
