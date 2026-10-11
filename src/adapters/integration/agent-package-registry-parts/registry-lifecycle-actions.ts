@@ -315,11 +315,13 @@ export async function runOplAgentPackageInstall(input: AgentPackageInstallInput)
 
 export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) {
   const descriptor = requirePackageMutationDescriptor(input, 'update');
+  const dependencyResults = requiredDependencyInstallResults(descriptor, input);
   return {
     version: 'g2' as const,
     opl_agent_package_update: {
       surface_kind: 'opl_agent_package_update' as const,
       ...nativeLifecycleResult('update', input, descriptor),
+      required_dependency_install_results: dependencyResults,
     },
   };
 }

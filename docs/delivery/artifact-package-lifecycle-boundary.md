@@ -128,4 +128,4 @@ App展示artifact和Package state，发起受控action，并持有App release tr
 
 包含媒体的独立 capability package 与标准 Agent 共用 OCI 源包获取、精确版本与载荷校验。源包允许最多 2 GiB，下载落盘并按流计算 SHA-256；JSON 与单个载荷文件继续使用 128 MiB 边界。发布校验只解包一次，再逐文件校验，安装时逐文件写入并从磁盘计算内容锁，避免为媒体库累计保存全部文件缓冲。
 
-所有包保留源身份、OCI layer 大小与 digest、归档成员路径和物理文件检查。只有标准 Agent 要求 domain descriptor；资产 capability 的入口与内容由它自己的 owner descriptor、导出项和内容锁定义。依赖安装仍使用已有 required closure；媒体在工作台的选用与创作质量由 MAC 决定。
+所有包保留源身份、OCI layer 大小与 digest、归档成员路径和物理文件检查。只有标准 Agent 要求 domain descriptor；资产 capability 的入口与内容由它自己的 owner descriptor、导出项和内容锁定义。安装和更新都使用已有 required closure，更新先为选中的新版本补齐依赖，再更新消费方；媒体在工作台的选用与创作质量由 MAC 决定。
