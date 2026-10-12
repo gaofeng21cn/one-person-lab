@@ -311,7 +311,10 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       output.skill_sync.summary.synced,
       STANDARD_AGENT_PACK_COUNT,
     );
-    assert.equal(output.skill_sync.summary.skipped, 1);
+    assert.equal(
+      output.skill_sync.summary.skipped,
+      listFamilySkillPackSpecs().filter((spec) => spec.distribution_role === 'framework_capability_plugin_pack').length,
+    );
     assert.equal(fs.existsSync(syncLogPath), false);
     for (const [project, plugin] of [
       ['med-autoscience', 'med-autoscience'],

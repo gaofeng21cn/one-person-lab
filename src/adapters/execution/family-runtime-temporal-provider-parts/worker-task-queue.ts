@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import {
   DEFAULT_TEMPORAL_TASK_QUEUE,
-} from '../family-runtime-temporal.ts';
+} from '../family-runtime-temporal-contract.ts';
 import type { TemporalWorkerPaths } from '../family-runtime-temporal-client.ts';
 
 export type TemporalWorkerTaskQueueSource =

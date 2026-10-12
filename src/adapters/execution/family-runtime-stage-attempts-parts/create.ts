@@ -42,6 +42,7 @@ import {
 import { requireNoActiveUnresolvedRuntimeIdentityConflict } from '../family-runtime-legacy-identity-admission.ts';
 import { requireFamilyRuntimeExecutionScope } from '../family-runtime-execution-scope.ts';
 import { isRegisteredReviewerRecoveryRepair } from '../family-runtime-stage-run-launch-registry.ts';
+import { resolveTemporalTaskQueue } from '../family-runtime-temporal-address.ts';
 export type StageAttemptCreateInput = {
   domainId: FamilyRuntimeDomainId;
   stageId: string;
@@ -574,7 +575,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     provider_kind: providerKind,
     workflow_id: workflowId,
     namespace: providerKind === 'temporal' ? process.env.OPL_TEMPORAL_NAMESPACE?.trim() || 'default' : null,
-    task_queue: providerKind === 'temporal' ? process.env.OPL_TEMPORAL_TASK_QUEUE?.trim() || 'opl-stage-attempts' : null,
+    task_queue: providerKind === 'temporal' ? resolveTemporalTaskQueue() : null,
     provider_status: 'registered',
     started_at: null,
     completed_at: null,

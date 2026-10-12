@@ -162,6 +162,7 @@ exit 1
       {
         OPL_CODEX_BIN: codexFixture.codexPath,
         OPL_CODEX_INSTALL_COMMAND: installScript,
+        OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
       },
     ) as {
       engine_action: {
@@ -324,7 +325,7 @@ exit 1
       '#!/usr/bin/env bash',
       'set -euo pipefail',
       `printf '%s\\n' "$*" >> ${shellSingleQuote(npmLog)}`,
-      'if [[ "$*" == *"@openai/codex@latest"* ]]; then',
+      'if [[ "$*" == *"@openai/codex@0.141.0"* ]]; then',
       '  echo "registry fetch is forbidden in preseeded fixture" >&2',
       '  exit 47',
       'fi',
@@ -373,7 +374,7 @@ exit 1
     assert.match(output.engine_action.command_preview.join(' '), /--prefer-offline/);
     assert.match(output.engine_action.stdout, /preseeded_platform_package/);
     assert.match(output.engine_action.stdout, /codex-darwin-arm64/);
-    assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), /@openai\/codex@latest/);
+    assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), /@openai\/codex@0\.141\.0/);
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -399,7 +400,7 @@ test('builtin Codex install explicitly materializes missing npm platform package
       `printf '%s\\n' "$*" >> ${shellSingleQuote(npmLog)}`,
       'if [[ "$1" == "install" && "$2" == "--prefix" ]]; then',
       '  prefix="$3"',
-      '  if [[ "$4" == "@openai/codex@latest" ]]; then',
+      '  if [[ "$4" == "@openai/codex@0.141.0" ]]; then',
       '    package_root="$prefix/node_modules/@openai/codex"',
       '    mkdir -p "$package_root/bin"',
       '    cat > "$package_root/package.json" <<\'JSON\'',
@@ -453,7 +454,7 @@ test('builtin Codex install explicitly materializes missing npm platform package
     assert.equal(fs.existsSync(runtimeRg), true);
     assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.141\.0/);
     assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg explicit-platform/);
-    assert.match(fs.readFileSync(npmLog, 'utf8'), /@openai\/codex@latest/);
+    assert.match(fs.readFileSync(npmLog, 'utf8'), /@openai\/codex@0\.141\.0/);
     assert.match(
       fs.readFileSync(npmLog, 'utf8'),
       /@openai\/codex-darwin-arm64@npm:@openai\/codex@0\.141\.0-darwin-arm64/,
@@ -499,7 +500,7 @@ test('builtin Codex install materializes Linux arm64 platform package when runni
       `printf '%s\\n' "$*" >> ${shellSingleQuote(npmLog)}`,
       'if [[ "$1" == "install" && "$2" == "--prefix" ]]; then',
       '  prefix="$3"',
-      '  if [[ "$4" == "@openai/codex@latest" ]]; then',
+      '  if [[ "$4" == "@openai/codex@0.141.0" ]]; then',
       '    package_root="$prefix/node_modules/@openai/codex"',
       '    mkdir -p "$package_root/bin"',
       '    cat > "$package_root/package.json" <<\'JSON\'',
@@ -592,7 +593,7 @@ test('builtin Codex install reports explicit platform package materialization fa
       `printf '%s\\n' "$*" >> ${shellSingleQuote(npmLog)}`,
       'if [[ "$1" == "install" && "$2" == "--prefix" ]]; then',
       '  prefix="$3"',
-      '  if [[ "$4" == "@openai/codex@latest" ]]; then',
+      '  if [[ "$4" == "@openai/codex@0.141.0" ]]; then',
       '    package_root="$prefix/node_modules/@openai/codex"',
       '    mkdir -p "$package_root/bin"',
       '    cat > "$package_root/package.json" <<\'JSON\'',
@@ -676,11 +677,19 @@ test('engine actions reject retired Hermes target without compatibility action s
 });
 
 test('builtin Codex install command bounds npm registry fetches', () => {
-  const install = resolveEngineActionSpec('codex', 'install');
+  const previousVersion = process.env.OPL_CODEX_CLI_LATEST_VERSION;
+  let install: ReturnType<typeof resolveEngineActionSpec>;
+  try {
+    process.env.OPL_CODEX_CLI_LATEST_VERSION = '0.141.0';
+    install = resolveEngineActionSpec('codex', 'install');
+  } finally {
+    if (previousVersion === undefined) delete process.env.OPL_CODEX_CLI_LATEST_VERSION;
+    else process.env.OPL_CODEX_CLI_LATEST_VERSION = previousVersion;
+  }
   const command = install.command_preview.join(' ');
 
   assert.equal(install.strategy, 'builtin');
-  assert.match(command, /npm install --prefix .* @openai\/codex@latest/);
+  assert.match(command, /npm install --prefix .* @openai\/codex@0\.141\.0\b/);
   assert.doesNotMatch(command, / install -g /);
   assert.match(install.note ?? '', /does not modify global Homebrew, npm, or system Codex/);
   assert.match(command, /--fetch-retries=3/);
