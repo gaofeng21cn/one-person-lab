@@ -585,3 +585,23 @@ test('Desktop and WebUI qualify in either order and share one Stable promotion b
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }
 });
+
+test('App Standard mechanical notes freeze honestly and remain bound to the Bundle digest', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mechanical-notes-'));
+  try {
+    const sourceRoot = path.join(root, 'source');
+    const request = appStandardRequest(sourceRoot);
+    request.prepared_notes.source = 'prepared_mechanical';
+    request.prepared_notes.markdown = 'Recorded changes.\n<!-- OPL_RELEASE_NOTES_GENERATOR:mechanical -->\n';
+    const requestPath = path.join(root, 'freeze.json');
+    writeJson(requestPath, request);
+    const frozen = freezeReleaseBundle({ requestPath, sourceRoot, storeRoot: path.join(root, 'store') }).release_bundle_freeze;
+    assert.equal(frozen.bundle.prepared_notes.source, 'prepared_mechanical');
+    assert.equal(frozen.bundle.prepared_notes.markdown, request.prepared_notes.markdown);
+    const changed = structuredClone(request);
+    changed.prepared_notes.markdown += 'Another recorded change.\n';
+    writeJson(requestPath, changed);
+    const second = freezeReleaseBundle({ requestPath, sourceRoot, storeRoot: path.join(root, 'store') }).release_bundle_freeze;
+    assert.notEqual(frozen.bundle_digest, second.bundle_digest);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

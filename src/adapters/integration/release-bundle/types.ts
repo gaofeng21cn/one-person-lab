@@ -95,7 +95,7 @@ type ReleaseBundleFreezeRequestCommon = {
     source_commit: string;
   }>;
   prepared_notes: {
-    source: 'prepared_ai';
+    source: 'prepared_ai' | 'prepared_mechanical';
     format: 'markdown';
     markdown: string;
     evidence: Record<string, unknown>;

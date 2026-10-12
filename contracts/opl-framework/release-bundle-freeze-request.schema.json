@@ -99,7 +99,10 @@
       ],
       "properties": {
         "source": {
-          "const": "prepared_ai"
+          "enum": [
+            "prepared_ai",
+            "prepared_mechanical"
+          ]
         },
         "format": {
           "const": "markdown"
