@@ -3,7 +3,7 @@
   "package_id": "mac-media-assets",
   "display_name": "MAC Media Assets",
   "publisher": "one-person-lab",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/mac-media-assets.git",
   "package_role": "capability_package",
@@ -37,8 +37,8 @@
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/mac-media-assets:latest-stable",
       "executor_route": "codex_cli"
     },
-    "plugin_payload_manifest_url": "payloads/mac-media-assets-0.1.9.json",
-    "carrier_source_commit": "b6f48f86bdbbce25c9942479c1b01ebba82c5879"
+    "plugin_payload_manifest_url": "payloads/mac-media-assets-0.2.0.json",
+    "carrier_source_commit": "d1685df88eaf61e4853df26a705c2658fab37ca5"
   },
   "authority_boundary": {
     "can_write_domain_truth": false,
@@ -418,6 +418,9 @@
       "payloads/paper-theatre/reserve_intestine_v1/8323133881fe6bdeb91e/files/payload.png",
       "payloads/paper-theatre/reserve_islet_v1/1796dcf00ad980856b21/evidence/generation-receipt.json",
       "payloads/paper-theatre/reserve_islet_v1/1796dcf00ad980856b21/files/payload.png",
+      "payloads/paper-theatre/reserve_kitchen_counter_v2/7e89239e364e80d7af82/files/payload.png",
+      "payloads/paper-theatre/reserve_kitchen_counter_v2/d0570c04286e/evidence/generation-receipt.json",
+      "payloads/paper-theatre/reserve_kitchen_counter_v2/d0570c04286e/files/payload.png",
       "payloads/paper-theatre/reserve_kraft_v1/fd4b73f9cf381087483e/evidence/generation-receipt.json",
       "payloads/paper-theatre/reserve_kraft_v1/fd4b73f9cf381087483e/files/payload.png",
       "payloads/paper-theatre/reserve_liver_v1/f2c83bbca2a24b3e5dfa/evidence/generation-receipt.json",
@@ -436,6 +439,12 @@
       "payloads/paper-theatre/reserve_oximeter_v1/69c807ea73b6b7982970/files/payload.png",
       "payloads/paper-theatre/reserve_pancreas_v1/0d1ea9719816e248ad1c/evidence/generation-receipt.json",
       "payloads/paper-theatre/reserve_pancreas_v1/0d1ea9719816e248ad1c/files/payload.png",
+      "payloads/paper-theatre/reserve_person_lying_v1/9678d312d307/evidence/generation-receipt.json",
+      "payloads/paper-theatre/reserve_person_lying_v1/9678d312d307/files/payload.png",
+      "payloads/paper-theatre/reserve_person_lying_v1/d2bac5b6b57519f51f5a/files/payload.png",
+      "payloads/paper-theatre/reserve_person_pointing_v1/e6afd7150ef2/evidence/generation-receipt.json",
+      "payloads/paper-theatre/reserve_person_pointing_v1/e6afd7150ef2/files/payload.png",
+      "payloads/paper-theatre/reserve_person_pointing_v1/fdce21068b193126c246/files/payload.png",
       "payloads/paper-theatre/reserve_person_reach_v1/06699488519265d1f09e/evidence/generation-receipt.json",
       "payloads/paper-theatre/reserve_person_reach_v1/06699488519265d1f09e/files/payload.png",
       "payloads/paper-theatre/reserve_person_seated_v1/0d8717db010fff199181/evidence/generation-receipt.json",
@@ -679,6 +688,8 @@
       "records/paper-theatre/reserve_inhaler_v1/deb3537c664b4d077f62/record.json",
       "records/paper-theatre/reserve_intestine_v1/8323133881fe6bdeb91e/record.json",
       "records/paper-theatre/reserve_islet_v1/1796dcf00ad980856b21/record.json",
+      "records/paper-theatre/reserve_kitchen_counter_v2/7e89239e364e80d7af82/record.json",
+      "records/paper-theatre/reserve_kitchen_counter_v2/d0570c04286e/record.json",
       "records/paper-theatre/reserve_kraft_v1/fd4b73f9cf381087483e/record.json",
       "records/paper-theatre/reserve_liver_v1/f2c83bbca2a24b3e5dfa/record.json",
       "records/paper-theatre/reserve_lungs_v1/dbfde62a985380b92220/record.json",
@@ -688,6 +699,10 @@
       "records/paper-theatre/reserve_oil_v1/3825f2cb267e08b1ae84/record.json",
       "records/paper-theatre/reserve_oximeter_v1/69c807ea73b6b7982970/record.json",
       "records/paper-theatre/reserve_pancreas_v1/0d1ea9719816e248ad1c/record.json",
+      "records/paper-theatre/reserve_person_lying_v1/9678d312d307/record.json",
+      "records/paper-theatre/reserve_person_lying_v1/d2bac5b6b57519f51f5a/record.json",
+      "records/paper-theatre/reserve_person_pointing_v1/e6afd7150ef2/record.json",
+      "records/paper-theatre/reserve_person_pointing_v1/fdce21068b193126c246/record.json",
       "records/paper-theatre/reserve_person_reach_v1/06699488519265d1f09e/record.json",
       "records/paper-theatre/reserve_person_seated_v1/0d8717db010fff199181/record.json",
       "records/paper-theatre/reserve_person_side_v1/b0c0805e327702792c91/record.json",
@@ -735,6 +750,7 @@
       "schemas/asset.schema.json",
       "skills/mac-media-assets/SKILL.md",
       "tools/audio_catalog.py",
+      "tools/ingest_generated.py",
       "tools/materialize_package.py",
       "tools/preview-engine/audio.html",
       "tools/preview-engine/index.html",
@@ -744,7 +760,7 @@
       "tools/sync_from_workbench.py",
       "tools/verify_catalog.py"
     ],
-    "digest": "sha256:ca5fd337f48b3d080adc33ea5e58433d02fa7a6b10d6a7865e7ef461fb2347ae"
+    "digest": "sha256:9c98947bbab796c6d8d5810f9529732b899b714c8f58033af9a31b70bbad07d7"
   },
   "publication_projection_order": 60,
   "publication_source": {
