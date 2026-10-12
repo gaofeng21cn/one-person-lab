@@ -50,6 +50,10 @@ digest，接口发现与 Hosted action 使用同一个父级源码根，不创�
 payload 物化路径，不退回 descriptor 中的 Git 仓库地址另建 marketplace。已有 Git
 carrier 和显式开发目录继续使用原有生命周期，不因存在 payload 声明而切换安装来源。
 
+Capability Package 仅在声明 `publication_ref` 时进入 OCI source acquisition；未声明的
+Package 保留固定提交的 GitHub payload transport 和原有文件摘要、content lock 校验。
+已声明但格式或身份不合法的 OCI reference 仍拒绝安装，不回退到其他来源。
+
 Package 不存在共享 Release Set、聚合 `latest-stable` 或整套冻结前置。每个
 Package 只发布自己的 immutable version 与 owner channel；Framework、App 和
 Homebrew 分别消费自己声明的 artifact。消费者可以在安装或运行时自由组合

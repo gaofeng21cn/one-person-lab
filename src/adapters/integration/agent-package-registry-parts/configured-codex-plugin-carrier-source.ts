@@ -164,6 +164,8 @@ export function acquireHostedPackageSource(input: {
   const surface = isRecord(owner.codex_surface) ? owner.codex_surface : null;
   const carrier = isRecord(surface?.configured_codex_plugin_carrier)
     ? surface.configured_codex_plugin_carrier : null;
+  // Capability packages without an OCI publication retain their pinned payload transport.
+  if (capability && carrier?.publication_ref == null) return null;
   const publication = stringValue(carrier?.publication_ref);
   const source = stringValue(carrier?.marketplace_source);
   const version = stringValue(owner.version);

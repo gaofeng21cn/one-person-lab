@@ -8,9 +8,23 @@ import test from 'node:test';
 import { installPayloadMarketplace } from '../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-payload.ts';
 import { hostedRuntimeReadiness } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
 import { gitMarketplaceRuntimeRoot } from '../../src/kernel/git-marketplace-runtime-root.ts';
+import { acquireHostedPackageSource } from '../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-source.ts';
 
 const hash = (bytes: Buffer) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 const json = (value: unknown) => Buffer.from(`${JSON.stringify(value)}\n`);
+
+test('capability packages without OCI publication retain pinned payload transport while malformed publications fail closed', () => {
+  const owner = JSON.parse(fs.readFileSync(new URL('../../contracts/opl-framework/packages/opl-channel-weixin.json', import.meta.url), 'utf8'));
+  for (const publication of [null, undefined, '', 'ghcr.io/owner/foreign:latest-stable']) {
+    const selected = structuredClone(owner);
+    selected.codex_surface.configured_codex_plugin_carrier.publication_ref = publication;
+    const acquire = () => acquireHostedPackageSource({ packageId: owner.package_id, ownerManifest: selected, payload: {}, env: {} });
+    if (publication == null) assert.equal(acquire(), null);
+    else assert.throws(acquire, /declared owner OCI channel/);
+  }
+  owner.surface_kind = 'opl_agent_package_manifest.v1';
+  assert.throws(() => acquireHostedPackageSource({ packageId: owner.package_id, ownerManifest: owner, payload: {}, env: {} }), /declared owner OCI channel/);
+});
 
 function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'nested-identity' | 'escaping-root' | 'root-identity' | 'unicode-path', capability = false) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-acquisition-')));
