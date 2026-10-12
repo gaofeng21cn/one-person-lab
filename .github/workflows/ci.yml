@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      - name: Verify shared release-note writer
+        run: node --test tests/release-note-writer.test.mjs
+
       - name: Validate source
         run: |
           npm run build

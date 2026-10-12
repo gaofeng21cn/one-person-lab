@@ -1,0 +1,12 @@
+{
+  "schema": "opl_release_note_writer.v1",
+  "providers": [
+    { "id": "copilot-auto", "type": "copilot", "model": "auto" },
+    { "id": "deepseek-flash", "type": "gateway", "model": "deepseek-flash" },
+    { "id": "gpt-6-luna", "type": "gateway", "model": "gpt-6-luna" }
+  ],
+  "gateway_endpoint": "https://gateway.medopl.com/v1/chat/completions",
+  "reasoning_effort": "low",
+  "timeout_ms": 90000,
+  "copilot": { "version": "1.0.95", "max_ai_credits": 30 }
+}
