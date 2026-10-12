@@ -102,12 +102,13 @@ function browserEnv(root: string, packageRoot: string) {
   };
 }
 
-test('managed Browser Automation lock pins the official Playwright MCP dependency and tool surface', () => {
+test('managed Browser Automation lock delegates version resolution while preserving the official tool surface', () => {
   const lock = readManagedBrowserAutomationLock();
   assert.equal(lock.provider_id, 'playwright-mcp');
   assert.equal(lock.runtime.package_name, '@playwright/mcp');
-  assert.equal(lock.runtime.package_version, '0.0.79');
-  assert.equal(lock.runtime.carrier, 'current_framework_node_process');
+  assert.equal(lock.runtime.package_version, '');
+  assert.equal(lock.runtime.dependency_source_ref, 'contracts/opl-framework/dependency-release-sources.json#playwright-mcp');
+  assert.equal(lock.runtime.carrier, 'opl_managed_npm_with_framework_first_run_seed');
   assert.equal(lock.mcp.default_enabled, true);
   assert.equal(lock.mcp.server_id, 'playwright');
   assert.deepEqual(lock.mcp.args, ['--browser', 'chrome', '--headless', '--isolated']);

@@ -78,7 +78,9 @@ function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'n
   fs.writeFileSync(path.join(packages, 'payload.json'), json(payload));
   if (fault === 'symlink') fs.symlinkSync('/tmp', path.join(source, 'escape'));
   const archive = path.join(root, 'source.tar.gz');
-  execFileSync('tar', ['-czf', archive, '-C', path.dirname(source), 'fixture']);
+  execFileSync('tar', ['-czf', archive, '-C', path.dirname(source), 'fixture'], {
+    env: { ...process.env, COPYFILE_DISABLE: '1' },
+  });
   const blobs = new Map<string, Buffer>();
   const layer = (kind: string, bytes: Buffer) => {
     const digest = hash(bytes); blobs.set(digest, bytes);

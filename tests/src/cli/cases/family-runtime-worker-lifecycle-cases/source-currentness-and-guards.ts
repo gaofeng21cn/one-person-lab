@@ -1,4 +1,6 @@
 import { pathToFileURL } from 'node:url';
+import { familyRuntimePaths } from '../../../../../src/adapters/execution/family-runtime-store.ts';
+import { resolveTemporalTaskQueue } from '../../../../../src/adapters/execution/family-runtime-temporal-address.ts';
 
 import {
   assert,
@@ -378,5 +380,32 @@ test('Temporal worker task queue isolates non-default roots unless explicitly co
     }
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(tempStateRoot, { recursive: true, force: true });
+  }
+});
+
+
+test('Temporal producers and workers use the same isolated queue for Docker data roots', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-docker-queue-'));
+  const saved = Object.fromEntries(['OPL_DATA_DIR', 'OPL_STATE_DIR', 'OPL_TEMPORAL_TASK_QUEUE'].map((key) => [key, process.env[key]]));
+  try {
+    delete process.env.OPL_TEMPORAL_TASK_QUEUE;
+    // The explicit state directory matches Docker's canonical data-root layout.
+    process.env.OPL_DATA_DIR = root;
+    process.env.OPL_STATE_DIR = path.join(root, 'opl', 'state');
+    const paths = familyRuntimePaths();
+    const workerQueue = resolveTemporalWorkerTaskQueue(paths);
+    assert.equal(resolveTemporalTaskQueue(), workerQueue);
+    assert.equal(resolveTemporalTaskQueue(paths), workerQueue);
+    assert.notEqual(workerQueue, DEFAULT_TEMPORAL_TASK_QUEUE);
+    assert.notEqual(resolveTemporalTaskQueue({ root: path.join(root, 'other-data', 'family-runtime') }), workerQueue);
+    process.env.OPL_TEMPORAL_TASK_QUEUE = 'explicit-docker-queue';
+    assert.equal(resolveTemporalTaskQueue(), 'explicit-docker-queue');
+    assert.equal(resolveTemporalWorkerTaskQueue(paths), 'explicit-docker-queue');
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

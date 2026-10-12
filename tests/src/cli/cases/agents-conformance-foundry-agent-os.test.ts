@@ -43,7 +43,10 @@ function readyFoundryRepos() {
   retargetReadyRepo(scholarSkillsRepo, 'mas-scholar-skills', 'MAS Scholar Skills');
   configureReadyCapabilityPackage(scholarSkillsRepo);
 
-  return { masRepo, magRepo, rcaRepo, omaRepo, bookForgeRepo, autocastRepo, scholarSkillsRepo };
+  const mediaAssetsRepo = buildReadyAgentRepo();
+  retargetReadyRepo(mediaAssetsRepo, 'mac-media-assets', 'Med Auto Cast Media Assets');
+
+  return { masRepo, magRepo, rcaRepo, omaRepo, bookForgeRepo, autocastRepo, scholarSkillsRepo, mediaAssetsRepo };
 }
 
 test('agents conformance exposes Foundry Agent OS membership without readiness authority', async () => {
@@ -65,6 +68,8 @@ test('agents conformance exposes Foundry Agent OS membership without readiness a
     `med-autocast=${repos.autocastRepo}`,
     '--agent',
     `mas-scholar-skills=${repos.scholarSkillsRepo}`,
+    '--agent',
+    `mac-media-assets=${repos.mediaAssetsRepo}`,
   ]);
   const report = payload.standard_domain_agent_conformance;
   const foundry = report.foundry_agent_os_conformance;
@@ -83,9 +88,12 @@ test('agents conformance exposes Foundry Agent OS membership without readiness a
   );
 
   assert.deepEqual(payload.foundry_agent_os_conformance, foundry);
-  assert.equal(foundry.status, 'passed');
+  assert.equal(foundry.status, 'passed', JSON.stringify(foundry.blockers));
   assert.deepEqual(foundry.observed_domain_agent_ids, [...STANDARD_FOUNDRY_DOMAIN_AGENT_IDS]);
-  assert.deepEqual(foundry.observed_capability_package_ids, ['mas-scholar-skills']);
+  assert.deepEqual(
+    foundry.observed_capability_package_ids,
+    STANDARD_AGENT_REGISTRY.filter((entry) => entry.series_membership === 'capability_package').map((entry) => entry.agent_id),
+  );
   assert.deepEqual(foundry.unknown_non_standard_agent_ids, []);
   assert.deepEqual(foundry.missing_domain_agent_ids, []);
   assert.equal(standardOwnerWorklist.length, STANDARD_FOUNDRY_DOMAIN_AGENT_IDS.length);

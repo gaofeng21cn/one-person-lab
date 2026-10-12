@@ -28,6 +28,8 @@ Framework 不维护普通 Package 的中央版本求解、installed lock、paylo
 
 Temporal service 和 worker 承担 workflow history、retry、task queue 和 durable execution。Framework 将其投影为 Stage/Attempt、repair route 和 operator state。
 
+Scheduler、StageRun、StageAttempt 和 worker 使用同一个按 runtime 数据根解析的 task queue。非默认数据根保持队列隔离；`OPL_TEMPORAL_TASK_QUEUE` 是显式覆盖入口，不能由容器布局暗中合并不同数据根。
+
 workflow 完成只能证明 transport/runtime 结果可读取。是否接受产物、是否进入下一 Stage、是否可发布，仍由 domain owner 和 human gate 决定。
 
 ## Codex carrier 随安装载体归属

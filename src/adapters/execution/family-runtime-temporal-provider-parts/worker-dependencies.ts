@@ -68,7 +68,7 @@ function dependencyHealth(input: {
 }
 
 function temporalWorkerRuntimeModuleRoot(moduleUrl: string) {
-  return path.resolve(path.dirname(fileURLToPath(moduleUrl)), '..');
+  return path.resolve(path.dirname(fileURLToPath(moduleUrl)), '../../../..');
 }
 
 export function inspectTemporalWorkerRuntimeDependencies(input: {
@@ -76,9 +76,10 @@ export function inspectTemporalWorkerRuntimeDependencies(input: {
   dependencyRequire?: NodeJS.Require;
 } = {}): WorkerDependencyHealth {
   const moduleRoot = temporalWorkerRuntimeModuleRoot(input.moduleUrl ?? import.meta.url);
-  const dependencyRequire = input.dependencyRequire ?? requireFromHere;
   let resolvedPath: string | null = null;
   try {
+    const dependencyRequire = input.dependencyRequire
+      ?? createRequire(requireFromHere.resolve('@temporalio/worker'));
     resolvedPath = dependencyRequire.resolve('@swc/core');
     dependencyRequire('@swc/core');
     return {
