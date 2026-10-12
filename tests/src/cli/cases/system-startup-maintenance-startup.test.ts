@@ -356,7 +356,7 @@ test('ScholarSkills sync rejects identity drift and unmanaged skill collisions',
       '--target-workspace',
       workspaceRoot,
     ], env);
-    assert.equal(collision.status, 2);
+    assert.equal(collision.status, 2, JSON.stringify(collision.payload));
     assert.equal(collision.payload.error.code, 'contract_shape_invalid');
     assert.equal(collision.payload.error.details.skill_id, 'example-specialist');
     assert.equal(fs.readFileSync(path.join(collisionRoot, 'USER.md'), 'utf8'), 'preserve me\n');

@@ -106,7 +106,9 @@ test('single-Package payload materialization binds exact physical archive proven
       plugin_payload_manifest_url: path.basename(input),
     },
   }, null, 2)}\n`, 'utf8');
-  execFileSync('tar', ['-czf', archive, '-C', stage, archiveRoot]);
+  execFileSync('tar', ['-czf', archive, '-C', stage, archiveRoot], {
+    env: { ...process.env, COPYFILE_DISABLE: '1' },
+  });
   const archiveSha256 = `sha256:${crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex')}`;
   const baseArgs = [
     '--experimental-strip-types',

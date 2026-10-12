@@ -235,6 +235,14 @@ export function createScholarSkillsRemote() {
 export function scholarSkillsPluginFixtureFiles(fixture: string): Record<string, string> {
   return {
     ...agentPluginManifestFixtureFiles('mas-scholar-skills'),
+    'opl-package.json': JSON.stringify({
+      package_id: 'mas-scholar-skills',
+      connect_skill_sync_policy: {
+        default_scope: 'workspace',
+        allowed_scopes: ['workspace', 'quest'],
+        implicit_without_target: 'skip',
+      },
+    }),
     'skills/mas-scholar-skills/SKILL.md': [
       '---',
       'name: mas-scholar-skills',

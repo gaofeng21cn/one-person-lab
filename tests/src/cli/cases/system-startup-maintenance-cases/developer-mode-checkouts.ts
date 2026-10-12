@@ -25,7 +25,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     redcube: path.join(workspaceRoot, 'redcube-ai'),
     oplmetaagent: path.join(workspaceRoot, 'opl-meta-agent'),
     oplbookforge: path.join(workspaceRoot, 'opl-bookforge'),
-    'med-autocast': path.join(workspaceRoot, 'med-autocast'),
+    medautocast: path.join(workspaceRoot, 'med-autocast'),
     scholarskills: path.join(workspaceRoot, 'mas-scholar-skills'),
   };
 
@@ -36,7 +36,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     runGitFixtureCommand(workspaceRoot, ['clone', rcaRemote.remoteRoot, siblingCheckouts.redcube]);
     runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckouts.oplmetaagent]);
     runGitFixtureCommand(workspaceRoot, ['clone', bookForgeRemote.remoteRoot, siblingCheckouts.oplbookforge]);
-    runGitFixtureCommand(workspaceRoot, ['clone', autocastRemote.remoteRoot, siblingCheckouts['med-autocast']]);
+    runGitFixtureCommand(workspaceRoot, ['clone', autocastRemote.remoteRoot, siblingCheckouts.medautocast]);
     runGitFixtureCommand(workspaceRoot, ['clone', scholarSkillsRemote.remoteRoot, siblingCheckouts.scholarskills]);
 
     const output = withCliTimeout('180000', () => runCli(['system', 'startup-maintenance'], {
