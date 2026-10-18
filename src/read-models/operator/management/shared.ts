@@ -6,12 +6,7 @@ import {
   FrameworkContractError,
   isRecord,
 } from '../../../kernel/contract-validation.ts';
-import { parseJsonText } from '../../../kernel/json-file.ts';
-import {
-  stringList as jsonStringList,
-  stringValue as optionalString,
-} from '../../../kernel/json-record.ts';
-import { buildManagedShellCommandEnv, prepareManagedShellCommandCwd } from '../../../adapters/integration/index.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { normalizeCommandOutput } from '../../../kernel/terminal.ts';
 
 type CommandResult = {
@@ -147,90 +142,6 @@ export function uniqueStrings(values: Array<string | null | undefined>) {
 
 export { isRecord, optionalString };
 
-export function optionalStringList(value: unknown) {
-  return jsonStringList(value);
-}
-
-export function readOptionalJsonRecord(filePath: string | null) {
-  if (!filePath || !fs.existsSync(filePath)) {
-    return null;
-  }
-
-  try {
-    const parsed = parseJsonText(fs.readFileSync(filePath, 'utf8'));
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-export function runJsonShellCommand(command: string | null, cwd: string) {
-  if (!command) {
-    return {
-      payload: null,
-      error: null,
-    };
-  }
-
-  const commandCwd = prepareManagedShellCommandCwd(cwd, command);
-  const result = (() => {
-    try {
-      return spawnSync('/bin/bash', ['-c', command], {
-        cwd: commandCwd.cwd,
-        encoding: 'utf8',
-        env: buildManagedShellCommandEnv(cwd),
-        maxBuffer: 10 * 1024 * 1024,
-      });
-    } finally {
-      commandCwd.cleanup();
-    }
-  })();
-
-  if (result.error || (result.status ?? 1) !== 0) {
-    const failure = normalizeCommandOutput(result.stdout ?? '', result.stderr ?? result.error?.message ?? '');
-    return {
-      payload: null,
-      error: failure || 'Command execution failed.',
-    };
-  }
-
-  try {
-    const parsed = parseJsonText(result.stdout ?? '');
-    if (!isRecord(parsed)) {
-      return {
-        payload: null,
-        error: 'Command returned a JSON payload that is not an object.',
-      };
-    }
-
-    return {
-      payload: parsed,
-      error: null,
-    };
-  } catch (error) {
-    return {
-      payload: null,
-      error: error instanceof Error ? error.message : 'Command did not return valid JSON.',
-    };
-  }
-}
-
-export function optionalNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-export function readOptionalText(filePath: string | null) {
-  if (!filePath || !fs.existsSync(filePath)) {
-    return null;
-  }
-
-  try {
-    return fs.readFileSync(filePath, 'utf8');
-  } catch {
-    return null;
-  }
-}
-
 export function normalizeInlineText(value: string | null | undefined) {
   const normalized = value
     ?.replace(/\r?\n+/g, ' ')
@@ -239,78 +150,4 @@ export function normalizeInlineText(value: string | null | undefined) {
     .trim();
 
   return normalized ? normalized : null;
-}
-
-function escapeRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-export function extractMarkedField(markdown: string | null, label: string) {
-  if (!markdown) {
-    return null;
-  }
-
-  const pattern = new RegExp(
-    `\\*\\*${escapeRegex(label)}:\\*\\*\\s*([\\s\\S]*?)(?:\\\\\\s*$|\\n\\*\\*|\\n##|\\n#|$)`,
-    'im',
-  );
-  const match = markdown.match(pattern);
-  return normalizeInlineText(match?.[1] ?? null);
-}
-
-export function extractFrontMatterTitle(markdown: string | null) {
-  if (!markdown) {
-    return null;
-  }
-
-  const match = markdown.match(/^title:\s*"(.+)"$/m);
-  return normalizeInlineText(match?.[1] ?? null);
-}
-
-export function summarizeFigureCounts(figureCatalog: Record<string, unknown> | null) {
-  const figures = Array.isArray(figureCatalog?.figures)
-    ? figureCatalog.figures.filter((entry): entry is Record<string, unknown> => isRecord(entry))
-    : [];
-  let main = 0;
-  let supplementary = 0;
-
-  for (const figure of figures) {
-    const figureId = optionalString(figure.figure_id);
-    const paperRole = optionalString(figure.paper_role);
-    const isSupplementary = (figureId && /^S/i.test(figureId)) || paperRole === 'supplementary';
-    if (isSupplementary) {
-      supplementary += 1;
-    } else {
-      main += 1;
-    }
-  }
-
-  return {
-    main: figures.length > 0 ? main : null,
-    supplementary: figures.length > 0 ? supplementary : null,
-  };
-}
-
-export function summarizeTableCounts(tableCatalog: Record<string, unknown> | null) {
-  const tables = Array.isArray(tableCatalog?.tables)
-    ? tableCatalog.tables.filter((entry): entry is Record<string, unknown> => isRecord(entry))
-    : [];
-  let main = 0;
-  let supplementary = 0;
-
-  for (const table of tables) {
-    const tableId = optionalString(table.table_id);
-    const paperRole = optionalString(table.paper_role);
-    const isSupplementary = (tableId && /^TA/i.test(tableId)) || paperRole === 'supplementary';
-    if (isSupplementary) {
-      supplementary += 1;
-    } else {
-      main += 1;
-    }
-  }
-
-  return {
-    main: tables.length > 0 ? main : null,
-    supplementary: tables.length > 0 ? supplementary : null,
-  };
 }
