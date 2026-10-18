@@ -129,31 +129,3 @@ export function localizeRuntimeDisplayText(value: string | null | undefined) {
 export function localizeRuntimeDisplayList(values: string[]) {
   return values.map((value) => localizeRuntimeDisplayText(value) ?? value);
 }
-
-export function liveRouteStatusLabel(routeTarget: string | null) {
-  const routeLabel = routeTarget ? humanizeStatusLabel(routeTarget) : null;
-  return routeLabel && routeLabel !== '状态已记录'
-    ? `运行中：${routeLabel}`
-    : '运行中';
-}
-
-export function masPublicationActionSummary(routeTarget: string | null) {
-  const routeLabel = routeTarget ? humanizeStatusLabel(routeTarget) : null;
-  return routeLabel && routeLabel !== '状态已记录'
-    ? `论文质量或交付检查未关闭；当前阶段：${routeLabel}。`
-    : '论文质量或交付检查未关闭。';
-}
-
-export function masPublicationNextActionSummary(routeTarget: string | null) {
-  const routeKey = routeTarget ? statusDisplayKey(routeTarget) : null;
-  if (routeKey === 'analysis_campaign' || routeKey === 'return_to_analysis_campaign') {
-    return '建议阶段：分析补充；目标：补齐证据一致性。';
-  }
-  if (routeKey === 'write' || routeKey === 'return_to_write') {
-    return '建议阶段：写作；目标：完善修订稿包。';
-  }
-  if (routeKey === 'finalize' || routeKey === 'return_to_finalize') {
-    return '建议阶段：交付收口；目标：确认投稿包达到交付条件。';
-  }
-  return '建议动作：继续关闭质量与交付检查。';
-}
