@@ -30,12 +30,15 @@ Choose the topic first, then follow the contract's schema, source, and consumer 
 | Where are reusable helper and source-material interfaces? | [Native helper execution](./pack-native-helper-execution-contract.json), [source material ingest](./source-material-ingest-contract.json), [submission resource request](./submission-resource-provision-request.schema.json) |
 | How are generated bundles and release consumers bound? | [Pack bundle](./pack-bundle-contract.json), [release operation event](./release-bundle-operation-event.schema.json), [release consumer envelope](./release-bundle-consumer-envelope.schema.json) |
 | Where do public whitepaper builds get their inputs? | [Whitepaper registry](./public-whitepaper-registry.json), [Profile schema](./public-whitepaper-profile.schema.json) |
+| How are managed dependency versions selected? | [Dependency release sources](./dependency-release-sources.json) |
 
 ## Consumer Reading
 
 A schema describes a payload, a descriptor advertises a capability, and a runtime receipt records an observed operation. None independently proves installation, domain acceptance, publication, or release readiness. Read each contract's authority boundary with its referenced consumer.
 
 The [family orchestration directory](../family-orchestration/README.md) owns companion payload shapes exchanged with domain Packages. Domain truth, artifact and memory bodies, professional verdicts, and owner receipts remain with the declared domain owner; App product and release decisions remain with the App owner.
+
+Managed external dependencies resolve the latest stable release from their canonical source at operation start. Environment version values are test fixtures only; runtime and packaged operations do not accept a fixed latest-version override. Dependabot keeps repository manifests moving through current compatible updates.
 
 ## Detailed Guides
 

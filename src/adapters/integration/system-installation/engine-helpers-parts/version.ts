@@ -1,4 +1,5 @@
 import { resolveDependencyReleaseSync } from '../../dependency-release-resolution-sync.ts';
+import { allowDependencyVersionOverride } from '../../dependency-resolution-mode.ts';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -159,6 +160,7 @@ export function resolveLatestVersionStatus(
 }
 
 function resolveConfiguredLatestCodexCliVersion() {
+  if (!allowDependencyVersionOverride()) return null;
   const envVersion = normalizeOptionalString(process.env.OPL_CODEX_CLI_LATEST_VERSION);
   return envVersion ? parseCliVersion(envVersion)?.version ?? envVersion : null;
 }

@@ -2,10 +2,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { compareDependencyVersions, resolveDependencyRelease, resolveDependencyReleases } from '../../src/adapters/integration/dependency-release-resolution.ts';
+import { configuredLatestVersion } from '../../src/adapters/integration/install-companions-parts/tool-version.ts';
 
 test('dependency version comparison preserves a newer installed release', () => {
   assert.equal(compareDependencyVersions('0.6.6', '0.5.4'), 1);
   assert.equal(compareDependencyVersions('v1.9.1', '1.9.1'), 0);
+});
+
+test('runtime ignores fixed latest-version environment overrides', () => {
+  const previousOverride = process.env.OPL_DEPENDENCY_TEST_OVERRIDE;
+  const previousOfficeCli = process.env.OPL_OFFICECLI_LATEST_VERSION;
+  try {
+    process.env.OPL_DEPENDENCY_TEST_OVERRIDE = '0';
+    process.env.OPL_OFFICECLI_LATEST_VERSION = '1.0.100';
+    assert.equal(configuredLatestVersion('officecli'), null);
+  } finally {
+    if (previousOverride === undefined) delete process.env.OPL_DEPENDENCY_TEST_OVERRIDE;
+    else process.env.OPL_DEPENDENCY_TEST_OVERRIDE = previousOverride;
+    if (previousOfficeCli === undefined) delete process.env.OPL_OFFICECLI_LATEST_VERSION;
+    else process.env.OPL_OFFICECLI_LATEST_VERSION = previousOfficeCli;
+  }
 });
 
 test('manifest resolution uses the official platform archive and digest', async () => {

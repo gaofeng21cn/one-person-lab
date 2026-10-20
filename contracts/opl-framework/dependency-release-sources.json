@@ -3,6 +3,7 @@
   "owner": "opl-framework",
   "selection": "latest_stable_at_operation_start",
   "stale_fallback_allowed": false,
+  "version_override_policy": "test_fixture_only",
   "sources": {
     "kimi-cu": {
       "kind": "json-manifest",
