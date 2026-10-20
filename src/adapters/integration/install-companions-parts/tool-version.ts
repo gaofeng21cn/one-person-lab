@@ -1,3 +1,5 @@
+import { allowDependencyVersionOverride } from '../dependency-resolution-mode.ts';
+
 export type OplCompanionToolActionStatus = 'ready' | 'installed' | 'updated' | 'missing' | 'failed';
 export const OPL_COMPANION_TOOL_IDS = [
   'officecli',
@@ -70,6 +72,7 @@ export function maxVersion(values: string[]) {
 }
 
 export function configuredLatestVersion(toolId: OplCompanionToolId) {
+  if (!allowDependencyVersionOverride()) return null;
   const key = {
     officecli: 'OPL_OFFICECLI_LATEST_VERSION',
     'mineru-open-api': 'OPL_MINERU_OPEN_API_LATEST_VERSION',

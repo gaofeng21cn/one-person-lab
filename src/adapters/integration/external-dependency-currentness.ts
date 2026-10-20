@@ -1,4 +1,5 @@
 import { resolveDependencyReleaseSync } from './dependency-release-resolution-sync.ts';
+import { allowDependencyVersionOverride } from './dependency-resolution-mode.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -219,7 +220,9 @@ function newestStableVersion(versions: Array<string | null>) {
 }
 
 function latestTemporalVersion(refresh: boolean) {
-  const configured = exactStableVersion(process.env.OPL_TEMPORAL_CLI_LATEST_VERSION?.trim());
+  const configured = allowDependencyVersionOverride()
+    ? exactStableVersion(process.env.OPL_TEMPORAL_CLI_LATEST_VERSION?.trim())
+    : null;
   if (configured || !refresh) return configured;
   try { return resolveDependencyReleaseSync('temporal-cli', { verifyArchive: false }).version; }
   catch { return null; }

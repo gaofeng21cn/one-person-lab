@@ -30,12 +30,15 @@ State: `active_support`
 | 通用 helper 与 source material 接口在哪里？ | [Native helper execution](./pack-native-helper-execution-contract.json)、[source material ingest](./source-material-ingest-contract.json)、[submission resource request](./submission-resource-provision-request.schema.json) |
 | generated bundle 与 release consumer 如何绑定？ | [Pack bundle](./pack-bundle-contract.json)、[release operation event](./release-bundle-operation-event.schema.json)、[release consumer envelope](./release-bundle-consumer-envelope.schema.json) |
 | 公开白皮书从哪里取得构建输入？ | [Whitepaper registry](./public-whitepaper-registry.json)、[Profile schema](./public-whitepaper-profile.schema.json) |
+| 受管依赖如何选择版本？ | [Dependency release sources](./dependency-release-sources.json) |
 
 ## Consumer 读法
 
 schema 描述 payload，descriptor 声明能力，runtime receipt 记录一次已观察操作。任一项都不能单独证明已安装、领域接受、已发布或 release ready。应结合合同的 authority boundary 和所引用 consumer 阅读。
 
 [Family orchestration 目录](../family-orchestration/README.zh-CN.md)持有与领域 Package 交换的 companion payload 形状。domain truth、artifact 和 memory body、专业 verdict 及 owner receipt 仍归声明的 domain owner；App 产品与发布决策仍归 App owner。
+
+受管外部依赖在每次操作开始时从权威来源解析最新稳定版本。环境变量中的版本值只允许作为测试 fixture；运行时和打包流程不接受固定的 latest-version 覆盖。Dependabot 负责持续推动仓库 manifest 的兼容更新。
 
 ## 详细说明
 

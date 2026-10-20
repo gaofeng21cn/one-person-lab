@@ -1,4 +1,5 @@
 import { resolveDependencyReleaseSync } from '../../dependency-release-resolution-sync.ts';
+import { allowDependencyVersionOverride } from '../../dependency-resolution-mode.ts';
 import { compareDependencyVersions } from '../../dependency-release-resolution.ts';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -181,7 +182,9 @@ function resolveCodexPackageInstallSpec() {
   // A seed is used only for a first install; installed generations always resolve the current upstream target.
   const paths = resolveOplRuntimeToolchainPaths();
   if (seed && !fs.existsSync(paths.current_codex_path)) return seed;
-  const configured = normalizeOptionalString(process.env.OPL_CODEX_CLI_LATEST_VERSION);
+  const configured = allowDependencyVersionOverride()
+    ? normalizeOptionalString(process.env.OPL_CODEX_CLI_LATEST_VERSION)
+    : null;
   const version = configured ?? resolveDependencyReleaseSync('codex-cli', { verifyArchive: false }).version;
   return `@openai/codex@${version}`;
 }
