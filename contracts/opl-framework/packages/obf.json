@@ -33,7 +33,7 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.3.15",
+  "version": "0.3.16",
   "domain_descriptor_ref": "contracts/domain_descriptor.json",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
@@ -54,8 +54,8 @@
     ],
     "bundled_capability_package_ids": [],
     "user_install_action_count": 1,
-    "plugin_payload_manifest_url": "payloads/obf-0.3.15.json",
-    "carrier_source_commit": "0fb70ab66b4833f7fa2d672fca31261b7fff7ff9"
+    "plugin_payload_manifest_url": "payloads/obf-0.3.16.json",
+    "carrier_source_commit": "183fa527c91f7db9dbad59288b6c4ff6829005b6"
   },
   "dependency_profiles": [
     {
