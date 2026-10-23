@@ -33,7 +33,7 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.3.16",
+  "version": "0.3.17",
   "domain_descriptor_ref": "contracts/domain_descriptor.json",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
@@ -54,8 +54,8 @@
     ],
     "bundled_capability_package_ids": [],
     "user_install_action_count": 1,
-    "plugin_payload_manifest_url": "payloads/obf-0.3.16.json",
-    "carrier_source_commit": "183fa527c91f7db9dbad59288b6c4ff6829005b6"
+    "plugin_payload_manifest_url": "payloads/obf-0.3.17.json",
+    "carrier_source_commit": "41f6984ca79e8dee2f8b119a572d34cf277a3d76"
   },
   "dependency_profiles": [
     {
@@ -71,7 +71,7 @@
       },
       "opl_role": "dependency_environment_check",
       "source_descriptor_ref": "contracts/domain_descriptor.json#/dependency_profiles/0",
-      "source_profile_sha256": "sha256:d13f062cca559183c6e10d7786e6ac760b8dd1f5693e9c2f102373c0ce04dd3b",
+      "source_profile_sha256": "sha256:a8e0e9ad69d1dede884ee9a2aad9af2d94647b8ecb0110aa5a557b18392a9370",
       "authority_boundary": {
         "can_write_domain_truth": false,
         "can_write_artifact_body": false,
