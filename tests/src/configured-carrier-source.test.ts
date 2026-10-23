@@ -98,8 +98,8 @@ function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'n
   fs.writeFileSync(path.join(bin, 'curl'), script, { mode: 0o755 });
   const state = path.join(root, 'state');
   const marketplace = path.join(state, 'codex-plugin-marketplaces/fixture');
-  const install = () => installPayloadMarketplace({ packageId: 'fixture', pluginId: 'fixture@fixture',
-    packageDirectory: packages, env: { ...process.env, OPL_STATE_DIR: state, PATH: `${bin}:${process.env.PATH}` } });
+  const install = (overrides: NodeJS.ProcessEnv = {}) => installPayloadMarketplace({ packageId: 'fixture', pluginId: 'fixture@fixture',
+    packageDirectory: packages, env: { ...process.env, OPL_STATE_DIR: state, PATH: `${bin}:${process.env.PATH}`, ...overrides } });
   return { root, source, marketplace, install };
 }
 
@@ -202,4 +202,30 @@ test('capability media source uses the verified OCI archive without a Standard A
     assert.equal(marker.source_type, 'oci_source_archive');
     assert.equal(fs.readFileSync(path.join(f.marketplace, 'plugins/fixture/skills/fixture/SKILL.md'), 'utf8'), '# Fixture\n');
   } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+});
+
+
+test('Full source seed installs through the native payload verifier without network and rejects changed bytes', () => {
+  for (const corrupt of [false, true]) {
+    const f = fixture();
+    try {
+      const runtime = path.join(f.root, 'runtime');
+      const seed = path.join(runtime, 'modules', 'fixture');
+      fs.cpSync(f.source, seed, { recursive: true });
+      fs.writeFileSync(path.join(seed, 'opl-runtime-module.json'), json({
+        repo_name: 'fixture', packaged_runtime: true, source_git: { head_sha: '1'.repeat(40) },
+      }));
+      const bin = path.join(f.root, 'offline-bin');
+      fs.mkdirSync(bin);
+      fs.writeFileSync(path.join(bin, 'curl'), '#!/bin/sh\nexit 99\n', { mode: 0o755 });
+      if (corrupt) fs.writeFileSync(path.join(seed, 'plugins/fixture/skills/fixture/SKILL.md'), 'changed');
+      const install = () => f.install({ OPL_FULL_RUNTIME_HOME: runtime, PATH: `${bin}:${process.env.PATH}` });
+      if (corrupt) assert.throws(install, /digest/);
+      else {
+        assert.equal(install(), f.marketplace);
+        assert.equal(JSON.parse(fs.readFileSync(path.join(f.marketplace, '.codex-marketplace-install.json'), 'utf8')).source_type, 'packaged_source_seed');
+        assert.equal(fs.existsSync(path.join(f.marketplace, 'contracts/domain_descriptor.json')), true);
+      }
+    } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+  }
 });

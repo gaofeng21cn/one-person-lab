@@ -149,6 +149,53 @@ function json(bytes: Buffer) {
   return isRecord(value) ? value : invalid('Package artifact must contain a JSON object.');
 }
 
+// Full is a transport seed. The current owner/payload still selects the version,
+// and installPayloadMarketplace verifies every file and the content lock.
+function acquirePackagedSource(input: {
+  packageId: string;
+  ownerManifest: Record<string, unknown>;
+  payload: Record<string, unknown>;
+  env: NodeJS.ProcessEnv;
+}) {
+  const runtime = stringValue(input.env.OPL_FULL_RUNTIME_HOME);
+  if (!runtime) return null;
+  const modules = path.join(fs.realpathSync(runtime), 'modules');
+  if (!fs.existsSync(modules)) return null;
+  const repo = stringValue(input.ownerManifest.source_repo);
+  const commit = stringValue(input.payload.source_commit);
+  if (!repo || !commit) return null;
+  const repoName = path.basename(new URL(repo).pathname.replace(/\.git$/, ''));
+  for (const entry of fs.readdirSync(modules, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const sourceRoot = path.join(modules, entry.name);
+    const markerPath = path.join(sourceRoot, 'opl-runtime-module.json');
+    if (!fs.existsSync(markerPath)) continue;
+    const marker = json(fs.readFileSync(markerPath));
+    if (marker.repo_name !== repoName || !isRecord(marker.source_git)
+      || marker.source_git.head_sha !== commit || marker.packaged_runtime !== true) continue;
+    const pluginSourceRoot = stringValue(input.payload.source_root);
+    const ownerRef = fs.existsSync(path.join(sourceRoot, 'opl-package.json'))
+      ? 'opl-package.json' : pluginSourceRoot ? path.posix.join(pluginSourceRoot, 'opl-package.json') : null;
+    if (!ownerRef || !runtimeRootContainsDescriptor(sourceRoot, ownerRef)) continue;
+    const owner = json(fs.readFileSync(path.join(sourceRoot, ownerRef)));
+    if (owner.package_id !== input.packageId || owner.version !== input.ownerManifest.version) continue;
+    return {
+      sourceRoot,
+      provenance: { source: repo, source_type: 'packaged_source_seed', source_commit: commit },
+      cleanup: () => {},
+      pathFor: (url: URL) => {
+        const prefix = `${new URL(repo).pathname.replace(/\.git$/, '')}/${commit}/`;
+        if (url.protocol !== 'https:' || url.hostname !== 'raw.githubusercontent.com'
+          || !url.pathname.startsWith(prefix)) return invalid('Seed carrier file does not belong to its selected owner commit.');
+        const relative = decodeURIComponent(url.pathname.slice(prefix.length));
+        if (!runtimeRootContainsDescriptor(sourceRoot, relative)) return invalid('Seed carrier file is missing or escapes its source root.');
+        return fs.readFileSync(path.join(sourceRoot, relative));
+      },
+    };
+  }
+  return null;
+}
+
 export function acquireHostedPackageSource(input: {
   packageId: string;
   ownerManifest: Record<string, unknown>;
@@ -174,6 +221,8 @@ export function acquireHostedPackageSource(input: {
     || !match[1].endsWith(`/${input.packageId}`)) {
     return invalid('Package source requires its declared owner OCI channel.');
   }
+  const packagedSource = acquirePackagedSource(input);
+  if (packagedSource) return packagedSource;
   const image = `ghcr.io/${match[1]}`;
   // The selected owner projection supplies the version. Do not introduce a
   // second latest/currentness resolver beside the native carrier lifecycle.
