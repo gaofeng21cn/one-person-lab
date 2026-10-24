@@ -38,13 +38,28 @@ const packageBackedTest = packageFixture ? test : test.skip;
 const testTlsFixture = createTestTlsServerFixture();
 test.after(() => testTlsFixture.close());
 
-async function startFakeBiomedicalProviderServer() {
+async function startFakeBiomedicalProviderServer(options: { pubmedSearch429Responses?: number } = {}) {
   const requests: string[] = [];
+  const requestRecords: Array<{ request: string; startedAt: number; status: number }> = [];
+  let remainingPubmedSearch429Responses = options.pubmedSearch429Responses ?? 0;
   const server = createServer(testTlsFixture.options, (request: IncomingMessage, response: ServerResponse) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
-    requests.push(`${url.pathname}?${url.searchParams.toString()}`);
+    const requestPath = `${url.pathname}?${url.searchParams.toString()}`;
+    requests.push(requestPath);
+    const requestRecord = { request: requestPath, startedAt: Date.now(), status: 0 };
+    requestRecords.push(requestRecord);
 
     if (url.pathname.endsWith('/pubmed/esearch.fcgi')) {
+      if (remainingPubmedSearch429Responses > 0) {
+        remainingPubmedSearch429Responses -= 1;
+        requestRecord.status = 429;
+        response.statusCode = 429;
+        response.setHeader('retry-after', '1');
+        response.setHeader('content-type', 'application/json');
+        response.end(JSON.stringify({ error: 'rate_limited' }));
+        return;
+      }
+      requestRecord.status = 200;
       response.setHeader('content-type', 'application/json');
       response.end(JSON.stringify({
         esearchresult: { count: '1', idlist: ['20332509'] },
@@ -52,6 +67,7 @@ async function startFakeBiomedicalProviderServer() {
       return;
     }
     if (url.pathname.endsWith('/pubmed/esummary.fcgi')) {
+      requestRecord.status = 200;
       response.setHeader('content-type', 'application/json');
       response.end(JSON.stringify({
         result: {
@@ -73,6 +89,7 @@ async function startFakeBiomedicalProviderServer() {
       return;
     }
     if (url.pathname.endsWith('/pmc/search')) {
+      requestRecord.status = 200;
       response.setHeader('content-type', 'application/json');
       response.end(JSON.stringify({
         hitCount: 1,
@@ -95,11 +112,13 @@ async function startFakeBiomedicalProviderServer() {
       return;
     }
     if (url.pathname.endsWith('/pmc/PMC2844940/fullTextXML')) {
+      requestRecord.status = 200;
       response.setHeader('content-type', 'application/xml');
       response.end('<article><front><article-meta /></front></article>');
       return;
     }
 
+    requestRecord.status = 404;
     response.statusCode = 404;
     response.setHeader('content-type', 'application/json');
     response.end(JSON.stringify({ error: 'not_found' }));
@@ -113,6 +132,7 @@ async function startFakeBiomedicalProviderServer() {
     pubmedBaseUrl: `${baseUrl}/pubmed`,
     europePmcBaseUrl: `${baseUrl}/pmc`,
     requests,
+    requestRecords,
     close: () => new Promise<void>((resolve, reject) => {
       server.close((error) => error ? reject(error) : resolve());
     }),
@@ -129,7 +149,7 @@ function structuredContent(result: unknown) {
 }
 
 packageBackedTest('opl-connect stdio MCP exposes progressive discovery and executes PubMed tools', async () => {
-  const fakeServer = await startFakeBiomedicalProviderServer();
+  const fakeServer = await startFakeBiomedicalProviderServer({ pubmedSearch429Responses: 1 });
   const transport = new StdioClientTransport({
     command: path.join(repoRoot, 'bin', 'opl'),
     args: ['connect', 'mcp-stdio'],
@@ -182,6 +202,43 @@ packageBackedTest('opl-connect stdio MCP exposes progressive discovery and execu
     assert.equal(searchResult.error, undefined, JSON.stringify(searchResult));
     assert.deepEqual(searchResult.opl_connect_scientific.result_refs, ['pubmed:20332509']);
     assert.equal(searchResult.opl_connect_scientific.normalized_results[0].doi, '10.1136/bmj.c332');
+    const retriedPubmedSearches = fakeServer.requestRecords.filter((entry) => {
+      const requestUrl = new URL(entry.request, fakeServer.pubmedBaseUrl);
+      return requestUrl.pathname.endsWith('/pubmed/esearch.fcgi')
+        && requestUrl.searchParams.get('term') === 'CONSORT randomized trial';
+    });
+    assert.equal(retriedPubmedSearches.length, 2);
+    assert.deepEqual(retriedPubmedSearches.map((entry) => entry.status), [429, 200]);
+    assert.ok(retriedPubmedSearches[1].startedAt - retriedPubmedSearches[0].startedAt >= 900);
+
+    const parallelSearchResults = await Promise.all([
+      client.callTool({
+        name: 'opl_connect_execute_tool',
+        arguments: {
+          tool_id: 'scientific_search',
+          arguments: { provider: 'pubmed', query: 'PubMed concurrency one', limit: 1 },
+        },
+      }),
+      client.callTool({
+        name: 'opl_connect_execute_tool',
+        arguments: {
+          tool_id: 'scientific_search',
+          arguments: { provider: 'pubmed', query: 'PubMed concurrency two', limit: 1 },
+        },
+      }),
+    ]);
+    for (const result of parallelSearchResults) {
+      assert.equal(structuredContent(result).error, undefined, JSON.stringify(result));
+    }
+    const pubmedRequestRecords = fakeServer.requestRecords.filter((entry) => (
+      new URL(entry.request, fakeServer.pubmedBaseUrl).pathname.startsWith('/pubmed/')
+    ));
+    for (let index = 1; index < pubmedRequestRecords.length; index += 1) {
+      assert.ok(
+        pubmedRequestRecords[index].startedAt - pubmedRequestRecords[index - 1].startedAt >= 350,
+        `PubMed request gap was shorter than the configured rate limit: ${JSON.stringify(pubmedRequestRecords)}`,
+      );
+    }
 
     const verifyResult = structuredContent(await client.callTool({
       name: 'opl_connect_execute_tool',

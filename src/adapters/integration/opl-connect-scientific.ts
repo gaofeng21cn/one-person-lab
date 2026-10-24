@@ -72,7 +72,12 @@ const SCIENTIFIC_SEARCH_MODULE_KIND = 'opl_connect_scientific_search_adapter';
 const SCIENTIFIC_SEARCH_PACKAGE_ID = 'mas-scholar-skills';
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_REDIRECT_HOPS = 5;
+const PUBMED_REQUEST_INTERVAL_MS = 400;
+const MAX_PUBMED_RATE_LIMIT_RETRIES = 2;
 const REDIRECT_STATUS_CODES = new Set([301, 302, 303, 307, 308]);
+const scientificProviderRequestQueueTails = new Map<string, Promise<void>>();
+const scientificProviderLastRequestAt = new Map<string, number>();
+const scientificProviderCooldownUntil = new Map<string, number>();
 
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -319,6 +324,79 @@ type ScientificAdapterHttpResponse = {
   body: unknown;
 };
 
+function scientificProviderTimeoutError(
+  provider: ScientificConnectorProviderAdapter,
+  url: URL,
+  timeout: number,
+) {
+  return new FrameworkContractError('codex_command_failed', 'OPL Connect scientific connector request failed.', {
+    connector_id: 'scientific',
+    provider_id: provider.provider_id,
+    url: url.toString(),
+    timeout_ms: timeout,
+    reason_code: 'scientific_provider_request_timeout',
+  });
+}
+
+async function waitForScientificProviderRequestTurn(
+  provider: ScientificConnectorProviderAdapter,
+  url: URL,
+  timeout: number,
+  deadline: number,
+) {
+  if (provider.provider_id !== 'pubmed') return;
+
+  const queueKey = provider.provider_id;
+  const previous = scientificProviderRequestQueueTails.get(queueKey) ?? Promise.resolve();
+  let releaseTurn!: () => void;
+  const turn = new Promise<void>((resolve) => {
+    releaseTurn = resolve;
+  });
+  const tail = previous.catch(() => undefined).then(() => turn);
+  scientificProviderRequestQueueTails.set(queueKey, tail);
+  void tail.then(() => {
+    if (scientificProviderRequestQueueTails.get(queueKey) === tail) {
+      scientificProviderRequestQueueTails.delete(queueKey);
+    }
+  });
+
+  const timeoutError = () => scientificProviderTimeoutError(provider, url, timeout);
+  let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw timeoutError();
+    await Promise.race([
+      previous,
+      new Promise<void>((_resolve, reject) => {
+        deadlineTimer = setTimeout(() => reject(timeoutError()), remaining);
+      }),
+    ]);
+    const lastRequestAt = scientificProviderLastRequestAt.get(queueKey) ?? 0;
+    const cooldownUntil = scientificProviderCooldownUntil.get(queueKey) ?? 0;
+    const waitMs = Math.max(
+      0,
+      lastRequestAt + PUBMED_REQUEST_INTERVAL_MS - Date.now(),
+      cooldownUntil - Date.now(),
+    );
+    const availableTime = deadline - Date.now();
+    if (waitMs >= availableTime) throw timeoutError();
+    if (waitMs > 0) await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
+    if (Date.now() >= deadline) throw timeoutError();
+    scientificProviderLastRequestAt.set(queueKey, Date.now());
+  } finally {
+    if (deadlineTimer) clearTimeout(deadlineTimer);
+    releaseTurn();
+  }
+}
+
+function retryAfterDelayMs(value: string | null, now = Date.now()) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) return Number(trimmed) * 1_000;
+  const retryAt = Date.parse(trimmed);
+  return Number.isFinite(retryAt) ? Math.max(0, retryAt - now) : null;
+}
+
 async function fetchScientificAdapterRequest(
   request: ScientificAdapterRequest,
   provider: ScientificConnectorProviderAdapter,
@@ -362,6 +440,8 @@ async function fetchScientificAdapterRequest(
   const deadline = Date.now() + timeout;
   const visitedUrls = new Set<string>();
   let redirectHops = 0;
+  let rateLimitRetryAttempts = 0;
+  let rateLimitRetryAfterMs: number | null = null;
   while (true) {
     if (Date.now() >= deadline) {
       throw new FrameworkContractError('codex_command_failed', 'OPL Connect scientific connector request failed.', {
@@ -373,6 +453,7 @@ async function fetchScientificAdapterRequest(
       });
     }
     visitedUrls.add(url.toString());
+    await waitForScientificProviderRequestTurn(provider, url, timeout, deadline);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), Math.max(1, deadline - Date.now()));
     try {
@@ -382,6 +463,20 @@ async function fetchScientificAdapterRequest(
         redirect: 'manual',
         signal: controller.signal,
       });
+      if (response.status === 429 && provider.provider_id === 'pubmed') {
+        rateLimitRetryAfterMs = retryAfterDelayMs(response.headers.get('retry-after'));
+        const fallbackDelayMs = Math.min(8_000, 1_000 * (2 ** rateLimitRetryAttempts));
+        const cooldownUntil = Date.now() + (rateLimitRetryAfterMs ?? fallbackDelayMs);
+        scientificProviderCooldownUntil.set(
+          provider.provider_id,
+          Math.max(scientificProviderCooldownUntil.get(provider.provider_id) ?? 0, cooldownUntil),
+        );
+        if (rateLimitRetryAttempts < MAX_PUBMED_RATE_LIMIT_RETRIES) {
+          rateLimitRetryAttempts += 1;
+          await response.body?.cancel().catch(() => undefined);
+          continue;
+        }
+      }
       if (REDIRECT_STATUS_CODES.has(response.status)) {
         const location = response.headers.get('location');
         if (!location) {
@@ -447,6 +542,13 @@ async function fetchScientificAdapterRequest(
           url: url.toString(),
           status: response.status,
           status_text: response.statusText,
+          ...(response.status === 429
+            ? {
+              reason_code: 'scientific_provider_rate_limited',
+              retry_attempts: rateLimitRetryAttempts,
+              retry_after_ms: rateLimitRetryAfterMs,
+            }
+            : {}),
         });
       }
       const raw = await readResponseBody(response, maxResponseBodyBytes());
