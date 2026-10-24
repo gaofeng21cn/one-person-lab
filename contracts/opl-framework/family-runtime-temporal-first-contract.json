@@ -5,6 +5,9 @@
   "provider_kind": "temporal",
   "scope": "Runway Temporal-first workflow/activity/signal mapping readback for Phase 3 contract projection",
   "production_substrate": "temporal_required_for_live_workflow_execution",
+  "resource_governance_contract_ref": "contracts/opl-framework/temporal-resource-governance.json",
+  "visibility_readiness_is_execution_prerequisite": false,
+  "non_indexed_execution_policy": "preserve_temporal_history_memo_and_refs_when_search_attributes_unavailable",
   "readback_policy": "contract_projection_only_no_live_temporal_service_started",
   "workflow_activity_signal_mapping": {
     "stage_run_workflow": {

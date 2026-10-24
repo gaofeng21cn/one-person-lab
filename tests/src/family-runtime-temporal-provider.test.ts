@@ -39,6 +39,7 @@ import {
   buildTemporalStageAttemptMemo,
   buildTemporalStageAttemptSearchAttributes,
   buildTemporalStageAttemptVisibilityReadiness,
+  ensureTemporalStageAttemptVisibilityReady,
   buildTemporalStageRunSearchAttributes,
   TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT,
 } from '../../src/adapters/execution/family-runtime-temporal-visibility.ts';
@@ -145,6 +146,171 @@ test('Temporal visibility readiness requires OPL stage attempt Search Attributes
   assert.deepEqual(ready.missing_search_attributes, []);
   assert.equal(ready.keyword_capacity.limit, TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT);
   assert.equal(ready.keyword_capacity.projected_count, 3);
+});
+
+test('Temporal visibility capacity can degrade to refs-only execution without mutation', () => {
+  const readiness = buildTemporalStageAttemptVisibilityReadiness({
+    namespace: 'default',
+    visibilityMode: 'best_effort',
+    observedCustomAttributes: {
+      OplStageAttemptId: 'Keyword',
+      OplStagePhase: 'Keyword',
+      OplTaskId: 'Keyword',
+      OplAttemptStatus: 'Keyword',
+      OplExecutorKind: 'Keyword',
+      OplSourceFingerprint: 'Keyword',
+      OplDomainId: 'Keyword',
+      OplBlockedReason: 'Keyword',
+      OplStageId: 'Keyword',
+    },
+  });
+  assert.equal(readiness.readiness_status, 'search_attribute_capacity_exceeded');
+  assert.equal(readiness.execution_ready, true);
+  assert.equal(readiness.indexing_ready, false);
+  assert.equal(readiness.governance.contract_ref, 'contracts/opl-framework/temporal-resource-governance.json');
+  assert.equal(readiness.keyword_capacity.automatic_remove_allowed, false);
+});
+
+test('Temporal visibility disabled mode is explicitly non-indexed and executable', () => {
+  const readiness = buildTemporalStageAttemptVisibilityReadiness({
+    namespace: 'opl-test',
+    visibilityMode: 'disabled',
+  });
+  assert.equal(readiness.readiness_status, 'visibility_disabled');
+  assert.equal(readiness.execution_ready, true);
+  assert.equal(readiness.indexing_ready, false);
+  assert.equal(readiness.visibility_mode, 'disabled');
+});
+
+test('Temporal best-effort mode keeps execution eligible when visibility inspection fails', () => {
+  const readiness = buildTemporalStageAttemptVisibilityReadiness({
+    namespace: 'default',
+    inspectionError: 'visibility unavailable',
+  });
+  assert.equal(readiness.visibility_mode, 'best_effort');
+  assert.equal(readiness.execution_ready, true);
+  assert.equal(readiness.indexing_ready, false);
+});
+
+test('Temporal best-effort probe never registers attributes in shared default namespace', async () => {
+  let addCalls = 0;
+  const connection = {
+    operatorService: {
+      listSearchAttributes: async () => ({
+        customAttributes: {
+          OplStageAttemptId: 2,
+          OplStagePhase: 2,
+          OplTaskId: 2,
+          OplAttemptStatus: 2,
+          OplExecutorKind: 2,
+          OplSourceFingerprint: 2,
+          OplDomainId: 2,
+          OplBlockedReason: 2,
+          OplStageId: 2,
+        },
+      }),
+      addSearchAttributes: async () => { addCalls += 1; },
+    },
+  } as never;
+  const readiness = await ensureTemporalStageAttemptVisibilityReady(connection, {
+    namespace: 'default',
+    visibilityMode: 'best_effort',
+  }, { allowDegraded: true });
+  assert.equal(readiness.readiness_status, 'search_attribute_capacity_exceeded');
+  assert.equal(readiness.indexing_ready, false);
+  assert.equal(addCalls, 0);
+  assert.equal(readiness.governance.resource_pool.automatic_mutation, 'disabled');
+});
+
+test('Temporal required repair adds only declared attributes in an approved pool and reads back', async () => {
+  const attributes: Record<string, number> = { OplStageAttemptId: 2 };
+  const connection = {
+    operatorService: {
+      listSearchAttributes: async () => ({ customAttributes: { ...attributes } }),
+      addSearchAttributes: async ({ searchAttributes }: { searchAttributes: Record<string, number> }) => {
+        Object.assign(attributes, searchAttributes);
+      },
+    },
+  } as never;
+  const readiness = await ensureTemporalStageAttemptVisibilityReady(connection, {
+    namespace: 'opl-foundry',
+    address: '127.0.0.1:7233',
+    clusterIdentity: 'active',
+    visibilityMode: 'required',
+  });
+  assert.equal(readiness.readiness_status, 'ready');
+  assert.deepEqual(Object.keys(attributes).sort(), [
+    'OplStageAttemptId',
+    'OplStageRunId',
+    'OplWorkItemScopeId',
+  ]);
+  assert.equal(readiness.governance.resource_pool.automatic_mutation, 'add_only_declared_schema');
+});
+
+test('Temporal required repair reconciles an add error by fresh readback without retry', async () => {
+  const attributes: Record<string, number> = { OplStageAttemptId: 2 };
+  let addCalls = 0;
+  const connection = {
+    operatorService: {
+      listSearchAttributes: async () => ({ customAttributes: { ...attributes } }),
+      addSearchAttributes: async ({ searchAttributes }: { searchAttributes: Record<string, number> }) => {
+        addCalls += 1;
+        Object.assign(attributes, searchAttributes);
+        throw new Error('server response was lost after applying the schema update');
+      },
+    },
+  } as never;
+  const readiness = await ensureTemporalStageAttemptVisibilityReady(connection, {
+    namespace: 'opl-foundry',
+    address: '127.0.0.1:7233',
+    clusterIdentity: 'active',
+    visibilityMode: 'required',
+  });
+  assert.equal(readiness.readiness_status, 'ready');
+  assert.equal(addCalls, 1);
+});
+
+test('Temporal approved pool requires endpoint and cluster binding before schema mutation', async () => {
+  let addCalls = 0;
+  const connection = {
+    operatorService: {
+      listSearchAttributes: async () => ({ customAttributes: {} }),
+      addSearchAttributes: async () => { addCalls += 1; },
+    },
+  } as never;
+  const readiness = buildTemporalStageAttemptVisibilityReadiness({
+    namespace: 'opl-foundry',
+    address: '10.0.0.8:7233',
+    clusterIdentity: 'active',
+    observedCustomAttributes: {},
+    visibilityMode: 'required',
+  });
+  assert.equal(readiness.governance.resource_pool.endpoint_binding.status, 'unmatched');
+  await assert.rejects(
+    ensureTemporalStageAttemptVisibilityReady(connection, {
+      namespace: 'opl-foundry',
+      address: '10.0.0.8:7233',
+      clusterIdentity: 'active',
+      visibilityMode: 'required',
+    }),
+    (error: any) => {
+      assert.equal(error.details.failure_code, 'temporal_namespace_schema_mutation_not_approved');
+      assert.equal(error.details.resource_pool.endpoint_binding.status, 'unmatched');
+      return true;
+    },
+  );
+  assert.equal(addCalls, 0);
+});
+
+test('Temporal approved pool rejects missing cluster identity even on a matching address', () => {
+  const readiness = buildTemporalStageAttemptVisibilityReadiness({
+    namespace: 'opl-foundry',
+    address: '127.0.0.1:7233',
+    observedCustomAttributes: {},
+    visibilityMode: 'required',
+  });
+  assert.equal(readiness.governance.resource_pool.endpoint_binding.status, 'unmatched');
+  assert.equal(readiness.governance.resource_pool.endpoint_binding.cluster_identity, null);
 });
 
 test('Temporal visibility readiness blocks legacy Keyword capacity before repair mutation', () => {

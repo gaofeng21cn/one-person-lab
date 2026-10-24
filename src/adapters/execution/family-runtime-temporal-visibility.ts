@@ -16,6 +16,16 @@ import {
 import {
   resolveTemporalAddressForPaths,
 } from './family-runtime-temporal-service.ts';
+import {
+  TEMPORAL_RESOURCE_GOVERNANCE_REF,
+  resolveTemporalVisibilityMode,
+  resolveTemporalResourcePool,
+  temporalSearchAttributeMutationAllowed,
+  temporalSearchAttributeIndexingAllowed,
+  temporalVisibilityBudget,
+  TEMPORAL_RESOURCE_GOVERNANCE,
+  type TemporalVisibilityMode,
+} from './family-runtime-temporal-resource-governance.ts';
 
 export {
   buildTemporalStageAttemptMemo,
@@ -25,7 +35,8 @@ export {
 type JsonRecord = Record<string, unknown>;
 type SearchAttributeType = 'Keyword' | 'Text' | 'Int' | 'Double' | 'Bool' | 'Datetime' | 'KeywordList';
 const TEMPORAL_VISIBILITY_INSPECTION_CONNECT_TIMEOUT_MS = 1_000;
-export const TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT = 10;
+export const TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT = TEMPORAL_RESOURCE_GOVERNANCE.budgets.keyword_attribute_limit;
+const temporalNamespaceMutationTails = new Map<string, Promise<void>>();
 
 const INDEXED_VALUE_TYPE: Record<SearchAttributeType, number> = {
   Text: 1,
@@ -53,11 +64,13 @@ export type TemporalStageAttemptSearchAttributeName =
 type TemporalVisibilityReadinessInput = {
   address?: string | null;
   addressSource?: string | null;
+  clusterIdentity?: string | null;
   namespace?: string | null;
   taskQueue?: string | null;
   observedCustomAttributes?: Record<string, string | number> | null;
   inspectionError?: string | null;
   unindexedTestServer?: boolean;
+  visibilityMode?: TemporalVisibilityMode;
 };
 
 function temporalCliAddressArg(address: string | null) {
@@ -105,6 +118,25 @@ function normalizeCustomAttributes(value: unknown) {
     key,
     observedAttributeType(type) ?? String(type),
   ]));
+}
+
+async function withTemporalNamespaceMutationLock<T>(namespace: string, fn: () => Promise<T>) {
+  const previous = temporalNamespaceMutationTails.get(namespace) ?? Promise.resolve();
+  let release!: () => void;
+  const turn = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const tail = previous.catch(() => undefined).then(() => turn);
+  temporalNamespaceMutationTails.set(namespace, tail);
+  try {
+    await previous;
+    return await fn();
+  } finally {
+    release();
+    if (temporalNamespaceMutationTails.get(namespace) === tail) {
+      temporalNamespaceMutationTails.delete(namespace);
+    }
+  }
 }
 
 function requiredSearchAttributesSummary(namespace: string, address: string | null) {
@@ -184,6 +216,7 @@ export function buildTemporalStageAttemptVisibilityReadiness(
   const taskQueue = input.taskQueue ?? resolveTemporalTaskQueue();
   const address = input.address ?? resolveTemporalAddress();
   const unindexedTestServer = input.unindexedTestServer === true;
+  const visibilityMode = resolveTemporalVisibilityMode(input.visibilityMode);
   const observed = input.observedCustomAttributes
     ? normalizeCustomAttributes(input.observedCustomAttributes)
     : null;
@@ -212,7 +245,9 @@ export function buildTemporalStageAttemptVisibilityReadiness(
     : null;
   const keywordCapacityExceeded = projectedKeywordCount !== null
     && projectedKeywordCount > TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT;
-  const readinessStatus = input.inspectionError
+  const readinessStatus = visibilityMode === 'disabled'
+    ? 'visibility_disabled'
+    : input.inspectionError
     ? 'inspection_failed'
     : unindexedTestServer
       ? 'test_server_unindexed_visibility'
@@ -223,12 +258,29 @@ export function buildTemporalStageAttemptVisibilityReadiness(
           ? 'search_attribute_capacity_exceeded'
           : missing.length === 0 ? 'ready' : 'missing_search_attributes'
       : 'not_verified';
+  const indexingAllowed = temporalSearchAttributeIndexingAllowed(namespace);
   const migrationRequired = readinessStatus === 'search_attribute_type_conflict'
     || readinessStatus === 'search_attribute_capacity_exceeded';
   return {
     surface_kind: 'temporal_stage_attempt_visibility_readiness',
     provider_kind: 'temporal',
     readiness_status: readinessStatus,
+    visibility_mode: visibilityMode,
+    execution_ready: visibilityMode !== 'required'
+      || readinessStatus === 'ready'
+      || readinessStatus === 'test_server_unindexed_visibility',
+    indexing_ready: indexingAllowed && (readinessStatus === 'ready' || readinessStatus === 'test_server_unindexed_visibility'),
+    degraded_reason: readinessStatus === 'ready' || readinessStatus === 'test_server_unindexed_visibility' || readinessStatus === 'visibility_disabled'
+      ? null
+      : readinessStatus,
+    governance: {
+      contract_ref: TEMPORAL_RESOURCE_GOVERNANCE_REF,
+      resource_pool: resolveTemporalResourcePool(namespace, {
+        address,
+        clusterIdentity: input.clusterIdentity ?? process.env.OPL_TEMPORAL_CLUSTER_IDENTITY,
+      }),
+      ...temporalVisibilityBudget(),
+    },
     namespace,
     task_queue: taskQueue,
     address,
@@ -450,17 +502,30 @@ export async function inspectTemporalStageAttemptVisibilityReadiness(
 
 export async function ensureTemporalStageAttemptVisibilityReady(
   connection: Connection,
-  input: { namespace?: string | null; address?: string | null; taskQueue?: string | null } = {},
+  input: {
+    namespace?: string | null;
+    address?: string | null;
+    taskQueue?: string | null;
+    clusterIdentity?: string | null;
+    visibilityMode?: TemporalVisibilityMode;
+  } = {},
+  options: { allowDegraded?: boolean } = {},
 ) {
   const namespace = input.namespace ?? resolveTemporalNamespace();
   const address = input.address ?? resolveTemporalAddress();
   const taskQueue = input.taskQueue ?? resolveTemporalTaskQueue();
+  const visibilityMode = resolveTemporalVisibilityMode(input.visibilityMode);
+  if (visibilityMode === 'disabled') {
+    return buildTemporalStageAttemptVisibilityReadiness({ address, namespace, taskQueue, clusterIdentity: input.clusterIdentity, visibilityMode });
+  }
   if (temporalTestServerAllowsUnindexedVisibility()) {
     return buildTemporalStageAttemptVisibilityReadiness({
       address,
       namespace,
       taskQueue,
+      clusterIdentity: input.clusterIdentity,
       unindexedTestServer: true,
+      visibilityMode,
     });
   }
   let observed: Record<string, string>;
@@ -471,8 +536,11 @@ export async function ensureTemporalStageAttemptVisibilityReady(
       address,
       namespace,
       taskQueue,
+      clusterIdentity: input.clusterIdentity,
       inspectionError: error instanceof Error ? error.message : String(error),
+      visibilityMode,
     });
+    if (options.allowDegraded) return readiness;
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Temporal stage attempt visibility Search Attributes could not be inspected.',
@@ -489,8 +557,11 @@ export async function ensureTemporalStageAttemptVisibilityReady(
     address,
     namespace,
     taskQueue,
+    clusterIdentity: input.clusterIdentity,
     observedCustomAttributes: observed,
+    visibilityMode,
   });
+  if (options.allowDegraded && readiness.readiness_status !== 'ready') return readiness;
   if (readiness.readiness_status === 'search_attribute_type_conflict') {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -521,47 +592,134 @@ export async function ensureTemporalStageAttemptVisibilityReady(
   if (readiness.missing_search_attributes.length === 0) {
     return readiness;
   }
-  try {
-    await connection.operatorService.addSearchAttributes({
-      namespace,
-      searchAttributes: Object.fromEntries(
-        readiness.missing_search_attributes.map((attribute) => [
-          attribute.name,
-          INDEXED_VALUE_TYPE[attribute.type as SearchAttributeType],
-        ]),
-      ),
-    });
-  } catch (error) {
+  if (!temporalSearchAttributeMutationAllowed(
+    namespace,
+    address,
+    input.clusterIdentity ?? process.env.OPL_TEMPORAL_CLUSTER_IDENTITY,
+  )) {
+    if (options.allowDegraded) return readiness;
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Temporal stage attempt visibility Search Attributes are missing and could not be installed.',
+      'Temporal Search Attributes are missing from a shared, unapproved, or endpoint-unbound namespace; resource governance must approve the endpoint and pool before schema mutation.',
       {
+        failure_code: 'temporal_namespace_schema_mutation_not_approved',
         provider_kind: 'temporal',
         namespace,
+        cluster_identity: input.clusterIdentity ?? process.env.OPL_TEMPORAL_CLUSTER_IDENTITY ?? null,
+        resource_pool: resolveTemporalResourcePool(namespace, {
+          address,
+          clusterIdentity: input.clusterIdentity ?? process.env.OPL_TEMPORAL_CLUSTER_IDENTITY,
+        }),
         missing_search_attributes: readiness.missing_search_attributes,
         repair_action: readiness.repair_action,
-        error: error instanceof Error ? error.message : String(error),
       },
     );
   }
-  const refreshed = await listTemporalCustomSearchAttributes(connection, namespace);
-  const refreshedReadiness = buildTemporalStageAttemptVisibilityReadiness({
-    address,
-    namespace,
-    taskQueue,
-    observedCustomAttributes: refreshed,
-  });
-  if (refreshedReadiness.readiness_status !== 'ready') {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Temporal stage attempt visibility Search Attributes remain missing after install.',
-      {
-        provider_kind: 'temporal',
+  return withTemporalNamespaceMutationLock(namespace, async () => {
+    // Re-probe after acquiring the namespace lease so concurrent callers do not duplicate an add.
+    const current = await listTemporalCustomSearchAttributes(connection, namespace);
+    const currentReadiness = buildTemporalStageAttemptVisibilityReadiness({
+      address,
+      namespace,
+      taskQueue,
+      clusterIdentity: input.clusterIdentity,
+      observedCustomAttributes: current,
+      visibilityMode,
+    });
+    if (currentReadiness.readiness_status === 'ready') return currentReadiness;
+    if (currentReadiness.readiness_status === 'search_attribute_type_conflict'
+      || currentReadiness.readiness_status === 'search_attribute_capacity_exceeded') {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal Search Attribute schema changed while waiting for the namespace mutation lease.',
+        {
+          failure_code: currentReadiness.readiness_status === 'search_attribute_type_conflict'
+            ? 'temporal_search_attribute_type_conflict'
+            : 'temporal_search_attribute_capacity_exceeded',
+          provider_kind: 'temporal',
+          namespace,
+          conflicting_search_attributes: currentReadiness.conflicting_search_attributes,
+          keyword_capacity: currentReadiness.keyword_capacity,
+          missing_search_attributes: currentReadiness.missing_search_attributes,
+        },
+      );
+    }
+    if (!temporalSearchAttributeMutationAllowed(
+      namespace,
+      address,
+      input.clusterIdentity ?? process.env.OPL_TEMPORAL_CLUSTER_IDENTITY,
+    )) {
+      if (options.allowDegraded) return currentReadiness;
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal Search Attribute schema mutation is not approved for this endpoint-bound resource pool.',
+        {
+          failure_code: 'temporal_namespace_schema_mutation_not_approved',
+          provider_kind: 'temporal',
+          namespace,
+          resource_pool: currentReadiness.governance.resource_pool,
+          missing_search_attributes: currentReadiness.missing_search_attributes,
+        },
+      );
+    }
+    try {
+      await connection.operatorService.addSearchAttributes({
         namespace,
-        missing_search_attributes: refreshedReadiness.missing_search_attributes,
-        repair_action: refreshedReadiness.repair_action,
-      },
-    );
-  }
-  return refreshedReadiness;
+        searchAttributes: Object.fromEntries(
+          currentReadiness.missing_search_attributes.map((attribute) => [
+            attribute.name,
+            INDEXED_VALUE_TYPE[attribute.type as SearchAttributeType],
+          ]),
+        ),
+      });
+    } catch (error) {
+      // Concurrent identical registration or an unknown response may have applied server-side.
+      const reconciled = await listTemporalCustomSearchAttributes(connection, namespace).catch(() => null);
+      if (reconciled) {
+        const reconciledReadiness = buildTemporalStageAttemptVisibilityReadiness({
+          address,
+          namespace,
+          taskQueue,
+          clusterIdentity: input.clusterIdentity,
+          observedCustomAttributes: reconciled,
+          visibilityMode,
+        });
+        if (reconciledReadiness.readiness_status === 'ready') return reconciledReadiness;
+      }
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal stage attempt visibility Search Attributes are missing and could not be installed.',
+        {
+          provider_kind: 'temporal',
+          namespace,
+          missing_search_attributes: currentReadiness.missing_search_attributes,
+          repair_action: currentReadiness.repair_action,
+          failure_code: 'temporal_search_attribute_add_failed_after_readback',
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+    }
+    const refreshed = await listTemporalCustomSearchAttributes(connection, namespace);
+    const refreshedReadiness = buildTemporalStageAttemptVisibilityReadiness({
+      address,
+      namespace,
+      taskQueue,
+      clusterIdentity: input.clusterIdentity,
+      observedCustomAttributes: refreshed,
+      visibilityMode,
+    });
+    if (refreshedReadiness.readiness_status !== 'ready') {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Temporal stage attempt visibility Search Attributes remain missing after install.',
+        {
+          provider_kind: 'temporal',
+          namespace,
+          missing_search_attributes: refreshedReadiness.missing_search_attributes,
+          repair_action: refreshedReadiness.repair_action,
+        },
+      );
+    }
+    return refreshedReadiness;
+  });
 }

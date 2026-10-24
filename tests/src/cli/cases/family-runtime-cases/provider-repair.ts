@@ -1,15 +1,11 @@
-import { spawnSync } from 'node:child_process';
-
 import { defineSearchAttributeKey } from '@temporalio/common';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 
 import {
   assert,
-  cliPath,
   fs,
   os,
   path,
-  repoRoot,
   runCli,
   runCliFailure,
   test,
@@ -104,7 +100,7 @@ test('family-runtime local queue commands are retired public runtime entrypoints
   }
 });
 
-test('family-runtime temporal provider repair installs visibility Search Attributes when service is reachable', async () => {
+test('family-runtime temporal provider repair leaves shared default schema unchanged without approval', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-provider-repair-'));
   const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
   const testEnv = await TestWorkflowEnvironment.createLocal({
@@ -113,48 +109,26 @@ test('family-runtime temporal provider repair installs visibility Search Attribu
     },
   });
   try {
-    const result = spawnSync(process.execPath, [
-      '--experimental-strip-types',
-      cliPath,
+    const failure = runCliFailure([
       'family-runtime',
       'repair',
       '--provider',
       'temporal',
     ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-        OPL_STATE_DIR: stateRoot,
-        OPL_TEMPORAL_ADDRESS: testEnv.address,
-        OPL_TEMPORAL_NAMESPACE: testEnv.namespace ?? 'default',
-        OPL_TEMPORAL_WORKER_STATUS: 'ready',
-      },
+      NODE_NO_WARNINGS: '1',
+      OPL_STATE_DIR: stateRoot,
+      OPL_TEMPORAL_ADDRESS: testEnv.address,
+      OPL_TEMPORAL_NAMESPACE: testEnv.namespace ?? 'default',
+      OPL_TEMPORAL_WORKER_STATUS: 'ready',
     });
-    assert.equal(result.status, 0, result.stderr);
-    const output = JSON.parse(result.stdout);
-    const repair = output.family_runtime_provider.temporal_visibility_repair;
-    const workerRepair = output.family_runtime_provider.temporal_worker_repair;
-    assert.equal(repair.surface_kind, 'temporal_visibility_repair_receipt');
-    assert.equal(repair.repair_status, 'ready');
-    assert.equal(workerRepair.trigger, 'provider_repair');
-    assert.equal(workerRepair.repair_status, 'skipped');
-    assert.equal(workerRepair.authority_boundary.can_write_domain_truth, false);
-    assert.deepEqual(repair.installed_search_attributes, [
-      'OplStageAttemptId',
-      'OplStageRunId',
-      'OplWorkItemScopeId',
-    ]);
-    assert.equal(repair.visibility_readiness.readiness_status, 'ready');
+    assert.equal(failure.status, 3);
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(failure.payload.error.details.failure_code, 'temporal_namespace_schema_mutation_not_approved');
+    assert.equal(failure.payload.error.details.resource_pool.pool_id, 'shared-default');
     const readback = await testEnv.connection.operatorService.listSearchAttributes({
       namespace: testEnv.namespace ?? 'default',
     });
-    assert.deepEqual(Object.keys(readback.customAttributes ?? {}).sort(), [
-      'OplStageAttemptId',
-      'OplStageRunId',
-      'OplWorkItemScopeId',
-    ]);
+    assert.deepEqual(Object.keys(readback.customAttributes ?? {}), []);
     assert.equal(fs.existsSync(queueDb), true);
   } finally {
     await testEnv.teardown();

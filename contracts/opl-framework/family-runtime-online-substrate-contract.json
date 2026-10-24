@@ -257,7 +257,9 @@
     "selected_provider_when_unconfigured": "temporal",
     "retired_local_provider": "local_sqlite",
     "sqlite_sidecar_role": "projection_and_readback_index_only",
-    "temporal_unready_policy": "fail_closed_blocked",
+    "temporal_unready_policy": "fail_closed_blocked_for_durable_execution_only",
+    "temporal_visibility_policy": "best_effort_indexing_never_blocks_non_indexed_execution",
+    "temporal_resource_governance_contract_ref": "contracts/opl-framework/temporal-resource-governance.json",
     "full_online_ready": false,
     "allowed_surfaces": [
       "local status",

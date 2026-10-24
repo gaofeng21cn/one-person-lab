@@ -277,6 +277,7 @@
   },
   "provider_lifecycle_contract": {
     "temporal": {
+      "resource_governance_contract_ref": "contracts/opl-framework/temporal-resource-governance.json",
       "temporal_first_contract_ref": "contracts/opl-framework/family-runtime-temporal-first-contract.json",
       "stage_run_workflow_name": "StageRunWorkflow",
       "stage_attempt_activity_name": "StageAttemptActivity",
@@ -303,6 +304,10 @@
         "OplStageRunId",
         "OplWorkItemScopeId"
       ],
+      "search_attributes_required_for": "indexed_visibility_only",
+      "visibility_modes": ["required", "best_effort", "disabled"],
+      "default_visibility_mode": "best_effort",
+      "non_indexed_execution_allowed": true,
       "visibility_payload_policy": "refs_and_indexable_summary_only_no_transcript_artifact_memory_or_domain_body",
       "fixture_mode_allowed_without_temporal_server": true
     }

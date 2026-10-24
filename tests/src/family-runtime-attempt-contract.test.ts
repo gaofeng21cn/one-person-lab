@@ -49,6 +49,12 @@ test('family runtime attempt contract keeps Temporal attempt, progress-first clo
 
   assert.equal(contract.provider_model, 'provider_backed_stage_attempt_runtime');
   assert.deepEqual(contract.allowed_providers, ['temporal']);
+  assert.equal(
+    contract.provider_lifecycle_contract.temporal.resource_governance_contract_ref,
+    'contracts/opl-framework/temporal-resource-governance.json',
+  );
+  assert.equal(contract.provider_lifecycle_contract.temporal.default_visibility_mode, 'best_effort');
+  assert.equal(contract.provider_lifecycle_contract.temporal.non_indexed_execution_allowed, true);
   assert.equal(contract.progress_closeout_contract.typed_packet_required_for_progress, false);
   assert.equal(contract.progress_closeout_contract.raw_or_free_text_artifact_accepted_for_progress, true);
   assert.equal(contract.progress_closeout_contract.framework_derives_minimal_progress_envelope, true);

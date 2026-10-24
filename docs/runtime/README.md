@@ -5,6 +5,7 @@ Runtime 文档只解释当前运行对象和运维边界。
 - [Runtime 命名与边界](./opl-runtime-naming-and-boundary-contract.md)
 - [Stage graph 与 AI route](./stage-graph-route-transition-runtime.md)
 - [Temporal service supervision](./temporal-service-supervision.md)
+- Temporal namespace 与 Search Attribute 的 owner、schema、配额和迁移合同见 [temporal-resource-governance.json](../../contracts/opl-framework/temporal-resource-governance.json)；App/Domain 只消费 probe projection。
 - [Foundry Kernel control plane](./opl-foundry-kernel-control-plane.md)
 - [Family Runtime Python client](./family-runtime-python-client.md)
 

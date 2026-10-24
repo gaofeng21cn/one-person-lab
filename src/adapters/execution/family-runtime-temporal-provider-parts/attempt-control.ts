@@ -117,7 +117,8 @@ export async function startTemporalStageRunWorkflow(
       namespace: resolveTemporalClientNamespace(options),
       address: resolveTemporalAddressForPaths(options.paths).address,
       taskQueue,
-    });
+      visibilityMode: 'best_effort',
+    }, { allowDegraded: true });
     const launchInput: TemporalStageRunWorkflowInput = {
       ...workflowInput,
       visibility_search_attributes_upsert_enabled: visibilityReadiness.readiness_status === 'ready',
@@ -132,9 +133,9 @@ export async function startTemporalStageRunWorkflow(
         taskQueue,
         workflowId: launchInput.workflow_id,
         memo: buildTemporalStageRunMemo(launchInput),
-        ...temporalTestServerAllowsUnindexedVisibility()
-          ? {}
-          : { searchAttributes: buildTemporalStageRunSearchAttributes(launchInput) },
+        ...visibilityReadiness.indexing_ready && !temporalTestServerAllowsUnindexedVisibility()
+          ? { searchAttributes: buildTemporalStageRunSearchAttributes(launchInput) }
+          : {},
         staticSummary: `OPL StageRun ${launchInput.stage_run_id}`,
         staticDetails: [
           ...(launchInput.execution_scope?.domain_work_item_id
@@ -218,7 +219,8 @@ export async function startTemporalStageRunRecoveryWorkflow(
       namespace: resolveTemporalClientNamespace(options),
       address: resolveTemporalAddressForPaths(options.paths).address,
       taskQueue,
-    });
+      visibilityMode: 'best_effort',
+    }, { allowDegraded: true });
     const launchInput: TemporalStageRunWorkflowInput = {
       ...workflowInput,
       visibility_search_attributes_upsert_enabled: visibilityReadiness.readiness_status === 'ready',
@@ -304,9 +306,9 @@ export async function startTemporalStageRunRecoveryWorkflow(
         taskQueue,
         workflowId: launchInput.workflow_id,
         memo: buildTemporalStageRunMemo(launchInput),
-        ...temporalTestServerAllowsUnindexedVisibility()
-          ? {}
-          : { searchAttributes: buildTemporalStageRunSearchAttributes(launchInput) },
+        ...visibilityReadiness.indexing_ready && !temporalTestServerAllowsUnindexedVisibility()
+          ? { searchAttributes: buildTemporalStageRunSearchAttributes(launchInput) }
+          : {},
         staticSummary: `OPL StageRun recovery ${launchInput.stage_run_id}`,
         staticDetails: [
           `StageRun: ${launchInput.stage_run_id}`,
@@ -469,7 +471,8 @@ export async function startTemporalStageAttemptWorkflow(
       namespace: resolveTemporalClientNamespace(options),
       address: resolveTemporalAddressForPaths(options.paths).address,
       taskQueue,
-    });
+      visibilityMode: 'best_effort',
+    }, { allowDegraded: true });
     const launchInput: TemporalStageAttemptWorkflowInput = {
       ...workflowInput,
       visibility_search_attributes_upsert_enabled: visibilityReadiness.readiness_status === 'ready',
@@ -488,9 +491,9 @@ export async function startTemporalStageAttemptWorkflow(
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
       workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
       memo: buildTemporalStageAttemptMemo(launchInput),
-      ...temporalTestServerAllowsUnindexedVisibility()
-        ? {}
-        : { searchAttributes: buildTemporalStageAttemptSearchAttributes(launchInput) },
+      ...visibilityReadiness.indexing_ready && !temporalTestServerAllowsUnindexedVisibility()
+        ? { searchAttributes: buildTemporalStageAttemptSearchAttributes(launchInput) }
+        : {},
     }), options);
     const description = await withTemporalRpcDeadline(client, () => handle.describe(), options);
     assertTemporalWorkflowMemoIdentity({

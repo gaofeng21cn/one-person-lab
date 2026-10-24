@@ -1,0 +1,83 @@
+{
+  "schema_version": "opl_temporal_resource_governance.v1",
+  "contract_id": "opl_temporal_resource_governance",
+  "owner": "one-person-lab",
+  "runtime_owner": "opl_runway",
+  "scope": "Temporal namespace and Search Attribute resource governance for OPL hosted workflows",
+  "authority_boundary": {
+    "framework": "namespace_pool_schema_budget_probe_and_route_readback",
+    "runway": "runtime_operation_resource_allocation_and_namespace_migration",
+    "app": "display_only_readiness_projection_consumer",
+    "domain": "quality_artifact_and_owner_receipt_authority",
+    "rca": "refs_only_consumer_and_declared_indexing_preference"
+  },
+  "resource_pools": [
+    {
+      "pool_id": "shared-default",
+      "namespace": "default",
+      "allocation": "legacy_shared",
+      "schema_version": "legacy-observed-v1",
+      "automatic_mutation": "disabled",
+      "endpoint_bindings": [],
+      "migration_policy": "retain_until_active_consumers_zero",
+      "workflow_visibility_policy": "best_effort_refs_only"
+    },
+    {
+      "pool_id": "opl-foundry",
+      "namespace": "opl-foundry",
+      "allocation": "approved_dedicated",
+      "schema_version": "opl-stage-attempt-visibility-v1",
+      "automatic_mutation": "add_only_declared_schema",
+      "endpoint_bindings": [
+        {
+          "endpoint_id": "local-temporal-dev",
+          "cluster_identity": "active",
+          "address_patterns": ["127.0.0.1:7233", "localhost:7233"]
+        }
+      ],
+      "migration_policy": "new_workflows_only_after_external_cutover_receipt",
+      "workflow_visibility_policy": "declared_indexed_schema"
+    }
+  ],
+  "search_attribute_schema": {
+    "schema_version": "opl-stage-attempt-visibility-v1",
+    "attributes": [
+      { "name": "OplStageAttemptId", "type": "Keyword", "required_for": "indexed_visibility" },
+      { "name": "OplStageRunId", "type": "Keyword", "required_for": "indexed_visibility" },
+      { "name": "OplWorkItemScopeId", "type": "Keyword", "required_for": "indexed_visibility" }
+    ],
+    "legacy_attributes_are_retained": true,
+    "automatic_remove_allowed": false
+  },
+  "budgets": {
+    "keyword_attribute_limit": 10,
+    "allocation_rule": "observed_plus_declared_must_not_exceed_limit",
+    "budget_is_per_namespace": true,
+    "reserve_before_mutation": "framework_process_namespace_mutation_lock_then_fresh_probe"
+  },
+  "launch_policy": {
+    "default_visibility_mode": "best_effort",
+    "modes": ["required", "best_effort", "disabled"],
+    "required_mode_blocks_on_missing_or_conflicting_schema": true,
+    "best_effort_mode_preserves_history_memo_refs_without_search_attributes": true,
+    "disabled_mode_must_not_register_or_upsert_search_attributes": true,
+    "non_indexed_execution_is_allowed": true
+  },
+  "migration_policy": {
+    "declaration_is_versioned": true,
+    "resource_allocation_and_namespace_migration_owner": "opl_runway",
+    "framework_role": "read_external_cutover_receipt_then_fresh_probe_and_route_new_workflows",
+    "rollout": ["runway_allocate_and_migrate", "runway_issue_cutover_receipt", "framework_probe", "route_new_workflows"],
+    "rollback_owner": "opl_runway_restores_previous_endpoint_and_namespace_selection",
+    "rollback": "never_remove_search_attributes; framework follows the owner-selected namespace",
+    "active_consumer_check_owner": "opl_runway_before_migration_or_retirement",
+    "unknown_external_result": "read_only_reconcile_before_retry"
+  },
+  "runtime_probe": {
+    "cluster_identity_env": "OPL_TEMPORAL_CLUSTER_IDENTITY",
+    "missing_cluster_identity_policy": "endpoint_unbound_no_schema_mutation",
+    "required_fields": ["address", "cluster_identity", "namespace", "pool_id", "endpoint_binding", "schema_version", "observed_attributes", "budget", "execution_ready", "indexing_ready", "degraded_reason"],
+    "probe_kind": "fresh_temporal_namespace_and_search_attribute_readback",
+    "read_only": true
+  }
+}

@@ -181,6 +181,7 @@ export async function ensureTemporalVisibilityReadiness(options: TemporalClientO
     const after = await ensureTemporalStageAttemptVisibilityReady(connection, {
       namespace,
       address: resolveTemporalAddressForPaths(options.paths).address,
+      visibilityMode: 'required',
     });
     return {
       surface_kind: 'temporal_visibility_repair_receipt',

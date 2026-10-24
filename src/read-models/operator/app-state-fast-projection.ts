@@ -120,6 +120,11 @@ export function compactFastProviderState(value: unknown) {
           ]),
           visibility_readiness: pickRecordFields(visibilityReadiness, [
             'readiness_status',
+            'visibility_mode',
+            'execution_ready',
+            'indexing_ready',
+            'degraded_reason',
+            'governance',
             'status',
             'reason',
             'inspection_detail',
