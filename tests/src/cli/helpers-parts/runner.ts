@@ -57,6 +57,9 @@ function cliTestEnvOverrides(envOverrides: Record<string, string> = {}) {
     : null;
   return {
     NODE_NO_WARNINGS: '1',
+    // CLI subprocesses do not inherit the parent node --test arguments.
+    // Keep declared fixture versions isolated from live upstream metadata.
+    OPL_DEPENDENCY_TEST_OVERRIDE: '1',
     OPL_COMPUTER_USE_PLATFORM: 'test-unsupported',
     OPL_STATE_DIR: cliTestStateDir(),
     OPL_DEVELOPER_MODE_GH_BINARY: path.join(cliTestStateDir(), 'missing-gh'),

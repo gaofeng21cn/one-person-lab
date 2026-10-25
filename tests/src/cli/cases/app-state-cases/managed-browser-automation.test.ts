@@ -297,7 +297,8 @@ test('installed official Playwright MCP completes a real initialize and tools/li
     assert.equal(projection.mcp.protocol_version, '2025-06-18');
     assert.equal(projection.mcp.server_name, 'Playwright');
     assert.equal(projection.mcp.tools_exact, true);
-    assert.deepEqual(projection.mcp.observed_tools, REQUIRED_TOOLS);
+    // Official releases may add tools while retaining the required surface.
+    assert.deepEqual(REQUIRED_TOOLS.filter((tool) => !projection.mcp.observed_tools.includes(tool)), []);
     assert.equal(projection.ready, true);
     assert.equal(projection.browser.launch_probe, 'not_run_by_state_projection');
     assert.equal(projection.authority_boundary.can_claim_app_release_ready, false);
