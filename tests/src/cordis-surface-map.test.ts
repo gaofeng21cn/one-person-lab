@@ -192,5 +192,5 @@ test('surface map records the exact Cordis runtime dependency', () => {
   const packageJson = readJson('package.json') as {
     dependencies?: Record<string, unknown>;
   };
-  assert.equal(packageJson.dependencies?.['@deepseek-ai/cordis'], '4.0.1');
+  assert.equal(packageJson.dependencies?.['@deepseek-ai/cordis'], '4.0.5');
 });
