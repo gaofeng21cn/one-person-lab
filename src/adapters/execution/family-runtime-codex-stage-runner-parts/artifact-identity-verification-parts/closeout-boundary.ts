@@ -6,11 +6,13 @@ import {
   artifactExecutionIdentity,
   artifactIdentityError,
   canonicalSha256,
+  type OplTransportArtifactIdentityReceipt,
+} from './identity-contract.ts';
+import {
   exactArtifactPairs,
   prepareTransportIdentityReceipt,
   verifyCurrentArtifactBytes,
   verifyIdentityReceipt,
-  type OplTransportArtifactIdentityReceipt,
 } from './transport-receipts.ts';
 
 export function verifyStageQualityCloseoutArtifactIdentity(input: {

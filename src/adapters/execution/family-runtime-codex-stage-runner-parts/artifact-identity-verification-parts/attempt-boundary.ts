@@ -7,6 +7,8 @@ import { verifyFrameworkRawArtifactInput } from '../raw-artifact-identity-verifi
 import {
   artifactExecutionIdentity,
   artifactIdentityError,
+} from './identity-contract.ts';
+import {
   exactArtifactPairs,
   verifyCurrentArtifactBytes,
   verifyIdentityReceipt,

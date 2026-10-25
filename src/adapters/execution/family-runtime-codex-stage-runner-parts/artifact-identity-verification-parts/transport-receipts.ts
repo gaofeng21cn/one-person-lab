@@ -1,9 +1,8 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 
-import { FrameworkContractError } from '../../../../kernel/contract-validation.ts';
 import { stringValue as optionalString } from '../../../../kernel/json-record.ts';
 import { ensureOplStateDir } from '../../../../kernel/runtime-state-paths.ts';
 import {
@@ -11,248 +10,21 @@ import {
   type WorkItemRootIdentity,
   WorkItemFileBoundaryError,
 } from '../../../../authority/workspace/index.ts';
+import { isRecord } from '../shared.ts';
 import {
-  requireFamilyRuntimeExecutionScope,
-  type FamilyRuntimeExecutionScopeKind,
-  type WorkItemExecutionScopeSnapshot,
-} from '../../family-runtime-execution-scope.ts';
-import { isRecord, type JsonRecord } from '../shared.ts';
+  artifactIdentityError,
+  canonicalSha256,
+  type ArtifactExecutionIdentity,
+  type OplTransportArtifactIdentityReceipt,
+} from './identity-contract.ts';
+import {
+  localPathForRef,
+  observeStableFile,
+  type StableFileObservation,
+} from './file-observation.ts';
 
-const SHA256_PATTERN = /^(?:sha256:)?([a-f0-9]{64})$/i;
-const URI_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
 const RECEIPT_FILENAME_PATTERN = /^([a-f0-9]{64})\.json$/i;
 const MAX_RECEIPT_BYTES = 1024 * 1024;
-const FILE_READ_CHUNK_BYTES = 64 * 1024;
-
-export type OplTransportArtifactIdentityReceipt = {
-  surface_kind: 'opl_transport_artifact_identity_receipt';
-  version: 'opl-transport-artifact-identity-receipt.v1';
-  domain_id: string;
-  stage_attempt_id: string;
-  stage_run_id: string | null;
-  scope_kind: FamilyRuntimeExecutionScopeKind;
-  work_item_scope_id: string | null;
-  scope_digest: string | null;
-  artifact_ref: string;
-  sha256: string;
-  size_bytes: number | null;
-};
-
-export type ArtifactExecutionIdentity = {
-  stageRunId: string | null;
-  scopeKind: FamilyRuntimeExecutionScopeKind;
-  executionScope: WorkItemExecutionScopeSnapshot | null;
-};
-
-export type StableFileObservation = {
-  sha256: string;
-  sizeBytes: number;
-  bytes: Buffer | null;
-};
-
-export function canonicalSha256(value: unknown, field: string) {
-  const normalized = optionalString(value);
-  const match = normalized?.match(SHA256_PATTERN);
-  if (!match) {
-    throw new FrameworkContractError('contract_shape_invalid', `${field} must be a canonical SHA-256 digest.`, {
-      field,
-      hard_stop_class: 'stale_or_mismatched_stage_identity',
-      blocked_reason: 'artifact_byte_identity_mismatch',
-    });
-  }
-  return match[1].toLowerCase();
-}
-
-export function artifactIdentityError(input: {
-  message: string;
-  blockedReason: string;
-  hardStopClass?: 'authority_boundary_violation' | 'stale_or_mismatched_stage_identity';
-  artifactRef: string;
-  details?: Record<string, unknown>;
-}) {
-  return new FrameworkContractError('contract_shape_invalid', input.message, {
-    hard_stop_class: input.hardStopClass ?? 'stale_or_mismatched_stage_identity',
-    blocked_reason: input.blockedReason,
-    artifact_ref: input.artifactRef,
-    ...(input.details ?? {}),
-  });
-}
-
-export function artifactExecutionIdentity(input: {
-  runtimeIdentity: JsonRecord;
-  operation: string;
-}): ArtifactExecutionIdentity {
-  const identityState = optionalString(input.runtimeIdentity.identity_state);
-  if (
-    identityState === 'identity_unresolved'
-    || identityState === 'quarantined'
-    || input.runtimeIdentity.scope_kind === 'identity_unresolved'
-  ) {
-    throw artifactIdentityError({
-      message: 'Identity-unresolved or quarantined Attempts cannot issue artifact identity receipts.',
-      blockedReason: 'artifact_identity_runtime_scope_unresolved_authority_violation',
-      hardStopClass: 'authority_boundary_violation',
-      artifactRef: optionalString(input.runtimeIdentity.stage_attempt_id) ?? 'missing',
-      details: {
-        identity_state: identityState ?? 'identity_unresolved',
-        scope_kind: input.runtimeIdentity.scope_kind ?? 'identity_unresolved',
-        operation: input.operation,
-      },
-    });
-  }
-  const workspaceLocator = isRecord(input.runtimeIdentity.workspace_locator)
-    ? input.runtimeIdentity.workspace_locator
-    : null;
-  const scope = requireFamilyRuntimeExecutionScope({
-    scopeKind: input.runtimeIdentity.scope_kind,
-    executionScope: input.runtimeIdentity.execution_scope,
-    workspaceLocator,
-    domainId: optionalString(input.runtimeIdentity.domain_id),
-    operation: input.operation,
-    requireWorkspaceTransportCopy: false,
-  });
-  const stageRunId = optionalString(input.runtimeIdentity.stage_run_id);
-  if (scope.scopeKind === 'work_item' && !stageRunId) {
-    throw artifactIdentityError({
-      message: 'Work-item artifact identity requires an exact producing StageRun.',
-      blockedReason: 'artifact_identity_stage_run_missing_authority_violation',
-      hardStopClass: 'authority_boundary_violation',
-      artifactRef: optionalString(input.runtimeIdentity.stage_attempt_id) ?? 'missing',
-      details: { operation: input.operation },
-    });
-  }
-  if (scope.executionScope && !optionalString(scope.executionScope.canonical_work_item_root)) {
-    throw artifactIdentityError({
-      message: 'Work-item artifact identity requires a canonical work-item root.',
-      blockedReason: 'artifact_identity_work_item_root_missing_authority_violation',
-      hardStopClass: 'authority_boundary_violation',
-      artifactRef: optionalString(input.runtimeIdentity.stage_attempt_id) ?? 'missing',
-      details: { operation: input.operation },
-    });
-  }
-  return {
-    stageRunId,
-    scopeKind: scope.scopeKind,
-    executionScope: scope.executionScope,
-  };
-}
-
-function localPathForRef(ref: string, workspaceRoot: string) {
-  if (ref.startsWith('file://')) {
-    try {
-      return fileURLToPath(ref);
-    } catch {
-      throw artifactIdentityError({
-        message: 'Artifact file URL is invalid.',
-        blockedReason: 'artifact_ref_unreadable',
-        artifactRef: ref,
-      });
-    }
-  }
-  if (path.isAbsolute(ref)) return ref;
-  if (URI_SCHEME_PATTERN.test(ref)) return null;
-  return path.resolve(workspaceRoot, ref);
-}
-
-function stableStatIdentity(stat: fs.Stats) {
-  return [stat.dev, stat.ino, stat.size, stat.mtimeMs, stat.ctimeMs].join(':');
-}
-
-function observeStableFile(input: {
-  filePath: string;
-  artifactRef: string;
-  captureBytes?: boolean;
-  maxBytes?: number;
-  authorityReceipt?: boolean;
-}): StableFileObservation {
-  let descriptor: number | null = null;
-  const blockedReason = input.authorityReceipt
-    ? 'artifact_identity_receipt_unverifiable_authority_violation'
-    : 'artifact_ref_unreadable';
-  const hardStopClass = input.authorityReceipt ? 'authority_boundary_violation' as const : undefined;
-  try {
-    descriptor = fs.openSync(input.filePath, 'r');
-    const before = fs.fstatSync(descriptor);
-    if (!before.isFile()) {
-      throw artifactIdentityError({
-        message: input.authorityReceipt
-          ? 'Artifact identity receipt must be a regular file.'
-          : 'Artifact identity must point to a regular local file.',
-        blockedReason,
-        hardStopClass,
-        artifactRef: input.artifactRef,
-        details: { resolved_path: input.filePath },
-      });
-    }
-    if (input.maxBytes !== undefined && before.size > input.maxBytes) {
-      throw artifactIdentityError({
-        message: 'Artifact identity receipt exceeds the transport verification limit.',
-        blockedReason,
-        hardStopClass,
-        artifactRef: input.artifactRef,
-        details: { resolved_path: input.filePath, size_bytes: before.size, max_bytes: input.maxBytes },
-      });
-    }
-
-    const hash = crypto.createHash('sha256');
-    const captured: Buffer[] = [];
-    let total = 0;
-    while (true) {
-      const chunk = Buffer.allocUnsafe(FILE_READ_CHUNK_BYTES);
-      const read = fs.readSync(descriptor, chunk, 0, chunk.length, null);
-      if (read === 0) break;
-      const bytes = chunk.subarray(0, read);
-      total += read;
-      if (input.maxBytes !== undefined && total > input.maxBytes) {
-        throw artifactIdentityError({
-          message: 'Artifact identity receipt exceeds the transport verification limit.',
-          blockedReason,
-          hardStopClass,
-          artifactRef: input.artifactRef,
-          details: { resolved_path: input.filePath, observed_size_bytes: total, max_bytes: input.maxBytes },
-        });
-      }
-      hash.update(bytes);
-      if (input.captureBytes) captured.push(Buffer.from(bytes));
-    }
-    const after = fs.fstatSync(descriptor);
-    if (total !== before.size || stableStatIdentity(before) !== stableStatIdentity(after)) {
-      throw artifactIdentityError({
-        message: input.authorityReceipt
-          ? 'Artifact identity receipt changed while it was being verified.'
-          : 'Artifact bytes changed while their identity was being verified.',
-        blockedReason: input.authorityReceipt
-          ? 'artifact_identity_receipt_changed_during_verification'
-          : 'artifact_changed_during_identity_verification',
-        hardStopClass,
-        artifactRef: input.artifactRef,
-        details: { resolved_path: input.filePath },
-      });
-    }
-    return {
-      sha256: hash.digest('hex'),
-      sizeBytes: total,
-      bytes: input.captureBytes ? Buffer.concat(captured, total) : null,
-    };
-  } catch (error) {
-    if (error instanceof FrameworkContractError) throw error;
-    throw artifactIdentityError({
-      message: input.authorityReceipt
-        ? 'Artifact identity receipt is not readable by the transport.'
-        : 'Artifact identity points to an unreadable local file.',
-      blockedReason,
-      hardStopClass,
-      artifactRef: input.artifactRef,
-      details: {
-        resolved_path: input.filePath,
-        read_error: error instanceof Error ? error.message : String(error),
-      },
-    });
-  } finally {
-    if (descriptor !== null) fs.closeSync(descriptor);
-  }
-}
-
 function safeIdentityDirectory(value: string, fallback: string) {
   const readable = value.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || fallback;
   const digest = crypto.createHash('sha256').update(value).digest('hex').slice(0, 12);
