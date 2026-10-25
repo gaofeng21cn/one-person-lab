@@ -110,15 +110,15 @@
     "framework:archive": "node scripts/framework-archive.mjs"
   },
   "dependencies": {
-    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/cordis": "4.0.5",
     "@modelcontextprotocol/sdk": "^1.32.2",
-    "@playwright/mcp": "0.0.79",
+    "@playwright/mcp": "0.0.83",
     "@temporalio/activity": "1.20.3",
     "@temporalio/client": "1.20.3",
     "@temporalio/common": "1.20.3",
     "@temporalio/worker": "1.20.3",
     "@temporalio/workflow": "1.20.3",
-    "@types/semver": "7.7.1",
+    "@types/semver": "7.8.0",
     "ajv": "^8.20.0",
     "semver": "7.8.5",
     "tar": "7.5.22",
@@ -133,6 +133,6 @@
   },
   "license": "Apache-2.0",
   "optionalDependencies": {
-    "e2b": "^2.31.0"
+    "e2b": "^2.59.0"
   }
 }
