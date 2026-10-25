@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 import { parseJsonText } from '../../../src/kernel/json-file.ts';
 import {
@@ -22,6 +23,7 @@ export function registerInstallerAndCarrierTests({
   installScript,
   frameworkSourceCommit,
 }: InstallerAndCarrierContext) {
+  const safeNodeFixture = '#!/usr/bin/env bash\nif [ "${1:-}" = "-p" ]; then printf "22.23.4\\n"; fi\nexit 0\n';
   function writeInstalledSourceIdentity(identityPath: string, identity: Record<string, unknown>) {
     fs.writeFileSync(identityPath, `${JSON.stringify(identity, null, 2)}\n`, { mode: 0o600 });
   }
@@ -92,10 +94,72 @@ export function registerInstallerAndCarrierTests({
     assert.match(gitignore, /^\.opl-framework-installed-source-identity\.json$/m);
   });
 
-  test('installer accepts supported Node majors without an arbitrary upper bound', () => {
+  test('installer admits patched standalone Node versions and refuses affected or unsupported identities', () => {
     const source = fs.readFileSync(installScript, 'utf8');
-    assert.match(source, /major >= 22 \? 0 : 1/);
-    assert.doesNotMatch(source, /major < \d+/);
+    const bootstrap = source.slice(0, source.indexOf('\nensure_node_runtime\n'));
+    for (const [version, accepted] of [
+      ['22.23.4', true], ['22.24.0', true], ['24.22.1', true], ['26.12.1', true], ['28.0.0', true],
+      ['20.20.0', false], ['22.21.1', false], ['22.23.3', false], ['24.22.0', false],
+      ['26.12.0', false], ['23.11.0', false], ['25.10.0', false],
+      ['22.23.4-next.1', false], ['electron:24.22.1', false], ['', false],
+    ] as const) {
+      const result = spawnSync('/bin/bash', ['-c', `${bootstrap}\nnode_version_is_usable "$OPL_TEST_NODE_VERSION"`], {
+        encoding: 'utf8', env: { ...process.env, OPL_TEST_NODE_VERSION: version },
+      });
+      assert.equal(result.status === 0, accepted, `Node ${version}: ${result.stderr}`);
+    }
+  });
+
+  test('installer probes the selected executable and refuses Electron even with a patched Node version', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-node-admission-'));
+    const source = fs.readFileSync(installScript, 'utf8');
+    const bootstrap = source.slice(0, source.indexOf('\nensure_node_runtime\n'));
+    fs.writeFileSync(path.join(root, 'node'), `#!${process.execPath}
+if (process.argv[2] !== '-p') process.exit(99);
+const versions = JSON.parse(process.env.OPL_TEST_RUNTIME_VERSIONS);
+console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }));
+`, { mode: 0o755 });
+    fs.writeFileSync(path.join(root, 'npm'), '#!/bin/bash\nexit 0\n', { mode: 0o755 });
+    try {
+      for (const [versions, accepted] of [
+        [{ node: '22.23.4' }, true],
+        [{ node: '22.23.3' }, false],
+        [{ node: '24.22.1', electron: '44.9.1' }, false],
+        [{ node: '26.10.0' }, false],
+      ] as const) {
+        const result = spawnSync('/bin/bash', ['-c', `${bootstrap}\nnode_is_usable`], {
+          encoding: 'utf8', env: { ...process.env, PATH: `${root}:/usr/bin:/bin`,
+            OPL_TEST_RUNTIME_VERSIONS: JSON.stringify(versions) },
+        });
+        assert.equal(result.status === 0, accepted, JSON.stringify(versions));
+      }
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  test('ensure-node reuses the bootstrap owner without touching an installed Framework or user Node', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ensure-node-'));
+    const fakeBin = path.join(root, 'bin');
+    const installed = path.join(root, 'framework');
+    const called = path.join(root, 'unexpected-call');
+    fs.mkdirSync(fakeBin);
+    fs.mkdirSync(installed);
+    fs.writeFileSync(path.join(installed, 'custom-file'), 'preserve me\n');
+    fs.writeFileSync(path.join(installed, '.opl-framework-installed-source-identity.json'), 'original identity\n');
+    fs.writeFileSync(path.join(fakeBin, 'node'), safeNodeFixture, { mode: 0o755 });
+    const untouchedNode = fs.readFileSync(path.join(fakeBin, 'node'));
+    for (const command of ['git', 'npm', 'curl']) {
+      fs.writeFileSync(path.join(fakeBin, command), `#!/bin/bash\ntouch '${called}'\nexit 99\n`, { mode: 0o755 });
+    }
+    try {
+      const result = spawnSync('/bin/bash', [installScript, '--ensure-node'], {
+        encoding: 'utf8', env: { HOME: root, PATH: `${fakeBin}:/usr/bin:/bin`, OPL_INSTALL_DIR: installed },
+      });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(fs.existsSync(called), false);
+      assert.equal(fs.readFileSync(path.join(installed, 'custom-file'), 'utf8'), 'preserve me\n');
+      assert.equal(fs.readFileSync(path.join(installed, '.opl-framework-installed-source-identity.json'), 'utf8'), 'original identity\n');
+      assert.deepEqual(fs.readFileSync(path.join(fakeBin, 'node')), untouchedNode);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
 
   test('installer uses the lockfile and retires only the exact legacy global carrier', () => {
@@ -114,7 +178,7 @@ export function registerInstallerAndCarrierTests({
     const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
     const cliPrefix = path.join(homeRoot, 'opt', 'homebrew');
     const toolchainRoot = path.join(homeRoot, '.opl', 'toolchain');
-    const managedNodeBin = path.join(toolchainRoot, 'node-v22.21.1-darwin-arm64', 'bin');
+    const managedNodeBin = path.join(toolchainRoot, 'node-v22.23.4-darwin-arm64', 'bin');
     const legacyCarrier = path.join(cliPrefix, 'lib', 'node_modules', 'opl-framework-shared');
     const npmLog = path.join(homeRoot, 'npm.log');
     fs.mkdirSync(path.join(installDir, '.git'), { recursive: true });
@@ -144,14 +208,14 @@ export function registerInstallerAndCarrierTests({
       ].join('\n'),
       { mode: 0o755 },
     );
-    fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n', { mode: 0o755 });
+    fs.writeFileSync(path.join(fakeBin, 'node'), safeNodeFixture, { mode: 0o755 });
     const npmFixture = [
       '#!/usr/bin/env bash',
       `printf '%s|%s\\n' "${'${npm_config_prefix:-}'}" "$*" >> ${JSON.stringify(npmLog)}`,
       'exit 0',
     ].join('\n');
     fs.writeFileSync(path.join(fakeBin, 'npm'), npmFixture, { mode: 0o755 });
-    fs.writeFileSync(path.join(managedNodeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n', { mode: 0o755 });
+    fs.writeFileSync(path.join(managedNodeBin, 'node'), safeNodeFixture, { mode: 0o755 });
     fs.writeFileSync(path.join(managedNodeBin, 'npm'), npmFixture, { mode: 0o755 });
 
     try {
@@ -200,7 +264,7 @@ export function registerInstallerAndCarrierTests({
         'fi',
       ].join('\n'),
     );
-    fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+    fs.writeFileSync(path.join(fakeBin, 'node'), safeNodeFixture);
     fs.writeFileSync(path.join(fakeBin, 'npm'), '#!/usr/bin/env bash\nexit 0\n');
     for (const command of ['git', 'node', 'npm']) {
       fs.chmodSync(path.join(fakeBin, command), 0o755);
@@ -248,7 +312,7 @@ export function registerInstallerAndCarrierTests({
         'exit 1',
       ].join('\n'),
     );
-    fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+    fs.writeFileSync(path.join(fakeBin, 'node'), safeNodeFixture);
     fs.writeFileSync(path.join(fakeBin, 'npm'), '#!/usr/bin/env bash\nexit 0\n');
     for (const command of ['git', 'node', 'npm']) {
       fs.chmodSync(path.join(fakeBin, command), 0o755);
@@ -286,7 +350,7 @@ export function registerInstallerAndCarrierTests({
     const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
     fs.mkdirSync(fakeBin, { recursive: true });
     fs.mkdirSync(tempRoot, { recursive: true });
-    fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n', { mode: 0o755 });
+    fs.writeFileSync(path.join(fakeBin, 'node'), safeNodeFixture, { mode: 0o755 });
     fs.writeFileSync(path.join(fakeBin, 'npm'), '#!/usr/bin/env bash\nexit 0\n', { mode: 0o755 });
     fs.writeFileSync(
       path.join(fakeBin, 'curl'),
@@ -358,7 +422,7 @@ export function registerInstallerAndCarrierTests({
         'exit 0',
       ].join('\n'),
     );
-    fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+    fs.writeFileSync(path.join(fakeBin, 'node'), safeNodeFixture);
     fs.writeFileSync(
       path.join(fakeBin, 'npm'),
       [
@@ -456,7 +520,7 @@ export function registerInstallerAndCarrierTests({
     fs.writeFileSync(path.join(prefilledNodeModules, '@temporalio', 'common', 'package.json'), '{}\n');
 
     fs.writeFileSync(path.join(fakeBin, 'git'), '#!/usr/bin/env bash\nexit 0\n');
-    fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+    fs.writeFileSync(path.join(fakeBin, 'node'), safeNodeFixture);
     fs.writeFileSync(
       path.join(fakeBin, 'npm'),
       ['#!/usr/bin/env bash', `printf '%s\\n' "$*" >> ${JSON.stringify(npmLog)}`, 'exit 0'].join('\n'),
@@ -524,6 +588,12 @@ export function registerInstallerAndCarrierTests({
     const gitLog = path.join(homeRoot, 'git.log');
     const npmLog = path.join(homeRoot, 'npm.log');
     fs.mkdirSync(fakeBin, { recursive: true });
+    const userNode = safeNodeFixture.replaceAll('22.23.4', '22.21.1');
+    fs.writeFileSync(path.join(fakeBin, 'node'), userNode, { mode: 0o755 });
+    fs.writeFileSync(path.join(fakeBin, 'npm'), '#!/bin/bash\nexit 0\n', { mode: 0o755 });
+    const retainedNode = path.join(toolchainRoot, 'node-v22.21.1-darwin-arm64');
+    fs.mkdirSync(retainedNode, { recursive: true });
+    fs.writeFileSync(path.join(retainedNode, 'sentinel'), 'preserved older managed runtime\n');
 
     fs.writeFileSync(
       path.join(fakeBin, 'uname'),
@@ -548,12 +618,18 @@ export function registerInstallerAndCarrierTests({
         '#!/usr/bin/env bash',
         'set -euo pipefail',
         'out=""',
+        'url=""',
         'while [ "$#" -gt 0 ]; do',
         '  if [ "$1" = "-o" ]; then out="$2"; shift 2; continue; fi',
+        '  if [[ "$1" == https:* ]]; then url="$1"; fi',
         '  shift',
         'done',
         'mkdir -p "$(dirname "$out")"',
-        'printf "fixture archive\\n" > "$out"',
+        'if [[ "$url" == */SHASUMS256.txt ]]; then',
+        `  printf '%s  node-v22.23.4-darwin-arm64.tar.gz\\n' '${createHash('sha256').update('fixture archive\n').digest('hex')}' > "$out"`,
+        'else',
+        '  printf "fixture archive\\n" > "$out"',
+        'fi',
       ].join('\n'),
     );
     fs.writeFileSync(
@@ -570,12 +646,13 @@ export function registerInstallerAndCarrierTests({
         '    *) shift ;;',
         '  esac',
         'done',
-        'if [[ "$archive" == *"node-v22.21.1-darwin-arm64"* ]]; then',
-        '  node_dir="$dest/node-v22.21.1-darwin-arm64/bin"',
+        'if [[ "$archive" == *"node-v22.23.4-darwin-arm64"* ]]; then',
+        '  node_dir="$dest/node-v22.23.4-darwin-arm64/bin"',
         '  mkdir -p "$node_dir"',
         '  cat > "$node_dir/node" <<\\NODE',
         '#!/usr/bin/env bash',
-        'exit 0',
+        'if [ "${1:-}" = "-p" ]; then printf "%s\\n" "${OPL_TEST_DOWNLOADED_NODE_VERSION:-22.23.4}"; fi',
+        'exit "${OPL_TEST_DOWNLOADED_NODE_EXIT:-0}"',
         'NODE',
         '  cat > "$node_dir/npm" <<\\NPM',
         '#!/usr/bin/env bash',
@@ -594,6 +671,34 @@ export function registerInstallerAndCarrierTests({
     }
 
     try {
+      const fixtureEnvironment = {
+        HOME: homeRoot, OPL_INSTALL_DIR: installDir,
+        OPL_FRAMEWORK_SOURCE_COMMIT: frameworkSourceCommit,
+        OPL_MANAGED_TOOLCHAIN_ROOT: toolchainRoot, PATH: `${fakeBin}:/usr/bin:/bin`,
+      };
+      for (const [override, message] of [
+        [{ OPL_MANAGED_NODE_SHA256: '0'.repeat(64) }, /archive checksum mismatch/],
+        [{ OPL_MANAGED_NODE_VERSION: 'v22.23.3' }, /not admitted by the bootstrap security policy/],
+        [{ OPL_MANAGED_NODE_URL: 'https://example.invalid/node.tar.gz' }, /requires OPL_MANAGED_NODE_SHA256/],
+        [{ OPL_TEST_DOWNLOADED_NODE_VERSION: '22.23.3' }, /runtime identity does not match/],
+        [{ OPL_TEST_DOWNLOADED_NODE_EXIT: '1' }, /runtime cannot be executed/],
+      ] as const) {
+        const refused = spawnSync('/bin/bash', [installScript, '--carrier-only'], {
+          cwd: repoRoot, encoding: 'utf8', env: { ...fixtureEnvironment, ...override },
+        });
+        assert.notEqual(refused.status, 0);
+        assert.match(refused.stderr, message);
+        assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v22.23.4-darwin-arm64')), false);
+        assert.equal(fs.existsSync(installDir), false);
+      }
+      const ensured = spawnSync('/bin/bash', [installScript, '--ensure-node'], {
+        cwd: repoRoot, encoding: 'utf8', env: fixtureEnvironment,
+      });
+      assert.equal(ensured.status, 0, ensured.stderr || ensured.stdout);
+      assert.match(ensured.stdout, /Preparing One Person Lab managed Node\.js v22\.23\.4/);
+      assert.equal(fs.existsSync(installDir), false);
+      assert.equal(fs.readFileSync(path.join(fakeBin, 'node'), 'utf8'), userNode);
+      assert.equal(fs.readFileSync(path.join(retainedNode, 'sentinel'), 'utf8'), 'preserved older managed runtime\n');
       const result = spawnSync('/bin/bash', [installScript, '--carrier-only'], {
         cwd: repoRoot,
         encoding: 'utf8',
@@ -607,12 +712,11 @@ export function registerInstallerAndCarrierTests({
       });
 
       assert.equal(result.status, 0, result.stderr || result.stdout);
-      assert.match(result.stdout, /Preparing One Person Lab managed Node\.js v22\.21\.1/);
       assert.match(result.stdout, /Downloading One Person Lab source archive/);
       assert.match(result.stdout, /OPL base carrier is ready/);
       assert.equal(result.stderr.includes('Homebrew'), false);
       assert.equal(result.stderr.includes('brew install'), false);
-      assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v22.21.1-darwin-arm64', 'bin', 'node')), true);
+      assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v22.23.4-darwin-arm64', 'bin', 'node')), true);
       assert.equal(fs.readFileSync(path.join(installDir, '.opl-install-source'), 'utf8').trim(), 'archive');
       assert.deepEqual(
         parseJsonText(fs.readFileSync(path.join(installDir, '.opl-framework-installed-source-identity.json'), 'utf8')),
@@ -686,7 +790,7 @@ export function registerInstallerAndCarrierTests({
         'exit 0',
       ].join('\n'),
     );
-    fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+    fs.writeFileSync(path.join(fakeBin, 'node'), safeNodeFixture);
     for (const command of ['uname', 'node', 'npm']) {
       fs.chmodSync(path.join(fakeBin, command), 0o755);
     }
@@ -754,7 +858,7 @@ export function registerInstallerAndCarrierTests({
         'exit 0',
       ].join('\n'),
     );
-    fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+    fs.writeFileSync(path.join(fakeBin, 'node'), safeNodeFixture);
     fs.writeFileSync(
       path.join(fakeBin, 'npm'),
       [
