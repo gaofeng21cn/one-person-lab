@@ -113,20 +113,20 @@
     "@deepseek-ai/cordis": "4.0.5",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@playwright/mcp": "0.0.83",
-    "@temporalio/activity": "1.24.0",
-    "@temporalio/client": "1.24.0",
-    "@temporalio/common": "1.24.0",
-    "@temporalio/worker": "1.24.0",
-    "@temporalio/workflow": "1.24.0",
+    "@temporalio/activity": "1.20.3",
+    "@temporalio/client": "1.20.3",
+    "@temporalio/common": "1.20.3",
+    "@temporalio/worker": "1.20.3",
+    "@temporalio/workflow": "1.20.3",
     "@types/semver": "7.8.0",
     "ajv": "^8.20.0",
     "semver": "7.8.5",
     "tar": "7.5.22",
-    "typescript": "^7.0.2"
+    "typescript": "^5.8.3"
   },
   "devDependencies": {
-    "@temporalio/testing": "1.24.0",
-    "@types/node": "^26.6.5"
+    "@temporalio/testing": "1.20.3",
+    "@types/node": "^24.5.2"
   },
   "overrides": {
     "protobufjs": "7.6.5"

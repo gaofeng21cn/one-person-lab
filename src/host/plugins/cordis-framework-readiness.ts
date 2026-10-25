@@ -1,4 +1,5 @@
 import { Context } from '@deepseek-ai/cordis';
+import { CORDIS_FRAMEWORK_PACKAGE, CORDIS_FRAMEWORK_VERSION, CORDIS_FRAMEWORK_INTEGRITY } from '@one-person-lab/cordis-abi/framework';
 
 import descriptorPayload from '../../../contracts/opl-framework/cordis-plugins/opl-console-readiness-projection.json' with { type: 'json' };
 import type { FrameworkContracts } from '../../kernel/types.ts';
@@ -33,10 +34,7 @@ import {
 export const CORDIS_CONSOLE_READINESS_PLUGIN_ID = 'opl-console-readiness-projection';
 export const CORDIS_CONSOLE_READINESS_PLUGIN_API_VERSION = '1.0.0';
 export const CORDIS_CONSOLE_READINESS_SERVICE = 'opl.console.framework-readiness';
-export const CORDIS_FRAMEWORK_PACKAGE = '@deepseek-ai/cordis';
-export const CORDIS_FRAMEWORK_VERSION = '4.0.1';
-export const CORDIS_FRAMEWORK_INTEGRITY =
-  'sha512-YBdskTU2Po1kru3GgcUWUbkTsPMA9LkSQDAY8rBkFJeajdgcQad3QPJZE26JyK99Xb6HaASvoXg2DSUTeN/0Nw==';
+export { CORDIS_FRAMEWORK_PACKAGE, CORDIS_FRAMEWORK_VERSION, CORDIS_FRAMEWORK_INTEGRITY };
 
 export const CORDIS_CONSOLE_READINESS_PLUGIN_DESCRIPTOR = buildCordisPluginDescriptor(
   descriptorPayload as unknown as CordisPluginDescriptorInput,

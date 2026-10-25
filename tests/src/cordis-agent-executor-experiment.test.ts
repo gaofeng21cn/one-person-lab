@@ -33,9 +33,9 @@ test('Cordis remains exact in the production dependency graph without optional l
   const packageLock = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package-lock.json'), 'utf8'));
   const lockedCordis = packageLock.packages['node_modules/@deepseek-ai/cordis'];
 
-  assert.equal(packageJson.dependencies?.['@deepseek-ai/cordis'], '4.0.1');
+  assert.equal(packageJson.dependencies?.['@deepseek-ai/cordis'], '4.0.5');
   assert.equal(packageJson.devDependencies?.['@deepseek-ai/cordis'], undefined);
-  assert.equal(lockedCordis.version, '4.0.1');
+  assert.equal(lockedCordis.version, '4.0.5');
   assert.equal(lockedCordis.dev, undefined);
   assert.match(lockedCordis.integrity, /^sha512-/);
   assert.equal(packageLock.packages['node_modules/@deepseek-ai/cordis-plugin-loader'], undefined);
@@ -78,7 +78,7 @@ exit 64
     assert.equal(requests.length, 1);
     assert.equal(results.length, 1);
     assert.equal(composition.snapshot.framework.package, '@deepseek-ai/cordis');
-    assert.equal(composition.snapshot.framework.version, '4.0.1');
+    assert.equal(composition.snapshot.framework.version, '4.0.5');
     assert.equal(composition.snapshot.binding.executor_adapter_id, 'fixture-codex');
     assert.equal(Object.isFrozen(composition.snapshot), true);
     assert.equal(Object.isFrozen(composition.snapshot.plugins), true);
