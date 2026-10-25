@@ -19,6 +19,18 @@
 
 ### 3. Base runtime
 
+`install.sh` 在源码物化之前负责 Node bootstrap。复用系统 Node 和安装受管 Node
+都必须通过同一 `node_version_is_usable` 准入，实际执行文件须为已修复已知
+证书撤销问题的稳定 standalone Node；Electron 的 Node 模式不构成该运行时。
+官方来源和 bootstrap 准入引用见
+[`dependency-release-sources.json`](../../../contracts/opl-framework/dependency-release-sources.json)。
+`OPL_MANAGED_NODE_VERSION` 只选择受管版本，不能绕过安全准入；自定义
+`OPL_MANAGED_NODE_URL` 必须同时声明 `OPL_MANAGED_NODE_SHA256`。默认下载按官方
+SHASUMS 核对归档，解包后回读实际 Node 版本再切入原受管目录，失败不替换现有运行时。
+已有 Framework 的 App consumer 通过同一 frozen installer 的 `--ensure-node`
+入口执行这段 bootstrap，再回读实际 Node；该入口在源码下载、npm 和安装身份写入之前退出，
+保留现有 Framework 与用户的系统 Node。
+
 - `opl --help`；
 - `opl system initialize --json`；
 - 配置 provider/service/worker 的真实 status；

@@ -5,9 +5,11 @@ REPO_URL=${OPL_REPO_URL:-https://github.com/gaofeng21cn/one-person-lab.git}
 INSTALL_DIR=${OPL_INSTALL_DIR:-$HOME/.opl/one-person-lab}
 BRANCH=${OPL_INSTALL_BRANCH:-main}
 CARRIER_ONLY=${OPL_CARRIER_ONLY:-0}
+ENSURE_NODE_ONLY=0
 INSTALL_SOURCE_MODE=${OPL_INSTALL_SOURCE_MODE:-auto}
 MANAGED_TOOLCHAIN_ROOT=${OPL_MANAGED_TOOLCHAIN_ROOT:-$HOME/.opl/toolchain}
-MANAGED_NODE_VERSION=${OPL_MANAGED_NODE_VERSION:-v22.21.1}
+MANAGED_NODE_VERSION=${OPL_MANAGED_NODE_VERSION:-v22.23.4}
+MANAGED_NODE_VERSION=v${MANAGED_NODE_VERSION#v}
 PREFILLED_NODE_MODULES_DIR=${OPL_PREFILLED_NODE_MODULES_DIR:-}
 INSTALL_SOURCE_MARKER=.opl-install-source
 INSTALL_SOURCE_IDENTITY=.opl-framework-installed-source-identity.json
@@ -22,6 +24,9 @@ INSTALL_ARGS=()
 INSTALL_MODE_EXPLICIT=0
 for arg in "$@"; do
   case "$arg" in
+    --ensure-node)
+      ENSURE_NODE_ONLY=1
+      ;;
     --carrier-only)
       CARRIER_ONLY=1
       ;;
@@ -94,36 +99,93 @@ prepend_managed_node_if_present() {
   fi
 }
 
+# Canonical bootstrap admission for the eMudhra SPKI mitigation and active Node
+# lines: https://nodejs.org/en/blog/vulnerability/october-2026-security-releases
+# The installer runs before the repository exists, so this predicate belongs in
+# the existing single-file bootstrap rather than a second runtime registry.
+node_version_is_usable() {
+  local version major minor patch
+  version=${1#v}
+  [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || return 1
+  major=$((10#${BASH_REMATCH[1]}))
+  minor=$((10#${BASH_REMATCH[2]}))
+  patch=$((10#${BASH_REMATCH[3]}))
+  case "$major" in
+    22) [ "$minor" -gt 23 ] || { [ "$minor" -eq 23 ] && [ "$patch" -ge 4 ]; } ;;
+    24) [ "$minor" -gt 22 ] || { [ "$minor" -eq 22 ] && [ "$patch" -ge 1 ]; } ;;
+    26) [ "$minor" -gt 12 ] || { [ "$minor" -eq 12 ] && [ "$patch" -ge 1 ]; } ;;
+    *) [ "$major" -gt 26 ] ;;
+  esac
+}
+
 node_is_usable() {
-  command -v node >/dev/null 2>&1 || return 1
+  local node_binary version
+  node_binary=$(type -P node) || return 1
   command -v npm >/dev/null 2>&1 || return 1
-  node -e 'const major = Number(process.versions.node.split(".")[0]); process.exit(major >= 22 ? 0 : 1)' >/dev/null 2>&1
+  # Probe the selected executable itself. Electron in Node mode still has an
+  # Electron TLS/runtime identity and must not masquerade as standalone Node.
+  version=$(env -u NODE_OPTIONS "$node_binary" -p 'process.versions.electron ? "" : process.versions.node' 2>/dev/null) || return 1
+  node_version_is_usable "$version"
 }
 
 install_managed_node() {
-  local arch node_dir archive_tmp archive_url
+  local arch node_dir archive_name archive_url
+  node_version_is_usable "$MANAGED_NODE_VERSION" || {
+    printf 'Managed Node.js version is not admitted by the bootstrap security policy: %s\n' "$MANAGED_NODE_VERSION" >&2
+    return 1
+  }
   arch=$(node_darwin_arch) || {
     printf 'One Person Lab cannot prepare managed Node.js on this Mac architecture: %s\n' "$(uname -m)" >&2
-    exit 1
+    return 1
   }
-  node_dir="$MANAGED_TOOLCHAIN_ROOT/node-$MANAGED_NODE_VERSION-darwin-$arch"
-  archive_url="${OPL_MANAGED_NODE_URL:-https://nodejs.org/dist/$MANAGED_NODE_VERSION/node-$MANAGED_NODE_VERSION-darwin-$arch.tar.gz}"
-  archive_tmp=$(mktemp "${TMPDIR:-/tmp}/node-$MANAGED_NODE_VERSION-darwin-$arch.XXXXXX")
-
-  log "Preparing One Person Lab managed Node.js $MANAGED_NODE_VERSION"
-  mkdir -p "$MANAGED_TOOLCHAIN_ROOT"
-  curl --http1.1 --connect-timeout 20 --max-time 300 --retry 3 --retry-delay 2 --retry-all-errors -fsSL "$archive_url" -o "$archive_tmp"
-  rm -rf "$node_dir"
-  tar -xzf "$archive_tmp" -C "$MANAGED_TOOLCHAIN_ROOT"
-  rm -f "$archive_tmp"
-  prepend_managed_node_if_present
-  if ! node_is_usable; then
-    printf 'Managed Node.js was downloaded but is not usable: %s\n' "$node_dir" >&2
-    exit 1
+  archive_name="node-$MANAGED_NODE_VERSION-darwin-$arch.tar.gz"
+  node_dir="$MANAGED_TOOLCHAIN_ROOT/${archive_name%.tar.gz}"
+  archive_url="${OPL_MANAGED_NODE_URL:-https://nodejs.org/dist/$MANAGED_NODE_VERSION/$archive_name}"
+  if [ -n "${OPL_MANAGED_NODE_URL:-}" ] && [ -z "${OPL_MANAGED_NODE_SHA256:-}" ]; then
+    printf 'A custom Node.js archive URL requires OPL_MANAGED_NODE_SHA256.\n' >&2
+    return 1
   fi
+  log "Preparing One Person Lab managed Node.js $MANAGED_NODE_VERSION"
+  (
+    set -euo pipefail
+    staging=$(mktemp -d "${TMPDIR:-/tmp}/opl-managed-node.XXXXXX")
+    trap 'rm -rf "$staging"' EXIT
+    expected=${OPL_MANAGED_NODE_SHA256:-}
+    if [ -z "$expected" ]; then
+      curl --http1.1 --connect-timeout 20 --max-time 300 --retry 3 --retry-delay 2 --retry-all-errors -fsSL \
+        "https://nodejs.org/dist/$MANAGED_NODE_VERSION/SHASUMS256.txt" -o "$staging/SHASUMS256.txt" || exit 1
+      expected=$(awk -v name="$archive_name" '$2 == name { print $1 }' "$staging/SHASUMS256.txt")
+    fi
+    [[ "$expected" =~ ^[[:xdigit:]]{64}$ ]] || { printf 'Node.js archive checksum is missing or invalid.\n' >&2; exit 1; }
+    expected=$(printf '%s' "$expected" | tr '[:upper:]' '[:lower:]')
+    curl --http1.1 --connect-timeout 20 --max-time 300 --retry 3 --retry-delay 2 --retry-all-errors -fsSL "$archive_url" -o "$staging/$archive_name" || exit 1
+    if command -v shasum >/dev/null 2>&1; then
+      actual=$(shasum -a 256 "$staging/$archive_name" | awk '{ print $1 }') || exit 1
+    else
+      need_cmd sha256sum
+      actual=$(sha256sum "$staging/$archive_name" | awk '{ print $1 }') || exit 1
+    fi
+    [ "$actual" = "$expected" ] || { printf 'Node.js archive checksum mismatch.\n' >&2; exit 1; }
+    tar -xzf "$staging/$archive_name" -C "$staging" || exit 1
+    selected="$staging/${archive_name%.tar.gz}"
+    version=$(env -u NODE_OPTIONS "$selected/bin/node" -p 'process.versions.electron ? "" : process.versions.node') \
+      || { printf 'Downloaded Node.js runtime cannot be executed.\n' >&2; exit 1; }
+    [ "v$version" = "$MANAGED_NODE_VERSION" ] && node_version_is_usable "$version" \
+      || { printf 'Downloaded Node.js runtime identity does not match the admitted version.\n' >&2; exit 1; }
+    [ -x "$selected/bin/npm" ] || { printf 'Downloaded Node.js runtime is missing npm.\n' >&2; exit 1; }
+    mkdir -p "$MANAGED_TOOLCHAIN_ROOT" || exit 1
+    rm -rf "$node_dir" || exit 1
+    mv "$selected" "$node_dir" || exit 1
+  ) || return 1
+  prepend_managed_node_if_present
+  node_is_usable || { printf 'Managed Node.js was verified but is not usable: %s\n' "$node_dir" >&2; return 1; }
 }
 
 ensure_node_runtime() {
+  node_version_is_usable "$MANAGED_NODE_VERSION" || {
+    printf 'Managed Node.js version is not admitted by the bootstrap security policy: %s\n' "$MANAGED_NODE_VERSION" >&2
+    return 1
+  }
   prepend_managed_node_if_present
   if node_is_usable; then
     return 0
@@ -136,8 +198,8 @@ ensure_node_runtime() {
     return 0
   fi
 
-  need_cmd node
-  need_cmd npm
+  printf 'A patched standalone Node.js runtime is required (22.23.4+, 24.22.1+, or 26.12.1+ on its active release line).\n' >&2
+  return 1
 }
 
 git_is_usable() {
@@ -389,6 +451,9 @@ cleanup_archive_tmp() {
 }
 
 ensure_node_runtime
+if [ "$ENSURE_NODE_ONLY" = "1" ]; then
+  exit 0
+fi
 
 mkdir -p "$(dirname "$INSTALL_DIR")"
 

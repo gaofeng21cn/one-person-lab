@@ -19,7 +19,7 @@
     "bun": { "kind": "github-release", "repository": "oven-sh/bun", "version_prefix": "bun-v", "asset": "bun-{platform}-{rust_arch}.zip", "install_metadata": { "format": "zip", "binary": "bun" } },
     "uv": { "kind": "github-release", "repository": "astral-sh/uv", "asset": "uv-{rust_arch}-{rust_target}.tar.gz", "install_metadata": { "format": "tar.gz", "binary": "uv" } },
     "python": { "kind": "github-release", "repository": "astral-sh/python-build-standalone", "asset_pattern": "^cpython-(?<version>[0-9]+\\.[0-9]+\\.[0-9]+)\\+[^-]+-{rust_arch}-{rust_target}-install_only_stripped\\.tar\\.gz$", "install_metadata": { "format": "tar.gz", "binary": "python3", "strip_components": 1 } },
-    "node": { "kind": "node-index", "url": "https://nodejs.org/dist/index.json", "install_metadata": { "format": "tar.gz", "binary": "node", "strip_components": 1 } },
+    "node": { "kind": "node-index", "url": "https://nodejs.org/dist/index.json", "install_metadata": { "format": "tar.gz", "binary": "node", "strip_components": 1, "bootstrap_admission_ref": "install.sh#node_version_is_usable", "bootstrap_default_ref": "install.sh#MANAGED_NODE_VERSION" } },
     "go": { "kind": "go-index", "url": "https://go.dev/dl/?mode=json", "install_metadata": { "format": "tar.gz", "binary": "go", "strip_components": 1 } },
     "zstd": { "kind": "github-release", "repository": "facebook/zstd", "asset": "zstd-{version}.tar.gz", "install_metadata": { "format": "source-tar.gz", "binary": "zstd", "build": "make" } }
   },
