@@ -18,9 +18,7 @@ import {
 } from './protocol.ts';
 import type {
   ActivationRuntime,
-  ActivationRuntimeTransactionResult,
   ActivationPointer,
-  ActivationTransactionKind,
   AgentVersion,
   CandidateCompiler,
   DesignerPort,
@@ -73,11 +71,7 @@ import {
   type BaselineAdoptionContentRefResolver,
   type BaselineAdoptionPreflightReceipt,
 } from './baseline-adoption.ts';
-import {
-  assertActivationPreflight,
-  assertActivationTransaction,
-  buildRuntimeBindingVerification,
-} from './kernel-parts/activation-verification.ts';
+import { commitFoundryActivation } from './kernel-parts/activation-transaction.ts';
 import {
   assertEvaluationEvidence,
   assertMaterializedCandidate,
@@ -627,11 +621,15 @@ export class FoundryKernel {
       version_digest: versionDigest,
       expected_revision: expected,
     });
-    return this.#commitActivation({
+    return commitFoundryActivation({
       transaction_kind: 'rollback',
       version,
       expected_activation_revision: expected,
       authority_receipt_ref: verification.receipt.receipt_ref,
+      activationRuntime: this.#activationRuntime,
+      versions: this.#versions,
+      clock: this.#clock,
+      activity: (operation, run) => this.#activity(operation, run),
     });
   }
 
@@ -1003,11 +1001,15 @@ export class FoundryKernel {
     ) ?? fail('Activation target AgentVersion does not exist.', {
       version_digest: inspection.run.version_digest,
     });
-    const transaction = await this.#commitActivation({
+    const transaction = await commitFoundryActivation({
       transaction_kind: 'activate',
       version,
       expected_activation_revision: inspection.run.activation_revision_at_start,
       authority_receipt_ref: authority?.ref ?? null,
+      activationRuntime: this.#activationRuntime,
+      versions: this.#versions,
+      clock: this.#clock,
+      activity: (operation, run) => this.#activity(operation, run),
     });
     return this.#append(inspection, {
       eventType: 'activation_completed',
@@ -1025,57 +1027,6 @@ export class FoundryKernel {
         } : {}),
       },
     });
-  }
-
-  async #commitActivation(input: {
-    transaction_kind: ActivationTransactionKind;
-    version: AgentVersion;
-    expected_activation_revision: number;
-    authority_receipt_ref: string | null;
-  }): Promise<ActivationRuntimeTransactionResult> {
-    if (input.transaction_kind === 'rollback' && !input.authority_receipt_ref) {
-      fail('Rollback activation transaction requires an Owner authority receipt.');
-    }
-    const preflight = await this.#activity(
-      `${input.transaction_kind}_runtime_preflight`,
-      () => this.#activationRuntime.preflight({
-        transaction_kind: input.transaction_kind,
-        version: input.version,
-        expected_activation_revision: input.expected_activation_revision,
-      }),
-    );
-    assertActivationPreflight(preflight, input);
-    const runtimeBindingVerification = buildRuntimeBindingVerification(preflight);
-    const occurredAt = this.#clock.now();
-    const transaction = await this.#activity(input.transaction_kind, () => (
-      input.transaction_kind === 'activate'
-        ? this.#versions.compareAndSwapActivation({
-            target_agent_id: input.version.target_agent_id,
-            target_domain_id: input.version.target_domain_id,
-            expected_revision: input.expected_activation_revision,
-            version_digest: input.version.version_digest,
-            occurred_at: occurredAt,
-            authority_receipt_ref: input.authority_receipt_ref,
-            runtime_binding_verification: runtimeBindingVerification,
-          })
-        : this.#versions.rollback({
-            target_agent_id: input.version.target_agent_id,
-            target_domain_id: input.version.target_domain_id,
-            expected_revision: input.expected_activation_revision,
-            version_digest: input.version.version_digest,
-            occurred_at: occurredAt,
-            authority_receipt_ref: input.authority_receipt_ref!,
-            runtime_binding_verification: runtimeBindingVerification,
-          })
-    ));
-    assertActivationTransaction(transaction, {
-      ...input,
-      runtime_binding_verification: runtimeBindingVerification,
-    });
-    return {
-      ...transaction,
-      runtime_preflight: preflight,
-    };
   }
 
   async #appendJournaledResult(
