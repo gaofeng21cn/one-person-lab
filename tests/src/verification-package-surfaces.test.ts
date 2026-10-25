@@ -79,7 +79,7 @@ test('node test lanes propagate Python cache isolation to spawned tests', () => 
 });
 
 test('carrier-only installs every dependency required by the prepare build', () => {
-  assert.equal(packageJson.dependencies?.['@types/semver'], '7.7.1');
+  assert.equal(packageJson.dependencies?.['@types/semver'], '7.8.0');
   assert.equal(packageJson.devDependencies?.['@types/semver'], undefined);
 
   const packageLock = parseJsonText(read('package-lock.json')) as {
@@ -89,7 +89,7 @@ test('carrier-only installs every dependency required by the prepare build', () 
       dev?: boolean;
     }>;
   };
-  assert.equal(packageLock.packages?.['']?.dependencies?.['@types/semver'], '7.7.1');
+  assert.equal(packageLock.packages?.['']?.dependencies?.['@types/semver'], '7.8.0');
   assert.equal(packageLock.packages?.['']?.devDependencies?.['@types/semver'], undefined);
   assert.equal(packageLock.packages?.['node_modules/@types/semver']?.dev, undefined);
 });
