@@ -182,6 +182,10 @@ install_managed_node() {
 }
 
 ensure_node_runtime() {
+  node_version_is_usable "$MANAGED_NODE_VERSION" || {
+    printf 'Managed Node.js version is not admitted by the bootstrap security policy: %s\n' "$MANAGED_NODE_VERSION" >&2
+    return 1
+  }
   prepend_managed_node_if_present
   if node_is_usable; then
     return 0
