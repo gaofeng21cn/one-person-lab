@@ -40,6 +40,13 @@ jobs:
           ref: main
           path: one-person-lab-cloud
 
+      - name: Checkout Flow whitepaper source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: gaofeng21cn/opl-flow
+          ref: main
+          path: opl-flow
+
       - name: Checkout MAS whitepaper source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -114,7 +121,7 @@ jobs:
             git -C site push origin gh-pages
           fi
 
-      - name: Read back all five public documents
+      - name: Read back the complete public collection
         run: |
           node --experimental-strip-types toolchain/scripts/verify-family-whitepaper-publication.ts \
             --artifact-dir artifact/whitepapers \

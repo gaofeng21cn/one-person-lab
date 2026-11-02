@@ -6,13 +6,14 @@ import test from 'node:test';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-test('whitepaper publication deploys one complete family artifact and closes with five-document readback', () => {
+test('whitepaper publication deploys one complete family artifact and closes with complete public readback', () => {
   const reusable = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', 'reusable-whitepaper.yml'), 'utf8');
   const entry = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', 'whitepaper.yml'), 'utf8');
   assert.match(entry, /schedule:/);
   assert.match(entry, /repository: gaofeng21cn\/one-person-lab-app/);
   assert.match(entry, /repository: gaofeng21cn\/one-person-lab-cloud/);
   assert.match(entry, /repository: gaofeng21cn\/med-autoscience/);
+  assert.match(entry, /repository: gaofeng21cn\/opl-flow/);
   assert.match(entry, /npm run docs:whitepapers:family/);
   assert.match(entry, /stage-family-whitepaper-artifact\.ts/);
   assert.match(entry, /environment: whitepaper-production/);

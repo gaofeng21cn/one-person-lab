@@ -60,6 +60,16 @@
       "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-cloud-whitepaper.pdf"
     },
     {
+      "id": "opl-flow",
+      "display_name": "OPL Flow",
+      "repo_slug": "gaofeng21cn/opl-flow",
+      "repo_env": "OPL_FLOW_REPO",
+      "default_repo_dir": "opl-flow",
+      "profile": "contracts/whitepaper_profile.json",
+      "public_html_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-flow-whitepaper.html",
+      "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-flow-whitepaper.pdf"
+    },
+    {
       "id": "mas",
       "display_name": "Med Auto Science",
       "repo_slug": "gaofeng21cn/med-autoscience",

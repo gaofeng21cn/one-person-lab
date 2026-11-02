@@ -14,8 +14,8 @@ test('family whitepaper registry exposes separate family and Framework documents
   });
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout) as { whitepapers: Array<Record<string, unknown>> };
-  assert.deepEqual(output.whitepapers.map(({ id }) => id), ['opl-family', 'opl-framework', 'opl-app', 'opl-cloud', 'mas']);
-  assert.equal(new Set(output.whitepapers.map(({ repo_root }) => repo_root)).size, 4);
+  assert.deepEqual(output.whitepapers.map(({ id }) => id), ['opl-family', 'opl-framework', 'opl-app', 'opl-cloud', 'opl-flow', 'mas']);
+  assert.equal(new Set(output.whitepapers.map(({ repo_root }) => repo_root)).size, 5);
   assert.equal(output.whitepapers[0]?.profile, 'contracts/whitepaper_profile.json');
   assert.equal(output.whitepapers[1]?.profile, 'contracts/framework-whitepaper_profile.json');
   assert.equal(output.whitepapers[0]?.repo_root, output.whitepapers[1]?.repo_root);
