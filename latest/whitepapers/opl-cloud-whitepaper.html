@@ -129,7 +129,7 @@ Machine boundary: 面向用户的产品愿景源文，不持有服务实现、�
 <blockquote>
 <p>让复杂知识工作跨越本机、私有数据、远端资源与对外服务，仍然保持连续、受控、可复查</p>
 </blockquote>
-<p>发布日期：2026-07-15 最近修订：2026-08-16</p>
+<p>发布日期：2026-07-15 最近修订：2026-09-30</p>
 <p>适用对象：正在使用 AI
 推进科研、基金、汇报、书籍或其他长期知识项目，希望沿用现有工作方式使用在线工作台、协作资源与远端计算，或者把成熟
 Agent 能力提供给外部用户的个人、实验室和机构。</p>
@@ -264,8 +264,11 @@ Agent 服务         OPL Serve
 适合远程访问、协作和托管执行。两者共享同一套产品语言，分别承载同一工作模型在本机与云端的工作面。</p>
 <p>用户可以从本机开始，在需要在线访问或更强资源时选择合适的
 Workspace，再把结果带回原项目。环境改变后，任务身份、材料引用、产物关系和继续入口仍然保留。Workspace
-与对外 Agent Service
-是不同对象：前者承载用户自己的工作，后者把成熟能力提供给外部消费者。</p>
+默认交付 OPL App 及其原生界面，也可以选择已构建的 Agent；默认 App
+直接使用获准的 Runtime Release，不需要虚构 Package 或构建任务。一个
+Workspace 至多有一个当前应用选择，交付状态由 Serve 持有；选择 Agent
+时，API、Embed、Hosted UI 访问同一个当前 Agent，而不是另建一个与
+Workspace 并列的 Agent Service。</p>
 <h3 id="三先形成计划再授予资源权力">三、先形成计划，再授予资源权力</h3>
 <p>正式远端任务先形成一份可理解的资源计划：要访问哪些输入、使用什么环境与计算、写入什么位置、预计消耗什么、如何停止。个人、实验室或机构只对看得懂的计划授权。</p>
 <p>这把危险动作和普通工作分开。低风险读取可以按既定策略继续；敏感数据出域、高成本计算、共享连接器、服务公开和资源变更则在明确边界上停下来。</p>
@@ -337,14 +340,25 @@ Agent 决定。</p>
 </table>
 <p>界面连接各自可靠的事实来源，为用户形成一致体验；资源、服务、证据和专业判断则由最合适的责任方维护。</p>
 <h2 id="从成熟-agent-到对外服务">从成熟 Agent 到对外服务</h2>
-<p>成熟 Agent
-不只可以在个人工作台中使用，也可以成为其他产品或团队可以调用的服务。OPL
-Cloud
-把“开发能力”“提供服务”和“一次具体调用”分开，让每一层都有清楚责任。</p>
-<pre class="text"><code>经过验证的 Agent 能力
-  -&gt; 形成可发布版本
-  -&gt; 配置服务对象与访问政策
-  -&gt; API / Embed / Hosted UI
+<p>成熟 Agent 不只可以在个人工作台中使用，也可以通过 OPL Serve 交付到
+Workspace，成为其他产品或团队可访问的服务。OPL Cloud 把“Package
+内容”“构建产物”“Workspace
+交付”和“一次具体调用”分开，让每一层都有清楚责任。Serve UI
+可以作为上传入口，但 Agent Package 的字节、身份和元数据由 Capability
+持有；Build 固定 Package、WebUI 和获准 Runtime 版本，生成不可变
+OCI。Runtime Control 管理获准 Runtime 版本目录，不部署 Agent 实例；OPL
+App/Framework 的 Runtime 实现由其外部 Owner 提供。Serve 拥有每个
+Workspace 唯一的 Agent 交付/当前状态；Workspace
+拥有自身身份、成员、权益、资源计划和目标授权；Fabric
+只负责基础设施资源的开通、绑定和资源状态读回。</p>
+<pre class="text"><code>用户在 Serve 选择/上传 Agent Package
+  -&gt; Capability 校验并保存不可变 Package 版本
+  -&gt; 选择 WebUI 与 Runtime Control 提供的获准 Runtime 版本
+  -&gt; Build 固定三项输入并生成不可变 OCI
+  -&gt; Workspace 校验目标、成员、权益和资源计划
+  -&gt; Fabric 开通/绑定所需基础设施资源并读回资源事实
+  -&gt; Serve 将 OCI 交付到 Workspace 唯一 Agent 槽位并读回交付结果
+  -&gt; API / Embed / Hosted UI 访问同一个当前 Agent
   -&gt; 一次具体调用或持续会话
   -&gt; 结果、用量与证据返回</code></pre>
 <p>OPL Serve 提供三种交付方式，并让它们共享一套服务原则：</p>
@@ -379,9 +393,11 @@ Cloud
 </tr>
 </tbody>
 </table>
-<p>三种方式共享身份、访问策略、额度、运行反馈和结果证据。发布者仍然负责
-Agent 的专业承诺、内容和客户关系；OPL Cloud
-负责让服务能够被安全、稳定、可解释地访问。</p>
+<p>三种方式共享同一个 Workspace
+Agent、访问策略、额度、运行反馈和结果证据，不会分别创建 Agent
+或部署。发布者仍然负责 Agent 的专业承诺、Skills 与客户关系；OPL Cloud
+负责 Package 登记、可复现构建、Workspace
+交付，以及安全、稳定、可解释的访问。</p>
 <h2 id="一条典型的专业工作链">一条典型的专业工作链</h2>
 <p>下面的实验室场景，比模块目录更能说明 OPL Cloud 为什么这样设计。</p>
 <h3 id="从本机形成问题">1. 从本机形成问题</h3>
@@ -429,21 +445,23 @@ API、嵌入组件或托管界面。开发者仍对 Agent
 <p>远端任务说明计算位置、软件环境、输入、输出和停止方式。Fabric
 的职责是忠实执行获准计划，并返回可检查结果。</p>
 <h3 id="版本可信">版本可信</h3>
-<p>用户能知道正在使用或发布的是哪一版能力，变化有清楚来源。工作台、服务与资源执行都引用同一份经过确认的版本，不各自维护互相冲突的副本。</p>
+<p>用户能知道正在使用或发布的是哪一版能力，变化有清楚来源。Package、WebUI
+和 Runtime 版本被固定进不可变 OCI；Workspace Agent 的交付状态由 Serve
+唯一拥有，不由工作台、Workspace 和 Fabric 重复维护。</p>
 <h3 id="服务可信">服务可信</h3>
 <p>对外 Agent
 服务有清楚身份、访问政策、运行状态和责任方。API、嵌入组件和托管界面遵循一致的访问、反馈与证据原则。</p>
 <h3 id="结果可信">结果可信</h3>
-<p>运行证据交给领域审阅。最终质量、发布、提交或交付决定来自对应领域的专业
-Agent 和必要的人类负责人。</p>
+<p>运行证据交给领域审阅。Agent Package、WebUI 和 Runtime 版本被固定进
+OCI；Workspace 的 Agent 由 Serve 统一交付并提供 API、Embed、Hosted UI
+访问。最终质量、发布、提交或交付决定来自对应领域的专业 Agent
+和必要的人类负责人。</p>
 <h3 id="接力可信">接力可信</h3>
 <p>重要结果带有负责人、输入输出、审阅结果和继续入口。协作成员未来可以重新理解和修订，不依赖某个人记住全部过程。</p>
 <h2 id="本文边界">本文边界</h2>
 <p>这份白皮书面向用户解释 OPL Cloud
 的设计理念与目标产品边界，回答“为什么这样设计会更好用、更可信”。功能清单、安装说明、服务状态、价格、发布时间与正式公告由对应产品页面提供。</p>
-<p>本文呈现 OPL Cloud
-的产品选择与设计承诺。具体能力的当前可用状态由正式产品页面持续更新；读者可以据此判断
-OPL Cloud 是否对复杂知识工作的真实矛盾做出了完整、专业和一致的回答。</p>
+<p>本文呈现 OPL Cloud 的产品选择与设计承诺。<a href="https://github.com/gaofeng21cn/one-person-lab-cloud/blob/main/docs/architecture.md">架构</a>持有职责边界，<a href="https://github.com/gaofeng21cn/one-person-lab-cloud/blob/main/docs/implementation-architecture.md">实现说明</a>和<a href="https://github.com/gaofeng21cn/one-person-lab-cloud/blob/main/docs/status.md">当前状态</a>分别持有源码路径与验收证据，<a href="https://github.com/gaofeng21cn/one-person-lab-cloud/blob/main/docs/installation.md">安装说明</a>区分公开版本和候选版本。文档、源码与构建不证明具体实例已部署，读者应按对应层次判断实际可用范围。</p>
 <h2 id="结语">结语</h2>
 <p>好的云端产品让用户继续思考问题、审阅结果和推进成果，同时在需要时获得更强
 AI、在线工作空间、私有数据连接、远端计算、协作和对外 Agent 服务。</p>

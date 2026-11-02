@@ -125,7 +125,7 @@ font-size: 1.9rem;
 </blockquote>
 <!-- Owner: `OPL Framework`; Purpose: `public_framework_whitepaper_body_source`; State: `active_public_source`; Machine boundary: Human-readable design whitepaper. It explains product philosophy and architecture commitments; implementation currentness, runtime truth, release readiness, Package currentness, publication proof, and domain verdicts remain with their owning contracts, source, runtime readbacks, receipts, and evidence surfaces. -->
 <p>发布日期：2026-08-15</p>
-<p>最近修订：2026-08-16</p>
+<p>最近修订：2026-09-07</p>
 <p>适用对象：希望理解 OPL Framework 为什么这样设计、它如何支撑可靠的 AI
 专业工作，以及这套架构为什么能够长期演进的用户、合作者和技术决策者。</p>
 <p>核心判断：优秀的智能体底座应让每项能力都能被独立理解、验证、替换和组合，同时让事实与责任始终清楚可见。</p>
@@ -154,7 +154,7 @@ font-size: 1.9rem;
 提供本地工作台；Cloud 将同一条
 工作线延伸到在线空间、托管资源与协作服务。四层产品各有分工，用户始终使用同一种任务、成果、
 证据和责任语言。</p>
-<p>从建立工作边界到持续运营，十一项品牌能力共同支撑一项专业工作的完整旅程。</p>
+<p>从建立工作边界到持续运营，品牌能力帮助读者理解一项专业工作的完整旅程。它们是能力地图，不是固定安装清单。</p>
 <table>
 <thead>
 <tr class="header">
@@ -221,7 +221,7 @@ font-size: 1.9rem;
 </tr>
 </tbody>
 </table>
-<p>这些能力不是十一套彼此割裂的产品，而是一条连续工作链。用户从目标出发，OPL
+<p>这些能力共同服务于一条连续工作链。用户从目标出发，OPL
 负责在合适的位置
 提供所需能力；无论工作发生在本机还是云端，任务、文件、进度、证据和下一步都保持连贯。</p>
 <h2 id="能力独立升级体验始终一致">能力独立升级，体验始终一致</h2>
@@ -236,9 +236,10 @@ OPL Packages
 <h2 id="受控组合保持体验清楚">受控组合，保持体验清楚</h2>
 <p>OPL Framework
 在内部保留能力组合的自由，在产品中提供少量经过完整验证的组合形态。</p>
-<p>基础运行、完整桌面工作台、研究工作、基金工作、视觉交付和 Foundry
-开发，需要的能力组合各有侧重。Framework
-用受控配置表达这些差异：每种配置都选择明确的能力，冻结实际组合，并接受完整验证。</p>
+<p>Framework 的受控组合分别服务于 headless 运行、App 集成和 Foundry
+开发。研究、基金与视觉交付由安装的专业 Package
+提供能力，不自动成为另一组 Framework Host
+profile。每种组合都需要选择明确能力、绑定实际身份并接受相应验证。</p>
 <p>用户只需选择“我要完成什么工作”。稳定的能力域降低维护成本，受控配置降低使用成本；二者结合，让系统内部快速演进，产品体验仍然稳定、清楚、可预测。</p>
 <h2 id="framework-与-app运行能力和产品体验各司其职">Framework 与
 App：运行能力和产品体验各司其职</h2>
@@ -249,12 +250,21 @@ Lab App
 <p>两者采用一致的可组合设计，但承担不同责任：Framework
 保证能力真实可用，App 保证用户看到的是
 一套稳定产品。运行底座和界面因此可以独立演进，同时共享同一份任务、状态和操作事实。</p>
+<p>Framework Host 负责通用运行、Package 能力图和 App 投影；Studio 的
+DSH/Cordis Application Host 负责自己的 profile、插件、原生 Codex 和交付
+transport。两者通过公开合同协作，各自保留清楚范围。 具体分工由 <a href="https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#host-scope-boundary">Framework
+架构</a> 和 <a href="https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-shell-adapter.json">App
+adapter contract</a> 维护。</p>
 <h2 id="界面持续演进产品体验保持连续">界面持续演进，产品体验保持连续</h2>
 <p>One Person Lab App
 对外提供一套统一的任务、能力、文件、状态和操作体验。界面设计可以持续改进，
-但用户不会因此进入两套产品，也不需要重新建立工作、迁移能力或学习相互冲突的操作方式。</p>
-<p>只有经过完整兼容性、安装、安全和发布验证的界面才会进入正式产品。内部实现如何演进，不改变用户
-已有工作的连续性，也不改变产品对状态、操作和结果的承诺。</p>
+App
+负责定义升级时的身份、数据保留、能力和更新路径，让用户能够从已有工作继续。</p>
+<p>正式版本发布、首次安装、旧版升级和 Preview 到 Stable 的终端 handoff
+分别需要自己的证据。 Framework source
+与聚合状态不能替代这些验收；支持路径和当前证据由 <a href="https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json">App
+发布合同</a> 和 <a href="https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/status.md">App
+当前状态</a> 维护。</p>
 <h2 id="自进化围绕能力持续改进">自进化：围绕能力持续改进</h2>
 <p>这套底座的长期价值，在于让系统能够观察自身、提出改进并在证据约束下采用更好的实现。</p>
 <p>当执行、发现、观测、评估和连接都可以独立升级时，Foundry
@@ -299,7 +309,7 @@ Lab App
 <p>OPL Framework
 的目标，是成为一套结构清楚、持续进化的专业能力系统。</p>
 <p>四层生态让用户理解 Base、App、Packages 和 Cloud
-的分工；十一项品牌能力让一项工作从准备、组建、推进到运营都有清楚去向；动态装配让运行能力可以组合、检查和替换；经过验证的产品组合让内部自由不会成为用户负担；Framework
+的分工；能力地图让一项工作从准备、组建、推进到运营都有清楚去向；动态装配让运行能力可以组合、检查和替换；经过验证的产品组合让内部自由不会成为用户负担；Framework
 与 App 让运行和界面共享同一种设计语言；Foundry
 则让每项能力可以在证据约束下持续改进。</p>
 <p>这些设计最终应体现为更稳定的工作、更清楚的进展、更容易恢复的任务，以及一个能够不断升级却不丢失责任与事实的

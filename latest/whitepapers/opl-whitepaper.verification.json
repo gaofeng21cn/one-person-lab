@@ -1,7 +1,7 @@
 {
   "schema_version": "opl_whitepaper_artifact_verification.v2",
   "status": "whitepaper_artifact_verified",
-  "generated_at": "2026-08-16T00:33:40.880Z",
+  "generated_at": "2026-11-02T04:37:23.988Z",
   "publication_date": "2026-07-13",
   "claim_boundary": {
     "artifact_render_verified": true,
@@ -11,7 +11,7 @@
     "domain_ready": false
   },
   "source_git": {
-    "commit": "0a34ae51a374477fcd5c0043c05e2c48a04534aa",
+    "commit": "592d35556f4750d64efb5fee5ebf772d760cf3b0",
     "branch": "main",
     "tracked_dirty": false
   },
@@ -19,17 +19,17 @@
   "source_profile_sha256": "8af288de40c1dc0fb07170f1b592f4922a428683be1aa6b655acbf0a49c3b2fd",
   "source_profile_size": 517,
   "source_markdown": "docs/whitepapers/opl-whitepaper.md",
-  "source_markdown_sha256": "926d09ebdce1e96bd5c1c4cd9e434401fce7dec35b7660a0263470fe4a1b0035",
-  "source_markdown_size": 18147,
+  "source_markdown_sha256": "c83e91b4b048836711990ae0c2a52dc0272facc0807210a0c7efd2bc777550f6",
+  "source_markdown_size": 18498,
   "generated_markdown": "docs/site/latest/whitepapers/opl-whitepaper.md",
-  "generated_markdown_sha256": "926d09ebdce1e96bd5c1c4cd9e434401fce7dec35b7660a0263470fe4a1b0035",
-  "generated_markdown_size": 18147,
+  "generated_markdown_sha256": "c83e91b4b048836711990ae0c2a52dc0272facc0807210a0c7efd2bc777550f6",
+  "generated_markdown_size": 18498,
   "generated_html": "docs/site/latest/whitepapers/opl-whitepaper.html",
-  "generated_html_sha256": "0462ab03e55da8d8e76390642bc951fb69af51ce9c21031bfd9ea1e33166df8c",
-  "generated_html_size": 2631326,
+  "generated_html_sha256": "d8970a98233ac63c3d7da39f8fb523b743b101680dd879a9de2fc7405fe05c57",
+  "generated_html_size": 2631699,
   "generated_pdf": "docs/site/latest/whitepapers/opl-whitepaper.pdf",
-  "generated_pdf_sha256": "48a82836cb2016f92465eb7ec4c0af2cb801deb062ac01ee32688fc7fa3f39ba",
-  "generated_pdf_size": 1813368,
+  "generated_pdf_sha256": "cd5b9288a3db5e1253a2d92f7f3ec7a462cf22be8e246db41dcf8035fc7cf323",
+  "generated_pdf_size": 1814823,
   "temp_markdown": "tmp/pdfs/opl-whitepaper/opl-whitepaper.pandoc.md",
   "rendered_dir": "tmp/pdfs/opl-whitepaper/rendered",
   "rendered_pages": 8,
@@ -46,8 +46,8 @@
     },
     {
       "page": "page-3.png",
-      "sha256": "7837f1aba505d17ccd6f956a0b0b9f3f567d94f3fb8904d1a3490f44b7de7f28",
-      "size": 400113
+      "sha256": "27de4d05a0fbbd6f97cc3ce8d5efb39edfde27083e97250320482914a25ffbbe",
+      "size": 400098
     },
     {
       "page": "page-4.png",
@@ -56,23 +56,23 @@
     },
     {
       "page": "page-5.png",
-      "sha256": "949a31defd90a726ced39bb50a3c8fce057a786098ef64c935e7ffeaa3ccfda0",
-      "size": 489876
+      "sha256": "b00913ddfe9b51726ac3046944128baaf362affe68d37865920db91ac022a3b5",
+      "size": 465534
     },
     {
       "page": "page-6.png",
-      "sha256": "c268c9acf7214eb0b4d3078d0d45f8b7024a4cb4cff295537befe0a5d0bbcc67",
-      "size": 462102
+      "sha256": "4a617a52f259d69fc105246f91b502cf331ed027e5dd7c5d8f48f07b072369c0",
+      "size": 490677
     },
     {
       "page": "page-7.png",
-      "sha256": "8f76a282ea653e9e01d7a09f75e1b6672203fb8f4ed351ddcc575951fed15d6a",
-      "size": 365086
+      "sha256": "d104a9816805d889e86bc809b4a4481823cab5b9db18d3af78cac0cac19ce701",
+      "size": 337758
     },
     {
       "page": "page-8.png",
-      "sha256": "b25151f4b20f8da04d1e8fd0e85a8e22a69848c0158522cd08845d29851ee13c",
-      "size": 227685
+      "sha256": "3b7068ae2e47f0a6a525f46b9802fe1a37a36e7d24a00e32922ea38b4cc536c5",
+      "size": 264462
     }
   ],
   "pdf_pages": 8,
@@ -86,7 +86,7 @@
   },
   "style_profile": "opl-whitepaper-pandoc-xelatex-v2",
   "renderer": {
-    "repo_commit": "0a34ae51a374477fcd5c0043c05e2c48a04534aa",
+    "repo_commit": "592d35556f4750d64efb5fee5ebf772d760cf3b0",
     "builder": {
       "path": "scripts/opl-whitepaper-builder.ts",
       "sha256": "1b9f93e4678d9f74a370d7ca6baf29dbca0636382c6fa443f60f0e6589b514aa",
@@ -106,8 +106,8 @@
     {
       "kind": "html",
       "path": "docs/site/latest/whitepapers/index.html",
-      "sha256": "7e2d510c1c5b3e6638b056c467505f5ceb427a150505bb3b01c92c471e5fa104",
-      "size": 6046,
+      "sha256": "e5d74536c155b9d9864dcb32f8213816525ea2a126faf549228687b7f4dc2904",
+      "size": 6589,
       "url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/"
     }
   ],
@@ -153,6 +153,14 @@
     {
       "label": "OPL Book Forge（OBF）",
       "url": "https://github.com/gaofeng21cn/opl-bookforge"
+    },
+    {
+      "label": "App 发布合同",
+      "url": "https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json"
+    },
+    {
+      "label": "App 当前状态",
+      "url": "https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/status.md"
     },
     {
       "label": "One Person Lab",

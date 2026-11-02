@@ -125,7 +125,7 @@ font-size: 1.9rem;
 </blockquote>
 <!-- Owner: `one-person-lab-app`; Purpose: `public_app_whitepaper_body_source`; State: `active_public_source`; Machine boundary: Human-readable whitepaper body source. Generated PDF and verification JSON are derived artifacts. App release, runtime, domain, quality, owner receipt, production, and currentness truth stay in contracts, source, release artifacts, runtime readback, domain owner surfaces, and evidence records. -->
 <p>发布日期：2026-07-13</p>
-<p>最近修订：2026-08-16</p>
+<p>最近修订：2026-09-07</p>
 <p>适用对象：希望理解 OPL App
 为什么这样设计，以及这些设计怎样帮助自己完成研究、基金、演示和书稿等复杂知识工作的用户、合作者、早期采用者和技术决策者。</p>
 <p>核心判断：一个专业 AI
@@ -153,42 +153,10 @@ font-size: 1.9rem;
 <h2 id="设计一从工作目的开始">设计一：从工作目的开始</h2>
 <p>用户打开 OPL
 App，首先表达“我要完成什么”，系统随后选择合适的专业能力与工作环境。内部工具和运行方式留在系统背后。</p>
-<p>产品提供四个高频工作目的：</p>
-<table>
-<thead>
-<tr class="header">
-<th>用户看到的入口</th>
-<th>用户想完成的事</th>
-<th>专业 Agent</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>科研</td>
-<td>从问题、材料和数据走向分析、证据与论文交付</td>
-<td>MAS</td>
-</tr>
-<tr class="even">
-<td>基金</td>
-<td>形成有说服力的选题、论证、申请书与修订</td>
-<td>MAG</td>
-</tr>
-<tr class="odd">
-<td>演示</td>
-<td>把内容、数据和故事线变成可审阅的视觉交付</td>
-<td>RCA</td>
-</tr>
-<tr class="even">
-<td>写书</td>
-<td>组织大纲、章节、风格、修订与出版交接</td>
-<td>OBF</td>
-</tr>
-</tbody>
-</table>
-<p>这四个目的入口与 OPL Meta
-Agent（OMA）的“元智能体”入口，共同构成五个默认起点。它们不是能力上限：App
-可以发现更多兼容的专业 Agent，用户也可以决定哪些快捷入口出现在首页。</p>
-<p>这样的设计有两个好处：新用户可以直接从工作目的开始，熟练用户可以自由扩展快捷入口。产品可以不断增加专业能力，首屏始终回答一个问题：你今天要完成什么？</p>
+<p>首页入口来自当前安装并启用的专业能力，以及用户选择的快捷方式。例如，科研能力帮助用户从问题、材料和数据走向分析与论文；基金能力支持选题、论证和申请书；视觉能力支持图表和演示；书稿能力支持章节组织与修订。这些是工作目的的例子，不是固定产品清单。</p>
+<p>App 根据 Framework 提供的能力信息展示可用入口。新增或移除 Package
+后，入口随实际可用能力变化；用户也可以决定哪些快捷入口出现在首页。
+这样的设计有两个好处：新用户可以直接从工作目的开始，熟练用户可以自由扩展快捷入口。产品可以不断增加专业能力，首屏始终回答一个问题：你今天要完成什么？</p>
 <h2 id="设计二成果必须带着来路">设计二：成果必须带着来路</h2>
 <p>正式知识工作的结果需要同时包含成果与来路。一个结论、一张图、一页演示或一个章节，能够回到它所依赖的材料、过程和审阅，才值得被继续使用。</p>
 <p>OPL App 把工作表达为一条可以复查的链：</p>

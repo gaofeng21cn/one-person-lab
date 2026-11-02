@@ -1,0 +1,157 @@
+{
+  "schema_version": "opl_whitepaper_artifact_verification.v2",
+  "status": "whitepaper_artifact_verified",
+  "generated_at": "2026-11-02T04:37:57.361Z",
+  "publication_date": "2026-11-02",
+  "claim_boundary": {
+    "artifact_render_verified": true,
+    "published_verified": false,
+    "product_ready": false,
+    "runtime_ready": false,
+    "domain_ready": false
+  },
+  "source_git": {
+    "commit": "24ae8d8ca3b08ab3542a17430b5d6bb6506a3ca7",
+    "branch": "main",
+    "tracked_dirty": false
+  },
+  "source_profile": "contracts/whitepaper_profile.json",
+  "source_profile_sha256": "6b368dfe5aa68fa49d16395873646e3eaa09f56f3d762f8bf387677cbfaaab5b",
+  "source_profile_size": 524,
+  "source_markdown": "docs/whitepapers/opl-flow-whitepaper.md",
+  "source_markdown_sha256": "a07b6500d5087fd5e99113be16654ee50beeca9fd40a1d7d33752a9ad1458b73",
+  "source_markdown_size": 18007,
+  "generated_markdown": "docs/site/latest/whitepapers/opl-flow-whitepaper.md",
+  "generated_markdown_sha256": "a07b6500d5087fd5e99113be16654ee50beeca9fd40a1d7d33752a9ad1458b73",
+  "generated_markdown_size": 18007,
+  "generated_html": "docs/site/latest/whitepapers/opl-flow-whitepaper.html",
+  "generated_html_sha256": "2e69dc39eeffd773a27271427b3b476fd88ae1e1908f2033143f1efd056c45d7",
+  "generated_html_size": 22667,
+  "generated_pdf": "docs/site/latest/whitepapers/opl-flow-whitepaper.pdf",
+  "generated_pdf_sha256": "1e07b13ad8d3038aa6d1073e999cf657e715c485f0d16ca9fa2f519fa64dc5bd",
+  "generated_pdf_size": 159177,
+  "temp_markdown": "tmp/pdfs/opl-flow-whitepaper/opl-flow-whitepaper.pandoc.md",
+  "rendered_dir": "tmp/pdfs/opl-flow-whitepaper/rendered",
+  "rendered_pages": 7,
+  "rendered_page_hashes": [
+    {
+      "page": "page-1.png",
+      "sha256": "9562b4e81974a512b49343c459a611e1418f7195741bc62e922261d7042869a0",
+      "size": 63501
+    },
+    {
+      "page": "page-2.png",
+      "sha256": "833322da083eb03662d64d60094968fafc0e0234da7f376b0f571c165abc7f65",
+      "size": 96057
+    },
+    {
+      "page": "page-3.png",
+      "sha256": "3929b16141fb5e78481ed973cd0b941e0f43b2f7004903a2f9a8b939d07cf44e",
+      "size": 498111
+    },
+    {
+      "page": "page-4.png",
+      "sha256": "1d1c56fd07043645d1567185e65c2785d57d3774e8fd10208bec31eac3959481",
+      "size": 406945
+    },
+    {
+      "page": "page-5.png",
+      "sha256": "926efba9a8f7dc355cefcb1cfeffeb176094fed4107a192fbd1914e5dd4ec135",
+      "size": 521014
+    },
+    {
+      "page": "page-6.png",
+      "sha256": "aad18a199a819356c6964c92b407b3d0cf8591e3096d698e503c0a853f08dd6d",
+      "size": 483007
+    },
+    {
+      "page": "page-7.png",
+      "sha256": "689947b8ae8c6b7f3728b16ba84514ada1eb1a63b9229f01fb89c1d46776ba2e",
+      "size": 60393
+    }
+  ],
+  "pdf_pages": 7,
+  "pdf_page_size_pts": {
+    "width": 612,
+    "height": 792
+  },
+  "page_policy": {
+    "min": 6,
+    "max": 12
+  },
+  "style_profile": "opl-whitepaper-pandoc-xelatex-v2",
+  "renderer": {
+    "repo_commit": "592d35556f4750d64efb5fee5ebf772d760cf3b0",
+    "builder": {
+      "path": "scripts/opl-whitepaper-builder.ts",
+      "sha256": "1b9f93e4678d9f74a370d7ca6baf29dbca0636382c6fa443f60f0e6589b514aa",
+      "size": 17276
+    },
+    "style": {
+      "path": "scripts/whitepaper-style.css",
+      "sha256": "2019446149baf356d6a8ed2184c70d15275a85e8b4e8964a5360f1822ae32d9f",
+      "size": 1776
+    }
+  },
+  "public_urls": {
+    "html": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-flow-whitepaper.html",
+    "pdf": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-flow-whitepaper.pdf"
+  },
+  "additional_public_artifacts": [],
+  "tools": {
+    "pandoc": {
+      "path": "/usr/bin/pandoc",
+      "version": "pandoc 3.1.3"
+    },
+    "xelatex": {
+      "path": "/usr/bin/xelatex",
+      "version": "XeTeX 3.141592653-2.6-0.999995 (TeX Live 2023/Debian)"
+    },
+    "pdfinfo": {
+      "path": "/usr/bin/pdfinfo",
+      "version": "pdfinfo version 24.02.0"
+    },
+    "pdftoppm": {
+      "path": "/usr/bin/pdftoppm",
+      "version": "pdftoppm version 24.02.0"
+    },
+    "pdftotext": {
+      "path": "/usr/bin/pdftotext",
+      "version": "pdftotext version 24.02.0"
+    }
+  },
+  "references": [
+    {
+      "label": "工作流架构",
+      "url": "https://github.com/gaofeng21cn/opl-flow/blob/main/docs/reusable-workflow-architecture.md"
+    },
+    {
+      "label": "Fleet 架构",
+      "url": "https://github.com/gaofeng21cn/opl-flow/blob/main/docs/opl-fleet-architecture.md"
+    },
+    {
+      "label": "One Person Lab 白皮书",
+      "url": "https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/whitepapers/opl-whitepaper.md"
+    },
+    {
+      "label": "OPL Framework 白皮书",
+      "url": "https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/whitepapers/opl-framework-whitepaper.md"
+    },
+    {
+      "label": "OPL App 白皮书",
+      "url": "https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/whitepapers/opl-app-whitepaper.md"
+    },
+    {
+      "label": "OPL Cloud 白皮书",
+      "url": "https://github.com/gaofeng21cn/one-person-lab-cloud/blob/main/docs/whitepapers/opl-cloud-whitepaper.md"
+    },
+    {
+      "label": "MAS 白皮书",
+      "url": "https://github.com/gaofeng21cn/med-autoscience/blob/main/docs/whitepapers/mas-whitepaper.md"
+    },
+    {
+      "label": "OPL Flow 文档索引",
+      "url": "https://github.com/gaofeng21cn/opl-flow/blob/main/docs/README.md"
+    }
+  ]
+}

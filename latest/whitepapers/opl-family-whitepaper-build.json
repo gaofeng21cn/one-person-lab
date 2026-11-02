@@ -1,37 +1,43 @@
 {
   "schema_version": "opl_family_whitepaper_build.v1",
   "mode": "preview",
-  "generated_at": "2026-08-16T00:34:41.818Z",
-  "renderer_commit": "0a34ae51a374477fcd5c0043c05e2c48a04534aa",
+  "generated_at": "2026-11-02T04:38:08.945Z",
+  "renderer_commit": "592d35556f4750d64efb5fee5ebf772d760cf3b0",
   "builds": [
     {
       "id": "opl-family",
       "repo_slug": "gaofeng21cn/one-person-lab",
-      "git_commit": "0a34ae51a374477fcd5c0043c05e2c48a04534aa",
+      "git_commit": "592d35556f4750d64efb5fee5ebf772d760cf3b0",
       "verification": "opl-whitepaper.verification.json"
     },
     {
       "id": "opl-framework",
       "repo_slug": "gaofeng21cn/one-person-lab",
-      "git_commit": "0a34ae51a374477fcd5c0043c05e2c48a04534aa",
+      "git_commit": "592d35556f4750d64efb5fee5ebf772d760cf3b0",
       "verification": "opl-framework-whitepaper.verification.json"
     },
     {
       "id": "opl-app",
       "repo_slug": "gaofeng21cn/one-person-lab-app",
-      "git_commit": "70b543869336fb8c29f20cff5fc7e38fceb01754",
+      "git_commit": "1dff14cfb10e311edd8e2a71e3f588fbd8b1ab26",
       "verification": "opl-app-whitepaper.verification.json"
     },
     {
       "id": "opl-cloud",
       "repo_slug": "gaofeng21cn/one-person-lab-cloud",
-      "git_commit": "a43b3a412d873cefbfa3cb5dfd1b0c8076864604",
+      "git_commit": "eb96132e9c8be48b12f0ea36010e5e7431b25caa",
       "verification": "opl-cloud-whitepaper.verification.json"
+    },
+    {
+      "id": "opl-flow",
+      "repo_slug": "gaofeng21cn/opl-flow",
+      "git_commit": "24ae8d8ca3b08ab3542a17430b5d6bb6506a3ca7",
+      "verification": "opl-flow-whitepaper.verification.json"
     },
     {
       "id": "mas",
       "repo_slug": "gaofeng21cn/med-autoscience",
-      "git_commit": "c3ca7b3e96770767e632de8724aac0cf3cd42371",
+      "git_commit": "41bc0110e2c82804d3a5eb795d63661492bc787c",
       "verification": "mas-whitepaper.verification.json"
     }
   ]
