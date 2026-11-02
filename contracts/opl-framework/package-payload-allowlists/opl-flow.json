@@ -81,6 +81,27 @@
     "templates/TASTE.md",
     "skills/software-development/references/grok-build/guide.md",
     "skills/software-development/references/grok-build/handoff-contract.md",
-    "skills/software-development/scripts/run-grok-build-agent.sh"
+    "skills/software-development/scripts/run-grok-build-agent.sh",
+    "scripts/opl_ledger.py",
+    "scripts/opl_execution.py",
+    "scripts/opl_task_owner.py",
+    "contracts/worker-handoff.schema.json",
+    "contracts/worker-result.schema.json",
+    "contracts/task-owner-migration.schema.json",
+    "contracts/execution-requirements.schema.json",
+    "contracts/worktree-ownership-ledger.schema.json",
+    "contracts/fleet-workspace-profile.schema.json",
+    "scripts/opl_fleet_parts/__init__.py",
+    "scripts/opl_fleet_parts/fleet_cli.py",
+    "scripts/opl_fleet_parts/fleet_common.py",
+    "scripts/opl_fleet_parts/fleet_control.py",
+    "scripts/opl_fleet_parts/fleet_dispatch.py",
+    "scripts/opl_fleet_parts/fleet_execution.py",
+    "scripts/opl_fleet_parts/fleet_features.py",
+    "scripts/opl_fleet_parts/fleet_lease.py",
+    "scripts/opl_fleet_parts/fleet_reconcile.py",
+    "scripts/opl_fleet_parts/fleet_runner.py",
+    "scripts/opl_fleet_parts/fleet_workflow.py",
+    "scripts/opl_fleet_parts/fleet_workspace.py"
   ]
 }
