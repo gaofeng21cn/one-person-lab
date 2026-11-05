@@ -795,8 +795,10 @@ test('scientific connector rejects installed package content lock drift before h
 
 test('scientific provider discovery is lazy for help and fail-closed for Connect without an installed Package', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-empty-carrier-state-'));
+  // Project-local capability packages are also discovered from sibling owners.
+  const env = { OPL_STATE_DIR: stateRoot, OPL_FAMILY_WORKSPACE_ROOT: stateRoot };
   try {
-    const help = runCli(['--help'], { OPL_STATE_DIR: stateRoot });
+    const help = runCli(['--help'], env);
     assert.equal(help.version, 'g2');
     const failure = runCliFailure([
       'connect',
@@ -807,7 +809,7 @@ test('scientific provider discovery is lazy for help and fail-closed for Connect
       '--query',
       'missing package',
       '--json',
-    ], { OPL_STATE_DIR: stateRoot });
+    ], env);
     assert.equal(failure.payload.error.code, 'codex_command_failed');
     assert.equal(failure.payload.error.details.reason_code, 'installed_package_descriptor_missing');
   } finally {
