@@ -166,6 +166,7 @@ if (command === 'plugin marketplace list --json') {
     );
     assert.deepEqual(JSON.parse(fs.readFileSync(callsPath, 'utf8')), [
       'plugin list --json',
+      'plugin list --json',
       'plugin marketplace list --json',
       'plugin marketplace add gaofeng21cn/opl-flow --json',
       'plugin add opl-flow@opl-flow --json',
@@ -179,6 +180,65 @@ if (command === 'plugin marketplace list --json') {
     removeFixtureTree(root);
   }
 });
+
+for (const action of ['update', 'repair']) {
+  test(`packages ${action} preserves installed OCI transport when selecting a newer owner`, () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-payload-update-'));
+    const stateDir = path.join(root, 'opl-state');
+    const marketplace = path.join(stateDir, 'codex-plugin-marketplaces', 'opl-bookforge-local');
+    const source = path.join(marketplace, 'plugins', 'opl-bookforge');
+    const callsPath = path.join(root, 'calls.jsonl');
+    const registryPath = path.join(root, 'registry.jsonl');
+    const binary = path.join(root, 'codex.mjs');
+    const manifest = parseJsonText(fs.readFileSync(
+      path.join(repoRoot, 'contracts/opl-framework/packages/obf.json'), 'utf8',
+    )) as any;
+    manifest.version = '0.0.1';
+    try {
+      fs.mkdirSync(path.join(source, '.codex-plugin'), { recursive: true });
+      fs.mkdirSync(path.join(source, 'skills/opl-bookforge'), { recursive: true });
+      fs.writeFileSync(path.join(source, 'opl-package.json'), formatJsonPayload(manifest));
+      fs.writeFileSync(path.join(source, '.codex-plugin/plugin.json'), formatJsonPayload({
+        name: 'opl-bookforge', version: '0.0.1', skills: './skills/',
+      }));
+      fs.writeFileSync(path.join(source, 'skills/opl-bookforge/SKILL.md'), '# Book Forge\n');
+      const listed = pluginList([{
+        pluginId: 'opl-bookforge@opl-bookforge-local', version: '0.0.1',
+        sourcePath: source, marketplaceSource: marketplace,
+      }]);
+      fs.writeFileSync(binary, `#!/usr/bin/env node
+import fs from 'node:fs';
+const command = process.argv.slice(2).join(' ');
+fs.appendFileSync(${JSON.stringify(callsPath)}, JSON.stringify(command) + '\\n');
+if (command === 'plugin list --json') process.stdout.write(${JSON.stringify(listed)});
+else { process.stderr.write('Unexpected native mutation'); process.exitCode = 2; }
+`);
+      const curl = path.join(root, 'curl');
+      fs.writeFileSync(curl, `#!/usr/bin/env node
+import fs from 'node:fs';
+fs.appendFileSync(${JSON.stringify(registryPath)}, JSON.stringify(process.argv.slice(2)) + '\\n');
+process.stdout.write('{}');
+`);
+      fs.chmodSync(binary, 0o755);
+      fs.chmodSync(curl, 0o755);
+      // Stop at the registry boundary with a stub response; no real download or mutation.
+      const result = runCliFailure(['packages', action, 'obf'], {
+        HOME: root, CODEX_HOME: path.join(root, 'codex-home'), OPL_STATE_DIR: stateDir,
+        OPL_CODEX_PLUGIN_BIN: binary, OPL_MODULE_SOURCE_MODE: 'oci',
+        PATH: `${root}${path.delimiter}${process.env.PATH}`,
+      }) as any;
+      assert.equal(result.payload.error.details.failure_code, 'configured_codex_plugin_carrier_source_invalid');
+      assert.match(result.payload.error.message, /registry did not return a pull token/);
+      const urls = fs.readFileSync(registryPath, 'utf8');
+      assert.match(urls, /ghcr\.io\/token/);
+      const calls = fs.readFileSync(callsPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+      assert.ok(calls.every((command) => command === 'plugin list --json'));
+      assert.equal(JSON.parse(fs.readFileSync(path.join(source, 'opl-package.json'), 'utf8')).version, '0.0.1');
+    } finally {
+      removeFixtureTree(root);
+    }
+  });
+}
 
 test('configured Codex carrier toggles only its native plugin table and verifies fresh enabled state', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configured-carrier-toggle-'));

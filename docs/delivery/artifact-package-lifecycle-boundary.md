@@ -54,6 +54,8 @@ digest，接口发现与 Hosted action 使用同一个父级源码根，不创�
 已安装在 OPL state 受管 marketplace 目录中的本地插件包，更新和修复复用安装时的
 payload 物化路径，不退回 descriptor 中的 Git 仓库地址另建 marketplace。已有 Git
 carrier 和显式开发目录继续使用原有生命周期，不因存在 payload 声明而切换安装来源。
+更新目标的版本与能力取自当前 owner projection；是否使用托管 payload 路径取自已安装
+carrier 的实际目录。选中新版 projection 时仍保留这项安装事实，更新与修复均遵循此规则。
 
 Capability Package 仅在声明 `publication_ref` 时进入 OCI source acquisition；未声明的
 Package 保留固定提交的 GitHub payload transport 和原有文件摘要、content lock 校验。

@@ -131,11 +131,15 @@ function nativeLifecycleResult(
   descriptorOverride?: Awaited<ReturnType<typeof requireDescriptor>>,
 ) {
   const descriptor = descriptorOverride ?? requireDescriptor(input, action, { installed: action !== 'install' });
+  // The target projection selects new bytes; the installed descriptor owns transport history.
+  const installedDescriptor = action === 'update' || action === 'repair'
+    ? requireDescriptor(input, action, { installed: true })
+    : descriptor;
   const configuredCarrier = runConfiguredCodexPluginCarrier({
     descriptor: descriptor.carrier,
     action,
     dryRun: input.dryRun,
-    installedPayloadCarrier: isManagedPayloadCarrier(descriptor),
+    installedPayloadCarrier: isManagedPayloadCarrier(installedDescriptor),
   });
   if (!input.dryRun && ['install', 'update', 'repair'].includes(action)
     && (configuredCarrier.status !== 'installed' || configuredCarrier.executor.status !== 'callable')) {
