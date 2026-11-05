@@ -133,6 +133,6 @@
   },
   "license": "Apache-2.0",
   "optionalDependencies": {
-    "e2b": "^2.62.0"
+    "e2b": "^2.63.0"
   }
 }
