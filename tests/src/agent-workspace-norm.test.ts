@@ -86,6 +86,7 @@ test('workspace agent identity and supported agents derive from the standard-age
     const profile = profileFromTopologyContract(
       agent.default_profile_id,
       agent.project_collection_path,
+      agent.shared_resources,
     );
     assert.deepEqual(
       buildAgentWorkspaceNormProjection({ contract, agentId: agent.agent_id }).domain_topology_profile,
