@@ -178,7 +178,8 @@
                   "artifact_view",
                   "activity_log",
                   "service_status",
-                  "channel_access"
+                  "channel_access",
+                  "remote_companion_access"
                 ]
               },
               "title_i18n": { "$ref": "#/$defs/app_contribution_localized_text" },
@@ -334,7 +335,8 @@
                   "artifact_view",
                   "activity_log",
                   "service_status",
-                  "channel_access"
+                  "channel_access",
+                  "remote_companion_access"
                 ]
               },
               "title_i18n": { "$ref": "#/$defs/app_contribution_localized_text" },
