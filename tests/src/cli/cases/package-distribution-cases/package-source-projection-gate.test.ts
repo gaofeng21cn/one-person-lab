@@ -396,6 +396,96 @@ test('package source projection gate verifies every capability Package ordered c
   );
 });
 
+test('package source projection gate resolves nested capability carrier roots for content locks', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-nested-capability-projection-gate-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const ownerRoot = path.join(root, 'owner');
+  const frameworkRoot = path.join(root, 'framework');
+  const packageId = 'photo-steward';
+  const version = '0.4.6';
+  const sourceRoot = 'plugins/photo-steward';
+  const repoUrl = 'https://github.com/example/photo-steward.git';
+  const paths = [
+    '.codex-plugin/plugin.json',
+    'app-contribution-adapter.json',
+    'plugin.json',
+    'skills/photo-steward/SKILL.md',
+    'skills/photo-steward/agents/openai.yaml',
+  ];
+  for (const item of paths) {
+    const absolute = path.join(ownerRoot, sourceRoot, item);
+    fs.mkdirSync(path.dirname(absolute), { recursive: true });
+    fs.writeFileSync(absolute, `${item}\n`);
+  }
+  const contentLock = {
+    algorithm: 'sha256',
+    canonicalization: 'ordered_path_length_file_length_bytes',
+    paths,
+    digest: lengthPrefixedFileDigest(paths.map((item) => ({
+      path: item,
+      absolute: path.join(ownerRoot, sourceRoot, item),
+    }))),
+  };
+  const ownerManifestRef = `${sourceRoot}/opl-package.json`;
+  writeJson(path.join(ownerRoot, ownerManifestRef), { package_id: packageId, version, content_lock: contentLock });
+  git(ownerRoot, ['init', '-q']);
+  git(ownerRoot, ['config', 'user.name', 'OPL Test']);
+  git(ownerRoot, ['config', 'user.email', 'test@example.com']);
+  git(ownerRoot, ['add', '.']);
+  git(ownerRoot, ['commit', '-qm', 'nested capability carrier']);
+  const sourceCommit = git(ownerRoot, ['rev-parse', 'HEAD']);
+  git(ownerRoot, ['tag', '-a', `v${version}`, '-m', `v${version}`]);
+
+  const manifestPath = path.join(frameworkRoot, `contracts/opl-framework/packages/${packageId}.json`);
+  const payloadRef = `payloads/${packageId}-${version}.json`;
+  const pluginManifestRef = '.codex-plugin/plugin.json';
+  writeJson(manifestPath, {
+    package_id: packageId,
+    version,
+    source_repo: repoUrl,
+    content_lock: contentLock,
+    owner_package_manifest_ref: ownerManifestRef,
+    owner_package_descriptor_ref: 'opl-package.json',
+    codex_surface: {
+      plugin_id: packageId,
+      plugin_payload_manifest_url: payloadRef,
+      carrier_source_commit: sourceCommit,
+    },
+    publication_source: { owner_plugin_manifest_ref: pluginManifestRef },
+  });
+  writeJson(path.join(path.dirname(manifestPath), payloadRef), {
+    surface_kind: 'opl_package_payload_manifest.v2',
+    schema_ref: 'contracts/opl-framework/package-payload-manifest-v2.schema.json',
+    package_id: packageId,
+    plugin_id: packageId,
+    package_version: version,
+    source_repo: repoUrl,
+    source_commit: sourceCommit,
+    source_root: sourceRoot,
+    content_lock: {
+      algorithm: contentLock.algorithm,
+      canonicalization: contentLock.canonicalization,
+      digest: contentLock.digest,
+    },
+    files: [...paths, 'opl-package.json'].map((item) => ({
+      path: item,
+      mode: '100644',
+      source_url: `https://raw.githubusercontent.com/example/photo-steward/${sourceCommit}/${sourceRoot}/${item}`,
+      sha256: digest(path.join(ownerRoot, sourceRoot, item)),
+    })),
+  });
+  const spec = {
+    package_id: packageId,
+    repo_url: repoUrl,
+    package_manifest_ref: `contracts/opl-framework/packages/${packageId}.json`,
+    owner_package_manifest_ref: ownerManifestRef,
+    owner_plugin_manifest_ref: pluginManifestRef,
+    owner_manifest_kind: 'capability_package',
+  };
+
+  assert.equal(validatePackageSourceProjection({ frameworkRoot, spec, ownerRepoPath: ownerRoot }).status, 'validated');
+});
+
 test('package source projection gate binds one regular owner descriptor outside capability content-lock paths', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-descriptor-projection-gate-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

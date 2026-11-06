@@ -237,9 +237,9 @@ function validateContentLock({
   packageId,
   ownerPackageManifestRef,
   ownerManifestKind,
-  ownerPluginManifestRef,
   ownerRepoPath,
   sourceCommit,
+  sourceRoot,
   ownerManifest,
   projectedManifest,
   payload,
@@ -283,25 +283,15 @@ function validateContentLock({
     fail('content_lock_drift', packageId, 'payload files do not match the ordered content lock paths');
   }
   const hash = crypto.createHash('sha256');
-  const pluginManifestPath = safeRelativePath(
-    ownerPluginManifestRef,
-    'owner_plugin_manifest_ref',
-    packageId,
-  );
-  // Owner plugin manifests may be either the package-root `plugin.json` or the
-  // nested `.codex-plugin/plugin.json`; resolve the carrier root from that
-  // shape instead of assuming every manifest has the nested layout.
-  const pluginManifestParent = path.posix.dirname(pluginManifestPath);
-  const carrierRoot = path.posix.basename(pluginManifestParent) === '.codex-plugin'
-    ? path.posix.dirname(pluginManifestParent)
-    : pluginManifestParent;
+  // Content-lock paths and descriptor refs are relative to the exact payload
+  // carrier root, already checked against every committed file above.
+  const resolveCarrierPath = (relative) => sourceRoot === '.' ? relative : path.posix.join(sourceRoot, relative);
   if (descriptorRef !== null) {
-    const descriptorPath = carrierRoot === '.' ? descriptorRef : path.posix.join(carrierRoot, descriptorRef);
     const descriptorBytes = readCommitBlob({
       packageId,
       ownerRepoPath,
       sourceCommit,
-      treePath: descriptorPath,
+      treePath: resolveCarrierPath(descriptorRef),
       failureCode: 'owner_package_descriptor_invalid',
     });
     const ownerManifestBytes = readCommitBlob({
@@ -332,7 +322,7 @@ function validateContentLock({
       packageId,
       ownerRepoPath,
       sourceCommit,
-      treePath: carrierRoot === '.' ? relative : path.posix.join(carrierRoot, relative),
+      treePath: resolveCarrierPath(relative),
       failureCode: 'content_lock_source_missing',
     });
     const pathBytes = Buffer.from(relative, 'utf8');
@@ -489,9 +479,9 @@ export function validatePackageSourceProjection({
     packageId: spec.package_id,
     ownerPackageManifestRef: spec.owner_package_manifest_ref,
     ownerManifestKind: spec.owner_manifest_kind,
-    ownerPluginManifestRef: spec.owner_plugin_manifest_ref,
     ownerRepoPath,
     sourceCommit: carrierSourceCommit,
+    sourceRoot,
     ownerManifest: owner.ownerManifest,
     projectedManifest,
     payload,
