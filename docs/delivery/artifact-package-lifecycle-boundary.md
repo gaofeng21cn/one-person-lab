@@ -33,6 +33,8 @@ Framework可以验证结构、投影和恢复；只有domain owner能promotion�
 
 Package owner持有descriptor、runtime bytes、version和publication。native carrier持有安装/启停/currentness。Framework只下载/验证/hand off owner bytes或调用carrier，并聚合installed/callable。
 
+原生 `plugin list` 读取统一使用 10 秒超时；超时终止子进程，严格发现入口返回失败，不接受未完成命令的部分输出。安装、更新等写操作保留独立的 120 秒上限，超时后的实际结果仍需重新读取确认。
+
 Standard Agent 安装、更新或修复时，carrier adapter 从已选择版本的 owner OCI artifact
 读取 manifest、payload 和 source layer，核对身份、源码提交、layer size/SHA-256 及
 carrier content lock。完整源码与最小插件一同保存于原有 marketplace 根，原子替换后再交给

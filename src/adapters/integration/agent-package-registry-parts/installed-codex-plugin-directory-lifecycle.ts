@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import {
   configuredCodexHome,
+  defaultRunner,
   internalPackageCodexHome,
 } from './configured-codex-plugin-carrier-native.ts';
 import type { CodexPluginCommandRunner } from './configured-codex-plugin-carrier.ts';
@@ -66,23 +66,6 @@ export function parseInstalledCarrierEntries(
     if (!previous || (!previous.installed && entry.installed)) byPluginId.set(entry.pluginId, entry);
   }
   return [...byPluginId.values()];
-}
-
-function defaultRunner(input: {
-  binary: string;
-  args: string[];
-  env: NodeJS.ProcessEnv;
-}) {
-  const result = spawnSync(input.binary, input.args, {
-    encoding: 'utf8',
-    env: input.env,
-  });
-  return {
-    status: result.status,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
-    error: result.error ?? null,
-  };
 }
 
 export type CarrierDiscoveryInput = {

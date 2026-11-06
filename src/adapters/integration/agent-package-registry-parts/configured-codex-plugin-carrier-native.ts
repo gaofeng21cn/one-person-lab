@@ -19,6 +19,7 @@ import type {
 } from './configured-codex-plugin-carrier-types.ts';
 
 const TRANSIENT_CURL_EXIT_STATUSES = new Set([5, 6, 7, 16, 18, 28, 35, 52, 55, 56, 92]);
+export const CODEX_PLUGIN_LIST_TIMEOUT_MS = 10_000;
 const TRANSIENT_SPAWN_ERROR_CODES = new Set([
   'EAI_AGAIN',
   'ECONNABORTED',
@@ -73,7 +74,8 @@ export function defaultRunner(input: {
   const result = spawnSync(input.binary, input.args, {
     encoding: 'utf8',
     env: input.env,
-    timeout: 120_000,
+    timeout: input.args[0] === 'plugin' && input.args[1] === 'list'
+      ? CODEX_PLUGIN_LIST_TIMEOUT_MS : 120_000,
     killSignal: 'SIGKILL',
   });
   return {

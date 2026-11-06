@@ -47,6 +47,29 @@ import {
   unavailableCodexRunner,
 } from '../configured-codex-plugin-carrier-shared.ts';
 import type { CodexPluginCommandRunner } from '../configured-codex-plugin-carrier-shared.ts';
+import { readInstalledCarrierEntries } from '../../../../../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-lifecycle.ts';
+import { CODEX_PLUGIN_LIST_TIMEOUT_MS } from '../../../../../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-native.ts';
+
+test('installed carrier discovery terminates a hung native readback and rejects partial output', { timeout: 20_000 }, () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-carrier-discovery-timeout-'));
+  const binary = path.join(root, 'hung-codex');
+  try {
+    fs.writeFileSync(binary, [
+      `#!${process.execPath}`,
+      'process.stdout.write(JSON.stringify({ installed: [] }));',
+      'process.on("SIGTERM", () => {});',
+      'setInterval(() => {}, 1_000);',
+    ].join('\n'), { mode: 0o755 });
+    const startedAt = Date.now();
+    assert.throws(() => readInstalledCarrierEntries({
+      binary, includeInternal: false, failClosedOnCarrierError: true,
+    }), (error: any) => error?.details?.failure_code === 'configured_codex_plugin_carrier_unavailable'
+      && /ETIMEDOUT/.test(error.details.error));
+    assert.ok(Date.now() - startedAt < CODEX_PLUGIN_LIST_TIMEOUT_MS + 5_000);
+  } finally {
+    removeFixtureTree(root);
+  }
+});
 
 test('configured Codex carrier validates a local readback when the CLI is unavailable without extending the fallback to writes', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configured-carrier-local-readback-'));
