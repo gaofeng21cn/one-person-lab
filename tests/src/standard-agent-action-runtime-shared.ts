@@ -135,6 +135,12 @@ export function writeStagePack(checkoutRoot: string): StandardAgentStageQualityR
     ['agent/goals/intake.md', '# Intake goal\n'],
     ['agent/sources/request.md', '# Hosted request source\n'],
     ['agent/lineage/intake.json', '{"stage_id":"intake"}\n'],
+    ['contracts/durable_knowledge_catalog.json', JSON.stringify({
+      surface_kind: 'opl_durable_knowledge_catalog',
+      version: 'durable-knowledge-catalog.v1',
+      owner: 'one-person-lab',
+      items: [],
+    })],
   ]);
   for (const [ref, bytes] of files) {
     const filePath = path.join(checkoutRoot, ref);

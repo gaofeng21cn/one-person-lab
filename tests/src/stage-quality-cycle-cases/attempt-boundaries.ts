@@ -61,6 +61,16 @@ test('StageRun controller input rejects custom Attempt roles and quality budgets
   const fixtureBytes = Buffer.from('{"stages":["artifact_creation","review_and_revision"]}\n');
   fs.mkdirSync(path.dirname(fixturePath), { recursive: true });
   fs.writeFileSync(fixturePath, fixtureBytes);
+  fs.mkdirSync(path.join(domainPackRoot, 'contracts'), { recursive: true });
+  fs.writeFileSync(
+    path.join(domainPackRoot, 'contracts/durable_knowledge_catalog.json'),
+    JSON.stringify({
+      surface_kind: 'opl_durable_knowledge_catalog',
+      version: 'durable-knowledge-catalog.v1',
+      owner: 'one-person-lab',
+      items: [],
+    }),
+  );
   const rolePromptRef = 'agent/prompts/stage-quality-cycle-roles.md';
   const rolePromptPath = path.join(domainPackRoot, rolePromptRef);
   fs.mkdirSync(path.dirname(rolePromptPath), { recursive: true });

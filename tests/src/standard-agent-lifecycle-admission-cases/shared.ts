@@ -267,6 +267,16 @@ function nativeManagedCheckout(checkoutRoot: string, workspaceRoot: string) {
 }
 
 function writeLifecycleContracts(checkoutRoot: string) {
+  fs.mkdirSync(path.join(checkoutRoot, 'contracts'), { recursive: true });
+  fs.writeFileSync(
+    path.join(checkoutRoot, 'contracts/durable_knowledge_catalog.json'),
+    JSON.stringify({
+      surface_kind: 'opl_durable_knowledge_catalog',
+      version: 'durable-knowledge-catalog.v1',
+      owner: 'one-person-lab',
+      items: [],
+    }),
+  );
   const lifecycleContract = {
     capability_id: 'opl_domain_lifecycle_admission.v1',
     work_item_id_field: 'study_id',
