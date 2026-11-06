@@ -76,6 +76,12 @@
           },
           "minItems": 1,
           "uniqueItems": true
+        },
+        "app_contribution_abi": {
+          "$ref": "#/$defs/app_contribution_abi"
+        },
+        "app_contribution_adapter": {
+          "$ref": "#/$defs/app_contribution_adapter"
         }
       },
       "additionalProperties": true
@@ -113,10 +119,161 @@
       "type": "array"
     },
     "app_contributions": {
-      "$ref": "#/$defs/app_contributions"
+      "type": "object",
+      "required": ["schema_version"],
+      "anyOf": [
+        {
+          "required": ["navigation"],
+          "properties": { "navigation": { "minItems": 1 } }
+        },
+        {
+          "required": ["views"],
+          "properties": { "views": { "minItems": 1 } }
+        },
+        {
+          "required": ["commands"],
+          "properties": { "commands": { "minItems": 1 } }
+        },
+        {
+          "required": ["badges"],
+          "properties": { "badges": { "minItems": 1 } }
+        },
+        {
+          "required": ["ui"],
+          "properties": { "ui": { "minItems": 1 } }
+        }
+      ],
+      "properties": {
+        "schema_version": { "const": "opl-app-contributions.v1" },
+        "navigation": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "required": ["navigation_id", "label_i18n", "view_id"],
+            "properties": {
+              "navigation_id": { "$ref": "#/$defs/app_contribution_id" },
+              "label_i18n": { "$ref": "#/$defs/app_contribution_localized_text" },
+              "view_id": { "$ref": "#/$defs/app_contribution_id" },
+              "icon_id": { "$ref": "#/$defs/app_contribution_id" },
+              "sort_order": { "type": "integer", "minimum": -10000, "maximum": 10000 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "views": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "required": ["view_id", "view_type", "title_i18n", "data_ref"],
+            "properties": {
+              "view_id": { "$ref": "#/$defs/app_contribution_id" },
+              "view_type": {
+                "enum": [
+                  "list_detail",
+                  "timeline",
+                  "approval_diff",
+                  "task_board",
+                  "artifact_view",
+                  "activity_log",
+                  "service_status",
+                  "channel_access"
+                ]
+              },
+              "title_i18n": { "$ref": "#/$defs/app_contribution_localized_text" },
+              "data_ref": { "$ref": "#/$defs/app_contribution_ref" },
+              "command_ids": {
+                "type": "array",
+                "maxItems": 100,
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/app_contribution_id" }
+              },
+              "badge_ids": {
+                "type": "array",
+                "maxItems": 100,
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/app_contribution_id" }
+              },
+              "empty_state_i18n": {
+                "$ref": "#/$defs/app_contribution_localized_text"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "commands": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "required": ["command_id", "label_i18n", "action_ref"],
+            "properties": {
+              "command_id": { "$ref": "#/$defs/app_contribution_id" },
+              "label_i18n": { "$ref": "#/$defs/app_contribution_localized_text" },
+              "action_ref": { "$ref": "#/$defs/app_contribution_ref" },
+              "confirmation_required": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "badges": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "required": ["badge_id", "label_i18n", "data_ref"],
+            "properties": {
+              "badge_id": { "$ref": "#/$defs/app_contribution_id" },
+              "label_i18n": { "$ref": "#/$defs/app_contribution_localized_text" },
+              "data_ref": { "$ref": "#/$defs/app_contribution_ref" },
+              "tone": {
+                "enum": ["neutral", "info", "success", "warning", "critical"]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "ui": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/app_contribution_ui_placement" }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "$defs": {
+    "app_contribution_abi": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "transport",
+        "argv",
+        "request_schema",
+        "response_schema"
+      ],
+      "properties": {
+        "schema_version": { "const": "opl-package-app-contribution-cli.v1" },
+        "transport": { "const": "stdin_json_stdout_json" },
+        "argv": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "request_schema": { "const": "opl-package-app-contribution-request.v1" },
+        "response_schema": { "const": "opl-package-app-contribution-response.v1" }
+      },
+      "additionalProperties": false
+    },
+    "app_contribution_adapter": {
+      "type": "object",
+      "required": ["manifest"],
+      "properties": {
+        "manifest": { "const": "app-contribution-adapter.json" }
+      },
+      "additionalProperties": false
+    },
     "app_contributions": {
       "type": "object",
       "required": ["schema_version"],

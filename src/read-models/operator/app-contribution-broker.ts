@@ -9,7 +9,12 @@ import {
   type InstalledPackageDescriptor,
   installedDescriptorSupportsFrameworkCalls,
 } from '../../adapters/integration/index.ts';
+import {
+  listWorkspaceBindings,
+  type WorkspaceBinding,
+} from '../../authority/workspace/public/app-state.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
+import { canonicalWorkspacePath } from './work-item-projection/catalog.ts';
 
 const REQUEST_SCHEMA = 'opl-package-app-contribution-request.v1';
 const RESPONSE_SCHEMA = 'opl-package-app-contribution-response.v1';
@@ -17,8 +22,8 @@ const ABI_SCHEMA = 'opl-package-app-contribution-cli.v1';
 const REF_PATTERN = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?(?:#[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)?$/;
 const PACKAGE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 const BARE_COMMAND_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;
-const INVOCATION_TIMEOUT_MS = 10_000;
-const INVOCATION_MAX_BUFFER = 1024 * 1024;
+const INVOCATION_TIMEOUT_MS = 120_000;
+const INVOCATION_MAX_BUFFER = 32 * 1024 * 1024;
 
 type JsonRecord = Record<string, unknown>;
 export type AppContributionOperation = 'read' | 'execute';
@@ -53,6 +58,7 @@ type ResolvedContribution = {
 type AppContributionBrokerOptions = {
   descriptorDiscovery?: Pick<CordisConnectDescriptorDiscoveryService, 'discover'>;
   resolveWorkItemWorkspace?: (identity: AppContributionWorkItemIdentity) => string | null;
+  workspaceBindings?: ReadonlyArray<WorkspaceBinding>;
 };
 
 function contributionReadback(resolved: ResolvedContribution, request: AppContributionRequest) {
@@ -199,6 +205,28 @@ function contributionAbi(descriptor: InstalledPackageDescriptor): ContributionAb
       failure_code: 'agent_package_app_contribution_abi_invalid',
     });
   }
+  const adapter = descriptor.manifest.codex_surface.app_contribution_adapter;
+  if (adapter !== undefined) {
+    if (
+      !isRecord(adapter)
+      || adapter.manifest !== 'app-contribution-adapter.json'
+    ) {
+      return contractError('Installed Package app contribution adapter is invalid.', {
+        package_id: descriptor.manifest.package_id,
+        failure_code: 'agent_package_app_contribution_adapter_invalid',
+      });
+    }
+    const adapterFile = path.resolve(descriptor.sourcePath, adapter.manifest);
+    if (
+      !adapterFile.startsWith(`${path.resolve(descriptor.sourcePath)}${path.sep}`)
+      || !fs.statSync(adapterFile, { throwIfNoEntry: false })?.isFile()
+    ) {
+      return contractError('Installed Package app contribution adapter file is missing.', {
+        package_id: descriptor.manifest.package_id,
+        failure_code: 'agent_package_app_contribution_adapter_missing',
+      });
+    }
+  }
   return { argv };
 }
 
@@ -245,14 +273,49 @@ function resolveProjectedWorkItemWorkspace(identity: AppContributionWorkItemIden
   return matches.length === 1 ? matches[0]!.identity.workspace_path : null;
 }
 
+function explicitWorkspacePath(request: AppContributionRequest) {
+  if (!Object.hasOwn(request.input, 'workspace_path')) return null;
+  const value = request.input.workspace_path;
+  if (typeof value !== 'string' || !value.trim()) {
+    return contractError('App contribution workspace_path must be a non-empty string.', {
+      failure_code: 'agent_package_app_contribution_workspace_invalid',
+    });
+  }
+  if (!path.isAbsolute(value)) {
+    return contractError('App contribution workspace_path must be absolute.', {
+      failure_code: 'agent_package_app_contribution_workspace_invalid',
+    });
+  }
+  return canonicalWorkspacePath(value);
+}
+
+function resolveBoundWorkspace(
+  workspacePath: string,
+  bindings: ReadonlyArray<WorkspaceBinding>,
+) {
+  const canonical = canonicalWorkspacePath(workspacePath);
+  const matches = bindings.filter((binding) => (
+    binding.status !== 'archived'
+    && canonicalWorkspacePath(binding.workspace_path) === canonical
+    && fs.statSync(binding.workspace_path, { throwIfNoEntry: false })?.isDirectory()
+  ));
+  if (matches.length === 0) {
+    return contractError('App contribution workspace_path does not match a registered workspace binding.', {
+      failure_code: 'agent_package_app_contribution_workspace_unregistered',
+    });
+  }
+  return canonical;
+}
+
 function contributionInvocationEnv(
   request: AppContributionRequest,
   resolveWorkspace: NonNullable<AppContributionBrokerOptions['resolveWorkItemWorkspace']>,
+  workspaceBindings: () => ReadonlyArray<WorkspaceBinding>,
 ) {
   const identity = workItemIdentity(request);
-  if (!identity) return process.env;
-  const workspaceRoot = resolveWorkspace(identity);
-  if (!workspaceRoot || !path.isAbsolute(workspaceRoot) || !fs.statSync(workspaceRoot, { throwIfNoEntry: false })?.isDirectory()) {
+  const explicitWorkspace = explicitWorkspacePath(request);
+  const identityWorkspace = identity ? resolveWorkspace(identity) : null;
+  if (identity && !identityWorkspace) {
     return contractError('App contribution work-item identity does not resolve to one current workspace.', {
       agent_id: identity.agent_id,
       domain_id: identity.domain_id,
@@ -261,7 +324,24 @@ function contributionInvocationEnv(
       failure_code: 'agent_package_app_contribution_work_item_identity_unresolved',
     });
   }
-  return { ...process.env, OPL_PROFILE_WORKSPACE: path.resolve(workspaceRoot) };
+  if (
+    explicitWorkspace
+    && identityWorkspace
+    && canonicalWorkspacePath(identityWorkspace) !== explicitWorkspace
+  ) {
+    return contractError('App contribution work-item identity and workspace_path do not identify the same workspace.', {
+      failure_code: 'agent_package_app_contribution_workspace_conflict',
+    });
+  }
+  const workspaceRoot = explicitWorkspace ?? identityWorkspace;
+  if (!workspaceRoot) return process.env;
+  const boundWorkspace = resolveBoundWorkspace(workspaceRoot, workspaceBindings());
+  if (!workspaceRoot || !path.isAbsolute(workspaceRoot) || !fs.statSync(workspaceRoot, { throwIfNoEntry: false })?.isDirectory()) {
+    return contractError('App contribution workspace is not a current directory.', {
+      failure_code: 'agent_package_app_contribution_workspace_invalid',
+    });
+  }
+  return { ...process.env, OPL_PROFILE_WORKSPACE: boundWorkspace };
 }
 
 function resolveContribution(input: AppContributionRequest, discover: () => Map<string, InstalledPackageDescriptor>) {
@@ -349,8 +429,14 @@ function invokeContribution(
   resolved: ResolvedContribution,
   request: AppContributionRequest,
   resolveWorkspace: NonNullable<AppContributionBrokerOptions['resolveWorkItemWorkspace']>,
+  workspaceBindings: () => ReadonlyArray<WorkspaceBinding>,
 ) {
   const executable = executableArgv(resolved);
+  const ownerInput = Object.fromEntries(
+    Object.entries(request.input).filter(([key]) => (
+      key !== 'workspace_path' && key !== 'work_item_root'
+    )),
+  );
   const result = spawnSync(executable.command, executable.args, {
     cwd: resolved.descriptor.sourcePath,
     encoding: 'utf8',
@@ -358,11 +444,11 @@ function invokeContribution(
       schema_version: REQUEST_SCHEMA,
       operation: request.operation,
       ref: request.ref,
-      input: request.input,
+      input: ownerInput,
     }),
     timeout: INVOCATION_TIMEOUT_MS,
     maxBuffer: INVOCATION_MAX_BUFFER,
-    env: contributionInvocationEnv(request, resolveWorkspace),
+    env: contributionInvocationEnv(request, resolveWorkspace, workspaceBindings),
   });
   if (result.error || result.status !== 0) {
     return contractError('Package-owned app contribution command failed.', {
@@ -407,10 +493,12 @@ export function runAppContribution(
 ) {
   const discover = requireDescriptorDiscovery(options.descriptorDiscovery);
   const resolved = resolveContribution(request, discover);
+  const workspaceBindings = () => options.workspaceBindings ?? listWorkspaceBindings();
   const response = invokeContribution(
     resolved,
     request,
     options.resolveWorkItemWorkspace ?? resolveProjectedWorkItemWorkspace,
+    workspaceBindings,
   );
   return {
     opl_app_contribution: {

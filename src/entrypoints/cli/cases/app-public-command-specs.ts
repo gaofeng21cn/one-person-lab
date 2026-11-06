@@ -99,6 +99,23 @@ export function buildPublicAppCommandSpecs(
         return runAppContribution(parseAppContributionArgs(args, 'execute'), { descriptorDiscovery });
       },
     },
+    'app contribution adapter': {
+      usage: 'opl app contribution adapter --stdin',
+      summary: 'Serve a Package-owned declarative app contribution adapter.',
+      examples: ['opl app contribution adapter --stdin'],
+      group: 'app',
+      handler: (args) => {
+        if (args.length !== 1 || args[0] !== '--stdin') {
+          throw new Error('app contribution adapter requires --stdin');
+        }
+        return import('node:fs').then(({ readFileSync }) => import(
+          '../../../read-models/operator/app-contribution-adapter.ts'
+        ).then(({ runDeclarativeAppContribution }) => runDeclarativeAppContribution({
+          packageRoot: process.cwd(),
+          request: JSON.parse(readFileSync(0, 'utf8')),
+        })));
+      },
+    },
     'app view read': {
       usage: 'opl app view read --item-id <canonical-item-id> --view-id <view-id> [--if-revision <n>]',
       summary: 'Read one descriptor-declared, item-scoped JSON detail view without accepting arbitrary paths.',

@@ -170,6 +170,33 @@ export function buildPublicCommandSpecs(
         };
       },
     },
+    'connect mcp-app-stdio': {
+      usage: 'opl connect mcp-app-stdio',
+      summary: 'Serve the OPL MCP App for installed Package contribution views over stdio.',
+      examples: ['opl connect mcp-app-stdio'],
+      group: 'connect',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['connect mcp-app-stdio']);
+        return {
+          version: 'g2',
+          opl_mcp_app_stdio: {
+            surface_kind: 'opl_mcp_app_stdio_interface',
+            server_id: 'opl-apps',
+            transport: 'stdio',
+            runtime_command: ['opl', 'connect', 'mcp-app-stdio'],
+            ui_resource: 'ui://opl/apps.html',
+            ui_mime_type: 'text/html;profile=mcp-app',
+            tool_exposure: 'dynamic_package_contribution_views',
+            authority_boundary: {
+              package_truth_owner: 'installed_package_descriptor',
+              domain_data_owner: 'installed_package_owner',
+              direct_domain_mutation_allowed: false,
+              arbitrary_package_html_allowed: false,
+            },
+          },
+        };
+      },
+    },
     'quality details': {
       usage:
         'opl quality details --root <repo_path> [--format <json|markdown>] [--limit <n>] [--focus <auto|depth|equality|modularity|redundancy|test_gaps|rules>] [--compare-ref <git_ref>]',

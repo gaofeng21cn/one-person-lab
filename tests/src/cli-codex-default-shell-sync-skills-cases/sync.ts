@@ -410,9 +410,11 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, STANDARD_AGENT_PACK_COUNT);
     assert.equal('removed_standalone_mcp_servers' in output.skill_sync.codex_plugin_registry.summary, false);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_superseded_plugin_tables, 10);
-    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered_unified_mcp_servers, 1);
+    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered_unified_mcp_servers, 2);
     assert.equal(output.skill_sync.codex_plugin_registry.unified_mcp_server.server_id, 'opl-connect');
     assert.deepEqual(output.skill_sync.codex_plugin_registry.unified_mcp_server.args, ['connect', 'mcp-stdio']);
+    assert.equal(output.skill_sync.codex_plugin_registry.app_mcp_server.server_id, 'opl-apps');
+    assert.deepEqual(output.skill_sync.codex_plugin_registry.app_mcp_server.args, ['connect', 'mcp-app-stdio']);
     const masPlugin = output.skill_sync.codex_plugin_registry.items.find(
       (entry: { plugin_id: string }) => entry.plugin_id === 'med-autoscience',
     );
@@ -466,6 +468,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.match(config, /\[mcp_servers\.redcube-ai\]/);
     assert.match(config, /\[mcp_servers\.opl-connect\]\ncommand = "opl"\nargs = \["connect", "mcp-stdio"\]/);
+    assert.match(config, /\[mcp_servers\.opl-apps\]\ncommand = "opl"\nargs = \["connect", "mcp-app-stdio"\]/);
     assert.doesNotMatch(config, /retired-mcp|\/legacy\/opl|LEGACY_OPL_CONNECT/);
     assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);
     assert.match(config, /\[plugins\."med-autogrant@med-autogrant-local"\]/);

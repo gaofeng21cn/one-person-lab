@@ -64,6 +64,13 @@ const allowedMcpProjectionFields = [
   'unified_mcp_server_ready',
   'unified_mcp_server_registration_surface',
   'unified_mcp_server_toolsets',
+  'unified_app_mcp_server_ready',
+  'unified_app_mcp_server_readiness',
+  'unified_app_mcp_server_id',
+  'unified_app_mcp_server_command',
+  'unified_app_mcp_server_registration_surface',
+  'unified_app_mcp_server_ui_resource',
+  'unified_app_mcp_server_requires_package_confirmation',
 ] as const;
 
 const forbiddenRuntimeMcpReadinessFields = [
@@ -282,6 +289,11 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(pack.mcp_projection.unified_mcp_server_registration_surface, 'opl connect sync-skills');
     assert.deepEqual(pack.mcp_projection.unified_mcp_server_toolsets, ['scientific', 'references']);
     assert.equal(pack.mcp_projection.unified_mcp_server_read_only_default, true);
+    assert.equal(pack.mcp_projection.unified_app_mcp_server_ready, true);
+    assert.equal(pack.mcp_projection.unified_app_mcp_server_id, 'opl-apps');
+    assert.deepEqual(pack.mcp_projection.unified_app_mcp_server_command, ['opl', 'connect', 'mcp-app-stdio']);
+    assert.equal(pack.mcp_projection.unified_app_mcp_server_ui_resource, 'ui://opl/apps.html');
+    assert.equal(pack.mcp_projection.unified_app_mcp_server_requires_package_confirmation, true);
     assert.equal(pack.mcp_projection.domain_repo_mcp_server_role, 'direct_protocol_adapter_or_proof_lane_only');
     const cliMcpRelationshipPolicy = pack.mcp_projection.cli_mcp_relationship_policy as Record<string, unknown>;
     const mcpContextBudgetPolicy = pack.mcp_projection.mcp_context_budget_policy as Record<string, unknown>;
@@ -405,7 +417,7 @@ test('OPL Codex plugin registry preserves unmanaged MCP server blocks', () => {
 
     assert.equal(result.summary.registered, 5);
     assert.equal('removed_standalone_mcp_servers' in result.summary, false);
-    assert.equal(result.summary.registered_unified_mcp_servers, 1);
+    assert.equal(result.summary.registered_unified_mcp_servers, 2);
     assert.deepEqual(result.unified_mcp_server, {
       server_id: 'opl-connect',
       status: 'registered',
@@ -416,9 +428,12 @@ test('OPL Codex plugin registry preserves unmanaged MCP server blocks', () => {
       read_only_default: true,
       progressive_discovery: true,
     });
+    assert.equal(result.app_mcp_server.server_id, 'opl-apps');
+    assert.deepEqual(result.app_mcp_server.args, ['connect', 'mcp-app-stdio']);
     assert.equal(result.summary.removed_superseded_plugin_tables, 4);
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.match(config, /\[mcp_servers\.opl-connect\]\ncommand = "opl"\nargs = \["connect", "mcp-stdio"\]/);
+    assert.match(config, /\[mcp_servers\.opl-apps\]\ncommand = "opl"\nargs = \["connect", "mcp-app-stdio"\]/);
     assert.match(config, /\[mcp_servers\.redcube-ai\]/);
     assert.match(config, /\[mcp_servers\.med-autoscience\]/);
     assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);

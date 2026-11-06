@@ -339,6 +339,12 @@
           },
           "minItems": 1,
           "uniqueItems": true
+        },
+        "app_contribution_abi": {
+          "$ref": "#/$defs/app_contribution_abi"
+        },
+        "app_contribution_adapter": {
+          "$ref": "#/$defs/app_contribution_adapter"
         }
       },
       "additionalProperties": true
@@ -937,6 +943,36 @@
           },
           "additionalProperties": false
         }
+      },
+      "additionalProperties": false
+    },
+    "app_contribution_abi": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "transport",
+        "argv",
+        "request_schema",
+        "response_schema"
+      ],
+      "properties": {
+        "schema_version": { "const": "opl-package-app-contribution-cli.v1" },
+        "transport": { "const": "stdin_json_stdout_json" },
+        "argv": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "request_schema": { "const": "opl-package-app-contribution-request.v1" },
+        "response_schema": { "const": "opl-package-app-contribution-response.v1" }
+      },
+      "additionalProperties": false
+    },
+    "app_contribution_adapter": {
+      "type": "object",
+      "required": ["manifest"],
+      "properties": {
+        "manifest": { "const": "app-contribution-adapter.json" }
       },
       "additionalProperties": false
     },

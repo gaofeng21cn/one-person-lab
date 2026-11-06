@@ -219,6 +219,13 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
     unified_mcp_server_registration_surface: 'opl connect sync-skills',
     unified_mcp_server_toolsets: ['scientific', 'references'],
     unified_mcp_server_read_only_default: true,
+    unified_app_mcp_server_ready: true,
+    unified_app_mcp_server_readiness: 'stdio_protocol_ui_resource_and_confirmation_verified',
+    unified_app_mcp_server_id: 'opl-apps',
+    unified_app_mcp_server_command: ['opl', 'connect', 'mcp-app-stdio'],
+    unified_app_mcp_server_registration_surface: 'opl connect sync-skills',
+    unified_app_mcp_server_ui_resource: 'ui://opl/apps.html',
+    unified_app_mcp_server_requires_package_confirmation: true,
     domain_repo_mcp_server_role: 'direct_protocol_adapter_or_proof_lane_only',
     cli_mcp_relationship_policy: {
       surface_kind: 'opl_cli_mcp_relationship_policy',

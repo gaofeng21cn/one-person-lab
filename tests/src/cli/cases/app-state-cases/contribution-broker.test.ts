@@ -247,9 +247,30 @@ test('work-item contribution resolves its workspace from exact Host identity bef
         observed.push(candidate);
         return workspace;
       },
+      workspaceBindings: [{
+        binding_id: 'binding-mas',
+        project_scope_id: 'project-mas',
+        project_id: 'mas',
+        project: 'MAS',
+        workspace_path: workspace,
+        label: null,
+        status: 'active',
+        direct_entry: {
+          command: null,
+          manifest_command: null,
+          url: null,
+          workspace_locator: null,
+        },
+        created_at: new Date(0).toISOString(),
+        updated_at: new Date(0).toISOString(),
+        archived_at: null,
+      }],
     }) as any;
     assert.deepEqual(observed, [identity]);
-    assert.equal(output.opl_app_contribution.response.result.workspace_root, workspace);
+    assert.equal(
+      output.opl_app_contribution.response.result.workspace_root,
+      fs.realpathSync.native(workspace),
+    );
 
     assert.throws(
       () => runAppContribution({
@@ -270,6 +291,92 @@ test('work-item contribution resolves its workspace from exact Host identity bef
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
     fs.rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('root contribution accepts one registered workspace and rejects unregistered or conflicting paths', () => {
+  const fixture = writeContributionFixture();
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-contribution-root-'));
+  const otherWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-contribution-other-'));
+  const binding = {
+    binding_id: 'binding-root',
+    project_scope_id: 'project-root',
+    project_id: 'rca',
+    project: 'RCA',
+    workspace_path: workspace,
+    label: null,
+    status: 'active' as const,
+    direct_entry: {
+      command: null,
+      manifest_command: null,
+      url: null,
+      workspace_locator: null,
+    },
+    created_at: new Date(0).toISOString(),
+    updated_at: new Date(0).toISOString(),
+    archived_at: null,
+  };
+  try {
+    const output = runAppContribution({
+      packageId: fixture.manifest.package_id,
+      ref: 'future.data.v1#current',
+      operation: 'read',
+      input: { workspace_path: workspace },
+      confirmed: false,
+    }, {
+      descriptorDiscovery: {
+        discover: () => new Map([[fixture.manifest.package_id, fixture.descriptor]]),
+      },
+      workspaceBindings: [binding],
+    }) as any;
+    assert.equal(output.opl_app_contribution.response.result.workspace_root, fs.realpathSync.native(workspace));
+
+    assert.throws(
+      () => runAppContribution({
+        packageId: fixture.manifest.package_id,
+        ref: 'future.data.v1#current',
+        operation: 'read',
+        input: { workspace_path: otherWorkspace },
+        confirmed: false,
+      }, {
+        descriptorDiscovery: {
+          discover: () => new Map([[fixture.manifest.package_id, fixture.descriptor]]),
+        },
+        workspaceBindings: [binding],
+      }),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'agent_package_app_contribution_workspace_unregistered',
+    );
+
+    const identity = {
+      agent_id: 'rca',
+      domain_id: 'redcube_ai',
+      work_item_id: 'visual-001',
+      domain_work_item_id: 'visual-001',
+      work_item_scope_id: 'work-item:visual-001',
+      identity_state: 'resolved' as const,
+    };
+    assert.throws(
+      () => runAppContribution({
+        packageId: fixture.manifest.package_id,
+        ref: 'future.data.v1#current',
+        operation: 'read',
+        input: { work_item_identity: identity, workspace_path: otherWorkspace },
+        confirmed: false,
+      }, {
+        descriptorDiscovery: {
+          discover: () => new Map([[fixture.manifest.package_id, fixture.descriptor]]),
+        },
+        resolveWorkItemWorkspace: () => workspace,
+        workspaceBindings: [binding],
+      }),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'agent_package_app_contribution_workspace_conflict',
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+    fs.rmSync(workspace, { recursive: true, force: true });
+    fs.rmSync(otherWorkspace, { recursive: true, force: true });
   }
 });
 
