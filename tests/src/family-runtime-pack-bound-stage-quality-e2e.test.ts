@@ -75,6 +75,35 @@ Repair only required findings and report changed artifact identity.
 Close prior findings against the repaired artifact.
 `);
   writeText(root, 'agent/knowledge/domain.md', '# Domain knowledge\n');
+  writeJson(root, 'contracts/durable_knowledge_catalog.json', {
+    surface_kind: 'opl_durable_knowledge_catalog',
+    version: 'durable-knowledge-catalog.v1',
+    owner: 'one-person-lab',
+    domain_id: 'medautoscience',
+    items: [{
+      surface_kind: 'opl_durable_knowledge_item',
+      version: 'durable-knowledge-item.v1',
+      knowledge_id: 'fixture.pack-bound.draft',
+      title: 'Pack-bound draft knowledge',
+      layer: 'agent_pack',
+      owner: 'medautoscience',
+      body_ref: {
+        kind: 'repo_path',
+        ref: 'agent/knowledge/domain.md',
+      },
+      applicability: {
+        domains: ['medautoscience'],
+        stages: ['draft'],
+      },
+      status: 'active',
+      reviewed_at: '2020-01-01T00:00:00Z',
+      next_review_at: '2099-01-01T00:00:00Z',
+      authority_boundary: {
+        semantic_body_owner: 'medautoscience',
+        opl_role: 'catalog_recall_and_receipt_projection_only',
+      },
+    }],
+  });
   writeText(root, 'agent/quality_gates/quality.md', '# Quality rubric\n\nThe draft is complete and source-grounded.\n');
   writeText(root, 'agent/skills/domain.md', '# Domain skill\n');
   writeText(root, 'agent/tools/domain.md', '# Domain tools\n');
