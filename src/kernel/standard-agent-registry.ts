@@ -50,6 +50,12 @@ export const PACKAGE_PROJECTION_ROOT = path.join(
   'opl-framework',
   'packages',
 );
+export const PACKAGE_PROJECTION_ROOT_ENV = 'OPL_PACKAGE_PROJECTION_DIR';
+
+export function resolvePackageProjectionRoot() {
+  const configured = process.env[PACKAGE_PROJECTION_ROOT_ENV]?.trim();
+  return configured ? path.resolve(configured) : PACKAGE_PROJECTION_ROOT;
+}
 
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -128,7 +134,7 @@ function projectionOrder(payload: Record<string, unknown>) {
 }
 
 export function listCurrentPackageProjections(
-  packageDirectory = PACKAGE_PROJECTION_ROOT,
+  packageDirectory = resolvePackageProjectionRoot(),
 ): CurrentPackageProjection[] {
   if (!fs.existsSync(packageDirectory)) return [];
   return fs.readdirSync(packageDirectory, { withFileTypes: true })
@@ -151,7 +157,7 @@ export function listCurrentPackageProjections(
     });
 }
 
-export function listProjectedOplPackageIds(packageDirectory = PACKAGE_PROJECTION_ROOT) {
+export function listProjectedOplPackageIds(packageDirectory = resolvePackageProjectionRoot()) {
   return listCurrentPackageProjections(packageDirectory)
     .map(({ payload }) => stringValue(payload.package_id))
     .filter((packageId): packageId is string => packageId !== null);
@@ -391,7 +397,7 @@ function assertRegistryNamespaceUnique(
 }
 
 export function loadStandardAgentRegistry(
-  packageDirectory = PACKAGE_PROJECTION_ROOT,
+  packageDirectory = resolvePackageProjectionRoot(),
 ): StandardAgentRegistryEntry[] {
   const projections = listCurrentPackageProjections(packageDirectory);
   const standardAgents = projections
