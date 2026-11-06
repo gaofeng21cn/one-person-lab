@@ -3,7 +3,7 @@
   "package_id": "opl-persona",
   "display_name": "OPL Persona",
   "publisher": "one-person-lab",
-  "version": "0.2.6",
+  "version": "0.3.1",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-persona.git",
@@ -47,6 +47,7 @@
       "runtime/opl_persona/__init__.py",
       "runtime/opl_persona/approvals.py",
       "runtime/opl_persona/__main__.py",
+      "app-contribution-adapter.json",
       "runtime/opl_persona/app_contributions.py",
       "runtime/opl_persona/bindings.py",
       "runtime/opl_persona/cli.py",
@@ -56,10 +57,12 @@
       "runtime/opl_persona/obsidian_apply.py",
       "runtime/opl_persona/paths.py",
       "runtime/opl_persona/policy.py",
+      "runtime/opl_persona/proposals.py",
+      "runtime/opl_persona/workspace.py",
       "skills/opl-persona/SKILL.md",
       "skills/opl-persona/agents/openai.yaml"
     ],
-    "digest": "sha256:bb394bc37a8261c5bb0bdb083f24c0347fa60d352d9dc920288d12f17d23414f"
+    "digest": "sha256:2145895de374b1b5153e8b438f00ed7558377de21e76d512b9c0ed09fe809e6f"
   },
   "codex_surface": {
     "plugin_id": "opl-persona",
@@ -77,18 +80,79 @@
       "schema_version": "opl-package-app-contribution-cli.v1",
       "transport": "stdin_json_stdout_json",
       "argv": [
-        "./bin/opl-persona",
-        "--json",
-        "app-contribution"
+        "opl",
+        "app",
+        "contribution",
+        "adapter",
+        "--stdin"
       ],
       "request_schema": "opl-package-app-contribution-request.v1",
       "response_schema": "opl-package-app-contribution-response.v1"
     },
-    "plugin_payload_manifest_url": "payloads/opl-persona-0.2.6.json",
-    "carrier_source_commit": "d37949750d1c6c7bbb5e5968dbf6f318175ed64d"
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "plugin_payload_manifest_url": "payloads/opl-persona-0.3.1.json",
+    "carrier_source_commit": "e94016b856ffddb38327aab7c0889525b5b73c21"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
+    "ui": [
+      {
+        "contribution_id": "persona.today.panel",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "persona.today",
+        "sort_order": 200
+      },
+      {
+        "contribution_id": "persona.contexts.panel",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "persona.contexts",
+        "sort_order": 201
+      },
+      {
+        "contribution_id": "persona.people.panel",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "persona.people",
+        "sort_order": 202
+      },
+      {
+        "contribution_id": "persona.memories.panel",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "persona.memories",
+        "sort_order": 203
+      },
+      {
+        "contribution_id": "persona.inbox.panel",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "persona.inbox",
+        "sort_order": 205
+      },
+      {
+        "contribution_id": "persona.proposals.panel",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "persona.proposals",
+        "sort_order": 210
+      }
+    ],
     "navigation": [
       {
         "navigation_id": "persona.today",
@@ -98,6 +162,33 @@
         },
         "view_id": "persona.today",
         "sort_order": 200
+      },
+      {
+        "navigation_id": "persona.contexts",
+        "label_i18n": {
+          "zh-CN": "工作模式",
+          "en-US": "Contexts"
+        },
+        "view_id": "persona.contexts",
+        "sort_order": 201
+      },
+      {
+        "navigation_id": "persona.people",
+        "label_i18n": {
+          "zh-CN": "人物",
+          "en-US": "People"
+        },
+        "view_id": "persona.people",
+        "sort_order": 202
+      },
+      {
+        "navigation_id": "persona.memories",
+        "label_i18n": {
+          "zh-CN": "证据记忆",
+          "en-US": "Evidence memories"
+        },
+        "view_id": "persona.memories",
+        "sort_order": 203
       },
       {
         "navigation_id": "persona.inbox",
@@ -121,7 +212,7 @@
     "views": [
       {
         "view_id": "persona.today",
-        "view_type": "activity_log",
+        "view_type": "timeline",
         "title_i18n": {
           "zh-CN": "PI 数字分身",
           "en-US": "PI Persona"
@@ -131,6 +222,44 @@
           "zh-CN": "暂无跨领域活动",
           "en-US": "No cross-domain activity"
         }
+      },
+      {
+        "view_id": "persona.contexts",
+        "view_type": "list_detail",
+        "title_i18n": {
+          "zh-CN": "工作模式",
+          "en-US": "Contexts"
+        },
+        "data_ref": "personal.context.v1#contexts",
+        "command_ids": [
+          "persona.context.select",
+          "persona.context.update"
+        ]
+      },
+      {
+        "view_id": "persona.people",
+        "view_type": "list_detail",
+        "title_i18n": {
+          "zh-CN": "人物",
+          "en-US": "People"
+        },
+        "data_ref": "personal.memory.v1#people",
+        "command_ids": [
+          "persona.person.update"
+        ]
+      },
+      {
+        "view_id": "persona.memories",
+        "view_type": "timeline",
+        "title_i18n": {
+          "zh-CN": "证据记忆",
+          "en-US": "Evidence memories"
+        },
+        "data_ref": "personal.memory.v1#memories",
+        "command_ids": [
+          "persona.memory.update",
+          "persona.memory.review"
+        ]
       },
       {
         "view_id": "persona.inbox",
@@ -159,9 +288,12 @@
         "command_ids": [
           "persona.proposal.inspect",
           "persona.proposal.approve",
+          "persona.proposal.reject",
           "persona.mail.triage",
           "persona.inbox.capture",
-          "persona.obsidian.note.propose"
+          "persona.obsidian.note.propose",
+          "persona.obsidian.note.authorize",
+          "persona.obsidian.note.apply"
         ],
         "empty_state_i18n": {
           "zh-CN": "暂无待审核提案",
@@ -170,6 +302,74 @@
       }
     ],
     "commands": [
+      {
+        "command_id": "persona.context.select",
+        "label_i18n": {
+          "zh-CN": "选择工作模式",
+          "en-US": "Select context"
+        },
+        "action_ref": "personal.context.v1#context.select"
+      },
+      {
+        "command_id": "persona.context.update",
+        "label_i18n": {
+          "zh-CN": "更新工作模式",
+          "en-US": "Update context"
+        },
+        "action_ref": "personal.context.v1#context.update"
+      },
+      {
+        "command_id": "persona.person.update",
+        "label_i18n": {
+          "zh-CN": "更新人物",
+          "en-US": "Update person"
+        },
+        "action_ref": "personal.memory.v1#person.update"
+      },
+      {
+        "command_id": "persona.memory.update",
+        "label_i18n": {
+          "zh-CN": "更新候选记忆",
+          "en-US": "Update candidate memory"
+        },
+        "action_ref": "personal.memory.v1#memory.update"
+      },
+      {
+        "command_id": "persona.memory.review",
+        "label_i18n": {
+          "zh-CN": "审核记忆",
+          "en-US": "Review memory"
+        },
+        "action_ref": "personal.memory.v1#memory.review",
+        "confirmation_required": true
+      },
+      {
+        "command_id": "persona.proposal.reject",
+        "label_i18n": {
+          "zh-CN": "拒绝提案",
+          "en-US": "Reject proposal"
+        },
+        "action_ref": "personal.context.v1#proposal.reject",
+        "confirmation_required": true
+      },
+      {
+        "command_id": "persona.obsidian.note.apply",
+        "label_i18n": {
+          "zh-CN": "应用已批准笔记",
+          "en-US": "Apply approved note"
+        },
+        "action_ref": "knowledge.obsidian.v1#note.apply",
+        "confirmation_required": true
+      },
+      {
+        "command_id": "persona.obsidian.note.authorize",
+        "label_i18n": {
+          "zh-CN": "授权笔记写入",
+          "en-US": "Authorize note write"
+        },
+        "action_ref": "knowledge.obsidian.v1#note.authorize",
+        "confirmation_required": true
+      },
       {
         "command_id": "persona.proposal.inspect",
         "label_i18n": {

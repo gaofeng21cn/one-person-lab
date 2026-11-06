@@ -12,6 +12,7 @@
     "runtime/opl_persona/__init__.py",
     "runtime/opl_persona/approvals.py",
     "runtime/opl_persona/__main__.py",
+    "app-contribution-adapter.json",
     "runtime/opl_persona/app_contributions.py",
     "runtime/opl_persona/bindings.py",
     "runtime/opl_persona/cli.py",
@@ -21,6 +22,8 @@
     "runtime/opl_persona/obsidian_apply.py",
     "runtime/opl_persona/paths.py",
     "runtime/opl_persona/policy.py",
+    "runtime/opl_persona/proposals.py",
+    "runtime/opl_persona/workspace.py",
     "skills/opl-persona/SKILL.md",
     "skills/opl-persona/agents/openai.yaml"
   ]
