@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readDurableKnowledgeCatalog } from './durable-knowledge-catalog.ts';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
@@ -8,7 +9,7 @@ import {
   conceptIdFromFile,
   conceptPathFromId,
   domainPackPathKind,
-  domainRepoDefaultMemoryDescriptorPath,
+  domainRepoDefaultKnowledgeCatalogPath,
   domainRepoDefaultPackPath,
   extractLinks,
   fileRole,
@@ -108,7 +109,6 @@ export interface BuildOkfDomainPackProjectionOptions {
 export interface BuildOkfDomainRepoProjectionOptions extends BuildOkfDomainPackProjectionOptions {
   repoRoot: string;
   packPath?: string;
-  memoryDescriptorPath?: string;
   includeMemoryLocators?: boolean;
 }
 
@@ -124,33 +124,6 @@ export interface OkfDomainPackCompilerInput {
   required_domain_pack_paths?: unknown;
   source_refs?: unknown;
   authority_boundary?: unknown;
-}
-
-export interface OkfMemoryLocatorDescriptor {
-  target_domain_id?: string;
-  domain_id?: string;
-  owner?: string;
-  memory_ref_id?: string;
-  memory_family?: string;
-  memory_body_owner?: string;
-  opl_projection_policy?: string;
-  memory_pack_ref?: {
-    ref?: string;
-    ref_kind?: string;
-    role?: string;
-    workspace_locator?: string;
-  };
-  canonical_body_ref?: {
-    ref?: string;
-    ref_kind?: string;
-    role?: string;
-  };
-  writeback_receipt_locator_ref?: {
-    ref?: string;
-    ref_kind?: string;
-    role?: string;
-  };
-  authority_boundary?: Record<string, unknown>;
 }
 
 export interface OkfProjectedFile {
@@ -209,8 +182,8 @@ export interface OkfDomainRepoProjectionReadback {
   version: 'opl-okf-domain-repo-projection-readback.v1';
   repo_root: string;
   pack_path: string;
-  memory_descriptor_path: string | null;
-  memory_descriptor_status: 'loaded' | 'missing' | 'not_requested';
+  knowledge_catalog_path: string | null;
+  knowledge_catalog_status: 'loaded' | 'missing' | 'not_requested';
   memory_locator_count: number;
   domain_id: string;
   domain_pack_owner: string;
@@ -438,23 +411,6 @@ export function buildOkfContextBundleFromDomainPack(
   });
 }
 
-function collectOkfMemoryLocatorDescriptors(value: unknown): OkfMemoryLocatorDescriptor[] {
-  if (Array.isArray(value)) {
-    return value
-      .map((entry) => frontmatterRecord(entry))
-      .filter((entry): entry is JsonRecord => Boolean(entry))
-      .map((entry) => entry as unknown as OkfMemoryLocatorDescriptor);
-  }
-  const record = frontmatterRecord(value);
-  if (!record) {
-    return [];
-  }
-  if (Array.isArray(record.descriptors)) {
-    return collectOkfMemoryLocatorDescriptors(record.descriptors);
-  }
-  return [record as unknown as OkfMemoryLocatorDescriptor];
-}
-
 export function buildOkfContextBundleFromDomainRepo(
   options: BuildOkfDomainRepoProjectionOptions,
 ): OkfDomainRepoProjectionReadback {
@@ -464,15 +420,18 @@ export function buildOkfContextBundleFromDomainRepo(
   const pack = buildOkfDomainPackConcepts(packInput, options);
 
   const includeMemoryLocators = options.includeMemoryLocators ?? true;
-  const defaultMemoryDescriptorPath = domainRepoDefaultMemoryDescriptorPath(repoRoot);
-  const memoryDescriptorPath = options.memoryDescriptorPath
-    ? resolveSourcePath(repoRoot, options.memoryDescriptorPath)
-    : defaultMemoryDescriptorPath;
-  const memoryDescriptorExists = fs.existsSync(memoryDescriptorPath);
-  const memoryDescriptors = includeMemoryLocators && memoryDescriptorExists
-    ? collectOkfMemoryLocatorDescriptors(readJsonRecordFile(memoryDescriptorPath))
+  const knowledgeCatalogPath = domainRepoDefaultKnowledgeCatalogPath(repoRoot);
+  const knowledgeCatalogExists = fs.existsSync(knowledgeCatalogPath);
+  const memoryConcepts = includeMemoryLocators && knowledgeCatalogExists
+    ? readDurableKnowledgeCatalog(repoRoot, path.relative(repoRoot, knowledgeCatalogPath)).items.map((item) => ({
+        id: `${pack.domainId}/knowledge/${item.knowledge_id}`,
+        type: 'memory_locator', title: item.title,
+        resource: item.body_ref.ref,
+        tags: ['opl', 'okf', item.layer],
+        body: `# ${item.title}\n\nKnowledge body: ${item.body_ref.ref}\n`,
+        frontmatter: { knowledge_id: item.knowledge_id, layer: item.layer, status: item.status, body_owner: item.owner },
+      }))
     : [];
-  const memoryConcepts = memoryDescriptors.map((descriptor) => buildOkfMemoryLocatorConcept(descriptor));
   const bundleId = options.bundleId ?? `okf:${pack.domainId}:domain-repo`;
   const projection = buildOkfContextBundleProjection({
     bundleId,
@@ -485,9 +444,9 @@ export function buildOkfContextBundleFromDomainRepo(
     version: 'opl-okf-domain-repo-projection-readback.v1',
     repo_root: repoRoot,
     pack_path: packPath,
-    memory_descriptor_path: includeMemoryLocators ? memoryDescriptorPath : null,
-    memory_descriptor_status: includeMemoryLocators
-      ? (memoryDescriptorExists ? 'loaded' : 'missing')
+    knowledge_catalog_path: includeMemoryLocators ? knowledgeCatalogPath : null,
+    knowledge_catalog_status: includeMemoryLocators
+      ? (knowledgeCatalogExists ? 'loaded' : 'missing')
       : 'not_requested',
     memory_locator_count: memoryConcepts.length,
     domain_id: pack.domainId,
@@ -496,56 +455,6 @@ export function buildOkfContextBundleFromDomainRepo(
     projection,
     authority_boundary: OKF_CONTEXT_BUNDLE_CONTRACT.authority_boundary,
     non_authority_flags: OKF_CONTEXT_BUNDLE_CONTRACT.non_authority_flags,
-  };
-}
-
-export function buildOkfMemoryLocatorConcept(
-  descriptor: OkfMemoryLocatorDescriptor,
-): OkfConceptInput {
-  const domainId = descriptor.target_domain_id ?? descriptor.domain_id ?? 'unknown-domain';
-  const memoryRefId = descriptor.memory_ref_id ?? 'memory';
-  const owner = descriptor.owner ?? descriptor.memory_body_owner ?? domainId;
-  const resourceRef = descriptor.memory_pack_ref?.ref ?? descriptor.canonical_body_ref?.ref ?? memoryRefId;
-  return {
-    id: `${domainId}/memory_locator/${memoryRefId}`,
-    type: 'memory_locator',
-    title: titleFromSlug(memoryRefId),
-    description: `Body-free memory locator for ${domainId}.`,
-    resource: resourceRef,
-    tags: ['opl', 'okf', 'memory-locator', 'body-free-ref'],
-    body: [
-      `# ${titleFromSlug(memoryRefId)}`,
-      '',
-      `Memory locator ref: \`${resourceRef}\``,
-      '',
-      descriptor.writeback_receipt_locator_ref?.ref
-        ? `Writeback receipt locator: \`${descriptor.writeback_receipt_locator_ref.ref}\``
-        : 'Writeback receipt locator: not declared',
-      '',
-      'The domain owner keeps the memory body and writeback accept/reject authority.',
-      '',
-    ].join('\n'),
-    frontmatter: {
-      domain_id: domainId,
-      memory_ref_id: memoryRefId,
-      memory_family: descriptor.memory_family ?? memoryRefId,
-      body_owner: owner,
-      resource_body_mode: 'body_free_locator',
-      opl_projection_policy: descriptor.opl_projection_policy ?? 'locator_and_receipt_refs_only',
-      memory_pack_ref: (descriptor.memory_pack_ref ?? {}) as JsonRecord,
-      canonical_body_ref: (descriptor.canonical_body_ref ?? {}) as JsonRecord,
-      writeback_receipt_locator_ref: (descriptor.writeback_receipt_locator_ref ?? {}) as JsonRecord,
-      authority_boundary: {
-        ...((descriptor.authority_boundary ?? {}) as JsonRecord),
-        domain_owns_body: true,
-        body_owner: owner,
-        memory_body_authority: 'domain_owns_body',
-        opl_can_write_memory_body: false,
-        opl_can_write_domain_truth: false,
-        opl_can_accept_or_reject_writeback: false,
-        opl_can_authorize_quality_or_export: false,
-      },
-    },
   };
 }
 

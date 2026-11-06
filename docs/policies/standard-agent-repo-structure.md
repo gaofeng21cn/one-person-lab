@@ -40,7 +40,6 @@ Domain repo 持有阶段语义、专业能力、知识、质量门和最小领�
 │  ├─ pack_compiler_input.json
 │  ├─ action_catalog.json
 │  ├─ generated_surface_handoff.json
-│  ├─ memory_descriptor.json
 │  ├─ durable_knowledge_catalog.json
 │  ├─ artifact_locator_contract.json
 │  ├─ owner_receipt_contract.json
@@ -106,11 +105,11 @@ stage_id
 | Agent pack | 领域仓 `agent/knowledge/` | 金融机制、研究套路、期刊偏好、专业执行规则 | 领域 Agent |
 | Workspace shared | Workspace `shared/memory/` | 跨项目风险政策、来源偏好、共同约束 | Workspace owner |
 | Workspace project | 项目 `memory/` | 投资 mandate、研究设计、书稿风格选择、项目决策历史 | 项目 owner |
-| Dated state | 项目 `state/` 或权威外部系统 | 持仓、现金、订单、当前利率、当季期刊要求 | 领域 owner 或外部权威 |
+| Dated state | 项目 `state/`（附权威来源） | 持仓、现金、订单、当前利率、当季期刊要求 | 领域 owner 或外部权威 |
 
-OPL 负责目录、身份、适用范围、召回、不可变字节和消费回执；领域/项目 owner 负责正文语义、接受或拒绝写回。Stage 的 `knowledge_refs` 与 `skills` 会作为不可变 managed content 提供给 producer、reviewer、repairer 和 re-reviewer，避免“只登记路径、实际没有读取正文”。
+OPL 负责目录、身份、适用范围、召回、不可变字节和消费回执；领域/项目 owner 负责正文语义、接受或拒绝写回。StageRun 从统一 catalog 按领域、Stage、明确任务范围、状态和审阅期限选择知识，为 producer、reviewer、repairer 和 re-reviewer 固定同一份私有正文快照。静态 `knowledge_refs` 只表达编写关联，不再绕过 catalog 注入正文；`skills` 仍按不可变 managed content 绑定。公开状态只投影召回回执和快照引用。
 
-OPL 不把所有知识一次性注入提示词，也不把召回命中当成质量结论。每次 Attempt 只消费 Stage 适用的较小知识集，并记录知识 ID、正文 SHA-256 和选择理由。缺少知识默认可继续，但必须形成可见 quality debt；权威 claim、质量结论和真实交易等硬边界仍由各自 owner 决定。
+OPL 不把所有知识一次性注入提示词，也不把召回命中当成质量结论。每次 Attempt 只消费 Stage 适用的较小知识集，并记录知识 ID、正文 SHA-256 和选择理由。Agent catalog 必须存在；缺少可选 workspace catalog 或条目过期可继续，但必须形成可见 quality debt；权威 claim、质量结论和真实交易等硬边界仍由各自 owner 决定。
 
 因此，“Stage 内可以用哪些能力”不是靠把所有文本塞进一个提示词解决，而是靠 Stage 主提示词引用稳定能力面：domain skill declarations、repo-local professional Skill、外置 professional pack、OPL Connect connector、知识 refs、质量门和 receipt shape。AI executor 在 Stage 内做开放式判断；合同只负责边界、证据和接力。
 
@@ -156,3 +155,11 @@ OMA 负责目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据�
 目录语义是稳定边界，不随命名偏好移动：`agent/primary_skill/SKILL.md` 表示标准 agent 的 rich default Codex entry source；`agent/skills/` 表示 domain pack 内的 skill declaration / generated-surface 输入；`agent/professional_skills/<skill-id>/SKILL.md` 表示 Codex-style 一等专业方法 Skill。若某个 repo 暂时采用等价目录，必须在 `contracts/capability_map.json` 中声明 `capability_kind`、canonical source 和 runtime projection，并保证不会降低 Codex discovery 或 OPL sync 能力。
 
 通过结构 conformance 只说明目录和合同可消费，不说明 live domain progress、domain ready、production ready、quality / export ready、App release ready 或 owner accepted。
+
+### 知识写入与治理
+
+正文使用可阅读的 Markdown；Agent 元数据归 `contracts/durable_knowledge_catalog.json`，其余三层各自在上述目录使用 `opl_durable_knowledge_catalog.json`。OPL 固定目录，不接受 Agent 覆盖或旧 descriptor 回退。项目根来自已授权 execution scope，不能由普通输入把另一个项目的目录带入。
+
+项目结论先进入本项目 `memory/`，跨项目约束由 workspace owner 审阅后进入 `shared/memory/`。只有经脱敏、来源核实和领域审阅的可复用方法才进入 Agent 包。最新持仓、期刊要求和市场观察保存观察日期与来源，进入 `state/`；到期需重新核实，不能靠延长日期恢复有效性。
+
+领域 owner 负责候选、接受/拒绝、正文和证据；OPL 统一校验路径、scope、状态、日期、正文 hash、召回及消费回执。写入需同步正文与目录，并保留接受记录；未接受的候选为 draft，过期或废弃条目不召回。知识召回是推理输入，不能代替交易授权、研究证据或质量判断。源码 Git 保留演进，不复制旧私有存储或兼容 reader。

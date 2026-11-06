@@ -103,23 +103,18 @@ test('opl okf project-repo writes pack refs and optional memory locator without 
     'utf8',
   );
   fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'memory_descriptor.json'),
+    path.join(repoRoot, 'contracts', 'durable_knowledge_catalog.json'),
     JSON.stringify({
-      target_domain_id: 'fixture-agent',
-      owner: 'fixture-agent',
-      memory_ref_id: 'fixture_context_memory',
-      memory_family: 'context_memory',
-      memory_body_owner: 'fixture-agent',
-      memory_pack_ref: {
-        ref: 'docs/policies/context_memory.md',
-        ref_kind: 'human_doc',
-        role: 'memory_policy',
-      },
-      writeback_receipt_locator_ref: {
-        ref: 'memory/context/writeback_receipts',
-        ref_kind: 'workspace_locator',
-        role: 'domain_owned_receipts',
-      },
+      surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v1',
+      owner: 'one-person-lab', domain_id: 'fixture-agent',
+      items: [{
+        surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
+        knowledge_id: 'fixture.context', title: 'Context', layer: 'agent_pack', owner: 'fixture-agent',
+        body_ref: { kind: 'repo_path', ref: 'agent/knowledge/context.md' },
+        applicability: { domains: ['fixture-agent'], stages: ['intake'] },
+        status: 'active', reviewed_at: '2026-01-01T00:00:00Z', next_review_at: '2099-01-01T00:00:00Z',
+        authority_boundary: { semantic_body_owner: 'fixture-agent', opl_role: 'catalog_recall_and_receipt_projection_only' },
+      }],
     }, null, 2),
     'utf8',
   );
@@ -140,7 +135,7 @@ test('opl okf project-repo writes pack refs and optional memory locator without 
     assert.equal(output.version, 'g2');
     assert.equal(output.okf_domain_repo.surface_kind, 'opl_okf_domain_repo_projection_readback');
     assert.equal(output.okf_domain_repo.domain_id, 'fixture-agent');
-    assert.equal(output.okf_domain_repo.memory_descriptor_status, 'loaded');
+    assert.equal(output.okf_domain_repo.knowledge_catalog_status, 'loaded');
     assert.equal(output.okf_domain_repo.memory_locator_count, 1);
     assert.equal(output.okf_domain_repo.okf_validation.status, 'valid');
     assert.equal(output.okf_domain_repo.okf_validation.warnings.length, 0);
@@ -153,10 +148,10 @@ test('opl okf project-repo writes pack refs and optional memory locator without 
     assert.match(stageConcept, /\[\[fixture-agent\/prompt\/intake]]/);
     assert.match(stageConcept, /\[\[fixture-agent\/skill\/intake]]/);
     const memoryConcept = fs.readFileSync(
-      path.join(outputRoot, 'fixture-agent/memory_locator/fixture_context_memory.md'),
+      path.join(outputRoot, 'fixture-agent/knowledge/fixture.context.md'),
       'utf8',
     );
-    assert.match(memoryConcept, /resource_body_mode: body_free_locator/);
+    assert.match(memoryConcept, /knowledge_id: fixture.context/);
     assert.equal(memoryConcept.includes('memory_body:'), false);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });

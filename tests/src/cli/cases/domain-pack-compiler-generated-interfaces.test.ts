@@ -93,7 +93,7 @@ function writeDomainRepoContracts(targetDir: string, manifest: Record<string, an
       },
     }],
     ['action_catalog.json', manifestSurface.family_action_catalog],
-    ['memory_descriptor.json', manifestSurface.domain_memory_descriptor],
+    ['durable_knowledge_catalog.json', manifestSurface.domain_memory_descriptor],
     ['functional_privatization_audit.json', manifestSurface.functional_privatization_audit],
     ['generated_surface_handoff.json', {
       surface_kind: 'opl_generated_surface_handoff',

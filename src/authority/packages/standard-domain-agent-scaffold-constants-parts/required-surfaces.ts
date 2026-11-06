@@ -28,7 +28,7 @@ export const REQUIRED_CONTRACT_SURFACES = [
   'product_entry_manifest',
   'stage_control_plane',
   'family_action_catalog',
-  'domain_memory_descriptor_locator',
+  'durable_knowledge_catalog',
   'artifact_locator_contract',
   'owner_receipt_contract',
   'foundry_agent_series_contract',

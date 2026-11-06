@@ -40,6 +40,10 @@ function stageQualityBindingFixture(workspaceRoot: string) {
   const fixturePath = path.join(domainPackRoot, fixtureRef);
   const fixtureBytes = Buffer.from('{"stages":["artifact_creation","review_and_revision"]}\n');
   fs.mkdirSync(path.dirname(fixturePath), { recursive: true });
+  fs.mkdirSync(path.join(domainPackRoot, 'contracts'), { recursive: true });
+  fs.writeFileSync(path.join(domainPackRoot, 'contracts/durable_knowledge_catalog.json'), JSON.stringify({
+    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v1', owner: 'one-person-lab', items: [],
+  }));
   fs.writeFileSync(fixturePath, fixtureBytes);
   const rolePromptRef = 'agent/prompts/stage-quality-cycle-roles.md';
   const rolePromptPath = path.join(domainPackRoot, rolePromptRef);

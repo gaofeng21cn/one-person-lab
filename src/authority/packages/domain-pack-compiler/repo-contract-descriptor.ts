@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { readDurableKnowledgeCatalog } from '../durable-knowledge-catalog.ts';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
@@ -422,7 +423,7 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
   );
   const generatedSurfaceHandoffRaw = readRepoJson(repoDir, 'contracts/generated_surface_handoff.json');
   const packCompilerInput = readRepoJson(repoDir, 'contracts/pack_compiler_input.json');
-  const memoryDescriptor = readRepoJson(repoDir, 'contracts/memory_descriptor.json');
+  const knowledgeCatalog = readDurableKnowledgeCatalog(repoDir);
   const generatedSurfaceHandoff = resolveGeneratedSurfaceHandoffContract(generatedSurfaceHandoffRaw);
   if (generatedSurfaceHandoff && (
     generatedSurfaceHandoff.generated_surface_owner !== 'one-person-lab'
@@ -602,8 +603,8 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
           }
         : null,
       domain_memory_descriptor: {
-        status: memoryDescriptor ? 'resolved' : 'missing',
-        raw_descriptor: memoryDescriptor,
+        status: knowledgeCatalog.status === 'declared' ? 'resolved' : 'missing',
+        raw_descriptor: knowledgeCatalog.status === 'declared' ? knowledgeCatalog : null,
       },
       functional_privatization_audit: {
         status: functionalAudit.status,
@@ -776,7 +777,7 @@ function repoContractRuntimeSurfacesProjection(descriptor: JsonRecord) {
     },
     status_read_model: {
       status: statusOf(descriptor.domain_memory_descriptor) === 'resolved' ? 'resolved' : 'missing',
-      source_ref: 'contracts/memory_descriptor.json',
+      source_ref: 'contracts/durable_knowledge_catalog.json',
     },
     workbench: {
       status: statusOf(descriptor.family_stage_control_plane) === 'resolved' ? 'resolved' : 'missing',

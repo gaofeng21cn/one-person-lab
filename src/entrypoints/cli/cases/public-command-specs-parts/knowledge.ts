@@ -1,7 +1,6 @@
 import { parseCommandOptions } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 import {
-  readLegacyMemoryDescriptor,
   readDurableKnowledgeCatalog,
   recallDurableKnowledge,
 } from '../../../../authority/packages/durable-knowledge-catalog.ts';
@@ -24,7 +23,6 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
         return {
           version: 'g2',
           durable_knowledge: readDurableKnowledgeCatalog(repo),
-          legacy_memory_descriptor: readLegacyMemoryDescriptor(repo),
         };
       },
     },
@@ -60,7 +58,7 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
     },
     'knowledge recall': {
       usage:
-        'opl knowledge recall --repo <agent_repo> --domain <domain_id> --stage <stage_id> [--task-intent <text>] [--workspace <path>] [--project <path>]',
+        'opl knowledge recall --repo <agent_repo> --domain <domain_id> --stage <stage_id> [--task-intent <action_id>] [--workspace <path>] [--project <path>]',
       summary: 'Select current Stage-relevant knowledge bodies and return exact identity and quality debt.',
       examples: [
         'opl knowledge recall --repo ../opl-capital-compass --domain occ --stage product-evidence --json',

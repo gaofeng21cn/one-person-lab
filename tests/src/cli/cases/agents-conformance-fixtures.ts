@@ -170,6 +170,16 @@ function syncStageManifestFromPlane(repoDir: string, stageControlPlane: Record<s
     };
   });
   writeJson(manifestPath, manifest);
+  const knowledgePath = contractPath(repoDir, 'durable_knowledge_catalog.json');
+  const catalog = readJson(knowledgePath);
+  catalog.domain_id = manifest.target_domain_id;
+  for (const item of catalog.items) {
+    item.applicability.domains = [manifest.target_domain_id];
+    item.applicability.stages = manifest.stages
+      .filter((stage: Record<string, any>) => stage.knowledge_refs.includes(item.body_ref.ref))
+      .map((stage: Record<string, any>) => stage.stage_id);
+  }
+  writeJson(knowledgePath, catalog);
 }
 
 export function buildReadyAgentRepo() {
@@ -584,7 +594,16 @@ export function buildReadyAgentRepo() {
   return targetDir;
 }
 
+function retargetKnowledgeCatalog(repoDir: string, domainId: string) {
+  const file = contractPath(repoDir, 'durable_knowledge_catalog.json');
+  const catalog = readJson(file);
+  catalog.domain_id = domainId;
+  for (const item of catalog.items) item.applicability.domains = [domainId];
+  writeJson(file, catalog);
+}
+
 export function retargetReadyRepoToMag(repoDir: string) {
+  retargetKnowledgeCatalog(repoDir, 'med-autogrant');
   const domainDescriptorPath = contractPath(repoDir, 'domain_descriptor.json');
   const domainDescriptor = readJson(domainDescriptorPath);
   domainDescriptor.domain_id = 'med-autogrant';
@@ -609,6 +628,7 @@ export function retargetReadyRepoToMag(repoDir: string) {
 }
 
 export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel: string) {
+  retargetKnowledgeCatalog(repoDir, domainId);
   const domainDescriptorPath = contractPath(repoDir, 'domain_descriptor.json');
   const domainDescriptor = readJson(domainDescriptorPath);
   domainDescriptor.domain_id = domainId;

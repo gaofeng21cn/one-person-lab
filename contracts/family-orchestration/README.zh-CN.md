@@ -29,7 +29,7 @@ State: `active_support`
 | owner decision、human gate 与冲突交换 | [Owner route](./family-owner-route.schema.json)、[human gate](./family-human-gate.schema.json)、[conflict envelope](./family-conflict-envelope.schema.json) |
 | persistence 角色与 lifecycle receipt | [Persistence policy](./family-persistence-policy.schema.json)、[lifecycle ledger](./family-lifecycle-ledger.schema.json) |
 | 只读 runtime supervision | [Runtime supervision](./family-runtime-supervision.schema.json) |
-| domain memory 引用与 writeback 交换 | [Memory ref](./family-domain-memory-ref.schema.json)、[memory writeback](./family-domain-memory-writeback.schema.json) |
+| domain memory 引用与 writeback 交换 | [Knowledge catalog](../opl-framework/durable-knowledge-catalog.schema.json)、[memory writeback](./family-domain-memory-writeback.schema.json) |
 
 ## 结合运行时 owner 阅读
 

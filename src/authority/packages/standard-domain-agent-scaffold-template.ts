@@ -239,7 +239,7 @@ function physicalSourceMorphologyPolicy(domainId: string) {
         surface_id: 'refs_only_adapters',
         classification: 'refs_only_adapter',
         source_refs: [
-          'contracts/memory_descriptor.json',
+          'contracts/durable_knowledge_catalog.json',
           'contracts/artifact_locator_contract.json',
           'contracts/owner_receipt_contract.json',
         ],
@@ -439,7 +439,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     },
     {
       path: 'agent/knowledge/README.md',
-      content: `# ${domainLabel} Knowledge\n\nStore knowledge locators and policies here. Runtime memory bodies belong in the workspace/runtime memory root, not in OPL state.\n`,
+      content: `# ${domainLabel} Knowledge\n\nStore reviewed reusable domain knowledge as Markdown here and register it in contracts/durable_knowledge_catalog.json. OPL owns catalog validation and scoped Stage recall. Owner/team constraints belong in shared/memory, project lessons in the authorized project memory directory, and dated observations in project state. Do not copy project facts into the Agent package.\n`,
     },
     {
       path: 'agent/knowledge/domain_boundary.md',
@@ -664,14 +664,21 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       }),
     },
     {
-      path: 'contracts/memory_descriptor.json',
+      path: 'contracts/durable_knowledge_catalog.json',
       content: json({
-        surface_kind: 'domain_memory_descriptor_locator',
-        schema_version: 1,
+        surface_kind: 'opl_durable_knowledge_catalog',
+        version: 'durable-knowledge-catalog.v1',
+        owner: 'one-person-lab',
         domain_id: domainId,
-        memory_body_owner: domainId,
-        opl_projection_policy: 'locator_and_receipt_refs_only',
-        marker: SCAFFOLD_MARKER,
+        items: [{
+          surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
+          knowledge_id: `${domainId}.domain-boundary`, title: `${domainLabel} domain boundary`,
+          layer: 'agent_pack', owner: domainId,
+          body_ref: { kind: 'repo_path', ref: 'agent/knowledge/domain_boundary.md' },
+          applicability: { domains: [domainId], stages: [STARTER_STAGE_ID] },
+          status: 'draft', reviewed_at: '2026-11-06T00:00:00Z', next_review_at: '2027-11-06T00:00:00Z',
+          authority_boundary: { semantic_body_owner: domainId, opl_role: 'catalog_recall_and_receipt_projection_only' },
+        }],
       }),
     },
     {

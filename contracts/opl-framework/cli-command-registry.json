@@ -45,8 +45,7 @@
         "type": "object",
         "required": [
           "version",
-          "durable_knowledge",
-          "legacy_memory_descriptor"
+          "durable_knowledge"
         ],
         "properties": {
           "version": {
@@ -82,34 +81,6 @@
                 "enum": [
                   "declared",
                   "not_declared"
-                ]
-              }
-            },
-            "additionalProperties": true
-          },
-          "legacy_memory_descriptor": {
-            "type": "object",
-            "required": [
-              "status",
-              "descriptor_ref",
-              "migration_state"
-            ],
-            "properties": {
-              "status": {
-                "enum": [
-                  "compatible_legacy_descriptor",
-                  "missing",
-                  "invalid"
-                ]
-              },
-              "descriptor_ref": {
-                "type": "string"
-              },
-              "migration_state": {
-                "enum": [
-                  "legacy_preserved",
-                  "catalog_declared",
-                  "invalid"
                 ]
               }
             },
@@ -206,7 +177,7 @@
           "flag": "--task-intent",
           "value_kind": "string",
           "required": false,
-          "summary": "Optional bounded task intent used for applicability filtering."
+          "summary": "Exact applicability task key; StageRun supplies its action_id."
         },
         {
           "name": "workspace",

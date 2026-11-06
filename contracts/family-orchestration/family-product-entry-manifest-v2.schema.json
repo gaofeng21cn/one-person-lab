@@ -286,7 +286,7 @@
       "$ref": "family-stage-integrity-metadata.schema.json"
     },
     "domain_memory_descriptor": {
-      "$ref": "family-domain-memory-ref.schema.json"
+      "$ref": "../opl-framework/durable-knowledge-catalog.schema.json"
     },
     "remaining_gaps": {
       "type": "array",

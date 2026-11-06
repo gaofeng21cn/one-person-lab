@@ -79,6 +79,8 @@ writeFixture(
 );
 writeFixture(domainPackRoot, 'agent/quality_gates/stage.md', '# Stage rubric\n');
 writeFixture(domainPackRoot, 'agent/knowledge/stage.md', '# Stage knowledge\n');
+writeFixture(domainPackRoot, 'contracts/durable_knowledge_catalog.json', JSON.stringify({"surface_kind": "opl_durable_knowledge_catalog", "version": "durable-knowledge-catalog.v1", "owner": "one-person-lab", "items": [{"surface_kind": "opl_durable_knowledge_item", "version": "durable-knowledge-item.v1", "knowledge_id": "fixture.stage", "title": "Stage knowledge", "layer": "agent_pack", "owner": "fixture", "body_ref": {"kind": "repo_path", "ref": "agent/knowledge/stage.md"}, "applicability": {"domains": ["medautoscience", "redcube_ai", "redcube"], "stages": ["intake", "draft", "review"]}, "status": "active", "reviewed_at": "2020-01-01T00:00:00Z", "next_review_at": "2099-01-01T00:00:00Z", "authority_boundary": {"semantic_body_owner": "fixture", "opl_role": "catalog_recall_and_receipt_projection_only"}}]}));
+
 writeFixture(domainPackRoot, 'agent/professional_skills/stage/SKILL.md', '# Stage professional method\n');
 writeFixture(domainPackRoot, 'agent/policies/stage.md', '# Stage policy\n');
 writeFixture(domainPackRoot, 'agent/sources/request.md', '# Request source\n');

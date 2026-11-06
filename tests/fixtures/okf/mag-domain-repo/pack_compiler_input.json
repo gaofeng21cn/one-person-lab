@@ -379,7 +379,7 @@
       "retention_class": "mag_minimal_authority_function",
       "retired_legacy_function_id_compatibility": false,
       "source_refs": [
-        "/product_entry_manifest/domain_memory_descriptor_locator",
+        "/product_entry_manifest/domain_memory_descriptor",
         "/product_entry_manifest/controlled_domain_memory_apply_proof"
       ],
       "stage_or_owner_receipt_evidence_required": true,

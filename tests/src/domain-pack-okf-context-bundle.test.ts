@@ -8,7 +8,7 @@ import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { assert, test } from './cli/helpers.ts';
 import {
   buildOkfContextBundleFromDomainPack,
-  buildOkfMemoryLocatorConcept,
+  buildOkfContextBundleFromDomainRepo,
   validateOkfContextBundle,
   writeOkfContextBundleProjection,
 } from '../../src/authority/packages/okf-context-bundle.ts';
@@ -152,53 +152,18 @@ for (const fixture of domainRepoFixtures) {
   });
 }
 
-test('domain memory descriptor fixtures map to body-free OKF locator concepts', () => {
-  const concepts = domainRepoFixtures.map((fixture) => (
-    buildOkfMemoryLocatorConcept(readJson(`${fixture.fixtureDir}/memory_descriptor.json`))
-  ));
-
-  assert.deepEqual(
-    concepts.map((concept) => concept.frontmatter?.domain_id),
-    domainRepoFixtures.map((fixture) => fixture.domainId),
-  );
-  for (const concept of concepts) {
-    assert.equal(concept.type, 'memory_locator');
-    assert.equal(concept.frontmatter?.resource_body_mode, 'body_free_locator');
-    const authority = concept.frontmatter?.authority_boundary as JsonRecord;
-    assert.equal(authority.domain_owns_body, true);
-    assert.equal(authority.opl_can_write_memory_body, false);
-    assert.equal(authority.opl_can_write_domain_truth, false);
-    assert.equal(authority.opl_can_accept_or_reject_writeback, false);
-    assert.equal('memory_body' in concept, false);
-    assert.equal('content' in concept, false);
+test('durable catalogs project body-free OKF knowledge references', () => {
+  for (const fixture of domainRepoFixtures) {
+    const result = buildOkfContextBundleFromDomainRepo({
+      repoRoot: path.join(okfFixtureDir, fixture.fixtureDir),
+      packPath: 'pack_compiler_input.json',
+    });
+    assert.equal(result.knowledge_catalog_status, 'loaded');
+    assert.equal(result.memory_locator_count, 1);
+    const file = Object.values(result.projection.files).find((entry) => entry.frontmatter.type === 'memory_locator');
+    assert.ok(file);
+    assert.equal(file.frontmatter.layer, 'agent_pack');
+    assert.equal('content' in file.frontmatter, false);
+    assert.equal(result.authority_boundary.can_write_memory_body, false);
   }
-});
-
-test('family memory descriptors map to OKF locator concepts without memory body authority', () => {
-  const fixture = readJson('memory-locators.json');
-  const descriptors = fixture.descriptors as JsonRecord[];
-  const concepts = descriptors.map((descriptor) => buildOkfMemoryLocatorConcept(descriptor));
-
-  assert.deepEqual(
-    concepts.map((concept) => concept.frontmatter?.domain_id),
-    ['med-autoscience', 'med-autogrant', 'redcube-ai', 'opl-meta-agent'],
-  );
-
-  for (const concept of concepts) {
-    assert.equal(concept.type, 'memory_locator');
-    assert.equal(concept.frontmatter?.resource_body_mode, 'body_free_locator');
-    const authority = concept.frontmatter?.authority_boundary as JsonRecord;
-    assert.equal(authority.domain_owns_body, true);
-    assert.equal(authority.memory_body_authority, 'domain_owns_body');
-    assert.equal(authority.opl_can_write_memory_body, false);
-    assert.equal(authority.opl_can_write_domain_truth, false);
-    assert.equal(authority.opl_can_accept_or_reject_writeback, false);
-    assert.equal('memory_body' in concept, false);
-    assert.equal('content' in concept, false);
-  }
-
-  const mas = concepts.find((concept) => concept.frontmatter?.domain_id === 'med-autoscience');
-  assert.ok(mas);
-  assert.equal(mas.id, 'med-autoscience/memory_locator/mas_publication_route_memory');
-  assert.equal(mas.resource, 'docs/policies/study-workflow/publication_route_memory_policy.md');
 });

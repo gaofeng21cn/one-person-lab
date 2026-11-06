@@ -297,6 +297,7 @@ export async function stageQualityAttemptMaterializeActivity(
       executionReviewLane,
     );
     const executionContentSpec = buildStageRunImmutableSpec({
+      knowledgeContext: stageRun.stage_run_spec.durable_knowledge_context,
       binding: executionStageBinding,
       domainPackRoot: executionDomainPackRoot,
       domainId: stageRun.domain_id,

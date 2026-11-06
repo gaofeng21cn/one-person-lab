@@ -12,6 +12,7 @@ import {
 } from '../../kernel/agent-plugin-manifest.ts';
 import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../kernel/schema-registry.ts';
+import { readDurableKnowledgeCatalog, resolveDurableKnowledgeBody } from './durable-knowledge-catalog.ts';
 import {
   buildStandardAgentRepoContractReadout,
   STANDARD_AGENT_STAGE_MANIFEST_REF,
@@ -26,7 +27,7 @@ import {
   requiresStagePackV2,
   validateStagePackV2,
 } from './standard-domain-agent-stage-pack-v2.ts';
-import { validateAgentPackFiles } from './standard-domain-agent-scaffold-validation-parts/pack-files.ts';
+import { discoverPackFiles, validateAgentPackFiles } from './standard-domain-agent-scaffold-validation-parts/pack-files.ts';
 import { validateStageRefs } from './standard-domain-agent-scaffold-validation-parts/stage-refs.ts';
 import { validateUserStageLogContracts } from './standard-domain-agent-scaffold-validation-parts/user-stage-log.ts';
 import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaffold-validation-parts/foundry-contract.ts';
@@ -324,7 +325,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/generated_surface_handoff.json',
     STANDARD_AGENT_STAGE_MANIFEST_REF,
     'contracts/action_catalog.json',
-    'contracts/memory_descriptor.json',
+    'contracts/durable_knowledge_catalog.json',
     'contracts/artifact_locator_contract.json',
     'contracts/owner_receipt_contract.json',
     'contracts/foundry_agent_series.json',
@@ -502,7 +503,40 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     : []);
   const effectiveAgentPackBlockers = agentPackValidation.blockers
     .filter((blocker) => !hostedNonApplicablePackSectionBlockers.has(blocker));
+  const knowledgeBlockers: string[] = [];
+  try {
+    const catalog = readDurableKnowledgeCatalog(repoDir);
+    if (catalog.status !== 'declared') knowledgeBlockers.push('durable_knowledge_catalog_missing');
+    if (catalog.domain_id !== descriptorDomainId) knowledgeBlockers.push('durable_knowledge_catalog_domain_mismatch');
+    const stageIds = new Set(stageRefValidation.stage_statuses.map((stage) => stage.stage_id));
+    const bodies = new Set(catalog.items.map((item) => item.body_ref.ref));
+    for (const item of catalog.items) {
+      resolveDurableKnowledgeBody({ item, domainPackRoot: repoDir });
+      for (const stage of item.applicability.stages) {
+        if (!stageIds.has(stage)) knowledgeBlockers.push(`knowledge_unknown_stage:${item.knowledge_id}:${stage}`);
+      }
+    }
+    for (const ref of discoverPackFiles(repoDir, 'agent/knowledge')) {
+      if (ref.endsWith('.md') && !ref.endsWith('/README.md') && !bodies.has(ref)) {
+        knowledgeBlockers.push(`knowledge_body_not_cataloged:${ref}`);
+      }
+    }
+    for (const stage of stageRefValidation.stage_statuses) {
+      for (const ref of stage.referenced_agent_files.filter((ref) => ref.startsWith('agent/knowledge/'))) {
+        if (!catalog.items.some((item) => item.body_ref.ref === ref.split('#')[0]
+          && item.applicability.stages.includes(stage.stage_id))) {
+          knowledgeBlockers.push(`knowledge_stage_not_cataloged:${stage.stage_id}:${ref}`);
+        }
+      }
+    }
+    if (fs.existsSync(path.join(repoDir, 'contracts/memory_descriptor.json'))) {
+      knowledgeBlockers.push('retired_memory_descriptor_present');
+    }
+  } catch (error) {
+    knowledgeBlockers.push(`durable_knowledge_invalid:${error instanceof Error ? error.message : String(error)}`);
+  }
   const rawBlockers = [
+    ...knowledgeBlockers,
     ...rawMissingRequiredDirs.map((item) => `missing_required_dir:${item}`),
     ...forbiddenPresentDirs.map((item) => `forbidden_source_dir_present:${item}`),
     ...rawMissingContractFiles.map((item) => `missing_contract:${item}`),
@@ -520,6 +554,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     ...agentPluginValidation.blockers,
   ].filter((entry): entry is string => Boolean(entry));
   const blockers = [
+    ...knowledgeBlockers,
     ...missingRequiredDirs.map((item) => `missing_required_dir:${item}`),
     ...forbiddenPresentDirs.map((item) => `forbidden_source_dir_present:${item}`),
     ...missingContractFiles.map((item) => `missing_contract:${item}`),

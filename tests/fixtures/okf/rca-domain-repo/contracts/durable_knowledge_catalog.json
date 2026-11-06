@@ -1,0 +1,35 @@
+{
+  "surface_kind": "opl_durable_knowledge_catalog",
+  "version": "durable-knowledge-catalog.v1",
+  "owner": "one-person-lab",
+  "domain_id": "redcube_ai",
+  "items": [
+    {
+      "surface_kind": "opl_durable_knowledge_item",
+      "version": "durable-knowledge-item.v1",
+      "knowledge_id": "redcube_ai.method",
+      "title": "Method",
+      "layer": "agent_pack",
+      "owner": "redcube_ai",
+      "body_ref": {
+        "kind": "repo_path",
+        "ref": "agent/knowledge/method.md"
+      },
+      "applicability": {
+        "domains": [
+          "redcube_ai"
+        ],
+        "stages": [
+          "intake"
+        ]
+      },
+      "status": "active",
+      "reviewed_at": "2026-01-01T00:00:00Z",
+      "next_review_at": "2099-01-01T00:00:00Z",
+      "authority_boundary": {
+        "semantic_body_owner": "redcube_ai",
+        "opl_role": "catalog_recall_and_receipt_projection_only"
+      }
+    }
+  ]
+}

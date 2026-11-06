@@ -97,18 +97,15 @@ function memoryRefEntries(manifest: DomainManifestRecord | null) {
     return [];
   }
 
-  return [
-    {
-      ref_id: descriptor.memory_ref_id,
-      memory_family: descriptor.memory_family,
-      owner: descriptor.owner,
-      memory_pack_ref: descriptor.memory_pack_ref,
-      writeback_contract_ref: descriptor.writeback_contract_ref,
-      receipt_contract_ref: descriptor.receipt_contract_ref,
-      writeback_receipt_locator_ref: descriptor.writeback_receipt_locator_ref,
-      lifecycle_role: 'domain_declared_memory_locator',
-    },
-  ];
+  const items: JsonRecord[] = Array.isArray(descriptor.items) ? descriptor.items.filter(isRecord) : [];
+  return items.map((item) => ({
+    ref_id: String(item.knowledge_id),
+    owner: item.owner,
+    layer: item.layer,
+    body_ref: item.body_ref,
+    status: item.status,
+    lifecycle_role: 'scoped_knowledge_catalog_item',
+  }));
 }
 
 function workspaceProjection(entry: DomainManifestCatalogEntry) {
@@ -360,8 +357,8 @@ function findProjectionEntry(
       || manifest?.target_domain_id === normalized
       || agentSpec?.agent_id === domain
       || agentSpec?.agent_id === normalized
-      || (isRecord(manifest?.domain_memory_descriptor) && manifest.domain_memory_descriptor.target_domain_id === domain)
-      || (isRecord(manifest?.domain_memory_descriptor) && manifest.domain_memory_descriptor.target_domain_id === normalized);
+      || (isRecord(manifest?.domain_memory_descriptor) && manifest.domain_memory_descriptor.domain_id === domain)
+      || (isRecord(manifest?.domain_memory_descriptor) && manifest.domain_memory_descriptor.domain_id === normalized);
   });
   if (!entry) {
     throw new FrameworkContractError('cli_usage_error', `Unknown substrate projection domain: ${domain}.`, {

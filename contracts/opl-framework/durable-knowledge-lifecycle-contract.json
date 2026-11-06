@@ -26,7 +26,7 @@
   "layer_model": {
     "agent_pack": {
       "role": "versioned_reusable_domain_knowledge",
-      "body_location": "domain_repo_agent_knowledge",
+      "body_location": "agent/knowledge/",
       "examples": [
         "financial_mechanisms",
         "research_methods",
@@ -44,7 +44,7 @@
     },
     "workspace_shared": {
       "role": "cross_project_owner_or_team_memory",
-      "body_location": "workspace_shared_memory_root",
+      "body_location": "shared/memory/",
       "examples": [
         "owner_constraints",
         "risk_policy",
@@ -61,7 +61,7 @@
     },
     "workspace_project": {
       "role": "project_specific_durable_context",
-      "body_location": "project_memory_root",
+      "body_location": "memory/",
       "examples": [
         "investment_mandate",
         "research_question_and_design",
@@ -77,7 +77,7 @@
     },
     "dated_state": {
       "role": "current_or_historical_fact_snapshot",
-      "body_location": "project_state_or_owner_authoritative_source",
+      "body_location": "state/",
       "examples": [
         "holdings_and_cash",
         "current_journal_requirements",
@@ -107,13 +107,12 @@
       "tags",
       "supersedes",
       "superseded_by",
-      "retrieval_notes",
       "freshness_policy"
     ],
     "identity_policy": "stable_across_body_revisions",
     "body_addressing_policy": "exact_sha256_at_stage_binding",
-    "unknown_metadata_policy": "preserve_without_promoting_to_authority",
-    "time_policy": "review_dates_are_required_for_time_sensitive_guidance"
+    "unknown_metadata_policy": "reject_unknown_fields",
+    "time_policy": "review_and_expiry_dates_required_for_all_items"
   },
   "recall_policy": {
     "selection_unit": "small_stage_relevant_knowledge_set",
@@ -126,14 +125,18 @@
       "status",
       "review_currentness"
     ],
-    "default_missing_knowledge_behavior": "fail_open_with_visible_quality_debt",
+    "default_missing_knowledge_behavior": "missing_agent_catalog_is_invalid; optional_workspace_catalogs_add_quality_debt",
     "must_record_consumed_refs": true,
     "must_record_body_sha256": true,
     "must_record_selection_reason": true,
     "may_rank_candidates": true,
     "may_make_quality_verdict": false,
     "may_override_stage_goal": false,
-    "must_not_inject_all_knowledge": true
+    "must_not_inject_all_knowledge": true,
+    "task_matching": "exact_task_intent_when_declared; StageRun uses action_id",
+    "execution_binding": "one_private_exact_snapshot_per_stage_run_shared_by_all_quality_roles",
+    "public_projection": "receipt_and_snapshot_ref_only_no_private_body",
+    "static_knowledge_refs": "authoring_references_only_never_bypass_catalog_lifecycle"
   },
   "writeback_policy": {
     "agent_may_propose": true,

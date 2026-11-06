@@ -209,51 +209,16 @@ function withStageControlPlane(payload: JsonRecord, targetDomainId: string, owne
 
 function withMemoryDescriptor(payload: JsonRecord, targetDomainId: string, owner: string, memoryRefId: string) {
   return attachManifestSurface(payload, 'domain_memory_descriptor', {
-    surface_kind: 'family_domain_memory_ref',
-    version: 'family-domain-memory-ref.v1',
-    memory_ref_id: memoryRefId,
-    target_domain_id: targetDomainId,
-    owner,
-    memory_family: `${targetDomainId}.memory`,
-    memory_pack_ref: {
-      ref_kind: 'human_doc',
-      ref: `docs/policies/${memoryRefId}.md`,
-      role: 'markdown_first_memory_policy',
-    },
-    stage_applicability: ['intake', 'review'],
-    retrieval_contract_ref: {
-      ref_kind: 'surface_kind',
-      ref: 'stage_knowledge_packet',
-    },
-    writeback_contract_ref: {
-      ref_kind: 'surface_kind',
-      ref: 'stage_memory_closeout_packet',
-    },
-    receipt_contract_ref: {
-      ref_kind: 'surface_kind',
-      ref: 'memory_write_router_receipt',
-    },
-    writeback_receipt_locator_ref: {
-      ref_kind: 'workspace_locator',
-      ref: `portfolio/domain_memory/${memoryRefId}/writeback_receipts`,
-    },
-    migration_readiness: { status: 'ready_for_refs_only_projection' },
-    freshness: { status: 'fresh' },
-    status: 'active',
-    authority_boundary: {
-      opl_role: 'locator_projection_owner',
-      domain_memory_owner: owner,
-      forbidden_opl_authority: [
-        'memory_store_owner',
-        'domain_truth_owner',
-        'quality_verdict_owner',
-        'artifact_authority',
-      ],
-      can_accept_memory_write: false,
-      can_write_domain_truth: false,
-      can_authorize_quality_verdict: false,
-      can_write_artifacts: false,
-    },
+    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v1',
+    domain_id: targetDomainId, owner: 'one-person-lab',
+    items: [{
+      surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
+      knowledge_id: memoryRefId, title: 'Fixture knowledge', layer: 'agent_pack', owner,
+      body_ref: { kind: 'repo_path', ref: 'agent/knowledge/domain_boundary.md' },
+      applicability: { domains: [targetDomainId], stages: ['intake'] },
+      status: 'active', reviewed_at: '2026-01-01T00:00:00Z', next_review_at: '2099-01-01T00:00:00Z',
+      authority_boundary: { semantic_body_owner: owner, opl_role: 'catalog_recall_and_receipt_projection_only' },
+    }],
   });
 }
 
@@ -490,7 +455,7 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
     required: ['workspace_root'],
     properties: { workspace_root: { type: 'string' } },
   });
-  writeJson(path.join(contractsDir, 'memory_descriptor.json'), manifest.domain_memory_descriptor as JsonRecord);
+  writeJson(path.join(contractsDir, 'durable_knowledge_catalog.json'), manifest.domain_memory_descriptor as JsonRecord);
   writeJson(path.join(contractsDir, 'functional_privatization_audit.json'), manifest.functional_privatization_audit as JsonRecord);
   writeJson(path.join(contractsDir, 'generated_surface_handoff.json'), generatedSurfaceHandoff(spec.targetDomainId));
   const packCompilerInput = JSON.parse(

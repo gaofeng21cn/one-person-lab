@@ -45,7 +45,7 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
       'opl domain-memory list',
       'opl domain-memory inspect',
       appOperatorProjectionRef('memory_writeback_refs'),
-      'contracts/family-orchestration/family-domain-memory-ref.schema.json',
+      'contracts/opl-framework/durable-knowledge-catalog.schema.json',
       'contracts/family-orchestration/family-domain-memory-writeback.schema.json',
     ],
     focused_verification_refs: [

@@ -146,7 +146,7 @@ export const PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY = {
         'authority_boundary',
       ],
       examples: [
-        'domain_memory_descriptor_locator',
+        'durable_knowledge_catalog',
         'artifact_locator_contract',
         'owner_receipt_contract',
         'source_readiness_refs',

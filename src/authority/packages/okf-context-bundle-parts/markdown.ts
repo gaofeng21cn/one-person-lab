@@ -134,8 +134,8 @@ export function domainRepoDefaultPackPath(repoRoot: string) {
   return path.join(repoRoot, 'contracts', 'pack_compiler_input.json');
 }
 
-export function domainRepoDefaultMemoryDescriptorPath(repoRoot: string) {
-  return path.join(repoRoot, 'contracts', 'memory_descriptor.json');
+export function domainRepoDefaultKnowledgeCatalogPath(repoRoot: string) {
+  return path.join(repoRoot, 'contracts', 'durable_knowledge_catalog.json');
 }
 
 export function domainPackPathKind(relativePath: string) {

@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+import { readStageKnowledgeContext } from './family-runtime-knowledge-context.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import {
@@ -288,7 +290,6 @@ export function resolveStageRunAttemptExecutorContent(
   const managedContent = [
     { purpose: 'stage_manifest', ref: spec.stage_manifest.ref },
     { purpose: 'quality_policy', ref: spec.quality_policy.ref },
-    ...spec.knowledge_refs.map((ref) => ({ purpose: 'knowledge', ref })),
     ...spec.skill_refs.map((ref) => ({ purpose: 'skill', ref })),
     ...spec.policy_refs.map((ref) => ({ purpose: 'policy', ref })),
     ...spec.quality_rubric_refs.map((ref) => ({ purpose: 'quality_rubric', ref })),
@@ -312,9 +313,28 @@ export function resolveStageRunAttemptExecutorContent(
     }
     return { ...entry, ...file, sha256: `sha256:${file.sha256}` };
   });
+  if (canonicalJsonText(spec.durable_knowledge_context) !== canonicalJsonText(parentSpec.durable_knowledge_context)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Quality roles must consume the same StageRun knowledge snapshot.');
+  }
+  const recallReceiptText = JSON.stringify(spec.durable_knowledge_context.receipt);
   return {
     effectiveStagePrompt: stagePrompt,
     effectiveQualityRolePrompt: rolePrompt,
-    effectiveManagedContent: managedContent,
+    effectiveManagedContent: [
+      ...managedContent,
+      ...readStageKnowledgeContext(spec.durable_knowledge_context, input.domain_id, input.stage_id).bodies.map((body) => ({
+        purpose: `knowledge:${body.layer}`,
+        ref: body.body_ref,
+        content: body.content,
+        sha256: body.sha256,
+        size_bytes: body.size_bytes,
+      })),
+      {
+        purpose: 'knowledge_recall_receipt', ref: 'stage_run_spec.durable_knowledge_context.receipt',
+        content: recallReceiptText,
+        sha256: `sha256:${crypto.createHash('sha256').update(recallReceiptText).digest('hex')}`,
+        size_bytes: Buffer.byteLength(recallReceiptText),
+      },
+    ],
   };
 }

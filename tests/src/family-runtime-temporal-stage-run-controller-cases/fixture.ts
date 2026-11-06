@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { Worker } from '@temporalio/worker';
 import { FrameworkContractError } from '../../../src/kernel/contract-validation.ts';
+import { persistCanonicalReviewTransportJson, reviewTransportRoots } from '../../../src/adapters/execution/family-runtime-review-transport-store.ts';
 
 import type {
   TemporalStageAttemptWorkflowInput,
@@ -24,6 +25,20 @@ import { queryTemporalStageRunWorkflow } from '../../../src/adapters/execution/f
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 
 function stageRunInput(id: string): TemporalStageRunWorkflowInput {
+  const receipt = {
+    surface_kind: 'opl_durable_knowledge_recall_receipt' as const,
+    version: 'durable-knowledge-recall-receipt.v1' as const,
+    domain_id: 'redcube', stage_id: 'artifact_creation', task_intent: null,
+    selected: [], quality_debt: [],
+    authority_boundary: {
+      context_evidence_only: true as const, can_authorize_quality_verdict: false as const,
+      can_authorize_domain_truth: false as const, can_replace_owner_receipt: false as const,
+    },
+  };
+  const snapshot = persistCanonicalReviewTransportJson({
+    root: path.join(reviewTransportRoots().root, 'knowledge-context'),
+    kind: 'opl_stage_knowledge_snapshot', value: { receipt, bodies: [] },
+  });
   return {
     stage_run_id: `stage-run:${id}`,
     stage_run_invocation_id: `stage-run-invocation:${id}`,
@@ -50,6 +65,7 @@ function stageRunInput(id: string): TemporalStageRunWorkflowInput {
       },
       quality_rubric_refs: ['rubric:visual'],
       knowledge_refs: [],
+      durable_knowledge_context: { receipt, snapshot_ref: snapshot.exact_ref },
       skill_refs: [],
       policy_refs: [],
       stage_goal_refs: ['goal:artifact-creation'],

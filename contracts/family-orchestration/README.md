@@ -29,7 +29,7 @@ Each row identifies one exchange concern. Required fields, allowed values, and a
 | Owner decision, human gate and conflict exchange | [Owner route](./family-owner-route.schema.json), [human gate](./family-human-gate.schema.json), [conflict envelope](./family-conflict-envelope.schema.json) |
 | Persistence roles and lifecycle receipts | [Persistence policy](./family-persistence-policy.schema.json), [lifecycle ledger](./family-lifecycle-ledger.schema.json) |
 | Read-only runtime supervision | [Runtime supervision](./family-runtime-supervision.schema.json) |
-| Domain memory references and writeback exchange | [Memory ref](./family-domain-memory-ref.schema.json), [memory writeback](./family-domain-memory-writeback.schema.json) |
+| Domain memory references and writeback exchange | [Knowledge catalog](../opl-framework/durable-knowledge-catalog.schema.json), [memory writeback](./family-domain-memory-writeback.schema.json) |
 
 ## Read Alongside The Runtime Owner
 

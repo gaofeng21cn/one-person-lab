@@ -278,22 +278,13 @@ function buildStageControlPlaneProjection(entry: DomainManifestCatalogEntry) {
 
 function buildDomainMemoryProjection(entry: DomainManifestCatalogEntry) {
   const descriptor = entry.manifest?.domain_memory_descriptor ?? null;
-  const authority = descriptor?.authority_boundary ?? null;
   return {
     status: componentStatus(entry, Boolean(descriptor)),
-    memory_ref_id: descriptor?.memory_ref_id ?? null,
-    memory_family: descriptor?.memory_family ?? null,
+    catalog_ref: descriptor?.catalog_ref ?? null,
     owner: descriptor?.owner ?? null,
-    memory_pack_ref: descriptor?.memory_pack_ref ?? null,
-    stage_applicability: descriptor?.stage_applicability ?? [],
-    retrieval_contract_ref: descriptor?.retrieval_contract_ref ?? null,
-    writeback_contract_ref: descriptor?.writeback_contract_ref ?? null,
-    receipt_contract_ref: descriptor?.receipt_contract_ref ?? null,
-    writeback_receipt_locator_ref: descriptor?.writeback_receipt_locator_ref ?? null,
-    migration_readiness: descriptor?.migration_readiness ?? null,
-    freshness: descriptor?.freshness ?? null,
-    receipt_projection: descriptor?.receipt_projection ?? null,
-    authority_boundary: authority,
+    domain_id: descriptor?.domain_id ?? null,
+    items: descriptor?.items ?? [],
+    stage_applicability: [...new Set(descriptor?.items.flatMap((item) => item.applicability.stages) ?? [])],
     non_authority_flags: {
       opl_owns_memory_content: false,
       opl_accepts_or_rejects_memory_writeback: false,
@@ -580,8 +571,8 @@ function findDescriptorEntry(
       || manifest?.target_domain_id === normalized
       || descriptor.agent_id === domain
       || descriptor.agent_id === normalized
-      || domainMemoryDescriptor.target_domain_id === domain
-      || domainMemoryDescriptor.target_domain_id === normalized;
+      || domainMemoryDescriptor.domain_id === domain
+      || domainMemoryDescriptor.domain_id === normalized;
   });
   if (!entry) {
     throw new FrameworkContractError('cli_usage_error', `Unknown family domain agent descriptor domain: ${domain}.`, {

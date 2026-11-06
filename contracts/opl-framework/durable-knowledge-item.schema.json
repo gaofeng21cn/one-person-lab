@@ -57,8 +57,7 @@
         "kind": {
           "enum": [
             "repo_path",
-            "workspace_path",
-            "external_ref"
+            "workspace_path"
           ]
         },
         "ref": {

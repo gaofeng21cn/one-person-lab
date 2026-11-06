@@ -36,6 +36,13 @@
 - Cloud、Package owner repo 和专业 Agent repo 保持独立 authority。
 - Framework 源码通过、App 源码通过或 provider healthy 都不能替代 installed、release、domain 或 user-path 验收。
 
+### 长期知识与记忆
+
+- 统一目录区分 Agent 通用知识、workspace 共享记忆、项目记忆和带日期的当前状态，路径与维护职责见[标准 Agent 仓库结构](policies/standard-agent-repo-structure.md#知识写入与治理)。正文为 Markdown，目录元数据为 JSON。
+- StageRun 从 catalog 按领域、阶段、action、状态与审阅期限选择正文；同轮生成、评审和修复共享一份字节绑定快照。公开 projection 只带引用和消费回执，项目根由 execution scope 约束。
+- 新 scaffold、pack compiler、知识 CLI、OKF 与七个现有标准 Agent 已改用统一 catalog。旧 memory descriptor、迁移计划入口与私有接受目录已退役；当前源码迁移不代表安装包已发布或正在运行的 Agent 已切换。
+- 接受写回仍由领域或项目 owner 决定并同步 Markdown、catalog 与接受记录；平台校验结构和消费证据，不自动把单次经验晋升成通用知识，也不声称具备语义检索或知识正确性认证。
+
 ## 动态真相入口
 
 ```bash

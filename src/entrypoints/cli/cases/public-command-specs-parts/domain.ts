@@ -45,7 +45,6 @@ import { agentsEvidenceApplySpec } from '../agent-evidence-command-spec.ts';
 import {
   buildFamilyDomainMemoryInspect,
   buildFamilyDomainMemoryList,
-  buildFamilyDomainMemoryMigrationPlan,
 } from '../../../../read-models/catalog/family-domain-memory.ts';
 import {
   buildGenericSubstrateProjectionInspect,
@@ -430,7 +429,7 @@ export function buildDomainCommandSpecs({
     },
     'domain-memory list': {
       usage: 'opl domain-memory list',
-      summary: 'List domain-owned memory locator descriptors resolved from bound manifests.',
+      summary: 'List unified knowledge catalogs and runtime consumption evidence from bound manifests.',
       examples: ['opl domain-memory list'],
       group: 'domain',
       handler: (args) => {
@@ -443,7 +442,7 @@ export function buildDomainCommandSpecs({
     },
     'domain-memory inspect': {
       usage: 'opl domain-memory inspect --domain <domain>',
-      summary: 'Inspect one domain-owned memory locator, receipt projection, and OPL non-authority boundary.',
+      summary: 'Inspect one unified knowledge catalog and its runtime consumption evidence.',
       examples: ['opl domain-memory inspect --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyDomainMemoryInspect(getContracts(), args, {
@@ -451,16 +450,7 @@ export function buildDomainCommandSpecs({
         runtimeReceiptEvidenceIndex: readFamilyDomainMemoryRuntimeReceiptEvidenceByDomain(),
       }),
     },
-    'domain-memory migration-plan': {
-      usage: 'opl domain-memory migration-plan --domain <domain>',
-      summary: 'Project domain-owned migration, proposal contract, router receipt, and writeback receipt locators.',
-      examples: ['opl domain-memory migration-plan --domain mas'],
-      group: 'domain',
-      handler: (args) => buildFamilyDomainMemoryMigrationPlan(getContracts(), args, {
-        domainManifests: loadDomainManifests(),
-        runtimeReceiptEvidenceIndex: readFamilyDomainMemoryRuntimeReceiptEvidenceByDomain(),
-      }),
-    },
+
   };
 
   return domainCommandSpecs;

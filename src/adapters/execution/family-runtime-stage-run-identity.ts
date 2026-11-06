@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { bindStageKnowledgeContext, readStageKnowledgeContext, type StageKnowledgeContext } from './family-runtime-knowledge-context.ts';
 
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
@@ -50,6 +51,7 @@ export type StageRunImmutableSpec = {
   role_prompt_refs: StandardAgentStageQualityRuntimeBinding['role_prompt_refs'];
   quality_rubric_refs: string[];
   knowledge_refs: string[];
+  durable_knowledge_context: StageKnowledgeContext;
   skill_refs: string[];
   policy_refs: string[];
   stage_goal_refs: string[];
@@ -436,6 +438,7 @@ export function buildStageRunImmutableSpec(input: {
   artifactIdentityReceiptRefs?: string[];
   parentRouteDecisionRef?: string | null;
   routeBudget?: { max_route_back_rounds: number; route_back_rounds_used: number } | null;
+  knowledgeContext?: StageKnowledgeContext;
 }): StageRunImmutableSpec {
   const checkpointRefs = stringList(input.checkpointRefs);
   const sourceRefs = stringList(input.binding.source_refs);
@@ -462,8 +465,19 @@ export function buildStageRunImmutableSpec(input: {
   if (sourceTruthRefs) {
     requirePrevalidatedSourceTruthFingerprint(sourceTruthRefs, input.sourceFingerprint);
   }
-  const workspaceRoot = optionalText(input.workspaceLocator.workspace_root)
+  const workspaceRoot = input.executionScope?.workspace_root ?? optionalText(input.workspaceLocator.workspace_root)
     ?? optionalText(input.workspaceLocator.repo_root);
+  if (input.knowledgeContext) readStageKnowledgeContext(input.knowledgeContext, input.domainId, input.stageId);
+  const knowledgeContext = input.knowledgeContext ?? bindStageKnowledgeContext({
+        repoDir: input.domainPackRoot,
+        domainPackRoot: input.domainPackRoot,
+        workspaceRoot,
+        // Project-private memory is admitted only from the authoritative scope.
+        projectRoot: input.executionScope?.canonical_work_item_root,
+        domainId: input.domainId,
+        stageId: input.stageId,
+        taskIntent: input.actionId ?? null,
+      });
   const contentBindings = buildStageRunImmutableContentBindings({
     domainId: input.domainId,
     domainPackRoot: text(input.domainPackRoot, 'domain_pack_root'),
@@ -515,6 +529,7 @@ export function buildStageRunImmutableSpec(input: {
     role_prompt_refs: input.binding.role_prompt_refs,
     quality_rubric_refs: qualityRubricRefs,
     knowledge_refs: knowledgeRefs,
+    durable_knowledge_context: knowledgeContext,
     skill_refs: skillRefs,
     policy_refs: policyRefs,
     stage_goal_refs: stageGoalRefs,
@@ -631,6 +646,7 @@ export function validateStageRunImmutableSpecEnvelope(input: {
     role_prompt_refs: input.rolePromptRefs,
     quality_rubric_refs: stringList(input.qualityRubricRefs),
     knowledge_refs: stringList(input.knowledgeRefs),
+    durable_knowledge_context: input.spec.durable_knowledge_context,
     skill_refs: stringList(input.skillRefs),
     policy_refs: stringList(input.policyRefs),
     stage_goal_refs: stringList(input.stageGoalRefs),
@@ -670,6 +686,7 @@ export function revalidateStageRunImmutableSpecContent(input: {
   skipManagedPackBytes?: boolean;
 }) {
   const contentBindings = requireStageRunImmutableContentBindings(input.spec.content_bindings);
+  readStageKnowledgeContext(input.spec.durable_knowledge_context, input.spec.domain_id, input.spec.stage_id);
   const required = [
     ['stage_manifest', input.spec.stage_manifest.ref],
     ['quality_policy', input.spec.quality_policy.ref],
@@ -677,7 +694,6 @@ export function revalidateStageRunImmutableSpecContent(input: {
     ...input.spec.checkpoint_refs.map((ref) => ['checkpoint', ref]),
     ...Object.values(input.spec.role_prompt_refs).map((ref) => ['role_prompt', ref]),
     ...input.spec.quality_rubric_refs.map((ref) => ['quality_rubric', ref]),
-    ...input.spec.knowledge_refs.map((ref) => ['knowledge', ref]),
     ...input.spec.skill_refs.map((ref) => ['skill', ref]),
     ...input.spec.policy_refs.map((ref) => ['policy', ref]),
     ...input.spec.stage_goal_refs.map((ref) => ['stage_goal', ref]),

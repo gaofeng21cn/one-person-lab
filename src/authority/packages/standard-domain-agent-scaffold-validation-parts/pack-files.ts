@@ -129,7 +129,7 @@ function legacyPackRootFields(packCompilerInput: unknown) {
     .map(([field]) => field);
 }
 
-function discoverPackFiles(repoDir: string, packRoot: string) {
+export function discoverPackFiles(repoDir: string, packRoot: string) {
   const rootPath = path.join(repoDir, packRoot);
   if (!fs.existsSync(rootPath) || !fs.statSync(rootPath).isDirectory()) {
     return [];

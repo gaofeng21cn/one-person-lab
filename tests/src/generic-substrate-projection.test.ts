@@ -56,52 +56,20 @@ function withGeneratedStageControlPlaneRef(payload: JsonRecord, label: string) {
   return { ...manifest, family_stage_control_plane_ref: ref };
 }
 
-function withMasLikeMemoryDescriptor(payload: JsonRecord) {
-  return attachManifestSurface(payload, 'domain_memory_descriptor', {
-    surface_kind: 'family_domain_memory_ref',
-    version: 'family-domain-memory-ref.v1',
-    memory_ref_id: 'mas_publication_route_memory',
-    target_domain_id: 'med-autoscience',
-    owner: 'MedAutoScience',
-    memory_family: 'publication_route_memory',
-    memory_pack_ref: {
-      ref_kind: 'human_doc',
-      ref: 'docs/policies/publication-route-memory.md',
-      role: 'markdown_first_memory_policy',
-    },
-    stage_applicability: ['scout', 'write', 'review'],
-    retrieval_contract_ref: {
-      ref_kind: 'surface_kind',
-      ref: 'stage_knowledge_packet',
-    },
-    writeback_contract_ref: {
-      ref_kind: 'surface_kind',
-      ref: 'stage_memory_closeout_packet',
-    },
-    receipt_contract_ref: {
-      ref_kind: 'surface_kind',
-      ref: 'memory_write_router_receipt',
-    },
-    writeback_receipt_locator_ref: {
-      ref_kind: 'workspace_locator',
-      ref: 'studies/<study_id>/artifacts/memory/writeback_receipts',
-    },
-    status: 'active',
-    authority_boundary: {
-      opl_role: 'locator_projection_owner',
-      domain_memory_owner: 'MedAutoScience',
-      forbidden_opl_authority: [
-        'memory_store_owner',
-        'domain_truth_owner',
-        'quality_verdict_owner',
-        'artifact_authority',
-      ],
-      can_accept_memory_write: false,
-      can_write_domain_truth: false,
-      can_authorize_quality_verdict: false,
-      can_write_artifacts: false,
-    },
-  });
+function withMasLikeMemoryDescriptor(payload: JsonRecord, workspaceRoot: string) {
+  const catalog = {
+    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v1',
+    owner: 'one-person-lab', domain_id: 'med-autoscience', items: [{
+      surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
+      knowledge_id: 'mas_publication_route_memory', title: 'Research method', layer: 'agent_pack', owner: 'MedAutoScience',
+      body_ref: { kind: 'repo_path', ref: 'agent/knowledge/method.md' },
+      applicability: { domains: ['med-autoscience'], stages: ['scout', 'write', 'review'] },
+      status: 'active', reviewed_at: '2026-01-01T00:00:00Z', next_review_at: '2099-01-01T00:00:00Z',
+      authority_boundary: { semantic_body_owner: 'MedAutoScience', opl_role: 'catalog_recall_and_receipt_projection_only' },
+    }],
+  };
+  fs.writeFileSync(path.join(workspaceRoot, 'med-autoscience/contracts/durable_knowledge_catalog.json'), JSON.stringify(catalog));
+  return attachManifestSurface(payload, 'domain_memory_descriptor', catalog);
 }
 
 test('generic substrate projection indexes MAS-like workspace, source, artifact, and memory refs without domain authority', () => {
@@ -110,7 +78,7 @@ test('generic substrate projection indexes MAS-like workspace, source, artifact,
   const fixtures = loadFamilyManifestFixtures();
   const workspaceRoot = createFamilyDefaultContractWorkspace();
   const masManifest = withGeneratedStageControlPlaneRef(
-    withMasLikeMemoryDescriptor(fixtures.medautoscience),
+    withMasLikeMemoryDescriptor(fixtures.medautoscience, workspaceRoot),
     'MAS generated stage plane',
   );
 
@@ -161,8 +129,8 @@ test('generic substrate projection indexes MAS-like workspace, source, artifact,
     assert.equal(projection.memory_refs.status, 'resolved');
     assert.equal(projection.memory_refs.refs[0].ref_id, 'mas_publication_route_memory');
     assert.equal(
-      projection.memory_refs.refs[0].memory_pack_ref.ref,
-      'docs/policies/publication-route-memory.md',
+      projection.memory_refs.refs[0].body_ref.ref,
+      'agent/knowledge/method.md',
     );
     assert.equal(projection.lifecycle_projection.lifecycle_role, 'locator_index_lifecycle_projection_only');
     assert.equal(projection.lifecycle_projection.indexed_ref_count, 11);
@@ -264,7 +232,7 @@ test('generic substrate projection ignores retired private domain-handler export
     });
     const projection = inspect.generic_substrate_projection;
 
-    assert.equal(projection.projection_status, 'substrate_refs_partial');
+    assert.equal(projection.projection_status, 'substrate_refs_resolved');
     assert.equal('domain_handler_substrate_adapter' in projection, false);
     assert.equal(projection.workspace_refs.status, 'resolved_from_manifest');
     assert.deepEqual(projection.workspace_refs.refs, []);
@@ -274,7 +242,7 @@ test('generic substrate projection ignores retired private domain-handler export
     assert.equal(projection.artifact_refs.refs.some((entry: { ref_id: string }) =>
       entry.ref_id === 'publication_eval_latest'
     ), true);
-    assert.equal(projection.memory_refs.status, 'missing');
+    assert.equal(projection.memory_refs.status, 'resolved');
     assert.equal(projection.non_authority_flags.opl_reads_memory_body, false);
     assert.equal(projection.non_authority_flags.opl_writes_domain_truth, false);
     assert.equal(projection.non_authority_flags.opl_authorizes_quality_verdict, false);
@@ -288,6 +256,7 @@ test('generic substrate projection list reports partial substrate when memory re
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   const workspaceRoot = createFamilyDefaultContractWorkspace();
+  fs.rmSync(path.join(workspaceRoot, 'med-autoscience/contracts/durable_knowledge_catalog.json'));
   const masManifest = withGeneratedStageControlPlaneRef(
     fixtures.medautoscience,
     'MAS generated stage plane',
@@ -339,7 +308,7 @@ test('generic substrate workbench groups family refs for App and operator drilld
       stageId: 'study_stage',
       memoryRefId: 'mas_publication_route_memory',
     },
-  ));
+  ), workspaceRoot);
   const magManifest = withPackCompilerReadySurfaces(fixtures.medautogrant, {
     agentId: 'mag',
     targetDomainId: 'med-autogrant',

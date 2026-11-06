@@ -82,60 +82,29 @@ function buildMemoryIndexEntry(
     project: entry.project,
     binding_id: entry.binding_id,
     manifest_status: entry.status,
-    target_domain_id: descriptor?.target_domain_id ?? entry.manifest?.target_domain_id ?? null,
-    memory_ref_id: descriptor?.memory_ref_id ?? null,
-    memory_family: descriptor?.memory_family ?? null,
+    target_domain_id: descriptor?.domain_id ?? entry.manifest?.target_domain_id ?? null,
     owner: descriptor?.owner ?? null,
-    status: descriptor?.status ?? null,
-    stage_applicability: descriptor?.stage_applicability ?? [],
-    memory_pack_ref: descriptor?.memory_pack_ref ?? null,
-    migration_plan_ref: descriptor?.migration_plan_ref ?? null,
-    seed_corpus_ref: descriptor?.seed_corpus_ref ?? null,
-    writeback_receipt_locator_ref: descriptor?.writeback_receipt_locator_ref ?? null,
-    writeback_contract_ref: descriptor?.writeback_contract_ref ?? null,
-    receipt_contract_ref: descriptor?.receipt_contract_ref ?? null,
+    catalog_ref: descriptor?.catalog_ref ?? null,
+    items: descriptor?.items ?? [],
     receipt_projection: receiptProjection,
     runtime_receipt_evidence: runtimeReceiptEvidence,
-    freshness: descriptor?.freshness ?? null,
-    migration_readiness: descriptor?.migration_readiness ?? null,
     ready: Boolean(descriptor),
     error: entry.error,
   };
 }
-
 function buildReceiptProjection(descriptor: FamilyDomainMemoryRef) {
-  const authority = descriptor.authority_boundary ?? {};
-  const domainOwner = authority.domain_memory_owner ?? descriptor.owner;
   return {
-    status: descriptor.receipt_projection?.status ?? 'descriptor_projection_only',
-    memory_locator_ref: descriptor.memory_pack_ref,
-    proposal_contract_ref: descriptor.writeback_contract_ref,
-    router_receipt_contract_ref: descriptor.receipt_contract_ref,
-    writeback_receipt_locator_ref: descriptor.writeback_receipt_locator_ref,
-    accepted_rejected_authority_owner: domainOwner,
-    router_receipt_owner: domainOwner,
-    opl_projection_role: 'descriptor_and_receipt_locator_projection_only',
-    readiness: {
-      descriptor_has_writeback_contract: Boolean(descriptor.writeback_contract_ref),
-      descriptor_has_receipt_contract: Boolean(descriptor.receipt_contract_ref),
-      descriptor_has_receipt_locator: Boolean(descriptor.writeback_receipt_locator_ref),
-      retrieval_apply_landed: false,
-      writeback_apply_landed: false,
-      memory_body_migration_landed: false,
-    },
+    status: 'catalog_projection_only',
+    catalog_ref: descriptor.catalog_ref,
+    semantic_owners: [...new Set(descriptor.items.map((item) => item.owner))],
+    opl_projection_role: 'catalog_and_consumption_receipts',
+    readiness: { writeback_apply_landed: false },
     authority_flags: {
-      can_accept_memory_write: false,
-      can_write_domain_truth: false,
-      can_own_memory_body: false,
-      can_authorize_quality_verdict: false,
+      can_accept_memory_write: false, can_write_domain_truth: false,
+      can_own_memory_body: false, can_authorize_quality_verdict: false,
     },
-    notes: [
-      'Locator, proposal, router receipt, and accepted/rejected authority remain domain-owned.',
-      'OPL projects descriptor-level receipt readiness only; it does not apply writeback.',
-    ],
   };
 }
-
 function uniqueStrings(values: string[]) {
   return [...new Set(values)];
 }
@@ -239,7 +208,7 @@ export function buildFamilyDomainMemoryList(contracts: FrameworkContracts, optio
       },
       memories: index.memories,
       notes: [
-        'OPL indexes domain-owned memory locators and receipts only.',
+        'OPL indexes scoped knowledge catalogs and consumption receipts; semantic acceptance stays with the domain owner.',
         'Memory content, writeback acceptance, quality verdicts and artifacts remain domain-owned.',
       ],
     },
@@ -263,8 +232,8 @@ export function buildFamilyDomainMemoryInspect(
       || matchesStandardDomainAgentCatalogEntry(parsed.domain, candidate)
       || candidate.manifest?.target_domain_id === parsed.domain
       || candidate.manifest?.target_domain_id === normalized
-      || descriptor?.target_domain_id === parsed.domain
-      || descriptor?.target_domain_id === normalized;
+      || descriptor?.domain_id === parsed.domain
+      || descriptor?.domain_id === normalized;
   });
   if (!entry) {
     throw new FrameworkContractError('cli_usage_error', `Unknown family domain memory domain: ${parsed.domain}.`, {
@@ -285,26 +254,11 @@ export function buildFamilyDomainMemoryInspect(
       surface_kind: 'opl_family_domain_memory_inspection',
       project_id: entry.project_id,
       project: entry.project,
-      target_domain_id: descriptor?.target_domain_id ?? entry.manifest?.target_domain_id ?? null,
+      target_domain_id: descriptor?.domain_id ?? entry.manifest?.target_domain_id ?? null,
       descriptor_status: descriptor ? 'resolved' : 'missing',
       descriptor,
       receipt_projection: receiptProjection,
       runtime_receipt_evidence: runtimeReceiptEvidence,
-      migration_plan: descriptor
-        ? {
-            migration_plan_ref: descriptor.migration_plan_ref,
-            seed_corpus_ref: descriptor.seed_corpus_ref,
-            writeback_receipt_locator_ref: descriptor.writeback_receipt_locator_ref,
-            writeback_contract_ref: descriptor.writeback_contract_ref,
-            receipt_contract_ref: descriptor.receipt_contract_ref,
-            receipt_projection: receiptProjection,
-            runtime_receipt_evidence: runtimeReceiptEvidence,
-            migration_readiness: descriptor.migration_readiness,
-            current_state: descriptor.migration_readiness?.status ?? descriptor.freshness?.status ?? 'unknown',
-            opl_role: 'migration_projection_only',
-          }
-        : null,
-      authority_boundary: descriptor?.authority_boundary ?? null,
       non_authority_flags: {
         opl_owns_memory_content: false,
         opl_accepts_memory_writeback: false,
@@ -314,62 +268,6 @@ export function buildFamilyDomainMemoryInspect(
         opl_writes_domain_truth: false,
         opl_authorizes_quality_verdict: false,
       },
-    },
-  };
-}
-
-export function buildFamilyDomainMemoryMigrationPlan(
-  contracts: FrameworkContracts,
-  args: string[],
-  options: ManifestCatalogOptions = {},
-) {
-  const inspected = buildFamilyDomainMemoryInspect(contracts, args, options).family_domain_memory;
-  const descriptor = inspected.descriptor;
-  if (!descriptor) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      `Domain memory descriptor is missing for ${inspected.project_id}.`,
-      {
-        domain: inspected.project_id,
-        descriptor_status: inspected.descriptor_status,
-      },
-    );
-  }
-
-  return {
-    version: 'g2',
-    family_domain_memory_migration_plan: {
-      surface_kind: 'opl_family_domain_memory_migration_plan_projection',
-      project_id: inspected.project_id,
-      project: inspected.project,
-      target_domain_id: inspected.target_domain_id,
-      memory_ref_id: descriptor.memory_ref_id,
-      memory_family: descriptor.memory_family,
-      owner: descriptor.owner,
-      migration_plan_ref: descriptor.migration_plan_ref,
-      seed_corpus_ref: descriptor.seed_corpus_ref,
-      writeback_receipt_locator_ref: descriptor.writeback_receipt_locator_ref,
-      migration_readiness: descriptor.migration_readiness,
-      retrieval_contract_ref: descriptor.retrieval_contract_ref,
-      writeback_contract_ref: descriptor.writeback_contract_ref,
-      receipt_contract_ref: descriptor.receipt_contract_ref,
-      recall_projection_ref: descriptor.recall_projection_ref,
-      receipt_projection: buildReceiptProjection(descriptor),
-      runtime_receipt_evidence: inspected.runtime_receipt_evidence,
-      authority_boundary: inspected.authority_boundary,
-      non_authority_flags: {
-        opl_owns_memory_content: false,
-        opl_applies_memory_migration: false,
-        opl_accepts_memory_writeback: false,
-        opl_accepts_or_rejects_memory_writeback: false,
-        opl_applies_memory_writeback: false,
-        opl_writes_domain_truth: false,
-        opl_authorizes_quality_verdict: false,
-      },
-      notes: [
-        'This is a projection over domain-owned migration and receipt locators.',
-        'Apply, accept/reject, memory body storage, and quality decisions remain domain-owned.',
-      ],
     },
   };
 }

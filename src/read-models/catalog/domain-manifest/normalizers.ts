@@ -139,7 +139,7 @@ export function normalizeManifest(
     options.repoDir,
   );
   const manifestTargetDomainId = requireString(manifest.target_domain_id, 'target_domain_id');
-  const domainMemoryDescriptor = normalizeFamilyDomainMemoryRef(manifest.domain_memory_descriptor);
+  const domainMemoryDescriptor = normalizeFamilyDomainMemoryRef(manifest.domain_memory_descriptor, options.repoDir);
   const skeletonCandidateFields = ['standard_domain_agent_skeleton'];
   const directSkeletonSourceField =
     skeletonCandidateFields.find((field) => isRecord(manifestWithWrapperSidecars[field])) ?? null;

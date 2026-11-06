@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/durable-knowledge-catalog.schema.json",
+  "title": "OPL durable knowledge catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "owner",
+    "items"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_durable_knowledge_catalog"
+    },
+    "version": {
+      "const": "durable-knowledge-catalog.v1"
+    },
+    "owner": {
+      "const": "one-person-lab"
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "durable-knowledge-item.schema.json"
+      }
+    }
+  }
+}

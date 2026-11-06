@@ -53,7 +53,6 @@ function parseOkfProjectRepoArgs(args: string[], spec: CommandSpec) {
     repo: { type: 'string' },
     output: { type: 'string' },
     pack: { type: 'string' },
-    'memory-descriptor': { type: 'string' },
     'no-memory-locators': { type: 'boolean' },
     'bundle-id': { type: 'string' },
     'source-root-ref': { type: 'string' },
@@ -68,7 +67,6 @@ function parseOkfProjectRepoArgs(args: string[], spec: CommandSpec) {
   return {
     bundleId: values['bundle-id'] as string | undefined,
     includeMemoryLocators: values['no-memory-locators'] !== true,
-    memoryDescriptorPath: values['memory-descriptor'] as string | undefined,
     outputPath,
     packPath: values.pack as string | undefined,
     repoRoot,
@@ -150,7 +148,7 @@ export function buildOkfCommandSpecs(): Record<string, CommandSpec> {
     },
     'okf project-repo': {
       usage:
-        'opl okf project-repo --repo <domain_repo> --output <okf_dir> [--pack <path>] [--memory-descriptor <path>] [--no-memory-locators] [--bundle-id <id>] [--source-root-ref <ref>]',
+        'opl okf project-repo --repo <domain_repo> --output <okf_dir> [--pack <path>] [--no-memory-locators] [--bundle-id <id>] [--source-root-ref <ref>]',
       summary:
         'Project a domain repo pack compiler input and optional memory descriptor into one body-free OKF context bundle directory.',
       examples: [
@@ -163,7 +161,6 @@ export function buildOkfCommandSpecs(): Record<string, CommandSpec> {
         const readback = buildOkfContextBundleFromDomainRepo({
           bundleId: parsed.bundleId,
           includeMemoryLocators: parsed.includeMemoryLocators,
-          memoryDescriptorPath: parsed.memoryDescriptorPath,
           packPath: parsed.packPath,
           repoRoot: parsed.repoRoot,
           sourceRootRef: parsed.sourceRootRef,

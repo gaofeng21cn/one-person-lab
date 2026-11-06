@@ -363,49 +363,16 @@ export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
   });
 
   test('family domain memory contracts freeze locator and writeback receipt authority boundaries', () => {
-    const memoryRefSchema = readJson('contracts/family-orchestration/family-domain-memory-ref.schema.json');
+    const catalogSchema = readJson('contracts/opl-framework/durable-knowledge-catalog.schema.json');
+    const itemSchema = readJson('contracts/opl-framework/durable-knowledge-item.schema.json');
     const writebackSchema = readJson('contracts/family-orchestration/family-domain-memory-writeback.schema.json');
     const stagePlaneSchema = readJson('contracts/family-orchestration/family-stage-control-plane.schema.json');
-    const memoryRefExample = readFirstSchemaExample(
-      'contracts/family-orchestration/family-domain-memory-ref.schema.json',
-    );
-    const writebackExample = readFirstSchemaExample(
-      'contracts/family-orchestration/family-domain-memory-writeback.schema.json',
-    );
-
-    assert.deepEqual(
-      (memoryRefSchema.properties as Json).surface_kind,
-      { const: 'family_domain_memory_ref' },
-    );
-    assert.ok((memoryRefSchema.required as string[]).includes('memory_pack_ref'));
-    assert.ok((memoryRefSchema.required as string[]).includes('stage_applicability'));
-    assert.equal(Boolean((memoryRefSchema.properties as Json).migration_plan_ref), true);
-    assert.equal(Boolean((memoryRefSchema.properties as Json).seed_corpus_ref), true);
-    assert.equal(Boolean((memoryRefSchema.properties as Json).writeback_receipt_locator_ref), true);
-    assert.equal(Boolean((memoryRefSchema.properties as Json).migration_readiness), true);
-    assert.equal(Boolean((memoryRefSchema.properties as Json).receipt_projection), true);
-    assert.equal(
-      (((memoryRefSchema.properties as Json).authority_boundary as Json).properties as Json).opl_role !== undefined,
-      true,
-    );
-    assert.deepEqual(
-      (((((memoryRefSchema.properties as Json).authority_boundary as Json).properties as Json).forbidden_opl_authority as Json).contains),
-      { const: 'memory_store_owner' },
-    );
-    assert.equal(
-      (((memoryRefExample.authority_boundary as Json).forbidden_opl_authority as string[]).includes('domain_truth_owner')),
-      true,
-    );
-    assert.equal((memoryRefExample.authority_boundary as Json).can_write_domain_truth, false);
-    assert.equal((memoryRefExample.authority_boundary as Json).can_authorize_quality_verdict, false);
-    assert.equal((memoryRefExample.authority_boundary as Json).can_write_artifacts, false);
-    assert.equal((memoryRefExample.migration_plan_ref as Json).role, 'domain_owned_migration_plan');
-    assert.equal((memoryRefExample.seed_corpus_ref as Json).role, 'domain_owned_seed_corpus');
-    assert.equal((memoryRefExample.writeback_receipt_locator_ref as Json).role, 'domain_owned_router_receipts');
-    assert.equal((memoryRefExample.migration_readiness as Json).opl_apply_allowed, false);
-    assert.equal((memoryRefExample.receipt_projection as Json).accepted_rejected_authority_owner, 'MedAutoScience');
-    assert.equal((memoryRefExample.receipt_projection as Json).can_accept_memory_write, false);
-    assert.equal((memoryRefExample.receipt_projection as Json).can_write_domain_truth, false);
+    const writebackExample = readFirstSchemaExample('contracts/family-orchestration/family-domain-memory-writeback.schema.json');
+    assert.deepEqual((catalogSchema.properties as Json).surface_kind, { const: 'opl_durable_knowledge_catalog' });
+    assert.ok((catalogSchema.required as string[]).includes('items'));
+    assert.ok((itemSchema.required as string[]).includes('layer'));
+    assert.ok((itemSchema.required as string[]).includes('next_review_at'));
+    assert.equal(itemSchema.additionalProperties, false);
 
     assert.deepEqual(
       (writebackSchema.properties as Json).surface_kind,

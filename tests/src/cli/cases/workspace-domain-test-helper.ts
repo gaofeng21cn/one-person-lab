@@ -110,7 +110,7 @@ function workspaceDescriptorFixture(agent: WorkspaceDescriptorFixtureAgent) {
           shared_resources: [
             { path: 'shared/sources', role: 'source_intake' },
             { path: 'shared/brand', role: 'brand_assets' },
-            { path: 'shared/visual_memory', role: 'visual_memory' },
+            { path: 'shared/memory', role: 'visual_memory' },
             { path: 'shared/style_system', role: 'style_system' },
             { path: 'shared/material_inventory', role: 'material_inventory' },
           ],

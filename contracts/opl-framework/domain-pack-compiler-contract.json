@@ -454,7 +454,7 @@
       "product_entry_manifest_descriptor",
       "domain_handler_descriptor"
     ],
-    "repo_dir_mode": "reads contracts/domain_descriptor.json, contracts/action_catalog.json, contracts/pack_compiler_input.json, agent/stages/manifest.json, contracts/generated_surface_handoff.json, contracts/memory_descriptor.json, and contracts/functional_privatization_audit.json; OPL Pack compiles the family stage control plane without executing target repo private wrappers or reading a tracked contracts/stage_control_plane.json fallback",
+    "repo_dir_mode": "reads contracts/domain_descriptor.json, contracts/action_catalog.json, contracts/pack_compiler_input.json, agent/stages/manifest.json, contracts/generated_surface_handoff.json, contracts/durable_knowledge_catalog.json, and contracts/functional_privatization_audit.json; OPL Pack compiles the family stage control plane without executing target repo private wrappers or reading a tracked contracts/stage_control_plane.json fallback",
     "descriptor_blocks": [
       "cli",
       "mcp",
