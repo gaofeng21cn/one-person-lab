@@ -1,0 +1,158 @@
+{
+  "surface_kind": "opl_agent_package_manifest.v1",
+  "kind": "agent",
+  "agent_id": "occ",
+  "package_id": "occ",
+  "domain_id": "occ",
+  "carrier_slug": "opl-capital-compass",
+  "display_name": "OPL Capital Compass",
+  "presentation": {
+    "display_name_i18n": {
+      "en-US": "OPL Capital Compass",
+      "zh-CN": "OPL Capital Compass"
+    },
+    "description_i18n": {
+      "en-US": "Personal investment portfolio diagnosis, macro judgment, allocation decisions, and exact-owner-authorized trade execution with broker readback.",
+      "zh-CN": "个人投资组合诊断、宏观研判、配置决策，以及经精确授权并由券商回读确认的交易执行。"
+    },
+    "session_routing_summary_i18n": {
+      "en-US": "Diagnose a portfolio and form an auditable allocation decision; submit only after exact owner authorization.",
+      "zh-CN": "诊断投资组合并形成可审计的配置决策；仅在本人精确授权后提交订单。"
+    },
+    "home_shortcuts": [
+      {
+        "shortcut_id": "advise-capital-allocation",
+        "label_i18n": {
+          "en-US": "Advise Capital Allocation",
+          "zh-CN": "诊断配置与决策"
+        },
+        "default_visible": true,
+        "user_configurable": true,
+        "route": {
+          "route_kind": "agent_package_shortcut",
+          "executor": "codex_cli",
+          "codex_visible_entry": "opl-capital-compass"
+        }
+      }
+    ]
+  },
+  "publisher": "one-person-lab",
+  "version": "0.1.2",
+  "source": "first_party_owner_projection",
+  "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
+  "domain_descriptor_ref": "contracts/domain_descriptor.json",
+  "action_catalog_ref": "contracts/action_catalog.json",
+  "view_refs": [],
+  "codex_surface": {
+    "plugin_id": "occ",
+    "plugin_source_path": ".",
+    "standalone_distribution": "repo_carrier_source",
+    "required_skill_ids": [
+      "occ"
+    ],
+    "user_install_action_count": 1,
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "occ@opl-capital-compass-local",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/opl-capital-compass",
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/occ:latest-stable"
+    },
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "opl",
+        "app",
+        "contribution",
+        "adapter",
+        "--stdin"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "plugin_payload_manifest_url": "payloads/occ-0.1.2.json",
+    "carrier_source_commit": "ea700c52f80af00e62f88ca980d9a06409cec703"
+  },
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "occ.decision-review",
+        "view_type": "artifact_view",
+        "title_i18n": {
+          "zh-CN": "配置决策审阅",
+          "en-US": "Allocation decision review"
+        },
+        "data_ref": "occ.decision.v1#current",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "当前没有待审阅的配置决策",
+          "en-US": "No allocation decision is awaiting review"
+        }
+      }
+    ],
+    "commands": [],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "occ.decision-review",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 1200,
+        "view_id": "occ.decision-review"
+      }
+    ]
+  },
+  "capability_dependencies": [],
+  "registry_entry": {
+    "registry_kind": "first_party_agent_package_registry_entry",
+    "registry_source_ref": "contracts/opl-framework/packages/occ.json",
+    "base_contract_role": "registry_data_not_base_invariant",
+    "base_contract_invariant": false,
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "admitted_domain_ref": null
+  },
+  "source_repo": "https://github.com/gaofeng21cn/opl-capital-compass.git",
+  "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
+  "publication_projection_order": 40,
+  "publication_source": {
+    "module_id": "occ",
+    "owner_package_manifest_ref": "plugins/occ/opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
+  "publication_channel_admission": "admitted",
+  "runtime_source_carrier": {
+    "carrier_kind": "opl_managed_module_source",
+    "module_id": "occ"
+  },
+  "standard_agent_descriptor_projection": {
+    "surface_kind": "opl_standard_agent_descriptor_projection.v1",
+    "source_ref": "contracts/domain_descriptor.json",
+    "interface_source_ref": "contracts/domain_descriptor.json#/standard_agent_interface",
+    "domain_id": "occ",
+    "runtime_domain_id": "occ",
+    "explicit_aliases": [
+      "occ",
+      "opl-capital-compass",
+      "capital-compass"
+    ],
+    "compatibility": {
+      "registry_domain_id": "occ",
+      "owner_aliases": [
+        "occ",
+        "opl-capital-compass",
+        "capital-compass"
+      ]
+    }
+  }
+}

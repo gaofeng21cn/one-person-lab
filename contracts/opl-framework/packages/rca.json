@@ -33,7 +33,7 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.2.20",
+  "version": "0.2.21",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
@@ -68,14 +68,30 @@
     "carrier_source_path": ".",
     "canonical_primary_skill_source_ref": "agent/primary_skill/SKILL.md",
     "plugin_carrier_skill_ref": "plugins/redcube-ai/skills/redcube-ai/SKILL.md",
-    "plugin_payload_manifest_url": "payloads/rca-0.2.20.json",
-    "carrier_source_commit": "65baa1b51c4db27f8f882e601e8cbd476da8b6da"
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "opl",
+        "app",
+        "contribution",
+        "adapter",
+        "--stdin"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "plugin_payload_manifest_url": "payloads/rca-0.2.21.json",
+    "carrier_source_commit": "11373e37ce8a2729ac3b192e2b7e5e226af1f535"
   },
   "skill_packs": [
     {
       "id": "redcube-ai",
       "source": "repo_local_codex_plugin_carrier",
-      "version": "0.2.20",
+      "version": "0.2.21",
       "install_mode": "bundled_required",
       "source_ref": "agent/primary_skill/SKILL.md",
       "carrier_mirror_ref": "plugins/redcube-ai/skills/redcube-ai/SKILL.md",
@@ -173,6 +189,61 @@
     "manifest_can_claim_runtime_readiness": false,
     "manifest_can_claim_release_readiness": false,
     "manifest_can_claim_live_package_download": false
+  },
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "rca.workspace.status",
+        "view_type": "task_board",
+        "title_i18n": {
+          "zh-CN": "视觉项目阶段",
+          "en-US": "Visual project status"
+        },
+        "data_ref": "rca.workspace.v1#status",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "选择一个视觉项目状态后读取当前阶段",
+          "en-US": "Select a visual project status to inspect its stage"
+        }
+      },
+      {
+        "view_id": "rca.workspace.artifacts",
+        "view_type": "artifact_view",
+        "title_i18n": {
+          "zh-CN": "视觉交付物",
+          "en-US": "Visual deliverables"
+        },
+        "data_ref": "rca.workspace.v1#artifacts",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "选择一个产物清单后读取视觉交付物",
+          "en-US": "Select an artifact manifest to inspect visual deliverables"
+        }
+      }
+    ],
+    "commands": [],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "rca.workspace.status",
+        "slot": "runtime.detail",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "work_item",
+        "sort_order": 610,
+        "view_id": "rca.workspace.status"
+      },
+      {
+        "contribution_id": "rca.workspace.artifacts",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 611,
+        "view_id": "rca.workspace.artifacts"
+      }
+    ]
   },
   "capability_dependencies": [],
   "registry_entry": {

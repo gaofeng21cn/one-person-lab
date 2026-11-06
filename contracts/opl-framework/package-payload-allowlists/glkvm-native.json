@@ -1,0 +1,21 @@
+{
+  "surface_kind": "opl_package_payload_allowlist.v1",
+  "package_id": "glkvm-native",
+  "plugin_id": "glkvm-native",
+  "source_repo": "https://github.com/gaofeng21cn/glkvm-native.git",
+  "source_root": "plugins/glkvm-native",
+  "paths": [
+    ".codex-plugin/plugin.json",
+    "app-contribution-adapter.json",
+    "app_contribution.py",
+    "plugin.json",
+    "skills/glkvm-control/SKILL.md",
+    "skills/glkvm-control/agents/openai.yaml",
+    "skills/glkvm-control/references/context-budget.md",
+    "skills/glkvm-control/references/desktop-client-operations.md",
+    "skills/glkvm-control/references/qualification.md",
+    "skills/glkvm-control/references/session-recovery.md",
+    "skills/glkvm-control/references/windows-maintenance.md",
+    "opl-package.json"
+  ]
+}

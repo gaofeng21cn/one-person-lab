@@ -149,9 +149,11 @@ test('App contribution normalizer rejects unknown view types', () => {
 test('Fleet Agent native-provider absence remains a successful unavailable contribution read', () => {
   const sourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-fleet-agent-framework-'));
   const adapterPath = path.join(sourceRoot, 'bin', 'opl-fleet-agent.mjs');
+  const contributionAdapterPath = path.join(sourceRoot, 'app-contribution-adapter.json');
   const manifest = normalizedManifest();
   try {
     fs.mkdirSync(path.dirname(adapterPath), { recursive: true });
+    fs.writeFileSync(contributionAdapterPath, '{"schema_version":"opl-package-app-contribution-adapter.v1","reads":{},"actions":{}}\n');
     fs.writeFileSync(adapterPath, `import fs from 'node:fs';
 const request = JSON.parse(fs.readFileSync(0, 'utf8'));
 process.stdout.write(JSON.stringify({

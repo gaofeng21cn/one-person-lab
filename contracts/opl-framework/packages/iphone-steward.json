@@ -1,0 +1,125 @@
+{
+  "surface_kind": "opl_capability_package_manifest.v2",
+  "package_id": "iphone-steward",
+  "display_name": "iPhone App Steward",
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "iPhone App Steward",
+      "en-US": "iPhone App Steward"
+    },
+    "description_i18n": {
+      "zh-CN": "通过 USB 审查 iPhone/iPad App 使用证据、生成精确卸载或主屏布局计划，并在授权后执行与回读。",
+      "en-US": "Review iPhone or iPad app usage, create exact removal or Home Screen plans, and apply them only after authorization."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "审查手机 App 与主屏整理计划",
+      "en-US": "Review app and Home Screen stewardship plans"
+    },
+    "home_shortcuts": []
+  },
+  "publisher": "gaofeng21cn",
+  "version": "0.2.4",
+  "source": "first_party_owner_projection",
+  "source_repo": "https://github.com/gaofeng21cn/iphone-app-steward.git",
+  "package_role": "capability_package",
+  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "capability_abi": {
+    "id": "iphone.steward.capabilities",
+    "version": "1.0.0",
+    "compatibility_policy": "same_major"
+  },
+  "exports": {
+    "core_skill_ids": [
+      "iphone-app-steward"
+    ],
+    "core_module_ids": [
+      "iphone.steward.v1"
+    ],
+    "optional_skill_policy_ref": "skills/iphone-app-steward/SKILL.md",
+    "optional_skills_installed_by_default": false,
+    "default_materialization_policy": "core_skills_only"
+  },
+  "codex_surface": {
+    "plugin_id": "iphone-app-steward",
+    "plugin_source_path": ".",
+    "codex_default_exposure": false,
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "iphone-app-steward@iphone-app-steward",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/iphone-app-steward",
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/iphone-steward:latest-stable"
+    },
+    "optional_install_policy": "core_skills_only",
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "python3",
+        "./app_contribution.py"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "plugin_payload_manifest_url": "payloads/iphone-steward-0.2.4.json",
+    "carrier_source_commit": "ebef1e60034a432140f6c3c81e57084702253d0f"
+  },
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "iphone.steward.plan",
+        "view_type": "approval_diff",
+        "title_i18n": {
+          "zh-CN": "iPhone 精确计划",
+          "en-US": "Exact iPhone plan"
+        },
+        "data_ref": "iphone.steward.v1#plan",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "选择一个已生成的精确计划后审阅",
+          "en-US": "Select a generated exact plan to review"
+        }
+      }
+    ],
+    "commands": [],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "iphone.steward.plan",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 700,
+        "view_id": "iphone.steward.plan"
+      }
+    ]
+  },
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "paths": [
+      ".codex-plugin/plugin.json",
+      "app-contribution-adapter.json",
+      "app_contribution.py",
+      "plugin.json",
+      "skills/iphone-app-steward/SKILL.md",
+      "skills/iphone-app-steward/agents/openai.yaml",
+      "skills/iphone-app-steward/references/decision-policy.md",
+      "skills/iphone-app-steward/references/evidence-and-layout.md"
+    ],
+    "digest": "sha256:56a97d20ee2510f66ab33ccdc8f1a8679b36f31f2c1b418fd2f42cded099f057"
+  },
+  "publication_source": {
+    "module_id": "iphone-steward",
+    "owner_package_manifest_ref": "plugins/iphone-app-steward/opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
+  "publication_channel_admission": "admitted",
+  "owner_package_manifest_ref": "plugins/iphone-app-steward/opl-package.json",
+  "owner_package_descriptor_ref": "opl-package.json"
+}

@@ -1,0 +1,15 @@
+{
+  "surface_kind": "opl_package_payload_allowlist.v1",
+  "package_id": "occ",
+  "plugin_id": "occ",
+  "source_repo": "https://github.com/gaofeng21cn/opl-capital-compass.git",
+  "source_root": "plugins/occ",
+  "paths": [
+    ".codex-plugin/plugin.json",
+    "app-contribution-adapter.json",
+    "contracts/opl_agent_package_manifest.json",
+    "opl-package.json",
+    "plugin.json",
+    "skills/occ/SKILL.md"
+  ]
+}

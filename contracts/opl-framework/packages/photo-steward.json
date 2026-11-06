@@ -1,0 +1,151 @@
+{
+  "surface_kind": "opl_capability_package_manifest.v2",
+  "package_id": "photo-steward",
+  "display_name": "Photo Steward",
+  "publisher": "gaofeng21cn",
+  "version": "0.4.6",
+  "source": "first_party_owner_projection",
+  "source_repo": "https://github.com/gaofeng21cn/photo-steward.git",
+  "package_role": "capability_package",
+  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "capability_abi": {
+    "id": "photo.steward.capabilities",
+    "version": "1.0.0",
+    "compatibility_policy": "same_major"
+  },
+  "exports": {
+    "core_skill_ids": [
+      "photo-steward"
+    ],
+    "core_module_ids": [
+      "photo.steward.v1"
+    ],
+    "optional_skill_policy_ref": "opl-package.json#/exports",
+    "optional_skills_installed_by_default": true,
+    "default_materialization_policy": "all_exported_skills"
+  },
+  "entrypoints": [],
+  "codex_surface": {
+    "plugin_id": "photo-steward",
+    "plugin_source_path": ".",
+    "codex_default_exposure": false,
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "photo-steward@photo-steward",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/photo-steward",
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/photo-steward:latest-stable"
+    },
+    "optional_install_policy": "all_exported_skills",
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "opl",
+        "app",
+        "contribution",
+        "adapter",
+        "--stdin"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "plugin_payload_manifest_url": "payloads/photo-steward-0.4.6.json",
+    "carrier_source_commit": "4ffdae23a5fb0faf5218c53e44538bd602f4f47a"
+  },
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "photo.steward.plan",
+        "view_type": "approval_diff",
+        "title_i18n": {
+          "zh-CN": "照片镜像计划",
+          "en-US": "Photo mirror plan"
+        },
+        "data_ref": "photo.steward.v1#plan",
+        "command_ids": [
+          "photo.steward.apply"
+        ],
+        "empty_state_i18n": {
+          "zh-CN": "没有待审核的照片镜像计划",
+          "en-US": "No photo mirror plan is awaiting review"
+        }
+      },
+      {
+        "view_id": "photo.steward.status",
+        "view_type": "service_status",
+        "title_i18n": {
+          "zh-CN": "照片同步状态",
+          "en-US": "Photo sync status"
+        },
+        "data_ref": "photo.steward.v1#status",
+        "empty_state_i18n": {
+          "zh-CN": "尚未读取 Photo Steward 状态",
+          "en-US": "Photo Steward status has not been read"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command_id": "photo.steward.apply",
+        "label_i18n": {
+          "zh-CN": "执行已审核计划",
+          "en-US": "Apply reviewed plan"
+        },
+        "action_ref": "photo.steward.v1#plan.apply",
+        "confirmation_required": true
+      }
+    ],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "photo.steward.plan",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 300,
+        "view_id": "photo.steward.plan"
+      },
+      {
+        "contribution_id": "photo.steward.status",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 301,
+        "view_id": "photo.steward.status"
+      }
+    ]
+  },
+  "authority_boundary": {
+    "domain_truth_owner": "photo-steward",
+    "artifact_owner": "photo-steward",
+    "review_and_apply_owner": "photo-steward",
+    "adapter_can_mutate": false
+  },
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "paths": [
+      ".codex-plugin/plugin.json",
+      "app-contribution-adapter.json",
+      "plugin.json",
+      "skills/photo-steward/SKILL.md",
+      "skills/photo-steward/agents/openai.yaml"
+    ],
+    "digest": "sha256:00acf8251d9d598eb58c653f23cfdc18f81859f9f2b73a82d275a440888e9e06"
+  },
+  "publication_source": {
+    "module_id": "photo-steward",
+    "owner_package_manifest_ref": "plugins/photo-steward/opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
+  "publication_channel_admission": "admitted",
+  "owner_package_manifest_ref": "plugins/photo-steward/opl-package.json",
+  "owner_package_descriptor_ref": "opl-package.json"
+}

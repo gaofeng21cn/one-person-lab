@@ -877,6 +877,14 @@ function writeFleetOwnerCheckout(sourcePath: string, lockPaths: string[]) {
   }));
   fs.writeFileSync(path.join(sourcePath, 'plugin.json'), formatJsonPayload({ name: 'opl-fleet-agent' }));
   fs.writeFileSync(path.join(sourcePath, 'bin', 'opl-fleet-agent.mjs'), '#!/usr/bin/env node\n');
+  fs.writeFileSync(
+    path.join(sourcePath, 'app-contribution-adapter.json'),
+    formatJsonPayload({
+      schema_version: 'opl-package-app-contribution-adapter.v1',
+      reads: {},
+      actions: {},
+    }),
+  );
   fs.writeFileSync(path.join(sourcePath, 'skills', 'opl-fleet-agent', 'SKILL.md'), '# OPL Fleet Agent\n');
   fs.writeFileSync(
     path.join(sourcePath, 'skills', 'opl-fleet-agent', 'agents', 'openai.yaml'),
@@ -1039,18 +1047,66 @@ test('package status projects and bulk update visits required installed owner de
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configured-carrier-dependency-status-'));
   const stateDir = path.join(root, 'opl-state');
   const codexHome = path.join(root, 'codex-home');
+  const projectionRoot = path.join(root, 'package-projections');
   const rootSource = path.join(root, 'mas');
+  const rootCarrier = path.join(rootSource, 'plugins', 'med-autoscience');
   const providerSource = path.join(root, 'scholar');
   const binary = path.join(root, 'fake-codex.mjs');
   const callsPath = path.join(root, 'codex-calls.txt');
+  const sourceCommit = '1'.repeat(40);
+  const payloadRef = 'payloads/mas-fixture.json';
   const writePlugin = (source: string, packageId: string, version: string) => {
     fs.mkdirSync(path.join(source, '.codex-plugin'), { recursive: true });
+    fs.mkdirSync(path.join(source, '.agents', 'plugins'), { recursive: true });
+    fs.mkdirSync(path.join(source, 'assets'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'assets', 'icon.png'), 'fixture icon\n');
+    fs.writeFileSync(path.join(source, 'assets', 'icon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>\n');
     fs.mkdirSync(path.join(source, 'skills', packageId), { recursive: true });
+    if (packageId === 'mas') {
+      fs.mkdirSync(path.join(source, 'skills', 'med-autoscience'), { recursive: true });
+      fs.writeFileSync(path.join(source, 'skills', 'med-autoscience', 'SKILL.md'), '# MedAutoScience\n');
+      fs.mkdirSync(path.join(source, 'skills', 'med-autoscience', 'agents'), { recursive: true });
+      fs.writeFileSync(
+        path.join(source, 'skills', 'med-autoscience', 'agents', 'openai.yaml'),
+        'interface:\n  display_name: "Med Auto Science"\n',
+      );
+      fs.writeFileSync(path.join(source, 'plugin.json'), formatJsonPayload({
+        $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+        name: 'med-autoscience',
+        version,
+        extensions: {
+          'com.openai': {
+            skills: './skills/',
+            interface: { displayName: 'Med Auto Science' },
+          },
+        },
+      }));
+    } else {
+      fs.writeFileSync(path.join(source, 'plugin.json'), formatJsonPayload({
+        $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+        name: packageId,
+        version,
+        extensions: {
+          'com.openai': {
+            skills: './skills/',
+            interface: { displayName: packageId },
+          },
+        },
+      }));
+    }
     fs.writeFileSync(path.join(source, 'skills', packageId, 'SKILL.md'), `# ${packageId}\n`);
     fs.writeFileSync(path.join(source, '.codex-plugin', 'plugin.json'), formatJsonPayload({
       name: packageId,
       version,
       skills: './skills/',
+    }));
+    fs.writeFileSync(path.join(source, '.agents', 'plugins', 'marketplace.json'), formatJsonPayload({
+      name: packageId === 'mas' ? 'med-autoscience' : packageId,
+      plugins: [{
+        name: packageId,
+        source: { source: 'local', path: '.' },
+        policy: { installation: 'AVAILABLE', authentication: 'ON_INSTALL' },
+      }],
     }));
   };
   const dependency = {
@@ -1065,10 +1121,33 @@ test('package status projects and bulk update visits required installed owner de
     required_module_ids: [] as string[],
     bootstrap_manifest_url: null,
     dependency_source: null,
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_write_runtime_queue: false,
+    },
   };
+  const masProjection = listCurrentPackageProjections()
+    .find((projection) => projection.payload.package_id === 'mas');
+  assert.ok(masProjection, 'MAS owner projection is required for this fixture');
+  const masVersion = String(masProjection.payload.version);
   const rootManifest = agentPackageManifest({ packageId: 'mas', agentId: 'mas', pluginId: 'med-autoscience' }) as any;
-  rootManifest.version = '0.2.25';
-  rootManifest.codex_surface.required_skill_ids = ['mas'];
+  rootManifest.version = masVersion;
+  rootManifest.source = 'first_party';
+  rootManifest.source_repo = 'https://github.com/gaofeng21cn/med-autoscience.git';
+  rootManifest.distribution_payload = null;
+  rootManifest.codex_surface.plugin_id = 'med-autoscience';
+  rootManifest.codex_surface.plugin_payload_manifest_url = payloadRef;
+  rootManifest.codex_surface.carrier_source_commit = sourceCommit;
+  rootManifest.codex_surface.configured_codex_plugin_carrier = {
+    kind: 'codex_plugin_manager',
+    plugin_selector: 'med-autoscience@med-autoscience',
+    executor_route: 'codex_cli',
+    marketplace_source: 'gaofeng21cn/med-autoscience',
+    publication_ref: 'ghcr.io/gaofeng21cn/one-person-lab-packages/mas:latest-stable',
+  };
+  rootManifest.codex_surface.required_skill_ids = ['med-autoscience'];
   rootManifest.capability_dependencies = [dependency];
   const providerProjection = listCurrentPackageProjections()
     .find((projection) => projection.payload.package_id === 'mas-scholar-skills');
@@ -1083,7 +1162,16 @@ test('package status projects and bulk update visits required installed owner de
   dependency.required_module_ids = [...provider.module_export_ids];
   fs.mkdirSync(rootSource, { recursive: true });
   fs.mkdirSync(providerSource, { recursive: true });
-  writePlugin(rootSource, 'mas', '0.2.25');
+  writePlugin(rootCarrier, 'mas', masVersion);
+  fs.mkdirSync(path.join(rootSource, '.agents', 'plugins'), { recursive: true });
+  fs.writeFileSync(path.join(rootSource, '.agents', 'plugins', 'marketplace.json'), formatJsonPayload({
+    name: 'med-autoscience',
+    plugins: [{
+      name: 'med-autoscience',
+      source: { source: 'local', path: './plugins/med-autoscience' },
+      policy: { installation: 'AVAILABLE', authentication: 'ON_INSTALL' },
+    }],
+  }));
   for (const entry of provider.exports) {
     fs.mkdirSync(path.join(providerSource, 'skills', entry.skill_id), { recursive: true });
     fs.writeFileSync(path.join(providerSource, 'skills', entry.skill_id, 'SKILL.md'), `# ${entry.skill_id}\n`);
@@ -1095,8 +1183,69 @@ test('package status projects and bulk update visits required installed owner de
   execFileSync('git', ['add', '.'], { cwd: providerSource });
   execFileSync('git', ['commit', '-q', '-m', 'ScholarSkills fixture'], { cwd: providerSource });
   fs.writeFileSync(path.join(rootSource, 'opl-package.json'), formatJsonPayload(rootManifest));
+  fs.writeFileSync(path.join(rootCarrier, 'opl-package.json'), formatJsonPayload(rootManifest));
+  const payloadPaths = [
+    'plugin.json',
+    '.codex-plugin/plugin.json',
+    'opl-package.json',
+    'skills/med-autoscience/SKILL.md',
+    'skills/med-autoscience/agents/openai.yaml',
+  ];
+  const contentDigest = orderedPathLockDigest(rootCarrier, payloadPaths);
+  const payload = {
+    surface_kind: 'opl_package_payload_manifest.v2',
+    schema_ref: 'contracts/opl-framework/package-payload-manifest-v2.schema.json',
+    package_id: 'mas',
+    plugin_id: 'med-autoscience',
+    package_version: masVersion,
+    source_repo: rootManifest.source_repo,
+    source_commit: sourceCommit,
+    source_root: 'plugins/med-autoscience',
+    content_lock: {
+      algorithm: 'sha256',
+      canonicalization: 'ordered_path_length_file_length_bytes',
+      digest: contentDigest,
+    },
+    files: payloadPaths.map((relativePath) => ({
+      path: relativePath,
+      mode: '100644',
+      source_url: pathToFileURL(path.join(rootCarrier, relativePath)).toString(),
+      sha256: `sha256:${crypto.createHash('sha256')
+        .update(fs.readFileSync(path.join(rootCarrier, relativePath)))
+        .digest('hex')}`,
+    })),
+  };
+  fs.cpSync(
+    path.join(repoRoot, 'contracts/opl-framework/packages'),
+    projectionRoot,
+    { recursive: true },
+  );
+  const projectedMas = structuredClone(masProjection.payload) as any;
+  projectedMas.source = 'first_party';
+  projectedMas.source_repo = rootManifest.source_repo;
+  projectedMas.codex_surface.plugin_id = 'med-autoscience';
+  projectedMas.codex_surface.plugin_payload_manifest_url = payloadRef;
+  projectedMas.codex_surface.carrier_source_commit = sourceCommit;
+  projectedMas.codex_surface.configured_codex_plugin_carrier =
+    rootManifest.codex_surface.configured_codex_plugin_carrier;
+  projectedMas.codex_surface.required_skill_ids = ['med-autoscience'];
+  projectedMas.capability_dependencies = [dependency];
+  projectedMas.content_lock = {
+    algorithm: 'sha256',
+    canonicalization: 'ordered_path_length_file_length_bytes',
+    paths: payloadPaths,
+    digest: contentDigest,
+  };
+  fs.mkdirSync(path.join(projectionRoot, 'payloads'), { recursive: true });
+  fs.writeFileSync(path.join(projectionRoot, 'mas.json'), formatJsonPayload(projectedMas));
+  fs.writeFileSync(path.join(projectionRoot, payloadRef), formatJsonPayload(payload));
   fs.writeFileSync(binary, `#!/usr/bin/env node\nimport fs from 'node:fs';\nfs.appendFileSync(process.env.FIXTURE_CODEX_CALLS, process.argv.slice(2).join(' ') + '\\n');\nprocess.stdout.write(${JSON.stringify(pluginList([
-    { pluginId: 'med-autoscience@carrier', version: '0.2.25', sourcePath: rootSource, marketplaceSource: 'fixture' },
+    {
+      pluginId: 'med-autoscience@med-autoscience',
+      version: masVersion,
+      sourcePath: rootCarrier,
+      marketplaceSource: 'gaofeng21cn/med-autoscience',
+    },
   ], [{
     name: 'carrier',
     marketplaceSource: { sourceType: 'local', source: 'fixture' },
@@ -1107,6 +1256,10 @@ test('package status projects and bulk update visits required installed owner de
     CODEX_HOME: codexHome,
     OPL_STATE_DIR: stateDir,
     OPL_CODEX_PLUGIN_BIN: binary,
+    OPL_PACKAGE_PROJECTION_DIR: projectionRoot,
+    OPL_MODULE_SOURCE_MODE: 'git_checkout',
+    OPL_FAMILY_WORKSPACE_ROOT: root,
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: rootSource,
     OPL_MODULE_PATH_SCHOLARSKILLS: providerSource,
     FIXTURE_CODEX_CALLS: callsPath,
   };
@@ -1115,6 +1268,10 @@ test('package status projects and bulk update visits required installed owner de
     codexHome: process.env.CODEX_HOME,
     stateDir: process.env.OPL_STATE_DIR,
     pluginBin: process.env.OPL_CODEX_PLUGIN_BIN,
+    packageProjectionDir: process.env.OPL_PACKAGE_PROJECTION_DIR,
+    sourceMode: process.env.OPL_MODULE_SOURCE_MODE,
+    familyWorkspace: process.env.OPL_FAMILY_WORKSPACE_ROOT,
+    masPath: process.env.OPL_MODULE_PATH_MEDAUTOSCIENCE,
     callsPath: process.env.FIXTURE_CODEX_CALLS,
     scholarSkillsPath: process.env.OPL_MODULE_PATH_SCHOLARSKILLS,
   };
@@ -1122,6 +1279,10 @@ test('package status projects and bulk update visits required installed owner de
   process.env.CODEX_HOME = env.CODEX_HOME;
   process.env.OPL_STATE_DIR = env.OPL_STATE_DIR;
   process.env.OPL_CODEX_PLUGIN_BIN = env.OPL_CODEX_PLUGIN_BIN;
+  process.env.OPL_PACKAGE_PROJECTION_DIR = env.OPL_PACKAGE_PROJECTION_DIR;
+  process.env.OPL_MODULE_SOURCE_MODE = env.OPL_MODULE_SOURCE_MODE;
+  process.env.OPL_FAMILY_WORKSPACE_ROOT = env.OPL_FAMILY_WORKSPACE_ROOT;
+  process.env.OPL_MODULE_PATH_MEDAUTOSCIENCE = env.OPL_MODULE_PATH_MEDAUTOSCIENCE;
   process.env.FIXTURE_CODEX_CALLS = env.FIXTURE_CODEX_CALLS;
   process.env.OPL_MODULE_PATH_SCHOLARSKILLS = providerSource;
   try {
@@ -1143,7 +1304,7 @@ test('package status projects and bulk update visits required installed owner de
       fs.readFileSync(callsPath, 'utf8').trim().split('\n')
         .filter((command) => command.startsWith('plugin add ')),
       [
-        'plugin add med-autoscience@carrier --json',
+        'plugin add med-autoscience@med-autoscience --json',
       ],
     );
 
@@ -1153,10 +1314,16 @@ test('package status projects and bulk update visits required installed owner de
       'mas',
     ]);
     assert.deepEqual(bulkUpdate.targets.map((target: any) => target.status), [
-      'failed',
+      'completed',
     ], JSON.stringify(bulkUpdate, null, 2));
-    assert.equal((bulkUpdate.targets[0] as any).error.error.details.failure_code,
-      'agent_package_native_post_update_readback_failed');
+    assert.equal(
+      (bulkUpdate.targets[0] as any).result.opl_agent_package_update.configured_carrier.status,
+      'installed',
+    );
+    assert.equal(
+      (bulkUpdate.targets[0] as any).result.opl_agent_package_update.configured_carrier.installed_version,
+      masVersion,
+    );
     assert.deepEqual(
       fs.readFileSync(callsPath, 'utf8').trim().split('\n')
       .filter((command) => command.startsWith('plugin add ')),
@@ -1169,7 +1336,12 @@ test('package status projects and bulk update visits required installed owner de
     env.OPL_MODULE_PATH_SCHOLARSKILLS = unavailableProviderSource;
     process.env.OPL_MODULE_PATH_SCHOLARSKILLS = unavailableProviderSource;
     fs.writeFileSync(binary, `#!/usr/bin/env node\nimport fs from 'node:fs';\nfs.appendFileSync(process.env.FIXTURE_CODEX_CALLS, process.argv.slice(2).join(' ') + '\\n');\nprocess.stdout.write(${JSON.stringify(pluginList([
-      { pluginId: 'med-autoscience@carrier', version: '0.2.25', sourcePath: rootSource, marketplaceSource: 'fixture' },
+      {
+        pluginId: 'med-autoscience@med-autoscience',
+        version: masVersion,
+        sourcePath: rootCarrier,
+        marketplaceSource: 'gaofeng21cn/med-autoscience',
+      },
       {
         pluginId: providerOwnerManifest.configured_codex_plugin_carrier!.carrier.pluginId,
         version: providerOwnerManifest.version,
@@ -1200,6 +1372,14 @@ test('package status projects and bulk update visits required installed owner de
     else process.env.OPL_STATE_DIR = previous.stateDir;
     if (previous.pluginBin === undefined) delete process.env.OPL_CODEX_PLUGIN_BIN;
     else process.env.OPL_CODEX_PLUGIN_BIN = previous.pluginBin;
+    if (previous.packageProjectionDir === undefined) delete process.env.OPL_PACKAGE_PROJECTION_DIR;
+    else process.env.OPL_PACKAGE_PROJECTION_DIR = previous.packageProjectionDir;
+    if (previous.sourceMode === undefined) delete process.env.OPL_MODULE_SOURCE_MODE;
+    else process.env.OPL_MODULE_SOURCE_MODE = previous.sourceMode;
+    if (previous.familyWorkspace === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    else process.env.OPL_FAMILY_WORKSPACE_ROOT = previous.familyWorkspace;
+    if (previous.masPath === undefined) delete process.env.OPL_MODULE_PATH_MEDAUTOSCIENCE;
+    else process.env.OPL_MODULE_PATH_MEDAUTOSCIENCE = previous.masPath;
     if (previous.callsPath === undefined) delete process.env.FIXTURE_CODEX_CALLS;
     else process.env.FIXTURE_CODEX_CALLS = previous.callsPath;
     if (previous.scholarSkillsPath === undefined) delete process.env.OPL_MODULE_PATH_SCHOLARSKILLS;

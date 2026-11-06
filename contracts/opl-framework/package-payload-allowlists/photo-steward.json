@@ -1,0 +1,15 @@
+{
+  "surface_kind": "opl_package_payload_allowlist.v1",
+  "package_id": "photo-steward",
+  "plugin_id": "photo-steward",
+  "source_repo": "https://github.com/gaofeng21cn/photo-steward.git",
+  "source_root": "plugins/photo-steward",
+  "paths": [
+    ".codex-plugin/plugin.json",
+    "app-contribution-adapter.json",
+    "plugin.json",
+    "skills/photo-steward/SKILL.md",
+    "skills/photo-steward/agents/openai.yaml",
+    "opl-package.json"
+  ]
+}

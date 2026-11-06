@@ -1,0 +1,53 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "occ",
+  "plugin_id": "occ",
+  "package_version": "0.1.2",
+  "source_repo": "https://github.com/gaofeng21cn/opl-capital-compass.git",
+  "source_commit": "ea700c52f80af00e62f88ca980d9a06409cec703",
+  "source_root": "plugins/occ",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:6397e1c8b7dd10f6c9084da6bef47262ea0ecf64dfbf13f1ac48cf595db0709d"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/ea700c52f80af00e62f88ca980d9a06409cec703/plugins/occ/.codex-plugin/plugin.json",
+      "sha256": "sha256:759cf967955aadb7110e2134b546d867b1aee7386a412aaf41891c129767d91f"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/ea700c52f80af00e62f88ca980d9a06409cec703/plugins/occ/app-contribution-adapter.json",
+      "sha256": "sha256:f3f5e1fff5c703066c108aa3e143a34d12fe0c5b48084046e91e6436ac2e7fd2"
+    },
+    {
+      "path": "contracts/opl_agent_package_manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/ea700c52f80af00e62f88ca980d9a06409cec703/plugins/occ/contracts/opl_agent_package_manifest.json",
+      "sha256": "sha256:86fc903a65d5048ef588bee3968a5667ce64a97c77fa18d6af63c3715f58b431"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/ea700c52f80af00e62f88ca980d9a06409cec703/plugins/occ/opl-package.json",
+      "sha256": "sha256:86fc903a65d5048ef588bee3968a5667ce64a97c77fa18d6af63c3715f58b431"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/ea700c52f80af00e62f88ca980d9a06409cec703/plugins/occ/plugin.json",
+      "sha256": "sha256:677a60ca3b02741d2e7036bce89a210e0808e2e8f24e1390cf415736a4a7fd15"
+    },
+    {
+      "path": "skills/occ/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/ea700c52f80af00e62f88ca980d9a06409cec703/plugins/occ/skills/occ/SKILL.md",
+      "sha256": "sha256:611191bce172138335afc13a54107ae829834a440bad0eec85b99e6035155b67"
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "package_id": "opl-fleet-agent",
   "display_name": "OPL Fleet Agent Integration",
   "publisher": "one-person-lab",
-  "version": "0.2.43",
+  "version": "0.2.47",
   "source": "first_party",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-fleet-agent.git",
@@ -30,12 +30,13 @@
     "canonicalization": "ordered_path_length_file_length_bytes",
     "paths": [
       ".codex-plugin/plugin.json",
+      "app-contribution-adapter.json",
       "bin/opl-fleet-agent.mjs",
       "plugin.json",
       "skills/opl-fleet-agent/SKILL.md",
       "skills/opl-fleet-agent/agents/openai.yaml"
     ],
-    "digest": "sha256:671b5ed92b273da82327d6b111376ea5ca873efb3d985e05302e7cdee1145f5a"
+    "digest": "sha256:393347eb91f8fe14ecb47924d351321a5d62514a2a2ae97a3fa223e7d1fa3908"
   },
   "codex_surface": {
     "plugin_id": "opl-fleet-agent",
@@ -60,8 +61,11 @@
       "request_schema": "opl-package-app-contribution-request.v1",
       "response_schema": "opl-package-app-contribution-response.v1"
     },
-    "plugin_payload_manifest_url": "payloads/opl-fleet-agent-0.2.43.json",
-    "carrier_source_commit": "eaf500e653bdeec2235f0606afbb1b790f0b3613"
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "plugin_payload_manifest_url": "payloads/opl-fleet-agent-0.2.47.json",
+    "carrier_source_commit": "47bdbcca6d1ade2118ec49c689b4a9d14e3b9a82"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -110,7 +114,26 @@
         "tone": "neutral"
       }
     ],
-    "ui": []
+    "ui": [
+      {
+        "contribution_id": "fleet.agent.telemetry",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 1300,
+        "view_id": "fleet.agent.telemetry"
+      },
+      {
+        "contribution_id": "fleet.agent.doctor",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 1301,
+        "view_id": "fleet.agent.doctor"
+      }
+    ]
   },
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "publication_source": {
