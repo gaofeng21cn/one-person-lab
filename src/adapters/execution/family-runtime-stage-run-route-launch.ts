@@ -23,6 +23,7 @@ import {
   deriveStageRunId,
   stageAttemptExecutionContentBindingSha256,
   stageRunSpecSha256,
+  stageRunWorkspaceIdentity,
 } from './family-runtime-stage-run-identity.ts';
 import type {
   TemporalStageRunRouteLaunchInput,
@@ -70,7 +71,7 @@ function routeReplayBusinessIdentity(input: TemporalStageRunWorkflowInput) {
     stage_id: spec.stage_id,
     action_id: spec.action_id,
     task_id: spec.task_id,
-    workspace_identity: spec.workspace_identity,
+    workspace_identity: stageRunWorkspaceIdentity(spec.workspace_identity),
     source_fingerprint: spec.source_fingerprint,
     input_artifacts: spec.input_artifacts,
     executor_kind: spec.executor_kind,
@@ -105,7 +106,7 @@ function expectedRouteReplayBusinessIdentity(input: {
       parentActionId: parentSpec.action_id,
     }),
     task_id: parentSpec.task_id,
-    workspace_identity: parentSpec.workspace_identity,
+    workspace_identity: stageRunWorkspaceIdentity(parentSpec.workspace_identity),
     source_fingerprint: parentSpec.source_fingerprint,
     input_artifacts: canonicalStageRunInputArtifacts(
       input.artifactRefs,

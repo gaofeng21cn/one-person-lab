@@ -9,6 +9,7 @@ import {
 import {
   resolveStandardAgent,
   STANDARD_AGENT_REGISTRY,
+  listStandardAgentRegistry,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
 import { runOplAgentPackageStatus } from './agent-package-registry.ts';
@@ -116,7 +117,7 @@ function presentDescriptorForPackage(
 
 function packageIdsForAliases(packageIds: readonly string[]) {
   const requested = new Set(packageIds.map(normalizedIdentity));
-  return STANDARD_AGENT_REGISTRY
+  return listStandardAgentRegistry()
     .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
     .filter((entry) => registryIdentities(entry)
       .some((alias) => requested.has(normalizedIdentity(alias))))
@@ -159,6 +160,9 @@ function currentCheckoutResolutionFromPackageStatus(
   const nativeCarrier = installedCarrierSourceFromStatus(status);
   if (nativeCarrier.selected) {
     if (nativeCarrier.checkout_path) {
+      if (status.launch_allowed === false || status.installed_readiness?.callability !== 'callable') {
+        return blockedCheckoutPath('installed_native_carrier_not_callable');
+      }
       return {
         checkout_path: nativeCarrier.checkout_path,
         source_status: 'current',
@@ -284,7 +288,10 @@ function installedCarrierSourceFromStatus(
   };
 }
 
-function defaultSelectedModuleSource(moduleId: string): SelectedModuleSource {
+function defaultSelectedModuleSource(moduleId: string): SelectedModuleSource | null {
+  // Only published compatibility entries have legacy Module source selection.
+  // A newly installed Agent resolves directly through its native Package.
+  if (!STANDARD_AGENT_REGISTRY.some((entry) => entry.domain_id === moduleId)) return null;
   return inspectOplModule(moduleId, { profile: 'fast' });
 }
 
@@ -521,7 +528,7 @@ export function readStandardAgentDescriptorForDomain(
   readSelectedModule: SelectedModuleSourceReader = defaultSelectedModuleSource,
 ): StandardAgentDescriptorInterface | null {
   const target = normalizedIdentity(domainId);
-  const standardAgents = STANDARD_AGENT_REGISTRY.filter((agent) =>
+  const standardAgents = listStandardAgentRegistry().filter((agent) =>
     agent.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
   );
   const directMatches = standardAgents.filter((agent) =>
@@ -559,7 +566,7 @@ export function readInstalledStandardAgentDescriptorForDomain(
   readSelectedModule: SelectedModuleSourceReader = defaultSelectedModuleSource,
 ): StandardAgentDescriptorInterface | null {
   const target = normalizedIdentity(domainId);
-  const standardAgents = STANDARD_AGENT_REGISTRY.filter((agent) =>
+  const standardAgents = listStandardAgentRegistry().filter((agent) =>
     agent.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
   );
   const directMatches = standardAgents.filter((agent) =>

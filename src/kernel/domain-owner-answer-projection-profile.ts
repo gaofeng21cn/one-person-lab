@@ -16,6 +16,7 @@ import {
 } from './standard-domain-agent-family-repos.ts';
 import {
   STANDARD_AGENT_REGISTRY,
+  listStandardAgentRegistry,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from './standard-agent-registry.ts';
 import { resolveContainedRepoJsonFile } from './repo-contained-json-file.ts';
@@ -228,7 +229,7 @@ export function normalizeDomainOwnerAnswerProjectionProfile(
 
 function defaultRepoInputs() {
   return discoverFamilyRepoInputs(
-    STANDARD_AGENT_REGISTRY
+    listStandardAgentRegistry()
       .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
       .map((entry) => ({
         requested_agent_id: entry.agent_id,

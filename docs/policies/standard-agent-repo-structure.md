@@ -70,6 +70,11 @@ Domain repo 持有阶段语义、专业能力、知识、质量门和最小领�
 
 ## Stage 内部连接方式
 
+脚手架同时生成 `contracts/stage_quality_cycle_policy.json` 与领域角色提示，并在
+每个 starter Stage 绑定启用的 policy。正式输入产物与 StageRun 身份依赖这个运行
+绑定；只有 manifest 而没有 policy 的目录不能据结构检查宣称已可执行。独立 Review
+是否必需由领域 owner 按实际风险决定，starter 使用 primary-only 模式。
+
 每个 Stage 内的 Skill、工具、数据库、知识库和记忆，逻辑上都先落成 refs，再由 `agent/stages/manifest.json` 连接；OPL Pack 将其编译为 generated `family_stage_control_plane`：
 
 ```text

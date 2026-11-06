@@ -40,6 +40,7 @@ import {
   AGENT_PLUGIN_MANIFEST_SCHEMA_1_0_0,
   normalizeAgentPluginName,
 } from '../../kernel/agent-plugin-manifest.ts';
+import { starterStageQualityFiles } from './standard-domain-agent-scaffold-template-parts/stage-quality.ts';
 
 export {
   STANDARD_AGENT_CAPABILITY_MAP_CONTRACT,
@@ -49,6 +50,7 @@ export interface ScaffoldFile {
   path: string;
   content: string;
 }
+
 
 const STARTER_ACTION_ID = 'domain_intake_owner_handoff';
 const STARTER_HANDLER_REF = 'runtime/authority_functions/domain-intake-owner-handoff.ts';
@@ -308,6 +310,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
   const pluginName = normalizeAgentPluginName(domainId);
   const primarySkillContent = primarySkill(domainId, domainLabel, pluginName);
   return [
+    ...starterStageQualityFiles(domainId, STARTER_STAGE_ID),
     {
       path: 'agent/primary_skill/SKILL.md',
       content: primarySkillContent,
@@ -382,6 +385,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           goal: 'Produce the best intake progress artifact or diagnostic plus a next-stage recommendation without granting OPL domain truth authority.',
           policy_ref: `agent/stages/${STARTER_STAGE_ID}.md`,
           prompt_ref: `agent/prompts/${STARTER_STAGE_ID}.md`,
+          stage_quality_cycle_policy_ref: `contracts/stage_quality_cycle_policy.json#/stages/${STARTER_STAGE_ID}`,
           knowledge_refs: ['agent/knowledge/domain_boundary.md'],
           quality_gate_refs: ['agent/quality_gates/domain_acceptance.md'],
           allowed_action_refs: [STARTER_ACTION_ID],
@@ -456,6 +460,9 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       content: json({
         surface_kind: 'domain_agent_descriptor',
         schema_version: 1,
+        kind: 'agent',
+        agent_id: domainId,
+        package_id: domainId,
         domain_id: domainId,
         domain_label: domainLabel,
         marker: SCAFFOLD_MARKER,
@@ -534,6 +541,8 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           'agent/principles/opl-standard-agent-principles.md',
           'agent/principles/domain-specialization.md',
           `agent/prompts/${STARTER_STAGE_ID}.md`,
+          'agent/prompts/stage-quality-cycle-roles.md',
+          'contracts/stage_quality_cycle_policy.json',
           `agent/stages/${STARTER_STAGE_ID}.md`,
           'agent/skills/domain_execution.md',
           'agent/tools/domain_affordances.md',

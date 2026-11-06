@@ -80,6 +80,7 @@ export {
   createProductionFoundryProviderOperationCoordinator,
   createProductionFoundryProviderOperationRuntime,
 } from './foundry-production-runtime.ts';
+export { createFoundryLifecycleKernel } from './foundry-lifecycle-runtime.ts';
 export {
   reconcileTemporalRuntimeStartupMaintenance,
   type TemporalStartupMaintenanceRuntime,

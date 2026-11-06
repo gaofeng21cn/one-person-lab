@@ -3,6 +3,7 @@ import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
   resolveStandardAgent,
   STANDARD_AGENT_REGISTRY,
+  listStandardAgentRegistry,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../../kernel/standard-agent-registry.ts';
 import {
@@ -25,7 +26,7 @@ type CatalogOptions = Parameters<typeof buildDomainManifestCatalog>[1] & {
 };
 
 function standardAgents(): StandardAgent[] {
-  return STANDARD_AGENT_REGISTRY.filter(
+  return listStandardAgentRegistry().filter(
     (agent): agent is StandardAgent =>
       agent.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP,
   );

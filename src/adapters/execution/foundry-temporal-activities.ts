@@ -1,5 +1,6 @@
 import { Context } from '@temporalio/activity';
 import { ApplicationFailure } from '@temporalio/common';
+import { createFoundryLifecycleKernel } from './foundry-lifecycle-runtime.ts';
 
 import {
   FoundryTransientActivityError,
@@ -160,6 +161,7 @@ export function buildFoundryTemporalActivities(
   createKernel: FoundryKernelFactory = productionKernel,
   createProviderOperationRuntime: FoundryProviderOperationRuntimeFactory | null = null,
   createProviderOperationCoordinator: FoundryProviderOperationCoordinatorFactory | null = null,
+  createLifecycleKernel: FoundryKernelFactory = createKernel,
 ): FoundryTemporalActivities {
   const providerRuntime = async (input: FoundryAdvanceRunActivityInput) => {
     validateOperationShape(input);
@@ -173,12 +175,12 @@ export function buildFoundryTemporalActivities(
   };
   return {
     async foundryStartRunActivity(input: FoundryRunWorkflowInput) {
-      const kernel = await createKernel();
+      const kernel = await createLifecycleKernel();
       const started = await kernel.startRun({ request: input.request, run_id: input.run_id });
       return kernel.inspectRun(started.run_id);
     },
     async foundryAuthorizeCancelRunActivity(input: FoundryCancelUpdate) {
-      return (await createKernel()).authorizeCancelRun(input);
+      return (await createLifecycleKernel()).authorizeCancelRun(input);
     },
     async foundryAdvanceRunActivity(input: FoundryAdvanceRunActivityInput) {
       const info = validateOperationIdentity(input);
@@ -263,13 +265,13 @@ export function buildFoundryTemporalActivities(
       );
     },
     async foundrySubmitOwnerDecisionActivity(input: FoundryOwnerDecisionUpdate) {
-      return (await createKernel()).submitOwnerDecision(input, { advance: false });
+      return (await createLifecycleKernel()).submitOwnerDecision(input, { advance: false });
     },
     async foundryCancelRunActivity(input: FoundryCancelUpdate) {
-      return (await createKernel()).cancelRun(input);
+      return (await createLifecycleKernel()).cancelRun(input);
     },
     async foundryFailRunActivity(input) {
-      return (await createKernel()).failRun(input);
+      return (await createLifecycleKernel()).failRun(input);
     },
   };
 }
@@ -281,6 +283,7 @@ const productionActivities = buildFoundryTemporalActivities(
     const runtime = await import('./foundry-production-runtime.ts');
     return runtime.createProductionFoundryProviderOperationCoordinator();
   },
+  () => createFoundryLifecycleKernel(),
 );
 
 export const foundryStartRunActivity = productionActivities.foundryStartRunActivity;

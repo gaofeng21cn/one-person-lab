@@ -19,6 +19,7 @@ import {
   type StageQualityOutcome,
 } from '../../../src/authority/stages/stage-quality-cycle.ts';
 import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environment.ts';
+import { queryTemporalStageRunWorkflow } from '../../../src/adapters/execution/family-runtime-temporal-provider-parts/attempt-control.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 
@@ -86,6 +87,7 @@ function stageRunInput(id: string): TemporalStageRunWorkflowInput {
 
 export async function runController(input: {
   id: string;
+  queryAfterWorkerStopped?: boolean;
   closeFindingAfterRound: number | null;
   formalReviewRequired?: boolean;
   maxRepairRounds?: number;
@@ -669,7 +671,24 @@ export async function runController(input: {
       });
       return await handle.result();
     });
-    return { state, attempts, workflowInputs, reviewReceiptInputs, routeInputs, handoffObservations, attemptSyncs };
+    let terminalReadback: unknown = null;
+    if (input.queryAfterWorkerStopped) {
+      const priorAddress = process.env.OPL_TEMPORAL_ADDRESS;
+      const priorNamespace = process.env.OPL_TEMPORAL_NAMESPACE;
+      process.env.OPL_TEMPORAL_ADDRESS = testEnv.address;
+      process.env.OPL_TEMPORAL_NAMESPACE = testEnv.namespace ?? 'default';
+      try {
+        // runUntil has stopped the only worker. A closed workflow must remain
+        // readable without scheduling a replay query on that absent worker.
+        terminalReadback = await queryTemporalStageRunWorkflow({ workflowId: state.workflow_id });
+      } finally {
+        if (priorAddress === undefined) delete process.env.OPL_TEMPORAL_ADDRESS;
+        else process.env.OPL_TEMPORAL_ADDRESS = priorAddress;
+        if (priorNamespace === undefined) delete process.env.OPL_TEMPORAL_NAMESPACE;
+        else process.env.OPL_TEMPORAL_NAMESPACE = priorNamespace;
+      }
+    }
+    return { state, terminalReadback, attempts, workflowInputs, reviewReceiptInputs, routeInputs, handoffObservations, attemptSyncs };
   } finally {
     await testEnv.teardown();
   }

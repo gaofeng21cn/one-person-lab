@@ -33,6 +33,16 @@ DesignRequest
 - 同一 target Agent 同时只允许一个写入型 Run；重复 activity 按 run/generation/phase/input digest 幂等。
 - 瞬时平台失败最多重试三次，不消耗 evolution generation；永久失败不重试。
 
+生命周期 Activity（start、fail、cancel 和 Owner decision）使用独立的持久化
+Kernel，不加载语义 provider。OMA 缺失、carrier 失效或 workspace 投影冲突时，
+失败收尾仍须追加终态事件并释放目标写保留；取消与 Owner decision 继续通过原有
+OwnerGate。不得因语义 provider 不可用而让失败收尾再次依赖同一 provider。
+
+排障时同时核对 Temporal address、namespace、workflow ID 和 Run request digest。
+同名 workflow 在不同 namespace 是不同执行；切换 worker namespace 不会迁移已有
+Run。旧执行确认失败而 Ledger 未收尾时，仅能依据匹配的 durable failure 经 Kernel
+补记失败，不能直接删除锁或修改 SQLite projection。
+
 终态为：
 
 ```text

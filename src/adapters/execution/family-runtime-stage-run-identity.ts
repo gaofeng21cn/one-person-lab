@@ -71,6 +71,7 @@ const WORKSPACE_OBSERVATION_FIELDS = new Set([
   'checkout_currentness',
   'currentness_observation',
   'domain_pack_root',
+  'native_package_closure',
   'package_status',
   'package_use_binding',
   'runtime_source_readiness',
@@ -622,7 +623,13 @@ export function validateStageRunImmutableSpecEnvelope(input: {
     parent_route_decision_ref: optionalText(input.parentRouteDecisionRef),
     ...(input.routeBudget ? { route_budget: input.routeBudget } : {}),
   };
-  if (canonicalJsonText(input.spec) !== canonicalJsonText(expected)) {
+  // Historical specs may include native carrier observations in workspace identity.
+  // Keep their original bytes/hash as evidence; compare only stable workspace axes.
+  const comparableSpec = {
+    ...input.spec,
+    workspace_identity: stageRunWorkspaceIdentity(input.spec.workspace_identity),
+  };
+  if (canonicalJsonText(comparableSpec) !== canonicalJsonText(expected)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'StageRun immutable spec does not match its exact launch envelope.',

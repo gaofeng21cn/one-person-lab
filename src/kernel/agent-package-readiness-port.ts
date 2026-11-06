@@ -1,5 +1,6 @@
 import { FrameworkContractError } from './contract-validation.ts';
 import type { StandardAgentDescriptorInterface } from './standard-agent-interface.ts';
+import type { StandardAgentRegistryEntry } from './standard-agent-registry.ts';
 
 export type StandardAgentContractCheckout = {
   agent_id: string;
@@ -33,6 +34,7 @@ export type StandardAgentProgressDeltaKeySet = {
 
 export type AgentPackageReadinessPort = {
   readStatus: (input: any) => any;
+  listInstalledStandardAgentEntries?: () => StandardAgentRegistryEntry[];
   readSourcePolicy?: (packageId: string) => any;
   refreshWorkspaceSkills?: (input: {
     packageId: string;

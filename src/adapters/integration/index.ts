@@ -8,6 +8,7 @@ import type { ManagedUpdateKernelInput } from './managed-update-owner-boundary.t
 import { resolveAgentPackageEffectiveSourcePolicy } from './agent-package-registry-parts/source-policy.ts';
 import { refreshInstalledAgentPackageWorkspaceSkills } from './agent-package-registry-parts/skill-projection.ts';
 import { discoverInstalledPackageDescriptors } from './agent-package-registry-parts/installed-codex-plugin-directory.ts';
+import { listInstalledStandardAgentEntries } from './installed-standard-agent-registry.ts';
 import {
   readInstalledStandardAgentDescriptorForPackage,
   readPackageManagedStandardAgentDescriptor,
@@ -18,6 +19,7 @@ import {
 
 registerAgentPackageReadinessPort({
   readStatus: runOplAgentPackageStatus,
+  listInstalledStandardAgentEntries,
   readSourcePolicy: resolveAgentPackageEffectiveSourcePolicy,
   refreshWorkspaceSkills(input) {
     return refreshInstalledAgentPackageWorkspaceSkills({

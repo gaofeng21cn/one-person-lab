@@ -6,6 +6,67 @@ import test from 'node:test';
 
 import { buildFoundryCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs-parts/foundry.ts';
 import { createPersistentFoundryControl } from '../../src/entrypoints/cli/modules/foundry-control.ts';
+import { createFoundryLifecycleKernel } from '../../src/adapters/execution/foundry-lifecycle-runtime.ts';
+import { buildFoundryTemporalActivities } from '../../src/adapters/execution/foundry-temporal-activities.ts';
+import { foundryContentDigest, type DesignRequest } from '../../src/authority/evolution/index.ts';
+import { foundryTemporalClientOptions } from '../../src/adapters/execution/foundry-temporal-control.ts';
+import { familyRuntimePaths } from '../../src/adapters/execution/family-runtime-store.ts';
+
+test('Foundry uses managed Temporal service and worker paths while preserving explicit isolation', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-client-state-'));
+  const previous = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = root;
+  t.after(() => {
+    if (previous === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previous;
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  assert.equal(foundryTemporalClientOptions().paths?.root, familyRuntimePaths().root);
+  const explicit = { paths: { root: '/isolated/runtime' }, addressOverride: '127.0.0.1:9999', namespaceOverride: 'test' };
+  assert.deepEqual(foundryTemporalClientOptions(explicit), explicit);
+});
+
+test('provider load failure can terminalize and release the target without loading the provider again', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-lifecycle-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const kernel = createFoundryLifecycleKernel(root);
+  let providerLoads = 0;
+  const activities = buildFoundryTemporalActivities(() => {
+    providerLoads += 1;
+    throw new Error('semantic provider unavailable');
+  }, null, null, () => kernel);
+  const request: DesignRequest = {
+    surface_kind: 'opl_foundry_design_request', version: 'opl-foundry-protocol.v1',
+    request_id: 'request:lifecycle-recovery', mode: 'create', target_agent_id: 'lifecycle-fixture',
+    target_domain_id: 'lifecycle-fixture', target_version_ref: null,
+    objective: 'Verify durable failure cleanup.', acceptance_criteria: ['Target reservation is released.'],
+    non_goals: ['No activation.'], source_refs: [],
+    constraints: { capability_refs: [], permission_refs: [], privacy_requirements: [], cost_limits: {}, latency_limits: {} },
+    delivery_policy: { activation_mode: 'qualify_only', max_generations: 1 },
+  };
+  const started = await activities.foundryStartRunActivity({
+    run_id: 'lifecycle-failed', request, request_digest: foundryContentDigest(request),
+  });
+  assert.equal(started.run.state, 'accepted');
+  await kernel.advanceRunStep(started.run.run_id);
+  const failed = await activities.foundryFailRunActivity({
+    run_id: started.run.run_id, failure_code: 'provider_unavailable', failure_message: 'semantic provider unavailable',
+  });
+  assert.equal(failed.run.state, 'failed');
+  const replay = await activities.foundryFailRunActivity({
+    run_id: started.run.run_id, failure_code: 'provider_unavailable', failure_message: 'semantic provider unavailable',
+  });
+  assert.equal(replay.run.revision, failed.run.revision);
+  const next = await activities.foundryStartRunActivity({
+    run_id: 'lifecycle-successor', request, request_digest: foundryContentDigest(request),
+  });
+  assert.equal(next.run.state, 'accepted');
+  await assert.rejects(activities.foundryCancelRunActivity({
+    run_id: next.run.run_id, expected_revision: next.run.revision, authority_receipt_ref: 'untrusted:receipt',
+  }));
+  assert.equal((await kernel.inspectRun(next.run.run_id)).run.state, 'accepted');
+  assert.equal(providerLoads, 0);
+});
 
 test('persistent Foundry control keeps read commands physically read-only on absent storage', async (t) => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-control-read-only-'));

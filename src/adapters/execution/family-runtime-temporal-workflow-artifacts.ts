@@ -10,6 +10,13 @@ import {
 } from '../../authority/stages/public/stage-quality-cycle.ts';
 import { asRecord, asRecordList, requiredRecordList } from './family-runtime-temporal-workflow-values.ts';
 
+function comparableArtifactHash(value: string) {
+  // Byte receipts may use bare hex while executor closeout uses sha256:hex.
+  // Normalize only actual SHA-256 digests; other identities remain exact.
+  const digest = /^(?:sha256:)?([a-fA-F0-9]{64})$/.exec(value);
+  return digest ? digest[1].toLowerCase() : value;
+}
+
 export function qualityEnvelopeFromAttempt(state: TemporalStageAttemptWorkflowState) {
   const closeout = asRecord(state.closeout_packet);
   const routeImpact = asRecord(closeout.route_impact);
@@ -41,8 +48,10 @@ export function qualityArtifactIdentity(
     artifactIdentityReceiptRefs: string[];
   },
   structuredReviewerIdentityFailure = false,
+  canonicalSha256NotationEnabled = false,
 ) {
   const sourceAttemptRef = `opl://stage_attempts/${state.stage_attempt_id}`;
+  const hashIdentity = canonicalSha256NotationEnabled ? comparableArtifactHash : (hash: string) => hash;
   const declaredArtifactRefs = Array.isArray(value.artifact_refs) ? value.artifact_refs : [];
   const declaredArtifactHashes = Array.isArray(value.artifact_hashes) ? value.artifact_hashes : [];
   if (declaredArtifactRefs.length === 0 && declaredArtifactHashes.length === 0 && inputIdentity) {
@@ -88,7 +97,8 @@ export function qualityArtifactIdentity(
     inputIdentity
     && (
       JSON.stringify(artifactRefs) !== JSON.stringify(inputIdentity.artifactRefs)
-      || JSON.stringify(artifactHashes) !== JSON.stringify(inputIdentity.artifactHashes)
+      || JSON.stringify(artifactHashes.map(hashIdentity))
+        !== JSON.stringify(inputIdentity.artifactHashes.map(hashIdentity))
     )
   ) {
     if (structuredReviewerIdentityFailure) {
@@ -109,7 +119,8 @@ export function qualityArtifactIdentity(
   const metadata = asRecordList(closeout.closeout_ref_metadata);
   const receiptRefs = artifactRefs.map((artifactRef, index) => {
     const entry = metadata.find((candidate) => candidate.ref === artifactRef || candidate.uri === artifactRef);
-    if (!entry || typeof entry.sha256 !== 'string' || entry.sha256 !== artifactHashes[index]) {
+    if (!entry || typeof entry.sha256 !== 'string'
+      || hashIdentity(entry.sha256) !== hashIdentity(artifactHashes[index])) {
       throw new FrameworkContractError(
         'contract_shape_invalid',
         'Producer and repairer artifact identity must match transport-verified closeout_ref_metadata SHA receipts.',

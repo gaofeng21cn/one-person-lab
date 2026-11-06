@@ -545,10 +545,12 @@ test('registered StageRun replay does not refresh package readiness or resolve a
     const first = await runFamilyRuntime(args, runtime) as any;
     assert.equal(first.family_runtime_stage_run.durable_launch.start_status, 'started');
     assert.equal(
-      first.family_runtime_stage_run.stage_run_input.stage_run_spec.workspace_identity
-        .native_package_closure.root_package.package_id,
+      first.family_runtime_stage_run.stage_run_input.stage_run_spec.package_closure
+        .root_package.package_id,
       'mas',
     );
+    assert.equal(first.family_runtime_stage_run.stage_run_input.stage_run_spec
+      .workspace_identity.native_package_closure, undefined);
     assert.equal(readinessCalls, 1);
     assert.equal(bindingCalls, 1);
 

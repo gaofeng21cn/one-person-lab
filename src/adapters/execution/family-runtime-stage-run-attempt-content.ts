@@ -16,6 +16,7 @@ import {
   revalidateStageRunImmutableSpecContent,
   stageAttemptExecutionContentBindingSha256,
   stageRunSpecSha256,
+  stageRunWorkspaceIdentity,
 } from './family-runtime-stage-run-identity.ts';
 import {
   requireStageRunAttemptContentBindingVersion,
@@ -132,7 +133,7 @@ export function resolveStageRunAttemptExecutorContent(
       stage_id: parentSpec.stage_id,
       action_id: parentSpec.action_id,
       task_id: parentSpec.task_id,
-      workspace_identity: parentSpec.workspace_identity,
+      workspace_identity: stageRunWorkspaceIdentity(parentSpec.workspace_identity),
       source_fingerprint: parentSpec.source_fingerprint,
       executor_kind: parentSpec.executor_kind,
       stage_attempt_executor_policy: stageAttemptExecutorPolicyWithReviewLane(
@@ -146,7 +147,7 @@ export function resolveStageRunAttemptExecutorContent(
       stage_id: executionBinding.spec.stage_id,
       action_id: executionBinding.spec.action_id,
       task_id: executionBinding.spec.task_id,
-      workspace_identity: executionBinding.spec.workspace_identity,
+      workspace_identity: stageRunWorkspaceIdentity(executionBinding.spec.workspace_identity),
       source_fingerprint: executionBinding.spec.source_fingerprint,
       executor_kind: executionBinding.spec.executor_kind,
       stage_attempt_executor_policy: stageAttemptExecutorPolicyWithReviewLane(

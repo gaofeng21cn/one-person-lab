@@ -19,7 +19,17 @@ Stage 角色、独立 Attempt、预算分支、hard stop、route 输出及 findi
 
 ## Durable invocation 与物化
 
+终态回读不依赖仍在运行的 worker。Temporal workflow 已 `COMPLETED` 时，查询读取
+该精确 run 的持久结果并校验 StageRun surface 与 workflow 身份；若完成发生在查询
+期间，再核对终态后走同一路径。运行中的查询错误仍保留，不以历史成功结果替换。
+
 `stage_run_id` 只由 `domain_id + stage_id + stage_run_invocation_id` 派生。`stage_run_spec_sha256` 单独绑定不可变的 pack closure、Stage manifest、quality policy、source/checkpoint/input artifact、prompt/rubric/goal/lineage 的实际 byte digest、executor 与 parent route；root package 必须有 content digest，pack 外 source/checkpoint/artifact 必须带可信 content-addressed identity receipt。launch registration/replay、每次 Attempt materialization 和 executor prompt hydration 前都会 fresh 核对这些 binding；`checked_at`、`use_receipt_ref`、checkout path、currentness receipt 等波动观察不参与 Run ID 或 spec hash。
+
+`native_package_closure` 与 `package_use_binding` 都属于包观测，不进入稳定的
+workspace identity。包字节仍由 spec 的 `package_closure` 和每次 Attempt 的内容绑定
+独立校验。旧 spec 若曾将 native closure 带入 workspace identity，其原字节和 hash
+继续保留；父子身份及路由 replay 比较只投影稳定工作区字段，避免 Skill 更新被误判
+为更换任务。真实 workspace、source、executor 或包内容不匹配仍拒绝。
 
 Runway 在启动 Temporal 前，先把 exact StageRun input 写入 `${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_run_launches`。真正调用 provider 前再用带 lease 的 `BEGIN IMMEDIATE` compare-and-swap 收敛 `registered|start_failed|expired starting`；active `starting` caller 只获得幂等 readback。未知成功恢复允许按同一 deterministic workflow id 重投 RPC，所以 provider delivery 是 at-least-once；Temporal `USE_EXISTING + REJECT_DUPLICATE` 保证 execution exactly one。`started` 不得降级，`closed` 永久终局。同 invocation + 同 spec 的 running/closed Run 幂等返回；同 invocation + 不同 spec 以 `stage_run_invocation_spec_conflict` 失败。
 
@@ -57,6 +67,11 @@ CLI 默认 invocation 是稳定幂等键；`--new-stage-run` 显式创建新 Run
 这些硬停保护执行安全与身份一致性，不评价内容质量，也不选择语义路线。
 
 reviewer / re_reviewer 的 `stage_quality_cycle.artifact_refs` 与 `artifact_hashes` 标识被审的 producer / repairer 产物；可同时省略以继承输入身份，或按原顺序原样回传。审查报告与 immutable snapshot 的读取地址不能替换该身份。身份不符时，新 controller 明确返回 `blocked`、`hard_stop_class=stale_or_mismatched_stage_identity`、`blocked_reason=reviewed_artifact_identity_mismatch` 和原 `source_attempt_ref`，不伪造 review receipt，也不将其降为缺少 route 的质量债。Attempt projection 失败仍单独留存，不能覆盖该身份拒绝原因。身份一致且没有 required findings 的 `quality_debt` 保留 reviewer 的终局 route 并物化后续 StageRun。
+
+SHA-256 的 64 位十六进制值与 `sha256:` 前缀形式按同一字节摘要比较，大小写归一；
+原输入身份及 receipt 继续保留。文件引用及顺序、真实摘要差异和其他算法仍严格区分。
+新行为通过 Temporal patch marker 进入，旧历史 replay 保留原决定；这只是传输表示
+归一，不产生语义审查结论。
 
 ## 当前机器入口
 

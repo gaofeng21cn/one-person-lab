@@ -14,6 +14,11 @@
 
 Framework 从 native carrier 的 installed descriptor 动态发现 Agent，校验 identity、schema 和 entrypoint。App profile 和 Framework source 不维护成员白名单。
 
+发布描述符保留既有兼容身份；新安装 Agent 直接补入当前成员投影，并校验名称空间
+冲突。工作区 profile、runtime domain 和 action catalog 使用同一动态投影，不要求
+先新增旧 Module。身份解析在同一事件循环内共享一次临时原生读数，下一轮重新发现；
+成员身份不授予启动许可，停用或移除后的 launch 仍由 Package 当前 readiness 拒绝。
+
 包内 `plugin_selector` 声明分发入口，平台实际安装入口可为 registry 推导的 canonical local wrapper。安装状态与托管启动统一使用 `acceptedConfiguredCodexPluginIds`，只接受声明入口或该包的官方本地包装入口，不能按同名或任意 `-local` 后缀放行。启动必须选中唯一启用来源，并保持实际 selector、物理路径、版本和 installed carrier 回读一致；停用历史副本不算第二个启动来源。运行 provenance 记录实际 selector，包内声明通过 owner manifest 保留。启用/停用修改实际安装 selector 的配置表，不创建未安装的分发入口表。
 
 绑定 StageAttempt 的 `OPL_WORKSPACE_ROOT` 表示 work-item 执行目录，不重定位机器的开发包目录。此时模块来源解析沿用持久化 workspace preference，保留显式 module override 和 carrier 来源一致性校验；无绑定调用仍接受 workspace 环境覆盖。

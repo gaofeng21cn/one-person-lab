@@ -6,6 +6,7 @@ import {
 import {
   resolveStandardAgent,
   STANDARD_AGENT_REGISTRY,
+  listStandardAgentRegistry,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
 import {
@@ -79,7 +80,7 @@ export function workspaceAgentProfileForRepo(value: string, repoDir: string) {
 }
 
 export function listWorkspaceAgentProfiles(): WorkspaceAgentProfile[] {
-  return STANDARD_AGENT_REGISTRY
+  return listStandardAgentRegistry()
     .filter((entry): entry is WorkspaceAgentRegistryEntry =>
       entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
     )

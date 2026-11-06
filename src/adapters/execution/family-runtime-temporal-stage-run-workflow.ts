@@ -91,6 +91,7 @@ export async function StageRunWorkflow(
   const reviewProtocolFailureEnabled = patched('opl-stage-run-review-protocol-failure-v1');
   const identityFailureSyncEnabled = patched('opl-stage-run-identity-failure-sync-v1');
   const reviewerIdentityHardStopEnabled = patched('opl-stage-run-reviewer-identity-hard-stop-v1');
+  const canonicalArtifactSha256Enabled = patched('opl-stage-run-artifact-sha256-notation-v1');
   const cancellationPropagationEnabled = patched('opl-stage-run-child-cancellation-propagation-v1');
   const qualityScopeBudget = normalizeStageQualityScopeBudget(
     input.quality_policy.formal_review.scope_budget,
@@ -413,6 +414,7 @@ export async function StageRunWorkflow(
                 }
               : undefined,
           reviewerIdentityHardStopEnabled,
+          canonicalArtifactSha256Enabled,
           )
         : {
             artifactRefs: attemptInput.artifactRefs,

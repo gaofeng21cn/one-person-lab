@@ -1,6 +1,7 @@
 import {
   resolveStandardAgent,
   STANDARD_AGENT_REGISTRY,
+  listStandardAgentRegistry,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
   type StandardAgentRegistryEntry,
 } from '../../kernel/standard-agent-registry.ts';
@@ -26,7 +27,7 @@ export type StandardAgentFamilyRuntimeProfile = {
 };
 
 function runtimeEnabledStandardAgents() {
-  return STANDARD_AGENT_REGISTRY.filter((entry): entry is typeof entry & RuntimeAgent =>
+  return listStandardAgentRegistry().filter((entry): entry is typeof entry & RuntimeAgent =>
     entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
   );
 }

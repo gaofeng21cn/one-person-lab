@@ -4,6 +4,7 @@ import {
   normalizeStandardDomainAgentId,
   resolveStandardAgent,
   STANDARD_AGENT_REGISTRY,
+  listStandardAgentRegistry,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
 import {
@@ -272,7 +273,7 @@ function buildLegacyActionDomainEntry(
 }
 
 function buildActionIndex(contracts: FrameworkContracts) {
-  const standardAgents = STANDARD_AGENT_REGISTRY.filter(
+  const standardAgents = listStandardAgentRegistry().filter(
     (agent) => agent.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP,
   );
   const standardAgentIds = new Set<string>(standardAgents.map((agent) => agent.agent_id));

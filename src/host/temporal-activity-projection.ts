@@ -1,6 +1,7 @@
 import type { EvaluationExecutor } from '../authority/evolution/index.ts';
 import {
   buildFoundryTemporalActivities,
+  createFoundryLifecycleKernel,
   codexStageActivity,
   createProductionFoundryKernel,
   createProductionFoundryProviderOperationCoordinator,
@@ -48,6 +49,7 @@ export function buildCordisTemporalActivities(options: CordisTemporalActivityOpt
         create_stage_route_composition: createStageRouteComposition,
       }),
       () => createProductionFoundryProviderOperationCoordinator(),
+      () => createFoundryLifecycleKernel(),
     ),
     codexStageActivity: (input: Parameters<typeof codexStageActivity>[0]) =>
       codexStageActivity(input, {

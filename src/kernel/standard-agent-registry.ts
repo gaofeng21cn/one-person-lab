@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readAgentPackageReadinessPort } from './agent-package-readiness-port.ts';
 
 export type StandardAgentSeriesMembership = 'standard_domain_agent' | 'capability_package';
 
@@ -407,6 +408,29 @@ export function loadStandardAgentRegistry(
 export const STANDARD_AGENT_REGISTRY: readonly StandardAgentRegistryEntry[] =
   loadStandardAgentRegistry();
 
+let discoveringInstalledAgents = false;
+
+/** Published compatibility identities plus fresh, carrier-owned Agent descriptors.
+ * Discovery supplies membership only; launch readiness remains with the Package port.
+ */
+export function listStandardAgentRegistry(): StandardAgentRegistryEntry[] {
+  const entries = new Map(STANDARD_AGENT_REGISTRY.map((entry) => [entry.agent_id, entry]));
+  // Carrier normalization itself may resolve published compatibility aliases.
+  // It must not recursively start another carrier discovery.
+  if (discoveringInstalledAgents) return [...entries.values()];
+  discoveringInstalledAgents = true;
+  try {
+    for (const entry of readAgentPackageReadinessPort()?.listInstalledStandardAgentEntries?.() ?? []) {
+      if (!entries.has(entry.agent_id)) entries.set(entry.agent_id, entry);
+    }
+  } finally {
+    discoveringInstalledAgents = false;
+  }
+  const registry = [...entries.values()];
+  assertRegistryNamespaceUnique(listCurrentPackageProjections(), registry);
+  return registry;
+}
+
 export type StandardAgentId = typeof STANDARD_AGENT_REGISTRY[number]['agent_id'];
 
 function normalizeAgentKey(value: string) {
@@ -414,17 +438,17 @@ function normalizeAgentKey(value: string) {
 }
 
 export function listStandardAgentIds() {
-  return STANDARD_AGENT_REGISTRY.map((entry) => entry.agent_id);
+  return listStandardAgentRegistry().map((entry) => entry.agent_id);
 }
 
 export function listStandardDomainAgentIds() {
-  return STANDARD_AGENT_REGISTRY
+  return listStandardAgentRegistry()
     .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
     .map((entry) => entry.agent_id);
 }
 
 export function standardDomainAgentFamilyProjection(format: 'compact' | 'full') {
-  const agents = STANDARD_AGENT_REGISTRY
+  const agents = listStandardAgentRegistry()
     .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
     .map((entry) => ({
       package_id: entry.agent_id,
@@ -454,25 +478,25 @@ function registryAliases(entry: StandardAgentRegistryEntry) {
 
 export function resolveStandardAgent(value: string) {
   const normalized = normalizeAgentKey(value);
-  return STANDARD_AGENT_REGISTRY.find((entry) =>
-    registryAliases(entry).some((alias) => normalizeAgentKey(alias) === normalized)
-  ) ?? null;
+  const matches = (entry: StandardAgentRegistryEntry) =>
+    registryAliases(entry).some((alias) => normalizeAgentKey(alias) === normalized);
+  return STANDARD_AGENT_REGISTRY.find(matches) ?? listStandardAgentRegistry().find(matches) ?? null;
 }
 
 export function resolveStandardAgentByDomainId(domainId: string) {
   const normalized = normalizeAgentKey(domainId);
-  return STANDARD_AGENT_REGISTRY.find((entry) =>
+  return listStandardAgentRegistry().find((entry) =>
     [entry.domain_id, entry.target_domain_id].some((value) => normalizeAgentKey(value) === normalized)
   ) ?? null;
 }
 
 export function resolveStandardAgentByCanonicalPluginName(canonicalPluginName: string) {
-  return STANDARD_AGENT_REGISTRY.find((entry) => entry.canonical_plugin_name === canonicalPluginName) ?? null;
+  return listStandardAgentRegistry().find((entry) => entry.canonical_plugin_name === canonicalPluginName) ?? null;
 }
 
 export function resolveStandardAgentByOwnerAlias(value: string) {
   const normalized = normalizeAgentKey(value);
-  return STANDARD_AGENT_REGISTRY.find((entry) =>
+  return listStandardAgentRegistry().find((entry) =>
     entry.owner_aliases.some((alias) => normalizeAgentKey(alias) === normalized)
   ) ?? null;
 }
@@ -494,7 +518,7 @@ export function matchesStandardDomainAgentCatalogEntry(
 }
 
 export function standardAgentDomainAliasEntries() {
-  return STANDARD_AGENT_REGISTRY.flatMap((entry) =>
+  return listStandardAgentRegistry().flatMap((entry) =>
     registryAliases(entry).map((alias) => ({
       alias,
       domain_id: entry.domain_id,

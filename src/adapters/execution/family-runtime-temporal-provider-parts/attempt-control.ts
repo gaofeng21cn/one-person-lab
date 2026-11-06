@@ -388,9 +388,28 @@ export async function queryTemporalStageRunWorkflow(input: {
 }) {
   return withTemporalClient(async (client) => {
     const handle = client.workflow.getHandle(input.workflowId);
-    return await withTemporalRpcDeadline(client, () => handle.query(stageRunQuery), {
-      paths: input.paths,
-    });
+    const options = { paths: input.paths };
+    const readCompleted = async (runId: string) => {
+      const result = await withTemporalRpcDeadline(client, () =>
+        client.workflow.getHandle(input.workflowId, runId, { followRuns: false }).result(), options);
+      if (result?.surface_kind !== 'temporal_stage_run_query' || result.workflow_id !== input.workflowId) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Completed StageRun result has the wrong identity.', {
+          workflow_id: input.workflowId, run_id: runId,
+        });
+      }
+      return result;
+    };
+    const description = await withTemporalRpcDeadline(client, () => handle.describe(), options);
+    if (description.status.name === 'COMPLETED') return readCompleted(description.runId);
+    try {
+      return await withTemporalRpcDeadline(client, () => handle.query(stageRunQuery), options);
+    } catch (error) {
+      // Completion can race the query. The persisted terminal result does not
+      // need a worker to replay a closed workflow just to answer a readback.
+      const latest = await withTemporalRpcDeadline(client, () => handle.describe(), options);
+      if (latest.status.name === 'COMPLETED') return readCompleted(latest.runId);
+      throw error;
+    }
   }, { paths: input.paths });
 }
 

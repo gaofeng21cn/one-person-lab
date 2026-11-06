@@ -32,6 +32,11 @@ import {
 } from './family-runtime-temporal-client.ts';
 import { resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
 import { resolveTemporalWorkerTaskQueue } from './family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { familyRuntimePaths } from './family-runtime-store.ts';
+
+export function foundryTemporalClientOptions(options: TemporalClientOptions = {}): TemporalClientOptions {
+  return { ...options, paths: options.paths ?? familyRuntimePaths() };
+}
 
 export function foundryTemporalWorkflowId(runId: string) {
   return `opl-foundry-${crypto.createHash('sha256').update(runId).digest('hex')}`;
@@ -61,6 +66,7 @@ export async function startTemporalFoundryRunWorkflow(
   options: TemporalClientOptions = {},
   dependencies: FoundryTemporalControlDependencies = {},
 ) {
+  options = foundryTemporalClientOptions(options);
   if (isBaselineAdoptionDesignRequest(input.request)) {
     const preflight = dependencies.preflightBaselineAdoption ?? productionBaselineAdoptionPreflight;
     assertBaselineAdoptionAdmitted(await preflight({ request: input.request, run_id: input.run_id }));
@@ -127,6 +133,7 @@ export async function queryTemporalFoundryRunWorkflow(
   runId: string,
   options: TemporalClientOptions = {},
 ) {
+  options = foundryTemporalClientOptions(options);
   return withTemporalClient(async (client) => {
     const handle = client.workflow.getHandle(foundryTemporalWorkflowId(runId));
     return withTemporalRpcDeadline(client, () => handle.query(foundryRunQuery), options);
@@ -137,6 +144,7 @@ export async function submitTemporalFoundryOwnerDecision(
   input: FoundryOwnerDecisionUpdate,
   options: TemporalClientOptions = {},
 ) {
+  options = foundryTemporalClientOptions(options);
   return withTemporalClient(async (client) => {
     const handle = client.workflow.getHandle(foundryTemporalWorkflowId(input.run_id));
     return withTemporalRpcDeadline(client, () => handle.executeUpdate(foundryOwnerDecisionUpdate, {
@@ -149,6 +157,7 @@ export async function cancelTemporalFoundryRun(
   input: FoundryCancelUpdate,
   options: TemporalClientOptions = {},
 ) {
+  options = foundryTemporalClientOptions(options);
   return withTemporalClient(async (client) => {
     const handle = client.workflow.getHandle(foundryTemporalWorkflowId(input.run_id));
     return withTemporalRpcDeadline(client, () => handle.executeUpdate(foundryCancelUpdate, {

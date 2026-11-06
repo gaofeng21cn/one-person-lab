@@ -174,7 +174,6 @@ export function stageRunReplayBusinessIdentity(
   input: Parameters<typeof launchRegisteredStageRun>[0]['stageRunInput'],
 ) {
   const spec = input.stage_run_spec;
-  const { native_package_closure: _nativePackageClosure, ...workspaceIdentity } = spec.workspace_identity;
   return {
     scope_kind: input.scope_kind ?? (input.execution_scope ? 'work_item' : 'domain'),
     execution_scope: input.execution_scope ?? null,
@@ -182,7 +181,7 @@ export function stageRunReplayBusinessIdentity(
     stage_id: spec.stage_id,
     action_id: spec.action_id,
     task_id: spec.task_id,
-    workspace_identity: workspaceIdentity,
+    workspace_identity: stageRunWorkspaceIdentity(spec.workspace_identity),
     source_fingerprint: spec.source_fingerprint,
     input_artifacts: spec.input_artifacts,
     executor_kind: spec.executor_kind,
