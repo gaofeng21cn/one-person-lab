@@ -33,7 +33,7 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.3.18",
+  "version": "0.3.19",
   "domain_descriptor_ref": "contracts/domain_descriptor.json",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
@@ -54,8 +54,79 @@
     ],
     "bundled_capability_package_ids": [],
     "user_install_action_count": 1,
-    "plugin_payload_manifest_url": "payloads/obf-0.3.18.json",
-    "carrier_source_commit": "8423ba64257754cde704befef23e6dbf00838568"
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "opl",
+        "app",
+        "contribution",
+        "adapter",
+        "--stdin"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "plugin_payload_manifest_url": "payloads/obf-0.3.19.json",
+    "carrier_source_commit": "3037417c36dc181b2912885f7e7514e0b4101d09"
+  },
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "obf.workspace.status",
+        "view_type": "task_board",
+        "title_i18n": {
+          "zh-CN": "书稿工作区状态",
+          "en-US": "Book workspace status"
+        },
+        "data_ref": "obf.workspace.v1#status",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "选择书稿状态文件后读取当前阶段",
+          "en-US": "Select a book status file to inspect the current stage"
+        }
+      },
+      {
+        "view_id": "obf.workspace.artifacts",
+        "view_type": "artifact_view",
+        "title_i18n": {
+          "zh-CN": "书稿阶段产物",
+          "en-US": "Book stage artifacts"
+        },
+        "data_ref": "obf.workspace.v1#artifacts",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "选择阶段产物清单后读取书稿产物",
+          "en-US": "Select a stage outputs manifest to inspect artifacts"
+        }
+      }
+    ],
+    "commands": [],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "obf.workspace.status",
+        "slot": "runtime.detail",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "work_item",
+        "sort_order": 510,
+        "view_id": "obf.workspace.status"
+      },
+      {
+        "contribution_id": "obf.workspace.artifacts",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 511,
+        "view_id": "obf.workspace.artifacts"
+      }
+    ]
   },
   "dependency_profiles": [
     {

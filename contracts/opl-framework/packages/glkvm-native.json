@@ -1,0 +1,119 @@
+{
+  "surface_kind": "opl_capability_package_manifest.v2",
+  "package_id": "glkvm-native",
+  "display_name": "GLKVM Native",
+  "publisher": "gaofeng21cn",
+  "version": "0.1.4",
+  "source": "first_party_owner_projection",
+  "source_repo": "https://github.com/gaofeng21cn/glkvm-native.git",
+  "package_role": "capability_package",
+  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "capability_abi": {
+    "id": "glkvm.native.v1",
+    "version": "1.0.0",
+    "compatibility_policy": "same_major"
+  },
+  "exports": {
+    "core_skill_ids": [
+      "glkvm-control"
+    ],
+    "core_module_ids": [
+      "glkvm.native.v1"
+    ],
+    "optional_skill_policy_ref": "skills/glkvm-control/SKILL.md",
+    "optional_skills_installed_by_default": false
+  },
+  "codex_surface": {
+    "plugin_id": "glkvm-native",
+    "plugin_source_path": ".",
+    "codex_default_exposure": false,
+    "optional_install_policy": "core_skills_only",
+    "interaction_mode": "headless_internal",
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "glkvm-native@glkvm-native",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/glkvm-native",
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/glkvm-native:latest-stable"
+    },
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "python3",
+        "./app_contribution.py"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "plugin_payload_manifest_url": "payloads/glkvm-native-0.1.4.json",
+    "carrier_source_commit": "a05dfbea0a88af9ee3dd288a9fe1384126ee3465"
+  },
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "glkvm.status",
+        "view_type": "service_status",
+        "title_i18n": {
+          "zh-CN": "GLKVM 设备状态",
+          "en-US": "GLKVM device status"
+        },
+        "data_ref": "glkvm.native.v1#status",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "当前没有可读取的 GLKVM 设备状态",
+          "en-US": "No GLKVM device status is available"
+        }
+      }
+    ],
+    "commands": [],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "glkvm.status",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 900,
+        "view_id": "glkvm.status"
+      }
+    ]
+  },
+  "authority_boundary": {
+    "domain_truth_owner": "glkvm-native",
+    "device_control_owner": "glkvm-native",
+    "projection_can_control_device": false,
+    "projection_can_authorize_input": false
+  },
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "paths": [
+      ".codex-plugin/plugin.json",
+      "app-contribution-adapter.json",
+      "app_contribution.py",
+      "plugin.json",
+      "skills/glkvm-control/SKILL.md",
+      "skills/glkvm-control/agents/openai.yaml",
+      "skills/glkvm-control/references/context-budget.md",
+      "skills/glkvm-control/references/desktop-client-operations.md",
+      "skills/glkvm-control/references/qualification.md",
+      "skills/glkvm-control/references/session-recovery.md",
+      "skills/glkvm-control/references/windows-maintenance.md"
+    ],
+    "digest": "sha256:21fe37a1916ca85cb116dfe3624d4330d09a41a5d1acfadec90978b78c5265f9"
+  },
+  "publication_source": {
+    "module_id": "glkvm-native",
+    "owner_package_manifest_ref": "plugins/glkvm-native/opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
+  "publication_channel_admission": "admitted",
+  "owner_package_manifest_ref": "plugins/glkvm-native/opl-package.json",
+  "owner_package_descriptor_ref": "opl-package.json"
+}

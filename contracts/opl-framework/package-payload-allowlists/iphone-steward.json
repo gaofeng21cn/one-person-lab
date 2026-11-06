@@ -1,0 +1,18 @@
+{
+  "surface_kind": "opl_package_payload_allowlist.v1",
+  "package_id": "iphone-steward",
+  "plugin_id": "iphone-app-steward",
+  "source_repo": "https://github.com/gaofeng21cn/iphone-app-steward.git",
+  "source_root": "plugins/iphone-app-steward",
+  "paths": [
+    ".codex-plugin/plugin.json",
+    "app-contribution-adapter.json",
+    "app_contribution.py",
+    "plugin.json",
+    "skills/iphone-app-steward/SKILL.md",
+    "skills/iphone-app-steward/agents/openai.yaml",
+    "skills/iphone-app-steward/references/decision-policy.md",
+    "skills/iphone-app-steward/references/evidence-and-layout.md",
+    "opl-package.json"
+  ]
+}

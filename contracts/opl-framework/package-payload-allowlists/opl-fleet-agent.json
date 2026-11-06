@@ -6,6 +6,7 @@
   "source_root": "plugins/opl-fleet-agent",
   "paths": [
     ".codex-plugin/plugin.json",
+    "app-contribution-adapter.json",
     "bin/opl-fleet-agent.mjs",
     "plugin.json",
     "skills/opl-fleet-agent/SKILL.md",

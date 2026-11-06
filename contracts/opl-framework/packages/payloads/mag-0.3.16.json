@@ -1,0 +1,59 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "mag",
+  "plugin_id": "med-autogrant",
+  "package_version": "0.3.16",
+  "source_repo": "https://github.com/gaofeng21cn/med-autogrant.git",
+  "source_commit": "7b7dc63deaa440d6a133e9508c2d44a2fc0dec6e",
+  "source_root": "plugins/med-autogrant",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:39f49b088a9865a17440dcb775e3628492ac0ebd8d716bbba3529efae39bdc22"
+  },
+  "files": [
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autogrant/7b7dc63deaa440d6a133e9508c2d44a2fc0dec6e/plugins/med-autogrant/plugin.json",
+      "sha256": "sha256:edf4d73c9ffdf8e0451c4c07920595d35a150c7c91d709c833b3999978a7e545"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autogrant/7b7dc63deaa440d6a133e9508c2d44a2fc0dec6e/plugins/med-autogrant/.codex-plugin/plugin.json",
+      "sha256": "sha256:8ec34a1b460462bc8d361feed6cdbee57acdb701e145ec3bbdfff276c03c9d99"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autogrant/7b7dc63deaa440d6a133e9508c2d44a2fc0dec6e/plugins/med-autogrant/opl-package.json",
+      "sha256": "sha256:18e238989383b8809d09020335fa19ae92df55d48fb748a482d849b090aebca4"
+    },
+    {
+      "path": "assets/icon.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autogrant/7b7dc63deaa440d6a133e9508c2d44a2fc0dec6e/plugins/med-autogrant/assets/icon.png",
+      "sha256": "sha256:4e252528f7511af8819283716ecc37f43a7a781218b43f93ea457b7857c44341"
+    },
+    {
+      "path": "assets/icon.svg",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autogrant/7b7dc63deaa440d6a133e9508c2d44a2fc0dec6e/plugins/med-autogrant/assets/icon.svg",
+      "sha256": "sha256:8bacf0e91ca16dcb0f7fbaaafda71951c6e75719d54add537a572143dc79e4f0"
+    },
+    {
+      "path": "skills/med-autogrant/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autogrant/7b7dc63deaa440d6a133e9508c2d44a2fc0dec6e/plugins/med-autogrant/skills/med-autogrant/SKILL.md",
+      "sha256": "sha256:435f87eafcf5ef78a1989d2e8a8111ae13f749e9260f84c389e37453b1f228bb"
+    },
+    {
+      "path": "skills/med-autogrant/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autogrant/7b7dc63deaa440d6a133e9508c2d44a2fc0dec6e/plugins/med-autogrant/skills/med-autogrant/agents/openai.yaml",
+      "sha256": "sha256:f81acfa43b739818eb181cac0b5746c6a60c5c08133dc442846e9833080985b4"
+    }
+  ]
+}
