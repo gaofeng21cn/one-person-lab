@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OPL Apps</title>
+    <style>/* STYLE */</style>
+  </head>
+  <body>
+    <div id="root" class="shell">
+      <aside class="sidebar">
+        <header class="brand">
+          <span class="mark" aria-hidden="true"></span>
+          <div>
+            <strong>OPL Apps</strong>
+            <span id="status">正在连接</span>
+          </div>
+        </header>
+        <label class="search">
+          <span>查找</span>
+          <input id="search" type="search" placeholder="Package、视图或数据">
+        </label>
+        <nav id="views" aria-label="可用视图"></nav>
+      </aside>
+      <main class="content">
+        <header class="toolbar">
+          <div>
+            <p id="eyebrow" class="eyebrow">OPL Package views</p>
+            <h1 id="title">正在读取可用能力</h1>
+            <p id="subtitle" class="subtitle"></p>
+          </div>
+          <div class="toolbar-actions">
+            <button id="refresh" type="button">刷新</button>
+            <button id="fullscreen" type="button">展开</button>
+          </div>
+        </header>
+        <div id="notice" class="notice" role="status" hidden></div>
+        <section id="body" class="body" aria-live="polite">
+          <div class="empty">正在载入 OPL 能力视图…</div>
+        </section>
+      </main>
+    </div>
+    <script type="module">/* SCRIPT */</script>
+  </body>
+</html>

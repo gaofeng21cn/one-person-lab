@@ -224,8 +224,8 @@ test('bin/opl routes release freeze through the Framework public CLI', () => {
   const launcher = fs.readFileSync(path.join(repoRoot, 'bin', 'opl'), 'utf8');
   assert.equal(
     launcher.match(/node --conditions=opl-source --experimental-strip-types/g)?.length,
-    2,
-    'source CLI and MCP entrypoints must resolve workspace package source exports',
+    3,
+    'source CLI, Connect MCP, and MCP App entrypoints must resolve workspace package source exports',
   );
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-release-bundle-public-entry-'));
   try {

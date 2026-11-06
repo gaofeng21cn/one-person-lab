@@ -30,6 +30,14 @@ run_opl_mcp_stdio() {
   exec node "$ROOT_DIR/dist/entrypoints/mcp-stdio.js"
 }
 
+run_opl_mcp_app_stdio() {
+  if [[ -f "$ROOT_DIR/src/entrypoints/mcp-app-stdio.ts" ]]; then
+    exec node --conditions=opl-source --experimental-strip-types "$ROOT_DIR/src/entrypoints/mcp-app-stdio.ts"
+  fi
+
+  exec node "$ROOT_DIR/dist/entrypoints/mcp-app-stdio.js"
+}
+
 print_framework_version() {
   node -e '
 const fs = require("node:fs");
@@ -96,6 +104,13 @@ case "$1" in
         run_opl connect mcp-stdio "$@"
       fi
       run_opl_mcp_stdio
+    fi
+    if [[ "${2:-}" == "mcp-app-stdio" ]]; then
+      shift 2
+      if [[ "$#" -gt 0 ]]; then
+        run_opl connect mcp-app-stdio "$@"
+      fi
+      run_opl_mcp_app_stdio
     fi
     run_opl "$@"
     ;;
