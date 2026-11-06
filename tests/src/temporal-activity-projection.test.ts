@@ -230,7 +230,15 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
   assert.equal(evaluated.run.candidate_digest, materialized.run.candidate_digest);
 });
 
-test('Cordis worker rejects a claimed qualification runtime without Framework provenance', async () => {
+test('Cordis worker rejects forged qualification on advance while lifecycle recovery remains available', async (t) => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cordis-forged-runtime-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateDir;
+  t.after(() => {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  });
   const forged: EvaluationExecutor = {
     evaluator_id: 'evaluator:forged',
     qualification_capability: {
@@ -242,7 +250,20 @@ test('Cordis worker rejects a claimed qualification runtime without Framework pr
     async canary() { throw new Error('Must not run'); },
   };
   const activities = buildCordisTemporalActivities({ trusted_evaluation_runtime: forged });
-  await assert.rejects(activities.foundryFailRunActivity({
+  const request = readJson<DesignRequest>(path.join(omaFixtureRoot, 'foundry-protocol/design-request.json'));
+  const started = await activities.foundryStartRunActivity({
+    run_id: 'run:forged',
+    request,
+    request_digest: foundryContentDigest(request),
+  });
+  const advance = foundryAdvanceOperationForInspection(started);
+  const environment = new MockActivityEnvironment({
+    activityType: 'foundryAdvanceRunActivity', activityId: advance.operation_key,
+  });
+  await assert.rejects(environment.run(activities.foundryAdvanceRunActivity, advance),
+    /Framework-owned FrozenPlan Evaluation Runtime/);
+  const failed = await activities.foundryFailRunActivity({
     run_id: 'run:forged', failure_code: 'test', failure_message: 'test',
-  }), /Framework-owned FrozenPlan Evaluation Runtime/);
+  });
+  assert.equal(failed.run.state, 'failed');
 });

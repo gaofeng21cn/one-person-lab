@@ -41,8 +41,10 @@ function writeQualityRoutePolicy(
   fs.writeFileSync(path.join(repoDir, rolePromptRef), rolePrompt, 'utf8');
   if (options.declare !== false) {
     stage.stage_quality_cycle_policy_ref = policyRef;
-    writeJson(manifestPath, manifest);
+  } else {
+    delete stage.stage_quality_cycle_policy_ref;
   }
+  writeJson(manifestPath, manifest);
   writeJson(path.join(repoDir, 'contracts', 'stage_quality_cycle_policy.json'), {
     surface_kind: 'opl_domain_stage_quality_cycle_policy_profile',
     cross_stage_route_selection: canonicalRouteSelection,
@@ -107,8 +109,13 @@ Repair the medical evidence within the inherited domain scope.
 Reassess the affected medical evidence against the original criteria.
 `;
 
-test('stage quality route prompt conformance is inactive for missing or orphan policy files', () => {
+test('stage quality route prompt conformance is inactive when absent or orphan policies are not declared', () => {
   const missingRepo = buildReadyAgentRepo();
+  const manifestPath = path.join(missingRepo, 'agent', 'stages', 'manifest.json');
+  const manifest = readJson(manifestPath);
+  for (const stage of manifest.stages) delete stage.stage_quality_cycle_policy_ref;
+  writeJson(manifestPath, manifest);
+  fs.rmSync(path.join(missingRepo, 'contracts', 'stage_quality_cycle_policy.json'));
   const missing = buildStageQualityRoutePromptAlignmentChecks(missingRepo);
   assert.equal(missing.status, 'not_applicable');
   assert.equal(missing.policy_status, 'not_declared');

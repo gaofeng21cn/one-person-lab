@@ -164,9 +164,12 @@ if (command === 'plugin marketplace list --json') {
       '0.1.53',
       JSON.stringify(update.opl_agent_package_update.configured_carrier),
     );
-    assert.deepEqual(JSON.parse(fs.readFileSync(callsPath, 'utf8')), [
-      'plugin list --json',
-      'plugin list --json',
+    const calls: string[] = JSON.parse(fs.readFileSync(callsPath, 'utf8'));
+    const marketplaceReadIndex = calls.indexOf('plugin marketplace list --json');
+    assert.ok(marketplaceReadIndex > 0);
+    assert.ok(calls.slice(0, marketplaceReadIndex).every((command) => command === 'plugin list --json'),
+      'discovery and owner selection must only read plugin state before carrier migration');
+    assert.deepEqual(calls.slice(marketplaceReadIndex), [
       'plugin marketplace list --json',
       'plugin marketplace add gaofeng21cn/opl-flow --json',
       'plugin add opl-flow@opl-flow --json',

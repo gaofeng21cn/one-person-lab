@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { buildScaffoldFiles } from '../../src/authority/packages/standard-domain-agent-scaffold-template.ts';
 import { compileStandardAgentStageManifest, resolveStandardAgentStageQualityRuntimeBinding } from '../../src/authority/packages/standard-agent-stage-manifest.ts';
+import { buildStageQualityRoutePromptAlignmentChecks } from '../../src/authority/packages/standard-domain-agent-stage-quality-route-conformance.ts';
 
 test('a newly scaffolded stage action can bind the quality runtime required for hosted input artifacts', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-runtime-'));
@@ -20,4 +21,6 @@ test('a newly scaffolded stage action can bind the quality runtime required for 
   assert.ok(binding, 'hosted stage_binding must not reach attempt-create with a null quality runtime');
   assert.equal(binding.enabled, true);
   assert.equal(binding.quality_policy.formal_review.required, false);
+  const routeChecks = buildStageQualityRoutePromptAlignmentChecks(root);
+  assert.equal(routeChecks.status, 'passed', JSON.stringify(routeChecks.blockers));
 });

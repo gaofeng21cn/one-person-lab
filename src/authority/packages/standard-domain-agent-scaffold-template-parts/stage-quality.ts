@@ -23,6 +23,17 @@ Check repaired findings and affected dependencies. Keep unresolved defects visib
       version: 'stage-quality-cycle-policy-set.v1',
       domain_id: domainId,
       owner: domainId,
+      cross_stage_route_selection: {
+        primary_only_decisive_attempt_role: 'producer',
+        formal_review_decisive_attempt_roles: ['reviewer', 're_reviewer'],
+        repairer_can_be_decisive_attempt: false,
+        repair_required_review_or_re_review_may_select_cross_stage_route_back_before_budget_exhaustion: true,
+        repair_required_cross_stage_route_back_requires_target_different_from_current_stage: true,
+        repair_required_review_or_re_review_may_select_other_terminal_route_before_budget_exhaustion: false,
+        repair_required_review_or_re_review_may_select_terminal_route_after_budget_exhaustion: true,
+        same_stage_repair_required_with_budget_remaining_continues_quality_loop: true,
+        cross_stage_route_back_requires_narrowest_canonical_owner_stage: true,
+      },
       stages: {
         [stageId]: {
           surface_kind: 'opl_stage_quality_cycle_policy',

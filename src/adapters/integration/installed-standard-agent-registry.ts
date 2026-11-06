@@ -9,7 +9,7 @@ import {
   type StandardDomainAgentRegistryEntry,
 } from '../../kernel/standard-agent-registry.ts';
 import {
-  discoverInstalledPackageDescriptors,
+  discoverPackageDescriptors,
   type InstalledPackageDescriptor,
 } from './agent-package-registry-parts/installed-codex-plugin-directory.ts';
 
@@ -20,7 +20,10 @@ function discoverForCurrentTurn() {
   // spawn the carrier CLI. Release at the next event-loop turn; launch readiness
   // still comes from its own fresh Package readback, not this identity snapshot.
   if (!turnDescriptors) {
-    turnDescriptors = discoverInstalledPackageDescriptors();
+    // Identity discovery only needs carrier descriptors. Project-local
+    // capability inspection can initialize module state and is not part of a
+    // read-only Agent membership lookup.
+    turnDescriptors = discoverPackageDescriptors();
     setImmediate(() => { turnDescriptors = null; });
   }
   return turnDescriptors;

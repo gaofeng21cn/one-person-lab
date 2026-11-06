@@ -697,7 +697,10 @@ if (process.argv.slice(2).join(' ') === 'plugin list --json') {
     assert.equal(result.manifest_url, pathToFileURL(manifestPath).href);
     assert.equal(result.trust_tier, 'third_party_verified');
     assert.equal(result.configured_carrier.native_action_dispatched, false);
-    assert.equal(fs.readFileSync(callsPath, 'utf8').trim(), 'plugin list --json');
+    const dryRunCalls = fs.readFileSync(callsPath, 'utf8').trim().split('\n');
+    assert.ok(dryRunCalls.length > 0);
+    assert.ok(dryRunCalls.every((command) => command === 'plugin list --json'),
+      'descriptor discovery and dry-run may only read native plugin state');
     assert.equal(fs.existsSync(path.join(root, 'opl-state')), false);
   } finally {
     removeFixtureTree(root);
@@ -1128,9 +1131,10 @@ test('package status projects and bulk update visits required installed owner de
     assert.equal(status.package_dependency_readiness?.dependencies[0]?.package_id, 'mas-scholar-skills');
     assert.equal(status.operational_ready, true);
     assert.equal(status.launch_allowed, true);
-    assert.deepEqual(fs.readFileSync(callsPath, 'utf8').trim().split('\n'), [
-      'plugin list --json',
-    ]);
+    const statusCalls = fs.readFileSync(callsPath, 'utf8').trim().split('\n');
+    assert.ok(statusCalls.length > 0);
+    assert.ok(statusCalls.every((command) => command === 'plugin list --json'),
+      'Agent discovery and package status must remain read-only');
     assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
 
     fs.writeFileSync(callsPath, '');
