@@ -387,6 +387,8 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           prompt_ref: `agent/prompts/${STARTER_STAGE_ID}.md`,
           stage_quality_cycle_policy_ref: `contracts/stage_quality_cycle_policy.json#/stages/${STARTER_STAGE_ID}`,
           knowledge_refs: ['agent/knowledge/domain_boundary.md'],
+          policy_refs: ['agent/policies/domain_policy.md'],
+          skills: ['agent/skills/domain_execution.md'],
           quality_gate_refs: ['agent/quality_gates/domain_acceptance.md'],
           allowed_action_refs: [STARTER_ACTION_ID],
           requires: [
@@ -453,7 +455,11 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     },
     {
       path: 'agent/policies/README.md',
-      content: `# ${domainLabel} Policies\n\nDeclare policy tables, authority boundaries, and pack compiler inputs here. Generic CLI, MCP, sidecar, status, and workbench shells are generated or hosted by OPL.\n`,
+      content: `# ${domainLabel} Policies\n\nDeclare reusable authority, evidence-currentness, execution, memory, and risk policies here. Generic CLI, MCP, sidecar, status, and workbench shells are generated or hosted by OPL.\n`,
+    },
+    {
+      path: 'agent/policies/domain_policy.md',
+      content: `# ${domainLabel} Domain Policy\n\nState the durable authority, evidence, execution, and memory boundaries that apply across this Agent's Stages. Current project state and user-owned facts belong in the Workspace, not this policy pack.\n`,
     },
     {
       path: 'contracts/domain_descriptor.json',
@@ -547,6 +553,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           'agent/skills/domain_execution.md',
           'agent/tools/domain_affordances.md',
           'agent/knowledge/domain_boundary.md',
+          'agent/policies/domain_policy.md',
           'agent/quality_gates/domain_acceptance.md',
         ],
         source_refs: {

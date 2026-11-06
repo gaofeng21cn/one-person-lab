@@ -41,6 +41,7 @@ Domain repo 持有阶段语义、专业能力、知识、质量门和最小领�
 │  ├─ action_catalog.json
 │  ├─ generated_surface_handoff.json
 │  ├─ memory_descriptor.json
+│  ├─ durable_knowledge_catalog.json
 │  ├─ artifact_locator_contract.json
 │  ├─ owner_receipt_contract.json
 │  ├─ foundry_agent_series.json
@@ -62,7 +63,7 @@ Domain repo 持有阶段语义、专业能力、知识、质量门和最小领�
 | `agent/skills/` | Domain skill declarations、stage 可引用的领域 playbook 或 OPL/generated skill surface 输入。 | 不作为 Codex-style 专业 Skill pack；不决定 stage 是否完成，不签 quality / export verdict。 |
 | `agent/professional_skills/<skill-id>/SKILL.md` | Repo-local Codex-style 专业方法 Skill。承载可独立发现/调用的专家 playbook、rubric、审查 lens 和 route-back 方法。 | 不写 runtime wrapper、target artifact、owner receipt、typed blocker、quality verdict、promotion state 或 domain truth。 |
 | `agent/tools/` | Tool affordance catalog：资源、工具、连接器、权限、写范围、side effect 和 forbidden authority。 | 不写成硬编码 workflow，不承接专业判断。 |
-| `agent/knowledge/` | 领域知识、source semantics、memory locator policy 和 reference refs。 | 不复制 runtime memory body，不成为第二 truth store。 |
+| `agent/knowledge/` | Agent 包内可跨项目复用的稳定领域知识正文，例如金融机制、研究方法、期刊偏好和交易规则。 | 不保存当前账户、价格、项目事实或 runtime memory body；语义正文仍由领域 owner 维护。 |
 | `agent/quality_gates/` | 审稿、交付、导出、owner review 等质量门规则和 receipt shape。 | 不让 OPL 代签领域质量结论。 |
 | `contracts/` | 机器可读连接层，固定 pack、stage、action、surface、receipt 和 authority boundary。 | 不承载长篇叙事，不替代真实 owner evidence。 |
 | `runtime/authority_functions/` | 最小领域 authority functions 或其声明源。 | 不实现 generic scheduler、queue、attempt ledger、status/workbench shell。 |
@@ -84,7 +85,7 @@ stage_id
 ├─ domain_skill_refs    -> agent/skills/*
 ├─ professional_skill_refs -> agent/professional_skills/*/SKILL.md 或同步到 workspace 的 professional skill
 ├─ tool_refs            -> agent/tools/* 或 OPL Connect / Fabric connector descriptor
-├─ knowledge_refs       -> agent/knowledge/*
+├─ knowledge_refs       -> agent/knowledge/*，并由 contracts/durable_knowledge_catalog.json 登记生命周期
 ├─ quality_gate_refs    -> agent/quality_gates/*
 ├─ expected_receipt_refs
 ├─ owner_receipt_schema_refs
@@ -97,6 +98,19 @@ stage_id
 1. **Repo source 层**：domain repo 的 `agent/` 和 `contracts/` 是可审阅单源。这里存 declarative stage manifest、Stage 主提示词、专业 Skill、工具 affordance、知识和质量门；不提交第二份 generated stage plane。
 2. **OPL 生成 / 托管层**：OPL Pack / Stagecraft / Connect 根据合同与 `agent/stages/manifest.json` 生成 `family_stage_control_plane`、CLI、MCP、Skill descriptor、OpenAI / AI SDK tool descriptor、App projection、workspace projection 和 conformance readback；Codex App carrier 由 `agent/primary_skill/SKILL.md` 物化为 owner Package 的 Codex plugin。
 3. **Workspace 执行层**：Codex、App 或 hosted runner 消费投影后的 prompt、skill、tool descriptor 和 refs。`.agents/skills/` 是 workspace / quest-local Codex discovery projection，不是 domain repo 的 canonical source；`.codex/` 仅保留 OPL 的配置、owner、manifest 和 transaction 元数据。
+
+长期知识按四层管理，共同遵守 [durable knowledge lifecycle](../../contracts/opl-framework/durable-knowledge-lifecycle-contract.json)：
+
+| 层 | 位置 | 例子 | owner |
+| --- | --- | --- | --- |
+| Agent pack | 领域仓 `agent/knowledge/` | 金融机制、研究套路、期刊偏好、专业执行规则 | 领域 Agent |
+| Workspace shared | Workspace `shared/memory/` | 跨项目风险政策、来源偏好、共同约束 | Workspace owner |
+| Workspace project | 项目 `memory/` | 投资 mandate、研究设计、书稿风格选择、项目决策历史 | 项目 owner |
+| Dated state | 项目 `state/` 或权威外部系统 | 持仓、现金、订单、当前利率、当季期刊要求 | 领域 owner 或外部权威 |
+
+OPL 负责目录、身份、适用范围、召回、不可变字节和消费回执；领域/项目 owner 负责正文语义、接受或拒绝写回。Stage 的 `knowledge_refs` 与 `skills` 会作为不可变 managed content 提供给 producer、reviewer、repairer 和 re-reviewer，避免“只登记路径、实际没有读取正文”。
+
+OPL 不把所有知识一次性注入提示词，也不把召回命中当成质量结论。每次 Attempt 只消费 Stage 适用的较小知识集，并记录知识 ID、正文 SHA-256 和选择理由。缺少知识默认可继续，但必须形成可见 quality debt；权威 claim、质量结论和真实交易等硬边界仍由各自 owner 决定。
 
 因此，“Stage 内可以用哪些能力”不是靠把所有文本塞进一个提示词解决，而是靠 Stage 主提示词引用稳定能力面：domain skill declarations、repo-local professional Skill、外置 professional pack、OPL Connect connector、知识 refs、质量门和 receipt shape。AI executor 在 Stage 内做开放式判断；合同只负责边界、证据和接力。
 

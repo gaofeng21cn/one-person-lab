@@ -389,8 +389,9 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       text(stage.prompt_ref, 'stage.prompt_ref', repoDir),
     );
     const knowledgeRefs = strings(stage.knowledge_refs, 'stage.knowledge_refs', repoDir);
-    const stageSkillRefs = optionalStrings(stage.skill_refs, 'stage.skill_refs', repoDir);
+    const stageSkillRefs = optionalStrings(stage.skill_refs ?? stage.skills, 'stage.skill_refs', repoDir);
     const skillRefs = [...new Set([...defaultSkillRefs, ...stageSkillRefs])];
+    const policyRefs = optionalStrings(stage.policy_refs, 'stage.policy_refs', repoDir);
     const qualityGateRefs = strings(stage.quality_gate_refs, 'stage.quality_gate_refs', repoDir);
     const allowedActionRefs = strings(stage.allowed_action_refs, 'stage.allowed_action_refs', repoDir);
     const nextStageRefs = strings(stage.next_stage_refs, 'stage.next_stage_refs', repoDir);
@@ -621,6 +622,9 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       inputs: [],
       knowledge_refs: knowledgeRefs.map((entry, refIndex) =>
         surfaceRef(repoDir, entry, `stage.knowledge_refs[${refIndex}]`, 'stage_knowledge')
+      ),
+      policy_refs: policyRefs.map((entry, refIndex) =>
+        surfaceRef(repoDir, entry, `stage.policy_refs[${refIndex}]`, 'stage_policy')
       ),
       skills: skillRefs.map((entry, refIndex) =>
         surfaceRef(repoDir, entry, `stage.skill_refs[${refIndex}]`, 'domain_skill_declaration')

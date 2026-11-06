@@ -86,6 +86,9 @@ export type StandardAgentStageQualityRuntimeBinding = {
     re_reviewer: string;
   };
   quality_rubric_refs: string[];
+  knowledge_refs: string[];
+  skill_refs: string[];
+  policy_refs: string[];
   stage_goal_refs: string[];
   source_refs: string[];
   lineage_refs: string[];

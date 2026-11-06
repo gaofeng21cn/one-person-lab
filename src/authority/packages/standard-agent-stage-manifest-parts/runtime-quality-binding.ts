@@ -5,6 +5,7 @@ import { isRecord } from '../../../kernel/contract-validation.ts';
 import { optionalString } from '../../../kernel/json-file.ts';
 import {
   STANDARD_AGENT_STAGE_MANIFEST_REF,
+  readStandardAgentManagedTextFile,
   readStandardAgentStagePromptFile,
 } from '../standard-agent-stage-prompt.ts';
 import {
@@ -14,6 +15,7 @@ import {
   repoFile,
   repoRef,
   record,
+  optionalStrings,
   strings,
   text,
 } from './repo-validation.ts';
@@ -144,6 +146,12 @@ function compileTargetStageBinding(repoDir: string, stageId: string) {
   text(stage.goal, 'stage.goal', repoDir);
   const policyRef = optionalString(stage.stage_quality_cycle_policy_ref);
   const qualityGateRefs = strings(stage.quality_gate_refs, 'stage.quality_gate_refs', repoDir);
+  const knowledgeRefs = strings(stage.knowledge_refs, 'stage.knowledge_refs', repoDir);
+  const skillRefs = optionalStrings(stage.skill_refs, 'stage.skill_refs', repoDir);
+  const policyRefs = optionalStrings(stage.policy_refs, 'stage.policy_refs', repoDir);
+  knowledgeRefs.forEach((ref) => readStandardAgentManagedTextFile(repoDir, ref));
+  skillRefs.forEach((ref) => readStandardAgentManagedTextFile(repoDir, ref));
+  policyRefs.forEach((ref) => readStandardAgentManagedTextFile(repoDir, ref));
   qualityGateRefs.forEach((ref) => repoFile(repoDir, ref, 'stage.quality_gate_refs'));
   const allowedActionRefs = strings(stage.allowed_action_refs, 'stage.allowed_action_refs', repoDir);
   const missingActions = allowedActionRefs.filter((ref) => !actionIds.has(ref));
@@ -219,6 +227,9 @@ function compileTargetStageBinding(repoDir: string, stageId: string) {
     metaReviewPolicy,
     handoffReviewBoundary,
     qualityProfileRef,
+    knowledgeRefs,
+    skillRefs,
+    policyRefs,
   };
 }
 
@@ -273,6 +284,9 @@ export function resolveStandardAgentStageQualityRuntimeBinding(
     review_lane_binding: reviewLaneBinding(compilation.stageContract, repoDir),
     role_prompt_refs: policy.role_prompt_refs,
     quality_rubric_refs: policy.quality_rubric_refs,
+    knowledge_refs: compilation.knowledgeRefs,
+    skill_refs: compilation.skillRefs,
+    policy_refs: compilation.policyRefs,
     stage_goal_refs: [`${STANDARD_AGENT_STAGE_MANIFEST_REF}#/stages/${compilation.stageIndex}/goal`],
     source_refs: [compilation.stagePolicyRef],
     lineage_refs: [`${STANDARD_AGENT_STAGE_MANIFEST_REF}#/stages/${compilation.stageIndex}`],

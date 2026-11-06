@@ -64,6 +64,9 @@ export type TemporalStageRunWorkflowInput = {
   quality_policy: StageQualityCyclePolicy;
   role_prompt_refs: TemporalStageRunQualityRolePromptRefs;
   quality_rubric_refs: string[];
+  knowledge_refs: string[];
+  skill_refs: string[];
+  policy_refs: string[];
   stage_goal_refs?: string[];
   source_refs?: string[];
   artifact_refs?: string[];

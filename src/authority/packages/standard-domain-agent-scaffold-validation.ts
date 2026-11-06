@@ -52,6 +52,7 @@ const REQUIRED_CAPABILITY_MAP_SURFACE_ROLES = [
   'professional_skill',
   'tool_connector',
   'knowledge_pack',
+  'policy_pack',
   'quality_gate',
   'eval_suite',
 ] as const;
@@ -195,8 +196,11 @@ function validateCapabilityMap(capabilityMap: unknown, repoDir: string) {
     .map((entry) => entry.surface_role))];
   const missingRoles = REQUIRED_CAPABILITY_MAP_SURFACE_ROLES.filter((role) => !observedRoles.includes(role));
   const selfEvolutionRoutingValidation = validateSelfEvolutionRoutingFields(capabilities);
+  const migrationRoles = missingRoles.filter((role) => role === 'policy_pack');
   const blockers = [
-    ...missingRoles.map((role) => `capability_map_missing_role:${role}`),
+    ...missingRoles
+      .filter((role) => role !== 'policy_pack')
+      .map((role) => `capability_map_missing_role:${role}`),
     ...selfEvolutionRoutingValidation.blockers,
   ].filter((entry): entry is string => Boolean(entry));
   return {
@@ -204,6 +208,7 @@ function validateCapabilityMap(capabilityMap: unknown, repoDir: string) {
     observed_roles: observedRoles,
     missing_roles: missingRoles,
     self_evolution_routing_validation: selfEvolutionRoutingValidation,
+    migration_advisory_findings: migrationRoles.map((role) => `capability_map_missing_role:${role}`),
     blockers,
   };
 }
@@ -537,6 +542,9 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     ...stageRefValidation.advisory_findings,
     ...foundryAgentSeriesValidation.advisory_findings,
     ...stagePackV2Validation.advisory_findings,
+    ...(agentPackValidation.migration_advisory_findings ?? []),
+    ...(stageRefValidation.migration_advisory_findings ?? []),
+    ...(capabilityMapValidation.migration_advisory_findings ?? []),
   ];
   return {
     version: 'g2',
@@ -561,6 +569,13 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       authority_violations: authorityViolations,
       raw_authority_violations: rawAuthorityViolations,
       agent_pack_validation: agentPackValidation,
+      agent_pack_migration_advisories: agentPackValidation.migration_advisory_findings,
+      stage_policy_migration_advisories: stageRefValidation.migration_advisory_findings,
+      migration_advisory_findings: [
+        ...(agentPackValidation.migration_advisory_findings ?? []),
+        ...(stageRefValidation.migration_advisory_findings ?? []),
+        ...(capabilityMapValidation.migration_advisory_findings ?? []),
+      ],
       agent_pack_effective_blockers: effectiveAgentPackBlockers,
       stage_ref_validation: stageRefValidation,
       user_stage_log_validation: userStageLogValidation,

@@ -13,6 +13,7 @@ type FrameworkLocatorSource =
   | 'OPL_BIN'
   | 'PATH:opl'
   | 'current_cli_entry'
+  | 'managed_install'
   | 'sibling_checkout';
 
 type FrameworkLocatorCandidate = {
@@ -39,6 +40,10 @@ function normalizeOptionalString(value: string | undefined | null) {
 
 function currentSourceRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+}
+
+function managedInstallRoot() {
+  return path.join(os.homedir(), '.opl', 'one-person-lab');
 }
 
 function findOnPath(commandName: string) {
@@ -154,6 +159,12 @@ function buildCandidateList(): FrameworkLocatorCandidate[] {
       required: true,
     },
     {
+      source: 'managed_install',
+      kind: 'root',
+      value: managedInstallRoot(),
+      required: false,
+    },
+    {
       source: 'PATH:opl',
       kind: 'bin',
       value: findOnPath('opl'),
@@ -166,6 +177,24 @@ function buildCandidateList(): FrameworkLocatorCandidate[] {
       required: false,
     },
   ];
+}
+
+export function listOplFrameworkRoots() {
+  const roots: string[] = [];
+  for (const candidate of buildCandidateList()) {
+    const rootPath = candidateValue(candidate);
+    if (!rootPath) continue;
+    let root: string;
+    try {
+      root = normalizeFrameworkRoot(rootPath);
+    } catch {
+      continue;
+    }
+    if (hasFrameworkShape(root) && !roots.includes(root)) {
+      roots.push(root);
+    }
+  }
+  return roots;
 }
 
 function buildResolutionOrder(candidates: FrameworkLocatorCandidate[]) {

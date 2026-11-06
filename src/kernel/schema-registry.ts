@@ -1,10 +1,15 @@
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import type { AnySchema, ErrorObject, ValidateFunction } from 'ajv';
+import { createRequire } from 'node:module';
 
 import {
   FrameworkContractError,
   isRecord,
 } from './contract-validation.ts';
+
+const addFormatsModule = createRequire(import.meta.url)('ajv-formats') as {
+  default?: (ajv: Ajv2020) => unknown;
+};
 
 export type JsonSchemaRegistryEntry = {
   schemaId: string;
@@ -33,10 +38,16 @@ export type JsonSchemaValidationResult =
       errors: JsonSchemaValidationIssue[];
     };
 
+if (typeof addFormatsModule.default !== 'function') {
+  throw new Error('ajv-formats default export is unavailable.');
+}
+const addFormats: (ajv: Ajv2020) => unknown = addFormatsModule.default;
+
 const ajv = new Ajv2020({
   allErrors: true,
   strict: false,
 });
+addFormats(ajv);
 
 const compiledValidators = new Map<string, ValidateFunction>();
 
@@ -141,6 +152,7 @@ export function assertJsonSchemaCompiles(
     allErrors: true,
     strict: false,
   });
+  addFormats(compiler);
   if (!compiler.validateSchema(entry.schema)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',

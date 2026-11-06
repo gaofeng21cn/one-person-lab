@@ -82,5 +82,6 @@ export const REQUIRED_AGENT_PACK_SECTIONS = [
   { section: 'tools', prefix: 'agent/tools/' },
   { section: 'quality_gates', prefix: 'agent/quality_gates/' },
   { section: 'knowledge', prefix: 'agent/knowledge/' },
+  { section: 'policies', prefix: 'agent/policies/' },
 ] as const;
 export const FORBIDDEN_AGENT_PACK_TEXT = /\b(TODO|TBD)\b/i;

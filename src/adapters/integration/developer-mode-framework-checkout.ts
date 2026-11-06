@@ -7,7 +7,7 @@ import type {
   DeveloperModeContext,
   OplDeveloperModeFrameworkCheckoutProjection,
 } from './developer-mode-types.ts';
-import { buildOplFrameworkLocator } from './opl-framework-locator.ts';
+import { buildOplFrameworkLocator } from '../../authority/contracts/index.ts';
 
 function pathExistsFile(filePath: string) {
   return fs.existsSync(filePath) && fs.statSync(filePath).isFile();

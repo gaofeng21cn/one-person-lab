@@ -54,6 +54,9 @@ export type TemporalStageAttemptWorkflowInput = {
   reviewed_artifact_hashes?: string[];
   quality_source_refs?: string[];
   quality_rubric_refs?: string[];
+  knowledge_refs?: string[];
+  skill_refs?: string[];
+  policy_refs?: string[];
   prior_finding_refs?: string[];
   repair_map_refs?: string[];
   quality_role_prompt_ref?: string | null;
@@ -180,6 +183,9 @@ export function buildTemporalStageAttemptWorkflowInput(
     reviewed_artifact_hashes?: unknown[];
     quality_source_refs?: unknown[];
     quality_rubric_refs?: unknown[];
+    knowledge_refs?: unknown[];
+    skill_refs?: unknown[];
+    policy_refs?: unknown[];
     prior_finding_refs?: unknown[];
     repair_map_refs?: unknown[];
     quality_context?: Record<string, unknown> | null;
@@ -249,6 +255,15 @@ export function buildTemporalStageAttemptWorkflowInput(
       : [],
     quality_rubric_refs: Array.isArray(attempt.quality_rubric_refs)
       ? attempt.quality_rubric_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      : [],
+    knowledge_refs: Array.isArray(attempt.knowledge_refs)
+      ? attempt.knowledge_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      : [],
+    skill_refs: Array.isArray(attempt.skill_refs)
+      ? attempt.skill_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      : [],
+    policy_refs: Array.isArray(attempt.policy_refs)
+      ? attempt.policy_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
       : [],
     prior_finding_refs: Array.isArray(attempt.prior_finding_refs)
       ? attempt.prior_finding_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))

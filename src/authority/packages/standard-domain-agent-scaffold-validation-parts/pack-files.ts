@@ -170,7 +170,11 @@ export function validateAgentPackFiles(repoDir: string, packCompilerInput: unkno
     .filter((item) => item.status !== 'ok')
     .map((item) => `missing_agent_pack_section:${item.section}`);
   const toolSectionFindings = sectionFindings.filter((item) => item === 'missing_agent_pack_section:tools');
-  const nonToolSectionFindings = sectionFindings.filter((item) => item !== 'missing_agent_pack_section:tools');
+  const policySectionFindings = sectionFindings.filter((item) => item === 'missing_agent_pack_section:policies');
+  const nonToolSectionFindings = sectionFindings.filter((item) => (
+    item !== 'missing_agent_pack_section:tools'
+    && item !== 'missing_agent_pack_section:policies'
+  ));
   return {
     pack_root: packRoot,
     listed_paths: listedPaths,
@@ -192,5 +196,6 @@ export function validateAgentPackFiles(repoDir: string, packCompilerInput: unkno
       ...(enforceToolAffordanceBoundary ? toolSectionFindings : []),
     ].filter((entry): entry is string => Boolean(entry)),
     advisory_findings: enforceToolAffordanceBoundary ? [] : toolSectionFindings,
+    migration_advisory_findings: policySectionFindings,
   };
 }

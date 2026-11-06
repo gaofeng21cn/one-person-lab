@@ -91,6 +91,7 @@ export {
 } from './submission-resource-provisioning.ts';
 export * from './agent-profile-spine.ts';
 export * from './agent-scaffold-materialization.ts';
+export * from './durable-knowledge-catalog.ts';
 export * from './profile-capability-plan.ts';
 export * from './profile-selection-intent.ts';
 export * from './public/foundry-agent-series-policy.ts';

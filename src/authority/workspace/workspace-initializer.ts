@@ -653,6 +653,8 @@ export function initializeWorkspace(
     for (const relativePath of [
       'control',
       'inputs',
+      'memory',
+      'state',
       profile.project_stage_outputs_root,
       'artifacts/exports',
       'artifacts/packages',
@@ -850,6 +852,8 @@ export function ensureWorkspace(
         for (const relativePath of [
           project.control_root,
           project.inputs_root,
+          'memory',
+          'state',
           project.stage_outputs_root,
           project.exports_root,
           project.packages_root,

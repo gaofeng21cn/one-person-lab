@@ -202,6 +202,13 @@
           },
           "description": "Domain-owned memory or knowledge locators that OPL may index and inject as references only; this does not grant OPL memory-store, domain-truth, quality-verdict, or artifact authority."
         },
+        "policy_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Domain-owned reusable policy bodies that may be injected into the Stage Attempt and reviewer context."
+        },
         "skills": {
           "type": "array",
           "items": {

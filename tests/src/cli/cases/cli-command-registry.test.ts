@@ -26,6 +26,9 @@ const registryCases = [
   ['install', 'install', ['headless', 'with-app', 'skip-packages', 'skip-engines', 'skip-native-helper-repair', 'no-online-runtime'], 'OPL Framework'],
   ['app compatibility receipt', 'app_compatibility_receipt', ['requirements-file', 'subject-file', 'output', 'ttl-seconds'], 'OPL Framework'],
   ['cordis inspect', 'cordis_inspect', [], 'OPL Framework'],
+  ['knowledge list', 'knowledge_list', ['repo'], 'OPL Framework durable knowledge'],
+  ['knowledge inspect', 'knowledge_inspect', ['repo', 'id'], 'OPL Framework durable knowledge'],
+  ['knowledge recall', 'knowledge_recall', ['repo', 'domain', 'stage', 'task-intent', 'workspace', 'project'], 'OPL Framework durable knowledge'],
   ['connect scientific search', 'connect_scientific_search', ['provider', 'query', 'limit'], undefined],
   ['connect references verify', 'connect_references_verify', ['references-file', 'providers', 'cache-root', 'max-retries'], undefined],
   ['connect gateway login', 'connect_gateway_login', ['credentials-stdin'], undefined],
@@ -344,7 +347,11 @@ test('stage commands reject options outside their registry entry', () => {
 test('update commands parse registered options and reject cross-command options', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-update-registry-'));
   try {
-    const status = runCli(['update', 'status'], { OPL_STATE_DIR: stateRoot });
+    const status = runCli(['update', 'status'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_APP_CARRIER_PLATFORM: 'linux',
+      OPL_CODEX_CLI_LATEST_VERSION: '0.0.0',
+    });
     assert.equal(status.managed_update.operation, 'status');
     assert.equal(status.managed_update.requested_component_id, null);
   } finally {

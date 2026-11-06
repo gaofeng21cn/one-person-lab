@@ -78,6 +78,9 @@ writeFixture(
   '# Stage quality roles\n\n## Producer\nProduce the artifact.\n\n## Reviewer\nReview the artifact.\n\n## Repairer\nRepair required findings.\n\n## Re-reviewer\nClose prior findings.\n',
 );
 writeFixture(domainPackRoot, 'agent/quality_gates/stage.md', '# Stage rubric\n');
+writeFixture(domainPackRoot, 'agent/knowledge/stage.md', '# Stage knowledge\n');
+writeFixture(domainPackRoot, 'agent/professional_skills/stage/SKILL.md', '# Stage professional method\n');
+writeFixture(domainPackRoot, 'agent/policies/stage.md', '# Stage policy\n');
 writeFixture(domainPackRoot, 'agent/sources/request.md', '# Request source\n');
 for (const stageId of ['intake', 'draft', 'review']) {
   writeFixture(domainPackRoot, `agent/prompts/${stageId}.md`, `# ${stageId} prompt\n`);
@@ -120,6 +123,9 @@ function binding(
       re_reviewer: 'agent/prompts/stage-quality.md#re-reviewer',
     },
     quality_rubric_refs: ['agent/quality_gates/stage.md'],
+    knowledge_refs: ['agent/knowledge/stage.md'],
+    skill_refs: ['agent/professional_skills/stage/SKILL.md'],
+    policy_refs: ['agent/policies/stage.md'],
     stage_goal_refs: [`agent/goals/${stageId}.md`],
     source_refs: sourceRefs,
     lineage_refs: [`agent/lineage/${stageId}.json`],

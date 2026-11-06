@@ -1,0 +1,182 @@
+{
+  "surface_kind": "opl_durable_knowledge_lifecycle_contract",
+  "version": "opl-durable-knowledge-lifecycle.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Define the common lifecycle for reusable knowledge and dated memory across OPL agents and workspaces without transferring domain truth, body ownership, or quality verdicts to OPL.",
+  "scope": {
+    "applies_to": [
+      "standard_domain_agent",
+      "domain_workspace",
+      "stage_attempt_context"
+    ],
+    "covers": [
+      "stable_agent_knowledge",
+      "workspace_project_memory",
+      "dated_current_state",
+      "decision_and_execution_records"
+    ],
+    "does_not_cover": [
+      "provider_workflow_history",
+      "raw_chat_transcript_as_truth",
+      "domain_artifact_body_ownership",
+      "quality_or_export_verdict"
+    ]
+  },
+  "layer_model": {
+    "agent_pack": {
+      "role": "versioned_reusable_domain_knowledge",
+      "body_location": "domain_repo_agent_knowledge",
+      "examples": [
+        "financial_mechanisms",
+        "research_methods",
+        "journal_style_guidance",
+        "grant_strategy",
+        "execution_rules"
+      ],
+      "owner": "domain_agent",
+      "shared_across_projects": true,
+      "must_not_hold": [
+        "private_account_state",
+        "current_market_prices",
+        "one_project_findings_as_universal_rule"
+      ]
+    },
+    "workspace_shared": {
+      "role": "cross_project_owner_or_team_memory",
+      "body_location": "workspace_shared_memory_root",
+      "examples": [
+        "owner_constraints",
+        "risk_policy",
+        "preferred_source_hierarchy",
+        "cross_project_lessons"
+      ],
+      "owner": "workspace_owner",
+      "shared_across_projects": true,
+      "must_not_hold": [
+        "agent_package_implementation",
+        "credentials",
+        "provider_runtime_state"
+      ]
+    },
+    "workspace_project": {
+      "role": "project_specific_durable_context",
+      "body_location": "project_memory_root",
+      "examples": [
+        "investment_mandate",
+        "research_question_and_design",
+        "book_style_choices",
+        "decision_history"
+      ],
+      "owner": "project_owner",
+      "shared_across_projects": false,
+      "must_not_hold": [
+        "agent_global_rule",
+        "another_project_private_state"
+      ]
+    },
+    "dated_state": {
+      "role": "current_or_historical_fact_snapshot",
+      "body_location": "project_state_or_owner_authoritative_source",
+      "examples": [
+        "holdings_and_cash",
+        "current_journal_requirements",
+        "submitted_order_state",
+        "dated_macro_observation"
+      ],
+      "owner": "domain_owner_or_external_authority",
+      "shared_across_projects": false,
+      "promotion_to_durable_knowledge": "explicit_owner_or_domain_review_required"
+    }
+  },
+  "knowledge_item_requirements": {
+    "required_fields": [
+      "knowledge_id",
+      "title",
+      "layer",
+      "owner",
+      "body_ref",
+      "applicability",
+      "status",
+      "reviewed_at",
+      "next_review_at"
+    ],
+    "recommended_fields": [
+      "version",
+      "sources",
+      "tags",
+      "supersedes",
+      "superseded_by",
+      "retrieval_notes",
+      "freshness_policy"
+    ],
+    "identity_policy": "stable_across_body_revisions",
+    "body_addressing_policy": "exact_sha256_at_stage_binding",
+    "unknown_metadata_policy": "preserve_without_promoting_to_authority",
+    "time_policy": "review_dates_are_required_for_time_sensitive_guidance"
+  },
+  "recall_policy": {
+    "selection_unit": "small_stage_relevant_knowledge_set",
+    "selection_inputs": [
+      "domain_id",
+      "stage_id",
+      "task_intent",
+      "project_scope",
+      "applicability",
+      "status",
+      "review_currentness"
+    ],
+    "default_missing_knowledge_behavior": "fail_open_with_visible_quality_debt",
+    "must_record_consumed_refs": true,
+    "must_record_body_sha256": true,
+    "must_record_selection_reason": true,
+    "may_rank_candidates": true,
+    "may_make_quality_verdict": false,
+    "may_override_stage_goal": false,
+    "must_not_inject_all_knowledge": true
+  },
+  "writeback_policy": {
+    "agent_may_propose": true,
+    "opl_may_transport_proposal": true,
+    "domain_or_project_owner_accepts_or_rejects": true,
+    "opl_may_apply_without_owner_receipt": false,
+    "proposal_must_include": [
+      "source_refs",
+      "target_layer",
+      "target_scope",
+      "proposed_rule_or_mechanism",
+      "evidence_class",
+      "review_requirement"
+    ],
+    "automatic_promotion_from_state": false,
+    "automatic_promotion_from_single_task": false,
+    "accepted_writeback_requires_receipt": true
+  },
+  "lifecycle_states": [
+    "draft",
+    "active",
+    "deprecated",
+    "superseded",
+    "expired",
+    "quarantined"
+  ],
+  "authority_boundary": {
+    "opl_owns_common_lifecycle_contract": true,
+    "opl_owns_catalog_and_body_free_index": true,
+    "opl_owns_stage_recall_and_consumption_receipts": true,
+    "opl_owns_workspace_topology_and_locator_validation": true,
+    "domain_owns_knowledge_body_and_semantic_acceptance": true,
+    "project_owner_owns_project_memory_body": true,
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_domain_memory_body": false,
+    "opl_can_accept_or_reject_semantic_knowledge": false,
+    "opl_can_authorize_quality_or_export": false,
+    "provider_completion_counts_as_knowledge_acceptance": false
+  },
+  "non_authority_flags": {
+    "knowledge_is_route_verdict": false,
+    "knowledge_is_quality_verdict": false,
+    "knowledge_is_domain_truth": false,
+    "recall_receipt_proves_answer_correctness": false
+  }
+}

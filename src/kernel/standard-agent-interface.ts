@@ -100,6 +100,12 @@ function parseWorkspaceSharedResources(value: unknown, sourceRef: string) {
   if (new Set(resources.map((entry) => entry.path)).size !== resources.length) {
     invalid('Standard Agent workspace shared resource paths must be unique.', sourceRef);
   }
+  const memoryRoots = resources.filter((entry) => entry.role === 'memory_root');
+  if (memoryRoots.length > 1) {
+    invalid('Standard Agent workspace may declare at most one shared memory_root.', sourceRef, {
+      memory_roots: memoryRoots.map((entry) => entry.path),
+    });
+  }
   return resources;
 }
 

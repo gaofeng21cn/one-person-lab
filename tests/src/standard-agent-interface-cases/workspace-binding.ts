@@ -61,6 +61,21 @@ test('workspace metadata does not weaken known path, locator, or resource valida
     ...duplicatePath.workspace_binding.shared_resources[0], role: 'another_role',
   });
   assert.throws(() => parseStandardAgentInterface(duplicatePath, 'fixture'), /paths must be unique/);
+  const duplicateMemoryRoot = extendedWorkspaceInterface();
+  duplicateMemoryRoot.workspace_binding.shared_resources = [
+    {
+      path: 'shared/memory-a', role: 'memory_root',
+      description: 'First memory root', owner_metadata: { source: 'domain' },
+    },
+    {
+      path: 'shared/memory-b', role: 'memory_root',
+      description: 'Second memory root', owner_metadata: { source: 'domain' },
+    },
+  ];
+  assert.throws(
+    () => parseStandardAgentInterface(duplicateMemoryRoot, 'fixture'),
+    /at most one shared memory_root/,
+  );
   const wrongType = extendedWorkspaceInterface();
   Object.assign(wrongType.workspace_binding, { shared_resources: { metadata: true } });
   assert.equal(validate(wrongType).ok, false);

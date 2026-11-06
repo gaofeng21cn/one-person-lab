@@ -78,6 +78,9 @@ export type StageAttemptCreateInput = {
   inputArtifactRefs?: string[];
   reviewedArtifactHashes?: string[];
   qualitySourceRefs?: string[];
+  qualityKnowledgeRefs?: string[];
+  qualitySkillRefs?: string[];
+  qualityPolicyRefs?: string[];
   qualityStageGoalRefs?: string[];
   qualityLineageRefs?: string[];
   qualityRubricRefs?: string[];
@@ -136,6 +139,9 @@ function stageAttemptBaseIdempotencyKey(input: StageAttemptCreateInput) {
     normalizeJsonList(input.inputArtifactRefs),
     normalizeJsonList(input.reviewedArtifactHashes),
     normalizeJsonList(input.qualitySourceRefs),
+    normalizeJsonList(input.qualityKnowledgeRefs),
+    normalizeJsonList(input.qualitySkillRefs),
+    normalizeJsonList(input.qualityPolicyRefs),
     normalizeJsonList(input.qualityStageGoalRefs),
     normalizeJsonList(input.qualityLineageRefs),
     normalizeJsonList(input.qualityRubricRefs),
@@ -449,6 +455,9 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       artifactHashes: input.reviewedArtifactHashes,
       stageGoalRefs: input.qualityStageGoalRefs,
       sourceRefs: input.qualitySourceRefs,
+      knowledgeRefs: input.qualityKnowledgeRefs,
+      skillRefs: input.qualitySkillRefs,
+      policyRefs: input.qualityPolicyRefs,
       lineageRefs: input.qualityLineageRefs,
       priorFindingRefs: input.priorFindingRefs,
       repairMapRefs: input.repairMapRefs,
@@ -488,6 +497,9 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       input_artifact_refs: input.inputArtifactRefs ?? [],
       reviewed_artifact_hashes: input.reviewedArtifactHashes ?? [],
       quality_source_refs: input.qualitySourceRefs ?? [],
+      quality_knowledge_refs: input.qualityKnowledgeRefs ?? [],
+      quality_skill_refs: input.qualitySkillRefs ?? [],
+      quality_policy_refs: input.qualityPolicyRefs ?? [],
       quality_rubric_refs: input.qualityRubricRefs ?? [],
       prior_finding_refs: input.priorFindingRefs ?? [],
       repair_map_refs: input.repairMapRefs ?? [],
@@ -617,6 +629,9 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
     input_artifact_refs_json: JSON.stringify(normalizeJsonList(input.inputArtifactRefs)),
     reviewed_artifact_hashes_json: JSON.stringify(normalizeJsonList(input.reviewedArtifactHashes)),
     quality_source_refs_json: JSON.stringify(normalizeJsonList(input.qualitySourceRefs)),
+    quality_knowledge_refs_json: JSON.stringify(normalizeJsonList(input.qualityKnowledgeRefs)),
+    quality_skill_refs_json: JSON.stringify(normalizeJsonList(input.qualitySkillRefs)),
+    quality_policy_refs_json: JSON.stringify(normalizeJsonList(input.qualityPolicyRefs)),
     quality_stage_goal_refs_json: JSON.stringify(normalizeJsonList(input.qualityStageGoalRefs)),
     quality_lineage_refs_json: JSON.stringify(normalizeJsonList(input.qualityLineageRefs)),
     quality_rubric_refs_json: JSON.stringify(normalizeJsonList(input.qualityRubricRefs)),
@@ -701,7 +716,8 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       scope_kind, project_scope_id, work_item_scope_id, workspace_binding_id, binding_version_id,
       scope_digest, execution_scope_json, identity_state, quality_cycle_id,
       attempt_role, quality_round_index, parent_attempt_ref, input_artifact_refs_json, reviewed_artifact_hashes_json,
-      quality_source_refs_json, quality_stage_goal_refs_json, quality_lineage_refs_json,
+      quality_source_refs_json, quality_knowledge_refs_json, quality_skill_refs_json, quality_policy_refs_json,
+      quality_stage_goal_refs_json, quality_lineage_refs_json,
       quality_rubric_refs_json, prior_finding_refs_json, repair_map_refs_json, quality_context_json,
       quality_role_prompt_ref,
       execution_session_ref, usage_observation_json, context_manifest_ref, context_manifest_json, no_context_inheritance, status, checkpoint_refs_json, closeout_refs_json,
@@ -715,7 +731,8 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
       @scope_kind, @project_scope_id, @work_item_scope_id, @workspace_binding_id, @binding_version_id,
       @scope_digest, @execution_scope_json, @identity_state, @quality_cycle_id,
       @attempt_role, @quality_round_index, @parent_attempt_ref, @input_artifact_refs_json, @reviewed_artifact_hashes_json,
-      @quality_source_refs_json, @quality_stage_goal_refs_json, @quality_lineage_refs_json,
+      @quality_source_refs_json, @quality_knowledge_refs_json, @quality_skill_refs_json, @quality_policy_refs_json,
+      @quality_stage_goal_refs_json, @quality_lineage_refs_json,
       @quality_rubric_refs_json, @prior_finding_refs_json, @repair_map_refs_json, @quality_context_json,
       @quality_role_prompt_ref,
       @execution_session_ref, @usage_observation_json, @context_manifest_ref, @context_manifest_json, @no_context_inheritance, @status, @checkpoint_refs_json, @closeout_refs_json,

@@ -1,4 +1,4 @@
-import { buildOplFrameworkLocator } from '../../../../adapters/integration/opl-framework-locator.ts';
+import { buildOplFrameworkLocator } from '../../../../authority/contracts/index.ts';
 import {
   buildFrameworkOperatingMaturityCompactReadback,
   buildFrameworkOperatingMaturityReadout,

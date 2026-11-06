@@ -10,6 +10,7 @@ import {
   STANDARD_FUNCTIONAL_PRIVATIZATION_AUDIT_DEFAULTS_PROFILE,
 } from '../../../../src/authority/packages/standard-agent-proof-contract-defaults.ts';
 import { materializeStandardAgentFrameworkLink } from '../../../../src/adapters/integration/standard-agent-framework-link.ts';
+import { buildOplFrameworkLocator } from '../../../../src/authority/contracts/index.ts';
 
 function readJson(filePath: string) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8')) as Record<string, any>;
@@ -55,6 +56,9 @@ test('agents check returns one blocked report when an existing check rejects the
 
 test('agents check and link-framework share Python helper dependency discovery', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-python-helper-'));
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateDir;
   try {
     buildStandardDomainAgentScaffold({ targetDir, domainId: 'sample-python-helper' });
     const helperDir = path.join(targetDir, 'runtime', 'native_helpers');
@@ -80,6 +84,51 @@ test('agents check and link-framework share Python helper dependency discovery',
     assert.equal(compatibility.status, 'compatible');
     assert.equal(compatibility.managed_python_link, true);
   } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents check accepts an OPL-managed Python Framework link and rejects an arbitrary same-shaped directory', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-managed-python-'));
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-managed-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateDir;
+  try {
+    buildStandardDomainAgentScaffold({ targetDir, domainId: 'sample-managed-python' });
+    fs.writeFileSync(
+      path.join(targetDir, 'runtime', 'native_helpers', 'consumer.py'),
+      'from opl_framework.artifact_inspection import sha256_bytes\n',
+    );
+    const linkPath = path.join(targetDir, 'src', 'opl_framework');
+    fs.rmSync(linkPath, { force: true, recursive: true });
+    fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+    const managedPythonTarget = path.join(
+      buildOplFrameworkLocator().framework_locator.resolved.root,
+      'python',
+      'opl_framework',
+    );
+    fs.symlinkSync(managedPythonTarget, linkPath, 'dir');
+    let compatibility = runCli(['agents', 'check', '--repo', targetDir])
+      .standard_agent_check.checks.framework_compatibility;
+    assert.equal(compatibility.status, 'compatible');
+    assert.equal(compatibility.managed_python_link, true);
+
+    fs.rmSync(linkPath, { force: true, recursive: true });
+    const fake = path.join(targetDir, 'python', 'opl_framework');
+    fs.mkdirSync(fake, { recursive: true });
+    fs.writeFileSync(path.join(fake, '__init__.py'), '');
+    fs.symlinkSync(fake, linkPath, 'dir');
+    compatibility = runCli(['agents', 'check', '--repo', targetDir])
+      .standard_agent_check.checks.framework_compatibility;
+    assert.equal(compatibility.status, 'blocked');
+    assert.equal(compatibility.blockers.includes('opl_managed_framework_python_link_missing'), true);
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(targetDir, { recursive: true, force: true });
   }
 });

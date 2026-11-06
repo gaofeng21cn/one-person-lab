@@ -205,7 +205,7 @@ const lanes = {
   smoke: [
     { kind: 'npm', args: ['run', 'source:modules', '--', '--strict-imports', '--strict-cycles'] },
     sourceTest([
-      '{verification-command-surfaces,target-architecture-schema-contracts,evidence-grounded-decision-agent-profile,agent-profile-spine,profile-capability-plan,evidence-grounded-stagecraft-runway,evidence-grounded-substrate,cognitive-computation-kernel-contract,advisory-knowledge-boundary-contract,opl-flow-completion-audit-contract,test-lanes-state-isolation,source-module-boundary,source-module-public-imports,cli-modularization,runtime-state-paths,runtime-environment-substrate,opl-session-runtime}.test.ts',
+      '{verification-command-surfaces,target-architecture-schema-contracts,evidence-grounded-decision-agent-profile,agent-profile-spine,profile-capability-plan,evidence-grounded-stagecraft-runway,evidence-grounded-substrate,cognitive-computation-kernel-contract,advisory-knowledge-boundary-contract,durable-knowledge-catalog,opl-flow-completion-audit-contract,test-lanes-state-isolation,source-module-boundary,source-module-public-imports,cli-modularization,runtime-state-paths,runtime-environment-substrate,opl-session-runtime}.test.ts',
       'cli/cases/runtime-environment-substrate-command-surface.test.ts',
     ], { batchSize: 25 }),
   ],

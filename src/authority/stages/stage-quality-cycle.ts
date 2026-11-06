@@ -68,6 +68,9 @@ export type StageReviewContextManifest = {
   artifact_hashes: string[];
   source_refs: string[];
   quality_rubric_refs: string[];
+  knowledge_refs: string[];
+  skill_refs: string[];
+  policy_refs: string[];
   lineage_refs: string[];
   prior_finding_refs: string[];
   repair_map_refs: string[];
@@ -445,6 +448,9 @@ export function buildStageReviewContextManifest(input: {
   artifactHashes: string[];
   sourceRefs?: string[];
   qualityRubricRefs: string[];
+  knowledgeRefs?: string[];
+  skillRefs?: string[];
+  policyRefs?: string[];
   lineageRefs?: string[];
   priorFindingRefs?: string[];
   repairMapRefs?: string[];
@@ -464,6 +470,9 @@ export function buildStageReviewContextManifest(input: {
     artifact_hashes: artifactIdentity.artifact_hashes,
     source_refs: nonEmptyStrings(input.sourceRefs ?? [], 'source_refs'),
     quality_rubric_refs: requiredRefs(input.qualityRubricRefs, 'quality_rubric_refs'),
+    knowledge_refs: nonEmptyStrings(input.knowledgeRefs ?? [], 'knowledge_refs'),
+    skill_refs: nonEmptyStrings(input.skillRefs ?? [], 'skill_refs'),
+    policy_refs: nonEmptyStrings(input.policyRefs ?? [], 'policy_refs'),
     lineage_refs: nonEmptyStrings(input.lineageRefs ?? [], 'lineage_refs'),
     prior_finding_refs: nonEmptyStrings(input.priorFindingRefs ?? [], 'prior_finding_refs'),
     repair_map_refs: nonEmptyStrings(input.repairMapRefs ?? [], 'repair_map_refs'),

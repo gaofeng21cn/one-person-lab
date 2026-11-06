@@ -150,6 +150,29 @@ test('Ajv schema registry rejects invalid payloads through the contract schema',
   );
 });
 
+test('Ajv schema registry enforces declared date-time formats', () => {
+  const schema: JsonSchemaRegistryEntry = {
+    schemaId: 'opl.date_time_format_regression.v1',
+    schema: {
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      $id: 'opl.date_time_format_regression.v1',
+      type: 'object',
+      additionalProperties: false,
+      required: ['observed_at'],
+      properties: {
+        observed_at: { type: 'string', format: 'date-time' },
+      },
+    },
+  };
+
+  assert.equal(validateJsonSchemaPayload(schema, { observed_at: '2026-11-06T00:00:00Z' }).ok, true);
+  const invalid = validateJsonSchemaPayload(schema, { observed_at: '2026-11-06 00:00:00' });
+  assert.equal(invalid.ok, false);
+  if (!invalid.ok) {
+    assert.equal(invalid.errors.some((error) => error.keyword === 'format'), true);
+  }
+});
+
 test('reviewer snapshot schemas accept controller lanes without breaking fixed-stage payloads', () => {
   const digest = `sha256:${'a'.repeat(64)}`;
   const authorityRef = {

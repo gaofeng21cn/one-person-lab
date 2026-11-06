@@ -27,6 +27,7 @@ const SURFACE_ROLES = new Set([
   'professional_skill',
   'tool_connector',
   'knowledge_pack',
+  'policy_pack',
   'quality_gate',
   'eval_suite',
 ]);
@@ -38,6 +39,7 @@ const CAPABILITY_KINDS = new Set([
   'professional_skill',
   'tool_connector',
   'reference_pack',
+  'policy_pack',
   'contract_module',
 ]);
 const REF_KINDS = new Set(['repo_path', 'contract_ref', 'external_capability_ref']);
@@ -90,6 +92,7 @@ function inferredSurface(ref: string): Surface | null {
   if (ref.startsWith('agent/prompts/')) return ['stage_prompt', 'stage_prompt', 'stage_operating_prompt_sources', 'stage_prompt_pack'];
   if (ref.startsWith('agent/tools/')) return ['tool_connector', 'tool_connector', 'domain_tool_connector_catalog', 'tool_affordance_boundary'];
   if (ref.startsWith('agent/knowledge/')) return ['knowledge_pack', 'reference_pack', 'knowledge_pack', 'knowledge_pack'];
+  if (ref.startsWith('agent/policies/')) return ['policy_pack', 'reference_pack', 'policy_pack', 'policy_pack'];
   if (ref.startsWith('agent/quality_gates/')) return ['quality_gate', 'contract_module', 'quality_gate_pack', 'quality_gate_pack'];
   return null;
 }
@@ -271,7 +274,7 @@ export function deriveStandardAgentCapabilityInventory(repoDir: string, capabili
   const inventory = capabilityMap.capability_inventory;
   const blockers: string[] = [];
   if (inventory.source_kind !== INVENTORY_SOURCE_KIND) blockers.push('capability_inventory_source_kind_invalid');
-  if (Array.isArray(capabilityMap.capabilities)) blockers.push('capability_inventory_conflicts_with_explicit_capabilities');
+  const existingCapabilities = records(capabilityMap.capabilities);
   const owner = typeof capabilityMap.owner === 'string' ? capabilityMap.owner.trim() : '';
   const policyRef = typeof inventory.policy_profile_ref === 'string' ? inventory.policy_profile_ref.trim() : '';
   if (!owner || !policyRef) blockers.push('capability_inventory_defaults_invalid');
@@ -311,7 +314,14 @@ export function deriveStandardAgentCapabilityInventory(repoDir: string, capabili
   const capabilities = [
     ...primary,
     ...professional,
-    ...materializedDeltas.filter((entry) => !primary.includes(entry)),
+    ...materializedDeltas.filter((entry) => (
+      !primary.includes(entry)
+      && !existingCapabilities.some((existing) => existing.capability_id === entry.capability_id)
+    )),
+    ...existingCapabilities.filter((entry) => (
+      !primary.some((candidate) => candidate.capability_id === entry.capability_id)
+      && !professional.some((candidate) => candidate.capability_id === entry.capability_id)
+    )),
   ];
   const ids = capabilities.map((entry) => String(entry.capability_id));
   ids.filter((id, index) => ids.indexOf(id) !== index)

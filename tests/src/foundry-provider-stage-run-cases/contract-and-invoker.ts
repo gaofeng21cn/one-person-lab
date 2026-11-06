@@ -110,7 +110,8 @@ test('StageRun provider binds admitted source bytes to its actual initial launch
           scopeKind: 'work_item', executionScope,
           stageManifest: { ref: 'binding.txt', sha256: crypto.createHash('sha256').update('managed test binding').digest('hex') },
           qualityPolicyRef: 'binding.txt', stagePromptRef: 'binding.txt',
-          rolePromptRefs: [], qualityRubricRefs: [], stageGoalRefs: [], lineageRefs: [], checkpointRefs: [],
+          rolePromptRefs: [], qualityRubricRefs: [], knowledgeRefs: [], skillRefs: [], policyRefs: [],
+          stageGoalRefs: [], lineageRefs: [], checkpointRefs: [],
           stagePacketRef: input.input_artifact_refs[0]!, sourceRefs: input.input_artifact_refs,
           inputArtifacts: input.input_artifact_refs.map((ref, index) => ({ ref, sha256: `sha256:${hashes[index]!}`, identity_receipt_ref: null })),
         });

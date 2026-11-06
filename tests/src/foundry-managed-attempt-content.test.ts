@@ -50,7 +50,7 @@ for (const role of ['producer', 'reviewer'] as const) {
     const entries = resolved.effectiveManagedContent;
     assert.ok(entries, 'resolver must hydrate managed package content');
     assert.deepEqual(entries.map(({ purpose }) => purpose), [
-      'stage_manifest', 'quality_policy', 'quality_rubric',
+      'stage_manifest', 'quality_policy', 'knowledge', 'skill', 'policy', 'quality_rubric',
     ]);
     const prompt = runnerPromptForExecution({ attempt: input, ...resolved }, input);
     for (const entry of entries) {

@@ -49,6 +49,9 @@ export function buildStageRunImmutableContentBindings(input: {
   stagePromptRef: string;
   rolePromptRefs: string[];
   qualityRubricRefs: string[];
+  knowledgeRefs: string[];
+  skillRefs: string[];
+  policyRefs: string[];
   stageGoalRefs: string[];
   sourceRefs: string[];
   lineageRefs: string[];
@@ -109,6 +112,9 @@ export function buildStageRunImmutableContentBindings(input: {
   bind('stage_prompt', input.stagePromptRef);
   input.rolePromptRefs.forEach((ref) => bind('role_prompt', ref));
   input.qualityRubricRefs.forEach((ref) => bind('quality_rubric', ref));
+  input.knowledgeRefs.forEach((ref) => bind('knowledge', ref));
+  input.skillRefs.forEach((ref) => bind('skill', ref));
+  input.policyRefs.forEach((ref) => bind('policy', ref));
   input.stageGoalRefs.forEach((ref) => bind('stage_goal', ref));
   input.sourceRefs.forEach((ref) => bind('source', ref));
   input.lineageRefs.forEach((ref) => bind('lineage', ref));

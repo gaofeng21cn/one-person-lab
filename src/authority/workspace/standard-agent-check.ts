@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { inspectStandardAgentFrameworkImports } from '../../kernel/standard-agent-framework-imports.ts';
@@ -9,6 +8,7 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildGeneratedAgentInterfaces } from '../packages/index.ts';
 import { buildAgentProfileConformance } from '../packages/index.ts';
 import { validateStandardDomainAgentScaffold } from '../packages/index.ts';
+import { listOplFrameworkRoots } from '../contracts/index.ts';
 
 function readJson(filePath: string) {
   if (!fs.existsSync(filePath)) return null;
@@ -36,24 +36,35 @@ function frameworkCompatibility(repoDir: string) {
   if (!dependencyRef && !pythonDependencyRef && requiredExports.length === 0 && !requiresPythonFramework) {
     return { status: 'not_applicable', dependency_ref: null, required_exports: [], missing_exports: [] };
   }
-  const frameworkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-  const frameworkPackage = readJson(path.join(frameworkRoot, 'package.json'));
+  const frameworkRoots = listOplFrameworkRoots();
+  const frameworkLink = path.join(repoDir, 'node_modules', 'opl-framework');
+  let linkedFrameworkRoot: string | null = null;
+  try {
+    linkedFrameworkRoot = fs.realpathSync.native(frameworkLink);
+  } catch {
+    linkedFrameworkRoot = null;
+  }
+  const exportRoot = linkedFrameworkRoot && frameworkRoots.includes(linkedFrameworkRoot)
+    ? linkedFrameworkRoot
+    : frameworkRoots[0];
+  const frameworkPackage = exportRoot ? readJson(path.join(exportRoot, 'package.json')) : null;
   const availableExports = isRecord(frameworkPackage?.exports) ? Object.keys(frameworkPackage.exports) : [];
   const missingExports = requiredExports.filter((entry) => !availableExports.includes(entry));
-  const frameworkLink = path.join(repoDir, 'node_modules', 'opl-framework');
-  let managedLink = false;
-  try {
-    managedLink = fs.lstatSync(frameworkLink).isSymbolicLink()
-      && fs.realpathSync(frameworkLink) === fs.realpathSync(frameworkRoot);
-  } catch {
-    managedLink = false;
-  }
+  const managedLink = Boolean(linkedFrameworkRoot && frameworkRoots.includes(linkedFrameworkRoot));
   const pythonFrameworkLink = path.join(repoDir, 'src', 'opl_framework');
-  const pythonFrameworkTarget = path.join(frameworkRoot, 'python', 'opl_framework');
   let managedPythonLink = false;
   try {
-    managedPythonLink = fs.lstatSync(pythonFrameworkLink).isSymbolicLink()
-      && fs.realpathSync(pythonFrameworkLink) === fs.realpathSync(pythonFrameworkTarget);
+    const linkTarget = fs.realpathSync.native(pythonFrameworkLink);
+    const linkStat = fs.lstatSync(pythonFrameworkLink);
+    const targetStat = fs.statSync(linkTarget);
+    managedPythonLink = linkStat.isSymbolicLink()
+      && targetStat.isDirectory()
+      && fs.existsSync(path.join(linkTarget, '__init__.py'))
+      && frameworkRoots.some((root) => {
+        const target = path.join(root, 'python', 'opl_framework');
+        return fs.existsSync(path.join(target, '__init__.py'))
+          && fs.realpathSync.native(target) === linkTarget;
+      });
   } catch {
     managedPythonLink = false;
   }
@@ -138,7 +149,13 @@ export function buildStandardAgentCheck(
     compatibility = blocked(error);
   }
   const checks = {
-    scaffold: { status: scaffold.status, blockers: scaffold.blockers ?? [] },
+    scaffold: {
+      status: scaffold.status,
+      blockers: scaffold.blockers ?? [],
+      migration_advisory_findings: Array.isArray(scaffold.migration_advisory_findings)
+        ? scaffold.migration_advisory_findings
+        : [],
+    },
     generated_interfaces: {
       status: generated.status,
       blockers: Array.isArray(generated.blocker_reasons) ? generated.blocker_reasons : [],

@@ -222,6 +222,9 @@ export function validateStageQualityAttemptContextManifest(input: {
   stageGoalRefs?: string[];
   sourceRefs?: string[];
   lineageRefs?: string[];
+  knowledgeRefs?: string[];
+  skillRefs?: string[];
+  policyRefs?: string[];
   priorFindingRefs?: string[];
   repairMapRefs?: string[];
   rubricRefs: string[];
@@ -269,6 +272,9 @@ export function validateStageQualityAttemptContextManifest(input: {
   for (const [field, expectedRefs] of Object.entries({
     stage_goal_refs: input.stageGoalRefs ?? [],
     source_refs: input.sourceRefs ?? [],
+    knowledge_refs: input.knowledgeRefs ?? [],
+    skill_refs: input.skillRefs ?? [],
+    policy_refs: input.policyRefs ?? [],
     lineage_refs: input.lineageRefs ?? [],
     prior_finding_refs: input.priorFindingRefs ?? [],
     repair_map_refs: input.repairMapRefs ?? [],

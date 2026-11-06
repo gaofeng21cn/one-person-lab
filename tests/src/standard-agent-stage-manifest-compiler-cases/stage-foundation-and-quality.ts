@@ -440,6 +440,9 @@ Re-review.
     re_reviewer: 'agent/prompts/intake.md#re-reviewer',
   });
   assert.deepEqual(binding?.quality_rubric_refs, ['agent/quality_gates/quality.md']);
+  assert.deepEqual(binding?.knowledge_refs, ['agent/knowledge/domain.md']);
+  assert.deepEqual(binding?.skill_refs, []);
+  assert.deepEqual(binding?.policy_refs, []);
   assert.deepEqual(binding?.stage_goal_refs, ['agent/stages/manifest.json#/stages/0/goal']);
   assert.deepEqual(binding?.source_refs, ['agent/stages/intake.md']);
   assert.deepEqual(binding?.lineage_refs, ['agent/stages/manifest.json#/stages/0']);

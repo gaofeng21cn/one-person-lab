@@ -214,6 +214,28 @@ export function standardCapabilityMap(domainId: string, domainLabel: string) {
         authority_boundary: capabilityAuthorityBoundary(),
       },
       {
+        capability_id: `${domainId}.domain_boundary.policy_pack`,
+        surface_role: 'policy_pack',
+        capability_kind: 'reference_pack',
+        stage_ids: [STARTER_STAGE_ID],
+        canonical_owner: domainId,
+        physical_source_ref: repoRef('agent/policies/domain_policy.md', 'domain_policy_pack'),
+        runtime_projection_refs: [
+          contractRef(`${stageRef}/policy_refs/0`, 'stage_control_plane_policy_ref'),
+        ],
+        sync_policy: 'domain_agent_builtin_refs_only',
+        externalization_reason: 'domain_agent_builtin',
+        ...selfEvolutionRoutingFields({
+          targetPath: 'agent/policies/domain_policy.md',
+          improvementTokens: [
+            'policy_pack_quality',
+            'authority_boundary_traceability',
+          ],
+          owner: domainId,
+        }),
+        authority_boundary: capabilityAuthorityBoundary(),
+      },
+      {
         capability_id: `${domainId}.domain_acceptance.quality_gate`,
         surface_role: 'quality_gate',
         capability_kind: 'reference_pack',

@@ -7,6 +7,7 @@ function refIncludesRepoPack(refs: unknown, prefix: string) {
 
 export function validateStageRefs(repoDir: string, stageControlPlane: unknown, enforceToolAffordanceBoundary: boolean) {
   const stages = isPlainRecord(stageControlPlane) ? readRecordArray(stageControlPlane.stages) : [];
+  const hasStagePolicyRefs = stages.some((stage) => refValues(stage.policy_refs).length > 0);
   const stageStatuses = stages.map((stage) => {
     const stageId = readOptionalString(stage.stage_id) ?? 'unknown_stage';
     const checks = [
@@ -27,6 +28,12 @@ export function validateStageRefs(repoDir: string, stageControlPlane: unknown, e
         status: refIncludesRepoPack(stage.knowledge_refs, 'agent/knowledge/') ? 'ok' : 'missing_agent_knowledge_ref',
       },
       {
+        field: 'policy_refs',
+        status: !hasStagePolicyRefs && (!Array.isArray(stage.policy_refs) || stage.policy_refs.length === 0)
+          ? 'legacy_missing_optional'
+          : refIncludesRepoPack(stage.policy_refs, 'agent/policies/') ? 'ok' : 'missing_agent_policy_ref',
+      },
+      {
         field: 'evaluation',
         status: refIncludesRepoPack(stage.evaluation, 'agent/quality_gates/') ? 'ok' : 'missing_agent_quality_gate_ref',
       },
@@ -36,6 +43,7 @@ export function validateStageRefs(repoDir: string, stageControlPlane: unknown, e
       ...refValues(stage.skills),
       ...refValues(stage.tool_refs),
       ...refValues(stage.knowledge_refs),
+      ...refValues(stage.policy_refs),
       ...refValues(stage.evaluation),
       ...refValues(stage.source_refs),
     ].filter((value) => value.startsWith('agent/'));
@@ -47,8 +55,13 @@ export function validateStageRefs(repoDir: string, stageControlPlane: unknown, e
     const toolCheckFindings = checkFindings.filter((item) =>
       item.startsWith(`stage_missing_tool_refs:${stageId}:`)
     );
+    const policyCheckFindings = checkFindings.filter((item) =>
+      item.startsWith(`stage_missing_policy_refs:${stageId}:`)
+      && item.endsWith(':legacy_missing_optional')
+    );
     const nonToolCheckFindings = checkFindings.filter((item) =>
       !item.startsWith(`stage_missing_tool_refs:${stageId}:`)
+      && !policyCheckFindings.includes(item)
     );
     const fileFindings = fileStatuses
       .filter((item) => item.status !== 'ok')
@@ -64,6 +77,7 @@ export function validateStageRefs(repoDir: string, stageControlPlane: unknown, e
         ...fileFindings,
       ],
       advisory_findings: enforceToolAffordanceBoundary ? [] : toolCheckFindings,
+      migration_advisory_findings: policyCheckFindings,
     };
   });
   return {
@@ -74,5 +88,6 @@ export function validateStageRefs(repoDir: string, stageControlPlane: unknown, e
       ...stageStatuses.flatMap((stage) => stage.blockers),
     ].filter((entry): entry is string => Boolean(entry)),
     advisory_findings: stageStatuses.flatMap((stage) => stage.advisory_findings),
+    migration_advisory_findings: stageStatuses.flatMap((stage) => stage.migration_advisory_findings),
   };
 }

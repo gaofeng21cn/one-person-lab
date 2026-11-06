@@ -1,5 +1,5 @@
 import type { OplDeveloperSupervisorConfigFile } from '../../kernel/system-preferences.ts';
-import type { buildOplFrameworkLocator } from './opl-framework-locator.ts';
+import type { buildOplFrameworkLocator } from '../../authority/contracts/index.ts';
 import type { DeveloperModeGithubIdentityProjection } from './developer-mode-source-policy.ts';
 
 export type DeveloperModeStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'inactive' | 'pending';

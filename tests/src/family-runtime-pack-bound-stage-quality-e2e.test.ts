@@ -544,6 +544,9 @@ Close findings using the latest package.
       re_reviewer: 'agent/prompts/draft.md#re-reviewer',
     });
     assert.deepEqual(stageRunInput.quality_rubric_refs, ['agent/quality_gates/quality.md']);
+    assert.deepEqual(stageRunInput.knowledge_refs, ['agent/knowledge/domain.md']);
+    assert.deepEqual(stageRunInput.skill_refs, []);
+    assert.deepEqual(stageRunInput.policy_refs, []);
     assert.equal(stageRunInput.stage_attempt_executor_policy.review_lane_binding, 'medical');
     assert.equal(replayLaunch.stage_run_input.stage_run_id, stageRunInput.stage_run_id);
     assert.equal(replayLaunch.durable_launch.start_status, 'existing');

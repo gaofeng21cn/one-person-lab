@@ -256,6 +256,7 @@ function buildScaffoldConsumptionRefs(input: {
     skill_ref_resolved_stage_count: countStageChecks(stageRefValidation, 'skills'),
     tool_ref_resolved_stage_count: countStageChecks(stageRefValidation, 'tool_refs'),
     knowledge_ref_resolved_stage_count: countStageChecks(stageRefValidation, 'knowledge_refs'),
+    policy_ref_resolved_stage_count: countStageChecks(stageRefValidation, 'policy_refs'),
     quality_gate_ref_resolved_stage_count: countStageChecks(stageRefValidation, 'evaluation'),
     selected_executor_binding_observed_count: selectedExecutorBindingObservedCount,
     default_codex_executor_binding_count: defaultCodexExecutorBindingCount,
@@ -268,6 +269,7 @@ function buildScaffoldConsumptionRefs(input: {
       ? readStringArray(validation.missing_forbidden_role_guards).length === 0
       : false,
     stage_pack_v2_status: readOptionalString(stagePackV2Validation.status),
+    migration_advisory_findings: readStringArray(validation?.migration_advisory_findings),
     app_operator_consumable: true,
     app_operator_projection_ref: '/app_operator_drilldown/standard_agent_template_consumption_refs',
     claim_policy:

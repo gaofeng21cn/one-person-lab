@@ -49,6 +49,9 @@ export type StageRunImmutableSpec = {
   content_bindings: StageRunImmutableContentBinding[];
   role_prompt_refs: StandardAgentStageQualityRuntimeBinding['role_prompt_refs'];
   quality_rubric_refs: string[];
+  knowledge_refs: string[];
+  skill_refs: string[];
+  policy_refs: string[];
   stage_goal_refs: string[];
   lineage_refs: string[];
   package_closure: Record<string, unknown> | null;
@@ -437,6 +440,9 @@ export function buildStageRunImmutableSpec(input: {
   const checkpointRefs = stringList(input.checkpointRefs);
   const sourceRefs = stringList(input.binding.source_refs);
   const qualityRubricRefs = stringList(input.binding.quality_rubric_refs);
+  const knowledgeRefs = stringList(input.binding.knowledge_refs);
+  const skillRefs = stringList(input.binding.skill_refs);
+  const policyRefs = stringList(input.binding.policy_refs);
   const stageGoalRefs = stringList(input.binding.stage_goal_refs);
   const lineageRefs = stringList([
     input.binding.policy_ref,
@@ -472,6 +478,9 @@ export function buildStageRunImmutableSpec(input: {
     stagePromptRef: text(input.binding.stage_prompt_ref, 'stage_prompt_ref'),
     rolePromptRefs: Object.values(input.binding.role_prompt_refs),
     qualityRubricRefs,
+    knowledgeRefs,
+    skillRefs,
+    policyRefs,
     stageGoalRefs,
     sourceRefs,
     lineageRefs,
@@ -505,6 +514,9 @@ export function buildStageRunImmutableSpec(input: {
     content_bindings: contentBindings,
     role_prompt_refs: input.binding.role_prompt_refs,
     quality_rubric_refs: qualityRubricRefs,
+    knowledge_refs: knowledgeRefs,
+    skill_refs: skillRefs,
+    policy_refs: policyRefs,
     stage_goal_refs: stageGoalRefs,
     lineage_refs: lineageRefs,
     package_closure: immutablePackageClosureFromWorkspaceLocator(input.workspaceLocator),
@@ -570,6 +582,9 @@ export function validateStageRunImmutableSpecEnvelope(input: {
   artifactIdentityReceiptRefs?: string[];
   rolePromptRefs: StandardAgentStageQualityRuntimeBinding['role_prompt_refs'];
   qualityRubricRefs: string[];
+  knowledgeRefs?: string[];
+  skillRefs?: string[];
+  policyRefs?: string[];
   stageGoalRefs?: string[];
   lineageRefs?: string[];
   executorKind: string;
@@ -615,6 +630,9 @@ export function validateStageRunImmutableSpecEnvelope(input: {
     content_bindings: input.spec.content_bindings,
     role_prompt_refs: input.rolePromptRefs,
     quality_rubric_refs: stringList(input.qualityRubricRefs),
+    knowledge_refs: stringList(input.knowledgeRefs),
+    skill_refs: stringList(input.skillRefs),
+    policy_refs: stringList(input.policyRefs),
     stage_goal_refs: stringList(input.stageGoalRefs),
     lineage_refs: stringList(input.lineageRefs),
     package_closure: immutablePackageClosureFromWorkspaceLocator(input.workspaceLocator),
@@ -659,6 +677,9 @@ export function revalidateStageRunImmutableSpecContent(input: {
     ...input.spec.checkpoint_refs.map((ref) => ['checkpoint', ref]),
     ...Object.values(input.spec.role_prompt_refs).map((ref) => ['role_prompt', ref]),
     ...input.spec.quality_rubric_refs.map((ref) => ['quality_rubric', ref]),
+    ...input.spec.knowledge_refs.map((ref) => ['knowledge', ref]),
+    ...input.spec.skill_refs.map((ref) => ['skill', ref]),
+    ...input.spec.policy_refs.map((ref) => ['policy', ref]),
     ...input.spec.stage_goal_refs.map((ref) => ['stage_goal', ref]),
     ...input.spec.source_refs.map((ref) => ['source', ref]),
     ...input.spec.lineage_refs.map((ref) => ['lineage', ref]),
@@ -697,6 +718,9 @@ export function revalidateStageRunImmutableSpecContent(input: {
     'stage_prompt',
     'role_prompt',
     'quality_rubric',
+    'knowledge',
+    'skill',
+    'policy',
     'stage_goal',
     'lineage',
   ]);

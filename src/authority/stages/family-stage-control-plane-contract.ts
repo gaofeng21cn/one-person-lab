@@ -122,6 +122,7 @@ export interface FamilyStageDescriptor {
   domain_stage_refs: string[];
   inputs: FamilyStageSurfaceRef[];
   knowledge_refs: FamilyStageSurfaceRef[];
+  policy_refs?: FamilyStageSurfaceRef[];
   skills: FamilyStageSurfaceRef[];
   prompt_refs: FamilyStageSurfaceRef[];
   tool_refs?: FamilyStageSurfaceRef[];
@@ -424,6 +425,9 @@ function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilySt
     domain_stage_refs: readStringList(value.domain_stage_refs),
     inputs: normalizeSurfaceRefs(value.inputs, `${field}.inputs`),
     knowledge_refs: normalizeSurfaceRefs(value.knowledge_refs, `${field}.knowledge_refs`),
+    ...(value.policy_refs === undefined
+      ? {}
+      : { policy_refs: normalizeSurfaceRefs(value.policy_refs, `${field}.policy_refs`) }),
     skills: normalizeSurfaceRefs(value.skills, `${field}.skills`),
     prompt_refs: normalizeSurfaceRefs(value.prompt_refs, `${field}.prompt_refs`),
     tool_refs: normalizeSurfaceRefs(value.tool_refs, `${field}.tool_refs`),

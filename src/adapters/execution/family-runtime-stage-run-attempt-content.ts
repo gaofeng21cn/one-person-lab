@@ -199,6 +199,9 @@ export function resolveStageRunAttemptExecutorContent(
     || canonicalJsonText(spec.stage_attempt_executor_policy ?? null)
       !== canonicalJsonText(input.stage_attempt_executor_policy ?? null)
     || canonicalJsonText(spec.quality_rubric_refs) !== canonicalJsonText(input.quality_rubric_refs ?? [])
+    || canonicalJsonText(spec.knowledge_refs) !== canonicalJsonText(input.knowledge_refs ?? [])
+    || canonicalJsonText(spec.skill_refs) !== canonicalJsonText(input.skill_refs ?? [])
+    || canonicalJsonText(spec.policy_refs) !== canonicalJsonText(input.policy_refs ?? [])
     || spec.stage_packet_ref !== input.stage_packet_ref
     || canonicalJsonText(spec.checkpoint_refs) !== canonicalJsonText(input.checkpoint_refs ?? [])
     || canonicalJsonText(spec.input_artifacts.map((artifact) => ({
@@ -285,6 +288,9 @@ export function resolveStageRunAttemptExecutorContent(
   const managedContent = [
     { purpose: 'stage_manifest', ref: spec.stage_manifest.ref },
     { purpose: 'quality_policy', ref: spec.quality_policy.ref },
+    ...spec.knowledge_refs.map((ref) => ({ purpose: 'knowledge', ref })),
+    ...spec.skill_refs.map((ref) => ({ purpose: 'skill', ref })),
+    ...spec.policy_refs.map((ref) => ({ purpose: 'policy', ref })),
     ...spec.quality_rubric_refs.map((ref) => ({ purpose: 'quality_rubric', ref })),
   ].map((entry) => {
     const file = readStandardAgentManagedTextFile(domainPackRoot, entry.ref);

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { inspectStandardAgentFrameworkImports } from '../../kernel/standard-agent-framework-imports.ts';
-import { buildOplFrameworkLocator } from './opl-framework-locator.ts';
+import { buildOplFrameworkLocator } from '../../authority/contracts/index.ts';
 
 const FRAMEWORK_PACKAGE_NAME = 'opl-framework';
 const PYTHON_IMPORT_NAME = 'opl_framework';

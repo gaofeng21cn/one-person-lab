@@ -41,6 +41,9 @@ export function createStageAttemptTable(db: DatabaseSync) {
       input_artifact_refs_json TEXT NOT NULL DEFAULT '[]',
       reviewed_artifact_hashes_json TEXT NOT NULL DEFAULT '[]',
       quality_source_refs_json TEXT NOT NULL DEFAULT '[]',
+      quality_knowledge_refs_json TEXT NOT NULL DEFAULT '[]',
+      quality_skill_refs_json TEXT NOT NULL DEFAULT '[]',
+      quality_policy_refs_json TEXT NOT NULL DEFAULT '[]',
       quality_stage_goal_refs_json TEXT NOT NULL DEFAULT '[]',
       quality_lineage_refs_json TEXT NOT NULL DEFAULT '[]',
       quality_rubric_refs_json TEXT NOT NULL DEFAULT '[]',
@@ -150,6 +153,9 @@ export function createStageAttemptTable(db: DatabaseSync) {
     addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_stage_goal_refs_json', "quality_stage_goal_refs_json TEXT NOT NULL DEFAULT '[]'");
     addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_lineage_refs_json', "quality_lineage_refs_json TEXT NOT NULL DEFAULT '[]'");
     addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_rubric_refs_json', "quality_rubric_refs_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_knowledge_refs_json', "quality_knowledge_refs_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_skill_refs_json', "quality_skill_refs_json TEXT NOT NULL DEFAULT '[]'");
+    addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_policy_refs_json', "quality_policy_refs_json TEXT NOT NULL DEFAULT '[]'");
     addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'prior_finding_refs_json', "prior_finding_refs_json TEXT NOT NULL DEFAULT '[]'");
     addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'repair_map_refs_json', "repair_map_refs_json TEXT NOT NULL DEFAULT '[]'");
     addSqliteColumnIfMissing(db, 'stage_attempts', columns, 'quality_context_json', "quality_context_json TEXT NOT NULL DEFAULT '{}'");

@@ -244,6 +244,7 @@
         "professional_skill",
         "tool_connector",
         "reference_pack",
+        "policy_pack",
         "contract_module"
       ]
     },
@@ -254,6 +255,7 @@
         "professional_skill",
         "tool_connector",
         "knowledge_pack",
+        "policy_pack",
         "quality_gate",
         "eval_suite"
       ]

@@ -48,6 +48,7 @@ test('framework locate returns the current OPL Framework dependency environment'
         'OPL_CLI_BIN',
         'OPL_BIN',
         'current_cli_entry',
+        'managed_install',
         'PATH:opl',
         'sibling_checkout',
       ],

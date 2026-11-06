@@ -45,6 +45,9 @@ export type StageAttemptRow = {
   input_artifact_refs_json?: string | null;
   reviewed_artifact_hashes_json?: string | null;
   quality_source_refs_json?: string | null;
+  quality_knowledge_refs_json?: string | null;
+  quality_skill_refs_json?: string | null;
+  quality_policy_refs_json?: string | null;
   quality_stage_goal_refs_json?: string | null;
   quality_lineage_refs_json?: string | null;
   quality_rubric_refs_json?: string | null;
