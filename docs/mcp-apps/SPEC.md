@@ -24,6 +24,10 @@ it does not own domain truth or execute arbitrary Package HTML.
 - Generic read-input forms for owner views that require a work-item identity or an
   exact artifact reference.
 
+The catalog and selected content scroll independently inside the host viewport,
+so selecting a Package near the end of a long catalog keeps its content visible.
+Narrow views stack a bounded catalog above the content pane.
+
 ## Tools
 
 - `open_opl_apps`: discover framework and installed Package views and return the
