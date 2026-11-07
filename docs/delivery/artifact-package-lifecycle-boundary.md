@@ -33,10 +33,21 @@ Framework可以验证结构、投影和恢复；只有domain owner能promotion�
 
 Package owner持有descriptor、runtime bytes、version和publication。native carrier持有安装/启停/currentness。Framework只下载/验证/hand off owner bytes或调用carrier，并聚合installed/callable。
 
-私有 owner 仓库的发布检出使用受保护发布环境中的 `OWNER_SOURCE_READ_TOKEN`；
-其权限限定为所选源码仓库的 `Contents: Read`。公开仓库可沿用工作流自己的
-`GITHUB_TOKEN`。凭据只用于源码检出，且不持久化到 Git；OCI 写入仍使用工作流
-自身的 Package 权限。源码仓库可见性由 owner 决定。
+私有 owner 仓库的发布检出优先使用单仓只读 Deploy Key。公钥登记在对应源码仓库，
+私钥保存于受保护发布环境的 `OWNER_SOURCE_READ_KEY_<OWNER>_<REPO>` secret；
+`<OWNER>/<REPO>` 取自 canonical Package manifest 的 `source_repo`，转为大写并把
+`/`、`.`、`-` 替换为 `_`。例如 `example/private-agent` 对应
+`OWNER_SOURCE_READ_KEY_EXAMPLE_PRIVATE_AGENT`，无需新增 Package 名单。
+已有 `OWNER_SOURCE_READ_TOKEN` 仍可用于权限限定为所选源码仓库 `Contents: Read`
+的检出；公开仓库可沿用工作流自己的 `GITHUB_TOKEN`。凭据只用于源码检出，且不
+持久化到 Git；OCI 写入仍使用工作流自身的 Package 权限。
+
+当前 OCI 通道是公开分发，包含完整已提交源码归档，不能把“源码仓库仍私有”当作
+归档仍私有。工作流在检出私有源码前匿名核对仓库可见性；公开源码可直接继续，
+私有源码须先取得 owner 对该版本完整归档公开的明确授权，再由受保护发布环境的
+`PUBLIC_SOURCE_ARCHIVE_COMMIT_<OWNER>_<REPO>` variable 绑定精确源码 commit。
+该变量采用上述相同的仓库名称归一方式；读取源码的凭据不构成公开授权。网络错误、
+未知可见性、缺失或不匹配的授权均在归档及 OCI 写入前停止。源码仓库自身的可见性不变。
 
 原生 `plugin list` 读取统一使用 10 秒超时；超时终止子进程，严格发现入口返回失败，不接受未完成命令的部分输出。安装、更新等写操作保留独立的 120 秒上限，超时后的实际结果仍需重新读取确认。
 
