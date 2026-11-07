@@ -153,6 +153,13 @@ test('OPL MCP App exposes installed Package views and gates confirmed actions', 
     const fixtureView = catalog.views.find((view: any) => view.package_id === 'mcp-app-fixture');
     assert.equal(fixtureView.view_id, 'review');
     assert.equal(fixtureView.commands[0].confirmation_required, true);
+    const focused = structured(await client.callTool({
+      name: 'open_opl_apps',
+      arguments: { package_id: 'mcp-app-fixture', view_id: 'review', input: { item_id: 'review-1' } },
+    }));
+    assert.equal((focused.opl_app_contribution as any).response.result.data.items[0].id, 'review-1');
+    assert.equal((focused.opl_mcp_app_catalog as any).focus.view_id, 'review');
+    assert.equal((await client.callTool({ name: 'open_opl_apps', arguments: { view_id: 'missing' } })).isError, true);
     assert.deepEqual(
       catalog.views.filter((view: any) => view.package_id === 'opl-runtime').map((view: any) => view.view_id),
       ['opl.runtime.work-items', 'opl.runtime.item'],

@@ -3,6 +3,10 @@ run-name: Package ${{ inputs.package_id }} ${{ inputs.expected_package_version }
 
 on:
   workflow_call:
+    secrets:
+      OWNER_SOURCE_READ_TOKEN:
+        description: Optional token with Contents Read access to the selected private Package owner repository
+        required: false
     inputs:
       package_id:
         description: Canonical Package id
@@ -114,6 +118,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ steps.package-source.outputs.owner_repo }}
+          token: ${{ secrets.OWNER_SOURCE_READ_TOKEN || github.token }}
           ref: refs/tags/v${{ inputs.expected_package_version }}
           path: .owner-source
           fetch-depth: 1

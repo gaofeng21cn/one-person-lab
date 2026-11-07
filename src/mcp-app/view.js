@@ -1,24 +1,32 @@
 import { App } from '@modelcontextprotocol/ext-apps';
 
-const OPEN_TOOL = 'open_opl_apps';
 const READ_TOOL = 'opl_app_contribution_read';
 const EXECUTE_TOOL = 'opl_app_contribution_execute';
 const $ = (id) => document.getElementById(id);
 const app = new App({ name: 'opl-apps', version: '1.0.0' }, { tools: { listChanged: false } }, { strict: true });
 
+function stored(name, fallback) {
+  try { return JSON.parse(sessionStorage.getItem(name) ?? 'null') ?? fallback; } catch { return fallback; }
+}
+
+function remember(name, value) {
+  try { sessionStorage.setItem(name, JSON.stringify(value)); } catch { /* Opaque sandboxes have no storage. */ }
+}
+
 const state = {
   catalog: null,
-  selectedKey: sessionStorage.getItem('opl-apps-selected') || '',
+  selectedKey: stored('opl-apps-selected', ''),
   selected: null,
   result: null,
-  selectedWorkItemIdentity: JSON.parse(sessionStorage.getItem('opl-apps-selected-work-item') || 'null'),
-  selectedWorkspace: JSON.parse(sessionStorage.getItem('opl-apps-selected-workspace') || 'null'),
+  selectedWorkItemIdentity: stored('opl-apps-selected-work-item', null),
+  selectedWorkspace: stored('opl-apps-selected-workspace', null),
   query: '',
   itemId: '',
-  busy: false,
+  executing: false,
   focusPackageId: '',
   focusInput: {},
 };
+let readGeneration = 0;
 
 function escape(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -54,22 +62,19 @@ function notice(text, error = false) {
   notice.timer = setTimeout(() => { $('notice').hidden = true; }, error ? 16000 : 5000);
 }
 
-async function run(action) {
-  if (state.busy) return;
-  state.busy = true;
+async function run(action, onError) {
   try {
     return await action();
   } catch (error) {
+    onError?.(error);
     notice(error?.message || '操作未完成，请先核对当前状态', true);
-  } finally {
-    state.busy = false;
   }
 }
 
 async function callTool(name, args) {
   const result = await app.callServerTool({ name, arguments: args });
   if (result.isError) {
-    throw new Error(result.content?.find((part) => part.type === 'text')?.text || '操作未完成');
+    throw new Error(result.structuredContent?.error?.message || result.content?.find((part) => part.type === 'text')?.text || '操作未完成');
   }
   return result.structuredContent || {};
 }
@@ -129,6 +134,7 @@ function collectionFrom(payload) {
 
 function currentViewInput(view) {
   const focused = state.focusPackageId === view.package_id ? state.focusInput : {};
+  if (focused.workspace_path || focused.work_item_identity) return { ...focused };
   const collection = collectionFrom(state.result);
   const items = collection.items;
   const selected = items.find((item, index) => itemIdentity(item, index) === state.itemId) || items[0];
@@ -138,10 +144,10 @@ function currentViewInput(view) {
     ? { workspace_path: selected.workspace_path, work_item_root: selected.work_item_root }
     : state.selectedWorkspace;
   return {
-    ...focused,
-    ...(selectedIdentity ? { work_item_identity: selectedIdentity } : {}),
+    ...(view.scope === 'work_item' && selectedIdentity ? { work_item_identity: selectedIdentity } : {}),
     ...(selectedWorkspace?.workspace_path ? { workspace_path: selectedWorkspace.workspace_path } : {}),
     ...(selectedWorkspace?.work_item_root ? { work_item_root: selectedWorkspace.work_item_root } : {}),
+    ...focused,
   };
 }
 
@@ -152,13 +158,13 @@ function rememberWorkspaceSelection(item) {
     workspace_path: item.workspace_path,
     work_item_root: item.work_item_root || null,
   };
-  sessionStorage.setItem('opl-apps-selected-work-item', JSON.stringify(state.selectedWorkItemIdentity));
-  sessionStorage.setItem('opl-apps-selected-workspace', JSON.stringify(state.selectedWorkspace));
+  remember('opl-apps-selected-work-item', state.selectedWorkItemIdentity);
+  remember('opl-apps-selected-workspace', state.selectedWorkspace);
 }
 
 function renderReadInputForm(collection) {
   const schema = record(collection.inputSchema);
-  const fields = record(schema?.properties);
+  const fields = record(schema?.properties) || {};
   if (!Object.keys(fields).length) return '';
   const required = new Set(Array.isArray(schema?.required) ? schema.required : []);
   const controls = Object.entries(fields).map(([name, raw]) => {
@@ -265,7 +271,7 @@ function renderCatalog() {
   for (const button of $('views').querySelectorAll('[data-key]')) {
     button.addEventListener('click', () => {
       state.selectedKey = button.dataset.key;
-      sessionStorage.setItem('opl-apps-selected', state.selectedKey);
+      remember('opl-apps-selected', state.selectedKey);
       state.itemId = '';
       renderCatalog();
       void loadSelected();
@@ -276,13 +282,14 @@ function renderCatalog() {
 function renderHeader() {
   const view = state.selected;
   $('title').textContent = view ? localized(view.title_i18n, view.view_id) : 'OPL 能力';
-  $('subtitle').textContent = view ? `${view.package_name} · ${view.view_type}` : '';
-  $('eyebrow').textContent = view?.slot || 'OPL Package views';
+  $('subtitle').textContent = view?.package_name || '';
+  $('eyebrow').textContent = '协作审阅';
 }
 
 function renderMeta(value) {
-  const entries = Object.entries(record(value) || {})
-    .filter(([name]) => !['items', 'command_inputs', 'input_schema', 'input_defaults', 'pagination', 'collection_actions'].includes(name))
+  const entries = Object.entries({ ...(record(value) || {}), ...(record(value?.payload) || {}) })
+    .filter(([name, item]) => item !== null && typeof item !== 'object'
+      && !['id', 'schema', 'schema_version', 'surface_kind', 'package_id', 'agent_id', 'domain_id', 'project_id', 'work_item_id', 'item_id', 'workspace_path', 'work_item_root', 'access', 'authority', 'operation', 'read_ref'].includes(name))
     .slice(0, 24);
   if (!entries.length) return '';
   return `<dl class="meta-grid">${entries.map(([name, item]) => `
@@ -350,7 +357,10 @@ function renderActionButtons(view, collection, item = null) {
     }
   }
   for (const command of view.commands) {
-    if (!item || command.confirmation_required) commands.push({ command, input: {} });
+    if ((!item || command.confirmation_required)
+      && !commands.some((entry) => entry.command.action_ref === command.action_ref)) {
+      commands.push({ command, input: {} });
+    }
   }
   const unique = new Map(commands.map((entry) => [`${entry.command.command_id}:${JSON.stringify(entry.input)}`, entry]));
   return [...unique.values()].map(({ command, input }) => `
@@ -385,7 +395,7 @@ function renderCommandForm(view, collection, command, input) {
     return `<label>${escape(name)}<input ${common} type="${['number', 'integer'].includes(field.type) ? 'number' : 'text'}" value="${escape(value)}"></label>`;
   }).join('');
   return `
-    <form class="form-grid" data-command-form="${escape(command.command_id)}" data-action-ref="${escape(command.action_ref)}">
+    <form class="form-grid" data-command-form="${escape(command.command_id)}" data-action-ref="${escape(command.action_ref)}" data-base-input="${escape(JSON.stringify(values))}">
       ${controls}
       <div><button class="action" type="submit">执行 ${escape(localized(command.label_i18n, command.command_id))}</button></div>
     </form>
@@ -420,7 +430,7 @@ function bindForms(view) {
       event.preventDefault();
       const command = view.commands.find((entry) => entry.action_ref === form.dataset.actionRef);
       if (!command) return;
-      const input = {};
+      const input = JSON.parse(form.dataset.baseInput || '{}');
       for (const control of form.querySelectorAll('[data-field]')) {
         const name = control.dataset.field;
         if (control.type === 'checkbox') input[name] = control.checked;
@@ -438,20 +448,38 @@ function bindForms(view) {
 
 async function executeCommand(command, input) {
   const view = state.selected;
-  if (!view) return;
-  if (command.confirmation_required && !window.confirm(`确认执行“${localized(command.label_i18n, command.command_id)}”？`)) return;
-  await run(async () => {
-    $('status').textContent = '正在执行';
-    const payload = await callTool(EXECUTE_TOOL, {
-      package_id: view.package_id,
-      ref: command.action_ref,
-      input,
-      confirmed: command.confirmation_required,
+  if (!view || state.executing) return;
+  const targetInput = { ...currentViewInput(view), ...input };
+  state.executing = true;
+  try {
+    await run(async () => {
+      if (command.confirmation_required && !await confirmCommand(command, view, targetInput)) return;
+      $('status').textContent = '正在执行';
+      const payload = await callTool(EXECUTE_TOOL, {
+        package_id: view.package_id,
+        ref: command.action_ref,
+        input: targetInput,
+        confirmed: command.confirmation_required,
+      });
+      const envelope = extractEnvelope(payload);
+      if (envelope?.confirmation_required && !envelope?.response) throw new Error('该操作需要明确确认');
+      if (envelope?.response?.ok === false) throw new Error(envelope.response.error?.message || '操作未完成');
+      notice('操作已完成，正在刷新');
+      await loadSelected();
     });
-    const envelope = extractEnvelope(payload);
-    if (envelope?.confirmation_required && !envelope?.response) throw new Error('该操作需要明确确认');
-    notice('操作已完成，正在重新读取 owner 状态');
-    await loadSelected();
+  } finally {
+    state.executing = false;
+  }
+}
+
+function confirmCommand(command, view, input) {
+  const dialog = $('confirmation');
+  $('confirmation-title').textContent = `确认执行“${localized(command.label_i18n, command.command_id)}”`;
+  $('confirmation-target').textContent = JSON.stringify({ package: view.package_name, action: command.action_ref, input }, null, 2);
+  dialog.returnValue = '';
+  return new Promise((resolve) => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+    dialog.showModal();
   });
 }
 
@@ -488,7 +516,7 @@ function renderResult() {
     return;
   }
   if (!state.result) {
-    $('body').innerHTML = '<div class="loading">正在读取 owner 数据…</div>';
+    $('body').innerHTML = '<div class="loading">正在读取数据…</div>';
     return;
   }
   const collection = collectionFrom(state.result);
@@ -502,7 +530,7 @@ function renderResult() {
     $('body').innerHTML = `<div class="empty">${escape(localized(view.empty_state_i18n, '当前没有条目'))}</div>
       <div class="detail-actions">${renderActionButtons(view, collection)}</div>`;
   } else {
-    $('body').innerHTML = `<div class="card detail">${renderMeta(collection.root)}<pre class="json">${escape(JSON.stringify(collection.root, null, 2))}</pre></div>
+    $('body').innerHTML = `<div class="card detail">${renderMeta(collection.root)}<details><summary>完整记录</summary><pre class="json">${escape(JSON.stringify(collection.root, null, 2))}</pre></details></div>
       <div class="detail-actions">${renderActionButtons(view, collection)}</div>`;
   }
   for (const button of $('body').querySelectorAll('[data-item-id]')) {
@@ -512,6 +540,7 @@ function renderResult() {
       const selected = items.find((item, index) => itemIdentity(item, index) === state.itemId);
       if (selected) rememberWorkspaceSelection(selected);
       renderResult();
+      updateContext();
     });
   }
   bindActionButtons(view, collection);
@@ -520,6 +549,7 @@ function renderResult() {
 }
 
 async function loadSelected() {
+  const generation = ++readGeneration;
   const previousItems = collectionFrom(state.result).items;
   const previous = previousItems.find((item, index) => itemIdentity(item, index) === state.itemId)
     || previousItems[0];
@@ -540,55 +570,64 @@ async function loadSelected() {
   renderResult();
   await run(async () => {
     $('status').textContent = '正在读取';
-    state.result = await callTool(READ_TOOL, {
+    const result = await callTool(READ_TOOL, {
       package_id: view.package_id,
       ref: view.data_ref,
       input: currentViewInput(view),
     });
+    if (generation !== readGeneration) return;
+    state.result = result;
     $('status').textContent = '已连接';
     renderResult();
-    const collection = collectionFrom(state.result);
-    const selected = collection.items[0];
-    const context = selected
-      ? `正在查看 ${view.package_name} 的 ${localized(view.title_i18n, view.view_id)}：${itemTitle(selected, 0)}`
-      : `正在查看 ${view.package_name} 的 ${localized(view.title_i18n, view.view_id)}`;
-    app.updateModelContext({ content: [{ type: 'text', text: context }] }).catch(() => {});
-    document.body.setAttribute('data-llm', context);
+    updateContext();
+  }, (error) => {
+    if (generation !== readGeneration) return;
+    state.result = { result: { state: 'unavailable', reason: error.message } };
+    $('status').textContent = '读取失败';
+    renderResult();
+    updateContext();
   });
 }
 
-async function loadCatalog(focus = {}) {
-  await run(async () => {
-    $('status').textContent = '正在发现能力';
-    const focusInput = record(focus.input) || {};
-    const catalog = await callTool(OPEN_TOOL, {
-      package_id: focus.package_id,
-      view_id: focus.view_id,
-      input: focusInput,
-    });
-    state.catalog = catalog.opl_mcp_app_catalog || catalog;
-    state.focusPackageId = focus.package_id || '';
-    state.focusInput = focusInput;
-    if (focus.package_id && focus.view_id) state.selectedKey = `${focus.package_id}:${focus.view_id}`;
-    if (!state.catalog?.views?.length) {
-      $('status').textContent = '没有可用视图';
-      renderHeader();
-      renderCatalog();
-      state.selected = null;
-      state.result = null;
-      renderResult();
-      return;
-    }
-    await loadSelected();
-  });
+function updateContext() {
+  const view = state.selected;
+  if (!view) return;
+  const collection = collectionFrom(state.result);
+  const selected = collection.items.find((item, index) => itemIdentity(item, index) === state.itemId) || collection.items[0];
+  const context = `正在查看 ${view.package_name} 的 ${localized(view.title_i18n, view.view_id)}`;
+  app.updateModelContext({
+    content: [{ type: 'text', text: context }],
+    structuredContent: { package_id: view.package_id, view_id: view.view_id, selection: selected || collection.root },
+  }).catch(() => {});
+  document.body.setAttribute('data-llm', context);
 }
 
 app.ontoolresult = (params) => {
   const payload = record(params?.structuredContent);
+  if (params?.isError) {
+    ++readGeneration;
+    $('status').textContent = '读取失败';
+    $('body').textContent = payload?.error?.message || '当前视图读取失败，请重新选择目标';
+    return;
+  }
   const catalog = record(payload?.opl_mcp_app_catalog);
   if (catalog) {
+    ++readGeneration;
     state.catalog = catalog;
-    void loadSelected();
+    const focus = record(catalog.focus) || {};
+    state.focusPackageId = focus.package_id || '';
+    state.focusInput = record(focus.input) || {};
+    state.selected = catalog.views.find((view) => view.package_id === focus.package_id && view.view_id === focus.view_id)
+      || catalog.views[0] || null;
+    state.selectedKey = state.selected ? key(state.selected) : '';
+    state.itemId = '';
+    state.result = payload.opl_app_contribution ? payload : null;
+    renderHeader();
+    renderCatalog();
+    renderResult();
+    $('status').textContent = state.selected ? '已连接' : '没有可用视图';
+    if (state.result) updateContext();
+    else if (state.selected) void loadSelected();
   }
 };
 
@@ -606,5 +645,3 @@ await app.connect();
 const context = app.getHostContext?.() || {};
 if (context.theme === 'dark') document.documentElement.dataset.theme = 'dark';
 if (context.theme === 'light') document.documentElement.dataset.theme = 'light';
-const focus = context.toolInput?.arguments || {};
-await loadCatalog(focus);
