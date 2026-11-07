@@ -81,7 +81,8 @@ export function acceptDomainRead(readback, item, descriptor, previous) {
   return { revision: r.revision, snapshot };
 }
 
-export function renderProgress(item, ownerDetails = undefined) {
+/** @param {{ current_owner?: unknown, phase?: unknown, work?: { active?: unknown, queued?: unknown } }} [ownerDetails] */
+export function renderProgress(item, ownerDetails) {
   const stages = list(item.stage_map);
   const lifecycle = obj(item.lifecycle);
   const action = obj(item.action);
