@@ -145,6 +145,7 @@ export function listOplMcpAppViews(input: {
       descriptor.readiness.installed
       && installedDescriptorSupportsFrameworkCalls(descriptor)
       && descriptor.manifest.app_contributions
+      && descriptor.manifest.codex_surface.app_contribution_abi
     ))
     .flatMap(projectedViews)
     .sort((left, right) => (

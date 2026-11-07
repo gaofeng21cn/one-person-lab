@@ -185,6 +185,34 @@ test('generic broker reads a dynamically installed descriptor contribution witho
   }
 });
 
+test('generic broker preserves a matching owner rejection instead of reporting a ref mismatch', () => {
+  const fixture = writeContributionFixture();
+  try {
+    const command = path.join(fixture.root, 'bin', 'contribution');
+    fs.writeFileSync(command, fs.readFileSync(command, 'utf8').replace('ok: true,',
+      "ok: false, error: { code: 'plan_missing', message: 'Select an existing plan.' },"));
+    assert.throws(() => runAppContribution({
+      packageId: fixture.manifest.package_id,
+      ref: 'future.data.v1#current',
+      operation: 'read',
+      input: {},
+      confirmed: false,
+    }, {
+      descriptorDiscovery: {
+        discover: () => new Map([[fixture.manifest.package_id, fixture.descriptor]]),
+      },
+    }), (error: unknown) => {
+      assert.ok(error instanceof FrameworkContractError);
+      assert.equal(error.message, 'Select an existing plan.');
+      assert.equal(error.details?.failure_code, 'agent_package_app_contribution_owner_rejected');
+      assert.equal((error.details?.owner_error as any).code, 'plan_missing');
+      return true;
+    });
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
 test('generic broker executes a headless internal contribution without enabling Codex exposure', () => {
   const fixture = writeContributionFixture();
   const descriptor = {
