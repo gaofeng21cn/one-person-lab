@@ -289,6 +289,65 @@ test('single-Package payload materialization binds exact physical archive proven
   }
 });
 
+test('source publication requires public source or exact private-source approval before checkout', () => {
+  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
+  const stepScript = (name: string): string => workflow.split(`      - name: ${name}\n`)[1]!
+    .split('\n      - name: ')[0]!.split('        run: |\n')[1]!
+    .split('\n').map((line) => line.slice(10)).join('\n');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-visibility-'));
+  const sourceCommit = 'a'.repeat(40);
+  try {
+    const manifests = path.join(root, 'contracts/opl-framework/packages');
+    fs.mkdirSync(manifests, { recursive: true });
+    fs.writeFileSync(path.join(manifests, 'example-agent.json'), JSON.stringify({
+      source_repo: 'https://github.com/example/private-agent.git',
+    }));
+    const output = path.join(root, 'outputs');
+    const selector = spawnSync('bash', ['-c', stepScript('Resolve exact Package owner source')], {
+      cwd: root, encoding: 'utf8',
+      env: { ...process.env, PACKAGE_ID: 'example-agent', GITHUB_OUTPUT: output },
+    });
+    assert.equal(selector.status, 0, selector.stderr);
+    assert.match(fs.readFileSync(output, 'utf8'), /owner_source_key_secret=OWNER_SOURCE_READ_KEY_EXAMPLE_PRIVATE_AGENT\n/);
+    assert.match(fs.readFileSync(output, 'utf8'), /public_source_approval_var=PUBLIC_SOURCE_ARCHIVE_COMMIT_EXAMPLE_PRIVATE_AGENT\n/);
+    fs.writeFileSync(path.join(root, 'curl'), `#!/bin/sh
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = --output ]; then shift; printf '%s' "$TEST_RESPONSE" > "$1"; fi
+  shift
+done
+printf '%s' "$TEST_STATUS"
+exit "$TEST_EXIT"
+`, { mode: 0o755 });
+    const cases = [
+      { status: '200', approval: '', allowed: true },
+      { status: '200', approval: '', private: true, allowed: false },
+      { status: '200', approval: '', repo: 'example/another-agent', allowed: false },
+      { status: '404', approval: '', allowed: false },
+      { status: '404', approval: 'b'.repeat(40), allowed: false },
+      { status: '404', approval: sourceCommit, allowed: true },
+      { status: '403', approval: sourceCommit, allowed: false },
+      { status: '502', approval: sourceCommit, allowed: false },
+      { status: '200', approval: sourceCommit, exit: '28', allowed: false },
+    ];
+    for (const scenario of cases) {
+      const result = spawnSync('bash', ['-c', stepScript('Verify source archive publication visibility')], {
+        cwd: root, encoding: 'utf8', env: {
+          ...process.env, PATH: `${root}${path.delimiter}${process.env.PATH}`,
+          OWNER_REPO: 'example/private-agent', EXPECTED_OWNER_SOURCE_COMMIT: sourceCommit,
+          PUBLIC_SOURCE_ARCHIVE_COMMIT: scenario.approval,
+          TEST_STATUS: scenario.status, TEST_EXIT: scenario.exit ?? '0',
+          TEST_RESPONSE: JSON.stringify({ private: scenario.private ?? false, full_name: scenario.repo ?? 'example/private-agent' }),
+        },
+      });
+      assert.equal(result.status === 0, scenario.allowed, JSON.stringify(scenario));
+    }
+    assert.ok(workflow.indexOf('- name: Verify source archive publication visibility')
+      < workflow.indexOf('- name: Checkout exact Package owner source'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('single-Package publication is protected, selector-bound, and readback-only after unknown results', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
   const packageSpecs = getPublicationAdmittedOplPackageSpecs();
