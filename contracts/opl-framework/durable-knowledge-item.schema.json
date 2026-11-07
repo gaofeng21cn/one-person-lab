@@ -70,6 +70,17 @@
         }
       }
     },
+    "projection_source": {
+      "description": "Workspace-owner-authorized local Markdown source for an exact read-only projection. Never allowed in a distributable agent pack. Source changes require owner review and regeneration before new recall.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "ref", "sha256"],
+      "properties": {
+        "root": {"type": "string", "minLength": 1},
+        "ref": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+      }
+    },
     "applicability": {
       "type": "object",
       "additionalProperties": false,
@@ -184,5 +195,9 @@
         }
       }
     }
-  }
+  },
+  "allOf": [{
+    "if": {"properties": {"layer": {"const": "agent_pack"}}},
+    "then": {"not": {"required": ["projection_source"]}}
+  }]
 }

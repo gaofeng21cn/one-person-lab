@@ -28,6 +28,38 @@
     "knowledge"
   ],
   "commands": {
+    "knowledge_prepare": {
+      "command_id": "knowledge prepare",
+      "owner": "OPL Framework durable knowledge",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {"name": "repo", "flag": "--repo", "value_kind": "string", "required": true, "summary": "Agent package root."},
+        {"name": "domain", "flag": "--domain", "value_kind": "string", "required": true, "summary": "Domain identity."},
+        {"name": "stage", "flag": "--stage", "value_kind": "string", "required": true, "summary": "Stage identity."},
+        {"name": "output", "flag": "--output", "value_kind": "string", "required": true, "summary": "New private binding file; existing files are never overwritten."},
+        {"name": "task-intent", "flag": "--task-intent", "value_kind": "string", "required": false, "summary": "Exact action identity."},
+        {"name": "workspace", "flag": "--workspace", "value_kind": "string", "required": false, "summary": "Authorized workspace root."},
+        {"name": "project", "flag": "--project", "value_kind": "string", "required": false, "summary": "Authorized project root within workspace."}
+      ],
+      "output_schema": {
+        "type": "object", "additionalProperties": false,
+        "required": ["version", "durable_knowledge_binding", "binding_path"],
+        "properties": {"version": {"const": "g2"}, "durable_knowledge_binding": {"type": "object", "required": ["receipt", "snapshot_ref"]}, "binding_path": {"type": "string"}}
+      },
+      "authority_boundary": {"can_write_domain_truth": false, "can_create_owner_receipt": false, "can_create_typed_blocker": false, "can_claim_domain_ready": false, "can_claim_production_ready": false, "owner": "OPL Framework durable knowledge", "surface": "private_exact_context_binding"}
+    },
+    "knowledge_read_context": {
+      "command_id": "knowledge read-context",
+      "owner": "OPL Framework durable knowledge",
+      "parser_adapter": "node_util_parse_args",
+      "options": [{"name": "binding", "flag": "--binding", "value_kind": "string", "required": true, "summary": "Exact private binding file produced by knowledge prepare."}],
+      "output_schema": {
+        "type": "object", "additionalProperties": false,
+        "required": ["version", "durable_knowledge_context"],
+        "properties": {"version": {"const": "g2"}, "durable_knowledge_context": {"type": "object", "required": ["receipt", "bodies"]}}
+      },
+      "authority_boundary": {"can_write_domain_truth": false, "can_create_owner_receipt": false, "can_create_typed_blocker": false, "can_claim_domain_ready": false, "can_claim_production_ready": false, "owner": "OPL Framework durable knowledge", "surface": "explicit_private_context_read"}
+    },
     "knowledge_list": {
       "command_id": "knowledge list",
       "owner": "OPL Framework durable knowledge",

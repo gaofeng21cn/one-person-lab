@@ -136,7 +136,10 @@
     "task_matching": "exact_task_intent_when_declared; StageRun uses action_id",
     "execution_binding": "one_private_exact_snapshot_per_stage_run_shared_by_all_quality_roles",
     "public_projection": "receipt_and_snapshot_ref_only_no_private_body",
-    "static_knowledge_refs": "authoring_references_only_never_bypass_catalog_lifecycle"
+    "static_knowledge_refs": "authoring_references_only_never_bypass_catalog_lifecycle",
+    "direct_skill_binding": "knowledge_prepare_then_explicit_private_read_context_uses_stage_snapshot_store",
+    "workspace_source_projection": "optional_explicit_owner_source_root_and_contained_ref; exact_source_and_projection_hash_required_before_new_recall; forbidden_in_agent_pack",
+    "frozen_source_policy": "source_changes_block_new_recall_until_owner_review_and_projection_refresh; existing_stage_snapshot_remains_immutable"
   },
   "writeback_policy": {
     "agent_may_propose": true,
@@ -153,7 +156,10 @@
     ],
     "automatic_promotion_from_state": false,
     "automatic_promotion_from_single_task": false,
-    "accepted_writeback_requires_receipt": true
+    "accepted_writeback_requires_receipt": true,
+    "body_writer": "domain_or_workspace_owner; OPL validates_and_transports_only",
+    "accepted_writeback_identity": "proposal_digest_original_body_digest_replacement_body_digest_and_actual_owner_review_ref",
+    "concurrent_source_change": "reject_overwrite_and_reconcile_before_retry"
   },
   "lifecycle_states": [
     "draft",
