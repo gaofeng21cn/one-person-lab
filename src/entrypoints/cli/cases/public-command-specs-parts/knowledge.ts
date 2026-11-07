@@ -1,9 +1,14 @@
+import fs from 'node:fs';
 import { parseCommandOptions } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 import {
   readDurableKnowledgeCatalog,
   recallDurableKnowledge,
 } from '../../../../authority/packages/durable-knowledge-catalog.ts';
+import {
+  bindStageKnowledgeContext,
+  readStageKnowledgeContext,
+} from '../../../../adapters/execution/family-runtime-knowledge-context.ts';
 
 export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
@@ -92,6 +97,48 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
           }),
         };
       },
+    },
+  };
+  commandSpecs['knowledge prepare'] = {
+    usage: 'opl knowledge prepare --repo <agent_repo> --domain <domain_id> --stage <stage_id> --output <binding.json> [--task-intent <action_id>] [--workspace <path>] [--project <path>]',
+    summary: 'Freeze private knowledge through the same snapshot store used by hosted StageRuns.',
+    examples: ['opl knowledge prepare --repo ../opl-capital-compass --domain occ --stage product-evidence --output /private/task/knowledge.json --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge prepare']!, {
+        repo: { type: 'string' }, domain: { type: 'string' }, stage: { type: 'string' },
+        output: { type: 'string' }, 'task-intent': { type: 'string' },
+        workspace: { type: 'string' }, project: { type: 'string' },
+      });
+      const repo = parsed.repo as string | undefined;
+      const domain = parsed.domain as string | undefined;
+      const stage = parsed.stage as string | undefined;
+      const output = parsed.output as string | undefined;
+      if (!repo || !domain || !stage || !output) throw new Error('knowledge prepare requires --repo, --domain, --stage and --output.');
+      const binding = bindStageKnowledgeContext({
+        repoDir: repo, domainPackRoot: repo, domainId: domain, stageId: stage,
+        taskIntent: parsed['task-intent'] as string | undefined,
+        workspaceRoot: parsed.workspace as string | undefined,
+        projectRoot: parsed.project as string | undefined,
+      });
+      // Never overwrite another task's binding or follow an output symlink.
+      fs.writeFileSync(output, `${JSON.stringify(binding, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+      return { version: 'g2', durable_knowledge_binding: binding, binding_path: output };
+    },
+  };
+  commandSpecs['knowledge read-context'] = {
+    usage: 'opl knowledge read-context --binding <binding.json>',
+    summary: 'Explicitly read private frozen bodies after verifying their exact snapshot identity.',
+    examples: ['opl knowledge read-context --binding /private/task/knowledge.json --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge read-context']!, { binding: { type: 'string' } });
+      const bindingPath = parsed.binding as string | undefined;
+      if (!bindingPath) throw new Error('knowledge read-context requires --binding.');
+      const binding = JSON.parse(fs.readFileSync(bindingPath, 'utf8'));
+      return { version: 'g2', durable_knowledge_context: readStageKnowledgeContext(
+        binding, binding.receipt?.domain_id, binding.receipt?.stage_id,
+      ) };
     },
   };
   return commandSpecs;

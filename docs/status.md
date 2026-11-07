@@ -42,6 +42,7 @@
 - StageRun 从 catalog 按领域、阶段、action、状态与审阅期限选择正文；同轮生成、评审和修复共享一份字节绑定快照。公开 projection 只带引用和消费回执，项目根由 execution scope 约束。
 - 新 scaffold、pack compiler、知识 CLI、OKF 与七个现有标准 Agent 已改用统一 catalog。旧 memory descriptor、迁移计划入口与私有接受目录已退役；当前源码迁移不代表安装包已发布或正在运行的 Agent 已切换。
 - 接受写回仍由领域或项目 owner 决定并同步 Markdown、catalog 与接受记录；平台校验结构和消费证据，不自动把单次经验晋升成通用知识，也不声称具备语义检索或知识正确性认证。
+- 直接 Skill 的 `knowledge prepare` / `read-context` 与托管 Stage 共用不可变快照存储。工作区可声明所有者授权的外部 Markdown 来源，原文漂移会阻止新召回；包内知识不能声明个人外部来源。
 
 ## 动态真相入口
 
