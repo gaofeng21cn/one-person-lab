@@ -8,6 +8,7 @@ import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotoc
 
 import { createFakeCodexPluginManagerFixture, repoRoot } from './cli/helpers.ts';
 import { formatJsonPayload } from '../../src/kernel/json-file.ts';
+import { acceptDomainRead, parseResearchSnapshot, parseContributionResearch, renderResearch, renderProgress } from '../../src/mcp-app/task-workbench.js';
 import { listOplMcpAppViews } from '../../src/read-models/operator/app-mcp-app.ts';
 
 test('MCP catalog excludes desktop-only contributions without an owner ABI', () => {
@@ -179,6 +180,7 @@ test('OPL MCP App starts through a linked launcher, exposes views and gates conf
     }));
     assert.equal((focused.opl_app_contribution as any).response.result.data.items[0].id, 'review-1');
     assert.equal((focused.opl_mcp_app_catalog as any).focus.view_id, 'review');
+    assert.equal((focused.opl_mcp_app_catalog as any).views.length, 3, 'focus preserves navigation to the other declared views');
     assert.equal((await client.callTool({ name: 'open_opl_apps', arguments: { view_id: 'missing' } })).isError, true);
     assert.deepEqual(
       catalog.views.filter((view: any) => view.package_id === 'opl-runtime').map((view: any) => view.view_id),
@@ -246,4 +248,35 @@ test('OPL MCP App starts through a linked launcher, exposes views and gates conf
     await client.close();
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+
+test('shared task workbench binds revisions and scientific evidence to the selected item', () => {
+  const node = (id: string, kind: string) => ({ id, kind, label: id, summary: 'Owner narrative', status: 'inconclusive', details: { evidence_judgment: 'Uncertain <evidence>', review_refs: ['review:1'] }, source_refs: [{ kind: 'evidence', ref: 'evidence:1' }] });
+  const snapshot = { surface_kind: 'mas_research_trajectory_snapshot', version: 'mas-research-trajectory-snapshot.v2', study_id: 'study', study_ref: { ref: 'mas-study:study' }, revision: 2, summary: { current_judgment: 'Not established' }, nodes: [node('hypothesis', 'hypothesis'), node('finding', 'finding')], edges: [{ id: 'edge', source: 'finding', target: 'hypothesis', kind: 'does_not_support', label: 'Owner negative evidence', source_refs: ['review:1'] }] };
+  const item = { item_id: 'canonical', identity: { domain_work_item_id: 'study' } };
+  const descriptor = { view_id: 'roadmap', view_kind: 'research-roadmap' };
+  const result = { schema_version: 'opl_domain_detail_view.v1', surface_kind: 'opl_domain_detail_view', item_id: 'canonical', view_id: 'roadmap', view_kind: 'research-roadmap', availability: 'available', revision: 2, not_modified: false, payload_schema_ref: 'contracts/schemas/v2/mas-research-trajectory-snapshot-v2.schema.json', payload: snapshot };
+  const first = acceptDomainRead(result, item, descriptor, undefined);
+  assert.equal(first.snapshot, snapshot);
+  assert.equal(acceptDomainRead({ ...result, not_modified: true, payload: null }, item, descriptor, first), first);
+  assert.throws(() => acceptDomainRead({ ...result, item_id: 'other' }, item, descriptor, first));
+  assert.throws(() => acceptDomainRead({ ...result, revision: 3 }, item, descriptor, first));
+  assert.throws(() => acceptDomainRead({ ...result, revision: 1 }, item, descriptor, first));
+  assert.throws(() => acceptDomainRead({ ...result, not_modified: true, payload: null }, item, descriptor, undefined));
+  assert.throws(() => acceptDomainRead({ ...result, payload_schema_ref: 'unknown' }, item, descriptor, first));
+  assert.throws(() => parseResearchSnapshot({ ...snapshot, study_id: 'other' }, 'study'));
+  assert.throws(() => parseResearchSnapshot({ ...snapshot, edges: [{ ...snapshot.edges[0], target: 'absent' }] }, 'study'));
+  const expected = { agent_id: 'owner', domain_id: 'domain', work_item_id: 'study', domain_work_item_id: 'study', identity_state: 'resolved' };
+  const owner = { identity: { ...expected, study_id: 'study' }, trajectory: snapshot };
+  assert.equal(parseContributionResearch(owner, expected), snapshot);
+  assert.throws(() => parseContributionResearch(owner, { ...expected, work_item_id: 'other' }));
+  assert.throws(() => parseContributionResearch(owner, undefined));
+  assert.match(renderProgress({}, { current_owner: 'Principal investigator', phase: { stage_id: 'analysis' }, work: { active: [], queued: [{ summary: 'Owner queued validation' }] } }), /Owner queued validation/);
+  const html = renderResearch(snapshot, 'hypothesis');
+  assert.match(html, /Owner negative evidence/);
+  assert.match(html, /Uncertain &lt;evidence&gt;/);
+  assert.match(html, /review:1/);
+  assert.match(html, /evidence:1/);
+  assert.doesNotMatch(renderProgress({ stage_map: [{ state: 'completed', display_name: 'Analysis' }] }), /证据支持/);
 });

@@ -41,15 +41,15 @@
       </main>
     </div>
     <dialog id="confirmation" aria-labelledby="confirmation-title">
-      <form method="dialog">
+      <div>
         <h2 id="confirmation-title"></h2>
         <p>请核对本次操作的目标与输入。</p>
         <pre class="json" id="confirmation-target"></pre>
         <div class="detail-actions">
-          <button value="cancel">取消</button>
-          <button class="action" value="confirm">确认执行</button>
+          <button id="confirmation-cancel" type="button">取消</button>
+          <button id="confirmation-submit" class="action" type="button">确认执行</button>
         </div>
-      </form>
+      </div>
     </dialog>
     <script type="module">/* SCRIPT */</script>
   </body>

@@ -1,3 +1,4 @@
+import { mountTaskWorkbench, parseContributionResearch } from './task-workbench.js';
 import { App } from '@modelcontextprotocol/ext-apps';
 
 const READ_TOOL = 'opl_app_contribution_read';
@@ -20,6 +21,7 @@ const state = {
   result: null,
   selectedWorkItemIdentity: stored('opl-apps-selected-work-item', null),
   selectedWorkspace: stored('opl-apps-selected-workspace', null),
+  selectedCanonicalItemId: stored('opl-apps-selected-item-id', ''),
   query: '',
   itemId: '',
   executing: false,
@@ -27,6 +29,7 @@ const state = {
   focusInput: {},
 };
 let readGeneration = 0;
+let disposeWorkbench = () => {};
 
 function escape(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -144,6 +147,7 @@ function currentViewInput(view) {
     ? { workspace_path: selected.workspace_path, work_item_root: selected.work_item_root }
     : state.selectedWorkspace;
   return {
+    ...(view.data_ref === 'opl.runtime.v1#item' && state.selectedCanonicalItemId ? { item_id: state.selectedCanonicalItemId } : {}),
     ...(view.scope === 'work_item' && selectedIdentity ? { work_item_identity: selectedIdentity } : {}),
     ...(selectedWorkspace?.workspace_path ? { workspace_path: selectedWorkspace.workspace_path } : {}),
     ...(selectedWorkspace?.work_item_root ? { work_item_root: selectedWorkspace.work_item_root } : {}),
@@ -153,6 +157,8 @@ function currentViewInput(view) {
 
 function rememberWorkspaceSelection(item) {
   if (!item?.work_item_identity || !item?.workspace_path) return;
+  state.selectedCanonicalItemId = item.id;
+  remember('opl-apps-selected-item-id', item.id);
   state.selectedWorkItemIdentity = item.work_item_identity;
   state.selectedWorkspace = {
     workspace_path: item.workspace_path,
@@ -503,13 +509,14 @@ function renderCollection(view, collection) {
           </button>`;
         }).join('')}
       </div>
-      ${renderReview(current)}
+      ${renderReview(current)}${view.data_ref === 'opl.runtime.v1#work-items' ? `<button class="action" data-open-task="${escape(current.id)}">打开任务工作台</button>` : ''}
     </div>
     <div class="detail-actions">${renderActionButtons(view, collection, current)}</div>
   `;
 }
 
 function renderResult() {
+  disposeWorkbench(); disposeWorkbench = () => {};
   const view = state.selected;
   if (!view) {
     $('body').innerHTML = '<div class="empty">请选择一个已安装 Package 的视图</div>';
@@ -524,6 +531,27 @@ function renderResult() {
     $('body').innerHTML = `<div class="empty">${escape(collection.reason || '当前视图不可用')}</div>
       ${collection.state === 'input_required' ? renderReadInputForm(collection) : ''}
       <div class="detail-actions">${renderActionButtons(view, collection)}</div>`;
+  } else if (view.data_ref === 'opl.runtime.v1#item' && collection.data.detail?.item_id) {
+    const item = collection.data.detail;
+    if (collection.items[0]) rememberWorkspaceSelection(collection.items[0]);
+    disposeWorkbench = mountTaskWorkbench({ container: $('body'), item,
+      initialViewId: currentViewInput(view).domain_view_id,
+      relatedViews: (state.catalog?.views || []).filter(entry => entry.scope === 'work_item' && entry.agent_id === item.identity.agent_id),
+      onOpenView: target => { state.selectedKey = key(target); state.focusPackageId = target.package_id;
+        state.focusInput = { work_item_identity: collection.items[0].work_item_identity, workspace_path: item.identity.workspace_path, work_item_root: item.identity.work_item_root }; void loadSelected(); },
+      read: async input => collectionFrom(await callTool(READ_TOOL, { package_id: 'opl-runtime', ref: 'opl.runtime.v1#domain-detail', input })).data.detail,
+      onContext: selection => { app.updateModelContext({ content: [{ type: 'text', text: `正在查看任务 ${item.identity.work_item_display_name}` }], structuredContent: selection }).catch(() => {}); },
+    });
+  } else if (collection.root.trajectory) {
+    try {
+      const snapshot = parseContributionResearch(collection.root, currentViewInput(view).work_item_identity);
+      disposeWorkbench = mountTaskWorkbench({ container: $('body'), snapshot, ownerDetails: collection.root,
+        item: { identity: collection.root.identity, lifecycle: { primary_state_label: collection.root.phase?.business_status },
+          stage_map: collection.root.phase?.stage_id ? [{ stage_id: collection.root.phase.stage_id, state: collection.root.phase.stage_status }] : [],
+          source_refs: collection.root.source_refs },
+        onContext: selection => { app.updateModelContext({ structuredContent: selection }).catch(() => {}); },
+      });
+    } catch { $('body').innerHTML = '<p role="alert">研究路径不可用，请核对任务与数据格式。</p>'; }
   } else if (collection.items.length) {
     $('body').innerHTML = renderCollection(view, collection);
   } else if (collection.itemsPresent) {
@@ -539,8 +567,16 @@ function renderResult() {
       const items = collectionFrom(state.result).items;
       const selected = items.find((item, index) => itemIdentity(item, index) === state.itemId);
       if (selected) rememberWorkspaceSelection(selected);
+      if (selected && view.data_ref === 'opl.runtime.v1#work-items') { state.focusPackageId = 'opl-runtime'; state.focusInput = { item_id: selected.id }; }
       renderResult();
       updateContext();
+    });
+  }
+  for (const button of $('body').querySelectorAll('[data-open-task]')) {
+    button.addEventListener('click', () => {
+      state.selectedKey = 'opl-runtime:opl.runtime.item';
+      state.focusPackageId = 'opl-runtime'; state.focusInput = { item_id: button.dataset.openTask };
+      void loadSelected();
     });
   }
   bindActionButtons(view, collection);
@@ -606,6 +642,7 @@ app.ontoolresult = (params) => {
   const payload = record(params?.structuredContent);
   if (params?.isError) {
     ++readGeneration;
+    disposeWorkbench(); disposeWorkbench = () => {};
     $('status').textContent = '读取失败';
     $('body').textContent = payload?.error?.message || '当前视图读取失败，请重新选择目标';
     return;
@@ -630,6 +667,9 @@ app.ontoolresult = (params) => {
     else if (state.selected) void loadSelected();
   }
 };
+
+$('confirmation-cancel').addEventListener('click', () => $('confirmation').close('cancel'));
+$('confirmation-submit').addEventListener('click', () => $('confirmation').close('confirm'));
 
 $('search').addEventListener('input', (event) => {
   state.query = event.currentTarget.value;

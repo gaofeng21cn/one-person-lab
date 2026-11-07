@@ -71,7 +71,8 @@ reuse the transport-only `workspace_path` or `work_item_root` fields.
 5. After execution, the view reloads owner state instead of synthesizing success.
 
 The UI works when sandbox storage is unavailable and does not depend on browser
-modal permissions. Read responses are bound to the current selection so a slower
+modal permissions. Confirmation buttons close the dialog explicitly, so cancellation
+and confirmation also work in hosts that do not grant iframe form submission. Read responses are bound to the current selection so a slower
 previous request cannot overwrite a newly selected view. Framework builds honor
 the selected output directory for both compiled code and the bundled MCP view.
 
@@ -95,3 +96,21 @@ The installed Package remains the data and action owner. OPL owns descriptor
 discovery, generic projection, rendering, and the confirmation gate. The MCP App
 cannot synthesize an owner receipt, approve a domain decision, or turn a projection
 into domain truth.
+
+## Task workbench
+
+The canonical runtime item opens a shared workbench with execution progress,
+declared domain paths, evidence/artifacts and pending human decisions. It uses
+`opl.runtime.v1#item` and `opl.runtime.v1#domain-detail`, carrying exact item and
+view identity and conditional revision. The renderer registry is selected by
+`view_kind` and the owner-declared schema, never by Agent ID. Unsupported or
+failed domain reads remain local to that view; successful prior revisions remain
+visible with a refresh warning. Selection and evidence references update model
+context without executing a command.
+
+The research-path renderer preserves owner-authored node details, source refs,
+supporting/opposing/inconclusive edges, failed routes and review refs. Execution
+progress is separate from scientific judgment. The same renderer handles a
+Package contribution carrying its full trajectory; it never reconstructs missing
+evidence or authorizes a decision. DSH is only a host adapter in Studio, not a
+dependency of this resource.
