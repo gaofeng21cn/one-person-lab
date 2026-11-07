@@ -163,3 +163,7 @@ OMA 负责目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据�
 项目结论先进入本项目 `memory/`，跨项目约束由 workspace owner 审阅后进入 `shared/memory/`。只有经脱敏、来源核实和领域审阅的可复用方法才进入 Agent 包。最新持仓、期刊要求和市场观察保存观察日期与来源，进入 `state/`；到期需重新核实，不能靠延长日期恢复有效性。
 
 领域 owner 负责候选、接受/拒绝、正文和证据；OPL 统一校验路径、scope、状态、日期、正文 hash、召回及消费回执。写入需同步正文与目录，并保留接受记录；未接受的候选为 draft，过期或废弃条目不召回。知识召回是推理输入，不能代替交易授权、研究证据或质量判断。源码 Git 保留演进，不复制旧私有存储或兼容 reader。
+
+个人知识库可以保留唯一可编辑 Markdown，工作区仅生成逐字投影。工作区条目用 `projection_source` 显式声明所有者授权的绝对来源根、根内相对路径与 SHA-256；通用 Agent 包禁止声明外部来源。新召回同时检查原文与投影字节，原文已变则要求领域 owner 复核并重新投影。已有 Stage 快照仍保留原字节，不在审阅中途刷新。来源观察日期与接入、复核日期分别记录。
+
+直接 Skill 使用 `opl knowledge prepare --repo <package> --domain <domain> --stage <stage> --task-intent <action> --workspace <root> --project <root> --output <new-binding.json>` 建立与托管 Stage 相同的私有快照，再用 `opl knowledge read-context --binding <new-binding.json> --json` 显式读取正文。普通 list、inspect、recall 仍只输出目录或回执；prepare 不覆盖已有绑定。领域 writer 保管具体提案、原/新正文哈希、真实接受依据和写回回执，发生并发修改时核对原版本后再写。

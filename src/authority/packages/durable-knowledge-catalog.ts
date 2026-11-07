@@ -32,6 +32,7 @@ export type DurableKnowledgeItem = {
     ref: string;
     sha256?: string;
   };
+  projection_source?: { root: string; ref: string; sha256: string };
   applicability: {
     domains: string[];
     stages: string[];
@@ -188,6 +189,13 @@ function normalizeItem(value: unknown, index: number): DurableKnowledgeItem {
     status: status as DurableKnowledgeItem['status'],
     reviewed_at: text(value.reviewed_at, `items[${index}].reviewed_at`),
     next_review_at: text(value.next_review_at, `items[${index}].next_review_at`),
+    ...(isRecord(value.projection_source) ? {
+      projection_source: {
+        root: text(value.projection_source.root, 'projection_source.root'),
+        ref: text(value.projection_source.ref, 'projection_source.ref'),
+        sha256: text(value.projection_source.sha256, 'projection_source.sha256'),
+      },
+    } : {}),
     ...(Array.isArray(value.sources) ? { sources: value.sources.filter(isRecord) } : {}),
     ...(Array.isArray(value.tags) ? { tags: stringList(value.tags, `items[${index}].tags`) } : {}),
     ...(Array.isArray(value.supersedes) ? { supersedes: stringList(value.supersedes, `items[${index}].supersedes`) } : {}),
@@ -385,6 +393,19 @@ export function resolveDurableKnowledgeBody(input: {
       expected: input.item.body_ref.sha256,
       observed: sha256,
     });
+  }
+  const source = input.item.projection_source;
+  if (source) {
+    if (input.item.layer === 'agent_pack' || !path.isAbsolute(source.root)) {
+      fail('Projection sources require an explicit workspace-owned absolute source root.', { knowledge_id: input.item.knowledge_id });
+    }
+    const sourceFile = contained(source.root, source.ref, 'projection_source');
+    if (fs.statSync(sourceFile).size > 256 * 1024 || source.sha256 !== sha256
+      || canonicalSha256(fs.readFileSync(sourceFile)) !== source.sha256) {
+      fail('Knowledge projection source changed; owner review and projection refresh are required.', {
+        knowledge_id: input.item.knowledge_id,
+      });
+    }
   }
   return {
     knowledge_id: input.item.knowledge_id,
