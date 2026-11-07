@@ -41,11 +41,19 @@ to one contained JSON read or fixed command. Command entries use stdin JSON,
 bounded output, a 120-second timeout, package/profile-root containment, and an
 optional output transform. `request_json` preserves the Package-owned request
 envelope, while `passthrough` preserves a Package-owned response envelope.
+JSON file reads use the same declared output transform as commands, while a
+missing file remains unavailable. Root containment also resolves symbolic links.
+Projections preserve owner records whose shape does not match a specialized card;
+stage pointers and manifests must not become unavailable or empty just because
+they lack a card collection. Decision cards retain the full packet, including
+alternatives, evidence, quality debt, and any execution plan.
 
 `workspace_path` selects one registered workspace binding and sets
 `OPL_PROFILE_WORKSPACE` for profile-relative reads. The Framework removes that
 transport-only field before invoking the owner and rejects unregistered paths or
 conflicts with an explicit work-item identity.
+Owner artifact inputs use distinct names, such as `workspace_file`; they must not
+reuse the transport-only `workspace_path` or `work_item_root` fields.
 
 ## Host Flow
 

@@ -96,6 +96,101 @@ test('declarative adapter rejects undeclared refs and path escape', () => {
   }
 });
 
+test('JSON reads apply the declared projection and preserve unavailable files', () => {
+  const root = fixture();
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app-contribution-adapter.json'), 'utf8'));
+    manifest.reads['fixture.v1#state'].transform = 'grant_workspace';
+    fs.writeFileSync(path.join(root, 'app-contribution-adapter.json'), JSON.stringify(manifest));
+    fs.writeFileSync(path.join(root, 'state.json'), JSON.stringify({
+      workspace_id: 'grant-7', lifecycle_stage: 'drafting',
+      current_selection: { active_draft_id: 'draft-3' },
+      application_drafts: [{ draft_id: 'draft-3', project_title: 'Selected grant', version_label: 'v3' }],
+      gates: { presubmission_frozen: false },
+    }));
+    const request = {
+      schema_version: 'opl-package-app-contribution-request.v1',
+      operation: 'read', ref: 'fixture.v1#state', input: {},
+    };
+    const read = runDeclarativeAppContribution({ packageRoot: root, request }) as any;
+    assert.equal(read.ok, true);
+    assert.equal(read.result.state, 'ready');
+    assert.equal(read.result.data.items[0].title, 'Selected grant');
+    assert.equal(read.result.data.items[0].active_draft_id, 'draft-3');
+    fs.unlinkSync(path.join(root, 'state.json'));
+    const missing = runDeclarativeAppContribution({ packageRoot: root, request }) as any;
+    assert.equal(missing.result.state, 'unavailable');
+    assert.equal(missing.result.reason, 'adapter_source_missing');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('projections preserve stage records and full nested decision packets', () => {
+  const root = fixture();
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app-contribution-adapter.json'), 'utf8'));
+    const read = (transform: string, value: unknown) => {
+      manifest.reads['fixture.v1#state'].transform = transform;
+      fs.writeFileSync(path.join(root, 'app-contribution-adapter.json'), JSON.stringify(manifest));
+      fs.writeFileSync(path.join(root, 'state.json'), JSON.stringify(value));
+      return (runDeclarativeAppContribution({
+        packageRoot: root,
+        request: {
+          schema_version: 'opl-package-app-contribution-request.v1',
+          operation: 'read', ref: 'fixture.v1#state', input: {},
+        },
+      }) as any).result;
+    };
+    const pointer = { surface_kind: 'opl_current_stage_pointer', current_stage: null, empty_state: 'no_stage_opened_yet' };
+    assert.deepEqual(read('runtime_detail', pointer), pointer);
+    const stageManifest = { surface_kind: 'opl_stage_outputs_root_manifest', project_id: 'book-1' };
+    assert.deepEqual(read('artifact_status', stageManifest), stageManifest);
+    assert.deepEqual(read('rca_artifacts', stageManifest), stageManifest);
+    const packet = {
+      decision_question: 'Maintain reserve?', decision: { kind: 'no_change', summary: 'Hold' },
+      alternatives: [{ alternative_id: 'reduce', thesis: 'Alternative' }],
+      evidence_refs: ['synthetic:statement'], unresolved_quality_debt: ['refresh-needed'],
+    };
+    const card = read('capital_decision', packet).data.items[0];
+    assert.equal(card.title, packet.decision_question);
+    assert.equal(card.summary, 'Hold');
+    assert.deepEqual(card.alternatives, packet.alternatives);
+    assert.deepEqual(card.source_refs, packet.evidence_refs);
+    assert.deepEqual(card.unknowns, packet.unresolved_quality_debt);
+    assert.equal(card.execution_status, null);
+    const plan = { plan_status: 'ready_for_owner_review', trades: [{ trade_id: 'trade-1' }], execution_claim: 'not_executed' };
+    const planCard = read('capital_decision', plan).data.items[0];
+    assert.deepEqual(planCard.trades, plan.trades);
+    assert.equal(planCard.status, plan.plan_status);
+    assert.equal(planCard.execution_status, 'not_executed');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('JSON reads reject symbolic links outside the declared root', () => {
+  const root = fixture();
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-adapter-outside-'));
+  try {
+    fs.writeFileSync(path.join(outside, 'state.json'), JSON.stringify({ private: true }));
+    fs.unlinkSync(path.join(root, 'state.json'));
+    fs.symlinkSync(path.join(outside, 'state.json'), path.join(root, 'state.json'));
+    const read = runDeclarativeAppContribution({
+      packageRoot: root,
+      request: {
+        schema_version: 'opl-package-app-contribution-request.v1',
+        operation: 'read', ref: 'fixture.v1#state', input: {},
+      },
+    }) as any;
+    assert.equal(read.ok, false);
+    assert.equal(read.error.details.failure_code, 'app_contribution_adapter_path_escape');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(outside, { recursive: true, force: true });
+  }
+});
+
 test('declarative adapter can preserve a Package-owned response envelope', () => {
   const root = fixture();
   try {
