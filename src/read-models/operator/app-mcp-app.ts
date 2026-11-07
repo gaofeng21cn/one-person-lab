@@ -119,6 +119,7 @@ function projectedViews(descriptor: InstalledPackageDescriptor) {
     const placement = contributionPlacement(descriptor, view.view_id);
     return [{
       package_id: descriptor.manifest.package_id,
+      agent_id: descriptor.manifest.agent_id,
       package_name: descriptor.manifest.display_name ?? descriptor.manifest.package_id,
       view_id: view.view_id,
       view_type: view.view_type,
