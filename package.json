@@ -59,7 +59,7 @@
     "scripts/compile-opl-flow-capability-projections.mjs"
   ],
   "scripts": {
-    "build": "npm run build:packages && tsc -p tsconfig.build.json && node ./scripts/build-mcp-app-view.mjs",
+    "build": "npm run build:packages && node ./scripts/build-framework.mjs",
     "prebuild": "node ./scripts/materialize-package-contracts.mjs",
     "build:packages": "npm run build --workspaces --if-present",
     "typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present",

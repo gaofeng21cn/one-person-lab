@@ -92,6 +92,11 @@ export async function createOplMcpAppServer() {
       resourceUri: OPL_MCP_APP_RESOURCE_URI,
     },
   };
+  const readContribution = (packageId: string, ref: string, input: Record<string, unknown>) => (
+    packageId === OPL_RUNTIME_PACKAGE_ID || isFrameworkRuntimeRef(ref)
+      ? readFrameworkMcpAppContribution({ ref, input })
+      : runAppContribution({ packageId, ref, operation: 'read', input, confirmed: false }, contributionBroker)
+  );
 
   registerAppResource(
     server,
@@ -142,25 +147,35 @@ export async function createOplMcpAppServer() {
       _meta: appMeta,
     },
     async ({ package_id, view_id, input }) => {
-      const catalog = listOplMcpAppViews({
-        descriptorDiscovery: composition.services.descriptorDiscovery,
-        packageId: package_id,
-      });
-      const views = view_id
-        ? catalog.views.filter((view) => view.view_id === view_id)
-        : catalog.views;
-      return jsonResult({
-        opl_mcp_app_catalog: {
-          ...catalog,
-          views,
-          view_count: views.length,
-          focus: {
-            package_id: package_id ?? null,
-            view_id: view_id ?? null,
-            input: input ?? {},
+      try {
+        const catalog = listOplMcpAppViews({
+          descriptorDiscovery: composition.services.descriptorDiscovery,
+          packageId: package_id,
+        });
+        const views = view_id
+          ? catalog.views.filter((view) => view.view_id === view_id)
+          : catalog.views;
+        const selected = views[0];
+        if (view_id && !selected) throw new Error(`No installed OPL view matches ${view_id}.`);
+        const contribution = selected
+          ? readContribution(String(selected.package_id), String(selected.data_ref), input ?? {})
+          : {};
+        return jsonResult({
+          ...contribution,
+          opl_mcp_app_catalog: {
+            ...catalog,
+            views,
+            view_count: views.length,
+            focus: {
+              package_id: selected?.package_id ?? package_id ?? null,
+              view_id: selected?.view_id ?? view_id ?? null,
+              input: input ?? {},
+            },
           },
-        },
-      });
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
     },
   );
 
@@ -185,19 +200,7 @@ export async function createOplMcpAppServer() {
     },
     async ({ package_id, ref, input }) => {
       try {
-        if (package_id === OPL_RUNTIME_PACKAGE_ID || isFrameworkRuntimeRef(ref)) {
-          return jsonResult(readFrameworkMcpAppContribution({
-            ref,
-            input: input ?? {},
-          }));
-        }
-        return jsonResult(runAppContribution({
-          packageId: package_id,
-          ref,
-          operation: 'read',
-          input: input ?? {},
-          confirmed: false,
-        }, contributionBroker));
+        return jsonResult(readContribution(package_id, ref, input ?? {}));
       } catch (error) {
         return errorResult(error);
       }
