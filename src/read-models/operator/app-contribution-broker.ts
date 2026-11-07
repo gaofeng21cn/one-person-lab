@@ -473,7 +473,7 @@ function invokeContribution(
   if (
     !isRecord(response)
     || response.schema_version !== RESPONSE_SCHEMA
-    || response.ok !== true
+    || typeof response.ok !== 'boolean'
     || response.ref !== request.ref
     || response.operation !== request.operation
   ) {
@@ -482,6 +482,16 @@ function invokeContribution(
       ref: request.ref,
       operation: request.operation,
       failure_code: 'agent_package_app_contribution_response_invalid',
+    });
+  }
+  if (response.ok === false) {
+    const error = isRecord(response.error) ? response.error : {};
+    return contractError(typeof error.message === 'string' ? error.message : 'Package owner rejected the contribution request.', {
+      package_id: resolved.descriptor.manifest.package_id,
+      ref: request.ref,
+      operation: request.operation,
+      failure_code: 'agent_package_app_contribution_owner_rejected',
+      owner_error: error,
     });
   }
   return response;

@@ -69,6 +69,9 @@ host rendering, installed Package currentness, publication, or domain acceptance
 ## Delivery Boundary
 
 Installed Packages declare their views and adapter in the carrier source root.
+The MCP catalog includes only callable Packages with a declared contribution ABI;
+desktop-only contributions remain with their native consumer. Owner error responses
+retain their diagnostic instead of being reported as an identity mismatch.
 Framework payload allowlists must include the adapter file, and Package content
 locks must cover it when present. Framework itself publishes no replacement
 standalone UI; Relay retains its dedicated MCP App, while device control, map

@@ -264,6 +264,7 @@ export async function runOplMcpAppStdio() {
   await app.server.connect(new StdioServerTransport());
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && fs.existsSync(process.argv[1])
+  && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
   await runOplMcpAppStdio();
 }

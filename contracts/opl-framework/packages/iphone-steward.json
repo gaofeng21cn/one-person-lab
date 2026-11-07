@@ -18,7 +18,7 @@
     "home_shortcuts": []
   },
   "publisher": "gaofeng21cn",
-  "version": "0.2.4",
+  "version": "0.2.6",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/iphone-app-steward.git",
   "package_role": "capability_package",
@@ -64,8 +64,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/iphone-steward-0.2.4.json",
-    "carrier_source_commit": "ebef1e60034a432140f6c3c81e57084702253d0f"
+    "plugin_payload_manifest_url": "payloads/iphone-steward-0.2.6.json",
+    "carrier_source_commit": "691c4d914fddab3310b57ceb19b5a1aa3f595f9f"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -112,7 +112,7 @@
       "skills/iphone-app-steward/references/decision-policy.md",
       "skills/iphone-app-steward/references/evidence-and-layout.md"
     ],
-    "digest": "sha256:56a97d20ee2510f66ab33ccdc8f1a8679b36f31f2c1b418fd2f42cded099f057"
+    "digest": "sha256:a1f50ffe64205291a8f068e6a3ddc1130d839c19f0171feab5248f322d9f826e"
   },
   "publication_source": {
     "module_id": "iphone-steward",

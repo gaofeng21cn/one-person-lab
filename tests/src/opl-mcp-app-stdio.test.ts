@@ -8,6 +8,23 @@ import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotoc
 
 import { createFakeCodexPluginManagerFixture, repoRoot } from './cli/helpers.ts';
 import { formatJsonPayload } from '../../src/kernel/json-file.ts';
+import { listOplMcpAppViews } from '../../src/read-models/operator/app-mcp-app.ts';
+
+test('MCP catalog excludes desktop-only contributions without an owner ABI', () => {
+  const descriptor = {
+    readiness: { installed: true, physical_status: 'available', callability: 'callable' },
+    enabled: true,
+    manifest: {
+      package_id: 'desktop-only',
+      codex_surface: {},
+      app_contributions: { views: [{ view_id: 'desktop' }] },
+    },
+  };
+  const catalog = listOplMcpAppViews({
+    descriptorDiscovery: { discover: () => new Map([['desktop-only', descriptor as any]]) },
+  });
+  assert.equal(catalog.views.some(view => view.package_id === 'desktop-only'), false);
+});
 
 function writeAppContributionPackage(root: string) {
   const command = path.join(root, 'bin', 'contribution');
@@ -106,7 +123,7 @@ function structured(result: unknown) {
   return (result as { structuredContent?: Record<string, unknown> }).structuredContent || {};
 }
 
-test('OPL MCP App exposes installed Package views and gates confirmed actions', async () => {
+test('OPL MCP App starts through a linked launcher, exposes views and gates confirmed actions', async () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mcp-app-stdio-'));
   const packageRoot = path.join(fixtureRoot, 'package');
   fs.mkdirSync(packageRoot, { recursive: true });
@@ -122,8 +139,11 @@ test('OPL MCP App exposes installed Package views and gates confirmed actions', 
     'enabled = true',
     '',
   ].join('\n'));
+  // Global npm installations link the Framework directory into node_modules.
+  const linkedFramework = path.join(fixtureRoot, 'linked-framework');
+  fs.symlinkSync(repoRoot, linkedFramework, 'dir');
   const transport = new StdioClientTransport({
-    command: path.join(repoRoot, 'bin', 'opl'),
+    command: path.join(linkedFramework, 'bin', 'opl'),
     args: ['connect', 'mcp-app-stdio'],
     cwd: repoRoot,
     env: {
