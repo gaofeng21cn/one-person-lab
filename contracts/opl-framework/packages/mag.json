@@ -35,7 +35,7 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.3.17",
+  "version": "0.3.18",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
@@ -79,8 +79,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/mag-0.3.17.json",
-    "carrier_source_commit": "3ba4b516dc0df767e7869e25b3b8417c080c373a"
+    "plugin_payload_manifest_url": "payloads/mag-0.3.18.json",
+    "carrier_source_commit": "65e220294f1c82b0ab9f414cc5ea960c366bd8f6"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -109,8 +109,8 @@
         "data_ref": "mag.workspace.v1#quality",
         "command_ids": [],
         "empty_state_i18n": {
-          "zh-CN": "选择一个基金质量产物后读取评分",
-          "en-US": "Select a grant quality artifact to inspect its assessment"
+          "zh-CN": "选择基金工作区，查看当前草稿与评审证据",
+          "en-US": "Select a grant workspace to inspect the current draft and review evidence"
         }
       }
     ],

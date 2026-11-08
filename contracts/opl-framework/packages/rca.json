@@ -33,7 +33,7 @@
     ]
   },
   "publisher": "one-person-lab",
-  "version": "0.2.21",
+  "version": "0.2.22",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
@@ -84,14 +84,14 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/rca-0.2.21.json",
-    "carrier_source_commit": "11373e37ce8a2729ac3b192e2b7e5e226af1f535"
+    "plugin_payload_manifest_url": "payloads/rca-0.2.22.json",
+    "carrier_source_commit": "53ae852f2032d05d5264f32501a8e141740b6b5b"
   },
   "skill_packs": [
     {
       "id": "redcube-ai",
       "source": "repo_local_codex_plugin_carrier",
-      "version": "0.2.21",
+      "version": "0.2.22",
       "install_mode": "bundled_required",
       "source_ref": "agent/primary_skill/SKILL.md",
       "carrier_mirror_ref": "plugins/redcube-ai/skills/redcube-ai/SKILL.md",
@@ -203,8 +203,8 @@
         "data_ref": "rca.workspace.v1#status",
         "command_ids": [],
         "empty_state_i18n": {
-          "zh-CN": "选择一个视觉项目状态后读取当前阶段",
-          "en-US": "Select a visual project status to inspect its stage"
+          "zh-CN": "选择当前工作区中的视觉任务，查看阶段与下一步",
+          "en-US": "Select a visual task in the current workspace to inspect progress and next actions"
         }
       },
       {
@@ -217,8 +217,8 @@
         "data_ref": "rca.workspace.v1#artifacts",
         "command_ids": [],
         "empty_state_i18n": {
-          "zh-CN": "选择一个产物清单后读取视觉交付物",
-          "en-US": "Select an artifact manifest to inspect visual deliverables"
+          "zh-CN": "选择视觉任务，查看已登记的产物与证据",
+          "en-US": "Select a visual task to inspect its registered artifacts and evidence"
         }
       }
     ],
@@ -236,10 +236,10 @@
       },
       {
         "contribution_id": "rca.workspace.artifacts",
-        "slot": "settings.section",
+        "slot": "runtime.detail",
         "contribution_kind": "view",
         "trust_tier": "declarative",
-        "scope": "root",
+        "scope": "work_item",
         "sort_order": 611,
         "view_id": "rca.workspace.artifacts"
       }

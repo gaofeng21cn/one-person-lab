@@ -1,0 +1,821 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "obf",
+  "plugin_id": "opl-bookforge",
+  "package_version": "0.3.21",
+  "source_repo": "https://github.com/gaofeng21cn/opl-bookforge.git",
+  "source_commit": "ae2dc5158fb177e27fb818a7f863b297e3306780",
+  "source_root": "plugins/opl-bookforge",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:616cd3e72fa15f34fe81de70cd78d8afe5b5cc65dab86fda3a4b5749c675c6e7"
+  },
+  "files": [
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/plugin.json",
+      "sha256": "sha256:f6666a1e79ea7deb91052fa3abd533725518223c2c28974ec8bfbab4cecbeccc"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/.codex-plugin/plugin.json",
+      "sha256": "sha256:a6576e1b00e08f0202f33b7faa1a2d4e4dce87d8e833ebd9225b01ea03201a0c"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/opl-package.json",
+      "sha256": "sha256:44253a33b683325d6febbcadae0f5babc29d3ab849528c16d77d68b213434513"
+    },
+    {
+      "path": "assets/icon.svg",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/assets/icon.svg",
+      "sha256": "sha256:25c178f543f6a914e2a62d7505ae402a983ab70d85a82dba9df46257be381820"
+    },
+    {
+      "path": "skills/opl-bookforge/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/skills/opl-bookforge/SKILL.md",
+      "sha256": "sha256:35ead4fa5cee1a6910e25b0c310413f307a42803b915ac24bf0c73c443d82a0a"
+    },
+    {
+      "path": "agent/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/README.md",
+      "sha256": "sha256:ce837d2190af1b9dfb94b7403e4131ac7d7ea1006335325fa43861e711d03f0f"
+    },
+    {
+      "path": "agent/knowledge/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/knowledge/README.md",
+      "sha256": "sha256:de21d7b80e445870f7dee400b827acda39208796593d25ee723b18af1210a9bc"
+    },
+    {
+      "path": "agent/knowledge/book-authority-boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/knowledge/book-authority-boundary.md",
+      "sha256": "sha256:015a917c306f92914a0de8a1edc0ec97ff3b9c9c8262c06e3387588fe4bff45b"
+    },
+    {
+      "path": "agent/knowledge/book-production-boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/knowledge/book-production-boundary.md",
+      "sha256": "sha256:1e64ddaf747b34795ac7d2d6d3d187bdf07249dcc0fec2c1d9820b2cd602b037"
+    },
+    {
+      "path": "agent/policies/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/policies/README.md",
+      "sha256": "sha256:8e29c79d24a365839adf2b33215c49d7350f950c985c46f6f3922cc174cecbc4"
+    },
+    {
+      "path": "agent/policies/book-authority-policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/policies/book-authority-policy.md",
+      "sha256": "sha256:61b50ea731ae34286684212ee791dd377ae37ab6c2878eac6bc32f626cc37114"
+    },
+    {
+      "path": "agent/primary_skill/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/primary_skill/SKILL.md",
+      "sha256": "sha256:35ead4fa5cee1a6910e25b0c310413f307a42803b915ac24bf0c73c443d82a0a"
+    },
+    {
+      "path": "agent/principles/domain-specialization.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/principles/domain-specialization.md",
+      "sha256": "sha256:b43de64b24e47f83ee18a7dc8a2fe10eca934f66044b08acd7fc065f48f9b66e"
+    },
+    {
+      "path": "agent/principles/opl-bookforge-principles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/principles/opl-bookforge-principles.md",
+      "sha256": "sha256:9418f803b5d257542356d6f7b05221b88399be16d134ad6d092ecf16ad9da6a0"
+    },
+    {
+      "path": "agent/principles/opl-standard-agent-principles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/principles/opl-standard-agent-principles.md",
+      "sha256": "sha256:8a25ab4bade82c10b6dccbfd92411cdb1c624949a0e1c80949f2e87c2a47f623"
+    },
+    {
+      "path": "agent/professional_skills/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/professional_skills/README.md",
+      "sha256": "sha256:1e24c8ac8f95ded11e951dc5f3c0989c39090b7de11415f30093fdc5fa16a958"
+    },
+    {
+      "path": "agent/professional_skills/bookforge-chapter-author/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/professional_skills/bookforge-chapter-author/SKILL.md",
+      "sha256": "sha256:98d73fee18fa80ba87acb968a4588f88fca0997951fa376d511792c3e472ad1a"
+    },
+    {
+      "path": "agent/professional_skills/bookforge-meta-reviewer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/professional_skills/bookforge-meta-reviewer/SKILL.md",
+      "sha256": "sha256:f8e9499acf738a1f21f03a527932cdbc03c5bf3c020e219d384bcc8b1bd1c684"
+    },
+    {
+      "path": "agent/professional_skills/bookforge-publication-memory-curator/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/professional_skills/bookforge-publication-memory-curator/SKILL.md",
+      "sha256": "sha256:a3ce150a59447273a9f93058c46e32eb87d7a84dfafeb91e31ac5b62a35ba159"
+    },
+    {
+      "path": "agent/professional_skills/bookforge-source-reference-reviewer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/professional_skills/bookforge-source-reference-reviewer/SKILL.md",
+      "sha256": "sha256:036a34256243f771b90d12e0ea2f2f893632d2b3616e4663540d073089868bc7"
+    },
+    {
+      "path": "agent/professional_skills/bookforge-story-style-architect/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/professional_skills/bookforge-story-style-architect/SKILL.md",
+      "sha256": "sha256:6365424a8febeabcb0b5f6a11773d5f86d9baa79630fbd0d6390ecac3d759b48"
+    },
+    {
+      "path": "agent/prompts/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/prompts/README.md",
+      "sha256": "sha256:2cee83ca32f4c3c2939e2b3e61bb74a7d7f4c24168ddf2f2db590e647b84edfe"
+    },
+    {
+      "path": "agent/prompts/chapter-materialization.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/prompts/chapter-materialization.md",
+      "sha256": "sha256:9bef39509b6c30121ef2d8d177e1f5bcdc896d44b662963780ef9f20e0b622fe"
+    },
+    {
+      "path": "agent/prompts/chapter-production-planning.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/prompts/chapter-production-planning.md",
+      "sha256": "sha256:5da7ec6a889f7b9b928a398918c5c1017d2093b543d5e971898c02f85492d7e2"
+    },
+    {
+      "path": "agent/prompts/publication-proof-handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/prompts/publication-proof-handoff.md",
+      "sha256": "sha256:9cadaea7be7d4a05138f1a3f404b5250ea3e57cce36bc97b9749d26c8b3d7b94"
+    },
+    {
+      "path": "agent/prompts/source-style-integrity-review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/prompts/source-style-integrity-review.md",
+      "sha256": "sha256:717668af1987849fc130dd3111eb08eeea7041f0c599f993482c5cbc10220fe4"
+    },
+    {
+      "path": "agent/prompts/stage-quality-cycle-roles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/prompts/stage-quality-cycle-roles.md",
+      "sha256": "sha256:3d08b5b10a0433d310bfa64dc6099c04b32d66a223b2178cdf64ada7f2a78824"
+    },
+    {
+      "path": "agent/prompts/storyline-architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/prompts/storyline-architecture.md",
+      "sha256": "sha256:eda6489713ee255dbf12b37fae58887e0f958025b37fe7c8425ddbb4e91c139f"
+    },
+    {
+      "path": "agent/quality_gates/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/quality_gates/README.md",
+      "sha256": "sha256:93de78264e148493b00672e61612effd35f8172e844a7f4322e5e2104967640d"
+    },
+    {
+      "path": "agent/quality_gates/chapter-materialization-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/quality_gates/chapter-materialization-quality-gate.md",
+      "sha256": "sha256:e5fae45caa6fa074d4fcf18f75da0cf7cca301dd45561fe3bee68e2b37d2dfa6"
+    },
+    {
+      "path": "agent/quality_gates/chapter-production-planning-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/quality_gates/chapter-production-planning-quality-gate.md",
+      "sha256": "sha256:137a835af8d1c710f9d9b589723b02309f45d3381317fa3e658f15314381b213"
+    },
+    {
+      "path": "agent/quality_gates/domain_acceptance.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/quality_gates/domain_acceptance.md",
+      "sha256": "sha256:e849127a22fe19d7d87a73bcffda70ded84575dc26342664bbef637c39e10396"
+    },
+    {
+      "path": "agent/quality_gates/publication-proof-handoff-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/quality_gates/publication-proof-handoff-quality-gate.md",
+      "sha256": "sha256:66e41680060c66e42e1b0f018f09ff6b001b17682ed3b5b072481548d160f6f9"
+    },
+    {
+      "path": "agent/quality_gates/source-style-integrity-review-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/quality_gates/source-style-integrity-review-quality-gate.md",
+      "sha256": "sha256:0368d5a2f0c6a0ba7c61eea8d9da3a7fd7968ad09ef57472abbe3bc627205027"
+    },
+    {
+      "path": "agent/quality_gates/storyline-architecture-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/quality_gates/storyline-architecture-quality-gate.md",
+      "sha256": "sha256:5e270aa55e3ab475afa38263b9d311598d2897edff03f3cb2de66a84d56108e7"
+    },
+    {
+      "path": "agent/skills/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/README.md",
+      "sha256": "sha256:35808e529feb86d4bc3daaf3d23a527957d31484b6baa70371fbfbb8b1f44ed4"
+    },
+    {
+      "path": "agent/skills/book-memory.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/book-memory.md",
+      "sha256": "sha256:8209dae508d05eed098f138f9ee968388a608c2af2e9210416212db01e4a6cb8"
+    },
+    {
+      "path": "agent/skills/book-production.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/book-production.md",
+      "sha256": "sha256:f0ea23917e296f0ac8c21bed61abc09e1108b31bc306150a334b8e4546270223"
+    },
+    {
+      "path": "agent/skills/chapter-context-compiler.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/chapter-context-compiler.md",
+      "sha256": "sha256:1de4e3c17aa55a5614e111a93dc794aa0a1f6cd5b620cea45c552922a72ca4c7"
+    },
+    {
+      "path": "agent/skills/chapter-runtime.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/chapter-runtime.md",
+      "sha256": "sha256:9eb93fa7a2d3e2a00a47b39a15806c9e8ee759f224c4e2e5b3706439441798ef"
+    },
+    {
+      "path": "agent/skills/domain_execution.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/domain_execution.md",
+      "sha256": "sha256:4ead088cf93b962959f3a72d647a85148dd528fe929f1545772305ca43a2639e"
+    },
+    {
+      "path": "agent/skills/fast-track-revision.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/fast-track-revision.md",
+      "sha256": "sha256:ec16133219efe7240e5940ea9335cdef146d78623c880c46c310d2a8d35893be"
+    },
+    {
+      "path": "agent/skills/meta-review-loop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/meta-review-loop.md",
+      "sha256": "sha256:0d485c20a31ecc0db28757573b20c3e62910712cc5cfa097f4ca2187335b9ea2"
+    },
+    {
+      "path": "agent/skills/publication-design.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/publication-design.md",
+      "sha256": "sha256:fafc1d7a93f92921e9356d769e2cd3b51055d680db9108b64aa859a64556e168"
+    },
+    {
+      "path": "agent/skills/reader-facing-draft.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/reader-facing-draft.md",
+      "sha256": "sha256:2fbc95203ba74bae7a164bb49793de7f8b2d2154ebd161e91793733ed4caeb98"
+    },
+    {
+      "path": "agent/skills/reader-style-contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/reader-style-contract.md",
+      "sha256": "sha256:e05a5e9ed7428562d594c09260297f4bdc54fd5f1d554f101db236e3088febbd"
+    },
+    {
+      "path": "agent/skills/reference-draft-absorption.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/reference-draft-absorption.md",
+      "sha256": "sha256:62db7205c465f788653e15b7a4a083a32f0cfdadb06d77e00afafeb0f5f06a6b"
+    },
+    {
+      "path": "agent/skills/revision-entrypoint-router.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/revision-entrypoint-router.md",
+      "sha256": "sha256:3eabecbfd06b961ed62b12d3191ea59cc225769c2caf52a820b2f34954554804"
+    },
+    {
+      "path": "agent/skills/source-claim-integrity.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/source-claim-integrity.md",
+      "sha256": "sha256:e7f74ea1c004653302c873d8830ee91e137afe03ebd53a061059ec200a894df8"
+    },
+    {
+      "path": "agent/skills/storyline-architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/storyline-architecture.md",
+      "sha256": "sha256:aead9dfb2bc8cb4710e0fb04b6fb85fdca189eba7c65b6fabfcf4786a7635738"
+    },
+    {
+      "path": "agent/skills/style-calibration.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/style-calibration.md",
+      "sha256": "sha256:33a602515ae3115acfc4bf203dfcc156ddae749b74e466327fb1584b1a3e147b"
+    },
+    {
+      "path": "agent/skills/style-engine.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/skills/style-engine.md",
+      "sha256": "sha256:78f0df2307e9f48161911fe38e60679e39333cf62be6c6071a892ad8aa7cfa01"
+    },
+    {
+      "path": "agent/stages/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/stages/README.md",
+      "sha256": "sha256:feabc1ce83caff6646a514c44d9ecae76fceee21bfd9a0bb7ae29e7467691715"
+    },
+    {
+      "path": "agent/stages/chapter-materialization.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/stages/chapter-materialization.md",
+      "sha256": "sha256:1fa060b7582452ff9c2b3b19ec13ba90197418490fe87cc225a72e623721ca49"
+    },
+    {
+      "path": "agent/stages/chapter-production-planning.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/stages/chapter-production-planning.md",
+      "sha256": "sha256:1de012931ce759c25113981ed805906bdcf7bd7fadb5f3a38f510e9bcac796bd"
+    },
+    {
+      "path": "agent/stages/manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/stages/manifest.json",
+      "sha256": "sha256:bf0fe07c26ed26d68b8c43b79c358ec8f79418647f4d3b45108b0ca4c5d6ab77"
+    },
+    {
+      "path": "agent/stages/publication-proof-handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/stages/publication-proof-handoff.md",
+      "sha256": "sha256:57ab60126f47a072e229af0fb08299e24e51f59429f29480bf4f72b3e459f519"
+    },
+    {
+      "path": "agent/stages/source-style-integrity-review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/stages/source-style-integrity-review.md",
+      "sha256": "sha256:9fdc0a457283c9ad1b8416949fce9cba22394c837dad4252861949e9eef345d2"
+    },
+    {
+      "path": "agent/stages/storyline-architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/stages/storyline-architecture.md",
+      "sha256": "sha256:91ce1e90db1ccdccd2ba186f20f8bf69b00c22098f807078551bfa514c01d73a"
+    },
+    {
+      "path": "agent/tools/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/tools/README.md",
+      "sha256": "sha256:fcd6d79d49f02173e5ec1b4ab82284542d2a4c16f06be4b6f7d759fd79505544"
+    },
+    {
+      "path": "agent/tools/domain_affordances.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/agent/tools/domain_affordances.md",
+      "sha256": "sha256:acb6cf6f9fa73eea106e187df17921ba277eac1051ffe89e5cfa0ef6602daf90"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/app-contribution-adapter.json",
+      "sha256": "sha256:c2b749dc91e430a2b25a6b916c429af98db67395b159c5154c34e6d9a281edb1"
+    },
+    {
+      "path": "contracts/action_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/action_catalog.json",
+      "sha256": "sha256:2c8e5bdb20776505be6910c2da118be3db0f149052cc7732fd0a840e32cc35ef"
+    },
+    {
+      "path": "contracts/agent_lab_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/agent_lab_handoff.json",
+      "sha256": "sha256:e04da5f2c5b0f0ef578b9948454d50a70f07342c31b6fe1fcba66a62120b00f0"
+    },
+    {
+      "path": "contracts/artifact_lifecycle_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/artifact_lifecycle_handoff.json",
+      "sha256": "sha256:6c0f02934f878ade1bbe6931d30589e76f6e173feb8fa44eec597ac412136208"
+    },
+    {
+      "path": "contracts/artifact_locator_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/artifact_locator_contract.json",
+      "sha256": "sha256:0ac113d915525c94122bf169f95e5167ba622b54a94fb3bbb16074198091f0ed"
+    },
+    {
+      "path": "contracts/capability_map.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/capability_map.json",
+      "sha256": "sha256:31b7a04d9365167ef672af5374f3336aeb86bf4e07d1b9eb581b678beaaa3fb2"
+    },
+    {
+      "path": "contracts/domain_descriptor.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/domain_descriptor.json",
+      "sha256": "sha256:8f47703603bf513193da37d8251cd135e2153494227ad5d3e76f2bb7f8ce10cc"
+    },
+    {
+      "path": "contracts/domain_handler_registry.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/domain_handler_registry.json",
+      "sha256": "sha256:b4452ac23826aeff65de1df8d025bf4a736d365ecb729f10e61b162c0ccac1db"
+    },
+    {
+      "path": "contracts/durable_knowledge_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/durable_knowledge_catalog.json",
+      "sha256": "sha256:76080a9bb357044ba1797afb815553e241f94942be43fe084bef76dbc71887d2"
+    },
+    {
+      "path": "contracts/epistemic_review_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/epistemic_review_adoption.json",
+      "sha256": "sha256:cf4154813ec60d065a72e0a9cc0de4b1ca997c2bca43099ad2956c58079ce10e"
+    },
+    {
+      "path": "contracts/foundry-agent-os-domain-kernel-manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/foundry-agent-os-domain-kernel-manifest.json",
+      "sha256": "sha256:3393aa72389db5a7f17fe6138f9faf14b11b7ef1868017f7336ff6a2045def10"
+    },
+    {
+      "path": "contracts/foundry_agent_series.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/foundry_agent_series.json",
+      "sha256": "sha256:fd3673897d9e3c14536d77f0de6b7538602911a5045ad65a044fd1f239d46158"
+    },
+    {
+      "path": "contracts/functional_privatization_audit.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/functional_privatization_audit.json",
+      "sha256": "sha256:e9a10a09c883d4a37d729090ecb16412e71102a0d01997b5df5166ee5efb3251"
+    },
+    {
+      "path": "contracts/generated_surface_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/generated_surface_handoff.json",
+      "sha256": "sha256:0bd645c66f532aa459bd5b6843069c0b2ff4c7cfc75500f10f2c263c47825372"
+    },
+    {
+      "path": "contracts/golden_path_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/golden_path_profile.json",
+      "sha256": "sha256:d8e9662386f11a422955bb1fbc01bc445474e673b97f4c2998395f53635b2f8c"
+    },
+    {
+      "path": "contracts/image_asset_host_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/image_asset_host_handoff.json",
+      "sha256": "sha256:0953e34324478cbfbdab4b6b567846dfca4fb443d014fc139fd03db6b8b5328d"
+    },
+    {
+      "path": "contracts/live_stage_run_progress_evidence.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/live_stage_run_progress_evidence.json",
+      "sha256": "sha256:998737453f2691b6b73031611ac860a2e89aa643c528513b0b9bf464124c976c"
+    },
+    {
+      "path": "contracts/opl-native-profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/opl-native-profile.json",
+      "sha256": "sha256:4327e8c948f747c8868e4a307e03e1ebebbce127d529735c69020e79006104bf"
+    },
+    {
+      "path": "contracts/opl_agent_package_manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/opl_agent_package_manifest.json",
+      "sha256": "sha256:89f98d2895d387aa88c55c39930edb80d9ab9378bbd55a5894b1f71480dc89ff"
+    },
+    {
+      "path": "contracts/opl_ledger_artifact_registration.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/opl_ledger_artifact_registration.json",
+      "sha256": "sha256:a5f818f8a623dc48abad62acb071b8cf71e42f34ba863129d8daa4e45cb9c933"
+    },
+    {
+      "path": "contracts/owner_receipt_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/owner_receipt_contract.json",
+      "sha256": "sha256:7f916e94add53cbfa8a7f17898c4ecaccee1a0f9d410edeb8cfd1519b080202f"
+    },
+    {
+      "path": "contracts/pack_compiler_input.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/pack_compiler_input.json",
+      "sha256": "sha256:e54ae733cba1ced68cb19815756d0591087168a7b041f4e74e0c3451ad785dd0"
+    },
+    {
+      "path": "contracts/production_acceptance/bookforge-production-acceptance.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/production_acceptance/bookforge-production-acceptance.json",
+      "sha256": "sha256:ea4e9eea5ac30ae5e489edb9377197b0cbf2d25daf98a5cf4a0d9d977c1a90fa"
+    },
+    {
+      "path": "contracts/production_acceptance/morphology_conformance_fixture.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/production_acceptance/morphology_conformance_fixture.json",
+      "sha256": "sha256:1c49c27c6c0e136b43431662bb90280754cd3005d23c437e982c8c6919791981"
+    },
+    {
+      "path": "contracts/publication_bundle_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/publication_bundle_contract.json",
+      "sha256": "sha256:720edb2b811a76fe5ac729686fcecb4e6b088cafc2128c2a6568a492cb330e60"
+    },
+    {
+      "path": "contracts/real_target_delivery_receipt.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/real_target_delivery_receipt.json",
+      "sha256": "sha256:a51798ebbe852b9b52243e8abf5ee9b6fd0cb45d20b5b2daf8f362bb5d8ad95b"
+    },
+    {
+      "path": "contracts/real_target_scaleout_evidence_ledger.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/real_target_scaleout_evidence_ledger.json",
+      "sha256": "sha256:aee157d7cae59ecf1dc1b4a86bcc3a050abaad91b415d15d365ce33f53fc9c3c"
+    },
+    {
+      "path": "contracts/schemas/imagegen-host-bitmap.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/schemas/imagegen-host-bitmap.input.schema.json",
+      "sha256": "sha256:9292cf1a3f8dd769f1eedca7ae1242632077f43e734265a5018c40d86c42caf6"
+    },
+    {
+      "path": "contracts/schemas/imagegen-host-bitmap.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/schemas/imagegen-host-bitmap.output.schema.json",
+      "sha256": "sha256:ea05cd7fa76b467d678512c115db30e6e8292cfa6d6e43fd59dd35a63432892f"
+    },
+    {
+      "path": "contracts/schemas/materialize-book.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/schemas/materialize-book.input.schema.json",
+      "sha256": "sha256:544958f7660cb15737958645f9ecfec7f477853e5dcdb1cc7631882aa53db7f6"
+    },
+    {
+      "path": "contracts/schemas/materialize-book.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/schemas/materialize-book.output.schema.json",
+      "sha256": "sha256:c2f6cd62c484a743776b0ed69ef6301e8dba84a9c8a9ab609d106b2a0a4357f6"
+    },
+    {
+      "path": "contracts/schemas/shape-storyline.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/schemas/shape-storyline.input.schema.json",
+      "sha256": "sha256:6f5745433d97369fffb91382ffe975dba1cb07bd69133bc5937ea5d3635b69a3"
+    },
+    {
+      "path": "contracts/schemas/shape-storyline.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/schemas/shape-storyline.output.schema.json",
+      "sha256": "sha256:2b5a8993b2c409349183c5d4bebd8ac0432bd7452d36f13ce7c8367bf07efb2d"
+    },
+    {
+      "path": "contracts/source_closure_audit.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/source_closure_audit.json",
+      "sha256": "sha256:c8e4936b6148500d532c0a44bebd64682bd34423297ac59786c43c9e440b13ae"
+    },
+    {
+      "path": "contracts/stage_artifact_kernel_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/stage_artifact_kernel_adoption.json",
+      "sha256": "sha256:e19004253c4251e3565307f4a3ca2aef5d1ad384363f42499f01d1e8cdb7bd07"
+    },
+    {
+      "path": "contracts/stage_decomposition_closeout.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/stage_decomposition_closeout.json",
+      "sha256": "sha256:34dba2458d3332fe89b1d7b0aeede1b7589449c1a77cb35c23286be0f76c9ccc"
+    },
+    {
+      "path": "contracts/stage_operating_principles.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/stage_operating_principles.json",
+      "sha256": "sha256:63dbb5e95c54c0ee0feb542382715620cae1f468469bda5ee893d227c43a176a"
+    },
+    {
+      "path": "contracts/stage_quality_cycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/stage_quality_cycle_policy.json",
+      "sha256": "sha256:7070a917d93452395b88f9f43fd133517aa90e47e2b0062bb6b51c92fea73b5d"
+    },
+    {
+      "path": "contracts/stage_run_canary_evidence.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/stage_run_canary_evidence.json",
+      "sha256": "sha256:d21a62e90b8184ef39d110a0b4c01897a661b615aac844f5e3f8294ee9621415"
+    },
+    {
+      "path": "contracts/stage_run_kernel_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/stage_run_kernel_profile.json",
+      "sha256": "sha256:ca0e3d756790b51aab5f68e68345a3887a561a521a59f68e316f845d0f155ca2"
+    },
+    {
+      "path": "contracts/standard-agent-principles-adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/standard-agent-principles-adoption.json",
+      "sha256": "sha256:1f9eda029d3d956607ba39830f0a0b69ec440fe1547ccee8e5b28f706e298b32"
+    },
+    {
+      "path": "contracts/standard_agent_conformance_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/standard_agent_conformance_profile.json",
+      "sha256": "sha256:edce0290f6fc3ffbc4036801810dbdfa89e92b6e5bfd2058cdf920a853dc3cab"
+    },
+    {
+      "path": "contracts/state_index_kernel_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/state_index_kernel_adoption.json",
+      "sha256": "sha256:6e0804a7842b6069aadbf8f601846982fe21d0c1714835033051fed7cab0bb60"
+    },
+    {
+      "path": "contracts/temporal_stage_run_consumption_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/temporal_stage_run_consumption_policy.json",
+      "sha256": "sha256:31a5f98c7a638b904a069d04d29903acde8d28a9abfd835e08c4cb643f40bbc9"
+    },
+    {
+      "path": "contracts/workspace_artifact_lifecycle_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/workspace_artifact_lifecycle_profile.json",
+      "sha256": "sha256:175b78349caadf1473b75c9d9087698680edbad8c4da8c925c5a5e018cc52067"
+    },
+    {
+      "path": "contracts/workspace_lifecycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/contracts/workspace_lifecycle_policy.json",
+      "sha256": "sha256:97d7fe43ed9189af328b69a087c3f27b4d0af105f3dc10b826816b531d08f9e4"
+    },
+    {
+      "path": "docs/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/docs/README.md",
+      "sha256": "sha256:5719655eb2acb1f9bc598086c40bea8814bca97448e9f61c95db11c742081c34"
+    },
+    {
+      "path": "docs/architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/docs/architecture.md",
+      "sha256": "sha256:dc964ac33a75eb41fbb31b4e13905172e7fba560195c701603013ed07d9f2044"
+    },
+    {
+      "path": "docs/decisions.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/docs/decisions.md",
+      "sha256": "sha256:263bdd6cc72283cdf2f931b5d18384c398c5dfee27fcc0e31940bbc3d1a21d87"
+    },
+    {
+      "path": "docs/evidence/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/docs/evidence/README.md",
+      "sha256": "sha256:81b541b2da58654928396db9a35e2bdafc1c74c4920e2b79a114463db7e1a526"
+    },
+    {
+      "path": "docs/history/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/docs/history/README.md",
+      "sha256": "sha256:cdb33ce8bdfbfb390bddf3f6b59463dd4e3bf225717ff73d4ca00bcf59c2d716"
+    },
+    {
+      "path": "docs/invariants.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/docs/invariants.md",
+      "sha256": "sha256:d0708c5c03cce8761cc4645931dd94ac31c70205c7896edd8a6a47e1cd2dfd69"
+    },
+    {
+      "path": "docs/project.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/docs/project.md",
+      "sha256": "sha256:37793855df77edf2327f4ea6bf3a06f98097c4932f2b252a08c1a312d7ff1e29"
+    },
+    {
+      "path": "docs/references/opl-base-revision-routing-handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/docs/references/opl-base-revision-routing-handoff.md",
+      "sha256": "sha256:64641179e6c333c2d67e6f68b1da506286c3cd55bdf810f582ab7329fe7acfb9"
+    },
+    {
+      "path": "docs/status.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/docs/status.md",
+      "sha256": "sha256:f3f1d64bfc4204d823a2653a2b36a1cc3fd70668c5c28b37882f9163dae7e679"
+    },
+    {
+      "path": "runtime/authority_functions/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/authority_functions/README.md",
+      "sha256": "sha256:984e51c6a232afd2f8239839f3b583c3a2930710ea7d914a1179379e3f4ec609"
+    },
+    {
+      "path": "runtime/fixtures/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/fixtures/README.md",
+      "sha256": "sha256:2feedec8c28142aeb9742bdb5ccf499c2c2ae7dce19d771810b05c8785dcf0b3"
+    },
+    {
+      "path": "runtime/native_helpers/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/README.md",
+      "sha256": "sha256:70bed942ac60cdf8951ba77a89a427bd398da5aefae0fc9f5c92b940c77a53a2"
+    },
+    {
+      "path": "runtime/native_helpers/bookforge_imagegen_asset.native-helper-probe.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/bookforge_imagegen_asset.native-helper-probe.json",
+      "sha256": "sha256:dd276274a40bb79ad12acba442b2200dd93bce75223f977c3399b0d01dadcca3"
+    },
+    {
+      "path": "runtime/native_helpers/bookforge_imagegen_asset.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/bookforge_imagegen_asset.py",
+      "sha256": "sha256:13ba76a5d6dc62754189a873e1269fd09830de3195accddf7e695922bf1952f2"
+    },
+    {
+      "path": "runtime/native_helpers/bookforge_pdf_export.native-helper-probe.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/bookforge_pdf_export.native-helper-probe.json",
+      "sha256": "sha256:dc0790003252d24ff04fbd404382d06e9278750f2a9e35fbcf40723d08d6a09c"
+    },
+    {
+      "path": "runtime/native_helpers/bookforge_pdf_export.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/bookforge_pdf_export.py",
+      "sha256": "sha256:c77aa6b5cab9a7b1b1dcab2f1419ed22a452f7bf3f8a1e224cda3d2d6b5f3e6e"
+    },
+    {
+      "path": "runtime/native_helpers/bookforge_pdf_export_parts/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/bookforge_pdf_export_parts/__init__.py",
+      "sha256": "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "runtime/native_helpers/bookforge_pdf_export_parts/artifact_gate.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/bookforge_pdf_export_parts/artifact_gate.py",
+      "sha256": "sha256:ea51b7096651a664ffafa6b0c74b13e9d92b7b7e34b0f6a363be6b29c1670103"
+    },
+    {
+      "path": "runtime/native_helpers/bookforge_pdf_export_parts/compile_phases.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/bookforge_pdf_export_parts/compile_phases.py",
+      "sha256": "sha256:2373172715b8e384cdbc9066403961c08f73e426373ec08b3397c697679ed132"
+    },
+    {
+      "path": "runtime/native_helpers/bookforge_pdf_export_parts/profile_and_assets.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/bookforge_pdf_export_parts/profile_and_assets.py",
+      "sha256": "sha256:4a2eadddd0de4ed5534c9285f5dbf53c69744f85885e35a03f9277da803fe233"
+    },
+    {
+      "path": "runtime/native_helpers/bookforge_publication_bundle.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/bookforge_publication_bundle.py",
+      "sha256": "sha256:04d272a2ddfca5e398a8f7c02394e09bb62ae6edeaee3f791ce9a91259d09fd5"
+    },
+    {
+      "path": "runtime/native_helpers/bookforge_table_widths.lua",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/bookforge_table_widths.lua",
+      "sha256": "sha256:5c23ea5315778038a3c2b98972cd10003e03036ce38c67030e12a7df869b2f89"
+    },
+    {
+      "path": "runtime/native_helpers/pdf_profiles/bookforge-zh-a4-publication-header.tex",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/pdf_profiles/bookforge-zh-a4-publication-header.tex",
+      "sha256": "sha256:1136060dc197dbd920cb32a502300e3bfae31dddb6299ef015ef0b061e754483"
+    },
+    {
+      "path": "runtime/native_helpers/pdf_profiles/bookforge-zh-a4-publication-reference.docx",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/pdf_profiles/bookforge-zh-a4-publication-reference.docx",
+      "sha256": "sha256:836f8771f8302162dbe21ac9760de34eb831896b44c048efba915bd4abced34b"
+    },
+    {
+      "path": "runtime/native_helpers/pdf_profiles/bookforge-zh-a4-publication.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/pdf_profiles/bookforge-zh-a4-publication.json",
+      "sha256": "sha256:7cbfd938f8f51b1604fea21cf84dd194075da3df7e369d8aa0e4a7663ccb903d"
+    },
+    {
+      "path": "runtime/native_helpers/pdf_profiles/bookforge-zh-publication-proof-header.tex",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/pdf_profiles/bookforge-zh-publication-proof-header.tex",
+      "sha256": "sha256:b5d3d4d365060746dbb66006411776857e4fc1183fd86bb9ca289ead8105b1fb"
+    },
+    {
+      "path": "runtime/native_helpers/pdf_profiles/bookforge-zh-publication-proof.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-bookforge/ae2dc5158fb177e27fb818a7f863b297e3306780/plugins/opl-bookforge/runtime/native_helpers/pdf_profiles/bookforge-zh-publication-proof.json",
+      "sha256": "sha256:a743e83f6df9c0f7f5a30c9e6c8ee3f8578ab273c16dff6c5affe3daefb2d2d4"
+    }
+  ]
+}
