@@ -7,6 +7,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 import { createFakeCodexPluginManagerFixture, repoRoot } from './cli/helpers.ts';
+import { codexNativeReadbackFixture } from './cli/helpers-parts/codex-native-readback-fixture.ts';
 import { formatJsonPayload } from '../../src/kernel/json-file.ts';
 import { acceptDomainRead, parseResearchSnapshot, parseContributionResearch, renderResearch, renderProgress } from '../../src/mcp-app/task-workbench.js';
 import { listOplMcpAppViews } from '../../src/read-models/operator/app-mcp-app.ts';
@@ -150,7 +151,7 @@ test('OPL MCP App starts through a linked launcher, exposes views and gates conf
     env: {
       ...getDefaultEnvironment(),
       CODEX_HOME: codexHome,
-      OPL_CODEX_PLUGIN_BIN: codex.codexPath,
+      ...codexNativeReadbackFixture(fixtureRoot, codex.codexPath),
       OPL_STATE_DIR: fixtureRoot,
       OPL_REPO_TEMP_ROOT: fixtureRoot,
     },

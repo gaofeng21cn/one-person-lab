@@ -406,7 +406,7 @@ export function buildWorkspaceIndex(input: {
     && Array.isArray(input.existingIndex?.[inventoryPointerSegment])
     ? input.existingIndex[inventoryPointerSegment].filter(isRecord)
     : [];
-  const projectedDomainItems = inventory
+  const projectedDomainItems: Array<Record<string, unknown>> = inventory
     ? input.projects.map((project) => ({
         ...(inventoryPointerSegment === 'projects' ? {
           ...existingDomainItems.find((item) => item.project_id === project.project_id),

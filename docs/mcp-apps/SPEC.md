@@ -20,7 +20,7 @@ it does not own domain truth or execute arbitrary Package HTML.
 This specification owns the shared Mini App interaction and contribution model.
 The App product contract owns navigation and visual design; Studio owns the MCP
 App host and transport; installed Packages own business data, actions and quality
-decisions. The implementation gaps and delivery sequence live only in
+decisions. Any remaining implementation gaps and their delivery sequence live only in
 [the active gap document](../active/current-state-vs-ideal-gap.md).
 
 An Agent tool and a human-facing view are entrypoints to the same owner operation.
