@@ -1,0 +1,653 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "occ",
+  "plugin_id": "occ",
+  "package_version": "0.1.5",
+  "source_repo": "https://github.com/gaofeng21cn/opl-capital-compass.git",
+  "source_commit": "d00a80da40ec048fa8698da5e26ad20fcba75ea7",
+  "source_root": "plugins/occ",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:c466fa2f068fd6cb58eee0366d9515bf44b212ecf7349bc3bb40d0a34cf4d917"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/.codex-plugin/plugin.json",
+      "sha256": "sha256:65d0cc1ad775a446784f0c6112f7b3de52161e1327111c8e5d0ca2d7151e2d84"
+    },
+    {
+      "path": "agent/knowledge/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/README.md",
+      "sha256": "sha256:66a2784cb2678faae5e90e46a7ef5a87a1da4bca82ed7f3102c5772c72bcdeb2"
+    },
+    {
+      "path": "agent/knowledge/ai-capital-cycle.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/ai-capital-cycle.md",
+      "sha256": "sha256:dc98a5b8237667933e0cea035cdce1c4778446600f89a01f5757a7e4d67b057e"
+    },
+    {
+      "path": "agent/knowledge/china-retail-products.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/china-retail-products.md",
+      "sha256": "sha256:9232c8025ba4d3e022c5f41c36ec4005e1d6822aa22059d88b1008c9a7a97c79"
+    },
+    {
+      "path": "agent/knowledge/derivatives-and-structured-products.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/derivatives-and-structured-products.md",
+      "sha256": "sha256:63792c53f223ed927861657bf1aedebd93a1feaa069470f906372704a22a12d3"
+    },
+    {
+      "path": "agent/knowledge/fixed-income-and-cash.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/fixed-income-and-cash.md",
+      "sha256": "sha256:b15f701a26bf65fda8fee3a436c473f2012f1913a6f97ab5119e4ecdd43c60bc"
+    },
+    {
+      "path": "agent/knowledge/funds-etfs-and-distributions.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/funds-etfs-and-distributions.md",
+      "sha256": "sha256:cb74ba62a4e0acc11a10dc4f3282df8e61327e40aca492436d5aa01ca4986afc"
+    },
+    {
+      "path": "agent/knowledge/fx-tax-and-cross-border.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/fx-tax-and-cross-border.md",
+      "sha256": "sha256:c9c08cebd69a75f7f446f10574c7773db449a85e14464b9a0d1570c46f64d15b"
+    },
+    {
+      "path": "agent/knowledge/market-microstructure-and-execution.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/market-microstructure-and-execution.md",
+      "sha256": "sha256:f0377c49a0882c065d4c85caa2970155477283ce2aeda9460a9840a75694b6ec"
+    },
+    {
+      "path": "agent/knowledge/portfolio-construction-and-suitability.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/portfolio-construction-and-suitability.md",
+      "sha256": "sha256:17f624ce8d7c61da12aa51989f4aeaefee3a34f6df83171d5b21d975f3612a04"
+    },
+    {
+      "path": "agent/knowledge/portfolio-structure.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/portfolio-structure.md",
+      "sha256": "sha256:8ecdad32f8bad7e5d882e1597e01aa0780b7a4aca8a9e2b5021c87f5f648ba24"
+    },
+    {
+      "path": "agent/knowledge/product-structure.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/product-structure.md",
+      "sha256": "sha256:0e4f916519a9fc20b5f11d601c659523c6f63ad52e0afb29a972757c98a2efaf"
+    },
+    {
+      "path": "agent/knowledge/source-hierarchy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/source-hierarchy.md",
+      "sha256": "sha256:b8784d2f51f8a773240130d5358e63e016be9347b13df91d7e778287bf9a2e66"
+    },
+    {
+      "path": "agent/knowledge/us-china-macro.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/knowledge/us-china-macro.md",
+      "sha256": "sha256:f091aa84c515848a2cdfea5fa1c182223aeae75a565e89daed4c92133250d690"
+    },
+    {
+      "path": "agent/policies/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/policies/README.md",
+      "sha256": "sha256:aac81bf5c0a810266282fc17eb13abaa84e2bc9eb446e1090e970142af69a69e"
+    },
+    {
+      "path": "agent/policies/authority-boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/policies/authority-boundary.md",
+      "sha256": "sha256:a0ae11dc26d24ad1a01d3275b541b136b02de979384b476a6e5c300e867f94c0"
+    },
+    {
+      "path": "agent/policies/evidence-currentness.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/policies/evidence-currentness.md",
+      "sha256": "sha256:fc6313baa25cac53f210afa42609872d8cd849d45acd5bc272bb48088a098908"
+    },
+    {
+      "path": "agent/policies/execution-boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/policies/execution-boundary.md",
+      "sha256": "sha256:cc50c119c419c14eb82e1375898cfd10f6fddbef14aeb653f4c8e90fd1384a11"
+    },
+    {
+      "path": "agent/policies/memory-boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/policies/memory-boundary.md",
+      "sha256": "sha256:c35d7d627029ea2b45c8a1f7a3cd1cee096b6e4f30c41ee63c4c22980134203d"
+    },
+    {
+      "path": "agent/policies/risk-budget.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/policies/risk-budget.md",
+      "sha256": "sha256:553d73b6921c9c29a68ce3e50d24b9e4cbaf96c58b39f38f2c7c67608e1d4e7d"
+    },
+    {
+      "path": "agent/primary_skill/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/primary_skill/SKILL.md",
+      "sha256": "sha256:3a4736cf1ad0a0f5b1f4b303aca745784577b7b6e526e409b4d2062a590ed020"
+    },
+    {
+      "path": "agent/principles/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/principles/README.md",
+      "sha256": "sha256:598042c264248793d3a21a22d730f10128e2e3bc43d95666df8b59eb309ae546"
+    },
+    {
+      "path": "agent/principles/domain-specialization.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/principles/domain-specialization.md",
+      "sha256": "sha256:60b9275bf473ab3fb444f491d18acc08b6cf698a2f283541f0e8f50cf37131b3"
+    },
+    {
+      "path": "agent/principles/opl-standard-agent-principles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/principles/opl-standard-agent-principles.md",
+      "sha256": "sha256:0aa8e0e0186e13c657b0253ab6ce2c4aaf2d6e0e12c27337c918e69c8a1add03"
+    },
+    {
+      "path": "agent/professional_skills/capital-decision-brief/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/professional_skills/capital-decision-brief/SKILL.md",
+      "sha256": "sha256:cdc711e217b2cfa3bc1ea7d09ee2a5f035e60efdf74a73d743edaa701af2cff6"
+    },
+    {
+      "path": "agent/professional_skills/decision-record-curator/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/professional_skills/decision-record-curator/SKILL.md",
+      "sha256": "sha256:3fdc755d994bd5207df863a589e0c722e714bced074403118033e060b0cce0cb"
+    },
+    {
+      "path": "agent/professional_skills/evidence-currentness-review/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/professional_skills/evidence-currentness-review/SKILL.md",
+      "sha256": "sha256:536aaeb15b0b71750f244c548064b1948c81ad1bb77b1bff67446ff7fdc5bbe5"
+    },
+    {
+      "path": "agent/professional_skills/execution-integrity/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/professional_skills/execution-integrity/SKILL.md",
+      "sha256": "sha256:3975b25366bfe16275dfc8c34180da47cad99f72a9e4c1c52f60ff0996fad326"
+    },
+    {
+      "path": "agent/professional_skills/portfolio-risk-diagnosis/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/professional_skills/portfolio-risk-diagnosis/SKILL.md",
+      "sha256": "sha256:9f6117f5c802a713003ba9709cd9c67e20cc228a02c81cee91fa24a3fe3eab00"
+    },
+    {
+      "path": "agent/professional_skills/product-mechanism-analysis/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/professional_skills/product-mechanism-analysis/SKILL.md",
+      "sha256": "sha256:d5ff0bd426e5126dcd00cb8125e8761c969392573473b3b3c6cec1577039ea6a"
+    },
+    {
+      "path": "agent/professional_skills/us-china-macro-transmission/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/professional_skills/us-china-macro-transmission/SKILL.md",
+      "sha256": "sha256:44471d891cb0a1034d195dcba2900f58d417fdd445f90b8e7e17c3a657b3b87b"
+    },
+    {
+      "path": "agent/prompts/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/prompts/README.md",
+      "sha256": "sha256:f19e09fdd83cf9a64b0d781dda91bb9f68302806d14c160c813cd4d2d0f8c397"
+    },
+    {
+      "path": "agent/prompts/decision-design.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/prompts/decision-design.md",
+      "sha256": "sha256:9d42085687e7fb9a3c2c16546a4490069d843920c4fdf5c0ed6d085791d05795"
+    },
+    {
+      "path": "agent/prompts/execution-plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/prompts/execution-plan.md",
+      "sha256": "sha256:fb9be20c33d8c6867945f5e1666ffd75bb1beb530a406125dbacc5da4e8c6611"
+    },
+    {
+      "path": "agent/prompts/mission-state.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/prompts/mission-state.md",
+      "sha256": "sha256:584b11f22552b3f78ab2f7e3d0a61449d0c1c86f0d69af793fe0953cb2cda91e"
+    },
+    {
+      "path": "agent/prompts/portfolio-macro.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/prompts/portfolio-macro.md",
+      "sha256": "sha256:55e4656ca15381415a2aae57e25b0c2c60e2b89e761a7eb1b911fbefa8d0466e"
+    },
+    {
+      "path": "agent/prompts/product-evidence.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/prompts/product-evidence.md",
+      "sha256": "sha256:3dbbd6061bbdce3e3d58fd94380bf7597d21242ac52c7c3671a3d78a7e080578"
+    },
+    {
+      "path": "agent/prompts/record-memory.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/prompts/record-memory.md",
+      "sha256": "sha256:f6a8ad2dd2195ec7a08adbe1b2a22d66cc54d03cd1beb18ca3546647e07c3e64"
+    },
+    {
+      "path": "agent/prompts/stage-quality-cycle-roles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/prompts/stage-quality-cycle-roles.md",
+      "sha256": "sha256:fb9facfdf8e35beb74bb04a996d64bf6a9e253fa5fe7fda3af047ee6bf3d301b"
+    },
+    {
+      "path": "agent/quality_gates/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/quality_gates/README.md",
+      "sha256": "sha256:89a10eaa843fd6c3f69466fe14c160890af8c211db55b6ef6ee2dba2ea0a03ac"
+    },
+    {
+      "path": "agent/quality_gates/decision-design-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/quality_gates/decision-design-quality-gate.md",
+      "sha256": "sha256:55a7d30b849a269f636b8719a8b7c902a0daac318c086171f65d17332771f0ee"
+    },
+    {
+      "path": "agent/quality_gates/domain_acceptance.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/quality_gates/domain_acceptance.md",
+      "sha256": "sha256:55430c249cb0fa6a1c8abf7e2905a4e580ce49a198c217754dc1c5cee08a4cae"
+    },
+    {
+      "path": "agent/quality_gates/execution-plan-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/quality_gates/execution-plan-quality-gate.md",
+      "sha256": "sha256:ab4281e2a8477e4f7f7028f523643a8aa711bc3d69c2996a75e9a0a4325c3592"
+    },
+    {
+      "path": "agent/quality_gates/mission-state-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/quality_gates/mission-state-quality-gate.md",
+      "sha256": "sha256:8fc8edd8a3d849e566192a4daefb2dc10a38db88ddf763a2092ebc2b6778b13c"
+    },
+    {
+      "path": "agent/quality_gates/portfolio-macro-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/quality_gates/portfolio-macro-quality-gate.md",
+      "sha256": "sha256:737644c0b586676a6197e2f9188932238f3cdad33278209c70d1b02ed3ea9c5b"
+    },
+    {
+      "path": "agent/quality_gates/product-evidence-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/quality_gates/product-evidence-quality-gate.md",
+      "sha256": "sha256:5a4fee85bcc20889e84bfade11bac73f5e1179dd2a29e1f576fc80afae38ac5e"
+    },
+    {
+      "path": "agent/quality_gates/record-memory-quality-gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/quality_gates/record-memory-quality-gate.md",
+      "sha256": "sha256:3cb5cd3e51b9b520fc66f2b2b464047f5a1b80a6023c481ff7c9a665c8c6da99"
+    },
+    {
+      "path": "agent/skills/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/skills/README.md",
+      "sha256": "sha256:662af1a91b50c45d873bcb6aaa62a1e44eaa2e8c3b352f017cd0203d4b3dc288"
+    },
+    {
+      "path": "agent/skills/domain_execution.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/skills/domain_execution.md",
+      "sha256": "sha256:9cced7c4ed01f89108dce688b4a2e1e2f169da7096d09b97f61e535b5156a52c"
+    },
+    {
+      "path": "agent/stages/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/stages/README.md",
+      "sha256": "sha256:f6e0608eee8e1d4de9cb9289c8f54d280c5a613f85e8b73b0ec04cc83ed043aa"
+    },
+    {
+      "path": "agent/stages/decision-design.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/stages/decision-design.md",
+      "sha256": "sha256:19c8108a8b85f43be81681d0e01efcdfb725097cfd95f8628b0fe7df4e47efd3"
+    },
+    {
+      "path": "agent/stages/execution-plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/stages/execution-plan.md",
+      "sha256": "sha256:7008c08c2a132da37af213027df5cb210693838f593acdb9abf7f21ef1d31871"
+    },
+    {
+      "path": "agent/stages/manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/stages/manifest.json",
+      "sha256": "sha256:59b7a5b6de5d5c5d0ceceda0050a266df3fdb6af05480ac632d6759e8ea6a971"
+    },
+    {
+      "path": "agent/stages/mission-state.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/stages/mission-state.md",
+      "sha256": "sha256:370085d09d1887d2021cb4ed20755b5f94f877c4d6285551e9f615d0c30d77c2"
+    },
+    {
+      "path": "agent/stages/portfolio-macro.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/stages/portfolio-macro.md",
+      "sha256": "sha256:85de7511770e1e97edf591e789d22eed49192b7d9e6253d2eeee04b8792d2dec"
+    },
+    {
+      "path": "agent/stages/product-evidence.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/stages/product-evidence.md",
+      "sha256": "sha256:92c938abd7a7834d409e188cbacef6ec320ae5817b6c0a4b59a1ae13c561c263"
+    },
+    {
+      "path": "agent/stages/record-memory.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/stages/record-memory.md",
+      "sha256": "sha256:dd740b511e22bd8067b73a1732912d3833b78de704f47dbaa219e63fdd29f99c"
+    },
+    {
+      "path": "agent/tools/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/tools/README.md",
+      "sha256": "sha256:cb2a4b1967a842e43fbcda3fd7b02411cd0a3a330670489f5361c362cdd5bb28"
+    },
+    {
+      "path": "agent/tools/domain_affordances.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/agent/tools/domain_affordances.md",
+      "sha256": "sha256:645ccf8a8705f686a414860c2d7dedbb89c6bfa1297820efb5918dfe56a52577"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/app-contribution-adapter.json",
+      "sha256": "sha256:f3f5e1fff5c703066c108aa3e143a34d12fe0c5b48084046e91e6436ac2e7fd2"
+    },
+    {
+      "path": "assets/branding/opl-capital-compass-overview-v1.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/assets/branding/opl-capital-compass-overview-v1.png",
+      "sha256": "sha256:706809717aeaa11f4d737fb4659dfcd656bdd58735f4bd1f0b27a1e45a960042"
+    },
+    {
+      "path": "assets/icon.svg",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/assets/icon.svg",
+      "sha256": "sha256:f6148838943ba9056f8a26a47fd57a80756c2921b1457bb12dd41da96bbeddb1"
+    },
+    {
+      "path": "contracts/action_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/action_catalog.json",
+      "sha256": "sha256:9af733e3199c33f27d566795c309af59675b62c2cfe3db67148d7a54e6189e9d"
+    },
+    {
+      "path": "contracts/artifact_locator_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/artifact_locator_contract.json",
+      "sha256": "sha256:1a4b33e25aa196e33ad30dd4c7a0cd6b84b5c3b4f84d1929378630b882f8ad8d"
+    },
+    {
+      "path": "contracts/capability_map.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/capability_map.json",
+      "sha256": "sha256:ae8cf7e09302e243d13ea85a44dc25215a1e4141cc182a819f4881c7bfa92797"
+    },
+    {
+      "path": "contracts/domain_descriptor.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/domain_descriptor.json",
+      "sha256": "sha256:0c9fe8446de2e5516b3d767c3bb9271f41868c0dfebda3c4bddc05f9672450bc"
+    },
+    {
+      "path": "contracts/domain_handler_registry.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/domain_handler_registry.json",
+      "sha256": "sha256:a904dacf72293f02457785ed3bdbddf781094ad6251c459dcf0814c43b5dd6a6"
+    },
+    {
+      "path": "contracts/durable_knowledge_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/durable_knowledge_catalog.json",
+      "sha256": "sha256:a15b2057fdcebfe93d72cb4a12bcb9ab00ce18b240b4a4217beb979daa7a1d44"
+    },
+    {
+      "path": "contracts/foundry_agent_series.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/foundry_agent_series.json",
+      "sha256": "sha256:05072d750213330a78ed276c76a18c4632c55d6a3c5a5342e84c63b60053f808"
+    },
+    {
+      "path": "contracts/functional_privatization_audit.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/functional_privatization_audit.json",
+      "sha256": "sha256:39d6decaabbdb10d23bc19907170547ca06c16ec298c740f72d693112580ee54"
+    },
+    {
+      "path": "contracts/generated_surface_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/generated_surface_handoff.json",
+      "sha256": "sha256:4b0f8854794196d64b810c759b072335d14eac3b165efe771bd2d2d2a0716609"
+    },
+    {
+      "path": "contracts/opl_agent_package_manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/opl_agent_package_manifest.json",
+      "sha256": "sha256:fa2382f5c5396228351a6e39628bfc1b28954e512e0681094937a707de7b2722"
+    },
+    {
+      "path": "contracts/owner_receipt_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/owner_receipt_contract.json",
+      "sha256": "sha256:b895c72375ef463a6e74c35fa3767c1830ce7a1d0d6a76a9fd9b3cdc4335cd89"
+    },
+    {
+      "path": "contracts/pack_compiler_input.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/pack_compiler_input.json",
+      "sha256": "sha256:72e76ea6ff9e3ae1f41f90e15366eaef06e7be8da46a3ca420d22be1a0e83459"
+    },
+    {
+      "path": "contracts/schemas/advise-capital-allocation.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/advise-capital-allocation.input.schema.json",
+      "sha256": "sha256:96298269a0b7314b0b4ec7a40c128150adc7019cefe3d90a5c86cbf9a432131a"
+    },
+    {
+      "path": "contracts/schemas/advise-capital-allocation.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/advise-capital-allocation.output.schema.json",
+      "sha256": "sha256:15c68ffd0d1f9fb6ee7428d6a2ef67fc5aa021972ff784d48ddc26cb9b143d8f"
+    },
+    {
+      "path": "contracts/schemas/decision-packet.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/decision-packet.schema.json",
+      "sha256": "sha256:19f556f89a83b1c1da3716381bb587a33842a93cc4e094b8bdd96ba708fcee7f"
+    },
+    {
+      "path": "contracts/schemas/decision-record.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/decision-record.schema.json",
+      "sha256": "sha256:9b6e16cfabda3b082ba52f196e3ed45476b8394e306c384f1671ee718804e7f9"
+    },
+    {
+      "path": "contracts/schemas/execution-plan.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/execution-plan.schema.json",
+      "sha256": "sha256:b4358becf7dfdaccc8bd53e1a9934adb9a9a6d2949794b7024561de715935b24"
+    },
+    {
+      "path": "contracts/schemas/knowledge-owner-review.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/knowledge-owner-review.schema.json",
+      "sha256": "sha256:b519cbd8c6f228fd4585a2dfb39c5ef8c36e06a7eb46898596342882e6e2a026"
+    },
+    {
+      "path": "contracts/schemas/knowledge-source-bindings.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/knowledge-source-bindings.schema.json",
+      "sha256": "sha256:7a2e0eedad9ccf4d37d7ea80f50b7faea84c6651acf128da380372d5d61b1a72"
+    },
+    {
+      "path": "contracts/schemas/memory-writeback-receipt.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/memory-writeback-receipt.schema.json",
+      "sha256": "sha256:77972eae0a50fcace565bed4fe11569a280d014572009e41b52331db712a774f"
+    },
+    {
+      "path": "contracts/schemas/portfolio-risk-map.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/portfolio-risk-map.schema.json",
+      "sha256": "sha256:19a0fa6d57bbe8ba325fc84aae69ebb26f224b2daba2122036bace0ea6da5972"
+    },
+    {
+      "path": "contracts/schemas/product-evidence-map.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/product-evidence-map.schema.json",
+      "sha256": "sha256:d0d791ce3e4eb5e228ffbbaccca3c9fbd08b79841e927da0c13ec0c738cb3b41"
+    },
+    {
+      "path": "contracts/schemas/trade-authorization.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/schemas/trade-authorization.schema.json",
+      "sha256": "sha256:dfdde18e64f18d61689453f7716c13f916c5321766948c725a1dbbd24e82aad7"
+    },
+    {
+      "path": "contracts/stage_artifact_kernel_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/stage_artifact_kernel_adoption.json",
+      "sha256": "sha256:b944df4b1de6d55551e47bd6f3127541bbaf4c740a3f9610265f3d5108f37b12"
+    },
+    {
+      "path": "contracts/stage_operating_principles.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/stage_operating_principles.json",
+      "sha256": "sha256:b9ff62288bc94aaa703c0914b95900df50e74afdc70d6337849a87ac06e52900"
+    },
+    {
+      "path": "contracts/stage_quality_cycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/stage_quality_cycle_policy.json",
+      "sha256": "sha256:e66d3af76f293572c6f553626d1536021c337b376889c83a828e65f81fc58bf7"
+    },
+    {
+      "path": "contracts/stage_run_canary_evidence.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/stage_run_canary_evidence.json",
+      "sha256": "sha256:58e35cd9efe3b6b7b7b8a771dfdf02e786b8579102f4e9f6210cc3a662e6a245"
+    },
+    {
+      "path": "contracts/stage_run_kernel_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/stage_run_kernel_profile.json",
+      "sha256": "sha256:0e39810ed75c008771d82c37eaf9548415050d6c40261ef40934e1a40edd3c41"
+    },
+    {
+      "path": "contracts/standard-agent-principles-adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/standard-agent-principles-adoption.json",
+      "sha256": "sha256:c18486c533575e371a5f623c6a6b9e5ce85058f599b91411ce4dc0376d2bf329"
+    },
+    {
+      "path": "contracts/workspace_lifecycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/contracts/workspace_lifecycle_policy.json",
+      "sha256": "sha256:c68750a7329ce6db788fc9fca78e636915476127bf551dd795863493fb2c43f5"
+    },
+    {
+      "path": "docs/knowledge-workflow.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/docs/knowledge-workflow.md",
+      "sha256": "sha256:9ea781a50b5ce9699ce5d07047d885db81578641e80bbb42e1844c475adc45a8"
+    },
+    {
+      "path": "docs/whitepapers/opl-capital-compass-whitepaper.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/docs/whitepapers/opl-capital-compass-whitepaper.md",
+      "sha256": "sha256:f0d2050646da32a78d7a7e0f63ae5fb5f48b106b1d61a64ec1ac8ec8cc7c024b"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/opl-package.json",
+      "sha256": "sha256:fa2382f5c5396228351a6e39628bfc1b28954e512e0681094937a707de7b2722"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/plugin.json",
+      "sha256": "sha256:308b0078433aca0e8cbd50612855feee0c3169938751487faf41a5d37746bda3"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/pyproject.toml",
+      "sha256": "sha256:0bc43c9d7751b565838de9ac4192a3b2766edf518c99300c8423551e03de973e"
+    },
+    {
+      "path": "runtime/authority_functions/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/runtime/authority_functions/README.md",
+      "sha256": "sha256:a07af9c192fad922383318edfac99207b618b300d065e5cbfa63883f0305d463"
+    },
+    {
+      "path": "runtime/authority_functions/capital-decision-owner-handoff.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/runtime/authority_functions/capital-decision-owner-handoff.ts",
+      "sha256": "sha256:abe4d0fe5e2743978fd04eef347e90f2e97bedc8b74dad28d9811faa91b99d8f"
+    },
+    {
+      "path": "runtime/fixtures/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/runtime/fixtures/README.md",
+      "sha256": "sha256:736247d21b85e6a816e00a07f93cd93803dd3cdcffec2aa79b66c20357f48013"
+    },
+    {
+      "path": "runtime/native_helpers/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/runtime/native_helpers/README.md",
+      "sha256": "sha256:d5760d4fc2d55c4231ac11a127b1522276938389fa09788b52ff9362cf7a7bcc"
+    },
+    {
+      "path": "scripts/knowledge_bridge.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/scripts/knowledge_bridge.py",
+      "sha256": "sha256:b32cf6e85d28cee6cf22da8f48f9b2e9589d52bd6111fd2d5823f1cead379515"
+    },
+    {
+      "path": "scripts/validate_artifact.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/scripts/validate_artifact.py",
+      "sha256": "sha256:4394db4e69e8f7e48468fac7c7f7c02ef07738c633ce1174402a87bd5dd8d269"
+    },
+    {
+      "path": "skills/occ/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/skills/occ/SKILL.md",
+      "sha256": "sha256:3a4736cf1ad0a0f5b1f4b303aca745784577b7b6e526e409b4d2062a590ed020"
+    },
+    {
+      "path": "tests/eval_cases.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/tests/eval_cases.json",
+      "sha256": "sha256:fd12feec6951f333b7ee5632798966fea9f2e63135199abcad56805c279776ce"
+    },
+    {
+      "path": "uv.lock",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-capital-compass/d00a80da40ec048fa8698da5e26ad20fcba75ea7/plugins/occ/uv.lock",
+      "sha256": "sha256:55062b4f84683d64bddd4d7a70a20ac5187aad606bd560a431c38ead4a45ad61"
+    }
+  ]
+}

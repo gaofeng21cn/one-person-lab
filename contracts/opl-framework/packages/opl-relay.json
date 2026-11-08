@@ -3,7 +3,7 @@
   "package_id": "opl-relay",
   "display_name": "OPL Relay",
   "publisher": "one-person-lab",
-  "version": "0.5.6",
+  "version": "0.6.0",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-relay.git",
@@ -41,6 +41,7 @@
       ".codex-plugin/plugin.json",
       "assets/icon.png",
       "bin/opl-relay",
+      "mcp.json",
       "openclaw/SKILL.md",
       "plugin.json",
       "runtime/codex_mail_workbench/__init__.py",
@@ -49,21 +50,36 @@
       "runtime/codex_mail_workbench/config.py",
       "runtime/codex_mail_workbench/context.py",
       "runtime/codex_mail_workbench/drafts.py",
+      "runtime/codex_mail_workbench/folders.py",
+      "runtime/codex_mail_workbench/graph.py",
+      "runtime/codex_mail_workbench/graph_drafts.py",
+      "runtime/codex_mail_workbench/keychain.py",
       "runtime/codex_mail_workbench/knowledge.py",
       "runtime/codex_mail_workbench/mailbox.py",
       "runtime/codex_mail_workbench/memory.py",
       "runtime/codex_mail_workbench/message.py",
+      "runtime/codex_mail_workbench/native.py",
       "runtime/codex_mail_workbench/paths.py",
+      "runtime/codex_mail_workbench/people.py",
       "runtime/codex_mail_workbench/persona.py",
+      "runtime/codex_mail_workbench/reply_context.py",
+      "runtime/codex_mail_workbench/remote_search.py",
       "runtime/codex_mail_workbench/server_drafts.py",
+      "runtime/codex_mail_workbench/server_send.py",
       "runtime/codex_mail_workbench/store.py",
       "runtime/codex_mail_workbench/sync.py",
       "runtime/codex_mail_workbench/triage.py",
       "runtime/codex_mail_workbench/workspace.py",
+      "runtime/codex_mail_workbench/workbench.py",
+      "workbench/server.mjs",
+      "workbench/index.html",
+      "workbench/THIRD_PARTY_NOTICES.txt",
       "skills/opl-relay/SKILL.md",
-      "skills/opl-relay/agents/openai.yaml"
+      "skills/opl-relay/agents/openai.yaml",
+      "skills/opl-relay/references/apple-mail.md",
+      "runtime/codex_mail_workbench/_opl_profile_workspace.py"
     ],
-    "digest": "sha256:12e93e86ac74c243a7d6effb19187509ac5c0f2a8bb7c30a2530a098128cb8a8"
+    "digest": "sha256:e94d3b61b481fdfa18f1668c9caae967ad6b9c016b8f7e34cb97d09db0fca9be"
   },
   "codex_surface": {
     "plugin_id": "opl-relay",
@@ -88,8 +104,8 @@
       "request_schema": "opl-package-app-contribution-request.v1",
       "response_schema": "opl-package-app-contribution-response.v1"
     },
-    "plugin_payload_manifest_url": "payloads/opl-relay-0.5.6.json",
-    "carrier_source_commit": "70185474fc291301de78d5167f42c198ccafdaf8"
+    "plugin_payload_manifest_url": "payloads/opl-relay-0.6.0.json",
+    "carrier_source_commit": "32c4baed09f13a97ab28f7ac086b2793828e3723"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -129,6 +145,15 @@
         },
         "view_id": "relay.people",
         "sort_order": 120
+      },
+      {
+        "navigation_id": "relay.memory",
+        "label_i18n": {
+          "zh-CN": "记忆证据",
+          "en-US": "Memory evidence"
+        },
+        "view_id": "relay.memory",
+        "sort_order": 125
       }
     ],
     "views": [
@@ -141,6 +166,7 @@
         },
         "data_ref": "communications.mail.v1#recent",
         "command_ids": [
+          "relay.workbench.open",
           "relay.mail.sync"
         ],
         "empty_state_i18n": {
@@ -171,6 +197,7 @@
         },
         "data_ref": "communications.mail.v1#draft.inspect",
         "command_ids": [
+          "relay.workbench.open",
           "relay.draft.create",
           "relay.draft.reply-all",
           "relay.draft.create-from-persona",
@@ -185,23 +212,94 @@
       },
       {
         "view_id": "relay.people",
-        "view_type": "timeline",
+        "view_type": "list_detail",
         "title_i18n": {
           "zh-CN": "联系人",
           "en-US": "People"
         },
-        "data_ref": "personal.memory.v1#search",
+        "data_ref": "personal.memory.v1#people",
         "command_ids": [
           "relay.context.build",
           "relay.memory.inspect"
         ],
         "empty_state_i18n": {
-          "zh-CN": "没有已批准的关系记忆",
-          "en-US": "No approved relationship memory"
+          "zh-CN": "没有已登记的联系人、组织或项目",
+          "en-US": "No registered people, organizations, or projects"
+        }
+      },
+      {
+        "view_id": "relay.memory",
+        "view_type": "timeline",
+        "title_i18n": {
+          "zh-CN": "记忆证据",
+          "en-US": "Memory evidence"
+        },
+        "data_ref": "personal.memory.v1#search",
+        "command_ids": [
+          "relay.memory.inspect"
+        ],
+        "empty_state_i18n": {
+          "zh-CN": "没有已批准的记忆证据",
+          "en-US": "No approved memory evidence"
         }
       }
     ],
+    "ui": [
+      {
+        "contribution_id": "relay.inbox",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "relay.inbox",
+        "sort_order": 100
+      },
+      {
+        "contribution_id": "relay.triage",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "relay.triage",
+        "sort_order": 105
+      },
+      {
+        "contribution_id": "relay.drafts",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "relay.drafts",
+        "sort_order": 110
+      },
+      {
+        "contribution_id": "relay.people",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "relay.people",
+        "sort_order": 120
+      },
+      {
+        "contribution_id": "relay.memory",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "relay.memory",
+        "sort_order": 125
+      }
+    ],
     "commands": [
+      {
+        "command_id": "relay.workbench.open",
+        "label_i18n": {
+          "zh-CN": "打开邮件工作台",
+          "en-US": "Open mail workbench"
+        },
+        "action_ref": "communications.mail.v1#workbench.open"
+      },
       {
         "command_id": "relay.mail.sync",
         "label_i18n": {

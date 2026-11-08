@@ -25,6 +25,7 @@
     "runtime/opl_persona/proposals.py",
     "runtime/opl_persona/workspace.py",
     "skills/opl-persona/SKILL.md",
-    "skills/opl-persona/agents/openai.yaml"
+    "skills/opl-persona/agents/openai.yaml",
+    "runtime/opl_persona/_opl_profile_workspace.py"
   ]
 }

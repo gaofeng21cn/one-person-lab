@@ -3,7 +3,7 @@
   "package_id": "photo-steward",
   "display_name": "Photo Steward",
   "publisher": "gaofeng21cn",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/photo-steward.git",
   "package_role": "capability_package",
@@ -53,8 +53,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/photo-steward-0.4.6.json",
-    "carrier_source_commit": "4ffdae23a5fb0faf5218c53e44538bd602f4f47a"
+    "plugin_payload_manifest_url": "payloads/photo-steward-0.4.7.json",
+    "carrier_source_commit": "cc69d94fb4eead6a246bd1e41ecd012316a01cba"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -138,7 +138,7 @@
       "skills/photo-steward/SKILL.md",
       "skills/photo-steward/agents/openai.yaml"
     ],
-    "digest": "sha256:00acf8251d9d598eb58c653f23cfdc18f81859f9f2b73a82d275a440888e9e06"
+    "digest": "sha256:e74d9744ad00004a650b4bbe1b69413edeac0e4a2188c4230ec49f12aef18bf6"
   },
   "publication_source": {
     "module_id": "photo-steward",

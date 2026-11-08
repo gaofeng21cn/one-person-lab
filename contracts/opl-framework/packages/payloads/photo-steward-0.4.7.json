@@ -1,0 +1,53 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "photo-steward",
+  "plugin_id": "photo-steward",
+  "package_version": "0.4.7",
+  "source_repo": "https://github.com/gaofeng21cn/photo-steward.git",
+  "source_commit": "cc69d94fb4eead6a246bd1e41ecd012316a01cba",
+  "source_root": "plugins/photo-steward",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:e74d9744ad00004a650b4bbe1b69413edeac0e4a2188c4230ec49f12aef18bf6"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/photo-steward/cc69d94fb4eead6a246bd1e41ecd012316a01cba/plugins/photo-steward/.codex-plugin/plugin.json",
+      "sha256": "sha256:5f31b03f4a4d9eb0b531483a4c43a13f03b30885969f772db0536f4020b525b7"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/photo-steward/cc69d94fb4eead6a246bd1e41ecd012316a01cba/plugins/photo-steward/app-contribution-adapter.json",
+      "sha256": "sha256:6d41ad4aa02a6d4261e836aa380a91acbbcd4b049bf3cdded149136035c1b686"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/photo-steward/cc69d94fb4eead6a246bd1e41ecd012316a01cba/plugins/photo-steward/plugin.json",
+      "sha256": "sha256:5fa37c95f357bc9158ec2d9e4c3303f7fc0c9fc11c56e158189508aaef943e52"
+    },
+    {
+      "path": "skills/photo-steward/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/photo-steward/cc69d94fb4eead6a246bd1e41ecd012316a01cba/plugins/photo-steward/skills/photo-steward/SKILL.md",
+      "sha256": "sha256:2cbc9bf8c4bd61d45016b99048558ac8805523b54232f6371f030e18b86b8991"
+    },
+    {
+      "path": "skills/photo-steward/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/photo-steward/cc69d94fb4eead6a246bd1e41ecd012316a01cba/plugins/photo-steward/skills/photo-steward/agents/openai.yaml",
+      "sha256": "sha256:bcd1b4448278ae72691ff4b8ec726d6d78b5604855ca11d65bc1b92547a6c863"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/photo-steward/cc69d94fb4eead6a246bd1e41ecd012316a01cba/plugins/photo-steward/opl-package.json",
+      "sha256": "sha256:46272cc45936522d7168fbbb5090dea9c8bd12f90e157349378bc7b16c89e7ce"
+    }
+  ]
+}
