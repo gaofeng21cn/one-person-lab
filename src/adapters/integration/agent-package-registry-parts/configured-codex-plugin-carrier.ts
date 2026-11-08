@@ -1,4 +1,5 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { readCodexLocalPluginList } from './codex-plugin-local-readback.ts';
 import {
   commandFailure,
   configuredPackageCarrierEnv,
@@ -134,8 +135,11 @@ function readConfiguredPluginEntries(input: {
   env: NodeJS.ProcessEnv;
   runner: CodexPluginCommandRunner;
 }): CodexPluginListEntry[] | ConfiguredCodexPluginCarrierReadback {
-  const listArgs = ['plugin', 'list', '--json'];
-  const list = input.runner({ binary: input.binary, args: listArgs, env: input.env });
+  const useNativeInstalled = input.runner === defaultRunner;
+  const listArgs = useNativeInstalled ? ['app-server', '--stdio'] : ['plugin', 'list', '--json'];
+  const list = useNativeInstalled
+    ? readCodexLocalPluginList({ binary: input.binary, env: input.env })
+    : input.runner({ binary: input.binary, args: listArgs, env: input.env });
   if (list.status !== 0 || list.error) {
     if (input.action === 'list' && list.error) {
       try {

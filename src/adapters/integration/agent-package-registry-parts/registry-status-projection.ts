@@ -292,7 +292,7 @@ function projectDirectoryAction(action: AgentPackageSettingsAction, packageId: s
   // Update and preferences are configure/install catalog entries whose directory semantics are more specific.
   const semantic = action.action_id === 'agent_package_update'
     ? 'update' as const
-    : action.action_id === 'agent_package_preferences_set'
+    : action.action_id === 'agent_package_preferences_set' || action.action_id === 'package_app_set_enabled'
       ? 'preferences' as const
       : action.task_kind;
   return {
@@ -301,7 +301,9 @@ function projectDirectoryAction(action: AgentPackageSettingsAction, packageId: s
     payload: { package_id: packageId },
     required_payload_fields: action.action_id === 'agent_package_preferences_set'
       ? ['package_id', 'exposure_action or shortcut_id']
-      : ['package_id'],
+      : action.action_id === 'package_app_set_enabled'
+        ? ['package_id', 'enabled']
+        : ['package_id'],
     confirmation_required: action.confirmation_required,
     semantic,
     surface: 'settings' as const,
@@ -410,6 +412,8 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
       diagnostic: null,
     },
     installed,
+    installed_version: installed ? manifest.version : null,
+    selected_version: manifest.version,
     activated: ready,
     codex_visible: codexVisible,
     installability: {

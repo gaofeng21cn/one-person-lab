@@ -16,6 +16,7 @@ import {
 } from './helpers.ts';
 import { pathToFileURL } from 'node:url';
 import crypto from 'node:crypto';
+import { codexNativeReadbackFixture } from '../../helpers-parts/codex-native-readback-fixture.ts';
 import { validateJsonSchemaPayload } from '../../../../../src/kernel/schema-registry.ts';
 import {
   normalizeAgentPluginName,
@@ -238,6 +239,9 @@ if (args.join(' ') === 'plugin marketplace list --json') {
 }
 `);
   fs.chmodSync(binary, 0o755);
+  const commands = `${binary}.commands.mjs`;
+  fs.renameSync(binary, commands);
+  fs.copyFileSync(codexNativeReadbackFixture(path.dirname(binary), commands).OPL_CODEX_PLUGIN_BIN, binary);
 }
 
 export function writeDiscoveryThenUnavailableCodex(binary: string, counterPath: string) {

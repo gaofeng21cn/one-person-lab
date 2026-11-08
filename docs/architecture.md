@@ -56,6 +56,7 @@ owner descriptor
 - Package identity 由 owner descriptor 持有。
 - native carrier 持有物理安装与启停。
 - Framework 只做薄 adapter、presence/callability 和统一投影。
+- Codex 的物理 Package descriptor 通过原生 `plugin/list` 的本地 marketplace 范围发现，安装状态和可用项来自同次原生回读。该目录不依赖远端目录刷新；原生未提供物理路径的远端 Plugin 不合成 Framework descriptor。
 - executor route 只决定一次调用怎么执行，不决定 Package 是否安装。
 - Package publication 属于 owner release 面，不由 Framework catalog 推导。
 

@@ -5,7 +5,6 @@ import { FrameworkContractError, isRecord } from '../../../kernel/contract-valid
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import {
   configuredCodexHome,
-  defaultRunner,
   internalPackageCodexHome,
 } from './configured-codex-plugin-carrier-native.ts';
 import type { CodexPluginCommandRunner } from './configured-codex-plugin-carrier.ts';
@@ -15,6 +14,7 @@ import {
   withCurrentOwnerProjection,
 } from './installed-codex-plugin-directory-descriptor.ts';
 import type { InstalledCarrierEntry } from './installed-codex-plugin-directory-types.ts';
+import { readCodexLocalPluginList } from './codex-plugin-local-readback.ts';
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -105,12 +105,13 @@ export function readInstalledCarrierEntries(input: CarrierDiscoveryInput = {}) {
 function readCarrierEntriesFromHome(input: CarrierDiscoveryInput) {
   const configuredBinary = input.binary?.trim() || process.env.OPL_CODEX_PLUGIN_BIN?.trim() || null;
   const binary = configuredBinary ?? 'codex';
-  const runner = input.runner ?? defaultRunner;
-  const result = runner({
-    binary,
-    args: ['plugin', 'list', ...(input.includeAvailable ? ['--available'] : []), '--json'],
-    env: { ...process.env, ...input.env },
-  });
+  const env = { ...process.env, ...input.env };
+  const command = input.runner
+    ? ['plugin', 'list', ...(input.includeAvailable ? ['--available'] : []), '--json']
+    : ['app-server', '--stdio'];
+  const result = input.runner
+    ? input.runner({ binary, args: command, env })
+    : readCodexLocalPluginList({ binary, env, includeAvailable: input.includeAvailable });
   if (result.status !== 0 || result.error) {
     const defaultCarrierAbsent = !configuredBinary
       && (result.error as NodeJS.ErrnoException | null)?.code === 'ENOENT';
@@ -124,13 +125,16 @@ function readCarrierEntriesFromHome(input: CarrierDiscoveryInput) {
         {
           package_id: input.packageId ?? null,
           action: 'list',
-          command: ['plugin', 'list', '--json'],
+          command,
+          ...(!input.runner ? { native_method: 'plugin/list', marketplace_kinds: ['local'] } : {}),
           exit_status: result.status,
           error: result.error?.message ?? null,
           stderr_present: Boolean(result.stderr.trim()),
-          failure_code: result.error
-            ? 'configured_codex_plugin_carrier_unavailable'
-            : 'configured_codex_plugin_carrier_action_failed',
+          failure_code: (result.error as NodeJS.ErrnoException | null)?.code === 'OPL_CODEX_PLUGIN_READBACK_INVALID_SHAPE'
+            ? 'configured_codex_plugin_carrier_readback_invalid_shape'
+            : result.error
+              ? 'configured_codex_plugin_carrier_unavailable'
+              : 'configured_codex_plugin_carrier_action_failed',
         },
       );
     }

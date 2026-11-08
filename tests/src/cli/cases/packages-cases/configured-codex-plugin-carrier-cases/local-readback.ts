@@ -64,7 +64,7 @@ test('installed carrier discovery terminates a hung native readback and rejects 
     assert.throws(() => readInstalledCarrierEntries({
       binary, includeInternal: false, failClosedOnCarrierError: true,
     }), (error: any) => error?.details?.failure_code === 'configured_codex_plugin_carrier_unavailable'
-      && /ETIMEDOUT/.test(error.details.error));
+      && /timed out|ETIMEDOUT/.test(error.details.error));
     assert.ok(Date.now() - startedAt < CODEX_PLUGIN_LIST_TIMEOUT_MS + 5_000);
   } finally {
     removeFixtureTree(root);

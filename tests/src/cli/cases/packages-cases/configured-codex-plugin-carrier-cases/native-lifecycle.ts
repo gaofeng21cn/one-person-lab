@@ -48,6 +48,7 @@ import {
   unavailableCodexRunner,
 } from '../configured-codex-plugin-carrier-shared.ts';
 import type { CodexPluginCommandRunner } from '../configured-codex-plugin-carrier-shared.ts';
+import { codexNativeReadbackFixture } from '../../../helpers-parts/codex-native-readback-fixture.ts';
 
 test('Package mutations advance to a newer owner projection without allowing downgrade', () => {
   const installed = {
@@ -102,8 +103,9 @@ else { process.stderr.write('native list unavailable'); process.exitCode = 7; }
       }
     }
     const calls = fs.readFileSync(callsPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
-    // CLI composition reads once; each mutation then performs its own strict discovery.
-    assert.deepEqual(calls, Array(8).fill('plugin list --json'));
+    // Failed native discovery must not dispatch a Package mutation.
+    assert.ok(calls.length > 0);
+    assert.ok(calls.every((command) => /^plugin list (?:--available )?--json$/.test(command)));
   } finally {
     removeFixtureTree(root);
   }
@@ -171,7 +173,7 @@ if (command === 'plugin marketplace list --json') {
   state.legacyInstalled = false; save(); process.stdout.write(JSON.stringify({ status: 'ok' }));
 } else if (command === 'plugin marketplace remove opl-flow-local --json') {
   state.legacyMarketplace = false; save(); process.stdout.write(JSON.stringify({ status: 'ok' }));
-} else if (command === 'plugin list --json') {
+} else if (command === 'plugin list --available --json') {
   process.stdout.write(JSON.stringify({ installed: [
     ...(state.legacyInstalled ? [{ pluginId: 'opl-flow@opl-flow-local', version: '0.1.52', installed: true, enabled: true, source: { source: 'local', path: process.env.FIXTURE_LEGACY_SOURCE }, marketplaceSource: { sourceType: 'git', source } }] : []),
     ...(state.targetInstalled ? [{ pluginId: 'opl-flow@opl-flow', version: '0.1.53', installed: true, enabled: true, source: { source: 'local', path: process.env.FIXTURE_TARGET_SOURCE }, marketplaceSource: { sourceType: 'git', source } }] : []),
@@ -204,15 +206,15 @@ if (command === 'plugin marketplace list --json') {
     const marketplaceReadIndex = calls.indexOf('plugin marketplace list --json');
     // One CLI composition read plus one mutation selection; no second mutation discovery.
     assert.equal(marketplaceReadIndex, 2, 'reuse the installed descriptor selected before mutation');
-    assert.ok(calls.slice(0, marketplaceReadIndex).every((command) => command === 'plugin list --json'),
+    assert.ok(calls.slice(0, marketplaceReadIndex).every((command) => command === 'plugin list --available --json'),
       'discovery and owner selection must only read plugin state before carrier migration');
     assert.deepEqual(calls.slice(marketplaceReadIndex), [
       'plugin marketplace list --json',
       'plugin marketplace add gaofeng21cn/opl-flow --json',
       'plugin add opl-flow@opl-flow --json',
-      'plugin list --json',
+      'plugin list --available --json',
       'plugin remove opl-flow@opl-flow-local --json',
-      'plugin list --json',
+      'plugin list --available --json',
       'plugin marketplace list --json',
       'plugin marketplace remove opl-flow-local --json',
     ]);
@@ -250,7 +252,7 @@ for (const action of ['update', 'repair']) {
 import fs from 'node:fs';
 const command = process.argv.slice(2).join(' ');
 fs.appendFileSync(${JSON.stringify(callsPath)}, JSON.stringify(command) + '\\n');
-if (command === 'plugin list --json') process.stdout.write(${JSON.stringify(listed)});
+if (command === 'plugin list --available --json') process.stdout.write(${JSON.stringify(listed)});
 else { process.stderr.write('Unexpected native mutation'); process.exitCode = 2; }
 `);
       const curl = path.join(root, 'curl');
@@ -272,7 +274,7 @@ process.stdout.write('{}');
       const urls = fs.readFileSync(registryPath, 'utf8');
       assert.match(urls, /ghcr\.io\/token/);
       const calls = fs.readFileSync(callsPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
-      assert.ok(calls.every((command) => command === 'plugin list --json'));
+      assert.ok(calls.every((command) => command === 'plugin list --available --json'));
       assert.equal(JSON.parse(fs.readFileSync(path.join(source, 'opl-package.json'), 'utf8')).version, '0.0.1');
     } finally {
       removeFixtureTree(root);
@@ -1029,6 +1031,7 @@ test('preloaded native status reader does not parse or replace a corrupt legacy 
     assert.equal(fs.readFileSync(lockPath, 'utf8'), invalidLegacyLock);
 
     Object.assign(process.env, env);
+    process.env.OPL_CODEX_PLUGIN_BIN = codexNativeReadbackFixture(root, binary).OPL_CODEX_PLUGIN_BIN;
     const readStatus = createOplAgentPackageStatusReader();
     const preloadedGlobalStatus = readStatus({
       detail: 'fast',

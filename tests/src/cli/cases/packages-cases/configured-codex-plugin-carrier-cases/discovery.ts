@@ -49,6 +49,7 @@ import {
 } from '../configured-codex-plugin-carrier-shared.ts';
 import { execFileSync } from 'node:child_process';
 import type { CodexPluginCommandRunner } from '../configured-codex-plugin-carrier-shared.ts';
+import { codexNativeReadbackFixture } from '../../../helpers-parts/codex-native-readback-fixture.ts';
 
 test('GitHub archive payload reads the owner source path independently from its install path', () => {
   const commit = '1'.repeat(40);
@@ -590,6 +591,8 @@ test('directory actions project the exact settings ABI while the settings catalo
     );
     assert.ok(entry);
     assert.equal(entry.recommended_action, 'agent_package_repair');
+    assert.equal(entry.installed_version, ownerPackageVersion);
+    assert.equal(entry.selected_version, ownerPackageVersion);
     const expectedActions = [
       {
         action_id: 'agent_package_update',
@@ -627,6 +630,15 @@ test('directory actions project the exact settings ABI while the settings catalo
         semantic: 'preferences',
         surface: 'settings',
       },
+      {
+        action_id: 'package_app_set_enabled',
+        action_ref: 'app_state.actions#package_app_set_enabled',
+        payload: { package_id: packageId },
+        required_payload_fields: ['package_id', 'enabled'],
+        confirmation_required: false,
+        semantic: 'preferences',
+        surface: 'settings',
+      },
     ];
     assert.deepEqual(entry.available_actions, expectedActions);
     assert.deepEqual(entry.recommended_action_ref, expectedActions[1]);
@@ -639,6 +651,7 @@ test('directory actions project the exact settings ABI while the settings catalo
       'agent_package_repair',
       'agent_package_uninstall',
       'agent_package_preferences_set',
+      'package_app_set_enabled',
     ]);
     assert.equal(settingsCatalog.every((action) => !Object.hasOwn(action, 'action_ref')), true);
     assert.equal(settingsCatalog.find((action) => action.action_id === 'agent_package_update')?.task_kind, 'install');
@@ -1278,7 +1291,7 @@ test('package status projects and bulk update visits required installed owner de
   process.env.HOME = env.HOME;
   process.env.CODEX_HOME = env.CODEX_HOME;
   process.env.OPL_STATE_DIR = env.OPL_STATE_DIR;
-  process.env.OPL_CODEX_PLUGIN_BIN = env.OPL_CODEX_PLUGIN_BIN;
+  process.env.OPL_CODEX_PLUGIN_BIN = codexNativeReadbackFixture(root, binary).OPL_CODEX_PLUGIN_BIN;
   process.env.OPL_PACKAGE_PROJECTION_DIR = env.OPL_PACKAGE_PROJECTION_DIR;
   process.env.OPL_MODULE_SOURCE_MODE = env.OPL_MODULE_SOURCE_MODE;
   process.env.OPL_FAMILY_WORKSPACE_ROOT = env.OPL_FAMILY_WORKSPACE_ROOT;
@@ -1294,7 +1307,7 @@ test('package status projects and bulk update visits required installed owner de
     assert.equal(status.launch_allowed, true);
     const statusCalls = fs.readFileSync(callsPath, 'utf8').trim().split('\n');
     assert.ok(statusCalls.length > 0);
-    assert.ok(statusCalls.every((command) => command === 'plugin list --json'),
+    assert.ok(statusCalls.every((command) => command === 'plugin list --available --json'),
       'Agent discovery and package status must remain read-only');
     assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
 

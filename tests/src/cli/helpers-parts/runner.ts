@@ -13,6 +13,7 @@ import { parseJsonText } from '../../../../src/kernel/json-file.ts';
 
 import { cliPath, repoRoot } from './constants.ts';
 import { createFakeCodexPluginManagerFixture } from './fixtures.ts';
+import { codexNativeReadbackFixture } from './codex-native-readback-fixture.ts';
 
 const CLI_TEST_MAX_BUFFER = 16 * 1024 * 1024;
 const DEFAULT_CLI_TEST_TIMEOUT_MS = 30_000;
@@ -55,7 +56,7 @@ function cliTestEnvOverrides(envOverrides: Record<string, string> = {}) {
   const fixtureCodexHome = envOverrides.OPL_STATE_DIR?.trim()
     ? path.join(envOverrides.OPL_STATE_DIR.trim(), 'codex-home')
     : null;
-  return {
+  const overrides = {
     NODE_NO_WARNINGS: '1',
     // CLI subprocesses do not inherit the parent node --test arguments.
     // Keep declared fixture versions isolated from live upstream metadata.
@@ -66,6 +67,10 @@ function cliTestEnvOverrides(envOverrides: Record<string, string> = {}) {
     OPL_CODEX_PLUGIN_BIN: process.env.OPL_CODEX_PLUGIN_BIN?.trim() || cliTestCodexPluginBin(),
     ...(fixtureCodexHome ? { CODEX_HOME: fixtureCodexHome } : {}),
     ...envOverrides,
+  };
+  return {
+    ...overrides,
+    ...codexNativeReadbackFixture(cliTestStateDir(), overrides.OPL_CODEX_PLUGIN_BIN),
   };
 }
 
