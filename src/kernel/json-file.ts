@@ -141,6 +141,58 @@ export type JsonReceiptLedgerAdapterOptions<
   authorityBoundary: () => AuthorityBoundary;
 };
 
+export function verifyJsonReceipt<
+  Receipt extends JsonReceipt,
+  Ledger extends JsonReceiptLedger<Receipt>,
+  AuthorityBoundary,
+>(options: {
+  read: () => Ledger;
+  write: (ledger: Ledger) => void;
+  ledgerPath: () => string;
+  verifySurfaceKind: string;
+  blocker: { blocker_kind: string; blocker_id: string; required_owner: string };
+  authorityBoundary: () => AuthorityBoundary;
+}, input?: JsonReceiptVerifyInput) {
+  const ledger = options.read();
+  const requestedReceiptRef = stringValue(input?.receipt_ref);
+  const receiptIndex = requestedReceiptRef
+    ? ledger.receipts.findIndex((receipt) => receipt.receipt_ref === requestedReceiptRef)
+    : ledger.receipts.findIndex((receipt) => receipt.receipt_status === 'recorded');
+  const fallbackIndex = requestedReceiptRef ? -1 : ledger.receipts.findIndex(Boolean);
+  const selectedIndex = receiptIndex >= 0 ? receiptIndex : fallbackIndex;
+
+  if (selectedIndex < 0) {
+    return {
+      surface_kind: options.verifySurfaceKind,
+      status: 'blocked',
+      writes_performed: false,
+      receipt_ref: requestedReceiptRef,
+      verified_receipt_count: 0,
+      ledger_file: options.ledgerPath(),
+      blocker: { ...options.blocker },
+      authority_boundary: options.authorityBoundary(),
+    };
+  }
+
+  const current = ledger.receipts[selectedIndex];
+  const verified = {
+    ...current,
+    receipt_status: 'verified' as const,
+  };
+  ledger.receipts[selectedIndex] = verified;
+  options.write(ledger);
+  return {
+    surface_kind: options.verifySurfaceKind,
+    status: 'verified',
+    writes_performed: current.receipt_status !== 'verified',
+    receipt_ref: verified.receipt_ref,
+    verified_receipt_count: 1,
+    ledger_file: options.ledgerPath(),
+    receipt: verified,
+    authority_boundary: options.authorityBoundary(),
+  };
+}
+
 export function createJsonReceiptLedgerAdapter<
   Receipt extends JsonReceipt,
   Input,
@@ -199,46 +251,14 @@ export function createJsonReceiptLedgerAdapter<
     };
   };
 
-  const verify = (input?: JsonReceiptVerifyInput) => {
-    const ledger = read();
-    const requestedReceiptRef = stringValue(input?.receipt_ref);
-    const receiptIndex = requestedReceiptRef
-      ? ledger.receipts.findIndex((receipt) => receipt.receipt_ref === requestedReceiptRef)
-      : ledger.receipts.findIndex((receipt) => receipt.receipt_status === 'recorded');
-    const fallbackIndex = requestedReceiptRef ? -1 : ledger.receipts.findIndex(Boolean);
-    const selectedIndex = receiptIndex >= 0 ? receiptIndex : fallbackIndex;
-
-    if (selectedIndex < 0) {
-      return {
-        surface_kind: options.verifySurfaceKind,
-        status: 'blocked',
-        writes_performed: false,
-        receipt_ref: requestedReceiptRef,
-        verified_receipt_count: 0,
-        ledger_file: options.ledgerPath(),
-        blocker: { ...options.blocker },
-        authority_boundary: options.authorityBoundary(),
-      };
-    }
-
-    const current = ledger.receipts[selectedIndex];
-    const verified = {
-      ...current,
-      receipt_status: 'verified' as const,
-    };
-    ledger.receipts[selectedIndex] = verified;
-    write(ledger);
-    return {
-      surface_kind: options.verifySurfaceKind,
-      status: 'verified',
-      writes_performed: current.receipt_status !== 'verified',
-      receipt_ref: verified.receipt_ref,
-      verified_receipt_count: 1,
-      ledger_file: options.ledgerPath(),
-      receipt: verified,
-      authority_boundary: options.authorityBoundary(),
-    };
-  };
+  const verify = (input?: JsonReceiptVerifyInput) => verifyJsonReceipt({
+    read,
+    write,
+    ledgerPath: options.ledgerPath,
+    verifySurfaceKind: options.verifySurfaceKind,
+    blocker: options.blocker,
+    authorityBoundary: options.authorityBoundary,
+  }, input);
 
   return {
     read,

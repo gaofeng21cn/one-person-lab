@@ -1,4 +1,5 @@
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { withFamilyRuntimeTransaction } from './family-runtime-sqlite.ts';
 import {
   requireTemporalStageRunWorkflowInputLaunchable,
   type TemporalStageQualityAttemptMaterializationInput,
@@ -46,7 +47,6 @@ import {
   requirePersistedAttemptStageRunIdentity,
   requireRawStageRunMutationAuthority,
   reviewerSnapshotAuthorityBinding,
-  withActivityMutationTransaction,
 } from './family-runtime-temporal-activity-identity.ts';
 import { requirePersistedStageRunActivityIdentity } from './family-runtime-persisted-identity-admission.ts';
 import { revisionTransportContext } from './family-runtime-revision-intake.ts';
@@ -111,7 +111,7 @@ export async function stageQualityAttemptMaterializeActivity(
         existingRow as unknown as Record<string, unknown>,
         'temporal_stage_quality_attempt_materialize_activity:existing_attempt',
       );
-      return withActivityMutationTransaction(db, () => {
+      return withFamilyRuntimeTransaction(db, () => {
         requireRawStageRunMutationAuthority({
           db,
           stageRunId: stageRun.stage_run_id,
@@ -452,7 +452,7 @@ export async function stageQualityAttemptMaterializeActivity(
           quality_scope_budget: qualityScopeBudget,
         };
     const contextManifestRef = `opl://stage-quality-context/${stableId('ctx', [contextManifest])}`;
-    return withActivityMutationTransaction(db, () => {
+    return withFamilyRuntimeTransaction(db, () => {
       requireRawStageRunMutationAuthority({
         db,
         stageRunId: stageRun.stage_run_id,

@@ -11,11 +11,10 @@ import {
 } from '../modules/json-boundary.ts';
 import {
   assertNoArgs,
-  assertSinglePayloadSource,
   buildUsageError,
   parseCommandOptions,
-  readPayloadFileText,
 } from '../modules/support.ts';
+import { readPayloadFileText, selectSinglePayloadSource } from '../modules/payload-file.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 function parseJsonObject(
@@ -48,12 +47,8 @@ function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
     'payload-file': { type: 'string', multiple: true },
     'target-identity': { type: 'string' },
   });
-  const payloadValues = values.payload as string[] | undefined;
-  const payloadFiles = values['payload-file'] as string[] | undefined;
   const targetIdentityValue = values['target-identity'] as string | undefined;
-  assertSinglePayloadSource((payloadValues?.length ?? 0) + (payloadFiles?.length ?? 0) > 1, spec);
-  const payloadValue = payloadValues?.[0];
-  const payloadFile = payloadFiles?.[0];
+  const { payload: payloadValue, payloadFile } = selectSinglePayloadSource(values, spec);
   if (!payloadValue && !payloadFile) {
     throw buildUsageError(
       'runtime stage-replay-missing-receipt record requires --payload or --payload-file.',

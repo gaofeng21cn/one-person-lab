@@ -13,6 +13,7 @@ import {
   readJsonRecordFile,
   upsertJsonReceipts,
   writeJsonReceiptLedger,
+  verifyJsonReceipt,
 } from '../../src/kernel/json-file.ts';
 
 const testBoundary = {
@@ -23,6 +24,42 @@ const testBoundary = {
   invalidRootMessage: () => 'JSON root must be an object.',
   invalidRootDetails: (filePath: string) => ({ file: filePath }),
 };
+
+test('receipt verification preserves selection, owner metadata and write failures', () => {
+  const ledger = {
+    receipts: [
+      { receipt_ref: 'earlier', receipt_status: 'verified' as 'recorded' | 'verified', owner: 'first' },
+      { receipt_ref: 'pending', receipt_status: 'recorded' as 'recorded' | 'verified', owner: 'second' },
+    ],
+  };
+  let writes = 0;
+  const options = {
+    read: () => ledger,
+    write: () => { writes += 1; },
+    ledgerPath: () => 'owner-ledger.json',
+    verifySurfaceKind: 'owner-verify',
+    blocker: { blocker_kind: 'owner-gate', blocker_id: 'missing', required_owner: 'owner' },
+    authorityBoundary: () => ({ can_write_domain_truth: false }),
+  };
+  const selected = verifyJsonReceipt(options);
+  assert.equal(selected.receipt_ref, 'pending');
+  assert.equal(selected.writes_performed, true);
+  assert.deepEqual(selected.receipt, { receipt_ref: 'pending', receipt_status: 'verified', owner: 'second' });
+  assert.equal(writes, 1);
+
+  const missing = verifyJsonReceipt(options, { receipt_ref: 'missing' });
+  assert.equal(missing.status, 'blocked');
+  assert.deepEqual(missing.blocker, options.blocker);
+  assert.equal(writes, 1);
+  const fallback = verifyJsonReceipt(options);
+  assert.equal(fallback.receipt_ref, 'earlier');
+  assert.equal(fallback.writes_performed, false);
+  assert.deepEqual(fallback.authority_boundary, { can_write_domain_truth: false });
+
+  const failure = new Error('owner write failed');
+  assert.throws(() => verifyJsonReceipt({ ...options, write: () => { throw failure; } }),
+    (error) => error === failure);
+});
 
 test('shared JSON file boundary keeps caller-owned error shape and read status', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-json-file-boundary-'));

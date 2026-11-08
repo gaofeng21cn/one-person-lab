@@ -28,3 +28,21 @@ export function assertSinglePayloadSource(
     });
   }
 }
+
+export function selectSinglePayloadSource(
+  values: Record<string, string | boolean | (string | boolean)[] | undefined>,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const payloads = values.payload as string[] | undefined;
+  const payloadFiles = values['payload-file'] as string[] | undefined;
+  assertSinglePayloadSource((payloads?.length ?? 0) + (payloadFiles?.length ?? 0) > 1, spec);
+  return { payload: payloads?.[0], payloadFile: payloadFiles?.[0] };
+}
+
+export function readSinglePayloadText(
+  values: Record<string, string | boolean | (string | boolean)[] | undefined>,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const { payload, payloadFile } = selectSinglePayloadSource(values, spec);
+  return payload ?? (payloadFile ? readPayloadFileText(payloadFile, spec) : null);
+}

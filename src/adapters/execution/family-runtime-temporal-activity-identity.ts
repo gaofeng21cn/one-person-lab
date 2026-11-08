@@ -37,21 +37,6 @@ import {
   type ReviewerInputSnapshotAuthorityBinding,
 } from './family-runtime-reviewer-input-snapshot.ts';
 import type { ReviewEvidenceArtifactContext } from './family-runtime-review-evidence-artifact.ts';
-export function withActivityMutationTransaction<T>(
-  db: ReturnType<typeof openQueueDb>['db'],
-  mutation: () => T,
-) {
-  const ownsTransaction = !db.isTransaction;
-  try {
-    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
-    const result = mutation();
-    if (ownsTransaction) db.exec('COMMIT');
-    return result;
-  } catch (error) {
-    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
-    throw error;
-  }
-}
 
 export function requireRawStageRunMutationAuthority(input: {
   db: ReturnType<typeof openQueueDb>['db'];

@@ -88,7 +88,7 @@ test('managed dependencies read from the installed owner descriptor policy witho
     schema_path: 'contracts/workflow-policy.schema.json',
   };
   const policy = {
-    schema: 'opl_flow_workflow_policy.v3',
+    schema: 'opl_flow_workflow_policy.v4',
     package: { id: 'opl-flow', version: '1.2.3', owner: 'opl-flow', kind: 'workflow_profile' },
     workflow_generation: 'fixture-generation',
     provides: [
@@ -132,7 +132,7 @@ test('managed dependencies read from the installed owner descriptor policy witho
         source: 'officecli',
       },
     ],
-    recommends: [
+    experience_baseline: [
       {
         id: 'mineru-open-api',
         kind: 'cli',
@@ -279,6 +279,15 @@ test('managed dependencies read from the installed owner descriptor policy witho
     ]);
     assert.equal(fs.existsSync(path.join(stateRoot, 'agent-package-locks.json')), false);
     assert.equal(fs.existsSync(path.join(stateRoot, 'agent-package-lifecycle-ledger.json')), false);
+
+    for (const version of [1, 2, 3]) {
+      fs.writeFileSync(policyPath, formatJsonPayload({
+        ...policy,
+        schema: `opl_flow_workflow_policy.v${version}`,
+      }));
+      assert.deepEqual(readOplFlowManagedDependencyIds(), []);
+      assert.deepEqual(readOplFlowManagedDependencies(), []);
+    }
 
     const schemaInvalidPolicy = { ...policy } as Record<string, unknown>;
     delete schemaInvalidPolicy.workflow_generation;

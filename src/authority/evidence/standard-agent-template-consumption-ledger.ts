@@ -5,6 +5,7 @@ import {
   readJsonReceiptLedger,
   upsertJsonReceipts,
   writeJsonReceiptLedger,
+  verifyJsonReceipt,
 } from '../../kernel/json-file.ts';
 import { record, stringList, type JsonRecord } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
@@ -316,48 +317,18 @@ export function recordStandardAgentTemplateConsumptionReceipts(
 export function verifyStandardAgentTemplateConsumptionReceipt(
   input: StandardAgentTemplateConsumptionReceiptVerifyInput = {},
 ) {
-  const ledger = readStandardAgentTemplateConsumptionLedger();
-  const requestedReceiptRef = optionalString(input.receipt_ref);
-  const receiptIndex = requestedReceiptRef
-    ? ledger.receipts.findIndex((receipt) => receipt.receipt_ref === requestedReceiptRef)
-    : ledger.receipts.findIndex((receipt) => receipt.receipt_status === 'recorded');
-  const fallbackIndex = requestedReceiptRef ? -1 : ledger.receipts.findIndex(Boolean);
-  const selectedIndex = receiptIndex >= 0 ? receiptIndex : fallbackIndex;
-
-  if (selectedIndex < 0) {
-    return {
-      surface_kind: 'opl_standard_agent_template_consumption_ledger_verify',
-      status: 'blocked',
-      writes_performed: false,
-      receipt_ref: requestedReceiptRef,
-      verified_receipt_count: 0,
-      ledger_file: ledgerPath(),
-      blocker: {
-        blocker_kind: 'standard_agent_template_consumption_receipt_gate',
-        blocker_id: 'standard_agent_template_consumption_receipt_not_found',
-        required_owner: 'one_person_lab_operator_or_agent_foundry_owner',
-      },
-      authority_boundary: refsOnlyAuthorityBoundary(),
-    };
-  }
-
-  const current = ledger.receipts[selectedIndex];
-  const verified = {
-    ...current,
-    receipt_status: 'verified' as const,
-  };
-  ledger.receipts[selectedIndex] = verified;
-  writeStandardAgentTemplateConsumptionLedger(ledger);
-  return {
-    surface_kind: 'opl_standard_agent_template_consumption_ledger_verify',
-    status: 'verified',
-    writes_performed: current.receipt_status !== 'verified',
-    receipt_ref: verified.receipt_ref,
-    verified_receipt_count: 1,
-    ledger_file: ledgerPath(),
-    receipt: verified,
-    authority_boundary: refsOnlyAuthorityBoundary(),
-  };
+  return verifyJsonReceipt({
+    read: readStandardAgentTemplateConsumptionLedger,
+    write: writeStandardAgentTemplateConsumptionLedger,
+    ledgerPath,
+    verifySurfaceKind: 'opl_standard_agent_template_consumption_ledger_verify',
+    blocker: {
+      blocker_kind: 'standard_agent_template_consumption_receipt_gate',
+      blocker_id: 'standard_agent_template_consumption_receipt_not_found',
+      required_owner: 'one_person_lab_operator_or_agent_foundry_owner',
+    },
+    authorityBoundary: refsOnlyAuthorityBoundary,
+  }, input);
 }
 
 export function listStandardAgentTemplateConsumptionReceipts() {

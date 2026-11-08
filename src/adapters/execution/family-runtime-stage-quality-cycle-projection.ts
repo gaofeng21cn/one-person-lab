@@ -4,6 +4,7 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { type StageQualityCycleState } from '../../authority/stages/index.ts';
+import { withFamilyRuntimeTransaction } from './family-runtime-sqlite.ts';
 import type { TemporalStageRunWorkflowState } from './family-runtime-temporal.ts';
 import {
   getRow,
@@ -13,7 +14,6 @@ import {
   requireCycleAttemptMutationAuthority,
   stageAttemptIdFromRef,
   stageRunMutationAuthority,
-  withQualityCycleMutation,
 } from './family-runtime-stage-quality-cycle-persistence.ts';
 import {
   exactStringArray,
@@ -41,7 +41,7 @@ export function projectTemporalStageRunQualityCycle(
   db: DatabaseSync,
   state: TemporalStageRunWorkflowState,
 ) {
-  return withQualityCycleMutation(db, () => {
+  return withFamilyRuntimeTransaction(db, () => {
     const row = getRow(db, state.quality_cycle_id);
     if (!row) {
       throw new FrameworkContractError('cli_usage_error', 'Stage quality cycle not found.', {

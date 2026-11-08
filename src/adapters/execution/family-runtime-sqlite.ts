@@ -44,3 +44,19 @@ export function openFamilyRuntimeSqlite(path: string, options?: FamilyRuntimeSql
   const db = options === undefined ? new DatabaseSync(path) : new DatabaseSync(path, options);
   return configureFamilyRuntimeSqliteConnection(db);
 }
+
+export function withFamilyRuntimeTransaction<T>(
+  db: DatabaseSync,
+  mutation: () => T,
+) {
+  const ownsTransaction = !db.isTransaction;
+  try {
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    const result = mutation();
+    if (ownsTransaction) db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
+}

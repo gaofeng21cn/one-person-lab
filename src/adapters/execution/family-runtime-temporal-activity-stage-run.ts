@@ -1,3 +1,4 @@
+import { withFamilyRuntimeTransaction } from './family-runtime-sqlite.ts';
 import {
   type TemporalStageQualityCycleProjectionInput,
   type TemporalStageRunRouteLaunchInput,
@@ -27,7 +28,6 @@ import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-ex
 import {
   requireRawStageRunMutationAuthority,
   stageAttemptIdFromRef,
-  withActivityMutationTransaction,
 } from './family-runtime-temporal-activity-identity.ts';
 import type { StageRouteCompositionFactory } from './composition-factory-ports.ts';
 export async function stageRunRouteLaunchActivity(
@@ -126,7 +126,7 @@ export async function stageQualityCycleProjectActivity(
       requireStageRunId: true,
     });
     createStageAttemptTable(db);
-    const projected = withActivityMutationTransaction(db, () => {
+    const projected = withFamilyRuntimeTransaction(db, () => {
       requireRawStageRunMutationAuthority({
         db,
         stageRunId: input.stage_run.stage_run_id,

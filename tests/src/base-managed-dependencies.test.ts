@@ -107,7 +107,7 @@ function writeFlowDependencyDescriptor(root: string, dependencyIds: string[]) {
   fs.writeFileSync(path.join(sourceRoot, 'opl-package.json'), formatJsonPayload(manifest));
   fs.writeFileSync(path.join(sourceRoot, 'templates', 'AGENTS.md'), 'fixture\n');
   fs.writeFileSync(policyPath, formatJsonPayload({
-    schema: 'opl_flow_workflow_policy.v3',
+    schema: 'opl_flow_workflow_policy.v4',
     package: { id: 'opl-flow', version: '1.2.3', owner: 'opl-flow', kind: 'workflow_profile' },
     workflow_generation: 'fixture-generation',
     provides: [
@@ -131,7 +131,7 @@ function writeFlowDependencyDescriptor(root: string, dependencyIds: string[]) {
       online_install_default: true,
       source: id,
     })),
-    recommends: [],
+    experience_baseline: [],
     compatible_optional: [],
     capability_bundles: [],
     conflicts: [],

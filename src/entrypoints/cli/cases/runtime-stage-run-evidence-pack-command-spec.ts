@@ -3,12 +3,11 @@ import {
   validateStageRunEvidencePack,
 } from '../../../authority/evidence/stage-run-evidence-pack.ts';
 import {
-  assertSinglePayloadSource,
   buildUsageError,
   parseCommandOptions,
-  readPayloadFileText,
 } from '../modules/support.ts';
 import { readJsonObject } from '../modules/json-boundary.ts';
+import { readSinglePayloadText } from '../modules/payload-file.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 function parseJsonPayload(
@@ -29,12 +28,8 @@ function parseRuntimeStageRunEvidencePackSummaryArgs(
     payload: { type: 'string', multiple: true },
     'payload-file': { type: 'string', multiple: true },
   });
-  const payloads = values.payload as string[] | undefined;
-  const payloadFiles = values['payload-file'] as string[] | undefined;
-  assertSinglePayloadSource((payloads?.length ?? 0) + (payloadFiles?.length ?? 0) > 1, spec);
-  const payload = payloads?.[0];
-  const payloadFile = payloadFiles?.[0];
-  if (!payload && !payloadFile) {
+  const payloadValue = readSinglePayloadText(values, spec);
+  if (payloadValue === null) {
     throw buildUsageError(
       'runtime stage-run-evidence-pack summary requires --payload or --payload-file.',
       spec,
@@ -42,7 +37,7 @@ function parseRuntimeStageRunEvidencePackSummaryArgs(
     );
   }
   return parseJsonPayload(
-    payload ?? readPayloadFileText(payloadFile as string, spec),
+    payloadValue,
     spec,
   );
 }

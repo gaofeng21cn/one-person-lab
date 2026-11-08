@@ -6,6 +6,7 @@ import {
   readJsonReceiptLedger,
   upsertJsonReceipts,
   writeJsonReceiptLedger,
+  verifyJsonReceipt,
 } from '../../kernel/json-file.ts';
 import { record, stringList } from '../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
@@ -526,48 +527,18 @@ export function recordOwnerEvidenceSustainedConsumptionReceipts(
 export function verifyOwnerEvidenceSustainedConsumptionReceipt(
   input: OwnerEvidenceSustainedConsumptionReceiptVerifyInput = {},
 ) {
-  const ledger = readOwnerEvidenceSustainedConsumptionLedger();
-  const requestedReceiptRef = optionalString(input.receipt_ref);
-  const receiptIndex = requestedReceiptRef
-    ? ledger.receipts.findIndex((receipt) => receipt.receipt_ref === requestedReceiptRef)
-    : ledger.receipts.findIndex((receipt) => receipt.receipt_status === 'recorded');
-  const fallbackIndex = requestedReceiptRef ? -1 : ledger.receipts.findIndex(Boolean);
-  const selectedIndex = receiptIndex >= 0 ? receiptIndex : fallbackIndex;
-
-  if (selectedIndex < 0) {
-    return {
-      surface_kind: 'opl_owner_evidence_sustained_consumption_ledger_verify',
-      status: 'blocked',
-      writes_performed: false,
-      receipt_ref: requestedReceiptRef,
-      verified_receipt_count: 0,
-      ledger_file: ledgerPath(),
-      blocker: {
-        blocker_kind: 'owner_evidence_sustained_consumption_receipt_gate',
-        blocker_id: 'owner_evidence_sustained_consumption_receipt_not_found',
-        required_owner: 'app_operator_or_release_default_caller',
-      },
-      authority_boundary: refsOnlyAuthorityBoundary(),
-    };
-  }
-
-  const current = ledger.receipts[selectedIndex];
-  const verified = {
-    ...current,
-    receipt_status: 'verified' as const,
-  };
-  ledger.receipts[selectedIndex] = verified;
-  writeOwnerEvidenceSustainedConsumptionLedger(ledger);
-  return {
-    surface_kind: 'opl_owner_evidence_sustained_consumption_ledger_verify',
-    status: 'verified',
-    writes_performed: current.receipt_status !== 'verified',
-    receipt_ref: verified.receipt_ref,
-    verified_receipt_count: 1,
-    ledger_file: ledgerPath(),
-    receipt: verified,
-    authority_boundary: refsOnlyAuthorityBoundary(),
-  };
+  return verifyJsonReceipt({
+    read: readOwnerEvidenceSustainedConsumptionLedger,
+    write: writeOwnerEvidenceSustainedConsumptionLedger,
+    ledgerPath,
+    verifySurfaceKind: 'opl_owner_evidence_sustained_consumption_ledger_verify',
+    blocker: {
+      blocker_kind: 'owner_evidence_sustained_consumption_receipt_gate',
+      blocker_id: 'owner_evidence_sustained_consumption_receipt_not_found',
+      required_owner: 'app_operator_or_release_default_caller',
+    },
+    authorityBoundary: refsOnlyAuthorityBoundary,
+  }, input);
 }
 
 export function listOwnerEvidenceSustainedConsumptionReceipts() {

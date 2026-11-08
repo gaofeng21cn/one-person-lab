@@ -4,6 +4,7 @@ import {
   readJsonReceiptLedger,
   upsertJsonReceipts,
   writeJsonReceiptLedger,
+  verifyJsonReceipt,
 } from '../../kernel/json-file.ts';
 import {
   stringList as arrayStringList,
@@ -474,48 +475,18 @@ export function recordDeveloperModeCloseoutReceipts(
 export function verifyDeveloperModeCloseoutReceipt(
   input: DeveloperModeCloseoutReceiptVerifyInput = {},
 ) {
-  const ledger = readDeveloperModeCloseoutLedger();
-  const requestedReceiptRef = optionalString(input.receipt_ref);
-  const receiptIndex = requestedReceiptRef
-    ? ledger.receipts.findIndex((receipt) => receipt.receipt_ref === requestedReceiptRef)
-    : ledger.receipts.findIndex((receipt) => receipt.receipt_status === 'recorded');
-  const fallbackIndex = requestedReceiptRef ? -1 : ledger.receipts.findIndex(Boolean);
-  const selectedIndex = receiptIndex >= 0 ? receiptIndex : fallbackIndex;
-
-  if (selectedIndex < 0) {
-    return {
-      surface_kind: 'opl_developer_mode_closeout_ledger_verify',
-      status: 'blocked',
-      writes_performed: false,
-      receipt_ref: requestedReceiptRef,
-      verified_receipt_count: 0,
-      ledger_file: ledgerPath(),
-      blocker: {
-        blocker_kind: 'developer_mode_closeout_receipt_gate',
-        blocker_id: 'developer_mode_closeout_receipt_not_found',
-        required_owner: 'external_repo_owner_or_developer_mode_operator',
-      },
-      authority_boundary: refsOnlyAuthorityBoundary(),
-    };
-  }
-
-  const current = ledger.receipts[selectedIndex];
-  const verified = {
-    ...current,
-    receipt_status: 'verified' as const,
-  };
-  ledger.receipts[selectedIndex] = verified;
-  writeDeveloperModeCloseoutLedger(ledger);
-  return {
-    surface_kind: 'opl_developer_mode_closeout_ledger_verify',
-    status: 'verified',
-    writes_performed: current.receipt_status !== 'verified',
-    receipt_ref: verified.receipt_ref,
-    verified_receipt_count: 1,
-    ledger_file: ledgerPath(),
-    receipt: verified,
-    authority_boundary: refsOnlyAuthorityBoundary(),
-  };
+  return verifyJsonReceipt({
+    read: readDeveloperModeCloseoutLedger,
+    write: writeDeveloperModeCloseoutLedger,
+    ledgerPath,
+    verifySurfaceKind: 'opl_developer_mode_closeout_ledger_verify',
+    blocker: {
+      blocker_kind: 'developer_mode_closeout_receipt_gate',
+      blocker_id: 'developer_mode_closeout_receipt_not_found',
+      required_owner: 'external_repo_owner_or_developer_mode_operator',
+    },
+    authorityBoundary: refsOnlyAuthorityBoundary,
+  }, input);
 }
 
 export function listDeveloperModeCloseoutReceipts() {

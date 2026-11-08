@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import { gt } from 'semver';
 
 import {
   assert,
@@ -851,99 +850,27 @@ test('first-party Package descriptors do not resurrect Framework-owned lock auth
   }
 });
 
-test('bundled Full MAS source projection advances to the immutable ordinary package version', () => {
-  const frozenRef = 'packages/mas-0.2.25.json';
-  const frozenPath = path.join(repoRoot, 'contracts/opl-framework', frozenRef);
-  const frozenBytes = fs.readFileSync(frozenPath);
-  const frozenManifest = parseJsonText(frozenBytes.toString('utf8')) as Record<string, any>;
-  const priorOrdinaryBytes = fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/mas-0.2.20.json'),
-  );
-  const priorOrdinaryManifest = parseJsonText(
-    priorOrdinaryBytes.toString('utf8'),
-  ) as Record<string, any>;
-  const ordinaryManifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/mas.json'),
-    'utf8',
-  )) as Record<string, any>;
+test('current first-party agent projections bind their exact immutable payload identity', () => {
+  const packageDirectory = path.join(repoRoot, 'contracts/opl-framework/packages');
+  const currentManifests = fs.readdirSync(packageDirectory)
+    .filter((fileName) => fileName.endsWith('.json'))
+    .map((fileName) => ({
+      fileName,
+      manifest: parseJsonText(fs.readFileSync(path.join(packageDirectory, fileName), 'utf8')) as Record<string, any>,
+    }))
+    .filter(({ fileName, manifest }) => manifest.surface_kind === 'opl_agent_package_manifest.v1'
+      && fileName === `${manifest.package_id}.json`);
 
-  assert.equal(crypto.createHash('sha256').update(frozenBytes).digest('hex'),
-    'f4849199eb950dc9590a4f8f5119587d91123b8a1655491d223a3b711c1d5bf3');
-  assert.equal(frozenManifest.version, '0.2.25');
-  assert.equal(frozenManifest.codex_surface.plugin_payload_manifest_url, 'payloads/mas-0.2.25.json');
-  assert.equal(crypto.createHash('sha256').update(priorOrdinaryBytes).digest('hex'),
-    'd2ec1d23c37c337b96b18601071ca09be89c43946971e87b3aba8c759107df6e');
-  assert.equal(priorOrdinaryManifest.version, '0.2.20');
-  assert.equal(priorOrdinaryManifest.codex_surface.plugin_payload_manifest_url, 'payloads/mas-0.2.20.json');
-  assert.equal(gt(ordinaryManifest.version, frozenManifest.version), true);
-});
-
-test('bundled Full MAG source projection advances to the immutable ordinary package version', () => {
-  const frozenRef = 'packages/mag-0.3.11.json';
-  const frozenPath = path.join(repoRoot, 'contracts/opl-framework', frozenRef);
-  const frozenBytes = fs.readFileSync(frozenPath);
-  const frozenManifest = parseJsonText(frozenBytes.toString('utf8')) as Record<string, any>;
-  const ordinaryManifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/mag.json'),
-    'utf8',
-  )) as Record<string, any>;
-
-  assert.equal(crypto.createHash('sha256').update(frozenBytes).digest('hex'),
-    'a03d62d7cd3b053e6134963250614305fa2c591193c7bbc28ae5ceed2024201b');
-  assert.equal(frozenManifest.version, '0.3.11');
-  assert.equal(frozenManifest.codex_surface.plugin_payload_manifest_url, 'payloads/mag-0.3.11.json');
-  assert.equal(gt(ordinaryManifest.version, frozenManifest.version), true);
-});
-
-test('bundled Full RCA source projection advances to the immutable ordinary package version', () => {
-  const frozenRef = 'packages/rca-0.2.13.json';
-  const frozenPath = path.join(repoRoot, 'contracts/opl-framework', frozenRef);
-  const frozenBytes = fs.readFileSync(frozenPath);
-  const frozenManifest = parseJsonText(frozenBytes.toString('utf8')) as Record<string, any>;
-  const ordinaryManifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/rca.json'),
-    'utf8',
-  )) as Record<string, any>;
-
-  assert.equal(crypto.createHash('sha256').update(frozenBytes).digest('hex'),
-    '8d638fd1c7555dc8d805ca3dbbdd5c5cd287b651ed68c9394bd2dc16d17f9c83');
-  assert.equal(frozenManifest.version, '0.2.13');
-  assert.equal(frozenManifest.codex_surface.plugin_payload_manifest_url, 'payloads/rca-0.2.13.json');
-  assert.equal(gt(ordinaryManifest.version, frozenManifest.version), true);
-});
-
-test('bundled Full OMA source projection advances independently of ordinary publication', () => {
-  const frozenRef = 'packages/oma-0.4.7.json';
-  const frozenPath = path.join(repoRoot, 'contracts/opl-framework', frozenRef);
-  const frozenBytes = fs.readFileSync(frozenPath);
-  const frozenManifest = parseJsonText(frozenBytes.toString('utf8')) as Record<string, any>;
-  const ordinaryManifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/oma.json'),
-    'utf8',
-  )) as Record<string, any>;
-
-  assert.equal(crypto.createHash('sha256').update(frozenBytes).digest('hex'),
-    '951d10cf5c57693c8a2f3f92f1981ff4b42d8a51783fc6c597564bec2e3b1617');
-  assert.equal(frozenManifest.version, '0.4.7');
-  assert.equal(frozenManifest.codex_surface.plugin_payload_manifest_url, 'payloads/oma-0.4.7.json');
-  assert.equal(gt(ordinaryManifest.version, frozenManifest.version), true);
-});
-
-test('bundled Full OBF source projection advances independently of ordinary publication', () => {
-  const frozenRef = 'packages/obf-0.3.9.json';
-  const frozenPath = path.join(repoRoot, 'contracts/opl-framework', frozenRef);
-  const frozenBytes = fs.readFileSync(frozenPath);
-  const frozenManifest = parseJsonText(frozenBytes.toString('utf8')) as Record<string, any>;
-  const ordinaryManifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/obf.json'),
-    'utf8',
-  )) as Record<string, any>;
-
-  assert.equal(crypto.createHash('sha256').update(frozenBytes).digest('hex'),
-    '87dbc954cf83a4b25903c84257a0088d06d52170b19f00b8ec5631f59f8659c4');
-  assert.equal(frozenManifest.version, '0.3.9');
-  assert.equal(frozenManifest.codex_surface.plugin_payload_manifest_url, 'payloads/obf-0.3.9.json');
-  assert.equal(gt(ordinaryManifest.version, frozenManifest.version), true);
+  assert.ok(currentManifests.length > 0);
+  for (const { manifest } of currentManifests) {
+    const payloadRef = `payloads/${manifest.package_id}-${manifest.version}.json`;
+    assert.equal(manifest.codex_surface.plugin_payload_manifest_url, payloadRef);
+    const payload = parseJsonText(fs.readFileSync(path.join(packageDirectory, payloadRef), 'utf8')) as Record<string, any>;
+    assert.equal(payload.package_id, manifest.package_id);
+    assert.equal(payload.package_version, manifest.version);
+    assert.equal(payload.plugin_id, manifest.codex_surface.plugin_id);
+    assert.match(payload.source_commit, /^[a-f0-9]{40}$/);
+  }
 });
 
 test('MAS first-party agent package manifest fails closed for unsafe dependency declarations', () => {

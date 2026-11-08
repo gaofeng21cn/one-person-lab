@@ -4,9 +4,43 @@ import assert from 'node:assert/strict';
 import {
   familyRuntimeSqliteSidecarPolicy,
   openFamilyRuntimeSqlite,
+  withFamilyRuntimeTransaction,
 } from '../../src/adapters/execution/family-runtime-sqlite.ts';
 
 const EXPECTED_BUSY_TIMEOUT_MS = 5_000;
+
+test('runtime mutations commit or roll back only the transaction they own', () => {
+  const db = openFamilyRuntimeSqlite(':memory:');
+  const failure = new Error('mutation failed');
+  try {
+    db.exec('CREATE TABLE entries (value TEXT)');
+    const insert = (value: string) => db.prepare('INSERT INTO entries VALUES (?)').run(value);
+    const count = () => (db.prepare('SELECT COUNT(*) AS count FROM entries').get() as { count: number }).count;
+
+    assert.equal(withFamilyRuntimeTransaction(db, () => { insert('committed'); return 42; }), 42);
+    assert.equal(db.isTransaction, false);
+    assert.equal(count(), 1);
+    assert.throws(() => withFamilyRuntimeTransaction(db, () => {
+      insert('rolled back');
+      throw failure;
+    }), (error) => error === failure);
+    assert.equal(db.isTransaction, false);
+    assert.equal(count(), 1);
+
+    db.exec('BEGIN IMMEDIATE');
+    withFamilyRuntimeTransaction(db, () => insert('outer ownership'));
+    assert.throws(() => withFamilyRuntimeTransaction(db, () => {
+      insert('outer decides rollback');
+      throw failure;
+    }), (error) => error === failure);
+    assert.equal(db.isTransaction, true);
+    assert.equal(count(), 3);
+    db.exec('ROLLBACK');
+    assert.equal(count(), 1);
+  } finally {
+    db.close();
+  }
+});
 
 test('family runtime SQLite connections set a busy timeout', () => {
   const db = openFamilyRuntimeSqlite(':memory:');

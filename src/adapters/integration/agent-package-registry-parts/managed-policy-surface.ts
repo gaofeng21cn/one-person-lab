@@ -75,12 +75,9 @@ export function managedPolicyDependenciesFromDescriptor(input: {
     },
     sourceRoot: input.sourceRoot,
   });
-  const recommended = policy.schema === 'opl_flow_workflow_policy.v4'
-    ? policy.experience_baseline
-    : policy.recommends;
   return [
     ...policy.requires.map((dependency) => ({ ...dependency, relationship: 'required' as const })),
-    ...recommended.map((dependency) => ({ ...dependency, relationship: 'recommended' as const })),
+    ...policy.experience_baseline.map((dependency) => ({ ...dependency, relationship: 'recommended' as const })),
   ];
 }
 
@@ -190,9 +187,7 @@ export function repairManagedPolicyDependenciesFromDescriptor(input: {
     toolIds,
     managedSkillDependencies,
   } = managedPolicyDependencySelection({
-    schema: inspection.policy.schema,
     requires: inspection.policy.requires,
-    recommends: inspection.policy.recommends,
     experienceBaseline: inspection.policy.experience_baseline,
   });
   const dryRun = input.dryRun === true;
@@ -314,14 +309,6 @@ function experienceBaselineReadback(input: {
   policy: OplFlowPolicy;
   sync: ReturnType<typeof syncOplCompanionSkills>;
 }): AgentPackageExperienceBaselineReadback {
-  if (input.policy.schema !== 'opl_flow_workflow_policy.v4') {
-    return {
-      status: 'not_declared',
-      failure_ids: [],
-      repair_command: null,
-      capabilities: [],
-    };
-  }
   const capabilities = input.policy.experience_baseline.map((dependency) =>
     capabilityReadbackFromSync({ dependency, sync: input.sync })
   );
@@ -454,9 +441,7 @@ export function managedPolicyCurrentnessFromDescriptor(input: {
       toolIds,
       managedSkillDependencies,
     } = managedPolicyDependencySelection({
-      schema: inspection.policy.schema,
       requires: inspection.policy.requires,
-      recommends: inspection.policy.recommends,
       experienceBaseline: inspection.policy.experience_baseline,
     });
     const dependencySync = syncOplCompanionSkills(inspection.home, {
@@ -490,17 +475,15 @@ export function managedPolicyCurrentnessFromDescriptor(input: {
     const requiredDependenciesOperational = requiredDependencyFailureIds.length === 0;
     const conflictDrifted = inspection.detectedConflicts.length > 0;
     const drifted = conflictDrifted || dependencyDriftReasons.length > 0;
-    const capabilityStrategy = inspection.policy.schema === 'opl_flow_workflow_policy.v4'
-      ? compileFlowCapabilityStrategy({
-          schema: inspection.policy.schema,
-          package: inspection.policy.package,
-          requires: inspection.policy.requires,
-          experienceBaseline: inspection.policy.experience_baseline,
-          compatibleOptional: inspection.policy.compatible_optional,
-          capabilityBundles: inspection.policy.capability_bundles,
-          policySha256: inspection.policySha256,
-        })
-      : null;
+    const capabilityStrategy = compileFlowCapabilityStrategy({
+      schema: inspection.policy.schema,
+      package: inspection.policy.package,
+      requires: inspection.policy.requires,
+      experienceBaseline: inspection.policy.experience_baseline,
+      compatibleOptional: inspection.policy.compatible_optional,
+      capabilityBundles: inspection.policy.capability_bundles,
+      policySha256: inspection.policySha256,
+    });
     return {
       surface_kind: 'opl_package_managed_policy_currentness',
       status: drifted ? 'drifted' : 'current',

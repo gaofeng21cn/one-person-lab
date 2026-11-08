@@ -63,261 +63,80 @@ function writeInstalledCodexPluginManager(
 function writeOplFlowPackage(
   root: string,
   options: {
-    includeRemoteCompanions?: boolean;
     includeManagedSkillCompanion?: boolean;
-    includeDeprecatedSkillManagerCompanion?: boolean;
-    includeMissingManagedSkillCompanion?: boolean;
-    includeKindCollision?: boolean;
-    includeUnsupportedDefaultMcp?: boolean;
-    includeOptionalArchitectureSkill?: boolean;
-    includeOptionalRuntimeCapability?: boolean;
-    policyVersion?: 'v1' | 'v2' | 'v3' | 'v4';
     packageVersion?: string;
   } = {},
 ) {
   const sourceRoot = path.join(root, 'fixture.opl-flow-source');
-  const v2 = options.policyVersion === 'v2';
-  const v3 = options.policyVersion === 'v3';
-  const v4 = options.policyVersion === 'v4';
   const packageVersion = options.packageVersion ?? '0.1.16';
-  const dependency = (
-    value: Record<string, unknown>,
-    overrides: Record<string, unknown> = {},
-  ): Record<string, unknown> => ({
-    ...value,
-    ...(v2 ? {
-      owner: 'fixture-owner',
-      version_requirement: 'release_lock_exact',
-      install_source: 'framework_managed_release_lock',
-      lifecycle_owner: 'opl-framework',
-      conflict_policy: 'managed_reconcile',
-      credential_policy: 'none',
-      ...overrides,
-    } : {}),
-  });
-  const recommendations = options.includeRemoteCompanions
-    ? [
-        dependency({
-          id: 'officecli',
-          kind: 'cli',
-          offline_bundle: 'full',
-          online_install_default: true,
-          activation: 'task_routed',
-          source: 'fixture-remote',
-        }),
-        dependency({
-          id: 'mineru-open-api',
-          kind: 'cli',
-          offline_bundle: 'full',
-          online_install_default: true,
-          activation: 'task_routed',
-          source: 'fixture-remote',
-        }),
-        dependency({
-          id: 'ui-ux-pro-max',
-          kind: 'codex_skill',
-          offline_bundle: 'full',
-          online_install_default: true,
-          activation: 'explicit',
-          source: 'fixture-remote',
-        }),
-        dependency({
-          id: 'mineru-document-extractor',
-          kind: 'codex_skill',
-          offline_bundle: 'full',
-          online_install_default: true,
-          activation: 'explicit',
-          source: 'fixture-remote',
-        }),
-      ]
-      : options.includeManagedSkillCompanion || options.includeDeprecatedSkillManagerCompanion
-      ? [
-          dependency({
-            id: 'ui-ux-pro-max',
-            kind: 'codex_skill',
-            offline_bundle: 'full',
-            online_install_default: true,
-            activation: 'explicit',
-            source: options.includeDeprecatedSkillManagerCompanion
-              ? 'skills-manager:ui-ux-pro-max'
-              : 'https://github.com/fixture/ui-ux-pro-max',
-            ...(options.includeDeprecatedSkillManagerCompanion ? {} : { source_path: 'skill' }),
-          }),
-        ]
-      : options.includeKindCollision
-        ? [
-            dependency({
-              id: 'officecli',
-              kind: 'codex_skill',
-              offline_bundle: 'full',
-              online_install_default: true,
-              activation: 'task_routed',
-              source: 'fixture-remote',
-            }),
-            dependency({
-              id: 'officecli',
-              kind: 'cli',
-              offline_bundle: 'full',
-              online_install_default: true,
-              activation: 'task_routed',
-              source: 'fixture-remote',
-            }),
-          ]
-        : options.includeUnsupportedDefaultMcp
-          ? [
-              dependency({
-                id: 'fixture-mcp',
-                kind: 'mcp_server',
-                offline_bundle: 'full',
-                online_install_default: true,
-                activation: 'task_routed',
-                source: 'fixture-mcp',
-              }, { credential_policy: 'user_or_provider_owned_not_bundled' }),
-            ]
-          : [];
-  const v4Recommendations: Record<string, unknown>[] = v4
-    ? recommendations.map((entry) => ({
-        ...entry,
-        bundle_id: 'fixture-experience-baseline',
-        install_source: entry.kind === 'codex_skill' ? 'framework_git_projection' : 'owner_release',
-        lifecycle_owner: 'opl-framework',
-        readiness_adapter: entry.kind === 'codex_skill' ? 'codex_skill_payload' : 'binary_version',
-        conflict_policy: 'managed_reconcile',
-        credential_policy: 'none',
-        ...(entry.kind === 'codex_skill' && !String(entry.source).startsWith('https://github.com/')
-          ? {
-              source: `https://github.com/fixture/${entry.id}`,
-              source_path: entry.source_path ?? 'skill',
-            }
-          : {}),
-      }))
-    : recommendations;
-  const optionalCapabilities: Record<string, unknown>[] = [
-    ...(options.includeOptionalArchitectureSkill ? [dependency({
-      id: 'architect-and-simplify',
-      kind: 'codex_skill',
-      owner: 'opl-skills',
-      online_install_default: false,
-      activation: 'task_routed',
-      source: 'https://github.com/gaofeng21cn/opl-skills',
-      source_path: 'skills/architect-and-simplify',
-    })] : []),
-    ...(options.includeOptionalRuntimeCapability ? [dependency({
-      id: 'openai-primary-runtime-office-pdf',
-      kind: 'runtime_capability',
-      owner: 'openai',
-      online_install_default: false,
-      activation: 'task_routed',
-      source: 'openai-primary-runtime',
-    })] : []),
-  ].map((entry) => v4 ? {
-    ...entry,
-    bundle_id: 'fixture-compatible-optional',
-    readiness_adapter: entry.kind === 'codex_skill' ? 'codex_skill_payload' : 'runtime_observation',
-  } : entry);
+  const experienceBaseline = options.includeManagedSkillCompanion ? [{
+    id: 'ui-ux-pro-max',
+    kind: 'codex_skill',
+    offline_bundle: 'full',
+    online_install_default: true,
+    activation: 'explicit',
+    source: 'https://github.com/fixture/ui-ux-pro-max',
+    source_path: 'skill',
+    bundle_id: 'fixture-experience-baseline',
+    install_source: 'framework_git_projection',
+    lifecycle_owner: 'opl-framework',
+    readiness_adapter: 'codex_skill_payload',
+    conflict_policy: 'managed_reconcile',
+    credential_policy: 'none',
+  }] : [];
   const policy = {
-    schema: v2
-      ? 'opl_flow_workflow_policy.v2'
-      : v3
-        ? 'opl_flow_workflow_policy.v3'
-        : v4
-          ? 'opl_flow_workflow_policy.v4'
-        : 'opl_flow_workflow_policy.v1',
+    schema: 'opl_flow_workflow_policy.v4',
     package: { id: 'fixture.opl-flow', version: packageVersion, owner: 'opl-flow', kind: 'workflow_profile' },
     workflow_generation: 'model-native-test',
-    ...(v2 || v3 || v4 ? {
-      provides: [
-        dependency({
-          id: 'fixture.opl-flow',
-          kind: 'codex_plugin',
-          ...(v2 ? { offline_bundle: 'full' } : {}),
-          online_install_default: true,
-          activation: 'always',
-          source: 'package:fixture.opl-flow',
-        }, {
-          owner: 'opl-flow',
-          version_requirement: `=${packageVersion}`,
-          install_source: 'package_payload',
-        }),
-        ...['fixture.opl-flow', 'codex-ops-kit'].map((skillId) => dependency({
-          id: skillId,
-          kind: 'codex_skill',
-          ...(v2 ? { offline_bundle: 'full' } : {}),
-          online_install_default: true,
-          activation: 'task_routed',
-          source: `package:fixture.opl-flow/skills/${skillId}`,
-        }, {
-          owner: 'opl-flow',
-          version_requirement: `=${packageVersion}`,
-          install_source: 'package_payload',
-        })),
-      ],
-      ...(v2 ? {
-        installation_convergence: {
-          standard_target_closure: 'workflow_policy_release_lock',
-          full_target_closure: 'workflow_policy_release_lock',
-          standard_source: 'online_exact_release_lock',
-          full_source: 'embedded_exact_release_lock',
-          final_projection_equivalence_required: true,
-          default_dependencies_require_full_bundle: true,
-          secrets_bundled: false,
-          user_third_party_surfaces_policy: 'preserve',
-        },
-      } : {}),
-    } : {}),
+    provides: [
+      {
+        id: 'fixture.opl-flow',
+        kind: 'codex_plugin',
+        online_install_default: true,
+        activation: 'always',
+        source: 'package:fixture.opl-flow',
+        owner: 'opl-flow',
+        version_requirement: `=${packageVersion}`,
+        install_source: 'package_payload',
+      },
+      ...['fixture.opl-flow', 'codex-ops-kit'].map((skillId) => ({
+        id: skillId,
+        kind: 'codex_skill',
+        online_install_default: true,
+        activation: 'task_routed',
+        source: `package:fixture.opl-flow/skills/${skillId}`,
+        owner: 'opl-flow',
+        version_requirement: `=${packageVersion}`,
+        install_source: 'package_payload',
+      })),
+    ],
     requires: [
-      dependency({
+      {
         id: 'opl-base',
         kind: 'base',
         offline_bundle: 'full',
         online_install_default: true,
         activation: 'always',
         source: 'fixture',
-      }),
-      ...(options.includeMissingManagedSkillCompanion
-        ? [dependency({
-            id: 'fixture-managed-skill',
-            kind: 'codex_skill',
-            owner: 'fixture-owner',
-            online_install_default: true,
-            activation: 'task_routed',
-            source: 'https://github.com/fixture/managed-skill',
-            source_path: 'skills/fixture-managed-skill',
-          })]
-        : []),
+      },
     ],
-    ...(v4 ? { experience_baseline: v4Recommendations } : { recommends: recommendations }),
-    compatible_optional: optionalCapabilities,
-    ...(v4 ? {
-      capability_bundles: [
-        ...(v4Recommendations.length > 0 ? [{
-          id: 'fixture-experience-baseline',
-          label: 'Fixture experience baseline',
-          relationship: 'experience_baseline',
-          member_refs: v4Recommendations.map((entry) => `${entry.kind}:${entry.id}`),
-          online_materialization: 'members_marked_default',
-          full_distribution: 'members_marked_full',
-          readiness: {
-            aggregation: 'all_members',
-            absence_effect: 'degraded_non_blocking',
-            repair_policy: 'framework_or_owner_adapter',
-          },
-        }] : []),
-        ...(optionalCapabilities.length > 0 ? [{
-          id: 'fixture-compatible-optional',
-          label: 'Fixture compatible optional',
-          relationship: 'compatible_optional',
-          member_refs: optionalCapabilities.map((entry) => `${entry.kind}:${entry.id}`),
-          online_materialization: 'observe_only',
-          full_distribution: 'none',
-          readiness: {
-            aggregation: 'observe_members',
-            absence_effect: 'optional_absent',
-            repair_policy: 'none',
-          },
-        }] : []),
-      ],
-    } : {}),
+    experience_baseline: experienceBaseline,
+    compatible_optional: [],
+    capability_bundles: [
+      ...(experienceBaseline.length > 0 ? [{
+        id: 'fixture-experience-baseline',
+        label: 'Fixture experience baseline',
+        relationship: 'experience_baseline',
+        member_refs: experienceBaseline.map((entry) => `${entry.kind}:${entry.id}`),
+        online_materialization: 'members_marked_default',
+        full_distribution: 'members_marked_full',
+        readiness: {
+          aggregation: 'all_members',
+          absence_effect: 'degraded_non_blocking',
+          repair_policy: 'framework_or_owner_adapter',
+        },
+      }] : []),
+    ],
     conflicts: [
       {
         id: 'upstream-superpowers',
@@ -438,30 +257,23 @@ function writeOplFlowPackage(
       'schema',
       'package',
       'requires',
-      ...(v4 ? ['experience_baseline', 'capability_bundles'] : ['recommends']),
+      'experience_baseline',
+      'capability_bundles',
       'compatible_optional',
       'conflicts',
       'retires',
       'migration_policy',
       'historical_fingerprints',
       'codex_model_policy',
-      ...(v2 ? ['provides', 'installation_convergence'] : v3 || v4 ? ['provides'] : []),
+      'provides',
     ],
     properties: {
       schema: {
-        const: v2
-          ? 'opl_flow_workflow_policy.v2'
-          : v3
-            ? 'opl_flow_workflow_policy.v3'
-            : v4
-              ? 'opl_flow_workflow_policy.v4'
-            : 'opl_flow_workflow_policy.v1',
+        const: 'opl_flow_workflow_policy.v4',
       },
       package: { type: 'object' },
       provides: { type: 'array' },
-      installation_convergence: { type: 'object' },
       requires: { type: 'array' },
-      recommends: { type: 'array' },
       experience_baseline: { type: 'array' },
       capability_bundles: { type: 'array' },
       compatible_optional: { type: 'array' },
@@ -480,7 +292,6 @@ test('installed native descriptor projects Flow policy planes and model recommen
   const home = path.join(root, 'home');
   const sourceRoot = path.join(root, 'fixture.opl-flow-source');
   const manifestPath = writeOplFlowPackage(root, {
-    policyVersion: 'v4',
     includeManagedSkillCompanion: true,
   });
   const env = {
@@ -555,7 +366,6 @@ test('public packages repair runs the native carrier and preserves an owner-mana
   const codexHome = path.join(home, '.codex');
   const sourceRoot = path.join(root, 'fixture.opl-flow-source');
   const manifestPath = writeOplFlowPackage(root, {
-    policyVersion: 'v4',
     includeManagedSkillCompanion: true,
   });
   fs.copyFileSync(manifestPath, path.join(sourceRoot, 'opl-package.json'));
@@ -673,7 +483,7 @@ test('managed policy ignores inactive plugin payloads and preserves a manual Pon
   const home = path.join(root, 'home');
   const codexHome = path.join(home, '.codex');
   const sourceRoot = path.join(root, 'fixture.opl-flow-source');
-  const manifestPath = writeOplFlowPackage(root, { policyVersion: 'v4' });
+  const manifestPath = writeOplFlowPackage(root, {});
   const env = {
     HOME: home,
     CODEX_HOME: codexHome,

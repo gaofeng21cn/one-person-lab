@@ -2,6 +2,7 @@ import {
   readJsonReceiptLedger,
   upsertJsonReceipts,
   writeJsonReceiptLedger,
+  verifyJsonReceipt,
 } from '../../kernel/json-file.ts';
 import { record, stringList, stringValue as optionalString } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
@@ -194,48 +195,18 @@ export function recordCodexAppRuntimeEvidenceReceipts(
 export function verifyCodexAppRuntimeEvidenceReceipt(
   input: CodexAppRuntimeEvidenceReceiptVerifyInput = {},
 ) {
-  const ledger = readCodexAppRuntimeEvidenceLedger();
-  const requestedReceiptRef = optionalString(input.receipt_ref);
-  const receiptIndex = requestedReceiptRef
-    ? ledger.receipts.findIndex((receipt) => receipt.receipt_ref === requestedReceiptRef)
-    : ledger.receipts.findIndex((receipt) => receipt.receipt_status === 'recorded');
-  const fallbackIndex = requestedReceiptRef ? -1 : ledger.receipts.findIndex(Boolean);
-  const selectedIndex = receiptIndex >= 0 ? receiptIndex : fallbackIndex;
-
-  if (selectedIndex < 0) {
-    return {
-      surface_kind: 'opl_codex_app_runtime_evidence_ledger_verify',
-      status: 'blocked',
-      writes_performed: false,
-      receipt_ref: requestedReceiptRef,
-      verified_receipt_count: 0,
-      ledger_file: ledgerPath(),
-      blocker: {
-        blocker_kind: 'codex_app_runtime_evidence_receipt_gate',
-        blocker_id: 'codex_app_runtime_evidence_receipt_not_found',
-        required_owner: 'app_live_operator_or_opl_provider_owner',
-      },
-      authority_boundary: refsOnlyAuthorityBoundary(),
-    };
-  }
-
-  const current = ledger.receipts[selectedIndex];
-  const verified = {
-    ...current,
-    receipt_status: 'verified' as const,
-  };
-  ledger.receipts[selectedIndex] = verified;
-  writeCodexAppRuntimeEvidenceLedger(ledger);
-  return {
-    surface_kind: 'opl_codex_app_runtime_evidence_ledger_verify',
-    status: 'verified',
-    writes_performed: current.receipt_status !== 'verified',
-    receipt_ref: verified.receipt_ref,
-    verified_receipt_count: 1,
-    ledger_file: ledgerPath(),
-    receipt: verified,
-    authority_boundary: refsOnlyAuthorityBoundary(),
-  };
+  return verifyJsonReceipt({
+    read: readCodexAppRuntimeEvidenceLedger,
+    write: writeCodexAppRuntimeEvidenceLedger,
+    ledgerPath,
+    verifySurfaceKind: 'opl_codex_app_runtime_evidence_ledger_verify',
+    blocker: {
+      blocker_kind: 'codex_app_runtime_evidence_receipt_gate',
+      blocker_id: 'codex_app_runtime_evidence_receipt_not_found',
+      required_owner: 'app_live_operator_or_opl_provider_owner',
+    },
+    authorityBoundary: refsOnlyAuthorityBoundary,
+  }, input);
 }
 
 export function listCodexAppRuntimeEvidenceReceipts() {

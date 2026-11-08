@@ -33,16 +33,11 @@ type HistoricalFingerprints = {
 };
 
 type OplFlowPolicy = {
-  schema:
-    | 'opl_flow_workflow_policy.v1'
-    | 'opl_flow_workflow_policy.v2'
-    | 'opl_flow_workflow_policy.v3'
-    | 'opl_flow_workflow_policy.v4';
+  schema: 'opl_flow_workflow_policy.v4';
   package: { id: string; version: string; owner: string; kind: string };
   workflow_generation: string;
   provides: AgentPackageManagedPolicyDependency[];
   requires: AgentPackageManagedPolicyDependency[];
-  recommends: AgentPackageManagedPolicyDependency[];
   experience_baseline: AgentPackageManagedPolicyDependency[];
   compatible_optional: AgentPackageManagedPolicyDependency[];
   capability_bundles: AgentPackageFlowCapabilityBundle[];
@@ -54,7 +49,6 @@ type OplFlowPolicy = {
     AgentPackageCodexModelPolicyProjection,
     'surface_kind' | 'configured_default_role' | 'effective_selection' | 'role'
   >;
-  installation_convergence: Record<string, unknown> | null;
 };
 
 type InventoryItem = {

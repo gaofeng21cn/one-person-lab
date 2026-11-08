@@ -103,6 +103,13 @@ App 启动维护自动按当前 owner descriptor 识别并迁移旧的内部 Pac
 源码中的 Package manifest 与 payload 仅保留当前入口和真实合同、测试直接引用的版本。
 历史版本通过 Git 与不可变发布产物追溯。删除前须核对实际消费路径；发布所选 payload、
 carrier 内容锁与已安装版本的生命周期校验继续由现有 owner 执行。
+测试验证当前 descriptor 与不可变 payload 的身份绑定、同版本写入拒绝和 seed 摘要匹配，
+不为已退出消费链的 Full 历史版本永久保留固定字节断言。
+
+Flow managed policy 由安装的 owner descriptor 指定来源，Framework 只解释
+`opl_flow_workflow_policy.v4` 的 required、experience baseline 和 optional 能力平面。
+原生 carrier 与各能力 owner 继续持有生命周期；旧策略必须通过 owner 更新，不能由
+Framework 在读取时推测或重建已退役语义。
 
 ## Publication
 

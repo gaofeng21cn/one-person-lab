@@ -15,11 +15,10 @@ import {
   readStringList,
 } from '../modules/json-boundary.ts';
 import {
-  assertSinglePayloadSource,
   buildUsageError,
   parseCommandOptions,
-  readPayloadFileText,
 } from '../modules/support.ts';
+import { readSinglePayloadText } from '../modules/payload-file.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 function parseRuntimeBrandModuleL5EvidencePayload(
@@ -60,12 +59,7 @@ function parseRuntimeBrandModuleL5EvidenceRecordArgs(
     payload: { type: 'string', multiple: true },
     'payload-file': { type: 'string', multiple: true },
   });
-  const inlinePayloads = parsed.payload as string[] | undefined;
-  const payloadFiles = parsed['payload-file'] as string[] | undefined;
-  assertSinglePayloadSource((inlinePayloads?.length ?? 0) + (payloadFiles?.length ?? 0) > 1, spec);
-  const inlinePayload = inlinePayloads?.[0];
-  const payloadFile = payloadFiles?.[0];
-  const payloadValue = inlinePayload ?? (payloadFile ? readPayloadFileText(payloadFile, spec) : null);
+  const payloadValue = readSinglePayloadText(parsed, spec);
   if (!payloadValue) {
     throw buildUsageError(
       'runtime brand-module-l5-evidence record requires --payload or --payload-file.',

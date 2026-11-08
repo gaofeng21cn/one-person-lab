@@ -6,6 +6,7 @@ import {
   record as recordValue,
   stringValue as optionalString,
 } from '../../kernel/json-record.ts';
+import { withFamilyRuntimeTransaction } from './family-runtime-sqlite.ts';
 import {
   DOMAIN_ROUTE_RUNTIME_REQUEST_KIND,
   DOMAIN_ROUTE_RUNTIME_REQUEST_SURFACE_KIND,
@@ -363,19 +364,6 @@ function reconcileTaskRowWithAttempt(
   return true;
 }
 
-function withDomainRouteTerminalMutation<T>(db: DatabaseSync, mutation: () => T) {
-  const ownsTransaction = !db.isTransaction;
-  try {
-    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
-    const result = mutation();
-    if (ownsTransaction) db.exec('COMMIT');
-    return result;
-  } catch (error) {
-    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
-    throw error;
-  }
-}
-
 function requirePersistedTerminalAttempt(
   db: DatabaseSync,
   stageAttemptId: string,
@@ -399,7 +387,7 @@ export function reconcileDomainRouteTerminalTaskForAttempt(
     source: string;
   },
 ) {
-  return withDomainRouteTerminalMutation(db, () => {
+  return withFamilyRuntimeTransaction(db, () => {
     const row = getStageAttemptRow(db, input.stageAttemptId);
     if (!row) {
       return { reconciled: false, taskId: null };
@@ -433,7 +421,7 @@ export function reconcileDomainRouteTerminalTasks(
   rows: FamilyRuntimeTaskRow[],
   source: string,
 ) {
-  return withDomainRouteTerminalMutation(db, () => {
+  return withFamilyRuntimeTransaction(db, () => {
     const candidates: Array<{
       task: FamilyRuntimeTaskRow;
       attempt: StageAttemptRow;

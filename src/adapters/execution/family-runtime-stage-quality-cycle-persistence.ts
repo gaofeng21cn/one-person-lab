@@ -10,6 +10,7 @@ import {
   type StageQualityCyclePolicy,
   type StageQualityCycleState,
 } from '../../authority/stages/index.ts';
+import { withFamilyRuntimeTransaction } from './family-runtime-sqlite.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
 
@@ -51,19 +52,6 @@ function payload(row: StageQualityCycleRow) {
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
-}
-
-export function withQualityCycleMutation<T>(db: DatabaseSync, mutation: () => T) {
-  const ownsTransaction = !db.isTransaction;
-  try {
-    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
-    const result = mutation();
-    if (ownsTransaction) db.exec('COMMIT');
-    return result;
-  } catch (error) {
-    if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
-    throw error;
-  }
 }
 
 export function stageRunMutationAuthority(
@@ -168,7 +156,6 @@ export function requireCycleAttemptMutationAuthority(input: {
   return { attempt, admission: attemptAdmission };
 }
 
-
 export function createStageQualityCycle(db: DatabaseSync, input: {
   qualityCycleId?: string;
   stageRunId: string;
@@ -176,7 +163,7 @@ export function createStageQualityCycle(db: DatabaseSync, input: {
   stageId: string;
   policy: StageQualityCyclePolicy | Record<string, unknown>;
 }) {
-  return withQualityCycleMutation(db, () => {
+  return withFamilyRuntimeTransaction(db, () => {
     const stageRun = stageRunMutationAuthority(db, input.stageRunId, 'create_stage_quality_cycle');
     if (
       stageRun.row.domain_id !== input.domainId || stageRun.row.stage_id !== input.stageId
@@ -252,7 +239,7 @@ export function markStageQualityCycleCurrentAttempt(db: DatabaseSync, input: {
   qualityCycleId: string;
   attemptRef: string;
 }) {
-  return withQualityCycleMutation(db, () => {
+  return withFamilyRuntimeTransaction(db, () => {
     const row = getRow(db, input.qualityCycleId);
     if (!row) {
       throw new FrameworkContractError('cli_usage_error', 'Stage quality cycle not found.', {
