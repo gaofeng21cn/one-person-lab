@@ -139,31 +139,16 @@ function parseRuntimeAppReleaseLongOperatorStartArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let cohort = '';
-  let evidenceDir: string | null = null;
-  let minimumDurationMinutes: number | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    const value = args[index + 1];
-    if (token === '--cohort' && value) {
-      cohort = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--evidence-dir' && value) {
-      evidenceDir = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--minimum-duration-minutes') {
-      minimumDurationMinutes = parsePositiveInteger(value, token, spec);
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown option for runtime app-release-evidence long-operator start: ${token}.`, spec, {
-      option: token,
-    });
-  }
+  const parsed = parseCommandOptions(args, spec, {
+    cohort: { type: 'string' },
+    'evidence-dir': { type: 'string' },
+    'minimum-duration-minutes': { type: 'string' },
+  });
+  const cohort = parsed.cohort as string | undefined;
+  const evidenceDir = parsed['evidence-dir'] as string | undefined;
+  const minimumDurationMinutes = parsed['minimum-duration-minutes'] === undefined
+    ? null
+    : parsePositiveInteger(parsed['minimum-duration-minutes'] as string, '--minimum-duration-minutes', spec);
   if (!cohort) {
     throw buildUsageError('runtime app-release-evidence long-operator start requires --cohort.', spec, {
       required: ['--cohort'],
@@ -194,25 +179,12 @@ function parseRuntimeAppReleaseLongOperatorFinishArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let workorderFile = '';
-  let finishedAt: string | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    const value = args[index + 1];
-    if (token === '--workorder-file' && value) {
-      workorderFile = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--finished-at' && value) {
-      finishedAt = value;
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown option for runtime app-release-evidence long-operator finish: ${token}.`, spec, {
-      option: token,
-    });
-  }
+  const parsed = parseCommandOptions(args, spec, {
+    'workorder-file': { type: 'string' },
+    'finished-at': { type: 'string' },
+  });
+  const workorderFile = parsed['workorder-file'] as string | undefined;
+  const finishedAt = parsed['finished-at'] as string | undefined ?? null;
   if (!workorderFile) {
     throw buildUsageError(
       'runtime app-release-evidence long-operator finish requires --workorder-file.',
@@ -229,37 +201,16 @@ function parseRuntimeAppReleaseLongOperatorEventArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let workorderFile = '';
-  let eventKind = '';
-  let observedAt: string | null = null;
-  let evidenceRef: string | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    const value = args[index + 1];
-    if (token === '--workorder-file' && value) {
-      workorderFile = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--event-kind' && value) {
-      eventKind = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--observed-at' && value) {
-      observedAt = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--evidence-ref' && value) {
-      evidenceRef = value;
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown option for runtime app-release-evidence long-operator event: ${token}.`, spec, {
-      option: token,
-    });
-  }
+  const parsed = parseCommandOptions(args, spec, {
+    'workorder-file': { type: 'string' },
+    'event-kind': { type: 'string' },
+    'observed-at': { type: 'string' },
+    'evidence-ref': { type: 'string' },
+  });
+  const workorderFile = parsed['workorder-file'] as string | undefined;
+  const eventKind = parsed['event-kind'] as string | undefined;
+  const observedAt = parsed['observed-at'] as string | undefined ?? null;
+  const evidenceRef = parsed['evidence-ref'] as string | undefined ?? null;
   if (!workorderFile) {
     throw buildUsageError(
       'runtime app-release-evidence long-operator event requires --workorder-file.',
@@ -280,12 +231,12 @@ function parseRuntimeAppReleaseLongOperatorEventArgs(
 export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime app-release-evidence record': {
+      group: 'runtime',
       usage: 'opl runtime app-release-evidence record (--payload <json>|--payload-file <path>)',
       summary:
         'Record refs-only App release/user-path evidence refs without claiming App release or production readiness.',
       examples: [
         'opl runtime app-release-evidence record --payload \'{"release_package_refs":["release:pkg"],"screenshot_refs":["screenshot:first-run"]}\'',
-        'opl runtime app-release-evidence record --payload \'{"owner_acceptance_refs":["owner-acceptance:app-release/<cohort>"]}\'',
         'opl runtime app-release-evidence record --payload-file payload.json',
       ],
       handler: (args) => ({
@@ -302,6 +253,7 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
       }),
     },
     'runtime app-release-evidence verify': {
+      group: 'runtime',
       usage: 'opl runtime app-release-evidence verify [--receipt-ref <ref>]',
       summary:
         'Verify an existing refs-only App release/user-path evidence receipt without claiming readiness.',
@@ -319,6 +271,7 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
       }),
     },
     'runtime app-release-evidence list': {
+      group: 'runtime',
       usage: 'opl runtime app-release-evidence list',
       summary:
         'List refs-only App release/user-path evidence receipts recorded in the local OPL state ledger.',
@@ -349,6 +302,7 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
       },
     },
     'runtime app-release-evidence long-operator start': {
+      group: 'runtime',
       usage:
         'opl runtime app-release-evidence long-operator start --cohort <version> --minimum-duration-minutes <n> --evidence-dir <path>',
       summary:
@@ -367,6 +321,7 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
       }),
     },
     'runtime app-release-evidence long-operator event': {
+      group: 'runtime',
       usage:
         'opl runtime app-release-evidence long-operator event --workorder-file <path> --event-kind <kind> [--observed-at <iso>] [--evidence-ref <ref>]',
       summary:
@@ -385,6 +340,7 @@ export function buildRuntimeAppReleaseEvidenceCommandSpecs(): Record<string, Com
       }),
     },
     'runtime app-release-evidence long-operator finish': {
+      group: 'runtime',
       usage:
         'opl runtime app-release-evidence long-operator finish --workorder-file <path> [--finished-at <iso>]',
       summary:

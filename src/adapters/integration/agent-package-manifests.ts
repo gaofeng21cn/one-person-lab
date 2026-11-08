@@ -2,7 +2,7 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { listCurrentPackageProjections } from '../../kernel/standard-agent-registry.ts';
 import { canonicalAgentPackageId } from './agent-package-identity.ts';
 import { normalizePackageManifest } from './agent-package-registry-parts/manifest-normalizers.ts';
-import type { AgentPackagePresentation } from './agent-package-registry-parts/types.ts';
+import type { AgentPackageCapabilityDependency, AgentPackagePresentation } from './agent-package-registry-parts/types.ts';
 import type { ModuleCapabilityDependency } from './system-installation/shared.ts';
 
 type CodexCarrierDistribution = 'repo_carrier_source' | 'generated_carrier_surface';
@@ -92,16 +92,6 @@ function requireStringList(value: unknown, field: string) {
   });
 }
 
-function normalizeStringList(value: unknown, field: string) {
-  if (Array.isArray(value)) {
-    return stringList(value);
-  }
-  throw new FrameworkContractError('contract_shape_invalid', `Agent package manifest must declare ${field}.`, {
-    contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
-    field,
-  });
-}
-
 function requireLiteral<T extends string>(value: unknown, expected: T, field: string) {
   if (value === expected) {
     return expected;
@@ -114,56 +104,7 @@ function requireLiteral<T extends string>(value: unknown, expected: T, field: st
   });
 }
 
-function normalizeDistributionPayload(value: unknown) {
-  if (value === undefined || value === null) {
-    return null;
-  }
-  if (!isRecord(value)) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest distribution_payload must be a JSON object.', {
-      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
-      field: 'distribution_payload',
-    });
-  }
-  const movingTag = requireLiteral(value.moving_tag, 'latest-stable', 'distribution_payload.moving_tag');
-  const installTruth = requireLiteral(value.install_truth, 'resolved_digest_lock', 'distribution_payload.install_truth');
-  const payloadDigestRef = requiredString(value.payload_digest_ref, 'distribution_payload.payload_digest_ref');
-  if (!/^sha256:[0-9a-f]{64}$/.test(payloadDigestRef)) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest distribution_payload.payload_digest_ref must be a SHA-256 digest ref.', {
-      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
-      field: 'distribution_payload.payload_digest_ref',
-    });
-  }
-  if (value.live_download_proof !== false || value.installed_reload_proof !== false) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest distribution_payload must not claim live download or installed reload proof.', {
-      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
-      field: 'distribution_payload',
-    });
-  }
-  return {
-    payload_kind: requiredString(value.payload_kind, 'distribution_payload.payload_kind'),
-    payload_ref: requiredString(value.payload_ref, 'distribution_payload.payload_ref'),
-    payload_digest_ref: payloadDigestRef,
-    required_skill_pack_lock_refs: normalizeStringList(
-      value.required_skill_pack_lock_refs,
-      'distribution_payload.required_skill_pack_lock_refs',
-    ),
-    proof_status: requiredString(value.proof_status, 'distribution_payload.proof_status'),
-    live_download_proof: false as const,
-    installed_reload_proof: false as const,
-    oci_ref: requiredString(value.oci_ref, 'distribution_payload.oci_ref'),
-    oci_media_type: requiredString(value.oci_media_type, 'distribution_payload.oci_media_type'),
-    immutable_tag: requiredString(value.immutable_tag, 'distribution_payload.immutable_tag'),
-    moving_tag: movingTag,
-    promotion_policy: requireLiteral(
-      value.promotion_policy,
-      'daily_candidate_gates_then_promote_latest_stable',
-      'distribution_payload.promotion_policy',
-    ),
-    install_truth: installTruth,
-  };
-}
-
-function normalizeCapabilityDependency(value: unknown): ModuleCapabilityDependency {
+function projectCapabilityDependency(value: unknown, normalized: AgentPackageCapabilityDependency): ModuleCapabilityDependency {
   if (!isRecord(value)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest capability dependency must be a framework capability package.', {
       contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
@@ -189,40 +130,15 @@ function normalizeCapabilityDependency(value: unknown): ModuleCapabilityDependen
       field: 'capability_dependencies.authority_boundary',
     });
   }
-  if (typeof value.required !== 'boolean') {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package capability dependency must declare required as a boolean.', {
-      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
-      field: 'capability_dependencies.required',
-    });
-  }
-  const dependencyKind = value.dependency_kind === undefined && value.required
-    ? 'hard_runtime_dependency'
-    : value.dependency_kind;
-  const expectedDependencyKind: ModuleCapabilityDependency['dependency_kind'] = value.required
-    ? 'hard_runtime_dependency'
-    : 'optional_enhancement';
-  if (dependencyKind !== expectedDependencyKind) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package capability dependency required and dependency_kind must agree.', {
-      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
-      field: 'capability_dependencies.dependency_kind',
-      required: value.required,
-      expected_dependency_kind: expectedDependencyKind,
-      actual_dependency_kind: dependencyKind,
-    });
-  }
   return {
-    module_id: requiredString(value.module_id, 'capability_dependencies.module_id') as ModuleCapabilityDependency['module_id'],
-    package_id: requiredString(value.package_id, 'capability_dependencies.package_id'),
+    module_id: normalized.module_id,
+    package_id: normalized.package_id,
     kind,
-    required: value.required,
-    dependency_kind: expectedDependencyKind,
-    version_requirement: typeof value.version_requirement === 'string'
-      ? requiredString(value.version_requirement, 'capability_dependencies.version_requirement')
-      : '*',
-    capability_abi: requiredString(value.capability_abi, 'capability_dependencies.capability_abi'),
-    ...(typeof value.consumer_profile_id === 'string'
-      ? { consumer_profile_id: requiredString(value.consumer_profile_id, 'capability_dependencies.consumer_profile_id') }
-      : {}),
+    required: normalized.required,
+    dependency_kind: normalized.dependency_kind,
+    version_requirement: normalized.version_requirement,
+    capability_abi: normalized.capability_abi,
+    ...(normalized.consumer_profile_id ? { consumer_profile_id: normalized.consumer_profile_id } : {}),
     required_export_ids: requireStringList(value.required_export_ids, 'capability_dependencies.required_export_ids'),
     required_module_ids: requireStringList(value.required_module_ids, 'capability_dependencies.required_module_ids'),
     ...(typeof value.manifest_url === 'string' ? { manifest_url: value.manifest_url } : {}),
@@ -235,10 +151,17 @@ function normalizeCapabilityDependency(value: unknown): ModuleCapabilityDependen
   };
 }
 
-function normalizeFirstPartyAgentPackagePresentation(payload: Record<string, unknown>) {
+function normalizeFirstPartyManifest(payload: Record<string, unknown>) {
+  if (isRecord(payload.distribution_payload)
+    && !Array.isArray(payload.distribution_payload.required_skill_pack_lock_refs)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must declare distribution_payload.required_skill_pack_lock_refs.', {
+      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+      field: 'distribution_payload.required_skill_pack_lock_refs',
+    });
+  }
   const manifestUrl = `framework://contracts/opl-framework/packages/${requiredString(payload.package_id, 'package_id')}.json`;
   try {
-    return normalizePackageManifest(payload, manifestUrl).presentation ?? null;
+    return normalizePackageManifest(payload, manifestUrl);
   } catch (error) {
     if (
       error instanceof FrameworkContractError
@@ -246,8 +169,7 @@ function normalizeFirstPartyAgentPackagePresentation(payload: Record<string, unk
       && 'presentation' in payload
     ) {
       const { presentation: _invalidPresentation, ...manifestWithoutPresentation } = payload;
-      normalizePackageManifest(manifestWithoutPresentation, manifestUrl);
-      return null;
+      return normalizePackageManifest(manifestWithoutPresentation, manifestUrl);
     }
     throw error;
   }
@@ -274,6 +196,7 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
   }
   const agentId = requireCanonicalPackageIdentity(payload.agent_id, 'agent_id');
   const packageId = requireCanonicalPackageIdentity(payload.package_id, 'package_id');
+  const normalized = normalizeFirstPartyManifest(payload);
   if (!isRecord(payload.codex_surface)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must declare codex_surface.', {
       contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
@@ -292,7 +215,7 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
   const repoUrl = requiredString(payload.source_repo, 'source_repo');
   const displayName = requiredString(payload.display_name, 'display_name');
   const capabilityDependencies = Array.isArray(payload.capability_dependencies)
-    ? payload.capability_dependencies.map(normalizeCapabilityDependency)
+    ? payload.capability_dependencies.map((value, index) => projectCapabilityDependency(value, normalized.capability_dependencies[index]))
     : null;
   if (!capabilityDependencies) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must declare capability_dependencies.', {
@@ -320,7 +243,7 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
       'carrier_source_role',
     ),
     package_core: isRecord(payload.package_core) ? payload.package_core : null,
-    distribution_payload: normalizeDistributionPayload(payload.distribution_payload),
+    distribution_payload: normalized.distribution_payload,
     codex_surface: {
       plugin_id: requiredString(codexSurface.plugin_id, 'codex_surface.plugin_id'),
       standalone_distribution: standaloneDistribution,
@@ -334,7 +257,7 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
       ? payload.dependency_profiles
       : [],
     capability_dependencies: capabilityDependencies,
-    presentation: normalizeFirstPartyAgentPackagePresentation(payload),
+    presentation: normalized.presentation ?? null,
     package_manifest_ref: `contracts/opl-framework/packages/${packageId}.json`,
     module_id: requiredString(runtimeSourceCarrier.module_id, 'runtime_source_carrier.module_id'),
     display_name: displayName,

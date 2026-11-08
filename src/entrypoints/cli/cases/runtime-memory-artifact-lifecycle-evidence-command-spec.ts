@@ -101,12 +101,13 @@ export function buildRuntimeMemoryArtifactLifecycleEvidenceCommandSpecs():
   Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime memory-artifact-lifecycle-evidence record': {
+      group: 'runtime',
       usage:
         'opl runtime memory-artifact-lifecycle-evidence record (--payload <json>|--payload-file <path>)',
       summary:
         'Record refs-only memory, artifact, package, export, cleanup/restore, typed blocker, or owner acceptance refs without taking body or verdict authority.',
       examples: [
-        'opl runtime memory-artifact-lifecycle-evidence record --payload \'{"memory_receipt_refs":["memory-receipt:domain/accepted"],"artifact_mutation_receipt_refs":["artifact-receipt:domain/package"],"owner_acceptance_refs":["owner-acceptance:lifecycle"]}\'',
+        'opl runtime memory-artifact-lifecycle-evidence record --payload \'{"memory_receipt_refs":["memory-receipt:domain/accepted"],"artifact_mutation_receipt_refs":["artifact-receipt:domain/package"]}\'',
         'opl runtime memory-artifact-lifecycle-evidence record --payload-file payload.json',
       ],
       handler: (args) => ({
@@ -120,6 +121,7 @@ export function buildRuntimeMemoryArtifactLifecycleEvidenceCommandSpecs():
       }),
     },
     'runtime memory-artifact-lifecycle-evidence verify': {
+      group: 'runtime',
       usage: 'opl runtime memory-artifact-lifecycle-evidence verify [--receipt-ref <ref>]',
       summary:
         'Verify an existing refs-only memory/artifact/lifecycle evidence receipt without claiming readiness.',
@@ -137,6 +139,7 @@ export function buildRuntimeMemoryArtifactLifecycleEvidenceCommandSpecs():
       }),
     },
     'runtime memory-artifact-lifecycle-evidence list': {
+      group: 'runtime',
       usage: 'opl runtime memory-artifact-lifecycle-evidence list',
       summary:
         'List refs-only memory/artifact/lifecycle evidence receipts recorded in the local OPL state ledger.',

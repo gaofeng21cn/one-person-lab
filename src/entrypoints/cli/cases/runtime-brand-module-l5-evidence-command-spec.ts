@@ -131,6 +131,7 @@ export function buildRuntimeBrandModuleL5EvidenceCommandSpecs(
 ): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime brand-module-l5-evidence record': {
+      group: 'runtime',
       usage:
         'opl runtime brand-module-l5-evidence record (--payload <json>|--payload-file <path>)',
       summary:
@@ -150,6 +151,7 @@ export function buildRuntimeBrandModuleL5EvidenceCommandSpecs(
       }),
     },
     'runtime brand-module-l5-evidence verify': {
+      group: 'runtime',
       usage: 'opl runtime brand-module-l5-evidence verify [--receipt-ref <ref>]',
       summary:
         'Verify a refs-only brand-module L5 evidence receipt without converting it into an L5 completion claim.',
@@ -166,6 +168,7 @@ export function buildRuntimeBrandModuleL5EvidenceCommandSpecs(
       }),
     },
     'runtime brand-module-l5-evidence list': {
+      group: 'runtime',
       usage:
         'opl runtime brand-module-l5-evidence list [--module <module_id>] [--class <evidence_class_id>]',
       summary:

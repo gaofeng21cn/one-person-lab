@@ -57,14 +57,14 @@ test('standard implementation profile resolves the canonical ref plus helper del
   assert.deepEqual(resolution.effective_profile, STANDARD_AGENT_IMPLEMENTATION_PROFILE);
 });
 
-test('standard implementation profile keeps legacy full declarations read compatible', () => {
+test('standard implementation profile rejects retired full declarations', () => {
   const validation = validateStandardAgentImplementationProfileDeclaration(
     STANDARD_AGENT_IMPLEMENTATION_PROFILE,
     { required: true },
   );
-  assert.equal(validation.status, 'passed');
-  assert.equal(validation.declaration_kind, 'legacy_full_profile');
-  assert.deepEqual(validation.profile, STANDARD_AGENT_IMPLEMENTATION_PROFILE);
+  assert.equal(validation.status, 'blocked');
+  assert.equal(validation.profile, null);
+  assert.ok(validation.blockers.includes('implementation_profile_base_profile_ref_invalid'));
 });
 
 test('standard implementation profile blocks a non-canonical base ref', () => {
@@ -198,7 +198,7 @@ test('standard implementation profile schema accepts empty helpers and rejects i
     },
     STANDARD_AGENT_IMPLEMENTATION_PROFILE,
   );
-  assert.equal(legacy.ok, true);
+  assert.equal(legacy.ok, false);
   const invalid = validateJsonSchemaPayload(
     {
       schemaId: schemaRef,

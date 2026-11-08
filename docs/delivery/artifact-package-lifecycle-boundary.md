@@ -33,6 +33,8 @@ Framework可以验证结构、投影和恢复；只有domain owner能promotion�
 
 Package owner持有descriptor、runtime bytes、version和publication。native carrier持有安装/启停/currentness。Framework只下载/验证/hand off owner bytes或调用carrier，并聚合installed/callable。
 
+`ordered_path_length_file_length_bytes` 的字节编码由 Framework 的 `src/kernel/package-content-lock.ts` 与 `python/opl_framework/package_content_lock.py` 持有，并以 UTF-8、二进制内容和路径顺序的同一向量验证一致性。Python 独立工具通过 `node scripts/materialize-python-support.mjs --module package_content_lock --target <consumer>/_opl_package_content_lock.py` 生成便携副本；加 `--check` 核对逐字一致。路径选择、identity 和 canonicalization 校验仍由实际调用方负责。
+
 私有 owner 仓库的发布检出优先使用单仓只读 Deploy Key。公钥登记在对应源码仓库，
 私钥保存于受保护发布环境的 `OWNER_SOURCE_READ_KEY_<OWNER>_<REPO>` secret；
 `<OWNER>/<REPO>` 取自 canonical Package manifest 的 `source_repo`，转为大写并把
@@ -97,6 +99,10 @@ MAS/MAG 按任务消费的能力包。它们保留 OPL 安装与调用能力，�
 App 启动维护自动按当前 owner descriptor 识别并迁移旧的内部 Package，复用已安装文件，
 不依赖历史下载地址。复制、安装或 descriptor 回读失败时保留原安装并报告需要修复；
 没有旧条目时不写入。后台仅暂存更新的维护模式不执行迁移。
+
+源码中的 Package manifest 与 payload 仅保留当前入口和真实合同、测试直接引用的版本。
+历史版本通过 Git 与不可变发布产物追溯。删除前须核对实际消费路径；发布所选 payload、
+carrier 内容锁与已安装版本的生命周期校验继续由现有 owner 执行。
 
 ## Publication
 

@@ -8,7 +8,7 @@ import { FrameworkContractError } from '../../../src/kernel/contract-validation.
 import { materializeAgentScaffold } from '../../../src/authority/packages/agent-scaffold-materialization.ts';
 import { buildAgentProfileConformance } from '../../../src/authority/packages/agent-profile-spine.ts';
 import {
-  STANDARD_AGENT_IMPLEMENTATION_PROFILE,
+  STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION,
 } from '../../../src/authority/packages/standard-agent-implementation-profile.ts';
 import {
   STANDARD_AGENT_PACK_ABI,
@@ -38,7 +38,7 @@ function buildMaterializationRequest(
     domainLabel: 'Materialized Agent',
   });
   const packCompilerInput = readJson(path.join(seedDir, 'contracts', 'pack_compiler_input.json'));
-  packCompilerInput.implementation_profile = structuredClone(STANDARD_AGENT_IMPLEMENTATION_PROFILE);
+  packCompilerInput.implementation_profile = structuredClone(STANDARD_AGENT_IMPLEMENTATION_PROFILE_DECLARATION);
   packCompilerInput.standard_agent_pack_abi = structuredClone(standardAgentPackAbi);
   return {
     surface_kind: 'opl_agent_scaffold_materialization_request',
@@ -158,12 +158,12 @@ test('scaffold materialization rejects the retired producer-specific v1 request'
   );
 });
 
-test('scaffold materialization reads an exact legacy ABI but writes only its canonical authority ref', (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-materialization-legacy-abi-'));
+test('scaffold materialization preserves the canonical ABI authority ref', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-materialization-abi-ref-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const requestPath = path.join(root, 'request.json');
   const targetDir = path.join(root, 'target');
-  writeJson(requestPath, buildMaterializationRequest(root, STANDARD_AGENT_PACK_ABI));
+  writeJson(requestPath, buildMaterializationRequest(root, STANDARD_AGENT_PACK_ABI_DECLARATION));
 
   materializeAgentScaffold({ requestPath, targetDir });
 
@@ -173,7 +173,7 @@ test('scaffold materialization reads an exact legacy ABI but writes only its can
   assert.equal(Object.hasOwn(materializedPack.implementation_profile, 'profile_id'), false);
 });
 
-test('scaffold materialization rejects a non-canonical legacy ABI body', (t) => {
+test('scaffold materialization rejects an inline ABI body', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-materialization-invalid-abi-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const requestPath = path.join(root, 'request.json');
@@ -191,7 +191,7 @@ test('scaffold materialization rejects a non-canonical legacy ABI body', (t) => 
       assert.ok(error instanceof FrameworkContractError);
       assert.equal(error.message, 'pack_compiler_input.standard_agent_pack_abi is invalid.');
       assert.deepEqual(error.details?.blockers, [
-        'standard_agent_pack_abi_legacy_inline_must_equal_framework_canonical',
+        'standard_agent_pack_abi_authority_ref_invalid',
       ]);
       return true;
     },

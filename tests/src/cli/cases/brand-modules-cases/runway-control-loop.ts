@@ -54,6 +54,10 @@ test('Temporal-first runtime contract keeps false-ready and lifecycle boundaries
   assert.equal(contract.event_history_mapping.sqlite_sidecar_role, 'projection_and_readback_index_only_not_runtime_provider');
   assert.equal(contract.false_ready_boundary.not_proven_by.includes('focused_tests_pass'), true);
   assert.equal(contract.authority_boundary.can_sign_owner_receipt, false);
+  assert.equal(contract.workflow_activity_signal_mapping.stage_run_workflow.raw_stage_run_start_cli_retired, true);
+  assert.equal(contract.retry_mapping.stage_quality_revision_budget.default_max_repair_rounds, 3);
+  contract.event_history_mapping.active_stage_run_patch_markers.length = 0;
+  assert.ok(buildTemporalFirstRuntimeContract().event_history_mapping.active_stage_run_patch_markers.length > 0);
 });
 
 test('Runway blocked and failed backlog is a runtime diagnostic queue before redrive', () => {

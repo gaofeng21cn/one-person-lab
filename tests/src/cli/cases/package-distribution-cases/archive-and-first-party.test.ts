@@ -552,7 +552,7 @@ test('static first-party presentation is optional without weakening manifest val
       ...invalidPresentation,
       version: '',
     }),
-    /version/,
+    /missing required fields/,
   );
 });
 
@@ -1091,7 +1091,7 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
         install_truth: 'latest',
       },
     }),
-    /distribution_payload.install_truth must be resolved_digest_lock/,
+    /digest-lock install truth/,
   );
   assert.throws(
     () => normalizeFirstPartyAgentPackageManifest({
@@ -1101,7 +1101,7 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
         payload_digest_ref: 'sha256:not-a-digest',
       },
     }),
-    /payload_digest_ref must be a SHA-256 digest ref/,
+    /install truth must be a SHA-256 digest ref/,
   );
   assert.throws(
     () => normalizeFirstPartyAgentPackageManifest({

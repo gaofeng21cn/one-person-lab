@@ -9,6 +9,7 @@ import { parseArgs } from 'node:util';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 
 import { parseJsonText } from './script-json-boundary.mjs';
+import { packageContentDigest } from '../src/kernel/package-content-lock.ts';
 import { materializeArchiveBackedPackagePayload } from '../src/adapters/integration/package-distribution.ts';
 
 import { packageSourceArchiveDigest, readPackageSourceArchiveEntries, packageSourceArchiveMembersStayWithinRoot, extractPackageSourceArchive } from '../src/adapters/integration/agent-package-registry-parts/package-source-archive.ts';
@@ -178,9 +179,8 @@ function packageContentLockPaths(packageManifest, payload, options) {
 }
 
 function lengthPrefixedContentLock(paths, archiveBytesByPath) {
-  const hash = crypto.createHash('sha256');
   const seen = new Set();
-  for (const packagePath of paths) {
+  return packageContentDigest(paths, (packagePath) => {
     if (seen.has(packagePath)) {
       throw new Error(`Package content_lock repeats package path ${packagePath}.`);
     }
@@ -189,18 +189,8 @@ function lengthPrefixedContentLock(paths, archiveBytesByPath) {
     if (!filePath) {
       throw new Error(`Package content_lock path is absent from the payload archive: ${packagePath}`);
     }
-    const fileBytes = readPhysicalRegularFile(filePath, 'payload content');
-    const pathBytes = Buffer.from(packagePath, 'utf8');
-    const pathLength = Buffer.allocUnsafe(8);
-    const fileLength = Buffer.allocUnsafe(8);
-    pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
-    fileLength.writeBigUInt64BE(BigInt(fileBytes.length));
-    hash.update(pathLength);
-    hash.update(pathBytes);
-    hash.update(fileLength);
-    hash.update(fileBytes);
-  }
-  return `sha256:${hash.digest('hex')}`;
+    return readPhysicalRegularFile(filePath, 'payload content');
+  });
 }
 
 function verifyArchiveEntries(archivePath, payload, packageManifest, options) {

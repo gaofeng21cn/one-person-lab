@@ -204,7 +204,7 @@ test('agents conformance requires an implementation profile for repo-local stand
   assert.equal(repo.scaffold_validation.stage_pack_v2_validation.status, 'passed');
 });
 
-test('agents conformance only accepts an exact legacy inline Standard Agent Pack ABI', () => {
+test('agents conformance rejects a retired inline Standard Agent Pack ABI', () => {
   const repoDir = buildScaffoldRepo();
   const packCompilerInputPath = path.join(repoDir, 'contracts/pack_compiler_input.json');
   const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerInputPath, 'utf8')) as any;
@@ -223,7 +223,7 @@ test('agents conformance only accepts an exact legacy inline Standard Agent Pack
   assert.equal(repo.status, 'blocked');
   assert.equal(
     repo.blockers.includes(
-      'stage_pack_v2_standard_agent_pack_abi_legacy_inline_must_equal_framework_canonical',
+      'stage_pack_v2_standard_agent_pack_abi_authority_ref_invalid',
     ),
     true,
   );

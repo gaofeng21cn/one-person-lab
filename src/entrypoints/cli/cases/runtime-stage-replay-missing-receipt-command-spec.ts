@@ -95,6 +95,7 @@ export function buildRuntimeStageReplayMissingReceiptCommandSpecs():
 Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime stage-replay-missing-receipt record': {
+      group: 'runtime',
       usage:
         'opl runtime stage-replay-missing-receipt record --target-identity <json> (--payload <json>|--payload-file <path>)',
       summary:
@@ -116,6 +117,7 @@ Record<string, CommandSpec> {
       },
     },
     'runtime stage-replay-missing-receipt verify': {
+      group: 'runtime',
       usage: 'opl runtime stage-replay-missing-receipt verify [--receipt-ref <ref>]',
       summary:
         'Verify an existing refs-only stage replay missing receipt record without claiming domain or production readiness.',
@@ -133,6 +135,7 @@ Record<string, CommandSpec> {
       }),
     },
     'runtime stage-replay-missing-receipt list': {
+      group: 'runtime',
       usage: 'opl runtime stage-replay-missing-receipt list',
       summary:
         'List refs-only stage replay missing receipt receipts in the local OPL state ledger.',

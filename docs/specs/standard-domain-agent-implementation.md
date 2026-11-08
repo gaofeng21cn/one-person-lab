@@ -13,6 +13,10 @@
 - repo-native verify entry；
 - 可 standalone 运行的 owner路径。
 
+Pack compiler 的 `implementation_profile` 使用 canonical `base_profile_ref` 与领域 helper 声明，
+`standard_agent_pack_abi` 仅声明 Framework `authority_ref`。完整生效 Profile 和 ABI 由
+Framework 解析生成，领域声明不复制基座合同正文。
+
 ## 托管适配
 
 Framework adapter 只负责把通用 Workspace/Stage/Attempt envelope送入 owner entrypoint，并把 refs-only结果投影回来。业务逻辑不复制到 Framework。

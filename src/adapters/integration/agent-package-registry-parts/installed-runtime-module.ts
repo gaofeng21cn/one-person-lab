@@ -1,10 +1,10 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
+import { packageContentDigest } from '../../../kernel/package-content-lock.ts';
 import {
   discoverInstalledPackageDescriptors,
   installedDescriptorSupportsFrameworkCalls,
@@ -144,21 +144,10 @@ function contentLockDigest(descriptor: InstalledPackageDescriptor): string {
       reason_code: 'installed_runtime_module_content_lock_invalid',
     });
   }
-  const digest = crypto.createHash('sha256');
-  for (const relativePath of contentLockPaths) {
+  const actualDigest = packageContentDigest(contentLockPaths, (relativePath) => {
     const filePath = lockedPackagePath(descriptor, relativePath, 'content lock file');
-    const fileBytes = fs.readFileSync(filePath);
-    const pathBytes = Buffer.from(relativePath, 'utf8');
-    const pathLength = Buffer.allocUnsafe(8);
-    const fileLength = Buffer.allocUnsafe(8);
-    pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
-    fileLength.writeBigUInt64BE(BigInt(fileBytes.length));
-    digest.update(pathLength);
-    digest.update(pathBytes);
-    digest.update(fileLength);
-    digest.update(fileBytes);
-  }
-  const actualDigest = `sha256:${digest.digest('hex')}`;
+    return fs.readFileSync(filePath);
+  });
   if (actualDigest !== declaredDigest) {
     throw new FrameworkContractError('codex_command_failed', 'Installed Package runtime module content lock does not match its source bytes.', {
       package_id: descriptor.manifest.package_id,

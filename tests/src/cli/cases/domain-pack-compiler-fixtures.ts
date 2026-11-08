@@ -1,3 +1,4 @@
+import { STANDARD_AGENT_PACK_ABI_DECLARATION } from '../../../../src/authority/packages/standard-agent-pack-abi.ts';
 import {
   buildManifestCommand,
   fs,
@@ -9,7 +10,6 @@ import {
 import { execFileSync } from 'node:child_process';
 import {
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
-  STANDARD_AGENT_PACK_ABI,
 } from '../../../../src/authority/packages/standard-domain-agent-scaffold-constants.ts';
 import { buildReadyAgentRepo } from './agents-conformance-fixtures.ts';
 
@@ -469,7 +469,7 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
     domain_repo_runtime_role: 'domain_handler_target_and_authority_functions',
     generated_surface_owner: 'one-person-lab',
     domain_repo_can_own_generated_surface: false,
-    standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI,
+    standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI_DECLARATION,
   });
   const stageManifestRef = path.join(repoDir, 'agent', 'stages', 'manifest.json');
   const stageManifest = JSON.parse(fs.readFileSync(stageManifestRef, 'utf8')) as JsonRecord;

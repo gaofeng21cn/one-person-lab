@@ -18,6 +18,8 @@ import struct
 from typing import Any
 import zipfile
 
+from .file_hash import sha256_file
+
 
 ZIP_CONTAINER_EPOCH = (1980, 1, 1, 0, 0, 0)
 ZIP_EXTENDED_TIMESTAMP_HEADER_ID = 0x5455
@@ -41,16 +43,6 @@ def sha256_bytes(value: bytes) -> str:
     """Return an unprefixed SHA-256 digest for exact bytes."""
 
     return hashlib.sha256(value).hexdigest()
-
-
-def sha256_file(path: Path) -> str:
-    """Hash a regular file without loading the complete file into memory."""
-
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def safe_relative_path(value: str, *, field: str = "path") -> str:

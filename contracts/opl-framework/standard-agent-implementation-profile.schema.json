@@ -2,25 +2,28 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://one-person-lab.local/contracts/opl-framework/standard-agent-implementation-profile.schema.json",
   "title": "OPL Standard Domain Agent Implementation Profile Declaration",
-  "oneOf": [
-    { "$ref": "#/$defs/declaration" },
-    { "$ref": "#/$defs/legacyFullProfile" }
-  ],
   "$defs": {
     "declaration": {
       "type": "object",
-      "required": ["base_profile_ref", "helpers"],
+      "required": [
+        "base_profile_ref",
+        "helpers"
+      ],
       "properties": {
         "base_profile_ref": {
           "const": "contracts/opl-framework/standard-agent-implementation-profile.schema.json"
         },
         "helpers": {
           "type": "object",
-          "required": ["entries"],
+          "required": [
+            "entries"
+          ],
           "properties": {
             "entries": {
               "type": "array",
-              "items": { "$ref": "#/$defs/helper" }
+              "items": {
+                "$ref": "#/$defs/helper"
+              }
             }
           },
           "additionalProperties": false
@@ -28,49 +31,27 @@
       },
       "additionalProperties": false
     },
-    "legacyFullProfile": {
-      "type": "object",
-      "required": [
-        "profile_id",
-        "agent_identity",
-        "pack_formats",
-        "helpers",
-        "generated_surfaces_owner"
-      ],
-      "properties": {
-        "profile_id": { "const": "opl.standard_domain_agent.v1" },
-        "agent_identity": { "const": "declarative_standard_agent_pack" },
-        "pack_formats": { "const": ["markdown", "json"] },
-        "helpers": { "$ref": "#/$defs/legacyHelpers" },
-        "generated_surfaces_owner": { "const": "one-person-lab" }
-      },
-      "additionalProperties": false
-    },
-    "legacyHelpers": {
-      "type": "object",
-      "required": ["optional", "entries", "language_is_identity", "rust_policy"],
-      "properties": {
-        "optional": { "const": true },
-        "entries": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/helper" }
-        },
-        "language_is_identity": { "const": false },
-        "rust_policy": { "const": "framework_hot_path_only" }
-      },
-      "additionalProperties": false
-    },
     "helper": {
       "type": "object",
-      "required": ["language", "role", "source_roots"],
+      "required": [
+        "language",
+        "role",
+        "source_roots"
+      ],
       "properties": {
         "language": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9_-]*$",
-          "not": { "const": "rust" }
+          "not": {
+            "const": "rust"
+          }
         },
         "role": {
-          "enum": ["authority_function", "domain_helper", "native_helper"]
+          "enum": [
+            "authority_function",
+            "domain_helper",
+            "native_helper"
+          ]
         },
         "source_roots": {
           "type": "array",
@@ -84,5 +65,6 @@
       },
       "additionalProperties": false
     }
-  }
+  },
+  "$ref": "#/$defs/declaration"
 }

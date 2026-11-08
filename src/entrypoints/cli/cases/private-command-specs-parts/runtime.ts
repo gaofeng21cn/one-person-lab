@@ -145,10 +145,11 @@ export function buildPrivateRuntimeCommandSpecs({
       },
     },
     'runtime manager': {
+      group: 'runtime',
       usage: 'opl runtime manager',
       summary:
         'Show the OPL Runtime Manager boundary for the configured provider-backed family runtime.',
-      examples: ['opl runtime manager', 'opl runtime manager --refresh-native-indexes'],
+      examples: ['opl runtime manager'],
       registry: {
         command_id: 'runtime manager',
         parser_adapter: 'node_util_parse_args',
@@ -181,6 +182,7 @@ export function buildPrivateRuntimeCommandSpecs({
       },
     },
     'runtime manager action': {
+      group: 'runtime',
       usage: 'opl runtime manager action (--dry-run|--apply)',
       summary:
         'Plan or apply Runtime Manager adapter actions without making OPL a scheduler or domain truth owner.',
@@ -230,6 +232,7 @@ export function buildPrivateRuntimeCommandSpecs({
       },
     },
     'runtime snapshot': {
+      group: 'runtime',
       usage: 'opl runtime snapshot',
       summary:
         'Project active domain progress surfaces into the desktop tray snapshot without starting a local daemon.',
@@ -240,6 +243,7 @@ export function buildPrivateRuntimeCommandSpecs({
       },
     },
     'runtime app-operator-drilldown': {
+      group: 'runtime',
       usage: 'opl runtime app-operator-drilldown [--detail summary|full] [--full]',
       summary:
         'Project the App/operator drilldown read model from the runtime snapshot, summary-first by default.',
@@ -307,6 +311,7 @@ export function buildPrivateRuntimeCommandSpecs({
       },
     },
     'runtime memory-artifact-lifecycle': {
+      group: 'runtime',
       usage: 'opl runtime memory-artifact-lifecycle',
       summary:
         'Project the memory/artifact/lifecycle owner follow-through packet without reading bodies or taking domain authority.',
@@ -340,12 +345,13 @@ export function buildPrivateRuntimeCommandSpecs({
     ...buildRuntimeStageCandidatePortfolioCommandSpecs(),
     ...buildRuntimeEnvironmentCommandSpecs(),
     'runtime action execute': {
+      group: 'runtime',
       usage: 'opl runtime action execute --action <action_id> [--payload <json>|--payload-file <path>] [--dry-run] [--approve-domain-action]',
       summary:
         'Execute an App/operator action route through the OPL-owned safe action shell without taking domain truth authority.',
       examples: [
         'opl runtime action execute --action action:sat_demo:attempt-query',
-        'opl runtime action execute --action action:sat_demo:domain-repair-command:0 --payload \'{"reason":"operator_selected"}\'',
+        'opl runtime action execute --action action:sat_demo:domain-repair-command:0 --dry-run',
       ],
       handler: (args) => runRuntimeOperatorActionExecute(getContracts(), args, {
         runtimeSnapshotProvider,
@@ -367,6 +373,7 @@ export function buildPrivateRuntimeCommandSpecs({
       }),
     },
     'runtime lifecycle apply': {
+      group: 'runtime',
       usage: 'opl runtime lifecycle apply --mode dry-run|apply|verify --domain <domain_id> [--action <json>|--handoff <json>] [--receipt-ref <ref>]',
       summary:
         'Expose the App/operator lifecycle apply surface while reusing the OPL family-runtime lifecycle ledger.',
@@ -393,6 +400,7 @@ export function buildPrivateRuntimeCommandSpecs({
       },
     },
     'runtime lifecycle reconcile': {
+      group: 'runtime',
       usage: 'opl runtime lifecycle reconcile [--domain <domain_id>] [--expected-source-ref <ref>] [--expected-receipt-ref <ref>] [--expected-restore-proof-ref <ref>] [--expected-domain-artifact-mutation-receipt-ref <ref>] [--max-age-ms <n>]',
       summary:
         'Expose the App/operator lifecycle reconciliation surface without giving OPL domain delete authority.',
@@ -418,6 +426,7 @@ export function buildPrivateRuntimeCommandSpecs({
       },
     },
     'runtime observability-export': {
+      group: 'runtime',
       usage: 'opl runtime observability-export [--format json|openmetrics|collector-config-json]',
       summary:
         'Export read-only runtime observability counters from provider proofs, stage attempts, memory receipts, and SLO receipts.',
@@ -490,6 +499,7 @@ export function buildPrivateRuntimeCommandSpecs({
       },
     },
     'runtime observability-endpoint': {
+      group: 'runtime',
       usage:
         'opl runtime observability-endpoint [--host <host>] [--port <port>] [--metrics-path <path>] [--once] [--ready-file <path>]',
       summary:
@@ -568,6 +578,7 @@ export function buildPrivateRuntimeCommandSpecs({
       },
     },
     'runtime observability-collector-smoke': {
+      group: 'runtime',
       usage:
         'opl runtime observability-collector-smoke [--collector-command <path>] [--endpoint <url>] [--host <host>] [--port <port>] [--metrics-path <path>] [--timeout-ms <n>]',
       summary:
@@ -658,6 +669,7 @@ export function buildPrivateRuntimeCommandSpecs({
       },
     },
     'runtime index': {
+      group: 'runtime',
       usage: 'opl runtime index',
       summary:
         'Explain the persisted native helper state index without rescanning workspaces or owning domain truth.',

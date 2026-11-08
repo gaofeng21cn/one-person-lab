@@ -2,6 +2,7 @@ import {
   appReleaseUserPathEvidenceNextStep,
   frameworkAppReleaseUserPathNextSafeAction,
 } from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
+import { frameworkDeveloperModeLiveCloseoutNextSafeAction } from './runtime-tray-app-operator-drilldown-parts/developer-mode-live-closeout.ts';
 import {
   countValue as numberValue,
   type JsonRecord,
@@ -15,85 +16,6 @@ function commandRef(args: string[]) {
   return `opl ${args.map((arg) => (
     arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
   )).join(' ')}`;
-}
-
-function developerModeLiveCloseoutEvidenceNextStep(evidence: JsonRecord) {
-  return {
-    step_kind: 'developer_mode_live_closeout_evidence',
-    owner: stringValue(evidence.owner) ?? 'one-person-lab',
-    target_surface:
-      stringValue(evidence.target_surface) ?? 'opl_developer_mode_live_closeout',
-    status: stringValue(evidence.status),
-    ledger_evidence_status: stringValue(evidence.ledger_evidence_status),
-    developer_mode_live_route_closeout_refs_ready:
-      evidence.developer_mode_live_route_closeout_refs_ready === true,
-    attention_count: numberValue(evidence.attention_count),
-    missing_live_ledger_route_count:
-      numberValue(evidence.missing_live_ledger_route_count),
-    missing_live_ledger_route_kinds: stringList(evidence.missing_live_ledger_route_kinds),
-    scaleout_payload_required: evidence.scaleout_payload_required === true,
-    pending_verify_receipt_ref_count:
-      numberValue(evidence.pending_verify_receipt_ref_count),
-    pending_verify_receipt_refs: stringList(evidence.pending_verify_receipt_refs),
-    verified_direct_fix_ledger_receipt_ref_count:
-      numberValue(evidence.verified_direct_fix_ledger_receipt_ref_count),
-    verified_fork_pr_ledger_receipt_ref_count:
-      numberValue(evidence.verified_fork_pr_ledger_receipt_ref_count),
-    route_repetition_ref_count:
-      numberValue(evidence.route_repetition_ref_count),
-    risk_tier_auto_promotion_ref_count:
-      numberValue(evidence.risk_tier_auto_promotion_ref_count),
-    app_patrol_mount_ref_count:
-      numberValue(evidence.app_patrol_mount_ref_count),
-    scaleout_followthrough_open_gate_count:
-      numberValue(evidence.scaleout_followthrough_open_gate_count),
-    scaleout_followthrough: record(evidence.scaleout_followthrough),
-    required_closeout_ref_groups: stringList(evidence.required_closeout_ref_groups),
-    required_return_shapes: stringList(evidence.required_return_shapes),
-    payload_owner:
-      stringValue(evidence.payload_owner) ?? 'developer_mode_operator_or_external_repo_owner',
-    receipt_verification_required: evidence.receipt_verification_required === true,
-    verification_command_ref: stringValue(evidence.verification_command_ref),
-    record_command_ref: stringValue(evidence.record_command_ref),
-    route_requires_domain_or_app_payload:
-      evidence.route_requires_domain_or_app_payload === true,
-    can_close_without_domain_or_app_payload:
-      evidence.can_close_without_domain_or_app_payload === true,
-    payload_template: record(evidence.payload_template),
-    payload_ref_hints: record(evidence.payload_ref_hints),
-    payload_workorder: record(evidence.payload_workorder),
-    payload_template_policy: stringValue(evidence.payload_template_policy),
-    scaleout_payload_policy: stringValue(evidence.scaleout_payload_policy),
-    empty_payload_template_is_success_evidence: false,
-    full_detail_section: 'developer_mode_live_closeout_evidence',
-    can_execute_domain_action: false,
-    can_create_owner_receipt: false,
-    can_write_owner_receipt: false,
-    can_modify_managed_runtime: false,
-    can_close_domain_ready: false,
-    can_claim_release_ready: false,
-    can_claim_production_ready: false,
-    can_close_developer_mode_live_route: false,
-  };
-}
-
-function frameworkDeveloperModeLiveCloseoutNextSafeAction(evidence: JsonRecord) {
-  return {
-    ...developerModeLiveCloseoutEvidenceNextStep(evidence),
-    action_id: 'review_developer_mode_live_closeout_evidence',
-    action_kind: 'developer_mode_live_closeout_evidence_review',
-    evidence_closure_gate:
-      'developer_mode_direct_fix_and_fork_pr_external_owner_acceptance_gate',
-    full_detail_section:
-      'attention_first_payload.evidence_after_contract.developer_mode_live_closeout_evidence',
-    authority: 'operator_attention_only',
-    can_execute_domain_action: false,
-    can_write_domain_truth: false,
-    can_create_owner_receipt: false,
-    can_create_typed_blocker: false,
-    can_close_domain_ready: false,
-    can_claim_production_ready: false,
-  };
 }
 
 function hasWarning(input: { warnings: JsonRecord[] }, warningId: string) {

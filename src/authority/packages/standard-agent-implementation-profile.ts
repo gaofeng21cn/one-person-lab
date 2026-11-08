@@ -72,14 +72,14 @@ export type StandardAgentImplementationProfileValidation = {
 
 export type StandardAgentImplementationProfileDeclarationValidation =
   StandardAgentImplementationProfileValidation & {
-    declaration_kind: 'canonical_ref_delta' | 'legacy_full_profile' | null;
+    declaration_kind: 'canonical_ref_delta' | null;
   };
 
 export type StandardAgentImplementationProfileResolution = {
   status: 'passed' | 'missing' | 'blocked' | 'not_applicable';
   applicability: 'repo_local' | 'opl_hosted' | 'profile_resolution_blocked';
   selected_execution_profile_id: string | null;
-  declaration_kind?: 'canonical_ref_delta' | 'legacy_full_profile' | null;
+  declaration_kind?: 'canonical_ref_delta' | null;
   declaration?: unknown;
   effective_profile: StandardAgentImplementationProfile | null;
   blockers: string[];
@@ -239,14 +239,6 @@ export function validateStandardAgentImplementationProfileDeclaration(
       declaration_kind: null,
       profile: null,
       blockers: options.required ? ['implementation_profile_missing'] : [],
-    };
-  }
-
-  if (isRecord(value) && Object.hasOwn(value, 'profile_id')) {
-    const validation = validateStandardAgentImplementationProfile(value, { required: true });
-    return {
-      ...validation,
-      declaration_kind: 'legacy_full_profile',
     };
   }
 

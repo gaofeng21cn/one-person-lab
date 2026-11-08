@@ -7,6 +7,35 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
+import { buildRuntimeAppReleaseEvidenceCommandSpecs } from '../../../../src/entrypoints/cli/cases/runtime-app-release-evidence-command-spec.ts';
+import { buildRuntimeCodexAppRuntimeEvidenceCommandSpecs } from '../../../../src/entrypoints/cli/cases/runtime-codex-app-runtime-evidence-command-spec.ts';
+
+test('observation commands reject invalid options before reaching observation storage', () => {
+  for (const [prefix, specs] of [
+    ['runtime app-release-evidence long-operator', buildRuntimeAppReleaseEvidenceCommandSpecs()],
+    ['runtime codex-app-runtime-evidence long-soak', buildRuntimeCodexAppRuntimeEvidenceCommandSpecs()],
+  ] as const) {
+    for (const action of ['start', 'event', 'finish']) {
+      const command = `${prefix} ${action}`;
+      const spec = specs[command];
+      const missingValue = action === 'start' ? '--evidence-dir' : '--workorder-file';
+      for (const args of [[], ['--unknown', 'value'], [missingValue], [`${missingValue}=`]]) {
+        assert.throws(() => spec.handler(args), (error: any) => {
+          assert.equal(error.code, 'cli_usage_error', `${command}: ${args.join(' ')}`);
+          assert.equal(error.details.usage, spec.usage);
+          return true;
+        });
+      }
+    }
+    for (const duration of ['0', '-1', '1.5', 'not-a-number']) {
+      const args = ['--cohort', '26.5.19', '--evidence-dir', '/unused', `--minimum-duration-minutes=${duration}`];
+      assert.throws(
+        () => specs[`${prefix} start`].handler(prefix.includes('long-soak') ? args.slice(2) : args),
+        /must be a positive integer/,
+      );
+    }
+  }
+});
 
 const eventKinds = [
   'app_window_reopened_or_kept_live',

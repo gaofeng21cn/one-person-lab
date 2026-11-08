@@ -132,6 +132,7 @@ function parseRuntimeDomainOwnerPayloadSummaryVerifyArgs(
 export function buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime domain-owner-payload-summary record': {
+      group: 'runtime',
       usage:
         'opl runtime domain-owner-payload-summary record --target-identity <json> (--payload <json>|--payload-file <path>)',
       summary:
@@ -153,6 +154,7 @@ export function buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(): Record<stri
       },
     },
     'runtime domain-owner-payload-summary verify': {
+      group: 'runtime',
       usage: 'opl runtime domain-owner-payload-summary verify [--receipt-ref <ref>]',
       summary:
         'Verify an existing refs-only domain owner payload summary receipt without claiming domain or production readiness.',
@@ -170,6 +172,7 @@ export function buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(): Record<stri
       }),
     },
     'runtime domain-owner-payload-summary list': {
+      group: 'runtime',
       usage: 'opl runtime domain-owner-payload-summary list',
       summary:
         'List refs-only domain owner payload summary receipts recorded in the local OPL state ledger.',

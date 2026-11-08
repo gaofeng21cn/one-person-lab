@@ -255,6 +255,7 @@ export async function prepareEnvironmentForCommand(input: {
 export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     env: {
+      group: 'env',
       usage: 'opl env <doctor|prepare|run>',
       summary:
         'Operate the default Fast Local Env surface for R/Python dependency execution.',
@@ -292,6 +293,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
       ],
     },
     'env doctor': {
+      group: 'env',
       usage: 'opl env doctor',
       summary:
         'Read Fast Local Env doctor findings without claiming runtime/domain/App readiness.',
@@ -304,12 +306,13 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
       },
     },
     'env prepare': {
+      group: 'env',
       usage:
-        'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>]... [--prepare-timeout-ms <ms>] --artifact-root <path> [--apply]',
+        'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
       summary:
         'Prepare declared R/Python dependencies into OPL-managed local environments.',
       examples: [
-        'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
+        'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --artifact-root artifacts --apply --json',
       ],
       handler: async (args) => ({
         runtime_environment: await buildRuntimeEnvironmentPrepareReadback(
@@ -318,7 +321,8 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
       }),
     },
     'env run': {
-      usage: 'opl env run --domain <domain> --profile <profile> --artifact-root <path> [--requirement-profile-id <id>]... [--prepare-timeout-ms <ms>] [--timeout-ms <ms>] -- <command...>',
+      group: 'env',
+      usage: 'opl env run --domain <domain> --profile <profile> --artifact-root <path> -- <command...>',
       summary:
         'Reuse or prepare language dependencies, run a command, and record the environment used.',
       examples: [
@@ -327,40 +331,59 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
       handler: (args) => runEnvironmentCommand(args),
     },
     'runtime env': {
+      group: 'runtime',
       usage: 'opl runtime env <inspect|prepare|cache|doctor|run-context|contract>',
       summary: 'Inspect and prepare reusable language environments.',
-      examples: ['opl env run --domain mas --profile display -- Rscript render.R'],
+      examples: [
+        'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
+        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
+        'opl runtime env cache status --json',
+      ],
       handler: () => ({ runtime_environment: buildRuntimeEnvironmentContractReadback() }),
     },
     'runtime env inspect': {
-      usage: 'opl runtime env inspect --domain <domain> --profile <profile> [--artifact-root <path>]',
-      summary: 'Read the prepared execution environment.', examples: [],
+      group: 'runtime',
+      usage: 'opl runtime env inspect --domain <domain> --profile <profile> --platform <platform>',
+      summary: 'Read the prepared execution environment.', examples: [
+        'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
+      ],
       handler: (args) => ({ runtime_environment: buildRuntimeEnvironmentInspectReadback(parseTargetArgs(args, commandSpecs['runtime env inspect'])) }),
     },
     'runtime env prepare': {
-      usage: 'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> [--apply]',
-      summary: 'Prepare reusable language dependencies.', examples: [],
+      group: 'runtime',
+      usage: 'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
+      summary: 'Prepare reusable language dependencies.', examples: [
+        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
+      ],
       handler: async (args) => ({ runtime_environment: await buildRuntimeEnvironmentPrepareReadback(parsePrepareArgs(args, commandSpecs['runtime env prepare'])) }),
     },
     'runtime env cache status': {
-      usage: 'opl runtime env cache status', summary: 'Read prepared environment inventory.', examples: [],
+      group: 'runtime',
+      usage: 'opl runtime env cache status', summary: 'Read prepared environment inventory.', examples: ['opl runtime env cache status --json'],
       handler: (args) => { assertNoArgs(args, commandSpecs['runtime env cache status']); return { runtime_environment: buildRuntimeEnvironmentCacheStatusReadback() }; },
     },
     'runtime env cache inventory': {
-      usage: 'opl runtime env cache inventory', summary: 'Read resolved environment versions.', examples: [],
+      group: 'runtime',
+      usage: 'opl runtime env cache inventory', summary: 'Read resolved environment versions.', examples: ['opl runtime env cache inventory --json'],
       handler: (args) => { assertNoArgs(args, commandSpecs['runtime env cache inventory']); return { runtime_environment: buildRuntimeEnvironmentCacheInventoryReadback() }; },
     },
     'runtime env doctor': {
-      usage: 'opl runtime env doctor', summary: 'Read the language execution strategy.', examples: [],
+      group: 'runtime',
+      usage: 'opl runtime env doctor', summary: 'Read the language execution strategy.', examples: ['opl runtime env doctor --json'],
       handler: (args) => { assertNoArgs(args, commandSpecs['runtime env doctor']); return { runtime_environment: buildRuntimeEnvironmentDoctorReadback() }; },
     },
     'runtime env run-context': {
+      group: 'runtime',
       usage: 'opl runtime env run-context --domain <domain> --profile <profile> [--artifact-root <path>]',
-      summary: 'Read an artifact-bound execution environment.', examples: [],
+      summary: 'Read an artifact-bound execution environment.', examples: [
+        'opl runtime env run-context --domain bookforge --profile publication_proof --json',
+        'opl runtime env run-context --domain mas --profile display --artifact-root artifacts --json',
+      ],
       handler: (args) => ({ runtime_environment: buildRuntimeEnvironmentRunContextReadback(parseTargetArgs(args, commandSpecs['runtime env run-context'])) }),
     },
     'runtime env contract': {
-      usage: 'opl runtime env contract', summary: 'Read the environment ownership contract.', examples: [],
+      group: 'runtime',
+      usage: 'opl runtime env contract', summary: 'Read the environment ownership contract.', examples: ['opl runtime env contract --json'],
       handler: (args) => { assertNoArgs(args, commandSpecs['runtime env contract']); return { runtime_environment: buildRuntimeEnvironmentContractReadback() }; },
     },
   };

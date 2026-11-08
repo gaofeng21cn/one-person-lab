@@ -179,7 +179,6 @@
       }
     },
     "new_writer_policy": "canonical_base_ref_plus_helper_delta_only",
-    "legacy_full_profile_policy": "read_only_compatibility_after_framework_canonical_validation",
     "effective_projection_field": "pack_compiler_input_projection.implementation_profile",
     "raw_declaration_projection_field": "pack_compiler_input_projection.implementation_profile_declaration",
     "hosted_foundry_profile_policy": "not_applicable_when_absent_and_blocked_when_repo_local_declaration_is_present",
@@ -786,7 +785,6 @@
       "authority_ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/agent_pack_contract/standard_agent_pack_abi"
     },
     "new_writer_policy": "canonical_authority_ref_only",
-    "legacy_inline_policy": "read_only_compatibility_only_when_deep_strict_equal_to_framework_canonical_constant",
     "effective_projection_field": "pack_compiler_input_projection.standard_agent_pack_abi.effective_abi",
     "hosted_foundry_profile_policy": "not_applicable_when_absent_and_blocked_when_repo_local_declaration_is_present"
   },

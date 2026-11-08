@@ -83,6 +83,7 @@ function parseVerifyArgs(
 export function buildRuntimeStandardAgentTemplateConsumptionCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime standard-agent-template-consumption record': {
+      group: 'runtime',
       usage:
         'opl runtime standard-agent-template-consumption record (--payload <json>|--payload-file <path>)',
       summary:
@@ -102,6 +103,7 @@ export function buildRuntimeStandardAgentTemplateConsumptionCommandSpecs(): Reco
       }),
     },
     'runtime standard-agent-template-consumption verify': {
+      group: 'runtime',
       usage: 'opl runtime standard-agent-template-consumption verify [--receipt-ref <ref>]',
       summary:
         'Verify an existing refs-only standard agent template consumption receipt without claiming readiness.',
@@ -119,6 +121,7 @@ export function buildRuntimeStandardAgentTemplateConsumptionCommandSpecs(): Reco
       }),
     },
     'runtime standard-agent-template-consumption list': {
+      group: 'runtime',
       usage: 'opl runtime standard-agent-template-consumption list',
       summary:
         'List refs-only standard agent template consumption receipts recorded in the local OPL state ledger.',

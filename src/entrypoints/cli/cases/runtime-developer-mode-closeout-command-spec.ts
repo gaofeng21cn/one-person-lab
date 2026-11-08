@@ -94,12 +94,12 @@ function refsOnlyAuthorityBoundary() {
 export function buildRuntimeDeveloperModeCloseoutCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime developer-mode-closeout record': {
+      group: 'runtime',
       usage: 'opl runtime developer-mode-closeout record --payload <json>',
       summary:
         'Record refs-only Developer Mode live repair closeout refs and optional immutable Foundry activation transaction refs.',
       examples: [
-        'opl runtime developer-mode-closeout record --payload \'{"target_repo_id":"demo-agent","route_decision":"direct-fix","route_eligibility":"eligible_direct_fix","patrol_observation_ref":"patrol:ref","diff_ref":"diff:ref","verification_refs":["test:ref"],"no_forbidden_write_ref":"scan:ref","commit_ref":"git:ref","owner_acceptance_ref":"external-owner-ref:accepted"}\'',
-        'opl runtime developer-mode-closeout record --payload \'{"foundry_activation_transaction_refs":["opl://foundry/activation-transaction/demo"]}\'',
+        'opl runtime developer-mode-closeout record --payload \'{"target_repo_id":"med-autoscience","route_decision":"direct-fix","route_eligibility":"eligible_direct_fix","patrol_observation_ref":"patrol:ref","diff_ref":"diff:ref","verification_refs":["test:ref"],"no_forbidden_write_ref":"scan:ref","commit_ref":"git:ref","owner_acceptance_ref":"external-owner-ref:accepted"}\'',
       ],
       handler: (args) => ({
         developer_mode_closeout_ledger_record:
@@ -112,11 +112,12 @@ export function buildRuntimeDeveloperModeCloseoutCommandSpecs(): Record<string, 
       }),
     },
     'runtime developer-mode-closeout verify': {
+      group: 'runtime',
       usage: 'opl runtime developer-mode-closeout verify [--receipt-ref <ref>]',
       summary:
         'Verify an existing refs-only Developer Mode live repair closeout receipt without claiming production ready.',
       examples: [
-        'opl runtime developer-mode-closeout verify --receipt-ref opl://developer-mode-closeout/demo-agent/patrol%3Aref',
+        'opl runtime developer-mode-closeout verify --receipt-ref opl://developer-mode-closeout/med-autoscience/patrol%3Aref',
       ],
       handler: (args) => ({
         developer_mode_closeout_ledger_verify:
@@ -129,6 +130,7 @@ export function buildRuntimeDeveloperModeCloseoutCommandSpecs(): Record<string, 
       }),
     },
     'runtime developer-mode-closeout list': {
+      group: 'runtime',
       usage: 'opl runtime developer-mode-closeout list',
       summary:
         'List refs-only Developer Mode live repair closeout receipts recorded in the local OPL state ledger.',
@@ -147,6 +149,35 @@ export function buildRuntimeDeveloperModeCloseoutCommandSpecs(): Record<string, 
           },
         };
       },
+    },
+  };
+  const subcommands = Object.entries(commandSpecs).map(([command, spec]) => ({
+    command,
+    usage: spec.usage,
+    summary: spec.summary,
+  }));
+  commandSpecs['runtime developer-mode-closeout'] = {
+    usage: 'opl runtime developer-mode-closeout <record|verify|list>',
+    summary:
+      'Inspect or update refs-only Developer Mode live repair closeout ledger entries; fork/PR closeout requires GitHub PR-backed owner acceptance.',
+    examples: [
+      'opl runtime developer-mode-closeout list --json',
+      'opl help runtime developer-mode-closeout record',
+    ],
+    group: 'runtime',
+    subcommands,
+    handler: (args) => {
+      assertNoArgs(args, commandSpecs['runtime developer-mode-closeout']);
+      return {
+        developer_mode_closeout_commands: {
+          surface_kind: 'opl_runtime_developer_mode_closeout_command_group',
+          usage: 'opl runtime developer-mode-closeout <record|verify|list>',
+          subcommands,
+          owner_acceptance_policy:
+            'direct_fix_accepts_external_owner_ref_fork_pr_requires_github_pr_owner_acceptance_ref_no_opl_owner_receipt_write',
+          refs_only: true,
+        },
+      };
     },
   };
   return commandSpecs;

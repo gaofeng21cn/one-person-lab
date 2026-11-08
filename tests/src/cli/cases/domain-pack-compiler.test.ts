@@ -196,7 +196,7 @@ test('domain pack compiler family-defaults consumes standard repo contracts with
     assert.equal(mas.pack_compiler_input_projection.standard_agent_pack_abi.status, 'passed');
     assert.equal(
       mas.pack_compiler_input_projection.standard_agent_pack_abi.declaration_kind,
-      'legacy_inline_abi',
+      'canonical_authority_ref',
     );
     assert.equal(
       mas.pack_compiler_input_projection.standard_agent_pack_abi.effective_abi.version,

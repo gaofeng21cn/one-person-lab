@@ -126,7 +126,7 @@ const readModelGateTestFiles = [
 
 const fastLaneExcludedTestFiles = new Set(expandTestFiles([
   'tests/built/**/*.test.{ts,mjs}',
-  'tests/src/{agent-profile-spine,cli-acp-runtime,cli-codex-default-shell-sync-skills,cli-codex-default-shell,cli-install,cli,cli-modularization,domain-definition-contract,evidence-grounded-decision-agent-profile,family-domain-catalog,family-entry-contracts,family-executor-adapter-contract,family-orchestration,fresh-install-smoke,handoff-bundle,opl-skills-boundary,product-entry-agent-executor,product-entry-companions,product-entry-runtime,profile-capability-plan,refactor-patrol-state,runtime-state-paths,source-module-boundary,source-module-public-imports,stage-run-mag-integration}.test.ts',
+  'tests/src/{agent-profile-spine,cli-acp-runtime,cli-codex-default-shell-sync-skills,cli-codex-default-shell,cli-install,cli,cli-modularization,domain-definition-contract,evidence-grounded-decision-agent-profile,family-domain-catalog,family-entry-contracts,family-executor-adapter-contract,family-orchestration,fresh-install-smoke,handoff-bundle,opl-skills-boundary,product-entry-agent-executor,product-entry-companions,product-entry-runtime,profile-capability-plan,refactor-patrol-state,runtime-state-paths,source-module-boundary,stage-run-mag-integration}.test.ts',
   'tests/src/cli/cases/{agents-conformance-stage-pack-v2,agents-default-callers,agents-residue-decisions,domain-pack-compiler-canonical-targets,framework-readiness-cli-surface,system-dependency-doctor,web-runtime}.test.ts',
 ]));
 
@@ -205,7 +205,7 @@ const lanes = {
   smoke: [
     { kind: 'npm', args: ['run', 'source:modules', '--', '--strict-imports', '--strict-cycles'] },
     sourceTest([
-      '{verification-command-surfaces,target-architecture-schema-contracts,evidence-grounded-decision-agent-profile,agent-profile-spine,profile-capability-plan,evidence-grounded-stagecraft-runway,evidence-grounded-substrate,cognitive-computation-kernel-contract,advisory-knowledge-boundary-contract,durable-knowledge-catalog,knowledge-context-direct,opl-flow-completion-audit-contract,test-lanes-state-isolation,source-module-boundary,source-module-public-imports,cli-modularization,runtime-state-paths,runtime-environment-substrate,opl-session-runtime}.test.ts',
+      '{verification-command-surfaces,target-architecture-schema-contracts,evidence-grounded-decision-agent-profile,agent-profile-spine,profile-capability-plan,evidence-grounded-stagecraft-runway,evidence-grounded-substrate,cognitive-computation-kernel-contract,advisory-knowledge-boundary-contract,durable-knowledge-catalog,knowledge-context-direct,opl-flow-completion-audit-contract,test-lanes-state-isolation,source-module-boundary,cli-modularization,runtime-state-paths,runtime-environment-substrate,opl-session-runtime}.test.ts',
       'cli/cases/runtime-environment-substrate-command-surface.test.ts',
     ], { batchSize: 25 }),
   ],

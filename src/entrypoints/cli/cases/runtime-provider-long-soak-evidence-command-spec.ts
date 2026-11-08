@@ -91,12 +91,13 @@ export function buildRuntimeProviderLongSoakEvidenceCommandSpecs():
   Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime provider-long-soak-evidence record': {
+      group: 'runtime',
       usage:
         'opl runtime provider-long-soak-evidence record (--payload <json>|--payload-file <path>)',
       summary:
         'Record refs-only provider long-soak, recovery, dead-letter, provider blocker, typed blocker, or owner acceptance refs without claiming production readiness.',
       examples: [
-        'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/window"],"provider_blocker_refs":["provider-blocker:temporal/capability-slo"],"owner_acceptance_refs":["owner-acceptance:runtime/provider-window"],"capability_requirement_ids":["signal_history_ready"]}\'',
+        'opl runtime provider-long-soak-evidence record --payload \'{"long_soak_refs":["provider-long-soak:temporal/window"],"provider_blocker_refs":["provider-blocker:temporal/capability-slo"],"owner_acceptance_refs":["owner-acceptance:provider/window"]}\'',
         'opl runtime provider-long-soak-evidence record --payload-file payload.json',
       ],
       handler: (args) => ({
@@ -107,6 +108,7 @@ export function buildRuntimeProviderLongSoakEvidenceCommandSpecs():
       }),
     },
     'runtime provider-long-soak-evidence verify': {
+      group: 'runtime',
       usage: 'opl runtime provider-long-soak-evidence verify [--receipt-ref <ref>]',
       summary:
         'Verify an existing refs-only provider long-soak evidence receipt without claiming readiness.',
@@ -121,6 +123,7 @@ export function buildRuntimeProviderLongSoakEvidenceCommandSpecs():
       }),
     },
     'runtime provider-long-soak-evidence list': {
+      group: 'runtime',
       usage: 'opl runtime provider-long-soak-evidence list',
       summary:
         'List refs-only provider long-soak evidence receipts recorded in the local OPL state ledger.',

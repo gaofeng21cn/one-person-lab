@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { resolveAgentPluginManifest } from '../../../kernel/agent-plugin-manifest.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
+import { packageContentDigest } from '../../../kernel/package-content-lock.ts';
 import {
   listCurrentPackageProjections,
   PACKAGE_PROJECTION_ROOT,
@@ -405,7 +406,6 @@ export function installPayloadMarketplace(input: {
 
     const lock = isRecord(payload.content_lock) ? payload.content_lock : null;
     const expectedLock = payloadSha256(lock?.digest, 'content_lock.digest');
-    const contentHash = crypto.createHash('sha256');
     const contentLockPaths = projection.contentLockPaths ?? [...downloaded.keys()];
     if (contentLockPaths.length === 0
       || contentLockPaths.some((relativePath) => !downloaded.has(relativePath))) {
@@ -415,19 +415,9 @@ export function installPayloadMarketplace(input: {
         { package_id: input.packageId },
       );
     }
-    for (const relativePath of contentLockPaths) {
-      const bytes = fs.readFileSync(downloaded.get(relativePath)!);
-      const pathBytes = Buffer.from(relativePath, 'utf8');
-      const pathLength = Buffer.allocUnsafe(8);
-      const fileLength = Buffer.allocUnsafe(8);
-      pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
-      fileLength.writeBigUInt64BE(BigInt(bytes.length));
-      contentHash.update(pathLength);
-      contentHash.update(pathBytes);
-      contentHash.update(fileLength);
-      contentHash.update(bytes);
-    }
-    if (`sha256:${contentHash.digest('hex')}` !== expectedLock) {
+    const actualLock = packageContentDigest(contentLockPaths, (relativePath) =>
+      fs.readFileSync(downloaded.get(relativePath)!));
+    if (actualLock !== expectedLock) {
       localReadbackFailure(
         'configured_codex_plugin_carrier_payload_digest_mismatch',
         'Configured Package payload content lock does not match its owner manifest.',

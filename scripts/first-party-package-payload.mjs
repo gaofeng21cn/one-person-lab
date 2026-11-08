@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs, TextDecoder } from 'node:util';
 
 import { Ajv2020 } from 'ajv/dist/2020.js';
+import { packageContentDigest } from '../src/kernel/package-content-lock.ts';
 
 const FULL_GIT_SHA = /^[0-9a-f]{40}$/;
 const PACKAGE_ID = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
@@ -567,23 +568,10 @@ function sha256(bytes) {
 }
 
 function contentLockDigest(canonicalization, paths, blobs) {
-  const digest = crypto.createHash('sha256');
-  for (const relativePath of paths) {
-    const pathBytes = Buffer.from(relativePath, 'utf8');
-    const fileBytes = blobs.get(relativePath);
-    if (canonicalization !== CANONICAL_CONTENT_LOCK) {
-      throw new Error(`Unsupported content_lock canonicalization: ${canonicalization}`);
-    }
-    const pathLength = Buffer.allocUnsafe(8);
-    const fileLength = Buffer.allocUnsafe(8);
-    pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
-    fileLength.writeBigUInt64BE(BigInt(fileBytes.length));
-    digest.update(pathLength);
-    digest.update(pathBytes);
-    digest.update(fileLength);
-    digest.update(fileBytes);
+  if (canonicalization !== CANONICAL_CONTENT_LOCK) {
+    throw new Error(`Unsupported content_lock canonicalization: ${canonicalization}`);
   }
-  return `sha256:${digest.digest('hex')}`;
+  return packageContentDigest(paths, (relativePath) => blobs.get(relativePath));
 }
 
 function readSourceSnapshot(options, authority) {

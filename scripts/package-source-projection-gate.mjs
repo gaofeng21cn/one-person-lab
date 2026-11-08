@@ -11,6 +11,7 @@ import {
 } from '../src/adapters/integration/package-distribution.ts';
 import { assertJsonSchemaPayload } from '../src/kernel/schema-registry.ts';
 import { parseJsonText, readJsonFile } from './script-json-boundary.mjs';
+import { packageContentDigest } from '../src/kernel/package-content-lock.ts';
 
 export const TEST_ONLY_PACKAGE_RELEASE_GATE = 'test_owner_sha_release_gate';
 
@@ -282,7 +283,6 @@ function validateContentLock({
     || JSON.stringify(contentPaths) !== JSON.stringify(ownerLock.paths)) {
     fail('content_lock_drift', packageId, 'payload files do not match the ordered content lock paths');
   }
-  const hash = crypto.createHash('sha256');
   // Content-lock paths and descriptor refs are relative to the exact payload
   // carrier root, already checked against every committed file above.
   const resolveCarrierPath = (relative) => sourceRoot === '.' ? relative : path.posix.join(sourceRoot, relative);
@@ -316,7 +316,7 @@ function validateContentLock({
       fail('owner_package_descriptor_drift', packageId, 'owner package descriptor identity, version, or content_lock differs from the Framework projection');
     }
   }
-  for (const declaredPath of ownerLock.paths) {
+  const digest = packageContentDigest(ownerLock.paths, (declaredPath) => {
     const relative = safeRelativePath(declaredPath, 'content_lock.paths[]', packageId);
     const bytes = readCommitBlob({
       packageId,
@@ -325,17 +325,8 @@ function validateContentLock({
       treePath: resolveCarrierPath(relative),
       failureCode: 'content_lock_source_missing',
     });
-    const pathBytes = Buffer.from(relative, 'utf8');
-    const pathLength = Buffer.allocUnsafe(8);
-    const fileLength = Buffer.allocUnsafe(8);
-    pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
-    fileLength.writeBigUInt64BE(BigInt(bytes.length));
-    hash.update(pathLength);
-    hash.update(pathBytes);
-    hash.update(fileLength);
-    hash.update(bytes);
-  }
-  const digest = `sha256:${hash.digest('hex')}`;
+    return bytes;
+  });
   if (digest !== ownerLock.digest) {
     fail('content_lock_digest_mismatch', packageId, 'owner content lock digest does not match current bytes', {
       expected: ownerLock.digest,
@@ -417,14 +408,16 @@ export function validatePackageSourceProjection({
   }
   const sourceRoot = safeRelativePath(payload.source_root, 'source_root', spec.package_id, true);
   const coordinates = repoCoordinates(spec.repo_url, spec.package_id);
-  const seen = new Set();
-  const payloadContentLock = crypto.createHash('sha256');
+  const entriesByPath = new Map();
   for (const entry of payload.files) {
     const relativePath = safeRelativePath(entry?.path, 'files[].path', spec.package_id);
-    if (seen.has(relativePath)) {
+    if (entriesByPath.has(relativePath)) {
       fail('payload_files_invalid', spec.package_id, `payload repeats source file: ${relativePath}`);
     }
-    seen.add(relativePath);
+    entriesByPath.set(relativePath, entry);
+  }
+  const actualPayloadDigest = packageContentDigest([...entriesByPath.keys()], (relativePath) => {
+    const entry = entriesByPath.get(relativePath);
     const sourcePath = sourceTreePath(ownerRepoPath, sourceRoot, relativePath, spec.package_id);
     const sourceEntry = readCommitRegularFile({
       packageId: spec.package_id,
@@ -456,18 +449,9 @@ export function validatePackageSourceProjection({
         actual: actualDigest,
       });
     }
-    const pathBytes = Buffer.from(relativePath, 'utf8');
-    const pathLength = Buffer.allocUnsafe(8);
-    const fileLength = Buffer.allocUnsafe(8);
-    pathLength.writeBigUInt64BE(BigInt(pathBytes.length));
-    fileLength.writeBigUInt64BE(BigInt(sourceBytes.length));
-    payloadContentLock.update(pathLength);
-    payloadContentLock.update(pathBytes);
-    payloadContentLock.update(fileLength);
-    payloadContentLock.update(sourceBytes);
-  }
+    return sourceBytes;
+  });
   if (spec.owner_manifest_kind !== 'capability_package') {
-    const actualPayloadDigest = `sha256:${payloadContentLock.digest('hex')}`;
     if (payload.content_lock.digest !== actualPayloadDigest) {
       fail('payload_content_lock_mismatch', spec.package_id, 'payload content lock digest differs from owner carrier bytes', {
         expected: actualPayloadDigest,

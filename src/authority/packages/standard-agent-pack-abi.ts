@@ -1,5 +1,3 @@
-import { isDeepStrictEqual } from 'node:util';
-
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { OPL_HOSTED_FOUNDRY_SEMANTIC_PROVIDER_PROFILE_ID } from './standard-agent-execution-profile.ts';
 
@@ -111,7 +109,7 @@ export type StandardAgentPackAbiResolution = {
   status: 'passed' | 'missing' | 'blocked' | 'not_applicable';
   applicability: 'repo_local' | 'opl_hosted' | 'profile_resolution_blocked';
   selected_execution_profile_id: string | null;
-  declaration_kind?: 'canonical_authority_ref' | 'legacy_inline_abi' | null;
+  declaration_kind?: 'canonical_authority_ref' | null;
   declaration?: unknown;
   effective_abi: typeof STANDARD_AGENT_PACK_ABI | null;
   blockers: string[];
@@ -123,14 +121,6 @@ function validateDeclaration(value: unknown) {
       declarationKind: null,
       blockers: ['standard_agent_pack_abi_declaration_must_be_object'],
     } as const;
-  }
-  if (Object.hasOwn(value, 'surface_kind')) {
-    return isDeepStrictEqual(value, STANDARD_AGENT_PACK_ABI)
-      ? { declarationKind: 'legacy_inline_abi', blockers: [] } as const
-      : {
-          declarationKind: 'legacy_inline_abi',
-          blockers: ['standard_agent_pack_abi_legacy_inline_must_equal_framework_canonical'],
-        } as const;
   }
   const onlyAuthorityRef = Object.keys(value).length === 1
     && value.authority_ref === STANDARD_AGENT_PACK_ABI_AUTHORITY_REF;

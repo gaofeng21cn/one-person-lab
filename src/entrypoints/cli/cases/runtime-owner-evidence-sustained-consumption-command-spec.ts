@@ -121,6 +121,7 @@ export function buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs():
 Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
     'runtime owner-evidence-sustained-consumption record': {
+      group: 'runtime',
       usage:
         'opl runtime owner-evidence-sustained-consumption record --target-identity <json> (--payload <json>|--payload-file <path>)',
       summary:
@@ -142,6 +143,7 @@ Record<string, CommandSpec> {
       },
     },
     'runtime owner-evidence-sustained-consumption verify': {
+      group: 'runtime',
       usage: 'opl runtime owner-evidence-sustained-consumption verify [--receipt-ref <ref>]',
       summary:
         'Verify an existing refs-only owner-evidence sustained-consumption receipt without claiming App sustained consumption or production readiness.',
@@ -159,6 +161,7 @@ Record<string, CommandSpec> {
       }),
     },
     'runtime owner-evidence-sustained-consumption list': {
+      group: 'runtime',
       usage: 'opl runtime owner-evidence-sustained-consumption list',
       summary:
         'List refs-only owner-evidence sustained-consumption receipts in the local OPL state ledger.',

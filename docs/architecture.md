@@ -31,6 +31,11 @@ User
 
 跨 unit 调用使用对方公开 entrypoint；源码身份和职责从责任图读取，entrypoint 只导出实际能力。entrypoint 不反向持有业务状态，adapter 不成为 authority，read model 不写 owner truth。
 
+通用 Python 文件能力归 `python/opl_framework`：Profile Workspace 根定位与无覆盖初始化、
+Package 内容锁字节编码和流式文件摘要由基座维护。已有 Framework 运行依赖的 consumer 直接导入；
+独立 carrier 通过 `scripts/materialize-python-support.mjs` 逐字生成私有模块，并在验证时用
+`--check` 核对同源。投影不引入注册表、版本状态或领域裁决，领域模板和业务状态仍归各自 owner。
+
 ## Family capability portfolio
 
 `contracts/opl-framework/family-capability-domain-registry.json` 描述 OPL Family 的 capability domain、authority surface、Package unit 和 Cordis contribution。它是跨产品认知地图，不是物理源码目录、安装清单或固定插件数量。

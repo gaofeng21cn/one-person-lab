@@ -122,6 +122,27 @@ test('framework readiness keeps raw stage replay receipt workorders out of defau
   assert.equal(actions[0].authority, 'operator_attention_only');
 });
 
+test('framework readiness projects current Foundry activation evidence into developer closeout actions', () => {
+  const actions = frameworkAttentionNextSafeActions({
+    blockers: [],
+    warnings: [{ warning_id: 'developer_mode_live_closeout_attention' }],
+    ownerPayloadGroups: [],
+    ownerHandoffPacket: {},
+    appReleaseUserPathEvidence: {},
+    developerModeLiveCloseoutEvidence: {
+      attention_count: 1,
+      foundry_activation_transaction_ref_count: 2,
+    },
+    domainDispatchEvidenceWorkorderGroupAttentionItems: [],
+    itemLimit: 5,
+  }) as JsonRecord[];
+  const action = actions.find((entry) => entry.action_id === 'review_developer_mode_live_closeout_evidence');
+  assert.ok(action);
+  assert.equal(action.foundry_activation_transaction_ref_count, 2);
+  assert.equal('risk_tier_auto_promotion_ref_count' in action, false);
+  assert.equal(action.can_create_owner_receipt, false);
+});
+
 test('framework readiness keeps blocked refs-only attention out of executable next actions', () => {
   const actions = frameworkAttentionNextSafeActions({
     blockers: [],
