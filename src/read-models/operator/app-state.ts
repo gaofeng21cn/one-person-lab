@@ -37,6 +37,7 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildDeveloperModeLiveCloseoutEvidenceSummary } from './app-state-developer-mode-closeout.ts';
 import { buildReleaseState } from './app-state-release.ts';
 import { readOplWorkspaceRoot } from '../../kernel/system-preferences.ts';
+import { readAppPackagePreferences, type AppPackagePreferences } from '../../kernel/app-package-preferences.ts';
 import path from 'node:path';
 import { buildActionCatalog } from './app-state-action-catalog.ts';
 import { buildSettingsControlCenter } from './app-state-settings-control-center.ts';
@@ -204,6 +205,7 @@ export function buildAppAgentPackageStatuses(input: {
   packageIds: readonly string[];
   profile: AppStateProfile;
   readStatus?: AgentPackageStatusReader;
+  appPreferences?: AppPackagePreferences;
 }) {
   const readStatus = input.readStatus ?? runOplAgentPackageStatus;
   const statuses: Record<string, JsonRecord> = {};
@@ -220,6 +222,7 @@ export function buildAppAgentPackageStatuses(input: {
     } catch (error) {
       statuses[packageId] = unavailableAgentPackageStatus(packageId, error);
     }
+    statuses[packageId].app_enabled = input.appPreferences?.[packageId] !== false;
   }
   return statuses;
 }
@@ -478,7 +481,9 @@ export async function buildOplAppState(input: {
   const packageIds = [...new Set(
     agentPackagesReadback.directory.entries.map((entry) => entry.package_id),
   )];
+  const appPreferences = readAppPackagePreferences();
   const agentPackageStatuses = buildAppAgentPackageStatuses({
+    appPreferences,
     packageIds,
     profile,
     readStatus: readAgentPackageStatus,
@@ -497,7 +502,13 @@ export async function buildOplAppState(input: {
       list_surface: 'opl packages list --json',
       status_surface: 'opl packages status --package-id <package_id> --json',
     },
-    directory: agentPackagesReadback.directory,
+    directory: {
+      ...agentPackagesReadback.directory,
+      entries: agentPackagesReadback.directory.entries.map((entry) => ({
+        ...entry,
+        app_enabled: appPreferences[entry.package_id] !== false,
+      })),
+    },
     storage_inventory: compactStorageOwnerProjection(
       storageOwnerInventory.agent_package_store,
       'agent_package_store',
@@ -509,9 +520,13 @@ export async function buildOplAppState(input: {
       status_read_failure_count: packageStatusFailures.length,
       diagnostics: packageStatusFailures,
       packages: agentPackageStatuses,
-      home_shortcut_preferences: agentPackagesReadback.home_shortcut_preferences,
+      home_shortcut_preferences: agentPackagesReadback.home_shortcut_preferences.map((shortcut) => ({
+        ...shortcut,
+        visible: shortcut.visible && appPreferences[shortcut.package_id] !== false,
+      })),
       files: {
         home_shortcut_preferences_file: agentPackagesReadback.files.home_shortcut_preferences_file,
+        app_package_preferences_file: statePaths.app_package_preferences_file,
       },
       authority_boundary: agentPackagesReadback.authority_boundary,
     },

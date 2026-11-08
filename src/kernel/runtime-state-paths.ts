@@ -22,6 +22,7 @@ export type OplStatePaths = {
   gateway_account_lock_file: string;
   external_evidence_ledger_file: string;
   agent_package_home_shortcut_preferences_file: string;
+  app_package_preferences_file: string;
   storage_owner_inventory_snapshot_file: string;
   managed_install_update_ledger_file: string;
   managed_update_component_receipt_ledger_file: string;
@@ -139,6 +140,7 @@ export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): O
     gateway_account_lock_file: path.join(stateDir, 'gateway', 'account.lock'),
     external_evidence_ledger_file: path.join(stateDir, 'external-evidence-ledger.json'),
     agent_package_home_shortcut_preferences_file: path.join(stateDir, 'agent-package-home-shortcut-preferences.json'),
+    app_package_preferences_file: path.join(stateDir, 'app-package-preferences.json'),
     storage_owner_inventory_snapshot_file: path.join(stateDir, 'storage-owner-inventory-snapshot.json'),
     managed_install_update_ledger_file: path.join(stateDir, 'managed-install-update-ledger.json'),
     managed_update_component_receipt_ledger_file: path.join(

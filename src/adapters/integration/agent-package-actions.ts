@@ -4,6 +4,7 @@ export type AgentPackageAppActionId =
   | 'agent_package_update'
   | 'agent_package_repair'
   | 'agent_package_uninstall'
+  | 'package_app_set_enabled'
   | 'agent_package_preferences_set';
 
 export type AgentPackageActionTaskKind =
@@ -127,6 +128,22 @@ const AGENT_PACKAGE_ACTION_CATALOG = [
     impact: 'Persists package exposure or Home shortcut user preferences without changing package core, carrier materialization, or agent domain semantics.',
     follow_up_action_ids: [],
     verify_action_id: 'agent_package_preferences_set',
+  },
+  {
+    action_id: 'package_app_set_enabled',
+    stable_id: 'set_package_app_enabled',
+    label: 'Enable package in OPL App',
+    section_id: 'capabilities',
+    task_kind: 'configure',
+    taxonomy: 'settings.capabilities.package.app_enabled',
+    delegated_surface: 'opl app action execute --action package_app_set_enabled',
+    payload_fields: ['package_id', 'enabled'],
+    mutates: 'opl_app_package_preferences',
+    dry_run_supported: true,
+    confirmation_required: false,
+    danger_level: 'low',
+    impact: 'Controls OPL App pages and contributions independently of native carrier installation, enablement and MCP Apps.',
+    follow_up_action_ids: [],
   },
 ] as const satisfies readonly AgentPackageActionCatalogEntry[];
 

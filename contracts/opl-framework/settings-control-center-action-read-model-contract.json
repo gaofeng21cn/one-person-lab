@@ -427,6 +427,17 @@
     "manual_required",
     "failed_with_repair"
   ],
+  "package_app_preferences": {
+    "action_id": "package_app_set_enabled",
+    "payload_fields": ["package_id", "enabled"],
+    "projection_field": "app_enabled",
+    "default_enabled": true,
+    "scope": ["opl_app_desktop", "opl_app_webui"],
+    "state_file": "app-package-preferences.json",
+    "native_carrier_affected": false,
+    "mcp_apps_affected": false,
+    "disabled_behavior": ["hide_ui_contributions_and_navigation", "stop_automatic_contribution_reads", "reject_app_contribution_actions", "retain_management_entry"]
+  },
   "allowed_action_ids": [
     "gateway_account_complete_setup",
     "gateway_account_refresh",
@@ -449,6 +460,7 @@
     "agent_package_repair",
     "agent_package_uninstall",
     "agent_package_preferences_set",
+    "package_app_set_enabled",
     "settings_check_opl_base_update",
     "settings_apply_opl_base_update",
     "settings_check_app_update",
@@ -488,6 +500,7 @@
     "agent_package_repair": "settings.capabilities.agent_package.repair",
     "agent_package_uninstall": "settings.capabilities.agent_package.uninstall",
     "agent_package_preferences_set": "settings.capabilities.agent_package.preferences",
+    "package_app_set_enabled": "settings.capabilities.package.app_enabled",
     "settings_check_opl_base_update": "settings.updates.check_opl_base_update",
     "settings_apply_opl_base_update": "settings.updates.apply_opl_base_update",
     "settings_check_app_update": "settings.updates.check_app_update",

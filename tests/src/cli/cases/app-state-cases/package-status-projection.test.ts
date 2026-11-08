@@ -179,6 +179,7 @@ test('App package projection accepts arbitrary package ids and trusts fresh owne
     packageIds: ['third.party.research'],
     profile: 'fast',
     readStatus,
+    appPreferences: { 'third.party.research': false },
   });
   const full = buildAppAgentPackageStatuses({
     packageIds: ['third.party.research'],
@@ -190,6 +191,8 @@ test('App package projection accepts arbitrary package ids and trusts fresh owne
   assert.deepEqual(requested, ['third.party.research', 'third.party.research']);
   const fastStatus = fast['third.party.research'] as any;
   const fullStatus = full['third.party.research'] as any;
+  assert.equal(fastStatus.app_enabled, false);
+  assert.equal(fullStatus.app_enabled, true);
   assert.deepEqual(fastStatus.presence, {
     registered: true,
     installed: true,

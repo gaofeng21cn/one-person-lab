@@ -14,7 +14,8 @@ function recordArray(value: unknown) {
 }
 
 function enabledInstalledPackage(status: JsonRecord) {
-  return isRecord(status.presence)
+  return status.app_enabled !== false
+    && isRecord(status.presence)
     && status.presence.installed === true
     && (!isRecord(status.capability_exposure) || status.capability_exposure.status !== 'disabled');
 }
@@ -92,7 +93,7 @@ export function buildAppUiContributionsProjection(
       order: 'sort_order_then_package_id_then_contribution_id',
       identity: 'package_id_colon_contribution_id',
       unknown_kind: 'render_local_fallback_without_disabling_other_contributions',
-      removal: 'remove_immediately_when_package_is_disabled_or_uninstalled',
+      removal: 'remove_immediately_when_package_is_disabled_uninstalled_or_disabled_in_app',
     },
     authority_boundary: {
       package_truth_owner: 'installed_package_descriptor_via_framework',

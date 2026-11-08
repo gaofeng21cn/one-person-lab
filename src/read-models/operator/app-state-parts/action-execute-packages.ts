@@ -1,4 +1,5 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { readAppPackagePreferences, setAppPackageEnabled } from '../../../kernel/app-package-preferences.ts';
 import {
   runOplAgentPackageExposureAction,
   runOplAgentPackageHomeShortcutPreferencesSet,
@@ -39,6 +40,13 @@ export function executePackageContributionAppAction(
 ) {
   if (options.actionId === 'package_contribution_execute') {
     const contribution = packageContributionExecutePayload(options.payload);
+    if (readAppPackagePreferences()[contribution.packageId] === false) {
+      throw new FrameworkContractError('cli_usage_error', 'This package is disabled in OPL App.', {
+        failure_code: 'package_disabled_in_app',
+        package_id: contribution.packageId,
+        recovery_action: 'package_app_set_enabled',
+      });
+    }
     const request = { ...contribution, operation: 'execute' as const };
     return {
       delegatedSurface: 'opl app contribution execute',
@@ -62,6 +70,17 @@ export function executePackageContributionAppAction(
 }
 
 export async function executeAgentPackageAppAction(options: AppActionExecuteOptions) {
+  if (options.actionId === 'package_app_set_enabled') {
+    return {
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
+      result: setAppPackageEnabled({
+        ...agentPackageIdPayload(options.actionId, options.payload),
+        enabled: options.payload.enabled,
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
   if (options.actionId === 'agent_package_install') {
     const installPayload = agentPackageInstallPayload(options.payload);
     return {
