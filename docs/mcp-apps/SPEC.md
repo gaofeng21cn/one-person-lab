@@ -15,6 +15,73 @@ evidence, and continue the conversation without asking the user to navigate anot
 application. The UI contributes visual hierarchy and an explicit confirmation gate;
 it does not own domain truth or execute arbitrary Package HTML.
 
+## Unified application model
+
+This specification owns the shared Mini App interaction and contribution model.
+The App product contract owns navigation and visual design; Studio owns the MCP
+App host and transport; installed Packages own business data, actions and quality
+decisions. The implementation gaps and delivery sequence live only in
+[the active gap document](../active/current-state-vs-ideal-gap.md).
+
+An Agent tool and a human-facing view are entrypoints to the same owner operation.
+They share project, work-item and artifact identity, and read the same result.
+Discovery remains descriptor-driven. A contribution does not introduce another
+application registry, session owner, task queue or credential store.
+
+Three presentation forms can coexist within one Package:
+
+- Shared declarative views for progress, artifacts, lists and review.
+- A dedicated MCP App for rich domain interaction, such as mail composition or
+  media review, using the same host protocol and owner operations.
+- An existing professional application for sustained editing, device control or
+  monitoring, reached through an owner-declared presentation or artifact link.
+
+Shared components are selected by view capability and owner schema, never by
+Package or Agent name. The initial reusable vocabulary is progress, artifact and
+review, supported by list/detail, loading, empty/error states and action feedback.
+Domain editors and quality verdicts remain with their owners. A new standalone
+runtime, database or independently published SDK requires an actual consumer need.
+
+## Progress-first interaction
+
+Opening a view carries the current registered workspace and exact work item.
+Known context supplies owner inputs; users select missing business facts rather
+than routinely locating status or manifest files. A path entry remains available
+when the requested artifact cannot be resolved unambiguously by its owner.
+
+The default workbench makes current work, available output, pending decisions and
+the next available action visible. Usable intermediate artifacts remain available
+while work continues. Quality debt is displayed separately from execution progress;
+it does not create a new generic startup or review gate.
+
+Short operations return an owner result. Long-running work uses the existing
+Task/StageRun and provider execution path, returning its durable identity for
+observation and later reopening. Closing or refreshing a view does not create,
+restart or cancel a task. Only currently available canonical actions are offered;
+domain-specific confirmation and revision requirements remain owner-defined.
+Unknown dispatch outcomes are reconciled through owner readback before retry.
+
+Studio supplies host theme, locale and viewport context. Shared and dedicated
+views consume that context while keeping their domain layout. Selection updates
+model context; appending a composer draft and actually starting work are distinct
+operations.
+
+Connection identity, consumer authorization and connection repair belong to OPL
+Connect's public Framework/App surfaces. Its machine contract is
+`contracts/opl-framework/connection-authorization-contract.json`, with the
+connection owner explanation in `docs/specs/connection-authorization.md`.
+The trusted host binds `connect.forPackage(packageId)` from verified installed
+descriptor identity; the resulting capability exposes `listConnections()`,
+`requestGrant(connectionId, capabilityIds)` and
+`invoke(connectionId, capabilityId, input, { signal })`. Requesting a grant is
+distinct from approving it. These capabilities are exposed through the existing
+host/MCP tool boundary, not by accepting a Package identity from page input.
+Mini Apps consume connection references
+and authorized owner operations, never copy provider credentials or authorize a
+caller from a UI-supplied identity. Provider/carrier owners retain credential
+storage and renewal. The Connect implementation is coordinated independently of
+the presentation layer.
+
 ## Views
 
 - Framework work-item list and detail, projected from the canonical OPL work-item
