@@ -408,13 +408,17 @@ export function buildWorkspaceIndex(input: {
     : [];
   const projectedDomainItems = inventory
     ? input.projects.map((project) => ({
+        ...(inventoryPointerSegment === 'projects' ? {
+          ...existingDomainItems.find((item) => item.project_id === project.project_id),
+          ...project,
+        } : {}),
         [inventory.field_map.work_item_id]: project.project_id,
         [inventory.field_map.work_item_root]: project.project_root,
       }))
     : [];
   const domainInventory = inventory && inventoryPointerSegment
     ? {
-        [inventoryPointerSegment]: [
+        [inventoryPointerSegment]: inventoryPointerSegment === 'projects' ? projectedDomainItems : [
           ...existingDomainItems.map((item) => {
             const projected = projectedDomainItems.find((candidate) => (
               candidate[inventory.field_map.work_item_id]

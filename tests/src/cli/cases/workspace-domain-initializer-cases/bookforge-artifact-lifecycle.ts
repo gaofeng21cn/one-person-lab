@@ -63,6 +63,14 @@ test('workspace init projects owner output groups and keeps existing profiles an
       standard_contract_refs: { artifact_lifecycle_profile: 'contracts/lifecycle.json' },
       standard_agent_interface: {
         version: 'opl_standard_agent_interface.v1',
+        inventory_projection: {
+          source_kind: 'workspace_relative_json', relative_path: 'workspace_index.json', items_pointer: '/projects',
+          field_map: {
+            work_item_id: 'project_id', work_item_root: 'project_root', business_status: 'business_status',
+            current_stage_id: 'current_stage_id', current_stage_status: 'current_stage_status',
+            package_status: 'package_status', lifecycle_ref: 'lifecycle_ref',
+          },
+        },
         workspace_binding: {
           locator_surface_kind: 'book_workspace', default_profile_id: 'one_off',
           workspace_kind: 'book_workspace', project_kind: 'book',
@@ -86,6 +94,15 @@ test('workspace init projects owner output groups and keeps existing profiles an
     runCli(initArgs, env);
     const workspace = path.join(root, 'books');
     const project = path.join(workspace, 'projects/book-1');
+    const indexPath = path.join(workspace, 'workspace_index.json');
+    const initialIndex = readJsonFile(indexPath);
+    assert.equal(initialIndex.projects[0].stage_outputs_root, 'projects/book-1/artifacts/stage_outputs');
+    assert.equal(initialIndex.projects[0].project_index_ref, 'projects/book-1/project_index.json');
+    assert.equal(initialIndex.projects[0].lifecycle.status, 'active');
+    assert.equal(Object.hasOwn(initialIndex.projects[0], 'business_status'), false);
+    initialIndex.projects[0].business_status = 'paused';
+    initialIndex.projects[0].current_stage_id = 'outline';
+    fs.writeFileSync(indexPath, JSON.stringify(initialIndex));
     const profile = path.join(project, 'control/opl/artifact_lifecycle/artifact_lifecycle_profile.json');
     assert.deepEqual(readJsonFile(profile), declared);
     for (const ref of ['chapters/draft.md', 'chapters/accepted/final.md', 'artifacts/manuscript/book.md', 'artifacts/exports/book.pdf', 'quality/report.json', 'receipts/owner.json', 'archive/old.md']) {
@@ -102,6 +119,11 @@ test('workspace init projects owner output groups and keeps existing profiles an
     runCli(initArgs, env);
     runCli(['workspace', 'ensure', '--agent', 'bookforge', '--project-id', 'book-1'], env);
     assert.deepEqual(readJsonFile(profile), { memory_model: 'custom_project' });
+    const ensuredProject = readJsonFile(indexPath).projects[0];
+    assert.equal(ensuredProject.stage_outputs_root, initialIndex.projects[0].stage_outputs_root);
+    assert.equal(ensuredProject.project_index_ref, initialIndex.projects[0].project_index_ref);
+    assert.equal(ensuredProject.business_status, 'paused');
+    assert.equal(ensuredProject.current_stage_id, 'outline');
     const legacyOutput = readback().output_lifecycle;
     assert.equal(legacyOutput.artifacts.length, declaredOutput.artifacts.length - 2);
     assert.ok(legacyOutput.artifacts.every((entry: any) => entry.role === 'output_artifact'));
@@ -120,6 +142,12 @@ test('workspace init projects owner output groups and keeps existing profiles an
     assert.equal(invalid.output_lifecycle.lifecycle_profile_status, 'invalid');
     assert.ok(invalid.health.blockers.some((entry: any) => entry.code === 'artifact_lifecycle_profile_invalid'));
     assert.equal(invalid.output_lifecycle.artifacts.length, legacyOutput.artifacts.length);
+    runCli(['workspace', 'project', 'lifecycle', '--workspace', workspace,
+      '--project-id', 'book-1', '--status', 'locked', '--reason', 'owner-review', '--apply'], env);
+    const lockedProject = readJsonFile(indexPath).projects[0];
+    assert.equal(lockedProject.lifecycle.status, 'locked');
+    assert.equal(lockedProject.business_status, 'paused');
+    assert.equal(lockedProject.current_stage_id, 'outline');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

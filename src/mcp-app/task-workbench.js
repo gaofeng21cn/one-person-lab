@@ -1,7 +1,8 @@
+import { escape, renderSources, renderFields as sharedFields, renderProgress, renderArtifacts, rawRecord } from './presentation.js';
+export { escape, renderSources, renderProgress };
 // Host-neutral projections. Owners supply scientific judgments and receipts.
 const obj = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const list = value => Array.isArray(value) ? value : [];
-export const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const labels = {
   hypothesis: '科研假设', test: '验证', finding: '发现', decision: '研究决定', route: '研究路线', artifact: '产物', human_gate: '待人评审',
   proposed: '已提出', planned: '已计划', active: '进行中', completed: '已完成', execution_failed: '执行失败', not_assessed: '尚未评估',
@@ -19,21 +20,7 @@ const labels = {
 const label = key => labels[key] || key;
 const empty = text => `<p class="workbench-empty">${escape(text)}</p>`;
 
-export function renderSources(refs) {
-  return list(refs).length ? `<ul class="source-list">${refs.map(ref => {
-    const value = typeof ref === 'string' ? ref : ref?.ref;
-    return value ? `<li><button class="source-ref" data-source-ref="${escape(value)}">${escape(value)}</button></li>` : '';
-  }).join('')}</ul>` : '';
-}
-
-export function renderFields(value, depth = 0) {
-  if (value === null || value === undefined) return '尚未提供';
-  if (typeof value !== 'object') return escape(value);
-  if (depth > 8) return escape(JSON.stringify(value));
-  if (Array.isArray(value)) return `<ul>${value.map(entry => `<li>${renderFields(entry, depth + 1)}</li>`).join('')}</ul>`;
-  return `<dl class="meta-grid">${Object.entries(value).filter(([key]) => !['schema_version', 'surface_kind', 'version', 'digest', 'audience', 'style', 'language'].includes(key)).map(([key, entry]) =>
-    `<div class="meta-row"><dt>${escape(label(key))}</dt><dd>${key.endsWith('_refs') ? renderSources(entry) : renderFields(entry, depth + 1)}</dd></div>`).join('')}</dl>`;
-}
+export const renderFields = (value, depth = 0) => sharedFields(value, depth, labels);
 
 export function parseResearchSnapshot(value, studyId) {
   const snapshot = obj(value);
@@ -81,18 +68,6 @@ export function acceptDomainRead(readback, item, descriptor, previous) {
   return { revision: r.revision, snapshot };
 }
 
-/** @param {{ current_owner?: unknown, phase?: unknown, work?: { active?: unknown, queued?: unknown } }} [ownerDetails] */
-export function renderProgress(item, ownerDetails) {
-  const stages = list(item.stage_map);
-  const lifecycle = obj(item.lifecycle);
-  const action = obj(item.action);
-  return `<section class="card"><h2>执行进度</h2><p>${escape(lifecycle.primary_state_label || label(lifecycle.primary_state))}</p>
-    ${stages.length ? `<ol class="stage-timeline">${stages.map(stage => `<li data-state="${escape(stage.state)}"><strong>${escape(stage.display_names?.zh || stage.display_name || stage.stage_id)}</strong><span class="badge">${escape(label(stage.state))}</span>${stage.owner_display_name ? `<p>${escape(stage.owner_display_name)}</p>` : ''}${stage.next_action ? `<p>${escape(stage.next_action)}</p>` : ''}</li>`).join('')}</ol>` : empty('尚未提供阶段明细')}
-    ${ownerDetails ? `<h3>负责人</h3>${renderFields(ownerDetails.current_owner)}<h3>当前阶段</h3>${renderFields(ownerDetails.phase)}<h3>进行中</h3>${renderFields(ownerDetails.work?.active)}<h3>待执行</h3>${renderFields(ownerDetails.work?.queued)}` : ''}
-    ${action.title || action.summary ? `<h3>下一步</h3><p>${escape(action.title)}</p><p>${escape(action.summary)}</p><p>${escape(action.owner_display_name)}</p>` : ''}
-    ${item.freshness?.state === 'stale' ? '<p role="status">当前显示上次读取的进度，请刷新。</p>' : ''}</section>`;
-}
-
 function graph(snapshot, selectedId) {
   const width = 760, cellWidth = 250, rowHeight = 110;
   const positions = new Map(snapshot.nodes.map((node, i) => [node.id, { x: 10 + (i % 3) * cellWidth, y: 12 + Math.floor(i / 3) * rowHeight }]));
@@ -132,10 +107,10 @@ export const domainViewRenderers = Object.freeze({
   },
 });
 
-export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot, initialViewId, read, onContext, relatedViews = [], onOpenView, ownerDetails }) {
+export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot, initialViewId, read, onContext, relatedViews = [], onOpenView, ownerDetails, actions = [], onAction, onOpenLink }) {
   const descriptors = list(item.domain_detail_views);
   const cache = new Map();
-  let section = initialViewId || initialSnapshot ? 'research' : 'progress';
+  let section = initialViewId ? 'research' : 'progress';
   let viewId = initialViewId || descriptors[0]?.view_id;
   let snapshot = initialSnapshot;
   let selectedId = snapshot?.current_focus?.node_id;
@@ -148,11 +123,12 @@ export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot,
     const focusKey = focused ? ['data-section', 'data-domain-view', 'data-refresh-domain', 'data-node-id'].find(key => focused.hasAttribute(key)) : null;
     const focusValue = focusKey ? focused.getAttribute(focusKey) : null;
     const hasResearch = descriptors.length || snapshot;
+    const runtimeActions = actions.length ? `<div class="detail-actions" aria-label="当前可用操作">${actions.map((action, index) => `<button type="button" class="action" data-runtime-action="${index}">${escape(action.label_i18n?.['zh-CN'] || action.label_i18n?.['en-US'] || action.command_id)}${action.confirmation_required ? '…' : ''}</button>`).join('')}</div>` : '';
     const tabs = [['progress', '执行进度'], ...(hasResearch ? [['research', '研究路径']] : []), ['evidence', '证据与产物'], ['decisions', '待人决定']];
     container.innerHTML = `<div class="task-workbench"><h2>${escape(item.identity?.work_item_display_name || item.identity?.work_item_id || '任务详情')}</h2><nav class="workbench-tabs" aria-label="任务详情">${tabs.map(([id, title]) => `<button class="action" data-section="${id}" aria-current="${id === section ? 'page' : 'false'}">${title}</button>`).join('')}</nav>
       ${hasResearch && section !== 'progress' && descriptors.length ? `<div class="toolbar-row">${descriptors.map(view => `<button class="action" data-domain-view="${escape(view.view_id)}" aria-pressed="${viewId === view.view_id}">${escape(view.title || view.view_id)}</button>`).join('')}<button class="action" data-refresh-domain ${busy ? 'disabled' : ''}>刷新视图</button></div>` : ''}
-      ${busy ? '<p role="status">正在读取视图…</p>' : ''}${error ? `<p role="alert">${escape(error)}${snapshot ? '；保留上次有效视图' : ''}</p>` : ''}
-      ${section === 'progress' ? renderProgress(item, ownerDetails) : section === 'evidence' ? `${snapshot ? renderResearch(snapshot, selectedId, section) : ''}<section class="card"><h3>任务来源</h3>${renderSources(item.source_refs)}</section>`
+      ${item.runtime_actions_unavailable ? '<p role="status">操作暂时无法读取，可刷新任务后重试。</p>' : ''}${busy ? '<p role="status">正在读取视图…</p>' : ''}${error ? `<p role="alert">${escape(error)}${snapshot ? '；保留上次有效视图' : ''}</p>` : ''}
+      ${section === 'progress' ? `${runtimeActions}${renderProgress(item, ownerDetails)}${rawRecord(item)}` : section === 'evidence' ? `${snapshot ? renderResearch(snapshot, selectedId, section) : ''}${item.artifacts?.length ? renderArtifacts(item.artifacts) : ''}<section class="card"><h3>任务来源</h3>${renderSources(item.source_refs)}</section>`
         : section === 'decisions' ? `<section class="card"><h3>当前待办</h3>${ownerDetails ? renderFields(ownerDetails.work?.pending || []) : item.attention?.kind === 'user' || item.action?.owner_kind === 'user' ? `<p>${escape(item.action?.title)}</p><p>${escape(item.action?.summary)}</p>${item.attention?.issue ? `<p>${escape(item.attention.issue)}</p>` : ''}` : empty('当前没有投影到此处的人工待办')}</section>${snapshot ? renderResearch(snapshot, selectedId, section) : ''}`
           : snapshot ? renderResearch(snapshot, selectedId) : empty('此任务的研究路径暂不可用')}
       ${relatedViews.length ? `<nav class="detail-actions" aria-label="任务能力">${relatedViews.map((view, index) => `<button class="action" data-related-view="${index}">${escape(view.title_i18n?.['zh-CN'] || view.title_i18n?.['en-US'] || view.view_id)}</button>`).join('')}</nav>` : ''}
@@ -175,7 +151,7 @@ export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot,
     finally { if (alive && ticket === generation) { busy = false; render(); emit({}); } }
   }
   function click(event) {
-    const button = event.target.closest('[data-section],[data-domain-view],[data-refresh-domain],[data-node-id],[data-source-ref],[data-related-view]');
+    const button = event.target.closest('[data-section],[data-domain-view],[data-refresh-domain],[data-node-id],[data-source-ref],[data-related-view],[data-runtime-action],[data-open-link]');
     if (!button || !container.contains(button)) return;
     if (button.hasAttribute('data-section')) {
       section = button.dataset.section; render(); emit({});
@@ -187,7 +163,9 @@ export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot,
     else if (button.hasAttribute('data-node-id')) {
       selectedId = button.dataset.nodeId; section = 'research'; render(); emit({});
       container.querySelector('.node-detail')?.scrollIntoView({ block: 'nearest' });
-    } else if (button.hasAttribute('data-related-view')) onOpenView?.(relatedViews[Number(button.dataset.relatedView)]);
+    } else if (button.hasAttribute('data-runtime-action')) onAction?.(actions[Number(button.dataset.runtimeAction)]);
+    else if (button.hasAttribute('data-open-link')) onOpenLink?.(button.dataset.openLink);
+    else if (button.hasAttribute('data-related-view')) onOpenView?.(relatedViews[Number(button.dataset.relatedView)]);
     else emit({ source_ref: button.dataset.sourceRef });
   }
   function keydown(event) { if (event.target.matches('.research-node') && ['Enter', ' '].includes(event.key)) { event.preventDefault(); click(event); } }

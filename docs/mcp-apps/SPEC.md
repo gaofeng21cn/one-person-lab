@@ -70,17 +70,27 @@ Connection identity, consumer authorization and connection repair belong to OPL
 Connect's public Framework/App surfaces. Its machine contract is
 `contracts/opl-framework/connection-authorization-contract.json`, with the
 connection owner explanation in `docs/specs/connection-authorization.md`.
-The trusted host binds `connect.forPackage(packageId)` from verified installed
-descriptor identity; the resulting capability exposes `listConnections()`,
-`requestGrant(connectionId, capabilityIds)` and
-`invoke(connectionId, capabilityId, input, { signal })`. Requesting a grant is
+The trusted host activates a fresh installed descriptor through
+`createOplConnectionContextHost(...).activate(installedDescriptor)` from
+`opl-framework/connection-authorization-host`. Its private `context.connect`
+port exposes `listConnections()`, `requestAccess(connectionId, capabilityIds)`
+and `invoke(connectionId, capabilityId, input)`. Requesting access is
 distinct from approving it. These capabilities are exposed through the existing
 host/MCP tool boundary, not by accepting a Package identity from page input.
+Every invocation rechecks the installed descriptor, grant, connection revision
+and provider capability; grant approval and revocation use the owner App action.
 Mini Apps consume connection references
 and authorized owner operations, never copy provider credentials or authorize a
 caller from a UI-supplied identity. Provider/carrier owners retain credential
 storage and renewal. The Connect implementation is coordinated independently of
 the presentation layer.
+
+The shared `opl-apps` server discovers views across Packages and receives its
+Package focus from tool input. That focus is navigation, not a consumer identity;
+this server does not expose Connect consumer calls. A dedicated trusted owner
+may capture the activated context during initialization before accepting tool
+input. Disposing the context or changing the installed descriptor invalidates
+the port.
 
 ## Views
 
@@ -101,8 +111,9 @@ Narrow views stack a bounded catalog above the content pane.
   selected owner's data in the same structured result for the Agent and UI. Read-only.
 - `opl_app_contribution_read`: invoke one declared Package data ref or a framework
   runtime projection. Read-only.
-- `opl_app_contribution_execute`: invoke one declared Package action only after the
-  descriptor requires confirmation and the view submits `confirmed=true`.
+- `opl_app_contribution_execute`: invoke one declared Package action with its
+  owner-required confirmation, or one current Framework runtime action through
+  `opl.runtime.v1#action`.
 
 ## Adapters
 
@@ -114,6 +125,13 @@ optional output transform. `request_json` preserves the Package-owned request
 envelope, while `passthrough` preserves a Package-owned response envelope.
 JSON file reads use the same declared output transform as commands, while a
 missing file remains unavailable. Root containment also resolves symbolic links.
+Read adapters can supply scalar defaults in `input_schema.properties`; explicit
+input takes precedence. Defaults do not supply confirmation or execute inputs.
+The `runtime_context` read kind projects `progress` or `artifacts` from the
+registered workspace and the Package's current work item. It reuses the existing
+work-item projection and attempt artifact records; it does not scan for files or
+create a Package-specific state store. Ambiguous work items use the same
+`input_required` schema and selection form as other owner reads.
 Projections preserve owner records whose shape does not match a specialized card;
 stage pointers and manifests must not become unavailable or empty just because
 they lack a card collection. Decision cards retain the full packet, including
@@ -181,3 +199,17 @@ progress is separate from scientific judgment. The same renderer handles a
 Package contribution carrying its full trajectory; it never reconstructs missing
 evidence or authorizes a decision. DSH is only a host adapter in Studio, not a
 dependency of this resource.
+
+The task detail offers only canonical runtime routes bound to its current item
+and attempt. Execution checks the route revision again and delegates to the
+existing runtime action owner. A dispatched operation with an unknown outcome
+returns a readback reference; the view does not automatically repeat it. The
+original durable execution identity remains the reopening and observation key.
+
+Opening a local artifact uses `opl-workspace://artifact?ref=<absolute-path>`;
+media segments may add `start` and `end` seconds. The Framework carries the
+owner's absolute artifact path without assuming that its registered workspace
+is the conversation thread's current directory. Studio resolves it only when
+that exact path is inside the active thread workspace, then uses the existing
+workspace byte/access APIs and their realpath containment checks. An artifact
+outside that workspace remains a reference and is not opened through this bridge.

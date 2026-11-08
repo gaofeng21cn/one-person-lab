@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { readAppContributionRuntimeContext } from './app-contribution-runtime-context.ts';
 
 const ADAPTER_SCHEMA = 'opl-package-app-contribution-adapter.v1';
 const REQUEST_SCHEMA = 'opl-package-app-contribution-request.v1';
@@ -41,7 +42,13 @@ type AdapterCommand = {
   stdin?: 'input_json' | 'request_json';
 };
 
-type AdapterItem = AdapterFile | AdapterCommand;
+type AdapterRuntimeContext = {
+  kind: 'runtime_context';
+  view: 'progress' | 'artifacts';
+  input_schema?: JsonRecord;
+};
+
+type AdapterItem = AdapterFile | AdapterCommand | AdapterRuntimeContext;
 
 type AdapterManifest = {
   schema_version: typeof ADAPTER_SCHEMA;
@@ -77,7 +84,7 @@ function adapterManifest(packageRoot: string): AdapterManifest {
 
 function entriesFor(manifest: AdapterManifest, operation: 'read' | 'execute', ref: string) {
   const entry = operation === 'read' ? manifest.reads[ref] : manifest.actions[ref];
-  if (!isRecord(entry)) {
+  if (!isRecord(entry) && !Array.isArray(entry)) {
     contractError('Adapter ref is not declared for the requested operation.', {
       failure_code: 'app_contribution_adapter_ref_not_declared',
       operation,
@@ -88,7 +95,12 @@ function entriesFor(manifest: AdapterManifest, operation: 'read' | 'execute', re
   for (const candidate of entries) {
     if (
       !isRecord(candidate)
-      || (candidate.kind !== 'json_file' && candidate.kind !== 'command')
+      || !['json_file', 'command', 'runtime_context'].includes(String(candidate.kind))
+      || (candidate.kind === 'runtime_context' && (
+        operation !== 'read'
+        || !['progress', 'artifacts'].includes(String(candidate.view))
+        || 'path' in candidate || 'argv' in candidate
+      ))
     ) {
       contractError('Adapter entry kind is invalid.', {
         failure_code: 'app_contribution_adapter_entry_invalid',
@@ -98,6 +110,20 @@ function entriesFor(manifest: AdapterManifest, operation: 'read' | 'execute', re
     }
   }
   return entries as AdapterItem[];
+}
+
+function readInputDefaults(entries: AdapterItem[], input: JsonRecord): JsonRecord {
+  const defaults: JsonRecord = {};
+  for (const entry of entries) {
+    const properties = entry.input_schema?.properties;
+    if (!isRecord(properties)) continue;
+    for (const [field, schema] of Object.entries(properties)) {
+      if (isRecord(schema) && Object.hasOwn(schema, 'default')) {
+        defaults[field] = schema.default;
+      }
+    }
+  }
+  return { ...defaults, ...input };
 }
 
 function inputSchemaRequired(entry: AdapterItem) {
@@ -653,13 +679,15 @@ export function executeDeclarativeAppContribution(input: {
   const manifest = adapterManifest(packageRoot);
   const operation = request.operation;
   const ref = request.ref;
-  const ownerInput = request.input;
   const entries = entriesFor(manifest, operation, ref);
+  const ownerInput = operation === 'read' ? readInputDefaults(entries, request.input) : request.input;
   const required = inputRequired(entries, ownerInput);
   const results = required ? [required] : entries.map((entry) => (
     entry.kind === 'json_file'
       ? readJsonFile(entry, packageRoot, ownerInput)
-      : runCommand(entry, packageRoot, ownerInput, request)
+      : entry.kind === 'runtime_context'
+        ? readAppContributionRuntimeContext({ packageRoot, view: entry.view, input: ownerInput })
+        : runCommand(entry, packageRoot, ownerInput, { ...request, input: ownerInput })
   ));
   const result = results.length === 1
     ? results[0]

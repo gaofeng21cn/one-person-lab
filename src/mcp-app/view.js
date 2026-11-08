@@ -1,5 +1,7 @@
 import { mountTaskWorkbench, parseContributionResearch } from './task-workbench.js';
-import { App } from '@modelcontextprotocol/ext-apps';
+import { App, applyDocumentTheme, applyHostStyleVariables, applyHostFonts } from '@modelcontextprotocol/ext-apps';
+import { renderOwnerView, renderFields, rawRecord, escape, statusLabel, presentationUrl } from './presentation.js';
+import { renderInputFields, readInputFields } from './forms.js';
 
 const READ_TOOL = 'opl_app_contribution_read';
 const EXECUTE_TOOL = 'opl_app_contribution_execute';
@@ -31,19 +33,13 @@ const state = {
 let readGeneration = 0;
 let disposeWorkbench = () => {};
 
-function escape(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[char]);
-}
-
 function record(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
 }
 
 function localized(value, fallback = '') {
   const labels = record(value) || {};
-  const locale = navigator.language || 'zh-CN';
+  const locale = document.documentElement.lang || navigator.language || 'zh-CN';
   return labels[locale]
     || labels[locale.split('-')[0]]
     || labels['zh-CN']
@@ -139,13 +135,14 @@ function currentViewInput(view) {
   const focused = state.focusPackageId === view.package_id ? state.focusInput : {};
   if (focused.workspace_path || focused.work_item_identity) return { ...focused };
   const collection = collectionFrom(state.result);
-  const items = collection.items;
+  const items = collection.state === 'ready' ? collection.items : [];
   const selected = items.find((item, index) => itemIdentity(item, index) === state.itemId) || items[0];
   if (selected?.work_item_identity) rememberWorkspaceSelection(selected);
-  const selectedIdentity = selected?.work_item_identity || state.selectedWorkItemIdentity;
+  const selectedIdentity = selected?.work_item_identity
+    || (collection.state === 'ready' ? state.selectedWorkItemIdentity : null);
   const selectedWorkspace = selected?.workspace_path
     ? { workspace_path: selected.workspace_path, work_item_root: selected.work_item_root }
-    : state.selectedWorkspace;
+    : collection.state === 'ready' ? state.selectedWorkspace : null;
   return {
     ...(view.data_ref === 'opl.runtime.v1#item' && state.selectedCanonicalItemId ? { item_id: state.selectedCanonicalItemId } : {}),
     ...(view.scope === 'work_item' && selectedIdentity ? { work_item_identity: selectedIdentity } : {}),
@@ -170,45 +167,33 @@ function rememberWorkspaceSelection(item) {
 
 function renderReadInputForm(collection) {
   const schema = record(collection.inputSchema);
-  const fields = record(schema?.properties) || {};
-  if (!Object.keys(fields).length) return '';
-  const required = new Set(Array.isArray(schema?.required) ? schema.required : []);
-  const controls = Object.entries(fields).map(([name, raw]) => {
-    const field = record(raw) || {};
-    const title = String(field.title || name);
-    const common = `data-read-field="${escape(name)}" ${required.has(name) ? 'required' : ''}`;
-    if (field.type === 'boolean') {
-      return `<label>${escape(title)}<input ${common} type="checkbox"></label>`;
+  if (!Object.keys(record(schema?.properties) || {}).length) return '';
+  const input = { ...collection.inputDefaults, ...currentViewInput(state.selected) };
+  return `<form class="form-grid" id="read-input-form" data-base-input="${escape(JSON.stringify(input))}">${renderInputFields(schema, input, [], 'data-read-field')}
+    <div><button class="action" type="button" data-submit>读取</button></div></form>`;
+}
+
+function bindFormSubmit(form, submit) {
+  form.addEventListener('submit', event => { event.preventDefault(); if (form.reportValidity()) submit(event); });
+  form.querySelector('[data-submit]')?.addEventListener('click', event => { if (form.reportValidity()) submit(event); });
+  form.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && event.target.tagName === 'INPUT' && event.target.type !== 'checkbox') {
+      event.preventDefault(); if (form.reportValidity()) submit(event);
     }
-    if (field.type === 'integer' || field.type === 'number') {
-      return `<label>${escape(title)}<input ${common} type="number" step="${field.type === 'integer' ? '1' : 'any'}"></label>`;
-    }
-    return `<label>${escape(title)}<input ${common} type="text"></label>`;
-  }).join('');
-  return `<form class="form-grid" id="read-input-form">${controls}
-    <div><button class="action" type="submit">读取</button></div>
-  </form>`;
+  });
 }
 
 function bindReadInputForm() {
   const form = $('read-input-form');
   if (!form || form.dataset.bound === 'true') return;
   form.dataset.bound = 'true';
-  form.addEventListener('submit', async (event) => {
+  bindFormSubmit(form, event => {
     event.preventDefault();
-    const view = state.selected;
-    if (!view) return;
-    const input = { ...currentViewInput(view) };
-    for (const control of form.querySelectorAll('[data-read-field]')) {
-      const name = control.dataset.readField;
-      if (control.type === 'checkbox') input[name] = control.checked;
-      else if (control.value !== '') {
-        input[name] = control.type === 'number' ? Number(control.value) : control.value;
-      }
-    }
-    state.focusPackageId = view.package_id;
-    state.focusInput = input;
-    await loadSelected();
+    void run(async () => {
+      state.focusPackageId = state.selected.package_id;
+      state.focusInput = readInputFields(form, JSON.parse(form.dataset.baseInput || '{}'), 'data-read-field');
+      await loadSelected();
+    });
   });
 }
 
@@ -222,31 +207,6 @@ function itemTitle(item, index) {
 
 function itemSummary(item) {
   return localized(item.summary_i18n, String(item.summary ?? ''));
-}
-
-function valueText(value) {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'object') return JSON.stringify(value, null, 2);
-  return String(value);
-}
-
-function statusLabel(value) {
-  const labels = {
-    pending: '待审核',
-    approved: '已批准',
-    rejected: '已拒绝',
-    applied: '已应用',
-    candidate: '候选',
-    forgotten: '已忘记',
-    active: '当前',
-    ready: '就绪',
-    unavailable: '不可用',
-    attention: '需要处理',
-    completed: '已完成',
-    failed: '失败',
-    blocked: '已阻塞',
-  };
-  return labels[value] || value || '';
 }
 
 function renderCatalog() {
@@ -286,59 +246,10 @@ function renderCatalog() {
 }
 
 function renderHeader() {
+  $('notice').hidden = true;
   const view = state.selected;
   $('title').textContent = view ? localized(view.title_i18n, view.view_id) : 'OPL 能力';
   $('subtitle').textContent = view?.package_name || '';
-  $('eyebrow').textContent = '协作审阅';
-}
-
-function renderMeta(value) {
-  const entries = Object.entries({ ...(record(value) || {}), ...(record(value?.payload) || {}) })
-    .filter(([name, item]) => item !== null && typeof item !== 'object'
-      && !['id', 'schema', 'schema_version', 'surface_kind', 'package_id', 'agent_id', 'domain_id', 'project_id', 'work_item_id', 'item_id', 'workspace_path', 'work_item_root', 'access', 'authority', 'operation', 'read_ref'].includes(name))
-    .slice(0, 24);
-  if (!entries.length) return '';
-  return `<dl class="meta-grid">${entries.map(([name, item]) => `
-    <div class="meta-row">
-      <dt>${escape(name.replaceAll('_', ' '))}</dt>
-      <dd>${escape(typeof item === 'object' ? JSON.stringify(item) : valueText(item))}</dd>
-    </div>
-  `).join('')}</dl>`;
-}
-
-function renderReview(item) {
-  const preview = record(item.preview) || item;
-  const payload = record(item.payload) || {};
-  const reviewTarget = record(item.review_target) || {};
-  const before = preview.before;
-  const after = typeof preview.after === 'string'
-    ? preview.after
-    : preview.body ?? payload.body ?? item.body_text ?? item.body ?? item.content ?? item.statement ?? item.summary;
-  const target = preview.target
-    ?? item.target_path
-    ?? payload.target_path
-    ?? reviewTarget.to
-    ?? reviewTarget.source_ref
-    ?? item.to
-    ?? item.display_name
-    ?? item.title
-    ?? item.proposal_id
-    ?? item.source_ref;
-  const evidence = preview.evidence_refs ?? item.evidence_refs ?? item.source_refs;
-  return `
-    <div class="card detail">
-      <h2>${escape(itemTitle(item, 0))}</h2>
-      ${target ? `<p class="subtitle"><strong>目标：</strong>${escape(typeof target === 'object' ? JSON.stringify(target) : target)}</p>` : ''}
-      ${before !== undefined && after !== undefined
-        ? `<pre class="review" data-change="removed">${escape(valueText(before))}</pre><pre class="review" data-change="added">${escape(valueText(after))}</pre>`
-        : after !== undefined
-          ? `<pre class="review">${escape(valueText(after))}</pre>`
-          : ''}
-      ${evidence ? `<details><summary>来源证据</summary><pre class="json">${escape(valueText(evidence))}</pre></details>` : ''}
-      ${renderMeta(item)}
-      <details><summary>完整记录</summary><pre class="json">${escape(JSON.stringify(item, null, 2))}</pre></details>
-    </div>
-  `;
 }
 
 function commandForAction(view, action) {
@@ -382,30 +293,10 @@ function renderActionButtons(view, collection, item = null) {
 function renderCommandForm(view, collection, command, input) {
   const { schema, defaults } = commandInputsFor(collection, command);
   const fields = record(schema?.properties) || {};
-  const required = new Set(Array.isArray(schema?.required) ? schema.required : []);
-  const values = { ...defaults, ...input };
+  const values = { ...defaults, ...currentViewInput(view), ...input };
   if (!Object.keys(fields).length) return null;
-  const controls = Object.entries(fields).map(([name, raw]) => {
-    const field = record(raw) || {};
-    const value = values[name] ?? field.default ?? '';
-    const common = `data-field="${escape(name)}" ${required.has(name) ? 'required' : ''}`;
-    if (field.enum) {
-      return `<label>${escape(name)}<select ${common}><option value="">请选择</option>${field.enum.map((option) => `<option value="${escape(option)}" ${option === value ? 'selected' : ''}>${escape(option)}</option>`).join('')}</select></label>`;
-    }
-    if (field.type === 'boolean') {
-      return `<label>${escape(name)}<input ${common} type="checkbox" ${value === true ? 'checked' : ''}></label>`;
-    }
-    if (field.type === 'object' || field.type === 'array' || ['body', 'content', 'summary', 'statement'].includes(name)) {
-      return `<label>${escape(name)}<textarea ${common}>${escape(typeof value === 'object' ? JSON.stringify(value, null, 2) : value)}</textarea></label>`;
-    }
-    return `<label>${escape(name)}<input ${common} type="${['number', 'integer'].includes(field.type) ? 'number' : 'text'}" value="${escape(value)}"></label>`;
-  }).join('');
-  return `
-    <form class="form-grid" data-command-form="${escape(command.command_id)}" data-action-ref="${escape(command.action_ref)}" data-base-input="${escape(JSON.stringify(values))}">
-      ${controls}
-      <div><button class="action" type="submit">执行 ${escape(localized(command.label_i18n, command.command_id))}</button></div>
-    </form>
-  `;
+  return `<form class="form-grid" data-command-form="${escape(command.command_id)}" data-action-ref="${escape(command.action_ref)}" data-base-input="${escape(JSON.stringify(values))}">
+    ${renderInputFields(schema, values)}<div><button class="action" type="button" data-submit>执行 ${escape(localized(command.label_i18n, command.command_id))}</button></div></form>`;
 }
 
 function bindActionButtons(view, collection) {
@@ -418,6 +309,8 @@ function bindActionButtons(view, collection) {
       const { schema } = commandInputsFor(collection, command);
       const fields = record(schema?.properties) || {};
       if (Object.keys(fields).length) {
+        const existing = [...$('body').querySelectorAll('[data-command-form]')].find(form => form.dataset.commandForm === command.command_id);
+        if (existing) { existing.querySelector('input, textarea, select')?.focus(); return; }
         const form = renderCommandForm(view, collection, command, input);
         button.insertAdjacentHTML('afterend', form || '');
         bindForms(view);
@@ -432,56 +325,130 @@ function bindForms(view) {
   for (const form of $('body').querySelectorAll('[data-command-form]')) {
     if (form.dataset.bound === 'true') continue;
     form.dataset.bound = 'true';
-    form.addEventListener('submit', async (event) => {
+    bindFormSubmit(form, async (event) => {
       event.preventDefault();
       const command = view.commands.find((entry) => entry.action_ref === form.dataset.actionRef);
       if (!command) return;
-      const input = JSON.parse(form.dataset.baseInput || '{}');
-      for (const control of form.querySelectorAll('[data-field]')) {
-        const name = control.dataset.field;
-        if (control.type === 'checkbox') input[name] = control.checked;
-        else if (control.value !== '') {
-          if (control.tagName === 'TEXTAREA' && (control.value.trim().startsWith('{') || control.value.trim().startsWith('['))) {
-            try { input[name] = JSON.parse(control.value); } catch { input[name] = control.value; }
-          } else if (control.type === 'number') input[name] = Number(control.value);
-          else input[name] = control.value;
-        }
-      }
+      let input;
+      try { input = readInputFields(form, JSON.parse(form.dataset.baseInput || '{}')); }
+      catch (error) { notice(error.message, true); return; }
       await executeCommand(command, input);
     });
   }
 }
 
-async function executeCommand(command, input) {
-  const view = state.selected;
-  if (!view || state.executing) return;
-  const targetInput = { ...currentViewInput(view), ...input };
-  state.executing = true;
-  try {
-    await run(async () => {
-      if (command.confirmation_required && !await confirmCommand(command, view, targetInput)) return;
-      $('status').textContent = '正在执行';
-      const payload = await callTool(EXECUTE_TOOL, {
-        package_id: view.package_id,
-        ref: command.action_ref,
-        input: targetInput,
-        confirmed: command.confirmation_required,
-      });
-      const envelope = extractEnvelope(payload);
-      if (envelope?.confirmation_required && !envelope?.response) throw new Error('该操作需要明确确认');
-      if (envelope?.response?.ok === false) throw new Error(envelope.response.error?.message || '操作未完成');
-      notice('操作已完成，正在刷新');
-      await loadSelected();
+function applyHostContext(context) {
+  if (context.theme) applyDocumentTheme(context.theme);
+  if (context.styles?.variables) applyHostStyleVariables(context.styles.variables);
+  if (context.styles?.css?.fonts) applyHostFonts(context.styles.css.fonts);
+  if (context.locale) document.documentElement.lang = context.locale;
+  if (context.displayMode) document.documentElement.dataset.displayMode = context.displayMode;
+  $('fullscreen').hidden = Array.isArray(context.availableDisplayModes) && !context.availableDisplayModes.includes('fullscreen');
+  $('fullscreen').textContent = context.displayMode === 'fullscreen' ? '收起' : '展开';
+}
+
+async function openLink(url) {
+  const safeUrl = presentationUrl(url);
+  if (safeUrl) await run(async () => {
+    const result = await app.openLink({ url: safeUrl });
+    if (result?.isError) throw new Error('宿主无法打开此产物，请在所属工作区查看。');
+  });
+}
+
+function bindPresentationLinks() {
+  for (const button of $('body').querySelectorAll('[data-open-link]')) {
+    if (!button.closest('.task-workbench')) button.addEventListener('click', () => void openLink(button.dataset.openLink));
+  }
+  for (const button of $('body').querySelectorAll('[data-media-selection]')) {
+    button.addEventListener('click', () => {
+      app.updateModelContext({ structuredContent: { package_id: state.selected.package_id, view_id: state.selected.view_id, ...currentViewInput(state.selected), media_selection: JSON.parse(button.dataset.mediaSelection) } }).catch(() => {});
+      notice('已将此镜头与时码加入当前对话上下文');
     });
+  }
+  for (const button of $('body').querySelectorAll('[data-source-ref]')) {
+    // Workbench handles its own selection context, including exact task identity.
+    if (button.closest('.task-workbench')) continue;
+    button.addEventListener('click', () => {
+      app.updateModelContext({ structuredContent: { package_id: state.selected.package_id,
+        view_id: state.selected.view_id, ...currentViewInput(state.selected), source_ref: button.dataset.sourceRef } }).catch(() => {});
+      notice('已将此引用加入当前对话上下文');
+    });
+  }
+}
+
+async function executeRuntimeAction(command) {
+  if (!command || state.executing) return;
+  const view = state.selected;
+  const input = { ...command.input };
+  const defaults = record(command.defaults) || {};
+  const needsPayload = command.input_schema?.additionalProperties === true && !command.input_schema?.properties;
+  const schema = needsPayload ? { type: 'object', properties: { payload: { type: 'object', title: '操作参数' } } } : command.input_schema;
+  if (needsPayload || Object.keys(schema?.properties || {}).length) {
+    const previous = $('body').querySelector('[data-runtime-form]');
+    previous?.remove();
+    const host = document.createElement('form');
+    host.className = 'form-grid'; host.dataset.runtimeForm = command.command_id;
+    host.innerHTML = `<h3>${escape(localized(command.label_i18n, command.command_id))}</h3>${command.summary ? `<p>${escape(command.summary)}</p>` : ''}${renderInputFields(schema, needsPayload ? { payload: defaults } : defaults)}<div><button type="button" data-submit class="action">继续</button></div>`;
+    $('body').append(host);
+    bindFormSubmit(host, event => {
+      event.preventDefault();
+      void run(async () => { const values = readInputFields(host, needsPayload ? { payload: defaults } : defaults); await executeCommand(command, { ...input, payload: needsPayload ? values.payload : values }, view); });
+    });
+    host.querySelector('input,textarea,select')?.focus();
+    return;
+  }
+  await executeCommand(command, { ...input, ...(Object.keys(defaults).length ? { payload: defaults } : {}) }, view);
+}
+
+async function executeCommand(command, input, view = state.selected) {
+  if (!view || state.executing) return;
+  const targetInput = view.package_id === 'opl-runtime' ? { ...input } : { ...currentViewInput(view), ...input };
+  state.executing = true;
+  let dispatched = false;
+  try {
+    if (command.confirmation_required && !await confirmCommand(command, view, targetInput)) return;
+    if (state.selected !== view) throw new Error('当前视图已改变，请在目标任务中重新选择操作。');
+    $('status').textContent = '正在执行';
+    $('body').setAttribute('aria-busy', 'true');
+    dispatched = true;
+    const payload = await callTool(EXECUTE_TOOL, {
+      package_id: view.package_id, ref: command.action_ref,
+      input: targetInput, confirmed: command.confirmation_required === true,
+    });
+    const envelope = extractEnvelope(payload);
+    if (envelope?.confirmation_required && !envelope?.response) throw new Error('该操作需要明确确认');
+    if (envelope?.response?.ok === false) throw new Error(envelope.response.error?.message || '操作未完成');
+    const result = ownerResult(envelope);
+    const execution = result?.execution || result?.runtime_operator_action_execution?.execution;
+    const ownerState = result?.state || execution?.execution_status;
+    if (state.selected === view) {
+      await loadSelected();
+      notice(['running', 'queued', 'started', 'accepted'].includes(ownerState)
+        ? '工作已提交，请查看当前进度' : '已收到操作结果，请核对当前状态');
+    }
+  } catch (error) {
+    // A transport error can occur after dispatch. Read the owner before any manual retry.
+    if (dispatched && state.selected === view) {
+      if (view.package_id === 'opl-runtime') await loadSelected();
+      else {
+        try {
+          const readback = await callTool(READ_TOOL, { package_id: view.package_id, ref: view.data_ref, input: currentViewInput(view) });
+          if (state.selected === view) { state.result = readback; updateContext(); }
+        } catch { /* Keep the editor and original owner error visible. */ }
+      }
+    }
+    notice(`${error.message || '操作结果尚未确认'}${dispatched ? '；已尝试读取当前状态，请核对后再操作。' : ''}`, true);
   } finally {
     state.executing = false;
+    $('body').removeAttribute('aria-busy');
+    if (state.selected === view) $('status').textContent = '已连接';
   }
 }
 
 function confirmCommand(command, view, input) {
   const dialog = $('confirmation');
   $('confirmation-title').textContent = `确认执行“${localized(command.label_i18n, command.command_id)}”`;
-  $('confirmation-target').textContent = JSON.stringify({ package: view.package_name, action: command.action_ref, input }, null, 2);
+  $('confirmation-target').innerHTML = `<p>${escape(view.package_name)} · ${escape(localized(command.label_i18n, command.command_id))}</p>${renderFields(input)}${rawRecord({ package_id: view.package_id, action: command.action_ref, input })}`;
   dialog.returnValue = '';
   return new Promise((resolve) => {
     dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
@@ -509,7 +476,7 @@ function renderCollection(view, collection) {
           </button>`;
         }).join('')}
       </div>
-      ${renderReview(current)}${view.data_ref === 'opl.runtime.v1#work-items' ? `<button class="action" data-open-task="${escape(current.id)}">打开任务工作台</button>` : ''}
+      <div class="card detail">${renderOwnerView(view, current)}${view.data_ref === 'opl.runtime.v1#work-items' ? `<button class="action" data-open-task="${escape(current.id)}">打开任务工作台</button>` : ''}</div>
     </div>
     <div class="detail-actions">${renderActionButtons(view, collection, current)}</div>
   `;
@@ -536,6 +503,7 @@ function renderResult() {
     if (collection.items[0]) rememberWorkspaceSelection(collection.items[0]);
     disposeWorkbench = mountTaskWorkbench({ container: $('body'), item,
       initialViewId: currentViewInput(view).domain_view_id,
+      actions: item.runtime_actions || [], onAction: executeRuntimeAction, onOpenLink: openLink,
       relatedViews: (state.catalog?.views || []).filter(entry => entry.scope === 'work_item' && entry.agent_id === item.identity.agent_id),
       onOpenView: target => { state.selectedKey = key(target); state.focusPackageId = target.package_id;
         state.focusInput = { work_item_identity: collection.items[0].work_item_identity, workspace_path: item.identity.workspace_path, work_item_root: item.identity.work_item_root }; void loadSelected(); },
@@ -558,7 +526,7 @@ function renderResult() {
     $('body').innerHTML = `<div class="empty">${escape(localized(view.empty_state_i18n, '当前没有条目'))}</div>
       <div class="detail-actions">${renderActionButtons(view, collection)}</div>`;
   } else {
-    $('body').innerHTML = `<div class="card detail">${renderMeta(collection.root)}<details><summary>完整记录</summary><pre class="json">${escape(JSON.stringify(collection.root, null, 2))}</pre></details></div>
+    $('body').innerHTML = `<div class="card detail">${renderOwnerView(view, collection.root)}</div>
       <div class="detail-actions">${renderActionButtons(view, collection)}</div>`;
   }
   for (const button of $('body').querySelectorAll('[data-item-id]')) {
@@ -579,6 +547,7 @@ function renderResult() {
       void loadSelected();
     });
   }
+  bindPresentationLinks();
   bindActionButtons(view, collection);
   bindForms(view);
   bindReadInputForm();
@@ -602,6 +571,7 @@ async function loadSelected() {
     renderResult();
     return;
   }
+  const input = currentViewInput(view);
   state.result = null;
   renderResult();
   await run(async () => {
@@ -609,7 +579,7 @@ async function loadSelected() {
     const result = await callTool(READ_TOOL, {
       package_id: view.package_id,
       ref: view.data_ref,
-      input: currentViewInput(view),
+      input,
     });
     if (generation !== readGeneration) return;
     state.result = result;
@@ -629,7 +599,8 @@ function updateContext() {
   const view = state.selected;
   if (!view) return;
   const collection = collectionFrom(state.result);
-  const selected = collection.items.find((item, index) => itemIdentity(item, index) === state.itemId) || collection.items[0];
+  const items = collection.state === 'ready' ? collection.items : [];
+  const selected = items.find((item, index) => itemIdentity(item, index) === state.itemId) || items[0];
   const context = `正在查看 ${view.package_name} 的 ${localized(view.title_i18n, view.view_id)}`;
   app.updateModelContext({
     content: [{ type: 'text', text: context }],
@@ -681,7 +652,6 @@ $('fullscreen').addEventListener('click', () => {
   void app.requestDisplayMode({ mode: current === 'fullscreen' ? 'inline' : 'fullscreen' }).catch((error) => notice(error.message, true));
 });
 
+app.onhostcontextchanged = applyHostContext;
 await app.connect();
-const context = app.getHostContext?.() || {};
-if (context.theme === 'dark') document.documentElement.dataset.theme = 'dark';
-if (context.theme === 'light') document.documentElement.dataset.theme = 'light';
+applyHostContext(app.getHostContext?.() || {});

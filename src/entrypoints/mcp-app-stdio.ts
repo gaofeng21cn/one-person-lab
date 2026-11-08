@@ -10,8 +10,10 @@ import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { z } from 'zod';
 
 import { createCordisAppFullComposition } from '../host/composition-profiles.ts';
-import { FrameworkContractError } from '../kernel/contract-validation.ts';
 import { runAppContribution } from '../read-models/operator/app-contribution-broker.ts';
+import { FrameworkContractError } from '../kernel/contract-validation.ts';
+import { executeFrameworkMcpAppAction } from '../read-models/operator/app-mcp-runtime-actions.ts';
+import { buildWorkItemProjectionV2 } from '../read-models/operator/work-item-projection/projection.ts';
 import {
   OPL_MCP_APP_RESOURCE_URI,
   OPL_MCP_APP_SERVER_ID,
@@ -74,11 +76,13 @@ function isFrameworkRuntimeRef(ref: string) {
 }
 
 export async function createOplMcpAppServer() {
-  const composition = await createCordisAppFullComposition({
-    runtimeSnapshotProvider: async (contracts, snapshotOptions) => {
+  const runtimeSnapshotProvider: Parameters<typeof createCordisAppFullComposition>[0]['runtimeSnapshotProvider']
+    = async (contracts, snapshotOptions) => {
       const { buildRuntimeTraySnapshot } = await import('../read-models/operator/runtime-tray-snapshot.ts');
       return buildRuntimeTraySnapshot(contracts, snapshotOptions);
-    },
+    };
+  const composition = await createCordisAppFullComposition({
+    runtimeSnapshotProvider,
   });
   const server = new McpServer(
     { name: OPL_MCP_APP_SERVER_ID, version: packageVersion() },
@@ -92,11 +96,35 @@ export async function createOplMcpAppServer() {
       resourceUri: OPL_MCP_APP_RESOURCE_URI,
     },
   };
-  const readContribution = (packageId: string, ref: string, input: Record<string, unknown>) => (
-    packageId === OPL_RUNTIME_PACKAGE_ID || isFrameworkRuntimeRef(ref)
-      ? readFrameworkMcpAppContribution({ ref, input })
-      : runAppContribution({ packageId, ref, operation: 'read', input, confirmed: false }, contributionBroker)
-  );
+  const runtimeServices = () => ({
+    contracts: composition.services.charter.load(),
+    familyRuntime: composition.services.familyRuntime,
+    runtimeSnapshotProvider: (contracts: Parameters<typeof runtimeSnapshotProvider>[0],
+      options: Parameters<typeof runtimeSnapshotProvider>[1]) => runtimeSnapshotProvider(contracts, {
+      ...options, ownerDeltaObserver: composition.services.ownerDeltaObserver,
+    }),
+  });
+  const readContribution = async (packageId: string, ref: string, input: Record<string, unknown>) => {
+    if (packageId !== OPL_RUNTIME_PACKAGE_ID && !isFrameworkRuntimeRef(ref)) {
+      return runAppContribution({ packageId, ref, operation: 'read', input, confirmed: false }, contributionBroker);
+    }
+    if (ref !== OPL_RUNTIME_REFS.item || (!input.item_id && !input.work_item_id)) {
+      return readFrameworkMcpAppContribution({ ref, input });
+    }
+    const projection = buildWorkItemProjectionV2({ profile: 'full' });
+    const services = runtimeServices();
+    try {
+      const snapshot = await services.runtimeSnapshotProvider(services.contracts, {
+        appOperatorDrilldownDetailLevel: 'full',
+      });
+      return readFrameworkMcpAppContribution({ ref, input, projection, runtimeSnapshot: snapshot.runtime_tray_snapshot });
+    } catch (error) {
+      return readFrameworkMcpAppContribution({
+        ref, input, projection,
+        runtimeActionsUnavailable: error instanceof Error ? error.message : 'runtime_actions_unavailable',
+      });
+    }
+  };
 
   registerAppResource(
     server,
@@ -157,7 +185,7 @@ export async function createOplMcpAppServer() {
         const selected = focusedViews[0];
         if ((package_id || view_id) && !selected) throw new Error(`No installed OPL view matches ${view_id}.`);
         const contribution = selected
-          ? readContribution(String(selected.package_id), String(selected.data_ref), input ?? {})
+          ? await readContribution(String(selected.package_id), String(selected.data_ref), input ?? {})
           : {};
         return jsonResult({
           ...contribution,
@@ -199,7 +227,7 @@ export async function createOplMcpAppServer() {
     },
     async ({ package_id, ref, input }) => {
       try {
-        return jsonResult(readContribution(package_id, ref, input ?? {}));
+        return jsonResult(await readContribution(package_id, ref, input ?? {}));
       } catch (error) {
         return errorResult(error);
       }
@@ -211,7 +239,7 @@ export async function createOplMcpAppServer() {
     OPL_MCP_APP_TOOL_NAMES.execute,
     {
       title: 'Execute OPL Package contribution',
-      description: 'Execute one descriptor-declared Package action after the user confirms its exact current target and input.',
+      description: 'Execute a declared Package action or a currently available work-item action after the user confirms its exact target and input.',
       inputSchema: z.object({
         package_id: z.string().min(1),
         ref: z.string().min(1),
@@ -229,11 +257,9 @@ export async function createOplMcpAppServer() {
     async ({ package_id, ref, input, confirmed }) => {
       try {
         if (package_id === OPL_RUNTIME_PACKAGE_ID) {
-          return errorResult(new FrameworkContractError(
-            'contract_shape_invalid',
-            'Framework runtime views are read-only and do not expose Package actions.',
-            { failure_code: 'framework_runtime_view_is_read_only' },
-          ));
+          return jsonResult(await executeFrameworkMcpAppAction({
+            ref, input: input ?? {}, confirmed,
+          }, runtimeServices()));
         }
         return jsonResult(runAppContribution({
           packageId: package_id,

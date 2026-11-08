@@ -6,6 +6,7 @@ import {
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { buildDomainDetailViewReadback } from './domain-detail-view.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
+import { runtimeActionsForItem } from './app-mcp-runtime-actions.ts';
 
 export const OPL_MCP_APP_SERVER_ID = 'opl-apps';
 export const OPL_MCP_APP_RESOURCE_URI = 'ui://opl/apps.html';
@@ -249,6 +250,8 @@ export function readFrameworkMcpAppContribution(input: {
   ref: string;
   input: JsonRecord;
   projection?: ReturnType<typeof buildWorkItemProjectionV2>;
+  runtimeSnapshot?: JsonRecord;
+  runtimeActionsUnavailable?: string;
 }) {
   if (input.ref === OPL_RUNTIME_REFS.workItems) {
     const projection = input.projection ?? buildWorkItemProjectionV2({ profile: 'fast' });
@@ -304,7 +307,15 @@ export function readFrameworkMcpAppContribution(input: {
       state: 'ready',
       data: {
         items: [projectionItem(matches[0]!)],
-        detail: matches[0],
+        detail: {
+          ...matches[0],
+          runtime_actions: input.runtimeSnapshot
+            ? runtimeActionsForItem(matches[0]!, input.runtimeSnapshot)
+            : [],
+          ...(input.runtimeActionsUnavailable
+            ? { runtime_actions_unavailable: input.runtimeActionsUnavailable }
+            : {}),
+        },
       },
     });
   }

@@ -113,6 +113,8 @@ Framework Host 负责通用运行、Package 能力图和 App 投影；Studio 的
 负责自己的 profile、插件、原生 Codex 和交付 transport。两者通过公开合同协作，各自保留清楚范围。
 具体分工由 [Framework 架构](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#host-scope-boundary) 和 [App adapter contract](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-shell-adapter.json) 维护。
 
+Mini App 延续这条边界：Framework 从已安装 Package 的能力声明中发现入口，提供当前任务上下文、进度与产物投影、共享视图及当前可用操作；Studio 提供宿主协议、主题与视口上下文；Package 的领域负责方提供业务数据、操作和质量结论。共享声明式视图、专用 MCP App 和专业应用复用同一工作身份与运行事实。视图按需调用已有操作，长任务继续使用现有阶段与执行链，业务状态和连接授权仍由原有负责方维护。
+
 ## 界面持续演进，产品体验保持连续
 
 One Person Lab App 对外提供一套统一的任务、能力、文件、状态和操作体验。界面设计可以持续改进，
