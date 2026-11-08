@@ -6,7 +6,7 @@
 
 发布日期：2026-08-15
 
-最近修订：2026-09-07
+最近修订：2026-11-08
 
 适用对象：希望理解 OPL Framework 为什么这样设计、它如何支撑可靠的 AI 专业工作，以及这套架构为什么能够长期演进的用户、合作者和技术决策者。
 
@@ -65,6 +65,23 @@ OPL Framework 不把所有能力固化在同一条运行链里，而是让每项
 
 这些能力共同服务于一条连续工作链。用户从目标出发，OPL 负责在合适的位置
 提供所需能力；无论工作发生在本机还是云端，任务、文件、进度、证据和下一步都保持连贯。
+
+## OPL Connect：一次连接，按能力授权
+
+外部服务接入最容易出现的误区，是让每个 Agent 或 Mini App 自己保存一份 API Key 或 OAuth Token。
+OPL Connect 采用更清楚的三层边界：Relay、Gateway、OPL Link 等 provider owner 保存凭据、刷新和
+账号生命周期；Connect 只保存连接的 opaque 引用与安全修订号；已安装的 Package 再按 capability 请求
+逐项 grant。用户在 App 的“资源与连接”中批准或撤销 grant，Host 每次调用都重新核对 Package 身份、
+连接修订和 capability，然后由 provider 在自己的边界内执行。
+
+因此，同一个 Relay 邮箱可以安全地被多个已安装能力复用，而每个能力拥有独立的授权范围。搜索、读取
+和本地待审草稿可以作为低风险入口，邮件发送等外部写操作仍遵循 Relay 自己的业务确认。调用记录只保留
+消费者、连接、能力、时间和派发结果，不保留参数、结果正文或密钥。OPL Connect 由此成为连接授权和
+调用路由层，而不是一个向插件暴露长期秘密的全局凭证库。
+
+这套边界也适用于 Mini App 的文件预览：绝对 artifact ref 先在当前对话工作区做精确词法包含检查，再
+交给既有 canonical byte API 做 realpath 和 inode 校验；Studio 负责预览与读取，artifact 和 receipt 的
+写入权仍归 Framework 或领域 owner。这样，连接身份、文件身份和业务内容都各自回到真实负责的 owner。
 
 ## 能力独立升级，体验始终一致
 
