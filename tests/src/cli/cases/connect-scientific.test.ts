@@ -4,7 +4,7 @@ import { createServer } from 'node:https';
 
 import {
   assert,
-  createFakeCodexFixture,
+  createFakeCodexPluginManagerFixture,
   createInstalledPackageCarrierFixture,
   fs,
   os,
@@ -13,7 +13,6 @@ import {
   runCli,
   runCliAsync,
   runCliFailure,
-  shellSingleQuote,
   test,
 } from '../helpers.ts';
 import { createTestTlsServerFixture } from '../helpers-parts/tls-fixture.ts';
@@ -358,6 +357,7 @@ export function runScientificSearchAdapterStep(request) {
     source: 'first_party_repo_local',
     package_role: 'capability_package',
     capability_abi: { id: 'mas-scholar-skills.v1' },
+    capability_dependencies: [],
     codex_surface: {
       plugin_id: 'mas-scholar-skills',
       required_skill_ids: ['mas-scholar-skills'],
@@ -560,17 +560,12 @@ test('scientific connector routes HTTP and normalization through the installed p
 
 test('scientific connector CLI loads a repo-contained synthetic installed Package', async () => {
   await withSyntheticScientificAdapter(async (_requests, _installedPackage, sourceRoot) => {
+    fs.mkdirSync(path.join(sourceRoot, '.codex-plugin'), { recursive: true });
+    fs.writeFileSync(path.join(sourceRoot, '.codex-plugin', 'plugin.json'), JSON.stringify({
+      name: 'mas-scholar-skills', version: '0.0.0', skills: './skills/',
+    }), 'utf8');
     const carrier = createInstalledPackageCarrierFixture(sourceRoot);
-    const codex = createFakeCodexFixture(`
-if [[ "$*" != "plugin list --json" ]]; then exit 2; fi
-printf '%s\n' ${shellSingleQuote(JSON.stringify({ installed: [{
-  pluginId: 'mas-scholar-skills@synthetic',
-  version: '0.0.0',
-  enabled: false,
-  source: { source: 'local', path: sourceRoot },
-  marketplaceSource: { source: sourceRoot },
-}] }))}
-`);
+    const codex = createFakeCodexPluginManagerFixture();
     const server = createServer(testTlsFixture.options, (request, response) => {
       const url = new URL(request.url ?? '/', 'https://127.0.0.1');
       response.setHeader('content-type', 'application/json');

@@ -9,29 +9,42 @@ import {
   readOplFlowManagedDependencyIds,
 } from '../../src/adapters/integration/agent-package-registry.ts';
 import { agentPackageManifest, formatJsonPayload } from './cli/cases/packages-cases/helpers.ts';
+import { codexNativeReadbackFixture } from './cli/helpers-parts/codex-native-readback-fixture.ts';
 
 function writeFakePluginList(root: string, sourceRoot: string) {
   const binary = path.join(root, 'fake-codex');
   fs.writeFileSync(binary, `#!/usr/bin/env node
-process.stdout.write(${JSON.stringify(JSON.stringify({
-  installed: [{
-    pluginId: 'opl-flow@fixture-marketplace',
-    version: '0.1.28',
-    enabled: true,
-    source: { source: 'local', path: sourceRoot },
-    marketplaceSource: { sourceType: 'local', source: sourceRoot },
-  }],
-}))});
+const args = process.argv.slice(2).join(' ');
+const installed = [{
+  pluginId: 'opl-flow@fixture-marketplace',
+  version: '0.1.28',
+  installed: true,
+  enabled: true,
+  source: { source: 'local', path: ${JSON.stringify(sourceRoot)} },
+  marketplaceSource: { sourceType: 'local', source: ${JSON.stringify(sourceRoot)} },
+}];
+if (args === 'plugin list --json' || args === 'plugin list --available --json') {
+  process.stdout.write(JSON.stringify({ installed, available: [] }));
+} else if (args === 'plugin marketplace list --json') {
+  process.stdout.write(JSON.stringify({ marketplaces: [{
+    name: 'fixture-marketplace', marketplaceSource: installed[0].marketplaceSource,
+  }] }));
+} else process.exitCode = 2;
 `, { mode: 0o755 });
-  return binary;
+  return codexNativeReadbackFixture(root, binary).OPL_CODEX_PLUGIN_BIN;
 }
 
 function writeEmptyPluginList(root: string) {
   const binary = path.join(root, 'fake-empty-codex');
   fs.writeFileSync(binary, `#!/usr/bin/env node
-process.stdout.write(${JSON.stringify(JSON.stringify({ installed: [] }))});
+const args = process.argv.slice(2).join(' ');
+if (args === 'plugin list --json' || args === 'plugin list --available --json') {
+  process.stdout.write(JSON.stringify({ installed: [], available: [] }));
+} else if (args === 'plugin marketplace list --json') {
+  process.stdout.write(JSON.stringify({ marketplaces: [] }));
+} else process.exitCode = 2;
 `, { mode: 0o755 });
-  return binary;
+  return codexNativeReadbackFixture(root, binary).OPL_CODEX_PLUGIN_BIN;
 }
 
 function writeLegacyDependencyLock(stateRoot: string) {

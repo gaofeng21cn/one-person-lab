@@ -169,15 +169,29 @@ function writeFlowDependencyDescriptor(root: string, dependencyIds: string[]) {
     },
   }));
   fs.writeFileSync(binary, `#!${process.execPath}
-process.stdout.write(${JSON.stringify(JSON.stringify({
-  installed: [{
-    pluginId: 'opl-flow@fixture-marketplace',
-    version: '0.1.28',
-    enabled: true,
-    source: { source: 'local', path: sourceRoot },
-    marketplaceSource: { sourceType: 'local', source: sourceRoot },
-  }],
-}))});
+import readline from 'node:readline';
+const installed = [{
+  pluginId: 'opl-flow@fixture-marketplace',
+  version: '0.1.28',
+  installed: true,
+  enabled: true,
+  source: { source: 'local', path: ${JSON.stringify(sourceRoot)} },
+  marketplaceSource: { sourceType: 'local', source: ${JSON.stringify(sourceRoot)} },
+}];
+const args = process.argv.slice(2).join(' ');
+if (args === 'app-server --stdio') {
+  readline.createInterface({ input: process.stdin }).on('line', (line) => {
+    const frame = JSON.parse(line);
+    if (frame.method === 'initialize') process.stdout.write(JSON.stringify({ id: frame.id, result: {} }) + '\\n');
+    if (frame.method === 'plugin/list') process.stdout.write(JSON.stringify({ id: frame.id, result: { marketplaces: [{ name: 'fixture-marketplace', plugins: [{ id: installed[0].pluginId, localVersion: installed[0].version, installed: true, enabled: true, source: { type: 'local', path: installed[0].source.path } }] }], marketplaceLoadErrors: [] } }) + '\\n');
+  });
+} else if (args === 'plugin marketplace list --json') {
+  process.stdout.write(JSON.stringify({ marketplaces: [{
+    name: 'fixture-marketplace', marketplaceSource: installed[0].marketplaceSource,
+  }] }));
+} else {
+  process.stdout.write(JSON.stringify({ installed, available: [] }));
+}
 `, { mode: 0o755 });
   return binary;
 }
@@ -740,10 +754,12 @@ test('managed companion currentness makes OPL Base background apply eligible', (
       OPL_RUNTIME_ROOT: runtimeRoot,
       OPL_CODEX_BIN: codex,
       OPL_CODEX_PLUGIN_BIN: pluginBin,
+      OPL_DEPENDENCY_TEST_OVERRIDE: '1',
       OPL_CODEX_CLI_LATEST_VERSION: '0.2.0',
       OPL_OFFICECLI_LATEST_VERSION: '1.0.2',
+      OPL_TEMPORAL_CLI_LATEST_VERSION: '1.0.0',
       OPL_COMPANION_SKIP_LATEST_LOOKUP: '1',
-      PATH: '/usr/bin:/bin',
+      PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`,
     }, () => {
       const component = buildRuntimeSubstrateComponent({ core_engines: { codex: {
         installed: true,
@@ -789,30 +805,29 @@ test('legacy OPL Flow locks do not project managed dependency authority', () => 
   }
 });
 
-test('cached Base status skips companion latest network lookup while explicit refresh performs it', () => {
+test('cached Base status stays unknown until explicit refresh resolves a configured stable version', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-companion-cached-status-'));
   const stateRoot = path.join(root, 'state');
   const office = path.join(stateRoot, 'base-dependencies', '.local', 'bin', 'officecli');
-  const marker = path.join(root, 'release-called');
   executable(office, 'officecli 1.0.1');
   const pluginBin = writeFlowDependencyDescriptor(root, ['opl-base', 'officecli']);
-  const fixturePath = githubReleaseFixture(root, 'iOfficeAI/OfficeCLI', '1.0.2', `officecli-${process.platform === 'darwin' ? 'mac' : process.platform}-${process.arch}`, marker);
   try {
     withEnvironment({
       CODEX_HOME: path.join(root, 'codex-home'),
       HOME: root,
       OPL_STATE_DIR: stateRoot,
+      OPL_DEPENDENCY_TEST_OVERRIDE: '1',
       OPL_COMPANION_SKIP_LATEST_LOOKUP: undefined,
       OPL_OFFICECLI_LATEST_VERSION: undefined,
+      OPL_TEMPORAL_CLI_LATEST_VERSION: '1.0.0',
       OPL_CODEX_PLUGIN_BIN: pluginBin,
-      PATH: `${fixturePath}:/usr/bin:/bin`,
+      PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`,
     }, () => {
       const cached = inspectBaseManagedDependencies(root);
       assert.equal(cached.dependencies.find((entry) => entry.dependency_id === 'officecli')?.currentness, 'unknown');
-      assert.equal(fs.existsSync(marker), false);
+      process.env.OPL_OFFICECLI_LATEST_VERSION = '1.0.2';
       const refreshed = inspectBaseManagedDependencies(root, { refreshManagedLatest: true });
       assert.equal(refreshed.dependencies.find((entry) => entry.dependency_id === 'officecli')?.currentness, 'update_available');
-      assert.equal(fs.existsSync(marker), true);
     });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

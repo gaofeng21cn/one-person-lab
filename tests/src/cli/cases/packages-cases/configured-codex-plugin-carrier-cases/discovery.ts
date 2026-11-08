@@ -183,7 +183,7 @@ if (args === 'plugin list --json') {
       HOME: root,
       CODEX_HOME: path.join(root, 'codex-home'),
       OPL_STATE_DIR: path.join(root, 'opl-state'),
-      OPL_CODEX_PLUGIN_BIN: binary,
+      OPL_CODEX_PLUGIN_BIN: codexNativeReadbackFixture(root, binary).OPL_CODEX_PLUGIN_BIN,
       FIXTURE_PLUGIN_SOURCE: sourcePath,
     }) as any;
     const entry = result.opl_agent_packages.directory.entries.find(
@@ -256,7 +256,7 @@ process.stdout.write(JSON.stringify({ installed: [], available: [] }));
       HOME: root,
       CODEX_HOME: path.join(root, 'codex-home'),
       OPL_STATE_DIR: path.join(root, 'opl-state'),
-      OPL_CODEX_PLUGIN_BIN: binary,
+      OPL_CODEX_PLUGIN_BIN: codexNativeReadbackFixture(root, binary).OPL_CODEX_PLUGIN_BIN,
     }) as any;
     const expectedPackageIds = listCurrentPackageProjections()
       .flatMap((projection) => {
@@ -519,7 +519,7 @@ if (process.argv.slice(2).join(' ') === 'plugin list --available --json') {
       HOME: root,
       CODEX_HOME: path.join(root, 'codex-home'),
       OPL_STATE_DIR: path.join(root, 'opl-state'),
-      OPL_CODEX_PLUGIN_BIN: binary,
+      OPL_CODEX_PLUGIN_BIN: codexNativeReadbackFixture(root, binary).OPL_CODEX_PLUGIN_BIN,
       FIXTURE_PLUGIN_SOURCE: sourcePath,
     }) as any;
     const entry = result.opl_agent_packages.directory.entries.find(
@@ -541,13 +541,12 @@ if (process.argv.slice(2).join(' ') === 'plugin list --available --json') {
       'source_explanation',
       'manifest_url',
       'version_currentness',
-      'selected_version',
       'stable_version',
       'migration_required_count',
       'manifest_sha256',
       'content_digest',
     ]) {
-      assert.equal(Object.hasOwn(entry, retiredDirectoryField), false);
+      assert.equal(Object.hasOwn(entry, retiredDirectoryField), false, retiredDirectoryField);
     }
   } finally {
     removeFixtureTree(root);
@@ -712,7 +711,10 @@ if (process.argv.slice(2).join(' ') === 'plugin list --json') {
     assert.equal(result.configured_carrier.native_action_dispatched, false);
     const dryRunCalls = fs.readFileSync(callsPath, 'utf8').trim().split('\n');
     assert.ok(dryRunCalls.length > 0);
-    assert.ok(dryRunCalls.every((command) => command === 'plugin list --json'),
+    assert.ok(dryRunCalls.includes('plugin list --available --json'));
+    assert.ok(dryRunCalls.every((command) => command === 'plugin list --available --json'
+      || command === 'plugin list --json'
+      || command === 'plugin marketplace list --json'),
       'descriptor discovery and dry-run may only read native plugin state');
     assert.equal(fs.existsSync(path.join(root, 'opl-state')), false);
   } finally {

@@ -6,8 +6,9 @@ import { buildMcpAppView } from './build-mcp-app-view.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
+const typescriptEntryPath = fileURLToPath(import.meta.resolve('typescript'));
 const result = spawnSync(process.execPath, [
-  fileURLToPath(import.meta.resolve('typescript/bin/tsc')),
+  path.resolve(path.dirname(typescriptEntryPath), '../bin/tsc'),
   '-p', 'tsconfig.build.json', ...args,
 ], { cwd: repoRoot, stdio: 'inherit' });
 if (result.error) throw result.error;
