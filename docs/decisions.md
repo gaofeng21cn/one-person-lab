@@ -38,6 +38,8 @@ Base/headless 安装必须自包含可用的 Codex executable carrier；App 使�
 
 稳定边界是 `OPL_CODEX_BIN + codex app-server --stdio`。Framework 不解析 App 私有 carrier manifest，App 也不通过 Framework fallback 猜测 executable。
 
+一键安装的初始检查与最终就绪投影只读取已选 Codex 的本地版本和兼容性；兼容 carrier 直接复用，不为就绪检查查询上游最新版。缺少可用 carrier 的实际安装与显式升级仍由正式 resolver 选择目标，未查询的 `latest_version` 保持未知。
+
 ## 文档直接收敛，不保留当前树内的历史兼容面
 
 当前文档用于指导下一次工作，Git 用于追溯历史。执行流水与兼容说明混入当前文档会被误读为受支持能力，因此直接收敛当前 owner。具体保留、退役和检查规则仅由 [文档生命周期政策](./policies/docs-lifecycle-policy.md) 定义。

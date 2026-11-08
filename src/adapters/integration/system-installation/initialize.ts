@@ -119,6 +119,8 @@ function lastAttempt(status: string, detail: Record<string, unknown> = {}) {
 
 type OplInitializeBuildOptions = {
   onEvent?: OplSystemInitializeEventHandler;
+  /** Preserve the turnkey initial-read policy through the final initialization projection. */
+  skipLatestLookup?: boolean;
 };
 
 export async function buildOplInitialize(
@@ -130,7 +132,10 @@ export async function buildOplInitialize(
     events,
     'environment',
     'Inspect local OPL environment',
-    () => buildOplEnvironment(contracts, { onInitializeEvent: events.relay }),
+    () => buildOplEnvironment(contracts, {
+      onInitializeEvent: events.relay,
+      skipLatestLookup: options.skipLatestLookup,
+    }),
     (payload) => ({ overall_status: payload.system_environment.overall_status }),
   );
   const modulesPayload = await withOplSystemInitializeEventPhase(

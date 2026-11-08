@@ -316,7 +316,7 @@ export async function runOplTurnkeyInstall(
   ];
 
   try {
-    const environment = (await buildOplEnvironment(contracts)).system_environment;
+    const environment = (await buildOplEnvironment(contracts, { skipLatestLookup: true })).system_environment;
     const engineActions = input.skipEngines
       ? []
       : await Promise.all(selectedEngines.map(async (engineId) => {
@@ -393,7 +393,7 @@ export async function runOplTurnkeyInstall(
       );
     }
     const companionSkillSync = syncOplCompanionSkills(undefined, { mode: 'managed' });
-    const initialize = await buildOplInitialize(contracts);
+    const initialize = await buildOplInitialize(contracts, { skipLatestLookup: true });
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('install_completed', {
         status: 'completed',

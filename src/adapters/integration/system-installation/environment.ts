@@ -29,6 +29,8 @@ import {
 
 type OplEnvironmentBuildOptions = {
   onInitializeEvent?: OplSystemInitializeEventHandler;
+  /** Initial readiness only inspects the selected local binary; update paths resolve latest explicitly. */
+  skipLatestLookup?: boolean;
 };
 
 export async function buildOplEnvironment(
@@ -45,7 +47,7 @@ export async function buildOplEnvironment(
     events,
     'codex',
     'Inspect Codex CLI and default profile',
-    () => resolveCodexVersion(),
+    () => resolveCodexVersion({ skipLatestLookup: options.skipLatestLookup }),
     (codex) => ({
       health_status: codex.installed ? codex.version_status : 'missing',
       installed: codex.installed,
