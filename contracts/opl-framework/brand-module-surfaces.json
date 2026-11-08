@@ -1819,6 +1819,9 @@
           "external_connector",
           "message_channel_connector",
           "remote_companion_connector",
+          "connection_access_request",
+          "connection_grant",
+          "connector_invocation",
           "connector_app_contribution",
           "capability_invocation_lifecycle_descriptor",
           "capability_execution_view_descriptor",
@@ -2004,7 +2007,7 @@
         "connected_product_or_remote_service_owned_by_connect",
         "connect_exports_mas_raw_contract_details"
       ],
-      "notes": "Connect owns generic connector lifecycle and one Framework-hosted composition path for external, message-channel, and remote-companion connector Packages, plus generated descriptors, capability execution view descriptors, agent operational card descriptors, ToolResultEnvelope descriptors, package/install surfaces, skill sync, channel, and drift projections. Runtime membership is derived from current installed Package descriptors, never a fixed Weixin, OPL Link, or other brand list. The connected product, remote service, credentials, provider lifecycle, content, and history remain with their product or provider owner. Connect exports ordinary Agent consumption descriptors derived from Pack contracts; it does not export raw MAS contract details, reinterpret domain semantics, or treat transport success as semantic authority."
+      "notes": "Connect owns generic connector lifecycle and one Framework-hosted composition path for external, message-channel, and remote-companion connector Packages, plus opaque connection refs, per-consumer capability grants, access requests, bounded invocation observations, generated descriptors, capability execution view descriptors, agent operational card descriptors, ToolResultEnvelope descriptors, package/install surfaces, skill sync, channel, and drift projections. Runtime membership is derived from current installed Package descriptors, never a fixed Weixin, OPL Link, or other brand list. The connected product/provider owner retains credential material, account and refresh lifecycle, remote service, content, and history. Connect routes invocations without resolving credentials into App state, prompts, Package pages, or generic action payloads. It exports ordinary Agent consumption descriptors derived from Pack contracts; it does not export raw MAS contract details, reinterpret domain semantics, or treat transport success as semantic authority."
     }
   ]
 }

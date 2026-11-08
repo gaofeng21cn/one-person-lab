@@ -1,0 +1,146 @@
+{
+  "version": "opl_connection_authorization_contract.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Define how installed OPL consumers request, receive, and use access to provider-owned connections without receiving credential material.",
+  "machine_boundary": "Framework Connect owns connection references, per-consumer grants, access requests, provider routing, and invocation observations. The provider or connected product owner retains account identity, credential storage, refresh, remote API semantics, and domain actions. App projects owner state; Studio transports and renders it.",
+  "objects": {
+    "connection": {
+      "identity": "connection_id",
+      "selects": "one provider-owned account or service binding",
+      "provider_selector": "connection_type",
+      "secret_policy": "credential_handle_only_never_resolve_or_return_secret_material",
+      "security_revision": "rotates when provider, endpoint, account binding, credential handle, or enabled state changes; a deleted and recreated connection receives a new revision"
+    },
+    "consumer": {
+      "identity": "installed_descriptor.manifest.package_id",
+      "binding_source": "fresh Framework installed descriptor discovery",
+      "required_readiness": ["installed", "physical_status_available", "framework_callability_callable", "expected_codex_exposure"],
+      "binding_revision": "installed descriptor manifest_sha256 and content_digest",
+      "caller_claims_allowed": false
+    },
+    "access_request": {
+      "identity": "request_id",
+      "scope": ["consumer_package_id", "consumer_manifest_sha256", "consumer_content_digest", "connection_id", "connection_security_revision", "capability_ids", "capabilities"],
+      "capability_snapshot": "provider-declared capability_id, user-facing title, and risk captured when requested; approval rejects a changed title or risk",
+      "initial_status": "requested",
+      "approval_owner": "OPL App user action",
+      "consumer_can_self_approve": false
+    },
+    "grant": {
+      "identity": "grant_id",
+      "scope": ["consumer_package_id", "consumer_manifest_sha256", "consumer_content_digest", "connection_id", "connection_security_revision", "capability_ids", "capabilities"],
+      "capability_snapshot": "the exact capability descriptors approved by the user; changed provider title or risk invalidates invocation",
+      "status": ["requested", "granted", "denied", "revoked"],
+      "approval_source": "explicit user action in App",
+      "invalidated_when": ["consumer descriptor identity or content changes", "connection security revision changes", "connection is disabled or deleted", "grant is revoked"]
+    },
+    "invocation": {
+      "identity": "invocation_id",
+      "scope": ["consumer_package_id", "connection_id", "capability_id", "started_at", "finished_at", "disposition"],
+      "retention": "bounded owner-local recent history; never persist arguments, results, errors, or credential values"
+    }
+  },
+  "provider_adapter": {
+    "registration": "explicit trusted Framework composition; installed Package presence alone does not register executable provider code",
+    "provider_id": "exact connection_type",
+    "capabilities": {
+      "fields": ["capability_id", "title", "risk"],
+      "risk_values": ["read", "local_write", "external_write"],
+      "rule": "risk is required and changing title or risk requires fresh user approval"
+    },
+    "list_capabilities": "read public operation descriptors without resolving credential values",
+    "invoke": "provider owner executes one declared capability using its own credential store and account lifecycle",
+    "input": "bounded JSON object; adapter validates capability-specific schema",
+    "output": "bounded JSON result; credential material is forbidden",
+    "error_disposition": ["not_dispatched", "provider_reported", "unknown_after_dispatch"],
+    "retry_policy": "Framework never retries an invocation; unknown_after_dispatch requires provider/domain readback before a write is repeated"
+  },
+  "host_api": {
+    "binding_factory": "createOplConnectionAuthorizationService({ descriptorDiscovery, providers }).forPackage(packageId)",
+    "binding_rule": "factory performs fresh discovery and derives package identity and digest only from the exact current callable installed descriptor",
+    "consumer_methods": {
+      "listConnections": "return consumer-safe connection summaries without credential_handle, endpoint, or provider payload",
+      "requestAccess": "persist a bounded pending request for provider-declared capability ids; does not grant access",
+      "invoke": "re-resolve consumer descriptor, connection, grant, security revision, and provider capability on every call, then route to the provider owner"
+    },
+    "consumer_port_lifecycle": "a trusted Host activation captures one descriptor identity and digest; every method rechecks that exact binding, and disposal or descriptor change makes the port fail closed",
+    "owner_methods": {
+      "listProjection": "read safe connection/request/grant summaries with display names, account labels, capability labels and risk; omit credential_handle, endpoint, manifest digests, and provider payloads",
+      "approveRequest": "grant exactly the requested capability set after fresh descriptor and connection checks",
+      "denyRequest": "deny one pending request",
+      "revokeGrant": "revoke one consumer grant without changing the connection or other grants"
+    },
+    "owner_projection": {
+      "connection_fields": ["connection_id", "display_name", "provider_type", "status", "security_revision", "account_label", "capabilities"],
+      "consumer_labels": "fresh callable installed descriptor display_name or name, falling back to package_id",
+      "capability_fields": ["capability_id", "label", "risk"],
+      "stale_projection": "requested becomes superseded and granted becomes stale when consumer digest or connection revision changes, connection is disabled or deleted",
+      "forbidden_fields": ["credential_handle", "endpoint", "manifest_sha256", "content_digest", "provider_payload"]
+    },
+    "host_context": "forPackage is bound to a Package resolved by the Framework Host; Studio pages and arbitrary caller payloads cannot mint or widen the binding"
+  },
+  "authorization": {
+    "connection_does_not_imply_grant": true,
+    "grant_does_not_imply_all_provider_operations": true,
+    "each_invocation_rechecks_current_owner_state": true,
+    "package_updates_require_fresh_grant_binding": true,
+    "global_tool_permission_and_codex_approval_remain_separate": true,
+    "domain_or_provider_confirmation_remains_required": true
+  },
+  "secret_boundary": {
+    "framework_connection_registry": "opaque credential handles only",
+    "provider_refresh_and_access_tokens": "provider_owner_only",
+    "app_state_and_generic_actions": "no credential material",
+    "mini_app_page_and_prompt": "no credential material",
+    "consumer_result": "provider result only; no secret lease or token-return API",
+    "unsupported_provider": "fail closed as unavailable; never fall back to env injection"
+  },
+  "ordinary_app_action_ids": [
+    "connection_access_request_list",
+    "connection_access_request_deny",
+    "connection_grant_revoke",
+    "connection_relay_import"
+  ],
+  "trusted_user_bridge": {
+    "approval_command": "opl connect authorization approve --request-id <id> --json",
+    "caller": "dedicated Studio user-initiated host bridge only",
+    "generic_app_action_or_mcp_access": false,
+    "approval_is_not_inferred_from": ["confirmed", "page focus", "package_id payload", "tool permission"]
+  },
+  "initial_provider_scope": {
+    "provider": "OPL Relay mailbox connection",
+    "capabilities": ["mailbox.search", "mailbox.read", "draft.create"],
+    "draft_create_semantics": "create or edit a Relay-local review draft; does not send mail",
+    "send_capability": "excluded; existing Relay review and send approval remains authoritative",
+    "connection_setup": "import an existing Relay mailbox reference; Relay remains the account and credential owner"
+  },
+  "failure_dispositions": {
+    "authorization_missing": "not_dispatched",
+    "consumer_descriptor_changed": "not_dispatched",
+    "connection_revision_changed": "not_dispatched",
+    "provider_capability_missing": "not_dispatched",
+    "provider_rejects_before_dispatch": "not_dispatched",
+    "provider_reports_error_after_dispatch": "provider_reported",
+    "result_lost_after_dispatch": "unknown_after_dispatch"
+  },
+  "security_limits": {
+    "same_user_process_isolation": false,
+    "meaning": "Product authorization prevents accidental cross-consumer reuse through conforming Host routes; it does not sandbox arbitrary code running as the same local user or protect provider stores from a malicious local process."
+  },
+  "verification": {
+    "owner_readback": "connection registry and authorization projection",
+    "focused_behavior": [
+      "uninstalled_or_stale_package_cannot_request_or_invoke",
+      "requested_grant_cannot_invoke_before_user_approval",
+      "one_consumer_revocation_preserves_other_consumer_grant",
+      "connection_rebinding_invalidates_old_grants",
+      "unsupported_provider_and_capability_fail_before_dispatch",
+      "unknown_after_dispatch_is_recorded_without_retry",
+      "provider_secret_and_arguments_never_enter_projection_or_history",
+      "capability_risk_is_validated_and_snapshot_changes_require_new_approval",
+      "stale_grants_and_pending_requests_are_projected_inactive_after_descriptor_or_connection_changes",
+      "owner_projection_contains_display_labels_without_connection_secrets_or_descriptor_digests"
+    ]
+  }
+}

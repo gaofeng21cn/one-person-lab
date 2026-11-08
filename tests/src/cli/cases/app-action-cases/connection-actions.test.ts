@@ -102,10 +102,45 @@ test('Settings read model exposes typed connection registry and actions', () => 
       'connection_delete',
       'connection_test',
       'connection_set_default',
+      'connection_access_request_list',
+      'connection_access_request_deny',
+      'connection_grant_revoke',
+      'connection_relay_import',
     ]) {
       assert.equal(state.allowed_action_ids.includes(actionId), true);
     }
+    assert.equal(state.allowed_action_ids.includes('connection_access_request_approve'), false);
+    assert.equal(state.connection_authorization.surface_kind, 'opl_connection_authorization_projection.v1');
+    assert.deepEqual(state.connection_authorization.requests, []);
+    assert.deepEqual(state.connection_authorization.grants, []);
+    assert.deepEqual(state.connection_authorization.invocations, []);
+    assert.equal(
+      state.app_settings_read_model.connections.authorization.surface_kind,
+      'opl_connection_authorization_projection.v1',
+    );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('Connect authorization list exposes only the owner projection', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-connect-authorization-cli-'));
+  try {
+    const output = runCli(['connect', 'authorization', 'list'], { OPL_STATE_DIR: stateDir });
+    assert.equal(output.connection_authorization.surface_kind, 'opl_connection_authorization_projection.v1');
+    assert.deepEqual(output.connection_authorization.requests, []);
+    assert.deepEqual(output.connection_authorization.grants, []);
+    assert.deepEqual(output.connection_authorization.invocations, []);
+    assert.equal(JSON.stringify(output.connection_authorization).includes('credential_handle'), false);
+    assert.equal(JSON.stringify(output.connection_authorization).includes('arguments'), false);
+    assert.equal(JSON.stringify(output.connection_authorization).includes('result'), false);
+
+    const identityClaim = runCliFailure([
+      'app', 'action', 'execute', '--action', 'connection_access_request_list',
+      '--payload', '{"consumer_package_id":"opl-mas"}',
+    ], { OPL_STATE_DIR: stateDir });
+    assert.equal(identityClaim.payload.error.details.reason_code, 'connection_action_field_unsupported');
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
   }
 });

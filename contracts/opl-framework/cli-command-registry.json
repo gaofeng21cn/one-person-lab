@@ -1355,6 +1355,76 @@
         "surface": "cached_gateway_account_read_model"
       }
     },
+    "connect_authorization_list": {
+      "command_id": "connect authorization list",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": { "type": "object", "required": ["connection_authorization"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "consumer_safe_connection_authorization_projection"
+      }
+    },
+    "connect_authorization_approve": {
+      "command_id": "connect authorization approve",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        { "name": "request-id", "flag": "--request-id", "value_kind": "string", "required": true, "summary": "Pending request reviewed by an explicit OPL App user action." }
+      ],
+      "output_schema": { "type": "object", "required": ["connection_authorization"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "dedicated_app_user_review_bridge_only"
+      }
+    },
+    "connect_authorization_deny": {
+      "command_id": "connect authorization deny",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        { "name": "request-id", "flag": "--request-id", "value_kind": "string", "required": true, "summary": "Pending request to deny." }
+      ],
+      "output_schema": { "type": "object", "required": ["connection_authorization"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "connection_authorization_request_denial"
+      }
+    },
+    "connect_authorization_revoke": {
+      "command_id": "connect authorization revoke",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        { "name": "grant-id", "flag": "--grant-id", "value_kind": "string", "required": true, "summary": "Consumer grant to revoke." }
+      ],
+      "output_schema": { "type": "object", "required": ["connection_authorization"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "connection_consumer_grant_revocation"
+      }
+    },
     "connect_gateway_login": {
       "command_id": "connect gateway login",
       "owner": "OPL Connect",

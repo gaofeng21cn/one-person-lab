@@ -47,6 +47,7 @@ import {
 import { readOptionalString } from '../../modules/json-boundary.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 import { buildNoArgSpec, commandActionSummary } from './shared.ts';
+import { buildConnectionAuthorizationCommandSpecs } from './connect-authorization.ts';
 
 type ModuleAction = 'install' | 'update' | 'reinstall' | 'remove';
 
@@ -375,6 +376,7 @@ export function buildConnectCommandSpecs(
   );
 
   const connectCommandSpecs: Record<string, CommandSpec> = {
+    ...buildConnectionAuthorizationCommandSpecs(),
     'connect modules': buildNoArgSpec(
       {
         usage: 'opl connect modules',

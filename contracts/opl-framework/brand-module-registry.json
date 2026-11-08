@@ -875,7 +875,7 @@
       "owner": "OPL Framework + App release owner",
       "purpose": "Stable external connector access and generated or distributed interfaces for CLI, MCP, ToolResultEnvelope descriptors, OpenAI tools, AI SDK tools, Skills/plugins, module install, release, and drift detection.",
       "state": "active_structural_baseline",
-      "machine_boundary": "Connect owns generic connector lifecycle and Framework-hosted composition for external connectors, including message-channel and remote-companion desktop connectors, while publishing descriptors and distribution surfaces derived from canonical contracts. The connected product or provider owner keeps credentials, provider lifecycle, content, history, remote service, and domain semantics. Connect uses installed descriptor projection rather than a fixed brand membership registry and does not claim install/release evidence that belongs to a release artifact owner.",
+      "machine_boundary": "Connect owns generic connector lifecycle, Framework-hosted composition, opaque connection references, per-consumer capability grants, provider routing, and bounded invocation observations for external connectors, including message-channel and remote-companion desktop connectors, while publishing descriptors and distribution surfaces derived from canonical contracts. The connected product or provider owner retains credential material, account/refresh lifecycle, content, history, remote service, and domain semantics. Connect uses installed descriptor projection rather than a fixed brand membership registry and does not claim install/release evidence that belongs to a release artifact owner.",
       "connector_classification": {
         "module_scope": "connector_packages_and_framework_hosted_connector_contributions",
         "connector_kinds": [
@@ -886,6 +886,8 @@
         "membership_source": "current_installed_enabled_callable_package_descriptors_and_framework_host_projection",
         "fixed_brand_membership_registry_allowed": false,
         "connected_product_absorbed_into_connect": false,
+        "credential_material_absorbed_into_connect": false,
+        "consumer_grant_authority": "Framework Connect over provider-owned connection references",
         "single_cordis_host_owner": "OPL Framework"
       },
       "module_doc_ref": "human_doc:opl_brand_module_connect",

@@ -1,4 +1,5 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { randomUUID } from 'node:crypto';
 import {
   assertCredentialHandleOnlyPayload,
   checkCredentialHandle,
@@ -8,6 +9,7 @@ import {
   readConnectionRegistryStore,
   writeConnectionRegistryStore,
 } from './connection-registry-parts/store.ts';
+import { withConnectionStateLock } from './connection-authorization-parts/state-lock.ts';
 import {
   OPL_CONNECTION_STATUSES,
   type CreateOplConnectionInput,
@@ -45,7 +47,10 @@ function registryProjection(store: OplConnectionRegistryStore, connection?: OplC
       surface_kind: 'opl_connection_registry.v1',
       owner: 'one-person-lab',
       credential_policy: 'handle_only',
-      allowed_credential_handles: ['env:NAME', 'codex:selected_provider', 'credential-store:opl-gateway-account'],
+      allowed_credential_handles: [
+        'env:NAME', 'codex:selected_provider', 'credential-store:opl-gateway-account',
+        'provider:PROVIDER_ID:OPAQUE_REF',
+      ],
       allowed_statuses: [...OPL_CONNECTION_STATUSES],
       default_connection_id: store.default_connection_id,
       connections: store.connections,
@@ -66,6 +71,10 @@ export function listOplConnections() {
 }
 
 export function createOplConnection(input: CreateOplConnectionInput) {
+  return withConnectionStateLock(() => createOplConnectionLocked(input));
+}
+
+function createOplConnectionLocked(input: CreateOplConnectionInput) {
   assertCredentialHandleOnlyPayload(input);
   const store = readConnectionRegistryStore();
   const connectionId = requiredString(input.connection_id, 'connection_id');
@@ -79,8 +88,12 @@ export function createOplConnection(input: CreateOplConnectionInput) {
     connection_id: connectionId,
     name: requiredString(input.name, 'name'),
     connection_type: requiredString(input.connection_type, 'connection_type'),
+    account_label: typeof input.account_label === 'string' && input.account_label.trim()
+      ? input.account_label.trim()
+      : null,
     endpoint: typeof input.endpoint === 'string' && input.endpoint.trim() ? input.endpoint.trim() : null,
     credential_handle: normalizeCredentialHandle(input.credential_handle),
+    security_revision: randomUUID(),
     status: input.disabled ? 'disabled' : 'untested',
     status_code: input.disabled ? 'connection_disabled' : null,
     created_at: now,
@@ -92,12 +105,25 @@ export function createOplConnection(input: CreateOplConnectionInput) {
 }
 
 export function updateOplConnection(connectionId: string, input: UpdateOplConnectionInput) {
+  return withConnectionStateLock(() => updateOplConnectionLocked(connectionId, input));
+}
+
+function updateOplConnectionLocked(connectionId: string, input: UpdateOplConnectionInput) {
   assertCredentialHandleOnlyPayload(input);
   const store = readConnectionRegistryStore();
   const connection = connectionById(store, requiredString(connectionId, 'connection_id'));
+  const previousBinding = JSON.stringify([
+    connection.connection_type, connection.endpoint, connection.credential_handle,
+    connection.status === 'disabled',
+  ]);
   if (input.name !== undefined) connection.name = requiredString(input.name, 'name');
   if (input.connection_type !== undefined) {
     connection.connection_type = requiredString(input.connection_type, 'connection_type');
+  }
+  if (input.account_label !== undefined) {
+    connection.account_label = typeof input.account_label === 'string' && input.account_label.trim()
+      ? input.account_label.trim()
+      : null;
   }
   if (input.endpoint !== undefined) {
     connection.endpoint = typeof input.endpoint === 'string' && input.endpoint.trim()
@@ -108,6 +134,9 @@ export function updateOplConnection(connectionId: string, input: UpdateOplConnec
     connection.credential_handle = normalizeCredentialHandle(input.credential_handle);
   }
   const disabled = input.disabled ?? connection.status === 'disabled';
+  if (previousBinding !== JSON.stringify([
+    connection.connection_type, connection.endpoint, connection.credential_handle, disabled,
+  ])) connection.security_revision = randomUUID();
   connection.status = disabled ? 'disabled' : 'untested';
   connection.status_code = disabled ? 'connection_disabled' : null;
   connection.updated_at = new Date().toISOString();
@@ -116,6 +145,10 @@ export function updateOplConnection(connectionId: string, input: UpdateOplConnec
 }
 
 export function deleteOplConnection(connectionId: string) {
+  return withConnectionStateLock(() => deleteOplConnectionLocked(connectionId));
+}
+
+function deleteOplConnectionLocked(connectionId: string) {
   const store = readConnectionRegistryStore();
   const normalizedId = requiredString(connectionId, 'connection_id');
   connectionById(store, normalizedId);
@@ -129,6 +162,10 @@ export function deleteOplConnection(connectionId: string) {
 }
 
 export function setDefaultOplConnection(connectionId: string) {
+  return withConnectionStateLock(() => setDefaultOplConnectionLocked(connectionId));
+}
+
+function setDefaultOplConnectionLocked(connectionId: string) {
   const store = readConnectionRegistryStore();
   const connection = connectionById(store, requiredString(connectionId, 'connection_id'));
   if (connection.status === 'disabled') {
@@ -153,6 +190,10 @@ function endpointCheck(endpoint: string | null): OplConnectionCheck {
 }
 
 export async function testOplConnection(connectionId: string) {
+  return withConnectionStateLock(() => testOplConnectionLocked(connectionId));
+}
+
+async function testOplConnectionLocked(connectionId: string) {
   const store = readConnectionRegistryStore();
   const connection = connectionById(store, requiredString(connectionId, 'connection_id'));
   const checkedAt = new Date().toISOString();

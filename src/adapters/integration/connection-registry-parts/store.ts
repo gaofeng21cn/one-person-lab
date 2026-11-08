@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { readJsonPayloadFile, writeJsonPayloadFile } from '../../../kernel/json-file.ts';
@@ -30,8 +31,17 @@ function normalizeConnection(value: unknown): OplConnection | null {
     connection_id: value.connection_id,
     name: value.name,
     connection_type: value.connection_type,
+    account_label: typeof value.account_label === 'string' && value.account_label.trim()
+      ? value.account_label.trim()
+      : null,
     endpoint: typeof value.endpoint === 'string' ? value.endpoint : null,
     credential_handle: normalizeCredentialHandle(value.credential_handle),
+    security_revision: typeof value.security_revision === 'string' && value.security_revision
+      ? value.security_revision
+      : `legacy-${createHash('sha256').update(JSON.stringify([
+        value.connection_id, value.created_at ?? null, value.connection_type,
+        value.endpoint ?? null, value.credential_handle, value.status === 'disabled',
+      ])).digest('hex')}`,
     status: value.status as OplConnection['status'],
     status_code: typeof value.status_code === 'string' ? value.status_code : null,
     created_at: typeof value.created_at === 'string' ? value.created_at : new Date().toISOString(),

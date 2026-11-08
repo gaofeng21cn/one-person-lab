@@ -11,8 +11,11 @@ export type OplConnection = {
   connection_id: string;
   name: string;
   connection_type: string;
+  account_label: string | null;
   endpoint: string | null;
   credential_handle: string;
+  /** Opaque generation: rotating a binding can never reactivate an earlier grant. */
+  security_revision: string;
   status: OplConnectionStatus;
   status_code: string | null;
   created_at: string;
@@ -32,6 +35,7 @@ export type CreateOplConnectionInput = {
   connection_id: string;
   name: string;
   connection_type: string;
+  account_label?: string | null;
   endpoint?: string | null;
   credential_handle: string;
   disabled?: boolean;

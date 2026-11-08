@@ -222,6 +222,7 @@ export function compactFastSettingsControlCenter(value: unknown) {
       'surface_policy',
       'configuration_catalog',
       'connection_registry',
+      'connection_authorization',
       'issue_queue',
       'authority_boundary',
     ]),

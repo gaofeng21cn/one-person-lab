@@ -8,6 +8,14 @@
   ],
   "exports": {
     "./cordis-profiles": "./dist/host/composition-profiles.js",
+    "./connection-authorization": {
+      "types": "./dist/adapters/integration/connection-authorization.d.ts",
+      "default": "./dist/adapters/integration/connection-authorization.js"
+    },
+    "./connection-authorization-host": {
+      "types": "./dist/host/connection-context.d.ts",
+      "default": "./dist/host/connection-context.js"
+    },
     "./foundry-protocol": "./dist/authority/evolution/protocol.js",
     "./foundry-protocol-fixture-conformance": "./dist/authority/evolution/protocol-fixture-conformance.js",
     "./foundry-control": "./dist/authority/evolution/control.js",

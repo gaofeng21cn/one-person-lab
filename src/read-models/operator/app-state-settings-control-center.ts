@@ -1,6 +1,7 @@
 import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
 import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';
 import { listOplConnections, readOplGatewayAccount } from '../../adapters/integration/public/app-state.ts';
+import { listOplConnectionAuthorization as listConnectionAuthorization } from '../../adapters/integration/public/app-state.ts';
 import { buildStorageOwnerReadModel } from './app-state-settings-control-center-parts/storage-owner-read-model.ts';
 import {
   actionCatalogEntry,
@@ -134,6 +135,7 @@ function buildSettingsProjection(
   taskEntries: ReturnType<typeof buildTaskEntries>,
   issueQueue: Array<Record<string, unknown>>,
   connectionRegistry: ReturnType<typeof listOplConnections>,
+  connectionAuthorization: ReturnType<typeof listConnectionAuthorization>,
   storageOwnerReadModel: ReturnType<typeof buildStorageOwnerReadModel>,
 ) {
   const moduleSummary = asRecord(asRecord(input.modules).summary);
@@ -616,6 +618,7 @@ function buildAppSettingsReadModel(
   settingsIa: ReturnType<typeof buildSettingsIa>,
   consumerOnlyReadback: ReturnType<typeof buildAppAionConsumerOnlyReadback>,
   connectionRegistry: ReturnType<typeof listOplConnections>,
+  connectionAuthorization: ReturnType<typeof listConnectionAuthorization>,
   storageOwnerReadModel: ReturnType<typeof buildStorageOwnerReadModel>,
 ) {
   const codex = asRecord(asRecord(input.core).codex);
@@ -667,8 +670,13 @@ function buildAppSettingsReadModel(
         'connection_delete',
         'connection_test',
         'connection_set_default',
+        'connection_access_request_list',
+        'connection_access_request_deny',
+        'connection_grant_revoke',
+        'connection_relay_import',
       ],
       runtime_readiness_claimed: false,
+      authorization: connectionAuthorization,
     },
     page_structure: {
       layout_authority: settingsIa.layout_authority,
@@ -858,12 +866,14 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
   const capabilityTaskAwarenessRefs = buildCapabilityTaskAwarenessRefs(input);
   const appAionConsumerOnlyReadback = buildAppAionConsumerOnlyReadback();
   const connectionRegistry = listOplConnections();
+  const connectionAuthorization = listConnectionAuthorization();
   const storageOwnerReadModel = buildStorageOwnerReadModel(input.storageOwnerInventory);
   const settingsProjection = buildSettingsProjection(
     input,
     taskEntries,
     issueQueue,
     connectionRegistry,
+    connectionAuthorization,
     storageOwnerReadModel,
   );
   const configurationCatalog = buildConfigurationCatalog(input);
@@ -874,6 +884,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     settingsIa,
     appAionConsumerOnlyReadback,
     connectionRegistry,
+    connectionAuthorization,
     storageOwnerReadModel,
   );
 
@@ -906,6 +917,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     app_aion_consumer_only_readback: appAionConsumerOnlyReadback,
     capability_task_awareness_refs: capabilityTaskAwarenessRefs,
     connection_registry: connectionRegistry,
+    connection_authorization: connectionAuthorization,
     control_center_groups: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => ({
       ...group,
       state: groupState(group, input),

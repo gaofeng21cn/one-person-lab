@@ -56,6 +56,18 @@ export {
   testOplConnection,
   updateOplConnection,
 } from './connection-registry.ts';
+export {
+  createOplConnectionAuthorizationService,
+  OplConnectionProviderError,
+} from './connection-authorization.ts';
+export type {
+  OplConnectionAuthorizationService,
+  OplConnectionCapability,
+  OplConnectionCapabilityRisk,
+  OplConnectionDescriptorDiscovery,
+  OplConnectionProvider,
+  OplConnectionProviderErrorDisposition,
+} from './connection-authorization.ts';
 export type { CordisConnectDescriptorDiscoveryService } from './public/descriptor-discovery.ts';
 export { loadInstalledChannelProviders } from './public/channel-provider-entrypoints.ts';
 export {

@@ -3,6 +3,7 @@ import { readLocalCodexAccessState } from '../../../kernel/local-codex-defaults.
 
 const ENV_HANDLE = /^env:([A-Z_][A-Z0-9_]*)$/;
 const OPL_GATEWAY_ACCOUNT_HANDLE = 'credential-store:opl-gateway-account';
+const PROVIDER_HANDLE = /^provider:([a-z0-9][a-z0-9._-]*):([A-Za-z0-9._~!*'()-]|%[A-Fa-f0-9]{2})+$/;
 const FORBIDDEN_FIELDS = /(?:^|_)(?:api_key|token|secret|password)$/i;
 
 function normalizedFieldName(field: string) {
@@ -37,17 +38,21 @@ export function normalizeCredentialHandle(value: unknown) {
     throw usageError('credential_handle is required.', 'credential_handle_required');
   }
   const handle = value.trim();
-  if (handle === 'codex:selected_provider' || handle === OPL_GATEWAY_ACCOUNT_HANDLE || ENV_HANDLE.test(handle)) {
+  if (handle === 'codex:selected_provider' || handle === OPL_GATEWAY_ACCOUNT_HANDLE
+    || ENV_HANDLE.test(handle) || PROVIDER_HANDLE.test(handle)) {
     return handle;
   }
   throw usageError(
-    'credential_handle must use env:NAME, codex:selected_provider, or the OPL Gateway account store.',
+    'credential_handle must use env:NAME, codex:selected_provider, an owner store, or a provider-owned opaque reference.',
     'credential_handle_invalid',
-    { allowed_schemes: ['env:NAME', 'codex:selected_provider', OPL_GATEWAY_ACCOUNT_HANDLE] },
+    { allowed_schemes: ['env:NAME', 'codex:selected_provider', OPL_GATEWAY_ACCOUNT_HANDLE, 'provider:PROVIDER_ID:OPAQUE_REF'] },
   );
 }
 
 export function checkCredentialHandle(handle: string) {
+  if (PROVIDER_HANDLE.test(handle)) {
+    return { status: 'passed' as const, code: 'provider_owned_credential_reference' };
+  }
   if (handle === OPL_GATEWAY_ACCOUNT_HANDLE) {
     return { status: 'passed' as const, code: 'opl_gateway_account_store_present' };
   }

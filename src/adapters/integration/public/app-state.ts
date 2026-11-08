@@ -7,6 +7,12 @@ export {
   runOplAgentPackageStatus,
 } from '../agent-package-registry.ts';
 export { listOplConnections } from '../connection-registry.ts';
+export {
+  createDefaultConnectionAuthorizationService,
+  importRelayConnection,
+  listOplConnectionAuthorization,
+} from '../connection-composition.ts';
+export type { DefaultConnectionAuthorizationOptions } from '../connection-composition.ts';
 export { readOplGatewayAccount } from '../opl-gateway-account.ts';
 export { listExternalOwnerDelegatedUpdateActions } from '../external-dependency-currentness.ts';
 export { resolveDefaultFamilyWorkspaceRoot } from '../opl-skills.ts';
