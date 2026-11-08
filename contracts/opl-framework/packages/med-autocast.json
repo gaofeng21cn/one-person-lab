@@ -4,7 +4,7 @@
   "package_id": "med-autocast",
   "display_name": "Med Auto Cast",
   "publisher": "one-person-lab",
-  "version": "0.2.39",
+  "version": "0.2.40",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
@@ -25,8 +25,24 @@
     "required_capability_package_ids": [
       "mac-media-assets"
     ],
-    "plugin_payload_manifest_url": "payloads/med-autocast-0.2.39.json",
-    "carrier_source_commit": "301dc6cb362fc338ed41079675a9a73d3215f5dc"
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "opl",
+        "app",
+        "contribution",
+        "adapter",
+        "--stdin"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "plugin_payload_manifest_url": "payloads/med-autocast-0.2.40.json",
+    "carrier_source_commit": "8e0bb05612afd0f5faa760bc9c8b600fb2a41601"
   },
   "dependency_profiles": [],
   "capability_dependencies": [
@@ -89,6 +105,75 @@
       "presence": "required"
     }
   ],
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "med-autocast.workspace.status",
+        "view_type": "task_board",
+        "title_i18n": {
+          "zh-CN": "视频制作进度",
+          "en-US": "Video production progress"
+        },
+        "data_ref": "med-autocast.workspace.v1#status",
+        "command_ids": [
+          "med-autocast.review.note"
+        ],
+        "empty_state_i18n": {
+          "zh-CN": "选择制作工作区，读取已登记单集",
+          "en-US": "Select a workspace to inspect registered episodes"
+        }
+      },
+      {
+        "view_id": "med-autocast.workspace.media",
+        "view_type": "artifact_view",
+        "title_i18n": {
+          "zh-CN": "视频与镜头审看",
+          "en-US": "Video and shot review"
+        },
+        "data_ref": "med-autocast.workspace.v1#media",
+        "command_ids": [
+          "med-autocast.review.note"
+        ],
+        "empty_state_i18n": {
+          "zh-CN": "选择制作工作区，读取已登记单集",
+          "en-US": "Select a workspace to inspect registered episodes"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command_id": "med-autocast.review.note",
+        "label_i18n": {
+          "zh-CN": "记录审看意见",
+          "en-US": "Record review note"
+        },
+        "action_ref": "med-autocast.workspace.v1#review.note",
+        "confirmation_required": true
+      }
+    ],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "med-autocast.workspace.status",
+        "slot": "runtime.detail",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "work_item",
+        "sort_order": 520,
+        "view_id": "med-autocast.workspace.status"
+      },
+      {
+        "contribution_id": "med-autocast.workspace.media",
+        "slot": "runtime.detail",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "work_item",
+        "sort_order": 521,
+        "view_id": "med-autocast.workspace.media"
+      }
+    ]
+  },
   "publication_projection_order": 60,
   "publication_source": {
     "owner_package_manifest_ref": "contracts/opl_agent_package_manifest.json",

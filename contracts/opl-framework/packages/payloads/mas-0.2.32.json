@@ -1,0 +1,1619 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "mas",
+  "plugin_id": "med-autoscience",
+  "package_version": "0.2.32",
+  "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",
+  "source_commit": "88414e89694d8e48dfc29a950d82868e78cce6f4",
+  "source_root": "plugins/med-autoscience",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:e61e369316f76492a6600f57a3ad23317fc7fb8f9deb5231a8de9823da6f4300"
+  },
+  "files": [
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/plugin.json",
+      "sha256": "sha256:93e3ed09c817c65c8c579e595cbb295e7e5b53f918dc45c8f2bef5b82f8e7a37"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/.codex-plugin/plugin.json",
+      "sha256": "sha256:c145359bcd8475b28662e0ecf00ad269da31e9aec4da7e4bb57823d815d47e3e"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/opl-package.json",
+      "sha256": "sha256:6ede5b2f239f1cb17cdc0f323cc029a37791e1d9e0f8b9086b0653818efe58ba"
+    },
+    {
+      "path": "assets/icon.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/assets/icon.png",
+      "sha256": "sha256:59b93bed97259c95ce12f370d39ce8f2665682138755a5afff78a85fc86833da"
+    },
+    {
+      "path": "assets/icon.svg",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/assets/icon.svg",
+      "sha256": "sha256:d0ba689e3ce511fa219a8712acf04c0ca710803f134ea6d15f127547ee8ff293"
+    },
+    {
+      "path": "skills/med-autoscience/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/skills/med-autoscience/SKILL.md",
+      "sha256": "sha256:35f42a5f6ec9d8b77153fa44a644a5d57ea2202187e6ab1dc43fb20b8112904b"
+    },
+    {
+      "path": "skills/med-autoscience/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/skills/med-autoscience/agents/openai.yaml",
+      "sha256": "sha256:af73de29c4d05b76c09d2a500ce54b2e47d0334ac4ee79ed54d2f0fb8fc9108b"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/app-contribution-adapter.json",
+      "sha256": "sha256:296aecdddbbcc898ccae04ad613e185e197998ba80df7fc12c3ac3f50f2e550e"
+    },
+    {
+      "path": "bin/mas-app-contribution",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/bin/mas-app-contribution",
+      "sha256": "sha256:c2148e75df2f0ad711f6943bf9db244078f0d1d70371dae36ea4f687ef6cd0d4"
+    },
+    {
+      "path": ".python-version",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/.python-version",
+      "sha256": "sha256:aa0d6581054e6e4ff3f91839deca7a854ad37221b8784d060b42d0f847ff1a3b"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/LICENSE",
+      "sha256": "sha256:833ec30eb6223cb0ff2caab6a7c25ea305b0bb62a373f37c8c78193a0cc4d575"
+    },
+    {
+      "path": "MANIFEST.in",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/MANIFEST.in",
+      "sha256": "sha256:972f410780edf2e9bb844236b446c75a1ceef196c345face959cd65b99883882"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/README.md",
+      "sha256": "sha256:ce715ab173aa7985451ba41a2ed9f4ff4356aae9980dc4064fd2f557d3ae4546"
+    },
+    {
+      "path": "README.zh-CN.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/README.zh-CN.md",
+      "sha256": "sha256:7f131b5ed52b12dc10424970900acc27f24c47408cb7b746babe89c0ea3e01a2"
+    },
+    {
+      "path": "agent/knowledge/hypothesis_portfolio_evidence_pack.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/knowledge/hypothesis_portfolio_evidence_pack.md",
+      "sha256": "sha256:2615e16f6939b82b76c14c2d14d069f1cc49d70d4f3193a7caaec106301201a8"
+    },
+    {
+      "path": "agent/knowledge/medical_research_truth.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/knowledge/medical_research_truth.md",
+      "sha256": "sha256:0ed04babe5d612fa8be4c941befb2a59b1c5978c185cc924883059b78492f1bf"
+    },
+    {
+      "path": "agent/knowledge/publication_route_memory.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/knowledge/publication_route_memory.md",
+      "sha256": "sha256:1ca2cc6827a9d01fa0c5edf00d7d6ab062bc6607e1939d0277c47b4312cc13a8"
+    },
+    {
+      "path": "agent/knowledge/publication_strategy_library.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/knowledge/publication_strategy_library.md",
+      "sha256": "sha256:7f9b813567207691cd1b74afa1d25d907191450f4cebd6e593f9f4b0abf2ad6b"
+    },
+    {
+      "path": "agent/knowledge/research_trajectory_medical_narrative.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/knowledge/research_trajectory_medical_narrative.md",
+      "sha256": "sha256:390500560e8f585383dea24fc120a3707bd5cce7264616c8a14afea30ca8a388"
+    },
+    {
+      "path": "agent/knowledge/source_readiness_and_artifact_authority.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/knowledge/source_readiness_and_artifact_authority.md",
+      "sha256": "sha256:f2f3310c4aac1cf6beb8cf66b44da211b73951f0c9ea7e09626c1a9ce3c4900d"
+    },
+    {
+      "path": "agent/policies/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/policies/README.md",
+      "sha256": "sha256:c8ec716443a8734bed9b7ede87f4961aeeea34ba3d7d87b90d566df35e04885d"
+    },
+    {
+      "path": "agent/policies/medical-research-policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/policies/medical-research-policy.md",
+      "sha256": "sha256:a28976a850d142564f7a46e2373063f20b9e85c3df0fb71e66ee710f5533f057"
+    },
+    {
+      "path": "agent/primary_skill/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/primary_skill/SKILL.md",
+      "sha256": "sha256:35f42a5f6ec9d8b77153fa44a644a5d57ea2202187e6ab1dc43fb20b8112904b"
+    },
+    {
+      "path": "agent/principles/domain-specialization.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/principles/domain-specialization.md",
+      "sha256": "sha256:9b5bf291948b852699215127c2e37728bfe44308213f8224598e9fcd872a5319"
+    },
+    {
+      "path": "agent/principles/opl-standard-agent-principles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/principles/opl-standard-agent-principles.md",
+      "sha256": "sha256:e5097c0d791760b95bae115500b18a51dc875ad4b4ba50da2249242475b96926"
+    },
+    {
+      "path": "agent/prompts/baseline_and_evidence_setup.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/prompts/baseline_and_evidence_setup.md",
+      "sha256": "sha256:1bb0e5b4299d13d6a51db568fb12dc876d1dd600b82b36b348250e09233206a5"
+    },
+    {
+      "path": "agent/prompts/bounded_analysis_campaign.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/prompts/bounded_analysis_campaign.md",
+      "sha256": "sha256:b8c8911788af2404e80f748bfa1a8ad92757463f69698e5f24cc7b24a9407822"
+    },
+    {
+      "path": "agent/prompts/direction_and_route_selection.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/prompts/direction_and_route_selection.md",
+      "sha256": "sha256:2a12b0e240ed624adf0052f69028f5763c88036a2cd72421d2d974b1f2bd0386"
+    },
+    {
+      "path": "agent/prompts/finalize_and_publication_handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/prompts/finalize_and_publication_handoff.md",
+      "sha256": "sha256:a9a1bfbace696253de2bb7217ba1c99ef33c7d53ad70b01983d592b5fee47500"
+    },
+    {
+      "path": "agent/prompts/manuscript_authoring.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/prompts/manuscript_authoring.md",
+      "sha256": "sha256:55736e911d98f87945bc064528c19294513a8ebda2f421613950244b5dfe2b14"
+    },
+    {
+      "path": "agent/prompts/review_and_quality_gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/prompts/review_and_quality_gate.md",
+      "sha256": "sha256:58b28bf8d02b1a4a4433167329334ff09b19a49e53d1437eb06ea53a0ed779c7"
+    },
+    {
+      "path": "agent/quality_gates/ai_reviewer_auditor_gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/quality_gates/ai_reviewer_auditor_gate.md",
+      "sha256": "sha256:dde2eaaa282342613d0b39aa549bd02728d728746043cfb9eaf1b5bafc4b01e6"
+    },
+    {
+      "path": "agent/quality_gates/artifact_source_authority_gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/quality_gates/artifact_source_authority_gate.md",
+      "sha256": "sha256:6836f13fe5896780ddbc298d1d6bf9ee2ed25fab52af61aa98d2beb8f6008d67"
+    },
+    {
+      "path": "agent/quality_gates/stage_quality_cycle_roles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/quality_gates/stage_quality_cycle_roles.md",
+      "sha256": "sha256:417fa0e9d8575cae0b039c82c256d8afe444e7a5ef46b62d0444e8e11998123e"
+    },
+    {
+      "path": "agent/skills/medical_research_execution.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/skills/medical_research_execution.md",
+      "sha256": "sha256:649dc2c3b586accf507cdfcc2d44975371baeb56df5674c47c60ade7a0452554"
+    },
+    {
+      "path": "agent/skills/owner_receipt_and_route_control.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/skills/owner_receipt_and_route_control.md",
+      "sha256": "sha256:9bb9988812c00233aadb3455ada1ed1dc2c83e6c9765546b04bcaad33f4192d6"
+    },
+    {
+      "path": "agent/stages/baseline_and_evidence_setup.policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/stages/baseline_and_evidence_setup.policy.md",
+      "sha256": "sha256:b2a0251bcdefc07dea4d5d15f8c317a98df2e1266b49c406803b4f29152543a8"
+    },
+    {
+      "path": "agent/stages/bounded_analysis_campaign.policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/stages/bounded_analysis_campaign.policy.md",
+      "sha256": "sha256:70538abd2235519f8e8d0ef4c9a64cdb9becda198f867627c27df54b90c70007"
+    },
+    {
+      "path": "agent/stages/direction_and_route_selection.policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/stages/direction_and_route_selection.policy.md",
+      "sha256": "sha256:2cce012ff2ba6cc20af1f10afe2c67e90d182728937c8d629ac9598e9fc08e70"
+    },
+    {
+      "path": "agent/stages/finalize_and_publication_handoff.policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/stages/finalize_and_publication_handoff.policy.md",
+      "sha256": "sha256:5019422b44dca7e6c8954145c6ec53a89ec5239415230dbd552ff99a912a37c2"
+    },
+    {
+      "path": "agent/stages/manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/stages/manifest.json",
+      "sha256": "sha256:f4dc1263e3e9176b56af68a8e2c6d0b6a65bbf6e7782fe24bd2ce44814875b41"
+    },
+    {
+      "path": "agent/stages/manuscript_authoring.policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/stages/manuscript_authoring.policy.md",
+      "sha256": "sha256:ecae7879f5e7f572f5e81de6ad327c8cf62e6f0a37df13808101797df88451fa"
+    },
+    {
+      "path": "agent/stages/review_and_quality_gate.policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/stages/review_and_quality_gate.policy.md",
+      "sha256": "sha256:f6eae052705d43a64cef94c7bc34d44f804b4a7dc621856462cde88afaac8abf"
+    },
+    {
+      "path": "agent/stages/stage_native_semantic_pack.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/stages/stage_native_semantic_pack.yaml",
+      "sha256": "sha256:6a7f38ee24756b9183cdac041c775e113b33c616c2accecfc05e4de7b617dc4f"
+    },
+    {
+      "path": "agent/stages/stage_route_contract.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/stages/stage_route_contract.yaml",
+      "sha256": "sha256:307b9c8fa07d19e691962f590684a8c25324d17eb047628dabd16dabfa149230"
+    },
+    {
+      "path": "agent/tools/domain_affordances.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/agent/tools/domain_affordances.md",
+      "sha256": "sha256:2ccc03afe4c0ebbee2ea6faa24eb54c8066a40275be7ca3aba524fa367b0dd37"
+    },
+    {
+      "path": "assets/branding/medautoscience-logo.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/assets/branding/medautoscience-logo.png",
+      "sha256": "sha256:0f67408da22ee2b7b2eb6719ec000ae37288a753e4eb9267144a3f98ad820d78"
+    },
+    {
+      "path": "assets/branding/medautoscience-overview-v3.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/assets/branding/medautoscience-overview-v3.png",
+      "sha256": "sha256:c227c37761bb4fd448ad9dc238d04729265f570cc735ee7d863912df06c662ef"
+    },
+    {
+      "path": "bootstrap/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/bootstrap/README.md",
+      "sha256": "sha256:cde3398898ad96f6cd5575f39e9802daa6d57c1946a4e99226ddb043cfa7c9e2"
+    },
+    {
+      "path": "contracts/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/README.md",
+      "sha256": "sha256:68efcb733806cf0f9097d5656accc9e28c9a6f9dc0020827c19851cce4057a0e"
+    },
+    {
+      "path": "contracts/academicforge_claude_science_learning_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/academicforge_claude_science_learning_adoption.json",
+      "sha256": "sha256:b8101174a08f73cf91650575435a4c4a7785b57037b0ef35d484d876729a29f9"
+    },
+    {
+      "path": "contracts/action_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/action_catalog.json",
+      "sha256": "sha256:7d06a2f79961e1e8c00bc2ad57fa10414488d9b1c59a75478c7e4b55c50f635f"
+    },
+    {
+      "path": "contracts/agent_lab_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/agent_lab_handoff.json",
+      "sha256": "sha256:8d0755f15a6ceaf455c8395ce7fb70c9018cb27bb04b9482f5a40afe28f98e18"
+    },
+    {
+      "path": "contracts/agent_lab_self_evolution_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/agent_lab_self_evolution_policy.json",
+      "sha256": "sha256:8dec51fe14d10bc6b793274746d434691045064453e5ef1d329435887de1fdbd"
+    },
+    {
+      "path": "contracts/artifact_iteration_efficiency_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/artifact_iteration_efficiency_policy.json",
+      "sha256": "sha256:be95d506976057271072a6f523fa07b6137ed727ff025a2f3d6e5794113be598"
+    },
+    {
+      "path": "contracts/artifact_locator_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/artifact_locator_contract.json",
+      "sha256": "sha256:304b00bef29a39a2d4c2362f0128e4295ee0363f1de08c7755b0934555b60684"
+    },
+    {
+      "path": "contracts/capability_map.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/capability_map.json",
+      "sha256": "sha256:4edd2fcdffc73b815763921526a811cd3e43ade0f05221ba1ec6325f0b9c3f79"
+    },
+    {
+      "path": "contracts/data_asset_operating_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/data_asset_operating_contract.json",
+      "sha256": "sha256:e26b5b56a500f7ebdfe1b4e4f4cb0e1d95ad9e802f346c3f6b9deec5cf202474"
+    },
+    {
+      "path": "contracts/domain_descriptor.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/domain_descriptor.json",
+      "sha256": "sha256:1d3ca485790365f196b06f21e145088af53d27400d399063d569df74ec53dddb"
+    },
+    {
+      "path": "contracts/domain_handler_registry.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/domain_handler_registry.json",
+      "sha256": "sha256:807926c47c295f3e135d6a1d1785e0ad80438ec093e92bfa6f182aa6e285514d"
+    },
+    {
+      "path": "contracts/domain_projection_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/domain_projection_profile.json",
+      "sha256": "sha256:590268165c73716bc061c7fd8049538991829773c2d6d0a3f8ce406ec37481d6"
+    },
+    {
+      "path": "contracts/domain_route_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/domain_route_profile.json",
+      "sha256": "sha256:779f9db13b18b974b8e487e82c06505fcf9b887f70272a2e5692e083cfcf0a28"
+    },
+    {
+      "path": "contracts/durable_knowledge_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/durable_knowledge_catalog.json",
+      "sha256": "sha256:5b1a6a0da7fbb2019907ccdc26fa9047ae3ec6f8aa23d38816a3a36f81c89485"
+    },
+    {
+      "path": "contracts/evidence-gap-consumption-abi.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/evidence-gap-consumption-abi.json",
+      "sha256": "sha256:da9a1ec1172cfad683bceae605bfd965ac083e41f25b1d4aa4c065d634cf5197"
+    },
+    {
+      "path": "contracts/evidence-gap-decision-policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/evidence-gap-decision-policy.json",
+      "sha256": "sha256:5fb111833bac9c10d1671d44adc6d80d9bcc566b6f3c588ba8e2c04f86528456"
+    },
+    {
+      "path": "contracts/foundry_agent_series.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/foundry_agent_series.json",
+      "sha256": "sha256:abf84c136b5e54ac321c0e319d12b15fb7e95dda0e05a71446411028507fbbfb"
+    },
+    {
+      "path": "contracts/foundry_owner_gate_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/foundry_owner_gate_policy.json",
+      "sha256": "sha256:186a07990312c5cb41d102a782a0c877f431bd94247c4b4e92b339e788b24c4d"
+    },
+    {
+      "path": "contracts/functional_privatization_audit.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/functional_privatization_audit.json",
+      "sha256": "sha256:dcfcd32d0d120c6c053a225c82de180554d720b90e722cc521328c3df8a28087"
+    },
+    {
+      "path": "contracts/generated_surface_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/generated_surface_handoff.json",
+      "sha256": "sha256:76bcae615f14f5eaf0db99464eaf92f8f167b29de140b28609efc9f2780c5c79"
+    },
+    {
+      "path": "contracts/kdense_byok_external_intake.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/kdense_byok_external_intake.json",
+      "sha256": "sha256:d1d5adc740800717244fc23f1dff8752506b8574f5cbf593742eb286736e44c3"
+    },
+    {
+      "path": "contracts/manuscript_first_draft_quality_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/manuscript_first_draft_quality_policy.json",
+      "sha256": "sha256:7750eaa4631c228d8247bb342bc7965e0399ac9cef7ce38bfebf3f19652b9a97"
+    },
+    {
+      "path": "contracts/mas-paper-study-stage-pack.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/mas-paper-study-stage-pack.json",
+      "sha256": "sha256:2b7c098ba5494af2a4788d35130fa8a6a4d876c6bb7e467bad04102823705c22"
+    },
+    {
+      "path": "contracts/mas_validator_release_set_receipt.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/mas_validator_release_set_receipt.json",
+      "sha256": "sha256:00c4845e1b50ef33002672654a34dacdd00ee3d1ed87d45990af6e31143ff9ce"
+    },
+    {
+      "path": "contracts/opl-native-profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/opl-native-profile.json",
+      "sha256": "sha256:5780dbd9ed6f454f80faddca4abe0b1eabe937bbd20a078550538b4427fa66f1"
+    },
+    {
+      "path": "contracts/opl_agent_package_manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/opl_agent_package_manifest.json",
+      "sha256": "sha256:4dafd8086be2e7c68bbb6a1e1e60e3281fa811e2b996a27d28af65426cfb840c"
+    },
+    {
+      "path": "contracts/owner_receipt_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/owner_receipt_contract.json",
+      "sha256": "sha256:285c78f78940f9ee54e19861d0421becac5b4e268755fb778a960eab980a5cf9"
+    },
+    {
+      "path": "contracts/pack_compiler_input.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/pack_compiler_input.json",
+      "sha256": "sha256:3be92264549900e20af938b3321d17610d85e1515894646c8c95a3f63a5bbc34"
+    },
+    {
+      "path": "contracts/private_functional_surface_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/private_functional_surface_policy.json",
+      "sha256": "sha256:19cbd42228ea10661edb28bbe1fa57cf1755e8e967735ea5be36a645464efb49"
+    },
+    {
+      "path": "contracts/production_acceptance/mas-production-acceptance.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/production_acceptance/mas-production-acceptance.json",
+      "sha256": "sha256:84b0f2b790fd5eb740ebca5b1e9943982f31d84d1845af777d4d878b97005c45"
+    },
+    {
+      "path": "contracts/publication_layout_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/publication_layout_policy.json",
+      "sha256": "sha256:080617de78ee908c79a9e5cce4aba0cd058445afa9aaaaeb554debe48aa63324"
+    },
+    {
+      "path": "contracts/qualification_work_item_provisioning_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/qualification_work_item_provisioning_contract.json",
+      "sha256": "sha256:880f2dd2336cee6fb756d0e86d6643a1033ac9877662c92436c7ec98b5b65d54"
+    },
+    {
+      "path": "contracts/research-integrity-layer.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/research-integrity-layer.json",
+      "sha256": "sha256:47aa7119c92b167ab18bedd1b1efa4ed39b96e3d23dc83ddc9947e5d74745ef8"
+    },
+    {
+      "path": "contracts/research_trajectory_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/research_trajectory_contract.json",
+      "sha256": "sha256:aac5decde88c38c812c8b3f7e5e076a67b7e05ddf8665e5d861e1beef57f1be0"
+    },
+    {
+      "path": "contracts/runtime/mas-live-runtime-evidence-rollup.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/runtime/mas-live-runtime-evidence-rollup.json",
+      "sha256": "sha256:564e91e3848d5a97509bb942b0b2fcd4004b49ba4b172ad6dda09edcb9d46f40"
+    },
+    {
+      "path": "contracts/runtime_detail_contribution_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/runtime_detail_contribution_contract.json",
+      "sha256": "sha256:e2cb7a28e72daa497c9b9178bf77495b0271961a43eb5292b6746c6bfdbe32a5"
+    },
+    {
+      "path": "contracts/runtime_environment_requirements.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/runtime_environment_requirements.json",
+      "sha256": "sha256:d08fad4071246e40cfa0365fe5a312a98f7c1f227eda23b8166637d0b3f9565a"
+    },
+    {
+      "path": "contracts/schemas/evidence-gap-decision.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/evidence-gap-decision.schema.json",
+      "sha256": "sha256:5bb4e80c6c4e5fd9bd7825d2f99471490874ab5da422777b805866c3eb64ecb8"
+    },
+    {
+      "path": "contracts/schemas/v1/data-asset-operating-contract.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v1/data-asset-operating-contract.schema.json",
+      "sha256": "sha256:90c03058f7964f6cea4702113cc2ab2d6a8a0b67f422cfd2f5dff493799234f0"
+    },
+    {
+      "path": "contracts/schemas/v1/product-entry-manifest.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v1/product-entry-manifest.schema.json",
+      "sha256": "sha256:fe5c7fd67d6b69d16e509392f0577ed9e66ef72e3358ee4a759ab28a44b7378f"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-build-dependency-currentness-authority.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-build-dependency-currentness-authority.input.schema.json",
+      "sha256": "sha256:12014829e44c2bee06b6054d08a66b21798a4384747ebc5bfc75eabb6560cda9"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-build-dependency-currentness-authority.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-build-dependency-currentness-authority.output.schema.json",
+      "sha256": "sha256:67d22722d80d14fa113555695e2a25bc8dc2e6831a429d870ee6c0c19dad2ec6"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-candidate-admission-authority.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-candidate-admission-authority.input.schema.json",
+      "sha256": "sha256:51e5d4cffa340ea1c8f31ac8e377a8023f4a55236202b6a6598b41fd6dcab19c"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-candidate-admission-authority.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-candidate-admission-authority.output.schema.json",
+      "sha256": "sha256:df02e8ff764f743123e18af4630d4971b33d62ac12e98229057984b6582d8fc6"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-evidence-generation-manifest.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-evidence-generation-manifest.schema.json",
+      "sha256": "sha256:08a8a1c2a6d2313d16dad9c5c2e3384d55c49a93bde15715c521bb816a08cef4"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-medical-narrative.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-medical-narrative.schema.json",
+      "sha256": "sha256:4c5155cfcee2650523a00d11ba24baefa56446f8f3c0a442e1278eb9cc8e45b4"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-paper-mission-authority.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-paper-mission-authority.input.schema.json",
+      "sha256": "sha256:bd8df2030104d2f233d228b97c5d4bae92f94d12bbebdd8d81c17032643b250a"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-paper-mission-authority.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-paper-mission-authority.output.schema.json",
+      "sha256": "sha256:5b68e15b658a4c19684984879a90fa651c4dece3836c6144f586982c0d9b0e10"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-qualification-work-item-provisioning-authority.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-qualification-work-item-provisioning-authority.input.schema.json",
+      "sha256": "sha256:ad2c0918474113a91ef32523e8586e8af97c1565ea936856ea4aa8217f395a7b"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-qualification-work-item-provisioning-authority.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-qualification-work-item-provisioning-authority.output.schema.json",
+      "sha256": "sha256:6cd081d513f51f7350468229ebe2a5647593da24519b824ca6f1964ae8a9bd87"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-research-trajectory-snapshot-v2.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-research-trajectory-snapshot-v2.schema.json",
+      "sha256": "sha256:9f6126af1ff34d9b75c82078b8bbbd3821414e0bee0fa333d1dc90355cc12933"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-review-input-snapshot-authority-v2.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-review-input-snapshot-authority-v2.schema.json",
+      "sha256": "sha256:79b9d574605064a3d1b42cdbd1eb32ca7e892bb90731b557c5c77e8f85f986b4"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-stage-action.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-stage-action.input.schema.json",
+      "sha256": "sha256:677287c53bfc4ceeaac6de54001cb81d0d33511ec00fdb48fd2e41d04003fc55"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-stage-action.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-stage-action.output.schema.json",
+      "sha256": "sha256:b25433b61a67c2b32091a08643e2c2ac6132776705836a8c9b380f94ea117802"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-study-initialization-authority.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-study-initialization-authority.input.schema.json",
+      "sha256": "sha256:1c65d8eafa7bf36efd114ee17a3e35c219343a10173ea5d35960d24b53d230a3"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-study-initialization-authority.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-study-initialization-authority.output.schema.json",
+      "sha256": "sha256:2a98e12f6a5454b23c36313fa9d0f5582d7f408f84cea8053d0ecd7003a897c7"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-study-lifecycle-reactivation-authority.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-study-lifecycle-reactivation-authority.input.schema.json",
+      "sha256": "sha256:1651b7c580b95287e891a90991ba8e4cb7484fd37b5d69e0eccf8818f770056b"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-study-lifecycle-reactivation-authority.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-study-lifecycle-reactivation-authority.output.schema.json",
+      "sha256": "sha256:f6852a4bee289f2d62af08c355df0690a2de367724501d3e902aeda00ade3258"
+    },
+    {
+      "path": "contracts/schemas/v2/mas-workspace-index.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/schemas/v2/mas-workspace-index.schema.json",
+      "sha256": "sha256:4efc8c9a8cb005b2065b3841c9916d887f652c6474a56e5d4660f66cdd61c828"
+    },
+    {
+      "path": "contracts/source_closure_audit.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/source_closure_audit.json",
+      "sha256": "sha256:d7cf3ed86b65a5f6384bd0049298e3bb717f9152ff9f31bddfa817dbf890d119"
+    },
+    {
+      "path": "contracts/stage_artifact_kernel_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/stage_artifact_kernel_adoption.json",
+      "sha256": "sha256:cbd0e8824e68bf8fe0761cc2fa59e9377a1560cf6b16fccec15b2681b59e3851"
+    },
+    {
+      "path": "contracts/stage_operating_principles.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/stage_operating_principles.json",
+      "sha256": "sha256:5ceeda9f2bf60bc2a56c52847b77121aab3a93292a1721be628b57fe8f9e3c6e"
+    },
+    {
+      "path": "contracts/stage_quality_cycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/stage_quality_cycle_policy.json",
+      "sha256": "sha256:57f07b5d13f9972690bdefa73b5e2e1e0e1050b4039310aa2671251041630b1b"
+    },
+    {
+      "path": "contracts/stage_run_canary_evidence.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/stage_run_canary_evidence.json",
+      "sha256": "sha256:500838265c4ffb0ac5999db4cfcacd86e2b1003057a04bb59f42099419f80687"
+    },
+    {
+      "path": "contracts/stage_run_kernel_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/stage_run_kernel_profile.json",
+      "sha256": "sha256:67fe8a9cccfa70bf7e817fc1c8d455fa132bca7abe311e10943112e940542f7f"
+    },
+    {
+      "path": "contracts/standard-agent-principles-adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/standard-agent-principles-adoption.json",
+      "sha256": "sha256:1c9790e9b0d3e8f5dd18ed6888cf867fc3a52205cfac19771a5b54b0d652782c"
+    },
+    {
+      "path": "contracts/standard_agent_conformance_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/standard_agent_conformance_profile.json",
+      "sha256": "sha256:30754a5ec36f856733e8b24d476bff8fc896e379548fce09f3ee51b16a442257"
+    },
+    {
+      "path": "contracts/state_index_kernel_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/state_index_kernel_adoption.json",
+      "sha256": "sha256:df632f64a63a8ad7674b0caca1f45684feab45f5c6819755fc10b53751986c97"
+    },
+    {
+      "path": "contracts/study_initialization_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/study_initialization_contract.json",
+      "sha256": "sha256:447ee251739365d139d5f2ea12e6b49755c486c8889eb670fd9d9ccac214bb3f"
+    },
+    {
+      "path": "contracts/study_lifecycle_reactivation_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/study_lifecycle_reactivation_contract.json",
+      "sha256": "sha256:44e242e9f4cf61a3df21df3e84356984334f197408d76369265816bf0014024d"
+    },
+    {
+      "path": "contracts/submission-resource-requirements.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/submission-resource-requirements.json",
+      "sha256": "sha256:079fe4b10d99a08e66c42702aa612b1cb20050a0105ce046e8e2cef9296cc68d"
+    },
+    {
+      "path": "contracts/whitepaper_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/whitepaper_profile.json",
+      "sha256": "sha256:f76cb8e9861dafaf622f4c0183c40210743662289230a0dc4a39833fb901a40d"
+    },
+    {
+      "path": "contracts/workspace_lifecycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/contracts/workspace_lifecycle_policy.json",
+      "sha256": "sha256:443d566812227cf91274d2b9f2344b14ccb4dcb792a4f4cc3968da4e302a9c15"
+    },
+    {
+      "path": "docs/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/README.md",
+      "sha256": "sha256:9eeca36264a5cc94c3c0e1976e5d004ed750865e0bbaadfdaab19f60cae0566d"
+    },
+    {
+      "path": "docs/active/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/active/README.md",
+      "sha256": "sha256:27645873628a9c8d2a780019ff2ca7a28d65e0185ad3166d5ba84ae437ad65d2"
+    },
+    {
+      "path": "docs/active/mas-ideal-state-gap-plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/active/mas-ideal-state-gap-plan.md",
+      "sha256": "sha256:9bbdbb515d68fc712cfe1cefb5c54d0844cd64bb0fe10a184f718836313d9168"
+    },
+    {
+      "path": "docs/architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/architecture.md",
+      "sha256": "sha256:d99ebccc7a555931fc6b98c2e35980f387af9a7e3da67e15568ea5ad6e8b4239"
+    },
+    {
+      "path": "docs/decisions.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/decisions.md",
+      "sha256": "sha256:c933edf2f8f57438a568f3d0fa7391d84a2a50515bcba48819260beb73303836"
+    },
+    {
+      "path": "docs/delivery/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/delivery/README.md",
+      "sha256": "sha256:f815430098073958439360fe211f9835b39c0ee17590d5584211919699a22f62"
+    },
+    {
+      "path": "docs/delivery/medical-display/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/delivery/medical-display/README.md",
+      "sha256": "sha256:4db83b4791150ed9547b805fb01dbf87cd54ee1e7ecef85794b689cd08f4a4cc"
+    },
+    {
+      "path": "docs/delivery/medical-display/catalogs/medical_figure_route_cookbook.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/delivery/medical-display/catalogs/medical_figure_route_cookbook.md",
+      "sha256": "sha256:b2d82433583a41db83f829a520cac2e614fd73eae6cff182d8576d1021659d70"
+    },
+    {
+      "path": "docs/delivery/medical-display/contracts/display_dependency_environment_os_target.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/delivery/medical-display/contracts/display_dependency_environment_os_target.md",
+      "sha256": "sha256:1211ec014a4a73f28ae199fb7f2a695110c9cd17833abc224587f41bc87de61c"
+    },
+    {
+      "path": "docs/delivery/medical-display/contracts/medical_display_audit_guide.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/delivery/medical-display/contracts/medical_display_audit_guide.md",
+      "sha256": "sha256:08dce1a631c956c6af162949973a7bdea79a82bafcef98a90156becc433d5f1d"
+    },
+    {
+      "path": "docs/delivery/medical-display/contracts/medical_display_visual_audit_protocol.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/delivery/medical-display/contracts/medical_display_visual_audit_protocol.md",
+      "sha256": "sha256:cbe01bfa643cfe60b3d2f4f0f76e022280020174931409e4ca03aed485f2f187"
+    },
+    {
+      "path": "docs/delivery/medical-display/portfolio/medical_display_family_roadmap.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/delivery/medical-display/portfolio/medical_display_family_roadmap.md",
+      "sha256": "sha256:187b4b43d65fa992d0b68bcf96b7a99e71c412b495018333cc167ca411bd45d6"
+    },
+    {
+      "path": "docs/docs_portfolio_consolidation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/docs_portfolio_consolidation.md",
+      "sha256": "sha256:7a2c35dbcb938cae8a77736f94d59058166d057961d35647d5f71ae3d8692aec"
+    },
+    {
+      "path": "docs/invariants.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/invariants.md",
+      "sha256": "sha256:6811dd3b8938389e5acf9c7e7d282733cce750ea41b8c7f364c66e293cd29798"
+    },
+    {
+      "path": "docs/policies/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/README.md",
+      "sha256": "sha256:48818f5525da7d5e78c73338467c8bdd6ce8495f51088d5d785f842f2bb1a55b"
+    },
+    {
+      "path": "docs/policies/domain_memory_markdown_first_policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/domain_memory_markdown_first_policy.md",
+      "sha256": "sha256:98f8fdb20622be806f266eca1f5d3532a0f9a7ca68e67fd504861bdca4363cd1"
+    },
+    {
+      "path": "docs/policies/quality/ai_first_quality_boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/quality/ai_first_quality_boundary.md",
+      "sha256": "sha256:78b13d6c32579d087a5008c68b569130341f39b2973cae957ba1baa20b9c6710"
+    },
+    {
+      "path": "docs/policies/quality/ai_reviewer_calibration_corpus.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/quality/ai_reviewer_calibration_corpus.md",
+      "sha256": "sha256:f77c8797adfaa1429334c96e6ba93179f7de3118b25c19d68210f9c093677bb0"
+    },
+    {
+      "path": "docs/policies/quality/evidence_review_contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/quality/evidence_review_contract.md",
+      "sha256": "sha256:38feb92063ae5f8c0edefcff353cac78c0199afe14280c005ade0437149e7cfb"
+    },
+    {
+      "path": "docs/policies/quality/medical_manuscript_first_draft_quality.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/quality/medical_manuscript_first_draft_quality.md",
+      "sha256": "sha256:f1efc448a536999102b7ce79357477fe67b054775e1050f1b268f1e633d32543"
+    },
+    {
+      "path": "docs/policies/quality/paper_autonomy_acceptance.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/quality/paper_autonomy_acceptance.md",
+      "sha256": "sha256:0e90981ca2bcf82da010ee300b4b601ddca460d8df1a81e6648bad77200d5a6c"
+    },
+    {
+      "path": "docs/policies/quality/publication_gate_policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/quality/publication_gate_policy.md",
+      "sha256": "sha256:752069f8b57cb7fcfc72ddfa9173233d8545be9db65cd2d976de7aeabc277947"
+    },
+    {
+      "path": "docs/policies/repo-ops/mainline_integration_and_cleanup.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/repo-ops/mainline_integration_and_cleanup.md",
+      "sha256": "sha256:90a025132e08d4e8456928764ed429a3841795a1066c3f609b50a22d24dd908f"
+    },
+    {
+      "path": "docs/policies/repo-ops/merge_and_cutover_gates.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/repo-ops/merge_and_cutover_gates.md",
+      "sha256": "sha256:9dd1c6e4f06ccb286fe2840bec06737104b30f2ab4308cff07bf13b2879b3353"
+    },
+    {
+      "path": "docs/policies/repo-ops/repository_ci_preflight.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/repo-ops/repository_ci_preflight.md",
+      "sha256": "sha256:1135f36d985198b2717f97d2c4235a74cd86f630ec39160fbe5cabf66006c98e"
+    },
+    {
+      "path": "docs/policies/runtime-governance/external_runtime_dependency_gate.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/runtime-governance/external_runtime_dependency_gate.md",
+      "sha256": "sha256:a8b0e5a02b168dda63b54c9d4f4bab8eaee8f0e3e21a08f3b5eb8b5fc5df11dd"
+    },
+    {
+      "path": "docs/policies/runtime-governance/manual_runtime_stabilization_checklist.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/runtime-governance/manual_runtime_stabilization_checklist.md",
+      "sha256": "sha256:c9e223a006f47d91fe3898fe95d8026153afb21bd09ca4d52f93bac381347cab"
+    },
+    {
+      "path": "docs/policies/runtime-governance/mas_mds_owner_boundary_contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/runtime-governance/mas_mds_owner_boundary_contract.md",
+      "sha256": "sha256:074a9660634047b96e924d29f1619abd0edb53a8aef89a8a64676f2816ce667f"
+    },
+    {
+      "path": "docs/policies/runtime-governance/platform_operating_model.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/runtime-governance/platform_operating_model.md",
+      "sha256": "sha256:83746eea5b6d014e5785b2678bc81e96cb4b781feede46439641d24c9eadaf79"
+    },
+    {
+      "path": "docs/policies/study-workflow/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/study-workflow/README.md",
+      "sha256": "sha256:753a5c9cdf0096dbaa36af84638128de683a6fe2f532805ab011d6cad79fa04e"
+    },
+    {
+      "path": "docs/policies/study-workflow/bounded_analysis_frontier_policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/study-workflow/bounded_analysis_frontier_policy.md",
+      "sha256": "sha256:0369a0691659943ef3b3b178a1687cce5f0830e308947dcd96db8be5ac823a50"
+    },
+    {
+      "path": "docs/policies/study-workflow/data_asset_management.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/study-workflow/data_asset_management.md",
+      "sha256": "sha256:8f878b95bdddd5d3a3f9071dbefb1f3484057964804b95517d463aea4e3d4f24"
+    },
+    {
+      "path": "docs/policies/study-workflow/publication_route_memory_policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/study-workflow/publication_route_memory_policy.md",
+      "sha256": "sha256:513d950f319ca556c0643d4a07f1e4032d1c8b20c2309172d9a86172113dcf1f"
+    },
+    {
+      "path": "docs/policies/study-workflow/stage_led_research_autonomy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/study-workflow/stage_led_research_autonomy.md",
+      "sha256": "sha256:969c86676532849bca5cbaf7bf0459455d787e906f1212a3b2c6e78e0d2a38c7"
+    },
+    {
+      "path": "docs/policies/study-workflow/study_archetypes.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/study-workflow/study_archetypes.md",
+      "sha256": "sha256:5878b6a3a7fcb21c55361e1ee08b94537f61cf2c89fbd33ce1daf19aaf6882e4"
+    },
+    {
+      "path": "docs/policies/study-workflow/submission_revision_operating_contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/study-workflow/submission_revision_operating_contract.md",
+      "sha256": "sha256:9b7398cfcec8d3e9ac72270dfe063081ea3e8ccc92f15b03655258b7a32ad8c1"
+    },
+    {
+      "path": "docs/policies/study-workflow/workspace_autoscience_rules.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/policies/study-workflow/workspace_autoscience_rules.md",
+      "sha256": "sha256:f2c7059b77eab7ccd1d1e9922ab5357c865532986468978a5e5f490919d4c132"
+    },
+    {
+      "path": "docs/product/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/product/README.md",
+      "sha256": "sha256:42d6b322137125ddf560b2263576e00238a98aa4e5a4cd3e395ad550fc814689"
+    },
+    {
+      "path": "docs/project.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/project.md",
+      "sha256": "sha256:9b795e73835ca69d5e0b34e4ef3b6a12b99219a4d0120cf57b6e3505be3fe644"
+    },
+    {
+      "path": "docs/references/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/README.md",
+      "sha256": "sha256:c83985eafe9e1b2a83e2aa83183da2c5d2c9027a832c31eb4a8a23a6d0c99fc7"
+    },
+    {
+      "path": "docs/references/integration/codex_plugin.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/integration/codex_plugin.md",
+      "sha256": "sha256:6873d1d867e5f973422476fc7948ff79238557dc39edab78938f909ca6f403a2"
+    },
+    {
+      "path": "docs/references/integration/lightweight_product_entry_and_opl_handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/integration/lightweight_product_entry_and_opl_handoff.md",
+      "sha256": "sha256:33919ff44ba4bd1375de7453b5290edca2759bb5b6b666427e05649765083931"
+    },
+    {
+      "path": "docs/references/integration/mas-runtime-detail-contribution.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/integration/mas-runtime-detail-contribution.md",
+      "sha256": "sha256:54826cf0e819748b3b5545e6654fd56f630a6e7642eccf44ae56e0bcac574f29"
+    },
+    {
+      "path": "docs/references/integration/opl-family-contract-adoption.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/integration/opl-family-contract-adoption.md",
+      "sha256": "sha256:875fabc3337d7da3ffdd474f559c88575fd4aca40d20d903e3cd4944af6cfe44"
+    },
+    {
+      "path": "docs/references/mainline/ark_learning_intake.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/mainline/ark_learning_intake.md",
+      "sha256": "sha256:e2874844aa427b426c7eaa74d0036a2668013134b2fdfea26110fa49ede519dc"
+    },
+    {
+      "path": "docs/references/mainline/ars_learning_intake.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/mainline/ars_learning_intake.md",
+      "sha256": "sha256:f32c22a40ef22bb4d873c6d1298c84d827bb9e52e4159245efda102617f0a026"
+    },
+    {
+      "path": "docs/references/mainline/autosci_learning_intake.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/mainline/autosci_learning_intake.md",
+      "sha256": "sha256:b030306b7d93ae5b0341e173a60cf051708ad4bfee9c161d3a1429175aadf725"
+    },
+    {
+      "path": "docs/references/mainline/co_scientist_hypothesis_portfolio_intake.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/mainline/co_scientist_hypothesis_portfolio_intake.md",
+      "sha256": "sha256:7d042497a93f1540ba9ac037d0bd4b0ba6b975a536346f7c53e027f9c5c58214"
+    },
+    {
+      "path": "docs/references/mainline/life_science_research_learning_intake.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/mainline/life_science_research_learning_intake.md",
+      "sha256": "sha256:9a7bc225114b0bb932e9c98731525cd41fbef27f64bb4678aaeedfe199568ec8"
+    },
+    {
+      "path": "docs/references/mainline/nature_skills_learning_intake.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/mainline/nature_skills_learning_intake.md",
+      "sha256": "sha256:86da2247091175a7033442ea0efec35de31d64c9ec6372178f29c1f2f11177c3"
+    },
+    {
+      "path": "docs/references/mainline/scipilot_figure_skill_learning_intake.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/mainline/scipilot_figure_skill_learning_intake.md",
+      "sha256": "sha256:0700b6e41bd0d65f30a9f8e5d3bc32d7f05ca986b7db360775e14181a1c6df55"
+    },
+    {
+      "path": "docs/references/med-deepscientist/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/med-deepscientist/README.md",
+      "sha256": "sha256:eaaf56aaef820e74c540b740f0efbbd093097b3b56efe833e23b6d718e718b03"
+    },
+    {
+      "path": "docs/references/med-deepscientist/deepscientist_continuous_learning_policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/med-deepscientist/deepscientist_continuous_learning_policy.md",
+      "sha256": "sha256:2f47cddb96962180476198849c145397cfe7ad5615c97a6f92a6fd63b1b1b490"
+    },
+    {
+      "path": "docs/references/med-deepscientist/med_deepscientist_upstream_source_provenance.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/med-deepscientist/med_deepscientist_upstream_source_provenance.md",
+      "sha256": "sha256:94aef51315760457a364e35294d0dfe34f29020c8699c5b20e27b4a9bf046cf3"
+    },
+    {
+      "path": "docs/references/med-deepscientist/source_provenance.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/med-deepscientist/source_provenance.json",
+      "sha256": "sha256:2d9195197d7ea7716148929563760b8012a1f973beea41d247edd14859ade078"
+    },
+    {
+      "path": "docs/references/positioning/mas_ideal_state.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/positioning/mas_ideal_state.md",
+      "sha256": "sha256:f6da76b00f606d10ee6b44eab8159b530c9cf18abe8a75a848cfd592b45cae25"
+    },
+    {
+      "path": "docs/references/primary-skill-plugin-carrier-boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/primary-skill-plugin-carrier-boundary.md",
+      "sha256": "sha256:37a6500da7f024325a6f5137ad29f9f146f12a6a363289422e7cdbfc60d5b5c5"
+    },
+    {
+      "path": "docs/references/workspace/disease_workspace_quickstart.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/workspace/disease_workspace_quickstart.md",
+      "sha256": "sha256:0a265ba928469f640f8750234d75c3ef21f6e7b3b28fc4d8dc473b11bdb3ef6d"
+    },
+    {
+      "path": "docs/references/workspace/workspace_architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/references/workspace/workspace_architecture.md",
+      "sha256": "sha256:d8022f94ea551ce474a764d716b14770424bd28e8812b52d69da5dbb2e3284c7"
+    },
+    {
+      "path": "docs/runtime/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/README.md",
+      "sha256": "sha256:4ba1b76d381c662fde58b3d3cfdd15b707e2fe29e89201c8494aced4e641481f"
+    },
+    {
+      "path": "docs/runtime/contracts/agent_runtime_interface.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/contracts/agent_runtime_interface.md",
+      "sha256": "sha256:d65e4db7d3ea416341a226e953c989c5c481430afa26689658498dd8b5146cc6"
+    },
+    {
+      "path": "docs/runtime/contracts/artifact_retention_operations_contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/contracts/artifact_retention_operations_contract.md",
+      "sha256": "sha256:3add16bbbf4448070e9a29bc97a50e8e98484d75d13ab011083c54c5985aacc7"
+    },
+    {
+      "path": "docs/runtime/contracts/baseline_refresh_contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/contracts/baseline_refresh_contract.md",
+      "sha256": "sha256:ea511043a570b5583f8bba5f5457365b6887b03258a6cf34e483ea952a62c0e0"
+    },
+    {
+      "path": "docs/runtime/contracts/canonical_artifact_contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/contracts/canonical_artifact_contract.md",
+      "sha256": "sha256:3db005df8a6257c5df8d89c6e168315cf7e9dc4e1704dd83a4a35fb58aebac1d"
+    },
+    {
+      "path": "docs/runtime/contracts/research_integrity_layer.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/contracts/research_integrity_layer.md",
+      "sha256": "sha256:79bb719a1ccb2116aa620975a1d4282b1e70c89f4a053eca3477c6b1561a5866"
+    },
+    {
+      "path": "docs/runtime/contracts/runtime_boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/contracts/runtime_boundary.md",
+      "sha256": "sha256:50ce9df549de6185167776807541075954fdcce3a3fb8fd004ad495d30df176e"
+    },
+    {
+      "path": "docs/runtime/contracts/stage_route_contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/contracts/stage_route_contract.md",
+      "sha256": "sha256:17142b41afdf8e150f7dac8005e14ad5b2eb785f9ec3b7fc5d6661afa25e3daf"
+    },
+    {
+      "path": "docs/runtime/contracts/workspace_knowledge_and_literature_contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/contracts/workspace_knowledge_and_literature_contract.md",
+      "sha256": "sha256:639e8c88dada3c6c2c498217ebb1f67ef681829836ace77ae65e822c329906f8"
+    },
+    {
+      "path": "docs/runtime/control/external_learning_adoption_closure.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/control/external_learning_adoption_closure.md",
+      "sha256": "sha256:da398c677f6a8a13a94f31a29a69f0d0500dc4bd47cda7ccd314df903187f170"
+    },
+    {
+      "path": "docs/runtime/control/progress_first_quality_loop.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/control/progress_first_quality_loop.md",
+      "sha256": "sha256:bac02958aaac8e38c3faa70cda184d286942774fb5931bca59048aa08d78bac1"
+    },
+    {
+      "path": "docs/runtime/control/progress_first_stage_outcome.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/control/progress_first_stage_outcome.md",
+      "sha256": "sha256:ea4f8666cad984be18b9bc86c4708fb71079d1140181bba7463e669f379fab76"
+    },
+    {
+      "path": "docs/runtime/data_asset_storage_retention.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/data_asset_storage_retention.md",
+      "sha256": "sha256:251561c5da9c743be0fbeda6fd509f3b3bd06f21d1b2109fafec8aa8ea77bf5a"
+    },
+    {
+      "path": "docs/runtime/domain_authority_refs_index_guard.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/domain_authority_refs_index_guard.md",
+      "sha256": "sha256:506540d378d5d511e2fc66f3966cf76949d3e42ca014335c35fe67e683431925"
+    },
+    {
+      "path": "docs/runtime/stage_route_handoff_standard.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/runtime/stage_route_handoff_standard.md",
+      "sha256": "sha256:596c025003cb5707efe96592a785452302f36f6ea357a44f118351a60ae5584e"
+    },
+    {
+      "path": "docs/source/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/source/README.md",
+      "sha256": "sha256:397b653810f298a8a627eb534b55d5208e57afb7271b45f7f2565f889d1edebc"
+    },
+    {
+      "path": "docs/source/medical_data_asset_target_operating_model.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/source/medical_data_asset_target_operating_model.md",
+      "sha256": "sha256:9df2609fc5241d0247379d4944a5392bc2634f0fa16dd4a892d01104e4bee195"
+    },
+    {
+      "path": "docs/source/study_lifecycle_control.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/source/study_lifecycle_control.md",
+      "sha256": "sha256:68d57c1b62b3a3d2cf00ed188fb27d544405163a1521b9158d00fd43036e9d7f"
+    },
+    {
+      "path": "docs/source/study_workspace_target_state.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/source/study_workspace_target_state.md",
+      "sha256": "sha256:4249797a29ac1588773812f4e681096d9ae36036737b0951d7eba6b2e51e828a"
+    },
+    {
+      "path": "docs/status.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/status.md",
+      "sha256": "sha256:1a9c29ef61d00a32d5452484186238fd92530f82159a36e6312dbecb093cc729"
+    },
+    {
+      "path": "docs/whitepapers/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/whitepapers/README.md",
+      "sha256": "sha256:a0d6828f25ff8e01acd771be1fd39bbaba1874255cd4d1c027b36deaf5382997"
+    },
+    {
+      "path": "docs/whitepapers/mas-whitepaper.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/docs/whitepapers/mas-whitepaper.md",
+      "sha256": "sha256:6ea2b889dfec7e8f01b267825059a5f6936e2c80d53ef3e913911ce0dabb29c2"
+    },
+    {
+      "path": "profiles/workspace.profile.template.toml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/profiles/workspace.profile.template.toml",
+      "sha256": "sha256:3207eeff55f8ed0ff429deec8cd082650915d53636fe730af3c9a34aaa657227"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/pyproject.toml",
+      "sha256": "sha256:773ecdbaef3a1f23975a832cc749a3ddb3e00ac2dcad47ff48da5affcf653aa5"
+    },
+    {
+      "path": "runtime/artifact_locator/workspace-runtime-artifact-root.locator.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/runtime/artifact_locator/workspace-runtime-artifact-root.locator.json",
+      "sha256": "sha256:b91f3689afba30f5872eadee98af5b3fc429ea52ef726a8546b59860db4ba58d"
+    },
+    {
+      "path": "runtime/authority_functions/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/runtime/authority_functions/README.md",
+      "sha256": "sha256:5f72b8e65b35fa8e57253c88127271ae6d35e65df09ecfa7e67446129d9ac918"
+    },
+    {
+      "path": "src/med_autoscience/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/__init__.py",
+      "sha256": "sha256:2b7f152edc702901e925a11a2deedcaf03ffc942f90fc2592e39eeec888eceb5"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest.py",
+      "sha256": "sha256:92141e9b67806cb98552a908ff8d4eaa0376266053eb844eed24c487491afaf3"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/__init__.py",
+      "sha256": "sha256:7ef35e9eb45c47a2ec90c6147c0b072bec266ce401c5c7f9768b66bd8bb2b78a"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/constants.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/constants.py",
+      "sha256": "sha256:86c0295e0db9b3e138c296224fa1acdaeefe12b926f258bea75a4ec85a88bdc3"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/currentness.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/currentness.py",
+      "sha256": "sha256:bfd112b29c993db4b94e6cc6e397598d6099d9b751b62c2aaa2af3d704f5744e"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/epistemic_policy.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/epistemic_policy.py",
+      "sha256": "sha256:b11ecc7e72142daef9e19c9e522ee4fd07f1ea288faf1df9d665d67a4eb41a76"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/first_draft.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/first_draft.py",
+      "sha256": "sha256:3c0aaafad5b16ea900aba0814d6823735b53830fab8194b04a42e51c32887ebf"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/generation_roles.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/generation_roles.py",
+      "sha256": "sha256:5d2973a7a6a64de8e85b6641f6c34f98003d07c3b3ef9134ff176b11f0a1cbe6"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/manifest.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/manifest.py",
+      "sha256": "sha256:bcc178db19ea50e9b02c2043f7de9e173a9d6791318e3aaa077dbfc1faafebe5"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/professional_manuscript.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/professional_manuscript.py",
+      "sha256": "sha256:fc0888a956d33f3d8d03c44b030ba40df645a657f2df7ca611c656f1ffac91f7"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/professional_skill.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/professional_skill.py",
+      "sha256": "sha256:8874ada47c4ba1b07db07a5b4a3e0252a2ab5bfa08c3afaa3f757221a002cba5"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/professional_table.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/professional_table.py",
+      "sha256": "sha256:a7289f525ea1bf416a651fbb8e9aea796ad692c34b54b4502dc32671a9dbbe51"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/records.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/records.py",
+      "sha256": "sha256:0d53bb04e3d16cc278f0d86aad3c1842d6df927fc54f76f07c03054752271ca5"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/review_receipts.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/review_receipts.py",
+      "sha256": "sha256:fe61788e4e6545c8cd77584e0cea34198cebf1dd94786e3d24a2413d36ef466b"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/review_scope.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/review_scope.py",
+      "sha256": "sha256:23760e9f1ea9f081ca0dfea74eebb833f34f065d259e06f4ff3e6288ff4c3715"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/review_scope_policy.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/review_scope_policy.py",
+      "sha256": "sha256:5daa2ffd36f82db129b8000a1ce2ffeb4811d70c1909d082542ad1bae1f984c4"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/review_snapshot.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/review_snapshot.py",
+      "sha256": "sha256:8b156f67e4d3a81fee2d222cef514e61431bc64b71cf214685d461b23b5e5bd4"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_generation_manifest_parts/stage_scope_policy.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_generation_manifest_parts/stage_scope_policy.py",
+      "sha256": "sha256:4ab9de0fd89620c6cf86a5b4a46fd13bb0629f0bb6fb03f273fe5922f5bba05a"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_record_validation.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_record_validation.py",
+      "sha256": "sha256:57578be13e33ef481d9a7f839aaa7d89e538b06833a5d20eb516aa9219abdab5"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/_stage_attempt_review_snapshot.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/_stage_attempt_review_snapshot.py",
+      "sha256": "sha256:357f071bcd9ad1ba4bb448786a1f6b84467bb59eafe1836cea892b9d931927ac"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/build_dependency_currentness.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/build_dependency_currentness.py",
+      "sha256": "sha256:2a6e6d88fc8a50910f396dd92836415483ad436cb1320f39d451123ba3a68146"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/candidate_admission.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/candidate_admission.py",
+      "sha256": "sha256:0e3cc5b1f5d2da4e9718280c13fafecb0ba55bed4b4f69416dc0550a58fdd435"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/candidate_admission_parts/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/candidate_admission_parts/__init__.py",
+      "sha256": "sha256:f777dd235f8fbff775ff0c19790bd413047461f76c40c020f551f2463333ee79"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/candidate_admission_parts/adjudicator.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/candidate_admission_parts/adjudicator.py",
+      "sha256": "sha256:70a70ec8d2ef723189e32e7f88d5f5319432d41bc964cf08c8b240de627b19d1"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/candidate_admission_parts/candidate.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/candidate_admission_parts/candidate.py",
+      "sha256": "sha256:16abb3254401caf7e6a3354a904769364a54525e6a24798ff7d513806a15ad86"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/candidate_admission_parts/currentness.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/candidate_admission_parts/currentness.py",
+      "sha256": "sha256:9ee04fa7125aaa501794da7a2ddb67bd8b9fa4f920a9bbd557c97cdb9f86ac78"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/candidate_admission_parts/policy.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/candidate_admission_parts/policy.py",
+      "sha256": "sha256:0d4ae3771218fa59a486817c2eb1567122a20360b0582393908dac95c1672270"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/candidate_admission_parts/receipt.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/candidate_admission_parts/receipt.py",
+      "sha256": "sha256:8457ee3b0f8756af6247d1fe3404416370c75d3b6bd5686b53796cb0f5fa0e11"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/candidate_admission_parts/receipt_integrity.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/candidate_admission_parts/receipt_integrity.py",
+      "sha256": "sha256:da23901b87164f84ce68c400a306f1dd59834714dc7a04fac581cbf7f849a041"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/candidate_admission_parts/request.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/candidate_admission_parts/request.py",
+      "sha256": "sha256:468e8a7d7575f9ea3489bee1a965bc300128f3f5227ad3183b366c5b0b88d5ee"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/candidate_admission_parts/result.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/candidate_admission_parts/result.py",
+      "sha256": "sha256:0136ed940ef1d732c299617bc912eb93563dc9535724a781bc6e7897199d4b3b"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/foundry_owner_gate.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/foundry_owner_gate.py",
+      "sha256": "sha256:3a298995e498b4fcacbac886e0f91f5ee14fad5788edf30877585de53c96d7c5"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission.py",
+      "sha256": "sha256:c179ec5f1741f5630f3f268373e2521f5679ac7110801890e2ddd560c8858ae4"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/__init__.py",
+      "sha256": "sha256:7ef35e9eb45c47a2ec90c6147c0b072bec266ce401c5c7f9768b66bd8bb2b78a"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/build_currentness.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/build_currentness.py",
+      "sha256": "sha256:ea6d4eb06b9d4f8e25f2f0778ea2f3f107f3d7bcea472d52c9d038055dfe2382"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/constants.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/constants.py",
+      "sha256": "sha256:439c002a9f56f751d807f3124d2bc2e07e3ca6307d4ec7308827c9e6987210f0"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/currentness.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/currentness.py",
+      "sha256": "sha256:3e6a4befb7d4e4b6441e4c75ba4d6fbd7be10092d2d2f6aef61f14c1059e29b1"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/epistemic_currentness.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/epistemic_currentness.py",
+      "sha256": "sha256:a07e3341b5951837ad4fc72325dc8bd03f3e5869262a85578389319d1264d11c"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/orchestration.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/orchestration.py",
+      "sha256": "sha256:b0d79d9f2fb1c0dfc6de8a53a9e4da468866a9bb9fcd53c26194aa3724df7375"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/quality.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/quality.py",
+      "sha256": "sha256:19a12027b6cc1fc18bcc80f6b0c11f7bb07f26b038a208b6aaa8bc7dcc2c5a4d"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/receipt.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/receipt.py",
+      "sha256": "sha256:55ee3dd8d7922021040460871b144c1d24dc6a53aee2f15f5ff29eb5577985de"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/repair_and_gates.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/repair_and_gates.py",
+      "sha256": "sha256:38ef56d5b9692e1286aa42018a507eeb00d918dd1a4d3ad6c592b3f36b844c18"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/request.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/request.py",
+      "sha256": "sha256:5f00c9ed637bf946abc54c3ba78bc8f6aec7892d58edfca151123ebc8262c2ae"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/result.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/result.py",
+      "sha256": "sha256:8efebcee8fe8b885cae551bacc33649ec1e810af00d9119a7756c0f386c80aab"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/review_currentness.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/review_currentness.py",
+      "sha256": "sha256:26b1ac22f70e8c429234c27aa793fa330a3af2273ad43b11e51fb29b3f20c4cc"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/paper_mission_parts/validation.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/paper_mission_parts/validation.py",
+      "sha256": "sha256:13d882d4af1ce50a9451ed2d09f071280a64049c5e54ad6b9766c8b2a938cb12"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/qualification_work_item_provisioning.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/qualification_work_item_provisioning.py",
+      "sha256": "sha256:90ef565070044842f0c2b36ead2b87613b2c4200e432fe8b0caebbccbb8a97c7"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/self_evolution_closeout.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/self_evolution_closeout.py",
+      "sha256": "sha256:09e2182fd66854a8e5098c3be2c97d3228f73cda0b0486413bdc884c4fc2fd38"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/study_initialization.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/study_initialization.py",
+      "sha256": "sha256:63009875bc7cc12a2dc80fed6487da9eea410d611278f033390c1ac1ab6149e3"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/study_lifecycle_reactivation.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/study_lifecycle_reactivation.py",
+      "sha256": "sha256:7e3b0eb0b4a07fa41b06163db1a8162cd7ef9cd4893a51f679f5b928241b2260"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/__init__.py",
+      "sha256": "sha256:5f3f8933c055f0fd2fa750267fc3505bd00c5f89e1141764ddb774e62639654a"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/constants.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/constants.py",
+      "sha256": "sha256:f0549602bc37195027c6555d3027059a3567019b71691c2a2005d76d6bc91218"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/materialization.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/materialization.py",
+      "sha256": "sha256:b0f0e4b5cdb45259ff83944169235b620c787f03a77949d9c595e711af577971"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/primitives.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/primitives.py",
+      "sha256": "sha256:c29a1716864d1054db4fd5810793f7ac929ffaf734d7c003f27d82abc66e8e28"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/projection.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/projection.py",
+      "sha256": "sha256:7161273b0f33e0354d9e07bfb817307b580aa6e7858d496ee207c37b88ce4dc0"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/request.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/request.py",
+      "sha256": "sha256:09ad7fe652d7f15cece818c76eb7ad2424e4ae3c4336d4c1f1b625a6b43ebe55"
+    },
+    {
+      "path": "src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/result.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/result.py",
+      "sha256": "sha256:fcf7636e5a5da535277e8d94e1835757be7301fa2615f02b49b4f832791f54d2"
+    },
+    {
+      "path": "src/med_autoscience/styles/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/styles/__init__.py",
+      "sha256": "sha256:8eea9df4f6d7b38ca0e39ccc27b04700e3d08dbeec8046d613d22706d19985fa"
+    },
+    {
+      "path": "src/med_autoscience/styles/frontiers.csl",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/src/med_autoscience/styles/frontiers.csl",
+      "sha256": "sha256:84880864ece6e2088adbfe52f794991670dd2c7f8560b9b8b8a33dfae5c8f092"
+    },
+    {
+      "path": "uv.lock",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/88414e89694d8e48dfc29a950d82868e78cce6f4/plugins/med-autoscience/uv.lock",
+      "sha256": "sha256:167ee68fef2540a58cdaff506914924409643e911fd1333d36ad31d81e4172a1"
+    }
+  ]
+}
