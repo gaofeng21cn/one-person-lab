@@ -118,30 +118,30 @@
     "framework:archive": "node scripts/framework-archive.mjs"
   },
   "dependencies": {
-    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/cordis": "4.1.0",
     "@modelcontextprotocol/client": "^2.4.0",
     "@modelcontextprotocol/core": "^2.4.0",
     "@modelcontextprotocol/ext-apps": "^2.0.4",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@modelcontextprotocol/server": "^2.4.0",
-    "@playwright/mcp": "0.0.83",
-    "@temporalio/activity": "1.20.3",
-    "@temporalio/client": "1.20.3",
-    "@temporalio/common": "1.20.3",
-    "@temporalio/worker": "1.20.3",
-    "@temporalio/workflow": "1.20.3",
+    "@playwright/mcp": "0.0.84",
+    "@temporalio/activity": "1.25.0",
+    "@temporalio/client": "1.25.0",
+    "@temporalio/common": "1.25.0",
+    "@temporalio/worker": "1.25.0",
+    "@temporalio/workflow": "1.25.0",
     "@types/semver": "7.8.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "esbuild": "^0.28.2",
-    "semver": "7.8.5",
+    "semver": "7.8.6",
     "tar": "7.5.22",
-    "typescript": "^5.8.3",
+    "typescript": "^7.0.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@temporalio/testing": "1.20.3",
-    "@types/node": "^24.5.2"
+    "@temporalio/testing": "1.25.0",
+    "@types/node": "^26.6.6"
   },
   "overrides": {
     "protobufjs": "7.6.5"
