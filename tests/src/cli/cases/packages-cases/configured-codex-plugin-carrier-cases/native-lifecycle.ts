@@ -73,6 +73,42 @@ test('Package mutations advance to a newer owner projection without allowing dow
   );
 });
 
+test('Package mutations report native discovery failures without claiming the Package is absent', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mutation-discovery-failure-'));
+  const binary = path.join(root, 'codex.mjs');
+  const callsPath = path.join(root, 'calls.jsonl');
+  try {
+    fs.writeFileSync(binary, `#!/usr/bin/env node
+import fs from 'node:fs';
+const command = process.argv.slice(2).join(' ');
+fs.appendFileSync(${JSON.stringify(callsPath)}, JSON.stringify(command) + '\\n');
+if (process.env.FIXTURE_DISCOVERY_FAILURE === 'invalid_json') process.stdout.write('not JSON');
+else { process.stderr.write('native list unavailable'); process.exitCode = 7; }
+`);
+    fs.chmodSync(binary, 0o755);
+    for (const action of ['update', 'repair']) {
+      for (const failure of ['exit_status', 'invalid_json']) {
+        const result = runCliFailure(['packages', action, 'obf', '--dry-run'], {
+          HOME: root,
+          CODEX_HOME: path.join(root, 'codex-home'),
+          OPL_STATE_DIR: path.join(root, 'opl-state'),
+          OPL_CODEX_PLUGIN_BIN: binary,
+          FIXTURE_DISCOVERY_FAILURE: failure,
+        }) as any;
+        assert.equal(result.payload.error.details.failure_code, failure === 'invalid_json'
+          ? 'configured_codex_plugin_carrier_readback_invalid_shape'
+          : 'configured_codex_plugin_carrier_action_failed');
+        assert.notEqual(result.payload.error.details.failure_code, 'agent_package_not_installed');
+      }
+    }
+    const calls = fs.readFileSync(callsPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    // CLI composition reads once; each mutation then performs its own strict discovery.
+    assert.deepEqual(calls, Array(8).fill('plugin list --json'));
+  } finally {
+    removeFixtureTree(root);
+  }
+});
+
 test('packages update uses the current owner projection to rename an installed OPL Flow carrier', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-flow-owner-projection-update-'));
   const binary = path.join(root, 'fake-codex.mjs');
@@ -166,7 +202,8 @@ if (command === 'plugin marketplace list --json') {
     );
     const calls: string[] = JSON.parse(fs.readFileSync(callsPath, 'utf8'));
     const marketplaceReadIndex = calls.indexOf('plugin marketplace list --json');
-    assert.ok(marketplaceReadIndex > 0);
+    // One CLI composition read plus one mutation selection; no second mutation discovery.
+    assert.equal(marketplaceReadIndex, 2, 'reuse the installed descriptor selected before mutation');
     assert.ok(calls.slice(0, marketplaceReadIndex).every((command) => command === 'plugin list --json'),
       'discovery and owner selection must only read plugin state before carrier migration');
     assert.deepEqual(calls.slice(marketplaceReadIndex), [

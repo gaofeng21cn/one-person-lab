@@ -42,8 +42,13 @@ export type PackageSnapshot = {
   installed: Map<string, InstalledPackageDescriptor>;
 };
 
-export function packageSnapshot(input: { includeAvailable?: boolean } = {}): PackageSnapshot {
-  const discoveredInstalled = discoverInstalledPackageDescriptors();
+export function packageSnapshot(input: {
+  includeAvailable?: boolean;
+  failClosedOnCarrierError?: boolean;
+} = {}): PackageSnapshot {
+  const discoveredInstalled = discoverInstalledPackageDescriptors({
+    failClosedOnCarrierError: input.failClosedOnCarrierError,
+  });
   const installed = new Map(
     [...discoveredInstalled].filter(([, descriptor]) => (
       installedDescriptorMatchesConfiguredCarrier(descriptor)
@@ -106,7 +111,10 @@ export function requireDescriptor(
   options: { installed?: boolean } = {},
 ) {
   const packageId = requirePackageId(input.packageId, action);
-  const snapshot = packageSnapshot({ includeAvailable: options.installed !== true });
+  const snapshot = packageSnapshot({
+    includeAvailable: options.installed !== true,
+    failClosedOnCarrierError: true,
+  });
   const descriptor = (options.installed ? snapshot.installed : snapshot.descriptors).get(packageId) ?? null;
   if (!descriptor) {
     throw new FrameworkContractError('contract_shape_invalid', `Package ${packageId} is not exposed by a native carrier.`, {
@@ -130,7 +138,7 @@ export function selectPackageMutationDescriptor(
     : installed;
 }
 
-export function requirePackageMutationDescriptor(
+export function requirePackageMutationDescriptors(
   input: Pick<AgentPackageInstallInput, 'packageId'>,
   action: 'update' | 'repair',
 ) {
@@ -138,7 +146,10 @@ export function requirePackageMutationDescriptor(
   const ownerProjection = discoverCurrentOwnerPackageDescriptors({
     packageId: installed.manifest.package_id,
   }).get(installed.manifest.package_id) ?? null;
-  return selectPackageMutationDescriptor(installed, ownerProjection);
+  return {
+    target: selectPackageMutationDescriptor(installed, ownerProjection),
+    installed,
+  };
 }
 
 export function configuredCarrierFromDescriptor(

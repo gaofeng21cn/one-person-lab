@@ -22,7 +22,7 @@ import {
   packageBackgroundUpdatePolicy,
   isManagedPayloadCarrier,
   requireDescriptor,
-  requirePackageMutationDescriptor,
+  requirePackageMutationDescriptors,
 } from './registry-status-projection.ts';
 import {
   projectLocalCapabilityDependencyReadiness,
@@ -129,12 +129,11 @@ function nativeLifecycleResult(
   action: ConfiguredCodexPluginCarrierAction,
   input: AgentPackageInstallInput,
   descriptorOverride?: Awaited<ReturnType<typeof requireDescriptor>>,
+  installedDescriptorOverride?: Awaited<ReturnType<typeof requireDescriptor>>,
 ) {
   const descriptor = descriptorOverride ?? requireDescriptor(input, action, { installed: action !== 'install' });
   // The target projection selects new bytes; the installed descriptor owns transport history.
-  const installedDescriptor = action === 'update' || action === 'repair'
-    ? requireDescriptor(input, action, { installed: true })
-    : descriptor;
+  const installedDescriptor = installedDescriptorOverride ?? descriptor;
   const configuredCarrier = runConfiguredCodexPluginCarrier({
     descriptor: descriptor.carrier,
     action,
@@ -190,7 +189,7 @@ function requiredDependencyInstallResults(
         },
       );
     }
-    const snapshot = packageSnapshot({ includeAvailable: true });
+    const snapshot = packageSnapshot({ includeAvailable: true, failClosedOnCarrierError: true });
     const installed = snapshot.installed.get(dependency.package_id) ?? null;
     const ready = installed?.readiness.installed === true
       && installed.readiness.physical_status === 'available'
@@ -318,13 +317,13 @@ export async function runOplAgentPackageInstall(input: AgentPackageInstallInput)
 }
 
 export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) {
-  const descriptor = requirePackageMutationDescriptor(input, 'update');
+  const { target: descriptor, installed } = requirePackageMutationDescriptors(input, 'update');
   const dependencyResults = requiredDependencyInstallResults(descriptor, input);
   return {
     version: 'g2' as const,
     opl_agent_package_update: {
       surface_kind: 'opl_agent_package_update' as const,
-      ...nativeLifecycleResult('update', input, descriptor),
+      ...nativeLifecycleResult('update', input, descriptor, installed),
       required_dependency_install_results: dependencyResults,
     },
   };
@@ -340,7 +339,7 @@ export async function runOplAgentPackageBulkUpdate(
   input: OplAgentPackageBulkUpdateInput = {},
 ) {
   const action = input.action ?? 'update';
-  const installed = packageSnapshot().installed;
+  const installed = packageSnapshot({ failClosedOnCarrierError: true }).installed;
   const descriptors = [...installed.values()]
     .sort((left, right) => left.manifest.package_id.localeCompare(right.manifest.package_id));
   const targets: Record<string, unknown>[] = [];
@@ -390,8 +389,8 @@ export async function runOplAgentPackageBulkUpdate(
 }
 
 export async function runOplAgentPackageRepair(input: AgentPackageRepairInput) {
-  const mutationDescriptor = requirePackageMutationDescriptor(input, 'repair');
-  const nativeRepair = nativeLifecycleResult('repair', input, mutationDescriptor);
+  const { target, installed } = requirePackageMutationDescriptors(input, 'repair');
+  const nativeRepair = nativeLifecycleResult('repair', input, target, installed);
   const descriptor = requireDescriptor(input, 'repair', { installed: true });
   const managedPolicyRepair = descriptor.manifest.managed_policy_surface
     ? repairManagedPolicyDependenciesFromDescriptor({
