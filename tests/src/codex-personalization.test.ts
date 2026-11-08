@@ -123,6 +123,7 @@ function writeInstalledOwnerProfileFixture(root: string) {
     codexPath: writeFakeCodexPluginList(root, [{
       pluginId: 'fixture-profile-owner@fixture-marketplace',
       version: '1.2.3',
+      installed: true,
       enabled: true,
       source: { source: 'local', path: sourceRoot },
       marketplaceSource: { sourceType: 'local', source: sourceRoot },
@@ -134,10 +135,26 @@ function writeInstalledOwnerProfileFixture(root: string) {
 
 function writeFakeCodexPluginList(root: string, installed: unknown[]) {
   const codexPath = path.join(root, 'fake-codex');
-  fs.writeFileSync(codexPath, `#!/usr/bin/env node
-process.stdout.write(${JSON.stringify(JSON.stringify({
-  installed,
-}))});
+  fs.writeFileSync(codexPath, `#!${process.execPath}
+import readline from 'node:readline';
+const args = process.argv.slice(2).join(' ');
+const installed = ${JSON.stringify(installed)};
+const marketplaces = installed.map((entry) => ({
+  name: String(entry.pluginId).split('@').slice(1).join('@'),
+  plugins: [{ id: entry.pluginId, localVersion: entry.version ?? null, installed: true,
+    enabled: entry.enabled === true, source: { type: entry.source?.source ?? 'local', path: entry.source?.path ?? null } }],
+}));
+if (args === 'app-server --stdio') {
+  readline.createInterface({ input: process.stdin }).on('line', (line) => {
+    const frame = JSON.parse(line);
+    if (frame.method === 'initialize') process.stdout.write(JSON.stringify({ id: frame.id, result: {} }) + '\\n');
+    if (frame.method === 'plugin/list') process.stdout.write(JSON.stringify({ id: frame.id, result: { marketplaces, marketplaceLoadErrors: [] } }) + '\\n');
+  });
+} else if (args === 'plugin marketplace list --json') {
+  process.stdout.write(JSON.stringify({ marketplaces: marketplaces.map((entry, index) => ({ name: entry.name, marketplaceSource: installed[index].marketplaceSource })) }));
+} else {
+  process.stdout.write(JSON.stringify({ installed, available: [] }));
+}
 `, { mode: 0o755 });
   return codexPath;
 }
@@ -200,6 +217,7 @@ test('Codex user instructions reject a bare plugin manifest as a first-party pro
   process.env.OPL_CODEX_PLUGIN_BIN = writeFakeCodexPluginList(root, [{
     pluginId: 'opl-flow@fixture-marketplace',
     version: '1.2.3',
+    installed: true,
     enabled: true,
     source: { source: 'local', path: sourceRoot },
     marketplaceSource: { sourceType: 'local', source: sourceRoot },

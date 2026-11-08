@@ -45,6 +45,7 @@ export function createFakeCodexPluginManagerFixture(
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 const args = process.argv.slice(2);
@@ -224,7 +225,32 @@ const availableEntries = () => {
 };
 
 const command = args.join(' ');
-if (command === 'plugin marketplace list --json') {
+if (command === 'app-server --stdio') {
+  readline.createInterface({ input: process.stdin }).on('line', (line) => {
+    const frame = JSON.parse(line);
+    if (frame.method === 'initialize') {
+      process.stdout.write(JSON.stringify({ id: frame.id, result: {} }) + '\\n');
+    } else if (frame.method === 'plugin/list') {
+      const entries = installedEntries();
+      const marketplaces = new Map();
+      for (const entry of entries) {
+        const separator = entry.pluginId.lastIndexOf('@');
+        const name = separator > 0 ? entry.pluginId.slice(separator + 1) : 'default';
+        if (!marketplaces.has(name)) marketplaces.set(name, { name, plugins: [] });
+        marketplaces.get(name).plugins.push({
+          id: entry.pluginId,
+          localVersion: entry.version,
+          installed: entry.installed === true,
+          enabled: entry.enabled === true,
+          source: { type: entry.source?.source ?? 'local', path: entry.source?.path ?? null },
+        });
+      }
+      process.stdout.write(JSON.stringify({ id: frame.id, result: {
+        marketplaces: [...marketplaces.values()], marketplaceLoadErrors: [],
+      } }) + '\\n');
+    }
+  });
+} else if (command === 'plugin marketplace list --json') {
   const entries = [...marketplaces].map(([id, source]) => ({
     name: id,
     marketplaceSource: { sourceType: localMarketplaceRoot(source) ? 'local' : 'remote', source },
