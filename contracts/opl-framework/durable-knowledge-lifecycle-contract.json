@@ -103,7 +103,10 @@
     "body_writer": "domain_or_user_owner_via_common_mechanical_writer",
     "accepted_writeback_identity": "proposal_digest_original_body_digest_replacement_body_digest_registry_digest_and_actual_review_ref",
     "concurrent_source_change": "reject_overwrite_and_reconcile_before_retry; local_lock_is_not_cross_device_transaction",
-    "owner_edit_review": "review_source_records_current_bytes_and_acceptance_without_rewriting_original"
+    "owner_edit_review": "review_source_records_current_bytes_and_acceptance_without_rewriting_original",
+    "owner_retirement": "explicit_review_of_exact_body_and_registry; retain_private_workspace_recovery_then_mark_deprecated_before_conditional_source_removal",
+    "retirement_identity": "preserve_knowledge_id_original_locator_and_accepted_digest; recovery_evidence_is_not_current_knowledge",
+    "retirement_recovery": "same_scoped_request_resumes_retained_intent; historical_replay_cannot_delete_recreated_body_or_reactivate_item"
   },
   "lifecycle_states": [
     "draft",

@@ -16,6 +16,8 @@ import {
   searchKnowledgeSources,
   resolveKnowledgeSourceTarget,
   discoverKnowledgeSources,
+  retireKnowledgeSource,
+  inspectKnowledgeRetirement,
 } from '../../../../authority/packages/index.ts';
 import {
   bindStageKnowledgeContext,
@@ -338,6 +340,37 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
       return { version: 'g2', knowledge_writeback: reviewKnowledgeSource({ ...scope(parsed), ...ownerReview(parsed),
         knowledgeId: parsed.id as string, expectedSha256: parsed['expected-sha256'] as string,
       }) };
+    },
+  };
+  commandSpecs['knowledge retire'] = {
+    usage: 'opl knowledge retire --workspace <path> --domain <domain_id> --id <knowledge_id> --expected-sha256 <digest> --expected-registry-sha256 <digest> --reason <reason> --reviewer <owner> --review-ref <authority-ref> --reviewed-at <time> [--project <path>]',
+    summary: 'Retire reviewed source bytes with owner-controlled recovery evidence and conditional removal from the original location.',
+    examples: ['opl knowledge retire --workspace /private/workspace --domain persona --id owner.policy --expected-sha256 <digest> --expected-registry-sha256 <digest> --reason <reason> --reviewer owner --review-ref <authority-ref> --reviewed-at <time> --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const fields = ['id', 'expected-sha256', 'expected-registry-sha256', 'reason', 'reviewer', 'review-ref', 'reviewed-at'];
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge retire']!, {
+        ...scopeOptions, ...Object.fromEntries(fields.map((name) => [name, { type: 'string' as const }])),
+      });
+      for (const field of fields) if (!parsed[field]) throw new Error(`knowledge retire requires --${field}.`);
+      return { version: 'g2', knowledge_retirement: retireKnowledgeSource({ ...scope(parsed),
+        knowledgeId: parsed.id as string, expectedSha256: parsed['expected-sha256'] as string,
+        expectedRegistrySha256: parsed['expected-registry-sha256'] as string, reason: parsed.reason as string,
+        reviewer: parsed.reviewer as string, reviewRef: parsed['review-ref'] as string, reviewedAt: parsed['reviewed-at'] as string,
+      }) };
+    },
+  };
+  commandSpecs['knowledge inspect-retirement'] = {
+    usage: 'opl knowledge inspect-retirement --workspace <path> --domain <domain_id> --operation-id <digest> [--project <path>]',
+    summary: 'Read an authorized retirement receipt or interrupted phase without removing or restoring source bytes.',
+    examples: ['opl knowledge inspect-retirement --workspace /private/workspace --domain persona --operation-id <digest> --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge inspect-retirement']!, {
+        ...scopeOptions, 'operation-id': { type: 'string' },
+      });
+      if (!parsed['operation-id']) throw new Error('knowledge inspect-retirement requires --operation-id.');
+      return { version: 'g2', knowledge_retirement: inspectKnowledgeRetirement({ ...scope(parsed), operationId: parsed['operation-id'] as string }) };
     },
   };
   return commandSpecs;

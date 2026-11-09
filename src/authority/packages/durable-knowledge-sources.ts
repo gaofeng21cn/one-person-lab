@@ -104,11 +104,17 @@ export function readBoundKnowledgeSources(input: SourceInput) {
   if (new Set(entries.map((entry) => entry.item.knowledge_id)).size !== entries.length) knowledgeFailure('Effective knowledge ids must have one source owner.');
   return { entries, qualityDebt, requiredIds: (bindings.required_knowledge_ids ?? []).filter((id) => !outsideCaller.has(id)), requirementBindings: bindings.requirement_bindings ?? [] };
 }
-export function resolveKnowledgeSourceItem(input: SourceInput & { knowledgeId: string; allowInactive?: boolean }) {
+export function resolveKnowledgeSourceAccess(input: SourceInput & { knowledgeId: string }) {
   const entry = readBoundKnowledgeSources(input).entries.find((candidate) => candidate.item.knowledge_id === input.knowledgeId);
   if (!entry) knowledgeFailure(`knowledge_source_unavailable:${input.knowledgeId}`);
   if (entry.issue) knowledgeFailure(entry.issue);
   if (!sourcePathAllowed(entry.source, entry.item.body_ref.ref)) knowledgeFailure(`knowledge_source_path_unauthorized:${input.knowledgeId}`);
+  const canWrite = entry.source.writable && matchingGrants(entry.source, entry.item, input, knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot))
+    .some((grant) => grant.write_domains?.includes(input.domainId));
+  return { ...entry, canWrite: Boolean(canWrite) };
+}
+export function resolveKnowledgeSourceItem(input: SourceInput & { knowledgeId: string; allowInactive?: boolean }) {
+  const entry = resolveKnowledgeSourceAccess(input);
   if (!input.allowInactive) {
     const currentness = knowledgeCurrentness(entry.item, input.now);
     if (currentness) knowledgeFailure(currentness);
@@ -116,9 +122,7 @@ export function resolveKnowledgeSourceItem(input: SourceInput & { knowledgeId: s
   const bodyPath = containedKnowledgeFile(entry.source.root, entry.item.body_ref.ref);
   const currentSha256 = knowledgeDigest(fs.readFileSync(bodyPath));
   if (!input.allowInactive && currentSha256 !== entry.item.body_ref.sha256) knowledgeFailure(`knowledge_source_drifted:${input.knowledgeId}`);
-  const canWrite = entry.source.writable && matchingGrants(entry.source, entry.item, input, knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot))
-    .some((grant) => grant.write_domains?.includes(input.domainId));
-  return { ...entry, bodyPath, currentSha256, reviewedSha256: entry.item.body_ref.sha256!, canWrite: Boolean(canWrite) };
+  return { ...entry, bodyPath, currentSha256, reviewedSha256: entry.item.body_ref.sha256! };
 }
 export function listKnowledgeSources(input: SourceInput & { knowledgeId?: string }) {
   const bound = readBoundKnowledgeSources(input);
@@ -205,7 +209,8 @@ export function discoverKnowledgeSources(input: SourceInput & { query: string; l
   const candidates: Array<{ candidate: true; accepted: false; source_id: string; source_ref: string;
     registry_ref: string; sha256: string; excerpt: string }> = [];
   for (const binding of bindings.registries) {
-    const registry = JSON.parse(fs.readFileSync(binding.registry_ref, 'utf8')) as KnowledgeSourceRegistry;
+    const registryBytes = fs.readFileSync(binding.registry_ref);
+    const registry = JSON.parse(registryBytes.toString('utf8')) as KnowledgeSourceRegistry;
     for (const source of registry.sources) {
       if (source.status !== 'active' || !binding.source_ids.includes(source.source_id) || !binding.scope_ids.length || !path.isAbsolute(source.root)) continue;
       const allowed = source.grants.some((grant) => path.isAbsolute(grant.workspace_root) && fs.existsSync(grant.workspace_root)
@@ -214,11 +219,17 @@ export function discoverKnowledgeSources(input: SourceInput & { query: string; l
         && (!grant.scope_ids || grant.scope_ids.some((scopeId) => binding.scope_ids.includes(scopeId))));
       if (!allowed) continue;
       const walk = (directory: string, prefix = ''): void => {
+        // Recovery control areas remain private evidence even when another workspace shares this source.
+        if (/(^|\/)shared\/memory\/knowledge-retirements(\/|$)/.test(directory.split(path.sep).join('/'))) return;
         for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
           if (candidates.length === limit) return;
           const ref = prefix ? `${prefix}/${entry.name}` : entry.name;
           if (entry.isSymbolicLink()) continue;
-          if (entry.isDirectory()) { if (!entry.name.startsWith('.')) walk(path.join(directory, entry.name), ref); continue; }
+          if (entry.isDirectory()) {
+            const child = path.join(directory, entry.name);
+            if (!entry.name.startsWith('.')) walk(child, ref);
+            continue;
+          }
           if (!entry.isFile() || !ref.endsWith('.md') || !sourcePathAllowed(source, ref)) continue;
           // Registered items remain on the accepted resolver/review path, even when inactive.
           if (registry.items.some((item) => item.body_ref.source_id === source.source_id && item.body_ref.ref === ref)) continue;
@@ -242,23 +253,29 @@ export function discoverKnowledgeSources(input: SourceInput & { query: string; l
 }
 export function resolveKnowledgeSourceTarget(input: SourceInput & { bodyPath: string }) {
   if (!path.isAbsolute(input.bodyPath)) knowledgeFailure('Knowledge target must be an absolute file path.');
-  const target = fs.existsSync(input.bodyPath) ? fs.realpathSync(input.bodyPath) : path.resolve(input.bodyPath);
+  const locate = (file: string): string => {
+    if (fs.existsSync(file)) return fs.realpathSync(file);
+    const parent = path.dirname(file);
+    return parent === file ? file : path.join(locate(parent), path.basename(file));
+  };
+  const target = locate(path.resolve(input.bodyPath));
   readBoundKnowledgeSources(input);
   const bindings = JSON.parse(fs.readFileSync(containedKnowledgeFile(input.workspaceRoot, KNOWLEDGE_BINDINGS_REF), 'utf8')) as SourceBindings;
-  const matches: Array<{ item: DurableKnowledgeItem; source: KnowledgeSource; issue: string | null; disclosed: boolean }> = [];
+  const matches: Array<{ item: DurableKnowledgeItem; source: KnowledgeSource; registrySha256: string; issue: string | null; disclosed: boolean }> = [];
   const projectId = knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot);
   for (const binding of bindings.registries) {
-    const registry = JSON.parse(fs.readFileSync(binding.registry_ref, 'utf8')) as KnowledgeSourceRegistry;
+    const registryBytes = fs.readFileSync(binding.registry_ref);
+    const registry = JSON.parse(registryBytes.toString('utf8')) as KnowledgeSourceRegistry;
     for (const item of registry.items) {
       const source = registry.sources.find((candidate) => candidate.source_id === item.body_ref.source_id);
       if (!source) continue;
       const file = path.resolve(source.root, item.body_ref.ref);
-      const resolved = fs.existsSync(file) ? fs.realpathSync(file) : file;
+      const resolved = locate(file);
       if (resolved !== target) continue;
       const disclosed = binding.source_ids.includes(item.body_ref.source_id!) && binding.scope_ids.includes(item.scope.id)
         && item.applicability.domains.includes(input.domainId) && (item.scope.kind !== 'project' || item.scope.id === projectId)
         && sourcePathAllowed(source, item.body_ref.ref);
-      matches.push({ item, source, issue: sourceIssue(source, item, input, projectId), disclosed });
+      matches.push({ item, source, registrySha256: knowledgeDigest(registryBytes), issue: sourceIssue(source, item, input, projectId), disclosed });
     }
   }
   if (matches.length > 1) knowledgeFailure('Knowledge target has multiple registered identities.');
@@ -266,7 +283,7 @@ export function resolveKnowledgeSourceTarget(input: SourceInput & { bodyPath: st
   if (match && !match.disclosed) return { registered: true, authorized: false };
   return match ? { registered: true, knowledge_id: match.item.knowledge_id, scope: match.item.scope,
     content_kind: match.item.content_kind, source_id: match.source.source_id, source_ref: match.item.body_ref.ref,
-    sha256: match.item.body_ref.sha256, status: match.item.status, authorized: match.issue === null }
+    sha256: match.item.body_ref.sha256, registry_sha256: match.registrySha256, status: match.item.status, authorized: match.issue === null }
     : { registered: false };
 }
 export function verifyKnowledgeDependencies(input: SourceInput & { dependencies: KnowledgeDependency[] }) {
