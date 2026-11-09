@@ -3,55 +3,55 @@
   "contract_id": "opl_temporal_stable_cohort",
   "surface_kind": "opl_temporal_stable_cohort",
   "contract_ref": "contracts/opl-framework/temporal-stable-cohort.json",
-  "audited_at": "2026-07-22",
+  "audited_at": "2026-11-09",
   "stability_policy": {
     "release_channel": "stable",
     "draft_allowed": false,
     "prerelease_allowed": false
   },
   "server": {
-    "version": "1.31.2",
-    "release_tag": "v1.31.2",
-    "tag_commit": "19a774302c613da9adc4436ab14278ccdca8e0a5",
-    "published_at": "2026-07-08T17:10:11Z",
-    "release_url": "https://github.com/temporalio/temporal/releases/tag/v1.31.2",
+    "version": "1.32.2",
+    "release_tag": "v1.32.2",
+    "tag_commit": "6d085822273f4336796e6959c73ab1d14a23eb77",
+    "published_at": "2026-11-02T18:38:48Z",
+    "release_url": "https://github.com/temporalio/temporal/releases/tag/v1.32.2",
     "maintained_minor_lines": [
-      "1.29.7",
-      "1.30.6",
-      "1.31.2"
+      "1.30.9",
+      "1.31.5",
+      "1.32.2"
     ]
   },
   "cli": {
-    "version": "1.8.1",
-    "release_tag": "v1.8.1",
-    "tag_commit": "d904a0d53bff2090274d494f3c201d9006b7237c",
-    "published_at": "2026-07-21T17:36:10Z",
-    "release_url": "https://github.com/temporalio/cli/releases/tag/v1.8.1",
-    "embedded_server_version": "1.31.2",
+    "version": "1.10.0",
+    "release_tag": "v1.10.0",
+    "tag_commit": "eace324a13f6a9161af1e201e1ca45b67b50b620",
+    "published_at": "2026-11-03T01:49:50Z",
+    "release_url": "https://github.com/temporalio/cli/releases/tag/v1.10.0",
+    "embedded_server_version": "1.32.2",
     "darwin_arm64_artifact": {
-      "file_name": "temporal_cli_1.8.1_darwin_arm64.tar.gz",
-      "sha256": "e942d2ba2634720293bded2a9061ac471a7fd44d883a6704b8d0ecb94995d6a6"
+      "file_name": "temporal_cli_1.10.0_darwin_arm64.tar.gz",
+      "sha256": "40a76ef7d525e6195b083e4cd50b184cc3bb242fea7f8dda2b9a8698ecbb7379"
     },
     "linux_amd64_artifact": {
-      "file_name": "temporal_cli_1.8.1_linux_amd64.tar.gz",
-      "sha256": "b94417b9a8760b30217f4b881dabce4b16a76a38b5e99e2eca3ce358b8030f06"
+      "file_name": "temporal_cli_1.10.0_linux_amd64.tar.gz",
+      "sha256": "521f461f3d108902763bb71e85cd0fd382dc9357b59604ae03da6ae734d16890"
     }
   },
   "sdk": {
-    "version": "1.20.3",
-    "release_tag": "v1.20.3",
-    "tag_commit": "ae823d7f9dd513f3b90aeba8c66854c59c39a359",
-    "published_at": "2026-07-15T19:20:48Z",
-    "release_url": "https://github.com/temporalio/sdk-typescript/releases/tag/v1.20.3",
+    "version": "1.25.0",
+    "release_tag": "v1.25.0",
+    "tag_commit": "efafd16ef4533da24029277bd72caf564c7aa007",
+    "published_at": "2026-10-27T18:32:22Z",
+    "release_url": "https://github.com/temporalio/sdk-typescript/releases/tag/v1.25.0",
     "npm_dist_tag": "latest",
     "node_engine": ">=20.3.0",
     "packages": {
-      "@temporalio/activity": "1.20.3",
-      "@temporalio/client": "1.20.3",
-      "@temporalio/common": "1.20.3",
-      "@temporalio/testing": "1.20.3",
-      "@temporalio/worker": "1.20.3",
-      "@temporalio/workflow": "1.20.3"
+      "@temporalio/activity": "1.25.0",
+      "@temporalio/client": "1.25.0",
+      "@temporalio/common": "1.25.0",
+      "@temporalio/testing": "1.25.0",
+      "@temporalio/worker": "1.25.0",
+      "@temporalio/workflow": "1.25.0"
     }
   },
   "compatibility": {
@@ -66,8 +66,8 @@
     "grpc_gzip_default_since": "1.19.0",
     "grpc_gzip_automatic_fallback_since": "1.20.0",
     "replay_honors_recorded_sdk_flags_since": "1.20.0",
-    "protobufjs_required_range": "^7.6.4",
-    "workflow_bundler_regression_fix_version": "1.20.3"
+    "protobufjs_required_range": "^8.7.1",
+    "workflow_bundler_regression_fix_version": "1.25.0"
   },
   "worker": {
     "bundle_api": "@temporalio/worker.bundleWorkflowCode",

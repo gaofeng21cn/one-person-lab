@@ -1,24 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-import temporalProto from '@temporalio/proto';
+import { readTemporalHistoryFixture } from '../temporal-history-fixture.ts';
 
 import { buildTemporalStageAttemptReplayGateForTest } from '../../../src/adapters/execution/family-runtime-temporal-provider.ts';
 
-const repoRoot = path.resolve(import.meta.dirname, '..', '..', '..');
 const legacySourceCommit = '86cc08825a06cd9345a8fe8cc70524693fb54318';
-
-function readLegacyHistory(fileName: string) {
-  const bytes = fs.readFileSync(
-    path.join(repoRoot, 'tests', 'fixtures', 'temporal-history', fileName),
-  );
-  return {
-    history: JSON.parse(bytes.toString('utf8')) as { events?: Array<Record<string, any>> },
-    sha256: createHash('sha256').update(bytes).digest('hex'),
-  };
-}
 
 function workflowType(history: { events?: Array<Record<string, any>> }) {
   return history.events?.find((event) => event.workflowExecutionStartedEventAttributes)
@@ -80,7 +66,6 @@ for (const fixture of [
     sourceCommit: '4a5ed90c52efa832cda0c9164d13c08766514e92',
     expectedAcceptedUpdate: 'StageAttemptOperatorUpdate',
     expectedSignal: 'ResumeSignal',
-    protobufObjectJson: true,
   },
   {
     fileName: 'stage-attempt-visibility-status-pre-minimal-index-v1.json',
@@ -97,11 +82,10 @@ for (const fixture of [
       'OplStagePhase',
     ],
     expectedSha256: '5ca6a60ac7504cc4dbfc43140ced9154b13c74a82bc236c15fbc3652146a9177',
-    protobufObjectJson: true,
   },
 ] as const) {
   test(`current bundle replays ${fixture.workflowType} history from ${fixture.sourceCommit}`, async () => {
-    const { history, sha256 } = readLegacyHistory(fixture.fileName);
+    const { history, sha256, replayHistory } = readTemporalHistoryFixture(fixture.fileName);
     assert.equal(workflowType(history), fixture.workflowType);
     if ('expectedPatchIds' in fixture) {
       assert.deepEqual(patchIds(history), fixture.expectedPatchIds);
@@ -115,9 +99,6 @@ for (const fixture of [
       assert.ok(signalNames(history).includes(fixture.expectedSignal));
     }
 
-    const replayHistory = 'protobufObjectJson' in fixture
-      ? temporalProto.temporal.api.history.v1.History.fromObject(history)
-      : history;
     const gate = await buildTemporalStageAttemptReplayGateForTest(replayHistory, fixture.workflowId);
     assert.equal(gate.replay_status, 'passed');
     assert.equal(gate.workflow_id, fixture.workflowId);

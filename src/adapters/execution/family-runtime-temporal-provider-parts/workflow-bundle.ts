@@ -39,8 +39,8 @@ function temporalWorkflowBundleManifestPath(paths: TemporalWorkerPaths) {
   return path.join(temporalWorkflowBundleDir(paths), 'manifest.json');
 }
 
-function bundleFileName(sourceVersion: string) {
-  const digest = crypto.createHash('sha256').update(sourceVersion).digest('hex');
+function bundleFileName(code: string) {
+  const digest = crypto.createHash('sha256').update(code).digest('hex');
   return `stage-attempt-workflows-${digest.slice(0, 16)}.js`;
 }
 
@@ -59,11 +59,13 @@ async function materializeTemporalWorkflowBundle(input: {
   sourceVersion: string;
 }): Promise<TemporalWorkflowBundleManifest> {
   const bundleDir = temporalWorkflowBundleDir(input.paths);
-  const codePath = path.join(bundleDir, bundleFileName(input.sourceVersion));
   const manifestPath = temporalWorkflowBundleManifestPath(input.paths);
   fs.mkdirSync(bundleDir, { recursive: true });
 
   const bundle = await bundleWorkflowCode({ workflowsPath: input.workflowsPath });
+  // An SDK-only upgrade changes bundle bytes without changing workflow source.
+  // Keep the previous bundle available for its matching runtime on rollback.
+  const codePath = path.join(bundleDir, bundleFileName(bundle.code));
   const version = workflowBundleVersion(bundle.code);
   fs.writeFileSync(codePath, bundle.code, 'utf8');
   const manifest: TemporalWorkflowBundleManifest = {
