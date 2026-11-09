@@ -299,6 +299,13 @@ export function compactFastAgentPackageDirectory(value: unknown) {
       'installability', 'readiness', 'recommended_action', 'recommended_action_ref',
       'available_actions', 'app_enabled',
     ]),
+    ...(isRecord(entry.installed_carrier_readback)
+      ? {
+          installed_carrier_readback: pickRecordFields(entry.installed_carrier_readback, [
+            'kind', 'identity', 'version', 'enabled', 'lifecycle_authority',
+          ]),
+        }
+      : {}),
     authority_boundary: compactFastAgentPackageAuthorityBoundary(entry.authority_boundary),
   }));
   return {

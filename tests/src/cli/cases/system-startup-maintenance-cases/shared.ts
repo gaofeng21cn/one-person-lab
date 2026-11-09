@@ -90,7 +90,7 @@ export function agentPluginManifestFixtureFiles(pluginName: string, prefix = '')
 export function createDomainModuleRemote(input: {
   repoName: string;
   pluginName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge'
-    | 'med-autocast';
+    | 'med-autocast' | 'occ';
   installerKind: 'bash' | 'node';
   logPath: string;
 }) {
@@ -355,6 +355,12 @@ export function createStartupDomainModuleRemotes(input: {
     rcaRemote: createDomainModuleRemote({
       repoName: 'redcube-ai',
       pluginName: 'redcube-ai',
+      installerKind: 'node',
+      logPath: input.logPath,
+    }),
+    occRemote: createDomainModuleRemote({
+      repoName: 'opl-capital-compass',
+      pluginName: 'occ',
       installerKind: 'node',
       logPath: input.logPath,
     }),
