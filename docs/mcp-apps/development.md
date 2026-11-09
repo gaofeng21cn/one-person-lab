@@ -22,6 +22,8 @@
 
 按真实需求选用已有入口，不要求所有应用依赖所有基座能力，也不要求轻量工具改成标准智能体。
 
+先按[物理归属](../architecture.md#共用基座的物理归属)找到实际 owner。开发与安装环境使用 `opl framework locate --json` 核对选定的 Framework；模块通过公开 export 或既有 CLI 调用，Python carrier 使用基座的现有投影流程。代码安装根、运行状态目录、Profile/Workspace 与知识正文位置分别配置，不把个人 checkout 或默认 Codex home 当作所有消费者的共同来源。
+
 | 需求 | 接入方式 | 验证重点 |
 | --- | --- | --- |
 | 复用外部服务账号 | 可信服务启动时通过 `opl-framework/connection-authorization-host` 的 `activateInstalledPackageConnectionContext` 绑定自己的 installed Package；消费注入的 `connect` port | 已有 grant 可用；撤权、连接修订或载体变化阻止后续调用；业务结果回到 provider |
