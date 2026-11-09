@@ -1,7 +1,7 @@
 export const CORDIS_FRAMEWORK_PACKAGE = '@deepseek-ai/cordis';
-export const CORDIS_FRAMEWORK_VERSION = '4.0.5';
+export const CORDIS_FRAMEWORK_VERSION = '4.1.0';
 export const CORDIS_FRAMEWORK_INTEGRITY =
-  'sha512-Sktq5axy0owk9PdnivBRNOJjHEVEibCt0+TDDZcv0+UH2KS1M910fX4kn5y45YFsrpZIi1mJf/1s5VzywMUnyg==';
+  'sha512-CJrjNyBkKn1SfvBQUcgFYKFnLjS+uKrhdMsbHU60xabvi12d+xQ+IQSNlME5Z+B+4Zi6n4BDknKY94tEPeo47w==';
 
 // Cordis exposes fiber.state, while its const enum is erased from ESM output.
 export const CORDIS_FIBER_STATE = {
