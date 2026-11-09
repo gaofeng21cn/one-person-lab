@@ -2,12 +2,6 @@
 
 本文只记录已有具体断点、明确负责人和验收方法的未完成工作。长期职责、例行维护和未验证的猜测不作为 gap；执行进度留在对应 Issue。
 
-## 知识来源模型的安装与实际工作区验收
-
-来源合同、直接正文解析、必要知识匹配、授权与版本核验以及接受写回已在源码链路实现。当前仍需确认已安装的 Framework 与领域包采用同一合同，并在实际工作区完成来源绑定、阶段上下文和写回入口的回读。设计依据由[知识来源与记忆政策](../policies/knowledge-source-and-memory-policy.md)持有。
-
-Framework 负责安装入口与通用运行回读，各领域 owner 负责现役工作区的绑定、消费和写回验证，Persona 负责派生上下文入口的实装核验。完成条件是安装包与当前合同一致，内部目录、外部个人库和混合来源在实际入口形成可验证的正文快照与消费证据，并证明私有正文未被复制成第二主源。源码测试不能代替这些安装与使用路径证据。
-
 ## 维护方式
 
 新增条目前必须给出当前断点证据、负责人和可观察完成条件。完成后删除条目，并仅在对应当前说明中更新行为；不追加完成区、测试总数或发布快照。
@@ -16,13 +10,13 @@ App、Cloud、Package 的部署验收与专业质量属于各 owner，本页未�
 
 ## Agent 原生应用基座与开发路径
 
-目标遵循[开发标准](../policies/agent-native-app-policy.md)；技术接入见[开发指南](../mcp-apps/development.md)。下面按可独立交付的切片组织。先完成一条真实协作闭环，再增加消费者；已有知识迁移由其当前 owner 继续，MiniApp 工作不接管或复制它。
+目标遵循[开发标准](../policies/agent-native-app-policy.md)；技术接入见[开发指南](../mcp-apps/development.md)。下面按可独立交付的切片组织。先完成一条真实协作闭环，再增加消费者；知识来源与记忆由其当前 owner 维护，MiniApp 工作不接管或复制它。
 
 | 顺序 / owner | 当前具体断点 | 最小交付与复用 | 完成条件 |
 | --- | --- | --- | --- |
 | P0 / Framework MCP App、App/Studio；Relay、MAC、Photo 各自提供场景 | `tests/src/opl-mcp-app-stdio.test.ts`、Studio host tests 与领域贡献 tests 分属不同链路，协议/fixture 不能证明发行安装中的完整人机协作 | 从既有测试提取可复用场景与合成数据：共享审阅采用 MAC/Photo；专用编辑采用 Relay。统一记录所验收 Host 与 exact carrier，不新造测试运行平台 | 在实际安装宿主完成 Agent 发起→精确对象 UI→人修改/决定→owner 应用→Agent 回读；覆盖重开、旧 revision、撤权、未知 outcome、无 UI 降级；结果按证据层分开 |
 | P0 / Framework Connect + 首个 provider/领域 owner | shared `mcp-app-stdio.ts` 的 `package_id` 只做导航；它没有可依据 UI 参数激活的可信 consumer 上下文 | 一个领域服务在可信安装激活时获得 `createOplConnectionContextHost`；Agent 与 UI 都调用该服务。复用已有 Connect/账号设置的状态和修复入口 | 已授权连接无需重新配置；伪造 Package 身份被拒；撤销/连接 revision 变化立即影响下一次调用；长期凭据不进入 UI/模型；业务确认仍由 owner 检查 |
-| P0 / Framework 知识 owner + 当前知识迁移任务 | 现行知识 catalog 混合归属、物理目录和日期状态；新的来源/主题模型需完成消费者与真实安装闭环 | 由知识 owner 交付来源模型、绑定、冻结与写回；MiniApp 只接入其最终公开合同，展示本次知识来源、过期/缺失项和修复入口。Persona 摘要绑定来源依赖 | 有 Obsidian/只有目录两种环境可用；同一主题跨项目引用且不复制正文；任务读取同版；源改动/撤权影响后续动作；条件写回原处。该切片成果由原任务验收 |
+| P0 / Framework MCP App + 领域 UI owner | 知识来源、绑定、冻结和写回已有公开接口；MiniApp 对本次来源、过期或缺失项及修复入口的展示仍需实际宿主验收 | 消费[知识来源接口](../specs/knowledge-sources.md)及领域既有回读，展示本次来源与修复入口，不建立另一套知识登记或写回流程 | 在实际安装宿主核对授权来源、冻结版本和缺口；源变化或撤权反映到后续操作；修复交回既有 owner 并可回读结果 |
 | P1 / OMA + Framework；Flow 只链接开发入口 | OMA 已有共享/专用/专业应用选型知识，但缺一项实际生成应用同时复用连接、个人知识并完成协作的验收 | 在现有 Blueprint/EvalSpec 和生成模板补知识/连接需求及交接场景；以两个真实消费者抽取最小可复用样例，不新增 MiniApp manifest 或独立 SDK publication | 新应用不复制凭证、个人正文、任务库、loader；从生成、发现、调用到必要 UI 与结果回读全部可操作；第二个消费者直接复用同一公共部分 |
 | P1 / Framework + 相关领域 owner | `app-contribution-adapter.ts` 的 transform 枚举仍包含 `photo_status`、`grant_workspace`、`capital_decision` 等领域命名；增加领域会扩大中心适配器 | 先按真实重复程度选择两个 owner，把领域 shape 转换移入 owner read，Framework 保留通用 renderer/schema 路由；兼容现有已装消费者后退役对应分支 | 迁移前后同对象/版本/动作语义一致；现行 carrier 可调用；源码与 fresh consumers 证明旧分支无人使用后删除。不要一次重写所有适配 |
 | P1 / RedNote、Travel；Framework 仅提供共享交互 | RedNote 的 package capability 明示无 graphical MCP App；Travel `scripts/update-atlas.mjs` 写结果仍主要为人读输出 | RedNote 复用 Controller/SQLite 增加精确内容/素材审阅；Travel 先提供结构化成功/错误和 owner receipt，再按需要接共享差异/审阅 | Agent 可读真实写结果；人核对精确版本/目标；未知结果可查询；不复制发布、地图或状态 owner |
