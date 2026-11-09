@@ -209,7 +209,7 @@ function resolveRcaVisualProfile(workspacePath: string, registry: unknown) {
     'rca-manifest.cjs',
     `process.stdout.write(${JSON.stringify(`${JSON.stringify(rcaVisualManifest())}\n`)});\n`,
   );
-  return resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+  return resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`);
 }
 
 function resolveWithCommand(
@@ -239,7 +239,7 @@ test('resolveBindingManifest resolves a configured command with env timeout poli
     );
 
     const entry = withEnvVar('OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS', '2500', () =>
-      resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`));
+      resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`));
 
     assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
     assert.equal(entry.error, null);
@@ -259,7 +259,7 @@ test('resolveBindingManifest hydrates canonical action and stage contracts from 
       `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
     );
 
-    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+    const entry = resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`);
 
     assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
     assert.equal(entry.manifest?.family_action_catalog_source_ref?.ref, 'contracts/action_catalog.json');
@@ -384,7 +384,7 @@ test('resolveBindingManifest rejects non-canonical or duplicated family contract
         `${name}.cjs`,
         `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
       );
-      const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+      const entry = resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`);
       assert.equal(entry.status, 'invalid_manifest');
       assert.match(entry.error?.message ?? '', message);
     }
@@ -412,7 +412,7 @@ test('resolveBindingManifest fails closed when the generated stage source manife
       `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
     );
 
-    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+    const entry = resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`);
 
     assert.equal(entry.status, 'invalid_manifest');
     assert.match(
@@ -483,7 +483,7 @@ test('resolveBindingManifest does not admit conflicting legacy visual transition
       `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
     );
 
-    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+    const entry = resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`);
 
     assert.equal(entry.status, 'resolved');
     assert.equal('family_transition' in (entry.manifest ?? {}), false);
@@ -512,7 +512,7 @@ test('resolveBindingManifest never dereferences an escaping legacy visual transi
       `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
     );
 
-    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+    const entry = resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`);
 
     assert.equal(entry.status, 'resolved');
     assert.equal('family_transition' in (entry.manifest ?? {}), false);
@@ -534,7 +534,7 @@ test('resolveBindingManifest ignores env timeout when timeout policy is fixed', 
     const entry = withEnvVar('OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS', '1', () =>
       resolveWithCommand(
         workspacePath,
-        `${process.execPath} ${scriptPath}`,
+        `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`,
         {
           timeoutMs: 1000,
           timeoutPolicy: 'fixed',
@@ -558,7 +558,7 @@ test('resolveBindingManifest reports command timeout and preserves timeout metad
       'setTimeout(() => process.stdout.write("{}\\n"), 500);\n',
     );
 
-    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`, {
+    const entry = resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`, {
       timeoutMs: 25,
       timeoutPolicy: 'fixed',
     });
@@ -603,7 +603,7 @@ test('resolveBindingManifest distinguishes invalid JSON from invalid manifest sh
       'invalid-json.cjs',
       'process.stdout.write("{not json");\n',
     );
-    const invalidJson = resolveWithCommand(workspacePath, `${process.execPath} ${invalidJsonScript}`, {
+    const invalidJson = resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(invalidJsonScript)}`, {
       timeoutMs: 1000,
       timeoutPolicy: 'fixed',
     });
@@ -617,7 +617,7 @@ test('resolveBindingManifest distinguishes invalid JSON from invalid manifest sh
     );
     const invalidManifest = resolveWithCommand(
       workspacePath,
-      `${process.execPath} ${invalidManifestScript}`,
+      `${shellSingleQuote(process.execPath)} ${shellSingleQuote(invalidManifestScript)}`,
       {
         timeoutMs: 1000,
         timeoutPolicy: 'fixed',
@@ -652,7 +652,7 @@ test('resolveBindingManifest retries uv cache install failures with a fresh comm
         + `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
     );
 
-    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`, {
+    const entry = resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`, {
       timeoutMs: 1000,
       timeoutPolicy: 'fixed',
     });
