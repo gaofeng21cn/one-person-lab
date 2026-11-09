@@ -8,16 +8,6 @@
 
 App、Cloud、Package 的部署验收与专业质量属于各 owner，本页未列出它们不表示已就绪。通用证据限制见 [当前状态](../status.md#production-evidence)。
 
-## Agent 与应用的共用基座接入
-
-适用范围与复用规则由[Agent 原生应用政策](../policies/agent-native-app-policy.md)持有。下列缺口来自真实调用链；领域业务库、原生凭据保管和专用 UI 各自保留原 owner，不作为批量迁移对象。
-
-| owner | 当前具体断点 | 下一步与完成条件 |
-| --- | --- | --- |
-| Relay、Persona、iPhone Steward + Framework Knowledge | 统一来源接口和消费者已合入，Framework 与消费者已有安装回读；最终组合的已安装修订、跨消费者写回及撤权/过期验证仍由知识迁移 owner 收口 | 沿现有知识迁移完成安装组合验收，保留领域业务证据；同一来源登记一次、多消费者读取同版，修订与失效传播均从实际载体回读 |
-
-新增 provider 由真实复用需求驱动，设备或社交产品尚无第二消费者时不预建适配。
-
 ## Agent 原生应用的后续验收与兼容退役
 
 设计标准见[Agent 原生应用政策](../policies/agent-native-app-policy.md)，接入与验证见[开发指南](../mcp-apps/development.md)。领域数据与决定由各 owner 持有；共享界面、来源摘要和开发样例的源码接通，不自动消除下列真实载体与业务链路的验证边界。
