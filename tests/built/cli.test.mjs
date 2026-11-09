@@ -121,3 +121,55 @@ exit 1
     fs.rmSync(capturePath, { force: true });
   }
 });
+
+test('npm tarball installs its workspace runtime dependencies without a checkout repair', { timeout: 240_000 }, () => {
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-npm-installed-cli-'));
+  const prefix = path.join(testRoot, 'prefix');
+  const testHome = path.join(testRoot, 'home');
+  fs.mkdirSync(testHome);
+  const env = {
+    ...process.env,
+    HOME: testHome,
+    USERPROFILE: testHome,
+    OPL_STATE_DIR: path.join(testRoot, 'state'),
+    NODE_NO_WARNINGS: '1',
+    NODE_PATH: '',
+    NODE_OPTIONS: '',
+  };
+  const run = (command, args, cwd = testRoot) => {
+    const result = spawnSync(command, args, { cwd, env, encoding: 'utf8', timeout: 180_000, maxBuffer: 8 * 1024 * 1024 });
+    assert.equal(result.status, 0, `${command} ${args.join(' ')}\n${result.error?.message ?? ''}\n${result.stderr}`);
+    return result;
+  };
+  try {
+    const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    const packed = JSON.parse(run(npm, ['pack', '--ignore-scripts', '--json', '--pack-destination', testRoot], repoRoot).stdout)[0];
+    run(npm, ['install', '--global', '--prefix', prefix, path.join(testRoot, packed.filename),
+      '--prefer-offline', '--no-audit', '--no-fund']);
+    const installedRoot = path.join(prefix, 'lib', 'node_modules', 'opl-framework');
+    assert.equal(fs.existsSync(path.join(installedRoot, 'src', 'entrypoints', 'cli.ts')), false);
+    const resolvedPackages = JSON.parse(run(process.execPath, ['--eval',
+      'const resolve = require("node:module").createRequire(process.argv[1]).resolve; process.stdout.write(JSON.stringify(["@one-person-lab/cordis-abi", "@one-person-lab/package-host"].map(id => resolve(id))));',
+      path.join(installedRoot, 'package.json')]).stdout);
+    for (const packagePath of resolvedPackages) {
+      const resolved = fs.realpathSync(packagePath);
+      assert.ok(resolved.startsWith(`${fs.realpathSync(installedRoot)}${path.sep}`), resolved);
+      assert.equal(resolved.startsWith(`${fs.realpathSync(repoRoot)}${path.sep}`), false);
+    }
+    const fixture = path.join(testRoot, 'agent');
+    fs.mkdirSync(path.join(fixture, 'contracts'), { recursive: true });
+    fs.writeFileSync(path.join(fixture, 'contracts', 'durable_knowledge_catalog.json'), JSON.stringify({
+      surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v2',
+      owner: 'one-person-lab', domain_id: 'fixture', items: [],
+    }));
+    const installedCli = path.join(prefix, 'bin', 'opl');
+    const knowledge = JSON.parse(run(installedCli, ['knowledge', 'list', '--repo', fixture, '--json']).stdout);
+    assert.equal(knowledge.durable_knowledge.version, 'durable-knowledge-catalog.v2');
+    const packages = JSON.parse(run(installedCli, ['packages', 'list', '--json']).stdout);
+    assert.equal(packages.version, 'g2');
+    assert.equal(packages.opl_agent_packages.surface_kind, 'opl_agent_package_readback');
+    assert.equal(packages.opl_agent_packages.status, 'available');
+  } finally {
+    fs.rmSync(testRoot, { recursive: true, force: true });
+  }
+});
