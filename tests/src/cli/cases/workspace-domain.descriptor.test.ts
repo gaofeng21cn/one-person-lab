@@ -79,6 +79,9 @@ test('agent descriptor commands keep partial domain surfaces discoverable and no
     'med-autoscience',
     'MedAutoScience',
   );
+  // Repo contracts now supply memory discovery, so make this source surface
+  // explicitly absent instead of relying on its omission from the legacy manifest.
+  fs.rmSync(path.join(masPack.repoDir, 'contracts', 'durable_knowledge_catalog.json'));
   initializeFixtureGitCheckout(masPack.repoDir);
   manifests.medautoscience = masPack.manifest;
   const env = {

@@ -30,6 +30,9 @@ function readyFoundryRepos() {
   retargetReadyRepo(rcaRepo, 'redcube-ai', 'RedCube AI');
   configureReadyRcaMorphology(rcaRepo);
 
+  const occRepo = buildReadyAgentRepo();
+  retargetReadyRepo(occRepo, 'occ', 'OPL Capital Compass');
+
   const omaRepo = buildReadyAgentRepo();
   retargetReadyRepo(omaRepo, 'opl-meta-agent', 'OPL Meta Agent');
 
@@ -46,7 +49,7 @@ function readyFoundryRepos() {
   const mediaAssetsRepo = buildReadyAgentRepo();
   retargetReadyRepo(mediaAssetsRepo, 'mac-media-assets', 'Med Auto Cast Media Assets');
 
-  return { masRepo, magRepo, rcaRepo, omaRepo, bookForgeRepo, autocastRepo, scholarSkillsRepo, mediaAssetsRepo };
+  return { masRepo, magRepo, rcaRepo, occRepo, omaRepo, bookForgeRepo, autocastRepo, scholarSkillsRepo, mediaAssetsRepo };
 }
 
 test('agents conformance exposes Foundry Agent OS membership without readiness authority', async () => {
@@ -60,6 +63,8 @@ test('agents conformance exposes Foundry Agent OS membership without readiness a
     `mag=${repos.magRepo}`,
     '--agent',
     `rca=${repos.rcaRepo}`,
+    '--agent',
+    `occ=${repos.occRepo}`,
     '--agent',
     `oma=${repos.omaRepo}`,
     '--agent',

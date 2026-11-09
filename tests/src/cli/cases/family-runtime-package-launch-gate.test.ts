@@ -6,7 +6,6 @@ import {
   path,
   removeFixtureTree,
   runCli,
-  runCliAsync,
   runCliFailure,
   test,
 } from '../helpers.ts';
@@ -334,7 +333,7 @@ test('a retained legacy package lock is not accepted as an installed native carr
   }
 });
 
-test('native package launch projects Workspace Skills without private lifecycle state', async () => {
+test('native package launch projects Workspace Skills without private lifecycle state', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-native-package-launch-'));
   const workspace = path.join(root, 'workspace');
   const providerRoot = path.join(root, 'provider');
@@ -364,6 +363,7 @@ test('native package launch projects Workspace Skills without private lifecycle 
   };
   fs.mkdirSync(workspace, { recursive: true });
   fs.mkdirSync(env.CODEX_HOME, { recursive: true });
+  // Seed the installed cohort that the launch gate reads from the native carrier.
   fs.writeFileSync(path.join(env.CODEX_HOME, 'config.toml'), [
     '[marketplaces."mas-scholar-skills-local"]',
     `source = ${JSON.stringify(path.join(providerRoot, 'native-carrier-marketplace'))}`,
@@ -371,17 +371,17 @@ test('native package launch projects Workspace Skills without private lifecycle 
     '[marketplaces."med-autoscience-local"]',
     `source = ${JSON.stringify(consumerRoot)}`,
     '',
+    '[plugins."mas-scholar-skills@mas-scholar-skills-local"]',
+    'enabled = false',
+    '',
+    '[plugins."med-autoscience@med-autoscience-local"]',
+    'enabled = true',
+    '',
   ].join('\n'));
   try {
     runCli([
       'workspace', 'bind', '--project', 'medautoscience', '--path', workspace,
     ], env);
-    await runCliAsync(['packages', 'install', 'mas-scholar-skills'], env);
-    await runCliAsync(['packages', 'install', 'mas'], env);
-    fs.appendFileSync(
-      path.join(env.CODEX_HOME, 'config.toml'),
-      '\n[plugins."mas-scholar-skills@mas-scholar-skills-local"]\nenabled = false\n',
-    );
     const providerStatus = runCli([
       'packages', 'status', '--package-id', 'mas-scholar-skills',
     ], env).opl_agent_package_status;
