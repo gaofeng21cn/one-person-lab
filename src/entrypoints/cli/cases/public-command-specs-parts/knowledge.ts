@@ -11,6 +11,11 @@ import {
   reviewKnowledgeWriteback,
   applyKnowledgeWriteback,
   reviewKnowledgeSource,
+  registerKnowledgeSource,
+  listKnowledgeSources,
+  searchKnowledgeSources,
+  resolveKnowledgeSourceTarget,
+  discoverKnowledgeSources,
 } from '../../../../authority/packages/index.ts';
 import {
   bindStageKnowledgeContext,
@@ -194,6 +199,60 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
     return { reviewer: parsed.reviewer as string, reviewRef: parsed['review-ref'] as string,
       reviewedAt: parsed['reviewed-at'] as string, nextReviewAt: parsed['next-review-at'] as string };
   };
+  commandSpecs['knowledge sources'] = {
+    usage: 'opl knowledge sources --workspace <path> --domain <domain_id> [--project <path>] [--id <knowledge_id>]',
+    summary: 'List authorized, current accepted private source metadata without returning bodies.',
+    examples: ['opl knowledge sources --workspace /private/workspace --domain relay --json'], group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge sources']!, { ...scopeOptions, id: { type: 'string' } });
+      return { version: 'g2', knowledge_sources: listKnowledgeSources({ ...scope(parsed), knowledgeId: parsed.id as string | undefined }) };
+    },
+  };
+  commandSpecs['knowledge search'] = {
+    usage: 'opl knowledge search --workspace <path> --domain <domain_id> --query <text> [--project <path>] [--limit <1-20>] [--excerpt-chars <1-1000>]',
+    summary: 'Return bounded literal search candidates from accepted authorized sources; selection is not a semantic verdict.',
+    examples: ['opl knowledge search --workspace /private/workspace --domain relay --query reserve --json'], group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge search']!, { ...scopeOptions, query: { type: 'string' }, limit: { type: 'string' }, 'excerpt-chars': { type: 'string' } });
+      if (!parsed.query) throw new Error('knowledge search requires --query.');
+      return { version: 'g2', knowledge_search: searchKnowledgeSources({ ...scope(parsed), query: parsed.query as string,
+        limit: parsed.limit ? Number(parsed.limit) : undefined, excerptChars: parsed['excerpt-chars'] ? Number(parsed['excerpt-chars']) : undefined }) };
+    },
+  };
+  commandSpecs['knowledge resolve-target'] = {
+    usage: 'opl knowledge resolve-target --workspace <path> --domain <domain_id> --path <absolute-file> [--project <path>]',
+    summary: 'Identify a bound source target before direct document editing, including inactive or revoked entries.',
+    examples: ['opl knowledge resolve-target --workspace /private/workspace --domain persona --path /private/vault/policy.md --json'], group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge resolve-target']!, { ...scopeOptions, path: { type: 'string' } });
+      if (!parsed.path) throw new Error('knowledge resolve-target requires --path.');
+      return { version: 'g2', knowledge_target: resolveKnowledgeSourceTarget({ ...scope(parsed), bodyPath: parsed.path as string }) };
+    },
+  };
+  commandSpecs['knowledge discover'] = {
+    usage: 'opl knowledge discover --workspace <path> --domain <domain_id> --query <text> [--project <path>] [--limit <1-20>] [--excerpt-chars <1-1000>]',
+    summary: 'Discover bounded unregistered source candidates through current read grants and path filters without accepting knowledge.',
+    examples: ['opl knowledge discover --workspace /private/workspace --domain relay --query collaboration --json'], group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge discover']!, { ...scopeOptions, query: { type: 'string' }, limit: { type: 'string' }, 'excerpt-chars': { type: 'string' } });
+      if (!parsed.query) throw new Error('knowledge discover requires --query.');
+      return { version: 'g2', knowledge_discovery: discoverKnowledgeSources({ ...scope(parsed), query: parsed.query as string,
+        limit: parsed.limit ? Number(parsed.limit) : undefined, excerptChars: parsed['excerpt-chars'] ? Number(parsed['excerpt-chars']) : undefined }) };
+    },
+  };
+  commandSpecs['knowledge register'] = {
+    usage: 'opl knowledge register --workspace <path> --domain <domain_id> --registry <path> --item <json-file> --expected-sha256 <digest> --reviewer <owner> --review-ref <authority-ref> --reviewed-at <time> --next-review-at <time> [--project <path>] [--expected-body-path <absolute-file>]',
+    summary: 'Register an owner-reviewed existing Markdown body in its current bound source registry without copying the body.',
+    examples: ['opl knowledge register --workspace /private/workspace --domain persona --registry /private/registry.json --item /private/item.json --expected-sha256 <digest> --reviewer owner --review-ref <authority-ref> --reviewed-at <time> --next-review-at <time> --json'], group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge register']!, { ...scopeOptions, ...reviewOptions,
+        registry: { type: 'string' }, item: { type: 'string' }, 'expected-sha256': { type: 'string' }, 'expected-body-path': { type: 'string' } });
+      if (!parsed.registry || !parsed.item || !parsed['expected-sha256']) throw new Error('knowledge register requires --registry, --item and --expected-sha256.');
+      return { version: 'g2', knowledge_registration: registerKnowledgeSource({ ...scope(parsed), ...ownerReview(parsed),
+        registryRef: parsed.registry as string, item: JSON.parse(fs.readFileSync(parsed.item as string, 'utf8')), expectedSha256: parsed['expected-sha256'] as string,
+        expectedBodyPath: parsed['expected-body-path'] as string | undefined }) };
+    },
+  };
   const readSource = (args: string[], command: string, candidate: boolean) => {
     const parsed = parseCommandOptions(args, commandSpecs[command]!, { ...scopeOptions, id: { type: 'string' } });
     if (!parsed.id) throw new Error(`${command} requires --id.`);
@@ -202,7 +261,9 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
     const sha256 = `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
     if (!bytes.length || bytes.length > 256 * 1024 || sha256 !== source.currentSha256
       || (!candidate && sha256 !== source.reviewedSha256)) throw new Error('Knowledge source changed during its authorized read.');
-    const content = { knowledge_id: source.item.knowledge_id, sha256,
+    const content = { knowledge_id: source.item.knowledge_id, sha256, source_id: source.source.source_id,
+      scope: source.item.scope, content_kind: source.item.content_kind, status: source.item.status,
+      reviewed_at: source.item.reviewed_at, next_review_at: source.item.next_review_at,
       content: new TextDecoder('utf-8', { fatal: true }).decode(bytes), source_ref: source.item.body_ref.ref };
     return candidate
       ? { version: 'g2', knowledge_source_candidate: { ...content, accepted_sha256: source.reviewedSha256, status: source.item.status } }

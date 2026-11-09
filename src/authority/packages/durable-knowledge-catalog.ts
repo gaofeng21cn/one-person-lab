@@ -13,7 +13,7 @@ import {
 import {
   readBoundKnowledgeSources, resolveKnowledgeSourceItem, type SourceInput,
 } from './durable-knowledge-sources.ts';
-export { resolveKnowledgeSourceItem, verifyKnowledgeDependencies, KNOWLEDGE_BINDINGS_REF } from './durable-knowledge-sources.ts';
+export { resolveKnowledgeSourceItem, resolveKnowledgeSourceTarget, verifyKnowledgeDependencies, listKnowledgeSources, searchKnowledgeSources, discoverKnowledgeSources, KNOWLEDGE_BINDINGS_REF } from './durable-knowledge-sources.ts';
 export type { DurableKnowledgeItem, DurableKnowledgeScope, KnowledgeDependency } from './durable-knowledge-model.ts';
 export const DURABLE_KNOWLEDGE_CATALOG_REF = 'contracts/durable_knowledge_catalog.json';
 export const DURABLE_KNOWLEDGE_ITEM_VERSION = 'durable-knowledge-item.v2';

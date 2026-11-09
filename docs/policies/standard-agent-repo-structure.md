@@ -136,7 +136,7 @@ OMA stage-decomposition / agent-building semantics
 
 OMA 负责目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据诊断和 `EvolutionProposal`。OPL Framework 负责 Pack scaffold/conformance、generated interfaces、FoundryRun、物化、评测、证据、版本、canary、activation、rollback 和 workspace projection。目标 agent/owner 负责自己的 domain truth、保护测试、artifact body、quality verdict、owner receipt、human gate 与生产采用。
 
-蓝图必须说明所需知识的归属、内容性质、来源模式、必要性与写回负责人。OMA 声明语义需求，获授权的运行控制面建立具体来源绑定；它不为每个新 Agent 另建个人正文库，也不通过蓝图授予私人目录访问权。
+蓝图必须说明所需知识的归属、内容性质、来源模式、必要性与写回负责人。 既有业务系统记录、设备状态、患者事实和执行配置仍由各自 owner 持有；薄知识消费者无需为接入而改造成 Standard Agent。OMA 声明语义需求，获授权的运行控制面建立具体来源绑定；它不为每个新 Agent 另建个人正文库，也不通过蓝图授予私人目录访问权。
 
 ## 准入口径
 
@@ -153,4 +153,4 @@ OMA 负责目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据�
 
 领域仓只维护自己的产品正文和语义规则。个人及项目正文通过来源登记直接读取；工作区保存绑定、任务产物、修订提案和回执，不要求中间全文副本。项目根与调用者范围来自已授权 execution scope，普通请求不能自行带入另一个项目或用户的私有目录。
 
-直接 Skill 与托管 Stage 共用 Framework 的知识快照接口。`opl knowledge prepare` 建立新的私有绑定，`opl knowledge read-context` 读取绑定正文；普通 list、inspect、recall 只输出目录或回执。操作入口见[知识来源接口](../specs/knowledge-sources.md)，具体字段与命令以 `opl help` 和知识合同为准。接受、并发修订、派生失效、撤权和保留规则只由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)维护。
+直接 Skill 与托管 Stage 共用 Framework 的知识快照接口。`opl knowledge prepare` 建立新的私有绑定，`opl knowledge read-context` 读取绑定正文；普通 list、inspect、recall 只输出目录或回执。操作入口见[知识来源接口](../specs/knowledge-sources.md)，具体字段与命令以 `opl help` 和知识合同为准。接受、并发修订、派生失效、撤权和保留规则只由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)维护。 邮件等业务证据经领域语义判断后才进入个人或项目知识；领域数据库和可重建索引不成为另一份个人来源 registry。新知识在既有授权来源登记，注册正文的修订使用共同写回链；provenance 和批准记录留在控制面，正文沿用用户资料库格式。
