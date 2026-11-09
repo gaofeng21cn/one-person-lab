@@ -1,5 +1,8 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { extract, list } from 'tar';
 
 // Source bundles may contain media; JSON and individual files retain their smaller bounds.
@@ -59,4 +62,32 @@ export function packageSourceArchiveMembersStayWithinRoot(entries: PackageSource
 export function extractPackageSourceArchive(archivePath: string, destination: string) {
   extract({ file: archivePath, cwd: destination, sync: true, strict: true,
     preservePaths: false, preserveOwner: false, noChmod: true, noMtime: true });
+}
+
+export function materializePackageSourceCommit(checkoutRoot: string, commit: string, env: NodeJS.ProcessEnv) {
+  const temporaryRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-source-')));
+  const cleanup = () => fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  try {
+    const git = (args: string[]) => spawnSync('git', ['--no-replace-objects', '-C', checkoutRoot, ...args], {
+      env, encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: 120_000,
+    });
+    const resolved = git(['rev-parse', '--verify', '--end-of-options', `${commit}^{commit}`]);
+    if (!/^[0-9a-f]{40}$/.test(commit) || resolved.status !== 0 || resolved.error
+      || resolved.stdout.trim() !== commit) {
+      throw new Error('Developer checkout does not contain the selected source commit.');
+    }
+    const archivePath = path.join(temporaryRoot, 'source.tar.gz');
+    const archived = git(['archive', '--format=tar.gz', '--prefix=source/', `--output=${archivePath}`, commit]);
+    if (archived.status !== 0 || archived.error) throw new Error('Developer source commit could not be archived.');
+    packageSourceArchiveDigest(archivePath);
+    const entries = readPackageSourceArchiveEntries(archivePath, 'source');
+    if (!packageSourceArchiveMembersStayWithinRoot(entries, 'source')) {
+      throw new Error('Developer source archive must contain only physical files within its declared root.');
+    }
+    extractPackageSourceArchive(archivePath, temporaryRoot);
+    return { sourceRoot: path.join(temporaryRoot, 'source'), cleanup };
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
 }
