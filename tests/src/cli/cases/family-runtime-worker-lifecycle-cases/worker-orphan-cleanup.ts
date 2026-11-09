@@ -351,16 +351,16 @@ test('Temporal worker stop cleans root-tagged orphan foreground worker from a di
 test('Temporal worker orphan cleanup is scoped to the requested family runtime root', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-root-scoped-orphan-'));
   const targetRoot = path.join(stateRoot, 'target-family-runtime');
-  const otherRoot = path.join(stateRoot, 'other-family-runtime');
+  const otherRoot = `${targetRoot} backup`;
   const modulePath = path.resolve('src/family-runtime-temporal-provider.ts');
   const childArgs = (root: string) => [
     '-e',
     'setTimeout(() => {}, 30_000);',
     '--',
+    modulePath,
     '--temporal-worker-foreground',
     '--family-runtime-root',
     root,
-    modulePath,
   ];
   const target = spawn(process.execPath, childArgs(targetRoot), {
     detached: true,

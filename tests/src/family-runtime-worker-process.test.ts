@@ -9,13 +9,14 @@ import {
   stopOrphanTemporalForegroundWorkers,
   temporalForegroundWorkerCommand,
 } from '../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-process.ts';
+import { resolveTemporalWorkerForegroundPathsFromArgv } from '../../src/adapters/execution/family-runtime-temporal-provider-parts/foreground-paths.ts';
 
 const modulePath = '/fixture/family-runtime-temporal-provider.ts';
 
-function fixtureWorker(root: string) {
+function fixtureWorker(root: string, marker = '--temporal-worker-foreground', module = modulePath, extraArgs: string[] = []) {
   return spawn(process.execPath, [
     '-e', 'setTimeout(() => {}, 30_000);', '--',
-    '--temporal-worker-foreground', '--family-runtime-root', root, modulePath,
+    marker, '--family-runtime-root', root, module, ...extraArgs,
   ], { detached: true, stdio: 'ignore' });
 }
 
@@ -23,6 +24,21 @@ function removeFixtureWorker(pid: number | undefined) {
   if (pid === undefined) return;
   try { process.kill(pid, 'SIGKILL'); } catch { /* The owner already stopped the fixture. */ }
 }
+
+test('foreground entrypoint and discovery share pair, equals and conflicting root semantics', () => {
+  const root = path.resolve('/tmp/worker root');
+  for (const argv of [
+    ['--family-runtime-root', root],
+    [`--family-runtime-root=${root}`],
+    ['--family-runtime-root', root, `--family-runtime-root=${root}`],
+  ]) assert.deepEqual(resolveTemporalWorkerForegroundPathsFromArgv(argv), { root });
+  for (const argv of [
+    ['--family-runtime-root', root, '--family-runtime-root', `${root} backup`],
+    ['--family-runtime-root'],
+    ['--family-runtime-root='],
+    ['--family-runtime-root', '--other-option'],
+  ]) assert.throws(() => resolveTemporalWorkerForegroundPathsFromArgv(argv), /unambiguous/);
+});
 
 test('Linux worker discovery and stop preserve exact roots without ps or pgrep', {
   skip: process.platform !== 'linux',
@@ -32,22 +48,38 @@ test('Linux worker discovery and stop preserve exact roots without ps or pgrep',
   const otherRoot = path.join(root, 'other root');
   const target = fixtureWorker(targetRoot);
   const other = fixtureWorker(otherRoot);
+  const neighbor = fixtureWorker(`${targetRoot} backup`);
+  const fakeMarker = fixtureWorker(targetRoot, 'note--temporal-worker-foreground');
+  const fakeModule = fixtureWorker(otherRoot, '--temporal-worker-foreground', `${modulePath}.backup`);
+  const conflictingRoot = fixtureWorker(otherRoot, '--temporal-worker-foreground', modulePath, ['--family-runtime-root', targetRoot]);
   const previousPath = process.env.PATH;
   try {
     process.env.PATH = '/nonexistent-process-tools';
     assert.ok(temporalForegroundWorkerCommand(target.pid!)?.includes(targetRoot));
     const input = { modulePath, familyRuntimeRoot: targetRoot };
     assert.deepEqual(findTemporalForegroundWorkerPids(input), [target.pid]);
+    assert.deepEqual(
+      findTemporalForegroundWorkerPids({ modulePath }),
+      [target.pid!, other.pid!, neighbor.pid!, conflictingRoot.pid!].sort((a, b) => a - b),
+    );
     assert.deepEqual(findTemporalForegroundWorkerPids({ ...input, excludePids: [target.pid!] }), []);
     const stopped = await stopOrphanTemporalForegroundWorkers(input);
     assert.deepEqual(stopped.orphan_stopped_pids, [target.pid]);
     assert.throws(() => process.kill(target.pid!, 0));
     assert.doesNotThrow(() => process.kill(other.pid!, 0));
+    assert.doesNotThrow(() => process.kill(neighbor.pid!, 0));
+    assert.doesNotThrow(() => process.kill(fakeMarker.pid!, 0));
+    assert.doesNotThrow(() => process.kill(fakeModule.pid!, 0));
+    assert.doesNotThrow(() => process.kill(conflictingRoot.pid!, 0));
   } finally {
     if (previousPath === undefined) delete process.env.PATH;
     else process.env.PATH = previousPath;
     removeFixtureWorker(target.pid);
     removeFixtureWorker(other.pid);
+    removeFixtureWorker(neighbor.pid);
+    removeFixtureWorker(fakeMarker.pid);
+    removeFixtureWorker(fakeModule.pid);
+    removeFixtureWorker(conflictingRoot.pid);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
