@@ -22,6 +22,7 @@ const state = {
   selectedKey: stored('opl-apps-selected', ''),
   selected: null,
   result: null,
+  lastAction: null,
   selectedWorkItemIdentity: stored('opl-apps-selected-work-item', null),
   selectedWorkspace: stored('opl-apps-selected-workspace', null),
   selectedCanonicalItemId: stored('opl-apps-selected-item-id', ''),
@@ -429,10 +430,11 @@ async function executeCommand(command, input, view = state.selected) {
     const execution = result?.execution || result?.runtime_operator_action_execution?.execution;
     const ownerState = result?.state || execution?.execution_status;
     const readbackRequest = ownerReadbackRequest(view, targetInput, result, state.catalog?.views || []);
-    app.updateModelContext({ structuredContent: {
+    state.lastAction = {
       package_id: view.package_id, view_id: view.view_id, action_ref: command.action_ref,
       input: targetInput, result, readback: readbackRequest,
-    } }).catch(() => {});
+    };
+    app.updateModelContext({ structuredContent: { last_action: state.lastAction } }).catch(() => {});
     if (stillSelected()) {
       await loadSelected();
       notice(['running', 'queued', 'started', 'accepted'].includes(ownerState)
@@ -442,6 +444,12 @@ async function executeCommand(command, input, view = state.selected) {
     // A transport error can occur after dispatch. Read the original owner/target without retrying the mutation.
     outcomeUnknown = dispatched;
     if (dispatched) {
+      state.lastAction = {
+        package_id: view.package_id, view_id: view.view_id, action_ref: command.action_ref,
+        input: targetInput, outcome: 'unknown',
+        readback: { package_id: view.package_id, ref: view.data_ref, input: { ...targetReadInput, ...(targetInput.request_id ? { request_id: targetInput.request_id } : {}) } },
+      };
+      app.updateModelContext({ structuredContent: { last_action: state.lastAction } }).catch(() => {});
       try {
         const readback = await callTool(READ_TOOL, { package_id: view.package_id, ref: view.data_ref,
           input: { ...targetReadInput, ...(targetInput.request_id ? { request_id: targetInput.request_id } : {}) } });
@@ -627,7 +635,7 @@ function updateContext() {
   const context = `正在查看 ${view.package_name} 的 ${localized(view.title_i18n, view.view_id)}`;
   app.updateModelContext({
     content: [{ type: 'text', text: context }],
-    structuredContent: { package_id: view.package_id, view_id: view.view_id, input: currentViewInput(view), selection: selected || collection.root },
+    structuredContent: { package_id: view.package_id, view_id: view.view_id, input: currentViewInput(view), selection: selected || collection.root, ...(state.lastAction ? { last_action: state.lastAction } : {}) },
   }).catch(() => {});
   document.body.setAttribute('data-llm', context);
 }
