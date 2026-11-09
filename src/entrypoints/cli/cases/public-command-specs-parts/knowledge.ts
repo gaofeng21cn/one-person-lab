@@ -1,13 +1,21 @@
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { parseCommandOptions } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 import {
   readDurableKnowledgeCatalog,
   recallDurableKnowledge,
-} from '../../../../authority/packages/durable-knowledge-catalog.ts';
+  verifyKnowledgeDependencies,
+  resolveKnowledgeSourceItem,
+  proposeKnowledgeWriteback,
+  reviewKnowledgeWriteback,
+  applyKnowledgeWriteback,
+  reviewKnowledgeSource,
+} from '../../../../authority/packages/index.ts';
 import {
   bindStageKnowledgeContext,
   readStageKnowledgeContext,
+  revalidateStageKnowledgeContext,
 } from '../../../../adapters/execution/family-runtime-knowledge-context.ts';
 
 export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
@@ -139,6 +147,136 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
       return { version: 'g2', durable_knowledge_context: readStageKnowledgeContext(
         binding, binding.receipt?.domain_id, binding.receipt?.stage_id,
       ) };
+    },
+  };
+  commandSpecs['knowledge revalidate'] = {
+    usage: 'opl knowledge revalidate --binding <binding.json> [--for-action]',
+    summary: 'Recheck live access and, before action, the critical source versions of a frozen knowledge context.',
+    examples: ['opl knowledge revalidate --binding /private/task/knowledge.json --for-action --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge revalidate']!, {
+        binding: { type: 'string' }, 'for-action': { type: 'boolean' },
+      });
+      if (!parsed.binding) throw new Error('knowledge revalidate requires --binding.');
+      const binding = JSON.parse(fs.readFileSync(parsed.binding as string, 'utf8'));
+      return { version: 'g2', knowledge_revalidation: revalidateStageKnowledgeContext(binding, { forAction: parsed['for-action'] === true }) };
+    },
+  };
+  commandSpecs['knowledge verify-dependencies'] = {
+    usage: 'opl knowledge verify-dependencies --workspace <path> --domain <domain_id> --dependencies <json-file> [--project <path>]',
+    summary: 'Verify the current authorization, accepted source versions and validity behind derived knowledge.',
+    examples: ['opl knowledge verify-dependencies --workspace /private/workspace --domain persona --dependencies /private/dependencies.json --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge verify-dependencies']!, {
+        workspace: { type: 'string' }, domain: { type: 'string' }, project: { type: 'string' }, dependencies: { type: 'string' },
+      });
+      if (!parsed.workspace || !parsed.domain || !parsed.dependencies) throw new Error('knowledge verify-dependencies requires --workspace, --domain and --dependencies.');
+      return { version: 'g2', knowledge_dependencies: verifyKnowledgeDependencies({
+        workspaceRoot: parsed.workspace as string, domainId: parsed.domain as string,
+        projectRoot: parsed.project as string | undefined,
+        dependencies: JSON.parse(fs.readFileSync(parsed.dependencies as string, 'utf8')),
+      }) };
+    },
+  };
+  const scopeOptions = { workspace: { type: 'string' as const }, domain: { type: 'string' as const }, project: { type: 'string' as const } };
+  const reviewOptions = {
+    reviewer: { type: 'string' as const }, 'review-ref': { type: 'string' as const },
+    'reviewed-at': { type: 'string' as const }, 'next-review-at': { type: 'string' as const },
+  };
+  const scope = (parsed: Record<string, unknown>) => {
+    if (!parsed.workspace || !parsed.domain) throw new Error('Knowledge owner writeback requires --workspace and --domain.');
+    return { workspaceRoot: parsed.workspace as string, domainId: parsed.domain as string, projectRoot: parsed.project as string | undefined };
+  };
+  const ownerReview = (parsed: Record<string, unknown>) => {
+    for (const field of Object.keys(reviewOptions)) if (!parsed[field]) throw new Error(`Knowledge owner review requires --${field}.`);
+    return { reviewer: parsed.reviewer as string, reviewRef: parsed['review-ref'] as string,
+      reviewedAt: parsed['reviewed-at'] as string, nextReviewAt: parsed['next-review-at'] as string };
+  };
+  const readSource = (args: string[], command: string, candidate: boolean) => {
+    const parsed = parseCommandOptions(args, commandSpecs[command]!, { ...scopeOptions, id: { type: 'string' } });
+    if (!parsed.id) throw new Error(`${command} requires --id.`);
+    const source = resolveKnowledgeSourceItem({ ...scope(parsed), knowledgeId: parsed.id as string, allowInactive: candidate });
+    const bytes = fs.readFileSync(source.bodyPath);
+    const sha256 = `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+    if (!bytes.length || bytes.length > 256 * 1024 || sha256 !== source.currentSha256
+      || (!candidate && sha256 !== source.reviewedSha256)) throw new Error('Knowledge source changed during its authorized read.');
+    const content = { knowledge_id: source.item.knowledge_id, sha256,
+      content: new TextDecoder('utf-8', { fatal: true }).decode(bytes), source_ref: source.item.body_ref.ref };
+    return candidate
+      ? { version: 'g2', knowledge_source_candidate: { ...content, accepted_sha256: source.reviewedSha256, status: source.item.status } }
+      : { version: 'g2', knowledge_source: content };
+  };
+  commandSpecs['knowledge read-source'] = {
+    usage: 'opl knowledge read-source --workspace <path> --domain <domain_id> --id <knowledge_id> [--project <path>]',
+    summary: 'Read one currently authorized accepted source body and its exact revision.',
+    examples: ['opl knowledge read-source --workspace /private/workspace --domain persona --id owner.identity --json'],
+    group: 'knowledge',
+    handler: (args) => readSource(args, 'knowledge read-source', false),
+  };
+  commandSpecs['knowledge inspect-source'] = {
+    usage: 'opl knowledge inspect-source --workspace <path> --domain <domain_id> --id <knowledge_id> [--project <path>]',
+    summary: 'Inspect authorized current source bytes as a review candidate; this does not accept or activate the revision.',
+    examples: ['opl knowledge inspect-source --workspace /private/workspace --domain occ --id owner.method --json'],
+    group: 'knowledge',
+    handler: (args) => readSource(args, 'knowledge inspect-source', true),
+  };
+  commandSpecs['knowledge propose'] = {
+    usage: 'opl knowledge propose --workspace <path> --domain <domain_id> --id <knowledge_id> --proposal <json-file> --body <markdown-file> [--project <path>]',
+    summary: 'Prepare an immutable owner knowledge revision against the exact source and registry versions.',
+    examples: ['opl knowledge propose --workspace /private/workspace --domain occ --id owner.method --proposal /private/proposal.json --body /private/replacement.md --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge propose']!, {
+        ...scopeOptions, id: { type: 'string' }, proposal: { type: 'string' }, body: { type: 'string' },
+      });
+      if (!parsed.id || !parsed.proposal || !parsed.body) throw new Error('knowledge propose requires --id, --proposal and --body.');
+      return { version: 'g2', knowledge_proposal: proposeKnowledgeWriteback({ ...scope(parsed),
+        knowledgeId: parsed.id as string, proposal: JSON.parse(fs.readFileSync(parsed.proposal as string, 'utf8')),
+        replacement: fs.readFileSync(parsed.body as string),
+      }) };
+    },
+  };
+  commandSpecs['knowledge review'] = {
+    usage: 'opl knowledge review --workspace <path> --domain <domain_id> --proposal-id <digest> --decision <accepted|rejected> --reviewer <owner> --review-ref <authority-ref> --reviewed-at <time> --next-review-at <time> [--project <path>]',
+    summary: 'Record an authorized maintainer review of an exact knowledge proposal; the command does not supply semantic acceptance.',
+    examples: ['opl knowledge review --workspace /private/workspace --domain occ --proposal-id <digest> --decision accepted --reviewer owner --review-ref <authority-ref> --reviewed-at <time> --next-review-at <time> --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge review']!, {
+        ...scopeOptions, ...reviewOptions, 'proposal-id': { type: 'string' }, decision: { type: 'string' },
+      });
+      if (!parsed['proposal-id'] || !['accepted', 'rejected'].includes(parsed.decision as string)) throw new Error('knowledge review requires --proposal-id and an accepted/rejected --decision.');
+      return { version: 'g2', knowledge_review: reviewKnowledgeWriteback({ ...scope(parsed), ...ownerReview(parsed),
+        proposalId: parsed['proposal-id'] as string, decision: parsed.decision as 'accepted' | 'rejected',
+      }) };
+    },
+  };
+  commandSpecs['knowledge apply'] = {
+    usage: 'opl knowledge apply --workspace <path> --domain <domain_id> --proposal-id <digest> [--project <path>]',
+    summary: 'Apply an accepted knowledge proposal to its unique source with version checks and recovery receipts.',
+    examples: ['opl knowledge apply --workspace /private/workspace --domain occ --proposal-id <digest> --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge apply']!, { ...scopeOptions, 'proposal-id': { type: 'string' } });
+      if (!parsed['proposal-id']) throw new Error('knowledge apply requires --proposal-id.');
+      return { version: 'g2', knowledge_writeback: applyKnowledgeWriteback({ ...scope(parsed), proposalId: parsed['proposal-id'] as string }) };
+    },
+  };
+  commandSpecs['knowledge review-source'] = {
+    usage: 'opl knowledge review-source --workspace <path> --domain <domain_id> --id <knowledge_id> --expected-sha256 <reviewed-source-digest> --reviewer <owner> --review-ref <authority-ref> --reviewed-at <time> --next-review-at <time> [--project <path>]',
+    summary: 'Accept reviewed edits already made in the original knowledge source without rewriting its body.',
+    examples: ['opl knowledge review-source --workspace /private/workspace --domain occ --id owner.method --expected-sha256 <reviewed-source-digest> --reviewer owner --review-ref <authority-ref> --reviewed-at <time> --next-review-at <time> --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge review-source']!, {
+        ...scopeOptions, ...reviewOptions, id: { type: 'string' }, 'expected-sha256': { type: 'string' },
+      });
+      if (!parsed.id || !parsed['expected-sha256']) throw new Error('knowledge review-source requires --id and --expected-sha256.');
+      return { version: 'g2', knowledge_writeback: reviewKnowledgeSource({ ...scope(parsed), ...ownerReview(parsed),
+        knowledgeId: parsed.id as string, expectedSha256: parsed['expected-sha256'] as string,
+      }) };
     },
   };
   return commandSpecs;
