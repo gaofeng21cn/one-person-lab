@@ -42,7 +42,7 @@ test('Cordis surface map is valid against its machine contract', () => {
   };
   const result = validateJsonSchemaPayload(schemaEntry, mapPayload());
 
-  assert.equal(result.ok, true, result.ok ? undefined : JSON.stringify(result.errors));
+  assert.equal(result.ok, true, result.ok ? '' : JSON.stringify(result.errors));
 
   const overclaim = structuredClone(mapPayload()) as {
     phase_state: { cordis_adopted: boolean };

@@ -167,7 +167,7 @@ test('WorkItemProjection V2 output validates against its machine schema', () => 
         schema,
         sourceRef: schemaRef,
       }, projection);
-      assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+      assert.equal(validation.ok, true, validation.ok ? '' : JSON.stringify(validation.errors, null, 2));
     }
 
     const fullProjection = buildWorkItemProjectionV2({
@@ -190,7 +190,7 @@ test('WorkItemProjection V2 output validates against its machine schema', () => 
     assert.equal(
       localizedValidation.ok,
       true,
-      localizedValidation.ok ? undefined : JSON.stringify(localizedValidation.errors, null, 2),
+      localizedValidation.ok ? '' : JSON.stringify(localizedValidation.errors, null, 2),
     );
     localizedStage.display_names['zh-CN'] = '   ';
     const invalidValidation = validateJsonSchemaPayload({

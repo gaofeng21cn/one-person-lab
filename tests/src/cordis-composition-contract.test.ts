@@ -96,7 +96,7 @@ test('Cordis plugin and composition schemas are valid and P2 snapshot is determi
       },
     },
   }, p2);
-  assert.equal(schemaValidation.ok, true, schemaValidation.ok ? undefined : JSON.stringify(schemaValidation.errors));
+  assert.equal(schemaValidation.ok, true, schemaValidation.ok ? '' : JSON.stringify(schemaValidation.errors));
   assert.equal(p2.framework.package, '@deepseek-ai/cordis');
   assert.equal(p2.plugins.find((entry) => entry.plugin_id.endsWith('service'))?.plugin_api_version, '1.0.0');
   assert.equal(p2.plugins.find((entry) => entry.plugin_id.endsWith('service'))?.injects.required[0]?.service_id, 'opl.runway.executor.adapter');

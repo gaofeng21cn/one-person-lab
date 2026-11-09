@@ -341,7 +341,7 @@ test('standard Agent interface accepts a repo-relative Stage Catalog declaration
     schema,
     sourceRef: schemaRef,
   }, value);
-  assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+  assert.equal(validation.ok, true, validation.ok ? '' : JSON.stringify(validation.errors, null, 2));
 
   const escaped = structuredClone(value);
   escaped.stage_catalog.relative_path = '../stage_catalog.json';
@@ -402,7 +402,7 @@ test('standard Agent interface accepts generic typed work-item view declarations
     schema,
     sourceRef: schemaRef,
   }, value);
-  assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+  assert.equal(validation.ok, true, validation.ok ? '' : JSON.stringify(validation.errors, null, 2));
 
   const missingSchema = structuredClone(value) as any;
   delete missingSchema.domain_detail_views[0]!.schema_ref;

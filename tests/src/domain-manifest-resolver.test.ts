@@ -241,7 +241,7 @@ test('resolveBindingManifest resolves a configured command with env timeout poli
     const entry = withEnvVar('OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS', '2500', () =>
       resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`));
 
-    assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
+    assert.equal(entry.status, 'resolved', entry.error?.message ?? '');
     assert.equal(entry.error, null);
     assert.equal(entry.manifest?.target_domain_id, 'med-autoscience');
   } finally {
@@ -261,7 +261,7 @@ test('resolveBindingManifest hydrates canonical action and stage contracts from 
 
     const entry = resolveWithCommand(workspacePath, `${shellSingleQuote(process.execPath)} ${shellSingleQuote(scriptPath)}`);
 
-    assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
+    assert.equal(entry.status, 'resolved', entry.error?.message ?? '');
     assert.equal(entry.manifest?.family_action_catalog_source_ref?.ref, 'contracts/action_catalog.json');
     assert.deepEqual(entry.manifest?.family_stage_control_plane_source_ref, {
       ref_kind: 'generated_surface',
@@ -432,7 +432,7 @@ test('resolveBindingManifest ignores a repo-local legacy visual transition profi
   try {
     const entry = resolveRcaVisualProfile(workspacePath, rcaVisualProfileRegistry());
 
-    assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
+    assert.equal(entry.status, 'resolved', entry.error?.message ?? '');
     assert.equal('visual_transition_adapter_profile_registry' in (entry.manifest ?? {}), false);
     assert.equal('family_transition' in (entry.manifest ?? {}), false);
   } finally {
@@ -453,7 +453,7 @@ test('resolveBindingManifest ignores the real RCA legacy visual transition profi
     );
     const entry = resolveRcaVisualProfile(workspacePath, registry);
 
-    assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
+    assert.equal(entry.status, 'resolved', entry.error?.message ?? '');
     assert.equal('visual_transition_adapter_profile_registry' in (entry.manifest ?? {}), false);
     assert.equal('family_transition' in (entry.manifest ?? {}), false);
   } finally {

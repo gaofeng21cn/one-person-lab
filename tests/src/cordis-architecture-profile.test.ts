@@ -45,7 +45,7 @@ test('Cordis architecture profile is valid against its machine contract', () => 
     schema: readJson(schemaRef),
     sourceRef: schemaRef,
   }, readJson(contractRef));
-  assert.equal(result.ok, true, result.ok ? undefined : JSON.stringify(result.errors));
+  assert.equal(result.ok, true, result.ok ? '' : JSON.stringify(result.errors));
 });
 
 test('Cordis architecture profile freezes the four-layer model and ten-module mapping', () => {

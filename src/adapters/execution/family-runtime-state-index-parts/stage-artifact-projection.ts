@@ -112,7 +112,7 @@ function listFilesRecursive(dir: string, prefix = ''): string[] {
   return files.sort();
 }
 
-function sha256Text(value: crypto.BinaryLike) {
+function sha256Text(value: string | Buffer) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 

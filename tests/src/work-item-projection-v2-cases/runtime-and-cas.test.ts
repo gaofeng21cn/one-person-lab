@@ -414,7 +414,7 @@ test('CAS read epoch makes projection fail closed without changing fresh Tempora
     assert.equal(
       pendingValidation.ok,
       true,
-      pendingValidation.ok ? undefined : JSON.stringify(pendingValidation.errors, null, 2),
+      pendingValidation.ok ? '' : JSON.stringify(pendingValidation.errors, null, 2),
     );
 
     fs.rmSync(paths.journal);
@@ -684,7 +684,7 @@ test('human gate action omits empty optional message args and remains schema-val
       schema,
       sourceRef: schemaRef,
     }, withoutOptionalArgs);
-    assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+    assert.equal(validation.ok, true, validation.ok ? '' : JSON.stringify(validation.errors, null, 2));
 
     const withOptionalArgs = project(['human-gate:owner-review']);
     const itemWithOptionalArgs = withOptionalArgs.items.find(
