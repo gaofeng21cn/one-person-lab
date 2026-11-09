@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "$id": "https://one-person-lab.local/contracts/opl-framework/knowledge-source-registry.schema.json",
+  "title": "Owner controlled knowledge sources and accepted item versions",
+  "required": [
+    "surface_kind",
+    "version",
+    "registry_id",
+    "owner",
+    "sources",
+    "items"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_knowledge_source_registry"
+    },
+    "version": {
+      "const": "knowledge-source-registry.v2"
+    },
+    "registry_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_id",
+          "root",
+          "status",
+          "writable",
+          "grants"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "active",
+              "revoked"
+            ]
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "grants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "workspace_root",
+                "domains"
+              ],
+              "properties": {
+                "workspace_root": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                },
+                "project_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                },
+                "scope_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                },
+                "write_domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "durable-knowledge-item.schema.json"
+      }
+    }
+  }
+}

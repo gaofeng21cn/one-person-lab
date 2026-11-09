@@ -210,7 +210,13 @@ function sameStableDirectoryChain(
 ) {
   return left.length === right.length && left.every((entry, index) => (
     entry.directory === right[index]?.directory
-    && sameStableFile(entry.observed, right[index]!.observed)
+    // Sibling snapshot creation changes directory size/timestamps, not the
+    // identity or access protection of the file being read. File bytes retain
+    // the stricter size/timestamp checks in stableFileObservation.
+    && sameFileIdentity(entry.observed, right[index]!.observed)
+    && entry.observed.mode === right[index]!.observed.mode
+    && entry.observed.uid === right[index]!.observed.uid
+    && entry.observed.gid === right[index]!.observed.gid
   ));
 }
 

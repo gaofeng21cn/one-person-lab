@@ -5,7 +5,7 @@ import test from 'node:test';
 import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs-parts/knowledge.ts';
 import { bindDurableKnowledgeContext, recallDurableKnowledge } from '../../src/authority/packages/durable-knowledge-catalog.ts';
 import { bindStageKnowledgeContext, readStageKnowledgeContext, revalidateStageKnowledgeContext } from '../../src/adapters/execution/family-runtime-knowledge-context.ts';
-import { knowledgeItem, knowledgeSha, sourceFixture, writeKnowledgeFile } from './knowledge-source-fixture.ts';
+import { knowledgeItem, knowledgeSha, productCatalog, sourceFixture, writeKnowledgeFile } from './knowledge-source-fixture.ts';
 
 test('direct CLI and hosted stages consume identical frozen source bytes without intermediate projection', async () => {
   const f = sourceFixture();
@@ -138,5 +138,27 @@ test('historical summaries retain their original transitive authorization depend
     writeKnowledgeFile(path.join(f.source, 'intermediate.md'), '# Independently revised\n');
     f.bindings.registries[0]!.scope_ids = ['finance']; f.save();
     assert.throws(() => readStageKnowledgeContext(binding, 'fixture', 'review'));
+  } finally { f.cleanup(); }
+});
+
+test('product context cannot bypass its private dependency authorization or action checks', () => {
+  const f = sourceFixture();
+  try {
+    f.item.action_critical = true;
+    f.item.applicability.stages = ['source-review'];
+    const summary = knowledgeItem({ id: 'fixture.method', scope: { kind: 'product', id: 'fixture' } });
+    summary.derived_from = [{ knowledge_id: f.item.knowledge_id, sha256: f.item.body_ref.sha256! }];
+    writeKnowledgeFile(path.join(f.repo, summary.body_ref.ref), '# Method\n');
+    writeKnowledgeFile(path.join(f.repo, 'contracts/durable_knowledge_catalog.json'), productCatalog([summary]));
+    f.save();
+    const binding = bindStageKnowledgeContext(f.input);
+    assert.deepEqual(binding.receipt.selected.map(item => item.knowledge_id), [summary.knowledge_id]);
+    revalidateStageKnowledgeContext(binding, { forAction: true });
+
+    f.registry.sources[0]!.status = 'revoked'; f.save();
+    assert.throws(() => readStageKnowledgeContext(binding, 'fixture', 'review'), /knowledge_source_revoked/);
+    f.registry.sources[0]!.status = 'active'; f.save();
+    writeKnowledgeFile(path.join(f.source, 'policy.md'), '# Changed constraint\n');
+    assert.throws(() => revalidateStageKnowledgeContext(binding, { forAction: true }), /knowledge_action_context_changed/);
   } finally { f.cleanup(); }
 });
