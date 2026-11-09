@@ -14,6 +14,34 @@ function pickRecordFields(value: unknown, fields: readonly string[]): JsonRecord
   ) as JsonRecord;
 }
 
+export function compactFastDeveloperMode(value: unknown) {
+  const developerMode = isRecord(value) ? value : {};
+  const { standard_targets: standardTargets, ...targetAuthority } = isRecord(developerMode.target_authority)
+    ? developerMode.target_authority
+    : {};
+  const { repos: _repos, ...repoAuthority } = isRecord(developerMode.repo_authority)
+    ? developerMode.repo_authority
+    : {};
+  return {
+    ...developerMode,
+    target_authority: {
+      ...targetAuthority,
+      standard_target_count: recordArray(standardTargets).length,
+      detail_policy: {
+        standard_targets: 'full_inspection_only',
+        full_detail_surface: 'opl app state --profile full --json#developer_mode.target_authority',
+      },
+    },
+    repo_authority: {
+      ...repoAuthority,
+      detail_policy: {
+        repos: 'full_inspection_only',
+        full_detail_surface: 'opl app state --profile full --json#developer_mode.repo_authority',
+      },
+    },
+  };
+}
+
 export function compactFastProviderState(value: unknown) {
   const provider = isRecord(value) ? value : {};
   const temporal = isRecord(provider.temporal) ? provider.temporal : {};
