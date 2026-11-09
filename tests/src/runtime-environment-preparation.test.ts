@@ -1,3 +1,4 @@
+import { nodeFixtureShebang } from './cli/helpers-parts/node-executable.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -29,7 +30,7 @@ function fixture(t: { after: (callback: () => void) => void }) {
   const profile = path.join(root, 'requirements.json');
   fs.mkdirSync(bin);
   fs.writeFileSync(mode, 'normal');
-  const shebang = `#!${process.execPath}\n`;
+  const shebang = `${nodeFixtureShebang}\n`;
   // Fake only the package manager/interpreter boundary; preparation and process
   // management still run through the real CLI with an isolated state directory.
   const pythonSource = shebang + `
@@ -298,7 +299,7 @@ for (const constraint of ['minimum_version', 'required_exports'] as const) {
     }] }));
     // Existing package names alone are insufficient: fake R can reject the
     // version/export predicate even after an installer reports success.
-    fs.writeFileSync(path.join(f.bin, 'Rscript'), `#!${process.execPath}\n
+    fs.writeFileSync(path.join(f.bin, 'Rscript'), `${nodeFixtureShebang}\n
 const fs = require('node:fs');
 const expression = process.argv[process.argv.indexOf('-e') + 1] || '';
 fs.appendFileSync(${JSON.stringify(f.eventsFile)}, JSON.stringify({kind:'r',expression})+'\\n');
