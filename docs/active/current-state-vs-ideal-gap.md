@@ -14,7 +14,7 @@ App、Cloud、Package 的部署验收与专业质量属于各 owner，本页未�
 
 | owner | 当前具体断点 | 下一步与完成条件 |
 | --- | --- | --- |
-| Framework、App/Studio；Relay、MAC、Photo | 领域 CLI/载体和 shared App/Host 已有各自验收，发行安装中的三条完整协作链仍需分别核验 | 使用同一 exact Framework、Host 和 carrier，在隔离安装宿主验证精确对象打开、人的修改/决定、owner 应用及 Agent 回读；记录重开、旧版本、撤权、unknown 与无 UI 降级。源码构建安装与公开发行分别记录 |
+| App/Studio、Relay、MAC、Photo 发布 owner | 正式隔离安装的 Studio、官方 Codex 与三个 carrier 已完成草稿保存、媒体批注和合成照片计划应用回读；这组源码候选尚未完成公开发行安装验收 | 在各自正常发行中绑定同一兼容 cohort，复验已安装版本、重开和关键恢复场景；保留现有隔离安装证据，不把源码候选当公开发行字节 |
 | Framework MCP App + 领域 UI owner | 知识模型安装已验收，阶段来源元数据视图已接公开接口；实际宿主中的来源、版本与缺口展示仍需核对 | 在安装宿主核对已授权来源、缺口和修复提示；源变化、过期或撤权必须可见。动作特定知识与冻结快照由原知识 owner 接口读取，不能用阶段概览代替 |
 | OMA + Framework | Photo/Relay 样例已在隔离安装的 Framework 中完成物化、激活、发现、调用及不重复派发的重开验证；真实模型生成与具体业务验收仍需代表性新应用证明 | 复用已有样例和正式安装入口，保留生成来源、安装身份及 owner 操作回读；第二消费者直接复用公共内容，不另设 manifest 或 SDK |
 | Framework + 已安装的 Photo/MAG/OCC 消费者 | 新 owner 已直接输出通用 view shape，Framework 的历史领域 transform 仍服务旧已安装消费者；缺少 fresh 无活跃 consumer 证明 | 通过各 owner 的正常升级交付迁移消费者；从实际 discovery/descriptor 和调用证明旧 transform 无人使用后删除。不能仅因源码已迁移就移除兼容 |
