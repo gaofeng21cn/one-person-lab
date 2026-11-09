@@ -101,6 +101,29 @@ test('registration cannot reuse a knowledge identity hidden by the current proje
   } finally { f.cleanup(); }
 });
 
+test('source discovery byte allowance preserves bounded excerpts without increasing accepted body limits', () => {
+  const f = sourceFixture();
+  try {
+    const scope = { workspaceRoot: f.workspace, projectRoot: f.project, domainId: 'fixture' };
+    const content = '# Large candidate\n' + 'x'.repeat(300_000);
+    const source = f.registry.sources[0]!;
+    writeKnowledgeFile(path.join(f.source, 'large.md'), content);
+    assert.equal(discoverKnowledgeSources({ ...scope, query: 'Large candidate' }).candidates.length, 0);
+    Object.assign(source, { discovery_max_bytes: 2_000_000 }); f.save();
+    const found = discoverKnowledgeSources({ ...scope, query: 'Large candidate', excerptChars: 40 });
+    assert.equal(found.candidates.length, 1);
+    assert.equal(found.candidates[0]!.excerpt.length, 40);
+    assert.equal(found.candidates[0]!.sha256, knowledgeSha(content));
+    const accepted = knowledgeItem({ id: 'owner.large', scope: { kind: 'topic', id: 'finance' }, ref: 'large.md', content });
+    Object.assign(source.grants[0]!, { write_domains: ['fixture'] }); f.save();
+    assert.throws(() => registerKnowledgeSource({ ...scope, registryRef: f.registryRef, item: accepted,
+      expectedSha256: accepted.body_ref.sha256!, reviewer: 'owner', reviewRef: 'owner://large',
+      reviewedAt: '2026-01-02T00:00:00Z', nextReviewAt: '2099-01-01T00:00:00Z' }), /262144/);
+    Object.assign(source, { discovery_max_bytes: 2_000_001 }); f.save();
+    assert.throws(() => discoverKnowledgeSources({ ...scope, query: 'Large candidate' }));
+  } finally { f.cleanup(); }
+});
+
 test('direct CLI and hosted stages consume identical frozen source bytes without intermediate projection', async () => {
   const f = sourceFixture();
   try {

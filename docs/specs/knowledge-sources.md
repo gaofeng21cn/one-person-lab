@@ -119,7 +119,7 @@ opl knowledge revalidate --binding <new-binding.json> --for-action --json
 
 `knowledge search` 使用相同范围，增加 `--query <text>`、`--limit <1..20>`、`--excerpt-chars <1..1000>`。`knowledge_search.matches` 在相同来源元数据上返回有限 `excerpt`；结果是字面检索候选，不能代表语义分类、内容接受或业务授权。失效、漂移与越权正文不会通过旧索引返回。
 
-`knowledge discover` 与 search 使用相同 query 和长度限制，返回 `knowledge_discovery: {query, candidates, quality_debt}`。它用于保留既有来源的未登记正文发现能力；按已授权的工作区、domain、可选项目和 registry 来源的 `include_globs`／`exclude_globs` 返回 `candidate: true, accepted: false` 及 `source_id`、`source_ref`、`registry_ref`、当前 `sha256` 和有限 `excerpt`。已登记正文即使失效，也继续走已接受来源的复核路径，不通过 discover 绕过。发现候选不进入 current context，也不批量登记或接受；Persona／Relay 必须逐项经用户或业务 owner 审阅，再调用 `knowledge register`。这保留搜索可发现性，同时不把旧索引内容冒充已接受知识。
+`knowledge discover` 与 search 使用相同 query 和长度限制，返回 `knowledge_discovery: {query, candidates, quality_debt}`。源级 `discovery_max_bytes` 控制参与发现的单文件大小，默认 262144 字节，最大 2000000 字节；它只扩大有界候选摘录的发现范围，已接受正文的读取与注册仍受原 256 KiB 限制。它用于保留既有来源的未登记正文发现能力；按已授权的工作区、domain、可选项目和 registry 来源的 `include_globs`／`exclude_globs` 返回 `candidate: true, accepted: false` 及 `source_id`、`source_ref`、`registry_ref`、当前 `sha256` 和有限 `excerpt`。已登记正文即使失效，也继续走已接受来源的复核路径，不通过 discover 绕过。发现候选不进入 current context，也不批量登记或接受；Persona／Relay 必须逐项经用户或业务 owner 审阅，再调用 `knowledge register`。这保留搜索可发现性，同时不把旧索引内容冒充已接受知识。
 
 登记命令绑定实际审阅的原文字节：
 

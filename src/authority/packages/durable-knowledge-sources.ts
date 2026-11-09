@@ -11,7 +11,7 @@ import {
 export const KNOWLEDGE_BINDINGS_REF = 'shared/memory/knowledge-bindings.json';
 export type KnowledgeSource = {
   source_id: string; root: string; status: 'active' | 'revoked'; writable: boolean;
-  include_globs?: string[]; exclude_globs?: string[];
+  include_globs?: string[]; exclude_globs?: string[]; discovery_max_bytes?: number;
   grants: Array<{ workspace_root: string; domains: string[]; write_domains?: string[]; project_ids?: string[]; scope_ids?: string[] }>;
 };
 export type KnowledgeSourceRegistry = {
@@ -223,7 +223,7 @@ export function discoverKnowledgeSources(input: SourceInput & { query: string; l
           // Registered items remain on the accepted resolver/review path, even when inactive.
           if (registry.items.some((item) => item.body_ref.source_id === source.source_id && item.body_ref.ref === ref)) continue;
           const file = containedKnowledgeFile(source.root, ref);
-          if (fs.statSync(file).size > 256 * 1024) continue;
+          if (fs.statSync(file).size > (source.discovery_max_bytes ?? 256 * 1024)) continue;
           const bytes = fs.readFileSync(file);
           const content = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
           const position = content.toLowerCase().indexOf(query.toLowerCase());
