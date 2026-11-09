@@ -227,6 +227,7 @@ function agentBlueprint(request: DesignRequest): AgentBlueprint {
       memory_classes: ['observation'],
       retention_refs: ['opl://retention/temporal-fixture'],
       write_authority_refs: ['opl://owner/temporal-fixture'],
+      knowledge_requirements: [],
     },
     assumptions: ['The test runtime is available.'],
     design_evidence_refs: ['opl://evidence/temporal-fixture-design'],

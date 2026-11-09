@@ -177,6 +177,7 @@ function blueprint(
       memory_classes: ['delivery-observation'],
       retention_refs: ['retention:foundry-e2e'],
       write_authority_refs: ['owner:foundry-e2e'],
+      knowledge_requirements: [],
     },
     assumptions: ['The Framework hosted Stage runtime is available.'],
     design_evidence_refs: ['evidence:foundry-e2e-design'],

@@ -100,7 +100,7 @@ const blueprint: AgentBlueprint = {
     generated_agent_can_modify_permissions: false,
     generated_agent_can_modify_activation: false,
   },
-  memory_policy: { memory_classes: [], retention_refs: [], write_authority_refs: [] },
+  memory_policy: { memory_classes: [], retention_refs: [], write_authority_refs: [], knowledge_requirements: [] },
   assumptions: [],
   design_evidence_refs: ['evidence:design'],
   eval_spec: {

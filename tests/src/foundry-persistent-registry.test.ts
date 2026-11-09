@@ -160,6 +160,7 @@ function createCandidate(root: string, label: string): MaterializedCandidate {
       memory_classes: [],
       retention_refs: [],
       write_authority_refs: [],
+      knowledge_requirements: [],
     },
     assumptions: [],
     design_evidence_refs: ['evidence:persistent-fixture'],
