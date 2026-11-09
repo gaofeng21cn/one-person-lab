@@ -307,6 +307,60 @@ test('installed Agent discovery is presence-only while launch compatibility rema
   }
 });
 
+test('installed Agent discovery falls back to its native carrier when the legacy module is missing', () => {
+  const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-interface-missing-module-'));
+  try {
+    writeStandardAgentDescriptor(repoDir, {
+      ...standardAgentDescriptor('oplbookforge'),
+      kind: 'agent',
+      agent_id: 'obf',
+      package_id: 'obf',
+    });
+    const statusReads: string[] = [];
+    const statusReader = ((input: { packageId?: string | null }) => {
+      statusReads.push(input.packageId ?? '');
+      return {
+        opl_agent_package_status: {
+          installed_package_count: 1,
+          installed_carrier_readback: {
+            lifecycle_authority: 'carrier_owned',
+            source_ref: repoDir,
+          },
+          installed_readiness: {
+            installed: true,
+            physical_status: 'available',
+            callability: 'callable',
+          },
+          launch_allowed: true,
+        },
+      };
+    }) as PackageStatusReaderFixture;
+    const missingModule = () => ({
+      installed: false,
+      health_status: 'missing' as const,
+      install_origin: 'managed_root' as const,
+      checkout_path: path.join(repoDir, 'missing-module'),
+    });
+    const descriptor = readInstalledStandardAgentDescriptorForDomain('oplbookforge', statusReader, missingModule);
+    assert.equal(descriptor?.kind, 'agent');
+    assert.equal(descriptor?.agent_id, 'obf');
+    assert.equal(fs.realpathSync.native(descriptor?.repo_dir ?? ''), fs.realpathSync.native(repoDir));
+    assert.deepEqual(statusReads, ['obf']);
+
+    // A deliberately selected invalid source must not silently switch authority.
+    const invalidModule = () => ({ ...missingModule(), health_status: 'invalid_checkout' as const });
+    assert.equal(readInstalledStandardAgentDescriptorForDomain('oplbookforge', statusReader, invalidModule), null);
+    assert.deepEqual(statusReads, ['obf']);
+
+    const absentCarrier = (() => ({
+      opl_agent_package_status: { installed_package_count: 0 },
+    })) as PackageStatusReaderFixture;
+    assert.equal(readInstalledStandardAgentDescriptorForDomain('oplbookforge', absentCarrier, missingModule), null);
+  } finally {
+    fs.rmSync(repoDir, { recursive: true, force: true });
+  }
+});
+
 test('installed package descriptor discovery bypasses registry-selected module routing', () => {
   const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-interface-direct-package-'));
   const statusReads: string[] = [];
