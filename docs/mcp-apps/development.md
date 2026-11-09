@@ -22,13 +22,15 @@
 
 按真实需求选用已有入口，不要求所有应用依赖所有基座能力，也不要求轻量工具改成标准智能体。
 
+先按[物理归属](../architecture.md#共用基座的物理归属)找到实际 owner。开发与安装环境使用 `opl framework locate --json` 核对选定的 Framework；模块通过公开 export 或既有 CLI 调用，Python carrier 使用基座的现有投影流程。代码安装根、运行状态目录、Profile/Workspace 与知识正文位置分别配置，不把个人 checkout 或默认 Codex home 当作所有消费者的共同来源。
+
 | 需求 | 接入方式 | 验证重点 |
 | --- | --- | --- |
 | 复用外部服务账号 | 可信服务启动时通过 `opl-framework/connection-authorization-host` 的 `activateInstalledPackageConnectionContext` 绑定自己的 installed Package；消费注入的 `connect` port | 已有 grant 可用；撤权、连接修订或载体变化阻止后续调用；业务结果回到 provider |
-| 复用模型能力 | 调用既有模型/provider owner 的公开执行入口；Gateway 账号由 Account & Access 持有 | 不在领域 Skill 中复制宿主配置和凭据解析；入口缺失作为 owner 的能力缺口处理 |
+| 复用模型能力 | 调用既有模型/provider owner 的公开执行入口；图片 API 回退使用 `opl-framework/domain-task-runtime` 的 `runDomainImageGeneration`，详见[接口](../specs/domain-image-generation.md) | 领域保留 built-in 优先和专业质量判断；选定账号由公共 owner 解析，缺失不换账号，未知结果不自动重试 |
 | 读取个人或主题知识 | 已知知识 ID 使用 `opl knowledge read-source`，派生摘要使用 `verify-dependencies`，按获授权 workspace/domain/project 取用 | 真实来源及接受版本可读；撤权、过期或原文改变时排除旧内容 |
 | 固定一轮任务的知识依据 | 使用 `prepare`、`read-context` 和行动前 `revalidate --for-action`；托管 StageRun 使用自动绑定 | 真实上下文消费、依赖版本和缺口可回读；只有空 catalog 或命令存在不算接入 |
-| 修改已登记的知识 | `propose/review/apply`，或原处编辑后 `inspect-source/review-source`；移动时维护 locator | 正文、接受版本与派生摘要一致；冲突不覆盖，旧缓存不掩盖失效 |
+| 修改或退役已登记的知识 | `propose/review/apply`，或原处编辑后 `inspect-source/review-source`；需移出正文时使用经审阅的 `retire` 与 `inspect-retirement` | 正文、接受版本与派生摘要一致；退役保留稳定 ID 和恢复字节，退出召回；冲突不覆盖 |
 | 复用工作与成果 | 短操作返回原 owner 结果；长操作使用已有 Task/StageRun 或领域任务身份 | 同一对象查询和恢复；领域业务库与产物权威保留在原处 |
 
 连接工厂只用于可信 Host/服务启动，安装根来自自身模块位置，Package 身份由启动代码固定。它不会安装、授权或根据页面选项切换消费者。完整约定见[Connect 接口](../specs/connection-authorization.md)。非 Package 的直接用户工具沿用既有 owner 入口，不能借用其他 Package 的身份。

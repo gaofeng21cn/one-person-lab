@@ -22,6 +22,22 @@ User
 
 Agent tool 与必要 UI 是同一领域能力的两个入口。Framework 的共享 MCP App 提供通用协作视图，专用 MCP App 保留领域编辑器，Studio 通过标准 MCP Apps 和 DSH/Cordis 接入。Connect 提供连接授权、provider 保管凭证；知识 owner 提供来源绑定与运行冻结，用户或领域 owner 持有知识正文。MiniApp 不新增应用注册表或独立 runtime。设计规则由[Agent 原生应用标准](./policies/agent-native-app-policy.md)持有，实际共享接口由 [MCP Apps SPEC](./mcp-apps/SPEC.md)持有。
 
+### 共用基座的物理归属
+
+`one-person-lab` 是通用基座的源码与合同维护中心。消费者通过安装的 Framework、公开模块和 CLI 复用能力；各领域仓维护自己的产品逻辑。SSOT 按事实归属确定，不以所有文件是否位于同一目录判断。
+
+| 内容 | 物理维护位置 | 消费方式与归属 |
+| --- | --- | --- |
+| 通用规则与机器合同 | 本仓 `contracts/opl-framework/`；人读入口为 `docs/README.md` | 标准与接口在唯一主题 owner 维护，各仓链接、声明依赖；契约变更同步真实 caller |
+| 通用运行代码与组件 | 本仓 `src/`、`packages/`、`python/opl_framework/`；共享 UI 为 `src/mcp-app/` | 使用 `package.json` 的公开 export、`opl` CLI 或已有 Python 支持投影；领域仓不复制 Framework runtime |
+| 已安装的可执行基座 | 当前 carrier 选择的 Framework 安装；managed locator 入口为 `~/.opl/one-person-lab` | `opl framework locate --json` 回读本次调用的实际 root、bin、contracts 和 state；开发 checkout、CLI 安装与 App 所带安装可位于不同位置，各宿主按自己的安装合同选择 |
+| 本机运行状态与连接授权 | `OPL_STATE_DIR` 指定位置；默认 `~/Library/Application Support/OPL/state`；使用 `OPL_DATA_DIR` 时为其下 `opl/state` | Framework 管理连接引用、grant、任务投影等状态；凭证由 provider、Account & Access 或原生 carrier 保管，消费者只使用公开执行入口 |
+| 私人知识控制信息 | Profile/Workspace 的私有来源 registry，以及 `<workspace>/shared/memory/knowledge-bindings.json` | 多个获授权工作区引用同一来源，Framework 核对范围与接受版本；具体文件布局由[知识来源接口](./specs/knowledge-sources.md)定义 |
+| 知识正文与领域数据 | 用户的 Obsidian、普通资料目录或业务工作区；邮件、照片、设备记录等保留原业务库 | 正文原处编辑、按共同生命周期接受；运行快照保存在 Framework state，业务数据不因共用知识而迁库 |
+| 专业应用与宿主 | 各领域仓、`one-person-lab-app` 与 `opl-studio` | 领域 owner 管业务逻辑和质量，App/Studio 管产品与宿主；通过公开接口复用基座 |
+
+定位代码、选择运行状态和选择知识来源是三个独立操作。开发者使用现有 Framework locator，部署者沿 carrier 安装与升级路径维护代码，用户在 Profile/Workspace 选择知识来源。显式选择的来源无效时应修复该选择，不能静默换成另一套身份或默认个人目录。实际路径随宿主和安装方式变化，公共合同不写入开发者机器的绝对路径；跨设备的来源同步与凭证续期继续由各自 owner 承担。
+
 ## Source topology
 
 `contracts/opl-framework/source-module-map.json` 是源码责任图：
