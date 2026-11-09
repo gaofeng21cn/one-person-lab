@@ -1,6 +1,6 @@
 # OPL Agent App 开发指南
 
-本指南将[开发标准](../policies/agent-native-app-policy.md)变成可执行的接入步骤。使用现有 Package 和 owner 工程，不创建另一种 MiniApp 包。协议、贡献 ABI 和工具行为见 [SPEC](./SPEC.md)。
+本指南将[开发标准](../policies/agent-native-app-policy.md)变成可执行的接入步骤，适用于标准智能体、其他 Agent、个人工作流和 Agent 原生 App。先接入需要的共用基座，再选择是否提供 UI。使用现有 Package 和 owner 工程，不创建另一种 MiniApp 包。协议、贡献 ABI 和工具行为见 [SPEC](./SPEC.md)。
 
 ## 从一条真实工作流开始
 
@@ -11,12 +11,31 @@
 | 目标与业务 owner | 用户要完成什么、真实数据/产物在哪、谁接受结果 |
 | Agent 主流程 | 已有读/写入口、输入/结果 schema、长操作身份、错误与恢复方法 |
 | 人介入点 | 需要比较、选择、编辑、专业判断或授权的具体时刻；明确只读也可成立 |
-| 共用环境 | 需要哪些连接能力和知识范围，哪些必要、哪些可选；已有授权和来源如何复用 |
+| 共用环境 | 需要哪些连接能力和知识范围，哪些必要、哪些可选；公共 owner、实际 caller、已接入或待迁移处，以及不适用理由 |
 | 展示选择 | 无 UI、共享视图、专用 MCP App 或专业应用；说明具体理由 |
 | 交接数据 | 精确对象、workspace/task/artifact 身份、revision、选择状态、返回结果 |
 | 验证与分发 | 代表性成功/失败场景，所需 Host 能力，选定 carrier 与 owner 发布路径 |
 
-优先完成“Agent 读取对象 → 打开必要 UI → 人作出一项选择/编辑 → 原 owner 应用 → Agent 回读继续”这条纵向链路。先证明它，再扩展页面和通用模块。
+优先完成“复用已有环境 → Agent 读取对象 → 原 owner 执行 → Agent 回读结果”的链路。有人类操作点时，再加入精确 UI 打开、选择或编辑和同一对象交接。先证明所需链路，再扩展页面和通用模块。
+
+## 让已有环境可直接使用
+
+按真实需求选用已有入口，不要求所有应用依赖所有基座能力，也不要求轻量工具改成标准智能体。
+
+| 需求 | 接入方式 | 验证重点 |
+| --- | --- | --- |
+| 复用外部服务账号 | 可信服务启动时通过 `opl-framework/connection-authorization-host` 的 `activateInstalledPackageConnectionContext` 绑定自己的 installed Package；消费注入的 `connect` port | 已有 grant 可用；撤权、连接修订或载体变化阻止后续调用；业务结果回到 provider |
+| 复用模型能力 | 调用既有模型/provider owner 的公开执行入口；Gateway 账号由 Account & Access 持有 | 不在领域 Skill 中复制宿主配置和凭据解析；入口缺失作为 owner 的能力缺口处理 |
+| 读取个人或主题知识 | 已知知识 ID 使用 `opl knowledge read-source`，派生摘要使用 `verify-dependencies`，按获授权 workspace/domain/project 取用 | 真实来源及接受版本可读；撤权、过期或原文改变时排除旧内容 |
+| 固定一轮任务的知识依据 | 使用 `prepare`、`read-context` 和行动前 `revalidate --for-action`；托管 StageRun 使用自动绑定 | 真实上下文消费、依赖版本和缺口可回读；只有空 catalog 或命令存在不算接入 |
+| 修改已登记的知识 | `propose/review/apply`，或原处编辑后 `inspect-source/review-source`；移动时维护 locator | 正文、接受版本与派生摘要一致；冲突不覆盖，旧缓存不掩盖失效 |
+| 复用工作与成果 | 短操作返回原 owner 结果；长操作使用已有 Task/StageRun 或领域任务身份 | 同一对象查询和恢复；领域业务库与产物权威保留在原处 |
+
+连接工厂只用于可信 Host/服务启动，安装根来自自身模块位置，Package 身份由启动代码固定。它不会安装、授权或根据页面选项切换消费者。完整约定见[Connect 接口](../specs/connection-authorization.md)。非 Package 的直接用户工具沿用既有 owner 入口，不能借用其他 Package 的身份。
+
+知识接口见[来源与上下文接口](../specs/knowledge-sources.md)。轻量工具读取单个获授权来源无需创建空 Task/StageRun；`recall/prepare` 按接口要求提供产品 catalog、repository、真实 domain、适用阶段及工作区/项目。来源绑定完成后，只询问仍缺失、冲突或过期的信息；不要再次收集已获授权的同一偏好或资料。没有个人库时，工作目录可作为相同机制下的来源。
+
+就绪情况从各 owner 回读，清楚区分缺安装、缺连接、缺 grant、缺知识、来源过期与业务尚未执行，并给出该 owner 的修复入口。公共 provider 尚未实现时先补 owner 的最小能力，再接消费者；不要让各应用用新的配置文件、授权副本或知识库暂代。
 
 ## 选择最小 UI
 
@@ -37,7 +56,7 @@ Agent 使用 `open_opl_apps` 指定所需 Package/view 与上下文；`opl_app_c
 
 通用状态组件应覆盖加载、空结果、错误、缺少输入、过期视图、动作待定和可用产物。renderer 按 `view_kind`/schema 选择；领域格式转换应尽量在领域 owner 内完成，避免在 Framework 增加按产品名分支。文件预览与媒体定位复用宿主已授权的 artifact 桥，保留路径与工作区校验。
 
-连接接入复用 [Connect](../specs/connection-authorization.md)。可信 Host 初始化 owner 的消费者上下文，页面只请求该 owner 已暴露的操作；页面 Package 选择不能激活任意消费者。知识接入复用 Framework 的现行知识命令和合同，绑定用户已有来源、按任务读取冻结版本；不提供尚不存在的通用 `context.knowledge` API。正在迁移的来源 schema 由知识 owner 交付，接入时以其实际 CLI/schema 为准。
+UI 使用前述已接入的 owner 上下文，页面只请求该 owner 已暴露的操作；页面 Package 选择不能激活任意消费者。知识正文与冻结上下文通过现行知识命令读取，来源视图仅投影获准的元数据；不提供尚不存在的通用 `context.knowledge` API。
 
 ## 可重复的开发验收
 
