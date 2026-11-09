@@ -7,6 +7,7 @@ import test from 'node:test';
 import {
   foundryContentDigest,
   validateAgentBlueprint,
+  validateKnowledgeRequirements,
   type AgentBlueprint,
 } from '../../src/authority/evolution/protocol.ts';
 import { recomputeBlueprintRisk } from '../../src/authority/evolution/risk-policy.ts';
@@ -63,6 +64,7 @@ test('blueprints declare knowledge ownership and source requirements with a clos
   const physicalSource = structuredClone(candidate);
   physicalSource.memory_policy.knowledge_requirements[0]!.semantic_owner_ref = '/private/person';
   assert.throws(() => validateAgentBlueprint(physicalSource), /semantic protocol boundary/);
+  assert.throws(() => validateKnowledgeRequirements(physicalSource.memory_policy.knowledge_requirements), /semantic protocol boundary/);
 });
 
 test('knowledge requirements survive candidate materialization and affect version risk and identity', async (t) => {

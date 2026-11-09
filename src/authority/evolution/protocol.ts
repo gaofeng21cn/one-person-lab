@@ -609,6 +609,7 @@ function validateProtectedAggregates(value: unknown, label: string) {
 
 export function validateKnowledgeRequirements(value: unknown): KnowledgeRequirement[] {
   const field = 'AgentBlueprint.memory_policy.knowledge_requirements';
+  assertFoundryProtocolPurity(value, field);
   if (!Array.isArray(value)) fail(`${field} must be an array.`, { field });
   const identities = new Set<string>();
   for (const [index, entry] of value.entries()) {
