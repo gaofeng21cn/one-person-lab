@@ -24,6 +24,24 @@
       "freshness": "owner observed or tested timestamp/status when provided; write time alone is not freshness",
       "readiness": "owner or resource status summary with safe reason code only"
     },
+    "metadata_shapes": {
+      "authorization": {
+        "status_values": ["authorized", "attention", "unknown"],
+        "count_fields": ["consumer_count", "grant_count"]
+      },
+      "revision": {
+        "status_values": ["current", "stale", "unknown"],
+        "identity_field": "security_revision"
+      },
+      "freshness": {
+        "status_values": ["fresh", "stale", "unknown"],
+        "timestamp_field": "observed_at"
+      },
+      "readiness": {
+        "status_values": ["ready", "attention", "unknown"],
+        "reason_field": "reason"
+      }
+    },
     "secret_policy": "refs_only; never include credential material, credential handles, provider payloads, or knowledge body",
     "path_policy": "do not include absolute filesystem paths; use stable source refs"
   },
