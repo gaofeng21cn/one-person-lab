@@ -1,0 +1,1361 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "rca",
+  "plugin_id": "redcube-ai",
+  "package_version": "0.2.23",
+  "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
+  "source_commit": "f7cac5cd3d330fd2a2ff95ce14244a764d76ee64",
+  "source_root": "plugins/redcube-ai",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:fc3b335fb863afafe3a612fd5e72d195dd3a6cb013dbef98aa50a9323694024f"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/.codex-plugin/plugin.json",
+      "sha256": "sha256:6b679b5385037126363303436026870a119262491411965b07670af0f861d851"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/LICENSE",
+      "sha256": "sha256:833ec30eb6223cb0ff2caab6a7c25ea305b0bb62a373f37c8c78193a0cc4d575"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/README.md",
+      "sha256": "sha256:7acd1222bc80ac206a93cea19edf4d22e7390a993b9f6b9fff416fada89b3539"
+    },
+    {
+      "path": "README.zh-CN.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/README.zh-CN.md",
+      "sha256": "sha256:862d1530a55586f6c65ff3515958620891d4682adbe9f7fb707be63d02fff13b"
+    },
+    {
+      "path": "agent/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/README.md",
+      "sha256": "sha256:2db1507b1aeea380b03bf2b37d3a235fc52b22977447b2b117947a59d5ab5b4f"
+    },
+    {
+      "path": "agent/knowledge/artifact_and_export_authority.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/knowledge/artifact_and_export_authority.md",
+      "sha256": "sha256:d4b0da9d152971dd2eadd423ab89f3b68f09f39e46aa9590d2be5ce0fcc9389c"
+    },
+    {
+      "path": "agent/knowledge/communication_visual_direction.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/knowledge/communication_visual_direction.md",
+      "sha256": "sha256:70ec6e2e85fc9b5c5260cbd6ccd8a9478e3b72a0145d45640d2121e0219fffc2"
+    },
+    {
+      "path": "agent/knowledge/owner_receipt_policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/knowledge/owner_receipt_policy.md",
+      "sha256": "sha256:c66fc0e5ca02b745b73c6b4fde9f350f8b513bde45aa62b65bd407b7c5375f8a"
+    },
+    {
+      "path": "agent/knowledge/ppt_production_reuse.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/knowledge/ppt_production_reuse.md",
+      "sha256": "sha256:fd4bdaa850cdcc82fae39c9ed614732e97b9556ad005b3f91d49c1168bf074c7"
+    },
+    {
+      "path": "agent/knowledge/ppt_source_adaptation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/knowledge/ppt_source_adaptation.md",
+      "sha256": "sha256:d8708888657558c04f1ccdaa38ce306bc8ee899b332f8912de6d3a5bd02ed74e"
+    },
+    {
+      "path": "agent/knowledge/ppt_style_calibration.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/knowledge/ppt_style_calibration.md",
+      "sha256": "sha256:989fa7296851060ee6c901183990d0614d267b3686fedde7a4828906edaf0055"
+    },
+    {
+      "path": "agent/knowledge/review_export_memory.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/knowledge/review_export_memory.md",
+      "sha256": "sha256:e18c858f2c016c393b18d024aefe068ea38d2903132458f36cf3e43380bd2590"
+    },
+    {
+      "path": "agent/knowledge/visual_truth_boundaries.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/knowledge/visual_truth_boundaries.md",
+      "sha256": "sha256:c37233f63d2bfacc2b491ac12547e7c289b3da9ecd70aa4fa0dd22699beb6b63"
+    },
+    {
+      "path": "agent/policies/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/policies/README.md",
+      "sha256": "sha256:d0a6e92f72eefad8d44946f42dec13ff42ee3842ec0341de9da540dba14ae5b4"
+    },
+    {
+      "path": "agent/policies/markdown-route-policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/policies/markdown-route-policy.md",
+      "sha256": "sha256:2bf9ec2d1d24f812ecff418bebb264310e5143be2141d98d52ba1932c9910d2f"
+    },
+    {
+      "path": "agent/policies/visual-authority-policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/policies/visual-authority-policy.md",
+      "sha256": "sha256:8f8b55d2d0dbf30012ee6f6749ed5fd4b9459df2663485630b5ca93860dc7956"
+    },
+    {
+      "path": "agent/primary_skill/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/primary_skill/SKILL.md",
+      "sha256": "sha256:a409f1318099c8ecdbb57f4b1b359b41664d2786f097331a2090e0352e82514e"
+    },
+    {
+      "path": "agent/principles/domain-specialization.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/principles/domain-specialization.md",
+      "sha256": "sha256:c2dfd091cce6bc7f58ceb565886d135665290b1dab90cd5ec504cf4e3680989e"
+    },
+    {
+      "path": "agent/principles/opl-standard-agent-principles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/principles/opl-standard-agent-principles.md",
+      "sha256": "sha256:c9ff5dc65b23308c89ec8aa35d102f9976bd84473117a49b55d2d5a7d3c5d35f"
+    },
+    {
+      "path": "agent/professional_skills/rca-native-ppt-designer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-native-ppt-designer/SKILL.md",
+      "sha256": "sha256:8a98da48c2d577a52f9ff3c2d3f68d813961fb4e7cc909f6f6231b31063cef2e"
+    },
+    {
+      "path": "agent/professional_skills/rca-native-ppt-designer/resources/minimal-resource-pack.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-native-ppt-designer/resources/minimal-resource-pack.md",
+      "sha256": "sha256:2ff5c37998066aaa027ecf1d261e9dbe955cd3d8349b101dc90bce353b76ea45"
+    },
+    {
+      "path": "agent/professional_skills/rca-native-ppt-designer/resources/native-object-semantics.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-native-ppt-designer/resources/native-object-semantics.md",
+      "sha256": "sha256:96f49d1c66e0a60d8de2e968ab9735bc45dd8fe5aad00999d19991f5cb240b93"
+    },
+    {
+      "path": "agent/professional_skills/rca-ppt-page-author/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-ppt-page-author/SKILL.md",
+      "sha256": "sha256:00044042e5006bb8e5ce6c58f1f2fee7715e2f02e4885c096b9f7f21c5637061"
+    },
+    {
+      "path": "agent/professional_skills/rca-ppt-page-author/resources/minimal-resource-pack.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-ppt-page-author/resources/minimal-resource-pack.md",
+      "sha256": "sha256:6823be303f7be9b8fe19133c0a7b2468bf54ce6c25fe3916b0d198d6a61ce41d"
+    },
+    {
+      "path": "agent/professional_skills/rca-ppt-reviewer/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-ppt-reviewer/SKILL.md",
+      "sha256": "sha256:1900a6873d3cefaa9d6be56fb0530178483ea59ec5de898ab0634921a29c75bc"
+    },
+    {
+      "path": "agent/professional_skills/rca-ppt-reviewer/resources/minimal-resource-pack.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-ppt-reviewer/resources/minimal-resource-pack.md",
+      "sha256": "sha256:e13ab1fbfd72224fbca14f29940f7dfff2d571392178cf0cd454b00a6141a3f7"
+    },
+    {
+      "path": "agent/professional_skills/rca-ppt-reviewer/resources/workbench-cases.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-ppt-reviewer/resources/workbench-cases.md",
+      "sha256": "sha256:b5c5f4c8f9eefe30413cf3ebb72b109dda843a411bf31273fae557db1cb4678d"
+    },
+    {
+      "path": "agent/professional_skills/rca-ppt-reviewer/resources/workbench-evaluation.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-ppt-reviewer/resources/workbench-evaluation.json",
+      "sha256": "sha256:204e4ab85d254cd7f0fae2640a0644f39318b35d7228389dda71e369dfa57afa"
+    },
+    {
+      "path": "agent/professional_skills/rca-ppt-story-architect/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-ppt-story-architect/SKILL.md",
+      "sha256": "sha256:12cb97eea923049ba70ee1674af0954d8e21245a8b4e804c1f4e27991331c94c"
+    },
+    {
+      "path": "agent/professional_skills/rca-ppt-story-architect/resources/minimal-resource-pack.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-ppt-story-architect/resources/minimal-resource-pack.md",
+      "sha256": "sha256:007331184ce378f8c4f92c5d990f114825ced2c918a1599c7520bc7cbfced80f"
+    },
+    {
+      "path": "agent/professional_skills/rca-ppt-visual-director/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-ppt-visual-director/SKILL.md",
+      "sha256": "sha256:faa5c54135a6c31fc6b042c4f860eea37bef60d47f5cc6ed2a665bed468e7595"
+    },
+    {
+      "path": "agent/professional_skills/rca-ppt-visual-director/resources/minimal-resource-pack.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-ppt-visual-director/resources/minimal-resource-pack.md",
+      "sha256": "sha256:646977d88b139a856f1dafcb2763a6704c84adad907a777760de1db51ee56e4a"
+    },
+    {
+      "path": "agent/professional_skills/rca-template-profiler/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-template-profiler/SKILL.md",
+      "sha256": "sha256:e9980e4fdfda8fe27e5c90af175990b0796c540e3eaf2c87aa495de881ee9106"
+    },
+    {
+      "path": "agent/professional_skills/rca-template-profiler/resources/minimal-resource-pack.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-template-profiler/resources/minimal-resource-pack.md",
+      "sha256": "sha256:818ddfa6650697a634bb81f1c6e0fc268fc6c62848d66f40be650f2bb192c43f"
+    },
+    {
+      "path": "agent/professional_skills/rca-visual-memory-curator/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-visual-memory-curator/SKILL.md",
+      "sha256": "sha256:2e07c2094ea35b6c1db558acca0df85e52eaa39f4f105705dd4ac6bf7bd03088"
+    },
+    {
+      "path": "agent/professional_skills/rca-visual-memory-curator/resources/minimal-resource-pack.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-visual-memory-curator/resources/minimal-resource-pack.md",
+      "sha256": "sha256:ace7abd3ed1fa69e6ac3c63a88efd310b135921f7ef7b6a2ea9f4e513701155b"
+    },
+    {
+      "path": "agent/professional_skills/rca-xhs-content-strategist/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-xhs-content-strategist/SKILL.md",
+      "sha256": "sha256:6e59c9e466b2385f55333ccb851b26269dcb90db58b0a45bd203217830d7f928"
+    },
+    {
+      "path": "agent/professional_skills/rca-xhs-content-strategist/resources/minimal-resource-pack.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/professional_skills/rca-xhs-content-strategist/resources/minimal-resource-pack.md",
+      "sha256": "sha256:9cfd3e8d4ea211dc70f6dff4bf2420dbfaa8e18a6eb9d6b5d0e1211cc1c79637"
+    },
+    {
+      "path": "agent/prompts/artifact_creation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/prompts/artifact_creation.md",
+      "sha256": "sha256:4cf57b08d7afd7278eec44a888686f08a751e878ba1a805ddf08bc92a243b3b9"
+    },
+    {
+      "path": "agent/prompts/communication_strategy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/prompts/communication_strategy.md",
+      "sha256": "sha256:56387ab76c43818b7bac10cacbd4327206ef2ee8ca393f1eb1e24cfc11171048"
+    },
+    {
+      "path": "agent/prompts/package_and_handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/prompts/package_and_handoff.md",
+      "sha256": "sha256:5e67fdf0e0328e1886453ffd9d808295662363fa218e68d5eba799408a7d2430"
+    },
+    {
+      "path": "agent/prompts/review_and_revision.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/prompts/review_and_revision.md",
+      "sha256": "sha256:c913a67cfb174b5b341bd11a28e50b512e5f12378ba46332d14fb4497515ec7e"
+    },
+    {
+      "path": "agent/prompts/source_intake.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/prompts/source_intake.md",
+      "sha256": "sha256:ba50cdd2e362fe273a502db0896570c68fe857646f9531ea9ae5baf87a45174f"
+    },
+    {
+      "path": "agent/prompts/stage-quality-cycle-roles.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/prompts/stage-quality-cycle-roles.md",
+      "sha256": "sha256:f2b9d852f225a99a50907539253b81036d331ec0ae4b0e25b0f0dcf2edece171"
+    },
+    {
+      "path": "agent/prompts/visual_direction.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/prompts/visual_direction.md",
+      "sha256": "sha256:3ac5adf3c93889c03abcb96a7583d7a939d7f2f1946dac57e829e39d7e9a622f"
+    },
+    {
+      "path": "agent/quality_gates/artifact_authority.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/quality_gates/artifact_authority.md",
+      "sha256": "sha256:d41d81f901fa0fb34668944d8745a14612759cda7b83e686ea7603d2041f16de"
+    },
+    {
+      "path": "agent/quality_gates/communication_and_direction.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/quality_gates/communication_and_direction.md",
+      "sha256": "sha256:690b918298a28f675f75dec4a9a860a555ccf3f4810a8f9609cedc1057c48dab"
+    },
+    {
+      "path": "agent/quality_gates/package_distribution.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/quality_gates/package_distribution.md",
+      "sha256": "sha256:6a17b5ef751a85666e06186fe689110ec24e4331724971d9e5359e9288f9ad8c"
+    },
+    {
+      "path": "agent/quality_gates/review_export_memory.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/quality_gates/review_export_memory.md",
+      "sha256": "sha256:f47745b8a44884a93d681333b45955b1b9006ff97cdb792b708ba80f17d4f093"
+    },
+    {
+      "path": "agent/quality_gates/screenshot_review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/quality_gates/screenshot_review.md",
+      "sha256": "sha256:ac47ee7dad26738f899dd946e9b8b20aa06000c19e7f9fb5de6282babc78a4c0"
+    },
+    {
+      "path": "agent/quality_gates/source_and_truth.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/quality_gates/source_and_truth.md",
+      "sha256": "sha256:b4d46c8d0650bf7b6b3c2363c2b5492ca55896a8b471221207034fe132954060"
+    },
+    {
+      "path": "agent/quality_gates/visual_authority_boundaries.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/quality_gates/visual_authority_boundaries.md",
+      "sha256": "sha256:8ba11e0c6c561973f0b0db2c4bef72f9a590e78db8ec5e0e9fde61ff00ef4c66"
+    },
+    {
+      "path": "agent/quality_gates/visual_pack_discipline.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/quality_gates/visual_pack_discipline.md",
+      "sha256": "sha256:818ed5ebbad5ab1e136495e34b289416ed4ad68936608f807a63a28483bd245a"
+    },
+    {
+      "path": "agent/skills/native_helper_policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/skills/native_helper_policy.md",
+      "sha256": "sha256:334dbc5bda74841f8178e60776c71997d1be943f48aa31c3f10d82b6388b943c"
+    },
+    {
+      "path": "agent/skills/visual_deliverable_authoring.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/skills/visual_deliverable_authoring.md",
+      "sha256": "sha256:5693e9cc1da514866c5d9d79101f15b2bb81d5a45b753e98edf6e0c58ccd4ec4"
+    },
+    {
+      "path": "agent/skills/visual_memory_policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/skills/visual_memory_policy.md",
+      "sha256": "sha256:aa5846d1397dc6e9e77550f8be8c79162dbffbf3b5702b310a763769a4f712e2"
+    },
+    {
+      "path": "agent/stages/artifact_creation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/stages/artifact_creation.md",
+      "sha256": "sha256:a51a26e12a52d240af99d020c1d0f8d1bc9d96c2a2a7b9fa55dfc5092a05a9ac"
+    },
+    {
+      "path": "agent/stages/communication_strategy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/stages/communication_strategy.md",
+      "sha256": "sha256:939a84f7ac63c2b43615cbe766cf658f883239db1b4215fa825f43faf1389881"
+    },
+    {
+      "path": "agent/stages/manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/stages/manifest.json",
+      "sha256": "sha256:8112562ef090aa36ffe3ae65850e91b3e3e48b2a82704e591dba0bd54f784173"
+    },
+    {
+      "path": "agent/stages/package_and_handoff.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/stages/package_and_handoff.md",
+      "sha256": "sha256:fbb0419df40d4b5d5cb349bb516fd3b1e258fb2fc4bc4cb368968a5d014bda02"
+    },
+    {
+      "path": "agent/stages/review_and_revision.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/stages/review_and_revision.md",
+      "sha256": "sha256:9840c67329f47976872fef6af10ccfdf4a93268a5138cb5894cc6e83111a28e6"
+    },
+    {
+      "path": "agent/stages/source_intake.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/stages/source_intake.md",
+      "sha256": "sha256:5a918dec51d3f582251325fd78fd8421ce7b7d55078f17fa1cddd9315e4b73b6"
+    },
+    {
+      "path": "agent/stages/visual_direction.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/stages/visual_direction.md",
+      "sha256": "sha256:7269ec15ac7732ca0b3e66eeb888f0187a65dbdd71e45b051b8434959deafd52"
+    },
+    {
+      "path": "agent/tools/domain_affordances.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/agent/tools/domain_affordances.md",
+      "sha256": "sha256:4b95a8a46ae6a403cde5c199e1c9f6a5d5345df9fb57cb388ea2fce2704df3b3"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/app-contribution-adapter.json",
+      "sha256": "sha256:15d0037f34497ac7aad808c0d1ab40ae757a084200a1640a07180fdb773372a4"
+    },
+    {
+      "path": "assets/branding/redcube-ai-logo.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/assets/branding/redcube-ai-logo.png",
+      "sha256": "sha256:5c587499ff65c58b43d77d525f2824a05cbe0b634e9e5676f8c738c461db8727"
+    },
+    {
+      "path": "assets/branding/redcube-ai-overview-v3.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/assets/branding/redcube-ai-overview-v3.png",
+      "sha256": "sha256:1d01a1bdc351b321c39d97f29efb4c39996b1e67ac601bcec31638ed1624c203"
+    },
+    {
+      "path": "assets/icon.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/assets/icon.png",
+      "sha256": "sha256:e599c03713aed9f8d7f88047e8d3845062da3d6a9ee073f33a0010ecac8dff5e"
+    },
+    {
+      "path": "contracts/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/README.md",
+      "sha256": "sha256:16094f8c74d9d21b8440b7a94c18dd07b119baade474623ba8216247420e826a"
+    },
+    {
+      "path": "contracts/action_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/action_catalog.json",
+      "sha256": "sha256:c36e599ef01b0d1927bc8833756cd91a082196908f6279324a5b6cb67eb3dd66"
+    },
+    {
+      "path": "contracts/agent_lab_cost_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/agent_lab_cost_profile.json",
+      "sha256": "sha256:2467b62aeb656c1248379fbc3294fcde238e77d5a7ccbb1c6206b01a43e4c2e1"
+    },
+    {
+      "path": "contracts/agent_lab_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/agent_lab_handoff.json",
+      "sha256": "sha256:f502d70e3cf91050ebc4aeb349d284799981c9ba2c0e3d0d229a99e3e34b5d63"
+    },
+    {
+      "path": "contracts/artifact_locator_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/artifact_locator_contract.json",
+      "sha256": "sha256:6903bb4efd3c5f5450d8d5f3f56ab8c842174c8db21f0aea96ee479bc9d29859"
+    },
+    {
+      "path": "contracts/capability_map.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/capability_map.json",
+      "sha256": "sha256:dc95d2fd7136c1579fa79db5e7874f044d4a10bf627bd11a16a561f8f610c121"
+    },
+    {
+      "path": "contracts/cognitive_kernel_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/cognitive_kernel_adoption.json",
+      "sha256": "sha256:58440fdaa0bfa1b53ab16bcf0a94b33dc93fd1fb77519bc16112404a7e425200"
+    },
+    {
+      "path": "contracts/domain_descriptor.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/domain_descriptor.json",
+      "sha256": "sha256:d830a67b5114d862ec0f51b81439372b383d3dd40dd7ea9204ba80c12eaeb5d2"
+    },
+    {
+      "path": "contracts/durable_knowledge_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/durable_knowledge_catalog.json",
+      "sha256": "sha256:30099e0229521429166b6862fb0d5843a07e5f24068f4698b051bbf3aed626b9"
+    },
+    {
+      "path": "contracts/foundry-agent-os-domain-kernel-manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/foundry-agent-os-domain-kernel-manifest.json",
+      "sha256": "sha256:001cdf30d248c7b98e189010d5fe93d8b38981e0f3614e5412b72ff5b114e357"
+    },
+    {
+      "path": "contracts/foundry_agent_series.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/foundry_agent_series.json",
+      "sha256": "sha256:3e73086db500cc25302a072a958ce9c669da191716fbc2cd82a5f929363c53d7"
+    },
+    {
+      "path": "contracts/functional_privatization_audit.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/functional_privatization_audit.json",
+      "sha256": "sha256:1a14a102b69ff09ced208542de56ca9b6f0294d8f9d019436b10430d63ae38af"
+    },
+    {
+      "path": "contracts/generated_surface_handoff.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/generated_surface_handoff.json",
+      "sha256": "sha256:b84357253e076d7ed83fc0f7682ddd5397c9a0dd5006ccefdb22d6d21b742593"
+    },
+    {
+      "path": "contracts/golden_path_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/golden_path_profile.json",
+      "sha256": "sha256:89e3734d145fad5f8d122d1476ded052b4374d5802b7f8562d206fdfefe3596b"
+    },
+    {
+      "path": "contracts/live_stage_run_progress_evidence.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/live_stage_run_progress_evidence.json",
+      "sha256": "sha256:3ce83efb48ed671c1b58c37f3d9a85a64e49dd627e6150fa04f467561f257323"
+    },
+    {
+      "path": "contracts/opl-native-profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/opl-native-profile.json",
+      "sha256": "sha256:ef8f50fd2d5de7020a08deb8ca7dc28a251bed3a518062acbe0bbb6fe7fbd23b"
+    },
+    {
+      "path": "contracts/opl_agent_package_manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/opl_agent_package_manifest.json",
+      "sha256": "sha256:a66c229d98770e3ba79a38ee81ecc7f7563be6704dc4def95454a51d85a0c099"
+    },
+    {
+      "path": "contracts/opl_domain_manifest_registration.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/opl_domain_manifest_registration.json",
+      "sha256": "sha256:7fbe8a7137e318ca923cb512ed7fe6f278f3f0f4e2f6317498d3f6c1a63fd039"
+    },
+    {
+      "path": "contracts/opl_ledger_artifact_registration.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/opl_ledger_artifact_registration.json",
+      "sha256": "sha256:905e307872fd88dca3e935fb114fb81370f791f249ddcc6b151abaa7383520f3"
+    },
+    {
+      "path": "contracts/owner_chain_live_progress_evidence.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/owner_chain_live_progress_evidence.json",
+      "sha256": "sha256:82b7e3da357584e3342e9c6f7fac70504346e03ad646214d317b9c4425587fd2"
+    },
+    {
+      "path": "contracts/owner_receipt_contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/owner_receipt_contract.json",
+      "sha256": "sha256:d9bd4a4c16b3c4f440bff56e0a0c2f480addfd088a480099fa6f3d1925fbfaf3"
+    },
+    {
+      "path": "contracts/pack_compiler_input.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/pack_compiler_input.json",
+      "sha256": "sha256:230033a62f9f71b580050b3738685198f313f21a7f008fed242c35c9c56195d2"
+    },
+    {
+      "path": "contracts/physical_source_morphology_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/physical_source_morphology_policy.json",
+      "sha256": "sha256:df6afef52cebebf17da3c9a37a64c087f84c20d87c9087ba73b3ddbfd0fc0fa1"
+    },
+    {
+      "path": "contracts/runtime-program/ppt-html-route-quality-nonregression.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/runtime-program/ppt-html-route-quality-nonregression.json",
+      "sha256": "sha256:63720aff9e43b0b159af86b22d42be298d4099ee4c9f0258366a64f1631b5c71"
+    },
+    {
+      "path": "contracts/runtime-program/ppt-image-first-production-route.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/runtime-program/ppt-image-first-production-route.json",
+      "sha256": "sha256:8f0f5b698399e07a9dff9c75c5139b92a1e788f3e3d13b851fcb9e124fc7c013"
+    },
+    {
+      "path": "contracts/runtime-program/ppt-image-first-quality-nonregression.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/runtime-program/ppt-image-first-quality-nonregression.json",
+      "sha256": "sha256:50f4139a7f4dbef30690723572eb6734ae620013f3d1501b53cca7eb74a0bf87"
+    },
+    {
+      "path": "contracts/runtime-program/ppt-master-learning-landing.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/runtime-program/ppt-master-learning-landing.json",
+      "sha256": "sha256:f58a33c4919217acf9c32edba543d2e4c5c1256a0b268edbe1a99fecae41b494"
+    },
+    {
+      "path": "contracts/runtime-program/ppt-master-parity-benchmark.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/runtime-program/ppt-master-parity-benchmark.json",
+      "sha256": "sha256:6d81dea53ae2c7422ad321c0ed3e950e15546d064e86e5ce0089a35bd569ecc6"
+    },
+    {
+      "path": "contracts/runtime-program/ppt-native-ai-first-design-pack.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/runtime-program/ppt-native-ai-first-design-pack.json",
+      "sha256": "sha256:0d97c7b405991090e158721f5dd0bfd634fdfaa9e3e7fe9f6bd8b99c1236cac3"
+    },
+    {
+      "path": "contracts/runtime-program/ppt-native-authoring-proof-lane.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/runtime-program/ppt-native-authoring-proof-lane.json",
+      "sha256": "sha256:e8c8ae8988a819a1bc916459d8340556d1f1fd71ed9570b55a1c86136f77bcc3"
+    },
+    {
+      "path": "contracts/runtime-program/ppt-native-pptx-quality-nonregression.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/runtime-program/ppt-native-pptx-quality-nonregression.json",
+      "sha256": "sha256:481484d2172ab78e9ff738759b6bbff939c3443a8393f9dee042edc809864136"
+    },
+    {
+      "path": "contracts/runtime-program/ppt-native-python-engine-contract.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/runtime-program/ppt-native-python-engine-contract.json",
+      "sha256": "sha256:dad9d8758724e6f0a84d00eb71940bb369264787b4a59196e195327fdd995b89"
+    },
+    {
+      "path": "contracts/runtime-program/python-native-helper-catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/runtime-program/python-native-helper-catalog.json",
+      "sha256": "sha256:851a3eafeccf500988173769d28059900024ff01807a10d4f14253621a0b142b"
+    },
+    {
+      "path": "contracts/schemas/rca-stage-action.input.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/schemas/rca-stage-action.input.schema.json",
+      "sha256": "sha256:205f3ee678839d391626c619625bf3260f18c7f544119bdd75c8cf10ddab04fa"
+    },
+    {
+      "path": "contracts/schemas/rca-stage-action.output.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/schemas/rca-stage-action.output.schema.json",
+      "sha256": "sha256:814e2b6eb70405cd0b9c4482344d5506f11d2f041f3675b87c02e0e47f5eaac6"
+    },
+    {
+      "path": "contracts/source_closure_audit.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/source_closure_audit.json",
+      "sha256": "sha256:372890d47159fd7c5b686d39413c8d63f38c8a01e60b5aec2fefc51a70533cc9"
+    },
+    {
+      "path": "contracts/stage_artifact_kernel_adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/stage_artifact_kernel_adoption.json",
+      "sha256": "sha256:ffa7f6e7c2389fac62c9c2a01b05ea26a40a7fa89adf59f53ac0ccaf5eeaa621"
+    },
+    {
+      "path": "contracts/stage_operating_principles.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/stage_operating_principles.json",
+      "sha256": "sha256:654a3d9f795ff19048d8e0dcc6a38223b5d42eab47d32eb7b410d3930a3beed3"
+    },
+    {
+      "path": "contracts/stage_quality_cycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/stage_quality_cycle_policy.json",
+      "sha256": "sha256:def339d6056a88a34673882fbde0b0a174a9097a7021648bd4d57dd8e5750c91"
+    },
+    {
+      "path": "contracts/stage_run_canary_evidence.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/stage_run_canary_evidence.json",
+      "sha256": "sha256:4c0cf72a5b36d3a2217f843ace3e8938884849697c7a6cd438dca5e397f2ec62"
+    },
+    {
+      "path": "contracts/stage_run_kernel_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/stage_run_kernel_profile.json",
+      "sha256": "sha256:664e50c685aee5473f601943838afe7eca87e3fa47a01fb3448a202c0fe4a599"
+    },
+    {
+      "path": "contracts/standard-agent-principles-adoption.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/standard-agent-principles-adoption.json",
+      "sha256": "sha256:502a283771cbc593f9432417c511881cb1bb036477adbf008e6a193b272c05b5"
+    },
+    {
+      "path": "contracts/standard_agent_conformance_profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/standard_agent_conformance_profile.json",
+      "sha256": "sha256:6ee9bbe3a3e853da65dfc6f431b25beb43b216e7832c49498465ceb2fb4adf99"
+    },
+    {
+      "path": "contracts/standard_agent_interface.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/standard_agent_interface.json",
+      "sha256": "sha256:4277394384870b127ad50246b19459f9b2316bfbeb7d910361dea6b5259e7163"
+    },
+    {
+      "path": "contracts/temporal_stage_run_consumption_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/temporal_stage_run_consumption_policy.json",
+      "sha256": "sha256:1ef9287b22f6bee7a65dc03799488bd153bf420ac36c43a5cf8ea64026eb4a75"
+    },
+    {
+      "path": "contracts/workspace_lifecycle_policy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/contracts/workspace_lifecycle_policy.json",
+      "sha256": "sha256:bd638f19d87b5e79dcedde412b4fa7f0fe335b647aa26007996776cdc7aee463"
+    },
+    {
+      "path": "docs/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/README.md",
+      "sha256": "sha256:496914225ffe4bcd968eb4b95ed57a9dfd6fb69664f30f30d49c6526ae3db431"
+    },
+    {
+      "path": "docs/active/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/active/README.md",
+      "sha256": "sha256:1198ad07dd41de294711e2e8f6e42b6e01c52959f9dba033259eec392fbc8ec8"
+    },
+    {
+      "path": "docs/active/rca-ideal-state-gap-plan.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/active/rca-ideal-state-gap-plan.md",
+      "sha256": "sha256:557ddce79dc3e9544429772e461bb3f6508cd69bac97119720fab48b0293e9d6"
+    },
+    {
+      "path": "docs/architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/architecture.md",
+      "sha256": "sha256:84797d17d74a515d53025737df4a38ff70f65c9e237ee62686e4598dca2c28ef"
+    },
+    {
+      "path": "docs/decisions.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/decisions.md",
+      "sha256": "sha256:26edb72fb0d5af908e7f948fa76140f06f3a96eab027c71c22d331f2a78d81b4"
+    },
+    {
+      "path": "docs/delivery/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/delivery/README.md",
+      "sha256": "sha256:4fb703db8ee799f862429e650021ff7b6d8028db84cf7fd50fc3d0f999f1261c"
+    },
+    {
+      "path": "docs/delivery/deliverable_examples.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/delivery/deliverable_examples.md",
+      "sha256": "sha256:9deca6e7131c5f154632149e385607901b98b1c875ba82818693cbd921de4889"
+    },
+    {
+      "path": "docs/delivery/html-ppt-route-quality.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/delivery/html-ppt-route-quality.md",
+      "sha256": "sha256:b60c1f22b532b8398ae6dc8f5b555358de34ebf574763ee8fae08b43c5fe9b29"
+    },
+    {
+      "path": "docs/delivery/image-first-ppt-production-route.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/delivery/image-first-ppt-production-route.md",
+      "sha256": "sha256:707f6b4ad9d917e439710cbc2f2725002fb97b52c9c02e55782b560d116a5d65"
+    },
+    {
+      "path": "docs/delivery/native-ppt-proof-environment.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/delivery/native-ppt-proof-environment.md",
+      "sha256": "sha256:2e1ad6c1158d6774d119ebec804a72ef3c260eb838196bd421584a803f43504d"
+    },
+    {
+      "path": "docs/delivery/ppt-workbench-learning.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/delivery/ppt-workbench-learning.md",
+      "sha256": "sha256:f33721c81d786278fe3e77871767c23fa9d861794e9491beceb2f1c23694d07e"
+    },
+    {
+      "path": "docs/docs_portfolio_consolidation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/docs_portfolio_consolidation.md",
+      "sha256": "sha256:3ce91e50636e5dd09d32a36807ec0c007c92f0c419677c1c52c33fee13a77db2"
+    },
+    {
+      "path": "docs/invariants.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/invariants.md",
+      "sha256": "sha256:f0b96d7872e39d10c8eccc6c1fcb1af2aebc4e29c3fd23c0fbf7fc27d318f0b6"
+    },
+    {
+      "path": "docs/policies/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/policies/README.md",
+      "sha256": "sha256:c2099744aae4d99283028a731b0d247f3fc55aa4eee3cc76dd3c478127759e52"
+    },
+    {
+      "path": "docs/policies/ai_first_quality_boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/policies/ai_first_quality_boundary.md",
+      "sha256": "sha256:6c2c4a2dea77c6a755fe4f8a0ff063ea034c8cfcf3e4b59d18fd8c8edfe75c03"
+    },
+    {
+      "path": "docs/policies/deliverable_contract_model.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/policies/deliverable_contract_model.md",
+      "sha256": "sha256:66a361ec9c141013cec855f135bdfcc043b66cbaaeecaeee3119bb2e7fe435b5"
+    },
+    {
+      "path": "docs/policies/visual_pattern_memory_policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/policies/visual_pattern_memory_policy.md",
+      "sha256": "sha256:12510b405db3ad162896d210cb0359c8cd7fb8311b43aac7630db24b746225a9"
+    },
+    {
+      "path": "docs/product/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/product/README.md",
+      "sha256": "sha256:291462ba79eeb83f7b2980f9282c18c1a196514a712188b20c5437ef9381f2a8"
+    },
+    {
+      "path": "docs/product/human_quickstart.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/product/human_quickstart.md",
+      "sha256": "sha256:cefbbdeb58acb18addabc1fbd503dd6f179ed227b44bfd7d8799413853434894"
+    },
+    {
+      "path": "docs/project.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/project.md",
+      "sha256": "sha256:1d60eb6010ab6ad0e43ee52c0af86b7a853a14f8f461e69d1ef654bb25502cba"
+    },
+    {
+      "path": "docs/references/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/references/README.md",
+      "sha256": "sha256:ecb136a24d2b5ce1d512ebceac556c340b8314ae664281efb6d8c34def0c20e5"
+    },
+    {
+      "path": "docs/references/native-ppt-open-source-design-discipline.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/references/native-ppt-open-source-design-discipline.md",
+      "sha256": "sha256:7f70ff182276efbf68d58f402d167851d362276782de916ac27a86feb3cf4289"
+    },
+    {
+      "path": "docs/references/primary-skill-plugin-carrier-boundary.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/references/primary-skill-plugin-carrier-boundary.md",
+      "sha256": "sha256:d22005f05c85280433252fd6aec7302d3556bb3ddbc4295400fe999fb857a7d4"
+    },
+    {
+      "path": "docs/references/rca-visual-deliverable-agent-ideal-state.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/references/rca-visual-deliverable-agent-ideal-state.md",
+      "sha256": "sha256:36485756f074553b4af25aefd52b05aeeec7c830e2da22d19f4b612a42d81fe2"
+    },
+    {
+      "path": "docs/runtime/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/runtime/README.md",
+      "sha256": "sha256:9c3b3ff038e30b1a502403e20ce2b388ed46afd9001e2b866ba6015e7be4bed0"
+    },
+    {
+      "path": "docs/runtime/runtime_architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/runtime/runtime_architecture.md",
+      "sha256": "sha256:9ee33fdd19e9c4cadc93fa02f399af98cc6cdb96b027ed48a246da7f2bcc71a4"
+    },
+    {
+      "path": "docs/source/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/source/README.md",
+      "sha256": "sha256:9b64bbf58f28a158a8449b71e4b8a076ef758c47971c71e256626350bb577dbd"
+    },
+    {
+      "path": "docs/specs/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/specs/README.md",
+      "sha256": "sha256:81fba9951e0d0f92bb5df831419bd52e8080dcaaf67deab84585a371b8dd71e6"
+    },
+    {
+      "path": "docs/specs/native-ppt-ppt-master-parity.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/specs/native-ppt-ppt-master-parity.md",
+      "sha256": "sha256:161680f256bfe37e9daf1b712aa8db27965262c6d28f959341b4790c3ff74c95"
+    },
+    {
+      "path": "docs/status.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/docs/status.md",
+      "sha256": "sha256:d062fb6638054e823684e2c0fdb5b304c15611aeb18e8809a33748b11287bfa6"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/opl-package.json",
+      "sha256": "sha256:3ff7425febc4d62294c52ee9ce04b284f88754f5674519c36737facf4a0ee9fe"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/plugin.json",
+      "sha256": "sha256:77d8872d4e4b13ade50c11addce93a11190d91d67775d911aef3d96cfbe9f6a7"
+    },
+    {
+      "path": "prompts/ppt_deck/author_image_pages.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/author_image_pages.md",
+      "sha256": "sha256:e681f8c9cdd636474a21de4328ce36fadd36dd481bcd4766b4832eb491c3aefd"
+    },
+    {
+      "path": "prompts/ppt_deck/author_pptx_native.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/author_pptx_native.md",
+      "sha256": "sha256:c47b123060d34930047621b4c49fc6ac30333d8bb7e758c68cba6701f3286dfc"
+    },
+    {
+      "path": "prompts/ppt_deck/author_pptx_native_sample.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/author_pptx_native_sample.md",
+      "sha256": "sha256:4072e757d1c810a2d1e567fa3f06119a0d3f1782a694ecc140476c6439e54580"
+    },
+    {
+      "path": "prompts/ppt_deck/detailed_outline.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/detailed_outline.md",
+      "sha256": "sha256:b9a7347b24dbae3367b5f3c10412a119e5a04d6ce8d4d401e4c5bc4ee4a86d46"
+    },
+    {
+      "path": "prompts/ppt_deck/director_review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/director_review.md",
+      "sha256": "sha256:42c349cd54cf39685ade914287e974fd4f971bd1dd247d030f1fbf8d4cf1d9d9"
+    },
+    {
+      "path": "prompts/ppt_deck/export_pptx.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/export_pptx.md",
+      "sha256": "sha256:da5383b3a71cf12373db9803e39c949c59ffed6c4c0c723e631f5ae964f636a5"
+    },
+    {
+      "path": "prompts/ppt_deck/fix_html.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/fix_html.md",
+      "sha256": "sha256:99506bd097822e170343ddd5905c5125fd63d4ab9391e1ea841023c61f3b18a3"
+    },
+    {
+      "path": "prompts/ppt_deck/image-first-benchmark-fixture.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/image-first-benchmark-fixture.json",
+      "sha256": "sha256:81648658c168957d07f8ba1216620a1511b690e40be026bb5f6d234e3613e31c"
+    },
+    {
+      "path": "prompts/ppt_deck/image-first-default-style-profile.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/image-first-default-style-profile.json",
+      "sha256": "sha256:af26b56c919389fd4b67fbfb92ce5104a2db2cc53ad5820c773b027d909b620f"
+    },
+    {
+      "path": "prompts/ppt_deck/image_first_prompt_template.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/image_first_prompt_template.md",
+      "sha256": "sha256:d550c7cee3f5ec13c1a5430ea6879a5836ddf25c8ed7bb66899bc986da87e598"
+    },
+    {
+      "path": "prompts/ppt_deck/render_html.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/render_html.md",
+      "sha256": "sha256:fe3eb9e849fe4be51d16f4e84efb52a6827a5dee26a594bf67d9204bf281e374"
+    },
+    {
+      "path": "prompts/ppt_deck/render_shell.html",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/render_shell.html",
+      "sha256": "sha256:5e9f9fe594ff8c51c006ee2ab3793baa79aab668d4118d5005259cf334ed3304"
+    },
+    {
+      "path": "prompts/ppt_deck/repair_image_pages.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/repair_image_pages.md",
+      "sha256": "sha256:6c52d60fd5f037d500552ba3169775afdeacf02aecc8d97518f6ca0f4c079e92"
+    },
+    {
+      "path": "prompts/ppt_deck/repair_pptx_native.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/repair_pptx_native.md",
+      "sha256": "sha256:956a75be5a405a08541679e965d5c139dc813bb15ffdf225c755ad57aac9de18"
+    },
+    {
+      "path": "prompts/ppt_deck/screenshot_review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/screenshot_review.md",
+      "sha256": "sha256:e46603f015994794d974090769eed5d2e5027e5f3ad51332f1962cf15f011dae"
+    },
+    {
+      "path": "prompts/ppt_deck/slide_blueprint.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/slide_blueprint.md",
+      "sha256": "sha256:684d820bfd88a085ee22d3cae70b6cc5b12a7d6170c55488e7228cfb4edfd2bf"
+    },
+    {
+      "path": "prompts/ppt_deck/storyline.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/storyline.md",
+      "sha256": "sha256:52888a11fa0294439de71407288bf170f357940d3a7e4e40159b1cbc60122daf"
+    },
+    {
+      "path": "prompts/ppt_deck/visual_direction.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/prompts/ppt_deck/visual_direction.md",
+      "sha256": "sha256:19101f80e518aff61f193d6b4766fb8c132ab1002777158216df3c8165e29c51"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/pyproject.toml",
+      "sha256": "sha256:cc10b100bc810caeec7d7c2831d7d2da2c7d1536a2d652622bd995f8dbe02c6c"
+    },
+    {
+      "path": "python/redcube_ai/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/__init__.py",
+      "sha256": "sha256:2ace70d5bd6e033d92173269458d0b78d94156c51e0e296faa2502af4542b73a"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/__init__.py",
+      "sha256": "sha256:508da0dcaca7829946ce9373b13c61416f0aa5e78176a60172a9fb2d19938c2c"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/catalog.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/catalog.py",
+      "sha256": "sha256:a32cb179dc220a1925db27bae49f5d966bc4aa634ee0d3bb07a9ab7afeb97e9a"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/doctor.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/doctor.py",
+      "sha256": "sha256:55c4a8a48589b6540bb439a2b6ee2537cd85cdafec896471396601a6ed852c4b"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/__init__.py",
+      "sha256": "sha256:1c8839153f9ccdaf3cfab462ba33be36645858b49f4f17e60179e86c909b879c"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/export.native-helper-probe.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/export.native-helper-probe.json",
+      "sha256": "sha256:941fc96a8bbe5595e4f26abc9e243d75315dabdd2fa18491cd312f5b1380b5a8"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/export.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/export.py",
+      "sha256": "sha256:f4fee95c2c64c0c2220acc4a502197d5f31363358927819812ab34cb02256410"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native.native-helper-probe.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native.native-helper-probe.json",
+      "sha256": "sha256:22c144be720c5733c11295af465bbc9af383232e5a94a3a4c9ecf3d27a22d7ee"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native.py",
+      "sha256": "sha256:c020ca9ff57f78bc328f01a7fd2f5c5fbc63974ee0fca023062e19e6ef3ae476"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_hyperlinks.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_hyperlinks.py",
+      "sha256": "sha256:8a70795b934071ce846325498ff215f55d991960ff028ac58a1afd9512ff6e70"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layout_constants.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layout_constants.py",
+      "sha256": "sha256:445966c705111dc4afcab089fc0c7195d7ea71303901008b75fdbd2ee7be6de1"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layout_grammar.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layout_grammar.py",
+      "sha256": "sha256:1de17aafc59a6806620bbee470225387491c52fd455613b02857f276a105d9f0"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layout_text_safety.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layout_text_safety.py",
+      "sha256": "sha256:00b581cfaf945d05a404d9b84139ce98a86c33b0caf85e0e437701f6e6e35d6c"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts.py",
+      "sha256": "sha256:07fd2c127c6a14405023b842e956ff1bbcf29f2379f7b5ae97fe1d88050ae3a4"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/__init__.py",
+      "sha256": "sha256:cff7ebfcd1c2757c19af7e7ef227782f67993e1fb7e2d789caf8345dac962abc"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/common.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/common.py",
+      "sha256": "sha256:5ed29a4dae57bbdafbba0b7201794e15ba7dd916a339a1defc8615f026e54547"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/geometry.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/geometry.py",
+      "sha256": "sha256:4bf4db97131d69f9351d5d8a0b2d439728c59d72ec6c4a739436593384dd066a"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/materializer.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/materializer.py",
+      "sha256": "sha256:552dce272461369ac8412431bbc7e4aa859ae8ca8f34a5198c42ce39e434bc28"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/materializer_commands.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/materializer_commands.py",
+      "sha256": "sha256:a4362843efc651609bebd0545f3bb889431d649ff68feac45920e9b06d9cda9d"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/materializer_readback.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/materializer_readback.py",
+      "sha256": "sha256:83dc1d4079e91931fcf92fa29af2004110c5532ea514b13fe368b01a88d7362e"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/officecli.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/officecli.py",
+      "sha256": "sha256:82245d8f1df3f95e160ca9af60ae525210287edc30e07466a35ff554b4960846"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/rules.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/rules.py",
+      "sha256": "sha256:54dbcceed8aab1cdf00c73e6afff677b715786d193314b1dba2ebc85a8b7db68"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/slide_metadata.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/slide_metadata.py",
+      "sha256": "sha256:e93a626053fe60d6a65e2a01b3984006f8498a7977a94ca6e61543caa42025bc"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/style.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/style.py",
+      "sha256": "sha256:ea5c6f9eb402240d55a4db53be22b5aad29a943bb7883ae99abee717532452c1"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/svg_ir.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/svg_ir.py",
+      "sha256": "sha256:162855fbbc43566b6da34d5c09b2cb7cac44563e175d533d804f371399eabafb"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/text_metrics.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/text_metrics.py",
+      "sha256": "sha256:574591ef3736cd4fb88469b18e800853c01aa5e8ae0484476684ca747cacb38f"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/text_safety.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/text_safety.py",
+      "sha256": "sha256:5e49a2fb5c8ef298894bacfd05d5424bb4e390c28003beac27b2fc0cdfeda14a"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/validation.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_layouts_parts/validation.py",
+      "sha256": "sha256:8b9ebc8f6e034018fa69b2890cd56efe303f61541ff70e60f2da2583a5a1136e"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_manifest_qa.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_manifest_qa.py",
+      "sha256": "sha256:0596675284592c87a170eec1efddc634dcdee6fcfc3d80e74835118fe3095ad4"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_package.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_package.py",
+      "sha256": "sha256:654d83239c53f47db50c5c466ff919954b58ee4cf80b20f1aa59cc2f04b618e6"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality.py",
+      "sha256": "sha256:fee38ffd272f2d5cf00b749ed2840187557c0a40e39cfb74fd8473d4e1f655a9"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality_constants.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality_constants.py",
+      "sha256": "sha256:366b6d6e21b20d9c7dfcbd0143a42d901ee8f4a0e360c6660dfb9b809e0d8eb5"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/__init__.py",
+      "sha256": "sha256:ddd1f195a0b038ffc63303e09c24d863e0f805a3364a7330efa622ad5acd0c60"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/fit_metrics.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/fit_metrics.py",
+      "sha256": "sha256:3e77887de5d4542151b80045b7d80830a3deba652a6b64764ff808d111862326"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/geometry.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/geometry.py",
+      "sha256": "sha256:7334f830413812db6e6670277921ace3d75ffddd7ae3df06920d66aa23b5ffb8"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/layout_slots.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/layout_slots.py",
+      "sha256": "sha256:7bc07cd0ccc251306de4b3bbbee6598829f54bb36b0363cb3caadc33f4765d82"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/reporting.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/reporting.py",
+      "sha256": "sha256:67ff7ecc8d749bd443306f1b13c0dbb2d48aa7ee380d6cb1dfc76e1c928101c0"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/scoring.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/scoring.py",
+      "sha256": "sha256:f335433cc2daaef6a016d73c6a42128eb6792224aa8aec95076ebca03bb7c95f"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/text_validation.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/text_validation.py",
+      "sha256": "sha256:edca04bc6663d0aa06c666753439b089e579167b1494d514663213b8706dc7c3"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/visual_validation.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality_parts/visual_validation.py",
+      "sha256": "sha256:72ec362f2cce048b2ac1f8fda3acb61d4d6f46b83626fc4f8bb7cf67c95ddb19"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_quality_text_safety.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_quality_text_safety.py",
+      "sha256": "sha256:905beffb2352e07f424406f7396af5e8ddd27be9dee38782b667a245f7d27e5b"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_render_proof.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_render_proof.py",
+      "sha256": "sha256:6fe8ec7cff2a16924b9b60ac9f1bc1eff7401b1b65d7deef3d06b2fd44019998"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_sample_layout.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_sample_layout.py",
+      "sha256": "sha256:2aacdd0f7e961e7fe8ae5781098423a0507496e5edbc13909188655b765e2df0"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/native_shape_plan.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/native_shape_plan.py",
+      "sha256": "sha256:c6763a70f85e5fb4aad4f589482c5f690c51221c964a9838983d979ec30e08f0"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/officecli_readback.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/officecli_readback.py",
+      "sha256": "sha256:e1929cf2c4bb7a62c053650c9561eb6bc610627c0ac377b678e4c670bde52cc2"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/review.native-helper-probe.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/review.native-helper-probe.json",
+      "sha256": "sha256:638d40f69ae51e37ced710c55c96debe9ee03c739b67f12254003655205e96b6"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/review.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/review.py",
+      "sha256": "sha256:67857b78879375b3d720a5f32e3861b59a031cdd69682fb98146f54fc10feed9"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/review_consistency.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/review_consistency.py",
+      "sha256": "sha256:398e3595e7033660b169eb8ced0d2b186bad56d7fa424a5aad4f1d322ffa5004"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/review_evidence.native-helper-probe.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/review_evidence.native-helper-probe.json",
+      "sha256": "sha256:8efff5c7f83829a8fa7d5af16575b901bfc8f7bea4558581d9752cf4e761531d"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/review_evidence.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/review_evidence.py",
+      "sha256": "sha256:2a096a1fde9e3918ade4ba8cea4e45d016cea4d59a79ba21c0fad41182330863"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/review_geometry.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/review_geometry.py",
+      "sha256": "sha256:32966c77cff0c0a44bf6472b42b7a0623a0b68bf5e6be74877c5f5fc70508728"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/review_slide.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/review_slide.py",
+      "sha256": "sha256:c5537b48942c2f7ed5245ee68d3ca613b816d288211c15befd65471287b85ec5"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/ppt_deck/review_summary.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/ppt_deck/review_summary.py",
+      "sha256": "sha256:fc7413ead7eef75245d0c96107d623af7e5d0e5f6d84ac7766b88784285a8082"
+    },
+    {
+      "path": "python/redcube_ai/native_helpers/renderer_dependencies.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/python/redcube_ai/native_helpers/renderer_dependencies.py",
+      "sha256": "sha256:8dccfdacdd82bc9833450c6654ae9a9efa2b2fb60fa7ad79921887f0a92eccc3"
+    },
+    {
+      "path": "runtime/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/runtime/README.md",
+      "sha256": "sha256:545e5a4bd47a03e3788c121142e634529835219f905340344b066175f6955eeb"
+    },
+    {
+      "path": "runtime/authority_functions/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/runtime/authority_functions/README.md",
+      "sha256": "sha256:3ce6e13ac6b8a7cd8430b3844b8757e963b1fd3e05cf3c8d21dfb30c13d57728"
+    },
+    {
+      "path": "skills/redcube-ai/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/skills/redcube-ai/SKILL.md",
+      "sha256": "sha256:a409f1318099c8ecdbb57f4b1b359b41664d2786f097331a2090e0352e82514e"
+    },
+    {
+      "path": "skills/redcube-ai/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/skills/redcube-ai/agents/openai.yaml",
+      "sha256": "sha256:2b025bb4d41952b5d366c55831ef605355069e2ebd5bc7a6cca1a17d9831f15a"
+    },
+    {
+      "path": "uv.lock",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/redcube-ai/f7cac5cd3d330fd2a2ff95ce14244a764d76ee64/plugins/redcube-ai/uv.lock",
+      "sha256": "sha256:597de05a1792838418d352db9501f4e2443d19d3167074641e32c3a349ce627a"
+    }
+  ]
+}
