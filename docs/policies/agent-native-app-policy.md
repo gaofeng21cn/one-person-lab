@@ -1,0 +1,78 @@
+# OPL Agent 原生应用开发标准
+
+本文是 OPL Agent Apps（OPL Agent 原生应用）的设计标准，定义新应用和既有应用演进时共同遵循的原则。实现字段继续由既有 contracts 和领域 schema 持有；本文不声明任何版本已通过安装或业务验收。接入步骤见[开发指南](../mcp-apps/development.md)，共享 UI 技术行为见 [MCP Apps SPEC](../mcp-apps/SPEC.md)，未完成实施项归[当前差距](../active/current-state-vs-ideal-gap.md)。
+
+## 定位与命名
+
+Agent 原生应用以 Agent 可发现、理解和调用的领域能力为核心。Agent 根据目标推进工作，在人需要比较、选择、编辑、判断或授权时打开适合的协作界面；人完成操作后，Agent 能从同一对象和真实结果继续。产品同时服务 Agent 和人。
+
+**OPL Agent Apps** 是整体开发理念；**OPL MiniApp** 是其中按任务打开的人机协作单元。MiniApp 不改变 Package 安装身份，也不引入新的 manifest、loader、session、任务队列或通信协议。后台 Agent、专业桌面软件、设备控制台均可遵循整体标准；应用规模和窗口尺寸不决定是否合格。
+
+## 共同原则
+
+1. **先形成可调用能力。** 主要业务动作通过既有 CLI JSON、API 或 MCP tools 提供明确输入、结果、错误和可观察状态。Skill 解释适用场景、领域知识与调用方式；不能让 Agent 只能靠识图点按钮完成本可结构化的主流程。纯只读工具可只提供读取能力，无需虚构写接口。
+2. **Agent 与 UI 共享同一个业务 owner。** 工具和按钮调用相同领域服务、校验和结果；UI 不重建业务规则、凭证、知识库或成功回执。展示选择不改变执行身份。专业质量、发送、交易、部署等实际结果仍由对应 owner 决定。
+3. **携带上下文交接。** 打开界面携带当前 workspace、task、artifact 或其他业务对象，以及需要的 revision 和选中位置。人完成的编辑、选择和结果可被 Agent 读取；不是所有 UI 内部状态都会自动进入模型上下文。只在身份或事实确实缺失/歧义时询问用户。
+4. **按需使用 UI。** 优先复用共享视图；复杂领域编辑采用专用 MCP App；持续创作、设备操作、地图和实时监测保留专业应用。由工作需要决定呈现方式，不为每个 Agent 强造独立前端。
+5. **任务独立于视图。** 页面关闭、重载或 Host 重启不重建、不取消持久任务。短操作直接返回 owner 结果；长操作复用既有 Task/StageRun 或领域任务身份，以同一身份查询、重开和恢复。不要为普通同步工具强制引入持久编排。
+6. **操作可核对、可恢复。** 有并发编辑风险时校验目标 revision；外部副作用按 owner 能力使用幂等键或查询标识。结果未知先 inspect/reconcile。重新展示已有结果不重复执行。取消视图与取消任务是不同动作。
+7. **共用获准的环境。** 已有连接、个人资料、偏好和知识按任务及权限复用；缺少时准确提示补齐。信息可读取、连接获授权和某次业务动作被批准是三个独立事实。有效授权不因页面重开而重复请求。
+8. **证据分层。** 区分协议与 schema、源码测试、真实宿主交互、安装载体、发行字节和领域结果。页面截图不证明安装版本可用；Package 发布不证明专业判断合格。
+
+## 共用基座及归属
+
+| 共用能力 | 现有 owner / 接口 | 新应用承担的工作 |
+| --- | --- | --- |
+| 安装、发现与可调用性 | native carrier、installed descriptor、Framework Package discovery | 声明现有 Package identity、实际入口与所需能力 |
+| 操作与业务数据 | 领域服务及其公开 CLI/API/MCP | 实现领域逻辑、输入/结果 schema、权限和质量判断 |
+| 工作与产物 | Framework Task/StageRun/Workspace 或既有领域任务；owner artifact | 返回可重开的身份、当前状态、产物和可用操作 |
+| 通用协作 UI | Framework `src/mcp-app/`、贡献 ABI；官方 MCP Apps SDK | 声明 data/action refs，复用已有 renderer；领域编辑由专用 UI 持有 |
+| 宿主与生命周期 | Studio 的 DSH/Cordis、Codex/其他 MCP Apps Host | 消费主题、语言、尺寸和连接；声明并验证所需 Host 能力 |
+| 连接与授权 | Framework Connect；实际 provider 保管和续期凭证 | 声明所需 capability，经可信安装身份消费授权连接 |
+| 知识与上下文 | Framework 知识来源、冻结、回执与写回；用户/领域 owner 持有正文和判断 | 声明知识需求、适用范围与必要性，复用来源，回读本次使用版本 |
+| 设计与验证 | 现有 OMA 蓝图、Package 开发流程、各 owner 测试 | 给出真实使用场景、人介入点、可复用面和必要验收 |
+
+共享基座首先是一组现有能力和开发入口。只有两个独立消费者确有相同需求、复用现有 owner 仍不能满足时，才抽取新的公共模块；是否独立发布由真实生命周期决定。领域 schema、专业编辑器和质量裁决不进入通用 renderer。
+
+## 统一连接与凭证管理
+
+产品提供统一的账号连接、授权、撤销和失效修复体验。机器分工以[连接授权合同](../specs/connection-authorization.md)及其 [machine contract](../../contracts/opl-framework/connection-authorization-contract.json)为准：Connect 管连接引用、消费者授权和调用路由；provider 或原生 carrier 管凭证存储、OAuth 续期及外部业务语义。
+
+可信 Host 依据 fresh installed descriptor 激活消费者；MiniApp 得到脱敏连接信息和被批准的能力，业务操作由 provider 执行。不得由页面传入的 `package_id` 选择授权身份，也不向前端、模型上下文、日志或知识库分发长期凭据。共享工作台的 Package 选择仅承担导航；需要调用连接时，优先由已激活的领域 owner 执行。
+
+连接授权不得代替领域动作确认。调用前复核 grant、连接 revision 和能力范围；撤销后旧页面和旧上下文不能继续使用原授权。当前接口和实现限制只由 Connect owner 维护，不另设 MiniApp 凭证库。
+
+## 统一个人知识与按需上下文
+
+用户拥有知识，项目组织工作，Agent 按需使用，运行时记录当次使用的版本。已有 Obsidian 或普通资料目录可以承载唯一可编辑正文；没有独立资料库时使用现有工作目录。允许不同主题采用不同位置，不要求迁移整库或复制到每个 Agent。
+
+应用的知识需求区分产品方法、用户/团队、长期主题与具体项目；知识的性质、事实日期、复核期限和来源可信度是独立维度。该分层及字段由 Framework 知识 owner 统一演进，MiniApp 只声明需要什么、用于什么任务，不自行创建目录协议或一套相竞争的层级。现行机械合同见[知识生命周期](../../contracts/opl-framework/durable-knowledge-lifecycle-contract.json)；正在演进的来源模型按其 owner 合同接入，不把目标设计当作已安装能力。
+
+Profile/Workspace 绑定获准来源；运行时选择适用内容并冻结所用版本，供生产、审阅和修复共享。UI 可显示用了哪些来源、缺少什么、哪些已过期及其修复入口。默认不注入整库，个人通用信息也不意味着任何应用可自动取得所有个人事实或跨项目数据。
+
+新认识通过现有提案、审阅、条件写回路径进入原处。用户编辑原文后，相关摘要与接受版本需重新核对。Persona 是可选整理者，其摘要要能追溯来源版本与范围；不是所有知识读取的必经入口。撤权、过期或来源变化不得由旧摘要掩盖。运行快照用于追溯，不成为日常编辑副本。
+
+## 交互与标准协议
+
+MCP Apps 是可选的开放 UI 扩展：使用标准工具、`ui://` 资源、官方 App/AppBridge 与能力协商。工具保留无 UI Host 可消费的结构化/文本结果。Host 不支持某项 UI 能力时，使用已支持的 CLI/API、明确的文本交接或受控浏览器回退；不得以协议成功冒充专业 UI 已可操作。
+
+工具 visibility、sandbox、CSP、线程/服务器绑定保护调用边界；业务授权继续由 owner 判断。更新模型上下文、准备用户草稿和实际执行分别处理，不能从一次上下文更新推断任务已开始。
+
+MiniMax Code MiniApp 为产品设计提供参考：专业工作台与 Agent 共用业务服务，宿主承接安装和环境能力，用户与 Agent 可交替操作。其 manifest、Node runtime 和 `window.mcode.miniapp` 属于 MiniMax 宿主约定；OPL 采用自身已有的 Package、MCP Apps 与 DSH/Cordis 组合。官方依据见 [MiniMax MiniApps](https://github.com/MiniMax-AI/MiniMax-Code-MiniApps) 与 [MCP Apps 规范](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx)。
+
+## 质量下限
+
+新能力在设计与交付时回答以下问题，并用与风险相称的证据验证。没有连接、持久任务或 UI 的工具可注明对应项不适用并说明原因。
+
+| 验收问题 | 通过所需的实际证据 |
+| --- | --- |
+| Agent 能发现并完成主要流程吗？ | 从声明入口完成一个代表性任务；结构化结果、错误、必要输入可读 |
+| 人能接手同一个对象吗？ | 从 Agent 结果打开精确对象/版本，完成需要的人类操作，Agent 回读并继续 |
+| 两种入口一致吗？ | 相同输入到达同一 owner；业务校验、revision 和结果一致 |
+| 断线/重开安全吗？ | 同一任务恢复；已有结果显示不重放副作用；未知结果走 owner 查询 |
+| 共用服务可直接复用吗？ | 已授权连接与知识无需重复录入；缺失、撤销、过期或冲突有真实失败/修复路径 |
+| UI 是最小必要形态吗？ | 共享视图满足常规需求；专用/独立 UI 有具体交互理由；无 UI 宿主路径清楚 |
+| 分发后仍可用吗？ | 选定 carrier 的安装文件、依赖、调用入口、升级与实际 Host 交互回读 |
+| 结果由谁接受？ | 领域负责人或用户的真实接受证据，与 runtime 完成分别记录 |
+
+机器检查 schema、身份、权限、链接、安装资源及确定性协议边界。AI 和领域负责人结合实际产物判断语义、交互质量和专业结果；不使用关键词、文档长度或测试数量代替质量判断。

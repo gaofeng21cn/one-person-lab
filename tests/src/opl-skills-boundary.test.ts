@@ -107,6 +107,7 @@ test('OBF resolves to OPL Book Forge through the standard agent registry aliases
 test('OPL system skill sync catalog excludes MDS stage skills while exposing ScholarSkills as a target-scoped capability pack', () => {
   const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   const previousModuleSourceMode = process.env.OPL_MODULE_SOURCE_MODE;
+  const previousStateDir = process.env.OPL_STATE_DIR;
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-catalog-'));
   const repoRoot = process.cwd();
   const packageProjection = JSON.parse(fs.readFileSync(
@@ -136,6 +137,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
   try {
     process.env.OPL_FAMILY_WORKSPACE_ROOT = fixtureRoot;
     process.env.OPL_MODULE_SOURCE_MODE = 'git_checkout';
+    process.env.OPL_STATE_DIR = path.join(fixtureRoot, 'state');
     catalog = readFamilySkillPacks().skill_catalog;
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -148,6 +150,11 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
       delete process.env.OPL_MODULE_SOURCE_MODE;
     } else {
       process.env.OPL_MODULE_SOURCE_MODE = previousModuleSourceMode;
+    }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
     }
   }
   const domainIds = catalog.packs.map((pack) => pack.domain_id);
@@ -269,6 +276,9 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     } else if (pack.canonical_plugin_name === 'med-autocast') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'med-autocast');
       assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain med-autocast --action <action_id>');
+    } else if (pack.canonical_plugin_name === 'occ') {
+      assert.equal(pack.foundry_agent_series.brand_cli, 'occ');
+      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl agents run --domain occ --action <action_id>');
     } else {
       assert.fail(`unexpected plugin: ${pack.canonical_plugin_name}`);
     }

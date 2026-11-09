@@ -56,8 +56,7 @@ import type { CordisOwnerDeltaObserverService } from '../../authority/evidence/p
 import { buildAppUiContributionsProjection } from './app-state-ui-contributions.ts';
 import {
   compactFastActionCatalog,
-  compactFastLegacyAgentPackageDirectory,
-  compactFastLegacyAgentPackageStatus,
+  compactFastAgentPackageDirectory,
   compactFastManagedUpdateProjection,
   compactFastOperatorRuntimeProjection,
   compactFastProviderState,
@@ -673,15 +672,20 @@ export async function buildOplAppState(input: {
       managed_update: profile === 'fast'
         ? compactFastManagedUpdateProjection(managedUpdate)
         : managedUpdate.managed_update,
-      agent_packages: agentPackagesProjection,
+      agent_packages: profile === 'fast'
+        ? {
+            ...agentPackagesProjection,
+            directory: compactFastAgentPackageDirectory(agentPackagesProjection.directory),
+          }
+        : agentPackagesProjection,
       ui_contributions: uiContributions,
       managed_companions: [managedBrowserAutomation, managedComputerUse],
-      opl_agent_packages: profile === 'fast'
-        ? compactFastLegacyAgentPackageDirectory(agentPackagesReadback)
-        : agentPackagesReadback,
-      opl_agent_package_status: profile === 'fast'
-        ? compactFastLegacyAgentPackageStatus(agentPackagesProjection.status_index)
-        : agentPackagesProjection.status_index,
+      ...(profile === 'full'
+        ? {
+            opl_agent_packages: agentPackagesReadback,
+            opl_agent_package_status: agentPackagesProjection.status_index,
+          }
+        : {}),
       provider,
       assistants: {
         default_launch: 'direct_click',

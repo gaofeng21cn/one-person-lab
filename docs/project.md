@@ -4,6 +4,8 @@ One Person Lab（OPL）是一套面向复杂知识工作的 AI-native 工作系�
 
 本文只定义产品定位和产品拓扑，不描述实现进度或运行状态。
 
+OPL 的应用共同遵循 **OPL Agent Apps（Agent 原生应用）** 定位：Agent 通过可调用能力推进工作，人按需要进入协作界面并让 Agent 接续同一任务。**OPL MiniApp** 是其中按任务出现的协作单元，覆盖共享视图和专用 MCP App；专业独立应用仍按工作需要保留。共同开发要求、连接和个人知识的复用边界见[开发标准](./policies/agent-native-app-policy.md)。
+
 ## 产品分层
 
 - **OPL Base**：Framework、CLI、Stage/Attempt、Workspace、Package discovery、Host composition、runtime provider adapter 和 read model。

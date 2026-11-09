@@ -28,7 +28,8 @@
 - [Source](./source/README.md)：源码与 workspace 输入边界。
 - [Delivery](./delivery/README.md)：artifact、Package 和发布边界。
 - [Product](./product/README.md)：App 与用户界面的产品边界。
-- [MCP Apps](./mcp-apps/SPEC.md)：Agent 主导的会话内 Package 审阅、适配器与宿主边界。
+- [Agent 原生应用标准](./policies/agent-native-app-policy.md)：Agent 主导、按需人机协作与共用基座的开发要求。
+- [MCP Apps](./mcp-apps/SPEC.md)：共享 MiniApp 技术行为、适配器与宿主边界；接入见[开发指南](./mcp-apps/development.md)。
 - [Public](./public/README.md)：面向外部读者的稳定叙事。
 - [References](./references/README.md)：不会决定状态或架构的维护参考。
 - [Whitepapers](./whitepapers/README.md)：白皮书源文件。

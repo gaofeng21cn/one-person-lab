@@ -1,6 +1,6 @@
 import {
   assert,
-  createFakeCodexFixture,
+  createFakeCodexPluginManagerFixture,
   fs,
   parseJsonText,
   path,
@@ -59,12 +59,36 @@ test('native Package plan admits managed updates and isolates failed post-update
   }))};
   const binary = writeFixtureFile(root, 'codex.mjs', `#!/usr/bin/env node
 import fs from 'node:fs';
+import readline from 'node:readline';
 const args = process.argv.slice(2);
+const readback = ${JSON.stringify(readback)};
 fs.appendFileSync(${JSON.stringify(callsPath)}, args.join(' ') + '\\n');
-if (args[0] === 'plugin' && args[1] === 'add' && args[2] === ${JSON.stringify(entries[0].pluginId)}) {
+if (args.join(' ') === 'app-server --stdio') {
+  readline.createInterface({ input: process.stdin }).on('line', (line) => {
+    const frame = JSON.parse(line);
+    if (frame.method === 'initialize') {
+      process.stdout.write(JSON.stringify({ id: frame.id, result: {} }) + '\\n');
+    } else if (frame.method === 'plugin/list') {
+      process.stdout.write(JSON.stringify({ id: frame.id, result: {
+        marketplaces: readback.installed.map((entry) => ({
+          name: entry.pluginId.split('@')[1],
+          plugins: [{
+            id: entry.pluginId, localVersion: entry.version, installed: entry.installed,
+            enabled: entry.enabled, source: { type: 'local', path: entry.source.path },
+          }],
+        })),
+        marketplaceLoadErrors: [],
+      } }) + '\\n');
+    }
+  });
+} else if (args.join(' ') === 'plugin marketplace list --json') {
+  process.stdout.write(JSON.stringify({ marketplaces: readback.marketplaces }));
+} else if (args[0] === 'plugin' && args[1] === 'add' && args[2] === ${JSON.stringify(entries[0].pluginId)}) {
   fs.rmSync(${JSON.stringify(path.join(root, 'mas', 'skills'))}, {recursive: true, force: true});
+  process.stdout.write(JSON.stringify(readback));
+} else {
+  process.stdout.write(JSON.stringify(readback));
 }
-process.stdout.write(${JSON.stringify(JSON.stringify(readback))});
 `);
   fs.chmodSync(binary, 0o755);
   const env = {HOME: root, CODEX_HOME: path.join(root, 'codex-home'), OPL_STATE_DIR: path.join(root, 'state'), OPL_CODEX_PLUGIN_BIN: binary};
@@ -74,6 +98,8 @@ process.stdout.write(${JSON.stringify(JSON.stringify(readback))});
     const planned = await buildManagedUpdateKernelProjection(loadFrameworkContracts(), {operation: 'plan', componentId: 'opl_packages'});
     const component = planned.managed_update.components[0];
     assert.equal(component.state, 'currentness_not_checked');
+    const packageStates = component.current.package_states as Array<{ state: string }>;
+    assert.equal(packageStates[0].state, 'currentness_not_checked');
     assert.equal(component.plan.action, 'update');
     assert.equal(component.auto_apply.eligible, true);
     assert.deepEqual(selectedManagedUpdateComponentIds({operation: 'apply'}, [component]), ['opl_packages']);
@@ -426,30 +452,23 @@ test('OPL Packages managed-update projection is independent of legacy lock autho
       distributionPayload: null,
     })),
   );
-  const pluginList = JSON.stringify({
-    installed: [{
-      pluginId: 'third-party-research@fixture-carrier',
-      version: '1.2.3',
-      installed: true,
-      enabled: true,
+  const codexFixture = createFakeCodexPluginManagerFixture();
+  const marketplaceRoot = path.join(root, 'fixture-carrier');
+  writeFixtureFile(marketplaceRoot, '.agents/plugins/marketplace.json', formatJsonPayload({
+    name: 'fixture-carrier',
+    plugins: [{
+      name: 'third-party-research',
       source: { source: 'local', path: pluginSource },
-      marketplaceSource: { sourceType: 'local', source: 'fixture-carrier' },
     }],
-    available: [],
-  });
-  const codexFixture = createFakeCodexFixture(`
-if [[ "$*" == "plugin list --json" ]]; then
-  printf '%s\\n' ${shellSingleQuote(pluginList)}
-  exit 0
-fi
-if [[ "$*" == "plugin marketplace add fixture-carrier --json" ]]; then
-  exit 0
-fi
-if [[ "$*" == "plugin add third-party-research@fixture-carrier --json" ]]; then
-  exit 0
-fi
-exit 2
-`);
+  }));
+  writeFixtureFile(homeDir, '.codex/config.toml', [
+    '[marketplaces.fixture-carrier]',
+    `source = ${JSON.stringify(marketplaceRoot)}`,
+    '',
+    '[plugins."third-party-research@fixture-carrier"]',
+    'enabled = true',
+    '',
+  ].join('\n'));
   const packageLock = (packageId: string) => ({
     surface_kind: 'opl_agent_package_lock',
     package_id: packageId,
@@ -494,6 +513,7 @@ exit 2
     const packages = output.managed_update.components[0];
 
     assert.equal(packages.state, 'currentness_not_checked');
+    assert.equal(packages.current.package_states[0].state, 'currentness_not_checked');
     assert.equal(packages.plan.action, 'none');
     assert.equal(packages.current.projection_source, 'installed_owner_descriptor');
     assert.equal(packages.current.installed_package_count, 1);
@@ -526,6 +546,7 @@ exit 2
     const unaffectedPackages = unaffected.managed_update.components[0];
 
     assert.equal(unaffectedPackages.state, 'currentness_not_checked');
+    assert.equal(unaffectedPackages.current.package_states[0].state, 'currentness_not_checked');
     assert.equal(unaffectedPackages.plan.action, 'none');
     assert.equal(unaffectedPackages.auto_apply.eligible, false);
     assert.deepEqual(unaffectedPackages.auto_apply.blocked_reasons, []);
