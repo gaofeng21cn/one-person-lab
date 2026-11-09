@@ -24,7 +24,7 @@ function fixture() {
     settingsControlCenter: {
       connection_registry: {
         connections: [
-          { connection_id: 'github', name: 'GitHub', status: 'ready' },
+          { connection_id: 'github', name: 'GitHub', status: 'ready', revision_status: 'current', security_revision: 'security-revision-1', freshness_status: 'fresh', last_tested_at: '2026-11-09T00:00:00.000Z' },
           { connection_id: 'disabled', name: 'Disabled', status: 'disabled' },
           { connection_id: 'stale', name: 'Stale', status: 'ready' },
         ],
@@ -53,18 +53,31 @@ test('application management aggregates owner projections without secrets or kno
       ['connection:disabled', 'attention'],
       ['connection:stale', 'attention'],
       ['model:codex', 'ready'],
-      ['knowledge:personal', 'unknown'],
     ],
   );
   assert.equal(JSON.stringify(projection).includes('/private/path/must-not-leak'), false);
-  assert.equal(projection.shared_resources.some((resource) => resource.resource_kind === 'knowledge_source'), true);
-  assert.equal(
-    projection.shared_resources.find((resource) => resource.resource_id === 'knowledge:personal')?.reason,
-    'knowledge_owner_projection_unavailable',
-  );
+  assert.equal(projection.shared_resources.some((resource) => resource.resource_kind === 'knowledge_source'), false);
   assert.equal(projection.authority_boundary.second_registry, false);
   assert.equal(projection.authority_boundary.second_updater, false);
   assert.deepEqual(projection.shared_resources.find((resource) => resource.resource_id === 'model:codex')?.consumer_package_ids, []);
+  assert.deepEqual(projection.shared_resources.find((resource) => resource.resource_id === 'connection:github')?.authorization, {
+    status: 'authorized', consumer_count: 1, grant_count: 1,
+  });
+  assert.deepEqual(projection.shared_resources.find((resource) => resource.resource_id === 'connection:github')?.revision, {
+    status: 'current', security_revision: 'security-revision-1',
+  });
+  assert.deepEqual(projection.shared_resources.find((resource) => resource.resource_id === 'connection:github')?.freshness, {
+    status: 'fresh', observed_at: '2026-11-09T00:00:00.000Z',
+  });
+  assert.deepEqual(projection.shared_resources.find((resource) => resource.resource_id === 'connection:github')?.readiness, {
+    status: 'ready',
+  });
+  assert.deepEqual(projection.shared_resources.find((resource) => resource.resource_id === 'connection:disabled')?.revision, {
+    status: 'unknown',
+  });
+  assert.deepEqual(projection.shared_resources.find((resource) => resource.resource_id === 'connection:disabled')?.freshness, {
+    status: 'unknown',
+  });
   assert.equal(
     projection.shared_resources.find((resource) => resource.resource_id === 'connection:disabled')?.reason,
     'connection_disabled',
@@ -75,7 +88,7 @@ test('fast projection stays bounded and keeps the full-detail ref', () => {
   const compact = compactFastApplicationManagementProjection(fixture());
   assert.equal(compact.surface_kind, 'opl_application_management_projection.v1');
   assert.equal(compact.detail_policy.full_detail_surface, 'opl app state --profile full --json#application_management');
-  assert.equal(compact.shared_resources.length, 6);
+  assert.equal(compact.shared_resources.length, 5);
   assert.deepEqual(compact.source_refs, [
     'app_state.agent_packages.directory.entries',
     'app_state.agent_packages.status_index',
@@ -106,9 +119,8 @@ test('base dependency resources keep native status and distinct kind identities'
     ['base:officecli:cli', 'ready'],
     ['base:officecli:codex_skill', 'unknown'],
     ['base:agent-reach:cli', 'attention'],
-    ['knowledge:personal', 'unknown'],
   ]);
-  assert.equal(new Set(projection.shared_resources.map((resource) => resource.source_refs[0])).size, 4);
+  assert.equal(new Set(projection.shared_resources.map((resource) => resource.source_refs[0])).size, 3);
 });
 
 test('knowledge resources consume owner metadata only and never infer consumers or paths', () => {
@@ -139,6 +151,10 @@ test('knowledge resources consume owner metadata only and never infer consumers 
     owner_settings_route: 'workspace',
     relation_kind: 'configured',
     detail_ref: 'app_state.settings_control_center.app_settings_read_model.resource_sources',
+    authorization: { status: 'unknown', consumer_count: 0, grant_count: 0 },
+    revision: { status: 'unknown' },
+    freshness: { status: 'unknown' },
+    readiness: { status: 'ready' },
   }]);
   assert.equal(JSON.stringify(projection).includes('/private/obsidian'), false);
   assert.equal(JSON.stringify(projection).includes('private body must not leak'), false);

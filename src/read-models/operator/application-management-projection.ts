@@ -12,6 +12,23 @@ type ApplicationManagementResource = {
   relation_kind: 'required' | 'optional' | 'configured';
   detail_ref?: string;
   reason?: string;
+  authorization?: {
+    status: 'authorized' | 'attention' | 'unknown';
+    consumer_count: number;
+    grant_count: number;
+  };
+  revision?: {
+    status: 'current' | 'stale' | 'unknown';
+    security_revision?: string;
+  };
+  freshness?: {
+    status: 'fresh' | 'stale' | 'unknown';
+    observed_at?: string;
+  };
+  readiness?: {
+    status: 'ready' | 'attention' | 'unknown';
+    reason?: string;
+  };
 };
 
 function records(value: unknown): JsonRecord[] {
@@ -87,6 +104,31 @@ function connectionResources(agentPackages: unknown, settingsControlCenter: unkn
       owner_settings_route: 'connections',
       relation_kind: activeGrants.length > 0 ? 'configured' : 'optional',
       detail_ref: 'app_state.settings_control_center.connection_authorization',
+      authorization: {
+        status: activeGrants.length > 0 && !hasStaleGrant
+          ? 'authorized'
+          : hasStaleGrant ? 'attention' : 'unknown',
+        consumer_count: consumerPackageIds.length,
+        grant_count: connectionGrants.length,
+      },
+      revision: {
+        status: connection.revision_status === 'current' || connection.revision_status === 'stale'
+          ? connection.revision_status
+          : 'unknown',
+        ...(string(connection.security_revision) ? { security_revision: string(connection.security_revision)! } : {}),
+      },
+      freshness: {
+        status: connection.freshness_status === 'fresh' || connection.freshness_status === 'stale'
+          ? connection.freshness_status
+          : 'unknown',
+        ...(string(connection.last_tested_at) ? { observed_at: string(connection.last_tested_at)! } : {}),
+      },
+      readiness: {
+        status,
+        ...((status === 'attention' || status === 'unknown')
+          ? { reason: hasStaleGrant ? 'consumer_grant_stale_or_revoked' : connectionStatus === 'disabled' ? 'connection_disabled' : activeGrants.length === 0 ? 'no_active_consumer_grant' : 'connection_not_ready' }
+          : {}),
+      },
       ...(hasStaleGrant
         ? { reason: 'consumer_grant_stale_or_revoked' }
         : connectionStatus === 'disabled'
@@ -140,20 +182,7 @@ function knowledgeResources(settingsControlCenter: unknown): ApplicationManageme
   const sources = isRecord(readModel.resource_sources)
     ? records(readModel.resource_sources.items)
     : records(readModel.resource_sources);
-  if (sources.length === 0) {
-    return [{
-      resource_id: 'knowledge:personal',
-      resource_kind: 'knowledge_source',
-      label: 'Personal knowledge sources',
-      status: 'unknown',
-      source_refs: ['app_state.settings_control_center.app_settings_read_model.resource_sources'],
-      consumer_package_ids: [],
-      owner_settings_route: 'workspace',
-      relation_kind: 'optional',
-      detail_ref: 'app_state.settings_control_center.app_settings_read_model.resource_sources',
-      reason: 'knowledge_owner_projection_unavailable',
-    }];
-  }
+  if (sources.length === 0) return [];
   return sources.flatMap((source) => {
     const sourceId = string(source.source_id) ?? string(source.resource_id) ?? string(source.id);
     if (!sourceId) return [];
@@ -176,6 +205,36 @@ function knowledgeResources(settingsControlCenter: unknown): ApplicationManageme
       owner_settings_route: 'workspace',
       relation_kind: 'configured',
       detail_ref: 'app_state.settings_control_center.app_settings_read_model.resource_sources',
+      authorization: {
+        status: rawStatus === 'authorized' || rawStatus === 'granted'
+          ? 'authorized'
+          : rawStatus === 'revoked' || rawStatus === 'stale' || rawStatus === 'attention_needed'
+            ? 'attention'
+            : 'unknown',
+        consumer_count: consumerIds.length,
+        grant_count: typeof source.grant_count === 'number' ? source.grant_count : 0,
+      },
+      revision: (() => {
+        const securityRevision = string(source.security_revision);
+        const revisionStatus = string(source.revision_status);
+        return securityRevision
+          ? { status: revisionStatus === 'current' ? 'current' as const : revisionStatus === 'stale' ? 'stale' as const : 'unknown' as const, security_revision: securityRevision }
+          : { status: revisionStatus === 'current' ? 'current' as const : revisionStatus === 'stale' ? 'stale' as const : 'unknown' as const };
+      })(),
+      freshness: (() => {
+        const freshnessStatus = string(source.freshness_status) ?? string(source.freshness);
+        const observedAt = string(source.observed_at) ?? string(source.updated_at);
+        return {
+          status: freshnessStatus === 'fresh' || freshnessStatus === 'current'
+            ? 'fresh' as const
+            : freshnessStatus === 'stale' ? 'stale' as const : 'unknown' as const,
+          ...(observedAt ? { observed_at: observedAt } : {}),
+        };
+      })(),
+      readiness: {
+        status,
+        ...(status !== 'ready' ? { reason: 'knowledge_source_requires_owner_attention' } : {}),
+      },
       ...(status === 'ready' ? {} : { reason: 'knowledge_source_requires_owner_attention' }),
     } satisfies ApplicationManagementResource];
   });
