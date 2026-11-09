@@ -29,6 +29,9 @@ export {
 };
 export type { CodexCommandResult, CodexExecEvent, CodexExecOptions, CodexStreamingCommandOptions };
 
+export { runDomainImageGeneration } from './domain-image-generation.ts';
+export type { DomainImageGenerationInput, DomainImageGenerationReceipt } from './domain-image-generation.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 export type DomainRunIdentity = {
