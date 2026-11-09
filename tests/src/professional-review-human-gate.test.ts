@@ -57,6 +57,21 @@ test('StageRun retains human decisions through child Attempts and replay identit
     const duplicate = await runFamilyRuntime([...duplicateArgs, '--checkpoint-ref', firstRef, '--human-gate-ref', firstRef], runtime) as any;
     assert.notEqual(duplicate.family_runtime_stage_run.stage_run_input.stage_packet_ref, firstRef);
     assert.equal(duplicate.family_runtime_stage_run.stage_run_input.checkpoint_refs.filter((ref: string) => ref === firstRef).length, 1);
+    const duplicateReplay = await runFamilyRuntime([...duplicateArgs, '--checkpoint-ref', firstRef, '--human-gate-ref', firstRef], runtime) as any;
+    assert.equal(duplicateReplay.family_runtime_stage_run.durable_launch.start_status, 'existing');
+
+    const packetArgs = baseArgs.map(value => value === 'human-decision-checkpoints' ? 'packet-reclassification' : value);
+    const packetLaunch = await runFamilyRuntime([...packetArgs, '--checkpoint-ref', firstRef], runtime) as any;
+    assert.equal(packetLaunch.family_runtime_stage_run.stage_run_input.stage_packet_ref, firstRef);
+    const packetReplay = await runFamilyRuntime([...packetArgs, '--checkpoint-ref', firstRef], runtime) as any;
+    assert.equal(packetReplay.family_runtime_stage_run.durable_launch.start_status, 'existing');
+    const startsBeforeReclassification = starts;
+    for (const checkpointArgs of [[], ['--checkpoint-ref', firstRef]]) {
+      await assert.rejects(() => runFamilyRuntime([
+        ...packetArgs, ...checkpointArgs, '--human-gate-ref', firstRef,
+      ], runtime), (error: any) => error.details?.failure_code === 'stage_run_invocation_spec_conflict');
+    }
+    assert.equal(starts, startsBeforeReclassification);
 
     const stageRun = launch.stage_run_input;
     const producer = await stageQualityAttemptMaterializeActivity({

@@ -177,15 +177,21 @@ export async function runAttemptCreateCommand(
   const replayReviewLane = existingStageRunLaunch
     ? requestedReviewLane ?? persistedReviewLane
     : requestedReviewLane;
-  if (existingStageRunLaunch && canonicalJsonText(
-    stageRunReplayBusinessIdentity(existingStageRunLaunch.stage_run_input),
-  ) !== canonicalJsonText(stageRunReplayRequestBusinessIdentity({
-    ...scopedAttemptInput,
-    checkpointRefs: stageRunCheckpointRefs(
-      parsed.input, existingStageRunLaunch.stage_run_input.stage_packet_ref,
-    ),
-    reviewLane: replayReviewLane ?? undefined,
-  }))) {
+  if (existingStageRunLaunch && (
+    // The persisted packet is omitted from child execution checkpoints. A
+    // replay cannot reclassify it as a decision and silently lose that input.
+    normalizedReplayStringList(parsed.input.humanGateRefs)
+      .includes(existingStageRunLaunch.stage_run_input.stage_packet_ref)
+    || canonicalJsonText(
+      stageRunReplayBusinessIdentity(existingStageRunLaunch.stage_run_input),
+    ) !== canonicalJsonText(stageRunReplayRequestBusinessIdentity({
+      ...scopedAttemptInput,
+      checkpointRefs: stageRunCheckpointRefs(
+        parsed.input, existingStageRunLaunch.stage_run_input.stage_packet_ref,
+      ),
+      reviewLane: replayReviewLane ?? undefined,
+    }))
+  )) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'StageRun invocation is already bound to a different immutable spec.',
