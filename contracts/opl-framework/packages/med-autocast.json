@@ -4,7 +4,7 @@
   "package_id": "med-autocast",
   "display_name": "Med Auto Cast",
   "publisher": "one-person-lab",
-  "version": "0.2.40",
+  "version": "0.3.1",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
@@ -41,8 +41,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/med-autocast-0.2.40.json",
-    "carrier_source_commit": "8e0bb05612afd0f5faa760bc9c8b600fb2a41601"
+    "plugin_payload_manifest_url": "payloads/med-autocast-0.3.1.json",
+    "carrier_source_commit": "5d567f9932f784af83b1be9d9130a2f2b94555fd"
   },
   "dependency_profiles": [],
   "capability_dependencies": [
