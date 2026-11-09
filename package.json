@@ -145,7 +145,7 @@
   },
   "devDependencies": {
     "@temporalio/testing": "1.25.0",
-    "@types/node": "^24.5.2"
+    "@types/node": "^26.6.6"
   },
   "license": "Apache-2.0",
   "optionalDependencies": {
