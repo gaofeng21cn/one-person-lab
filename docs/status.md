@@ -38,11 +38,12 @@
 
 ### 长期知识与记忆
 
-- 统一目录区分 Agent 通用知识、workspace 共享记忆、项目记忆和带日期的当前状态，路径与维护职责见[标准 Agent 仓库结构](policies/standard-agent-repo-structure.md#知识写入与治理)。正文为 Markdown，目录元数据为 JSON。
-- StageRun 从 catalog 按领域、阶段、action、状态与审阅期限选择正文；同轮生成、评审和修复共享一份字节绑定快照。公开 projection 只带引用和消费回执，项目根由 execution scope 约束。
-- 新 scaffold、pack compiler、知识 CLI、OKF 与七个现有标准 Agent 已改用统一 catalog。旧 memory descriptor、迁移计划入口与私有接受目录已退役；当前源码迁移不代表安装包已发布或正在运行的 Agent 已切换。
-- 接受写回仍由领域或项目 owner 决定并同步 Markdown、catalog 与接受记录；平台校验结构和消费证据，不自动把单次经验晋升成通用知识，也不声称具备语义检索或知识正确性认证。
-- 直接 Skill 的 `knowledge prepare` / `read-context` 与托管 Stage 共用不可变快照存储。工作区可声明所有者授权的外部 Markdown 来源，原文漂移会阻止新召回；包内知识不能声明个人外部来源。
+- 知识条目以 `scope` 区分产品、用户或团队、主题和项目，以 `content_kind` 独立描述机制、政策、时点状态和决策。正文为 Markdown；产品 catalog、私有来源 registry 与工作区 binding 保存身份、范围和版本。归属规则见[知识来源与记忆政策](./policies/knowledge-source-and-memory-policy.md)。
+- 已授权的个人库与工作目录内原文使用同一来源解析，不要求中间全文投影。工作区显式选择来源和 scope，来源 grant 分别授予读取与写回，并核对 domain、工作区与声明的项目限制；项目身份来自 workspace inventory，既有业务目录可通过 `--project-root` 原位登记。
+- StageRun 按领域、阶段、action、必要性、来源权限与有效性选择正文；同轮生产、评审和修复共享一份字节绑定快照。来源漂移、过期、撤权和派生依赖缺口参与可用性判断，公开 projection 只带引用与消费回执。
+- 直接 Skill 的 `knowledge prepare` / `read-context` 与托管 Stage 共用快照存储。快照读取重新核对来源访问；`knowledge revalidate --for-action` 提供关键知识的行动前复核，领域行动仍需自己的实时状态和授权。
+- `knowledge propose`、`review`、`apply` 提供接受写回的通用机械链；`inspect-source` 提供候选正文与哈希，`review-source` 接受与该审阅哈希一致的原处编辑，`verify-dependencies` 核对派生上下文的来源。语义接受由有权维护者提供，不由命令或结构检查产生。具体接口见[知识来源与运行上下文](./specs/knowledge-sources.md)。
+- 源码、包内声明、安装状态和实际模型执行分别验收；知识召回成功不等于金融判断、研究结论或其他领域结果正确。
 
 ## 动态真相入口
 

@@ -9,5 +9,6 @@ Policies 只定义跨实现长期生效的治理规则，不记录状态、计�
 - [Standard Agent AI-first 原则](./standard-agent-ai-first-principles.md)
 - [Standard Agent capability 管理](./standard-agent-capability-management-policy.md)
 - [Standard Agent repo 结构](./standard-agent-repo-structure.md)
+- [知识来源与记忆](./knowledge-source-and-memory-policy.md)
 
 接口字段属于 `contracts/` 或 [Specs](../specs/README.md)，当前实现属于 [状态](../status.md)。

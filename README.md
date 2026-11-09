@@ -88,6 +88,12 @@ With this design, OPL keeps attention on real progress: whether the next version
 
 Workflow tools are strongest when the task is deterministic: call a few tools, fill a few fields, and produce a fixed output. High-value knowledge work behaves more like a professional team moving a project forward: someone prepares material, someone creates, someone reviews, someone revises, and someone closes out delivery. OPL organizes those roles and stages so AI keeps producing inspectable, editable, deliverable work.
 
+## Knowledge That Remains Yours
+
+Personal policies, long-term research themes, and project decisions keep one editable source owned by the user or responsible team. An existing Obsidian vault can remain that source; a normal business workspace serves the same role when no personal library exists. Agents use the parts authorized for their task, while each run records the exact knowledge revision it consumed.
+
+Knowledge ownership, content type, physical location, and access are separate. A financial topic can support several accounts and agents, while a study keeps its own research design and data. Accepted updates return to the original source; summaries and runtime snapshots retain their source dependencies. See the [knowledge source and memory policy](./docs/policies/knowledge-source-and-memory-policy.md) for the shared rules.
+
 ## OPL Ecosystem
 
 Users only need four stable product concepts:
