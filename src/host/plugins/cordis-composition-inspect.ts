@@ -197,7 +197,7 @@ function providedServices(context: Context, fibers: readonly Fiber[]): string[] 
   const names = new Set<string>();
   for (const key of Object.getOwnPropertySymbols(context.reflect.store)) {
     const implementation = context.reflect.store[key];
-    if (implementation && fibers.includes(implementation.fiber)) names.add(implementation.name);
+    if (implementation && fibers.includes(implementation.ctx.fiber)) names.add(implementation.name);
   }
   return [...names].sort(compareStrings);
 }
