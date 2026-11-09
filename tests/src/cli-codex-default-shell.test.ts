@@ -415,6 +415,12 @@ exit 65
       OPL_CODEX_BIN: codexPath,
       OPL_SKIP_SKILL_SYNC: '1',
       OPL_STATE_DIR: path.join(fixtureRoot, 'state'),
+      // The launcher subprocess does not inherit node --test arguments.
+      // Keep routing assertions independent of live dependency releases.
+      OPL_DEPENDENCY_TEST_OVERRIDE: '1',
+      OPL_CODEX_CLI_LATEST_VERSION: '0.137.0',
+      OPL_TEMPORAL_CLI_LATEST_VERSION: '1.0.0',
+      OPL_COMPANION_SKIP_LATEST_LOOKUP: '1',
     });
 
     const payload = parseJsonText(result.stdout) as Record<string, any>;

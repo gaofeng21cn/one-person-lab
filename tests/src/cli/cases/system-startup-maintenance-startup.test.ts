@@ -15,7 +15,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const logPath = path.join(homeRoot, 'startup-maintenance.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, autocastRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, occRemote, metaRemote, bookForgeRemote, autocastRemote } = remotes;
   const codexFixture = createCurrentCodexFixture();
   try {
     const output = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
@@ -26,6 +26,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
       OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: masRemote.remoteRoot,
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OCC: occRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_MODULE_REPO_URL_MEDAUTOCAST: autocastRemote.remoteRoot,
@@ -120,7 +121,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
     };
 
     assert.equal(output.system_action.action, 'startup_maintenance');
-    assert.equal(output.system_action.status, 'completed');
+    assert.equal(output.system_action.status, 'completed', JSON.stringify(output.system_action.details.module_targets));
     assert.equal(output.system_action.details.surface_kind, 'opl_app_startup_maintenance');
     assert.equal(output.system_action.details.mode, 'clean_managed_environment_startup');
     assert.equal(output.system_action.details.authority_boundary.can_write_domain_truth, false);
@@ -278,7 +279,7 @@ test('system startup-maintenance does not install ScholarSkills without an insta
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const logPath = path.join(homeRoot, 'startup-maintenance-scholarskills.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, occRemote, metaRemote, bookForgeRemote, autocastRemote } = remotes;
   const codexFixture = createCurrentCodexFixture();
 
   try {
@@ -290,8 +291,10 @@ test('system startup-maintenance does not install ScholarSkills without an insta
       OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: masRemote.remoteRoot,
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OCC: occRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_MEDAUTOCAST: autocastRemote.remoteRoot,
       OPL_GIT_RETRY_ATTEMPTS: '1',
       ...currentCodexEnvironment(codexFixture),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },

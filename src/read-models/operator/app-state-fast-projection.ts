@@ -275,6 +275,54 @@ export function compactFastLegacyAgentPackageDirectory(value: unknown) {
   };
 }
 
+function compactFastAgentPackageAuthorityBoundary(value: unknown) {
+  const boundary = isRecord(value) ? value : {};
+  return {
+    can_write_domain_truth: boundary.can_write_domain_truth === true,
+    can_authorize_quality_verdict: boundary.can_authorize_quality_verdict === true,
+    can_authorize_export_verdict: boundary.can_authorize_export_verdict === true,
+    can_execute_domain_action: boundary.can_execute_domain_action === true,
+    provider_completion_is_domain_ready: boundary.provider_completion_is_domain_ready === true,
+  };
+}
+
+export function compactFastAgentPackageDirectory(value: unknown) {
+  const directory = isRecord(value) ? value : {};
+  const entries = recordArray(directory.entries).map((entry) => ({
+    ...pickRecordFields(entry, [
+      'package_id', 'package_kind', 'display_name', 'publisher', 'description', 'tags', 'package_role',
+      'capability_metadata', 'display_name_i18n', 'description_i18n',
+      'session_routing_summary_i18n', 'home_shortcuts',
+      'app_contributions', 'role_state', 'trust_tier', 'source_explanation', 'manifest_url',
+      'installed', 'installed_version', 'selected_version', 'stable_version',
+      'activated', 'exposure', 'codex_visible',
+      'installability', 'readiness', 'recommended_action', 'recommended_action_ref',
+      'available_actions', 'app_enabled',
+    ]),
+    ...(isRecord(entry.installed_carrier_readback)
+      ? {
+          installed_carrier_readback: pickRecordFields(entry.installed_carrier_readback, [
+            'kind', 'identity', 'version', 'enabled', 'lifecycle_authority',
+          ]),
+        }
+      : {}),
+    authority_boundary: compactFastAgentPackageAuthorityBoundary(entry.authority_boundary),
+  }));
+  return {
+    ...pickRecordFields(directory, [
+      'surface_kind', 'status', 'source_catalog_kind', 'detail', 'entry_count',
+      'installed_package_count', 'installable_package_count',
+    ]),
+    entries,
+    detail_policy: {
+      detail: 'startup',
+      full_detail_surface: 'opl packages list --json#directory',
+      physical_carrier_fields: 'opl app state --profile full --json#agent_packages.directory.entries',
+      catalog_diagnostics: 'opl app state --profile full --json#agent_packages.directory.entries',
+    },
+  };
+}
+
 export function compactFastLegacyAgentPackageStatus(value: unknown) {
   return {
     ...pickRecordFields(value, [
@@ -431,7 +479,6 @@ export function compactFastOperatorRuntimeProjection(operator: JsonRecord) {
         'accepted_return_shapes',
         'default_next_action_derivation_policy',
       ]),
-      current_owner_delta: currentOwnerDelta,
     },
     stage_run_cockpit: {
       source_ref: 'opl runtime app-operator-drilldown --detail full --json#stage_run_cockpit',

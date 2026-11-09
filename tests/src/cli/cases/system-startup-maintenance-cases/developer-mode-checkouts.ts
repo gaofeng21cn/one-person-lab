@@ -16,13 +16,14 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
   const onePersonLabRoot = path.join(workspaceRoot, 'one-person-lab');
   const logPath = path.join(homeRoot, 'startup-maintenance-devmode.log');
   const remotes = createStartupDomainModuleRemotes({ logPath });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, autocastRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, occRemote, metaRemote, bookForgeRemote, autocastRemote } = remotes;
   const scholarSkillsRemote = createScholarSkillsRemote();
   const codexFixture = createCurrentCodexFixture();
   const siblingCheckouts = {
     medautoscience: path.join(workspaceRoot, 'med-autoscience'),
     medautogrant: path.join(workspaceRoot, 'med-autogrant'),
     redcube: path.join(workspaceRoot, 'redcube-ai'),
+    occ: path.join(workspaceRoot, 'opl-capital-compass'),
     oplmetaagent: path.join(workspaceRoot, 'opl-meta-agent'),
     oplbookforge: path.join(workspaceRoot, 'opl-bookforge'),
     medautocast: path.join(workspaceRoot, 'med-autocast'),
@@ -34,6 +35,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
     runGitFixtureCommand(workspaceRoot, ['clone', masRemote.remoteRoot, siblingCheckouts.medautoscience]);
     runGitFixtureCommand(workspaceRoot, ['clone', magRemote.remoteRoot, siblingCheckouts.medautogrant]);
     runGitFixtureCommand(workspaceRoot, ['clone', rcaRemote.remoteRoot, siblingCheckouts.redcube]);
+    runGitFixtureCommand(workspaceRoot, ['clone', occRemote.remoteRoot, siblingCheckouts.occ]);
     runGitFixtureCommand(workspaceRoot, ['clone', metaRemote.remoteRoot, siblingCheckouts.oplmetaagent]);
     runGitFixtureCommand(workspaceRoot, ['clone', bookForgeRemote.remoteRoot, siblingCheckouts.oplbookforge]);
     runGitFixtureCommand(workspaceRoot, ['clone', autocastRemote.remoteRoot, siblingCheckouts.medautocast]);
@@ -51,6 +53,7 @@ test('system startup-maintenance uses Developer Mode domain checkouts without gl
           'gaofeng21cn/med-autoscience': 'admin',
           'gaofeng21cn/med-autogrant': 'admin',
           'gaofeng21cn/redcube-ai': 'admin',
+          'gaofeng21cn/opl-capital-compass': 'admin',
           'gaofeng21cn/opl-meta-agent': 'admin',
           'gaofeng21cn/opl-bookforge': 'admin',
           'gaofeng21cn/med-autocast': 'admin',

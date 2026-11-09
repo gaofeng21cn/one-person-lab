@@ -138,6 +138,7 @@ const fakeFamilySkillDescriptions: Record<string, string> = {
   mas: 'Use when Codex should operate MedAutoScience through its stable runtime, controller, overlay, and workspace contracts instead of ad-hoc scripts.',
   mag: 'Use when Codex should operate Med Auto Grant through its grant-authoring product entry, user-loop, and schema-backed contracts instead of ad-hoc repo scripting.',
   rca: 'Operate RedCube AI as the formal RCA visual-deliverable domain app through product-entry, recoverable deliverable runtime, and same-session continuation contracts.',
+  occ: 'Use OPL Capital Compass to inspect portfolio decisions and review financial evidence through its owner contracts.',
   'opl-meta-agent': 'Use when Codex should operate OPL Meta Agent to design, test, improve, or take over testing for OPL-compatible Foundry Agents.',
   'opl-bookforge': 'Use when Codex should operate OPL Book Forge for book storyline architecture, manuscript materialization, figures, tables, style control, export handoff, and owner-gated publication decisions.',
 };
@@ -401,6 +402,13 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
 `,
     },
     {
+      project: 'opl-capital-compass',
+      plugin: 'occ',
+      canonicalPlugin: 'occ',
+      installer: null,
+      scriptBody: null,
+    },
+    {
       project: 'opl-meta-agent',
       plugin: 'opl-meta-agent',
       canonicalPlugin: 'opl-meta-agent',
@@ -477,16 +485,16 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       );
       continue;
     }
-    if (spec.project === 'med-autocast') {
-      // Med Auto Cast ships a generated carrier surface like OMA and Book Forge,
-      // so the fixture needs a primary skill plus a repo-local plugin carrier
-      // and no repo-owned installer.
+    if (spec.project === 'med-autocast' || spec.project === 'opl-capital-compass') {
+      // These Agents expose a primary skill and generated carrier without a
+      // repo-owned installer, as OMA and Book Forge do above.
+      const label = spec.project === 'med-autocast' ? 'Med Auto Cast' : 'OPL Capital Compass';
       fs.mkdirSync(repoRoot, { recursive: true });
       writeFakePrimarySkill(
         repoRoot,
         spec.plugin,
-        'Med Auto Cast Primary Skill',
-        'Use this fixture primary skill to plan and review medical explainer videos through the Med Auto Cast product entry.',
+        `${label} Primary Skill`,
+        `Use this fixture primary skill to inspect and advance the ${label} product entry.`,
       );
       writeFakeRepoLocalPluginCarrier(repoRoot, spec.plugin);
       continue;

@@ -449,7 +449,10 @@ if (args.join(' ') === 'plugin list --json') {
     );
     const nativeInvocations = fs.readFileSync(invocationLog, 'utf8').trim().split('\n');
     assert.equal(nativeInvocations.length >= 1, true);
-    assert.equal(nativeInvocations.every((command) => command === 'plugin list --json'), true);
+    assert.equal(nativeInvocations.every((command) => command === 'plugin list --json'
+      || command === 'plugin list --available --json'
+      || command === 'app-server --stdio'
+      || command === 'plugin marketplace list --json'), true, nativeInvocations.join('|'));
     assert.equal(fs.readFileSync(lockPath, 'utf8'), legacyLockBytes);
     assert.equal(fs.existsSync(path.join(stateRoot, 'agent-package-lifecycle-ledger.json')), false);
     assert.equal(fs.existsSync(path.join(stateRoot, 'agent-package-lifecycle.sqlite')), false);

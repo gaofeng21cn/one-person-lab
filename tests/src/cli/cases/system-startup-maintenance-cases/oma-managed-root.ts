@@ -21,7 +21,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
     logPath,
     omaHealthcheckLogPath,
   });
-  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote, autocastRemote } = remotes;
+  const { masRemote, magRemote, rcaRemote, occRemote, metaRemote, bookForgeRemote, autocastRemote } = remotes;
   const codexFixture = createCurrentCodexFixture();
 
   try {
@@ -36,6 +36,7 @@ test('system startup-maintenance installs OMA managed root when only a sibling c
       OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: masRemote.remoteRoot,
       OPL_MODULE_REPO_URL_MEDAUTOGRANT: magRemote.remoteRoot,
       OPL_MODULE_REPO_URL_REDCUBE: rcaRemote.remoteRoot,
+      OPL_MODULE_REPO_URL_OCC: occRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLMETAAGENT: metaRemote.remoteRoot,
       OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
       OPL_MODULE_REPO_URL_MEDAUTOCAST: autocastRemote.remoteRoot,
