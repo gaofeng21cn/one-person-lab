@@ -28,6 +28,7 @@ function fixture() {
           { connection_id: 'disabled', name: 'Disabled', status: 'disabled' },
           { connection_id: 'stale', name: 'Stale', status: 'ready' },
           { connection_id: 'rotated', name: 'Rotated', status: 'ready' },
+          { connection_id: 'mixed', name: 'Mixed', status: 'ready' },
         ],
       },
       connection_authorization: {
@@ -37,6 +38,8 @@ function fixture() {
           { connection_id: 'stale', consumer_package_id: 'agent.demo', status: 'stale' },
           { connection_id: 'rotated', consumer_package_id: 'agent.demo', status: 'stale' },
           { connection_id: 'rotated', consumer_package_id: 'agent.demo', status: 'granted' },
+          { connection_id: 'mixed', consumer_package_id: 'agent.demo', status: 'granted' },
+          { connection_id: 'mixed', consumer_package_id: 'other.agent', status: 'stale' },
         ],
       },
       app_settings_read_model: {
@@ -56,6 +59,7 @@ test('application management aggregates owner projections without secrets or kno
       ['connection:disabled', 'attention'],
       ['connection:stale', 'attention'],
       ['connection:rotated', 'ready'],
+      ['connection:mixed', 'attention'],
       ['model:codex', 'ready'],
     ],
   );
@@ -79,6 +83,9 @@ test('application management aggregates owner projections without secrets or kno
   assert.deepEqual(projection.shared_resources.find((resource) => resource.resource_id === 'connection:rotated')?.authorization, {
     status: 'authorized', consumer_count: 1, grant_count: 2,
   });
+  assert.deepEqual(projection.shared_resources.find((resource) => resource.resource_id === 'connection:mixed')?.readiness, {
+    status: 'attention', reason: 'consumer_grant_stale_or_revoked',
+  });
   assert.deepEqual(projection.shared_resources.find((resource) => resource.resource_id === 'connection:disabled')?.revision, {
     status: 'unknown',
   });
@@ -95,7 +102,7 @@ test('fast projection stays bounded and keeps the full-detail ref', () => {
   const compact = compactFastApplicationManagementProjection(fixture());
   assert.equal(compact.surface_kind, 'opl_application_management_projection.v1');
   assert.equal(compact.detail_policy.full_detail_surface, 'opl app state --profile full --json#application_management');
-  assert.equal(compact.shared_resources.length, 6);
+  assert.equal(compact.shared_resources.length, 7);
   assert.deepEqual(compact.source_refs, [
     'app_state.agent_packages.directory.entries',
     'app_state.agent_packages.status_index',

@@ -94,10 +94,10 @@ function connectionResources(agentPackages: unknown, settingsControlCenter: unkn
         return !consumerId || !activeConsumerIds.has(consumerId);
       });
     const connectionStatus = string(connection.status);
-    const status = connectionStatus === 'ready' && activeGrants.length > 0
+    const status = connectionStatus === 'ready' && activeGrants.length > 0 && !hasOrphanedStaleGrant
       ? 'ready'
       : connectionStatus === 'attention_needed' || connectionStatus === 'disabled'
-        || (activeGrants.length === 0 && hasOrphanedStaleGrant)
+        || hasOrphanedStaleGrant
         ? 'attention'
         : 'unknown';
     const consumerPackageIds = [...new Set(activeGrants
