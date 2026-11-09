@@ -120,7 +120,9 @@ opl knowledge revalidate --binding <new-binding.json> --for-action --json
 
 `knowledge search` 使用相同范围，增加 `--query <text>`、`--limit <1..20>`、`--excerpt-chars <1..1000>`。`knowledge_search.matches` 在相同来源元数据上返回有限 `excerpt`；结果是字面检索候选，不能代表语义分类、内容接受或业务授权。失效、漂移与越权正文不会通过旧索引返回。
 
-`knowledge discover` 与 search 使用相同 query 和长度限制，返回 `knowledge_discovery: {query, candidates, quality_debt}`。源级 `discovery_max_bytes` 控制参与发现的单文件大小，默认 262144 字节，最大 2000000 字节；它只扩大有界候选摘录的发现范围，已接受正文的读取与注册仍受原 256 KiB 限制。它用于保留既有来源的未登记正文发现能力；按已授权的工作区、domain、可选项目和 registry 来源的 `include_globs`／`exclude_globs` 返回 `candidate: true, accepted: false` 及 `source_id`、`source_ref`、`registry_ref`、当前 `sha256` 和有限 `excerpt`。已登记正文即使失效，也继续走已接受来源的复核路径，不通过 discover 绕过。发现候选不进入 current context，也不批量登记或接受；Persona／Relay 必须逐项经用户或业务 owner 审阅，再调用 `knowledge register`。这保留搜索可发现性，同时不把旧索引内容冒充已接受知识。
+`knowledge discover` 与 search 使用相同 query 和长度限制，返回 `knowledge_discovery: {query, candidates, quality_debt, has_more, truncated, next_cursor}`。`--source <source_id>` 只选择已授权来源；`--path-prefix <relative-path>` 按来源内文件或目录边界限缩，不能扩大 grant 或绕过 include/exclude。候选按 registry、source 和相对路径的稳定顺序分页；`has_more` 和 `truncated` 表示本页之后还有命中，继续请求时传入 `--cursor <next_cursor>`，末页返回 `next_cursor: null`。每页重新核验当前授权；query、过滤条件、工作区、domain、项目、binding 或 registry 变化会拒绝旧游标，需重新开始。游标是位置而非正文快照：翻页期间新插入在当前位置之前的文件需要重新检索才会出现，后续文件按当次实际字节读取。
+
+源级 `discovery_max_bytes` 控制参与发现的单文件大小，默认 262144 字节，最大 2000000 字节；它只扩大有界候选摘录的发现范围，已接受正文的读取与注册仍受原 256 KiB 限制。它用于保留既有来源的未登记正文发现能力；按已授权的工作区、domain、可选项目和 registry 来源的 `include_globs`／`exclude_globs` 返回 `candidate: true, accepted: false` 及 `source_id`、`source_ref`、`registry_ref`、当前 `sha256` 和有限 `excerpt`。已登记正文即使失效，也继续走已接受来源的复核路径，不通过 discover 或重叠来源别名绕过。发现候选不进入 current context，也不批量登记或接受；Persona／Relay 必须逐项经用户或业务 owner 审阅，再调用 `knowledge register`。这保留搜索可发现性，同时不把旧索引内容冒充已接受知识。
 
 登记命令绑定实际审阅的原文字节：
 

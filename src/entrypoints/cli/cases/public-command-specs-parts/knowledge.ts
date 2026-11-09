@@ -232,14 +232,16 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
     },
   };
   commandSpecs['knowledge discover'] = {
-    usage: 'opl knowledge discover --workspace <path> --domain <domain_id> --query <text> [--project <path>] [--limit <1-20>] [--excerpt-chars <1-1000>]',
-    summary: 'Discover bounded unregistered source candidates through current read grants and path filters without accepting knowledge.',
+    usage: 'opl knowledge discover --workspace <path> --domain <domain_id> --query <text> [--project <path>] [--source <source_id>] [--path-prefix <relative-prefix>] [--cursor <cursor>] [--limit <1-20>] [--excerpt-chars <1-1000>]',
+    summary: 'Discover bounded unregistered source candidates through current read grants and optional source/path filters without accepting knowledge; paginate with the returned cursor.',
     examples: ['opl knowledge discover --workspace /private/workspace --domain relay --query collaboration --json'], group: 'knowledge',
     handler: (args) => {
-      const parsed = parseCommandOptions(args, commandSpecs['knowledge discover']!, { ...scopeOptions, query: { type: 'string' }, limit: { type: 'string' }, 'excerpt-chars': { type: 'string' } });
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge discover']!, { ...scopeOptions, query: { type: 'string' }, source: { type: 'string' }, 'path-prefix': { type: 'string' }, cursor: { type: 'string' }, limit: { type: 'string' }, 'excerpt-chars': { type: 'string' } });
       if (!parsed.query) throw new Error('knowledge discover requires --query.');
       return { version: 'g2', knowledge_discovery: discoverKnowledgeSources({ ...scope(parsed), query: parsed.query as string,
-        limit: parsed.limit ? Number(parsed.limit) : undefined, excerptChars: parsed['excerpt-chars'] ? Number(parsed['excerpt-chars']) : undefined }) };
+        sourceId: parsed.source as string | undefined, pathPrefix: parsed['path-prefix'] as string | undefined,
+        cursor: parsed.cursor as string | undefined, limit: parsed.limit ? Number(parsed.limit) : undefined,
+        excerptChars: parsed['excerpt-chars'] ? Number(parsed['excerpt-chars']) : undefined }) };
     },
   };
   commandSpecs['knowledge register'] = {

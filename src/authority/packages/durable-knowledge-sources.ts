@@ -5,7 +5,7 @@ import bindingsSchema from '../../../contracts/opl-framework/knowledge-source-bi
 import registrySchema from '../../../contracts/opl-framework/knowledge-source-registry.schema.json' with { type: 'json' };
 import {
   containedKnowledgeFile, itemSchema, knowledgeCurrentness, knowledgeDigest, knowledgeFailure,
-  normalizeKnowledgeItem, type DurableKnowledgeItem, type KnowledgeDependency,
+  normalizeKnowledgeItem, validateKnowledgeRef, type DurableKnowledgeItem, type KnowledgeDependency,
 } from './durable-knowledge-model.ts';
 
 export const KNOWLEDGE_BINDINGS_REF = 'shared/memory/knowledge-bindings.json';
@@ -196,60 +196,120 @@ export function resolveKnowledgeRegistrationSource(input: SourceInput & { regist
   }
   return { registryRef, registry, source, item, bodyPath };
 }
-export function discoverKnowledgeSources(input: SourceInput & { query: string; limit?: number; excerptChars?: number }) {
+type DiscoveryPosition = [string, string, string];
+type KnowledgeDiscoveryCursor = { version: 1; scope: string; after: DiscoveryPosition };
+const compareDiscoveryKeys = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
+const discoveryPosition = (registryRef: string, sourceId: string, sourceRef: string): DiscoveryPosition => [registryRef, sourceId, sourceRef];
+const compareDiscoveryPositions = (a: DiscoveryPosition, b: DiscoveryPosition) =>
+  compareDiscoveryKeys(a[0], b[0]) || compareDiscoveryKeys(a[1], b[1]) || compareDiscoveryKeys(a[2], b[2]);
+function decodeDiscoveryCursor(raw: string, scope: string): KnowledgeDiscoveryCursor {
+  if (!raw || raw.length > 16384 || !/^[A-Za-z0-9_-]+$/.test(raw)) knowledgeFailure('Knowledge discovery cursor is invalid.');
+  let value: unknown;
+  try { value = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')); } catch {
+    knowledgeFailure('Knowledge discovery cursor is invalid.');
+  }
+  if (!value || typeof value !== 'object') knowledgeFailure('Knowledge discovery cursor is invalid.');
+  const cursor = value as Partial<KnowledgeDiscoveryCursor>;
+  if (cursor.version !== 1 || cursor.scope !== scope || !Array.isArray(cursor.after) || cursor.after.length !== 3
+    || cursor.after.some(part => typeof part !== 'string' || !part)) {
+    knowledgeFailure('Knowledge discovery cursor is stale or belongs to a different query or authorization scope; restart discovery.');
+  }
+  return cursor as KnowledgeDiscoveryCursor;
+}
+function normalizeDiscoveryPathPrefix(value: string | undefined) {
+  if (value === undefined) return undefined;
+  if (!value || value.length > 4096 || path.isAbsolute(value) || value.includes('\0')) knowledgeFailure('Knowledge discovery path prefix must be a relative contained path.');
+  const prefix = value.replace(/\/$/, '');
+  validateKnowledgeRef(prefix);
+  if (prefix === '.' || prefix.split('/').some(part => part === '.' || part === '..' || !part)) knowledgeFailure('Knowledge discovery path prefix must be a relative contained path.');
+  return prefix;
+}
+export function discoverKnowledgeSources(input: SourceInput & {
+  query: string; limit?: number; excerptChars?: number; sourceId?: string; pathPrefix?: string; cursor?: string;
+}) {
   const query = input.query.trim();
   const limit = input.limit ?? 10;
   const excerptChars = input.excerptChars ?? 400;
+  const sourceId = input.sourceId;
+  const pathPrefix = normalizeDiscoveryPathPrefix(input.pathPrefix);
   if (!query || query.length > 256 || !Number.isInteger(limit) || limit < 1 || limit > 20
-    || !Number.isInteger(excerptChars) || excerptChars < 1 || excerptChars > 1000) knowledgeFailure('Knowledge discovery requires a bounded query, limit 1–20 and excerpt size 1–1000.');
+    || !Number.isInteger(excerptChars) || excerptChars < 1 || excerptChars > 1000
+    || (sourceId !== undefined && (!sourceId.trim() || sourceId.length > 256))) {
+    knowledgeFailure('Knowledge discovery requires a bounded query, limit 1–20 and excerpt size 1–1000.');
+  }
   readBoundKnowledgeSources(input);
   const bindings = JSON.parse(fs.readFileSync(containedKnowledgeFile(input.workspaceRoot, KNOWLEDGE_BINDINGS_REF), 'utf8')) as SourceBindings;
   const projectId = knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot);
   const workspace = fs.realpathSync(input.workspaceRoot);
+  const registries = bindings.registries.map(binding => {
+    const registryRef = containedKnowledgeFile(path.dirname(binding.registry_ref), path.basename(binding.registry_ref));
+    const bytes = fs.readFileSync(registryRef);
+    return { binding, registryRef, registry: JSON.parse(bytes.toString('utf8')) as KnowledgeSourceRegistry, sha256: knowledgeDigest(bytes) };
+  }).sort((a, b) => compareDiscoveryKeys(a.registryRef, b.registryRef));
+  const scope = knowledgeDigest(JSON.stringify({ workspace, domain: input.domainId, projectId,
+    query, sourceId, pathPrefix, bindings, registries: registries.map(({ registryRef, sha256 }) => ({ registryRef, sha256 })) }));
+  const cursor = input.cursor === undefined ? undefined : decodeDiscoveryCursor(input.cursor, scope);
+  // A second source alias must not turn a registered body into an unaccepted candidate.
+  const registeredPaths = new Set<string>();
+  for (const { registry } of registries) for (const item of registry.items) {
+    const source = registry.sources.find(candidate => candidate.source_id === item.body_ref.source_id);
+    if (!source || !path.isAbsolute(source.root)) continue;
+    const file = path.resolve(source.root, item.body_ref.ref);
+    registeredPaths.add(fs.existsSync(file) ? fs.realpathSync(file) : file);
+  }
   const candidates: Array<{ candidate: true; accepted: false; source_id: string; source_ref: string;
     registry_ref: string; sha256: string; excerpt: string }> = [];
-  for (const binding of bindings.registries) {
-    const registryBytes = fs.readFileSync(binding.registry_ref);
-    const registry = JSON.parse(registryBytes.toString('utf8')) as KnowledgeSourceRegistry;
-    for (const source of registry.sources) {
-      if (source.status !== 'active' || !binding.source_ids.includes(source.source_id) || !binding.scope_ids.length || !path.isAbsolute(source.root)) continue;
+  let hasMore = false;
+  const lowerQuery = query.toLowerCase();
+  for (const { binding, registryRef, registry } of registries) {
+    for (const source of [...registry.sources].sort((a, b) => compareDiscoveryKeys(a.source_id, b.source_id))) {
+      if (source.status !== 'active' || !binding.source_ids.includes(source.source_id)
+        || (sourceId !== undefined && source.source_id !== sourceId)
+        || !binding.scope_ids.length || !path.isAbsolute(source.root)) continue;
       const allowed = source.grants.some((grant) => path.isAbsolute(grant.workspace_root) && fs.existsSync(grant.workspace_root)
         && fs.realpathSync(grant.workspace_root) === workspace && grant.domains.includes(input.domainId)
         && (!grant.project_ids || (projectId !== null && grant.project_ids.includes(projectId)))
         && (!grant.scope_ids || grant.scope_ids.some((scopeId) => binding.scope_ids.includes(scopeId))));
       if (!allowed) continue;
+      const refs: string[] = [];
       const walk = (directory: string, prefix = ''): void => {
         // Recovery control areas remain private evidence even when another workspace shares this source.
-        if (/(^|\/)shared\/memory\/knowledge-retirements(\/|$)/.test(directory.split(path.sep).join('/'))) return;
-        for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-          if (candidates.length === limit) return;
+        if (/(^|\/)shared\/memory\/knowledge-(retirements|relocations)(\/|$)/.test(directory.split(path.sep).join('/'))) return;
+        for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
           const ref = prefix ? `${prefix}/${entry.name}` : entry.name;
           if (entry.isSymbolicLink()) continue;
           if (entry.isDirectory()) {
-            const child = path.join(directory, entry.name);
-            if (!entry.name.startsWith('.')) walk(child, ref);
-            continue;
-          }
-          if (!entry.isFile() || !ref.endsWith('.md') || !sourcePathAllowed(source, ref)) continue;
-          // Registered items remain on the accepted resolver/review path, even when inactive.
-          if (registry.items.some((item) => item.body_ref.source_id === source.source_id && item.body_ref.ref === ref)) continue;
-          const file = containedKnowledgeFile(source.root, ref);
-          if (fs.statSync(file).size > (source.discovery_max_bytes ?? 256 * 1024)) continue;
-          const bytes = fs.readFileSync(file);
-          const content = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-          const position = content.toLowerCase().indexOf(query.toLowerCase());
-          if (position < 0 && !ref.toLowerCase().includes(query.toLowerCase())) continue;
-          const start = Math.max(0, position - Math.floor(excerptChars / 3));
-          candidates.push({ candidate: true, accepted: false, source_id: source.source_id, source_ref: ref,
-            registry_ref: binding.registry_ref, sha256: knowledgeDigest(bytes), excerpt: content.slice(start, start + excerptChars) });
+            if (!entry.name.startsWith('.') && (pathPrefix === undefined || ref === pathPrefix
+              || ref.startsWith(`${pathPrefix}/`) || pathPrefix.startsWith(`${ref}/`))) walk(path.join(directory, entry.name), ref);
+          } else if (entry.isFile() && ref.endsWith('.md') && sourcePathAllowed(source, ref)
+            && (pathPrefix === undefined || ref === pathPrefix || ref.startsWith(`${pathPrefix}/`))) refs.push(ref);
         }
       };
       walk(fs.realpathSync(source.root));
-      if (candidates.length === limit) break;
+      for (const ref of refs.sort(compareDiscoveryKeys)) {
+        const positionKey = discoveryPosition(registryRef, source.source_id, ref);
+        if (cursor && compareDiscoveryPositions(positionKey, cursor.after) <= 0) continue;
+        const file = containedKnowledgeFile(source.root, ref);
+        if (registeredPaths.has(file) || fs.statSync(file).size > (source.discovery_max_bytes ?? 256 * 1024)) continue;
+        const bytes = fs.readFileSync(file);
+        if (bytes.length > (source.discovery_max_bytes ?? 256 * 1024)) knowledgeFailure('Knowledge candidate changed during discovery.');
+        const content = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+        const position = content.toLowerCase().indexOf(lowerQuery);
+        if (position < 0 && !ref.toLowerCase().includes(lowerQuery)) continue;
+        if (candidates.length === limit) { hasMore = true; break; }
+        const start = Math.max(0, position - Math.floor(excerptChars / 3));
+        candidates.push({ candidate: true, accepted: false, source_id: source.source_id, source_ref: ref,
+          registry_ref: registryRef, sha256: knowledgeDigest(bytes), excerpt: content.slice(start, start + excerptChars) });
+      }
+      if (hasMore) break;
     }
-    if (candidates.length === limit) break;
+    if (hasMore) break;
   }
-  return { query, candidates, quality_debt: [] as string[] };
+  const last = candidates.at(-1);
+  const nextCursor = hasMore && last
+    ? Buffer.from(JSON.stringify({ version: 1, scope, after: discoveryPosition(last.registry_ref, last.source_id, last.source_ref) } satisfies KnowledgeDiscoveryCursor)).toString('base64url')
+    : null;
+  return { query, candidates, quality_debt: [] as string[], has_more: hasMore, truncated: hasMore, next_cursor: nextCursor };
 }
 export function resolveKnowledgeSourceTarget(input: SourceInput & { bodyPath: string }) {
   if (!path.isAbsolute(input.bodyPath)) knowledgeFailure('Knowledge target must be an absolute file path.');
