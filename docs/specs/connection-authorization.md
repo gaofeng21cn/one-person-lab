@@ -19,7 +19,7 @@ Connect 统一管理连接引用、消费者请求、逐项 grant、provider 路
 
 ## 接口约定
 
-Framework Host 可从 `createOplConnectionAuthorizationService({ descriptorDiscovery, providers })` 创建 service。领域服务可从 `opl-framework/connection-authorization-host` 导入 `activateInstalledPackageConnectionContext({ packageRoot, packageId })`。`packageRoot` 来自服务模块的实际安装目录，`packageId` 是服务启动代码中的固定身份；Host 核对 fresh discovery 的可调用 descriptor 与 realpath 后委托 `createOplConnectionContextHost` 绑定上下文。工厂仅供 Host 内部使用，页面和工具参数不能提供身份或安装根。
+Framework Host 可从 `createOplConnectionAuthorizationService({ descriptorDiscovery, providers })` 创建 service。领域服务可从 `opl-framework/connection-authorization-host` 导入 `activateInstalledPackageConnectionContext({ packageRoot, packageId })`。`packageRoot` 来自服务模块的实际安装目录，`packageId` 是服务启动代码中的固定身份；Host 核对 fresh discovery 的可调用 descriptor 与 realpath 后委托 `createOplConnectionContextHost` 绑定上下文。工厂仅供 Host 内部使用，页面和工具参数不能提供身份或安装根。对于 Codex local marketplace，运行根以 fresh native descriptor 的 `source.path` 为准；`plugin add` 返回的缓存路径可能不同，不能凭缓存目录名替代实际载体绑定。隔离验收可先把精确提交展开为不可变 marketplace，再走原生安装和回读。
 
 作用域对象只提供 `listConnections()`、`requestAccess(connectionId, capabilityIds)` 与 `invoke(connectionId, capabilityId, input)`。`requestAccess` 只产生待审批记录。管理请求和 grant 使用 owner action；Studio 页面与通用 App action 不接收 token，也不能写 grant 外的身份。
 
