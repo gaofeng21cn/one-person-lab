@@ -68,3 +68,10 @@ owner 执行结果可附已有贡献引用形式的 `readback: { data_ref, input
 
 
 `runtime_context` 的产物读取可携带 `runtime_handoff: { package_id, view_id, input }` 返回原任务。共享页面只打开 catalog 中的目标；当前产物的工作项身份、工作区相对引用和 SHA-256 随 `review_context` 进入原 runtime action，执行前重新核对来源字节。人工决定引用写入原 Attempt 不等于阶段通过或已继续运行；后续仍由实际任务/controller 按其质量门禁处理。
+
+
+## 人工审阅后继续原任务
+
+共享视图的 `human_gate` 记录人工决定引用。后续阶段沿用既有领域 action 或 `opl family-runtime attempt create`，保留原 `--task`、execution scope 和 workspace locator，以新的稳定 `--stage-run-invocation-id` 创建同任务的后续 StageRun。`--human-gate-ref` 同时通过 `--input-artifact-ref` 与 `--input-artifact-sha256` 绑定精确决定字节；决定进入不可变输入和 checkpoint，producer 与 reviewer 保留原 Task 身份。
+
+相同 invocation 的重开查询既有运行；改变决定、输入或目标必须使用新 invocation，旧摘要不能读取新字节。决定记录、阶段执行完成和领域质量接受分别回读；这条路径不解除 quality Attempt 的通用 resume 禁令，也不把人的批注当作专业质量批准。

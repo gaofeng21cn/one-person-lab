@@ -18,7 +18,7 @@ App、Cloud、Package 的部署验收与专业质量属于各 owner，本页未�
 | Framework MCP App + 领域 UI owner | 知识模型安装已验收，阶段来源元数据视图已接公开接口；实际宿主中的来源、版本与缺口展示仍需核对 | 在安装宿主核对已授权来源、缺口和修复提示；源变化、过期或撤权必须可见。动作特定知识与冻结快照由原知识 owner 接口读取，不能用阶段概览代替 |
 | OMA + Framework | Photo/Relay 样例已在隔离安装的 Framework 中完成物化、激活、发现、调用及不重复派发的重开验证；真实模型生成与具体业务验收仍需代表性新应用证明 | 复用已有样例和正式安装入口，保留生成来源、安装身份及 owner 操作回读；第二消费者直接复用公共内容，不另设 manifest 或 SDK |
 | Framework + 已安装的 Photo/MAG/OCC 消费者 | 新 owner 已直接输出通用 view shape，Framework 的历史领域 transform 仍服务旧已安装消费者；缺少 fresh 无活跃 consumer 证明 | 通过各 owner 的正常升级交付迁移消费者；从实际 discovery/descriptor 和调用证明旧 transform 无人使用后删除。不能仅因源码已迁移就移除兼容 |
-| MAS、MAG、RCA、OBF、OCC + Framework StageRun owner | 精确产物、决定引用及返回原任务入口已具备；`human_gate` 只记录决定。quality Attempt 不允许通用 `resume`，不能据此宣称专业审阅后已经继续执行 | 各领域按原公开 action 或带原 `task_id` 的 attempt 创建入口，验证同一任务创建后续 StageRun 并消费精确决定/产物；保留质量门禁。MAG 已有同 grant run 的反馈消费与修订测试，其余实际任务续跑仍由领域 owner 验收 |
+| MAS、MAG、RCA、OBF、OCC 领域 owner | MAG 同申请反馈消费已验证；MAS/RCA/OBF/OCC 已用真实本地 Temporal、真实领域包和合成 executor 验证同 Task 新 StageRun、精确决定消费及 replay。真实领域成果与模型质量仍需代表任务接受 | 沿用已验证 continuation 入口完成各领域代表任务，保留产物版本、人工决定和质量依据。合成执行保留质量债，不等于论文、申请、书稿或投资决定获得接受 |
 | NetFleet、U60、Cloud、Fleet、GLKVM 等产品 owner | 薄接口、状态与协作投影不证明当前原生应用、真实设备/账户或公开发布载体采用相同版本；部分新 connector 仍为 development-only | 沿用各产品发布与安装路径完成版本、身份、freshness 和实际调用回读。采购、设备控制、删除等动作仍由原 owner 执行；开发资格不能通过改 admission 字段冒充发布 |
 | OPL DSH + 官方 DSH MCP 客户端 | 官方 MCP 客户端的公开连接能力协商与工具投影没有保留完整 UI metadata/visibility，当前无法通过公开接口构建合规的标准 MCP Apps host | 官方公开 UI 协商、资源与元数据能力后，用 Cordis/slots 增加必要薄适配并验收同一 Framework/Relay 资源；此前提供准确的能力诊断和无 UI 交接，不复制私有客户端或会话 authority |
 
