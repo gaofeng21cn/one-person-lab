@@ -20,7 +20,26 @@ updates:
       time: "03:00"
       timezone: Asia/Shanghai
     groups:
-      npm:
+      # Keep version cohorts together; security updates remain independent.
+      temporal-cohort:
+        applies-to: version-updates
+        patterns:
+          - "@temporalio/*"
+      cordis-runtime:
+        applies-to: version-updates
+        patterns:
+          - "@deepseek-ai/cordis"
+      npm-minor-patch:
+        applies-to: version-updates
         patterns:
           - "*"
-    open-pull-requests-limit: 2
+        exclude-patterns:
+          - "@temporalio/*"
+          - "@deepseek-ai/cordis"
+          - "typescript"
+          - "@types/node"
+        update-types:
+          - minor
+          - patch
+    # Ungrouped compiler/type and major updates remain visible individually.
+    open-pull-requests-limit: 10

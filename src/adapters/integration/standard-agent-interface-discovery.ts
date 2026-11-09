@@ -371,6 +371,9 @@ function presentDescriptorFromSelectedModule(
 ) {
   const selected = readSelectedModule(agent.domain_id);
   if (!selected) return { source_selected: false as const, descriptor: null };
+  if (!selected.installed && selected.health_status === 'missing') {
+    return { source_selected: false as const, descriptor: null };
+  }
   if (!selected.installed || selected.health_status === 'invalid_checkout') {
     return { source_selected: true as const, descriptor: null };
   }

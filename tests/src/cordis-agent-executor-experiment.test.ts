@@ -11,6 +11,8 @@ import {
   cordisAgentExecutorObserverPlugin,
   cordisAgentExecutorServicePlugin,
   CORDIS_FIBER_STATE,
+  CORDIS_FRAMEWORK_INTEGRITY,
+  CORDIS_FRAMEWORK_VERSION,
   createCordisAgentExecutorRequest,
   type CordisAgentExecutorAdapter,
 } from '../../src/host/plugins/cordis-agent-executor-experiment.ts';
@@ -33,11 +35,12 @@ test('Cordis remains exact in the production dependency graph without optional l
   const packageLock = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package-lock.json'), 'utf8'));
   const lockedCordis = packageLock.packages['node_modules/@deepseek-ai/cordis'];
 
-  assert.equal(packageJson.dependencies?.['@deepseek-ai/cordis'], '4.0.5');
+  assert.equal(packageJson.dependencies?.['@deepseek-ai/cordis'], '4.1.0');
   assert.equal(packageJson.devDependencies?.['@deepseek-ai/cordis'], undefined);
-  assert.equal(lockedCordis.version, '4.0.5');
+  assert.equal(lockedCordis.version, '4.1.0');
   assert.equal(lockedCordis.dev, undefined);
-  assert.match(lockedCordis.integrity, /^sha512-/);
+  assert.equal(lockedCordis.version, CORDIS_FRAMEWORK_VERSION);
+  assert.equal(lockedCordis.integrity, CORDIS_FRAMEWORK_INTEGRITY);
   assert.equal(packageLock.packages['node_modules/@deepseek-ai/cordis-plugin-loader'], undefined);
   assert.equal(packageLock.packages['node_modules/@deepseek-ai/cordis-plugin-include'], undefined);
 });
@@ -78,7 +81,7 @@ exit 64
     assert.equal(requests.length, 1);
     assert.equal(results.length, 1);
     assert.equal(composition.snapshot.framework.package, '@deepseek-ai/cordis');
-    assert.equal(composition.snapshot.framework.version, '4.0.5');
+    assert.equal(composition.snapshot.framework.version, '4.1.0');
     assert.equal(composition.snapshot.binding.executor_adapter_id, 'fixture-codex');
     assert.equal(Object.isFrozen(composition.snapshot), true);
     assert.equal(Object.isFrozen(composition.snapshot.plugins), true);

@@ -1,6 +1,7 @@
 import path from 'node:path';
 
-import ts from 'typescript';
+import * as ts from 'typescript/unstable/ast';
+import { API, SymbolFlags, type NodeHandle, type Project, type Symbol } from 'typescript/unstable/sync';
 
 import type {
   SourceClosureCallEdge,
@@ -26,7 +27,7 @@ function functionName(node: ts.Node, sourceFile: ts.SourceFile) {
     || ts.isSetAccessorDeclaration(node)
   ) {
     const ownName = node.name?.getText(sourceFile);
-    if (ownName && ts.isMethodDeclaration(node) && node.parent && ts.isClassLike(node.parent)) {
+    if (ownName && ts.isMethodDeclaration(node) && node.parent && ts.isClassLikeDeclaration(node.parent)) {
       return `${node.parent.name?.getText(sourceFile) ?? '<anonymous-class>'}.${ownName}`;
     }
     return ownName ?? `<anonymous@${lineOf(sourceFile, node)}>`;
@@ -55,12 +56,12 @@ function functionLike(node: ts.Node) {
 function literalArguments(call: ts.CallExpression) {
   return call.arguments.map((argument) => {
     if (
-      ts.isStringLiteralLike(argument)
+      ts.isStringLiteralLikeNode(argument)
       || ts.isNumericLiteral(argument)
       || argument.kind === ts.SyntaxKind.TrueKeyword
       || argument.kind === ts.SyntaxKind.FalseKeyword
     ) {
-      return ts.isStringLiteralLike(argument) || ts.isNumericLiteral(argument)
+      return ts.isStringLiteralLikeNode(argument) || ts.isNumericLiteral(argument)
         ? argument.text
         : argument.getText();
     }
@@ -84,21 +85,61 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
     };
   }
   const absoluteFiles = relativeFiles.map((file) => path.resolve(repoDir, file));
-  const compilerOptions: ts.CompilerOptions = {
-    allowJs: true,
-    allowImportingTsExtensions: true,
-    checkJs: false,
-    esModuleInterop: true,
-    module: ts.ModuleKind.NodeNext,
-    moduleResolution: ts.ModuleResolutionKind.NodeNext,
-    noEmit: true,
-    skipLibCheck: true,
-    target: ts.ScriptTarget.ES2022,
+  const configPath = path.resolve(repoDir, '.opl-source-closure.tsconfig.json');
+  const config = JSON.stringify({
+    compilerOptions: {
+      allowJs: true,
+      allowImportingTsExtensions: true,
+      checkJs: false,
+      esModuleInterop: true,
+      module: 'nodenext',
+      moduleResolution: 'nodenext',
+      noEmit: true,
+      skipLibCheck: true,
+      target: 'es2022',
+    },
+    files: absoluteFiles,
+  });
+  const api = new API({
+    cwd: path.resolve(repoDir),
+    fs: {
+      fileExists: (file) => path.resolve(file) === configPath ? true : undefined,
+      readFile: (file) => path.resolve(file) === configPath ? config : undefined,
+    },
+  });
+  try {
+    const snapshot = api.updateSnapshot({ openProjects: [configPath] });
+    try {
+      const project = snapshot.getProject(configPath);
+      if (!project) {
+        throw new Error(`Unable to open TypeScript source graph project: ${repoDir}`);
+      }
+      return scanTypescriptProject(project, repoDir, absoluteFiles);
+    } finally {
+      snapshot.dispose();
+    }
+  } finally {
+    api.close();
+  }
+}
+
+function scanTypescriptProject(project: Project, repoDir: string, absoluteFiles: string[]): SourceClosureGraphScan {
+  const { program, checker } = project;
+  const symbolResolutionDiagnostics = new Set<string>();
+  const resolveNodeHandle = (handle: NodeHandle) => {
+    const node = handle.resolve(project);
+    if (!node) {
+      symbolResolutionDiagnostics.add(
+        `typescript_symbol_resolution_error:${handle.path}:${handle.index}`,
+      );
+    }
+    return node;
   };
-  const program = ts.createProgram({ rootNames: absoluteFiles, options: compilerOptions });
-  const checker = program.getTypeChecker();
   const activeFiles = new Set(absoluteFiles.map((file) => path.resolve(file)));
-  const sourceFiles = program.getSourceFiles().filter((file) => activeFiles.has(path.resolve(file.fileName)));
+  const sourceFiles = absoluteFiles.flatMap((file) => {
+    const sourceFile = program.getSourceFile(file);
+    return sourceFile ? [sourceFile] : [];
+  });
   const relativeByAbsolute = new Map(sourceFiles.map((file) => [
     path.resolve(file.fileName),
     unixPath(path.relative(repoDir, file.fileName)),
@@ -135,9 +176,9 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
           line: lineOf(sourceFile, node),
         });
       }
-      ts.forEachChild(node, visit);
+      node.forEachChild(visit);
     };
-    ts.forEachChild(sourceFile, visit);
+    sourceFile.forEachChild(visit);
   }
 
   const containingSymbol = (node: ts.Node) => {
@@ -153,15 +194,15 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
     const relativeFile = relativeByAbsolute.get(path.resolve(sourceFile.fileName));
     return `${relativeFile ?? unixPath(path.relative(repoDir, sourceFile.fileName))}#<module>`;
   };
-  const localSymbolId = (symbol: ts.Symbol | undefined) => {
+  const localSymbolId = (symbol: Symbol | undefined) => {
     if (!symbol) {
       return null;
     }
-    const resolved = (symbol.flags & ts.SymbolFlags.Alias) !== 0
+    const resolved = (symbol.flags & SymbolFlags.Alias) !== 0
       ? checker.getAliasedSymbol(symbol)
       : symbol;
     for (const declaration of resolved.declarations ?? []) {
-      let current: ts.Node | undefined = declaration;
+      let current: ts.Node | undefined = resolveNodeHandle(declaration);
       while (current) {
         const symbolId = nodeSymbols.get(current);
         if (symbolId) {
@@ -182,8 +223,7 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
     const visit = (node: ts.Node) => {
       if (
         functionLike(node)
-        && ts.canHaveModifiers(node)
-        && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+        && node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
       ) {
         const target = nodeSymbols.get(node);
         if (target) {
@@ -198,7 +238,7 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
       }
       if (
         ts.isVariableStatement(node)
-        && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+        && node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
       ) {
         for (const declaration of node.declarationList.declarations) {
           const target = nodeSymbols.get(declaration);
@@ -215,15 +255,13 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
       }
       if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
         const specifier = node.moduleSpecifier;
-        if (specifier && ts.isStringLiteralLike(specifier)) {
-          const resolved = ts.resolveModuleName(
-            specifier.text,
-            sourceFile.fileName,
-            compilerOptions,
-            ts.sys,
-          ).resolvedModule;
-          if (resolved) {
-            const targetFile = relativeByAbsolute.get(path.resolve(resolved.resolvedFileName));
+        if (specifier && ts.isStringLiteralLikeNode(specifier)) {
+          const moduleSymbol = checker.getSymbolAtLocation(specifier);
+          const resolvedFile = moduleSymbol?.declarations
+            .map((declaration) => resolveNodeHandle(declaration))
+            .find((declaration): declaration is ts.SourceFile => declaration !== undefined && ts.isSourceFile(declaration));
+          if (resolvedFile) {
+            const targetFile = relativeByAbsolute.get(path.resolve(resolvedFile.fileName));
             if (targetFile) {
               callEdges.push({
                 from_symbol: moduleId,
@@ -282,13 +320,13 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
           });
         }
         const dynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword
-          && (!node.arguments[0] || !ts.isStringLiteralLike(node.arguments[0]));
+          && (!node.arguments[0] || !ts.isStringLiteralLikeNode(node.arguments[0]));
         const dynamicRequire = ts.isIdentifier(node.expression)
           && node.expression.text === 'require'
-          && (!node.arguments[0] || !ts.isStringLiteralLike(node.arguments[0]));
+          && (!node.arguments[0] || !ts.isStringLiteralLikeNode(node.arguments[0]));
         const dynamicDispatch = ts.isElementAccessExpression(node.expression)
           && (!node.expression.argumentExpression
-            || !ts.isStringLiteralLike(node.expression.argumentExpression));
+            || !ts.isStringLiteralLikeNode(node.expression.argumentExpression));
         if (dynamicImport || dynamicRequire || dynamicDispatch) {
           unresolvedEdges.push({
             from_symbol: fromSymbol,
@@ -304,25 +342,26 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
           });
         }
       }
-      ts.forEachChild(node, visit);
+      node.forEachChild(visit);
     };
-    ts.forEachChild(sourceFile, visit);
+    sourceFile.forEachChild(visit);
   }
 
   const syntaxDiagnostics = program.getSyntacticDiagnostics()
-    .filter((diagnostic) => diagnostic.file && activeFiles.has(path.resolve(diagnostic.file.fileName)))
+    .filter((diagnostic) => diagnostic.fileName && activeFiles.has(path.resolve(diagnostic.fileName)))
     .map((diagnostic) => {
-      const file = diagnostic.file
-        ? relativeByAbsolute.get(path.resolve(diagnostic.file.fileName)) ?? diagnostic.file.fileName
+      const file = diagnostic.fileName
+        ? relativeByAbsolute.get(path.resolve(diagnostic.fileName)) ?? diagnostic.fileName
         : '<unknown>';
-      return `typescript_parse_error:${file}:${ts.flattenDiagnosticMessageText(diagnostic.messageText, ' ')}`;
+      return `typescript_parse_error:${file}:${diagnostic.text}`;
     });
+  const diagnostics = [...new Set([...symbolResolutionDiagnostics, ...syntaxDiagnostics])];
   return {
-    scan_complete: syntaxDiagnostics.length === 0,
+    scan_complete: diagnostics.length === 0,
     symbols: uniqueBy(symbols, (item) => item.symbol_id),
     call_edges: uniqueBy(callEdges, (item) => `${item.from_symbol}:${item.to_symbol}:${item.line}:${item.edge_kind}`),
     unresolved_edges: uniqueBy(unresolvedEdges, (item) => `${item.file}:${item.line}:${item.reason}:${item.expression}`),
     observed_calls: uniqueBy(observedCalls, (item) => `${item.symbol_id}:${item.line}:${item.source_text}`),
-    diagnostics: syntaxDiagnostics,
+    diagnostics,
   };
 }
