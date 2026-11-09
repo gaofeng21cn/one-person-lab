@@ -107,6 +107,21 @@ Stage contract
 
 Stage 决定工作边界，AI/executor 决定阶段内方法，provider 保存 durable execution，domain owner 决定专业结果。Framework 可以呈现、路由和恢复，不能替任何一层伪造完成。
 
+## Knowledge ownership and execution context
+
+用户、团队、长期主题和项目的知识正文由各自 owner 维护。Framework 将知识归属、内容性质、物理来源和访问范围分别解析；领域 Agent 使用获授权内容，不因执行任务而拥有用户的长期知识。
+
+```text
+owner-maintained Markdown source (personal vault or business workspace)
+  -> authorized source binding + accepted revision + task applicability
+  -> exact StageRun knowledge snapshot
+  -> producer / reviewer / repairer context
+  -> domain-owned update proposal and semantic acceptance
+  -> revision-checked writeback to the same source
+```
+
+来源登记复用 Profile/Workspace 控制面，冻结快照复用 Framework 运行状态存储，项目工程继续保存业务产物。个人库无需生成第二套可编辑正文，工作区也不以中间全文投影充当来源。共同规则由[知识来源与记忆政策](./policies/knowledge-source-and-memory-policy.md)持有，字段与执行行为归知识生命周期合同及其源码。
+
 ## Evidence and state
 
 - Workspace 文件和绑定归 Workspace owner。
@@ -117,7 +132,7 @@ Stage 决定工作边界，AI/executor 决定阶段内方法，provider 保存 d
 - App product state 和 release verdict 归 App。
 - Cloud resource truth 归 Cloud/provider owner。
 
-任何 cache、generated report、Markdown 或 UI 都只能投影这些 owner，不得成为第二 writer。
+Framework 的 cache、generated report、运行说明与 UI 只投影这些 owner，不得成为第二 writer。用户或领域维护的 Markdown 正文可以是知识主源，其归属由来源绑定与知识合同明确。
 
 ## Product boundary
 

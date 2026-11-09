@@ -5,7 +5,7 @@
   "target_agent_id": "fixture-research-agent",
   "target_domain_id": "fixture_research",
   "target_version_ref": null,
-  "blueprint_digest": "sha256:632b44372381cb6e0e6d3e162a9b08eba531e63c41535dbd84c9633576ab04bb",
+  "blueprint_digest": "sha256:e9f643a7116ac3b726a511f92c8d352e575fd7191afc089af36e4eab2b168f5b",
   "candidate_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
   "baseline_version_digest": null,
   "baseline_public_results": null,

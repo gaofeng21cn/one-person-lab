@@ -71,6 +71,7 @@ function blueprint(): AgentBlueprint {
       memory_classes: [],
       retention_refs: [],
       write_authority_refs: [],
+      knowledge_requirements: [],
     },
     assumptions: [],
     design_evidence_refs: ['evidence:design'],

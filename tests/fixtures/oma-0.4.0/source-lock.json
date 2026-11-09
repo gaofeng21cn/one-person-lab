@@ -21,17 +21,24 @@
     {
       "path": "foundry-protocol/agent-blueprint.json",
       "source_path": "contracts/fixtures/foundry-protocol/agent-blueprint.json",
-      "sha256": "sha256:14739b31121b56c63009e6dbcfbe4951b5b44274e64853913b2d36b1ad7b1b28"
+      "sha256": "sha256:d7965addbac9645bd8d11a6060833a83202f4943e185e02051ed77a21573d6b7",
+      "source_sha256": "sha256:14739b31121b56c63009e6dbcfbe4951b5b44274e64853913b2d36b1ad7b1b28"
     },
     {
       "path": "foundry-protocol/evidence-bundle.json",
       "source_path": "contracts/fixtures/foundry-protocol/evidence-bundle.json",
-      "sha256": "sha256:71a81329a04d366e4cc3e8eed5916e902a9045addb67a3daf01ff9d5d924c2ae"
+      "sha256": "sha256:dfe8f3c5f89f9a52d3b123eeebb648a74fbe9f6b4c35d68c920bce4d6ecae44f",
+      "source_sha256": "sha256:71a81329a04d366e4cc3e8eed5916e902a9045addb67a3daf01ff9d5d924c2ae"
     },
     {
       "path": "foundry-protocol/evolution-proposal.json",
       "source_path": "contracts/fixtures/foundry-protocol/evolution-proposal.json",
-      "sha256": "sha256:39f206085ef2c39dbe18773e912d1fe0d835b5c28d03d721542207243aa0c081"
+      "sha256": "sha256:c4ea7b571490349ad7890ce8f9b36031f4e0bf8798f7ad088496aa702e75fe3c",
+      "source_sha256": "sha256:39f206085ef2c39dbe18773e912d1fe0d835b5c28d03d721542207243aa0c081"
     }
+  ],
+  "source_provenance": "derived_for_current_contract",
+  "transformations": [
+    "knowledge_requirements_contract"
   ]
 }

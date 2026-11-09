@@ -162,8 +162,12 @@ test('durable catalogs project body-free OKF knowledge references', () => {
     assert.equal(result.memory_locator_count, 1);
     const file = Object.values(result.projection.files).find((entry) => entry.frontmatter.type === 'memory_locator');
     assert.ok(file);
-    assert.equal(file.frontmatter.layer, 'agent_pack');
+    assert.deepEqual(file.frontmatter.scope, { kind: 'product', id: fixture.domainId });
+    assert.equal(file.frontmatter.content_kind, 'mechanism');
+    assert.equal('layer' in file.frontmatter, false);
     assert.equal('content' in file.frontmatter, false);
+    assert.equal('memory_body' in file.frontmatter, false);
+    assert.equal(file.body.trim(), '# Method\n\nKnowledge body: agent/knowledge/method.md');
     assert.equal(result.authority_boundary.can_write_memory_body, false);
   }
 });

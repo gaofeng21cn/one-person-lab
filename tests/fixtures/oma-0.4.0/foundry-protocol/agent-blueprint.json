@@ -123,6 +123,22 @@
     ],
     "write_authority_refs": [
       "opl://owner/fixture-research"
+    ],
+    "knowledge_requirements": [
+      {
+        "requirement_id": "fixture-research.evidence-method",
+        "scope_kind": "product",
+        "content_kind": "mechanism",
+        "semantic_owner_ref": "opl://owner/fixture-research",
+        "source_modes": [
+          "product"
+        ],
+        "requirement": "required",
+        "freshness_policy": "Review when the evidence method changes.",
+        "writeback_owner_ref": "opl://owner/fixture-research",
+        "derived_dependency_policy": "Bind the accepted source revision.",
+        "action_critical": false
+      }
     ]
   },
   "assumptions": [

@@ -98,18 +98,9 @@ stage_id
 2. **OPL 生成 / 托管层**：OPL Pack / Stagecraft / Connect 根据合同与 `agent/stages/manifest.json` 生成 `family_stage_control_plane`、CLI、MCP、Skill descriptor、OpenAI / AI SDK tool descriptor、App projection、workspace projection 和 conformance readback；Codex App carrier 由 `agent/primary_skill/SKILL.md` 物化为 owner Package 的 Codex plugin。
 3. **Workspace 执行层**：Codex、App 或 hosted runner 消费投影后的 prompt、skill、tool descriptor 和 refs。`.agents/skills/` 是 workspace / quest-local Codex discovery projection，不是 domain repo 的 canonical source；`.codex/` 仅保留 OPL 的配置、owner、manifest 和 transaction 元数据。
 
-长期知识按四层管理，共同遵守 [durable knowledge lifecycle](../../contracts/opl-framework/durable-knowledge-lifecycle-contract.json)：
+知识正文的归属、来源与生命周期由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)统一定义，机器字段见 [durable knowledge lifecycle](../../contracts/opl-framework/durable-knowledge-lifecycle-contract.json)。产品知识由 `contracts/durable_knowledge_catalog.json` 登记；用户、主题和项目知识通过获授权的来源绑定接入，同一模型支持个人资料库、普通工作目录与混合来源。知识 scope 不由目录前缀决定。
 
-| 层 | 位置 | 例子 | owner |
-| --- | --- | --- | --- |
-| Agent pack | 领域仓 `agent/knowledge/` | 金融机制、研究套路、期刊偏好、专业执行规则 | 领域 Agent |
-| Workspace shared | Workspace `shared/memory/` | 跨项目风险政策、来源偏好、共同约束 | Workspace owner |
-| Workspace project | 项目 `memory/` | 投资 mandate、研究设计、书稿风格选择、项目决策历史 | 项目 owner |
-| Dated state | 项目 `state/`（附权威来源） | 持仓、现金、订单、当前利率、当季期刊要求 | 领域 owner 或外部权威 |
-
-OPL 负责目录、身份、适用范围、召回、不可变字节和消费回执；领域/项目 owner 负责正文语义、接受或拒绝写回。StageRun 从统一 catalog 按领域、Stage、明确任务范围、状态和审阅期限选择知识，为 producer、reviewer、repairer 和 re-reviewer 固定同一份私有正文快照。静态 `knowledge_refs` 只表达编写关联，不再绕过 catalog 注入正文；`skills` 仍按不可变 managed content 绑定。公开状态只投影召回回执和快照引用。
-
-OPL 不把所有知识一次性注入提示词，也不把召回命中当成质量结论。每次 Attempt 只消费 Stage 适用的较小知识集，并记录知识 ID、正文 SHA-256 和选择理由。Agent catalog 必须存在；缺少可选 workspace catalog 或条目过期可继续，但必须形成可见 quality debt；权威 claim、质量结论和真实交易等硬边界仍由各自 owner 决定。
+StageRun 为 producer、reviewer、repairer 和 re-reviewer 固定同一份私有正文快照。静态 `knowledge_refs` 只表达编写关联，不绕过 catalog、来源权限和有效性直接注入正文；`skills` 仍按不可变 managed content 绑定。公开状态只投影召回回执和快照引用。必要知识与可选知识的缺口处理遵守领域任务声明。
 
 因此，“Stage 内可以用哪些能力”不是靠把所有文本塞进一个提示词解决，而是靠 Stage 主提示词引用稳定能力面：domain skill declarations、repo-local professional Skill、外置 professional pack、OPL Connect connector、知识 refs、质量门和 receipt shape。AI executor 在 Stage 内做开放式判断；合同只负责边界、证据和接力。
 
@@ -145,6 +136,8 @@ OMA stage-decomposition / agent-building semantics
 
 OMA 负责目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据诊断和 `EvolutionProposal`。OPL Framework 负责 Pack scaffold/conformance、generated interfaces、FoundryRun、物化、评测、证据、版本、canary、activation、rollback 和 workspace projection。目标 agent/owner 负责自己的 domain truth、保护测试、artifact body、quality verdict、owner receipt、human gate 与生产采用。
 
+蓝图必须说明所需知识的归属、内容性质、来源模式、必要性与写回负责人。OMA 声明语义需求，获授权的运行控制面建立具体来源绑定；它不为每个新 Agent 另建个人正文库，也不通过蓝图授予私人目录访问权。
+
 ## 准入口径
 
 1. repo source 必须具备 `agent/`、`contracts/`、`runtime/` 和 `docs/`，`pack_compiler_input.json` 只能指向真实 source，不得用 README 占位。
@@ -158,12 +151,6 @@ OMA 负责目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据�
 
 ### 知识写入与治理
 
-正文使用可阅读的 Markdown；Agent 元数据归 `contracts/durable_knowledge_catalog.json`，其余三层各自在上述目录使用 `opl_durable_knowledge_catalog.json`。OPL 固定目录，不接受 Agent 覆盖或旧 descriptor 回退。项目根来自已授权 execution scope，不能由普通输入把另一个项目的目录带入。
+领域仓只维护自己的产品正文和语义规则。个人及项目正文通过来源登记直接读取；工作区保存绑定、任务产物、修订提案和回执，不要求中间全文副本。项目根与调用者范围来自已授权 execution scope，普通请求不能自行带入另一个项目或用户的私有目录。
 
-项目结论先进入本项目 `memory/`，跨项目约束由 workspace owner 审阅后进入 `shared/memory/`。只有经脱敏、来源核实和领域审阅的可复用方法才进入 Agent 包。最新持仓、期刊要求和市场观察保存观察日期与来源，进入 `state/`；到期需重新核实，不能靠延长日期恢复有效性。
-
-领域 owner 负责候选、接受/拒绝、正文和证据；OPL 统一校验路径、scope、状态、日期、正文 hash、召回及消费回执。写入需同步正文与目录，并保留接受记录；未接受的候选为 draft，过期或废弃条目不召回。知识召回是推理输入，不能代替交易授权、研究证据或质量判断。源码 Git 保留演进，不复制旧私有存储或兼容 reader。
-
-个人知识库可以保留唯一可编辑 Markdown，工作区仅生成逐字投影。工作区条目用 `projection_source` 显式声明所有者授权的绝对来源根、根内相对路径与 SHA-256；通用 Agent 包禁止声明外部来源。新召回同时检查原文与投影字节，原文已变则要求领域 owner 复核并重新投影。已有 Stage 快照仍保留原字节，不在审阅中途刷新。来源观察日期与接入、复核日期分别记录。
-
-直接 Skill 使用 `opl knowledge prepare --repo <package> --domain <domain> --stage <stage> --task-intent <action> --workspace <root> --project <root> --output <new-binding.json>` 建立与托管 Stage 相同的私有快照，再用 `opl knowledge read-context --binding <new-binding.json> --json` 显式读取正文。普通 list、inspect、recall 仍只输出目录或回执；prepare 不覆盖已有绑定。领域 writer 保管具体提案、原/新正文哈希、真实接受依据和写回回执，发生并发修改时核对原版本后再写。
+直接 Skill 与托管 Stage 共用 Framework 的知识快照接口。`opl knowledge prepare` 建立新的私有绑定，`opl knowledge read-context` 读取绑定正文；普通 list、inspect、recall 只输出目录或回执。操作入口见[知识来源接口](../specs/knowledge-sources.md)，具体字段与命令以 `opl help` 和知识合同为准。接受、并发修订、派生失效、撤权和保留规则只由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)维护。

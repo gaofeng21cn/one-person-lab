@@ -1199,6 +1199,12 @@ test('package status projects and bulk update visits required installed owner de
   execFileSync('git', ['commit', '-q', '-m', 'ScholarSkills fixture'], { cwd: providerSource });
   fs.writeFileSync(path.join(rootSource, 'opl-package.json'), formatJsonPayload(rootManifest));
   fs.writeFileSync(path.join(rootCarrier, 'opl-package.json'), formatJsonPayload(rootManifest));
+  execFileSync('git', ['init', '-q'], { cwd: rootSource });
+  execFileSync('git', ['config', 'user.name', 'OPL Fixture'], { cwd: rootSource });
+  execFileSync('git', ['config', 'user.email', 'opl-fixture@example.test'], { cwd: rootSource });
+  execFileSync('git', ['add', '.'], { cwd: rootSource });
+  execFileSync('git', ['commit', '-q', '-m', 'MAS source fixture'], { cwd: rootSource });
+  const selectedSourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: rootSource, encoding: 'utf8' }).trim();
   const payloadPaths = [
     'plugin.json',
     '.codex-plugin/plugin.json',
@@ -1214,7 +1220,7 @@ test('package status projects and bulk update visits required installed owner de
     plugin_id: 'med-autoscience',
     package_version: masVersion,
     source_repo: rootManifest.source_repo,
-    source_commit: sourceCommit,
+    source_commit: selectedSourceCommit,
     source_root: 'plugins/med-autoscience',
     content_lock: {
       algorithm: 'sha256',
@@ -1240,7 +1246,7 @@ test('package status projects and bulk update visits required installed owner de
   projectedMas.source_repo = rootManifest.source_repo;
   projectedMas.codex_surface.plugin_id = 'med-autoscience';
   projectedMas.codex_surface.plugin_payload_manifest_url = payloadRef;
-  projectedMas.codex_surface.carrier_source_commit = sourceCommit;
+  projectedMas.codex_surface.carrier_source_commit = selectedSourceCommit;
   projectedMas.codex_surface.configured_codex_plugin_carrier =
     rootManifest.codex_surface.configured_codex_plugin_carrier;
   projectedMas.codex_surface.required_skill_ids = ['med-autoscience'];

@@ -272,7 +272,7 @@ function writeLifecycleContracts(checkoutRoot: string) {
     path.join(checkoutRoot, 'contracts/durable_knowledge_catalog.json'),
     JSON.stringify({
       surface_kind: 'opl_durable_knowledge_catalog',
-      version: 'durable-knowledge-catalog.v1',
+      version: 'durable-knowledge-catalog.v2',
       owner: 'one-person-lab',
       items: [],
     }),

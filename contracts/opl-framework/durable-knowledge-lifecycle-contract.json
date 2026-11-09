@@ -1,6 +1,6 @@
 {
   "surface_kind": "opl_durable_knowledge_lifecycle_contract",
-  "version": "opl-durable-knowledge-lifecycle.v1",
+  "version": "opl-durable-knowledge-lifecycle.v2",
   "owner": "one-person-lab",
   "state": "active_contract",
   "purpose": "Define the common lifecycle for reusable knowledge and dated memory across OPL agents and workspaces without transferring domain truth, body ownership, or quality verdicts to OPL.",
@@ -11,10 +11,13 @@
       "stage_attempt_context"
     ],
     "covers": [
-      "stable_agent_knowledge",
-      "workspace_project_memory",
-      "dated_current_state",
-      "decision_and_execution_records"
+      "product_knowledge",
+      "owner_and_topic_knowledge",
+      "project_knowledge",
+      "dated_state",
+      "decision_records",
+      "derived_context",
+      "source_bindings_and_execution_snapshots"
     ],
     "does_not_cover": [
       "provider_workflow_history",
@@ -23,77 +26,12 @@
       "quality_or_export_verdict"
     ]
   },
-  "layer_model": {
-    "agent_pack": {
-      "role": "versioned_reusable_domain_knowledge",
-      "body_location": "agent/knowledge/",
-      "examples": [
-        "financial_mechanisms",
-        "research_methods",
-        "journal_style_guidance",
-        "grant_strategy",
-        "execution_rules"
-      ],
-      "owner": "domain_agent",
-      "shared_across_projects": true,
-      "must_not_hold": [
-        "private_account_state",
-        "current_market_prices",
-        "one_project_findings_as_universal_rule"
-      ]
-    },
-    "workspace_shared": {
-      "role": "cross_project_owner_or_team_memory",
-      "body_location": "shared/memory/",
-      "examples": [
-        "owner_constraints",
-        "risk_policy",
-        "preferred_source_hierarchy",
-        "cross_project_lessons"
-      ],
-      "owner": "workspace_owner",
-      "shared_across_projects": true,
-      "must_not_hold": [
-        "agent_package_implementation",
-        "credentials",
-        "provider_runtime_state"
-      ]
-    },
-    "workspace_project": {
-      "role": "project_specific_durable_context",
-      "body_location": "memory/",
-      "examples": [
-        "investment_mandate",
-        "research_question_and_design",
-        "book_style_choices",
-        "decision_history"
-      ],
-      "owner": "project_owner",
-      "shared_across_projects": false,
-      "must_not_hold": [
-        "agent_global_rule",
-        "another_project_private_state"
-      ]
-    },
-    "dated_state": {
-      "role": "current_or_historical_fact_snapshot",
-      "body_location": "state/",
-      "examples": [
-        "holdings_and_cash",
-        "current_journal_requirements",
-        "submitted_order_state",
-        "dated_macro_observation"
-      ],
-      "owner": "domain_owner_or_external_authority",
-      "shared_across_projects": false,
-      "promotion_to_durable_knowledge": "explicit_owner_or_domain_review_required"
-    }
-  },
   "knowledge_item_requirements": {
     "required_fields": [
       "knowledge_id",
       "title",
-      "layer",
+      "scope",
+      "content_kind",
       "owner",
       "body_ref",
       "applicability",
@@ -102,12 +40,13 @@
       "next_review_at"
     ],
     "recommended_fields": [
-      "version",
       "sources",
-      "tags",
       "supersedes",
       "superseded_by",
-      "freshness_policy"
+      "freshness_policy",
+      "requirement",
+      "action_critical",
+      "derived_from"
     ],
     "identity_policy": "stable_across_body_revisions",
     "body_addressing_policy": "exact_sha256_at_stage_binding",
@@ -138,8 +77,12 @@
     "public_projection": "receipt_and_snapshot_ref_only_no_private_body",
     "static_knowledge_refs": "authoring_references_only_never_bypass_catalog_lifecycle",
     "direct_skill_binding": "knowledge_prepare_then_explicit_private_read_context_uses_stage_snapshot_store",
-    "workspace_source_projection": "optional_explicit_owner_source_root_and_contained_ref; exact_source_and_projection_hash_required_before_new_recall; forbidden_in_agent_pack",
-    "frozen_source_policy": "source_changes_block_new_recall_until_owner_review_and_projection_refresh; existing_stage_snapshot_remains_immutable"
+    "direct_source_read": "resolve_authorized_source_then_freeze_exact_bytes",
+    "required_knowledge": "required_item_ids_and_blueprint_requirements_fail_closed; optional_items_report_quality_debt",
+    "derived_knowledge": "transitive_source_versions_currentness_and_authorization",
+    "snapshot_reuse": "historical_bytes_immutable; live_authorization_rechecked_before_every_body_read",
+    "action_revalidation": "action_critical_items_and_dependencies_rechecked_before_executor_hydration_and_domain_action",
+    "source_drift": "reject_drifted_items_until_owner_review; independent_optional_work_can_continue"
   },
   "writeback_policy": {
     "agent_may_propose": true,
@@ -148,8 +91,8 @@
     "opl_may_apply_without_owner_receipt": false,
     "proposal_must_include": [
       "source_refs",
-      "target_layer",
       "target_scope",
+      "content_kind",
       "proposed_rule_or_mechanism",
       "evidence_class",
       "review_requirement"
@@ -157,9 +100,10 @@
     "automatic_promotion_from_state": false,
     "automatic_promotion_from_single_task": false,
     "accepted_writeback_requires_receipt": true,
-    "body_writer": "domain_or_workspace_owner; OPL validates_and_transports_only",
-    "accepted_writeback_identity": "proposal_digest_original_body_digest_replacement_body_digest_and_actual_owner_review_ref",
-    "concurrent_source_change": "reject_overwrite_and_reconcile_before_retry"
+    "body_writer": "domain_or_user_owner_via_common_mechanical_writer",
+    "accepted_writeback_identity": "proposal_digest_original_body_digest_replacement_body_digest_registry_digest_and_actual_review_ref",
+    "concurrent_source_change": "reject_overwrite_and_reconcile_before_retry; local_lock_is_not_cross_device_transaction",
+    "owner_edit_review": "review_source_records_current_bytes_and_acceptance_without_rewriting_original"
   },
   "lifecycle_states": [
     "draft",
@@ -180,12 +124,55 @@
     "opl_can_write_domain_memory_body": false,
     "opl_can_accept_or_reject_semantic_knowledge": false,
     "opl_can_authorize_quality_or_export": false,
-    "provider_completion_counts_as_knowledge_acceptance": false
+    "provider_completion_counts_as_knowledge_acceptance": false,
+    "opl_can_apply_owner_accepted_bytes_mechanically": true
   },
   "non_authority_flags": {
     "knowledge_is_route_verdict": false,
     "knowledge_is_quality_verdict": false,
     "knowledge_is_domain_truth": false,
     "recall_receipt_proves_answer_correctness": false
+  },
+  "scope_model": {
+    "product": {
+      "role": "versioned_reusable_domain_knowledge",
+      "owner": "domain_product_owner",
+      "body_source": "distributable_package_repo_path"
+    },
+    "owner": {
+      "role": "cross_topic_person_or_team_knowledge",
+      "owner": "user_or_team",
+      "body_source": "explicitly_bound_local_markdown_source"
+    },
+    "topic": {
+      "role": "long_lived_domain_knowledge_shared_by_authorized_projects",
+      "owner": "user_or_team_topic_owner",
+      "body_source": "explicitly_bound_local_markdown_source"
+    },
+    "project": {
+      "role": "specific_project_design_and_accepted_decisions",
+      "owner": "project_owner",
+      "identity": "workspace_inventory_project_id",
+      "body_source": "explicitly_bound_local_markdown_source"
+    }
+  },
+  "content_kinds": [
+    "mechanism",
+    "policy",
+    "state",
+    "decision"
+  ],
+  "source_model": {
+    "registry_schema_ref": "contracts/opl-framework/knowledge-source-registry.schema.json",
+    "binding_schema_ref": "contracts/opl-framework/knowledge-source-bindings.schema.json",
+    "binding_ref": "shared/memory/knowledge-bindings.json",
+    "registry_owner": "existing_profile_or_workspace_private_control_plane",
+    "canonical_body": "one_editable_source_per_knowledge_id",
+    "sources": "local_markdown_inside_or_outside_workspace",
+    "intermediate_full_text_projection_required": false,
+    "scope_binding": "explicit_source_ids_and_scope_ids_intersect_live_registry_grants",
+    "project_identity": "resolve_project_root_through_workspace_index_projects",
+    "semantic_owner_requirement_binding": "explicit_requirement_id_owner_id_knowledge_ids_mapping_or_exact_owner_identity",
+    "source_root_from_agent_package": false
   }
 }

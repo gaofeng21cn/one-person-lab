@@ -209,11 +209,11 @@ function withStageControlPlane(payload: JsonRecord, targetDomainId: string, owne
 
 function withMemoryDescriptor(payload: JsonRecord, targetDomainId: string, owner: string, memoryRefId: string) {
   return attachManifestSurface(payload, 'domain_memory_descriptor', {
-    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v1',
+    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v2',
     domain_id: targetDomainId, owner: 'one-person-lab',
     items: [{
-      surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
-      knowledge_id: memoryRefId, title: 'Fixture knowledge', layer: 'agent_pack', owner,
+      surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v2',
+      knowledge_id: memoryRefId, title: 'Fixture knowledge', scope: { kind: 'product', id: owner }, content_kind: 'mechanism', owner,
       body_ref: { kind: 'repo_path', ref: 'agent/knowledge/domain_boundary.md' },
       applicability: { domains: [targetDomainId], stages: ['intake'] },
       status: 'active', reviewed_at: '2026-01-01T00:00:00Z', next_review_at: '2099-01-01T00:00:00Z',

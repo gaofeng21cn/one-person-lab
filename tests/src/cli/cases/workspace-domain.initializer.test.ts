@@ -28,6 +28,7 @@ import './workspace-domain-initializer-cases/bookforge-artifact-lifecycle.ts';
 import './workspace-domain-initializer-cases/resource-provenance.ts';
 import './workspace-domain-initializer-cases/source-material-ingest.ts';
 import './workspace-domain-initializer-cases/validation-and-doctor.ts';
+import './workspace-domain-initializer-cases/existing-project-root.ts';
 
 function readJsonFile(filePath: string) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;

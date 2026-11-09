@@ -28,6 +28,468 @@
     "knowledge"
   ],
   "commands": {
+    "knowledge_inspect_source": {
+      "command_id": "knowledge inspect-source",
+      "owner": "OPL Framework durable knowledge",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {"name": "workspace", "flag": "--workspace", "value_kind": "string", "required": true, "summary": "Authorized workspace root."},
+        {"name": "domain", "flag": "--domain", "value_kind": "string", "required": true, "summary": "Caller domain identity."},
+        {"name": "id", "flag": "--id", "value_kind": "string", "required": true, "summary": "Stable source knowledge identity."},
+        {"name": "project", "flag": "--project", "value_kind": "string", "required": false, "summary": "Registered project root within the workspace."}
+      ],
+      "output_schema": {
+        "type": "object", "additionalProperties": false, "required": ["version", "knowledge_source_candidate"],
+        "properties": {"version": {"const": "g2"}, "knowledge_source_candidate": {"type": "object", "additionalProperties": false, "required": ["knowledge_id", "sha256", "accepted_sha256", "content", "source_ref", "status"], "properties": {"knowledge_id": {"type": "string"}, "sha256": {"type": "string"}, "accepted_sha256": {"type": "string"}, "content": {"type": "string"}, "source_ref": {"type": "string"}, "status": {"type": "string"}}}}
+      },
+      "authority_boundary": {"can_write_domain_truth": false, "can_create_owner_receipt": false, "can_create_typed_blocker": false, "can_claim_domain_ready": false, "can_claim_production_ready": false, "owner": "OPL Framework durable knowledge", "surface": "explicit_source_candidate_inspection"}
+    },
+    "knowledge_read_source": {
+      "command_id": "knowledge read-source",
+      "owner": "OPL Framework durable knowledge",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {"name": "workspace", "flag": "--workspace", "value_kind": "string", "required": true, "summary": "Authorized workspace root."},
+        {"name": "domain", "flag": "--domain", "value_kind": "string", "required": true, "summary": "Caller domain identity."},
+        {"name": "id", "flag": "--id", "value_kind": "string", "required": true, "summary": "Stable source knowledge identity."},
+        {"name": "project", "flag": "--project", "value_kind": "string", "required": false, "summary": "Registered project root within the workspace."}
+      ],
+      "output_schema": {
+        "type": "object", "additionalProperties": false, "required": ["version", "knowledge_source"],
+        "properties": {"version": {"const": "g2"}, "knowledge_source": {"type": "object", "additionalProperties": false, "required": ["knowledge_id", "sha256", "content", "source_ref"], "properties": {"knowledge_id": {"type": "string"}, "sha256": {"type": "string"}, "content": {"type": "string"}, "source_ref": {"type": "string"}}}}
+      },
+      "authority_boundary": {"can_write_domain_truth": false, "can_create_owner_receipt": false, "can_create_typed_blocker": false, "can_claim_domain_ready": false, "can_claim_production_ready": false, "owner": "OPL Framework durable knowledge", "surface": "explicit_authorized_private_source_read"}
+    },
+    "knowledge_revalidate": {
+      "command_id": "knowledge revalidate",
+      "owner": "OPL Framework durable knowledge",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "binding",
+          "flag": "--binding",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact frozen knowledge binding."
+        },
+        {
+          "name": "for-action",
+          "flag": "--for-action",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Also require current versions of action-critical knowledge."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "knowledge_revalidation"
+        ],
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "knowledge_revalidation": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Framework durable knowledge",
+        "surface": "live_knowledge_access_and_action_revalidation"
+      }
+    },
+    "knowledge_verify_dependencies": {
+      "command_id": "knowledge verify-dependencies",
+      "owner": "OPL Framework durable knowledge",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "workspace",
+          "flag": "--workspace",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Authorized workspace root."
+        },
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Caller domain identity."
+        },
+        {
+          "name": "project",
+          "flag": "--project",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Registered project root within the workspace."
+        },
+        {
+          "name": "dependencies",
+          "flag": "--dependencies",
+          "value_kind": "string",
+          "required": true,
+          "summary": "JSON array of exact knowledge_id and sha256 dependencies."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "knowledge_dependencies"
+        ],
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "knowledge_dependencies": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Framework durable knowledge",
+        "surface": "derived_knowledge_dependency_validation"
+      }
+    },
+    "knowledge_propose": {
+      "command_id": "knowledge propose",
+      "owner": "OPL Framework durable knowledge",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "workspace",
+          "flag": "--workspace",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Authorized workspace root."
+        },
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Caller domain identity."
+        },
+        {
+          "name": "project",
+          "flag": "--project",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Registered project root within the workspace."
+        },
+        {
+          "name": "id",
+          "flag": "--id",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Stable source knowledge identity."
+        },
+        {
+          "name": "proposal",
+          "flag": "--proposal",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Owner knowledge revision proposal JSON."
+        },
+        {
+          "name": "body",
+          "flag": "--body",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Replacement Markdown body."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "knowledge_proposal"
+        ],
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "knowledge_proposal": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Framework durable knowledge",
+        "surface": "owner_knowledge_revision_proposal"
+      }
+    },
+    "knowledge_review": {
+      "command_id": "knowledge review",
+      "owner": "OPL Framework durable knowledge",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "workspace",
+          "flag": "--workspace",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Authorized workspace root."
+        },
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Caller domain identity."
+        },
+        {
+          "name": "project",
+          "flag": "--project",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Registered project root within the workspace."
+        },
+        {
+          "name": "reviewer",
+          "flag": "--reviewer",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Authorized maintainer recorded for this review."
+        },
+        {
+          "name": "review-ref",
+          "flag": "--review-ref",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Actual owner authorization and review reference."
+        },
+        {
+          "name": "reviewed-at",
+          "flag": "--reviewed-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Observed review timestamp."
+        },
+        {
+          "name": "next-review-at",
+          "flag": "--next-review-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Next review deadline."
+        },
+        {
+          "name": "proposal-id",
+          "flag": "--proposal-id",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact immutable proposal digest."
+        },
+        {
+          "name": "decision",
+          "flag": "--decision",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Recorded owner decision: accepted or rejected."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "knowledge_review"
+        ],
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "knowledge_review": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Framework durable knowledge",
+        "surface": "record_existing_owner_knowledge_review"
+      }
+    },
+    "knowledge_apply": {
+      "command_id": "knowledge apply",
+      "owner": "OPL Framework durable knowledge",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "workspace",
+          "flag": "--workspace",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Authorized workspace root."
+        },
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Caller domain identity."
+        },
+        {
+          "name": "project",
+          "flag": "--project",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Registered project root within the workspace."
+        },
+        {
+          "name": "proposal-id",
+          "flag": "--proposal-id",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Exact immutable proposal digest."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "knowledge_writeback"
+        ],
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "knowledge_writeback": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Framework durable knowledge",
+        "surface": "accepted_owner_knowledge_writeback"
+      }
+    },
+    "knowledge_review_source": {
+      "command_id": "knowledge review-source",
+      "owner": "OPL Framework durable knowledge",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {"name": "expected-sha256", "flag": "--expected-sha256", "value_kind": "string", "required": true, "summary": "Digest returned by the source inspection that the owner reviewed."},
+        {
+          "name": "workspace",
+          "flag": "--workspace",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Authorized workspace root."
+        },
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Caller domain identity."
+        },
+        {
+          "name": "project",
+          "flag": "--project",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Registered project root within the workspace."
+        },
+        {
+          "name": "reviewer",
+          "flag": "--reviewer",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Authorized maintainer recorded for this review."
+        },
+        {
+          "name": "review-ref",
+          "flag": "--review-ref",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Actual owner authorization and review reference."
+        },
+        {
+          "name": "reviewed-at",
+          "flag": "--reviewed-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Observed review timestamp."
+        },
+        {
+          "name": "next-review-at",
+          "flag": "--next-review-at",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Next review deadline."
+        },
+        {
+          "name": "id",
+          "flag": "--id",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Stable source knowledge identity."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "knowledge_writeback"
+        ],
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "knowledge_writeback": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Framework durable knowledge",
+        "surface": "accept_reviewed_source_revision"
+      }
+    },
     "knowledge_prepare": {
       "command_id": "knowledge prepare",
       "owner": "OPL Framework durable knowledge",
@@ -98,7 +560,7 @@
                 "const": "opl_durable_knowledge_catalog"
               },
               "version": {
-                "const": "durable-knowledge-catalog.v1"
+                "const": "durable-knowledge-catalog.v2"
               },
               "owner": {
                 "const": "one-person-lab"
@@ -216,14 +678,14 @@
           "flag": "--workspace",
           "value_kind": "string",
           "required": false,
-          "summary": "Optional workspace root for workspace-layer knowledge bodies."
+          "summary": "Optional workspace root with explicit owner-controlled knowledge source bindings."
         },
         {
           "name": "project",
           "flag": "--project",
           "value_kind": "string",
           "required": false,
-          "summary": "Optional project root for project memory and dated-state catalogs."
+          "summary": "Optional registered project root used to select project-scoped source knowledge."
         }
       ],
       "output_schema": {
@@ -253,7 +715,7 @@
                 "const": "opl_durable_knowledge_recall_receipt"
               },
               "version": {
-                "const": "durable-knowledge-recall-receipt.v1"
+                "const": "durable-knowledge-recall-receipt.v2"
               },
               "domain_id": {
                 "type": "string"

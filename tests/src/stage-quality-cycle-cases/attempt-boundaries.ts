@@ -66,7 +66,7 @@ test('StageRun controller input rejects custom Attempt roles and quality budgets
     path.join(domainPackRoot, 'contracts/durable_knowledge_catalog.json'),
     JSON.stringify({
       surface_kind: 'opl_durable_knowledge_catalog',
-      version: 'durable-knowledge-catalog.v1',
+      version: 'durable-knowledge-catalog.v2',
       owner: 'one-person-lab',
       items: [],
     }),

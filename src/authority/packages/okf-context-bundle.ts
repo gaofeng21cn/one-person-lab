@@ -427,9 +427,9 @@ export function buildOkfContextBundleFromDomainRepo(
         id: `${pack.domainId}/knowledge/${item.knowledge_id}`,
         type: 'memory_locator', title: item.title,
         resource: item.body_ref.ref,
-        tags: ['opl', 'okf', item.layer],
+        tags: ['opl', 'okf', item.scope.kind, item.content_kind],
         body: `# ${item.title}\n\nKnowledge body: ${item.body_ref.ref}\n`,
-        frontmatter: { knowledge_id: item.knowledge_id, layer: item.layer, status: item.status, body_owner: item.owner },
+        frontmatter: { knowledge_id: item.knowledge_id, scope: item.scope, content_kind: item.content_kind, status: item.status, body_owner: item.owner },
       }))
     : [];
   const bundleId = options.bundleId ?? `okf:${pack.domainId}:domain-repo`;

@@ -20,6 +20,7 @@
       "workspace_path_or_workspace_root",
       "workspace_id",
       "project_id",
+      "project_root",
       "mode",
       "title",
       "dry_run",

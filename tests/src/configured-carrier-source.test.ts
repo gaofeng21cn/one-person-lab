@@ -9,6 +9,7 @@ import { installPayloadMarketplace } from '../../src/adapters/integration/agent-
 import { hostedRuntimeReadiness } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
 import { gitMarketplaceRuntimeRoot } from '../../src/kernel/git-marketplace-runtime-root.ts';
 import { acquireHostedPackageSource } from '../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-source.ts';
+import { materializeStandardAgentFrameworkLink } from '../../src/adapters/integration/standard-agent-framework-link.ts';
 
 const hash = (bytes: Buffer) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 const json = (value: unknown) => Buffer.from(`${JSON.stringify(value)}\n`);
@@ -228,4 +229,84 @@ test('Full source seed installs through the native payload verifier without netw
       }
     } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
   }
+});
+
+function developerFixture() {
+  const f = fixture();
+  const packages = path.join(f.root, 'packages');
+  const write = (ref: string, content: string) => {
+    const file = path.join(f.source, ref);
+    fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content);
+  };
+  write('.agents/plugins/marketplace.json', '{}\n');
+  write('.gitignore', 'src/opl_framework\n');
+  write('runtime.mjs', 'process.stdout.write("committed runtime");\n');
+  write('src/fixture_runtime.py', 'import opl_framework\nprint(opl_framework.__file__)\n');
+  const git = (args: string[]) => execFileSync('git', ['-C', f.source, ...args], { encoding: 'utf8' }).trim();
+  git(['init', '-q']);
+  git(['config', 'user.name', 'OPL Fixture']);
+  git(['config', 'user.email', 'opl-fixture@example.test']);
+  git(['add', '.']); git(['commit', '-q', '-m', 'Source fixture']);
+  const commit = git(['rev-parse', 'HEAD']);
+  const checkout = path.join(f.root, 'task-worktree');
+  git(['worktree', 'add', '--quiet', '--detach', checkout, commit]);
+  const owner = JSON.parse(fs.readFileSync(path.join(packages, 'fixture.json'), 'utf8'));
+  owner.codex_surface.carrier_source_commit = commit;
+  const payload = JSON.parse(fs.readFileSync(path.join(packages, 'payload.json'), 'utf8'));
+  payload.source_commit = commit;
+  for (const file of payload.files) file.source_url = file.source_url.replace('1'.repeat(40), commit);
+  fs.writeFileSync(path.join(packages, 'fixture.json'), json(owner));
+  fs.writeFileSync(path.join(packages, 'payload.json'), json(payload));
+  const env = { ...process.env, OPL_STATE_DIR: path.join(f.root, 'state'),
+    OPL_MODULE_SOURCE_MODE: 'git_checkout', OPL_MODULE_PATH_FIXTURE: checkout };
+  return { ...f, checkout, commit, owner, payload, env };
+}
+
+test('developer installation archives the selected commit and survives removal of its task worktree', () => {
+  const f = developerFixture();
+  try {
+    const external = path.join(f.root, 'external-runtime');
+    fs.mkdirSync(external); fs.writeFileSync(path.join(external, 'secret'), 'excluded');
+    fs.symlinkSync(external, path.join(f.checkout, 'src/opl_framework'));
+    fs.writeFileSync(path.join(f.checkout, 'untracked-private.txt'), 'excluded');
+    fs.writeFileSync(path.join(f.checkout, 'runtime.mjs'), 'throw new Error("dirty checkout");\n');
+    assert.equal(fs.statSync(path.join(f.checkout, '.git')).isFile(), true);
+
+    const source = acquireHostedPackageSource({ packageId: 'fixture', ownerManifest: f.owner, payload: f.payload, env: f.env });
+    assert.ok(source);
+    assert.notEqual(source.sourceRoot, f.checkout);
+    assert.equal(source.provenance.source_commit, f.commit);
+    source.cleanup();
+    assert.equal(fs.existsSync(source.sourceRoot), false);
+
+    assert.equal(f.install(f.env), f.marketplace);
+    for (const ref of ['.git', 'src/opl_framework', 'untracked-private.txt']) {
+      assert.equal(fs.existsSync(path.join(f.marketplace, ref)), false, ref);
+    }
+    const marker = JSON.parse(fs.readFileSync(path.join(f.marketplace, '.codex-marketplace-install.json'), 'utf8'));
+    assert.equal(marker.source, f.owner.source_repo);
+    assert.equal(marker.source_commit, f.commit);
+    assert.equal(marker.source_checkout, f.checkout);
+    const link = materializeStandardAgentFrameworkLink({ agentRoot: f.marketplace });
+    assert.equal(link.status, 'linked');
+    assert.equal(fs.realpathSync(path.join(f.marketplace, 'src/opl_framework')), fs.realpathSync(link.python_target_root!));
+    fs.rmSync(f.checkout, { recursive: true, force: true });
+    fs.rmSync(f.source, { recursive: true, force: true });
+    fs.rmSync(external, { recursive: true, force: true });
+    assert.equal(execFileSync(process.execPath, [path.join(f.marketplace, 'runtime.mjs')], { encoding: 'utf8' }), 'committed runtime');
+    const importedFramework = execFileSync('python3', [path.join(f.marketplace, 'src/fixture_runtime.py')], { encoding: 'utf8' }).trim();
+    assert.equal(fs.realpathSync(importedFramework), fs.realpathSync(path.join(link.python_target_root!, '__init__.py')));
+    assert.equal(gitMarketplaceRuntimeRoot(path.join(f.marketplace, 'plugins/fixture'),
+      'owner/fixture', 'contracts/domain_descriptor.json'), f.marketplace);
+  } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+});
+
+test('developer source acquisition rejects an unavailable commit without falling back to checkout HEAD', () => {
+  const f = developerFixture();
+  try {
+    const payload = { ...f.payload, source_commit: 'f'.repeat(40) };
+    assert.throws(() => acquireHostedPackageSource({ packageId: 'fixture', ownerManifest: f.owner, payload, env: f.env }),
+      /cannot materialize the selected source commit/);
+    assert.equal(fs.existsSync(f.marketplace), false);
+  } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
 });

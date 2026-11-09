@@ -53,7 +53,9 @@ type FixtureLock = {
   source_commit: string;
   evidence_class: string;
   live_model_proof: boolean;
-  files: Array<{ path: string; source_path: string; sha256: string }>;
+  source_provenance: 'derived_for_current_contract';
+  transformations: string[];
+  files: Array<{ path: string; source_path: string; sha256: string; source_sha256?: string }>;
 };
 
 type Artifact = {
@@ -171,6 +173,7 @@ function transportableBlueprint(
       memory_classes: ['task_observation'],
       retention_refs: ['opl://retention/fixture-research/default'],
       write_authority_refs: ['opl://owner/fixture-research'],
+      knowledge_requirements: [],
     },
     assumptions: ['This payload is deterministic transport evidence, not live OMA model output.'],
     design_evidence_refs: [...request.source_refs],
@@ -309,7 +312,7 @@ function stageState(input: {
   };
 }
 
-test('OMA 0.4.0 deterministic fixture bytes are locked to exact commit without claiming live model proof', () => {
+test('OMA deterministic fixtures retain input provenance and lock current-contract derivations without claiming live model proof', () => {
   const lock = readJson<FixtureLock>(path.join(fixtureRoot, 'source-lock.json'));
   assert.equal(lock.surface_kind, 'opl_foundry_oma_fixture_lock');
   assert.equal(lock.version, 'opl-foundry-oma-fixture-lock.v1');
@@ -318,6 +321,8 @@ test('OMA 0.4.0 deterministic fixture bytes are locked to exact commit without c
   assert.equal(lock.source_commit, exactOmaCommit);
   assert.equal(lock.evidence_class, 'deterministic_local_fixture');
   assert.equal(lock.live_model_proof, false);
+  assert.equal(lock.source_provenance, 'derived_for_current_contract');
+  assert.deepEqual(lock.transformations, ['knowledge_requirements_contract']);
   assert.deepEqual(lock.files.map(({ path: fixturePath, source_path: sourcePath }) => ({
     fixture_path: fixturePath,
     source_path: sourcePath,
@@ -349,6 +354,10 @@ test('OMA 0.4.0 deterministic fixture bytes are locked to exact commit without c
     { package_id: 'oma', package_version: '0.4.0', source_commit: exactOmaCommit },
   );
   for (const entry of lock.files) {
+    if (entry.source_sha256) {
+      assert.match(entry.source_sha256, /^sha256:[a-f0-9]{64}$/);
+      assert.notEqual(entry.sha256, entry.source_sha256);
+    }
     assert.equal(
       `sha256:${sha256(fs.readFileSync(path.join(fixtureRoot, entry.path)))}`,
       entry.sha256,

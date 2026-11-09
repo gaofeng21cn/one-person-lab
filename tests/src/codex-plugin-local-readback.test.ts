@@ -82,10 +82,60 @@ test('native command failure and invalid JSON retain distinct failure boundaries
 
 test('native local readback timeout terminates its app-server child', () => {
   const setup = fixture('stall');
+  const env: NodeJS.ProcessEnv = setup.env;
+  const timeoutMs = 200;
+  const deadlineReady = path.join(setup.root, 'deadline-ready');
+  const preload = path.join(setup.root, 'deadline-after-start.cjs');
+  // Exercise the cleanup deadline after a live child exists. Concurrent test
+  // runners can otherwise spend the entire short deadline starting Node.
+  fs.writeFileSync(preload, `
+const fs = require('node:fs');
+if (process.argv[2] === 'app-server') {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0,
+    Number(process.env.FIXTURE_READBACK_TIMEOUT) * 2);
+}
+if (process.argv[2] === process.env.FIXTURE_READBACK_TIMEOUT) {
+  const originalSetTimeout = global.setTimeout;
+  let gated = false;
+  global.setTimeout = (callback, delay, ...args) => {
+    if (gated || delay !== Number(process.env.FIXTURE_READBACK_TIMEOUT)) {
+      return originalSetTimeout(callback, delay, ...args);
+    }
+    gated = true;
+    let started = false;
+    const timer = originalSetTimeout(() => {
+      if (!started) {
+        if (fs.existsSync(process.env.FIXTURE_PID)) {
+          const pid = Number(fs.readFileSync(process.env.FIXTURE_PID, 'utf8'));
+          process.kill(pid, 0);
+          fs.writeFileSync(process.env.FIXTURE_DEADLINE_READY, String(pid));
+          started = true;
+        }
+        timer.refresh();
+        return;
+      }
+      callback(...args);
+    }, delay);
+    return timer;
+  };
+}
+`);
   try {
-    const result = readCodexLocalPluginList({ ...setup, timeoutMs: 200 });
+    const result = readCodexLocalPluginList({
+      ...setup,
+      timeoutMs,
+      env: {
+        ...env,
+        NODE_OPTIONS: `${env.NODE_OPTIONS ?? ''} --require ${JSON.stringify(preload)}`,
+        FIXTURE_READBACK_TIMEOUT: String(timeoutMs),
+        FIXTURE_DEADLINE_READY: deadlineReady,
+      },
+    });
+    const childPid = Number(fs.readFileSync(deadlineReady, 'utf8'));
+    assert.equal(childPid, Number(fs.readFileSync(setup.env.FIXTURE_PID, 'utf8')));
     assert.equal(result.status, 1);
     assert.match(result.stderr, /timed out/);
-    assert.throws(() => process.kill(Number(fs.readFileSync(setup.env.FIXTURE_PID, 'utf8')), 0), { code: 'ESRCH' });
+    assert.equal((result.error as NodeJS.ErrnoException).code, 'ETIMEDOUT');
+    assert.throws(() => process.kill(childPid, 0), { code: 'ESRCH' });
   } finally { fs.rmSync(setup.root, { recursive: true, force: true }); }
 });

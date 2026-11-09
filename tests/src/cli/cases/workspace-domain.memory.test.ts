@@ -11,11 +11,11 @@ function withDomainMemoryDescriptor(payload: JsonRecord, overrides: JsonRecord =
   const domain = String(overrides.target_domain_id ?? 'med-autoscience');
   const owner = String(overrides.owner ?? 'MedAutoScience');
   const descriptor = {
-    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v1',
+    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v2',
     owner: 'one-person-lab', domain_id: domain, items: [{
-      surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
+      surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v2',
       knowledge_id: overrides.memory_ref_id ?? 'mas_publication_route_memory',
-      title: 'Strategy context', layer: 'agent_pack', owner,
+      title: 'Strategy context', scope: { kind: 'product', id: owner }, content_kind: 'mechanism', owner,
       body_ref: { kind: 'repo_path', ref: 'agent/knowledge/method.md' },
       applicability: { domains: [domain], stages: ['scout', 'review_and_rebuttal'] },
       status: 'active', reviewed_at: '2026-01-01T00:00:00Z', next_review_at: '2099-01-01T00:00:00Z',

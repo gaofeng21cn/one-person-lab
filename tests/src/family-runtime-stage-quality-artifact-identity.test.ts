@@ -42,7 +42,7 @@ function stageQualityBindingFixture(workspaceRoot: string) {
   fs.mkdirSync(path.dirname(fixturePath), { recursive: true });
   fs.mkdirSync(path.join(domainPackRoot, 'contracts'), { recursive: true });
   fs.writeFileSync(path.join(domainPackRoot, 'contracts/durable_knowledge_catalog.json'), JSON.stringify({
-    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v1', owner: 'one-person-lab', items: [],
+    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v2', owner: 'one-person-lab', items: [],
   }));
   fs.writeFileSync(fixturePath, fixtureBytes);
   const rolePromptRef = 'agent/prompts/stage-quality-cycle-roles.md';

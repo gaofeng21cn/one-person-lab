@@ -5,8 +5,8 @@
   "target_agent_id": "fixture-research-agent",
   "target_domain_id": "fixture_research",
   "target_version_ref": null,
-  "blueprint_digest": "sha256:632b44372381cb6e0e6d3e162a9b08eba531e63c41535dbd84c9633576ab04bb",
-  "evidence_digest": "sha256:6a6bcf144958c50d32480691789cfe9b36b64f8019da154d6da00d34dc521f46",
+  "blueprint_digest": "sha256:e9f643a7116ac3b726a511f92c8d352e575fd7191afc089af36e4eab2b168f5b",
+  "evidence_digest": "sha256:0075bb415c70d0bd6be72f8b7fc0e32d76a9f23b9111b00b383c7901ccfa73d4",
   "root_causes": [
     {
       "failure_class": "semantic_quality_gap",
@@ -142,6 +142,22 @@
       ],
       "write_authority_refs": [
         "opl://owner/fixture-research"
+      ],
+      "knowledge_requirements": [
+        {
+          "requirement_id": "fixture-research.evidence-method",
+          "scope_kind": "product",
+          "content_kind": "mechanism",
+          "semantic_owner_ref": "opl://owner/fixture-research",
+          "source_modes": [
+            "product"
+          ],
+          "requirement": "required",
+          "freshness_policy": "Review when the evidence method changes.",
+          "writeback_owner_ref": "opl://owner/fixture-research",
+          "derived_dependency_policy": "Bind the accepted source revision.",
+          "action_critical": false
+        }
       ]
     },
     "assumptions": [

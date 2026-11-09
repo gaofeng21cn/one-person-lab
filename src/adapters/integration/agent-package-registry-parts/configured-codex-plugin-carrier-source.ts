@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { runtimeRootContainsDescriptor } from '../../../kernel/git-marketplace-runtime-root.ts';
-import { MAX_PACKAGE_SOURCE_ARCHIVE_BYTES, packageSourceArchiveDigest, extractPackageSourceArchive, packageSourceArchiveMembersStayWithinRoot, readPackageSourceArchiveEntries } from './package-source-archive.ts';
+import { MAX_PACKAGE_SOURCE_ARCHIVE_BYTES, packageSourceArchiveDigest, extractPackageSourceArchive, materializePackageSourceCommit, packageSourceArchiveMembersStayWithinRoot, readPackageSourceArchiveEntries } from './package-source-archive.ts';
 import { localReadbackFailure, runConfiguredDownloadWithTransientRetry, stringValue } from './configured-codex-plugin-carrier-native.ts';
 
 const PREFIX = 'application/vnd.onepersonlab.package.';
@@ -93,35 +93,47 @@ function acquireDeveloperCheckoutSource(input: {
   payload: Record<string, unknown>;
   env: NodeJS.ProcessEnv;
 }) {
-  const sourceRoot = developerCheckoutRoot(input.packageId, input.ownerManifest, input.env);
-  if (!sourceRoot) return null;
+  const checkoutRoot = developerCheckoutRoot(input.packageId, input.ownerManifest, input.env);
+  if (!checkoutRoot) return null;
   const surface = isRecord(input.ownerManifest.codex_surface) ? input.ownerManifest.codex_surface : null;
   const carrier = isRecord(surface?.configured_codex_plugin_carrier)
     ? surface.configured_codex_plugin_carrier : null;
   const pluginId = stringValue(carrier?.plugin_selector)?.split('@')[0]
     ?? stringValue(surface?.plugin_id);
-  const ownerDescriptor = path.join(sourceRoot, 'opl-package.json');
-  const ownerBytes = fs.readFileSync(ownerDescriptor);
-  const sourceOwner = json(ownerBytes);
-  if (sourceOwner.package_id !== input.packageId
-    || sourceOwner.version !== input.ownerManifest.version
-    || (pluginId && isRecord(sourceOwner.codex_surface)
-      && sourceOwner.codex_surface.plugin_id !== pluginId)) {
-    return invalid('Developer checkout does not match the selected Package owner.');
-  }
   const sourceCommit = stringValue(input.payload.source_commit)
     ?? stringValue(surface?.carrier_source_commit);
   if (!sourceCommit || !/^[0-9a-f]{40}$/.test(sourceCommit)) {
     return invalid('Developer checkout source commit is missing or invalid.');
   }
+  let archive: ReturnType<typeof materializePackageSourceCommit>;
+  try {
+    archive = materializePackageSourceCommit(checkoutRoot, sourceCommit, input.env);
+  } catch {
+    return invalid('Developer checkout cannot materialize the selected source commit as a physical archive.');
+  }
+  const { sourceRoot } = archive;
+  try {
+    const sourceOwner = json(fs.readFileSync(path.join(sourceRoot, 'opl-package.json')));
+    if (sourceOwner.package_id !== input.packageId
+      || sourceOwner.version !== input.ownerManifest.version
+      || (sourceOwner.source_repo !== undefined && sourceOwner.source_repo !== input.ownerManifest.source_repo)
+      || (pluginId && isRecord(sourceOwner.codex_surface)
+        && sourceOwner.codex_surface.plugin_id !== pluginId)) {
+      return invalid('Developer source commit does not match the selected Package owner.');
+    }
+  } catch (error) {
+    archive.cleanup();
+    throw error;
+  }
   return {
     sourceRoot,
     provenance: {
-      source: sourceRoot,
-      source_type: 'developer_git_checkout',
+      source: input.ownerManifest.source_repo,
+      source_type: 'developer_git_archive',
+      source_checkout: checkoutRoot,
       source_commit: sourceCommit,
     },
-    cleanup: () => {},
+    cleanup: archive.cleanup,
     pathFor: (url: URL) => {
       if (url.protocol !== 'https:' || url.hostname !== 'raw.githubusercontent.com') {
         return invalid('Developer checkout carrier file source is invalid.');
@@ -131,15 +143,10 @@ function acquireDeveloperCheckoutSource(input: {
         return invalid('Developer checkout carrier file does not belong to the selected commit.');
       }
       const relative = decodeURIComponent(url.pathname.slice(expectedPrefix.length));
-      const candidate = path.resolve(sourceRoot, ...relative.split('/'));
-      if (candidate !== sourceRoot && !candidate.startsWith(`${sourceRoot}${path.sep}`)) {
-        return invalid('Developer checkout carrier file escapes its source root.');
-      }
-      const stat = fs.lstatSync(candidate, { throwIfNoEntry: false });
-      if (!stat?.isFile() || stat.isSymbolicLink()) {
+      if (!runtimeRootContainsDescriptor(sourceRoot, relative)) {
         return invalid('Developer checkout carrier file is missing.');
       }
-      return fs.readFileSync(candidate);
+      return fs.readFileSync(path.join(sourceRoot, relative));
     },
   };
 }

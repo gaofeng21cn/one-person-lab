@@ -1,15 +1,14 @@
 {
   "surface_kind": "opl_durable_knowledge_catalog",
-  "version": "durable-knowledge-catalog.v1",
+  "version": "durable-knowledge-catalog.v2",
   "owner": "one-person-lab",
   "domain_id": "med-autogrant",
   "items": [
     {
       "surface_kind": "opl_durable_knowledge_item",
-      "version": "durable-knowledge-item.v1",
+      "version": "durable-knowledge-item.v2",
       "knowledge_id": "med-autogrant.method",
       "title": "Method",
-      "layer": "agent_pack",
       "owner": "med-autogrant",
       "body_ref": {
         "kind": "repo_path",
@@ -29,7 +28,12 @@
       "authority_boundary": {
         "semantic_body_owner": "med-autogrant",
         "opl_role": "catalog_recall_and_receipt_projection_only"
-      }
+      },
+      "scope": {
+        "kind": "product",
+        "id": "med-autogrant"
+      },
+      "content_kind": "mechanism"
     }
   ]
 }
