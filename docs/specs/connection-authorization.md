@@ -52,3 +52,16 @@ Framework 通过既有 `opl packages link-framework --agent-root <installed-pack
 Relay 原有本地邮箱工具仍是直接由用户使用的领域入口，其草稿保存与发送确认合同不由 Connect grant 替代。共享 `opl-apps` 中的 `package_id` 继续只用于导航与贡献路由，不暴露任意 Package 的 consumer 工厂。
 
 源码检查与合成场景可验证身份、授权、同对象/版本以及恢复语义；真实邮箱和发行安装的运行结果由对应 carrier/领域验收分别记录。
+
+## Cloud 跨宿主连接
+
+`opl-cloud` provider 将外部 Agent Host 接到 Cloud 原有 MCP 只读工具。CloudIdentity 签发固定 tenant、`opl-cloud-mcp` audience 和只读 action 范围的短期凭证，最长一小时且不超过父登录会话。用户从已登录的 Cloud 界面取得连接文件，由 Cloud 自有 `opl-cloud-connect` helper 导入和保管；Framework 只登记 helper 返回的 `cloud:<UUID>` 引用与 binding revision。
+
+```bash
+opl connect cloud list --json
+opl connect cloud import --cloud-ref cloud:<UUID> --json
+```
+
+可信宿主通过已安装的 `opl-cloud-connect`，或显式 `OPL_CLOUD_CONNECT_BINARY` 选择该 helper。导入连接不批准 Package grant；消费者仍通过上面的 installed context 请求并使用精确能力。公共能力、身份和调用边界由 [Cloud 连接合同](../../contracts/opl-framework/cloud-connection-contract.json)定义；凭证的建立、保管和服务部署由 [Cloud](https://github.com/gaofeng21cn/one-person-lab-cloud) 维护。
+
+每次调用由 CloudIdentity 重验凭证、父会话、成员状态、tenant 与 action，业务 owner 继续检查目标 Workspace 或 operation。Connect 撤权在派发前生效；Cloud 撤权或父会话到期则由 Cloud 拒绝后续访问。用户重新建立连接后，helper revision 变化会使旧 grant 失效。此入口不提供长期 PAT、OAuth 或自动刷新；过期后回到 Cloud 登录与连接流程，不借用浏览器 cookie。未知结果回读原对象或 operation，不重放业务操作。

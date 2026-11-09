@@ -30,7 +30,7 @@
 | 复用模型能力 | 调用既有模型/provider owner 的公开执行入口；图片 API 回退使用 `opl-framework/domain-task-runtime` 的 `runDomainImageGeneration`，详见[接口](../specs/domain-image-generation.md) | 领域保留 built-in 优先和专业质量判断；选定账号由公共 owner 解析，缺失不换账号，未知结果不自动重试 |
 | 读取个人或主题知识 | 已知知识 ID 使用 `opl knowledge read-source`，派生摘要使用 `verify-dependencies`，按获授权 workspace/domain/project 取用 | 真实来源及接受版本可读；撤权、过期或原文改变时排除旧内容 |
 | 固定一轮任务的知识依据 | 使用 `prepare`、`read-context` 和行动前 `revalidate --for-action`；托管 StageRun 使用自动绑定 | 真实上下文消费、依赖版本和缺口可回读；只有空 catalog 或命令存在不算接入 |
-| 修改已登记的知识 | `propose/review/apply`，或原处编辑后 `inspect-source/review-source`；移动时维护 locator | 正文、接受版本与派生摘要一致；冲突不覆盖，旧缓存不掩盖失效 |
+| 修改或退役已登记的知识 | `propose/review/apply`，或原处编辑后 `inspect-source/review-source`；需移出正文时使用经审阅的 `retire` 与 `inspect-retirement` | 正文、接受版本与派生摘要一致；退役保留稳定 ID 和恢复字节，退出召回；冲突不覆盖 |
 | 复用工作与成果 | 短操作返回原 owner 结果；长操作使用已有 Task/StageRun 或领域任务身份 | 同一对象查询和恢复；领域业务库与产物权威保留在原处 |
 
 连接工厂只用于可信 Host/服务启动，安装根来自自身模块位置，Package 身份由启动代码固定。它不会安装、授权或根据页面选项切换消费者。完整约定见[Connect 接口](../specs/connection-authorization.md)。非 Package 的直接用户工具沿用既有 owner 入口，不能借用其他 Package 的身份。
