@@ -16,7 +16,7 @@ import {
   verifyKnowledgeDependencies,
 } from '../../src/authority/packages/durable-knowledge-catalog.ts';
 
-import { knowledgeItem, sourceFixture, writeKnowledgeFile } from './knowledge-source-fixture.ts';
+import { knowledgeItem, productCatalog, sourceFixture, writeKnowledgeFile } from './knowledge-source-fixture.ts';
 
 function sha256(content: string) {
   return `sha256:${crypto.createHash('sha256').update(content).digest('hex')}`;
@@ -292,6 +292,14 @@ test('two authorized agents and workspaces share one source identity and accepte
   const f = sourceFixture();
   try {
     const secondWorkspace = path.join(f.root, 'second-workspace');
+    const secondRepo = path.join(f.root, 'second-agent');
+    writeKnowledgeFile(path.join(secondRepo, 'contracts/durable_knowledge_catalog.json'), {
+      ...productCatalog([]), domain_id: 'second-agent',
+    });
+    writeKnowledgeFile(path.join(secondRepo, 'contracts/domain_descriptor.json'), {
+      domain_id: 'second-agent',
+      standard_agent_interface: { runtime: { runtime_domain_id: 'second-agent' } },
+    });
     fs.mkdirSync(secondWorkspace, { recursive: true });
     f.item.applicability.domains.push('second-agent');
     f.registry.sources[0]!.grants.push({ workspace_root: secondWorkspace,
@@ -299,14 +307,14 @@ test('two authorized agents and workspaces share one source identity and accepte
     f.save();
     writeKnowledgeFile(path.join(secondWorkspace, 'shared/memory/knowledge-bindings.json'), f.bindings);
     const first = bindDurableKnowledgeContext(f.input);
-    const second = bindDurableKnowledgeContext({ ...f.input, workspaceRoot: secondWorkspace,
-      projectRoot: undefined, domainId: 'second-agent' });
+    const secondInput = { ...f.input, repoDir: secondRepo, domainPackRoot: secondRepo,
+      workspaceRoot: secondWorkspace, projectRoot: undefined, domainId: 'second-agent' };
+    const second = bindDurableKnowledgeContext(secondInput);
     assert.deepEqual(second.bodies.map(({ knowledge_id, source_id, sha256, content }) => ({ knowledge_id, source_id, sha256, content })),
       first.bodies.map(({ knowledge_id, source_id, sha256, content }) => ({ knowledge_id, source_id, sha256, content })));
     assert.equal(fs.existsSync(path.join(secondWorkspace, 'shared/memory/knowledge-sources.json')), false);
     f.registry.sources[0]!.grants.pop(); f.save();
-    assert.equal(recallDurableKnowledge({ ...f.input, workspaceRoot: secondWorkspace,
-      projectRoot: undefined, domainId: 'second-agent' }).selected.length, 0);
+    assert.equal(recallDurableKnowledge(secondInput).selected.length, 0);
   } finally { f.cleanup(); }
 });
 
