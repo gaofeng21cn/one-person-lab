@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { ResponseBodyTooLargeError } from '../http-response-body.ts';
+import { ResponseBodyTooLargeError } from '../../../kernel/http-response-body.ts';
 
 const CERTIFICATE_CODES = new Set(['SELF_SIGNED_CERT_IN_CHAIN', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY']);
 const STATUS_MARKER = '\nOPL_GATEWAY_HTTP_STATUS:';

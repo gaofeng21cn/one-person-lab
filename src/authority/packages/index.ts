@@ -93,6 +93,7 @@ export * from './agent-profile-spine.ts';
 export * from './agent-scaffold-materialization.ts';
 export * from './durable-knowledge-catalog.ts';
 export * from './knowledge-source-writeback.ts';
+export * from './knowledge-source-retirement.ts';
 export * from './profile-capability-plan.ts';
 export * from './profile-selection-intent.ts';
 export * from './public/foundry-agent-series-policy.ts';

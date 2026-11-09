@@ -1,5 +1,7 @@
 import {
   createDefaultConnectionAuthorizationService,
+  importCloudConnection,
+  listCloudConnections,
   listOplConnectionAuthorization as listConnectionAuthorization,
 } from '../../../../adapters/integration/public/app-state.ts';
 import { FrameworkContractError } from '../../../../authority/contracts/contracts.ts';
@@ -15,7 +17,7 @@ function requiredOption(
   command: string,
   args: string[],
   spec: CommandSpec,
-  option: 'request-id' | 'grant-id',
+  option: 'request-id' | 'grant-id' | 'cloud-ref',
 ) {
   const parsed = parseRegisteredCommandOptions(command, args, spec);
   const value = parsed[option];
@@ -30,7 +32,7 @@ function requiredOption(
 
 export function buildConnectionAuthorizationCommandSpecs(): Record<string, CommandSpec> {
   const commands: AuthorizationCommand[] = ['list', 'approve', 'deny', 'revoke'];
-  return Object.fromEntries(commands.map((action) => {
+  const specs = Object.fromEntries(commands.map((action) => {
     const command = `connect authorization ${action}`;
     const spec: CommandSpec = {
       usage: action === 'list'
@@ -74,4 +76,19 @@ export function buildConnectionAuthorizationCommandSpecs(): Record<string, Comma
     };
     return [command, spec];
   }));
+  const list: CommandSpec = {
+    usage: 'opl connect cloud list',
+    summary: 'List metadata for short-lived connections held by the Cloud credential helper.',
+    examples: ['opl connect cloud list --json'],
+    group: 'connect',
+    handler: async (args) => { assertNoArgs(args, list); return { cloud_connections: listCloudConnections() }; },
+  };
+  const importSpec: CommandSpec = {
+    usage: 'opl connect cloud import --cloud-ref <reference>',
+    summary: 'Register one Cloud-owned opaque connection reference without importing credentials into Framework.',
+    examples: ['opl connect cloud import --cloud-ref cloud:<uuid> --json'],
+    group: 'connect',
+    handler: async (args) => importCloudConnection(requiredOption('connect cloud import', args, importSpec, 'cloud-ref')),
+  };
+  return { ...specs, 'connect cloud list': list, 'connect cloud import': importSpec };
 }

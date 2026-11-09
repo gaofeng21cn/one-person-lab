@@ -8,7 +8,7 @@ import {
   maxResponseBodyBytes,
   readResponseBody,
   ResponseBodyTooLargeError,
-} from '../http-response-body.ts';
+} from '../../../kernel/http-response-body.ts';
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT';

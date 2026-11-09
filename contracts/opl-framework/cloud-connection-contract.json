@@ -1,0 +1,29 @@
+{
+  "contract_id": "opl-cloud-connect.v1",
+  "provider_id": "opl-cloud",
+  "credential_owner": "CloudIdentity and the Cloud-owned local credential helper",
+  "credential_kind": "session-bound agent credential, at most one hour and no longer than the parent session",
+  "audience": "opl-cloud-mcp",
+  "framework_binding": ["opaque Cloud reference", "helper binding revision"],
+  "command": "opl-cloud-connect connect",
+  "trusted_host_binary_override": "OPL_CLOUD_CONNECT_BINARY",
+  "operations": ["list", "inspect", "invoke"],
+  "capabilities": [
+    "cloud_list_compute_plans",
+    "cloud_list_storage_plans",
+    "cloud_list_workspaces",
+    "cloud_get_quote",
+    "cloud_get_workspace",
+    "cloud_get_workspace_operation"
+  ],
+  "capability_risk": "read",
+  "transport_owner": "Cloud helper calls the existing /api/v2/mcp endpoint using fixed MCP methods",
+  "authorization": [
+    "Connect validates installed consumer, capability grant and connection revision on every invocation",
+    "CloudIdentity revalidates credential, audience, parent session, tenant, action and current membership",
+    "Workspace and other business owners retain object authorization"
+  ],
+  "unknown_result": "Record unknown_after_dispatch without automatic retry; read the original object or operation after access is restored",
+  "credential_projection": "No bearer, cookie, password or credential file contents enter Framework registry, grants, invocation records, MCP input or UI",
+  "renewal": "The signed-in user creates a new short-lived credential and imports it into the Cloud helper; this is not PAT, OAuth or refresh-token support"
+}

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseToml } from 'smol-toml';
 
 import { FrameworkContractError } from './contract-validation.ts';
 import { parseJsonText, readJsonPayloadFile } from './json-file.ts';
@@ -806,46 +807,49 @@ function readLocalCodexConfigValues(configPath: string) {
     );
   }
 
-  const contents = fs.readFileSync(configPath, 'utf8');
-  const rootValues = new Map<string, string>();
-  const providerValues = new Map<string, Map<string, string>>();
-  let currentSection: string[] = [];
-
-  for (const rawLine of contents.split(/\r?\n/)) {
-    const line = stripTomlInlineComment(rawLine);
-    if (!line) {
-      continue;
-    }
-
-    const sectionPath = parseTomlTablePath(line);
-    if (sectionPath) {
-      currentSection = sectionPath;
-      continue;
-    }
-
-    const separatorIndex = line.indexOf('=');
-    if (separatorIndex <= 0) {
-      continue;
-    }
-
-    const key = line.slice(0, separatorIndex).trim();
-    const rawValue = line.slice(separatorIndex + 1);
-    const value = parseTomlValue(rawValue);
-
-    if (currentSection.length === 0) {
-      rootValues.set(key, value);
-      continue;
-    }
-
-    if (currentSection.length === 2 && currentSection[0] === 'model_providers') {
-      const providerId = currentSection[1];
-      const providerEntry = providerValues.get(providerId) ?? new Map<string, string>();
-      providerEntry.set(key, value);
-      providerValues.set(providerId, providerEntry);
-    }
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = parseToml(fs.readFileSync(configPath, 'utf8'));
+  } catch {
+    // TOML parser diagnostics may quote credentials from the source line.
+    throw new FrameworkContractError('contract_shape_invalid', 'Local Codex config is not valid TOML.');
   }
-
+  const values = (value: unknown) => new Map<string, string>(
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? Object.entries(value).flatMap(([key, entry]) => (
+          ['string', 'number', 'boolean'].includes(typeof entry) ? [[key, String(entry)] as [string, string]] : []
+        ))
+      : [],
+  );
+  const rootValues = values(parsed);
+  const providers = parsed.model_providers;
+  const providerValues = new Map<string, Map<string, string>>(
+    providers && typeof providers === 'object' && !Array.isArray(providers)
+      ? Object.entries(providers).map(([key, entry]) => [key, values(entry)])
+      : [],
+  );
   return { rootValues, providerValues };
+}
+
+/** Internal execution boundary: callers must never serialize this connection. */
+export function readLocalCodexModelConnection(input: {
+  config_path?: string;
+  env?: NodeJS.ProcessEnv;
+} = {}) {
+  const env = input.env ?? process.env;
+  const configPath = input.config_path ?? path.join(
+    env.CODEX_HOME?.trim() || path.join(env.HOME?.trim() || os.homedir(), '.codex'), 'config.toml',
+  );
+  const { rootValues, providerValues } = readLocalCodexConfigValues(configPath);
+  const providerId = rootValues.get('model_provider');
+  const provider = providerId ? providerValues.get(providerId) : undefined;
+  const envKey = provider?.get('env_key');
+  return {
+    base_url: normalizeOptionalString(provider?.get('base_url')),
+    credential: normalizeOptionalString(provider?.get('experimental_bearer_token'))
+      ?? normalizeOptionalString(provider?.get('api_key'))
+      ?? (envKey ? normalizeOptionalString(env[envKey]) : null),
+  };
 }
 
 function readLocalCodexDefaults(): LocalCodexDefaults {

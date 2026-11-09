@@ -8,7 +8,7 @@
 | --- | --- |
 | [项目概览](./project.md) | 产品定位、产品分层和 Package 拓扑选择 |
 | [当前状态](./status.md) | 已实现能力、当前验证边界和动态读面 |
-| [架构](./architecture.md) | 静态分层、owner、依赖方向和运行链路 |
+| [架构](./architecture.md) | 静态分层、owner、依赖方向、共用基座的物理归属和运行链路 |
 | [硬约束](./invariants.md) | 实现和演进不得破坏的规则 |
 | [关键决策](./decisions.md) | 当前仍有效、且无法仅从代码读出的选择 |
 | [当前差距](./active/current-state-vs-ideal-gap.md) | 唯一 active gap owner |
@@ -29,6 +29,7 @@
 - [Delivery](./delivery/README.md)：artifact、Package 和发布边界。
 - [Product](./product/README.md)：App 与用户界面的产品边界。
 - [Agent 原生应用标准](./policies/agent-native-app-policy.md)：Agent 主导、按需人机协作与共用基座的开发要求。
+- [共用基座放在哪里](./architecture.md#共用基座的物理归属)：源码、合同、安装、状态、私人知识和领域数据的查找入口。
 - [MCP Apps](./mcp-apps/SPEC.md)：共享 MiniApp 技术行为、适配器与宿主边界；接入见[开发指南](./mcp-apps/development.md)。
 - [Public](./public/README.md)：面向外部读者的稳定叙事。
 - [References](./references/README.md)：不会决定状态或架构的维护参考。

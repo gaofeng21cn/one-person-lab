@@ -8,7 +8,7 @@ import {
   maxResponseBodyBytes,
   readResponseBody,
   ResponseBodyTooLargeError,
-} from '../http-response-body.ts';
+} from '../../../kernel/http-response-body.ts';
 import type { ReferenceProviderDefinition, ProviderId } from './provider-registry.ts';
 import type { ReferenceRecord, ReferenceVerificationInput } from './reference-normalization.ts';
 
