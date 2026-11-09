@@ -6,6 +6,123 @@ import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/publ
 import { bindDurableKnowledgeContext, recallDurableKnowledge } from '../../src/authority/packages/durable-knowledge-catalog.ts';
 import { bindStageKnowledgeContext, readStageKnowledgeContext, revalidateStageKnowledgeContext } from '../../src/adapters/execution/family-runtime-knowledge-context.ts';
 import { knowledgeItem, knowledgeSha, productCatalog, sourceFixture, writeKnowledgeFile } from './knowledge-source-fixture.ts';
+import { listKnowledgeSources, searchKnowledgeSources, discoverKnowledgeSources, resolveKnowledgeSourceTarget } from '../../src/authority/packages/durable-knowledge-sources.ts';
+import { registerKnowledgeSource } from '../../src/authority/packages/knowledge-source-writeback.ts';
+
+test('private discovery separates accepted metadata, authorized candidates and exact owner registration', async () => {
+  const f = sourceFixture();
+  try {
+    const scope = { workspaceRoot: f.workspace, projectRoot: f.project, domainId: 'fixture' };
+    Object.assign(f.registry.sources[0]!.grants[0]!, { write_domains: ['fixture'], project_ids: ['project-finance'] });
+    Object.assign(f.registry.sources[0]!, { include_globs: ['*.md', 'notes/**/*.md'], exclude_globs: ['notes/excluded/**'] });
+    f.save();
+    const listing = listKnowledgeSources(scope);
+    assert.equal(listing.items[0]!.knowledge_id, f.item.knowledge_id);
+    assert.equal(JSON.stringify(listing).includes(f.body), false);
+    assert.equal(listKnowledgeSources({ ...scope, projectRoot: f.otherProject }).items.length, 0);
+    assert.equal(searchKnowledgeSources({ ...scope, query: 'policy', excerptChars: 4 }).matches[0]!.excerpt.length, 4);
+    assert.throws(() => searchKnowledgeSources({ ...scope, query: 'policy', limit: 21 }));
+    const candidate = knowledgeItem({ id: 'owner.new', scope: { kind: 'project', id: 'project-finance' }, ref: 'notes/new.md', content: '# New policy\n' });
+    writeKnowledgeFile(path.join(f.source, candidate.body_ref.ref), '# New policy\n');
+    writeKnowledgeFile(path.join(f.source, 'notes/excluded/secret.md'), '# New policy secret\n');
+    fs.symlinkSync(path.join(f.source, candidate.body_ref.ref), path.join(f.source, 'linked.md'));
+    const found = discoverKnowledgeSources({ ...scope, query: 'policy' });
+    assert.deepEqual(found.candidates.map(item => item.source_ref), ['notes/new.md']);
+    assert.equal(found.candidates[0]!.candidate, true); assert.equal(found.candidates[0]!.accepted, false);
+    assert.equal(discoverKnowledgeSources({ ...scope, projectRoot: f.otherProject, query: 'policy' }).candidates.length, 0);
+    assert.equal(resolveKnowledgeSourceTarget({ ...scope, bodyPath: path.join(f.source, 'policy.md') }).registered, true);
+    assert.equal(resolveKnowledgeSourceTarget({ ...scope, bodyPath: path.join(f.source, 'linked.md') }).registered, false);
+    const register = { ...scope, registryRef: f.registryRef, item: candidate, expectedSha256: candidate.body_ref.sha256!,
+      reviewer: 'fixture-owner', reviewRef: 'owner://fixture/new-policy', reviewedAt: '2026-01-02T00:00:00Z', nextReviewAt: '2099-01-01T00:00:00Z' };
+    assert.throws(() => registerKnowledgeSource({ ...register, expectedSha256: knowledgeSha('other bytes') }));
+    assert.throws(() => registerKnowledgeSource({ ...register, projectRoot: f.otherProject }));
+    writeKnowledgeFile(path.join(f.source, 'same-bytes.md'), '# New policy\n');
+    assert.throws(() => registerKnowledgeSource({ ...register, expectedBodyPath: path.join(f.source, 'same-bytes.md') }), /expected.*body path/);
+    fs.unlinkSync(path.join(f.source, 'same-bytes.md'));
+    const receipt = registerKnowledgeSource(register);
+    assert.equal(receipt.status, 'registered');
+    const after = fs.readFileSync(f.registryRef);
+    assert.deepEqual(registerKnowledgeSource(register), receipt);
+    assert.deepEqual(fs.readFileSync(f.registryRef), after);
+    assert.equal(listKnowledgeSources(scope).items.length, 2);
+    assert.deepEqual(resolveKnowledgeSourceTarget({ ...scope, projectRoot: f.otherProject,
+      bodyPath: path.join(f.source, candidate.body_ref.ref) }), { registered: true, authorized: false });
+    assert.equal(discoverKnowledgeSources({ ...scope, query: 'policy' }).candidates.length, 0);
+    assert.throws(() => registerKnowledgeSource({ ...register, item: { ...candidate, title: 'Conflicting identity' } }));
+    const specs = buildKnowledgeCommandSpecs();
+    const output = await specs['knowledge sources']!.handler!(['--workspace', f.workspace, '--domain', 'fixture', '--project', f.project]);
+    assert.equal((output as { knowledge_sources: { items: unknown[] } }).knowledge_sources.items.length, 2);
+    fs.appendFileSync(path.join(f.source, candidate.body_ref.ref), 'Unreviewed edit');
+    assert.equal(listKnowledgeSources(scope).items.length, 1);
+    f.registry.sources[0]!.status = 'revoked'; f.save();
+    assert.equal(listKnowledgeSources(scope).items.length, 0);
+    assert.equal(discoverKnowledgeSources({ ...scope, query: 'policy' }).candidates.length, 0);
+    assert.equal(resolveKnowledgeSourceTarget({ ...scope, bodyPath: path.join(f.source, 'policy.md') }).registered, true);
+  } finally { f.cleanup(); }
+});
+
+test('target routing protects registered bodies after binding narrowing and registration rejects physical aliases', () => {
+  const f = sourceFixture();
+  try {
+    const scope = { workspaceRoot: f.workspace, projectRoot: f.project, domainId: 'fixture' };
+    const input = { ...scope, bodyPath: path.join(f.source, 'policy.md') };
+    f.bindings.registries[0]!.scope_ids = []; f.save();
+    assert.deepEqual(resolveKnowledgeSourceTarget(input), { registered: true, authorized: false });
+    f.bindings.registries[0]!.scope_ids = ['finance']; f.bindings.registries[0]!.source_ids = []; f.save();
+    assert.deepEqual(resolveKnowledgeSourceTarget(input), { registered: true, authorized: false });
+    f.bindings.registries[0]!.source_ids = ['owner.notes'];
+    Object.assign(f.registry.sources[0]!, { exclude_globs: ['policy.md'] }); f.save();
+    assert.deepEqual(resolveKnowledgeSourceTarget(input), { registered: true, authorized: false });
+    Object.assign(f.registry.sources[0]!, { exclude_globs: [] });
+    Object.assign(f.registry.sources[0]!.grants[0]!, { write_domains: ['fixture'] });
+    f.registry.sources.push({ ...structuredClone(f.registry.sources[0]!), source_id: 'alias.notes' });
+    f.bindings.registries[0]!.source_ids.push('alias.notes'); f.save();
+    const item = { ...structuredClone(f.item), knowledge_id: 'owner.alias', body_ref: { ...f.item.body_ref, source_id: 'alias.notes' } };
+    assert.throws(() => registerKnowledgeSource({ ...scope, registryRef: f.registryRef, item, expectedSha256: item.body_ref.sha256!,
+      reviewer: 'owner', reviewRef: 'owner://alias', reviewedAt: '2026-01-02T00:00:00Z', nextReviewAt: '2099-01-01T00:00:00Z' }), /already.*identity/);
+  } finally { f.cleanup(); }
+});
+
+test('registration cannot reuse a knowledge identity hidden by the current project scope', () => {
+  const f = sourceFixture();
+  try {
+    const registryRef = path.join(f.workspace, 'shared/memory/second.json');
+    f.item.scope = { kind: 'project', id: 'project-research' };
+    Object.assign(f.registry.sources[0]!.grants[0]!, { write_domains: ['fixture'] });
+    const second = { ...structuredClone(f.registry), registry_id: 'second', items: [] };
+    writeKnowledgeFile(registryRef, second);
+    f.bindings.registries.push({ ...f.bindings.registries[0]!, registry_ref: registryRef }); f.save();
+    const item = knowledgeItem({ id: f.item.knowledge_id, scope: { kind: 'topic', id: 'finance' }, ref: 'new.md' });
+    writeKnowledgeFile(path.join(f.source, 'new.md'), '# Policy\n');
+    assert.throws(() => registerKnowledgeSource({ workspaceRoot: f.workspace, projectRoot: f.project, domainId: 'fixture',
+      registryRef, item, expectedSha256: item.body_ref.sha256!, reviewer: 'owner', reviewRef: 'owner://new',
+      reviewedAt: '2026-01-02T00:00:00Z', nextReviewAt: '2099-01-01T00:00:00Z' }), /already belongs/);
+    assert.equal(listKnowledgeSources({ workspaceRoot: f.workspace, projectRoot: f.otherProject, domainId: 'fixture' }).items.length, 1);
+  } finally { f.cleanup(); }
+});
+
+test('source discovery byte allowance preserves bounded excerpts without increasing accepted body limits', () => {
+  const f = sourceFixture();
+  try {
+    const scope = { workspaceRoot: f.workspace, projectRoot: f.project, domainId: 'fixture' };
+    const content = '# Large candidate\n' + 'x'.repeat(300_000);
+    const source = f.registry.sources[0]!;
+    writeKnowledgeFile(path.join(f.source, 'large.md'), content);
+    assert.equal(discoverKnowledgeSources({ ...scope, query: 'Large candidate' }).candidates.length, 0);
+    Object.assign(source, { discovery_max_bytes: 2_000_000 }); f.save();
+    const found = discoverKnowledgeSources({ ...scope, query: 'Large candidate', excerptChars: 40 });
+    assert.equal(found.candidates.length, 1);
+    assert.equal(found.candidates[0]!.excerpt.length, 40);
+    assert.equal(found.candidates[0]!.sha256, knowledgeSha(content));
+    const accepted = knowledgeItem({ id: 'owner.large', scope: { kind: 'topic', id: 'finance' }, ref: 'large.md', content });
+    Object.assign(source.grants[0]!, { write_domains: ['fixture'] }); f.save();
+    assert.throws(() => registerKnowledgeSource({ ...scope, registryRef: f.registryRef, item: accepted,
+      expectedSha256: accepted.body_ref.sha256!, reviewer: 'owner', reviewRef: 'owner://large',
+      reviewedAt: '2026-01-02T00:00:00Z', nextReviewAt: '2099-01-01T00:00:00Z' }), /262144/);
+    Object.assign(source, { discovery_max_bytes: 2_000_001 }); f.save();
+    assert.throws(() => discoverKnowledgeSources({ ...scope, query: 'Large candidate' }));
+  } finally { f.cleanup(); }
+});
 
 test('direct CLI and hosted stages consume identical frozen source bytes without intermediate projection', async () => {
   const f = sourceFixture();

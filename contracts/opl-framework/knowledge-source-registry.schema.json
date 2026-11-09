@@ -105,6 +105,29 @@
                 }
               }
             }
+          },
+          "discovery_max_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000000,
+            "default": 262144,
+            "description": "Maximum source bytes considered for bounded unregistered discovery excerpts; accepted body limits remain unchanged."
+          },
+          "include_globs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "exclude_globs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
           }
         }
       }
