@@ -58,6 +58,7 @@ import { bindWorkspace, getActiveWorkspaceBinding } from './workspace-registry.t
 import { buildInterfaceProjection } from './workspace-initializer-parts/interfaces.ts';
 import { initializeArtifactLifecycleProfile } from './workspace-artifact-lifecycle-profile.ts';
 import { profileFromIndex } from './workspace-index-normalization.ts';
+import { assertWorkspaceInitializationPaths, resolveWorkspaceProjectRoot } from './workspace-initializer-parts/project-root.ts';
 
 export type WorkspaceInitializeOptions = {
   agentId?: string;
@@ -65,6 +66,7 @@ export type WorkspaceInitializeOptions = {
   workspaceRoot?: string;
   workspaceId?: string;
   projectId?: string;
+  projectRoot?: string;
   title?: string;
   mode?: WorkspaceModeInput;
   bind?: boolean;
@@ -575,7 +577,7 @@ export function initializeWorkspace(
   const profileId = selectWorkspaceProfileId(agent, mode);
   const workspacePath = resolveWorkspacePath(options, agent);
   const workspaceIndexPath = path.join(workspacePath, 'workspace_index.json');
-  const existingIndex = options.force ? null : readExistingWorkspaceIndex(workspaceIndexPath);
+  const existingIndex = readExistingWorkspaceIndex(workspaceIndexPath);
   const profile = existingIndex && !options.adoptExistingTopology
     ? requireExistingWorkspaceProfile(existingIndex, workspaceIndexPath)
     : profileFromTopologyContract(profileId, agent.project_collection_path, agent.shared_resources);
@@ -587,7 +589,11 @@ export function initializeWorkspace(
   const requestedTitle = normalizeOptionalString(options.title);
   const createdAt = new Date().toISOString();
   const updatedAt = createdAt;
-  const projectRoot = path.join(workspacePath, profile.project_collection_path, projectId);
+  const existingProjects = normalizeExistingProjects(existingIndex?.projects);
+  const projectRoot = resolveWorkspaceProjectRoot({
+    workspacePath, projectId, projectRoot: options.projectRoot,
+    projectCollectionPath: profile.project_collection_path, projects: existingProjects,
+  });
   const stageOutputsRoot = path.join(projectRoot, profile.project_stage_outputs_root);
   const projectRootRef = toWorkspaceRelative(workspacePath, projectRoot);
   const stageOutputsRootRef = toWorkspaceRelative(workspacePath, stageOutputsRoot);
@@ -609,8 +615,8 @@ export function initializeWorkspace(
       ? existingIndex.title
       : null
   );
-  const existingProjects = normalizeExistingProjects(existingIndex?.projects);
   const mergedProjects = mergeWorkspaceProjects(existingProjects, currentProject);
+  assertWorkspaceInitializationPaths({ workspacePath, profile, projects: mergedProjects.projects });
   const createdDirectories: string[] = [];
 
   const workspaceIndex = buildWorkspaceIndex({
@@ -815,6 +821,11 @@ export function ensureWorkspace(
       assertCompatibleExistingIndex({ existingIndex: refreshedIndex, agent, profileId, profile });
     }
     const projects = normalizeExistingProjects(refreshedIndex?.projects);
+    resolveWorkspaceProjectRoot({
+      workspacePath: activeWorkspacePath, projectId, projectRoot: options.projectRoot,
+      projectCollectionPath: profile.project_collection_path, projects,
+    });
+    assertWorkspaceInitializationPaths({ workspacePath: activeWorkspacePath, profile, projects });
     const refreshedProject = projects.find((project) => project.project_id === projectId) ?? indexedProject;
     const workspaceId = normalizeRequiredSegment(path.basename(activeWorkspacePath), 'workspace_id');
     const updatedAt = new Date().toISOString();
@@ -856,8 +867,8 @@ export function ensureWorkspace(
         for (const relativePath of [
           project.control_root,
           project.inputs_root,
-          'memory',
-          'state',
+          `${project.project_root}/memory`,
+          `${project.project_root}/state`,
           project.stage_outputs_root,
           project.exports_root,
           project.packages_root,

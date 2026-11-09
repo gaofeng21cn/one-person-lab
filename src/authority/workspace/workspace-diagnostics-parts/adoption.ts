@@ -8,6 +8,7 @@ import {
   initializeWorkspace,
   type WorkspaceSkillProjectionRefresher,
 } from '../workspace-initializer.ts';
+import { assertWorkspaceInitializationPaths, resolveWorkspaceProjectRoot } from '../workspace-initializer-parts/project-root.ts';
 import { normalizeWorkspaceProjectEntry } from '../workspace-artifacts.ts';
 import {
   buildCanonicalTopology,
@@ -36,12 +37,17 @@ export type WorkspaceAdoptOptions = {
   workspaceRoot?: string;
   workspaceId?: string;
   projectId?: string;
+  projectRoot?: string;
   title?: string;
   mode?: WorkspaceModeInput;
   dryRun?: boolean;
   apply?: boolean;
   refreshWorkspaceSkills: WorkspaceSkillProjectionRefresher;
 };
+
+function shellQuote(value: string) {
+  return "'" + value.replaceAll("'", "'\"'\"'") + "'";
+}
 
 function normalizeRequiredSegment(value: string, field: string) {
   const trimmed = value.trim();
@@ -88,15 +94,16 @@ function normalizeProjectEntry(project: Record<string, unknown>): WorkspaceProje
 function readWorkspaceIndex(indexPath: string) {
   try {
     const parsed = parseJsonText(fs.readFileSync(indexPath, 'utf8'));
-    if (!isRecord(parsed)) {
-      return null;
-    }
-    if (parsed.surface_kind !== 'opl_workspace_index' || parsed.version !== 'workspace-index.v1') {
-      return null;
+    if (!isRecord(parsed) || parsed.surface_kind !== 'opl_workspace_index' || !Array.isArray(parsed.projects)) {
+      throw new Error('Invalid OPL workspace_index shape.');
     }
     return parsed;
-  } catch {
-    return null;
+  } catch (error) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Existing workspace_index.json is invalid JSON or has an invalid OPL workspace shape.',
+      { file: indexPath, cause: error instanceof Error ? error.message : String(error) },
+    );
   }
 }
 
@@ -150,7 +157,17 @@ export function adoptWorkspace(
     normalizeOptionalString(options.projectId) ?? agent.default_project_id,
     'project_id',
   );
-  const projectRoot = path.join(workspacePath, profile.project_collection_path, projectId);
+  const existingIndexPath = path.join(workspacePath, 'workspace_index.json');
+  const existingIndex = fs.existsSync(existingIndexPath)
+    ? readWorkspaceIndex(existingIndexPath)
+    : null;
+  const indexedProjects = existingIndex && Array.isArray(existingIndex.projects)
+    ? existingIndex.projects.filter(isRecord).map(normalizeProjectEntry).filter((entry): entry is WorkspaceProjectIndexEntry => Boolean(entry))
+    : [];
+  const projectRoot = resolveWorkspaceProjectRoot({
+    workspacePath, projectId, projectRoot: options.projectRoot,
+    projectCollectionPath: profile.project_collection_path, projects: indexedProjects,
+  });
   const stageOutputsRoot = path.join(projectRoot, profile.project_stage_outputs_root);
   const projectRootRef = toWorkspaceRelative(workspacePath, projectRoot);
   const stageOutputsRootRef = toWorkspaceRelative(workspacePath, stageOutputsRoot);
@@ -162,6 +179,8 @@ export function adoptWorkspace(
     projectRoot,
     path.join(projectRoot, 'control'),
     path.join(projectRoot, 'inputs'),
+    path.join(projectRoot, 'memory'),
+    path.join(projectRoot, 'state'),
     stageOutputsRoot,
     path.join(projectRoot, 'artifacts', 'exports'),
     path.join(projectRoot, 'artifacts', 'packages'),
@@ -169,23 +188,19 @@ export function adoptWorkspace(
     path.join(projectRoot, 'handoff'),
     path.join(projectRoot, 'archive'),
   ];
-  const existingIndexPath = path.join(workspacePath, 'workspace_index.json');
-  const existingIndex = fs.existsSync(existingIndexPath)
-    ? readWorkspaceIndex(existingIndexPath)
-    : null;
-  const indexedProjects = existingIndex && Array.isArray(existingIndex.projects)
-    ? existingIndex.projects.filter(isRecord).map(normalizeProjectEntry).filter((entry): entry is WorkspaceProjectIndexEntry => Boolean(entry))
-    : [];
   const projectIds = new Set(indexedProjects.map((entry) => entry.project_id));
   const wouldIndexProjects = projectIds.has(projectId)
     ? indexedProjects
     : [...indexedProjects, currentProject];
+
+  assertWorkspaceInitializationPaths({ workspacePath, profile, projects: wouldIndexProjects });
 
   if (apply) {
     const initialized = initializeWorkspace(contracts, {
       agentId: agent.agent_id,
       workspacePath,
       projectId,
+      projectRoot: options.projectRoot,
       title: options.title,
       mode: options.mode,
       bind: false,
@@ -265,7 +280,12 @@ export function adoptWorkspace(
       )),
       would_index_projects: wouldIndexProjects,
       existing_workspace_index_detected: Boolean(existingIndex),
-      next_apply_command: `opl workspace adopt --agent ${agent.agent_id} --workspace ${workspacePath} --project-id ${projectId} --mode ${profile.workspace_mode} --apply`,
+      next_apply_command: [
+        'opl workspace adopt --agent', shellQuote(agent.agent_id), '--workspace', shellQuote(workspacePath),
+        '--project-id', shellQuote(projectId),
+        ...(options.projectRoot !== undefined ? ['--project-root', shellQuote(projectRoot)] : []),
+        '--mode', profile.workspace_mode, '--apply',
+      ].join(' '),
       authority_boundary: {
         adopt_dry_run_can_write_files: false,
         opl_can_write_domain_truth: false,
