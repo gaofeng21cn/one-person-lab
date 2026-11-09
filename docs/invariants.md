@@ -47,6 +47,15 @@
 26. release artifact 必须由真实 owner workflow、签名/校验和远端 readback证明；本地 commit 或候选分支不等于发布。
 27. dynamic count、receipt、health 和 version 只从 fresh machine surface 读取，不写入长期文档。
 
+## Knowledge and memory
+
+28. 知识的 scope、内容性质、来源位置与访问范围独立表达；Agent 执行任务不转移用户、主题或项目正文的所有权。
+29. 同一知识对象只有一个可编辑正文主源。已有个人库与普通工作目录使用同一来源机制，运行快照和派生摘要不能成为第二正文权威。
+30. 已接受版本、来源权限和时效约束共同决定可用性；冻结快照不延续已撤回的权限，关键约束变化须在真实行动前核验。
+31. 语义接受与业务行动权归相应 owner。通用来源解析、写入、回执和结构检查不能替代它们。
+
+共同生命周期与保留规则由[知识来源与记忆政策](./policies/knowledge-source-and-memory-policy.md)持有。
+
 ## Documentation
 
 文档的单一职责、保留与退役规则由 [文档生命周期政策](./policies/docs-lifecycle-policy.md) 统一持有。本页不复制该政策，也不通过文档断言改变 runtime 合同。

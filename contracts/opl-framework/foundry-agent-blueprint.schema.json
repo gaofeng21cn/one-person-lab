@@ -69,11 +69,12 @@
     },
     "memory_policy": {
       "type": "object",
-      "required": ["memory_classes", "retention_refs", "write_authority_refs"],
+      "required": ["memory_classes", "retention_refs", "write_authority_refs", "knowledge_requirements"],
       "properties": {
         "memory_classes": { "$ref": "#/$defs/string_list" },
         "retention_refs": { "$ref": "#/$defs/string_list" },
-        "write_authority_refs": { "$ref": "#/$defs/string_list" }
+        "write_authority_refs": { "$ref": "#/$defs/string_list" },
+        "knowledge_requirements": { "type": "array", "items": { "$ref": "#/$defs/knowledge_requirement" } }
       },
       "additionalProperties": false
     },
@@ -89,6 +90,34 @@
     "exact_content_ref": { "type": "string", "pattern": "^opl-content://sha256/[a-f0-9]{64}$" },
     "risk_tier": { "enum": ["low", "medium", "high"] },
     "string_list": { "type": "array", "items": { "$ref": "#/$defs/non_empty" }, "uniqueItems": true },
+    "knowledge_requirement": {
+      "type": "object",
+      "required": [
+        "requirement_id", "scope_kind", "content_kind", "semantic_owner_ref", "source_modes",
+        "requirement", "freshness_policy", "writeback_owner_ref", "derived_dependency_policy", "action_critical"
+      ],
+      "properties": {
+        "requirement_id": { "$ref": "#/$defs/non_empty" },
+        "scope_kind": { "enum": ["product", "owner", "topic", "project"] },
+        "content_kind": { "enum": ["mechanism", "policy", "state", "decision"] },
+        "semantic_owner_ref": { "$ref": "#/$defs/non_empty" },
+        "source_modes": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["product", "workspace", "external"] }
+        },
+        "requirement": { "enum": ["required", "optional"] },
+        "freshness_policy": { "$ref": "#/$defs/non_empty" },
+        "writeback_owner_ref": { "$ref": "#/$defs/non_empty" },
+        "derived_dependency_policy": { "$ref": "#/$defs/non_empty" },
+        "action_critical": { "type": "boolean" }
+      },
+      "additionalProperties": false,
+      "allOf": [{
+        "if": { "properties": { "scope_kind": { "const": "product" } } },
+        "then": { "properties": { "source_modes": { "const": ["product"] } } },
+        "else": { "properties": { "source_modes": { "items": { "enum": ["workspace", "external"] } } } }
+      }]
+    },
     "stage": {
       "type": "object",
       "required": [

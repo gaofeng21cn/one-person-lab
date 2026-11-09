@@ -146,6 +146,7 @@ type WorkspaceInitializeCliInput = {
   workspaceRoot?: string;
   workspaceId?: string;
   projectId?: string;
+  projectRoot?: string;
   title?: string;
   mode?: 'auto' | 'one_off' | 'series' | 'portfolio';
   bind?: boolean;
@@ -189,6 +190,7 @@ type WorkspaceAdoptCliInput = {
   workspaceRoot?: string;
   workspaceId?: string;
   projectId?: string;
+  projectRoot?: string;
   title?: string;
   mode?: 'auto' | 'one_off' | 'series' | 'portfolio';
   dryRun?: boolean;

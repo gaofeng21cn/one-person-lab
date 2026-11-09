@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://one-person-lab.local/contracts/opl-framework/durable-knowledge-item.schema.json",
   "title": "OPL durable knowledge item",
-  "description": "Body-free catalog entry for reusable agent knowledge or workspace memory. The owner of body_ref retains semantic authority.",
+  "description": "Source-owned knowledge with independent scope, content kind and temporal validity.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,21 +10,22 @@
     "version",
     "knowledge_id",
     "title",
-    "layer",
     "owner",
     "body_ref",
     "applicability",
     "status",
     "reviewed_at",
     "next_review_at",
-    "authority_boundary"
+    "authority_boundary",
+    "scope",
+    "content_kind"
   ],
   "properties": {
     "surface_kind": {
       "const": "opl_durable_knowledge_item"
     },
     "version": {
-      "const": "durable-knowledge-item.v1"
+      "const": "durable-knowledge-item.v2"
     },
     "knowledge_id": {
       "type": "string",
@@ -33,14 +34,6 @@
     "title": {
       "type": "string",
       "minLength": 1
-    },
-    "layer": {
-      "enum": [
-        "agent_pack",
-        "workspace_shared",
-        "workspace_project",
-        "dated_state"
-      ]
     },
     "owner": {
       "type": "string",
@@ -57,7 +50,7 @@
         "kind": {
           "enum": [
             "repo_path",
-            "workspace_path"
+            "source_path"
           ]
         },
         "ref": {
@@ -67,18 +60,11 @@
         "sha256": {
           "type": "string",
           "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1
         }
-      }
-    },
-    "projection_source": {
-      "description": "Workspace-owner-authorized local Markdown source for an exact read-only projection. Never allowed in a distributable agent pack. Source changes require owner review and regeneration before new recall.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["root", "ref", "sha256"],
-      "properties": {
-        "root": {"type": "string", "minLength": 1},
-        "ref": {"type": "string", "minLength": 1},
-        "sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
       }
     },
     "applicability": {
@@ -194,10 +180,112 @@
           "const": "catalog_recall_and_receipt_projection_only"
         }
       }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "product",
+            "owner",
+            "topic",
+            "project"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "content_kind": {
+      "enum": [
+        "mechanism",
+        "policy",
+        "state",
+        "decision"
+      ]
+    },
+    "requirement": {
+      "enum": [
+        "required",
+        "optional"
+      ]
+    },
+    "action_critical": {
+      "type": "boolean"
+    },
+    "derived_from": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "knowledge_id",
+          "sha256"
+        ],
+        "properties": {
+          "knowledge_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          }
+        }
+      }
     }
   },
-  "allOf": [{
-    "if": {"properties": {"layer": {"const": "agent_pack"}}},
-    "then": {"not": {"required": ["projection_source"]}}
-  }]
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "scope": {
+            "properties": {
+              "kind": {
+                "const": "product"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "body_ref": {
+            "properties": {
+              "kind": {
+                "const": "repo_path"
+              }
+            },
+            "not": {
+              "required": [
+                "source_id"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "body_ref": {
+            "required": [
+              "source_id",
+              "sha256"
+            ],
+            "properties": {
+              "kind": {
+                "const": "source_path"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

@@ -15,7 +15,7 @@
       "const": "opl_durable_knowledge_catalog"
     },
     "version": {
-      "const": "durable-knowledge-catalog.v1"
+      "const": "durable-knowledge-catalog.v2"
     },
     "owner": {
       "const": "one-person-lab"

@@ -22,6 +22,7 @@
 ## 专题文档
 
 - [Policies](./policies/README.md)：跨实现长期生效的治理规则。
+- [知识来源与记忆](./policies/knowledge-source-and-memory-policy.md)：个人库、主题、项目正文与运行快照的共同归属和生命周期。
 - [Specs](./specs/README.md)：人读接口和跨 owner 行为合同。
 - [Runtime](./runtime/README.md)：运行时对象、控制链和运维边界。
 - [Source](./source/README.md)：源码与 workspace 输入边界。

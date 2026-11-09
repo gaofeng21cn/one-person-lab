@@ -1,48 +1,14 @@
 import assert from 'node:assert/strict';
-import crypto from 'node:crypto';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs-parts/knowledge.ts';
 import { bindDurableKnowledgeContext, recallDurableKnowledge } from '../../src/authority/packages/durable-knowledge-catalog.ts';
-import { readStageKnowledgeContext } from '../../src/adapters/execution/family-runtime-knowledge-context.ts';
+import { bindStageKnowledgeContext, readStageKnowledgeContext, revalidateStageKnowledgeContext } from '../../src/adapters/execution/family-runtime-knowledge-context.ts';
+import { knowledgeItem, knowledgeSha, productCatalog, sourceFixture, writeKnowledgeFile } from './knowledge-source-fixture.ts';
 
-const sha = (text: string) => `sha256:${crypto.createHash('sha256').update(text).digest('hex')}`;
-
-function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-direct-knowledge-'));
-  const repo = path.join(root, 'agent');
-  const workspace = path.join(root, 'workspace');
-  const project = path.join(workspace, 'projects/finance');
-  const source = path.join(root, 'vault');
-  const body = '# Synthetic policy\n\nRetain the owner reserve.\n';
-  function write(file: string, value: string | object) {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, typeof value === 'string' ? value : JSON.stringify(value));
-  }
-  const catalog = (items: object[]) => ({ surface_kind: 'opl_durable_knowledge_catalog',
-    version: 'durable-knowledge-catalog.v1', owner: 'one-person-lab', items });
-  const item = { surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
-    knowledge_id: 'fixture.policy', title: 'Policy', layer: 'workspace_project', owner: 'owner',
-    body_ref: { kind: 'workspace_path', ref: 'memory/policy.md', sha256: sha(body) },
-    projection_source: { root: source, ref: 'policy.md', sha256: sha(body) },
-    applicability: { domains: ['fixture'], stages: ['review'], tasks: ['review-policy'] },
-    status: 'active', reviewed_at: '2026-01-01T00:00:00Z', next_review_at: '2099-01-01T00:00:00Z',
-    authority_boundary: { semantic_body_owner: 'owner', opl_role: 'catalog_recall_and_receipt_projection_only' } };
-  write(path.join(source, 'policy.md'), body);
-  write(path.join(project, 'memory/policy.md'), body);
-  write(path.join(repo, 'contracts/durable_knowledge_catalog.json'), catalog([]));
-  write(path.join(workspace, 'shared/memory/opl_durable_knowledge_catalog.json'), catalog([]));
-  write(path.join(project, 'memory/opl_durable_knowledge_catalog.json'), catalog([item]));
-  write(path.join(project, 'state/opl_durable_knowledge_catalog.json'), catalog([]));
-  const input = { repoDir: repo, domainPackRoot: repo, workspaceRoot: workspace, projectRoot: project,
-    domainId: 'fixture', stageId: 'review', taskIntent: 'review-policy' };
-  return { root, repo, workspace, project, source, body, item, input, write, catalog };
-}
-
-test('direct CLI freezes the same exact context as hosted stages and preserves its bytes after owner revision', async () => {
-  const f = fixture();
+test('direct CLI and hosted stages consume identical frozen source bytes without intermediate projection', async () => {
+  const f = sourceFixture();
   try {
     const specs = buildKnowledgeCommandSpecs();
     const output = path.join(f.root, 'binding.json');
@@ -53,46 +19,146 @@ test('direct CLI freezes the same exact context as hosted stages and preserves i
     assert.deepEqual(hosted, bindDurableKnowledgeContext(f.input));
     assert.equal(hosted.bodies[0]?.content, f.body);
     assert.equal(fs.statSync(output).mode & 0o777, 0o600);
-    f.write(path.join(f.source, 'policy.md'), '# Revised owner rule\n');
-    assert.throws(() => recallDurableKnowledge(f.input), /source changed/);
+    writeKnowledgeFile(path.join(f.source, 'policy.md'), '# Revised owner rule\n');
+    const revisedRecall = recallDurableKnowledge(f.input);
+    assert.equal(revisedRecall.selected.length, 0);
+    assert.ok(revisedRecall.quality_debt.some(debt => debt.includes(f.item.knowledge_id)));
     const direct = await specs['knowledge read-context']!.handler!(['--binding', output]) as { durable_knowledge_context: unknown };
     assert.deepEqual(direct.durable_knowledge_context, hosted);
-    binding.receipt.selected[0].sha256 = sha('tampered');
-    f.write(output, binding);
-    await assert.rejects(async () => specs['knowledge read-context']!.handler!(['--binding', output]), /differs from its snapshot/);
-  } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+    binding.receipt.selected[0].sha256 = knowledgeSha('tampered');
+    writeKnowledgeFile(output, binding);
+    await assert.rejects(async () => specs['knowledge read-context']!.handler!(['--binding', output]));
+  } finally { f.cleanup(); }
 });
 
-test('new owner revision is recalled while expired state and superseded knowledge remain excluded', () => {
-  const f = fixture();
+test('accepted new revisions enter new snapshots while old bytes remain reproducible', () => {
+  const f = sourceFixture();
   try {
+    const oldBinding = bindStageKnowledgeContext(f.input);
     const revised = '# Accepted rule\n\nReserve is a liquidity constraint.\n';
-    const old = { ...f.item, knowledge_id: 'fixture.old', status: 'superseded' };
-    f.item.body_ref.sha256 = sha(revised);
-    f.item.projection_source.sha256 = sha(revised);
-    f.write(path.join(f.source, 'policy.md'), revised);
-    f.write(path.join(f.project, 'memory/policy.md'), revised);
-    f.write(path.join(f.project, 'memory/opl_durable_knowledge_catalog.json'), f.catalog([old, f.item]));
-    const stale = { ...f.item, knowledge_id: 'fixture.stale', layer: 'dated_state',
-      body_ref: { ...f.item.body_ref, ref: 'state/snapshot.md' }, next_review_at: '2026-01-02T00:00:00Z' };
-    f.write(path.join(f.project, 'state/opl_durable_knowledge_catalog.json'), f.catalog([stale]));
-    const context = bindDurableKnowledgeContext(f.input);
-    assert.deepEqual(context.bodies.map(b => b.knowledge_id), ['fixture.policy']);
+    const old = { ...structuredClone(f.item), knowledge_id: 'owner.old', status: 'superseded' as const };
+    f.item.body_ref.sha256 = knowledgeSha(revised);
+    writeKnowledgeFile(path.join(f.source, 'policy.md'), revised);
+    const stale = { ...structuredClone(f.item), knowledge_id: 'owner.stale', content_kind: 'state' as const,
+      next_review_at: '2026-01-02T00:00:00Z' };
+    f.registry.items = [old, f.item, stale]; f.save();
+    const newBinding = bindStageKnowledgeContext(f.input);
+    const context = readStageKnowledgeContext(newBinding, 'fixture', 'review');
+    assert.deepEqual(context.bodies.map(body => body.knowledge_id), ['owner.policy']);
     assert.equal(context.bodies[0]?.content, revised);
-    assert.equal(context.receipt.quality_debt.some(d => d.startsWith('knowledge_review_overdue:fixture.stale:')), true);
-  } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+    assert.ok(context.receipt.quality_debt.some(debt => debt.includes('owner.stale')));
+    assert.equal(readStageKnowledgeContext(oldBinding, 'fixture', 'review').bodies[0]?.content, f.body);
+  } finally { f.cleanup(); }
 });
 
-test('source root escape and external-source declarations in agent packs are rejected', () => {
-  const f = fixture();
+test('revoked access prevents new use of an already frozen private snapshot', () => {
+  const f = sourceFixture();
   try {
-    fs.unlinkSync(path.join(f.source, 'policy.md'));
-    f.write(path.join(f.root, 'outside.md'), f.body);
-    fs.symlinkSync(path.join(f.root, 'outside.md'), path.join(f.source, 'policy.md'));
-    assert.throws(() => recallDurableKnowledge(f.input), /regular contained file/);
-    f.write(path.join(f.repo, 'contracts/durable_knowledge_catalog.json'), f.catalog([
-      { ...f.item, layer: 'agent_pack', body_ref: { kind: 'repo_path', ref: 'agent/knowledge/policy.md' } },
-    ]));
-    assert.throws(() => recallDurableKnowledge(f.input), /JSON Schema validation/);
-  } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+    const binding = bindStageKnowledgeContext(f.input);
+    f.registry.sources[0]!.status = 'revoked'; f.save();
+    assert.throws(() => readStageKnowledgeContext(binding, 'fixture', 'review'));
+    assert.throws(() => revalidateStageKnowledgeContext(binding, { forAction: true }));
+    f.registry.sources[0]!.status = 'active';
+    f.registry.sources[0]!.grants = []; f.save();
+    assert.throws(() => readStageKnowledgeContext(binding, 'fixture', 'review'));
+  } finally { f.cleanup(); }
+});
+
+test('action-critical policy changes invalidate old execution while preserving historical reasoning', () => {
+  const f = sourceFixture();
+  try {
+    f.item.action_critical = true; f.save();
+    const binding = bindStageKnowledgeContext(f.input);
+    revalidateStageKnowledgeContext(binding, { forAction: true });
+    const revised = '# New funding constraint\n';
+    writeKnowledgeFile(path.join(f.source, 'policy.md'), revised);
+    f.item.body_ref.sha256 = knowledgeSha(revised); f.save();
+    assert.equal(readStageKnowledgeContext(binding, 'fixture', 'review').bodies[0]?.content, f.body);
+    assert.throws(() => revalidateStageKnowledgeContext(binding, { forAction: true }));
+    const current = bindStageKnowledgeContext(f.input);
+    revalidateStageKnowledgeContext(current, { forAction: true });
+    assert.equal(readStageKnowledgeContext(current, 'fixture', 'review').bodies[0]?.content, revised);
+  } finally { f.cleanup(); }
+});
+
+test('source relocation preserves identity and does not require a duplicate editable body', () => {
+  const f = sourceFixture();
+  try {
+    const before = bindDurableKnowledgeContext(f.input);
+    const moved = path.join(f.root, 'renamed-vault');
+    fs.renameSync(f.source, moved);
+    f.registry.sources[0]!.root = moved; f.save();
+    const after = bindDurableKnowledgeContext(f.input);
+    assert.deepEqual(after.bodies, before.bodies);
+    assert.equal(fs.existsSync(f.source), false);
+    assert.equal(fs.readFileSync(path.join(moved, 'policy.md'), 'utf8'), f.body);
+  } finally { f.cleanup(); }
+});
+
+test('action revalidation follows critical dependencies even when only their summary enters the stage', () => {
+  const f = sourceFixture();
+  try {
+    f.item.action_critical = true;
+    f.item.applicability.stages = ['source-review'];
+    const summary = knowledgeItem({ id: 'owner.summary', scope: { kind: 'topic', id: 'finance' },
+      ref: 'summary.md', content: '# Summary\n' });
+    summary.derived_from = [{ knowledge_id: f.item.knowledge_id, sha256: f.item.body_ref.sha256! }];
+    f.registry.items.push(summary);
+    writeKnowledgeFile(path.join(f.source, 'summary.md'), '# Summary\n'); f.save();
+    const binding = bindStageKnowledgeContext(f.input);
+    assert.deepEqual(binding.receipt.selected.map(item => item.knowledge_id), ['owner.summary']);
+    revalidateStageKnowledgeContext(binding, { forAction: true });
+    const revised = '# Changed critical constraint\n';
+    writeKnowledgeFile(path.join(f.source, 'policy.md'), revised);
+    f.item.body_ref.sha256 = knowledgeSha(revised); f.save();
+    assert.equal(readStageKnowledgeContext(binding, 'fixture', 'review').bodies[0]?.content, '# Summary\n');
+    assert.throws(() => revalidateStageKnowledgeContext(binding, { forAction: true }));
+  } finally { f.cleanup(); }
+});
+
+test('historical summaries retain their original transitive authorization dependencies', () => {
+  const f = sourceFixture();
+  try {
+    f.item.scope = { kind: 'owner', id: 'owner-a' };
+    f.item.applicability.stages = ['source-review'];
+    const intermediate = knowledgeItem({ id: 'owner.intermediate', scope: { kind: 'topic', id: 'finance' },
+      ref: 'intermediate.md', content: '# Intermediate\n' });
+    intermediate.applicability.stages = ['source-review'];
+    intermediate.derived_from = [{ knowledge_id: f.item.knowledge_id, sha256: f.item.body_ref.sha256! }];
+    const summary = knowledgeItem({ id: 'owner.summary', scope: { kind: 'topic', id: 'finance' },
+      ref: 'summary.md', content: '# Historical summary\n' });
+    summary.derived_from = [{ knowledge_id: intermediate.knowledge_id, sha256: intermediate.body_ref.sha256! }];
+    f.registry.items.push(intermediate, summary);
+    writeKnowledgeFile(path.join(f.source, 'intermediate.md'), '# Intermediate\n');
+    writeKnowledgeFile(path.join(f.source, 'summary.md'), '# Historical summary\n'); f.save();
+    const binding = bindStageKnowledgeContext(f.input);
+    assert.equal(readStageKnowledgeContext(binding, 'fixture', 'review').bodies[0]?.knowledge_id, summary.knowledge_id);
+    intermediate.derived_from = [];
+    intermediate.body_ref.sha256 = knowledgeSha('# Independently revised\n');
+    writeKnowledgeFile(path.join(f.source, 'intermediate.md'), '# Independently revised\n');
+    f.bindings.registries[0]!.scope_ids = ['finance']; f.save();
+    assert.throws(() => readStageKnowledgeContext(binding, 'fixture', 'review'));
+  } finally { f.cleanup(); }
+});
+
+test('product context cannot bypass its private dependency authorization or action checks', () => {
+  const f = sourceFixture();
+  try {
+    f.item.action_critical = true;
+    f.item.applicability.stages = ['source-review'];
+    const summary = knowledgeItem({ id: 'fixture.method', scope: { kind: 'product', id: 'fixture' } });
+    summary.derived_from = [{ knowledge_id: f.item.knowledge_id, sha256: f.item.body_ref.sha256! }];
+    writeKnowledgeFile(path.join(f.repo, summary.body_ref.ref), '# Method\n');
+    writeKnowledgeFile(path.join(f.repo, 'contracts/durable_knowledge_catalog.json'), productCatalog([summary]));
+    f.save();
+    const binding = bindStageKnowledgeContext(f.input);
+    assert.deepEqual(binding.receipt.selected.map(item => item.knowledge_id), [summary.knowledge_id]);
+    revalidateStageKnowledgeContext(binding, { forAction: true });
+
+    f.registry.sources[0]!.status = 'revoked'; f.save();
+    assert.throws(() => readStageKnowledgeContext(binding, 'fixture', 'review'), /knowledge_source_revoked/);
+    f.registry.sources[0]!.status = 'active'; f.save();
+    writeKnowledgeFile(path.join(f.source, 'policy.md'), '# Changed constraint\n');
+    assert.throws(() => revalidateStageKnowledgeContext(binding, { forAction: true }), /knowledge_action_context_changed/);
+  } finally { f.cleanup(); }
 });

@@ -27,7 +27,7 @@ const repoRoot = path.resolve(import.meta.dirname, '../../..');
 function stageRunInput(id: string): TemporalStageRunWorkflowInput {
   const receipt = {
     surface_kind: 'opl_durable_knowledge_recall_receipt' as const,
-    version: 'durable-knowledge-recall-receipt.v1' as const,
+    version: 'durable-knowledge-recall-receipt.v2' as const,
     domain_id: 'redcube', stage_id: 'artifact_creation', task_intent: null,
     selected: [], quality_debt: [],
     authority_boundary: {

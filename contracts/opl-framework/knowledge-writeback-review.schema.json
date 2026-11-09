@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/knowledge-writeback-review.schema.json",
+  "title": "knowledge writeback review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "proposal_sha256",
+    "decision",
+    "reviewer",
+    "review_ref",
+    "reviewed_at",
+    "next_review_at"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_knowledge_owner_review"
+    },
+    "version": {
+      "const": "knowledge-owner-review.v2"
+    },
+    "proposal_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "decision": {
+      "enum": [
+        "accepted",
+        "rejected"
+      ]
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "next_review_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

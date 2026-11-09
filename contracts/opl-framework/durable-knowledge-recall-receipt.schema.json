@@ -18,7 +18,7 @@
       "const": "opl_durable_knowledge_recall_receipt"
     },
     "version": {
-      "const": "durable-knowledge-recall-receipt.v1"
+      "const": "durable-knowledge-recall-receipt.v2"
     },
     "domain_id": {
       "type": "string",
@@ -41,23 +41,16 @@
         "additionalProperties": false,
         "required": [
           "knowledge_id",
-          "layer",
           "body_ref",
           "sha256",
-          "selection_reason"
+          "selection_reason",
+          "scope",
+          "content_kind"
         ],
         "properties": {
           "knowledge_id": {
             "type": "string",
             "minLength": 1
-          },
-          "layer": {
-            "enum": [
-              "agent_pack",
-              "workspace_shared",
-              "workspace_project",
-              "dated_state"
-            ]
           },
           "body_ref": {
             "type": "string",
@@ -70,6 +63,43 @@
           "selection_reason": {
             "type": "string",
             "minLength": 1
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "id"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "product",
+                  "owner",
+                  "topic",
+                  "project"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "content_kind": {
+            "enum": [
+              "mechanism",
+              "policy",
+              "state",
+              "decision"
+            ]
+          },
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action_critical": {
+            "type": "boolean"
           }
         }
       }
@@ -104,6 +134,10 @@
           "const": false
         }
       }
+    },
+    "knowledge_domain_id": {
+      "type": "string",
+      "minLength": 1
     }
   }
 }

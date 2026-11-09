@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   bindDurableKnowledgeContext,
   validateDurableKnowledgeContext,
+  revalidateDurableKnowledgeContextAccess,
   type DurableKnowledgeContext,
 } from '../../authority/packages/index.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
@@ -42,5 +43,11 @@ export function readStageKnowledgeContext(binding: StageKnowledgeContext, domain
   if (canonicalJsonText(context.receipt) !== canonicalJsonText(binding.receipt)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Stage knowledge receipt differs from its snapshot.');
   }
+  revalidateDurableKnowledgeContextAccess(context);
   return context;
+}
+
+export function revalidateStageKnowledgeContext(binding: StageKnowledgeContext, options: { forAction?: boolean } = {}) {
+  const context = readStageKnowledgeContext(binding, binding.receipt.domain_id, binding.receipt.stage_id);
+  return revalidateDurableKnowledgeContextAccess(context, options);
 }

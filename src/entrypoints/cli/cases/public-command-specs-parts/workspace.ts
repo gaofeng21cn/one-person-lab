@@ -5,11 +5,11 @@ export function buildWorkspaceCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
 ): Record<string, CommandSpec> {
   const workspaceInitUsage = commandSpecs['workspace-init']?.usage
-    ?? 'opl workspace init --agent <mas|mag|rca|oma|obf> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]';
+    ?? 'opl workspace init --agent <mas|mag|rca|oma|obf> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>]';
   const workspaceEnsureUsage = commandSpecs['workspace-ensure']?.usage
-    ?? 'opl workspace ensure --agent <mas|mag|rca|oma|obf> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]';
+    ?? 'opl workspace ensure --agent <mas|mag|rca|oma|obf> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>]';
   const workspaceAdoptUsage = commandSpecs['workspace adopt']?.usage
-    ?? 'opl workspace adopt --agent <mas|mag|rca|oma|obf> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]';
+    ?? 'opl workspace adopt --agent <mas|mag|rca|oma|obf> --workspace <path> [--project-id <id>] [--project-root <absolute-existing-path>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]';
   const workspaceCommandSpecs: Record<string, CommandSpec> = {
     workspace: {
       usage:
@@ -191,6 +191,7 @@ export function buildWorkspaceCommandSpecs(
       usage: workspaceAdoptUsage,
       examples: [
         'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
+        'opl workspace adopt --agent rca --workspace /work/visuals --project-id deck-001 --project-root /work/visuals/productions/intro --apply',
         'opl workspace adopt --agent bookforge --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
         'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --apply',
       ],

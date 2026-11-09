@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import test, { type TestContext } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
@@ -23,6 +23,11 @@ import {
   revisionTransportContext,
 } from '../../src/adapters/execution/family-runtime-revision-intake.ts';
 import type { StageReviewReceipt } from '../../src/authority/stages/public/stage-quality-cycle.ts';
+import {
+  persistCanonicalReviewTransportJson,
+  readReviewTransportJsonExactRef,
+  reviewTransportRoots,
+} from '../../src/adapters/execution/family-runtime-review-transport-store.ts';
 
 function sha256(value: string | Buffer) {
   return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
@@ -401,3 +406,86 @@ test('reviewer snapshot materialization treats a stale declared size_bytes as me
     );
   });
 });
+
+function interleaveSnapshotRead(t: TestContext, target: string, interleave: () => void) {
+  const originalRead = fs.readSync;
+  const identity = fs.statSync(target, { bigint: true });
+  let injected = false;
+  const mocked = t.mock.method(fs, 'readSync', (...args: Parameters<typeof fs.readSync>) => {
+    const current = fs.fstatSync(args[0], { bigint: true });
+    if (!injected && current.dev === identity.dev && current.ino === identity.ino) {
+      injected = true;
+      interleave();
+    }
+    return originalRead(...args);
+  });
+  return { restore: () => mocked.mock.restore(), wasInjected: () => injected };
+}
+
+function snapshotFileIdentity(target: string) {
+  const stat = fs.statSync(target, { bigint: true });
+  return { dev: stat.dev, ino: stat.ino, size: stat.size, mtimeNs: stat.mtimeNs, ctimeNs: stat.ctimeNs };
+}
+
+test('exact snapshot read tolerates a real sibling snapshot persisted during the read', (t) => {
+  withFixture(() => {
+    const root = path.join(reviewTransportRoots().root, 'knowledge-context');
+    const kind = 'review_transport_test_snapshot';
+    const value = { content: 'original snapshot' };
+    const original = persistCanonicalReviewTransportJson({ root, kind, value });
+    const target = fileURLToPath(original.exact_ref.ref);
+    const before = snapshotFileIdentity(target);
+    const digestBefore = sha256(fs.readFileSync(target));
+    let sibling: ReturnType<typeof persistCanonicalReviewTransportJson> | undefined;
+    const probe = interleaveSnapshotRead(t, target, () => {
+      sibling = persistCanonicalReviewTransportJson({ root, kind, value: { content: 'sibling snapshot' } });
+    });
+    try {
+      assert.deepEqual(readReviewTransportJsonExactRef({
+        exactRef: original.exact_ref, expectedKind: kind, trustedRoot: root,
+      }).value, value);
+    } finally { probe.restore(); }
+    assert.equal(probe.wasInjected(), true);
+    assert.ok(sibling?.created);
+    assert.notEqual(sibling.exact_ref.ref, original.exact_ref.ref);
+    assert.equal(path.dirname(fileURLToPath(sibling.exact_ref.ref)), path.dirname(target));
+    assert.deepEqual(snapshotFileIdentity(target), before);
+    assert.equal(sha256(fs.readFileSync(target)), digestBefore);
+    assert.equal(digestBefore, original.exact_ref.sha256);
+  });
+});
+
+for (const replacement of ['directory', 'symlink'] as const) {
+  test(`exact snapshot read rejects an ancestor ${replacement} replacement with unchanged file bytes`, (t) => {
+    withFixture(() => {
+      const root = path.join(reviewTransportRoots().root, 'knowledge-context');
+      const kind = 'review_transport_test_snapshot';
+      const original = persistCanonicalReviewTransportJson({ root, kind, value: { content: 'original snapshot' } });
+      const target = fileURLToPath(original.exact_ref.ref);
+      const displaced = `${root}.displaced`;
+      const prepared = `${root}.replacement`;
+      if (replacement === 'directory') {
+        fs.mkdirSync(prepared);
+        // Prepare the hard link before observation so replacing the directory
+        // leaves the target file's inode, size, and timestamps unchanged.
+        fs.linkSync(target, path.join(prepared, path.basename(target)));
+      }
+      const before = snapshotFileIdentity(target);
+      const probe = interleaveSnapshotRead(t, target, () => {
+        fs.renameSync(root, displaced);
+        if (replacement === 'directory') fs.renameSync(prepared, root);
+        else fs.symlinkSync(displaced, root, 'dir');
+      });
+      try {
+        assertFailureCode(() => readReviewTransportJsonExactRef({
+          exactRef: original.exact_ref, expectedKind: kind, trustedRoot: root,
+        }), replacement === 'directory'
+          ? 'review_transport_ref_changed_during_read'
+          : 'review_transport_exact_ref_untrusted_root');
+      } finally { probe.restore(); }
+      assert.equal(probe.wasInjected(), true);
+      assert.deepEqual(snapshotFileIdentity(target), before);
+      assert.equal(sha256(fs.readFileSync(target)), original.exact_ref.sha256);
+    });
+  });
+}

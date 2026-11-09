@@ -179,7 +179,7 @@ function validateAgentWorkspaceNormSemantics(
   assertExactStringArray(precondition.required_inputs, ['agent_id'], 'default_workspace_precondition.required_inputs', filePath);
   assertExactStringArray(
     precondition.optional_inputs,
-    ['workspace_path_or_workspace_root', 'workspace_id', 'project_id', 'mode', 'title', 'dry_run', 'force', 'bind'],
+    ['workspace_path_or_workspace_root', 'workspace_id', 'project_id', 'project_root', 'mode', 'title', 'dry_run', 'force', 'bind'],
     'default_workspace_precondition.optional_inputs',
     filePath,
   );

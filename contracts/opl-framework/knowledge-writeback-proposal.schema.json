@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/knowledge-writeback-proposal.schema.json",
+  "title": "knowledge writeback proposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_refs",
+    "target_scope",
+    "content_kind",
+    "proposed_rule_or_mechanism",
+    "evidence_class",
+    "review_requirement"
+  ],
+  "properties": {
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "target_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "owner",
+            "topic",
+            "project"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "content_kind": {
+      "enum": [
+        "mechanism",
+        "policy",
+        "state",
+        "decision"
+      ]
+    },
+    "proposed_rule_or_mechanism": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_requirement": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

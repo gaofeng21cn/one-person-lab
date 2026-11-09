@@ -58,10 +58,10 @@ function withGeneratedStageControlPlaneRef(payload: JsonRecord, label: string) {
 
 function withMasLikeMemoryDescriptor(payload: JsonRecord, workspaceRoot: string) {
   const catalog = {
-    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v1',
+    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v2',
     owner: 'one-person-lab', domain_id: 'med-autoscience', items: [{
-      surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
-      knowledge_id: 'mas_publication_route_memory', title: 'Research method', layer: 'agent_pack', owner: 'MedAutoScience',
+      surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v2',
+      knowledge_id: 'mas_publication_route_memory', title: 'Research method', scope: { kind: 'product', id: 'MedAutoScience' }, content_kind: 'mechanism', owner: 'MedAutoScience',
       body_ref: { kind: 'repo_path', ref: 'agent/knowledge/method.md' },
       applicability: { domains: ['med-autoscience'], stages: ['scout', 'write', 'review'] },
       status: 'active', reviewed_at: '2026-01-01T00:00:00Z', next_review_at: '2099-01-01T00:00:00Z',

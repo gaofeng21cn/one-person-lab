@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/knowledge-writeback-receipt.schema.json",
+  "title": "knowledge writeback receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "status",
+    "knowledge_id",
+    "scope",
+    "content_kind",
+    "source_id",
+    "source_ref",
+    "proposal_sha256",
+    "review_sha256",
+    "reviewer",
+    "review_ref",
+    "before_sha256",
+    "after_sha256",
+    "registry_sha256",
+    "applied_at"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_knowledge_writeback_receipt"
+    },
+    "version": {
+      "const": "knowledge-writeback-receipt.v2"
+    },
+    "status": {
+      "enum": [
+        "applied",
+        "source_reviewed"
+      ]
+    },
+    "knowledge_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "owner",
+            "topic",
+            "project"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "content_kind": {
+      "enum": [
+        "mechanism",
+        "policy",
+        "state",
+        "decision"
+      ]
+    },
+    "source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proposal_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "review_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "before_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "after_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "registry_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "applied_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

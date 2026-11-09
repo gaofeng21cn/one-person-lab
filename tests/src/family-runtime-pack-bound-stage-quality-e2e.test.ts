@@ -77,16 +77,15 @@ Close prior findings against the repaired artifact.
   writeText(root, 'agent/knowledge/domain.md', '# Domain knowledge\n');
   writeJson(root, 'contracts/durable_knowledge_catalog.json', {
     surface_kind: 'opl_durable_knowledge_catalog',
-    version: 'durable-knowledge-catalog.v1',
+    version: 'durable-knowledge-catalog.v2',
     owner: 'one-person-lab',
     domain_id: 'medautoscience',
     items: [{
       surface_kind: 'opl_durable_knowledge_item',
-      version: 'durable-knowledge-item.v1',
+      version: 'durable-knowledge-item.v2',
       knowledge_id: 'fixture.pack-bound.draft',
       title: 'Pack-bound draft knowledge',
-      layer: 'agent_pack',
-      owner: 'medautoscience',
+      scope: { kind: 'product', id: 'medautoscience' }, content_kind: 'mechanism', owner: 'medautoscience',
       body_ref: {
         kind: 'repo_path',
         ref: 'agent/knowledge/domain.md',
