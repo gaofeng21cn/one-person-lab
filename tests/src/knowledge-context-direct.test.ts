@@ -58,6 +58,28 @@ test('private discovery separates accepted metadata, authorized candidates and e
   } finally { f.cleanup(); }
 });
 
+test('target routing protects registered bodies after binding narrowing and registration rejects physical aliases', () => {
+  const f = sourceFixture();
+  try {
+    const scope = { workspaceRoot: f.workspace, projectRoot: f.project, domainId: 'fixture' };
+    const input = { ...scope, bodyPath: path.join(f.source, 'policy.md') };
+    f.bindings.registries[0]!.scope_ids = []; f.save();
+    assert.deepEqual(resolveKnowledgeSourceTarget(input), { registered: true, authorized: false });
+    f.bindings.registries[0]!.scope_ids = ['finance']; f.bindings.registries[0]!.source_ids = []; f.save();
+    assert.deepEqual(resolveKnowledgeSourceTarget(input), { registered: true, authorized: false });
+    f.bindings.registries[0]!.source_ids = ['owner.notes'];
+    Object.assign(f.registry.sources[0]!, { exclude_globs: ['policy.md'] }); f.save();
+    assert.deepEqual(resolveKnowledgeSourceTarget(input), { registered: true, authorized: false });
+    Object.assign(f.registry.sources[0]!, { exclude_globs: [] });
+    Object.assign(f.registry.sources[0]!.grants[0]!, { write_domains: ['fixture'] });
+    f.registry.sources.push({ ...structuredClone(f.registry.sources[0]!), source_id: 'alias.notes' });
+    f.bindings.registries[0]!.source_ids.push('alias.notes'); f.save();
+    const item = { ...structuredClone(f.item), knowledge_id: 'owner.alias', body_ref: { ...f.item.body_ref, source_id: 'alias.notes' } };
+    assert.throws(() => registerKnowledgeSource({ ...scope, registryRef: f.registryRef, item, expectedSha256: item.body_ref.sha256!,
+      reviewer: 'owner', reviewRef: 'owner://alias', reviewedAt: '2026-01-02T00:00:00Z', nextReviewAt: '2099-01-01T00:00:00Z' }), /already.*identity/);
+  } finally { f.cleanup(); }
+});
+
 test('direct CLI and hosted stages consume identical frozen source bytes without intermediate projection', async () => {
   const f = sourceFixture();
   try {

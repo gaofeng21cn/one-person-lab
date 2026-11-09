@@ -178,6 +178,17 @@ export function resolveKnowledgeRegistrationSource(input: SourceInput & { regist
     || !matchingGrants(source, item, input, projectId).some((grant) => grant.write_domains?.includes(input.domainId))) knowledgeFailure('Knowledge registration requires the current source write grant.');
   const bodyPath = containedKnowledgeFile(source.root, item.body_ref.ref);
   if (!sourcePathAllowed(source, item.body_ref.ref)) knowledgeFailure('Knowledge registration path is outside its source filter.');
+  for (const boundRegistry of bindings.registries) {
+    const candidateRegistry = JSON.parse(fs.readFileSync(boundRegistry.registry_ref, 'utf8')) as KnowledgeSourceRegistry;
+    for (const candidate of candidateRegistry.items) {
+      const candidateSource = candidateRegistry.sources.find((entry) => entry.source_id === candidate.body_ref.source_id);
+      if (!candidateSource) continue;
+      const candidatePath = path.resolve(candidateSource.root, candidate.body_ref.ref);
+      if (fs.existsSync(candidatePath) && fs.realpathSync(candidatePath) === fs.realpathSync(bodyPath)
+        && (candidate.knowledge_id !== item.knowledge_id || candidate.body_ref.source_id !== item.body_ref.source_id
+          || fs.realpathSync(boundRegistry.registry_ref) !== registryRef)) knowledgeFailure('Knowledge source body already has a registered identity.');
+    }
+  }
   return { registryRef, registry, source, item, bodyPath };
 }
 export function discoverKnowledgeSources(input: SourceInput & { query: string; limit?: number; excerptChars?: number }) {
@@ -238,13 +249,14 @@ export function resolveKnowledgeSourceTarget(input: SourceInput & { bodyPath: st
   for (const binding of bindings.registries) {
     const registry = JSON.parse(fs.readFileSync(binding.registry_ref, 'utf8')) as KnowledgeSourceRegistry;
     for (const item of registry.items) {
-      if (!binding.source_ids.includes(item.body_ref.source_id!) || !binding.scope_ids.includes(item.scope.id)) continue;
       const source = registry.sources.find((candidate) => candidate.source_id === item.body_ref.source_id);
       if (!source) continue;
       const file = path.resolve(source.root, item.body_ref.ref);
       const resolved = fs.existsSync(file) ? fs.realpathSync(file) : file;
       if (resolved !== target) continue;
-      const disclosed = item.applicability.domains.includes(input.domainId) && (item.scope.kind !== 'project' || item.scope.id === projectId);
+      const disclosed = binding.source_ids.includes(item.body_ref.source_id!) && binding.scope_ids.includes(item.scope.id)
+        && item.applicability.domains.includes(input.domainId) && (item.scope.kind !== 'project' || item.scope.id === projectId)
+        && sourcePathAllowed(source, item.body_ref.ref);
       matches.push({ item, source, issue: sourceIssue(source, item, input, projectId), disclosed });
     }
   }
