@@ -12,6 +12,55 @@ const developerModeDirectFixCloseoutPayload = {
   owner_acceptance_ref: 'external-owner-ref:mas/app-state-direct-fix-accepted',
 };
 
+test('app state defers authority details to full inspection while fast retains mutation guards', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-devmode-authority-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  try {
+    const env = {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    };
+    const fast = runCli(['app', 'state', '--profile', 'fast'], env).app_state.developer_mode;
+    const full = runCli(['app', 'state', '--profile', 'full'], env).app_state.developer_mode;
+
+    assert.equal(fast.inspection_detail, 'fast');
+    assert.equal(fast.github_identity.status, 'skipped');
+    assert.equal(fast.repo_authority.status, 'not_checked');
+    assert.equal('standard_targets' in fast.target_authority, false);
+    assert.equal('repos' in fast.repo_authority, false);
+    assert.equal(fast.target_authority.standard_target_count, full.target_authority.standard_targets.length);
+    assert.equal(fast.repo_authority.required_repo_count, full.repo_authority.repos.length);
+    assert.equal(
+      fast.repo_authority.detail_policy.full_detail_surface,
+      'opl app state --profile full --json#developer_mode.repo_authority',
+    );
+    assert.equal(full.inspection_detail, 'full');
+    assert.equal(full.github_identity.status, 'unavailable');
+    assert.equal(full.repo_authority.repos.length > 0, true);
+    assert.equal(full.target_authority.standard_targets.length > 0, true);
+    assert.equal(full.repo_authority.repos.every((repo: any) => repo.direct_write_allowed === false), true);
+
+    for (const projection of [fast, full]) {
+      assert.equal(projection.allowed_route, 'blocked');
+      assert.equal(projection.repo_authority.direct_write_repo_count, 0);
+      assert.equal(projection.capabilities.runtime_mutation_scope.status, 'blocked');
+      assert.equal(projection.agent_authority.manual_enable_without_repo_write_cannot_grant_direct_write, true);
+      assert.equal(projection.agent_authority.activation_sources.manual_user_config.can_grant_direct_repo_write, false);
+      assert.equal(projection.repository_maintenance_protection.branch.direct_push_to_protected_branch, false);
+      assert.equal(projection.live_closeout_evidence.authority_boundary.can_modify_managed_runtime, false);
+    }
+    assert.deepEqual(fast.action, full.action);
+    assert.deepEqual(fast.agent_authority, full.agent_authority);
+    assert.deepEqual(fast.repository_maintenance_protection, full.repository_maintenance_protection);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('app state fast exposes Developer Mode live closeout evidence summary from the ledger', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-devmode-closeout-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');

@@ -392,7 +392,7 @@ test('App Runtime fast producer projects an effective running quality-cycle budg
       schema,
       sourceRef: schemaRef,
     }, projection);
-    assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+    assert.equal(validation.ok, true, validation.ok ? '' : JSON.stringify(validation.errors, null, 2));
   } finally {
     fs.rmSync(input.root, { recursive: true, force: true });
   }

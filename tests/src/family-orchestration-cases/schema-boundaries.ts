@@ -370,7 +370,9 @@ export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
     const writebackExample = readFirstSchemaExample('contracts/family-orchestration/family-domain-memory-writeback.schema.json');
     assert.deepEqual((catalogSchema.properties as Json).surface_kind, { const: 'opl_durable_knowledge_catalog' });
     assert.ok((catalogSchema.required as string[]).includes('items'));
-    assert.ok((itemSchema.required as string[]).includes('layer'));
+    assert.ok((itemSchema.required as string[]).includes('scope'));
+    assert.ok((itemSchema.required as string[]).includes('content_kind'));
+    assert.equal((itemSchema.properties as Json).layer, undefined);
     assert.ok((itemSchema.required as string[]).includes('next_review_at'));
     assert.equal(itemSchema.additionalProperties, false);
 

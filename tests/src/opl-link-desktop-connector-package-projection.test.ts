@@ -36,7 +36,7 @@ function assertSchema(relativePath: string, payload: unknown) {
     schema,
     sourceRef: relativePath,
   }, payload);
-  assert.equal(result.ok, true, result.ok ? undefined : JSON.stringify(result.errors));
+  assert.equal(result.ok, true, result.ok ? '' : JSON.stringify(result.errors));
 }
 
 test('OPL Link projection, payload, and allowlist bind one exact owner cohort', () => {

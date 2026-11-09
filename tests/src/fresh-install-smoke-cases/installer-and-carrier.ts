@@ -178,7 +178,7 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
     const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
     const cliPrefix = path.join(homeRoot, 'opt', 'homebrew');
     const toolchainRoot = path.join(homeRoot, '.opl', 'toolchain');
-    const managedNodeBin = path.join(toolchainRoot, 'node-v22.23.4-darwin-arm64', 'bin');
+    const managedNodeBin = path.join(toolchainRoot, 'node-v26.13.0-darwin-arm64', 'bin');
     const legacyCarrier = path.join(cliPrefix, 'lib', 'node_modules', 'opl-framework-shared');
     const npmLog = path.join(homeRoot, 'npm.log');
     fs.mkdirSync(path.join(installDir, '.git'), { recursive: true });
@@ -626,7 +626,7 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
         'done',
         'mkdir -p "$(dirname "$out")"',
         'if [[ "$url" == */SHASUMS256.txt ]]; then',
-        `  printf '%s  node-v22.23.4-darwin-arm64.tar.gz\\n' '${createHash('sha256').update('fixture archive\n').digest('hex')}' > "$out"`,
+        `  printf '%s  node-v26.13.0-darwin-arm64.tar.gz\\n' '${createHash('sha256').update('fixture archive\n').digest('hex')}' > "$out"`,
         'else',
         '  printf "fixture archive\\n" > "$out"',
         'fi',
@@ -646,12 +646,12 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
         '    *) shift ;;',
         '  esac',
         'done',
-        'if [[ "$archive" == *"node-v22.23.4-darwin-arm64"* ]]; then',
-        '  node_dir="$dest/node-v22.23.4-darwin-arm64/bin"',
+        'if [[ "$archive" == *"node-v26.13.0-darwin-arm64"* ]]; then',
+        '  node_dir="$dest/node-v26.13.0-darwin-arm64/bin"',
         '  mkdir -p "$node_dir"',
         '  cat > "$node_dir/node" <<\\NODE',
         '#!/usr/bin/env bash',
-        'if [ "${1:-}" = "-p" ]; then printf "%s\\n" "${OPL_TEST_DOWNLOADED_NODE_VERSION:-22.23.4}"; fi',
+        'if [ "${1:-}" = "-p" ]; then printf "%s\\n" "${OPL_TEST_DOWNLOADED_NODE_VERSION:-26.13.0}"; fi',
         'exit "${OPL_TEST_DOWNLOADED_NODE_EXIT:-0}"',
         'NODE',
         '  cat > "$node_dir/npm" <<\\NPM',
@@ -688,14 +688,14 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
         });
         assert.notEqual(refused.status, 0);
         assert.match(refused.stderr, message);
-        assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v22.23.4-darwin-arm64')), false);
+        assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v26.13.0-darwin-arm64')), false);
         assert.equal(fs.existsSync(installDir), false);
       }
       const ensured = spawnSync('/bin/bash', [installScript, '--ensure-node'], {
         cwd: repoRoot, encoding: 'utf8', env: fixtureEnvironment,
       });
       assert.equal(ensured.status, 0, ensured.stderr || ensured.stdout);
-      assert.match(ensured.stdout, /Preparing One Person Lab managed Node\.js v22\.23\.4/);
+      assert.match(ensured.stdout, /Preparing One Person Lab managed Node\.js v26\.13\.0/);
       assert.equal(fs.existsSync(installDir), false);
       assert.equal(fs.readFileSync(path.join(fakeBin, 'node'), 'utf8'), userNode);
       assert.equal(fs.readFileSync(path.join(retainedNode, 'sentinel'), 'utf8'), 'preserved older managed runtime\n');
@@ -716,7 +716,7 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
       assert.match(result.stdout, /OPL base carrier is ready/);
       assert.equal(result.stderr.includes('Homebrew'), false);
       assert.equal(result.stderr.includes('brew install'), false);
-      assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v22.23.4-darwin-arm64', 'bin', 'node')), true);
+      assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v26.13.0-darwin-arm64', 'bin', 'node')), true);
       assert.equal(fs.readFileSync(path.join(installDir, '.opl-install-source'), 'utf8').trim(), 'archive');
       assert.deepEqual(
         parseJsonText(fs.readFileSync(path.join(installDir, '.opl-framework-installed-source-identity.json'), 'utf8')),

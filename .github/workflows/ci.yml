@@ -19,9 +19,13 @@ env:
 
 jobs:
   source:
-    name: Source validation
+    name: Source validation (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['24', '26']
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,7 +35,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: ${{ matrix.node }}
           cache: npm
 
       - name: Install dependencies
@@ -39,6 +43,9 @@ jobs:
 
       - name: Verify shared release-note writer
         run: node --test tests/release-note-writer.test.mjs
+
+      - name: Verify Linux native worker discovery
+        run: node --experimental-strip-types --test tests/src/family-runtime-worker-process.test.ts
 
       - name: Validate source
         run: |
@@ -63,7 +70,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
           cache: npm
 
       - name: Install dependencies

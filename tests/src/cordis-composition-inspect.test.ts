@@ -56,7 +56,7 @@ test('Cordis composition inspect schema and CLI output are deterministic and rea
     schema,
     sourceRef: 'contracts/opl-framework/cordis-composition-inspect.schema.json',
   }, first);
-  assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors));
+  assert.equal(validation.ok, true, validation.ok ? '' : JSON.stringify(validation.errors));
 
   assert.equal(first.surface_kind, 'opl_cordis_composition_inspect');
   assert.equal(first.authority_boundary.installed_truth, false);

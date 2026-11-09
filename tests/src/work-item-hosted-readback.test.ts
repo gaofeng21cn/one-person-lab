@@ -415,7 +415,7 @@ test('hosted work-item readback keeps runtime projection and domain truth author
       schema,
       sourceRef: 'contracts/opl-framework/cli-command-registry.json#/commands/workspace_work_item_readback/output_schema'
     }, output);
-    assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors, null, 2));
+    assert.equal(validation.ok, true, validation.ok ? '' : JSON.stringify(validation.errors, null, 2));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

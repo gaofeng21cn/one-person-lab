@@ -9,10 +9,21 @@ function defaultTemporalWorkerPaths(): TemporalWorkerPaths {
 
 export function resolveTemporalWorkerForegroundPaths(): TemporalWorkerPaths { return defaultTemporalWorkerPaths(); }
 
+export function temporalWorkerRootArgumentFromArgv(argv: string[]): string | null {
+  const roots = argv.flatMap((arg, index) => {
+    if (arg === '--family-runtime-root') return [argv[index + 1]];
+    if (arg.startsWith('--family-runtime-root=')) return [arg.slice('--family-runtime-root='.length)];
+    return [];
+  });
+  if (!roots.length) return null;
+  const root = roots[0];
+  if (!root?.trim() || root.startsWith('--') || roots.some((value) => value !== root)) {
+    throw new Error('Temporal foreground worker requires one unambiguous family runtime root');
+  }
+  return root;
+}
+
 export function resolveTemporalWorkerForegroundPathsFromArgv(argv = process.argv): TemporalWorkerPaths {
-  const rootIndex = argv.indexOf('--family-runtime-root');
-  const root = rootIndex >= 0 ? argv[rootIndex + 1] : null;
-  return root && root.trim().length > 0
-    ? { root: path.resolve(root) }
-    : defaultTemporalWorkerPaths();
+  const root = temporalWorkerRootArgumentFromArgv(argv);
+  return root === null ? defaultTemporalWorkerPaths() : { root: path.resolve(root) };
 }

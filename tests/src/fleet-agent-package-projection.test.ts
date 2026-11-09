@@ -33,7 +33,7 @@ function assertSchema(relativePath: string, schemaId: string, payload: unknown) 
     schema,
     sourceRef: relativePath,
   }, payload);
-  assert.equal(result.ok, true, result.ok ? undefined : JSON.stringify(result.errors));
+  assert.equal(result.ok, true, result.ok ? '' : JSON.stringify(result.errors));
 }
 
 function appContributionsSchema(relativePath: string) {
@@ -82,7 +82,7 @@ test('Fleet Agent owner projection is a schema-valid capability Package with one
   );
   for (const schemaRef of appContributionsSchemaRefs) {
     const result = validateAppContributionsSchema(schemaRef, manifest.app_contributions);
-    assert.equal(result.ok, true, result.ok ? undefined : `${schemaRef}: ${JSON.stringify(result.errors)}`);
+    assert.equal(result.ok, true, result.ok ? '' : `${schemaRef}: ${JSON.stringify(result.errors)}`);
   }
 
   assert.equal(manifest.package_id, 'opl-fleet-agent');

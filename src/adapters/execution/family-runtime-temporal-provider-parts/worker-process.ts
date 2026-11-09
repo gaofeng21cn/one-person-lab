@@ -1,5 +1,7 @@
 import { processIsAlive } from './worker-state.ts';
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import { temporalWorkerRootArgumentFromArgv } from './foreground-paths.ts';
 
 const WORKER_STOP_GRACE_MS = 2_000;
 const WORKER_STOP_POLL_MS = 50;
@@ -14,7 +16,58 @@ function escapeRegExp(value: string) {
 
 function commandMatchesFamilyRuntimeRoot(command: string, familyRuntimeRoot: string) {
   const escapedRoot = escapeRegExp(familyRuntimeRoot);
-  return new RegExp(`(?:^|\\s)--family-runtime-root(?:=|\\s+)${escapedRoot}(?:\\s|$)`).test(command);
+  // The canonical launcher places the root last; do not accept a sibling path
+  // whose value merely starts with this root followed by a space.
+  return new RegExp(`(?:^|\\s)--family-runtime-root(?:=|\\s+)${escapedRoot}$`).test(command);
+}
+
+function linuxProcessArguments(pid: number) {
+  const args = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0');
+  if (args.at(-1) === '') args.pop();
+  return args.length ? args : null;
+}
+
+function linuxProcessCommand(pid: number) {
+  return linuxProcessArguments(pid)?.join(' ') ?? null;
+}
+
+function linuxArgumentsMatchFamilyRuntimeRoot(args: string[], familyRuntimeRoot: string) {
+  try {
+    return temporalWorkerRootArgumentFromArgv(args) === familyRuntimeRoot;
+  } catch {
+    return false;
+  }
+}
+
+function processExistsForInspection(pid: number) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false;
+    throw new Error(`Unable to inspect Temporal foreground worker process ${pid}`, { cause: error });
+  }
+}
+
+function linuxForegroundWorkerCandidates() {
+  let entries: string[];
+  try {
+    entries = fs.readdirSync('/proc');
+  } catch (error) {
+    throw new Error('Unable to discover Temporal foreground worker processes from /proc', { cause: error });
+  }
+  return entries.filter((entry) => {
+    if (!/^[1-9]\d*$/.test(entry)) return false;
+    try {
+      return linuxProcessArguments(Number(entry))?.includes('--temporal-worker-foreground') === true;
+    } catch (error) {
+      // Exited or inaccessible processes have not been identified as workers.
+      if (['ENOENT', 'ESRCH', 'EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')) {
+        return false;
+      }
+      throw new Error(`Unable to read process ${entry} during Temporal worker discovery`, { cause: error });
+    }
+  });
 }
 
 export function temporalForegroundWorkerCommand(pid: number) {
@@ -22,6 +75,7 @@ export function temporalForegroundWorkerCommand(pid: number) {
     return null;
   }
   try {
+    if (process.platform === 'linux') return linuxProcessCommand(pid);
     const output = execFileSync('ps', ['-ww', '-p', String(pid), '-o', 'command='], {
       encoding: 'utf8',
       maxBuffer: 1024 * 1024,
@@ -98,37 +152,62 @@ export function findTemporalForegroundWorkerPids(input: {
     return [];
   }
   const exclude = new Set([process.pid, process.ppid, ...(input.excludePids ?? [])]);
-  let output = '';
-  try {
-    output = execFileSync('ps', ['-ww', '-axo', 'pid=,command='], {
-      encoding: 'utf8',
-      maxBuffer: 1024 * 1024,
-    });
-  } catch {
-    return [];
+  let candidates: string[];
+  if (process.platform === 'linux') {
+    candidates = linuxForegroundWorkerCandidates();
+  } else {
+    try {
+      // Enumerate candidate PIDs first: unrelated process arguments must not fill
+      // the command buffer and hide live workers on busy hosts.
+      candidates = execFileSync('pgrep', ['-f', '--', '--temporal-worker-foreground'], {
+        encoding: 'utf8',
+        maxBuffer: 1024 * 1024,
+      }).trim().split(/\s+/);
+    } catch (error) {
+      if ((error as { status?: number }).status === 1) return [];
+      throw new Error('Unable to discover Temporal foreground worker processes', { cause: error });
+    }
   }
   const pids: number[] = [];
   const scopedRoot = typeof input.familyRuntimeRoot === 'string' && input.familyRuntimeRoot.length > 0
     ? input.familyRuntimeRoot
     : null;
-  for (const line of output.split('\n')) {
-    const trimmed = line.trim();
-    const match = /^(\d+)\s+(.+)$/.exec(trimmed);
-    if (!match) {
+  for (const candidate of candidates) {
+    if (!/^\d+$/.test(candidate)) {
       continue;
     }
-    const pid = Number(match[1]);
-    const command = match[2];
+    const pid = Number(candidate);
+    if (!Number.isInteger(pid) || pid <= 0 || exclude.has(pid)) {
+      continue;
+    }
+    let linuxArguments: string[] | null = null;
+    let command: string | null;
+    if (process.platform === 'linux') {
+      try {
+        linuxArguments = linuxProcessArguments(pid);
+        command = linuxArguments?.join(' ') || null;
+      } catch {
+        command = null;
+      }
+    } else {
+      command = temporalForegroundWorkerCommand(pid);
+    }
+    if (!command) {
+      if (processExistsForInspection(pid)) {
+        throw new Error(`Unable to inspect Temporal foreground worker process ${pid}`);
+      }
+      continue;
+    }
     if (
-      Number.isInteger(pid)
-      && !exclude.has(pid)
-      && command.includes('--temporal-worker-foreground')
+      (linuxArguments ? linuxArguments.includes('--temporal-worker-foreground') : command.includes('--temporal-worker-foreground'))
       && (
         scopedRoot
-          ? commandMatchesFamilyRuntimeRoot(command, scopedRoot)
-          : command.includes(input.modulePath)
+          ? (process.platform === 'linux'
+            ? linuxArgumentsMatchFamilyRuntimeRoot(linuxArguments ?? [], scopedRoot)
+            : commandMatchesFamilyRuntimeRoot(command, scopedRoot))
+          : (linuxArguments ? linuxArguments.includes(input.modulePath) : command.includes(input.modulePath))
       )
-      && processIsAlive(pid)
+      && processExistsForInspection(pid)
     ) {
       pids.push(pid);
     }

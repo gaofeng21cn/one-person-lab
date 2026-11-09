@@ -24,6 +24,10 @@
 证书撤销问题的稳定 standalone Node；Electron 的 Node 模式不构成该运行时。
 官方来源和 bootstrap 准入引用见
 [`dependency-release-sources.json`](../../../contracts/opl-framework/dependency-release-sources.json)。
+受管工具链默认使用当前 LTS，具体版本由 `install.sh` 的 `MANAGED_NODE_VERSION` 声明。
+CI 的 Source validation 同时验证当前及上一条受支持 LTS；完整 Verify 和产物构建使用当前 LTS。
+这不改变已有安全系统 Node 的复用和准入范围。
+
 `OPL_MANAGED_NODE_VERSION` 只选择受管版本，不能绕过安全准入；自定义
 `OPL_MANAGED_NODE_URL` 必须同时声明 `OPL_MANAGED_NODE_SHA256`。默认下载按官方
 SHASUMS 核对归档，解包后回读实际 Node 版本再切入原受管目录，失败不替换现有运行时。

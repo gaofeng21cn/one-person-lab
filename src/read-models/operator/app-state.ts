@@ -57,6 +57,7 @@ import { buildAppUiContributionsProjection } from './app-state-ui-contributions.
 import {
   compactFastActionCatalog,
   compactFastAgentPackageDirectory,
+  compactFastDeveloperMode,
   compactFastManagedUpdateProjection,
   compactFastOperatorRuntimeProjection,
   compactFastProviderState,
@@ -667,7 +668,7 @@ export async function buildOplAppState(input: {
         },
       },
       developer_profile: developerProfile,
-      developer_mode: developerMode,
+      developer_mode: profile === 'fast' ? compactFastDeveloperMode(developerMode) : developerMode,
       runtime_source_carriers: runtimeSourceCarriersState,
       managed_update: profile === 'fast'
         ? compactFastManagedUpdateProjection(managedUpdate)
