@@ -1,4 +1,4 @@
-import { recallDurableKnowledge } from '../../authority/packages/durable-knowledge-catalog.ts';
+import { recallDurableKnowledge } from '../../authority/packages/index.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 
 type KnowledgeInput = Parameters<typeof recallDurableKnowledge>[0];

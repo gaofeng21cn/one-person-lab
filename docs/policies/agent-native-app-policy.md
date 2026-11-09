@@ -46,7 +46,7 @@ Agent 原生应用以 Agent 可发现、理解和调用的领域能力为核心�
 
 用户拥有知识，项目组织工作，Agent 按需使用，运行时记录当次使用的版本。已有 Obsidian 或普通资料目录可以承载唯一可编辑正文；没有独立资料库时使用现有工作目录。允许不同主题采用不同位置，不要求迁移整库或复制到每个 Agent。
 
-应用的知识需求区分产品方法、用户/团队、长期主题与具体项目；知识的性质、事实日期、复核期限和来源可信度是独立维度。该分层及字段由 Framework 知识 owner 统一演进，MiniApp 只声明需要什么、用于什么任务，不自行创建目录协议或一套相竞争的层级。现行机械合同见[知识生命周期](../../contracts/opl-framework/durable-knowledge-lifecycle-contract.json)；正在演进的来源模型按其 owner 合同接入，不把目标设计当作已安装能力。
+应用的知识需求区分产品方法、用户/团队、长期主题与具体项目；知识的性质、事实日期、复核期限和来源可信度是独立维度。归属与生命周期由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)持有，机器字段见[知识生命周期](../../contracts/opl-framework/durable-knowledge-lifecycle-contract.json)，实际绑定、召回、冻结和写回见[知识来源接口](../specs/knowledge-sources.md)。MiniApp 声明需要什么、用于什么任务，直接消费这些公开接口。
 
 Profile/Workspace 绑定获准来源；运行时选择适用内容并冻结所用版本，供生产、审阅和修复共享。UI 可显示用了哪些来源、缺少什么、哪些已过期及其修复入口。默认不注入整库，个人通用信息也不意味着任何应用可自动取得所有个人事实或跨项目数据。
 
