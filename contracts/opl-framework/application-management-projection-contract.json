@@ -37,7 +37,8 @@
     "source": "knowledge-owner authorized source projection only",
     "body": "never projected",
     "workspace_binding_alone_is_not_a_knowledge_source": true,
-    "unprojected_owner_source": "omit",
+    "unprojected_owner_source": "emit_unknown_summary",
+    "unavailable_owner_projection_resource_id": "knowledge:personal",
     "consumer_must_not_infer_ready": true
   },
   "action_boundary": {
