@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -31,7 +32,10 @@ type WorkerDependencyHealth = {
 };
 
 function repairCommand(moduleRoot: string) {
-  return `cd ${JSON.stringify(moduleRoot)} && npm install --include=optional --ignore-scripts=false`;
+  const quotedRoot = process.platform === 'win32'
+    ? JSON.stringify(moduleRoot)
+    : `'${moduleRoot.replaceAll("'", "'\\''")}'`;
+  return `cd ${quotedRoot} && npm install --include=optional --ignore-scripts=false`;
 }
 
 function dependencyHealth(input: {
@@ -68,7 +72,13 @@ function dependencyHealth(input: {
 }
 
 function temporalWorkerRuntimeModuleRoot(moduleUrl: string) {
-  return path.resolve(path.dirname(fileURLToPath(moduleUrl)), '../../../..');
+  let directory = path.dirname(fileURLToPath(moduleUrl));
+  while (true) {
+    if (fs.existsSync(path.join(directory, 'package.json'))) return directory;
+    const parent = path.dirname(directory);
+    if (parent === directory) throw new Error('Temporal worker module is outside a runtime package');
+    directory = parent;
+  }
 }
 
 export function inspectTemporalWorkerRuntimeDependencies(input: {

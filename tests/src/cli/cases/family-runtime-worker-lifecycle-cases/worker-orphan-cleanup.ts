@@ -32,7 +32,7 @@ test('Temporal worker module path parser preserves unquoted macOS paths with spa
 });
 
 test('Temporal worker discovery ignores oversized unrelated process arguments', {
-  skip: process.platform === 'win32',
+  skip: process.platform !== 'darwin',
 }, () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-large-process-table-'));
   const workerRoot = path.join(stateRoot, 'family-runtime');
@@ -68,7 +68,7 @@ process.stdout.write(execFileSync('/bin/ps', args));
 });
 
 test('Temporal worker discovery distinguishes no matches from a failed process probe', {
-  skip: process.platform === 'win32',
+  skip: process.platform !== 'darwin',
 }, () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-failed-process-probe-'));
   const previousPath = process.env.PATH;

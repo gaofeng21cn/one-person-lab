@@ -1,5 +1,6 @@
 import { processIsAlive } from './worker-state.ts';
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 
 const WORKER_STOP_GRACE_MS = 2_000;
 const WORKER_STOP_POLL_MS = 50;
@@ -17,11 +18,47 @@ function commandMatchesFamilyRuntimeRoot(command: string, familyRuntimeRoot: str
   return new RegExp(`(?:^|\\s)--family-runtime-root(?:=|\\s+)${escapedRoot}(?:\\s|$)`).test(command);
 }
 
+function linuxProcessCommand(pid: number) {
+  return fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0').filter(Boolean).join(' ') || null;
+}
+
+function processExistsForInspection(pid: number) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false;
+    throw new Error(`Unable to inspect Temporal foreground worker process ${pid}`, { cause: error });
+  }
+}
+
+function linuxForegroundWorkerCandidates() {
+  let entries: string[];
+  try {
+    entries = fs.readdirSync('/proc');
+  } catch (error) {
+    throw new Error('Unable to discover Temporal foreground worker processes from /proc', { cause: error });
+  }
+  return entries.filter((entry) => {
+    if (!/^[1-9]\d*$/.test(entry)) return false;
+    try {
+      return linuxProcessCommand(Number(entry))?.includes('--temporal-worker-foreground') === true;
+    } catch (error) {
+      // Exited or inaccessible processes have not been identified as workers.
+      if (['ENOENT', 'ESRCH', 'EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')) {
+        return false;
+      }
+      throw new Error(`Unable to read process ${entry} during Temporal worker discovery`, { cause: error });
+    }
+  });
+}
+
 export function temporalForegroundWorkerCommand(pid: number) {
   if (process.platform === 'win32' || !Number.isInteger(pid) || pid <= 0) {
     return null;
   }
   try {
+    if (process.platform === 'linux') return linuxProcessCommand(pid);
     const output = execFileSync('ps', ['-ww', '-p', String(pid), '-o', 'command='], {
       encoding: 'utf8',
       maxBuffer: 1024 * 1024,
@@ -98,35 +135,37 @@ export function findTemporalForegroundWorkerPids(input: {
     return [];
   }
   const exclude = new Set([process.pid, process.ppid, ...(input.excludePids ?? [])]);
-  let output = '';
-  try {
-    // Enumerate candidate PIDs first: unrelated process arguments must not fill
-    // the command buffer and hide live workers on busy hosts.
-    output = execFileSync('pgrep', ['-f', '--', '--temporal-worker-foreground'], {
-      encoding: 'utf8',
-      maxBuffer: 1024 * 1024,
-    });
-  } catch (error) {
-    if ((error as { status?: number }).status === 1) {
-      return [];
+  let candidates: string[];
+  if (process.platform === 'linux') {
+    candidates = linuxForegroundWorkerCandidates();
+  } else {
+    try {
+      // Enumerate candidate PIDs first: unrelated process arguments must not fill
+      // the command buffer and hide live workers on busy hosts.
+      candidates = execFileSync('pgrep', ['-f', '--', '--temporal-worker-foreground'], {
+        encoding: 'utf8',
+        maxBuffer: 1024 * 1024,
+      }).trim().split(/\s+/);
+    } catch (error) {
+      if ((error as { status?: number }).status === 1) return [];
+      throw new Error('Unable to discover Temporal foreground worker processes', { cause: error });
     }
-    throw new Error('Unable to discover Temporal foreground worker processes', { cause: error });
   }
   const pids: number[] = [];
   const scopedRoot = typeof input.familyRuntimeRoot === 'string' && input.familyRuntimeRoot.length > 0
     ? input.familyRuntimeRoot
     : null;
-  for (const candidate of output.trim().split(/\s+/)) {
+  for (const candidate of candidates) {
     if (!/^\d+$/.test(candidate)) {
       continue;
     }
     const pid = Number(candidate);
-    if (!Number.isInteger(pid) || pid <= 0 || exclude.has(pid) || !processIsAlive(pid)) {
+    if (!Number.isInteger(pid) || pid <= 0 || exclude.has(pid)) {
       continue;
     }
     const command = temporalForegroundWorkerCommand(pid);
     if (!command) {
-      if (processIsAlive(pid)) {
+      if (processExistsForInspection(pid)) {
         throw new Error(`Unable to inspect Temporal foreground worker process ${pid}`);
       }
       continue;
@@ -138,7 +177,7 @@ export function findTemporalForegroundWorkerPids(input: {
           ? commandMatchesFamilyRuntimeRoot(command, scopedRoot)
           : command.includes(input.modulePath)
       )
-      && processIsAlive(pid)
+      && processExistsForInspection(pid)
     ) {
       pids.push(pid);
     }
