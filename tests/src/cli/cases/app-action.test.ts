@@ -145,6 +145,7 @@ test('app action catalog exposes representative safe delegated action refs', () 
       'workspace_root_optional',
       'workspace_id',
       'project_id',
+      'project_root',
       'mode',
       'title',
     ]);
