@@ -11,12 +11,21 @@ import {
   importOplRelayMailboxConnection,
 } from './relay-mailbox-provider.ts';
 import type { RelayConnectCommandRunner } from './relay-mailbox-provider.ts';
+import {
+  createOplCloudConnectionProvider,
+  importOplCloudConnection,
+  listOplCloudProviderConnections,
+  type CloudConnectCommandRunner,
+} from './cloud-connect-provider.ts';
 
 export type DefaultConnectionAuthorizationOptions = {
   descriptorDiscovery?: OplConnectionDescriptorDiscovery;
   relayProvider?: OplConnectionProvider;
   relayBinary?: string;
   relayRunner?: RelayConnectCommandRunner;
+  cloudProvider?: OplConnectionProvider;
+  cloudBinary?: string;
+  cloudRunner?: CloudConnectCommandRunner;
 };
 
 export function createDefaultConnectionAuthorizationService(
@@ -29,8 +38,24 @@ export function createDefaultConnectionAuthorizationService(
     providers: [options.relayProvider ?? createOplRelayMailboxConnectionProvider({
       binary: options.relayBinary,
       runner: options.relayRunner,
+    }), options.cloudProvider ?? createOplCloudConnectionProvider({
+      binary: options.cloudBinary,
+      runner: options.cloudRunner,
     })],
   });
+}
+
+export function listCloudConnections(
+  options: Pick<DefaultConnectionAuthorizationOptions, 'cloudBinary' | 'cloudRunner'> = {},
+) {
+  return listOplCloudProviderConnections({ binary: options.cloudBinary, runner: options.cloudRunner });
+}
+
+export function importCloudConnection(
+  cloudRef: string,
+  options: Pick<DefaultConnectionAuthorizationOptions, 'cloudBinary' | 'cloudRunner'> = {},
+) {
+  return importOplCloudConnection(cloudRef, { binary: options.cloudBinary, runner: options.cloudRunner });
 }
 
 export function listOplConnectionAuthorization() {

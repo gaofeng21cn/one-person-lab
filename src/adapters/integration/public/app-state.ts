@@ -10,6 +10,8 @@ export { listOplConnections } from '../connection-registry.ts';
 export {
   createDefaultConnectionAuthorizationService,
   importRelayConnection,
+  importCloudConnection,
+  listCloudConnections,
   listOplConnectionAuthorization,
 } from '../connection-composition.ts';
 export type { DefaultConnectionAuthorizationOptions } from '../connection-composition.ts';
