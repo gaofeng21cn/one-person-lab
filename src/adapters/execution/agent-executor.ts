@@ -520,9 +520,11 @@ function runCodexExecutor(request: AgentExecutionRequest, executorKind: AgentExe
     provider: provider ?? undefined,
     reasoningEffort: reasoningEffort ?? undefined,
     enableImageGeneration: requestedCapabilities.includes('image_generation'),
+    promptViaStdin: true,
   });
   const result = runCodexCommand(args, {
     timeoutMs: normalizeTimeoutMs(request.timeout_ms),
+    stdin: request.prompt,
   });
   const parsed = json ? parseCodexExecOutput(result.stdout) : null;
   return {

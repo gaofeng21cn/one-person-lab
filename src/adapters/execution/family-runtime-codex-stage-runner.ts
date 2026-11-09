@@ -272,8 +272,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     const skillRuntime = hostSkillRuntime ?? sandboxSkillRuntime;
     const stagePrompt = runnerPromptForExecution({ ...input, stagePacketRef }, executionAttempt);
     const skillPromptPrefix = packageSkillPromptPrefix(skillRuntime?.projection ?? null);
+    const promptText = skillPromptPrefix ? `${skillPromptPrefix}\n\n${stagePrompt}` : stagePrompt;
+    const promptViaStdin = !runInE2bSandbox && !runInLocalSandbox;
     const args = buildCodexExecArgs(
-      skillPromptPrefix ? `${skillPromptPrefix}\n\n${stagePrompt}` : stagePrompt,
+      promptText,
       {
       cwd: runInSandbox ? sandboxWorkspaceRoot : workspaceRoot,
       json: true,
@@ -285,6 +287,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
             codexExecOptions,
             outputLastMessagePath: stageCloseoutCapture.outputLastMessagePath,
           })),
+      promptViaStdin,
       },
     );
     let result: CodexCommandResult;
@@ -331,6 +334,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
             ...providerEnv,
             ...hostSkillRuntime?.env,
           },
+          stdin: promptText,
           timeoutMs,
           noOutputTimeoutMs,
           commandNoProgressTimeoutMs,
@@ -444,10 +448,11 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         process.env.OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS,
         DEFAULT_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS,
       );
+      const resumePrompt = protocolCloseoutResumePrompt(input.attempt,
+        attemptRole === 'reviewer' || attemptRole === 're_reviewer' ? rawStageArtifact : null);
       const resumeArgs = buildCodexExecResumeArgs(
         parsed.threadId,
-        protocolCloseoutResumePrompt(input.attempt,
-          attemptRole === 'reviewer' || attemptRole === 're_reviewer' ? rawStageArtifact : null),
+        resumePrompt,
         {
           ...codexCloseoutCaptureExecOptions({
             codexExecOptions,
@@ -458,11 +463,13 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           reasoningEffort: 'low',
           packageSkillBindings: hostSkillRuntime?.packageSkillBindings,
           shellHome: hostSkillRuntime?.shellHome,
+          promptViaStdin: true,
         },
       );
       protocolCloseoutResumeResult = await runCodexCommandStreaming(resumeArgs, {
         cwd: workspaceRoot,
         env: { ...input.env, ...providerEnv, ...hostSkillRuntime?.env },
+        stdin: resumePrompt,
         timeoutMs: protocolCloseoutResumeTimeoutMs,
         noOutputTimeoutMs,
         commandNoProgressTimeoutMs,

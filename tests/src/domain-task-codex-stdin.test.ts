@@ -7,7 +7,7 @@ import {
   runDomainCodexPrompt,
   runCodexCommandStreaming,
 } from '../../src/adapters/execution/domain-task-runtime.ts';
-import { buildCodexExecResumeArgs } from '../../src/adapters/execution/codex.ts';
+import { buildCodexExecResumeArgs, runCodexCommand } from '../../src/adapters/execution/codex.ts';
 
 test('Codex exec can carry large prompts over stdin instead of argv', () => {
   const prompt = 'x'.repeat(1024 * 1024);
@@ -30,6 +30,35 @@ test('Codex exec resume uses an explicit workspace-write sandbox without the rem
     'thread-1',
     'continue',
   ]);
+});
+
+test('Codex exec resume can carry large prompts over stdin instead of argv', () => {
+  const prompt = 'x'.repeat(1024 * 1024);
+  const args = buildCodexExecResumeArgs('thread-1', prompt, { promptViaStdin: true });
+
+  assert.equal(args.at(-1), '-');
+  assert.equal(args.at(-2), 'thread-1');
+  assert.equal(args.includes(prompt), false);
+});
+
+test('Codex non-streaming transport writes the supplied prompt to child stdin', () => {
+  const prompt = 'stdin prompt payload';
+  const previous = process.env.OPL_CODEX_BIN;
+  process.env.OPL_CODEX_BIN = process.execPath;
+  try {
+    const result = runCodexCommand([
+      '-e',
+      'let body=""; process.stdin.on("data", chunk => body += chunk); process.stdin.on("end", () => process.stdout.write(body));',
+    ], {
+      stdin: prompt,
+      timeoutMs: 5000,
+    });
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stdout.trimEnd(), prompt);
+  } finally {
+    if (previous === undefined) delete process.env.OPL_CODEX_BIN;
+    else process.env.OPL_CODEX_BIN = previous;
+  }
 });
 
 test('Codex exec isolates package-bound Skills while preserving the real shell home', () => {
