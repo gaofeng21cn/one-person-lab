@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import {
   defaultPayloadConverter,
   fromPayloadsAtIndex,
-} from '@temporalio/common/lib/converter/payload-converter.js';
+} from '@temporalio/common';
 import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../../src/adapters/execution/family-runtime-temporal-activities.ts';
