@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { recallDurableKnowledge } from '../../src/authority/packages/durable-knowledge-catalog.ts';
+import { bindDurableKnowledgeContext, recallDurableKnowledge, revalidateDurableKnowledgeContextAccess } from '../../src/authority/packages/durable-knowledge-catalog.ts';
 import { knowledgeItem, sourceFixture } from './knowledge-source-fixture.ts';
 
 test('a missing bound registry cannot silently discard requirements declared only in that registry', () => {
@@ -31,6 +31,7 @@ test('required superseded knowledge needs a replacement that is actually selecte
       ref: 'revised-policy.md', content: replacementContent,
     });
     f.item.requirement = 'required';
+    f.item.action_critical = true;
     f.item.superseded_by = [replacement.knowledge_id];
     f.save();
     const requiredUnavailable = {
@@ -46,6 +47,20 @@ test('required superseded knowledge needs a replacement that is actually selecte
     assert.throws(() => recallDurableKnowledge(f.input), requiredUnavailable);
 
     f.write(path.join(f.source, replacement.body_ref.ref), replacementContent);
-    assert.deepEqual(recallDurableKnowledge(f.input).selected.map(item => item.knowledge_id), [replacement.knowledge_id]);
+    const context = bindDurableKnowledgeContext(f.input);
+    assert.deepEqual(context.receipt.selected.map(item => item.knowledge_id), [replacement.knowledge_id]);
+    assert.equal(revalidateDurableKnowledgeContextAccess(context, { forAction: true }).valid, true);
+
+    const additional = knowledgeItem({
+      id: 'owner.additional-policy', scope: f.item.scope, contentKind: f.item.content_kind,
+      requirement: 'required',
+    });
+    f.registry.items.push(additional); f.save();
+    assert.throws(() => revalidateDurableKnowledgeContextAccess(context, { forAction: true }),
+      /knowledge_action_context_changed:owner.additional-policy/);
+    additional.requirement = 'optional';
+    additional.action_critical = true; f.save();
+    assert.throws(() => revalidateDurableKnowledgeContextAccess(context, { forAction: true }),
+      /knowledge_action_context_changed:owner.additional-policy/);
   } finally { f.cleanup(); }
 });
