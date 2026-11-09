@@ -127,26 +127,25 @@
     "@one-person-lab/cordis-abi": "file:packages/cordis-abi",
     "@one-person-lab/package-host": "file:packages/package-host",
     "@playwright/mcp": "0.0.83",
-    "@temporalio/activity": "1.20.3",
-    "@temporalio/client": "1.20.3",
-    "@temporalio/common": "1.20.3",
-    "@temporalio/worker": "1.20.3",
-    "@temporalio/workflow": "1.20.3",
+    "@temporalio/activity": "1.25.0",
+    "@temporalio/client": "1.25.0",
+    "@temporalio/common": "1.25.0",
+    "@temporalio/worker": "1.25.0",
+    "@temporalio/workflow": "1.25.0",
     "@types/semver": "7.8.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "esbuild": "^0.28.2",
+    "long": "5.3.2",
+    "protobufjs": "8.8.1",
     "semver": "7.8.5",
     "tar": "7.5.22",
     "typescript": "^5.8.3",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@temporalio/testing": "1.20.3",
+    "@temporalio/testing": "1.25.0",
     "@types/node": "^24.5.2"
-  },
-  "overrides": {
-    "protobufjs": "7.6.5"
   },
   "license": "Apache-2.0",
   "optionalDependencies": {

@@ -3,10 +3,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import temporalProto from '@temporalio/proto';
+import { historyFromJSON } from '@temporalio/common/proto-utils';
+import { readTemporalHistoryFixture } from './temporal-history-fixture.ts';
 
 import { readTemporalStableCohort } from '../../src/adapters/integration/temporal-stable-cohort.ts';
 import { buildTemporalStageAttemptReplayGateForTest } from '../../src/adapters/execution/family-runtime-temporal-provider.ts';
+import { buildTemporalStageAttemptWorkerOptions } from '../../src/adapters/execution/family-runtime-temporal-provider-parts/workflow-bundle.ts';
 import {
   syncTemporalProductionProbeAttemptProjection,
   temporalProductionProbeInput,
@@ -24,14 +26,6 @@ import {
   completedTemporalObservation,
   withStageAttemptDb,
 } from './family-runtime-temporal-terminal-sync-cases/helpers.ts';
-
-const repoRoot = path.resolve(import.meta.dirname, '../..');
-
-function readHistory(fixturePath: string) {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, fixturePath), 'utf8')) as {
-    events?: Array<Record<string, any>>;
-  };
-}
 
 test('Temporal production proof uses a generic example-domain fixture', () => {
   const closeout = temporalProductionTypedCloseoutPacket();
@@ -173,11 +167,8 @@ test('Temporal production proof persists terminal Attempt projection through the
 test('current workflow bundle replays every immutable stable-cohort history fixture', async () => {
   const cohort = readTemporalStableCohort();
   for (const [index, fixture] of cohort.replay.fixtures.entries()) {
-    const history = readHistory(fixture.path);
+    const { replayHistory } = readTemporalHistoryFixture(path.basename(fixture.path));
     const workflowId = `stable-cohort-replay-${index}`;
-    const replayHistory = fixture.path.includes('quality-resume')
-      ? temporalProto.temporal.api.history.v1.History.fromObject(history)
-      : history;
     const gate = await buildTemporalStageAttemptReplayGateForTest(replayHistory, workflowId);
     assert.equal(gate.replay_status, 'passed', fixture.path);
     assert.equal(gate.workflow_id, workflowId, fixture.path);
@@ -185,9 +176,34 @@ test('current workflow bundle replays every immutable stable-cohort history fixt
   }
 });
 
+test('legacy fixture normalization does not relax the official JSON history parser', () => {
+  const { history } = readTemporalHistoryFixture('stage-attempt-hard-stop-pre-runtime-evidence-v1.json');
+  assert.throws(() => historyFromJSON(history), /Header: expected object/);
+});
+
+test('a new bundle preserves previous bytes even when the source version is unchanged', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-bundle-retention-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.symlinkSync(path.resolve(import.meta.dirname, '../../node_modules'), path.join(root, 'node_modules'),
+    process.platform === 'win32' ? 'junction' : 'dir');
+  const workflowsPath = path.join(root, 'workflows.ts');
+  const input = { paths: { root }, workflowsPath, activities: {}, sourceVersion: 'same-source-version' };
+  fs.writeFileSync(workflowsPath, 'export async function RetainedWorkflow() { return 1; }\n');
+  const previous = await buildTemporalStageAttemptWorkerOptions(input);
+  const previousBytes = fs.readFileSync(previous.workflow_bundle.code_path);
+  fs.writeFileSync(workflowsPath, 'export async function RetainedWorkflow() { return 2; }\n');
+  const current = await buildTemporalStageAttemptWorkerOptions(input);
+
+  assert.notEqual(current.workflow_bundle.code_path, previous.workflow_bundle.code_path);
+  assert.notEqual(current.workflow_bundle.workflow_bundle_version, previous.workflow_bundle.workflow_bundle_version);
+  assert.deepEqual(fs.readFileSync(previous.workflow_bundle.code_path), previousBytes);
+  assert.equal(JSON.parse(fs.readFileSync(current.workflow_bundle.manifest_path, 'utf8')).code_path,
+    current.workflow_bundle.code_path);
+});
+
 test('history replay fails closed when a recorded workflow type is not exported by the current bundle', async () => {
   const fixture = readTemporalStableCohort().replay.fixtures[0];
-  const history = readHistory(fixture.path);
+  const { replayHistory: history } = readTemporalHistoryFixture(path.basename(fixture.path));
   const started = history.events?.find((event) => event.workflowExecutionStartedEventAttributes)
     ?.workflowExecutionStartedEventAttributes;
   assert.ok(started?.workflowType);
