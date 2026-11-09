@@ -1,0 +1,48 @@
+{
+  "surface_kind": "opl_application_management_projection.v1",
+  "purpose": "Aggregate shared Agent-native App resources for App and Studio from existing owner projections.",
+  "producer": "one-person-lab Framework app_state producer",
+  "field": "app_state.application_management",
+  "shared_resources": {
+    "required_fields": [
+      "resource_id",
+      "resource_kind",
+      "label",
+      "status",
+      "source_refs",
+      "consumer_package_ids",
+      "owner_settings_route",
+      "relation_kind"
+    ],
+    "resource_kinds": ["knowledge_source", "connection", "model", "base_capability"],
+    "status_values": ["ready", "attention", "unknown"],
+    "relation_kind_values": ["required", "optional", "configured"],
+    "secret_policy": "refs_only; never include credential material, credential handles, provider payloads, or knowledge body",
+    "path_policy": "do not include absolute filesystem paths; use stable source refs"
+  },
+  "authority_boundary": {
+    "resource_truth": "existing package, connection, model, workspace, and knowledge owners",
+    "framework_role": "aggregate safe refs and expose existing app_state/action routes",
+    "app_role": "render and dispatch existing actions",
+    "second_registry_allowed": false,
+    "second_updater_allowed": false,
+    "second_knowledge_store_allowed": false,
+    "second_credential_store_allowed": false
+  },
+  "profiles": {
+    "fast": "bounded startup projection with full detail ref",
+    "full": "same owner truth with complete safe resource rows"
+  },
+  "knowledge_policy": {
+    "source": "authorized workspace/profile binding only",
+    "body": "never projected",
+    "unresolved_binding_status": "unknown",
+    "consumer_must_not_infer_ready": true
+  },
+  "action_boundary": {
+    "state_surface": "opl app state --profile fast|full --json",
+    "action_surface": "opl app action execute --json",
+    "owner_actions": "existing package, connection, settings, knowledge, and managed-update actions",
+    "new_action_namespace": false
+  }
+}

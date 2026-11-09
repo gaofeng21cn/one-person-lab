@@ -63,6 +63,10 @@ import {
   compactFastProviderState,
   compactFastSettingsControlCenter,
 } from './app-state-fast-projection.ts';
+import {
+  buildApplicationManagementProjection,
+  compactFastApplicationManagementProjection,
+} from './application-management-projection.ts';
 export { compactFastProviderState };
 
 type AutomationProviderHostInspector = Readonly<{
@@ -606,6 +610,15 @@ export async function buildOplAppState(input: {
   const settingsControlCenter = profile === 'fast'
     ? compactFastSettingsControlCenter(rawSettingsControlCenter)
     : rawSettingsControlCenter;
+  const rawApplicationManagement = buildApplicationManagementProjection({
+    agentPackages: agentPackagesProjection,
+    managedUpdate: managedUpdate.managed_update,
+    settingsControlCenter: rawSettingsControlCenter,
+    workspaceBindings,
+  });
+  const applicationManagement = profile === 'fast'
+    ? compactFastApplicationManagementProjection(rawApplicationManagement)
+    : rawApplicationManagement;
   const rawOperator = buildOplAppOperatorViewModel({
     profile,
     core,
@@ -695,6 +708,7 @@ export async function buildOplAppState(input: {
       },
       release,
       settings_control_center: settingsControlCenter,
+      application_management: applicationManagement,
       operator,
       foundry,
       runtime_workbench: fullRuntimeWorkbenchSummary(fullRuntimeDrilldown, operator),

@@ -18,6 +18,12 @@ User
 
 产品、composition、Package、carrier、executor 和 domain authority 是不同维度，不能用一个 registry 或状态机统一替代。
 
+### 应用管理共享投影
+
+Framework 在公开 `app_state.application_management` 提供一个 refs-only 聚合视图，供 OPL App、Studio 和 Agent 共同呈现共享基座。该视图把已存在的 OPL Base 能力、连接授权、模型访问和已授权工作区来源放在同一认知入口；资源的安装、启停、授权、更新和修复仍由原 owner 的既有 `app action` 负责。它不引入第二个 Package registry、凭证库、知识正文库或 updater。
+
+字段与边界由 [`application-management-projection-contract.json`](../contracts/opl-framework/application-management-projection-contract.json) 持有。`fast` profile 只返回有界资源摘要，`full` profile 返回同一 owner projection 的完整安全行。知识来源没有明确授权绑定时必须保持 `unknown`，UI 和 Agent 不得从 workspace 路径自行推断“已就绪”。
+
 ## Agent 原生应用组合
 
 Agent tool 与必要 UI 是同一领域能力的两个入口。Framework 的共享 MCP App 提供通用协作视图，专用 MCP App 保留领域编辑器，Studio 通过标准 MCP Apps 和 DSH/Cordis 接入。Connect 提供连接授权、provider 保管凭证；知识 owner 提供来源绑定与运行冻结，用户或领域 owner 持有知识正文。MiniApp 不新增应用注册表或独立 runtime。设计规则由[Agent 原生应用标准](./policies/agent-native-app-policy.md)持有，实际共享接口由 [MCP Apps SPEC](./mcp-apps/SPEC.md)持有。
