@@ -241,15 +241,16 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
     },
   };
   commandSpecs['knowledge register'] = {
-    usage: 'opl knowledge register --workspace <path> --domain <domain_id> --registry <path> --item <json-file> --expected-sha256 <digest> --reviewer <owner> --review-ref <authority-ref> --reviewed-at <time> --next-review-at <time> [--project <path>]',
+    usage: 'opl knowledge register --workspace <path> --domain <domain_id> --registry <path> --item <json-file> --expected-sha256 <digest> --reviewer <owner> --review-ref <authority-ref> --reviewed-at <time> --next-review-at <time> [--project <path>] [--expected-body-path <absolute-file>]',
     summary: 'Register an owner-reviewed existing Markdown body in its current bound source registry without copying the body.',
     examples: ['opl knowledge register --workspace /private/workspace --domain persona --registry /private/registry.json --item /private/item.json --expected-sha256 <digest> --reviewer owner --review-ref <authority-ref> --reviewed-at <time> --next-review-at <time> --json'], group: 'knowledge',
     handler: (args) => {
       const parsed = parseCommandOptions(args, commandSpecs['knowledge register']!, { ...scopeOptions, ...reviewOptions,
-        registry: { type: 'string' }, item: { type: 'string' }, 'expected-sha256': { type: 'string' } });
+        registry: { type: 'string' }, item: { type: 'string' }, 'expected-sha256': { type: 'string' }, 'expected-body-path': { type: 'string' } });
       if (!parsed.registry || !parsed.item || !parsed['expected-sha256']) throw new Error('knowledge register requires --registry, --item and --expected-sha256.');
       return { version: 'g2', knowledge_registration: registerKnowledgeSource({ ...scope(parsed), ...ownerReview(parsed),
-        registryRef: parsed.registry as string, item: JSON.parse(fs.readFileSync(parsed.item as string, 'utf8')), expectedSha256: parsed['expected-sha256'] as string }) };
+        registryRef: parsed.registry as string, item: JSON.parse(fs.readFileSync(parsed.item as string, 'utf8')), expectedSha256: parsed['expected-sha256'] as string,
+        expectedBodyPath: parsed['expected-body-path'] as string | undefined }) };
     },
   };
   const readSource = (args: string[], command: string, candidate: boolean) => {

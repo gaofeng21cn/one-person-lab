@@ -54,7 +54,7 @@
 
 这一链路是“邮件证据 → 语义分类与提案 → 知识登记或版本化写回 → 原处正文 → 后续授权读取”。Persona 可以协调各步骤，其他领域智能体仍可直接消费获授权知识。跨仓调用不转移各层 authority。
 
-Relay 的 SQLite 保存邮件领域记忆和可重建检索索引，不承担个人知识 registry。 记忆记录可以保存 `knowledge_id`、`source_versions`、`scope`、`content_kind`、`canonical_target`、`writeback_status`、`observed_at` 与 `next_review_at`，用于表达与共同知识的链接和复核债务；这些字段不会把 Relay 变成正文 owner。原邮件或 `user://` 当次陈述是证据；在 Relay 中批准一条关系记忆，不会使它自动成为 Framework 已接受的个人事实。已沉淀内容保留 canonical `knowledge_id` 与来源版本；其派生读取遵守共同来源授权和失效规则。泛个人知识的来源范围、授权和接受版本只有一个控制面，不由邮件索引另行定义。
+Relay 的 SQLite 保存邮件领域记忆和可重建检索索引，不承担个人知识 registry。记忆记录可以保存 `knowledge_id`、`source_versions`、`scope`、`content_kind`、`canonical_target`、`writeback_status`、`observed_at` 与 `next_review_at`，用于表达与共同知识的链接和复核债务；这些字段不会把 Relay 变成正文 owner。原邮件或 `user://` 当次陈述是证据；在 Relay 中批准一条关系记忆，不会使它自动成为 Framework 已接受的个人事实。已沉淀内容保留 canonical `knowledge_id` 与来源版本；其派生读取遵守共同来源授权和失效规则。泛个人知识的来源范围、授权和接受版本只有一个控制面，不由邮件索引另行定义。
 
 “证据仍能回读”与“陈述仍适用于现在”分别判断。历史邮件可持续证明当时发生过什么；现任职务、合作状态或承诺还需观察日期、适用期和复核依据。来源哈希未变不能延长当前事实的有效期。
 

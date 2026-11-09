@@ -181,6 +181,7 @@ export function resolveKnowledgeRegistrationSource(input: SourceInput & { regist
   for (const boundRegistry of bindings.registries) {
     const candidateRegistry = JSON.parse(fs.readFileSync(boundRegistry.registry_ref, 'utf8')) as KnowledgeSourceRegistry;
     for (const candidate of candidateRegistry.items) {
+      if (candidate.knowledge_id === item.knowledge_id && fs.realpathSync(boundRegistry.registry_ref) !== registryRef) knowledgeFailure('Knowledge identity already belongs to another bound registry.');
       const candidateSource = candidateRegistry.sources.find((entry) => entry.source_id === candidate.body_ref.source_id);
       if (!candidateSource) continue;
       const candidatePath = path.resolve(candidateSource.root, candidate.body_ref.ref);

@@ -347,7 +347,7 @@ export function reviewKnowledgeSource(input: Scope & ReviewInput & { knowledgeId
 }
 
 export function registerKnowledgeSource(input: SourceInput & ReviewInput & {
-  registryRef: string; item: unknown; expectedSha256: string;
+  registryRef: string; item: unknown; expectedSha256: string; expectedBodyPath?: string;
 }) {
   const initial = resolveKnowledgeRegistrationSource({ ...input, item: input.item as DurableKnowledgeItem });
   return withRegistryLock(initial.registryRef, () => {
@@ -356,6 +356,8 @@ export function registerKnowledgeSource(input: SourceInput & ReviewInput & {
     const item = { ...source.item, reviewed_at: review.reviewed_at, next_review_at: review.next_review_at };
     if (knowledgeCurrentness(item, input.now)) fail('New knowledge registration requires an active, currently reviewed item.');
     const bytes = body(fs.readFileSync(source.bodyPath));
+    if (input.expectedBodyPath && (!path.isAbsolute(input.expectedBodyPath)
+      || fs.realpathSync(input.expectedBodyPath) !== fs.realpathSync(source.bodyPath))) fail('Knowledge registration source differs from the expected created body path.');
     if (digest(bytes) !== input.expectedSha256 || item.body_ref.sha256 !== input.expectedSha256) fail('Knowledge registration source differs from the reviewed expected hash.');
     const dependencies = verifyKnowledgeDependencies({ ...input, dependencies: item.derived_from ?? [] });
     if (!dependencies.valid) fail(`Knowledge registration dependencies are invalid: ${dependencies.issues.join(', ')}`);

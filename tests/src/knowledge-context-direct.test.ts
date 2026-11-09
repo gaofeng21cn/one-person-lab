@@ -36,6 +36,9 @@ test('private discovery separates accepted metadata, authorized candidates and e
       reviewer: 'fixture-owner', reviewRef: 'owner://fixture/new-policy', reviewedAt: '2026-01-02T00:00:00Z', nextReviewAt: '2099-01-01T00:00:00Z' };
     assert.throws(() => registerKnowledgeSource({ ...register, expectedSha256: knowledgeSha('other bytes') }));
     assert.throws(() => registerKnowledgeSource({ ...register, projectRoot: f.otherProject }));
+    writeKnowledgeFile(path.join(f.source, 'same-bytes.md'), '# New policy\n');
+    assert.throws(() => registerKnowledgeSource({ ...register, expectedBodyPath: path.join(f.source, 'same-bytes.md') }), /expected.*body path/);
+    fs.unlinkSync(path.join(f.source, 'same-bytes.md'));
     const receipt = registerKnowledgeSource(register);
     assert.equal(receipt.status, 'registered');
     const after = fs.readFileSync(f.registryRef);
@@ -77,6 +80,24 @@ test('target routing protects registered bodies after binding narrowing and regi
     const item = { ...structuredClone(f.item), knowledge_id: 'owner.alias', body_ref: { ...f.item.body_ref, source_id: 'alias.notes' } };
     assert.throws(() => registerKnowledgeSource({ ...scope, registryRef: f.registryRef, item, expectedSha256: item.body_ref.sha256!,
       reviewer: 'owner', reviewRef: 'owner://alias', reviewedAt: '2026-01-02T00:00:00Z', nextReviewAt: '2099-01-01T00:00:00Z' }), /already.*identity/);
+  } finally { f.cleanup(); }
+});
+
+test('registration cannot reuse a knowledge identity hidden by the current project scope', () => {
+  const f = sourceFixture();
+  try {
+    const registryRef = path.join(f.workspace, 'shared/memory/second.json');
+    f.item.scope = { kind: 'project', id: 'project-research' };
+    Object.assign(f.registry.sources[0]!.grants[0]!, { write_domains: ['fixture'] });
+    const second = { ...structuredClone(f.registry), registry_id: 'second', items: [] };
+    writeKnowledgeFile(registryRef, second);
+    f.bindings.registries.push({ ...f.bindings.registries[0]!, registry_ref: registryRef }); f.save();
+    const item = knowledgeItem({ id: f.item.knowledge_id, scope: { kind: 'topic', id: 'finance' }, ref: 'new.md' });
+    writeKnowledgeFile(path.join(f.source, 'new.md'), '# Policy\n');
+    assert.throws(() => registerKnowledgeSource({ workspaceRoot: f.workspace, projectRoot: f.project, domainId: 'fixture',
+      registryRef, item, expectedSha256: item.body_ref.sha256!, reviewer: 'owner', reviewRef: 'owner://new',
+      reviewedAt: '2026-01-02T00:00:00Z', nextReviewAt: '2099-01-01T00:00:00Z' }), /already belongs/);
+    assert.equal(listKnowledgeSources({ workspaceRoot: f.workspace, projectRoot: f.otherProject, domainId: 'fixture' }).items.length, 1);
   } finally { f.cleanup(); }
 });
 

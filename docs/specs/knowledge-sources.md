@@ -99,7 +99,7 @@ Persona 的 `data/persona/knowledge-inputs.json` 只按角色选择知识 ID；�
 | `knowledge read-context` | binding 路径 | 核对快照身份及当前来源访问后返回冻结正文 |
 | `knowledge read-source` | 工作区、domain、知识 ID、可选项目 | 返回当前获授权且已接受的原文及哈希 |
 | `knowledge resolve-target` | 工作区、domain、正文绝对路径、可选项目 | 判断是否已注册及其身份；保留已注册但失效或撤权的识别，防止普通 writer 绕过生命周期 |
-| `knowledge inspect-source` | 同上 | 返回待审阅原文字节、当前与接受版本哈希；不接受或激活修订 |
+| `knowledge inspect-source` | 工作区、domain、知识 ID、可选项目 | 返回待审阅原文字节、当前与接受版本哈希；不接受或激活修订 |
 | `knowledge revalidate --for-action` | binding 路径 | 复核当前访问、关键知识版本及新增适用的必要或关键知识，不产生业务行动授权 |
 | `knowledge verify-dependencies` | 工作区、domain、依赖 JSON、可选项目 | 核对派生摘要所依赖知识的版本、有效性与访问范围 |
 
@@ -119,7 +119,7 @@ opl knowledge revalidate --binding <new-binding.json> --for-action --json
 
 `knowledge search` 使用相同范围，增加 `--query <text>`、`--limit <1..20>`、`--excerpt-chars <1..1000>`。`knowledge_search.matches` 在相同来源元数据上返回有限 `excerpt`；结果是字面检索候选，不能代表语义分类、内容接受或业务授权。失效、漂移与越权正文不会通过旧索引返回。
 
-`knowledge discover` 与 search 使用相同 query 和长度限制，返回 `knowledge_discovery: {query, candidates}`。它用于保留既有来源的未登记正文发现能力；按已授权的工作区、domain、可选项目和 registry 来源的 `include_globs`／`exclude_globs` 返回 `candidate: true, accepted: false` 及 `source_id`、`source_ref`、`registry_ref`、当前 `sha256` 和有限 `excerpt`。已登记正文即使失效，也继续走已接受来源的复核路径，不通过 discover 绕过。发现候选不进入 current context，也不批量登记或接受；Persona／Relay 必须逐项经用户或业务 owner 审阅，再调用 `knowledge register`。这保留搜索可发现性，同时不把旧索引内容冒充已接受知识。
+`knowledge discover` 与 search 使用相同 query 和长度限制，返回 `knowledge_discovery: {query, candidates, quality_debt}`。它用于保留既有来源的未登记正文发现能力；按已授权的工作区、domain、可选项目和 registry 来源的 `include_globs`／`exclude_globs` 返回 `candidate: true, accepted: false` 及 `source_id`、`source_ref`、`registry_ref`、当前 `sha256` 和有限 `excerpt`。已登记正文即使失效，也继续走已接受来源的复核路径，不通过 discover 绕过。发现候选不进入 current context，也不批量登记或接受；Persona／Relay 必须逐项经用户或业务 owner 审阅，再调用 `knowledge register`。这保留搜索可发现性，同时不把旧索引内容冒充已接受知识。
 
 登记命令绑定实际审阅的原文字节：
 
@@ -128,6 +128,8 @@ opl knowledge register --workspace <workspace> --domain <domain> --registry <bou
 ```
 
 需要项目范围时加 `--project <project>`。`--item` 使用当前知识条目 schema，正文 `body_ref` 指向已绑定来源内的现有 Markdown。调用者须持有该来源的独立写回 grant；来源须可写，工作区已选择相应来源和 scope。登记更新 registry 中的条目与接受版本，不修改原文。命令拒绝基础哈希、身份和既有条目冲突；精确相同的重试返回 `knowledge_registration` 幂等登记回执，证据位于 `shared/memory/knowledge-registrations/`。新正文的创建与目标库格式由其文档 owner 负责，随后登记写后回读的精确字节。
+
+新建正文后调用 register 时，传入 `--expected-body-path <absolute-file>`，同时核对创建目标与登记来源是同一个实际文件；相同摘要的另一文件不会代替本次创建目标。
 
 文档 writer 在普通文件编辑前可通过 `knowledge resolve-target --path <absolute-file>` 判断目标是否已登记。`knowledge_target.registered` 只表达身份存在性；返回失效或撤权条目的身份不代表读取或维护授权。已登记目标走共同修订链，避免退回普通笔记 writer 绕过接受版本。
 
