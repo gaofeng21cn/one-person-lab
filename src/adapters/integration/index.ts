@@ -68,6 +68,7 @@ export type {
   OplConnectionProvider,
   OplConnectionProviderErrorDisposition,
 } from './connection-authorization.ts';
+export { createDefaultConnectionAuthorizationService } from './connection-composition.ts';
 export type { CordisConnectDescriptorDiscoveryService } from './public/descriptor-discovery.ts';
 export { loadInstalledChannelProviders } from './public/channel-provider-entrypoints.ts';
 export {

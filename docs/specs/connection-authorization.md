@@ -19,7 +19,7 @@ Connect 统一管理连接引用、消费者请求、逐项 grant、provider 路
 
 ## 接口约定
 
-Framework Host 可从 `createOplConnectionAuthorizationService({ descriptorDiscovery, providers })` 创建 service。Host 通过 `forPackage(packageId)` 在 fresh discovery 中找到唯一的当前 descriptor 后创建作用域对象。此工厂供 Host 内部使用，不能作为用户可调用的“任选 Package 身份”API。
+Framework Host 可从 `createOplConnectionAuthorizationService({ descriptorDiscovery, providers })` 创建 service。领域服务可从 `opl-framework/connection-authorization-host` 导入 `activateInstalledPackageConnectionContext({ packageRoot, packageId })`。`packageRoot` 来自服务模块的实际安装目录，`packageId` 是服务启动代码中的固定身份；Host 核对 fresh discovery 的可调用 descriptor 与 realpath 后委托 `createOplConnectionContextHost` 绑定上下文。工厂仅供 Host 内部使用，页面和工具参数不能提供身份或安装根。
 
 作用域对象只提供 `listConnections()`、`requestAccess(connectionId, capabilityIds)` 与 `invoke(connectionId, capabilityId, input)`。`requestAccess` 只产生待审批记录。管理请求和 grant 使用 owner action；Studio 页面与通用 App action 不接收 token，也不能写 grant 外的身份。
 
@@ -43,16 +43,12 @@ Connect 的统一能力采用三层模型，而不是建立一个把所有密钥
 
 品牌模块沿用现有 owner：Pack 在 manifest 中声明 provider 与 capability/risk，Atlas 只索引需求和可用性，App/Console 在“资源与连接”展示连接、请求、授权和撤销，Studio Host 注入绑定的 `connect` context，Relay 等 provider 继续执行凭据访问和业务确认。Gateway 的模型账号仍由 Account & Access 管理；OPL Link 的传输凭据仍由其 provider adapter 管理。Ledger、Runway 和 Stagecraft 只传 grant/invocation 元数据，不传 token。
 
-## 当前实现与验收状态
+## Relay 参考消费路径
 
-截至 2026-11-08，以下能力已经在对应 owner 的实现写集中完成，并以 focused checks 验证：
+Relay 专用 MCP App 的 `connection_*` 操作与“已连接邮箱”界面共用同一个领域服务。该服务从自身 installed carrier 激活固定的 `opl-relay` consumer；列出连接只返回脱敏字段，请求授权只创建 pending request，查找、读取和本地回复分别映射到 `mailbox.search`、`mailbox.read`、`draft.create`。已有 grant 可直接调用，无需再次配置邮箱。
 
-| Owner | 已落地内容 | 验收证据 |
-| --- | --- | --- |
-| Framework Connect | connection security revision、逐 consumer request/grant、capability risk snapshot、Host `connect` 闭包、脱敏 projection、fail-closed recheck、unknown-after-dispatch 无重试 | authorization/Host/Relay provider 28 项通过；`tsc`、strict module boundary、CLI registry 和 connection actions 通过 |
-| Relay | `mailbox.search`、`mailbox.read`、Relay 本地 review draft；provider 绑定 mailbox revision，未提供发送 | provider/CLI focused tests 25 项通过 |
-| App | Resources & Connections 投影、deny/revoke/import action、fast/full read model；审批不进入通用 action catalog | App contract tests、typecheck、active-shell quick 通过 |
-| Studio | typed approval bridge、Web route、连接授权设置页面；审批只接受 request id | approval/HTTP、typecheck、WebUI build 和 Connect UI tests 通过 |
-| Mini App artifact preview | `opl-workspace://artifact` 先做当前 thread workspace 的精确词法 containment，再交既有 canonical byte API 做 realpath/inode 校验；POSIX 路径大小写敏感 | Mini App host/provider 9 项和 Studio workspace service 13 项通过 |
+Framework 通过既有 `opl packages link-framework --agent-root <installed-package-root> --json` 维护公共导出链接。缺少链接或旧 Framework 不支持该导出时，Relay 返回明确修复结果，不能转向未授权的 provider 调用。关闭再打开界面不会创建新的授权或更改 consumer；撤权、连接 revision 和 installed descriptor 变化由每次调用的原 owner 复核。未知调用返回 invocation ID 和 disposition，不自动重发。
 
-这些证据仍分属任务 worktree，必须在各仓 fresh `main` 上完成语义重放、canonical 吸收和远端 tree/readback 后，才能称为产品 SSOT。共享 `opl-apps` MCP 服务目前没有可信的 per-Package 初始化入口，因此本规范不宣称所有 Mini App 已经接通 Connect consumer 调用；该接线是后续明确 owner 的交付项。真实邮箱、跨宿主 clean-install 和生产发布也不在本地 fixture 证据之内。
+Relay 原有本地邮箱工具仍是直接由用户使用的领域入口，其草稿保存与发送确认合同不由 Connect grant 替代。共享 `opl-apps` 中的 `package_id` 继续只用于导航与贡献路由，不暴露任意 Package 的 consumer 工厂。
+
+源码检查与合成场景可验证身份、授权、同对象/版本以及恢复语义；真实邮箱和发行安装的运行结果由对应 carrier/领域验收分别记录。
