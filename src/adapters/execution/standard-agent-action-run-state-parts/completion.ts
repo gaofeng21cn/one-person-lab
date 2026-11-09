@@ -100,7 +100,7 @@ function sandboxRecord(value: unknown) {
   exactKeys(value, ['runtime_kind', 'sandbox_kind', 'exit_code', 'timed_out'], 'completion.sandbox');
   if (
     !['node_permission_model', 'python_audit_hook'].includes(String(value.runtime_kind))
-    || value.sandbox_kind !== 'macos_sandbox_exec'
+    || !['macos_sandbox_exec', 'linux_runtime_guard_only'].includes(String(value.sandbox_kind))
     || !Number.isSafeInteger(value.exit_code)
     || typeof value.timed_out !== 'boolean'
   ) {
@@ -108,7 +108,7 @@ function sandboxRecord(value: unknown) {
   }
   return {
     runtime_kind: value.runtime_kind as 'node_permission_model' | 'python_audit_hook',
-    sandbox_kind: 'macos_sandbox_exec' as const,
+    sandbox_kind: value.sandbox_kind as 'macos_sandbox_exec' | 'linux_runtime_guard_only',
     exit_code: Number(value.exit_code),
     timed_out: value.timed_out,
   };
