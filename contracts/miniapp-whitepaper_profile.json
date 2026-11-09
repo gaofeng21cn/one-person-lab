@@ -1,0 +1,12 @@
+{
+  "sourceMarkdown": "docs/whitepapers/opl-miniapp-whitepaper.md",
+  "outputName": "opl-miniapp-whitepaper",
+  "status": "whitepaper_artifact_verified",
+  "owner": "OPL Framework",
+  "coverLine": "Agent Native / Human Collaboration / Shared Foundations",
+  "headerTitle": "OPL MiniApp Whitepaper",
+  "minPdfPages": 4,
+  "maxPdfPages": 14,
+  "publicHtmlUrl": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-miniapp-whitepaper.html",
+  "publicPdfUrl": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-miniapp-whitepaper.pdf"
+}

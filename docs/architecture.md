@@ -18,6 +18,10 @@ User
 
 产品、composition、Package、carrier、executor 和 domain authority 是不同维度，不能用一个 registry 或状态机统一替代。
 
+## Agent 原生应用组合
+
+Agent tool 与必要 UI 是同一领域能力的两个入口。Framework 的共享 MCP App 提供通用协作视图，专用 MCP App 保留领域编辑器，Studio 通过标准 MCP Apps 和 DSH/Cordis 接入。Connect 提供连接授权、provider 保管凭证；知识 owner 提供来源绑定与运行冻结，用户或领域 owner 持有知识正文。MiniApp 不新增应用注册表或独立 runtime。设计规则由[Agent 原生应用标准](./policies/agent-native-app-policy.md)持有，实际共享接口由 [MCP Apps SPEC](./mcp-apps/SPEC.md)持有。
+
 ## Source topology
 
 `contracts/opl-framework/source-module-map.json` 是源码责任图：
