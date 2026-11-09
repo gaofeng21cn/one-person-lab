@@ -102,6 +102,7 @@ function unclassifiedRiskProjection(blueprint: AgentBlueprint) {
     memory_classes: [],
     retention_refs: [],
     write_authority_refs: [],
+    knowledge_requirements: [],
   };
   projection.eval_spec.public_cases = [];
   projection.eval_spec.protected_requirements = [];

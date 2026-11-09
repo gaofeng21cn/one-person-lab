@@ -9,6 +9,19 @@ export type FoundryMode = 'create' | 'takeover' | 'improve';
 export type FoundryRiskTier = 'low' | 'medium' | 'high';
 export type EvaluationStatus = 'pass' | 'fail' | 'blocked';
 
+export interface KnowledgeRequirement {
+  requirement_id: string;
+  scope_kind: 'product' | 'owner' | 'topic' | 'project';
+  content_kind: 'mechanism' | 'policy' | 'state' | 'decision';
+  semantic_owner_ref: string;
+  source_modes: Array<'product' | 'workspace' | 'external'>;
+  requirement: 'required' | 'optional';
+  freshness_policy: string;
+  writeback_owner_ref: string;
+  derived_dependency_policy: string;
+  action_critical: boolean;
+}
+
 export interface BaselineAdoptionRequest {
   surface_kind: 'opl_foundry_baseline_adoption_request';
   version: 'opl-foundry-baseline-adoption-request.v1';
@@ -129,6 +142,7 @@ export interface AgentBlueprint {
     memory_classes: string[];
     retention_refs: string[];
     write_authority_refs: string[];
+    knowledge_requirements: KnowledgeRequirement[];
   };
   assumptions: string[];
   design_evidence_refs: string[];
@@ -593,6 +607,42 @@ function validateProtectedAggregates(value: unknown, label: string) {
   if (new Set(categories).size !== categories.length) fail(`${label} categories must be unique.`);
 }
 
+export function validateKnowledgeRequirements(value: unknown): KnowledgeRequirement[] {
+  const field = 'AgentBlueprint.memory_policy.knowledge_requirements';
+  if (!Array.isArray(value)) fail(`${field} must be an array.`, { field });
+  const identities = new Set<string>();
+  for (const [index, entry] of value.entries()) {
+    const label = `${field}[${index}]`;
+    if (!isRecord(entry)) fail(`${label} must be an object.`, { field: label });
+    assertExactKeys(entry, label, [
+      'requirement_id', 'scope_kind', 'content_kind', 'semantic_owner_ref', 'source_modes',
+      'requirement', 'freshness_policy', 'writeback_owner_ref', 'derived_dependency_policy', 'action_critical',
+    ]);
+    const identity = requiredString(entry.requirement_id, `${label}.requirement_id`);
+    if (identities.has(identity)) fail(`${field} requirement_id values must be unique.`, { requirement_id: identity });
+    identities.add(identity);
+    if (!['product', 'owner', 'topic', 'project'].includes(String(entry.scope_kind))) {
+      fail(`${label}.scope_kind is invalid.`, { field: label });
+    }
+    if (!['mechanism', 'policy', 'state', 'decision'].includes(String(entry.content_kind))) {
+      fail(`${label}.content_kind is invalid.`, { field: label });
+    }
+    if (!['required', 'optional'].includes(String(entry.requirement))) {
+      fail(`${label}.requirement is invalid.`, { field: label });
+    }
+    const modes = requiredUniqueStringList(entry.source_modes, `${label}.source_modes`, 1);
+    const validModes = entry.scope_kind === 'product'
+      ? modes.length === 1 && modes[0] === 'product'
+      : modes.every((mode) => mode === 'workspace' || mode === 'external');
+    if (!validModes) fail(`${label}.source_modes must match its knowledge scope.`, { field: label });
+    for (const key of ['semantic_owner_ref', 'freshness_policy', 'writeback_owner_ref', 'derived_dependency_policy']) {
+      requiredString(entry[key], `${label}.${key}`);
+    }
+    if (typeof entry.action_critical !== 'boolean') fail(`${label}.action_critical must be boolean.`, { field: label });
+  }
+  return value as KnowledgeRequirement[];
+}
+
 export function validateAgentBlueprint(value: unknown): AgentBlueprint {
   const input = assertBase(value, 'opl_foundry_agent_blueprint', 'AgentBlueprint');
   assertExactKeys(input, 'AgentBlueprint', [
@@ -762,10 +812,12 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprint {
     'memory_classes',
     'retention_refs',
     'write_authority_refs',
+    'knowledge_requirements',
   ]);
   requiredUniqueStringList(input.memory_policy.memory_classes, 'AgentBlueprint.memory_policy.memory_classes');
   requiredUniqueStringList(input.memory_policy.retention_refs, 'AgentBlueprint.memory_policy.retention_refs');
   requiredUniqueStringList(input.memory_policy.write_authority_refs, 'AgentBlueprint.memory_policy.write_authority_refs');
+  validateKnowledgeRequirements(input.memory_policy.knowledge_requirements);
   requiredUniqueStringList(input.assumptions, 'AgentBlueprint.assumptions');
   requiredUniqueStringList(input.design_evidence_refs, 'AgentBlueprint.design_evidence_refs');
   validateEvalSpec(input.eval_spec, 'AgentBlueprint.eval_spec');
