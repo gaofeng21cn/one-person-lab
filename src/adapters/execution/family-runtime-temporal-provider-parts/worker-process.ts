@@ -100,29 +100,39 @@ export function findTemporalForegroundWorkerPids(input: {
   const exclude = new Set([process.pid, process.ppid, ...(input.excludePids ?? [])]);
   let output = '';
   try {
-    output = execFileSync('ps', ['-ww', '-axo', 'pid=,command='], {
+    // Enumerate candidate PIDs first: unrelated process arguments must not fill
+    // the command buffer and hide live workers on busy hosts.
+    output = execFileSync('pgrep', ['-f', '--', '--temporal-worker-foreground'], {
       encoding: 'utf8',
       maxBuffer: 1024 * 1024,
     });
-  } catch {
-    return [];
+  } catch (error) {
+    if ((error as { status?: number }).status === 1) {
+      return [];
+    }
+    throw new Error('Unable to discover Temporal foreground worker processes', { cause: error });
   }
   const pids: number[] = [];
   const scopedRoot = typeof input.familyRuntimeRoot === 'string' && input.familyRuntimeRoot.length > 0
     ? input.familyRuntimeRoot
     : null;
-  for (const line of output.split('\n')) {
-    const trimmed = line.trim();
-    const match = /^(\d+)\s+(.+)$/.exec(trimmed);
-    if (!match) {
+  for (const candidate of output.trim().split(/\s+/)) {
+    if (!/^\d+$/.test(candidate)) {
       continue;
     }
-    const pid = Number(match[1]);
-    const command = match[2];
+    const pid = Number(candidate);
+    if (!Number.isInteger(pid) || pid <= 0 || exclude.has(pid) || !processIsAlive(pid)) {
+      continue;
+    }
+    const command = temporalForegroundWorkerCommand(pid);
+    if (!command) {
+      if (processIsAlive(pid)) {
+        throw new Error(`Unable to inspect Temporal foreground worker process ${pid}`);
+      }
+      continue;
+    }
     if (
-      Number.isInteger(pid)
-      && !exclude.has(pid)
-      && command.includes('--temporal-worker-foreground')
+      command.includes('--temporal-worker-foreground')
       && (
         scopedRoot
           ? commandMatchesFamilyRuntimeRoot(command, scopedRoot)

@@ -18,6 +18,7 @@ import {
   currentWorkerSourceVersion,
 } from '../../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-state.ts';
 import {
+  findTemporalForegroundWorkerPids,
   stopOrphanTemporalForegroundWorkers,
   temporalForegroundWorkerModulePathFromCommand,
 } from '../../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-process.ts';
@@ -28,6 +29,69 @@ test('Temporal worker module path parser preserves unquoted macOS paths with spa
   const command = `/usr/local/bin/node --experimental-strip-types ${modulePath} --temporal-worker-foreground --family-runtime-root /Users/test/Library/Application Support/OPL/state/family-runtime`;
 
   assert.equal(temporalForegroundWorkerModulePathFromCommand(command), modulePath);
+});
+
+test('Temporal worker discovery ignores oversized unrelated process arguments', {
+  skip: process.platform === 'win32',
+}, () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-large-process-table-'));
+  const workerRoot = path.join(stateRoot, 'family-runtime');
+  const previousPath = process.env.PATH;
+  const child = spawn(process.execPath, [
+    '-e', 'setTimeout(() => {}, 30_000);', '--',
+    '--temporal-worker-foreground', '--family-runtime-root', workerRoot,
+  ], { detached: true, stdio: 'ignore' });
+  child.unref();
+  try {
+    fs.writeFileSync(path.join(stateRoot, 'ps'), `#!${process.execPath}
+const { execFileSync } = require('node:child_process');
+const args = process.argv.slice(2);
+if (args.includes('-axo')) process.stdout.write('999999 unrelated-command '.repeat(70000) + '\\n');
+process.stdout.write(execFileSync('/bin/ps', args));
+`, { mode: 0o755 });
+    process.env.PATH = `${stateRoot}:${previousPath ?? ''}`;
+
+    assert.deepEqual(findTemporalForegroundWorkerPids({
+      modulePath: '/unrelated/source/family-runtime-temporal-provider.ts',
+      familyRuntimeRoot: workerRoot,
+    }), [child.pid]);
+  } finally {
+    if (previousPath === undefined) delete process.env.PATH;
+    else process.env.PATH = previousPath;
+    try {
+      process.kill(child.pid!, 'SIGKILL');
+    } catch {
+      // The fixture process may already have exited.
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('Temporal worker discovery distinguishes no matches from a failed process probe', {
+  skip: process.platform === 'win32',
+}, () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-failed-process-probe-'));
+  const previousPath = process.env.PATH;
+  try {
+    const probe = path.join(stateRoot, 'pgrep');
+    process.env.PATH = stateRoot;
+    fs.writeFileSync(probe, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    assert.deepEqual(findTemporalForegroundWorkerPids({ modulePath: '/worker.ts' }), []);
+    fs.writeFileSync(probe, '#!/bin/sh\nexit 2\n', { mode: 0o755 });
+    assert.throws(
+      () => findTemporalForegroundWorkerPids({ modulePath: '/worker.ts' }),
+      /Unable to discover Temporal foreground worker processes/,
+    );
+    fs.rmSync(probe);
+    assert.throws(
+      () => findTemporalForegroundWorkerPids({ modulePath: '/worker.ts' }),
+      /Unable to discover Temporal foreground worker processes/,
+    );
+  } finally {
+    if (previousPath === undefined) delete process.env.PATH;
+    else process.env.PATH = previousPath;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('Temporal worker lifecycle adopts the live managed worker namespace without counting it as duplicate', async () => {
@@ -130,6 +194,7 @@ test('Temporal worker stop cleans orphan foreground worker after state file is m
   const previousWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
   const previousWorkerEnabled = process.env.OPL_TEMPORAL_WORKER_ENABLED;
   const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
+  let workerPid: number | undefined;
   try {
     fs.mkdirSync(workerRoot, { recursive: true });
     process.env.OPL_TEMPORAL_ADDRESS = testEnv.address;
@@ -144,6 +209,7 @@ test('Temporal worker stop cleans orphan foreground worker after state file is m
     const workerState = parseJsonText(
       fs.readFileSync(statePath, 'utf8'),
     ) as { pid: number };
+    workerPid = workerState.pid;
     fs.rmSync(statePath, { force: true });
 
     const stop = await stopTemporalWorkerLifecycle({ root: workerRoot });
@@ -189,12 +255,9 @@ test('Temporal worker stop cleans orphan foreground worker after state file is m
       process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
     }
     try {
-      const state = parseJsonText(
-        fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8'),
-      ) as { pid: number };
-      process.kill(state.pid, 'SIGKILL');
+      if (workerPid !== undefined) process.kill(workerPid, 'SIGKILL');
     } catch {
-      // The lifecycle under test should have removed the fixture process or state file.
+      // The lifecycle under test should have removed the fixture process.
     }
     await testEnv.teardown();
     fs.rmSync(stateRoot, { recursive: true, force: true });
