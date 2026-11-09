@@ -70,3 +70,23 @@ export function atomic(file: string, bytes: Buffer, exclusive = false) {
   finally { if (fs.existsSync(temporary)) fs.unlinkSync(temporary); }
 }
 
+/** Publish a complete file without replacing an already-created path. */
+export function atomicNoClobber(file: string, bytes: Buffer) {
+  if (fs.existsSync(file) && fs.lstatSync(file).isSymbolicLink()) fail('Knowledge writeback refuses a symlink target.');
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  const temporary = path.join(path.dirname(file), `.opl-knowledge-publish-${crypto.randomUUID()}`);
+  let fd: number | undefined;
+  try {
+    fd = fs.openSync(temporary, 'wx', 0o600);
+    fs.writeFileSync(fd, bytes);
+    fs.fsyncSync(fd);
+    fs.closeSync(fd);
+    fd = undefined;
+    // A hard link is an atomic no-clobber publication on the same filesystem.
+    fs.linkSync(temporary, file);
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+    if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+  }
+}
+

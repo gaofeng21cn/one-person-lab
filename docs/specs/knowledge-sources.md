@@ -37,6 +37,7 @@ Persona 的 `data/persona/knowledge-inputs.json` 只按角色选择知识 ID；�
 | 冻结快照 | `<OPL state>/family-runtime/review-transport/knowledge-context/` | 运行时保存本次实际消费的私有正文，binding 只引用该快照 |
 | 正文登记证据 | `<workspace>/shared/memory/knowledge-registrations/` | 新知识登记的精确身份、接受依据、意图与回执 |
 | 知识退役证据 | `<workspace>/shared/memory/knowledge-retirements/` | 已审阅退役的原文字节、原 registry、原因、恢复阶段与回执；不作为新知识候选 |
+| 正文迁移证据 | `<workspace>/shared/memory/knowledge-relocations/` | 精确源/目标位置、原文字节、原 registry、目标身份、恢复阶段与回执；不作为新知识候选 |
 | 提案修订证据 | `<workspace>/shared/memory/knowledge-writeback/` | 提案、审阅、基础版本、恢复意图与应用回执 |
 | 原处编辑接受证据 | `<workspace>/shared/memory/knowledge-source-reviews/` | 审阅时的正文、registry 基础版本、接受意图与回执 |
 
@@ -154,6 +155,23 @@ opl knowledge retire --workspace <workspace> --domain <domain> --id <knowledge-i
 回收位置由该工作区的知识 owner 管理。命令不接受任意外部移动目标；普通未登记文件继续使用原文件工具。来源写 grant、工作区、domain、项目和路径边界每次重验。缺少审阅、来源漂移或 registry 冲突时不覆盖。
 
 中断后用 `knowledge inspect-retirement --workspace <workspace> --domain <domain> --operation-id <id> --json` 只读回查：未完成时返回 `recovery_required` 及 `prepared`、`registry_retired` 或 `source_removed` 阶段。相同退役请求可继续原操作；成功后的同请求返回原回执，不重放删除。原位置已被重新创建、身份改变或恢复字节损坏时须由 owner 处理，历史请求不能覆盖或删除新内容。恢复材料保留原位置、接受版本和审阅理由，重新启用知识必须显式经 owner 维护，退役回读不会自动恢复正文或激活条目。
+
+### 保持知识身份的正文迁移
+
+`knowledge relocate` 在同一个已授权 source 内移动已登记 Markdown，保留 `knowledge_id`、正文哈希、scope、状态和原知识复核日期，只变更 `body_ref.ref`。迁移审阅时间记录在迁移回执中，不能延长知识事实的有效期。调用者须提供当前正文和 registry 的精确哈希、原相对路径、目标相对路径及实际维护授权引用：
+
+```bash
+opl knowledge relocate --workspace <workspace> --domain <domain> --id <knowledge-id> \
+  --source-ref <original.md> --target-ref <topic/current.md> \
+  --expected-sha256 <accepted-body-digest> --expected-registry-sha256 <reviewed-registry-digest> \
+  --reviewer <owner> --review-ref <review-ref> --reviewed-at <time> --json
+```
+
+两个位置都须满足当前来源过滤和写 grant，原位置只能有一个登记身份，目标不得已有文件或登记身份；每个恢复阶段重新核对所有绑定 registry 的身份。命令先保全原文和 registry，以同设备硬链接创建不覆盖目标的副本，再把原路径原子移入同目录的私有暂存目录，核对文件身份和哈希后清理。registry 同样先捕获当前文件，再以目标不存在时才成功的方式发布新版本。不同文件系统不走自动复制/覆盖降级。
+
+迁移途中，已登记来源可能暂不可读；失败不是完成，错误给出 `operation_id`，通过 `knowledge inspect-relocation --workspace <workspace> --domain <domain> --operation-id <digest> [--project <project>] --json` 只读检查阶段。若捕获 registry 后中断而原路径缺失，检查返回 `registry_restore_required`；相同精确请求重试只会原样归还实际捕获的 registry，再重新验证当前授权，不用审阅前快照重建授权。并发撤权或新建 registry 不被旧请求覆盖，源文件的并发替换也保留。证据文件先完整写入临时文件并同步，再不覆盖地发布，部分写入不会成为正式证据。该机制协调本机遵守协议的写者，不保证 iCloud 多设备事务；冲突须由 owner 核对暂存与恢复证据。
+
+Obsidian 调用方负责链接与文稿关系，不由通用 Framework 批量重写正文。完整操作顺序为：先枚举受影响链接及文件并以 `resolve-target` 区分已登记对象；保全并审阅修改集合；迁移目标正文；通过原文 owner 更新引用（已登记引用走共同写回/接受链）；最后用原知识 ID 执行 `read-source`、检查链接及相关视图。链接回写失败时保留迁移回执和待修集合，不能报告整次资料整理完成。普通未登记文件继续使用资料库现有维护入口。
 
 ## 用户编辑与智能体提案
 

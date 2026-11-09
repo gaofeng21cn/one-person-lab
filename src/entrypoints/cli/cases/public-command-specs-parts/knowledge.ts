@@ -18,6 +18,8 @@ import {
   discoverKnowledgeSources,
   retireKnowledgeSource,
   inspectKnowledgeRetirement,
+  relocateKnowledgeSource,
+  inspectKnowledgeRelocation,
 } from '../../../../authority/packages/index.ts';
 import {
   bindStageKnowledgeContext,
@@ -373,6 +375,35 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
       });
       if (!parsed['operation-id']) throw new Error('knowledge inspect-retirement requires --operation-id.');
       return { version: 'g2', knowledge_retirement: inspectKnowledgeRetirement({ ...scope(parsed), operationId: parsed['operation-id'] as string }) };
+    },
+  };
+  commandSpecs['knowledge relocate'] = {
+    usage: 'opl knowledge relocate --workspace <path> --domain <domain_id> --id <knowledge_id> --source-ref <relative-markdown-path> --target-ref <relative-markdown-path> --expected-sha256 <digest> --expected-registry-sha256 <digest> --reviewer <owner> --review-ref <authority-ref> --reviewed-at <time> [--project <path>]',
+    summary: 'Move exact accepted knowledge bytes within the same authorized source while preserving identity and review state.',
+    examples: ['opl knowledge relocate --workspace /private/workspace --domain persona --id owner.policy --source-ref policy.md --target-ref current/policy.md --expected-sha256 <digest> --expected-registry-sha256 <digest> --reviewer owner --review-ref <authority-ref> --reviewed-at <time> --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const fields = ['id', 'source-ref', 'target-ref', 'expected-sha256', 'expected-registry-sha256', 'reviewer', 'review-ref', 'reviewed-at'];
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge relocate']!, {
+        ...scopeOptions, ...Object.fromEntries(fields.map((name) => [name, { type: 'string' as const }])),
+      });
+      for (const field of fields) if (!parsed[field]) throw new Error(`knowledge relocate requires --${field}.`);
+      return { version: 'g2', knowledge_relocation: relocateKnowledgeSource({ ...scope(parsed),
+        knowledgeId: parsed.id as string, sourceRef: parsed['source-ref'] as string, targetRef: parsed['target-ref'] as string,
+        expectedSha256: parsed['expected-sha256'] as string, expectedRegistrySha256: parsed['expected-registry-sha256'] as string,
+        reviewer: parsed.reviewer as string, reviewRef: parsed['review-ref'] as string, reviewedAt: parsed['reviewed-at'] as string,
+      }) };
+    },
+  };
+  commandSpecs['knowledge inspect-relocation'] = {
+    usage: 'opl knowledge inspect-relocation --workspace <path> --domain <domain_id> --operation-id <digest> [--project <path>]',
+    summary: 'Read a relocation receipt or interrupted phase without moving source bytes.',
+    examples: ['opl knowledge inspect-relocation --workspace /private/workspace --domain persona --operation-id <digest> --json'],
+    group: 'knowledge',
+    handler: (args) => {
+      const parsed = parseCommandOptions(args, commandSpecs['knowledge inspect-relocation']!, { ...scopeOptions, 'operation-id': { type: 'string' } });
+      if (!parsed['operation-id']) throw new Error('knowledge inspect-relocation requires --operation-id.');
+      return { version: 'g2', knowledge_relocation: inspectKnowledgeRelocation({ ...scope(parsed), operationId: parsed['operation-id'] as string }) };
     },
   };
   return commandSpecs;

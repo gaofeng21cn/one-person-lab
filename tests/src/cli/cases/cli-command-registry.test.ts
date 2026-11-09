@@ -28,6 +28,8 @@ const registryCases = [
   ['cordis inspect', 'cordis_inspect', [], 'OPL Framework'],
   ['knowledge list', 'knowledge_list', ['repo'], 'OPL Framework durable knowledge'],
   ['knowledge inspect', 'knowledge_inspect', ['repo', 'id'], 'OPL Framework durable knowledge'],
+  ['knowledge relocate', 'knowledge_relocate', ['workspace', 'domain', 'id', 'source-ref', 'target-ref', 'expected-sha256', 'expected-registry-sha256', 'reviewer', 'review-ref', 'reviewed-at', 'project'], 'OPL Framework durable knowledge'],
+  ['knowledge inspect-relocation', 'knowledge_inspect_relocation', ['workspace', 'domain', 'operation-id', 'project'], 'OPL Framework durable knowledge'],
   ['knowledge recall', 'knowledge_recall', ['repo', 'domain', 'stage', 'task-intent', 'workspace', 'project'], 'OPL Framework durable knowledge'],
   ['connect scientific search', 'connect_scientific_search', ['provider', 'query', 'limit'], undefined],
   ['connect references verify', 'connect_references_verify', ['references-file', 'providers', 'cache-root', 'max-retries'], undefined],
