@@ -36,6 +36,7 @@ Persona 的 `data/persona/knowledge-inputs.json` 只按角色选择知识 ID；�
 | 原文 | registry 中的 `root` 加条目相对 `ref` | 用户已有个人库或工作目录内的唯一正文；无需中间全文投影 |
 | 冻结快照 | `<OPL state>/family-runtime/review-transport/knowledge-context/` | 运行时保存本次实际消费的私有正文，binding 只引用该快照 |
 | 正文登记证据 | `<workspace>/shared/memory/knowledge-registrations/` | 新知识登记的精确身份、接受依据、意图与回执 |
+| 知识退役证据 | `<workspace>/shared/memory/knowledge-retirements/` | 已审阅退役的原文字节、原 registry、原因、恢复阶段与回执；不作为新知识候选 |
 | 提案修订证据 | `<workspace>/shared/memory/knowledge-writeback/` | 提案、审阅、基础版本、恢复意图与应用回执 |
 | 原处编辑接受证据 | `<workspace>/shared/memory/knowledge-source-reviews/` | 审阅时的正文、registry 基础版本、接受意图与回执 |
 
@@ -98,7 +99,7 @@ Persona 的 `data/persona/knowledge-inputs.json` 只按角色选择知识 ID；�
 | `knowledge prepare` | 与 recall 相同的范围，另带新的 output 路径 | 私有快照的 binding；不覆盖已有 binding |
 | `knowledge read-context` | binding 路径 | 核对快照身份及当前来源访问后返回冻结正文 |
 | `knowledge read-source` | 工作区、domain、知识 ID、可选项目 | 返回当前获授权且已接受的原文及哈希 |
-| `knowledge resolve-target` | 工作区、domain、正文绝对路径、可选项目 | 判断是否已注册及其身份；保留已注册但失效或撤权的识别，防止普通 writer 绕过生命周期 |
+| `knowledge resolve-target` | 工作区、domain、正文绝对路径、可选项目 | 判断是否已注册及其身份、接受正文哈希与 `registry_sha256`；保留已注册但失效、退役或撤权的识别，防止普通 writer 绕过生命周期 |
 | `knowledge inspect-source` | 工作区、domain、知识 ID、可选项目 | 返回待审阅原文字节、当前与接受版本哈希；不接受或激活修订 |
 | `knowledge revalidate --for-action` | binding 路径 | 复核当前访问、关键知识版本及新增适用的必要或关键知识，不产生业务行动授权 |
 | `knowledge verify-dependencies` | 工作区、domain、依赖 JSON、可选项目 | 核对派生摘要所依赖知识的版本、有效性与访问范围 |
@@ -134,6 +135,23 @@ opl knowledge register --workspace <workspace> --domain <domain> --registry <bou
 文档 writer 在普通文件编辑前可通过 `knowledge resolve-target --path <absolute-file>` 判断目标是否已登记。`knowledge_target.registered` 只表达身份存在性；返回失效或撤权条目的身份不代表读取或维护授权。已登记目标走共同修订链，避免退回普通笔记 writer 绕过接受版本。
 
 来源首次接入和新知识登记分开：前者由有权控制面确认来源根及 grants，后者只能在已授权范围内增加知识对象。通用登记能力不授予调用者新的私人目录、scope 或业务权限。
+
+### 退役与恢复证据
+
+整理工具需要移出已登记正文时，先按精确知识 ID、正文与 registry 哈希取得实际 owner 的退役审阅，再调用公共入口：
+
+```bash
+opl knowledge retire --workspace <workspace> --domain <domain> --id <knowledge-id> \
+  --expected-sha256 <sha256:body-digest> --expected-registry-sha256 <sha256:registry-digest> \
+  --reason <retirement-reason> --reviewer <owner> --review-ref <authority-ref> \
+  --reviewed-at <observed-review-time> --json
+```
+
+`knowledge_retirement` 返回 `status: retired`、`operation_id`、`recovery_path` 和 `receipt_ref`。Framework 先在工作区私有控制目录保存原字节、原 registry 和审阅依据，再以精确版本更新条目为 `deprecated`，最后核对并删除原位置的字节。稳定知识 ID、原 `body_ref` 和接受哈希保留，当前召回与依赖验证将其排除；旧 locator 仍可通过 `resolve-target` 识别为已登记。恢复正文不成为第二可编辑主源，也不会被 `discover` 当作未登记候选。
+
+回收位置由该工作区的知识 owner 管理。命令不接受任意外部移动目标；普通未登记文件继续使用原文件工具。来源写 grant、工作区、domain、项目和路径边界每次重验。缺少审阅、来源漂移或 registry 冲突时不覆盖。
+
+中断后用 `knowledge inspect-retirement --workspace <workspace> --domain <domain> --operation-id <id> --json` 只读回查：未完成时返回 `recovery_required` 及 `prepared`、`registry_retired` 或 `source_removed` 阶段。相同退役请求可继续原操作；成功后的同请求返回原回执，不重放删除。原位置已被重新创建、身份改变或恢复字节损坏时须由 owner 处理，历史请求不能覆盖或删除新内容。恢复材料保留原位置、接受版本和审阅理由，重新启用知识必须显式经 owner 维护，退役回读不会自动恢复正文或激活条目。
 
 ## 用户编辑与智能体提案
 
