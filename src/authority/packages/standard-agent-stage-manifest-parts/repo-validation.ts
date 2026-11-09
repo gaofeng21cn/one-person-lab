@@ -2,7 +2,8 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import ts from 'typescript';
+import * as ts from 'typescript/unstable/ast';
+import { API } from 'typescript/unstable/sync';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import {
@@ -117,7 +118,7 @@ export function repoRef(repoDir: string, value: unknown, field: string) {
 }
 
 function declarationModifiers(node: ts.Node) {
-  return ts.canHaveModifiers(node) ? ts.getModifiers(node) ?? [] : [];
+  return 'modifiers' in node ? (node as ts.Node & ts.ModifiersBase).modifiers ?? [] : [];
 }
 
 function hasModifier(node: ts.Node, kind: ts.SyntaxKind) {
@@ -125,19 +126,40 @@ function hasModifier(node: ts.Node, kind: ts.SyntaxKind) {
 }
 
 function typescriptCallableExports(filePath: string) {
-  const source = fs.readFileSync(filePath, 'utf8');
-  const scriptKind = filePath.endsWith('.tsx')
-    ? ts.ScriptKind.TSX
-    : filePath.endsWith('.js') || filePath.endsWith('.mjs') || filePath.endsWith('.cjs')
-      ? ts.ScriptKind.JS
-      : ts.ScriptKind.TS;
-  const sourceFile = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true, scriptKind);
-  const parseDiagnostics = (sourceFile as ts.SourceFile & { parseDiagnostics?: readonly ts.Diagnostic[] })
-    .parseDiagnostics ?? [];
-  if (parseDiagnostics.length > 0) {
-    throw new Error(`TypeScript handler file has parse errors: ${filePath}`);
+  const absolutePath = path.resolve(filePath);
+  const configPath = path.join(path.dirname(absolutePath), '.opl-handler-validation.tsconfig.json');
+  const config = JSON.stringify({
+    compilerOptions: { allowJs: true, noEmit: true, noResolve: true, noLib: true, types: [] },
+    files: [absolutePath],
+  });
+  const api = new API({
+    cwd: path.dirname(absolutePath),
+    fs: {
+      fileExists: (file) => path.resolve(file) === configPath ? true : undefined,
+      readFile: (file) => path.resolve(file) === configPath ? config : undefined,
+    },
+  });
+  try {
+    const snapshot = api.updateSnapshot({ openProjects: [configPath] });
+    try {
+      const project = snapshot.getProject(configPath);
+      const sourceFile = project?.program.getSourceFile(absolutePath);
+      if (!project || !sourceFile) {
+        throw new Error(`Unable to read TypeScript handler file: ${filePath}`);
+      }
+      if (project.program.getSyntacticDiagnostics(absolutePath).length > 0) {
+        throw new Error(`TypeScript handler file has parse errors: ${filePath}`);
+      }
+      return callableExportsFromSourceFile(sourceFile);
+    } finally {
+      snapshot.dispose();
+    }
+  } finally {
+    api.close();
   }
+}
 
+function callableExportsFromSourceFile(sourceFile: ts.SourceFile) {
   const localCallables = new Set<string>();
   for (const statement of sourceFile.statements) {
     if (

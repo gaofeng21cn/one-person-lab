@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
+import { NodeHandle } from 'typescript/unstable/sync';
 
 import { assert, fs, path, repoRoot, test } from '../../helpers.ts';
+import { buildTypescriptSourceGraph } from '../../../../../src/authority/workspace/standard-agent-source-closure-parts/typescript-graph.ts';
 
 import {
   actionCatalogAction,
@@ -49,13 +51,16 @@ export function registerPackageActionHandlerTypescript() {
   test('agents source-closure resolves package, action, handler, and TypeScript calls', () => {
     const repoDir = buildRepo();
     const cliSource = [
-      "import { handle } from './handler.ts';",
-      'export function main() { return handle(); }',
+      "import { exportedHandle as run } from './barrel.js';",
+      "import './side-effect.ts';",
+      'export function main() { return run(); }',
       'main();',
       '',
     ].join('\n');
     installTypescriptEntry(repoDir, cliSource);
+    writeSource(repoDir, 'src/barrel.ts', "export { handle as exportedHandle } from './handler.ts';\n");
     writeSource(repoDir, 'src/handler.ts', "export function handle() { return 'ok'; }\n");
+    writeSource(repoDir, 'src/side-effect.ts', "function initialize() { return 'ready'; }\ninitialize();\n");
 
     const result = runSourceClosure(repoDir);
     const report = result.reports[0];
@@ -67,8 +72,41 @@ export function registerPackageActionHandlerTypescript() {
       new Set(['package_bin', 'action_catalog', 'handler_registry']),
     );
     assert.equal(report.reachable_symbols.some((symbol: { symbol: string }) => symbol.symbol === 'handle'), true);
+    const edges = report.call_edges.map((edge: { from_symbol: string; to_symbol: string; edge_kind: string }) => (
+      `${edge.from_symbol} -> ${edge.to_symbol} (${edge.edge_kind})`
+    ));
+    assert.ok(edges.includes('src/cli.ts#main -> src/handler.ts#handle (call)'));
+    assert.ok(edges.includes('src/barrel.ts#<module> -> src/handler.ts#handle (static_import)'));
+    assert.ok(edges.includes('src/cli.ts#<module> -> src/side-effect.ts#<module> (static_import)'));
+    assert.ok(edges.includes('src/side-effect.ts#<module> -> src/side-effect.ts#initialize (call)'));
   });
 
+  test('TypeScript source closure retains unresolved relative aliases as blocking edges', () => {
+    const repoDir = buildRepo();
+    try {
+      writeSource(repoDir, 'src/cli.ts', "import { missing as run } from './missing.ts';\nexport const main = () => run();\n");
+      const graph = buildTypescriptSourceGraph(repoDir, ['src/cli.ts']);
+      assert.equal(graph.unresolved_edges.length, 1);
+      assert.equal(graph.unresolved_edges[0]?.reason, 'relative_import_unresolved');
+      assert.equal(graph.unresolved_edges[0]?.expression, './missing.ts');
+      assert.equal(graph.unresolved_edges[0]?.sensitive, true);
+    } finally {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  test('TypeScript source closure fails closed when compiler declaration handles cannot resolve', (t) => {
+    const repoDir = buildRepo();
+    try {
+      writeSource(repoDir, 'src/cli.ts', 'function handle() { return true; }\nexport const main = () => handle();\n');
+      t.mock.method(NodeHandle.prototype, 'resolve', () => undefined);
+      const graph = buildTypescriptSourceGraph(repoDir, ['src/cli.ts']);
+      assert.equal(graph.scan_complete, false);
+      assert.ok(graph.diagnostics.some((diagnostic) => diagnostic.startsWith('typescript_symbol_resolution_error:')));
+    } finally {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
 }
 
 export function registerNestedWorkspaceBins() {
