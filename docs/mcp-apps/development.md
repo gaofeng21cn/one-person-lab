@@ -27,7 +27,7 @@
 | 需求 | 接入方式 | 验证重点 |
 | --- | --- | --- |
 | 复用外部服务账号 | 可信服务启动时通过 `opl-framework/connection-authorization-host` 的 `activateInstalledPackageConnectionContext` 绑定自己的 installed Package；消费注入的 `connect` port | 已有 grant 可用；撤权、连接修订或载体变化阻止后续调用；业务结果回到 provider |
-| 复用模型能力 | 调用既有模型/provider owner 的公开执行入口；Gateway 账号由 Account & Access 持有 | 不在领域 Skill 中复制宿主配置和凭据解析；入口缺失作为 owner 的能力缺口处理 |
+| 复用模型能力 | 调用既有模型/provider owner 的公开执行入口；图片 API 回退使用 `opl-framework/domain-task-runtime` 的 `runDomainImageGeneration`，详见[接口](../specs/domain-image-generation.md) | 领域保留 built-in 优先和专业质量判断；选定账号由公共 owner 解析，缺失不换账号，未知结果不自动重试 |
 | 读取个人或主题知识 | 已知知识 ID 使用 `opl knowledge read-source`，派生摘要使用 `verify-dependencies`，按获授权 workspace/domain/project 取用 | 真实来源及接受版本可读；撤权、过期或原文改变时排除旧内容 |
 | 固定一轮任务的知识依据 | 使用 `prepare`、`read-context` 和行动前 `revalidate --for-action`；托管 StageRun 使用自动绑定 | 真实上下文消费、依赖版本和缺口可回读；只有空 catalog 或命令存在不算接入 |
 | 修改已登记的知识 | `propose/review/apply`，或原处编辑后 `inspect-source/review-source`；移动时维护 locator | 正文、接受版本与派生摘要一致；冲突不覆盖，旧缓存不掩盖失效 |

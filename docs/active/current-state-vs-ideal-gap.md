@@ -16,11 +16,9 @@ App、Cloud、Package 的部署验收与专业质量属于各 owner，本页未�
 | --- | --- | --- |
 | Relay、Persona、iPhone Steward + Framework Knowledge | Relay 已委托共享来源检索与依赖验证，Persona 已接共享写回，iPhone 已接长期偏好读取；它们新增依赖的 Framework `sources/search/discover/resolve-target/register` 接口仍在生产者主线集成中 | 完成生产者与消费者配套集成及所选安装载体回读；同一来源登记一次即可被多个消费者使用，修订后版本一致，撤权、过期、原文漂移均使旧内容退出上下文。保留领域业务证据，不能把消费端已合入等同整条已安装链路可用 |
 | 个人知识写入工具 + Framework Knowledge | 原处写入或移动正文的工具尚未统一衔接已登记知识的接受版本/locator；普通文件保存与共享知识可消费状态分离 | 已登记条目优先以 `knowledge_id` 调用既有 `propose/review/apply`，原处编辑沿 `inspect-source/review-source`；普通未登记笔记保留原流程。合成来源验证一次获准修订可被下一消费者读取、移动保留身份、冲突不覆盖、撤权后不可读；不批量导入私人正文 |
-| 模型能力/Account & Access owner + RCA | RCA 图片回退在主 Skill、专业 Skill、prompt 和 `ppt-image-first-production-route.json` 中重复解释 Codex provider、凭据字段和图片 CLI 位置。Framework `domain-task-runtime` 可通过官方 Codex CLI 启用图片工具，但尚未证明它可替换这条直接图片 API 回退；默认连接授权服务仍只装配 Relay mailbox provider | 先在现有模型执行 owner 提供并验收所需图片调用，再让 RCA 保留一处能力引用。覆盖 built-in 可用/未注入、provider 切换、失效和未知结果；保留已有账号可用体验，删除领域凭据解析，不把 Gateway 模型账号迁入普通连接库 |
-| Models、GLKVM、OBF consumer owner | Models macOS 在线目录仍从默认 `.codex/auth.json` 取身份；GLKVM App contribution 与 MAP Desk 未沿安装/MCP 的 home/profile 选择；OBF `scripts/verify.sh` 固定开发机 Framework CLI 绝对路径 | 各自复用既有目标/配置解析并贯穿 CLI、UI 和后台调用，保留单一 provider。用两个隔离 home/profile 和非默认 checkout 验证始终读取选定来源，缺失时给原 owner 修复入口，不静默转到另一身份；OBF 文档与实际定位一致 |
 | Cloud + Framework Connect | Cloud `/api/v2/mcp` 仍依赖同源 CloudIdentity 浏览器会话；它不构成其他 Agent Host 可直接复用的外部连接 | 沿 Cloud 现有 identity/权限提供所需跨宿主认证与薄 Connect provider，复用原业务 API。用真实外部消费者验证连接、授权、撤销和同一工作区回读；保留同源工作台路径，不复制 Cloud identity 或业务库 |
 
-实施先从可独立修复的环境选择开始，知识侧沿已有消费者迁移完成配套集成，并让其他已登记正文写入工具衔接同一生命周期；模型与 Cloud 在公共入口具备等价能力后再切换消费者。新增 provider 由真实复用需求驱动，设备或社交产品尚无第二消费者时不预建适配。
+知识侧沿已有消费者迁移完成配套集成，并让其他已登记正文写入工具衔接同一生命周期；Cloud 在公共入口具备等价能力后切换消费者。新增 provider 由真实复用需求驱动，设备或社交产品尚无第二消费者时不预建适配。
 
 ## Agent 原生应用的后续验收与兼容退役
 
