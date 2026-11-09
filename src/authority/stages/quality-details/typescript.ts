@@ -1,24 +1,17 @@
-import fs from 'node:fs';
-import ts from 'typescript';
+import path from 'node:path';
+import * as ts from 'typescript/unstable/ast';
+import { API, type Project } from 'typescript/unstable/sync';
 
 import type { FunctionFinding, SourceFileInfo } from './types.ts';
 
-function scriptKindFor(filePath: string) {
-  if (filePath.endsWith('.tsx') || filePath.endsWith('.jsx')) {
-    return ts.ScriptKind.TSX;
-  }
-  if (filePath.endsWith('.js') || filePath.endsWith('.mjs') || filePath.endsWith('.cjs') || filePath.endsWith('.jsx')) {
-    return ts.ScriptKind.JS;
-  }
-  return ts.ScriptKind.TS;
-}
+type AnalyzedFunction = ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction | ts.MethodDeclaration;
 
 function lineOf(sourceFile: ts.SourceFile, position: number) {
   return sourceFile.getLineAndCharacterOfPosition(position).line + 1;
 }
 
-function nameOf(node: ts.FunctionLikeDeclarationBase) {
-  const named = node as ts.FunctionLikeDeclarationBase & { name?: ts.PropertyName };
+function nameOf(node: AnalyzedFunction) {
+  const named = node as AnalyzedFunction & { name?: ts.PropertyName };
   if (named.name && ts.isIdentifier(named.name)) {
     return named.name.text;
   }
@@ -64,7 +57,7 @@ function parentName(node: ts.Node) {
   return undefined;
 }
 
-function qualifiedNameOf(node: ts.FunctionLikeDeclarationBase) {
+function qualifiedNameOf(node: AnalyzedFunction) {
   const names: string[] = [];
   for (let current: ts.Node | undefined = node.parent; current; current = current.parent) {
     const name = parentName(current);
@@ -75,7 +68,7 @@ function qualifiedNameOf(node: ts.FunctionLikeDeclarationBase) {
   return [...names.reverse(), nameOf(node)].join('.');
 }
 
-function complexityOf(root: ts.FunctionLikeDeclarationBase) {
+function complexityOf(root: AnalyzedFunction) {
   let complexity = 1;
 
   const visit = (node: ts.Node) => {
@@ -109,7 +102,7 @@ function complexityOf(root: ts.FunctionLikeDeclarationBase) {
       complexity += 1;
     }
 
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   };
 
   visit(root);
@@ -155,7 +148,7 @@ function collectImportTargets(sourceFile: ts.SourceFile) {
       imports.add(node.arguments[0].text);
     }
 
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   };
 
   visit(sourceFile);
@@ -163,12 +156,47 @@ function collectImportTargets(sourceFile: ts.SourceFile) {
 }
 
 function analyzeTypescriptFiles(files: SourceFileInfo[]) {
+  if (files.length === 0) {
+    return { files: [], functions: [] };
+  }
+  const cwd = path.dirname(path.resolve(files[0]!.absolutePath));
+  const configPath = path.join(cwd, '.opl-quality-details.tsconfig.json');
+  const config = JSON.stringify({
+    compilerOptions: { allowJs: true, noEmit: true, noResolve: true, noLib: true, types: [] },
+    files: files.map((file) => path.resolve(file.absolutePath)),
+  });
+  const api = new API({
+    cwd,
+    fs: {
+      fileExists: (file) => path.resolve(file) === configPath ? true : undefined,
+      readFile: (file) => path.resolve(file) === configPath ? config : undefined,
+    },
+  });
+  try {
+    const snapshot = api.updateSnapshot({ openProjects: [configPath] });
+    try {
+      const project = snapshot.getProject(configPath);
+      if (!project) {
+        throw new Error(`Unable to open TypeScript quality project: ${cwd}`);
+      }
+      return analyzeProjectFiles(files, project);
+    } finally {
+      snapshot.dispose();
+    }
+  } finally {
+    api.close();
+  }
+}
+
+function analyzeProjectFiles(files: SourceFileInfo[], project: Project) {
   const functions: FunctionFinding[] = [];
   const updatedFiles: SourceFileInfo[] = [];
 
   for (const file of files) {
-    const text = fs.readFileSync(file.absolutePath, 'utf8');
-    const sourceFile = ts.createSourceFile(file.absolutePath, text, ts.ScriptTarget.Latest, true, scriptKindFor(file.absolutePath));
+    const sourceFile = project.program.getSourceFile(path.resolve(file.absolutePath));
+    if (!sourceFile) {
+      throw new Error(`Unable to read TypeScript source file: ${file.absolutePath}`);
+    }
 
     const visit = (node: ts.Node) => {
       if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node) || ts.isMethodDeclaration(node)) {
@@ -192,7 +220,7 @@ function analyzeTypescriptFiles(files: SourceFileInfo[]) {
         });
       }
 
-      ts.forEachChild(node, visit);
+      node.forEachChild(visit);
     };
 
     visit(sourceFile);

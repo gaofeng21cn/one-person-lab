@@ -187,9 +187,10 @@ export function pickSkillActivationProjection(manifest: DomainManifestCatalogEnt
     const entryShellKey = normalizeOptionalString(activationSurface?.entry_shell_key)
       ?? normalizeOptionalString(activationSurface?.skill_entry)
       ?? normalizeOptionalString(activationSurface?.recommended_shell);
+    const shellEntryCommand = entryShellKey ? shellCommands[entryShellKey]?.command : undefined;
     const entryCommand = normalizeOptionalString(activationSurface?.entry_command)
       ?? normalizeOptionalString(skillRecord.command)
-      ?? (entryShellKey ? shellCommands[entryShellKey]?.command ?? null : null)
+      ?? shellEntryCommand
       ?? productEntryCommand
       ?? recommendedCommand;
     const supportingShellKeys = [...new Set([

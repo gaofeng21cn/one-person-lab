@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
 import semver from 'semver';
-import ts from 'typescript';
+import * as ts from 'typescript/unstable/ast';
+import { API } from 'typescript/unstable/sync';
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const options = readOptions(process.argv.slice(2));
@@ -333,8 +334,7 @@ function normalizeExports(exportsValue) {
 }
 
 function inspectImports(file, packageRoot, packageId, manifest) {
-  const text = fs.readFileSync(file, 'utf8');
-  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const source = parseSourceFile(file);
   const findings = [];
   const visit = (node) => {
     let specifier = null;
@@ -347,7 +347,7 @@ function inspectImports(file, packageRoot, packageId, manifest) {
       specifier = node.arguments[0].text;
     }
     if (specifier !== null) findings.push(inspectSpecifier(file, specifier, packageRoot, packageId, manifest));
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   };
   visit(source);
   return findings;
@@ -384,13 +384,7 @@ function inspectSpecifier(file, specifier, packageRoot, packageId, manifest) {
 }
 
 function readTypeScriptDescriptorRefs(file) {
-  const source = ts.createSourceFile(
-    file,
-    fs.readFileSync(file, 'utf8'),
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
+  const source = parseSourceFile(file);
   const descriptors = [];
   const visit = (node) => {
     if (ts.isCallExpression(node)
@@ -401,10 +395,47 @@ function readTypeScriptDescriptorRefs(file) {
       const packageRefNode = objectProperty(node.arguments[0], 'package_ref');
       descriptors.push({ package_ref: readLiteralObject(packageRefNode) });
     }
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   };
   visit(source);
   return descriptors;
+}
+
+// TypeScript 7 exports the parser through its sync API. Only the synthetic
+// config is virtual; undefined delegates source reads to the host filesystem.
+function parseSourceFile(file) {
+  const absolutePath = path.resolve(file);
+  const configPath = path.join(path.dirname(absolutePath), '.opl-source-package-boundary.tsconfig.json');
+  const config = JSON.stringify({
+    compilerOptions: {
+      allowJs: true,
+      noEmit: true,
+      noResolve: true,
+      noLib: true,
+      types: [],
+    },
+    files: [absolutePath],
+  });
+  const api = new API({
+    cwd: path.dirname(absolutePath),
+    fs: {
+      fileExists: (candidate) => path.resolve(candidate) === configPath ? true : undefined,
+      readFile: (candidate) => path.resolve(candidate) === configPath ? config : undefined,
+    },
+  });
+  try {
+    const snapshot = api.updateSnapshot({ openProjects: [configPath] });
+    try {
+      const project = snapshot.getProject(configPath);
+      const source = project?.program.getSourceFile(absolutePath);
+      if (!source) throw new Error(`Unable to parse TypeScript source file: ${file}`);
+      return source;
+    } finally {
+      snapshot.dispose();
+    }
+  } finally {
+    api.close();
+  }
 }
 
 function objectProperty(object, name) {
