@@ -23,4 +23,14 @@ This repository's current source:
 
 - [opl-whitepaper.md](./opl-whitepaper.md) (OPL family design and product philosophy)
 - [opl-framework-whitepaper.md](./opl-framework-whitepaper.md) (Framework architecture and design philosophy)
+- [opl-miniapp-whitepaper.md](./opl-miniapp-whitepaper.md) (Agent-native applications and on-demand collaboration; source and local artifact, public publication remains separate)
 - [index.md](./index.md) (family catalog published at `/latest/whitepapers/`)
+
+Build the MiniApp whitepaper with the existing renderer:
+
+```sh
+node --experimental-strip-types scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/miniapp-whitepaper_profile.json
+```
+
+Its profile declares intended publication URLs; they do not prove publication.
+Add it to the public family catalog only with the corresponding publication work.

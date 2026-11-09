@@ -1,5 +1,11 @@
 # OPL MCP Apps
 
+The family development policy is [OPL Agent Apps](../policies/agent-native-app-policy.md).
+OPL MiniApp names an on-demand collaboration surface within that model; it is not
+a new installable unit or protocol. This specification owns the existing shared
+MCP App behavior and contribution mapping. The [development guide](./development.md)
+explains how to reuse it; implementation gaps remain in the active gap document.
+
 ## Value Proposition
 
 Give installed OPL Packages one Agent-callable, conversational review surface for
@@ -17,7 +23,7 @@ it does not own domain truth or execute arbitrary Package HTML.
 
 ## Unified application model
 
-This specification owns the shared Mini App interaction and contribution model.
+This specification owns the shared MiniApp interaction and contribution model.
 The App product contract owns navigation and visual design; Studio owns the MCP
 App host and transport; installed Packages own business data, actions and quality
 decisions. Any remaining implementation gaps and their delivery sequence live only in
