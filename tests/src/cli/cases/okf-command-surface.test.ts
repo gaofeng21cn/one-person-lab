@@ -105,11 +105,11 @@ test('opl okf project-repo writes pack refs and optional memory locator without 
   fs.writeFileSync(
     path.join(repoRoot, 'contracts', 'durable_knowledge_catalog.json'),
     JSON.stringify({
-      surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v1',
+      surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v2',
       owner: 'one-person-lab', domain_id: 'fixture-agent',
       items: [{
-        surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
-        knowledge_id: 'fixture.context', title: 'Context', layer: 'agent_pack', owner: 'fixture-agent',
+        surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v2',
+        knowledge_id: 'fixture.context', title: 'Context', scope: { kind: 'product', id: 'fixture-agent' }, content_kind: 'mechanism', owner: 'fixture-agent',
         body_ref: { kind: 'repo_path', ref: 'agent/knowledge/context.md' },
         applicability: { domains: ['fixture-agent'], stages: ['intake'] },
         status: 'active', reviewed_at: '2026-01-01T00:00:00Z', next_review_at: '2099-01-01T00:00:00Z',

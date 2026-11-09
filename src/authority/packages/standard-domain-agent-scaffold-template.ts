@@ -667,13 +667,13 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       path: 'contracts/durable_knowledge_catalog.json',
       content: json({
         surface_kind: 'opl_durable_knowledge_catalog',
-        version: 'durable-knowledge-catalog.v1',
+        version: 'durable-knowledge-catalog.v2',
         owner: 'one-person-lab',
         domain_id: domainId,
         items: [{
-          surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
+          surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v2',
           knowledge_id: `${domainId}.domain-boundary`, title: `${domainLabel} domain boundary`,
-          layer: 'agent_pack', owner: domainId,
+          scope: { kind: 'product', id: domainId }, content_kind: 'policy', owner: domainId,
           body_ref: { kind: 'repo_path', ref: 'agent/knowledge/domain_boundary.md' },
           applicability: { domains: [domainId], stages: [STARTER_STAGE_ID] },
           status: 'draft', reviewed_at: '2026-11-06T00:00:00Z', next_review_at: '2027-11-06T00:00:00Z',

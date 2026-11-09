@@ -4,6 +4,7 @@ import {
   workspaceRoot, workspaceLocator, workItemExecutionScope, scopedStageRunInput,
 } from './family-runtime-stage-run-launch-cases/shared.ts';
 import { fileURLToPath } from 'node:url';
+import crypto from 'node:crypto';
 import type { TemporalStageAttemptWorkflowInput } from '../../src/adapters/execution/family-runtime-temporal.ts';
 import { runnerPromptForExecution } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
 import { readStandardAgentManagedTextFile } from '../../src/authority/packages/index.ts';
@@ -27,25 +28,36 @@ function attempt(role: 'producer' | 'reviewer' | 'repairer' | 're_reviewer', par
 test('StageRun isolates projects and freezes private knowledge outside public specs', () => {
   const a = workItemExecutionScope('knowledge-a');
   const b = workItemExecutionScope('knowledge-b');
-  const writeKnowledge = (root: string, layer: 'workspace_shared' | 'workspace_project', id: string, content: string) => {
-    const dir = layer === 'workspace_shared' ? 'shared/memory' : 'memory';
-    fs.mkdirSync(path.join(root, dir), { recursive: true });
-    fs.writeFileSync(path.join(root, dir, 'lesson.md'), content);
-    fs.writeFileSync(path.join(root, dir, 'opl_durable_knowledge_catalog.json'), JSON.stringify({
-      surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v1', owner: 'one-person-lab',
-      items: [{
-        surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v1',
-        knowledge_id: id, title: 'Private lesson', layer, owner: 'fixture',
-        body_ref: { kind: 'workspace_path', ref: `${dir}/lesson.md` },
-        applicability: { domains: ['medautoscience'], stages: ['intake'], tasks: ['draft-paper'] },
-        status: 'active', reviewed_at: '2020-01-01T00:00:00Z', next_review_at: '2099-01-01T00:00:00Z',
-        authority_boundary: { semantic_body_owner: 'fixture', opl_role: 'catalog_recall_and_receipt_projection_only' },
-      }],
-    }));
+  const registryRef = path.join(workspaceRoot, 'shared/memory/knowledge-sources.json');
+  const policyRef = path.join(workspaceRoot, 'shared/memory/knowledge-bindings.json');
+  const items = [
+    { knowledgeId: 'team.preference', scope: { kind: 'owner', id: 'fixture-owner' }, ref: 'shared/memory/lesson.md', body: 'TEAM_PRIVATE_STYLE' },
+    { knowledgeId: 'a.lesson', scope: { kind: 'project', id: 'knowledge-a' }, ref: 'studies/knowledge-a/memory/lesson.md', body: 'A_PRIVATE_DECISION' },
+    { knowledgeId: 'b.lesson', scope: { kind: 'project', id: 'knowledge-b' }, ref: 'studies/knowledge-b/memory/lesson.md', body: 'B_PRIVATE_DECISION' },
+  ];
+  for (const item of items) {
+    fs.mkdirSync(path.dirname(path.join(workspaceRoot, item.ref)), { recursive: true });
+    fs.writeFileSync(path.join(workspaceRoot, item.ref), item.body);
+  }
+  fs.writeFileSync(path.join(workspaceRoot, 'workspace_index.json'), JSON.stringify({
+    projects: ['knowledge-a', 'knowledge-b'].map((id) => ({ project_id: id, project_root: `studies/${id}` })),
+  }));
+  const registry = {
+    surface_kind: 'opl_knowledge_source_registry', version: 'knowledge-source-registry.v2', registry_id: 'fixture-registry', owner: 'fixture',
+    sources: [{ source_id: 'fixture-source', root: workspaceRoot, status: 'active', writable: true,
+      grants: [{ workspace_root: workspaceRoot, domains: ['medautoscience'] }] }],
+    items: items.map(({ knowledgeId, scope, ref, body }) => ({
+      surface_kind: 'opl_durable_knowledge_item', version: 'durable-knowledge-item.v2',
+      knowledge_id: knowledgeId, title: 'Private lesson', scope, content_kind: 'decision', owner: 'fixture',
+      body_ref: { kind: 'source_path', source_id: 'fixture-source', ref, sha256: `sha256:${crypto.createHash('sha256').update(body).digest('hex')}` },
+      applicability: { domains: ['medautoscience'], stages: ['intake'], tasks: ['draft-paper'] },
+      status: 'active', reviewed_at: '2020-01-01T00:00:00Z', next_review_at: '2099-01-01T00:00:00Z',
+      authority_boundary: { semantic_body_owner: 'fixture', opl_role: 'catalog_recall_and_receipt_projection_only' },
+    })),
   };
-  writeKnowledge(workspaceRoot, 'workspace_shared', 'team.preference', 'TEAM_PRIVATE_STYLE');
-  writeKnowledge(a.canonical_work_item_root!, 'workspace_project', 'a.lesson', 'A_PRIVATE_DECISION');
-  writeKnowledge(b.canonical_work_item_root!, 'workspace_project', 'b.lesson', 'B_PRIVATE_DECISION');
+  fs.writeFileSync(registryRef, JSON.stringify(registry));
+  fs.writeFileSync(policyRef, JSON.stringify({ surface_kind: 'opl_knowledge_source_bindings', version: 'knowledge-source-bindings.v2',
+    registries: [{ registry_ref: registryRef, source_ids: ['fixture-source'], scope_ids: ['fixture-owner', 'knowledge-a', 'knowledge-b'] }] }));
   try {
     const original = scopedStageRunInput('knowledge-scope', 'knowledge-a').input;
     assert.throws(() => stageRunInput({
@@ -73,6 +85,12 @@ test('StageRun isolates projects and freezes private knowledge outside public sp
       assert.equal(prompt.includes('B_PRIVATE_DECISION'), false);
       assert.equal(prompt.includes('A_CHANGED_AFTER_BINDING'), false);
     }
+    registry.sources[0]!.status = 'revoked';
+    fs.writeFileSync(registryRef, JSON.stringify(registry));
+    assert.throws(() => resolveStageRunAttemptExecutorContent(attempt('producer', input)),
+      /revoked|authoriz|unavailable/i, 'revoked private knowledge must not reach a new executor prompt');
+    registry.sources[0]!.status = 'active';
+    fs.writeFileSync(registryRef, JSON.stringify(registry));
     const snapshot = fileURLToPath(spec.durable_knowledge_context.snapshot_ref.ref);
     const bytes = fs.readFileSync(snapshot);
     const mode = fs.statSync(snapshot).mode;
@@ -83,6 +101,7 @@ test('StageRun isolates projects and freezes private knowledge outside public sp
     } finally { fs.writeFileSync(snapshot, bytes); fs.chmodSync(snapshot, mode); }
   } finally {
     fs.rmSync(path.join(workspaceRoot, 'shared'), { recursive: true, force: true });
+    fs.rmSync(path.join(workspaceRoot, 'workspace_index.json'), { force: true });
     for (const scope of [a, b]) fs.rmSync(scope.canonical_work_item_root!, { recursive: true, force: true });
   }
 });
@@ -114,7 +133,7 @@ for (const role of ['producer', 'reviewer', 'repairer', 're_reviewer'] as const)
     const entries = resolved.effectiveManagedContent;
     assert.ok(entries, 'resolver must hydrate managed package content');
     assert.deepEqual(entries.map(({ purpose }) => purpose), [
-      'stage_manifest', 'quality_policy', 'skill', 'policy', 'quality_rubric', 'knowledge:agent_pack', 'knowledge_recall_receipt',
+      'stage_manifest', 'quality_policy', 'skill', 'policy', 'quality_rubric', 'knowledge:product', 'knowledge_recall_receipt',
     ]);
     const prompt = runnerPromptForExecution({ attempt: input, ...resolved }, input);
     for (const entry of entries) {

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { readStageKnowledgeContext } from './family-runtime-knowledge-context.ts';
+import { readStageKnowledgeContext, revalidateStageKnowledgeContext } from './family-runtime-knowledge-context.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import {
@@ -316,6 +316,7 @@ export function resolveStageRunAttemptExecutorContent(
   if (canonicalJsonText(spec.durable_knowledge_context) !== canonicalJsonText(parentSpec.durable_knowledge_context)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Quality roles must consume the same StageRun knowledge snapshot.');
   }
+  revalidateStageKnowledgeContext(spec.durable_knowledge_context, { forAction: true });
   const recallReceiptText = JSON.stringify(spec.durable_knowledge_context.receipt);
   return {
     effectiveStagePrompt: stagePrompt,
@@ -323,7 +324,7 @@ export function resolveStageRunAttemptExecutorContent(
     effectiveManagedContent: [
       ...managedContent,
       ...readStageKnowledgeContext(spec.durable_knowledge_context, input.domain_id, input.stage_id).bodies.map((body) => ({
-        purpose: `knowledge:${body.layer}`,
+        purpose: `knowledge:${body.scope.kind}`,
         ref: body.body_ref,
         content: body.content,
         sha256: body.sha256,

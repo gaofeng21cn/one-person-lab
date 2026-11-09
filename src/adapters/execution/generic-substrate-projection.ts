@@ -101,7 +101,8 @@ function memoryRefEntries(manifest: DomainManifestRecord | null) {
   return items.map((item) => ({
     ref_id: String(item.knowledge_id),
     owner: item.owner,
-    layer: item.layer,
+    scope: item.scope,
+    content_kind: item.content_kind,
     body_ref: item.body_ref,
     status: item.status,
     lifecycle_role: 'scoped_knowledge_catalog_item',

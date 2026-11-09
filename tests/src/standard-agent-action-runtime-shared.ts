@@ -137,7 +137,7 @@ export function writeStagePack(checkoutRoot: string): StandardAgentStageQualityR
     ['agent/lineage/intake.json', '{"stage_id":"intake"}\n'],
     ['contracts/durable_knowledge_catalog.json', JSON.stringify({
       surface_kind: 'opl_durable_knowledge_catalog',
-      version: 'durable-knowledge-catalog.v1',
+      version: 'durable-knowledge-catalog.v2',
       owner: 'one-person-lab',
       items: [],
     })],
