@@ -7,7 +7,7 @@ import { Worker } from '@temporalio/worker';
 import {
   defaultPayloadConverter,
   fromPayloadsAtIndex,
-} from '@temporalio/common/lib/converter/payload-converter.js';
+} from '@temporalio/common';
 
 import * as activities from '../../../src/adapters/execution/family-runtime-temporal-activities.ts';
 import { signalTemporalStageAttemptWorkflow } from '../../../src/adapters/execution/family-runtime-temporal-provider.ts';

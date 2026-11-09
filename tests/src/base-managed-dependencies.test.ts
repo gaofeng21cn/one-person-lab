@@ -297,9 +297,9 @@ test('Temporal stable cohort reports exact installed SDK package drift against i
       ? 'current'
       : 'update_available';
 
-  assert.equal(cohort.server.version, '1.31.2');
-  assert.equal(cohort.cli.version, '1.8.1');
-  assert.equal(cohort.sdk.version, '1.20.3');
+  assert.equal(cohort.server.version, '1.32.2');
+  assert.equal(cohort.cli.version, '1.10.0');
+  assert.equal(cohort.sdk.version, '1.25.0');
   assert.deepEqual(Object.keys(cohort.sdk.packages).sort(), [...TEMPORAL_SDK_PACKAGE_NAMES].sort());
   assert.deepEqual(temporal.latest_version, expectedVersions);
   assert.equal(temporal.currentness, expectedCurrentness);
@@ -332,7 +332,7 @@ test('Temporal stable cohort rejects prerelease versions and split SDK package v
   splitCohort.sdk.packages['@temporalio/worker'] = '1.20.2';
   assert.throws(
     () => validateTemporalStableCohort(splitCohort, 'fixture:split-sdk'),
-    /sdk\.packages\.@temporalio\/worker must equal "1\.20\.3"/,
+    /sdk\.packages\.@temporalio\/worker must equal "1\.25\.0"/,
   );
 });
 

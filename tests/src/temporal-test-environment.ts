@@ -1,5 +1,7 @@
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 
+import { readTemporalStableCohort } from '../../src/adapters/integration/temporal-stable-cohort.ts';
+
 // The bundled test server has a fixed five second connect budget. A loaded host
 // (parallel lane batches, an editor, a VM) can miss that window repeatedly, so
 // keep retrying well past the point where the host is merely busy.
@@ -30,7 +32,11 @@ export async function createTemporalTestWorkflowEnvironment() {
   // Temporal's time-skipping test server has no ARM build.
   if (process.arch === 'arm64') {
     return await startWithRetry(() => TestWorkflowEnvironment.createLocal({
-      server: { searchAttributes: [], log: { format: 'pretty', level: 'error' } },
+      server: {
+        executable: { type: 'cached-download', version: readTemporalStableCohort().cli.release_tag },
+        searchAttributes: [],
+        log: { format: 'pretty', level: 'error' },
+      },
     }));
   }
   return await startWithRetry(() => TestWorkflowEnvironment.createTimeSkipping());

@@ -1,4 +1,4 @@
-import { ScheduleAlreadyRunning, ScheduleNotFoundError, ScheduleOverlapPolicy } from '@temporalio/client';
+import { ScheduleAlreadyRunning, ScheduleNotFoundError, ScheduleOverlapPolicy, type ScheduleOptions } from '@temporalio/client';
 import { WorkflowNotFoundError } from '@temporalio/common';
 
 import {
@@ -344,7 +344,7 @@ export async function ensureTemporalSchedulerCadence(paths: TemporalWorkerPaths,
       state: {
         note: 'OPL-owned family runtime provider scheduler; replaces domain LaunchAgent/supervision daemons.',
       },
-    };
+    } satisfies ScheduleOptions;
     try {
       const handle = await withTemporalRpcDeadline(
         client,
