@@ -118,7 +118,7 @@
     "framework:archive": "node scripts/framework-archive.mjs"
   },
   "dependencies": {
-    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/cordis": "4.1.0",
     "@modelcontextprotocol/client": "^2.4.0",
     "@modelcontextprotocol/core": "^2.4.0",
     "@modelcontextprotocol/ext-apps": "^2.0.4",

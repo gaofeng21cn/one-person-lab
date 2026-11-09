@@ -107,7 +107,9 @@ test('Cordis composition inspect safely degrades for an unknown plugin', async (
   const context = new Context();
   const unknownPlugin = {
     name: 'unknown-third-party-plugin',
-    apply() {},
+    apply(ctx: Context) {
+      ctx.provide('fixture.unknown-service', { ready: true });
+    },
   };
   const fiber = await context.plugin(unknownPlugin);
   try {
@@ -125,6 +127,7 @@ test('Cordis composition inspect safely degrades for an unknown plugin', async (
     assert.equal(plugin.metadata_status, 'unknown');
     assert.equal(plugin.source_ref, null);
     assert.equal(plugin.state, 'active');
+    assert.deepEqual(plugin.provides, ['fixture.unknown-service']);
     assert.equal(inspect.diagnostics[0]?.code, 'unknown_plugin_metadata');
   } finally {
     await fiber.dispose();
