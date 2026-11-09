@@ -6,8 +6,8 @@ import path from 'node:path';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { assertJsonSchemaPayload } from '../../kernel/schema-registry.ts';
-import { resolveKnowledgeSourceItem } from './durable-knowledge-sources.ts';
-import type { DurableKnowledgeItem } from './durable-knowledge-model.ts';
+import { resolveKnowledgeSourceItem, resolveKnowledgeRegistrationSource, verifyKnowledgeDependencies, type SourceInput } from './durable-knowledge-sources.ts';
+import { knowledgeCurrentness, type DurableKnowledgeItem } from './durable-knowledge-model.ts';
 import proposalSchema from '../../../contracts/opl-framework/knowledge-writeback-proposal.schema.json' with { type: 'json' };
 import reviewSchema from '../../../contracts/opl-framework/knowledge-writeback-review.schema.json' with { type: 'json' };
 import receiptSchema from '../../../contracts/opl-framework/knowledge-writeback-receipt.schema.json' with { type: 'json' };
@@ -343,5 +343,54 @@ export function reviewKnowledgeSource(input: Scope & ReviewInput & { knowledgeId
     };
     check(receiptSchema, receipt); atomic(receiptPath, encoded(receipt), true);
     return receipt;
+  });
+}
+
+export function registerKnowledgeSource(input: SourceInput & ReviewInput & {
+  registryRef: string; item: unknown; expectedSha256: string;
+}) {
+  const initial = resolveKnowledgeRegistrationSource({ ...input, item: input.item as DurableKnowledgeItem });
+  return withRegistryLock(initial.registryRef, () => {
+    const source = resolveKnowledgeRegistrationSource({ ...input, item: input.item as DurableKnowledgeItem });
+    const review = reviewRecord(input, digest(encoded(source.item)).slice(7), 'accepted');
+    const item = { ...source.item, reviewed_at: review.reviewed_at, next_review_at: review.next_review_at };
+    if (knowledgeCurrentness(item, input.now)) fail('New knowledge registration requires an active, currently reviewed item.');
+    const bytes = body(fs.readFileSync(source.bodyPath));
+    if (digest(bytes) !== input.expectedSha256 || item.body_ref.sha256 !== input.expectedSha256) fail('Knowledge registration source differs from the reviewed expected hash.');
+    const dependencies = verifyKnowledgeDependencies({ ...input, dependencies: item.derived_from ?? [] });
+    if (!dependencies.valid) fail(`Knowledge registration dependencies are invalid: ${dependencies.issues.join(', ')}`);
+    const identity = { workspace_root: fs.realpathSync(input.workspaceRoot), project_root: input.projectRoot ? fs.realpathSync(input.projectRoot) : null,
+      domain_id: input.domainId, registry_ref: source.registryRef, item, reviewer: review.reviewer, review_ref: review.review_ref };
+    const registrationId = digest(encoded(identity)).slice(7);
+    const prefix = `shared/memory/knowledge-registrations/${registrationId}`;
+    const artifact = (name: string) => safePath(input.workspaceRoot, `${prefix}/${name}`);
+    const existing = source.registry.items.find((candidate) => candidate.knowledge_id === item.knowledge_id);
+    if (existing) {
+      if (canonicalJsonText(existing) !== canonicalJsonText(item) || !fs.existsSync(artifact('receipt.json'))) fail('Knowledge identity is already registered; use owner writeback for revisions.');
+      const receipt = readJson(artifact('receipt.json'));
+      if (receipt.registration_sha256 !== `sha256:${registrationId}` || receipt.sha256 !== input.expectedSha256
+        || receipt.registry_ref !== source.registryRef || receipt.knowledge_id !== item.knowledge_id) fail('Knowledge registration receipt changed.');
+      return receipt;
+    }
+    if (source.registry.items.some((candidate) => candidate.body_ref.source_id === item.body_ref.source_id && candidate.body_ref.ref === item.body_ref.ref)) fail('Knowledge source body already has a registered identity.');
+    const beforeRegistry = fs.readFileSync(source.registryRef);
+    const afterRegistry = encoded({ ...source.registry, items: [...source.registry.items, item] });
+    const intent = { ...identity, registration_sha256: `sha256:${registrationId}`, before_registry_sha256: digest(beforeRegistry), after_registry_sha256: digest(afterRegistry) };
+    fs.mkdirSync(path.dirname(artifact('intent.json')), { recursive: true, mode: 0o700 });
+    if (fs.existsSync(artifact('intent.json'))) {
+      if (canonicalJsonText(readJson(artifact('intent.json'))) !== canonicalJsonText(intent)) fail('Knowledge registration intent changed.');
+    } else atomic(artifact('intent.json'), encoded(intent), true);
+    resolveKnowledgeRegistrationSource({ ...input, item });
+    if (!fs.readFileSync(source.bodyPath).equals(bytes) || !fs.readFileSync(source.registryRef).equals(beforeRegistry)) fail('Knowledge registration source or registry changed before acceptance.');
+    const receipt = { status: 'registered', registration_sha256: `sha256:${registrationId}`, knowledge_id: item.knowledge_id,
+      scope: item.scope, content_kind: item.content_kind, source_id: item.body_ref.source_id, source_ref: item.body_ref.ref,
+      sha256: input.expectedSha256, registry_ref: source.registryRef, registry_sha256: digest(afterRegistry),
+      reviewer: review.reviewer, review_ref: review.review_ref, reviewed_at: review.reviewed_at, next_review_at: review.next_review_at,
+      registered_at: new Date().toISOString(), receipt_ref: artifact('receipt.json') };
+    // Retain the immutable receipt before advancing the registry, so an interrupted rename can safely retry.
+    if (!fs.existsSync(artifact('receipt.json'))) atomic(artifact('receipt.json'), encoded(receipt), true);
+    atomic(source.registryRef, afterRegistry);
+    if (!fs.readFileSync(source.bodyPath).equals(bytes) || !fs.readFileSync(source.registryRef).equals(afterRegistry)) fail('Knowledge registration changed before final readback.');
+    return readJson(artifact('receipt.json'));
   });
 }

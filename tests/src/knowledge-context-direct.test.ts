@@ -6,6 +6,57 @@ import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/publ
 import { bindDurableKnowledgeContext, recallDurableKnowledge } from '../../src/authority/packages/durable-knowledge-catalog.ts';
 import { bindStageKnowledgeContext, readStageKnowledgeContext, revalidateStageKnowledgeContext } from '../../src/adapters/execution/family-runtime-knowledge-context.ts';
 import { knowledgeItem, knowledgeSha, productCatalog, sourceFixture, writeKnowledgeFile } from './knowledge-source-fixture.ts';
+import { listKnowledgeSources, searchKnowledgeSources, discoverKnowledgeSources, resolveKnowledgeSourceTarget } from '../../src/authority/packages/durable-knowledge-sources.ts';
+import { registerKnowledgeSource } from '../../src/authority/packages/knowledge-source-writeback.ts';
+
+test('private discovery separates accepted metadata, authorized candidates and exact owner registration', async () => {
+  const f = sourceFixture();
+  try {
+    const scope = { workspaceRoot: f.workspace, projectRoot: f.project, domainId: 'fixture' };
+    Object.assign(f.registry.sources[0]!.grants[0]!, { write_domains: ['fixture'], project_ids: ['project-finance'] });
+    Object.assign(f.registry.sources[0]!, { include_globs: ['*.md', 'notes/**/*.md'], exclude_globs: ['notes/excluded/**'] });
+    f.save();
+    const listing = listKnowledgeSources(scope);
+    assert.equal(listing.items[0]!.knowledge_id, f.item.knowledge_id);
+    assert.equal(JSON.stringify(listing).includes(f.body), false);
+    assert.equal(listKnowledgeSources({ ...scope, projectRoot: f.otherProject }).items.length, 0);
+    assert.equal(searchKnowledgeSources({ ...scope, query: 'policy', excerptChars: 4 }).matches[0]!.excerpt.length, 4);
+    assert.throws(() => searchKnowledgeSources({ ...scope, query: 'policy', limit: 21 }));
+    const candidate = knowledgeItem({ id: 'owner.new', scope: { kind: 'project', id: 'project-finance' }, ref: 'notes/new.md', content: '# New policy\n' });
+    writeKnowledgeFile(path.join(f.source, candidate.body_ref.ref), '# New policy\n');
+    writeKnowledgeFile(path.join(f.source, 'notes/excluded/secret.md'), '# New policy secret\n');
+    fs.symlinkSync(path.join(f.source, candidate.body_ref.ref), path.join(f.source, 'linked.md'));
+    const found = discoverKnowledgeSources({ ...scope, query: 'policy' });
+    assert.deepEqual(found.candidates.map(item => item.source_ref), ['notes/new.md']);
+    assert.equal(found.candidates[0]!.candidate, true); assert.equal(found.candidates[0]!.accepted, false);
+    assert.equal(discoverKnowledgeSources({ ...scope, projectRoot: f.otherProject, query: 'policy' }).candidates.length, 0);
+    assert.equal(resolveKnowledgeSourceTarget({ ...scope, bodyPath: path.join(f.source, 'policy.md') }).registered, true);
+    assert.equal(resolveKnowledgeSourceTarget({ ...scope, bodyPath: path.join(f.source, 'linked.md') }).registered, false);
+    const register = { ...scope, registryRef: f.registryRef, item: candidate, expectedSha256: candidate.body_ref.sha256!,
+      reviewer: 'fixture-owner', reviewRef: 'owner://fixture/new-policy', reviewedAt: '2026-01-02T00:00:00Z', nextReviewAt: '2099-01-01T00:00:00Z' };
+    assert.throws(() => registerKnowledgeSource({ ...register, expectedSha256: knowledgeSha('other bytes') }));
+    assert.throws(() => registerKnowledgeSource({ ...register, projectRoot: f.otherProject }));
+    const receipt = registerKnowledgeSource(register);
+    assert.equal(receipt.status, 'registered');
+    const after = fs.readFileSync(f.registryRef);
+    assert.deepEqual(registerKnowledgeSource(register), receipt);
+    assert.deepEqual(fs.readFileSync(f.registryRef), after);
+    assert.equal(listKnowledgeSources(scope).items.length, 2);
+    assert.deepEqual(resolveKnowledgeSourceTarget({ ...scope, projectRoot: f.otherProject,
+      bodyPath: path.join(f.source, candidate.body_ref.ref) }), { registered: true, authorized: false });
+    assert.equal(discoverKnowledgeSources({ ...scope, query: 'policy' }).candidates.length, 0);
+    assert.throws(() => registerKnowledgeSource({ ...register, item: { ...candidate, title: 'Conflicting identity' } }));
+    const specs = buildKnowledgeCommandSpecs();
+    const output = await specs['knowledge sources']!.handler!(['--workspace', f.workspace, '--domain', 'fixture', '--project', f.project]);
+    assert.equal((output as { knowledge_sources: { items: unknown[] } }).knowledge_sources.items.length, 2);
+    fs.appendFileSync(path.join(f.source, candidate.body_ref.ref), 'Unreviewed edit');
+    assert.equal(listKnowledgeSources(scope).items.length, 1);
+    f.registry.sources[0]!.status = 'revoked'; f.save();
+    assert.equal(listKnowledgeSources(scope).items.length, 0);
+    assert.equal(discoverKnowledgeSources({ ...scope, query: 'policy' }).candidates.length, 0);
+    assert.equal(resolveKnowledgeSourceTarget({ ...scope, bodyPath: path.join(f.source, 'policy.md') }).registered, true);
+  } finally { f.cleanup(); }
+});
 
 test('direct CLI and hosted stages consume identical frozen source bytes without intermediate projection', async () => {
   const f = sourceFixture();
