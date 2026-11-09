@@ -84,11 +84,20 @@ function connectionResources(agentPackages: unknown, settingsControlCenter: unkn
     if (!connectionId) return [];
     const connectionGrants = grants.filter((grant) => grant.connection_id === connectionId);
     const activeGrants = connectionGrants.filter((grant) => grant.status === 'granted');
-    const hasStaleGrant = connectionGrants.some((grant) => grant.status === 'stale' || grant.status === 'revoked');
+    const activeConsumerIds = new Set(activeGrants
+      .map((grant) => string(grant.consumer_package_id) ?? string(grant.package_id))
+      .filter((id): id is string => Boolean(id)));
+    const hasOrphanedStaleGrant = connectionGrants
+      .filter((grant) => grant.status === 'stale' || grant.status === 'revoked')
+      .some((grant) => {
+        const consumerId = string(grant.consumer_package_id) ?? string(grant.package_id);
+        return !consumerId || !activeConsumerIds.has(consumerId);
+      });
     const connectionStatus = string(connection.status);
-    const status = connectionStatus === 'ready' && activeGrants.length > 0 && !hasStaleGrant
+    const status = connectionStatus === 'ready' && activeGrants.length > 0
       ? 'ready'
-      : connectionStatus === 'attention_needed' || connectionStatus === 'disabled' || hasStaleGrant
+      : connectionStatus === 'attention_needed' || connectionStatus === 'disabled'
+        || (activeGrants.length === 0 && hasOrphanedStaleGrant)
         ? 'attention'
         : 'unknown';
     const consumerPackageIds = [...new Set(activeGrants
@@ -105,9 +114,9 @@ function connectionResources(agentPackages: unknown, settingsControlCenter: unkn
       relation_kind: activeGrants.length > 0 ? 'configured' : 'optional',
       detail_ref: 'app_state.settings_control_center.connection_authorization',
       authorization: {
-        status: activeGrants.length > 0 && !hasStaleGrant
+        status: activeGrants.length > 0 && !hasOrphanedStaleGrant
           ? 'authorized'
-          : hasStaleGrant ? 'attention' : 'unknown',
+          : hasOrphanedStaleGrant ? 'attention' : 'unknown',
         consumer_count: consumerPackageIds.length,
         grant_count: connectionGrants.length,
       },
@@ -126,10 +135,10 @@ function connectionResources(agentPackages: unknown, settingsControlCenter: unkn
       readiness: {
         status,
         ...((status === 'attention' || status === 'unknown')
-          ? { reason: hasStaleGrant ? 'consumer_grant_stale_or_revoked' : connectionStatus === 'disabled' ? 'connection_disabled' : activeGrants.length === 0 ? 'no_active_consumer_grant' : 'connection_not_ready' }
+          ? { reason: hasOrphanedStaleGrant ? 'consumer_grant_stale_or_revoked' : connectionStatus === 'disabled' ? 'connection_disabled' : activeGrants.length === 0 ? 'no_active_consumer_grant' : 'connection_not_ready' }
           : {}),
       },
-      ...(hasStaleGrant
+      ...(hasOrphanedStaleGrant
         ? { reason: 'consumer_grant_stale_or_revoked' }
         : connectionStatus === 'disabled'
           ? { reason: 'connection_disabled' }

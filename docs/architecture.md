@@ -24,6 +24,8 @@ Framework 在公开 `app_state.application_management` 提供一个 refs-only �
 
 资源行可带 owner 提供的授权、修订、安全版本、freshness 和 readiness 摘要；缺少明确 owner 字段时保持 `unknown`，不能从写入时间、工作区绑定或消费者存在性推断“当前”或“已就绪”。
 
+连接授权按消费者聚合：同一消费者已有 active `granted` 时，历史 `stale` 或 `revoked` 记录不覆盖当前授权；没有 active grant 的 stale/revoked 记录才进入 `attention`。
+
 字段与边界由 [`application-management-projection-contract.json`](../contracts/opl-framework/application-management-projection-contract.json) 持有。`fast` profile 只返回有界资源摘要，`full` profile 返回同一 owner projection 的完整安全行。知识来源没有明确授权绑定时必须保持 `unknown`，UI 和 Agent 不得从 workspace 路径自行推断“已就绪”。
 
 ## Agent 原生应用组合

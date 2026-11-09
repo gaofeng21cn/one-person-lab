@@ -20,6 +20,7 @@
     "relation_kind_values": ["required", "optional", "configured"],
     "metadata_policy": {
       "authorization": "owner-reported status and bounded consumer/grant counts; unknown when no authorization relation is projected",
+      "connection_grant_aggregation": "an active granted row for the same consumer supersedes historical stale or revoked rows; stale or revoked rows without an active grant remain attention",
       "revision": "owner security revision identity when provided; otherwise unknown; never include credential material",
       "freshness": "owner observed or tested timestamp/status when provided; write time alone is not freshness",
       "readiness": "owner or resource status summary with safe reason code only"
