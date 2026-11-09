@@ -7,6 +7,7 @@ import { isRecord } from '../../kernel/contract-validation.ts';
 import { buildDomainDetailViewReadback } from './domain-detail-view.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
 import { runtimeActionsForItem } from './app-mcp-runtime-actions.ts';
+import { readMcpAppKnowledgeSources } from './app-mcp-knowledge.ts';
 
 export const OPL_MCP_APP_SERVER_ID = 'opl-apps';
 export const OPL_MCP_APP_RESOURCE_URI = 'ui://opl/apps.html';
@@ -15,6 +16,7 @@ export const OPL_RUNTIME_REFS = {
   workItems: 'opl.runtime.v1#work-items',
   item: 'opl.runtime.v1#item',
   domainDetail: 'opl.runtime.v1#domain-detail',
+  knowledge: 'opl.runtime.v1#knowledge',
 } as const;
 export const OPL_MCP_APP_TOOL_NAMES = {
   open: 'open_opl_apps',
@@ -68,6 +70,20 @@ const FRAMEWORK_RUNTIME_VIEWS = [
     slot: 'runtime.detail',
     scope: 'work_item',
     sort_order: -999,
+    framework_owned: true,
+  },
+  {
+    package_id: OPL_RUNTIME_PACKAGE_ID,
+    package_name: 'OPL Runtime',
+    view_id: 'opl.runtime.knowledge',
+    view_type: 'list_detail',
+    title_i18n: { 'zh-CN': '阶段知识来源', 'en-US': 'Task knowledge sources' },
+    data_ref: OPL_RUNTIME_REFS.knowledge,
+    empty_state_i18n: { 'zh-CN': '此阶段没有选用知识', 'en-US': 'No knowledge selected for this stage' },
+    commands: [],
+    slot: 'runtime.detail',
+    scope: 'work_item',
+    sort_order: -998,
     framework_owned: true,
   },
 ] satisfies JsonRecord[];
@@ -252,7 +268,37 @@ export function readFrameworkMcpAppContribution(input: {
   projection?: ReturnType<typeof buildWorkItemProjectionV2>;
   runtimeSnapshot?: JsonRecord;
   runtimeActionsUnavailable?: string;
+  descriptorDiscovery?: DescriptorDiscovery;
+  knowledgeReader?: typeof readMcpAppKnowledgeSources;
 }) {
+  if (input.ref === OPL_RUNTIME_REFS.knowledge) {
+    const itemId = typeof input.input.item_id === 'string' ? input.input.item_id.trim() : '';
+    if (!itemId) return inputRequired(input.ref, '选择任务以查看当前阶段的知识来源。', {
+      type: 'object', required: ['item_id'], properties: { item_id: { type: 'string', title: '任务' } },
+      additionalProperties: false,
+    });
+    const projection = input.projection ?? buildWorkItemProjectionV2({ profile: 'fast' });
+    const matches = projection.items.filter(item => item.item_id === itemId && item.visibility.state === 'visible');
+    const item = matches.length === 1 ? matches[0] : null;
+    const stage = item?.lifecycle.current_stage_id;
+    if (!item || !stage) return ownerEnvelope(input.ref, {
+      state: 'unavailable', reason: item ? 'work_item_stage_unavailable' : 'work_item_not_found', data: { items: [] },
+    });
+    const descriptors = (input.descriptorDiscovery ?? { discover: discoverInstalledPackageDescriptors }).discover();
+    const owners = [...descriptors.values()].filter(descriptor =>
+      descriptor.manifest.agent_id === item.identity.agent_id && descriptor.readiness.installed
+      && installedDescriptorSupportsFrameworkCalls(descriptor));
+    if (owners.length !== 1) return ownerEnvelope(input.ref, {
+      state: 'unavailable', reason: 'knowledge_owner_not_callable', data: { items: [] },
+    });
+    return ownerEnvelope(input.ref, (input.knowledgeReader ?? readMcpAppKnowledgeSources)({
+      repoDir: owners[0]!.sourcePath,
+      domainId: item.identity.domain_id,
+      stageId: stage,
+      workspaceRoot: item.identity.workspace_path,
+      projectRoot: item.identity.work_item_root,
+    }));
+  }
   if (input.ref === OPL_RUNTIME_REFS.workItems) {
     const projection = input.projection ?? buildWorkItemProjectionV2({ profile: 'fast' });
     const items = projection.items

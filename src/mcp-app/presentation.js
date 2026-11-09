@@ -105,7 +105,7 @@ export function renderReview(item) {
     ${item.summary ? `<p>${escape(item.summary)}</p>` : ''}${target ? `<h3>目标</h3>${renderFields(target)}` : ''}
     ${before !== undefined || after !== undefined ? `<div class="review-diff">${before !== undefined ? `<section><h3>修改前</h3><div class="review" data-change="removed">${renderFields(before)}</div></section>` : ''}${after !== undefined ? `<section><h3>${before !== undefined ? '修改后' : '审阅内容'}</h3><div class="review" data-change="added">${renderFields(after)}</div></section>` : ''}</div>` : ''}
     ${item.alternatives?.length ? `<h3>备选方案</h3>${renderFields(item.alternatives)}` : ''}${item.quality_debt || item.unknowns ? `<h3>待完善项</h3>${renderFields(item.quality_debt || item.unknowns)}` : ''}
-    ${renderSources(preview.evidence_refs || item.evidence_refs || item.source_refs)}${rawRecord(item)}</section>`;
+    ${list(item.artifacts).length ? renderArtifacts(item.artifacts, '完整审阅产物') : ''}${renderSources(preview.evidence_refs || item.evidence_refs || item.source_refs)}${rawRecord(item)}</section>`;
 }
 
 function renderMediaSegments(item) {

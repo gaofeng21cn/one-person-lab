@@ -82,6 +82,7 @@ export function readMcpAppKnowledgeSources(input: KnowledgeInput, recall: Knowle
   const selected = Array.isArray(receipt.selected) ? receipt.selected.flatMap(selectedItem) : [];
   return {
     state: unavailable ? 'unavailable' : 'ready',
+    summary: input.taskIntent ? '按此阶段与动作核对来源。' : '此处显示阶段通用来源；特定动作的知识由该动作执行前核对。',
     ...(unavailable ? { reason: 'knowledge_sources_require_attention' } : {}),
     data: {
       items: [...selected, ...gaps],
@@ -93,6 +94,8 @@ export function readMcpAppKnowledgeSources(input: KnowledgeInput, recall: Knowle
         gap_count: gaps.length,
         receipt_version: typeof receipt.version === 'string' ? receipt.version : null,
         context_kind: 'current_recall_metadata',
+        selection_scope: input.taskIntent ? 'stage_and_action' : 'stage_only',
+        scope_note: input.taskIntent ? '按此阶段与动作召回。' : '此处按阶段匹配；仅适用于特定动作的知识由该动作的 prepare/read-context 核对。',
         next_step: '来源修复后刷新；任务执行仍由原 owner prepare/read-context，行动前 revalidate --for-action。',
       },
     },

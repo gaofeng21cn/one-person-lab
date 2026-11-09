@@ -66,3 +66,28 @@ test('missing bindings and unreadable registry do not claim sources are ready', 
   assert.equal(JSON.stringify(failed).includes('patient'), false);
   assert.equal(JSON.stringify(failed).includes('/private'), false);
 });
+
+
+test('runtime knowledge route resolves consumer and workspace from the selected owner, not UI paths', async () => {
+  const { readFrameworkMcpAppContribution, OPL_RUNTIME_REFS } = await import('../../src/read-models/operator/app-mcp-app.ts');
+  const item = { item_id: 'task-a', visibility: { state: 'visible' },
+    lifecycle: { current_stage_id: 'review' },
+    identity: { agent_id: 'fixture', domain_id: 'fixture-domain', workspace_path: '/trusted/workspace', work_item_root: '/trusted/workspace/project' } };
+  const descriptor = { manifest: { agent_id: 'fixture' }, sourcePath: '/trusted/installed', enabled: true,
+    readiness: { installed: true, callability: 'callable', physical_status: 'available' } };
+  let received: unknown;
+  const options = { ref: OPL_RUNTIME_REFS.knowledge,
+    input: { item_id: 'task-a', repoDir: '/untrusted/package', workspace_path: '/untrusted/workspace', domainId: 'other' },
+    projection: { items: [item] } as any,
+    descriptorDiscovery: { discover: () => new Map([['fixture', descriptor as any]]) },
+    knowledgeReader: (args: any) => { received = args; return { state: 'ready', data: { items: [], detail: {} } } as any; } };
+  const result = readFrameworkMcpAppContribution(options);
+  assert.equal(result.opl_app_contribution.response.result.state, 'ready');
+  assert.deepEqual(received, { repoDir: '/trusted/installed', domainId: 'fixture-domain', stageId: 'review',
+    workspaceRoot: '/trusted/workspace', projectRoot: '/trusted/workspace/project' });
+  received = undefined;
+  descriptor.readiness.callability = 'unavailable';
+  const revoked = readFrameworkMcpAppContribution(options);
+  assert.equal(revoked.opl_app_contribution.response.result.state, 'unavailable');
+  assert.equal(received, undefined);
+});

@@ -57,3 +57,14 @@ Agent 使用 `open_opl_apps` 指定所需 Package/view 与上下文；`opl_app_c
 Framework shared App 是通用进度/产物/审阅组件的来源。Relay 专用工作台展示了工具/UI 共用邮件服务与浏览器回退；Med Auto Cast 的 review feedback 展示 revision 与 request ID；Photo Steward 展示计划差异后由原 CLI 应用。参考其真实当前源码与测试，不把这些产品 ID 固定进 runtime catalog，也不把它们现有安装状态写成所有新应用的保证。
 
 第二个真实消费者接入时，记录哪些 owner 代码直接复用、哪些适配仍有重复。优先删除重复的连接处理、状态镜像、UI 状态机和手工上下文录入；仅当相同复杂性确实跨消费者存在时抽取公共模块。开发效率看首次可用闭环所需工作、重复实现减少和验收缺陷，而非新建模块数量。
+
+## 精确交接与来源视图
+
+共享页面将 `open_opl_apps` 的 `input` 绑定到具体 Package/view。切到同包其他视图时不沿用原视图的领域参数；已打开的执行表单使用当时的目标与版本。owner 在 `actions[].input` 中提供完整对象与 revision/digest，并在 `command_inputs[action_ref].input_schema` 将这些字段设为 `readOnly`；执行端仍须核对精确版本。UI 的绑定不代替 owner 并发检查。
+
+owner 执行结果可附已有贡献引用形式的 `readback: { data_ref, input }`。共享页面只接受同包已声明的数据引用，将操作输入、owner 结果和只读回读请求交回 Agent。传输中断后仅尝试原目标只读回读，保留“操作结果待核对”，不重发写入。无 UI 的 Host 仍可使用 `open_opl_apps` 返回的结构化结果以及 owner 原有 CLI/API。
+
+`opl-runtime / opl.runtime.knowledge` 是阶段知识来源视图，通过 canonical `item_id` 找到实际任务、当前阶段、工作区和已安装 owner，再读取知识 owner 的召回元数据。它不接受页面提供的 Package 路径或领域身份作为授权，不显示正文、私有来源路径或凭据。此视图展示当前阶段通用召回会选用的来源和缺口，`selection_scope=stage_only` 明确不含仅适用某个动作的知识；已运行任务的冻结上下文继续由知识 owner 的 `prepare/read-context` 与行动前 `revalidate --for-action` 管理。
+
+
+`runtime_context` 的产物读取可携带 `runtime_handoff: { package_id, view_id, input }` 返回原任务。共享页面只打开 catalog 中的目标；当前产物的工作项身份、工作区相对引用和 SHA-256 随 `review_context` 进入原 runtime action，执行前重新核对来源字节。人工决定引用写入原 Attempt 不等于阶段通过或已继续运行；后续仍由实际任务/controller 按其质量门禁处理。

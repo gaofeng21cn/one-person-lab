@@ -11,6 +11,7 @@ import { record, recordList, stringValue } from '../../kernel/json-record.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
 import type { WorkItemProjectionItem } from './work-item-projection/types.ts';
+import { validateRuntimeReviewContext } from './app-contribution-runtime-context.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -21,7 +22,7 @@ const ACTION_LABELS: Record<string, { 'zh-CN': string; 'en-US': string }> = {
   stage_production_attempt_request: { 'zh-CN': '准备阶段任务', 'en-US': 'Prepare stage work' },
   stage_production_attempt_start: { 'zh-CN': '开始阶段任务', 'en-US': 'Start stage work' },
   'provider_signal:resume': { 'zh-CN': '继续任务', 'en-US': 'Resume work' },
-  'provider_signal:human_gate': { 'zh-CN': '提交当前决定', 'en-US': 'Submit decision' },
+  'provider_signal:human_gate': { 'zh-CN': '记录人工决定引用', 'en-US': 'Record human decision reference' },
 };
 
 function routeBelongsToItem(route: JsonRecord, item: WorkItemProjectionItem) {
@@ -82,17 +83,31 @@ export function runtimeActionsForItem(item: WorkItemProjectionItem, snapshot: Js
       ?? ACTION_LABELS[String(route.action_kind)]?.['zh-CN']
       ?? stringValue(route.action_kind) ?? actionId;
     const payloadTemplate = record(route.payload_template);
+    const signalSchema = route.action_kind === 'provider_signal:human_gate'
+      ? { type: 'object', required: ['human_gate_ref'], properties: {
+          human_gate_ref: { type: 'string', title: '已保存的人工决定引用' },
+          reason: { type: 'string', title: '说明' },
+        }, additionalProperties: true }
+      : route.action_kind === 'provider_signal:resume'
+        ? { type: 'object', properties: {
+            reason: { type: 'string', title: '继续原因' },
+            resume_ref: { type: 'string', title: '继续依据引用' },
+          }, additionalProperties: true }
+        : null;
     const inputSchema = isRecord(route.input_schema) ? route.input_schema
-      : safe.route_requires_domain_or_app_payload === true || safe.route_target_kind === 'provider_signal'
+      : signalSchema ?? (safe.route_requires_domain_or_app_payload === true || safe.route_target_kind === 'provider_signal'
         ? { type: 'object', title: 'Owner action input', additionalProperties: true }
-        : { type: 'object', properties: {}, additionalProperties: false };
+        : { type: 'object', properties: {}, additionalProperties: false });
     return [{
       command_id: actionId,
       action_id: actionId,
+      action_kind: route.action_kind,
       action_ref: OPL_RUNTIME_ACTION_REF,
       label_i18n: ACTION_LABELS[String(route.action_kind)] ?? { 'zh-CN': title, 'en-US': title },
       title,
-      summary: stringValue(route.route_status_detail) ?? stringValue(route.open_reason) ?? '',
+      summary: route.action_kind === 'provider_signal:human_gate'
+        ? '将已保存的人工决定引用记录到原执行任务；后续执行由原任务负责人决定。'
+        : stringValue(route.route_status_detail) ?? stringValue(route.open_reason) ?? '',
       confirmation_required: true,
       input: { item_id: item.item_id, action_id: actionId, route_revision: routeRevision(route, item) },
       input_schema: inputSchema,
@@ -157,6 +172,13 @@ export async function executeFrameworkMcpAppAction(input: {
         failure_code: 'runtime_app_action_changed', item_id: itemId, action_id: actionId,
       });
     }
+    if (Object.hasOwn(payload, 'review_context')) validateRuntimeReviewContext(item!, payload.review_context);
+    if (action.action_kind === 'provider_signal:human_gate' && !stringValue(payload.human_gate_ref)) {
+      throw new FrameworkContractError('cli_usage_error', 'A human decision requires the saved human_gate_ref.');
+    }
+    if (action.action_kind === 'provider_signal:resume' && !stringValue(payload.reason) && !stringValue(payload.resume_ref)) {
+      throw new FrameworkContractError('cli_usage_error', 'Resume requires a reason or resume_ref from the current owner.');
+    }
     return snapshot;
   };
   let result: JsonRecord;
@@ -186,6 +208,7 @@ export async function executeFrameworkMcpAppAction(input: {
           item_id: itemId,
           action_id: actionId,
           execution_status: execution.execution_status,
+          readback: { package_id: 'opl-runtime', data_ref: 'opl.runtime.v1#item', input: { item_id: itemId } },
           ...result,
         },
       },

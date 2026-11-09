@@ -105,11 +105,16 @@ export async function createOplMcpAppServer() {
     }),
   });
   const readContribution = async (packageId: string, ref: string, input: Record<string, unknown>) => {
-    if (packageId !== OPL_RUNTIME_PACKAGE_ID && !isFrameworkRuntimeRef(ref)) {
+    if (packageId !== OPL_RUNTIME_PACKAGE_ID && isFrameworkRuntimeRef(ref)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'The runtime data ref requires the runtime package identity.', {
+        failure_code: 'app_contribution_owner_mismatch',
+      });
+    }
+    if (packageId !== OPL_RUNTIME_PACKAGE_ID) {
       return runAppContribution({ packageId, ref, operation: 'read', input, confirmed: false }, contributionBroker);
     }
     if (ref !== OPL_RUNTIME_REFS.item || (!input.item_id && !input.work_item_id)) {
-      return readFrameworkMcpAppContribution({ ref, input });
+      return readFrameworkMcpAppContribution({ ref, input, descriptorDiscovery: composition.services.descriptorDiscovery });
     }
     const projection = buildWorkItemProjectionV2({ profile: 'full' });
     const services = runtimeServices();

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
@@ -44,6 +45,9 @@ function summary(item: WorkItemProjectionItem) {
     source_refs: item.source_refs.map((entry) => entry.ref),
     freshness: item.freshness,
     domain_detail_views: item.domain_detail_views,
+    runtime_handoff: {
+      package_id: 'opl-runtime', view_id: 'opl.runtime.item', input: { item_id: item.item_id },
+    },
   };
 }
 
@@ -75,7 +79,7 @@ function selection(items: WorkItemProjectionItem[]) {
 }
 
 function contained(root: string, file: string) {
-  const resolved = path.resolve(file);
+  const resolved = canonicalWorkspacePath(file);
   const rootPath = canonicalWorkspacePath(root);
   if (resolved !== rootPath && !resolved.startsWith(`${rootPath}${path.sep}`)) return false;
   // Validate the nearest existing ancestor as well as existing files: a missing
@@ -84,6 +88,67 @@ function contained(root: string, file: string) {
   while (!fs.existsSync(ancestor) && path.dirname(ancestor) !== ancestor) ancestor = path.dirname(ancestor);
   const actual = canonicalWorkspacePath(ancestor);
   return actual === rootPath || actual.startsWith(`${rootPath}${path.sep}`);
+}
+
+function contentRevision(file: string) {
+  const descriptor = fs.openSync(file, 'r');
+  try {
+    if (!fs.fstatSync(descriptor).isFile()) return null;
+    const digest = createHash('sha256');
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let count: number;
+    while ((count = fs.readSync(descriptor, buffer, 0, buffer.length, null)) > 0) digest.update(buffer.subarray(0, count));
+    return `sha256:${digest.digest('hex')}`;
+  } finally { fs.closeSync(descriptor); }
+}
+
+export function runtimeArtifactReview(item: WorkItemProjectionItem, artifact: JsonRecord) {
+  const file = stringValue(artifact.path);
+  const root = item.identity.work_item_root || item.identity.workspace_path;
+  if (!file || !contained(root, file) || !fs.existsSync(file)) return artifact;
+  const revision = contentRevision(file);
+  if (!revision) return artifact;
+  const reviewContext = {
+    work_item_identity: item.identity,
+    artifact_refs: [path.relative(item.identity.workspace_path, file)],
+    artifact_hashes: [revision],
+  };
+  return {
+    ...artifact, revision, review_context: reviewContext,
+    runtime_handoff: {
+      package_id: 'opl-runtime', view_id: 'opl.runtime.item',
+      input: { item_id: item.item_id, review_context: reviewContext },
+    },
+  };
+}
+
+// Bind human input to the exact files observed in the selected task. This does
+// not accept a quality verdict or change any domain/StageRun state.
+export function validateRuntimeReviewContext(item: WorkItemProjectionItem, value: unknown) {
+  if (!isRecord(value) || !isRecord(value.work_item_identity)
+    || !identityMatches(item, value.work_item_identity)) {
+    contextError('runtime_review_identity_mismatch', 'Review evidence does not belong to the selected task.');
+  }
+  const refs = value.artifact_refs;
+  const hashes = value.artifact_hashes;
+  if (!Array.isArray(refs) || !refs.length || !Array.isArray(hashes) || refs.length !== hashes.length) {
+    contextError('runtime_review_evidence_required', 'Review requires one exact content hash per artifact reference.');
+  }
+  // Domain evidence can include a shared workspace index as well as project
+  // files. The selected work-item identity and registered workspace stay fixed.
+  const root = item.identity.workspace_path;
+  for (let index = 0; index < refs.length; index += 1) {
+    const ref = refs[index];
+    const hash = hashes[index];
+    if (typeof ref !== 'string' || !ref || path.isAbsolute(ref) || /^[a-z][a-z0-9+.-]*:/i.test(ref)
+      || typeof hash !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(hash)) {
+      contextError('runtime_review_evidence_invalid', 'Review evidence requires workspace-relative references and SHA-256 content hashes.');
+    }
+    const file = path.resolve(item.identity.workspace_path, ref);
+    if (!contained(root, file) || !fs.existsSync(file) || contentRevision(file) !== hash) {
+      contextError('runtime_review_artifact_changed', 'The reviewed artifact changed or is unavailable. Reopen it before submitting the decision.');
+    }
+  }
 }
 
 function workspaceArtifacts(item: WorkItemProjectionItem) {
@@ -218,7 +283,8 @@ export function readAppContributionRuntimeContext(options: {
   const item = matches[0]!;
   if (options.view === 'progress') return { state: 'ready', data: { items: [summary(item)], detail: item } };
   const artifacts = [...attemptArtifacts(item), ...workspaceArtifacts(item)];
-  const unique = [...new Map(artifacts.map((artifact) => [artifact.source_ref, artifact])).values()];
+  const unique = [...new Map(artifacts.map((artifact) => [artifact.source_ref, artifact])).values()]
+    .map((artifact) => runtimeArtifactReview(item, artifact));
   return {
     state: 'ready',
     data: { items: unique, work_item: summary(item), content_policy: 'locator_only_no_artifact_content' },
