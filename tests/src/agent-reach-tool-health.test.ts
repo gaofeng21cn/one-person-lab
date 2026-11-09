@@ -1,3 +1,4 @@
+import { nodeFixtureShebang } from './cli/helpers-parts/node-executable.ts';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -16,10 +17,10 @@ function fixture(github: string, apiOutput: string, apiExit = 0, doctorOutput?: 
   const binary = path.join(root, 'agent-reach');
   const gh = path.join(root, 'gh');
   const calls = path.join(root, 'gh-args.json');
-  fs.writeFileSync(binary, `#!${process.execPath}
+  fs.writeFileSync(binary, `${nodeFixtureShebang}
 process.stdout.write(process.argv[2] === '--version' ? 'Agent Reach v1.5.0' : ${JSON.stringify(doctor)});
 `, { mode: 0o755 });
-  fs.writeFileSync(gh, `#!${process.execPath}
+  fs.writeFileSync(gh, `${nodeFixtureShebang}
 require('node:fs').writeFileSync(${JSON.stringify(calls)}, JSON.stringify(process.argv.slice(2)));
 process.stdout.write(${JSON.stringify(apiOutput)});
 process.exit(${apiExit});

@@ -1,9 +1,16 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import type {
   CordisConnectDescriptorDiscoveryService,
   InstalledPackageDescriptor,
   OplConnectionAuthorizationService,
 } from '../adapters/integration/index.ts';
-import { installedDescriptorSupportsFrameworkCalls } from '../adapters/integration/index.ts';
+import {
+  createDefaultConnectionAuthorizationService,
+  discoverInstalledPackageDescriptors,
+  installedDescriptorSupportsFrameworkCalls,
+} from '../adapters/integration/index.ts';
 import { FrameworkContractError } from '../kernel/contract-validation.ts';
 
 type ConsumerPort = ReturnType<OplConnectionAuthorizationService['forPackage']>;
@@ -27,6 +34,31 @@ export type OplPackageConnectionContext = Readonly<{
 export type OplConnectionContextHost = Readonly<{
   activate(descriptor: InstalledPackageDescriptor): OplPackageConnectionContext;
 }>;
+
+/** Bind a domain service to its own installed carrier at process startup.
+ * packageRoot must come from the service module location, never a tool payload.
+ * This composes the existing discovery and authorization owners; it does not
+ * install a Package or grant access. The returned port rechecks each call.
+ */
+export function activateInstalledPackageConnectionContext(input: {
+  packageRoot: string;
+  packageId: string;
+}, options: {
+  descriptorDiscovery?: Pick<CordisConnectDescriptorDiscoveryService, 'discover'>;
+  authorization?: OplConnectionAuthorizationBinding;
+} = {}): OplPackageConnectionContext {
+  const descriptorDiscovery = options.descriptorDiscovery ?? { discover: discoverInstalledPackageDescriptors };
+  const descriptor = assertCallable(descriptorDiscovery.discover({ packageId: input.packageId }).get(input.packageId), input.packageId);
+  let sameRoot = false;
+  try {
+    sameRoot = fs.realpathSync(path.resolve(input.packageRoot)) === fs.realpathSync(descriptor.sourcePath);
+  } catch { /* Missing or replaced carrier roots cannot activate a consumer. */ }
+  if (!sameRoot) unavailable('activation_source_root_mismatch');
+  return createOplConnectionContextHost({
+    descriptorDiscovery,
+    authorization: options.authorization ?? createDefaultConnectionAuthorizationService({ descriptorDiscovery }),
+  }).activate(descriptor);
+}
 
 function descriptorIdentity(descriptor: InstalledPackageDescriptor) {
   return [

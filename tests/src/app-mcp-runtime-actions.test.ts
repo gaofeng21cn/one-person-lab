@@ -113,7 +113,29 @@ test('a failed response after dispatch requires readback and never automatically
   let dispatches = 0;
   owner.familyRuntime = async () => { dispatches += 1; throw new Error('transport ended'); };
   await assert.rejects(executeFrameworkMcpAppAction({
-    ref: OPL_RUNTIME_ACTION_REF, input: action.input, confirmed: true,
+    ref: OPL_RUNTIME_ACTION_REF, input: { ...action.input, payload: { reason: 'continue' } }, confirmed: true,
   }, owner as any), (error: any) => error.details.dispatch_status === 'unknown_after_dispatch');
   assert.equal(dispatches, 1);
+});
+
+test('human decision keeps its reference in the original attempt signal and requires explicit evidence', async () => {
+  const decisionRoute = { ...route, action_kind: 'provider_signal:human_gate', action_id: 'decision-a' };
+  const action = runtimeActionsForItem(item, snapshot([decisionRoute]).runtime_tray_snapshot)[0];
+  assert.equal(action.action_kind, 'provider_signal:human_gate');
+  assert.deepEqual((action.input_schema as any).required, ['human_gate_ref']);
+  const owner = services(snapshot([decisionRoute]));
+  await assert.rejects(executeFrameworkMcpAppAction({
+    ref: OPL_RUNTIME_ACTION_REF, input: action.input, confirmed: true,
+  }, owner as any));
+  assert.equal(owner.calls.length, 0);
+  const result = await executeFrameworkMcpAppAction({
+    ref: OPL_RUNTIME_ACTION_REF,
+    input: { ...action.input, payload: { human_gate_ref: 'project/review/decision.md', reason: 'Revise section two' } },
+    confirmed: true,
+  }, owner as any);
+  assert.deepEqual(owner.calls[0].slice(0, 5), ['attempt', 'signal', 'attempt-a', '--kind', 'human_gate']);
+  const payload = JSON.parse(owner.calls[0][6]);
+  assert.equal(payload.human_gate_ref, 'project/review/decision.md');
+  assert.equal(payload.reason, 'Revise section two');
+  assert.deepEqual(result.opl_app_contribution.response.result.readback.input, { item_id: 'item-a' });
 });

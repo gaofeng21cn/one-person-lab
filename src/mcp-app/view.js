@@ -2,6 +2,7 @@ import { mountTaskWorkbench, parseContributionResearch } from './task-workbench.
 import { App, applyDocumentTheme, applyHostStyleVariables, applyHostFonts } from '@modelcontextprotocol/ext-apps';
 import { renderOwnerView, renderFields, rawRecord, escape, statusLabel, presentationUrl } from './presentation.js';
 import { renderInputFields, readInputFields } from './forms.js';
+import { viewKey, focusedViewInput, ownerReadbackRequest, resolveViewHandoff } from './handoff.js';
 
 const READ_TOOL = 'opl_app_contribution_read';
 const EXECUTE_TOOL = 'opl_app_contribution_execute';
@@ -21,13 +22,14 @@ const state = {
   selectedKey: stored('opl-apps-selected', ''),
   selected: null,
   result: null,
+  lastAction: null,
   selectedWorkItemIdentity: stored('opl-apps-selected-work-item', null),
   selectedWorkspace: stored('opl-apps-selected-workspace', null),
   selectedCanonicalItemId: stored('opl-apps-selected-item-id', ''),
   query: '',
   itemId: '',
   executing: false,
-  focusPackageId: '',
+  focusKey: '',
   focusInput: {},
 };
 let readGeneration = 0;
@@ -50,7 +52,7 @@ function localized(value, fallback = '') {
 }
 
 function key(view) {
-  return `${view.package_id}:${view.view_id}`;
+  return viewKey(view);
 }
 
 function notice(text, error = false) {
@@ -132,7 +134,7 @@ function collectionFrom(payload) {
 }
 
 function currentViewInput(view) {
-  const focused = state.focusPackageId === view.package_id ? state.focusInput : {};
+  const focused = focusedViewInput(view, state.focusKey, state.focusInput);
   if (focused.workspace_path || focused.work_item_identity) return { ...focused };
   const collection = collectionFrom(state.result);
   const items = collection.state === 'ready' ? collection.items : [];
@@ -144,7 +146,7 @@ function currentViewInput(view) {
     ? { workspace_path: selected.workspace_path, work_item_root: selected.work_item_root }
     : collection.state === 'ready' ? state.selectedWorkspace : null;
   return {
-    ...(view.data_ref === 'opl.runtime.v1#item' && state.selectedCanonicalItemId ? { item_id: state.selectedCanonicalItemId } : {}),
+    ...(['opl.runtime.v1#item', 'opl.runtime.v1#knowledge'].includes(view.data_ref) && state.selectedCanonicalItemId ? { item_id: state.selectedCanonicalItemId } : {}),
     ...(view.scope === 'work_item' && selectedIdentity ? { work_item_identity: selectedIdentity } : {}),
     ...(selectedWorkspace?.workspace_path ? { workspace_path: selectedWorkspace.workspace_path } : {}),
     ...(selectedWorkspace?.work_item_root ? { work_item_root: selectedWorkspace.work_item_root } : {}),
@@ -190,7 +192,7 @@ function bindReadInputForm() {
   bindFormSubmit(form, event => {
     event.preventDefault();
     void run(async () => {
-      state.focusPackageId = state.selected.package_id;
+      state.focusKey = key(state.selected);
       state.focusInput = readInputFields(form, JSON.parse(form.dataset.baseInput || '{}'), 'data-read-field');
       await loadSelected();
     });
@@ -305,7 +307,7 @@ function bindActionButtons(view, collection) {
     button.addEventListener('click', async () => {
       const command = view.commands.find((entry) => entry.action_ref === button.dataset.actionRef);
       if (!command) return;
-      const input = JSON.parse(button.dataset.input || '{}');
+      const input = { ...currentViewInput(view), ...JSON.parse(button.dataset.input || '{}') };
       const { schema } = commandInputsFor(collection, command);
       const fields = record(schema?.properties) || {};
       if (Object.keys(fields).length) {
@@ -316,7 +318,7 @@ function bindActionButtons(view, collection) {
         bindForms(view);
         return;
       }
-      await executeCommand(command, input);
+      await executeCommand(command, input, view);
     });
   }
 }
@@ -332,7 +334,7 @@ function bindForms(view) {
       let input;
       try { input = readInputFields(form, JSON.parse(form.dataset.baseInput || '{}')); }
       catch (error) { notice(error.message, true); return; }
-      await executeCommand(command, input);
+      await executeCommand(command, input, view);
     });
   }
 }
@@ -380,7 +382,8 @@ async function executeRuntimeAction(command) {
   if (!command || state.executing) return;
   const view = state.selected;
   const input = { ...command.input };
-  const defaults = record(command.defaults) || {};
+  const review = record(currentViewInput(view).review_context);
+  const defaults = { ...(record(command.defaults) || {}), ...(review ? { review_context: review } : {}) };
   const needsPayload = command.input_schema?.additionalProperties === true && !command.input_schema?.properties;
   const schema = needsPayload ? { type: 'object', properties: { payload: { type: 'object', title: '操作参数' } } } : command.input_schema;
   if (needsPayload || Object.keys(schema?.properties || {}).length) {
@@ -402,12 +405,17 @@ async function executeRuntimeAction(command) {
 
 async function executeCommand(command, input, view = state.selected) {
   if (!view || state.executing) return;
-  const targetInput = view.package_id === 'opl-runtime' ? { ...input } : { ...currentViewInput(view), ...input };
+  const targetInput = structuredClone(input);
+  const targetReadInput = structuredClone(currentViewInput(view));
+  const generation = readGeneration;
+  const selectedItemId = state.itemId;
+  const stillSelected = () => state.selected === view && generation === readGeneration && selectedItemId === state.itemId;
   state.executing = true;
   let dispatched = false;
+  let outcomeUnknown = false;
   try {
     if (command.confirmation_required && !await confirmCommand(command, view, targetInput)) return;
-    if (state.selected !== view) throw new Error('当前视图已改变，请在目标任务中重新选择操作。');
+    if (!stillSelected()) throw new Error('当前视图已改变，请在目标任务中重新选择操作。');
     $('status').textContent = '正在执行';
     $('body').setAttribute('aria-busy', 'true');
     dispatched = true;
@@ -421,27 +429,38 @@ async function executeCommand(command, input, view = state.selected) {
     const result = ownerResult(envelope);
     const execution = result?.execution || result?.runtime_operator_action_execution?.execution;
     const ownerState = result?.state || execution?.execution_status;
-    if (state.selected === view) {
+    const readbackRequest = ownerReadbackRequest(view, targetInput, result, state.catalog?.views || []);
+    state.lastAction = {
+      package_id: view.package_id, view_id: view.view_id, action_ref: command.action_ref,
+      input: targetInput, result, readback: readbackRequest,
+    };
+    app.updateModelContext({ structuredContent: { last_action: state.lastAction } }).catch(() => {});
+    if (stillSelected()) {
       await loadSelected();
       notice(['running', 'queued', 'started', 'accepted'].includes(ownerState)
         ? '工作已提交，请查看当前进度' : '已收到操作结果，请核对当前状态');
     }
   } catch (error) {
-    // A transport error can occur after dispatch. Read the owner before any manual retry.
-    if (dispatched && state.selected === view) {
-      if (view.package_id === 'opl-runtime') await loadSelected();
-      else {
-        try {
-          const readback = await callTool(READ_TOOL, { package_id: view.package_id, ref: view.data_ref, input: currentViewInput(view) });
-          if (state.selected === view) { state.result = readback; updateContext(); }
-        } catch { /* Keep the editor and original owner error visible. */ }
-      }
+    // A transport error can occur after dispatch. Read the original owner/target without retrying the mutation.
+    outcomeUnknown = dispatched;
+    if (dispatched) {
+      state.lastAction = {
+        package_id: view.package_id, view_id: view.view_id, action_ref: command.action_ref,
+        input: targetInput, outcome: 'unknown',
+        readback: { package_id: view.package_id, ref: view.data_ref, input: { ...targetReadInput, ...(targetInput.request_id ? { request_id: targetInput.request_id } : {}) } },
+      };
+      app.updateModelContext({ structuredContent: { last_action: state.lastAction } }).catch(() => {});
+      try {
+        const readback = await callTool(READ_TOOL, { package_id: view.package_id, ref: view.data_ref,
+          input: { ...targetReadInput, ...(targetInput.request_id ? { request_id: targetInput.request_id } : {}) } });
+        if (stillSelected()) { state.result = readback; renderResult(); updateContext(); }
+      } catch { /* Keep the original owner error; a failed read cannot establish the write outcome. */ }
     }
-    notice(`${error.message || '操作结果尚未确认'}${dispatched ? '；已尝试读取当前状态，请核对后再操作。' : ''}`, true);
+    if (stillSelected()) notice(`${error.message || '操作结果尚未确认'}${dispatched ? '；已尝试读取原目标状态，请核对后再操作。' : ''}`, true);
   } finally {
     state.executing = false;
     $('body').removeAttribute('aria-busy');
-    if (state.selected === view) $('status').textContent = '已连接';
+    if (stillSelected()) $('status').textContent = outcomeUnknown ? '操作结果待核对' : '已连接';
   }
 }
 
@@ -497,7 +516,7 @@ function renderResult() {
   if (collection.state !== 'ready') {
     $('body').innerHTML = `<div class="empty">${escape(collection.reason || '当前视图不可用')}</div>
       ${collection.state === 'input_required' ? renderReadInputForm(collection) : ''}
-      <div class="detail-actions">${renderActionButtons(view, collection)}</div>`;
+      ${collection.items.length ? `<div class="card detail">${collection.items.map(item => renderOwnerView(view, item)).join('')}</div>` : ''}`;
   } else if (view.data_ref === 'opl.runtime.v1#item' && collection.data.detail?.item_id) {
     const item = collection.data.detail;
     if (collection.items[0]) rememberWorkspaceSelection(collection.items[0]);
@@ -505,7 +524,7 @@ function renderResult() {
       initialViewId: currentViewInput(view).domain_view_id,
       actions: item.runtime_actions || [], onAction: executeRuntimeAction, onOpenLink: openLink,
       relatedViews: (state.catalog?.views || []).filter(entry => entry.scope === 'work_item' && entry.agent_id === item.identity.agent_id),
-      onOpenView: target => { state.selectedKey = key(target); state.focusPackageId = target.package_id;
+      onOpenView: target => { state.selectedKey = key(target); state.focusKey = key(target);
         state.focusInput = { work_item_identity: collection.items[0].work_item_identity, workspace_path: item.identity.workspace_path, work_item_root: item.identity.work_item_root }; void loadSelected(); },
       read: async input => collectionFrom(await callTool(READ_TOOL, { package_id: 'opl-runtime', ref: 'opl.runtime.v1#domain-detail', input })).data.detail,
       onContext: selection => { app.updateModelContext({ content: [{ type: 'text', text: `正在查看任务 ${item.identity.work_item_display_name}` }], structuredContent: selection }).catch(() => {}); },
@@ -529,13 +548,25 @@ function renderResult() {
     $('body').innerHTML = `<div class="card detail">${renderOwnerView(view, collection.root)}</div>
       <div class="detail-actions">${renderActionButtons(view, collection)}</div>`;
   }
+  if (typeof collection.root.summary === 'string') $('body').insertAdjacentHTML('afterbegin', `<p>${escape(collection.root.summary)}</p>`);
+  const current = collection.items.find((item, index) => itemIdentity(item, index) === state.itemId) || collection.items[0];
+  const handoff = resolveViewHandoff(current?.runtime_handoff || collection.data.runtime_handoff || collection.root.runtime_handoff, state.catalog?.views || []);
+  if (handoff) {
+    const button = document.createElement('button');
+    button.className = 'action'; button.type = 'button'; button.textContent = '返回原任务继续';
+    button.addEventListener('click', () => {
+      state.selectedKey = key(handoff.view); state.focusKey = state.selectedKey;
+      state.focusInput = handoff.input; state.itemId = ''; void loadSelected();
+    });
+    $('body').append(button);
+  }
   for (const button of $('body').querySelectorAll('[data-item-id]')) {
     button.addEventListener('click', () => {
       state.itemId = button.dataset.itemId;
       const items = collectionFrom(state.result).items;
       const selected = items.find((item, index) => itemIdentity(item, index) === state.itemId);
       if (selected) rememberWorkspaceSelection(selected);
-      if (selected && view.data_ref === 'opl.runtime.v1#work-items') { state.focusPackageId = 'opl-runtime'; state.focusInput = { item_id: selected.id }; }
+      if (selected && view.data_ref === 'opl.runtime.v1#work-items') { state.focusKey = 'opl-runtime:opl.runtime.item'; state.focusInput = { item_id: selected.id }; }
       renderResult();
       updateContext();
     });
@@ -543,7 +574,7 @@ function renderResult() {
   for (const button of $('body').querySelectorAll('[data-open-task]')) {
     button.addEventListener('click', () => {
       state.selectedKey = 'opl-runtime:opl.runtime.item';
-      state.focusPackageId = 'opl-runtime'; state.focusInput = { item_id: button.dataset.openTask };
+      state.focusKey = 'opl-runtime:opl.runtime.item'; state.focusInput = { item_id: button.dataset.openTask };
       void loadSelected();
     });
   }
@@ -604,7 +635,7 @@ function updateContext() {
   const context = `正在查看 ${view.package_name} 的 ${localized(view.title_i18n, view.view_id)}`;
   app.updateModelContext({
     content: [{ type: 'text', text: context }],
-    structuredContent: { package_id: view.package_id, view_id: view.view_id, selection: selected || collection.root },
+    structuredContent: { package_id: view.package_id, view_id: view.view_id, input: currentViewInput(view), selection: selected || collection.root, ...(state.lastAction ? { last_action: state.lastAction } : {}) },
   }).catch(() => {});
   document.body.setAttribute('data-llm', context);
 }
@@ -623,7 +654,7 @@ app.ontoolresult = (params) => {
     ++readGeneration;
     state.catalog = catalog;
     const focus = record(catalog.focus) || {};
-    state.focusPackageId = focus.package_id || '';
+    state.focusKey = focus.package_id && focus.view_id ? `${focus.package_id}:${focus.view_id}` : '';
     state.focusInput = record(focus.input) || {};
     state.selected = catalog.views.find((view) => view.package_id === focus.package_id && view.view_id === focus.view_id)
       || catalog.views[0] || null;

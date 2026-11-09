@@ -171,7 +171,7 @@ test('OPL MCP App starts through a linked launcher, exposes views and gates conf
     assert.equal(open?.annotations?.readOnlyHint, true);
     const opened = structured(await client.callTool({ name: 'open_opl_apps', arguments: {} }));
     const catalog = opened.opl_mcp_app_catalog as any;
-    assert.equal(catalog.views.length, 3);
+    assert.equal(catalog.views.length, 4);
     const fixtureView = catalog.views.find((view: any) => view.package_id === 'mcp-app-fixture');
     assert.equal(fixtureView.view_id, 'review');
     assert.equal(fixtureView.commands[0].confirmation_required, true);
@@ -181,11 +181,11 @@ test('OPL MCP App starts through a linked launcher, exposes views and gates conf
     }));
     assert.equal((focused.opl_app_contribution as any).response.result.data.items[0].id, 'review-1');
     assert.equal((focused.opl_mcp_app_catalog as any).focus.view_id, 'review');
-    assert.equal((focused.opl_mcp_app_catalog as any).views.length, 3, 'focus preserves navigation to the other declared views');
+    assert.equal((focused.opl_mcp_app_catalog as any).views.length, 4, 'focus preserves navigation to the other declared views');
     assert.equal((await client.callTool({ name: 'open_opl_apps', arguments: { view_id: 'missing' } })).isError, true);
     assert.deepEqual(
       catalog.views.filter((view: any) => view.package_id === 'opl-runtime').map((view: any) => view.view_id),
-      ['opl.runtime.work-items', 'opl.runtime.item'],
+      ['opl.runtime.work-items', 'opl.runtime.item', 'opl.runtime.knowledge'],
     );
     const resource = await client.readResource({ uri: 'ui://opl/apps.html' });
     const resourceContent = resource.contents[0] as { mimeType?: string; text?: string };
@@ -217,6 +217,11 @@ test('OPL MCP App starts through a linked launcher, exposes views and gates conf
       },
     }));
     assert.equal((executed.opl_app_contribution as any).response.result.receipt, 'receipt-1');
+    const wrongOwner = await client.callTool({
+      name: 'opl_app_contribution_read',
+      arguments: { package_id: 'mcp-app-fixture', ref: 'opl.runtime.v1#work-items' },
+    });
+    assert.equal(wrongOwner.isError, true);
     const workItems = structured(await client.callTool({
       name: 'opl_app_contribution_read',
       arguments: {

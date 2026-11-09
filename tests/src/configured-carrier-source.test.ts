@@ -1,3 +1,4 @@
+import { nodeFixtureShebang } from './cli/helpers-parts/node-executable.ts';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -95,7 +96,7 @@ function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'n
   ] };
   if (fault === 'digest') blobs.set(sourceLayer.digest, Buffer.from('corrupt'));
   const responses = Object.fromEntries([...blobs].map(([digest, bytes]) => [digest, bytes.toString('base64')]));
-  const script = `#!${process.execPath}\nconst args=process.argv.slice(2); const url=args.at(-1); const blobs=${JSON.stringify(responses)}; if(url.includes('/token?')) process.stdout.write(${JSON.stringify(JSON.stringify({token:'fixture-token'}))}); else if(url.includes('/manifests/')) process.stdout.write(${JSON.stringify(JSON.stringify(manifest))}); else {const b=blobs[url.split('/blobs/')[1]]; if(!b)process.exit(22); const bytes=Buffer.from(b,'base64'); const output=args.indexOf('--output'); if(output>=0)require('fs').writeFileSync(args[output+1],bytes);else process.stdout.write(bytes);}\n`;
+  const script = `${nodeFixtureShebang}\nconst args=process.argv.slice(2); const url=args.at(-1); const blobs=${JSON.stringify(responses)}; if(url.includes('/token?')) process.stdout.write(${JSON.stringify(JSON.stringify({token:'fixture-token'}))}); else if(url.includes('/manifests/')) process.stdout.write(${JSON.stringify(JSON.stringify(manifest))}); else {const b=blobs[url.split('/blobs/')[1]]; if(!b)process.exit(22); const bytes=Buffer.from(b,'base64'); const output=args.indexOf('--output'); if(output>=0)require('fs').writeFileSync(args[output+1],bytes);else process.stdout.write(bytes);}\n`;
   fs.writeFileSync(path.join(bin, 'curl'), script, { mode: 0o755 });
   const state = path.join(root, 'state');
   const marketplace = path.join(state, 'codex-plugin-marketplaces/fixture');

@@ -1,3 +1,4 @@
+import { nodeFixtureShebang } from './cli/helpers-parts/node-executable.ts';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -135,7 +136,7 @@ function writeInstalledOwnerProfileFixture(root: string) {
 
 function writeFakeCodexPluginList(root: string, installed: unknown[]) {
   const codexPath = path.join(root, 'fake-codex');
-  fs.writeFileSync(codexPath, `#!${process.execPath}
+  fs.writeFileSync(codexPath, `${nodeFixtureShebang}
 import readline from 'node:readline';
 const args = process.argv.slice(2).join(' ');
 const installed = ${JSON.stringify(installed)};

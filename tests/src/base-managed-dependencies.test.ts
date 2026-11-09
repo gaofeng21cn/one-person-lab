@@ -1,3 +1,4 @@
+import { nodeFixtureShebang } from './cli/helpers-parts/node-executable.ts';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -168,7 +169,7 @@ function writeFlowDependencyDescriptor(root: string, dependencyIds: string[]) {
       workflow_generation: { type: 'string', minLength: 1 },
     },
   }));
-  fs.writeFileSync(binary, `#!${process.execPath}
+  fs.writeFileSync(binary, `${nodeFixtureShebang}
 import readline from 'node:readline';
 const installed = [{
   pluginId: 'opl-flow@fixture-marketplace',
@@ -426,7 +427,7 @@ test('official gh-stack extension installs through GitHub CLI and remains callab
   const calls = path.join(root, 'gh.calls');
   fs.mkdirSync(path.dirname(gh), { recursive: true });
   fs.writeFileSync(gh, [
-    `#!${process.execPath}`,
+    `${nodeFixtureShebang}`,
     "const fs = require('node:fs');",
     "const path = require('node:path');",
     "const marker = path.join(process.env.HOME, 'gh-stack.installed');",

@@ -39,6 +39,7 @@ import { requireFamilyRuntimeExecutionScope } from '../family-runtime-execution-
 import type { FamilyRuntimeAttemptCommandContext } from './attempt-shared.ts';
 import {
   rawStageAttemptMutationAuthority,
+  normalizedReplayStringList,
   requireCurrentRuntimeRowsBeforeLaunchSideEffects,
   stageRunReplayBusinessIdentity,
   stageRunReplayRequestBusinessIdentity,
@@ -48,6 +49,22 @@ import {
 export type AttemptCreateCommandContext = FamilyRuntimeAttemptCommandContext & {
   parsed: Extract<FamilyRuntimeCommandInput, { mode: 'attempt_create' }>;
 };
+
+function stageRunCheckpointRefs(
+  input: AttemptCreateCommandContext['parsed']['input'],
+  defaultStagePacketRef: string,
+) {
+  const checkpoints = normalizedReplayStringList(input.checkpointRefs);
+  const decisions = normalizedReplayStringList(input.humanGateRefs);
+  if (decisions.length === 0) return checkpoints;
+  // StageRun transports human decisions as immutable owner input references.
+  // Keep its stage packet first so child Attempt materialization does not
+  // mistake a decision for the packet and remove it from execution checkpoints.
+  const explicitPacket = checkpoints[0];
+  const stagePacketRef = explicitPacket && !decisions.includes(explicitPacket)
+    ? explicitPacket : defaultStagePacketRef;
+  return [...new Set([stagePacketRef, ...checkpoints, ...decisions])];
+}
 
 export async function runAttemptCreateCommand(
   context: AttemptCreateCommandContext,
@@ -160,12 +177,21 @@ export async function runAttemptCreateCommand(
   const replayReviewLane = existingStageRunLaunch
     ? requestedReviewLane ?? persistedReviewLane
     : requestedReviewLane;
-  if (existingStageRunLaunch && canonicalJsonText(
-    stageRunReplayBusinessIdentity(existingStageRunLaunch.stage_run_input),
-  ) !== canonicalJsonText(stageRunReplayRequestBusinessIdentity({
-    ...scopedAttemptInput,
-    reviewLane: replayReviewLane ?? undefined,
-  }))) {
+  if (existingStageRunLaunch && (
+    // The persisted packet is omitted from child execution checkpoints. A
+    // replay cannot reclassify it as a decision and silently lose that input.
+    normalizedReplayStringList(parsed.input.humanGateRefs)
+      .includes(existingStageRunLaunch.stage_run_input.stage_packet_ref)
+    || canonicalJsonText(
+      stageRunReplayBusinessIdentity(existingStageRunLaunch.stage_run_input),
+    ) !== canonicalJsonText(stageRunReplayRequestBusinessIdentity({
+      ...scopedAttemptInput,
+      checkpointRefs: stageRunCheckpointRefs(
+        parsed.input, existingStageRunLaunch.stage_run_input.stage_packet_ref,
+      ),
+      reviewLane: replayReviewLane ?? undefined,
+    }))
+  )) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'StageRun invocation is already bound to a different immutable spec.',
@@ -327,7 +353,9 @@ export async function runAttemptCreateCommand(
           ...(parsed.input.invocationMode ? { invocation_mode: parsed.input.invocationMode } : {}),
           ...(parsed.input.boundedEditRef ? { bounded_edit_ref: parsed.input.boundedEditRef } : {}),
         }, effectiveReviewLane) ?? {},
-        checkpointRefs: parsed.input.checkpointRefs,
+        checkpointRefs: stageRunCheckpointRefs(parsed.input,
+          `${stageQualityBinding!.manifest_ref}@sha256:${stageQualityBinding!.manifest_sha256}`
+          + `#stage=${encodeURIComponent(parsed.input.stageId)}`),
         artifactRefs: parsed.input.inputArtifactRefs,
         artifactHashes: parsed.input.inputArtifactHashes,
         actionId: parsed.input.actionId,

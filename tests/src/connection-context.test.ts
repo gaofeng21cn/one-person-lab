@@ -4,17 +4,17 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { createOplConnectionContextHost } from '../../src/host/connection-context.ts';
+import { activateInstalledPackageConnectionContext, createOplConnectionContextHost } from '../../src/host/connection-context.ts';
 import { createOplConnectionAuthorizationService } from '../../src/adapters/integration/connection-authorization.ts';
 import { createOplConnection } from '../../src/adapters/integration/connection-registry.ts';
 import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 
-function descriptor(packageId: string): InstalledPackageDescriptor {
+function descriptor(packageId: string, sourcePath = `/fixture/${packageId}`): InstalledPackageDescriptor {
   return {
     manifest: { package_id: packageId, content_digest: `sha256:${'b'.repeat(64)}` },
     manifest_sha256: 'a'.repeat(64),
-    sourcePath: `/fixture/${packageId}`,
+    sourcePath,
     carrier_readback: { kind: 'codex_plugin_manager', identity: `${packageId}@fixture` },
     enabled: true,
     readiness: { installed: true, physical_status: 'available', callability: 'callable' },
@@ -125,5 +125,23 @@ test('retained consumer closures stop working after runtime disposal or package 
     const removed = host.activate(current);
     descriptors.delete('app-host');
     assert.throws(() => removed.connect.listConnections(), rejected('installed_package_descriptor_missing'));
+  });
+});
+
+test('domain activation binds only its own installed source root', async () => {
+  await fixture(({ descriptors, authorization }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-relay-root-'));
+    const current = descriptor('app-host', root);
+    descriptors.set('app-host', current);
+    const context = activateInstalledPackageConnectionContext({
+      packageRoot: root,
+      packageId: 'app-host',
+    }, { descriptorDiscovery: { discover: () => descriptors }, authorization });
+    assert.equal(context.package_id, 'app-host');
+    context.dispose();
+    assert.throws(() => activateInstalledPackageConnectionContext({
+      packageRoot: path.join(root, 'replaced'), packageId: 'app-host',
+    }, { descriptorDiscovery: { discover: () => descriptors }, authorization }), rejected('activation_source_root_mismatch'));
+    fs.rmSync(root, { recursive: true, force: true });
   });
 });
