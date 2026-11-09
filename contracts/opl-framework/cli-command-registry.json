@@ -1817,6 +1817,40 @@
         "surface": "cached_gateway_account_read_model"
       }
     },
+    "connect_cloud_list": {
+      "command_id": "connect cloud list",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": { "type": "object", "required": ["cloud_connections"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "cloud_owned_connection_metadata"
+      }
+    },
+    "connect_cloud_import": {
+      "command_id": "connect cloud import",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        { "name": "cloud-ref", "flag": "--cloud-ref", "value_kind": "string", "required": true, "summary": "Opaque reference already held by the Cloud credential helper; never a credential or file path." }
+      ],
+      "output_schema": { "type": "object", "required": ["connection"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "cloud_opaque_reference_registration"
+      }
+    },
     "connect_authorization_list": {
       "command_id": "connect authorization list",
       "owner": "OPL Connect",

@@ -33,6 +33,8 @@ const registryCases = [
   ['connect references verify', 'connect_references_verify', ['references-file', 'providers', 'cache-root', 'max-retries'], undefined],
   ['connect gateway login', 'connect_gateway_login', ['credentials-stdin'], undefined],
   ['connect authorization list', 'connect_authorization_list', [], undefined],
+  ['connect cloud list', 'connect_cloud_list', [], undefined],
+  ['connect cloud import', 'connect_cloud_import', ['cloud-ref'], undefined],
   ['connect authorization approve', 'connect_authorization_approve', ['request-id'], undefined],
   ['connect authorization deny', 'connect_authorization_deny', ['request-id'], undefined],
   ['connect authorization revoke', 'connect_authorization_revoke', ['grant-id'], undefined],
