@@ -1,6 +1,5 @@
 import { isRecord } from '../../kernel/contract-validation.ts';
 import type { JsonRecord } from '../../kernel/json-record.ts';
-import type { WorkspaceBinding } from '../../authority/workspace/public/app-state.ts';
 
 type ApplicationManagementResource = {
   resource_id: string;
@@ -23,25 +22,7 @@ function string(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function packageConsumersForDependency(agentPackages: unknown, dependencyId: string) {
-  const projection = isRecord(agentPackages) ? agentPackages : {};
-  const statusIndex = isRecord(projection.status_index) ? projection.status_index : {};
-  const packages = isRecord(statusIndex.packages) ? statusIndex.packages : {};
-  const consumers: string[] = [];
-  for (const [packageId, rawStatus] of Object.entries(packages)) {
-    const status = isRecord(rawStatus) ? rawStatus : {};
-    const readiness = isRecord(status.dependency_readiness) ? status.dependency_readiness : {};
-    for (const check of records(readiness.checks)) {
-      if (check.package_id === dependencyId) {
-        consumers.push(packageId);
-        break;
-      }
-    }
-  }
-  return [...new Set(consumers)].sort();
-}
-
-function baseCapabilityResources(agentPackages: unknown, managedUpdate: unknown): ApplicationManagementResource[] {
+function baseCapabilityResources(managedUpdate: unknown): ApplicationManagementResource[] {
   const update = isRecord(managedUpdate) ? managedUpdate : {};
   const component = records(update.components).find((entry) => entry.component_id === 'opl_base');
   const current = component && isRecord(component.current) ? component.current : {};
@@ -50,21 +31,25 @@ function baseCapabilityResources(agentPackages: unknown, managedUpdate: unknown)
   return dependencies.flatMap((dependency) => {
     const dependencyId = string(dependency.dependency_id);
     if (!dependencyId) return [];
-    const observedStatus = string(dependency.observed_status);
+    const observedStatus = string(dependency.status) ?? string(dependency.observed_status);
     const currentness = string(dependency.currentness);
-    const installed = dependency.installed === true;
-    const status = installed && observedStatus !== 'failed' && currentness !== 'missing'
-      ? 'ready'
-      : installed || observedStatus || currentness
-        ? 'attention'
+    const status = currentness === 'update_available'
+      || currentness === 'missing'
+      || observedStatus === 'attention_needed'
+      || observedStatus === 'failed'
+      || observedStatus === 'missing'
+      ? 'attention'
+      : observedStatus === 'ready' || currentness === 'current'
+        ? 'ready'
         : 'unknown';
+    const dependencyKind = string(dependency.dependency_kind) ?? 'dependency';
     return [{
-      resource_id: `base:${dependencyId}`,
+      resource_id: `base:${dependencyId}:${dependencyKind}`,
       resource_kind: 'base_capability',
       label: string(dependency.label) ?? dependencyId,
       status,
-      source_refs: [`app_state.managed_update.components[component_id=opl_base].current.dependency_catalog.flow_dependencies[dependency_id=${dependencyId}]`],
-      consumer_package_ids: packageConsumersForDependency(agentPackages, dependencyId),
+      source_refs: [`app_state.managed_update.components[component_id=opl_base].current.dependency_catalog.flow_dependencies[dependency_id=${dependencyId},dependency_kind=${dependencyKind}]`],
+      consumer_package_ids: [],
       owner_settings_route: 'updates',
       relation_kind: dependency.relationship === 'required' ? 'required' : 'optional',
       detail_ref: 'app_state.managed_update',
@@ -80,26 +65,33 @@ function connectionResources(agentPackages: unknown, settingsControlCenter: unkn
   return records(registry.connections).flatMap((connection) => {
     const connectionId = string(connection.connection_id);
     if (!connectionId) return [];
-    const connectionGrants = grants.filter((grant) => (
-      grant.connection_id === connectionId && grant.status === 'granted'
-    ));
+    const connectionGrants = grants.filter((grant) => grant.connection_id === connectionId);
+    const activeGrants = connectionGrants.filter((grant) => grant.status === 'granted');
+    const hasStaleGrant = connectionGrants.some((grant) => grant.status === 'stale' || grant.status === 'revoked');
     const connectionStatus = string(connection.status);
-    const status = connectionStatus === 'ready' && connectionGrants.length > 0
+    const status = connectionStatus === 'ready' && activeGrants.length > 0 && !hasStaleGrant
       ? 'ready'
-      : connectionStatus === 'disabled' || connectionGrants.some((grant) => grant.status !== 'granted')
+      : connectionStatus === 'attention_needed' || connectionStatus === 'disabled' || hasStaleGrant
         ? 'attention'
         : 'unknown';
+    const consumerPackageIds = [...new Set(activeGrants
+      .map((grant) => string(grant.consumer_package_id) ?? string(grant.package_id))
+      .filter((id): id is string => Boolean(id)))].sort();
     return [{
       resource_id: `connection:${connectionId}`,
       resource_kind: 'connection',
-      label: string(connection.display_name) ?? connectionId,
+      label: string(connection.name) ?? string(connection.display_name) ?? connectionId,
       status,
       source_refs: [`app_state.settings_control_center.connection_registry.connections[connection_id=${connectionId}]`],
-      consumer_package_ids: [...new Set(connectionGrants.map((grant) => string(grant.package_id)).filter((id): id is string => Boolean(id)))].sort(),
+      consumer_package_ids: consumerPackageIds,
       owner_settings_route: 'connections',
-      relation_kind: connectionGrants.length > 0 ? 'configured' : 'optional',
+      relation_kind: activeGrants.length > 0 ? 'configured' : 'optional',
       detail_ref: 'app_state.settings_control_center.connection_authorization',
-      ...(connectionGrants.length === 0 ? { reason: 'no_active_consumer_grant' } : {}),
+      ...(hasStaleGrant
+        ? { reason: 'consumer_grant_stale_or_revoked' }
+        : connectionStatus === 'disabled'
+          ? { reason: 'connection_disabled' }
+          : activeGrants.length === 0 ? { reason: 'no_active_consumer_grant' } : {}),
     } satisfies ApplicationManagementResource];
   });
 }
@@ -142,32 +134,63 @@ function modelResource(settingsControlCenter: unknown, agentPackages: unknown): 
   } satisfies ApplicationManagementResource];
 }
 
-function knowledgeResources(bindings: readonly WorkspaceBinding[]): ApplicationManagementResource[] {
-  return bindings.filter((binding) => binding.status === 'active').map((binding) => ({
-    resource_id: `knowledge:${binding.project_id}`,
-    resource_kind: 'knowledge_source' as const,
-    label: binding.label ?? binding.project,
-    status: 'unknown' as const,
-    source_refs: [`workspace_registry.active_bindings[binding_id=${binding.binding_id}]`],
-    consumer_package_ids: [],
-    owner_settings_route: 'workspace',
-    relation_kind: 'optional' as const,
-    detail_ref: 'app_state.paths.workspace_root',
-    reason: 'knowledge_binding_not_projected',
-  }));
+function knowledgeResources(settingsControlCenter: unknown): ApplicationManagementResource[] {
+  const settings = isRecord(settingsControlCenter) ? settingsControlCenter : {};
+  const readModel = isRecord(settings.app_settings_read_model) ? settings.app_settings_read_model : {};
+  const sources = isRecord(readModel.resource_sources)
+    ? records(readModel.resource_sources.items)
+    : records(readModel.resource_sources);
+  if (sources.length === 0) {
+    return [{
+      resource_id: 'knowledge:personal',
+      resource_kind: 'knowledge_source',
+      label: 'Personal knowledge sources',
+      status: 'unknown',
+      source_refs: ['app_state.settings_control_center.app_settings_read_model.resource_sources'],
+      consumer_package_ids: [],
+      owner_settings_route: 'workspace',
+      relation_kind: 'optional',
+      detail_ref: 'app_state.settings_control_center.app_settings_read_model.resource_sources',
+      reason: 'knowledge_owner_projection_unavailable',
+    }];
+  }
+  return sources.flatMap((source) => {
+    const sourceId = string(source.source_id) ?? string(source.resource_id) ?? string(source.id);
+    if (!sourceId) return [];
+    const rawStatus = string(source.status) ?? string(source.state);
+    const status = rawStatus === 'ready' || rawStatus === 'available'
+      ? 'ready'
+      : rawStatus === 'attention' || rawStatus === 'attention_needed' || rawStatus === 'unavailable'
+        ? 'attention'
+        : 'unknown';
+    const consumerIds = Array.isArray(source.consumer_package_ids)
+      ? source.consumer_package_ids.filter((id): id is string => typeof id === 'string')
+      : [string(source.consumer_package_id)].filter((id): id is string => Boolean(id));
+    return [{
+      resource_id: `knowledge:${sourceId}`,
+      resource_kind: 'knowledge_source',
+      label: string(source.label) ?? string(source.title) ?? sourceId,
+      status,
+      source_refs: [`app_state.settings_control_center.app_settings_read_model.resource_sources[source_id=${sourceId}]`],
+      consumer_package_ids: [...new Set(consumerIds)].sort(),
+      owner_settings_route: 'workspace',
+      relation_kind: 'configured',
+      detail_ref: 'app_state.settings_control_center.app_settings_read_model.resource_sources',
+      ...(status === 'ready' ? {} : { reason: 'knowledge_source_requires_owner_attention' }),
+    } satisfies ApplicationManagementResource];
+  });
 }
 
 export function buildApplicationManagementProjection(input: {
   agentPackages: unknown;
   managedUpdate: unknown;
   settingsControlCenter: unknown;
-  workspaceBindings: readonly WorkspaceBinding[];
 }) {
   const sharedResources = [
-    ...baseCapabilityResources(input.agentPackages, input.managedUpdate),
+    ...baseCapabilityResources(input.managedUpdate),
     ...connectionResources(input.agentPackages, input.settingsControlCenter),
     ...modelResource(input.settingsControlCenter, input.agentPackages),
-    ...knowledgeResources(input.workspaceBindings),
+    ...knowledgeResources(input.settingsControlCenter),
   ];
   return {
     surface_kind: 'opl_application_management_projection.v1',
@@ -179,7 +202,7 @@ export function buildApplicationManagementProjection(input: {
       'app_state.settings_control_center.connection_authorization',
       'app_state.settings_control_center.connection_registry',
       'app_state.settings_control_center.app_settings_read_model.codex_model_policy',
-      'app_state.paths.workspace_root',
+      'app_state.settings_control_center.app_settings_read_model.resource_sources',
     ],
     shared_resources: sharedResources,
     authority_boundary: {

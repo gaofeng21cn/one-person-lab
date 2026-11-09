@@ -20,7 +20,7 @@ User
 
 ### 应用管理共享投影
 
-Framework 在公开 `app_state.application_management` 提供一个 refs-only 聚合视图，供 OPL App、Studio 和 Agent 共同呈现共享基座。该视图把已存在的 OPL Base 能力、连接授权、模型访问和已授权工作区来源放在同一认知入口；资源的安装、启停、授权、更新和修复仍由原 owner 的既有 `app action` 负责。它不引入第二个 Package registry、凭证库、知识正文库或 updater。
+Framework 在公开 `app_state.application_management` 提供一个 refs-only 聚合视图，供 OPL App、Studio 和 Agent 共同呈现共享基座。该视图把已存在的 OPL Base 能力、连接授权、模型访问和知识 owner 已授权来源放在同一认知入口；知识 owner 尚未提供安全 projection 时不生成知识资源行。资源的安装、启停、授权、更新和修复仍由原 owner 的既有 `app action` 负责。它不引入第二个 Package registry、凭证库、知识正文库或 updater。
 
 字段与边界由 [`application-management-projection-contract.json`](../contracts/opl-framework/application-management-projection-contract.json) 持有。`fast` profile 只返回有界资源摘要，`full` profile 返回同一 owner projection 的完整安全行。知识来源没有明确授权绑定时必须保持 `unknown`，UI 和 Agent 不得从 workspace 路径自行推断“已就绪”。
 

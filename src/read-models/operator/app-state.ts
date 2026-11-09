@@ -614,7 +614,6 @@ export async function buildOplAppState(input: {
     agentPackages: agentPackagesProjection,
     managedUpdate: managedUpdate.managed_update,
     settingsControlCenter: rawSettingsControlCenter,
-    workspaceBindings,
   });
   const applicationManagement = profile === 'fast'
     ? compactFastApplicationManagementProjection(rawApplicationManagement)

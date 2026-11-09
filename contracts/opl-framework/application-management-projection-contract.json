@@ -34,9 +34,10 @@
     "full": "same owner truth with complete safe resource rows"
   },
   "knowledge_policy": {
-    "source": "authorized workspace/profile binding only",
+    "source": "knowledge-owner authorized source projection only",
     "body": "never projected",
-    "unresolved_binding_status": "unknown",
+    "workspace_binding_alone_is_not_a_knowledge_source": true,
+    "unprojected_owner_source": "omit",
     "consumer_must_not_infer_ready": true
   },
   "action_boundary": {
