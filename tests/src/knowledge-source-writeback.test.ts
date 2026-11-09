@@ -14,6 +14,7 @@ import {
   reviewKnowledgeWriteback,
 } from '../../src/authority/packages/knowledge-source-writeback.ts';
 import { resolveKnowledgeSourceItem } from '../../src/authority/packages/durable-knowledge-sources.ts';
+import { assertJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 
 const original = '# Investment method\n\nKeep a separate spending reserve.\n';
 const replacement = Buffer.from('# Investment method\n\nKeep a spending reserve before allocating long-term funds.\n');
@@ -315,6 +316,40 @@ for (const alteration of [
     assert.equal(fs.readFileSync(f.bodyPath, 'utf8'), original);
   });
 }
+
+test('public knowledge list and recall satisfy their declared output schemas', { timeout: 60_000 }, (t) => {
+  const f = fixture(t);
+  const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
+  const productRoot = path.join(f.root, 'product');
+  const bodyRef = 'agent/knowledge/method.md';
+  fs.mkdirSync(path.join(productRoot, 'contracts'), { recursive: true });
+  fs.mkdirSync(path.dirname(path.join(productRoot, bodyRef)), { recursive: true });
+  fs.writeFileSync(path.join(productRoot, bodyRef), original);
+  writeJson(path.join(productRoot, 'contracts/durable_knowledge_catalog.json'), {
+    surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v2',
+    owner: 'one-person-lab', domain_id: 'fixture',
+    items: [{ ...f.item, knowledge_id: 'fixture.method', owner: 'fixture',
+      scope: { kind: 'product', id: 'fixture' }, content_kind: 'mechanism',
+      body_ref: { kind: 'repo_path', ref: bodyRef, sha256: sha(original) },
+      authority_boundary: { ...f.item.authority_boundary, semantic_body_owner: 'fixture' },
+    }],
+  });
+  const registry = readJson(path.join(repoRoot, 'contracts/opl-framework/cli-command-registry.json'));
+  for (const command of ['list', 'recall']) {
+    const args = command === 'recall' ? ['--domain', 'fixture', '--stage', 'decide', '--workspace', f.workspaceRoot] : [];
+    const result = spawnSync(path.join(repoRoot, 'bin/opl'), ['knowledge', command, '--repo', productRoot, ...args, '--json'], {
+      cwd: repoRoot, env: { ...process.env, OPL_STATE_DIR: path.join(f.root, 'opl-state') },
+      encoding: 'utf8', timeout: 30_000,
+    });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, `CLI ${command} failed:\n${result.stdout}\n${result.stderr}`);
+    const output = JSON.parse(result.stdout);
+    assertJsonSchemaPayload({ schemaId: `test-knowledge-${command}-output`, schema: registry.commands[`knowledge_${command}`].output_schema }, output);
+    if (command === 'list') assert.equal(output.durable_knowledge.items[0].knowledge_id, 'fixture.method');
+    else assert.deepEqual(output.durable_knowledge_recall.selected.map((item: { knowledge_id: string }) => item.knowledge_id).sort(),
+      ['fixture.method', f.item.knowledge_id].sort());
+  }
+});
 
 test('public knowledge CLI revises the original source and detects derived dependency drift', { timeout: 120_000 }, (t) => {
   const f = fixture(t);

@@ -82,6 +82,7 @@ test('native command failure and invalid JSON retain distinct failure boundaries
 
 test('native local readback timeout terminates its app-server child', () => {
   const setup = fixture('stall');
+  const env: NodeJS.ProcessEnv = setup.env;
   const timeoutMs = 200;
   const deadlineReady = path.join(setup.root, 'deadline-ready');
   const preload = path.join(setup.root, 'deadline-after-start.cjs');
@@ -124,8 +125,8 @@ if (process.argv[2] === process.env.FIXTURE_READBACK_TIMEOUT) {
       ...setup,
       timeoutMs,
       env: {
-        ...setup.env,
-        NODE_OPTIONS: `${setup.env.NODE_OPTIONS ?? ''} --require ${JSON.stringify(preload)}`,
+        ...env,
+        NODE_OPTIONS: `${env.NODE_OPTIONS ?? ''} --require ${JSON.stringify(preload)}`,
         FIXTURE_READBACK_TIMEOUT: String(timeoutMs),
         FIXTURE_DEADLINE_READY: deadlineReady,
       },
