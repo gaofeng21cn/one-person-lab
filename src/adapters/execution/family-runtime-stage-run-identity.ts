@@ -433,6 +433,7 @@ export function buildStageRunImmutableSpec(input: {
   actionId?: string | null;
   taskId?: string | null;
   checkpointRefs?: string[];
+  checkpointArtifacts?: StageRunImmutableSpec['input_artifacts'];
   artifactRefs?: string[];
   artifactHashes?: string[];
   artifactIdentityReceiptRefs?: string[];
@@ -500,6 +501,7 @@ export function buildStageRunImmutableSpec(input: {
     lineageRefs,
     stagePacketRef: text(input.stagePacketRef, 'stage_packet_ref'),
     checkpointRefs,
+    checkpointArtifacts: input.checkpointArtifacts,
     inputArtifacts,
   });
   return {

@@ -312,6 +312,9 @@ export async function stageQualityAttemptMaterializeActivity(
       actionId: stageRun.action_id,
       taskId: stageRun.task_id,
       checkpointRefs: executionCheckpointRefs,
+      checkpointArtifacts: stageRun.stage_run_spec.input_artifacts.filter((artifact) => (
+        executionCheckpointRefs.includes(artifact.ref)
+      )),
       artifactRefs: input.artifact_refs,
       artifactHashes: input.artifact_hashes,
       artifactIdentityReceiptRefs: input.artifact_identity_receipt_refs,
@@ -493,6 +496,7 @@ export async function stageQualityAttemptMaterializeActivity(
         executorKind: stageRun.executor_kind,
         stageAttemptExecutorPolicy: executionAttemptExecutorPolicy,
         checkpointRefs: executionCheckpointRefs,
+        taskId: stageRun.task_id ?? undefined,
         stageRunId: stageRun.stage_run_id,
         qualityCycleId: input.quality_cycle_id,
         attemptRole: input.attempt_role,

@@ -57,16 +57,38 @@ export function buildStageRunImmutableContentBindings(input: {
   lineageRefs: string[];
   stagePacketRef: string;
   checkpointRefs: string[];
+  checkpointArtifacts?: ArtifactIdentity[];
   inputArtifacts: ArtifactIdentity[];
 }) {
   const artifacts = new Map(input.inputArtifacts.map((artifact) => [artifact.ref, artifact]));
+  const checkpointArtifacts = new Map((input.checkpointArtifacts ?? []).map((artifact) => [artifact.ref, artifact]));
+  for (const artifact of checkpointArtifacts.values()) {
+    const existing = artifacts.get(artifact.ref);
+    if (existing && (
+      existing.sha256 !== artifact.sha256
+      || existing.identity_receipt_ref !== artifact.identity_receipt_ref
+    )) {
+      fail('StageRun checkpoint and input artifact identities conflict.', {
+        failure_code: 'stage_run_content_binding_conflict',
+        ref: artifact.ref,
+        existing_sha256: existing.sha256,
+        received_sha256: artifact.sha256,
+        existing_identity_receipt_ref: existing.identity_receipt_ref,
+        received_identity_receipt_ref: artifact.identity_receipt_ref,
+      });
+    }
+  }
   const result: StageRunImmutableContentBinding[] = [];
   const bind = (
     purpose: StageRunContentPurpose,
     ref: string,
     expectedSha256?: string | null,
   ) => {
-    const artifact = artifacts.get(ref);
+    // A child keeps the parent's exact decision bytes as checkpoints, while its
+    // input artifacts describe only the current producer or review subject.
+    const artifact = purpose === 'checkpoint'
+      ? checkpointArtifacts.get(ref) ?? artifacts.get(ref)
+      : artifacts.get(ref);
     const binding = purpose === 'role_prompt' && !artifact
       ? bindManagedRolePrompt({ domainPackRoot: input.domainPackRoot, ref })
       : artifact
