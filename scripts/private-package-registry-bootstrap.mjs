@@ -13,8 +13,8 @@ const denied = (result) => result.status !== 0 && /unauthorized|denied|forbidden
 /** No Package source, manifest, payload, credential or private predicate is uploaded here. */
 export function ensurePrivatePackageRegistry(input, options = {}) {
   const env = options.env ?? process.env;
-  const run = options.run ?? ((command, args, extraEnv = {}) => spawnSync(command, args, {
-    env: { ...env, ...extraEnv }, encoding: 'utf8', stdio: 'pipe', timeout: 90_000, maxBuffer: 1024 * 1024,
+  const run = options.run ?? ((command, args, extraEnv = {}, cwd) => spawnSync(command, args, {
+    env: { ...env, ...extraEnv }, cwd, encoding: 'utf8', stdio: 'pipe', timeout: 90_000, maxBuffer: 1024 * 1024,
   }));
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(input.ownerRepo ?? '')
     || env.GITHUB_REPOSITORY !== input.ownerRepo) {
@@ -53,7 +53,7 @@ export function ensurePrivatePackageRegistry(input, options = {}) {
       // Still verify the resulting registry state before uploading sensitive bytes.
       run('oras', ['push', '--format', 'json', `${input.image}:opl-access-bootstrap`,
         '--artifact-type', MARKER_TYPE, '--annotation', `org.opencontainers.image.source=https://github.com/${input.ownerRepo}`,
-        `${marker}:${MARKER_TYPE}+json`]);
+        `access-bootstrap.json:${MARKER_TYPE}+json`], {}, temporary);
       // A failed/unknown push is reconciled by metadata; never repeat the write.
       metadata = read(route);
       bootstrapped = true;

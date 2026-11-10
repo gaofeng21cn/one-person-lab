@@ -55,6 +55,8 @@ test('private publication receipt readback verifies the authenticated referrer a
   const receipt = {
     surface_kind: 'opl_package_publication_receipt.v1',
     status: 'published_and_verified',
+    publication_request_id: 'private-readback-request',
+    workflow: { repository: 'example/occ', run_id: '123', run_attempt: '1' },
     package: { package_id: packageId, version, owner_source_commit: sourceCommit, framework_source_commit: frameworkCommit },
     source: { owner_repository: sourceRepo.replace(/\.git$/, ''), oci_annotation: 'https://github.com/example/one-person-lab' },
     content: {
@@ -80,9 +82,10 @@ test('private publication receipt readback verifies the authenticated referrer a
       predicateType: 'https://slsa.dev/provenance/v1',
       subject: [{ name: subjectRef, digest: { sha256: subjectDigest.slice(7) } }],
       predicate: { buildDefinition: {
+        internalParameters: { publication_request_id: 'private-readback-request' },
         externalParameters: { package_id: packageId, package_version: version, owner_source_commit: sourceCommit, framework_source_commit: frameworkCommit },
         resolvedDependencies: [{ uri: sourceRepo.replace(/\.git$/, ''), digest: { gitCommit: sourceCommit } }],
-      } },
+      }, runDetails: { builder: { id: 'example/occ/.github/workflows/publish-package.yml@refs/heads/main' }, metadata: { invocationId: '123-1' } } },
     })).toString('base64'),
   };
   const sbomStatement = {
@@ -101,9 +104,9 @@ test('private publication receipt readback verifies the authenticated referrer a
 const fs = require('node:fs');
 const maps = JSON.parse(fs.readFileSync(process.env.OPL_RECEIPT_MAPS, 'utf8'));
 const a = process.argv.slice(2);
-if (a[0] === 'discover') { process.stdout.write(JSON.stringify({ referrers: [{ artifactType: 'application/vnd.onepersonlab.package.receipt.v1', digest: '${receiptDigest}' }] })); process.exit(0); }
-if (a[0] === 'manifest' && a[1] === 'fetch') { const ref = a.at(-1); process.stdout.write(ref === maps.subjectRef ? maps.subject : maps.receipt); process.exit(0); }
-if (a[0] === 'blob' && a[1] === 'fetch') { process.stdout.write(Buffer.from(maps.receiptBlob, 'base64')); process.exit(0); }
+if (a[0] === 'discover') { process.stdout.write(JSON.stringify({ referrers: maps.referrers || [{ artifactType: 'application/vnd.onepersonlab.package.receipt.v1', digest: '${receiptDigest}' }] })); process.exit(0); }
+if (a[0] === 'manifest' && a[1] === 'fetch') { const ref = a.at(-1); process.stdout.write(ref === maps.subjectRef ? maps.subject : (maps.receipts?.[ref] || maps.receipt)); process.exit(0); }
+if (a[0] === 'blob' && a[1] === 'fetch') { process.stdout.write(Buffer.from(maps.blobs?.[a.at(-1)] || maps.receiptBlob, 'base64')); process.exit(0); }
 process.exit(2);
 `);
   fs.chmodSync(path.join(bin, 'oras'), 0o755);
@@ -119,12 +122,14 @@ process.stdout.write(JSON.stringify(statements));
     '--subject', subjectRef, '--package-id', packageId, '--version', version,
     '--source-repo', sourceRepo, '--source-commit', sourceCommit, '--public-key', publicKeyPath,
     '--access-policy-ref', 'github-package:example/one-person-lab-private-packages/occ', '--credential-provider', 'github_packages',
-    '--receipt-digest', receiptDigest,
+    '--receipt-digest', receiptDigest, '--include-receipt',
+    '--publication-request-id', 'private-readback-request', '--workflow-repository', 'example/occ', '--workflow-run-id', '123',
   ], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, OPL_RECEIPT_MAPS: mapsPath } })) as Record<string, unknown>;
   assert.equal(output.status, 'verified');
   assert.equal(output.receipt_ref, receiptRef);
   assert.equal(output.signing_key_digest, signingKeyDigest);
   assert.equal(output.trusted_key_source, 'caller_software_source_configuration');
+  assert.deepEqual(output.receipt, receipt, 'callers receive only the digest-checked and signature-bound receipt');
 
   const bad = spawnSync(process.execPath, [
     path.join(repoRoot, 'scripts/oci-publication-receipt-readback.mjs'),
@@ -134,5 +139,65 @@ process.stdout.write(JSON.stringify(statements));
   ], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, OPL_RECEIPT_MAPS: mapsPath } });
   assert.notEqual(bad.status, 0);
   assert.match(`${bad.stdout}${bad.stderr}`, /trusted software source configuration/);
+  const cosignPath = path.join(bin, 'cosign');
+  const originalCosign = fs.readFileSync(cosignPath, 'utf8');
+  const mismatchedProvenance = JSON.parse(Buffer.from(provenanceStatement.payload, 'base64').toString());
+  mismatchedProvenance.predicate.buildDefinition.internalParameters.publication_request_id = 'different-request';
+  const mismatchedEnvelope = { ...provenanceStatement, payload: Buffer.from(JSON.stringify(mismatchedProvenance)).toString('base64') };
+  fs.writeFileSync(cosignPath, `#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify(${JSON.stringify([mismatchedEnvelope, sbomStatement])}));\n`);
+  const wrongRequest = spawnSync(process.execPath, [
+    path.join(repoRoot, 'scripts/oci-publication-receipt-readback.mjs'),
+    '--subject', subjectRef, '--package-id', packageId, '--version', version,
+    '--source-repo', sourceRepo, '--source-commit', sourceCommit, '--public-key', publicKeyPath,
+    '--access-policy-ref', 'github-package:example/one-person-lab-private-packages/occ', '--credential-provider', 'github_packages',
+  ], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, OPL_RECEIPT_MAPS: mapsPath } });
+  assert.notEqual(wrongRequest.status, 0);
+  assert.equal(wrongRequest.stdout, '', 'a receipt from another signed publication request is not returned');
+  fs.writeFileSync(cosignPath, originalCosign);
+
+  const runSelected = (extra: string[]) => spawnSync(process.execPath, [
+    path.join(repoRoot, 'scripts/oci-publication-receipt-readback.mjs'),
+    '--subject', subjectRef, '--package-id', packageId, '--version', version,
+    '--source-repo', sourceRepo, '--source-commit', sourceCommit, '--public-key', publicKeyPath,
+    '--access-policy-ref', 'github-package:example/one-person-lab-private-packages/occ', '--credential-provider', 'github_packages', ...extra,
+  ], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, OPL_RECEIPT_MAPS: mapsPath } });
+  assert.equal(JSON.parse(runSelected([]).stdout).receipt, undefined, 'normal consumer output stays bounded');
+  const nextReceipt = { ...receipt, publication_request_id: 'next-request', workflow: { ...receipt.workflow, run_id: '124' } };
+  const nextBytes = Buffer.from(JSON.stringify(nextReceipt));
+  const nextLayer = { mediaType: 'application/vnd.onepersonlab.package.receipt.v1+json', digest: digest(nextBytes), size: nextBytes.length };
+  const nextManifest = Buffer.from(JSON.stringify({ ...JSON.parse(receiptManifest.toString()), layers: [nextLayer] }));
+  const nextDigest = digest(nextManifest);
+  const originalMaps = fs.readFileSync(mapsPath, 'utf8');
+  const multipleMaps = JSON.parse(originalMaps);
+  multipleMaps.referrers = [receiptDigest, nextDigest].map((value) => ({ artifactType: 'application/vnd.onepersonlab.package.receipt.v1', digest: value }));
+  multipleMaps.receipts = { [`${subject.split('@')[0]}@${nextDigest}`]: nextManifest.toString() };
+  multipleMaps.blobs = { [`${subject.split('@')[0]}@${nextLayer.digest}`]: nextBytes.toString('base64') };
+  fs.writeFileSync(mapsPath, JSON.stringify(multipleMaps));
+  const nextProvenance = JSON.parse(Buffer.from(provenanceStatement.payload, 'base64').toString());
+  nextProvenance.predicate.buildDefinition.internalParameters.publication_request_id = 'next-request';
+  nextProvenance.predicate.runDetails.metadata.invocationId = '124-1';
+  const nextEnvelope = { ...provenanceStatement, payload: Buffer.from(JSON.stringify(nextProvenance)).toString('base64') };
+  fs.writeFileSync(cosignPath, `#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify(${JSON.stringify([provenanceStatement, nextEnvelope, sbomStatement])}));\n`);
+  const selected = runSelected(['--include-receipt', '--publication-request-id', 'next-request', '--workflow-repository', 'example/occ', '--workflow-run-id', '124']);
+  assert.equal(selected.status, 0, selected.stderr);
+  assert.deepEqual(JSON.parse(selected.stdout).receipt, nextReceipt, 'old receipt and old attestation do not hide the selected publication');
+  const absent = runSelected(['--include-receipt', '--publication-request-id', 'absent-request']);
+  assert.notEqual(absent.status, 0);
+  assert.equal(absent.stdout, '');
+  fs.writeFileSync(cosignPath, originalCosign);
+  fs.writeFileSync(mapsPath, originalMaps);
+
+  const maps = JSON.parse(fs.readFileSync(mapsPath, 'utf8'));
+  maps.receiptBlob = Buffer.from(JSON.stringify({ ...receipt, status: 'forged' })).toString('base64');
+  fs.writeFileSync(mapsPath, JSON.stringify(maps));
+  const tampered = spawnSync(process.execPath, [
+    path.join(repoRoot, 'scripts/oci-publication-receipt-readback.mjs'),
+    '--subject', subjectRef, '--package-id', packageId, '--version', version,
+    '--source-repo', sourceRepo, '--source-commit', sourceCommit, '--public-key', publicKeyPath,
+    '--access-policy-ref', 'github-package:example/one-person-lab-private-packages/occ', '--credential-provider', 'github_packages',
+  ], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, OPL_RECEIPT_MAPS: mapsPath } });
+  assert.notEqual(tampered.status, 0);
+  assert.equal(tampered.stdout, '', 'unverified receipt contents are never returned');
+  assert.match(tampered.stderr, /No publication receipt matches/);
   privateKey.export({ type: 'pkcs8', format: 'pem' });
 });

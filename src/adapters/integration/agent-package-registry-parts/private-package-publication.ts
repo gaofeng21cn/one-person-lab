@@ -14,6 +14,10 @@ export function verifyPrivatePackagePublication(input: {
   sourceRepo: string;
   sourceCommit: string;
   accessPolicyRef: string;
+  includeReceipt?: boolean;
+  publicationRequestId?: string;
+  workflowRepository?: string;
+  workflowRunId?: string;
   credential: PackageRegistryCredential;
   env: NodeJS.ProcessEnv;
   run?: typeof spawnSync;
@@ -52,6 +56,10 @@ export function verifyPrivatePackagePublication(input: {
       '--source-repo', input.sourceRepo, '--source-commit', input.sourceCommit,
       '--access-policy-ref', input.accessPolicyRef, '--credential-provider', 'github_packages',
       '--public-key', publicKey,
+      ...(input.includeReceipt ? ['--include-receipt'] : []),
+      ...(input.publicationRequestId ? ['--publication-request-id', input.publicationRequestId] : []),
+      ...(input.workflowRepository ? ['--workflow-repository', input.workflowRepository] : []),
+      ...(input.workflowRunId ? ['--workflow-run-id', input.workflowRunId] : []),
     ], { env: { ...input.env, DOCKER_CONFIG: temporary }, encoding: 'utf8', timeout: 90_000, maxBuffer: 1024 * 1024 });
     if (result.error || result.status !== 0) return fail('publication_receipt_or_signature_invalid');
     let receipt: unknown;
