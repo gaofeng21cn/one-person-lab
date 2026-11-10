@@ -1,0 +1,227 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "agent-session-vault",
+  "plugin_id": "agent-session-vault",
+  "package_version": "0.1.0",
+  "source_repo": "https://github.com/gaofeng21cn/agent-session-vault.git",
+  "source_commit": "c785e946e5271c9d3cb4e9d325e59122419b9888",
+  "source_root": ".",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:612bf541677c5ccf7bd54c6d2138a3b3d33e5e3e798f1a6bc6f2bf2392db58f7"
+  },
+  "files": [
+    {
+      "path": ".agents/plugins/marketplace.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/.agents/plugins/marketplace.json",
+      "sha256": "sha256:73a76c572ac0d383c122a4c5d67847b29fdd6970b67e87c719744e89f659dae3"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/.codex-plugin/plugin.json",
+      "sha256": "sha256:c2dada7ea71eed8e0ad7c57f92a742f786d1466aa0e63c7e49cb69358d8b03da"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/README.md",
+      "sha256": "sha256:098ac04c8129fb9f9b545520ab147720ffff4458a6e45e091d379ac1f76f122c"
+    },
+    {
+      "path": "README.zh-CN.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/README.zh-CN.md",
+      "sha256": "sha256:ae3968ef0b48ebc7b114dbec2f5735a01daa510f80e697215935a4cc251ea3d6"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/app-contribution-adapter.json",
+      "sha256": "sha256:de880d3896d10a5f30d7add59295d92f18012f2a8be89a9c59fd4853ca24160a"
+    },
+    {
+      "path": "app_contribution.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/app_contribution.py",
+      "sha256": "sha256:54de66b8b97ee1fee271dae0e58506bed7baf90f203b173189cc7d8ca71ddb93"
+    },
+    {
+      "path": "config/agent-session-vault.example.toml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/config/agent-session-vault.example.toml",
+      "sha256": "sha256:62963bc39c4890c1befaec60cef966e3877f736240b2c94e86bb6778324c6611"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/plugin.json",
+      "sha256": "sha256:be1bbd4667553f4e00daff7c7c2e6e97e6944f31545e277b04533a2e9245a022"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/pyproject.toml",
+      "sha256": "sha256:ba472d68217c29b6fd6e3182c8c5c1688fa88adf4993ef8443746d38a1a11d03"
+    },
+    {
+      "path": "skills/agent-session-vault/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/skills/agent-session-vault/SKILL.md",
+      "sha256": "sha256:96eb619b13aefa211b5ebdb98eebf238475de89182be263508e74b570a36c145"
+    },
+    {
+      "path": "src/agent_session_vault/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/__init__.py",
+      "sha256": "sha256:e2dfdcaf386b2ee9befa8ca8c14331b63053cd4b56a7ba114c5db67b012f246e"
+    },
+    {
+      "path": "src/agent_session_vault/__main__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/__main__.py",
+      "sha256": "sha256:3d2438ae92f4746e9ffaa1f837b1fe803f6281091d1f31f8c95643716f257d9a"
+    },
+    {
+      "path": "src/agent_session_vault/app_review.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/app_review.py",
+      "sha256": "sha256:f94c19e0c0aaf704312dbedef3d4ba8803530395643a91d8d51816284ab0c2b3"
+    },
+    {
+      "path": "src/agent_session_vault/archive.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/archive.py",
+      "sha256": "sha256:302721c30412cae11a2ec0000d26e7919d7b41e948f2fce4449fdafa98f84bd5"
+    },
+    {
+      "path": "src/agent_session_vault/archive_backend.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/archive_backend.py",
+      "sha256": "sha256:43187eb01918154cce3fe709e12812e822a46c9395f22c6ad92fc5e445994c83"
+    },
+    {
+      "path": "src/agent_session_vault/archive_catalog.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/archive_catalog.py",
+      "sha256": "sha256:665e582738e2214c165d9da91a91b2bd87563f6464b63e4a9804a8f6ad5b48e2"
+    },
+    {
+      "path": "src/agent_session_vault/archive_model.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/archive_model.py",
+      "sha256": "sha256:d5e073db5fe4309f915d16f1f5d8b3b5f05643ee294be5e13bab67b12a7a0f28"
+    },
+    {
+      "path": "src/agent_session_vault/archive_ops.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/archive_ops.py",
+      "sha256": "sha256:210e380663d7b65ffb608d1a0240ee4bed69cdc29ebbcd0906edb0b03001065b"
+    },
+    {
+      "path": "src/agent_session_vault/archive_prune.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/archive_prune.py",
+      "sha256": "sha256:808e8dda841bfa4381b36df2e7aee3cbd29895a968596bebaea8ca84499e8cf6"
+    },
+    {
+      "path": "src/agent_session_vault/archive_restore.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/archive_restore.py",
+      "sha256": "sha256:2f62cc1d9c6bce1090c4f8b7973248291a604fec22d4d7146a163c544bfe1416"
+    },
+    {
+      "path": "src/agent_session_vault/archive_sources.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/archive_sources.py",
+      "sha256": "sha256:7a2d19b8fe1b47fac9849c744e57eb89e0c38fb576d7173f4b822a4892d852e6"
+    },
+    {
+      "path": "src/agent_session_vault/cli.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/cli.py",
+      "sha256": "sha256:eb991f42a943b9f29f7e50fb267097545438ff042fd8ef7f8f94dcf3296a2b0e"
+    },
+    {
+      "path": "src/agent_session_vault/config.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/config.py",
+      "sha256": "sha256:eedeb6c4f8523d2ed3e6b142aa59f6bd89c7cbf7364553a8080852f80d014044"
+    },
+    {
+      "path": "src/agent_session_vault/daily_ops.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/daily_ops.py",
+      "sha256": "sha256:4df8c5651827556a75a3f887d40192a728c48b1b4bff918dd5cf5bd7d1ad79c3"
+    },
+    {
+      "path": "src/agent_session_vault/fleet.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/fleet.py",
+      "sha256": "sha256:13abb754c5c74928bd622ec4040498425210081b2bd14b097901bd3bd010f674"
+    },
+    {
+      "path": "src/agent_session_vault/local_codex.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/local_codex.py",
+      "sha256": "sha256:95a726e5f75b1c2a0d4554026166e5236d6f25ef3870b36887ff2fbe6ea45c1a"
+    },
+    {
+      "path": "src/agent_session_vault/openclaw.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/openclaw.py",
+      "sha256": "sha256:579088094e4c9fbacf71ac16062075191089a70f9534e604e281a89d527bcac6"
+    },
+    {
+      "path": "src/agent_session_vault/projection.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/projection.py",
+      "sha256": "sha256:88b0fab4f6a8da04306a4a9e6c6e673004c29403e13d0edd587c0872c6952f2b"
+    },
+    {
+      "path": "src/agent_session_vault/stable.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/stable.py",
+      "sha256": "sha256:30c3226dacb03a45bad3999e3f823cf0c8e3e6f237cb9901be191113686c36e7"
+    },
+    {
+      "path": "src/agent_session_vault/stable_pack.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/stable_pack.py",
+      "sha256": "sha256:96c3f610f46df505174297faa65609b8034d259bc7dde221a3c0b0c2f32f5920"
+    },
+    {
+      "path": "src/agent_session_vault/storage.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/storage.py",
+      "sha256": "sha256:484fe0d402ee585ffd460a1984769d5912d910f30f81ef745e6a3c231523a234"
+    },
+    {
+      "path": "src/agent_session_vault/tokscale.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/tokscale.py",
+      "sha256": "sha256:6bdebe57d26fccfd32d9b836a236d60286fb67acb9c8430d52e239d765aca6a4"
+    },
+    {
+      "path": "src/agent_session_vault/views.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/src/agent_session_vault/views.py",
+      "sha256": "sha256:db184f6f1345a2aa847c3a9eeee20fc7f471a4db173662fde474eb9cb8eccb19"
+    },
+    {
+      "path": "vault.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/vault.py",
+      "sha256": "sha256:453ccb57479bc220f6ceae15cf019db6d44e2ea6987732e833657eea8a023739"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-session-vault/c785e946e5271c9d3cb4e9d325e59122419b9888/opl-package.json",
+      "sha256": "sha256:4e349ebb65fc66ac65c42e57ed67a4d3e577566043866be4f99c95501f10bee1"
+    }
+  ]
+}

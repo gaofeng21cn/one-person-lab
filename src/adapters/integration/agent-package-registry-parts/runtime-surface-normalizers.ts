@@ -399,6 +399,7 @@ type ManifestSourceFields = Pick<
   | 'owner_language_version'
   | 'source'
   | 'source_repo'
+  | 'publication_channel_admission'
   | 'source_commit'
   | 'carrier_source_commit'
   | 'verified_payload_source_commit'
@@ -420,6 +421,13 @@ export function normalizeManifestSourceFields(
 ): ManifestSourceFields {
   const carrierAuthority = normalizeCarrierSourceAuthority(payload, codexSurface, manifestUrl);
   const access = normalizePackageAccessFields(payload, String(payload.package_id));
+  const admission = payload.publication_channel_admission ?? 'admitted';
+  if (admission !== 'admitted' && admission !== 'development_only') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package publication channel admission is invalid.', {
+      manifest_url: manifestUrl,
+      failure_code: 'agent_package_publication_channel_admission_invalid',
+    });
+  }
   return {
     display_name: values.displayName,
     publisher: values.publisher,
@@ -427,6 +435,7 @@ export function normalizeManifestSourceFields(
     owner_language_version: values.ownerLanguageVersion,
     source: values.source,
     source_repo: stringValue(payload.source_repo),
+    publication_channel_admission: admission,
     ...access,
     source_commit: carrierAuthority.sourceCommit,
     carrier_source_commit: carrierAuthority.carrierSourceCommit,

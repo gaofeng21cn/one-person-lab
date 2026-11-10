@@ -1,6 +1,5 @@
 import path from 'node:path';
 
-import { listCurrentPackageProjections } from '../../../kernel/standard-agent-registry.ts';
 import {
   discoverProjectLocalCapabilityPackageDescriptors as discoverProjectLocalCapabilityPackageDescriptorsFromOwners,
 } from './installed-codex-plugin-directory-project-local.ts';
@@ -102,10 +101,7 @@ export function discoverAvailablePackageDescriptors(input: {
   runner?: CarrierDiscoveryInput['runner'];
 } = {}) {
   const discovered = discoverCurrentOwnerPackageDescriptors(input);
-  const developmentOnly = new Set(listCurrentPackageProjections().filter(({ payload }) => payload.publication_channel_admission === 'development_only').map(({ payload }) => payload.package_id));
-  for (const packageId of developmentOnly) if (typeof packageId === 'string' && input.packageId !== packageId) discovered.delete(packageId);
   for (const [packageId, descriptor] of discoverPackageDescriptors({ ...input, includeAvailable: true })) {
-    if (!descriptor.readiness.installed && developmentOnly.has(packageId) && input.packageId !== packageId) continue;
     discovered.set(packageId, withCurrentOwnerProjection(descriptor, discovered.get(packageId)));
   }
   return discovered;

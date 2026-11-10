@@ -503,7 +503,10 @@ export async function buildOplAppState(input: {
     }));
   const agentPackagesProjection = {
     surface_kind: 'opl_app_agent_packages_projection',
-    sources: listOplSoftwareSources({ packageEntries: agentPackagesReadback.directory.entries }),
+    sources: listOplSoftwareSources({
+      packageEntries: agentPackagesReadback.directory.entries,
+      refreshRequiredSourceIds: agentPackagesReadback.directory.source_refresh_required_ids,
+    }),
     source: {
       list_surface: 'opl packages list --json',
       status_surface: 'opl packages status --package-id <package_id> --json',

@@ -32,6 +32,7 @@ import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
 import { inspectOplModule } from '../system-installation/modules.ts';
 import type { AgentPackageInstallInput } from './types.ts';
 import { resolvePackageAccessDecision, type AgentPackageAccessDecision } from './package-access.ts';
+import { packageInstallSourceAvailable, packageReleaseChannel } from './package-install-source.ts';
 
 export type OplAgentPackageStatusInput = {
   packageId?: string | null;
@@ -42,6 +43,7 @@ export type PackageSnapshot = {
   descriptors: Map<string, InstalledPackageDescriptor>;
   installed: Map<string, InstalledPackageDescriptor>;
   access: Map<string, AgentPackageAccessDecision>;
+  currentOwner?: Map<string, InstalledPackageDescriptor>;
 };
 
 export function packageSnapshot(input: {
@@ -79,6 +81,7 @@ export function packageSnapshot(input: {
     descriptors,
     installed,
     access,
+    currentOwner: discoverCurrentOwnerPackageDescriptors(),
   };
 }
 
@@ -103,6 +106,8 @@ export function packageBackgroundUpdatePolicy(
     ? 'package_not_installed'
     : !access.download_allowed
       ? access.reason ?? 'package_access_verification_required'
+    : !packageInstallSourceAvailable(descriptor)
+      ? 'package_install_source_unavailable'
     : !isFirstPartyPackage(descriptor.manifest.package_id)
       ? 'external_package_explicit_update_only'
       : !declaredSource || !githubMarketplaceSourceIdentity(declaredSource)
@@ -305,7 +310,7 @@ function dependencyReadiness(
   };
 }
 
-function presentationText(value: Record<string, string> | null | undefined, fallback: string) {
+function presentationText(value: Record<string, string> | null | undefined, fallback: string | null) {
   return value?.['en-US'] ?? value?.zh ?? Object.values(value ?? {})[0] ?? fallback;
 }
 
@@ -387,7 +392,7 @@ export function hostedRuntimeReadiness(descriptor: InstalledPackageDescriptor | 
     reason: ready ? null : 'hosted_agent_source_unavailable' };
 }
 
-function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' | 'full', packageAccess?: AgentPackageAccessDecision) {
+function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' | 'full', packageAccess?: AgentPackageAccessDecision, currentOwner?: InstalledPackageDescriptor) {
   const manifest = descriptor.manifest;
   const installed = descriptor.readiness.installed
     && installedDescriptorMatchesConfiguredCarrier(descriptor);
@@ -401,16 +406,21 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
   const codexVisible = installed
     && descriptor.enabled
     && manifest.codex_interaction_mode !== 'headless_internal';
+  const sourceAvailable = packageInstallSourceAvailable(descriptor);
+  const installReason = !access.download_allowed
+    ? access.reason ?? 'package_access_verification_required'
+    : !sourceAvailable ? 'package_install_source_unavailable' : null;
+  const downloadable = installReason === null;
   const actions = actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode)
-    .filter((action) => access.download_allowed || !['agent_package_install', 'agent_package_update', 'agent_package_repair'].includes(action.action_id));
-  const recommendedAction = !access.download_allowed
+    .filter((action) => downloadable || !['agent_package_install', 'agent_package_update', 'agent_package_repair'].includes(action.action_id));
+  const recommendedAction = !downloadable
     ? null
     : installed ? (ready ? null : 'agent_package_repair') : 'agent_package_install';
   return {
     package_id: manifest.package_id,
     display_name: manifest.display_name,
     publisher: manifest.publisher,
-    description: presentationText(manifest.presentation?.description_i18n, manifest.display_name),
+    description: presentationText(manifest.presentation?.description_i18n, null),
     tags: [],
     package_role: manifest.package_role,
     capability_metadata: installed
@@ -442,13 +452,16 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     },
     installed,
     installed_version: installed ? manifest.version : null,
-    selected_version: manifest.version,
+    selected_version: access.discover_allowed
+      ? currentOwner?.manifest.version ?? (installed ? null : manifest.version) : null,
+    release_channel: packageReleaseChannel(descriptor),
     activated: ready,
     codex_visible: codexVisible,
     package_access: access,
     installability: {
-      status: installed ? 'installed' as const : access.discover_allowed ? 'installable' as const : 'blocked' as const,
-      installable: !installed && access.download_allowed,
+      status: installed ? 'installed' as const : downloadable ? 'installable' as const : 'blocked' as const,
+      installable: !installed && downloadable,
+      reason: installReason,
     },
     hosted_runtime_readiness: hosted,
     readiness: {
@@ -472,7 +485,7 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
 export function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full') {
   const entries = [...snapshot.descriptors.values()]
     .filter((descriptor) => !isProjectLocalCapabilityPackage(descriptor.manifest))
-    .map((entry) => directoryEntry(entry, detail, snapshot.access.get(entry.manifest.package_id)))
+    .map((entry) => directoryEntry(entry, detail, snapshot.access.get(entry.manifest.package_id), snapshot.currentOwner?.get(entry.manifest.package_id)))
     .filter((entry) => entry.installed || entry.package_access.discover_allowed)
     .sort((left, right) => left.display_name.localeCompare(right.display_name, 'en'));
   return {
@@ -483,6 +496,10 @@ export function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full'
     entry_count: entries.length,
     installed_package_count: entries.filter((entry) => entry.installed).length,
     installable_package_count: entries.filter((entry) => entry.installability.installable).length,
+    source_refresh_required_ids: [...new Set([...snapshot.access.values()]
+      .filter((access) => access.visibility === 'authorized_only'
+        && access.reason === 'package_access_check_required' && access.source_id)
+      .map((access) => access.source_id!))],
     entries,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };

@@ -322,7 +322,7 @@ export function compactFastAgentPackageDirectory(value: unknown) {
       'capability_metadata', 'display_name_i18n', 'description_i18n',
       'session_routing_summary_i18n', 'home_shortcuts',
       'app_contributions', 'role_state', 'trust_tier', 'source_explanation', 'manifest_url',
-      'installed', 'installed_version', 'selected_version', 'stable_version',
+      'installed', 'installed_version', 'selected_version', 'stable_version', 'release_channel',
       'activated', 'exposure', 'codex_visible',
       'installability', 'readiness', 'recommended_action', 'recommended_action_ref',
       'available_actions', 'app_enabled',

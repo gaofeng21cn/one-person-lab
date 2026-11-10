@@ -144,5 +144,20 @@
     "workspace_or_thread_inference_allowed": false,
     "second_app_server_allowed": false,
     "unrestricted_json_rpc_allowed": false
+  },
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "OPL Channel Weixin",
+      "en-US": "OPL Channel Weixin"
+    },
+    "description_i18n": {
+      "zh-CN": "为 OPL 提供微信 iLink 消息传输能力。",
+      "en-US": "Weixin iLink transport capability for OPL."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "为 OPL 提供微信 iLink 消息传输能力。",
+      "en-US": "Weixin iLink transport capability for OPL."
+    },
+    "home_shortcuts": []
   }
 }

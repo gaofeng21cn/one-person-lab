@@ -70,6 +70,8 @@ opl sources disconnect --source-id github-packages:gaofeng21cn --json
 
 Framework 从 `brew tap-info --json` 和 `brew info --json=v2` 读取当前 tap 成员、版本和安装事实。快速列表只读取可重建的投影缓存；显式检查或生命周期动作会重新读取 Homebrew。`available_version` 表示本机配方中的来源版本，UI 显示“来源版本”，不把未联网刷新的配方称为远端最新版本。
 
+软件标题使用发布者的正式 `display_name`，技术身份使用稳定的 `item_id` / `name`，二者分开呈现。Homebrew Cask 使用配方声明的正式名称；Formula 没有独立名称字段时，复用已有产品品牌合同中的载体绑定。例如 `gaofeng21cn/one-person-lab/opl` 展示为 **OPL Framework**，命令和安装 ID 仍为 `opl`。品牌合同只提供名称与用途说明，不保存版本或安装状态；修改文案不改变生命周期修订号。目录优先显示当前语言的 `description_i18n`，其余说明来自原发布者。
+
 同一投影位于 `app_state.agent_packages.sources.entries[].native_items`，机器合同见 [Settings Control Center 的 Homebrew 定义](../../contracts/opl-framework/settings-control-center-action-read-model-contract.json)。源投影包含 `inventory_status`（`available`、`not_checked` 或 `unavailable`）、`inventory_reason`、`inventory_checked_at`、`entry_count`、`version_basis=homebrew_local_recipes`、`installation_owner=homebrew` 和 `native_items`。每个原生条目包含：
 
 - `item_id`、`name`、`display_name`、`description` 和 `kind`（`formula` 或 `cask`）；

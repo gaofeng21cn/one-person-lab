@@ -1,0 +1,109 @@
+{
+  "surface_kind": "opl_capability_package_manifest.v2",
+  "package_id": "kindle-pilot",
+  "display_name": "Kindle Pilot",
+  "description": "Agent-guided Kindle setup, reading configuration, and library maintenance.",
+  "publisher": "gaofeng21cn",
+  "version": "0.1.0",
+  "source": "first_party_owner_projection",
+  "source_repo": "https://github.com/gaofeng21cn/kindle-pilot.git",
+  "visibility": "public",
+  "package_role": "capability_package",
+  "publication_channel_admission": "development_only",
+  "capability_abi": {
+    "id": "kindle-pilot.host.v1",
+    "version": "1.0.0",
+    "compatibility_policy": "same_major"
+  },
+  "exports": {
+    "core_skill_ids": [
+      "kindle-pilot"
+    ],
+    "core_module_ids": [
+      "kindle-pilot.host.v1"
+    ],
+    "optional_skill_policy_ref": "skills/kindle-pilot/SKILL.md",
+    "optional_skills_installed_by_default": false,
+    "default_materialization_policy": "core_skills_only"
+  },
+  "codex_surface": {
+    "plugin_id": "kindle-pilot",
+    "plugin_source_path": ".",
+    "codex_default_exposure": false,
+    "optional_install_policy": "core_skills_only",
+    "interaction_mode": "headless_internal",
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "kindle-pilot@kindle-pilot",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/kindle-pilot",
+      "publication_ref": null
+    },
+    "carrier_source_commit": "f402174675f8463b3719cce4933770a2f931eacd",
+    "plugin_payload_manifest_url": "payloads/kindle-pilot-0.1.0.json"
+  },
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "paths": [
+      ".agents/plugins/marketplace.json",
+      ".codex-plugin/plugin.json",
+      "LICENSE",
+      "README.md",
+      "THIRD_PARTY_NOTICES.md",
+      "assets/README.md",
+      "assets/wireless-cover.png",
+      "assets/wireless-cover.prompt.txt",
+      "docs/ARCHITECTURE.md",
+      "docs/NATIVE_COLLECTIONS.md",
+      "docs/WIRELESS_MAINTENANCE.md",
+      "docs/WORKFLOW.md",
+      "manifests/compatibility.json",
+      "plugin.json",
+      "pyproject.toml",
+      "scripts/build-kc-checker.py",
+      "scripts/build-mtp-plan.py",
+      "scripts/check-package.py",
+      "scripts/kindle-collection-additions.py",
+      "scripts/kindle-collections.py",
+      "scripts/kindle-mtp.py",
+      "scripts/kindle-wireless.py",
+      "skills/kindle-pilot/SKILL.md",
+      "skills/kindle-pilot/agents/openai.yaml",
+      "src/kindle_companion/__init__.py",
+      "src/kindle_companion/__main__.py",
+      "src/kindle_companion/cli.py",
+      "src/kindle_companion/collection_additions.py",
+      "src/kindle_companion/collections.py",
+      "src/kindle_companion/compat.py",
+      "src/kindle_companion/discovery.py",
+      "src/kindle_companion/manifest.py",
+      "src/kindle_companion/models.py",
+      "src/kindle_companion/mtp.py",
+      "src/kindle_companion/plan.py",
+      "src/kindle_companion/software.py",
+      "src/kindle_companion/state.py",
+      "src/kindle_companion/verify.py",
+      "src/kindle_companion/wireless.py"
+    ],
+    "digest": "sha256:7203d5cd6530737c81205435005173694fbcd7409d8a26024de40266f0aa81c6"
+  },
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "Kindle Pilot",
+      "en-US": "Kindle Pilot"
+    },
+    "description_i18n": {
+      "zh-CN": "由 Agent 协助完成 Kindle 装机、阅读配置与书库维护。",
+      "en-US": "Agent-guided Kindle setup, reading configuration, and library maintenance."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "使用 Kindle Pilot 管理 Kindle，按兼容清单推进并逐项回读设备状态。",
+      "en-US": "Use Kindle Pilot to manage a Kindle through compatibility checks and explicit device readback."
+    },
+    "home_shortcuts": []
+  },
+  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "owner_package_manifest_ref": "opl-package.json",
+  "owner_package_descriptor_ref": "opl-package.json"
+}

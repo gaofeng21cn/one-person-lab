@@ -86,7 +86,10 @@ export async function checkOplSoftwareSource(sourceId: string, deps: SoftwareSou
   }
   return stored;
 }
-export function listOplSoftwareSources(input: { packageEntries?: readonly unknown[] } = {}) {
+export function listOplSoftwareSources(input: {
+  packageEntries?: readonly unknown[];
+  refreshRequiredSourceIds?: readonly string[];
+} = {}) {
   const sources = readSoftwareSources();
   const entries = input.packageEntries ?? [];
   const entryCount = (source: SoftwareSource) => entries.filter(entry => {
@@ -104,7 +107,20 @@ export function listOplSoftwareSources(input: { packageEntries?: readonly unknow
     if (source.provider_id === 'homebrew') return false;
     return sourceId === source.source_id;
   }).length;
-  const safeEntries = sources.map(source => ({ ...publicSource(source), entry_count: source.provider_id === 'homebrew' ? readHomebrewSourceProjection().entry_count : input.packageEntries === undefined ? null : entryCount(source) }));
+  const safeEntries = sources.map(source => {
+    // Failed source probes have their own retry delay. They never extend an
+    // authorization snapshot or expose hidden Package metadata.
+    const recentFailure = source.status !== 'authorized' && source.verified_at !== null
+      && Date.now() - Date.parse(source.verified_at) < 60_000;
+    return {
+      ...publicSource(source),
+      access_refresh_required: source.visibility === 'authorized_only' && source.enabled
+        && credentialPresent(source) && !recentFailure
+        && (input.refreshRequiredSourceIds?.includes(source.source_id) ?? false),
+      entry_count: source.provider_id === 'homebrew' ? readHomebrewSourceProjection().entry_count
+        : input.packageEntries === undefined ? null : entryCount(source),
+    };
+  });
   return {
     surface_kind: 'opl_software_sources_projection.v1', status: safeEntries.some(source => source.enabled && source.credential_handle_present && ['expired', 'forbidden', 'revoked', 'unknown'].includes(source.status)) ? 'attention_required' : 'available',
     entries: safeEntries,

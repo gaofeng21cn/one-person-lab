@@ -284,6 +284,65 @@ function writePayloadMarketplaceManifest(input: {
   }, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
 }
 
+function readProjectedPayload(projection: NonNullable<ReturnType<typeof packagePayloadProjection>>, packageId: string): Record<string, unknown> & { files: unknown[] } {
+  let payload: Record<string, unknown>;
+  try {
+    const stat = fs.lstatSync(projection.payloadPath);
+    if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('payload manifest is not a physical file');
+    payload = parseJsonText(fs.readFileSync(projection.payloadPath, 'utf8')) as Record<string, unknown>;
+  } catch (error) {
+    return localReadbackFailure(
+      'configured_codex_plugin_carrier_payload_invalid',
+      'Configured Package payload manifest is missing or invalid.',
+      { package_id: packageId, cause: error instanceof Error ? error.message : String(error) },
+    );
+  }
+  if (!isRecord(payload)
+    || payload.package_id !== packageId
+    || payload.plugin_id !== projection.pluginId
+    || payload.package_version !== projection.packageVersion
+    || payload.source_commit !== projection.sourceCommit
+    || !Array.isArray(payload.files)
+    || payload.files.length === 0) {
+    return localReadbackFailure(
+      'configured_codex_plugin_carrier_payload_invalid',
+      'Configured Package payload identity does not match its owner projection.',
+      { package_id: packageId },
+    );
+  }
+
+  return { ...payload, files: payload.files };
+}
+
+/** Read only the same immutable payload identity consumed by installation. */
+export function configuredPackagePayloadAvailable(input: {
+  packageId: string;
+  pluginId: string;
+  packageDirectory?: string;
+}) {
+  const projection = packagePayloadProjection(input.packageId, input.packageDirectory);
+  if (!projection || projection.pluginId !== pluginBareName(input.pluginId)) return false;
+  try {
+    const payload = readProjectedPayload(projection, input.packageId);
+    const paths = new Set<string>();
+    for (const [index, file] of payload.files.entries()) {
+      if (!isRecord(file)) return false;
+      const relativePath = payloadRelativePath(file.path, `files[${index}].path`);
+      if (paths.has(relativePath)) return false;
+      paths.add(relativePath);
+      payloadSha256(file.sha256, `files[${index}].sha256`);
+      const source = resolvePayloadFileSource(file.source_url, projection.sourceCommit);
+      if (source.protocol === 'https:') githubArchiveFileSource(source, projection.sourceCommit);
+    }
+    const lock = isRecord(payload.content_lock) ? payload.content_lock : null;
+    payloadSha256(lock?.digest, 'content_lock.digest');
+    if (projection.contentLockPaths?.some((ref) => !paths.has(ref))) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function installPayloadMarketplace(input: {
   packageId: string;
   pluginId: string;
@@ -295,31 +354,7 @@ export function installPayloadMarketplace(input: {
   if (projection?.ownerManifest.visibility === 'authorized_only') {
     assertPackageDownloadAllowed(packageAccessSubject(projection.ownerManifest), input.env);
   }
-  let payload: Record<string, unknown>;
-  try {
-    const stat = fs.lstatSync(projection.payloadPath);
-    if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('payload manifest is not a physical file');
-    payload = parseJsonText(fs.readFileSync(projection.payloadPath, 'utf8')) as Record<string, unknown>;
-  } catch (error) {
-    return localReadbackFailure(
-      'configured_codex_plugin_carrier_payload_invalid',
-      'Configured Package payload manifest is missing or invalid.',
-      { package_id: input.packageId, cause: error instanceof Error ? error.message : String(error) },
-    );
-  }
-  if (!isRecord(payload)
-    || payload.package_id !== input.packageId
-    || payload.plugin_id !== projection.pluginId
-    || payload.package_version !== projection.packageVersion
-    || payload.source_commit !== projection.sourceCommit
-    || !Array.isArray(payload.files)
-    || payload.files.length === 0) {
-    return localReadbackFailure(
-      'configured_codex_plugin_carrier_payload_invalid',
-      'Configured Package payload identity does not match its owner projection.',
-      { package_id: input.packageId },
-    );
-  }
+  const payload = readProjectedPayload(projection, input.packageId);
 
   const home = input.env.HOME?.trim() || os.homedir();
   const stateDir = input.env.OPL_STATE_DIR?.trim()
@@ -338,7 +373,7 @@ export function installPayloadMarketplace(input: {
   });
   if (projection.ownerManifest.visibility === 'authorized_only' && !hostedSource) {
     return localReadbackFailure('private_package_transport_unavailable',
-      'Private Packages require their authenticated OCI source artifact.', { package_id: input.packageId });
+      'Private Packages require their declared authenticated source.', { package_id: input.packageId });
   }
   const archive = hostedSource ?? materializeGithubArchive({
     packageId: input.packageId,

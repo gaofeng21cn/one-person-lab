@@ -90,6 +90,17 @@ test('verified private discovery contributes an installable directory item', () 
   assert.equal(result.entries[0].recommended_action, 'agent_package_install');
 });
 
+test('an expired private snapshot requests its source refresh without exposing Package metadata', () => {
+  const pending = { ...access('unknown'), source_id: 'github-packages:gaofeng21cn',
+    reason: 'package_access_check_required' };
+  const result = directoryFrom(snapshot([descriptor('private-not-installed', false)], [pending]), 'fast');
+  assert.equal(result.entry_count, 0);
+  assert.deepEqual(result.source_refresh_required_ids, ['github-packages:gaofeng21cn']);
+  const disconnected = directoryFrom(snapshot([descriptor('private-not-installed', false)],
+    [{ ...pending, reason: 'package_access_credential_required' }]), 'fast');
+  assert.deepEqual(disconnected.source_refresh_required_ids, []);
+});
+
 test('background update eligibility uses the existing access decision and skips denied downloads', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-private-background-'));
   const previous = process.env.OPL_STATE_DIR;

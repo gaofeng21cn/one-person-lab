@@ -104,5 +104,20 @@
     "second_host_allowed": false,
     "provider_history_as_truth_allowed": false,
     "provider_api_key_in_client_allowed": false
+  },
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "OPL Link Desktop Connector",
+      "en-US": "OPL Link Desktop Connector"
+    },
+    "description_i18n": {
+      "zh-CN": "为 OPL Link 提供桌面远程协同连接。",
+      "en-US": "OPL Link remote companion connector for OPL."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "为 OPL Link 提供桌面远程协同连接。",
+      "en-US": "OPL Link remote companion connector for OPL."
+    },
+    "home_shortcuts": []
   }
 }

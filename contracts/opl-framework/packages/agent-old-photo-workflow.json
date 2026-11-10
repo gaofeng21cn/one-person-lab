@@ -1,0 +1,148 @@
+{
+  "surface_kind": "opl_capability_package_manifest.v2",
+  "package_id": "agent-old-photo-workflow",
+  "display_name": "Agent Old Photo Workflow",
+  "publisher": "gaofeng21cn",
+  "version": "0.1.0",
+  "source": "first_party_owner_projection",
+  "source_repo": "https://github.com/gaofeng21cn/agent-old-photo-workflow.git",
+  "package_role": "capability_package",
+  "publication_channel_admission": "development_only",
+  "capability_abi": {
+    "id": "old-photo.v1",
+    "version": "1.0.0",
+    "compatibility_policy": "same_major"
+  },
+  "exports": {
+    "core_skill_ids": [
+      "agent-old-photo"
+    ],
+    "core_module_ids": [
+      "old-photo.v1"
+    ],
+    "optional_skill_policy_ref": "skills/agent-old-photo/SKILL.md",
+    "optional_skills_installed_by_default": false
+  },
+  "codex_surface": {
+    "plugin_id": "agent-old-photo-workflow",
+    "plugin_source_path": ".",
+    "codex_default_exposure": false,
+    "optional_install_policy": "core_skills_only",
+    "interaction_mode": "headless_internal",
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "python3",
+        "./app_contribution.py"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "agent-old-photo-workflow@agent-old-photo-workflow",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/agent-old-photo-workflow",
+      "publication_ref": null
+    },
+    "carrier_source_commit": "be507179fd79ae5775cc5bbd62a8446695a34a91",
+    "plugin_payload_manifest_url": "payloads/agent-old-photo-workflow-0.1.0.json"
+  },
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "old-photo.status",
+        "view_type": "service_status",
+        "title_i18n": {
+          "zh-CN": "老照片运行环境",
+          "en-US": "Old-photo runtime"
+        },
+        "data_ref": "old-photo.v1#status",
+        "command_ids": []
+      },
+      {
+        "view_id": "old-photo.review",
+        "view_type": "artifact_view",
+        "title_i18n": {
+          "zh-CN": "老照片阶段对照",
+          "en-US": "Old-photo stage comparison"
+        },
+        "data_ref": "old-photo.v1#review",
+        "command_ids": []
+      }
+    ],
+    "commands": [],
+    "ui": [
+      {
+        "contribution_id": "old-photo.status",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "old-photo.status"
+      },
+      {
+        "contribution_id": "old-photo.review",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "old-photo.review"
+      }
+    ]
+  },
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "paths": [
+      ".agents/plugins/marketplace.json",
+      ".codex-plugin/plugin.json",
+      "README.md",
+      "README.zh-CN.md",
+      "agent_old_photo/__init__.py",
+      "agent_old_photo/cli.py",
+      "agent_old_photo/pipeline.py",
+      "agent_old_photo/results.py",
+      "agent_old_photo/runtime_paths.py",
+      "agent_old_photo/runtime_status.py",
+      "agent_old_photo/workflow.py",
+      "app-contribution-adapter.json",
+      "app_contribution.py",
+      "colorize_runner.py",
+      "extract_photo.py",
+      "plugin.json",
+      "pyproject.toml",
+      "restore_runner.py",
+      "run_extract_restore.sh",
+      "run_extract_restore_colorize.sh",
+      "run_restore.sh",
+      "setup_env.sh",
+      "setup_extract_env.sh",
+      "skills/agent-old-photo/SKILL.md"
+    ],
+    "digest": "sha256:e5e4b9428ba208230e0f61003804b11a4aa06019f836f003f7ece51ccb260d2a"
+  },
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "老照片工作流",
+      "en-US": "Agent Old Photo Workflow"
+    },
+    "description_i18n": {
+      "zh-CN": "在本地提取、拉正、修复和上色老照片，并审阅原图与各阶段结果。",
+      "en-US": "Extract, rectify, restore, and colorize old photos locally, with reviewable original and stage results."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "通过老照片 CLI 处理明确选择的图片；模型与照片保留在本地工作区。",
+      "en-US": "Use the Old Photo CLI for explicitly selected images; keep models and photos in the local workspace."
+    },
+    "home_shortcuts": []
+  },
+  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "owner_package_manifest_ref": "opl-package.json",
+  "owner_package_descriptor_ref": "opl-package.json"
+}
