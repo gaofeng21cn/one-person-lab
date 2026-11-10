@@ -8,6 +8,14 @@
 
 App、Cloud、Package 的部署验收与专业质量属于各 owner，本页未列出它们不表示已就绪。通用证据限制见 [当前状态](../status.md#production-evidence)。
 
+## 私有软件源的发行与安装验收
+
+共同访问与生命周期合同见 [Package Directory](../specs/package-directory.md#私有-package-的访问合同)。本机通过本地 carrier 运行私有 Agent，不能代替授权新用户从私有源安装的验收。
+
+| owner | 当前具体断点 | 下一步与完成条件 |
+| --- | --- | --- |
+| Framework、Package 发布 owner、App/Studio | 私有 Package 的真实授权发现、私有制品发布、认证下载和 UI 生命周期尚无同一发行载体的完整验收；现有本地安装不能证明新用户可从私有源获取 | 以 OCC 为代表，在获权身份与无权身份下分别验证目录、版本、安装和更新；确认未授权身份不能读取私有制品，账号切换和撤权阻止后续远端读取；已安装条目仍能禁用或卸载，重开后状态来自 carrier 回读。正式发行验收同时核对 App/Studio、Framework 与 Package 的实际安装版本 |
+
 ## Agent 原生应用的后续验收与兼容退役
 
 设计标准见[Agent 原生应用政策](../policies/agent-native-app-policy.md)，接入与验证见[开发指南](../mcp-apps/development.md)。领域数据与决定由各 owner 持有；共享界面、来源摘要和开发样例的源码接通，不自动消除下列真实载体与业务链路的验证边界。

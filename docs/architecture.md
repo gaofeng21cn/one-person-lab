@@ -24,7 +24,9 @@ Framework 在公开 `app_state.application_management` 提供一个 refs-only �
 
 目录条目必须具备稳定 Package identity、角色、发布/载体、安装回读、就绪状态、可用版本和 owner action。GitHub 仓库数量、仓库活跃或一个可用 action 都不能直接变成可安装条目。`standard_agent` 与 `workflow_profile` 进入 Agents，`capability_package` 进入 Shared capabilities；宿主、Framework、分发仓和系统依赖保留在基础设施或产品设置中。
 
-应用管理 UI 是统一的一级入口，与主对话并列，展示目录总数、可安装、已安装、已安装/可用版本、更新和需处理状态。安装、启停、更新和修复继续由原 owner 的 `app action` 与 native carrier 执行；App 只 dispatch 并做 fresh readback。它不引入第二个 Package registry、凭证库、知识正文库或 updater。Homebrew 是系统依赖、CLI 和声明的原生 carrier，不能替代 OPL Agent Package Directory。
+应用管理 UI 是统一的一级入口，与主对话并列，展示目录总数、可安装、已安装、已安装/可用版本、更新和需处理状态。安装、启停、更新、修复和卸载继续由原 owner 的 `app action` 与 native carrier 执行；App 只 dispatch 并做 fresh readback。它不引入第二个 Package registry、凭证库、知识正文库或 updater。Homebrew 是系统依赖、CLI 和声明的原生 carrier，不能替代 OPL Agent Package Directory。
+
+公开与私有源共享这条 owner 链：软件源决定可发现的 metadata，registry 决定可下载的制品，native carrier 决定本机安装事实，Connect、知识和领域 owner 决定运行时权限。Framework 把当前身份获准的私有来源作为同一目录的补充输入；私有源码仓、已安装状态和运行 grant 均不能代替 registry 读取许可。凭证由 provider 或原生 credential helper 保管，目录与 UI 只呈现安全引用和访问状态。
 
 该目录与安装边界的完整人读说明见 [Package Directory 与统一安装管理](./specs/package-directory.md)。
 
@@ -48,6 +50,7 @@ Agent tool 与必要 UI 是同一领域能力的两个入口。Framework 的共�
 | --- | --- | --- |
 | 通用规则与机器合同 | 本仓 `contracts/opl-framework/`；人读入口为 `docs/README.md` | 标准与接口在唯一主题 owner 维护，各仓链接、声明依赖；契约变更同步真实 caller |
 | 通用运行代码与组件 | 本仓 `src/`、`packages/`、`python/opl_framework/`；共享 UI 为 `src/mcp-app/` | 使用 `package.json` 的公开 export、`opl` CLI 或已有 Python 支持投影；领域仓不复制 Framework runtime |
+| 软件源与发布制品 | 公开目录声明位于本仓 `contracts/opl-framework/packages/`，公开载体位于 [Homebrew tap](https://github.com/gaofeng21cn/homebrew-one-person-lab)，制品位于 descriptor 指定的 OCI/GHCR 或其他 native source | 私有 metadata 与制品由受权限保护的源提供；Framework 统一 identity 与状态投影，权限、凭证和安装事实保留各自 owner；完整入口见 [Package Directory](./specs/package-directory.md#软件源的物理入口) |
 | 已安装的可执行基座 | 当前 carrier 选择的 Framework 安装；managed locator 入口为 `~/.opl/one-person-lab` | `opl framework locate --json` 回读本次调用的实际 root、bin、contracts 和 state；开发 checkout、CLI 安装与 App 所带安装可位于不同位置，各宿主按自己的安装合同选择 |
 | 本机运行状态与连接授权 | `OPL_STATE_DIR` 指定位置；默认 `~/Library/Application Support/OPL/state`；使用 `OPL_DATA_DIR` 时为其下 `opl/state` | Framework 管理连接引用、grant、任务投影等状态；凭证由 provider、Account & Access 或原生 carrier 保管，消费者只使用公开执行入口 |
 | 私人知识控制信息 | Profile/Workspace 的私有来源 registry，以及 `<workspace>/shared/memory/knowledge-bindings.json` | 多个获授权工作区引用同一来源，Framework 核对范围与接受版本；具体文件布局由[知识来源接口](./specs/knowledge-sources.md)定义 |
