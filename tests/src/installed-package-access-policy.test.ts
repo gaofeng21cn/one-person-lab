@@ -114,3 +114,14 @@ test('same-version owner replacement retains existing complete projection semant
   assert.equal(selected.sourcePath, installed.sourcePath);
   assert.deepEqual(selected.carrier_readback, installed.carrier_readback);
 });
+
+
+test('an available native descriptor also inherits private owner policy before directory discovery', () => {
+  const installed = descriptor('0.2.0', false);
+  const owner = descriptor('0.1.5', 'authorized_only');
+  installed.readiness.installed = false;
+  const projected = withCurrentOwnerProjection(installed, owner);
+  assert.equal(projected.readiness.installed, false);
+  assert.equal(projected.manifest.visibility, 'authorized_only');
+  assert.equal(projected.manifest.version, '0.2.0');
+});

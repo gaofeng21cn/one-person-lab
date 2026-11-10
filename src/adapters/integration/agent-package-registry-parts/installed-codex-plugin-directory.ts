@@ -106,9 +106,7 @@ export function discoverAvailablePackageDescriptors(input: {
   for (const packageId of developmentOnly) if (typeof packageId === 'string' && input.packageId !== packageId) discovered.delete(packageId);
   for (const [packageId, descriptor] of discoverPackageDescriptors({ ...input, includeAvailable: true })) {
     if (!descriptor.readiness.installed && developmentOnly.has(packageId) && input.packageId !== packageId) continue;
-    discovered.set(packageId, descriptor.readiness.installed
-      ? withCurrentOwnerProjection(descriptor, discovered.get(packageId))
-      : descriptor);
+    discovered.set(packageId, withCurrentOwnerProjection(descriptor, discovered.get(packageId)));
   }
   return discovered;
 }
