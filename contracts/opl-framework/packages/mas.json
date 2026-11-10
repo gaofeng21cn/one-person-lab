@@ -36,7 +36,7 @@
     "software_type": "agent"
   },
   "publisher": "one-person-lab",
-  "version": "0.2.32",
+  "version": "0.3.0",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
@@ -86,8 +86,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/mas-0.2.32.json",
-    "carrier_source_commit": "88414e89694d8e48dfc29a950d82868e78cce6f4"
+    "plugin_payload_manifest_url": "payloads/mas-0.3.0.json",
+    "carrier_source_commit": "64c4ffd4569e5a3307bc050d0e35e5840a958f02"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",

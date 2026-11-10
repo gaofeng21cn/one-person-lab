@@ -34,7 +34,7 @@
     "software_type": "agent"
   },
   "publisher": "one-person-lab",
-  "version": "0.3.21",
+  "version": "0.4.0",
   "domain_descriptor_ref": "contracts/domain_descriptor.json",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
@@ -71,8 +71,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/obf-0.3.21.json",
-    "carrier_source_commit": "ae2dc5158fb177e27fb818a7f863b297e3306780"
+    "plugin_payload_manifest_url": "payloads/obf-0.4.0.json",
+    "carrier_source_commit": "122a3cd3521ddb82e5d97d9954364b15180ca203"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -104,6 +104,20 @@
           "zh-CN": "选择当前书稿任务以查看进度与产物",
           "en-US": "Select the current book task to inspect progress and artifacts"
         }
+      },
+      {
+        "view_id": "obf.workspace.review",
+        "view_type": "approval_diff",
+        "title_i18n": {
+          "zh-CN": "书稿与章节审阅",
+          "en-US": "Manuscript and chapter review"
+        },
+        "data_ref": "obf.workspace.v1#review",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "选择同一书稿的当前候选与比较基线",
+          "en-US": "Select the current manuscript and an optional baseline in the same book"
+        }
       }
     ],
     "commands": [],
@@ -126,6 +140,15 @@
         "scope": "work_item",
         "sort_order": 511,
         "view_id": "obf.workspace.artifacts"
+      },
+      {
+        "contribution_id": "obf.workspace.review",
+        "slot": "runtime.detail",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "work_item",
+        "sort_order": 512,
+        "view_id": "obf.workspace.review"
       }
     ]
   },

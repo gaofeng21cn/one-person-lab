@@ -4,12 +4,12 @@
   "display_name": "Kindle Pilot",
   "description": "Agent-guided Kindle setup, reading configuration, and library maintenance.",
   "publisher": "gaofeng21cn",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/kindle-pilot.git",
   "visibility": "public",
   "package_role": "capability_package",
-  "publication_channel_admission": "development_only",
+  "publication_channel_admission": "admitted",
   "capability_abi": {
     "id": "kindle-pilot.host.v1",
     "version": "1.0.0",
@@ -20,11 +20,19 @@
       "kindle-pilot"
     ],
     "core_module_ids": [
-      "kindle-pilot.host.v1"
+      "kindle-pilot.host.v1",
+      "kindle.device.setup.v1",
+      "kindle.mtp.transfer.v1",
+      "kindle.reading.environment.v1",
+      "kindle.account.reading.v1",
+      "kindle.library.preservation.v1",
+      "kindle.native.collections.v1",
+      "kindle.wireless.maintenance.v1"
     ],
     "optional_skill_policy_ref": "skills/kindle-pilot/SKILL.md",
     "optional_skills_installed_by_default": false,
-    "default_materialization_policy": "core_skills_only"
+    "default_materialization_policy": "core_skills_only",
+    "capability_catalog_ref": "capabilities/kindle-pilot.json"
   },
   "codex_surface": {
     "plugin_id": "kindle-pilot",
@@ -37,10 +45,10 @@
       "plugin_selector": "kindle-pilot@kindle-pilot",
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/kindle-pilot",
-      "publication_ref": null
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/kindle-pilot:latest-stable"
     },
-    "carrier_source_commit": "f402174675f8463b3719cce4933770a2f931eacd",
-    "plugin_payload_manifest_url": "payloads/kindle-pilot-0.1.0.json"
+    "carrier_source_commit": "fd83fbce55b4878628173a6b20da0d3e2651682d",
+    "plugin_payload_manifest_url": "payloads/kindle-pilot-0.2.0.json"
   },
   "content_lock": {
     "algorithm": "sha256",
@@ -52,9 +60,13 @@
       "README.md",
       "THIRD_PARTY_NOTICES.md",
       "assets/README.md",
+      "assets/kindlepilot.koplugin/_meta.lua",
+      "assets/kindlepilot.koplugin/main.lua",
       "assets/wireless-cover.png",
       "assets/wireless-cover.prompt.txt",
+      "capabilities/kindle-pilot.json",
       "docs/ARCHITECTURE.md",
+      "docs/CAPABILITIES.md",
       "docs/NATIVE_COLLECTIONS.md",
       "docs/WIRELESS_MAINTENANCE.md",
       "docs/WORKFLOW.md",
@@ -72,6 +84,7 @@
       "skills/kindle-pilot/agents/openai.yaml",
       "src/kindle_companion/__init__.py",
       "src/kindle_companion/__main__.py",
+      "src/kindle_companion/capabilities.py",
       "src/kindle_companion/cli.py",
       "src/kindle_companion/collection_additions.py",
       "src/kindle_companion/collections.py",
@@ -80,13 +93,14 @@
       "src/kindle_companion/manifest.py",
       "src/kindle_companion/models.py",
       "src/kindle_companion/mtp.py",
+      "src/kindle_companion/pairing.py",
       "src/kindle_companion/plan.py",
       "src/kindle_companion/software.py",
       "src/kindle_companion/state.py",
       "src/kindle_companion/verify.py",
       "src/kindle_companion/wireless.py"
     ],
-    "digest": "sha256:7203d5cd6530737c81205435005173694fbcd7409d8a26024de40266f0aa81c6"
+    "digest": "sha256:bd9d5fdcc343c10d1877e709a18b057970538ef422e2fa7161d167cf42f1218d"
   },
   "presentation": {
     "display_name_i18n": {
@@ -106,5 +120,11 @@
   },
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "owner_package_manifest_ref": "opl-package.json",
-  "owner_package_descriptor_ref": "opl-package.json"
+  "owner_package_descriptor_ref": "opl-package.json",
+  "publication_source": {
+    "module_id": "kindle-pilot",
+    "owner_package_manifest_ref": "opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json",
+    "owner_language_version_ref": "pyproject.toml"
+  }
 }

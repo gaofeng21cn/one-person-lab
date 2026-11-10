@@ -661,6 +661,41 @@ test('GHCR package cleanup dry-runs active package-channel packages', () => {
 });
 
 
+test('private Package publisher verifies its signing key against the shipped trust root before upload', () => {
+  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
+  const signingStep = workflow.split('      - name: Check private Package signing credentials\n')[1]!
+    .split('\n      - name: ')[0]!;
+  const script = signingStep.split("          node --input-type=module <<'NODE'\n")[1]!
+    .split('\n          NODE')[0]!
+    .split('\n').map((line) => line.slice(10)).join('\n');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-private-signing-trust-'));
+  try {
+    const expectedPath = path.join(root, 'contracts/opl-framework/keys/private-package-signing.pub');
+    const runnerTemp = path.join(root, 'runner');
+    const actualPath = path.join(runnerTemp, 'private-package-signing.pub');
+    fs.mkdirSync(path.dirname(expectedPath), { recursive: true });
+    fs.mkdirSync(runnerTemp);
+    fs.copyFileSync(path.join(repoRoot, 'contracts/opl-framework/keys/private-package-signing.pub'), expectedPath);
+    const runCheck = () => spawnSync(process.execPath, ['--input-type=module'], {
+      cwd: root, encoding: 'utf8', input: script, env: { ...process.env, RUNNER_TEMP: runnerTemp },
+    });
+    fs.copyFileSync(expectedPath, actualPath);
+    const matched = runCheck();
+    assert.equal(matched.status, 0, matched.stderr);
+    const unrelatedKey = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).publicKey;
+    fs.writeFileSync(actualPath, unrelatedKey.export({ type: 'spki', format: 'pem' }));
+    const mismatched = runCheck();
+    assert.notEqual(mismatched.status, 0);
+    assert.match(mismatched.stderr, /does not match the Framework trust root/);
+    fs.rmSync(actualPath);
+    assert.notEqual(runCheck().status, 0, 'missing derived signing key fails closed');
+    assert.ok(workflow.indexOf('Check private Package signing credentials')
+      < workflow.indexOf('Publish immutable Package and advance its channel'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('private Package visibility is checked before upload and cannot be promoted to public', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
   const publishStep = workflow.split('      - name: Publish immutable Package and advance its channel\n')[1]!

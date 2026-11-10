@@ -22,21 +22,42 @@ export function projectKnowledgeSource(context: ManagementContext, registry: Ret
   let reason = !connected ? 'knowledge_source_disconnected' : source.status !== 'active' ? 'knowledge_source_revoked' : !authorized ? 'knowledge_source_authorization_missing' : null;
   try { physicalDirectory(source.root); } catch { reason ??= 'knowledge_source_directory_unavailable'; }
   const items = registry.value.items.filter(item => item.body_ref.source_id === source.source_id && scopes.includes(item.scope.id));
-  let current = 0; let stale = 0;
+  const activeItems = items.filter(item => item.status === 'active' && !item.superseded_by?.length);
+  const inactive = items.length - activeItems.length;
+  let current = 0; let reviewDue = 0; let unavailable = 0; let checked = 0;
+  const issues: Array<{ knowledge_id: string; status: 'review_due' | 'unavailable'; reason: string }> = [];
   if (authorized && !reason) {
-    for (const item of items.slice(0, 100)) {
+    for (const item of activeItems.slice(0, 100)) {
+      checked += 1;
       try {
-        if (knowledgeCurrentness(item, deps.now)) { stale += 1; continue; }
         const file = containedKnowledgeFile(source.root, item.body_ref.ref);
         const stats = fs.statSync(file);
-        if (!stats.size || stats.size > 256 * 1024 || knowledgeDigest(fs.readFileSync(file)) !== item.body_ref.sha256) { stale += 1; continue; }
+        if (!stats.size || stats.size > 256 * 1024 || knowledgeDigest(fs.readFileSync(file)) !== item.body_ref.sha256) {
+          unavailable += 1;
+          issues.push({ knowledge_id: item.knowledge_id, status: 'unavailable', reason: 'knowledge_source_body_requires_review' });
+          continue;
+        }
+        const currentness = knowledgeCurrentness(item, deps.now);
+        if (currentness?.startsWith('knowledge_review_overdue:')) {
+          reviewDue += 1;
+          issues.push({ knowledge_id: item.knowledge_id, status: 'review_due', reason: 'knowledge_review_overdue' });
+          continue;
+        }
+        if (currentness) {
+          unavailable += 1;
+          issues.push({ knowledge_id: item.knowledge_id, status: 'unavailable', reason: currentness.split(':')[0]! });
+          continue;
+        }
         current += 1;
-      } catch { stale += 1; }
+      } catch {
+        unavailable += 1;
+        issues.push({ knowledge_id: item.knowledge_id, status: 'unavailable', reason: 'knowledge_source_body_unavailable' });
+      }
     }
-    if (stale) reason = 'knowledge_source_revision_requires_review';
+    if (unavailable) reason = 'knowledge_source_revision_requires_review';
   }
   const status = reason ? (connected ? 'attention' as const : 'unknown' as const) : 'ready' as const;
-  const bounded = items.length > 100;
+  const bounded = activeItems.length > 100;
   return {
     resource_id: sourceResourceId(context, registry.file, source.source_id), source_id: safeId(source.source_id) ?? 'source',
     label: label(source.label, safeId(source.source_id) ?? '知识来源'), context_id: context.context_id,
@@ -44,9 +65,11 @@ export function projectKnowledgeSource(context: ManagementContext, registry: Ret
     source_writable: source.writable, scope_expansion_allowed: !(binding?.source_ids.some(id => id !== source.source_id)),
     available_scope_ids: binding?.scope_ids.filter(scope => safeId(scope)) ?? [], consumer_package_ids: [...new Set(consumers.flatMap(consumer => consumer.package_id ? [consumer.package_id] : []))].sort(),
     revision_identity: sourceRevision(context, registry), knowledge_count: items.length,
+    knowledge_health: { current_count: current, review_due_count: reviewDue, inactive_count: inactive,
+      unavailable_count: unavailable, checked_count: checked, truncated: bounded, issues },
     authorization: { status: authorized ? 'authorized' as const : 'attention' as const, consumer_count: domains.length, grant_count: grants.length },
-    revision: { status: stale ? 'stale' as const : current && !bounded ? 'current' as const : 'unknown' as const, security_revision: sourceRevision(context, registry) },
-    freshness: { status: stale ? 'stale' as const : current && !bounded ? 'fresh' as const : 'unknown' as const,
+    revision: { status: unavailable ? 'stale' as const : checked && !bounded ? 'current' as const : 'unknown' as const, security_revision: sourceRevision(context, registry) },
+    freshness: { status: unavailable ? 'stale' as const : current && !bounded ? 'fresh' as const : 'unknown' as const,
       observed_at: (deps.now ?? new Date()).toISOString() },
     readiness: { status, ...(reason ? { reason } : {}) }, ...(reason ? { reason } : {}),
     owner_settings_route: 'resources',

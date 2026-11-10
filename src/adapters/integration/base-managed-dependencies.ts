@@ -32,7 +32,7 @@ function packageVersion(packageName: string) {
   }
 }
 
-function toolDependency(tool: OplCompanionToolSyncItem | null, dependencyId: string, selectedByFlow: boolean) {
+function toolDependency(tool: OplCompanionToolSyncItem | null, dependencyId: string, selectedByFlow: boolean, inspected = true) {
   const ownerAdapterManaged = dependencyId === 'gh-stack';
   const managed = selectedByFlow && (
     ownerAdapterManaged
@@ -43,12 +43,12 @@ function toolDependency(tool: OplCompanionToolSyncItem | null, dependencyId: str
   return {
     dependency_id: dependencyId,
     dependency_kind: 'cli',
-    installed: Boolean(tool?.binary_path),
+    installed: tool ? Boolean(tool.binary_path) : inspected ? false : null,
     version: tool?.version ?? null,
     latest_version: tool?.latest_version ?? null,
-    currentness: tool?.currentness ?? 'missing',
+    currentness: tool?.currentness ?? (inspected ? 'missing' : 'unknown'),
     content_sha256: tool?.content_sha256 ?? null,
-    ownership: tool?.ownership ?? 'missing',
+    ownership: tool?.ownership ?? (inspected ? 'missing' : 'unknown'),
     update_policy: ownerAdapterManaged
       ? 'owner_adapter_managed_reconcile'
       : tool?.ownership === 'opl_managed'
@@ -62,8 +62,8 @@ function toolDependency(tool: OplCompanionToolSyncItem | null, dependencyId: str
       ? 'app_restart_generation_switch'
       : 'next_process_discovery',
     binary_path: tool?.binary_path ?? null,
-    status: tool?.status ?? 'missing',
-    note: tool?.note ?? null,
+    status: tool?.status ?? (inspected ? 'missing' : 'unknown'),
+    note: tool?.note ?? (inspected ? null : 'External owner inspection was skipped for this read.'),
   };
 }
 
@@ -192,6 +192,7 @@ export function inspectBaseManagedDependencies(
       companionTools.get(toolId) ?? null,
       toolId,
       flowDependencyIds.includes(toolId),
+      !(options.inspectExternalOwners === false && toolId === 'gh-stack'),
     )),
     {
       ...temporalSystemCli,

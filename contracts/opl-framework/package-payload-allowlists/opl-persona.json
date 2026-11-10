@@ -18,6 +18,7 @@
     "runtime/opl_persona/cli.py",
     "runtime/opl_persona/core.py",
     "runtime/opl_persona/inbox.py",
+    "runtime/opl_persona/knowledge.py",
     "runtime/opl_persona/obsidian.py",
     "runtime/opl_persona/obsidian_apply.py",
     "runtime/opl_persona/paths.py",

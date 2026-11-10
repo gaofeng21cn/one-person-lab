@@ -138,6 +138,11 @@
     "runtime/native_helpers/pdf_profiles/bookforge-zh-a4-publication-reference.docx",
     "runtime/native_helpers/pdf_profiles/bookforge-zh-a4-publication.json",
     "runtime/native_helpers/pdf_profiles/bookforge-zh-publication-proof-header.tex",
-    "runtime/native_helpers/pdf_profiles/bookforge-zh-publication-proof.json"
+    "runtime/native_helpers/pdf_profiles/bookforge-zh-publication-proof.json",
+    "runtime/native_helpers/bookforge_app_review.py",
+    "runtime/native_helpers/bookforge_publication_bundle_parts/__init__.py",
+    "runtime/native_helpers/bookforge_publication_bundle_parts/docx_package.py",
+    "runtime/native_helpers/bookforge_publication_bundle_parts/errors.py",
+    "runtime/native_helpers/bookforge_publication_bundle_parts/text_integrity.py"
   ]
 }

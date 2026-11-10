@@ -24,6 +24,7 @@
     "runtime/codex_mail_workbench/knowledge.py",
     "runtime/codex_mail_workbench/mailbox.py",
     "runtime/codex_mail_workbench/memory.py",
+    "runtime/codex_mail_workbench/memory_evidence.py",
     "runtime/codex_mail_workbench/message.py",
     "runtime/codex_mail_workbench/native.py",
     "runtime/codex_mail_workbench/paths.py",

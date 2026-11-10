@@ -11,6 +11,7 @@
     "plugin.json",
     "skills/iphone-app-steward/SKILL.md",
     "skills/iphone-app-steward/agents/openai.yaml",
+    "skills/iphone-app-steward/knowledge_context.py",
     "skills/iphone-app-steward/references/decision-policy.md",
     "skills/iphone-app-steward/references/evidence-and-layout.md",
     "opl-package.json"

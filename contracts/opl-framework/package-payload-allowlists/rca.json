@@ -69,6 +69,7 @@
     "agent/stages/source_intake.md",
     "agent/stages/visual_direction.md",
     "agent/tools/domain_affordances.md",
+    "agent/tools/generate-image.mjs",
     "app-contribution-adapter.json",
     "assets/branding/redcube-ai-logo.png",
     "assets/branding/redcube-ai-overview-v3.png",

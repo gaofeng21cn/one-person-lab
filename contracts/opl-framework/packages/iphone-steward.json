@@ -19,9 +19,13 @@
     "software_type": "agent"
   },
   "publisher": "gaofeng21cn",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/iphone-app-steward.git",
+  "visibility": "authorized_only",
+  "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/iphone-steward",
+  "credential_provider": "github_packages",
+  "publication_channel_admission": "admitted",
   "package_role": "capability_package",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "capability_abi": {
@@ -49,7 +53,7 @@
       "plugin_selector": "iphone-app-steward@iphone-app-steward",
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/iphone-app-steward",
-      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/iphone-steward:latest-stable"
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-private-packages/iphone-steward:latest-stable"
     },
     "optional_install_policy": "core_skills_only",
     "app_contribution_abi": {
@@ -65,8 +69,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/iphone-steward-0.2.7.json",
-    "carrier_source_commit": "c99a4d8d32bad4c991dbf8589d43add01ffdd06c"
+    "plugin_payload_manifest_url": "payloads/iphone-steward-0.2.8.json",
+    "carrier_source_commit": "e3f50fd526b233596fc833dbdb6052d4c654a05f"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -84,6 +88,34 @@
           "zh-CN": "选择一个已生成的精确计划后审阅",
           "en-US": "Select a generated exact plan to review"
         }
+      },
+      {
+        "view_id": "iphone.steward.receipt",
+        "view_type": "list_detail",
+        "title_i18n": {
+          "zh-CN": "iPhone 执行收据",
+          "en-US": "iPhone execution receipt"
+        },
+        "data_ref": "iphone.steward.v1#receipt",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "选择 CLI 保存的精确收据与验证结果",
+          "en-US": "Select exact CLI receipt and saved verification output"
+        }
+      },
+      {
+        "view_id": "iphone.steward.verification",
+        "view_type": "list_detail",
+        "title_i18n": {
+          "zh-CN": "iPhone 终态验证",
+          "en-US": "iPhone verification"
+        },
+        "data_ref": "iphone.steward.v1#verification",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "选择 CLI 保存的精确收据与验证结果",
+          "en-US": "Select exact CLI receipt and saved verification output"
+        }
       }
     ],
     "commands": [],
@@ -97,6 +129,24 @@
         "scope": "root",
         "sort_order": 700,
         "view_id": "iphone.steward.plan"
+      },
+      {
+        "contribution_id": "iphone.steward.receipt",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 701,
+        "view_id": "iphone.steward.receipt"
+      },
+      {
+        "contribution_id": "iphone.steward.verification",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 702,
+        "view_id": "iphone.steward.verification"
       }
     ]
   },
@@ -110,17 +160,17 @@
       "plugin.json",
       "skills/iphone-app-steward/SKILL.md",
       "skills/iphone-app-steward/agents/openai.yaml",
+      "skills/iphone-app-steward/knowledge_context.py",
       "skills/iphone-app-steward/references/decision-policy.md",
       "skills/iphone-app-steward/references/evidence-and-layout.md"
     ],
-    "digest": "sha256:d7c299224663099e92c77a8ac56cd687ee5069fd1925efa5cdf1d1576d2d6f09"
+    "digest": "sha256:745229e88cce4e0c61a6a311d7f347c23d6e2b8ffd3685d7f4a5d4e04bc756e1"
   },
   "publication_source": {
     "module_id": "iphone-steward",
     "owner_package_manifest_ref": "plugins/iphone-app-steward/opl-package.json",
     "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
   },
-  "publication_channel_admission": "admitted",
   "owner_package_manifest_ref": "plugins/iphone-app-steward/opl-package.json",
   "owner_package_descriptor_ref": "opl-package.json"
 }

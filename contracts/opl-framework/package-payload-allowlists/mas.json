@@ -271,6 +271,11 @@
     "src/med_autoscience/authority_handlers/study_lifecycle_reactivation_parts/result.py",
     "src/med_autoscience/styles/__init__.py",
     "src/med_autoscience/styles/frontiers.csl",
-    "uv.lock"
+    "uv.lock",
+    "src/med_autoscience/authority_handlers/qualification_provisioning_parts/__init__.py",
+    "src/med_autoscience/authority_handlers/qualification_provisioning_parts/records.py",
+    "src/med_autoscience/authority_handlers/qualification_provisioning_parts/request.py",
+    "src/med_autoscience/authority_handlers/qualification_provisioning_parts/result.py",
+    "src/med_autoscience/authority_handlers/qualification_provisioning_parts/values.py"
   ]
 }

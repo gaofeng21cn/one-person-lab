@@ -11,6 +11,7 @@ import {
 } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-descriptor.ts';
 import type { InstalledCarrierEntry } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
 import { normalizePresentation } from '../../src/adapters/integration/agent-package-registry-parts/presentation-normalizers.ts';
+import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
 import { directoryFrom } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
 import { compactFastAgentPackageDirectory } from '../../src/read-models/operator/app-state-fast-projection.ts';
 import { isFirstPartyPackage } from '../../src/adapters/integration/agent-package-first-party.ts';
@@ -18,6 +19,18 @@ import { isFirstPartyPackage } from '../../src/adapters/integration/agent-packag
 const ownerManifest = JSON.parse(fs.readFileSync(
   new URL('../../contracts/opl-framework/packages/photo-steward.json', import.meta.url), 'utf8',
 ));
+
+test('catalog release manifests remain consumable without dropping their presentation', () => {
+  const catalog = new URL('../../contracts/opl-framework/packages/', import.meta.url);
+  for (const file of fs.readdirSync(catalog).filter((entry) => entry.endsWith('.json'))) {
+    const manifestUrl = new URL(file, catalog);
+    const payload = JSON.parse(fs.readFileSync(manifestUrl, 'utf8'));
+    const manifest = normalizePackageManifest(payload, manifestUrl.href);
+    if (payload.presentation) {
+      assert.deepEqual(manifest.presentation, payload.presentation, payload.package_id);
+    }
+  }
+});
 
 function fixture(context: { after: (cleanup: () => void) => void }, options: {
   description?: string;

@@ -16,7 +16,12 @@
   },
   "projection_fields": {
     "contexts": ["context_id", "label", "selected", "revision", "available_scope_ids", "status"],
-    "items": ["resource_id", "source_id", "label", "context_id", "status", "connected", "scope_ids", "consumer_domain_ids", "write_domain_ids", "source_writable", "consumer_package_ids", "revision_identity", "knowledge_count", "authorization", "revision", "freshness", "readiness", "reason", "owner_settings_route", "action_ids", "access_editable", "access_edit_reason", "scope_expansion_allowed", "available_scope_ids"],
+    "items": ["resource_id", "source_id", "label", "context_id", "status", "connected", "scope_ids", "consumer_domain_ids", "write_domain_ids", "source_writable", "consumer_package_ids", "revision_identity", "knowledge_count", "knowledge_health", "authorization", "revision", "freshness", "readiness", "reason", "owner_settings_route", "action_ids", "access_editable", "access_edit_reason", "scope_expansion_allowed", "available_scope_ids"],
+    "knowledge_health": {
+      "counts": ["current_count", "review_due_count", "inactive_count", "unavailable_count", "checked_count"],
+      "truncated": "true when more than 100 active entries require inspection",
+      "issues": "bounded refs-only entries with knowledge_id, review_due or unavailable status, and a machine reason; never paths or bodies"
+    },
     "available_consumers": "current package domain declarations and already-explicit grants; the UI cannot invent a consumer",
     "available_actions": "same owner action catalog used by App and CLI",
     "forbidden": ["absolute_paths", "knowledge_bodies", "credential_material"]
@@ -38,7 +43,10 @@
   "read_policy": {
     "network": false,
     "bodies": "check at most 100 registered body hashes per source; never return them",
-    "freshness": "fresh only when accepted body versions and dates are checked; no accepted items or truncated checks remain unknown",
+    "source_health": "source access and accepted-body integrity are independent of record lifecycle; an overdue record retains review debt without making a readable source unavailable",
+    "revision": "current only when all inspected active body hashes match accepted versions and inspection is complete; unavailable or unreviewed bodies remain stale",
+    "freshness": "fresh describes the current recall-eligible subset after body and date checks; overdue and inactive counts remain explicit; no current items or truncated checks remain unknown",
+    "recall_boundary": "overdue and inactive records remain excluded by existing recall; required knowledge and action-critical gates are unchanged; source checks never extend review dates",
     "configuration_error": "safe reason code with no selected path or provider payload"
   }
 }
