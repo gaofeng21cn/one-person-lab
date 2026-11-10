@@ -140,7 +140,8 @@
       "zh-CN": "通过老照片 CLI 处理明确选择的图片；模型与照片保留在本地工作区。",
       "en-US": "Use the Old Photo CLI for explicitly selected images; keep models and photos in the local workspace."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "application"
   },
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "owner_package_manifest_ref": "opl-package.json",

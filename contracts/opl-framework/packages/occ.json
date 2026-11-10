@@ -34,7 +34,8 @@
           "codex_visible_entry": "opl-capital-compass"
         }
       }
-    ]
+    ],
+    "software_type": "agent"
   },
   "publisher": "one-person-lab",
   "version": "0.1.5",

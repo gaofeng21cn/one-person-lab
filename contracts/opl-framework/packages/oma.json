@@ -34,7 +34,8 @@
           "codex_visible_entry": "opl-meta-agent"
         }
       }
-    ]
+    ],
+    "software_type": "agent"
   },
   "publisher": "one-person-lab",
   "version": "0.4.13",

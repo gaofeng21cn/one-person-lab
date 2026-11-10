@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -35,6 +36,16 @@ function frameworkProjectionRemainsCallableWhileDisabled(
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function hostBundledSource(sourcePath: string) {
+  const home = process.env.HOME?.trim() || os.homedir();
+  const codexHome = process.env.CODEX_HOME?.trim() || path.join(home, '.codex');
+  const cacheHome = process.env.XDG_CACHE_HOME?.trim() || path.join(home, '.cache');
+  // These are Host-owned distribution locations, not a list of products or
+  // publishers. An independent third-party native plugin remains software.
+  return [path.join(codexHome, '.tmp', 'bundled-marketplaces'), path.join(cacheHome, 'codex-runtimes')]
+    .some(root => path.resolve(sourcePath).startsWith(`${path.resolve(root)}${path.sep}`));
 }
 
 function nativePresentation(displayName: string, payload: Record<string, unknown>) {
@@ -215,6 +226,7 @@ export function readInstalledPackageDescriptor(entry: InstalledCarrierEntry): In
     return {
       manifest,
       manifestPath,
+      catalog_scope: !hasOwnerManifest && hostBundledSource(entry.sourcePath) ? 'host_component' : 'software',
       manifest_sha256: sha256Text(manifestText),
       sourcePath: entry.sourcePath,
       pluginId: entry.pluginId,
@@ -264,6 +276,7 @@ function readProjectedPackageDescriptor(
     return {
       manifest,
       manifestPath,
+      catalog_scope: 'software',
       manifest_sha256: sha256Text(manifestText),
       sourcePath: manifestPath,
       pluginId: carrier.carrier.pluginId,

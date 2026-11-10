@@ -2,6 +2,7 @@ import { readSoftwareSource, readSoftwareSources, softwareSourceFailure, writeSo
 import { assertCredentialHandleOnlyPayload } from './connection-registry-parts/credential-handle.ts';
 import { normalizeSoftwareSourceCredential } from './software-sources-store.ts';
 import { verifySoftwareSourceCredential } from './software-sources-verification.ts';
+import { readInstalledSoftwareProducts } from './software-sources-framework-installation.ts';
 import { executeHomebrewSourceAction, HOMEBREW_ACTION_IDS, homebrewActionCatalog, readHomebrewSourceProjection, refreshHomebrewSource, type HomebrewActionId } from './homebrew-source.ts';
 import type {
   SoftwareSource, SoftwareSourceConfigureInput, SoftwareSourceDependencies,
@@ -44,9 +45,9 @@ function sourceActionProjection() {
 function credentialPresent(source: SoftwareSource) {
   return Boolean(source.credential_handle);
 }
-function publicSource(source: SoftwareSource) {
+function publicSource(source: SoftwareSource, env: NodeJS.ProcessEnv = process.env) {
   const { credential_handle: _credential, ...safe } = source;
-  const inventory = source.provider_id === 'homebrew' ? readHomebrewSourceProjection() : null;
+  const inventory = source.provider_id === 'homebrew' ? readHomebrewSourceProjection(env) : null;
   const sourceActions = ['source_list', 'source_check', ...(source.visibility === 'authorized_only' ? ['source_configure', 'source_disconnect'] : []),
     ...(inventory?.inventory_status === 'available' ? ['source_refresh'] : inventory?.inventory_reason === 'homebrew_tap_not_connected' ? ['source_setup'] : [])];
   return { ...safe, ...(inventory ?? {}), credential_handle_present: credentialPresent(source), available_actions: sourceActionProjection().filter(action => sourceActions.includes(action.action_id)) };
@@ -89,8 +90,8 @@ export async function checkOplSoftwareSource(sourceId: string, deps: SoftwareSou
 export function listOplSoftwareSources(input: {
   packageEntries?: readonly unknown[];
   refreshRequiredSourceIds?: readonly string[];
-} = {}) {
-  const sources = readSoftwareSources();
+} = {}, env: NodeJS.ProcessEnv = process.env) {
+  const sources = readSoftwareSources(env);
   const entries = input.packageEntries ?? [];
   const entryCount = (source: SoftwareSource) => entries.filter(entry => {
     if (!entry || typeof entry !== 'object') return false;
@@ -113,17 +114,18 @@ export function listOplSoftwareSources(input: {
     const recentFailure = source.status !== 'authorized' && source.verified_at !== null
       && Date.now() - Date.parse(source.verified_at) < 60_000;
     return {
-      ...publicSource(source),
+      ...publicSource(source, env),
       access_refresh_required: source.visibility === 'authorized_only' && source.enabled
         && credentialPresent(source) && !recentFailure
         && (input.refreshRequiredSourceIds?.includes(source.source_id) ?? false),
-      entry_count: source.provider_id === 'homebrew' ? readHomebrewSourceProjection().entry_count
+      entry_count: source.provider_id === 'homebrew' ? readHomebrewSourceProjection(env).entry_count
         : input.packageEntries === undefined ? null : entryCount(source),
     };
   });
   return {
     surface_kind: 'opl_software_sources_projection.v1', status: safeEntries.some(source => source.enabled && source.credential_handle_present && ['expired', 'forbidden', 'revoked', 'unknown'].includes(source.status)) ? 'attention_required' : 'available',
     entries: safeEntries,
+    installed_products: readInstalledSoftwareProducts(env),
     authority_boundary: { owner: 'opl_framework', credential_values_exposed: false, installation_mutation_owner: 'native_carrier', package_installation_owner: 'opl_packages', native_software_installation_owner: 'homebrew' },
   };
 }

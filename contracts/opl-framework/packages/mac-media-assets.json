@@ -5439,6 +5439,7 @@
       "zh-CN": "为 Med Auto Cast 提供可复用的医学动画素材与制作技法库。",
       "en-US": "Med Auto Cast reusable medical animation media and craft library."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "capability"
   }
 }

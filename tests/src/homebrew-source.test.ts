@@ -6,6 +6,7 @@ import test from 'node:test';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { executeHomebrewSourceAction, OPL_HOMEBREW_SOURCE_ID, readHomebrewSourceProjection, refreshHomebrewSource, type HomebrewRunner } from '../../src/adapters/integration/homebrew-source.ts';
 import { executeOplSoftwareSourceAction, listOplSoftwareSources, softwareSourceActionCatalog } from '../../src/adapters/integration/software-sources.ts';
+import { readFrameworkSoftwareInstallation } from '../../src/adapters/integration/software-sources-framework-installation.ts';
 
 const tap = 'gaofeng21cn/one-person-lab';
 function fixture() {
@@ -42,12 +43,14 @@ function reason(code: string) { return (error: unknown) => error instanceof Fram
 test('fast sources read only native snapshots and never invent empty or latest remote state', async () => withState(async env => {
   assert.equal(readHomebrewSourceProjection(env).entry_count, null);
   assert.equal(readHomebrewSourceProjection(env).inventory_status, 'not_checked');
+  assert.equal(readHomebrewSourceProjection(env).inventory_refresh_required, true);
   const native = fixture();
   const checked = await executeOplSoftwareSourceAction('source_check', { source_id: OPL_HOMEBREW_SOURCE_ID }, { env, homebrewRun: native.run });
   assert.ok('software_source' in checked);
   assert.equal(checked.software_source.entry_count, 2);
   const snapshot = listOplSoftwareSources().entries.find(source => source.source_id === OPL_HOMEBREW_SOURCE_ID)!;
   assert.equal(snapshot.version_basis, 'homebrew_local_recipes');
+  assert.equal(snapshot.inventory_refresh_required, false);
   assert.equal(snapshot.native_items?.[0].display_name, 'OPL Framework');
   assert.equal(snapshot.native_items?.[0].name, `${tap}/opl`);
   assert.equal(snapshot.native_items?.[0].item_id, `formula:${tap}/opl`);
@@ -157,4 +160,76 @@ test('successful native exit still requires installation readback and serializes
   const result = await pending;
   assert.equal(result.native_action.status, 'needs_attention');
   assert.equal(result.native_action.reason_code, 'homebrew_native_readback_unverified');
+}));
+
+test('App bundle versions are local installation truth while Homebrew receipts retain lifecycle ownership', async () => withState(async env => {
+  const native = fixture();
+  const run: HomebrewRunner = async (args, options) => {
+    const result = await native.run(args, options);
+    if (args[0] !== 'info') return result;
+    const value = JSON.parse(result.stdout);
+    Object.assign(value.casks[0], { homepage: 'https://github.com/gaofeng21cn/one-person-lab-app', bundle_short_version: '4.0' });
+    return { ...result, stdout: JSON.stringify(value) };
+  };
+  const deps = { env, run };
+  let snapshot = await refreshHomebrewSource(deps);
+  const external = snapshot.native_items[1];
+  assert.equal(external.product_id, 'github:gaofeng21cn/one-person-lab-app');
+  assert.equal(external.installed, true);
+  assert.equal(external.installed_version, '4.0');
+  assert.equal(external.homebrew_installed, false);
+  assert.equal(external.homebrew_installed_version, null);
+  assert.equal(external.installation_owner, 'application');
+  assert.equal(external.update_status, 'unknown');
+  assert.deepEqual(external.available_actions, []);
+  for (const actionId of ['source_install', 'source_update', 'source_uninstall'] as const) {
+    await assert.rejects(executeHomebrewSourceAction(actionId, {
+      source_id: OPL_HOMEBREW_SOURCE_ID, item_id: external.item_id, expected_revision: external.revision,
+    }, deps), reason('homebrew_action_unavailable'));
+  }
+  native.state.installed = '2.0'; native.state.available = '3.0'; native.state.outdated = true;
+  snapshot = await refreshHomebrewSource(deps);
+  const selfUpdated = snapshot.native_items[1];
+  assert.equal(selfUpdated.installed_version, '4.0');
+  assert.equal(selfUpdated.homebrew_installed_version, '2.0');
+  assert.equal(selfUpdated.update_status, 'unknown');
+  assert.deepEqual(selfUpdated.available_actions.map(action => action.action_id), ['source_uninstall']);
+  assert.equal(native.commands.some(args => ['install', 'upgrade', 'uninstall'].includes(args[0])), false);
+}));
+
+test('Framework installation requires an installed CLI and owner receipt, not the executing checkout', async () => withState(async env => {
+  const userHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-installed-home-'));
+  const root = path.join(userHome, 'framework');
+  const localEnv = { ...env, HOME: userHome, OPL_FRAMEWORK_PACKAGE_ROOT: root };
+  try {
+    fs.mkdirSync(path.join(root, 'bin'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'opl-framework', version: '0.3.12' }));
+    fs.writeFileSync(path.join(root, 'bin', 'opl'), '#!/bin/sh\n');
+    fs.writeFileSync(path.join(root, '.opl-framework-installed-source-identity.json'), JSON.stringify({
+      schema: 'opl_framework_installed_source_identity.v1', framework_sha: 'a'.repeat(40), install_mode: 'archive', identity_source: 'install_ref',
+    }));
+    assert.equal(readFrameworkSoftwareInstallation(localEnv), null);
+    fs.mkdirSync(path.join(userHome, '.local', 'bin'), { recursive: true });
+    fs.symlinkSync(path.join(root, 'bin', 'opl'), path.join(userHome, '.local', 'bin', 'opl'));
+    const native = fixture();
+    const deps = { env: localEnv, run: native.run };
+    const snapshot = await refreshHomebrewSource(deps);
+    const framework = snapshot.native_items[0];
+    assert.equal(framework.installed, true);
+    assert.equal(framework.installed_version, '0.3.12');
+    assert.equal(framework.homebrew_installed, false);
+    assert.equal(framework.homebrew_installed_version, null);
+    assert.equal(framework.installation_owner, 'opl_framework');
+    assert.equal(framework.installation_evidence, 'framework_install_receipt');
+    assert.equal(framework.owner_settings_route, 'updates');
+    assert.equal(framework.update_status, 'unknown');
+    assert.deepEqual(framework.available_actions, []);
+    await assert.rejects(executeHomebrewSourceAction('source_install', {
+      source_id: OPL_HOMEBREW_SOURCE_ID, item_id: framework.item_id, expected_revision: framework.revision,
+    }, deps), reason('homebrew_action_unavailable'));
+    fs.rmSync(path.join(root, '.opl-framework-installed-source-identity.json'));
+    fs.mkdirSync(path.join(root, '.git'));
+    assert.equal(readFrameworkSoftwareInstallation(localEnv), null);
+    assert.equal(readHomebrewSourceProjection(localEnv).native_items[0].installed, false);
+  } finally { fs.rmSync(userHome, { recursive: true, force: true }); }
 }));

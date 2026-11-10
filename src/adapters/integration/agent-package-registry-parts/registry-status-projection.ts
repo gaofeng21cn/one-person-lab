@@ -32,7 +32,8 @@ import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
 import { inspectOplModule } from '../system-installation/modules.ts';
 import type { AgentPackageInstallInput } from './types.ts';
 import { resolvePackageAccessDecision, type AgentPackageAccessDecision } from './package-access.ts';
-import { packageInstallSourceAvailable, packageReleaseChannel } from './package-install-source.ts';
+import { packageInstallSourceAvailable, packageDistributionChannel } from './package-install-source.ts';
+import { readPackageInstallationReadback } from './package-installation-readback.ts';
 
 export type OplAgentPackageStatusInput = {
   packageId?: string | null;
@@ -423,6 +424,11 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     description: presentationText(manifest.presentation?.description_i18n, null),
     tags: [],
     package_role: manifest.package_role,
+    catalog_scope: descriptor.catalog_scope ?? currentOwner?.catalog_scope ?? 'software',
+    software_type: currentOwner?.manifest.presentation?.software_type
+      ?? manifest.presentation?.software_type
+      ?? (manifest.package_role === 'standard_agent' ? 'agent' : 'unknown'),
+    local_installations: readPackageInstallationReadback(manifest.package_id),
     capability_metadata: installed
       ? {
           source: manifest.source,
@@ -454,7 +460,10 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     installed_version: installed ? manifest.version : null,
     selected_version: access.discover_allowed
       ? currentOwner?.manifest.version ?? (installed ? null : manifest.version) : null,
-    release_channel: packageReleaseChannel(descriptor),
+    // No Package owner currently declares release maturity. Keep it unknown;
+    // publication admission cannot establish either preview or stable quality.
+    release_channel: 'unknown' as const,
+    distribution_channel: packageDistributionChannel(currentOwner ?? descriptor),
     activated: ready,
     codex_visible: codexVisible,
     package_access: access,

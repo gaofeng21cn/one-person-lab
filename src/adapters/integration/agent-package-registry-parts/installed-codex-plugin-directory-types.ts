@@ -75,6 +75,8 @@ export type InstalledPackageManifest = Pick<
 >>;
 
 export type InstalledPackageDescriptor = {
+  /** Independent Packages are software; proven Host-bundled sources are components. */
+  catalog_scope?: 'software' | 'host_component';
   manifest: InstalledPackageManifest;
   manifestPath: string;
   manifest_sha256: string;

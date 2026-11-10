@@ -9,6 +9,7 @@ import {
   withCurrentOwnerProjection,
 } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-descriptor.ts';
 import type { InstalledCarrierEntry } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
+import { normalizePresentation } from '../../src/adapters/integration/agent-package-registry-parts/presentation-normalizers.ts';
 
 const ownerManifest = JSON.parse(fs.readFileSync(
   new URL('../../contracts/opl-framework/packages/photo-steward.json', import.meta.url), 'utf8',
@@ -59,9 +60,35 @@ test('native plugin discovery preserves the formal name and prefers its interfac
   assert.equal(descriptor.manifest.package_id, 'fixture-native');
   assert.equal(descriptor.manifest.display_name, 'Native Product');
   assert.equal(descriptor.manifest.version, '1.2.3');
+  assert.equal(descriptor.catalog_scope, 'software');
   assert.deepEqual(descriptor.manifest.presentation?.description_i18n, {
     und: 'Review prepared documents.',
   });
+});
+
+test('only native plugins distributed from a Host-owned bundle are system components', (t) => {
+  const entry = fixture(t, { description: 'Host capability.' });
+  const codexRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-host-bundle-'));
+  t.after(() => fs.rmSync(codexRoot, { recursive: true, force: true }));
+  const sourcePath = path.join(codexRoot, '.tmp', 'bundled-marketplaces', 'host', 'plugins', 'fixture-native');
+  fs.mkdirSync(sourcePath, { recursive: true });
+  fs.copyFileSync(path.join(entry.sourcePath, 'plugin.json'), path.join(sourcePath, 'plugin.json'));
+  const previous = process.env.CODEX_HOME;
+  process.env.CODEX_HOME = codexRoot;
+  try {
+    assert.equal(readInstalledPackageDescriptor({ ...entry, sourcePath })?.catalog_scope, 'host_component');
+    assert.equal(readInstalledPackageDescriptor(entry)?.catalog_scope, 'software');
+  } finally {
+    if (previous === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = previous;
+  }
+});
+
+test('software type is owner-declared independently from technical role and is validated', () => {
+  const presentation = { ...ownerManifest.presentation, software_type: 'agent' };
+  assert.equal(normalizePresentation(presentation, 'file:///fixture/opl-package.json')?.software_type, 'agent');
+  assert.throws(() => normalizePresentation({ ...presentation, software_type: ['agent'] }, 'file:///fixture/opl-package.json'));
+  assert.throws(() => normalizePresentation({ ...presentation, software_type: 'preview' }, 'file:///fixture/opl-package.json'));
 });
 
 test('native discovery falls back to the plugin description and leaves absent descriptions unknown', (t) => {

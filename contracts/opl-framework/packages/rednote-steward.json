@@ -267,7 +267,8 @@
       "zh-CN": "检查发布队列、审阅准确内容、维护已有笔记，并从同一任务恢复执行。",
       "en-US": "Inspect the publication queue, review exact content, maintain existing posts and resume the same task."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "application"
   },
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "owner_package_manifest_ref": "opl-package.json",

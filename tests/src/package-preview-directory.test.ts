@@ -15,7 +15,7 @@ const source = JSON.parse(fs.readFileSync(
 ));
 
 function descriptor(options: { packageId?: string; installed?: boolean; private?: boolean } = {}): InstalledPackageDescriptor {
-  const packageId = options.packageId ?? 'fixture-preview-without-payload';
+  const packageId = options.packageId ?? 'fixture-source-distributed-without-payload';
   const installed = options.installed ?? false;
   const manifest = normalizePackageManifest({
     ...source,
@@ -25,7 +25,7 @@ function descriptor(options: { packageId?: string; installed?: boolean; private?
     access_policy_ref: options.private ? `github-package:fixture/packages/${packageId}` : null,
     credential_provider: options.private ? 'github_packages' : null,
   }, 'fixture');
-  const carrier = manifest.configured_codex_plugin_carrier!;
+  const carrier = { ...manifest.configured_codex_plugin_carrier!, publicationRef: null };
   return {
     manifest,
     manifestPath: '/fixture/opl-package.json',
@@ -80,17 +80,18 @@ function assertNoDownloadActions(entry: ReturnType<typeof directoryFrom>['entrie
   assert.equal(entry.recommended_action, null);
 }
 
-test('normalization retains preview admission and defaults existing packages to admitted', () => {
+test('normalization retains source-distributed admission and defaults existing packages to admitted', () => {
   assert.equal(descriptor().manifest.publication_channel_admission, 'development_only');
   assert.equal(normalizePackageManifest(source, 'fixture').publication_channel_admission, 'admitted');
 });
 
-test('public preview without a payload remains visible with installation blocked', () => {
+test('public source-distributed without a payload remains visible with installation blocked', () => {
   const result = directoryFrom(snapshot(descriptor()), 'fast');
   assert.equal(result.entry_count, 1);
   assert.equal(result.installable_package_count, 0);
   const [entry] = result.entries;
-  assert.equal(entry.release_channel, 'preview');
+  assert.equal(entry.release_channel, 'unknown');
+  assert.equal(entry.distribution_channel, 'source');
   assert.equal(entry.installed, false);
   assert.deepEqual(entry.installability, {
     status: 'blocked', installable: false, reason: 'package_install_source_unavailable',
@@ -98,7 +99,7 @@ test('public preview without a payload remains visible with installation blocked
   assertNoDownloadActions(entry);
 });
 
-test('installed preview without a payload remains callable and removable', () => {
+test('installed source-distributed without a payload remains callable and removable', () => {
   const result = directoryFrom(snapshot(descriptor({ installed: true })), 'fast');
   assert.equal(result.installed_package_count, 1);
   const [entry] = result.entries;
@@ -109,34 +110,36 @@ test('installed preview without a payload remains callable and removable', () =>
   assertNoDownloadActions(entry);
 });
 
-test('public preview with an existing pinned carrier payload can be installed', () => {
+test('public source-distributed with an existing pinned carrier payload can be installed', () => {
   const item = descriptor({ packageId: 'opl-flow' });
   const result = directoryFrom(snapshot(item), 'fast');
   assert.equal(result.installable_package_count, 1);
   const [entry] = result.entries;
-  assert.equal(entry.release_channel, 'preview');
+  assert.equal(entry.release_channel, 'unknown');
+  assert.equal(entry.distribution_channel, 'source');
   assert.deepEqual(entry.installability, { status: 'installable', installable: true, reason: null });
   assert.equal(entry.recommended_action, 'agent_package_install');
   assert.ok(entry.available_actions.some(action => action.action_id === 'agent_package_install'));
   assert.doesNotThrow(() => assertPackageInstallSourceAvailable(item));
 });
 
-test('preview admission does not disclose private packages when discovery is denied', () => {
+test('source-distributed admission does not disclose private packages when discovery is denied', () => {
   const result = directoryFrom(snapshot(descriptor({ private: true })), 'fast');
   assert.equal(result.entry_count, 0);
   assert.equal(result.installable_package_count, 0);
 });
 
-test('fast app state preserves the preview channel and blocked installation state', () => {
+test('fast app state keeps source distribution distinct from maturity and retains blocked installation state', () => {
   const result = compactFastAgentPackageDirectory(directoryFrom(snapshot(descriptor()), 'fast'));
   const entry: Record<string, unknown> = result.entries[0];
-  assert.equal(entry.release_channel, 'preview');
+  assert.equal(entry.release_channel, 'unknown');
+  assert.equal(entry.distribution_channel, 'source');
   assert.deepEqual(entry.installability, {
     status: 'blocked', installable: false, reason: 'package_install_source_unavailable',
   });
 });
 
-test('installation guard rejects preview packages without a verified source', () => {
+test('installation guard rejects source-distributed packages without a verified source', () => {
   const item = descriptor();
   assert.throws(() => assertPackageInstallSourceAvailable(item), (error: unknown) => {
     assert.ok(error instanceof FrameworkContractError);

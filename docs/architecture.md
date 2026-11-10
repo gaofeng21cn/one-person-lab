@@ -22,7 +22,7 @@ User
 
 Framework 在公开 `app_state.application_management` 提供一个 refs-only 聚合视图，供 OPL App、Studio 和 Agent 共同呈现共享基座；Package Directory 则由 `app_state.agent_packages.directory.entries` 提供 Agent、Workflow 和 Capability 的可发现清单。前者聚合共享资源，后者聚合可安装 Package，两者都只投影 owner truth。
 
-目录条目必须具备稳定 Package identity、角色、发布/载体、安装回读、就绪状态、可用版本和 owner action。GitHub 仓库数量、仓库活跃或一个可用 action 都不能直接变成可安装条目。`standard_agent` 与 `workflow_profile` 进入 Agents，`capability_package` 进入 Shared capabilities；宿主、Framework、分发仓和系统依赖保留在基础设施或产品设置中。
+软件条目必须具备稳定 identity、实际入口、来源、载体与状态回读，范围覆盖 OPL 标准及非标准智能体、独立 MCP App、桌面/Web/CLI 应用和独立能力包。Package 技术角色保留 `standard_agent`、`workflow_profile`、`capability_package`，但不限定产品类型；类型、核心/生态/第三方归属、交互方式、依赖关系和安装模式分别表达。内部组件跟随父产品管理，概念仓和开发库不因仓库存在而成为独立软件。完整准入与计数规则由 [Package Directory](./specs/package-directory.md#管理对象与分类) 持有。
 
 应用管理 UI 是统一的一级入口，与主对话并列，展示目录总数、可安装、已安装、已安装/可用版本、更新和需处理状态。安装、启停、更新、修复和卸载继续由原 owner 的 `app action` 与 native carrier 执行；App 只 dispatch 并做 fresh readback。它不引入第二个 Package registry、凭证库、知识正文库或 updater。Homebrew 是系统依赖、CLI 和声明的原生 carrier，不能替代 OPL Agent Package Directory。
 
@@ -41,6 +41,20 @@ Framework 在公开 `app_state.application_management` 提供一个 refs-only �
 ## Agent 原生应用组合
 
 Agent tool 与必要 UI 是同一领域能力的两个入口。Framework 的共享 MCP App 提供通用协作视图，专用 MCP App 保留领域编辑器，Studio 通过标准 MCP Apps 和 DSH/Cordis 接入。Connect 提供连接授权、provider 保管凭证；知识 owner 提供来源绑定与运行冻结，用户或领域 owner 持有知识正文。MiniApp 不新增应用注册表或独立 runtime。设计规则由[Agent 原生应用标准](./policies/agent-native-app-policy.md)持有，实际共享接口由 [MCP Apps SPEC](./mcp-apps/SPEC.md)持有。
+
+### OPL 核心的运行与维护结构
+
+下表只解释 OPL 自身的核心组成，不是全生态分类或目录准入清单。其他智能体、独立 MCP App 与其他类型应用按自身产品身份接入同一管理机制。
+
+| 层 | 实际 owner 与职责 | 管理方式 |
+| --- | --- | --- |
+| OPL 基座 | Framework 的通用 runtime、Package discovery、状态/action、Connect 与知识控制接口 | 展示实际 Framework 安装和当前生效入口；由对应 carrier 更新 |
+| OPL App | `one-person-lab-app` 持有产品与发行；Studio 承载应用宿主和 UI | App 是独立应用；Studio 及其宿主依赖随 App 管理 |
+| OPL 标准智能体 | 领域 Package owner 持有 Agent 设计、业务逻辑、结果和质量判断 | `standard_agent` 以独立 Package 安装、调用和更新 |
+| 能力包 | 能力或工作流 owner 提供可复用入口 | 有独立生命周期的 Package 单列；仅供父产品使用的内部模块留在依赖中 |
+| 运行依赖 | Codex、DSH/Cordis、Node/Python、原生服务或设备等各自 owner | 显示依赖关系、版本、健康与维护入口，按所属产品或安装器更新 |
+
+知识正文、账号凭证和业务数据被核心产品及生态应用按权限使用，仍保留其原有 owner。统一管理把软件、实例、依赖和共享资源关联起来，不把它们变成同一种安装对象。安装位置和开发覆盖规则由 [Package Directory](./specs/package-directory.md#安装位置与当前生效来源) 持有。
 
 ### 共用基座的物理归属
 

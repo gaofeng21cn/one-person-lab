@@ -44,6 +44,14 @@ export function normalizePresentation(
       failure_code: 'agent_package_presentation_invalid',
     });
   }
+  const softwareType = value.software_type;
+  if (softwareType !== undefined && (typeof softwareType !== 'string'
+    || !['agent', 'application', 'capability'].includes(softwareType))) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package software type must be agent, application, or capability.', {
+      manifest_url: manifestUrl,
+      failure_code: 'agent_package_presentation_invalid',
+    });
+  }
   const rawShortcuts = recordList(value.home_shortcuts);
   if (rawShortcuts.length !== value.home_shortcuts.length) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package presentation shortcuts must be objects.', {
@@ -118,6 +126,7 @@ export function normalizePresentation(
     });
   }
   return {
+    ...(softwareType ? { software_type: softwareType as 'agent' | 'application' | 'capability' } : {}),
     display_name_i18n: normalizeLocalizedText(value.display_name_i18n, 'presentation.display_name_i18n', manifestUrl),
     description_i18n: normalizeLocalizedText(value.description_i18n, 'presentation.description_i18n', manifestUrl),
     session_routing_summary_i18n: normalizeLocalizedText(

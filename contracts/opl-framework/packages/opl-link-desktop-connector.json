@@ -118,6 +118,7 @@
       "zh-CN": "为 OPL Link 提供桌面远程协同连接。",
       "en-US": "OPL Link remote companion connector for OPL."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "capability"
   }
 }

@@ -25,11 +25,13 @@ MiniApp 所依托的共用基座是所有自有 Agent 和 Agent 原生 App 的�
 
 ## 目录、安装与更新
 
-所有 Agent、Agent 原生 App、工作流和共享能力共用 Framework 的 Package Directory 与 owner action。目录的唯一机器来源是 `app_state.agent_packages.directory.entries`，可通过 `opl packages list --json` 和 `opl app state --profile fast|full --json` 读取；OPL App 与 Studio 不维护 GitHub 仓库白名单、静态 Package 清单或第二套版本数据库。
+所有 Agent、Agent 原生 App、工作流和共享能力共用 Framework 的状态投影与既有 owner action。Package 目录来自 `app_state.agent_packages.directory.entries`，原生应用和 CLI 的来源及安装信息来自软件源/安装 owner；OPL App 与 Studio 消费这些投影，不维护第二套软件、版本或路径数据库。
 
-GitHub 仓库只有在具备稳定 Package ID、正确 `package_role`、manifest/descriptor、可调用入口、已声明发布来源与 carrier、以及安装后 installed/callable/readiness 回读合同后，才可成为可安装条目。`standard_agent`、`workflow_profile` 和 `capability_package` 分别投影到 Agents、Workflows 和 Shared capabilities；宿主、Framework、分发仓、系统依赖、开发 checkout、冻结/归档项目和 publication 未验证项目不伪装成普通 Agent。私有项目按授权范围进入 `authorized-only` 视图。
+软件目录纳入有独立 identity、实际入口、受支持的安装或部署载体及回读合同的软件，覆盖 OPL 标准智能体、其他智能体、独立 MCP App、桌面/Web/CLI 应用、能力包和工作流。核心产品、生态扩展和第三方软件采用同一原则。概念方案、源码仓、宿主实现库和私人数据按其职责维护。三个 Package 技术角色不构成产品类型全集，产品类型由 owner 的 `presentation.software_type` 声明并与交互方式分开；内部组件按实际宿主关系显示，缺少 OPL manifest 本身不排除独立原生软件。
 
-Homebrew 是 native carrier，适合宿主、CLI、系统依赖和明确声明的 OPL App 载体；它不拥有 OPL Agent 目录。用户看到的是统一的 OPL 应用管理页，底层动作可以由 Framework、Homebrew、npm、OCI 或 GitHub Release 执行。App 展示已安装版本与可用版本，只有 owner 的 `package_currentness.status=update_available` 才表示有更新；完成动作后必须重新读取 owner projection。完整边界见 [Package Directory 与统一安装管理](../specs/package-directory.md)。
+公开源、获授权私有源、固定源码版本采用同一安装管理合同。成熟度由产品 owner 声明，`development_only` 不等于预览版，`admitted` 不等于稳定版。技术原型也可安装、更新和卸载，领域执行资格另行判断。
+
+安装路径沿用 App、Framework、Codex、Homebrew 等实际 carrier 的布局，通过统一 locator 和 owner 回读定位。安装实例、当前生效来源和开发 checkout 分别表达；开发模式由明确来源选择或可编辑安装证据决定。不能因 Homebrew 无收据声称软件未装，也不能因工作区有源码声称软件已装。App 展示本机版本和来源版本，只有 owner 确认有新版本才提示更新，操作完成后重新读取 owner 状态。完整模型与物理入口见 [Package Directory 与统一安装管理](../specs/package-directory.md)。
 
 ## 共用基座及归属
 

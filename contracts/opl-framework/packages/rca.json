@@ -30,7 +30,8 @@
           "codex_visible_entry": "redcube-ai"
         }
       }
-    ]
+    ],
+    "software_type": "agent"
   },
   "publisher": "one-person-lab",
   "version": "0.2.23",

@@ -112,6 +112,7 @@
       "zh-CN": "建立统一的 Codex 使用基线，协调跨任务、仓库与机器的持续工作。",
       "en-US": "OPL Flow establishes the Codex experience baseline and coordinates durable work across tasks, repositories, and machines."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "capability"
   }
 }

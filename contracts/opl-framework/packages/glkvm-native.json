@@ -129,6 +129,7 @@
       "zh-CN": "只读查看 GLKVM 安装及运行状态，并通过原生工具控制设备。",
       "en-US": "Read-only GLKVM installation and runtime review with native device control."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "capability"
   }
 }
