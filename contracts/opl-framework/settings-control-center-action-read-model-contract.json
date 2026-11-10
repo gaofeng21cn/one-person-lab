@@ -104,6 +104,7 @@
       "name",
       "display_name",
       "description",
+      "description_i18n",
       "kind",
       "installed",
       "installed_version",

@@ -48,6 +48,11 @@ test('fast sources read only native snapshots and never invent empty or latest r
   assert.equal(checked.software_source.entry_count, 2);
   const snapshot = listOplSoftwareSources().entries.find(source => source.source_id === OPL_HOMEBREW_SOURCE_ID)!;
   assert.equal(snapshot.version_basis, 'homebrew_local_recipes');
+  assert.equal(snapshot.native_items?.[0].display_name, 'OPL Framework');
+  assert.equal(snapshot.native_items?.[0].name, `${tap}/opl`);
+  assert.equal(snapshot.native_items?.[0].item_id, `formula:${tap}/opl`);
+  assert.ok(snapshot.native_items?.[0].description_i18n?.['zh-CN']);
+  assert.equal(snapshot.native_items?.[1].display_name, 'Example');
   assert.equal(snapshot.native_items?.[1].installed, false);
   assert.deepEqual(native.commands.map(args => args[0]), ['tap-info', 'info']);
   assert.equal(snapshot.available_actions.some(action => action.action_id === 'source_install'), false);

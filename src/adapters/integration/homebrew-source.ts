@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
+import brandProfile from '../../../contracts/opl-framework/brand-system-profile.json' with { type: 'json' };
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { softwareSourceFailure, softwareSourcesFile } from './software-sources-store.ts';
 
@@ -13,6 +14,7 @@ export type HomebrewRunner = (args: string[], options: { env: NodeJS.ProcessEnv;
 export type HomebrewDependencies = { env?: NodeJS.ProcessEnv; now?: () => Date; run?: HomebrewRunner };
 type NativeItem = {
   item_id: string; name: string; display_name: string; description: string | null; kind: 'formula' | 'cask';
+  description_i18n?: Record<string, string>;
   installed: boolean; installed_version: string | null; available_version: string | null;
   update_status: 'available' | 'current' | 'not_installed' | 'unknown'; revision: string; disabled: boolean; pinned: boolean;
 };
@@ -54,8 +56,16 @@ function itemActions(item: NativeItem) {
 function projection(snapshot: Snapshot) {
   return { ...snapshot, version_basis: 'homebrew_local_recipes', installation_owner: 'homebrew',
     entry_count: snapshot.inventory_status === 'available' ? snapshot.native_items.length : null,
-    native_items: snapshot.native_items.map(item => ({ ...item, available_actions: itemActions(item) })),
+    native_items: snapshot.native_items.map(item => ({ ...item, ...productPresentation(item), available_actions: itemActions(item) })),
   };
+}
+function productPresentation(item: NativeItem) {
+  const product = brandProfile.product_cognition_layers.find(layer => 'native_carriers' in layer
+    && layer.native_carriers?.some(carrier => carrier.kind === `homebrew_${item.kind}` && carrier.package_ref === item.name));
+  if (!product) return {};
+  const description = 'description_i18n' in product ? product.description_i18n : undefined;
+  return { display_name: product.product_name,
+    ...(description ? { description: description['en-US'], description_i18n: description } : {}) };
 }
 export function readHomebrewSourceProjection(env: NodeJS.ProcessEnv = process.env) {
   try {
