@@ -68,8 +68,11 @@ test('workspace package prepack materializes contracts into a clean package boun
         env: { ...process.env, npm_config_ignore_scripts: '' },
       });
       assert.equal(packed.status, 0, packed.stderr || packed.stdout);
-      const metadata = JSON.parse(packed.stdout) as Array<{ files: Array<{ path: string }> }>;
-      const paths = new Set(metadata[0]?.files.map((file) => file.path) ?? []);
+      type PackedPackage = { files: Array<{ path: string }> };
+      const metadata = JSON.parse(packed.stdout) as PackedPackage[] | Record<string, PackedPackage>;
+      // npm 12 keys pack results by package name; earlier versions return an array.
+      const entry = Array.isArray(metadata) ? metadata[0] : metadata[`@one-person-lab/${packageName}`];
+      const paths = new Set(entry?.files.map((file) => file.path) ?? []);
       for (const contractFile of contractFiles) {
         assert.equal(paths.has(`contracts/${contractFile}`), true, `${packageName} pack omitted contracts/${contractFile}`);
       }

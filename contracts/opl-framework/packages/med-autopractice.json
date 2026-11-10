@@ -1,0 +1,152 @@
+{
+  "surface_kind": "opl_capability_package_manifest.v2",
+  "package_id": "med-autopractice",
+  "display_name": "Med Auto Practice",
+  "description": "医生主导的临床资料整理、病历草拟与医嘱协作；当前提供规划及合成任务验证。",
+  "publisher": "gaofeng21cn",
+  "version": "0.0.1",
+  "source": "first_party_owner_projection",
+  "source_repo": "https://github.com/gaofeng21cn/med-autopractice.git",
+  "visibility": "authorized_only",
+  "access_policy_ref": "github-repository:gaofeng21cn/med-autopractice",
+  "credential_provider": "github_packages",
+  "package_role": "capability_package",
+  "publication_channel_admission": "development_only",
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "Med Auto Practice",
+      "en-US": "Med Auto Practice"
+    },
+    "description_i18n": {
+      "zh-CN": "医生主导的临床资料整理、病历草拟与医嘱协作；当前提供规划及合成任务验证。",
+      "en-US": "Clinician-directed records, notes, and order collaboration, with planning and synthetic task validation."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "通过 MAP 主 Skill 查看能力、规划任务并运行合成验证；临床执行按部署资格开放。",
+      "en-US": "Use the MAP skill to inspect capabilities, plan work, and validate synthetic tasks. Clinical execution follows site qualification."
+    },
+    "home_shortcuts": []
+  },
+  "capability_abi": {
+    "id": "med-autopractice.capabilities",
+    "version": "1.0.0",
+    "compatibility_policy": "same_major"
+  },
+  "exports": {
+    "core_skill_ids": [
+      "med-autopractice"
+    ],
+    "core_module_ids": [
+      "med-autopractice.runtime"
+    ],
+    "optional_skill_policy_ref": "skills/med-autopractice/SKILL.md",
+    "optional_skills_installed_by_default": false,
+    "default_materialization_policy": "core_skills_only"
+  },
+  "entrypoints": [
+    {
+      "entrypoint_id": "med-autopractice.inspect",
+      "kind": "cli",
+      "argv": [
+        "python3",
+        "scripts/project_status.py",
+        "--json"
+      ],
+      "read_only": true
+    },
+    {
+      "entrypoint_id": "med-autopractice.synthetic-runtime",
+      "kind": "cli",
+      "argv": [
+        "python3",
+        "scripts/map_runtime.py"
+      ],
+      "scope": "synthetic_only"
+    }
+  ],
+  "codex_surface": {
+    "plugin_id": "med-autopractice",
+    "plugin_source_path": ".",
+    "codex_default_exposure": false,
+    "optional_install_policy": "core_skills_only",
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "med-autopractice@med-autopractice",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/med-autopractice",
+      "publication_ref": null
+    },
+    "carrier_source_commit": "dfa8494d0ed3ba9df0306bdab3c94498baf90add",
+    "plugin_payload_manifest_url": "payloads/med-autopractice-0.0.1.json"
+  },
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "paths": [
+      ".agents/plugins/marketplace.json",
+      ".codex-plugin/plugin.json",
+      "README.en.md",
+      "README.md",
+      "agent/manifest.json",
+      "assets/branding/medautopractice-logo.png",
+      "assets/branding/medautopractice-overview.png",
+      "contracts/capabilities.json",
+      "contracts/site-dependencies.json",
+      "contracts/site-playbook.schema.json",
+      "contracts/site-survey.schema.json",
+      "contracts/structured-clinical-record.schema.json",
+      "docs/agent-contract.md",
+      "docs/architecture.md",
+      "docs/clinical-record.md",
+      "docs/kvm-ui-qualification.md",
+      "docs/product.md",
+      "docs/research-dataset.md",
+      "docs/research.md",
+      "docs/roadmap.md",
+      "docs/site-integration.md",
+      "docs/site-survey.md",
+      "docs/workflows.md",
+      "plugin.json",
+      "pyproject.toml",
+      "rules/README.md",
+      "scripts/kvm_status.py",
+      "scripts/map_knowledge.py",
+      "scripts/map_runtime.py",
+      "scripts/package_metadata.py",
+      "scripts/project_status.py",
+      "scripts/site_plan.py",
+      "scripts/site_playbook.py",
+      "scripts/site_survey.py",
+      "scripts/structure_record.py",
+      "skills/med-autopractice/SKILL.md",
+      "skills/med-autopractice/agents/openai.yaml",
+      "src/med_autopractice/__init__.py",
+      "src/med_autopractice/adapters/__init__.py",
+      "src/med_autopractice/adapters/kvm.py",
+      "src/med_autopractice/adapters/ports.py",
+      "src/med_autopractice/adapters/synthetic.py",
+      "src/med_autopractice/agent/__init__.py",
+      "src/med_autopractice/agent/task_engine.py",
+      "src/med_autopractice/agent/task_store.py",
+      "src/med_autopractice/domain/__init__.py",
+      "src/med_autopractice/domain/task.py",
+      "src/med_autopractice/knowledge.py",
+      "src/med_autopractice/medicine/__init__.py",
+      "src/med_autopractice/medicine/ports.py",
+      "src/med_autopractice/medicine/router.py",
+      "src/med_autopractice/records/__init__.py",
+      "src/med_autopractice/records/clinical_record.py",
+      "src/med_autopractice/records/research_dataset.py",
+      "src/med_autopractice/runtime.py",
+      "src/med_autopractice/workflows/__init__.py",
+      "src/med_autopractice/workflows/catalog.py",
+      "src/med_autopractice/workflows/site_plan.py",
+      "src/med_autopractice/workflows/site_playbook.py",
+      "src/med_autopractice/workflows/site_survey.py"
+    ],
+    "digest": "sha256:554c8022d3741bfa8c4c69998d2aceefa15bee6d5ee95d3068eed8a2f2a06efa"
+  },
+  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "owner_package_manifest_ref": "opl-package.json",
+  "owner_package_descriptor_ref": "opl-package.json"
+}
