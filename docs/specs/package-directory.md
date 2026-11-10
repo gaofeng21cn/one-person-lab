@@ -18,7 +18,7 @@ App 与 Studio 只消费 `app_state.agent_packages.directory.entries` 及其状�
 
 ## 哪些项目可以进入目录
 
-GitHub 仓库本身不是可安装软件。一个项目只有在具备稳定 Package identity、受支持的 manifest/descriptor、可调用入口、已声明的 carrier、可验证的发布来源，以及安装后 readback 合同后，才可以进入可安装目录。
+GitHub 仓库本身不是可安装软件。一个项目具备稳定 Package identity、受支持的 manifest/descriptor、已声明的调用入口、native carrier 和安装后 readback 合同后，可以进入管理目录；可安装资格还要求具备可验证的安装来源。安装、运行调用和领域业务验收分别表达，不能因需要设备、模型或业务配置就取消软件管理能力。
 
 | Package role | 用户目录分区 | 准入要求 |
 | --- | --- | --- |
@@ -27,7 +27,9 @@ GitHub 仓库本身不是可安装软件。一个项目只有在具备稳定 Pac
 | `capability_package` | Shared capabilities | 能力入口、依赖、授权范围和 carrier 回读 |
 | 宿主、Framework、Cloud、分发仓、基础依赖 | Infrastructure 或产品设置 | 作为依赖/宿主呈现，不伪装成普通 Agent |
 
-以下项目不应显示为可安装条目：仅开发用或未发布的 checkout、已冻结或归档项目、缺少 publication ref 的草稿、只有 Skill/素材而没有 Package 入口的仓库、未能证明安装和调用回读的镜像。私有项目采用下述授权目录合同，仓库私有或本机已安装不构成其他用户可以下载安装的证据。
+仅有源码 checkout、Skill/素材或草稿而没有合法 Package descriptor 和 native carrier 的仓库不进入软件目录。已冻结、归档和镜像项目由 owner 声明其支持范围。私有项目采用下述授权目录合同，仓库私有或本机已安装不构成其他用户可以下载安装的证据。
+
+`publication_channel_admission=development_only` 限制受保护的正式发行，不排除目录发现或用户主动管理。目录将其投影为 `release_channel=preview`，其余为 `stable`。预览版有与 owner identity、版本和精确 source commit 一致的冻结 payload，且当前用户具备下载权限时，复用原 native carrier 安装、更新、修复和卸载；缺安装来源时保留可见条目，`installability.status=blocked`、`reason=package_install_source_unavailable`，不提供下载型动作。已有安装仍保留停用和卸载入口。预览可安装不表示已通过业务或临床验收，也不改变默认自动安装及正式渠道准入规则。
 
 目录分区由 `package_role` 动态决定。App 不维护 GitHub 仓库白名单，也不因仓库“活跃”就自动注册；重复仓库或 fork 先 canonicalize 到同一 Package ID，再由 owner 决定是否显示多个 carrier。
 
@@ -77,6 +79,14 @@ Homebrew 是 OPL 的一个 carrier，不是 Agent 目录。它适合分发宿主
 - Homebrew 只在它是声明的 carrier 时执行动作；
 - App/Studio 的统一管理页是用户认知入口，owner projection 是机器真相。
 
+## 名称、说明与状态展示
+
+目录列表以 owner 的正式 `display_name` 为标题，按所选语言使用 `display_name_i18n`；`package_id` 或统一管理条目的稳定 ID 是次级身份，供搜索、复制和 Agent 调用。不得将小写 ID 与其他软件的正式名称混排为标题，也不按 ID 机械生成产品名。
+
+用途说明来自 owner 的 `presentation.description_i18n`。原生插件没有 owner 展示声明时，依次复用其 `interface.shortDescription` 和 `description`。缺失说明保持未知，不重复软件名称作为占位说明；App 不维护独立名称或说明字典。
+
+列表和详情统一呈现正式名称、简短用途、稳定 ID、发布者、来源、已安装版本、所选来源版本以及预览/正式渠道。已安装版本来自实际 carrier，来源版本来自选定 owner projection；二者不可互相补造，未知版本显示尚未获取。访问、安装管理、运行调用和领域验收分别来自各自 owner，不由视觉标签推断。
+
 ## 版本与更新
 
 目录同时投影 `installed_version` 和 `selected_version`/`stable_version`。两者不一致时显示“已安装版本”和“可安装版本”；只有 owner 的 `package_currentness.status=update_available` 才显示“有更新”。`available_actions.update` 只是可执行能力，不等于已经发现新版本。
@@ -97,5 +107,5 @@ OPL App 的“应用管理”是一级能力，与主对话并列，统一呈现
 2. 补齐 manifest/descriptor、公开或私有可见性、发布来源、carrier 和安装后 readback；私有源还须绑定访问策略与凭证 provider。
 3. 在 Framework projection 中登记可安全展示的版本、访问状态、就绪、依赖和 action refs；不写入秘密、正文或绝对路径。
 4. 用 `opl packages list --json` 和 `opl app state --profile fast --json` 回读，再在 OPL App 的目录页完成安装、更新、停用、修复和卸载验收。私有源同时验证无权限、过期、撤权、重新授权和账号切换。
-5. 只有通过安装、调用和更新回读的项目，才从“候选/开发”转为用户可安装条目。
+5. 用真实 carrier 的安装、更新和卸载回读验证管理能力；按运行依赖显示调用就绪状态。预览版可先纳入统一管理，正式发行与领域业务资格仍由 owner 各自验收。
 

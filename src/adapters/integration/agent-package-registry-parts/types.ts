@@ -196,6 +196,7 @@ export type AgentPackageManifest = {
   owner_language_version: AgentPackageOwnerLanguageVersion | null;
   source: string;
   source_repo: string | null;
+  publication_channel_admission?: 'admitted' | 'development_only';
   visibility: AgentPackageVisibility;
   access_policy_ref: string | null;
   credential_provider: string | null;

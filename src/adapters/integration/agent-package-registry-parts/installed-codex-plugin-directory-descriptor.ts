@@ -37,6 +37,30 @@ function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function nativePresentation(displayName: string, payload: Record<string, unknown>) {
+  const description = stringValue(agentPluginOpenAiInterface(payload)?.shortDescription)
+    ?? stringValue(payload.description);
+  if (!description) return null;
+  // Native plugin text has no declared locale. Preserve it without guessing a
+  // language or deriving a product name from its machine identifier.
+  return {
+    display_name_i18n: { und: displayName },
+    description_i18n: { und: description },
+    session_routing_summary_i18n: { und: description },
+    home_shortcuts: [],
+  };
+}
+
+function installedNativePresentation(sourcePath: string, displayName: string) {
+  try {
+    const resolved = resolveAgentPluginManifest([sourcePath]);
+    return resolved ? nativePresentation(displayName, resolved.manifest) : null;
+  } catch {
+    // Optional carrier metadata must not hide a valid Package owner manifest.
+    return null;
+  }
+}
+
 function pluginPackageId(pluginId: string) {
   const bareName = pluginId.split('@', 1)[0]?.trim().toLowerCase() ?? '';
   const normalized = bareName.replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
@@ -109,7 +133,7 @@ function normalizeNativeCarrierManifest(
     entrypoints: [],
     required_skill_ids: requiredSkillIds,
     optional_skill_refs: [],
-    presentation: null,
+    presentation: nativePresentation(displayName, pluginPayload),
     profile_surface: null,
     managed_policy_surface: null,
     capability_dependencies: [],
@@ -148,6 +172,7 @@ export function readInstalledPackageDescriptor(entry: InstalledCarrierEntry): In
         JSON.parse(manifestText),
         pathToFileURL(ownerManifestPath).toString(),
       );
+      manifest.presentation ??= installedNativePresentation(entry.sourcePath, manifest.display_name);
     } else {
       if (!entry.installed) return null;
       const resolvedPlugin = resolveAgentPluginManifest([entry.sourcePath]);
@@ -300,6 +325,7 @@ export function withCurrentOwnerProjection(
         access_policy_ref: ownerProjection.manifest.access_policy_ref,
         credential_provider: ownerProjection.manifest.credential_provider,
         source_repo: ownerProjection.manifest.source_repo,
+        publication_channel_admission: ownerProjection.manifest.publication_channel_admission,
         codex_surface: {
           ...descriptor.manifest.codex_surface,
           configured_codex_plugin_carrier: {
@@ -322,11 +348,16 @@ export function withCurrentOwnerProjection(
     && !descriptor.enabled;
   if (projectionCallableWhileDisabled) readiness.projection_callability = 'callable';
   const physicalLock = physicalContentLock(descriptor, ownerProjection);
+  const presentation = ownerProjection.manifest.presentation
+    ?? (descriptor.manifest.presentation
+      ? {
+          ...descriptor.manifest.presentation,
+          display_name_i18n: { und: ownerProjection.manifest.display_name },
+        }
+      : null);
   return {
     ...descriptor,
-    manifest: physicalLock
-      ? { ...ownerProjection.manifest, ...physicalLock }
-      : ownerProjection.manifest,
+    manifest: { ...ownerProjection.manifest, ...physicalLock, presentation },
     manifestPath: ownerProjection.manifestPath,
     manifest_sha256: ownerProjection.manifest_sha256,
     carrier: ownerProjection.carrier,

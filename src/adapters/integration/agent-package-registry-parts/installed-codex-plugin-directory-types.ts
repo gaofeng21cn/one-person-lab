@@ -66,6 +66,7 @@ export type InstalledPackageManifest = Pick<
 > & Partial<Pick<
   AgentPackageManifest,
   | 'source_commit'
+  | 'publication_channel_admission'
   | 'carrier_source_commit'
   | 'plugin_id'
   | 'plugin_payload_manifest_url'

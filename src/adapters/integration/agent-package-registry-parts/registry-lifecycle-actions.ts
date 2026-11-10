@@ -35,6 +35,7 @@ import type {
   AgentPackageRepairInput,
 } from './types.ts';
 import { assertPackageDownloadAllowed } from './package-access.ts';
+import { assertPackageInstallSourceAvailable } from './package-install-source.ts';
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -135,6 +136,7 @@ function nativeLifecycleResult(
   const descriptor = descriptorOverride ?? requireDescriptor(input, action, { installed: action !== 'install' });
   if (['install', 'update', 'repair'].includes(action)) {
     assertPackageDownloadAllowed(descriptor.manifest);
+    assertPackageInstallSourceAvailable(descriptor);
   }
   // The target projection selects new bytes; the installed descriptor owns transport history.
   const installedDescriptor = installedDescriptorOverride ?? descriptor;

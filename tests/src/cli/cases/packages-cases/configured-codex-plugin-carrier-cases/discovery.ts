@@ -244,7 +244,7 @@ test('carrier status does not relabel capability closure Skills as carrier requi
   assert.deepEqual(readback.executor.required_skill_ids, ['third-party-research']);
 });
 
-test('clean Codex state projects current first-party carrier manifests as installable Packages', () => {
+test('clean Codex state projects stable and preview Packages with truthful installation availability', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-clean-package-directory-'));
   const binary = path.join(root, 'fake-codex.mjs');
   fs.writeFileSync(binary, `#!/usr/bin/env node
@@ -261,8 +261,7 @@ process.stdout.write(JSON.stringify({ installed: [], available: [] }));
     const expectedPackageIds = listCurrentPackageProjections()
       .flatMap((projection) => {
         const manifest = normalizePackageManifest(projection.payload, projection.source_ref);
-        return projection.payload.publication_channel_admission !== 'development_only'
-          && manifest.visibility !== 'authorized_only'
+        return manifest.visibility !== 'authorized_only'
           && manifest.configured_codex_plugin_carrier
           && !(manifest.package_role === 'capability_package'
             && manifest.codex_default_exposure === false
@@ -282,12 +281,20 @@ process.stdout.write(JSON.stringify({ installed: [], available: [] }));
       assert.equal(entries.some((entry: any) => entry.package_id === packageId), true, packageId);
     }
     assert.equal(result.opl_agent_packages.installed_package_count, 0);
-    assert.equal(result.opl_agent_packages.directory.installable_package_count, expectedPackageIds.length);
+    assert.equal(result.opl_agent_packages.directory.installable_package_count,
+      entries.filter((entry: any) => entry.installability.installable).length);
     for (const entry of entries) {
       assert.equal(entry.installed, false, entry.package_id);
-      assert.equal(entry.installability.status, 'installable', entry.package_id);
-      assert.equal(entry.recommended_action, 'agent_package_install', entry.package_id);
-      assert.equal(entry.recommended_action_ref?.action_id, 'agent_package_install', entry.package_id);
+      if (entry.installability.installable) {
+        assert.equal(entry.installability.status, 'installable', entry.package_id);
+        assert.equal(entry.recommended_action, 'agent_package_install', entry.package_id);
+        assert.equal(entry.recommended_action_ref?.action_id, 'agent_package_install', entry.package_id);
+      } else {
+        assert.equal(entry.release_channel, 'preview', entry.package_id);
+        assert.equal(entry.installability.status, 'blocked', entry.package_id);
+        assert.equal(entry.installability.reason, 'package_install_source_unavailable', entry.package_id);
+        assert.equal(entry.recommended_action, null, entry.package_id);
+      }
     }
   } finally {
     removeFixtureTree(root);
