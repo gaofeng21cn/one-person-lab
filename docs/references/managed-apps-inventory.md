@@ -23,12 +23,12 @@ opl app state --profile fast --json
 | `mas` | Med Auto Science | `standard_agent` | `med-autoscience` |
 | `med-autocast` | Med Auto Cast | `standard_agent` | `med-autocast` |
 | `obf` | OPL Book Forge | `standard_agent` | `opl-bookforge` |
-| `occ` | OPL Capital Compass | `standard_agent` | 授权私有源 |
+| `occ` | OPL Capital Compass | `standard_agent` | 私有源码 owner；采用 `authorized_only` 访问策略，分发权限以 Package manifest 和 registry access readback 为准 |
 | `oma` | OPL Meta Agent | `standard_agent` | `opl-meta-agent` |
 | `rca` | RedCube AI | `standard_agent` | `redcube-ai` |
 | `opl-flow` | OPL Flow | `workflow_profile` | `opl-flow` |
-| `glkvm-native` | GLKVM Native | `capability_package` | 授权私有源 |
-| `iphone-steward` | iPhone App Steward | `capability_package` | 授权私有源 |
+| `glkvm-native` | GLKVM Native | `capability_package` | 私有源码 owner；分发权限以 Package manifest 和 registry access readback 为准 |
+| `iphone-steward` | iPhone App Steward | `capability_package` | 私有源码 owner；分发权限以 Package manifest 和 registry access readback 为准 |
 | `mac-media-assets` | MAC Media Assets | `capability_package` | `mac-media-assets` |
 | `mas-scholar-skills` | MAS Scholar Skills | `capability_package` | `mas-scholar-skills` |
 | `opl-channel-weixin` | OPL Channel Weixin | `capability_package` | `one-person-lab-app` 的渠道能力 |
