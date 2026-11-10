@@ -67,10 +67,17 @@ function itemActions(item: NativeItem) {
 }
 function projection(snapshot: Snapshot, env: NodeJS.ProcessEnv) {
   const frameworkInstallation = readFrameworkSoftwareInstallation(env);
+  // Membership is verified against the configured OPL tap before caching.
+  // These labels describe maintenance and transport, never action authority.
+  const provenance = {
+    catalog_origin: 'opl' as const,
+    origin_basis: 'owner_projection' as const,
+    catalog_source: { manager: 'homebrew', marketplace_id: TAP, delivery: 'marketplace' as const },
+  };
   const checkedAt = snapshot.inventory_checked_at ? Date.parse(snapshot.inventory_checked_at) : Number.NaN;
   const refreshRequired = !Number.isFinite(checkedAt) || Date.now() - checkedAt >= 60_000
     || (snapshot.inventory_status === 'available' && snapshot.native_items.some(item => item.homebrew_installed === undefined));
-  return { ...snapshot, version_basis: 'homebrew_local_recipes', installation_owner: 'homebrew',
+  return { ...snapshot, ...provenance, version_basis: 'homebrew_local_recipes', installation_owner: 'homebrew',
     inventory_refresh_required: refreshRequired,
     entry_count: snapshot.inventory_status === 'available' ? snapshot.native_items.length : null,
     native_items: snapshot.native_items.map(raw => {
@@ -79,7 +86,7 @@ function projection(snapshot: Snapshot, env: NodeJS.ProcessEnv) {
       if (item.name === `${TAP}/opl` && !item.homebrew_installed && frameworkInstallation) {
         Object.assign(item, frameworkInstallation, { update_status: 'unknown' });
       }
-      return { ...item, ...productPresentation(item), available_actions: itemActions(item) };
+      return { ...item, ...productPresentation(item), ...provenance, available_actions: itemActions(item) };
     }),
   };
 }

@@ -12,7 +12,13 @@
 
 设置 `OPL_STATE_DIR` 后，文件位于该目录下；文件权限由 Framework 以仅用户可读写方式创建。该文件只保存 `source_id`、是否启用、provider/credential handle 引用和最近状态。它不是凭证数据库，也不保存 token 值。应用、CLI 和 Agent 都通过同一 Framework projection 读取它。
 
-默认来源为：
+## 一个目录，多个获取渠道
+
+OPL 软件源是用户认识“我们维护的软件”的统一入口。公开 registry、授权私有源和 Homebrew tap 提供不同获取渠道，合并为同一软件目录；用户从软件条目安装和更新，不必先理解技术载体。公开或私有只改变访问条件，不改变产品分类、状态表达和操作方式。
+
+来源配置与实际管理器仍分别保留。其他渠道的软件位于“其他来源”，沿各自管理器发现和维护；当前目录已接入 Codex 原生插件回读，独立 Skills 沿现有 Skill 管理入口处理，不由插件清单推断其安装或更新状态。它们不会因为也使用插件格式就进入 OPL 自有软件数量。随 Codex 附带的 PDF 等可选扩展也不自动成为运行组件。归属字段和显示规则由 [Package Directory](./package-directory.md#管理范围与产品类型) 持有。
+
+默认 OPL 获取渠道为：
 
 | source ID | 类型 | 默认可见性 | 用途 |
 | --- | --- | --- | --- |
@@ -20,7 +26,7 @@
 | `public-registry:opl` | OPL 公共 Package 源 | `public` | 公开 Agent、Workflow 和 Capability |
 | `github-packages:gaofeng21cn` | GitHub Packages/GHCR | `authorized_only` | 获授权用户的私有 Package，例如 OCC |
 
-Framework 通过 owner projection、native carrier 和当前身份的软件源状态生成统一目录。Agent Package 使用 `opl packages list --json` 及 `app_state.agent_packages.directory.entries`；Homebrew 原生软件使用 `opl sources list --json` 返回的 `software_sources.entries[].native_items`，并进入 App 的“我的应用”和软件源详情。两处 UI 消费同一份投影。Homebrew tap、OCI/GHCR 和 GitHub 源码仍由各自 owner 维护，App 不另建版本注册表。
+Framework 通过 owner projection、native carrier 和当前身份的软件源状态生成统一目录。Agent Package 使用 `opl packages list --json` 及 `app_state.agent_packages.directory.entries`；Homebrew 原生软件使用 `opl sources list --json` 返回的 `software_sources.entries[].native_items`，并进入 App 的 OPL 软件目录和软件源详情。两处 UI 消费同一份投影。Homebrew tap、OCI/GHCR 和 GitHub 源码仍由各自 owner 维护，App 不另建版本注册表。
 
 ## CLI 操作
 
@@ -68,13 +74,14 @@ opl sources disconnect --source-id github-packages:gaofeng21cn --json
 
 尚未安装 Homebrew 时，UI 显示“需要安装 Homebrew”并指向其官方安装入口；Framework 不执行远程安装脚本。已安装 Homebrew 但尚未接入 OPL tap 时，显示“未接入”和接入动作。`setup`、`refresh` 以及安装、更新、卸载都使用现有 App 确认流程。`brew update` 会刷新 Homebrew 管理的配方元数据，影响范围不限于 OPL tap。
 
-Framework 从 `brew tap-info --json` 和 `brew info --json=v2` 读取当前 tap 成员、配方版本与 Homebrew 收据；产品的实际安装还结合受支持的应用 bundle 与 Framework 安装 owner 回读。快速列表读取可重建投影；检查本机清单会重新读取本机配方及安装证据，不执行 `brew update`。只有“刷新来源版本”联网更新配方。`available_version` 表示本机配方中的来源版本，UI 显示“来源版本”，不把未联网刷新的配方称为远端最新版本。
+Framework 从 `brew tap-info --json` 和 `brew info --json=v2` 读取当前 tap 成员、配方版本与 Homebrew 收据；产品的实际安装还结合受支持的应用 bundle 与 Framework 安装 owner 回读。快速列表读取可重建投影；检查本机清单会重新读取本机配方及安装证据，不执行 `brew update`。只有“刷新来源版本”联网更新配方。`available_version` 表示本机配方中的安装目标，主列表显示为“可用版本”，来源详情保留配方依据与检查时间；没有联网刷新证据时不称为远端最新版本。
 
 软件标题使用发布者的正式 `display_name`，技术身份使用稳定的 `item_id` / `name`，二者分开呈现。Homebrew Cask 使用配方声明的正式名称；Formula 没有独立名称字段时，复用已有产品品牌合同中的载体绑定。例如 `gaofeng21cn/one-person-lab/opl` 展示为 **OPL Framework**，命令和安装 ID 仍为 `opl`。品牌合同只提供名称与用途说明，不保存版本或安装状态；修改文案不改变生命周期修订号。目录优先显示当前语言的 `description_i18n`，其余说明来自原发布者。
 
 同一投影位于 `app_state.agent_packages.sources.entries[].native_items`，机器合同见 [Settings Control Center 的 Homebrew 定义](../../contracts/opl-framework/settings-control-center-action-read-model-contract.json)。源投影包含 `inventory_status`（`available`、`not_checked` 或 `unavailable`）、`inventory_reason`、`inventory_checked_at`、`inventory_refresh_required`、`entry_count`、`version_basis=homebrew_local_recipes`、`installation_owner=homebrew` 和 `native_items`。无快照、旧字段或快照过期时，`inventory_refresh_required=true` 让界面复用 `source_check` 重新读取本机状态；快速投影本身不运行 Homebrew。每个原生条目包含：
 
 - `item_id`、`name`、`display_name`、`description` 和 `kind`（`formula` 或 `cask`）；
+- `catalog_origin`、`origin_basis` 和 `catalog_source` 表达维护归属与原生来源；这组展示信息不改变下载权限、安装 owner 或动作授权；
 - `product_id` 归并同一产品的多个配方；`item_id` 继续标识各自安装选项；
 - `installed`、`installed_version` 表示经受支持证据确认的本机产品安装，`homebrew_installed`、`homebrew_installed_version` 单独表示 Homebrew 收据；
 - `installation_owner`、`installation_kind`、`installation_evidence`、`installed_source_revision` 和 `owner_settings_route` 说明实际安装方式、证据及维护入口；

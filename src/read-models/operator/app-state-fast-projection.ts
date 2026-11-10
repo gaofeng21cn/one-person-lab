@@ -324,10 +324,14 @@ export function compactFastAgentPackageDirectory(value: unknown) {
       'app_contributions', 'role_state', 'trust_tier', 'source_explanation', 'manifest_url',
       'installed', 'installed_version', 'selected_version', 'stable_version', 'release_channel',
       'catalog_scope', 'software_type', 'distribution_channel', 'local_installations',
+      'catalog_origin', 'origin_basis',
       'activated', 'exposure', 'codex_visible',
       'installability', 'readiness', 'recommended_action', 'recommended_action_ref',
       'available_actions', 'app_enabled',
     ]),
+    ...(isRecord(entry.catalog_source)
+      ? { catalog_source: pickRecordFields(entry.catalog_source, ['manager', 'marketplace_id', 'delivery']) }
+      : {}),
     ...(isRecord(entry.package_access)
       ? {
           package_access: pickRecordFields(entry.package_access, [

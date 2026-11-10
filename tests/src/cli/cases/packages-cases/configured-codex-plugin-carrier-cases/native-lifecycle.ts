@@ -419,6 +419,53 @@ test('native plugin list memoization separates user and internal carrier homes',
   assert.deepEqual(calls, ['/fixture/user-codex', '/fixture/internal-carrier']);
 });
 
+test('update and repair dry runs preserve duplicate sources while execution removes stale carriers', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-carrier-dry-run-sources-'));
+  const selectedSource = path.join(root, 'selected');
+  const duplicateSource = path.join(root, 'duplicate');
+  writePluginSource(selectedSource, 'selected');
+  writePluginSource(duplicateSource, 'duplicate');
+  const duplicateId = 'third-party-research@historical-carrier';
+  const localDescriptor = { ...descriptor, carrier: { ...descriptor.carrier, marketplaceSource: 'fixture-carrier' } };
+  try {
+    for (const action of ['update', 'repair'] as const) {
+      const calls: string[] = [];
+      let entries = [{ pluginId: pluginSelector, version: '1.0.1', sourcePath: selectedSource, marketplaceSource: 'fixture-carrier' },
+        { pluginId: duplicateId, version: '1.0.0', sourcePath: duplicateSource, marketplaceSource: 'fixture-carrier' }];
+      const runner: CodexPluginCommandRunner = ({ args }) => {
+        const command = args.join(' ');
+        calls.push(command);
+        if (command === 'plugin list --json') return { status: 0, stdout: pluginList(entries), stderr: '', error: null };
+        if (command === 'plugin marketplace list --json') return {
+          status: 0, stderr: '', error: null,
+          stdout: JSON.stringify({ marketplaces: ['fixture-carrier', 'historical-carrier'].map(name => ({ name, marketplaceSource: { sourceType: 'local', source: 'fixture-carrier' } })) }),
+        };
+        if (command === `plugin remove ${duplicateId} --json`) entries = entries.filter(entry => entry.pluginId !== duplicateId);
+        else if (command !== `plugin add ${pluginSelector} --json`
+          && command !== 'plugin marketplace remove historical-carrier --json') {
+          return { status: 1, stdout: '', stderr: `Unexpected mutation: ${command}`, error: null };
+        }
+        return { status: 0, stdout: '{}', stderr: '', error: null };
+      };
+      const env = { HOME: root, CODEX_HOME: path.join(root, action) };
+      const original = structuredClone(entries);
+      runConfiguredCodexPluginCarrier({ descriptor: localDescriptor, action, dryRun: true, env, runner });
+      assert.deepEqual(entries, original);
+      assert.deepEqual(calls, ['plugin list --json']);
+      assert.equal(fs.existsSync(env.CODEX_HOME), false);
+      calls.length = 0;
+      const executed = runConfiguredCodexPluginCarrier({ descriptor: localDescriptor, action, env, runner });
+      assert.equal(executed.status, 'installed');
+      assert.equal(executed.executor.status, 'callable');
+      assert.deepEqual(entries.map(entry => entry.pluginId), [pluginSelector]);
+      assert.ok(calls.includes(`plugin remove ${duplicateId} --json`));
+      assert.ok(calls.includes('plugin marketplace remove historical-carrier --json'));
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('headless internal carrier rejects an enabled same-name source outside its owner selector', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-headless-carrier-duplicate-'));
   const selectedSource = path.join(root, 'selected');

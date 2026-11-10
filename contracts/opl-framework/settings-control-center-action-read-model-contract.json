@@ -91,6 +91,9 @@
     "projection_ref": "app_state.agent_packages.sources.entries[].native_items",
     "cli_projection_ref": "opl sources list --json#software_sources.entries[].native_items",
     "source_fields": [
+      "catalog_origin",
+      "origin_basis",
+      "catalog_source",
       "inventory_status",
       "inventory_reason",
       "inventory_checked_at",
@@ -100,6 +103,9 @@
       "native_items"
     ],
     "native_item_fields": [
+      "catalog_origin",
+      "origin_basis",
+      "catalog_source",
       "item_id",
       "name",
       "display_name",
@@ -140,6 +146,17 @@
     "refresh_changes_recipes_not_installed_software": true,
     "refresh_recipe_scope": "all_homebrew_managed_recipe_metadata",
     "missing_homebrew_behavior": "show_official_installation_entry_without_running_remote_installer",
+    "catalog_provenance": {
+      "catalog_origin": "opl",
+      "origin_basis": "owner_projection",
+      "catalog_source": {
+        "manager": "homebrew",
+        "marketplace_id": "gaofeng21cn/one-person-lab",
+        "delivery": "marketplace"
+      },
+      "classification_basis": "verified_fixed_tap_membership",
+      "changes_lifecycle_authority": false
+    },
     "second_registry": false,
     "second_updater": false
   },

@@ -72,6 +72,9 @@ export function readInstalledSoftwareProducts(env: NodeJS.ProcessEnv = process.e
   const description = 'description_i18n' in product ? product.description_i18n : undefined;
   return [{
     ...installation,
+    catalog_origin: 'opl' as const,
+    origin_basis: 'owner_manifest' as const,
+    catalog_source: { manager: 'opl_framework', delivery: 'local' as const },
     product_id: `github:gaofeng21cn/${product.owner}`,
     product_display_name: product.product_name,
     item_id: 'managed:opl-framework',

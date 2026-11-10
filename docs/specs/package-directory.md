@@ -16,30 +16,35 @@ App 与 Studio 通过 `app_state.agent_packages.directory.entries` 消费 Packag
 
 目录是发现和编排入口，不是第二个安装数据库。安装、启停、修复、更新和卸载仍由 Package owner 与配置的 native carrier 执行；Framework 聚合安全状态，App 负责呈现和 dispatch，执行后重新读取 owner projection。
 
-## 管理对象与分类
+## 管理范围与产品类型
 
-软件目录管理可以独立识别、安装和维护的软件单元。一个 GitHub 仓库可以提供多个软件单元，也可能只保存开发依赖、概念设计或部署配置；仓库数量不是软件数量。软件源提供这些单元的可安装版本，实际安装实例记录它们在本机由谁安装、位于何处，当前生效来源说明某次运行使用哪一份代码。
+软件中心先回答“这是由谁维护的软件”，再回答“它是什么、装了什么、能否更新”。默认范围是 OPL 自己维护的软件，覆盖标准和非标准智能体、应用、能力包及其所有受支持载体；OPL 核心只是其中一组架构关系。
 
-纳管范围覆盖 OPL 核心与整个应用生态，包括 OPL 标准智能体、其他独立智能体、MCP App、桌面/Web/CLI 应用及独立能力包。第一方或第三方、标准 Agent 或非标准 Agent 都不是独立软件的排除条件。
+| 管理范围 | 内容 | 生命周期入口 |
+| --- | --- | --- |
+| OPL 软件 | OPL 自行维护、有独立用途和生命周期的软件；公开与获授权私有软件共用目录 | 统一安装、更新、卸载入口，调用该软件实际安装器 |
+| 其他来源 | Codex 等平台提供的插件、独立 Skills 及其他外部软件 | 按实际来源和管理器展示；使用原平台支持的操作 |
+| 运行组件 | 有明确依赖或内嵌关系、由父产品统一维护的组件 | 显示父产品和依赖关系，从父产品维护入口处理 |
 
-| 对象 | 软件身份与管理方式 |
+插件是一种交付方式。OPL 软件即使通过 Codex 插件安装，也仍在 OPL 软件中；PDF、Documents 等外部可选扩展即使随 Codex 提供，也仍属于其他来源。随附安装只证明交付方式，不能据此把扩展称为运行依赖。只有实际依赖合同支持时才使用 `catalog_scope=host_component`；独立软件或用户扩展使用 `catalog_scope=software`。
+
+产品类型仅提供三个筛选：**智能体、应用、能力包**。标准与非标准智能体采用同一产品类型；工作流按实际产品职责声明。当前 owner 字段为 `presentation.software_type=agent|application|capability`，目录输出 `software_type`。未声明时，只有 `standard_agent` 沿原合同兼容为 `agent`，其余保持 `unknown`。`standard_agent`、`workflow_profile`、`capability_package` 是既有加载和调用合同，放在技术详情中，不决定用户默认分组。MCP App、桌面、Web、CLI、移动端和设备端是入口或运行形态，允许同一产品拥有多种形态。
+
+维护归属由 Framework 投影，App 不按名称、ID 前缀或 publisher 字符串猜测：
+
+| 字段 | 含义 |
 | --- | --- |
-| OPL 标准智能体 | 沿用 `standard_agent` 的领域设计与执行合同，作为独立 Package 管理 |
-| 其他独立智能体 | 按自身 owner 声明的 Agent 身份、调用入口和受支持的载体管理，无需采用 OPL 标准智能体全套实现 |
-| 桌面、Web、CLI 与其他应用 | 按独立产品、安装实例或部署实例管理；不同载体保留各自生命周期 |
-| MCP App / MiniApp | MCP 是调用与协作界面方式。具有独立 identity 和生命周期的产品单列；随父 Package 打开的任务视图归父产品，不重复计数 |
-| 独立能力包与工作流 | 有独立入口、版本及生命周期的能力单列；被其他软件依赖不取消其独立身份 |
-| 宿主内建组件与内部依赖 | 没有独立用户生命周期时，显示在所属产品的系统组件或依赖范围 |
+| `catalog_origin=opl\|external\|unknown` | 软件由 OPL 维护、来自外部，或归属尚未确认 |
+| `origin_basis=owner_projection\|owner_manifest\|native_carrier\|unknown` | 维护归属的声明依据 |
+| `catalog_source.manager` | 该来源的实际管理器，例如 `codex_plugin_manager`、`homebrew`、`opl_framework` |
+| `catalog_source.marketplace_id` | 原生载体回读的市场身份；不存在时省略 |
+| `catalog_source.delivery=host_bundled\|marketplace\|local\|unknown` | 随附、市场来源、本地接入或尚未确认的交付方式 |
 
-Package 的 `standard_agent`、`workflow_profile`、`capability_package` 三个技术角色决定既有加载和调用合同，不构成软件类型全集。`capability_package` 可以承载非标准智能体或应用，界面不能把所有这类 Package 都自动叫作“共享能力”。产品类型采用 owner 的明确声明。当前通用展示字段为可选的 `presentation.software_type=agent|application|capability`，目录输出 `software_type`；标准和非标准智能体均可声明 `agent`，独立 MCP App、桌面/Web/CLI 应用均可声明 `application`。未声明时，仅 `standard_agent` 按原有合同兼容为 `agent`，其他技术角色输出 `unknown`，由界面显示类型未声明；不得把它们强制归入能力包。MCP/CLI/Web 等交互入口与产品类型分别记录。
+OPL 归属优先来自中央 owner projection；已经安装且拥有真实 OPL owner manifest 的软件，也可使用其明确的第一方来源声明。纯原生外部插件从 native carrier 获得归属与来源。未知归属保留在其他来源的待确认范围，不进入 OPL 数量。上述字段仅用于发现与呈现，不授予信任、安装权限或业务授权。
 
-软件准入需要稳定身份、真实入口、受支持的安装/部署载体和状态回读。显式 OPL Package descriptor 是其中一种接入方式，原生应用与其他受支持软件沿用自身描述和生命周期合同。目录的 `catalog_scope=host_component` 仅表示有证据确认随宿主分发或由宿主内建管理的组件。独立原生插件可按 `catalog_scope=software` 纳管，产品类型未声明时保留 `software_type=unknown`；缺少 OPL manifest 本身不构成系统组件或排除依据。概念方案、开发库、网站内容和私人数据按其职责维护；Studio 是 App 的 Application Host 实现，Health Platform 的概念仓不因此成为已交付独立应用。
+一个独立软件对应一个稳定 identity 和一个目录条目。公开与私有、标准与完整安装包、不同版本和多个安装器都是同一条目的来源或安装选项。一个 GitHub 仓库可以提供多个软件，也可能只保存源码、资料、概念或实例配置；仓库本身不是安装单元。Studio 随 OPL App 维护，概念方案、资料和私人数据按各自职责管理。
 
-软件类型、所属范围（OPL 核心、生态扩展、第三方）、依赖关系、交互入口、分发渠道和安装模式是不同维度。目录按需要筛选这些事实，不用某一个技术角色同时代替它们。
-
-可安装资格还要求可验证的来源与当前下载权限。安装管理、运行依赖就绪和领域业务验收分别表达：技术原型、需要外接设备或尚未配置模型的软件，仍使用同一安装、更新、修复和卸载规则。安装来源、权限或载体校验不满足时，保持 `installability.status=blocked` 并给出具体原因。
-
-目录按 descriptor 和 carrier 动态发现；App 不维护 GitHub 仓库白名单。别名和重复来源先归并到稳定 identity。一个产品的标准安装包、完整安装包和其他渠道属于安装选项，不能各算一个产品；真实并存的安装实例仍各自保留版本、渠道、位置和管理者。
+可安装资格仍由稳定身份、实际入口、受支持载体、可验证来源、当前权限和安装回读合同决定。原型软件沿用同一生命周期；尚未满足来源、权限或载体条件时，保留具体原因和当前可用动作。目录按 descriptor 和 carrier 动态发现，不建立 App 自有的软件白名单。
 
 ## 成熟度、分发渠道与安装模式
 
@@ -59,7 +64,7 @@ Package 的 `standard_agent`、`workflow_profile`、`capability_package` 三个�
 
 软件源是“提供哪些可安装版本及如何验证和获取”的入口。统一管理接入可验证的公开和授权私有 Package 来源，以及各产品声明支持的原生应用、CLI、Web/服务部署等来源；OPL 维护的软件与获准的生态/第三方软件遵循同一准入原则。它们按稳定软件 identity 合并，保留各自来源、可安装版本、授权和安装选项。Homebrew tap 是原生来源之一，不复制整个 Homebrew 或任意 GitHub 仓库列表到 OPL 软件目录。
 
-Host 自带或只有内部组件身份的插件来源在系统组件范围回读，由 Host 维护；第三方产品具有独立身份和生命周期时可进入软件目录。用户连接的 Obsidian 资料库、邮箱、GitHub 账号和模型账号属于共享资源或连接，不是软件源；它们通过原有 Connect、知识和账号 owner 管理。
+OPL 的公开 registry、授权私有源和 Homebrew tap 是同一个 OPL 软件目录的获取渠道。其他来源的软件按原管理器独立呈现；独立 Skills 由其原生 Skill 管理入口负责，不把插件列表当作所有 Skills 的清单。只有明确的内嵌或依赖合同才进入运行组件。用户连接的 Obsidian 资料库、邮箱、GitHub 账号和模型账号属于共享资源或连接，通过原有 Connect、知识和账号 owner 管理。
 
 当前来源 provider 实现为公开 registry、受授权的 GitHub Packages/固定源码和 Homebrew tap。其他应用或部署载体按同一合同接入自身 adapter；软件属于某种产品类型不等于其所有载体都已接通。
 
@@ -112,7 +117,7 @@ Homebrew 是 OPL 的一个 carrier，不是 Agent 目录。它适合分发宿主
 
 因此：
 
-- Package Directory 决定“有什么、属于什么角色、是否准入”；
+- Package Directory 决定“有哪些软件、由谁维护、可安装哪个版本”；
 - native carrier 决定“怎么装、怎么更新、怎么回读”；
 - Homebrew 只在它是声明的 carrier 时执行动作；
 - App/Studio 的统一管理页是用户认知入口，owner projection 是机器真相。
@@ -148,15 +153,21 @@ Package 目录的 `installed`、`installed_version` 仍表示配置的原生插�
 
 用途说明来自 owner 的 `presentation.description_i18n`。原生插件没有 owner 展示声明时，依次复用其 `interface.shortDescription` 和 `description`。缺失说明保持未知，不重复软件名称作为占位说明；App 不维护独立名称或说明字典。
 
-列表和详情统一呈现正式名称、简短用途、稳定 ID、发布者、来源、已安装版本、所选来源版本及安装方式。产品成熟度只展示 owner 的明确声明。已安装版本来自实际 carrier，来源版本来自选定 owner projection；二者不可互相补造，未知版本显示尚未获取。访问、安装管理、运行调用和领域验收分别来自各自 owner，不由视觉标签推断。
+主列表固定呈现软件名称与短说明、产品类型、已装版本、可用版本、状态和主操作。稳定 ID 可作为名称下的次级文本；同一产品不因多个来源或多个安装实例重复出现。用户可以按已安装、未安装、可更新和产品类型筛选，计数始终与当前管理范围一致。开发接入计入已安装，并以安装方式标签区分，不另设互斥的软件数量。
+
+详情承载来源、安装器、安装位置、多个安装实例、开发模式、依赖和技术合同。源码提交、GitHub Release、制品摘要等是版本证据，放在相应来源或安装详情中，不作为主列表的并列分类。开发接入是安装方式标签；成熟度只展示 owner 的明确声明。
+
+主状态收敛为“未安装、已安装、可更新、需处理、待检查”。已安装不等于已确认最新；更新必须来自 owner 的明确 currentness。未知安装状态显示待检查，未选择安装的可选软件显示未安装而不是故障。权限、调用就绪和领域资格在详情保留各自事实及处理入口，不为简化主状态而丢失证据。
 
 ## 版本与更新
 
-目录同时投影 `installed_version` 和 `selected_version`/`stable_version`。两者不一致时显示“已安装版本”和“可安装版本”；只有 owner 的 `package_currentness.status=update_available` 才显示“有更新”。`available_actions.update` 只是可执行能力，不等于已经发现新版本。
+目录主列使用“已装版本”和“可用版本”。已装版本来自选定安装实例；可用版本来自当前所选软件源的精确安装目标。多个实例没有唯一选择时，主列提示查看多个安装，详情逐个列出，不拼接多个版本号或擅自选择最高版本。多个交付渠道尚未选定时，也不把全部渠道版本拼成一个版本。
 
-OPL App 的“应用管理”是一级能力，与主对话并列，统一呈现“软件目录、更新、共享资源、软件源”。它可以按角色、状态、来源和更新状态筛选，动作仍按 owner action 执行并在完成后 fresh readback。Settings 中保留的细节页是诊断和深链入口，不能另建一套目录或版本注册中心。
+`installed_version` 与 `selected_version`/`stable_version` 不一致不自动代表可更新。只有 owner 的 `package_currentness.status=update_available` 才显示更新动作；`available_actions.update` 仅表示执行能力。来源落后于本机版本时保留两份事实，不能提示降级；来源未检查或不可访问时保持待检查。GitHub Release、OCI 和固定源码都可以提供可用版本，源码 main 的版本号不能直接代替可获取的安装目标。
 
-公开/私有与访问状态独立于安装状态显示。UI 区分“公开”“私有·已授权”“需要登录”“无读取权限”“授权过期”“访问已撤销”和“尚未检查”，仅使用 owner 提供的明确状态。未选择安装的可选软件计入“可安装”，不计入“需处理”；已安装软件的依赖或访问故障才进入处理入口。更新页只统计当前用户可读取的新版本，不能用无权访问的远端版本制造更新提示。
+OPL App 的“应用管理”是一级能力，与主对话并列，统一呈现“软件目录、更新、共享资源、软件源”。默认展示 OPL 软件，其他来源和运行组件另行查看；产品类型只是筛选。动作仍按 owner action 执行并在完成后 fresh readback。Settings 中保留的细节页是诊断和深链入口，不能另建一套目录或版本注册中心。
+
+公开/私有与访问状态独立于安装状态显示。UI 区分“公开”“私有·已授权”“需要登录”“无读取权限”“授权过期”“访问已撤销”和“尚未检查”，仅使用 owner 提供的明确状态。未选择安装的可选软件归入“未安装”，不计入“需处理”；已安装软件的依赖或访问故障才进入处理入口。更新页只统计当前用户可读取的新版本，不能用无权访问的远端版本制造更新提示。
 
 对 OCI carrier，channel tag 用于发现选定版本，digest 绑定本次下载的具体内容。不可变版本、manifest、payload、source archive 和 content lock 必须保持一致。公开发布用匿名回读证明可获取；私有发布用授权回读证明可获取，并确认匿名访问被拒绝。发布者声明私有时，流水线不能把包改成 public；源代码归档、签名材料和发布附件遵守相同可见性。安装与更新仍由原 carrier 负责，这些校验不另建版本解析器。
 

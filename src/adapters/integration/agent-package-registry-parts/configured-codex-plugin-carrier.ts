@@ -282,7 +282,7 @@ export function runConfiguredCodexPluginCarrier(input: {
     runner,
   });
   if (isConfiguredCarrierReadback(entries)) return entries;
-  if ((input.action === 'update' || input.action === 'repair') && marketplaceSource) {
+  if (dispatchAction && (input.action === 'update' || input.action === 'repair') && marketplaceSource) {
     const selection = configuredPluginSelection({ entries, descriptor: input.descriptor });
       const targetEntry = selection.installedSameName.find((entry) => (
         entry.pluginId === input.descriptor.carrier.pluginId

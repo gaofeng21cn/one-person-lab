@@ -6,10 +6,14 @@ import test from 'node:test';
 
 import {
   readInstalledPackageDescriptor,
+  discoverCurrentOwnerPackageDescriptors,
   withCurrentOwnerProjection,
 } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-descriptor.ts';
 import type { InstalledCarrierEntry } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
 import { normalizePresentation } from '../../src/adapters/integration/agent-package-registry-parts/presentation-normalizers.ts';
+import { directoryFrom } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
+import { compactFastAgentPackageDirectory } from '../../src/read-models/operator/app-state-fast-projection.ts';
+import { isFirstPartyPackage } from '../../src/adapters/integration/agent-package-first-party.ts';
 
 const ownerManifest = JSON.parse(fs.readFileSync(
   new URL('../../contracts/opl-framework/packages/photo-steward.json', import.meta.url), 'utf8',
@@ -61,12 +65,15 @@ test('native plugin discovery preserves the formal name and prefers its interfac
   assert.equal(descriptor.manifest.display_name, 'Native Product');
   assert.equal(descriptor.manifest.version, '1.2.3');
   assert.equal(descriptor.catalog_scope, 'software');
+  assert.equal(descriptor.catalog_origin, 'external');
+  assert.equal(descriptor.origin_basis, 'native_carrier');
+  assert.deepEqual(descriptor.catalog_source, { manager: 'codex_plugin_manager', marketplace_id: 'fixture-marketplace', delivery: 'marketplace' });
   assert.deepEqual(descriptor.manifest.presentation?.description_i18n, {
     und: 'Review prepared documents.',
   });
 });
 
-test('only native plugins distributed from a Host-owned bundle are system components', (t) => {
+test('Host-bundled plugins retain external provenance without becoming runtime dependencies', (t) => {
   const entry = fixture(t, { description: 'Host capability.' });
   const codexRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-host-bundle-'));
   t.after(() => fs.rmSync(codexRoot, { recursive: true, force: true }));
@@ -76,12 +83,68 @@ test('only native plugins distributed from a Host-owned bundle are system compon
   const previous = process.env.CODEX_HOME;
   process.env.CODEX_HOME = codexRoot;
   try {
-    assert.equal(readInstalledPackageDescriptor({ ...entry, sourcePath })?.catalog_scope, 'host_component');
+    const bundled = readInstalledPackageDescriptor({ ...entry, sourcePath, pluginId: 'pdf@openai-primary-runtime' });
+    assert.equal(bundled?.catalog_scope, 'software');
+    assert.equal(bundled?.catalog_origin, 'external');
+    assert.deepEqual(bundled?.catalog_source, { manager: 'codex_plugin_manager', marketplace_id: 'openai-primary-runtime', delivery: 'host_bundled' });
     assert.equal(readInstalledPackageDescriptor(entry)?.catalog_scope, 'software');
   } finally {
     if (previous === undefined) delete process.env.CODEX_HOME;
     else process.env.CODEX_HOME = previous;
   }
+});
+
+test('installed owner declarations admit OPL software without inventing a central release target', (t) => {
+  const entry = fixture(t, { owner: true, description: 'Travel ledger.' });
+  const file = path.join(entry.sourcePath, 'opl-package.json');
+  const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+  manifest.package_id = 'travel-passport';
+  manifest.source = 'first_party_repo_local';
+  manifest.source_repo = 'https://github.com/gaofeng21cn/travel-passport.git';
+  manifest.publisher = 'gaofeng21cn';
+  manifest.codex_surface.configured_codex_plugin_carrier.plugin_selector = 'travel-passport@travel-passport';
+  fs.writeFileSync(file, JSON.stringify(manifest));
+  const installed = readInstalledPackageDescriptor({ ...entry, pluginId: 'travel-passport@travel-passport' });
+  assert.ok(installed);
+  assert.equal(isFirstPartyPackage('travel-passport'), false);
+  assert.equal(installed.catalog_origin, 'opl');
+  assert.equal(installed.origin_basis, 'owner_manifest');
+  const result = directoryFrom({ descriptors: new Map([['travel-passport', installed]]), installed: new Map([['travel-passport', installed]]), access: new Map() }, 'fast');
+  assert.equal(result.entries[0].catalog_origin, 'opl');
+  assert.equal(result.entries[0].selected_version, null);
+  const compact: Record<string, unknown> = compactFastAgentPackageDirectory(result).entries[0];
+  assert.equal(compact.catalog_origin, 'opl');
+  assert.equal(compact.origin_basis, 'owner_manifest');
+  assert.deepEqual(compact.catalog_source, installed.catalog_source);
+});
+
+test('publisher and product names cannot promote an undeclared owner to OPL', (t) => {
+  const entry = fixture(t, { owner: true, description: 'Independent extension.' });
+  const file = path.join(entry.sourcePath, 'opl-package.json');
+  const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+  manifest.package_id = 'fixture-independent';
+  manifest.source = 'custom-source';
+  manifest.publisher = 'one-person-lab';
+  manifest.display_name = 'OPL Independent';
+  fs.writeFileSync(file, JSON.stringify(manifest));
+  assert.equal(readInstalledPackageDescriptor(entry)?.catalog_origin, 'unknown');
+  manifest.source = 'third_party';
+  fs.writeFileSync(file, JSON.stringify(manifest));
+  assert.equal(readInstalledPackageDescriptor(entry)?.catalog_origin, 'external');
+});
+
+test('central owner provenance wins while installation transport and action authority stay intact', (t) => {
+  const installed = readInstalledPackageDescriptor(fixture(t, { owner: true }));
+  const owner = discoverCurrentOwnerPackageDescriptors({ packageId: 'photo-steward' }).get('photo-steward');
+  assert.ok(installed && owner);
+  assert.equal(owner.catalog_origin, 'opl');
+  assert.equal(owner.origin_basis, 'owner_projection');
+  installed.catalog_origin = 'unknown';
+  const merged = withCurrentOwnerProjection(installed, owner);
+  assert.equal(merged.catalog_origin, 'opl');
+  assert.equal(merged.origin_basis, 'owner_projection');
+  assert.deepEqual(merged.catalog_source, installed.catalog_source);
+  assert.equal(merged.carrier_readback.lifecycle_authority, 'carrier_owned');
 });
 
 test('software type is owner-declared independently from technical role and is validated', () => {

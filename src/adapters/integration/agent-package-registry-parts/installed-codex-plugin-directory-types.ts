@@ -2,6 +2,7 @@ import type {
   AgentPackageConfiguredCodexPluginCarrierDescriptor,
   AgentPackageManifest,
 } from './types.ts';
+import type { PackageCatalogProvenance } from './package-catalog-provenance.ts';
 
 export type InstalledCarrierEntry = {
   pluginId: string;
@@ -74,8 +75,8 @@ export type InstalledPackageManifest = Pick<
   | 'content_lock_paths'
 >>;
 
-export type InstalledPackageDescriptor = {
-  /** Independent Packages are software; proven Host-bundled sources are components. */
+export type InstalledPackageDescriptor = Partial<PackageCatalogProvenance> & {
+  /** A dependency contract, not a bundled distribution path, identifies a Host component. */
   catalog_scope?: 'software' | 'host_component';
   manifest: InstalledPackageManifest;
   manifestPath: string;

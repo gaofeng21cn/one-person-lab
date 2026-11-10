@@ -48,9 +48,21 @@ function credentialPresent(source: SoftwareSource) {
 function publicSource(source: SoftwareSource, env: NodeJS.ProcessEnv = process.env) {
   const { credential_handle: _credential, ...safe } = source;
   const inventory = source.provider_id === 'homebrew' ? readHomebrewSourceProjection(env) : null;
+  // Public providers are fixed OPL sources. GitHub may also contain a user's
+  // separately configured namespace; that source does not become OPL-owned.
+  const catalogOrigin = source.provider_id !== 'github_packages' || source.source_id === 'github-packages:gaofeng21cn'
+    ? 'opl' as const : 'external' as const;
   const sourceActions = ['source_list', 'source_check', ...(source.visibility === 'authorized_only' ? ['source_configure', 'source_disconnect'] : []),
     ...(inventory?.inventory_status === 'available' ? ['source_refresh'] : inventory?.inventory_reason === 'homebrew_tap_not_connected' ? ['source_setup'] : [])];
-  return { ...safe, ...(inventory ?? {}), credential_handle_present: credentialPresent(source), available_actions: sourceActionProjection().filter(action => sourceActions.includes(action.action_id)) };
+  return {
+    ...safe,
+    catalog_origin: catalogOrigin,
+    origin_basis: 'owner_projection' as const,
+    catalog_source: { manager: 'opl_packages', marketplace_id: source.source_id, delivery: 'marketplace' as const },
+    ...(inventory ?? {}),
+    credential_handle_present: credentialPresent(source),
+    available_actions: sourceActionProjection().filter(action => sourceActions.includes(action.action_id)),
+  };
 }
 function normalizeOwner(value: string) {
   const owner = value.trim().toLowerCase();

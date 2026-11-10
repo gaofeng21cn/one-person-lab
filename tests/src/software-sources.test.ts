@@ -93,6 +93,23 @@ test('source actions enforce exact safe payloads and count directory entries wit
   assert.equal(state.entries.find(source => source.source_id === 'public-registry:opl')?.available_actions.some(action => action.action_id === 'source_configure'), false);
 }));
 
+test('source provenance distinguishes configured OPL sources from external GitHub namespaces', async () => withState(() => {
+  const initial = listOplSoftwareSources();
+  for (const source of initial.entries) {
+    assert.equal(source.catalog_origin, 'opl');
+    assert.equal(source.origin_basis, 'owner_projection');
+    assert.equal(source.catalog_source.delivery, 'marketplace');
+  }
+  const external = configureOplSoftwareSource({ source_id: 'github-packages:external-maintainer' }).software_source;
+  assert.equal(external.catalog_origin, 'external');
+  assert.equal(external.origin_basis, 'owner_projection');
+  assert.deepEqual(external.catalog_source, {
+    manager: 'opl_packages', marketplace_id: 'github-packages:external-maintainer', delivery: 'marketplace',
+  });
+  assert.equal(external.status, 'unknown');
+  assert.equal(external.credential_handle_present, true);
+}));
+
 test('owner requests refresh for connected stale private sources and bounds retries after access failures', async () => withState(async () => {
   const input = { refreshRequiredSourceIds: [privateId] };
   const needsRefresh = () => listOplSoftwareSources(input).entries.find(source => source.source_id === privateId)!.access_refresh_required;
@@ -137,6 +154,9 @@ test('installed Framework remains visible without a Homebrew catalog or provider
     assert.equal(framework.display_name, 'OPL Framework');
     assert.equal(framework.installed_version, '0.3.12');
     assert.equal(framework.installation_owner, 'opl_framework');
+    assert.equal(framework.catalog_origin, 'opl');
+    assert.equal(framework.origin_basis, 'owner_manifest');
+    assert.deepEqual(framework.catalog_source, { manager: 'opl_framework', delivery: 'local' });
     assert.equal(framework.owner_settings_route, 'updates');
     assert.deepEqual(framework.available_actions, []);
     assert.equal(JSON.stringify(framework).includes(userHome), false);
