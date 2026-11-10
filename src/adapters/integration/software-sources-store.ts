@@ -29,8 +29,8 @@ export function sourceTemplate(sourceId: string): SoftwareSource {
   const match = /^github-packages:([a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?)$/.exec(sourceId);
   if (!match) softwareSourceFailure('software_source_id_invalid', 'Use a known public source or github-packages:<owner>.');
   return {
-    ...common, source_id: sourceId, provider_id: 'github_packages', display_name: `${match[1]} / GitHub Packages`,
-    source_kind: 'registry', source_ref: `https://github.com/${match[1]}?tab=packages`, visibility: 'authorized_only', status: 'signed_out',
+    ...common, source_id: sourceId, provider_id: 'github_packages', display_name: `${match[1]} / GitHub`,
+    source_kind: 'registry', source_ref: `https://github.com/${match[1]}`, visibility: 'authorized_only', status: 'signed_out',
   };
 }
 export function normalizeSoftwareSourceCredential(value: unknown) {

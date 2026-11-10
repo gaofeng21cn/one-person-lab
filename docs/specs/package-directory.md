@@ -40,7 +40,7 @@ GitHub 仓库本身不是可安装软件。一个项目具备稳定 Package iden
 | 第一方目录 projection | [`contracts/opl-framework/packages/`](../../contracts/opl-framework/packages)；[GitHub 入口](https://github.com/gaofeng21cn/one-person-lab/tree/main/contracts/opl-framework/packages) | 从 Package owner descriptor 形成可分发的语义声明；与 native carrier 回读合并，不保存本机安装事实 |
 | 公开 Homebrew tap | [`gaofeng21cn/homebrew-one-person-lab`](https://github.com/gaofeng21cn/homebrew-one-person-lab)；`brew tap gaofeng21cn/one-person-lab` | Formula/Cask、宿主和原生依赖的安装更新 |
 | 公开 Package 制品 | descriptor 的 `publication_ref`；第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-packages/` | 版本、内容摘要和匿名读取回读 |
-| 私有 Package 制品 | descriptor 的 `publication_ref`；第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-private-packages/` | 独立 registry package、包级读取权限与签名校验 |
+| 私有 Package 制品 | 正式渠道为 descriptor 的 `publication_ref`，第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-private-packages/`；预览渠道可声明受保护的 GitHub 仓库及精确 commit | OCI 包级权限与签名校验；仓库预览按精确 repository/commit 校验读取权限与冻结 payload |
 | 当前用户的目录与状态 | `opl packages list --json` 与 `app_state.agent_packages.directory.entries` | 合并当前获准来源与本机 carrier 的安装回读 |
 
 公开仓内只放可公开的目录声明。需要隐藏名称、说明或版本的私有条目由受权限保护的软件源提供，Framework 对当前身份获准的条目做同样的 identity 合并；不能先把完整私有清单放入公开文件，再依赖 UI 隐藏。软件源配置和凭证不进入公共 Package metadata。
@@ -61,6 +61,10 @@ GitHub 仓库本身不是可安装软件。一个项目具备稳定 Package iden
 目录按当前身份和来源权限过滤后计数。尚未获准发现的私有条目不出现，也不暴露其数量；来源本身可以显示登录、授权过期或连接失败状态。已获准读取 metadata 但无制品下载权限的条目可以显示权限问题，安装和更新按钮保持不可用。凭证存在只能证明找到凭证来源，不能证明 registry 已接受它。
 
 安装、检查更新、下载更新和需要读取远端内容的修复均重新校验来源权限。凭证、authorization revision 或账号变更不能沿用其他身份的目录缓存或旧 access decision。卸载与禁用依据本地 carrier 和依赖关系执行，远端撤权不阻止用户管理已经安装的软件。
+
+私有仓库尚未进入正式发行时，可以声明 `visibility=authorized_only`、`publication_channel_admission=development_only`、`credential_provider=github_packages`、`access_policy_ref=github-repository:<owner>/<repo>`，保留 `publication_ref=null`，并提供与冻结 payload 一致的精确 source commit。它继续使用 `github-packages:<owner>` 软件源和同一 credential handle；不新增凭据存储，也不要求将仓库公开或伪造 OCI 发布。Framework 通过 GitHub API 核实该仓库和指定 commit 的读取权限，再从固定 API hostname 的 Contents 路径下载所选文件。凭据仅经标准输入交给请求工具，禁止转发至 raw/codeload 或其他 host，禁止匿名回退；每个文件和完整 payload 仍校验原有 SHA-256 与 content lock。此路径只授予预览管理，不改变正式 OCI 发行与签名要求。
+
+软件源配置仍使用 `opl sources configure --source-id github-packages:<owner> --provider-id github_packages --credential-handle provider:github_packages:gh-cli --json`；`opl sources check --source-id github-packages:<owner> --json` 刷新仓库预览和 OCI 包各自的读取权限。UI 只展示来源、访问状态与原因，不展示 credential handle 的值或令牌。缓存绑定来源修订、仓库、精确 commit 和当前 handle，安装时重新校验；仓库读取权限和 OCI pull 权限互不替代。
 
 撤权后，尚未安装的私有条目从授权目录移除；已安装条目保留必要的本地名称、版本、载体和卸载入口，并显示访问失效。后续远端读取被拒绝，不自动删除本地文件。Registry 撤权不是运行许可证；运行时连接或知识权限的撤销仍由各自 owner 单独执行。
 

@@ -53,7 +53,7 @@ function value(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function defaultRunner(args: string[], input: string, env: NodeJS.ProcessEnv): CommandResult {
+export function runGithubPackageProviderRequest(args: string[], input: string, env: NodeJS.ProcessEnv): CommandResult {
   const curl = process.platform === 'win32' ? 'curl.exe' : 'curl';
   const result = spawnSync(curl, args, {
     input,
@@ -106,6 +106,10 @@ function dockerCredential(env: NodeJS.ProcessEnv, credentialHandle: string): Pac
 function githubCliCredential(env: NodeJS.ProcessEnv, credentialHandle: string): PackageRegistryCredential | null {
   const token = value(nativeCredentialCommand('gh', ['auth', 'token', '--hostname', 'github.com'], env));
   return token ? normalizeCredential('x-access-token', token, credentialHandle) : null;
+}
+
+export function isGithubPackagesCredentialHandle(handle: string | null | undefined): handle is string {
+  return Boolean(handle && CREDENTIAL_HANDLES.has(handle));
 }
 
 function defaultCredentialReader(env: NodeJS.ProcessEnv, credentialHandle?: string | null): PackageRegistryCredential | null {
@@ -193,7 +197,7 @@ export function verifyGithubPackagesAccess(input: PackageRegistryAccessProviderI
     return baseReadback(input, 'unknown', 'package_access_policy_binding_mismatch');
   }
   const env = input.env ?? process.env;
-  if (!input.credentialHandle || !CREDENTIAL_HANDLES.has(input.credentialHandle)) {
+  if (!isGithubPackagesCredentialHandle(input.credentialHandle)) {
     return baseReadback(input, 'signed_out', 'package_access_credential_required');
   }
   const credentialReader = input.credentialReader ?? defaultCredentialReader;
@@ -204,7 +208,7 @@ export function verifyGithubPackagesAccess(input: PackageRegistryAccessProviderI
     ? normalizeCredential(selectedCredential.username, selectedCredential.token, selectedCredential.credential_handle)
     : null;
   if (!credential) return baseReadback(input, 'signed_out', 'package_access_credential_required');
-  const runner = input.commandRunner ?? ((args: string[], content: string) => defaultRunner(args, content, env));
+  const runner = input.commandRunner ?? ((args: string[], content: string) => runGithubPackageProviderRequest(args, content, env));
   const now = input.now ?? (() => new Date());
   const scope = encodeURIComponent(`repository:${parsed.repository}:pull`);
   const tokenResult = runner([

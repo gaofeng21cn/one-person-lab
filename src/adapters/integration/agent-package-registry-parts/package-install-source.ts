@@ -1,6 +1,7 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { configuredPackagePayloadAvailable } from './configured-codex-plugin-carrier-payload.ts';
 import type { InstalledPackageDescriptor } from './installed-codex-plugin-directory-types.ts';
+import { githubPreviewSourceIdentity } from './package-github-preview-contract.ts';
 
 export function packageReleaseChannel(descriptor: InstalledPackageDescriptor) {
   return descriptor.manifest.publication_channel_admission === 'development_only'
@@ -11,7 +12,8 @@ export function packageInstallSourceAvailable(descriptor: InstalledPackageDescri
   // Protected publication keeps its existing native-carrier contract. Preview
   // admission additionally requires the pinned payload used by that carrier.
   if (packageReleaseChannel(descriptor) !== 'preview') return true;
-  if (descriptor.manifest.visibility === 'authorized_only' && !descriptor.carrier.publicationRef) return false;
+  if (descriptor.manifest.visibility === 'authorized_only' && !descriptor.carrier.publicationRef
+    && !githubPreviewSourceIdentity(descriptor.manifest)) return false;
   return configuredPackagePayloadAvailable({
     packageId: descriptor.manifest.package_id,
     pluginId: descriptor.carrier.carrier.pluginId,

@@ -373,7 +373,7 @@ export function installPayloadMarketplace(input: {
   });
   if (projection.ownerManifest.visibility === 'authorized_only' && !hostedSource) {
     return localReadbackFailure('private_package_transport_unavailable',
-      'Private Packages require their authenticated OCI source artifact.', { package_id: input.packageId });
+      'Private Packages require their declared authenticated source.', { package_id: input.packageId });
   }
   const archive = hostedSource ?? materializeGithubArchive({
     packageId: input.packageId,

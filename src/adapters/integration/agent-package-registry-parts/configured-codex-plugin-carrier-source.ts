@@ -12,6 +12,7 @@ import { localReadbackFailure, runConfiguredDownloadWithTransientRetry, stringVa
 import { credentialForGithubPackages } from './package-registry-access-provider.ts';
 import { assertPackageDownloadAllowed, packageAccessSubject } from './package-access.ts';
 import { verifyPrivatePackagePublication } from './private-package-publication.ts';
+import { acquireGithubPreviewSource } from './configured-github-preview-source.ts';
 
 const PREFIX = 'application/vnd.onepersonlab.package.';
 const MAX_BYTES = 128 * 1024 * 1024;
@@ -220,6 +221,8 @@ export function acquireHostedPackageSource(input: {
   env: NodeJS.ProcessEnv;
 }) {
   const owner = input.ownerManifest;
+  const githubPreview = acquireGithubPreviewSource(input);
+  if (githubPreview) return githubPreview;
   const developerSource = acquireDeveloperCheckoutSource(input);
   if (developerSource) return developerSource;
   const standardAgent = owner.surface_kind === 'opl_agent_package_manifest.v1';
