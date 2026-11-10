@@ -7,6 +7,12 @@ on:
       OWNER_SOURCE_READ_TOKEN:
         description: Optional token with Contents Read access to the selected private Package owner repository
         required: false
+      PRIVATE_PACKAGE_SIGNING_KEY:
+        description: Cosign key for authorized-only Package attestations; held in the protected release environment
+        required: false
+      PRIVATE_PACKAGE_SIGNING_PASSWORD:
+        description: Password for the protected private Package signing key
+        required: false
     inputs:
       package_id:
         description: Canonical Package id
@@ -110,6 +116,19 @@ jobs:
           set -euo pipefail
           [[ "$PACKAGE_ID" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || { echo "::error::Invalid Package id"; exit 2; }
           manifest="contracts/opl-framework/packages/${PACKAGE_ID}.json"
+          visibility="$(jq -er '.visibility // "public" | select(. == "public" or . == "authorized_only")' "$manifest")"
+          access_policy_ref="$(jq -r '.access_policy_ref // empty' "$manifest")"
+          credential_provider="$(jq -r '.credential_provider // empty' "$manifest")"
+          [[ -z "$access_policy_ref" || "$access_policy_ref" =~ ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$ ]]
+          [[ -z "$credential_provider" || "$credential_provider" =~ ^[a-z0-9][a-z0-9._-]{0,63}$ ]]
+          if [ "$visibility" = authorized_only ]; then
+            [[ "$access_policy_ref" =~ ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$ ]]
+            [[ "$credential_provider" =~ ^[a-z0-9][a-z0-9._-]{0,63}$ ]]
+          fi
+          # Only non-secret references cross steps; credentials stay with the publisher.
+          echo "PACKAGE_VISIBILITY=$visibility" >> "$GITHUB_ENV"
+          echo "PACKAGE_ACCESS_POLICY_REF=$access_policy_ref" >> "$GITHUB_ENV"
+          echo "PACKAGE_CREDENTIAL_PROVIDER=$credential_provider" >> "$GITHUB_ENV"
           source_repo="$(jq -er .source_repo "$manifest")"
           if [[ "$source_repo" =~ ^https://github\.com/([^/]+)/([^/]+)\.git$ ]]; then
             owner_repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
@@ -129,6 +148,10 @@ jobs:
           PUBLIC_SOURCE_ARCHIVE_COMMIT: ${{ vars[steps.package-source.outputs.public_source_approval_var] }}
         run: |
           set -euo pipefail
+          # A private source archive remains private. Exact checkout and Package
+          # projection verification below establish the selected source identity.
+          if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then exit 0; fi
+          [ "$PACKAGE_VISIBILITY" = public ]
           response="$(mktemp)"
           trap 'rm -f "$response"' EXIT
           status="$(curl --silent --show-error --location --max-time 20 \
@@ -230,12 +253,30 @@ jobs:
             echo "PACKAGE_IMAGE=$image"
             echo "IMMUTABLE_REF=${image}:${EXPECTED_PACKAGE_VERSION}"
             echo "LATEST_STABLE_REF=${image}:latest-stable"
-            echo "OCI_SOURCE_URL=${source_repo%.git}"
+            if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
+              # Keep private owner repository names out of public workflow logs
+              # and public OCI metadata. The signed manifest layer retains the
+              # owner source for authorized consumers and digest verification.
+              echo "OCI_SOURCE_URL=https://github.com/${GITHUB_REPOSITORY}"
+            else
+              echo "OCI_SOURCE_URL=${source_repo%.git}"
+            fi
           } >> "$GITHUB_ENV"
 
       - name: Authenticate protected Package publisher
         shell: bash
         run: echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Check private Package signing credentials
+        if: env.PACKAGE_VISIBILITY == 'authorized_only'
+        shell: bash
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.PRIVATE_PACKAGE_SIGNING_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.PRIVATE_PACKAGE_SIGNING_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [ -n "$COSIGN_PRIVATE_KEY" ] || { echo '::error::Private Package signing key is required.'; exit 1; }
+          cosign public-key --key env://COSIGN_PRIVATE_KEY > "$RUNNER_TEMP/private-package-signing.pub"
 
       - name: Resolve predecessor with the protected Package credential
         if: inputs.expected_latest_stable_predecessor == 'resolve-authenticated'
@@ -259,22 +300,53 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.PRIVATE_PACKAGE_SIGNING_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.PRIVATE_PACKAGE_SIGNING_PASSWORD }}
         run: |
           set -euo pipefail
-          ensure_public_package() {
+          inspect_package_visibility() {
             local package_name="$1"
-            local encoded readback attempt
+            local phase="$2"
+            local encoded readback attempt visibility response status
             encoded="$(jq -rn --arg value "$package_name" '$value|@uri')"
+            response="$(mktemp)"
             for attempt in {1..24}; do
-              if readback="$(gh api "/users/${PACKAGES_OWNER}/packages/container/${encoded}" 2>/dev/null)" \
-                && jq -e --arg repo "$GITHUB_REPOSITORY" \
-                  '.visibility == "public" and .repository.full_name == $repo' <<<"$readback" >/dev/null; then
+              status="$(curl --silent --show-error --max-time 20 \
+                -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' \
+                --output "$response" --write-out '%{http_code}' \
+                "https://api.github.com/users/${PACKAGES_OWNER}/packages/container/${encoded}")"
+              if [ "$status" = 200 ]; then
+                readback="$(cat "$response")"
+                jq -e --arg repo "$GITHUB_REPOSITORY" '.repository.full_name == $repo' <<<"$readback" >/dev/null
+                visibility="$(jq -er .visibility <<<"$readback")"
+                if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
+                  if [ "$visibility" != private ]; then
+                    echo '::error::Private Package publication cannot use an existing public or internal registry package.'
+                    rm -f "$response"
+                    return 1
+                  fi
+                  rm -f "$response"
+                  return 0
+                fi
+                if [ "$visibility" = public ]; then rm -f "$response"; return 0; fi
+              elif [ "$status" = 404 ] && [ "$phase" = before ]; then
+                # New GHCR packages start private. The authenticated immutable
+                # preflight and post-push metadata check remain mandatory.
+                rm -f "$response"
                 return 0
+              elif [ "$status" != 404 ]; then
+                echo "::error::Registry access metadata could not be verified (HTTP ${status})."
+                rm -f "$response"
+                return 1
               fi
-              gh api --method PATCH "/user/packages/container/${encoded}/visibility" \
-                -f visibility=public >/dev/null 2>&1 || true
+              if [ "$phase" = before ]; then rm -f "$response"; return 0; fi
+              if [ "$PACKAGE_VISIBILITY" = public ]; then
+                gh api --method PATCH "/user/packages/container/${encoded}/visibility" \
+                  -f visibility=public >/dev/null 2>&1 || true
+              fi
               if [ "$attempt" -eq 24 ]; then
-                echo "::error::GHCR package is not public or is not associated with ${GITHUB_REPOSITORY}: ${package_name}"
+                echo '::error::Registry Package visibility does not match the owner manifest.'
+                rm -f "$response"
                 return 1
               fi
               sleep 5
@@ -289,6 +361,11 @@ jobs:
             --layer "${PACKAGE_ROOT}/package-manifest.json=application/vnd.onepersonlab.package.manifest.v1+json"
             --layer "${PACKAGE_ROOT}/payload-manifest.json=application/vnd.onepersonlab.package.payload.v1+json"
           )
+          readback_args=(--anonymous)
+          if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
+            readback_args=(--require-anonymous-denied)
+          fi
+          inspect_package_visibility "one-person-lab-packages/${PACKAGE_ID}" before
 
           published_manifest_digest=""
           immutable_preflight="$(node scripts/oci-publication-preflight.mjs --ref "$IMMUTABLE_REF" "${preflight_args[@]}")"
@@ -327,12 +404,12 @@ jobs:
             fi
           fi
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-          ensure_public_package "one-person-lab-packages/${PACKAGE_ID}"
+          inspect_package_visibility "one-person-lab-packages/${PACKAGE_ID}" after
 
           node scripts/oci-publication-preflight.mjs --ref "$IMMUTABLE_REF" "${preflight_args[@]}" \
-            --verify-only --expected-digest "$digest" --anonymous
+            --verify-only --expected-digest "$digest" "${readback_args[@]}"
           node scripts/oci-publication-preflight.mjs --ref "${PACKAGE_IMAGE}@${digest}" "${preflight_args[@]}" \
-            --verify-only --expected-digest "$digest" --anonymous
+            --verify-only --expected-digest "$digest" "${readback_args[@]}"
 
           read_stable_digest() {
             local output status normalized
@@ -367,12 +444,12 @@ jobs:
             stable_result="advanced"
             if [ "$tag_status" -ne 0 ]; then
               node scripts/oci-publication-preflight.mjs --ref "$LATEST_STABLE_REF" "${preflight_args[@]}" \
-                --verify-only --expected-digest "$digest" --anonymous
+                --verify-only --expected-digest "$digest" "${readback_args[@]}"
               stable_result="reconciled_after_unknown"
             fi
           fi
           node scripts/oci-publication-preflight.mjs --ref "$LATEST_STABLE_REF" "${preflight_args[@]}" \
-            --verify-only --expected-digest "$digest" --anonymous
+            --verify-only --expected-digest "$digest" "${readback_args[@]}"
 
           archive_digest="sha256:$(sha256sum "$PACKAGE_ARCHIVE" | cut -d' ' -f1)"
           manifest_digest="${published_manifest_digest:-sha256:$(sha256sum "$PACKAGE_ROOT/package-manifest.json" | cut -d' ' -f1)}"
@@ -424,19 +501,27 @@ jobs:
               sleep "$((attempt * 10))"
             done
           }
-          retry cosign attest --yes --timeout 60s --oidc-provider github-actions \
-            --type slsaprovenance1 --predicate "$provenance" "$subject"
-          retry cosign attest --yes --timeout 60s --oidc-provider github-actions \
-            --type spdxjson --predicate "$sbom" "$subject"
+          attest_access_args=(--oidc-provider github-actions)
+          verify_access_args=(--certificate-identity "$certificate_identity" --certificate-oidc-issuer https://token.actions.githubusercontent.com)
+          signing_key_digest=""
+          if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
+            # Private provenance must not enter a public transparency log.
+            # The registry keeps the signed attestations behind Package read access.
+            attest_access_args=(--key env://COSIGN_PRIVATE_KEY --tlog-upload=false)
+            verify_access_args=(--key "$RUNNER_TEMP/private-package-signing.pub" --insecure-ignore-tlog)
+            signing_key_digest="sha256:$(sha256sum "$RUNNER_TEMP/private-package-signing.pub" | cut -d' ' -f1)"
+          fi
+          retry cosign attest --yes --timeout 60s \
+            "${attest_access_args[@]}" --type slsaprovenance1 --predicate "$provenance" "$subject"
+          retry cosign attest --yes --timeout 60s \
+            "${attest_access_args[@]}" --type spdxjson --predicate "$sbom" "$subject"
           retry cosign verify-attestation --timeout 60s \
+            "${verify_access_args[@]}" \
             --type slsaprovenance1 \
-            --certificate-identity "$certificate_identity" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "$subject" >/dev/null
           retry cosign verify-attestation --timeout 60s \
+            "${verify_access_args[@]}" \
             --type spdxjson \
-            --certificate-identity "$certificate_identity" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "$subject" >/dev/null
           content_lock="$(jq -r '.content_lock.digest // empty' "$PACKAGE_ROOT/payload-manifest.json")"
           if [ -z "$content_lock" ]; then
@@ -462,6 +547,10 @@ jobs:
             --arg certificate_identity "$certificate_identity" \
             --arg repository "$GITHUB_REPOSITORY" \
             --arg publication_environment "$PUBLICATION_ENVIRONMENT" \
+            --arg visibility "$PACKAGE_VISIBILITY" \
+            --arg access_policy_ref "$PACKAGE_ACCESS_POLICY_REF" \
+            --arg credential_provider "$PACKAGE_CREDENTIAL_PROVIDER" \
+            --arg signing_key_digest "$signing_key_digest" \
             --arg run_id "$GITHUB_RUN_ID" \
             --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
             '{surface_kind:"opl_package_publication_receipt.v1",status:"published_and_verified",
@@ -471,16 +560,41 @@ jobs:
               payload_manifest_digest:$payload_digest,content_lock:($content_lock | if length > 0 then . else null end)},
               immutable:{ref:$immutable_ref,digest:$digest,result:$immutable_result},
               latest_stable:{ref:$latest_ref,predecessor_digest:$predecessor,digest:$digest,result:$stable_result},
+              access:{visibility:$visibility,
+                access_policy_ref:($access_policy_ref | if length > 0 then . else null end),
+                credential_provider:($credential_provider | if length > 0 then . else null end),
+                registry_visibility_verified:true},
               attestations:{status:"verified",subject:$subject,
-                certificate_identity:$certificate_identity,types:["slsaprovenance1","spdxjson"]},
-              anonymous_readback:{status:"verified",refs:[$immutable_ref,($immutable_ref|split(":")[0:-1]|join(":"))+"@"+$digest,$latest_ref]},
+                certificate_identity:(if $visibility == "public" then $certificate_identity else null end),
+                signing_key_digest:($signing_key_digest | if length > 0 then . else null end),
+                types:["slsaprovenance1","spdxjson"],
+                transparency_log: (if $visibility == "public" then "verified" else "not_uploaded_private" end)},
+              anonymous_readback:{status:(if $visibility == "public" then "verified" else "denied_verified" end),refs:[$immutable_ref,($immutable_ref|split(":")[0:-1]|join(":"))+"@"+$digest,$latest_ref]},
+              authenticated_readback:{status:(if $visibility == "authorized_only" then "verified" else "not_required" end)},
               mutation_boundary:{registry_atomic_cas_claim:false,
-              controls:["protected_environment","single_package_concurrency","double_predecessor_inspect","anonymous_readback"]},
+              controls:["protected_environment","single_package_concurrency","double_predecessor_inspect","manifest_visibility",
+                (if $visibility == "public" then "anonymous_readback" else "authenticated_readback_and_anonymous_denial" end)]},
               workflow:{repository:$repository,run_id:$run_id,run_attempt:$run_attempt,environment:$publication_environment}}' \
             > "$PACKAGE_ROOT/publication-receipt.json"
           (cd "$PACKAGE_ROOT" && sha256sum publication-receipt.json > publication-receipt.sha256)
+          if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
+            # Keep private receipts inside the same access-controlled registry;
+            # Actions artifacts inherit this public Framework repository's access.
+            receipt_result="$(oras attach --format json \
+              --artifact-type application/vnd.onepersonlab.package.receipt.v1 \
+              --annotation "org.opencontainers.image.source=${OCI_SOURCE_URL}" \
+              "$subject" \
+              "${PACKAGE_ROOT}/publication-receipt.json:application/vnd.onepersonlab.package.receipt.v1+json")"
+            receipt_digest="$(jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))' <<<"$receipt_result")"
+            node scripts/oci-publication-preflight.mjs --ref "${PACKAGE_IMAGE}@${receipt_digest}" \
+              --artifact-type application/vnd.onepersonlab.package.receipt.v1 \
+              --source-url "$OCI_SOURCE_URL" \
+              --layer "${PACKAGE_ROOT}/publication-receipt.json=application/vnd.onepersonlab.package.receipt.v1+json" \
+              --verify-only --expected-digest "$receipt_digest" --require-anonymous-denied
+          fi
 
       - name: Upload Package publication receipt
+        if: env.PACKAGE_VISIBILITY == 'public'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: opl-package-publication-${{ inputs.package_id }}-${{ inputs.expected_package_version }}-${{ inputs.publication_request_id }}

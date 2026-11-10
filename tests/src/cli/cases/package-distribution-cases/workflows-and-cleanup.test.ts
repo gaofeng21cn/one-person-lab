@@ -289,7 +289,7 @@ test('single-Package payload materialization binds exact physical archive proven
   }
 });
 
-test('source publication requires public source or exact private-source approval before checkout', () => {
+test('public source publication requires approval while private publication retains private source', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
   const stepScript = (name: string): string => workflow.split(`      - name: ${name}\n`)[1]!
     .split('\n      - name: ')[0]!.split('        run: |\n')[1]!
@@ -305,7 +305,7 @@ test('source publication requires public source or exact private-source approval
     const output = path.join(root, 'outputs');
     const selector = spawnSync('bash', ['-c', stepScript('Resolve exact Package owner source')], {
       cwd: root, encoding: 'utf8',
-      env: { ...process.env, PACKAGE_ID: 'example-agent', GITHUB_OUTPUT: output },
+      env: { ...process.env, PACKAGE_ID: 'example-agent', GITHUB_OUTPUT: output, GITHUB_ENV: path.join(root, 'env') },
     });
     assert.equal(selector.status, 0, selector.stderr);
     assert.match(fs.readFileSync(output, 'utf8'), /owner_source_key_secret=OWNER_SOURCE_READ_KEY_EXAMPLE_PRIVATE_AGENT\n/);
@@ -328,6 +328,8 @@ exit "$TEST_EXIT"
       { status: '403', approval: sourceCommit, allowed: false },
       { status: '502', approval: sourceCommit, allowed: false },
       { status: '200', approval: sourceCommit, exit: '28', allowed: false },
+      { status: '404', approval: '', visibility: 'authorized_only', allowed: true },
+      { status: '404', approval: '', visibility: 'invalid', allowed: false },
     ];
     for (const scenario of cases) {
       const result = spawnSync('bash', ['-c', stepScript('Verify source archive publication visibility')], {
@@ -335,6 +337,7 @@ exit "$TEST_EXIT"
           ...process.env, PATH: `${root}${path.delimiter}${process.env.PATH}`,
           OWNER_REPO: 'example/private-agent', EXPECTED_OWNER_SOURCE_COMMIT: sourceCommit,
           PUBLIC_SOURCE_ARCHIVE_COMMIT: scenario.approval,
+          PACKAGE_VISIBILITY: scenario.visibility ?? 'public',
           TEST_STATUS: scenario.status, TEST_EXIT: scenario.exit ?? '0',
           TEST_RESPONSE: JSON.stringify({ private: scenario.private ?? false, full_name: scenario.repo ?? 'example/private-agent' }),
         },
@@ -442,11 +445,14 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.match(workflow, /registry_atomic_cas_claim:false/);
   assert.match(workflow, /if \[ "\$GITHUB_EVENT_NAME" = schedule \]; then[\s\S]*PUBLICATION_ENVIRONMENT.*release-stable-automated/);
   assert.match(workflow, /environment:\$publication_environment/);
-  assert.match(workflow, /--expected-digest "\$digest" --anonymous/g);
-  assert.match(workflow, /ensure_public_package "one-person-lab-packages\/\$\{PACKAGE_ID\}"/);
-  assert.match(workflow, /visibility == "public" and \.repository\.full_name == \$repo/);
-  assert.ok(workflow.indexOf('ensure_public_package "one-person-lab-packages/${PACKAGE_ID}"')
-    < workflow.indexOf('--verify-only --expected-digest "$digest" --anonymous'));
+  assert.match(workflow, /--expected-digest "\$digest"/g);
+  assert.match(workflow, /PACKAGE_VISIBILITY/);
+  assert.match(workflow, /"\$visibility" != private/);
+  assert.match(workflow, /--require-anonymous-denied/);
+  assert.match(workflow, /manifest_visibility/);
+  assert.match(workflow, /authenticated_readback/);
+  assert.match(workflow, /denied_verified/);
+  assert.doesNotMatch(workflow, /ensure_public_package/);
   assert.match(workflow, /cosign attest[\s\S]*--type slsaprovenance1/);
   assert.match(workflow, /cosign attest[\s\S]*--type spdxjson/);
   assert.equal(workflow.match(/cosign verify-attestation/g)?.length, 2);
@@ -610,4 +616,50 @@ test('GHCR package cleanup dry-runs active package-channel packages', () => {
   assert.deepEqual(frameworkCore.candidates.map((candidate: { id: number }) => candidate.id), [34]);
   const missing = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-packages/oma');
   assert.equal(missing.status, 'not_found_or_unreadable');
+});
+
+
+test('private Package visibility is checked before upload and cannot be promoted to public', () => {
+  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
+  const publishStep = workflow.split('      - name: Publish immutable Package and advance its channel\n')[1]!
+    .split('\n      - name: ')[0]!;
+  const script = publishStep.split('        run: |\n')[1]!
+    .split('\n').map((line) => line.slice(10)).join('\n');
+  const visibilityFunction = script.slice(0, script.indexOf('\n\npreflight_args=('));
+  assert.ok(visibilityFunction.includes('inspect_package_visibility()'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-private-publish-'));
+  try {
+    fs.writeFileSync(path.join(root, 'curl'), '#!/bin/sh\nwhile [ "$#" -gt 0 ]; do if [ "$1" = --output ]; then shift; printf "%s" "$VISIBILITY_RESPONSE" > "$1"; fi; shift; done; printf "%s" "$VISIBILITY_HTTP_STATUS"\n', { mode: 0o755 });
+    fs.writeFileSync(path.join(root, 'gh'), '#!/bin/sh\necho called >> "$GH_CALLS"\n', { mode: 0o755 });
+    const scenarios = [
+      { visibility: 'private', status: '200', phase: 'before', allowed: true },
+      { visibility: 'private', status: '200', phase: 'after', allowed: true },
+      { visibility: 'public', status: '200', phase: 'before', allowed: false },
+      { visibility: 'internal', status: '200', phase: 'before', allowed: false },
+      { visibility: 'private', status: '200', phase: 'before', repository: 'other/publisher', allowed: false },
+      { visibility: 'private', status: '404', phase: 'before', allowed: true },
+      { visibility: 'private', status: '403', phase: 'before', allowed: false },
+    ];
+    for (const scenario of scenarios) {
+      const result = spawnSync('bash', ['-c', `${visibilityFunction}\ninspect_package_visibility one-person-lab-packages/example ${scenario.phase}`], {
+        cwd: root, encoding: 'utf8', env: {
+          ...process.env, PATH: `${root}${path.delimiter}${process.env.PATH}`,
+          PACKAGE_VISIBILITY: 'authorized_only', PACKAGES_OWNER: 'example', GITHUB_REPOSITORY: 'example/framework',
+          GH_TOKEN: 'fixture-secret-never-output', GH_CALLS: path.join(root, 'gh-calls'),
+          VISIBILITY_HTTP_STATUS: scenario.status,
+          VISIBILITY_RESPONSE: JSON.stringify({ visibility: scenario.visibility, repository: { full_name: scenario.repository ?? 'example/framework' } }),
+        },
+      });
+      assert.equal(result.status === 0, scenario.allowed, `${JSON.stringify(scenario)}\n${result.stderr}`);
+      assert.doesNotMatch(result.stdout + result.stderr, /fixture-secret-never-output/);
+    }
+    assert.equal(fs.existsSync(path.join(root, 'gh-calls')), false, 'private publication never calls a visibility mutation');
+    assert.ok(script.indexOf('inspect_package_visibility "one-person-lab-packages/${PACKAGE_ID}" before') < script.indexOf('oras push --format json'));
+    assert.match(workflow, /if: env\.PACKAGE_VISIBILITY == 'public'\n        uses: actions\/upload-artifact/);
+    assert.match(workflow, /--key env:\/\/COSIGN_PRIVATE_KEY --tlog-upload=false/);
+    assert.match(workflow, /--key "\$RUNNER_TEMP\/private-package-signing\.pub" --insecure-ignore-tlog/);
+    assert.match(workflow, /oras attach --format json/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
