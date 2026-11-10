@@ -11,11 +11,13 @@ import {
 import {
   createOplRelayMailboxConnectionProvider,
   importOplRelayMailboxConnection,
+  listOplRelayMailboxConnections,
 } from '../../src/adapters/integration/relay-mailbox-provider.ts';
 import type {
   RelayConnectCommandRunner,
   RelayConnectRequest,
 } from '../../src/adapters/integration/relay-mailbox-provider.ts';
+import { listOplConnectionAuthorization } from '../../src/adapters/integration/connection-composition.ts';
 import { listOplConnections } from '../../src/adapters/integration/connection-registry.ts';
 
 const mailboxRef = `relay-mailbox://${'a'.repeat(64)}`;
@@ -216,4 +218,43 @@ test('maps Relay unknown-after-dispatch without retrying a local draft request',
       && !error.message.includes('private-token-value'));
     assert.equal(invokeCalls, 1);
   });
+});
+
+
+test('settings authorization lists selectable Relay mailboxes through the local owner without secret fields', async () => {
+  await withState(() => {
+    const calls: RelayConnectRequest[] = [];
+    const projection = listOplConnectionAuthorization({
+      descriptorDiscovery: { discover: () => new Map() },
+      relayRunner: ({ request }) => {
+        calls.push(request);
+        return { status: 0, stdout: JSON.stringify({ ok: true, disposition: 'completed', result: { mailboxes: [{
+          mailbox_ref: mailboxRef, email: 'owner@example.test', account_id: 'work', revision,
+          password: 'must-not-leak', credential_handle: 'must-not-leak',
+        }] } }) };
+      },
+    });
+    assert.equal(projection.available_connections_status, 'available');
+    assert.deepEqual(projection.available_connections, [{
+      mailbox_ref: mailboxRef, display_name: 'owner@example.test', account_label: 'owner@example.test', provider_type: 'opl-relay',
+    }]);
+    assert.deepEqual(calls.map((call) => call.operation), ['list']);
+    assert.equal(JSON.stringify(projection).includes('must-not-leak'), false);
+    assert.deepEqual(listOplConnections().connections, []);
+  });
+});
+
+test('unavailable or malformed Relay mailbox metadata is distinct from an empty configured list', () => {
+  const unavailable = listOplRelayMailboxConnections({ runner: () => ({ status: 1, stdout: 'private details' }) });
+  assert.equal(unavailable.available_connections_status, 'unavailable');
+  assert.deepEqual(unavailable.available_connections, []);
+  assert.equal(JSON.stringify(unavailable).includes('private details'), false);
+  const empty = listOplRelayMailboxConnections({ runner: () => ({ status: 0, stdout: JSON.stringify({
+    ok: true, disposition: 'completed', result: { mailboxes: [] },
+  }) }) });
+  assert.equal(empty.available_connections_status, 'available');
+  const malformed = listOplRelayMailboxConnections({ runner: () => ({ status: 0, stdout: JSON.stringify({
+    ok: true, disposition: 'completed', result: { mailboxes: [{ mailbox_ref: '/private/account', email: 'user@example.test' }] },
+  }) }) });
+  assert.equal(malformed.available_connections_status, 'unavailable');
 });

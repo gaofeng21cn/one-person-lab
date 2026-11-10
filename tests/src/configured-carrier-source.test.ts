@@ -28,6 +28,23 @@ test('capability packages without OCI publication retain pinned payload transpor
   assert.throws(() => acquireHostedPackageSource({ packageId: owner.package_id, ownerManifest: owner, payload: {}, env: {} }), /declared owner OCI channel/);
 });
 
+test('hosted source acquisition binds visibility and access policy to the matching public or private namespace', () => {
+  const owner = {
+    surface_kind: 'opl_agent_package_manifest.v1', package_id: 'fixture', version: '1.0.0',
+    visibility: 'authorized_only', access_policy_ref: 'github-package:owner/one-person-lab-private-packages/fixture',
+    credential_provider: 'github_packages', source_repo: 'https://github.com/owner/fixture.git',
+    codex_surface: { configured_codex_plugin_carrier: { marketplace_source: 'owner/fixture',
+      publication_ref: 'ghcr.io/owner/one-person-lab-private-packages/fixture:latest-stable' } },
+  };
+  const acquire = (selected: typeof owner) => acquireHostedPackageSource({ packageId: 'fixture', ownerManifest: selected, payload: {}, env: {} });
+  assert.throws(() => acquire(owner), /Package download access is unavailable/);
+  assert.throws(() => acquire({ ...owner, visibility: 'public' }), /declared owner OCI channel/);
+  assert.throws(() => acquire({ ...owner, access_policy_ref: 'github-package:owner/one-person-lab-private-packages/other' }), /access policy must bind/);
+  assert.throws(() => acquire({ ...owner, codex_surface: { configured_codex_plugin_carrier: {
+    ...owner.codex_surface.configured_codex_plugin_carrier, publication_ref: 'ghcr.io/owner/one-person-lab-packages/fixture:latest-stable',
+  } } }), /declared owner OCI channel/);
+});
+
 function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'nested-identity' | 'escaping-root' | 'root-identity' | 'unicode-path', capability = false) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-acquisition-')));
   const source = path.join(root, 'archive/fixture');

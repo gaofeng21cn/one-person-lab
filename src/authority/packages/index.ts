@@ -116,3 +116,4 @@ export * from './standard-domain-agent-scaffold.ts';
 export * from './standard-domain-agent-stage-operating-principles.ts';
 export * from './standard-domain-agent-stage-pack-v2.ts';
 export * from './standard-domain-agent-stage-quality-route-conformance.ts';
+export { KNOWLEDGE_SOURCE_ACTION_IDS, knowledgeSourceActionCatalog, executeKnowledgeSourceAction, listKnowledgeSourceManagement } from './knowledge-source-management.ts';

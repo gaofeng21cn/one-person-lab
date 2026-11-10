@@ -37,7 +37,8 @@ GitHub 仓库本身不是可安装软件。一个项目只有在具备稳定 Pac
 | --- | --- | --- |
 | 第一方目录 projection | [`contracts/opl-framework/packages/`](../../contracts/opl-framework/packages)；[GitHub 入口](https://github.com/gaofeng21cn/one-person-lab/tree/main/contracts/opl-framework/packages) | 从 Package owner descriptor 形成可分发的语义声明；与 native carrier 回读合并，不保存本机安装事实 |
 | 公开 Homebrew tap | [`gaofeng21cn/homebrew-one-person-lab`](https://github.com/gaofeng21cn/homebrew-one-person-lab)；`brew tap gaofeng21cn/one-person-lab` | Formula/Cask、宿主和原生依赖的安装更新 |
-| Package 制品 | descriptor 的 `publication_ref`；第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-packages/` | 版本、内容摘要和包级读取权限 |
+| 公开 Package 制品 | descriptor 的 `publication_ref`；第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-packages/` | 版本、内容摘要和匿名读取回读 |
+| 私有 Package 制品 | descriptor 的 `publication_ref`；第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-private-packages/` | 独立 registry package、包级读取权限与签名校验 |
 | 当前用户的目录与状态 | `opl packages list --json` 与 `app_state.agent_packages.directory.entries` | 合并当前获准来源与本机 carrier 的安装回读 |
 
 公开仓内只放可公开的目录声明。需要隐藏名称、说明或版本的私有条目由受权限保护的软件源提供，Framework 对当前身份获准的条目做同样的 identity 合并；不能先把完整私有清单放入公开文件，再依赖 UI 隐藏。软件源配置和凭证不进入公共 Package metadata。
@@ -85,6 +86,10 @@ OPL App 的“应用管理”是一级能力，与主对话并列，统一呈现
 公开/私有与访问状态独立于安装状态显示。UI 区分“公开”“私有·已授权”“需要登录”“无读取权限”“授权过期”“访问已撤销”和“尚未检查”，仅使用 owner 提供的明确状态。未选择安装的可选软件计入“可安装”，不计入“需处理”；已安装软件的依赖或访问故障才进入处理入口。更新页只统计当前用户可读取的新版本，不能用无权访问的远端版本制造更新提示。
 
 对 OCI carrier，channel tag 用于发现选定版本，digest 绑定本次下载的具体内容。不可变版本、manifest、payload、source archive 和 content lock 必须保持一致。公开发布用匿名回读证明可获取；私有发布用授权回读证明可获取，并确认匿名访问被拒绝。发布者声明私有时，流水线不能把包改成 public；源代码归档、签名材料和发布附件遵守相同可见性。安装与更新仍由原 carrier 负责，这些校验不另建版本解析器。
+
+第一方发布与下载按 `visibility` 固定选择 namespace：`public` 使用 `one-person-lab-packages`，`authorized_only` 使用 `one-person-lab-private-packages`。访问策略引用必须与私有制品路径一致。OCC 保持 `Package ID=occ`，其新授权分发入口为 `ghcr.io/gaofeng21cn/one-person-lab-private-packages/occ:latest-stable`；旧 `one-person-lab-packages/occ` 中已公开的历史版本保留只读，不作为私有安装回退源，自动清理也不删除这些历史制品。
+
+私有入口配置不代表已经发布。实际发行仍要求 owner 的 annotated version tag、Framework projection/payload 与精确 source commit 一致，发布账号具备 Package 写权限，安装账号具备 Package 读权限，并配置受保护签名密钥及 Host 可信公钥。凭证和签名配置不足时保留不可下载状态，不借用历史公开制品填补。
 
 ## 新项目接入顺序
 

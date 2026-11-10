@@ -10,7 +10,7 @@ import { Ajv2020 } from 'ajv/dist/2020.js';
 
 import { parseJsonText } from './script-json-boundary.mjs';
 import { packageContentDigest } from '../src/kernel/package-content-lock.ts';
-import { materializeArchiveBackedPackagePayload } from '../src/adapters/integration/package-distribution.ts';
+import { materializeArchiveBackedPackagePayload, packageRegistryNamespace } from '../src/adapters/integration/package-distribution.ts';
 
 import { packageSourceArchiveDigest, readPackageSourceArchiveEntries, packageSourceArchiveMembersStayWithinRoot, extractPackageSourceArchive } from '../src/adapters/integration/agent-package-registry-parts/package-source-archive.ts';
 
@@ -271,7 +271,9 @@ function main() {
     throw new Error('Payload input identity does not match the exact Package publication selection.');
   }
   const source = sourceCoordinates(payload);
-  const expectedArtifactRef = `ghcr.io/${source.owner}/one-person-lab-packages/${options.packageId}:${options.packageVersion}`;
+  const visibility = packageManifest.visibility ?? 'public';
+  const namespace = packageRegistryNamespace(visibility);
+  const expectedArtifactRef = `ghcr.io/${source.owner}/${namespace}/${options.packageId}:${options.packageVersion}`;
   if (options.artifactRef !== expectedArtifactRef) {
     throw new Error(`Artifact ref does not match the exact owner Package selection: expected=${expectedArtifactRef}`);
   }
@@ -291,6 +293,7 @@ function main() {
     sourceArtifactRef: options.artifactRef,
     archiveSha256: actualArchiveSha256,
     archiveRoot: options.archiveRoot,
+    visibility,
   });
   assertSchema(validate, materialized, 'Materialized payload');
   verifyArchiveEntries(options.archive, materialized, packageManifest, options);

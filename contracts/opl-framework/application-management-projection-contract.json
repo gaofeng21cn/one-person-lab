@@ -14,32 +14,54 @@
       "owner_settings_route",
       "relation_kind"
     ],
-    "optional_fields": ["authorization", "revision", "freshness", "readiness", "detail_ref", "reason"],
+    "optional_fields": ["owner", "source_id", "scope_ids", "connection_id", "provider_type", "account_label", "capability_ids", "action_ids", "authorization", "revision", "freshness", "readiness", "detail_ref", "reason"],
     "resource_kinds": ["knowledge_source", "connection", "model", "base_capability"],
     "status_values": ["ready", "attention", "unknown"],
     "relation_kind_values": ["required", "optional", "configured"],
     "metadata_policy": {
       "authorization": "owner-reported status and bounded consumer/grant counts; unknown when no authorization relation is projected",
       "connection_grant_aggregation": "an active granted row for the same consumer supersedes historical stale or revoked rows; stale or revoked rows without an active grant remain attention",
+      "connection_identity": "safe connection id, provider type, and account label from the existing registry and authorization owner; never a credential handle or provider payload",
+      "capability_ids": "only capabilities of active granted rows; does not replace per-consumer authorization checks",
+      "action_ids": "only existing actions declared by the current owner read model; the consumer does not infer capabilities from the resource kind",
       "revision": "owner security revision identity when provided; otherwise unknown; never include credential material",
       "freshness": "owner observed or tested timestamp/status when provided; write time alone is not freshness",
       "readiness": "owner or resource status summary with safe reason code only"
     },
     "metadata_shapes": {
       "authorization": {
-        "status_values": ["authorized", "attention", "unknown"],
-        "count_fields": ["consumer_count", "grant_count"]
+        "status_values": [
+          "authorized",
+          "attention",
+          "unknown"
+        ],
+        "count_fields": [
+          "consumer_count",
+          "grant_count"
+        ]
       },
       "revision": {
-        "status_values": ["current", "stale", "unknown"],
+        "status_values": [
+          "current",
+          "stale",
+          "unknown"
+        ],
         "identity_field": "security_revision"
       },
       "freshness": {
-        "status_values": ["fresh", "stale", "unknown"],
+        "status_values": [
+          "fresh",
+          "stale",
+          "unknown"
+        ],
         "timestamp_field": "observed_at"
       },
       "readiness": {
-        "status_values": ["ready", "attention", "unknown"],
+        "status_values": [
+          "ready",
+          "attention",
+          "unknown"
+        ],
         "reason_field": "reason"
       }
     },
@@ -60,11 +82,20 @@
     "full": "same owner truth with complete safe resource rows"
   },
   "knowledge_policy": {
-    "source": "knowledge-owner authorized source projection only",
+    "source": "Profile/Workspace owner registry and explicit bindings via knowledge-source-management",
     "body": "never projected",
     "workspace_binding_alone_is_not_a_knowledge_source": true,
     "unprojected_owner_source": "omit",
-    "consumer_must_not_infer_ready": true
+    "consumer_must_not_infer_ready": true,
+    "management_projection": "app_state.settings_control_center.app_settings_read_model.resource_sources",
+    "management_contract_ref": "contracts/opl-framework/knowledge-source-management-contract.json"
+  },
+  "connection_and_model_policy": {
+    "connection_owner": "opl-connect",
+    "model_account_owner": "account-and-access",
+    "gateway_account": "shown through model access only, not duplicated as a generic connection",
+    "model_access_ready": "true maps to ready, false maps to attention, absent maps to unknown",
+    "credential_material": "retained by the existing provider owner; shared resources expose safe references and owner actions only"
   },
   "action_boundary": {
     "state_surface": "opl app state --profile fast|full --json",

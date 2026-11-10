@@ -2,14 +2,16 @@ import { readSoftwareSource, readSoftwareSources, softwareSourceFailure, writeSo
 import { assertCredentialHandleOnlyPayload } from './connection-registry-parts/credential-handle.ts';
 import { normalizeSoftwareSourceCredential } from './software-sources-store.ts';
 import { verifySoftwareSourceCredential } from './software-sources-verification.ts';
+import { executeHomebrewSourceAction, HOMEBREW_ACTION_IDS, homebrewActionCatalog, readHomebrewSourceProjection, refreshHomebrewSource, type HomebrewActionId } from './homebrew-source.ts';
 import type {
   SoftwareSource, SoftwareSourceConfigureInput, SoftwareSourceDependencies,
   SoftwareSourceProviderId,
 } from './software-sources-types.ts';
 
-export type SoftwareSourceActionId = 'source_list' | 'source_check' | 'source_configure' | 'source_disconnect';
+export type SoftwareSourceActionId = 'source_list' | 'source_check' | 'source_configure' | 'source_disconnect' | HomebrewActionId;
 export const SOFTWARE_SOURCE_ACTION_IDS: readonly SoftwareSourceActionId[] = [
   'source_list', 'source_check', 'source_configure', 'source_disconnect',
+  ...HOMEBREW_ACTION_IDS,
 ];
 
 const SOURCE_ACTIONS = [
@@ -37,14 +39,17 @@ const SOURCE_ACTIONS = [
 ] as const;
 
 function sourceActionProjection() {
-  return SOURCE_ACTIONS.map(action => ({ ...action }));
+  return [...SOURCE_ACTIONS.map(action => ({ ...action })), ...homebrewActionCatalog()];
 }
 function credentialPresent(source: SoftwareSource) {
   return Boolean(source.credential_handle);
 }
 function publicSource(source: SoftwareSource) {
   const { credential_handle: _credential, ...safe } = source;
-  return { ...safe, credential_handle_present: credentialPresent(source), available_actions: sourceActionProjection().filter(action => source.visibility === 'authorized_only' || ['source_list', 'source_check'].includes(action.action_id)) };
+  const inventory = source.provider_id === 'homebrew' ? readHomebrewSourceProjection() : null;
+  const sourceActions = ['source_list', 'source_check', ...(source.visibility === 'authorized_only' ? ['source_configure', 'source_disconnect'] : []),
+    ...(inventory?.inventory_status === 'available' ? ['source_refresh'] : inventory?.inventory_reason === 'homebrew_tap_not_connected' ? ['source_setup'] : [])];
+  return { ...safe, ...(inventory ?? {}), credential_handle_present: credentialPresent(source), available_actions: sourceActionProjection().filter(action => sourceActions.includes(action.action_id)) };
 }
 function normalizeOwner(value: string) {
   const owner = value.trim().toLowerCase();
@@ -63,6 +68,10 @@ function sourceOwner(sourceRepo?: string | null, publicationRef?: string | null)
 function nowIso(deps: SoftwareSourceDependencies) { return (deps.now ?? (() => new Date()))().toISOString(); }
 export async function checkOplSoftwareSource(sourceId: string, deps: SoftwareSourceDependencies = {}) {
   const source = readSoftwareSource(sourceId);
+  if (source.provider_id === 'homebrew') {
+    const inventory = await refreshHomebrewSource({ env: deps.env, now: deps.now, run: deps.homebrewRun });
+    return writeSoftwareSource({ ...source, status: inventory.inventory_status === 'available' ? 'public' : 'unknown', verified_at: nowIso(deps), verification_reason: inventory.inventory_reason ?? 'homebrew_native_inventory_verified' }, source.revision);
+  }
   const credentialReader = deps.verify ? undefined : (deps.credentialReader
     ?? (await import('./agent-package-registry-parts/package-registry-access-provider.ts')).credentialForGithubPackages);
   const result = deps.verify ? await deps.verify(source) : await verifySoftwareSourceCredential(source, deps.env ?? process.env, {
@@ -95,11 +104,11 @@ export function listOplSoftwareSources(input: { packageEntries?: readonly unknow
     if (source.provider_id === 'homebrew') return false;
     return sourceId === source.source_id;
   }).length;
-  const safeEntries = sources.map(source => ({ ...publicSource(source), entry_count: input.packageEntries === undefined || source.provider_id === 'homebrew' ? null : entryCount(source) }));
+  const safeEntries = sources.map(source => ({ ...publicSource(source), entry_count: source.provider_id === 'homebrew' ? readHomebrewSourceProjection().entry_count : input.packageEntries === undefined ? null : entryCount(source) }));
   return {
     surface_kind: 'opl_software_sources_projection.v1', status: safeEntries.some(source => source.enabled && source.credential_handle_present && ['expired', 'forbidden', 'revoked', 'unknown'].includes(source.status)) ? 'attention_required' : 'available',
     entries: safeEntries,
-    authority_boundary: { owner: 'opl_framework', credential_values_exposed: false, installation_mutation_owner: 'opl_packages' },
+    authority_boundary: { owner: 'opl_framework', credential_values_exposed: false, installation_mutation_owner: 'native_carrier', package_installation_owner: 'opl_packages', native_software_installation_owner: 'homebrew' },
   };
 }
 export function configureOplSoftwareSource(input: SoftwareSourceConfigureInput) {
@@ -127,7 +136,7 @@ export function resolvePackageSourceCredentialProvider(sourceRepo?: string | nul
 }
 export function executeOplSoftwareSourceAction(actionId: SoftwareSourceActionId, payload: Record<string, unknown>, deps: SoftwareSourceDependencies = {}) {
   assertCredentialHandleOnlyPayload(payload);
-  const allowed = actionId === 'source_list' ? [] : actionId === 'source_configure' ? ['source_id', 'provider_id', 'credential_handle', 'enabled'] : ['source_id'];
+  const allowed = actionId === 'source_list' ? [] : actionId === 'source_configure' ? ['source_id', 'provider_id', 'credential_handle', 'enabled'] : ['source_install', 'source_update', 'source_uninstall'].includes(actionId) ? ['source_id', 'item_id', 'expected_revision'] : ['source_id'];
   if (Object.keys(payload).some(field => !allowed.includes(field))) softwareSourceFailure('software_source_payload_invalid', 'Software source action contains unsupported fields.');
   if (payload.enabled !== undefined && typeof payload.enabled !== 'boolean') softwareSourceFailure('software_source_payload_invalid', 'enabled must be a boolean.');
   if (actionId === 'source_list') {
@@ -136,6 +145,11 @@ export function executeOplSoftwareSourceAction(actionId: SoftwareSourceActionId,
   }
   const sourceId = payload.source_id;
   if (typeof sourceId !== 'string' || !sourceId.trim()) softwareSourceFailure('software_source_id_required', 'source_id is required.');
+  if (HOMEBREW_ACTION_IDS.includes(actionId as HomebrewActionId)) return executeHomebrewSourceAction(actionId as HomebrewActionId, { ...payload, source_id: sourceId.trim() }, { env: deps.env, now: deps.now, run: deps.homebrewRun }).then(result => {
+    const source = readSoftwareSource(sourceId.trim());
+    const verified = writeSoftwareSource({ ...source, status: result.native_inventory.inventory_status === 'available' ? 'public' : 'unknown', verified_at: result.native_inventory.inventory_checked_at, verification_reason: result.native_inventory.inventory_reason ?? 'homebrew_native_inventory_verified' }, source.revision);
+    return { ...result, software_source: publicSource(verified) };
+  });
   if (actionId === 'source_check') return checkOplSoftwareSource(sourceId.trim(), deps).then(source => ({ software_source: publicSource(source) }));
   if (actionId === 'source_configure') {
     const result = configureOplSoftwareSource({ source_id: sourceId.trim(), provider_id: payload.provider_id as SoftwareSourceProviderId | undefined, credential_handle: payload.credential_handle as string | null | undefined, enabled: payload.enabled === undefined ? undefined : payload.enabled === true });

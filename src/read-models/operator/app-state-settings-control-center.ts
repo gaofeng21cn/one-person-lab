@@ -1,3 +1,5 @@
+import { listKnowledgeSourceManagement } from '../../authority/packages/index.ts';
+import { listWorkspaceBindings } from '../../authority/workspace/public/app-state.ts';
 import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
 import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';
 import { listOplConnections, readOplGatewayAccount } from '../../adapters/integration/public/app-state.ts';
@@ -656,6 +658,7 @@ function buildAppSettingsReadModel(
       shell_must_not_infer_api_key_or_workspace_service_truth: true,
       shell_must_not_execute_unlisted_actions: true,
     },
+    resource_sources: listKnowledgeSourceManagement({ workspaceBindings: listWorkspaceBindings() }),
     connections: {
       surface_kind: 'opl_settings_connections_read_model.v1',
       source_ref: 'app_state.settings_control_center.connection_registry',

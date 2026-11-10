@@ -23,6 +23,9 @@ export function verifyPrivatePackagePublication(input: {
       package_id: input.packageId, failure_code: 'private_package_publication_unverified', reason,
     });
   };
+  const subject = /^ghcr\.io\/([a-z0-9._-]+\/one-person-lab-private-packages\/([a-z0-9.-]+))@sha256:[0-9a-f]{64}$/.exec(input.subject);
+  if (!subject || subject[2] !== input.packageId
+    || input.accessPolicyRef !== `github-package:${subject[1]}`) return fail('private_package_namespace_or_policy_invalid');
   const publicKey = input.env.OPL_PACKAGE_SIGNING_PUBLIC_KEY?.trim();
   if (!publicKey || !path.isAbsolute(publicKey)) return fail('trusted_signing_key_required');
   try { if (!fs.statSync(publicKey).isFile()) return fail('trusted_signing_key_unavailable'); }

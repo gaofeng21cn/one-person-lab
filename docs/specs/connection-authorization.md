@@ -10,7 +10,7 @@ Connect 统一管理连接引用、消费者请求、逐项 grant、provider 路
 
 ## 使用流程
 
-1. 用户在 App 的“资源与连接”添加/选择连接；现有注册表继续只保存 owner-backed credential handle。
+1. 用户在 App“应用管理 → 共享资源”的连接区添加/选择连接；设置页复用同一管理组件与 owner action。现有注册表继续只保存 owner-backed credential handle。
 2. Mini App/Agent 的 Host 从 Framework fresh descriptor discovery 解析已安装且可调用的 Package；调用方不能通过页面字段声明自己的消费者身份。
 3. Consumer 从该 Host 绑定的 `connect` 上下文列出脱敏连接，并为 provider 声明的 capability 创建待批准请求。
 4. App 用户批准精确的连接与 capability 集合。批准动作读取 owner projection 并由 Framework 写入 grant；Mini App 请求本身不能自授。
@@ -24,6 +24,8 @@ Framework Host 可从 `createOplConnectionAuthorizationService({ descriptorDisco
 作用域对象只提供 `listConnections()`、`requestAccess(connectionId, capabilityIds)` 与 `invoke(connectionId, capabilityId, input)`。`requestAccess` 只产生待审批记录。管理请求和 grant 使用 owner action；Studio 页面与通用 App action 不接收 token，也不能写 grant 外的身份。
 
 Provider adapter 是 Framework 显式装配的可信 owner 接口，以 connection type 选择。它接收 connection id、capability id 和 bounded input，在其 owner 边界读取凭据并返回 bounded result；连接注册表不会把 handle 解引用后传入 adapter。适配器缺失、连接更新或授权失效均 fail closed。Framework 不自动重试，特别是写调用的派发结果未知时。
+
+共享资源中的连接行只投影连接 ID、provider、账户显示名、授权 capability 与 owner 声明的操作。连接检查、停用和移除继续调用现有 Connect action；移除 Connect 引用不删除 Relay 邮箱账户。模型账号显示在模型访问区并由 Account & Access 管理，内置 Gateway 不再重复显示为通用连接。模型访问尚未被 owner 回读时保持“未知”，不能据缺失字段判断失败。
 
 ## 运行边界
 
@@ -44,6 +46,8 @@ Connect 的统一能力采用三层模型，而不是建立一个把所有密钥
 品牌模块沿用现有 owner：Pack 在 manifest 中声明 provider 与 capability/risk，Atlas 只索引需求和可用性，App/Console 在“资源与连接”展示连接、请求、授权和撤销，Studio Host 注入绑定的 `connect` context，Relay 等 provider 继续执行凭据访问和业务确认。Gateway 的模型账号仍由 Account & Access 管理；OPL Link 的传输凭据仍由其 provider adapter 管理。Ledger、Runway 和 Stagecraft 只传 grant/invocation 元数据，不传 token。
 
 ## Relay 参考消费路径
+
+Relay 已配置邮箱通过既有 `connect list` 本地只读操作进入连接选择器。Framework 仅保留 `mailbox_ref`、显示名、账户标签及 provider；不读取 token、密码或 Keychain，不发起邮箱联网探测。读取最多等待 1.5 秒、最多接受 100 条记录。`available_connections_status=available` 且列表为空表示 Relay 本地尚无配置；`unavailable` 表示本次无法读取，UI 应引导恢复 Relay 后刷新。选择已有邮箱再执行导入才创建 Connect 引用，读取列表不会导入或批准任何授权。
 
 Relay 专用 MCP App 的 `connection_*` 操作与“已连接邮箱”界面共用同一个领域服务。该服务从自身 installed carrier 激活固定的 `opl-relay` consumer；列出连接只返回脱敏字段，请求授权只创建 pending request，查找、读取和本地回复分别映射到 `mailbox.search`、`mailbox.read`、`draft.create`。已有 grant 可直接调用，无需再次配置邮箱。
 

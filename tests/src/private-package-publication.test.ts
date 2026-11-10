@@ -6,16 +6,29 @@ import test from 'node:test';
 import type { spawnSync } from 'node:child_process';
 import { verifyPrivatePackagePublication } from '../../src/adapters/integration/agent-package-registry-parts/private-package-publication.ts';
 
-const subject = `ghcr.io/example/one-person-lab-packages/private-agent@sha256:${'a'.repeat(64)}`;
+const subject = `ghcr.io/example/one-person-lab-private-packages/private-agent@sha256:${'a'.repeat(64)}`;
 const base = {
   subject, packageId: 'private-agent', version: '1.0.0', sourceRepo: 'https://github.com/example/private-agent.git',
-  sourceCommit: 'b'.repeat(40), accessPolicyRef: 'github-package:example/one-person-lab-packages/private-agent',
+  sourceCommit: 'b'.repeat(40), accessPolicyRef: 'github-package:example/one-person-lab-private-packages/private-agent',
   credential: { provider_id: 'github_packages' as const, credential_handle: 'provider:github_packages:gh-cli', username: 'user', token: 'secret-test-token' },
 };
 
 test('private publication requires a Host-pinned key before invoking tools', () => {
   assert.throws(() => verifyPrivatePackagePublication({ ...base, env: {}, run: (() => { throw new Error('must not run'); }) as typeof spawnSync }),
     (error: unknown) => typeof error === 'object' && error !== null && 'details' in error && (error.details as Record<string, unknown>).reason === 'trusted_signing_key_required');
+});
+
+test('private publication rejects public subjects and cross-package policies before invoking tools', () => {
+  for (const selected of [
+    { ...base, subject: base.subject.replace('one-person-lab-private-packages', 'one-person-lab-packages') },
+    { ...base, accessPolicyRef: base.accessPolicyRef.replace('/private-agent', '/other') },
+    { ...base, packageId: 'other' },
+  ]) {
+    assert.throws(() => verifyPrivatePackagePublication({ ...selected, env: {},
+      run: (() => { throw new Error('must not run'); }) as typeof spawnSync }),
+    (error: unknown) => typeof error === 'object' && error !== null && 'details' in error
+      && (error.details as Record<string, unknown>).reason === 'private_package_namespace_or_policy_invalid');
+  }
 });
 
 test('private publication forwards credentials only through a protected temporary config and removes it', (t) => {

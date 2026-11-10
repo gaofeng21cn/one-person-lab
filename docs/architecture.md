@@ -30,7 +30,7 @@ Framework 在公开 `app_state.application_management` 提供一个 refs-only �
 
 该目录与安装边界的完整人读说明见 [Package Directory 与统一安装管理](./specs/package-directory.md)。
 
-共享资源视图把已存在的 OPL Base 能力、连接授权、模型访问和知识 owner 已授权来源放在同一认知入口；知识 owner 尚未提供安全 projection 时保持空列表，由 App 的知识空状态说明来源尚未返回。资源的安装、启停、授权、更新和修复仍由原 owner 的既有 `app action` 负责。它不引入第二个凭证库、知识正文库或 updater。
+共享资源视图把已存在的 OPL Base 能力、连接授权、模型访问和知识 owner 已授权来源放在同一认知入口；知识 owner 从已选 Profile 和工作区来源绑定生成安全 projection，App 通过同一 owner action 配置、检查、授权和断开来源。未配置与配置失效分别呈现，不从路径或空列表推断已就绪。资源的安装、启停、授权、更新和修复仍由原 owner 的既有 `app action` 负责。它不引入第二个凭证库、知识正文库或 updater。
 
 资源行可带 owner 提供的授权、修订、安全版本、freshness 和 readiness 摘要；缺少明确 owner 字段时保持 `unknown`，不能从写入时间、工作区绑定或消费者存在性推断“当前”或“已就绪”。
 

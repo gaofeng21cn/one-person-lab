@@ -9,6 +9,7 @@ import type {
 import {
   createOplRelayMailboxConnectionProvider,
   importOplRelayMailboxConnection,
+  listOplRelayMailboxConnections,
 } from './relay-mailbox-provider.ts';
 import type { RelayConnectCommandRunner } from './relay-mailbox-provider.ts';
 import {
@@ -58,8 +59,13 @@ export function importCloudConnection(
   return importOplCloudConnection(cloudRef, { binary: options.cloudBinary, runner: options.cloudRunner });
 }
 
-export function listOplConnectionAuthorization() {
-  return createDefaultConnectionAuthorizationService().listProjection();
+export function listOplConnectionAuthorization(
+  options: DefaultConnectionAuthorizationOptions = {},
+) {
+  return {
+    ...createDefaultConnectionAuthorizationService(options).listProjection(),
+    ...listOplRelayMailboxConnections({ binary: options.relayBinary, runner: options.relayRunner }),
+  };
 }
 
 export function importRelayConnection(

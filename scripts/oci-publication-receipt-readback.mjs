@@ -81,6 +81,7 @@ function verifyAttestations(input, env, subjectDigest) {
 
 function validateReceipt(receipt, input, subjectDigest, layers, keyDigest, attestations) {
   const content = receipt?.content;
+  const repository = input.subject.split('@')[0];
   const matchingLayer = (kind, value) => layers.some((layer) =>
     layer?.mediaType === `application/vnd.onepersonlab.package.${kind}` && layer?.digest === value);
   if (receipt?.surface_kind !== 'opl_package_publication_receipt.v1'
@@ -90,6 +91,8 @@ function validateReceipt(receipt, input, subjectDigest, layers, keyDigest, attes
     || receipt.package?.framework_source_commit !== attestations.provenance.predicate.buildDefinition.externalParameters.framework_source_commit
     || receipt.source?.owner_repository !== input.sourceRepo.replace(/\.git$/, '')
     || receipt.immutable?.digest !== subjectDigest || receipt.latest_stable?.digest !== subjectDigest
+    || receipt.immutable?.ref !== `${repository}:${input.version}`
+    || receipt.latest_stable?.ref !== `${repository}:latest-stable`
     || receipt.access?.visibility !== 'authorized_only'
     || receipt.access?.access_policy_ref !== input.accessPolicyRef
     || receipt.access?.credential_provider !== input.credentialProvider
@@ -112,13 +115,17 @@ function validateReceipt(receipt, input, subjectDigest, layers, keyDigest, attes
 }
 
 export function verifyPrivatePackagePublication(input, env = process.env) {
-  const match = /^(ghcr\.io\/[a-z0-9._/-]+)@(sha256:[0-9a-f]{64})$/.exec(input.subject ?? '');
+  const match = /^(ghcr\.io\/[a-z0-9._-]+\/one-person-lab-private-packages\/[a-z0-9.-]+)@(sha256:[0-9a-f]{64})$/.exec(input.subject ?? '');
   if (!match || !/^[a-z0-9][a-z0-9.-]*$/.test(input.packageId ?? '')
     || !/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/.test(input.version ?? '')
     || !/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\.git$/.test(input.sourceRepo ?? '')
     || !/^[0-9a-f]{40}$/.test(input.sourceCommit ?? '')
     || !input.accessPolicyRef || input.credentialProvider !== 'github_packages') {
     fail('An exact Package digest and canonical owner/access identity are required.');
+  }
+  if (!match[1].endsWith(`/${input.packageId}`)
+    || input.accessPolicyRef !== `github-package:${match[1].slice('ghcr.io/'.length)}`) {
+    fail('The private Package namespace and access policy must match the selected Package.');
   }
   if (input.receiptDigest && !digestPattern.test(input.receiptDigest)) fail('Receipt digest is invalid.');
   if (!input.publicKey || !fs.existsSync(input.publicKey) || !fs.statSync(input.publicKey).isFile()) {

@@ -1,4 +1,5 @@
 import { softwareSourceActionCatalog } from '../../../adapters/integration/index.ts';
+import { knowledgeSourceActionCatalog } from '../../../authority/packages/index.ts';
 import {
   MANAGED_UPDATE_OWNER_ACTIONS,
   listAgentPackageSettingsActions,
@@ -6,11 +7,24 @@ import {
 } from '../../../adapters/integration/index.ts';
 import type { SettingsAction } from './types.ts';
 
+const SOURCE_ACTION_TASK_KINDS: Record<string, SettingsAction['task_kind']> = {
+  source_list: 'read', source_check: 'check', source_configure: 'configure', source_disconnect: 'configure',
+  source_setup: 'configure', source_refresh: 'refresh', source_install: 'install', source_update: 'update', source_uninstall: 'uninstall',
+};
+
 export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
+  ...knowledgeSourceActionCatalog().map(action => ({
+    ...action,
+    stable_id: action.action_id, section_id: 'workspace',
+    task_kind: action.action_id === 'knowledge_source_list' ? 'read' as const : action.action_id === 'knowledge_source_check' ? 'check' as const : 'configure' as const,
+    taxonomy: `settings.knowledge_sources.${action.action_id}`,
+    payload_fields: [...action.payload_fields], follow_up_action_ids: [...action.follow_up_action_ids],
+    verify_action_id: action.verify_action_id ?? undefined,
+  })),
   ...softwareSourceActionCatalog().map(action => ({
     ...action,
     stable_id: action.action_id, section_id: 'agent_packages',
-    task_kind: action.action_id === 'source_list' ? 'read' as const : action.action_id === 'source_check' ? 'check' as const : 'configure' as const,
+    task_kind: SOURCE_ACTION_TASK_KINDS[action.action_id] ?? 'configure',
     taxonomy: `settings.software_sources.${action.action_id}`,
     payload_fields: [...action.payload_fields], follow_up_action_ids: [...action.follow_up_action_ids],
     verify_action_id: action.verify_action_id ?? undefined,

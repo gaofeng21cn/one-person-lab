@@ -75,6 +75,17 @@
       "connection_fields": ["connection_id", "display_name", "provider_type", "status", "security_revision", "account_label", "capabilities"],
       "consumer_labels": "fresh callable installed descriptor display_name or name, falling back to package_id",
       "capability_fields": ["capability_id", "label", "risk"],
+      "available_connections": {
+        "producer": "listOplConnectionAuthorization reads the existing Relay connect list operation",
+        "fields": ["mailbox_ref", "display_name", "account_label", "provider_type"],
+        "status_field": "available_connections_status",
+        "status_values": ["available", "unavailable"],
+        "unavailable_reason": "relay_local_connections_unavailable",
+        "empty_available_list": "Relay local configuration was read successfully and contains no mailboxes",
+        "read_boundary": "local configured account metadata only; no network probe, credential lookup, connection import, or grant change",
+        "limits": { "timeout_ms": 1500, "maximum_connections": 100 },
+        "consumer_behavior": "select an available owner reference; unavailable state must not be presented as an empty configured account list"
+      },
       "stale_projection": "requested becomes superseded and granted becomes stale when consumer digest or connection revision changes, connection is disabled or deleted",
       "forbidden_fields": ["credential_handle", "endpoint", "manifest_sha256", "content_digest", "provider_payload"]
     },

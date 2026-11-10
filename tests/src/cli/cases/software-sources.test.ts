@@ -25,5 +25,11 @@ test('software source CLI and App action share one refs-only configuration', () 
     const secretRejected = runCliFailure(['app', 'action', 'execute', '--action', 'source_configure', '--payload', JSON.stringify({ source_id: sourceId, token: 'never-store-this-value' })], env);
     assert.equal(secretRejected.payload.error.details.reason_code, 'credential_payload_forbidden');
     assert.equal(fs.readFileSync(path.join(root, 'software-sources.json'), 'utf8').includes('never-store-this-value'), false);
+    const missingRevision = runCliFailure(['sources', 'install', '--source-id', 'homebrew:gaofeng21cn-one-person-lab', '--item-id', 'formula:gaofeng21cn/one-person-lab/opl'], env);
+    assert.equal(missingRevision.payload.error.code, 'cli_usage_error');
+    const wrongNativeSource = runCliFailure(['sources', 'setup', '--source-id', sourceId], env);
+    assert.equal(wrongNativeSource.payload.error.details.reason_code, 'homebrew_source_mismatch');
+    const nativeDryRun = runCliFailure(['app', 'action', 'execute', '--action', 'source_uninstall', '--payload', JSON.stringify({ source_id: 'homebrew:gaofeng21cn-one-person-lab', item_id: 'formula:gaofeng21cn/one-person-lab/opl', expected_revision: 'fixture' }), '--dry-run'], env);
+    assert.equal(nativeDryRun.payload.error.details.reason_code, 'software_source_dry_run_unsupported');
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

@@ -119,16 +119,26 @@ jobs:
           visibility="$(jq -er '.visibility // "public" | select(. == "public" or . == "authorized_only")' "$manifest")"
           access_policy_ref="$(jq -r '.access_policy_ref // empty' "$manifest")"
           credential_provider="$(jq -r '.credential_provider // empty' "$manifest")"
+          package_namespace=one-person-lab-packages
           [[ -z "$access_policy_ref" || "$access_policy_ref" =~ ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$ ]]
           [[ -z "$credential_provider" || "$credential_provider" =~ ^[a-z0-9][a-z0-9._-]{0,63}$ ]]
           if [ "$visibility" = authorized_only ]; then
+            package_namespace=one-person-lab-private-packages
             [[ "$access_policy_ref" =~ ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$ ]]
             [[ "$credential_provider" =~ ^[a-z0-9][a-z0-9._-]{0,63}$ ]]
+            [ "$access_policy_ref" = "github-package:${PACKAGES_OWNER}/${package_namespace}/${PACKAGE_ID}" ]
+            [ "$credential_provider" = github_packages ]
+          fi
+          publication_ref="$(jq -r '.codex_surface.configured_codex_plugin_carrier.publication_ref // empty' "$manifest")"
+          if [ "$visibility" = authorized_only ] || [ -n "$publication_ref" ]; then
+            [ "$publication_ref" = "ghcr.io/${PACKAGES_OWNER}/${package_namespace}/${PACKAGE_ID}:latest-stable" ]
           fi
           # Only non-secret references cross steps; credentials stay with the publisher.
           echo "PACKAGE_VISIBILITY=$visibility" >> "$GITHUB_ENV"
           echo "PACKAGE_ACCESS_POLICY_REF=$access_policy_ref" >> "$GITHUB_ENV"
           echo "PACKAGE_CREDENTIAL_PROVIDER=$credential_provider" >> "$GITHUB_ENV"
+          echo "PACKAGE_NAMESPACE=$package_namespace" >> "$GITHUB_ENV"
+          echo "PACKAGE_REGISTRY_NAME=${package_namespace}/${PACKAGE_ID}" >> "$GITHUB_ENV"
           source_repo="$(jq -er .source_repo "$manifest")"
           if [[ "$source_repo" =~ ^https://github\.com/([^/]+)/([^/]+)\.git$ ]]; then
             owner_repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
@@ -233,7 +243,7 @@ jobs:
           git -C .owner-source archive --format=tar.gz --prefix="${repo_name}/" \
             -o "$GITHUB_WORKSPACE/$archive" "$EXPECTED_OWNER_SOURCE_COMMIT"
           cp "$manifest" "$package_root/package-manifest.json"
-          image="ghcr.io/${PACKAGES_OWNER}/one-person-lab-packages/${PACKAGE_ID}"
+          image="ghcr.io/${PACKAGES_OWNER}/${PACKAGE_REGISTRY_NAME}"
           archive_sha256="sha256:$(sha256sum "$archive" | cut -d' ' -f1)"
           node --experimental-strip-types scripts/materialize-package-payload.mjs \
             --input "$payload" \
@@ -369,7 +379,7 @@ jobs:
           if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
             readback_args=(--require-anonymous-denied)
           fi
-          inspect_package_visibility "one-person-lab-packages/${PACKAGE_ID}" before
+          inspect_package_visibility "$PACKAGE_REGISTRY_NAME" before
 
           published_manifest_digest=""
           immutable_preflight="$(node scripts/oci-publication-preflight.mjs --ref "$IMMUTABLE_REF" "${preflight_args[@]}")"
@@ -408,7 +418,7 @@ jobs:
             fi
           fi
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-          inspect_package_visibility "one-person-lab-packages/${PACKAGE_ID}" after
+          inspect_package_visibility "$PACKAGE_REGISTRY_NAME" after
 
           node scripts/oci-publication-preflight.mjs --ref "$IMMUTABLE_REF" "${preflight_args[@]}" \
             --verify-only --expected-digest "$digest" "${readback_args[@]}"
