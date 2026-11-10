@@ -25,7 +25,8 @@
       "zh-CN": "通过 MAP 主 Skill 查看能力、规划任务并运行合成验证；临床执行按部署资格开放。",
       "en-US": "Use the MAP skill to inspect capabilities, plan work, and validate synthetic tasks. Clinical execution follows site qualification."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "agent"
   },
   "capability_abi": {
     "id": "med-autopractice.capabilities",

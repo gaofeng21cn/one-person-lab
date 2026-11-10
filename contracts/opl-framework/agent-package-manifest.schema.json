@@ -141,6 +141,7 @@
         "home_shortcuts"
       ],
       "properties": {
+        "software_type": { "enum": ["agent", "application", "capability"] },
         "display_name_i18n": { "$ref": "#/$defs/localized_text" },
         "description_i18n": { "$ref": "#/$defs/localized_text" },
         "session_routing_summary_i18n": { "$ref": "#/$defs/localized_text" },

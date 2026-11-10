@@ -32,7 +32,8 @@
           "codex_visible_entry": "med-autoscience"
         }
       }
-    ]
+    ],
+    "software_type": "agent"
   },
   "publisher": "one-person-lab",
   "version": "0.2.32",

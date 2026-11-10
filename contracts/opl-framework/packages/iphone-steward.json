@@ -15,7 +15,8 @@
       "zh-CN": "审查手机 App 与主屏整理计划",
       "en-US": "Review app and Home Screen stewardship plans"
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "agent"
   },
   "publisher": "gaofeng21cn",
   "version": "0.2.7",

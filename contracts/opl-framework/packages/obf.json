@@ -30,7 +30,8 @@
           "codex_visible_entry": "opl-bookforge"
         }
       }
-    ]
+    ],
+    "software_type": "agent"
   },
   "publisher": "one-person-lab",
   "version": "0.3.21",

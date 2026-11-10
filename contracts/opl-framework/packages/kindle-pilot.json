@@ -101,7 +101,8 @@
       "zh-CN": "使用 Kindle Pilot 管理 Kindle，按兼容清单推进并逐项回读设备状态。",
       "en-US": "Use Kindle Pilot to manage a Kindle through compatibility checks and explicit device readback."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "agent"
   },
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "owner_package_manifest_ref": "opl-package.json",

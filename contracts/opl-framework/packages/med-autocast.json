@@ -97,7 +97,8 @@
           "codex_visible_entry": "med-autocast"
         }
       }
-    ]
+    ],
+    "software_type": "agent"
   },
   "requires": [
     {

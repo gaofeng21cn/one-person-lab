@@ -152,7 +152,8 @@
       "en-US": "Inspect session analytics, synchronize approved Fleet projections, and review archive plans through the Vault owner.",
       "zh-CN": "通过 Vault 查看会话统计、同步获准的 Fleet 投影并审阅归档计划。"
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "application"
   },
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "owner_package_manifest_ref": "opl-package.json",

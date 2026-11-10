@@ -158,6 +158,7 @@
       "zh-CN": "为 OPL 提供微信 iLink 消息传输能力。",
       "en-US": "Weixin iLink transport capability for OPL."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "capability"
   }
 }

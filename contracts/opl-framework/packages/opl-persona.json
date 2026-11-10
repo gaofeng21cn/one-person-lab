@@ -434,6 +434,7 @@
       "zh-CN": "协调 OPL Relay、Obsidian 与实验室网站中获准使用的个人上下文。",
       "en-US": "Coordinate approved personal context across OPL Relay, Obsidian, and the lab website."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "agent"
   }
 }

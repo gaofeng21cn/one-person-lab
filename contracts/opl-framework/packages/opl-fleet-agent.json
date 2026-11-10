@@ -154,6 +154,7 @@
       "zh-CN": "检查本机 Fleet Agent 的运行健康状态和遥测信息。",
       "en-US": "Inspect local Fleet Agent health and telemetry."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "capability"
   }
 }

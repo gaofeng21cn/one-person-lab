@@ -10,6 +10,7 @@ import {
 } from '../../src/adapters/integration/software-sources.ts';
 import { readSoftwareSource } from '../../src/adapters/integration/software-sources-store.ts';
 import { verifySoftwareSourceCredential } from '../../src/adapters/integration/software-sources-verification.ts';
+import { refreshHomebrewSource } from '../../src/adapters/integration/homebrew-source.ts';
 
 const privateId = 'github-packages:gaofeng21cn';
 async function withState(run: (directory: string) => void | Promise<void>) {
@@ -110,4 +111,39 @@ test('owner requests refresh for connected stale private sources and bounds retr
   assert.equal(needsRefresh(), false);
   disconnectOplSoftwareSource(privateId);
   assert.equal(needsRefresh(), false);
+}));
+
+test('installed Framework remains visible without a Homebrew catalog or provider', async () => withState(async directory => {
+  const userHome = path.join(directory, 'user-home');
+  const root = path.join(userHome, '.opl', 'one-person-lab');
+  const env = { ...process.env, HOME: userHome, OPL_STATE_DIR: directory };
+  fs.mkdirSync(path.join(root, 'bin'), { recursive: true });
+  fs.mkdirSync(path.join(userHome, '.local', 'bin'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'opl-framework', version: '0.3.12' }));
+  fs.writeFileSync(path.join(root, 'bin', 'opl'), '#!/bin/sh\n');
+  fs.writeFileSync(path.join(root, '.opl-framework-installed-source-identity.json'), JSON.stringify({
+    schema: 'opl_framework_installed_source_identity.v1', framework_sha: 'a'.repeat(40), install_mode: 'archive', identity_source: 'install_ref',
+  }));
+  fs.symlinkSync(path.join(root, 'bin', 'opl'), path.join(userHome, '.local', 'bin', 'opl'));
+  const assertInstalled = (expectedSourceStatus: string) => {
+    const projection = listOplSoftwareSources({}, env);
+    const brew = projection.entries.find(source => source.provider_id === 'homebrew')!;
+    assert.equal(brew.inventory_status, expectedSourceStatus);
+    assert.deepEqual(brew.native_items, []);
+    assert.equal(brew.entry_count, null);
+    assert.equal(projection.installed_products.length, 1);
+    const framework = projection.installed_products[0];
+    assert.equal(framework.product_id, 'github:gaofeng21cn/one-person-lab');
+    assert.equal(framework.display_name, 'OPL Framework');
+    assert.equal(framework.installed_version, '0.3.12');
+    assert.equal(framework.installation_owner, 'opl_framework');
+    assert.equal(framework.owner_settings_route, 'updates');
+    assert.deepEqual(framework.available_actions, []);
+    assert.equal(JSON.stringify(framework).includes(userHome), false);
+  };
+  assertInstalled('not_checked');
+  await refreshHomebrewSource({ env, run: async () => ({ status: null, stdout: '' }) });
+  assertInstalled('unavailable');
+  fs.rmSync(path.join(userHome, '.local', 'bin', 'opl'));
+  assert.deepEqual(listOplSoftwareSources({}, env).installed_products, []);
 }));

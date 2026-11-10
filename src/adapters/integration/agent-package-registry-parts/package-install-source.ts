@@ -3,15 +3,16 @@ import { configuredPackagePayloadAvailable } from './configured-codex-plugin-car
 import type { InstalledPackageDescriptor } from './installed-codex-plugin-directory-types.ts';
 import { githubPreviewSourceIdentity } from './package-github-preview-contract.ts';
 
-export function packageReleaseChannel(descriptor: InstalledPackageDescriptor) {
+export function packageDistributionChannel(descriptor: InstalledPackageDescriptor) {
+  if (descriptor.carrier.publicationRef) return 'release' as const;
   return descriptor.manifest.publication_channel_admission === 'development_only'
-    ? 'preview' as const : 'stable' as const;
+    ? 'source' as const : 'unknown' as const;
 }
 
 export function packageInstallSourceAvailable(descriptor: InstalledPackageDescriptor) {
-  // Protected publication keeps its existing native-carrier contract. Preview
-  // admission additionally requires the pinned payload used by that carrier.
-  if (packageReleaseChannel(descriptor) !== 'preview') return true;
+  // Publication admission is a distribution constraint, never a maturity label.
+  // Source distribution requires the pinned payload used by its native carrier.
+  if (descriptor.manifest.publication_channel_admission !== 'development_only') return true;
   if (descriptor.manifest.visibility === 'authorized_only' && !descriptor.carrier.publicationRef
     && !githubPreviewSourceIdentity(descriptor.manifest)) return false;
   return configuredPackagePayloadAvailable({
@@ -22,7 +23,7 @@ export function packageInstallSourceAvailable(descriptor: InstalledPackageDescri
 
 export function assertPackageInstallSourceAvailable(descriptor: InstalledPackageDescriptor) {
   if (!packageInstallSourceAvailable(descriptor)) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Preview Package has no verified installation source.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package has no verified installation source.', {
       package_id: descriptor.manifest.package_id,
       failure_code: 'package_install_source_unavailable',
     });

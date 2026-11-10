@@ -567,6 +567,7 @@
       "zh-CN": "为 MAS 医学论文与 MAG 医学基金项目提供所需的研究技能。",
       "en-US": "Required MAS paper and MAG grant capability Skills."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "capability"
   }
 }

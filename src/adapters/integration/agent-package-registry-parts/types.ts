@@ -128,6 +128,7 @@ export type AgentPackageHomeShortcutPresentation = {
 };
 
 export type AgentPackagePresentation = {
+  software_type?: 'agent' | 'application' | 'capability';
   display_name_i18n: AgentPackageLocalizedText;
   description_i18n: AgentPackageLocalizedText;
   session_routing_summary_i18n: AgentPackageLocalizedText;

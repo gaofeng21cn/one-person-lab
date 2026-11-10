@@ -161,6 +161,7 @@
       "zh-CN": "查看 iCloud 照片镜像状态，审阅镜像计划。",
       "en-US": "Review photo mirror plans and status."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "software_type": "application"
   }
 }

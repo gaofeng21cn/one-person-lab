@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import brandProfile from '../../../contracts/opl-framework/brand-system-profile.json' with { type: 'json' };
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { softwareSourceFailure, softwareSourcesFile } from './software-sources-store.ts';
+import { readFrameworkSoftwareInstallation } from './software-sources-framework-installation.ts';
 
 export const OPL_HOMEBREW_SOURCE_ID = 'homebrew:gaofeng21cn-one-person-lab';
 const TAP = 'gaofeng21cn/one-person-lab';
@@ -17,6 +18,15 @@ type NativeItem = {
   description_i18n?: Record<string, string>;
   installed: boolean; installed_version: string | null; available_version: string | null;
   update_status: 'available' | 'current' | 'not_installed' | 'unknown'; revision: string; disabled: boolean; pinned: boolean;
+  product_id?: string;
+  product_display_name?: string;
+  homebrew_installed?: boolean;
+  homebrew_installed_version?: string | null;
+  installation_owner?: 'homebrew' | 'opl_framework' | 'application' | null;
+  installation_kind?: 'homebrew_formula' | 'homebrew_cask' | 'managed_runtime' | 'app_bundle' | null;
+  installation_evidence?: string | null;
+  installed_source_revision?: string | null;
+  owner_settings_route?: 'updates' | null;
 };
 type Snapshot = {
   inventory_status: 'available' | 'not_checked' | 'unavailable'; inventory_reason: string | null;
@@ -48,23 +58,39 @@ function emptySnapshot(reason: string | null = null): Snapshot {
 function text(value: unknown): string | null { return typeof value === 'string' && value.trim() ? value : null; }
 function fullName(value: unknown): value is string { return typeof value === 'string' && value.startsWith(`${TAP}/`) && /^[a-z0-9][a-z0-9+@._-]*$/.test(value.slice(TAP.length + 1)); }
 function itemActions(item: NativeItem) {
-  const ids = item.installed ? ['source_uninstall', ...(item.update_status === 'available' && !item.disabled && !item.pinned ? ['source_update'] : [])] : item.disabled ? [] : ['source_install'];
+  const brewInstalled = item.homebrew_installed ?? item.installed;
+  const ids = brewInstalled ? ['source_uninstall', ...(item.update_status === 'available' && !item.disabled && !item.pinned ? ['source_update'] : [])]
+    : item.installed || item.disabled ? [] : ['source_install'];
   return homebrewActionCatalog().filter(action => ids.includes(action.action_id)).map(action => ({
     ...action, default_payload: { source_id: OPL_HOMEBREW_SOURCE_ID, item_id: item.item_id, expected_revision: item.revision },
   }));
 }
-function projection(snapshot: Snapshot) {
+function projection(snapshot: Snapshot, env: NodeJS.ProcessEnv) {
+  const frameworkInstallation = readFrameworkSoftwareInstallation(env);
+  const checkedAt = snapshot.inventory_checked_at ? Date.parse(snapshot.inventory_checked_at) : Number.NaN;
+  const refreshRequired = !Number.isFinite(checkedAt) || Date.now() - checkedAt >= 60_000
+    || (snapshot.inventory_status === 'available' && snapshot.native_items.some(item => item.homebrew_installed === undefined));
   return { ...snapshot, version_basis: 'homebrew_local_recipes', installation_owner: 'homebrew',
+    inventory_refresh_required: refreshRequired,
     entry_count: snapshot.inventory_status === 'available' ? snapshot.native_items.length : null,
-    native_items: snapshot.native_items.map(item => ({ ...item, ...productPresentation(item), available_actions: itemActions(item) })),
+    native_items: snapshot.native_items.map(raw => {
+      const item = { ...raw, homebrew_installed: raw.homebrew_installed ?? raw.installed,
+        homebrew_installed_version: raw.homebrew_installed === undefined ? raw.installed_version : raw.homebrew_installed_version ?? null };
+      if (item.name === `${TAP}/opl` && !item.homebrew_installed && frameworkInstallation) {
+        Object.assign(item, frameworkInstallation, { update_status: 'unknown' });
+      }
+      return { ...item, ...productPresentation(item), available_actions: itemActions(item) };
+    }),
   };
 }
 function productPresentation(item: NativeItem) {
-  const product = brandProfile.product_cognition_layers.find(layer => 'native_carriers' in layer
-    && layer.native_carriers?.some(carrier => carrier.kind === `homebrew_${item.kind}` && carrier.package_ref === item.name));
+  const product = brandProfile.product_cognition_layers.find(layer => item.product_id === `github:gaofeng21cn/${layer.owner}`
+    || ('native_carriers' in layer && layer.native_carriers?.some(carrier => carrier.kind === `homebrew_${item.kind}` && carrier.package_ref === item.name)));
   if (!product) return {};
   const description = 'description_i18n' in product ? product.description_i18n : undefined;
-  return { display_name: product.product_name,
+  return { product_display_name: product.product_name,
+    // Preserve carrier labels such as Full and Nightly inside source details.
+    ...(item.kind === 'formula' ? { display_name: product.product_name } : {}),
     ...(description ? { description: description['en-US'], description_i18n: description } : {}) };
 }
 export function readHomebrewSourceProjection(env: NodeJS.ProcessEnv = process.env) {
@@ -82,9 +108,12 @@ export function readHomebrewSourceProjection(env: NodeJS.ProcessEnv = process.en
         || !(item.available_version === null || typeof item.available_version === 'string')
         || !['available', 'current', 'not_installed', 'unknown'].includes(String(item.update_status))
         || typeof item.revision !== 'string' || typeof item.disabled !== 'boolean' || typeof item.pinned !== 'boolean') throw new Error();
+      if (item.homebrew_installed !== undefined && (typeof item.homebrew_installed !== 'boolean'
+        || !(item.homebrew_installed_version === null || typeof item.homebrew_installed_version === 'string'))) throw new Error();
+      if (item.product_id !== undefined && (typeof item.product_id !== 'string' || !/^github:[a-z0-9_.-]+\/[a-z0-9_.-]+$/.test(item.product_id))) throw new Error();
     }
-    return projection(snapshot as Snapshot);
-  } catch { return projection(emptySnapshot()); }
+    return projection(snapshot as Snapshot, env);
+  } catch { return projection(emptySnapshot(), env); }
 }
 function persist(snapshot: Snapshot, env: NodeJS.ProcessEnv) {
   const file = cacheFile(env);
@@ -131,12 +160,24 @@ function normalizeItem(raw: Record<string, unknown>, kind: 'formula' | 'cask'): 
   const versions = isRecord(raw.versions) ? raw.versions : {};
   const stable = text(versions.stable);
   const available = kind === 'formula' ? stable && `${stable}${typeof raw.revision === 'number' && raw.revision > 0 ? `_${raw.revision}` : ''}` : text(raw.version);
-  const installed = kind === 'formula' ? (Array.isArray(raw.installed) ? raw.installed.filter(isRecord).map(row => text(row.version)).filter(Boolean).sort().join(', ') || null : null) : text(raw.installed);
-  const state = { name, kind, installed, available, outdated: raw.outdated, disabled: raw.disabled === true, pinned: raw.pinned === true, recipe: raw.ruby_source_checksum ?? null };
+  const brewInstalled = kind === 'formula' ? (Array.isArray(raw.installed) ? raw.installed.filter(isRecord).map(row => text(row.version)).filter(Boolean).sort().join(', ') || null : null) : text(raw.installed);
+  // Homebrew reports bundle versions even when an App was installed outside
+  // Homebrew or updated itself. Its receipt is not the current bundle version.
+  const bundleVersion = kind === 'cask' ? text(raw.bundle_short_version) ?? text(raw.bundle_version) : null;
+  const installed = bundleVersion ?? brewInstalled;
+  const receiptMatchesBundle = !bundleVersion || Boolean(brewInstalled?.split(',').map(value => value.trim()).includes(bundleVersion));
+  const productRepo = /^https:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?)(?:\.git)?\/?$/.exec(String(raw.homepage ?? ''))?.[1];
+  const state = { name, kind, installed, brewInstalled, available, outdated: raw.outdated, disabled: raw.disabled === true, pinned: raw.pinned === true, recipe: raw.ruby_source_checksum ?? null };
   return {
     item_id: `${kind}:${name}`, name, kind, display_name: displayName,
     description: text(raw.desc), installed: installed !== null, installed_version: installed, available_version: available,
-    update_status: !installed ? 'not_installed' : raw.outdated === true ? 'available' : raw.outdated === false ? 'current' : 'unknown',
+    ...(productRepo ? { product_id: `github:${productRepo.toLowerCase()}` } : {}),
+    homebrew_installed: brewInstalled !== null, homebrew_installed_version: brewInstalled,
+    installation_owner: brewInstalled ? 'homebrew' : bundleVersion ? 'application' : null,
+    installation_kind: bundleVersion ? 'app_bundle' : brewInstalled ? kind === 'formula' ? 'homebrew_formula' : 'homebrew_cask' : null,
+    installation_evidence: bundleVersion ? 'homebrew_bundle_readback' : brewInstalled ? 'homebrew_install_receipt' : null,
+    owner_settings_route: productRepo === 'gaofeng21cn/one-person-lab-app' && installed ? 'updates' : null,
+    update_status: !installed ? 'not_installed' : !brewInstalled || !receiptMatchesBundle ? 'unknown' : raw.outdated === true ? 'available' : raw.outdated === false ? 'current' : 'unknown',
     revision: createHash('sha256').update(JSON.stringify(state)).digest('hex'), disabled: state.disabled, pinned: state.pinned,
   };
 }
@@ -145,7 +186,7 @@ export async function refreshHomebrewSource(deps: HomebrewDependencies = {}) {
   const finish = (snapshot: Snapshot) => {
     snapshot.inventory_checked_at = checkedAt;
     persist(snapshot, deps.env ?? process.env);
-    return projection(snapshot);
+    return projection(snapshot, deps.env ?? process.env);
   };
   const tapResult = await runBrew(['tap-info', '--json', TAP], deps);
   if (tapResult.status !== 0) return finish(emptySnapshot(tapResult.status === null ? 'homebrew_unavailable' : 'homebrew_tap_read_failed'));
@@ -202,7 +243,7 @@ export async function executeHomebrewSourceAction(actionId: HomebrewActionId, pa
     const result = await runBrew(args, deps, true);
     const after = await refreshHomebrewSource(deps);
     const readback = item ? after.native_items.find(candidate => candidate.item_id === item!.item_id) : undefined;
-    const verified = after.inventory_status === 'available' && (!item || (actionId === 'source_uninstall' ? readback?.installed === false : readback?.installed === true && readback.update_status === 'current'));
+    const verified = after.inventory_status === 'available' && (!item || (actionId === 'source_uninstall' ? readback?.homebrew_installed === false : readback?.homebrew_installed === true && readback.update_status === 'current'));
     return { native_action: { action_id: actionId, item_id: item?.item_id ?? null, status: result.status === 0 && verified ? 'completed' : 'needs_attention',
       reason_code: result.status !== 0 ? 'homebrew_native_command_failed' : verified ? null : 'homebrew_native_readback_unverified',
       business_data_cleanup_requested: false, installation_owner: 'homebrew' }, native_inventory: after };
