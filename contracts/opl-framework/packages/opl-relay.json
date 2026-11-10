@@ -385,6 +385,19 @@
     "owner_plugin_manifest_ref": "plugins/opl-relay/.codex-plugin/plugin.json"
   },
   "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "OPL Relay",
+      "en-US": "OPL Relay"
+    },
+    "description_i18n": {
+      "zh-CN": "在共享工作台中阅读邮件、编辑会话回复、审阅附件，经确认后发送已核实的草稿。",
+      "en-US": "Read mail, edit threaded replies, review attachments and explicitly send verified drafts in a shared workbench."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "在共享工作台中阅读邮件、编辑会话回复、审阅附件，经确认后发送已核实的草稿。",
+      "en-US": "Read mail, edit threaded replies, review attachments and explicitly send verified drafts in a shared workbench."
+    },
+    "home_shortcuts": [],
     "software_type": "application"
   }
 }

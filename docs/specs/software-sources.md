@@ -86,7 +86,10 @@ Framework 从 `brew tap-info --json` 和 `brew info --json=v2` 读取当前 tap 
 - `installed`、`installed_version` 表示经受支持证据确认的本机产品安装，`homebrew_installed`、`homebrew_installed_version` 单独表示 Homebrew 收据；
 - `installation_owner`、`installation_kind`、`installation_evidence`、`installed_source_revision` 和 `owner_settings_route` 说明实际安装方式、证据及维护入口；
 - `available_version` 是当前配方来源版本，`update_status` 为 `available`、`current`、`not_installed` 或 `unknown`；
+- `installed_display_version`、`available_display_version` 提供产品发布者声明的展示版本；`installed_build_kind` 和 `installed_build_id` 提供已安装 App 自身声明的开发构建身份，未确认时为 `null`；
 - `revision`、`disabled`、`pinned` 和带完整 payload 的 `available_actions`。
+
+OPL App 的显示版本与更新器机器版本遵循 [App 发布合同](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json)。列表优先展示显示版本，并仅依据 bundle 的 `OPLBuildKind=local-development` 标注“开发版”；不能根据版本领先、目录渠道或缺少 Homebrew 收据推断开发版。Framework 从匹配的 App bundle 及其既有 Full manifest 读取本机显示身份，或在机器版本完全匹配时复用该 Cask 明确声明的机器／显示版本对；来源显示版本同时绑定配方的 Release 下载 URL。原始机器版本、配方版本和构建 ID 留在详情，更新比较、Homebrew 收据和可执行动作继续使用各自 owner 的原始字段。缺少展示身份时不通过算术反推版本，也不把开发构建标成正式发布。
 
 软件源投影根级的 `installed_products` 独立于 `entries` 和 Homebrew 清单缓存。当前已接入 Framework 安装 owner：从有效安装收据和真实入口回读 `managed:opl-framework`，输出 `kind=managed_runtime`、`product_id=github:gaofeng21cn/one-person-lab`、本机版本、`installation_owner=opl_framework` 和 `owner_settings_route=updates`，不附加 Homebrew 动作。即使本机未安装 Homebrew、未接入 tap 或来源缓存不可用，该安装记录仍可显示；来源自身继续如实返回未检查或不可用，不合成配方条目。UI 按 `product_id` 将本机产品与可用来源选项合并。
 

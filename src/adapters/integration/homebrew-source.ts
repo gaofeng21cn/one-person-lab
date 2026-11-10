@@ -6,6 +6,7 @@ import brandProfile from '../../../contracts/opl-framework/brand-system-profile.
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { softwareSourceFailure, softwareSourcesFile } from './software-sources-store.ts';
 import { readFrameworkSoftwareInstallation } from './software-sources-framework-installation.ts';
+import { readHomebrewAppVersionPresentation } from './homebrew-app-version.ts';
 
 export const OPL_HOMEBREW_SOURCE_ID = 'homebrew:gaofeng21cn-one-person-lab';
 const TAP = 'gaofeng21cn/one-person-lab';
@@ -22,6 +23,10 @@ type NativeItem = {
   product_display_name?: string;
   homebrew_installed?: boolean;
   homebrew_installed_version?: string | null;
+  installed_display_version?: string | null;
+  available_display_version?: string | null;
+  installed_build_kind?: 'local-development' | null;
+  installed_build_id?: string | null;
   installation_owner?: 'homebrew' | 'opl_framework' | 'application' | null;
   installation_kind?: 'homebrew_formula' | 'homebrew_cask' | 'managed_runtime' | 'app_bundle' | null;
   installation_evidence?: string | null;
@@ -117,6 +122,10 @@ export function readHomebrewSourceProjection(env: NodeJS.ProcessEnv = process.en
         || typeof item.revision !== 'string' || typeof item.disabled !== 'boolean' || typeof item.pinned !== 'boolean') throw new Error();
       if (item.homebrew_installed !== undefined && (typeof item.homebrew_installed !== 'boolean'
         || !(item.homebrew_installed_version === null || typeof item.homebrew_installed_version === 'string'))) throw new Error();
+      for (const key of ['installed_display_version', 'available_display_version', 'installed_build_id']) {
+        if (item[key] !== undefined && item[key] !== null && typeof item[key] !== 'string') throw new Error();
+      }
+      if (item.installed_build_kind !== undefined && item.installed_build_kind !== null && item.installed_build_kind !== 'local-development') throw new Error();
       if (item.product_id !== undefined && (typeof item.product_id !== 'string' || !/^github:[a-z0-9_.-]+\/[a-z0-9_.-]+$/.test(item.product_id))) throw new Error();
     }
     return projection(snapshot as Snapshot, env);
@@ -160,7 +169,7 @@ function runBrew(args: string[], deps: HomebrewDependencies, mutation = false) {
   });
 }
 function parseJson(value: string): unknown { try { return JSON.parse(value); } catch { return null; } }
-function normalizeItem(raw: Record<string, unknown>, kind: 'formula' | 'cask'): NativeItem {
+function normalizeItem(raw: Record<string, unknown>, kind: 'formula' | 'cask', env: NodeJS.ProcessEnv): NativeItem {
   const name = String(kind === 'formula' ? raw.full_name : raw.full_token);
   const baseName = kind === 'cask' && Array.isArray(raw.name) ? text(raw.name[0]) ?? name.split('/').at(-1)! : name.split('/').at(-1)!;
   const displayName = name.endsWith('-nightly') && !/nightly/i.test(baseName) ? `${baseName} Nightly` : baseName;
@@ -179,6 +188,7 @@ function normalizeItem(raw: Record<string, unknown>, kind: 'formula' | 'cask'): 
     item_id: `${kind}:${name}`, name, kind, display_name: displayName,
     description: text(raw.desc), installed: installed !== null, installed_version: installed, available_version: available,
     ...(productRepo ? { product_id: `github:${productRepo.toLowerCase()}` } : {}),
+    ...(kind === 'cask' && productRepo === 'gaofeng21cn/one-person-lab-app' ? readHomebrewAppVersionPresentation(raw, installed, env) : {}),
     homebrew_installed: brewInstalled !== null, homebrew_installed_version: brewInstalled,
     installation_owner: brewInstalled ? 'homebrew' : bundleVersion ? 'application' : null,
     installation_kind: bundleVersion ? 'app_bundle' : brewInstalled ? kind === 'formula' ? 'homebrew_formula' : 'homebrew_cask' : null,
@@ -213,7 +223,7 @@ export async function refreshHomebrewSource(deps: HomebrewDependencies = {}) {
     for (const row of rows) {
       const name = isRecord(row) ? kind === 'formula' ? row.full_name : row.full_token : null;
       if (!isRecord(row) || row.tap !== TAP || !fullName(name) || !expected.includes(name)) return finish(emptySnapshot('homebrew_inventory_identity_invalid'));
-      items.push(normalizeItem(row, kind));
+      items.push(normalizeItem(row, kind, deps.env ?? process.env));
     }
   }
   if (items.length !== names.length || new Set(items.map(item => item.item_id)).size !== names.length) return finish(emptySnapshot('homebrew_inventory_incomplete'));

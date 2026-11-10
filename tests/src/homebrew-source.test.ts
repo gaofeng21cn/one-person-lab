@@ -205,6 +205,63 @@ test('App bundle versions are local installation truth while Homebrew receipts r
   assert.equal(native.commands.some(args => ['install', 'upgrade', 'uninstall'].includes(args[0])), false);
 }));
 
+test('App display versions and development identity come from declared release and installed bundle metadata', async () => withState(async env => {
+  const appPath = path.join(env.OPL_STATE_DIR!, 'One Person Lab.app');
+  const infoPath = path.join(appPath, 'Contents', 'Info.plist');
+  const manifestPath = path.join(appPath, 'Contents', 'Resources', 'opl-studio-full-runtime', 'manifest', 'full-package-manifest.json');
+  fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+  const info = { CFBundleIdentifier: 'cn.onepersonlab.opl', CFBundleShortVersionString: '26.11.1091',
+    OPLBuildKind: 'local-development', OPLLocalBuildID: 'local.src123456789abc' };
+  fs.writeFileSync(infoPath, JSON.stringify(info));
+  fs.writeFileSync(manifestPath, JSON.stringify({ carrier: { bundle_id: 'cn.onepersonlab.opl' }, version: '26.11.10' }));
+  const plutil = path.join(env.OPL_STATE_DIR!, 'plutil-fixture');
+  fs.writeFileSync(plutil, '#!/bin/sh\nfor arg do last="$arg"; done\ncat "$last"\n', { mode: 0o755 });
+  const native = fixture();
+  native.state.available = '26.11.991,26.11.9';
+  let releaseDisplay = '26.11.9';
+  const run: HomebrewRunner = async (args, options) => {
+    const result = await native.run(args, options);
+    if (args[0] !== 'info') return result;
+    const value = JSON.parse(result.stdout);
+    Object.assign(value.casks[0], { homepage: 'https://github.com/gaofeng21cn/one-person-lab-app',
+      bundle_short_version: '26.11.1091', url: `https://github.com/gaofeng21cn/one-person-lab-app/releases/download/v${releaseDisplay}/One-Person-Lab.dmg`,
+      artifacts: [{ app: ['One Person Lab.app'], target: appPath }] });
+    return { ...result, stdout: JSON.stringify(value) };
+  };
+  const deps = { env: { ...env, OPL_PLUTIL_BIN: plutil }, run };
+  const item = (await refreshHomebrewSource(deps)).native_items[1];
+  assert.equal(item.installed_version, '26.11.1091');
+  assert.equal(item.available_version, '26.11.991,26.11.9');
+  assert.equal(item.installed_display_version, '26.11.10');
+  assert.equal(item.available_display_version, '26.11.9');
+  assert.equal(item.installed_build_kind, 'local-development');
+  assert.equal(item.installed_build_id, 'local.src123456789abc');
+  assert.equal(item.update_status, 'unknown');
+  assert.equal(item.owner_settings_route, 'updates');
+  assert.deepEqual(item.available_actions, []);
+  assert.equal(readHomebrewSourceProjection(deps.env).native_items[1].installed_display_version, '26.11.10');
+  // An absent display artifact must not trigger arithmetic decoding of the updater version.
+  fs.rmSync(manifestPath);
+  const withoutManifest = (await refreshHomebrewSource(deps)).native_items[1];
+  assert.equal(withoutManifest.installed_display_version, null);
+  assert.equal(withoutManifest.installed_build_kind, 'local-development');
+  // Nor may an unrelated bundle at the observed path label this installation as development.
+  fs.writeFileSync(infoPath, JSON.stringify({ ...info, CFBundleIdentifier: 'unrelated.app' }));
+  const unrelated = (await refreshHomebrewSource(deps)).native_items[1];
+  assert.equal(unrelated.installed_build_kind, null);
+  assert.equal(unrelated.installed_display_version, null);
+  // A Standard bundle may use the published Cask's exact machine/display pair.
+  fs.writeFileSync(infoPath, JSON.stringify({ CFBundleIdentifier: info.CFBundleIdentifier, CFBundleShortVersionString: info.CFBundleShortVersionString }));
+  native.state.available = '26.11.1091,26.11.10';
+  releaseDisplay = '26.11.10';
+  const aligned = (await refreshHomebrewSource(deps)).native_items[1];
+  assert.equal(aligned.installed_display_version, '26.11.10');
+  assert.equal(aligned.available_display_version, '26.11.10');
+  assert.equal(aligned.installed_version, '26.11.1091');
+  assert.equal(aligned.installed_build_kind, null);
+  assert.deepEqual(aligned.available_actions, []);
+}));
+
 test('Framework installation requires an installed CLI and owner receipt, not the executing checkout', async () => withState(async env => {
   const userHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-installed-home-'));
   const root = path.join(userHome, 'framework');

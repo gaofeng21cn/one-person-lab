@@ -423,6 +423,19 @@
     "owner_plugin_manifest_ref": "plugins/opl-persona/.codex-plugin/plugin.json"
   },
   "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "OPL Persona",
+      "en-US": "OPL Persona"
+    },
+    "description_i18n": {
+      "zh-CN": "协调 OPL Relay、Obsidian 与实验室网站中获准使用的个人上下文。",
+      "en-US": "Coordinate approved personal context across OPL Relay, Obsidian, and the lab website."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "协调 OPL Relay、Obsidian 与实验室网站中获准使用的个人上下文。",
+      "en-US": "Coordinate approved personal context across OPL Relay, Obsidian, and the lab website."
+    },
+    "home_shortcuts": [],
     "software_type": "agent"
   }
 }
