@@ -104,6 +104,70 @@ function ownerVersion(spec, ownerRepoPath) {
   return { ownerManifest, ownerPackage, languageVersion, version };
 }
 
+const packageVisibilityValues = new Set(['public', 'authorized_only']);
+
+function packageAccessMetadata(packageId, label, manifest, requirePrivateRefs = false) {
+  const visibility = manifest?.visibility;
+  if (visibility !== undefined && !packageVisibilityValues.has(visibility)) {
+    fail('package_visibility_invalid', packageId,
+      `${label} visibility must be public or authorized_only`, { visibility });
+  }
+  const accessPolicyRef = manifest?.access_policy_ref;
+  const credentialProvider = manifest?.credential_provider;
+  for (const [field, value] of [
+    ['access_policy_ref', accessPolicyRef],
+    ['credential_provider', credentialProvider],
+  ]) {
+    if (value !== undefined
+      && (typeof value !== 'string' || value.trim() === '')) {
+      fail('package_access_metadata_invalid', packageId,
+        `${label} ${field} must be a non-empty string when declared`, { field, value });
+    }
+  }
+  if (requirePrivateRefs && visibility === 'authorized_only'
+    && (typeof accessPolicyRef !== 'string' || accessPolicyRef.trim() === ''
+      || typeof credentialProvider !== 'string' || credentialProvider.trim() === '')) {
+    fail('package_access_metadata_invalid', packageId,
+      `${label} authorized_only visibility requires access_policy_ref and credential_provider`);
+  }
+  return {
+    visibility: visibility ?? null,
+    access_policy_ref: typeof accessPolicyRef === 'string' ? accessPolicyRef : null,
+    credential_provider: typeof credentialProvider === 'string' ? credentialProvider : null,
+  };
+}
+
+function validatePackageAccessProjection({ packageId, owner, projectedManifest }) {
+  const projectedAccess = packageAccessMetadata(packageId, 'Framework Package', projectedManifest, true);
+  for (const ownerManifest of new Set([owner.ownerManifest, owner.ownerPackage])) {
+    const ownerAccess = packageAccessMetadata(packageId, 'Owner Package', ownerManifest);
+    if (ownerAccess.visibility === 'authorized_only'
+      && projectedAccess.visibility !== 'authorized_only') {
+      fail('package_visibility_downgrade', packageId,
+        'Framework projection cannot downgrade an explicitly private owner Package to public', {
+          owner_visibility: ownerAccess.visibility,
+          projected_visibility: projectedAccess.visibility ?? 'public',
+        });
+    }
+    if (ownerAccess.access_policy_ref !== null
+      && projectedAccess.access_policy_ref !== ownerAccess.access_policy_ref) {
+      fail('package_access_policy_drift', packageId,
+        'Framework access_policy_ref differs from the explicitly declared owner Package policy', {
+          owner_access_policy_ref: ownerAccess.access_policy_ref,
+          projected_access_policy_ref: projectedAccess.access_policy_ref,
+        });
+    }
+    if (ownerAccess.credential_provider !== null
+      && projectedAccess.credential_provider !== ownerAccess.credential_provider) {
+      fail('package_credential_provider_drift', packageId,
+        'Framework credential_provider differs from the explicitly declared owner Package provider', {
+          owner_credential_provider: ownerAccess.credential_provider,
+          projected_credential_provider: projectedAccess.credential_provider,
+        });
+    }
+  }
+}
+
 export function resolveAnnotatedOwnerVersionTag({
   spec,
   ownerRepoPath,
@@ -364,6 +428,7 @@ export function validatePackageSourceProjection({
   if (projectedManifest.source_repo !== spec.repo_url) {
     fail('source_repository_drift', spec.package_id, 'Framework manifest source repository differs from owner');
   }
+  validatePackageAccessProjection({ packageId: spec.package_id, owner, projectedManifest });
   const carrierSourceCommit = resolveCarrierSourceCommit({
     spec,
     ownerRepoPath,

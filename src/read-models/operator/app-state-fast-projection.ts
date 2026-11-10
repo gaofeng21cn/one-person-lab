@@ -327,6 +327,15 @@ export function compactFastAgentPackageDirectory(value: unknown) {
       'installability', 'readiness', 'recommended_action', 'recommended_action_ref',
       'available_actions', 'app_enabled',
     ]),
+    ...(isRecord(entry.package_access)
+      ? {
+          package_access: pickRecordFields(entry.package_access, [
+            'visibility', 'status', 'provider_id', 'source_id', 'source_ref',
+            'access_policy_ref', 'verified_at', 'expires_at', 'security_revision',
+            'reason', 'discover_allowed', 'download_allowed', 'registry_digest',
+          ]),
+        }
+      : {}),
     ...(isRecord(entry.installed_carrier_readback)
       ? {
           installed_carrier_readback: pickRecordFields(entry.installed_carrier_readback, [

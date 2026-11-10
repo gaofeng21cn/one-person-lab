@@ -1,0 +1,137 @@
+{
+  "version": "opl_package_access_contract.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "purpose": "Define one access boundary for public and authorized-only Package discovery, download, installation, update and local lifecycle management.",
+  "manifest": {
+    "schemas": [
+      "contracts/opl-framework/agent-package-manifest.schema.json",
+      "contracts/opl-framework/capability-package-manifest.schema.json",
+      "contracts/opl-framework/workflow-profile-package-manifest.schema.json"
+    ],
+    "visibility": {
+      "values": [
+        "public",
+        "authorized_only"
+      ],
+      "default": "public"
+    },
+    "authorized_only_required_fields": [
+      "access_policy_ref",
+      "credential_provider"
+    ],
+    "public_nullable_fields": [
+      "access_policy_ref",
+      "credential_provider"
+    ],
+    "access_policy_ref": "Opaque policy reference bound to the declared publication repository; never a credential.",
+    "current_owner_access_policy_applies_across_installed_versions": true
+  },
+  "credential_resolution": {
+    "owner": "software_source_provider",
+    "selection": "Use only the credential handle selected for the Package software source.",
+    "missing_or_disconnected_handle": "signed_out",
+    "disabled_source": "revoked",
+    "implicit_fallback_to_another_credential": false,
+    "token_presence_proves_access": false,
+    "credential_values_allowed_in_manifest_ui_logs_or_argv": false,
+    "github_packages_policy_binding": "github-package:<publication_repository>",
+    "github_packages_verification": "Authenticated pull-token exchange followed by an authorized OCI manifest read; bind the successful decision to the immutable manifest digest."
+  },
+  "decision": {
+    "projection_field": "package_access",
+    "status_values": [
+      "public",
+      "authorized",
+      "signed_out",
+      "forbidden",
+      "expired",
+      "revoked",
+      "unknown"
+    ],
+    "safe_fields": [
+      "visibility",
+      "status",
+      "provider_id",
+      "credential_handle",
+      "source_id",
+      "source_ref",
+      "access_policy_ref",
+      "verified_at",
+      "expires_at",
+      "security_revision",
+      "reason",
+      "discover_allowed",
+      "download_allowed",
+      "registry_digest"
+    ],
+    "allow_statuses": [
+      "public",
+      "authorized"
+    ],
+    "unknown_or_failed_verification": "deny_discovery_and_download",
+    "source_login_is_package_grant": false
+  },
+  "read_modes": {
+    "fast_directory": {
+      "network_allowed": false,
+      "read_only": true,
+      "authorized_snapshot_required": [
+        "same_source_binding",
+        "same_package_policy",
+        "unexpired_verification"
+      ],
+      "missing_expired_or_mismatched_snapshot": "fail_closed_until_explicit_check",
+      "snapshot_is_download_authority": false
+    },
+    "explicit_check": {
+      "fresh_remote_verification": true,
+      "persisted_fields": "Safe access decision metadata only; never credentials or registry pull tokens."
+    },
+    "download": {
+      "fresh_remote_verification": true,
+      "use_verified_immutable_digest": true,
+      "long_term_authorization_cache_allowed": false
+    },
+    "request_scope": {
+      "reuse_same_access_decision_within_one_read_request": true
+    }
+  },
+  "directory": {
+    "uninstalled_without_discovery_access": "exclude_from_entries_and_counts",
+    "installed_without_download_access": "retain_with_access_attention",
+    "installed_version_and_local_readiness": "Read from the native carrier independently of download access.",
+    "private_identity_in_public_unauthorized_catalog": "not_exposed"
+  },
+  "lifecycle": {
+    "fresh_download_access_required": [
+      "install",
+      "update",
+      "repair_that_downloads"
+    ],
+    "background_update_without_access": "skip_with_reason",
+    "access_revocation_disables_local_runtime": false,
+    "access_revocation_blocks_local_uninstall": false,
+    "access_revocation_deletes_installed_content": false,
+    "local_operation_still_requires_native_carrier_readiness": true
+  },
+  "authority_boundary": {
+    "registry": "Owns artifact visibility and pull permission.",
+    "framework": "Selects the source provider, verifies access and projects safe decisions.",
+    "native_carrier": "Owns physical installation, updates, removal and readback.",
+    "studio": "Renders Framework state and dispatches declared actions; does not mint grants."
+  },
+  "private_publication_admission": {
+    "trusted_key_owner": "Host configuration",
+    "trusted_key_path_environment": "OPL_PACKAGE_SIGNING_PUBLIC_KEY",
+    "key_source": "absolute local PEM path; artifact-supplied keys are rejected",
+    "verifier": "scripts/oci-publication-receipt-readback.mjs",
+    "prerequisites": [
+      "oras",
+      "cosign"
+    ],
+    "required": "verified receipt and signature for the exact authorized OCI digest before remote source admission",
+    "credential_transport": "source-selected provider credential in temporary mode-0700 Docker config directory with mode-0600 config; removed after verification",
+    "discovery_scope": "known owner Package descriptors; no arbitrary GHCR account enumeration"
+  }
+}

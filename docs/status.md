@@ -16,6 +16,7 @@
 - Framework 从 installed descriptor 动态发现 Agent 和 capability，不维护固定成员白名单。
 - required dependency 只检查 presence 与 callable entrypoint；版本解析、安装锁、payload lock、LKG 和 carrier transaction 不属于 Framework 的普通 Package 生命周期。
 - Family capability portfolio 由 `contracts/opl-framework/family-capability-domain-registry.json` 描述，品牌名称只做认知与产品投影。
+- 应用目录与 native carrier 提供安装、更新、启停、修复和卸载的共同入口；公开与授权私有源遵守 [Package Directory 合同](./specs/package-directory.md)。某个私有 Package 本机已安装，只证明该本机 carrier 的状态。授权新用户能发现、下载并持续更新，需要该源的权限判定、认证下载、私有发布与真实安装链分别验收；剩余边界记入[当前差距](./active/current-state-vs-ideal-gap.md#私有软件源的发行与安装验收)。
 
 ### Cordis composition
 

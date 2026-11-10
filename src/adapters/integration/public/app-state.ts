@@ -1,3 +1,4 @@
+export { listOplSoftwareSources } from '../software-sources.ts';
 export { CANONICAL_OPL_PACKAGE_IDS, canonicalAgentPackageId } from '../agent-package-identity.ts';
 export type { CordisConnectDescriptorDiscoveryService } from './descriptor-discovery.ts';
 export {

@@ -23,6 +23,16 @@
     "publisher": { "type": "string", "minLength": 1 },
     "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$" },
     "source": { "type": "string", "minLength": 1 },
+    "visibility": { "enum": ["public", "authorized_only"], "default": "public" },
+    "access_policy_ref": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#?=&%+~-]*$"
+    },
+    "credential_provider": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
     "publication_channel_admission": {
       "description": "Whether the Package may enter the protected publication channel. Missing preserves the existing admitted behavior.",
       "enum": ["admitted", "development_only"]
@@ -298,6 +308,19 @@
     "owner_package_descriptor_ref": ["owner_package_manifest_ref"]
   },
   "allOf": [
+    {
+      "if": {
+        "properties": { "visibility": { "const": "authorized_only" } },
+        "required": ["visibility"]
+      },
+      "then": {
+        "required": ["access_policy_ref", "credential_provider"],
+        "properties": {
+          "access_policy_ref": { "type": "string", "minLength": 1 },
+          "credential_provider": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     {
       "if": {
         "properties": {

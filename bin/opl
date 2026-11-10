@@ -117,7 +117,7 @@ case "$1" in
   session)
     run_opl "$@"
     ;;
-  okf|knowledge)
+  okf|knowledge|sources)
     run_opl "$@"
     ;;
   help|doctor|install|start|web|mcp-stdio|app|status|update|workspace|domain|actions|agents|agent-lab|foundry-lab|feedback|work-order|domain-memory|stages|stage|stage-artifact|index|packages|contract|system|modules|module|engine|service|runtime|env|family-runtime|executor|skill|quality|framework|substrate|brand-modules|capability-pack|scholar-skills|charter|atlas|pack|stagecraft|runway|ledger|vault|console|foundry|profiles|release|cordis)

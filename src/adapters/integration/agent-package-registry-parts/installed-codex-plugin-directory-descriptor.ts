@@ -94,6 +94,9 @@ function normalizeNativeCarrierManifest(
     version,
     source: 'installed_descriptor',
     source_repo: sourceRepo,
+    visibility: 'public',
+    access_policy_ref: null,
+    credential_provider: null,
     codex_surface: {
       plugin_id: entry.pluginId,
       plugin_source_path: entry.sourcePath,
@@ -277,8 +280,41 @@ export function withCurrentOwnerProjection(
   ownerProjection: InstalledPackageDescriptor | undefined,
 ) {
   if (!ownerProjection
-    || descriptor.manifest.version !== ownerProjection.manifest.version
+    || descriptor.manifest.package_id !== ownerProjection.manifest.package_id
     || !installedDescriptorMatchesConfiguredCarrier(descriptor)) return descriptor;
+  // Access belongs to the current owner, even when the physical installation
+  // has a newer version than the embedded projection. Keep its runtime/content
+  // identity and native lifecycle selector while refreshing that policy binding.
+  if (descriptor.manifest.version !== ownerProjection.manifest.version) {
+    const ownerPluginName = ownerProjection.carrier.carrier.pluginId.split('@', 1)[0];
+    const installedPluginName = descriptor.pluginId.split('@', 1)[0];
+    if (installedPluginName !== ownerPluginName) return descriptor;
+    const configuredSurface = descriptor.manifest.codex_surface.configured_codex_plugin_carrier;
+    const publicationRef = ownerProjection.carrier.publicationRef;
+    const carrier = { ...descriptor.carrier, publicationRef };
+    return {
+      ...descriptor,
+      manifest: {
+        ...descriptor.manifest,
+        visibility: ownerProjection.manifest.visibility,
+        access_policy_ref: ownerProjection.manifest.access_policy_ref,
+        credential_provider: ownerProjection.manifest.credential_provider,
+        source_repo: ownerProjection.manifest.source_repo,
+        codex_surface: {
+          ...descriptor.manifest.codex_surface,
+          configured_codex_plugin_carrier: {
+            ...(isRecord(configuredSurface) ? configuredSurface : {}),
+            publication_ref: publicationRef,
+          },
+        },
+        configured_codex_plugin_carrier: {
+          ...(descriptor.manifest.configured_codex_plugin_carrier ?? descriptor.carrier),
+          publicationRef,
+        },
+      },
+      carrier,
+    };
+  }
   const readiness = { ...descriptor.readiness };
   delete readiness.projection_callability;
   const projectionCallableWhileDisabled = frameworkProjectionRemainsCallableWhileDisabled(ownerProjection.manifest)

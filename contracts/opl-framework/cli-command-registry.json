@@ -6,6 +6,7 @@
   "state": "active_contract",
   "machine_boundary": "This registry describes command metadata and output schemas. It does not execute commands, write domain truth, create owner receipts, create typed blockers, or claim domain, artifact, App, production, release, or L5 readiness.",
   "protected_command_prefixes": [
+    "sources",
     "app compatibility receipt",
     "connect scientific",
     "connect references",
@@ -4883,6 +4884,10 @@
         "surface": "runtime_observability_collector_smoke"
       }
     },
+    "sources_list": {"command_id": "sources list", "owner": "OPL Software Sources", "parser_adapter": "node_util_parse_args", "options": [], "output_schema": {"type": "object", "additionalProperties": true}, "authority_boundary": {"can_write_domain_truth": false, "can_create_owner_receipt": false, "can_create_typed_blocker": false, "can_claim_domain_ready": false, "can_claim_production_ready": false, "owner": "OPL Framework software sources", "surface": "refs_only_software_source_list"}},
+    "sources_check": {"command_id": "sources check", "owner": "OPL Software Sources", "parser_adapter": "node_util_parse_args", "options": [{"name": "source-id", "flag": "--source-id", "value_kind": "string", "required": true, "summary": "Exact configured software source identity."}], "output_schema": {"type": "object", "additionalProperties": true}, "authority_boundary": {"can_write_domain_truth": false, "can_create_owner_receipt": false, "can_create_typed_blocker": false, "can_claim_domain_ready": false, "can_claim_production_ready": false, "owner": "OPL Framework software sources", "surface": "refs_only_software_source_check"}},
+    "sources_configure": {"command_id": "sources configure", "owner": "OPL Software Sources", "parser_adapter": "node_util_parse_args", "options": [{"name": "source-id", "flag": "--source-id", "value_kind": "string", "required": true, "summary": "Exact configured software source identity."}, {"name": "provider-id", "flag": "--provider-id", "value_kind": "string", "required": false, "allowed_values": ["github_packages"], "summary": "Credential provider owner."}, {"name": "credential-handle", "flag": "--credential-handle", "value_kind": "string", "required": false, "summary": "Opaque reference to credentials managed by the native provider."}, {"name": "enabled", "flag": "--enabled", "value_kind": "string", "required": false, "allowed_values": ["true", "false"], "summary": "Enable or suspend this source for future installs."}], "output_schema": {"type": "object", "additionalProperties": true}, "authority_boundary": {"can_write_domain_truth": false, "can_create_owner_receipt": false, "can_create_typed_blocker": false, "can_claim_domain_ready": false, "can_claim_production_ready": false, "owner": "OPL Framework software sources", "surface": "refs_only_software_source_configure"}},
+    "sources_disconnect": {"command_id": "sources disconnect", "owner": "OPL Software Sources", "parser_adapter": "node_util_parse_args", "options": [{"name": "source-id", "flag": "--source-id", "value_kind": "string", "required": true, "summary": "Exact configured software source identity."}], "output_schema": {"type": "object", "additionalProperties": true}, "authority_boundary": {"can_write_domain_truth": false, "can_create_owner_receipt": false, "can_create_typed_blocker": false, "can_claim_domain_ready": false, "can_claim_production_ready": false, "owner": "OPL Framework software sources", "surface": "refs_only_software_source_disconnect"}},
     "packages_list": {
       "command_id": "packages list",
       "owner": "OPL Packages",

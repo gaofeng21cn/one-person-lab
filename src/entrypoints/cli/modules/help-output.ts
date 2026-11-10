@@ -109,6 +109,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   'modules',
   'pack',
   'packages',
+  'sources',
   'runtime',
   'runway',
   'vault',

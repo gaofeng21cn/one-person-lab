@@ -89,6 +89,18 @@ export {
 } from './release-bundle/index.ts';
 export { assertCredentialHandleOnlyPayload } from './connection-registry-parts/credential-handle.ts';
 export {
+  checkOplSoftwareSource,
+  configureOplSoftwareSource,
+  disconnectOplSoftwareSource,
+  executeOplSoftwareSourceAction,
+  listOplSoftwareSources,
+  resolvePackageSourceCredentialProvider,
+  softwareSourceActionCatalog,
+  SOFTWARE_SOURCE_ACTION_IDS,
+} from './software-sources.ts';
+export type { SoftwareSourceActionId } from './software-sources.ts';
+export type { SoftwareSource, SoftwareSourceStatus } from './software-sources-types.ts';
+export {
   completeOplGatewaySetup,
   disconnectOplGatewayAccount,
   refreshOplGatewayAccount,

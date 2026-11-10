@@ -148,6 +148,122 @@ test('package source projection gate binds annotated owner tag, exact commit, UR
   assert.equal(result.file_count, 2);
 });
 
+test('package source projection gate allows a private projection of legacy or public owner metadata', (t) => {
+  const fixture = standardFixture(t);
+  const ownerPath = path.join(fixture.ownerRoot, fixture.spec.owner_package_manifest_ref);
+  const owner = JSON.parse(fs.readFileSync(ownerPath, 'utf8'));
+  const projected = JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8'));
+  const access = {
+    visibility: 'authorized_only',
+    access_policy_ref: 'github-package:example/one-person-lab-packages/mas',
+    credential_provider: 'github_packages',
+  };
+  writeJson(fixture.manifestPath, { ...projected, ...access });
+  const validate = () => validatePackageSourceProjection({
+    frameworkRoot: fixture.frameworkRoot, spec: fixture.spec, ownerRepoPath: fixture.ownerRoot,
+  });
+
+  assert.equal(validate().status, 'validated');
+  writeJson(ownerPath, { ...owner, visibility: 'public' });
+  assert.equal(validate().status, 'validated');
+  writeJson(ownerPath, { ...owner, visibility: 'authorized_only' });
+  assert.equal(validate().status, 'validated');
+  writeJson(ownerPath, { ...owner, ...access });
+  assert.equal(validate().status, 'validated');
+});
+
+test('package source projection gate prevents private owner downgrade and access authority drift', (t) => {
+  const fixture = standardFixture(t);
+  const ownerPath = path.join(fixture.ownerRoot, fixture.spec.owner_package_manifest_ref);
+  const owner = JSON.parse(fs.readFileSync(ownerPath, 'utf8'));
+  const projected = JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8'));
+  const access = {
+    visibility: 'authorized_only',
+    access_policy_ref: 'github-package:example/one-person-lab-packages/mas',
+    credential_provider: 'github_packages',
+  };
+  writeJson(ownerPath, { ...owner, ...access });
+  const validate = () => validatePackageSourceProjection({
+    frameworkRoot: fixture.frameworkRoot, spec: fixture.spec, ownerRepoPath: fixture.ownerRoot,
+  });
+  for (const visibility of [undefined, 'public']) {
+    writeJson(fixture.manifestPath, { ...projected, visibility });
+    assert.throws(validate, (error: unknown) => (
+      (error as { code?: string }).code === 'package_visibility_downgrade'
+    ));
+  }
+  for (const [field, value, code] of [
+    ['access_policy_ref', 'github-package:another/package', 'package_access_policy_drift'],
+    ['credential_provider', 'another_provider', 'package_credential_provider_drift'],
+  ]) {
+    writeJson(fixture.manifestPath, { ...projected, ...access, [field]: value });
+    assert.throws(validate, (error: unknown) => (error as { code?: string }).code === code);
+  }
+});
+
+test('package source projection gate rejects invalid visibility and incomplete private access metadata', (t) => {
+  const fixture = standardFixture(t);
+  const ownerPath = path.join(fixture.ownerRoot, fixture.spec.owner_package_manifest_ref);
+  const owner = JSON.parse(fs.readFileSync(ownerPath, 'utf8'));
+  const projected = JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8'));
+  const access = {
+    visibility: 'authorized_only',
+    access_policy_ref: 'github-package:example/one-person-lab-packages/mas',
+    credential_provider: 'github_packages',
+  };
+  const validate = () => validatePackageSourceProjection({
+    frameworkRoot: fixture.frameworkRoot, spec: fixture.spec, ownerRepoPath: fixture.ownerRoot,
+  });
+  for (const visibility of ['private', '', null, false]) {
+    writeJson(ownerPath, { ...owner, visibility });
+    writeJson(fixture.manifestPath, projected);
+    assert.throws(validate, (error: unknown) => (
+      (error as { code?: string }).code === 'package_visibility_invalid'
+    ));
+    writeJson(ownerPath, owner);
+    writeJson(fixture.manifestPath, { ...projected, visibility });
+    assert.throws(validate, (error: unknown) => (
+      (error as { code?: string }).code === 'package_visibility_invalid'
+    ));
+  }
+  for (const field of ['access_policy_ref', 'credential_provider']) {
+    for (const value of [undefined, null, '', ' ']) {
+      writeJson(fixture.manifestPath, { ...projected, ...access, [field]: value });
+      assert.throws(validate, (error: unknown) => (
+        (error as { code?: string }).code === 'package_access_metadata_invalid'
+      ));
+    }
+  }
+});
+
+test('package source projection gate respects workflow profile wrapper and nested package access authority', (t) => {
+  const fixture = standardFixture(t);
+  const ownerPath = path.join(fixture.ownerRoot, fixture.spec.owner_package_manifest_ref);
+  const owner = JSON.parse(fs.readFileSync(ownerPath, 'utf8'));
+  const projected = JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8'));
+  const spec = { ...fixture.spec, owner_manifest_kind: 'workflow_profile' };
+  const validate = () => validatePackageSourceProjection({
+    frameworkRoot: fixture.frameworkRoot, spec, ownerRepoPath: fixture.ownerRoot,
+  });
+  for (const wrapped of [
+    { visibility: 'authorized_only', package: owner },
+    { package: { ...owner, visibility: 'authorized_only' } },
+  ]) {
+    writeJson(ownerPath, wrapped);
+    assert.throws(validate, (error: unknown) => (
+      (error as { code?: string }).code === 'package_visibility_downgrade'
+    ));
+    writeJson(fixture.manifestPath, {
+      ...projected,
+      visibility: 'authorized_only',
+      access_policy_ref: 'github-package:example/one-person-lab-packages/mas',
+      credential_provider: 'github_packages',
+    });
+    assert.equal(validate().status, 'validated');
+    writeJson(fixture.manifestPath, projected);
+  }
+});
+
 test('package source projection gate preserves Unicode and spaced carrier paths with Git quoting enabled', (t) => {
   const fixture = standardFixture(t, 'skills/med-autoscience/医学科普 说明.md');
   git(fixture.ownerRoot, ['config', 'core.quotePath', 'true']);

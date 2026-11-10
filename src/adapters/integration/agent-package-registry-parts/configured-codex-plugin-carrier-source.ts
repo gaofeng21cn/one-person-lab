@@ -9,6 +9,9 @@ import { parseJsonText } from '../../../kernel/json-file.ts';
 import { runtimeRootContainsDescriptor } from '../../../kernel/git-marketplace-runtime-root.ts';
 import { MAX_PACKAGE_SOURCE_ARCHIVE_BYTES, packageSourceArchiveDigest, extractPackageSourceArchive, materializePackageSourceCommit, packageSourceArchiveMembersStayWithinRoot, readPackageSourceArchiveEntries } from './package-source-archive.ts';
 import { localReadbackFailure, runConfiguredDownloadWithTransientRetry, stringValue } from './configured-codex-plugin-carrier-native.ts';
+import { credentialForGithubPackages } from './package-registry-access-provider.ts';
+import { assertPackageDownloadAllowed, packageAccessSubject } from './package-access.ts';
+import { verifyPrivatePackagePublication } from './private-package-publication.ts';
 
 const PREFIX = 'application/vnd.onepersonlab.package.';
 const MAX_BYTES = 128 * 1024 * 1024;
@@ -18,15 +21,21 @@ function invalid(message: string): never {
   return localReadbackFailure('configured_codex_plugin_carrier_source_invalid', message);
 }
 
-function download(url: string, env: NodeJS.ProcessEnv, token?: string) {
+function download(url: string, env: NodeJS.ProcessEnv, token?: string, basicCredential?: { username: string; token: string }) {
+  if (token && !/^[A-Za-z0-9._~+/=-]+$/.test(token)) return invalid('Package registry pull token is invalid.');
   const result = runConfiguredDownloadWithTransientRetry(() => {
+    const config = token
+      ? `header = "Authorization: Bearer ${token}"\n`
+      : basicCredential
+        ? `header = "Authorization: Basic ${Buffer.from(`${basicCredential.username}:${basicCredential.token}`, 'utf8').toString('base64')}"\n`
+        : '';
     const response = spawnSync('curl', [
-      '--fail', '--silent', '--show-error', '--location', '--proto', '=https',
+      '--disable', '--fail', '--silent', '--show-error', '--location', '--proto', '=https',
       '--ipv4',
       '--connect-timeout', '10', '--max-time', '120', '--max-filesize', String(MAX_BYTES),
-      ...(token ? ['-H', `Authorization: Bearer ${token}`] : []),
+      ...(config ? ['--config', '-'] : []),
       '-H', 'Accept: application/vnd.oci.image.manifest.v1+json', url,
-    ], { env, maxBuffer: MAX_BYTES });
+    ], { env, maxBuffer: MAX_BYTES, input: config });
     return { status: response.status, stdout: response.stdout ?? Buffer.alloc(0),
       stderr: response.stderr?.toString('utf8') ?? '', error: response.error ?? null };
   });
@@ -40,13 +49,14 @@ function download(url: string, env: NodeJS.ProcessEnv, token?: string) {
 }
 
 function downloadArchive(url: string, destination: string, env: NodeJS.ProcessEnv, token: string) {
+  if (!/^[A-Za-z0-9._~+/=-]+$/.test(token)) return invalid('Package registry pull token is invalid.');
   const result = runConfiguredDownloadWithTransientRetry(() => {
     const response = spawnSync('curl', [
-      '--fail', '--silent', '--show-error', '--location', '--proto', '=https', '--ipv4',
+      '--disable', '--fail', '--silent', '--show-error', '--location', '--proto', '=https', '--ipv4',
       '--connect-timeout', '10', '--max-time', '600',
       '--max-filesize', String(MAX_PACKAGE_SOURCE_ARCHIVE_BYTES),
-      '-H', `Authorization: Bearer ${token}`, '--output', destination, url,
-    ], { env, maxBuffer: MAX_BYTES });
+      '--config', '-', '--output', destination, url,
+    ], { env, maxBuffer: MAX_BYTES, input: `header = "Authorization: Bearer ${token}"\n` });
     return { status: response.status, stdout: response.stdout ?? Buffer.alloc(0),
       stderr: response.stderr?.toString('utf8') ?? '', error: response.error ?? null };
   });
@@ -234,10 +244,34 @@ export function acquireHostedPackageSource(input: {
   // The selected owner projection supplies the version. Do not introduce a
   // second latest/currentness resolver beside the native carrier lifecycle.
   const artifactRef = `${image}:${version}`;
+  const selectedSubject = packageAccessSubject({
+    ...owner,
+    codex_surface: { ...surface, configured_codex_plugin_carrier: { ...carrier, publication_ref: artifactRef } },
+  });
+  const privateAccess = owner.visibility === 'authorized_only'
+    ? assertPackageDownloadAllowed(selectedSubject, input.env)
+    : null;
   const scope = encodeURIComponent(`repository:${match[1]}:pull`);
-  const token = stringValue(json(download(`https://ghcr.io/token?service=ghcr.io&scope=${scope}`, input.env)).token);
+  const credential = privateAccess
+    ? credentialForGithubPackages(input.env, privateAccess.credential_handle)
+    : null;
+  if (privateAccess && !credential) return invalid('The selected private Package has no authorized registry credential.');
+  if (privateAccess && credential) {
+    if (!privateAccess.registry_digest) return invalid('The private Package registry did not return an immutable digest.');
+    verifyPrivatePackagePublication({
+      subject: `${image}@${privateAccess.registry_digest}`, packageId: input.packageId, version,
+      sourceRepo: String(owner.source_repo ?? ''), sourceCommit: String(input.payload.source_commit ?? ''),
+      accessPolicyRef: selectedSubject.access_policy_ref!, credential, env: input.env,
+    });
+  }
+  const token = stringValue(json(download(`https://ghcr.io/token?service=ghcr.io&scope=${scope}`, input.env, undefined, credential ?? undefined)).token);
   if (!token) return invalid('Package registry did not return a pull token.');
-  const manifestBytes = download(`https://ghcr.io/v2/${match[1]}/manifests/${version}`, input.env, token);
+  const reference = privateAccess?.registry_digest ?? version;
+  if (privateAccess && !privateAccess.registry_digest) return invalid('The private Package registry did not return an immutable digest.');
+  const manifestBytes = download(`https://ghcr.io/v2/${match[1]}/manifests/${reference}`, input.env, token);
+  if (privateAccess && digest(manifestBytes) !== privateAccess.registry_digest) {
+    return invalid('Private Package manifest does not match its authorized digest.');
+  }
   const manifest = json(manifestBytes);
   const layers = Array.isArray(manifest.layers) ? manifest.layers.filter(isRecord) : [];
   const layer = (kind: string) => {

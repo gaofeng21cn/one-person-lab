@@ -23,6 +23,7 @@ function parseOptions(argv) {
     verifyOnly: false,
     digestOnly: false,
     anonymous: false,
+    requireAnonymousDenied: false,
     allowPackageManifestProjectionDrift: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -33,6 +34,10 @@ function parseOptions(argv) {
     }
     if (token === '--anonymous') {
       options.anonymous = true;
+      continue;
+    }
+    if (token === '--require-anonymous-denied') {
+      options.requireAnonymousDenied = true;
       continue;
     }
     if (token === '--digest-only') {
@@ -61,6 +66,9 @@ function parseOptions(argv) {
   }
   if (options.digestOnly && !options.verifyOnly) {
     throw new Error('--digest-only requires --verify-only and an exact expected digest');
+  }
+  if (options.requireAnonymousDenied && (!options.verifyOnly || options.anonymous)) {
+    throw new Error('--require-anonymous-denied requires authenticated --verify-only and cannot be combined with --anonymous');
   }
   if (options.allowPackageManifestProjectionDrift
     && (options.digestOnly || options.artifactType !== PACKAGE_ARTIFACT_TYPE)) {
@@ -119,6 +127,10 @@ function fetchRemote(ref, registryConfig = '') {
   if (manifestResult.status !== 0) {
     return {
       missing: isMissing(manifestResult),
+      inaccessible: true,
+      accessDenied: /(?:unauthorized|denied|forbidden|\b401\b|\b403\b)/i.test(
+        `${manifestResult.stdout ?? ''}\n${manifestResult.stderr ?? ''}`,
+      ) || isMissing(manifestResult),
       error: `${manifestResult.stdout ?? ''}\n${manifestResult.stderr ?? ''}`.trim(),
     };
   }
@@ -243,9 +255,12 @@ function main() {
   try {
     if (options.anonymous) anonymousConfig = anonymousRegistryConfig();
     const remote = fetchRemote(options.ref, anonymousConfig?.configPath ?? '');
+    if (remote.inaccessible && !remote.missing) {
+      throw new Error(`OCI artifact access failed at ${options.ref}`);
+    }
     if (remote.missing) {
       if (options.verifyOnly || options.anonymous) {
-        throw new Error(`OCI artifact is not anonymously readable at ${options.ref}: ${remote.error}`);
+        throw new Error(`OCI artifact is not ${options.anonymous ? 'anonymously' : 'authenticated'} readable at ${options.ref}`);
       }
       console.log(JSON.stringify({
         status: 'absent_publish_required',
@@ -258,6 +273,16 @@ function main() {
       return;
     }
     const matched = assertRemoteMatches(remote, options, layers, anonymousConfig?.configPath ?? '');
+    if (options.requireAnonymousDenied) {
+      anonymousConfig = anonymousRegistryConfig();
+      const anonymousRemote = fetchRemote(options.ref, anonymousConfig.configPath);
+      if (!anonymousRemote.inaccessible) {
+        throw new Error(`Private OCI artifact is anonymously readable at ${options.ref}`);
+      }
+      if (!anonymousRemote.accessDenied) {
+        throw new Error(`Private OCI artifact anonymous access denial could not be verified at ${options.ref}`);
+      }
+    }
     console.log(JSON.stringify({
       status: matched.packageManifestProjectionEquivalent
         ? (options.verifyOnly ? 'verified_package_projection_equivalent' : 'existing_package_projection_equivalent_reuse')
@@ -269,6 +294,8 @@ function main() {
       package_manifest_projection_equivalent: matched.packageManifestProjectionEquivalent,
       source_annotation_verified: true,
       anonymous_pull_verified: options.anonymous,
+      authenticated_pull_verified: options.requireAnonymousDenied,
+      anonymous_access_denied_verified: options.requireAnonymousDenied,
     }));
   } finally {
     if (anonymousConfig) fs.rmSync(anonymousConfig.root, { recursive: true, force: true });

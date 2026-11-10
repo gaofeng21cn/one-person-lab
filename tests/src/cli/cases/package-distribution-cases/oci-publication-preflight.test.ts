@@ -33,6 +33,10 @@ function fixture() {
 const fs = require('node:fs');
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.FAKE_ORAS_LOG, JSON.stringify(args) + '\\n');
+if (args.includes('--registry-config') && process.env.FAKE_ORAS_ANONYMOUS_ERROR) {
+  console.error(process.env.FAKE_ORAS_ANONYMOUS_ERROR);
+  process.exit(1);
+}
 if (process.env.FAKE_ORAS_MODE === 'missing') {
   console.error('manifest unknown');
   process.exit(1);
@@ -219,4 +223,33 @@ test('OCI publication readback reuses an exact stable digest without rebuilding 
     '--digest-only',
     '--expected-digest', remoteDigest,
   ], { encoding: 'utf8', env: value.env }), /--digest-only requires --verify-only/);
+});
+
+test('private OCI readback requires authenticated exact bytes and verified anonymous denial', () => {
+  const value = fixture();
+  const privateArgs = [...args(value.layerPath), '--verify-only', '--expected-digest', remoteDigest, '--require-anonymous-denied'];
+  try {
+    for (const denial of ['denied: requested access is denied', '401 Unauthorized', '404 Not Found']) {
+      const output = parseJsonText(execFileSync(process.execPath, privateArgs, {
+        encoding: 'utf8', env: { ...value.env, FAKE_ORAS_ANONYMOUS_ERROR: denial },
+      })) as Record<string, unknown>;
+      assert.equal(output.authenticated_pull_verified, true);
+      assert.equal(output.anonymous_access_denied_verified, true);
+      assert.equal(output.anonymous_pull_verified, false);
+    }
+    assert.throws(() => execFileSync(process.execPath, privateArgs, {
+      encoding: 'utf8', env: value.env,
+    }), /Private OCI artifact is anonymously readable/);
+    assert.throws(() => execFileSync(process.execPath, privateArgs, {
+      encoding: 'utf8', env: { ...value.env, FAKE_ORAS_ANONYMOUS_ERROR: 'connection timed out' },
+    }), /anonymous access denial could not be verified/);
+    assert.throws(() => execFileSync(process.execPath, privateArgs, {
+      encoding: 'utf8', env: { ...value.env, FAKE_ORAS_MODE: 'missing', FAKE_ORAS_ANONYMOUS_ERROR: '401 Unauthorized' },
+    }), /not authenticated readable/);
+    assert.throws(() => execFileSync(process.execPath, [...privateArgs, '--anonymous'], {
+      encoding: 'utf8', env: value.env,
+    }), /cannot be combined with --anonymous/);
+  } finally {
+    fs.rmSync(value.root, { recursive: true, force: true });
+  }
 });

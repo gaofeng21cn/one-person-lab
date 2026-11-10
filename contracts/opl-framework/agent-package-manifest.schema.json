@@ -53,6 +53,19 @@
       "format": "uri-reference",
       "minLength": 1
     },
+    "visibility": {
+      "enum": ["public", "authorized_only"],
+      "default": "public"
+    },
+    "access_policy_ref": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#?=&%+~-]*$"
+    },
+    "credential_provider": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
     "display_name": {
       "type": "string",
       "minLength": 1
@@ -901,6 +914,21 @@
       "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "visibility": { "const": "authorized_only" } },
+        "required": ["visibility"]
+      },
+      "then": {
+        "required": ["access_policy_ref", "credential_provider"],
+        "properties": {
+          "access_policy_ref": { "type": "string", "minLength": 1 },
+          "credential_provider": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  ],
   "$defs": {
     "localized_text": {
       "type": "object",

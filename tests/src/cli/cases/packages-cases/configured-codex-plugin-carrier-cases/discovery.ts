@@ -262,6 +262,7 @@ process.stdout.write(JSON.stringify({ installed: [], available: [] }));
       .flatMap((projection) => {
         const manifest = normalizePackageManifest(projection.payload, projection.source_ref);
         return projection.payload.publication_channel_admission !== 'development_only'
+          && manifest.visibility !== 'authorized_only'
           && manifest.configured_codex_plugin_carrier
           && !(manifest.package_role === 'capability_package'
             && manifest.codex_default_exposure === false
