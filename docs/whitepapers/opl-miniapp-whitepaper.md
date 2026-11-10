@@ -6,6 +6,8 @@
 
 发布日期：2026-11-09
 
+更新日期：2026-11-10
+
 文档状态：设计标准稿。本文确立产品理念与开发方向；各应用的实现、安装验收和公开发布状态由其负责方分别维护。
 
 适用对象：希望开发、使用或集成 Agent 原生应用的用户、开发者与技术决策者。
@@ -56,9 +58,13 @@ OPL 的会话内界面采用标准 MCP Apps，使工具结果与交互资源能�
 
 ### 统一目录与安装管理
 
-当 Agent 和 MiniApp 数量增加时，用户需要一个稳定的“软件清单”认知入口。OPL 将这项职责交给 Framework 的 **OPL Package Directory**：它按 Package identity 和 `package_role` 投影 Agents、Workflows 与 Shared capabilities，展示目录总量、可安装、已安装版本、可用版本、更新和就绪状态。OPL App 首页的“应用管理”与主对话并列，是这个目录的人机入口；Studio 和其他宿主消费同一 owner projection。
+当 Agent 和 MiniApp 数量增加时，用户需要一个稳定的软件清单入口。OPL App 的“应用管理”与主对话并列，提供软件目录、更新、共享资源和软件源。Framework 的 **OPL Package Directory** 汇总软件身份、来源与真实安装状态，Studio 和其他宿主使用同一份投影。
 
-GitHub 仓库活跃并不等于可安装。只有具备 manifest/descriptor、可调用入口、发布来源、carrier 和安装后回读的项目才能进入可安装目录。Homebrew 在这套模型中是系统依赖、CLI 和部分原生载体的分发方式，沿对应 artifact 做版本与 digest 回读；它不替代 OPL Agent 目录，也不成为第二个 Package registry。完整规则见 [Package Directory 与统一安装管理](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/package-directory.md)。
+软件中心按维护归属组织三个范围：**OPL 软件、其他来源、运行组件**。OPL 软件覆盖我们独立维护的智能体、应用和能力包，标准智能体只是其中一种实现；这三个产品类型用于筛选。外部 Codex 插件和 Skills 标明原渠道与管理器，运行组件则说明其服务的产品。同一软件的公开或私有来源、不同渠道与多个安装位置聚合在同一身份下，内部技术角色不成为用户必须理解的分类。
+
+独立软件进入可安装目录，需要稳定身份、清单、可调用入口、发布来源、安装方式和安装后回读。概念仓库与产品内部开发依赖按其实际归属管理。列表展示正式名称、说明、已装版本、可用版本与当前操作；ID、路径和精确构建信息放在详情。成熟度由软件实际情况声明，开发接入单独标识；版本差异与可更新状态分别判断，未完成检查时保留未知。
+
+分发复用现有平台：[OPL Homebrew tap](https://github.com/gaofeng21cn/homebrew-one-person-lab) 承载公开原生应用与 CLI，Package 使用公开或授权的 OCI 来源。获授权的私有软件与公开软件共用安装、更新、修复和卸载入口，读取与操作时重新检查实际权限。Homebrew、Codex 及其他原生安装器各自执行生命周期操作，Framework 汇总结果；软件代码沿平台路径安装，开发源码与用户资料分别保留，操作绑定选定的安装实例。完整规则见 [Package Directory 与统一安装管理](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/package-directory.md)及[软件源接口](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/software-sources.md)。
 
 宿主能力不同，体验也应有清楚的降级路径。支持 MCP Apps 的宿主呈现交互界面；其他调用方仍能获得结构化结果，并在适用时使用由负责方提供的专业应用或浏览器入口。业务执行不能依赖某个页面恰好保持打开。
 

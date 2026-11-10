@@ -35,7 +35,9 @@ Package owner持有descriptor、runtime bytes、version和publication。native c
 
 `ordered_path_length_file_length_bytes` 的字节编码由 Framework 的 `src/kernel/package-content-lock.ts` 与 `python/opl_framework/package_content_lock.py` 持有，并以 UTF-8、二进制内容和路径顺序的同一向量验证一致性。Python 独立工具通过 `node scripts/materialize-python-support.mjs --module package_content_lock --target <consumer>/_opl_package_content_lock.py` 生成便携副本；加 `--check` 核对逐字一致。路径选择、identity 和 canonicalization 校验仍由实际调用方负责。
 
-私有 owner 仓库的发布检出优先使用单仓只读 Deploy Key。公钥登记在对应源码仓库，
+私有 Package 从其私有 owner 仓库运行统一发布器，使用该工作流自身的 `GITHUB_TOKEN`
+读取精确源码并访问私有 registry。跨仓公开分发已获明确授权的私有源码时，可使用单仓
+只读 Deploy Key。公钥登记在对应源码仓库，
 私钥保存于受保护发布环境的 `OWNER_SOURCE_READ_KEY_<OWNER>_<REPO>` secret；
 `<OWNER>/<REPO>` 取自 canonical Package manifest 的 `source_repo`，转为大写并把
 `/`、`.`、`-` 替换为 `_`。例如 `example/private-agent` 对应
@@ -44,7 +46,7 @@ Package owner持有descriptor、runtime bytes、version和publication。native c
 的检出；公开仓库可沿用工作流自己的 `GITHUB_TOKEN`。凭据只用于源码检出，且不
 持久化到 Git；OCI 写入仍使用工作流自身的 Package 权限。
 
-当前 OCI 通道是公开分发，包含完整已提交源码归档，不能把“源码仓库仍私有”当作
+公开 OCI 通道包含完整已提交源码归档，不能把“源码仓库仍私有”当作
 归档仍私有。工作流在检出私有源码前匿名核对仓库可见性；公开源码可直接继续，
 私有源码须先取得 owner 对该版本完整归档公开的明确授权，再由受保护发布环境的
 `PUBLIC_SOURCE_ARCHIVE_COMMIT_<OWNER>_<REPO>` variable 绑定精确源码 commit。
@@ -152,9 +154,12 @@ Flow 的统一发布入口按可见性选择调用方。私有 wrapper 固定的
 和工作流运行；完整回执只向显式请求它的发布工具返回。
 
 私有发布先验证调用方就是 manifest 的私有 owner；新 namespace 只允许先上传固定的
-无敏感内容标记。确认 registry 为 private、关联正确的私有仓库且匿名访问被拒绝后，
-才允许上传源码、manifest 和 payload。未知上传结果先回读，不重复创建。
-两个步骤之间 namespace 缺失或变成公开均停止发布。签名密钥由 owner 的受保护
+无敏感内容标记。确认 registry 为 private 且匿名访问被拒绝后，才允许上传源码、manifest
+和 payload。归属由 canonical owner、经认证的精确私有 caller、源码 commit/tag、OCI
+source annotation 和签名 provenance 共同绑定。GitHub 的 `repository` 关联投影存在时
+必须匹配该私有 owner；缺失时记录 `association_metadata_unavailable`，不宣称关联已验证。
+上传前后复用同一个只读核验路径；namespace 缺失、变成公开或明确关联错误 owner 时均停止。
+未知上传结果先回读，不重复创建。签名密钥由 owner 的受保护
 `release-stable` 环境提供，并与 Framework 随附的公钥核对；不依赖个人访问令牌。
 
 该规则覆盖全部 package id，而不只是标准智能体。未进入 OCI 流程的内部模块由

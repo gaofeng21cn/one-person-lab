@@ -37,16 +37,24 @@ export function ensurePrivatePackageRegistry(input, options = {}) {
   if (!image || image[1] !== input.ownerRepo.split('/')[0].toLowerCase()) fail('private registry identity is invalid.');
   const route = `/users/${image[1]}/packages/container/${encodeURIComponent(image[2])}`;
   const validate = (metadata) => {
-    if (!metadata || metadata.visibility !== 'private' || metadata.repository?.full_name !== input.ownerRepo
-      || metadata.repository?.private !== true) {
-      fail('private visibility and exact private owner association are required before content upload.');
-    }
+    // Actions can omit this optional association even when its token reads the
+    // private package. The authenticated caller above is the publisher authority;
+    // source identity is bound by the publication annotation and signed provenance.
+    const reason = !metadata ? 'metadata_missing'
+      : metadata.visibility !== 'private' ? 'visibility_not_private'
+        : metadata.repository == null ? null
+          : metadata.repository.full_name !== input.ownerRepo ? 'owner_association_mismatch'
+            : metadata.repository.private == null ? 'associated_owner_privacy_missing'
+              : metadata.repository.private !== true ? 'associated_owner_not_private' : null;
+    if (reason) fail(`private visibility and any reported private owner association must match (${reason}).`);
+    return metadata.repository == null ? 'association_metadata_unavailable' : 'association_verified';
   };
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-private-registry-'));
   try {
     let metadata = read(route);
     let bootstrapped = false;
     if (!metadata) {
+      if (input.verifyOnly) validate(metadata);
       const marker = path.join(temporary, 'access-bootstrap.json');
       fs.writeFileSync(marker, MARKER, { mode: 0o600 });
       // GitHub Actions creates a package using the caller repository visibility.
@@ -65,9 +73,9 @@ export function ensurePrivatePackageRegistry(input, options = {}) {
     fs.writeFileSync(registryConfig, '{"auths":{}}\n', { mode: 0o600 });
     const access = run('oras', ['repo', 'tags', '--registry-config', registryConfig, input.image], { DOCKER_CONFIG: anonymous });
     if (!denied(access)) fail('anonymous registry enumeration was not denied.');
-    // Fresh owner metadata closes the bootstrap/read interval before source upload.
-    validate(read(route));
-    return { status: 'private_registry_verified', bootstrapped, anonymous_access: 'denied_verified' };
+    // Fresh registry metadata closes the access/read interval before returning.
+    const ownerAssociation = validate(read(route));
+    return { status: 'private_registry_verified', bootstrapped, anonymous_access: 'denied_verified', owner_association: ownerAssociation };
   } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
 }
 
@@ -76,6 +84,7 @@ function main() {
   const argv = process.argv.slice(2);
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--publisher-only') input.publisherOnly = true;
+    else if (argv[i] === '--verify-only') input.verifyOnly = true;
     else if (argv[i] === '--owner-repo' && argv[i + 1]) input.ownerRepo = argv[++i];
     else if (argv[i] === '--image' && argv[i + 1]) input.image = argv[++i];
     else fail('unknown or incomplete argument.');

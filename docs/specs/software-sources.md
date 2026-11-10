@@ -118,7 +118,9 @@ Homebrew 动作执行前重新读取该来源，核对固定 OPL tap、当前版
 
 安装、更新和需要远端读取的修复在执行前重新检查来源授权。私有制品安装时锁定不可变 digest；`latest-stable` 只用于发现候选版本。公开源的匿名回读与私有源的授权回读是不同验收条件，不能用本机 carrier 已安装替代新用户发行验收。
 
-第一方私有 Package 的签名信任由 Framework 随版本交付的 `contracts/opl-framework/keys/private-package-signing.pub` 提供，仅用于 `gaofeng21cn/one-person-lab-private-packages`。其他发布者由 Host 显式配置 `OPL_PACKAGE_SIGNING_PUBLIC_KEY` 绝对公钥路径；显式配置优先，配置错误不会回退到默认信任。公钥不从制品或用户覆盖的目录中取得。发布流程在上传前核对受保护私钥派生的公钥与随 Framework 交付的公钥一致。私钥与密码仅保存在 `release-stable` 的受保护发布凭据中；私有源码使用每仓专用的只读 Deploy Key。签名信任不能代替 registry 登录、Package read 权限或 Connect/知识授权；实际发行仍须完成授权回读及匿名拒绝验证。
+第一方私有 Package 的签名信任由 Framework 随版本交付的 `contracts/opl-framework/keys/private-package-signing.pub` 提供，仅用于 `gaofeng21cn/one-person-lab-private-packages`。其他发布者由 Host 显式配置 `OPL_PACKAGE_SIGNING_PUBLIC_KEY` 绝对公钥路径；显式配置优先，配置错误不会回退到默认信任。公钥不从制品或用户覆盖的目录中取得。发布流程在上传前核对受保护私钥派生的公钥与随 Framework 交付的公钥一致。私钥与密码保存在私有 owner 仓库的 `release-stable` 发布环境；该仓库通过固定 Framework commit 的正式 workflow 调用统一发布器，使用自身 `GITHUB_TOKEN` 读取精确源码和访问 registry。签名信任不能代替 registry 登录、Package read 权限或 Connect/知识授权；实际发行仍须完成授权回读及匿名拒绝验证。
+
+私有制品的归属由 canonical Package owner、经认证的精确私有 workflow caller、源码 commit/tag，以及 OCI source annotation 和签名 provenance 共同绑定。GitHub Package REST 返回的 `repository` 是可选关联投影：存在时必须与该私有 owner 一致；缺失时明确记录 `association_metadata_unavailable`，不得宣称关联已验证。发布器仍须实际读取目标私有 namespace，并在上传前后用同一只读核验路径证明 `visibility=private` 和匿名访问被拒绝；明确的公开状态或错误 owner 均拒绝发布。首次创建只允许先上传不含源码或凭据的固定访问标记，完成同样核验后才上传 Package 内容。
 
 ## UI 展示规则
 
