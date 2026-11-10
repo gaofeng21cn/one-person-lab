@@ -5181,9 +5181,53 @@
                         "readiness",
                         "recommended_action",
                         "recommended_action_ref",
-                        "available_actions"
+                        "available_actions",
+                        "catalog_origin",
+                        "origin_basis",
+                        "catalog_source"
                       ],
-                      "additionalProperties": true
+                      "additionalProperties": true,
+                      "properties": {
+                        "catalog_origin": {
+                          "enum": [
+                            "opl",
+                            "external",
+                            "unknown"
+                          ]
+                        },
+                        "origin_basis": {
+                          "enum": [
+                            "owner_projection",
+                            "owner_manifest",
+                            "native_carrier",
+                            "unknown"
+                          ]
+                        },
+                        "catalog_source": {
+                          "type": "object",
+                          "required": [
+                            "manager",
+                            "delivery"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "manager": {
+                              "type": "string"
+                            },
+                            "marketplace_id": {
+                              "type": "string"
+                            },
+                            "delivery": {
+                              "enum": [
+                                "host_bundled",
+                                "marketplace",
+                                "local",
+                                "unknown"
+                              ]
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }

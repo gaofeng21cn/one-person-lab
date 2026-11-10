@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import { gitMarketplaceRuntimeRoot, runtimeRootContainsDescriptor } from '../../../kernel/git-marketplace-runtime-root.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
 import { isFirstPartyPackage } from '../agent-package-first-party.ts';
+import { packageCatalogProvenance } from './package-catalog-provenance.ts';
 import { githubMarketplaceSourceIdentity, sameMarketplaceSource } from './shared.ts';
 import { listAgentPackageSettingsActions } from '../agent-package-actions.ts';
 import {
@@ -425,6 +426,9 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     tags: [],
     package_role: manifest.package_role,
     catalog_scope: descriptor.catalog_scope ?? currentOwner?.catalog_scope ?? 'software',
+    ...packageCatalogProvenance(currentOwner?.catalog_origin === 'opl'
+      ? { ...descriptor, catalog_origin: currentOwner.catalog_origin, origin_basis: currentOwner.origin_basis }
+      : descriptor),
     software_type: currentOwner?.manifest.presentation?.software_type
       ?? manifest.presentation?.software_type
       ?? (manifest.package_role === 'standard_agent' ? 'agent' : 'unknown'),
@@ -642,6 +646,7 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
       surface_kind: 'opl_agent_package_status' as const,
       status: operationalReady ? 'available' : installed ? 'attention_needed' : 'not_installed',
       package_id: packageId ?? null,
+      ...packageCatalogProvenance(descriptor),
       agent_id: installedDescriptor?.manifest.agent_id ?? descriptor?.manifest.agent_id ?? null,
       app_contributions: installedDescriptor?.manifest.app_contributions ?? null,
       installed_package_count: packageId ? (installed ? 1 : 0) : snapshot.installed.size,

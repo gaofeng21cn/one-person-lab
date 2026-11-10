@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -18,6 +17,7 @@ import { canonicalAgentPackageId } from '../agent-package-identity.ts';
 import { isFirstPartyPackage } from '../agent-package-first-party.ts';
 import { resolveCanonicalOplFamilyMarketplaceId } from '../system-installation/codex-plugin-registry.ts';
 import { normalizePackageManifest } from './manifest-normalizers.ts';
+import { codexPackageCatalogProvenance } from './package-catalog-provenance.ts';
 import { sha256Text } from './shared.ts';
 import type {
   InstalledCarrierEntry,
@@ -36,16 +36,6 @@ function frameworkProjectionRemainsCallableWhileDisabled(
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function hostBundledSource(sourcePath: string) {
-  const home = process.env.HOME?.trim() || os.homedir();
-  const codexHome = process.env.CODEX_HOME?.trim() || path.join(home, '.codex');
-  const cacheHome = process.env.XDG_CACHE_HOME?.trim() || path.join(home, '.cache');
-  // These are Host-owned distribution locations, not a list of products or
-  // publishers. An independent third-party native plugin remains software.
-  return [path.join(codexHome, '.tmp', 'bundled-marketplaces'), path.join(cacheHome, 'codex-runtimes')]
-    .some(root => path.resolve(sourcePath).startsWith(`${path.resolve(root)}${path.sep}`));
 }
 
 function nativePresentation(displayName: string, payload: Record<string, unknown>) {
@@ -226,7 +216,8 @@ export function readInstalledPackageDescriptor(entry: InstalledCarrierEntry): In
     return {
       manifest,
       manifestPath,
-      catalog_scope: !hasOwnerManifest && hostBundledSource(entry.sourcePath) ? 'host_component' : 'software',
+      catalog_scope: 'software',
+      ...codexPackageCatalogProvenance({ ...entry, ownerManifest: hasOwnerManifest, ownerSource: manifest.source }),
       manifest_sha256: sha256Text(manifestText),
       sourcePath: entry.sourcePath,
       pluginId: entry.pluginId,
@@ -277,6 +268,11 @@ function readProjectedPackageDescriptor(
       manifest,
       manifestPath,
       catalog_scope: 'software',
+      ...codexPackageCatalogProvenance({
+        pluginId: carrier.carrier.pluginId,
+        marketplaceSource: carrier.carrier.marketplaceSource,
+        ownerProjection: true,
+      }),
       manifest_sha256: sha256Text(manifestText),
       sourcePath: manifestPath,
       pluginId: carrier.carrier.pluginId,
@@ -332,6 +328,8 @@ export function withCurrentOwnerProjection(
     const carrier = { ...descriptor.carrier, publicationRef };
     return {
       ...descriptor,
+      catalog_origin: ownerProjection.catalog_origin,
+      origin_basis: ownerProjection.origin_basis,
       manifest: {
         ...descriptor.manifest,
         visibility: ownerProjection.manifest.visibility,
@@ -370,6 +368,8 @@ export function withCurrentOwnerProjection(
       : null);
   return {
     ...descriptor,
+    catalog_origin: ownerProjection.catalog_origin,
+    origin_basis: ownerProjection.origin_basis,
     manifest: { ...ownerProjection.manifest, ...physicalLock, presentation },
     manifestPath: ownerProjection.manifestPath,
     manifest_sha256: ownerProjection.manifest_sha256,

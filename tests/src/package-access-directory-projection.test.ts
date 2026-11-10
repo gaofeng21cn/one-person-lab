@@ -119,12 +119,16 @@ test('background update eligibility uses the existing access decision and skips 
 
 test('fast app state preserves safe access state without copying credentials or provider extensions', () => {
   const result = compactFastAgentPackageDirectory({ entries: [{
-    package_id: 'opl-flow', package_access: {
+    package_id: 'opl-flow', catalog_origin: 'opl', origin_basis: 'owner_projection',
+    catalog_source: { manager: 'codex_plugin_manager', marketplace_id: 'opl-flow', delivery: 'marketplace', token: 'must-not-project' },
+    package_access: {
       ...access('revoked'), credential_handle: 'provider:github_packages:gh-cli',
       token: 'must-not-project', provider_debug: { password: 'must-not-project' },
     },
   }] });
   const projected = result.entries[0].package_access;
+  assert.deepEqual(result.entries[0].catalog_source, { manager: 'codex_plugin_manager', marketplace_id: 'opl-flow', delivery: 'marketplace' });
+  assert.equal((result.entries[0] as Record<string, unknown>).catalog_origin, 'opl');
   assert.equal(projected?.visibility, 'authorized_only');
   assert.equal(projected?.status, 'revoked');
   assert.equal(projected?.source_id, 'github-packages:gaofeng21cn');

@@ -57,6 +57,14 @@ test('fast sources read only native snapshots and never invent empty or latest r
   assert.ok(snapshot.native_items?.[0].description_i18n?.['zh-CN']);
   assert.equal(snapshot.native_items?.[1].display_name, 'Example');
   assert.equal(snapshot.native_items?.[1].installed, false);
+  assert.equal(snapshot.catalog_origin, 'opl');
+  assert.equal(snapshot.origin_basis, 'owner_projection');
+  assert.deepEqual(snapshot.catalog_source, { manager: 'homebrew', marketplace_id: tap, delivery: 'marketplace' });
+  // Even an unbranded item has OPL source provenance: tap membership owns this
+  // classification, not its name or current installation status.
+  assert.equal(snapshot.native_items?.[1].catalog_origin, 'opl');
+  assert.equal(snapshot.native_items?.[1].origin_basis, 'owner_projection');
+  assert.deepEqual(snapshot.native_items?.[1].catalog_source, snapshot.catalog_source);
   assert.deepEqual(native.commands.map(args => args[0]), ['tap-info', 'info']);
   assert.equal(snapshot.available_actions.some(action => action.action_id === 'source_install'), false);
   const itemAction = snapshot.native_items?.[1].available_actions[0];
