@@ -34,6 +34,8 @@ App／Studio 的“共享资源 → 知识与记忆”读取 `app_state.settings
 
 `opl knowledge source-list`、`source-check`、`source-connect`、`source-configure`、`source-disconnect` 与 `knowledge_source_*` App actions 共用一个 owner。配置、授权修改和断开绑定要求确认及精确 revision，写后立即回读。断开只移除当前工作区对此来源的选择，保留原文、registry、其他工作区授权及必要知识声明；重新连接沿原来源身份完成。
 
+来源是否可用与知识条目是否仍适合召回分别呈现。授权正常、原文字节与接受版本一致的来源，不因其中历史记录到达复核期限而显示来源故障。`knowledge_health` 保留当前可用、待复核、已退役和正文不可用的数量，以及待复核条目的知识 ID 与原因；详情可据此显示“6 项可用，2 项待复核”。正文漂移、文件不可读及无效接受记录仍要求处理。来源检查不延长复核日期，不修改正文；过期条目继续被原召回流程排除，必要知识或行动前复核缺口仍阻止对应执行。
+
 简单表单保留现有授权边界：多条项目/领域/范围 grant 由来源 owner 管理；同 registry 绑定多个来源时，不允许通过编辑一个来源扩大其他来源的 scope。UI 根据 `access_editable`、`scope_expansion_allowed` 和现有范围选项说明可执行动作。机器字段与安全边界见[知识来源管理合同](../../contracts/opl-framework/knowledge-source-management-contract.json)。
 
 ## 文件与身份

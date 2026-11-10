@@ -4,6 +4,8 @@ import path from 'node:path';
 import test from 'node:test';
 import { executeKnowledgeSourceAction, listKnowledgeSourceManagement } from '../../src/authority/packages/knowledge-source-management.ts';
 import type { KnowledgeSourceRegistry } from '../../src/authority/packages/durable-knowledge-sources.ts';
+import { listKnowledgeSources } from '../../src/authority/packages/durable-knowledge-sources.ts';
+import { recallDurableKnowledge } from '../../src/authority/packages/durable-knowledge-catalog.ts';
 import { sourceFixture } from './knowledge-source-fixture.ts';
 
 function setup() {
@@ -28,6 +30,55 @@ test('source owner projects real bindings, accepted-version state and no body or
     const changed = f.list().items[0]!;
     assert.equal(changed.revision.status, 'stale');
     assert.equal(changed.reason, 'knowledge_source_revision_requires_review');
+  } finally { f.cleanup(); }
+});
+test('expired records retain review debt without marking the readable source as broken', () => {
+  const f = setup();
+  try {
+    f.registry.items.push({ ...structuredClone(f.item), knowledge_id: 'owner.historical-state',
+      content_kind: 'state', next_review_at: '2026-01-02T00:00:00Z' });
+    f.save();
+    const before = fs.readFileSync(f.registryRef);
+    const source = f.list().items[0]!;
+    assert.equal(source.status, 'ready');
+    assert.equal(source.revision.status, 'current');
+    assert.equal(source.freshness.status, 'fresh');
+    assert.equal(source.knowledge_count, 2);
+    assert.equal(source.knowledge_health.current_count, 1);
+    assert.equal(source.knowledge_health.review_due_count, 1);
+    assert.deepEqual(source.knowledge_health.issues, [{ knowledge_id: 'owner.historical-state', status: 'review_due', reason: 'knowledge_review_overdue' }]);
+    const scope = { workspaceRoot: f.workspace, domainId: 'fixture', now: f.deps.now };
+    const sources = listKnowledgeSources(scope);
+    assert.deepEqual(sources.items.map(item => item.knowledge_id), ['owner.policy']);
+    assert.ok(sources.quality_debt.includes('knowledge_review_overdue:owner.historical-state'));
+    assert.ok(fs.readFileSync(f.registryRef).equals(before));
+    f.bindings.required_knowledge_ids = ['owner.historical-state']; f.save();
+    assert.throws(() => recallDurableKnowledge({ ...f.input, now: f.deps.now }), /Required knowledge is unavailable/);
+  } finally { f.cleanup(); }
+});
+test('inactive historical entries do not require their retired body to remain readable', () => {
+  const f = setup();
+  try {
+    f.registry.items.push({ ...structuredClone(f.item), knowledge_id: 'owner.retired', status: 'deprecated',
+      body_ref: { ...f.item.body_ref, ref: 'retired.md' } });
+    f.save();
+    const source = f.list().items[0]!;
+    assert.equal(source.status, 'ready');
+    assert.equal(source.knowledge_health.inactive_count, 1);
+    assert.equal(source.knowledge_health.current_count, 1);
+    assert.equal(source.knowledge_health.unavailable_count, 0);
+  } finally { f.cleanup(); }
+});
+test('expired records with unreviewed body changes still require source repair', () => {
+  const f = setup();
+  try {
+    f.item.next_review_at = '2026-01-02T00:00:00Z'; f.save();
+    fs.writeFileSync(path.join(f.source, 'policy.md'), '# Unreviewed change\n');
+    const source = f.list().items[0]!;
+    assert.equal(source.status, 'attention');
+    assert.equal(source.revision.status, 'stale');
+    assert.equal(source.knowledge_health.unavailable_count, 1);
+    assert.equal(source.knowledge_health.issues[0]?.reason, 'knowledge_source_body_requires_review');
   } finally { f.cleanup(); }
 });
 test('configure preserves other workspace grants and rejected revisions never write', () => {

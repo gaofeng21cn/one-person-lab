@@ -472,6 +472,20 @@ test('official gh-stack extension installs through GitHub CLI and remains callab
       assert.equal(recordedCalls.includes('extension install github/gh-stack'), true);
       assert.equal(recordedCalls.includes('extension exec stack --version'), false);
       assert.equal(recordedCalls.includes('stack --version'), true);
+
+      const callsBeforeFastRead = fs.readFileSync(calls, 'utf8');
+      const fastCatalog = inspectBaseManagedDependencies(root, { inspectExternalOwners: false });
+      const deferred = fastCatalog.dependencies.find(entry => entry.dependency_id === 'gh-stack');
+      assert.equal(deferred?.installed, null);
+      assert.equal(deferred?.status, 'unknown');
+      assert.equal(deferred?.currentness, 'unknown');
+      assert.equal(deferred?.ownership, 'unknown');
+      assert.equal(fs.readFileSync(calls, 'utf8'), callsBeforeFastRead);
+
+      const checked = inspectBaseManagedDependencies(root).dependencies.find(entry => entry.dependency_id === 'gh-stack');
+      assert.equal(checked?.installed, true);
+      assert.equal(checked?.status, 'ready');
+      assert.match(String(checked?.version), /0\.1\.0/);
     });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -592,6 +606,7 @@ test('verified Homebrew external dependencies expose confirmation-only owner act
       assert.equal(installation.update_action?.auto_apply_allowed, false);
       const catalog = inspectBaseManagedDependencies(root, { refreshManagedLatest: true });
       const catalogCodex = catalog.dependencies.find((entry) => entry.dependency_id === 'codex-cli');
+      assert.ok(catalogCodex && 'external_installations' in catalogCodex);
       assert.equal(catalogCodex?.ownership, 'homebrew_formula');
       assert.equal(catalogCodex?.update_mode, 'explicit_owner_delegated');
       assert.equal(catalogCodex?.update_action?.action_id, 'external_codex_update_homebrew');
