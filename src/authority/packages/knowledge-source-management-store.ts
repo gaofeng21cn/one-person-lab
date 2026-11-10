@@ -5,7 +5,6 @@ import registrySchema from '../../../contracts/opl-framework/knowledge-source-re
 import bindingsSchema from '../../../contracts/opl-framework/knowledge-source-bindings.schema.json' with { type: 'json' };
 import { assertJsonSchemaPayload } from '../../kernel/schema-registry.ts';
 import { listStandardAgentRegistry } from '../../kernel/standard-agent-registry.ts';
-import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/public/app-state.ts';
 import { itemSchema } from './durable-knowledge-model.ts';
 import { KNOWLEDGE_BINDINGS_REF, type KnowledgeSourceRegistry } from './durable-knowledge-sources.ts';
 import { digest, encoded, fail, safePath } from './knowledge-source-mutation-support.ts';
@@ -17,7 +16,11 @@ export type ManagementBindings = {
   required_knowledge_ids?: string[];
   requirement_bindings?: Array<{ requirement_id: string; semantic_owner_ref: string; owner_id: string; knowledge_ids: string[] }>;
 };
-export type ManagementDependencies = { profileRoot?: string; workspaceBindings?: WorkspaceBinding[]; now?: Date };
+export type ManagementDependencies = {
+  profileRoot?: string;
+  workspaceBindings?: Array<{ binding_id: string; workspace_path: string; label?: string | null; project: string; status?: string }>;
+  now?: Date;
+};
 export function profileWorkspaceRoot(env = process.env) {
   const explicit = env.OPL_PROFILE_WORKSPACE?.trim();
   return explicit ? path.resolve(explicit.startsWith('~/') ? path.join(os.homedir(), explicit.slice(2)) : explicit)
@@ -26,7 +29,7 @@ export function profileWorkspaceRoot(env = process.env) {
 export function managementContexts(deps: ManagementDependencies = {}): ManagementContext[] {
   const profile = path.resolve(deps.profileRoot ?? profileWorkspaceRoot());
   const contexts: ManagementContext[] = [{ context_id: 'profile', label: '个人资料', root: profile, selected: true }];
-  for (const binding of deps.workspaceBindings ?? listWorkspaceBindings()) {
+  for (const binding of deps.workspaceBindings ?? []) {
     if (binding.status === 'archived' || !path.isAbsolute(binding.workspace_path)
       || contexts.some(context => context.root === path.resolve(binding.workspace_path))) continue;
     contexts.push({ context_id: `workspace:${binding.binding_id}`, label: binding.label ?? binding.project,

@@ -3,6 +3,7 @@ import {
   KNOWLEDGE_SOURCE_ACTION_IDS,
 } from '../../../authority/packages/index.ts';
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { listWorkspaceBindings } from '../../../authority/workspace/public/app-state.ts';
 import type { AppActionExecuteOptions } from './action-execute-parser.ts';
 
 export function executeKnowledgeSourceAppAction(options: AppActionExecuteOptions) {
@@ -15,6 +16,6 @@ export function executeKnowledgeSourceAppAction(options: AppActionExecuteOptions
   }
   return {
     delegatedSurface: `opl knowledge source-${actionId.slice('knowledge_source_'.length)}`,
-    result: executeKnowledgeSourceAction(actionId, options.payload),
+    result: executeKnowledgeSourceAction(actionId, options.payload, { workspaceBindings: listWorkspaceBindings() }),
   };
 }

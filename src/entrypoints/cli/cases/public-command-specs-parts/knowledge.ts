@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { parseCommandOptions } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 import { executeKnowledgeSourceAction } from '../../../../authority/packages/index.ts';
+import { listWorkspaceBindings } from '../../../../authority/workspace/public/app-state.ts';
 import {
   readDurableKnowledgeCatalog,
   recallDurableKnowledge,
@@ -434,7 +435,7 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
       handler: args => {
         const parsed = parseCommandOptions(args, commandSpecs[command]!, options);
         const payload = Object.fromEntries(fields.flatMap(field => parsed[field] === undefined ? [] : [[sourceFields[field], parsed[field]]]));
-        return { version: 'g2', ...executeKnowledgeSourceAction(`knowledge_source_${definition.operation}`, payload) };
+        return { version: 'g2', ...executeKnowledgeSourceAction(`knowledge_source_${definition.operation}`, payload, { workspaceBindings: listWorkspaceBindings() }) };
       },
     };
   }
