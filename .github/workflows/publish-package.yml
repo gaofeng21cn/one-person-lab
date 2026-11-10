@@ -88,11 +88,13 @@ jobs:
       EXPECTED_LATEST_STABLE_PREDECESSOR: ${{ inputs.expected_latest_stable_predecessor }}
       PUBLICATION_REQUEST_ID: ${{ inputs.publication_request_id }}
       PACKAGES_OWNER: ${{ github.repository_owner }}
+      FRAMEWORK_REPOSITORY: gaofeng21cn/one-person-lab
       PUBLICATION_ENVIRONMENT: ${{ github.event_name == 'schedule' && 'release-stable-automated' || 'release-stable' }}
     steps:
       - name: Checkout exact Framework source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          repository: gaofeng21cn/one-person-lab
           ref: ${{ inputs.expected_framework_source_commit }}
           fetch-depth: 1
 
@@ -150,6 +152,13 @@ jobs:
           owner_key_suffix="$(printf '%s' "$owner_repo" | tr '[:lower:]/.-' '[:upper:]___')"
           echo "owner_source_key_secret=OWNER_SOURCE_READ_KEY_${owner_key_suffix}" >> "$GITHUB_OUTPUT"
           echo "public_source_approval_var=PUBLIC_SOURCE_ARCHIVE_COMMIT_${owner_key_suffix}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify private Package publisher identity
+        if: env.PACKAGE_VISIBILITY == 'authorized_only'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER_REPO: ${{ steps.package-source.outputs.owner_repo }}
+        run: node scripts/private-package-registry-bootstrap.mjs --owner-repo "$OWNER_REPO" --publisher-only
 
       - name: Verify source archive publication visibility
         shell: bash
@@ -263,17 +272,7 @@ jobs:
             echo "PACKAGE_IMAGE=$image"
             echo "IMMUTABLE_REF=${image}:${EXPECTED_PACKAGE_VERSION}"
             echo "LATEST_STABLE_REF=${image}:latest-stable"
-            if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
-              # Keep private owner repository names out of public workflow logs
-              # and public OCI metadata. The signed manifest layer retains the
-              # owner source for authorized consumers and digest verification.
-              echo "OCI_SOURCE_URL=https://github.com/${GITHUB_REPOSITORY}"
-            else
-              echo "OCI_SOURCE_URL=${source_repo%.git}"
-            fi
-            # The OCI source annotation is intentionally the Framework
-            # publisher for authorized-only packages, but provenance must
-            # retain the exact owner source URI used for the payload.
+            echo "OCI_SOURCE_URL=${source_repo%.git}"
             echo "OWNER_SOURCE_URL=${source_repo%.git}"
           } >> "$GITHUB_ENV"
 
@@ -299,6 +298,13 @@ jobs:
           const actual = spki(`${process.env.RUNNER_TEMP}/private-package-signing.pub`);
           if (!expected.equals(actual)) throw new Error('Private Package signing key does not match the Framework trust root.');
           NODE
+
+      - name: Verify private registry before uploading Package content
+        if: env.PACKAGE_VISIBILITY == 'authorized_only'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER_REPO: ${{ steps.package-source.outputs.owner_repo }}
+        run: node scripts/private-package-registry-bootstrap.mjs --owner-repo "$OWNER_REPO" --image "$PACKAGE_IMAGE"
 
       - name: Resolve predecessor with the protected Package credential
         if: inputs.expected_latest_stable_predecessor == 'resolve-authenticated'
@@ -342,7 +348,7 @@ jobs:
                 jq -e --arg repo "$GITHUB_REPOSITORY" '.repository.full_name == $repo' <<<"$readback" >/dev/null
                 visibility="$(jq -er .visibility <<<"$readback")"
                 if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
-                  if [ "$visibility" != private ]; then
+                  if [ "$visibility" != private ] || ! jq -e '.repository.private == true' <<<"$readback" >/dev/null; then
                     echo '::error::Private Package publication cannot use an existing public or internal registry package.'
                     rm -f "$response"
                     return 1
@@ -352,8 +358,13 @@ jobs:
                 fi
                 if [ "$visibility" = public ]; then rm -f "$response"; return 0; fi
               elif [ "$status" = 404 ] && [ "$phase" = before ]; then
-                # New GHCR packages start private. The authenticated immutable
-                # preflight and post-push metadata check remain mandatory.
+                # A private namespace must already have passed the harmless
+                # bootstrap and access checks before any source layer upload.
+                if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
+                  echo '::error::Private Package namespace is missing before content upload.'
+                  rm -f "$response"
+                  return 1
+                fi
                 rm -f "$response"
                 return 0
               elif [ "$status" != 404 ]; then
@@ -488,7 +499,7 @@ jobs:
             --arg framework_commit "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" \
             --arg request_id "$PUBLICATION_REQUEST_ID" \
             --arg owner_source_url "$OWNER_SOURCE_URL" \
-            --arg repository "$GITHUB_REPOSITORY" \
+            --arg repository "$FRAMEWORK_REPOSITORY" \
             --arg workflow_ref "$GITHUB_WORKFLOW_REF" \
             --arg invocation_id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
             '{buildDefinition:{buildType:"https://onepersonlab.ai/buildtypes/opl-package-publication/v1",
