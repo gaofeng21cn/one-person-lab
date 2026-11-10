@@ -85,7 +85,7 @@ opl sources install \
   --expected-revision <revision-from-source-readback> --json
 ```
 
-执行前重新读取 Homebrew，核对条目确属固定 OPL tap、当前版本和可执行动作；清单已变化时要求重新查看后再执行。安装、更新、卸载分别委托 `brew install`、`brew upgrade`、`brew uninstall`，完成后以新的 Homebrew 回读决定结果。卸载不使用 `--zap` 或强制删除，不删除用户配置、Obsidian 资料库及业务数据。
+执行前重新读取 Homebrew，核对条目确属固定 OPL tap、当前版本和可执行动作；清单已变化时要求重新查看后再执行。安装、更新、卸载分别委托 `brew install`、`brew upgrade`、`brew uninstall`，完成后以新的 Homebrew 回读决定结果。卸载禁用依赖自动清理，不使用 `--zap` 或强制删除，保留用户配置、Obsidian 资料库及业务数据。
 
 ## 私有 Package 的安装前检查
 
@@ -103,13 +103,13 @@ opl sources install \
 
 OPL App 的“应用管理”页与主对话并列，软件源作为一级能力的来源筛选和状态详情。UI 应分别展示：
 
-- 来源：公开、私有·已授权、需要登录、无读取权限、授权过期、访问已撤销、尚未检查；
+- 来源：公开、账户已连接、需要登录、无读取权限、授权过期、访问已撤销、尚未检查。来源的 `authorized` 只表示账户身份检查成功；每个私有 Package 的可见性与下载权限仍逐项验证；
 - Package：可安装、已安装版本、可用版本、更新状态、调用就绪、依赖影响和 owner action；
 - 计数：`entry_count` 只统计当前身份实际可见的条目；未获准的私有条目不泄露名称、数量或版本。Homebrew 清单尚未读取或读取失败时返回 `null`，UI 显示“尚未读取”或具体不可用原因；只有成功读取后的空清单才能显示零个软件。
 
 用户未安装的可选软件属于“可安装”，不计入“需处理”。已安装软件的缺少依赖、carrier 故障或访问撤权才进入处理队列。所有安装、更新、修复、停用和卸载动作完成后都重新读取 Framework/native carrier 状态；UI 不用按钮存在性或旧缓存宣称成功。
 
-Obsidian 等个人知识源沿用同一控制面但不属于软件源：正文仍在用户原资料库，Framework 只管理 source binding、接受版本、授权和运行快照。当前没有知识 owner producer 时，应用管理页必须显示“来源尚未返回/尚未配置”，不得把工作目录路径或空列表推断为已接入。
+Obsidian 等个人知识源在“共享资源 → 知识与记忆”管理，复用[知识来源接口](./knowledge-sources.md)的真实 Profile/Workspace projection 与接入、配置、检查、断开动作。正文保留在用户原资料库，Framework 管理来源 binding、接受版本、授权和运行快照。账号连接、模型能力、基础依赖也在共享资源按原 owner 管理；软件源权限链接回同一“软件源”页面。读取失败或尚未返回时显示明确状态，只有 owner 成功回读的空列表才表示尚未配置。
 
 ## 当前验收边界
 
