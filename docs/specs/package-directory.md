@@ -66,6 +66,8 @@ GitHub 仓库本身不是可安装软件。一个项目具备稳定 Package iden
 
 软件源配置仍使用 `opl sources configure --source-id github-packages:<owner> --provider-id github_packages --credential-handle provider:github_packages:gh-cli --json`；`opl sources check --source-id github-packages:<owner> --json` 刷新仓库预览和 OCI 包各自的读取权限。UI 只展示来源、访问状态与原因，不展示 credential handle 的值或令牌。缓存绑定来源修订、仓库、精确 commit 和当前 handle，安装时重新校验；仓库读取权限和 OCI pull 权限互不替代。
 
+快速 App state 保持只读缓存，不在启动投影内联网。包访问快照过期或缺失时，owner 在已连接私有软件源投影中给出 `access_refresh_required=true`；Studio 的正常刷新先执行该来源已有的 `source_check`，再读取快速状态后呈现。用户无需每分钟手动重新授权。未配置或禁用的源不自动检查，失败来源按 owner 的短重试间隔处理，过期快照不继续作为发现或下载授权。
+
 撤权后，尚未安装的私有条目从授权目录移除；已安装条目保留必要的本地名称、版本、载体和卸载入口，并显示访问失效。后续远端读取被拒绝，不自动删除本地文件。Registry 撤权不是运行许可证；运行时连接或知识权限的撤销仍由各自 owner 单独执行。
 
 ## Homebrew 的位置

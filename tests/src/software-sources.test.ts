@@ -91,3 +91,23 @@ test('source actions enforce exact safe payloads and count directory entries wit
   assert.equal(state.entries.find(source => source.source_id === 'public-registry:opl')?.entry_count, 1);
   assert.equal(state.entries.find(source => source.source_id === 'public-registry:opl')?.available_actions.some(action => action.action_id === 'source_configure'), false);
 }));
+
+test('owner requests refresh for connected stale private sources and bounds retries after access failures', async () => withState(async () => {
+  const input = { refreshRequiredSourceIds: [privateId] };
+  const needsRefresh = () => listOplSoftwareSources(input).entries.find(source => source.source_id === privateId)!.access_refresh_required;
+  assert.equal(needsRefresh(), false);
+  configureOplSoftwareSource({ source_id: privateId });
+  assert.equal(needsRefresh(), true);
+  assert.equal(listOplSoftwareSources().entries.find(source => source.source_id === privateId)!.access_refresh_required, false);
+  await checkOplSoftwareSource(privateId, { verify: async () => ({ status: 'authorized', verification_reason: 'verified' }), refreshPackageAccess: async () => {} });
+  assert.equal(needsRefresh(), true);
+  await checkOplSoftwareSource(privateId, { verify: async () => ({ status: 'expired', verification_reason: 'expired' }) });
+  assert.equal(needsRefresh(), false);
+  await checkOplSoftwareSource(privateId, { now: () => new Date(Date.now() - 61_000),
+    verify: async () => ({ status: 'unknown', verification_reason: 'offline' }) });
+  assert.equal(needsRefresh(), true);
+  configureOplSoftwareSource({ source_id: privateId, enabled: false });
+  assert.equal(needsRefresh(), false);
+  disconnectOplSoftwareSource(privateId);
+  assert.equal(needsRefresh(), false);
+}));

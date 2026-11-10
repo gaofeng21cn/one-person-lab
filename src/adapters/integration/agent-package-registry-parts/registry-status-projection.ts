@@ -496,6 +496,10 @@ export function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full'
     entry_count: entries.length,
     installed_package_count: entries.filter((entry) => entry.installed).length,
     installable_package_count: entries.filter((entry) => entry.installability.installable).length,
+    source_refresh_required_ids: [...new Set([...snapshot.access.values()]
+      .filter((access) => access.visibility === 'authorized_only'
+        && access.reason === 'package_access_check_required' && access.source_id)
+      .map((access) => access.source_id!))],
     entries,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
