@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import type { spawnSync } from 'node:child_process';
 import { verifyPrivatePackagePublication } from '../../src/adapters/integration/agent-package-registry-parts/private-package-publication.ts';
+import { PACKAGE_PROJECTION_ROOT } from '../../src/kernel/standard-agent-registry.ts';
 
 const subject = `ghcr.io/example/one-person-lab-private-packages/private-agent@sha256:${'a'.repeat(64)}`;
 const base = {
@@ -12,6 +13,47 @@ const base = {
   sourceCommit: 'b'.repeat(40), accessPolicyRef: 'github-package:example/one-person-lab-private-packages/private-agent',
   credential: { provider_id: 'github_packages' as const, credential_handle: 'provider:github_packages:gh-cli', username: 'user', token: 'secret-test-token' },
 };
+const firstParty = {
+  ...base,
+  subject: base.subject.replace('ghcr.io/example/', 'ghcr.io/gaofeng21cn/'),
+  sourceRepo: base.sourceRepo.replace('/example/', '/gaofeng21cn/'),
+  accessPolicyRef: base.accessPolicyRef.replace(':example/', ':gaofeng21cn/'),
+};
+
+test('first-party private publication uses the Framework trust root independently of projection overrides', () => {
+  const trusted = path.resolve(PACKAGE_PROJECTION_ROOT, '../keys/private-package-signing.pub');
+  const previous = process.env.OPL_PACKAGE_PROJECTION_DIR;
+  process.env.OPL_PACKAGE_PROJECTION_DIR = '/untrusted/overridden/packages';
+  try {
+    const run = ((_binary: string, args: string[]) => {
+      assert.equal(args[args.indexOf('--public-key') + 1], trusted);
+      assert.match(fs.readFileSync(trusted, 'utf8'), /^-----BEGIN PUBLIC KEY-----/);
+      return { status: 0, stdout: JSON.stringify({ status: 'verified', subject: firstParty.subject }) };
+    }) as unknown as typeof spawnSync;
+    assert.equal(verifyPrivatePackagePublication({ ...firstParty, env: { OPL_PACKAGE_PROJECTION_DIR: '/untrusted/env/packages' }, run }).subject, firstParty.subject);
+  } finally {
+    if (previous === undefined) delete process.env.OPL_PACKAGE_PROJECTION_DIR;
+    else process.env.OPL_PACKAGE_PROJECTION_DIR = previous;
+  }
+});
+
+test('explicit Host key overrides first-party trust and invalid overrides never fall back', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-private-publication-override-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const key = path.join(root, 'explicit.pub');
+  fs.writeFileSync(key, 'explicit-host-key');
+  const run = ((_binary: string, args: string[]) => {
+    assert.equal(args[args.indexOf('--public-key') + 1], key);
+    return { status: 0, stdout: JSON.stringify({ status: 'verified', subject: firstParty.subject }) };
+  }) as unknown as typeof spawnSync;
+  assert.equal(verifyPrivatePackagePublication({ ...firstParty, env: { OPL_PACKAGE_SIGNING_PUBLIC_KEY: key }, run }).subject, firstParty.subject);
+  for (const override of ['', '  ', 'relative.pub', path.join(root, 'missing.pub')]) {
+    assert.throws(() => verifyPrivatePackagePublication({ ...firstParty, env: { OPL_PACKAGE_SIGNING_PUBLIC_KEY: override },
+      run: (() => { throw new Error('must not invoke verifier'); }) as typeof spawnSync }),
+    (error: unknown) => typeof error === 'object' && error !== null && 'details' in error
+      && ['trusted_signing_key_required', 'trusted_signing_key_unavailable'].includes(String((error.details as Record<string, unknown>).reason)));
+  }
+});
 
 test('private publication requires a Host-pinned key before invoking tools', () => {
   assert.throws(() => verifyPrivatePackagePublication({ ...base, env: {}, run: (() => { throw new Error('must not run'); }) as typeof spawnSync }),

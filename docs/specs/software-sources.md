@@ -115,7 +115,7 @@ Homebrew 动作执行前重新读取该来源，核对固定 OPL tap、当前版
 
 安装、更新和需要远端读取的修复在执行前重新检查来源授权。私有制品安装时锁定不可变 digest；`latest-stable` 只用于发现候选版本。公开源的匿名回读与私有源的授权回读是不同验收条件，不能用本机 carrier 已安装替代新用户发行验收。
 
-私有 Package 的签名信任通过受控运行环境提供 `OPL_PACKAGE_SIGNING_PUBLIC_KEY`。该变量只用于验证发布者签名，不能代替 registry 登录、Package read 权限或 Connect/知识授权；生产发行仍须以受保护源中的真实 artifact、授权回读和撤权测试为准。
+第一方私有 Package 的签名信任由 Framework 随版本交付的 `contracts/opl-framework/keys/private-package-signing.pub` 提供，仅用于 `gaofeng21cn/one-person-lab-private-packages`。其他发布者由 Host 显式配置 `OPL_PACKAGE_SIGNING_PUBLIC_KEY` 绝对公钥路径；显式配置优先，配置错误不会回退到默认信任。公钥不从制品或用户覆盖的目录中取得。发布流程在上传前核对受保护私钥派生的公钥与随 Framework 交付的公钥一致。私钥与密码仅保存在 `release-stable` 的受保护发布凭据中；私有源码使用每仓专用的只读 Deploy Key。签名信任不能代替 registry 登录、Package read 权限或 Connect/知识授权；实际发行仍须完成授权回读及匿名拒绝验证。
 
 ## UI 展示规则
 

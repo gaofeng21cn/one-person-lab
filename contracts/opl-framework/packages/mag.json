@@ -36,7 +36,7 @@
     "software_type": "agent"
   },
   "publisher": "one-person-lab",
-  "version": "0.3.18",
+  "version": "0.4.0",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
@@ -80,8 +80,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/mag-0.3.18.json",
-    "carrier_source_commit": "65e220294f1c82b0ab9f414cc5ea960c366bd8f6"
+    "plugin_payload_manifest_url": "payloads/mag-0.4.0.json",
+    "carrier_source_commit": "afacabe6dcf767a103856457296824bcc7d5d282"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -94,7 +94,9 @@
           "en-US": "Grant workspace route"
         },
         "data_ref": "mag.workspace.v1#route",
-        "command_ids": [],
+        "command_ids": [
+          "mag.review.note"
+        ],
         "empty_state_i18n": {
           "zh-CN": "选择一个基金工作区后读取当前阶段",
           "en-US": "Select a grant workspace to inspect its current stage"
@@ -108,14 +110,26 @@
           "en-US": "Grant quality"
         },
         "data_ref": "mag.workspace.v1#quality",
-        "command_ids": [],
+        "command_ids": [
+          "mag.review.note"
+        ],
         "empty_state_i18n": {
           "zh-CN": "选择基金工作区，查看当前草稿与评审证据",
           "en-US": "Select a grant workspace to inspect the current draft and review evidence"
         }
       }
     ],
-    "commands": [],
+    "commands": [
+      {
+        "command_id": "mag.review.note",
+        "label_i18n": {
+          "zh-CN": "记录审阅意见",
+          "en-US": "Record review feedback"
+        },
+        "action_ref": "mag.workspace.v1#review.note",
+        "confirmation_required": true
+      }
+    ],
     "badges": [],
     "ui": [
       {

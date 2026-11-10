@@ -26,7 +26,14 @@ export function verifyPrivatePackagePublication(input: {
   const subject = /^ghcr\.io\/([a-z0-9._-]+\/one-person-lab-private-packages\/([a-z0-9.-]+))@sha256:[0-9a-f]{64}$/.exec(input.subject);
   if (!subject || subject[2] !== input.packageId
     || input.accessPolicyRef !== `github-package:${subject[1]}`) return fail('private_package_namespace_or_policy_invalid');
-  const publicKey = input.env.OPL_PACKAGE_SIGNING_PUBLIC_KEY?.trim();
+  // The first-party trust root is shipped with Framework, never obtained from
+  // the artifact or an overridden Package projection directory.
+  const configuredPublicKey = input.env.OPL_PACKAGE_SIGNING_PUBLIC_KEY;
+  const publicKey = configuredPublicKey !== undefined
+    ? configuredPublicKey.trim()
+    : (subject[1].startsWith('gaofeng21cn/one-person-lab-private-packages/')
+      ? path.resolve(PACKAGE_PROJECTION_ROOT, '../keys/private-package-signing.pub')
+      : null);
   if (!publicKey || !path.isAbsolute(publicKey)) return fail('trusted_signing_key_required');
   try { if (!fs.statSync(publicKey).isFile()) return fail('trusted_signing_key_unavailable'); }
   catch { return fail('trusted_signing_key_unavailable'); }

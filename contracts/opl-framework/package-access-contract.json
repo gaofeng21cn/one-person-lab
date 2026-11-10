@@ -122,9 +122,10 @@
     "studio": "Renders Framework state and dispatches declared actions; does not mint grants."
   },
   "private_publication_admission": {
-    "trusted_key_owner": "Host configuration",
+    "trusted_key_owner": "Framework first-party trust root or explicit Host configuration",
     "trusted_key_path_environment": "OPL_PACKAGE_SIGNING_PUBLIC_KEY",
-    "key_source": "absolute local PEM path; artifact-supplied keys are rejected",
+    "key_source": "explicit absolute local PEM path takes precedence; otherwise only gaofeng21cn/one-person-lab-private-packages uses the key shipped in contracts/opl-framework/keys/private-package-signing.pub; artifact and overridden projection-directory keys are rejected",
+    "publisher_key_binding": "private publisher derives the protected signing key's public key and requires it to match the Framework-shipped trust root before publication",
     "verifier": "scripts/oci-publication-receipt-readback.mjs",
     "prerequisites": [
       "oras",

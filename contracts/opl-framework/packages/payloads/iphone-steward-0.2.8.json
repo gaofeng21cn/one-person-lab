@@ -1,0 +1,77 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "iphone-steward",
+  "plugin_id": "iphone-app-steward",
+  "package_version": "0.2.8",
+  "source_repo": "https://github.com/gaofeng21cn/iphone-app-steward.git",
+  "source_commit": "e3f50fd526b233596fc833dbdb6052d4c654a05f",
+  "source_root": "plugins/iphone-app-steward",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:745229e88cce4e0c61a6a311d7f347c23d6e2b8ffd3685d7f4a5d4e04bc756e1"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/iphone-app-steward/e3f50fd526b233596fc833dbdb6052d4c654a05f/plugins/iphone-app-steward/.codex-plugin/plugin.json",
+      "sha256": "sha256:350e63fde959a5526d75a194db70c36479edff2d6f48eef7ff4741f58f7bc86d"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/iphone-app-steward/e3f50fd526b233596fc833dbdb6052d4c654a05f/plugins/iphone-app-steward/app-contribution-adapter.json",
+      "sha256": "sha256:406ba64acae41d3b261c8d7c896c4cc3f49c93f8446a015a619a038a31f64b0e"
+    },
+    {
+      "path": "app_contribution.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/iphone-app-steward/e3f50fd526b233596fc833dbdb6052d4c654a05f/plugins/iphone-app-steward/app_contribution.py",
+      "sha256": "sha256:b392175960f27c07a1ee27c528f2bee3cc4a8ec47488914d27bf8956220939c8"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/iphone-app-steward/e3f50fd526b233596fc833dbdb6052d4c654a05f/plugins/iphone-app-steward/plugin.json",
+      "sha256": "sha256:543c512a84240648da8c00b7d9751ab0744b2ccb2b8645b38dc9ffa1f70411d5"
+    },
+    {
+      "path": "skills/iphone-app-steward/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/iphone-app-steward/e3f50fd526b233596fc833dbdb6052d4c654a05f/plugins/iphone-app-steward/skills/iphone-app-steward/SKILL.md",
+      "sha256": "sha256:a4fd56aba86e5b7519a463fb4e8fe35a8102cbe5d44da42d55af903510883b24"
+    },
+    {
+      "path": "skills/iphone-app-steward/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/iphone-app-steward/e3f50fd526b233596fc833dbdb6052d4c654a05f/plugins/iphone-app-steward/skills/iphone-app-steward/agents/openai.yaml",
+      "sha256": "sha256:098733e64e6eb313d01b2063f071c119dbcc0231deba97dd928eabc6e9b16a36"
+    },
+    {
+      "path": "skills/iphone-app-steward/knowledge_context.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/iphone-app-steward/e3f50fd526b233596fc833dbdb6052d4c654a05f/plugins/iphone-app-steward/skills/iphone-app-steward/knowledge_context.py",
+      "sha256": "sha256:866920455c6656c86da297807156b14aec95bbc870637c87cdc3d09b39c6d675"
+    },
+    {
+      "path": "skills/iphone-app-steward/references/decision-policy.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/iphone-app-steward/e3f50fd526b233596fc833dbdb6052d4c654a05f/plugins/iphone-app-steward/skills/iphone-app-steward/references/decision-policy.md",
+      "sha256": "sha256:2987b0dabafb3c5909a05f96a1616b730b5f731c9c3a195afca178a2c804b967"
+    },
+    {
+      "path": "skills/iphone-app-steward/references/evidence-and-layout.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/iphone-app-steward/e3f50fd526b233596fc833dbdb6052d4c654a05f/plugins/iphone-app-steward/skills/iphone-app-steward/references/evidence-and-layout.md",
+      "sha256": "sha256:bdde662047d341b14ba4af23499019aaf79b712f9a92f93800fc3bea34f22206"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/iphone-app-steward/e3f50fd526b233596fc833dbdb6052d4c654a05f/plugins/iphone-app-steward/opl-package.json",
+      "sha256": "sha256:d6ade79638c30995140594558247a267cf63476414bea054b99a2bca6062cc98"
+    }
+  ]
+}

@@ -38,11 +38,11 @@
     "software_type": "agent"
   },
   "publisher": "one-person-lab",
-  "version": "0.1.5",
-  "source": "first_party_owner_projection",
+  "version": "0.2.0",
   "visibility": "authorized_only",
   "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/occ",
   "credential_provider": "github_packages",
+  "source": "first_party_owner_projection",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "domain_descriptor_ref": "contracts/domain_descriptor.json",
   "action_catalog_ref": "contracts/action_catalog.json",
@@ -78,12 +78,26 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/occ-0.1.5.json",
-    "carrier_source_commit": "d00a80da40ec048fa8698da5e26ad20fcba75ea7"
+    "plugin_payload_manifest_url": "payloads/occ-0.2.0.json",
+    "carrier_source_commit": "4b532738239d60c2b87d4f3e83afc1aba921a960"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
     "views": [
+      {
+        "view_id": "occ.task",
+        "view_type": "task_board",
+        "title_i18n": {
+          "zh-CN": "当前配置任务",
+          "en-US": "Current allocation task"
+        },
+        "data_ref": "occ.runtime.v1#progress",
+        "command_ids": [],
+        "empty_state_i18n": {
+          "zh-CN": "当前没有已登记的配置任务",
+          "en-US": "No registered allocation task"
+        }
+      },
       {
         "view_id": "occ.decision-review",
         "view_type": "artifact_view",
@@ -102,6 +116,15 @@
     "commands": [],
     "badges": [],
     "ui": [
+      {
+        "contribution_id": "occ.task",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 1190,
+        "view_id": "occ.task"
+      },
       {
         "contribution_id": "occ.decision-review",
         "slot": "settings.section",

@@ -291,6 +291,14 @@ jobs:
           set -euo pipefail
           [ -n "$COSIGN_PRIVATE_KEY" ] || { echo '::error::Private Package signing key is required.'; exit 1; }
           cosign public-key --key env://COSIGN_PRIVATE_KEY > "$RUNNER_TEMP/private-package-signing.pub"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import crypto from 'node:crypto';
+          const spki = (file) => crypto.createPublicKey(fs.readFileSync(file)).export({ type: 'spki', format: 'der' });
+          const expected = spki('contracts/opl-framework/keys/private-package-signing.pub');
+          const actual = spki(`${process.env.RUNNER_TEMP}/private-package-signing.pub`);
+          if (!expected.equals(actual)) throw new Error('Private Package signing key does not match the Framework trust root.');
+          NODE
 
       - name: Resolve predecessor with the protected Package credential
         if: inputs.expected_latest_stable_predecessor == 'resolve-authenticated'

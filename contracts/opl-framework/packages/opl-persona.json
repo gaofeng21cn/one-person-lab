@@ -3,7 +3,7 @@
   "package_id": "opl-persona",
   "display_name": "OPL Persona",
   "publisher": "one-person-lab",
-  "version": "0.3.2",
+  "version": "0.5.0",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-persona.git",
@@ -53,6 +53,7 @@
       "runtime/opl_persona/cli.py",
       "runtime/opl_persona/core.py",
       "runtime/opl_persona/inbox.py",
+      "runtime/opl_persona/knowledge.py",
       "runtime/opl_persona/obsidian.py",
       "runtime/opl_persona/obsidian_apply.py",
       "runtime/opl_persona/paths.py",
@@ -63,7 +64,7 @@
       "skills/opl-persona/agents/openai.yaml",
       "runtime/opl_persona/_opl_profile_workspace.py"
     ],
-    "digest": "sha256:13e5ac9c0d51a454de0fc508ccca0a900b22a3645c36420e973da4c73eedcf61"
+    "digest": "sha256:67b03a751b8ad8c0e73db618cc6336ffad01e331da6db3cf2497f431244c3c30"
   },
   "codex_surface": {
     "plugin_id": "opl-persona",
@@ -93,8 +94,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/opl-persona-0.3.2.json",
-    "carrier_source_commit": "0ccad12c304eca629da0ace3b1c96f691cbdae8d"
+    "plugin_payload_manifest_url": "payloads/opl-persona-0.5.0.json",
+    "carrier_source_commit": "58146c8703dd7cb034d3a155d9012c80658ea239"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -422,19 +423,6 @@
     "owner_plugin_manifest_ref": "plugins/opl-persona/.codex-plugin/plugin.json"
   },
   "presentation": {
-    "display_name_i18n": {
-      "zh-CN": "OPL Persona",
-      "en-US": "OPL Persona"
-    },
-    "description_i18n": {
-      "zh-CN": "协调 OPL Relay、Obsidian 与实验室网站中获准使用的个人上下文。",
-      "en-US": "Coordinate approved personal context across OPL Relay, Obsidian, and the lab website."
-    },
-    "session_routing_summary_i18n": {
-      "zh-CN": "协调 OPL Relay、Obsidian 与实验室网站中获准使用的个人上下文。",
-      "en-US": "Coordinate approved personal context across OPL Relay, Obsidian, and the lab website."
-    },
-    "home_shortcuts": [],
     "software_type": "agent"
   }
 }
