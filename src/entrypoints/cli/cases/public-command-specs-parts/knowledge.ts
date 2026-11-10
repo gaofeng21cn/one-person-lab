@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { parseCommandOptions } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
+import { executeKnowledgeSourceAction } from '../../../../authority/packages/index.ts';
 import {
   readDurableKnowledgeCatalog,
   recallDurableKnowledge,
@@ -406,5 +407,36 @@ export function buildKnowledgeCommandSpecs(): Record<string, CommandSpec> {
       return { version: 'g2', knowledge_relocation: inspectKnowledgeRelocation({ ...scope(parsed), operationId: parsed['operation-id'] as string }) };
     },
   };
+  const sourceFields = {
+    'context-id': 'context_id', 'resource-id': 'resource_id', 'vault-path': 'vault_path',
+    'registry-path': 'registry_path', 'source-id': 'source_id', label: 'label',
+    'scope-id': 'scope_ids', 'consumer-domain-id': 'consumer_domain_ids',
+    'write-domain-id': 'write_domain_ids', 'expected-revision': 'expected_revision',
+  } as const;
+  const sourceCommandDefinitions = [
+    { operation: 'list', fields: [], usage: '', summary: 'List configured knowledge sources and management contexts without paths or bodies.' },
+    { operation: 'check', fields: ['resource-id'], usage: '[--resource-id <id>]', summary: 'Check current source availability and accepted revisions without changing them.' },
+    { operation: 'connect', fields: ['context-id', 'vault-path', 'registry-path', 'source-id', 'label', 'scope-id', 'consumer-domain-id', 'write-domain-id', 'expected-revision'], usage: '--context-id <id> (--vault-path <path> | --registry-path <path> --source-id <id>) --scope-id <id> --consumer-domain-id <id> --expected-revision <revision>', summary: 'Connect an explicitly selected knowledge source with scoped consumer grants; preserve source bodies.' },
+    { operation: 'configure', fields: ['resource-id', 'scope-id', 'consumer-domain-id', 'write-domain-id', 'expected-revision'], usage: '--resource-id <id> --scope-id <id> --consumer-domain-id <id> --expected-revision <revision>', summary: 'Update this context source permissions against the exact displayed revision.' },
+    { operation: 'disconnect', fields: ['resource-id', 'expected-revision'], usage: '--resource-id <id> --expected-revision <revision>', summary: 'Disconnect this context source without deleting its bodies or other contexts.' },
+  ] as const;
+  for (const definition of sourceCommandDefinitions) {
+    const command = `knowledge source-${definition.operation}`;
+    const fields = definition.fields as readonly (keyof typeof sourceFields)[];
+    const options = Object.fromEntries(fields.map(field => [field, {
+      type: 'string' as const,
+      ...(['scope-id', 'consumer-domain-id', 'write-domain-id'].includes(field) ? { multiple: true } : {}),
+    }]));
+    commandSpecs[command] = {
+      usage: `opl ${command}${definition.usage ? ` ${definition.usage}` : ''}`,
+      summary: definition.summary,
+      examples: [`opl ${command} --help`], group: 'knowledge',
+      handler: args => {
+        const parsed = parseCommandOptions(args, commandSpecs[command]!, options);
+        const payload = Object.fromEntries(fields.flatMap(field => parsed[field] === undefined ? [] : [[sourceFields[field], parsed[field]]]));
+        return { version: 'g2', ...executeKnowledgeSourceAction(`knowledge_source_${definition.operation}`, payload) };
+      },
+    };
+  }
   return commandSpecs;
 }

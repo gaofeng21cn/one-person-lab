@@ -1,4 +1,5 @@
 import { softwareSourceActionCatalog } from '../../../adapters/integration/index.ts';
+import { knowledgeSourceActionCatalog } from '../../../authority/packages/index.ts';
 import {
   MANAGED_UPDATE_OWNER_ACTIONS,
   listAgentPackageSettingsActions,
@@ -7,6 +8,14 @@ import {
 import type { SettingsAction } from './types.ts';
 
 export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
+  ...knowledgeSourceActionCatalog().map(action => ({
+    ...action,
+    stable_id: action.action_id, section_id: 'workspace',
+    task_kind: action.action_id === 'knowledge_source_list' ? 'read' as const : action.action_id === 'knowledge_source_check' ? 'check' as const : 'configure' as const,
+    taxonomy: `settings.knowledge_sources.${action.action_id}`,
+    payload_fields: [...action.payload_fields], follow_up_action_ids: [...action.follow_up_action_ids],
+    verify_action_id: action.verify_action_id ?? undefined,
+  })),
   ...softwareSourceActionCatalog().map(action => ({
     ...action,
     stable_id: action.action_id, section_id: 'agent_packages',

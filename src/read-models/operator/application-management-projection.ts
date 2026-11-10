@@ -224,63 +224,35 @@ function modelResource(settingsControlCenter: unknown, agentPackages: unknown): 
 function knowledgeResources(settingsControlCenter: unknown): ApplicationManagementResource[] {
   const settings = isRecord(settingsControlCenter) ? settingsControlCenter : {};
   const readModel = isRecord(settings.app_settings_read_model) ? settings.app_settings_read_model : {};
-  const sources = isRecord(readModel.resource_sources)
-    ? records(readModel.resource_sources.items)
-    : records(readModel.resource_sources);
-  if (sources.length === 0) return [];
+  const sources = isRecord(readModel.resource_sources) ? records(readModel.resource_sources.items) : [];
   return sources.flatMap((source) => {
-    const sourceId = string(source.source_id) ?? string(source.resource_id) ?? string(source.id);
+    const sourceId = string(source.source_id);
     if (!sourceId) return [];
-    const rawStatus = string(source.status) ?? string(source.state);
-    const status = rawStatus === 'ready' || rawStatus === 'available'
-      ? 'ready'
-      : rawStatus === 'attention' || rawStatus === 'attention_needed' || rawStatus === 'unavailable'
-        ? 'attention'
-        : 'unknown';
-    const consumerIds = Array.isArray(source.consumer_package_ids)
-      ? source.consumer_package_ids.filter((id): id is string => typeof id === 'string')
-      : [string(source.consumer_package_id)].filter((id): id is string => Boolean(id));
+    const status = source.status === 'ready' ? 'ready' : source.status === 'attention' ? 'attention' : 'unknown';
+    const authorization = isRecord(source.authorization) ? source.authorization : {};
+    const revision = isRecord(source.revision) ? source.revision : {};
+    const freshness = isRecord(source.freshness) ? source.freshness : {};
+    const readiness = isRecord(source.readiness) ? source.readiness : {};
+    const strings = (value: unknown) => Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+    const consumerIds = strings(source.consumer_package_ids);
     return [{
-      resource_id: `knowledge:${sourceId}`,
-      resource_kind: 'knowledge_source',
-      label: string(source.label) ?? string(source.title) ?? sourceId,
-      status,
-      source_refs: [`app_state.settings_control_center.app_settings_read_model.resource_sources[source_id=${sourceId}]`],
-      consumer_package_ids: [...new Set(consumerIds)].sort(),
-      owner_settings_route: 'workspace',
-      relation_kind: 'configured',
+      resource_id: string(source.resource_id) ?? `knowledge:${sourceId}`,
+      resource_kind: 'knowledge_source', source_id: sourceId,
+      label: string(source.label) ?? sourceId, status,
+      source_refs: [`app_state.settings_control_center.app_settings_read_model.resource_sources.items[source_id=${sourceId}]`],
+      consumer_package_ids: consumerIds, scope_ids: strings(source.scope_ids),
+      owner_settings_route: 'resources', relation_kind: 'configured',
       detail_ref: 'app_state.settings_control_center.app_settings_read_model.resource_sources',
-      authorization: {
-        status: rawStatus === 'authorized' || rawStatus === 'granted'
-          ? 'authorized'
-          : rawStatus === 'revoked' || rawStatus === 'stale' || rawStatus === 'attention_needed'
-            ? 'attention'
-            : 'unknown',
-        consumer_count: consumerIds.length,
-        grant_count: typeof source.grant_count === 'number' ? source.grant_count : 0,
-      },
-      revision: (() => {
-        const securityRevision = string(source.security_revision);
-        const revisionStatus = string(source.revision_status);
-        return securityRevision
-          ? { status: revisionStatus === 'current' ? 'current' as const : revisionStatus === 'stale' ? 'stale' as const : 'unknown' as const, security_revision: securityRevision }
-          : { status: revisionStatus === 'current' ? 'current' as const : revisionStatus === 'stale' ? 'stale' as const : 'unknown' as const };
-      })(),
-      freshness: (() => {
-        const freshnessStatus = string(source.freshness_status) ?? string(source.freshness);
-        const observedAt = string(source.observed_at) ?? string(source.updated_at);
-        return {
-          status: freshnessStatus === 'fresh' || freshnessStatus === 'current'
-            ? 'fresh' as const
-            : freshnessStatus === 'stale' ? 'stale' as const : 'unknown' as const,
-          ...(observedAt ? { observed_at: observedAt } : {}),
-        };
-      })(),
-      readiness: {
-        status,
-        ...(status !== 'ready' ? { reason: 'knowledge_source_requires_owner_attention' } : {}),
-      },
-      ...(status === 'ready' ? {} : { reason: 'knowledge_source_requires_owner_attention' }),
+      action_ids: strings(source.action_ids),
+      authorization: { status: authorization.status === 'authorized' ? 'authorized' : authorization.status === 'attention' ? 'attention' : 'unknown',
+        consumer_count: typeof authorization.consumer_count === 'number' ? authorization.consumer_count : consumerIds.length,
+        grant_count: typeof authorization.grant_count === 'number' ? authorization.grant_count : 0 },
+      revision: { status: revision.status === 'current' ? 'current' : revision.status === 'stale' ? 'stale' : 'unknown',
+        ...(string(revision.security_revision) ? { security_revision: string(revision.security_revision)! } : {}) },
+      freshness: { status: freshness.status === 'fresh' ? 'fresh' : freshness.status === 'stale' ? 'stale' : 'unknown',
+        ...(string(freshness.observed_at) ? { observed_at: string(freshness.observed_at)! } : {}) },
+      readiness: { status, ...(string(readiness.reason) ? { reason: string(readiness.reason)! } : {}) },
+      ...(string(source.reason) ? { reason: string(source.reason)! } : {}),
     } satisfies ApplicationManagementResource];
   });
 }

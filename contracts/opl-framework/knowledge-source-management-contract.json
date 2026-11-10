@@ -1,0 +1,44 @@
+{
+  "surface_kind": "opl_knowledge_source_management_contract.v1",
+  "owner": "one-person-lab knowledge source owner",
+  "projection": "app_state.settings_control_center.app_settings_read_model.resource_sources",
+  "projection_kind": "opl_knowledge_sources_projection.v1",
+  "shared_resource_projection": "app_state.application_management.shared_resources",
+  "actions": ["knowledge_source_list", "knowledge_source_check", "knowledge_source_connect", "knowledge_source_configure", "knowledge_source_disconnect"],
+  "storage": {
+    "profile_selection": "explicit OPL_PROFILE_WORKSPACE, otherwise the existing Profile Workspace convention",
+    "workspace_selection": "opaque workspace registry binding id; never a caller-supplied workspace path",
+    "bindings": "<workspace>/shared/memory/knowledge-bindings.json",
+    "new_registry": "<workspace>/data/knowledge-sources.json",
+    "existing_registry": "explicit local registry selection",
+    "body_policy": "leave original Markdown in the selected source; source setup never registers or accepts body content",
+    "second_registry": false
+  },
+  "projection_fields": {
+    "contexts": ["context_id", "label", "selected", "revision", "available_scope_ids", "status"],
+    "items": ["resource_id", "source_id", "label", "context_id", "status", "connected", "scope_ids", "consumer_domain_ids", "write_domain_ids", "source_writable", "consumer_package_ids", "revision_identity", "knowledge_count", "authorization", "revision", "freshness", "readiness", "reason", "owner_settings_route", "action_ids", "access_editable", "access_edit_reason", "scope_expansion_allowed", "available_scope_ids"],
+    "available_consumers": "current package domain declarations and already-explicit grants; the UI cannot invent a consumer",
+    "available_actions": "same owner action catalog used by App and CLI",
+    "forbidden": ["absolute_paths", "knowledge_bodies", "credential_material"]
+  },
+  "mutation_policy": {
+    "confirmation_required": true,
+    "expected_revision_required": true,
+    "revision_identity": "context binding and source registry byte digests",
+    "consumer_selection": "must be explicitly selected from fresh owner choices; write domains are a subset of read domains",
+    "source_scope_selection": "explicit scope identifiers, limited by existing source grants and workspace binding",
+    "complex_grants": "multiple current-workspace grants are read-only in the simple form; preserve project/domain/scope relationships",
+    "shared_binding_scope": "cannot broaden registry scopes while another source is bound; show existing safe scope choices",
+    "write_enablement": "cannot activate another workspace's latent write grants",
+    "disconnect": "remove only selected source from current workspace binding; retain registry, other workspace grants, required knowledge declarations and original bodies",
+    "reconnect": "configure the same retained source identity with explicit domains/scopes and a fresh revision",
+    "write_protocol": "existing registry writer lock, atomic private file writes, CAS, fresh owner projection",
+    "invalid_explicit_selection": "report configuration failure; never fall back to another personal profile"
+  },
+  "read_policy": {
+    "network": false,
+    "bodies": "check at most 100 registered body hashes per source; never return them",
+    "freshness": "fresh only when accepted body versions and dates are checked; no accepted items or truncated checks remain unknown",
+    "configuration_error": "safe reason code with no selected path or provider payload"
+  }
+}

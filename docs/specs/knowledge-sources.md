@@ -26,6 +26,16 @@
 
 Persona 的 `data/persona/knowledge-inputs.json` 只按角色选择知识 ID；笔记 Resource Binding 只解析允许操作的资源。Relay 的邮件记忆、Persona 的派生摘要与 Framework 的 registry 分别承担领域证据、语义上下文和知识生命周期职责。 Relay 记忆可保留 `knowledge_id`、`source_versions`、`scope`、`content_kind`、`canonical_target`、`writeback_status`、`observed_at` 和 `next_review_at`，但这些是链接与复核元数据，不是新的 registry。Relay 的 export/link/promote 只能输出证据或 review-gated proposal；正文写回仍走 Framework。来源权限和接受版本以 registry 为准，磁盘上的目录或索引不产生授权。
 
+## App 共享资源与来源配置
+
+App／Studio 的“共享资源 → 知识与记忆”读取 `app_state.settings_control_center.app_settings_read_model.resource_sources`，同一摘要进入 `application_management.shared_resources`。来源 owner 从已选 Profile 和已有工作区绑定读取真实 registry；只返回来源身份、名称、权限、接受版本与检查结果，不返回资料库路径或正文。
+
+用户在同一入口选择资料目录，或通过高级入口接入已有 registry，并明确选择使用范围与可使用的应用。首次接入复用 `<workspace>/data/knowledge-sources.json` 和既有 binding；它不自动登记、接受或复制库中的正文。`OPL_PROFILE_WORKSPACE` 的显式选择无效时直接报告错误，不换用默认个人目录。工作区以已有 registry 的不透明 ID 选择。
+
+`opl knowledge source-list`、`source-check`、`source-connect`、`source-configure`、`source-disconnect` 与 `knowledge_source_*` App actions 共用一个 owner。配置、授权修改和断开绑定要求确认及精确 revision，写后立即回读。断开只移除当前工作区对此来源的选择，保留原文、registry、其他工作区授权及必要知识声明；重新连接沿原来源身份完成。
+
+简单表单保留现有授权边界：多条项目/领域/范围 grant 由来源 owner 管理；同 registry 绑定多个来源时，不允许通过编辑一个来源扩大其他来源的 scope。UI 根据 `access_editable`、`scope_expansion_allowed` 和现有范围选项说明可执行动作。机器字段与安全边界见[知识来源管理合同](../../contracts/opl-framework/knowledge-source-management-contract.json)。
+
 ## 文件与身份
 
 | 表面 | 位置或合同 | 作用 |

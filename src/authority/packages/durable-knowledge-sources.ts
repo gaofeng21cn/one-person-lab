@@ -10,7 +10,7 @@ import {
 
 export const KNOWLEDGE_BINDINGS_REF = 'shared/memory/knowledge-bindings.json';
 export type KnowledgeSource = {
-  source_id: string; root: string; status: 'active' | 'revoked'; writable: boolean;
+  source_id: string; label?: string; root: string; status: 'active' | 'revoked'; writable: boolean;
   include_globs?: string[]; exclude_globs?: string[]; discovery_max_bytes?: number;
   grants: Array<{ workspace_root: string; domains: string[]; write_domains?: string[]; project_ids?: string[]; scope_ids?: string[] }>;
 };

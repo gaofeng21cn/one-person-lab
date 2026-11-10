@@ -14,7 +14,7 @@
       "owner_settings_route",
       "relation_kind"
     ],
-    "optional_fields": ["owner", "connection_id", "provider_type", "account_label", "capability_ids", "action_ids", "authorization", "revision", "freshness", "readiness", "detail_ref", "reason"],
+    "optional_fields": ["owner", "source_id", "scope_ids", "connection_id", "provider_type", "account_label", "capability_ids", "action_ids", "authorization", "revision", "freshness", "readiness", "detail_ref", "reason"],
     "resource_kinds": ["knowledge_source", "connection", "model", "base_capability"],
     "status_values": ["ready", "attention", "unknown"],
     "relation_kind_values": ["required", "optional", "configured"],
@@ -30,19 +30,38 @@
     },
     "metadata_shapes": {
       "authorization": {
-        "status_values": ["authorized", "attention", "unknown"],
-        "count_fields": ["consumer_count", "grant_count"]
+        "status_values": [
+          "authorized",
+          "attention",
+          "unknown"
+        ],
+        "count_fields": [
+          "consumer_count",
+          "grant_count"
+        ]
       },
       "revision": {
-        "status_values": ["current", "stale", "unknown"],
+        "status_values": [
+          "current",
+          "stale",
+          "unknown"
+        ],
         "identity_field": "security_revision"
       },
       "freshness": {
-        "status_values": ["fresh", "stale", "unknown"],
+        "status_values": [
+          "fresh",
+          "stale",
+          "unknown"
+        ],
         "timestamp_field": "observed_at"
       },
       "readiness": {
-        "status_values": ["ready", "attention", "unknown"],
+        "status_values": [
+          "ready",
+          "attention",
+          "unknown"
+        ],
         "reason_field": "reason"
       }
     },
@@ -63,11 +82,13 @@
     "full": "same owner truth with complete safe resource rows"
   },
   "knowledge_policy": {
-    "source": "knowledge-owner authorized source projection only",
+    "source": "Profile/Workspace owner registry and explicit bindings via knowledge-source-management",
     "body": "never projected",
     "workspace_binding_alone_is_not_a_knowledge_source": true,
     "unprojected_owner_source": "omit",
-    "consumer_must_not_infer_ready": true
+    "consumer_must_not_infer_ready": true,
+    "management_projection": "app_state.settings_control_center.app_settings_read_model.resource_sources",
+    "management_contract_ref": "contracts/opl-framework/knowledge-source-management-contract.json"
   },
   "connection_and_model_policy": {
     "connection_owner": "opl-connect",
