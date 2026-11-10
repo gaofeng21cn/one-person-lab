@@ -40,7 +40,7 @@
   "version": "0.1.5",
   "source": "first_party_owner_projection",
   "visibility": "authorized_only",
-  "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-packages/occ",
+  "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/occ",
   "credential_provider": "github_packages",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "domain_descriptor_ref": "contracts/domain_descriptor.json",
@@ -59,7 +59,7 @@
       "plugin_selector": "occ@opl-capital-compass-local",
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/opl-capital-compass",
-      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/occ:latest-stable"
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-private-packages/occ:latest-stable"
     },
     "app_contribution_abi": {
       "schema_version": "opl-package-app-contribution-cli.v1",

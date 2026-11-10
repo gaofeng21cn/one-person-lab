@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { buildOplPackageManifest } from '../src/adapters/integration/package-distribution.ts';
+import { buildOplPackageManifest, packageRegistryNamespace } from '../src/adapters/integration/package-distribution.ts';
 import { parseJsonText } from './script-json-boundary.mjs';
 
 function parseCliOptions(argv) {
@@ -124,13 +124,22 @@ function packageTargets(manifest) {
   const cleanupPolicy = manifest.release_automation.cleanup;
   return [
     ...Object.values(manifest.packages.package_artifacts).map((entry) => ({
-      package_name: `one-person-lab-packages/${entry.package_id}`,
+      package_name: `${packageRegistryNamespace(entry.visibility)}/${entry.package_id}`,
       package_kind: 'active_package',
       lifecycle_status: entry.package_lifecycle_status,
       retain_versions: cleanupPolicy.retain_versions,
       execution_mode: cleanupPolicy.execution_mode,
       protected_tags: cleanupPolicy.protected_tags ?? [],
     })),
+    ...Object.values(manifest.packages.package_artifacts)
+      .filter((entry) => entry.visibility === 'authorized_only').map((entry) => ({
+        package_name: `one-person-lab-packages/${entry.package_id}`,
+        package_kind: 'previous_public_namespace_tombstone',
+        lifecycle_status: 'retired_migration_detection_only',
+        retain_versions: 0,
+        execution_mode: 'read_only_migration_detection',
+        protected_tags: [],
+      })),
     ...Object.values(manifest.packages.package_artifacts).map((entry) => ({
       package_name: `one-person-lab-modules/${entry.carrier_locator.repo_name}`,
       package_kind: 'legacy_module_namespace_tombstone',

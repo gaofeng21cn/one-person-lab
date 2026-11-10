@@ -10,11 +10,29 @@ import {
 
 const input = {
   packageId: 'occ',
-  publicationRef: 'ghcr.io/gaofeng21cn/one-person-lab-packages/occ:latest-stable',
-  accessPolicyRef: 'github:packages:read:one-person-lab-packages/occ',
+  publicationRef: 'ghcr.io/gaofeng21cn/one-person-lab-private-packages/occ:latest-stable',
+  accessPolicyRef: 'github-package:gaofeng21cn/one-person-lab-private-packages/occ',
   sourceRef: 'https://github.com/gaofeng21cn/opl-capital-compass',
   credentialHandle: 'env:OPL_GITHUB_PACKAGES_TOKEN',
 };
+
+test('private Package authorization rejects public namespaces and mismatched access policies before reading credentials', () => {
+  for (const selected of [
+    { ...input, publicationRef: input.publicationRef.replace('one-person-lab-private-packages', 'one-person-lab-packages') },
+    { ...input, accessPolicyRef: input.accessPolicyRef.replace('/occ', '/other') },
+    { ...input, packageId: 'other' },
+  ]) {
+    const result = verifyGithubPackagesAccess({
+      ...selected,
+      credentialReader() { throw new Error('must not read a credential for a mismatched private namespace'); },
+      commandRunner() { throw new Error('must not contact a mismatched registry'); },
+    });
+    assert.equal(result.status, 'unknown');
+    assert.equal(result.download_allowed, false);
+    assert.equal(result.discover_allowed, false);
+    assert.match(result.reason ?? '', /package_publication_ref_invalid|package_access_policy_binding_mismatch/);
+  }
+});
 
 test('private Package access fails closed when the provider credential is absent', () => {
   const result = verifyGithubPackagesAccess({ ...input, env: {}, credentialReader() { return null; }, commandRunner() { throw new Error('must not contact registry'); } });
@@ -108,7 +126,7 @@ test('private Package access verifies the GHCR pull scope before authorizing', (
   assert.equal(result.credential_handle, 'env:OPL_GITHUB_PACKAGES_TOKEN');
   assert.match(result.security_revision ?? '', /^sha256:[0-9a-f]{64}$/);
   assert.equal(calls.length, 2);
-  assert.match(calls[0].args.join(' '), /repository%3Agaofeng21cn%2Fone-person-lab-packages%2Focc%3Apull/);
+  assert.match(calls[0].args.join(' '), /repository%3Agaofeng21cn%2Fone-person-lab-private-packages%2Focc%3Apull/);
   assert.match(calls[0].input, /Authorization: Basic /);
   assert.doesNotMatch(calls[0].args.join(' '), /test-secret/);
   assert.match(calls[1].input, /Authorization: Bearer registry-token/);

@@ -41,7 +41,7 @@ export type PackageRegistryAccessReadback = Omit<AgentPackageAccessDecision, 'vi
   registry_digest: string | null;
 };
 
-const GHCR_REF = /^ghcr\.io\/([a-z0-9._-]+\/one-person-lab-packages\/[a-z0-9._-]+)(?::([^@]+)|@(sha256:[0-9a-f]{64}))?$/i;
+const GHCR_REF = /^ghcr\.io\/([a-z0-9._-]+\/one-person-lab-private-packages\/[a-z0-9._-]+)(?::([^@]+)|@(sha256:[0-9a-f]{64}))?$/i;
 const SHA256 = /^sha256:[0-9a-f]{64}$/;
 const REGISTRY_REQUEST_MAX_SECONDS = '15';
 const CREDENTIAL_HANDLES = new Set([
@@ -188,6 +188,9 @@ export function verifyGithubPackagesAccess(input: PackageRegistryAccessProviderI
   const parsed = parsePublicationRef(input.publicationRef);
   if (!parsed || !parsed.repository.endsWith(`/${input.packageId}`)) {
     return baseReadback(input, 'unknown', 'package_publication_ref_invalid');
+  }
+  if (input.accessPolicyRef !== `github-package:${parsed.repository}`) {
+    return baseReadback(input, 'unknown', 'package_access_policy_binding_mismatch');
   }
   const env = input.env ?? process.env;
   if (!input.credentialHandle || !CREDENTIAL_HANDLES.has(input.credentialHandle)) {

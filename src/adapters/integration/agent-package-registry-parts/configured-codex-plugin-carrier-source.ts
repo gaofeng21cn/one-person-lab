@@ -233,10 +233,16 @@ export function acquireHostedPackageSource(input: {
   const publication = stringValue(carrier?.publication_ref);
   const source = stringValue(carrier?.marketplace_source);
   const version = stringValue(owner.version);
-  const match = publication?.match(/^ghcr\.io\/([a-z0-9._-]+\/one-person-lab-packages\/[a-z0-9.-]+):latest-stable$/);
+  const match = publication?.match(/^ghcr\.io\/([a-z0-9._-]+\/(one-person-lab-(?:private-)?packages)\/[a-z0-9.-]+):latest-stable$/);
+  const expectedNamespace = owner.visibility === 'authorized_only'
+    ? 'one-person-lab-private-packages' : 'one-person-lab-packages';
   if (!match || !source || !version || !/^[0-9A-Za-z.+-]+$/.test(version)
-    || !match[1].endsWith(`/${input.packageId}`)) {
+    || match[2] !== expectedNamespace || !match[1].endsWith(`/${input.packageId}`)) {
     return invalid('Package source requires its declared owner OCI channel.');
+  }
+  if (owner.visibility === 'authorized_only'
+    && owner.access_policy_ref !== `github-package:${match[1]}`) {
+    return invalid('Private Package access policy must bind its declared owner OCI channel.');
   }
   const packagedSource = acquirePackagedSource(input);
   if (packagedSource) return packagedSource;

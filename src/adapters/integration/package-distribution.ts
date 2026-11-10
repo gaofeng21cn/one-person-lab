@@ -31,6 +31,7 @@ export type PackageSpec = {
   publication_channel_admission: 'admitted' | 'development_only';
   capability_dependencies?: readonly ModuleCapabilityDependency[];
   version: string;
+  visibility: 'public' | 'authorized_only';
 };
 
 type BuildPackageManifestInput = Partial<{
@@ -155,6 +156,7 @@ export function loadOplPackageSpecs(packageDirectory?: string): PackageSpec[] {
       publication_channel_admission: projectionPublicationChannelAdmission(payload),
       capability_dependencies: agentManifest?.capability_dependencies ?? [],
       version: projectionString(payload, 'version'),
+      visibility: packageVisibility(payload.visibility),
     };
   });
 }
@@ -190,8 +192,19 @@ function projectedPackageVersion(spec: PackageSpec) {
   return normalizeDistributionVersion(spec.version);
 }
 
-function buildPackageRef(owner: string, packageId: string, version: string) {
-  return `ghcr.io/${owner}/one-person-lab-packages/${packageId}:${version}`;
+function packageVisibility(value: unknown): 'public' | 'authorized_only' {
+  if (value === undefined || value === null || value === 'public') return 'public';
+  if (value === 'authorized_only') return value;
+  throw new Error('Package visibility must be public or authorized_only.');
+}
+
+export function packageRegistryNamespace(visibility: unknown) {
+  return packageVisibility(visibility) === 'authorized_only'
+    ? 'one-person-lab-private-packages' : 'one-person-lab-packages';
+}
+
+function buildPackageRef(owner: string, packageId: string, version: string, visibility: PackageSpec['visibility']) {
+  return `ghcr.io/${owner}/${packageRegistryNamespace(visibility)}/${packageId}:${version}`;
 }
 
 function buildFrameworkRef(owner: string, version: string) {
@@ -255,9 +268,12 @@ function buildPackageReleaseDiscipline(spec: PackageSpec, rollbackVersion: strin
       'ghcr_package_artifact_published',
       'immutable_version_remote_digest_preflight',
       'repository_source_association_verified',
-      'anonymous_digest_pull_verified',
+      ...(spec.visibility === 'authorized_only'
+        ? ['authenticated_digest_pull_verified', 'anonymous_access_denied_verified', 'trusted_private_signature_verified']
+        : ['anonymous_digest_pull_verified']),
       'owner_latest_stable_promoted',
-      'anonymous_owner_channel_readback_verified',
+      spec.visibility === 'authorized_only'
+        ? 'authenticated_owner_channel_readback_verified' : 'anonymous_owner_channel_readback_verified',
       'developer_git_checkout_override_declared',
       'rollback_target_declared_when_previous_manifest_exists',
     ],
@@ -391,7 +407,8 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             package_manifest_ref: spec.package_manifest_ref,
             version: packageVersion,
             artifact_kind: 'source_archive',
-            artifact: buildPackageRef(owner, spec.package_id, packageVersion),
+            artifact: buildPackageRef(owner, spec.package_id, packageVersion, spec.visibility),
+            visibility: spec.visibility,
             owner_language_version: null as string | null,
             owner_source_commit: null as string | null,
             owner_version_tag: null as string | null,
@@ -487,6 +504,7 @@ export function materializeArchiveBackedPackagePayload(input: {
   sourceArtifactRef: string;
   archiveSha256: string | null;
   archiveRoot: string;
+  visibility?: 'public' | 'authorized_only';
 }) {
   assertCanonicalPackagePayloadManifest(input.payload, input.payloadRef);
   if (!/^[0-9a-f]{40}$/.test(input.ownerSourceCommit ?? '')) {
@@ -495,7 +513,7 @@ export function materializeArchiveBackedPackagePayload(input: {
   if (!/^sha256:[0-9a-f]{64}$/.test(input.archiveSha256 ?? '')) {
     throw new Error(`${input.payloadRef}.package_source.archive_sha256 must be an exact SHA-256 digest.`);
   }
-  const expectedArtifactSuffix = `/one-person-lab-packages/${input.packageId}:${input.packageVersion}`;
+  const expectedArtifactSuffix = `/${packageRegistryNamespace(input.visibility)}/${input.packageId}:${input.packageVersion}`;
   if (!input.sourceArtifactRef.startsWith('ghcr.io/')
     || !input.sourceArtifactRef.endsWith(expectedArtifactSuffix)) {
     throw new Error(`${input.payloadRef}.package_source.artifact_ref must select the exact Package id and version.`);

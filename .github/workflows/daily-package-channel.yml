@@ -58,7 +58,15 @@ jobs:
           plan=dist/opl-daily-packages/owner-channel-publication-plan.json
           jq -n '{surface_kind:"opl_package_owner_channel_state.v1",packages:{}}' > "$owner_state"
           while IFS= read -r package_id; do
-            image="ghcr.io/${{ github.repository_owner }}/one-person-lab-packages/$package_id"
+            manifest="contracts/opl-framework/packages/${package_id}.json"
+            visibility="$(jq -er '.visibility // "public" | select(. == "public" or . == "authorized_only")' "$manifest")"
+            package_namespace=one-person-lab-packages
+            if [ "$visibility" = authorized_only ]; then package_namespace=one-person-lab-private-packages; fi
+            image="ghcr.io/${{ github.repository_owner }}/${package_namespace}/$package_id"
+            publication_ref="$(jq -r '.codex_surface.configured_codex_plugin_carrier.publication_ref // empty' "$manifest")"
+            if [ "$visibility" = authorized_only ] || [ -n "$publication_ref" ]; then
+              [ "$publication_ref" = "${image}:latest-stable" ]
+            fi
             descriptor_file="$RUNNER_TEMP/opl-$package_id-latest-stable-descriptor.json"
             descriptor_error="$RUNNER_TEMP/opl-$package_id-latest-stable-descriptor.error"
             manifest_file="$RUNNER_TEMP/opl-$package_id-latest-stable-manifest.json"

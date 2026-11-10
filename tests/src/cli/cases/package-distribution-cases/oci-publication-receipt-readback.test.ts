@@ -8,7 +8,7 @@ const version = '0.4.0';
 const sourceRepo = 'https://github.com/example/occ.git';
 const sourceCommit = 'a'.repeat(40);
 const frameworkCommit = 'b'.repeat(40);
-const subject = 'ghcr.io/example/one-person-lab-packages/occ@';
+const subject = 'ghcr.io/example/one-person-lab-private-packages/occ@';
 
 function digest(bytes: Buffer) {
   return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
@@ -38,6 +38,20 @@ test('private publication receipt readback verifies the authenticated referrer a
   }));
   const subjectDigest = digest(subjectManifest);
   const subjectRef = `${subject}${subjectDigest}`;
+  for (const selected of [
+    { subject: subjectRef.replace('one-person-lab-private-packages', 'one-person-lab-packages'), policy: 'github-package:example/one-person-lab-private-packages/occ' },
+    { subject: subjectRef, policy: 'github-package:example/one-person-lab-private-packages/other' },
+  ]) {
+    const rejected = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/oci-publication-receipt-readback.mjs'),
+      '--subject', selected.subject, '--package-id', packageId, '--version', version,
+      '--source-repo', sourceRepo, '--source-commit', sourceCommit, '--public-key', publicKeyPath,
+      '--access-policy-ref', selected.policy, '--credential-provider', 'github_packages',
+    ], { encoding: 'utf8', env: { PATH: bin } });
+    assert.notEqual(rejected.status, 0);
+    assert.match(rejected.stderr, /canonical owner.access identity|namespace and access policy/);
+    assert.doesNotMatch(rejected.stderr, /oras readback|cosign readback/);
+  }
   const receipt = {
     surface_kind: 'opl_package_publication_receipt.v1',
     status: 'published_and_verified',
@@ -46,8 +60,8 @@ test('private publication receipt readback verifies the authenticated referrer a
     content: {
       source_archive_digest: digest(archive), manifest_digest: digest(manifestLayer), payload_manifest_digest: digest(payload),
     },
-    immutable: { digest: subjectDigest }, latest_stable: { digest: subjectDigest },
-    access: { visibility: 'authorized_only', access_policy_ref: 'github-package:example/private', credential_provider: 'github_packages', registry_visibility_verified: true },
+    immutable: { ref: `${subject.split('@')[0]}:${version}`, digest: subjectDigest }, latest_stable: { ref: `${subject.split('@')[0]}:latest-stable`, digest: subjectDigest },
+    access: { visibility: 'authorized_only', access_policy_ref: 'github-package:example/one-person-lab-private-packages/occ', credential_provider: 'github_packages', registry_visibility_verified: true },
     attestations: { status: 'verified', subject: subjectRef, signing_key_digest: signingKeyDigest, transparency_log: 'not_uploaded_private' },
     anonymous_readback: { status: 'denied_verified' }, authenticated_readback: { status: 'verified' },
   };
@@ -104,7 +118,7 @@ process.stdout.write(JSON.stringify(statements));
     path.join(repoRoot, 'scripts/oci-publication-receipt-readback.mjs'),
     '--subject', subjectRef, '--package-id', packageId, '--version', version,
     '--source-repo', sourceRepo, '--source-commit', sourceCommit, '--public-key', publicKeyPath,
-    '--access-policy-ref', 'github-package:example/private', '--credential-provider', 'github_packages',
+    '--access-policy-ref', 'github-package:example/one-person-lab-private-packages/occ', '--credential-provider', 'github_packages',
     '--receipt-digest', receiptDigest,
   ], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, OPL_RECEIPT_MAPS: mapsPath } })) as Record<string, unknown>;
   assert.equal(output.status, 'verified');
@@ -116,7 +130,7 @@ process.stdout.write(JSON.stringify(statements));
     path.join(repoRoot, 'scripts/oci-publication-receipt-readback.mjs'),
     '--subject', subjectRef, '--package-id', packageId, '--version', version,
     '--source-repo', sourceRepo, '--source-commit', sourceCommit,
-    '--access-policy-ref', 'github-package:example/private', '--credential-provider', 'github_packages',
+    '--access-policy-ref', 'github-package:example/one-person-lab-private-packages/occ', '--credential-provider', 'github_packages',
   ], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, OPL_RECEIPT_MAPS: mapsPath } });
   assert.notEqual(bad.status, 0);
   assert.match(`${bad.stdout}${bad.stderr}`, /trusted software source configuration/);

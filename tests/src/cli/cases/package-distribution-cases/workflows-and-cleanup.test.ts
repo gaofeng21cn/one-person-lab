@@ -186,6 +186,23 @@ test('single-Package payload materialization binds exact physical archive proven
     const standard = run('standard', standardArgs);
     assert.equal(standard.status, 0, standard.stderr);
 
+    const privateManifest = path.join(root, 'private-package-manifest.json');
+    fs.writeFileSync(privateManifest, JSON.stringify({
+      ...JSON.parse(fs.readFileSync(packageManifest, 'utf8')), visibility: 'authorized_only',
+    }));
+    const privateArgs = [...baseArgs];
+    privateArgs[privateArgs.indexOf('--package-manifest') + 1] = privateManifest;
+    const publicNamespaceRejected = run('private-public-namespace', privateArgs);
+    assert.equal(publicNamespaceRejected.status, 1);
+    assert.match(publicNamespaceRejected.stderr, /Artifact ref does not match/);
+    privateArgs[privateArgs.indexOf('--artifact-ref') + 1] = artifactRef.replace('/one-person-lab-packages/', '/one-person-lab-private-packages/');
+    const privateResult = run('private-materialized', privateArgs);
+    assert.equal(privateResult.status, 0, privateResult.stderr);
+    const privatePayload = JSON.parse(fs.readFileSync(path.join(root, 'private-materialized.json'), 'utf8'));
+    assert.equal(privatePayload.package_source.artifact_ref, privateArgs[privateArgs.indexOf('--artifact-ref') + 1]);
+    privateArgs[privateArgs.indexOf('--package-manifest') + 1] = packageManifest;
+    assert.equal(run('public-private-namespace', privateArgs).status, 1);
+
     const missingArchiveRootArgs = [...baseArgs];
     missingArchiveRootArgs.splice(missingArchiveRootArgs.indexOf('--archive-root'), 2);
     const missingArchiveRoot = run('missing-archive-root', missingArchiveRootArgs);
@@ -305,11 +322,24 @@ test('public source publication requires approval while private publication reta
     const output = path.join(root, 'outputs');
     const selector = spawnSync('bash', ['-c', stepScript('Resolve exact Package owner source')], {
       cwd: root, encoding: 'utf8',
-      env: { ...process.env, PACKAGE_ID: 'example-agent', GITHUB_OUTPUT: output, GITHUB_ENV: path.join(root, 'env') },
+      env: { ...process.env, PACKAGES_OWNER: 'example', PACKAGE_ID: 'example-agent', GITHUB_OUTPUT: output, GITHUB_ENV: path.join(root, 'env') },
     });
     assert.equal(selector.status, 0, selector.stderr);
     assert.match(fs.readFileSync(output, 'utf8'), /owner_source_key_secret=OWNER_SOURCE_READ_KEY_EXAMPLE_PRIVATE_AGENT\n/);
     assert.match(fs.readFileSync(output, 'utf8'), /public_source_approval_var=PUBLIC_SOURCE_ARCHIVE_COMMIT_EXAMPLE_PRIVATE_AGENT\n/);
+    for (const namespace of ['one-person-lab-private-packages', 'one-person-lab-packages']) {
+      fs.writeFileSync(path.join(manifests, 'example-agent.json'), JSON.stringify({
+        source_repo: 'https://github.com/example/private-agent.git', visibility: 'authorized_only',
+        access_policy_ref: `github-package:example/${namespace}/example-agent`, credential_provider: 'github_packages',
+        codex_surface: { configured_codex_plugin_carrier: { publication_ref: `ghcr.io/example/${namespace}/example-agent:latest-stable` } },
+      }));
+      const privateSelector = spawnSync('bash', ['-c', stepScript('Resolve exact Package owner source')], {
+        cwd: root, encoding: 'utf8', env: { ...process.env, PACKAGES_OWNER: 'example', PACKAGE_ID: 'example-agent',
+          GITHUB_OUTPUT: output, GITHUB_ENV: path.join(root, 'env-private') },
+      });
+      assert.equal(privateSelector.status === 0, namespace === 'one-person-lab-private-packages', privateSelector.stderr);
+    }
+    assert.match(fs.readFileSync(path.join(root, 'env-private'), 'utf8'), /PACKAGE_REGISTRY_NAME=one-person-lab-private-packages\/example-agent/);
     fs.writeFileSync(path.join(root, 'curl'), `#!/bin/sh
 while [ "$#" -gt 0 ]; do
   if [ "$1" = --output ]; then shift; printf '%s' "$TEST_RESPONSE" > "$1"; fi
@@ -562,6 +592,10 @@ test('GHCR package cleanup dry-runs active package-channel packages', () => {
       { id: 16, updated_at: '2026-04-01T00:00:00Z', metadata: { container: { tags: ['26.4.1'] } } },
     ],
     'one-person-lab-modules/med-autogrant': [],
+    'one-person-lab-packages/occ': [
+      { id: 99, updated_at: '2026-05-01T00:00:00Z', metadata: { container: { tags: ['0.1.5', 'latest-stable'] } } },
+    ],
+    'one-person-lab-private-packages/occ': [],
     'one-person-lab-modules/redcube-ai': [],
     'one-person-lab-framework': [
       { id: 31, updated_at: '2026-05-06T00:00:00Z', metadata: { container: { tags: ['26.5.6'] } } },
@@ -618,6 +652,12 @@ test('GHCR package cleanup dry-runs active package-channel packages', () => {
   assert.deepEqual(frameworkCore.candidates.map((candidate: { id: number }) => candidate.id), [34]);
   const missing = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-packages/oma');
   assert.equal(missing.status, 'not_found_or_unreadable');
+  const historicalOcc = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-packages/occ');
+  assert.equal(historicalOcc.package_kind, 'previous_public_namespace_tombstone');
+  assert.equal(historicalOcc.execution_mode, 'read_only_migration_detection');
+  assert.deepEqual(historicalOcc.candidates, []);
+  const privateOcc = summary.packages.find((entry: { package_name: string }) => entry.package_name === 'one-person-lab-private-packages/occ');
+  assert.equal(privateOcc.package_kind, 'active_package');
 });
 
 
@@ -656,7 +696,7 @@ test('private Package visibility is checked before upload and cannot be promoted
       assert.doesNotMatch(result.stdout + result.stderr, /fixture-secret-never-output/);
     }
     assert.equal(fs.existsSync(path.join(root, 'gh-calls')), false, 'private publication never calls a visibility mutation');
-    assert.ok(script.indexOf('inspect_package_visibility "one-person-lab-packages/${PACKAGE_ID}" before') < script.indexOf('oras push --format json'));
+    assert.ok(script.indexOf('inspect_package_visibility "$PACKAGE_REGISTRY_NAME" before') < script.indexOf('oras push --format json'));
     assert.match(workflow, /if: env\.PACKAGE_VISIBILITY == 'public'\n        uses: actions\/upload-artifact/);
     assert.match(workflow, /--key env:\/\/COSIGN_PRIVATE_KEY --tlog-upload=false/);
     assert.match(workflow, /--key "\$RUNNER_TEMP\/private-package-signing\.pub" --insecure-ignore-tlog/);
