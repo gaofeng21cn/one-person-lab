@@ -14,12 +14,12 @@ const denied = { status: 1, stdout: '', stderr: 'unauthorized: authentication re
 function fixture(options: {
   publisher?: string; ownerPrivate?: boolean; metadata?: any[]; anonymous?: any; push?: any;
 } = {}) {
-  const calls: Array<{ command: string; args: string[] }> = [];
+  const calls: Array<{ command: string; args: string[]; cwd?: string }> = [];
   let packageReads = 0;
   const markerBytes: string[] = [];
   const state = options.metadata ?? [privateMetadata, privateMetadata];
-  const run = (command: string, args: string[]) => {
-    calls.push({ command, args });
+  const run = (command: string, args: string[], _extraEnv: unknown, cwd?: string) => {
+    calls.push({ command, args, cwd });
     if (command === 'gh') {
       if (args.at(-1) === `/repos/${ownerRepo}`) return ok({ full_name: ownerRepo, private: options.ownerPrivate ?? true });
       const metadata = state[Math.min(packageReads++, state.length - 1)];
@@ -27,7 +27,7 @@ function fixture(options: {
     }
     if (args[0] === 'push') {
       const layer = args.at(-1)!;
-      markerBytes.push(fs.readFileSync(layer.slice(0, layer.indexOf(':application/')), 'utf8'));
+      markerBytes.push(fs.readFileSync(path.resolve(cwd!, layer.slice(0, layer.indexOf(':application/'))), 'utf8'));
       return options.push ?? ok({ digest: `sha256:${'1'.repeat(64)}` });
     }
     assert.equal(args.slice(0, 2).join(' '), 'repo tags');
@@ -60,7 +60,9 @@ test('new private namespace receives only a fixed harmless marker before private
   assert.ok(push.args.includes(`${image}:opl-access-bootstrap`));
   assert.ok(push.args.includes(`org.opencontainers.image.source=https://github.com/${ownerRepo}`));
   assert.equal(push.args.filter((a) => a.includes(':application/')).length, 1);
-  assert.equal(fs.existsSync(path.dirname(push.args.at(-1)!.split(':application/')[0]!)), false, 'temporary marker is removed');
+  assert.equal(path.isAbsolute(push.args.at(-1)!.split(':application/')[0]!), false, 'ORAS receives a validated relative marker path');
+  assert.ok(push.cwd && path.isAbsolute(push.cwd));
+  assert.equal(fs.existsSync(push.cwd!), false, 'temporary marker is removed');
 });
 
 test('public bootstrap result never authorizes sensitive publication and is not retried', () => {

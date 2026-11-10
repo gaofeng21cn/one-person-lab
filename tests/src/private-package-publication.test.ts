@@ -81,6 +81,7 @@ test('private publication forwards credentials only through a protected temporar
   let observedConfig = '';
   const run = ((_binary: string, args: string[], options: { env: NodeJS.ProcessEnv }) => {
     assert.equal(JSON.stringify(args).includes(base.credential.token), false);
+    assert.equal(args.includes('--include-receipt'), false, 'normal consumer does not request internal publication metadata');
     assert.ok(args.includes(key));
     observedConfig = options.env.DOCKER_CONFIG!;
     assert.equal(fs.statSync(observedConfig).mode & 0o777, 0o700);
@@ -104,4 +105,19 @@ test('private publication rejects wrong-subject verifier output and never expose
     assert.equal(String(error).includes(base.credential.token), false);
     return true;
   });
+});
+
+
+test('publication tooling explicitly selects its signed receipt without exposing credentials', () => {
+  const run = ((_binary: string, args: string[]) => {
+    assert.ok(args.includes('--include-receipt'));
+    assert.equal(args[args.indexOf('--publication-request-id') + 1], 'release-request');
+    assert.equal(args[args.indexOf('--workflow-repository') + 1], 'gaofeng21cn/private-agent');
+    assert.equal(args[args.indexOf('--workflow-run-id') + 1], '42');
+    assert.equal(JSON.stringify(args).includes(base.credential.token), false);
+    return { status: 0, stdout: JSON.stringify({ status: 'verified', subject: firstParty.subject, receipt: { publication_request_id: 'release-request' } }) };
+  }) as unknown as typeof spawnSync;
+  const result = verifyPrivatePackagePublication({ ...firstParty, env: {}, run, includeReceipt: true,
+    publicationRequestId: 'release-request', workflowRepository: 'gaofeng21cn/private-agent', workflowRunId: '42' });
+  assert.deepEqual(result.receipt, { publication_request_id: 'release-request' });
 });

@@ -146,6 +146,10 @@ annotated tag 仍用于绑定正式发布内容；版本说明直接使用仓库
 `publish-package.yml`，调用时固定 Framework commit。GitHub Actions 首次创建
 Package 时继承调用方仓库的可见性，不能从公开 Framework 仓库直接发布私有源包。
 公共包仍由 Framework 调度；这只改变执行身份，不新增软件源或发布机制。
+Flow 的统一发布入口按可见性选择调用方。私有 wrapper 固定的 Framework 提交必须属于
+当前主线历史，且目标 Package 的版本、来源与载荷仍与所选目录一致；无关目录更新不要求
+重写全部 wrapper。私有回执从同一 OCI 制品读取，使用共享验证器绑定签名来源、发布请求
+和工作流运行；完整回执只向显式请求它的发布工具返回。
 
 私有发布先验证调用方就是 manifest 的私有 owner；新 namespace 只允许先上传固定的
 无敏感内容标记。确认 registry 为 private、关联正确的私有仓库且匿名访问被拒绝后，

@@ -57,7 +57,7 @@ function verifyAttestations(input, env, subjectDigest) {
   ], env));
   const isSubject = (statement) => Array.isArray(statement?.subject)
     && statement.subject.some((entry) => entry?.digest?.sha256 === subjectDigest.slice(7));
-  const provenance = read('slsaprovenance1').find((statement) => {
+  const provenances = read('slsaprovenance1').filter((statement) => {
     const definition = statement?.predicate?.buildDefinition;
     const parameters = definition?.externalParameters;
     return isSubject(statement) && statement.predicateType === 'https://slsa.dev/provenance/v1'
@@ -68,7 +68,7 @@ function verifyAttestations(input, env, subjectDigest) {
         dependency?.uri === input.sourceRepo.replace(/\.git$/, '')
         && dependency?.digest?.gitCommit === input.sourceCommit);
   });
-  if (!provenance) fail('Signed provenance does not bind the selected Package and owner source.');
+  if (provenances.length === 0) fail('Signed provenance does not bind the selected Package and owner source.');
   const sbom = read('spdxjson').find((statement) => isSubject(statement)
     && statement.predicateType === 'https://spdx.dev/Document'
     && statement.predicate?.spdxVersion === 'SPDX-2.3'
@@ -76,19 +76,32 @@ function verifyAttestations(input, env, subjectDigest) {
     && statement.predicate.packages.some((entry) => entry?.name === input.packageId
       && entry?.versionInfo === input.version && entry?.downloadLocation === input.subject));
   if (!sbom) fail('Signed SBOM does not bind the selected Package.');
-  return { provenance, sbom };
+  return { provenances, sbom };
 }
 
 function validateReceipt(receipt, input, subjectDigest, layers, keyDigest, attestations) {
   const content = receipt?.content;
   const repository = input.subject.split('@')[0];
+  const provenance = attestations.provenances.map((statement) => statement.predicate).find((predicate) =>
+    receipt?.package?.framework_source_commit === predicate.buildDefinition.externalParameters.framework_source_commit
+    && receipt?.publication_request_id === predicate.buildDefinition.internalParameters?.publication_request_id
+    && predicate.runDetails?.metadata?.invocationId === `${receipt?.workflow?.run_id}-${receipt?.workflow?.run_attempt}`
+    && typeof predicate.runDetails?.builder?.id === 'string'
+    && predicate.runDetails.builder.id.startsWith(`${receipt?.workflow?.repository}/.github/workflows/`));
   const matchingLayer = (kind, value) => layers.some((layer) =>
     layer?.mediaType === `application/vnd.onepersonlab.package.${kind}` && layer?.digest === value);
   if (receipt?.surface_kind !== 'opl_package_publication_receipt.v1'
     || receipt.status !== 'published_and_verified'
     || receipt.package?.package_id !== input.packageId || receipt.package?.version !== input.version
     || receipt.package?.owner_source_commit !== input.sourceCommit
-    || receipt.package?.framework_source_commit !== attestations.provenance.predicate.buildDefinition.externalParameters.framework_source_commit
+    || !provenance
+    || receipt.package?.framework_source_commit !== provenance.buildDefinition.externalParameters.framework_source_commit
+    || !receipt.publication_request_id
+    || receipt.publication_request_id !== provenance.buildDefinition.internalParameters?.publication_request_id
+    || !receipt.workflow?.repository || !receipt.workflow?.run_id || !receipt.workflow?.run_attempt
+    || provenance.runDetails?.metadata?.invocationId !== `${receipt.workflow.run_id}-${receipt.workflow.run_attempt}`
+    || typeof provenance.runDetails?.builder?.id !== 'string'
+    || !provenance.runDetails.builder.id.startsWith(`${receipt.workflow.repository}/.github/workflows/`)
     || receipt.source?.owner_repository !== input.sourceRepo.replace(/\.git$/, '')
     || receipt.immutable?.digest !== subjectDigest || receipt.latest_stable?.digest !== subjectDigest
     || receipt.immutable?.ref !== `${repository}:${input.version}`
@@ -156,11 +169,16 @@ export function verifyPrivatePackagePublication(input, env = process.env) {
       if (layer?.mediaType !== receiptLayerType || !digestPattern.test(layer.digest ?? '')) fail('Receipt layer is invalid.');
       const bytes = run('oras', ['blob', 'fetch', '--output', '-', `${repository}@${layer.digest}`], env);
       if (sha256(bytes) !== layer.digest || bytes.length !== layer.size) fail('Receipt layer bytes do not match its digest.');
-      validateReceipt(json(bytes, 'Publication receipt'), input, subjectDigest, subject.layers, keyDigest, attestations);
+      const receipt = json(bytes, 'Publication receipt');
+      validateReceipt(receipt, input, subjectDigest, subject.layers, keyDigest, attestations);
+      if ((input.publicationRequestId && receipt.publication_request_id !== input.publicationRequestId)
+        || (input.workflowRepository && receipt.workflow.repository !== input.workflowRepository)
+        || (input.workflowRunId && String(receipt.workflow.run_id) !== input.workflowRunId)) continue;
       return {
         status: 'verified', subject: input.subject, package_id: input.packageId, version: input.version,
         receipt_ref: receiptRef, receipt_digest: candidate.digest, signing_key_digest: keyDigest,
         trusted_key_source: 'caller_software_source_configuration',
+        ...(input.includeReceipt ? { receipt } : {}),
       };
     } catch {
       // Retries can attach more than one receipt to the same immutable subject.
@@ -173,10 +191,12 @@ export function verifyPrivatePackagePublication(input, env = process.env) {
 function main() {
   const names = { '--subject': 'subject', '--package-id': 'packageId', '--version': 'version',
     '--source-repo': 'sourceRepo', '--source-commit': 'sourceCommit', '--public-key': 'publicKey',
-    '--access-policy-ref': 'accessPolicyRef', '--credential-provider': 'credentialProvider', '--receipt-digest': 'receiptDigest' };
+    '--access-policy-ref': 'accessPolicyRef', '--credential-provider': 'credentialProvider', '--receipt-digest': 'receiptDigest',
+    '--publication-request-id': 'publicationRequestId', '--workflow-repository': 'workflowRepository', '--workflow-run-id': 'workflowRunId' };
   const input = {};
   const argv = process.argv.slice(2);
   for (let index = 0; index < argv.length; index += 2) {
+    if (argv[index] === '--include-receipt') { input.includeReceipt = true; index -= 1; continue; }
     const field = names[argv[index]];
     if (!field || !argv[index + 1] || argv[index + 1].startsWith('--')) fail('Unknown or incomplete readback option.');
     input[field] = argv[index + 1];
