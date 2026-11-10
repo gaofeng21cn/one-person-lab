@@ -46,7 +46,7 @@ opl sources configure \
   --enabled true --json
 ```
 
-可用的原生引用由 provider 决定；当前实现支持 `gh-cli`、`ghcr` 和受控的 `env:OPL_GITHUB_PACKAGES_TOKEN` 引用。未经 provider 声明的任意 URL、明文 token 或 `credential:` 字符串都会被拒绝。需要切换账号时，先在 provider（例如 `gh auth login`）中完成账号切换，再重新执行 `check`；Framework 不复制 GitHub token。
+可用的原生引用由 provider 决定；当前实现支持 `provider:github_packages:gh-cli`、`provider:github_packages:ghcr`、`provider:github_packages:docker` 和受控的 `env:OPL_GITHUB_PACKAGES_TOKEN` 引用。未经 provider 声明的任意 URL、明文 token 或 `credential:` 字符串都会被拒绝。需要切换账号时，先在 provider（例如 `gh auth login`）中完成账号切换，再重新执行 `check`；Framework 不复制 GitHub token。
 
 断开来源只移除本地 credential handle 和后续远端读取能力，不删除已经安装的 Package：
 
