@@ -1,4 +1,5 @@
 import type { FrameworkContracts } from '../../../kernel/types.ts';
+import { executeSoftwareSourceAppAction } from './action-execute-sources.ts';
 import { executeConnectionAppAction } from './action-execute-connections.ts';
 import { executeProviderAppAction } from './action-execute-provider.ts';
 import { executeEnvironmentAppAction } from './action-execute-environment.ts';
@@ -48,6 +49,9 @@ export async function executeDirectAppAction(
   options: AppActionExecuteOptions,
   services: AppActionExecuteServices,
 ) {
+  const sourceAction = await executeSoftwareSourceAppAction(options);
+  if (sourceAction) return sourceAction;
+
   const connectionAction = await executeConnectionAppAction(options);
   if (connectionAction) return connectionAction;
 

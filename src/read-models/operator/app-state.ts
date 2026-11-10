@@ -1,3 +1,4 @@
+import { listOplSoftwareSources } from '../../adapters/integration/public/app-state.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { loadFrameworkContracts } from '../../authority/contracts/public/app-state.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
@@ -502,6 +503,7 @@ export async function buildOplAppState(input: {
     }));
   const agentPackagesProjection = {
     surface_kind: 'opl_app_agent_packages_projection',
+    sources: listOplSoftwareSources({ packageEntries: agentPackagesReadback.directory.entries }),
     source: {
       list_surface: 'opl packages list --json',
       status_surface: 'opl packages status --package-id <package_id> --json',

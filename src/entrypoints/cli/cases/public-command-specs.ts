@@ -14,6 +14,7 @@ import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.t
 import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.ts';
 import { buildOkfCommandSpecs } from './public-command-specs-parts/okf.ts';
 import { buildKnowledgeCommandSpecs } from './public-command-specs-parts/knowledge.ts';
+import { buildSoftwareSourcesCommandSpecs } from './public-command-specs-parts/sources.ts';
 import { buildPackagesCommandSpecs } from './public-command-specs-parts/packages.ts';
 import { buildProfileCommandSpecs } from './public-command-specs-parts/profiles.ts';
 import { buildReleaseCommandSpecs } from './public-command-specs-parts/release.ts';
@@ -137,6 +138,7 @@ export function buildPublicCommandSpecs(
     ...profileCommandSpecs,
     ...connectCommandSpecs,
     ...packagesCommandSpecs,
+    ...buildSoftwareSourcesCommandSpecs(command => publicCommandSpecs[command]),
     ...updateCommandSpecs,
     ...okfCommandSpecs,
     ...knowledgeCommandSpecs,
