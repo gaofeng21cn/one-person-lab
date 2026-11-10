@@ -10,7 +10,7 @@ OPL 的应用共同遵循 **OPL Agent Apps（Agent 原生应用）** 定位：Ag
 
 - **OPL Base**：Framework、CLI、Stage/Attempt、Workspace、Package discovery、Host composition、runtime provider adapter 和 read model。
 - **OPL App**：桌面产品、用户交互、Settings、官方 starter profile 和 product truth。
-- **OPL Packages**：可安装的 Agent、capability、workflow profile 和 provider。Package 是唯一安装单元，Skill、Tool、Plugin、MCP 和 entrypoint 是 Package descriptor 中的能力。
+- **OPL Packages**：可安装的 Agent、capability、workflow profile 和 provider。Package 是唯一安装单元，Skill、Tool、Plugin、MCP 和 entrypoint 是 Package descriptor 中的能力；用户目录由 Framework 的 Package Directory 投影，Homebrew 等 carrier 只负责物理分发。
 - **OPL Cloud**：远端 workspace、managed resource、协作和 Cloud product truth。
 
 专业 Agent 持有各自领域的事实、质量判断、artifact authority、owner receipt、typed blocker 和 human gate。Framework 只提供通用底座与受控投影，不代替领域负责人作结论。

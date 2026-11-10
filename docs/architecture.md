@@ -20,7 +20,15 @@ User
 
 ### 应用管理共享投影
 
-Framework 在公开 `app_state.application_management` 提供一个 refs-only 聚合视图，供 OPL App、Studio 和 Agent 共同呈现共享基座。该视图把已存在的 OPL Base 能力、连接授权、模型访问和知识 owner 已授权来源放在同一认知入口；知识 owner 尚未提供安全 projection 时保持空列表，由 App 的知识空状态说明来源尚未返回。资源的安装、启停、授权、更新和修复仍由原 owner 的既有 `app action` 负责。它不引入第二个 Package registry、凭证库、知识正文库或 updater。
+Framework 在公开 `app_state.application_management` 提供一个 refs-only 聚合视图，供 OPL App、Studio 和 Agent 共同呈现共享基座；Package Directory 则由 `app_state.agent_packages.directory.entries` 提供 Agent、Workflow 和 Capability 的可发现清单。前者聚合共享资源，后者聚合可安装 Package，两者都只投影 owner truth。
+
+目录条目必须具备稳定 Package identity、角色、发布/载体、安装回读、就绪状态、可用版本和 owner action。GitHub 仓库数量、仓库活跃或一个可用 action 都不能直接变成可安装条目。`standard_agent` 与 `workflow_profile` 进入 Agents，`capability_package` 进入 Shared capabilities；宿主、Framework、分发仓和系统依赖保留在基础设施或产品设置中。
+
+应用管理 UI 是统一的一级入口，与主对话并列，展示目录总数、可安装、已安装、已安装/可用版本、更新和需处理状态。安装、启停、更新和修复继续由原 owner 的 `app action` 与 native carrier 执行；App 只 dispatch 并做 fresh readback。它不引入第二个 Package registry、凭证库、知识正文库或 updater。Homebrew 是系统依赖、CLI 和声明的原生 carrier，不能替代 OPL Agent Package Directory。
+
+该目录与安装边界的完整人读说明见 [Package Directory 与统一安装管理](./specs/package-directory.md)。
+
+共享资源视图把已存在的 OPL Base 能力、连接授权、模型访问和知识 owner 已授权来源放在同一认知入口；知识 owner 尚未提供安全 projection 时保持空列表，由 App 的知识空状态说明来源尚未返回。资源的安装、启停、授权、更新和修复仍由原 owner 的既有 `app action` 负责。它不引入第二个凭证库、知识正文库或 updater。
 
 资源行可带 owner 提供的授权、修订、安全版本、freshness 和 readiness 摘要；缺少明确 owner 字段时保持 `unknown`，不能从写入时间、工作区绑定或消费者存在性推断“当前”或“已就绪”。
 

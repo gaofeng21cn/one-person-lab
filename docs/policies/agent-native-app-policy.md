@@ -23,6 +23,14 @@ MiniApp 所依托的共用基座是所有自有 Agent 和 Agent 原生 App 的�
 7. **共用获准的环境。** 已有连接、个人资料、偏好和知识按任务及权限复用；缺少时准确提示补齐。信息可读取、连接获授权和某次业务动作被批准是三个独立事实。有效授权不因页面重开而重复请求。
 8. **证据分层。** 区分协议与 schema、源码测试、真实宿主交互、安装载体、发行字节和领域结果。页面截图不证明安装版本可用；Package 发布不证明专业判断合格。
 
+## 目录、安装与更新
+
+所有 Agent、Agent 原生 App、工作流和共享能力共用 Framework 的 Package Directory 与 owner action。目录的唯一机器来源是 `app_state.agent_packages.directory.entries`，可通过 `opl packages list --json` 和 `opl app state --profile fast|full --json` 读取；OPL App 与 Studio 不维护 GitHub 仓库白名单、静态 Package 清单或第二套版本数据库。
+
+GitHub 仓库只有在具备稳定 Package ID、正确 `package_role`、manifest/descriptor、可调用入口、已声明发布来源与 carrier、以及安装后 installed/callable/readiness 回读合同后，才可成为可安装条目。`standard_agent`、`workflow_profile` 和 `capability_package` 分别投影到 Agents、Workflows 和 Shared capabilities；宿主、Framework、分发仓、系统依赖、开发 checkout、冻结/归档项目和 publication 未验证项目不伪装成普通 Agent。私有项目按授权范围进入 `authorized-only` 视图。
+
+Homebrew 是 native carrier，适合宿主、CLI、系统依赖和明确声明的 OPL App 载体；它不拥有 OPL Agent 目录。用户看到的是统一的 OPL 应用管理页，底层动作可以由 Framework、Homebrew、npm、OCI 或 GitHub Release 执行。App 展示已安装版本与可用版本，只有 owner 的 `package_currentness.status=update_available` 才表示有更新；完成动作后必须重新读取 owner projection。完整边界见 [Package Directory 与统一安装管理](../specs/package-directory.md)。
+
 ## 共用基座及归属
 
 | 共用能力 | 现有 owner / 接口 | 新应用承担的工作 |

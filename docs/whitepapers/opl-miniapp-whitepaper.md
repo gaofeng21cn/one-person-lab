@@ -54,6 +54,12 @@ OPL 的会话内界面采用标准 MCP Apps，使工具结果与交互资源能�
 
 因此，OPL Agent Apps 定义整体开发与协作方式，MiniApp 提供其中需要的交互界面。它们沿用现有 Package、MCP、插件生命周期与权限机制，开发者可以直接复用既有安装身份、通用通信协议和能力发现入口。
 
+### 统一目录与安装管理
+
+当 Agent 和 MiniApp 数量增加时，用户需要一个稳定的“软件清单”认知入口。OPL 将这项职责交给 Framework 的 **OPL Package Directory**：它按 Package identity 和 `package_role` 投影 Agents、Workflows 与 Shared capabilities，展示目录总量、可安装、已安装版本、可用版本、更新和就绪状态。OPL App 首页的“应用管理”与主对话并列，是这个目录的人机入口；Studio 和其他宿主消费同一 owner projection。
+
+GitHub 仓库活跃并不等于可安装。只有具备 manifest/descriptor、可调用入口、发布来源、carrier 和安装后回读的项目才能进入可安装目录。Homebrew 在这套模型中是系统依赖、CLI 和部分原生载体的分发方式，沿对应 artifact 做版本与 digest 回读；它不替代 OPL Agent 目录，也不成为第二个 Package registry。完整规则见[Package Directory 与统一安装管理](../specs/package-directory.md)。
+
 宿主能力不同，体验也应有清楚的降级路径。支持 MCP Apps 的宿主呈现交互界面；其他调用方仍能获得结构化结果，并在适用时使用由负责方提供的专业应用或浏览器入口。业务执行不能依赖某个页面恰好保持打开。
 
 ## 连接一次，按任务使用

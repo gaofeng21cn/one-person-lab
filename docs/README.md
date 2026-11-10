@@ -31,6 +31,7 @@
 - [Agent 原生应用标准](./policies/agent-native-app-policy.md)：Agent 主导、按需人机协作与共用基座的开发要求。
 - [共用基座放在哪里](./architecture.md#共用基座的物理归属)：源码、合同、安装、状态、私人知识和领域数据的查找入口。
 - [MCP Apps](./mcp-apps/SPEC.md)：共享 MiniApp 技术行为、适配器与宿主边界；接入见[开发指南](./mcp-apps/development.md)。
+- [Package Directory 与统一安装管理](./specs/package-directory.md)：统一目录、项目准入、carrier 边界和版本回读。
 - [Public](./public/README.md)：面向外部读者的稳定叙事。
 - [References](./references/README.md)：不会决定状态或架构的维护参考。
 - [Whitepapers](./whitepapers/README.md)：白皮书源文件。
