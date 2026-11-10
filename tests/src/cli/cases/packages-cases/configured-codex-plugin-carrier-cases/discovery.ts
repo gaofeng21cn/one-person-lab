@@ -599,7 +599,8 @@ test('directory actions project the exact settings ABI while the settings catalo
     assert.ok(entry);
     assert.equal(entry.recommended_action, 'agent_package_repair');
     assert.equal(entry.installed_version, ownerPackageVersion);
-    assert.equal(entry.selected_version, ownerPackageVersion);
+    // This external installed fixture has no current source version projection.
+    assert.equal(entry.selected_version, null);
     const expectedActions = [
       {
         action_id: 'agent_package_update',
