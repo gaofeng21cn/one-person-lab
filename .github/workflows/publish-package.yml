@@ -529,7 +529,8 @@ jobs:
           if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
             # Private provenance must not enter a public transparency log.
             # The registry keeps the signed attestations behind Package read access.
-            attest_access_args=(--key env://COSIGN_PRIVATE_KEY --tlog-upload=false)
+            # Cosign 3.1.1 requires disabling its default signing config for this flag.
+            attest_access_args=(--key env://COSIGN_PRIVATE_KEY --tlog-upload=false --use-signing-config=false)
             verify_access_args=(--key "$RUNNER_TEMP/private-package-signing.pub" --insecure-ignore-tlog)
             signing_key_digest="$(node -e 'const c = require("node:crypto"); const f = require("node:fs"); const der = c.createPublicKey(f.readFileSync(process.argv[1])).export({type:"spki",format:"der"}); process.stdout.write("sha256:" + c.createHash("sha256").update(der).digest("hex"));' "$RUNNER_TEMP/private-package-signing.pub")"
           fi

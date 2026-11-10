@@ -742,7 +742,7 @@ test('private Package visibility is checked before upload and cannot be promoted
     assert.match(workflow, /repository: gaofeng21cn\/one-person-lab\n          ref: \$\{\{ inputs\.expected_framework_source_commit \}\}/);
     assert.match(workflow, /--arg repository "\$FRAMEWORK_REPOSITORY"/);
     assert.match(workflow, /if: env\.PACKAGE_VISIBILITY == 'public'\n        uses: actions\/upload-artifact/);
-    assert.match(workflow, /--key env:\/\/COSIGN_PRIVATE_KEY --tlog-upload=false/);
+    assert.match(workflow, /--key env:\/\/COSIGN_PRIVATE_KEY --tlog-upload=false --use-signing-config=false/);
     assert.match(workflow, /--key "\$RUNNER_TEMP\/private-package-signing\.pub" --insecure-ignore-tlog/);
     assert.match(workflow, /oras attach --format json/);
   assert.match(workflow, /scripts\/oci-publication-receipt-readback\.mjs/);
