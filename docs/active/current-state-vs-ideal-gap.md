@@ -14,7 +14,8 @@ App、Cloud、Package 的部署验收与专业质量属于各 owner，本页未�
 
 | owner | 当前具体断点 | 下一步与完成条件 |
 | --- | --- | --- |
-| Framework、Package 发布 owner、App/Studio | 私有 Package 的真实授权发现、私有制品发布、认证下载和 UI 生命周期尚无同一发行载体的完整验收；现有本地安装不能证明新用户可从私有源获取 | 以 OCC 为代表，在获权身份与无权身份下分别验证目录、版本、安装和更新；确认未授权身份不能读取私有制品，账号切换和撤权阻止后续远端读取；已安装条目仍能禁用或卸载，重开后状态来自 carrier 回读。正式发行验收同时核对 App/Studio、Framework 与 Package 的实际安装版本 |
+| Framework、Package 发布 owner、App/Studio | 私有分发已隔离到 `one-person-lab-private-packages`，但尚无同一发行载体的完整授权安装验收。OCC 旧公开制品不能转回私有，新 namespace 仍需正式版本、精确 owner projection、受保护签名和 Package 读取权限；现有本地安装不能证明新用户可获取 | 由 Package owner 完成私有发行，在获权与无权身份下分别验证目录、版本、安装、更新及匿名拒绝。账号切换和撤权须阻止后续远端读取；已安装条目保留停用和卸载。核对 App/Studio、Framework 与 Package 的实际安装版本；历史公开制品处置单独决定 |
+| App/Studio、Framework 发布 owner | 统一软件源、Homebrew 生命周期及共享资源配置的源码接线，不会更新用户现有 App 与 CLI；当前发行安装尚未覆盖完整功能 | 按现有发行路径交付兼容版本，回读已安装 App、Framework、原生 carrier 和页面状态；验证重开后的目录、来源配置、知识 binding、账号授权及操作结果 |
 
 ## Agent 原生应用的后续验收与兼容退役
 
@@ -30,14 +31,6 @@ App、Cloud、Package 的部署验收与专业质量属于各 owner，本页未�
 | MAS、MAG、RCA、OBF、OCC 领域 owner | MAG 同申请反馈消费已验证；MAS/RCA/OBF/OCC 已用真实本地 Temporal、真实领域包和合成 executor 验证同 Task 新 StageRun、精确决定消费及 replay。真实领域成果与模型质量仍需代表任务接受 | 沿用已验证 continuation 入口完成各领域代表任务，保留产物版本、人工决定和质量依据。合成执行保留质量债，不等于论文、申请、书稿或投资决定获得接受 |
 | NetFleet、U60、Cloud、Fleet、GLKVM 等产品 owner | 薄接口、状态与协作投影不证明当前原生应用、真实设备/账户或公开发布载体采用相同版本；部分新 connector 仍为 development-only | 沿用各产品发布与安装路径完成版本、身份、freshness 和实际调用回读。采购、设备控制、删除等动作仍由原 owner 执行；开发资格不能通过改 admission 字段冒充发布 |
 | OPL DSH + 官方 DSH MCP 客户端 | 官方 MCP 客户端的公开连接能力协商与工具投影没有保留完整 UI metadata/visibility，当前无法通过公开接口构建合规的标准 MCP Apps host | 官方公开 UI 协商、资源与元数据能力后，用 Cordis/slots 增加必要薄适配并验收同一 Framework/Relay 资源；此前提供准确的能力诊断和无 UI 交接，不复制私有客户端或会话 authority |
-
-## 共享知识与凭证的用户界面接线
-
-共同基座的物理归属已经明确：凭证由 provider/系统 credential helper 持有，个人知识正文优先保留在 Obsidian，Framework 管理来源 binding、接受版本、授权和运行快照。当前仍有一个产品接线断点：软件源管理页已有来源状态合同，但知识 owner 尚未提供可供 App 消费的完整 producer projection，资源页不能把工作目录或空列表解释为已接入的 Obsidian 来源。
-
-| owner | 当前具体断点 | 下一步与完成条件 |
-| --- | --- | --- |
-| Framework、OPL App/Studio、知识 owner | 应用管理页可以展示连接、模型和软件源状态；知识资源需要明确的 source id、授权、接受版本、freshness、readiness 与 Obsidian locator 摘要，当前缺少统一 producer 接线 | 由知识 owner 提供安全 refs-only projection，App/Studio 复用同一资源行和 `unknown/attention/ready` 三态；在真实 Obsidian 绑定、撤权、路径变更和重新授权场景中 fresh readback，且不复制正文或建立第二知识库 |
 
 MAP、Link、Health 维持各自研发、冻结或试点选择边界。知识来源模型的安装与工作区验收已由其 owner 完成，见[当前状态](../status.md#长期知识与记忆)；MiniApp 仅消费其公开合同。
 
