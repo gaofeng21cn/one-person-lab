@@ -12,7 +12,7 @@ const missing = { status: 1, stdout: '', stderr: 'gh: Not Found (HTTP 404)' };
 const denied = { status: 1, stdout: '', stderr: 'unauthorized: authentication required' };
 
 function fixture(options: {
-  publisher?: string; ownerPrivate?: boolean; metadata?: any[]; anonymous?: any; push?: any;
+  publisher?: string; ownerPrivate?: boolean; metadata?: any[]; anonymous?: any; push?: any; verifyOnly?: boolean;
 } = {}) {
   const calls: Array<{ command: string; args: string[]; cwd?: string }> = [];
   let packageReads = 0;
@@ -37,7 +37,7 @@ function fixture(options: {
   };
   return {
     calls, markerBytes,
-    execute: () => ensurePrivatePackageRegistry({ ownerRepo, image }, {
+    execute: () => ensurePrivatePackageRegistry({ ownerRepo, image, verifyOnly: options.verifyOnly }, {
       env: { GITHUB_REPOSITORY: options.publisher ?? ownerRepo, GH_TOKEN: 'fixture-private-secret' }, run,
     }),
   };
@@ -53,7 +53,7 @@ test('private publisher rejects public or unrelated callers before any registry 
 
 test('new private namespace receives only a fixed harmless marker before private metadata and anonymous denial', () => {
   const f = fixture({ metadata: [null, privateMetadata, privateMetadata] });
-  assert.deepEqual(f.execute(), { status: 'private_registry_verified', bootstrapped: true, anonymous_access: 'denied_verified' });
+  assert.deepEqual(f.execute(), { status: 'private_registry_verified', bootstrapped: true, anonymous_access: 'denied_verified', owner_association: 'association_verified' });
   assert.equal(f.markerBytes.length, 1);
   assert.deepEqual(JSON.parse(f.markerBytes[0]!), { schema_version: 1, purpose: 'Private registry access check; no Package content' });
   const push = f.calls.find((c) => c.args[0] === 'push')!;
@@ -100,4 +100,36 @@ test('unknown bootstrap write is reconciled once and requires private metadata',
   const missingAfterWrite = fixture({ metadata: [null, null] });
   assert.throws(missingAfterWrite.execute, /private visibility/);
   assert.equal(missingAfterWrite.calls.filter((c) => c.args[0] === 'push').length, 1);
+});
+
+
+test('registry failure identifies only the exact failed metadata boundary', () => {
+  for (const [metadata, reason] of [
+    [null, 'metadata_missing'],
+    [{ ...privateMetadata, visibility: 'public' }, 'visibility_not_private'],
+    [{ ...privateMetadata, repository: { full_name: 'example/other', private: true } }, 'owner_association_mismatch'],
+    [{ ...privateMetadata, repository: { full_name: ownerRepo } }, 'associated_owner_privacy_missing'],
+    [{ ...privateMetadata, repository: { full_name: ownerRepo, private: false } }, 'associated_owner_not_private'],
+  ] as const) {
+    const f = fixture({ metadata: [metadata] });
+    assert.throws(f.execute, new RegExp(`\\(${reason}\\)`));
+  }
+});
+
+
+test('omitted GitHub Actions association remains explicit while exact private caller and access are verified', () => {
+  for (const metadata of [{ visibility: 'private' }, { visibility: 'private', repository: null }]) {
+    const f = fixture({ metadata: [metadata], verifyOnly: true });
+    assert.deepEqual(f.execute(), { status: 'private_registry_verified', bootstrapped: false, anonymous_access: 'denied_verified', owner_association: 'association_metadata_unavailable' });
+    assert.equal(f.calls.filter((call) => call.args[0] === 'push').length, 0);
+    assert.throws(fixture({ metadata: [metadata], ownerPrivate: false }).execute, /private repository/);
+    assert.throws(fixture({ metadata: [metadata], publisher: 'example/other' }).execute, /private owner repository/);
+    assert.throws(fixture({ metadata: [metadata], anonymous: ok(['0.2.0']) }).execute, /anonymous.*not denied/);
+  }
+});
+
+test('read-only verification never creates a missing private registry', () => {
+  const f = fixture({ metadata: [null], verifyOnly: true });
+  assert.throws(f.execute, /metadata_missing/);
+  assert.equal(f.calls.filter((call) => call.command === 'oras').length, 0);
 });

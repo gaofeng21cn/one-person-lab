@@ -479,7 +479,7 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.match(workflow, /environment:\$publication_environment/);
   assert.match(workflow, /--expected-digest "\$digest"/g);
   assert.match(workflow, /PACKAGE_VISIBILITY/);
-  assert.match(workflow, /"\$visibility" != private/);
+  assert.match(workflow, /private-package-registry-bootstrap\.mjs --owner-repo "\$OWNER_REPO" --image "\$PACKAGE_IMAGE" --verify-only/);
   assert.match(workflow, /--require-anonymous-denied/);
   assert.match(workflow, /manifest_visibility/);
   assert.match(workflow, /authenticated_readback/);
@@ -706,11 +706,15 @@ test('private Package visibility is checked before upload and cannot be promoted
   assert.ok(visibilityFunction.includes('inspect_package_visibility()'));
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-private-publish-'));
   try {
-    fs.writeFileSync(path.join(root, 'curl'), '#!/bin/sh\nwhile [ "$#" -gt 0 ]; do if [ "$1" = --output ]; then shift; printf "%s" "$VISIBILITY_RESPONSE" > "$1"; fi; shift; done; printf "%s" "$VISIBILITY_HTTP_STATUS"\n', { mode: 0o755 });
-    fs.writeFileSync(path.join(root, 'gh'), '#!/bin/sh\necho called >> "$GH_CALLS"\n', { mode: 0o755 });
+    fs.mkdirSync(path.join(root, 'scripts'));
+    fs.copyFileSync(path.join(repoRoot, 'scripts/private-package-registry-bootstrap.mjs'), path.join(root, 'scripts/private-package-registry-bootstrap.mjs'));
+    fs.writeFileSync(path.join(root, 'gh'), "#!/bin/sh\nif [ \"$1\" != api ]; then echo mutation >> \"$GH_CALLS\"; exit 1; fi\nfor arg do route=\"$arg\"; done\ncase \"$route\" in\n/repos/*) printf '%s\\n' '{\"full_name\":\"example/private-owner\",\"private\":true}';;\n*) if [ \"$VISIBILITY_HTTP_STATUS\" = 200 ]; then printf '%s\\n' \"$VISIBILITY_RESPONSE\"; else printf 'gh: unavailable (HTTP %s)\\n' \"$VISIBILITY_HTTP_STATUS\" >&2; exit 1; fi;;\nesac\n", { mode: 0o755 });
+    fs.writeFileSync(path.join(root, 'oras'), '#!/bin/sh\nif [ "$1" != repo ]; then echo mutation >> "$GH_CALLS"; exit 1; fi\necho unauthorized >&2; exit 1\n', { mode: 0o755 });
     const scenarios = [
       { visibility: 'private', status: '200', phase: 'before', allowed: true },
       { visibility: 'private', status: '200', phase: 'after', allowed: true },
+      { visibility: 'private', status: '200', phase: 'before', associationMissing: true, allowed: true },
+      { visibility: 'private', status: '200', phase: 'after', associationMissing: true, allowed: true },
       { visibility: 'public', status: '200', phase: 'before', allowed: false },
       { visibility: 'internal', status: '200', phase: 'before', allowed: false },
       { visibility: 'private', status: '200', phase: 'before', repository: 'other/publisher', allowed: false },
@@ -721,16 +725,17 @@ test('private Package visibility is checked before upload and cannot be promoted
       const result = spawnSync('bash', ['-c', `${visibilityFunction}\ninspect_package_visibility one-person-lab-packages/example ${scenario.phase}`], {
         cwd: root, encoding: 'utf8', env: {
           ...process.env, PATH: `${root}${path.delimiter}${process.env.PATH}`,
-          PACKAGE_VISIBILITY: 'authorized_only', PACKAGES_OWNER: 'example', GITHUB_REPOSITORY: 'example/framework',
+          PACKAGE_VISIBILITY: 'authorized_only', PACKAGES_OWNER: 'example', GITHUB_REPOSITORY: 'example/private-owner',
+          OWNER_REPO: 'example/private-owner', PACKAGE_IMAGE: 'ghcr.io/example/one-person-lab-private-packages/example',
           GH_TOKEN: 'fixture-secret-never-output', GH_CALLS: path.join(root, 'gh-calls'),
           VISIBILITY_HTTP_STATUS: scenario.status,
-          VISIBILITY_RESPONSE: JSON.stringify({ visibility: scenario.visibility, repository: { full_name: scenario.repository ?? 'example/framework', private: true } }),
+          VISIBILITY_RESPONSE: JSON.stringify({ visibility: scenario.visibility, ...(scenario.associationMissing ? {} : { repository: { full_name: scenario.repository ?? 'example/private-owner', private: true } }) }),
         },
       });
       assert.equal(result.status === 0, scenario.allowed, `${JSON.stringify(scenario)}\n${result.stderr}`);
       assert.doesNotMatch(result.stdout + result.stderr, /fixture-secret-never-output/);
     }
-    assert.equal(fs.existsSync(path.join(root, 'gh-calls')), false, 'private publication never calls a visibility mutation');
+    assert.equal(fs.existsSync(path.join(root, 'gh-calls')), false, 'private before/after checks never mutate visibility or bootstrap a namespace');
     assert.ok(script.indexOf('inspect_package_visibility "$PACKAGE_REGISTRY_NAME" before') < script.indexOf('oras push --format json'));
     assert.ok(workflow.indexOf('Verify private Package publisher identity') < workflow.indexOf('Checkout exact Package owner source'));
     assert.ok(workflow.indexOf('Verify private registry before uploading Package content') < workflow.indexOf('Publish immutable Package and advance its channel'));
