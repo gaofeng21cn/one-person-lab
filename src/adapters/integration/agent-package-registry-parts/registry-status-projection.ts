@@ -31,6 +31,7 @@ import { managedPolicyCurrentnessFromDescriptor } from './managed-policy-surface
 import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
 import { inspectOplModule } from '../system-installation/modules.ts';
 import type { AgentPackageInstallInput } from './types.ts';
+import { resolvePackageAccessDecision, type AgentPackageAccessDecision } from './package-access.ts';
 
 export type OplAgentPackageStatusInput = {
   packageId?: string | null;
@@ -40,14 +41,22 @@ export type OplAgentPackageStatusInput = {
 export type PackageSnapshot = {
   descriptors: Map<string, InstalledPackageDescriptor>;
   installed: Map<string, InstalledPackageDescriptor>;
+  access: Map<string, AgentPackageAccessDecision>;
 };
 
 export function packageSnapshot(input: {
   includeAvailable?: boolean;
   failClosedOnCarrierError?: boolean;
+  env?: NodeJS.ProcessEnv;
+  accessMode?: 'cached' | 'live';
 } = {}): PackageSnapshot {
+  const env = input.env ?? process.env;
+  // Startup and descriptor selection are local read models. Only an explicit
+  // full inspection refreshes registry grants; downloads reverify separately.
+  const verification = input.accessMode ?? 'cached';
   const discoveredInstalled = discoverInstalledPackageDescriptors({
     failClosedOnCarrierError: input.failClosedOnCarrierError,
+    env,
   });
   const installed = new Map(
     [...discoveredInstalled].filter(([, descriptor]) => (
@@ -56,12 +65,20 @@ export function packageSnapshot(input: {
     )),
   );
   const descriptors = input.includeAvailable
-    ? discoverAvailablePackageDescriptors()
+    ? discoverAvailablePackageDescriptors({ env })
     : new Map<string, InstalledPackageDescriptor>();
   for (const [packageId, descriptor] of discoveredInstalled) descriptors.set(packageId, descriptor);
+  const access = new Map<string, AgentPackageAccessDecision>();
+  for (const [packageId, descriptor] of descriptors) {
+    access.set(packageId, resolvePackageAccessDecision(descriptor.manifest, env, { verification }));
+  }
+  for (const [packageId, descriptor] of installed) {
+    if (!access.has(packageId)) access.set(packageId, resolvePackageAccessDecision(descriptor.manifest, env, { verification }));
+  }
   return {
     descriptors,
     installed,
+    access,
   };
 }
 
@@ -75,11 +92,17 @@ export function isManagedPayloadCarrier(descriptor: InstalledPackageDescriptor) 
     ));
 }
 
-export function packageBackgroundUpdatePolicy(descriptor: InstalledPackageDescriptor) {
+export function packageBackgroundUpdatePolicy(
+  descriptor: InstalledPackageDescriptor,
+  packageAccess?: AgentPackageAccessDecision,
+) {
   const declaredSource = descriptor.carrier.carrier.marketplaceSource;
   const managedPayloadSource = isManagedPayloadCarrier(descriptor);
+  const access = packageAccess ?? resolvePackageAccessDecision(descriptor.manifest, process.env, { verification: 'cached' });
   const reason = !descriptor.readiness.installed
     ? 'package_not_installed'
+    : !access.download_allowed
+      ? access.reason ?? 'package_access_verification_required'
     : !isFirstPartyPackage(descriptor.manifest.package_id)
       ? 'external_package_explicit_update_only'
       : !declaredSource || !githubMarketplaceSourceIdentity(declaredSource)
@@ -364,19 +387,25 @@ export function hostedRuntimeReadiness(descriptor: InstalledPackageDescriptor | 
     reason: ready ? null : 'hosted_agent_source_unavailable' };
 }
 
-function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' | 'full') {
+function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' | 'full', packageAccess?: AgentPackageAccessDecision) {
   const manifest = descriptor.manifest;
   const installed = descriptor.readiness.installed
     && installedDescriptorMatchesConfiguredCarrier(descriptor);
   const hosted = hostedRuntimeReadiness(descriptor, detail);
+  const access = packageAccess ?? resolvePackageAccessDecision(manifest, process.env, {
+    verification: detail === 'fast' ? 'cached' : 'live',
+  });
   const ready = installed && hosted.ready
     && installedDescriptorSupportsFrameworkCalls(descriptor)
     && installedDescriptorHasExpectedCodexExposure(descriptor);
   const codexVisible = installed
     && descriptor.enabled
     && manifest.codex_interaction_mode !== 'headless_internal';
-  const actions = actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode);
-  const recommendedAction = installed ? (ready ? null : 'agent_package_repair') : 'agent_package_install';
+  const actions = actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode)
+    .filter((action) => access.download_allowed || !['agent_package_install', 'agent_package_update', 'agent_package_repair'].includes(action.action_id));
+  const recommendedAction = !access.download_allowed
+    ? null
+    : installed ? (ready ? null : 'agent_package_repair') : 'agent_package_install';
   return {
     package_id: manifest.package_id,
     display_name: manifest.display_name,
@@ -416,17 +445,18 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     selected_version: manifest.version,
     activated: ready,
     codex_visible: codexVisible,
+    package_access: access,
     installability: {
-      status: installed ? 'installed' as const : 'installable' as const,
-      installable: !installed,
+      status: installed ? 'installed' as const : access.discover_allowed ? 'installable' as const : 'blocked' as const,
+      installable: !installed && access.download_allowed,
     },
     hosted_runtime_readiness: hosted,
     readiness: {
-      status: !installed ? 'not_installed' as const : ready ? 'ready' as const : 'attention_needed' as const,
+      status: !installed ? 'not_installed' as const : ready && access.download_allowed ? 'ready' as const : 'attention_needed' as const,
       operational_ready: ready,
       launch_allowed: ready,
       verification_deferred: false,
-      reason: ready ? null : !installed ? 'package_not_installed' : hosted.reason ?? 'native_carrier_not_callable',
+      reason: !access.download_allowed ? access.reason : ready ? null : !installed ? 'package_not_installed' : hosted.reason ?? 'native_carrier_not_callable',
       detail_surface: `opl packages status --package-id ${manifest.package_id} --json`,
       status_read_error: null,
     },
@@ -439,10 +469,11 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
   };
 }
 
-function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full') {
+export function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full') {
   const entries = [...snapshot.descriptors.values()]
     .filter((descriptor) => !isProjectLocalCapabilityPackage(descriptor.manifest))
-    .map((entry) => directoryEntry(entry, detail))
+    .map((entry) => directoryEntry(entry, detail, snapshot.access.get(entry.manifest.package_id)))
+    .filter((entry) => entry.installed || entry.package_access.discover_allowed)
     .sort((left, right) => left.display_name.localeCompare(right.display_name, 'en'));
   return {
     surface_kind: 'opl_agent_package_directory.v1' as const,
@@ -576,8 +607,8 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
   });
   const homeShortcutPreferences = mergedHomeShortcutPreferences({
     entries: descriptor
-      ? [directoryEntry(descriptor, detail)]
-      : [...snapshot.descriptors.values()].map((entry) => directoryEntry(entry, detail)),
+      ? [directoryEntry(descriptor, detail, snapshot.access.get(descriptor.manifest.package_id))]
+      : [...snapshot.descriptors.values()].map((entry) => directoryEntry(entry, detail, snapshot.access.get(entry.manifest.package_id))),
   }).filter((entry) => !packageId || entry.package_id === packageId);
   return {
     version: 'g2' as const,
@@ -589,6 +620,11 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
       app_contributions: installedDescriptor?.manifest.app_contributions ?? null,
       installed_package_count: packageId ? (installed ? 1 : 0) : snapshot.installed.size,
       configured_carrier: configuredCarrier,
+      package_access: packageId
+        ? snapshot.access.get(packageId) ?? (descriptor ? resolvePackageAccessDecision(descriptor.manifest, process.env, {
+            verification: detail === 'fast' ? 'cached' : 'live',
+          }) : null)
+        : null,
       installed_carrier_readback: installedDescriptor?.carrier_readback ?? null,
       installed_readiness: installedDescriptor?.readiness ?? descriptor?.readiness ?? null,
       installed_manifest_sha256: installedDescriptor?.manifest_sha256 ?? null,
@@ -651,17 +687,26 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
 }
 
 export function createOplAgentPackageStatusReader() {
-  const snapshot = packageSnapshot();
-  return (input: OplAgentPackageStatusInput = {}) => buildPackageStatus(input, snapshot);
+  const snapshots = new Map<'cached' | 'live', PackageSnapshot>();
+  return (input: OplAgentPackageStatusInput = {}) => {
+    const accessMode = input.detail === 'fast' ? 'cached' : 'live';
+    let snapshot = snapshots.get(accessMode);
+    if (!snapshot) {
+      snapshot = packageSnapshot({ accessMode });
+      snapshots.set(accessMode, snapshot);
+    }
+    return buildPackageStatus(input, snapshot);
+  };
 }
 
 export function runOplAgentPackageStatus(input: OplAgentPackageStatusInput = {}) {
-  return buildPackageStatus(input, packageSnapshot());
+  return buildPackageStatus(input, packageSnapshot({ accessMode: input.detail === 'fast' ? 'cached' : 'live' }));
 }
 
 export function listOplAgentPackages(input: { detail?: 'fast' | 'full' } = {}) {
-  const snapshot = packageSnapshot({ includeAvailable: true });
-  const directory = directoryFrom(snapshot, input.detail ?? 'fast');
+  const detail = input.detail ?? 'fast';
+  const snapshot = packageSnapshot({ includeAvailable: true, accessMode: detail === 'fast' ? 'cached' : 'live' });
+  const directory = directoryFrom(snapshot, detail);
   const homeShortcutPreferences = mergedHomeShortcutPreferences(directory);
   return {
     version: 'g2' as const,

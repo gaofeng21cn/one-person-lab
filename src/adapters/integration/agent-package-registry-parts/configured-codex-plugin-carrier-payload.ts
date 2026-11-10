@@ -21,6 +21,7 @@ import {
   stringValue,
 } from './configured-codex-plugin-carrier-native.ts';
 import type { AgentPackageConfiguredCodexPluginCarrierDescriptor } from './types.ts';
+import { assertPackageDownloadAllowed, packageAccessSubject } from './package-access.ts';
 import { acquireHostedPackageSource } from './configured-codex-plugin-carrier-source.ts';
 
 function projectedManifestPath(sourceRef: string) {
@@ -145,7 +146,7 @@ function runPayloadCurl(input: {
   const curl = fs.existsSync('/usr/bin/curl') ? '/usr/bin/curl' : 'curl';
   return runConfiguredDownloadWithTransientRetry(() => {
     const result = spawnSync(curl, [
-      '--fail', '--silent', '--show-error', '--location',
+      '--disable', '--fail', '--silent', '--show-error', '--location',
       '--proto', '=https', '--tlsv1.2', '--ipv4',
       '--connect-timeout', '10', '--max-time', String(input.maxTimeSeconds),
       input.url,
@@ -291,6 +292,9 @@ export function installPayloadMarketplace(input: {
 }) {
   const projection = packagePayloadProjection(input.packageId, input.packageDirectory);
   if (!projection || projection.pluginId !== pluginBareName(input.pluginId)) return null;
+  if (projection?.ownerManifest.visibility === 'authorized_only') {
+    assertPackageDownloadAllowed(packageAccessSubject(projection.ownerManifest), input.env);
+  }
   let payload: Record<string, unknown>;
   try {
     const stat = fs.lstatSync(projection.payloadPath);
@@ -332,6 +336,10 @@ export function installPayloadMarketplace(input: {
     payload,
     env: input.env,
   });
+  if (projection.ownerManifest.visibility === 'authorized_only' && !hostedSource) {
+    return localReadbackFailure('private_package_transport_unavailable',
+      'Private Packages require their authenticated OCI source artifact.', { package_id: input.packageId });
+  }
   const archive = hostedSource ?? materializeGithubArchive({
     packageId: input.packageId,
     payloadFiles: payload.files.filter(isRecord),

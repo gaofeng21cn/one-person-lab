@@ -13,6 +13,7 @@ import type {
   AgentPackageProfileSurfaceConfig,
   AgentPackageRuntimeModuleBinding,
 } from './types.ts';
+import { normalizePackageAccessFields } from './package-access.ts';
 
 export function normalizeCodexDefaultExposure(
   codexSurface: Record<string, unknown>,
@@ -401,6 +402,9 @@ type ManifestSourceFields = Pick<
   | 'source_commit'
   | 'carrier_source_commit'
   | 'verified_payload_source_commit'
+  | 'visibility'
+  | 'access_policy_ref'
+  | 'credential_provider'
 >;
 
 export function normalizeManifestSourceFields(
@@ -415,6 +419,7 @@ export function normalizeManifestSourceFields(
   },
 ): ManifestSourceFields {
   const carrierAuthority = normalizeCarrierSourceAuthority(payload, codexSurface, manifestUrl);
+  const access = normalizePackageAccessFields(payload, String(payload.package_id));
   return {
     display_name: values.displayName,
     publisher: values.publisher,
@@ -422,6 +427,7 @@ export function normalizeManifestSourceFields(
     owner_language_version: values.ownerLanguageVersion,
     source: values.source,
     source_repo: stringValue(payload.source_repo),
+    ...access,
     source_commit: carrierAuthority.sourceCommit,
     carrier_source_commit: carrierAuthority.carrierSourceCommit,
     verified_payload_source_commit: null,

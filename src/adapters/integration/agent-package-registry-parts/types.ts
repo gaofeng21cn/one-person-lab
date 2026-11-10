@@ -22,6 +22,17 @@ export type AgentPackageRole =
   | 'capability_package'
   | 'workflow_profile';
 
+export type AgentPackageVisibility = 'public' | 'authorized_only';
+
+export type AgentPackageAccessStatus =
+  | 'public'
+  | 'authorized'
+  | 'signed_out'
+  | 'forbidden'
+  | 'expired'
+  | 'revoked'
+  | 'unknown';
+
 export type AgentPackageCodexInteractionMode = 'interactive' | 'headless_internal';
 
 export type AgentPackagePackageActionInput = {
@@ -185,6 +196,9 @@ export type AgentPackageManifest = {
   owner_language_version: AgentPackageOwnerLanguageVersion | null;
   source: string;
   source_repo: string | null;
+  visibility: AgentPackageVisibility;
+  access_policy_ref: string | null;
+  credential_provider: string | null;
   source_commit: string | null;
   carrier_source_commit: string | null;
   verified_payload_source_commit: string | null;

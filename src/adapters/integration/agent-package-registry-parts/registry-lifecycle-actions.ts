@@ -34,6 +34,7 @@ import type {
   AgentPackagePackageActionInput,
   AgentPackageRepairInput,
 } from './types.ts';
+import { assertPackageDownloadAllowed } from './package-access.ts';
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -132,6 +133,9 @@ function nativeLifecycleResult(
   installedDescriptorOverride?: Awaited<ReturnType<typeof requireDescriptor>>,
 ) {
   const descriptor = descriptorOverride ?? requireDescriptor(input, action, { installed: action !== 'install' });
+  if (['install', 'update', 'repair'].includes(action)) {
+    assertPackageDownloadAllowed(descriptor.manifest);
+  }
   // The target projection selects new bytes; the installed descriptor owns transport history.
   const installedDescriptor = installedDescriptorOverride ?? descriptor;
   const configuredCarrier = runConfiguredCodexPluginCarrier({
@@ -339,13 +343,14 @@ export async function runOplAgentPackageBulkUpdate(
   input: OplAgentPackageBulkUpdateInput = {},
 ) {
   const action = input.action ?? 'update';
-  const installed = packageSnapshot({ failClosedOnCarrierError: true }).installed;
+  const snapshot = packageSnapshot({ failClosedOnCarrierError: true });
+  const installed = snapshot.installed;
   const descriptors = [...installed.values()]
     .sort((left, right) => left.manifest.package_id.localeCompare(right.manifest.package_id));
   const targets: Record<string, unknown>[] = [];
   for (const descriptor of descriptors) {
     const packageId = descriptor.manifest.package_id;
-    const policy = packageBackgroundUpdatePolicy(descriptor);
+    const policy = packageBackgroundUpdatePolicy(descriptor, snapshot.access.get(packageId));
     if (input.background && !policy.eligible) {
       targets.push({ target_type: 'package', target_id: packageId, status: 'skipped', reason: policy.reason, action });
       continue;
