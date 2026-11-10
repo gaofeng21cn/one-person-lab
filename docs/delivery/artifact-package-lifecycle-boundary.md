@@ -142,6 +142,17 @@ GitHub Release 页面及附件，也不建立 ZIP、wheel 等平行安装包发�
 annotated tag 仍用于绑定正式发布内容；版本说明直接使用仓库文档与源码变更记录，
 不构成第二个发布渠道。README 提供统一安装命令和 OCI 地址。
 
+私有 Package 由其私有 owner 仓库的薄 workflow 调用同一个 Framework
+`publish-package.yml`，调用时固定 Framework commit。GitHub Actions 首次创建
+Package 时继承调用方仓库的可见性，不能从公开 Framework 仓库直接发布私有源包。
+公共包仍由 Framework 调度；这只改变执行身份，不新增软件源或发布机制。
+
+私有发布先验证调用方就是 manifest 的私有 owner；新 namespace 只允许先上传固定的
+无敏感内容标记。确认 registry 为 private、关联正确的私有仓库且匿名访问被拒绝后，
+才允许上传源码、manifest 和 payload。未知上传结果先回读，不重复创建。
+两个步骤之间 namespace 缺失或变成公开均停止发布。签名密钥由 owner 的受保护
+`release-stable` 环境提供，并与 Framework 随附的公钥核对；不依赖个人访问令牌。
+
 该规则覆盖全部 package id，而不只是标准智能体。未进入 OCI 流程的内部模块由
 各自 owner descriptor 声明其 carrier 与安装入口。将来为某个 Package 增加新的
 分发形式前，先按上面的字段确认它是否已有 OCI 渠道：有则扩展 OCI 渠道，不再新增

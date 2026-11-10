@@ -714,7 +714,7 @@ test('private Package visibility is checked before upload and cannot be promoted
       { visibility: 'public', status: '200', phase: 'before', allowed: false },
       { visibility: 'internal', status: '200', phase: 'before', allowed: false },
       { visibility: 'private', status: '200', phase: 'before', repository: 'other/publisher', allowed: false },
-      { visibility: 'private', status: '404', phase: 'before', allowed: true },
+      { visibility: 'private', status: '404', phase: 'before', allowed: false },
       { visibility: 'private', status: '403', phase: 'before', allowed: false },
     ];
     for (const scenario of scenarios) {
@@ -724,7 +724,7 @@ test('private Package visibility is checked before upload and cannot be promoted
           PACKAGE_VISIBILITY: 'authorized_only', PACKAGES_OWNER: 'example', GITHUB_REPOSITORY: 'example/framework',
           GH_TOKEN: 'fixture-secret-never-output', GH_CALLS: path.join(root, 'gh-calls'),
           VISIBILITY_HTTP_STATUS: scenario.status,
-          VISIBILITY_RESPONSE: JSON.stringify({ visibility: scenario.visibility, repository: { full_name: scenario.repository ?? 'example/framework' } }),
+          VISIBILITY_RESPONSE: JSON.stringify({ visibility: scenario.visibility, repository: { full_name: scenario.repository ?? 'example/framework', private: true } }),
         },
       });
       assert.equal(result.status === 0, scenario.allowed, `${JSON.stringify(scenario)}\n${result.stderr}`);
@@ -732,6 +732,10 @@ test('private Package visibility is checked before upload and cannot be promoted
     }
     assert.equal(fs.existsSync(path.join(root, 'gh-calls')), false, 'private publication never calls a visibility mutation');
     assert.ok(script.indexOf('inspect_package_visibility "$PACKAGE_REGISTRY_NAME" before') < script.indexOf('oras push --format json'));
+    assert.ok(workflow.indexOf('Verify private Package publisher identity') < workflow.indexOf('Checkout exact Package owner source'));
+    assert.ok(workflow.indexOf('Verify private registry before uploading Package content') < workflow.indexOf('Publish immutable Package and advance its channel'));
+    assert.match(workflow, /repository: gaofeng21cn\/one-person-lab\n          ref: \$\{\{ inputs\.expected_framework_source_commit \}\}/);
+    assert.match(workflow, /--arg repository "\$FRAMEWORK_REPOSITORY"/);
     assert.match(workflow, /if: env\.PACKAGE_VISIBILITY == 'public'\n        uses: actions\/upload-artifact/);
     assert.match(workflow, /--key env:\/\/COSIGN_PRIVATE_KEY --tlog-upload=false/);
     assert.match(workflow, /--key "\$RUNNER_TEMP\/private-package-signing\.pub" --insecure-ignore-tlog/);
