@@ -261,6 +261,10 @@ jobs:
             else
               echo "OCI_SOURCE_URL=${source_repo%.git}"
             fi
+            # The OCI source annotation is intentionally the Framework
+            # publisher for authorized-only packages, but provenance must
+            # retain the exact owner source URI used for the payload.
+            echo "OWNER_SOURCE_URL=${source_repo%.git}"
           } >> "$GITHUB_ENV"
 
       - name: Authenticate protected Package publisher
@@ -465,7 +469,7 @@ jobs:
             --arg owner_commit "$EXPECTED_OWNER_SOURCE_COMMIT" \
             --arg framework_commit "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" \
             --arg request_id "$PUBLICATION_REQUEST_ID" \
-            --arg source_url "$OCI_SOURCE_URL" \
+            --arg owner_source_url "$OWNER_SOURCE_URL" \
             --arg repository "$GITHUB_REPOSITORY" \
             --arg workflow_ref "$GITHUB_WORKFLOW_REF" \
             --arg invocation_id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
@@ -474,7 +478,7 @@ jobs:
                 owner_source_commit:$owner_commit,framework_source_commit:$framework_commit},
               internalParameters:{publication_request_id:$request_id},
               resolvedDependencies:[
-                {uri:$source_url,digest:{gitCommit:$owner_commit}},
+                {uri:$owner_source_url,digest:{gitCommit:$owner_commit}},
                 {uri:("https://github.com/"+$repository),digest:{gitCommit:$framework_commit}}]},
               runDetails:{builder:{id:$workflow_ref},metadata:{invocationId:$invocation_id}}}' \
             > "$provenance"
@@ -509,7 +513,7 @@ jobs:
             # The registry keeps the signed attestations behind Package read access.
             attest_access_args=(--key env://COSIGN_PRIVATE_KEY --tlog-upload=false)
             verify_access_args=(--key "$RUNNER_TEMP/private-package-signing.pub" --insecure-ignore-tlog)
-            signing_key_digest="sha256:$(sha256sum "$RUNNER_TEMP/private-package-signing.pub" | cut -d' ' -f1)"
+            signing_key_digest="$(node -e 'const c = require("node:crypto"); const f = require("node:fs"); const der = c.createPublicKey(f.readFileSync(process.argv[1])).export({type:"spki",format:"der"}); process.stdout.write("sha256:" + c.createHash("sha256").update(der).digest("hex"));' "$RUNNER_TEMP/private-package-signing.pub")"
           fi
           retry cosign attest --yes --timeout 60s \
             "${attest_access_args[@]}" --type slsaprovenance1 --predicate "$provenance" "$subject"
@@ -541,6 +545,8 @@ jobs:
             --arg manifest_digest "$manifest_digest" \
             --arg payload_digest "$payload_digest" \
             --arg content_lock "$content_lock" \
+            --arg owner_source_url "$OWNER_SOURCE_URL" \
+            --arg oci_source_url "$OCI_SOURCE_URL" \
             --arg immutable_result "$immutable_result" \
             --arg stable_result "$stable_result" \
             --arg subject "$subject" \
@@ -556,6 +562,7 @@ jobs:
             '{surface_kind:"opl_package_publication_receipt.v1",status:"published_and_verified",
               publication_request_id:$request_id,package:{package_id:$package_id,version:$version,
               owner_source_commit:$owner_commit,framework_source_commit:$framework_commit},
+              source:{owner_repository:$owner_source_url,oci_annotation:$oci_source_url},
               content:{source_archive_digest:$archive_digest,manifest_digest:$manifest_digest,
               payload_manifest_digest:$payload_digest,content_lock:($content_lock | if length > 0 then . else null end)},
               immutable:{ref:$immutable_ref,digest:$digest,result:$immutable_result},
@@ -591,6 +598,11 @@ jobs:
               --source-url "$OCI_SOURCE_URL" \
               --layer "${PACKAGE_ROOT}/publication-receipt.json=application/vnd.onepersonlab.package.receipt.v1+json" \
               --verify-only --expected-digest "$receipt_digest" --require-anonymous-denied
+            node scripts/oci-publication-receipt-readback.mjs \
+              --subject "$subject" --package-id "$PACKAGE_ID" --version "$EXPECTED_PACKAGE_VERSION" \
+              --source-repo "${OWNER_SOURCE_URL}.git" --source-commit "$EXPECTED_OWNER_SOURCE_COMMIT" \
+              --access-policy-ref "$PACKAGE_ACCESS_POLICY_REF" --credential-provider "$PACKAGE_CREDENTIAL_PROVIDER" \
+              --public-key "$RUNNER_TEMP/private-package-signing.pub" --receipt-digest "$receipt_digest"
           fi
 
       - name: Upload Package publication receipt

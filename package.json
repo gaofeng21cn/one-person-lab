@@ -64,6 +64,7 @@
     "scripts/resolve-dependency-releases.mjs",
     "scripts/native-helper-doctor.mjs",
     "scripts/native-helper-family-smoke.mjs",
+    "scripts/oci-publication-receipt-readback.mjs",
     "scripts/compile-opl-flow-capability-projections.mjs"
   ],
   "scripts": {

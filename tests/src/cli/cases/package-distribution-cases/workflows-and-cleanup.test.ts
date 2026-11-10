@@ -401,6 +401,8 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.match(workflow, /source_repo="\$\(jq -er \.source_repo "\$manifest"\)"/);
   assert.match(workflow, /\^https:\/\/github\\\.com\/\(\[\^\/\]\+\)\/\(\[\^\/\]\+\)\\\.git\$/);
   assert.match(workflow, /echo "OCI_SOURCE_URL=\$\{source_repo%\.git\}"/);
+  assert.match(workflow, /echo "OWNER_SOURCE_URL=\$\{source_repo%\.git\}"/);
+  assert.match(workflow, /resolvedDependencies:\[\n\s*\{uri:\$owner_source_url,digest:\{gitCommit:\$owner_commit\}\}/);
   assert.doesNotMatch(workflow, /OCI_SOURCE_URL: https:\/\/github\.com\/\$\{\{ github\.repository \}\}/);
   for (const ownerRepo of [
     'gaofeng21cn/med-autoscience',
@@ -659,6 +661,7 @@ test('private Package visibility is checked before upload and cannot be promoted
     assert.match(workflow, /--key env:\/\/COSIGN_PRIVATE_KEY --tlog-upload=false/);
     assert.match(workflow, /--key "\$RUNNER_TEMP\/private-package-signing\.pub" --insecure-ignore-tlog/);
     assert.match(workflow, /oras attach --format json/);
+  assert.match(workflow, /scripts\/oci-publication-receipt-readback\.mjs/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

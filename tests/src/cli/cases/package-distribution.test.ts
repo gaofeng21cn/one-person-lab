@@ -4,4 +4,5 @@ import './package-distribution-cases/archive-and-first-party.test.ts';
 import './package-distribution-cases/first-party-package-payload.test.ts';
 import './package-distribution-cases/workflows-and-cleanup.test.ts';
 import './package-distribution-cases/oci-publication-preflight.test.ts';
+import './package-distribution-cases/oci-publication-receipt-readback.test.ts';
 import './package-owner-channel-plan.test.ts';
