@@ -439,6 +439,10 @@
     "disabled_behavior": ["hide_ui_contributions_and_navigation", "stop_automatic_contribution_reads", "reject_app_contribution_actions", "retain_management_entry"]
   },
   "allowed_action_ids": [
+    "source_list",
+    "source_check",
+    "source_configure",
+    "source_disconnect",
     "gateway_account_complete_setup",
     "gateway_account_refresh",
     "gateway_account_repair",
@@ -483,6 +487,10 @@
     "developer_supervisor"
   ],
   "action_taxonomy": {
+    "source_list": "settings.software_sources.source_list",
+    "source_check": "settings.software_sources.source_check",
+    "source_configure": "settings.software_sources.source_configure",
+    "source_disconnect": "settings.software_sources.source_disconnect",
     "gateway_account_complete_setup": "settings.model_access.gateway_account.complete_setup",
     "gateway_account_refresh": "settings.model_access.gateway_account.refresh",
     "gateway_account_repair": "settings.model_access.gateway_account.repair",
