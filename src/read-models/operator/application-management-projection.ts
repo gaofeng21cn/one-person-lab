@@ -10,6 +10,14 @@ type ApplicationManagementResource = {
   consumer_package_ids: string[];
   owner_settings_route: string;
   relation_kind: 'required' | 'optional' | 'configured';
+  owner?: string;
+  source_id?: string;
+  scope_ids?: string[];
+  connection_id?: string;
+  provider_type?: string;
+  account_label?: string;
+  capability_ids?: string[];
+  action_ids?: string[];
   detail_ref?: string;
   reason?: string;
   authorization?: {
@@ -74,14 +82,22 @@ function baseCapabilityResources(managedUpdate: unknown): ApplicationManagementR
   });
 }
 
-function connectionResources(agentPackages: unknown, settingsControlCenter: unknown): ApplicationManagementResource[] {
+function connectionResources(settingsControlCenter: unknown): ApplicationManagementResource[] {
   const settings = isRecord(settingsControlCenter) ? settingsControlCenter : {};
   const registry = isRecord(settings.connection_registry) ? settings.connection_registry : {};
   const authorization = isRecord(settings.connection_authorization) ? settings.connection_authorization : {};
   const grants = records(authorization.grants);
+  const authorizationConnections = records(authorization.connections);
+  const readModel = isRecord(settings.app_settings_read_model) ? settings.app_settings_read_model : {};
+  const connectionReadModel = isRecord(readModel.connections) ? readModel.connections : {};
+  const actionIds = Array.isArray(connectionReadModel.action_ids) ? connectionReadModel.action_ids : [];
   return records(registry.connections).flatMap((connection) => {
     const connectionId = string(connection.connection_id);
-    if (!connectionId) return [];
+    if (!connectionId || connection.connection_type === 'opl_gateway_account'
+      || connectionId === 'opl-gateway-account') return [];
+    const authorizedConnection = authorizationConnections.find((entry) => entry.connection_id === connectionId);
+    const providerType = string(authorizedConnection?.provider_type) ?? string(connection.connection_type);
+    const accountLabel = string(authorizedConnection?.account_label) ?? string(connection.account_label);
     const connectionGrants = grants.filter((grant) => grant.connection_id === connectionId);
     const activeGrants = connectionGrants.filter((grant) => grant.status === 'granted');
     const activeConsumerIds = new Set(activeGrants
@@ -106,6 +122,13 @@ function connectionResources(agentPackages: unknown, settingsControlCenter: unkn
     return [{
       resource_id: `connection:${connectionId}`,
       resource_kind: 'connection',
+      owner: 'opl-connect',
+      connection_id: connectionId,
+      ...(providerType ? { provider_type: providerType } : {}),
+      ...(accountLabel ? { account_label: accountLabel } : {}),
+      capability_ids: [...new Set(activeGrants.flatMap((grant) =>
+        Array.isArray(grant.capability_ids) ? grant.capability_ids.filter((id): id is string => typeof id === 'string') : []))].sort(),
+      action_ids: ['connection_test', 'connection_update', 'connection_delete'].filter((id) => actionIds.includes(id)),
       label: string(connection.name) ?? string(connection.display_name) ?? connectionId,
       status,
       source_refs: [`app_state.settings_control_center.connection_registry.connections[connection_id=${connectionId}]`],
@@ -170,18 +193,31 @@ function modelResource(settingsControlCenter: unknown, agentPackages: unknown): 
   const policy = isRecord(readModel.codex_model_policy) ? readModel.codex_model_policy : {};
   const model = string(policy.model);
   if (!model) return [];
-  const ready = policy.model_access_ready === true;
+  const status = policy.model_access_ready === true ? 'ready'
+    : policy.model_access_ready === false ? 'attention' : 'unknown';
+  const reason = string(policy.access_status) ?? (status === 'attention' ? 'model_access_not_ready' : 'model_access_unknown');
+  const providerType = string(policy.model_provider);
+  const actionPolicy = isRecord(readModel.action_policy) ? readModel.action_policy : {};
+  const actionIds = Array.isArray(actionPolicy.allowed_action_ids) ? actionPolicy.allowed_action_ids : [];
+  const repairAction = string(policy.repair_action_id);
   return [{
     resource_id: 'model:codex',
     resource_kind: 'model',
+    owner: 'account-and-access',
+    ...(providerType ? { provider_type: providerType } : {}),
+    action_ids: repairAction && actionIds.includes(repairAction) ? [repairAction] : [],
     label: model,
-    status: ready ? 'ready' : 'attention',
+    status,
     source_refs: ['app_state.settings_control_center.app_settings_read_model.codex_model_policy'],
     consumer_package_ids: modelConsumers(agentPackages, model),
     owner_settings_route: 'access',
     relation_kind: 'required',
     detail_ref: 'app_state.settings_control_center.app_settings_read_model.codex_model_policy',
-    ...(ready ? {} : { reason: string(policy.access_status) ?? 'model_access_not_ready' }),
+    readiness: {
+      status,
+      ...(status !== 'ready' ? { reason } : {}),
+    },
+    ...(status === 'ready' ? {} : { reason }),
   } satisfies ApplicationManagementResource];
 }
 
@@ -256,7 +292,7 @@ export function buildApplicationManagementProjection(input: {
 }) {
   const sharedResources = [
     ...baseCapabilityResources(input.managedUpdate),
-    ...connectionResources(input.agentPackages, input.settingsControlCenter),
+    ...connectionResources(input.settingsControlCenter),
     ...modelResource(input.settingsControlCenter, input.agentPackages),
     ...knowledgeResources(input.settingsControlCenter),
   ];

@@ -81,7 +81,7 @@ function runRelayConnectCommand(input: {
     env: process.env,
     input: JSON.stringify(input.request),
     maxBuffer: 1024 * 1024,
-    timeout: 15_000,
+    timeout: input.request.operation === 'list' ? 1_500 : 15_000,
   });
   return {
     status: result.status,
@@ -281,6 +281,42 @@ export function createOplRelayMailboxConnectionProvider(options: {
       return result;
     },
   });
+}
+
+/** Read only Relay-owned local account metadata; never probes remote mail or reads credentials. */
+export function listOplRelayMailboxConnections(options: {
+  binary?: string;
+  runner?: RelayConnectCommandRunner;
+} = {}) {
+  try {
+    const result = callRelay(options.runner ?? runRelayConnectCommand, options.binary ?? 'opl-relay', relayRequest('list'));
+    if (!Array.isArray(result.mailboxes) || result.mailboxes.length > 100) {
+      relayFailure('relay_list_response_invalid', 'not_dispatched');
+    }
+    const connections = result.mailboxes.map((value) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) relayFailure('relay_list_response_invalid', 'not_dispatched');
+      const entry = value as Record<string, unknown>;
+      if (typeof entry.mailbox_ref !== 'string' || !/^relay-mailbox:\/\/[a-f0-9]{64}$/.test(entry.mailbox_ref)
+        || typeof entry.email !== 'string' || !entry.email.trim() || entry.email.length > 240
+        || /[\u0000-\u001f\u007f]/.test(entry.email)) relayFailure('relay_list_response_invalid', 'not_dispatched');
+      return {
+        mailbox_ref: entry.mailbox_ref,
+        display_name: entry.email,
+        account_label: entry.email,
+        provider_type: RELAY_PROVIDER_ID,
+      };
+    });
+    if (new Set(connections.map((entry) => entry.mailbox_ref)).size !== connections.length) {
+      relayFailure('relay_list_response_invalid', 'not_dispatched');
+    }
+    return { available_connections: connections, available_connections_status: 'available' as const };
+  } catch {
+    return {
+      available_connections: [],
+      available_connections_status: 'unavailable' as const,
+      available_connections_reason: 'relay_local_connections_unavailable',
+    };
+  }
 }
 
 export function importOplRelayMailboxConnection(

@@ -173,3 +173,46 @@ test('knowledge resources consume owner metadata only and never infer consumers 
   assert.equal(JSON.stringify(projection).includes('/private/obsidian'), false);
   assert.equal(JSON.stringify(projection).includes('private body must not leak'), false);
 });
+
+
+test('connection resources expose safe owner actions and active capabilities without duplicating Gateway', () => {
+  const projection = buildApplicationManagementProjection({
+    agentPackages: {}, managedUpdate: {}, settingsControlCenter: {
+      connection_registry: { connections: [
+        { connection_id: 'opl-gateway-account', connection_type: 'opl_gateway_account', name: 'Gateway', status: 'ready' },
+        { connection_id: 'mail-main', connection_type: 'opl-relay', name: 'Work mailbox', status: 'ready', credential_handle: 'secret-ref', endpoint: '/private/location' },
+      ] },
+      connection_authorization: {
+        connections: [{ connection_id: 'mail-main', provider_type: 'opl-relay', account_label: 'work@example.test' }],
+        grants: [
+          { connection_id: 'mail-main', consumer_package_id: 'relay', status: 'granted', capability_ids: ['mailbox.search', 'mailbox.read'] },
+          { connection_id: 'mail-main', consumer_package_id: 'old', status: 'revoked', capability_ids: ['draft.create'] },
+        ],
+      },
+      app_settings_read_model: { connections: { action_ids: ['connection_test', 'connection_update'] } },
+    },
+  });
+  assert.equal(projection.shared_resources.length, 1);
+  const connection = projection.shared_resources[0]!;
+  assert.equal(connection.owner, 'opl-connect');
+  assert.equal(connection.connection_id, 'mail-main');
+  assert.equal(connection.provider_type, 'opl-relay');
+  assert.equal(connection.account_label, 'work@example.test');
+  assert.deepEqual(connection.capability_ids, ['mailbox.read', 'mailbox.search']);
+  assert.deepEqual(connection.action_ids, ['connection_test', 'connection_update']);
+  assert.equal(JSON.stringify(connection).includes('secret-ref'), false);
+  assert.equal(JSON.stringify(connection).includes('/private/location'), false);
+});
+
+test('missing model access observation remains unknown and exposes only declared owner actions', () => {
+  const projection = buildApplicationManagementProjection({
+    agentPackages: {}, managedUpdate: {}, settingsControlCenter: { app_settings_read_model: {
+      codex_model_policy: { model: 'gpt-6', model_provider: 'gateway', repair_action_id: 'settings_repair_model_access' },
+      action_policy: { allowed_action_ids: ['settings_repair_model_access'] },
+    } },
+  });
+  assert.equal(projection.shared_resources[0]?.status, 'unknown');
+  assert.equal(projection.shared_resources[0]?.readiness?.status, 'unknown');
+  assert.equal(projection.shared_resources[0]?.owner, 'account-and-access');
+  assert.deepEqual(projection.shared_resources[0]?.action_ids, ['settings_repair_model_access']);
+});
