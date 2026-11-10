@@ -147,5 +147,20 @@
   },
   "publication_channel_admission": "admitted",
   "owner_package_manifest_ref": "plugins/photo-steward/opl-package.json",
-  "owner_package_descriptor_ref": "opl-package.json"
+  "owner_package_descriptor_ref": "opl-package.json",
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "Photo Steward",
+      "en-US": "Photo Steward"
+    },
+    "description_i18n": {
+      "zh-CN": "查看 iCloud 照片镜像状态，审阅镜像计划。",
+      "en-US": "Review photo mirror plans and status."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "查看 iCloud 照片镜像状态，审阅镜像计划。",
+      "en-US": "Review photo mirror plans and status."
+    },
+    "home_shortcuts": []
+  }
 }

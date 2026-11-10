@@ -98,5 +98,20 @@
     "profile_migration_policy": "semantic_merge_required_fail_closed",
     "silent_profile_overwrite_allowed": false
   },
-  "machine_boundary": "This first-party OPL Package records OPL Flow package identity and profile migration ownership. It cannot silently overwrite user Codex profiles or claim project, runtime, domain, artifact, or owner-receipt truth."
+  "machine_boundary": "This first-party OPL Package records OPL Flow package identity and profile migration ownership. It cannot silently overwrite user Codex profiles or claim project, runtime, domain, artifact, or owner-receipt truth.",
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "OPL Flow",
+      "en-US": "OPL Flow"
+    },
+    "description_i18n": {
+      "zh-CN": "建立统一的 Codex 使用基线，协调跨任务、仓库与机器的持续工作。",
+      "en-US": "OPL Flow establishes the Codex experience baseline and coordinates durable work across tasks, repositories, and machines."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "建立统一的 Codex 使用基线，协调跨任务、仓库与机器的持续工作。",
+      "en-US": "OPL Flow establishes the Codex experience baseline and coordinates durable work across tasks, repositories, and machines."
+    },
+    "home_shortcuts": []
+  }
 }

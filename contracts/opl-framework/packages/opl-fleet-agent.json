@@ -140,5 +140,20 @@
     "module_id": "opl-fleet-agent",
     "owner_package_manifest_ref": "plugins/opl-fleet-agent/opl-package.json",
     "owner_plugin_manifest_ref": "plugins/opl-fleet-agent/plugin.json"
+  },
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "OPL Fleet Agent Integration",
+      "en-US": "OPL Fleet Agent Integration"
+    },
+    "description_i18n": {
+      "zh-CN": "检查本机 Fleet Agent 的运行健康状态和遥测信息。",
+      "en-US": "Inspect local Fleet Agent health and telemetry."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "检查本机 Fleet Agent 的运行健康状态和遥测信息。",
+      "en-US": "Inspect local Fleet Agent health and telemetry."
+    },
+    "home_shortcuts": []
   }
 }

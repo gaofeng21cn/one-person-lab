@@ -553,5 +553,20 @@
   },
   "owner_package_manifest_ref": "contracts/opl_capability_package_manifest.json",
   "owner_package_descriptor_ref": "opl-package.json",
-  "source_manifest_ref": "mas-scholar-skills/contracts/opl_capability_package_manifest.json"
+  "source_manifest_ref": "mas-scholar-skills/contracts/opl_capability_package_manifest.json",
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "MAS Scholar Skills",
+      "en-US": "MAS Scholar Skills"
+    },
+    "description_i18n": {
+      "zh-CN": "为 MAS 医学论文与 MAG 医学基金项目提供所需的研究技能。",
+      "en-US": "Required MAS paper and MAG grant capability Skills."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "为 MAS 医学论文与 MAG 医学基金项目提供所需的研究技能。",
+      "en-US": "Required MAS paper and MAG grant capability Skills."
+    },
+    "home_shortcuts": []
+  }
 }

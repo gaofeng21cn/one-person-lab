@@ -5425,5 +5425,20 @@
   },
   "owner_package_manifest_ref": "contracts/opl_capability_package_manifest.json",
   "owner_package_descriptor_ref": "opl-package.json",
-  "source_manifest_ref": "mac-media-assets/contracts/opl_capability_package_manifest.json"
+  "source_manifest_ref": "mac-media-assets/contracts/opl_capability_package_manifest.json",
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "MAC Media Assets",
+      "en-US": "MAC Media Assets"
+    },
+    "description_i18n": {
+      "zh-CN": "为 Med Auto Cast 提供可复用的医学动画素材与制作技法库。",
+      "en-US": "Med Auto Cast reusable medical animation media and craft library."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "为 Med Auto Cast 提供可复用的医学动画素材与制作技法库。",
+      "en-US": "Med Auto Cast reusable medical animation media and craft library."
+    },
+    "home_shortcuts": []
+  }
 }
