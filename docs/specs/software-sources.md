@@ -1,6 +1,6 @@
 # OPL 软件源控制面
 
-本文是公开与私有软件源的操作说明。它只描述来源配置、访问检查和状态回读，不保存 token、密码、动态安装数量或 Package 版本。目录语义仍由 [Package Directory](./package-directory.md) 持有，凭证由 provider 或系统 credential helper 持有。
+本文是公开与私有软件源的操作说明，覆盖来源配置、访问检查、原生软件生命周期和状态回读。来源配置只保存引用；软件清单、版本和安装事实来自各自 owner。Package 目录语义由 [Package Directory](./package-directory.md) 持有，Homebrew 持有 formula/cask 的安装和更新，凭证由 provider 或系统 credential helper 持有。
 
 ## 物理位置
 
@@ -20,7 +20,7 @@
 | `public-registry:opl` | OPL 公共 Package 源 | `public` | 公开 Agent、Workflow 和 Capability |
 | `github-packages:gaofeng21cn` | GitHub Packages/GHCR | `authorized_only` | 获授权用户的私有 Package，例如 OCC |
 
-目录入口不是另一个在线应用商店 URL。Framework 通过 owner projection、native carrier 和当前身份的软件源状态合并生成 `opl packages list --json` 及 `app_state.agent_packages.directory.entries`。Homebrew tap、OCI/GHCR 和 GitHub 源码仍由各自 owner 维护，不能在 App 中复制一份版本注册表。
+Framework 通过 owner projection、native carrier 和当前身份的软件源状态生成统一目录。Agent Package 使用 `opl packages list --json` 及 `app_state.agent_packages.directory.entries`；Homebrew 原生软件使用 `opl sources list --json` 返回的 `software_sources.entries[].native_items`，并进入 App 的“我的应用”和软件源详情。两处 UI 消费同一份投影。Homebrew tap、OCI/GHCR 和 GitHub 源码仍由各自 owner 维护，App 不另建版本注册表。
 
 ## CLI 操作
 
@@ -56,6 +56,37 @@ opl sources disconnect --source-id github-packages:gaofeng21cn --json
 
 断开后，已安装的私有条目仍显示最小本地安装事实，并允许停用、修复本地 carrier 或卸载；需要远端 manifest、payload 或更新的动作会显示授权失效并保持不可用。重新 `configure` 后再 `check`，目录和可更新状态才恢复。
 
+## Homebrew 原生软件
+
+公开 tap 的物理入口是 [gaofeng21cn/homebrew-one-person-lab](https://github.com/gaofeng21cn/homebrew-one-person-lab)，Homebrew 名称为 `gaofeng21cn/one-person-lab`。首次接入、检查和联网刷新各自有明确动作：
+
+| 操作 | CLI | 影响 |
+| --- | --- | --- |
+| 接入软件源 | `opl sources setup --source-id homebrew:gaofeng21cn-one-person-lab --json` | 使用已有 Homebrew 执行固定 OPL tap 的接入，随后回读清单 |
+| 检查本机清单 | `opl sources check --source-id homebrew:gaofeng21cn-one-person-lab --json` | 读取本机 tap 配方和安装状态，不联网更新配方 |
+| 刷新来源版本 | `opl sources refresh --source-id homebrew:gaofeng21cn-one-person-lab --json` | 通过 `brew update` 更新 Homebrew 配方元数据，随后回读，不升级已安装软件 |
+
+尚未安装 Homebrew 时，UI 显示“需要安装 Homebrew”并指向其官方安装入口；Framework 不执行远程安装脚本。已安装 Homebrew 但尚未接入 OPL tap 时，显示“未接入”和接入动作。`setup`、`refresh` 以及安装、更新、卸载都使用现有 App 确认流程。`brew update` 会刷新 Homebrew 管理的配方元数据，影响范围不限于 OPL tap。
+
+Framework 从 `brew tap-info --json` 和 `brew info --json=v2` 读取当前 tap 成员、版本和安装事实。快速列表只读取可重建的投影缓存；显式检查或生命周期动作会重新读取 Homebrew。`available_version` 表示本机配方中的来源版本，UI 显示“来源版本”，不把未联网刷新的配方称为远端最新版本。
+
+同一投影位于 `app_state.agent_packages.sources.entries[].native_items`，机器合同见 [Settings Control Center 的 Homebrew 定义](../../contracts/opl-framework/settings-control-center-action-read-model-contract.json)。源投影包含 `inventory_status`（`available`、`not_checked` 或 `unavailable`）、`inventory_reason`、`inventory_checked_at`、`entry_count`、`version_basis=homebrew_local_recipes`、`installation_owner=homebrew` 和 `native_items`。每个原生条目包含：
+
+- `item_id`、`name`、`display_name`、`description` 和 `kind`（`formula` 或 `cask`）；
+- `installed`、`installed_version`、`available_version` 和 `update_status`（`available`、`current`、`not_installed` 或 `unknown`）；
+- `revision`、`disabled`、`pinned` 和带完整 payload 的 `available_actions`。
+
+安装、更新和卸载分别使用 `source_install`、`source_update`、`source_uninstall`，CLI 对应 `sources install`、`sources update`、`sources uninstall`。三者只接受 `source_id`、`item_id`、`expected_revision`。调用时使用最近一次清单返回的条目身份和修订号，例如：
+
+```bash
+opl sources install \
+  --source-id homebrew:gaofeng21cn-one-person-lab \
+  --item-id formula:gaofeng21cn/one-person-lab/opl \
+  --expected-revision <revision-from-source-readback> --json
+```
+
+执行前重新读取 Homebrew，核对条目确属固定 OPL tap、当前版本和可执行动作；清单已变化时要求重新查看后再执行。安装、更新、卸载分别委托 `brew install`、`brew upgrade`、`brew uninstall`，完成后以新的 Homebrew 回读决定结果。卸载不使用 `--zap` 或强制删除，不删除用户配置、Obsidian 资料库及业务数据。
+
 ## 私有 Package 的安装前检查
 
 私有条目使用 `visibility=authorized_only`。发现、下载和运行是三条独立授权链：
@@ -74,7 +105,7 @@ OPL App 的“应用管理”页与主对话并列，软件源作为一级能力
 
 - 来源：公开、私有·已授权、需要登录、无读取权限、授权过期、访问已撤销、尚未检查；
 - Package：可安装、已安装版本、可用版本、更新状态、调用就绪、依赖影响和 owner action；
-- 计数：`entry_count` 只统计当前身份实际可见的条目；未获准的私有条目不泄露名称、数量或版本。Framework 尚未读取 Homebrew tap 内容时返回 `null`，UI 显示“尚未读取”，不能显示为零个软件。
+- 计数：`entry_count` 只统计当前身份实际可见的条目；未获准的私有条目不泄露名称、数量或版本。Homebrew 清单尚未读取或读取失败时返回 `null`，UI 显示“尚未读取”或具体不可用原因；只有成功读取后的空清单才能显示零个软件。
 
 用户未安装的可选软件属于“可安装”，不计入“需处理”。已安装软件的缺少依赖、carrier 故障或访问撤权才进入处理队列。所有安装、更新、修复、停用和卸载动作完成后都重新读取 Framework/native carrier 状态；UI 不用按钮存在性或旧缓存宣称成功。
 
@@ -82,4 +113,4 @@ Obsidian 等个人知识源沿用同一控制面但不属于软件源：正文�
 
 ## 当前验收边界
 
-软件源 CLI、refs-only 持久化、凭证值拒绝、来源状态投影和 UI 状态合同可以通过源码与聚焦测试验证。私有 OCC 的真实授权发行、无权身份拒绝、授权撤销后的重新读取阻断，以及带真实签名/私有制品的端到端安装更新，必须在受保护 registry 和获权/无权账号上单独验收；源码测试不能替代这些外部回读。
+软件源 CLI、refs-only 持久化、凭证值拒绝、来源状态投影和 UI 状态合同通过源码与聚焦测试验证。Homebrew adapter 的命令参数、身份及版本漂移拒绝和生命周期结果回读使用 runner fixture 验证，本机只读清单核对真实 Homebrew 字段。真实安装、更新和卸载的生效结果，以执行后的 native carrier 回读为准。私有 OCC 的真实授权发行、无权身份拒绝、授权撤销后的重新读取阻断，以及带真实签名/私有制品的端到端安装更新，仍需受保护 registry 和获权/无权账号的实际证据。

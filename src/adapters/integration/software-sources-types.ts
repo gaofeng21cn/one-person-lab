@@ -20,6 +20,7 @@ export type SoftwareSourceCheckResult = {
   verification_reason: string;
 };
 export type SoftwareSourceDependencies = {
+  homebrewRun?: import('./homebrew-source.ts').HomebrewRunner;
   env?: NodeJS.ProcessEnv;
   now?: () => Date;
   verify?: (source: SoftwareSource) => Promise<SoftwareSourceCheckResult>;
