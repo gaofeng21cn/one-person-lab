@@ -6,8 +6,6 @@ import { resolvePackageSourceCredentialProvider } from '../software-sources.ts';
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import type { AgentPackageAccessStatus, AgentPackageManifest, AgentPackageVisibility } from './types.ts';
 import { verifyGithubPackagesAccess, type PackageRegistryAccessProviderInput } from './package-registry-access-provider.ts';
-import { githubPreviewSourceIdentity } from './package-github-preview-contract.ts';
-import { verifyGithubRepositoryAccess, type GithubRepositoryAccessProviderInput } from './package-github-access-provider.ts';
 
 export type { AgentPackageAccessStatus, AgentPackageVisibility } from './types.ts';
 export type PackageAccessSubject = Pick<AgentPackageManifest,
@@ -80,7 +78,6 @@ export type PackageAccessOptions = {
   verification?: 'cached' | 'live';
   now?: () => Date;
   verify?: (input: PackageRegistryAccessProviderInput) => ReturnType<typeof verifyGithubPackagesAccess>;
-  verifyRepository?: (input: GithubRepositoryAccessProviderInput) => ReturnType<typeof verifyGithubRepositoryAccess>;
 };
 
 function accessSnapshotFile(subject: PackageAccessSubject, env: NodeJS.ProcessEnv) {
@@ -93,7 +90,7 @@ function accessBinding(subject: PackageAccessSubject, credentialHandle: string |
   return crypto.createHash('sha256').update(JSON.stringify([
     subject.package_id, subject.visibility, subject.access_policy_ref,
     subject.credential_provider, subject.source_repo, packagePublicationRef(subject),
-    subject.publication_channel_admission, githubPreviewSourceIdentity(subject)?.sourceCommit,
+    subject.publication_channel_admission,
     credentialHandle, sourceRevision,
   ])).digest('hex');
 }
@@ -137,9 +134,8 @@ export function resolvePackageAccessDecision(
 ): AgentPackageAccessDecision {
   const visibility = manifest.visibility ?? 'public';
   const publicationRef = packagePublicationRef(manifest);
-  const previewSource = githubPreviewSourceIdentity(manifest);
   const owner = publicationRef?.match(/^ghcr\.io\/([a-z0-9._-]+)\//)?.[1]
-    ?? previewSource?.repository.split('/')[0] ?? null;
+    ?? null;
   const base: AgentPackageAccessDecision = {
     visibility,
     status: visibility === 'public' ? 'public' : 'unknown',
@@ -161,11 +157,11 @@ export function resolvePackageAccessDecision(
   const credentialHandle = options.credentialHandle !== undefined ? options.credentialHandle : source?.credential_handle ?? null;
   const sourceRevision = source && 'revision' in source ? String(source.revision) : null;
   if (options.disabled || source?.enabled === false) return { ...base, status: 'revoked', reason: 'package_source_disconnected' };
-  if ((!publicationRef && !previewSource) || !manifest.access_policy_ref || manifest.credential_provider !== 'github_packages') {
+  if ((!publicationRef) || !manifest.access_policy_ref || manifest.credential_provider !== 'github_packages') {
     return { ...base, reason: 'package_access_contract_incomplete_or_provider_unsupported' };
   }
   const repository = publicationRef?.replace(/^ghcr\.io\//, '').split(/[:@]/)[0];
-  if (!previewSource && manifest.access_policy_ref !== `github-package:${repository}`) {
+  if (manifest.access_policy_ref !== `github-package:${repository}`) {
     return { ...base, reason: 'package_access_policy_binding_mismatch' };
   }
   if (!credentialHandle) return { ...base, status: 'signed_out', reason: 'package_access_credential_required' };
@@ -175,15 +171,7 @@ export function resolvePackageAccessDecision(
     return readAccessSnapshot(manifest, options.env ?? env, binding, now)
       ?? { ...base, credential_handle: credentialHandle, reason: 'package_access_check_required' };
   }
-  const readback = previewSource ? (options.verifyRepository ?? verifyGithubRepositoryAccess)({
-    packageId: manifest.package_id,
-    sourceRef: previewSource.sourceRepo,
-    sourceCommit: previewSource.sourceCommit,
-    accessPolicyRef: manifest.access_policy_ref,
-    env: options.env ?? env,
-    credentialHandle,
-    now: options.now,
-  }) : (options.verify ?? verifyGithubPackagesAccess)({
+  const readback = (options.verify ?? verifyGithubPackagesAccess)({
     packageId: manifest.package_id,
     publicationRef: publicationRef!,
     accessPolicyRef: manifest.access_policy_ref,

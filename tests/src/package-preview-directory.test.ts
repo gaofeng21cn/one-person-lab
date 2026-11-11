@@ -15,7 +15,7 @@ const source = JSON.parse(fs.readFileSync(
 ));
 
 function descriptor(options: { packageId?: string; installed?: boolean; private?: boolean } = {}): InstalledPackageDescriptor {
-  const packageId = options.packageId ?? 'fixture-source-distributed-without-payload';
+  const packageId = options.packageId ?? 'fixture-development-only-without-payload';
   const installed = options.installed ?? false;
   const manifest = normalizePackageManifest({
     ...source,
@@ -80,26 +80,18 @@ function assertNoDownloadActions(entry: ReturnType<typeof directoryFrom>['entrie
   assert.equal(entry.recommended_action, null);
 }
 
-test('normalization retains source-distributed admission and defaults existing packages to admitted', () => {
+test('normalization retains development-only admission and defaults existing packages to admitted', () => {
   assert.equal(descriptor().manifest.publication_channel_admission, 'development_only');
   assert.equal(normalizePackageManifest(source, 'fixture').publication_channel_admission, 'admitted');
 });
 
-test('public source-distributed without a payload remains visible with installation blocked', () => {
+test('uninstalled development-only packages are absent from the software directory', () => {
   const result = directoryFrom(snapshot(descriptor()), 'fast');
-  assert.equal(result.entry_count, 1);
+  assert.equal(result.entry_count, 0);
   assert.equal(result.installable_package_count, 0);
-  const [entry] = result.entries;
-  assert.equal(entry.release_channel, 'unknown');
-  assert.equal(entry.distribution_channel, 'source');
-  assert.equal(entry.installed, false);
-  assert.deepEqual(entry.installability, {
-    status: 'blocked', installable: false, reason: 'package_install_source_unavailable',
-  });
-  assertNoDownloadActions(entry);
 });
 
-test('installed source-distributed without a payload remains callable and removable', () => {
+test('installed development-only without a payload remains callable and removable', () => {
   const result = directoryFrom(snapshot(descriptor({ installed: true })), 'fast');
   assert.equal(result.installed_package_count, 1);
   const [entry] = result.entries;
@@ -110,36 +102,31 @@ test('installed source-distributed without a payload remains callable and remova
   assertNoDownloadActions(entry);
 });
 
-test('public source-distributed with an existing pinned carrier payload can be installed', () => {
+test('pinned source payloads cannot become a software-center installation source', () => {
   const item = descriptor({ packageId: 'opl-flow' });
   const result = directoryFrom(snapshot(item), 'fast');
-  assert.equal(result.installable_package_count, 1);
-  const [entry] = result.entries;
-  assert.equal(entry.release_channel, 'unknown');
-  assert.equal(entry.distribution_channel, 'source');
-  assert.deepEqual(entry.installability, { status: 'installable', installable: true, reason: null });
-  assert.equal(entry.recommended_action, 'agent_package_install');
-  assert.ok(entry.available_actions.some(action => action.action_id === 'agent_package_install'));
-  assert.doesNotThrow(() => assertPackageInstallSourceAvailable(item));
+  assert.equal(result.installable_package_count, 0);
+  assert.equal(result.entry_count, 0);
+  assert.throws(() => assertPackageInstallSourceAvailable(item));
 });
 
-test('source-distributed admission does not disclose private packages when discovery is denied', () => {
+test('development-only admission does not disclose private packages when discovery is denied', () => {
   const result = directoryFrom(snapshot(descriptor({ private: true })), 'fast');
   assert.equal(result.entry_count, 0);
   assert.equal(result.installable_package_count, 0);
 });
 
-test('fast app state keeps source distribution distinct from maturity and retains blocked installation state', () => {
-  const result = compactFastAgentPackageDirectory(directoryFrom(snapshot(descriptor()), 'fast'));
+test('fast app state keeps development overlay distinct from maturity and retains blocked installation state', () => {
+  const result = compactFastAgentPackageDirectory(directoryFrom(snapshot(descriptor({ installed: true })), 'fast'));
   const entry: Record<string, unknown> = result.entries[0];
   assert.equal(entry.release_channel, 'unknown');
-  assert.equal(entry.distribution_channel, 'source');
+  assert.equal(entry.distribution_channel, 'development');
   assert.deepEqual(entry.installability, {
-    status: 'blocked', installable: false, reason: 'package_install_source_unavailable',
+    status: 'installed', installable: false, reason: 'package_install_source_unavailable',
   });
 });
 
-test('installation guard rejects source-distributed packages without a verified source', () => {
+test('installation guard rejects development-only packages without a verified source', () => {
   const item = descriptor();
   assert.throws(() => assertPackageInstallSourceAvailable(item), (error: unknown) => {
     assert.ok(error instanceof FrameworkContractError);
@@ -165,4 +152,32 @@ test('installed and selected versions retain separate authorities and unknown se
   const revoked = snapshot(descriptor({ installed: true, private: true }));
   revoked.currentOwner = observed.currentOwner;
   assert.equal(directoryFrom(revoked, 'fast').entries[0].selected_version, null);
+});
+
+
+test('deployment targets are absent and parent-owned components have no independent lifecycle actions', () => {
+  const remote = descriptor({ installed: true });
+  remote.manifest.management_scope = 'deployment_target';
+  remote.manifest.deployment_target = 'device';
+  assert.equal(directoryFrom(snapshot(remote), 'fast').entry_count, 0);
+  const component = descriptor({ installed: true });
+  component.manifest.management_scope = 'local_component';
+  const [entry] = directoryFrom(snapshot(component), 'fast').entries;
+  assert.equal(entry.catalog_scope, 'host_component');
+  assert.deepEqual(entry.available_actions, []);
+  assert.throws(() => assertPackageInstallSourceAvailable(component));
+  component.manifest.publication_channel_admission = 'admitted';
+  component.carrier.publicationRef = 'ghcr.io/example/packages/component:latest-stable';
+  assert.doesNotThrow(() => assertPackageInstallSourceAvailable(component));
+  const [publishedComponent] = directoryFrom(snapshot(component), 'fast').entries;
+  assert.deepEqual(publishedComponent.available_actions, []);
+  assert.equal(publishedComponent.recommended_action, null);
+});
+
+test('admission alone cannot authorize an unpublished first-party install', () => {
+  const item = descriptor({ installed: true });
+  item.manifest.publication_channel_admission = 'admitted';
+  assert.throws(() => assertPackageInstallSourceAvailable(item));
+  const [entry] = directoryFrom(snapshot(item), 'fast').entries;
+  assertNoDownloadActions(entry);
 });

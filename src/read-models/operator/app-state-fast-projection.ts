@@ -320,10 +320,14 @@ export function compactFastAgentPackageDirectory(value: unknown) {
     ...pickRecordFields(entry, [
       'package_id', 'package_kind', 'display_name', 'publisher', 'description', 'tags', 'package_role',
       'capability_metadata', 'display_name_i18n', 'description_i18n',
+      'icon_ref',
+      'icon_url',
+      'carrier_source_commit',
       'session_routing_summary_i18n', 'home_shortcuts',
       'app_contributions', 'role_state', 'trust_tier', 'source_explanation', 'manifest_url',
       'installed', 'installed_version', 'selected_version', 'stable_version', 'release_channel',
       'catalog_scope', 'software_type', 'distribution_channel', 'local_installations',
+      'management_scope', 'deployment_target',
       'installations', 'active_installation_id', 'active_installation_status', 'installation_management_reason', 'installation_actions',
       'catalog_origin', 'origin_basis',
       'activated', 'exposure', 'codex_visible',
@@ -606,6 +610,13 @@ export function compactFastManagedUpdateProjection(
       const flowDependencies = dependencyCatalog && Array.isArray(dependencyCatalog.flow_dependencies)
         ? dependencyCatalog.flow_dependencies
         : null;
+      const dependencies = dependencyCatalog && Array.isArray(dependencyCatalog.dependencies)
+        ? recordArray(dependencyCatalog.dependencies).map((entry) => pickRecordFields(entry, [
+          'dependency_id', 'dependency_kind', 'installed', 'version', 'latest_version',
+          'currentness', 'ownership', 'update_policy', 'update_mode', 'activation_policy',
+          'binary_path', 'status', 'note', 'guidance',
+        ]))
+        : null;
       const installedVersion = typeof current.installed_version === 'string'
         ? current.installed_version
         : typeof current.parsed_version === 'string'
@@ -631,8 +642,11 @@ export function compactFastManagedUpdateProjection(
           manual_guidance: typeof current.manual_guidance === 'string'
             ? current.manual_guidance
             : null,
-          ...(flowDependencies
-            ? { dependency_catalog: { flow_dependencies: flowDependencies } }
+          ...(dependencyCatalog
+            ? { dependency_catalog: {
+              ...(flowDependencies ? { flow_dependencies: flowDependencies } : {}),
+              ...(dependencies ? { dependencies } : {}),
+            } }
             : {}),
         },
         auto_apply: {

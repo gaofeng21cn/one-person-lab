@@ -35,7 +35,8 @@
         }
       }
     ],
-    "software_type": "agent"
+    "software_type": "agent",
+    "icon_ref": "assets/icon.svg"
   },
   "publisher": "one-person-lab",
   "version": "0.2.0",

@@ -101,3 +101,18 @@ test('connected source check supports local fast discovery and disconnect invali
   assert.equal(disconnected.discover_allowed, false);
   assert.equal(calls, 1);
 });
+
+
+test('repository permission cannot authorize an unpublished private Package download', () => {
+  let checked = false;
+  const decision = resolvePackageAccessDecision(manifest({
+    publication_channel_admission: 'development_only',
+    access_policy_ref: 'github-repository:gaofeng21cn/opl-capital-compass',
+    source_commit: 'a'.repeat(40),
+    codex_surface: { configured_codex_plugin_carrier: { publication_ref: null } },
+  }), {}, { credentialHandle: 'provider:github_packages:gh-cli', verify: () => { checked = true; throw new Error('unexpected registry check'); } });
+  assert.equal(checked, false);
+  assert.equal(decision.download_allowed, false);
+  assert.equal(decision.discover_allowed, false);
+  assert.equal(decision.reason, 'package_access_contract_incomplete_or_provider_unsupported');
+});

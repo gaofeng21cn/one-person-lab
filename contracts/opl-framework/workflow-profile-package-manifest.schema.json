@@ -42,6 +42,44 @@
       "minLength": 1
     },
     "visibility": { "enum": ["public", "authorized_only"], "default": "public" },
+    "management_scope": {
+      "description": "Where this product is managed. Deployment targets are discoverable deployment records, never local software-center installation entries.",
+      "enum": [
+        "local_product",
+        "local_component",
+        "deployment_target",
+        "external_carrier"
+      ],
+      "default": "local_product"
+    },
+    "deployment_target": {
+      "description": "The non-local surface that owns deployment when management_scope is deployment_target.",
+      "enum": [
+        "cloud",
+        "mobile",
+        "device",
+        "remote_service",
+        "unknown"
+      ]
+    },
+    "presentation": {
+      "type": "object",
+      "properties": {
+        "software_type": {
+          "enum": [
+            "agent",
+            "application",
+            "capability"
+          ]
+        },
+        "icon_ref": {
+          "description": "Relative asset path inside the immutable Package payload. External URLs are not permitted.",
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+\\.(?:svg|png|webp)$"
+        }
+      },
+      "additionalProperties": true
+    },
     "access_policy_ref": {
       "type": ["string", "null"],
       "minLength": 1,

@@ -21,9 +21,6 @@ import { buildAppUiContributionsProjection } from '../../src/read-models/operato
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
 const manifestRef = 'contracts/opl-framework/packages/opl-link-desktop-connector.json';
 const allowlistRef = 'contracts/opl-framework/package-payload-allowlists/opl-link-desktop-connector.json';
-const payloadRef = 'contracts/opl-framework/packages/payloads/opl-link-desktop-connector-0.1.0.json';
-const ownerCommit = 'c21e2ddda2f790d3f21677fcec616c29c343357f';
-const contentLockDigest = 'sha256:a56d21c3f9d06547a6ca1311a78ea3e8b234fc83323ab2593053876e1b710049';
 
 function readJson(relativePath: string): Record<string, any> {
   return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
@@ -42,16 +39,24 @@ function assertSchema(relativePath: string, payload: unknown) {
 test('OPL Link projection, payload, and allowlist bind one exact owner cohort', () => {
   const manifest = readJson(manifestRef);
   const allowlist = readJson(allowlistRef);
+  const payloadRef = path.join(path.dirname(manifestRef), manifest.codex_surface.plugin_payload_manifest_url);
   const payload = readJson(payloadRef);
+  const ownerCommit = manifest.codex_surface.carrier_source_commit;
+  const contentLockDigest = manifest.content_lock.digest;
 
   assertSchema('contracts/opl-framework/capability-package-manifest.schema.json', manifest);
   assertSchema('contracts/opl-framework/package-payload-allowlist.schema.json', allowlist);
   assertSchema('contracts/opl-framework/package-payload-manifest-v2.schema.json', payload);
 
   assert.equal(manifest.package_id, 'opl-link-desktop-connector');
-  assert.equal(manifest.version, '0.1.0');
+  assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.equal(manifest.source_repo, 'https://github.com/gaofeng21cn/opl-link.git');
-  assert.equal(manifest.publication_channel_admission, 'development_only');
+  assert.equal(manifest.publication_channel_admission, 'admitted');
+  assert.equal(manifest.visibility, 'authorized_only');
+  assert.equal(manifest.codex_surface.configured_codex_plugin_carrier.publication_ref,
+    'ghcr.io/gaofeng21cn/one-person-lab-private-packages/opl-link-desktop-connector:latest-stable');
+  assert.match(ownerCommit, /^[0-9a-f]{40}$/);
+  assert.match(contentLockDigest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(manifest.codex_surface.plugin_id, manifest.package_id);
   assert.equal(manifest.codex_surface.interaction_mode, 'headless_internal');
   assert.equal(manifest.codex_surface.carrier_source_commit, ownerCommit);
@@ -94,8 +99,8 @@ test('dynamic package discovery admits one remote companion Host contribution an
     .find((entry) => entry.package_id === manifest.package_id);
 
   assert.ok(spec);
-  assert.equal(publicationSpec, undefined);
-  assert.equal(spec.publication_channel_admission, 'development_only');
+  assert.ok(publicationSpec);
+  assert.equal(spec.publication_channel_admission, 'admitted');
   assert.equal(spec.scope, 'capability_package');
   assert.equal(spec.version, manifest.version);
   assert.equal(spec.repo_url, manifest.source_repo);
@@ -103,7 +108,7 @@ test('dynamic package discovery admits one remote companion Host contribution an
   assert.deepEqual(normalized.capability_provider?.module_export_ids, [
     'opl.link.remote-companion.connector.v1',
   ]);
-  assert.equal(normalized.app_contributions, null);
+  assert.deepEqual(normalized.app_contributions, manifest.app_contributions);
 
   const integration = resolvePackageHostIntegration(hostManifest);
   assert.equal(integration.integration_kind, 'capability_provider');
@@ -122,10 +127,11 @@ test('dynamic package discovery admits one remote companion Host contribution an
     [manifest.package_id]: {
       presence: { installed: true },
       capability_exposure: { status: 'enabled' },
+      app_contributions: normalized.app_contributions,
     },
   }, { actionRoute: 'opl.connect.remote-companion-connector-host' });
-  assert.equal(available.contribution_count, 0);
-  assert.deepEqual(available.slots['settings.section'], []);
+  assert.equal(available.contribution_count, 1);
+  assert.equal(available.slots['settings.section'].length, 1);
 
   const missing = buildAppUiContributionsProjection({});
   assert.equal(missing.contribution_count, 0);

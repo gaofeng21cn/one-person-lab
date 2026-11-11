@@ -26,7 +26,9 @@ OPL 软件源是用户认识“我们维护的软件”的统一入口。公开 
 | `public-registry:opl` | OPL 公共 Package 源 | `public` | 公开 Agent、Workflow 和 Capability |
 | `github-packages:gaofeng21cn` | GitHub Packages/GHCR | `authorized_only` | 获授权用户的私有 Package，例如 OCC |
 
-Framework 通过 owner projection、native carrier 和当前身份的软件源状态生成统一目录。Agent Package 使用 `opl packages list --json` 及 `app_state.agent_packages.directory.entries`；Homebrew 原生软件使用 `opl sources list --json` 返回的 `software_sources.entries[].native_items`，并进入 App 的 OPL 软件目录和软件源详情。两处 UI 消费同一份投影。Homebrew tap、OCI/GHCR 和 GitHub 源码仍由各自 owner 维护，App 不另建版本注册表。
+Framework 通过 owner projection、native carrier 和当前身份的软件源状态生成统一目录。Agent Package 使用 `opl packages list --json` 及 `app_state.agent_packages.directory.entries`；Homebrew 原生软件使用 `opl sources list --json` 返回的 `software_sources.entries[].native_items`，并进入 App 的 OPL 软件目录和软件源详情。两处 UI 消费同一份投影。Homebrew tap 和 OCI/GHCR 仍由各自 owner 维护，App 不另建版本注册表。GitHub 保存开发源码与发布来源，开发 checkout 只通过显式开发覆盖接入，不作为普通安装或更新渠道。
+
+运行组件来自 `managed_update.components[opl_base].current.dependency_catalog.dependencies`，快速状态与完整状态保留相同的身份、版本、管理归属和路径摘要。App 自有运行目录可由原维护入口更新；系统 PATH、Homebrew 或其他产品提供的工具按原安装者维护，不能因被 OPL 使用就变成可静默覆盖的 OPL 安装。Python/uv 由既有 `opl env` 按项目锁文件准备环境、复用缓存，软件中心不全局升级所有项目的解释器；具体环境通过 `opl env inspect` 和 `opl env cache inventory` 回读。
 
 ## CLI 操作
 
@@ -122,7 +124,7 @@ Homebrew 动作执行前重新读取该来源，核对固定 OPL tap、当前版
 
 安装、更新和需要远端读取的修复在执行前重新检查来源授权。私有制品安装时锁定不可变 digest；`latest-stable` 只用于发现候选版本。公开源的匿名回读与私有源的授权回读是不同验收条件，不能用本机 carrier 已安装替代新用户发行验收。
 
-第一方私有 Package 的签名信任由 Framework 随版本交付的 `contracts/opl-framework/keys/private-package-signing.pub` 提供，仅用于 `gaofeng21cn/one-person-lab-private-packages`。其他发布者由 Host 显式配置 `OPL_PACKAGE_SIGNING_PUBLIC_KEY` 绝对公钥路径；显式配置优先，配置错误不会回退到默认信任。公钥不从制品或用户覆盖的目录中取得。发布流程在上传前核对受保护私钥派生的公钥与随 Framework 交付的公钥一致。私钥与密码保存在私有 owner 仓库的 `release-stable` 发布环境；该仓库通过固定 Framework commit 的正式 workflow 调用统一发布器，使用自身 `GITHUB_TOKEN` 读取精确源码和访问 registry。签名信任不能代替 registry 登录、Package read 权限或 Connect/知识授权；实际发行仍须完成授权回读及匿名拒绝验证。
+第一方私有 Package 优先使用 Framework 随版本交付的 `contracts/opl-framework/keys/private-packages/<package_id>.pub`；已有 Package 沿用 `contracts/opl-framework/keys/private-package-signing.pub`。两者仅用于 `gaofeng21cn/one-person-lab-private-packages`。其他发布者由 Host 显式配置 `OPL_PACKAGE_SIGNING_PUBLIC_KEY` 绝对公钥路径；显式配置优先，配置错误不会回退到默认信任。公钥不从制品或用户覆盖的目录中取得。发布流程在上传前核对受保护私钥派生的公钥与随 Framework 交付的公钥一致。每个私有 owner 可以独立管理签名密钥，增加新包不需要取出其他仓库的秘密或轮换现有包的信任。私钥与密码保存在私有 owner 仓库的 `release-stable` 发布环境；该仓库通过固定 Framework commit 的正式 workflow 调用统一发布器，使用自身 `GITHUB_TOKEN` 读取精确源码和访问 registry。签名信任不能代替 registry 登录、Package read 权限或 Connect/知识授权；实际发行仍须完成授权回读及匿名拒绝验证。
 
 私有制品的归属由 canonical Package owner、经认证的精确私有 workflow caller、源码 commit/tag，以及 OCI source annotation 和签名 provenance 共同绑定。GitHub Package REST 返回的 `repository` 是可选关联投影：存在时必须与该私有 owner 一致；缺失时明确记录 `association_metadata_unavailable`，不得宣称关联已验证。发布器仍须实际读取目标私有 namespace，并在上传前后用同一只读核验路径证明 `visibility=private` 和匿名访问被拒绝；明确的公开状态或错误 owner 均拒绝发布。首次创建只允许先上传不含源码或凭据的固定访问标记，完成同样核验后才上传 Package 内容。
 
@@ -140,4 +142,4 @@ Obsidian 等个人知识源在“共享资源 → 知识与记忆”管理，复
 
 ## 当前验收边界
 
-软件源 CLI、refs-only 持久化、凭证值拒绝、来源状态投影和 UI 状态合同通过源码与聚焦测试验证。Homebrew adapter 的命令参数、身份及版本漂移拒绝和生命周期结果回读使用 runner fixture 验证，本机只读清单核对真实 Homebrew 字段。真实安装、更新和卸载的生效结果，以执行后的 native carrier 回读为准。私有 OCC 的真实授权发行、无权身份拒绝、授权撤销后的重新读取阻断，以及带真实签名/私有制品的端到端安装更新，仍需受保护 registry 和获权/无权账号的实际证据。
+软件源 CLI、refs-only 持久化、凭证值拒绝、来源状态投影和 UI 状态合同通过源码与聚焦测试验证。Homebrew adapter 的命令参数、身份及版本漂移拒绝和生命周期结果回读使用 runner fixture 验证，本机只读清单核对真实 Homebrew 字段。真实安装、更新和卸载的生效结果，以执行后的 native carrier 回读为准。每个私有发行须提供受保护 registry 的授权回读、匿名拒绝、签名与安装回读证据；一个 Package 的验收不能代替另一个版本或消费者的验收。

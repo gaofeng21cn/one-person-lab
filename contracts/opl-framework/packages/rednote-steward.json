@@ -3,11 +3,11 @@
   "package_id": "rednote-steward",
   "display_name": "RedNote Steward",
   "publisher": "gaofeng21cn",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/rednote-steward.git",
   "package_role": "capability_package",
-  "publication_channel_admission": "development_only",
+  "publication_channel_admission": "admitted",
   "capability_abi": {
     "id": "rednote.steward.capabilities",
     "version": "1.0.0",
@@ -64,10 +64,10 @@
       "plugin_selector": "rednote-steward@rednote-steward",
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/rednote-steward",
-      "publication_ref": null
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/rednote-steward:latest-stable"
     },
-    "carrier_source_commit": "74e66c1df451b922b5ff228b61f1b1d13767305c",
-    "plugin_payload_manifest_url": "payloads/rednote-steward-0.2.3.json"
+    "plugin_payload_manifest_url": "payloads/rednote-steward-0.2.4.json",
+    "carrier_source_commit": "0f36502a108f0411bdc2e15444a7f8e16e5f33c7"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -210,6 +210,7 @@
       "adapters/opencli/xiaohongshu/steward-read-note.js",
       "adapters/opencli/xiaohongshu/topic-probe.js",
       "app-contribution-adapter.json",
+      "assets/branding/rednote-steward-logo-v2.png",
       "mcp.json",
       "package-lock.json",
       "package.json",
@@ -251,7 +252,7 @@
       "src/opencli-runner.mjs",
       "src/setup.mjs"
     ],
-    "digest": "sha256:a773cee6781f74dee3bc620ea08368231e57566621b574addf2dc677bba8c923"
+    "digest": "sha256:ea2e0538af79e50086ac497a147539767aa4cbfd251f6557eedd351aa5249999"
   },
   "description": "Prepare, review and manage Xiaohongshu publications through one local CLI and MCP service.",
   "presentation": {
@@ -268,9 +269,16 @@
       "en-US": "Inspect the publication queue, review exact content, maintain existing posts and resume the same task."
     },
     "home_shortcuts": [],
-    "software_type": "application"
+    "software_type": "application",
+    "icon_ref": "assets/branding/rednote-steward-logo-v2.png"
   },
+  "management_scope": "local_product",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "publication_source": {
+    "module_id": "rednote-steward",
+    "owner_package_manifest_ref": "opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
   "owner_package_manifest_ref": "opl-package.json",
   "owner_package_descriptor_ref": "opl-package.json"
 }

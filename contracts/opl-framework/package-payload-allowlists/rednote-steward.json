@@ -19,6 +19,7 @@
     "adapters/opencli/xiaohongshu/steward-read-note.js",
     "adapters/opencli/xiaohongshu/topic-probe.js",
     "app-contribution-adapter.json",
+    "assets/branding/rednote-steward-logo-v2.png",
     "mcp.json",
     "package-lock.json",
     "package.json",

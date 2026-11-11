@@ -436,6 +436,7 @@
       "en-US": "Coordinate approved personal context across OPL Relay, Obsidian, and the lab website."
     },
     "home_shortcuts": [],
-    "software_type": "agent"
+    "software_type": "agent",
+    "icon_ref": "assets/icon.png"
   }
 }

@@ -129,6 +129,8 @@ export type AgentPackageHomeShortcutPresentation = {
 
 export type AgentPackagePresentation = {
   software_type?: 'agent' | 'application' | 'capability';
+  /** Relative, immutable Package asset path. The host must reject remote URLs. */
+  icon_ref?: string;
   display_name_i18n: AgentPackageLocalizedText;
   description_i18n: AgentPackageLocalizedText;
   session_routing_summary_i18n: AgentPackageLocalizedText;
@@ -197,6 +199,8 @@ export type AgentPackageManifest = {
   owner_language_version: AgentPackageOwnerLanguageVersion | null;
   source: string;
   source_repo: string | null;
+  management_scope: 'local_product' | 'local_component' | 'deployment_target' | 'external_carrier';
+  deployment_target: 'cloud' | 'mobile' | 'device' | 'remote_service' | 'unknown' | null;
   publication_channel_admission?: 'admitted' | 'development_only';
   visibility: AgentPackageVisibility;
   access_policy_ref: string | null;

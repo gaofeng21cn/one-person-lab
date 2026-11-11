@@ -98,10 +98,17 @@ function projectionDescription(payload: Record<string, unknown>, fallback: strin
 }
 
 function projectionPublicationChannelAdmission(payload: Record<string, unknown>) {
-  const value = payload.publication_channel_admission;
-  if (value === undefined || value === 'admitted') return 'admitted' as const;
-  if (value === 'development_only') return value;
-  throw new Error('Package projection publication_channel_admission must be admitted or development_only.');
+  const value = payload.publication_channel_admission ?? 'admitted';
+  if (value !== 'admitted' && value !== 'development_only') {
+    throw new Error('Package projection publication_channel_admission must be admitted or development_only.');
+  }
+  const surface = projectionRecord(payload, 'codex_surface');
+  const carrier = surface ? projectionRecord(surface, 'configured_codex_plugin_carrier') : null;
+  const scope = payload.management_scope ?? 'local_product';
+  if (value === 'admitted' && scope === 'local_product' && !carrier?.publication_ref) {
+    throw new Error(`Admitted Package ${payload.package_id} must declare a formal OCI publication_ref.`);
+  }
+  return value;
 }
 
 export function loadOplPackageSpecs(packageDirectory?: string): PackageSpec[] {

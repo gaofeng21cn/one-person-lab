@@ -229,6 +229,13 @@ function writeOplFlowPackage(
       plugin_id: 'fixture.opl-flow',
       plugin_source_path: sourceRoot,
       required_skill_ids: ['fixture.opl-flow', 'codex-ops-kit'],
+      configured_codex_plugin_carrier: {
+        kind: 'codex_plugin_manager',
+        plugin_selector: 'fixture.opl-flow@fixture-marketplace',
+        executor_route: 'codex_cli',
+        marketplace_source: 'fixture-marketplace',
+        publication_ref: 'ghcr.io/fixture/packages/fixture.opl-flow:latest-stable',
+      },
     },
     profile_surface: {
       runtime_profile: { source_path: 'profile/runtime-profile', target_id: 'user_agents_profile' },

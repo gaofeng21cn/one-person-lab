@@ -339,6 +339,8 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(schema.properties.package_core.properties.core_kind.const, 'opl_agent_package_core');
   assert.equal(schema.properties.carrier_adapters.items.properties.carrier.const, 'codex_plugin');
   assert.deepEqual(manifest.presentation, {
+    software_type: 'agent',
+    icon_ref: 'assets/icon.svg',
     display_name_i18n: {
       'zh-CN': 'Med Auto Science',
       'en-US': 'Med Auto Science',
@@ -367,6 +369,8 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
     }],
   });
   assert.deepEqual(manifests.oma.presentation, {
+    software_type: 'agent',
+    icon_ref: 'assets/icon.svg',
     display_name_i18n: {
       'en-US': 'OPL Meta Agent',
       'zh-CN': 'OPL Meta Agent',

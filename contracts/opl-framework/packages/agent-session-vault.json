@@ -3,11 +3,11 @@
   "package_id": "agent-session-vault",
   "display_name": "Agent Session Vault",
   "publisher": "gaofeng21cn",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/agent-session-vault.git",
   "package_role": "capability_package",
-  "publication_channel_admission": "development_only",
+  "publication_channel_admission": "admitted",
   "capability_abi": {
     "id": "agent.session.vault.v1",
     "version": "1.0.0",
@@ -47,10 +47,10 @@
       "plugin_selector": "agent-session-vault@agent-session-vault",
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/agent-session-vault",
-      "publication_ref": null
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/agent-session-vault:latest-stable"
     },
-    "carrier_source_commit": "c785e946e5271c9d3cb4e9d325e59122419b9888",
-    "plugin_payload_manifest_url": "payloads/agent-session-vault-0.1.0.json"
+    "plugin_payload_manifest_url": "payloads/agent-session-vault-0.1.1.json",
+    "carrier_source_commit": "04f45754cb9331b0414a06067598122c5f7b0366"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -137,7 +137,7 @@
       "src/agent_session_vault/views.py",
       "vault.py"
     ],
-    "digest": "sha256:612bf541677c5ccf7bd54c6d2138a3b3d33e5e3e798f1a6bc6f2bf2392db58f7"
+    "digest": "sha256:7a316e58c1a249ece974d371ffd2f93a36ea461507a97a73510aab99e75a2d10"
   },
   "presentation": {
     "display_name_i18n": {
@@ -155,7 +155,13 @@
     "home_shortcuts": [],
     "software_type": "application"
   },
+  "management_scope": "local_product",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "publication_source": {
+    "module_id": "agent-session-vault",
+    "owner_package_manifest_ref": "opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
   "owner_package_manifest_ref": "opl-package.json",
   "owner_package_descriptor_ref": "opl-package.json"
 }

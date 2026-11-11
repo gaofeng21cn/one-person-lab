@@ -194,6 +194,7 @@
     ],
     "flow_dependencies_path": "components[opl_base].current.dependency_catalog.flow_dependencies",
     "flow_dependencies_contract_ref": "base_dependency_catalog_contract.flow_dependencies_projection",
+    "runtime_dependencies_path": "components[opl_base].current.dependency_catalog.dependencies",
     "forbidden_kernel_envelope_fields": [
       "authority_boundary",
       "conditions",

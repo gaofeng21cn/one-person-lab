@@ -34,6 +34,7 @@ import { inspectOplModule } from '../system-installation/modules.ts';
 import type { AgentPackageInstallInput } from './types.ts';
 import { resolvePackageAccessDecision, type AgentPackageAccessDecision } from './package-access.ts';
 import { packageInstallSourceAvailable, packageDistributionChannel } from './package-install-source.ts';
+import { packageArtworkUrl } from './package-artwork.ts';
 import { packageInstallationProjection } from './package-installation-projection.ts';
 
 export type OplAgentPackageStatusInput = {
@@ -413,19 +414,22 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     ? access.reason ?? 'package_access_verification_required'
     : !sourceAvailable ? 'package_install_source_unavailable' : null;
   const downloadable = installReason === null;
-  const actions = actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode)
+  const actions = (manifest.management_scope === 'local_component' ? [] : actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode))
     .filter((action) => downloadable || !['agent_package_install', 'agent_package_update', 'agent_package_repair'].includes(action.action_id));
-  const recommendedAction = !downloadable
+  const recommendedAction = !downloadable || manifest.management_scope === 'local_component'
     ? null
     : installed ? (ready ? null : 'agent_package_repair') : 'agent_package_install';
   return {
     package_id: manifest.package_id,
+    carrier_source_commit: manifest.carrier_source_commit,
     display_name: manifest.display_name,
     publisher: manifest.publisher,
     description: presentationText(manifest.presentation?.description_i18n, null),
     tags: [],
     package_role: manifest.package_role,
-    catalog_scope: descriptor.catalog_scope ?? currentOwner?.catalog_scope ?? 'software',
+    management_scope: manifest.management_scope,
+    deployment_target: manifest.deployment_target,
+    catalog_scope: manifest.management_scope === 'local_component' ? 'host_component' : descriptor.catalog_scope ?? currentOwner?.catalog_scope ?? 'software',
     ...packageCatalogProvenance(currentOwner?.catalog_origin === 'opl'
       ? { ...descriptor, catalog_origin: currentOwner.catalog_origin, origin_basis: currentOwner.origin_basis }
       : descriptor),
@@ -444,6 +448,8 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
       : null,
     display_name_i18n: manifest.presentation?.display_name_i18n ?? null,
     description_i18n: manifest.presentation?.description_i18n ?? null,
+    icon_ref: manifest.presentation?.icon_ref ?? null,
+    icon_url: packageArtworkUrl(currentOwner ?? descriptor),
     session_routing_summary_i18n: manifest.presentation?.session_routing_summary_i18n ?? null,
     home_shortcuts: manifest.presentation?.home_shortcuts ?? [],
     home_shortcut_ids: manifest.presentation?.home_shortcuts.map((shortcut) => shortcut.shortcut_id) ?? [],
@@ -500,6 +506,8 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
 export function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full') {
   const entries = [...snapshot.descriptors.values()]
     .filter((descriptor) => !isProjectLocalCapabilityPackage(descriptor.manifest))
+    .filter((descriptor) => descriptor.manifest.management_scope !== 'deployment_target')
+    .filter((descriptor) => descriptor.manifest.publication_channel_admission !== 'development_only' || descriptor.readiness.installed)
     .map((entry) => directoryEntry(entry, detail, snapshot.access.get(entry.manifest.package_id), snapshot.currentOwner?.get(entry.manifest.package_id)))
     .filter((entry) => entry.installed || entry.package_access.discover_allowed)
     .sort((left, right) => left.display_name.localeCompare(right.display_name, 'en'));

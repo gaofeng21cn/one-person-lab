@@ -245,7 +245,7 @@ test('carrier status does not relabel capability closure Skills as carrier requi
   assert.deepEqual(readback.executor.required_skill_ids, ['third-party-research']);
 });
 
-test('clean Codex state separates source distribution from maturity and installation availability', () => {
+test('clean Codex state separates development overlay from maturity and installation availability', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-clean-package-directory-'));
   const binary = path.join(root, 'fake-codex.mjs');
   fs.writeFileSync(binary, `#!/usr/bin/env node
@@ -286,14 +286,19 @@ process.stdout.write(JSON.stringify({ installed: [], available: [] }));
       entries.filter((entry: any) => entry.installability.installable).length);
     for (const entry of entries) {
       assert.equal(entry.installed, false, entry.package_id);
-      assert.equal(entry.catalog_scope, 'software', entry.package_id);
+      assert.equal(entry.catalog_scope, entry.management_scope === 'local_component' ? 'host_component' : 'software', entry.package_id);
       assert.equal(entry.release_channel, 'unknown', entry.package_id);
+      if (entry.management_scope === 'local_component') {
+        assert.deepEqual(entry.available_actions, []);
+        assert.equal(entry.recommended_action, null);
+        continue;
+      }
       if (entry.installability.installable) {
         assert.equal(entry.installability.status, 'installable', entry.package_id);
         assert.equal(entry.recommended_action, 'agent_package_install', entry.package_id);
         assert.equal(entry.recommended_action_ref?.action_id, 'agent_package_install', entry.package_id);
       } else {
-        assert.equal(entry.distribution_channel, 'source', entry.package_id);
+        assert.equal(entry.distribution_channel, 'development', entry.package_id);
         assert.equal(entry.installability.status, 'blocked', entry.package_id);
         assert.equal(entry.installability.reason, 'package_install_source_unavailable', entry.package_id);
         assert.equal(entry.recommended_action, null, entry.package_id);

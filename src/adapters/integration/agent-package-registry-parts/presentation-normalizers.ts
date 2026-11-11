@@ -5,6 +5,7 @@ import type { AgentPackagePresentation } from './types.ts';
 
 const LOCALE_ID_PATTERN = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/;
 const HOME_SHORTCUT_ICON_ID_PATTERN = /^[A-Za-z][A-Za-z0-9._-]*$/;
+const PACKAGE_ICON_REF_PATTERN = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._/-]+\.(?:svg|png|webp)$/i;
 
 function normalizeLocalizedText(
   value: unknown,
@@ -50,6 +51,14 @@ export function normalizePresentation(
     throw new FrameworkContractError('contract_shape_invalid', 'Package software type must be agent, application, or capability.', {
       manifest_url: manifestUrl,
       failure_code: 'agent_package_presentation_invalid',
+    });
+  }
+  const iconRef = value.icon_ref;
+  if (iconRef !== undefined && (typeof iconRef !== 'string' || !PACKAGE_ICON_REF_PATTERN.test(iconRef))) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package presentation icon_ref must be a relative SVG, PNG, or WebP asset path.', {
+      manifest_url: manifestUrl,
+      field: 'presentation.icon_ref',
+      failure_code: 'agent_package_presentation_icon_invalid',
     });
   }
   const rawShortcuts = recordList(value.home_shortcuts);
@@ -127,6 +136,7 @@ export function normalizePresentation(
   }
   return {
     ...(softwareType ? { software_type: softwareType as 'agent' | 'application' | 'capability' } : {}),
+    ...(iconRef !== undefined ? { icon_ref: iconRef as string } : {}),
     display_name_i18n: normalizeLocalizedText(value.display_name_i18n, 'presentation.display_name_i18n', manifestUrl),
     description_i18n: normalizeLocalizedText(value.description_i18n, 'presentation.description_i18n', manifestUrl),
     session_routing_summary_i18n: normalizeLocalizedText(

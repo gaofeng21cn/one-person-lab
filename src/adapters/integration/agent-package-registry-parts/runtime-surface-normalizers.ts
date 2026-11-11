@@ -399,6 +399,8 @@ type ManifestSourceFields = Pick<
   | 'owner_language_version'
   | 'source'
   | 'source_repo'
+  | 'management_scope'
+  | 'deployment_target'
   | 'publication_channel_admission'
   | 'source_commit'
   | 'carrier_source_commit'
@@ -421,6 +423,37 @@ export function normalizeManifestSourceFields(
 ): ManifestSourceFields {
   const carrierAuthority = normalizeCarrierSourceAuthority(payload, codexSurface, manifestUrl);
   const access = normalizePackageAccessFields(payload, String(payload.package_id));
+  const managementScope = payload.management_scope === undefined ? 'local_product' : payload.management_scope;
+  const validManagementScopes = ['local_product', 'local_component', 'deployment_target', 'external_carrier'];
+  if (typeof managementScope !== 'string' || !validManagementScopes.includes(managementScope)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package management_scope is invalid.', {
+      manifest_url: manifestUrl,
+      management_scope: managementScope,
+      failure_code: 'agent_package_management_scope_invalid',
+    });
+  }
+  const deploymentTarget = payload.deployment_target === undefined || payload.deployment_target === null
+    ? null : payload.deployment_target;
+  const validDeploymentTargets = ['cloud', 'mobile', 'device', 'remote_service', 'unknown'];
+  if (deploymentTarget !== null && (typeof deploymentTarget !== 'string' || !validDeploymentTargets.includes(deploymentTarget))) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package deployment_target is invalid.', {
+      manifest_url: manifestUrl,
+      deployment_target: deploymentTarget,
+      failure_code: 'agent_package_deployment_target_invalid',
+    });
+  }
+  if (managementScope === 'deployment_target' && deploymentTarget === null) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Deployment-target Packages must declare deployment_target.', {
+      manifest_url: manifestUrl,
+      failure_code: 'agent_package_deployment_target_required',
+    });
+  }
+  if (managementScope !== 'deployment_target' && deploymentTarget !== null) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Local Packages cannot declare a deployment_target.', {
+      manifest_url: manifestUrl,
+      failure_code: 'agent_package_deployment_target_scope_mismatch',
+    });
+  }
   const admission = payload.publication_channel_admission ?? 'admitted';
   if (admission !== 'admitted' && admission !== 'development_only') {
     throw new FrameworkContractError('contract_shape_invalid', 'Package publication channel admission is invalid.', {
@@ -435,6 +468,8 @@ export function normalizeManifestSourceFields(
     owner_language_version: values.ownerLanguageVersion,
     source: values.source,
     source_repo: stringValue(payload.source_repo),
+    management_scope: managementScope as AgentPackageManifest['management_scope'],
+    deployment_target: deploymentTarget as AgentPackageManifest['deployment_target'],
     publication_channel_admission: admission,
     ...access,
     source_commit: carrierAuthority.sourceCommit,

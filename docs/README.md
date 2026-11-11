@@ -9,6 +9,7 @@
 | [项目概览](./project.md) | 产品定位、产品分层和 Package 拓扑选择 |
 | [当前状态](./status.md) | 已实现能力、当前验证边界和动态读面 |
 | [架构](./architecture.md) | 静态分层、owner、依赖方向、共用基座的物理归属和运行链路 |
+| [Agent/MiniApp SDK 共用基座](./architecture/agent-miniapp-sdk.md) | Agent、MCP App、凭证、知识与第三方适配的统一规则 |
 | [硬约束](./invariants.md) | 实现和演进不得破坏的规则 |
 | [关键决策](./decisions.md) | 当前仍有效、且无法仅从代码读出的选择 |
 | [当前差距](./active/current-state-vs-ideal-gap.md) | 唯一 active gap owner |

@@ -27,11 +27,11 @@ MiniApp 所依托的共用基座是所有自有 Agent 和 Agent 原生 App 的�
 
 所有 Agent、Agent 原生 App、工作流和共享能力共用 Framework 的状态投影与既有 owner action。Package 目录来自 `app_state.agent_packages.directory.entries`，原生应用和 CLI 的来源及安装信息来自软件源/安装 owner；OPL App 与 Studio 消费这些投影，不维护第二套软件、版本或路径数据库。
 
-软件目录纳入有独立 identity、实际入口、受支持的安装或部署载体及回读合同的软件，覆盖 OPL 标准智能体、其他智能体、独立 MCP App、桌面/Web/CLI 应用、能力包和工作流。核心产品、生态扩展和第三方软件采用同一原则。概念方案、源码仓、宿主实现库和私人数据按其职责维护。三个 Package 技术角色不构成产品类型全集，产品类型由 owner 的 `presentation.software_type` 声明并与交互方式分开；内部组件按实际宿主关系显示，缺少 OPL manifest 本身不排除独立原生软件。
+软件目录纳入有独立 identity、实际入口、受支持的本机安装载体及回读合同的软件，覆盖 OPL 标准智能体、其他智能体、独立 MCP App、桌面/Web/CLI 应用、能力包和工作流。独立云端、移动端和设备端产品只由对应部署入口提供协助与状态；本机 connector 有独立安装生命周期时，按自己的 Package identity 管理。核心产品、生态扩展和第三方软件采用同一原则。概念方案、源码仓、宿主实现库和私人数据按其职责维护。三个 Package 技术角色不构成产品类型全集，产品类型由 owner 的 `presentation.software_type` 声明并与交互方式分开；内部组件按实际宿主关系显示，缺少 OPL manifest 本身不排除独立原生软件。
 
 OPL 自行维护的软件在同一个 OPL 软件目录管理，产品类型仅用于筛选；Codex 等其他来源的插件和独立 Skills 按原管理器单独呈现。插件格式、名称或宿主随附路径不能代替维护归属，也不能证明是运行依赖。只有明确的依赖关系才进入运行组件。
 
-公开源、获授权私有源、固定源码版本采用同一安装管理合同。成熟度由产品 owner 声明，`development_only` 不等于预览版，`admitted` 不等于稳定版。技术原型也可安装、更新和卸载，领域执行资格另行判断。
+公开与获授权私有发行制品采用同一安装管理合同。OPL 自有 Package 统一使用正式 OCI 制品，原生产品使用正式 carrier；固定源码只作显式开发覆盖，不作为用户安装、更新或修复渠道。成熟度由产品 owner 声明，`development_only` 不等于预览版，`admitted` 不等于稳定版。技术原型也可安装、更新和卸载，领域执行资格另行判断。
 
 安装路径沿用 App、Framework、Codex、Homebrew 等实际 carrier 的布局，通过统一 locator 和 owner 回读定位。安装实例、当前生效来源和开发 checkout 分别表达；开发模式由明确来源选择或可编辑安装证据决定。不能因 Homebrew 无收据声称软件未装，也不能因工作区有源码声称软件已装。App 主列表展示已装版本、可用版本和简明状态，来源与多份安装在详情展开；只有 owner 确认有新版本才提示更新，操作完成后重新读取 owner 状态。完整模型与物理入口见 [Package Directory 与统一安装管理](../specs/package-directory.md)。
 
@@ -104,3 +104,5 @@ MiniMax Code MiniApp 为产品设计提供参考：专业工作台与 Agent 共�
 | 结果由谁接受？ | 领域负责人或用户的真实接受证据，与 runtime 完成分别记录 |
 
 机器检查 schema、身份、权限、链接、安装资源及确定性协议边界。AI 和领域负责人结合实际产物判断语义、交互质量和专业结果；不使用关键词、文档长度或测试数量代替质量判断。
+
+共用 SDK 的实际入口、第三方复用边界与软件中心管理范围见[Agent/MiniApp SDK](../architecture/agent-miniapp-sdk.md)。

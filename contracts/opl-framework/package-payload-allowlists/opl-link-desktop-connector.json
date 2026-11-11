@@ -6,7 +6,6 @@
   "source_root": "packages/opl-link-desktop-connector",
   "paths": [
     ".codex-plugin/plugin.json",
-    "opl-package.json",
     "release-cohort.json",
     "dist/ably-adapter.d.ts",
     "dist/ably-adapter.js",
@@ -31,6 +30,7 @@
     "dist/worker-client.d.ts",
     "dist/worker-client.js",
     "package-lock.json",
-    "package.json"
+    "package.json",
+    "opl-package.json"
   ]
 }

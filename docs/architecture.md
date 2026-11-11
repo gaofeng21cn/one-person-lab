@@ -22,7 +22,7 @@ User
 
 Framework 在公开 `app_state.application_management` 提供一个 refs-only 聚合视图，供 OPL App、Studio 和 Agent 共同呈现共享基座；Package Directory 则由 `app_state.agent_packages.directory.entries` 提供 Agent、Workflow 和 Capability 的可发现清单。前者聚合共享资源，后者聚合可安装 Package，两者都只投影 owner truth。
 
-软件条目必须具备稳定 identity、实际入口、来源、载体与状态回读，范围覆盖 OPL 标准及非标准智能体、独立 MCP App、桌面/Web/CLI 应用和独立能力包。Package 技术角色保留 `standard_agent`、`workflow_profile`、`capability_package`，但不限定产品类型；类型、核心/生态/第三方归属、交互方式、依赖关系和安装模式分别表达。内部组件跟随父产品管理，概念仓和开发库不因仓库存在而成为独立软件。完整准入与计数规则由 [Package Directory](./specs/package-directory.md#管理对象与分类) 持有。
+软件条目必须具备稳定 identity、实际入口、来源、载体与状态回读，范围覆盖 OPL 标准及非标准智能体、独立 MCP App、桌面/Web/CLI 应用和独立能力包。Package 技术角色保留 `standard_agent`、`workflow_profile`、`capability_package`，但不限定产品类型；类型、核心/生态/第三方归属、交互方式、依赖关系和安装模式分别表达。内部组件跟随父产品管理，概念仓和开发库不因仓库存在而成为独立软件。云端、移动端、设备端和远端服务产品属于 `deployment_target`，由 OPL App 提供部署协助和状态入口，不冒充本机已安装软件。完整准入与计数规则由 [Package Directory](./specs/package-directory.md#管理范围与产品类型) 持有。
 
 应用管理 UI 是统一的一级入口，与主对话并列，展示目录总数、可安装、已安装、已安装/可用版本、更新和需处理状态。安装、启停、更新、修复和卸载继续由原 owner 的 `app action` 与 native carrier 执行；App 只 dispatch 并做 fresh readback。它不引入第二个 Package registry、凭证库、知识正文库或 updater。Homebrew 是系统依赖、CLI 和声明的原生 carrier，不能替代 OPL Agent Package Directory。
 
@@ -40,7 +40,7 @@ Framework 在公开 `app_state.application_management` 提供一个 refs-only �
 
 ## Agent 原生应用组合
 
-Agent tool 与必要 UI 是同一领域能力的两个入口。Framework 的共享 MCP App 提供通用协作视图，专用 MCP App 保留领域编辑器，Studio 通过标准 MCP Apps 和 DSH/Cordis 接入。Connect 提供连接授权、provider 保管凭证；知识 owner 提供来源绑定与运行冻结，用户或领域 owner 持有知识正文。MiniApp 不新增应用注册表或独立 runtime。设计规则由[Agent 原生应用标准](./policies/agent-native-app-policy.md)持有，实际共享接口由 [MCP Apps SPEC](./mcp-apps/SPEC.md)持有。
+Agent tool 与必要 UI 是同一领域能力的两个入口。Framework 的共享 MCP App 提供通用协作视图，专用 MCP App 保留领域编辑器，Studio 通过标准 MCP Apps 和 DSH/Cordis 接入。Connect 提供连接授权、provider 保管凭证；知识 owner 提供来源绑定与运行冻结，用户或领域 owner 持有知识正文。MiniApp 不新增应用注册表或独立 runtime。设计规则由[Agent 原生应用标准](./policies/agent-native-app-policy.md)持有，共用 SDK、复用第三方和凭证/知识边界由 [Agent/MiniApp SDK 共用基座](./architecture/agent-miniapp-sdk.md) 持有，实际共享接口由 [MCP Apps SPEC](./mcp-apps/SPEC.md) 持有。
 
 ### OPL 核心的运行与维护结构
 
