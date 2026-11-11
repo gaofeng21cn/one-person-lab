@@ -52,6 +52,10 @@ test('Framework updates its receipted Git installation, pins the release and pre
   try {
     assert.equal(readInstalledSoftwareProducts()[0].update_status, 'unknown');
     refreshFrameworkSoftwareRelease();
+    assert.equal(readInstalledSoftwareProducts()[0].installations[0].mode, 'installed');
+    const identityPath = path.join(installedRoot, '.opl-framework-installed-source-identity.json');
+    const identity = JSON.parse(fs.readFileSync(identityPath, 'utf8'));
+    fs.writeFileSync(identityPath, JSON.stringify({ ...identity, identity_source: 'explicit_source_commit' }));
     const product = readInstalledSoftwareProducts()[0];
     assert.equal(product.update_status, 'available');
     assert.equal(product.available_version, '0.3.13');

@@ -110,7 +110,7 @@ export function readManagedFrameworkGitInstallation(root: string, env: NodeJS.Pr
     if (!fs.statSync(path.join(root, '.git')).isDirectory()) return null;
     const identity = readJsonPayloadFile(path.join(root, '.opl-framework-installed-source-identity.json'));
     if (!isRecord(identity) || identity.schema !== 'opl_framework_installed_source_identity.v1'
-      || identity.install_mode !== 'git' || identity.identity_source !== 'git_head'
+      || identity.install_mode !== 'git' || !['git_head', 'explicit_source_commit'].includes(String(identity.identity_source))
       || typeof identity.framework_sha !== 'string' || !/^[0-9a-f]{40}$/.test(identity.framework_sha)) return null;
     const installedCommand = path.join(env.HOME?.trim() || os.homedir(), '.local', 'bin', 'opl');
     if (!pathsReferToSameLocation(installedCommand, path.join(root, 'bin', 'opl'))) return null;
