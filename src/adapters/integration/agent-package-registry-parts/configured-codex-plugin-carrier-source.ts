@@ -168,7 +168,7 @@ function json(bytes: Buffer) {
 
 // Full is a transport seed. The current owner/payload still selects the version,
 // and installPayloadMarketplace verifies every file and the content lock.
-function acquirePackagedSource(input: {
+export function acquirePackagedSource(input: {
   packageId: string;
   ownerManifest: Record<string, unknown>;
   payload: Record<string, unknown>;
@@ -228,6 +228,12 @@ export function acquireHostedPackageSource(input: {
   const surface = isRecord(owner.codex_surface) ? owner.codex_surface : null;
   const carrier = isRecord(surface?.configured_codex_plugin_carrier)
     ? surface.configured_codex_plugin_carrier : null;
+  // Full is the only offline source for a local component without an independent
+  // publication. It is checked against the owner commit and payload closure by
+  // acquirePackagedSource; an absent or mismatched seed remains fail-closed.
+  if (capability && carrier?.publication_ref == null && owner.management_scope === 'local_component') {
+    return acquirePackagedSource(input);
+  }
   // Components are delivered by their parent product. Independent OPL software
   // must use a published artifact; only an explicit developer override above
   // may materialize a checkout. External carriers keep their native transport.

@@ -79,8 +79,10 @@ carrier 和显式开发目录继续使用原有生命周期，不因存在 paylo
 更新目标的版本与能力取自当前 owner projection；是否使用托管 payload 路径取自已安装
 carrier 的实际目录。选中新版 projection 时仍保留这项安装事实，更新与修复均遵循此规则。
 
-Capability Package 仅在声明 `publication_ref` 时进入 OCI source acquisition；未声明的
-Package 保留固定提交的 GitHub payload transport 和原有文件摘要、content lock 校验。
+Capability Package 仅在声明 `publication_ref` 时进入 OCI source acquisition。`local_component`
+由父产品交付：只有 Full seed 与 owner 版本、source commit 和物理 owner 描述匹配时，
+Framework 才投影安装或修复动作，并继续执行 payload 摘要及 content lock 校验；没有匹配 seed
+时不提供安装动作，也不回退在线下载。其他未声明 publication 的外部 Package 保留原生 transport。
 已声明但格式或身份不合法的 OCI reference 仍拒绝安装，不回退到其他来源。
 
 Package 不存在共享 Release Set、聚合 `latest-stable` 或整套冻结前置。每个

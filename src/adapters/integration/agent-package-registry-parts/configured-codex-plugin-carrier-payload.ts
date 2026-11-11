@@ -371,6 +371,10 @@ export function installPayloadMarketplace(input: {
     payload,
     env: input.env,
   });
+  if (projection.ownerManifest.management_scope === 'local_component' && !hostedSource) {
+    return localReadbackFailure('package_install_source_unavailable',
+      'Local components require the matching parent-product Full seed.', { package_id: input.packageId });
+  }
   if (projection.ownerManifest.visibility === 'authorized_only' && !hostedSource) {
     return localReadbackFailure('private_package_transport_unavailable',
       'Private Packages require their declared authenticated source.', { package_id: input.packageId });
