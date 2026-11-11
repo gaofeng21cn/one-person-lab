@@ -75,3 +75,90 @@ test('closeout consumed/writeback ref lists accept the published exact ref shape
   assert.throws(() => packet({ consumed_refs: [{}] }));
   assert.throws(() => packet({ writeback_receipt_refs: [42] }));
 });
+
+test('copying the supplied closeout identity survives ingress validation, including opaque idempotency', async () => {
+  const { normalizeTypedStageCloseoutPacket, validateCloseoutPacketForAttempt } = await import(
+    '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts'
+  );
+  const { protocolCloseoutResumePrompt } = await import(
+    '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts'
+  );
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-closeout-identity-'));
+  try {
+    const canonicalWorkItemRoot = path.join(workspaceRoot, 'run-identity');
+    fs.mkdirSync(canonicalWorkItemRoot);
+    const scope = createWorkItemExecutionScopeSnapshot({
+      projectScopeId: 'project:identity', workspaceBindingId: 'binding:identity',
+      domainId: 'agent_engineering', workspaceRoot, canonicalWorkItemRoot,
+      payload: { run_id: 'run-identity' }, requirement: { kind: 'work_item', alias_fields: ['run_id'] },
+    });
+    const attempt = {
+      stage_attempt_id: 'sat-identity', stage_run_id: 'sr-identity',
+      stage_id: 'mission-intake', attempt_role: 'producer',
+      idempotency_key: 'opaque/key:"value"/\\identity',
+      domain_id: 'agent_engineering', scope_kind: 'work_item', execution_scope: scope,
+      workspace_locator: { workspace_root: workspaceRoot, execution_scope: scope },
+    };
+    for (const prompt of [runnerPromptFor({ attempt }), protocolCloseoutResumePrompt(attempt)]) {
+      const lines = prompt.split('\n');
+      const marker = lines.findIndex((line) => line.startsWith('Exact typed closeout identity JSON'));
+      assert.notEqual(marker, -1);
+      const identity = JSON.parse(lines[marker + 1]);
+      assert.equal(identity.idempotency_key, attempt.idempotency_key);
+      assert.equal(identity.role, 'producer');
+      assert.deepEqual(identity.execution_scope, scope);
+      const packet = normalizeTypedStageCloseoutPacket({
+        surface_kind: 'stage_attempt_closeout_packet',
+        closeout_refs: ['file:///workspace/artifacts/mission.json'], ...identity,
+      });
+      assert.equal(validateCloseoutPacketForAttempt({ attempt, closeoutPacket: packet }).rejection, null);
+      const wrongIdentity = normalizeTypedStageCloseoutPacket({
+        ...packet, idempotency_key: 'another-attempt',
+      });
+      assert.equal(validateCloseoutPacketForAttempt({ attempt, closeoutPacket: wrongIdentity }).rejection?.reason,
+        'idempotency_key_mismatch');
+    }
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('closeout identity omits optional fields not supplied by the current Attempt', () => {
+  const prompt = runnerPromptFor({ attempt: { stage_attempt_id: 'sat-no-key', stage_id: 'intake' } });
+  const lines = prompt.split('\n');
+  const marker = lines.findIndex((line) => line.startsWith('Exact typed closeout identity JSON'));
+  assert.deepEqual(JSON.parse(lines[marker + 1]), { stage_attempt_id: 'sat-no-key', stage_id: 'intake' });
+});
+
+test('producer closeout with a changed in-place artifact still passes the zero-new-artifact guard', async () => {
+  const { verifyStageQualityCloseoutArtifactIdentity } = await import(
+    '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts'
+  );
+  const artifactRef = 'file:///workspace/run/artifacts/repair.json';
+  const inputHash = 'a'.repeat(64);
+  const outputHash = 'b'.repeat(64);
+  const packet = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: [artifactRef],
+    closeout_ref_metadata: [{ ref: artifactRef, sha256: `sha256:${outputHash}`, size_bytes: 1 }],
+    route_impact: { stage_quality_cycle: { artifact_refs: [artifactRef], artifact_hashes: [outputHash] } },
+    authority_boundary: { opl: 'transport_only' },
+  };
+  // Reaches byte verification (and fails there for the missing file), not the zero-new-artifact guard.
+  assert.throws(
+    () => verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: packet as never,
+      attempt: {
+        attempt_role: 'producer', domain_id: 'agent_engineering', stage_attempt_id: 'sat-repair',
+        input_artifact_refs: [artifactRef], reviewed_artifact_hashes: [inputHash],
+      } as never,
+      workspaceRoot: '/workspace/run',
+    }),
+    (error: unknown) => {
+      const detail = error as { details?: { blocked_reason?: string } };
+      assert.notEqual(detail.details?.blocked_reason, 'zero_new_artifact');
+      return true;
+    },
+  );
+});
+
