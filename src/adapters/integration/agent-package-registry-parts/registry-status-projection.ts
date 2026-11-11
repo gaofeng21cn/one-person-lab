@@ -409,12 +409,14 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
   const codexVisible = installed
     && descriptor.enabled
     && manifest.codex_interaction_mode !== 'headless_internal';
-  const sourceAvailable = packageInstallSourceAvailable(descriptor);
+  const parentSeedAvailable = manifest.management_scope === 'local_component' && componentSeedAvailable(descriptor);
+  const sourceAvailable = manifest.management_scope === 'local_component'
+    ? Boolean(descriptor.carrier.publicationRef) || parentSeedAvailable
+    : packageInstallSourceAvailable(descriptor);
   const installReason = !access.download_allowed
     ? access.reason ?? 'package_access_verification_required'
     : !sourceAvailable ? 'package_install_source_unavailable' : null;
   const downloadable = installReason === null;
-  const parentSeedAvailable = manifest.management_scope === 'local_component' && componentSeedAvailable(descriptor);
   const actions = (manifest.management_scope === 'local_component' && !parentSeedAvailable ? [] : actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode))
     .filter((action) => downloadable || !['agent_package_install', 'agent_package_update', 'agent_package_repair'].includes(action.action_id));
   const recommendedAction = !downloadable || (manifest.management_scope === 'local_component' && !parentSeedAvailable)
