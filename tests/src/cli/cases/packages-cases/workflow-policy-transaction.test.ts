@@ -36,6 +36,7 @@ function writeInstalledCodexPluginManager(
   options: { allowMutations?: boolean } = {},
 ) {
   const binary = path.join(root, 'fake-codex-installed-plugin-manager');
+  const marketplaceId = pluginId.split('@').slice(1).join('@');
   fs.mkdirSync(root, { recursive: true });
   fs.writeFileSync(binary, [
     '#!/usr/bin/env node',
@@ -45,7 +46,7 @@ function writeInstalledCodexPluginManager(
     "const mutation = /^plugin (add|remove|marketplace (add|remove|upgrade)) /.test(command);",
     'if (!readOnly && !(allowMutations && mutation)) process.exit(2);',
     "if (command === 'plugin marketplace list --json') {",
-    "  process.stdout.write(JSON.stringify({ marketplaces: [{ name: 'fixture-marketplace', marketplaceSource: { sourceType: 'local', source: 'fixture-marketplace' } }] }));",
+    `  process.stdout.write(JSON.stringify({ marketplaces: [{ name: ${JSON.stringify(marketplaceId)}, marketplaceSource: { sourceType: 'local', source: ${JSON.stringify(marketplaceId)} } }] }));`,
     '  process.exit(0);',
     '}',
     `process.stdout.write(JSON.stringify({ installed: [{`,
@@ -54,7 +55,7 @@ function writeInstalledCodexPluginManager(
     '  installed: true,',
     '  enabled: true,',
     `  source: { source: 'local', path: ${JSON.stringify(sourcePath)} },`,
-    "  marketplaceSource: { sourceType: 'local', source: 'fixture-marketplace' },",
+    `  marketplaceSource: { sourceType: 'local', source: ${JSON.stringify(marketplaceId)} },`,
     '}], available: [] }));',
   ].join('\n'), { mode: 0o755 });
   return binary;
@@ -65,10 +66,12 @@ function writeOplFlowPackage(
   options: {
     includeManagedSkillCompanion?: boolean;
     packageVersion?: string;
+    marketplaceId?: string;
   } = {},
 ) {
   const sourceRoot = path.join(root, 'fixture.opl-flow-source');
   const packageVersion = options.packageVersion ?? '0.1.16';
+  const marketplaceId = options.marketplaceId ?? 'fixture-marketplace';
   const experienceBaseline = options.includeManagedSkillCompanion ? [{
     id: 'ui-ux-pro-max',
     kind: 'codex_skill',
@@ -231,9 +234,9 @@ function writeOplFlowPackage(
       required_skill_ids: ['fixture.opl-flow', 'codex-ops-kit'],
       configured_codex_plugin_carrier: {
         kind: 'codex_plugin_manager',
-        plugin_selector: 'fixture.opl-flow@fixture-marketplace',
+        plugin_selector: `fixture.opl-flow@${marketplaceId}`,
         executor_route: 'codex_cli',
-        marketplace_source: 'fixture-marketplace',
+        marketplace_source: marketplaceId,
         publication_ref: 'ghcr.io/fixture/packages/fixture.opl-flow:latest-stable',
       },
     },
@@ -443,7 +446,7 @@ test('installed native descriptor excludes its active marketplace from historica
     'fixture.opl-flow',
     '0.1.16',
   );
-  const manifestPath = writeOplFlowPackage(packageRoot);
+  const manifestPath = writeOplFlowPackage(packageRoot, { marketplaceId });
   const sourceRoot = path.join(packageRoot, 'fixture.opl-flow-source');
   const configPath = path.join(codexHome, 'config.toml');
   const env = {
