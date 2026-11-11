@@ -1,4 +1,4 @@
-import { listKnowledgeSourceManagement } from '../../authority/packages/index.ts';
+import { listKnowledgeSourceManagement } from '../../authority/packages/public/knowledge-source-management.ts';
 import { listWorkspaceBindings } from '../../authority/workspace/public/app-state.ts';
 import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
 import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';

@@ -1,24 +1,20 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
-import { configuredPackagePayloadAvailable } from './configured-codex-plugin-carrier-payload.ts';
 import type { InstalledPackageDescriptor } from './installed-codex-plugin-directory-types.ts';
-import { githubPreviewSourceIdentity } from './package-github-preview-contract.ts';
 
 export function packageDistributionChannel(descriptor: InstalledPackageDescriptor) {
   if (descriptor.carrier.publicationRef) return 'release' as const;
   return descriptor.manifest.publication_channel_admission === 'development_only'
-    ? 'source' as const : 'unknown' as const;
+    ? 'development' as const : 'unknown' as const;
 }
 
 export function packageInstallSourceAvailable(descriptor: InstalledPackageDescriptor) {
-  // Publication admission is a distribution constraint, never a maturity label.
-  // Source distribution requires the pinned payload used by its native carrier.
-  if (descriptor.manifest.publication_channel_admission !== 'development_only') return true;
-  if (descriptor.manifest.visibility === 'authorized_only' && !descriptor.carrier.publicationRef
-    && !githubPreviewSourceIdentity(descriptor.manifest)) return false;
-  return configuredPackagePayloadAvailable({
-    packageId: descriptor.manifest.package_id,
-    pluginId: descriptor.carrier.carrier.pluginId,
-  });
+  // The Software Center only installs a formally admitted Package artifact.
+  // A developer checkout may remain active for an existing installation, but it
+  // is never a user-facing install/update/repair source.
+  if (descriptor.manifest.management_scope === 'deployment_target'
+    || descriptor.manifest.publication_channel_admission === 'development_only') return false;
+  if (descriptor.catalog_origin === 'external' || descriptor.manifest.source === 'third_party') return true;
+  return Boolean(descriptor.carrier.publicationRef);
 }
 
 export function assertPackageInstallSourceAvailable(descriptor: InstalledPackageDescriptor) {

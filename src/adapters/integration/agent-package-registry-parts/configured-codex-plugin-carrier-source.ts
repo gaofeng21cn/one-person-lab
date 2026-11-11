@@ -12,7 +12,6 @@ import { localReadbackFailure, runConfiguredDownloadWithTransientRetry, stringVa
 import { credentialForGithubPackages } from './package-registry-access-provider.ts';
 import { assertPackageDownloadAllowed, packageAccessSubject } from './package-access.ts';
 import { verifyPrivatePackagePublication } from './private-package-publication.ts';
-import { acquireGithubPreviewSource } from './configured-github-preview-source.ts';
 
 const PREFIX = 'application/vnd.onepersonlab.package.';
 const MAX_BYTES = 128 * 1024 * 1024;
@@ -221,8 +220,6 @@ export function acquireHostedPackageSource(input: {
   env: NodeJS.ProcessEnv;
 }) {
   const owner = input.ownerManifest;
-  const githubPreview = acquireGithubPreviewSource(input);
-  if (githubPreview) return githubPreview;
   const developerSource = acquireDeveloperCheckoutSource(input);
   if (developerSource) return developerSource;
   const standardAgent = owner.surface_kind === 'opl_agent_package_manifest.v1';
@@ -231,8 +228,11 @@ export function acquireHostedPackageSource(input: {
   const surface = isRecord(owner.codex_surface) ? owner.codex_surface : null;
   const carrier = isRecord(surface?.configured_codex_plugin_carrier)
     ? surface.configured_codex_plugin_carrier : null;
-  // Capability packages without an OCI publication retain their pinned payload transport.
-  if (capability && carrier?.publication_ref == null) return null;
+  // Components are delivered by their parent product. Independent OPL software
+  // must use a published artifact; only an explicit developer override above
+  // may materialize a checkout. External carriers keep their native transport.
+  if (capability && carrier?.publication_ref == null
+    && (owner.management_scope === 'local_component' || owner.source === 'third_party')) return null;
   const publication = stringValue(carrier?.publication_ref);
   const source = stringValue(carrier?.marketplace_source);
   const version = stringValue(owner.version);

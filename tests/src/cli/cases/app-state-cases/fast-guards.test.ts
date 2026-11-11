@@ -10,6 +10,13 @@ import { assert, createFakeCodexFixture, fs, os, path, runCli, runCliFailure, te
 import { assertCurrentOwnerDeltaProjection } from '../owner-payload-workorder-assertions.ts';
 import { writeCurrentOwnerDeltaProjectionCacheFixture } from './fixtures.ts';
 
+function fastStateByteBudget(output: any) {
+  // Catalog growth is legitimate; payload growth per entry and fixed overhead
+  // remain bounded independently of the current number of admitted products.
+  const entries = output.app_state.agent_packages.directory.entries;
+  return 192 * 1024 + entries.length * 8 * 1024;
+}
+
 function seedLargeRuntimeActivityFixture(stateDir: string) {
   const queueDb = path.join(stateDir, 'family-runtime', 'queue.sqlite');
   fs.mkdirSync(path.dirname(queueDb), { recursive: true });
@@ -298,6 +305,14 @@ exit 1
     assert.doesNotMatch(app.plan.summary, /manual|repair|required/i);
     assert.equal(base.current.installed_version, '0.125.0');
     assert.equal(Array.isArray(base.current.dependency_catalog.flow_dependencies), true);
+    assert.equal(Array.isArray(base.current.dependency_catalog.dependencies), true);
+    const codexDependency = base.current.dependency_catalog.dependencies.find((entry: Record<string, unknown>) => entry.dependency_id === 'codex-cli');
+    assert.equal(codexDependency.installed, true);
+    assert.equal(codexDependency.version, 'codex-cli 0.125.0');
+    assert.equal(Object.hasOwn(codexDependency, 'external_installations'), false);
+    const temporalDependency = base.current.dependency_catalog.dependencies.find((entry: Record<string, unknown>) => entry.dependency_id === 'temporal-system-cli');
+    assert.equal(temporalDependency.installed, true);
+    assert.equal(temporalDependency.currentness, 'unknown');
     assert.equal(Object.hasOwn(base.current.dependency_catalog, 'flow_dependency_ids'), false);
     assert.equal(fs.existsSync(npmMarker), false);
     assert.equal(fs.existsSync(brewMarker), false);
@@ -324,7 +339,7 @@ test('app state fast stays bounded for GUI rendering', () => {
       JSON.stringify((output as any).app_state.managed_update),
       'utf8',
     );
-    assert.equal(byteLength <= 262144, true, `fast app state was ${byteLength} bytes`);
+    assert.equal(byteLength <= fastStateByteBudget(output), true, `fast app state was ${byteLength} bytes`);
     assert.equal(
       managedUpdateByteLength <= 32768,
       true,
@@ -359,7 +374,7 @@ test('app state fast excludes unregistered runtime history from the work-item in
     );
     const workItemProjectionV2 = workbench.work_item_projection_v2;
 
-    assert.equal(Buffer.byteLength(JSON.stringify(output), 'utf8') <= 262144, true);
+    assert.equal(Buffer.byteLength(JSON.stringify(output), 'utf8') <= fastStateByteBudget(output), true);
     assert.equal(runtimeTasks.length, 0);
     assert.equal(workbench.task_run_projection_v2.tasks.length, 0);
     assert.equal('work_item_projection_v1' in workbench.task_run_projection_v2, false);

@@ -294,7 +294,10 @@ jobs:
           import fs from 'node:fs';
           import crypto from 'node:crypto';
           const spki = (file) => crypto.createPublicKey(fs.readFileSync(file)).export({ type: 'spki', format: 'der' });
-          const expected = spki('contracts/opl-framework/keys/private-package-signing.pub');
+          const packageId = process.env.PACKAGE_ID;
+          if (!/^[a-z0-9][a-z0-9.-]*$/.test(packageId ?? '')) throw new Error('Invalid signing Package identity.');
+          const packageKey = `contracts/opl-framework/keys/private-packages/${packageId}.pub`;
+          const expected = spki(fs.existsSync(packageKey) ? packageKey : 'contracts/opl-framework/keys/private-package-signing.pub');
           const actual = spki(`${process.env.RUNNER_TEMP}/private-package-signing.pub`);
           if (!expected.equals(actual)) throw new Error('Private Package signing key does not match the Framework trust root.');
           NODE

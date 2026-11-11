@@ -45,6 +45,8 @@ export type InstalledPackageManifest = Pick<
   | 'version'
   | 'source'
   | 'source_repo'
+  | 'management_scope'
+  | 'deployment_target'
   | 'visibility'
   | 'access_policy_ref'
   | 'credential_provider'

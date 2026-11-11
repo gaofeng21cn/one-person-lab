@@ -1,0 +1,179 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "opl-link-desktop-connector",
+  "plugin_id": "opl-link-desktop-connector",
+  "package_version": "0.1.1",
+  "source_repo": "https://github.com/gaofeng21cn/opl-link.git",
+  "source_commit": "dc64d2395803677d61f479bded79d813433e7df4",
+  "source_root": "packages/opl-link-desktop-connector",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:6b1ab8c483959a82e8c748fff11cabe41fc4627519b5e73d8346d0d89e2ef8d8"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/.codex-plugin/plugin.json",
+      "sha256": "sha256:817980d49ccc8e3423ad2ff96f6d3c11208ad27cc4a5c75bc579ce62b0261080"
+    },
+    {
+      "path": "release-cohort.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/release-cohort.json",
+      "sha256": "sha256:f5f1b0caeac215585735131c4b743a3c25ca6fe77cd0eebf67c27b3511f76420"
+    },
+    {
+      "path": "dist/ably-adapter.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/ably-adapter.d.ts",
+      "sha256": "sha256:c2f86bc828f95b6865bada0f1df113644f2438e85b99c99a5f19cafa8b548c54"
+    },
+    {
+      "path": "dist/ably-adapter.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/ably-adapter.js",
+      "sha256": "sha256:da5450c829c06656be7514aec24a72a39e52c3eccd20a204c38e791cb79b8029"
+    },
+    {
+      "path": "dist/batching.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/batching.d.ts",
+      "sha256": "sha256:4022306a818637580a0dc1725e06b18b6248629f79a98b8f2787ada9f7aeb850"
+    },
+    {
+      "path": "dist/batching.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/batching.js",
+      "sha256": "sha256:cdedda4226ce77b1b60b28cc572488be57eb7c6ace82adcd5cee5917f91ff246"
+    },
+    {
+      "path": "dist/constants.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/constants.d.ts",
+      "sha256": "sha256:1d26229359a40b02447592b9dabbafc47752a232e762f8db1987fc8764eadb40"
+    },
+    {
+      "path": "dist/constants.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/constants.js",
+      "sha256": "sha256:3535f8c38bd3a2e932decdd2ac2b0bafdf698d31acd94e0fe5b6834421c7de79"
+    },
+    {
+      "path": "dist/content-lock.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/content-lock.d.ts",
+      "sha256": "sha256:67eec33a73708cd5cdd4526c1de9fe45b9e81c3e977c182ed6206075fbba6cad"
+    },
+    {
+      "path": "dist/content-lock.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/content-lock.js",
+      "sha256": "sha256:8a5094b9e4d8b55bfa816fea342da499f4d6f9881a093086a6658535b2675fd6"
+    },
+    {
+      "path": "dist/controller.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/controller.d.ts",
+      "sha256": "sha256:ef7b01d8e66fd455d607b9bc0379675a0349a48b258ec05e445c88cdaf01fdb3"
+    },
+    {
+      "path": "dist/controller.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/controller.js",
+      "sha256": "sha256:71034bc5d5e2e929c531bb004419d11e24519e677244ac25920628800f09edc0"
+    },
+    {
+      "path": "dist/credentials.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/credentials.d.ts",
+      "sha256": "sha256:7141dee677fd99eaaded93153949e3e814d1099e8a006cf4cb53f54e861a2d4b"
+    },
+    {
+      "path": "dist/credentials.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/credentials.js",
+      "sha256": "sha256:4073df92b8147ec0372f48d745f00fce8acd8aac030cc13ad1554ac2f81b77fc"
+    },
+    {
+      "path": "dist/index.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/index.d.ts",
+      "sha256": "sha256:86fe6877a752d5d64b001d2ea26ce94b4eadb219e58b38965b2da80039a82fea"
+    },
+    {
+      "path": "dist/index.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/index.js",
+      "sha256": "sha256:7159d2d6f8b28e303694aee1b9bd60646fe6776d5acda51328ba24b677c07734"
+    },
+    {
+      "path": "dist/projection.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/projection.d.ts",
+      "sha256": "sha256:77c3af707c2fd073a849a32d38c6e739f9f4e2b3e5170ddfa5fe328c540f467d"
+    },
+    {
+      "path": "dist/projection.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/projection.js",
+      "sha256": "sha256:adf17f2aa62b008ff1fa5e3ffc06d82e68915a34a49ed10f6911eea1cb7d7d2a"
+    },
+    {
+      "path": "dist/protocol.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/protocol.d.ts",
+      "sha256": "sha256:034417be8687f7312ef425470b4994143bcbbf39db8bc1d87f4a66525cc83f4c"
+    },
+    {
+      "path": "dist/protocol.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/protocol.js",
+      "sha256": "sha256:54afbbbaf584a478df73702ad1bb683338c6934a6662bb40e97454ae3fa0d369"
+    },
+    {
+      "path": "dist/types.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/types.d.ts",
+      "sha256": "sha256:6811cace5893010af8325dfefb8f6c8bd5d62cddaa5181dc6a4257b573f5d01a"
+    },
+    {
+      "path": "dist/types.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/types.js",
+      "sha256": "sha256:8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+    },
+    {
+      "path": "dist/worker-client.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/worker-client.d.ts",
+      "sha256": "sha256:608cdac827fcfc29a886fd23064e0ff5d0fac7612f3415c7eff34b8e8f58ac89"
+    },
+    {
+      "path": "dist/worker-client.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/dist/worker-client.js",
+      "sha256": "sha256:8c22ce2cf8cd5bd6010caae2f9f93a216b873c4f24386a6dd11e93db42c909fc"
+    },
+    {
+      "path": "package-lock.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/package-lock.json",
+      "sha256": "sha256:cef4ea2a8f57bc91d14ddd856356bf4164e3ec9f76516fc7d3d67297d08de9e8"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/package.json",
+      "sha256": "sha256:bd92b1f0b28e32d6b359179687995af712fc34e486ee4a05b22a590e58572c2f"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-link/dc64d2395803677d61f479bded79d813433e7df4/packages/opl-link-desktop-connector/opl-package.json",
+      "sha256": "sha256:65fea9ce103fb94788a3aeaf73487a7bd8b08d1d3bc13f88c196723759a4f249"
+    }
+  ]
+}

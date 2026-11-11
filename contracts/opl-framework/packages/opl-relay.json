@@ -398,6 +398,7 @@
       "en-US": "Read mail, edit threaded replies, review attachments and explicitly send verified drafts in a shared workbench."
     },
     "home_shortcuts": [],
-    "software_type": "application"
+    "software_type": "application",
+    "icon_ref": "assets/icon.png"
   }
 }

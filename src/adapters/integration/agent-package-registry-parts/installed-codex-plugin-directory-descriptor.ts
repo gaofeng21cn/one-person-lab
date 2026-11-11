@@ -119,6 +119,8 @@ function normalizeNativeCarrierManifest(
     version,
     source: 'installed_descriptor',
     source_repo: sourceRepo,
+    management_scope: 'external_carrier',
+    deployment_target: null,
     visibility: 'public',
     access_policy_ref: null,
     credential_provider: null,
@@ -337,6 +339,8 @@ export function withCurrentOwnerProjection(
         credential_provider: ownerProjection.manifest.credential_provider,
         source_repo: ownerProjection.manifest.source_repo,
         publication_channel_admission: ownerProjection.manifest.publication_channel_admission,
+        management_scope: ownerProjection.manifest.management_scope,
+        deployment_target: ownerProjection.manifest.deployment_target,
         codex_surface: {
           ...descriptor.manifest.codex_surface,
           configured_codex_plugin_carrier: {

@@ -14,6 +14,7 @@ import { normalizePresentation } from '../../src/adapters/integration/agent-pack
 import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
 import { directoryFrom } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
 import { compactFastAgentPackageDirectory } from '../../src/read-models/operator/app-state-fast-projection.ts';
+import { packageArtworkUrl } from '../../src/adapters/integration/agent-package-registry-parts/package-artwork.ts';
 import { isFirstPartyPackage } from '../../src/adapters/integration/agent-package-first-party.ts';
 
 const ownerManifest = JSON.parse(fs.readFileSync(
@@ -226,4 +227,22 @@ test('complete current owner presentation takes precedence over native carrier m
     manifest: { ...installed.manifest, presentation },
   });
   assert.deepEqual(merged.manifest.presentation, presentation);
+});
+
+
+test('catalog artwork uses immutable payload paths and never sends private artwork to an anonymous URL', () => {
+  const owners = discoverCurrentOwnerPackageDescriptors();
+  const mas = owners.get('mas')!;
+  assert.ok(mas);
+  const url = packageArtworkUrl(mas);
+  assert.ok(url?.includes(`/med-autoscience/${mas.manifest.carrier_source_commit}/plugins/med-autoscience/assets/icon.svg`));
+  const before = mas.manifest.visibility;
+  mas.manifest.visibility = 'authorized_only';
+  assert.equal(packageArtworkUrl(mas), null);
+  mas.manifest.visibility = before;
+  mas.manifest.carrier_source_commit = 'main';
+  assert.equal(packageArtworkUrl(mas), null);
+  for (const icon_ref of ['../secret.svg', 'https://example.com/logo.svg', '/logo.png']) {
+    assert.throws(() => normalizePresentation({ home_shortcuts: [], icon_ref }, 'fixture'));
+  }
 });

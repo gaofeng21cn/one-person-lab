@@ -3,11 +3,11 @@
   "package_id": "agent-old-photo-workflow",
   "display_name": "Agent Old Photo Workflow",
   "publisher": "gaofeng21cn",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/agent-old-photo-workflow.git",
   "package_role": "capability_package",
-  "publication_channel_admission": "development_only",
+  "publication_channel_admission": "admitted",
   "capability_abi": {
     "id": "old-photo.v1",
     "version": "1.0.0",
@@ -47,10 +47,10 @@
       "plugin_selector": "agent-old-photo-workflow@agent-old-photo-workflow",
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/agent-old-photo-workflow",
-      "publication_ref": null
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/agent-old-photo-workflow:latest-stable"
     },
-    "carrier_source_commit": "be507179fd79ae5775cc5bbd62a8446695a34a91",
-    "plugin_payload_manifest_url": "payloads/agent-old-photo-workflow-0.1.0.json"
+    "plugin_payload_manifest_url": "payloads/agent-old-photo-workflow-0.1.1.json",
+    "carrier_source_commit": "467da66d1fb5c0c89d74401954b63624cc6a20a8"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -125,7 +125,7 @@
       "setup_extract_env.sh",
       "skills/agent-old-photo/SKILL.md"
     ],
-    "digest": "sha256:e5e4b9428ba208230e0f61003804b11a4aa06019f836f003f7ece51ccb260d2a"
+    "digest": "sha256:cee9b94cbc3f807456aac7e06d6c737996c1deef8c22e3ea2aac8a44f8df25e9"
   },
   "presentation": {
     "display_name_i18n": {
@@ -143,7 +143,13 @@
     "home_shortcuts": [],
     "software_type": "application"
   },
+  "management_scope": "local_product",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "publication_source": {
+    "module_id": "agent-old-photo-workflow",
+    "owner_package_manifest_ref": "opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
   "owner_package_manifest_ref": "opl-package.json",
   "owner_package_descriptor_ref": "opl-package.json"
 }

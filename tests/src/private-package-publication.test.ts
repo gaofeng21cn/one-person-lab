@@ -121,3 +121,18 @@ test('publication tooling explicitly selects its signed receipt without exposing
     publicationRequestId: 'release-request', workflowRepository: 'gaofeng21cn/private-agent', workflowRunId: '42' });
   assert.deepEqual(result.receipt, { publication_request_id: 'release-request' });
 });
+
+
+test('a Package-specific trust root replaces the shared root only for its bound identity', () => {
+  const packageId = 'med-autopractice';
+  const scoped = { ...firstParty, packageId,
+    subject: firstParty.subject.replace('/private-agent@', `/${packageId}@`),
+    accessPolicyRef: firstParty.accessPolicyRef.replace('/private-agent', `/${packageId}`) };
+  const run = ((_binary: string, args: string[]) => {
+    const trusted = path.resolve(PACKAGE_PROJECTION_ROOT, `../keys/private-packages/${packageId}.pub`);
+    assert.equal(args[args.indexOf('--public-key') + 1], trusted);
+    assert.match(fs.readFileSync(trusted, 'utf8'), /^-----BEGIN PUBLIC KEY-----/);
+    return { status: 0, stdout: JSON.stringify({ status: 'verified', subject: scoped.subject }) };
+  }) as unknown as typeof spawnSync;
+  assert.equal(verifyPrivatePackagePublication({ ...scoped, env: {}, run }).subject, scoped.subject);
+});

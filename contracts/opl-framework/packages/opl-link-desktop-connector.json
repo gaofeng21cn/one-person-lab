@@ -3,16 +3,9 @@
   "package_id": "opl-link-desktop-connector",
   "display_name": "OPL Link Desktop Connector",
   "publisher": "one-person-lab",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/opl-link.git",
-  "publication_channel_admission": "development_only",
-  "publication_projection_order": 110,
-  "publication_source": {
-    "module_id": "opl-link-desktop-connector",
-    "owner_package_manifest_ref": "packages/opl-link-desktop-connector/opl-package.json",
-    "owner_plugin_manifest_ref": "packages/opl-link-desktop-connector/.codex-plugin/plugin.json"
-  },
   "package_role": "capability_package",
   "owner_package_manifest_ref": "packages/opl-link-desktop-connector/opl-package.json",
   "owner_package_descriptor_ref": "opl-package.json",
@@ -39,6 +32,102 @@
       "export_name": "createRemoteCompanionConnector"
     }
   ],
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "navigation": [],
+    "views": [
+      {
+        "view_id": "remote-companion-access",
+        "view_type": "remote_companion_access",
+        "title_i18n": {
+          "en": "OPL Link",
+          "zh-CN": "OPL Link"
+        },
+        "data_ref": "remote_companion_access#state",
+        "command_ids": [
+          "pair-start",
+          "pair-refresh",
+          "pair-confirm",
+          "pair-cancel",
+          "device-rename",
+          "pair-revoke"
+        ],
+        "badge_ids": [],
+        "empty_state_i18n": {
+          "en": "OPL Link is unavailable",
+          "zh-CN": "OPL Link 当前不可用"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command_id": "pair-start",
+        "label_i18n": {
+          "en": "Pair device",
+          "zh-CN": "配对设备"
+        },
+        "action_ref": "remote_companion_access#pair.start",
+        "confirmation_required": false
+      },
+      {
+        "command_id": "pair-refresh",
+        "label_i18n": {
+          "en": "Refresh pairing",
+          "zh-CN": "刷新配对"
+        },
+        "action_ref": "remote_companion_access#pair.refresh",
+        "confirmation_required": false
+      },
+      {
+        "command_id": "pair-confirm",
+        "label_i18n": {
+          "en": "Confirm pairing",
+          "zh-CN": "确认配对"
+        },
+        "action_ref": "remote_companion_access#pair.confirm",
+        "confirmation_required": true
+      },
+      {
+        "command_id": "pair-cancel",
+        "label_i18n": {
+          "en": "Cancel pairing",
+          "zh-CN": "取消配对"
+        },
+        "action_ref": "remote_companion_access#pair.cancel",
+        "confirmation_required": false
+      },
+      {
+        "command_id": "pair-revoke",
+        "label_i18n": {
+          "en": "Revoke device",
+          "zh-CN": "撤销设备"
+        },
+        "action_ref": "remote_companion_access#pair.revoke",
+        "confirmation_required": true
+      },
+      {
+        "command_id": "device-rename",
+        "label_i18n": {
+          "en": "Rename device",
+          "zh-CN": "重命名设备"
+        },
+        "action_ref": "remote_companion_access#device.rename",
+        "confirmation_required": false
+      }
+    ],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "remote-companion-access",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 40,
+        "view_id": "remote-companion-access"
+      }
+    ]
+  },
   "content_lock": {
     "algorithm": "sha256",
     "canonicalization": "ordered_path_length_file_length_bytes",
@@ -70,13 +159,11 @@
       "package-lock.json",
       "package.json"
     ],
-    "digest": "sha256:a56d21c3f9d06547a6ca1311a78ea3e8b234fc83323ab2593053876e1b710049"
+    "digest": "sha256:6b1ab8c483959a82e8c748fff11cabe41fc4627519b5e73d8346d0d89e2ef8d8"
   },
   "codex_surface": {
     "plugin_id": "opl-link-desktop-connector",
     "plugin_source_path": "packages/opl-link-desktop-connector",
-    "plugin_payload_manifest_url": "payloads/opl-link-desktop-connector-0.1.0.json",
-    "carrier_source_commit": "c21e2ddda2f790d3f21677fcec616c29c343357f",
     "codex_default_exposure": false,
     "interaction_mode": "headless_internal",
     "configured_codex_plugin_carrier": {
@@ -84,11 +171,14 @@
       "plugin_selector": "opl-link-desktop-connector@opl-link",
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/opl-link",
-      "publication_ref": null
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-private-packages/opl-link-desktop-connector:latest-stable"
     },
     "optional_install_policy": "all_exported_skills",
-    "required_skill_ids": []
+    "required_skill_ids": [],
+    "plugin_payload_manifest_url": "payloads/opl-link-desktop-connector-0.1.1.json",
+    "carrier_source_commit": "dc64d2395803677d61f479bded79d813433e7df4"
   },
+  "implementation_state": "implementation_lane",
   "authority_boundary": {
     "transport_owner": "opl-link-desktop-connector",
     "credential_injection": "framework_protected_opaque_blob_only",
@@ -105,20 +195,31 @@
     "provider_history_as_truth_allowed": false,
     "provider_api_key_in_client_allowed": false
   },
+  "visibility": "authorized_only",
+  "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/opl-link-desktop-connector",
+  "credential_provider": "github_packages",
+  "publication_channel_admission": "admitted",
+  "management_scope": "local_component",
   "presentation": {
     "display_name_i18n": {
       "zh-CN": "OPL Link Desktop Connector",
       "en-US": "OPL Link Desktop Connector"
     },
     "description_i18n": {
-      "zh-CN": "为 OPL Link 提供桌面远程协同连接。",
-      "en-US": "OPL Link remote companion connector for OPL."
+      "zh-CN": "由 OPL Framework 托管的桌面对话连接组件，提供 OPL Link 的传输与配对适配。",
+      "en-US": "Framework-hosted desktop conversation connector for OPL Link transport and pairing."
     },
     "session_routing_summary_i18n": {
-      "zh-CN": "为 OPL Link 提供桌面远程协同连接。",
-      "en-US": "OPL Link remote companion connector for OPL."
+      "zh-CN": "供 Framework 托管的 OPL Link 桌面连接组件；远端部署和配对资格由产品合同单独确认。",
+      "en-US": "Framework-hosted OPL Link desktop connector; remote deployment and pairing remain separately qualified."
     },
     "home_shortcuts": [],
     "software_type": "capability"
+  },
+  "publication_projection_order": 110,
+  "publication_source": {
+    "module_id": "opl-link-desktop-connector",
+    "owner_package_manifest_ref": "packages/opl-link-desktop-connector/opl-package.json",
+    "owner_plugin_manifest_ref": "packages/opl-link-desktop-connector/.codex-plugin/plugin.json"
   }
 }

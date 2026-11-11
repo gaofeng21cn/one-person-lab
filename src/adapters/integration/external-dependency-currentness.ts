@@ -248,7 +248,7 @@ export function inspectExternalTemporalInstallation(
     dependency_id: 'temporal-system-cli', installed: true, binary_path: binaryPath,
     version: parseVersion(version)?.version ?? version,
     latest_version: latest,
-    currentness: currentness(version, latest),
+    currentness: options.inspectVersion === false ? 'unknown' : currentness(version, latest),
     ownership: owner,
     update_mode: action ? 'explicit_owner_delegated' : 'detect_only_guidance',
     update_action: action,

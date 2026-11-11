@@ -1,0 +1,167 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "agent-old-photo-workflow",
+  "plugin_id": "agent-old-photo-workflow",
+  "package_version": "0.1.1",
+  "source_repo": "https://github.com/gaofeng21cn/agent-old-photo-workflow.git",
+  "source_commit": "467da66d1fb5c0c89d74401954b63624cc6a20a8",
+  "source_root": ".",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:cee9b94cbc3f807456aac7e06d6c737996c1deef8c22e3ea2aac8a44f8df25e9"
+  },
+  "files": [
+    {
+      "path": ".agents/plugins/marketplace.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/.agents/plugins/marketplace.json",
+      "sha256": "sha256:5cf5c8a70ad1971465690779621b605e12d42fd873a86cb46b4609baae765d7b"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/.codex-plugin/plugin.json",
+      "sha256": "sha256:c2e539e49094b123d85f096aa66fcd2bdcfacd1fd260e121033c8107c6b4625c"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/README.md",
+      "sha256": "sha256:20fd9aee54ac4bb1e4a914555c8215b91c375f210202031d5e988dc05163701b"
+    },
+    {
+      "path": "README.zh-CN.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/README.zh-CN.md",
+      "sha256": "sha256:c356d3cb08401e1aba3c67f0c8a41c5699eedfdce6750863df6902f8640a2cbd"
+    },
+    {
+      "path": "agent_old_photo/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/agent_old_photo/__init__.py",
+      "sha256": "sha256:a1ae5c75e389f5f3485a71a6662636faf38863ca60c24fa4a3cb7d492da9b943"
+    },
+    {
+      "path": "agent_old_photo/cli.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/agent_old_photo/cli.py",
+      "sha256": "sha256:a17bf67bd0d7d5e2d2b50a0f234b00db7d26e1790fbd8c7a8a842eab2ab43e62"
+    },
+    {
+      "path": "agent_old_photo/pipeline.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/agent_old_photo/pipeline.py",
+      "sha256": "sha256:7b2f2a880927184cb0e9178fa5352e9671f547ad7db71575aea5be4f42b1c21a"
+    },
+    {
+      "path": "agent_old_photo/results.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/agent_old_photo/results.py",
+      "sha256": "sha256:c725f83f5da234216f71e44888e17fe05edfdd65dbe33e7b359fc7001213b7dd"
+    },
+    {
+      "path": "agent_old_photo/runtime_paths.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/agent_old_photo/runtime_paths.py",
+      "sha256": "sha256:a7c31fbc945a3f73fa91c7026e96623bf4c552167aa45f0197dc3305bf3bd5f8"
+    },
+    {
+      "path": "agent_old_photo/runtime_status.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/agent_old_photo/runtime_status.py",
+      "sha256": "sha256:4796629830148310d279023b04684d6846c32474865ada8b1da085fb76efcabe"
+    },
+    {
+      "path": "agent_old_photo/workflow.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/agent_old_photo/workflow.py",
+      "sha256": "sha256:c4c0262c752568c9545c344320649d25ccc8a0494d375d7cdaabb429ac13fa40"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/app-contribution-adapter.json",
+      "sha256": "sha256:13681b764b2ae0fd2555ab345b386b4455decb295947dea65fe4fba8e59329d2"
+    },
+    {
+      "path": "app_contribution.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/app_contribution.py",
+      "sha256": "sha256:e3504cc214b3b42c8664fb4a5d65ebfaef9052ee9a6523fc35a1495d866d37e4"
+    },
+    {
+      "path": "colorize_runner.py",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/colorize_runner.py",
+      "sha256": "sha256:2b0e6c365edbea8a71726f6f8820b1c87d0c99069a027765a70383895556b440"
+    },
+    {
+      "path": "extract_photo.py",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/extract_photo.py",
+      "sha256": "sha256:1c925c504c4bfcf7ab17cf75f7167c8c1c01d1dd4409bea69ee9e3cd3f7cc016"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/plugin.json",
+      "sha256": "sha256:ae662877a614d40edfa91367bb9c5555a1104c0047b423afade239f89b0a2585"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/pyproject.toml",
+      "sha256": "sha256:d5e7a7be1f0d5a08636053c501987755f8f5ff24898de90ea0779604084211f2"
+    },
+    {
+      "path": "restore_runner.py",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/restore_runner.py",
+      "sha256": "sha256:dba63a17f586f04f38615bc74e79c24ff8f7b6ab52832c442b70572ad272c780"
+    },
+    {
+      "path": "run_extract_restore.sh",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/run_extract_restore.sh",
+      "sha256": "sha256:87698f732b864eb753f1063f67f1ac641fb85369f39115d2efc57cbbc463332b"
+    },
+    {
+      "path": "run_extract_restore_colorize.sh",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/run_extract_restore_colorize.sh",
+      "sha256": "sha256:6a101b49ff65ab3d514c7251eb0572c6a21b31a9a6959df429b1826bd6d9f44a"
+    },
+    {
+      "path": "run_restore.sh",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/run_restore.sh",
+      "sha256": "sha256:cbed7d3bd37f49e474384f1f52b30a24c334743fc8f7903f2b0716baf19b9f8a"
+    },
+    {
+      "path": "setup_env.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/setup_env.sh",
+      "sha256": "sha256:0553c39189f88ff7202620d46966a0ee8fc57dbabbadceceffc46d89beeda356"
+    },
+    {
+      "path": "setup_extract_env.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/setup_extract_env.sh",
+      "sha256": "sha256:d752497cba240215a2b11b6da46b92a2f1358547dac73caf595e73482bebc937"
+    },
+    {
+      "path": "skills/agent-old-photo/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/skills/agent-old-photo/SKILL.md",
+      "sha256": "sha256:3e6056c837298f3ed85179eea3f3d9e1118f74c32f38db9d62bc96813be85ee8"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/agent-old-photo-workflow/467da66d1fb5c0c89d74401954b63624cc6a20a8/opl-package.json",
+      "sha256": "sha256:212d5df8644370c130d94f9163a5aa328ea3031d5f821796050b897cb8a7c5dc"
+    }
+  ]
+}

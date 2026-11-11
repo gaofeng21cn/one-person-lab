@@ -156,5 +156,6 @@
     },
     "home_shortcuts": [],
     "software_type": "capability"
-  }
+  },
+  "management_scope": "local_component"
 }

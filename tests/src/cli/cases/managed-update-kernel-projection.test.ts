@@ -279,6 +279,7 @@ test('managed update contract exposes only OPL Base, OPL App, and OPL Packages l
     ],
     flow_dependencies_path: 'components[opl_base].current.dependency_catalog.flow_dependencies',
     flow_dependencies_contract_ref: 'base_dependency_catalog_contract.flow_dependencies_projection',
+    runtime_dependencies_path: 'components[opl_base].current.dependency_catalog.dependencies',
     forbidden_kernel_envelope_fields: [
       'authority_boundary',
       'conditions',
@@ -376,7 +377,10 @@ test('full managed update projection materializes only the three lifecycle owner
 });
 
 test('opl update projects coordinated Base and installed Packages while rejecting internal selectors', () => {
-  const output = runCli(['update', 'status']) as Record<string, any>;
+  const output = runCli(['update', 'status'], {
+    OPL_DEPENDENCY_TEST_OVERRIDE: '1',
+    OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
+  }) as Record<string, any>;
   const components = output.managed_update.components;
 
   assert.equal(output.managed_update.requested_component_id, null);

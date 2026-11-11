@@ -402,7 +402,7 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.equal(loadOplPackageSpecs().some((spec) => spec.package_id === 'opl-channel-weixin'), true);
   assert.equal(getOplPackageSpecs().some((spec) => spec.package_id === 'opl-link-desktop-connector'), true);
   assert.equal(publisherPackageIds.includes('opl-channel-weixin'), false);
-  assert.equal(publisherPackageIds.includes('opl-link-desktop-connector'), false);
+  assert.equal(publisherPackageIds.includes('opl-link-desktop-connector'), true);
   assert.doesNotMatch(workflow, /type: choice/);
   // Exercise the actual shell path guard before manifest resolution.
   const packageIdGuard = workflow.split('\n').find((line) => line.includes('Invalid Package id'))!.trim();
@@ -412,14 +412,14 @@ test('single-Package publication is protected, selector-bound, and readback-only
     });
     assert.equal(guarded.status === 0, Boolean(id) && !id.includes('/'));
   }
-  const linkPublicationGate = spawnSync(process.execPath, [
+  const componentPublicationGate = spawnSync(process.execPath, [
     '--experimental-strip-types',
     path.join(repoRoot, 'scripts/package-source-projection-gate.mjs'),
-    '--package-id', 'opl-link-desktop-connector',
+    '--package-id', 'opl-channel-weixin',
     '--owner-root', repoRoot,
   ], { cwd: repoRoot, encoding: 'utf8' });
-  assert.equal(linkPublicationGate.status, 1);
-  assert.match(linkPublicationGate.stderr, /Package is not admitted to the publication channel/);
+  assert.equal(componentPublicationGate.status, 1);
+  assert.match(componentPublicationGate.stderr, /Unknown canonical Package id: opl-channel-weixin/);
   for (const spec of packageSpecs) {
     const manifest = parseJsonText(
       fs.readFileSync(path.join(repoRoot, spec.package_manifest_ref), 'utf8'),
@@ -677,7 +677,7 @@ test('private Package publisher verifies its signing key against the shipped tru
     fs.mkdirSync(runnerTemp);
     fs.copyFileSync(path.join(repoRoot, 'contracts/opl-framework/keys/private-package-signing.pub'), expectedPath);
     const runCheck = () => spawnSync(process.execPath, ['--input-type=module'], {
-      cwd: root, encoding: 'utf8', input: script, env: { ...process.env, RUNNER_TEMP: runnerTemp },
+      cwd: root, encoding: 'utf8', input: script, env: { ...process.env, RUNNER_TEMP: runnerTemp, PACKAGE_ID: 'fixture' },
     });
     fs.copyFileSync(expectedPath, actualPath);
     const matched = runCheck();
@@ -687,6 +687,12 @@ test('private Package publisher verifies its signing key against the shipped tru
     const mismatched = runCheck();
     assert.notEqual(mismatched.status, 0);
     assert.match(mismatched.stderr, /does not match the Framework trust root/);
+    const packageKey = path.join(root, 'contracts/opl-framework/keys/private-packages/fixture.pub');
+    fs.mkdirSync(path.dirname(packageKey), { recursive: true });
+    fs.copyFileSync(actualPath, packageKey);
+    assert.equal(runCheck().status, 0, 'package-scoped key is accepted for that Package');
+    fs.copyFileSync(expectedPath, actualPath);
+    assert.notEqual(runCheck().status, 0, 'shared key cannot override a Package-specific trust root');
     fs.rmSync(actualPath);
     assert.notEqual(runCheck().status, 0, 'missing derived signing key fails closed');
     assert.ok(workflow.indexOf('Check private Package signing credentials')

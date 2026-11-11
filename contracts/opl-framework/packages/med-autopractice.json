@@ -4,14 +4,14 @@
   "display_name": "Med Auto Practice",
   "description": "医生主导的临床资料整理、病历草拟与医嘱协作；当前提供规划及合成任务验证。",
   "publisher": "gaofeng21cn",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/med-autopractice.git",
   "visibility": "authorized_only",
-  "access_policy_ref": "github-repository:gaofeng21cn/med-autopractice",
+  "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/med-autopractice",
   "credential_provider": "github_packages",
   "package_role": "capability_package",
-  "publication_channel_admission": "development_only",
+  "publication_channel_admission": "admitted",
   "presentation": {
     "display_name_i18n": {
       "zh-CN": "Med Auto Practice",
@@ -26,7 +26,8 @@
       "en-US": "Use the MAP skill to inspect capabilities, plan work, and validate synthetic tasks. Clinical execution follows site qualification."
     },
     "home_shortcuts": [],
-    "software_type": "agent"
+    "software_type": "agent",
+    "icon_ref": "assets/branding/medautopractice-logo.png"
   },
   "capability_abi": {
     "id": "med-autopractice.capabilities",
@@ -75,10 +76,10 @@
       "plugin_selector": "med-autopractice@med-autopractice",
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/med-autopractice",
-      "publication_ref": null
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-private-packages/med-autopractice:latest-stable"
     },
-    "carrier_source_commit": "dfa8494d0ed3ba9df0306bdab3c94498baf90add",
-    "plugin_payload_manifest_url": "payloads/med-autopractice-0.0.1.json"
+    "plugin_payload_manifest_url": "payloads/med-autopractice-0.0.2.json",
+    "carrier_source_commit": "1c203c0e8e39b5f67b482c173a2dc105e215c820"
   },
   "content_lock": {
     "algorithm": "sha256",
@@ -145,9 +146,15 @@
       "src/med_autopractice/workflows/site_playbook.py",
       "src/med_autopractice/workflows/site_survey.py"
     ],
-    "digest": "sha256:554c8022d3741bfa8c4c69998d2aceefa15bee6d5ee95d3068eed8a2f2a06efa"
+    "digest": "sha256:ad1a5148d83a9ce9b6956fd224d14a35496300ab660da198b859820a47824eb0"
   },
+  "management_scope": "local_product",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "publication_source": {
+    "module_id": "med-autopractice",
+    "owner_package_manifest_ref": "opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
   "owner_package_manifest_ref": "opl-package.json",
   "owner_package_descriptor_ref": "opl-package.json"
 }

@@ -33,10 +33,11 @@ export function verifyPrivatePackagePublication(input: {
   // The first-party trust root is shipped with Framework, never obtained from
   // the artifact or an overridden Package projection directory.
   const configuredPublicKey = input.env.OPL_PACKAGE_SIGNING_PUBLIC_KEY;
+  const packagePublicKey = path.resolve(PACKAGE_PROJECTION_ROOT, `../keys/private-packages/${input.packageId}.pub`);
   const publicKey = configuredPublicKey !== undefined
     ? configuredPublicKey.trim()
     : (subject[1].startsWith('gaofeng21cn/one-person-lab-private-packages/')
-      ? path.resolve(PACKAGE_PROJECTION_ROOT, '../keys/private-package-signing.pub')
+      ? (fs.existsSync(packagePublicKey) ? packagePublicKey : path.resolve(PACKAGE_PROJECTION_ROOT, '../keys/private-package-signing.pub'))
       : null);
   if (!publicKey || !path.isAbsolute(publicKey)) return fail('trusted_signing_key_required');
   try { if (!fs.statSync(publicKey).isFile()) return fail('trusted_signing_key_unavailable'); }
