@@ -226,6 +226,26 @@ function renderCatalog() {
     if (!groups.has(packageId)) groups.set(packageId, { name: view.package_name, views: [] });
     groups.get(packageId).views.push(view);
   }
+  const picker = $('view-select');
+  const pickerGroups = new Map();
+  for (const view of views) {
+    if (!pickerGroups.has(view.package_id)) pickerGroups.set(view.package_id, { name: view.package_name, views: [] });
+    pickerGroups.get(view.package_id).views.push(view);
+  }
+  picker.innerHTML = [...pickerGroups.values()].map(group => `
+    <optgroup label="${escape(group.name)}">${group.views.map(view => `
+      <option value="${escape(key(view))}" ${key(view) === state.selectedKey ? 'selected' : ''}>${escape(localized(view.title_i18n, view.view_id))}</option>
+    `).join('')}</optgroup>
+  `).join('') || '<option value="">没有匹配的视图</option>';
+  picker.disabled = !views.length;
+  function selectView(selectedKey) {
+    state.selectedKey = selectedKey;
+    remember('opl-apps-selected', state.selectedKey);
+    state.itemId = '';
+    renderCatalog();
+    void loadSelected();
+  }
+  picker.onchange = () => selectView(picker.value);
   $('views').innerHTML = [...groups.entries()].map(([packageId, group]) => `
     <section class="package-group" aria-label="${escape(group.name)}">
       <h2>${escape(group.name)}</h2>
@@ -238,11 +258,7 @@ function renderCatalog() {
   `).join('') || '<div class="empty">没有匹配的 OPL 视图</div>';
   for (const button of $('views').querySelectorAll('[data-key]')) {
     button.addEventListener('click', () => {
-      state.selectedKey = button.dataset.key;
-      remember('opl-apps-selected', state.selectedKey);
-      state.itemId = '';
-      renderCatalog();
-      void loadSelected();
+      selectView(button.dataset.key);
     });
   }
 }

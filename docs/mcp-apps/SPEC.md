@@ -152,6 +152,18 @@ reuse the transport-only `workspace_path` or `work_item_root` fields.
 
 ## Host Flow
 
+`ui://opl/apps.html` is one MCP App surface. Its installed Package and runtime
+views are internal navigation, not separately launched MiniApps. The App host
+owns the MiniApp directory and its ephemeral UI session; this renderer owns only
+the selected business view and delegates reads and actions to the original owner.
+Closing the host surface does not cancel an owner task or remove a Package.
+
+The shared UI uses a compact searchable view list on wide screens and a labeled,
+grouped view selector in narrow panels. The content retains the available height;
+navigation must not reserve a fixed fraction of the viewport. Long titles and
+owner values wrap, keyboard focus remains visible, and touch controls keep a
+44px target. Theme changes preserve the current view and input.
+
 1. The Agent opens `open_opl_apps` with an optional Package/view focus.
 2. The view renders the selected owner result from the tool response, including
    the Agent's exact view and input focus. Later navigation reads owner state.
