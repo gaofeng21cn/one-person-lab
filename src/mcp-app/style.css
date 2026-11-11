@@ -1,6 +1,8 @@
 :root {
   color-scheme: light dark;
   font-family: var(--font-sans, "SF Pro Text", "PingFang SC", "Segoe UI", sans-serif);
+  font-size: 14px;
+  line-height: 1.5;
   --bg: var(--color-background-secondary, #f5f3ee);
   --panel: var(--color-background-primary, #fffdf8);
   --panel-strong: var(--color-background-primary, #ffffff);
@@ -53,8 +55,8 @@ body {
   background: var(--bg);
 }
 button, input, textarea, select { font: inherit; }
-button { color: inherit; }
-button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+button { color: inherit; min-height: 36px; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -62,7 +64,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .shell {
   height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(220px, 270px) minmax(0, 1fr);
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
   overflow: hidden;
 }
 
@@ -99,7 +101,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   gap: 5px;
   padding: 0 7px 14px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .search input {
   width: 100%;
@@ -116,10 +118,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   margin: 0;
   padding: 6px 8px 3px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: .04em;
-  text-transform: uppercase;
 }
 .view-button {
   width: 100%;
@@ -127,6 +127,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   border-radius: 9px;
   padding: 8px 9px;
   text-align: left;
+  overflow-wrap: anywhere;
   background: transparent;
   cursor: pointer;
 }
@@ -150,7 +151,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   align-items: flex-start;
   margin-bottom: 20px;
 }
-h1 { text-wrap: balance; margin: 0; font-size: clamp(22px, 3vw, 32px); letter-spacing: -.035em; }
+h1 { text-wrap: balance; overflow-wrap: anywhere; margin: 0; font-size: clamp(22px, 3vw, 28px); letter-spacing: -.025em; }
 .subtitle { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
 .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .toolbar-actions button, .action {
@@ -209,9 +210,9 @@ h1 { text-wrap: balance; margin: 0; font-size: clamp(22px, 3vw, 32px); letter-sp
   border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
   background: var(--accent-soft);
 }
-.item-button strong { display: block; font-size: 13px; }
+.item-button strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
 .item-button small { display: block; margin-top: 4px; color: var(--muted); line-height: 1.45; }
-.detail h2 { margin: 0 0 6px; font-size: 18px; }
+.detail h2 { margin: 0 0 6px; font-size: 18px; overflow-wrap: anywhere; }
 .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
 .detail pre, .json, .review {
   overflow: auto;
@@ -255,13 +256,17 @@ h1 { text-wrap: balance; margin: 0; font-size: clamp(22px, 3vw, 32px); letter-sp
   font-weight: 600;
 }
 
+.compact-navigation { display: none; }
 @media (max-width: 760px) {
-  .shell { grid-template-columns: 1fr; grid-template-rows: minmax(0, 40dvh) minmax(0, 1fr); }
-  .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
-  #views { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-  .package-group { margin-bottom: 4px; }
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .sidebar { padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .brand, .search, #views { display: none; }
+  .compact-navigation { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
+  .compact-navigation select { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); color: var(--text); }
+  button, input, select { min-height: 44px; }
+  input, select, textarea { font-size: 16px; }
   .collection { grid-template-columns: 1fr; }
-  .toolbar { align-items: stretch; flex-direction: column; }
+  .toolbar { align-items: stretch; flex-direction: column; gap: 12px; }
 }
 
 .task-workbench { display: grid; gap: 14px; min-width: 0; }
