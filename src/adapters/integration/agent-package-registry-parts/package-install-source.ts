@@ -2,7 +2,7 @@ import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { InstalledPackageDescriptor } from './installed-codex-plugin-directory-types.ts';
 import { acquirePackagedSource } from './configured-codex-plugin-carrier-source.ts';
 
-function componentSeedAvailable(descriptor: InstalledPackageDescriptor) {
+export function componentSeedAvailable(descriptor: InstalledPackageDescriptor) {
   const manifest = descriptor.manifest;
   const surface = manifest.codex_surface;
   try {

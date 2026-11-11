@@ -33,7 +33,7 @@ import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
 import { inspectOplModule } from '../system-installation/modules.ts';
 import type { AgentPackageInstallInput } from './types.ts';
 import { resolvePackageAccessDecision, type AgentPackageAccessDecision } from './package-access.ts';
-import { packageInstallSourceAvailable, packageDistributionChannel } from './package-install-source.ts';
+import { componentSeedAvailable, packageInstallSourceAvailable, packageDistributionChannel } from './package-install-source.ts';
 import { packageArtworkUrl } from './package-artwork.ts';
 import { packageInstallationProjection } from './package-installation-projection.ts';
 
@@ -414,9 +414,10 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     ? access.reason ?? 'package_access_verification_required'
     : !sourceAvailable ? 'package_install_source_unavailable' : null;
   const downloadable = installReason === null;
-  const actions = (manifest.management_scope === 'local_component' && !sourceAvailable ? [] : actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode))
+  const parentSeedAvailable = manifest.management_scope === 'local_component' && componentSeedAvailable(descriptor);
+  const actions = (manifest.management_scope === 'local_component' && !parentSeedAvailable ? [] : actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode))
     .filter((action) => downloadable || !['agent_package_install', 'agent_package_update', 'agent_package_repair'].includes(action.action_id));
-  const recommendedAction = !downloadable
+  const recommendedAction = !downloadable || (manifest.management_scope === 'local_component' && !parentSeedAvailable)
     ? null
     : installed ? (ready ? null : 'agent_package_repair') : 'agent_package_install';
   return {
