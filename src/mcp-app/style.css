@@ -113,16 +113,62 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 }
 
 #views { display: grid; gap: 4px; }
+.catalog-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 2px 7px 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.catalog-heading small { font-size: 11px; font-weight: 500; letter-spacing: 0; }
+.views-heading { margin-top: 18px; }
+#products { display: grid; gap: 6px; margin-bottom: 8px; }
+.product-entry { min-width: 0; }
+.product-entry-button {
+  width: 100%;
+  min-height: 66px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 11px;
+  color: var(--text);
+  text-align: left;
+  background: var(--panel-strong);
+  cursor: pointer;
+}
+.product-entry-button:hover, .product-entry.is-selected .product-entry-button { border-color: var(--accent); background: var(--accent-soft); }
+.product-entry-button:disabled { cursor: default; opacity: .62; }
+.product-entry-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.product-entry-top strong { overflow-wrap: anywhere; }
+.product-entry-button small { color: var(--muted); line-height: 1.4; overflow-wrap: anywhere; }
+.product-entry-meta { color: var(--muted); font-size: 11px; }
+.catalog-empty { padding: 10px 8px; color: var(--muted); font-size: 12px; }
 .package-group { display: grid; gap: 3px; margin-bottom: 11px; }
 .package-group h2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0;
   padding: 6px 8px 3px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
 }
+.package-group h2 small { font-size: 11px; font-weight: 500; }
 .view-button {
   width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   border: 0;
   border-radius: 9px;
   padding: 8px 9px;
@@ -131,6 +177,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   background: transparent;
   cursor: pointer;
 }
+.view-button > span:first-child { overflow-wrap: anywhere; }
+.view-button .entry-mark { flex: 0 0 auto; color: var(--muted); font-size: 10px; }
 .view-button:hover { background: color-mix(in srgb, var(--accent-soft) 65%, transparent); }
 .view-button[aria-current="page"] {
   color: var(--accent);

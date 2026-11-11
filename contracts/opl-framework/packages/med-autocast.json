@@ -98,7 +98,13 @@
         }
       }
     ],
-    "software_type": "agent"
+    "software_type": "agent",
+    "miniapp": {
+      "presentation_mode": "dedicated_app",
+      "entry_kind": "product_entry",
+      "direct_entry": true,
+      "entry_view_id": "med-autocast.workspace.media"
+    }
   },
   "requires": [
     {

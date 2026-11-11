@@ -50,6 +50,10 @@
 
 只读 UI 不必复制完整的 Agent 动作集。可调用能力与人类需要直接操作的范围分别设计；真正的写操作仍走同一 owner。
 
+产品入口与 MiniApp surface 采用两个层级：一个 Package 在 `catalog.products` 中只有一个产品入口，入口下面可以挂多个共享 internal view；只有 MCP catalog 中独立的 `server + resourceUri` 才计为一个 MiniApp。Package manifest 的 `presentation.miniapp` 声明入口形式和默认 view。产品卡不会自动启动独立 App，启动仍由 Studio 的 MiniApp 工作台显式执行。
+
+选择逻辑按交互密度落地：进度、列表、产物和低频审阅留在共享声明式 renderer；邮件编辑、媒体时码审看、revision-bound feedback 等高密度交互使用专用标准 MCP App；持续创作、设备、地图和监测才保留专业应用。判断依据是交互状态、输入密度、时序/预览要求和 owner 现有 UI 能力，不是 Package 名称或是否属于 OPL。
+
 ## 复用现有接线
 
 共享视图从 installed descriptor 发现。`app-contribution-adapter.json` 将现有 `data_ref`/`action_ref` 映射到 owner 的 JSON 读取、固定命令或已有 `runtime_context`；其路径、输入和输出以 [SPEC](./SPEC.md#adapters) 为准。工作区默认值可由绑定提供，不能靠让用户每次寻找 manifest 文件填空。

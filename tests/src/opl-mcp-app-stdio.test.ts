@@ -172,8 +172,13 @@ test('OPL MCP App starts through a linked launcher, exposes views and gates conf
     const opened = structured(await client.callTool({ name: 'open_opl_apps', arguments: {} }));
     const catalog = opened.opl_mcp_app_catalog as any;
     assert.equal(catalog.views.length, 4);
+    assert.equal(catalog.product_count, 2);
+    assert.deepEqual(catalog.products.map((product: any) => product.package_id), ['opl-runtime', 'mcp-app-fixture']);
     const fixtureView = catalog.views.find((view: any) => view.package_id === 'mcp-app-fixture');
     assert.equal(fixtureView.view_id, 'review');
+    assert.equal(fixtureView.presentation_mode, 'shared_view');
+    assert.equal(fixtureView.entry_kind, 'product_entry');
+    assert.equal(fixtureView.direct_entry, true);
     assert.equal(fixtureView.commands[0].confirmation_required, true);
     const focused = structured(await client.callTool({
       name: 'open_opl_apps',

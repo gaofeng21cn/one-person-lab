@@ -399,6 +399,11 @@
     },
     "home_shortcuts": [],
     "software_type": "application",
-    "icon_ref": "assets/icon.png"
+    "icon_ref": "assets/icon.png",
+    "miniapp": {
+      "presentation_mode": "dedicated_app",
+      "entry_kind": "product_entry",
+      "direct_entry": false
+    }
   }
 }

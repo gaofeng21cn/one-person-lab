@@ -159,6 +159,26 @@
         "display_name_i18n": { "$ref": "#/$defs/localized_text" },
         "description_i18n": { "$ref": "#/$defs/localized_text" },
         "session_routing_summary_i18n": { "$ref": "#/$defs/localized_text" },
+        "miniapp": {
+          "type": "object",
+          "required": ["presentation_mode", "entry_kind", "direct_entry"],
+          "properties": {
+            "presentation_mode": { "enum": ["shared_view", "dedicated_app", "professional_app"] },
+            "entry_kind": { "enum": ["product_entry", "runtime_view"] },
+            "direct_entry": { "type": "boolean" },
+            "entry_view_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+            }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "direct_entry": { "const": true } } },
+              "then": { "required": ["entry_view_id"] }
+            }
+          ],
+          "additionalProperties": false
+        },
         "home_shortcuts": {
           "type": "array",
           "items": { "$ref": "#/$defs/home_shortcut" }

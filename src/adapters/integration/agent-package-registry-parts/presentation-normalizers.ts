@@ -6,6 +6,7 @@ import type { AgentPackagePresentation } from './types.ts';
 const LOCALE_ID_PATTERN = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/;
 const HOME_SHORTCUT_ICON_ID_PATTERN = /^[A-Za-z][A-Za-z0-9._-]*$/;
 const PACKAGE_ICON_REF_PATTERN = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._/-]+\.(?:svg|png|webp)$/i;
+const MINIAPP_ENTRY_VIEW_ID_PATTERN = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 
 function normalizeLocalizedText(
   value: unknown,
@@ -134,6 +135,61 @@ export function normalizePresentation(
       failure_code: 'agent_package_presentation_invalid',
     });
   }
+  let miniapp: AgentPackagePresentation['miniapp'];
+  if (value.miniapp !== undefined) {
+    if (!isRecord(value.miniapp)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package presentation miniapp metadata must be an object.', {
+        manifest_url: manifestUrl,
+        field: 'presentation.miniapp',
+        failure_code: 'agent_package_presentation_invalid',
+      });
+    }
+    const miniappValue = value.miniapp;
+    const presentationMode = miniappValue.presentation_mode;
+    const entryKind = miniappValue.entry_kind;
+    const entryViewId = miniappValue.entry_view_id;
+    if (!['shared_view', 'dedicated_app', 'professional_app'].includes(String(presentationMode))) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package presentation miniapp.presentation_mode is unsupported.', {
+        manifest_url: manifestUrl,
+        field: 'presentation.miniapp.presentation_mode',
+        failure_code: 'agent_package_presentation_invalid',
+      });
+    }
+    if (!['product_entry', 'runtime_view'].includes(String(entryKind))) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package presentation miniapp.entry_kind is unsupported.', {
+        manifest_url: manifestUrl,
+        field: 'presentation.miniapp.entry_kind',
+        failure_code: 'agent_package_presentation_invalid',
+      });
+    }
+    if (typeof miniappValue.direct_entry !== 'boolean') {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package presentation miniapp.direct_entry must be a boolean.', {
+        manifest_url: manifestUrl,
+        field: 'presentation.miniapp.direct_entry',
+        failure_code: 'agent_package_presentation_invalid',
+      });
+    }
+    if (entryViewId !== undefined && (typeof entryViewId !== 'string' || !MINIAPP_ENTRY_VIEW_ID_PATTERN.test(entryViewId))) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package presentation miniapp.entry_view_id is invalid.', {
+        manifest_url: manifestUrl,
+        field: 'presentation.miniapp.entry_view_id',
+        failure_code: 'agent_package_presentation_invalid',
+      });
+    }
+    if (miniappValue.direct_entry && entryViewId === undefined) {
+      throw new FrameworkContractError('contract_shape_invalid', 'A direct MiniApp product entry must declare entry_view_id.', {
+        manifest_url: manifestUrl,
+        field: 'presentation.miniapp.entry_view_id',
+        failure_code: 'agent_package_presentation_invalid',
+      });
+    }
+    miniapp = {
+      presentation_mode: presentationMode as 'shared_view' | 'dedicated_app' | 'professional_app',
+      entry_kind: entryKind as 'product_entry' | 'runtime_view',
+      direct_entry: miniappValue.direct_entry,
+      ...(entryViewId === undefined ? {} : { entry_view_id: entryViewId }),
+    };
+  }
   return {
     ...(softwareType ? { software_type: softwareType as 'agent' | 'application' | 'capability' } : {}),
     ...(iconRef !== undefined ? { icon_ref: iconRef as string } : {}),
@@ -145,5 +201,6 @@ export function normalizePresentation(
       manifestUrl,
     ),
     home_shortcuts: homeShortcuts,
+    ...(miniapp ? { miniapp } : {}),
   };
 }

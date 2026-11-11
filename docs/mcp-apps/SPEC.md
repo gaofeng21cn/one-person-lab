@@ -34,6 +34,16 @@ They share project, work-item and artifact identity, and read the same result.
 Discovery remains descriptor-driven. A contribution does not introduce another
 application registry, session owner, task queue or credential store.
 
+The shared OPL Apps catalog exposes a Package-level `products` projection alongside
+its view list. A product entry is navigation metadata, not a MiniApp surface: one
+Package may expose several internal views inside `ui://opl/apps.html`, while a
+declared dedicated App has its own `server + resourceUri` identity. The projection
+uses `presentation.miniapp` when present and safely falls back to
+`shared_view/product_entry` with the first declared view as the navigation entry.
+`presentation_mode` is `shared_view`, `dedicated_app`, or `professional_app`;
+`entry_kind` is `product_entry` or `runtime_view`; `direct_entry` only controls the
+navigation affordance and never starts a surface.
+
 Three presentation forms can coexist within one Package:
 
 - Shared declarative views for progress, artifacts, lists and review.
@@ -157,6 +167,11 @@ views are internal navigation, not separately launched MiniApps. The App host
 owns the MiniApp directory and its ephemeral UI session; this renderer owns only
 the selected business view and delegates reads and actions to the original owner.
 Closing the host surface does not cancel an owner task or remove a Package.
+
+The catalog presents product entries before the internal view list. Selecting a
+product card or an internal view changes navigation within the existing shared
+surface. Relay mail and Med Auto Cast media review are dedicated surfaces and are
+started only through their own read-only launcher and resource initialization.
 
 The shared UI uses a compact searchable view list on wide screens and a labeled,
 grouped view selector in narrow panels. The content retains the available height;

@@ -213,6 +213,7 @@ function itemSummary(item) {
 
 function renderCatalog() {
   const views = state.catalog?.views || [];
+  const products = state.catalog?.products || [];
   const query = state.query.trim().toLocaleLowerCase();
   const filtered = views.filter((view) => {
     if (!query) return true;
@@ -246,16 +247,44 @@ function renderCatalog() {
     void loadSelected();
   }
   picker.onchange = () => selectView(picker.value);
-  $('views').innerHTML = [...groups.entries()].map(([packageId, group]) => `
-    <section class="package-group" aria-label="${escape(group.name)}">
-      <h2>${escape(group.name)}</h2>
+  const productMatches = products.filter((product) => {
+    if (!query) return true;
+    return `${product.package_id} ${product.package_name} ${localized(product.package_description_i18n)} ${localized(product.package_summary_i18n)}`
+      .toLocaleLowerCase().includes(query);
+  });
+  $('products').innerHTML = productMatches.map((product) => {
+    const entry = views.find((view) => view.package_id === product.package_id && view.view_id === product.entry_view_id)
+      || views.find((view) => view.package_id === product.package_id);
+    const entryKey = entry ? key(entry) : '';
+    const modeLabel = product.presentation_mode === 'dedicated_app'
+      ? '专用 App'
+      : product.presentation_mode === 'professional_app' ? '专业应用' : '共享视图';
+    return `<article class="product-entry ${entryKey === state.selectedKey ? 'is-selected' : ''}">
+      <button class="product-entry-button" type="button" data-key="${escape(entryKey)}" ${entryKey ? '' : 'disabled'}>
+        <span class="product-entry-top"><strong>${escape(product.package_name)}</strong><span class="badge">${escape(modeLabel)}</span></span>
+        <small>${escape(localized(product.package_summary_i18n || product.package_description_i18n, '已安装能力'))}</small>
+        <span class="product-entry-meta">${escape(String(product.view_count))} 个视图${product.direct_entry ? ' · 可直接进入' : ''}</span>
+      </button>
+    </article>`;
+  }).join('') || '<div class="catalog-empty">没有匹配的产品入口</div>';
+  for (const button of $('products').querySelectorAll('[data-key]')) {
+    button.addEventListener('click', () => selectView(button.dataset.key));
+  }
+  $('views').innerHTML = [...groups.entries()].map(([packageId, group]) => {
+    const product = products.find((entry) => entry.package_id === packageId);
+    const heading = product?.entry_kind === 'runtime_view' ? '运行时' : group.name;
+    return `<section class="package-group" aria-label="${escape(heading)}">
+      <h2>${escape(heading)}<small>${escape(String(group.views.length))}</small></h2>
       ${group.views.map((view) => `
         <button class="view-button" type="button" data-key="${escape(key(view))}" aria-current="${key(view) === state.selectedKey ? 'page' : 'false'}">
-          ${escape(localized(view.title_i18n, view.view_id))}
+          <span>${escape(localized(view.title_i18n, view.view_id))}</span>
+          ${view.view_id === product?.entry_view_id ? '<span class="entry-mark">入口</span>' : ''}
         </button>
       `).join('')}
-    </section>
-  `).join('') || '<div class="empty">没有匹配的 OPL 视图</div>';
+    </section>`;
+  }).join('') || '<div class="catalog-empty">没有匹配的内部视图</div>';
+  $('product-count').textContent = products.length ? `${products.length} 个` : '';
+  $('view-count').textContent = views.length ? `${views.length} 个` : '';
   for (const button of $('views').querySelectorAll('[data-key]')) {
     button.addEventListener('click', () => {
       selectView(button.dataset.key);
@@ -267,7 +296,10 @@ function renderHeader() {
   $('notice').hidden = true;
   const view = state.selected;
   $('title').textContent = view ? localized(view.title_i18n, view.view_id) : 'OPL 能力';
-  $('subtitle').textContent = view?.package_name || '';
+  const modeLabel = view?.presentation_mode === 'dedicated_app'
+    ? '专用 App'
+    : view?.presentation_mode === 'professional_app' ? '专业应用' : '共享视图';
+  $('subtitle').textContent = view ? `${view.package_name || ''} · ${modeLabel}` : '';
 }
 
 function commandForAction(view, action) {

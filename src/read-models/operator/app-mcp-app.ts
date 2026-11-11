@@ -129,15 +129,44 @@ function viewCommands(
   });
 }
 
+function miniAppPresentation(
+  descriptor: InstalledPackageDescriptor | null,
+  entryKind: 'product_entry' | 'runtime_view',
+  entryViewId?: string,
+) {
+  const declared = descriptor?.manifest.presentation?.miniapp;
+  if (declared) {
+    return {
+      presentation_mode: declared.presentation_mode,
+      entry_kind: declared.entry_kind,
+      direct_entry: declared.direct_entry,
+      ...(declared.entry_view_id ? { entry_view_id: declared.entry_view_id } : {}),
+    };
+  }
+  return {
+    presentation_mode: 'shared_view' as const,
+    entry_kind: entryKind,
+    direct_entry: entryKind === 'product_entry' && Boolean(entryViewId),
+    ...(entryViewId ? { entry_view_id: entryViewId } : {}),
+  };
+}
+
 function projectedViews(descriptor: InstalledPackageDescriptor) {
   const contributions = descriptor.manifest.app_contributions;
   if (!contributions) return [];
+  const firstViewId = contributions.views[0]?.view_id;
+  const miniapp = miniAppPresentation(descriptor, 'product_entry', firstViewId);
+  const description = descriptor.manifest.presentation?.description_i18n ?? {};
+  const sessionSummary = descriptor.manifest.presentation?.session_routing_summary_i18n ?? {};
   return contributions.views.flatMap((view) => {
     const placement = contributionPlacement(descriptor, view.view_id);
     return [{
       package_id: descriptor.manifest.package_id,
       agent_id: descriptor.manifest.agent_id,
       package_name: descriptor.manifest.display_name ?? descriptor.manifest.package_id,
+      package_description_i18n: localizedText(description),
+      package_summary_i18n: localizedText(sessionSummary),
+      ...miniapp,
       view_id: view.view_id,
       view_type: view.view_type,
       title_i18n: localizedText(view.title_i18n),
@@ -149,6 +178,22 @@ function projectedViews(descriptor: InstalledPackageDescriptor) {
       sort_order: placement?.sort_order ?? 10000,
     } satisfies JsonRecord];
   });
+}
+
+function projectedRuntimeViews() {
+  return FRAMEWORK_RUNTIME_VIEWS.map((view) => ({
+    ...view,
+    agent_id: null,
+    package_description_i18n: {
+      'zh-CN': 'OPL 运行时任务、上下文与阶段知识的通用入口。',
+      'en-US': 'Shared runtime views for work, context, and stage knowledge.',
+    },
+    package_summary_i18n: {
+      'zh-CN': '查看当前运行中的任务与上下文。',
+      'en-US': 'Inspect current runtime work and context.',
+    },
+    ...miniAppPresentation(null, 'runtime_view'),
+  }));
 }
 
 export function listOplMcpAppViews(input: {
@@ -173,13 +218,41 @@ export function listOplMcpAppViews(input: {
     ));
   const runtimeViews = input.packageId && input.packageId !== OPL_RUNTIME_PACKAGE_ID
     ? []
-    : FRAMEWORK_RUNTIME_VIEWS;
+    : projectedRuntimeViews();
   const views = [...runtimeViews, ...packageViews];
+  const products = [...new Map(views.map((view) => [String(view.package_id), view])).values()]
+    .map((view) => {
+      const packageViewsForEntry = views.filter((candidate) => candidate.package_id === view.package_id);
+      const entryViewId = String(view.entry_view_id ?? packageViewsForEntry[0]?.view_id ?? '');
+      const entryView = packageViewsForEntry.find((candidate) => candidate.view_id === entryViewId)
+        ?? packageViewsForEntry[0]
+        ?? view;
+      return {
+        package_id: view.package_id,
+        agent_id: view.agent_id ?? null,
+        package_name: view.package_name,
+        package_description_i18n: view.package_description_i18n ?? {},
+        package_summary_i18n: view.package_summary_i18n ?? {},
+        presentation_mode: view.presentation_mode,
+        entry_kind: view.entry_kind,
+        direct_entry: view.direct_entry === true,
+        entry_view_id: entryView.view_id,
+        view_count: packageViewsForEntry.length,
+      };
+    })
+    .sort((left, right) => (
+      (left.entry_kind === right.entry_kind
+        ? 0
+        : left.entry_kind === 'runtime_view' ? -1 : 1)
+      || String(left.package_name).localeCompare(String(right.package_name))
+    ));
   return {
     surface_kind: 'opl_mcp_app_view_catalog.v1',
     server_id: OPL_MCP_APP_SERVER_ID,
     package_filter: input.packageId ?? null,
     view_count: views.length,
+    product_count: products.length,
+    products,
     views,
     authority_boundary: {
       catalog_owner: 'one-person-lab',

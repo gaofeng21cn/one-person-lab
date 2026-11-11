@@ -135,6 +135,14 @@ export type AgentPackagePresentation = {
   description_i18n: AgentPackageLocalizedText;
   session_routing_summary_i18n: AgentPackageLocalizedText;
   home_shortcuts: AgentPackageHomeShortcutPresentation[];
+  miniapp?: AgentPackageMiniAppPresentation;
+};
+
+export type AgentPackageMiniAppPresentation = {
+  presentation_mode: 'shared_view' | 'dedicated_app' | 'professional_app';
+  entry_kind: 'product_entry' | 'runtime_view';
+  direct_entry: boolean;
+  entry_view_id?: string;
 };
 
 export type AgentPackageConfiguredCodexPluginCarrierDescriptor = {
