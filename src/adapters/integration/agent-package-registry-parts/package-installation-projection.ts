@@ -7,6 +7,8 @@ import { readPackageInstallationReadback } from './package-installation-readback
 import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
 import { readSoftwareInstallationOwner, softwareInstallationOperation } from './software-installation-owner.ts';
 import { getOplPackageSpecs } from '../package-distribution.ts';
+import { readOplDeveloperSupervisorConfig } from '../../../kernel/system-preferences.ts';
+import { resolveOplInstallUpdateSourcePolicy } from '../system-installation/modules.ts';
 
 function real(value: string) { try { return fs.realpathSync(value); } catch { return null; } }
 function versionAt(root: string, packageId: string) {
@@ -38,13 +40,30 @@ export function packageInstallationProjection(descriptor: InstalledPackageDescri
     revision: createHash('sha256').update(JSON.stringify(item)).digest('hex'),
     available_actions: [],
   }));
+  for (const row of installations) {
+    if (row.manager === 'uv') row.available_actions.push(softwareInstallationOperation(descriptor.manifest.package_id, row,
+      row.mode === 'development' ? 'unlink' : 'uninstall'));
+  }
   if (native) installations.push(...native.installations);
   const location = real(descriptor.sourcePath);
   const source = resolveAgentPackageEffectiveSourcePolicy(descriptor.manifest.package_id, { profile: 'fast' });
-  const explicitDeveloper = source.desired_source_kind === 'developer_checkout_override'
-    && source.configured_by !== 'native_git_checkout' && source.developer_checkout_available
-    && hostedSourceRoot !== null && real(hostedSourceRoot) === real(source.developer_checkout_path ?? '');
-  const developerPath = explicitDeveloper && source.developer_checkout_path ? real(source.developer_checkout_path) : null;
+  const spec = getOplPackageSpecs().find(entry => entry.package_id === descriptor.manifest.package_id);
+  const preference = source.module_id ? readOplDeveloperSupervisorConfig().module_source_preferences?.[source.module_id] : undefined;
+  const hostedRefs = descriptor.manifest.package_role === 'standard_agent'
+    ? descriptor.manifest.entrypoints.filter(entry => entry.entrypoint_kind === 'opl_hosted_action_catalog')
+      .map(entry => String(entry.source_ref ?? '')) : [];
+  const validHostedRoot = (root: string | null) => root && hostedRefs.length > 0
+    && ['contracts/domain_descriptor.json', ...hostedRefs].every(ref => {
+      const resolved = real(path.join(root, ref));
+      return ref && resolved?.startsWith(root + path.sep) && fs.statSync(resolved).isFile();
+    });
+  const explicitlyRegistered = source.configured_by === 'developer_mode' || source.configured_by === 'developer_mode_package_override'
+    || preference === 'developer' || preference === 'managed';
+  const developerRoot = spec && explicitlyRegistered
+    ? real(resolveOplInstallUpdateSourcePolicy(spec, { profile: 'fast' }).developer_checkout_path) : null;
+  const developerPath = validHostedRoot(developerRoot) && developerRoot !== location ? developerRoot : null;
+  const developerActive = developerPath !== null && hostedSourceRoot !== null && real(hostedSourceRoot) === developerPath;
+  const canSelect = developerPath && validHostedRoot(location) && !['module_path_override', 'env_source_mode', 'module_repo_url_override', 'full_runtime_override'].includes(source.configured_by);
   if (installed && location && !native) {
     const registeredLocal = descriptor.marketplaceSource && path.isAbsolute(descriptor.marketplaceSource)
       ? real(descriptor.marketplaceSource) : null;
@@ -54,12 +73,13 @@ export function packageInstallationProjection(descriptor: InstalledPackageDescri
       installation_id: `carrier:${descriptor.pluginId}`, kind: 'codex_plugin', version: descriptor.manifest.version,
       mode: localCheckout ? 'development' : 'installed', manager: 'codex_plugin_manager',
       location, location_ref: descriptor.carrier_readback.source_ref, evidence_ref: descriptor.manifestPath,
-      active: !developerPath && local.length === 0, entrypoint_verified: true,
+      active: !developerActive && local.length === 0, entrypoint_verified: true,
       revision: createHash('sha256').update(JSON.stringify({ manifest: descriptor.manifest_sha256, location,
         hostedSourceRoot, enabled: descriptor.enabled })).digest('hex'), available_version: availableVersion, available_actions: [],
     };
     const operation = localCheckout ? 'unlink' : 'uninstall';
     row.available_actions.push(softwareInstallationOperation(descriptor.manifest.package_id, row, operation));
+    if (canSelect && !row.active) row.available_actions.push(softwareInstallationOperation(descriptor.manifest.package_id, row, 'activate'));
     if (!localCheckout && availableVersion && valid(availableVersion) && valid(row.version) && gt(availableVersion, row.version))
       row.available_actions.push(softwareInstallationOperation(descriptor.manifest.package_id, row, 'update', availableVersion));
     installations.push(row);
@@ -67,13 +87,17 @@ export function packageInstallationProjection(descriptor: InstalledPackageDescri
   const developerVersion = developerPath ? versionAt(developerPath, descriptor.manifest.package_id) : null;
   if (developerPath) {
     const version = developerVersion;
-    if (version) installations.push({
+    if (version) {
+      const row: SoftwareInstallation = {
       installation_id: `developer:${createHash('sha256').update(developerPath).digest('hex').slice(0, 24)}`,
       kind: 'developer_checkout', version, mode: 'development', manager: 'opl_framework',
       location: developerPath, location_ref: developerPath, evidence_ref: source.configured_by,
-      active: true, entrypoint_verified: true, revision: createHash('sha256').update(`${developerPath}:${version}`).digest('hex'),
-      owner_settings_route: 'developer', available_actions: [],
-    });
+      active: developerActive, entrypoint_verified: true, revision: createHash('sha256').update(`${developerPath}:${version}:${hostedSourceRoot}`).digest('hex'),
+      available_actions: [],
+      };
+      if (canSelect && !row.active) row.available_actions.push(softwareInstallationOperation(descriptor.manifest.package_id, row, 'activate'));
+      installations.push(row);
+    }
   }
   const active = installations.filter(item => item.active);
   const status = native?.active_installation_status === 'unknown' || developerPath && !developerVersion ? 'unknown' as const
