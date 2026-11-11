@@ -226,7 +226,18 @@ function typedCloseoutScopeBindingLines(attempt: JsonRecord) {
   const scopeDigest = optionalString(scope?.scope_digest);
   const stageRunId = optionalString(attempt.stage_run_id);
   const attemptId = optionalString(attempt.stage_attempt_id);
+  const identity: JsonRecord = {};
+  for (const field of ['stage_attempt_id', 'stage_run_id', 'idempotency_key', 'stage_id']) {
+    const value = optionalString(attempt[field]);
+    if (value) identity[field] = value;
+  }
+  const role = optionalString(attempt.attempt_role);
+  if (role) identity.role = role;
+  if (scopeDigest) identity.scope_digest = scopeDigest;
+  if (scope) identity.execution_scope = scope;
   return [
+        'Exact typed closeout identity JSON (copy only these supplied identity fields; omit absent fields instead of reconstructing them):',
+        JSON.stringify(identity),
         'When returning a typed Stage closeout, use surface_kind "stage_attempt_closeout_packet" exactly and a non-empty closeout_refs array. These identify the transport packet, not a quality verdict.',
         ...(attemptId ? [`Any typed closeout packet must use stage_attempt_id "${attemptId}" exactly.`] : []),
         ...(stageRunId ? [`Any typed closeout packet must use stage_run_id "${stageRunId}" exactly.`] : []),
@@ -450,6 +461,7 @@ export function runnerPromptFor(input: {
     stagePacketRef
       ? 'Use the domain-owned stage packet as input within the stage skill boundary.'
       : 'No stage packet was supplied. Start from the declared stage id, hydrated stage prompt, workspace context, and any readable prior artifacts; record the missing packet as quality debt rather than stopping.',
+    'Do not delegate this Attempt to subagents, background agents, or parallel helper sessions. The Attempt ends when your turn ends, so work handed to another agent is discarded while its closeout is still expected; do the work in this session and finish with the artifacts on disk.',
     'Return progress through structured events when available.',
     ...qualityAttemptPromptLines(input.attempt, input.effectiveQualityRolePrompt, input.effectiveManagedContent),
     ...sourceTruthPromptLines(input.attempt),
@@ -467,8 +479,10 @@ export function runnerPromptFor(input: {
     'A typed closeout packet is preferred when naturally available. It is not required to make progress, but it is the only channel that can carry a cross-Stage route declaration for this Attempt.',
     'Your final message may be structured JSON or ordinary readable text. OPL persists it as a raw artifact and derives refs, hashes, lineage, and a minimal progress envelope.',
     'When this Attempt declares a cross-Stage route, make the final message exactly one JSON object with no surrounding prose and no code fence, using surface_kind "stage_attempt_closeout_packet" and a non-empty closeout_refs array for artifacts this Attempt actually produced.',
+    'For a producer or repairer Attempt, closeout_refs must name at least one artifact this Attempt produced. Listing only a StageRun input artifact as the produced output is rejected as zero_new_artifact: write the Stage decision to a new file and reference that file. A reviewer Attempt is exempt because it must reference the artifact it reviewed.',
+    'For a producer or repairer Attempt in a Stage that schedules formal Review, the typed closeout packet must be the entire final message. Ending with a prose summary leaves the packet missing; OPL then spends the remaining budget on a recovery turn, which can exhaust the Attempt and discard work that is already complete on disk.',
     'This applies whenever the final message is a typed closeout packet for a Stage that schedules formal Review: emit ONLY the raw JSON object as the entire final message — no leading sentence, no trailing explanation, and no ```json code fence. Prose or a fenced block makes the packet undiscoverable and silently discards the Attempt\'s review handoff, even when the referenced closeout file on disk is complete.',
-    'Copy the identity fields (stage_attempt_id, stage_run_id, idempotency_key, scope_digest, role, stage_id, execution_scope) character-for-character from the values given in this prompt. They are opaque and are not reconstructable from memory; a single mistyped character makes the whole packet unusable and discards the Attempt\'s semantic output, so prefer emitting them verbatim over retyping them.',
+    'Copy the supplied identity fields character-for-character from the exact typed closeout identity JSON above. Do not invent values for absent optional fields, search other Attempts for identities, or inspect runtime databases to reconstruct them. These fields identify only this Attempt; they do not grant semantic or quality authority.',
     'If closeout_ref_metadata is present, its objects may contain only ref_kind, kind, uri, sha256, ref, size_bytes, and artifact_identity_receipt_ref. Any other field makes the whole packet unusable, so keep domain semantics in the artifact body rather than in transport metadata.',
     'If the packet declares domain_output, it must contain exactly four fields: surface_kind "domain_owned_stage_output_ref", version "domain-owned-stage-output-ref.v1", domain_id, and output_ref (which must also appear in closeout_refs). The transport drops any other domain_output fields, so put supplementary refs, statuses, and prose in the artifact body instead.',
     'Cross-Stage semantic route selection must come from this StageRun\'s decisive Codex Attempt: the producer for a primary-only StageRun, otherwise the terminal reviewer or re-reviewer. Other Attempts may return evidence-backed stage_route_recommendation only. The decisive Attempt cannot write a Stage current pointer or materialize a Stage transition. OPL validates terminal-role eligibility, route shape, field exclusivity, legacy-field absence, finding closure, and declared target identity; the StageRun controller then materializes the accepted declared-Stage transition without judging its domain semantics.',

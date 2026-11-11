@@ -28,9 +28,15 @@ import {
 import { codexStageAttemptEnv } from './family-runtime-codex-stage-runner-parts/provider-env.ts';
 import {
   normalizeTypedStageCloseoutPacket,
+  type TypedStageCloseoutPacket,
   validateCloseoutPacketForAttempt,
 } from './family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
 import { recoverDefaultExecutorDomainReceiptCloseout } from './family-runtime-codex-stage-runner-parts/default-executor-recovery.ts';
+import { hydrateContentRefTransport } from './family-runtime-codex-stage-runner-parts/content-ref-transport-hydration.ts';
+import {
+  attemptProducedWorkspaceArtifact,
+  buildWorkspaceArtifactCloseoutPacket,
+} from './family-runtime-codex-stage-runner-parts/workspace-artifact-closeout.ts';
 import {
   buildAgentStageRunnerReceipt,
   buildCodexStageRunnerReceipt,
@@ -179,6 +185,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const stagePacketRef = resolvedStagePacketRef(input);
   const workspaceRoot = workspaceRootFromAttempt(input.attempt);
+  const attemptStartedAtMs = Date.now();
   if (runnerMode !== 'codex_cli') {
     return {
       ...buildCodexStageRunnerReceipt({ ...input, stagePacketRef }),
@@ -406,6 +413,15 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     observedAt: input.observedAt,
   });
   const attemptRole = optionalString(input.attempt.attempt_role);
+  // A producer that wrote nothing has nothing to close out. Raising the resume anyway
+  // makes the model invent a packet: the 2026-11-09 mission-intake resume named
+  // artifacts that never existed, which the identity guards then killed the run over.
+  const producerLike = attemptRole === 'producer' || attemptRole === 'repairer';
+  const producedArtifact = attemptProducedWorkspaceArtifact({
+    workspaceRoot,
+    producedAfterMs: attemptStartedAtMs,
+  });
+  const producedAnyMessage = Boolean(parsed.finalMessage || capturedLastMessage.message);
   if (
     !runInSandbox
     && !closeoutPacket
@@ -413,6 +429,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     && ['producer', 'reviewer', 'repairer', 're_reviewer'].includes(attemptRole ?? '')
     && result.timeoutReason !== 'unsupported_tool_protocol'
     && result.timeoutReason !== 'activity_cancelled'
+    && !(producerLike && !producedArtifact && !producedAnyMessage)
+    // The provider session was killed by the budget: this Attempt's output is the
+    // workspace, and resuming a killed session mostly produces invented packets.
+    && !(producerLike && producedArtifact && result.timeoutReason === 'total_timeout')
   ) {
     const resumeCapture = createCodexCloseoutCapture();
     protocolCloseoutResumeStatus = 'failed';
@@ -615,7 +635,18 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         'typed_closeout_not_required_raw_artifact_advanced',
       ],
     });
-  } else if (!closeoutPacket && primaryBlockedReason) {
+  } else if (!closeoutPacket) {
+    // Producers routinely finish the semantic work and still end the turn with no
+    // typed packet. Their Stage artifact is on disk; derive progress from it instead
+    // of failing the Attempt on a transport omission.
+    closeoutPacket = buildWorkspaceArtifactCloseoutPacket({
+      attempt: input.attempt,
+      stagePacketRef: stagePacketTransportRef ?? '',
+      workspaceRoot,
+      producedAfterMs: attemptStartedAtMs,
+    });
+  }
+  if (!closeoutPacket && primaryBlockedReason) {
     closeoutPacket = buildProviderRuntimeCloseoutPacket({
       attempt: input.attempt,
       stagePacketRef: stagePacketTransportRef,
@@ -635,12 +666,94 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       },
     });
   }
-  closeoutPacket = verifyStageQualityCloseoutArtifactIdentity({
-    closeoutPacket,
+  // A rejected artifact identity is a contract outcome of this Attempt, not a transport
+  // failure: surface it as a blocked closeout so the StageRun controller records a hard
+  // stop instead of retrying the Activity and re-running the provider session.
+  let identityBlockedReason: string | null = null;
+  try {
+    closeoutPacket = hydrateContentRefTransport({
+      closeoutPacket,
+      attempt: input.attempt,
+      workspaceRoot,
+    }) as typeof closeoutPacket;
+  } catch {
+    // Hydration only appends hash-verified files, so a failure here is a framework bug.
+    // Stop this Attempt cleanly rather than leave a half-written Attempt row behind.
+    closeoutPacket = buildProviderRuntimeCloseoutPacket({
+      attempt: input.attempt,
+      stagePacketRef: stagePacketTransportRef,
+      blockedReason: 'codex_cli_content_ref_transport_failed',
+      routeImpact: {
+        next_stage_may_start: false,
+        runner_exit_code: result.exitCode,
+      },
+    });
+  }
+  const verifyPacket = (packet: TypedStageCloseoutPacket | null) => verifyStageQualityCloseoutArtifactIdentity({
+    closeoutPacket: packet,
     attempt: input.attempt,
     workspaceRoot,
   });
-  const effectiveBlockedReason = reviewProtocolFailure ?? (rawStageArtifact ? null : primaryBlockedReason);
+  try {
+    closeoutPacket = verifyPacket(closeoutPacket);
+  } catch (error) {
+    const details = isRecord(error) && isRecord((error as { details?: unknown }).details)
+      ? (error as { details: JsonRecord }).details
+      : {};
+    const rejectionReason = optionalString(details.blocked_reason) ?? 'closeout_artifact_identity_unverified';
+    // The rejected packet is usually a resume that named another Attempt's artifact.
+    // This Attempt's own Stage output is on disk, so try to verify and advance on that
+    // instead of stopping the run over a transport error.
+    let recovered = false;
+    const artifactCloseout = buildWorkspaceArtifactCloseoutPacket({
+      attempt: input.attempt,
+      stagePacketRef: stagePacketTransportRef ?? '',
+      workspaceRoot,
+      producedAfterMs: attemptStartedAtMs,
+    });
+    if (artifactCloseout) {
+      try {
+        closeoutPacket = verifyPacket(artifactCloseout);
+        recovered = true;
+      } catch {
+        recovered = false;
+      }
+    }
+    if (!recovered) {
+      identityBlockedReason = rejectionReason;
+      closeoutPacket = buildProviderRuntimeCloseoutPacket({
+        attempt: input.attempt,
+        stagePacketRef: stagePacketTransportRef,
+        blockedReason: identityBlockedReason,
+        routeImpact: {
+          next_stage_may_start: false,
+          runner_exit_code: result.exitCode,
+          artifact_ref: optionalString(details.artifact_ref) ?? null,
+          missing_path: optionalString(details.missing_path) ?? null,
+        },
+      });
+    }
+  }
+  // A protocol closeout resume can recover a complete typed closeout after the primary
+  // process was killed by the total budget. The recovered packet is the Attempt's real
+  // result: the timeout stays visible in route_impact, but it must not fail the Attempt
+  // that already did the work.
+  const recoveredCloseoutAfterTimeout = protocolCloseoutResumeStatus === 'completed'
+    && protocolCloseoutResumePacketObserved;
+  // Any closeout that carries an advancing route is the Attempt's result, whatever
+  // produced it: the provider transcript, a protocol resume, or the Stage artifacts the
+  // Attempt wrote. A transport-level failure stays visible in route_impact instead of
+  // overriding work that is already complete on disk.
+  const closeoutAdvancesStage = Boolean(
+    closeoutPacket
+    && isRecord(closeoutPacket.route_impact)
+    && closeoutPacket.route_impact.next_stage_may_start === true,
+  );
+  const effectiveBlockedReason = reviewProtocolFailure
+    ?? identityBlockedReason
+    ?? (rawStageArtifact || recoveredCloseoutAfterTimeout || closeoutAdvancesStage
+      ? null
+      : primaryBlockedReason);
   const combinedStdout = [result.stdout, protocolCloseoutResumeResult?.stdout]
     .filter((entry): entry is string => Boolean(entry))
     .join('\n');

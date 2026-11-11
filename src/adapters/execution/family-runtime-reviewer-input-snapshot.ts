@@ -156,6 +156,7 @@ function normalizeAuthorityBinding(
 // checks to the strict re-normalization after supplementation.
 export type ReviewerInputSnapshotNormalizeOptions = {
   allowIncompleteMembers?: boolean;
+  rebindAuthorityIdentity?: boolean;
 };
 
 // The snapshot authoring prompt publishes the immutable fields under a
@@ -178,6 +179,7 @@ export function normalizeReviewerInputSnapshotRequest(
   options?: ReviewerInputSnapshotNormalizeOptions,
 ): ReviewerInputSnapshotMaterializationRequest {
   const allowIncompleteMembers = options?.allowIncompleteMembers === true;
+  const rebindIdentity = options?.rebindAuthorityIdentity === true;
   const request = foldSnapshotRequestHeading(value);
   requireExactReviewTransportKeys(request, [
     'surface_kind',
@@ -229,7 +231,7 @@ export function normalizeReviewerInputSnapshotRequest(
     : normalizeAuthorityBinding(expectedAuthority).review_lane_binding ?? null;
   const laneIsAuthoritative = expectedAuthority !== undefined && authoritativeLane !== null;
   const suppressLaneHint = expectedAuthority !== undefined && authoritativeLane === null;
-  const normalized = {
+  let normalized = {
     surface_kind: 'opl_reviewer_input_snapshot_materialization_request' as const,
     schema_version: 2 as const,
     owner_authority_ref: normalizeExactRef(request.owner_authority_ref, 'owner_authority_ref'),
@@ -256,21 +258,39 @@ export function normalizeReviewerInputSnapshotRequest(
         { missing_stage_run_input_refs: missingInputs.map((ref) => ref.ref) },
       );
     }
-    const authorityMetadataMatch = expected.owner_authority_refs.some((ref) => (
-      canonicalJsonText(ref) === canonicalJsonText(normalized.owner_authority_ref)
-    ));
-    if (
-      normalized.producer_attempt_ref !== expected.producer_attempt_ref
-      || normalized.execution_content_binding_sha256
-        !== expected.execution_content_binding_sha256
+    const identityMismatch = normalized.producer_attempt_ref !== expected.producer_attempt_ref
+      || normalized.execution_content_binding_sha256 !== expected.execution_content_binding_sha256
       || (laneIsAuthoritative && (normalized.review_lane ?? null) !== expected.review_lane_binding)
-      || !authorityMetadataMatch
-    ) {
+      || !expected.owner_authority_refs.some((ref) => (
+        canonicalJsonText(ref) === canonicalJsonText(normalized.owner_authority_ref)
+      ));
+    if (identityMismatch && !rebindIdentity) {
       throw reviewTransportError(
         'reviewer_input_snapshot_authority_binding_mismatch',
         'Reviewer input snapshot request does not match its producer Attempt binding and closeout metadata.',
         { producer_attempt_ref: normalized.producer_attempt_ref },
       );
+    }
+    if (identityMismatch) {
+      // First-contact completion of a model-authored closeout: producer_attempt_ref, the
+      // execution content binding, and the owner authority ref are Framework identity, not
+      // model knowledge, and the 2026-11-09 design-basis-admission producer echoed the
+      // previous Stage's values. The members still decide the review scope and are
+      // validated against owner closeout metadata and the frozen StageRun inputs, and the
+      // lane stays strict because it selects which review scope the members belong to.
+      if (laneIsAuthoritative && (normalized.review_lane ?? null) !== expected.review_lane_binding) {
+        throw reviewTransportError(
+          'reviewer_input_snapshot_authority_binding_mismatch',
+          'Reviewer input snapshot request does not match its producer Attempt binding and closeout metadata.',
+          { review_lane: normalized.review_lane ?? null },
+        );
+      }
+      normalized = {
+        ...normalized,
+        owner_authority_ref: expected.owner_authority_refs[0]!,
+        producer_attempt_ref: expected.producer_attempt_ref,
+        execution_content_binding_sha256: expected.execution_content_binding_sha256,
+      };
     }
   }
   return normalized;
@@ -507,7 +527,10 @@ export function completeReviewerSnapshotTransportEnvelope(
   expectedAuthority: ReviewerInputSnapshotAuthorityBinding,
   declaredArtifacts: { refs: string[]; hashes: string[] },
 ) {
-  const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority, { allowIncompleteMembers: true });
+  const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority, {
+    allowIncompleteMembers: true,
+    rebindAuthorityIdentity: true,
+  });
   const authority = normalizeAuthorityBinding(expectedAuthority);
   if (declaredArtifacts.refs.length !== declaredArtifacts.hashes.length) {
     throw reviewTransportError('reviewer_input_snapshot_artifact_identity_mismatch', 'Declared artifact refs and hashes must align.');
