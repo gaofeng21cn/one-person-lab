@@ -183,7 +183,7 @@ export function runOplFrameworkSelfUpdate(
   if (!sourceRootRaw) {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-channel-artifact-'));
     try {
-      const channelEntry = readFrameworkChannelEntry();
+      const channelEntry = input.channelEntry ?? readFrameworkChannelEntry();
       const pendingResult = pendingFrameworkArtifactResult(targetRoot, {
         sourceHeadSha: channelEntry.source_git_head_sha,
         sourceArchiveSha256: channelEntry.source_archive_sha256,

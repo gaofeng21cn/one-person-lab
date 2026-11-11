@@ -53,6 +53,7 @@ export type OplFrameworkRollbackTargetResult = {
 
 export type FrameworkSelfUpdateInput = {
   targetRoot: string;
+  channelEntry?: ReturnType<typeof import('./channel-artifact.ts').readFrameworkChannelEntry>;
   sourceRoot?: string | null;
   sourceArchive?: string | null;
   sourceArchiveSha256?: string | null;

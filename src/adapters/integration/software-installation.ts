@@ -5,6 +5,7 @@ import { executeSoftwareInstallationOwner } from './agent-package-registry-parts
 import { packageSnapshot, directoryFrom } from './agent-package-registry-parts/registry-status-projection.ts';
 import { runOplAgentPackageUpdate, runOplAgentPackageUninstall } from './agent-package-registry-parts/registry-lifecycle-actions.ts';
 import { getOplPackageSpecs } from './package-distribution.ts';
+import { executeFrameworkSoftwareInstallation } from './software-sources-framework-installation.ts';
 
 export const SOFTWARE_INSTALLATION_ACTION_ID = 'software_installation_execute';
 export function softwareInstallationActionCatalog() {
@@ -17,6 +18,7 @@ export function softwareInstallationActionCatalog() {
 }
 export async function executeSoftwareInstallationAction(payload: Record<string, unknown>) {
   if (typeof payload.package_id !== 'string') throw new FrameworkContractError('cli_usage_error', 'package_id is required.');
+  if (payload.package_id === 'opl-framework') return executeFrameworkSoftwareInstallation(payload);
   const snapshot = packageSnapshot({ includeAvailable: true, failClosedOnCarrierError: true });
   const descriptor = snapshot.installed.get(payload.package_id);
   if (descriptor?.manifest.entrypoints.some(entry => (entry.entrypoint_kind ?? entry.kind) === 'opl_software_installation_cli'))

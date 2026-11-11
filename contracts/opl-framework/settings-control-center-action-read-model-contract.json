@@ -225,6 +225,21 @@
     "second_registry": false,
     "second_updater": false
   },
+  "installed_software_products": {
+    "source": "software_sources.installed_products",
+    "independent_of_distribution_source_availability": true,
+    "framework_update_owner": "opl_framework_self_update",
+    "framework_release_authority": "independent_framework_oci_channel",
+    "framework_release_refresh_action": "source_check:public-registry:opl",
+    "framework_release_refresh_hint": "catalog_refresh_required",
+    "framework_update_action": "software_installation_execute",
+    "framework_update_payload": ["package_id", "installation_id", "expected_revision", "operation", "version"],
+    "framework_update_statuses": ["available", "current", "needs_restart", "unknown"],
+    "framework_update_rechecks_installation_and_channel": true,
+    "framework_update_preserves_active_generation_until_restart": true,
+    "framework_update_mutates_codex": false,
+    "framework_update_overwrites_development_checkout": false
+  },
   "configuration_catalog": {
     "surface_kind": "opl_settings_configuration_catalog.v1",
     "owner": "one-person-lab",

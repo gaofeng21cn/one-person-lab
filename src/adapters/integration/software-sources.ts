@@ -3,6 +3,7 @@ import { assertCredentialHandleOnlyPayload } from './connection-registry-parts/c
 import { normalizeSoftwareSourceCredential } from './software-sources-store.ts';
 import { verifySoftwareSourceCredential } from './software-sources-verification.ts';
 import { readInstalledSoftwareProducts } from './software-sources-framework-installation.ts';
+import { readFrameworkSoftwareRelease, refreshFrameworkSoftwareRelease } from './software-sources-framework-release.ts';
 import { executeHomebrewSourceAction, HOMEBREW_ACTION_IDS, homebrewActionCatalog, readHomebrewSourceProjection, refreshHomebrewSource, type HomebrewActionId } from './homebrew-source.ts';
 import type {
   SoftwareSource, SoftwareSourceConfigureInput, SoftwareSourceDependencies,
@@ -61,6 +62,7 @@ function publicSource(source: SoftwareSource, env: NodeJS.ProcessEnv = process.e
     catalog_source: { manager: 'opl_packages', marketplace_id: source.source_id, delivery: 'marketplace' as const },
     ...(inventory ?? {}),
     credential_handle_present: credentialPresent(source),
+    catalog_refresh_required: source.provider_id === 'public_registry' && readFrameworkSoftwareRelease(env).refresh_required,
     available_actions: sourceActionProjection().filter(action => sourceActions.includes(action.action_id)),
   };
 }
@@ -92,6 +94,7 @@ export async function checkOplSoftwareSource(sourceId: string, deps: SoftwareSou
   });
   const verified = { ...source, status: result.status, verified_at: nowIso(deps), verification_reason: result.verification_reason };
   const stored = writeSoftwareSource(verified, source.revision);
+  if (source.provider_id === 'public_registry' && !deps.verify) refreshFrameworkSoftwareRelease(deps.env);
   if (stored.visibility === 'authorized_only' && stored.status === 'authorized') {
     const refresh = deps.refreshPackageAccess
       ?? (await import('./agent-package-registry-parts/package-access.ts')).refreshGithubPackageSourceAccess;
