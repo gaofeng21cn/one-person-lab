@@ -409,10 +409,9 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
   const codexVisible = installed
     && descriptor.enabled
     && manifest.codex_interaction_mode !== 'headless_internal';
-  const parentSeedAvailable = manifest.management_scope === 'local_component' && componentSeedAvailable(descriptor);
-  const sourceAvailable = manifest.management_scope === 'local_component'
-    ? Boolean(descriptor.carrier.publicationRef) || parentSeedAvailable
-    : packageInstallSourceAvailable(descriptor);
+  const sourceAvailable = packageInstallSourceAvailable(descriptor);
+  const parentSeedAvailable = manifest.management_scope === 'local_component'
+    && sourceAvailable && componentSeedAvailable(descriptor);
   const installReason = !access.download_allowed
     ? access.reason ?? 'package_access_verification_required'
     : !sourceAvailable ? 'package_install_source_unavailable' : null;
