@@ -160,6 +160,8 @@ Package 目录的 `installed`、`installed_version` 仍表示配置的原生插�
 
 本机详情展示 owner 验证的绝对代码路径、安装模式、管理器、当前和可用版本及激活状态。用户资料、Obsidian 正文和密钥不因此进入软件清单。激活和生命周期动作绑定精确 installation_id 与 revision；操作后读取同一 owner。冲突、未知和未激活分别展示，禁止通过最大版本号掩盖不一致。
 
+Framework 托管运行时同样按实际安装执行更新，复用 Framework 自更新器和更新锁。可用版本来自其 OCI 发布频道；旧安装或频道修订的请求不能执行。暂存成功显示待重启，新一代通过启动验证后才成为激活版本；Codex 的版本和健康状态不代替 Framework 自身状态。
+
 有独立原生安装器的 Package 在 `entrypoints` 声明 `kind=opl_software_installation_cli`、`protocol=opl_software_installation.v1`、`runtime`、`source_ref` 和 `operations`。helper 必须随已安装 carrier 交付并纳入 content lock。Framework 通过固定 `--stdin` JSON 调用 owner，不执行 UI 提供的任意命令，也不执行软件源中尚未安装的新 helper。旧 carrier 可按 owner 的 `discovery.kind=macos_bundle` 回读实际 bundle，提示先更新集成组件；此时不猜测激活状态。集成组件记录留在 carrier 详情，不重复算作该产品的另一份程序安装。
 
 helper 的 `inspect` 不联网、不修改配置，返回 `package_id`、`installations`、`active_installation_id` 和 `active_installation_status`。每份实例提供位置、版本、`mode=release|development`、revision、active 和 supported_actions。已有实例的 activate/update/uninstall/unlink 均携带 id 和 revision；update 还绑定精确目标版本。Framework 投影 `installations`、`installation_actions` 及激活状态，App 仅渲染这些 owner 提供的动作。首装用 `operation=install`、精确 version 及安装清单 revision，无 installation_id；fresh inspect 后交还 owner 在锁内核对目标不存在或拒绝覆盖。开发安装保留原选择，安装发布版不自动替换已激活的开发版。

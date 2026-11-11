@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 
 import { resolveOplStatePaths } from '../../../../kernel/runtime-state-paths.ts';
 import { isRecord } from '../../../../kernel/contract-validation.ts';
@@ -53,6 +54,7 @@ export type OplFrameworkRollbackTargetResult = {
 
 export type FrameworkSelfUpdateInput = {
   targetRoot: string;
+  channelEntry?: ReturnType<typeof import('./channel-artifact.ts').readFrameworkChannelEntry>;
   sourceRoot?: string | null;
   sourceArchive?: string | null;
   sourceArchiveSha256?: string | null;
@@ -100,6 +102,25 @@ export function pathsReferToSameLocation(left: string, right: string) {
 
 export function isGitRepo(repoPath: string) {
   return runGit(['rev-parse', '--is-inside-work-tree'], repoPath).exitCode === 0;
+}
+
+/** Legacy Git installs are managed only when the installer receipt and active command agree. */
+export function readManagedFrameworkGitInstallation(root: string, env: NodeJS.ProcessEnv = process.env) {
+  try {
+    if (!fs.statSync(path.join(root, '.git')).isDirectory()) return null;
+    const identity = readJsonPayloadFile(path.join(root, '.opl-framework-installed-source-identity.json'));
+    if (!isRecord(identity) || identity.schema !== 'opl_framework_installed_source_identity.v1'
+      || identity.install_mode !== 'git' || !['git_head', 'explicit_source_commit'].includes(String(identity.identity_source))
+      || typeof identity.framework_sha !== 'string' || !/^[0-9a-f]{40}$/.test(identity.framework_sha)) return null;
+    const installedCommand = path.join(env.HOME?.trim() || os.homedir(), '.local', 'bin', 'opl');
+    if (!pathsReferToSameLocation(installedCommand, path.join(root, 'bin', 'opl'))) return null;
+    const top = runGit(['rev-parse', '--show-toplevel'], root);
+    if (top.exitCode !== 0 || !pathsReferToSameLocation(top.stdout.trim(), root)) return null;
+    const head = runGit(['rev-parse', 'HEAD'], root);
+    const status = runGit(['status', '--porcelain', '--untracked-files=all'], root);
+    return { source_current: head.exitCode === 0 && head.stdout.trim() === identity.framework_sha,
+      clean: status.exitCode === 0 && status.stdout.trim() === '' };
+  } catch { return null; }
 }
 
 export function isOplFrameworkRoot(repoPath: string) {

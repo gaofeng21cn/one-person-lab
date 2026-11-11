@@ -25,6 +25,7 @@ import {
   isGitRepo,
   isOplFrameworkRoot,
   pathsReferToSameLocation,
+  readManagedFrameworkGitInstallation,
   resolveFrameworkUpdateArchive,
   resolveFrameworkUpdateArchiveSha256,
   resolveFrameworkUpdateSource,
@@ -140,8 +141,9 @@ export function runOplFrameworkSelfUpdate(
     });
   }
 
-  if (fs.existsSync(targetRoot) && isGitRepo(targetRoot)) {
-    return buildResult('skipped', 'framework_update_target_is_developer_checkout', {
+  const managedGit = readManagedFrameworkGitInstallation(targetRoot);
+  if (fs.existsSync(targetRoot) && isGitRepo(targetRoot) && !(managedGit?.clean && managedGit.source_current)) {
+    return buildResult('skipped', managedGit ? 'framework_managed_git_installation_changed' : 'framework_update_target_is_developer_checkout', {
       target_root: targetRoot,
       source_root: sourceRootRaw ? path.resolve(sourceRootRaw) : null,
       source_head_sha: null,
@@ -183,7 +185,7 @@ export function runOplFrameworkSelfUpdate(
   if (!sourceRootRaw) {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-channel-artifact-'));
     try {
-      const channelEntry = readFrameworkChannelEntry();
+      const channelEntry = input.channelEntry ?? readFrameworkChannelEntry();
       const pendingResult = pendingFrameworkArtifactResult(targetRoot, {
         sourceHeadSha: channelEntry.source_git_head_sha,
         sourceArchiveSha256: channelEntry.source_archive_sha256,
@@ -340,7 +342,7 @@ export function readOplFrameworkRuntimeUpdateStatus(
     target_root: targetRoot,
     pending_generation: pendingGeneration,
     target_valid: fs.existsSync(targetRoot) && fs.statSync(targetRoot).isDirectory() && isOplFrameworkRoot(targetRoot),
-    target_is_developer_checkout: fs.existsSync(targetRoot) && isGitRepo(targetRoot),
+    target_is_developer_checkout: fs.existsSync(targetRoot) && isGitRepo(targetRoot) && !readManagedFrameworkGitInstallation(targetRoot),
     source_archive: sourceArchive,
     source_archive_configured: Boolean(sourceArchive),
     source_archive_exists: Boolean(sourceArchive && fs.existsSync(sourceArchive) && fs.statSync(sourceArchive).isFile()),
