@@ -271,6 +271,7 @@ test('App action catalog registers only verified external owner updates and exec
     OPL_STATE_DIR: path.join(root, 'state'),
     OPL_HOMEBREW_BIN: brew,
     OPL_CODEX_BIN: codex,
+    OPL_CODEX_CLI_LATEST_VERSION: '0.1.0',
     PATH: `${path.dirname(codex)}:/usr/bin:/bin`,
   };
   try {

@@ -1,0 +1,86 @@
+{
+  "surface_kind": "opl_mcp_app_presentation_contract.v1",
+  "owner": "one-person-lab",
+  "purpose": "决定 OPL Package 使用共享视图、独立 MiniApp 或专业应用，并定义动态发现边界。",
+  "presentation_modes": {
+    "shared_view": {
+      "when": [
+        "进度、列表、产物摘要、低频审阅或简单确认是主要操作",
+        "交互可以在 OPL Apps 共享工作台的通用组件中完成"
+      ],
+      "entry": "Framework app_contributions projection",
+      "owner_ui": "shared OPL Apps MCP App"
+    },
+    "dedicated_app": {
+      "when": [
+        "存在连续的领域操作链，单次操作需要保持上下文",
+        "需要高密度输入、预览、时序定位、版本对比或 revision-bound feedback",
+        "领域 owner 能提供同一操作的只读读取、明确写入和回读"
+      ],
+      "entry": "owner MCP server resourceUri discovered from the live Codex catalog",
+      "owner_ui": "domain-owned standard MCP App inside the OPL host"
+    },
+    "professional_app": {
+      "when": [
+        "高频创作、实时设备控制、地图、持续监测或复杂专业编辑构成主要工作",
+        "已有成熟专业应用承担交互，重复嵌入会降低效率"
+      ],
+      "entry": "owner professional application with OPL handoff and artifact references",
+      "owner_ui": "domain professional application"
+    }
+  },
+  "selection_rules": [
+    "交互密度、预览/时序要求、revision 一致性和 owner 操作完整度共同决定形态。",
+    "Package 名称、Agent 名称、页面看起来复杂与否都不能单独决定形态。",
+    "已有专业应用足以承担主要工作时，OPL 只提供状态、入口和可回读引用。",
+    "专用 UI 与共享视图调用同一个 owner 操作，不复制业务状态、审批记录或凭据。"
+  ],
+  "discovery_chain": [
+    "owner source",
+    "immutable Package payload",
+    "native carrier install or update",
+    "installed descriptor",
+    "Framework dynamic Package projection",
+    "Codex live MCP catalog",
+    "OPL App discovery by server and resourceUri"
+  ],
+  "runtime_states": {
+    "not_installed": {
+      "installed_descriptor": false,
+      "shared_view": "unavailable",
+      "dedicated_app": "unavailable"
+    },
+    "installed_disabled": {
+      "installed_descriptor": true,
+      "package_projection": "available for management",
+      "live_catalog": "absent until the carrier enables the server"
+    },
+    "installed_enabled_not_callable": {
+      "installed_descriptor": true,
+      "package_projection": "available",
+      "live_catalog": "present only as a typed unavailable or blocked entry",
+      "dedicated_app": "cannot open"
+    },
+    "installed_enabled_callable": {
+      "installed_descriptor": true,
+      "package_projection": "available",
+      "live_catalog": "server and resourceUri are discoverable",
+      "dedicated_app": "can open and revalidate before each call"
+    },
+    "package_ready_ui_payload_missing": {
+      "shared_view": "may remain available from app_contributions",
+      "dedicated_app": "unavailable until the declared MCP App payload is installed"
+    }
+  },
+  "update_semantics": {
+    "fresh_discovery": "安装或更新成功后，下一次 fresh catalog/session 读取 owner 的新 descriptor、server 和 resourceUri。",
+    "open_session": "已经打开的 MiniApp binding 不热更新；关闭并重新打开或重新发现后使用新 payload。",
+    "registry_policy": "OPL App 不维护固定 MiniApp 清单、第二套 MCP registry、凭据或 session owner。"
+  },
+  "management_vs_work_ui": {
+    "management_surface": "OPL Apps 管理界面负责 Package 的安装、更新、启用、停用、状态和诊断。",
+    "work_surface": "共享视图或独立 MiniApp 负责当前领域工作、预览、编辑、审阅和 owner 回读。",
+    "boundary": "管理界面决定能力是否可发现；工作界面不改变安装、启用或 catalog registry。"
+  },
+  "visual_contract_ref": "one-person-lab-app/contracts/opl-apps-miniapp-visual-contract.json"
+}

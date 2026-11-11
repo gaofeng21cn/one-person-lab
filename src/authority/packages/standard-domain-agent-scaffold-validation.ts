@@ -231,6 +231,69 @@ function discoverPluginName(repoDir: string, domainId: string) {
   return normalizeAgentPluginName(domainId);
 }
 
+function dedicatedMiniAppMode(repoDir: string, pluginRoot: string) {
+  const candidates = [
+    path.join(pluginRoot, 'opl-package.json'),
+    path.join(repoDir, 'opl-package.json'),
+    path.join(repoDir, 'contracts', 'opl_agent_package_manifest.json'),
+  ];
+  for (const candidate of candidates) {
+    const manifest = readJsonFileOrNull(candidate);
+    if (!isRecord(manifest)) continue;
+    const presentation = isRecord(manifest.presentation) ? manifest.presentation : null;
+    const miniapp = presentation && isRecord(presentation.miniapp) ? presentation.miniapp : null;
+    if (miniapp?.presentation_mode === 'dedicated_app') return true;
+  }
+  return false;
+}
+
+function validateDedicatedMiniAppMcpConfig(
+  repoDir: string,
+  pluginRoot: string,
+  legacyManifest: Record<string, unknown> | null,
+) {
+  const configPath = path.join(pluginRoot, 'mcp.json');
+  const blockers: string[] = [];
+  if (!dedicatedMiniAppMode(repoDir, pluginRoot)) {
+    blockers.push('standard_agent_plugin_mcp_json_must_be_absent');
+    return blockers;
+  }
+  if (!legacyManifest || legacyManifest.mcpServers !== './mcp.json') {
+    blockers.push('dedicated_mcp_app_legacy_manifest_mcp_servers_declaration_required');
+  }
+  const config = readJsonFileOrNull(configPath);
+  if (!isRecord(config) || !isRecord(config.mcpServers)) {
+    blockers.push('dedicated_mcp_app_mcp_json_invalid_or_missing_mcp_servers');
+    return blockers;
+  }
+  const servers = config.mcpServers;
+  const names = Object.keys(servers);
+  if (names.length === 0) blockers.push('dedicated_mcp_app_mcp_servers_must_not_be_empty');
+  for (const name of names) {
+    const server = servers[name];
+    if (!isRecord(server) || server.type !== 'stdio') {
+      blockers.push(`dedicated_mcp_app_server_must_be_stdio:${name}`);
+      continue;
+    }
+    if (typeof server.command !== 'string' || !server.command.trim()
+      || /[\u0000-\u001f\u007f\s;|&`]/.test(server.command)) {
+      blockers.push(`dedicated_mcp_app_server_command_invalid:${name}`);
+    }
+    if (server.args !== undefined && (!Array.isArray(server.args)
+      || server.args.some((arg) => typeof arg !== 'string'
+        || arg.length > 2048
+        || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(arg)))) {
+      blockers.push(`dedicated_mcp_app_server_args_invalid:${name}`);
+    }
+    if (server.cwd !== undefined && (typeof server.cwd !== 'string'
+      || server.cwd.length > 1024
+      || /[\u0000-\u001f\u007f]/.test(server.cwd))) {
+      blockers.push(`dedicated_mcp_app_server_cwd_invalid:${name}`);
+    }
+  }
+  return blockers;
+}
+
 function validateAgentPluginCarrier(repoDir: string, domainId: string) {
   const pluginName = discoverPluginName(repoDir, domainId);
   const pluginRoot = path.join(repoDir, 'plugins', pluginName);
@@ -286,7 +349,11 @@ function validateAgentPluginCarrier(repoDir: string, domainId: string) {
     blockers.push('agent_plugin_primary_skill_carrier_not_byte_identical');
   }
   if (fs.existsSync(mcpConfigPath)) {
-    blockers.push('standard_agent_plugin_mcp_json_must_be_absent');
+    blockers.push(...validateDedicatedMiniAppMcpConfig(
+      repoDir,
+      pluginRoot,
+      isRecord(legacy) ? legacy : null,
+    ));
   }
   return {
     surface_kind: 'opl_agent_plugin_1_0_conformance',

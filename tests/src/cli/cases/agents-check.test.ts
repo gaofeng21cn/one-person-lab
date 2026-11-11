@@ -211,6 +211,82 @@ test('standard agent scaffold emits an Agent Plugins 1.0 carrier with one byte-i
   }
 });
 
+test('dedicated MiniApp carrier accepts a constrained stdio MCP App declaration', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dedicated-miniapp-'));
+  try {
+    buildStandardDomainAgentScaffold({ targetDir, domainId: 'media-review' });
+    const pluginRoot = path.join(targetDir, 'plugins', 'media-review');
+    writeJson(path.join(pluginRoot, 'opl-package.json'), {
+      presentation: { miniapp: { presentation_mode: 'dedicated_app' } },
+    });
+    const legacyPath = path.join(pluginRoot, '.codex-plugin', 'plugin.json');
+    const legacy = readJson(legacyPath);
+    legacy.mcpServers = './mcp.json';
+    writeJson(legacyPath, legacy);
+    writeJson(path.join(pluginRoot, 'mcp.json'), {
+      mcpServers: {
+        'media-review': {
+          type: 'stdio',
+          command: 'node',
+          args: ['${PLUGIN_ROOT}/server.bundle.mjs'],
+          cwd: '${PLUGIN_ROOT}',
+        },
+      },
+    });
+    const validation = validateStandardDomainAgentScaffold({ repoDir: targetDir })
+      .standard_domain_agent_scaffold_validation;
+    assert.equal(validation.agent_plugin_1_0_validation.status, 'passed');
+    assert.equal(validation.status, 'passed');
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('ordinary standard agent with mcp.json remains blocked', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-mcp-blocked-'));
+  try {
+    buildStandardDomainAgentScaffold({ targetDir, domainId: 'ordinary-agent' });
+    const pluginRoot = path.join(targetDir, 'plugins', 'ordinary-agent');
+    writeJson(path.join(pluginRoot, 'mcp.json'), { mcpServers: {} });
+    const validation = validateStandardDomainAgentScaffold({ repoDir: targetDir })
+      .standard_domain_agent_scaffold_validation;
+    assert.equal(validation.agent_plugin_1_0_validation.status, 'blocked');
+    assert.equal(
+      validation.agent_plugin_1_0_validation.blockers.includes('standard_agent_plugin_mcp_json_must_be_absent'),
+      true,
+    );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('dedicated MiniApp rejects malformed MCP App configuration', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dedicated-mcp-invalid-'));
+  try {
+    buildStandardDomainAgentScaffold({ targetDir, domainId: 'invalid-media-review' });
+    const pluginRoot = path.join(targetDir, 'plugins', 'invalid-media-review');
+    writeJson(path.join(pluginRoot, 'opl-package.json'), {
+      presentation: { miniapp: { presentation_mode: 'dedicated_app' } },
+    });
+    const legacyPath = path.join(pluginRoot, '.codex-plugin', 'plugin.json');
+    const legacy = readJson(legacyPath);
+    legacy.mcpServers = './mcp.json';
+    writeJson(legacyPath, legacy);
+    writeJson(path.join(pluginRoot, 'mcp.json'), {
+      mcpServers: { broken: { type: 'http', url: 'https://example.test' } },
+    });
+    const validation = validateStandardDomainAgentScaffold({ repoDir: targetDir })
+      .standard_domain_agent_scaffold_validation;
+    assert.equal(validation.agent_plugin_1_0_validation.status, 'blocked');
+    assert.equal(
+      validation.agent_plugin_1_0_validation.blockers.includes('dedicated_mcp_app_server_must_be_stdio:broken'),
+      true,
+    );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
 test('standard agent scaffold fails closed on repeated platform policy and morphology owner overclaims', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-private-policy-fail-close-'));
   try {
