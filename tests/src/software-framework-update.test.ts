@@ -11,7 +11,7 @@ import { refreshFrameworkSoftwareRelease } from '../../src/adapters/integration/
 import { acquireManagedUpdateLock } from '../../src/adapters/integration/managed-update-lock.ts';
 import { activatePendingOplFrameworkRuntime } from '../../src/adapters/integration/system-installation/framework-self-update.ts';
 
-test('Framework installation updates independently, pins the reviewed release and activates only after restart', async () => {
+test('Framework updates its receipted Git installation, pins the release and preserves changes until restart', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-installation-'));
   const installedRoot = path.join(root, '.opl', 'one-person-lab');
   const incomingRoot = path.join(root, 'incoming');
@@ -25,8 +25,13 @@ test('Framework installation updates independently, pins the reviewed release an
     fs.writeFileSync(path.join(directory, 'dist', 'entrypoints', 'cli.js'), 'export {};\n');
     fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify({ name: 'opl-framework', version }));
   }
+  fs.writeFileSync(path.join(installedRoot, '.gitignore'), '.opl-framework-installed-source-identity.json\n');
+  execFileSync('git', ['init', '-q', installedRoot]);
+  execFileSync('git', ['add', '.'], { cwd: installedRoot });
+  execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Installed release'], { cwd: installedRoot });
+  const installedCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: installedRoot, encoding: 'utf8' }).trim();
   fs.writeFileSync(path.join(installedRoot, '.opl-framework-installed-source-identity.json'), JSON.stringify({
-    schema: 'opl_framework_installed_source_identity.v1', framework_sha: 'a'.repeat(40), install_mode: 'archive', identity_source: 'install_ref',
+    schema: 'opl_framework_installed_source_identity.v1', framework_sha: installedCommit, install_mode: 'git', identity_source: 'git_head',
   }));
   fs.mkdirSync(path.join(root, '.local', 'bin'), { recursive: true });
   fs.symlinkSync(path.join(installedRoot, 'bin', 'opl'), path.join(root, '.local', 'bin', 'opl'));
@@ -52,6 +57,12 @@ test('Framework installation updates independently, pins the reviewed release an
     assert.equal(product.available_version, '0.3.13');
     assert.equal(product.installations[0].location, fs.realpathSync(installedRoot));
     const payload = product.available_actions[0].payload as Record<string, unknown>;
+    fs.writeFileSync(path.join(installedRoot, 'local-change.txt'), 'keep');
+    assert.equal(readInstalledSoftwareProducts()[0].installations[0].mode, 'installed');
+    assert.deepEqual(readInstalledSoftwareProducts()[0].available_actions, []);
+    await assert.rejects(() => executeSoftwareInstallationAction(payload), /Refresh this Framework/);
+    assert.equal(fs.readFileSync(path.join(installedRoot, 'local-change.txt'), 'utf8'), 'keep');
+    fs.rmSync(path.join(installedRoot, 'local-change.txt'));
     await assert.rejects(() => executeSoftwareInstallationAction({ ...payload, installation_id: 'wrong' }), /Refresh this Framework/);
     await assert.rejects(() => executeSoftwareInstallationAction({ ...payload, version: '0.3.14' }), /Refresh this Framework/);
     const lock = acquireManagedUpdateLock({ operation: 'apply', componentId: 'opl_base' });
@@ -66,11 +77,17 @@ test('Framework installation updates independently, pins the reviewed release an
     assert.equal(readInstalledSoftwareProducts()[0].update_status, 'needs_restart');
     assert.equal(readInstalledSoftwareProducts()[0].pending_version, '0.3.13');
     assert.deepEqual(readInstalledSoftwareProducts()[0].available_actions, []);
+    fs.writeFileSync(path.join(installedRoot, 'local-change.txt'), 'keep after staging');
+    assert.equal(activatePendingOplFrameworkRuntime(fs.realpathSync(installedRoot)).status, 'manual_required');
+    assert.equal(fs.readFileSync(path.join(installedRoot, 'local-change.txt'), 'utf8'), 'keep after staging');
+    fs.rmSync(path.join(installedRoot, 'local-change.txt'));
     assert.equal(activatePendingOplFrameworkRuntime(fs.realpathSync(installedRoot)).status, 'deferred_same_app_instance');
     process.env.OPL_APP_PROCESS_INSTANCE_ID = 'after-restart';
     assert.equal(activatePendingOplFrameworkRuntime(fs.realpathSync(installedRoot)).status, 'activated');
     assert.equal(readInstalledSoftwareProducts()[0].installed_version, '0.3.13');
     assert.equal(readInstalledSoftwareProducts()[0].update_status, 'current');
+    assert.equal(fs.existsSync(path.join(`${installedRoot}.previous`, '.git')), true);
+    assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: `${installedRoot}.previous`, encoding: 'utf8' }).trim(), installedCommit);
     assert.equal(fs.readFileSync(path.join(root, 'business-data.txt'), 'utf8'), 'preserved');
     await assert.rejects(() => executeSoftwareInstallationAction(payload), /Refresh this Framework/);
     execFileSync('git', ['init', '-q', installedRoot]);

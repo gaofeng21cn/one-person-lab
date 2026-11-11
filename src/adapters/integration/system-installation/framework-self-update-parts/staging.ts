@@ -20,6 +20,7 @@ import {
   frameworkSourceAlreadyCurrent,
   isOplFrameworkRoot,
   resolveFrameworkUpdateSource,
+  readManagedFrameworkGitInstallation,
   skippedDependencyInstall,
   shouldSkipDependencyInstall,
 } from './source-resolution.ts';
@@ -121,8 +122,10 @@ export function activatePendingOplFrameworkRuntime(targetRootInput: string) {
   if (!fs.existsSync(pendingMetadataPath) && !fs.existsSync(pendingRoot)) {
     return { surface_kind: 'opl_framework_generation_activation.v1', status: 'no_pending_generation', target_root: targetRoot };
   }
-  if (isDeveloperRuntimePath(targetRoot) || (fs.existsSync(targetRoot) && (
-    fs.lstatSync(targetRoot).isSymbolicLink() || isDeveloperRuntimePath(fs.realpathSync(targetRoot))
+  const managedGit = readManagedFrameworkGitInstallation(targetRoot);
+  const unchangedManagedGit = managedGit?.clean && managedGit.source_current;
+  if ((!unchangedManagedGit && isDeveloperRuntimePath(targetRoot)) || (fs.existsSync(targetRoot) && (
+    fs.lstatSync(targetRoot).isSymbolicLink() || (!unchangedManagedGit && isDeveloperRuntimePath(fs.realpathSync(targetRoot)))
   )) || resolveFrameworkUpdateSource()) {
     return {
       surface_kind: 'opl_framework_generation_activation.v1', status: 'manual_required',

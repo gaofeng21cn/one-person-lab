@@ -8,7 +8,7 @@ import brandProfile from '../../../contracts/opl-framework/brand-system-profile.
 import { readFrameworkSoftwareRelease, refreshFrameworkSoftwareRelease } from './software-sources-framework-release.ts';
 import { acquireManagedUpdateLock } from './managed-update-lock.ts';
 import { runOplFrameworkSelfUpdate } from './system-installation/framework-self-update.ts';
-import { isGitRepo, isOplFrameworkRoot } from './system-installation/framework-self-update-parts/source-resolution.ts';
+import { isGitRepo, isOplFrameworkRoot, readManagedFrameworkGitInstallation } from './system-installation/framework-self-update-parts/source-resolution.ts';
 import { pendingFrameworkArtifactResult } from './system-installation/framework-self-update-parts/staging.ts';
 import { softwareInstallationOperation } from './agent-package-registry-parts/software-installation-owner.ts';
 import type { SoftwareInstallation } from './agent-package-registry-parts/package-installation-projection.ts';
@@ -109,12 +109,13 @@ function frameworkInstallationUpdate(installation: NonNullable<ReturnType<typeof
     && pending.target_root === location && pending.pending_root === `${location}.pending`
     && isOplFrameworkRoot(`${location}.pending`)
     ? record(path.join(`${location}.pending`, 'package.json'))?.version : null;
-  const managed = !isGitRepo(location);
+  const managedGit = readManagedFrameworkGitInstallation(location, env);
+  const managed = !isGitRepo(location) || managedGit !== null;
   const updateStatus = pendingVersion ? 'needs_restart' as const
     : release && valid(installation.installed_version)
       ? gt(release.channel_version, installation.installed_version) ? 'available' as const : 'current' as const
       : 'unknown' as const;
-  const revision = createHash('sha256').update(JSON.stringify({ installation, release, pending })).digest('hex');
+  const revision = createHash('sha256').update(JSON.stringify({ installation, release, pending, managedGit })).digest('hex');
   const row: SoftwareInstallation = {
     installation_id: installation.installation_id, kind: installation.installation_kind,
     manager: installation.installation_owner, location, location_ref: location,
@@ -122,7 +123,8 @@ function frameworkInstallationUpdate(installation: NonNullable<ReturnType<typeof
     mode: managed ? 'installed' : 'development', active: true, entrypoint_verified: true,
     revision, available_version: release?.channel_version ?? null, available_actions: [],
   };
-  if (managed && updateStatus === 'available') row.available_actions.push(softwareInstallationOperation('opl-framework', row, 'update', release!.channel_version));
+  if (managed && (!managedGit || (managedGit.clean && managedGit.source_current)) && updateStatus === 'available')
+    row.available_actions.push(softwareInstallationOperation('opl-framework', row, 'update', release!.channel_version));
   return {
     revision, available_version: release?.channel_version ?? null, update_status: updateStatus,
     pending_version: typeof pendingVersion === 'string' ? pendingVersion : null,
