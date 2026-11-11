@@ -100,6 +100,7 @@ export {
 } from './software-sources.ts';
 export type { SoftwareSourceActionId } from './software-sources.ts';
 export type { SoftwareSource, SoftwareSourceStatus } from './software-sources-types.ts';
+export { SOFTWARE_INSTALLATION_ACTION_ID, softwareInstallationActionCatalog, executeSoftwareInstallationAction } from './software-installation.ts';
 export {
   completeOplGatewaySetup,
   disconnectOplGatewayAccount,

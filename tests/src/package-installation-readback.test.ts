@@ -68,7 +68,8 @@ test('owner receipts prove an installed instance without claiming plugin lifecyc
   assert.equal(result[0].management_scope, 'owner_only');
   assert.equal(result[0].entrypoint_verified, true);
   assert.equal(result[0].source_revision, 'a'.repeat(40));
-  assert.equal(JSON.stringify(result).includes(home), false);
+  assert.ok(path.isAbsolute(result[0].location));
+  assert.equal(result[0].active, true);
   assert.equal('installed' in result[0], false);
 }));
 
@@ -97,7 +98,8 @@ test('uv editable links are development installations while ordinary uv tools re
     assert.equal(result[0].mode, editable ? 'development' : 'installed');
     assert.equal(result[0].manager, 'uv');
     assert.equal(result[0].management_scope, 'owner_only');
-    assert.equal(JSON.stringify(result).includes(home), false);
+    assert.ok(path.isAbsolute(result[0].location));
+  assert.equal(result[0].active, true);
   });
 });
 

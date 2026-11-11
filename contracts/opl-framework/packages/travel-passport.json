@@ -1,0 +1,361 @@
+{
+  "surface_kind": "opl_capability_package_manifest.v2",
+  "package_id": "travel-passport",
+  "display_name": "Journey Atlas",
+  "publisher": "gaofeng21cn",
+  "version": "0.2.0",
+  "source": "first_party_owner_projection",
+  "source_repo": "https://github.com/gaofeng21cn/journey-atlas.git",
+  "package_role": "capability_package",
+  "capability_abi": {
+    "id": "travel-passport.v1",
+    "version": "1.0.0",
+    "compatibility_policy": "same_major"
+  },
+  "exports": {
+    "core_skill_ids": [
+      "travel-planning"
+    ],
+    "core_module_ids": [
+      "travel.passport.v1"
+    ],
+    "optional_skill_policy_ref": "skills/travel-planning/SKILL.md",
+    "optional_skills_installed_by_default": false,
+    "default_materialization_policy": "core_skills_only"
+  },
+  "codex_surface": {
+    "plugin_id": "travel-passport",
+    "plugin_source_path": ".",
+    "codex_default_exposure": false,
+    "interaction_mode": "headless_internal",
+    "optional_install_policy": "core_skills_only",
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "travel-passport@travel-passport",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/journey-atlas",
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/travel-passport:latest-stable"
+    },
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "opl",
+        "app",
+        "contribution",
+        "adapter",
+        "--stdin"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "carrier_source_commit": "5dda1a0456910d3533f306a20818f9112ac89344",
+    "plugin_payload_manifest_url": "payloads/travel-passport-0.2.0.json"
+  },
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "travel.passport.status",
+        "view_type": "service_status",
+        "title_i18n": {
+          "zh-CN": "旅行护照状态",
+          "en-US": "Travel passport status"
+        },
+        "data_ref": "travel.passport.v1#status",
+        "command_ids": [
+          "travel.passport.setup"
+        ],
+        "empty_state_i18n": {
+          "zh-CN": "尚未读取旅行护照状态",
+          "en-US": "Travel passport status has not been read"
+        }
+      },
+      {
+        "view_id": "travel.passport.overview",
+        "view_type": "artifact_view",
+        "title_i18n": {
+          "zh-CN": "旅行护照总览",
+          "en-US": "Travel passport overview"
+        },
+        "data_ref": "travel.passport.v1#overview",
+        "empty_state_i18n": {
+          "zh-CN": "尚未读取旅行护照总览",
+          "en-US": "Travel passport overview has not been read"
+        }
+      },
+      {
+        "view_id": "travel.passport.annual",
+        "view_type": "artifact_view",
+        "title_i18n": {
+          "zh-CN": "年度旅行回顾",
+          "en-US": "Annual travel review"
+        },
+        "data_ref": "travel.passport.v1#annual",
+        "empty_state_i18n": {
+          "zh-CN": "尚未找到年度旅行卡",
+          "en-US": "No annual travel card is available"
+        }
+      },
+      {
+        "view_id": "travel.passport.regions",
+        "view_type": "artifact_view",
+        "title_i18n": {
+          "zh-CN": "分区旅行护照",
+          "en-US": "Regional travel passports"
+        },
+        "data_ref": "travel.passport.v1#regions",
+        "empty_state_i18n": {
+          "zh-CN": "尚未读取分区旅行护照",
+          "en-US": "Regional travel passports have not been read"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command_id": "travel.passport.setup",
+        "label_i18n": {
+          "zh-CN": "初始化运行环境",
+          "en-US": "Prepare runtime"
+        },
+        "action_ref": "travel.passport.v1#runtime.setup",
+        "confirmation_required": true
+      }
+    ],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "travel.passport.status",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 1000,
+        "view_id": "travel.passport.status"
+      },
+      {
+        "contribution_id": "travel.passport.overview",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 1001,
+        "view_id": "travel.passport.overview"
+      },
+      {
+        "contribution_id": "travel.passport.annual",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 1002,
+        "view_id": "travel.passport.annual"
+      },
+      {
+        "contribution_id": "travel.passport.regions",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 1003,
+        "view_id": "travel.passport.regions"
+      }
+    ]
+  },
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "paths": [
+      ".codex-plugin/plugin.json",
+      "LICENSE",
+      "NOTICE.md",
+      "README.md",
+      "app-contribution-adapter.json",
+      "app-contribution.mjs",
+      "data/atlas-config.example.json",
+      "data/china.geojson",
+      "data/city-catalog.json",
+      "data/europe-countries.topojson",
+      "data/europe.geojson",
+      "data/geographic-context.json",
+      "data/greece-regions.geojson",
+      "data/greece.geojson",
+      "data/italy-regions.geojson",
+      "data/italy.geojson",
+      "data/japan-prefectures.json",
+      "data/japan.topojson",
+      "data/region-catalog.json",
+      "data/scope-hierarchy.json",
+      "data/southeast-asia.geojson",
+      "data/swiss-cantons.topojson",
+      "data/switzerland.geojson",
+      "data/us-states.topojson",
+      "data/usa.geojson",
+      "docs/城市地图与数据规范.md",
+      "docs/安装与共享基座.md",
+      "docs/架构与数据边界.md",
+      "docs/维护流程.md",
+      "docs/输入目录约定.md",
+      "examples/atlas-update.json",
+      "examples/import-bundle.json",
+      "examples/source-note.md",
+      "journey-atlas.mjs",
+      "package-lock.json",
+      "package.json",
+      "plugin.json",
+      "scripts/annual-data.mjs",
+      "scripts/annual-map.mjs",
+      "scripts/archive-files.py",
+      "scripts/atlas-data.mjs",
+      "scripts/audit-gateways.mjs",
+      "scripts/audit-node-continuity.mjs",
+      "scripts/audit-visit-evidence.mjs",
+      "scripts/calibrate-city-movements.mjs",
+      "scripts/check-site.mjs",
+      "scripts/check.mjs",
+      "scripts/city-data.mjs",
+      "scripts/city-evidence.mjs",
+      "scripts/city-reconstruction-output.mjs",
+      "scripts/collect-city-evidence.mjs",
+      "scripts/collect-global-evidence.mjs",
+      "scripts/compose-city.mjs",
+      "scripts/continuity-audit.mjs",
+      "scripts/csv.mjs",
+      "scripts/data.mjs",
+      "scripts/detail-connections.mjs",
+      "scripts/display-geometry.mjs",
+      "scripts/edge-labels.mjs",
+      "scripts/evidence-contract.mjs",
+      "scripts/extract-city-context.py",
+      "scripts/fetch-city-geography.mjs",
+      "scripts/fetch-city-map.mjs",
+      "scripts/fetch-geography.mjs",
+      "scripts/flight-card-data.mjs",
+      "scripts/flight-time.mjs",
+      "scripts/flight-view.mjs",
+      "scripts/global-mobility-output.mjs",
+      "scripts/global-mobility.mjs",
+      "scripts/hub-links.mjs",
+      "scripts/infer-links.mjs",
+      "scripts/infer-placeholders.mjs",
+      "scripts/japan-map.mjs",
+      "scripts/managed-links.mjs",
+      "scripts/manifest.mjs",
+      "scripts/map-label-layout.mjs",
+      "scripts/migrate-evidence.mjs",
+      "scripts/node-access.mjs",
+      "scripts/organize-output.mjs",
+      "scripts/output-paths.mjs",
+      "scripts/passport.mjs",
+      "scripts/prepare-open-geography.mjs",
+      "scripts/promote-verified-candidates.mjs",
+      "scripts/prune-cache.mjs",
+      "scripts/prune-history.mjs",
+      "scripts/rebuild-city-evidence.mjs",
+      "scripts/reconstruct-city.mjs",
+      "scripts/reconstruct-connections.mjs",
+      "scripts/reconstruction-progress.mjs",
+      "scripts/region-data.mjs",
+      "scripts/region-map.mjs",
+      "scripts/render-all.mjs",
+      "scripts/render-annual.mjs",
+      "scripts/render-atlas.mjs",
+      "scripts/render.mjs",
+      "scripts/repair-formal-node-edges.mjs",
+      "scripts/repair-journey-scope.mjs",
+      "scripts/requirements-map.txt",
+      "scripts/route-geometry.mjs",
+      "scripts/schema.mjs",
+      "scripts/site-data.mjs",
+      "scripts/site.mjs",
+      "scripts/source-data-cli.mjs",
+      "scripts/source-data.mjs",
+      "scripts/source-references.mjs",
+      "scripts/storage.mjs",
+      "scripts/travel-layers.mjs",
+      "scripts/update-atlas.mjs",
+      "scripts/update-cities.mjs",
+      "scripts/update-operation.mjs",
+      "scripts/vector-context.mjs",
+      "scripts/verify-all.mjs",
+      "scripts/visit-evidence.mjs",
+      "scripts/visit-instances.mjs",
+      "skills/travel-planning/SKILL.md",
+      "src/annual.css",
+      "src/annual.html",
+      "src/atlas-world.js",
+      "src/atlas.css",
+      "src/city-gateways.mjs",
+      "src/city-map.mjs",
+      "src/city-passport-summary.mjs",
+      "src/geographic-fit.mjs",
+      "src/japan.html",
+      "src/map-background.mjs",
+      "src/map-dots.mjs",
+      "src/map-frames.mjs",
+      "src/map-interactions.mjs",
+      "src/map-labels.mjs",
+      "src/poster.css",
+      "src/poster.html",
+      "src/poster.js",
+      "src/region.html",
+      "src/route-semantics.mjs",
+      "src/scope-model.mjs",
+      "src/site-app.mjs",
+      "src/site-map.mjs",
+      "src/site.css",
+      "src/site.html",
+      "src/transport-time.mjs",
+      "src/world-dots.js"
+    ],
+    "digest": "sha256:6c737faa104bcca07f2c1214100264d3b14b20e6e601b8aecc10511d462ad575"
+  },
+  "visibility": "public",
+  "description": "Agent-native travel atlas using user-owned travel records and Obsidian sources.",
+  "publication_channel_admission": "admitted",
+  "owner_package_manifest_ref": "plugins/travel-passport/opl-package.json",
+  "owner_package_descriptor_ref": "opl-package.json",
+  "presentation": {
+    "software_type": "application",
+    "display_name_i18n": {
+      "zh-CN": "Journey Atlas",
+      "en-US": "Journey Atlas"
+    },
+    "description_i18n": {
+      "zh-CN": "从旅行记录和 Obsidian 资料生成旅行地图、护照与年度回顾。",
+      "en-US": "Build travel maps, passports, and annual reviews from user-owned records and Obsidian."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "用 Journey Atlas 读取和维护旅行资料，生成地图并在共享视图中审阅。",
+      "en-US": "Use Journey Atlas to maintain travel records, generate maps, and review shared views."
+    },
+    "home_shortcuts": []
+  },
+  "entrypoints": [
+    {
+      "entrypoint_id": "travel.passport.cli",
+      "kind": "cli",
+      "argv": [
+        "node",
+        "journey-atlas.mjs"
+      ],
+      "workspace_binding": "OPL_PROFILE_WORKSPACE"
+    }
+  ],
+  "authority_boundary": {
+    "domain_truth_owner": "travel-passport",
+    "artifact_owner": "travel-passport",
+    "review_and_apply_owner": "travel-passport",
+    "adapter_can_mutate": false
+  },
+  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "source_commit": "5dda1a0456910d3533f306a20818f9112ac89344",
+  "publication_source": {
+    "module_id": "travel-passport",
+    "owner_package_manifest_ref": "plugins/travel-passport/opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  }
+}

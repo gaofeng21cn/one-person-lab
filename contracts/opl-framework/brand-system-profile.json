@@ -27,7 +27,13 @@
         "en-US": "Shared runtime, software management and command-line tools for OPL apps and agents."
       },
       "native_carriers": [
-        { "kind": "homebrew_formula", "package_ref": "gaofeng21cn/one-person-lab/opl" }
+        {
+          "kind": "homebrew_formula",
+          "package_ref": "gaofeng21cn/one-person-lab/opl",
+          "release_channel": "stable",
+          "installation_variant": "default",
+          "recommended": true
+        }
       ],
       "user_understanding": "The foundation that makes agents creatable, runnable, recoverable, and auditable.",
       "maintainer_understanding": "Agent platform, runtime, contracts, pack compiler, generated surfaces, Ledger, Runway, and Console projection producer.",
@@ -50,6 +56,29 @@
         "owns_app_release_user_path_evidence",
         "does_not_own_runtime_truth",
         "does_not_own_domain_truth"
+      ],
+      "native_carriers": [
+        {
+          "kind": "homebrew_cask",
+          "package_ref": "gaofeng21cn/one-person-lab/one-person-lab",
+          "release_channel": "stable",
+          "installation_variant": "standard",
+          "recommended": true
+        },
+        {
+          "kind": "homebrew_cask",
+          "package_ref": "gaofeng21cn/one-person-lab/one-person-lab-full",
+          "release_channel": "stable",
+          "installation_variant": "full",
+          "recommended": false
+        },
+        {
+          "kind": "homebrew_cask",
+          "package_ref": "gaofeng21cn/one-person-lab/one-person-lab-nightly",
+          "release_channel": "nightly",
+          "installation_variant": "standard",
+          "recommended": false
+        }
       ]
     },
     {

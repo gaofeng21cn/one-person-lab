@@ -1,4 +1,4 @@
-import { softwareSourceActionCatalog } from '../../../adapters/integration/index.ts';
+import { softwareSourceActionCatalog, softwareInstallationActionCatalog } from '../../../adapters/integration/index.ts';
 import { knowledgeSourceActionCatalog } from '../../../authority/packages/index.ts';
 import {
   MANAGED_UPDATE_OWNER_ACTIONS,
@@ -13,6 +13,9 @@ const SOURCE_ACTION_TASK_KINDS: Record<string, SettingsAction['task_kind']> = {
 };
 
 export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
+  ...softwareInstallationActionCatalog().map(action => ({ ...action, stable_id: action.action_id,
+    section_id: 'agent_packages', task_kind: 'configure' as const, taxonomy: `settings.software_sources.${action.action_id}`,
+  })),
   ...knowledgeSourceActionCatalog().map(action => ({
     ...action,
     stable_id: action.action_id, section_id: 'workspace',
