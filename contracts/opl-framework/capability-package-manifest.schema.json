@@ -409,6 +409,31 @@
             "required": ["kind"]
           },
           "then": { "required": ["module_ref", "export_name"] }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "opl_software_installation_cli" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["protocol", "runtime", "source_ref", "operations"],
+            "properties": {
+              "protocol": { "const": "opl_software_installation.v1" },
+              "runtime": { "enum": ["python3", "node"] },
+              "source_ref": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$" },
+              "operations": {
+                "type": "array",
+                "items": { "enum": ["inspect", "install", "activate", "update", "uninstall", "link", "unlink"] },
+                "contains": { "const": "inspect" },
+                "uniqueItems": true
+              },
+              "release_target": {
+                "type": "object",
+                "required": ["version"],
+                "properties": { "version": { "type": "string", "minLength": 1 } }
+              }
+            }
+          }
         }
       ],
       "additionalProperties": true

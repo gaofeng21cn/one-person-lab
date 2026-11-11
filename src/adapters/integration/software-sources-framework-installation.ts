@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import brandProfile from '../../../contracts/opl-framework/brand-system-profile.json' with { type: 'json' };
 
@@ -59,6 +60,10 @@ export function readFrameworkSoftwareInstallation(env: NodeJS.ProcessEnv = proce
       installation_evidence: updatedRevision ? 'framework_update_receipt' : installedIdentity ? 'framework_install_receipt' : 'app_runtime_marker',
       installed_source_revision: updatedRevision ?? (typeof installedIdentity?.framework_sha === 'string' ? installedIdentity.framework_sha : null),
       owner_settings_route: 'updates' as const,
+      location: real(root),
+      installation_id: `local:${createHash('sha256').update(real(root)!).digest('hex').slice(0, 24)}`,
+      active: true,
+      mode: 'installed' as const,
     };
   }
   return null;

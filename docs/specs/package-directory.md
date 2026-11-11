@@ -147,6 +147,25 @@ Package 目录的 `installed`、`installed_version` 仍表示配置的原生插�
 
 某个安装器没有收据，只能说明它没有持有该安装。例如 Homebrew 未安装 `opl`，不能推断本机没有 npm 或 App 提供的 Framework。确认另一载体已安装后，主目录显示该实例和管理者；Homebrew 来源详情仍显示自己的收据状态。读取不到受支持的安装证据时显示未知，而不是根据仓库目录、文件名或可执行文件的存在猜测版本与管理权。新的安装器接入须补齐自身回读和动作路由，不能只增加一个“已安装”标签。
 
+## 安装与激活的统一模型
+
+产品、可获取版本、安装实例和激活选择是四个对象。一个产品可以从多个来源取得版本，也可以保留多个安装；在同一环境中最多只有一个激活的运行实例。软件中心聚合各 owner 的回读，调用 owner 的切换操作，不持有第二套激活数据库。
+
+- **软件源**回答从哪里取得制品；公开或私有只是访问规则。
+- **发布轨道**回答跟随哪组更新，默认 Stable，Nightly 为显式选择。Standard/Full 是同版本的安装规格。
+- **安装实例**绑定真实代码路径、版本、安装器、模式和入口。一个目录选项没有安装收据时不是安装实例；多个安装器观察同一路径时合并为一份安装。
+- **激活实例**是 owner 当前选择的运行代码。OPL App、Agent、CLI 和协作 UI 通过已有入口读取该选择；附属入口不另建激活身份。
+
+首次安装优先发布者声明的推荐发行；已明确选择的轨道沿自己的精确目标更新。开发 checkout 只有显式接入才成为安装，显式激活才参与调用。目录扫描和版本排序都不能激活源码。开发版支持查看、激活、解除接入；代码更新沿 Git/开发工具执行，解除接入不删除源码或业务资料。旧的有效选择保持回读，不借迁移隐式切换。
+
+本机详情展示 owner 验证的绝对代码路径、安装模式、管理器、当前和可用版本及激活状态。用户资料、Obsidian 正文和密钥不因此进入软件清单。激活和生命周期动作绑定精确 installation_id 与 revision；操作后读取同一 owner。冲突、未知和未激活分别展示，禁止通过最大版本号掩盖不一致。
+
+有独立原生安装器的 Package 在 `entrypoints` 声明 `kind=opl_software_installation_cli`、`protocol=opl_software_installation.v1`、`runtime`、`source_ref` 和 `operations`。helper 必须随已安装 carrier 交付并纳入 content lock。Framework 通过固定 `--stdin` JSON 调用 owner，不执行 UI 提供的任意命令，也不执行软件源中尚未安装的新 helper。旧 carrier 可按 owner 的 `discovery.kind=macos_bundle` 回读实际 bundle，提示先更新集成组件；此时不猜测激活状态。集成组件记录留在 carrier 详情，不重复算作该产品的另一份程序安装。
+
+helper 的 `inspect` 不联网、不修改配置，返回 `package_id`、`installations`、`active_installation_id` 和 `active_installation_status`。每份实例提供位置、版本、`mode=release|development`、revision、active 和 supported_actions。已有实例的 activate/update/uninstall/unlink 均携带 id 和 revision；update 还绑定精确目标版本。Framework 投影 `installations`、`installation_actions` 及激活状态，App 仅渲染这些 owner 提供的动作。首装用 `operation=install`、精确 version 及安装清单 revision，无 installation_id；fresh inspect 后交还 owner 在锁内核对目标不存在或拒绝覆盖。开发安装保留原选择，安装发布版不自动替换已激活的开发版。
+
+Codex carrier 的实例动作复用已有 Package 生命周期：先核对已装 descriptor、真实位置、版本和 revision，再交给原生管理器更新或移除。开发插件只提供解除接入，保留源码。全局 Developer Mode 的源码维护偏好不等于运行时激活；标准智能体须回读实际 hosted runtime，普通能力包须回读真正的已安装入口，不能把恰好存在的仓库或 monorepo 根版本当作正在使用的软件。
+
 ## 名称、说明与状态展示
 
 目录列表以 owner 的正式 `display_name` 为标题，按所选语言使用 `display_name_i18n`；`package_id` 或统一管理条目的稳定 ID 是次级身份，供搜索、复制和 Agent 调用。不得将小写 ID 与其他软件的正式名称混排为标题，也不按 ID 机械生成产品名。
@@ -161,7 +180,7 @@ Package 目录的 `installed`、`installed_version` 仍表示配置的原生插�
 
 ## 版本与更新
 
-目录主列使用“已装版本”和“可用版本”。已装版本来自选定安装实例；可用版本来自当前所选软件源的精确安装目标。多个实例没有唯一选择时，主列提示查看多个安装，详情逐个列出，不拼接多个版本号或擅自选择最高版本。多个交付渠道尚未选定时，也不把全部渠道版本拼成一个版本。
+目录主列使用“已装版本”和“可用版本”。已装版本来自选定安装实例；可用版本来自当前所选软件源的精确安装目标。多个实例没有唯一选择时，主列提示查看多个安装，详情逐个列出，不拼接多个版本号或擅自选择最高版本。发布者必须为多个可获取目标声明默认选择；已安装来源优先绑定当前更新轨道。主列展示一个精确版本，不以“多个渠道”代替版本。暂缺来源目标用“—”，详情区分尚未发布、访问失败和外部平台负责更新。
 
 `installed_version` 与 `selected_version`/`stable_version` 不一致不自动代表可更新。只有 owner 的 `package_currentness.status=update_available` 才显示更新动作；`available_actions.update` 仅表示执行能力。来源落后于本机版本时保留两份事实，不能提示降级；来源未检查或不可访问时保持待检查。GitHub Release、OCI 和固定源码都可以提供可用版本，源码 main 的版本号不能直接代替可获取的安装目标。
 
@@ -179,7 +198,7 @@ OPL App 的“应用管理”是一级能力，与主对话并列，统一呈现
 
 1. 先确认软件 owner、稳定 identity、产品类型和真实调用入口；采用 OPL Package 时同时声明其技术角色。
 2. 补齐 manifest/descriptor、公开或私有可见性、发布来源、carrier 和安装后 readback；私有源还须绑定访问策略与凭证 provider。
-3. 在 Framework projection 中登记可安全展示的版本、访问状态、就绪、依赖和 action refs；不写入秘密、正文或绝对路径。
+3. 在 Framework projection 中登记版本、访问状态、就绪、依赖和 action refs；公开目录不写入本机路径，本地安装回读只展示代码位置，不包含秘密或资料正文。
 4. 用 `opl packages list --json` 和 `opl app state --profile fast --json` 回读，再在 OPL App 的目录页完成安装、更新、停用、修复和卸载验收。私有源同时验证无权限、过期、撤权、重新授权和账号切换。
 5. 用真实 carrier 的安装、更新和卸载回读验证管理能力；按运行依赖显示调用就绪状态。固定源码版本、原型与已发行产品使用同一管理规则，发行与领域业务资格仍由 owner 各自验收。
 

@@ -34,7 +34,7 @@ import { inspectOplModule } from '../system-installation/modules.ts';
 import type { AgentPackageInstallInput } from './types.ts';
 import { resolvePackageAccessDecision, type AgentPackageAccessDecision } from './package-access.ts';
 import { packageInstallSourceAvailable, packageDistributionChannel } from './package-install-source.ts';
-import { readPackageInstallationReadback } from './package-installation-readback.ts';
+import { packageInstallationProjection } from './package-installation-projection.ts';
 
 export type OplAgentPackageStatusInput = {
   packageId?: string | null;
@@ -432,7 +432,9 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     software_type: currentOwner?.manifest.presentation?.software_type
       ?? manifest.presentation?.software_type
       ?? (manifest.package_role === 'standard_agent' ? 'agent' : 'unknown'),
-    local_installations: readPackageInstallationReadback(manifest.package_id),
+    ...packageInstallationProjection(descriptor, installed,
+      access.discover_allowed ? currentOwner?.manifest.version ?? (installed ? null : manifest.version) : null,
+      process.env, currentOwner ?? descriptor, hosted.source_root),
     capability_metadata: installed
       ? {
           source: manifest.source,

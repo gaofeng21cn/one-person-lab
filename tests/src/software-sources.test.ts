@@ -159,7 +159,8 @@ test('installed Framework remains visible without a Homebrew catalog or provider
     assert.deepEqual(framework.catalog_source, { manager: 'opl_framework', delivery: 'local' });
     assert.equal(framework.owner_settings_route, 'updates');
     assert.deepEqual(framework.available_actions, []);
-    assert.equal(JSON.stringify(framework).includes(userHome), false);
+    assert.ok(path.isAbsolute(framework.location!));
+    assert.equal(framework.active, true);
   };
   assertInstalled('not_checked');
   await refreshHomebrewSource({ env, run: async () => ({ status: null, stdout: '' }) });

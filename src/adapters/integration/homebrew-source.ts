@@ -7,6 +7,7 @@ import { isRecord } from '../../kernel/contract-validation.ts';
 import { softwareSourceFailure, softwareSourcesFile } from './software-sources-store.ts';
 import { readFrameworkSoftwareInstallation } from './software-sources-framework-installation.ts';
 import { readHomebrewAppVersionPresentation } from './homebrew-app-version.ts';
+import { selectHomebrewProductTargets } from './homebrew-product-selection.ts';
 
 export const OPL_HOMEBREW_SOURCE_ID = 'homebrew:gaofeng21cn-one-person-lab';
 const TAP = 'gaofeng21cn/one-person-lab';
@@ -32,6 +33,9 @@ type NativeItem = {
   installation_evidence?: string | null;
   installed_source_revision?: string | null;
   owner_settings_route?: 'updates' | null;
+  installation_id?: string | null;
+  location?: string | null;
+  active?: boolean;
 };
 type Snapshot = {
   inventory_status: 'available' | 'not_checked' | 'unavailable'; inventory_reason: string | null;
@@ -63,6 +67,7 @@ function emptySnapshot(reason: string | null = null): Snapshot {
 function text(value: unknown): string | null { return typeof value === 'string' && value.trim() ? value : null; }
 function fullName(value: unknown): value is string { return typeof value === 'string' && value.startsWith(`${TAP}/`) && /^[a-z0-9][a-z0-9+@._-]*$/.test(value.slice(TAP.length + 1)); }
 function itemActions(item: NativeItem) {
+  if (item.installed_build_kind === 'local-development') return [];
   const brewInstalled = item.homebrew_installed ?? item.installed;
   const ids = brewInstalled ? ['source_uninstall', ...(item.update_status === 'available' && !item.disabled && !item.pinned ? ['source_update'] : [])]
     : item.installed || item.disabled ? [] : ['source_install'];
@@ -85,14 +90,14 @@ function projection(snapshot: Snapshot, env: NodeJS.ProcessEnv) {
   return { ...snapshot, ...provenance, version_basis: 'homebrew_local_recipes', installation_owner: 'homebrew',
     inventory_refresh_required: refreshRequired,
     entry_count: snapshot.inventory_status === 'available' ? snapshot.native_items.length : null,
-    native_items: snapshot.native_items.map(raw => {
+    native_items: selectHomebrewProductTargets(snapshot.native_items.map(raw => {
       const item = { ...raw, homebrew_installed: raw.homebrew_installed ?? raw.installed,
         homebrew_installed_version: raw.homebrew_installed === undefined ? raw.installed_version : raw.homebrew_installed_version ?? null };
       if (item.name === `${TAP}/opl` && !item.homebrew_installed && frameworkInstallation) {
         Object.assign(item, frameworkInstallation, { update_status: 'unknown' });
       }
       return { ...item, ...productPresentation(item), ...provenance, available_actions: itemActions(item) };
-    }),
+    })),
   };
 }
 function productPresentation(item: NativeItem) {
@@ -181,6 +186,10 @@ function normalizeItem(raw: Record<string, unknown>, kind: 'formula' | 'cask', e
   // Homebrew or updated itself. Its receipt is not the current bundle version.
   const bundleVersion = kind === 'cask' ? text(raw.bundle_short_version) ?? text(raw.bundle_version) : null;
   const installed = bundleVersion ?? brewInstalled;
+  const target = kind === 'cask' && bundleVersion && Array.isArray(raw.artifacts)
+    ? raw.artifacts.filter(isRecord).find(artifact => Array.isArray(artifact.app) && typeof artifact.target === 'string')?.target : null;
+  let location: string | null = null;
+  try { if (typeof target === 'string' && path.isAbsolute(target)) location = fs.realpathSync(target); } catch { /* No path claim without installed evidence. */ }
   const receiptMatchesBundle = !bundleVersion || Boolean(brewInstalled?.split(',').map(value => value.trim()).includes(bundleVersion));
   const productRepo = /^https:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?)(?:\.git)?\/?$/.exec(String(raw.homepage ?? ''))?.[1];
   const state = { name, kind, installed, brewInstalled, available, outdated: raw.outdated, disabled: raw.disabled === true, pinned: raw.pinned === true, recipe: raw.ruby_source_checksum ?? null };
@@ -193,6 +202,9 @@ function normalizeItem(raw: Record<string, unknown>, kind: 'formula' | 'cask', e
     installation_owner: brewInstalled ? 'homebrew' : bundleVersion ? 'application' : null,
     installation_kind: bundleVersion ? 'app_bundle' : brewInstalled ? kind === 'formula' ? 'homebrew_formula' : 'homebrew_cask' : null,
     installation_evidence: bundleVersion ? 'homebrew_bundle_readback' : brewInstalled ? 'homebrew_install_receipt' : null,
+    location,
+    installation_id: location ? `local:${createHash('sha256').update(location).digest('hex').slice(0, 24)}` : null,
+    active: Boolean(location && installed),
     owner_settings_route: productRepo === 'gaofeng21cn/one-person-lab-app' && installed ? 'updates' : null,
     update_status: !installed ? 'not_installed' : !brewInstalled || !receiptMatchesBundle ? 'unknown' : raw.outdated === true ? 'available' : raw.outdated === false ? 'current' : 'unknown',
     revision: createHash('sha256').update(JSON.stringify(state)).digest('hex'), disabled: state.disabled, pinned: state.pinned,

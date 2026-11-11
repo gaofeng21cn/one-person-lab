@@ -1,0 +1,869 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "travel-passport",
+  "plugin_id": "travel-passport",
+  "package_version": "0.2.0",
+  "source_repo": "https://github.com/gaofeng21cn/journey-atlas.git",
+  "source_commit": "5dda1a0456910d3533f306a20818f9112ac89344",
+  "source_root": "plugins/travel-passport",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:6c737faa104bcca07f2c1214100264d3b14b20e6e601b8aecc10511d462ad575"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/.codex-plugin/plugin.json",
+      "sha256": "sha256:70a939ecb83481028728c77ba09beaeabff39ae9e6cfaedc31224ed3daa64e22"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/LICENSE",
+      "sha256": "sha256:a22822970331a0e172bc6451a0c70d7f57c433f643c618eb2bc02b96196b91aa"
+    },
+    {
+      "path": "NOTICE.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/NOTICE.md",
+      "sha256": "sha256:35535febe83b6d03d77420bc02df64c76ccc6ba193a3797ee3b04011e719dc72"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/README.md",
+      "sha256": "sha256:9afcaaed2ba1296e7896281b6149c299b214428b8f042003bf85a3901b7c1097"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/app-contribution-adapter.json",
+      "sha256": "sha256:927498d57c0c98cfbc28c8644433664bf41b424c11d58c6b4fae26f441883483"
+    },
+    {
+      "path": "app-contribution.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/app-contribution.mjs",
+      "sha256": "sha256:1a00894181eb491910da41d6e948a9212d64f63a8665a3ba633bab2b5dd6e895"
+    },
+    {
+      "path": "data/atlas-config.example.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/atlas-config.example.json",
+      "sha256": "sha256:e1137c159e9c7a5d3fae6d0b1980e1b96b64a262bfe689709a828dc7907771bb"
+    },
+    {
+      "path": "data/china.geojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/china.geojson",
+      "sha256": "sha256:4370605a036f78ad7da4214e459714e43d3724c31160201ed25d79db763d2f48"
+    },
+    {
+      "path": "data/city-catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/city-catalog.json",
+      "sha256": "sha256:359669738f1aae07b099f20c54e83f1274bf7de2911158753c3f241b12281240"
+    },
+    {
+      "path": "data/europe-countries.topojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/europe-countries.topojson",
+      "sha256": "sha256:04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394"
+    },
+    {
+      "path": "data/europe.geojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/europe.geojson",
+      "sha256": "sha256:d32d6134b02b3845c4cb923bbc5e7de4ab885cb7c9699614b152ba2bcf0115df"
+    },
+    {
+      "path": "data/geographic-context.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/geographic-context.json",
+      "sha256": "sha256:a54f82d788c51de133093d8c5ccc99cb38765b827b66b115df52ab591da0b9bf"
+    },
+    {
+      "path": "data/greece-regions.geojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/greece-regions.geojson",
+      "sha256": "sha256:9b868653aa8aca0d3e13da76c87e8090c67f8f995d0683ac84d61f06a7d6222f"
+    },
+    {
+      "path": "data/greece.geojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/greece.geojson",
+      "sha256": "sha256:da496f70ebd3f118f7cf9acfd3bfe938e58c86414cb1898b8496dbc3a7b21b4e"
+    },
+    {
+      "path": "data/italy-regions.geojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/italy-regions.geojson",
+      "sha256": "sha256:97e9dc4c8ddb83e1d32c9f75f2007f7410f233e465cb529c6f8cf6f5ac488b0f"
+    },
+    {
+      "path": "data/italy.geojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/italy.geojson",
+      "sha256": "sha256:9efba777f38291f4443170724c5dc82c0bbf3dc1eb0adcd1580a653ef5e3beb2"
+    },
+    {
+      "path": "data/japan-prefectures.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/japan-prefectures.json",
+      "sha256": "sha256:ca9206ab9733cc38cb708b2f5d3b22efe93dfba742f331f72699aefa4fd47621"
+    },
+    {
+      "path": "data/japan.topojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/japan.topojson",
+      "sha256": "sha256:1fc5c61b08475a8a0264526ff67057ab6a21af34f0acb5b4e79b68e6557d7cb9"
+    },
+    {
+      "path": "data/region-catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/region-catalog.json",
+      "sha256": "sha256:57dd4dd625d580350dd4abe6a6f48c20108503809737b39183682fbb518b192a"
+    },
+    {
+      "path": "data/scope-hierarchy.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/scope-hierarchy.json",
+      "sha256": "sha256:e0ab668c140f8262f002174e56850c26440a84b706593ba0078c41e3f03119ff"
+    },
+    {
+      "path": "data/southeast-asia.geojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/southeast-asia.geojson",
+      "sha256": "sha256:084279629a395918c6ad1b4ed756ef944247d2143c7887b2cf962adfe3eb4a87"
+    },
+    {
+      "path": "data/swiss-cantons.topojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/swiss-cantons.topojson",
+      "sha256": "sha256:177f7299086ed37f9c565a8f9da07742cd71d5c8a3dd7ae27193af5432e6b33c"
+    },
+    {
+      "path": "data/switzerland.geojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/switzerland.geojson",
+      "sha256": "sha256:d47df27ec4e78b26ca26e749338844f23f2f836822956d9601973cd52f9e5f16"
+    },
+    {
+      "path": "data/us-states.topojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/us-states.topojson",
+      "sha256": "sha256:d76b391ccfa8bff601d51e3e3da5d43a89fa46cd5caca72ce731b383be5596d0"
+    },
+    {
+      "path": "data/usa.geojson",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/data/usa.geojson",
+      "sha256": "sha256:24f2ea0e12061ba5ad379eecd1a7fdac2c8812faccf4360e4e67887724342d37"
+    },
+    {
+      "path": "docs/城市地图与数据规范.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/docs/%E5%9F%8E%E5%B8%82%E5%9C%B0%E5%9B%BE%E4%B8%8E%E6%95%B0%E6%8D%AE%E8%A7%84%E8%8C%83.md",
+      "sha256": "sha256:c33f7ba72660184f7ce27040652f46e0da4fb8071fe108740f97ea05a53c2ee1"
+    },
+    {
+      "path": "docs/安装与共享基座.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/docs/%E5%AE%89%E8%A3%85%E4%B8%8E%E5%85%B1%E4%BA%AB%E5%9F%BA%E5%BA%A7.md",
+      "sha256": "sha256:af6a35ace5db01c35baa07d844eeb6a2d8ce01b94ecad31cdf7fafdcfda8ca2d"
+    },
+    {
+      "path": "docs/架构与数据边界.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/docs/%E6%9E%B6%E6%9E%84%E4%B8%8E%E6%95%B0%E6%8D%AE%E8%BE%B9%E7%95%8C.md",
+      "sha256": "sha256:27e2d1121cb43dc653f842cccadfd798b612025af3bd97d41d7c20733f4dd334"
+    },
+    {
+      "path": "docs/维护流程.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/docs/%E7%BB%B4%E6%8A%A4%E6%B5%81%E7%A8%8B.md",
+      "sha256": "sha256:b4490c57d891495b69ee6fd692a69a2c274d618e404a3e3c9b74f3a5bab5ba5b"
+    },
+    {
+      "path": "docs/输入目录约定.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/docs/%E8%BE%93%E5%85%A5%E7%9B%AE%E5%BD%95%E7%BA%A6%E5%AE%9A.md",
+      "sha256": "sha256:621ba3eb57e3487ec2c295d805c0d2a4bbae9bd3c62bda8acf5b48790996cdb8"
+    },
+    {
+      "path": "examples/atlas-update.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/examples/atlas-update.json",
+      "sha256": "sha256:57936be5547c647a18804e25c0209d29449ed6e3b941a12c943b61332441c203"
+    },
+    {
+      "path": "examples/import-bundle.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/examples/import-bundle.json",
+      "sha256": "sha256:b52c58dbc5b95e712ea6b45a77afc65b20362e1c504abcdfb09fe4d7ef314c29"
+    },
+    {
+      "path": "examples/source-note.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/examples/source-note.md",
+      "sha256": "sha256:fbbd2ff8d5b27839ca422d76fe311ed95edff4af6ee3a49c00701c5f345b147b"
+    },
+    {
+      "path": "journey-atlas.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/journey-atlas.mjs",
+      "sha256": "sha256:b105644b79ba362611b9c8fe489b77c84f15948818e310e1c9ab6abf960dbe48"
+    },
+    {
+      "path": "package-lock.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/package-lock.json",
+      "sha256": "sha256:b336034319c118b2b9da640f1fe54522b3987fb9fbb28e19cb9040c99c6d37e9"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/package.json",
+      "sha256": "sha256:7e0672127d7a432c0fb9ad55d3e3892597870ee772edc57c2c4ab9cc4d60e7ad"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/plugin.json",
+      "sha256": "sha256:c32e27524d577d52964dcd831bffdd3471947c9e8a6c6b15c3ac2bbb69546328"
+    },
+    {
+      "path": "scripts/annual-data.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/annual-data.mjs",
+      "sha256": "sha256:d8b03083e792ac33d30771426e84e0fc15251b9a9a946c47d6e11f3751dbdcb5"
+    },
+    {
+      "path": "scripts/annual-map.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/annual-map.mjs",
+      "sha256": "sha256:f300a50f4c837917438ab4b3eff9392cb65c16c018054e0db4f27b2c0c3a33e1"
+    },
+    {
+      "path": "scripts/archive-files.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/archive-files.py",
+      "sha256": "sha256:0919c1e84c2f2268f49ab73735a76f996998d390afb821a280648c4bcea27a9f"
+    },
+    {
+      "path": "scripts/atlas-data.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/atlas-data.mjs",
+      "sha256": "sha256:72aa1aaf4f5c0770aae96af8ea0e4f654abdd1a865212a1bb461f5cc469277f5"
+    },
+    {
+      "path": "scripts/audit-gateways.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/audit-gateways.mjs",
+      "sha256": "sha256:e18ee839200da0b54d3a96910ca084a7595ba6ca645b8b469c688ed2d22b1f34"
+    },
+    {
+      "path": "scripts/audit-node-continuity.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/audit-node-continuity.mjs",
+      "sha256": "sha256:1c6df4a9ae2ecefac88a3bf00973d15acb49a189cc32e52234fa15237dc8810c"
+    },
+    {
+      "path": "scripts/audit-visit-evidence.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/audit-visit-evidence.mjs",
+      "sha256": "sha256:e1d5151c7566672e03e8a3700b883bc2ba8f0fafe0bd960ab9f2e606b6c27db3"
+    },
+    {
+      "path": "scripts/calibrate-city-movements.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/calibrate-city-movements.mjs",
+      "sha256": "sha256:ada23af03d4d15a01d9bef1dba7bfe481e47692dcd00dd0904e0df559b8b77cf"
+    },
+    {
+      "path": "scripts/check-site.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/check-site.mjs",
+      "sha256": "sha256:6761851884dd02e72dba69989071b011e418bfcbf79af784eb2bc7034ca75e94"
+    },
+    {
+      "path": "scripts/check.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/check.mjs",
+      "sha256": "sha256:2bd224807fdc7e59915e75bcfbd155343e3a291b99fd1cb3ce4894cd29d3bd9a"
+    },
+    {
+      "path": "scripts/city-data.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/city-data.mjs",
+      "sha256": "sha256:cf10c6bf105e9540a3c2a3a2fe7bbd0ef9784b75268b84e486ccdbea62cf9f38"
+    },
+    {
+      "path": "scripts/city-evidence.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/city-evidence.mjs",
+      "sha256": "sha256:84f3fa4558f0f8f84e67ca228fea0c9823d41047388ee21d837e8ab36b1822d7"
+    },
+    {
+      "path": "scripts/city-reconstruction-output.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/city-reconstruction-output.mjs",
+      "sha256": "sha256:3f75f69a867a04cf003f78f51a8df3af64dd29087b44430df2a5e3677ba0242d"
+    },
+    {
+      "path": "scripts/collect-city-evidence.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/collect-city-evidence.mjs",
+      "sha256": "sha256:052ac6de8a4080f2fecdec2cdeb4af95ecbebead50e0a3ce8354d5dfa95d6a1e"
+    },
+    {
+      "path": "scripts/collect-global-evidence.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/collect-global-evidence.mjs",
+      "sha256": "sha256:4c7e991d89989d764322e422397c1344283ffdc09c82319466bd0bfffd1cf38f"
+    },
+    {
+      "path": "scripts/compose-city.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/compose-city.mjs",
+      "sha256": "sha256:32d03d212eb3c59d55689f22e60330a362e97ead11eb44dc72f386c038135974"
+    },
+    {
+      "path": "scripts/continuity-audit.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/continuity-audit.mjs",
+      "sha256": "sha256:2d4c11b4b84732a7aad14802a04fa046749c206a9a1f7353aa202e6290feb7b1"
+    },
+    {
+      "path": "scripts/csv.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/csv.mjs",
+      "sha256": "sha256:21a44b1be933701a83a434a58347695dd3050855fe21199aeecde0dcf13642cb"
+    },
+    {
+      "path": "scripts/data.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/data.mjs",
+      "sha256": "sha256:794f9f0f5edee30ab5cd3d06b4ad7c45206211f4810cdd7fd25c1cf0cefb350a"
+    },
+    {
+      "path": "scripts/detail-connections.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/detail-connections.mjs",
+      "sha256": "sha256:4340074a2954d90031db74452bf3eb08e9f3116886a474993ef0ae551ec47257"
+    },
+    {
+      "path": "scripts/display-geometry.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/display-geometry.mjs",
+      "sha256": "sha256:ef8936394f9612936adcc1f9886dadd646240d536b3a161a34acf0b8d46d0dc7"
+    },
+    {
+      "path": "scripts/edge-labels.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/edge-labels.mjs",
+      "sha256": "sha256:83016e184d41048d298957ea41d5f4d92322445f82fdce32901a556b91077a18"
+    },
+    {
+      "path": "scripts/evidence-contract.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/evidence-contract.mjs",
+      "sha256": "sha256:6b43f70b1aadb624b58c235a764f06070d4dce4f1d01e0e0d4adb1104cf20c6e"
+    },
+    {
+      "path": "scripts/extract-city-context.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/extract-city-context.py",
+      "sha256": "sha256:7caa6bd3d2a0b322220aac68d9fa8fa8bd7f2aa1e65ec07afde34463874f6fff"
+    },
+    {
+      "path": "scripts/fetch-city-geography.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/fetch-city-geography.mjs",
+      "sha256": "sha256:9042b380aa68464a0a80acb20126885ca79d5641d558f3c24eb1408cae085542"
+    },
+    {
+      "path": "scripts/fetch-city-map.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/fetch-city-map.mjs",
+      "sha256": "sha256:3c1658958ea76a21e8b43b070630f2a87e896c7be0a45f330533d417cf24900c"
+    },
+    {
+      "path": "scripts/fetch-geography.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/fetch-geography.mjs",
+      "sha256": "sha256:b80d600c2a1478bbdc16e64165b164fe53df136b507cea9bf19a7ac8981e199c"
+    },
+    {
+      "path": "scripts/flight-card-data.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/flight-card-data.mjs",
+      "sha256": "sha256:ca01cb8e40d89d66ba30631647c40ada72525f7259edd72f6c3b7283dddd42f7"
+    },
+    {
+      "path": "scripts/flight-time.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/flight-time.mjs",
+      "sha256": "sha256:ba29bdc55c481e334c12f2537c29afd5f88ba93c0e05ad44402c4bcb096551d3"
+    },
+    {
+      "path": "scripts/flight-view.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/flight-view.mjs",
+      "sha256": "sha256:ed5dcd8e2bebbc1434049fa025335f088453e62d96ac8b46cc1c7d77d83fd347"
+    },
+    {
+      "path": "scripts/global-mobility-output.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/global-mobility-output.mjs",
+      "sha256": "sha256:e98c55e42c7972631dc2090346b15833da9c289b78dd17afa2672488937a4f62"
+    },
+    {
+      "path": "scripts/global-mobility.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/global-mobility.mjs",
+      "sha256": "sha256:41f41e14770d6492a2ffafab02f20b4749c3fb560ccad55f652688d402e4305b"
+    },
+    {
+      "path": "scripts/hub-links.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/hub-links.mjs",
+      "sha256": "sha256:494cc2b9232d8dc43f5f69aca03640bc7ad5654329b25d2369da6df827098ce8"
+    },
+    {
+      "path": "scripts/infer-links.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/infer-links.mjs",
+      "sha256": "sha256:59d731aaddb88f64f2e20eeba6f555729e919c549f86f6cbed5332cb22787edc"
+    },
+    {
+      "path": "scripts/infer-placeholders.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/infer-placeholders.mjs",
+      "sha256": "sha256:8ae428dec46040fbc04a590c65331a648e2d946ea74cb39b62c7c6df8fee340b"
+    },
+    {
+      "path": "scripts/japan-map.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/japan-map.mjs",
+      "sha256": "sha256:44faf06bfdd8396dc5cbd4745af4d26cdd2f36593ba230a2cc81651a11b3e0a7"
+    },
+    {
+      "path": "scripts/managed-links.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/managed-links.mjs",
+      "sha256": "sha256:06829904982dc9488282e3d56973eca462ceceea0d15ae5105d70b13174b66e9"
+    },
+    {
+      "path": "scripts/manifest.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/manifest.mjs",
+      "sha256": "sha256:20668b9bae5b288f8562dd25b8dcc742e080e404b4c8dbb5d865907cc23f90e4"
+    },
+    {
+      "path": "scripts/map-label-layout.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/map-label-layout.mjs",
+      "sha256": "sha256:49d8c002d10b49d84e7b485832bcfac7240158a1c3ab8cb58ab1b680ab908d93"
+    },
+    {
+      "path": "scripts/migrate-evidence.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/migrate-evidence.mjs",
+      "sha256": "sha256:c01f731d565b2b9ebd8783a7fc360418221e9ed1a54b1f7cfe7f27bbdd20c6c1"
+    },
+    {
+      "path": "scripts/node-access.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/node-access.mjs",
+      "sha256": "sha256:8f67a7b6c37f8c1fb98a98b11da6bee20d5999c522994e09e7cbf6686ffbb09f"
+    },
+    {
+      "path": "scripts/organize-output.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/organize-output.mjs",
+      "sha256": "sha256:1ee58bfb6503adda4907c68a1b09a502247d3e4136a5343838b8a6141ba65248"
+    },
+    {
+      "path": "scripts/output-paths.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/output-paths.mjs",
+      "sha256": "sha256:c67b7b9d99926a19a80a76b6e26f637bc9d887f3c5ad8a61bbf96a1a534727d2"
+    },
+    {
+      "path": "scripts/passport.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/passport.mjs",
+      "sha256": "sha256:281ca2d7631ba260dc5f8dd7156ab0ef203b0341755998f4463c3f8b73b54561"
+    },
+    {
+      "path": "scripts/prepare-open-geography.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/prepare-open-geography.mjs",
+      "sha256": "sha256:7eaa067cf23e92a40d436bf69b257bc90a023267db3435ed1750c1f14df01c0d"
+    },
+    {
+      "path": "scripts/promote-verified-candidates.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/promote-verified-candidates.mjs",
+      "sha256": "sha256:ee0087e4e1d518c239fec00bc4d63e766c72dce54421e56732924e03773b2b54"
+    },
+    {
+      "path": "scripts/prune-cache.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/prune-cache.mjs",
+      "sha256": "sha256:66053ca00070b047c44b0958eae26893ce3873ff31d4bb20c1cd0eb1f453faa7"
+    },
+    {
+      "path": "scripts/prune-history.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/prune-history.mjs",
+      "sha256": "sha256:385820f4a5380cc0345d9bc4c48e62384017b8449abd2961c2bf00b239dc0add"
+    },
+    {
+      "path": "scripts/rebuild-city-evidence.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/rebuild-city-evidence.mjs",
+      "sha256": "sha256:df64e43d15aeeef22810391d58381fc69414a2074567965746410f9134d8fe75"
+    },
+    {
+      "path": "scripts/reconstruct-city.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/reconstruct-city.mjs",
+      "sha256": "sha256:f60e9243ba4a41fa60c63abe992d53cbdbc44e7ef39a75d2bbe071495918af57"
+    },
+    {
+      "path": "scripts/reconstruct-connections.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/reconstruct-connections.mjs",
+      "sha256": "sha256:c4123cfeaae5e8b8275ae85eb6c183a78bb147c4bdd2f111ba2ac9c350ea20c7"
+    },
+    {
+      "path": "scripts/reconstruction-progress.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/reconstruction-progress.mjs",
+      "sha256": "sha256:5223567e7a858e3f2d6bcca23d69dfafe267936974e1ca1279a799b713a8c93c"
+    },
+    {
+      "path": "scripts/region-data.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/region-data.mjs",
+      "sha256": "sha256:0f569eba71e35e1368546a928ff2b9c806fa82a492c3327fcccc2a02608f8168"
+    },
+    {
+      "path": "scripts/region-map.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/region-map.mjs",
+      "sha256": "sha256:598fe598a867f6907e6f3635e894b18ca5391e5974a5366b5c0499312bc1009d"
+    },
+    {
+      "path": "scripts/render-all.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/render-all.mjs",
+      "sha256": "sha256:c2d110c045928d4c22b9e7e11b0877497c8c65c56c30e6dd9d6b22f769ca7973"
+    },
+    {
+      "path": "scripts/render-annual.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/render-annual.mjs",
+      "sha256": "sha256:58c725b5fdbb82344cdc4914d0ee06b4e2ad1002160f37e300e30a36e225634b"
+    },
+    {
+      "path": "scripts/render-atlas.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/render-atlas.mjs",
+      "sha256": "sha256:f50ddbca82921d1c4d8dc85fc169ac9b4033ed2cabb84152a1623e32ff952bf8"
+    },
+    {
+      "path": "scripts/render.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/render.mjs",
+      "sha256": "sha256:be3b007f38abe8f1219977a49132bd9baf31ad60338cb2e1fc3e190a85910d81"
+    },
+    {
+      "path": "scripts/repair-formal-node-edges.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/repair-formal-node-edges.mjs",
+      "sha256": "sha256:1a28c234b05f1bf6b4ecd13ce69f4644197ffcd85ae69aeaa35d7288028477de"
+    },
+    {
+      "path": "scripts/repair-journey-scope.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/repair-journey-scope.mjs",
+      "sha256": "sha256:be44df5836c166057925ae39faca7ffa902227b442bbbf92bcd2c8b6f570e5fe"
+    },
+    {
+      "path": "scripts/requirements-map.txt",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/requirements-map.txt",
+      "sha256": "sha256:0d738f724ce454b63458e3a30a7e0255d3c608b3bde015304ac314319e3c0edf"
+    },
+    {
+      "path": "scripts/route-geometry.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/route-geometry.mjs",
+      "sha256": "sha256:a8307d1c030e501aceadb4ef0a3ecf218a48f1ffb98a9c5a90ca9ee91cb3e47c"
+    },
+    {
+      "path": "scripts/schema.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/schema.mjs",
+      "sha256": "sha256:47cf2efbe7d0e61500dfd218da7f7a923b63a9d0261c989fc765c81ad311fcef"
+    },
+    {
+      "path": "scripts/site-data.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/site-data.mjs",
+      "sha256": "sha256:8fbba45fc8d7d1e2cb29a18be1a8ce34d7f0081cd3490a9cb0c3b0a004044ab0"
+    },
+    {
+      "path": "scripts/site.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/site.mjs",
+      "sha256": "sha256:1675a6b0ff6e8020e33ecaa6e9e19d9ad952ef05f1e6824b9287047016bce15b"
+    },
+    {
+      "path": "scripts/source-data-cli.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/source-data-cli.mjs",
+      "sha256": "sha256:8a27b16cdc78075311bb6def016ecbfd315db357e68dffa9478e3e33fc5cd8c5"
+    },
+    {
+      "path": "scripts/source-data.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/source-data.mjs",
+      "sha256": "sha256:942933a593bf4fb3e23915bfc39977f824c77b0bdb57ffcd1eb31557ae8da84e"
+    },
+    {
+      "path": "scripts/source-references.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/source-references.mjs",
+      "sha256": "sha256:990033b3ff3e599a5ef8b3c85996ea1f556471e88acdeb7e9dee215c613c4aff"
+    },
+    {
+      "path": "scripts/storage.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/storage.mjs",
+      "sha256": "sha256:70520e618048f3a552a2d582105c1668b3f37c6cfc8b687f13a3c825f25782e9"
+    },
+    {
+      "path": "scripts/travel-layers.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/travel-layers.mjs",
+      "sha256": "sha256:73dab025e864a439603604cc52fe3830f13dac0a114121c9a4c69e0de7504bb4"
+    },
+    {
+      "path": "scripts/update-atlas.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/update-atlas.mjs",
+      "sha256": "sha256:3e6ac4bde95a669f3fcdc1d5bff3314df75ff07ac816ed6912a8a02878ba5a0d"
+    },
+    {
+      "path": "scripts/update-cities.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/update-cities.mjs",
+      "sha256": "sha256:46bc4380d257bde473566eba182195619577da2cdb6cb9bdbd9a1f4835ecab9f"
+    },
+    {
+      "path": "scripts/update-operation.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/update-operation.mjs",
+      "sha256": "sha256:7dd5df5f0877bdb3ba621ff5432894a62ee4be6067d082b094a1a7d93bce93ba"
+    },
+    {
+      "path": "scripts/vector-context.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/vector-context.mjs",
+      "sha256": "sha256:6f60967f159dcec729a051e45edae542aa126873d9b066139798f17c8c59f6fd"
+    },
+    {
+      "path": "scripts/verify-all.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/verify-all.mjs",
+      "sha256": "sha256:91c6c6c18f84ac338e4e93000cf830d8ebd05efe94321af56a976eb38a027d52"
+    },
+    {
+      "path": "scripts/visit-evidence.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/visit-evidence.mjs",
+      "sha256": "sha256:dbb864715f4a3bff7d53abae8818453dd6563208fc2ec85433a6741e503b3465"
+    },
+    {
+      "path": "scripts/visit-instances.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/scripts/visit-instances.mjs",
+      "sha256": "sha256:7e655ba04b157795d357d3ee99a17ebddf3b5e120019ab317f24ab9255b3139c"
+    },
+    {
+      "path": "skills/travel-planning/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/skills/travel-planning/SKILL.md",
+      "sha256": "sha256:13bfcfff11c0dd7adcfd8d3a87ca07e26a6943cf7fd756bc42d49898a119e770"
+    },
+    {
+      "path": "src/annual.css",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/annual.css",
+      "sha256": "sha256:5e57efff874071d1c36acf3eee0e1d973cdde3002980a407ffeefdf39e9fd37c"
+    },
+    {
+      "path": "src/annual.html",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/annual.html",
+      "sha256": "sha256:9a977e414cdf85388619014d1d33c37a0b5eaed5f19deb83a2cbc9143a0cbad9"
+    },
+    {
+      "path": "src/atlas-world.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/atlas-world.js",
+      "sha256": "sha256:f2eb9d1a1fb6815a870516c2c9cf9e9cd57394436f98ceb44fbe4a94e652edaa"
+    },
+    {
+      "path": "src/atlas.css",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/atlas.css",
+      "sha256": "sha256:e02c7c312077b83497744de2c413ff41d931b00a5ccc6c5f90d9820b81136e91"
+    },
+    {
+      "path": "src/city-gateways.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/city-gateways.mjs",
+      "sha256": "sha256:aec0ec2f01166c5118d8b547bcc771b3264a572f136fc34c1a295589869ab0a1"
+    },
+    {
+      "path": "src/city-map.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/city-map.mjs",
+      "sha256": "sha256:f3c0c885ee673f88ec161e36c75543c9d03c82a0235b1f73e0167693a6a8f7aa"
+    },
+    {
+      "path": "src/city-passport-summary.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/city-passport-summary.mjs",
+      "sha256": "sha256:a520b57cbf3b0b3547a8368a947594ac082672e7f27488bd72ea1b3bd83bf3f2"
+    },
+    {
+      "path": "src/geographic-fit.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/geographic-fit.mjs",
+      "sha256": "sha256:91afae1d5ecd6225eb4efd5548d81a6651f9f52381d7657a4a353d32f6f3bc7c"
+    },
+    {
+      "path": "src/japan.html",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/japan.html",
+      "sha256": "sha256:d7c6cf2f385ad205dd47a18c989f452b0eb336056e1515a8ec4082b3c21d0b73"
+    },
+    {
+      "path": "src/map-background.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/map-background.mjs",
+      "sha256": "sha256:53caa99c0ea28492ee3fb193dc30ffd19cde0ce1dd3411f0dc527def633f209d"
+    },
+    {
+      "path": "src/map-dots.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/map-dots.mjs",
+      "sha256": "sha256:115cfcc38a519a8cea5e6203b13b33258722005c6c8bab33c49161e8007807e3"
+    },
+    {
+      "path": "src/map-frames.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/map-frames.mjs",
+      "sha256": "sha256:df949751ca995473260ec2a13f08516250737c1c2c13b71537f6c9b3c650323b"
+    },
+    {
+      "path": "src/map-interactions.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/map-interactions.mjs",
+      "sha256": "sha256:3846fa3c5030b6fc2544bac291883e9f8e512f77ee0948de12bc3dc96eb5b68d"
+    },
+    {
+      "path": "src/map-labels.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/map-labels.mjs",
+      "sha256": "sha256:d914b5850441dad6213ec579a6323ecc79ca446f50c9001bf8f8a1fdf37b8db1"
+    },
+    {
+      "path": "src/poster.css",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/poster.css",
+      "sha256": "sha256:0f3a38364499c813c28a14376457025fa95e0f861caeaf62251bb10742e7ecf7"
+    },
+    {
+      "path": "src/poster.html",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/poster.html",
+      "sha256": "sha256:1c1036853c445417d3a35442bdc3b48716116316bbfdd0e171912e1715918156"
+    },
+    {
+      "path": "src/poster.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/poster.js",
+      "sha256": "sha256:b18b88a818ca22a59f654b9780ceb978f96c6249ec943e83208c6ffbec8f3642"
+    },
+    {
+      "path": "src/region.html",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/region.html",
+      "sha256": "sha256:85c4c6224bd447bcfcff4bf2f7433458324575f6664eee837d85b6c9f310e556"
+    },
+    {
+      "path": "src/route-semantics.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/route-semantics.mjs",
+      "sha256": "sha256:ea3b8983aece2467c285ab02502becdafb9155589c8d98aba96e08fceb952c0f"
+    },
+    {
+      "path": "src/scope-model.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/scope-model.mjs",
+      "sha256": "sha256:363909991630e409f34016c24e52e601140054209c21fc3c7e2d821bd4c0dee7"
+    },
+    {
+      "path": "src/site-app.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/site-app.mjs",
+      "sha256": "sha256:d8b89b3440dc03a182222215b7685f620845fd8ec8803c42cb2c28a79a3fbbb8"
+    },
+    {
+      "path": "src/site-map.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/site-map.mjs",
+      "sha256": "sha256:772c0dd67edcc0cd66dbde89c01f395d002bae61fc6dc45319e4f5e8aee25c88"
+    },
+    {
+      "path": "src/site.css",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/site.css",
+      "sha256": "sha256:da72d25cba1e95cc18a6bd4f7c1a930947407e0acacb1f056fcbeaf1323e4378"
+    },
+    {
+      "path": "src/site.html",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/site.html",
+      "sha256": "sha256:19cf97a62eb367bfd1e750a642518a482f97f0883748448eef94354099e4a263"
+    },
+    {
+      "path": "src/transport-time.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/transport-time.mjs",
+      "sha256": "sha256:a6dc8da4196d9f31606cf8e971482ee58aa227b56d00c04d33d28f8b30186f80"
+    },
+    {
+      "path": "src/world-dots.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/src/world-dots.js",
+      "sha256": "sha256:af58a1732f55dbf59cd58bc50bc0a2b6a5008b251953385370f28237e3fa74d1"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/journey-atlas/5dda1a0456910d3533f306a20818f9112ac89344/plugins/travel-passport/opl-package.json",
+      "sha256": "sha256:a05e73e338fe108148cabb701dc184f2adf9da94d60ab0ad4a763f3f7665cef7"
+    }
+  ]
+}

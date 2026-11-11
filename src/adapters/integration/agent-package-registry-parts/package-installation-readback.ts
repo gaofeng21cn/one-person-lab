@@ -15,6 +15,8 @@ export type PackageInstallationReadback = {
   manager: 'package_owner' | 'uv';
   management_scope: 'owner_only';
   location_ref: string;
+  location: string;
+  active: boolean;
   evidence_ref: string;
   entrypoint_verified: true;
   source_revision?: string;
@@ -79,6 +81,7 @@ function ownerManaged(packageId: string, dataRoot: string, home: string): Packag
     installation_id: `owner-managed:${packageId}`,
     kind: 'owner_managed', version, mode: 'installed', manager: 'package_owner',
     management_scope: 'owner_only', location_ref: `local-data:${packageId}/app/current`,
+    location: fs.realpathSync(current), active: true,
     evidence_ref: `local-data:${packageId}/app/install.json`, entrypoint_verified: true,
     ...(typeof receipt.sourceRevision === 'string' && /^[a-f0-9]{40}$/.test(receipt.sourceRevision)
       ? { source_revision: receipt.sourceRevision } : {}),
@@ -140,6 +143,8 @@ function uvTool(packageId: string, toolsRoot: string): PackageInstallationReadba
         installation_id: `uv-tool:${packageId}`, kind: 'uv_tool', version,
         mode: editable ? 'development' : 'installed', manager: 'uv', management_scope: 'owner_only',
         location_ref: `uv-tool:${packageId}`, evidence_ref: `uv-tool:${packageId}/uv-receipt.toml`,
+        location: editable ? fs.realpathSync(fileURLToPath(String(origin.url))) : fs.realpathSync(root),
+        active: true,
         entrypoint_verified: true,
       };
     }

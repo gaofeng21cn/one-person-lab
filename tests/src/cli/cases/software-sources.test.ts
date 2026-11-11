@@ -1,4 +1,5 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { writeFakeCodex, writePluginSource, installedOwnerDescriptor, packageId, ownerPackageVersion } from './packages-cases/configured-codex-plugin-carrier-shared.ts';
 
 test('software source CLI and App action share one refs-only configuration', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-cli-'));
@@ -31,5 +32,38 @@ test('software source CLI and App action share one refs-only configuration', () 
     assert.equal(wrongNativeSource.payload.error.details.reason_code, 'homebrew_source_mismatch');
     const nativeDryRun = runCliFailure(['app', 'action', 'execute', '--action', 'source_uninstall', '--payload', JSON.stringify({ source_id: 'homebrew:gaofeng21cn-one-person-lab', item_id: 'formula:gaofeng21cn/one-person-lab/opl', expected_revision: 'fixture' }), '--dry-run'], env);
     assert.equal(nativeDryRun.payload.error.details.reason_code, 'software_source_dry_run_unsupported');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('software installation actions reject a relocated carrier before delegating native removal', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-installation-carrier-'));
+  const source = path.join(root, 'source');
+  const replacement = path.join(root, 'replacement');
+  const binary = path.join(root, 'codex.mjs');
+  const state = path.join(root, 'plugin-state.json');
+  const env = { OPL_STATE_DIR: path.join(root, 'state'), CODEX_HOME: path.join(root, 'codex'),
+    OPL_CODEX_PLUGIN_BIN: binary, FIXTURE_PLUGIN_STATE: state, FIXTURE_PLUGIN_SOURCE: source };
+  try {
+    writePluginSource(source, 'callable');
+    fs.writeFileSync(path.join(source, 'opl-package.json'), JSON.stringify(installedOwnerDescriptor()));
+    fs.cpSync(source, replacement, { recursive: true });
+    writeFakeCodex(binary, ownerPackageVersion);
+    fs.mkdirSync(env.CODEX_HOME);
+    fs.writeFileSync(state, JSON.stringify({ installed: true, version: ownerPackageVersion, marketplaceSource: 'fixture-carrier' }));
+    const product = () => runCli(['packages', 'list', '--detail', 'fast'], env).opl_agent_packages.directory.entries.find((item: any) => item.package_id === packageId);
+    const before = product();
+    const action = before.installations[0].available_actions.find((item: any) => item.payload.operation === 'uninstall');
+    assert.ok(action);
+    const invoke = (payload: unknown) => ['app', 'action', 'execute', '--action', 'software_installation_execute', '--payload', JSON.stringify(payload)];
+    env.FIXTURE_PLUGIN_SOURCE = replacement;
+    const rejected = runCliFailure(invoke(action.payload), env);
+    assert.equal(rejected.payload.error.details.reason_code, 'software_installation_stale_or_unavailable');
+    assert.equal(JSON.parse(fs.readFileSync(state, 'utf8')).installed, true);
+    const refreshed = product().installations[0].available_actions.find((item: any) => item.payload.operation === 'uninstall');
+    const result = runCli(invoke(refreshed.payload), env).app_action_execution.result;
+    assert.equal(result.opl_agent_package_uninstall.status, 'uninstalled');
+    assert.equal(JSON.parse(fs.readFileSync(state, 'utf8')).installed, false);
+    assert.equal(fs.existsSync(path.join(source, 'opl-package.json')), true);
+    assert.equal(fs.existsSync(path.join(replacement, 'opl-package.json')), true);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
