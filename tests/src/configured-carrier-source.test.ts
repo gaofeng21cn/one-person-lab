@@ -11,6 +11,7 @@ import { hostedRuntimeReadiness } from '../../src/adapters/integration/agent-pac
 import { gitMarketplaceRuntimeRoot } from '../../src/kernel/git-marketplace-runtime-root.ts';
 import { acquireHostedPackageSource } from '../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-source.ts';
 import { materializeStandardAgentFrameworkLink } from '../../src/adapters/integration/standard-agent-framework-link.ts';
+import { packageInstallSourceAvailable } from '../../src/adapters/integration/agent-package-registry-parts/package-install-source.ts';
 
 const hash = (bytes: Buffer) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 const json = (value: unknown) => Buffer.from(`${JSON.stringify(value)}\n`);
@@ -246,6 +247,49 @@ test('Full source seed installs through the native payload verifier without netw
         assert.equal(fs.existsSync(path.join(f.marketplace, 'contracts/domain_descriptor.json')), true);
       }
     } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+  }
+});
+
+test('parent Full seed admits a local component and never falls back to online payload transport', () => {
+  for (const fault of [null, 'commit', 'bytes'] as const) {
+    const f = fixture(undefined, true);
+    const previousRuntime = process.env.OPL_FULL_RUNTIME_HOME;
+    try {
+      const packages = path.join(f.root, 'packages');
+      const owner = JSON.parse(fs.readFileSync(path.join(packages, 'fixture.json'), 'utf8'));
+      owner.management_scope = 'local_component';
+      owner.codex_surface.plugin_source_path = 'plugins/fixture';
+      owner.codex_surface.configured_codex_plugin_carrier.publication_ref = null;
+      fs.writeFileSync(path.join(packages, 'fixture.json'), json(owner));
+      const runtime = path.join(f.root, 'runtime');
+      const seed = path.join(runtime, 'modules/fixture');
+      fs.cpSync(f.source, seed, { recursive: true });
+      fs.writeFileSync(path.join(seed, 'opl-runtime-module.json'), json({
+        repo_name: 'fixture', packaged_runtime: true,
+        source_git: { head_sha: (fault === 'commit' ? '2' : '1').repeat(40) },
+      }));
+      if (fault === 'bytes') fs.writeFileSync(path.join(seed, 'plugins/fixture/skills/fixture/SKILL.md'), 'corrupt');
+      process.env.OPL_FULL_RUNTIME_HOME = runtime;
+      const descriptor = { manifest: { ...owner, carrier_source_commit: '1'.repeat(40) },
+        carrier: { publicationRef: null } } as any;
+      assert.equal(packageInstallSourceAvailable(descriptor), fault !== 'commit');
+      const bin = path.join(f.root, 'offline-bin');
+      fs.mkdirSync(bin);
+      fs.writeFileSync(path.join(bin, 'curl'), '#!/bin/sh\nexit 99\n', { mode: 0o755 });
+      const install = () => f.install({ OPL_FULL_RUNTIME_HOME: runtime, PATH: `${bin}:${process.env.PATH}` });
+      if (fault === 'commit') assert.throws(install, /matching parent-product Full seed/);
+      else if (fault === 'bytes') assert.throws(install, /digest/);
+      else {
+        assert.equal(install(), f.marketplace);
+        assert.equal(JSON.parse(fs.readFileSync(path.join(f.marketplace, '.codex-marketplace-install.json'), 'utf8')).source_type, 'packaged_source_seed');
+      }
+      delete process.env.OPL_FULL_RUNTIME_HOME;
+      assert.equal(packageInstallSourceAvailable(descriptor), false);
+    } finally {
+      if (previousRuntime === undefined) delete process.env.OPL_FULL_RUNTIME_HOME;
+      else process.env.OPL_FULL_RUNTIME_HOME = previousRuntime;
+      fs.rmSync(f.root, { recursive: true, force: true });
+    }
   }
 });
 
