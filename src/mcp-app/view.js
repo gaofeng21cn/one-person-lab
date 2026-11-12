@@ -215,8 +215,9 @@ function renderCatalog() {
   const views = state.catalog?.views || [];
   const products = state.catalog?.products || [];
   const query = state.query.trim().toLocaleLowerCase();
+  const selectedPackage = views.find(view => key(view) === state.selectedKey)?.package_id || views[0]?.package_id;
   const filtered = views.filter((view) => {
-    if (!query) return true;
+    if (!query) return view.package_id === selectedPackage;
     return `${view.package_id} ${view.package_name} ${view.view_id} ${localized(view.title_i18n)} ${view.view_type}`
       .toLocaleLowerCase()
       .includes(query);
@@ -229,7 +230,7 @@ function renderCatalog() {
   }
   const picker = $('view-select');
   const pickerGroups = new Map();
-  for (const view of views) {
+  for (const view of filtered) {
     if (!pickerGroups.has(view.package_id)) pickerGroups.set(view.package_id, { name: view.package_name, views: [] });
     pickerGroups.get(view.package_id).views.push(view);
   }
@@ -237,8 +238,8 @@ function renderCatalog() {
     <optgroup label="${escape(group.name)}">${group.views.map(view => `
       <option value="${escape(key(view))}" ${key(view) === state.selectedKey ? 'selected' : ''}>${escape(localized(view.title_i18n, view.view_id))}</option>
     `).join('')}</optgroup>
-  `).join('') || '<option value="">没有匹配的视图</option>';
-  picker.disabled = !views.length;
+  `).join('') || '<option value="">没有匹配的功能</option>';
+  picker.disabled = !filtered.length;
   function selectView(selectedKey) {
     state.selectedKey = selectedKey;
     remember('opl-apps-selected', state.selectedKey);
@@ -247,44 +248,38 @@ function renderCatalog() {
     void loadSelected();
   }
   picker.onchange = () => selectView(picker.value);
-  const productMatches = products.filter((product) => {
-    if (!query) return true;
-    return `${product.package_id} ${product.package_name} ${localized(product.package_description_i18n)} ${localized(product.package_summary_i18n)}`
-      .toLocaleLowerCase().includes(query);
-  });
-  $('products').innerHTML = productMatches.map((product) => {
-    const entry = views.find((view) => view.package_id === product.package_id && view.view_id === product.entry_view_id)
-      || views.find((view) => view.package_id === product.package_id);
-    const entryKey = entry ? key(entry) : '';
-    const modeLabel = product.presentation_mode === 'dedicated_app'
-      ? '专用 App'
-      : product.presentation_mode === 'professional_app' ? '专业应用' : '共享视图';
-    return `<article class="product-entry ${entryKey === state.selectedKey ? 'is-selected' : ''}">
-      <button class="product-entry-button" type="button" data-key="${escape(entryKey)}" ${entryKey ? '' : 'disabled'}>
-        <span class="product-entry-top"><strong>${escape(product.package_name)}</strong><span class="badge">${escape(modeLabel)}</span></span>
-        <small>${escape(localized(product.package_summary_i18n || product.package_description_i18n, '已安装能力'))}</small>
-        <span class="product-entry-meta">${escape(String(product.view_count))} 个视图${product.direct_entry ? ' · 可直接进入' : ''}</span>
-      </button>
-    </article>`;
-  }).join('') || '<div class="catalog-empty">没有匹配的产品入口</div>';
-  for (const button of $('products').querySelectorAll('[data-key]')) {
-    button.addEventListener('click', () => selectView(button.dataset.key));
-  }
+  // Older catalogs may not include products; the declared views still provide navigation.
+  const entries = products.length ? products : [...new Map(views.map(view => [view.package_id, {
+    package_id: view.package_id, package_name: view.package_name,
+  }])).values()];
+  const productPicker = $('product-select');
+  productPicker.innerHTML = entries.map(product => `<option value="${escape(product.package_id)}" ${product.package_id === selectedPackage ? 'selected' : ''}>${escape(product.package_name)}</option>`).join('') || '<option value="">暂无可用应用</option>';
+  productPicker.disabled = !entries.length;
+  productPicker.onchange = () => {
+    const product = entries.find(entry => entry.package_id === productPicker.value);
+    const entry = views.find(view => view.package_id === productPicker.value && view.view_id === product?.entry_view_id)
+      || views.find(view => view.package_id === productPicker.value);
+    if (!entry) return;
+    state.query = ''; $('search').value = '';
+    selectView(key(entry));
+  };
+  const selectedProduct = entries.find(product => product.package_id === selectedPackage);
+  $('product-summary').textContent = localized(selectedProduct?.package_summary_i18n || selectedProduct?.package_description_i18n);
+  $('views-label').textContent = query ? '搜索结果 · 所有应用' : '应用功能';
   $('views').innerHTML = [...groups.entries()].map(([packageId, group]) => {
     const product = products.find((entry) => entry.package_id === packageId);
-    const heading = product?.entry_kind === 'runtime_view' ? '运行时' : group.name;
+    const heading = product?.entry_kind === 'runtime_view' ? '任务与进度' : group.name;
     return `<section class="package-group" aria-label="${escape(heading)}">
       <h2>${escape(heading)}<small>${escape(String(group.views.length))}</small></h2>
       ${group.views.map((view) => `
         <button class="view-button" type="button" data-key="${escape(key(view))}" aria-current="${key(view) === state.selectedKey ? 'page' : 'false'}">
           <span>${escape(localized(view.title_i18n, view.view_id))}</span>
-          ${view.view_id === product?.entry_view_id ? '<span class="entry-mark">入口</span>' : ''}
         </button>
       `).join('')}
     </section>`;
-  }).join('') || '<div class="catalog-empty">没有匹配的内部视图</div>';
-  $('product-count').textContent = products.length ? `${products.length} 个` : '';
-  $('view-count').textContent = views.length ? `${views.length} 个` : '';
+  }).join('') || '<div class="catalog-empty">没有匹配的功能</div>';
+  $('product-count').textContent = entries.length ? `${entries.length} 个` : '';
+  $('view-count').textContent = filtered.length ? `${filtered.length} 项` : '';
   for (const button of $('views').querySelectorAll('[data-key]')) {
     button.addEventListener('click', () => {
       selectView(button.dataset.key);
@@ -296,10 +291,11 @@ function renderHeader() {
   $('notice').hidden = true;
   const view = state.selected;
   $('title').textContent = view ? localized(view.title_i18n, view.view_id) : 'OPL 能力';
-  const modeLabel = view?.presentation_mode === 'dedicated_app'
-    ? '专用 App'
-    : view?.presentation_mode === 'professional_app' ? '专业应用' : '共享视图';
-  $('subtitle').textContent = view ? `${view.package_name || ''} · ${modeLabel}` : '';
+  const guidance = view?.presentation_mode === 'dedicated_app'
+    ? '共享概览 · 完整操作请在 MiniApp 列表打开此应用的专用界面。'
+    : view?.presentation_mode === 'professional_app' ? '共享概览 · 编辑操作请进入该应用的专业界面。' : '';
+  $('subtitle').textContent = view ? [view.package_name, guidance].filter(Boolean).join(' · ') : '';
+
 }
 
 function commandForAction(view, action) {

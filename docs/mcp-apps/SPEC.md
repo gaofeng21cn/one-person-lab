@@ -246,3 +246,7 @@ is the conversation thread's current directory. Studio resolves it only when
 that exact path is inside the active thread workspace, then uses the existing
 workspace byte/access APIs and their realpath containment checks. An artifact
 outside that workspace remains a reference and is not opened through this bridge.
+
+### Shared app navigation
+
+The shared UI selects one installed product and shows its functions. Search can span all products; focused task handoffs still select the exact declared view. A dedicated-app descriptor is described as a shared overview here, with guidance to open its dedicated MiniApp from the host switcher. It never implies that selecting a product launches another UI session.

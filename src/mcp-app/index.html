@@ -18,26 +18,25 @@
         </header>
         <label class="search">
           <span>查找</span>
-          <input id="search" type="search" placeholder="搜索应用内视图">
+          <input id="search" type="search" placeholder="搜索应用或功能">
         </label>
-        <label class="compact-navigation" for="view-select">当前视图
+        <label class="product-picker" for="product-select"><span>选择应用 <small id="product-count"></small></span>
+          <select id="product-select"></select>
+        </label>
+        <p id="product-summary" class="product-summary"></p>
+        <label class="compact-navigation" for="view-select">当前功能
           <select id="view-select"></select>
         </label>
-        <div class="catalog-heading">
-          <span>产品入口</span>
-          <small id="product-count"></small>
-        </div>
-        <div id="products" aria-label="产品入口"></div>
         <div class="catalog-heading views-heading">
-          <span>内部视图</span>
+          <span id="views-label">应用功能</span>
           <small id="view-count"></small>
         </div>
-        <nav id="views" aria-label="可用视图"></nav>
+        <nav id="views" aria-label="应用功能"></nav>
       </aside>
       <main class="content">
         <header class="toolbar">
           <div>
-            <h1 id="title">正在读取可用能力</h1>
+            <h1 id="title">正在读取应用</h1>
             <p id="subtitle" class="subtitle"></p>
           </div>
           <div class="toolbar-actions">
@@ -47,7 +46,7 @@
         </header>
         <div id="notice" class="notice" role="status" hidden></div>
         <section id="body" class="body" aria-live="polite">
-          <div class="empty">正在载入 OPL 能力视图…</div>
+          <div class="empty">正在载入应用内容…</div>
         </section>
       </main>
     </div>
