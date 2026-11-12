@@ -42,7 +42,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: printf '%s' "$GH_TOKEN" | oras login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
 
-      - name: Read independent Package candidates
+      - name: Read public Package candidates and private owner delegations
         run: node --experimental-strip-types scripts/package-channel-candidates.mjs dist/opl-daily-packages/daily-package-channel-summary.json
 
       - name: Compare independent Package fingerprints
@@ -60,11 +60,13 @@ jobs:
           while IFS= read -r package_id; do
             manifest="contracts/opl-framework/packages/${package_id}.json"
             visibility="$(jq -er '.visibility // "public" | select(. == "public" or . == "authorized_only")' "$manifest")"
-            package_namespace=one-person-lab-packages
-            if [ "$visibility" = authorized_only ]; then package_namespace=one-person-lab-private-packages; fi
-            image="ghcr.io/${{ github.repository_owner }}/${package_namespace}/$package_id"
+            if [ "$visibility" != public ]; then
+              echo "::error::${package_id}: private publication belongs to its private owner, not the public daily publisher."
+              exit 1
+            fi
+            image="ghcr.io/${{ github.repository_owner }}/one-person-lab-packages/$package_id"
             publication_ref="$(jq -r '.codex_surface.configured_codex_plugin_carrier.publication_ref // empty' "$manifest")"
-            if [ "$visibility" = authorized_only ] || [ -n "$publication_ref" ]; then
+            if [ -n "$publication_ref" ]; then
               [ "$publication_ref" = "${image}:latest-stable" ]
             fi
             descriptor_file="$RUNNER_TEMP/opl-$package_id-latest-stable-descriptor.json"
@@ -199,6 +201,8 @@ jobs:
           fi
           ready_count="$(jq 'length' <<<"$ready_entries")"
           needs_count="$(jq 'length' <<<"$needs_owner_release")"
+          owner_managed_packages="$(jq -c .owner_managed_packages "$summary")"
+          owner_managed_count="$(jq 'length' <<<"$owner_managed_packages")"
           if [ "$publish_required" != true ]; then
             dispatch_status=skipped
           elif [ "$ready_count" -gt 0 ]; then
@@ -215,12 +219,14 @@ jobs:
             --argjson packages "$entries" \
             --argjson ready_packages "$ready_entries" \
             --argjson needs_owner_release "$needs_owner_release" \
+            --argjson owner_managed_packages "$owner_managed_packages" \
             '{surface_kind:$surface_kind,source_run_id:$source_run_id,
               source_run_attempt:$source_run_attempt,
               framework_source_commit:$framework_source_commit,
               status:$status,
               packages:$packages,ready_packages:$ready_packages,
-              needs_owner_release:$needs_owner_release}' > "$dispatch_plan"
+              needs_owner_release:$needs_owner_release,
+              owner_managed_packages:$owner_managed_packages}' > "$dispatch_plan"
           {
             echo "### Daily package channel"
             echo "- Status: \`$summary_status\`"
@@ -228,6 +234,7 @@ jobs:
             echo "- Independent owner-channel changes: \`$changed_packages_json\`"
             echo "- Dispatch status: \`$dispatch_status\`"
             echo "- Owner releases still needed: \`$needs_count\`"
+            echo "- Private owner-managed Packages: \`$owner_managed_count\` (registry readback and publication not evaluated here)"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload daily package-channel candidate evidence
