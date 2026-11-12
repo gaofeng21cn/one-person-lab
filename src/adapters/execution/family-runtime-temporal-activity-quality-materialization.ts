@@ -51,6 +51,7 @@ import {
 import { requirePersistedStageRunActivityIdentity } from './family-runtime-persisted-identity-admission.ts';
 import { revisionTransportContext } from './family-runtime-revision-intake.ts';
 import type { StageRouteCompositionFactory } from './composition-factory-ports.ts';
+import { resolveStageRunDefaultProgression } from './family-runtime-stage-run-default-progression.ts';
 export async function stageQualityAttemptMaterializeActivity(
   input: TemporalStageQualityAttemptMaterializationInput,
   options: {
@@ -375,6 +376,17 @@ export async function stageQualityAttemptMaterializeActivity(
         .map((finding) => finding.finding_id),
       non_decisive_output: 'route_impact.stage_route_recommendation',
       prior_route_recommendations: input.route_recommendations ?? [],
+      ...(!executionStageBinding.quality_policy.formal_review.required && input.attempt_role === 'producer'
+        ? { controller_default_progression: resolveStageRunDefaultProgression({
+            domainPackRoot: executionDomainPackRoot,
+            domainId: stageRun.domain_id,
+            stageId: stageRun.stage_id,
+            actionId: stageRun.action_id ?? null,
+            manifestRef: executionStageBinding.manifest_ref,
+            manifestSha256: executionStageBinding.manifest_sha256,
+            declaredStageIds: executionDeclaredStageIds,
+          }) }
+        : {}),
     };
     const reviewAttemptRole = input.attempt_role === 'reviewer' || input.attempt_role === 're_reviewer'
       ? input.attempt_role

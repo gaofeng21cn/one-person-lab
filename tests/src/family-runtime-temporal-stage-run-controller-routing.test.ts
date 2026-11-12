@@ -236,6 +236,96 @@ test('raw producer progress reaches fresh AI review without a typed quality enve
   assert.equal(state.review_receipts.length, 1);
 });
 
+test('primary-only raw progress materializes only the pack-declared default progression', async () => {
+  const { state, attempts, routeInputs } = await runController({
+    id: 'primary-raw-declared-progression',
+    closeFindingAfterRound: null,
+    formalReviewRequired: false,
+    rawArtifactProgressRole: 'producer',
+    declaredDefaultProgression: { decision_kind: 'advance', target_stage_id: 'review_and_revision' },
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer']);
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.decisive_attempt_role, 'producer');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+  assert.equal(state.next_stage_run_launch?.target_stage_run_id, 'target:review_and_revision');
+  assert.deepEqual(routeInputs[0]?.decision.evidence_refs, [
+    'artifact:deck-v1', 'agent/stages/manifest.json#stage=artifact_creation',
+  ]);
+  assert.ok(state.route_quality_debt_refs.some((ref) => ref.includes('controller_missing_route_fallback_applied')));
+});
+
+test('raw progress without a declared default does not choose a Stage from the sorted catalog', async () => {
+  const { state, routeInputs } = await runController({
+    id: 'primary-raw-no-declared-progression', closeFindingAfterRound: null,
+    formalReviewRequired: false, rawArtifactProgressRole: 'producer',
+  });
+  assert.equal(state.selected_stage_route, null);
+  assert.equal(state.next_stage_run_launch, null);
+  assert.equal(routeInputs.length, 0);
+  assert.ok(state.route_quality_debt_refs.some((ref) => ref.includes('decisive_attempt_route_decision_missing')));
+});
+
+test('the controller does not invent a route for an unmarked raw envelope or undeclared target', async () => {
+  for (const [id, extra] of [
+    ['unmarked', { rawFrameworkMarker: false }],
+    ['undeclared', { declaredDefaultProgression: { decision_kind: 'advance' as const, target_stage_id: 'absent' } }],
+    ['rejected', { rawRouteDecision: { decision_kind: 'advance', target_stage_id: 'absent', evidence_refs: ['artifact:deck-v1'] } }],
+  ] as const) {
+    const { state, routeInputs } = await runController({
+      id: `primary-raw-${id}`, closeFindingAfterRound: null,
+      formalReviewRequired: false, rawArtifactProgressRole: 'producer',
+      declaredDefaultProgression: { decision_kind: 'advance', target_stage_id: 'review_and_revision' },
+      ...extra,
+    });
+    assert.equal(state.selected_stage_route, null);
+    assert.equal(routeInputs.length, 0);
+  }
+});
+
+test('a declared raw terminal progression completes without launching an undeclared continuation', async () => {
+  const { state, routeInputs } = await runController({
+    id: 'primary-raw-terminal-progression', closeFindingAfterRound: null,
+    formalReviewRequired: false, rawArtifactProgressRole: 'producer',
+    declaredDefaultProgression: { decision_kind: 'complete' },
+  });
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.selected_stage_route?.decision_kind, 'complete');
+  assert.equal(state.next_stage_run_launch?.materialization_status, 'workflow_complete');
+  assert.equal(state.next_stage_run_launch?.target_stage_run_id, null);
+  assert.equal(routeInputs[0]?.decision.target_stage_id, undefined);
+});
+
+test('a current formal-review policy keeps route ownership with the reviewer despite a raw producer default', async () => {
+  const { state, attempts, routeInputs } = await runController({
+    id: 'primary-raw-current-policy-review', closeFindingAfterRound: null,
+    formalReviewRequired: false, executionFormalReviewRequired: true,
+    rawArtifactProgressRole: 'producer', initialReviewerOutcome: 'pass', initialReviewerFindings: 'none',
+    declaredDefaultProgression: { decision_kind: 'advance', target_stage_id: 'package_and_handoff' },
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+  assert.equal(state.decisive_attempt_role, 'reviewer');
+  assert.equal(routeInputs[0]?.decision.target_stage_id, 'review_and_revision');
+  assert.equal(state.route_quality_debt_refs.some((ref) => ref.includes('controller_missing_route_fallback_applied')), false);
+});
+
+test('raw producer fallback cannot replace a provider hard stop or an unfinished Attempt', async () => {
+  for (const [id, extra] of [
+    ['hard-stop', { preflightHardBlockRole: 'producer' as const }],
+    ['unfinished', { failRole: 'producer' as const }],
+  ] as const) {
+    const { state, routeInputs } = await runController({
+      id: `primary-raw-${id}`, closeFindingAfterRound: null,
+      formalReviewRequired: false, rawArtifactProgressRole: 'producer',
+      declaredDefaultProgression: { decision_kind: 'advance', target_stage_id: 'review_and_revision' },
+      ...extra,
+    });
+    assert.equal(state.selected_stage_route, null);
+    assert.equal(routeInputs.length, 0);
+    assert.equal(state.route_quality_debt_refs.some((ref) => ref.includes('controller_missing_route_fallback_applied')), false);
+  }
+});
+
 test('reviewer quality-debt verdict terminalizes the StageRun and retains reviewer route authority', async () => {
   const { state, attempts } = await runController({
     id: 'reviewer-quality-debt',

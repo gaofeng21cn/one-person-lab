@@ -401,6 +401,82 @@ test('StageRun revalidation classifies file drift independently from root drift'
   }
 });
 
+test('primary-only Attempt materialization binds its real pack declared default progression', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-default-progression-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  const executionPackRoot = path.join(stateRoot, 'current-pack');
+  fs.cpSync(domainPackRoot, executionPackRoot, { recursive: true });
+  // Deliberately disagree with both file order and canonical declared-id order.
+  const currentManifest = writeFixture(executionPackRoot, 'agent/stages/manifest.json', `${JSON.stringify({
+    surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+    version: 'opl-standard-agent-declarative-stage-manifest.v1',
+    target_domain_id: 'medautoscience',
+    owner: 'medautoscience',
+    stages: [
+      { stage_id: 'review', next_stage_refs: [] },
+      { stage_id: 'intake', next_stage_refs: ['draft'] },
+      { stage_id: 'draft', next_stage_refs: ['review'] },
+    ],
+  })}\n`);
+  const primaryPolicy = normalizeStageQualityCyclePolicy({
+    formal_review: { required: false, risk_tier: 'low', max_repair_rounds: 0 },
+  });
+  writeFixture(executionPackRoot, 'contracts/stage_quality_cycle_policy.json', `${JSON.stringify({
+    stages: { intake: primaryPolicy },
+  })}\n`);
+  const currentBinding = {
+    ...binding(),
+    quality_policy: primaryPolicy,
+    manifest_sha256: currentManifest.sha256.slice('sha256:'.length),
+  };
+  const currentUseBinding = packageUseBinding({ packageVersion: '0.2.2' });
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const input = stageRunInput({ invocationId: 'sri_real_primary_default_progression' });
+    registerStageRunInConfiguredState(input);
+    const request = {
+      stage_run: input,
+      quality_cycle_id: 'sqc_real_primary_default_progression',
+      attempt_role: 'producer' as const,
+      quality_round_index: 0,
+      artifact_refs: input.artifact_refs ?? [],
+      artifact_hashes: input.artifact_hashes ?? [],
+      artifact_identity_receipt_refs: input.artifact_identity_receipt_refs ?? [],
+    };
+    const options = {
+      ensurePackageLaunchReady: async () => ({
+        runtime_source_readiness: { status: 'current', checkout_path: executionPackRoot, operational_ready: true },
+        configured_carrier: {
+          status: 'installed', executor: { status: 'callable' }, plugin_source_path: executionPackRoot,
+        },
+        package_use_binding: currentUseBinding,
+      }),
+      resolveStageBinding: () => currentBinding,
+    };
+    const materialized = await stageQualityAttemptMaterializeActivity(request, options);
+    const context = materialized.workflow_input.quality_context?.context_manifest as any;
+    assert.deepEqual(context.cross_stage_route_selection.configured_decisive_attempt_roles, ['producer']);
+    assert.deepEqual(context.cross_stage_route_selection.controller_default_progression, {
+      decision_kind: 'advance',
+      target_stage_id: 'draft',
+      source_ref: 'agent/stages/manifest.json#stage=intake',
+      source_sha256: currentManifest.sha256,
+    });
+    assert.deepEqual(materialized.workflow_input.execution_content_binding?.spec.quality_policy.body,
+      primaryPolicy);
+    assert.equal(materialized.workflow_input.execution_content_binding?.spec.stage_manifest.sha256,
+      currentManifest.sha256);
+    // Idempotent materialization reads the persisted context instead of inventing a second route.
+    const replay = await stageQualityAttemptMaterializeActivity(request, options);
+    assert.equal(replay.attempt_ref, materialized.attempt_ref);
+    assert.deepEqual(replay.workflow_input.quality_context, materialized.workflow_input.quality_context);
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('every child Attempt preserves parent evidence and binds the latest execution snapshot', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-child-content-'));
   const previousStateRoot = process.env.OPL_STATE_DIR;

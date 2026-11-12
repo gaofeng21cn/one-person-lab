@@ -15,6 +15,8 @@ OPL Framework 只持有 StageRun transport、attempt ledger、queue/provider、d
 
 若终局决定缺失或被拒绝，可消费 artifact 仍保留并形成路由质量债。fallback 先沿当前 action 明确声明的 ordered `required_stage_refs`；action 没有 route 时，只能沿当前 Stage 唯一的 `next_stage_refs`。多个 declared successor 时保持下一 Stage 未选择，manifest 文件排列顺序不能成为隐藏路由器。
 
+当前自动兜底仅用于 primary-only producer 已完成且返回 Framework raw-progress 信封、没有路由输出的情况。Attempt 物化边界核对当前绑定 manifest 的字节摘要、域与 Stage catalog，再把明确默认去向固化到同一 context manifest；controller 不从已排序的 `declared_stage_ids` 推导顺序。仅 action 明确声明为 terminal 的最后阶段可形成 `complete`，无 successor 不能自行推断完成。兜底沿用真实产物引用并记录 `controller_missing_route_fallback_applied`，终态为 `completed_with_quality_debt`，不产生领域通过结论。正式 Review、显式但被拒绝的 route、缺失或歧义声明及真实硬停均不走该兜底；Temporal patch marker 保留已有工作流历史的原决定。
+
 Stage 角色、独立 Attempt、预算分支、hard stop、route 输出及 finding/repair/closure 协议由 Framework 在 provider prompt 中统一注入。领域角色片段只补充专业审查范围、质量标准、证据及修复 owner 判断；领域无需重复通用协议文本。Conformance 校验声明的机器策略和角色片段引用，不按提示词关键词判断语义。角色文件及 fragment 仍由既有内容绑定机制保留精确字节和摘要，已绑定的历史内容不会被新的领域文件覆盖。
 
 ## Durable invocation 与物化
@@ -40,6 +42,8 @@ Runway 在启动 Temporal 前，先把 exact StageRun input 写入 `${OPL_STATE_
 Closeout 恢复接受完整 JSON 对象及完整 JSON 代码块，记录无法归一化的原因。`domain_output` 先验证四字段身份与 `closeout_refs` 绑定，再丢弃额外正文、状态和 verdict；台账只保存 refs-only 身份。原始输出在 Attempt 物化时同时核对 producing Stage，身份或物理路径边界失败仍然终止。Review lane 由 Stage 声明决定：没有绑定时忽略请求中的 lane 提示，controller-required 目标缺少父 lane 时保留质量债并继续路由；已声明但不允许的父 lane 仍拒绝。长会话的同线程 closeout 补交默认预算为 900 秒，且仍受 Activity 总时限约束。
 
 直接 closeout 与同线程 protocol-resume 均可以引用本 Attempt 工作区内已经写出的 closeout packet；直接 packet 缺失的 route_impact 从该已核验文件补全，显式字段冲突不被覆盖。该路径绑定稳定观测字节的 SHA-256 与长度，不要求 packet 声明自身的哈希；工作区包含性、文件稳定性、当前 Attempt 身份、packet 类型和显式字段冲突仍须核验。独立 recovery 路径继续严格核对已声明的 digest 和长度。两条路径都只恢复 transport 与原有语义输出，不把文件持久化当成领域验收。
+
+AgentBlueprint 的 content-ref 字节补全保持同一归一化传输形态：`closeout_refs` 只存字符串，摘要、长度及经过核验的 identity receipt 由 `closeout_ref_metadata` 唯一承载。Activity 返回后再做 StageAttempt 归一化，不会从内联对象重复派生一条缺少 receipt 的元数据，从而遮住已验证身份。
 
 Finding、repair、closure 与跨 Stage route 的证据引用接受非空 locator 字符串或带非空 `ref` 的对象，归一化结果仍是字符串列表；引用对象中的其他元数据不能替代 artifact identity receipt。证据列表及其成员不能为空白。`changed_artifact_refs` 可为空，使未修复或被阻断的 repair 能如实声明没有产物变化。
 

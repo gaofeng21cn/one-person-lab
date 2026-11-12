@@ -162,6 +162,7 @@ const fastTemporalStageRunControllerTestFiles = [
 // suites starting processes beside them.
 const fastIsolatedTemporalTestFiles = [
   'tests/src/family-runtime-pack-bound-stage-quality-e2e.test.ts',
+  'tests/src/foundry-five-stage-accounting.test.ts',
   'tests/src/family-runtime-temporal-stage-run-recovery-start.test.ts',
 ];
 

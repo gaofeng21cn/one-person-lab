@@ -148,6 +148,9 @@ export async function runController(input: {
   transientHandoffFailures?: number;
   permanentHandoffFailure?: boolean;
   rawArtifactProgressRole?: 'producer' | 'reviewer' | 're_reviewer';
+  declaredDefaultProgression?: { decision_kind: 'advance' | 'complete'; target_stage_id?: string } | null;
+  rawFrameworkMarker?: boolean;
+  rawRouteDecision?: Record<string, unknown>;
   repairRequiredRoute?: {
     role: 'reviewer' | 're_reviewer';
     decisionKind: 'advance' | 'route_back';
@@ -225,6 +228,13 @@ export async function runController(input: {
             declared_stage_ids: executionDeclaredStageIds,
             max_repair_rounds: executionPolicy.formal_review.max_repair_rounds,
             quality_scope_budget: qualityScopeBudget,
+            ...(input.declaredDefaultProgression
+              ? { controller_default_progression: {
+                  ...input.declaredDefaultProgression,
+                  source_ref: 'agent/stages/manifest.json#stage=artifact_creation',
+                  source_sha256: `sha256:${'a'.repeat(64)}`,
+                } }
+              : {}),
           },
           quality_scope_budget: qualityScopeBudget,
         };
@@ -500,7 +510,11 @@ export async function runController(input: {
         }
         const rawArtifactProgress = role === input.rawArtifactProgressRole;
         const routeImpact: Record<string, unknown> = rawArtifactProgress
-          ? {}
+          ? {
+              framework_generated_envelope: input.rawFrameworkMarker ?? true,
+              normalization_findings: ['typed_closeout_not_required_raw_artifact_advanced'],
+              ...(input.rawRouteDecision ? { stage_route_decision: input.rawRouteDecision } : {}),
+            }
           : { stage_quality_cycle: stageQualityCycle };
         const routeSelection = (
           attempt.quality_context?.context_manifest as any
@@ -511,7 +525,7 @@ export async function runController(input: {
         const attemptMaxRepairRounds = typeof routeSelection?.max_repair_rounds === 'number'
           ? routeSelection.max_repair_rounds
           : 3;
-        if (role === 'producer' && !attemptFormalReviewRequired) {
+        if (role === 'producer' && !attemptFormalReviewRequired && !rawArtifactProgress) {
           routeImpact.stage_route_decision = {
             decision_kind: 'advance',
             target_stage_id: input.terminalRouteTarget ?? 'review_and_revision',
