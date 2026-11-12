@@ -8,6 +8,7 @@ import {
   installedDescriptorMatchesConfiguredCarrier,
 } from './installed-codex-plugin-directory.ts';
 import { runConfiguredCodexPluginCarrier } from './configured-codex-plugin-carrier.ts';
+import { readCodexLocalPluginList } from './codex-plugin-local-readback.ts';
 import {
   commandFailure,
   configuredCodexHome,
@@ -35,7 +36,7 @@ export function reconcileInternalPackageCarriers(input: {
   const runner = input.runner ?? defaultRunner;
   const owners = discoverCurrentOwnerPackageDescriptors();
   const installed = discoverInstalledPackageDescriptors({
-    env, binary, runner, includeInternal: false, failClosedOnCarrierError: true,
+    env, binary, runner: input.runner, includeInternal: false, failClosedOnCarrierError: true,
   });
 
   for (const [packageId, legacy] of installed) {
@@ -71,13 +72,13 @@ export function reconcileInternalPackageCarriers(input: {
         interactionMode: 'headless_internal' as const,
         carrier: { ...legacy.carrier.carrier, pluginId: legacy.pluginId, marketplaceSource: marketplaceRoot },
       };
-      const readback = runConfiguredCodexPluginCarrier({ descriptor, action: 'repair', env, binary, runner });
+      const readback = runConfiguredCodexPluginCarrier({ descriptor, action: 'repair', env, binary, runner: input.runner });
       if (readback.status !== 'installed' || readback.enabled !== false
         || readback.executor.status !== 'callable' || sourceTreeSha256(target) !== originalDigest) {
         throw new Error('Internal native installation is not callable; preserve the original installation.');
       }
       const discovered = discoverInstalledPackageDescriptors({
-        env: { ...env, CODEX_HOME: internalHome }, binary, runner, includeInternal: false,
+        env: { ...env, CODEX_HOME: internalHome }, binary, runner: input.runner, includeInternal: false,
         failClosedOnCarrierError: true,
       }).get(packageId);
       if (!discovered?.readiness.installed
@@ -92,7 +93,9 @@ export function reconcileInternalPackageCarriers(input: {
       if (removal.status !== 0 || removal.error) {
         commandFailure({ packageId, action: 'remove', args: removeArgs, result: removal });
       }
-      const listed = runner({ binary, args: nativeArgs('list', legacy.pluginId), env });
+      const listed = input.runner
+        ? input.runner({ binary, args: nativeArgs('list', legacy.pluginId), env })
+        : readCodexLocalPluginList({ binary, env });
       if (listed.status !== 0 || listed.error) {
         commandFailure({ packageId, action: 'list', args: nativeArgs('list', legacy.pluginId), result: listed });
       }

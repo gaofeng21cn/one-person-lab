@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { readCodexLocalPluginList } from '../../src/adapters/integration/agent-package-registry-parts/codex-plugin-local-readback.ts';
+import { reconcileInternalPackageCarriers } from '../../src/adapters/integration/agent-package-registry-parts/internal-package-carrier-migration.ts';
 
 function fixture(mode = 'normal') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-local-'));
@@ -54,6 +55,18 @@ test('native local inventory preserves installed versions and sources while avai
     assert.equal(output.installed[0].marketplaceSource.source, 'example/owner');
     assert.deepEqual(output.available.map((entry: any) => entry.pluginId), ['three@owner']);
     assert.throws(() => process.kill(Number(fs.readFileSync(setup.env.FIXTURE_PID, 'utf8')), 0), { code: 'ESRCH' });
+  } finally { fs.rmSync(setup.root, { recursive: true, force: true }); }
+});
+
+test('startup carrier migration reads local inventory without querying remote plugin listings', () => {
+  const setup = fixture();
+  try {
+    // The fixture rejects `plugin list`; only the local app-server inventory is available.
+    const result = reconcileInternalPackageCarriers({
+      binary: setup.binary,
+      env: { ...setup.env, CODEX_HOME: path.join(setup.root, 'codex-home') },
+    });
+    assert.deepEqual(result, { status: 'completed', items: [] });
   } finally { fs.rmSync(setup.root, { recursive: true, force: true }); }
 });
 
