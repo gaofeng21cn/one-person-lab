@@ -15,6 +15,8 @@ OPL Framework 只持有 StageRun transport、attempt ledger、queue/provider、d
 
 若终局决定缺失或被拒绝，可消费 artifact 仍保留并形成路由质量债。fallback 先沿当前 action 明确声明的 ordered `required_stage_refs`；action 没有 route 时，只能沿当前 Stage 唯一的 `next_stage_refs`。多个 declared successor 时保持下一 Stage 未选择，manifest 文件排列顺序不能成为隐藏路由器。
 
+当前自动兜底仅用于 primary-only producer 已完成且返回 Framework raw-progress 信封、没有路由输出的情况。Attempt 物化边界核对当前绑定 manifest 的字节摘要、域与 Stage catalog，再把明确默认去向固化到同一 context manifest；controller 不从已排序的 `declared_stage_ids` 推导顺序。仅 action 明确声明为 terminal 的最后阶段可形成 `complete`，无 successor 不能自行推断完成。兜底沿用真实产物引用并记录 `controller_missing_route_fallback_applied`，终态为 `completed_with_quality_debt`，不产生领域通过结论。正式 Review、显式但被拒绝的 route、缺失或歧义声明及真实硬停均不走该兜底；Temporal patch marker 保留已有工作流历史的原决定。
+
 Stage 角色、独立 Attempt、预算分支、hard stop、route 输出及 finding/repair/closure 协议由 Framework 在 provider prompt 中统一注入。领域角色片段只补充专业审查范围、质量标准、证据及修复 owner 判断；领域无需重复通用协议文本。Conformance 校验声明的机器策略和角色片段引用，不按提示词关键词判断语义。角色文件及 fragment 仍由既有内容绑定机制保留精确字节和摘要，已绑定的历史内容不会被新的领域文件覆盖。
 
 ## Durable invocation 与物化

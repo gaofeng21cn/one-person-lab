@@ -88,6 +88,7 @@ export async function StageRunWorkflow(
     'opl-stage-run-recovery-attempt-run-identity-v1',
   );
   const progressFirstHandoffEnabled = patched('opl-stage-run-progress-first-handoff-v1');
+  const controllerMissingRouteFallbackEnabled = patched('opl-stage-run-controller-missing-route-fallback-v1');
   const reviewProtocolFailureEnabled = patched('opl-stage-run-review-protocol-failure-v1');
   const identityFailureSyncEnabled = patched('opl-stage-run-identity-failure-sync-v1');
   const reviewerIdentityHardStopEnabled = patched('opl-stage-run-reviewer-identity-hard-stop-v1');
@@ -609,6 +610,7 @@ export async function StageRunWorkflow(
       executionSessionRef,
       routeEvaluation,
       executionPolicy,
+      defaultProgression: asRecord(asRecord(childContextManifest.cross_stage_route_selection).controller_default_progression),
       reviewInputSnapshotQualityDebtRef,
       reviewedArtifactRefs: attemptInput.artifactRefs,
       reviewedArtifactHashes: attemptInput.artifactHashes,
@@ -641,16 +643,61 @@ export async function StageRunWorkflow(
   };
 
   const commitTerminalRouteDecision = (attempt: Awaited<ReturnType<typeof runAttempt>>) => {
-    if (!attempt.routeEvaluation.decision) return;
+    let decision = attempt.routeEvaluation.decision;
+    let fallbackApplied = false;
+    if (!decision && controllerMissingRouteFallbackEnabled) {
+      const closeout = asRecord(attempt.result.closeout_packet);
+      const routeImpact = asRecord(closeout.route_impact);
+      const progression = attempt.defaultProgression;
+      const declaredStageIds = attempt.executionPolicy.binding?.declared_stage_ids ?? [];
+      const targetStageId = typeof progression.target_stage_id === 'string'
+        ? progression.target_stage_id : null;
+      if (
+        attempt.attemptRole === 'producer'
+        && !attempt.executionPolicy.formalReviewRequired
+        && attempt.result.status === 'completed'
+        && !providerRuntimeHardStop(attempt.result)
+        && attempt.artifactProducedByAttempt
+        && hasConsumableArtifact(state)
+        && asRecord(closeout.authority_boundary).opl === 'raw_executor_output_progress_envelope_only'
+        && routeImpact.framework_generated_envelope === true
+        && asStringList(routeImpact.normalization_findings)
+          .includes('typed_closeout_not_required_raw_artifact_advanced')
+        && !Object.hasOwn(routeImpact, 'stage_route_decision')
+        && !Object.hasOwn(routeImpact, 'stage_route_recommendation')
+        && !Object.hasOwn(routeImpact, 'stage_route_contract')
+        && attempt.routeEvaluation.decision_rejection_reasons.length === 0
+        && attempt.routeEvaluation.recommendation_rejection_reasons.length === 0
+        && typeof progression.source_ref === 'string'
+        && /^sha256:[a-f0-9]{64}$/.test(String(progression.source_sha256))
+        && (
+          (progression.decision_kind === 'advance' && targetStageId && declaredStageIds.includes(targetStageId))
+          || (progression.decision_kind === 'complete' && !targetStageId)
+        )
+      ) {
+        decision = {
+          decision_kind: progression.decision_kind as 'advance' | 'complete',
+          ...(targetStageId ? { target_stage_id: targetStageId } : {}),
+          evidence_refs: [...new Set([...state.artifact_refs, progression.source_ref])],
+        };
+        fallbackApplied = true;
+      }
+    }
+    if (!decision) return false;
     decisiveExecutionContentBinding = attempt.executionPolicy.binding;
     state = {
       ...state,
       decisive_attempt_role: attempt.attemptRole,
       decisive_attempt_ref: attempt.attemptRef,
-      selected_stage_route: attempt.routeEvaluation.decision,
-      route_evidence_refs: attempt.routeEvaluation.decision.evidence_refs,
+      selected_stage_route: decision,
+      route_evidence_refs: decision.evidence_refs,
+      route_quality_debt_refs: fallbackApplied
+        ? [...new Set([...state.route_quality_debt_refs,
+            qualityFailureRef(input, 'controller_missing_route_fallback_applied')])]
+        : state.route_quality_debt_refs,
       updated_at: nowIso(),
     };
+    return fallbackApplied;
   };
 
   const isEarlyRepairRouteBack = (attempt: Awaited<ReturnType<typeof runAttempt>>) => (
@@ -779,8 +826,13 @@ export async function StageRunWorkflow(
         return terminalize(state);
       }
       if (!producer.executionPolicy.formalReviewRequired) {
-        commitTerminalRouteDecision(producer);
-        return terminalize({ ...state, status: 'completed', current_role: null, updated_at: nowIso() });
+        const fallbackApplied = commitTerminalRouteDecision(producer);
+        return terminalize({
+          ...state,
+          status: fallbackApplied ? 'completed_with_quality_debt' : 'completed',
+          current_role: null,
+          updated_at: nowIso(),
+        });
       }
     }
 
