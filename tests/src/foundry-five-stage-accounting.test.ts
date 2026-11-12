@@ -212,7 +212,7 @@ test('five real StageRuns account for raw progress and materialize exact candida
             return transported;
           }, async diagnose() { throw new Error('Diagnosis is outside the accounting fixture.'); } },
           compiler, objects: new InMemoryFoundryObjectStore(), events, versions: new InMemoryVersionRegistry(),
-          ownerGate: new InMemoryOwnerGate(), activityMaxAttempts: 1,
+          ownerGate: new InMemoryOwnerGate(),
           evaluator: { evaluator_id: 'unavailable:accounting-only',
             async evaluate() { throw new Error('Qualification is outside the accounting fixture.'); },
             async canary() { throw new Error('Canary is outside the accounting fixture.'); } },
