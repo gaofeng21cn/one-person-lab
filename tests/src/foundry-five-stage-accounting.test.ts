@@ -212,7 +212,7 @@ test('five real StageRuns account for raw progress and materialize exact candida
             return transported;
           }, async diagnose() { throw new Error('Diagnosis is outside the accounting fixture.'); } },
           compiler, objects: new InMemoryFoundryObjectStore(), events, versions: new InMemoryVersionRegistry(),
-          ownerGate: new InMemoryOwnerGate(), activityMaxAttempts: 1,
+          ownerGate: new InMemoryOwnerGate(),
           evaluator: { evaluator_id: 'unavailable:accounting-only',
             async evaluate() { throw new Error('Qualification is outside the accounting fixture.'); },
             async canary() { throw new Error('Canary is outside the accounting fixture.'); } },
@@ -220,7 +220,15 @@ test('five real StageRuns account for raw progress and materialize exact candida
         const runId = `run:five-stage-${round}`;
         await kernel.startRun({ request: designRequest, run_id: runId });
         assert.equal((await kernel.advanceRunStep(runId)).run.state, 'designing');
-        assert.equal((await kernel.advanceRunStep(runId)).run.state, 'materializing');
+        const designInspection = await kernel.advanceRunStep(runId);
+        assert.equal(designInspection.run.state, 'materializing', JSON.stringify({
+          run: designInspection.run, events: await events.read(runId),
+          attempts: observed.map(({ input, receipt }) => ({
+            stage_id: input.stage_id, attempt_role: input.attempt_role,
+            runner_status: receipt.runner_status,
+            normalization_findings: receipt.closeout_packet?.route_impact?.normalization_findings,
+          })),
+        }));
         const inspection = await kernel.advanceRunStep(runId);
         assert.equal(inspection.run.state, 'evaluating');
         const runEvents = await events.read(runId);

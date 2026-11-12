@@ -214,13 +214,13 @@ const lanes = {
     { kind: 'command', command: process.execPath, args: ['scripts/test-lanes.mjs', 'assert-coverage'] },
     { kind: 'npm', args: ['run', 'build'] },
     { kind: 'command', command: 'scripts/repo-hygiene.sh', args: [] },
+    nodeTest(fastIsolatedTemporalTestFiles, { batchSize: 1 }),
     nodeTest(fastNonTemporalHeavyTestFiles, { batchSize: fastNonTemporalHeavyBatchSize }),
     nodeTest(fastIsolatedCliTestFiles, {
       batchSize: 1,
       env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
     }),
     nodeTest(fastTemporalStageRunControllerTestFiles, { batchSize: 4 }),
-    nodeTest(fastIsolatedTemporalTestFiles, { batchSize: 1 }),
   ],
   'read-model-gates': [
     nodeTest(readModelGateNonTemporalHeavyTestFiles, {
