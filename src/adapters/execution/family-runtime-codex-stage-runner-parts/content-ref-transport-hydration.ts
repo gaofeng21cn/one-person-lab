@@ -168,18 +168,14 @@ export function hydrateContentRefTransport(input: {
   const consumable = Array.isArray(routeImpact.consumable_artifact_refs)
     ? routeImpact.consumable_artifact_refs
     : [];
-  // The packet was already normalized when it was parsed. Extend it instead of
-  // re-normalizing, which would re-validate a shape this function only appends to.
+  // Keep the normalized wire shape: metadata has one owner in closeout_ref_metadata.
+  // Inline objects here would be expanded again by StageAttempt normalization,
+  // shadowing the transport-verified metadata and its identity receipt.
   return {
     ...packet,
     closeout_refs: [
       ...(Array.isArray(packet.closeout_refs) ? packet.closeout_refs : []),
-      ...added.map((entry) => ({
-        ref: entry.ref,
-        ref_kind: 'stage_artifact',
-        sha256: entry.sha256,
-        size_bytes: entry.sizeBytes,
-      })),
+      ...added.map((entry) => entry.ref),
     ],
     closeout_ref_metadata: [
       ...metadata,

@@ -88,7 +88,7 @@ export async function StageRunWorkflow(
     'opl-stage-run-recovery-attempt-run-identity-v1',
   );
   const progressFirstHandoffEnabled = patched('opl-stage-run-progress-first-handoff-v1');
-  const controllerMissingRouteFallbackEnabled = patched('opl-stage-run-controller-missing-route-fallback-v1');
+  const controllerMissingRouteFallbackEnabled = patched('opl-stage-run-controller-declared-default-progression-v1');
   const reviewProtocolFailureEnabled = patched('opl-stage-run-review-protocol-failure-v1');
   const identityFailureSyncEnabled = patched('opl-stage-run-identity-failure-sync-v1');
   const reviewerIdentityHardStopEnabled = patched('opl-stage-run-reviewer-identity-hard-stop-v1');

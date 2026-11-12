@@ -7,6 +7,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { hydrateContentRefTransport } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/content-ref-transport-hydration.ts';
 import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+import { qualityArtifactIdentity } from '../../src/adapters/execution/family-runtime-temporal-workflow-artifacts.ts';
 
 function sha256(bytes: Buffer) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
@@ -110,6 +111,29 @@ test('leaves the closeout untouched when the referenced bytes are not on disk', 
   assert.ok(hydrated);
   const cycle = hydrated.route_impact?.stage_quality_cycle as { artifact_refs: string[] };
   assert.deepEqual(cycle.artifact_refs, [ref]);
+});
+
+test('hydrated content keeps one verified metadata entry after StageAttempt normalization', (t) => {
+  const { workspaceRoot, packet } = fixture();
+  t.after(() => fs.rmSync(workspaceRoot, { recursive: true, force: true }));
+  const hydrated = hydrateContentRefTransport({
+    closeoutPacket: packet, attempt: { attempt_role: 'producer' }, workspaceRoot,
+  })!;
+  // The runner transport verifier adds these receipt refs before the packet
+  // crosses the Activity wire and StageAttempt normalizes it again.
+  hydrated.closeout_ref_metadata = hydrated.closeout_ref_metadata!.map((entry, index) => ({
+    ...entry, sha256: `sha256:${entry.sha256}`,
+    artifact_identity_receipt_ref: `artifact-identity:verified-${index}`,
+  }));
+  const roundTrip = normalizeTypedStageCloseoutPacket(JSON.parse(JSON.stringify(hydrated)));
+  const cycle = roundTrip.route_impact!.stage_quality_cycle as Record<string, unknown>;
+  const identity = qualityArtifactIdentity({
+    stage_attempt_id: 'sat-content', closeout_packet: roundTrip,
+  } as never, cycle, true, undefined, false, true);
+  assert.equal(roundTrip.closeout_ref_metadata!.length, 2);
+  assert.deepEqual(identity.artifactIdentityReceiptRefs, [
+    'artifact-identity:verified-0', 'artifact-identity:verified-1',
+  ]);
 });
 
 test('reviewers never gain transported content members', () => {
