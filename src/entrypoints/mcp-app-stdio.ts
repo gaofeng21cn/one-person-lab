@@ -179,9 +179,12 @@ export async function createOplMcpAppServer() {
           descriptorDiscovery: composition.services.descriptorDiscovery,
         });
         const views = catalog.views;
-        const focusedViews = views.filter((view) => (!package_id || view.package_id === package_id)
-          && (!view_id || view.view_id === view_id));
-        const selected = focusedViews[0];
+        const firstProduct = catalog.products[0];
+        const selected = package_id || view_id
+          ? views.find((view) => (!package_id || view.package_id === package_id)
+            && (!view_id || view.view_id === view_id))
+          : views.find((view) => view.package_id === firstProduct?.package_id
+            && view.view_id === firstProduct?.entry_view_id);
         if ((package_id || view_id) && !selected) throw new Error(`No installed OPL view matches ${view_id}.`);
         const contribution = selected
           ? await readContribution(String(selected.package_id), String(selected.data_ref), input ?? {})
