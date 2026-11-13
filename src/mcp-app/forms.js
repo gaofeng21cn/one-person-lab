@@ -9,12 +9,12 @@ export function renderInputFields(schema, values = {}, path = [], attribute = 'd
     if (field.readOnly || (['work_item_identity', 'item_id', 'action_id', 'action_revision', 'route_revision', 'workspace_path', 'work_item_root'].includes(name) && value != null)) return `<div class="bound-input"><strong>${escape(title)}</strong>${renderFields(value)}</div>`;
     if (field.type === 'object' && field.properties) return `<fieldset><legend>${escape(title)}</legend>${help}${renderInputFields(field, record(value), key, attribute)}</fieldset>`;
     let control;
-    if (Array.isArray(field.enum)) control = `<select ${common}><option value="">请选择</option>${field.enum.map(option => `<option value="${escape(String(option))}" ${option === value ? 'selected' : ''}>${escape(field.enumNames?.[field.enum.indexOf(option)] || option)}</option>`).join('')}</select>`;
+    if (Array.isArray(field.enum)) control = `<select ${common} class="dsh-input"><option value="">请选择</option>${field.enum.map(option => `<option value="${escape(String(option))}" ${option === value ? 'selected' : ''}>${escape(field.enumNames?.[field.enum.indexOf(option)] || option)}</option>`).join('')}</select>`;
     else if (field.type === 'boolean') control = `<input ${common} type="checkbox" ${value === true ? 'checked' : ''}>`;
-    else if (field.type === 'array' && field.items?.type === 'string') control = `<textarea ${common} data-line-array="true" placeholder="每行一项">${escape(Array.isArray(value) ? value.join('\n') : '')}</textarea>`;
-    else if (['object', 'array'].includes(field.type)) control = `<textarea ${common} data-json="true" spellcheck="false">${escape(value == null ? '' : JSON.stringify(value, null, 2))}</textarea>`;
-    else if (['body', 'content', 'summary', 'statement'].includes(name) || field.format === 'textarea') control = `<textarea ${common}>${escape(value ?? '')}</textarea>`;
-    else control = `<input ${common} type="${['number', 'integer'].includes(field.type) ? 'number' : 'text'}" ${field.type === 'integer' ? 'step="1"' : field.type === 'number' ? 'step="any"' : ''} value="${escape(value ?? '')}">`;
+    else if (field.type === 'array' && field.items?.type === 'string') control = `<textarea ${common} data-line-array="true" placeholder="每行一项" class="dsh-input">${escape(Array.isArray(value) ? value.join('\n') : '')}</textarea>`;
+    else if (['object', 'array'].includes(field.type)) control = `<textarea ${common} data-json="true" spellcheck="false" class="dsh-input">${escape(value == null ? '' : JSON.stringify(value, null, 2))}</textarea>`;
+    else if (['body', 'content', 'summary', 'statement'].includes(name) || field.format === 'textarea') control = `<textarea ${common} class="dsh-input">${escape(value ?? '')}</textarea>`;
+    else control = `<input ${common} type="${['number', 'integer'].includes(field.type) ? 'number' : 'text'}" ${field.type === 'integer' ? 'step="1"' : field.type === 'number' ? 'step="any"' : ''} value="${escape(value ?? '')}" class="dsh-input">`;
     return `<label>${escape(title)}${required.has(name) ? '<span class="required-label">必填</span>' : ''}${control}${help}</label>`;
   }).join('');
 }

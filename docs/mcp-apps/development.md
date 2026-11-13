@@ -52,6 +52,11 @@
 
 产品入口与 MiniApp surface 采用两个层级：一个 Package 在 `catalog.products` 中只有一个产品入口，入口下面可以挂多个共享 internal view；只有 MCP catalog 中独立的 `server + resourceUri` 才计为一个 MiniApp。Package manifest 的 `presentation.miniapp` 声明入口形式和默认 view。产品卡不会自动启动独立 App，启动仍由 Studio 的 MiniApp 工作台显式执行。
 
+自有 MiniApp 直接复用 App 选定的官方 DSH 视觉来源。共享页的 `src/mcp-app/dsh-theme.css`
+由 App `scripts/sync-miniapp-dsh-styles.mjs` 从固定上游生成，与 Relay、MAC 的样式字节一致；
+构建嵌入主题、控件样式和 MIT 许可。只适配 CSS Module 选择器，不维护 Framework 自有调色板、
+字号或控件尺度。领域 CSS 负责布局和官方语义 token 的角色映射，主题和字体仍走标准 MCP Apps context。
+
 选择逻辑按交互密度落地：进度、列表、产物和低频审阅留在共享声明式 renderer；邮件编辑、媒体时码审看、revision-bound feedback 等高密度交互使用专用标准 MCP App；持续创作、设备、地图和监测才保留专业应用。判断依据是交互状态、输入密度、时序/预览要求和 owner 现有 UI 能力，不是 Package 名称或是否属于 OPL。
 
 ## 复用现有接线
@@ -88,6 +93,10 @@ Framework shared App 是通用进度/产物/审阅组件的来源。Relay 专用
 共享页面将 `open_opl_apps` 的 `input` 绑定到具体 Package/view。切到同包其他视图时不沿用原视图的领域参数；已打开的执行表单使用当时的目标与版本。owner 在 `actions[].input` 中提供完整对象与 revision/digest，并在 `command_inputs[action_ref].input_schema` 将这些字段设为 `readOnly`；执行端仍须核对精确版本。UI 的绑定不代替 owner 并发检查。
 
 owner 执行结果可附已有贡献引用形式的 `readback: { data_ref, input }`。共享页面只接受同包已声明的数据引用，将操作输入、owner 结果和只读回读请求交回 Agent。传输中断后仅尝试原目标只读回读，保留“操作结果待核对”，不重发写入。无 UI 的 Host 仍可使用 `open_opl_apps` 返回的结构化结果以及 owner 原有 CLI/API。
+
+`opl.runtime.v1#item` 默认只读取任务投影，返回 `runtime_actions_deferred=true`，不等待全局运行诊断。
+共享工作台通过“查看可用操作”以同一 `item_id` 和 `include_runtime_actions=true` 按需读取操作；
+读取中保留已有任务内容，失败可重试。按需读取不执行操作；执行端继续校验原任务、操作路由与版本。
 
 `opl-runtime / opl.runtime.knowledge` 是阶段知识来源视图，通过 canonical `item_id` 找到实际任务、当前阶段、工作区和已安装 owner，再读取知识 owner 的召回元数据。它不接受页面提供的 Package 路径或领域身份作为授权，不显示正文、私有来源路径或凭据。此视图展示当前阶段通用召回会选用的来源和缺口，`selection_scope=stage_only` 明确不含仅适用某个动作的知识；已运行任务的冻结上下文继续由知识 owner 的 `prepare/read-context` 与行动前 `revalidate --for-action` 管理。
 

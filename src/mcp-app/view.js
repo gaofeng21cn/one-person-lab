@@ -55,6 +55,15 @@ function key(view) {
   return viewKey(view);
 }
 
+function isRuntimeView(view) {
+  return view?.entry_kind === 'runtime_view' || view?.package_id === 'opl-runtime';
+}
+
+function defaultCatalogView(catalog) {
+  const views = Array.isArray(catalog?.views) ? catalog.views : [];
+  return views.find((view) => view.entry_kind === 'product_entry') || views[0] || null;
+}
+
 function notice(text, error = false) {
   $('notice').textContent = text;
   $('notice').className = `notice${error ? ' error' : ''}`;
@@ -172,7 +181,7 @@ function renderReadInputForm(collection) {
   if (!Object.keys(record(schema?.properties) || {}).length) return '';
   const input = { ...collection.inputDefaults, ...currentViewInput(state.selected) };
   return `<form class="form-grid" id="read-input-form" data-base-input="${escape(JSON.stringify(input))}">${renderInputFields(schema, input, [], 'data-read-field')}
-    <div><button class="action" type="button" data-submit>读取</button></div></form>`;
+    <div><button class="dsh-button action" type="button" data-submit>读取</button></div></form>`;
 }
 
 function bindFormSubmit(form, submit) {
@@ -215,8 +224,12 @@ function renderCatalog() {
   const views = state.catalog?.views || [];
   const products = state.catalog?.products || [];
   const query = state.query.trim().toLocaleLowerCase();
-  const selectedPackage = views.find(view => key(view) === state.selectedKey)?.package_id || views[0]?.package_id;
-  const filtered = views.filter((view) => {
+  const selectedView = views.find(view => key(view) === state.selectedKey) || state.selected;
+  const runtimeContext = isRuntimeView(selectedView);
+  const productViews = views.filter((view) => !isRuntimeView(view));
+  const navigationViews = runtimeContext ? views.filter(isRuntimeView) : productViews;
+  const selectedPackage = selectedView?.package_id || navigationViews[0]?.package_id;
+  const filtered = navigationViews.filter((view) => {
     if (!query) return view.package_id === selectedPackage;
     return `${view.package_id} ${view.package_name} ${view.view_id} ${localized(view.title_i18n)} ${view.view_type}`
       .toLocaleLowerCase()
@@ -241,6 +254,7 @@ function renderCatalog() {
   `).join('') || '<option value="">没有匹配的功能</option>';
   picker.disabled = !filtered.length;
   function selectView(selectedKey) {
+    $('catalog-search').open = false;
     state.selectedKey = selectedKey;
     remember('opl-apps-selected', state.selectedKey);
     state.itemId = '';
@@ -248,10 +262,14 @@ function renderCatalog() {
     void loadSelected();
   }
   picker.onchange = () => selectView(picker.value);
-  // Older catalogs may not include products; the declared views still provide navigation.
-  const entries = products.length ? products : [...new Map(views.map(view => [view.package_id, {
+  // Older catalogs may not include products; product views still provide navigation.
+  const entries = products.length ? products : [...new Map(productViews.map(view => [view.package_id, {
     package_id: view.package_id, package_name: view.package_name,
   }])).values()];
+  $('product-picker').hidden = runtimeContext;
+  $('runtime-context').hidden = !runtimeContext;
+  $('catalog-search').hidden = runtimeContext;
+  $('view-picker').querySelector('span').textContent = runtimeContext ? '任务视图' : '功能';
   const productPicker = $('product-select');
   productPicker.innerHTML = entries.map(product => `<option value="${escape(product.package_id)}" ${product.package_id === selectedPackage ? 'selected' : ''}>${escape(product.package_name)}</option>`).join('') || '<option value="">暂无可用应用</option>';
   productPicker.disabled = !entries.length;
@@ -264,11 +282,15 @@ function renderCatalog() {
     selectView(key(entry));
   };
   const selectedProduct = entries.find(product => product.package_id === selectedPackage);
-  $('product-summary').textContent = localized(selectedProduct?.package_summary_i18n || selectedProduct?.package_description_i18n);
-  $('views-label').textContent = query ? '搜索结果 · 所有应用' : '应用功能';
+  $('product-summary').textContent = runtimeContext
+    ? '由首页“运行状态”打开的任务工作台。'
+    : localized(selectedProduct?.package_summary_i18n || selectedProduct?.package_description_i18n);
+  $('views-label').textContent = runtimeContext
+    ? '任务工作台'
+    : query ? '搜索结果 · 所有应用' : '应用功能';
   $('views').innerHTML = [...groups.entries()].map(([packageId, group]) => {
-    const product = products.find((entry) => entry.package_id === packageId);
-    const heading = product?.entry_kind === 'runtime_view' ? '任务与进度' : group.name;
+    const product = entries.find((entry) => entry.package_id === packageId);
+    const heading = runtimeContext ? '任务工作台' : product?.entry_kind === 'runtime_view' ? '任务与进度' : group.name;
     return `<section class="package-group" aria-label="${escape(heading)}">
       <h2>${escape(heading)}<small>${escape(String(group.views.length))}</small></h2>
       ${group.views.map((view) => `
@@ -290,8 +312,17 @@ function renderCatalog() {
 function renderHeader() {
   $('notice').hidden = true;
   const view = state.selected;
-  $('title').textContent = view ? localized(view.title_i18n, view.view_id) : 'OPL 能力';
-  const guidance = view?.presentation_mode === 'dedicated_app'
+  const runtimeContext = isRuntimeView(view);
+  $(runtimeContext ? 'app-navigation' : 'view-toolbar').append($('toolbar-actions'));
+  $('view-toolbar').hidden = runtimeContext;
+  $('title').textContent = runtimeContext
+    ? (view?.data_ref === 'opl.runtime.v1#item' ? '任务工作台' : '任务与进度')
+    : view ? localized(view.title_i18n, view.view_id) : 'OPL 能力';
+  const guidance = runtimeContext
+    ? (view?.data_ref === 'opl.runtime.v1#item'
+      ? '首页运行状态 → 当前任务详情；查看进度、证据和待人决定。'
+      : '全局任务总览请从首页“运行状态”进入。')
+    : view?.presentation_mode === 'dedicated_app'
     ? '共享概览 · 可进入专用界面继续操作。'
     : view?.presentation_mode === 'professional_app' ? '共享概览 · 编辑操作请进入该应用的专业界面。' : '';
   $('subtitle').textContent = view ? [view.package_name, guidance || localized(view.package_summary_i18n || view.package_description_i18n)].filter(Boolean).join(' · ') : '';
@@ -302,7 +333,7 @@ function renderHeader() {
     const navigation = { ...currentViewInput(view), ...selected };
     // Only reference fields are offered. The target host filters again against
     // its live read-only launcher schema; business content never enters a URL.
-    const refs = Object.fromEntries(['account_id', 'storage_ref', 'draft_id', 'revision', 'request_id', 'series_id', 'episode_id', 'shot_id']
+    const refs = Object.fromEntries(['workspace_path', 'account_id', 'storage_ref', 'draft_id', 'revision', 'request_id', 'series_id', 'episode_id', 'shot_id']
       .filter(name => typeof navigation[name] === 'string' || typeof navigation[name] === 'number').map(name => [name, navigation[name]]));
     const result = await app.openLink({ url: `${view.dedicated_resource_uri}#${encodeURIComponent(JSON.stringify(refs))}` });
     if (result?.isError) throw new Error('专用界面尚未连接，请刷新应用目录或在应用管理中检查连接。');
@@ -339,7 +370,7 @@ function renderActionButtons(view, collection, item = null) {
   }
   const unique = new Map(commands.map((entry) => [`${entry.command.command_id}:${JSON.stringify(entry.input)}`, entry]));
   return [...unique.values()].map(({ command, input }) => `
-    <button class="action" type="button"
+    <button class="dsh-button action" type="button"
       data-action-ref="${escape(command.action_ref)}"
       data-input="${escape(JSON.stringify(input))}"
       data-confirm="${command.confirmation_required ? 'true' : 'false'}">
@@ -354,7 +385,7 @@ function renderCommandForm(view, collection, command, input) {
   const values = { ...defaults, ...currentViewInput(view), ...input };
   if (!Object.keys(fields).length) return null;
   return `<form class="form-grid" data-command-form="${escape(command.command_id)}" data-action-ref="${escape(command.action_ref)}" data-base-input="${escape(JSON.stringify(values))}">
-    ${renderInputFields(schema, values)}<div><button class="action" type="button" data-submit>执行 ${escape(localized(command.label_i18n, command.command_id))}</button></div></form>`;
+    ${renderInputFields(schema, values)}<div><button class="dsh-button action" type="button" data-submit>执行 ${escape(localized(command.label_i18n, command.command_id))}</button></div></form>`;
 }
 
 function bindActionButtons(view, collection) {
@@ -397,6 +428,7 @@ function bindForms(view) {
 
 function applyHostContext(context) {
   if (context.theme) applyDocumentTheme(context.theme);
+  document.body.toggleAttribute('data-ds-dark-theme', document.documentElement.dataset.theme === 'dark');
   if (context.styles?.variables) applyHostStyleVariables(context.styles.variables);
   if (context.styles?.css?.fonts) applyHostFonts(context.styles.css.fonts);
   if (context.locale) document.documentElement.lang = context.locale;
@@ -447,7 +479,7 @@ async function executeRuntimeAction(command) {
     previous?.remove();
     const host = document.createElement('form');
     host.className = 'form-grid'; host.dataset.runtimeForm = command.command_id;
-    host.innerHTML = `<h3>${escape(localized(command.label_i18n, command.command_id))}</h3>${command.summary ? `<p>${escape(command.summary)}</p>` : ''}${renderInputFields(schema, needsPayload ? { payload: defaults } : defaults)}<div><button type="button" data-submit class="action">继续</button></div>`;
+    host.innerHTML = `<h3>${escape(localized(command.label_i18n, command.command_id))}</h3>${command.summary ? `<p>${escape(command.summary)}</p>` : ''}${renderInputFields(schema, needsPayload ? { payload: defaults } : defaults)}<div><button type="button" data-submit class="dsh-button action">继续</button></div>`;
     $('body').append(host);
     bindFormSubmit(host, event => {
       event.preventDefault();
@@ -551,7 +583,7 @@ function renderCollection(view, collection) {
           </button>`;
         }).join('')}
       </div>
-      <div class="card detail">${renderOwnerView(view, current)}${view.data_ref === 'opl.runtime.v1#work-items' ? `<button class="action" data-open-task="${escape(current.id)}">打开任务工作台</button>` : ''}</div>
+      <div class="card detail">${renderOwnerView(view, current)}${view.data_ref === 'opl.runtime.v1#work-items' ? `<button class="dsh-button action" data-open-task="${escape(current.id)}">打开任务工作台</button>` : ''}</div>
     </div>
     <div class="detail-actions">${renderActionButtons(view, collection, current)}</div>
   `;
@@ -579,6 +611,15 @@ function renderResult() {
     disposeWorkbench = mountTaskWorkbench({ container: $('body'), item,
       initialViewId: currentViewInput(view).domain_view_id,
       actions: item.runtime_actions || [], onAction: executeRuntimeAction, onOpenLink: openLink,
+      readActions: async () => {
+        const result = collectionFrom(await callTool(READ_TOOL, { package_id: 'opl-runtime', ref: 'opl.runtime.v1#item',
+          input: { item_id: item.item_id, include_runtime_actions: true } }));
+        const detail = result.data.detail;
+        if (result.state !== 'ready' || detail?.item_id !== item.item_id || detail.runtime_actions_unavailable) {
+          throw new Error('操作暂时无法读取，请重试。');
+        }
+        return detail.runtime_actions || [];
+      },
       relatedViews: (state.catalog?.views || []).filter(entry => entry.scope === 'work_item' && entry.agent_id === item.identity.agent_id),
       onOpenView: target => { state.selectedKey = key(target); state.focusKey = key(target);
         state.focusInput = { work_item_identity: collection.items[0].work_item_identity, workspace_path: item.identity.workspace_path, work_item_root: item.identity.work_item_root }; void loadSelected(); },
@@ -647,7 +688,7 @@ async function loadSelected() {
     || previousItems[0];
   if (previous) rememberWorkspaceSelection(previous);
   const view = (state.catalog?.views || []).find((entry) => key(entry) === state.selectedKey)
-    || state.catalog?.views?.[0]
+    || defaultCatalogView(state.catalog)
     || null;
   state.selected = view;
   state.selectedKey = view ? key(view) : '';
@@ -713,7 +754,7 @@ app.ontoolresult = (params) => {
     state.focusKey = focus.package_id && focus.view_id ? `${focus.package_id}:${focus.view_id}` : '';
     state.focusInput = record(focus.input) || {};
     state.selected = catalog.views.find((view) => view.package_id === focus.package_id && view.view_id === focus.view_id)
-      || catalog.views[0] || null;
+      || defaultCatalogView(catalog);
     state.selectedKey = state.selected ? key(state.selected) : '';
     state.itemId = '';
     state.result = payload.opl_app_contribution ? payload : null;

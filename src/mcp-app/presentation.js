@@ -71,7 +71,7 @@ export function renderArtifact(item) {
     ${item.summary ? `<p>${escape(item.summary)}</p>` : ''}
     ${item.artifact_kind || item.media_type ? `<p class="subtitle">${escape(item.artifact_kind || item.media_type)}</p>` : ''}
     ${item.quality_debt || item.unresolved_quality_debt ? `<div class="quality-debt"><h4>待完善项</h4>${renderFields(item.quality_debt || item.unresolved_quality_debt)}</div>` : ''}
-    <div class="detail-actions">${available && url ? `<button type="button" class="action" data-open-link="${escape(url)}">${escape(presentation.title || '打开产物')}</button>` : ''}${ref ? `<button type="button" class="source-ref" data-source-ref="${escape(typeof ref === 'object' ? ref.ref : ref)}">查看产物引用</button>` : ''}</div>
+    <div class="detail-actions">${available && url ? `<button type="button" class="dsh-button action" data-open-link="${escape(url)}">${escape(presentation.title || '打开产物')}</button>` : ''}${ref ? `<button type="button" class="source-ref" data-source-ref="${escape(typeof ref === 'object' ? ref.ref : ref)}">查看产物引用</button>` : ''}</div>
     ${renderSources(item.evidence_refs || item.source_refs)}${rawRecord(item)}</article>`;
 }
 

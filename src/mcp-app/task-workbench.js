@@ -83,7 +83,7 @@ export function renderResearch(snapshot, selectedId, section = 'research') {
   const summaries = ['primary_hypothesis', 'latest_finding', 'current_judgment', 'next_research_step'];
   if (section === 'evidence') {
     const evidence = snapshot.nodes.filter(node => ['artifact', 'finding', 'test'].includes(node.kind));
-    return `<section class="card"><h2>证据与产物</h2>${evidence.map(node => `<article><button class="action" data-node-id="${escape(node.id)}">${escape(node.label)}</button><p>${escape(node.summary)}</p>${renderSources(node.source_refs)}</article>`).join('') || empty('尚未提供证据节点')}${renderSources(snapshot.source_refs)}</section>`;
+    return `<section class="card"><h2>证据与产物</h2>${evidence.map(node => `<article><button class="dsh-button action" data-node-id="${escape(node.id)}">${escape(node.label)}</button><p>${escape(node.summary)}</p>${renderSources(node.source_refs)}</article>`).join('') || empty('尚未提供证据节点')}${renderSources(snapshot.source_refs)}</section>`;
   }
   if (section === 'decisions') {
     const gates = snapshot.nodes.filter(node => node.kind === 'human_gate');
@@ -92,10 +92,10 @@ export function renderResearch(snapshot, selectedId, section = 'research') {
   const relations = snapshot.edges.filter(edge => edge.source === selected?.id || edge.target === selected?.id);
   return `<section class="card research-summary"><h2>研究路径</h2>${summaries.map(key => `<div><h3>${escape(label(key))}</h3><p>${escape(snapshot.summary[key] || '尚未提供')}</p></div>`).join('')}<p>当前分支：${escape(snapshot.active_branch?.label || '尚未提供')}</p></section>
     ${graph(snapshot, selected?.id)}
-    <nav class="node-list" aria-label="研究节点">${snapshot.nodes.map(node => `<button class="action" data-node-id="${escape(node.id)}" aria-pressed="${node.id === selected?.id}">${escape(node.label)}</button>`).join('')}</nav>
+    <nav class="node-list" aria-label="研究节点">${snapshot.nodes.map(node => `<button class="dsh-button action" data-node-id="${escape(node.id)}" aria-pressed="${node.id === selected?.id}">${escape(node.label)}</button>`).join('')}</nav>
     ${selected ? `<article class="card node-detail"><h2>${escape(selected.label)}</h2><p><span class="badge">${escape(label(selected.kind))} · ${escape(label(selected.status))}</span> ${escape(selected.occurred_at || '')}</p><p>${escape(selected.summary)}</p>${renderFields(selected.details)}${renderSources(selected.source_refs)}<h3>相关证据与路线</h3>${relations.map(edge => {
       const other = snapshot.nodes.find(node => node.id === (edge.source === selected.id ? edge.target : edge.source));
-      return `<div class="research-relation" data-kind="${escape(edge.kind)}"><span>${escape(snapshot.nodes.find(node => node.id === edge.source)?.label)} → ${escape(label(edge.kind))} → ${escape(snapshot.nodes.find(node => node.id === edge.target)?.label)}</span><p>${escape(edge.label)}</p><button class="action" data-node-id="${escape(other.id)}">查看 ${escape(other.label)}</button>${renderSources(edge.source_refs)}</div>`;
+      return `<div class="research-relation" data-kind="${escape(edge.kind)}"><span>${escape(snapshot.nodes.find(node => node.id === edge.source)?.label)} → ${escape(label(edge.kind))} → ${escape(snapshot.nodes.find(node => node.id === edge.target)?.label)}</span><p>${escape(edge.label)}</p><button class="dsh-button action" data-node-id="${escape(other.id)}">查看 ${escape(other.label)}</button>${renderSources(edge.source_refs)}</div>`;
     }).join('') || empty('尚未声明相关关系')}</article>` : ''}`;
 }
 
@@ -107,7 +107,7 @@ export const domainViewRenderers = Object.freeze({
   },
 });
 
-export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot, initialViewId, read, onContext, relatedViews = [], onOpenView, ownerDetails, actions = [], onAction, onOpenLink }) {
+export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot, initialViewId, read, onContext, relatedViews = [], onOpenView, ownerDetails, actions = [], readActions, onAction, onOpenLink }) {
   const descriptors = list(item.domain_detail_views);
   const cache = new Map();
   let section = initialViewId ? 'research' : 'progress';
@@ -115,23 +115,24 @@ export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot,
   let snapshot = initialSnapshot;
   let selectedId = snapshot?.current_focus?.node_id;
   let error = '', busy = false, alive = true, generation = 0;
+  let actionsBusy = false, actionsError = '', actionsLoaded = !item.runtime_actions_deferred;
   const emit = extra => onContext({ item_id: item.item_id, work_item_identity: item.identity, section, view_id: viewId,
     node: snapshot?.nodes.find(node => node.id === selectedId) || null, ...extra });
   function render() {
     if (!alive) return;
     const focused = container.contains(document.activeElement) ? document.activeElement : null;
-    const focusKey = focused ? ['data-section', 'data-domain-view', 'data-refresh-domain', 'data-node-id'].find(key => focused.hasAttribute(key)) : null;
+    const focusKey = focused ? ['data-section', 'data-domain-view', 'data-refresh-domain', 'data-node-id', 'data-load-actions'].find(key => focused.hasAttribute(key)) : null;
     const focusValue = focusKey ? focused.getAttribute(focusKey) : null;
     const hasResearch = descriptors.length || snapshot;
-    const runtimeActions = actions.length ? `<div class="detail-actions" aria-label="当前可用操作">${actions.map((action, index) => `<button type="button" class="action" data-runtime-action="${index}">${escape(action.label_i18n?.['zh-CN'] || action.label_i18n?.['en-US'] || action.command_id)}${action.confirmation_required ? '…' : ''}</button>`).join('')}</div>` : '';
+    const runtimeActions = `<div class="detail-actions" aria-label="当前可用操作">${actions.map((action, index) => `<button type="button" class="dsh-button action" data-runtime-action="${index}">${escape(action.label_i18n?.['zh-CN'] || action.label_i18n?.['en-US'] || action.command_id)}${action.confirmation_required ? '…' : ''}</button>`).join('')}${readActions && (!actionsLoaded || actionsError) ? `<button type="button" class="dsh-button action" data-load-actions ${actionsBusy ? 'disabled' : ''}>${actionsBusy ? '正在读取可用操作…' : actionsError ? '重试读取操作' : '查看可用操作'}</button>` : ''}${actionsError ? `<p role="alert">${escape(actionsError)}</p>` : actionsLoaded && item.runtime_actions_deferred && !actions.length ? '<p role="status">当前没有可用操作。</p>' : ''}</div>`;
     const tabs = [['progress', '执行进度'], ...(hasResearch ? [['research', '研究路径']] : []), ['evidence', '证据与产物'], ['decisions', '待人决定']];
-    container.innerHTML = `<div class="task-workbench"><h2>${escape(item.identity?.work_item_display_name || item.identity?.work_item_id || '任务详情')}</h2><nav class="workbench-tabs" aria-label="任务详情">${tabs.map(([id, title]) => `<button class="action" data-section="${id}" aria-current="${id === section ? 'page' : 'false'}">${title}</button>`).join('')}</nav>
-      ${hasResearch && section !== 'progress' && descriptors.length ? `<div class="toolbar-row">${descriptors.map(view => `<button class="action" data-domain-view="${escape(view.view_id)}" aria-pressed="${viewId === view.view_id}">${escape(view.title || view.view_id)}</button>`).join('')}<button class="action" data-refresh-domain ${busy ? 'disabled' : ''}>刷新视图</button></div>` : ''}
+    container.innerHTML = `<div class="task-workbench"><h2>${escape(item.identity?.work_item_display_name || item.identity?.work_item_id || '任务详情')}</h2><nav class="workbench-tabs" aria-label="任务详情">${tabs.map(([id, title]) => `<button class="dsh-button action" data-section="${id}" aria-current="${id === section ? 'page' : 'false'}">${title}</button>`).join('')}</nav>
+      ${hasResearch && section !== 'progress' && descriptors.length ? `<div class="toolbar-row">${descriptors.map(view => `<button class="dsh-button action" data-domain-view="${escape(view.view_id)}" aria-pressed="${viewId === view.view_id}">${escape(view.title || view.view_id)}</button>`).join('')}<button class="dsh-button action" data-refresh-domain ${busy ? 'disabled' : ''}>刷新视图</button></div>` : ''}
       ${item.runtime_actions_unavailable ? '<p role="status">操作暂时无法读取，可刷新任务后重试。</p>' : ''}${busy ? '<p role="status">正在读取视图…</p>' : ''}${error ? `<p role="alert">${escape(error)}${snapshot ? '；保留上次有效视图' : ''}</p>` : ''}
       ${section === 'progress' ? `${runtimeActions}${renderProgress(item, ownerDetails)}${rawRecord(item)}` : section === 'evidence' ? `${snapshot ? renderResearch(snapshot, selectedId, section) : ''}${item.artifacts?.length ? renderArtifacts(item.artifacts) : ''}<section class="card"><h3>任务来源</h3>${renderSources(item.source_refs)}</section>`
         : section === 'decisions' ? `<section class="card"><h3>当前待办</h3>${ownerDetails ? renderFields(ownerDetails.work?.pending || []) : item.attention?.kind === 'user' || item.action?.owner_kind === 'user' ? `<p>${escape(item.action?.title)}</p><p>${escape(item.action?.summary)}</p>${item.attention?.issue ? `<p>${escape(item.attention.issue)}</p>` : ''}` : empty('当前没有投影到此处的人工待办')}</section>${snapshot ? renderResearch(snapshot, selectedId, section) : ''}`
           : snapshot ? renderResearch(snapshot, selectedId) : empty('此任务的研究路径暂不可用')}
-      ${relatedViews.length ? `<nav class="detail-actions" aria-label="任务能力">${relatedViews.map((view, index) => `<button class="action" data-related-view="${index}">${escape(view.title_i18n?.['zh-CN'] || view.title_i18n?.['en-US'] || view.view_id)}</button>`).join('')}</nav>` : ''}
+      ${relatedViews.length ? `<nav class="detail-actions" aria-label="任务能力">${relatedViews.map((view, index) => `<button class="dsh-button action" data-related-view="${index}">${escape(view.title_i18n?.['zh-CN'] || view.title_i18n?.['en-US'] || view.view_id)}</button>`).join('')}</nav>` : ''}
       </div>`;
     if (focusKey) [...container.querySelectorAll(`[${focusKey}]`)].find(element => element.getAttribute(focusKey) === focusValue)?.focus({ preventScroll: true });
   }
@@ -150,8 +151,18 @@ export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot,
     } catch (reason) { if (alive && ticket === generation) error = reason.message || '此视图暂不可用'; }
     finally { if (alive && ticket === generation) { busy = false; render(); emit({}); } }
   }
+  async function loadActions() {
+    if (!readActions || actionsBusy) return;
+    actionsBusy = true; actionsError = ''; render();
+    try {
+      const result = await readActions();
+      if (!alive) return;
+      actions = result; actionsLoaded = true;
+    } catch { if (alive) actionsError = '操作暂时无法读取，请重试。'; }
+    finally { if (alive) { actionsBusy = false; render(); } }
+  }
   function click(event) {
-    const button = event.target.closest('[data-section],[data-domain-view],[data-refresh-domain],[data-node-id],[data-source-ref],[data-related-view],[data-runtime-action],[data-open-link]');
+    const button = event.target.closest('[data-section],[data-domain-view],[data-refresh-domain],[data-node-id],[data-source-ref],[data-related-view],[data-runtime-action],[data-open-link],[data-load-actions]');
     if (!button || !container.contains(button)) return;
     if (button.hasAttribute('data-section')) {
       section = button.dataset.section; render(); emit({});
@@ -163,7 +174,8 @@ export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot,
     else if (button.hasAttribute('data-node-id')) {
       selectedId = button.dataset.nodeId; section = 'research'; render(); emit({});
       container.querySelector('.node-detail')?.scrollIntoView({ block: 'nearest' });
-    } else if (button.hasAttribute('data-runtime-action')) onAction?.(actions[Number(button.dataset.runtimeAction)]);
+    } else if (button.hasAttribute('data-load-actions')) void loadActions();
+    else if (button.hasAttribute('data-runtime-action')) onAction?.(actions[Number(button.dataset.runtimeAction)]);
     else if (button.hasAttribute('data-open-link')) onOpenLink?.(button.dataset.openLink);
     else if (button.hasAttribute('data-related-view')) onOpenView?.(relatedViews[Number(button.dataset.relatedView)]);
     else emit({ source_ref: button.dataset.sourceRef });

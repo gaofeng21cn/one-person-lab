@@ -13,7 +13,6 @@ import { createCordisAppFullComposition } from '../host/composition-profiles.ts'
 import { runAppContribution } from '../read-models/operator/app-contribution-broker.ts';
 import { FrameworkContractError } from '../kernel/contract-validation.ts';
 import { executeFrameworkMcpAppAction } from '../read-models/operator/app-mcp-runtime-actions.ts';
-import { buildWorkItemProjectionV2 } from '../read-models/operator/work-item-projection/projection.ts';
 import {
   OPL_MCP_APP_RESOURCE_URI,
   OPL_MCP_APP_SERVER_ID,
@@ -22,6 +21,7 @@ import {
   OPL_RUNTIME_REFS,
   listOplMcpAppViews,
   readFrameworkMcpAppContribution,
+  readFrameworkMcpAppTask,
 } from '../read-models/operator/app-mcp-app.ts';
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -116,19 +116,13 @@ export async function createOplMcpAppServer() {
     if (ref !== OPL_RUNTIME_REFS.item || (!input.item_id && !input.work_item_id)) {
       return readFrameworkMcpAppContribution({ ref, input, descriptorDiscovery: composition.services.descriptorDiscovery });
     }
-    const projection = buildWorkItemProjectionV2({ profile: 'full' });
-    const services = runtimeServices();
-    try {
+    return readFrameworkMcpAppTask({ ref, input }, async () => {
+      const services = runtimeServices();
       const snapshot = await services.runtimeSnapshotProvider(services.contracts, {
         appOperatorDrilldownDetailLevel: 'full',
       });
-      return readFrameworkMcpAppContribution({ ref, input, projection, runtimeSnapshot: snapshot.runtime_tray_snapshot });
-    } catch (error) {
-      return readFrameworkMcpAppContribution({
-        ref, input, projection,
-        runtimeActionsUnavailable: error instanceof Error ? error.message : 'runtime_actions_unavailable',
-      });
-    }
+      return snapshot.runtime_tray_snapshot;
+    });
   };
 
   registerAppResource(
@@ -185,9 +179,12 @@ export async function createOplMcpAppServer() {
           descriptorDiscovery: composition.services.descriptorDiscovery,
         });
         const views = catalog.views;
-        const focusedViews = views.filter((view) => (!package_id || view.package_id === package_id)
-          && (!view_id || view.view_id === view_id));
-        const selected = focusedViews[0];
+        const firstProduct = catalog.products[0];
+        const selected = package_id || view_id
+          ? views.find((view) => (!package_id || view.package_id === package_id)
+            && (!view_id || view.view_id === view_id))
+          : views.find((view) => view.package_id === firstProduct?.package_id
+            && view.view_id === firstProduct?.entry_view_id);
         if ((package_id || view_id) && !selected) throw new Error(`No installed OPL view matches ${view_id}.`);
         const contribution = selected
           ? await readContribution(String(selected.package_id), String(selected.data_ref), input ?? {})

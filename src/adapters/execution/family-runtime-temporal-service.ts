@@ -260,8 +260,11 @@ export function resolveTemporalAddressForPaths(
 
 function executablePath(candidate: string) {
   try {
-    fs.accessSync(candidate, fs.constants.X_OK);
-    return fs.realpathSync(candidate);
+    const executable = path.resolve(candidate);
+    fs.accessSync(executable, fs.constants.X_OK);
+    // Retain the carrier's stable entry point. Resolving its symlink here pins
+    // launchd to a versioned installation that the next upgrade can remove.
+    return fs.statSync(executable).isFile() ? executable : null;
   } catch {
     return null;
   }

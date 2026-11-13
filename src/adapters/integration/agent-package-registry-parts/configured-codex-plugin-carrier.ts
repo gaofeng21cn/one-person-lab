@@ -1,3 +1,4 @@
+import { checkPackageOperationCancellation, reportPackageOperation } from './package-operation-state.ts';
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { readCodexLocalPluginList } from './codex-plugin-local-readback.ts';
 import {
@@ -238,7 +239,10 @@ export function runConfiguredCodexPluginCarrier(input: {
   const actionArgs = nativeArgs(input.action, input.descriptor.carrier.pluginId);
   const isConfigToggle = input.action === 'enable' || input.action === 'disable';
   const dispatchAction = !isConfigToggle && input.action !== 'list' && input.dryRun !== true;
-  if (dispatchAction) ensureConfiguredCodexHomeForMutation(env);
+  if (dispatchAction) {
+    checkPackageOperationCancellation(env);
+    ensureConfiguredCodexHomeForMutation(env);
+  }
   const declaredMarketplaceSource = input.descriptor.carrier.marketplaceSource;
   // Payload-backed Packages must use the same owner-verified carrier for
   // install, update and repair. Falling back to the declared Git repository
@@ -253,6 +257,7 @@ export function runConfiguredCodexPluginCarrier(input: {
         packageDirectory: input.packageDirectory,
       }) ?? declaredMarketplaceSource
     : declaredMarketplaceSource;
+  if (dispatchAction) reportPackageOperation({ stage: 'installing', can_cancel: false, active_package_id: input.descriptor.packageId }, env);
   if (dispatchAction && configuredCarrierActionNeedsMarketplace(input.action) && marketplaceSource) {
     ensureMarketplaceAvailable({
       packageId: input.descriptor.packageId,
@@ -273,6 +278,7 @@ export function runConfiguredCodexPluginCarrier(input: {
     env,
     runner,
   });
+  if (dispatchAction) reportPackageOperation({ stage: 'checking', can_cancel: false }, env);
   let entries = readConfiguredPluginEntries({
     descriptor: input.descriptor,
     action: input.action,

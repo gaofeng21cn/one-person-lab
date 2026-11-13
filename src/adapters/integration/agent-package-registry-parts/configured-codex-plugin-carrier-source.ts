@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { checkPackageOperationCancellation, packageTransferStateRoot, reportPackageOperation } from './package-operation-state.ts';
 
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
@@ -21,7 +23,7 @@ function invalid(message: string): never {
   return localReadbackFailure('configured_codex_plugin_carrier_source_invalid', message);
 }
 
-function download(url: string, env: NodeJS.ProcessEnv, token?: string, basicCredential?: { username: string; token: string }) {
+export function readPackageRegistryBytes(url: string, env: NodeJS.ProcessEnv, token?: string, basicCredential?: { username: string; token: string }) {
   if (token && !/^[A-Za-z0-9._~+/=-]+$/.test(token)) return invalid('Package registry pull token is invalid.');
   const result = runConfiguredDownloadWithTransientRetry(() => {
     const config = token
@@ -48,23 +50,18 @@ function download(url: string, env: NodeJS.ProcessEnv, token?: string, basicCred
   return result.stdout;
 }
 
-function downloadArchive(url: string, destination: string, env: NodeJS.ProcessEnv, token: string) {
-  if (!/^[A-Za-z0-9._~+/=-]+$/.test(token)) return invalid('Package registry pull token is invalid.');
-  const result = runConfiguredDownloadWithTransientRetry(() => {
-    const response = spawnSync('curl', [
-      '--disable', '--fail', '--silent', '--show-error', '--location', '--proto', '=https', '--ipv4',
-      '--connect-timeout', '10', '--max-time', '600',
-      '--max-filesize', String(MAX_PACKAGE_SOURCE_ARCHIVE_BYTES),
-      '--config', '-', '--output', destination, url,
-    ], { env, maxBuffer: MAX_BYTES, input: `header = "Authorization: Bearer ${token}"\n` });
-    return { status: response.status, stdout: response.stdout ?? Buffer.alloc(0),
-      stderr: response.stderr?.toString('utf8') ?? '', error: response.error ?? null };
+function downloadArchive(input: { url: string; token: string; digest: string; size: number; packageId: string }, env: NodeJS.ProcessEnv) {
+  const worker = fileURLToPath(new URL(import.meta.url.endsWith('.ts') ? './package-download-worker.ts' : './package-download-worker.js', import.meta.url));
+  const result = spawnSync(process.execPath, [...(import.meta.url.endsWith('.ts') ? ['--conditions=opl-source', '--experimental-strip-types'] : []), worker], {
+    env, input: JSON.stringify(input), encoding: 'utf8', maxBuffer: 1024 * 1024,
   });
-  if (result.status !== 0 || result.error) {
-    return localReadbackFailure('configured_codex_plugin_carrier_source_download_failed',
-      'The selected Package source archive could not be downloaded.',
-      { exit_status: result.status, attempt_count: result.attemptCount });
+  let response: Record<string, unknown> = {};
+  try { response = JSON.parse(result.stdout || '{}'); } catch { /* no credential-bearing diagnostics */ }
+  if (result.status !== 0 || typeof response.archive_path !== 'string') {
+    const code = typeof response.error_code === 'string' ? response.error_code : 'package_download_failed';
+    throw Object.assign(new Error(code), { code });
   }
+  return response.archive_path;
 }
 
 function developerCheckoutRoot(packageId: string, owner: Record<string, unknown>, env: NodeJS.ProcessEnv) {
@@ -279,11 +276,11 @@ export function acquireHostedPackageSource(input: {
       accessPolicyRef: selectedSubject.access_policy_ref!, credential, env: input.env,
     });
   }
-  const token = stringValue(json(download(`https://ghcr.io/token?service=ghcr.io&scope=${scope}`, input.env, undefined, credential ?? undefined)).token);
+  const token = stringValue(json(readPackageRegistryBytes(`https://ghcr.io/token?service=ghcr.io&scope=${scope}`, input.env, undefined, credential ?? undefined)).token);
   if (!token) return invalid('Package registry did not return a pull token.');
   const reference = privateAccess?.registry_digest ?? version;
   if (privateAccess && !privateAccess.registry_digest) return invalid('The private Package registry did not return an immutable digest.');
-  const manifestBytes = download(`https://ghcr.io/v2/${match[1]}/manifests/${reference}`, input.env, token);
+  const manifestBytes = readPackageRegistryBytes(`https://ghcr.io/v2/${match[1]}/manifests/${reference}`, input.env, token);
   if (privateAccess && digest(manifestBytes) !== privateAccess.registry_digest) {
     return invalid('Private Package manifest does not match its authorized digest.');
   }
@@ -298,7 +295,7 @@ export function acquireHostedPackageSource(input: {
     return matches[0];
   };
   const blob = (item: Record<string, unknown>) => {
-    const bytes = download(`https://ghcr.io/v2/${match[1]}/blobs/${item.digest}`, input.env, token);
+    const bytes = readPackageRegistryBytes(`https://ghcr.io/v2/${match[1]}/blobs/${item.digest}`, input.env, token);
     if (digest(bytes) !== item.digest || bytes.length !== item.size) {
       return invalid('Package artifact layer digest or size mismatch.');
     }
@@ -321,14 +318,16 @@ export function acquireHostedPackageSource(input: {
     || !archiveRoot || !/^[A-Za-z0-9._-]+$/.test(archiveRoot) || ['.', '..'].includes(archiveRoot)) {
     return invalid('Package source artifact does not match the selected owner and carrier.');
   }
-  const temporaryRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hosted-package-')));
+  const stateRoot = packageTransferStateRoot(input.env);
+  fs.mkdirSync(stateRoot, { recursive: true, mode: 0o700 });
+  const temporaryRoot = fs.realpathSync(fs.mkdtempSync(path.join(stateRoot, 'package-staging-')));
   try {
-    const archivePath = path.join(temporaryRoot, 'source.tar.gz');
     if (typeof sourceLayer.size !== 'number' || !Number.isSafeInteger(sourceLayer.size)
       || sourceLayer.size < 0 || sourceLayer.size > MAX_PACKAGE_SOURCE_ARCHIVE_BYTES) {
       return invalid('Package source archive exceeds the bounded media source limit.');
     }
-    downloadArchive(`https://ghcr.io/v2/${match[1]}/blobs/${sourceLayer.digest}`, archivePath, input.env, token);
+    const archivePath = downloadArchive({ url: `https://ghcr.io/v2/${match[1]}/blobs/${sourceLayer.digest}`,
+      token, digest: String(sourceLayer.digest), size: sourceLayer.size, packageId: input.packageId }, input.env);
     if (packageSourceArchiveDigest(archivePath) !== sourceLayer.digest
       || fs.statSync(archivePath).size !== sourceLayer.size) {
       return invalid('Package source archive digest or size mismatch.');
@@ -346,6 +345,13 @@ export function acquireHostedPackageSource(input: {
     if (!packageSourceArchiveMembersStayWithinRoot(entries, archiveRoot)) {
       return invalid('Package source archive must contain only physical files within its declared root.');
     }
+    checkPackageOperationCancellation(input.env);
+    const disk = fs.statfsSync(stateRoot);
+    const unpackedBytes = entries.reduce((total, entry) => total + (entry.size ?? 0), 0);
+    if (disk.bavail * disk.bsize < unpackedBytes * (standardAgent ? 3 : 2)) {
+      throw Object.assign(new Error('Insufficient space to unpack and stage this Package.'), { code: 'package_download_insufficient_space' });
+    }
+    reportPackageOperation({ stage: 'extracting', can_cancel: true }, input.env);
     try {
       extractPackageSourceArchive(archivePath, temporaryRoot);
     } catch {

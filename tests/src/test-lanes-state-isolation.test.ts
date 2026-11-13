@@ -4,10 +4,38 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { runNodeTestStep } from '../../scripts/test-lanes.mjs';
+import { discoverTestRoots, laneTestPlan, runNodeTestStep } from '../../scripts/test-lanes.mjs';
 import { runCli, runCliAsync, runCliReadOnly } from './cli/helpers.ts';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+
+test('CI phases and unit shards execute every fast test exactly once', () => {
+  const files = (steps: any[]) => steps.filter(step => step.kind === 'node-test').flatMap(step => step.files);
+  const original = files(laneTestPlan('fast'));
+  const selected = [
+    ...[1,2,3].flatMap(index => files(laneTestPlan('fast','unit',`${index}/3`))),
+    ...files(laneTestPlan('fast','cli')),
+    ...files(laneTestPlan('fast','temporal')),
+  ];
+  assert.equal(new Set(selected).size,selected.length);
+  assert.deepEqual(selected.sort(),original.sort());
+  assert.equal(laneTestPlan('fast','build').length,1);
+  assert.equal(laneTestPlan('fast','quality').every((step: any)=>step.kind==='command'),true);
+  assert.throws(()=>laneTestPlan('fast','missing'),/no steps/);
+  for(const shard of ['0/3','4/3','1/0','abc','1/999999999999999999999']) {
+    assert.throws(()=>laneTestPlan('fast','unit',shard),/index\/count/);
+  }
+  assert.throws(()=>laneTestPlan('fast',null,'1/3'),/test-only/);
+  const fullFiles=files(laneTestPlan('full'));
+  assert.deepEqual(discoverTestRoots(fullFiles),[...fullFiles].sort());
+  const constituentFiles=['artifact','fast','fresh-install','read-model-gates','meta','regression','integration']
+    .flatMap(lane=>files(laneTestPlan(lane)));
+  assert.deepEqual([...fullFiles].sort(),discoverTestRoots([...new Set(constituentFiles)]));
+  assert.equal(fullFiles.includes('tests/src/cli/cases/packages.test.ts'),true);
+  assert.equal(fullFiles.includes('tests/src/cli/cases/packages-cases/workflow-policy-transaction.test.ts'),false);
+  const cliRoot=laneTestPlan('full').find((step: any)=>step.kind==='node-test'&&step.files.includes('tests/src/cli.test.ts'));
+  assert.equal(cliRoot.batchSize,1);
+});
 
 function processExists(pid: number) {
   try {

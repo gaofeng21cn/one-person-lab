@@ -1,3 +1,4 @@
+import { executePackageOperationAppAction } from './action-execute-package-operations.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { executeSoftwareSourceAppAction } from './action-execute-sources.ts';
 import { executeKnowledgeSourceAppAction } from './action-execute-knowledge-sources.ts';
@@ -50,6 +51,9 @@ export async function executeDirectAppAction(
   options: AppActionExecuteOptions,
   services: AppActionExecuteServices,
 ) {
+  const packageOperation = await executePackageOperationAppAction(options);
+  if (packageOperation) return packageOperation;
+
   const knowledgeSourceAction = executeKnowledgeSourceAppAction(options);
   if (knowledgeSourceAction) return knowledgeSourceAction;
 

@@ -123,6 +123,16 @@ Homebrew 是 OPL 的一个 carrier，不是 Agent 目录。它适合分发宿主
 - Homebrew 只在它是声明的 carrier 时执行动作；
 - App/Studio 的统一管理页是用户认知入口，owner projection 是机器真相。
 
+## 下载进度与后台安装
+
+安装、更新和修复可通过 [`package-install-operation-contract.json`](../../contracts/opl-framework/package-install-operation-contract.json) 使用同一套后台操作。`package_operation_start --dry-run` 调用既有 lifecycle 预检查并读取发布制品元数据，返回版本、下载量、可用缓存、位置与磁盘余量。依赖沿既有 required dependency 结果展开；没有解压大小的旧制品保持未知，下载后从归档头计算并检查实际暂存空间。
+
+确认后，后台 worker 仍执行原来的 `agent_package_install/update/repair`。App 通过 `package_operation_status` 回读准备、下载、校验、解压、安装和最终结果；下载字节、速度和 ETA 来自传输实际写入量，其他阶段不伪造百分比。原生注册期间不可取消；下载或文件准备期间的取消只产生请求，worker 到达安全边界后才报告 `cancelled`。进程消失报告 `interrupted`，不自动重发生命周期操作。
+
+系统 curl 继续持有 HTTP、重定向与 Range。Framework 只补齐当前 OCI 到原生 marketplace 的缺口：digest 命名的私有缓存目录、完整内容校验、暂存与进度投影。此缓存不决定版本、不替代 carrier registry。重复安装先重新验证缓存；私有包复用缓存前仍通过原有授权。断线重试保留 partial，服务器不接受 Range 时重新下载，取消和失败均不将 partial 激活。取消安装不会撤销此前已经成功安装的必需依赖。
+
+后台操作按当前 Codex 宿主隔离，并拒绝同一宿主的并发后台安装。离开软件中心或重载页面不会停止 worker。恢复时读取 owner 状态；只有现有 native lifecycle 的最终回读成功才能显示安装完成。
+
 ## 安装位置与当前生效来源
 
 统一的是定位、状态和操作方式，不要求所有文件搬进一个物理目录。路径由实际安装器持有；Framework 通过既有 locator、安装收据和 carrier 回读定位，不新增路径注册表。
@@ -166,6 +176,8 @@ Framework 托管运行时同样按实际安装执行更新，复用 Framework �
 有独立原生安装器的 Package 在 `entrypoints` 声明 `kind=opl_software_installation_cli`、`protocol=opl_software_installation.v1`、`runtime`、`source_ref` 和 `operations`。helper 必须随已安装 carrier 交付并纳入 content lock。Framework 通过固定 `--stdin` JSON 调用 owner，不执行 UI 提供的任意命令，也不执行软件源中尚未安装的新 helper。旧 carrier 可按 owner 的 `discovery.kind=macos_bundle` 回读实际 bundle，提示先更新集成组件；此时不猜测激活状态。集成组件记录留在 carrier 详情，不重复算作该产品的另一份程序安装。
 
 helper 的 `inspect` 不联网、不修改配置，返回 `package_id`、`installations`、`active_installation_id` 和 `active_installation_status`。每份实例提供位置、版本、`mode=release|development`、revision、active 和 supported_actions。已有实例的 activate/update/uninstall/unlink 均携带 id 和 revision；update 还绑定精确目标版本。Framework 投影 `installations`、`installation_actions` 及激活状态，App 仅渲染这些 owner 提供的动作。首装用 `operation=install`、精确 version 及安装清单 revision，无 installation_id；fresh inspect 后交还 owner 在锁内核对目标不存在或拒绝覆盖。开发安装保留原选择，安装发布版不自动替换已激活的开发版。
+
+可选的大型数据安装沿用同一个 Package：owner 声明 `installation_scope=supplemental_payload` 和 `installation_profiles`，投影带本地化标签及 profile 的精确安装动作。默认核心 carrier 继续负责代码激活，附加 `data_directory` 与它并存，不替代核心安装或依赖解析。选择附加方式时先由现有 Package 安装器准备核心，并核对所选版本与内容摘要，再执行已安装核心中的 owner helper；附加资料的卸载不移除核心。MAC 素材库以此提供可选离线完整版，默认依赖仍是轻量目录包。
 
 Codex carrier 的实例动作复用已有 Package 生命周期：先核对已装 descriptor、真实位置、版本和 revision，再交给原生管理器更新或移除。开发插件只提供解除接入，保留源码。全局 Developer Mode 的源码维护偏好不等于运行时激活；标准智能体须回读实际 hosted runtime，普通能力包须回读真正的已安装入口，不能把恰好存在的仓库或 monorepo 根版本当作正在使用的软件。
 

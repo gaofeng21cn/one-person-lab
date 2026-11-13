@@ -1,6 +1,7 @@
 import path from 'node:path';
+import { after } from 'node:test';
 
-import { Worker } from '@temporalio/worker';
+import { bundleWorkflowCode, Worker } from '@temporalio/worker';
 import { FrameworkContractError } from '../../../src/kernel/contract-validation.ts';
 import { persistCanonicalReviewTransportJson, reviewTransportRoots } from '../../../src/adapters/execution/family-runtime-review-transport-store.ts';
 
@@ -23,6 +24,15 @@ import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environm
 import { queryTemporalStageRunWorkflow } from '../../../src/adapters/execution/family-runtime-temporal-provider-parts/attempt-control.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
+const workflowsPath = path.join(repoRoot, 'src/adapters/execution/family-runtime-temporal-workflows.ts');
+let controllerEnvironment: ReturnType<typeof createTemporalTestWorkflowEnvironment> | null = null;
+let controllerWorkflowBundle: ReturnType<typeof bundleWorkflowCode> | null = null;
+
+// Test files are separate node --test processes. Reuse only the server and
+// immutable bundle; each scenario owns its Worker, queue, IDs and activities.
+after(async () => {
+  if (controllerEnvironment) await (await controllerEnvironment).teardown();
+});
 
 function stageRunInput(id: string): TemporalStageRunWorkflowInput {
   const receipt = {
@@ -161,7 +171,8 @@ export async function runController(input: {
   acceptedReviewerResume?: boolean;
   acceptedRepairerResume?: boolean;
 }) {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await (controllerEnvironment ??= createTemporalTestWorkflowEnvironment());
+  const workflowBundle = await (controllerWorkflowBundle ??= bundleWorkflowCode({ workflowsPath }));
   const taskQueue = `opl-stage-run-controller-${input.id}-${Date.now()}`;
   const attempts: TemporalStageQualityAttemptMaterializationInput[] = [];
   const workflowInputs: TemporalStageAttemptWorkflowInput[] = [];
@@ -169,6 +180,7 @@ export async function runController(input: {
   const routeInputs: any[] = [];
   const handoffObservations: any[] = [];
   const attemptSyncs: any[] = [];
+  let worker: Worker | null = null;
   try {
     const activities = {
       async stageQualityAttemptMaterializeActivity(materialization: TemporalStageQualityAttemptMaterializationInput) {
@@ -604,11 +616,11 @@ export async function runController(input: {
         };
       },
     };
-    const worker = await Worker.create({
+    worker = await Worker.create({
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
       taskQueue,
-      workflowsPath: path.join(repoRoot, 'src/adapters/execution/family-runtime-temporal-workflows.ts'),
+      workflowBundle,
       activities,
     });
     const state = await worker.runUntil(async () => {
@@ -726,6 +738,7 @@ export async function runController(input: {
     }
     return { state, terminalReadback, attempts, workflowInputs, reviewReceiptInputs, routeInputs, handoffObservations, attemptSyncs };
   } finally {
-    await testEnv.teardown();
+    // runUntil normally stops this Worker's pollers; the file hook owns the server.
+    if (worker?.getState() === 'RUNNING') worker.shutdown();
   }
 }

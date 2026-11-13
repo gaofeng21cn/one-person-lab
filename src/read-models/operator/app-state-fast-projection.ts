@@ -321,7 +321,7 @@ export function compactFastAgentPackageDirectory(value: unknown) {
       'package_id', 'package_kind', 'display_name', 'publisher', 'description', 'tags', 'package_role',
       'capability_metadata', 'display_name_i18n', 'description_i18n',
       'icon_ref',
-      'icon_url',
+      'icon_url', 'miniapp_entry',
       'carrier_source_commit',
       'session_routing_summary_i18n', 'home_shortcuts',
       'app_contributions', 'role_state', 'trust_tier', 'source_explanation', 'manifest_url',

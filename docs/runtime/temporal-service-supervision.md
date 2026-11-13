@@ -27,7 +27,7 @@ opl family-runtime service supervisor remove --provider temporal
 
 App 的 Server 维护动作独立为 `provider_service_start`、`provider_service_restart` 与 `provider_service_stop`；Worker 也保留 status/start/restart/stop 动作。restart 不复用幂等 start：macOS 本机受管实例执行 `opl family-runtime service restart --provider temporal`，内部使用 `launchctl kickstart -k`；non-darwin 的 OPL detached 实例执行有界 stop/start；外部或容器服务返回 typed `not_applicable` 且不产生 mutation。只有 fresh Server 与 supervisor readback 都 ready（或 supervisor 明确不适用），且 macOS 受管实例的 launchd PID 确认已更换时，restart receipt 才会给出 `ready=true`；同 PID 返回 `restart_unready` / `supervisor_pid_not_replaced`。
 
-Supervisor plist 直接执行 realpath 后的 Temporal CLI，不执行 Framework checkout 中的 TypeScript 文件，也不接受 shell command 作为 production supervisor launcher。固定配置包括：
+Supervisor 安装时按现有发现顺序选择 Temporal CLI：显式 `OPL_TEMPORAL_CLI_PATH`、Framework managed entrypoint、`PATH`。plist 保存发现到的绝对入口路径，保留 Homebrew 等原生安装器提供的稳定符号链接，不把它解析并固化成 `Cellar/<version>`。launchd 每次启动通过该入口执行当前目标，不依赖交互式 shell 或 Framework checkout 中的 TypeScript 文件，也不接受 shell command 作为 production supervisor launcher。固定配置包括：
 
 - label `ai.opl.family-runtime.temporal-service`
 - `RunAtLoad=true`
@@ -36,7 +36,9 @@ Supervisor plist 直接执行 realpath 后的 Temporal CLI，不执行 Framework
 - `WorkingDirectory=${OPL_STATE_DIR}/family-runtime`
 - `--db-filename ${OPL_STATE_DIR}/family-runtime/temporal-server/temporal.sqlite`
 
-持久库父目录在安装前创建；config、plist args 和状态 currentness 必须指向同一个绝对 realpath。readback 会核对 exact plist SHA-256、launcher SHA-256，以及 executable 仍存在、可执行且 realpath 未漂移。Temporal CLI、plist 字节、启动参数或数据库路径漂移都会成为 `configuration_drift`，不会被当作 ready。
+持久库父目录在安装前创建；config、plist args 和状态 currentness 必须指向同一个数据库绝对 realpath。readback 会核对 exact plist SHA-256、launcher SHA-256，以及启动入口的当前目标是可执行的普通文件。原生安装器升级时切换稳定链接、删除旧版目录，不再单独造成 `configuration_drift`；目标缺失、断链、循环链接、目录或不可执行文件，以及 plist 字节、启动参数或数据库路径的实际漂移仍会阻断 ready。
+
+已运行的进程保持原生命周期；稳定入口切换在下次启动时生效，服务 ready 不代表运行中的程序已经升级。显式指定可用版本目录时仍保存该路径；这类精确路径不具备稳定链接的跨版本行为，显式配置也应优先选择原生安装器维护的稳定入口。旧配置若已经保存了被删除的版本路径，现有 `provider_service_start` 或 Desktop startup reconciliation 会重新发现入口并按原事务重装配置，之后同类升级不再要求重写 plist。普通 status/App state 读取只报告现状，不重装或重启服务。
 
 ## Readiness And Repair
 
@@ -55,6 +57,11 @@ app_state.provider.temporal.details.worker_readiness.temporal_service_lifecycle.
 ```
 
 repair action 为 `install_temporal_service_supervisor`、`trigger_temporal_service_supervisor` 或 `none`。Server 必须先 ready，之后才可维护 Worker，最后独立检查或安装 scheduler cadence；Server supervisor 不读取或推断 scheduler ready。
+
+Worker 的 Node 启动入口同样保留稳定路径：在安装环境的绝对 `PATH` 目录中寻找指向当前
+运行时的入口，只有 realpath 相同才采用，不切换到另一个 Node 安装。找不到等价入口时
+保留当前 executable。健康检查验证 plist 中的程序仍为可执行普通文件；旧版本被移除、
+链接断开或权限丢失时返回 configuration drift，由现有启动维护重新生成配置。
 
 `supported` 只描述当前平台是否支持 launchd；`applicable`/`required` 只在 macOS OPL-local Temporal CLI 路径为 true。non-darwin、external/container 和显式 custom command 均投影 `status=not_applicable`、`ready=null`、`error=null`，不能因为 launchd 不适用而污染健康状态。
 

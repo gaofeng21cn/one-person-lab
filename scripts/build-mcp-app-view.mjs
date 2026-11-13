@@ -19,7 +19,7 @@ export async function buildMcpAppView(outputDirectory = path.join(repoRoot, 'dis
   });
   const script = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
   const template = await readFile(path.join(sourceRoot, 'index.html'), 'utf8');
-  const css = await readFile(path.join(sourceRoot, 'style.css'), 'utf8');
+  const css = '/*\n' + await readFile(path.join(sourceRoot, 'DSH-LICENSE.txt'), 'utf8') + '\n*/\n' + await readFile(path.join(sourceRoot, 'dsh-theme.css'), 'utf8') + '\n' + await readFile(path.join(sourceRoot, 'style.css'), 'utf8');
   const html = template
     .replace('/* STYLE */', () => css)
     .replace('/* SCRIPT */', () => script);

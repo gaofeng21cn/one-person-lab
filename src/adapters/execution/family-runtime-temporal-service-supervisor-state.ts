@@ -210,7 +210,9 @@ function fileSha256(filePath: string) {
 function launcherExecutableCurrent(config: TemporalServiceSupervisorConfig) {
   try {
     fs.accessSync(config.launcher_executable, fs.constants.X_OK);
-    return fs.realpathSync(config.launcher_executable) === config.launcher_executable;
+    // A package manager may retarget its stable link on upgrade. Validate the
+    // current target without treating a supported carrier update as drift.
+    return fs.statSync(config.launcher_executable).isFile();
   } catch {
     return false;
   }

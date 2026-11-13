@@ -19,6 +19,7 @@ import {
   legacyProviderSloWatchdogPlistPath,
   LEGACY_PROVIDER_SLO_WATCHDOG_LABEL,
   providerWorkerLauncherModulePath,
+  providerWorkerNodeExecutable,
   providerWorkerSupervisorLaunchctlTarget,
   providerWorkerSupervisorPlistPath,
   PROVIDER_WORKER_SUPERVISOR_LABEL,
@@ -180,10 +181,10 @@ function providerSloTriggerCommandForDisplay() {
   return ['opl', 'family-runtime', 'provider-slo', 'tick', '--provider', 'temporal'];
 }
 
-function workerSupervisorProgramArguments(paths: RuntimePaths) {
+function workerSupervisorProgramArguments(paths: RuntimePaths, environment: ProviderWorkerSupervisorEnvironment) {
   const launcherModulePath = providerWorkerLauncherModulePath();
   return [
-    process.execPath,
+    providerWorkerNodeExecutable(environment),
     ...(launcherModulePath.endsWith('.ts') ? ['--experimental-strip-types'] : []),
     launcherModulePath,
     '--provider-worker-launcher',
@@ -343,7 +344,7 @@ export function buildProviderWorkerSupervisorPlist(
   const environmentXml = plistEnvironmentXml(paths, environment);
   const logsDir = path.join(paths.root, 'logs');
   fs.mkdirSync(logsDir, { recursive: true });
-  const args = workerSupervisorProgramArguments(paths)
+  const args = workerSupervisorProgramArguments(paths, environment)
     .map((entry) => `    <string>${escapeXml(entry)}</string>`)
     .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>

@@ -45,6 +45,23 @@ export function providerWorkerLauncherModulePath() {
   return path.join(path.dirname(currentModulePath), `family-runtime-provider-worker-launcher${extension}`);
 }
 
+export function providerWorkerNodeExecutable(
+  environment: NodeJS.ProcessEnv = process.env,
+  executable = process.execPath,
+) {
+  const current = fs.realpathSync(executable);
+  for (const directory of (environment.PATH ?? '').split(path.delimiter)) {
+    if (!path.isAbsolute(directory)) continue;
+    const candidate = path.resolve(directory, path.basename(executable));
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      if (candidate !== current && fs.statSync(candidate).isFile()
+        && fs.realpathSync(candidate) === current) return candidate;
+    } catch { /* Continue past unavailable PATH entries. */ }
+  }
+  return path.resolve(executable);
+}
+
 export function runProviderWorkerSupervisorLaunchctl(args: string[]) {
   if (process.platform !== 'darwin') {
     return {
@@ -79,13 +96,16 @@ function readPlist(pathToPlist: string) {
   }
 }
 
-export function inspectProviderWorkerSupervisorState(paths: RuntimePaths) {
-  const pathToPlist = providerWorkerSupervisorPlistPath();
+export function inspectProviderWorkerSupervisorState(paths: RuntimePaths, runtime: {
+  plistPath?: string;
+  runLaunchctl?: typeof runProviderWorkerSupervisorLaunchctl;
+} = {}) {
+  const pathToPlist = runtime.plistPath ?? providerWorkerSupervisorPlistPath();
   const plistExists = fs.existsSync(pathToPlist);
   const plist = readPlist(pathToPlist);
   const launcherModulePath = providerWorkerLauncherModulePath();
   const launchctl = plistExists
-    ? runProviderWorkerSupervisorLaunchctl([
+    ? (runtime.runLaunchctl ?? runProviderWorkerSupervisorLaunchctl)([
         'print',
         `${providerWorkerSupervisorLaunchctlTarget()}/${PROVIDER_WORKER_SUPERVISOR_LABEL}`,
       ])
@@ -98,12 +118,23 @@ export function inspectProviderWorkerSupervisorState(paths: RuntimePaths) {
     : false;
   const plistMentionsCurrentRoot = plist ? textMentionsRoot(plist, paths.root) : false;
   const plistMentionsCurrentLauncher = plist ? textMentionsRoot(plist, launcherModulePath) : false;
+  const program = plist?.match(/<key>ProgramArguments<\/key>\s*<array>\s*<string>([\s\S]*?)<\/string>/)?.[1]
+    ?.replaceAll('&quot;', '"').replaceAll('&apos;', "'")
+    .replaceAll('&gt;', '>').replaceAll('&lt;', '<').replaceAll('&amp;', '&');
+  let executableCurrent = false;
+  try {
+    if (program && path.isAbsolute(program)) {
+      fs.accessSync(program, fs.constants.X_OK);
+      executableCurrent = fs.statSync(program).isFile();
+    }
+  } catch { /* Missing or broken launchers require existing startup repair. */ }
   const loadedConfigurationCurrent = !launchctl?.ok
     || (launchctlMentionsRoot && launchctlMentionsCurrentLauncher);
   const configurationCurrent = Boolean(
     plistExists
     && plistMentionsCurrentRoot
     && plistMentionsCurrentLauncher
+    && executableCurrent
     && loadedConfigurationCurrent,
   );
   const supervisesCurrentRoot = launchctl?.ok ? launchctlMentionsRoot : plistMentionsCurrentRoot;
@@ -124,6 +155,7 @@ export function inspectProviderWorkerSupervisorState(paths: RuntimePaths) {
     configuration_checks: {
       plist_root_current: plistMentionsCurrentRoot,
       plist_launcher_current: plistMentionsCurrentLauncher,
+      plist_executable_current: executableCurrent,
       loaded_root_current: !launchctl?.ok || launchctlMentionsRoot,
       loaded_launcher_current: !launchctl?.ok || launchctlMentionsCurrentLauncher,
     },

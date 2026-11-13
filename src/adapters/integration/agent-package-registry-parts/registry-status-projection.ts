@@ -35,6 +35,7 @@ import type { AgentPackageInstallInput } from './types.ts';
 import { resolvePackageAccessDecision, type AgentPackageAccessDecision } from './package-access.ts';
 import { componentSeedAvailable, packageInstallSourceAvailable, packageDistributionChannel } from './package-install-source.ts';
 import { packageArtworkUrl } from './package-artwork.ts';
+import { miniAppPresentation } from './miniapp-presentation.ts';
 import { packageInstallationProjection } from './package-installation-projection.ts';
 
 export type OplAgentPackageStatusInput = {
@@ -397,6 +398,7 @@ export function hostedRuntimeReadiness(descriptor: InstalledPackageDescriptor | 
 
 function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' | 'full', packageAccess?: AgentPackageAccessDecision, currentOwner?: InstalledPackageDescriptor) {
   const manifest = descriptor.manifest;
+  const miniapp = miniAppPresentation(manifest, 'product_entry');
   const installed = descriptor.readiness.installed
     && installedDescriptorMatchesConfiguredCarrier(descriptor);
   const hosted = hostedRuntimeReadiness(descriptor, detail);
@@ -416,8 +418,12 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     ? access.reason ?? 'package_access_verification_required'
     : !sourceAvailable ? 'package_install_source_unavailable' : null;
   const downloadable = installReason === null;
+  const installation = packageInstallationProjection(descriptor, installed,
+    access.discover_allowed ? currentOwner?.manifest.version ?? (installed ? null : manifest.version) : null,
+    process.env, currentOwner ?? descriptor, hosted.source_root);
   const actions = (manifest.management_scope === 'local_component' && !parentSeedAvailable ? [] : actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode))
     .filter((action) => downloadable || !['agent_package_install', 'agent_package_update', 'agent_package_repair'].includes(action.action_id));
+  if (downloadable) actions.push(...(installation.installation_actions ?? []) as typeof actions);
   const recommendedAction = !downloadable || (manifest.management_scope === 'local_component' && !parentSeedAvailable)
     ? null
     : installed ? (ready ? null : 'agent_package_repair') : 'agent_package_install';
@@ -438,9 +444,7 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     software_type: currentOwner?.manifest.presentation?.software_type
       ?? manifest.presentation?.software_type
       ?? (manifest.package_role === 'standard_agent' ? 'agent' : 'unknown'),
-    ...packageInstallationProjection(descriptor, installed,
-      access.discover_allowed ? currentOwner?.manifest.version ?? (installed ? null : manifest.version) : null,
-      process.env, currentOwner ?? descriptor, hosted.source_root),
+    ...installation,
     capability_metadata: installed
       ? {
           source: manifest.source,
@@ -452,6 +456,12 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     description_i18n: manifest.presentation?.description_i18n ?? null,
     icon_ref: manifest.presentation?.icon_ref ?? null,
     icon_url: packageArtworkUrl(currentOwner ?? descriptor),
+    miniapp_entry: miniapp.direct_entry ? {
+      resource_uri: miniapp.dedicated_resource_uri ?? 'ui://opl/apps.html',
+      arguments: miniapp.dedicated_resource_uri ? {} : {
+        package_id: manifest.package_id, ...(miniapp.entry_view_id ? { view_id: miniapp.entry_view_id } : {}),
+      },
+    } : null,
     session_routing_summary_i18n: manifest.presentation?.session_routing_summary_i18n ?? null,
     home_shortcuts: manifest.presentation?.home_shortcuts ?? [],
     home_shortcut_ids: manifest.presentation?.home_shortcuts.map((shortcut) => shortcut.shortcut_id) ?? [],

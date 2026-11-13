@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import semver from 'semver';
 
@@ -49,6 +49,8 @@ export interface DependencyReleaseResolutionOptions {
   source?: DependencyReleaseSource;
   verifyArchive?: boolean;
   timeoutMs?: number;
+  /** Disposable archive bytes only; release metadata is always resolved fresh. */
+  archiveCacheDir?: string;
   /** Injectable authenticated GitHub metadata transport, never used for archive bytes. */
   githubApi?: (endpoint: string) => Promise<unknown>;
 }
@@ -131,28 +133,92 @@ function sha256(value: unknown): string | undefined {
   return /^[a-f0-9]{64}$/.test(digest) ? digest : undefined;
 }
 
+export function dependencyArchiveCachePath(url: string, cacheDir: string): string {
+  return path.join(cacheDir, `${createHash('sha256').update(httpsUrl(url)).digest('hex')}.archive`);
+}
+
 async function fingerprint(
   url: string, expectedSha: string | undefined, expectedSize: number | undefined,
-  integrity: string | undefined, options: DependencyReleaseResolutionOptions,
+  integrity: string | undefined, options: DependencyReleaseResolutionOptions, outputFile?: string,
 ): Promise<{ archive_sha256: string; archive_size_bytes?: number }> {
-  if (options.verifyArchive === false && expectedSha) {
+  if (!outputFile && options.verifyArchive === false && expectedSha) {
     return { archive_sha256: expectedSha, ...(expectedSize === undefined ? {} : { archive_size_bytes: expectedSize }) };
   }
-  const result = await response(url, options);
-  const hash = createHash('sha256');
   const sriToken = integrity?.split(/\s+/).find((entry) => /^(sha512|sha384|sha256|sha1)-/.test(entry));
   const sriAlgorithm = sriToken?.split('-')[0];
-  const sriHash = sriAlgorithm ? createHash(sriAlgorithm) : undefined;
-  let size = 0;
-  if (!result.body) throw new Error('Dependency archive has no response body.');
-  for await (const chunk of result.body as unknown as AsyncIterable<Uint8Array>) {
-    hash.update(chunk); sriHash?.update(chunk); size += chunk.byteLength;
+  const cacheDir = options.archiveCacheDir ?? process.env.OPL_DEPENDENCY_ARCHIVE_CACHE_DIR;
+  const cacheFile = cacheDir ? dependencyArchiveCachePath(url, cacheDir) : undefined;
+  const outputTemp = outputFile ? `${outputFile}.${randomUUID()}.partial` : undefined;
+  if (outputFile) fs.mkdirSync(path.dirname(outputFile), { recursive: true });
+  let cacheTemp: string | undefined;
+  if (cacheFile) {
+    try {
+      fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+      cacheTemp = `${cacheFile}.${randomUUID()}.partial`;
+    } catch { /* An unavailable cache cannot prevent a verified download. */ }
   }
-  const digest = hash.digest('hex');
-  if (expectedSha && expectedSha !== digest) throw new Error('Dependency archive SHA-256 does not match its official source.');
-  if (expectedSize !== undefined && expectedSize !== size) throw new Error('Dependency archive size does not match its official source.');
-  if (sriToken && `${sriAlgorithm}-${sriHash!.digest('base64')}` !== sriToken) throw new Error('Dependency npm tarball integrity does not match its registry metadata.');
-  return { archive_sha256: digest, archive_size_bytes: size };
+  const consume = async (chunks: AsyncIterable<Uint8Array>, sink?: string) => {
+    const hash = createHash('sha256');
+    const sriHash = sriAlgorithm ? createHash(sriAlgorithm) : undefined;
+    let size = 0;
+    let fd: number | undefined;
+    try {
+      if (sink) {
+        try { fd = fs.openSync(sink, 'wx', outputFile ? 0o644 : 0o600); }
+        catch (error) { if (outputFile) throw error; }
+      }
+      for await (const chunk of chunks) {
+        hash.update(chunk); sriHash?.update(chunk); size += chunk.byteLength;
+        if (fd !== undefined) {
+          try { fs.writeFileSync(fd, chunk); }
+          catch (error) {
+            fs.closeSync(fd); fd = undefined;
+            if (outputFile) throw error;
+            if (sink) { try { fs.rmSync(sink, { force: true }); } catch { /* Disposable partial cache file. */ } }
+          }
+        }
+      }
+    } finally { if (fd !== undefined) fs.closeSync(fd); }
+    const digest = hash.digest('hex');
+    if (expectedSha && expectedSha !== digest) throw new Error('Dependency archive SHA-256 does not match its official source.');
+    if (expectedSize !== undefined && expectedSize !== size) throw new Error('Dependency archive size does not match its official source.');
+    if (sriToken && `${sriAlgorithm}-${sriHash!.digest('base64')}` !== sriToken) throw new Error('Dependency npm tarball integrity does not match its registry metadata.');
+    return { archive_sha256: digest, archive_size_bytes: size };
+  };
+  try {
+    // Fresh official SHA/SRI is required for a hit; a URL alone is no authority.
+    if (cacheFile && (expectedSha || sriToken)) {
+      try {
+        if (fs.lstatSync(cacheFile).isFile()) {
+          const result = await consume(fs.createReadStream(cacheFile), outputTemp);
+          if (outputFile) fs.renameSync(outputTemp!, outputFile);
+          return result;
+        }
+      } catch { if (outputTemp) fs.rmSync(outputTemp, { force: true }); }
+    }
+    const result = await response(url, options);
+    if (!result.body) throw new Error('Dependency archive has no response body.');
+    const verified = await consume(result.body as unknown as AsyncIterable<Uint8Array>, outputTemp ?? cacheTemp);
+    if (outputFile) fs.renameSync(outputTemp!, outputFile);
+    if (cacheTemp && cacheFile) {
+      try {
+        if (outputFile) fs.copyFileSync(outputFile, cacheTemp);
+        if (fs.existsSync(cacheTemp)) fs.renameSync(cacheTemp, cacheFile);
+      } catch { /* Cache persistence is optional after successful verification. */ }
+    }
+    return verified;
+  } finally {
+    for (const file of [outputTemp, cacheTemp]) {
+      if (file) { try { fs.rmSync(file, { force: true }); } catch { /* Cleanup must not replace a verification result. */ } }
+    }
+  }
+}
+
+/** Consume frozen identity without resolving a new release or selecting a version. */
+export async function fetchDependencyArchive(url: string, expectedSha256: string, outputFile: string,
+  options: DependencyReleaseResolutionOptions = {}) {
+  if (!sha256(expectedSha256)) throw new Error('A frozen archive SHA-256 is required.');
+  return fingerprint(httpsUrl(url), sha256(expectedSha256), undefined, undefined, options, path.resolve(outputFile));
 }
 
 async function npmArtifact(packageName: string, selector: string, options: DependencyReleaseResolutionOptions): Promise<Json> {

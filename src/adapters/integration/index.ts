@@ -1,4 +1,5 @@
 import { registerAgentPackageReadinessPort } from '../../kernel/agent-package-readiness-port.ts';
+export { miniAppPresentation } from './agent-package-registry-parts/miniapp-presentation.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { runOplAgentPackageBulkUpdate, runOplAgentPackageStatus } from './agent-package-registry.ts';
 import {
@@ -211,3 +212,6 @@ export {
   compactStorageOwnerInventorySnapshot,
   webuiHostActionRequired,
 } from './storage-owner-inventory-snapshot.ts';
+
+export { packageDownloadPlan } from './agent-package-registry-parts/package-download-plan.ts';
+export { cancelPackageOperation, packageOperationStatus, startPackageOperation, validatePackageOperationRequest, observePackageOperation, PACKAGE_BACKGROUND_ACTIONS } from './agent-package-registry-parts/package-operations.ts';

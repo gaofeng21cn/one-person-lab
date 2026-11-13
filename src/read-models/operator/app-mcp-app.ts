@@ -1,6 +1,7 @@
 import {
   discoverInstalledPackageDescriptors,
   installedDescriptorSupportsFrameworkCalls,
+  miniAppPresentation,
   type InstalledPackageDescriptor,
 } from '../../adapters/integration/index.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
@@ -129,34 +130,10 @@ function viewCommands(
   });
 }
 
-function miniAppPresentation(
-  descriptor: InstalledPackageDescriptor | null,
-  entryKind: 'product_entry' | 'runtime_view',
-  entryViewId?: string,
-) {
-  const declared = descriptor?.manifest.presentation?.miniapp;
-  if (declared) {
-    return {
-      presentation_mode: declared.presentation_mode,
-      entry_kind: declared.entry_kind,
-      direct_entry: declared.direct_entry,
-      ...(declared.dedicated_resource_uri ? { dedicated_resource_uri: declared.dedicated_resource_uri } : {}),
-      ...(declared.entry_view_id ? { entry_view_id: declared.entry_view_id } : {}),
-    };
-  }
-  return {
-    presentation_mode: 'shared_view' as const,
-    entry_kind: entryKind,
-    direct_entry: entryKind === 'product_entry' && Boolean(entryViewId),
-    ...(entryViewId ? { entry_view_id: entryViewId } : {}),
-  };
-}
-
 function projectedViews(descriptor: InstalledPackageDescriptor) {
   const contributions = descriptor.manifest.app_contributions;
   if (!contributions) return [];
-  const firstViewId = contributions.views[0]?.view_id;
-  const miniapp = miniAppPresentation(descriptor, 'product_entry', firstViewId);
+  const miniapp = miniAppPresentation(descriptor.manifest, 'product_entry');
   const description = descriptor.manifest.presentation?.description_i18n ?? {};
   const sessionSummary = descriptor.manifest.presentation?.session_routing_summary_i18n ?? {};
   return contributions.views.flatMap((view) => {
@@ -221,9 +198,14 @@ export function listOplMcpAppViews(input: {
     ? []
     : projectedRuntimeViews();
   const views = [...runtimeViews, ...packageViews];
-  const products = [...new Map(views.map((view) => [String(view.package_id), view])).values()]
+  // Runtime views are contextual workbench routes. They share the OPL Apps
+  // resource, but the global task list already lives at the App /runtime
+  // route, so exposing them as a product here creates a second top-level
+  // navigation entry and makes the same task list appear twice.
+  const productViews = views.filter((view) => view.entry_kind === 'product_entry');
+  const products = [...new Map(productViews.map((view) => [String(view.package_id), view])).values()]
     .map((view) => {
-      const packageViewsForEntry = views.filter((candidate) => candidate.package_id === view.package_id);
+      const packageViewsForEntry = productViews.filter((candidate) => candidate.package_id === view.package_id);
       const entryViewId = String(view.entry_view_id ?? packageViewsForEntry[0]?.view_id ?? '');
       const entryView = packageViewsForEntry.find((candidate) => candidate.view_id === entryViewId)
         ?? packageViewsForEntry[0]
@@ -254,6 +236,12 @@ export function listOplMcpAppViews(input: {
     package_filter: input.packageId ?? null,
     view_count: views.length,
     product_count: products.length,
+    runtime_view_count: views.filter((view) => view.entry_kind === 'runtime_view').length,
+    navigation_policy: {
+      product_entries: 'product_entry_only',
+      runtime_views: 'contextual_task_workbench',
+      default_product: 'first_product_entry',
+    },
     products,
     views,
     authority_boundary: {
@@ -337,12 +325,31 @@ function projectionItem(item: ReturnType<typeof buildWorkItemProjectionV2>['item
   };
 }
 
+export async function readFrameworkMcpAppTask(input: {
+  ref: string;
+  input: JsonRecord;
+  projection?: ReturnType<typeof buildWorkItemProjectionV2>;
+}, loadRuntimeSnapshot: () => Promise<JsonRecord>) {
+  const projection = input.projection ?? buildWorkItemProjectionV2({ profile: 'full' });
+  const detail = readFrameworkMcpAppContribution({ ...input, projection, runtimeActionsDeferred: true });
+  // A task read must not wait on global provider and package diagnostics.
+  // Actions are inspected only on explicit request and revalidated at execution.
+  if (input.input.include_runtime_actions !== true || detail.opl_app_contribution.response.result.state !== 'ready') return detail;
+  try {
+    return readFrameworkMcpAppContribution({ ...input, projection, runtimeSnapshot: await loadRuntimeSnapshot() });
+  } catch (error) {
+    return readFrameworkMcpAppContribution({ ...input, projection,
+      runtimeActionsUnavailable: error instanceof Error ? error.message : 'runtime_actions_unavailable' });
+  }
+}
+
 export function readFrameworkMcpAppContribution(input: {
   ref: string;
   input: JsonRecord;
   projection?: ReturnType<typeof buildWorkItemProjectionV2>;
   runtimeSnapshot?: JsonRecord;
   runtimeActionsUnavailable?: string;
+  runtimeActionsDeferred?: boolean;
   descriptorDiscovery?: DescriptorDiscovery;
   knowledgeReader?: typeof readMcpAppKnowledgeSources;
 }) {
@@ -433,6 +440,7 @@ export function readFrameworkMcpAppContribution(input: {
           runtime_actions: input.runtimeSnapshot
             ? runtimeActionsForItem(matches[0]!, input.runtimeSnapshot)
             : [],
+          ...(input.runtimeActionsDeferred ? { runtime_actions_deferred: true } : {}),
           ...(input.runtimeActionsUnavailable
             ? { runtime_actions_unavailable: input.runtimeActionsUnavailable }
             : {}),

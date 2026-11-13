@@ -44,6 +44,14 @@ uses `presentation.miniapp` when present and safely falls back to
 `entry_kind` is `product_entry` or `runtime_view`; `direct_entry` only controls the
 navigation affordance and never starts a surface.
 
+The software directory exposes the same navigation decision as
+`agent_packages.directory.entries[].miniapp_entry`, including the fast App-state
+projection. Explicit `direct_entry: false` remains authoritative; a Package with
+no declared views and no direct entry has no MiniApp shortcut. This field carries
+only the resource URI and navigation arguments. The host resolves the live MCP
+catalog and its read-only launcher before opening the view; the directory does
+not create another catalog or grant execution permission.
+
 Three presentation forms can coexist within one Package:
 
 - Shared declarative views for progress, artifacts, lists and review.
@@ -249,11 +257,13 @@ outside that workspace remains a reference and is not opened through this bridge
 
 ### Shared app navigation
 
-The shared UI selects one installed product and shows its functions. Search can span all products; focused task handoffs still select the exact declared view. A dedicated-app descriptor is described as a shared overview here, with guidance to open its dedicated MiniApp from the host switcher. It never implies that selecting a product launches another UI session.
+The shared UI selects one installed product and shows its functions. Product and function selectors share a compact top navigation bar at every width; catalog search opens on demand. There is no permanent product sidebar. The content fills the remaining width and height, following the App-owned MiniApp visual contract. Search can span all products; focused task handoffs still select the exact declared view. A dedicated-app descriptor is described as a shared overview here, with guidance to open its dedicated MiniApp from the host switcher. It never implies that selecting a product launches another UI session.
 
 
 ### 连续导航
 
-Package 的 `presentation.miniapp.dedicated_resource_uri` 可声明共享概览的专用界面入口，Framework 只投影这项 owner 声明。同版本的本地安装也优先读取实际载体的 MiniApp 入口，避免旧目录投影覆盖新 UI；名称、策略和发布身份仍由既有 owner 投影持有。标准 `ui/open-link` 使用该 `ui://` URI，fragment 为 URL 编码的 JSON 导航参数。宿主仅匹配当前目录中的唯一只读 launcher，按其 input schema 过滤参数；缺失或歧义保持原界面。共享页只传递当前对象的引用，不传业务正文。
+Package 的 `presentation.miniapp.dedicated_resource_uri` 可声明共享概览的专用界面入口，Framework 只投影这项 owner 声明。同版本的本地安装也优先读取实际载体的 MiniApp 入口，避免旧目录投影覆盖新 UI；名称、策略和发布身份仍由既有 owner 投影持有。标准 `ui/open-link` 使用该 `ui://` URI，fragment 为 URL 编码的 JSON 导航参数。宿主仅匹配当前目录中的唯一只读 launcher，按其 input schema 过滤参数；缺失或歧义保持原界面。共享页只传递当前对象的引用，不传业务正文。引用包含当前 `workspace_path` 时一并保留，专用界面仍通过 Framework contribution broker 验证登记，不因跨界面导航改选另一个制作工作区。
 
 自有 UI 通过标准 `ui/update-model-context` 的 `structuredContent.navigation` 提供再次打开用的参数。App 可在本机保存隔离到 thread/server/resource 的有限显示偏好，owner 每次打开重新校验并读取对象。显式入口优先；恢复不携带调用 ID、编辑缓冲区或写操作。应用退出、关闭或切换均不改变后台任务状态。
+
+本地源码更新必须执行 npm 的 prepare 生命周期，重新生成 `dist` 与 MCP App HTML；版本号和依赖清单相同也不能跳过。源码回执、实际载体和 `resources/read` 返回的网页必须来自同一套实现。
