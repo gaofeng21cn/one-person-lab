@@ -10,8 +10,9 @@
     <div id="root" class="shell" data-opl-family="opl-apps">
       <nav class="app-navigation" aria-label="产品与功能">
         <span class="brand" title="OPL Apps"><span class="mark" aria-hidden="true"></span><span class="sr-only">OPL Apps</span></span>
-        <label class="product-picker" for="product-select"><span>产品</span><select id="product-select" class="dsh-input"></select></label>
-        <label class="compact-navigation" for="view-select"><span>功能</span><select id="view-select" aria-label="当前功能" class="dsh-input"></select></label>
+        <label id="product-picker" class="product-picker" for="product-select"><span>产品</span><select id="product-select" class="dsh-input"></select></label>
+        <span id="runtime-context" class="runtime-context" hidden>任务工作台 · 从运行状态进入</span>
+        <label id="view-picker" class="compact-navigation" for="view-select"><span>功能</span><select id="view-select" aria-label="当前功能" class="dsh-input"></select></label>
         <span id="status" class="connection-status">正在连接</span>
         <details id="catalog-search" class="catalog-search">
           <summary class="dsh-button">查找</summary>

@@ -55,6 +55,15 @@ function key(view) {
   return viewKey(view);
 }
 
+function isRuntimeView(view) {
+  return view?.entry_kind === 'runtime_view' || view?.package_id === 'opl-runtime';
+}
+
+function defaultCatalogView(catalog) {
+  const views = Array.isArray(catalog?.views) ? catalog.views : [];
+  return views.find((view) => view.entry_kind === 'product_entry') || views[0] || null;
+}
+
 function notice(text, error = false) {
   $('notice').textContent = text;
   $('notice').className = `notice${error ? ' error' : ''}`;
@@ -215,8 +224,12 @@ function renderCatalog() {
   const views = state.catalog?.views || [];
   const products = state.catalog?.products || [];
   const query = state.query.trim().toLocaleLowerCase();
-  const selectedPackage = views.find(view => key(view) === state.selectedKey)?.package_id || views[0]?.package_id;
-  const filtered = views.filter((view) => {
+  const selectedView = views.find(view => key(view) === state.selectedKey) || state.selected;
+  const runtimeContext = isRuntimeView(selectedView);
+  const productViews = views.filter((view) => !isRuntimeView(view));
+  const navigationViews = runtimeContext ? views.filter(isRuntimeView) : productViews;
+  const selectedPackage = selectedView?.package_id || navigationViews[0]?.package_id;
+  const filtered = navigationViews.filter((view) => {
     if (!query) return view.package_id === selectedPackage;
     return `${view.package_id} ${view.package_name} ${view.view_id} ${localized(view.title_i18n)} ${view.view_type}`
       .toLocaleLowerCase()
@@ -249,10 +262,14 @@ function renderCatalog() {
     void loadSelected();
   }
   picker.onchange = () => selectView(picker.value);
-  // Older catalogs may not include products; the declared views still provide navigation.
-  const entries = products.length ? products : [...new Map(views.map(view => [view.package_id, {
+  // Older catalogs may not include products; product views still provide navigation.
+  const entries = products.length ? products : [...new Map(productViews.map(view => [view.package_id, {
     package_id: view.package_id, package_name: view.package_name,
   }])).values()];
+  $('product-picker').hidden = runtimeContext;
+  $('runtime-context').hidden = !runtimeContext;
+  $('catalog-search').hidden = runtimeContext;
+  $('view-picker').querySelector('span').textContent = runtimeContext ? '任务视图' : '功能';
   const productPicker = $('product-select');
   productPicker.innerHTML = entries.map(product => `<option value="${escape(product.package_id)}" ${product.package_id === selectedPackage ? 'selected' : ''}>${escape(product.package_name)}</option>`).join('') || '<option value="">暂无可用应用</option>';
   productPicker.disabled = !entries.length;
@@ -265,11 +282,15 @@ function renderCatalog() {
     selectView(key(entry));
   };
   const selectedProduct = entries.find(product => product.package_id === selectedPackage);
-  $('product-summary').textContent = localized(selectedProduct?.package_summary_i18n || selectedProduct?.package_description_i18n);
-  $('views-label').textContent = query ? '搜索结果 · 所有应用' : '应用功能';
+  $('product-summary').textContent = runtimeContext
+    ? '由首页“运行状态”打开的任务工作台。'
+    : localized(selectedProduct?.package_summary_i18n || selectedProduct?.package_description_i18n);
+  $('views-label').textContent = runtimeContext
+    ? '任务工作台'
+    : query ? '搜索结果 · 所有应用' : '应用功能';
   $('views').innerHTML = [...groups.entries()].map(([packageId, group]) => {
-    const product = products.find((entry) => entry.package_id === packageId);
-    const heading = product?.entry_kind === 'runtime_view' ? '任务与进度' : group.name;
+    const product = entries.find((entry) => entry.package_id === packageId);
+    const heading = runtimeContext ? '任务工作台' : product?.entry_kind === 'runtime_view' ? '任务与进度' : group.name;
     return `<section class="package-group" aria-label="${escape(heading)}">
       <h2>${escape(heading)}<small>${escape(String(group.views.length))}</small></h2>
       ${group.views.map((view) => `
@@ -291,8 +312,15 @@ function renderCatalog() {
 function renderHeader() {
   $('notice').hidden = true;
   const view = state.selected;
-  $('title').textContent = view ? localized(view.title_i18n, view.view_id) : 'OPL 能力';
-  const guidance = view?.presentation_mode === 'dedicated_app'
+  const runtimeContext = isRuntimeView(view);
+  $('title').textContent = runtimeContext
+    ? (view?.data_ref === 'opl.runtime.v1#item' ? '任务工作台' : '任务与进度')
+    : view ? localized(view.title_i18n, view.view_id) : 'OPL 能力';
+  const guidance = runtimeContext
+    ? (view?.data_ref === 'opl.runtime.v1#item'
+      ? '首页运行状态 → 当前任务详情；查看进度、证据和待人决定。'
+      : '全局任务总览请从首页“运行状态”进入。')
+    : view?.presentation_mode === 'dedicated_app'
     ? '共享概览 · 可进入专用界面继续操作。'
     : view?.presentation_mode === 'professional_app' ? '共享概览 · 编辑操作请进入该应用的专业界面。' : '';
   $('subtitle').textContent = view ? [view.package_name, guidance || localized(view.package_summary_i18n || view.package_description_i18n)].filter(Boolean).join(' · ') : '';
@@ -649,7 +677,7 @@ async function loadSelected() {
     || previousItems[0];
   if (previous) rememberWorkspaceSelection(previous);
   const view = (state.catalog?.views || []).find((entry) => key(entry) === state.selectedKey)
-    || state.catalog?.views?.[0]
+    || defaultCatalogView(state.catalog)
     || null;
   state.selected = view;
   state.selectedKey = view ? key(view) : '';
@@ -715,7 +743,7 @@ app.ontoolresult = (params) => {
     state.focusKey = focus.package_id && focus.view_id ? `${focus.package_id}:${focus.view_id}` : '';
     state.focusInput = record(focus.input) || {};
     state.selected = catalog.views.find((view) => view.package_id === focus.package_id && view.view_id === focus.view_id)
-      || catalog.views[0] || null;
+      || defaultCatalogView(catalog);
     state.selectedKey = state.selected ? key(state.selected) : '';
     state.itemId = '';
     state.result = payload.opl_app_contribution ? payload : null;

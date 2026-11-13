@@ -198,9 +198,14 @@ export function listOplMcpAppViews(input: {
     ? []
     : projectedRuntimeViews();
   const views = [...runtimeViews, ...packageViews];
-  const products = [...new Map(views.map((view) => [String(view.package_id), view])).values()]
+  // Runtime views are contextual workbench routes. They share the OPL Apps
+  // resource, but the global task list already lives at the App /runtime
+  // route, so exposing them as a product here creates a second top-level
+  // navigation entry and makes the same task list appear twice.
+  const productViews = views.filter((view) => view.entry_kind === 'product_entry');
+  const products = [...new Map(productViews.map((view) => [String(view.package_id), view])).values()]
     .map((view) => {
-      const packageViewsForEntry = views.filter((candidate) => candidate.package_id === view.package_id);
+      const packageViewsForEntry = productViews.filter((candidate) => candidate.package_id === view.package_id);
       const entryViewId = String(view.entry_view_id ?? packageViewsForEntry[0]?.view_id ?? '');
       const entryView = packageViewsForEntry.find((candidate) => candidate.view_id === entryViewId)
         ?? packageViewsForEntry[0]
@@ -231,6 +236,12 @@ export function listOplMcpAppViews(input: {
     package_filter: input.packageId ?? null,
     view_count: views.length,
     product_count: products.length,
+    runtime_view_count: views.filter((view) => view.entry_kind === 'runtime_view').length,
+    navigation_policy: {
+      product_entries: 'product_entry_only',
+      runtime_views: 'contextual_task_workbench',
+      default_product: 'first_product_entry',
+    },
     products,
     views,
     authority_boundary: {

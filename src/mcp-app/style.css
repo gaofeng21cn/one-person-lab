@@ -43,6 +43,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .product-picker { flex: 1; }
 .compact-navigation { flex: 1.2; }
 .product-picker > span, .compact-navigation > span { flex: none; }
+.runtime-context { min-width: 0; flex: 1; color: var(--text); font-size: var(--dsw-font-s-14-font-size); font-weight: var(--dsw-font-s-strong-14-font-weight); overflow-wrap: anywhere; }
 .product-picker select, .compact-navigation select { width: 100%; min-width: 0; }
 .connection-status { margin-left: auto; flex: none; color: var(--muted); font-size: var(--dsw-font-xxs-12-font-size); }
 .catalog-search { position: relative; flex: none; }
@@ -212,6 +213,7 @@ h1 { text-wrap: balance; overflow-wrap: anywhere; margin: 0; font-size: var(--ds
 @media (max-width: 760px) {
   .app-navigation { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; padding: 10px 12px; }
   .brand, .connection-status { display: none; }
+  .runtime-context { grid-column: 1 / -1; }
   .product-picker, .compact-navigation { display: grid; gap: 4px; }
   .catalog-search { align-self: end; }
   .collection { grid-template-columns: 1fr; }
