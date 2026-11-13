@@ -36,6 +36,7 @@ function supervisorState(paths: { root: string }, installed = true) {
     configuration_checks: {
       plist_root_current: installed,
       plist_launcher_current: installed,
+      plist_executable_current: installed,
       loaded_root_current: true,
       loaded_launcher_current: true,
     },

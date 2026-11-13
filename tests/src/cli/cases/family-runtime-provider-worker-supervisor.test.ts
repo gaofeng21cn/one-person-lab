@@ -3,6 +3,7 @@ import {
   chmodSync,
   existsSync,
   mkdtempSync,
+  mkdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -29,7 +30,11 @@ import {
   parseProviderWorkerLauncherRoot,
   rotateBoundedLog,
 } from '../../../../src/adapters/execution/family-runtime-provider-worker-launcher.ts';
-import { providerWorkerLauncherModulePath } from '../../../../src/adapters/execution/family-runtime-provider-worker-supervisor-state.ts';
+import {
+  inspectProviderWorkerSupervisorState,
+  providerWorkerLauncherModulePath,
+  providerWorkerNodeExecutable,
+} from '../../../../src/adapters/execution/family-runtime-provider-worker-supervisor-state.ts';
 
 function runtimePaths(root: string) {
   return {
@@ -101,6 +106,58 @@ test('provider-worker supervisor launches the guarded worker and delegates log o
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('provider-worker persists the current runtime PATH entry without selecting a different Node', (context) => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'opl-worker-node-entrypoint-'));
+  context.after(() => rmSync(root, { recursive: true, force: true }));
+  const bin = path.join(root, 'bin');
+  const other = path.join(root, 'other');
+  mkdirSync(bin);
+  mkdirSync(other);
+  const name = path.basename(process.execPath);
+  writeFileSync(path.join(other, name), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  const entrypoint = path.join(bin, name);
+  symlinkSync(process.execPath, entrypoint);
+  const environment = { PATH: [other, bin].join(path.delimiter) };
+  const plist = buildProviderWorkerSupervisorPlist(runtimePaths(root), environment);
+  const program = plist.match(/<key>ProgramArguments<\/key>\s*<array>\s*<string>(.*?)<\/string>/)?.[1];
+  assert.equal(decodeXml(program!), entrypoint);
+  assert.equal(providerWorkerNodeExecutable({ PATH: other }), process.execPath);
+});
+
+test('provider-worker survives an entrypoint upgrade and detects an unusable saved executable', (context) => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'opl-worker-node-upgrade-'));
+  context.after(() => rmSync(root, { recursive: true, force: true }));
+  for (const directory of ['v1', 'v2', 'bin']) mkdirSync(path.join(root, directory));
+  const oldNode = path.join(root, 'v1', 'node');
+  const newNode = path.join(root, 'v2', 'node');
+  writeFileSync(oldNode, '#!/bin/sh\nprintf old', { mode: 0o755 });
+  writeFileSync(newNode, '#!/bin/sh\nprintf new', { mode: 0o755 });
+  const stable = path.join(root, 'bin', 'node');
+  symlinkSync(oldNode, stable);
+  const selected = providerWorkerNodeExecutable({ PATH: path.dirname(stable) }, oldNode);
+  assert.equal(selected, stable);
+  const plistPath = path.join(root, 'worker.plist');
+  const original = buildProviderWorkerSupervisorPlist(runtimePaths(root), {});
+  writeFileSync(plistPath, original.replace(/(<key>ProgramArguments<\/key>\s*<array>\s*<string>).*?(<\/string>)/, `$1${selected}$2`));
+  const inspect = () => inspectProviderWorkerSupervisorState(runtimePaths(root), {
+    plistPath,
+    runLaunchctl: (args) => ({ ok: true, status: 0, stdout: `${root}\n${providerWorkerLauncherModulePath()}`, stderr: '', args }),
+  });
+  assert.equal(inspect().configuration_current, true);
+  rmSync(stable);
+  symlinkSync(newNode, stable);
+  rmSync(oldNode);
+  assert.equal(spawnSync(selected, [], { encoding: 'utf8' }).stdout, 'new');
+  assert.equal(inspect().configuration_current, true);
+  chmodSync(newNode, 0o644);
+  assert.equal(inspect().status, 'configuration_drift');
+  chmodSync(newNode, 0o755);
+  rmSync(newNode);
+  assert.equal(inspect().configuration_checks.plist_executable_current, false);
+  mkdirSync(newNode);
+  assert.equal(inspect().configuration_checks.plist_executable_current, false);
 });
 
 test('provider-worker supervisor omits every OwnerGate variable when BIN is absent', () => {

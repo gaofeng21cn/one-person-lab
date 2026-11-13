@@ -2,6 +2,7 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { providerWorkerNodeExecutable } from './family-runtime-provider-worker-supervisor-state.ts';
 
 import {
   probeTemporalServer,
@@ -144,6 +145,7 @@ function forwardSignal(child: ChildProcess | null, signal: NodeJS.Signals) {
 }
 
 export async function runProviderWorkerLauncher(argv = process.argv.slice(2)) {
+  const nodeExecutable = providerWorkerNodeExecutable();
   const paths = { root: parseProviderWorkerLauncherRoot(argv) };
   const logs = launcherLogPaths(paths);
   rotateBoundedLog(logs.stdout);
@@ -172,7 +174,7 @@ export async function runProviderWorkerLauncher(argv = process.argv.slice(2)) {
     if (!ready) return 0;
 
     const modulePath = workerModulePath();
-    child = spawn(process.execPath, [
+    child = spawn(nodeExecutable, [
       ...buildTemporalProviderWorkerProcessArgs(modulePath),
       '--temporal-worker-foreground',
       '--family-runtime-root',

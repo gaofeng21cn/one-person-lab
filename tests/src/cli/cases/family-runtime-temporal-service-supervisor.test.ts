@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import net from 'node:net';
+import { execFileSync } from 'node:child_process';
 
 import { assert, fs, os, path, test } from '../helpers.ts';
 import { parseRegisteredFamilyRuntimeCommand } from '../../../../src/adapters/execution/family-runtime-command-parts/registry.ts';
@@ -18,7 +19,7 @@ import {
   type TemporalServiceSupervisorLaunchctlResult,
 } from '../../../../src/adapters/execution/family-runtime-temporal-service-supervisor-state.ts';
 import type { TemporalServiceLauncher } from '../../../../src/adapters/execution/family-runtime-temporal-service.ts';
-import { inspectTemporalServiceLifecycle } from '../../../../src/adapters/execution/family-runtime-temporal-service.ts';
+import { inspectTemporalServiceLifecycle, resolveTemporalServiceLauncher } from '../../../../src/adapters/execution/family-runtime-temporal-service.ts';
 import { restartTemporalServiceLifecycle } from '../../../../src/adapters/execution/family-runtime-temporal-service-command.ts';
 import { inspectTemporalWorkerLifecycleFast } from '../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-lifecycle-fast.ts';
 
@@ -156,6 +157,117 @@ function createFakeLaunchctl(options: {
     },
   };
 }
+
+test('Temporal discovery retains a carrier entrypoint across upgrade, cleanup, and supervisor reuse', async () => {
+  const fixture = createFixture();
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = fixture.stateDir;
+  try {
+    const stable = path.join(fixture.stateDir, 'carrier prefix', 'bin', 'temporal');
+    const writeVersion = (version: string) => {
+      const executable = path.join(fixture.stateDir, 'Cellar', 'temporal', version, 'bin', 'temporal');
+      fs.mkdirSync(path.dirname(executable), { recursive: true });
+      fs.writeFileSync(executable, `#!/bin/sh\nprintf '%s\\n' '${version}'\n`, { mode: 0o755 });
+      return executable;
+    };
+    const oldExecutable = writeVersion('1.8.0');
+    fs.mkdirSync(path.dirname(stable), { recursive: true });
+    fs.symlinkSync(oldExecutable, stable);
+    const env = { PATH: path.dirname(stable) };
+    const fakeLaunchctl = createFakeLaunchctl();
+    const runtime = {
+      platform: 'darwin' as const, env, launchAgentsDir: fixture.launchAgentsDir,
+      launchctlTarget: 'gui/501', runLaunchctl: fakeLaunchctl.run,
+      probeServer: async () => fakeLaunchctl.loaded,
+    };
+    const discovered = resolveTemporalServiceLauncher(fixture.paths, env);
+    assert.equal(discovered?.executable, stable);
+    assert.equal(discovered?.source, 'temporal_cli_path');
+    const installed = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'install', runtime);
+    assert.equal(installed.ready, true);
+    const configPath = temporalServiceSupervisorConfigPath(fixture.paths);
+    const plistPath = temporalServiceSupervisorPlistPath(runtime);
+    const configBytes = fs.readFileSync(configPath, 'utf8');
+    const plistBytes = fs.readFileSync(plistPath, 'utf8');
+    const config = JSON.parse(configBytes);
+    assert.equal(config.launcher_executable, stable);
+    assert.ok(plistBytes.includes(stable));
+    assert.ok(!plistBytes.includes(oldExecutable));
+    assert.equal(execFileSync(config.launcher_executable, config.launcher_args, { encoding: 'utf8' }).trim(), '1.8.0');
+
+    const nextExecutable = writeVersion('1.10.0');
+    fs.symlinkSync(nextExecutable, `${stable}.next`);
+    fs.renameSync(`${stable}.next`, stable);
+    fs.rmSync(path.join(fixture.stateDir, 'Cellar', 'temporal', '1.8.0'), { recursive: true });
+    assert.equal(resolveTemporalServiceLauncher(fixture.paths, env)?.executable, stable);
+    const status = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'status', runtime);
+    assert.equal(status.ready, true);
+    assert.equal(status.supervisor.configuration_current, true);
+    assert.equal(execFileSync(config.launcher_executable, config.launcher_args, { encoding: 'utf8' }).trim(), '1.10.0');
+    const reinstalled = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'install', runtime);
+    assert.equal(reinstalled.status, 'already_ready');
+    assert.equal(fakeLaunchctl.bootstrapCount, 1);
+    assert.equal(fs.readFileSync(configPath, 'utf8'), configBytes);
+    assert.equal(fs.readFileSync(plistPath, 'utf8'), plistBytes);
+
+    // Accept carrier retargeting, but never a broken or unusable target.
+    for (const fault of ['not_executable', 'directory', 'dangling', 'cycle']) {
+      fs.rmSync(stable);
+      if (fault === 'not_executable') {
+        fs.chmodSync(nextExecutable, 0o644);
+        fs.symlinkSync(nextExecutable, stable);
+      } else if (fault === 'directory') {
+        fs.symlinkSync(path.dirname(nextExecutable), stable);
+      } else if (fault === 'dangling') {
+        fs.symlinkSync(oldExecutable, stable);
+      } else {
+        fs.symlinkSync(stable, stable);
+      }
+      assert.equal(resolveTemporalServiceLauncher(fixture.paths, env), null, fault);
+      const broken = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'status', runtime);
+      assert.equal(broken.ready, false, fault);
+      assert.equal(broken.supervisor.configuration_checks.launcher_executable_current, false, fault);
+      assert.equal(fs.readFileSync(configPath, 'utf8'), configBytes, 'status never rewrites configuration');
+      assert.equal(fakeLaunchctl.bootstrapCount, 1, 'status never restarts the service');
+    }
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fixture.close();
+  }
+});
+
+test('existing install repairs a removed versioned launcher through fresh discovery and preserves its database', async () => {
+  const fixture = createFixture();
+  try {
+    const fakeLaunchctl = createFakeLaunchctl();
+    const runtime = {
+      platform: 'darwin' as const, launchAgentsDir: fixture.launchAgentsDir,
+      launchctlTarget: 'gui/501', runLaunchctl: fakeLaunchctl.run,
+      probeServer: async () => fakeLaunchctl.loaded,
+      env: { OPL_TEMPORAL_CLI_PATH: fixture.launcher.executable },
+    };
+    assert.equal((await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'install', runtime)).ready, true);
+    const configPath = temporalServiceSupervisorConfigPath(fixture.paths);
+    const before = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    fs.writeFileSync(before.database_path, 'persistent-database-fixture');
+    const stable = path.join(fixture.stateDir, 'bin', 'temporal');
+    const replacement = `${fixture.launcher.executable}.new`;
+    fs.renameSync(fixture.launcher.executable, replacement);
+    fs.mkdirSync(path.dirname(stable), { recursive: true });
+    fs.symlinkSync(replacement, stable);
+    runtime.env.OPL_TEMPORAL_CLI_PATH = stable;
+    const repaired = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'install', runtime);
+    const after = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    assert.equal(repaired.ready, true);
+    assert.equal(after.launcher_executable, stable);
+    assert.equal(after.database_path, before.database_path);
+    assert.equal(fs.readFileSync(before.database_path, 'utf8'), 'persistent-database-fixture');
+    assert.equal(fakeLaunchctl.bootstrapCount, 2);
+  } finally {
+    fixture.close();
+  }
+});
 
 test('Temporal service supervisor CLI parses the explicit lifecycle without conflating scheduler state', () => {
   assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
