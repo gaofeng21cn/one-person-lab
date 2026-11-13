@@ -45,7 +45,6 @@ import {
   activatePendingOplFrameworkRuntime,
   applyFrameworkArchive,
   copyTrackedFiles,
-  dependencyInputsChanged,
   listTrackedFiles,
   pendingFrameworkArtifactResult,
   runDependencyInstall,
@@ -267,11 +266,12 @@ export function runOplFrameworkSelfUpdate(
     });
   }
 
-  const dependencyInstallRequired = dependencyInputsChanged(sourceRoot, targetRoot);
   const copiedFileCount = copyTrackedFiles(sourceRoot, targetRoot, listTrackedFiles(sourceRoot));
-  const dependencyInstall = dependencyInstallRequired && !shouldSkipDependencyInstall(input)
+  // npm's prepare lifecycle rebuilds dist and the MCP App resource. Source-only
+  // updates need it even when versions and dependency manifests are unchanged.
+  const dependencyInstall = !shouldSkipDependencyInstall(input)
     ? runDependencyInstall(targetRoot)
-    : skippedDependencyInstall(dependencyInstallRequired);
+    : skippedDependencyInstall(true);
   const metadataRef = writeFrameworkSourceMetadata({
     targetRoot,
     sourceRoot,

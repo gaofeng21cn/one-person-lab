@@ -250,7 +250,9 @@ test('catalog artwork uses immutable payload paths and never sends private artwo
 
 test('dedicated resource navigation survives owner presentation normalization', () => {
   const miniapp = { presentation_mode: 'dedicated_app', entry_kind: 'product_entry', direct_entry: true, entry_view_id: 'mail.inbox', dedicated_resource_uri: 'ui://mail/inbox.html' };
-  assert.deepEqual(normalizePresentation({ ...ownerManifest.presentation, miniapp }, 'fixture').miniapp, miniapp);
+  const presentation = normalizePresentation({ ...ownerManifest.presentation, miniapp }, 'fixture');
+  assert.ok(presentation);
+  assert.deepEqual(presentation.miniapp, miniapp);
   assert.throws(() => normalizePresentation({ ...ownerManifest.presentation, miniapp: { ...miniapp, dedicated_resource_uri: 'https://other.example' } }, 'fixture'));
 });
 

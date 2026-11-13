@@ -933,6 +933,35 @@ function frameworkFixture(root: string, version: string) {
   fs.writeFileSync(path.join(root, 'src', 'entrypoints', 'cli.ts'), `export const version = ${JSON.stringify(version)};\n`, 'utf8');
 }
 
+test('Framework source updates rebuild the UI when dependency manifests and versions are unchanged', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-source-prepare-'));
+  const sourceRoot = path.join(root, 'source');
+  const targetRoot = path.join(root, 'installed');
+  const fakeBin = path.join(root, 'fake-bin');
+  frameworkFixture(sourceRoot, '1.0.0');
+  frameworkFixture(targetRoot, '1.0.0');
+  fs.mkdirSync(path.join(targetRoot, 'node_modules'), { recursive: true });
+  fs.mkdirSync(path.join(targetRoot, 'dist', 'entrypoints'), { recursive: true });
+  fs.writeFileSync(path.join(targetRoot, 'dist', 'entrypoints', 'mcp-app-view.html'), 'old UI');
+  fs.writeFileSync(path.join(sourceRoot, 'src', 'view.html'), 'new UI');
+  execFileSync('git', ['init', '--initial-branch', 'main'], { cwd: sourceRoot, stdio: 'ignore' });
+  execFileSync('git', ['add', '.'], { cwd: sourceRoot });
+  execFileSync('git', ['-c', 'user.name=OPL Test', '-c', 'user.email=opl@example.test', 'commit', '-m', 'seed'], { cwd: sourceRoot, stdio: 'ignore' });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(path.join(fakeBin, 'npm'), '#!/bin/sh\nset -eu\ncp src/view.html dist/entrypoints/mcp-app-view.html\n', { mode: 0o755 });
+  try {
+    const result = withEnvironment({
+      PATH: `${fakeBin}:${process.env.PATH ?? ''}`,
+      OPL_FRAMEWORK_UPDATE_SKIP_DEPENDENCY_INSTALL: undefined,
+    }, () => runOplFrameworkSelfUpdate({ targetRoot, sourceRoot, allowChannelArtifact: false }));
+    assert.equal(result.status, 'completed');
+    assert.equal(result.result?.dependency_install.status, 'completed');
+    assert.equal(fs.readFileSync(path.join(targetRoot, 'dist', 'entrypoints', 'mcp-app-view.html'), 'utf8'), 'new UI');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 function runtimeFrameworkFixture(root: string, marker: string) {
   fs.mkdirSync(path.join(root, 'bin'), { recursive: true });
   fs.mkdirSync(path.join(root, 'dist', 'entrypoints'), { recursive: true });
