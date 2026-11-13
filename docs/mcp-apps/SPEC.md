@@ -257,7 +257,7 @@ outside that workspace remains a reference and is not opened through this bridge
 
 ### Shared app navigation
 
-The shared UI selects one installed product and shows its functions. Search can span all products; focused task handoffs still select the exact declared view. A dedicated-app descriptor is described as a shared overview here, with guidance to open its dedicated MiniApp from the host switcher. It never implies that selecting a product launches another UI session.
+The shared UI selects one installed product and shows its functions. Product and function selectors share a compact top navigation bar at every width; catalog search opens on demand. There is no permanent product sidebar. The content fills the remaining width and height, following the App-owned MiniApp visual contract. Search can span all products; focused task handoffs still select the exact declared view. A dedicated-app descriptor is described as a shared overview here, with guidance to open its dedicated MiniApp from the host switcher. It never implies that selecting a product launches another UI session.
 
 
 ### 连续导航

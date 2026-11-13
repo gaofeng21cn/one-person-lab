@@ -8,31 +8,21 @@
   </head>
   <body>
     <div id="root" class="shell" data-opl-family="opl-apps">
-      <aside class="sidebar">
-        <header class="brand">
-          <span class="mark" aria-hidden="true"></span>
-          <div>
-            <strong>OPL Apps</strong>
-            <span id="status">正在连接</span>
+      <nav class="app-navigation" aria-label="产品与功能">
+        <span class="brand" title="OPL Apps"><span class="mark" aria-hidden="true"></span><span class="sr-only">OPL Apps</span></span>
+        <label class="product-picker" for="product-select"><span>产品</span><select id="product-select"></select></label>
+        <label class="compact-navigation" for="view-select"><span>功能</span><select id="view-select" aria-label="当前功能"></select></label>
+        <span id="status" class="connection-status">正在连接</span>
+        <details id="catalog-search" class="catalog-search">
+          <summary>查找</summary>
+          <div class="search-panel">
+            <label class="search"><span>查找产品或功能</span><input id="search" type="search" placeholder="搜索所有产品与功能"></label>
+            <div class="catalog-heading"><span id="views-label">应用功能</span><small id="view-count"></small></div>
+            <div id="views" aria-label="搜索结果"></div>
           </div>
-        </header>
-        <label class="search">
-          <span>查找</span>
-          <input id="search" type="search" placeholder="搜索应用或功能">
-        </label>
-        <label class="product-picker" for="product-select"><span>选择应用 <small id="product-count"></small></span>
-          <select id="product-select"></select>
-        </label>
-        <p id="product-summary" class="product-summary"></p>
-        <label class="compact-navigation" for="view-select">当前功能
-          <select id="view-select"></select>
-        </label>
-        <div class="catalog-heading views-heading">
-          <span id="views-label">应用功能</span>
-          <small id="view-count"></small>
-        </div>
-        <nav id="views" aria-label="应用功能"></nav>
-      </aside>
+        </details>
+        <span id="product-count" hidden></span><p id="product-summary" hidden></p>
+      </nav>
       <main class="content">
         <header class="toolbar">
           <div>

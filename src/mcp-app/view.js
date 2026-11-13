@@ -241,6 +241,7 @@ function renderCatalog() {
   `).join('') || '<option value="">没有匹配的功能</option>';
   picker.disabled = !filtered.length;
   function selectView(selectedKey) {
+    $('catalog-search').open = false;
     state.selectedKey = selectedKey;
     remember('opl-apps-selected', state.selectedKey);
     state.itemId = '';
