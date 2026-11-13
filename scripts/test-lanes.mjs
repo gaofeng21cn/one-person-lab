@@ -27,6 +27,7 @@ if (ownsPythonCacheRoot) {
 const nodeTest = (files, options = {}) => ({
   kind: 'node-test',
   files,
+  phase: options.phase ?? null,
   stripTypes: options.stripTypes !== false,
   batchSize: options.batchSize ?? null,
   env: options.env ?? {},
@@ -58,14 +59,37 @@ function selectTestRoots(patterns, options = {}) {
   return sourceTestRoots.filter((file) => matched.has(file));
 }
 
-export function discoverTestRoots(testFiles, sourceReader = readTestSource) {
+function testEntryDependencies(testFiles, sourceReader = readTestSource) {
   const availableFiles = new Set(testFiles.map(normalizeRelativePath));
-  const importedFiles = new Set();
+  const dependencies = new Map();
+  const imports = new Map();
+  const readImports = (file) => {
+    if (!imports.has(file)) {
+      imports.set(file, collectImportedTestFiles(file, null, sourceReader)
+        .filter((imported) => imported.startsWith('tests/')));
+    }
+    return imports.get(file);
+  };
   for (const relativePath of availableFiles) {
-    collectImportedTestFiles(relativePath, availableFiles, sourceReader)
-      .forEach((imported) => importedFiles.add(imported));
+    const importedFiles = new Set();
+    const visited = new Set([relativePath]);
+    const pending = [...readImports(relativePath)];
+    while (pending.length > 0) {
+      const imported = pending.pop();
+      if (visited.has(imported)) continue;
+      visited.add(imported);
+      if (availableFiles.has(imported)) importedFiles.add(imported);
+      pending.push(...readImports(imported));
+    }
+    dependencies.set(relativePath, importedFiles);
   }
-  return [...availableFiles].filter((file) => !importedFiles.has(file)).sort();
+  return dependencies;
+}
+
+export function discoverTestRoots(testFiles, sourceReader = readTestSource) {
+  const dependencies = testEntryDependencies(testFiles, sourceReader);
+  const importedFiles = new Set([...dependencies.values()].flatMap((files) => [...files]));
+  return [...dependencies.keys()].filter((file) => !importedFiles.has(file)).sort();
 }
 
 const sourceTestPatterns = ['tests/src/**/*.test.{ts,mjs}'];
@@ -211,16 +235,17 @@ const lanes = {
     ], { batchSize: 25 }),
   ],
   fast: [
-    { kind: 'command', command: process.execPath, args: ['scripts/test-lanes.mjs', 'assert-coverage'] },
-    { kind: 'npm', args: ['run', 'build'] },
-    { kind: 'command', command: 'scripts/repo-hygiene.sh', args: [] },
-    nodeTest(fastIsolatedTemporalTestFiles, { batchSize: 1 }),
-    nodeTest(fastNonTemporalHeavyTestFiles, { batchSize: fastNonTemporalHeavyBatchSize }),
+    { kind: 'command', phase: 'quality', command: process.execPath, args: ['scripts/test-lanes.mjs', 'assert-coverage'] },
+    { kind: 'npm', phase: 'build', args: ['run', 'build'] },
+    { kind: 'command', phase: 'quality', command: 'scripts/repo-hygiene.sh', args: [] },
+    nodeTest(fastIsolatedTemporalTestFiles, { phase: 'temporal', batchSize: 1 }),
+    nodeTest(fastNonTemporalHeavyTestFiles, { phase: 'unit', batchSize: fastNonTemporalHeavyBatchSize }),
     nodeTest(fastIsolatedCliTestFiles, {
+      phase: 'cli',
       batchSize: 1,
       env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
     }),
-    nodeTest(fastTemporalStageRunControllerTestFiles, { batchSize: 4 }),
+    nodeTest(fastTemporalStageRunControllerTestFiles, { phase: 'temporal', batchSize: 4 }),
   ],
   'read-model-gates': [
     nodeTest(readModelGateNonTemporalHeavyTestFiles, {
@@ -315,7 +340,15 @@ function fullLaneNodeTestSteps() {
   }
 
   const groups = new Map();
-  for (const [file, configuration] of fileConfigurations) {
+  const dependencies = testEntryDependencies([...fileConfigurations.keys()]);
+  const importedFiles = new Set([...dependencies.values()].flatMap((files) => [...files]));
+  for (const [file, ownConfiguration] of fileConfigurations) {
+    if (importedFiles.has(file)) continue;
+    const configuration = [...dependencies.get(file)].reduce((strictest, imported) => {
+      const child = fileConfigurations.get(imported);
+      return child ? { batchSize: Math.min(strictest.batchSize, child.batchSize),
+        stripTypes: strictest.stripTypes && child.stripTypes, env: { ...strictest.env, ...child.env } } : strictest;
+    }, ownConfiguration);
     const key = JSON.stringify([configuration.stripTypes, configuration.batchSize, configuration.env]);
     if (!groups.has(key)) {
       groups.set(key, { configuration, files: [] });
@@ -362,6 +395,7 @@ const argv = process.argv.slice(2);
 const command = argv[0] ?? 'help';
 const commandHandlers = {
   list: printLaneList,
+  plan: () => process.stdout.write(`${JSON.stringify(laneTestPlan(argv[1], requestedLanePhase(), requestedLaneShard()), null, 2)}\n`),
   run: () => runLane(argv[1]),
   'assert-coverage': assertCoverage,
   help: printHelp,
@@ -370,7 +404,7 @@ const commandHandlers = {
 };
 
 function runLane(laneName) {
-  const steps = requireLane(laneName);
+  const steps = laneTestPlan(laneName, requestedLanePhase(), requestedLaneShard());
   const failures = [];
   steps.forEach((step, index) => {
     const result = runLaneStep(laneName, step, index);
@@ -386,6 +420,40 @@ function runLane(laneName) {
     reportLaneFailures(laneName, failures);
     process.exit(1);
   }
+}
+
+/** @param {string} laneName @param {string | null} phase @param {string | null} shard */
+export function laneTestPlan(laneName, phase = null, shard = null) {
+  const allSteps = requireLane(laneName);
+  const selected = phase === null ? allSteps : allSteps.filter((step) => step.phase === phase);
+  if (selected.length === 0) throw new Error(`Test lane ${laneName} has no steps for phase ${phase}`);
+  if (shard === null) return selected;
+  const match = /^([1-9]\d*)\/([1-9]\d*)$/.exec(shard);
+  if (!match || Number(match[1]) > Number(match[2]) || !Number.isSafeInteger(Number(match[2]))) {
+    throw new Error('--shard must be an index/count with 1 <= index <= count');
+  }
+  if (selected.some((step) => step.kind !== 'node-test')) throw new Error('--shard requires a test-only phase');
+  const index = Number(match[1]) - 1, count = Number(match[2]);
+  const steps = selected.map((step) => ({ ...step, files: step.files.filter((_, position) => position % count === index) }))
+    .filter((step) => step.files.length > 0);
+  if (steps.length === 0) throw new Error(`Shard ${shard} has no test files`);
+  return steps;
+}
+
+function requestedLanePhase() {
+  const index = argv.indexOf('--phase');
+  if (index === -1) return null;
+  const phase = argv[index + 1];
+  if (!phase || phase.startsWith('--')) fail('--phase requires a non-empty phase name');
+  return phase;
+}
+
+function requestedLaneShard() {
+  const index = argv.indexOf('--shard');
+  if (index === -1) return null;
+  const shard = argv[index + 1];
+  if (!shard || shard.startsWith('--')) fail('--shard requires an index/count');
+  return shard;
 }
 
 function requireLane(laneName) {
@@ -531,6 +599,7 @@ function chunkFiles(files, size) {
 }
 
 function spawnStep(commandName, args, context, options = {}) {
+  const startedAt = performance.now();
   const result = spawnSync(commandName, args, {
     cwd: repoRoot,
     stdio: 'inherit',
@@ -558,6 +627,7 @@ function spawnStep(commandName, args, context, options = {}) {
       ...(options.env ?? {}),
     },
   });
+  process.stdout.write(`Test lane timing: ${JSON.stringify({ lane: context.laneName, step: formatStepContext(context), duration_ms: Math.round(performance.now() - startedAt), status: result.status })}\n`);
   if (isTimeoutResult(result)) {
     cleanupProcessGroup(result);
     reportStepTimeout(commandName, args, context);
@@ -772,11 +842,14 @@ function printHelp() {
   process.stdout.write(`Usage: scripts/test-lanes.mjs <command>\n\n`);
   process.stdout.write('Commands:\n');
   process.stdout.write('  list\n');
+  process.stdout.write('  plan <lane> [--phase <name>] [--shard <index/count>]\n');
   process.stdout.write(`  run <${Object.keys(lanes).join('|')}>\n`);
   process.stdout.write('  assert-coverage\n');
   process.stdout.write('\nOptions:\n');
   process.stdout.write('  --continue   Run every batch after a failure and print the full failure summary\n');
   process.stdout.write('               (equivalent to OPL_TEST_LANE_CONTINUE=1)\n');
+  process.stdout.write('  --phase <name> Run one independent phase; omission runs the complete lane\n');
+  process.stdout.write('  --shard <index/count> Partition a test-only phase without repeating files\n');
 }
 
 function normalizeRelativePath(filePath) {
