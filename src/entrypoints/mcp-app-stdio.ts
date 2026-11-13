@@ -164,8 +164,8 @@ export async function createOplMcpAppServer() {
     server,
     OPL_MCP_APP_TOOL_NAMES.open,
     {
-      title: 'Open OPL Apps',
-      description: 'Open a shared MCP App for installed OPL Package views. This is read-only until the user chooses a declared Package action.',
+      title: 'OPL Apps · 应用概览',
+      description: '查看任务进展、产物与待处理事项。打开后先选择应用，再选择需要查看的功能。',
       inputSchema: z.object({
         package_id: z.string().min(1).optional(),
         view_id: z.string().min(1).optional(),

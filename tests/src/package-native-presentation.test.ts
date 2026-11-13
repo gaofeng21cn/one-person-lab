@@ -246,3 +246,20 @@ test('catalog artwork uses immutable payload paths and never sends private artwo
     assert.throws(() => normalizePresentation({ home_shortcuts: [], icon_ref }, 'fixture'));
   }
 });
+
+
+test('dedicated resource navigation survives owner presentation normalization', () => {
+  const miniapp = { presentation_mode: 'dedicated_app', entry_kind: 'product_entry', direct_entry: true, entry_view_id: 'mail.inbox', dedicated_resource_uri: 'ui://mail/inbox.html' };
+  assert.deepEqual(normalizePresentation({ ...ownerManifest.presentation, miniapp }, 'fixture').miniapp, miniapp);
+  assert.throws(() => normalizePresentation({ ...ownerManifest.presentation, miniapp: { ...miniapp, dedicated_resource_uri: 'https://other.example' } }, 'fixture'));
+});
+
+
+test('same-version installed MiniApp declaration survives the older catalog projection', (t) => {
+  const installed = readInstalledPackageDescriptor(fixture(t, { owner: true }));
+  assert.ok(installed);
+  const miniapp = { presentation_mode: 'dedicated_app' as const, entry_kind: 'product_entry' as const, direct_entry: true, entry_view_id: 'photo.review', dedicated_resource_uri: 'ui://photo/review.html' };
+  installed.manifest.presentation = { ...ownerManifest.presentation, miniapp };
+  const projection = { ...installed, manifest: { ...installed.manifest, presentation: ownerManifest.presentation } };
+  assert.deepEqual(withCurrentOwnerProjection(installed, projection).manifest.presentation?.miniapp, miniapp);
+});

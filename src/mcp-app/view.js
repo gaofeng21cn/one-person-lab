@@ -292,9 +292,21 @@ function renderHeader() {
   const view = state.selected;
   $('title').textContent = view ? localized(view.title_i18n, view.view_id) : 'OPL 能力';
   const guidance = view?.presentation_mode === 'dedicated_app'
-    ? '共享概览 · 完整操作请在 MiniApp 列表打开此应用的专用界面。'
+    ? '共享概览 · 可进入专用界面继续操作。'
     : view?.presentation_mode === 'professional_app' ? '共享概览 · 编辑操作请进入该应用的专业界面。' : '';
-  $('subtitle').textContent = view ? [view.package_name, guidance].filter(Boolean).join(' · ') : '';
+  $('subtitle').textContent = view ? [view.package_name, guidance || localized(view.package_summary_i18n || view.package_description_i18n)].filter(Boolean).join(' · ') : '';
+  $('dedicated').hidden = !view?.dedicated_resource_uri;
+  $('dedicated').onclick = () => void run(async () => {
+    const collection = collectionFrom(state.result);
+    const selected = collection.items.find((item, index) => itemIdentity(item, index) === state.itemId) || collection.items[0] || {};
+    const navigation = { ...currentViewInput(view), ...selected };
+    // Only reference fields are offered. The target host filters again against
+    // its live read-only launcher schema; business content never enters a URL.
+    const refs = Object.fromEntries(['account_id', 'storage_ref', 'draft_id', 'revision', 'request_id', 'series_id', 'episode_id', 'shot_id']
+      .filter(name => typeof navigation[name] === 'string' || typeof navigation[name] === 'number').map(name => [name, navigation[name]]));
+    const result = await app.openLink({ url: `${view.dedicated_resource_uri}#${encodeURIComponent(JSON.stringify(refs))}` });
+    if (result?.isError) throw new Error('专用界面尚未连接，请刷新应用目录或在应用管理中检查连接。');
+  });
 
 }
 
@@ -549,7 +561,7 @@ function renderResult() {
   disposeWorkbench(); disposeWorkbench = () => {};
   const view = state.selected;
   if (!view) {
-    $('body').innerHTML = '<div class="empty">请选择一个已安装 Package 的视图</div>';
+    $('body').innerHTML = '<div class="empty">这里还没有可查看的应用。请到应用管理安装或启用应用，再刷新目录。</div>';
     return;
   }
   if (!state.result) {
@@ -679,7 +691,7 @@ function updateContext() {
   const context = `正在查看 ${view.package_name} 的 ${localized(view.title_i18n, view.view_id)}`;
   app.updateModelContext({
     content: [{ type: 'text', text: context }],
-    structuredContent: { package_id: view.package_id, view_id: view.view_id, input: currentViewInput(view), selection: selected || collection.root, ...(state.lastAction ? { last_action: state.lastAction } : {}) },
+    structuredContent: { navigation: { package_id: view.package_id, view_id: view.view_id, input: currentViewInput(view) }, package_id: view.package_id, view_id: view.view_id, input: currentViewInput(view), selection: selected || collection.root, ...(state.lastAction ? { last_action: state.lastAction } : {}) },
   }).catch(() => {});
   document.body.setAttribute('data-llm', context);
 }

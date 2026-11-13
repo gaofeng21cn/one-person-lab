@@ -143,6 +143,7 @@ export type AgentPackageMiniAppPresentation = {
   entry_kind: 'product_entry' | 'runtime_view';
   direct_entry: boolean;
   entry_view_id?: string;
+  dedicated_resource_uri?: string;
 };
 
 export type AgentPackageConfiguredCodexPluginCarrierDescriptor = {

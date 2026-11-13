@@ -363,13 +363,19 @@ export function withCurrentOwnerProjection(
     && !descriptor.enabled;
   if (projectionCallableWhileDisabled) readiness.projection_callability = 'callable';
   const physicalLock = physicalContentLock(descriptor, ownerProjection);
-  const presentation = ownerProjection.manifest.presentation
+  const ownerPresentation = ownerProjection.manifest.presentation
     ?? (descriptor.manifest.presentation
       ? {
           ...descriptor.manifest.presentation,
           display_name_i18n: { und: ownerProjection.manifest.display_name },
         }
       : null);
+  // UI entrypoints describe the installed payload. Keep current owner naming
+  // and policy, but do not replace a newly installed surface declaration with
+  // the catalog's older same-version presentation (including local builds).
+  const presentation = ownerPresentation && descriptor.manifest.presentation?.miniapp
+    ? { ...ownerPresentation, miniapp: descriptor.manifest.presentation.miniapp }
+    : ownerPresentation;
   return {
     ...descriptor,
     catalog_origin: ownerProjection.catalog_origin,

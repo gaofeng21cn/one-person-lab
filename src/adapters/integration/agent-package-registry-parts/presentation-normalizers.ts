@@ -148,6 +148,10 @@ export function normalizePresentation(
     const presentationMode = miniappValue.presentation_mode;
     const entryKind = miniappValue.entry_kind;
     const entryViewId = miniappValue.entry_view_id;
+    const dedicatedResourceUri = miniappValue.dedicated_resource_uri;
+    if (dedicatedResourceUri !== undefined && (typeof dedicatedResourceUri !== 'string' || !/^ui:\/\/[^#]+$/.test(dedicatedResourceUri))) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Package MiniApp resource URI is invalid.', { field: 'presentation.miniapp.dedicated_resource_uri' });
+    }
     if (!['shared_view', 'dedicated_app', 'professional_app'].includes(String(presentationMode))) {
       throw new FrameworkContractError('contract_shape_invalid', 'Package presentation miniapp.presentation_mode is unsupported.', {
         manifest_url: manifestUrl,
@@ -188,6 +192,7 @@ export function normalizePresentation(
       entry_kind: entryKind as 'product_entry' | 'runtime_view',
       direct_entry: miniappValue.direct_entry,
       ...(entryViewId === undefined ? {} : { entry_view_id: entryViewId }),
+      ...(dedicatedResourceUri === undefined ? {} : { dedicated_resource_uri: dedicatedResourceUri }),
     };
   }
   return {

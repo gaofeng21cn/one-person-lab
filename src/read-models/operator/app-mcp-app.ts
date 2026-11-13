@@ -140,6 +140,7 @@ function miniAppPresentation(
       presentation_mode: declared.presentation_mode,
       entry_kind: declared.entry_kind,
       direct_entry: declared.direct_entry,
+      ...(declared.dedicated_resource_uri ? { dedicated_resource_uri: declared.dedicated_resource_uri } : {}),
       ...(declared.entry_view_id ? { entry_view_id: declared.entry_view_id } : {}),
     };
   }
@@ -236,6 +237,7 @@ export function listOplMcpAppViews(input: {
         presentation_mode: view.presentation_mode,
         entry_kind: view.entry_kind,
         direct_entry: view.direct_entry === true,
+        ...(view.dedicated_resource_uri ? { dedicated_resource_uri: view.dedicated_resource_uri } : {}),
         entry_view_id: entryView.view_id,
         view_count: packageViewsForEntry.length,
       };

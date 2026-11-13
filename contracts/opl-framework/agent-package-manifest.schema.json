@@ -166,6 +166,7 @@
             "presentation_mode": { "enum": ["shared_view", "dedicated_app", "professional_app"] },
             "entry_kind": { "enum": ["product_entry", "runtime_view"] },
             "direct_entry": { "type": "boolean" },
+            "dedicated_resource_uri": { "type": "string", "pattern": "^ui://[^#]+$" },
             "entry_view_id": {
               "type": "string",
               "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
