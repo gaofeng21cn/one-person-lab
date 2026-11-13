@@ -30,7 +30,7 @@ export function packageSourceArchiveDigest(archivePath: string) {
   } finally { fs.closeSync(descriptor); }
 }
 
-export type PackageSourceArchiveEntry = { path: string; kind: 'file' | 'directory' };
+export type PackageSourceArchiveEntry = { path: string; kind: 'file' | 'directory'; size?: number };
 
 // Use the same structured reader for inspection and extraction. PAX and GNU
 // metadata can override a header's path; checking only its ustar name while a
@@ -42,7 +42,7 @@ export function readPackageSourceArchiveEntries(archivePath: string, _archiveRoo
     if (entry.type !== 'File' && entry.type !== 'Directory') {
       throw new Error('Package source archive contains a non-physical member type.');
     }
-    entries.push({ path: entry.path, kind: entry.type === 'File' ? 'file' : 'directory' });
+    entries.push({ path: entry.path, kind: entry.type === 'File' ? 'file' : 'directory', size: entry.size });
   } });
   if (entries.length === 0) throw new Error('Package source archive contains no members.');
   return entries;

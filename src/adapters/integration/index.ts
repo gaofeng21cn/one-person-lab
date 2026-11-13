@@ -212,3 +212,6 @@ export {
   compactStorageOwnerInventorySnapshot,
   webuiHostActionRequired,
 } from './storage-owner-inventory-snapshot.ts';
+
+export { packageDownloadPlan } from './agent-package-registry-parts/package-download-plan.ts';
+export { cancelPackageOperation, packageOperationStatus, startPackageOperation, validatePackageOperationRequest, observePackageOperation, PACKAGE_BACKGROUND_ACTIONS } from './agent-package-registry-parts/package-operations.ts';

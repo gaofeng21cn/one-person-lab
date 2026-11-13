@@ -1,3 +1,4 @@
+import { observePackageOperation, PACKAGE_BACKGROUND_ACTIONS } from '../../../adapters/integration/index.ts';
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { runRuntimeOperatorActionExecute } from '../../../adapters/execution/index.ts';
 import { buildRuntimeTraySnapshot } from '../runtime-tray-snapshot.ts';
@@ -10,7 +11,12 @@ import type { FrameworkContracts } from '../../../kernel/types.ts';
 import type { AppActionExecuteOptions } from './action-execute-parser.ts';
 export { parseAppActionExecuteArgs } from './action-execute-parser.ts';
 
-export async function runOplAppActionExecute(
+export async function runOplAppActionExecute(contracts: FrameworkContracts, options: AppActionExecuteOptions, services: AppActionExecuteServices) {
+  const execute = () => executeAppAction(contracts, options, services);
+  return !options.dryRun && PACKAGE_BACKGROUND_ACTIONS.has(options.actionId) ? observePackageOperation(execute) : execute();
+}
+
+async function executeAppAction(
   contracts: FrameworkContracts,
   options: AppActionExecuteOptions,
   services: AppActionExecuteServices,

@@ -1,0 +1,32 @@
+{
+  "surface_kind": "opl_package_install_operation_contract.v1",
+  "owner": "opl_framework",
+  "transport": "opl app action execute",
+  "actions": {
+    "package_operation_start": {
+      "payload": ["action_id", "package_id"],
+      "allowed_actions": ["agent_package_install", "agent_package_update", "agent_package_repair"],
+      "dry_run": "native lifecycle preflight plus download_plan; no payload transfer or installation",
+      "execute": "return operation immediately; detached worker invokes the existing native lifecycle"
+    },
+    "package_operation_status": { "payload": ["operation_id?"], "read_only": true, "result": "operations" },
+    "package_operation_cancel": { "payload": ["operation_id"], "effect": "cooperative cancellation before native registration; retained partial bytes are not installed" }
+  },
+  "status": ["running", "completed", "failed", "cancelled", "interrupted"],
+  "stages": ["preparing", "downloading", "verifying", "extracting", "installing", "checking", "completed", "failed", "cancelled", "interrupted"],
+  "progress_fields": ["operation_id", "package_id", "active_package_id", "stage", "downloaded_bytes", "total_bytes", "bytes_per_second", "eta_seconds", "cached_bytes", "can_cancel", "cancel_requested", "install_location"],
+  "storage": {
+    "operations": "<state_dir>/package-operations/<host_scope>/<operation_id>.json",
+    "transport_cache": "<state_dir>/package-downloads/<sha256>/archive.tar.gz[.part]",
+    "authority": "observation and transfer bytes only; never version selection, activation, installed registry or lifecycle truth",
+    "private_access": "authorize with the existing registry provider before each acquisition, including cache reuse"
+  },
+  "transfer": {
+    "implementation": "system curl with HTTP Range, then SHA-256 and size verification",
+    "retry": "up to three attempts for transient failures; preserve partial bytes between operations",
+    "timeout": "10 second connect timeout; 120 second no-progress timeout; no fixed total download deadline",
+    "fallback": "a server rejecting Range restarts a bounded download; corrupt bytes are discarded",
+    "disk": "check remaining archive space before download and actual archive-member bytes before extraction and staging",
+    "success": "only after the existing native lifecycle returns its verified installed readback"
+  }
+}

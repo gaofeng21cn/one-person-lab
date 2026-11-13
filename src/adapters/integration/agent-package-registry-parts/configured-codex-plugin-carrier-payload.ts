@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { checkPackageOperationCancellation, reportPackageOperation } from './package-operation-state.ts';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -29,7 +30,7 @@ function projectedManifestPath(sourceRef: string) {
     ? sourceRef
     : path.join(PACKAGE_PROJECTION_ROOT, path.basename(sourceRef));
 }
-function packagePayloadProjection(packageId: string, packageDirectory?: string) {
+export function packagePayloadProjection(packageId: string, packageDirectory?: string) {
   const projection = listCurrentPackageProjections(packageDirectory)
     .find((candidate) => candidate.payload.package_id === packageId);
   if (!projection) return null;
@@ -354,6 +355,8 @@ export function installPayloadMarketplace(input: {
   if (projection?.ownerManifest.visibility === 'authorized_only') {
     assertPackageDownloadAllowed(packageAccessSubject(projection.ownerManifest), input.env);
   }
+  checkPackageOperationCancellation(input.env);
+  reportPackageOperation({ active_package_id: input.packageId, stage: 'preparing', can_cancel: true, downloaded_bytes: 0, total_bytes: undefined, bytes_per_second: 0, eta_seconds: null }, input.env);
   const payload = readProjectedPayload(projection, input.packageId);
 
   const home = input.env.HOME?.trim() || os.homedir();
@@ -398,7 +401,9 @@ export function installPayloadMarketplace(input: {
       fs.writeFileSync(path.join(stagingRoot, '.codex-marketplace-install.json'),
         `${JSON.stringify(hostedSource.provenance, null, 2)}\n`, { mode: 0o600 });
     }
+    reportPackageOperation({ stage: 'verifying', install_location: path.join(marketplaceRoot, 'plugins', projection.pluginId) }, input.env);
     for (const [index, candidate] of payload.files.entries()) {
+      checkPackageOperationCancellation(input.env);
       if (!isRecord(candidate)) {
         localReadbackFailure(
           'configured_codex_plugin_carrier_payload_invalid',
@@ -492,6 +497,8 @@ export function installPayloadMarketplace(input: {
       pluginId: projection.pluginId,
     });
 
+    checkPackageOperationCancellation(input.env);
+    reportPackageOperation({ stage: 'installing', can_cancel: false }, input.env);
     const backupRoot = `${marketplaceRoot}.${process.pid}.previous`;
     fs.mkdirSync(path.dirname(marketplaceRoot), { recursive: true });
     fs.rmSync(backupRoot, { recursive: true, force: true });
