@@ -10,7 +10,34 @@ import { createFakeCodexPluginManagerFixture, repoRoot } from './cli/helpers.ts'
 import { codexNativeReadbackFixture } from './cli/helpers-parts/codex-native-readback-fixture.ts';
 import { formatJsonPayload } from '../../src/kernel/json-file.ts';
 import { acceptDomainRead, parseResearchSnapshot, parseContributionResearch, renderResearch, renderProgress } from '../../src/mcp-app/task-workbench.js';
-import { listOplMcpAppViews } from '../../src/read-models/operator/app-mcp-app.ts';
+import { listOplMcpAppViews, readFrameworkMcpAppTask } from '../../src/read-models/operator/app-mcp-app.ts';
+
+test('task details do not wait for global diagnostics and action inspection preserves the selected task', async () => {
+  const item = { item_id: 'canonical', identity: { work_item_id: 'study', work_item_display_name: 'Study' },
+    lifecycle: { primary_state: 'paused', primary_state_label: '已暂停' },
+    action: {}, source_refs: [], freshness: {} };
+  const request = { ref: 'opl.runtime.v1#item', input: { item_id: 'canonical' }, projection: { items: [item] } as any };
+  let inspections = 0;
+  const inspect = async () => { inspections++; return {}; };
+  const data = (result: any) => result.opl_app_contribution.response.result;
+  const initial = data(await readFrameworkMcpAppTask(request, inspect));
+  assert.equal(inspections, 0);
+  assert.equal(initial.data.detail.item_id, 'canonical');
+  assert.equal(initial.data.detail.runtime_actions_deferred, true);
+  const actions = data(await readFrameworkMcpAppTask({ ...request, input: { ...request.input, include_runtime_actions: true } }, inspect));
+  assert.equal(inspections, 1);
+  assert.equal(actions.data.detail.item_id, 'canonical');
+  assert.equal(actions.data.detail.runtime_actions_deferred, undefined);
+  assert.deepEqual(actions.data.detail.runtime_actions, []);
+  const failed = data(await readFrameworkMcpAppTask({ ...request, input: { ...request.input, include_runtime_actions: true } },
+    async () => { throw new Error('provider unavailable'); }));
+  assert.equal(failed.state, 'ready');
+  assert.equal(failed.data.detail.item_id, 'canonical');
+  assert.equal(failed.data.detail.runtime_actions_unavailable, 'provider unavailable');
+  const missing = data(await readFrameworkMcpAppTask({ ...request, input: { item_id: 'other', include_runtime_actions: true } }, inspect));
+  assert.equal(missing.state, 'unavailable');
+  assert.equal(inspections, 1);
+});
 
 test('MCP catalog excludes desktop-only contributions without an owner ABI', () => {
   const descriptor = {

@@ -609,6 +609,15 @@ function renderResult() {
     disposeWorkbench = mountTaskWorkbench({ container: $('body'), item,
       initialViewId: currentViewInput(view).domain_view_id,
       actions: item.runtime_actions || [], onAction: executeRuntimeAction, onOpenLink: openLink,
+      readActions: async () => {
+        const result = collectionFrom(await callTool(READ_TOOL, { package_id: 'opl-runtime', ref: 'opl.runtime.v1#item',
+          input: { item_id: item.item_id, include_runtime_actions: true } }));
+        const detail = result.data.detail;
+        if (result.state !== 'ready' || detail?.item_id !== item.item_id || detail.runtime_actions_unavailable) {
+          throw new Error('操作暂时无法读取，请重试。');
+        }
+        return detail.runtime_actions || [];
+      },
       relatedViews: (state.catalog?.views || []).filter(entry => entry.scope === 'work_item' && entry.agent_id === item.identity.agent_id),
       onOpenView: target => { state.selectedKey = key(target); state.focusKey = key(target);
         state.focusInput = { work_item_identity: collection.items[0].work_item_identity, workspace_path: item.identity.workspace_path, work_item_root: item.identity.work_item_root }; void loadSelected(); },

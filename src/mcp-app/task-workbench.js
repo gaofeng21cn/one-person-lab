@@ -107,7 +107,7 @@ export const domainViewRenderers = Object.freeze({
   },
 });
 
-export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot, initialViewId, read, onContext, relatedViews = [], onOpenView, ownerDetails, actions = [], onAction, onOpenLink }) {
+export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot, initialViewId, read, onContext, relatedViews = [], onOpenView, ownerDetails, actions = [], readActions, onAction, onOpenLink }) {
   const descriptors = list(item.domain_detail_views);
   const cache = new Map();
   let section = initialViewId ? 'research' : 'progress';
@@ -115,15 +115,16 @@ export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot,
   let snapshot = initialSnapshot;
   let selectedId = snapshot?.current_focus?.node_id;
   let error = '', busy = false, alive = true, generation = 0;
+  let actionsBusy = false, actionsError = '', actionsLoaded = !item.runtime_actions_deferred;
   const emit = extra => onContext({ item_id: item.item_id, work_item_identity: item.identity, section, view_id: viewId,
     node: snapshot?.nodes.find(node => node.id === selectedId) || null, ...extra });
   function render() {
     if (!alive) return;
     const focused = container.contains(document.activeElement) ? document.activeElement : null;
-    const focusKey = focused ? ['data-section', 'data-domain-view', 'data-refresh-domain', 'data-node-id'].find(key => focused.hasAttribute(key)) : null;
+    const focusKey = focused ? ['data-section', 'data-domain-view', 'data-refresh-domain', 'data-node-id', 'data-load-actions'].find(key => focused.hasAttribute(key)) : null;
     const focusValue = focusKey ? focused.getAttribute(focusKey) : null;
     const hasResearch = descriptors.length || snapshot;
-    const runtimeActions = actions.length ? `<div class="detail-actions" aria-label="当前可用操作">${actions.map((action, index) => `<button type="button" class="dsh-button action" data-runtime-action="${index}">${escape(action.label_i18n?.['zh-CN'] || action.label_i18n?.['en-US'] || action.command_id)}${action.confirmation_required ? '…' : ''}</button>`).join('')}</div>` : '';
+    const runtimeActions = `<div class="detail-actions" aria-label="当前可用操作">${actions.map((action, index) => `<button type="button" class="dsh-button action" data-runtime-action="${index}">${escape(action.label_i18n?.['zh-CN'] || action.label_i18n?.['en-US'] || action.command_id)}${action.confirmation_required ? '…' : ''}</button>`).join('')}${readActions && (!actionsLoaded || actionsError) ? `<button type="button" class="dsh-button action" data-load-actions ${actionsBusy ? 'disabled' : ''}>${actionsBusy ? '正在读取可用操作…' : actionsError ? '重试读取操作' : '查看可用操作'}</button>` : ''}${actionsError ? `<p role="alert">${escape(actionsError)}</p>` : actionsLoaded && item.runtime_actions_deferred && !actions.length ? '<p role="status">当前没有可用操作。</p>' : ''}</div>`;
     const tabs = [['progress', '执行进度'], ...(hasResearch ? [['research', '研究路径']] : []), ['evidence', '证据与产物'], ['decisions', '待人决定']];
     container.innerHTML = `<div class="task-workbench"><h2>${escape(item.identity?.work_item_display_name || item.identity?.work_item_id || '任务详情')}</h2><nav class="workbench-tabs" aria-label="任务详情">${tabs.map(([id, title]) => `<button class="dsh-button action" data-section="${id}" aria-current="${id === section ? 'page' : 'false'}">${title}</button>`).join('')}</nav>
       ${hasResearch && section !== 'progress' && descriptors.length ? `<div class="toolbar-row">${descriptors.map(view => `<button class="dsh-button action" data-domain-view="${escape(view.view_id)}" aria-pressed="${viewId === view.view_id}">${escape(view.title || view.view_id)}</button>`).join('')}<button class="dsh-button action" data-refresh-domain ${busy ? 'disabled' : ''}>刷新视图</button></div>` : ''}
@@ -150,8 +151,18 @@ export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot,
     } catch (reason) { if (alive && ticket === generation) error = reason.message || '此视图暂不可用'; }
     finally { if (alive && ticket === generation) { busy = false; render(); emit({}); } }
   }
+  async function loadActions() {
+    if (!readActions || actionsBusy) return;
+    actionsBusy = true; actionsError = ''; render();
+    try {
+      const result = await readActions();
+      if (!alive) return;
+      actions = result; actionsLoaded = true;
+    } catch { if (alive) actionsError = '操作暂时无法读取，请重试。'; }
+    finally { if (alive) { actionsBusy = false; render(); } }
+  }
   function click(event) {
-    const button = event.target.closest('[data-section],[data-domain-view],[data-refresh-domain],[data-node-id],[data-source-ref],[data-related-view],[data-runtime-action],[data-open-link]');
+    const button = event.target.closest('[data-section],[data-domain-view],[data-refresh-domain],[data-node-id],[data-source-ref],[data-related-view],[data-runtime-action],[data-open-link],[data-load-actions]');
     if (!button || !container.contains(button)) return;
     if (button.hasAttribute('data-section')) {
       section = button.dataset.section; render(); emit({});
@@ -163,7 +174,8 @@ export function mountTaskWorkbench({ container, item, snapshot: initialSnapshot,
     else if (button.hasAttribute('data-node-id')) {
       selectedId = button.dataset.nodeId; section = 'research'; render(); emit({});
       container.querySelector('.node-detail')?.scrollIntoView({ block: 'nearest' });
-    } else if (button.hasAttribute('data-runtime-action')) onAction?.(actions[Number(button.dataset.runtimeAction)]);
+    } else if (button.hasAttribute('data-load-actions')) void loadActions();
+    else if (button.hasAttribute('data-runtime-action')) onAction?.(actions[Number(button.dataset.runtimeAction)]);
     else if (button.hasAttribute('data-open-link')) onOpenLink?.(button.dataset.openLink);
     else if (button.hasAttribute('data-related-view')) onOpenView?.(relatedViews[Number(button.dataset.relatedView)]);
     else emit({ source_ref: button.dataset.sourceRef });

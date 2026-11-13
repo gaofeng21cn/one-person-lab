@@ -94,6 +94,10 @@ Framework shared App 是通用进度/产物/审阅组件的来源。Relay 专用
 
 owner 执行结果可附已有贡献引用形式的 `readback: { data_ref, input }`。共享页面只接受同包已声明的数据引用，将操作输入、owner 结果和只读回读请求交回 Agent。传输中断后仅尝试原目标只读回读，保留“操作结果待核对”，不重发写入。无 UI 的 Host 仍可使用 `open_opl_apps` 返回的结构化结果以及 owner 原有 CLI/API。
 
+`opl.runtime.v1#item` 默认只读取任务投影，返回 `runtime_actions_deferred=true`，不等待全局运行诊断。
+共享工作台通过“查看可用操作”以同一 `item_id` 和 `include_runtime_actions=true` 按需读取操作；
+读取中保留已有任务内容，失败可重试。按需读取不执行操作；执行端继续校验原任务、操作路由与版本。
+
 `opl-runtime / opl.runtime.knowledge` 是阶段知识来源视图，通过 canonical `item_id` 找到实际任务、当前阶段、工作区和已安装 owner，再读取知识 owner 的召回元数据。它不接受页面提供的 Package 路径或领域身份作为授权，不显示正文、私有来源路径或凭据。此视图展示当前阶段通用召回会选用的来源和缺口，`selection_scope=stage_only` 明确不含仅适用某个动作的知识；已运行任务的冻结上下文继续由知识 owner 的 `prepare/read-context` 与行动前 `revalidate --for-action` 管理。
 
 

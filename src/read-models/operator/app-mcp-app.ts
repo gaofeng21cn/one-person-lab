@@ -325,12 +325,31 @@ function projectionItem(item: ReturnType<typeof buildWorkItemProjectionV2>['item
   };
 }
 
+export async function readFrameworkMcpAppTask(input: {
+  ref: string;
+  input: JsonRecord;
+  projection?: ReturnType<typeof buildWorkItemProjectionV2>;
+}, loadRuntimeSnapshot: () => Promise<JsonRecord>) {
+  const projection = input.projection ?? buildWorkItemProjectionV2({ profile: 'full' });
+  const detail = readFrameworkMcpAppContribution({ ...input, projection, runtimeActionsDeferred: true });
+  // A task read must not wait on global provider and package diagnostics.
+  // Actions are inspected only on explicit request and revalidated at execution.
+  if (input.input.include_runtime_actions !== true || detail.opl_app_contribution.response.result.state !== 'ready') return detail;
+  try {
+    return readFrameworkMcpAppContribution({ ...input, projection, runtimeSnapshot: await loadRuntimeSnapshot() });
+  } catch (error) {
+    return readFrameworkMcpAppContribution({ ...input, projection,
+      runtimeActionsUnavailable: error instanceof Error ? error.message : 'runtime_actions_unavailable' });
+  }
+}
+
 export function readFrameworkMcpAppContribution(input: {
   ref: string;
   input: JsonRecord;
   projection?: ReturnType<typeof buildWorkItemProjectionV2>;
   runtimeSnapshot?: JsonRecord;
   runtimeActionsUnavailable?: string;
+  runtimeActionsDeferred?: boolean;
   descriptorDiscovery?: DescriptorDiscovery;
   knowledgeReader?: typeof readMcpAppKnowledgeSources;
 }) {
@@ -421,6 +440,7 @@ export function readFrameworkMcpAppContribution(input: {
           runtime_actions: input.runtimeSnapshot
             ? runtimeActionsForItem(matches[0]!, input.runtimeSnapshot)
             : [],
+          ...(input.runtimeActionsDeferred ? { runtime_actions_deferred: true } : {}),
           ...(input.runtimeActionsUnavailable
             ? { runtime_actions_unavailable: input.runtimeActionsUnavailable }
             : {}),
