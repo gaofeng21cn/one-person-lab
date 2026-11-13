@@ -16,6 +16,13 @@ Runtime 文档只解释当前运行对象和运维边界。
 `source_commit_required`：GitHub release 解析准确 tag 的 commit，npm 解析所选发布的
 `gitHead` 并在指定仓库回读。App 消费该不可变结果，不以当前 main 替代发布来源。
 
+构建可用 `OPL_DEPENDENCY_ARCHIVE_CACHE_DIR` 复用工具原始归档。解析仍读取新鲜的官方
+metadata；每次命中按该 metadata 的 SHA-256 或 npm SRI 重新校验字节，不能凭缓存
+决定 latest，也不能在官方查询失败时采用旧版本。`scripts/fetch-dependency-archive.mjs`
+接收冻结的 `--url`、`--sha256`、`--output`，供后续安装消费同一份已下载文件。
+缓存文件按规范化 HTTPS URL 的 SHA-256 命名为 `<digest>.archive`，文件名只定位字节，
+内容仍须通过当前摘要。损坏或缺失时重新下载；安装输出使用验证后的临时文件原子替换。
+
 Hosted Package source 的归档检查与解包使用同一结构化 tar reader。成员身份按
 PAX/GNU 元数据解析后的实际路径判断，不解析依赖 locale 的命令行列表；合法中文
 文件名可用，越出声明根目录、反斜杠和非普通文件/目录成员仍拒绝。OCI layer 的

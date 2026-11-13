@@ -1,8 +1,80 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { compareDependencyVersions, resolveDependencyRelease, resolveDependencyReleases } from '../../src/adapters/integration/dependency-release-resolution.ts';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { compareDependencyVersions, resolveDependencyRelease, resolveDependencyReleases, fetchDependencyArchive, dependencyArchiveCachePath } from '../../src/adapters/integration/dependency-release-resolution.ts';
 import { configuredLatestVersion } from '../../src/adapters/integration/install-companions-parts/tool-version.ts';
+
+test('verified archive cache reuses bytes across discovery and installation while metadata stays fresh', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dependency-cache-'));
+  const url = 'https://example.test/temporal.tgz';
+  let bytes = Buffer.from('official temporal archive');
+  let metadataRequests = 0, archiveRequests = 0;
+  const sha = () => createHash('sha256').update(bytes).digest('hex');
+  const options = {
+    archiveCacheDir: path.join(root, 'cache'), platform: 'darwin', architecture: 'arm64',
+    source: { kind: 'json-manifest' as const, url: 'https://example.test/latest.json', platforms: { 'darwin-arm64': 'archive' } },
+    fetch: async (input: any) => {
+      if (String(input).endsWith('.json')) {
+        metadataRequests += 1;
+        return new Response(JSON.stringify({ version: '1.0.0', archive: { url, sha256: sha() } }));
+      }
+      archiveRequests += 1;
+      return new Response(bytes);
+    },
+  };
+  try {
+    const first = await resolveDependencyRelease('temporal', options);
+    assert.equal(archiveRequests, 1);
+    assert.equal((await resolveDependencyRelease('temporal', options)).archive_sha256, first.archive_sha256);
+    assert.equal(metadataRequests, 2);
+    assert.equal(archiveRequests, 1);
+    const output = path.join(root, 'install/temporal.tgz');
+    await fetchDependencyArchive(url, sha(), output, options);
+    assert.deepEqual(fs.readFileSync(output), bytes);
+    assert.equal(archiveRequests, 1, 'installer consumes the resolver download');
+    fs.writeFileSync(dependencyArchiveCachePath(url, options.archiveCacheDir), 'damaged');
+    await fetchDependencyArchive(url, sha(), output, options);
+    assert.equal(archiveRequests, 2);
+    bytes = Buffer.from('changed official bytes at the same URL');
+    assert.equal((await resolveDependencyRelease('temporal', options)).archive_sha256, sha());
+    assert.equal(archiveRequests, 3, 'fresh official identity invalidates old bytes');
+    await assert.rejects(() => resolveDependencyRelease('temporal', { ...options, fetch: async () => new Response('', { status: 503 }) }), /503/);
+    const previousOutput = fs.readFileSync(output);
+    await assert.rejects(() => fetchDependencyArchive(url, 'a'.repeat(64), output, options), /SHA-256/);
+    assert.deepEqual(fs.readFileSync(output), previousOutput, 'failed download leaves the previous output intact');
+    const unavailableCache = path.join(root, 'not-a-directory');
+    fs.writeFileSync(unavailableCache, 'block cache creation');
+    await fetchDependencyArchive(url, sha(), output, { ...options, archiveCacheDir: unavailableCache });
+    assert.deepEqual(fs.readFileSync(output), bytes, 'unavailable cache still permits a verified install');
+    assert.ok(!fs.readdirSync(options.archiveCacheDir).some((name) => name.endsWith('.partial')));
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('Codex npm archives reuse only after fresh SRI validation and a bad download is not cached', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-cache-'));
+  const bytes = Buffer.from('codex platform fixture');
+  let downloads = 0;
+  const url = 'https://registry.npmjs.org/@openai/codex/-/codex-1.0.0.tgz';
+  const integrity = `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
+  const options = { archiveCacheDir: root, source: { kind: 'npm' as const, package: '@openai/codex' },
+    fetch: async (input: any) => {
+      if (String(input).endsWith('/latest')) return new Response(JSON.stringify({ version: '1.0.0', dist: { tarball: url, integrity } }));
+      downloads += 1; return new Response(bytes);
+    } };
+  try {
+    await resolveDependencyRelease('codex-cli', options);
+    await resolveDependencyRelease('codex-cli', options);
+    assert.equal(downloads, 1);
+    fs.rmSync(dependencyArchiveCachePath(url, root));
+    await assert.rejects(() => resolveDependencyRelease('codex-cli', { ...options,
+      fetch: async (input: any) => String(input).endsWith('/latest') ? options.fetch(input) : new Response('bad bytes'),
+    }), /integrity/);
+    assert.equal(fs.existsSync(dependencyArchiveCachePath(url, root)), false);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test('dependency version comparison preserves a newer installed release', () => {
   assert.equal(compareDependencyVersions('0.6.6', '0.5.4'), 1);
