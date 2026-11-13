@@ -182,3 +182,16 @@ test('invalid registry selection errors do not include selected paths', () => {
     error => error instanceof Error && !error.message.includes(f.root) && /unavailable or invalid/.test(error.message));
   } finally { f.cleanup(); }
 });
+
+test('a first library receives an owner scope default without changing existing grants', () => {
+  const f = setup();
+  try {
+    const existing = f.list().contexts[0]!;
+    assert.equal(existing.default_scope_ids?.length, existing.scope_options?.length === 1 ? 1 : 0);
+    const emptyProfile = path.join(f.root, 'new-profile');
+    const first = listKnowledgeSourceManagement({ ...f.deps, profileRoot: emptyProfile }).contexts[0]!;
+    assert.deepEqual(first.scope_options, [{ id: 'personal', label: '个人资料' }]);
+    assert.deepEqual(first.default_scope_ids, ['personal']);
+    assert.equal(fs.existsSync(emptyProfile), false);
+  } finally { f.cleanup(); }
+});

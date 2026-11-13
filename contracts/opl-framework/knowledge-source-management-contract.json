@@ -15,7 +15,16 @@
     "second_registry": false
   },
   "projection_fields": {
-    "contexts": ["context_id", "label", "selected", "revision", "available_scope_ids", "status"],
+    "contexts": [
+      "context_id",
+      "label",
+      "selected",
+      "revision",
+      "available_scope_ids",
+      "status",
+      "scope_options",
+      "default_scope_ids"
+    ],
     "items": ["resource_id", "source_id", "label", "context_id", "status", "connected", "scope_ids", "consumer_domain_ids", "write_domain_ids", "source_writable", "consumer_package_ids", "revision_identity", "knowledge_count", "knowledge_health", "authorization", "revision", "freshness", "readiness", "reason", "owner_settings_route", "action_ids", "access_editable", "access_edit_reason", "scope_expansion_allowed", "available_scope_ids"],
     "knowledge_health": {
       "counts": ["current_count", "review_due_count", "inactive_count", "unavailable_count", "checked_count"],
@@ -48,5 +57,6 @@
     "freshness": "fresh describes the current recall-eligible subset after body and date checks; overdue and inactive counts remain explicit; no current items or truncated checks remain unknown",
     "recall_boundary": "overdue and inactive records remain excluded by existing recall; required knowledge and action-critical gates are unchanged; source checks never extend review dates",
     "configuration_error": "safe reason code with no selected path or provider payload"
-  }
+  },
+  "scope_presentation_policy": "Owner supplies readable scope options and a single default only when unambiguous. A new profile uses personal; a new project uses its context identity. Existing grants remain explicit and unchanged."
 }

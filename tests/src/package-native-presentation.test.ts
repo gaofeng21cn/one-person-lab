@@ -265,3 +265,22 @@ test('same-version installed MiniApp declaration survives the older catalog proj
   const projection = { ...installed, manifest: { ...installed.manifest, presentation: ownerManifest.presentation } };
   assert.deepEqual(withCurrentOwnerProjection(installed, projection).manifest.presentation?.miniapp, miniapp);
 });
+
+
+test('direct MiniApp entries survive the Framework fast projection with owner navigation only', (t) => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-entry-projection-'));
+  const previous = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  t.after(() => { if (previous === undefined) delete process.env.OPL_STATE_DIR; else process.env.OPL_STATE_DIR = previous; fs.rmSync(stateRoot, { recursive: true, force: true }); });
+  const installed = readInstalledPackageDescriptor(fixture(t, { owner: true }));
+  assert.ok(installed);
+  const miniapp = { presentation_mode: 'dedicated_app' as const, entry_kind: 'product_entry' as const, direct_entry: true, entry_view_id: 'photo.review', dedicated_resource_uri: 'ui://photo/review.html' };
+  installed.manifest.presentation = { ...ownerManifest.presentation, miniapp };
+  const registry = { descriptors: new Map([[installed.manifest.package_id, installed]]), installed: new Map([[installed.manifest.package_id, installed]]), access: new Map() };
+  const entry = (): Record<string, unknown> => compactFastAgentPackageDirectory(directoryFrom(registry, 'fast')).entries[0];
+  assert.deepEqual(entry().miniapp_entry, { resource_uri: 'ui://photo/review.html', arguments: {} });
+  installed.manifest.presentation = { ...ownerManifest.presentation, miniapp: { ...miniapp, presentation_mode: 'shared_view', dedicated_resource_uri: undefined } };
+  assert.deepEqual(entry().miniapp_entry, { resource_uri: 'ui://opl/apps.html', arguments: { package_id: installed.manifest.package_id, view_id: 'photo.review' } });
+  installed.manifest.presentation = { ...ownerManifest.presentation, miniapp: { ...miniapp, direct_entry: false } };
+  assert.equal(entry().miniapp_entry, null);
+});

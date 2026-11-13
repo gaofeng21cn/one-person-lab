@@ -91,8 +91,13 @@ export function listKnowledgeSourceProjection(deps: ManagementDependencies = {})
           items.push(projectKnowledgeSource(context, registry, source, deps, availableConsumers));
         }
       }
+      const scopes = [...new Set(bindings.registries.flatMap(binding => binding.scope_ids).filter(scope => safeId(scope)))];
+      const defaultScope = context.context_id === 'profile' ? 'personal' : context.context_id;
+      const scopeOptions = (scopes.length ? scopes : [defaultScope]).map(id => ({ id,
+        label: id === defaultScope ? label(context.label, '工作区资料') : id }));
       return { context_id: context.context_id, label: label(context.label, '工作区'), selected: context.selected,
-        revision: contextRevision(context), available_scope_ids: [...new Set(bindings.registries.flatMap(binding => binding.scope_ids).filter(scope => safeId(scope)))], status: 'available' as const };
+        revision: contextRevision(context), available_scope_ids: scopes,
+        scope_options: scopeOptions, default_scope_ids: scopeOptions.length === 1 ? [scopeOptions[0]!.id] : [], status: 'available' as const };
     } catch {
       failures.push({ context_id: context.context_id, reason: 'knowledge_source_configuration_invalid' });
       return { context_id: context.context_id, label: label(context.label, '工作区'), selected: context.selected,

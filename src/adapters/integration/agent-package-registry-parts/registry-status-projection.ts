@@ -452,6 +452,12 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     description_i18n: manifest.presentation?.description_i18n ?? null,
     icon_ref: manifest.presentation?.icon_ref ?? null,
     icon_url: packageArtworkUrl(currentOwner ?? descriptor),
+    miniapp_entry: manifest.presentation?.miniapp?.direct_entry ? {
+      resource_uri: manifest.presentation.miniapp.dedicated_resource_uri ?? 'ui://opl/apps.html',
+      arguments: manifest.presentation.miniapp.dedicated_resource_uri ? {} : {
+        package_id: manifest.package_id, ...(manifest.presentation.miniapp.entry_view_id ? { view_id: manifest.presentation.miniapp.entry_view_id } : {}),
+      },
+    } : null,
     session_routing_summary_i18n: manifest.presentation?.session_routing_summary_i18n ?? null,
     home_shortcuts: manifest.presentation?.home_shortcuts ?? [],
     home_shortcut_ids: manifest.presentation?.home_shortcuts.map((shortcut) => shortcut.shortcut_id) ?? [],

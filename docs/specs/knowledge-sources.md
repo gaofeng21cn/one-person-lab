@@ -201,3 +201,7 @@ Obsidian 调用方负责链接与文稿关系，不由通用 Framework 批量重
 来源版本检查和本机写入锁用于协调遵守同一协议的本机写者，不构成跨设备文件系统事务。云同步冲突或其他编辑器并发写入需要保留并核对版本；不以最后写入覆盖解决。
 
 提案、审阅与应用合同分别见[提案 schema](../../contracts/opl-framework/knowledge-writeback-proposal.schema.json)、[审阅 schema](../../contracts/opl-framework/knowledge-writeback-review.schema.json)和[回执 schema](../../contracts/opl-framework/knowledge-writeback-receipt.schema.json)。命令成功证明机械操作已完成，语义接受与业务结果仍由其 owner 的依据决定。
+
+## 软件中心接入
+
+连接资料库时优先使用宿主原生目录选择器，网页端保留服务器目录输入，不上传或复制整个资料库。Framework 在 context 投影中提供 `scope_options` 和 `default_scope_ids`：没有既有绑定时使用个人或项目范围，只有唯一选择时才默认选中；多范围由用户明确选择。软件中心保留同一份来源授权，产品详情与共享资源页只是两个入口。提议、审阅、写回继续由原知识来源 owner 执行。
