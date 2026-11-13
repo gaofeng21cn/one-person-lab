@@ -1,4 +1,5 @@
 /* Layout and semantic aliases only. Visual values come from the official DSH stylesheet. */
+:where([hidden]) { display: none !important; }
 :root { color-scheme: light dark; }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }

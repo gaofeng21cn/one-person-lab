@@ -313,6 +313,8 @@ function renderHeader() {
   $('notice').hidden = true;
   const view = state.selected;
   const runtimeContext = isRuntimeView(view);
+  $(runtimeContext ? 'app-navigation' : 'view-toolbar').append($('toolbar-actions'));
+  $('view-toolbar').hidden = runtimeContext;
   $('title').textContent = runtimeContext
     ? (view?.data_ref === 'opl.runtime.v1#item' ? '任务工作台' : '任务与进度')
     : view ? localized(view.title_i18n, view.view_id) : 'OPL 能力';
