@@ -1,6 +1,7 @@
 import {
   discoverInstalledPackageDescriptors,
   installedDescriptorSupportsFrameworkCalls,
+  miniAppPresentation,
   type InstalledPackageDescriptor,
 } from '../../adapters/integration/index.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
@@ -8,7 +9,6 @@ import { buildDomainDetailViewReadback } from './domain-detail-view.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
 import { runtimeActionsForItem } from './app-mcp-runtime-actions.ts';
 import { readMcpAppKnowledgeSources } from './app-mcp-knowledge.ts';
-import { miniAppPresentation } from '../../adapters/integration/agent-package-registry-parts/miniapp-presentation.ts';
 
 export const OPL_MCP_APP_SERVER_ID = 'opl-apps';
 export const OPL_MCP_APP_RESOURCE_URI = 'ui://opl/apps.html';

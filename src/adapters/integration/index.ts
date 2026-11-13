@@ -1,4 +1,5 @@
 import { registerAgentPackageReadinessPort } from '../../kernel/agent-package-readiness-port.ts';
+export { miniAppPresentation } from './agent-package-registry-parts/miniapp-presentation.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { runOplAgentPackageBulkUpdate, runOplAgentPackageStatus } from './agent-package-registry.ts';
 import {
