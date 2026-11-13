@@ -78,7 +78,8 @@
     "registry_policy": "OPL App 不维护固定 MiniApp 清单、第二套 MCP registry、凭据或 session owner。"
   },
   "management_vs_work_ui": {
-    "management_surface": "OPL Apps 管理界面负责 Package 的安装、更新、启用、停用、状态和诊断。",
+    "management_surface": "软件中心负责 Package 的安装、更新、启用、停用、状态和诊断。",
+    "use_entry": "软件目录 miniapp_entry 与 OPL Apps catalog 共用 presentation.miniapp 导航规则；未声明时以首个共享视图为入口，显式 direct_entry=false 则不提供入口。Host 根据实时 MCP catalog 解析只读启动器，导航投影不授予执行权限。",
     "work_surface": "共享视图或独立 MiniApp 负责当前领域工作、预览、编辑、审阅和 owner 回读。",
     "boundary": "管理界面决定能力是否可发现；工作界面不改变安装、启用或 catalog registry。"
   },

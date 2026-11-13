@@ -8,6 +8,7 @@ import { buildDomainDetailViewReadback } from './domain-detail-view.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
 import { runtimeActionsForItem } from './app-mcp-runtime-actions.ts';
 import { readMcpAppKnowledgeSources } from './app-mcp-knowledge.ts';
+import { miniAppPresentation } from '../../adapters/integration/agent-package-registry-parts/miniapp-presentation.ts';
 
 export const OPL_MCP_APP_SERVER_ID = 'opl-apps';
 export const OPL_MCP_APP_RESOURCE_URI = 'ui://opl/apps.html';
@@ -129,34 +130,10 @@ function viewCommands(
   });
 }
 
-function miniAppPresentation(
-  descriptor: InstalledPackageDescriptor | null,
-  entryKind: 'product_entry' | 'runtime_view',
-  entryViewId?: string,
-) {
-  const declared = descriptor?.manifest.presentation?.miniapp;
-  if (declared) {
-    return {
-      presentation_mode: declared.presentation_mode,
-      entry_kind: declared.entry_kind,
-      direct_entry: declared.direct_entry,
-      ...(declared.dedicated_resource_uri ? { dedicated_resource_uri: declared.dedicated_resource_uri } : {}),
-      ...(declared.entry_view_id ? { entry_view_id: declared.entry_view_id } : {}),
-    };
-  }
-  return {
-    presentation_mode: 'shared_view' as const,
-    entry_kind: entryKind,
-    direct_entry: entryKind === 'product_entry' && Boolean(entryViewId),
-    ...(entryViewId ? { entry_view_id: entryViewId } : {}),
-  };
-}
-
 function projectedViews(descriptor: InstalledPackageDescriptor) {
   const contributions = descriptor.manifest.app_contributions;
   if (!contributions) return [];
-  const firstViewId = contributions.views[0]?.view_id;
-  const miniapp = miniAppPresentation(descriptor, 'product_entry', firstViewId);
+  const miniapp = miniAppPresentation(descriptor.manifest, 'product_entry');
   const description = descriptor.manifest.presentation?.description_i18n ?? {};
   const sessionSummary = descriptor.manifest.presentation?.session_routing_summary_i18n ?? {};
   return contributions.views.flatMap((view) => {

@@ -44,6 +44,14 @@ uses `presentation.miniapp` when present and safely falls back to
 `entry_kind` is `product_entry` or `runtime_view`; `direct_entry` only controls the
 navigation affordance and never starts a surface.
 
+The software directory exposes the same navigation decision as
+`agent_packages.directory.entries[].miniapp_entry`, including the fast App-state
+projection. Explicit `direct_entry: false` remains authoritative; a Package with
+no declared views and no direct entry has no MiniApp shortcut. This field carries
+only the resource URI and navigation arguments. The host resolves the live MCP
+catalog and its read-only launcher before opening the view; the directory does
+not create another catalog or grant execution permission.
+
 Three presentation forms can coexist within one Package:
 
 - Shared declarative views for progress, artifacts, lists and review.
