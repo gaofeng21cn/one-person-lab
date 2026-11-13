@@ -302,7 +302,7 @@ function renderHeader() {
     const navigation = { ...currentViewInput(view), ...selected };
     // Only reference fields are offered. The target host filters again against
     // its live read-only launcher schema; business content never enters a URL.
-    const refs = Object.fromEntries(['account_id', 'storage_ref', 'draft_id', 'revision', 'request_id', 'series_id', 'episode_id', 'shot_id']
+    const refs = Object.fromEntries(['workspace_path', 'account_id', 'storage_ref', 'draft_id', 'revision', 'request_id', 'series_id', 'episode_id', 'shot_id']
       .filter(name => typeof navigation[name] === 'string' || typeof navigation[name] === 'number').map(name => [name, navigation[name]]));
     const result = await app.openLink({ url: `${view.dedicated_resource_uri}#${encodeURIComponent(JSON.stringify(refs))}` });
     if (result?.isError) throw new Error('专用界面尚未连接，请刷新应用目录或在应用管理中检查连接。');

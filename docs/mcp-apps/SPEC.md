@@ -254,7 +254,7 @@ The shared UI selects one installed product and shows its functions. Search can 
 
 ### 连续导航
 
-Package 的 `presentation.miniapp.dedicated_resource_uri` 可声明共享概览的专用界面入口，Framework 只投影这项 owner 声明。同版本的本地安装也优先读取实际载体的 MiniApp 入口，避免旧目录投影覆盖新 UI；名称、策略和发布身份仍由既有 owner 投影持有。标准 `ui/open-link` 使用该 `ui://` URI，fragment 为 URL 编码的 JSON 导航参数。宿主仅匹配当前目录中的唯一只读 launcher，按其 input schema 过滤参数；缺失或歧义保持原界面。共享页只传递当前对象的引用，不传业务正文。
+Package 的 `presentation.miniapp.dedicated_resource_uri` 可声明共享概览的专用界面入口，Framework 只投影这项 owner 声明。同版本的本地安装也优先读取实际载体的 MiniApp 入口，避免旧目录投影覆盖新 UI；名称、策略和发布身份仍由既有 owner 投影持有。标准 `ui/open-link` 使用该 `ui://` URI，fragment 为 URL 编码的 JSON 导航参数。宿主仅匹配当前目录中的唯一只读 launcher，按其 input schema 过滤参数；缺失或歧义保持原界面。共享页只传递当前对象的引用，不传业务正文。引用包含当前 `workspace_path` 时一并保留，专用界面仍通过 Framework contribution broker 验证登记，不因跨界面导航改选另一个制作工作区。
 
 自有 UI 通过标准 `ui/update-model-context` 的 `structuredContent.navigation` 提供再次打开用的参数。App 可在本机保存隔离到 thread/server/resource 的有限显示偏好，owner 每次打开重新校验并读取对象。显式入口优先；恢复不携带调用 ID、编辑缓冲区或写操作。应用退出、关闭或切换均不改变后台任务状态。
 
