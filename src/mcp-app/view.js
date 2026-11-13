@@ -172,7 +172,7 @@ function renderReadInputForm(collection) {
   if (!Object.keys(record(schema?.properties) || {}).length) return '';
   const input = { ...collection.inputDefaults, ...currentViewInput(state.selected) };
   return `<form class="form-grid" id="read-input-form" data-base-input="${escape(JSON.stringify(input))}">${renderInputFields(schema, input, [], 'data-read-field')}
-    <div><button class="action" type="button" data-submit>读取</button></div></form>`;
+    <div><button class="dsh-button action" type="button" data-submit>读取</button></div></form>`;
 }
 
 function bindFormSubmit(form, submit) {
@@ -340,7 +340,7 @@ function renderActionButtons(view, collection, item = null) {
   }
   const unique = new Map(commands.map((entry) => [`${entry.command.command_id}:${JSON.stringify(entry.input)}`, entry]));
   return [...unique.values()].map(({ command, input }) => `
-    <button class="action" type="button"
+    <button class="dsh-button action" type="button"
       data-action-ref="${escape(command.action_ref)}"
       data-input="${escape(JSON.stringify(input))}"
       data-confirm="${command.confirmation_required ? 'true' : 'false'}">
@@ -355,7 +355,7 @@ function renderCommandForm(view, collection, command, input) {
   const values = { ...defaults, ...currentViewInput(view), ...input };
   if (!Object.keys(fields).length) return null;
   return `<form class="form-grid" data-command-form="${escape(command.command_id)}" data-action-ref="${escape(command.action_ref)}" data-base-input="${escape(JSON.stringify(values))}">
-    ${renderInputFields(schema, values)}<div><button class="action" type="button" data-submit>执行 ${escape(localized(command.label_i18n, command.command_id))}</button></div></form>`;
+    ${renderInputFields(schema, values)}<div><button class="dsh-button action" type="button" data-submit>执行 ${escape(localized(command.label_i18n, command.command_id))}</button></div></form>`;
 }
 
 function bindActionButtons(view, collection) {
@@ -398,6 +398,7 @@ function bindForms(view) {
 
 function applyHostContext(context) {
   if (context.theme) applyDocumentTheme(context.theme);
+  document.body.toggleAttribute('data-ds-dark-theme', document.documentElement.dataset.theme === 'dark');
   if (context.styles?.variables) applyHostStyleVariables(context.styles.variables);
   if (context.styles?.css?.fonts) applyHostFonts(context.styles.css.fonts);
   if (context.locale) document.documentElement.lang = context.locale;
@@ -448,7 +449,7 @@ async function executeRuntimeAction(command) {
     previous?.remove();
     const host = document.createElement('form');
     host.className = 'form-grid'; host.dataset.runtimeForm = command.command_id;
-    host.innerHTML = `<h3>${escape(localized(command.label_i18n, command.command_id))}</h3>${command.summary ? `<p>${escape(command.summary)}</p>` : ''}${renderInputFields(schema, needsPayload ? { payload: defaults } : defaults)}<div><button type="button" data-submit class="action">继续</button></div>`;
+    host.innerHTML = `<h3>${escape(localized(command.label_i18n, command.command_id))}</h3>${command.summary ? `<p>${escape(command.summary)}</p>` : ''}${renderInputFields(schema, needsPayload ? { payload: defaults } : defaults)}<div><button type="button" data-submit class="dsh-button action">继续</button></div>`;
     $('body').append(host);
     bindFormSubmit(host, event => {
       event.preventDefault();
@@ -552,7 +553,7 @@ function renderCollection(view, collection) {
           </button>`;
         }).join('')}
       </div>
-      <div class="card detail">${renderOwnerView(view, current)}${view.data_ref === 'opl.runtime.v1#work-items' ? `<button class="action" data-open-task="${escape(current.id)}">打开任务工作台</button>` : ''}</div>
+      <div class="card detail">${renderOwnerView(view, current)}${view.data_ref === 'opl.runtime.v1#work-items' ? `<button class="dsh-button action" data-open-task="${escape(current.id)}">打开任务工作台</button>` : ''}</div>
     </div>
     <div class="detail-actions">${renderActionButtons(view, collection, current)}</div>
   `;

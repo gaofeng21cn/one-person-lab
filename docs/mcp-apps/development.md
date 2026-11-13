@@ -52,6 +52,11 @@
 
 产品入口与 MiniApp surface 采用两个层级：一个 Package 在 `catalog.products` 中只有一个产品入口，入口下面可以挂多个共享 internal view；只有 MCP catalog 中独立的 `server + resourceUri` 才计为一个 MiniApp。Package manifest 的 `presentation.miniapp` 声明入口形式和默认 view。产品卡不会自动启动独立 App，启动仍由 Studio 的 MiniApp 工作台显式执行。
 
+自有 MiniApp 直接复用 App 选定的官方 DSH 视觉来源。共享页的 `src/mcp-app/dsh-theme.css`
+由 App `scripts/sync-miniapp-dsh-styles.mjs` 从固定上游生成，与 Relay、MAC 的样式字节一致；
+构建嵌入主题、控件样式和 MIT 许可。只适配 CSS Module 选择器，不维护 Framework 自有调色板、
+字号或控件尺度。领域 CSS 负责布局和官方语义 token 的角色映射，主题和字体仍走标准 MCP Apps context。
+
 选择逻辑按交互密度落地：进度、列表、产物和低频审阅留在共享声明式 renderer；邮件编辑、媒体时码审看、revision-bound feedback 等高密度交互使用专用标准 MCP App；持续创作、设备、地图和监测才保留专业应用。判断依据是交互状态、输入密度、时序/预览要求和 owner 现有 UI 能力，不是 Package 名称或是否属于 OPL。
 
 ## 复用现有接线
