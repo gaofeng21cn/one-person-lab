@@ -5,7 +5,7 @@ import { valid, gt } from 'semver';
 import type { InstalledPackageDescriptor } from './installed-codex-plugin-directory-types.ts';
 import { readPackageInstallationReadback } from './package-installation-readback.ts';
 import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
-import { readSoftwareInstallationOwner, softwareInstallationOperation } from './software-installation-owner.ts';
+import { readSoftwareInstallationOwner, softwareInstallationOperation, supplementalInstallationOwner } from './software-installation-owner.ts';
 import { getOplPackageSpecs } from '../package-distribution.ts';
 import { readOplDeveloperSupervisorConfig } from '../../../kernel/system-preferences.ts';
 import { resolveOplInstallUpdateSourcePolicy } from '../system-installation/modules.ts';
@@ -27,6 +27,7 @@ export type SoftwareInstallation = {
   manager: string; location: string; location_ref: string; evidence_ref: string;
   entrypoint_verified: boolean; active: boolean; revision: string;
   available_version?: string | null; owner_settings_route?: string;
+  profile?: string;
   available_actions: Record<string, unknown>[];
 };
 
@@ -36,6 +37,7 @@ export function packageInstallationProjection(descriptor: InstalledPackageDescri
   hostedSourceRoot: string | null = null) {
   const local = readPackageInstallationReadback(descriptor.manifest.package_id, env);
   const native = readSoftwareInstallationOwner(descriptor, owner, env);
+  const supplemental = supplementalInstallationOwner(owner);
   const installations: SoftwareInstallation[] = local.map(item => ({ ...item,
     revision: createHash('sha256').update(JSON.stringify(item)).digest('hex'),
     available_actions: [],
@@ -64,7 +66,7 @@ export function packageInstallationProjection(descriptor: InstalledPackageDescri
   const developerPath = validHostedRoot(developerRoot) && developerRoot !== location ? developerRoot : null;
   const developerActive = developerPath !== null && hostedSourceRoot !== null && real(hostedSourceRoot) === developerPath;
   const canSelect = developerPath && validHostedRoot(location) && !['module_path_override', 'env_source_mode', 'module_repo_url_override', 'full_runtime_override'].includes(source.configured_by);
-  if (installed && location && !native) {
+  if (installed && location && (!native || supplemental)) {
     const registeredLocal = descriptor.marketplaceSource && path.isAbsolute(descriptor.marketplaceSource)
       ? real(descriptor.marketplaceSource) : null;
     const localCheckout = registeredLocal && fs.existsSync(path.join(registeredLocal, '.git'))
@@ -100,8 +102,8 @@ export function packageInstallationProjection(descriptor: InstalledPackageDescri
     }
   }
   const active = installations.filter(item => item.active);
-  const status = native?.active_installation_status === 'unknown' || developerPath && !developerVersion ? 'unknown' as const
-    : native?.active_installation_status === 'conflict' || active.length > 1 ? 'conflict' as const
+  const status = (!supplemental && native?.active_installation_status === 'unknown') || developerPath && !developerVersion ? 'unknown' as const
+    : (!supplemental && native?.active_installation_status === 'conflict') || active.length > 1 ? 'conflict' as const
     : active.length === 1 ? 'active' as const : installed && !location ? 'unknown' as const : 'inactive' as const;
   return { local_installations: local, installations,
     ...(native ? { installation_management_reason: native.management_reason, installation_actions: native.installation_actions } : {}),

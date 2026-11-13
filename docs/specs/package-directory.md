@@ -177,6 +177,8 @@ Framework 托管运行时同样按实际安装执行更新，复用 Framework �
 
 helper 的 `inspect` 不联网、不修改配置，返回 `package_id`、`installations`、`active_installation_id` 和 `active_installation_status`。每份实例提供位置、版本、`mode=release|development`、revision、active 和 supported_actions。已有实例的 activate/update/uninstall/unlink 均携带 id 和 revision；update 还绑定精确目标版本。Framework 投影 `installations`、`installation_actions` 及激活状态，App 仅渲染这些 owner 提供的动作。首装用 `operation=install`、精确 version 及安装清单 revision，无 installation_id；fresh inspect 后交还 owner 在锁内核对目标不存在或拒绝覆盖。开发安装保留原选择，安装发布版不自动替换已激活的开发版。
 
+可选的大型数据安装沿用同一个 Package：owner 声明 `installation_scope=supplemental_payload` 和 `installation_profiles`，投影带本地化标签及 profile 的精确安装动作。默认核心 carrier 继续负责代码激活，附加 `data_directory` 与它并存，不替代核心安装或依赖解析。选择附加方式时先由现有 Package 安装器准备核心，并核对所选版本与内容摘要，再执行已安装核心中的 owner helper；附加资料的卸载不移除核心。MAC 素材库以此提供可选离线完整版，默认依赖仍是轻量目录包。
+
 Codex carrier 的实例动作复用已有 Package 生命周期：先核对已装 descriptor、真实位置、版本和 revision，再交给原生管理器更新或移除。开发插件只提供解除接入，保留源码。全局 Developer Mode 的源码维护偏好不等于运行时激活；标准智能体须回读实际 hosted runtime，普通能力包须回读真正的已安装入口，不能把恰好存在的仓库或 monorepo 根版本当作正在使用的软件。
 
 ## 名称、说明与状态展示

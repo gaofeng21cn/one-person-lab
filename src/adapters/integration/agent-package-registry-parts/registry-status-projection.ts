@@ -418,8 +418,12 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     ? access.reason ?? 'package_access_verification_required'
     : !sourceAvailable ? 'package_install_source_unavailable' : null;
   const downloadable = installReason === null;
+  const installation = packageInstallationProjection(descriptor, installed,
+    access.discover_allowed ? currentOwner?.manifest.version ?? (installed ? null : manifest.version) : null,
+    process.env, currentOwner ?? descriptor, hosted.source_root);
   const actions = (manifest.management_scope === 'local_component' && !parentSeedAvailable ? [] : actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode))
     .filter((action) => downloadable || !['agent_package_install', 'agent_package_update', 'agent_package_repair'].includes(action.action_id));
+  if (downloadable) actions.push(...(installation.installation_actions ?? []) as typeof actions);
   const recommendedAction = !downloadable || (manifest.management_scope === 'local_component' && !parentSeedAvailable)
     ? null
     : installed ? (ready ? null : 'agent_package_repair') : 'agent_package_install';
@@ -440,9 +444,7 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     software_type: currentOwner?.manifest.presentation?.software_type
       ?? manifest.presentation?.software_type
       ?? (manifest.package_role === 'standard_agent' ? 'agent' : 'unknown'),
-    ...packageInstallationProjection(descriptor, installed,
-      access.discover_allowed ? currentOwner?.manifest.version ?? (installed ? null : manifest.version) : null,
-      process.env, currentOwner ?? descriptor, hosted.source_root),
+    ...installation,
     capability_metadata: installed
       ? {
           source: manifest.source,

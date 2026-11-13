@@ -469,6 +469,23 @@
                 "type": "object",
                 "required": ["version"],
                 "properties": { "version": { "type": "string", "minLength": 1 } }
+              },
+              "installation_scope": {
+                "enum": ["primary", "supplemental_payload"],
+                "description": "Optional owner-managed data supplements coexist with the default native carrier."
+              },
+              "installation_profiles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "label_i18n"],
+                  "properties": {
+                    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+                    "label": { "type": "string", "minLength": 1 },
+                    "label_i18n": { "type": "object", "additionalProperties": { "type": "string" } }
+                  },
+                  "additionalProperties": false
+                }
               }
             }
           }
