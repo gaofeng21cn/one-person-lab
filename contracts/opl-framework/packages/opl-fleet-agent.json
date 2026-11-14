@@ -3,9 +3,10 @@
   "package_id": "opl-fleet-agent",
   "display_name": "OPL Fleet Agent Integration",
   "publisher": "one-person-lab",
-  "version": "0.2.47",
+  "version": "0.2.50",
   "source": "first_party",
   "package_role": "capability_package",
+  "management_scope": "local_component",
   "source_repo": "https://github.com/gaofeng21cn/opl-fleet-agent.git",
   "machine_boundary": "This optional read-only adapter projects sanitized node-local observations from the installed native OPL Fleet Agent. It is not a dependency of installing or running the native OPL Fleet Agent.app. It does not own native installation, collection, upgrade, fleet admission, leases, dispatch, task completion, execution constraints, receipts, or Cordis Host truth.",
   "capability_abi": {
@@ -36,7 +37,7 @@
       "skills/opl-fleet-agent/SKILL.md",
       "skills/opl-fleet-agent/agents/openai.yaml"
     ],
-    "digest": "sha256:393347eb91f8fe14ecb47924d351321a5d62514a2a2ae97a3fa223e7d1fa3908"
+    "digest": "sha256:01f967ee9294cd5d0126287afc4c6889807eeb5887986feeb22f039439e3e9b4"
   },
   "codex_surface": {
     "plugin_id": "opl-fleet-agent",
@@ -48,7 +49,7 @@
       "plugin_selector": "opl-fleet-agent@opl-fleet-agent",
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/opl-fleet-agent",
-      "publication_ref": null
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/opl-fleet-agent:latest-stable"
     },
     "optional_install_policy": "all_exported_skills",
     "app_contribution_abi": {
@@ -64,8 +65,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/opl-fleet-agent-0.2.47.json",
-    "carrier_source_commit": "47bdbcca6d1ade2118ec49c689b4a9d14e3b9a82"
+    "plugin_payload_manifest_url": "payloads/opl-fleet-agent-0.2.50.json",
+    "carrier_source_commit": "020ff0bc6f9dde89360343943a2f4e5cc9e14685"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -156,6 +157,5 @@
     },
     "home_shortcuts": [],
     "software_type": "capability"
-  },
-  "management_scope": "local_component"
+  }
 }
