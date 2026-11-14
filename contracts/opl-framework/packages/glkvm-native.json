@@ -3,7 +3,7 @@
   "package_id": "glkvm-native",
   "display_name": "MAP Desk",
   "publisher": "gaofeng21cn",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/glkvm-native.git",
   "package_role": "capability_package",
@@ -49,8 +49,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/glkvm-native-0.1.6.json",
-    "carrier_source_commit": "d20da3227392b79f3a02ad1a184ccfb073682ab2"
+    "plugin_payload_manifest_url": "payloads/glkvm-native-0.1.7.json",
+    "carrier_source_commit": "f0655eed2788ac9c53298ba7e6375f32f05b5f82"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -108,7 +108,7 @@
       "skills/glkvm-control/references/session-recovery.md",
       "skills/glkvm-control/references/windows-maintenance.md"
     ],
-    "digest": "sha256:516856610177700274b45498b50bcdfb9baba797c7067e9aba54664e101f4f08"
+    "digest": "sha256:92cc94ad5a24baa1cd945af548f7008442b3a5e93bd53b2ea00748fe07a12fc4"
   },
   "visibility": "authorized_only",
   "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/glkvm-native",

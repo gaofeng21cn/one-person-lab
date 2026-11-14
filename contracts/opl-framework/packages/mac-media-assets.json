@@ -3,7 +3,7 @@
   "package_id": "mac-media-assets",
   "display_name": "Med Auto Cast Assets",
   "publisher": "one-person-lab",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/mac-media-assets.git",
   "package_role": "capability_package",
@@ -53,8 +53,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/mac-media-assets-0.2.5.json",
-    "carrier_source_commit": "79a35f2fbce8227ce4880a476aaac2db9c53b2ab"
+    "plugin_payload_manifest_url": "payloads/mac-media-assets-0.2.6.json",
+    "carrier_source_commit": "4beb7545e096b5330be23708ca86a836da2afbd8"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -652,7 +652,7 @@
       "tools/sync_from_workbench.py",
       "tools/verify_catalog.py"
     ],
-    "digest": "sha256:56f88bc4c4b2325a1a75d8d9ebf8a8d51a580032fed27551ae170d993e11532d"
+    "digest": "sha256:fd3d3f24290c283d212203fe86239c5907eb85296e96f769beaf5945f116b4c9"
   },
   "entrypoints": [
     {
