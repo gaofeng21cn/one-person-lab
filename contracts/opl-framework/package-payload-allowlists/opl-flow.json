@@ -103,6 +103,7 @@
     "skills/software-development/references/systems/production-reliability.md",
     "skills/software-development/scripts/run-grok-build-agent.sh",
     "templates/AGENTS.md",
-    "templates/TASTE.md"
+    "templates/TASTE.md",
+    "assets/branding/opl-flow-logo.png"
   ]
 }

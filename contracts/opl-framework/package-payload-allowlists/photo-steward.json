@@ -12,6 +12,7 @@
     "skills/photo-steward/SKILL.md",
     "skills/photo-steward/agents/openai.yaml",
     "tools/icloud_photo_sync/installation.py",
-    "opl-package.json"
+    "opl-package.json",
+    "assets/branding/photo-steward-logo.png"
   ]
 }

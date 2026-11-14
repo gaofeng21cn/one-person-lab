@@ -9,6 +9,7 @@
     ".codex-plugin/plugin.json",
     "opl-package.json",
     "assets/icon.svg",
-    "skills/opl-meta-agent/SKILL.md"
+    "skills/opl-meta-agent/SKILL.md",
+    "assets/branding/opl-meta-agent-logo.png"
   ]
 }

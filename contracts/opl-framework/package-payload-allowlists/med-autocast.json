@@ -357,6 +357,7 @@
     "skills/med-autocast/runtime/workbench/work/episode-migration-status.md",
     "skills/med-autocast/runtime/workbench/work/review/creative-20261022/character-scale-audit-expanded-final-v2.json",
     "app-contribution-adapter.json",
-    "skills/med-autocast/runtime/native_helpers/app_contribution.py"
+    "skills/med-autocast/runtime/native_helpers/app_contribution.py",
+    "assets/branding/medautocast-logo.png"
   ]
 }

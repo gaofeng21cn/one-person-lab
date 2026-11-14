@@ -113,6 +113,7 @@
     "scripts/validate_artifact.py",
     "skills/occ/SKILL.md",
     "tests/eval_cases.json",
-    "uv.lock"
+    "uv.lock",
+    "assets/branding/opl-capital-compass-logo.png"
   ]
 }

@@ -39,6 +39,7 @@
     "src/agent_session_vault/tokscale.py",
     "src/agent_session_vault/views.py",
     "vault.py",
-    "opl-package.json"
+    "opl-package.json",
+    "assets/branding/agent-session-vault-logo.png"
   ]
 }

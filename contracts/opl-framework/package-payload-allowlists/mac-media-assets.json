@@ -556,6 +556,7 @@
     "tools/structure_reveal_runtime.mjs",
     "tools/structure_section_runtime.mjs",
     "tools/sync_from_workbench.py",
-    "tools/verify_catalog.py"
+    "tools/verify_catalog.py",
+    "assets/branding/mac-media-assets-logo.png"
   ]
 }

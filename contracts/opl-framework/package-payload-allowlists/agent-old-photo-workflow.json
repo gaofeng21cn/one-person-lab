@@ -29,6 +29,7 @@
     "setup_env.sh",
     "setup_extract_env.sh",
     "skills/agent-old-photo/SKILL.md",
-    "opl-package.json"
+    "opl-package.json",
+    "assets/branding/agent-old-photo-workflow-logo.png"
   ]
 }

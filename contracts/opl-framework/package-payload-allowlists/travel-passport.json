@@ -146,6 +146,7 @@
     "src/site.html",
     "src/transport-time.mjs",
     "src/world-dots.js",
-    "opl-package.json"
+    "opl-package.json",
+    "assets/branding/journey-atlas-logo.png"
   ]
 }

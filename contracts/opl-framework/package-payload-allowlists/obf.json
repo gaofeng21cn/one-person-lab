@@ -143,6 +143,7 @@
     "runtime/native_helpers/bookforge_publication_bundle_parts/__init__.py",
     "runtime/native_helpers/bookforge_publication_bundle_parts/docx_package.py",
     "runtime/native_helpers/bookforge_publication_bundle_parts/errors.py",
-    "runtime/native_helpers/bookforge_publication_bundle_parts/text_integrity.py"
+    "runtime/native_helpers/bookforge_publication_bundle_parts/text_integrity.py",
+    "assets/branding/opl-bookforge-logo.png"
   ]
 }

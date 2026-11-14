@@ -54,6 +54,7 @@
     "src/kindle_companion/state.py",
     "src/kindle_companion/verify.py",
     "src/kindle_companion/wireless.py",
-    "opl-package.json"
+    "opl-package.json",
+    "assets/branding/kindle-pilot-logo.png"
   ]
 }
