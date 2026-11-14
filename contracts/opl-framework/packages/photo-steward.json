@@ -3,7 +3,7 @@
   "package_id": "photo-steward",
   "display_name": "Photo Steward",
   "publisher": "gaofeng21cn",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/photo-steward.git",
   "package_role": "capability_package",
@@ -92,8 +92,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/photo-steward-0.4.10.json",
-    "carrier_source_commit": "dac46bc3addb3030651e2de0e5579c892999448f"
+    "plugin_payload_manifest_url": "payloads/photo-steward-0.4.11.json",
+    "carrier_source_commit": "6f5d097f6fee964e41b8f0f4676baeddd117d064"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -173,13 +173,14 @@
     "paths": [
       ".codex-plugin/plugin.json",
       "app-contribution-adapter.json",
+      "assets/branding/photo-steward-logo.png",
       "plugin.json",
       "scripts/manage_installation.py",
       "skills/photo-steward/SKILL.md",
       "skills/photo-steward/agents/openai.yaml",
       "tools/icloud_photo_sync/installation.py"
     ],
-    "digest": "sha256:f243668e6e49b4f2aae2c86e2c33bfca76a7ace83c0b8fc9c5c8c82bd3950c7a"
+    "digest": "sha256:4669f8bdc01a47a4f245139e8dfed6362157bfb5fbc5dea5c9d38f6cc54e7428"
   },
   "presentation": {
     "display_name_i18n": {
@@ -195,7 +196,8 @@
       "en-US": "Review photo mirror plans and status."
     },
     "home_shortcuts": [],
-    "software_type": "application"
+    "software_type": "application",
+    "icon_ref": "assets/branding/photo-steward-logo.png"
   },
   "publication_source": {
     "module_id": "photo-steward",

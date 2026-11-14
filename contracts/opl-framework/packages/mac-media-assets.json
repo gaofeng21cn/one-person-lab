@@ -1,9 +1,9 @@
 {
   "surface_kind": "opl_capability_package_manifest.v2",
   "package_id": "mac-media-assets",
-  "display_name": "MAC Media Assets",
+  "display_name": "Med Auto Cast Assets",
   "publisher": "one-person-lab",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/mac-media-assets.git",
   "package_role": "capability_package",
@@ -53,8 +53,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/mac-media-assets-0.2.4.json",
-    "carrier_source_commit": "11a5c96f215b068243fee792e183a97cb18d7c34"
+    "plugin_payload_manifest_url": "payloads/mac-media-assets-0.2.5.json",
+    "carrier_source_commit": "79a35f2fbce8227ce4880a476aaac2db9c53b2ab"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -102,6 +102,7 @@
       ".agents/plugins/marketplace.json",
       ".codex-plugin/plugin.json",
       "app-contribution-adapter.json",
+      "assets/branding/mac-media-assets-logo.png",
       "catalog/README.md",
       "catalog/assets.jsonl",
       "catalog/media-storage.json",
@@ -651,32 +652,7 @@
       "tools/sync_from_workbench.py",
       "tools/verify_catalog.py"
     ],
-    "digest": "sha256:486079bf6ded8a1d9c8bf33170f10e6015b0eb959bb5804cbd049021d4e59b71"
-  },
-  "publication_projection_order": 60,
-  "publication_source": {
-    "module_id": "mac-media-assets",
-    "owner_package_manifest_ref": "contracts/opl_capability_package_manifest.json",
-    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
-  },
-  "owner_package_manifest_ref": "contracts/opl_capability_package_manifest.json",
-  "owner_package_descriptor_ref": "opl-package.json",
-  "source_manifest_ref": "mac-media-assets/contracts/opl_capability_package_manifest.json",
-  "presentation": {
-    "software_type": "capability",
-    "display_name_i18n": {
-      "zh-CN": "MAC 医学动画素材库",
-      "en-US": "MAC Media Assets"
-    },
-    "description_i18n": {
-      "zh-CN": "默认安装轻量索引与代码组件，按需获取素材；可在软件中心选择离线完整版。",
-      "en-US": "Install a small catalog and code components by default; fetch media as needed or choose the complete offline installation."
-    },
-    "session_routing_summary_i18n": {
-      "zh-CN": "默认安装轻量索引与代码组件，按需获取素材；可在软件中心选择离线完整版。",
-      "en-US": "Install a small catalog and code components by default; fetch media as needed or choose the complete offline installation."
-    },
-    "home_shortcuts": []
+    "digest": "sha256:56f88bc4c4b2325a1a75d8d9ebf8a8d51a580032fed27551ae170d993e11532d"
   },
   "entrypoints": [
     {
@@ -706,5 +682,31 @@
         }
       ]
     }
-  ]
+  ],
+  "presentation": {
+    "software_type": "capability",
+    "display_name_i18n": {
+      "zh-CN": "Med Auto Cast Assets",
+      "en-US": "Med Auto Cast Assets"
+    },
+    "description_i18n": {
+      "zh-CN": "默认安装轻量索引与代码组件，按需获取素材；可在软件中心选择离线完整版。",
+      "en-US": "Install a small catalog and code components by default; fetch media as needed or choose the complete offline installation."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "默认安装轻量索引与代码组件，按需获取素材；可在软件中心选择离线完整版。",
+      "en-US": "Install a small catalog and code components by default; fetch media as needed or choose the complete offline installation."
+    },
+    "home_shortcuts": [],
+    "icon_ref": "assets/branding/mac-media-assets-logo.png"
+  },
+  "publication_projection_order": 60,
+  "publication_source": {
+    "module_id": "mac-media-assets",
+    "owner_package_manifest_ref": "contracts/opl_capability_package_manifest.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
+  "owner_package_manifest_ref": "contracts/opl_capability_package_manifest.json",
+  "owner_package_descriptor_ref": "opl-package.json",
+  "source_manifest_ref": "mac-media-assets/contracts/opl_capability_package_manifest.json"
 }

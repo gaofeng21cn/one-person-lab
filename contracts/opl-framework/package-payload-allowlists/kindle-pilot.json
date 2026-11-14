@@ -8,9 +8,12 @@
     ".agents/plugins/marketplace.json",
     ".codex-plugin/plugin.json",
     "LICENSE",
+    "README.en.md",
     "README.md",
     "THIRD_PARTY_NOTICES.md",
     "assets/README.md",
+    "assets/branding/README.md",
+    "assets/branding/kindle-pilot-logo.png",
     "assets/kindlepilot.koplugin/_meta.lua",
     "assets/kindlepilot.koplugin/main.lua",
     "assets/kindlepilot.koplugin/pairing_daemon.lua",
@@ -54,7 +57,6 @@
     "src/kindle_companion/state.py",
     "src/kindle_companion/verify.py",
     "src/kindle_companion/wireless.py",
-    "opl-package.json",
-    "assets/branding/kindle-pilot-logo.png"
+    "opl-package.json"
   ]
 }

@@ -8,6 +8,7 @@
     ".codex-plugin/plugin.json",
     "app-contribution-adapter.json",
     "app_contribution.py",
+    "assets/branding/map-desk-logo.png",
     "owner_profile.py",
     "plugin.json",
     "skills/glkvm-control/SKILL.md",
@@ -17,7 +18,6 @@
     "skills/glkvm-control/references/qualification.md",
     "skills/glkvm-control/references/session-recovery.md",
     "skills/glkvm-control/references/windows-maintenance.md",
-    "opl-package.json",
-    "assets/branding/map-desk-logo.png"
+    "opl-package.json"
   ]
 }

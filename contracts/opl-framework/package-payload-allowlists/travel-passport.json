@@ -8,9 +8,11 @@
     ".codex-plugin/plugin.json",
     "LICENSE",
     "NOTICE.md",
+    "README.en.md",
     "README.md",
     "app-contribution-adapter.json",
     "app-contribution.mjs",
+    "assets/branding/journey-atlas-logo.png",
     "data/atlas-config.example.json",
     "data/china.geojson",
     "data/city-catalog.json",
@@ -146,7 +148,6 @@
     "src/site.html",
     "src/transport-time.mjs",
     "src/world-dots.js",
-    "opl-package.json",
-    "assets/branding/journey-atlas-logo.png"
+    "opl-package.json"
   ]
 }

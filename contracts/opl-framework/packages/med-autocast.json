@@ -4,7 +4,7 @@
   "package_id": "med-autocast",
   "display_name": "Med Auto Cast",
   "publisher": "one-person-lab",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
@@ -41,8 +41,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/med-autocast-0.3.6.json",
-    "carrier_source_commit": "f0db3ee0c9f50972f307419280af7a5c7d96e262"
+    "plugin_payload_manifest_url": "payloads/med-autocast-0.3.7.json",
+    "carrier_source_commit": "880d05ac6acd1236bce4e5ef2e482a09802f1c6f"
   },
   "dependency_profiles": [],
   "capability_dependencies": [
@@ -105,7 +105,8 @@
       "direct_entry": true,
       "entry_view_id": "med-autocast.workspace.media",
       "dedicated_resource_uri": "ui://med-autocast/media-review.html"
-    }
+    },
+    "icon_ref": "assets/branding/medautocast-logo.png"
   },
   "requires": [
     {

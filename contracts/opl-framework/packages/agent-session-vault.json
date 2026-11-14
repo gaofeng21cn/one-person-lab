@@ -1,9 +1,9 @@
 {
   "surface_kind": "opl_capability_package_manifest.v2",
   "package_id": "agent-session-vault",
-  "display_name": "Agent Session Vault",
+  "display_name": "OPL Session Vault",
   "publisher": "gaofeng21cn",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/agent-session-vault.git",
   "package_role": "capability_package",
@@ -49,8 +49,8 @@
       "marketplace_source": "gaofeng21cn/agent-session-vault",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/agent-session-vault:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/agent-session-vault-0.1.1.json",
-    "carrier_source_commit": "04f45754cb9331b0414a06067598122c5f7b0366"
+    "plugin_payload_manifest_url": "payloads/agent-session-vault-0.1.2.json",
+    "carrier_source_commit": "22cb31e4424532e7288c4645e91e702f23844c95"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -135,14 +135,15 @@
       "src/agent_session_vault/storage.py",
       "src/agent_session_vault/tokscale.py",
       "src/agent_session_vault/views.py",
-      "vault.py"
+      "vault.py",
+      "assets/branding/agent-session-vault-logo.png"
     ],
-    "digest": "sha256:7a316e58c1a249ece974d371ffd2f93a36ea461507a97a73510aab99e75a2d10"
+    "digest": "sha256:100cc77ce2c60edf969c7d0b9725eeb4e203222227a59999635e19c3ca2e2919"
   },
   "presentation": {
     "display_name_i18n": {
-      "en-US": "Agent Session Vault",
-      "zh-CN": "Agent Session Vault"
+      "zh-CN": "OPL Session Vault",
+      "en-US": "OPL Session Vault"
     },
     "description_i18n": {
       "en-US": "Session synchronization, usage analytics, and recoverable Codex archives.",
@@ -153,7 +154,8 @@
       "zh-CN": "通过 Vault 查看会话统计、同步获准的 Fleet 投影并审阅归档计划。"
     },
     "home_shortcuts": [],
-    "software_type": "application"
+    "software_type": "application",
+    "icon_ref": "assets/branding/agent-session-vault-logo.png"
   },
   "management_scope": "local_product",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",

@@ -8,8 +8,8 @@
   "display_name": "OPL Capital Compass",
   "presentation": {
     "display_name_i18n": {
-      "en-US": "OPL Capital Compass",
-      "zh-CN": "OPL Capital Compass"
+      "zh-CN": "OPL Capital Compass",
+      "en-US": "OPL Capital Compass"
     },
     "description_i18n": {
       "en-US": "Personal investment portfolio diagnosis, macro judgment, allocation decisions, and exact-owner-authorized trade execution with broker readback.",
@@ -36,10 +36,10 @@
       }
     ],
     "software_type": "agent",
-    "icon_ref": "assets/icon.svg"
+    "icon_ref": "assets/branding/opl-capital-compass-logo.png"
   },
   "publisher": "one-person-lab",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "visibility": "authorized_only",
   "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/occ",
   "credential_provider": "github_packages",
@@ -79,8 +79,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/occ-0.2.0.json",
-    "carrier_source_commit": "4b532738239d60c2b87d4f3e83afc1aba921a960"
+    "plugin_payload_manifest_url": "payloads/occ-0.2.2.json",
+    "carrier_source_commit": "bc39c0729b2af701853a3ec32024c483b5e86961"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",

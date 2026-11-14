@@ -16,10 +16,11 @@
       "en-US": "Review app and Home Screen stewardship plans"
     },
     "home_shortcuts": [],
-    "software_type": "agent"
+    "software_type": "agent",
+    "icon_ref": "assets/branding/iphone-app-steward-logo.png"
   },
   "publisher": "gaofeng21cn",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/iphone-app-steward.git",
   "visibility": "authorized_only",
@@ -69,8 +70,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/iphone-steward-0.2.8.json",
-    "carrier_source_commit": "e3f50fd526b233596fc833dbdb6052d4c654a05f"
+    "plugin_payload_manifest_url": "payloads/iphone-steward-0.2.9.json",
+    "carrier_source_commit": "8c76afba5f19081335f08392ddda4d37bf2e1221"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -157,6 +158,7 @@
       ".codex-plugin/plugin.json",
       "app-contribution-adapter.json",
       "app_contribution.py",
+      "assets/branding/iphone-app-steward-logo.png",
       "plugin.json",
       "skills/iphone-app-steward/SKILL.md",
       "skills/iphone-app-steward/agents/openai.yaml",
@@ -164,7 +166,7 @@
       "skills/iphone-app-steward/references/decision-policy.md",
       "skills/iphone-app-steward/references/evidence-and-layout.md"
     ],
-    "digest": "sha256:745229e88cce4e0c61a6a311d7f347c23d6e2b8ffd3685d7f4a5d4e04bc756e1"
+    "digest": "sha256:ec242517bbc762b6e23ee51b755acbf8c17a735c4d203e591448d9e37b043ff0"
   },
   "publication_source": {
     "module_id": "iphone-steward",

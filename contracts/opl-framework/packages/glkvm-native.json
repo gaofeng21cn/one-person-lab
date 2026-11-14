@@ -1,9 +1,9 @@
 {
   "surface_kind": "opl_capability_package_manifest.v2",
   "package_id": "glkvm-native",
-  "display_name": "GLKVM Native",
+  "display_name": "MAP Desk",
   "publisher": "gaofeng21cn",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/glkvm-native.git",
   "package_role": "capability_package",
@@ -49,8 +49,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/glkvm-native-0.1.5.json",
-    "carrier_source_commit": "dc700ee605f102caed4907dff21a8567e15ac6be"
+    "plugin_payload_manifest_url": "payloads/glkvm-native-0.1.6.json",
+    "carrier_source_commit": "d20da3227392b79f3a02ad1a184ccfb073682ab2"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -97,6 +97,7 @@
       ".codex-plugin/plugin.json",
       "app-contribution-adapter.json",
       "app_contribution.py",
+      "assets/branding/map-desk-logo.png",
       "owner_profile.py",
       "plugin.json",
       "skills/glkvm-control/SKILL.md",
@@ -107,23 +108,15 @@
       "skills/glkvm-control/references/session-recovery.md",
       "skills/glkvm-control/references/windows-maintenance.md"
     ],
-    "digest": "sha256:ba4973dbea93e098368ac8e4404d77b0f37c9f26a5c26e123d82e7f627e1b954"
+    "digest": "sha256:516856610177700274b45498b50bcdfb9baba797c7067e9aba54664e101f4f08"
   },
   "visibility": "authorized_only",
   "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/glkvm-native",
   "credential_provider": "github_packages",
-  "publication_source": {
-    "module_id": "glkvm-native",
-    "owner_package_manifest_ref": "plugins/glkvm-native/opl-package.json",
-    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
-  },
-  "publication_channel_admission": "admitted",
-  "owner_package_manifest_ref": "plugins/glkvm-native/opl-package.json",
-  "owner_package_descriptor_ref": "opl-package.json",
   "presentation": {
     "display_name_i18n": {
-      "zh-CN": "GLKVM Native",
-      "en-US": "GLKVM Native"
+      "zh-CN": "MAP Desk",
+      "en-US": "MAP Desk"
     },
     "description_i18n": {
       "zh-CN": "只读查看 GLKVM 安装及运行状态，并通过原生工具控制设备。",
@@ -134,6 +127,15 @@
       "en-US": "Read-only GLKVM installation and runtime review with native device control."
     },
     "home_shortcuts": [],
-    "software_type": "capability"
-  }
+    "software_type": "capability",
+    "icon_ref": "assets/branding/map-desk-logo.png"
+  },
+  "publication_source": {
+    "module_id": "glkvm-native",
+    "owner_package_manifest_ref": "plugins/glkvm-native/opl-package.json",
+    "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
+  },
+  "publication_channel_admission": "admitted",
+  "owner_package_manifest_ref": "plugins/glkvm-native/opl-package.json",
+  "owner_package_descriptor_ref": "opl-package.json"
 }

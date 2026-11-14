@@ -3,7 +3,7 @@
   "package_id": "travel-passport",
   "display_name": "Journey Atlas",
   "publisher": "gaofeng21cn",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/journey-atlas.git",
   "package_role": "capability_package",
@@ -52,8 +52,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "carrier_source_commit": "5dda1a0456910d3533f306a20818f9112ac89344",
-    "plugin_payload_manifest_url": "payloads/travel-passport-0.2.0.json"
+    "plugin_payload_manifest_url": "payloads/travel-passport-0.2.1.json",
+    "carrier_source_commit": "322685c348beecee960b1e606f9e94382ef3a450"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -172,9 +172,11 @@
       ".codex-plugin/plugin.json",
       "LICENSE",
       "NOTICE.md",
+      "README.en.md",
       "README.md",
       "app-contribution-adapter.json",
       "app-contribution.mjs",
+      "assets/branding/journey-atlas-logo.png",
       "data/atlas-config.example.json",
       "data/china.geojson",
       "data/city-catalog.json",
@@ -311,7 +313,7 @@
       "src/transport-time.mjs",
       "src/world-dots.js"
     ],
-    "digest": "sha256:6c737faa104bcca07f2c1214100264d3b14b20e6e601b8aecc10511d462ad575"
+    "digest": "sha256:cf191006bcf04c0c00fce5c9fa916d1045d772226dbb23aa0fc1fc09bddeb403"
   },
   "visibility": "public",
   "description": "Agent-native travel atlas using user-owned travel records and Obsidian sources.",
@@ -332,7 +334,8 @@
       "zh-CN": "用 Journey Atlas 读取和维护旅行资料，生成地图并在共享视图中审阅。",
       "en-US": "Use Journey Atlas to maintain travel records, generate maps, and review shared views."
     },
-    "home_shortcuts": []
+    "home_shortcuts": [],
+    "icon_ref": "assets/branding/journey-atlas-logo.png"
   },
   "entrypoints": [
     {
@@ -352,10 +355,10 @@
     "adapter_can_mutate": false
   },
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
-  "source_commit": "5dda1a0456910d3533f306a20818f9112ac89344",
   "publication_source": {
     "module_id": "travel-passport",
     "owner_package_manifest_ref": "plugins/travel-passport/opl-package.json",
     "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
-  }
+  },
+  "source_commit": "322685c348beecee960b1e606f9e94382ef3a450"
 }

@@ -3,14 +3,14 @@
   "package_id": "opl-flow",
   "display_name": "OPL Flow",
   "publisher": "one-person-lab",
-  "version": "0.1.71",
+  "version": "0.1.72",
   "source": "first_party",
   "source_repo": "https://github.com/gaofeng21cn/opl-flow.git",
   "package_role": "workflow_profile",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
     "plugin_id": "opl-flow",
-    "plugin_payload_manifest_url": "payloads/opl-flow-0.1.71.json",
+    "plugin_payload_manifest_url": "payloads/opl-flow-0.1.72.json",
     "configured_codex_plugin_carrier": {
       "kind": "codex_plugin_manager",
       "plugin_selector": "opl-flow@opl-flow",
@@ -23,7 +23,7 @@
       "software-development",
       "manage-codex-tasks"
     ],
-    "carrier_source_commit": "6cc4591bd29661dafcc15f018217ed65b20c59b5"
+    "carrier_source_commit": "664d3875229544df826a3cada105b1a741b04009"
   },
   "profile_surface": {
     "runtime_profile": {
@@ -49,6 +49,23 @@
     "schema_path": "contracts/workflow-policy.schema.json"
   },
   "capability_dependencies": [],
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "OPL Flow",
+      "en-US": "OPL Flow"
+    },
+    "description_i18n": {
+      "zh-CN": "建立统一的 Codex 使用基线，协调跨任务、仓库与机器的持续工作。",
+      "en-US": "OPL Flow establishes the Codex experience baseline and coordinates durable work across tasks, repositories, and machines."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "建立统一的 Codex 使用基线，协调跨任务、仓库与机器的持续工作。",
+      "en-US": "OPL Flow establishes the Codex experience baseline and coordinates durable work across tasks, repositories, and machines."
+    },
+    "home_shortcuts": [],
+    "software_type": "capability",
+    "icon_ref": "assets/branding/opl-flow-logo.png"
+  },
   "registry_entry": {
     "registry_kind": "first_party_package_registry_entry",
     "registry_source_ref": "contracts/opl-framework/packages/opl-flow.json",
@@ -97,22 +114,6 @@
     "dependency_update_policy": "independent_package_target",
     "profile_migration_policy": "semantic_merge_required_fail_closed",
     "silent_profile_overwrite_allowed": false
-  },
-  "presentation": {
-    "display_name_i18n": {
-      "zh-CN": "OPL Flow",
-      "en-US": "OPL Flow"
-    },
-    "description_i18n": {
-      "zh-CN": "建立统一的 Codex 使用基线，协调跨任务、仓库与机器的持续工作。",
-      "en-US": "OPL Flow establishes the Codex experience baseline and coordinates durable work across tasks, repositories, and machines."
-    },
-    "session_routing_summary_i18n": {
-      "zh-CN": "建立统一的 Codex 使用基线，协调跨任务、仓库与机器的持续工作。",
-      "en-US": "OPL Flow establishes the Codex experience baseline and coordinates durable work across tasks, repositories, and machines."
-    },
-    "home_shortcuts": [],
-    "software_type": "capability"
   },
   "machine_boundary": "This first-party OPL Package records OPL Flow package identity and profile migration ownership. It cannot silently overwrite user Codex profiles or claim project, runtime, domain, artifact, or owner-receipt truth."
 }

@@ -4,7 +4,7 @@
   "display_name": "Kindle Pilot",
   "description": "Agent-guided Kindle setup, reading configuration, and library maintenance.",
   "publisher": "gaofeng21cn",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/kindle-pilot.git",
   "visibility": "public",
@@ -47,8 +47,8 @@
       "marketplace_source": "gaofeng21cn/kindle-pilot",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/kindle-pilot:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/kindle-pilot-0.2.2.json",
-    "carrier_source_commit": "4ec498f11e365961bea4c02a0bbb4f45dce2d4c3"
+    "plugin_payload_manifest_url": "payloads/kindle-pilot-0.2.3.json",
+    "carrier_source_commit": "8e0299ff20100bfb39254b46cf995a506cfca85a"
   },
   "content_lock": {
     "algorithm": "sha256",
@@ -57,9 +57,12 @@
       ".agents/plugins/marketplace.json",
       ".codex-plugin/plugin.json",
       "LICENSE",
+      "README.en.md",
       "README.md",
       "THIRD_PARTY_NOTICES.md",
       "assets/README.md",
+      "assets/branding/README.md",
+      "assets/branding/kindle-pilot-logo.png",
       "assets/kindlepilot.koplugin/_meta.lua",
       "assets/kindlepilot.koplugin/main.lua",
       "assets/kindlepilot.koplugin/pairing_daemon.lua",
@@ -104,7 +107,7 @@
       "src/kindle_companion/verify.py",
       "src/kindle_companion/wireless.py"
     ],
-    "digest": "sha256:8c1ed34bc2882d6c16b1da2a79c85fc102754ec2a1ec20040c9d3c6ecee26596"
+    "digest": "sha256:f2d77dee0a6bf145e04a74126d4b0aaaee015c29064a4bd029aae6eb5a5d931f"
   },
   "presentation": {
     "display_name_i18n": {
@@ -120,7 +123,8 @@
       "en-US": "Use Kindle Pilot to manage a Kindle through compatibility checks and explicit device readback."
     },
     "home_shortcuts": [],
-    "software_type": "agent"
+    "software_type": "agent",
+    "icon_ref": "assets/branding/kindle-pilot-logo.png"
   },
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
   "publication_source": {

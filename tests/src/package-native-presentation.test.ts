@@ -235,7 +235,7 @@ test('catalog artwork uses immutable payload paths and never sends private artwo
   const mas = owners.get('mas')!;
   assert.ok(mas);
   const url = packageArtworkUrl(mas);
-  assert.ok(url?.includes(`/med-autoscience/${mas.manifest.carrier_source_commit}/plugins/med-autoscience/assets/icon.svg`));
+  assert.ok(url?.includes(`/med-autoscience/${mas.manifest.carrier_source_commit}/plugins/med-autoscience/${mas.manifest.presentation?.icon_ref}`));
   const before = mas.manifest.visibility;
   mas.manifest.visibility = 'authorized_only';
   assert.equal(packageArtworkUrl(mas), null);

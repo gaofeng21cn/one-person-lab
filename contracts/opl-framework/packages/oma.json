@@ -8,8 +8,8 @@
   "display_name": "OPL Meta Agent",
   "presentation": {
     "display_name_i18n": {
-      "en-US": "OPL Meta Agent",
-      "zh-CN": "OPL Meta Agent"
+      "zh-CN": "OPL Meta Agent",
+      "en-US": "OPL Meta Agent"
     },
     "description_i18n": {
       "en-US": "OPL agent design, review, takeover, and evolution.",
@@ -36,10 +36,10 @@
       }
     ],
     "software_type": "agent",
-    "icon_ref": "assets/icon.svg"
+    "icon_ref": "assets/branding/opl-meta-agent-logo.png"
   },
   "publisher": "one-person-lab",
-  "version": "0.4.14",
+  "version": "0.4.15",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "domain_descriptor_ref": "contracts/domain_descriptor.json",
@@ -60,8 +60,8 @@
       "marketplace_source": "gaofeng21cn/opl-meta-agent",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/oma:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/oma-0.4.14.json",
-    "carrier_source_commit": "b788f365a7718fa5fc63e14e8540ad68660281da"
+    "plugin_payload_manifest_url": "payloads/oma-0.4.15.json",
+    "carrier_source_commit": "979b1fa1ffa9bb41f3323d70a1fa8a9018c07aa0"
   },
   "capability_dependencies": [],
   "registry_entry": {

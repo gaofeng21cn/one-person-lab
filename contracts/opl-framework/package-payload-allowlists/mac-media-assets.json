@@ -8,6 +8,7 @@
     ".agents/plugins/marketplace.json",
     ".codex-plugin/plugin.json",
     "app-contribution-adapter.json",
+    "assets/branding/mac-media-assets-logo.png",
     "catalog/README.md",
     "catalog/assets.jsonl",
     "catalog/media-storage.json",
@@ -74,7 +75,6 @@
     "docs/reserve-2026-10-11/README.md",
     "docs/reserve-2026-10-11/alpha-report.json",
     "docs/reserve-2026-10-11/plan.json",
-    "opl-package.json",
     "payloads/paper-theatre/mac_process_blood_v1/3d09cc8e8c95cd895612/USAGE.md",
     "payloads/paper-theatre/mac_process_blood_v1/3d09cc8e8c95cd895612/component.json",
     "payloads/paper-theatre/mac_process_blood_v1/3d09cc8e8c95cd895612/index.html",
@@ -557,6 +557,6 @@
     "tools/structure_section_runtime.mjs",
     "tools/sync_from_workbench.py",
     "tools/verify_catalog.py",
-    "assets/branding/mac-media-assets-logo.png"
+    "opl-package.json"
   ]
 }
