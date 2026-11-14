@@ -68,6 +68,13 @@ def update_versions(root, projection, allowlist, settings, version):
     refs = list(settings.get('version_files', []))
     if language_ref and not any(x['path'] == language_ref for x in refs):
         refs.append({'path': language_ref, 'kind': 'toml_project' if language_ref.endswith('.toml') else 'json'})
+    changed.update(update_version_files(root, refs, version))
+    return changed
+
+
+def update_version_files(root, refs, version):
+    """Align declared language/native metadata for Package and product releases."""
+    changed = set()
     for item in refs:
         p = safe_path(root, item['path'])
         if item['kind'] == 'json':
