@@ -3,7 +3,7 @@
   "package_id": "rednote-steward",
   "display_name": "RedNote Steward",
   "publisher": "gaofeng21cn",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/rednote-steward.git",
   "package_role": "capability_package",
@@ -66,8 +66,8 @@
       "marketplace_source": "gaofeng21cn/rednote-steward",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/rednote-steward:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/rednote-steward-0.2.4.json",
-    "carrier_source_commit": "0f36502a108f0411bdc2e15444a7f8e16e5f33c7"
+    "plugin_payload_manifest_url": "payloads/rednote-steward-0.2.5.json",
+    "carrier_source_commit": "48d3a399ca93d0c46c626c2580f5d7fbdfad64fc"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -211,11 +211,14 @@
       "adapters/opencli/xiaohongshu/topic-probe.js",
       "app-contribution-adapter.json",
       "assets/branding/rednote-steward-logo-v2.png",
+      "install.sh",
       "mcp.json",
       "package-lock.json",
       "package.json",
       "plugin.json",
+      "release-automation.json",
       "scripts/check-package.mjs",
+      "scripts/download-stable.mjs",
       "scripts/install-local.mjs",
       "scripts/lib/npm-pack-output.mjs",
       "scripts/package-lock.mjs",
@@ -252,7 +255,7 @@
       "src/opencli-runner.mjs",
       "src/setup.mjs"
     ],
-    "digest": "sha256:ea2e0538af79e50086ac497a147539767aa4cbfd251f6557eedd351aa5249999"
+    "digest": "sha256:af9732ad5f7891b7e35301cdae238e515c1aa0f6d874a68c8ca6335ec9f551aa"
   },
   "description": "Prepare, review and manage Xiaohongshu publications through one local CLI and MCP service.",
   "presentation": {
