@@ -57,6 +57,7 @@ class PackageReleaseTests(unittest.TestCase):
         write(self.root / 'package.json', {'name': 'fixture', 'version': '1.2.3', 'dependencies': {'unrelated': '9.8.7'}})
         write(self.root / 'package-lock.json', {'version': '1.2.3', 'packages': {'': {'version': '1.2.3'}, 'dependency': {'version': '9.8.7'}}})
         (self.root / 'pyproject.toml').write_text('[project]\nname = "fixture"\nversion = "1.2.3"\n\n[other]\nversion = "9.8.7"\n')
+        (self.root / 'uv.lock').write_text('version = 1\n\n[[package]]\nname = "fixture"\nversion = "1.2.3"\nsource = { editable = "." }\n\n[[package]]\nname = "unrelated"\nversion = "9.8.7"\nsource = { registry = "https://example.invalid" }\n')
         settings = {'version_files': [{'path': p, 'kind': 'json'} for p in ['package.json', 'package-lock.json']] +
                     [{'path': 'pyproject.toml', 'kind': 'toml_project'}]}
         update_versions(self.root, self.projection, self.allowlist, settings, '1.2.4')
@@ -64,6 +65,8 @@ class PackageReleaseTests(unittest.TestCase):
         self.assertEqual(read(self.root / 'package-lock.json')['packages']['']['version'], '1.2.4')
         self.assertEqual(read(self.root / 'package-lock.json')['packages']['dependency']['version'], '9.8.7')
         self.assertIn('[other]\nversion = "9.8.7"', (self.root / 'pyproject.toml').read_text())
+        self.assertIn('name = "fixture"\nversion = "1.2.4"', (self.root / 'uv.lock').read_text())
+        self.assertIn('name = "unrelated"\nversion = "9.8.7"', (self.root / 'uv.lock').read_text())
         settings['version_files'] = [{'path': '../outside.json', 'kind': 'json'}]
         with self.assertRaises(ReleaseError):
             update_versions(self.root, self.projection, self.allowlist, settings, '1.2.4')

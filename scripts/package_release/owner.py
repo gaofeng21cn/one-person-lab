@@ -4,6 +4,7 @@ import json
 import re
 import sys
 import time
+import tomllib
 from pathlib import Path
 from .common import ReleaseError, gh, git, read, run, safe_path, version_tuple, write
 
@@ -66,11 +67,30 @@ def update_versions(root, projection, allowlist, settings, version):
             write(p, d)
         elif item['kind'] == 'toml_project':
             text = p.read_text()
+            project_name = tomllib.loads(text)['project']['name']
             text, count = re.subn(r'(?ms)(^\[project\]\s*\n(?:(?!^\[).)*?^version\s*=\s*)["\'][^"\']+["\']',
                                   lambda m: m[1] + json.dumps(version), text, count=1)
             if count != 1:
                 raise ReleaseError('Cannot update the declared Python project version')
             p.write_text(text)
+            lock_path = p.with_name('uv.lock')
+            if lock_path.is_file():
+                lock = lock_path.read_text()
+                replacements = 0
+                def align_local_package(match):
+                    nonlocal replacements
+                    block = match[0]
+                    package = tomllib.loads(block)['package'][0]
+                    source = package.get('source', {})
+                    if package['name'] == project_name and (source.get('editable') == '.' or source.get('virtual') == '.'):
+                        replacements += 1
+                        return re.sub(r'(?m)^version\s*=.*$', 'version = ' + json.dumps(version), block, count=1)
+                    return block
+                lock = re.sub(r'(?ms)^\[\[package\]\]\n.*?(?=^\[\[package\]\]|\Z)', align_local_package, lock)
+                if replacements != 1:
+                    raise ReleaseError('Cannot align the local project version in uv.lock')
+                lock_path.write_text(lock)
+                changed.add(str(lock_path.relative_to(root)))
         elif item['kind'] == 'python_version':
             text, count = re.subn(r'(?m)^__version__\s*=.*$', '__version__ = ' + json.dumps(version), p.read_text())
             if count != 1:
