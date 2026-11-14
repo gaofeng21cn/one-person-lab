@@ -176,12 +176,17 @@ source annotation 和签名 provenance 共同绑定。GitHub 的 `repository` �
 
 `daily-package-channel.yml` 每天检查已准入 Package 的 owner `main`。owner 根目录的
 `release-automation.json` 声明 `daily_patch` 或 `manual`、正式载体生成与验证命令，以及
-额外版本文件；字段结构由 `package-release-automation.schema.json` 约束。源码位置、Package
+额外版本文件；字段结构由 `package-release-automation.schema.json` 约束。`release_paths`
+把同产品的原生界面、构建脚本等源码纳入变更检测。源码位置、Package
 身份、公开/私有访问策略和交付文件仍来自现有 descriptor、publication source 与内容锁。
 
 没有交付内容变化时跳过；已有合法的新版本就复用，有变化但版本未提升时递增 patch。
 major/minor 由 owner 显式选择。通用版本准备只修改已声明的版本文件，调用 owner 的载体生成
-命令后重新验证内容锁。精确主线 CI 失败时停止该包；版本与投影变更通过 PR 和精确 head CI 合并，
+命令后重新验证内容锁。JSON、Python、macOS plist 和 Windows project 使用同一产品版本；
+macOS 内部 build counter 保持递增。已有新版本也重新对齐已声明文件。
+`release_workflows` 声明同 tag 的原生发布 workflow；准备器回读准确源码与 tag 的成功运行后
+才生成稳定 OCI 投影。签名、公证、原生构建与资产回读继续由产品的原生发布器负责。
+精确主线 CI 失败时停止该包；版本与投影变更通过 PR 和精确 head CI 合并，
 合并前重新检查主线未前进，源码 tag 绑定实际合入的提交。跨仓身份使用 OPL Package Publisher
 的短时 GitHub App token，CI 正常触发。App 安装覆盖账号的当前及未来仓库；每日任务根据
 Framework 动态准入和 owner 配置选择发布对象，新 Package 无需重复配置安装范围。
@@ -203,8 +208,11 @@ Framework 随后复用 Flow 的 `package_release.py prepare` 更新投影，再�
 遵循用户已有安装策略。
 
 RedNote Steward 的独立安装脚本读取同一 OCI `latest-stable` 和源码层，校验 manifest、
-各 layer 与 payload 文件摘要，随后交给它原有本地安装器。已有历史 Release 保留，但新版本
-通过同一 OCI 渠道交付，独立入口不再停留在硬编码版本。
+各 layer 与 payload 文件摘要，随后交给它原有本地安装器。Package-only 软件以 OCI 为唯一
+稳定制品源，移除没有消费者的旧 GitHub Release 下载对象，源码 tags 保留历史。
+同一产品的 Package 与原生 App 共享版本和源码 tag；GitHub Release 只承载该版本确有需要的
+原生或设备安装资产。旧迁移产品仅保留实际仍被旧客户端读取的最终桥接版本，页面明确指向
+继任产品；不继续发布另一套产品版本。安装/升级 feed 与固定迁移资产先核对消费者再清理。
 
 ## App
 

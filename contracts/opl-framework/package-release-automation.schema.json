@@ -8,6 +8,16 @@
     "strategy": { "enum": ["daily_patch", "manual"] },
     "prepare": { "$ref": "#/$defs/commands" },
     "verify": { "$ref": "#/$defs/commands" },
+    "release_paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$" }
+    },
+    "release_workflows": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9_-]+\\.ya?ml$" }
+    },
     "version_files": {
       "type": "array",
       "items": {
@@ -15,7 +25,7 @@
         "required": ["path", "kind"],
         "properties": {
           "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$" },
-          "kind": { "enum": ["json", "toml_project", "python_version"] }
+          "kind": { "enum": ["json", "toml_project", "python_version", "plist_bundle", "xml_project"] }
         },
         "additionalProperties": false
       }

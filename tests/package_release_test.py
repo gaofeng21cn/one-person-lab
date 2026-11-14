@@ -3,6 +3,7 @@ import importlib.util
 import io
 import json
 import os
+import plistlib
 from pathlib import Path
 import subprocess
 import sys
@@ -15,7 +16,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from package_release.common import ReleaseError, read, write
-from package_release.owner import content_changed, update_versions, prepare_owner, reconcile_release_branch
+from package_release.owner import content_changed, update_versions, prepare_owner, reconcile_release_branch, wait_for_release_workflows
 from package_release.channels import public_channel
 
 spec = importlib.util.spec_from_file_location('dispatcher', ROOT / 'scripts/package-publication-dispatch.py')
@@ -72,6 +73,63 @@ class PackageReleaseTests(unittest.TestCase):
         with self.assertRaises(ReleaseError):
             update_versions(self.root, self.projection, self.allowlist, settings, '1.2.4')
 
+    def test_native_only_changes_and_deletions_advance_the_product(self):
+        app = self.root / 'app'
+        app.mkdir()
+        (app / 'View.swift').write_text('original view')
+        self.git('add', '.')
+        self.git('commit', '-m', 'add native frontend')
+        previous = self.git('rev-parse', 'HEAD')
+        settings = {'release_paths': ['app']}
+        self.assertFalse(content_changed(self.root, previous, self.projection, self.allowlist, settings))
+        (app / 'View.swift').write_text('changed view')
+        self.assertTrue(content_changed(self.root, previous, self.projection, self.allowlist, settings))
+        self.assertFalse(content_changed(self.root, previous, self.projection, self.allowlist))
+        (app / 'View.swift').unlink()
+        self.assertTrue(content_changed(self.root, previous, self.projection, self.allowlist, settings))
+        with self.assertRaises(ReleaseError):
+            content_changed(self.root, previous, self.projection, self.allowlist, {'release_paths': ['../outside']})
+
+    def test_bundle_versions_follow_the_same_product_and_preserve_identity(self):
+        info = self.root / 'Info.plist'
+        for fmt in [plistlib.FMT_XML, plistlib.FMT_BINARY]:
+            info.write_bytes(plistlib.dumps({'CFBundleShortVersionString': '1.0.0', 'CFBundleVersion': '7',
+                                            'CFBundleIdentifier': 'example.fixture', 'NSPhotoLibraryUsageDescription': 'Photos'}, fmt=fmt))
+            update_versions(self.root, self.projection, self.allowlist,
+                            {'version_files': [{'path': 'Info.plist', 'kind': 'plist_bundle'}]}, '1.2.4')
+            actual = plistlib.loads(info.read_bytes())
+            self.assertEqual(actual['CFBundleShortVersionString'], '1.2.4')
+            self.assertEqual(actual['CFBundleVersion'], '8')
+            self.assertEqual(actual['CFBundleIdentifier'], 'example.fixture')
+            self.assertEqual(actual['NSPhotoLibraryUsageDescription'], 'Photos')
+            self.assertEqual(info.read_bytes().startswith(b'bplist'), fmt == plistlib.FMT_BINARY)
+            update_versions(self.root, self.projection, self.allowlist,
+                            {'version_files': [{'path': 'Info.plist', 'kind': 'plist_bundle'}]}, '1.2.4')
+            self.assertEqual(plistlib.loads(info.read_bytes())['CFBundleVersion'], '8')
+
+    def test_xml_project_version_uses_the_same_product_version(self):
+        path = self.root / 'project.csproj'
+        path.write_text('<Project><PropertyGroup><Version>1.2.3</Version></PropertyGroup></Project>')
+        update_versions(self.root, self.projection, self.allowlist,
+                        {'version_files': [{'path': 'project.csproj', 'kind': 'xml_project'}]}, '1.2.4')
+        self.assertIn('<Version>1.2.4</Version>', path.read_text())
+
+    def test_native_publication_must_succeed_for_the_exact_product_tag(self):
+        selected = {'id': 10, 'head_sha': 'a' * 40, 'head_branch': 'v1.2.4',
+                    'status': 'completed', 'conclusion': 'success'}
+        settings = {'release_workflows': ['release.yml']}
+        with patch('package_release.owner.gh', return_value={'workflow_runs': [selected]}):
+            wait_for_release_workflows('example/fixture', 'a' * 40, 'v1.2.4', settings, timeout=0)
+        selected['conclusion'] = 'failure'
+        with patch('package_release.owner.gh', return_value={'workflow_runs': [selected]}):
+            with self.assertRaisesRegex(ReleaseError, 'workflow failed'):
+                wait_for_release_workflows('example/fixture', 'a' * 40, 'v1.2.4', settings, timeout=0)
+        selected['head_branch'] = 'v1.2.3'
+        selected['conclusion'] = 'success'
+        with patch('package_release.owner.gh', return_value={'workflow_runs': [selected]}):
+            with self.assertRaisesRegex(ReleaseError, 'workflow is pending'):
+                wait_for_release_workflows('example/fixture', 'a' * 40, 'v1.2.4', settings, timeout=0)
+
     def test_registry_denial_stays_unknown(self):
         denial = urllib.error.HTTPError('https://ghcr.io/token', 403, 'Forbidden', {}, io.BytesIO(b'{"errors":[{"code":"DENIED"}]}'))
         with patch('urllib.request.urlopen', side_effect=denial):
@@ -122,6 +180,7 @@ class PackageReleaseTests(unittest.TestCase):
             with patch.dict(os.environ, {'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_CONFIG_NOSYSTEM': '1'}), \
                  patch('package_release.owner.git', side_effect=local_git), \
                  patch('package_release.owner.wait_for_checks'), \
+                 patch('package_release.owner.refresh_locks'), \
                  patch('package_release.owner.content_changed', return_value=True):
                 result = prepare_owner(self.root, projection, self.allowlist, framework, 'example/fixture', apply=True)
             self.assertEqual(result['owner_source_commit'], base)

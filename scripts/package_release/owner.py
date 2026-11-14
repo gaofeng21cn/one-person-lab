@@ -1,6 +1,7 @@
 """Prepare owner bytes; Framework continues to generate and publish its projection."""
 from __future__ import annotations
 import json
+import plistlib
 import re
 import sys
 import time
@@ -14,7 +15,7 @@ def owner_settings(root):
     settings = read(path) if path.is_file() else {}
     if not path.is_file():
         raise ReleaseError('Owner must declare release-automation.json before automatic version changes')
-    if set(settings) - {'strategy', 'prepare', 'verify', 'version_files'}:
+    if set(settings) - {'strategy', 'prepare', 'verify', 'version_files', 'release_paths', 'release_workflows'}:
         raise ReleaseError('Unknown owner release setting')
     strategy = settings.get('strategy', 'daily_patch')
     if strategy not in ['daily_patch', 'manual']:
@@ -23,6 +24,16 @@ def owner_settings(root):
         for command in settings.get(field, []):
             if not isinstance(command, list) or not command or not all(isinstance(x, str) for x in command):
                 raise ReleaseError('Owner release commands must be argument arrays')
+    release_paths = settings.get('release_paths', [])
+    if not isinstance(release_paths, list) or not all(isinstance(name, str) for name in release_paths) or len(set(release_paths)) != len(release_paths):
+        raise ReleaseError('Release paths must be a unique array')
+    for name in release_paths:
+        if not isinstance(name, str) or not name:
+            raise ReleaseError('Release paths must be nonempty owner-relative paths')
+        safe_path(root, name)
+    for name in settings.get('release_workflows', []):
+        if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9_-]+\.ya?ml', name):
+            raise ReleaseError('Release workflows must name owner workflow files')
     return settings
 
 
@@ -96,6 +107,20 @@ def update_versions(root, projection, allowlist, settings, version):
             if count != 1:
                 raise ReleaseError('Cannot update the declared Python runtime version')
             p.write_text(text)
+        elif item['kind'] == 'plist_bundle':
+            original = p.read_bytes()
+            d = plistlib.loads(original)
+            if d.get('CFBundleShortVersionString') != version:
+                build = str(d.get('CFBundleVersion', '0'))
+                d['CFBundleVersion'] = str(int(build) + 1) if build.isdigit() else version
+            d['CFBundleShortVersionString'] = version
+            p.write_bytes(plistlib.dumps(d, fmt=plistlib.FMT_BINARY if original.startswith(b'bplist') else plistlib.FMT_XML,
+                                        sort_keys=False))
+        elif item['kind'] == 'xml_project':
+            text, count = re.subn(r'(<Version>)[^<]+(</Version>)', lambda m: m[1] + version + m[2], p.read_text())
+            if count != 1:
+                raise ReleaseError('Cannot update the declared XML project version')
+            p.write_text(text)
         else:
             raise ReleaseError('Unknown version-file adapter')
         changed.add(item['path'])
@@ -122,12 +147,25 @@ def execute_commands(root, settings, field):
         run(command, cwd=root)
 
 
-def content_changed(root, previous_commit, projection, allowlist):
+def content_changed(root, previous_commit, projection, allowlist, settings=None):
     carrier = safe_path(root, allowlist['source_root'])
     descriptor = read(carrier / 'opl-package.json')
     paths = descriptor.get('content_lock', {}).get('paths', allowlist['paths'])
     names = {str(Path(allowlist['source_root']) / p) for p in paths}
     names.update(metadata_files(root, projection, allowlist))
+    if (root / 'release-automation.json').is_file():
+        names.add('release-automation.json')
+    settings = settings or {}
+    names.update(item['path'] for item in settings.get('version_files', []))
+    release_paths = settings.get('release_paths', [])
+    if release_paths:
+        for name in release_paths:
+            safe_path(root, name)
+        difference = run(['git', 'diff', '--quiet', previous_commit, '--', *release_paths], cwd=root, check=False)
+        if difference.returncode == 1:
+            return True
+        if difference.returncode:
+            raise ReleaseError('Cannot compare the declared product release paths')
     for name in sorted(names):
         current = safe_path(root, name)
         if not current.is_file():
@@ -159,6 +197,23 @@ def wait_for_checks(repo, commit, timeout=1200):
             raise ReleaseError('Source checks have not completed')
         first = False
         time.sleep(10)
+
+
+def wait_for_release_workflows(repo, commit, tag, settings, timeout=3600):
+    """Keep the same product's native publication ahead of OCI stable promotion."""
+    deadline = time.monotonic() + timeout
+    for workflow in settings.get('release_workflows', []):
+        while True:
+            runs = gh(f'repos/{repo}/actions/workflows/{workflow}/runs?head_sha={commit}&event=push&per_page=100')['workflow_runs']
+            selected = [r for r in runs if r['head_sha'] == commit and r['head_branch'] == tag]
+            latest = max(selected, key=lambda r: r['id']) if selected else None
+            if latest and latest['status'] == 'completed':
+                if latest['conclusion'] != 'success':
+                    raise ReleaseError(f'Product release workflow failed: {workflow} {latest.get("html_url", "")}')
+                break
+            if time.monotonic() >= deadline:
+                raise ReleaseError(f'Product release workflow is pending: {workflow} {tag}')
+            time.sleep(10)
 
 
 def reconcile_release_branch(root, branch, base):
@@ -207,7 +262,7 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
     if base == payload['source_commit']:
         return {'status': 'unchanged', 'owner_source_commit': base}
     execute_commands(root, settings, 'prepare')
-    if not content_changed(root, payload['source_commit'], projection, allowlist):
+    if not content_changed(root, payload['source_commit'], projection, allowlist, settings):
         return {'status': 'unchanged_payload', 'owner_source_commit': base}
     carrier = safe_path(root, allowlist['source_root'])
     current = read(carrier / 'opl-package.json')['version']
@@ -225,10 +280,9 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
     git(root, 'config', 'user.name', 'OPL Package Publisher')
     git(root, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
     wait_for_checks(repo, base)
-    if version != current:
-        update_versions(root, projection, allowlist, settings, version)
-        execute_commands(root, settings, 'prepare')
-        refresh_locks(root, projection, allowlist, framework)
+    update_versions(root, projection, allowlist, settings, version)
+    execute_commands(root, settings, 'prepare')
+    refresh_locks(root, projection, allowlist, framework)
     execute_commands(root, settings, 'verify')
     if git(root, 'status', '--porcelain'):
         git(root, 'add', '--all')
@@ -244,4 +298,5 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
     # Tags bind the actual merged source; no existing tag is moved.
     git(root, 'push', 'origin', f'refs/tags/v{version}')
     wait_for_checks(repo, source)
+    wait_for_release_workflows(repo, source, f'v{version}', settings)
     return {'status': 'prepared', 'version': version, 'owner_source_commit': source}
