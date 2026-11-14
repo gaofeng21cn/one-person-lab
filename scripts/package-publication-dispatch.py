@@ -9,10 +9,11 @@ from package_release.common import gh, read, write
 
 
 def matching_publications(runs, entry):
-    expected = f"Package {entry['package_id']} {entry['expected_package_version']} / "
+    prefixes = (f"Package {entry['package_id']} {entry['expected_package_version']} / ".casefold(),
+                f"{entry['package_id']} {entry['expected_package_version']} / ".casefold())
     request_id = entry['publication_request_id']
     return [r for r in runs if (request_id in r.get('display_title', '') or
-                               r.get('display_title', '').startswith(expected))
+                               r.get('display_title', '').casefold().startswith(prefixes))
             and (r['status'] != 'completed' or r.get('conclusion') == 'success')]
 
 

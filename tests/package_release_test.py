@@ -137,6 +137,17 @@ class PackageReleaseTests(unittest.TestCase):
         previous['conclusion'] = 'failure'
         self.assertEqual(dispatcher.matching_publications([previous], entry), [])
 
+    def test_legacy_private_publisher_titles_reuse_the_successful_same_version(self):
+        entry = {'package_id': 'fixture', 'expected_package_version': '1.2.3', 'publication_request_id': 'daily-fixture-new'}
+        legacy = {'display_title': 'FIXTURE 1.2.3 / original-private-publication',
+                  'status': 'completed', 'conclusion': 'success'}
+        self.assertEqual(dispatcher.matching_publications([legacy], entry), [legacy])
+        legacy['display_title'] = 'FIXTURE 1.2.4 / original-private-publication'
+        self.assertEqual(dispatcher.matching_publications([legacy], entry), [])
+        legacy['display_title'] = 'FIXTURE 1.2.3 / original-private-publication'
+        legacy['conclusion'] = 'failure'
+        self.assertEqual(dispatcher.matching_publications([legacy], entry), [])
+
     def test_failed_preparation_is_excluded_from_publication(self):
         preparation = self.root / 'preparation.json'
         write(preparation, {'packages': [{'package_id': 'fixture', 'status': 'blocked', 'reason': 'Owner checks failed'}]})
