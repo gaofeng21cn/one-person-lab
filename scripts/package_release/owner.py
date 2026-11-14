@@ -153,8 +153,6 @@ def content_changed(root, previous_commit, projection, allowlist, settings=None)
     paths = descriptor.get('content_lock', {}).get('paths', allowlist['paths'])
     names = {str(Path(allowlist['source_root']) / p) for p in paths}
     names.update(metadata_files(root, projection, allowlist))
-    if (root / 'release-automation.json').is_file():
-        names.add('release-automation.json')
     settings = settings or {}
     names.update(item['path'] for item in settings.get('version_files', []))
     release_paths = settings.get('release_paths', [])
@@ -297,6 +295,6 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
         git(root, 'tag', '-a', f'v{version}', '-m', f'Package {version}', source)
     # Tags bind the actual merged source; no existing tag is moved.
     git(root, 'push', 'origin', f'refs/tags/v{version}')
-    wait_for_checks(repo, source)
     wait_for_release_workflows(repo, source, f'v{version}', settings)
+    wait_for_checks(repo, source)
     return {'status': 'prepared', 'version': version, 'owner_source_commit': source}
