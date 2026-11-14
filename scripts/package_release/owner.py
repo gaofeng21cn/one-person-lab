@@ -241,17 +241,17 @@ def reconcile_release_branch(root, branch, base):
     git(root, 'reset', '--hard', selected)
 
 
-def merge_release_changes(root, repo, base, package_id, version):
+def merge_release_changes(root, repo, base, package_id, version, *, delivery_kind='Package'):
     """Use the existing PR/CI surface, then tag the actual merged commit."""
-    branch = f'codex/daily-package-{package_id}-{base[:12]}'
+    branch = f'codex/daily-{delivery_kind.lower()}-{package_id}-{base[:12]}'
     reconcile_release_branch(root, branch, base)
     git(root, 'push', 'origin', f'HEAD:refs/heads/{branch}')
     pulls = gh(f'repos/{repo}/pulls?state=open&head={repo.split("/")[0]}:{branch}&base=main')
     if len(pulls) > 1:
         raise ReleaseError('More than one owner release PR selects the same source')
     pull = pulls[0] if pulls else gh(f'repos/{repo}/pulls', method='POST', payload={
-        'title': f'chore: prepare Package {version}', 'head': branch, 'base': 'main',
-        'body': f'Prepare the changed {package_id} delivery files, aligned version metadata and content lock for the daily OCI channel. Owner verification runs before publication.'})
+        'title': f'chore: prepare {delivery_kind} {version}', 'head': branch, 'base': 'main',
+        'body': f'Prepare the changed {package_id} delivery files and aligned version metadata for its daily release. Owner verification runs before publication.'})
     head = git(root, 'rev-parse', 'HEAD')
     wait_for_checks(repo, head)
     if gh(f'repos/{repo}/commits/main')['sha'] != base:

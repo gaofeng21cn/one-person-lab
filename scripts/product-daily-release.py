@@ -139,7 +139,10 @@ def publisher_status(config, tag, source):
     if not matches:
         return {'status': 'tag_submitted'}
     item = max(matches, key=lambda row: row['id'])
-    return {'status': 'publisher_' + (item['conclusion'] if item['status'] == 'completed' else item['status']),
+    status = 'publisher_' + (item['conclusion'] if item['status'] == 'completed' else item['status'])
+    if status == 'publisher_success' and config.get('publication_stage') == 'candidate_until_device_qualification':
+        status = 'qualification_pending'
+    return {'status': status,
             'run_id': item['id'], 'run_url': item['html_url']}
 
 
@@ -177,7 +180,7 @@ def prepare(root, config, *, apply):
         if git(root, 'status', '--porcelain'):
             git(root, 'add', '--all')
             git(root, 'commit', '-m', f"chore: prepare {config['product_id']} {result['version']}")
-            result['source_commit'] = merge_release_changes(root, repo, base, config['product_id'], result['version'])
+            result['source_commit'] = merge_release_changes(root, repo, base, config['product_id'], result['version'], delivery_kind='product')
         git(root, 'tag', '-a', result['tag'], '-m', f"{config['product_id']} {result['version']}", result['source_commit'])
         git(root, 'push', 'origin', f"refs/tags/{result['tag']}")
     else:
@@ -186,6 +189,9 @@ def prepare(root, config, *, apply):
         if state['status'] in ('publisher_failure', 'publisher_cancelled', 'publisher_timed_out'):
             gh(f"repos/{repo}/actions/runs/{state['run_id']}/rerun-failed-jobs", method='POST')
             state['status'] = 'publisher_retry_submitted'
+        elif state['status'] == 'publisher_success' and config.get('recheck_after_success'):
+            gh(f"repos/{repo}/actions/runs/{state['run_id']}/rerun", method='POST')
+            state['status'] = 'qualification_recheck_submitted'
         result.update(state)
         return result
     result.update(publisher_status(config, result['tag'], result['source_commit']))
