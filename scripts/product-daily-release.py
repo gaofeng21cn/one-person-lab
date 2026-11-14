@@ -169,7 +169,12 @@ def prepare(root, config, *, apply):
     if not apply or result['status'] == 'unchanged':
         return result
     if result['status'] != 'resume':
-        wait_for_checks(repo, base)
+        # Framework publishes itself: its current controller check is not source
+        # verification and must not wait for its own completion.
+        suite = None
+        if os.getenv('GITHUB_REPOSITORY') == repo and os.getenv('GITHUB_RUN_ID'):
+            suite = gh(f"repos/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}")['check_suite_id']
+        wait_for_checks(repo, base, ignored_check_suite_id=suite)
         git(root, 'config', 'user.name', 'OPL Package Publisher')
         git(root, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
         update_version_files(root, config.get('version_files', [config['version_file']]), result['version'])

@@ -5,9 +5,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
+from package_release.owner import wait_for_checks
 from package_release.common import ReleaseError
 spec = importlib.util.spec_from_file_location('product_release', ROOT / 'scripts/product-daily-release.py')
 product = importlib.util.module_from_spec(spec)
@@ -39,6 +41,20 @@ class ProductReleaseTests(unittest.TestCase):
     def commit(self):
         self.git('add', '.')
         self.git('commit', '--allow-empty', '-m', 'fixture')
+
+    def test_self_publication_waits_for_source_checks_without_waiting_for_its_controller(self):
+        source = {'name': 'source', 'check_suite': {'id': 10}, 'status': 'completed', 'conclusion': 'success'}
+        controller = {'name': 'daily controller', 'check_suite': {'id': 20}, 'status': 'in_progress'}
+        def api(path):
+            return {'check_runs': [source, controller]} if 'check-runs' in path else {'statuses': []}
+        with patch('package_release.owner.gh', api):
+            wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0, ignored_check_suite_id=20)
+            source['status'] = 'in_progress'
+            with self.assertRaises(ReleaseError):
+                wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0, ignored_check_suite_id=20)
+            source.update(status='completed', conclusion='failure')
+            with self.assertRaises(ReleaseError):
+                wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0, ignored_check_suite_id=20)
 
     def test_docs_only_main_does_not_allocate_a_version(self):
         (self.root / 'README.md').write_text('documentation change')

@@ -182,12 +182,13 @@ def content_changed(root, previous_commit, projection, allowlist, settings=None)
     return False
 
 
-def wait_for_checks(repo, commit, timeout=1200):
+def wait_for_checks(repo, commit, timeout=1200, *, ignored_check_suite_id=None):
     deadline = time.monotonic() + timeout
     first = True
     while True:
         response = gh(f'repos/{repo}/commits/{commit}/check-runs?per_page=100')
-        checks = response['check_runs']
+        checks = [check for check in response['check_runs']
+                  if ignored_check_suite_id is None or check.get('check_suite', {}).get('id') != ignored_check_suite_id]
         statuses = gh(f'repos/{repo}/commits/{commit}/status')['statuses']
         rejected = [s['context'] for s in statuses if s['state'] in ['error', 'failure']]
         if rejected:
