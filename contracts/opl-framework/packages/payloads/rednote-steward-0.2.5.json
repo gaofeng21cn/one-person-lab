@@ -1,0 +1,371 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "rednote-steward",
+  "plugin_id": "rednote-steward",
+  "package_version": "0.2.5",
+  "source_repo": "https://github.com/gaofeng21cn/rednote-steward.git",
+  "source_commit": "48d3a399ca93d0c46c626c2580f5d7fbdfad64fc",
+  "source_root": ".",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:af9732ad5f7891b7e35301cdae238e515c1aa0f6d874a68c8ca6335ec9f551aa"
+  },
+  "files": [
+    {
+      "path": ".agents/plugins/marketplace.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/.agents/plugins/marketplace.json",
+      "sha256": "sha256:f9bd30bb652bfa5fb16ce71d719311797668f53e3ce8de962a5c5f76b5d7ae13"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/.codex-plugin/plugin.json",
+      "sha256": "sha256:ec335135a5363189c6aa018bc0c26d0d3301934898f5b9c67253204b468e4f19"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/cover-editor.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/cover-editor.mjs",
+      "sha256": "sha256:f760e37fb387078784088053e64437d61f4353a7b11d574392300e89cf31adef"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/declarations.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/declarations.mjs",
+      "sha256": "sha256:82e74e159717f45e2866e9ef9d315d13177688ce58f97526e1293b11a4b82a59"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/edit-note.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/edit-note.js",
+      "sha256": "sha256:7653d0845610c80396be0cb4396986a4dd3ad88d47657d72245055b0a2df3d21"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/editor-helpers.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/editor-helpers.mjs",
+      "sha256": "sha256:81c7cec3323679dbcebd78993703d2073af255691b076c2c896653588d7a77a4"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/inventory.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/inventory.js",
+      "sha256": "sha256:fa2a1b8245506c2a74e26579959f2108117d9bf7ec2417e68e4791eef14170d4"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/owned-tab.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/owned-tab.mjs",
+      "sha256": "sha256:426739c6232e15fd15bceec5783c03c22f6bd048e73da26e012e6f441ab876c9"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/page-check.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/page-check.mjs",
+      "sha256": "sha256:cfe69edda93a15d9950327321a51697d0b1b064dddfde9f362beedcc17adfd8c"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/steward-account.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/steward-account.js",
+      "sha256": "sha256:17bed6710f80af5211fa3ed80e4100b0274350f03eab0232d5006f8c9c32d87e"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/steward-publish.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/steward-publish.js",
+      "sha256": "sha256:737c5c135d0810a97a5cc07db906fdb70461b5ad9e8a1fb358416667587fc425"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/steward-read-note.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/steward-read-note.js",
+      "sha256": "sha256:c5da8e09dc00095f5386b1de040ee57f8d2878f6dc7268ac4c84a80d174e6bea"
+    },
+    {
+      "path": "adapters/opencli/xiaohongshu/topic-probe.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/adapters/opencli/xiaohongshu/topic-probe.js",
+      "sha256": "sha256:f63ae6335ce3d0d50b3b2e98a54e540960dab3ab204bd597642aec818a7c2c2d"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/app-contribution-adapter.json",
+      "sha256": "sha256:c50f21a36c4b4d62b9df96a89265bcb857eeb6000d09452712d0efe927ddfd68"
+    },
+    {
+      "path": "assets/branding/rednote-steward-logo-v2.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/assets/branding/rednote-steward-logo-v2.png",
+      "sha256": "sha256:c4c112993572b5018ef7ed334d72974ce4f6b7e1ec58d71de198b237ce8580d8"
+    },
+    {
+      "path": "install.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/install.sh",
+      "sha256": "sha256:7132d647d706abd8d5b50aa37bf6fc1b2c9272b700b6d8ad0d496f86c32ffed3"
+    },
+    {
+      "path": "mcp.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/mcp.json",
+      "sha256": "sha256:c0e1d5d010039deae4e4a203ce56f4490249d41964d174dcbb70f3cacba61d91"
+    },
+    {
+      "path": "package-lock.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/package-lock.json",
+      "sha256": "sha256:b6aea4da1a62aaf5e21684d1a9fcdb7d7fe867f73fadf64e3590f19b708b522a"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/package.json",
+      "sha256": "sha256:28954f75a37f3a0afd0f2c620937a44f58b1b04bf50591eff2b3d73597e50282"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/plugin.json",
+      "sha256": "sha256:b5202bec42163f80cfd143bc37eb56597ae319464294d7531486c10a72a328e4"
+    },
+    {
+      "path": "release-automation.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/release-automation.json",
+      "sha256": "sha256:d0b0656dcdbbd3a9253236f28083e8dcdd179192e2580f5cb818b4c631354010"
+    },
+    {
+      "path": "scripts/check-package.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/scripts/check-package.mjs",
+      "sha256": "sha256:e43d745d93eb4a759c880cb0d549a6328a1cbf29f89009066343e8bb1a4f48de"
+    },
+    {
+      "path": "scripts/download-stable.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/scripts/download-stable.mjs",
+      "sha256": "sha256:87306b20e58c65c0641fd03f9466165dbb21fc7cd230a9c09a34aa9cfc505c70"
+    },
+    {
+      "path": "scripts/install-local.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/scripts/install-local.mjs",
+      "sha256": "sha256:067536d88e41535802ac181fb86c7603062858a0e2c9350a94e9b7fc510d5130"
+    },
+    {
+      "path": "scripts/lib/npm-pack-output.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/scripts/lib/npm-pack-output.mjs",
+      "sha256": "sha256:e4d9354065bac357f0568fa089edd67cf4534c2412234f649dd42ab1fc63dd27"
+    },
+    {
+      "path": "scripts/package-lock.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/scripts/package-lock.mjs",
+      "sha256": "sha256:f175148d77892eb93b6238d9f3e59e9451a50d0edfe78aaabb99e3bec301d9a4"
+    },
+    {
+      "path": "scripts/package-release.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/scripts/package-release.mjs",
+      "sha256": "sha256:9a73b32f9bf5bebf715925d10ada5b6a3d6c7cd918f288a62fd2d2af46675e5c"
+    },
+    {
+      "path": "scripts/release-manifest.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/scripts/release-manifest.mjs",
+      "sha256": "sha256:6663aa1976d77a26e3c20657833bf8df8c7db2e086035a1ead726e80a05b8fdd"
+    },
+    {
+      "path": "scripts/run-plugin.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/scripts/run-plugin.mjs",
+      "sha256": "sha256:1b1dccba569bb4de5bd914fce076adc1d0b20737799795764bda6cb7ff654e22"
+    },
+    {
+      "path": "scripts/uninstall.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/scripts/uninstall.mjs",
+      "sha256": "sha256:31ebfa7298f0f561db9a55d281669e4808e280fea757a52151a24fc112b2f920"
+    },
+    {
+      "path": "scripts/uninstall.sh",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/scripts/uninstall.sh",
+      "sha256": "sha256:a6a55b114b81300447bbdba647f52f16c5f68c5cc5e81675f5e1ba12a23979d3"
+    },
+    {
+      "path": "skills/rednote-steward/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/skills/rednote-steward/SKILL.md",
+      "sha256": "sha256:e37c6a8c05a94c606ea85e631685ba395d79b8f22a6ab33ba2ab2aca5994fffb"
+    },
+    {
+      "path": "src/app-contribution.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/app-contribution.mjs",
+      "sha256": "sha256:fb2d6765e11658f4b63663a2f5bfa91af819c7b533fe079c49e25f38f55e91c1"
+    },
+    {
+      "path": "src/cli.mjs",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/cli.mjs",
+      "sha256": "sha256:7bbda7a60afe22c5695f2eb700999dd6102cfe3f3f2b24027928e5c9e74d6445"
+    },
+    {
+      "path": "src/lib/audit.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/audit.mjs",
+      "sha256": "sha256:a1d400140970d249955b4d9480df4d7469a4d50a6f909e0c9944af1f944677a4"
+    },
+    {
+      "path": "src/lib/backup.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/backup.mjs",
+      "sha256": "sha256:1dd5ab1b731ad6bde846c33bb146a07e9e1b46d6c2dbc10e8a7f317d6ea27327"
+    },
+    {
+      "path": "src/lib/build.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/build.mjs",
+      "sha256": "sha256:d6662c7c7bbe355cb343acc78c10ee673c8712533e92c6f5001c901417ed656d"
+    },
+    {
+      "path": "src/lib/catalog.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/catalog.mjs",
+      "sha256": "sha256:906291fcf99e3787cc163a762280b112e4d253f51d463c7b6c620b5ba17acfa9"
+    },
+    {
+      "path": "src/lib/config.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/config.mjs",
+      "sha256": "sha256:db7967a0181d8855496c34e70cb3c76e9fffcaa43666d3a56518c5ca415208de"
+    },
+    {
+      "path": "src/lib/controller.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/controller.mjs",
+      "sha256": "sha256:ee1f5b589efdb147f0fae4eba444e74fe3aeaeb669de02f40fabc7206062fd8a"
+    },
+    {
+      "path": "src/lib/cover-evidence.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/cover-evidence.mjs",
+      "sha256": "sha256:96d68492085bedad0ae0f9bdae1d97c308600aa3220910d510f4332622ee48fe"
+    },
+    {
+      "path": "src/lib/db.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/db.mjs",
+      "sha256": "sha256:22ec72abe14fa9dd17f35ecc6674d4b547a7332de0149091bf22777cf1a46b07"
+    },
+    {
+      "path": "src/lib/health.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/health.mjs",
+      "sha256": "sha256:bac1885b183dfef2c82e03a7c8d6fba3e9cd6832e45070084377a117d32ef22f"
+    },
+    {
+      "path": "src/lib/installation.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/installation.mjs",
+      "sha256": "sha256:9e863b3cb861da154100d41268876f01b319c12f9b1dd37b81006b122387ed15"
+    },
+    {
+      "path": "src/lib/lineage.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/lineage.mjs",
+      "sha256": "sha256:6c21844ecc37f4294b88cf727421fc5d5f644636da72ae86ec1a3567242a4ffb"
+    },
+    {
+      "path": "src/lib/media.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/media.mjs",
+      "sha256": "sha256:f6a656118df0c56de166c052f0f2b344c8f8d068f5ec5706cda72c85ad308566"
+    },
+    {
+      "path": "src/lib/migration.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/migration.mjs",
+      "sha256": "sha256:499822540fb95d5abb21773522b1371dbff4eb65464a2b02f16620f10e96c673"
+    },
+    {
+      "path": "src/lib/opencli.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/opencli.mjs",
+      "sha256": "sha256:086e30ce10bc9fdb9edb95a884284c45585f0a7120859a59cc251bc47389fbff"
+    },
+    {
+      "path": "src/lib/owner.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/owner.mjs",
+      "sha256": "sha256:6a5e6e3feaf0bd29cd7c92d2cfe662ecf281eadc0cdeecca29af69e650d2138b"
+    },
+    {
+      "path": "src/lib/package.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/package.mjs",
+      "sha256": "sha256:9249afa4fd46f0c7778cf076efab9a79bb9f336925bbe3b2f7f9ce2f84c829e0"
+    },
+    {
+      "path": "src/lib/progress.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/progress.mjs",
+      "sha256": "sha256:321aeaa427178817e1e35825820d432f4dca6e13a1b37f79c75c4d07dd8554c9"
+    },
+    {
+      "path": "src/lib/qualification.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/qualification.mjs",
+      "sha256": "sha256:e5e3d0a04d2e3c358095875a8173a0c6864c9f6761d716ca7b25b84864aed56f"
+    },
+    {
+      "path": "src/lib/review.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/review.mjs",
+      "sha256": "sha256:2452befd2185b925d1d0372e79a9512cb1cae8d496b37a65d7aac5a342381618"
+    },
+    {
+      "path": "src/lib/video-compare.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/video-compare.mjs",
+      "sha256": "sha256:f3433efabe8d135e221bad3d3b81215085761bd59af6333faf91cc26ad24038c"
+    },
+    {
+      "path": "src/lib/workspace.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/lib/workspace.mjs",
+      "sha256": "sha256:1d6b12f5ccf71445fdca8f8b63264818759b5c8d96bfe71fd8ff7c59b2108c3f"
+    },
+    {
+      "path": "src/mcp.mjs",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/mcp.mjs",
+      "sha256": "sha256:d45020b77b7e674e107558f083e6d6c5bd0a93c0521a02c2eb15f63951e47199"
+    },
+    {
+      "path": "src/opencli-runner.mjs",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/opencli-runner.mjs",
+      "sha256": "sha256:bf85fa39f1108f9fa8b118e7f4ad7d9b3965dee49151746385c35d081cbfa5f5"
+    },
+    {
+      "path": "src/setup.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/src/setup.mjs",
+      "sha256": "sha256:4f43120d055f812d9c1c112e5596c1c0847090dcf1ee60745364379d98706c02"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/rednote-steward/48d3a399ca93d0c46c626c2580f5d7fbdfad64fc/opl-package.json",
+      "sha256": "sha256:616ae1965babb8ccf1d57015547cab3b7ab9ff6c9f69ded6ea47bed470258ea6"
+    }
+  ]
+}
