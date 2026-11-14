@@ -3,7 +3,7 @@
   "package_id": "photo-steward",
   "display_name": "Photo Steward",
   "publisher": "gaofeng21cn",
-  "version": "0.4.7",
+  "version": "0.4.9",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/photo-steward.git",
   "package_role": "capability_package",
@@ -24,7 +24,46 @@
     "optional_skills_installed_by_default": true,
     "default_materialization_policy": "all_exported_skills"
   },
-  "entrypoints": [],
+  "entrypoints": [
+    {
+      "entrypoint_id": "photo-steward.installation",
+      "entrypoint_kind": "opl_software_installation_cli",
+      "source_ref": "scripts/manage_installation.py",
+      "runtime": "python3",
+      "protocol": "opl_software_installation.v1",
+      "discovery": {
+        "kind": "macos_bundle",
+        "bundle_id": "com.photosteward.photo-center",
+        "bundle_names": [
+          "Photo Steward.app"
+        ],
+        "executable": "PhotoCenterMenuBar",
+        "runtime_relative_path": "Contents/Resources/PhotoStewardRuntime",
+        "cli_names": [
+          "photo-steward",
+          "icloud-photo-sync"
+        ],
+        "runtime_current": "Library/Application Support/Photo Steward/runtime/current",
+        "development_manifest": "pyproject.toml"
+      },
+      "kind": "opl_software_installation_cli",
+      "release_target": {
+        "version": "0.4.8",
+        "channel": "stable",
+        "tag": "v0.4.8",
+        "asset": "Photo-Steward-0.4.8-macOS-universal.zip"
+      },
+      "operations": [
+        "inspect",
+        "install",
+        "activate",
+        "update",
+        "uninstall",
+        "link",
+        "unlink"
+      ]
+    }
+  ],
   "codex_surface": {
     "plugin_id": "photo-steward",
     "plugin_source_path": ".",
@@ -53,8 +92,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/photo-steward-0.4.7.json",
-    "carrier_source_commit": "cc69d94fb4eead6a246bd1e41ecd012316a01cba"
+    "plugin_payload_manifest_url": "payloads/photo-steward-0.4.9.json",
+    "carrier_source_commit": "68c838e8092f355d6c74a8f348dc088ea2c1e8a4"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -135,10 +174,28 @@
       ".codex-plugin/plugin.json",
       "app-contribution-adapter.json",
       "plugin.json",
+      "scripts/manage_installation.py",
       "skills/photo-steward/SKILL.md",
-      "skills/photo-steward/agents/openai.yaml"
+      "skills/photo-steward/agents/openai.yaml",
+      "tools/icloud_photo_sync/installation.py"
     ],
-    "digest": "sha256:e74d9744ad00004a650b4bbe1b69413edeac0e4a2188c4230ec49f12aef18bf6"
+    "digest": "sha256:feaa710381dcc2c2e6ea36fab1ca756037315791973d30e2cf3fdbf7bd533e42"
+  },
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "Photo Steward",
+      "en-US": "Photo Steward"
+    },
+    "description_i18n": {
+      "zh-CN": "以 iCloud Photos 为主源，规划、审阅并执行照片镜像；Agent 与桌面共用同一运行时。",
+      "en-US": "Plan, review, and apply photo mirrors from iCloud Photos through one shared Agent and desktop runtime."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "查看 iCloud 照片镜像状态，审阅镜像计划。",
+      "en-US": "Review photo mirror plans and status."
+    },
+    "home_shortcuts": [],
+    "software_type": "application"
   },
   "publication_source": {
     "module_id": "photo-steward",
@@ -147,21 +204,5 @@
   },
   "publication_channel_admission": "admitted",
   "owner_package_manifest_ref": "plugins/photo-steward/opl-package.json",
-  "owner_package_descriptor_ref": "opl-package.json",
-  "presentation": {
-    "display_name_i18n": {
-      "zh-CN": "Photo Steward",
-      "en-US": "Photo Steward"
-    },
-    "description_i18n": {
-      "zh-CN": "查看 iCloud 照片镜像状态，审阅镜像计划。",
-      "en-US": "Review photo mirror plans and status."
-    },
-    "session_routing_summary_i18n": {
-      "zh-CN": "查看 iCloud 照片镜像状态，审阅镜像计划。",
-      "en-US": "Review photo mirror plans and status."
-    },
-    "home_shortcuts": [],
-    "software_type": "application"
-  }
+  "owner_package_descriptor_ref": "opl-package.json"
 }
