@@ -188,6 +188,8 @@ macOS 内部 build counter 保持递增。已有新版本也重新对齐已声�
 才生成稳定 OCI 投影。签名、公证、原生构建与资产回读继续由产品的原生发布器负责。
 精确主线 CI 失败时停止该包；版本与投影变更通过 PR 和精确 head CI 合并，
 合并前重新检查主线未前进，源码 tag 绑定实际合入的提交。跨仓身份使用 OPL Package Publisher
+合并后逐树核对正式源码与已经通过 PR CI 的文件树一致；相同字节不重复等待 merge/tag
+再次触发的通用扫描。原生发布 workflow、精确 tag、签名与 OCI 门禁仍独立执行。
 的短时 GitHub App token，CI 正常触发。App 安装覆盖账号的当前及未来仓库；每日任务根据
 Framework 动态准入和 owner 配置选择发布对象，新 Package 无需重复配置安装范围。
 未声明 owner 配置、未知可见性和无权读取分别记录，不解释成缺版本或缺产物。
