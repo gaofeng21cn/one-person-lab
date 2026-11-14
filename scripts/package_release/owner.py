@@ -68,6 +68,13 @@ def update_versions(root, projection, allowlist, settings, version):
     refs = list(settings.get('version_files', []))
     if language_ref and not any(x['path'] == language_ref for x in refs):
         refs.append({'path': language_ref, 'kind': 'toml_project' if language_ref.endswith('.toml') else 'json'})
+    changed.update(update_version_files(root, refs, version))
+    return changed
+
+
+def update_version_files(root, refs, version):
+    """Align declared language/native metadata for Package and product releases."""
+    changed = set()
     for item in refs:
         p = safe_path(root, item['path'])
         if item['kind'] == 'json':
@@ -175,12 +182,13 @@ def content_changed(root, previous_commit, projection, allowlist, settings=None)
     return False
 
 
-def wait_for_checks(repo, commit, timeout=1200):
+def wait_for_checks(repo, commit, timeout=1200, *, ignored_check_suite_id=None):
     deadline = time.monotonic() + timeout
     first = True
     while True:
         response = gh(f'repos/{repo}/commits/{commit}/check-runs?per_page=100')
-        checks = response['check_runs']
+        checks = [check for check in response['check_runs']
+                  if ignored_check_suite_id is None or check.get('check_suite', {}).get('id') != ignored_check_suite_id]
         statuses = gh(f'repos/{repo}/commits/{commit}/status')['statuses']
         rejected = [s['context'] for s in statuses if s['state'] in ['error', 'failure']]
         if rejected:
@@ -234,17 +242,17 @@ def reconcile_release_branch(root, branch, base):
     git(root, 'reset', '--hard', selected)
 
 
-def merge_release_changes(root, repo, base, package_id, version):
+def merge_release_changes(root, repo, base, package_id, version, *, delivery_kind='Package'):
     """Use the existing PR/CI surface, then tag the actual merged commit."""
-    branch = f'codex/daily-package-{package_id}-{base[:12]}'
+    branch = f'codex/daily-{delivery_kind.lower()}-{package_id}-{base[:12]}'
     reconcile_release_branch(root, branch, base)
     git(root, 'push', 'origin', f'HEAD:refs/heads/{branch}')
     pulls = gh(f'repos/{repo}/pulls?state=open&head={repo.split("/")[0]}:{branch}&base=main')
     if len(pulls) > 1:
         raise ReleaseError('More than one owner release PR selects the same source')
     pull = pulls[0] if pulls else gh(f'repos/{repo}/pulls', method='POST', payload={
-        'title': f'chore: prepare Package {version}', 'head': branch, 'base': 'main',
-        'body': f'Prepare the changed {package_id} delivery files, aligned version metadata and content lock for the daily OCI channel. Owner verification runs before publication.'})
+        'title': f'chore: prepare {delivery_kind} {version}', 'head': branch, 'base': 'main',
+        'body': f'Prepare the changed {package_id} delivery files and aligned version metadata for its daily release. Owner verification runs before publication.'})
     head = git(root, 'rev-parse', 'HEAD')
     wait_for_checks(repo, head)
     if gh(f'repos/{repo}/commits/main')['sha'] != base:

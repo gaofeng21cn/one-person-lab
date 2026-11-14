@@ -1,0 +1,40 @@
+{
+  "schema_version": "opl.product-release.v1",
+  "product_id": "opl-framework",
+  "repository": "gaofeng21cn/one-person-lab",
+  "strategy": "daily_patch",
+  "trigger": "tag",
+  "tag_prefix": "framework-v",
+  "publisher_workflow": "publish-framework.yml",
+  "channel": {
+    "kind": "framework_oci"
+  },
+  "version_file": {
+    "path": "package.json",
+    "kind": "json"
+  },
+  "version_files": [
+    {
+      "path": "package.json",
+      "kind": "json"
+    },
+    {
+      "path": "package-lock.json",
+      "kind": "json"
+    }
+  ],
+  "release_paths": [
+    "src",
+    "python",
+    "bin",
+    "packages",
+    "contracts",
+    "scripts",
+    "package.json",
+    "package-lock.json",
+    "install.sh",
+    ".github/workflows/publish-framework.yml"
+  ],
+  "prepare": [],
+  "verify": []
+}

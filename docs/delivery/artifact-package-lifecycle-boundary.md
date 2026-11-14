@@ -132,6 +132,22 @@ Framework 的入口为 `.github/workflows/publish-framework.yml`；它仅发布
 按 digest 校验下载内容。Homebrew Formula 消费同一 Framework artifact，
 App Cask 消费 App 的发布结果，两者独立推进。
 
+### 每日原生产品发布
+
+`daily-product-channel.yml` 每日独立处理 `product-release-owners.json` 登记的
+第一方产品；它是发布路由，不是 Package 注册表或安装状态。已准入的 Package
+继续由原有每日 Package 流程动态发现，不重复登记。App Stable 沿用其产品发布入口。
+
+产品根目录的 `product-release.json` 声明交付路径、版本文件、tag 格式及原生发布
+workflow。共用准备器比较已发布源码与 main，只对交付变化分配补丁版本，
+经现有 PR/CI 合入后创建 annotated tag。安装包、容器、Feed 与设备验收仍归
+各产品发布器。已冻结但未完成的 tag 复用原源码与发布 run，不移动旧 tag。
+DSH 的 `owner_schedule` 只回读既有每日任务，避免重复调度。
+
+每日 Actions artifact 分别记录各产品的发布进度、原生 run 或阻塞原因；提交 tag、
+候选构建成功与 stable 发布成功分别回读。该流程不安装用户软件、不部署生产实例、
+不更新真实设备。
+
 ## 软件包的发布入口
 
 Package 只有一套软件包发布机制：`publish-package.yml` 发布不可变版本并推进该
