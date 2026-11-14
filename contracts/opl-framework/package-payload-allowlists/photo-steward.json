@@ -8,8 +8,10 @@
     ".codex-plugin/plugin.json",
     "app-contribution-adapter.json",
     "plugin.json",
+    "scripts/manage_installation.py",
     "skills/photo-steward/SKILL.md",
     "skills/photo-steward/agents/openai.yaml",
+    "tools/icloud_photo_sync/installation.py",
     "opl-package.json"
   ]
 }

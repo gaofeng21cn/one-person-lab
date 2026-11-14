@@ -3,7 +3,7 @@
   "package_id": "glkvm-native",
   "display_name": "GLKVM Native",
   "publisher": "gaofeng21cn",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/glkvm-native.git",
   "package_role": "capability_package",
@@ -49,8 +49,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/glkvm-native-0.1.4.json",
-    "carrier_source_commit": "a05dfbea0a88af9ee3dd288a9fe1384126ee3465"
+    "plugin_payload_manifest_url": "payloads/glkvm-native-0.1.5.json",
+    "carrier_source_commit": "dc700ee605f102caed4907dff21a8567e15ac6be"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -97,6 +97,7 @@
       ".codex-plugin/plugin.json",
       "app-contribution-adapter.json",
       "app_contribution.py",
+      "owner_profile.py",
       "plugin.json",
       "skills/glkvm-control/SKILL.md",
       "skills/glkvm-control/agents/openai.yaml",
@@ -106,8 +107,11 @@
       "skills/glkvm-control/references/session-recovery.md",
       "skills/glkvm-control/references/windows-maintenance.md"
     ],
-    "digest": "sha256:21fe37a1916ca85cb116dfe3624d4330d09a41a5d1acfadec90978b78c5265f9"
+    "digest": "sha256:ba4973dbea93e098368ac8e4404d77b0f37c9f26a5c26e123d82e7f627e1b954"
   },
+  "visibility": "authorized_only",
+  "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/glkvm-native",
+  "credential_provider": "github_packages",
   "publication_source": {
     "module_id": "glkvm-native",
     "owner_package_manifest_ref": "plugins/glkvm-native/opl-package.json",
@@ -131,8 +135,5 @@
     },
     "home_shortcuts": [],
     "software_type": "capability"
-  },
-  "visibility": "authorized_only",
-  "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/glkvm-native",
-  "credential_provider": "github_packages"
+  }
 }
