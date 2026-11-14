@@ -107,6 +107,18 @@ class PackageReleaseTests(unittest.TestCase):
                             {'version_files': [{'path': 'Info.plist', 'kind': 'plist_bundle'}]}, '1.2.4')
             self.assertEqual(plistlib.loads(info.read_bytes())['CFBundleVersion'], '8')
 
+    def test_native_workflow_changes_require_the_same_product_release(self):
+        workflow = self.root / '.github/workflows/release.yml'
+        workflow.parent.mkdir(parents=True)
+        workflow.write_text('name: original')
+        self.git('add', '.')
+        self.git('commit', '-m', 'native release workflow')
+        previous = self.git('rev-parse', 'HEAD')
+        settings = {'release_workflows': ['release.yml']}
+        self.assertFalse(content_changed(self.root, previous, self.projection, self.allowlist, settings))
+        workflow.write_text('name: changed')
+        self.assertTrue(content_changed(self.root, previous, self.projection, self.allowlist, settings))
+
     def test_xml_project_version_uses_the_same_product_version(self):
         path = self.root / 'project.csproj'
         path.write_text('<Project><PropertyGroup><Version>1.2.3</Version></PropertyGroup></Project>')
@@ -128,6 +140,11 @@ class PackageReleaseTests(unittest.TestCase):
         selected['conclusion'] = 'success'
         with patch('package_release.owner.gh', return_value={'workflow_runs': [selected]}):
             with self.assertRaisesRegex(ReleaseError, 'workflow is pending'):
+                wait_for_release_workflows('example/fixture', 'a' * 40, 'v1.2.4', settings, timeout=0)
+        selected.update(head_branch='v1.2.4', status='in_progress', conclusion=None)
+        with patch('package_release.owner.gh', side_effect=[{'workflow_runs': [selected]},
+                  {'jobs': [{'name': 'macos', 'status': 'completed', 'conclusion': 'failure'}]}]):
+            with self.assertRaisesRegex(ReleaseError, 'release job failed'):
                 wait_for_release_workflows('example/fixture', 'a' * 40, 'v1.2.4', settings, timeout=0)
 
     def test_registry_denial_stays_unknown(self):

@@ -104,7 +104,7 @@ test('Fleet Agent owner projection is a schema-valid capability Package with one
     plugin_selector: 'opl-fleet-agent@opl-fleet-agent',
     executor_route: 'codex_cli',
     marketplace_source: 'gaofeng21cn/opl-fleet-agent',
-    publication_ref: null,
+    publication_ref: 'ghcr.io/gaofeng21cn/one-person-lab-packages/opl-fleet-agent:latest-stable',
   });
   assert.equal(resolvePackageHostIntegration(manifest as any).integration_kind, 'capability_provider');
 

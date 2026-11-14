@@ -2,6 +2,7 @@
 """Prepare changed owner Packages and refresh their existing Framework projections."""
 from __future__ import annotations
 import argparse
+import base64
 import json
 import os
 import sys
@@ -55,6 +56,17 @@ def prepare(args):
                 if main == payload['source_commit']:
                     result.update(status='unchanged', owner_source_commit=main)
                 else:
+                    difference = gh(f"repos/{repo}/compare/{payload['source_commit']}...{main}")
+                    files = [row['filename'] for row in difference.get('files', [])]
+                    if files and len(files) < 300 and all(name == 'release-automation.json' or name.startswith('.github/') for name in files):
+                        remote_settings = gh(f'repos/{repo}/contents/release-automation.json?ref={main}')
+                        settings = json.loads(base64.b64decode(remote_settings['content']))
+                        product_paths = settings.get('release_paths', [])
+                        product_paths += [f'.github/workflows/{name}' for name in settings.get('release_workflows', [])]
+                        if not any(name == p or name.startswith(p.rstrip('/') + '/') for name in files for p in product_paths):
+                            result.update(status='unchanged_payload', owner_source_commit=main)
+                            results.append(result)
+                            continue
                     root = Path(temporary) / pid
                     run(['git', 'clone', '--filter=blob:none', '--branch', 'main', '--single-branch',
                          '--quiet', projection['source_repo'], root])

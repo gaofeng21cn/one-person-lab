@@ -155,6 +155,7 @@ def content_changed(root, previous_commit, projection, allowlist, settings=None)
     names.update(metadata_files(root, projection, allowlist))
     settings = settings or {}
     names.update(item['path'] for item in settings.get('version_files', []))
+    names.update(f'.github/workflows/{name}' for name in settings.get('release_workflows', []))
     release_paths = settings.get('release_paths', [])
     if release_paths:
         for name in release_paths:
@@ -209,6 +210,12 @@ def wait_for_release_workflows(repo, commit, tag, settings, timeout=3600):
                 if latest['conclusion'] != 'success':
                     raise ReleaseError(f'Product release workflow failed: {workflow} {latest.get("html_url", "")}')
                 break
+            if latest and latest['status'] == 'in_progress':
+                jobs = gh(f'repos/{repo}/actions/runs/{latest["id"]}/jobs?filter=latest&per_page=100')['jobs']
+                failed = [job['name'] for job in jobs if job['status'] == 'completed'
+                          and job['conclusion'] in ['failure', 'cancelled', 'timed_out', 'action_required']]
+                if failed:
+                    raise ReleaseError(f'Product release job failed: {workflow} {", ".join(failed)} {latest.get("html_url", "")}')
             if time.monotonic() >= deadline:
                 raise ReleaseError(f'Product release workflow is pending: {workflow} {tag}')
             time.sleep(10)
@@ -248,6 +255,8 @@ def merge_release_changes(root, repo, base, package_id, version):
         raise ReleaseError('Release PR was not merged')
     git(root, 'fetch', 'origin', 'main', '--quiet')
     git(root, 'reset', '--hard', 'origin/main')
+    if git(root, 'rev-parse', 'HEAD^{tree}') != git(root, 'rev-parse', f'{head}^{{tree}}'):
+        raise ReleaseError('Merged release source differs from the verified PR tree; retry from fresh main')
     return git(root, 'rev-parse', 'HEAD')
 
 def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
@@ -296,5 +305,4 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
     # Tags bind the actual merged source; no existing tag is moved.
     git(root, 'push', 'origin', f'refs/tags/v{version}')
     wait_for_release_workflows(repo, source, f'v{version}', settings)
-    wait_for_checks(repo, source)
     return {'status': 'prepared', 'version': version, 'owner_source_commit': source}
