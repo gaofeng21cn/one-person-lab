@@ -4,7 +4,7 @@
   "display_name": "Kindle Pilot",
   "description": "Agent-guided Kindle setup, reading configuration, and library maintenance.",
   "publisher": "gaofeng21cn",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/kindle-pilot.git",
   "visibility": "public",
@@ -47,8 +47,8 @@
       "marketplace_source": "gaofeng21cn/kindle-pilot",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/kindle-pilot:latest-stable"
     },
-    "carrier_source_commit": "fd83fbce55b4878628173a6b20da0d3e2651682d",
-    "plugin_payload_manifest_url": "payloads/kindle-pilot-0.2.0.json"
+    "plugin_payload_manifest_url": "payloads/kindle-pilot-0.2.2.json",
+    "carrier_source_commit": "4ec498f11e365961bea4c02a0bbb4f45dce2d4c3"
   },
   "content_lock": {
     "algorithm": "sha256",
@@ -62,6 +62,8 @@
       "assets/README.md",
       "assets/kindlepilot.koplugin/_meta.lua",
       "assets/kindlepilot.koplugin/main.lua",
+      "assets/kindlepilot.koplugin/pairing_daemon.lua",
+      "assets/kindlepilot.koplugin/pairing_daemon_entry.lua",
       "assets/wireless-cover.png",
       "assets/wireless-cover.prompt.txt",
       "capabilities/kindle-pilot.json",
@@ -79,6 +81,7 @@
       "scripts/kindle-collection-additions.py",
       "scripts/kindle-collections.py",
       "scripts/kindle-mtp.py",
+      "scripts/kindle-reading-setup.py",
       "scripts/kindle-wireless.py",
       "skills/kindle-pilot/SKILL.md",
       "skills/kindle-pilot/agents/openai.yaml",
@@ -95,12 +98,13 @@
       "src/kindle_companion/mtp.py",
       "src/kindle_companion/pairing.py",
       "src/kindle_companion/plan.py",
+      "src/kindle_companion/reading_setup.py",
       "src/kindle_companion/software.py",
       "src/kindle_companion/state.py",
       "src/kindle_companion/verify.py",
       "src/kindle_companion/wireless.py"
     ],
-    "digest": "sha256:bd9d5fdcc343c10d1877e709a18b057970538ef422e2fa7161d167cf42f1218d"
+    "digest": "sha256:8c1ed34bc2882d6c16b1da2a79c85fc102754ec2a1ec20040c9d3c6ecee26596"
   },
   "presentation": {
     "display_name_i18n": {
@@ -119,12 +123,12 @@
     "software_type": "agent"
   },
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
-  "owner_package_manifest_ref": "opl-package.json",
-  "owner_package_descriptor_ref": "opl-package.json",
   "publication_source": {
     "module_id": "kindle-pilot",
     "owner_package_manifest_ref": "opl-package.json",
     "owner_plugin_manifest_ref": ".codex-plugin/plugin.json",
     "owner_language_version_ref": "pyproject.toml"
-  }
+  },
+  "owner_package_manifest_ref": "opl-package.json",
+  "owner_package_descriptor_ref": "opl-package.json"
 }
