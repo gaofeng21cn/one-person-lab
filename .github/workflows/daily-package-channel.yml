@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '23 18 * * *'
   workflow_dispatch:
+    inputs:
+      package_id:
+        description: Optional registered Package to prepare and publish
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -18,225 +24,73 @@ env:
 
 jobs:
   detect-package-channel-change:
-    name: Detect package-channel source changes
+    name: Prepare owner versions and detect independent channels
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 180
     steps:
       - name: Checkout OPL
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '26'
           cache: npm
-
       - name: Install dependencies
-        run: npm ci
-
-      - name: Setup ORAS
-        uses: oras-project/setup-oras@5e2f2482b30b0cb3e14e67f89a80c88c659a7c63 # v2.0.3
-
-      - name: Authenticate Package channel reads
+        run: |
+          npm ci --ignore-scripts
+          npm run build:packages
+      - name: Create scoped publication identity
+        id: publisher-token
+        if: vars.PACKAGE_RELEASE_APP_ID != ''
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.PACKAGE_RELEASE_APP_ID }}
+          private-key: ${{ secrets.PACKAGE_RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-contents: write
+          permission-actions: write
+          permission-pull-requests: write
+          permission-workflows: write
+          permission-checks: read
+          permission-statuses: read
+      - name: Prepare changed owner versions
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: printf '%s' "$GH_TOKEN" | oras login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-
-      - name: Read public Package candidates and private owner delegations
-        run: node --experimental-strip-types scripts/package-channel-candidates.mjs dist/opl-daily-packages/daily-package-channel-summary.json
-
-      - name: Compare independent Package fingerprints
-        id: decide
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
+          GH_TOKEN: ${{ steps.publisher-token.outputs.token || github.token }}
+          SELECTED_PACKAGE: ${{ inputs.package_id }}
         run: |
           set -euo pipefail
-          summary=dist/opl-daily-packages/daily-package-channel-summary.json
-          test -f "$summary"
-          owner_state=dist/opl-daily-packages/current-owner-channels.json
-          plan=dist/opl-daily-packages/owner-channel-publication-plan.json
-          jq -n '{surface_kind:"opl_package_owner_channel_state.v1",packages:{}}' > "$owner_state"
-          while IFS= read -r package_id; do
-            manifest="contracts/opl-framework/packages/${package_id}.json"
-            visibility="$(jq -er '.visibility // "public" | select(. == "public" or . == "authorized_only")' "$manifest")"
-            if [ "$visibility" != public ]; then
-              echo "::error::${package_id}: private publication belongs to its private owner, not the public daily publisher."
-              exit 1
-            fi
-            image="ghcr.io/${{ github.repository_owner }}/one-person-lab-packages/$package_id"
-            publication_ref="$(jq -r '.codex_surface.configured_codex_plugin_carrier.publication_ref // empty' "$manifest")"
-            if [ -n "$publication_ref" ]; then
-              [ "$publication_ref" = "${image}:latest-stable" ]
-            fi
-            descriptor_file="$RUNNER_TEMP/opl-$package_id-latest-stable-descriptor.json"
-            descriptor_error="$RUNNER_TEMP/opl-$package_id-latest-stable-descriptor.error"
-            manifest_file="$RUNNER_TEMP/opl-$package_id-latest-stable-manifest.json"
-            payload_file="$RUNNER_TEMP/opl-$package_id-latest-stable-payload.json"
-            if oras manifest fetch --descriptor "$image:latest-stable" \
-              > "$descriptor_file" 2> "$descriptor_error"; then
-              digest="$(jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))' "$descriptor_file")"
-              oras manifest fetch "${image}@${digest}" > "$manifest_file"
-              payload_digest="$(jq -er \
-                '[.layers[] | select(.mediaType == "application/vnd.onepersonlab.package.payload.v1+json") | .digest] | select(length == 1) | .[0]' \
-                "$manifest_file")"
-              for attempt in 1 2 3; do
-                if oras blob fetch --output "$payload_file" "${image}@${payload_digest}"; then
-                  break
-                fi
-                [ "$attempt" -lt 3 ] || exit 1
-                sleep "$((attempt * 5))"
-              done
-              jq -e \
-                --arg id "$package_id" \
-                '.package_id == $id
-                  and (.package_version | test("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"))
-                  and (.source_commit | test("^[0-9a-f]{40}$"))
-                  and (.content_lock.digest | test("^sha256:[0-9a-f]{64}$"))' \
-                "$payload_file" >/dev/null
-              entry="$(jq -c \
-                --arg digest "$digest" \
-                '{status:"present",digest:$digest,fingerprint:{package_version:.package_version,package_content_digest:.content_lock.digest,owner_source_commit:.source_commit}}' \
-                "$payload_file")"
-            else
-              tags_file="$RUNNER_TEMP/opl-$package_id-tags.txt"
-              tags_error="$RUNNER_TEMP/opl-$package_id-tags.error"
-              if oras repo tags "$image" > "$tags_file" 2> "$tags_error"; then
-                if grep -Fxq latest-stable "$tags_file"; then
-                  echo "::error::latest-stable exists but its exact digest could not be resolved for $package_id."
-                  exit 1
-                fi
-                entry='{"status":"absent","digest":null,"fingerprint":null}'
-              elif grep -Fq 'name unknown: repository name not known to registry' "$tags_error"; then
-                echo "::notice::No owner repository exists for $package_id; treating the independent channel as verified absence."
-                entry='{"status":"absent","digest":null,"fingerprint":null}'
-              else
-                echo "::error::Unable to read the independent latest-stable state for $package_id."
-                cat "$descriptor_error" >&2
-                cat "$tags_error" >&2
-                exit 1
-              fi
-            fi
-            jq --arg id "$package_id" --argjson entry "$entry" \
-              '.packages[$id] = $entry' "$owner_state" > "$owner_state.next"
-            mv "$owner_state.next" "$owner_state"
-          done < <(jq -er '.candidate_fingerprint | keys[]' "$summary")
-
-          set +e
-          node scripts/package-owner-channel-plan.mjs \
-            --candidate-summary "$summary" \
-            --current-state "$owner_state" \
-            --output "$plan"
-          plan_status=$?
-          set -e
-          if [ "$plan_status" -eq 2 ]; then
-            jq -r '.violations[] | "::error::\(.package_id): \(.reason) current=\(.current_version) candidate=\(.candidate_version)"' "$plan"
-            exit 1
-          fi
-          [ "$plan_status" -eq 0 ]
-          summary_status="$(jq -r .status "$plan")"
-          publish_required="$(jq -r .publish_required "$plan")"
-          echo "publish_required=$publish_required" >> "$GITHUB_OUTPUT"
-          changed_packages_json="$(jq -c .changed_packages "$plan")"
-          echo "changed_packages_json=$changed_packages_json" >> "$GITHUB_OUTPUT"
-          dispatch_plan=dist/opl-daily-packages/package-publication-dispatch-plan.json
-          entries='[]'
-          ready_entries='[]'
-          needs_owner_release='[]'
-          if [ "$publish_required" = true ]; then
-            while IFS= read -r package_id; do
-              version="$(jq -er --arg id "$package_id" '.candidate_fingerprint[$id].package_version' "$summary")"
-              owner_commit="$(jq -er --arg id "$package_id" '.candidate_fingerprint[$id].owner_source_commit' "$summary")"
-              predecessor="$(jq -er --arg id "$package_id" '.packages[$id] | if .status == "present" then .digest else "none" end' "$owner_state")"
-              request_id="daily-${{ github.run_id }}-${{ github.run_attempt }}-${package_id}"
-              manifest="contracts/opl-framework/packages/${package_id}.json"
-              source_repo="$(jq -er .source_repo "$manifest")"
-              if [[ "$source_repo" =~ ^https://github\.com/([^/]+)/([^/]+)\.git$ ]]; then
-                owner_repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
-              else
-                echo "::error::${package_id}: Package source_repo is not a canonical GitHub repository: ${source_repo}"
-                exit 1
-              fi
-              owner_tag="v${version}"
-              tag_error="$RUNNER_TEMP/opl-${package_id}-owner-tag.error"
-              set +e
-              tagged_commit="$(gh api "repos/${owner_repo}/commits/${owner_tag}" --jq .sha 2>"$tag_error")"
-              tag_status=$?
-              set -e
-              if [ "$tag_status" -eq 0 ] && [[ "$tagged_commit" =~ ^[0-9a-f]{40}$ ]]; then
-                if [ "$tagged_commit" != "$owner_commit" ]; then
-                  echo "::error::${package_id}: owner tag ${owner_tag} resolves to ${tagged_commit}, expected ${owner_commit}."
-                  exit 1
-                fi
-                tag_state=ready
-              elif [ "$tag_status" -ne 0 ] && grep -Eq 'HTTP 404|Not Found|not found' "$tag_error"; then
-                echo "::notice::${package_id}: ${owner_repo} has no ${owner_tag}; status=needs_owner_release."
-                tag_state=needs_owner_release
-              else
-                echo "::error::${package_id}: unable to resolve owner tag ${owner_repo}@${owner_tag}."
-                cat "$tag_error" >&2
-                exit 1
-              fi
-              entry="$(jq -n \
-                --arg package_id "$package_id" \
-                --arg version "$version" \
-                --arg owner_commit "$owner_commit" \
-                --arg predecessor "$predecessor" \
-                --arg request_id "$request_id" \
-                --arg owner_repo "$owner_repo" \
-                --arg owner_tag "$owner_tag" \
-                --arg tag_state "$tag_state" \
-                '{package_id:$package_id,expected_package_version:$version,
-                  expected_owner_source_commit:$owner_commit,
-                  expected_latest_stable_predecessor:$predecessor,
-                  publication_request_id:$request_id,owner_repository:$owner_repo,
-                  owner_tag:$owner_tag,owner_tag_status:$tag_state}')"
-              entries="$(jq -c --argjson entry "$entry" '. + [$entry]' <<<"$entries")"
-              if [ "$tag_state" = ready ]; then
-                ready_entries="$(jq -c --argjson entry "$entry" '. + [$entry]' <<<"$ready_entries")"
-              else
-                needs_owner_release="$(jq -c --argjson entry "$entry" '. + [$entry]' <<<"$needs_owner_release")"
-              fi
-            done < <(jq -er '.changed_packages[]' "$plan")
-          fi
-          ready_count="$(jq 'length' <<<"$ready_entries")"
-          needs_count="$(jq 'length' <<<"$needs_owner_release")"
-          owner_managed_packages="$(jq -c .owner_managed_packages "$summary")"
-          owner_managed_count="$(jq 'length' <<<"$owner_managed_packages")"
-          if [ "$publish_required" != true ]; then
-            dispatch_status=skipped
-          elif [ "$ready_count" -gt 0 ]; then
-            dispatch_status=publish_ready
-          else
-            dispatch_status=needs_owner_release
-          fi
-          jq -n \
-            --arg surface_kind opl_package_publication_dispatch_plan.v1 \
-            --arg source_run_id "${{ github.run_id }}" \
-            --arg source_run_attempt "${{ github.run_attempt }}" \
-            --arg framework_source_commit "${{ github.sha }}" \
-            --arg status "$dispatch_status" \
-            --argjson packages "$entries" \
-            --argjson ready_packages "$ready_entries" \
-            --argjson needs_owner_release "$needs_owner_release" \
-            --argjson owner_managed_packages "$owner_managed_packages" \
-            '{surface_kind:$surface_kind,source_run_id:$source_run_id,
-              source_run_attempt:$source_run_attempt,
-              framework_source_commit:$framework_source_commit,
-              status:$status,
-              packages:$packages,ready_packages:$ready_packages,
-              needs_owner_release:$needs_owner_release,
-              owner_managed_packages:$owner_managed_packages}' > "$dispatch_plan"
-          {
-            echo "### Daily package channel"
-            echo "- Status: \`$summary_status\`"
-            echo "- Publish required: \`$publish_required\`"
-            echo "- Independent owner-channel changes: \`$changed_packages_json\`"
-            echo "- Dispatch status: \`$dispatch_status\`"
-            echo "- Owner releases still needed: \`$needs_count\`"
-            echo "- Private owner-managed Packages: \`$owner_managed_count\` (registry readback and publication not evaluated here)"
-          } >> "$GITHUB_STEP_SUMMARY"
-
+          gh repo clone gaofeng21cn/opl-flow "$RUNNER_TEMP/opl-flow" -- --depth=1 --quiet
+          args=()
+          if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
+          python3 scripts/package-daily-release.py \
+            --flow-root "$RUNNER_TEMP/opl-flow" \
+            --output "$RUNNER_TEMP/opl-package-preparation.json" \
+            --apply "${args[@]}"
+      - name: Synchronize private owner publisher pins
+        if: steps.publisher-token.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
+          SELECTED_PACKAGE: ${{ inputs.package_id }}
+        run: |
+          args=()
+          if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
+          python3 scripts/sync-private-package-publishers.py "${args[@]}"
+      - name: Compare independent Package fingerprints
+        env:
+          GH_TOKEN: ${{ steps.publisher-token.outputs.token || github.token }}
+          SELECTED_PACKAGE: ${{ inputs.package_id }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
+          python3 scripts/package-channel-detection.py \
+            --output-root dist/opl-daily-packages \
+            --preparation "$RUNNER_TEMP/opl-package-preparation.json" "${args[@]}"
+          cp "$RUNNER_TEMP/opl-package-preparation.json" dist/opl-daily-packages/owner-preparation.json
       - name: Upload daily package-channel candidate evidence
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

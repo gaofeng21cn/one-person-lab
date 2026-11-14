@@ -14,6 +14,11 @@ on:
         description: Password for the protected private Package signing key
         required: false
     inputs:
+      automation_source_run_id:
+        description: Trusted daily-channel run selecting these exact publication inputs
+        required: false
+        default: ''
+        type: string
       package_id:
         description: Canonical Package id
         required: true
@@ -40,6 +45,11 @@ on:
         type: string
   workflow_dispatch:
     inputs:
+      automation_source_run_id:
+        description: Trusted daily-channel run selecting these exact publication inputs
+        required: false
+        default: ''
+        type: string
       package_id:
         description: Canonical Package id
         required: true
@@ -72,10 +82,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  publication-authority:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      environment: ${{ steps.authority.outputs.environment }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: gaofeng21cn/one-person-lab
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26'
+      - name: Verify publication authority
+        id: authority
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLICATION_INPUTS: ${{ toJSON(inputs) }}
+        run: node scripts/package-publication-authority.mjs
+
   publish-package:
+    needs: publication-authority
     runs-on: ubuntu-latest
     environment:
-      name: ${{ github.event_name == 'schedule' && 'release-stable-automated' || 'release-stable' }}
+      name: ${{ needs.publication-authority.outputs.environment }}
     permissions:
       contents: read
       id-token: write
@@ -89,7 +123,7 @@ jobs:
       PUBLICATION_REQUEST_ID: ${{ inputs.publication_request_id }}
       PACKAGES_OWNER: ${{ github.repository_owner }}
       FRAMEWORK_REPOSITORY: gaofeng21cn/one-person-lab
-      PUBLICATION_ENVIRONMENT: ${{ github.event_name == 'schedule' && 'release-stable-automated' || 'release-stable' }}
+      PUBLICATION_ENVIRONMENT: ${{ needs.publication-authority.outputs.environment }}
     steps:
       - name: Checkout exact Framework source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -136,11 +170,13 @@ jobs:
             [ "$publication_ref" = "ghcr.io/${PACKAGES_OWNER}/${package_namespace}/${PACKAGE_ID}:latest-stable" ]
           fi
           # Only non-secret references cross steps; credentials stay with the publisher.
-          echo "PACKAGE_VISIBILITY=$visibility" >> "$GITHUB_ENV"
-          echo "PACKAGE_ACCESS_POLICY_REF=$access_policy_ref" >> "$GITHUB_ENV"
-          echo "PACKAGE_CREDENTIAL_PROVIDER=$credential_provider" >> "$GITHUB_ENV"
-          echo "PACKAGE_NAMESPACE=$package_namespace" >> "$GITHUB_ENV"
-          echo "PACKAGE_REGISTRY_NAME=${package_namespace}/${PACKAGE_ID}" >> "$GITHUB_ENV"
+          {
+            echo "PACKAGE_VISIBILITY=$visibility"
+            echo "PACKAGE_ACCESS_POLICY_REF=$access_policy_ref"
+            echo "PACKAGE_CREDENTIAL_PROVIDER=$credential_provider"
+            echo "PACKAGE_NAMESPACE=$package_namespace"
+            echo "PACKAGE_REGISTRY_NAME=${package_namespace}/${PACKAGE_ID}"
+          } >> "$GITHUB_ENV"
           source_repo="$(jq -er .source_repo "$manifest")"
           if [[ "$source_repo" =~ ^https://github\.com/([^/]+)/([^/]+)\.git$ ]]; then
             owner_repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"

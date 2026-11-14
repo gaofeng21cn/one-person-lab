@@ -172,6 +172,39 @@ source annotation 和签名 provenance 共同绑定。GitHub 的 `repository` �
 领域质量、资格、运行可用性与软件包发布分别据实记录。App 等有独立安装制品的产品
 不属于此规则的范围。
 
+## 每日稳定发布
+
+`daily-package-channel.yml` 每天检查已准入 Package 的 owner `main`。owner 根目录的
+`release-automation.json` 声明 `daily_patch` 或 `manual`、正式载体生成与验证命令，以及
+额外版本文件；字段结构由 `package-release-automation.schema.json` 约束。源码位置、Package
+身份、公开/私有访问策略和交付文件仍来自现有 descriptor、publication source 与内容锁。
+
+没有交付内容变化时跳过；已有合法的新版本就复用，有变化但版本未提升时递增 patch。
+major/minor 由 owner 显式选择。通用版本准备只修改已声明的版本文件，调用 owner 的载体生成
+命令后重新验证内容锁。精确主线 CI 失败时停止该包；版本与投影变更通过 PR 和精确 head CI 合并，
+合并前重新检查主线未前进，源码 tag 绑定实际合入的提交。跨仓身份使用 OPL Package Publisher
+的短时 GitHub App token，CI 正常触发。App 安装覆盖账号的当前及未来仓库；每日任务根据
+Framework 动态准入和 owner 配置选择发布对象，新 Package 无需重复配置安装范围。
+未声明 owner 配置、未知可见性和无权读取分别记录，不解释成缺版本或缺产物。
+
+Framework 随后复用 Flow 的 `package_release.py prepare` 更新投影，再由现有 OCI 发布器
+发布。每日计划绑定工作流源码、生成后的 Framework commit、owner 源码、版本、前序 digest
+和稳定发布请求 ID。发布器在进入自动环境前，从 GitHub 回读同一主线任务及 artifact，逐字段
+校验；手动发布继续使用原受保护环境。私有包仍从私有 owner 的固定 Framework wrapper
+执行并使用原有私有签名环境，公共调度只读状态与派发，不取得私有签名密钥。
+
+稳定请求 ID 由 Package、版本和源码提交组成，跨日回读相同身份的在途和成功运行，避免
+重复排队。单包版本冲突、CI失败、访问失败和未知派发结果单独记录，其他合法候选继续。
+准备失败的 Package 从当天发布计划排除；派发任务在处理完合法候选后汇总失败并标红，
+保留逐包结果 artifact 和任务摘要，便于定位和下次对账。
+未知写结果先按请求身份回读；不可变版本、单包串行、前序 digest/CAS、可见性、回执和证明
+验证继续由同一个发布器执行。`latest-stable` 更新表示有新软件包可安装，设备是否自动更新
+遵循用户已有安装策略。
+
+RedNote Steward 的独立安装脚本读取同一 OCI `latest-stable` 和源码层，校验 manifest、
+各 layer 与 payload 文件摘要，随后交给它原有本地安装器。已有历史 Release 保留，但新版本
+通过同一 OCI 渠道交付，独立入口不再停留在硬编码版本。
+
 ## App
 
 App展示artifact和Package state，发起受控action，并持有App release truth。App不读取domain artifact body来推断quality，也不建立第二Package carrier。
