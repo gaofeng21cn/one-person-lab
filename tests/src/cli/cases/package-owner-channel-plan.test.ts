@@ -10,7 +10,7 @@ import { buildDailyPackageCandidates } from '../../../../scripts/package-channel
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 
 test('daily release preparation handles version metadata, binary payloads, denial and partial failures', () => {
-  execFileSync('python3', ['-m', 'unittest', 'discover', '-s', 'tests', '-p', 'package_release_test.py'],
+  execFileSync('python3', ['-m', 'unittest', 'discover', '-s', 'tests', '-p', '*release_test.py'],
     { cwd: repoRoot, env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' }, stdio: 'pipe' });
 });
 
