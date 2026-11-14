@@ -55,6 +55,12 @@ def prepare(args):
                 if main == payload['source_commit']:
                     result.update(status='unchanged', owner_source_commit=main)
                 else:
+                    difference = gh(f"repos/{repo}/compare/{payload['source_commit']}...{main}")
+                    files = [row['filename'] for row in difference.get('files', [])]
+                    if files and len(files) < 300 and all(name == 'release-automation.json' or name.startswith('.github/') for name in files):
+                        result.update(status='unchanged_payload', owner_source_commit=main)
+                        results.append(result)
+                        continue
                     root = Path(temporary) / pid
                     run(['git', 'clone', '--filter=blob:none', '--branch', 'main', '--single-branch',
                          '--quiet', projection['source_repo'], root])
