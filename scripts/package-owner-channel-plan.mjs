@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { parseRequiredValueOptions } from './required-value-options.mjs';
 import { readJsonFile } from './script-json-boundary.mjs';
@@ -70,7 +71,7 @@ function validateCurrentState(packageId, state) {
   return state;
 }
 
-function buildPlan(candidateSummary, currentState) {
+export function buildPlan(candidateSummary, currentState) {
   const candidateFingerprint = candidateSummary.candidate_fingerprint;
   if (!candidateFingerprint || typeof candidateFingerprint !== 'object' || Array.isArray(candidateFingerprint)) {
     throw new Error('Candidate summary has no candidate_fingerprint object');
@@ -144,7 +145,7 @@ function buildPlan(candidateSummary, currentState) {
   return {
     surface_kind: 'opl_package_owner_channel_plan.v1',
     status: violations.length > 0
-      ? 'blocked'
+      ? (publishPackages.length > 0 ? 'partially_blocked' : 'blocked')
       : publishPackages.length > 0
         ? 'publish_required'
         : 'skipped',
@@ -153,7 +154,7 @@ function buildPlan(candidateSummary, currentState) {
       : publishPackages.length > 0
         ? 'independent_owner_channel_changed'
         : 'independent_owner_channels_unchanged',
-    publish_required: violations.length === 0 && publishPackages.length > 0,
+    publish_required: publishPackages.length > 0,
     changed_packages: publishPackages,
     unchanged_packages: unchangedPackages,
     violations,
@@ -178,9 +179,9 @@ function main() {
   }
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try { main(); } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
 }

@@ -391,11 +391,11 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.match(workflow, /^permissions: \{\}$/m);
   assert.match(
     workflow,
-    /^    environment:\n      name: \$\{\{ github\.event_name == 'schedule' && 'release-stable-automated' \|\| 'release-stable' \}\}$/m,
+    /^    environment:\n      name: \$\{\{ needs\.publication-authority\.outputs\.environment \}\}$/m,
   );
   assert.match(
     workflow,
-    /^      PUBLICATION_ENVIRONMENT: \$\{\{ github\.event_name == 'schedule' && 'release-stable-automated' \|\| 'release-stable' \}\}$/m,
+    /^      PUBLICATION_ENVIRONMENT: \$\{\{ needs\.publication-authority\.outputs\.environment \}\}$/m,
   );
   assert.match(workflow, /^    permissions:\n      contents: read\n      id-token: write\n      packages: write$/m);
   assert.deepEqual(packageSpecs.map((spec) => spec.package_id), publisherPackageIds);

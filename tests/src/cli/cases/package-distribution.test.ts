@@ -7,3 +7,5 @@ import './package-distribution-cases/oci-publication-preflight.test.ts';
 import './package-distribution-cases/oci-publication-receipt-readback.test.ts';
 import './package-owner-channel-plan.test.ts';
 import './package-distribution-cases/private-package-registry-bootstrap.test.ts';
+
+import './package-publication-authority.test.ts';
