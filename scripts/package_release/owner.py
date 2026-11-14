@@ -255,6 +255,8 @@ def merge_release_changes(root, repo, base, package_id, version):
         raise ReleaseError('Release PR was not merged')
     git(root, 'fetch', 'origin', 'main', '--quiet')
     git(root, 'reset', '--hard', 'origin/main')
+    if git(root, 'rev-parse', 'HEAD^{tree}') != git(root, 'rev-parse', f'{head}^{{tree}}'):
+        raise ReleaseError('Merged release source differs from the verified PR tree; retry from fresh main')
     return git(root, 'rev-parse', 'HEAD')
 
 def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
@@ -303,5 +305,4 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
     # Tags bind the actual merged source; no existing tag is moved.
     git(root, 'push', 'origin', f'refs/tags/v{version}')
     wait_for_release_workflows(repo, source, f'v{version}', settings)
-    wait_for_checks(repo, source)
     return {'status': 'prepared', 'version': version, 'owner_source_commit': source}
