@@ -2,6 +2,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -14,7 +15,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from package_release.common import ReleaseError, read, write
-from package_release.owner import content_changed, update_versions
+from package_release.owner import content_changed, update_versions, prepare_owner
 from package_release.channels import public_channel
 
 spec = importlib.util.spec_from_file_location('dispatcher', ROOT / 'scripts/package-publication-dispatch.py')
@@ -76,6 +77,30 @@ class PackageReleaseTests(unittest.TestCase):
         with patch('urllib.request.urlopen', side_effect=denial):
             with self.assertRaisesRegex(ReleaseError, 'absence is unverified'):
                 public_channel('fixture', 'example')
+
+    def test_existing_clean_version_can_create_an_annotated_tag_without_prior_git_identity(self):
+        write(self.root / 'release-automation.json', {'strategy': 'daily_patch'})
+        self.git('add', '.')
+        self.git('commit', '-m', 'declare release settings')
+        base = self.git('rev-parse', 'HEAD')
+        self.git('config', '--unset', 'user.name')
+        self.git('config', '--unset', 'user.email')
+        with tempfile.TemporaryDirectory() as temporary:
+            framework = Path(temporary)
+            write(framework / 'contracts/opl-framework/packages/fixture.json', {'source_commit': self.base})
+            projection = {**self.projection, 'version': '1.2.2',
+                          'codex_surface': {'plugin_payload_manifest_url': 'fixture.json'}}
+            from package_release.common import git as actual_git
+            def local_git(root, *args):
+                return '' if args[0] == 'push' else actual_git(root, *args)
+            with patch.dict(os.environ, {'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_CONFIG_NOSYSTEM': '1'}), \
+                 patch('package_release.owner.git', side_effect=local_git), \
+                 patch('package_release.owner.wait_for_checks'), \
+                 patch('package_release.owner.content_changed', return_value=True):
+                result = prepare_owner(self.root, projection, self.allowlist, framework, 'example/fixture', apply=True)
+            self.assertEqual(result['owner_source_commit'], base)
+            self.assertEqual(self.git('cat-file', '-t', 'v1.2.3'), 'tag')
+            self.assertEqual(self.git('rev-parse', 'v1.2.3^{}'), base)
 
     def test_cross_day_dispatch_reconciles_the_same_publication_identity(self):
         entry = {'package_id': 'fixture', 'expected_package_version': '1.2.3', 'publication_request_id': 'daily-new-stable-id'}

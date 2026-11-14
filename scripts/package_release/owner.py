@@ -208,6 +208,8 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
         version = f'{a}.{b}.{c + 1}'
     if not apply:
         return {'status': 'needs_release', 'version': version, 'owner_source_commit': base}
+    git(root, 'config', 'user.name', 'OPL Package Publisher')
+    git(root, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
     wait_for_checks(repo, base)
     if version != current:
         update_versions(root, projection, allowlist, settings, version)
@@ -215,8 +217,6 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
         refresh_locks(root, projection, allowlist, framework)
     execute_commands(root, settings, 'verify')
     if git(root, 'status', '--porcelain'):
-        git(root, 'config', 'user.name', 'OPL Package Publisher')
-        git(root, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
         git(root, 'add', '--all')
         git(root, 'commit', '-m', f'chore: prepare Package {version}')
         source = merge_release_changes(root, repo, base, projection['package_id'], version)
