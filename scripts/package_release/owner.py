@@ -210,6 +210,12 @@ def wait_for_release_workflows(repo, commit, tag, settings, timeout=3600):
                 if latest['conclusion'] != 'success':
                     raise ReleaseError(f'Product release workflow failed: {workflow} {latest.get("html_url", "")}')
                 break
+            if latest and latest['status'] == 'in_progress':
+                jobs = gh(f'repos/{repo}/actions/runs/{latest["id"]}/jobs?filter=latest&per_page=100')['jobs']
+                failed = [job['name'] for job in jobs if job['status'] == 'completed'
+                          and job['conclusion'] in ['failure', 'cancelled', 'timed_out', 'action_required']]
+                if failed:
+                    raise ReleaseError(f'Product release job failed: {workflow} {", ".join(failed)} {latest.get("html_url", "")}')
             if time.monotonic() >= deadline:
                 raise ReleaseError(f'Product release workflow is pending: {workflow} {tag}')
             time.sleep(10)
