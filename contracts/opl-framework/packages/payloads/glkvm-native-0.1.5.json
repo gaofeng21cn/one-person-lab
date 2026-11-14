@@ -1,0 +1,95 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "glkvm-native",
+  "plugin_id": "glkvm-native",
+  "package_version": "0.1.5",
+  "source_repo": "https://github.com/gaofeng21cn/glkvm-native.git",
+  "source_commit": "dc700ee605f102caed4907dff21a8567e15ac6be",
+  "source_root": "plugins/glkvm-native",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:ba4973dbea93e098368ac8e4404d77b0f37c9f26a5c26e123d82e7f627e1b954"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/.codex-plugin/plugin.json",
+      "sha256": "sha256:be29adadf278a42848ca1c55c0124d57352fb615ebc1ec353caaf1b55ff92300"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/app-contribution-adapter.json",
+      "sha256": "sha256:68277635cbee3d58f224bbee8faab6401ff30a2e82041c7833ee73640f54a37d"
+    },
+    {
+      "path": "app_contribution.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/app_contribution.py",
+      "sha256": "sha256:ff2230860ea58349b3c2a28890406898d982338ca56458595e01aa6afec070e9"
+    },
+    {
+      "path": "owner_profile.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/owner_profile.py",
+      "sha256": "sha256:ab12de8dea177b3f38cef0795f08c2a9ac8578f15de6f52d0e3e75f21ea3c285"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/plugin.json",
+      "sha256": "sha256:b4f0374a81284be7db0a0c5ec57771faceab9c7700429d1dbe798c6485d6f7b4"
+    },
+    {
+      "path": "skills/glkvm-control/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/skills/glkvm-control/SKILL.md",
+      "sha256": "sha256:b6b3d1fffec803a39543a9da409e8d57518672a071be95cdb5edfe5aff6cd9f2"
+    },
+    {
+      "path": "skills/glkvm-control/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/skills/glkvm-control/agents/openai.yaml",
+      "sha256": "sha256:e3cf03714e6e7ebbb8a62401046140d022319488c982f1c561654af64c7b159c"
+    },
+    {
+      "path": "skills/glkvm-control/references/context-budget.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/skills/glkvm-control/references/context-budget.md",
+      "sha256": "sha256:f442b598b8dda96ab73529f1e19fd8152bdefebeb6930f59e47eb5430007deb3"
+    },
+    {
+      "path": "skills/glkvm-control/references/desktop-client-operations.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/skills/glkvm-control/references/desktop-client-operations.md",
+      "sha256": "sha256:feb3fc8e59c44f078e650fd88bd940630a3ad29aa147467f56175164025d686a"
+    },
+    {
+      "path": "skills/glkvm-control/references/qualification.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/skills/glkvm-control/references/qualification.md",
+      "sha256": "sha256:b781b6ffba748c22959445f0c449d71a797d27ea8e27c2e377f74f5c682fb6a0"
+    },
+    {
+      "path": "skills/glkvm-control/references/session-recovery.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/skills/glkvm-control/references/session-recovery.md",
+      "sha256": "sha256:b0013fa1a039d852bcc25b4782abafb51b322131b841d92344dfd63cced322e4"
+    },
+    {
+      "path": "skills/glkvm-control/references/windows-maintenance.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/skills/glkvm-control/references/windows-maintenance.md",
+      "sha256": "sha256:640400b4c87723195afc5d33fd10b542ce64bb14cc27a3deebd21a877ddb4c20"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/glkvm-native/dc700ee605f102caed4907dff21a8567e15ac6be/plugins/glkvm-native/opl-package.json",
+      "sha256": "sha256:6262338d1bdad61d04750a7d40af44b7c972cb0b6a43bc5680707c0cac3685a1"
+    }
+  ]
+}

@@ -8,6 +8,7 @@
     ".codex-plugin/plugin.json",
     "app-contribution-adapter.json",
     "app_contribution.py",
+    "owner_profile.py",
     "plugin.json",
     "skills/glkvm-control/SKILL.md",
     "skills/glkvm-control/agents/openai.yaml",
