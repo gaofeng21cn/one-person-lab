@@ -155,6 +155,7 @@ def content_changed(root, previous_commit, projection, allowlist, settings=None)
     names.update(metadata_files(root, projection, allowlist))
     settings = settings or {}
     names.update(item['path'] for item in settings.get('version_files', []))
+    names.update(f'.github/workflows/{name}' for name in settings.get('release_workflows', []))
     release_paths = settings.get('release_paths', [])
     if release_paths:
         for name in release_paths:
