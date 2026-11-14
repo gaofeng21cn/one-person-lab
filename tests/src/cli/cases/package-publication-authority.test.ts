@@ -76,6 +76,14 @@ test('a conflicting Package does not stop an independent valid publication', () 
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import fs from 'node:fs';
+test('the dispatcher checks out its repository before downloading the authenticated plan', () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+  const workflow = fs.readFileSync(path.join(root, '.github/workflows/daily-package-channel-publication.yml'), 'utf8');
+  const checkout = workflow.indexOf('- name: Checkout trusted dispatcher');
+  const download = workflow.indexOf('- name: Download read-only daily dispatch plan');
+  assert.ok(checkout >= 0 && download > checkout);
+});
 test('daily owner and channel boundaries preserve bytes, version scope, permission denial, and deduplication', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
   execFileSync('python3', ['tests/package_release_test.py'], { cwd: root, stdio: 'pipe' });
