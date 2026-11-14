@@ -15,7 +15,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from package_release.common import ReleaseError, read, write
-from package_release.owner import content_changed, update_versions, prepare_owner
+from package_release.owner import content_changed, update_versions, prepare_owner, reconcile_release_branch
 from package_release.channels import public_channel
 
 spec = importlib.util.spec_from_file_location('dispatcher', ROOT / 'scripts/package-publication-dispatch.py')
@@ -77,6 +77,32 @@ class PackageReleaseTests(unittest.TestCase):
         with patch('urllib.request.urlopen', side_effect=denial):
             with self.assertRaisesRegex(ReleaseError, 'absence is unverified'):
                 public_channel('fixture', 'example')
+
+    def test_interrupted_preparation_reuses_exact_remote_bytes_and_preserves_different_edits(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            remote = Path(temporary) / 'origin.git'
+            subprocess.run(['git', 'clone', '--bare', str(self.root), str(remote)], check=True, capture_output=True)
+            self.git('remote', 'add', 'origin', str(remote))
+            branch = f'codex/daily-package-fixture-{self.base[:12]}'
+            write(self.root / 'version.json', {'version': '1.2.4'})
+            self.git('add', '.')
+            self.git('commit', '-m', 'first preparation')
+            original = self.git('rev-parse', 'HEAD')
+            self.git('push', 'origin', f'HEAD:refs/heads/{branch}')
+            self.git('reset', '--hard', self.base)
+            write(self.root / 'version.json', {'version': '1.2.4'})
+            self.git('add', '.')
+            self.git('commit', '-m', 'repeated preparation')
+            self.assertNotEqual(self.git('rev-parse', 'HEAD'), original)
+            reconcile_release_branch(self.root, branch, self.base)
+            self.assertEqual(self.git('rev-parse', 'HEAD'), original)
+            write(self.root / 'version.json', {'version': '1.2.5'})
+            self.git('add', '.')
+            self.git('commit', '-m', 'different owner edit')
+            changed = self.git('rev-parse', 'HEAD')
+            with self.assertRaisesRegex(ReleaseError, 'different source files'):
+                reconcile_release_branch(self.root, branch, self.base)
+            self.assertEqual(self.git('rev-parse', 'HEAD'), changed)
 
     def test_existing_clean_version_can_create_an_annotated_tag_without_prior_git_identity(self):
         write(self.root / 'release-automation.json', {'strategy': 'daily_patch'})
