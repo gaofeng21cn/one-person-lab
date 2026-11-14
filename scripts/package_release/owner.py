@@ -161,9 +161,23 @@ def wait_for_checks(repo, commit, timeout=1200):
         time.sleep(10)
 
 
+def reconcile_release_branch(root, branch, base):
+    existing = git(root, 'ls-remote', 'origin', f'refs/heads/{branch}')
+    if not existing:
+        return
+    git(root, 'fetch', 'origin', f'refs/heads/{branch}', '--quiet')
+    selected = git(root, 'rev-parse', 'FETCH_HEAD')
+    if (git(root, 'rev-parse', f'{selected}^{{tree}}') != git(root, 'rev-parse', 'HEAD^{tree}')
+        or run(['git', 'merge-base', '--is-ancestor', base, selected], cwd=root, check=False).returncode):
+        raise ReleaseError('Existing release branch has different source files; preserve it for review')
+    # Preserve the original commit and its checks after an interrupted push or PR request.
+    git(root, 'reset', '--hard', selected)
+
+
 def merge_release_changes(root, repo, base, package_id, version):
     """Use the existing PR/CI surface, then tag the actual merged commit."""
     branch = f'codex/daily-package-{package_id}-{base[:12]}'
+    reconcile_release_branch(root, branch, base)
     git(root, 'push', 'origin', f'HEAD:refs/heads/{branch}')
     pulls = gh(f'repos/{repo}/pulls?state=open&head={repo.split("/")[0]}:{branch}&base=main')
     if len(pulls) > 1:
