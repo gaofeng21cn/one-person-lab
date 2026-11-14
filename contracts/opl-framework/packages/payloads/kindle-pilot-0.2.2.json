@@ -1,0 +1,317 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "kindle-pilot",
+  "plugin_id": "kindle-pilot",
+  "package_version": "0.2.2",
+  "source_repo": "https://github.com/gaofeng21cn/kindle-pilot.git",
+  "source_commit": "4ec498f11e365961bea4c02a0bbb4f45dce2d4c3",
+  "source_root": ".",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:8c1ed34bc2882d6c16b1da2a79c85fc102754ec2a1ec20040c9d3c6ecee26596"
+  },
+  "files": [
+    {
+      "path": ".agents/plugins/marketplace.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/.agents/plugins/marketplace.json",
+      "sha256": "sha256:dba3d6c468f6b67deae5475161ddc7fcf67264c17a608cf6aed0b111b0185bb8"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/.codex-plugin/plugin.json",
+      "sha256": "sha256:3eb9d304f88af1341c848fb380c2d7d59824a8580e85b4d3b4f59545d1c43fa7"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/LICENSE",
+      "sha256": "sha256:65c3ff404221e727c53dc448996fd3d9ab186c87112e131356e0e1f7b2e2904b"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/README.md",
+      "sha256": "sha256:c26d2e2904720f6b4cf1c4cc2f213385b11d85d491af19bc6ac7de936c9fe6c3"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/THIRD_PARTY_NOTICES.md",
+      "sha256": "sha256:8bf53c8dabc3cb0c2cea00ee186495ddf0e07381c2e07145ee8de3de5d42ebfa"
+    },
+    {
+      "path": "assets/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/assets/README.md",
+      "sha256": "sha256:82d5626e9f3aecf4f2de93bb8eef77a1d5e842768fc1c9c4c2aa9d1e51bbac34"
+    },
+    {
+      "path": "assets/kindlepilot.koplugin/_meta.lua",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/assets/kindlepilot.koplugin/_meta.lua",
+      "sha256": "sha256:a264d3b8c74866f1b4b6eb491c67243cbe3d6801c5c6c62251803caeedb34586"
+    },
+    {
+      "path": "assets/kindlepilot.koplugin/main.lua",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/assets/kindlepilot.koplugin/main.lua",
+      "sha256": "sha256:8e07b9cd646c5c28b6486ab59a10bf3691b6d989e83ddc1b8f1f73042623191d"
+    },
+    {
+      "path": "assets/kindlepilot.koplugin/pairing_daemon.lua",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/assets/kindlepilot.koplugin/pairing_daemon.lua",
+      "sha256": "sha256:f7b496ddd343d30dee62e3446cd8723e79ddfe2641207f406cbb3e2e6eefa993"
+    },
+    {
+      "path": "assets/kindlepilot.koplugin/pairing_daemon_entry.lua",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/assets/kindlepilot.koplugin/pairing_daemon_entry.lua",
+      "sha256": "sha256:0a620b6632814702b7bdedb0400e8f51f20fa1019cf2ec4b77ca500a978fe823"
+    },
+    {
+      "path": "assets/wireless-cover.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/assets/wireless-cover.png",
+      "sha256": "sha256:4f0e6d9dd8b5006ed8db19bbf4ca38abf4123bb3b6ec313afc2def76af4d619c"
+    },
+    {
+      "path": "assets/wireless-cover.prompt.txt",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/assets/wireless-cover.prompt.txt",
+      "sha256": "sha256:2697120b0c7c0f1e0f8a47705396b0e14b6d32b6d33b6599db8ff292cd637810"
+    },
+    {
+      "path": "capabilities/kindle-pilot.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/capabilities/kindle-pilot.json",
+      "sha256": "sha256:e0daea8f399ec5b11c10b572019d1dfbb23c7e9a5f9ec3027d01c3a3c9b382c3"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/docs/ARCHITECTURE.md",
+      "sha256": "sha256:a1a42b0286e217099d617dee08220d1363ce64e3c9d13c87a178558d35d00c00"
+    },
+    {
+      "path": "docs/CAPABILITIES.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/docs/CAPABILITIES.md",
+      "sha256": "sha256:5c5f3968f7a1fa730b16969e0b71ef62f05dfdd836d9b2249e5a9ca4ea3dc46d"
+    },
+    {
+      "path": "docs/NATIVE_COLLECTIONS.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/docs/NATIVE_COLLECTIONS.md",
+      "sha256": "sha256:2075acebc1b3bec4889afdfc59b3b14538a8f1b95f3b137d4e47a87381404aee"
+    },
+    {
+      "path": "docs/WIRELESS_MAINTENANCE.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/docs/WIRELESS_MAINTENANCE.md",
+      "sha256": "sha256:fd29b0e3c2566e2963d70142108fa34c899eab4cfa87f835e5672e8dec79a9d6"
+    },
+    {
+      "path": "docs/WORKFLOW.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/docs/WORKFLOW.md",
+      "sha256": "sha256:5689a938b5b2e14baeabf3d998a5a02e790fe4139e06a0a8714282ff7e1d14ad"
+    },
+    {
+      "path": "manifests/compatibility.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/manifests/compatibility.json",
+      "sha256": "sha256:f8446ac8777af5959e43ff0777b62796eb274efad84e5a9466512560f8ae641f"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/plugin.json",
+      "sha256": "sha256:063bb2f29b378996c3d5dcce4cb21755f24d372058a1b9f0c372f2f0059a476c"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/pyproject.toml",
+      "sha256": "sha256:67b77aa4e66d06b6ab0a1e6d1c21c726a69a8613e7ba0dbf0aaabc4e723f85f5"
+    },
+    {
+      "path": "scripts/build-kc-checker.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/scripts/build-kc-checker.py",
+      "sha256": "sha256:4a0328198631e445a473ad910691797a3c51edb220eec87ed352487c72c19191"
+    },
+    {
+      "path": "scripts/build-mtp-plan.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/scripts/build-mtp-plan.py",
+      "sha256": "sha256:f673ae49d4d694a9b2fafb974af5a73647e351a792afa3ec2ff287f95e3d45a5"
+    },
+    {
+      "path": "scripts/check-package.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/scripts/check-package.py",
+      "sha256": "sha256:3462e5c22ccbc7bb8e416d988abbccac11154a7b66553aee740b52ee4515fb15"
+    },
+    {
+      "path": "scripts/kindle-collection-additions.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/scripts/kindle-collection-additions.py",
+      "sha256": "sha256:ac080310776f0ff56ecad2eb23a9383d74f6c42c1ba1d2be04d0aebc0799a99f"
+    },
+    {
+      "path": "scripts/kindle-collections.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/scripts/kindle-collections.py",
+      "sha256": "sha256:02dfe529c4b0c5592e4ac792ea446e41ef6deea09ea8429ff667306c5c0851b6"
+    },
+    {
+      "path": "scripts/kindle-mtp.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/scripts/kindle-mtp.py",
+      "sha256": "sha256:20a8586dac9c132b1cbb2933750b47148c5efd426e55cf2f8344a4d641692020"
+    },
+    {
+      "path": "scripts/kindle-reading-setup.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/scripts/kindle-reading-setup.py",
+      "sha256": "sha256:848304afb243bbfb4466109305c151791ae9fcce80bbf49c620fde479b9a76bd"
+    },
+    {
+      "path": "scripts/kindle-wireless.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/scripts/kindle-wireless.py",
+      "sha256": "sha256:5d71745bc9cd62d6c6b71c1e01d571ec477c07c4c8dce2a9c2e308b9a63c3402"
+    },
+    {
+      "path": "skills/kindle-pilot/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/skills/kindle-pilot/SKILL.md",
+      "sha256": "sha256:b82fd771ef938cc81819209f354b79c52e6a1157b64313bd4dcb87a88ce428fa"
+    },
+    {
+      "path": "skills/kindle-pilot/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/skills/kindle-pilot/agents/openai.yaml",
+      "sha256": "sha256:90b68dd18f920bb50e7c8696eaae34282f7b352768b5bb50567abdc65a3495fa"
+    },
+    {
+      "path": "src/kindle_companion/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/__init__.py",
+      "sha256": "sha256:eb5167f9676573f9100137e29536bd1480b7db385902b51a317b21f8f2188efd"
+    },
+    {
+      "path": "src/kindle_companion/__main__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/__main__.py",
+      "sha256": "sha256:935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d"
+    },
+    {
+      "path": "src/kindle_companion/capabilities.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/capabilities.py",
+      "sha256": "sha256:a97646c2fc62d443cd5762d01f972d8e5aec5ccfea627f615d411d096863ca0e"
+    },
+    {
+      "path": "src/kindle_companion/cli.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/cli.py",
+      "sha256": "sha256:14e1af17774266117cab80befb67680c2623f3252bc9934ce890886196728580"
+    },
+    {
+      "path": "src/kindle_companion/collection_additions.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/collection_additions.py",
+      "sha256": "sha256:b102e48647258a397f8381da6d2cf8ea58c03677e1bbfb80cea7e93cfdf28d6e"
+    },
+    {
+      "path": "src/kindle_companion/collections.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/collections.py",
+      "sha256": "sha256:20ee34e271afc9af309b96fb5bc3a157b0e4578adbefbe7a32d0d0b0ca7169be"
+    },
+    {
+      "path": "src/kindle_companion/compat.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/compat.py",
+      "sha256": "sha256:b561085b3491baad9f26660f3023dd5f09cf3110c9172e057ffcf0e4f29e402e"
+    },
+    {
+      "path": "src/kindle_companion/discovery.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/discovery.py",
+      "sha256": "sha256:bdd8c61147ad9e97b401a03246f021404dfe4bbc8eba012a9b0d440f45046cd0"
+    },
+    {
+      "path": "src/kindle_companion/manifest.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/manifest.py",
+      "sha256": "sha256:f88ee2ca17b12541caf7d3f27caa5c8023b359530923af9c66ba498ded844275"
+    },
+    {
+      "path": "src/kindle_companion/models.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/models.py",
+      "sha256": "sha256:94fb814ce745af162daa7833c90ff581b5b732a179840d6aad7f678ab26f90ab"
+    },
+    {
+      "path": "src/kindle_companion/mtp.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/mtp.py",
+      "sha256": "sha256:09bb9a7c8013b1eb98b739ee43cf97f40003e5f8198ec5307af7436250ef036d"
+    },
+    {
+      "path": "src/kindle_companion/pairing.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/pairing.py",
+      "sha256": "sha256:6308ee432a8ba2e9094722297eda05d85c8818a51700de51d8f0a0405bfab828"
+    },
+    {
+      "path": "src/kindle_companion/plan.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/plan.py",
+      "sha256": "sha256:e891414287b21a92f654a3ac108f898def35b0e0bdd1b78d685a9f5c1a27a673"
+    },
+    {
+      "path": "src/kindle_companion/reading_setup.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/reading_setup.py",
+      "sha256": "sha256:db61682de045e9b68438790ef51db3cd2ace1b3e7de6409617c1e48bd55708b1"
+    },
+    {
+      "path": "src/kindle_companion/software.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/software.py",
+      "sha256": "sha256:2c90cee58764ed065cce407ff267a8de53cd2bbe550be9f25a32e34ed17760e9"
+    },
+    {
+      "path": "src/kindle_companion/state.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/state.py",
+      "sha256": "sha256:e5a9c9c6cbfcc6890a090e3eca912f208775a4dcd13c9dbdd19a27ed20a56c1a"
+    },
+    {
+      "path": "src/kindle_companion/verify.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/verify.py",
+      "sha256": "sha256:afe1e5df4f0e23ef357143eea7c2ea74cda470e2b58fd5fda8f6ab3d1e476930"
+    },
+    {
+      "path": "src/kindle_companion/wireless.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/src/kindle_companion/wireless.py",
+      "sha256": "sha256:9a4980bb0bc3a5716489388110116f08cac18abddcbae0b3954b9015919742ff"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/kindle-pilot/4ec498f11e365961bea4c02a0bbb4f45dce2d4c3/opl-package.json",
+      "sha256": "sha256:14a76f820d711b2fd545651fc2af14a6fbe5f0d9e93de4435503b004f77871c6"
+    }
+  ]
+}
