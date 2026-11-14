@@ -3,7 +3,7 @@
   "package_id": "opl-relay",
   "display_name": "OPL Relay",
   "publisher": "one-person-lab",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-relay.git",
@@ -80,7 +80,7 @@
       "skills/opl-relay/references/apple-mail.md",
       "runtime/codex_mail_workbench/_opl_profile_workspace.py"
     ],
-    "digest": "sha256:236bc13534732084b6cfb0023e564260707997a971153f1d782f25a266c2e585"
+    "digest": "sha256:162c25c1f4a9779f289d483f4ff51fa4b89fd9de37b0adaafe95ed6aeb1b10b2"
   },
   "codex_surface": {
     "plugin_id": "opl-relay",
@@ -105,8 +105,8 @@
       "request_schema": "opl-package-app-contribution-request.v1",
       "response_schema": "opl-package-app-contribution-response.v1"
     },
-    "plugin_payload_manifest_url": "payloads/opl-relay-0.7.3.json",
-    "carrier_source_commit": "1ed4f55e00d6c3e58c862804f32e6ca2072b7386"
+    "plugin_payload_manifest_url": "payloads/opl-relay-0.7.4.json",
+    "carrier_source_commit": "56903a144b8c59f1b0760171232023049377c6d1"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -377,25 +377,18 @@
       }
     ]
   },
-  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
-  "publication_projection_order": 70,
-  "publication_source": {
-    "module_id": "oplrelay",
-    "owner_package_manifest_ref": "plugins/opl-relay/opl-package.json",
-    "owner_plugin_manifest_ref": "plugins/opl-relay/.codex-plugin/plugin.json"
-  },
   "presentation": {
     "display_name_i18n": {
       "zh-CN": "OPL Relay",
       "en-US": "OPL Relay"
     },
     "description_i18n": {
-      "zh-CN": "在共享工作台中阅读邮件、编辑会话回复、审阅附件，经确认后发送已核实的草稿。",
-      "en-US": "Read mail, edit threaded replies, review attachments and explicitly send verified drafts in a shared workbench."
+      "zh-CN": "阅读邮件、核对附件和编辑回复草稿。",
+      "en-US": "Read mail, review attachments, and edit reply drafts."
     },
     "session_routing_summary_i18n": {
-      "zh-CN": "在共享工作台中阅读邮件、编辑会话回复、审阅附件，经确认后发送已核实的草稿。",
-      "en-US": "Read mail, edit threaded replies, review attachments and explicitly send verified drafts in a shared workbench."
+      "zh-CN": "阅读邮件、核对附件和编辑回复草稿。",
+      "en-US": "Read mail, review attachments, and edit reply drafts."
     },
     "home_shortcuts": [],
     "software_type": "application",
@@ -403,7 +396,16 @@
     "miniapp": {
       "presentation_mode": "dedicated_app",
       "entry_kind": "product_entry",
-      "direct_entry": false
+      "direct_entry": true,
+      "entry_view_id": "relay.inbox",
+      "dedicated_resource_uri": "ui://opl-relay/mail-workbench.html"
     }
+  },
+  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "publication_projection_order": 70,
+  "publication_source": {
+    "module_id": "oplrelay",
+    "owner_package_manifest_ref": "plugins/opl-relay/opl-package.json",
+    "owner_plugin_manifest_ref": "plugins/opl-relay/.codex-plugin/plugin.json"
   }
 }
