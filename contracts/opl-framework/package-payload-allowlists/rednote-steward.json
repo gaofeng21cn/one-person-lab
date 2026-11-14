@@ -31,7 +31,6 @@
     "scripts/install-local.mjs",
     "scripts/lib/npm-pack-output.mjs",
     "scripts/package-lock.mjs",
-    "scripts/package-release.mjs",
     "scripts/release-manifest.mjs",
     "scripts/run-plugin.mjs",
     "scripts/uninstall.mjs",
