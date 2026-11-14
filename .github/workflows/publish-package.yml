@@ -124,6 +124,7 @@ jobs:
       PACKAGES_OWNER: ${{ github.repository_owner }}
       FRAMEWORK_REPOSITORY: gaofeng21cn/one-person-lab
       PUBLICATION_ENVIRONMENT: ${{ needs.publication-authority.outputs.environment }}
+      AUTOMATION_SOURCE_RUN_ID: ${{ inputs.automation_source_run_id }}
     steps:
       - name: Checkout exact Framework source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -242,7 +243,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" = schedule ]; then
+          if [ -n "$AUTOMATION_SOURCE_RUN_ID" ] && [ "$PACKAGE_VISIBILITY" = public ]; then
             [ "$PUBLICATION_ENVIRONMENT" = release-stable-automated ]
           else
             [ "$PUBLICATION_ENVIRONMENT" = release-stable ]

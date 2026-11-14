@@ -79,6 +79,11 @@ jobs:
             echo "artifact_name=$artifact_name"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Checkout trusted dispatcher
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
       - name: Download read-only daily dispatch plan
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -86,13 +91,6 @@ jobs:
           path: artifacts/daily-package-channel
           github-token: ${{ github.token }}
           run-id: ${{ steps.authority.outputs.source_run_id }}
-
-      - name: Checkout trusted dispatcher
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: main
-          clean: false
-          persist-credentials: false
       - name: Create scoped owner dispatch identity
         id: publisher-token
         if: vars.PACKAGE_RELEASE_APP_ID != ''
