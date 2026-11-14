@@ -475,7 +475,7 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.match(workflow, /immutable_result="reconciled_after_unknown"/);
   assert.match(workflow, /stable_result="reconciled_after_unknown"/);
   assert.match(workflow, /registry_atomic_cas_claim:false/);
-  assert.match(workflow, /if \[ "\$GITHUB_EVENT_NAME" = schedule \]; then[\s\S]*PUBLICATION_ENVIRONMENT.*release-stable-automated/);
+  assert.match(workflow, /if \[ -n "\$AUTOMATION_SOURCE_RUN_ID" \] && \[ "\$PACKAGE_VISIBILITY" = public \]; then[\s\S]*PUBLICATION_ENVIRONMENT.*release-stable-automated/);
   assert.match(workflow, /environment:\$publication_environment/);
   assert.match(workflow, /--expected-digest "\$digest"/g);
   assert.match(workflow, /PACKAGE_VISIBILITY/);

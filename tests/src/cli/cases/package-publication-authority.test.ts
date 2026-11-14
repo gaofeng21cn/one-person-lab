@@ -73,7 +73,7 @@ test('a conflicting Package does not stop an independent valid publication', () 
   assert.equal(plan.violations[0].package_id, 'conflict');
 });
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -83,6 +83,23 @@ test('the dispatcher checks out its repository before downloading the authentica
   const checkout = workflow.indexOf('- name: Checkout trusted dispatcher');
   const download = workflow.indexOf('- name: Download read-only daily dispatch plan');
   assert.ok(checkout >= 0 && download > checkout);
+});
+test('workflow dispatch uses the environment selected by verified automation proof and visibility', () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+  const workflow = fs.readFileSync(path.join(root, '.github/workflows/publish-package.yml'), 'utf8');
+  const guard = workflow.match(/          if \[ -n "\$AUTOMATION_SOURCE_RUN_ID"[\s\S]*?          fi/)?.[0];
+  assert.ok(guard);
+  for (const [proof, visibility, environment] of [
+    ['123', 'public', 'release-stable-automated'],
+    ['123', 'authorized_only', 'release-stable'],
+    ['', 'public', 'release-stable'],
+  ]) {
+    const env = { ...process.env, GITHUB_EVENT_NAME: 'workflow_dispatch', AUTOMATION_SOURCE_RUN_ID: proof,
+      PACKAGE_VISIBILITY: visibility, PUBLICATION_ENVIRONMENT: environment };
+    assert.equal(spawnSync('bash', ['-euc', guard], { env }).status, 0);
+    assert.notEqual(spawnSync('bash', ['-euc', guard], { env: { ...env,
+      PUBLICATION_ENVIRONMENT: environment === 'release-stable' ? 'release-stable-automated' : 'release-stable' } }).status, 0);
+  }
 });
 test('daily owner and channel boundaries preserve bytes, version scope, permission denial, and deduplication', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
