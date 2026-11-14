@@ -228,6 +228,9 @@ test('builtin Codex update stages selected OPL runtime binary for restart activa
         HOME: fixtureRoot,
         OPL_CODEX_BIN: runtimeCodex,
         OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+        // A retained first-install seed must never replace a fresh update.
+        OPL_FIRST_RUN_CODEX_PACKAGE_TARBALL: fakeNpm,
+        OPL_FIRST_RUN_CODEX_PLATFORM_PACKAGE_TARBALL: fakeNpm,
         SHELL: '/bin/bash',
         PATH: `${fakeBin}:/usr/bin:/bin`,
       },
@@ -271,6 +274,7 @@ test('builtin Codex update stages selected OPL runtime binary for restart activa
     assert.match(output.engine_action.stdout, /opl_runtime_substrate_update_receipt/);
     assert.match(output.engine_action.stdout, /codex-darwin-arm64/);
     assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), / -g( |$)/);
+    assert.match(fs.readFileSync(npmLog, 'utf8'), /@openai\/codex@0\.134\.0/);
     assert.match(fs.readFileSync(runtimeCodex, 'utf8'), /0\.130\.0/);
     assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg old/);
     const receipt = parseRuntimeCodexUpdateReceipt(output.engine_action.stdout);
@@ -372,9 +376,11 @@ exit 1
     assert.match(fs.readFileSync(runtimeRg, 'utf8'), /rg preseeded/);
     assert.match(output.engine_action.command_preview.join(' '), new RegExp(rootTarball.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.match(output.engine_action.command_preview.join(' '), /--prefer-offline/);
+    assert.match(output.engine_action.command_preview.join(' '), /--offline/);
+    assert.match(output.engine_action.command_preview.join(' '), /--omit=optional/);
     assert.match(output.engine_action.stdout, /preseeded_platform_package/);
     assert.match(output.engine_action.stdout, /codex-darwin-arm64/);
-    assert.doesNotMatch(fs.readFileSync(npmLog, 'utf8'), /@openai\/codex@0\.141\.0/);
+    assert.equal(fs.existsSync(npmLog), false, 'offline seed installation must not call npm');
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

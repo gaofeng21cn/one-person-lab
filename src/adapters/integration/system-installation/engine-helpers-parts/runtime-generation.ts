@@ -324,6 +324,7 @@ export function rollbackCodexRuntimeGeneration(
 }
 
 export function readLatestPendingCodexGeneration(paths: RuntimeToolchainPaths) {
+  if (!fs.existsSync(paths.pending_metadata_path)) return null;
   const latestVersion = resolveLatestCodexCliVersion({ preferOffline: true });
   if (!latestVersion || !fs.existsSync(paths.pending_metadata_path)) return null;
   try {

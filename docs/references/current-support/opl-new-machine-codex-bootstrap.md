@@ -46,6 +46,12 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/main
 
 安装后从 Applications 启动并完成 App owner定义的 first-run。Framework 命令通过不能替代 App 签名、安装和真实启动验证。
 
+Full 可向 Framework 首装提供 `OPL_FIRST_RUN_CODEX_PACKAGE_TARBALL` 和
+`OPL_FIRST_RUN_CODEX_PLATFORM_PACKAGE_TARBALL`。没有 managed Codex 时，Framework
+直接从配对归档物化 launcher 与平台二进制，并经版本、App Server 协议验证后激活，
+无需 npm registry 或 Gateway。App 负责归档与其发布 manifest 的摘要校验；Framework
+核对包身份和配对版本。已有安装的更新继续从上游解析最新稳定版，不沿用首装归档。
+
 ## 安装 Packages
 
 先按 Package owner说明配置唯一 native marketplace/carrier，再执行：

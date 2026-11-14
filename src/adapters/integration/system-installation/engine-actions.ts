@@ -6,6 +6,7 @@ import { parseJsonText } from '../../../kernel/json-file.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 
 import { resolveEngineActionSpec } from './engine-helpers.ts';
+import { resolvePreseedTarballPath } from './engine-helpers-parts/runtime-payload.ts';
 import { buildOplEnvironment } from './environment.ts';
 import type { OplEngineAction, OplEngineId } from './shared.ts';
 import { normalizeOutput } from './shared.ts';
@@ -99,7 +100,9 @@ export async function runOplEngineAction(
       note: spec.note,
       stdout: normalizeOutput(result.stdout, result.stderr),
       stderr: result.stderr,
-      system_environment: (await buildOplEnvironment(contracts)).system_environment,
+      system_environment: (await buildOplEnvironment(contracts, {
+        skipLatestLookup: action === 'install' && Boolean(resolvePreseedTarballPath('OPL_FIRST_RUN_CODEX_PACKAGE_TARBALL')),
+      })).system_environment,
     },
   };
 }

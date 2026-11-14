@@ -133,14 +133,19 @@ function copyExecutable(source: string, destination: string) {
 }
 
 export function buildCodexRuntimeNpmInstallArgs(prefixRoot: string) {
+  const installSpec = resolveCodexPackageInstallSpec();
+  const offlineSeed = installSpec === resolvePreseedTarballPath('OPL_FIRST_RUN_CODEX_PACKAGE_TARBALL')
+    && resolveCodexPlatformPackageTarball() !== null;
   return [
     'install',
     '--prefix',
     prefixRoot,
-    resolveCodexPackageInstallSpec(),
+    installSpec,
     '--force',
-    '--include=optional',
-    '--ignore-scripts=false',
+    // The exact platform archive is materialized below. npm must not resolve
+    // optional packages or run upstream install hooks during offline first use.
+    ...(offlineSeed ? ['--offline', '--omit=optional', '--ignore-scripts', '--no-audit', '--no-fund']
+      : ['--include=optional', '--ignore-scripts=false']),
     '--fetch-retries=3',
     '--fetch-retry-mintimeout=2000',
     '--fetch-retry-maxtimeout=20000',
@@ -190,6 +195,7 @@ function resolveCodexPackageInstallSpec() {
 }
 
 export function resolveCodexPlatformPackageTarball() {
+  if (fs.existsSync(resolveOplRuntimeToolchainPaths().current_codex_path)) return null;
   return resolvePreseedTarballPath('OPL_FIRST_RUN_CODEX_PLATFORM_PACKAGE_TARBALL');
 }
 
@@ -227,6 +233,21 @@ function copyDirectoryContents(sourceRoot: string, targetRoot: string) {
   fs.cpSync(sourceRoot, targetRoot, { recursive: true });
 }
 
+export function materializePreseededCodexPackage(stageAttemptRoot: string, tarballPath: string) {
+  const extracted = extractTarballToDirectory(tarballPath, path.join(stageAttemptRoot, '.preseed', 'codex'));
+  const metadata = readPackageJson(extracted);
+  // Codex's root package is a launcher with optional platform packages. Do not
+  // skip a future upstream mandatory dependency or install hook silently.
+  if (metadata?.name !== '@openai/codex' || !/^\d+\.\d+\.\d+$/.test(String(metadata.version ?? ''))
+    || Object.keys(isRecord(metadata.dependencies) ? metadata.dependencies : {}).length
+    || ['preinstall', 'install', 'postinstall'].some((key) => isRecord(metadata.scripts) && metadata.scripts[key])) {
+    throw new Error('Codex offline seed root package is not a self-contained stable launcher.');
+  }
+  const packageRoot = path.join(stageAttemptRoot, 'node_modules', '@openai', 'codex');
+  copyDirectoryContents(extracted, packageRoot);
+  return packageRoot;
+}
+
 export function materializePreseededCodexPlatformPackage(stageAttemptRoot: string, platformTarballPath: string) {
   const target = resolveCodexPlatformTarget();
   const packageBaseName = target.packageName.split('/').pop()!;
@@ -234,6 +255,12 @@ export function materializePreseededCodexPlatformPackage(stageAttemptRoot: strin
     platformTarballPath,
     path.join(stageAttemptRoot, '.preseed', packageBaseName),
   );
+  const root = readPackageJson(path.join(stageAttemptRoot, 'node_modules', '@openai', 'codex'));
+  const platform = readPackageJson(extractedRoot);
+  if (root?.version && (platform?.name !== '@openai/codex'
+    || platform.version !== `${root.version}-${process.platform}-${process.arch}`)) {
+    throw new Error('Codex offline platform package does not match its root package.');
+  }
   const platformPackageRoot = path.join(stageAttemptRoot, 'node_modules', '@openai', packageBaseName);
   copyDirectoryContents(extractedRoot, platformPackageRoot);
   return {

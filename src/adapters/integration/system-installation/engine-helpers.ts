@@ -25,6 +25,7 @@ import {
   applyStagedCodexRuntimePayload,
   buildCodexRuntimeNpmInstallArgs,
   materializePreseededCodexPlatformPackage,
+  materializePreseededCodexPackage,
   resolveCodexPlatformPackageTarball,
   resolvePreseedTarballPath,
 } from './engine-helpers-parts/runtime-payload.ts';
@@ -234,12 +235,19 @@ async function runBuiltinCodexRuntimeInstallOrUpdate(cwd?: string) {
   const stageAttemptRoot = makeRuntimeStageAttemptRoot(paths);
   try {
     const installArgs = buildCodexRuntimeNpmInstallArgs(stageAttemptRoot);
-    const installResult = runCommand('npm', installArgs, cwd);
+    const rootTarball = resolvePreseedTarballPath('OPL_FIRST_RUN_CODEX_PACKAGE_TARBALL');
+    const platformTarballPath = resolveCodexPlatformPackageTarball();
+    let installResult;
+    if (rootTarball && platformTarballPath && !fs.existsSync(paths.current_codex_path)) {
+      materializePreseededCodexPackage(stageAttemptRoot, rootTarball);
+      installResult = { exitCode: 0, stdout: 'Materialized the packaged Codex launcher without registry access.', stderr: '' };
+    } else {
+      installResult = runCommand('npm', installArgs, cwd);
+    }
     if (installResult.exitCode !== 0) {
       return installResult;
     }
     let preseededPlatformPackage = null;
-    const platformTarballPath = resolveCodexPlatformPackageTarball();
     try {
       if (platformTarballPath) {
         preseededPlatformPackage = materializePreseededCodexPlatformPackage(
