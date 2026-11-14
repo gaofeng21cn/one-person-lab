@@ -3,7 +3,7 @@
   "package_id": "photo-steward",
   "display_name": "Photo Steward",
   "publisher": "gaofeng21cn",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/photo-steward.git",
   "package_role": "capability_package",
@@ -92,8 +92,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/photo-steward-0.4.9.json",
-    "carrier_source_commit": "68c838e8092f355d6c74a8f348dc088ea2c1e8a4"
+    "plugin_payload_manifest_url": "payloads/photo-steward-0.4.10.json",
+    "carrier_source_commit": "dac46bc3addb3030651e2de0e5579c892999448f"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -179,7 +179,7 @@
       "skills/photo-steward/agents/openai.yaml",
       "tools/icloud_photo_sync/installation.py"
     ],
-    "digest": "sha256:feaa710381dcc2c2e6ea36fab1ca756037315791973d30e2cf3fdbf7bd533e42"
+    "digest": "sha256:f243668e6e49b4f2aae2c86e2c33bfca76a7ace83c0b8fc9c5c8c82bd3950c7a"
   },
   "presentation": {
     "display_name_i18n": {
