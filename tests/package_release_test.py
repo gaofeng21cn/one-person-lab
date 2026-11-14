@@ -141,6 +141,11 @@ class PackageReleaseTests(unittest.TestCase):
         with patch('package_release.owner.gh', return_value={'workflow_runs': [selected]}):
             with self.assertRaisesRegex(ReleaseError, 'workflow is pending'):
                 wait_for_release_workflows('example/fixture', 'a' * 40, 'v1.2.4', settings, timeout=0)
+        selected.update(head_branch='v1.2.4', status='in_progress', conclusion=None)
+        with patch('package_release.owner.gh', side_effect=[{'workflow_runs': [selected]},
+                  {'jobs': [{'name': 'macos', 'status': 'completed', 'conclusion': 'failure'}]}]):
+            with self.assertRaisesRegex(ReleaseError, 'release job failed'):
+                wait_for_release_workflows('example/fixture', 'a' * 40, 'v1.2.4', settings, timeout=0)
 
     def test_registry_denial_stays_unknown(self):
         denial = urllib.error.HTTPError('https://ghcr.io/token', 403, 'Forbidden', {}, io.BytesIO(b'{"errors":[{"code":"DENIED"}]}'))
