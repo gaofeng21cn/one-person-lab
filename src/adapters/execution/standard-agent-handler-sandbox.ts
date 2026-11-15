@@ -25,7 +25,7 @@ export type StandardAgentHandlerBinding =
 
 export type StandardAgentHandlerSandboxReceipt = {
   runtime_kind: 'node_permission_model' | 'python_audit_hook';
-  sandbox_kind: 'macos_sandbox_exec';
+  sandbox_kind: 'macos_sandbox_exec' | 'linux_runtime_guard_only';
   exit_code: number;
   timed_out: boolean;
   stdout_bytes: Buffer;
@@ -35,6 +35,9 @@ export type StandardAgentHandlerSandboxReceipt = {
 
 const NODE_BRIDGE = String.raw`
 import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
+import path from 'node:path';
+import { syncBuiltinESMExports } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 function canonical(value, at = '$') {
@@ -65,8 +68,36 @@ process.stdout.write = ((chunk, encoding, callback) => {
 });
 
 try {
-  const [modulePath, exportName] = process.argv.slice(1);
+  const [modulePath, exportName, workspaceRoot, workspaceReadRoot, checkoutRoot] = process.argv.slice(1);
   const request = JSON.parse(fs.readFileSync(0, 'utf8'));
+  const workspaceRootReal = workspaceRoot;
+  const allowedReadRoots = [checkoutRoot, workspaceReadRoot];
+  const contained = (root, candidate) => {
+    const relative = path.relative(root, candidate);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  };
+  const assertReadable = (file) => {
+    if (typeof file !== 'string' && !Buffer.isBuffer(file) && !(file instanceof URL)) return;
+    let real;
+    try { real = fs.realpathSync(file); } catch {
+      if (typeof file === 'string' && contained(workspaceRootReal, path.resolve(file))) {
+        throw new Error('workspace read outside the handler scope denied');
+      }
+      return;
+    }
+    if (contained(workspaceRootReal, real) && !allowedReadRoots.some((root) => contained(root, real))) {
+      throw new Error('workspace read outside the handler scope denied');
+    }
+  };
+  for (const method of ['readFileSync', 'readFile', 'openSync', 'open', 'createReadStream', 'readdirSync', 'readdir', 'opendirSync', 'opendir']) {
+    const original = fs[method];
+    if (typeof original === 'function') fs[method] = function (...args) { assertReadable(args[0]); return original.apply(this, args); };
+  }
+  for (const method of ['readFile', 'open', 'readdir', 'opendir']) {
+    const original = fsPromises[method];
+    if (typeof original === 'function') fsPromises[method] = function (...args) { assertReadable(args[0]); return original.apply(this, args); };
+  }
+  syncBuiltinESMExports();
   const imported = await import(pathToFileURL(modulePath).href);
   const handler = imported[exportName];
   if (typeof handler !== 'function') throw new Error('handler export is not callable: ' + exportName);
@@ -208,8 +239,25 @@ function sandboxProfile(input: {
     : `(require-any ${allowedWorkspaceRoots.map((root) => `(subpath ${JSON.stringify(root)})`).join(' ')})`;
   return [
     BASE_SANDBOX_PROFILE,
-    `(deny file-read* (require-all (subpath ${JSON.stringify(input.workspaceRoot)}) (require-not ${allowed})))`,
+    `(deny file-read-data (require-all (subpath ${JSON.stringify(input.workspaceRoot)}) (require-not ${allowed})))`,
   ].join(' ');
+}
+
+export function standardAgentHandlerSandboxKind(): StandardAgentHandlerSandboxReceipt['sandbox_kind'] {
+  if (process.platform === 'darwin') return 'macos_sandbox_exec';
+  if (process.platform === 'linux') return 'linux_runtime_guard_only';
+  invalid('Standard Agent handler sandbox is unsupported on this platform.', {
+    platform: process.platform,
+    failure_code: 'standard_agent_handler_sandbox_unsupported_platform',
+  });
+}
+
+function handlerSandboxCommand(profile: string, executable: string, args: string[]) {
+  const kind = standardAgentHandlerSandboxKind();
+  if (kind === 'macos_sandbox_exec') {
+    return { kind, command: '/usr/bin/sandbox-exec', args: ['-p', profile, executable, ...args] };
+  }
+  return { kind, command: executable, args };
 }
 
 function containedSourceFile(checkoutRoot: string, relativeFile: string) {
@@ -400,7 +448,9 @@ export function runStandardAgentHandlerSandbox(input: {
       failure_code: 'standard_agent_handler_read_root_escape',
     });
   }
-  const readRoots = [...new Set([checkoutRoot, workspaceReadRoot])];
+  // Node needs permission to traverse the workspace root while resolving realpaths;
+  // the bridge still enforces the narrower checkout/read-root policy below.
+  const readRoots = [...new Set([checkoutRoot, workspaceRoot, workspaceReadRoot])];
   const profile = sandboxProfile({ checkoutRoot, workspaceRoot, workspaceReadRoot });
   const requestBytes = Buffer.from(`${canonicalJsonText(input.request)}\n`, 'utf8');
   const timeout = timeoutMs(input.timeoutMs);
@@ -419,10 +469,7 @@ export function runStandardAgentHandlerSandbox(input: {
       invalid('TypeScript handler export name is invalid.', { export: input.binding.export });
     }
     const target = containedSourceFile(checkoutRoot, input.binding.file);
-    const result = spawnSync('/usr/bin/sandbox-exec', [
-      '-p',
-      profile,
-      process.execPath,
+    const command = handlerSandboxCommand(profile, process.execPath, [
       '--permission',
       ...readRoots.map((root) => `--allow-fs-read=${root}`),
       '--experimental-strip-types',
@@ -431,12 +478,16 @@ export function runStandardAgentHandlerSandbox(input: {
       NODE_BRIDGE,
       target.realFile,
       input.binding.export,
-    ], commonOptions);
+      workspaceRoot,
+      workspaceReadRoot,
+      checkoutRoot,
+    ]);
+    const result = spawnSync(command.command, command.args, commonOptions);
     if (result.status !== 0 || result.error) processFailure(result, 'node_permission_model', timeout);
     const output = parseSingleCanonicalJson(result.stdout ?? '');
     return {
       runtime_kind: 'node_permission_model',
-      sandbox_kind: 'macos_sandbox_exec',
+      sandbox_kind: command.kind,
       exit_code: 0,
       timed_out: false,
       stdout_bytes: Buffer.from(result.stdout ?? '', 'utf8'),
@@ -463,10 +514,7 @@ export function runStandardAgentHandlerSandbox(input: {
     additionalReadRoots: [frameworkPythonRoot],
   });
   const python = resolvePython(checkoutRoot);
-  const result = spawnSync('/usr/bin/sandbox-exec', [
-    '-p',
-    pythonProfile,
-    python,
+  const command = handlerSandboxCommand(pythonProfile, python, [
     '-I',
     '-B',
     '-c',
@@ -477,12 +525,13 @@ export function runStandardAgentHandlerSandbox(input: {
     workspaceRoot,
     workspaceReadRoot,
     frameworkPythonRoot,
-  ], commonOptions);
+  ]);
+  const result = spawnSync(command.command, command.args, commonOptions);
   if (result.status !== 0 || result.error) processFailure(result, 'python_audit_hook', timeout);
   const output = parseSingleCanonicalJson(result.stdout ?? '');
   return {
     runtime_kind: 'python_audit_hook',
-    sandbox_kind: 'macos_sandbox_exec',
+    sandbox_kind: command.kind,
     exit_code: 0,
     timed_out: false,
     stdout_bytes: Buffer.from(result.stdout ?? '', 'utf8'),

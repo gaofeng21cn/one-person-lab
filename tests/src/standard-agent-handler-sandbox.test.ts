@@ -54,7 +54,7 @@ test('TypeScript handler cannot write files or spawn child processes', () => {
   assert.equal(fs.existsSync(path.join(checkoutRoot, 'forbidden.txt')), false);
 });
 
-test('Python handler runs through sandbox-exec and the Python audit hook', () => {
+test('Python handler runs through the platform sandbox and the Python audit hook', () => {
   const checkoutRoot = fixtureRoot();
   fs.mkdirSync(path.join(checkoutRoot, 'src', 'sample'), { recursive: true });
   fs.writeFileSync(path.join(checkoutRoot, 'src', 'sample', '__init__.py'), '');
@@ -73,6 +73,7 @@ test('Python handler runs through sandbox-exec and the Python audit hook', () =>
   });
 
   assert.equal(result.runtime_kind, 'python_audit_hook');
+  assert.equal(result.sandbox_kind, process.platform === 'darwin' ? 'macos_sandbox_exec' : 'linux_runtime_guard_only');
   assert.equal(result.stdout_bytes.toString('utf8'), '{"a":"ok","z":9}\n');
   assert.deepEqual(result.output, { a: 'ok', z: 9 });
 });

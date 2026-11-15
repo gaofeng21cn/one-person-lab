@@ -54,6 +54,34 @@ test('hosted Standard Agent actions require installed owner descriptor and confi
   ]);
 });
 
+test('handler sandbox contract distinguishes macOS Seatbelt from reduced Linux runtime guards', () => {
+  // Given the published handler execution contract.
+  const execution = readContract().handler_execution;
+
+  // When consumers resolve platform isolation, then Linux does not inherit the macOS network claim.
+  assert.deepEqual(execution.sandbox_by_platform, {
+    darwin: {
+      sandbox_kind: 'macos_sandbox_exec',
+      os_sandbox_enforced: true,
+      network_allowed_by_binding: {
+        typescript_export: false,
+        python_callable: false,
+      },
+    },
+    linux: {
+      sandbox_kind: 'linux_runtime_guard_only',
+      os_sandbox_enforced: false,
+      seatbelt_equivalent: false,
+      network_allowed_by_binding: {
+        typescript_export: true,
+        python_callable: false,
+      },
+    },
+  });
+  assert.equal(execution.current_sandbox_kind, undefined);
+  assert.equal(execution.network_allowed, undefined);
+});
+
 test('hosted action persistence and ledger distinguish Stage launch from completion', () => {
   const contract = readContract();
 

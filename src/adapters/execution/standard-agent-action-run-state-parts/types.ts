@@ -77,7 +77,7 @@ export type StandardAgentActionRunCompletion = {
   output_byte_size: number;
   sandbox: {
     runtime_kind: 'node_permission_model' | 'python_audit_hook';
-    sandbox_kind: 'macos_sandbox_exec';
+    sandbox_kind: 'macos_sandbox_exec' | 'linux_runtime_guard_only';
     exit_code: number;
     timed_out: boolean;
   } | null;
