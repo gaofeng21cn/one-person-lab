@@ -44,7 +44,19 @@ export function failForWorkItemFileBoundary(input: {
     canonical_work_item_root: input.canonicalWorkItemRoot,
     work_item_scope_id: input.workItemScopeId,
     boundary_failure_code: input.error.failureCode,
+    boundary_message: input.error.message,
+    boundary_details: input.error.details,
   };
+  if ([1, 13].includes(Number(input.error.details?.errno))) {
+    fail('Work-item StageRun file access was denied by the execution host.', {
+      failure_code: 'stage_run_artifact_access_denied', hard_stop_class: 'permission', ...details,
+    });
+  }
+  if (input.error.failureCode === 'work_item_file_boundary_helper_unavailable') {
+    fail('Work-item StageRun file observation is unavailable on the execution host.', {
+      failure_code: 'stage_run_content_observation_unavailable', ...details,
+    });
+  }
   if (
     input.error.failureCode === 'work_item_file_boundary_escape'
     || input.error.failureCode === 'work_item_file_boundary_ref_invalid'

@@ -58,6 +58,8 @@ import {
   workerClose,
   waitForBarrierCount,
 } from './shared.ts';
+import { WorkItemFileBoundaryError } from '../../../src/authority/workspace/work-item-file-boundary.ts';
+import { failForWorkItemFileBoundary } from '../../../src/adapters/execution/family-runtime-stage-run-identity-parts/content-binding-observation.ts';
 import { prevalidatedSourceTruthFingerprint } from '../../../src/adapters/execution/family-runtime-source-truth-refs.ts';
 test('work-item content bindings reject local root escape and cross-study receipts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-work-item-content-'));
@@ -798,4 +800,27 @@ test('Temporal materialization retry reuses the first child Attempt and package-
     else process.env.OPL_STATE_DIR = previousStateRoot;
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
+});
+
+
+test('StageRun content observation distinguishes host access denial and helper failure from root identity drift', () => {
+  const boundary = { phase: 'revalidate' as const, ref: 'file:///workspace/project/input.json',
+    resolvedPath: '/workspace/project/input.json', canonicalWorkItemRoot: '/workspace/project', workItemScopeId: 'work-item:fixture' };
+  for (const errno of [1, 13]) {
+    assert.throws(() => failForWorkItemFileBoundary({ ...boundary,
+      error: new WorkItemFileBoundaryError('work_item_file_boundary_root_drift', 'Root cannot be opened', { errno }),
+    }), (error: any) => {
+      assert.equal(error.details.failure_code, 'stage_run_artifact_access_denied');
+      assert.equal(error.details.hard_stop_class, 'permission');
+      assert.equal(error.details.boundary_details.errno, errno);
+      return true;
+    });
+  }
+  assert.throws(() => failForWorkItemFileBoundary({ ...boundary,
+    error: new WorkItemFileBoundaryError('work_item_file_boundary_helper_unavailable', 'Observation timed out', { helper_signal: 'SIGTERM' }),
+  }), (error: any) => {
+    assert.equal(error.details.failure_code, 'stage_run_content_observation_unavailable');
+    assert.equal(error.details.boundary_message, 'Observation timed out');
+    return true;
+  });
 });

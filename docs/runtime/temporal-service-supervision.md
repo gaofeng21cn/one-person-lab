@@ -83,6 +83,12 @@ SDK、CLI 和 Server 的受管目标版本统一由 `contracts/opl-framework/tem
 
 本地 ARM 测试使用 cohort 固定的 CLI release，x64 时间跳跃测试使用 SDK 的专用测试服务。两者都只证明隔离测试运行；更新目标合同不会直接替换已安装的 CLI、升级持久 Server 数据库或重启生产 Worker。
 
+## 工作区文件权限
+
+launchd 托管的 Node/Worker 具有自己的 macOS 隐私权限。交互式宿主可读取文稿或 iCloud，不代表后台 Worker 也可读取；provider ready 与指定工作区的文件访问分别核对。对受保护来源，可由已有授权的资料接收入口提供范围明确的输入快照，并在执行器可访问的工作区制作；原始可编辑来源仍由原 owner 维护。
+
+文件观察保留底层错误与 errno。宿主拒绝访问返回 `stage_run_artifact_access_denied`，观察 helper 不可用单独报告；这些情况不伪称目录被替换，也不放宽物理根和来源校验。
+
 ## Boundary
 
 该 launchd 路径仅是 Desktop macOS 的 local deployment substrate。WebUI/Linux 使用 container、external service 或显式 foreground lifecycle。它不授权 domain repo 安装私有 daemon / scheduler；Temporal service/worker/scheduler ready 也不等于任何 domain truth、quality 或 artifact ready。
