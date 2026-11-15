@@ -157,9 +157,26 @@
       "node_permission_model",
       "python_audit_hook"
     ],
-    "current_sandbox_kind": "macos_sandbox_exec",
     "sandbox_required": true,
-    "network_allowed": false,
+    "sandbox_by_platform": {
+      "darwin": {
+        "sandbox_kind": "macos_sandbox_exec",
+        "os_sandbox_enforced": true,
+        "network_allowed_by_binding": {
+          "typescript_export": false,
+          "python_callable": false
+        }
+      },
+      "linux": {
+        "sandbox_kind": "linux_runtime_guard_only",
+        "os_sandbox_enforced": false,
+        "seatbelt_equivalent": false,
+        "network_allowed_by_binding": {
+          "typescript_export": true,
+          "python_callable": false
+        }
+      }
+    },
     "filesystem_write_allowed": false,
     "subprocess_allowed_for_python_handler": false,
     "native_carrier_root_and_workspace_read_only_access": true,
