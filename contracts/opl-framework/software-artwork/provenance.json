@@ -1,0 +1,265 @@
+{
+  "purpose": "Artwork provenance only; never used for software discovery or lifecycle",
+  "assets": [
+    {
+      "software_id": "mag",
+      "file": "packages/mag.png",
+      "kind": "owner_asset",
+      "repo": "https://github.com/gaofeng21cn/med-autogrant.git",
+      "source_commit": "afacabe6dcf767a103856457296824bcc7d5d282",
+      "source_path": "assets/branding/medautogrant-logo.png",
+      "source_sha256": "0d2441deefd12988c2e584c334cfe1a367f1fa88cb9adcd460873c0807f5356a",
+      "sha256": "40222ada27048f07398800906a27bec1c50c53fa13da0f6de36ca6f9c532fcb1"
+    },
+    {
+      "software_id": "mas",
+      "file": "packages/mas.png",
+      "kind": "owner_asset",
+      "repo": "ssh://git@ssh.github.com:443/gaofeng21cn/med-autoscience.git",
+      "source_commit": "64c4ffd4569e5a3307bc050d0e35e5840a958f02",
+      "source_path": "assets/branding/medautoscience-logo.png",
+      "source_sha256": "0f67408da22ee2b7b2eb6719ec000ae37288a753e4eb9267144a3f98ad820d78",
+      "sha256": "b0270b745fb7543c3bb1b89bef1798b02d1774a791a626d7fef05ccd0c12ad46"
+    },
+    {
+      "software_id": "rca",
+      "file": "packages/rca.png",
+      "kind": "owner_asset",
+      "repo": "ssh://git@ssh.github.com:443/gaofeng21cn/redcube-ai.git",
+      "source_commit": "00fcc1f08232391b42901256b8a512b2ba4c3f4c",
+      "source_path": "assets/branding/redcube-ai-logo.png",
+      "source_sha256": "5c587499ff65c58b43d77d525f2824a05cbe0b634e9e5676f8c738c461db8727",
+      "sha256": "fce7965e0eeedb4ed86713982adbfb8f9fa6abba8548a2a774be4d30282e3361"
+    },
+    {
+      "software_id": "obf",
+      "file": "packages/obf.png",
+      "kind": "owner_asset",
+      "repo": "https://github.com/gaofeng21cn/opl-bookforge.git",
+      "source_commit": "122a3cd3521ddb82e5d97d9954364b15180ca203",
+      "source_path": "assets/branding/opl-bookforge-logo.png",
+      "source_sha256": "4aa2bb3841944854dd920a478ea0c160d71bf8c116581a8b550a908cd57dfd23",
+      "sha256": "80b80e7f2a0208f39b1986d476ed23acc6325e9110b47e68620eadc91fda1048"
+    },
+    {
+      "software_id": "med-autocast",
+      "file": "packages/med-autocast.png",
+      "kind": "owner_asset",
+      "repo": "https://github.com/gaofeng21cn/med-autocast.git",
+      "source_commit": "78c6665f9f4e8c3c345d6d0ebca10459bb96be86",
+      "source_path": "assets/branding/medautocast-logo.png",
+      "source_sha256": "452c2b4fb65598301c5f4edbf5606736ad8d7bc32c148f7eee1627d5c0e94975",
+      "sha256": "46b979a01b0c030406dd6940dd55d7e1864007aa959db69d736d74a31a375e69"
+    },
+    {
+      "software_id": "med-autopractice",
+      "file": "packages/med-autopractice.png",
+      "kind": "owner_asset",
+      "repo": "https://github.com/gaofeng21cn/med-autopractice.git",
+      "source_commit": "dfa8494d0ed3ba9df0306bdab3c94498baf90add",
+      "source_path": "assets/branding/medautopractice-logo.png",
+      "source_sha256": "0b261dc0fea8c0b6bf1d13a3a8409a8d82abb6da89d50416adbe4fb49d89a5cb",
+      "sha256": "49862fcf988745d319acb9a77ca55987ed7660687270caa1489f64c7473e9cb3"
+    },
+    {
+      "software_id": "opl-flow",
+      "file": "packages/opl-flow.png",
+      "kind": "owner_asset",
+      "repo": "https://github.com/gaofeng21cn/opl-flow.git",
+      "source_commit": "066790a7a6e9d15658dd0e9103021a9bf37409a2",
+      "source_path": "assets/branding/opl-flow-logo.png",
+      "source_sha256": "843168f4d153aacc03f9020df7317eefc90f07b191d0481682579e3c547be9fc",
+      "sha256": "69bba68871c332bd42dabc4cec75cc6dff1d86790d53952b0242ac26c3d80a3a"
+    },
+    {
+      "software_id": "opl-persona",
+      "file": "packages/opl-persona.png",
+      "kind": "owner_asset",
+      "repo": "ssh://git@ssh.github.com:443/gaofeng21cn/opl-persona.git",
+      "source_commit": "58146c8703dd7cb034d3a155d9012c80658ea239",
+      "source_path": "assets/branding/opl-persona-logo.png",
+      "source_sha256": "e42e4c8ecc0936b4c17f1dd41aeb98a09a83b1ee0eee6935defee9638fe1a4a4",
+      "sha256": "229be03cfe17b3d52d0b2cf637bbd113bea6d1a8a88770e6797ccef5b684458f"
+    },
+    {
+      "software_id": "opl-relay",
+      "file": "packages/opl-relay.png",
+      "kind": "owner_asset",
+      "repo": "https://github.com/gaofeng21cn/opl-relay.git",
+      "source_commit": "de25682137479627400a67a65529bd6a6b7cebd6",
+      "source_path": "assets/branding/opl-relay-logo.png",
+      "source_sha256": "2547dfbd2e5ea9e698010a89b26335c6ff72c74ff6ce1f1cc535a6845ed1876a",
+      "sha256": "e4b8ad567507a5f0309579ace8ccccdb8801e85daf193960d70d3e5eb98aba07"
+    },
+    {
+      "software_id": "mas-scholar-skills",
+      "file": "packages/mas-scholar-skills.png",
+      "kind": "owner_asset",
+      "repo": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
+      "source_commit": "10e9adf0f580670c75e499391a386fc7ea482166",
+      "source_path": "assets/branding/mas-scholar-skills-logo.png",
+      "source_sha256": "311a583b12bdec04cb16a3c0e46030d61c57f99a257d4243539158b183b10aa4",
+      "sha256": "a7d320fad25b1f473e9e1575d2ed7d5a64e9e8edbff4fe8f91c056c2293713af"
+    },
+    {
+      "software_id": "photo-steward",
+      "file": "packages/photo-steward.png",
+      "kind": "owner_asset",
+      "repo": "git@github.com:gaofeng21cn/photo-steward.git",
+      "source_commit": "aa4e45d6ba6853ac559176fa614b1c5a983cbba6",
+      "source_path": "app/PhotoCenterMenuBar/Resources/PhotoSteward.png",
+      "source_sha256": "ce3e6d4d2eda4534f0ca03d43033bdf48d988bf7588096f555dcb1c35a86689b",
+      "sha256": "ced82e65effd7422cb0f980242b9b63c6bd456acfa47749d4193c1f880183b3d"
+    },
+    {
+      "software_id": "rednote-steward",
+      "file": "packages/rednote-steward.png",
+      "kind": "owner_asset",
+      "repo": "https://github.com/gaofeng21cn/rednote-steward.git",
+      "source_commit": "02df89a04d0d11d137256a24e9f43350c5c208e1",
+      "source_path": "assets/branding/rednote-steward-logo-v2.png",
+      "source_sha256": "c4c112993572b5018ef7ed334d72974ce4f6b7e1ec58d71de198b237ce8580d8",
+      "sha256": "bde270349947728f8fafab051d976a99506bd6665c3db95f50f938fe9ff6e9fe"
+    },
+    {
+      "software_id": "opl-link-desktop-connector",
+      "file": "packages/opl-link-desktop-connector.png",
+      "kind": "owner_asset",
+      "repo": "ssh://git@ssh.github.com:443/gaofeng21cn/opl-link.git",
+      "source_commit": "8272369d2110f25da9290011500fb93a692993bd",
+      "source_path": "assets/branding/opl-link-logo.png",
+      "source_sha256": "5a43bce88f604f9b9fcf9706d221b5d1ebda0caeccc31db812f2a90f7eee723a",
+      "sha256": "c24bbbd45cee82e707fccc1b0057c55f120c09eff8bb7a21cfcd1adfb78f3d0b"
+    },
+    {
+      "software_id": "opl-fleet-agent",
+      "file": "packages/opl-fleet-agent.png",
+      "kind": "owner_asset",
+      "repo": "git@github.com:gaofeng21cn/opl-fleet-agent.git",
+      "source_commit": "991684448e83aefae32935ba9c7713d9eeadc4ba",
+      "source_path": "Resources/AppIcon.png",
+      "source_sha256": "bb3d43eafffe484d120093b2378940836b7831bbe6282f12b4c7c28166f760ac",
+      "sha256": "1aa8f9a376c64c7cf8a6dd0205bfe8a955bb8006581099cf647c5433343a4126"
+    },
+    {
+      "software_id": "github:gaofeng21cn/one-person-lab",
+      "file": "github/gaofeng21cn/one-person-lab.png",
+      "kind": "owner_asset",
+      "repo": "ssh://git@ssh.github.com:443/gaofeng21cn/one-person-lab.git",
+      "source_commit": "b25c7c8fa027af539a72f9414cd866c704070a45",
+      "source_path": "assets/branding/opl-app-icon.png",
+      "source_sha256": "540a7a393e26ab84c9ab9a4ccae121bc41d8963b19febcef5cf7acc685d5786c",
+      "sha256": "c873622198071e0f04dae6d279d3e861b80a87c6e4a12f4fc68a8bf4e868adaf"
+    },
+    {
+      "software_id": "github:gaofeng21cn/one-person-lab-app",
+      "file": "github/gaofeng21cn/one-person-lab-app.png",
+      "kind": "owner_asset",
+      "repo": "ssh://git@ssh.github.com:443/gaofeng21cn/one-person-lab-app.git",
+      "source_commit": "e1fad9d71fa361fb70f2ef307894001a5c9e502f",
+      "source_path": "assets/branding/opl-app-logo.png",
+      "source_sha256": "fb29565107032f9378f599a3444b8736c54a69fd3dee598e5ba348fb6db32631",
+      "sha256": "07f081be29ce112a3fb57b7b8651c42ba3282f0064d11ae6d140cff7881974ef"
+    },
+    {
+      "software_id": "github:gaofeng21cn/opl-fleet-agent",
+      "file": "github/gaofeng21cn/opl-fleet-agent.png",
+      "kind": "owner_asset",
+      "repo": "git@github.com:gaofeng21cn/opl-fleet-agent.git",
+      "source_commit": "991684448e83aefae32935ba9c7713d9eeadc4ba",
+      "source_path": "Resources/AppIcon.png",
+      "source_sha256": "bb3d43eafffe484d120093b2378940836b7831bbe6282f12b4c7c28166f760ac",
+      "sha256": "1aa8f9a376c64c7cf8a6dd0205bfe8a955bb8006581099cf647c5433343a4126"
+    },
+    {
+      "software_id": "github:gaofeng21cn/opl-codex-models",
+      "file": "github/gaofeng21cn/opl-codex-models.png",
+      "kind": "owner_asset",
+      "repo": "https://github.com/gaofeng21cn/opl-codex-models.git",
+      "source_commit": "e6a4e6239e66357bb747747b1edcfbaac11f74d2",
+      "source_path": "Resources/AppIcon.png",
+      "source_sha256": "9320eaf71f068e07c5da15e974bd7416d8287df6c64e6b5a0cc218d5a2e767e7",
+      "sha256": "68bfd58b096965a76117fb332ba84d87774d396a2f744372c14159dbf5b803cb"
+    },
+    {
+      "software_id": "oma",
+      "file": "packages/oma.png",
+      "kind": "imagegen",
+      "prompt_id": "oma",
+      "source_sha256": "05117deb1592865a2897e44431f9a36860dde3f4d9eb4e33affb6396e0619848",
+      "sha256": "da6733bcc0a67516e970893a3993352abf2069516843148bca2260a6f0ed5bdb"
+    },
+    {
+      "software_id": "occ",
+      "file": "packages/occ.png",
+      "kind": "imagegen",
+      "prompt_id": "occ",
+      "source_sha256": "52411d8572f77ea2be8f4505aa962333dabd0b705471af9eb4fa21e07d7ba557",
+      "sha256": "88d47110a8d33e41292111cbd4be641c0cc9eb04c0e481b76260d669c7bf981f"
+    },
+    {
+      "software_id": "travel-passport",
+      "file": "packages/travel-passport.png",
+      "kind": "imagegen",
+      "prompt_id": "travel-passport",
+      "source_sha256": "7635908c5d4f6dfba1594a1ad35ce3027389a4e7a0032b8ef8d99b9c6276ad8d",
+      "sha256": "ff5a763a659457e488334ceaa5dec500e26ba97f3c31c56f8593fafb290a29fd"
+    },
+    {
+      "software_id": "iphone-steward",
+      "file": "packages/iphone-steward.png",
+      "kind": "imagegen",
+      "prompt_id": "iphone-steward",
+      "source_sha256": "1891b4c44bc3c6b7c4564281dd19a98e5ffc359d8d254a729579551aef23a2d6",
+      "sha256": "03cb0d2f15b01676324ad2a88e865a08eb3807898336feffe65971249a6fb27e"
+    },
+    {
+      "software_id": "kindle-pilot",
+      "file": "packages/kindle-pilot.png",
+      "kind": "imagegen",
+      "prompt_id": "kindle-pilot",
+      "source_sha256": "fc8860afcfa049b8826b64a6606f8cf79de22ff3631db2fde4046987a83873ef",
+      "sha256": "a19c974cd4e8cd26ff72d34d9d41edb27abf39235f5ec27e065c3ee0da31a322"
+    },
+    {
+      "software_id": "agent-old-photo-workflow",
+      "file": "packages/agent-old-photo-workflow.png",
+      "kind": "imagegen",
+      "prompt_id": "agent-old-photo-workflow",
+      "source_sha256": "8cffb6e07e72949477be4bc6966caafa60ef371100be6fef2a0701bd9ddf1000",
+      "sha256": "f7f59a7a9a3e1cc14ab52d9ab50d88dbe91cbbb356b448d068cb15e16cba664f"
+    },
+    {
+      "software_id": "agent-session-vault",
+      "file": "packages/agent-session-vault.png",
+      "kind": "imagegen",
+      "prompt_id": "agent-session-vault",
+      "source_sha256": "82e9713c9ea9377acd303d3ab8c6e0d25fad30c40955e3ce59df97aaf3039c1b",
+      "sha256": "683dfff98b8d64a18ee4b0d330cc1f88b493e0a89494fcac99cee607883f656d"
+    },
+    {
+      "software_id": "mac-media-assets",
+      "file": "packages/mac-media-assets.png",
+      "kind": "imagegen",
+      "prompt_id": "mac-media-assets",
+      "source_sha256": "6f147950660ccc5d4ede93731382ef3b060868f4ac5c558a8222ebd4d15822ab",
+      "sha256": "7938f01091effcc039e0e94148c20869aca573b10427df46ba04be8558231661"
+    },
+    {
+      "software_id": "glkvm-native",
+      "file": "packages/glkvm-native.png",
+      "kind": "imagegen",
+      "prompt_id": "glkvm-native",
+      "source_sha256": "838df40c0c34de026da47932f8f0141deb5d1abd6c30b4d846c6c8475d5b2b72",
+      "sha256": "97425bfd7606497d5edfc0554c2a1144e85c31e9cb9db4b4b8fa0ba5289b288e"
+    },
+    {
+      "software_id": "opl-channel-weixin",
+      "file": "packages/opl-channel-weixin.png",
+      "kind": "imagegen",
+      "prompt_id": "opl-channel-weixin",
+      "source_sha256": "c12fda226a9d5e1cd3363cd05fc595dedcb8b2b3a0d38c178d888fd6367c66f6",
+      "sha256": "462173ccb029796a3d122899133c8208cdc761da27098db71c637a42bff03a2b"
+    }
+  ]
+}

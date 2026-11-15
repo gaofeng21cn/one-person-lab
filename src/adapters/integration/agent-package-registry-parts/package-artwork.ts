@@ -2,10 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import type { InstalledPackageDescriptor } from './installed-codex-plugin-directory-types.ts';
+import { softwareArtworkDataUrl } from '../software-artwork.ts';
 
-/** Artwork uses the existing payload's immutable provenance, never a second asset catalog. */
+/** Prefer reviewed OPL catalog artwork; other assets retain immutable payload provenance. */
 export function packageArtworkUrl(descriptor: InstalledPackageDescriptor): string | null {
   const { manifest } = descriptor;
+  if (descriptor.catalog_origin === 'opl') {
+    const artwork = softwareArtworkDataUrl(manifest.package_id);
+    if (artwork) return artwork;
+  }
   const icon = manifest.presentation?.icon_ref;
   const commit = manifest.carrier_source_commit;
   const payloadRef = manifest.plugin_payload_manifest_url;

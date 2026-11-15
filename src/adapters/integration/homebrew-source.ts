@@ -8,6 +8,7 @@ import { softwareSourceFailure, softwareSourcesFile } from './software-sources-s
 import { readFrameworkSoftwareInstallation } from './software-sources-framework-installation.ts';
 import { readHomebrewAppVersionPresentation } from './homebrew-app-version.ts';
 import { selectHomebrewProductTargets } from './homebrew-product-selection.ts';
+import { softwareArtworkDataUrl } from './software-artwork.ts';
 
 export const OPL_HOMEBREW_SOURCE_ID = 'homebrew:gaofeng21cn-one-person-lab';
 const TAP = 'gaofeng21cn/one-person-lab';
@@ -96,7 +97,9 @@ function projection(snapshot: Snapshot, env: NodeJS.ProcessEnv) {
       if (item.name === `${TAP}/opl` && !item.homebrew_installed && frameworkInstallation) {
         Object.assign(item, frameworkInstallation, { update_status: 'unknown' });
       }
-      return { ...item, ...productPresentation(item), ...provenance, available_actions: itemActions(item) };
+      return { ...item, ...productPresentation(item), ...provenance,
+        icon_url: item.product_id ? softwareArtworkDataUrl(item.product_id) : null,
+        available_actions: itemActions(item) };
     })),
   };
 }

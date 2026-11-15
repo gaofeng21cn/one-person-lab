@@ -12,6 +12,7 @@ import { isGitRepo, isOplFrameworkRoot, readManagedFrameworkGitInstallation } fr
 import { pendingFrameworkArtifactResult } from './system-installation/framework-self-update-parts/staging.ts';
 import { softwareInstallationOperation } from './agent-package-registry-parts/software-installation-owner.ts';
 import type { SoftwareInstallation } from './agent-package-registry-parts/package-installation-projection.ts';
+import { softwareArtworkDataUrl } from './software-artwork.ts';
 
 function record(file: string) {
   try {
@@ -90,6 +91,7 @@ export function readInstalledSoftwareProducts(env: NodeJS.ProcessEnv = process.e
     origin_basis: 'owner_manifest' as const,
     catalog_source: { manager: 'opl_framework', delivery: 'local' as const },
     product_id: `github:gaofeng21cn/${product.owner}`,
+    icon_url: softwareArtworkDataUrl(`github:gaofeng21cn/${product.owner}`),
     product_display_name: product.product_name,
     item_id: 'managed:opl-framework',
     name: 'opl-framework',
