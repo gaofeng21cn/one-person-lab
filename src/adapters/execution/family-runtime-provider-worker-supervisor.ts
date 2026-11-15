@@ -367,7 +367,7 @@ ${environmentXml}
   <key>RunAtLoad</key>
   <true/>
   <key>ProcessType</key>
-  <string>Background</string>
+  <string>Standard</string>
   <key>ThrottleInterval</key>
   <integer>${PROVIDER_WORKER_SUPERVISOR_THROTTLE_SECONDS}</integer>
   <key>StandardOutPath</key>

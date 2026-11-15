@@ -101,7 +101,7 @@ test('provider-worker supervisor launches the guarded worker and delegates log o
     assert.doesNotMatch(plist, /src\/modules\/runway\/family-runtime-provider-worker-launcher/);
     assert.match(plist, /--provider-worker-launcher/);
     assert.match(plist, /<integer>60<\/integer>/);
-    assert.match(plist, /<key>ProcessType<\/key>\s*<string>Background<\/string>/);
+    assert.match(plist, /<key>ProcessType<\/key>\s*<string>Standard<\/string>/);
     assert.equal(plist.match(/<string>\/dev\/null<\/string>/g)?.length, 2);
   } finally {
     rmSync(root, { recursive: true, force: true });

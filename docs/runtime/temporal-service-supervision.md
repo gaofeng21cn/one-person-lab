@@ -67,6 +67,11 @@ Worker 的 Node 启动入口同样保留稳定路径：在安装环境的绝对 
 保留当前 executable。健康检查验证 plist 中的程序仍为可执行普通文件；旧版本被移除、
 链接断开或权限丢失时返回 configuration drift，由现有启动维护重新生成配置。
 
+Worker supervisor 使用 launchd `ProcessType=Standard`。Temporal 的任务处理、心跳和
+插件发现都有时限；`Background` 会让 Worker 及其子进程在系统负载下受到 CPU 与 I/O
+节流，引起本地插件发现超时和 workflow task 延迟。此设置保留普通服务调度优先级，
+不提高为交互应用；变更后须通过 supervisor 安装入口重新加载并回读实际 plist。
+
 `supported` 只描述当前平台是否支持 launchd；`applicable`/`required` 只在 macOS OPL-local Temporal CLI 路径为 true。non-darwin、external/container 和显式 custom command 均投影 `status=not_applicable`、`ready=null`、`error=null`，不能因为 launchd 不适用而污染健康状态。
 
 Desktop 启动维护会在 `system_action.details.temporal_runtime_reconcile` 返回 `opl_temporal_runtime_startup_reconcile.v1` 回执，并严格依次 fresh readback Server、Worker、Scheduler。任何前置步骤未 ready，后续步骤都标为 `skipped_dependency_not_ready`，整体 `system_action.status=manual_required`。Worker supervisor 若已经 loaded 但指向另一个 family runtime root，自动维护只报告 blocker，不会 remove/reinstall，也不会制造第二个 Worker。
