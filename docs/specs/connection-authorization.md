@@ -78,4 +78,6 @@ Framework 在现有账号锁内轮换会话并持久化 refresh token，再兑�
 
 这次兑换仅授权传输。手机仍须通过电脑公钥固定的 Noise 通道兑换 120 秒单次业务配对码；会话、审批、工作区及设备撤销继续由 Studio 和已有 Codex owner 执行。产品和互联网合同由 [App](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-remote-companion-internet.json) 持有。
 
-本轮源码交付另有固定范围的 [GitHub 只读桥](../../.github/workflows/link-source-access.yml)，复用已有 GitHub App installation，为 Framework、Studio、Link 三仓请求 `contents/actions/packages: read`，验证私有源码、构建产物与准确镜像读取后才把短时 token 加密给本机临时公钥。它不自授新的 App 权限，也不转移 App 私钥或个人 OAuth。GitHub 以 HTTP 422 拒绝请求的权限集合时，仅终止当前凭据 operation，具体缺少哪项权限仍为未知；恢复需要账号 owner 核对 GitHub 既有 App installation 的只读授权。该失败不触发扩大 grant、替代凭据或自动重试，托管服务交付目标仍由原任务负责。
+本轮源码交付另有固定范围的 [GitHub 源码只读桥](../../.github/workflows/link-source-access.yml)，复用已有 GitHub App installation，仅为 Framework、Studio、Link 三仓请求 `contents/actions: read`。它核对私有源码和准确构建 run 的 artifact 可读后，才以 RSA-OAEP/AES-256-GCM 将短时 token 加密给本机临时公钥；密文绑定当前 workflow run、源码提交与接收公钥。调用方只在 mint 前开始的 50 分钟保守窗口内使用，GitHub installation token 的实际失效仍由 GitHub 持有。
+
+此桥只承担本轮源码与构建产物读取，不请求 Packages 权限或核验镜像。GHCR 由 Instance 通过该包的独立 Actions Read 授权及自身 `GITHUB_TOKEN` 读取；GitHub App grant、App 私钥和个人 OAuth 沿用各自 owner。若 GitHub 拒绝现有只读请求，只终止当前 operation，由账号 owner 核对既有 App installation 授权；不会扩大 grant、添加替代凭据或自动重试。

@@ -6,17 +6,17 @@ import { pathToFileURL } from 'node:url';
 export const LINK_ACCESS = Object.freeze({
   schema: 'opl_link_source_access_encrypted.v1', payloadSchema: 'opl_link_source_access.v1', resultSchema: 'opl_link_source_access_result.v1',
   appId: '5752885', repository: 'gaofeng21cn/one-person-lab', repositories: Object.freeze(['gaofeng21cn/one-person-lab', 'gaofeng21cn/opl-studio', 'gaofeng21cn/opl-link']),
-  permissions: Object.freeze({ contents: 'read', actions: 'read', packages: 'read' }),
+  permissions: Object.freeze({ contents: 'read', actions: 'read' }),
   sourceSha: '565fc1b1feb882c7793566abc1b1179df7847c0d', sourceRunId: '43691263878',
-  imageRepository: 'gaofeng21cn/opl-link-service', imageDigest: 'sha256:df5f4d001534ad16bf0b44d3fabd7e7f2a38653b16dfc8df291ae518c3e4294c',
   maxLifetimeSeconds: 3600, useWindowSeconds: 3000,
 });
-export const LINK_ACCESS_ERROR = Object.freeze({ INPUT: 'LINK_ACCESS_INPUT_INVALID', MINT: 'LINK_APP_TOKEN_MINT_FAILED', SCOPE: 'LINK_APP_REPOSITORY_SCOPE_INVALID', SOURCE: 'LINK_APP_SOURCE_READ_DENIED', ACTIONS: 'LINK_APP_ARTIFACT_READ_DENIED', PACKAGES: 'LINK_APP_PACKAGES_READ_DENIED', EXPIRED: 'LINK_ACCESS_USE_WINDOW_EXPIRED', ENVELOPE: 'LINK_ACCESS_ENVELOPE_INVALID' });
+export const LINK_ACCESS_ERROR = Object.freeze({ INPUT: 'LINK_ACCESS_INPUT_INVALID', MINT: 'LINK_APP_TOKEN_MINT_FAILED', SCOPE: 'LINK_APP_REPOSITORY_SCOPE_INVALID', SOURCE: 'LINK_APP_SOURCE_READ_DENIED', ACTIONS: 'LINK_APP_ARTIFACT_READ_DENIED', EXPIRED: 'LINK_ACCESS_USE_WINDOW_EXPIRED', ENVELOPE: 'LINK_ACCESS_ENVELOPE_INVALID' });
 const fail = (code) => { throw Object.assign(new Error(code), { code }); };
 const object = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const sha = /^[a-f0-9]{40}$/;
 const id = /^[1-9][0-9]{0,15}$/;
+const validToken = (value) => typeof value === 'string' && value.startsWith('ghs_') && value.length >= 24 && value.length <= 4096 && !/[\p{White_Space}\p{Cc}\p{Cf}]/u.test(value);
 const fingerprint = (key) => `sha256:${createHash('sha256').update(key.export({ type: 'spki', format: 'der' })).digest('hex')}`;
 function base64(value, max = 65536) {
   if (typeof value !== 'string' || !value.length || value.length > max || Buffer.from(value, 'base64').toString('base64') !== value) fail(LINK_ACCESS_ERROR.INPUT);
@@ -35,7 +35,7 @@ function context(runId, sourceSha) {
 }
 function payload(value, now) {
   const keys = ['schema', 'token', 'allowedRepositories', 'permissions', 'actualExpiryKnown', 'tokenMaxLifetimeSeconds', 'mintStartedAt', 'usableUntil'].sort();
-  if (!object(value) || Object.keys(value).sort().join() !== keys.join() || value.schema !== LINK_ACCESS.payloadSchema || typeof value.token !== 'string' || !/^ghs_[A-Za-z0-9_]{20,255}$/.test(value.token) || !same(value.allowedRepositories, LINK_ACCESS.repositories) || !same(value.permissions, LINK_ACCESS.permissions) || value.actualExpiryKnown !== false || value.tokenMaxLifetimeSeconds !== LINK_ACCESS.maxLifetimeSeconds) fail(LINK_ACCESS_ERROR.ENVELOPE);
+  if (!object(value) || Object.keys(value).sort().join() !== keys.join() || value.schema !== LINK_ACCESS.payloadSchema || !validToken(value.token) || !same(value.allowedRepositories, LINK_ACCESS.repositories) || !same(value.permissions, LINK_ACCESS.permissions) || value.actualExpiryKnown !== false || value.tokenMaxLifetimeSeconds !== LINK_ACCESS.maxLifetimeSeconds) fail(LINK_ACCESS_ERROR.ENVELOPE);
   const start = Date.parse(value.mintStartedAt), end = Date.parse(value.usableUntil);
   if (!Number.isFinite(start) || !Number.isFinite(end) || new Date(start).toISOString() !== value.mintStartedAt || new Date(end).toISOString() !== value.usableUntil || end - start !== LINK_ACCESS.useWindowSeconds * 1000 || start > now + 30000 || end <= now) fail(LINK_ACCESS_ERROR.EXPIRED);
   return value;
@@ -43,7 +43,7 @@ function payload(value, now) {
 export function encryptLinkSourceAccess(value, publicKeyB64, { runId, sourceSha, now = Date.now() }) {
   context(runId, sourceSha); payload(value, now);
   const key = recipientKey(publicKeyB64);
-  const header = { schema: LINK_ACCESS.schema, alg: 'RSA-OAEP-256', enc: 'A256GCM', purpose: 'link_internet_delivery_read_only', repository: LINK_ACCESS.repository, workflowRunId: runId, sourceSha, recipientFingerprint: fingerprint(key) };
+  const header = { schema: LINK_ACCESS.schema, alg: 'RSA-OAEP-256', enc: 'A256GCM', purpose: 'link_internet_source_read_only', repository: LINK_ACCESS.repository, workflowRunId: runId, sourceSha, recipientFingerprint: fingerprint(key) };
   const secret = randomBytes(32), iv = randomBytes(12);
   try {
     const cipher = createCipheriv('aes-256-gcm', secret, iv); cipher.setAAD(Buffer.from(JSON.stringify(header)));
@@ -57,7 +57,7 @@ export function decryptLinkSourceAccess(envelope, privateKey, { expectedRunId, e
   context(expectedRunId, expectedSourceSha);
   try {
     const header = envelope?.header;
-    const expected = { schema: LINK_ACCESS.schema, alg: 'RSA-OAEP-256', enc: 'A256GCM', purpose: 'link_internet_delivery_read_only', repository: LINK_ACCESS.repository, workflowRunId: expectedRunId, sourceSha: expectedSourceSha, recipientFingerprint: fingerprint(createPublicKey(privateKey)) };
+    const expected = { schema: LINK_ACCESS.schema, alg: 'RSA-OAEP-256', enc: 'A256GCM', purpose: 'link_internet_source_read_only', repository: LINK_ACCESS.repository, workflowRunId: expectedRunId, sourceSha: expectedSourceSha, recipientFingerprint: fingerprint(createPublicKey(privateKey)) };
     if (!object(envelope) || Object.keys(envelope).sort().join() !== ['header', 'encryptedKey', 'iv', 'tag', 'ciphertext'].sort().join() || !same(header, expected)) fail(LINK_ACCESS_ERROR.ENVELOPE);
     const secret = privateDecrypt({ key: privateKey, oaepHash: 'sha256', padding: constants.RSA_PKCS1_OAEP_PADDING }, base64(envelope.encryptedKey));
     try {
@@ -79,7 +79,7 @@ async function response(fetchImpl, url, options, code) {
   return Buffer.concat(chunks);
 }
 export async function verifyLinkSourceReads(token, { fetchImpl = fetch } = {}) {
-  if (typeof token !== 'string' || !/^ghs_[A-Za-z0-9_]{20,255}$/.test(token)) fail(LINK_ACCESS_ERROR.INPUT);
+  if (!validToken(token)) fail(LINK_ACCESS_ERROR.INPUT);
   const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
   const api = async (path, code) => { try { return JSON.parse((await response(fetchImpl, `https://api.github.com${path}`, { headers }, code)).toString('utf8')); } catch (error) { if (error.code) throw error; fail(code); } };
   const repos = await api('/installation/repositories?per_page=100', LINK_ACCESS_ERROR.SCOPE);
@@ -92,12 +92,7 @@ export async function verifyLinkSourceReads(token, { fetchImpl = fetch } = {}) {
   if (run.id !== Number(LINK_ACCESS.sourceRunId) || run.head_sha !== LINK_ACCESS.sourceSha || run.head_branch !== 'main' || run.status !== 'completed' || run.conclusion !== 'success' || run.path !== '.github/workflows/link-service.yml') fail(LINK_ACCESS_ERROR.ACTIONS);
   const artifacts = await api(`/repos/gaofeng21cn/opl-link/actions/runs/${LINK_ACCESS.sourceRunId}/artifacts?per_page=100`, LINK_ACCESS_ERROR.ACTIONS);
   if (!artifacts.artifacts?.some((a) => a.name === 'link-service-image' && a.expired === false)) fail(LINK_ACCESS_ERROR.ACTIONS);
-  let registry;
-  try { registry = JSON.parse((await response(fetchImpl, `https://ghcr.io/token?service=ghcr.io&scope=repository:${LINK_ACCESS.imageRepository}:pull`, { headers: { Authorization: `Basic ${Buffer.from(`x-access-token:${token}`).toString('base64')}` } }, LINK_ACCESS_ERROR.PACKAGES)).toString('utf8')); } catch { fail(LINK_ACCESS_ERROR.PACKAGES); }
-  if (typeof registry.token !== 'string' || !registry.token) fail(LINK_ACCESS_ERROR.PACKAGES);
-  const manifest = await response(fetchImpl, `https://ghcr.io/v2/${LINK_ACCESS.imageRepository}/manifests/${LINK_ACCESS.imageDigest}`, { headers: { Authorization: `Bearer ${registry.token}`, Accept: 'application/vnd.oci.image.index.v1+json' } }, LINK_ACCESS_ERROR.PACKAGES);
-  if (`sha256:${createHash('sha256').update(manifest).digest('hex')}` !== LINK_ACCESS.imageDigest) fail(LINK_ACCESS_ERROR.PACKAGES);
-  return { repositoryScope: true, privateSources: true, buildArtifact: true, exactImageDigest: true };
+  return { repositoryScope: true, privateSources: true, buildArtifact: true };
 }
 
 async function main(env) {

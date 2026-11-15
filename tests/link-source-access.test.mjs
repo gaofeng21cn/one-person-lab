@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { LINK_ACCESS as C, LINK_ACCESS_ERROR as E, recipientKey, encryptLinkSourceAccess, decryptLinkSourceAccess, verifyLinkSourceReads } from '../scripts/link-source-access.mjs';
 
 const HTTP = Object.freeze({ OK: 200, FORBIDDEN: 403 });
@@ -24,25 +25,55 @@ test('recipient and authenticated envelope bind exact run, source, scope and con
   rejects(() => decryptLinkSourceAccess(modified, privateKey, { expectedRunId: runId, expectedSourceSha: sourceSha, now }), E.ENVELOPE);
 });
 
-function fixture({ expanded = false, packagesDenied = false } = {}) {
+function fixture({ expanded = false, sourceDenied = false, artifactsDenied = false, calls = [] } = {}) {
   return async (url, options) => {
     assert.equal(options.redirect, 'error');
-    const source = String(url); let body;
+    const source = String(url); calls.push(source); let body;
+    assert.equal(new URL(source).origin, 'https://api.github.com');
     if (source.includes('/installation/repositories?')) body = { total_count: expanded ? 4 : 3, repositories: [...C.repositories, ...(expanded ? ['other/repo'] : [])].map((full_name) => ({ full_name })) };
-    else if (source.includes('/contents/package.json?')) body = { type: 'file', path: 'package.json', sha: 'b'.repeat(40) };
-    else if (source.endsWith('/artifacts?per_page=100')) body = { artifacts: [{ name: 'link-service-image', expired: false }] };
+    else if (source.includes('/contents/package.json?')) {
+      if (sourceDenied) return new Response('', { status: HTTP.FORBIDDEN });
+      body = { type: 'file', path: 'package.json', sha: 'b'.repeat(40) };
+    }
+    else if (source.endsWith('/artifacts?per_page=100')) {
+      if (artifactsDenied) return new Response('', { status: HTTP.FORBIDDEN });
+      body = { artifacts: [{ name: 'link-service-image', expired: false }] };
+    }
     else if (source.includes('/actions/runs/')) body = { id: Number(C.sourceRunId), head_sha: C.sourceSha, head_branch: 'main', status: BUILD.COMPLETED, conclusion: BUILD.SUCCESS, path: '.github/workflows/link-service.yml' };
-    else if (source.startsWith('https://ghcr.io/token?')) {
-      assert.ok(options.headers.Authorization.startsWith('Basic '));
-      if (packagesDenied) return new Response('', { status: HTTP.FORBIDDEN });
-      body = { token: 'registry-fixture' };
-    } else if (source.includes('/manifests/')) return new Response('wrong digest', { status: HTTP.OK });
     else throw new Error('Unexpected URL');
     return new Response(JSON.stringify(body), { status: HTTP.OK });
   };
 }
-test('read proof refuses expanded repository scope and unavailable package permission without leaking token', async () => {
+test('source proof accepts long installation tokens and refuses unavailable source or artifact reads', async () => {
+  const calls = [];
+  const longToken = 'ghs_' + 's'.repeat(516);
+  assert.deepEqual(await verifyLinkSourceReads(longToken, { fetchImpl: fixture({ calls }) }), { repositoryScope: true, privateSources: true, buildArtifact: true });
+  assert.equal(calls.length, 6);
+  assert.ok(calls.every((url) => url.startsWith('https://api.github.com/')));
   await assert.rejects(() => verifyLinkSourceReads(value().token, { fetchImpl: fixture({ expanded: true }) }), (e) => e.code === E.SCOPE);
-  await assert.rejects(() => verifyLinkSourceReads(value().token, { fetchImpl: fixture({ packagesDenied: true }) }), (e) => e.code === E.PACKAGES && !e.message.includes(value().token));
-  await assert.rejects(() => verifyLinkSourceReads(value().token, { fetchImpl: fixture() }), (e) => e.code === E.PACKAGES);
+  await assert.rejects(() => verifyLinkSourceReads(value().token, { fetchImpl: fixture({ sourceDenied: true }) }), (e) => e.code === E.SOURCE && !e.message.includes(value().token));
+  await assert.rejects(() => verifyLinkSourceReads(value().token, { fetchImpl: fixture({ artifactsDenied: true }) }), (e) => e.code === E.ACTIONS);
+});
+
+test('source token envelope supports 520 to 4096 characters and rejects control, whitespace, overflow and package grants', async () => {
+  for (const length of [520, 4096]) {
+    const input = { ...value(), token: 'ghs_' + 's'.repeat(length - 4) };
+    const envelope = encryptLinkSourceAccess(input, pub, { runId, sourceSha, now });
+    assert.equal(decryptLinkSourceAccess(envelope, privateKey, { expectedRunId: runId, expectedSourceSha: sourceSha, now }).token.length, length);
+  }
+  for (const token of ['ghs_' + 's'.repeat(4093), value().token + '\n', value().token + ' ', value().token + '\u0000', value().token + '\u007f', value().token + '\u00a0', value().token + '\u200b']) {
+    rejects(() => encryptLinkSourceAccess({ ...value(), token }, pub, { runId, sourceSha, now }), E.ENVELOPE);
+    await assert.rejects(() => verifyLinkSourceReads(token, { fetchImpl: fixture() }), (e) => e.code === E.INPUT);
+  }
+  rejects(() => encryptLinkSourceAccess({ ...value(), permissions: { ...C.permissions, packages: 'read' } }, pub, { runId, sourceSha, now }), E.ENVELOPE);
+});
+
+test('workflow mints only fixed source read capabilities with the existing App identity', () => {
+  const text = readFileSync(new URL('../.github/workflows/link-source-access.yml', import.meta.url), 'utf8');
+  const requested = [...text.matchAll(/^\s+permission-([a-z-]+): (.+)$/gm)].map((match) => [match[1], match[2]]);
+  assert.deepEqual(requested, [['contents', 'read'], ['actions', 'read']]);
+  assert.deepEqual(C.permissions, { contents: 'read', actions: 'read' });
+  assert.match(text, /actions\/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349/);
+  assert.match(text, /repositories: \|\n\s+one-person-lab\n\s+opl-studio\n\s+opl-link\n/);
+  assert.match(text, /skip-token-revoke: true/);
 });

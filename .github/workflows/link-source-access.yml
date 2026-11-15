@@ -42,9 +42,8 @@ jobs:
             opl-link
           permission-contents: read
           permission-actions: read
-          permission-packages: read
           skip-token-revoke: true
-      - name: Verify fixed source and image reads, then encrypt short-lived token
+      - name: Verify fixed source reads, then encrypt short-lived token
         env:
           PUBLIC_KEY_B64: ${{ inputs.public_key_b64 }}
           LINK_SOURCE_ACCESS_TOKEN: ${{ steps.reader.outputs.token }}
