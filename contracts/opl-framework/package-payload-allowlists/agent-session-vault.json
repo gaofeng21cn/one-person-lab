@@ -21,6 +21,7 @@
     "src/agent_session_vault/archive.py",
     "src/agent_session_vault/archive_backend.py",
     "src/agent_session_vault/archive_catalog.py",
+    "src/agent_session_vault/archive_content.py",
     "src/agent_session_vault/archive_model.py",
     "src/agent_session_vault/archive_ops.py",
     "src/agent_session_vault/archive_prune.py",
@@ -40,6 +41,10 @@
     "src/agent_session_vault/views.py",
     "vault.py",
     "assets/branding/agent-session-vault-logo.png",
+    "src/agent_session_vault/archive_maintenance.py",
+    "src/agent_session_vault/cold_archive.py",
+    "scripts/run_detached.py",
+    "config/codex-cold-decisions.example.json",
     "opl-package.json"
   ]
 }
