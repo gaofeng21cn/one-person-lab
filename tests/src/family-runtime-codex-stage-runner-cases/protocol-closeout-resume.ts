@@ -31,7 +31,8 @@ test('reviewer resume can cite the persisted original response without promoting
   };
   const script = [
     'if [ "$1" = "exec" ] && [ "${2:-}" = "resume" ]; then',
-    'node - "$@" <<\'NODE\'',
+    'prompt=$(cat)',
+    'node - "$@" "$prompt" <<\'NODE\'',
     'const fs = require("node:fs");',
     'const crypto = require("node:crypto");',
     'const prompt = process.argv.at(-1);',
@@ -178,6 +179,7 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     'if [ "$1" = "exec" ] && [ "${2:-}" = "resume" ]; then',
     '  printf "resume:%s\\n" "$PWD" >> ' + JSON.stringify(invocationLog),
     '  printf "%s\\n" "$*" >> ' + JSON.stringify(invocationLog),
+    '  cat >> ' + JSON.stringify(invocationLog),
     '  printf \'{"type":"thread.started","thread_id":"thread-protocol-closeout"}\\n\'',
     '  printf "%s\\n" ' + JSON.stringify(resumeEvent),
     '  printf \'{"type":"turn.completed"}\\n\'',
@@ -243,6 +245,7 @@ test('formal quality Attempt uses one same-thread closeout-only resume without c
     assert.equal(invocation.match(/exec resume --skip-git-repo-check/g)?.length, 1);
     assert.match(invocation, /--config sandbox_mode="read-only"/);
     assert.match(invocation, /--config model_reasoning_effort="low"/);
+    assert.match(invocation, /thread-protocol-closeout -\n/);
     assert.match(invocation, /protocol_closeout_resume, not Review/);
     assert.match(invocation, /Do not call tools, edit files, change artifact bytes/);
     assert.match(invocation, /surface_kind "stage_attempt_closeout_packet" exactly/);
