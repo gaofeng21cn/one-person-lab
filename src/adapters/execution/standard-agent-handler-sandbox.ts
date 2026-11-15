@@ -35,11 +35,10 @@ export type StandardAgentHandlerSandboxReceipt = {
 
 const NODE_BRIDGE = String.raw`
 import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
 import path from 'node:path';
-import { createRequire } from 'node:module';
+import { syncBuiltinESMExports } from 'node:module';
 import { pathToFileURL } from 'node:url';
-
-const require = createRequire(import.meta.url);
 
 function canonical(value, at = '$') {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
@@ -94,11 +93,11 @@ try {
     const original = fs[method];
     if (typeof original === 'function') fs[method] = function (...args) { assertReadable(args[0]); return original.apply(this, args); };
   }
-  const fsPromises = require('node:fs/promises');
   for (const method of ['readFile', 'open', 'readdir', 'opendir']) {
     const original = fsPromises[method];
     if (typeof original === 'function') fsPromises[method] = function (...args) { assertReadable(args[0]); return original.apply(this, args); };
   }
+  syncBuiltinESMExports();
   const imported = await import(pathToFileURL(modulePath).href);
   const handler = imported[exportName];
   if (typeof handler !== 'function') throw new Error('handler export is not callable: ' + exportName);
