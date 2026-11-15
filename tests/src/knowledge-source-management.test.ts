@@ -235,3 +235,13 @@ test('legacy source names use readable context without changing stable identitie
     }
   } finally { f.cleanup(); }
 });
+
+test('knowledge target resolution reports an unbound workspace without creating a registry', () => {
+  const f = setup();
+  try {
+    fs.rmSync(f.bindingRef);
+    const result = resolveKnowledgeSourceTarget({ workspaceRoot: f.workspace, domainId: 'fixture', bodyPath: path.join(f.source, 'policy.md') });
+    assert.deepEqual(result, { registered: false });
+    assert.equal(fs.existsSync(f.bindingRef), false);
+  } finally { f.cleanup(); }
+});

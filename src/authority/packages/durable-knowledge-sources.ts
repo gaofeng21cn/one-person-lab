@@ -319,6 +319,7 @@ export function resolveKnowledgeSourceTarget(input: SourceInput & { bodyPath: st
     return parent === file ? file : path.join(locate(parent), path.basename(file));
   };
   const target = locate(path.resolve(input.bodyPath));
+  if (!fs.existsSync(path.join(input.workspaceRoot, KNOWLEDGE_BINDINGS_REF))) return { registered: false };
   readBoundKnowledgeSources(input);
   const bindings = JSON.parse(fs.readFileSync(containedKnowledgeFile(input.workspaceRoot, KNOWLEDGE_BINDINGS_REF), 'utf8')) as SourceBindings;
   const matches: Array<{ item: DurableKnowledgeItem; source: KnowledgeSource; registrySha256: string; issue: string | null; disclosed: boolean }> = [];
