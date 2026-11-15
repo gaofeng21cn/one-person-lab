@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import agentBlueprintSchema from '../../../contracts/opl-framework/foundry-agent-blueprint.schema.json' with { type: 'json' };
 import evolutionProposalSchema from '../../../contracts/opl-framework/foundry-evolution-proposal.schema.json' with { type: 'json' };
 
@@ -16,6 +16,54 @@ import type {
   FoundryProviderManifest,
   FoundryActivityIdentity,
 } from '../../authority/evolution/index.ts';
+/**
+ * Content-addressed bytes the terminal Stage already transported. Producers name the content
+ * files after their own digest only sometimes, and a Stage that declares the top-level blueprint
+ * without every member fails the last readback even though the bytes sit next to it. Resolve by
+ * hash inside the transported artifact tree so transport keeps proving identity by digest.
+ */
+function recoverTransportedContentBytes(
+  artifactRefs: string[],
+  digest: string,
+): Buffer | null {
+  const first = artifactRefs[0];
+  if (!first || !first.startsWith('file://')) return null;
+  let root: string;
+  try {
+    root = path.join(path.dirname(fileURLToPath(first)), 'content');
+  } catch {
+    return null;
+  }
+  if (!fs.existsSync(root)) return null;
+  const pending: Array<{ directory: string; depth: number }> = [{ directory: root, depth: 0 }];
+  while (pending.length > 0) {
+    const { directory, depth } = pending.pop()!;
+    if (depth > 3) continue;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        pending.push({ directory: entryPath, depth: depth + 1 });
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      let bytes: Buffer;
+      try {
+        bytes = fs.readFileSync(entryPath);
+      } catch {
+        continue;
+      }
+      if (crypto.createHash('sha256').update(bytes).digest('hex') === digest) return bytes;
+    }
+  }
+  return null;
+}
+
 import { foundryContentDigest } from '../../authority/evolution/index.ts';
 import { FileFoundryContentStore, foundryStoragePaths } from '../../authority/evidence/index.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
@@ -493,12 +541,17 @@ export class StageRunFoundryProviderCoordinator {
       const expected = /^opl-content:\/\/sha256\/([a-f0-9]{64})$/.exec(ref)?.[1];
       if (!expected) fail('Foundry provider returned a malformed content ref.', { content_ref: ref });
       const artifact = artifactBodies.find((entry) => entry.sha256.replace(/^sha256:/, '') === expected);
-      if (!artifact) {
+      if (artifact) {
+        contentStore.put(artifact.bytes, ref);
+        continue;
+      }
+      const recovered = recoverTransportedContentBytes(cursor.artifact_refs, expected);
+      if (!recovered) {
         fail('Foundry provider did not transport bytes for a content-addressed AgentBlueprint ref.', {
           content_ref: ref,
         });
       }
-      contentStore.put(artifact.bytes, ref);
+      contentStore.put(recovered, ref);
     }
     canonicalJsonText(candidates[0]);
     const resultDirectory = path.join(this.#storageRoot, 'provider-results');
