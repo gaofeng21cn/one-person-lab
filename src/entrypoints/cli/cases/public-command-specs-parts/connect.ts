@@ -1,5 +1,6 @@
 import { buildOplPackageManifest } from '../../../../adapters/integration/package-distribution.ts';
 import {
+  authorizeOplLinkCompanion,
   completeOplGatewaySetup,
   disconnectOplGatewayAccount,
   loginOplGatewayAccount,
@@ -88,7 +89,7 @@ type ExternalSkillsSyncArgs = ExternalSkillsInspectArgs & {
 
 type FoundationSkillsSyncArgs = FoundationSkillsSyncInput;
 
-async function readGatewayCredentialsStdin() {
+async function readGatewayStdinObject() {
   const chunks: Buffer[] = [];
   let totalBytes = 0;
   for await (const chunk of process.stdin) {
@@ -115,6 +116,11 @@ async function readGatewayCredentialsStdin() {
     });
   }
   const record = value as Record<string, unknown>;
+  return record;
+}
+
+async function readGatewayCredentialsStdin() {
+  const record = await readGatewayStdinObject();
   if (typeof record.email !== 'string' || typeof record.password !== 'string') {
     throw new FrameworkContractError('cli_usage_error', 'Gateway credentials require email and password.', {
       reason_code: 'credentials_stdin_invalid',
@@ -458,6 +464,17 @@ export function buildConnectCommandSpecs(
       handler: async (args) => {
         parseRegisteredCommandOptions('connect gateway login', args, connectCommandSpecs['connect gateway login']);
         return loginOplGatewayAccount(await readGatewayCredentialsStdin());
+      },
+    },
+    'connect gateway authorize-companion': {
+      usage: 'opl connect gateway authorize-companion --request-stdin --credential-file <path>',
+      summary: 'Authorize phone access through the existing account and a private credential file.',
+      examples: ['opl connect gateway authorize-companion --request-stdin --credential-file /private/companion/credentials.json --json'],
+      group: 'connect',
+      handler: async (args) => {
+        const parsed = parseRegisteredCommandOptions('connect gateway authorize-companion', args,
+          connectCommandSpecs['connect gateway authorize-companion']);
+        return authorizeOplLinkCompanion(await readGatewayStdinObject(), String(parsed['credential-file'] ?? ''));
       },
     },
     'connect gateway complete-setup': {

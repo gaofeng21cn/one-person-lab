@@ -2173,6 +2173,25 @@
         "surface": "gateway_account_secret_stdin_login"
       }
     },
+    "connect_gateway_authorize_companion": {
+      "command_id": "connect gateway authorize-companion",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        { "name": "request-stdin", "flag": "--request-stdin", "value_kind": "boolean", "required": true, "summary": "Read the bounded companion service and public host identity request from stdin." },
+        { "name": "credential-file", "flag": "--credential-file", "value_kind": "string", "required": true, "summary": "Write credentials exclusively to a new file inside the caller's private directory." }
+      ],
+      "output_schema": { "type": "object", "required": ["companion_authorization"], "additionalProperties": true },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "gateway_account_scoped_companion_credential_file"
+      }
+    },
     "connect_gateway_complete_setup": {
       "command_id": "connect gateway complete-setup",
       "owner": "OPL Connect",

@@ -19,6 +19,7 @@ import {
   refreshGatewaySession,
 } from './opl-gateway-account-parts/client.ts';
 import { bindGatewayKeyToCodex, gatewayKeyFingerprint, restoreCodexBinding } from './opl-gateway-account-parts/codex-binding.ts';
+import { exchangeCompanionCredentials, writeCompanionAuthorization } from './opl-gateway-account-parts/companion-authorization.ts';
 import { disableGatewayManagedKey, reconcileGatewayManagedKey } from './opl-gateway-account-parts/key-reconcile.ts';
 import {
   readGatewayAccountState,
@@ -335,6 +336,14 @@ export async function refreshOplGatewayAccount() {
       throw error;
     }
   });
+}
+
+export async function authorizeOplLinkCompanion(request: unknown, credentialFile: string) {
+  return writeCompanionAuthorization(request, credentialFile, device => withGatewayAccountLock(async () => {
+    if (!readGatewayAccountState()) throw gatewayError('reauth_required', 'Sign in to your OPL account in the App first.');
+    const rotated = await rotateSession();
+    return exchangeCompanionCredentials(device, rotated.session.access_token);
+  }));
 }
 
 export async function repairOplGatewayAccount(groupId?: string) {

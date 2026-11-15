@@ -34,6 +34,7 @@ const registryCases = [
   ['connect scientific search', 'connect_scientific_search', ['provider', 'query', 'limit'], undefined],
   ['connect references verify', 'connect_references_verify', ['references-file', 'providers', 'cache-root', 'max-retries'], undefined],
   ['connect gateway login', 'connect_gateway_login', ['credentials-stdin'], undefined],
+  ['connect gateway authorize-companion', 'connect_gateway_authorize_companion', ['request-stdin', 'credential-file'], undefined],
   ['connect authorization list', 'connect_authorization_list', [], undefined],
   ['connect cloud list', 'connect_cloud_list', [], undefined],
   ['connect cloud import', 'connect_cloud_import', ['cloud-ref'], undefined],

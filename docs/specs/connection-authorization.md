@@ -69,3 +69,11 @@ opl connect cloud import --cloud-ref cloud:<UUID> --json
 可信宿主通过已安装的 `opl-cloud-connect`，或显式 `OPL_CLOUD_CONNECT_BINARY` 选择该 helper。导入连接不批准 Package grant；消费者仍通过上面的 installed context 请求并使用精确能力。公共能力、身份和调用边界由 [Cloud 连接合同](../../contracts/opl-framework/cloud-connection-contract.json)定义；凭证的建立、保管和服务部署由 [Cloud](https://github.com/gaofeng21cn/one-person-lab-cloud) 维护。
 
 每次调用由 CloudIdentity 重验凭证、父会话、成员状态、tenant 与 action，业务 owner 继续检查目标 Workspace 或 operation。Connect 撤权在派发前生效；Cloud 撤权或父会话到期则由 Cloud 拒绝后续访问。用户重新建立连接后，helper revision 变化会使旧 grant 失效。此入口不提供长期 PAT、OAuth 或自动刷新；过期后回到 Cloud 登录与连接流程，不借用浏览器 cookie。未知结果回读原对象或 operation，不重放业务操作。
+
+## OPL Link 的现有账号授权桥
+
+桌面 Host 通过 `opl connect gateway authorize-companion --request-stdin --credential-file <new-private-file> --json` 复用 App 已登录的 OPL Gateway 账号，向固定的 `https://link.medopl.com` 注册公开电脑身份。请求只包含 `service: "opl_link"` 和上游 Host descriptor；不从界面接收服务器地址。未登录或会话失效时回到 App 原有账号入口，手机不输入账号密码。
+
+Framework 在现有账号锁内轮换会话并持久化 refresh token，再兑换 Relay 专用凭据。凭据只写入调用者拥有的 0700 目录中的全新 0600 文件；已有文件、符号链接和宽权限目录在联网前拒绝。Studio 导入后删除临时文件。标准输出仅含已写入状态、固定服务地址、scope 和电脑 ID；Gateway bearer、密码、模型 Key 与 Relay token 不进入 Renderer、CLI 输出或通用连接注册表。
+
+这次兑换仅授权传输。手机仍须通过电脑公钥固定的 Noise 通道兑换 120 秒单次业务配对码；会话、审批、工作区及设备撤销继续由 Studio 和已有 Codex owner 执行。产品和互联网合同由 [App](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-remote-companion-internet.json) 持有。
