@@ -507,10 +507,11 @@ async function executeBridgePrompt(
   writable?: NodeJS.WritableStream,
 ) {
   const args = session.runtimeSessionId
-    ? buildCodexExecResumeArgs(session.runtimeSessionId, promptText, { json: true })
+    ? buildCodexExecResumeArgs(session.runtimeSessionId, promptText, { json: true, promptViaStdin: true })
     : buildCodexExecArgs(promptText, {
         cwd: session.cwd,
         json: true,
+        promptViaStdin: true,
       });
 
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -526,6 +527,7 @@ async function executeBridgePrompt(
   let result: Awaited<ReturnType<typeof runCodexCommandStreaming>>;
   try {
     result = await runCodexCommandStreaming(args, {
+      stdin: promptText,
       onStdoutEvent: (event) => {
         applyCodexExecEvent(session, event, writable);
       },

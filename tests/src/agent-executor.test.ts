@@ -244,10 +244,12 @@ test('codex_cli executor keeps ordinary, non-object, non-typed, and event-envelo
   }]).closeout_packet, null);
 });
 
-test('codex_cli executor passes model, provider, and reasoning effort as explicit request policy', () => {
+test('codex_cli executor passes request policy in argv and delivers the prompt through stdin', () => {
   const capturePath = path.join(os.tmpdir(), `opl-agent-executor-codex-policy-${process.pid}.txt`);
+  const stdinCapturePath = `${capturePath}.stdin`;
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+cat > ${JSON.stringify(stdinCapturePath)}
 if [ "$1" = "exec" ]; then
   printf '{"type":"thread.started","thread_id":"thread-agent-executor-policy"}\\n'
   printf '{"item":{"type":"agent_message","text":"Codex policy done"}}\\n'
@@ -283,8 +285,9 @@ exit 64
       'model_provider="openai"',
       '--config',
       'model_reasoning_effort="high"',
-      'Run a default executor task with a policy.',
+      '-',
     ]);
+    assert.equal(fs.readFileSync(stdinCapturePath, 'utf8'), 'Run a default executor task with a policy.');
     assert.equal(receipt.proof?.reasoning_effort, 'high');
   } finally {
     if (previousCodexBin === undefined) {
@@ -294,6 +297,7 @@ exit 64
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(capturePath, { force: true });
+    fs.rmSync(stdinCapturePath, { force: true });
   }
 });
 
