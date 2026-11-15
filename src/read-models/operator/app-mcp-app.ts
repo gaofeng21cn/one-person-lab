@@ -2,6 +2,7 @@ import {
   discoverInstalledPackageDescriptors,
   installedDescriptorSupportsFrameworkCalls,
   miniAppPresentation,
+  workspaceContributionViews,
   type InstalledPackageDescriptor,
 } from '../../adapters/integration/index.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
@@ -136,7 +137,7 @@ function projectedViews(descriptor: InstalledPackageDescriptor) {
   const miniapp = miniAppPresentation(descriptor.manifest, 'product_entry');
   const description = descriptor.manifest.presentation?.description_i18n ?? {};
   const sessionSummary = descriptor.manifest.presentation?.session_routing_summary_i18n ?? {};
-  return contributions.views.flatMap((view) => {
+  return workspaceContributionViews(descriptor.manifest).flatMap((view) => {
     const placement = contributionPlacement(descriptor, view.view_id);
     return [{
       package_id: descriptor.manifest.package_id,

@@ -111,3 +111,14 @@ owner 执行结果可附已有贡献引用形式的 `readback: { data_ref, input
 相同 invocation 的重开查询既有运行；改变决定、输入或目标必须使用新 invocation，旧摘要不能读取新字节。决定记录、阶段执行完成和领域质量接受分别回读；这条路径不解除 quality Attempt 的通用 resume 禁令，也不把人的批注当作专业质量批准。
 
 共用 SDK 的实际入口、第三方复用边界与软件中心管理范围见[Agent/MiniApp SDK](../architecture/agent-miniapp-sdk.md)。
+
+## Functional placement in OPL App
+
+Package repositories and carriers are delivery boundaries. User configuration remains on the
+App's functional Settings pages: channel and companion connections under Connections, service
+status and opt-in technical diagnostics under Service Status. Business lists, timelines, reviews,
+boards and artifacts use the existing shared OPL Apps or a dedicated standard MCP App; task-scoped
+views retain the contextual task workbench. Legacy `settings.section` placement does not make a
+business view a Settings form. The software directory and MCP catalog derive the same operational
+entry from the installed descriptor, so a leading service-status view cannot become a false work
+entry. No additional UI registry, loader or lifecycle is introduced.

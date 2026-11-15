@@ -10,6 +10,7 @@ import { createFakeCodexPluginManagerFixture, repoRoot } from './cli/helpers.ts'
 import { codexNativeReadbackFixture } from './cli/helpers-parts/codex-native-readback-fixture.ts';
 import { formatJsonPayload } from '../../src/kernel/json-file.ts';
 import { acceptDomainRead, parseResearchSnapshot, parseContributionResearch, renderResearch, renderProgress } from '../../src/mcp-app/task-workbench.js';
+import { miniAppPresentation } from '../../src/adapters/integration/agent-package-registry-parts/miniapp-presentation.ts';
 import { listOplMcpAppViews, readFrameworkMcpAppTask } from '../../src/read-models/operator/app-mcp-app.ts';
 
 test('task details do not wait for global diagnostics and action inspection preserves the selected task', async () => {
@@ -322,4 +323,30 @@ test('shared task workbench binds revisions and scientific evidence to the selec
   assert.match(html, /review:1/);
   assert.match(html, /evidence:1/);
   assert.doesNotMatch(renderProgress({ stage_map: [{ state: 'completed', display_name: 'Analysis' }] }), /证据支持/);
+});
+
+
+test('software navigation and the MCP catalog share operational entries independently of legacy Settings placement', () => {
+  const viewTypes = ['service_status', 'channel_access', 'remote_companion_access', 'activity_log',
+    'list_detail', 'timeline', 'approval_diff', 'task_board', 'artifact_view'];
+  const manifest = { package_id: 'arbitrary-component', display_name: 'Example',
+    codex_surface: { app_contribution_abi: { command: ['unused'], request_schema: 'opl-package-app-contribution-request.v1', response_schema: 'opl-package-app-contribution-response.v1' } },
+    app_contributions: { views: viewTypes.map(view_type => ({view_id: view_type, view_type, title_i18n: {'en-US': view_type}, data_ref: `example#${view_type}`})),
+      ui: viewTypes.map(view_id => ({view_id, slot: 'settings.section', scope: 'root', contribution_kind: 'view'})) } };
+  const descriptor = { manifest, enabled: true, readiness: {installed: true, physical_status: 'available', callability: 'callable'} };
+  const catalog = listOplMcpAppViews({ descriptorDiscovery: { discover: () => new Map([[manifest.package_id, descriptor as any]]) } });
+  const operational = ['list_detail', 'timeline', 'approval_diff', 'task_board', 'artifact_view'];
+  assert.deepEqual(catalog.views.filter(view => view.package_id === manifest.package_id).map(view => view.view_type).sort(), [...operational].sort());
+  assert.equal(catalog.products[0]?.entry_view_id, 'list_detail');
+  assert.equal(miniAppPresentation(manifest as any, 'product_entry').entry_view_id, 'list_detail');
+  assert.equal(catalog.products[0]?.view_count, operational.length);
+
+  const settingsOnly = { ...manifest, app_contributions: {...manifest.app_contributions, views: manifest.app_contributions.views.slice(0, 4)} };
+  assert.equal(miniAppPresentation(settingsOnly as any, 'product_entry').direct_entry, false);
+  const settingsCatalog = listOplMcpAppViews({ descriptorDiscovery: { discover: () => new Map([[manifest.package_id, {...descriptor, manifest: settingsOnly} as any]]) } });
+  assert.equal(settingsCatalog.products.length, 0);
+
+  const task = { ...manifest, app_contributions: {views: [manifest.app_contributions.views[3]], ui: [{view_id: 'activity_log', contribution_kind: 'view', slot: 'runtime.detail', scope: 'work_item'}]} };
+  const taskCatalog = listOplMcpAppViews({ descriptorDiscovery: { discover: () => new Map([[manifest.package_id, {...descriptor, manifest: task} as any]]) } });
+  assert.equal(taskCatalog.views.filter(view => view.package_id === manifest.package_id)[0]?.view_type, 'activity_log');
 });

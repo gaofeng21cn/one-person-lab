@@ -287,6 +287,11 @@ test('direct MiniApp entries survive the Framework fast projection with owner na
   const firstViewId = installed.manifest.app_contributions?.views[0]?.view_id;
   assert.ok(firstViewId);
   assert.deepEqual(entry().miniapp_entry, { resource_uri: 'ui://opl/apps.html', arguments: { package_id: installed.manifest.package_id, view_id: firstViewId } });
+  const contributions = installed.manifest.app_contributions!;
+  const serviceView = contributions.views.find(view => view.view_type === 'service_status')!;
+  assert.ok(serviceView);
+  installed.manifest.app_contributions = {...contributions, views: [serviceView, ...contributions.views.filter(view => view !== serviceView)]};
+  assert.deepEqual(entry().miniapp_entry, { resource_uri: 'ui://opl/apps.html', arguments: { package_id: installed.manifest.package_id, view_id: firstViewId } });
   installed.manifest.app_contributions = null;
   assert.equal(entry().miniapp_entry, null);
 });
