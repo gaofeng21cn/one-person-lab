@@ -1,0 +1,107 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "opl-channel-weixin",
+  "plugin_id": "opl-channel-weixin",
+  "package_version": "0.2.0",
+  "source_repo": "https://github.com/gaofeng21cn/one-person-lab-app.git",
+  "source_commit": "a93e027957d5c0654deff2e2aaaf61ce78cedfb4",
+  "source_root": "packages/opl-channel-weixin",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:14f6ea85585268046b6d5c04569cbf9d4a4dc8c0722b35ce268e82bff32a2b5f"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/.codex-plugin/plugin.json",
+      "sha256": "sha256:1f1e65894226c74d6a934694db623adecd9777f7c3452b6c034fa7237f994354"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/opl-package.json",
+      "sha256": "sha256:d6c0a36e160c0a0bb010df4587991423a17b6eafbe568031d4a8d055d56d379c"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/LICENSE",
+      "sha256": "sha256:a515d5a76da6c082f0d3d33a597bf82e32ecdac8841ed1783ac081ebd6d62ebf"
+    },
+    {
+      "path": "NOTICE",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/NOTICE",
+      "sha256": "sha256:a161c7f19e064162ea933c57e8d0644d464f2cd5ea89913494b52c39558f5948"
+    },
+    {
+      "path": "dist/src/backoff.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/dist/src/backoff.d.ts",
+      "sha256": "sha256:e332173d89f9112fde04184cbb39da2cc9b89b65562d87cab927be44265b0ec7"
+    },
+    {
+      "path": "dist/src/backoff.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/dist/src/backoff.js",
+      "sha256": "sha256:a682bdea85c3ca7bb3638e3485503270c25c40927c6b71c428c564dd4cce2f8a"
+    },
+    {
+      "path": "dist/src/ilink.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/dist/src/ilink.d.ts",
+      "sha256": "sha256:bec7ec315a138e9936b6368e9344055a23b6c3393ec4d9ff6c315dc2e9f7e3cb"
+    },
+    {
+      "path": "dist/src/ilink.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/dist/src/ilink.js",
+      "sha256": "sha256:539326edbe564e6c20e52bbdc5d09c81ad5f9e78d182efed5b53070d0a656726"
+    },
+    {
+      "path": "dist/src/index.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/dist/src/index.d.ts",
+      "sha256": "sha256:80fbe16f784a4f8a33e7fd5a74d85e516b9088777f919a41ec2b4c8189c845e0"
+    },
+    {
+      "path": "dist/src/index.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/dist/src/index.js",
+      "sha256": "sha256:5bfca4f77523f0b5eed11a8c3861d815759985c8071b3a3e528bf904814aca1f"
+    },
+    {
+      "path": "dist/src/provider.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/dist/src/provider.d.ts",
+      "sha256": "sha256:1b5f74216411a325c8bfd1b49d440c0769645584ac4ab87fa4d70709e08b1f9d"
+    },
+    {
+      "path": "dist/src/provider.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/dist/src/provider.js",
+      "sha256": "sha256:694b376ff548b7abdf3d68e6c5e12f009791224cbcfc7f709bfcb8f083470201"
+    },
+    {
+      "path": "dist/src/types.d.ts",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/dist/src/types.d.ts",
+      "sha256": "sha256:2e7bde94b444ff13656ef7673299260614cf2639372071a49ee02a51b62c5635"
+    },
+    {
+      "path": "dist/src/types.js",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/dist/src/types.js",
+      "sha256": "sha256:dc9e2ed3a5ba4abbe9f7824e8dc5075b377e73f07d378ef56022198667684f33"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/a93e027957d5c0654deff2e2aaaf61ce78cedfb4/packages/opl-channel-weixin/package.json",
+      "sha256": "sha256:a24315dd325c1d1abc018f28ef9420bb2912def79d7d338c15eeb72128c529f2"
+    }
+  ]
+}
