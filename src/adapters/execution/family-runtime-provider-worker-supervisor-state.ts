@@ -104,7 +104,7 @@ export function inspectProviderWorkerSupervisorState(paths: RuntimePaths, runtim
   const plistExists = fs.existsSync(pathToPlist);
   const plist = readPlist(pathToPlist);
   const launcherModulePath = providerWorkerLauncherModulePath();
-  const launchctl = plistExists
+  const launchctl = process.platform === 'darwin' || runtime.runLaunchctl
     ? (runtime.runLaunchctl ?? runProviderWorkerSupervisorLaunchctl)([
         'print',
         `${providerWorkerSupervisorLaunchctlTarget()}/${PROVIDER_WORKER_SUPERVISOR_LABEL}`,
@@ -142,7 +142,7 @@ export function inspectProviderWorkerSupervisorState(paths: RuntimePaths, runtim
     surface_kind: 'opl_family_runtime_provider_worker_supervisor_state',
     provider_kind: 'temporal',
     supervisor_label: PROVIDER_WORKER_SUPERVISOR_LABEL,
-    status: !plistExists
+    status: !plistExists && !launchctl?.ok
       ? 'not_installed'
       : !configurationCurrent
         ? 'configuration_drift'

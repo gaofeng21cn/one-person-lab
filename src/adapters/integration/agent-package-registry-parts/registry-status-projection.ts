@@ -1,3 +1,4 @@
+import { readStandardAgentRuntimeOwner, sameStandardAgentRuntimeOwner } from '../../../kernel/standard-agent-runtime-owner.ts';
 import { deriveAgentPackageLaunchState } from '../../../kernel/agent-package-launch-state.ts';
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { refsOnlyAuthorityBoundary } from '../../../kernel/refs-only-authority-boundary.ts';
@@ -61,7 +62,7 @@ export function packageSnapshot(input: {
   // full inspection refreshes registry grants; downloads reverify separately.
   const verification = input.accessMode ?? 'cached';
   const discoveredInstalled = discoverInstalledPackageDescriptors({
-    failClosedOnCarrierError: input.failClosedOnCarrierError,
+    failClosedOnCarrierError: input.failClosedOnCarrierError ?? true,
     env,
   });
   const installed = new Map(
@@ -390,10 +391,26 @@ export function hostedRuntimeReadiness(descriptor: InstalledPackageDescriptor | 
     try { return candidate ? fs.realpathSync(candidate) : null; } catch { return null; }
   }).find((candidate) => candidate && ['contracts/domain_descriptor.json', ...catalogRefs]
     .every((ref) => ref.length > 0 && runtimeRootContainsDescriptor(candidate, ref))) ?? null;
-  const ready = root !== null;
-  return { status: ready ? 'available' as const : 'unavailable' as const,
-    ready, source_root: ready ? root : null,
-    reason: ready ? null : 'hosted_agent_source_unavailable' };
+  if (!root) {
+    return { status: 'unavailable' as const, ready: false, source_root: null,
+      reason: 'hosted_agent_source_unavailable' };
+  }
+  try {
+    const sourceRoot = fs.realpathSync(descriptor.sourcePath);
+    const carrierOwner = readStandardAgentRuntimeOwner(sourceRoot, descriptor.manifest.package_id);
+    const separateRuntime = sourceRoot !== root && !sourceRoot.startsWith(`${root}${path.sep}`);
+    if (separateRuntime && !sameStandardAgentRuntimeOwner(
+      readStandardAgentRuntimeOwner(root, descriptor.manifest.package_id), carrierOwner,
+    )) {
+      return { status: 'unavailable' as const, ready: false, source_root: root,
+        reason: 'hosted_agent_runtime_identity_mismatch' };
+    }
+  } catch (error) {
+    if (!(error instanceof FrameworkContractError)) throw error;
+    return { status: 'unavailable' as const, ready: false, source_root: root,
+      reason: 'hosted_agent_runtime_descriptor_invalid' };
+  }
+  return { status: 'available' as const, ready: true, source_root: root, reason: null };
 }
 
 function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' | 'full', packageAccess?: AgentPackageAccessDecision, currentOwner?: InstalledPackageDescriptor) {
@@ -628,7 +645,7 @@ function buildPackageStatus(input: OplAgentPackageStatusInput, snapshot: Package
             : !callable
               ? 'carrier_disabled'
               : !hostedReady
-                ? 'hosted_agent_source_unavailable'
+                ? hosted.reason ?? 'hosted_agent_source_unavailable'
               : !requiredPolicyDependenciesOperational
                 ? 'managed_policy_required_dependency_unavailable'
               : !managedPolicyOperational

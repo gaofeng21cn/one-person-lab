@@ -79,14 +79,18 @@ export function readPackageManagedStandardAgentDescriptorFromPackagePort(
   return registeredPort?.readPackageManagedStandardAgentDescriptor?.(packageIds) ?? null;
 }
 
-export function readStandardAgentDescriptorForDomainFromPackagePort(domainId: string) {
-  return registeredPort?.readStandardAgentDescriptorForDomain?.(domainId) ?? null;
+export function readStandardAgentDescriptorForDomainFromPackagePort(
+  domainId: string,
+  port: AgentPackageReadinessPort | null = registeredPort,
+) {
+  return port?.readStandardAgentDescriptorForDomain?.(domainId) ?? null;
 }
 
 export function resolveStandardAgentContractCheckoutFromPackagePort(
   domainId: string,
+  port: AgentPackageReadinessPort | null = registeredPort,
 ): StandardAgentContractCheckoutResolution {
-  return registeredPort?.resolveStandardAgentContractCheckout?.(domainId) ?? {
+  return port?.resolveStandardAgentContractCheckout?.(domainId) ?? {
     surface_kind: 'opl_standard_agent_contract_checkout_resolution',
     status: 'not_applicable',
     launch_allowed: false,

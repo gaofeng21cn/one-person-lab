@@ -22,6 +22,8 @@ import {
   standardAgentDescriptor,
   writeStandardAgentDescriptor,
 } from './descriptor-and-source-material.ts';
+import { hostedRuntimeReadiness } from '../../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
+import { resolveAgentPackageEffectiveSourcePolicy } from '../../../src/adapters/integration/agent-package-registry-parts/source-policy.ts';
 
 function initializeGitCheckout(repoDir: string) {
   execFileSync('git', ['init', '--quiet'], { cwd: repoDir });
@@ -684,6 +686,28 @@ test('developer-selected sibling descriptor wins over an inactive stale managed 
   });
 });
 
+test('explicit installed selection uses its carrier despite a stale developer and legacy module', () => {
+  withDeveloperBookForgeSources(({ siblingRepo, managedRepo, statusReader }) => {
+    const configPath = path.join(process.env.OPL_STATE_DIR!, 'developer-supervisor.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.module_source_preferences = { oplbookforge: 'managed' };
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+
+    const source = resolveAgentPackageEffectiveSourcePolicy('obf');
+    assert.notEqual(fs.realpathSync.native(siblingRepo), fs.realpathSync.native(managedRepo));
+    assert.equal(source.desired_source_kind, null);
+    const checkout = resolveStandardAgentContractCheckout('obf', statusReader);
+    assert.equal(checkout?.source_kind, 'opl_installed_native_carrier');
+    assert.equal(fs.realpathSync.native(checkout?.checkout_path ?? ''), fs.realpathSync.native(managedRepo));
+
+    process.env.OPL_MODULE_PATH_OPLBOOKFORGE = siblingRepo;
+    assert.equal(resolveAgentPackageEffectiveSourcePolicy('obf').desired_source_kind, 'developer_checkout_override');
+    const override = resolveStandardAgentContractCheckout('obf', statusReader);
+    assert.equal(override?.source_kind, 'opl_selected_developer_checkout');
+    assert.equal(fs.realpathSync.native(override?.checkout_path ?? ''), fs.realpathSync.native(siblingRepo));
+  });
+});
+
 test('selected descriptor accepts a canonical registry agent id as its domain identity', () => {
   const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-interface-agent-id-'));
   const statusReads: string[] = [];
@@ -723,5 +747,45 @@ test('developer-selected sibling descriptor remains fail-closed when the selecte
       /unknown properties/,
     );
     assert.deepEqual(statusReads, []);
+  });
+});
+
+
+test('hosted readiness rejects a selected developer runtime whose owner differs from the installed carrier', () => {
+  withDeveloperBookForgeSources(({ siblingRepo, managedRepo }) => {
+    process.env.OPL_MODULE_PATH_OPLBOOKFORGE = siblingRepo;
+    const owner = {
+      surface_kind: 'opl_agent_package_manifest.v1', package_id: 'obf', agent_id: 'obf', version: '0.1.0',
+      domain_descriptor_ref: 'contracts/domain_descriptor.json',
+      codex_surface: {
+        plugin_id: 'opl-bookforge', plugin_source_path: '.',
+        configured_codex_plugin_carrier: {
+          kind: 'codex_plugin_manager', executor_route: 'codex_cli',
+          plugin_selector: 'opl-bookforge@opl-bookforge', marketplace_source: 'gaofeng21cn/opl-bookforge',
+          publication_ref: 'ghcr.io/gaofeng21cn/one-person-lab-packages/obf:latest-stable',
+        },
+      },
+    };
+    for (const repo of [siblingRepo, managedRepo]) {
+      fs.writeFileSync(path.join(repo, 'opl-package.json'), JSON.stringify(owner));
+      fs.writeFileSync(path.join(repo, 'contracts/action_catalog.json'), '{}');
+    }
+    const installed = {
+      sourcePath: managedRepo,
+      manifest: { package_role: 'standard_agent', package_id: 'obf', entrypoints: [
+        { entrypoint_kind: 'opl_hosted_action_catalog', source_ref: 'contracts/action_catalog.json' },
+      ] },
+    } as unknown as Parameters<typeof hostedRuntimeReadiness>[0];
+    for (const detail of ['fast', 'full'] as const) {
+      assert.equal(hostedRuntimeReadiness(installed, detail).ready, true);
+      fs.writeFileSync(path.join(siblingRepo, 'opl-package.json'), JSON.stringify({ ...owner, version: '0.0.9' }));
+      const mismatch = hostedRuntimeReadiness(installed, detail);
+      assert.equal(mismatch.ready, false);
+      assert.equal(mismatch.reason, 'hosted_agent_runtime_identity_mismatch');
+      assert.equal(mismatch.source_root, fs.realpathSync(siblingRepo));
+      fs.writeFileSync(path.join(siblingRepo, 'opl-package.json'), 'invalid json');
+      assert.equal(hostedRuntimeReadiness(installed, detail).reason, 'hosted_agent_runtime_descriptor_invalid');
+      fs.writeFileSync(path.join(siblingRepo, 'opl-package.json'), JSON.stringify(owner));
+    }
   });
 });

@@ -88,6 +88,7 @@ test('Temporal launchctl kickstart timeout includes the launchd throttle window'
 function createFakeLaunchctl(options: {
   replacePidOnKickstart?: boolean;
   kickstartDelayMs?: number;
+  bootoutDelayMs?: number;
   monotonicNowMs?: () => number;
 } = {}) {
   let loaded = false;
@@ -95,6 +96,7 @@ function createFakeLaunchctl(options: {
   let bootstrapCount = 0;
   let pid = 4242;
   let kickstartReadyAtMs: number | null = null;
+  let unloadAtMs: number | null = null;
   const calls: string[][] = [];
   const settleKickstart = () => {
     if (
@@ -124,6 +126,11 @@ function createFakeLaunchctl(options: {
       calls.push(args);
       if (args[0] === 'print') {
         settleKickstart();
+        if (unloadAtMs !== null && (options.monotonicNowMs?.() ?? Date.now()) >= unloadAtMs) {
+          loaded = false;
+          loadedPlistPath = null;
+          unloadAtMs = null;
+        }
         return loaded
           ? kickstartReadyAtMs === null
             ? launchctlResult(args, true, `path = ${loadedPlistPath}\nstate = running\npid = ${pid}\nlast exit code = 0\n`)
@@ -131,14 +138,19 @@ function createFakeLaunchctl(options: {
           : launchctlResult(args, false, '', 'Could not find service');
       }
       if (args[0] === 'bootstrap') {
+        if (loaded) return launchctlResult(args, false, '', 'Service is still loaded');
         bootstrapCount += 1;
         loaded = true;
         loadedPlistPath = args[2] ?? null;
         return launchctlResult(args, true);
       }
       if (args[0] === 'bootout') {
-        loaded = false;
-        loadedPlistPath = null;
+        if (loaded && options.bootoutDelayMs) {
+          unloadAtMs = (options.monotonicNowMs?.() ?? Date.now()) + options.bootoutDelayMs;
+        } else {
+          loaded = false;
+          loadedPlistPath = null;
+        }
         return launchctlResult(args, true);
       }
       if (args[0] === 'kickstart') {
@@ -664,7 +676,7 @@ test('Temporal supervisor restores exact prior files when bootstrap fails', asyn
       resolveLauncher: () => fixture.launcher,
       runLaunchctl: (args) => args[0] === 'bootstrap'
         ? launchctlResult(args, false, '', 'fixture bootstrap failed')
-        : launchctlResult(args, args[0] === 'bootout'),
+        : launchctlResult(args, args[0] === 'bootout', '', args[0] === 'print' ? 'Could not find service' : ''),
       probeServer: async () => false,
       readinessTimeoutMs: 0,
     });
@@ -992,4 +1004,28 @@ test('full and compact fast projections preserve fresh supervisor readiness fiel
     await new Promise<void>((resolve) => server.close(() => resolve()));
     fixture.close();
   }
+});
+
+
+test('Temporal reinstall observes delayed launchd unload before replacing the job', async () => {
+  const fixture = createFixture();
+  let clock = 0;
+  const fake = createFakeLaunchctl({ bootoutDelayMs: 200, monotonicNowMs: () => clock });
+  const runtime = {
+    platform: 'darwin' as const, launchAgentsDir: fixture.launchAgentsDir, launchctlTarget: 'gui/501',
+    resolveLauncher: () => fixture.launcher, runLaunchctl: fake.run, probeServer: async () => true,
+    readinessTimeoutMs: 500, readinessPollMs: 50,
+    monotonicNowMs: () => clock, sleep: async (ms: number) => { clock += ms; },
+  };
+  try {
+    assert.equal((await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'install', runtime)).ready, true);
+    const oldExecutable = fixture.launcher.executable;
+    const replacement = `${oldExecutable}-replacement`;
+    fs.copyFileSync(oldExecutable, replacement);
+    fixture.launcher.executable = replacement;
+    const repaired = await runTemporalServiceSupervisorCommand(fixture.db, fixture.paths, 'install', runtime);
+    assert.equal(repaired.ready, true);
+    assert.equal(fake.bootstrapCount, 2);
+    assert.equal(clock, 200);
+  } finally { fixture.close(); }
 });

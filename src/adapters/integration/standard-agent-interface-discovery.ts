@@ -292,7 +292,11 @@ function defaultSelectedModuleSource(moduleId: string): SelectedModuleSource | n
   // Only published compatibility entries have legacy Module source selection.
   // A newly installed Agent resolves directly through its native Package.
   if (!STANDARD_AGENT_REGISTRY.some((entry) => entry.domain_id === moduleId)) return null;
-  return inspectOplModule(moduleId, { profile: 'fast' });
+  const selected = inspectOplModule(moduleId, { profile: 'fast' });
+  // The installed carrier selected by the user owns the runtime and its
+  // descriptor. A stale legacy managed Module must not shadow that carrier.
+  return selected.source_policy.source_preference === 'managed'
+    && selected.source_policy.configured_by === 'native_git_checkout' ? null : selected;
 }
 
 function checkoutFromSelectedModule(

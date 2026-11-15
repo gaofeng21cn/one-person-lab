@@ -1,10 +1,9 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { readStandardAgentRuntimeOwner, sameStandardAgentRuntimeOwner } from '../../kernel/standard-agent-runtime-owner.ts';
 import { requireAgentPackageReadinessPort } from '../../kernel/agent-package-readiness-port.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
-import { parseJsonText } from '../../kernel/json-file.ts';
 import { sameMarketplaceSource } from '../../kernel/marketplace-source-identity.ts';
 import { gitMarketplaceRuntimeRoot, runtimeRootContainsDescriptor } from '../../kernel/git-marketplace-runtime-root.ts';
 import { acceptedConfiguredCodexPluginIds } from '../../kernel/codex-plugin-selector.ts';
@@ -20,9 +19,6 @@ import {
 import { packageLaunchHardStopReason } from './family-runtime-package-readiness.ts';
 
 type AgentPackageReadinessPort = ReturnType<typeof requireAgentPackageReadinessPort>;
-
-const SEMVER_PATTERN = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
-const PLUGIN_SELECTOR_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*@[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 function blocked(message: string, details: Record<string, unknown>): never {
   throw new FrameworkContractError('contract_shape_invalid', message, {
@@ -105,89 +101,6 @@ function installedVersionMatchesPackage(installedVersion: string, packageVersion
     && /^[a-f0-9]{64}$/.test(installedVersion.slice(prefix.length));
 }
 
-function ownerDescriptor(sourceRoot: string, packageId: string) {
-  const manifestPath = path.join(sourceRoot, 'opl-package.json');
-  let bytes: Buffer;
-  let manifest: Record<string, unknown>;
-  try {
-    const stat = fs.lstatSync(manifestPath);
-    const realPath = fs.realpathSync.native(manifestPath);
-    if (!stat.isFile() || stat.isSymbolicLink() || !realPath.startsWith(`${sourceRoot}${path.sep}`)) {
-      throw new Error('descriptor is not one physical file inside the native carrier source root');
-    }
-    bytes = fs.readFileSync(realPath);
-    const parsed = parseJsonText(bytes.toString('utf8'));
-    if (!isRecord(parsed)) throw new Error('descriptor root is not an object');
-    manifest = parsed;
-  } catch (error) {
-    blocked('Standard Agent native carrier owner descriptor is missing, unsafe, or invalid.', {
-      package_id: packageId,
-      owner_manifest_path: manifestPath,
-      cause: error instanceof Error ? error.message : String(error),
-    });
-  }
-  const version = text(manifest!.version, 'opl-package.json#/version');
-  const agentId = text(manifest!.agent_id, 'opl-package.json#/agent_id');
-  if (
-    manifest!.surface_kind !== 'opl_agent_package_manifest.v1'
-    || text(manifest!.package_id, 'opl-package.json#/package_id') !== packageId
-    || agentId !== packageId
-    || !SEMVER_PATTERN.test(version)
-  ) {
-    blocked('Standard Agent native carrier owner descriptor identity is invalid.', {
-      package_id: packageId,
-      owner_manifest_path: manifestPath,
-      descriptor_package_id: manifest!.package_id ?? null,
-      descriptor_agent_id: manifest!.agent_id ?? null,
-      descriptor_version: manifest!.version ?? null,
-    });
-  }
-  const codexSurface = record(manifest!.codex_surface, 'opl-package.json#/codex_surface');
-  const carrier = record(
-    codexSurface.configured_codex_plugin_carrier,
-    'opl-package.json#/codex_surface/configured_codex_plugin_carrier',
-  );
-  const pluginSelector = text(carrier.plugin_selector, 'configured_codex_plugin_carrier.plugin_selector');
-  const marketplaceSource = text(
-    carrier.marketplace_source,
-    'configured_codex_plugin_carrier.marketplace_source',
-  );
-  const pluginName = pluginSelector.split('@', 1)[0];
-  const declaredPluginName = text(codexSurface.plugin_id, 'codex_surface.plugin_id');
-  const declaredSourcePath = codexSurface.plugin_source_path === undefined
-    ? sourceRoot
-    : path.resolve(sourceRoot, text(codexSurface.plugin_source_path, 'codex_surface.plugin_source_path'));
-  if (
-    carrier.kind !== 'codex_plugin_manager'
-    || carrier.executor_route !== 'codex_cli'
-    || !PLUGIN_SELECTOR_PATTERN.test(pluginSelector)
-    || pluginName !== declaredPluginName
-    || !pathsMatch(declaredSourcePath, sourceRoot)
-  ) {
-    blocked('Standard Agent owner descriptor does not declare one repo-root configured native carrier.', {
-      package_id: packageId,
-      plugin_selector: pluginSelector,
-      plugin_id: declaredPluginName,
-      declared_source_path: declaredSourcePath,
-      native_source_path: sourceRoot,
-    });
-  }
-  return {
-    manifest_path: fs.realpathSync.native(manifestPath),
-    manifest_sha256: `sha256:${crypto.createHash('sha256').update(bytes!).digest('hex')}`,
-    package_version: version,
-    plugin_selector: pluginSelector,
-    marketplace_source: marketplaceSource,
-    publication_ref: carrier.publication_ref === null || carrier.publication_ref === undefined
-      ? null
-      : text(carrier.publication_ref, 'configured_codex_plugin_carrier.publication_ref'),
-    domain_descriptor_ref: text(
-      manifest!.domain_descriptor_ref,
-      'opl-package.json#/domain_descriptor_ref',
-    ),
-  };
-}
-
 function nativeRuntimeFromStatus(
   packageStatus: any,
   packageId: string,
@@ -211,7 +124,7 @@ function nativeRuntimeFromStatus(
   const installedReadiness = record(packageStatus?.installed_readiness, 'installed_readiness');
   const installedCarrierKind = text(installedCarrier.kind, 'installed_carrier_readback.kind');
   const pluginSourcePath = realDirectory(configured.plugin_source_path, 'configured_carrier.plugin_source_path');
-  const descriptor = ownerDescriptor(pluginSourcePath, packageId);
+  const descriptor = readStandardAgentRuntimeOwner(pluginSourcePath, packageId);
   const pluginSelector = text(carrier.plugin_id, 'configured_carrier.carrier.plugin_id');
   const marketplaceSource = text(
     carrier.marketplace_source,
@@ -325,13 +238,9 @@ function nativeRuntimeFromStatus(
   const policyProvidesSeparateRuntime = policyRuntimeCheckout !== null
     && pathsMatch(runtimeCheckoutRoot, policyRuntimeCheckout);
   if (policyProvidesSeparateRuntime && !pathWithin(runtimeCheckoutRoot, pluginSourcePath)) {
-    const runtimeDescriptor = ownerDescriptor(runtimeCheckoutRoot, packageId);
+    const runtimeDescriptor = readStandardAgentRuntimeOwner(runtimeCheckoutRoot, packageId);
     if (
-      runtimeDescriptor.package_version !== descriptor.package_version
-      || runtimeDescriptor.plugin_selector !== descriptor.plugin_selector
-      || runtimeDescriptor.marketplace_source !== descriptor.marketplace_source
-      || runtimeDescriptor.publication_ref !== descriptor.publication_ref
-      || runtimeDescriptor.domain_descriptor_ref !== descriptor.domain_descriptor_ref
+      !sameStandardAgentRuntimeOwner(runtimeDescriptor, descriptor)
     ) {
       blocked('Standard Agent runtime checkout and installed carrier owner identities disagree.', {
         package_id: packageId,

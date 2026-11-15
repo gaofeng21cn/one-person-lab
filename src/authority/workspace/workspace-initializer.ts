@@ -572,7 +572,7 @@ export function initializeWorkspace(
   contracts: FrameworkContracts,
   options: WorkspaceInitializeOptions,
 ) {
-  const agent = findWorkspaceAgentProfile(options.agentId);
+  const agent = findWorkspaceAgentProfile(options.agentId, options.packageReadiness);
   const mode = normalizeMode(options.mode);
   const profileId = selectWorkspaceProfileId(agent, mode);
   const workspacePath = resolveWorkspacePath(options, agent);
@@ -794,7 +794,7 @@ export function ensureWorkspace(
   contracts: FrameworkContracts,
   options: WorkspaceEnsureOptions,
 ) {
-  const agent = findWorkspaceAgentProfile(options.agentId);
+  const agent = findWorkspaceAgentProfile(options.agentId, options.packageReadiness);
   const projectId = normalizeRequiredSegment(
     normalizeOptionalString(options.projectId) ?? agent.default_project_id,
     'project_id',

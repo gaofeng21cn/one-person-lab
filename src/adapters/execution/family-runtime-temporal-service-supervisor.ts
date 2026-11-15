@@ -5,6 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { insertEvent, type familyRuntimePaths } from './family-runtime-store.ts';
 import { escapeXml } from './family-runtime-provider-worker-supervisor-state.ts';
+import { waitForLaunchdJobUnload } from './launchd-job-lifecycle.ts';
 import {
   inspectDetachedTemporalServiceState,
   prepareTemporalServiceDatabasePath,
@@ -336,7 +337,18 @@ function bootoutLoadedSupervisor(runtime: TemporalServiceSupervisorRuntime) {
   ], runtime);
 }
 
-function rollbackInstall(input: {
+function waitForSupervisorUnload(runtime: TemporalServiceSupervisorRuntime) {
+  return waitForLaunchdJobUnload({
+    target: `${temporalServiceSupervisorLaunchctlTarget(runtime)}/${TEMPORAL_SERVICE_SUPERVISOR_LABEL}`,
+    runLaunchctl: (args) => launchctl(args, runtime),
+    timeoutMs: runtime.readinessTimeoutMs,
+    pollMs: runtime.readinessPollMs,
+    monotonicNowMs: runtime.monotonicNowMs,
+    sleep: runtime.sleep,
+  });
+}
+
+async function rollbackInstall(input: {
   paths: RuntimePaths;
   runtime: TemporalServiceSupervisorRuntime;
   plistSnapshot: string | null;
@@ -346,6 +358,12 @@ function rollbackInstall(input: {
   const plistPath = temporalServiceSupervisorPlistPath(input.runtime);
   const configPath = temporalServiceSupervisorConfigPath(input.paths);
   const cleanupLaunchctl = bootoutLoadedSupervisor(input.runtime);
+  if (!await waitForSupervisorUnload(input.runtime)) {
+    return {
+      attempted: true, status: 'cleanup_unload_pending', cleanup_launchctl: cleanupLaunchctl,
+      restore_launchctl: null, plist_restored: false, config_restored: false,
+    };
+  }
   try {
     restoreFileSnapshot(plistPath, input.plistSnapshot);
     restoreFileSnapshot(configPath, input.configSnapshot);
@@ -480,10 +498,13 @@ async function installSupervisor(
     const cleanupLaunchctl = installed.loaded
       ? bootoutLoadedSupervisor(runtime)
       : null;
-    if (cleanupLaunchctl && !cleanupLaunchctl.ok) {
+    const cleanupUnloaded = !cleanupLaunchctl || (cleanupLaunchctl.ok && await waitForSupervisorUnload(runtime));
+    if (!cleanupUnloaded) {
       const blocked = {
         ...payload,
-        status: 'blocked_supervisor_unready_rollback_bootout_failed',
+        status: cleanupLaunchctl?.ok
+          ? 'blocked_supervisor_unready_rollback_unload_pending'
+          : 'blocked_supervisor_unready_rollback_bootout_failed',
         detached_service_migration: {
           ...detachedServiceMigration,
           status: 'rollback_blocked',
@@ -568,6 +589,15 @@ async function installSupervisor(
       });
       return await finishInstall(payload);
     }
+    const unloaded = await waitForSupervisorUnload(runtime);
+    if (!unloaded) {
+      return await finishInstall(basePayload({
+        action: 'install',
+        status: 'blocked_existing_job_unload_pending',
+        supervisor: await inspectReady(paths, runtime),
+        launchctl: bootout,
+      }));
+    }
   }
 
   let bootstrap: TemporalServiceSupervisorLaunchctlResult;
@@ -581,7 +611,7 @@ async function installSupervisor(
       plistPath,
     ], runtime);
   } catch (error) {
-    const rollback = rollbackInstall({
+    const rollback = await rollbackInstall({
       paths,
       runtime,
       plistSnapshot,
@@ -602,7 +632,7 @@ async function installSupervisor(
   }
 
   if (!bootstrap.ok) {
-    const rollback = rollbackInstall({
+    const rollback = await rollbackInstall({
       paths,
       runtime,
       plistSnapshot,
@@ -687,6 +717,12 @@ async function removeSupervisor(
         supervisor: await inspectReady(paths, runtime),
         launchctl: result,
       });
+      recordMutationEvent(db, 'remove', payload);
+      return payload;
+    }
+    if (!await waitForSupervisorUnload(runtime)) {
+      const payload = basePayload({ action: 'remove', status: 'blocked_job_unload_pending',
+        supervisor: await inspectReady(paths, runtime), launchctl: result });
       recordMutationEvent(db, 'remove', payload);
       return payload;
     }

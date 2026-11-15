@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { waitForLaunchdJobUnload } from './launchd-job-lifecycle.ts';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 
@@ -526,6 +527,22 @@ export async function runProviderWorkerSupervisorCommand(
         });
         return payload;
       }
+      const unloaded = await waitForLaunchdJobUnload({
+        target: `${providerWorkerSupervisorLaunchctlTarget()}/${PROVIDER_WORKER_SUPERVISOR_LABEL}`,
+        runLaunchctl: runProviderWorkerSupervisorLaunchctl,
+      });
+      if (!unloaded) {
+        const payload = basePayload({
+          paths,
+          action: input.action,
+          status: 'blocked_existing_job_unload_pending',
+          launchctl: bootout,
+          legacyWatchdog,
+          supervisorState: inspectProviderWorkerSupervisorState(paths),
+        });
+        insertEvent(db, { eventType: 'temporal_provider_worker_supervisor_install', source: 'opl-cli', payload });
+        return payload;
+      }
     }
     fs.writeFileSync(pathToPlist, plist);
     const launchctl = runProviderWorkerSupervisorLaunchctl([
@@ -560,6 +577,17 @@ export async function runProviderWorkerSupervisorCommand(
           `${providerWorkerSupervisorLaunchctlTarget()}/${PROVIDER_WORKER_SUPERVISOR_LABEL}`,
         ])
       : null;
+    const unloaded = !launchctl || (launchctl.ok && await waitForLaunchdJobUnload({
+      target: `${providerWorkerSupervisorLaunchctlTarget()}/${PROVIDER_WORKER_SUPERVISOR_LABEL}`,
+      runLaunchctl: runProviderWorkerSupervisorLaunchctl,
+    }));
+    if (!unloaded) {
+      const payload = basePayload({ paths, action: input.action,
+        status: launchctl?.ok ? 'blocked_job_unload_pending' : 'blocked_bootout_failed',
+        launchctl, supervisorState: inspectProviderWorkerSupervisorState(paths) });
+      insertEvent(db, { eventType: 'temporal_provider_worker_supervisor_remove', source: 'opl-cli', payload });
+      return payload;
+    }
     fs.rmSync(pathToPlist, { force: true });
     const legacyWatchdog = removeLegacyWatchdog();
     const payload = basePayload({

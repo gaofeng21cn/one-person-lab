@@ -258,7 +258,7 @@ export class DefaultHostedAgentRuntimeBindingResolver implements HostedAgentRunt
       checkout_root: managed.checkout_root,
       workspace_root: managed.workspace_root,
       agent_id: managed.agent.agent_id,
-      runtime_domain_id: managed.agent.domain_id,
+      runtime_domain_id: managed.agent.target_domain_id,
       target_domain_id: managed.agent.target_domain_id,
       catalog_target_domain_ids: [
         managed.agent.target_domain_id,
@@ -389,7 +389,7 @@ export class DefaultHostedAgentRuntimeBindingResolver implements HostedAgentRunt
       checkout_root: managed.checkout_root,
       workspace_root: managed.workspace_root,
       agent_id: managed.agent.agent_id,
-      runtime_domain_id: managed.agent.domain_id,
+      runtime_domain_id: managed.agent.target_domain_id,
       target_domain_id: managed.agent.target_domain_id,
       catalog_target_domain_ids: [
         managed.agent.target_domain_id,

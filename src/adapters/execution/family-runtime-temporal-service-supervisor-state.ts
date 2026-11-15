@@ -249,7 +249,7 @@ export function inspectTemporalServiceSupervisorState(
   const plistExists = fs.existsSync(plistPath);
   const config = readTemporalServiceSupervisorConfig(paths);
   const configExists = fs.existsSync(temporalServiceSupervisorConfigPath(paths));
-  const launchctl = platform === 'darwin' && plistExists
+  const launchctl = platform === 'darwin'
     ? runTemporalServiceSupervisorLaunchctl([
         'print',
         `${temporalServiceSupervisorLaunchctlTarget(runtime)}/${TEMPORAL_SERVICE_SUPERVISOR_LABEL}`,
@@ -288,7 +288,7 @@ export function inspectTemporalServiceSupervisorState(
   const configurationCurrent = Object.values(configurationChecks).every(Boolean);
   const launchdError = platform !== 'darwin'
     ? null
-    : (plistExists || configExists) && !configurationCurrent
+    : (plistExists || configExists || launchctl?.ok) && !configurationCurrent
       ? 'temporal_service_supervisor_configuration_drift'
       : plistExists && !launchctl?.ok
       ? launchctl?.stderr.trim() || 'launchd_job_not_loaded'
@@ -299,7 +299,7 @@ export function inspectTemporalServiceSupervisorState(
           : null;
   const status = platform !== 'darwin'
     ? 'not_applicable'
-    : !plistExists && !configExists
+    : !plistExists && !configExists && !launchctl?.ok
       ? 'not_installed'
       : !plistExists || !config || !configurationCurrent
         ? 'configuration_drift'

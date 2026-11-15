@@ -53,6 +53,8 @@ Package owner持有descriptor、runtime bytes、version和publication。native c
 该变量采用上述相同的仓库名称归一方式；读取源码的凭据不构成公开授权。网络错误、
 未知可见性、缺失或不匹配的授权均在归档及 OCI 写入前停止。源码仓库自身的可见性不变。
 
+Package status、列表与生命周期命令对原生发现失败保留错误，不将失败解释成空的安装清单。
+
 原生 `plugin list` 读取统一使用 10 秒超时；超时终止子进程，严格发现入口返回失败，不接受未完成命令的部分输出。安装、更新等写操作保留独立的 120 秒上限，超时后的实际结果仍需重新读取确认。
 
 Standard Agent 安装、更新或修复时，carrier adapter 从已选择版本的 owner OCI artifact
@@ -69,6 +71,7 @@ Full 中存在与当前 owner 版本及 payload source commit 完全匹配的签
 digest，接口发现与 Hosted action 使用同一个父级源码根，不创建独立 Package registry、
 版本指针或源码缓存。缺失声明的 descriptor/action catalog 时，Package status 显示
 `hosted_agent_source_unavailable`，保留 carrier callable 的独立事实，提示重新安装 Package。
+显式选择 installed/managed 来源后，邻近开发仓和旧 module 镜像不覆盖该选择；显式环境路径仍作为开发覆盖。分离的开发运行根与安装 carrier 必须具有相同 owner 身份、版本、插件选择器、publication 和领域描述入口。启动前检查与实际调用共用身份读取与比较规则，不匹配时返回 `hosted_agent_runtime_identity_mismatch` 并关闭 launch。
 这些检查证明源码与入口文件可用；Temporal、实际 StageRun 和领域业务验收分别回读。
 发布前可运行 `node scripts/verify-package-source-artifacts.ts --package-id <id>`（可重复参数），
 在独立临时目录复用同一下载、归档身份和内容摘要校验，再立即清理。该入口只验证明确选择的

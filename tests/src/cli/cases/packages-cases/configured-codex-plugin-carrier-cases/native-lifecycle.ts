@@ -74,7 +74,7 @@ test('Package mutations advance to a newer owner projection without allowing dow
   );
 });
 
-test('Package mutations report native discovery failures without claiming the Package is absent', () => {
+test('Package reads and mutations report native discovery failures without claiming the Package is absent', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mutation-discovery-failure-'));
   const binary = path.join(root, 'codex.mjs');
   const callsPath = path.join(root, 'calls.jsonl');
@@ -87,9 +87,14 @@ if (process.env.FIXTURE_DISCOVERY_FAILURE === 'invalid_json') process.stdout.wri
 else { process.stderr.write('native list unavailable'); process.exitCode = 7; }
 `);
     fs.chmodSync(binary, 0o755);
-    for (const action of ['update', 'repair']) {
+    for (const args of [
+      ['packages', 'status', '--package-id', 'obf'],
+      ['packages', 'list'],
+      ['packages', 'update', 'obf', '--dry-run'],
+      ['packages', 'repair', 'obf', '--dry-run'],
+    ]) {
       for (const failure of ['exit_status', 'invalid_json']) {
-        const result = runCliFailure(['packages', action, 'obf', '--dry-run'], {
+        const result = runCliFailure(args, {
           HOME: root,
           CODEX_HOME: path.join(root, 'codex-home'),
           OPL_STATE_DIR: path.join(root, 'opl-state'),

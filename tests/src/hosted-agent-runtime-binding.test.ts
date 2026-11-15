@@ -703,6 +703,34 @@ test('inactive Foundry target resolves its installed native carrier without a Pa
   }
 });
 
+test('native bindings use the declared runtime domain when the registry alias differs', async () => {
+  const stateRoot = root('opl-hosted-binding-runtime-domain-state-');
+  const checkoutRoot = root('opl-hosted-binding-runtime-domain-checkout-');
+  const workspaceRoot = root('opl-hosted-binding-runtime-domain-workspace-');
+  try {
+    writePackageCheckout(checkoutRoot);
+    const native = nativeCheckout({ checkoutRoot, workspaceRoot });
+    native.agent = { ...native.agent, domain_id: 'legacy_registry_alias', target_domain_id: 'declared_runtime_domain' };
+    const resolver = new DefaultHostedAgentRuntimeBindingResolver({
+      root_override: stateRoot,
+      resolve_managed_checkout: (async () => native) as never,
+    });
+    const initial = await resolver.resolve({ domainId: 'mas', workspaceRoot });
+    assert.equal(initial.runtime_domain_id, 'declared_runtime_domain');
+    assert.ok(initial.catalog_target_domain_ids.includes('legacy_registry_alias'));
+    const pinned = await resolver.resolvePinned({
+      provenance: initial.provenance,
+      provenance_ref: initial.provenance_ref,
+      workspaceRoot,
+    });
+    assert.equal(pinned.runtime_domain_id, 'declared_runtime_domain');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('ordinary hosted resolution rejects a legacy managed checkout instead of restoring fallback', async () => {
   const stateRoot = root('opl-hosted-binding-no-legacy-state-');
   const checkoutRoot = root('opl-hosted-binding-no-legacy-checkout-');

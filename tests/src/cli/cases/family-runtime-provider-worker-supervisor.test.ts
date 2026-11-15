@@ -420,3 +420,19 @@ test('supervised worker preserves the explicit sandbox mode through plist and fr
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+
+test('provider-worker status preserves a loaded job when its plist has gone missing', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'opl-worker-missing-plist-'));
+  try {
+    const paths = runtimePaths(root);
+    const state = inspectProviderWorkerSupervisorState(paths, {
+      plistPath: path.join(root, 'missing.plist'),
+      runLaunchctl: () => ({ ok: true, status: 0, stdout: `state = running\n${root}\n${providerWorkerLauncherModulePath()}`, stderr: '', args: [] }),
+    });
+    assert.equal(state.plist_exists, false);
+    assert.equal(state.launchctl_loaded, true);
+    assert.equal(state.configuration_current, false);
+    assert.equal(state.status, 'configuration_drift');
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

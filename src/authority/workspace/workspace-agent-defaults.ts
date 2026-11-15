@@ -1,5 +1,6 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
+  type AgentPackageReadinessPort,
   readStandardAgentDescriptorForDomainFromPackagePort,
   resolveStandardAgentContractCheckoutFromPackagePort,
 } from '../../kernel/agent-package-readiness-port.ts';
@@ -87,7 +88,7 @@ export function listWorkspaceAgentProfiles(): WorkspaceAgentProfile[] {
     .map((entry) => workspaceProfile(entry));
 }
 
-export function findWorkspaceAgentProfile(value: string | undefined) {
+export function findWorkspaceAgentProfile(value: string | undefined, packageReadiness?: AgentPackageReadinessPort) {
   const requested = value?.trim();
   if (!requested) {
     throw new FrameworkContractError('cli_usage_error', 'workspace init requires --agent.', {
@@ -102,11 +103,11 @@ export function findWorkspaceAgentProfile(value: string | undefined) {
       allowed_agents: listWorkspaceAgentProfiles().map((entry) => entry.agent_id),
     });
   }
-  const descriptor = readStandardAgentDescriptorForDomainFromPackagePort(entry.target_domain_id);
+  const descriptor = readStandardAgentDescriptorForDomainFromPackagePort(entry.target_domain_id, packageReadiness);
   if (descriptor) {
     return workspaceProfile(entry, descriptor);
   }
-  const resolution = resolveStandardAgentContractCheckoutFromPackagePort(entry.target_domain_id);
+  const resolution = resolveStandardAgentContractCheckoutFromPackagePort(entry.target_domain_id, packageReadiness);
   if (resolution.status === 'resolved' && resolution.checkout) {
     throw new FrameworkContractError(
       'contract_shape_invalid',

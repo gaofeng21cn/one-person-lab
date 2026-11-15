@@ -34,7 +34,8 @@ export function resolveAgentPackageEffectiveSourcePolicy(
 
   const module = resolveOplInstallUpdateSourcePolicy(spec, { profile: options.profile ?? 'full' });
   const sourcePolicy = module.source_policy;
-  const developerSelected = sourcePolicy.effective_install_update_source === 'git_checkout';
+  const developerSelected = sourcePolicy.effective_install_update_source === 'git_checkout'
+    && sourcePolicy.configured_by !== 'native_git_checkout';
   const checkoutPath = developerSelected ? module.developer_checkout_path : null;
   const checkoutAvailable = developerSelected && module.developer_checkout_available;
   return {
