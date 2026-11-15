@@ -2,6 +2,11 @@
 
 本文描述 Standard Agent 对 Framework 暴露的稳定人读接口。machine shape 以当前 descriptor 和 schema 为准。
 
+源码入口 `src/kernel/standard-agent-interface.ts` 保留公开导出。其内部模块分别持有
+声明解析、工作区与投影视图校验、描述符读取和 source-material consumer 路由；
+共享类型沿用 `standard-agent-interface-types.ts`，模块只向下依赖校验值与常量，
+不反向导入公开入口，也不引入独立发现或路由 registry。
+
 ## Identity
 
 - `package_id`：安装单元；
