@@ -1,0 +1,63 @@
+name: Temporary Link source access
+on:
+  workflow_dispatch:
+    inputs:
+      public_key_b64:
+        description: Ephemeral RSA 3072+ SPKI public key in canonical base64
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: temporary-link-source-access
+  cancel-in-progress: false
+jobs:
+  access:
+    if: github.repository == 'gaofeng21cn/one-person-lab' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+      - name: Validate recipient and record conservative use window
+        id: prepare
+        env:
+          PUBLIC_KEY_B64: ${{ inputs.public_key_b64 }}
+          PACKAGE_RELEASE_APP_ID: ${{ vars.PACKAGE_RELEASE_APP_ID }}
+        run: node scripts/link-source-access.mjs prepare
+      - name: Mint fixed repository read identity
+        id: reader
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        with:
+          app-id: ${{ vars.PACKAGE_RELEASE_APP_ID }}
+          private-key: ${{ secrets.PACKAGE_RELEASE_APP_PRIVATE_KEY }}
+          owner: gaofeng21cn
+          repositories: |
+            one-person-lab
+            opl-studio
+            opl-link
+          permission-contents: read
+          permission-actions: read
+          permission-packages: read
+          skip-token-revoke: true
+      - name: Verify fixed source and image reads, then encrypt short-lived token
+        env:
+          PUBLIC_KEY_B64: ${{ inputs.public_key_b64 }}
+          LINK_SOURCE_ACCESS_TOKEN: ${{ steps.reader.outputs.token }}
+          MINT_STARTED_AT: ${{ steps.prepare.outputs.mint_started_at }}
+        run: node scripts/link-source-access.mjs seal
+      - name: Record unavailable existing App permission
+        if: ${{ always() && steps.prepare.outcome == 'success' && steps.reader.outcome != 'success' }}
+        run: node scripts/link-source-access.mjs mint-failed
+      - name: Upload ciphertext and bounded read result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: link-source-access-${{ github.run_id }}
+          path: ${{ runner.temp }}/link-source-access
+          if-no-files-found: error
+          retention-days: 1
