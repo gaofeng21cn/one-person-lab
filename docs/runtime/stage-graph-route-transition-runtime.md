@@ -19,6 +19,10 @@ OPL Framework 只持有 StageRun transport、attempt ledger、queue/provider、d
 
 Stage 角色、独立 Attempt、预算分支、hard stop、route 输出及 finding/repair/closure 协议由 Framework 在 provider prompt 中统一注入。领域角色片段只补充专业审查范围、质量标准、证据及修复 owner 判断；领域无需重复通用协议文本。Conformance 校验声明的机器策略和角色片段引用，不按提示词关键词判断语义。角色文件及 fragment 仍由既有内容绑定机制保留精确字节和摘要，已绑定的历史内容不会被新的领域文件覆盖。
 
+Stage runner 的公开入口继续保留。`raw-progress-closeout.ts` 维护原始输出的进展信封，
+`activity-input.ts` 维护 Activity 输入投影；二者直接依赖既有 packet、receipt 和 policy
+模块。执行、session recovery 与最终身份核对仍由 runner 按原顺序编排。
+
 ## Durable invocation 与物化
 
 终态回读不依赖仍在运行的 worker。Temporal workflow 已 `COMPLETED` 时，查询读取
