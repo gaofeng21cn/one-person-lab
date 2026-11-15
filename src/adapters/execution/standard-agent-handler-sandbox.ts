@@ -239,7 +239,7 @@ function sandboxProfile(input: {
     : `(require-any ${allowedWorkspaceRoots.map((root) => `(subpath ${JSON.stringify(root)})`).join(' ')})`;
   return [
     BASE_SANDBOX_PROFILE,
-    `(deny file-read* (require-all (subpath ${JSON.stringify(input.workspaceRoot)}) (require-not ${allowed})))`,
+    `(deny file-read-data (require-all (subpath ${JSON.stringify(input.workspaceRoot)}) (require-not ${allowed})))`,
   ].join(' ');
 }
 
@@ -448,7 +448,9 @@ export function runStandardAgentHandlerSandbox(input: {
       failure_code: 'standard_agent_handler_read_root_escape',
     });
   }
-  const readRoots = [...new Set([checkoutRoot, workspaceReadRoot])];
+  // Node needs permission to traverse the workspace root while resolving realpaths;
+  // the bridge still enforces the narrower checkout/read-root policy below.
+  const readRoots = [...new Set([checkoutRoot, workspaceRoot, workspaceReadRoot])];
   const profile = sandboxProfile({ checkoutRoot, workspaceRoot, workspaceReadRoot });
   const requestBytes = Buffer.from(`${canonicalJsonText(input.request)}\n`, 'utf8');
   const timeout = timeoutMs(input.timeoutMs);
