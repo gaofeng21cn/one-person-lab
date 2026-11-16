@@ -22,6 +22,8 @@ import {
   test,
 } from '../helpers.ts';
 import { writeCapabilityCatalog } from './packages-cases/capability-fixtures.ts';
+// Direct resolver calls need the same Package readiness adapter as the CLI Host.
+import '../../../../src/adapters/integration/index.ts';
 
 test('contract validate honors explicit contract-root provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
