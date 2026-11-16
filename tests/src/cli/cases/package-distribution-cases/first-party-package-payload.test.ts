@@ -971,7 +971,8 @@ test('Framework allowlists and payloads validate at their explicit schema bounda
         schema: canonicalPayloadSchema,
         sourceRef: 'contracts/opl-framework/package-payload-manifest-v2.schema.json',
       }, payload), label);
-      assert.equal(payload.plugin_id, manifests[payload.package_id].codex_surface.plugin_id, label);
+      const manifest = manifests[payload.package_id];
+      if (manifest) assert.equal(payload.plugin_id, manifest.codex_surface.plugin_id, label);
       assert.equal(payload.content_lock.algorithm, 'sha256', label);
       assert.equal(payload.content_lock.canonicalization, 'ordered_path_length_file_length_bytes', label);
       assert.equal(payload.files.every((entry: Record<string, unknown>) => entry.mode !== undefined), true, label);
@@ -1022,10 +1023,10 @@ test('Framework allowlists and payloads validate at their explicit schema bounda
   for (const file of trackedPayloadFiles) {
     const payload = JSON.parse(fs.readFileSync(path.join(payloadRoot, file), 'utf8')) as Record<string, any>;
     const label = `tracked payload ${file}`;
-    assert.ok(canonicalIds.includes(payload.package_id), label);
+    // Immutable historical payloads remain valid after their owner retires the current projection.
     assert.equal(file, `${payload.package_id}-${payload.package_version}.json`, label);
     const manifest = manifests[payload.package_id];
-    if (manifest.codex_surface.plugin_payload_manifest_url === `payloads/${file}`) {
+    if (manifest?.codex_surface.plugin_payload_manifest_url === `payloads/${file}`) {
       const allowlist = allowlists[payload.package_id];
       assert.equal(payload.source_repo, allowlist.source_repo, label);
       assert.equal(payload.source_root, allowlist.source_root, label);

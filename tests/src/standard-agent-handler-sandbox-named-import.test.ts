@@ -53,3 +53,40 @@ test('TypeScript ESM named imports cannot follow a symlink outside the Study rea
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
+
+test('TypeScript dynamic JSON imports cannot read a sibling Study', () => {
+  const checkoutRoot = fixtureRoot();
+  const workspaceRoot = fixtureRoot();
+  const studyRoot = path.join(workspaceRoot, 'study-001');
+  const siblingRoot = path.join(workspaceRoot, 'study-002');
+  fs.mkdirSync(studyRoot);
+  fs.mkdirSync(siblingRoot);
+  const siblingEvidence = path.join(siblingRoot, 'evidence.json');
+  fs.writeFileSync(siblingEvidence, JSON.stringify({ secret: 'sibling-study-only' }));
+  fs.writeFileSync(path.join(checkoutRoot, 'handler.ts'), [
+    'export async function evaluate(request: Record<string, unknown>) {',
+    "  return (await import(String(request.target), { with: { type: 'json' } })).default;",
+    '}',
+    '',
+  ].join('\n'));
+
+  try {
+    assert.throws(
+      () => runStandardAgentHandlerSandbox({
+        checkoutRoot,
+        workspaceRoot,
+        workspaceReadRoot: studyRoot,
+        binding: { kind: 'typescript_export', file: 'handler.ts', export: 'evaluate' },
+        request: { target: siblingEvidence },
+      }),
+      (error: unknown) => {
+        assert(error instanceof FrameworkContractError);
+        assert.equal(error.details?.failure_code, 'standard_agent_handler_execution_failed');
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
