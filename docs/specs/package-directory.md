@@ -129,7 +129,7 @@ Homebrew 是 OPL 的一个 carrier，不是 Agent 目录。它适合分发宿主
 
 确认后，后台 worker 仍执行原来的 `agent_package_install/update/repair`。App 通过 `package_operation_status` 回读准备、下载、校验、解压、安装和最终结果；下载字节、速度和 ETA 来自传输实际写入量，其他阶段不伪造百分比。原生注册期间不可取消；下载或文件准备期间的取消只产生请求，worker 到达安全边界后才报告 `cancelled`。进程消失报告 `interrupted`，不自动重发生命周期操作。
 
-系统 curl 继续持有 HTTP、重定向与 Range。Framework 只补齐当前 OCI 到原生 marketplace 的缺口：digest 命名的私有缓存目录、完整内容校验、暂存与进度投影。此缓存不决定版本、不替代 carrier registry。重复安装先重新验证缓存；私有包复用缓存前仍通过原有授权。断线重试保留 partial，服务器不接受 Range 时重新下载，取消和失败均不将 partial 激活。取消安装不会撤销此前已经成功安装的必需依赖。
+系统 curl 继续持有 HTTP、重定向与 Range。剩余归档达到 16 MiB 时，worker 默认并行发起 4 个有界 Range 请求，最多 8 个；只有每个响应都返回精确的 HTTP 206、Content-Range 和分片长度时才合并。任何不支持 Range、状态或长度不匹配的响应都会安全回退到既有单连接断点路径。Framework 只补齐当前 OCI 到原生 marketplace 的缺口：digest 命名的私有缓存目录、完整内容校验、暂存与进度投影。此缓存不决定版本、不替代 carrier registry。重复安装先重新验证缓存；断线重试保留 partial，取消和失败均不将 partial 激活。取消安装不会撤销此前已经成功安装的必需依赖。
 
 后台操作按当前 Codex 宿主隔离，并拒绝同一宿主的并发后台安装。离开软件中心或重载页面不会停止 worker。恢复时读取 owner 状态；只有现有 native lifecycle 的最终回读成功才能显示安装完成。
 
