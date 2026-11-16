@@ -451,6 +451,44 @@ test(`configured first-party carrier ${action} uses a frozen local payload witho
 });
 }
 
+test('retired native descriptors leave available discovery while installed management remains discoverable', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-retired-package-discovery-'));
+  writePluginSource(root, 'retired');
+  fs.writeFileSync(path.join(root, 'opl-package.json'), formatJsonPayload({
+    ...installedOwnerDescriptor(), publication_channel_admission: 'retired',
+  }));
+  try {
+    for (const installed of [false, true]) {
+      const runner: CodexPluginCommandRunner = () => ({
+        status: 0,
+        stdout: JSON.stringify({
+          [installed ? 'installed' : 'available']: [{
+            pluginId: pluginSelector,
+            version: ownerPackageVersion,
+            installed,
+            enabled: installed,
+            source: { source: 'local', path: root },
+            marketplaceSource: { sourceType: 'local', source: 'fixture-carrier' },
+          }],
+        }),
+        stderr: '',
+        error: null,
+      });
+      const available = discoverAvailablePackageDescriptors({ packageId, runner });
+      assert.equal(available.has(packageId), installed);
+      if (installed) {
+        const managed = discoverInstalledPackageDescriptors({ packageId, runner }).get(packageId);
+        assert.ok(managed);
+        assert.equal(managed.manifest.publication_channel_admission, 'retired');
+        assert.equal(managed.readiness.installed, true);
+        assert.equal(managed.pluginId, pluginSelector);
+      }
+    }
+  } finally {
+    removeFixtureTree(root);
+  }
+});
+
 test('installed descriptor wins over an available descriptor with the same carrier identity', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-installed-package-precedence-'));
   const installedSource = path.join(root, 'installed');

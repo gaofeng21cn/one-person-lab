@@ -186,7 +186,11 @@ test('a new bundle preserves previous bytes even when the source version is unch
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.symlinkSync(path.resolve(import.meta.dirname, '../../node_modules'), path.join(root, 'node_modules'),
     process.platform === 'win32' ? 'junction' : 'dir');
-  const workflowsPath = path.join(root, 'workflows.ts');
+  const sourceRoot = path.join(root, 'source');
+  const sourceAlias = path.join(root, 'source-alias');
+  fs.mkdirSync(sourceRoot);
+  fs.symlinkSync(sourceRoot, sourceAlias, process.platform === 'win32' ? 'junction' : 'dir');
+  const workflowsPath = path.join(sourceAlias, 'workflows.ts');
   const input = { paths: { root }, workflowsPath, activities: {}, sourceVersion: 'same-source-version' };
   fs.writeFileSync(workflowsPath, 'export async function RetainedWorkflow() { return 1; }\n');
   const previous = await buildTemporalStageAttemptWorkerOptions(input);

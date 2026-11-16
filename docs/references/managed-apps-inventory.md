@@ -36,10 +36,11 @@ opl app state --profile fast --json
 | `opl-persona` | OPL Persona | `capability_package` | `opl-persona` |
 | `opl-relay` | OPL Relay | `capability_package` | `opl-relay` |
 | `photo-steward` | Photo Steward | `capability_package` | `photo-steward` |
+| `opl-link-desktop-connector` | OPL Link Desktop Connector | `capability_package` | `opl-link`；`retired`，保留已有安装的私有身份与管理元数据 |
 
 `development_only` 不进入普通可安装发现，但已安装 carrier 可以保留在本机目录，供用户查看和管理。嵌套能力与所属产品按 Package ID 区分，不按仓库数重复计数。
 
-OPL Link 的原生客户端与 Relay 由 [OPL Link](https://github.com/gaofeng21cn/opl-link) 持有，桌面连接由 Studio 提供；边界见 [App 远程伴侣合同](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-remote-companion.json)。Framework 不再将独立 Desktop Connector 列为当前发布目标；已有 carrier 仍通过其安装 descriptor 发现和管理。
+OPL Link 的原生客户端与 Relay 由 [OPL Link](https://github.com/gaofeng21cn/opl-link) 持有，桌面连接由 Studio 提供；边界见 [App 远程伴侣合同](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-remote-companion.json)。Framework 不再发布或新装独立 Desktop Connector；`retired` 投影保留旧身份的私有策略，已有 carrier 继续通过其安装 descriptor 发现和管理。
 
 ## 通过 native carrier 发现的项目
 

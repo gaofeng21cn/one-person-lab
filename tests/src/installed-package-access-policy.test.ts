@@ -10,6 +10,7 @@ import {
   withCurrentOwnerProjection,
 } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-descriptor.ts';
 import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
+import { packageAccessSubject, resolvePackageAccessDecision } from '../../src/adapters/integration/agent-package-registry-parts/package-access.ts';
 
 const publicationRef = 'ghcr.io/gaofeng21cn/one-person-lab-packages/occ:latest-stable';
 
@@ -79,6 +80,28 @@ test('older installed Package also receives owner access policy while keeping it
   const selected = withCurrentOwnerProjection(installed, descriptor('0.1.5', true));
   assert.equal(selected.manifest.visibility, 'authorized_only');
   assert.equal(selected.manifest.version, '0.1.4');
+  assert.equal(installedDescriptorSupportsFrameworkCalls(selected), true);
+});
+
+test('retired owner policy keeps an older installed private identity and native management', () => {
+  const installed = descriptor('0.1.0');
+  const owner = descriptor('0.1.5', true);
+  owner.manifest.publication_channel_admission = 'retired';
+  const selected = withCurrentOwnerProjection(installed, owner);
+  const subject = packageAccessSubject(selected.manifest);
+  assert.equal(subject.visibility, 'authorized_only');
+  assert.equal(subject.publication_channel_admission, 'retired');
+  assert.equal(subject.access_policy_ref, owner.manifest.access_policy_ref);
+  assert.equal(subject.credential_provider, owner.manifest.credential_provider);
+  assert.equal(subject.source_repo, owner.manifest.source_repo);
+  const access = resolvePackageAccessDecision(subject, {});
+  assert.equal(access.visibility, 'authorized_only');
+  assert.equal(access.reason, 'package_retired');
+  assert.equal(access.discover_allowed, false);
+  assert.equal(access.download_allowed, false);
+  assert.equal(selected.manifest.version, '0.1.0');
+  assert.deepEqual(selected.carrier_readback, installed.carrier_readback);
+  assert.deepEqual(selected.readiness, installed.readiness);
   assert.equal(installedDescriptorSupportsFrameworkCalls(selected), true);
 });
 

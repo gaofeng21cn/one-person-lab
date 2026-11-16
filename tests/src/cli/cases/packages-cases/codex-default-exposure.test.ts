@@ -74,7 +74,7 @@ test('internal OPL carriers stay headless while interactive Packages remain sele
   }
 });
 
-test('development-only Packages stay discoverable explicitly but are excluded from default registration', async (t) => {
+test('non-admitted Packages retain metadata without default registration or publication', async (t) => {
   const { buildCodexFamilyPluginSpecs } = await import('../../../../../src/adapters/integration/system-installation/codex-plugin-registry.ts');
   const { getOplPackageSpecs, getPublicationAdmittedOplPackageSpecs } = await import('../../../../../src/adapters/integration/package-distribution.ts');
   const packageDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-development-package-projection-'));
@@ -121,10 +121,16 @@ test('development-only Packages stay discoverable explicitly but are excluded fr
   };
   const manifestPath = path.join(packageDirectory, `${packageId}.json`);
   const writeDescriptor = () => fs.writeFileSync(manifestPath, JSON.stringify(descriptor));
-  writeDescriptor();
-  assert.deepEqual(getOplPackageSpecs(packageDirectory).map(spec => spec.package_id), [packageId]);
-  assert.deepEqual(buildCodexFamilyPluginSpecs(packageDirectory), []);
-  assert.deepEqual(getPublicationAdmittedOplPackageSpecs(packageDirectory), []);
+  for (const admission of ['development_only', 'retired']) {
+    descriptor.publication_channel_admission = admission;
+    writeDescriptor();
+    assert.deepEqual(getOplPackageSpecs(packageDirectory).map(spec => ({
+      package_id: spec.package_id,
+      admission: spec.publication_channel_admission,
+    })), [{ package_id: packageId, admission }]);
+    assert.deepEqual(buildCodexFamilyPluginSpecs(packageDirectory), []);
+    assert.deepEqual(getPublicationAdmittedOplPackageSpecs(packageDirectory), []);
+  }
 
   descriptor.publication_channel_admission = 'admitted';
   writeDescriptor();

@@ -200,6 +200,10 @@ source annotation 和签名 provenance 共同绑定。GitHub 的 `repository` �
 把同产品的原生界面、构建脚本等源码纳入变更检测。源码位置、Package
 身份、公开/私有访问策略和交付文件仍来自现有 descriptor、publication source 与内容锁。
 
+`publication_channel_admission=retired` 停止该 Package 的新发布、默认注册和安装来源，
+同时保留已有安装的身份、私有访问策略及原生 carrier 管理。退休元数据不形成新的
+发布目标；历史载荷的不可变来源继续保留。
+
 没有交付内容变化时跳过；已有合法的新版本就复用，有变化但版本未提升时递增 patch。
 major/minor 由 owner 显式选择。通用版本准备只修改已声明的版本文件，调用 owner 的载体生成
 命令后重新验证内容锁。JSON、Python、macOS plist 和 Windows project 使用同一产品版本；

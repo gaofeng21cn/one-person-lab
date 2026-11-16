@@ -27,7 +27,8 @@ export function packageInstallSourceAvailable(descriptor: InstalledPackageDescri
   // A developer checkout may remain active for an existing installation, but it
   // is never a user-facing install/update/repair source.
   if (descriptor.manifest.management_scope === 'deployment_target'
-    || descriptor.manifest.publication_channel_admission === 'development_only') return false;
+    || descriptor.manifest.publication_channel_admission === 'development_only'
+    || descriptor.manifest.publication_channel_admission === 'retired') return false;
   if (descriptor.manifest.management_scope === 'local_component') {
     return Boolean(descriptor.carrier.publicationRef) || componentSeedAvailable(descriptor);
   }

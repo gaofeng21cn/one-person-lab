@@ -210,7 +210,7 @@ export type AgentPackageManifest = {
   source_repo: string | null;
   management_scope: 'local_product' | 'local_component' | 'deployment_target' | 'external_carrier';
   deployment_target: 'cloud' | 'mobile' | 'device' | 'remote_service' | 'unknown' | null;
-  publication_channel_admission?: 'admitted' | 'development_only';
+  publication_channel_admission?: 'admitted' | 'development_only' | 'retired';
   visibility: AgentPackageVisibility;
   access_policy_ref: string | null;
   credential_provider: string | null;

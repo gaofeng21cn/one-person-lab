@@ -455,7 +455,7 @@ export function normalizeManifestSourceFields(
     });
   }
   const admission = payload.publication_channel_admission ?? 'admitted';
-  if (admission !== 'admitted' && admission !== 'development_only') {
+  if (admission !== 'admitted' && admission !== 'development_only' && admission !== 'retired') {
     throw new FrameworkContractError('contract_shape_invalid', 'Package publication channel admission is invalid.', {
       manifest_url: manifestUrl,
       failure_code: 'agent_package_publication_channel_admission_invalid',

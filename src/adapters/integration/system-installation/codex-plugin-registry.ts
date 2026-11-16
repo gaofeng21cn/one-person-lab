@@ -115,7 +115,10 @@ const NO_AUTHORITY = {
 } as const;
 
 export function buildCodexFamilyPluginSpecs(packageDirectory?: string): CodexFamilyPluginSpec[] {
-  const excluded = new Set(listCurrentPackageProjections(packageDirectory).filter(({ payload }) => payload.publication_channel_admission === 'development_only').map(({ payload }) => payload.package_id));
+  const excluded = new Set(listCurrentPackageProjections(packageDirectory)
+    .filter(({ payload }) => payload.publication_channel_admission === 'development_only'
+      || payload.publication_channel_admission === 'retired')
+    .map(({ payload }) => payload.package_id));
   return loadStandardAgentRegistry(packageDirectory).filter(entry => !excluded.has(entry.agent_id)).map((entry) => {
     const capabilityPackage = entry.series_membership === FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP;
     return {
