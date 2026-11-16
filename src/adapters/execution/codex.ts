@@ -62,6 +62,7 @@ export interface CodexPassthroughResult {
 export interface CodexCommandOptions {
   inheritStdio?: boolean;
   timeoutMs?: number;
+  stdin?: string;
 }
 
 export interface CodexStreamingCommandOptions {
@@ -323,7 +324,7 @@ export function buildCodexExecResumeArgs(
     args.push('--output-last-message', options.outputLastMessagePath);
   }
 
-  args.push(sessionId, prompt);
+  args.push(sessionId, options.promptViaStdin ? '-' : prompt);
   return args;
 }
 
@@ -352,6 +353,7 @@ export function runCodexCommand(
     stdio: options.inheritStdio ? 'inherit' : 'pipe',
     env: process.env,
     timeout: options.timeoutMs,
+    input: options.stdin,
   });
 
   if (result.error) {

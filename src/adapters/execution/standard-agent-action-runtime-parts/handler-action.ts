@@ -28,7 +28,10 @@ import {
   type StandardAgentActionRunBinding,
   type StandardAgentActionRunCompletion,
 } from '../standard-agent-action-run-state.ts';
-import { runStandardAgentHandlerSandbox } from '../standard-agent-handler-sandbox.ts';
+import {
+  runStandardAgentHandlerSandbox,
+  standardAgentHandlerSandboxKind,
+} from '../standard-agent-handler-sandbox.ts';
 import {
   actionLedger,
   assertCompletionIdentity,
@@ -105,7 +108,7 @@ function handlerSandboxSummary(
     runtime_kind: binding.kind === 'typescript_export'
       ? 'node_permission_model' as const
       : 'python_audit_hook' as const,
-    sandbox_kind: 'macos_sandbox_exec' as const,
+    sandbox_kind: standardAgentHandlerSandboxKind(),
     exit_code: 0,
     timed_out: false,
   };
