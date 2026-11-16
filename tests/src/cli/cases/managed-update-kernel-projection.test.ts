@@ -39,6 +39,17 @@ function writeFixtureFile(root: string, relativePath: string, content: string) {
   return targetPath;
 }
 
+async function withCodexLatestFixture<T>(callback: () => Promise<T>): Promise<T> {
+  const previous = process.env.OPL_CODEX_CLI_LATEST_VERSION;
+  process.env.OPL_CODEX_CLI_LATEST_VERSION = '0.125.0';
+  try {
+    return await callback();
+  } finally {
+    if (previous === undefined) delete process.env.OPL_CODEX_CLI_LATEST_VERSION;
+    else process.env.OPL_CODEX_CLI_LATEST_VERSION = previous;
+  }
+}
+
 test('native Package plan admits managed updates and isolates failed post-update readback', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-background-package-update-'));
   const callsPath = path.join(root, 'calls');
@@ -360,9 +371,9 @@ test('App update action preserves the fast consumer network boundary', async () 
 });
 
 test('full managed update projection materializes only the three lifecycle owners', async () => {
-  const output = await buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
+  const output = await withCodexLatestFixture(() => buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
     operation: 'status',
-  }) as Record<string, any>;
+  })) as Record<string, any>;
 
   assert.deepEqual(
     output.managed_update.components.map((component: Record<string, unknown>) => component.component_id),
@@ -606,9 +617,9 @@ test('legacy Package component receipts do not override native carrier currentne
 });
 
 test('generic apply selects only eligible background-safe components while explicit owner actions stay scoped', async () => {
-  const output = await buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
+  const output = await withCodexLatestFixture(() => buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
     operation: 'plan',
-  }) as Record<string, any>;
+  })) as Record<string, any>;
   const components = output.managed_update.components.map((component: Record<string, any>) => ({
     ...component,
     auto_apply: component.component_id === 'opl_packages'
@@ -636,10 +647,10 @@ test('developer Framework source override is visible but excluded from generic b
   try {
     process.env.OPL_FRAMEWORK_UPDATE_SOURCE = source;
     process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT = target;
-    const output = await buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
+    const output = await withCodexLatestFixture(() => buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
       operation: 'plan',
       componentId: 'opl_base',
-    }) as Record<string, any>;
+    })) as Record<string, any>;
     const base = output.managed_update.components[0];
     assert.equal(base.current.opl_framework_runtime.source_root_configured, true);
     assert.equal(base.auto_apply.eligible, false);
