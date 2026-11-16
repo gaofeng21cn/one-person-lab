@@ -5,6 +5,7 @@ import argparse
 import base64
 import json
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -16,6 +17,26 @@ def package_specs(framework):
     command = '''import {getPublicationAdmittedOplPackageSpecs} from './src/adapters/integration/package-distribution.ts';
 console.log(JSON.stringify(getPublicationAdmittedOplPackageSpecs()));'''
     return json.loads(run(['node', '--experimental-strip-types', '--input-type=module', '-e', command], cwd=framework).stdout)
+
+
+def changed_owner_files(repo, previous, current):
+    if not all(isinstance(commit, str) and re.fullmatch(r'[a-f0-9]{40}', commit)
+               for commit in (previous, current)):
+        raise ReleaseError('Owner comparison requires exact source commits')
+    try:
+        difference = gh(f'repos/{repo}/compare/{previous}...{current}')
+    except ReleaseError as exc:
+        message = str(exc)
+        if f'No common ancestor between {previous} and {current}.' not in message or '(HTTP 404)' not in message:
+            raise
+        # A retained payload may predate the owner's current Git lineage. Verify
+        # both immutable sources before bypassing only the compare optimization.
+        for commit in (previous, current):
+            observed = gh(f'repos/{repo}/commits/{commit}')
+            if not isinstance(observed, dict) or observed.get('sha') != commit:
+                raise ReleaseError('Owner comparison source does not match the exact commit')
+        return None
+    return [row['filename'] for row in difference.get('files', [])]
 
 
 def prepare(args):
@@ -56,8 +77,7 @@ def prepare(args):
                 if main == payload['source_commit']:
                     result.update(status='unchanged', owner_source_commit=main)
                 else:
-                    difference = gh(f"repos/{repo}/compare/{payload['source_commit']}...{main}")
-                    files = [row['filename'] for row in difference.get('files', [])]
+                    files = changed_owner_files(repo, payload['source_commit'], main)
                     if files and len(files) < 300 and all(name == 'release-automation.json' or name.startswith('.github/') for name in files):
                         remote_settings = gh(f'repos/{repo}/contents/release-automation.json?ref={main}')
                         settings = json.loads(base64.b64decode(remote_settings['content']))
@@ -71,6 +91,10 @@ def prepare(args):
                     run(['git', 'clone', '--filter=blob:none', '--branch', 'main', '--single-branch',
                          '--quiet', projection['source_repo'], root])
                     git(root, 'fetch', 'origin', '--tags', '--quiet')
+                    if files is None:
+                        # Single-branch clones omit unrelated retained history;
+                        # fetch the exact predecessor for the owner's byte check.
+                        git(root, 'fetch', 'origin', payload['source_commit'], '--quiet')
                     result.update(prepare_owner(root, projection, allowlist, framework, repo, apply=args.apply))
                     if result['status'] == 'prepared':
                         script = args.flow_root / 'skills/opl-flow/scripts/package_release.py'

@@ -25,6 +25,9 @@ spec.loader.exec_module(dispatcher)
 spec = importlib.util.spec_from_file_location('detection', ROOT / 'scripts/package-channel-detection.py')
 detection = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(detection)
+spec = importlib.util.spec_from_file_location('daily', ROOT / 'scripts/package-daily-release.py')
+daily = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(daily)
 
 class PackageReleaseTests(unittest.TestCase):
     def setUp(self):
@@ -54,6 +57,71 @@ class PackageReleaseTests(unittest.TestCase):
         self.assertFalse(content_changed(self.root, self.base, self.projection, self.allowlist))
         (self.root / 'photo.png').write_bytes(bytes([255, 0, 5]))
         self.assertTrue(content_changed(self.root, self.base, self.projection, self.allowlist))
+
+    def test_unrelated_verified_owner_history_reaches_exact_payload_comparison(self):
+        write(self.root / 'release-automation.json', {'strategy': 'daily_patch'})
+        self.git('add', '.')
+        self.git('commit', '-m', 'declare owner settings')
+        previous = self.git('rev-parse', 'HEAD')
+        self.git('branch', 'retained-payload')
+        self.git('checkout', '--orphan', 'replacement')
+        (self.root / 'photo.png').write_bytes(bytes([1, 2, 3]))
+        self.git('add', '.')
+        self.git('commit', '-m', 'current owner lineage')
+        self.git('branch', '-M', 'main')
+        current = self.git('rev-parse', 'HEAD')
+        from package_release.common import git as actual_git, run as actual_run
+        with tempfile.TemporaryDirectory() as temporary:
+            framework, remote = Path(temporary) / 'framework', Path(temporary) / 'owner.git'
+            subprocess.run(['git', 'clone', '--bare', str(self.root), str(remote)], check=True, capture_output=True)
+            projection = {**self.projection, 'version': '1.2.3', 'source_repo': 'https://github.com/example/fixture.git',
+                          'codex_surface': {'plugin_payload_manifest_url': 'payloads/fixture.json'}}
+            directory = framework / 'contracts/opl-framework/packages'
+            write(directory / 'fixture.json', projection)
+            write(directory / 'payloads/fixture.json', {'source_commit': previous})
+            write(framework / 'contracts/opl-framework/package-payload-allowlists/fixture.json', self.allowlist)
+            compare = f'repos/example/fixture/compare/{previous}...{current}'
+            responses = {'repos/example/fixture': {'private': False},
+                         'repos/example/fixture/commits/main': {'sha': current},
+                         **{f'repos/example/fixture/commits/{sha}': {'sha': sha} for sha in (previous, current)}}
+            def api(path):
+                if path == compare:
+                    raise ReleaseError(f'gh: No common ancestor between {previous} and {current}. (HTTP 404)')
+                return responses[path]
+            def command(argv, **kwargs):
+                argv = [str(arg) for arg in argv]
+                argv = [str(remote) if arg == projection['source_repo'] else arg for arg in argv]
+                return actual_run(argv, **kwargs)
+            def git_command(root, *args):
+                return 'f' * 40 if root.resolve() == framework.resolve() else actual_git(root, *args)
+            args = SimpleNamespace(framework_root=framework, flow_root=framework, package_id=None,
+                                   apply=False, output=framework / 'preparation.json')
+            with patch.dict(os.environ), patch.object(daily, 'package_specs', return_value=[{'package_id': 'fixture'}]), \
+                 patch.object(daily, 'gh', side_effect=api), patch.object(daily, 'run', side_effect=command), \
+                 patch.object(daily, 'git', side_effect=git_command) as calls:
+                report = daily.prepare(args)
+            self.assertEqual(report['packages'][0]['status'], 'needs_release')
+            self.assertEqual(report['packages'][0]['owner_source_commit'], current)
+            self.assertTrue(any(call.args[1:] == ('fetch', 'origin', previous, '--quiet') for call in calls.call_args_list))
+            self.assertEqual(read(directory / 'payloads/fixture.json')['source_commit'], previous)
+
+    def test_owner_history_comparison_keeps_missing_and_denied_sources_blocked(self):
+        previous, current = 'a' * 40, 'b' * 40
+        unrelated = f'gh: No common ancestor between {previous} and {current}. (HTTP 404)'
+        for message in ['gh: Forbidden (HTTP 403)', 'gh: Not Found (HTTP 404)']:
+            with self.subTest(message=message), patch.object(daily, 'gh', side_effect=ReleaseError(message)) as api:
+                with self.assertRaisesRegex(ReleaseError, message.split(' (')[0]):
+                    daily.changed_owner_files('example/fixture', previous, current)
+                self.assertEqual(api.call_count, 1)
+        for observed in [ReleaseError('gh: Not Found (HTTP 404)'), ReleaseError('gh: Forbidden (HTTP 403)'),
+                         {'sha': 'c' * 40}]:
+            with self.subTest(observed=observed), patch.object(daily, 'gh', side_effect=[ReleaseError(unrelated), observed]):
+                with self.assertRaises(ReleaseError):
+                    daily.changed_owner_files('example/fixture', previous, current)
+        with patch.object(daily, 'gh', side_effect=[ReleaseError(unrelated), {'sha': previous},
+                                                   ReleaseError('gh: Not Found (HTTP 404)')]):
+            with self.assertRaises(ReleaseError):
+                daily.changed_owner_files('example/fixture', previous, current)
 
     def test_explicit_version_adapters_preserve_unrelated_versions(self):
         write(self.root / 'package.json', {'name': 'fixture', 'version': '1.2.3', 'dependencies': {'unrelated': '9.8.7'}})

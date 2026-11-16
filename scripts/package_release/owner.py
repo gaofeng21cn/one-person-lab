@@ -182,13 +182,31 @@ def content_changed(root, previous_commit, projection, allowlist, settings=None)
     return False
 
 
-def wait_for_checks(repo, commit, timeout=1200, *, ignored_check_suite_id=None):
+def source_workflow_checks(repo, commit, workflows, ignored_check_suite_id):
+    checks = []
+    for workflow in workflows:
+        runs = gh(f'repos/{repo}/actions/workflows/{workflow}/runs?head_sha={commit}&per_page=100')['workflow_runs']
+        matches = [row for row in runs if row.get('head_sha') == commit
+                   and row.get('path') == f'.github/workflows/{workflow}'
+                   and (ignored_check_suite_id is None or row.get('check_suite_id') != ignored_check_suite_id)]
+        if matches:
+            # A workflow result covers all its jobs, including checks outside the
+            # first commit/check-runs page. A newer retry replaces the older run.
+            latest = max(matches, key=lambda row: row['id'])
+            checks.append({'name': workflow, 'status': latest['status'], 'conclusion': latest.get('conclusion')})
+    return checks
+
+
+def wait_for_checks(repo, commit, timeout=1200, *, ignored_check_suite_id=None, source_workflows=None):
     deadline = time.monotonic() + timeout
     first = True
     while True:
-        response = gh(f'repos/{repo}/commits/{commit}/check-runs?per_page=100')
-        checks = [check for check in response['check_runs']
-                  if ignored_check_suite_id is None or check.get('check_suite', {}).get('id') != ignored_check_suite_id]
+        if source_workflows is None:
+            response = gh(f'repos/{repo}/commits/{commit}/check-runs?per_page=100')
+            checks = [check for check in response['check_runs']
+                      if ignored_check_suite_id is None or check.get('check_suite', {}).get('id') != ignored_check_suite_id]
+        else:
+            checks = source_workflow_checks(repo, commit, source_workflows, ignored_check_suite_id)
         statuses = gh(f'repos/{repo}/commits/{commit}/status')['statuses']
         rejected = [s['context'] for s in statuses if s['state'] in ['error', 'failure']]
         if rejected:
@@ -198,7 +216,7 @@ def wait_for_checks(repo, commit, timeout=1200, *, ignored_check_suite_id=None):
         if failed:
             raise ReleaseError('Source checks failed: ' + ', '.join(failed))
         pending = any(c['status'] != 'completed' for c in checks) or any(s['state'] == 'pending' for s in statuses)
-        if not pending and (checks or not first):
+        if not pending and (checks or (source_workflows is None and not first)):
             return
         if time.monotonic() >= deadline:
             raise ReleaseError('Source checks have not completed')

@@ -400,9 +400,9 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.match(workflow, /^    permissions:\n      contents: read\n      id-token: write\n      packages: write$/m);
   assert.deepEqual(packageSpecs.map((spec) => spec.package_id), publisherPackageIds);
   assert.equal(loadOplPackageSpecs().some((spec) => spec.package_id === 'opl-channel-weixin'), true);
-  assert.equal(getOplPackageSpecs().some((spec) => spec.package_id === 'opl-link-desktop-connector'), true);
+  assert.equal(getOplPackageSpecs().some((spec) => spec.package_id === 'opl-link-desktop-connector'), false);
   assert.equal(publisherPackageIds.includes('opl-channel-weixin'), false);
-  assert.equal(publisherPackageIds.includes('opl-link-desktop-connector'), true);
+  assert.equal(publisherPackageIds.includes('opl-link-desktop-connector'), false);
   assert.doesNotMatch(workflow, /type: choice/);
   // Exercise the actual shell path guard before manifest resolution.
   const packageIdGuard = workflow.split('\n').find((line) => line.includes('Invalid Package id'))!.trim();

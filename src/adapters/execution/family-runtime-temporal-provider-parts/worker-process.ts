@@ -6,6 +6,10 @@ import { temporalWorkerRootArgumentFromArgv } from './foreground-paths.ts';
 const WORKER_STOP_GRACE_MS = 2_000;
 const WORKER_STOP_POLL_MS = 50;
 
+function processInspectionEnv() {
+  return process.env.PATH?.trim() ? process.env : { ...process.env, PATH: '/usr/bin:/bin' };
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -79,6 +83,7 @@ export function temporalForegroundWorkerCommand(pid: number) {
     const output = execFileSync('ps', ['-ww', '-p', String(pid), '-o', 'command='], {
       encoding: 'utf8',
       maxBuffer: 1024 * 1024,
+      env: processInspectionEnv(),
     }).trim();
     return output || null;
   } catch {
@@ -162,6 +167,7 @@ export function findTemporalForegroundWorkerPids(input: {
       candidates = execFileSync('pgrep', ['-f', '--', '--temporal-worker-foreground'], {
         encoding: 'utf8',
         maxBuffer: 1024 * 1024,
+        env: processInspectionEnv(),
       }).trim().split(/\s+/);
     } catch (error) {
       if ((error as { status?: number }).status === 1) return [];

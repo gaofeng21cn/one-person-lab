@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
@@ -61,7 +62,6 @@ test('only capability Packages may declare headless internal Codex interaction',
 test('internal OPL carriers stay headless while interactive Packages remain selectable', () => {
   for (const [packageId, expectedMode] of [
     ['opl-channel-weixin', 'headless_internal'],
-    ['opl-link-desktop-connector', 'headless_internal'],
     ['opl-fleet-agent', 'headless_internal'],
     ['opl-flow', 'interactive'],
   ] as const) {
@@ -74,15 +74,60 @@ test('internal OPL carriers stay headless while interactive Packages remain sele
   }
 });
 
-test('development-only connectors stay discoverable explicitly but are excluded from default registration', async () => {
+test('development-only Packages stay discoverable explicitly but are excluded from default registration', async (t) => {
   const { buildCodexFamilyPluginSpecs } = await import('../../../../../src/adapters/integration/system-installation/codex-plugin-registry.ts');
   const { getOplPackageSpecs, getPublicationAdmittedOplPackageSpecs } = await import('../../../../../src/adapters/integration/package-distribution.ts');
-  const development = getOplPackageSpecs().filter(spec => spec.publication_channel_admission === 'development_only');
-  assert.ok(development.some(spec => spec.package_id === 'opl-link-desktop-connector'));
-  for (const spec of development) {
-    assert.equal(buildCodexFamilyPluginSpecs().some(item => item.pack_id === spec.module_id), false);
-    assert.equal(getPublicationAdmittedOplPackageSpecs().some(item => item.package_id === spec.package_id), false);
-  }
-  const descriptor = JSON.parse(fs.readFileSync('contracts/opl-framework/packages/opl-link-desktop-connector.json', 'utf8'));
-  assert.equal(descriptor.app_contributions, undefined);
+  const packageDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-development-package-projection-'));
+  t.after(() => fs.rmSync(packageDirectory, { recursive: true, force: true }));
+  const packageId = 'fixture-development-agent';
+  const descriptor = {
+    surface_kind: 'opl_agent_package_manifest.v1',
+    package_id: packageId,
+    agent_id: packageId,
+    display_name: 'Fixture Development Agent',
+    publisher: 'example',
+    version: '1.0.0',
+    source: 'first_party',
+    source_repo: `https://example.test/${packageId}.git`,
+    carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
+    publication_channel_admission: 'development_only',
+    publication_source: {
+      owner_package_manifest_ref: 'opl-package.json',
+      owner_plugin_manifest_ref: '.codex-plugin/plugin.json',
+    },
+    runtime_source_carrier: { module_id: packageId },
+    standard_agent_descriptor_projection: {
+      surface_kind: 'opl_standard_agent_descriptor_projection.v1',
+      source_ref: 'contracts/domain_descriptor.json',
+      interface_source_ref: 'contracts/domain_descriptor.json#/standard_agent_interface',
+      domain_id: packageId,
+      runtime_domain_id: packageId,
+      explicit_aliases: [],
+      compatibility: { registry_domain_id: packageId, owner_aliases: [] },
+    },
+    codex_surface: {
+      plugin_id: packageId,
+      standalone_distribution: 'repo_carrier_source',
+      required_skill_ids: [packageId],
+      configured_codex_plugin_carrier: {
+        kind: 'codex_plugin_manager',
+        plugin_selector: `${packageId}@${packageId}`,
+        executor_route: 'codex_cli',
+        marketplace_source: `example/${packageId}`,
+        publication_ref: `ghcr.io/example/packages/${packageId}:latest-stable`,
+      },
+    },
+    capability_dependencies: [],
+  };
+  const manifestPath = path.join(packageDirectory, `${packageId}.json`);
+  const writeDescriptor = () => fs.writeFileSync(manifestPath, JSON.stringify(descriptor));
+  writeDescriptor();
+  assert.deepEqual(getOplPackageSpecs(packageDirectory).map(spec => spec.package_id), [packageId]);
+  assert.deepEqual(buildCodexFamilyPluginSpecs(packageDirectory), []);
+  assert.deepEqual(getPublicationAdmittedOplPackageSpecs(packageDirectory), []);
+
+  descriptor.publication_channel_admission = 'admitted';
+  writeDescriptor();
+  assert.deepEqual(buildCodexFamilyPluginSpecs(packageDirectory).map(spec => spec.pack_id), [packageId]);
+  assert.deepEqual(getPublicationAdmittedOplPackageSpecs(packageDirectory).map(spec => spec.package_id), [packageId]);
 });

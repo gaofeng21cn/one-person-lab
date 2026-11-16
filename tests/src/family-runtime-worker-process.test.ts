@@ -40,6 +40,27 @@ test('foreground entrypoint and discovery share pair, equals and conflicting roo
   ]) assert.throws(() => resolveTemporalWorkerForegroundPathsFromArgv(argv), /unambiguous/);
 });
 
+test('macOS worker discovery keeps system process probes available with an empty PATH', {
+  skip: process.platform !== 'darwin',
+}, () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-macos-worker-empty-path-'));
+  const child = spawn(process.execPath, [
+    '-e', 'setTimeout(() => {}, 30_000);', '--',
+    modulePath, '--temporal-worker-foreground', '--family-runtime-root', root,
+  ], { detached: true, stdio: 'ignore' });
+  const previousPath = process.env.PATH;
+  try {
+    process.env.PATH = '';
+    assert.ok(temporalForegroundWorkerCommand(child.pid!)?.includes(root));
+    assert.deepEqual(findTemporalForegroundWorkerPids({ modulePath, familyRuntimeRoot: root }), [child.pid]);
+  } finally {
+    if (previousPath === undefined) delete process.env.PATH;
+    else process.env.PATH = previousPath;
+    removeFixtureWorker(child.pid);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('Linux worker discovery and stop preserve exact roots without ps or pgrep', {
   skip: process.platform !== 'linux',
 }, async () => {
