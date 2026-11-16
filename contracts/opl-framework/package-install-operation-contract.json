@@ -22,7 +22,13 @@
     "private_access": "authorize with the existing registry provider before each acquisition, including cache reuse"
   },
   "transfer": {
-    "implementation": "system curl with HTTP Range, then SHA-256 and size verification",
+    "implementation": "system curl with bounded parallel HTTP Range requests for large remaining archives, then SHA-256 and size verification",
+    "parallel_range": {
+      "default_requests": 4,
+      "maximum_requests": 8,
+      "minimum_remaining_bytes": 16777216,
+      "requires": "every response must be HTTP 206 with an exact Content-Range and chunk length; otherwise resume through the existing single-request path"
+    },
     "retry": "up to three attempts for transient failures; preserve partial bytes between operations",
     "timeout": "10 second connect timeout; 120 second no-progress timeout; no fixed total download deadline",
     "fallback": "a server rejecting Range restarts a bounded download; corrupt bytes are discarded",
