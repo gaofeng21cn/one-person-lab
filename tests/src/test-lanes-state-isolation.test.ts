@@ -33,8 +33,15 @@ test('CI phases and unit shards execute every fast test exactly once', () => {
   assert.deepEqual([...fullFiles].sort(),discoverTestRoots([...new Set(constituentFiles)]));
   assert.equal(fullFiles.includes('tests/src/cli/cases/packages.test.ts'),true);
   assert.equal(fullFiles.includes('tests/src/cli/cases/packages-cases/workflow-policy-transaction.test.ts'),false);
-  const cliRoot=laneTestPlan('full').find((step: any)=>step.kind==='node-test'&&step.files.includes('tests/src/cli.test.ts'));
-  assert.equal(cliRoot.batchSize,1);
+  assert.equal(fullFiles.includes('tests/src/cli.test.ts'),false);
+  const regressionCli=laneTestPlan('regression').find((step: any)=>step.kind==='node-test'&&step.files.includes('tests/src/cli/cases/contracts-entry.test.ts'));
+  assert.equal(regressionCli.files.length,11);
+  assert.equal(regressionCli.batchSize,4);
+  for(const file of regressionCli.files) {
+    assert.equal(fullFiles.includes(file),true,file);
+    const fullStep=laneTestPlan('full').find((step: any)=>step.kind==='node-test'&&step.files.includes(file));
+    assert.ok(fullStep.batchSize<=4,file);
+  }
 });
 
 function processExists(pid: number) {

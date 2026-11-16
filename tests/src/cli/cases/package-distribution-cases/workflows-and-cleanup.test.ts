@@ -402,7 +402,7 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.equal(loadOplPackageSpecs().some((spec) => spec.package_id === 'opl-channel-weixin'), true);
   assert.equal(getOplPackageSpecs().some((spec) => spec.package_id === 'opl-link-desktop-connector'), true);
   assert.equal(publisherPackageIds.includes('opl-channel-weixin'), false);
-  assert.equal(publisherPackageIds.includes('opl-link-desktop-connector'), true);
+  assert.equal(publisherPackageIds.includes('opl-link-desktop-connector'), false);
   assert.doesNotMatch(workflow, /type: choice/);
   // Exercise the actual shell path guard before manifest resolution.
   const packageIdGuard = workflow.split('\n').find((line) => line.includes('Invalid Package id'))!.trim();

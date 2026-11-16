@@ -104,6 +104,11 @@ export function discoverAvailablePackageDescriptors(input: {
   for (const [packageId, descriptor] of discoverPackageDescriptors({ ...input, includeAvailable: true })) {
     discovered.set(packageId, withCurrentOwnerProjection(descriptor, discovered.get(packageId)));
   }
+  for (const [packageId, descriptor] of discovered) {
+    if (descriptor.manifest.publication_channel_admission === 'retired' && !descriptor.readiness.installed) {
+      discovered.delete(packageId);
+    }
+  }
   return discovered;
 }
 

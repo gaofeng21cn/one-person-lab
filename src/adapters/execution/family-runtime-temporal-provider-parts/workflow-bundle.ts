@@ -62,7 +62,8 @@ async function materializeTemporalWorkflowBundle(input: {
   const manifestPath = temporalWorkflowBundleManifestPath(input.paths);
   fs.mkdirSync(bundleDir, { recursive: true });
 
-  const bundle = await bundleWorkflowCode({ workflowsPath: input.workflowsPath });
+  const workflowsPath = fs.realpathSync.native(input.workflowsPath);
+  const bundle = await bundleWorkflowCode({ workflowsPath });
   // An SDK-only upgrade changes bundle bytes without changing workflow source.
   // Keep the previous bundle available for its matching runtime on rollback.
   const codePath = path.join(bundleDir, bundleFileName(bundle.code));
@@ -75,7 +76,7 @@ async function materializeTemporalWorkflowBundle(input: {
     manifest_path: manifestPath,
     workflow_bundle_version: version,
     workflow_bundle_source_version: input.sourceVersion,
-    workflows_path: input.workflowsPath,
+    workflows_path: workflowsPath,
     namespace: resolveTemporalClientNamespace({ paths: input.paths }),
     task_queue: resolveTemporalWorkerTaskQueue(input.paths),
     generated_at: new Date().toISOString(),

@@ -36,7 +36,7 @@ function assertSchema(relativePath: string, payload: unknown) {
   assert.equal(result.ok, true, result.ok ? '' : JSON.stringify(result.errors));
 }
 
-test('OPL Link projection, payload, and allowlist bind one exact owner cohort', () => {
+test('retired OPL Link metadata preserves one exact private owner cohort', () => {
   const manifest = readJson(manifestRef);
   const allowlist = readJson(allowlistRef);
   const payloadRef = path.join(path.dirname(manifestRef), manifest.codex_surface.plugin_payload_manifest_url);
@@ -51,7 +51,7 @@ test('OPL Link projection, payload, and allowlist bind one exact owner cohort', 
   assert.equal(manifest.package_id, 'opl-link-desktop-connector');
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.equal(manifest.source_repo, 'https://github.com/gaofeng21cn/opl-link.git');
-  assert.equal(manifest.publication_channel_admission, 'admitted');
+  assert.equal(manifest.publication_channel_admission, 'retired');
   assert.equal(manifest.visibility, 'authorized_only');
   assert.equal(manifest.codex_surface.configured_codex_plugin_carrier.publication_ref,
     'ghcr.io/gaofeng21cn/one-person-lab-private-packages/opl-link-desktop-connector:latest-stable');
@@ -88,7 +88,7 @@ test('OPL Link projection, payload, and allowlist bind one exact owner cohort', 
   );
 });
 
-test('dynamic package discovery admits one remote companion Host contribution and hides absent Package', () => {
+test('retired metadata preserves installed remote companion integration without a publication target', () => {
   const manifest = readJson(manifestRef);
   const hostManifest = manifest as PackageHostManifest;
   const manifestPath = path.join(repoRoot, manifestRef);
@@ -99,8 +99,8 @@ test('dynamic package discovery admits one remote companion Host contribution an
     .find((entry) => entry.package_id === manifest.package_id);
 
   assert.ok(spec);
-  assert.ok(publicationSpec);
-  assert.equal(spec.publication_channel_admission, 'admitted');
+  assert.equal(publicationSpec, undefined);
+  assert.equal(spec.publication_channel_admission, 'retired');
   assert.equal(spec.scope, 'capability_package');
   assert.equal(spec.version, manifest.version);
   assert.equal(spec.repo_url, manifest.source_repo);

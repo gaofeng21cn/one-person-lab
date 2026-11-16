@@ -14,18 +14,19 @@ const source = JSON.parse(fs.readFileSync(
   new URL('../../contracts/opl-framework/packages/opl-flow.json', import.meta.url), 'utf8',
 ));
 
-function descriptor(options: { packageId?: string; installed?: boolean; private?: boolean } = {}): InstalledPackageDescriptor {
+function descriptor(options: { packageId?: string; installed?: boolean; private?: boolean;
+  admission?: 'development_only' | 'retired'; publicationRef?: string } = {}): InstalledPackageDescriptor {
   const packageId = options.packageId ?? 'fixture-development-only-without-payload';
   const installed = options.installed ?? false;
   const manifest = normalizePackageManifest({
     ...source,
     package_id: packageId,
-    publication_channel_admission: 'development_only',
+    publication_channel_admission: options.admission ?? 'development_only',
     visibility: options.private ? 'authorized_only' : 'public',
     access_policy_ref: options.private ? `github-package:fixture/packages/${packageId}` : null,
     credential_provider: options.private ? 'github_packages' : null,
   }, 'fixture');
-  const carrier = { ...manifest.configured_codex_plugin_carrier!, publicationRef: null };
+  const carrier = { ...manifest.configured_codex_plugin_carrier!, publicationRef: options.publicationRef ?? null };
   return {
     manifest,
     manifestPath: '/fixture/opl-package.json',
@@ -80,9 +81,26 @@ function assertNoDownloadActions(entry: ReturnType<typeof directoryFrom>['entrie
   assert.equal(entry.recommended_action, null);
 }
 
-test('normalization retains development-only admission and defaults existing packages to admitted', () => {
+test('normalization retains non-admitted identities and defaults existing packages to admitted', () => {
   assert.equal(descriptor().manifest.publication_channel_admission, 'development_only');
+  assert.equal(descriptor({ admission: 'retired' }).manifest.publication_channel_admission, 'retired');
   assert.equal(normalizePackageManifest(source, 'fixture').publication_channel_admission, 'admitted');
+});
+
+test('retired Packages with a published payload stay hidden while installed management remains available', () => {
+  const options = { admission: 'retired' as const, publicationRef: 'ghcr.io/example/packages/retired:latest-stable' };
+  const available = descriptor(options);
+  assert.equal(directoryFrom(snapshot(available), 'fast').entry_count, 0);
+  assert.throws(() => assertPackageInstallSourceAvailable(available));
+  const installed = descriptor({ ...options, installed: true });
+  const result = directoryFrom(snapshot(installed), 'fast');
+  assert.equal(result.installed_package_count, 1);
+  const [entry] = result.entries;
+  assert.equal(entry.activated, true);
+  assert.equal(entry.readiness.launch_allowed, true);
+  assert.ok(entry.available_actions.some(action => action.action_id === 'agent_package_uninstall'));
+  assertNoDownloadActions(entry);
+  assert.throws(() => assertPackageInstallSourceAvailable(installed));
 });
 
 test('uninstalled development-only packages are absent from the software directory', () => {

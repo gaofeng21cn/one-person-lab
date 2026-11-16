@@ -15,7 +15,7 @@ test('CLI modularization keeps stable entry files while extracting modules and c
   assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'entrypoints', 'cli', 'modules', 'request-parsers.ts')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'entrypoints', 'cli', 'modules', 'system-action-parsers.ts')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'entrypoints', 'cli', 'modules', 'help-output.ts')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'tests', 'src', 'cli.test.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'tests', 'src', 'cli', 'cases', 'contracts-entry.test.ts')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'tests', 'src', 'cli', 'cases')), true);
 });
 

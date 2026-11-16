@@ -1,6 +1,7 @@
 import path from 'node:path';
 import * as ts from 'typescript/unstable/ast';
-import { API, type Project } from 'typescript/unstable/sync';
+import type { Project } from 'typescript/unstable/sync';
+import { withTypescriptAPI } from '../../../kernel/typescript-api.ts';
 
 import type { FunctionFinding, SourceFileInfo } from './types.ts';
 
@@ -165,14 +166,13 @@ function analyzeTypescriptFiles(files: SourceFileInfo[]) {
     compilerOptions: { allowJs: true, noEmit: true, noResolve: true, noLib: true, types: [] },
     files: files.map((file) => path.resolve(file.absolutePath)),
   });
-  const api = new API({
+  return withTypescriptAPI({
     cwd,
     fs: {
       fileExists: (file) => path.resolve(file) === configPath ? true : undefined,
       readFile: (file) => path.resolve(file) === configPath ? config : undefined,
     },
-  });
-  try {
+  }, (api) => {
     const snapshot = api.updateSnapshot({ openProjects: [configPath] });
     try {
       const project = snapshot.getProject(configPath);
@@ -183,9 +183,7 @@ function analyzeTypescriptFiles(files: SourceFileInfo[]) {
     } finally {
       snapshot.dispose();
     }
-  } finally {
-    api.close();
-  }
+  });
 }
 
 function analyzeProjectFiles(files: SourceFileInfo[], project: Project) {

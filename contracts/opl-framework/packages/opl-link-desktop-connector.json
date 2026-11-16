@@ -198,7 +198,7 @@
   "visibility": "authorized_only",
   "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/opl-link-desktop-connector",
   "credential_provider": "github_packages",
-  "publication_channel_admission": "admitted",
+  "publication_channel_admission": "retired",
   "management_scope": "local_component",
   "presentation": {
     "display_name_i18n": {

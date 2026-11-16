@@ -28,7 +28,7 @@ export type PackageSpec = {
   owner_manifest_kind: 'standard_agent' | 'capability_package' | 'workflow_profile';
   owner_plugin_manifest_ref: string;
   owner_language_version_ref?: string;
-  publication_channel_admission: 'admitted' | 'development_only';
+  publication_channel_admission: 'admitted' | 'development_only' | 'retired';
   capability_dependencies?: readonly ModuleCapabilityDependency[];
   version: string;
   visibility: 'public' | 'authorized_only';
@@ -99,8 +99,8 @@ function projectionDescription(payload: Record<string, unknown>, fallback: strin
 
 function projectionPublicationChannelAdmission(payload: Record<string, unknown>) {
   const value = payload.publication_channel_admission ?? 'admitted';
-  if (value !== 'admitted' && value !== 'development_only') {
-    throw new Error('Package projection publication_channel_admission must be admitted or development_only.');
+  if (value !== 'admitted' && value !== 'development_only' && value !== 'retired') {
+    throw new Error('Package projection publication_channel_admission must be admitted, development_only, or retired.');
   }
   const surface = projectionRecord(payload, 'codex_surface');
   const carrier = surface ? projectionRecord(surface, 'configured_codex_plugin_carrier') : null;

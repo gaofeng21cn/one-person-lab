@@ -66,7 +66,9 @@ export function packageAccessSubject(owner: Record<string, unknown>): PackageAcc
     ...normalizePackageAccessFields(owner, value(owner.package_id) ?? ''),
     source_repo: value(owner.source_repo),
     source_commit: value(owner.source_commit),
-    publication_channel_admission: owner.publication_channel_admission === 'development_only' ? 'development_only' : 'admitted',
+    publication_channel_admission: owner.publication_channel_admission === 'development_only'
+      || owner.publication_channel_admission === 'retired'
+      ? owner.publication_channel_admission : 'admitted',
     codex_surface: isRecord(owner.codex_surface) ? owner.codex_surface : {},
   };
 }
@@ -152,6 +154,9 @@ export function resolvePackageAccessDecision(
     download_allowed: visibility === 'public',
     registry_digest: null,
   };
+  if (manifest.publication_channel_admission === 'retired') {
+    return { ...base, status: 'unknown', reason: 'package_retired', discover_allowed: false, download_allowed: false };
+  }
   if (visibility === 'public') return base;
   const source = resolvePackageSourceCredentialProvider(manifest.source_repo, publicationRef, options.env ?? env);
   const credentialHandle = options.credentialHandle !== undefined ? options.credentialHandle : source?.credential_handle ?? null;

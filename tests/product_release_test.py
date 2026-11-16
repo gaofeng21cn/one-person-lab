@@ -1,5 +1,6 @@
 from __future__ import annotations
 import importlib.util
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -55,6 +56,74 @@ class ProductReleaseTests(unittest.TestCase):
             source.update(status='completed', conclusion='failure')
             with self.assertRaises(ReleaseError):
                 wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0, ignored_check_suite_id=20)
+
+    def test_product_source_workflows_ignore_dispatch_but_retain_source_failures(self):
+        source = {'id': 10, 'head_sha': self.first, 'path': '.github/workflows/ci.yml',
+                  'status': 'completed', 'conclusion': 'success'}
+        verify = {'id': 30, 'head_sha': self.first, 'path': '.github/workflows/verify.yml',
+                  'status': 'completed', 'conclusion': 'failure'}
+        dispatcher = {'name': 'Dispatch independent Package owner publishers',
+                      'status': 'completed', 'conclusion': 'failure'}
+        def api(path):
+            if '/actions/workflows/ci.yml/runs?' in path:
+                return {'workflow_runs': [source]}
+            if '/actions/workflows/verify.yml/runs?' in path:
+                return {'workflow_runs': [verify]}
+            if '/check-runs?' in path:
+                return {'check_runs': [dispatcher]}
+            return {'statuses': []}
+        workflows = ['ci.yml', 'verify.yml']
+        with patch('package_release.owner.gh', side_effect=api):
+            with self.assertRaisesRegex(ReleaseError, 'Source checks failed: verify.yml'):
+                wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0, source_workflows=workflows)
+            verify['conclusion'] = 'success'
+            wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0, source_workflows=workflows)
+            verify.update(status='in_progress', conclusion=None)
+            with self.assertRaisesRegex(ReleaseError, 'not completed'):
+                wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0, source_workflows=workflows)
+            # Merge acceptance still uses the original full check set.
+            with self.assertRaisesRegex(ReleaseError, 'Dispatch independent Package owner publishers'):
+                wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0)
+
+    def test_source_workflows_bind_exact_commit_and_latest_run_without_requiring_scheduled_runs(self):
+        latest = {'id': 20, 'head_sha': self.first, 'path': '.github/workflows/ci.yml',
+                  'status': 'completed', 'conclusion': 'success'}
+        runs = [dict(latest, id=10, conclusion='failure'), latest,
+                dict(latest, id=30, head_sha='a' * 40, conclusion='failure')]
+        def api(path):
+            if '/actions/workflows/ci.yml/runs?' in path:
+                return {'workflow_runs': runs}
+            if '/actions/workflows/verify.yml/runs?' in path:
+                return {'workflow_runs': []}
+            return {'statuses': []}
+        with patch('package_release.owner.gh', side_effect=api):
+            wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0,
+                            source_workflows=['ci.yml', 'verify.yml'])
+            runs[:] = [dict(latest, path='.github/workflows/daily-product-channel.yml')]
+            with self.assertRaisesRegex(ReleaseError, 'not completed'):
+                wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0,
+                                source_workflows=['ci.yml', 'verify.yml'])
+
+    def test_scoped_source_workflows_still_reject_commit_status_failures(self):
+        def api(path):
+            if '/actions/workflows/' in path:
+                return {'workflow_runs': [{'id': 10, 'head_sha': self.first,
+                        'path': '.github/workflows/ci.yml', 'status': 'completed', 'conclusion': 'success'}]}
+            return {'statuses': [{'context': 'external-required', 'state': 'failure'}]}
+        with patch('package_release.owner.gh', side_effect=api):
+            with self.assertRaisesRegex(ReleaseError, 'Source statuses failed: external-required'):
+                wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0, source_workflows=['ci.yml'])
+
+    def test_product_contract_validates_source_workflow_filenames(self):
+        config = {**self.config, 'schema_version': 'opl.product-release.v1', 'strategy': 'daily_patch',
+                  'trigger': 'tag', 'publisher_workflow': 'publish.yml', 'source_check_workflows': ['ci.yml', 'verify.yml']}
+        path = self.root / 'product-release.json'
+        path.write_text(json.dumps(config))
+        self.assertEqual(product.settings(self.root)['source_check_workflows'], ['ci.yml', 'verify.yml'])
+        for invalid in [[], 'ci.yml', ['ci.yml', 'ci.yml'], ['../ci.yml'], [1]]:
+            path.write_text(json.dumps({**config, 'source_check_workflows': invalid}))
+            with self.assertRaisesRegex(ReleaseError, 'Source check workflows'):
+                product.settings(self.root)
 
     def test_docs_only_main_does_not_allocate_a_version(self):
         (self.root / 'README.md').write_text('documentation change')

@@ -144,6 +144,10 @@ workflow。共用准备器比较已发布源码与 main，只对交付变化分�
 各产品发布器。已冻结但未完成的 tag 复用原源码与发布 run，不移动旧 tag。
 DSH 的 `owner_schedule` 只回读既有每日任务，避免重复调度。
 
+`source_check_workflows` 可按 owner 声明源码验证 workflow 文件名。产品准备仅等待这些
+workflow 对准确源码提交的当前结果及 commit statuses；Package 派发器和产品发布器
+不充当源码门槛。已运行的源码检查失败仍阻止准备，合并前仍保留完整检查保护。
+
 每日 Actions artifact 分别记录各产品的发布进度、原生 run 或阻塞原因；提交 tag、
 候选构建成功与 stable 发布成功分别回读。该流程不安装用户软件、不部署生产实例、
 不更新真实设备。
@@ -196,6 +200,10 @@ source annotation 和签名 provenance 共同绑定。GitHub 的 `repository` �
 把同产品的原生界面、构建脚本等源码纳入变更检测。源码位置、Package
 身份、公开/私有访问策略和交付文件仍来自现有 descriptor、publication source 与内容锁。
 
+`publication_channel_admission=retired` 停止该 Package 的新发布、默认注册和安装来源，
+同时保留已有安装的身份、私有访问策略及原生 carrier 管理。退休元数据不形成新的
+发布目标；历史载荷的不可变来源继续保留。
+
 没有交付内容变化时跳过；已有合法的新版本就复用，有变化但版本未提升时递增 patch。
 major/minor 由 owner 显式选择。通用版本准备只修改已声明的版本文件，调用 owner 的载体生成
 命令后重新验证内容锁。JSON、Python、macOS plist 和 Windows project 使用同一产品版本；
@@ -219,6 +227,10 @@ Framework 随后复用 Flow 的 `package_release.py prepare` 更新投影，再�
 稳定请求 ID 由 Package、版本和源码提交组成，跨日回读相同身份的在途和成功运行，避免
 重复排队。已存在的准备分支按完整文件树核对；相同内容沿用原提交和 CI，不同内容保留并报告冲突。
 单包版本冲突、CI失败、访问失败和未知派发结果单独记录，其他合法候选继续。
+已发布载荷的源码与 owner 当前 main 没有共同祖先时，准备器先确认两个准确提交均可读，
+再抓取原提交并按 owner 既有交付路径比较字节。该比较不改写旧载荷来源；缺失提交、
+身份拒绝和其他比较错误继续阻止该 Package 的准备。
+
 准备失败的 Package 从当天发布计划排除；派发任务在处理完合法候选后汇总失败并标红，
 保留逐包结果 artifact 和任务摘要，便于定位和下次对账。
 未知写结果先按请求身份回读；不可变版本、单包串行、前序 digest/CAS、可见性、回执和证明

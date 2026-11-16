@@ -519,7 +519,9 @@ export function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full'
   const entries = [...snapshot.descriptors.values()]
     .filter((descriptor) => !isProjectLocalCapabilityPackage(descriptor.manifest))
     .filter((descriptor) => descriptor.manifest.management_scope !== 'deployment_target')
-    .filter((descriptor) => descriptor.manifest.publication_channel_admission !== 'development_only' || descriptor.readiness.installed)
+    .filter((descriptor) => descriptor.readiness.installed
+      || (descriptor.manifest.publication_channel_admission !== 'development_only'
+        && descriptor.manifest.publication_channel_admission !== 'retired'))
     .map((entry) => directoryEntry(entry, detail, snapshot.access.get(entry.manifest.package_id), snapshot.currentOwner?.get(entry.manifest.package_id)))
     .filter((entry) => entry.installed || entry.package_access.discover_allowed)
     .sort((left, right) => left.display_name.localeCompare(right.display_name, 'en'));

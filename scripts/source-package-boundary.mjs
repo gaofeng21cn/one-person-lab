@@ -6,7 +6,7 @@ import { parseArgs } from 'node:util';
 
 import semver from 'semver';
 import * as ts from 'typescript/unstable/ast';
-import { API } from 'typescript/unstable/sync';
+import { withTypescriptAPI } from '../src/kernel/typescript-api.ts';
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const options = readOptions(process.argv.slice(2));
@@ -416,14 +416,13 @@ function parseSourceFile(file) {
     },
     files: [absolutePath],
   });
-  const api = new API({
+  return withTypescriptAPI({
     cwd: path.dirname(absolutePath),
     fs: {
       fileExists: (candidate) => path.resolve(candidate) === configPath ? true : undefined,
       readFile: (candidate) => path.resolve(candidate) === configPath ? config : undefined,
     },
-  });
-  try {
+  }, (api) => {
     const snapshot = api.updateSnapshot({ openProjects: [configPath] });
     try {
       const project = snapshot.getProject(configPath);
@@ -433,9 +432,7 @@ function parseSourceFile(file) {
     } finally {
       snapshot.dispose();
     }
-  } finally {
-    api.close();
-  }
+  });
 }
 
 function objectProperty(object, name) {

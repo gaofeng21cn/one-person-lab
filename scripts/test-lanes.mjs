@@ -96,7 +96,12 @@ const sourceTestPatterns = ['tests/src/**/*.test.{ts,mjs}'];
 const activeSourceTestFiles = expandTestFiles(sourceTestPatterns).sort();
 const sourceTestRoots = discoverTestRoots(activeSourceTestFiles);
 
+const regressionCliTestFiles = expandTestFiles([
+  'tests/src/cli/cases/{contracts-entry,runtime-manager-native,runtime-index-summary,system-surfaces,package-distribution,managed-update-kernel-projection,managed-update-kernel,framework-readiness-binding-cases,framework-locator,workspace-domain,contracts-help}.test.ts',
+]);
+
 const readModelGateCliExclusions = [
+  ...regressionCliTestFiles,
   ...expandTestFiles([
     'tests/src/cli/cases/{agents-conformance-stage-pack-v2,agents-default-callers,agents-residue-decisions,domain-pack-compiler-canonical-targets,framework-readiness-cli-surface,system-dependency-doctor,web-runtime}.test.ts',
     'tests/src/cli/cases/connect-*.test.ts',
@@ -148,11 +153,11 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/workspace-domain.external-evidence.test.ts',
 ];
 
-const fastLaneExcludedTestFiles = new Set(expandTestFiles([
+const fastLaneExcludedTestFiles = new Set([...regressionCliTestFiles, ...expandTestFiles([
   'tests/built/**/*.test.{ts,mjs}',
   'tests/src/{agent-profile-spine,cli-acp-runtime,cli-codex-default-shell-sync-skills,cli-codex-default-shell,cli-install,cli,cli-modularization,domain-definition-contract,evidence-grounded-decision-agent-profile,family-domain-catalog,family-entry-contracts,family-executor-adapter-contract,family-orchestration,fresh-install-smoke,handoff-bundle,opl-skills-boundary,product-entry-agent-executor,product-entry-companions,product-entry-runtime,profile-capability-plan,refactor-patrol-state,runtime-state-paths,source-module-boundary,stage-run-mag-integration}.test.ts',
   'tests/src/cli/cases/{agents-conformance-stage-pack-v2,agents-default-callers,agents-residue-decisions,domain-pack-compiler-canonical-targets,framework-readiness-cli-surface,system-dependency-doctor,web-runtime}.test.ts',
-]));
+])]);
 
 const fastReadModelSharedTestFiles = new Set([
   'tests/src/cli/cases/domain-pack-compiler-active-caller-targets.test.ts',
@@ -271,8 +276,13 @@ const lanes = {
   regression: [
     sourceTest([
       '{base-managed-dependencies,cli-codex-default-shell,cli-codex-default-shell-sync-skills,runtime-state-paths,family-domain-catalog,family-entry-contracts,family-executor-adapter-contract,handoff-bundle,product-entry-companions,product-entry-runtime,product-entry-agent-executor,family-orchestration,agent-package-home-localization,opl-skills-boundary}.test.ts',
-      'cli.test.ts',
     ], {
+      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
+    }),
+    // Each CLI case owns its process and timeout. Four concurrent roots retain
+    // every assertion without one synchronous aggregate exhausting the step.
+    nodeTest(regressionCliTestFiles, {
+      batchSize: 4,
       env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
     }),
   ],

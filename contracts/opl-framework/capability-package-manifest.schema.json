@@ -72,8 +72,8 @@
       "pattern": "^[a-z0-9][a-z0-9._-]*$"
     },
     "publication_channel_admission": {
-      "description": "Whether the Package may enter the protected publication channel. Missing preserves the existing admitted behavior.",
-      "enum": ["admitted", "development_only"]
+      "description": "Whether the Package may enter the protected publication channel. Retired identities retain installed management and access policy without new publication or installation. Missing preserves the existing admitted behavior.",
+      "enum": ["admitted", "development_only", "retired"]
     },
     "owner_package_manifest_ref": { "type": "string", "minLength": 1 },
     "owner_package_descriptor_ref": { "type": "string", "minLength": 1 },

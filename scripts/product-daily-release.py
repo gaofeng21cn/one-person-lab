@@ -31,6 +31,11 @@ def settings(root):
         raise ReleaseError('Invalid owner publisher workflow')
     if value.get('trigger') not in ('tag', 'owner_schedule'):
         raise ReleaseError('Unsupported product release trigger')
+    workflows = value.get('source_check_workflows')
+    if workflows is not None and (not isinstance(workflows, list) or not workflows
+            or not all(isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9_-]+\.ya?ml', name) for name in workflows)
+            or len(set(workflows)) != len(workflows)):
+        raise ReleaseError('Source check workflows must be unique owner workflow filenames')
     if value['strategy'] == 'owner_schedule':
         return value
     paths = value.get('release_paths')
@@ -174,7 +179,8 @@ def prepare(root, config, *, apply):
         suite = None
         if os.getenv('GITHUB_REPOSITORY') == repo and os.getenv('GITHUB_RUN_ID'):
             suite = gh(f"repos/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}")['check_suite_id']
-        wait_for_checks(repo, base, ignored_check_suite_id=suite)
+        wait_for_checks(repo, base, ignored_check_suite_id=suite,
+                        source_workflows=config.get('source_check_workflows'))
         git(root, 'config', 'user.name', 'OPL Package Publisher')
         git(root, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
         update_version_files(root, config.get('version_files', [config['version_file']]), result['version'])

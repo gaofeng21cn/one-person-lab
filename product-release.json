@@ -6,6 +6,11 @@
   "trigger": "tag",
   "tag_prefix": "framework-v",
   "publisher_workflow": "publish-framework.yml",
+  "source_check_workflows": [
+    "ci.yml",
+    "verify.yml",
+    "codeql.yml"
+  ],
   "channel": {
     "kind": "framework_oci"
   },

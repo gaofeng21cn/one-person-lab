@@ -80,7 +80,7 @@ exit 64
       'model_provider="openai"',
       '--config',
       'model_reasoning_effort="high"',
-      'hello',
+      '-',
     ]);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

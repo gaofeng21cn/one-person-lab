@@ -3,7 +3,7 @@ import test from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { normalizePackageAccessFields, resolvePackageAccessDecision } from '../../src/adapters/integration/agent-package-registry-parts/package-access.ts';
+import { assertPackageDownloadAllowed, normalizePackageAccessFields, packageAccessSubject, resolvePackageAccessDecision } from '../../src/adapters/integration/agent-package-registry-parts/package-access.ts';
 
 const manifest = (patch: Record<string, unknown> = {}) => ({
   package_id: 'occ',
@@ -27,7 +27,7 @@ test('public packages remain discoverable without a source credential', () => {
 });
 
 test('authorized packages fail closed when no credential is configured', () => {
-  const access = resolvePackageAccessDecision(manifest(), {});
+  const access = resolvePackageAccessDecision(manifest(), {}, { credentialHandle: null });
   assert.equal(access.status, 'signed_out');
   assert.equal(access.discover_allowed, false);
   assert.equal(access.download_allowed, false);
@@ -57,6 +57,31 @@ test('authorized packages use the verified provider result', () => {
 test('private access contract requires policy and provider fields', () => {
   assert.throws(() => normalizePackageAccessFields({ visibility: 'authorized_only' }, 'occ'), /access_policy_ref/);
   assert.deepEqual(normalizePackageAccessFields({}, 'public'), { visibility: 'public', access_policy_ref: null, credential_provider: null });
+});
+
+test('retired access subjects preserve private identity and deny new access before registry verification', () => {
+  const subject = packageAccessSubject(manifest({ publication_channel_admission: 'retired' }));
+  assert.equal(subject.publication_channel_admission, 'retired');
+  assert.equal(subject.visibility, 'authorized_only');
+  assert.equal(subject.access_policy_ref, manifest().access_policy_ref);
+  assert.equal(subject.credential_provider, 'github_packages');
+  assert.equal(subject.source_repo, manifest().source_repo);
+  for (const visibility of ['public', 'authorized_only'] as const) {
+    let verified = false;
+    const options = { credentialHandle: 'provider:github_packages:fixture', verify: () => {
+      verified = true;
+      throw new Error('Retired Packages must not query the registry.');
+    } };
+    const retired = { ...subject, visibility };
+    const decision = resolvePackageAccessDecision(retired, {}, options);
+    assert.equal(decision.visibility, visibility);
+    assert.equal(decision.status, 'unknown');
+    assert.equal(decision.reason, 'package_retired');
+    assert.equal(decision.discover_allowed, false);
+    assert.equal(decision.download_allowed, false);
+    assert.throws(() => assertPackageDownloadAllowed(retired, {}, options));
+    assert.equal(verified, false);
+  }
 });
 
 
