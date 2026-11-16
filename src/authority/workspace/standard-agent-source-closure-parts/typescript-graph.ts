@@ -1,7 +1,8 @@
 import path from 'node:path';
 
 import * as ts from 'typescript/unstable/ast';
-import { API, SymbolFlags, type NodeHandle, type Project, type Symbol } from 'typescript/unstable/sync';
+import { SymbolFlags, type NodeHandle, type Project, type Symbol } from 'typescript/unstable/sync';
+import { withTypescriptAPI } from '../../../kernel/typescript-api.ts';
 
 import type {
   SourceClosureCallEdge,
@@ -100,14 +101,13 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
     },
     files: absoluteFiles,
   });
-  const api = new API({
+  return withTypescriptAPI({
     cwd: path.resolve(repoDir),
     fs: {
       fileExists: (file) => path.resolve(file) === configPath ? true : undefined,
       readFile: (file) => path.resolve(file) === configPath ? config : undefined,
     },
-  });
-  try {
+  }, (api) => {
     const snapshot = api.updateSnapshot({ openProjects: [configPath] });
     try {
       const project = snapshot.getProject(configPath);
@@ -118,9 +118,7 @@ export function buildTypescriptSourceGraph(repoDir: string, relativeFiles: strin
     } finally {
       snapshot.dispose();
     }
-  } finally {
-    api.close();
-  }
+  });
 }
 
 function scanTypescriptProject(project: Project, repoDir: string, absoluteFiles: string[]): SourceClosureGraphScan {

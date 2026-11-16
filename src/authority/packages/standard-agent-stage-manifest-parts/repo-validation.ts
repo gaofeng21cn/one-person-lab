@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import * as ts from 'typescript/unstable/ast';
-import { API } from 'typescript/unstable/sync';
+import { withTypescriptAPI } from '../../../kernel/typescript-api.ts';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import {
@@ -132,14 +132,13 @@ function typescriptCallableExports(filePath: string) {
     compilerOptions: { allowJs: true, noEmit: true, noResolve: true, noLib: true, types: [] },
     files: [absolutePath],
   });
-  const api = new API({
+  return withTypescriptAPI({
     cwd: path.dirname(absolutePath),
     fs: {
       fileExists: (file) => path.resolve(file) === configPath ? true : undefined,
       readFile: (file) => path.resolve(file) === configPath ? config : undefined,
     },
-  });
-  try {
+  }, (api) => {
     const snapshot = api.updateSnapshot({ openProjects: [configPath] });
     try {
       const project = snapshot.getProject(configPath);
@@ -154,9 +153,7 @@ function typescriptCallableExports(filePath: string) {
     } finally {
       snapshot.dispose();
     }
-  } finally {
-    api.close();
-  }
+  });
 }
 
 function callableExportsFromSourceFile(sourceFile: ts.SourceFile) {
