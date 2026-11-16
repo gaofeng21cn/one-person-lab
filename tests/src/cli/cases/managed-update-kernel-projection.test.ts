@@ -129,6 +129,70 @@ if (args.join(' ') === 'app-server --stdio') {
   }
 });
 
+test('explicit bulk skips unavailable sources and still validates disabled external installations', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-explicit-package-admission-'));
+  const callsPath = path.join(root, 'calls');
+  const entries = ['development', 'retired', 'published'].map((admission) => {
+    const packageId = `third.party.${admission}`;
+    const sourcePath = path.join(root, admission);
+    const manifest = agentPackageManifest({ packageId, pluginId: admission, distributionPayload: null });
+    const payload = {
+      ...manifest,
+      publication_channel_admission: admission === 'development' ? 'development_only'
+        : admission === 'retired' ? 'retired' : 'admitted',
+      codex_surface: {
+        ...manifest.codex_surface,
+        configured_codex_plugin_carrier: {
+          kind: 'codex_plugin_manager', plugin_selector: `${admission}@fixture`,
+          executor_route: 'codex_cli', marketplace_source: 'example/fixture',
+        },
+      },
+    };
+    writeFixtureFile(sourcePath, 'opl-package.json', JSON.stringify(payload));
+    writeFixtureFile(sourcePath, '.codex-plugin/plugin.json', JSON.stringify({ name: admission, version: '1.2.3', skills: './skills/' }));
+    writeFixtureFile(sourcePath, `skills/${admission}/SKILL.md`, '# Fixture\n');
+    return { pluginId: `${admission}@fixture`, version: '1.2.3', installed: true, enabled: false,
+      source: { source: 'local', path: sourcePath }, marketplaceSource: { sourceType: 'git', source: 'example/fixture' } };
+  });
+  const readback = { installed: entries, available: [], marketplaces: [{ name: 'fixture', marketplaceSource: entries[0].marketplaceSource }] };
+  const binary = writeFixtureFile(root, 'codex.mjs', `#!/usr/bin/env node
+import fs from 'node:fs';
+import readline from 'node:readline';
+fs.appendFileSync(${JSON.stringify(callsPath)}, process.argv.slice(2).join(' ') + '\\n');
+const readback = ${JSON.stringify(readback)};
+if (process.argv.slice(2).join(' ') === 'app-server --stdio') {
+  readline.createInterface({ input: process.stdin }).on('line', (line) => {
+    const frame = JSON.parse(line);
+    if (frame.method === 'initialize') process.stdout.write(JSON.stringify({ id: frame.id, result: {} }) + '\\n');
+    if (frame.method === 'plugin/list') process.stdout.write(JSON.stringify({ id: frame.id, result: {
+      marketplaces: [{ name: 'fixture', plugins: readback.installed.map((entry) => ({
+        id: entry.pluginId, localVersion: entry.version, installed: true, enabled: false,
+        source: { type: 'local', path: entry.source.path },
+      })) }], marketplaceLoadErrors: [],
+    } }) + '\\n');
+  });
+} else process.stdout.write(JSON.stringify(readback));
+`);
+  fs.chmodSync(binary, 0o755);
+  const env = { HOME: root, CODEX_HOME: path.join(root, 'codex-home'), OPL_STATE_DIR: path.join(root, 'state'), OPL_CODEX_PLUGIN_BIN: binary };
+  const previous = new Map(Object.keys(env).map((key) => [key, process.env[key]]));
+  try {
+    Object.assign(process.env, env);
+    for (const action of ['update', 'repair'] as const) {
+      const result = await runOplAgentPackageBulkUpdate({ action, dryRun: true });
+      assert.deepEqual(result.targets.map((entry) => [entry.target_id, entry.status, entry.reason]), [
+        ['third.party.development', 'skipped', 'package_install_source_unavailable'],
+        ['third.party.published', 'validated', `native_carrier_owner_${action}_validated`],
+        ['third.party.retired', 'skipped', 'package_retired'],
+      ]);
+    }
+    assert.doesNotMatch(fs.readFileSync(callsPath, 'utf8'), /plugin add|marketplace upgrade/);
+  } finally {
+    for (const [key, value] of previous) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 let macAppCarrierFixtureQueue = Promise.resolve();
 
 async function withMacAppCarrierFixture<T>(
