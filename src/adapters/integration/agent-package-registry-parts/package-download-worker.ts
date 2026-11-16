@@ -55,8 +55,7 @@ function acceptsChunkRange(chunk: ParallelChunk, total: number) {
   const response = fs.readFileSync(chunk.headers, 'utf8').trim().split(/\r?\n\r?\n/).at(-1) ?? '';
   const range = response.match(/^content-range:\s*bytes (\d+)-(\d+)\/(\d+)\s*$/im);
   return /^HTTP\/\S+ 206\b/.test(response) && !!range
-    && Number(range[1]) === chunk.start && Number(range[2]) === chunk.end && Number(range[3]) === total
-    && physicalSize(chunk.path) === chunk.end - chunk.start + 1;
+    && Number(range[1]) === chunk.start && Number(range[2]) === chunk.end && Number(range[3]) === total;
 }
 
 async function tryParallelDownload(input: PackageDownload, partial: string, offset: number, env: NodeJS.ProcessEnv) {

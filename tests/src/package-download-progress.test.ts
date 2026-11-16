@@ -30,14 +30,17 @@ async function fixture(mode: 'range' | 'no-range' | 'slow' | 'disconnect' | 'par
     if (mode === 'disconnect' && ranges.length === 1) {
       response.write(bytes.subarray(0, 65536)); setTimeout(() => response.destroy(), 80); return;
     }
-    if (mode !== 'slow' && mode !== 'parallel-slow') { response.end(payload); return; }
-    if (mode === 'parallel-slow' && offset === 0) { response.end(payload); return; }
+    if (mode === 'parallel-slow' && range?.[2]) {
+      response.write(payload.subarray(0, 65536));
+      return; // Hold every bounded response until the downloader cancels it.
+    }
+    if (mode !== 'slow') { response.end(payload); return; }
     let at = offset;
     const timer = setInterval(() => {
       const next = Math.min(end + 1, at + 16384);
       response.write(bytes.subarray(at, next)); at = next;
       if (at > end) { clearInterval(timer); response.end(); }
-      }, mode === 'parallel-slow' ? 120 : 60);
+    }, 60);
     response.on('close', () => clearInterval(timer));
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -97,7 +100,7 @@ test('mismatched Content-Range falls back without reusing invalid chunks', async
 });
 
 test('parallel transfer reports live progress and cancellation retains a resumable contiguous prefix', async () => {
-  const f = await fixture('parallel-slow', 1024 * 1024);
+  const f = await fixture('parallel-slow', 8 * 1024 * 1024);
   try {
     f.env.OPL_PACKAGE_DOWNLOAD_MIN_PARALLEL_BYTES = '65536';
     f.env.OPL_PACKAGE_DOWNLOAD_PARALLELISM = '4';
@@ -105,18 +108,18 @@ test('parallel transfer reports live progress and cancellation retains a resumab
     const rejection = assert.rejects(downloading, /cancelled/);
     const deadline = Date.now() + 5000;
     let progress = readPackageOperation(f.env.OPL_PACKAGE_OPERATION_ID!, f.env);
-    while (!progress.downloaded_bytes && Date.now() < deadline) {
+    while ((!progress.downloaded_bytes || f.ranges.length < 4) && Date.now() < deadline) {
       await new Promise(resolve => setTimeout(resolve, 25));
       progress = readPackageOperation(f.env.OPL_PACKAGE_OPERATION_ID!, f.env);
     }
     assert.ok(progress.downloaded_bytes! > 0 && progress.downloaded_bytes! < f.bytes.length);
     assert.ok(progress.bytes_per_second! > 0);
-    assert.ok(f.transfers.peak >= 3, `expected overlapping range transfers, peak=${f.transfers.peak}`);
+    assert.equal(f.transfers.peak, 4);
     cancelPackageOperation(progress.operation_id, f.env);
     await rejection;
     const partial = path.join(f.cache, 'archive.tar.gz.part');
     const retained = fs.readFileSync(partial);
-    assert.ok(retained.length > 0 && retained.length < f.bytes.length);
+    assert.ok(retained.length > 0 && retained.length <= 65536, 'keep the unfinished first chunk as a resumable prefix');
     assert.deepEqual(retained, f.bytes.subarray(0, retained.length));
     assert.equal(fs.readdirSync(f.cache).some(name => name.includes('.chunk-')), false);
     assert.equal(fs.existsSync(path.join(f.cache, 'archive.tar.gz')), false);
