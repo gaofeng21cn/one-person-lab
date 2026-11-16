@@ -23,6 +23,7 @@ import {
   isManagedPayloadCarrier,
   requireDescriptor,
   requirePackageMutationDescriptors,
+  selectPackageMutationDescriptor,
 } from './registry-status-projection.ts';
 import {
   projectLocalCapabilityDependencyReadiness,
@@ -35,7 +36,7 @@ import type {
   AgentPackageRepairInput,
 } from './types.ts';
 import { assertPackageDownloadAllowed } from './package-access.ts';
-import { assertPackageInstallSourceAvailable } from './package-install-source.ts';
+import { assertPackageInstallSourceAvailable, packageInstallSourceAvailable } from './package-install-source.ts';
 
 function stringValue(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -355,6 +356,18 @@ export async function runOplAgentPackageBulkUpdate(
     const policy = packageBackgroundUpdatePolicy(descriptor, snapshot.access.get(packageId));
     if (input.background && !policy.eligible) {
       targets.push({ target_type: 'package', target_id: packageId, status: 'skipped', reason: policy.reason, action });
+      continue;
+    }
+    // Explicit bulk updates may visit disabled and user-managed installations,
+    // but still require an admitted source for the selected owner version.
+    const target = selectPackageMutationDescriptor(descriptor, snapshot.currentOwner?.get(packageId) ?? null);
+    if (!input.background && !packageInstallSourceAvailable(target)) {
+      targets.push({
+        target_type: 'package', target_id: packageId, status: 'skipped',
+        reason: target.manifest.publication_channel_admission === 'retired'
+          ? 'package_retired' : 'package_install_source_unavailable',
+        action,
+      });
       continue;
     }
     try {

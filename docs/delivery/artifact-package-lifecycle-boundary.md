@@ -79,6 +79,10 @@ carrier 和显式开发目录继续使用原有生命周期，不因存在 paylo
 更新目标的版本与能力取自当前 owner projection；是否使用托管 payload 路径取自已安装
 carrier 的实际目录。选中新版 projection 时仍保留这项安装事实，更新与修复均遵循此规则。
 
+显式批量更新和修复先按当前 owner 版本核对安装源；已退役、仅开发使用或没有可验证来源的
+安装项返回 `skipped` 并说明原因，不调用 carrier，也不计为更新失败。显式操作仍可更新
+已停用、第三方和用户管理来源的安装项；后台维护继续使用更严格的自动更新资格。
+
 Capability Package 仅在声明 `publication_ref` 时进入 OCI source acquisition。`local_component`
 由父产品交付：只有 Full seed 与 owner 版本、source commit 和物理 owner 描述匹配时，
 Framework 才投影安装或修复动作，并继续执行 payload 摘要及 content lock 校验；没有匹配 seed
