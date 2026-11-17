@@ -794,16 +794,59 @@ export function completeReviewerSnapshotTransportEnvelope(
   return normalizeReviewerInputSnapshotRequest({ ...request, members }, expectedAuthority);
 }
 
+/**
+ * The producer is asked to hand OPL a `review_input_snapshot_materialization_request`, but the
+ * framework already owns every field of it: the producer Attempt, the execution content binding
+ * digest, the review lane and the closeout metadata all come from authority, and
+ * `completeReviewerSnapshotTransportEnvelope` supplements the members from that same authority.
+ * Only the member selection is a producer judgement, so a producer that omits the request
+ * entirely should not turn the Stage into quality debt and strand the run: synthesize the
+ * envelope from authority and let the existing supplementation freeze the exact review scope.
+ * This does not widen scope beyond what the Stage already declared as its artifacts and inputs.
+ */
+function synthesizedSnapshotRequest(
+  authority: ReviewerInputSnapshotAuthorityBinding,
+  declaredArtifacts: { refs: string[]; hashes: string[] },
+  workspaceRoot: string,
+) {
+  for (const [index, ref] of declaredArtifacts.refs.entries()) {
+    const sha256 = canonicalReviewTransportSha256(declaredArtifacts.hashes[index], 'declared_artifact.sha256');
+    const ownerAuthorityRef = authority.owner_authority_refs.find(
+      (item) => item.ref === ref && item.sha256 === sha256,
+    );
+    if (!ownerAuthorityRef) continue;
+    const reviewLane = authority.review_lane_binding;
+    return {
+      surface_kind: 'opl_reviewer_input_snapshot_materialization_request',
+      schema_version: 2,
+      producer_attempt_ref: authority.producer_attempt_ref,
+      execution_content_binding_sha256: authority.execution_content_binding_sha256,
+      workspace_root: workspaceRoot,
+      ...(typeof reviewLane === 'string' && reviewLane.length > 0 ? { review_lane: reviewLane } : {}),
+      owner_authority_ref: ownerAuthorityRef,
+      members: [],
+    };
+  }
+  return null;
+}
+
 export function resolveReviewerInputSnapshotMaterialization(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
   declaredArtifacts?: { refs: string[]; hashes: string[] },
+  workspaceRoot?: string | null,
 ) {
   if (value === null || value === undefined) {
-    return snapshotQualityDebt(
-      'review_input_snapshot_binding_required',
-      'materialize the complete owner-provided review scope as an immutable OPL snapshot',
-    );
+    const synthesized = expectedAuthority && declaredArtifacts && workspaceRoot
+      ? synthesizedSnapshotRequest(expectedAuthority, declaredArtifacts, workspaceRoot)
+      : null;
+    if (!synthesized) {
+      return snapshotQualityDebt(
+        'review_input_snapshot_binding_required',
+        'materialize the complete owner-provided review scope as an immutable OPL snapshot',
+      );
+    }
+    value = synthesized;
   }
   const normalizations: SnapshotAuthoringNormalization[] = [];
   const envelope = declaredArtifacts && expectedAuthority

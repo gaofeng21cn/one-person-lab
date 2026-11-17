@@ -424,13 +424,17 @@ export async function stageQualityAttemptMaterializeActivity(
           input.review_input_snapshot_materialization_request,
           snapshotAuthorityBinding!,
           { refs: inputArtifactIdentity.artifact_refs, hashes: inputArtifactIdentity.artifact_hashes },
+          readString(stageRun.workspace_locator.workspace_root)
+            ?? readString(stageRun.workspace_locator.repo_root),
         );
-        reviewInputSnapshotContext = buildStageReviewInputSnapshotContext({
-          stageRunId: stageRun.stage_run_id,
-          qualityCycleId: input.quality_cycle_id,
-          reviewerAttemptRole: reviewAttemptRole,
-          resolution,
-        });
+        reviewInputSnapshotContext = resolution
+          ? buildStageReviewInputSnapshotContext({
+              stageRunId: stageRun.stage_run_id,
+              qualityCycleId: input.quality_cycle_id,
+              reviewerAttemptRole: reviewAttemptRole,
+              resolution,
+            })
+          : null;
       } catch (error) {
         const field = error instanceof FrameworkContractError ? error.details?.field : null;
         if (

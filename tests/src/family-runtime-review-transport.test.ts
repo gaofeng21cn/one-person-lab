@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test, { type TestContext } from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import {
@@ -508,4 +508,34 @@ test('resolves a content-identity member to the stored Foundry source material',
     () => resolveContainedWorkspaceFile(workspaceRoot, `source-material:sha256:${'f'.repeat(64)}`),
     /not a readable local file/,
   );
+});
+
+test('synthesizes the review snapshot from authority when the producer omits the request', () => {
+  withFixture(({ workspaceRoot }) => {
+    const bytes = Buffer.from('{"decision":"admitted"}\n');
+    const artifactPath = path.join(workspaceRoot, 'design-basis-decision.json');
+    fs.writeFileSync(artifactPath, bytes);
+    const artifactRef = pathToFileURL(artifactPath).href;
+    const artifactRef_ = exactRef('design_basis_decision', artifactRef, bytes);
+    const authority = expectedAuthority({ owner_authority_refs: [artifactRef_] });
+    // A producer that omits the request must not strand the Stage: the framework owns every
+    // field of the envelope, so it freezes the exact scope it already declared.
+    const resolution = resolveReviewerInputSnapshotMaterialization(
+      null,
+      authority,
+      { refs: [artifactRef], hashes: [sha256(bytes)] },
+      workspaceRoot,
+    );
+    assert.ok(!('status' in resolution) || (resolution as any).status !== 'quality_debt');
+    assert.equal((resolution as any).manifest.members.length, 1);
+    assert.equal((resolution as any).manifest.members[0].sha256, sha256(bytes));
+    // Without an authority match there is nothing to freeze, so the debt still stands.
+    const unresolved = resolveReviewerInputSnapshotMaterialization(
+      null,
+      expectedAuthority({ owner_authority_refs: [] }),
+      { refs: [artifactRef], hashes: [sha256(bytes)] },
+      workspaceRoot,
+    );
+    assert.equal((unresolved as any).status, 'quality_debt');
+  });
 });
