@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { executeKnowledgeSourceAction, listKnowledgeSourceManagement } from '../../src/authority/packages/knowledge-source-management.ts';
 import type { KnowledgeSourceRegistry } from '../../src/authority/packages/durable-knowledge-sources.ts';
-import { listKnowledgeSources } from '../../src/authority/packages/durable-knowledge-sources.ts';
+import { listKnowledgeSources, resolveKnowledgeSourceTarget } from '../../src/authority/packages/durable-knowledge-sources.ts';
 import { recallDurableKnowledge } from '../../src/authority/packages/durable-knowledge-catalog.ts';
 import { sourceFixture } from './knowledge-source-fixture.ts';
 
