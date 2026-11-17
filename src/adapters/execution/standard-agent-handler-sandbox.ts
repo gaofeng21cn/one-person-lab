@@ -465,6 +465,12 @@ export function runStandardAgentHandlerSandbox(input: {
   };
 
   if (input.binding.kind === 'typescript_export') {
+    if (process.platform === 'linux' && !process.allowedNodeEnvironmentFlags.has('--allow-net')) {
+      invalid('TypeScript handler failed closed: Linux requires Node.js network permission enforcement.', {
+        node_version: process.version,
+        failure_code: 'standard_agent_handler_network_guard_unavailable',
+      });
+    }
     if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(input.binding.export)) {
       invalid('TypeScript handler export name is invalid.', { export: input.binding.export });
     }

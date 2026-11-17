@@ -40,6 +40,13 @@ Agent 声明 workspace requirement、locator、Stage/capability contracts 和 ru
 
 Hosted action 的重启原因码由 action catalog 的 `lifecycle_admission_contract.reactivation_reason_code` 声明。Framework 校验请求与该声明一致，持有重放、身份和物化安全边界；新合同的领域原因由 Agent 决定。
 
+Hosted Handler 是无网络、只读的确定性动作。macOS 沿用 Seatbelt；Linux 的 Python
+使用 audit hook，TypeScript 使用 Node 原生 permission model，均不因平台扩展而允许联网。
+Linux TypeScript 需要支持网络权限控制的 Node（当前受支持的 Node 26 具备该能力）；
+旧运行时缺少这一保护时，在加载 handler 前返回
+`standard_agent_handler_network_guard_unavailable`，升级 Host Node 后再执行。Linux 仍不具备
+macOS Seatbelt 的完整 OS 隔离；contract 的平台差异不授予更宽的动作权限。
+
 ## Capability map
 
 每项 capability 声明：

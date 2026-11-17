@@ -171,8 +171,9 @@
         "sandbox_kind": "linux_runtime_guard_only",
         "os_sandbox_enforced": false,
         "seatbelt_equivalent": false,
+        "typescript_runtime_requirement": "node_permission_model_with_network_denied_by_default; fail_closed_when_network_permission_enforcement_is_unavailable",
         "network_allowed_by_binding": {
-          "typescript_export": true,
+          "typescript_export": false,
           "python_callable": false
         }
       }

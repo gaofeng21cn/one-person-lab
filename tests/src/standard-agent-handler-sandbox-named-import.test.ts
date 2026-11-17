@@ -11,6 +11,9 @@ function fixtureRoot() {
   return fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-named-import-')));
 }
 
+const unavailableNetworkGuard = () => process.platform === 'linux'
+  && !process.allowedNodeEnvironmentFlags.has('--allow-net');
+
 test('TypeScript ESM named imports cannot follow a symlink outside the Study read root', () => {
   // Given a Study symlink targeting sibling evidence and a handler using an ESM named import.
   const checkoutRoot = fixtureRoot();
@@ -43,8 +46,11 @@ test('TypeScript ESM named imports cannot follow a symlink outside the Study rea
       }),
       (error: unknown) => {
         assert(error instanceof FrameworkContractError);
-        assert.equal(error.details?.failure_code, 'standard_agent_handler_execution_failed');
-        assert.match(String(error.details?.stderr), /workspace read outside the handler scope denied/);
+        assert.equal(error.details?.failure_code, unavailableNetworkGuard()
+          ? 'standard_agent_handler_network_guard_unavailable' : 'standard_agent_handler_execution_failed');
+        if (!unavailableNetworkGuard()) {
+          assert.match(String(error.details?.stderr), /workspace read outside the handler scope denied/);
+        }
         return true;
       },
     );
@@ -81,7 +87,8 @@ test('TypeScript dynamic JSON imports cannot read a sibling Study', () => {
       }),
       (error: unknown) => {
         assert(error instanceof FrameworkContractError);
-        assert.equal(error.details?.failure_code, 'standard_agent_handler_execution_failed');
+        assert.equal(error.details?.failure_code, unavailableNetworkGuard()
+          ? 'standard_agent_handler_network_guard_unavailable' : 'standard_agent_handler_execution_failed');
         return true;
       },
     );

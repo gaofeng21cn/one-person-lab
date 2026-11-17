@@ -54,11 +54,11 @@ test('hosted Standard Agent actions require installed owner descriptor and confi
   ]);
 });
 
-test('handler sandbox contract distinguishes macOS Seatbelt from reduced Linux runtime guards', () => {
+test('handler sandbox contract preserves network denial across platform isolation kinds', () => {
   // Given the published handler execution contract.
   const execution = readContract().handler_execution;
 
-  // When consumers resolve platform isolation, then Linux does not inherit the macOS network claim.
+  // Linux retains reduced isolation but must not gain network access by changing platforms.
   assert.deepEqual(execution.sandbox_by_platform, {
     darwin: {
       sandbox_kind: 'macos_sandbox_exec',
@@ -72,8 +72,9 @@ test('handler sandbox contract distinguishes macOS Seatbelt from reduced Linux r
       sandbox_kind: 'linux_runtime_guard_only',
       os_sandbox_enforced: false,
       seatbelt_equivalent: false,
+      typescript_runtime_requirement: 'node_permission_model_with_network_denied_by_default; fail_closed_when_network_permission_enforcement_is_unavailable',
       network_allowed_by_binding: {
-        typescript_export: true,
+        typescript_export: false,
         python_callable: false,
       },
     },

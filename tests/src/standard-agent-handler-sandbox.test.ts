@@ -10,6 +10,72 @@ function fixtureRoot() {
   return fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-handler-')));
 }
 
+const unavailableNetworkGuard = () => process.platform === 'linux'
+  && !process.allowedNodeEnvironmentFlags.has('--allow-net');
+function assertNetworkGuardRefused(run: () => unknown) {
+  assert.throws(run, (error: unknown) => {
+    assert.equal((error as { details?: Record<string, unknown> }).details?.failure_code,
+      'standard_agent_handler_network_guard_unavailable');
+    return true;
+  });
+}
+
+test('TypeScript handler cannot use networking on any platform', () => {
+  const checkoutRoot = fixtureRoot();
+  try {
+    fs.writeFileSync(path.join(checkoutRoot, 'handler.mjs'), [
+      "import { connect } from 'node:net';",
+      'export async function evaluate() {',
+      '  return { error: await new Promise(resolve => {',
+      "    try { const socket = connect({ host: '127.0.0.1', port: 9 });",
+      "      socket.once('error', error => resolve(error.code));",
+      "      socket.once('connect', () => { socket.destroy(); resolve('connected'); });",
+      '    } catch (error) { resolve(error.code); }',
+      '  }) };',
+      '}',
+    ].join('\n'));
+    const run = () => runStandardAgentHandlerSandbox({
+      checkoutRoot, workspaceRoot: checkoutRoot, workspaceReadRoot: checkoutRoot,
+      binding: { kind: 'typescript_export', file: 'handler.mjs', export: 'evaluate' },
+      request: {}, timeoutMs: 2_000,
+    });
+    if (process.platform === 'linux' && !process.allowedNodeEnvironmentFlags.has('--allow-net')) {
+      assert.throws(run, error => {
+        assert.equal((error as { details?: Record<string, unknown> }).details?.failure_code,
+          'standard_agent_handler_network_guard_unavailable');
+        return true;
+      });
+    } else {
+      assert.deepEqual(run().output, { error: 'ERR_ACCESS_DENIED' });
+    }
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+  }
+});
+
+test('Linux refuses a TypeScript handler before loading it when Node lacks network enforcement', () => {
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  const flags = Object.getOwnPropertyDescriptor(process, 'allowedNodeEnvironmentFlags')!;
+  const checkoutRoot = fixtureRoot();
+  try {
+    Object.defineProperty(process, 'platform', { ...platform, value: 'linux' });
+    Object.defineProperty(process, 'allowedNodeEnvironmentFlags', { configurable: true, value: new Set() });
+    assert.throws(() => runStandardAgentHandlerSandbox({
+      checkoutRoot, workspaceRoot: checkoutRoot, workspaceReadRoot: checkoutRoot,
+      binding: { kind: 'typescript_export', file: 'never-load.mjs', export: 'evaluate' },
+      request: {},
+    }), error => {
+      assert.equal((error as { details?: Record<string, unknown> }).details?.failure_code,
+        'standard_agent_handler_network_guard_unavailable');
+      return true;
+    });
+  } finally {
+    Object.defineProperty(process, 'platform', platform);
+    Object.defineProperty(process, 'allowedNodeEnvironmentFlags', flags);
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+  }
+});
+
 test('TypeScript handler runs through Node permission model and emits one canonical JSON value', () => {
   const checkoutRoot = fixtureRoot();
   fs.writeFileSync(path.join(checkoutRoot, 'handler.ts'), [
@@ -19,13 +85,15 @@ test('TypeScript handler runs through Node permission model and emits one canoni
     '',
   ].join('\n'));
 
-  const result = runStandardAgentHandlerSandbox({
+  const run = () => runStandardAgentHandlerSandbox({
     checkoutRoot,
     workspaceRoot: checkoutRoot,
     workspaceReadRoot: checkoutRoot,
     binding: { kind: 'typescript_export', file: 'handler.ts', export: 'evaluate' },
     request: { value: 7 },
   });
+  if (unavailableNetworkGuard()) return assertNetworkGuardRefused(run);
+  const result = run();
 
   assert.equal(result.runtime_kind, 'node_permission_model');
   assert.equal(result.stdout_bytes.toString('utf8'), '{"a":"ok","z":7}\n');
@@ -145,6 +213,9 @@ for (const runtime of ['typescript', 'python'] as const) {
         request: { target },
       });
 
+      if (runtime === 'typescript' && unavailableNetworkGuard()) {
+        return assertNetworkGuardRefused(() => run(studyOneFile));
+      }
       assert.deepEqual(run(studyOneFile).output, { value: 'study-001' });
       assert.throws(
         () => run(studyTwoFile),
