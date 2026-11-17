@@ -56,9 +56,11 @@ function fixture(fault?: 'digest' | 'identity' | 'symlink' | 'nested-owner' | 'n
   const artifact = 'ghcr.io/owner/one-person-lab-packages/fixture:1.0.0';
   const owner = {
     surface_kind: capability ? 'opl_capability_package_manifest.v2' : 'opl_agent_package_manifest.v1', package_id: 'fixture', version: '1.0.0',
+    ...(!capability ? { agent_id: 'fixture', domain_descriptor_ref: 'contracts/domain_descriptor.json' } : {}),
     source_repo: 'https://github.com/owner/fixture.git',
     codex_surface: { plugin_id: 'fixture', carrier_source_commit: commit,
       plugin_payload_manifest_url: 'payload.json', configured_codex_plugin_carrier: {
+        kind: 'codex_plugin_manager', plugin_selector: 'fixture@fixture', executor_route: 'codex_cli',
         marketplace_source: 'owner/fixture', publication_ref: artifact.replace(':1.0.0', ':latest-stable'),
       } },
   };
@@ -192,16 +194,31 @@ test('hosted readiness preserves explicit developer and Full runtime sources', (
     fs.mkdirSync(path.join(root, 'contracts'));
     fs.writeFileSync(path.join(root, 'contracts/domain_descriptor.json'), '{}');
     fs.writeFileSync(path.join(root, 'contracts/action_catalog.json'), '{}');
-    const descriptor = { sourcePath: path.join(root, 'minimal-carrier'), marketplaceSource: null,
+    const carrier = path.join(root, 'minimal-carrier');
+    const owner = {
+      surface_kind: 'opl_agent_package_manifest.v1', agent_id: 'rca', package_id: 'rca', version: '1.0.0',
+      domain_descriptor_ref: 'contracts/domain_descriptor.json',
+      codex_surface: { plugin_id: 'redcube-ai', plugin_source_path: '.', configured_codex_plugin_carrier: {
+        kind: 'codex_plugin_manager', plugin_selector: 'redcube-ai@redcube-ai', executor_route: 'codex_cli',
+        marketplace_source: 'gaofeng21cn/redcube-ai',
+      } },
+    };
+    fs.mkdirSync(carrier);
+    for (const source of [root, carrier]) fs.writeFileSync(path.join(source, 'opl-package.json'), json(owner));
+    const descriptor = { sourcePath: carrier, marketplaceSource: null,
       carrier: { carrier: { marketplaceSource: 'gaofeng21cn/redcube-ai' } },
       manifest: { package_id: 'rca', package_role: 'standard_agent',
         entrypoints: [{ entrypoint_kind: 'opl_hosted_action_catalog', source_ref: 'contracts/action_catalog.json' }] } } as any;
-    assert.equal(hostedRuntimeReadiness(descriptor).source_root, root);
+    assert.deepEqual(hostedRuntimeReadiness(descriptor), {
+      status: 'available', ready: true, source_root: root, reason: null,
+    });
     process.env.OPL_FULL_RUNTIME_HOME = root;
     fs.writeFileSync(path.join(root, 'opl-runtime-module.json'), JSON.stringify({
       module_id: 'redcube', repo_name: 'redcube-ai', packaged_runtime: true, source_git: {},
     }));
-    assert.equal(hostedRuntimeReadiness(descriptor).source_root, root);
+    assert.deepEqual(hostedRuntimeReadiness(descriptor), {
+      status: 'available', ready: true, source_root: root, reason: null,
+    });
     fs.unlinkSync(path.join(root, 'contracts/action_catalog.json'));
     assert.equal(hostedRuntimeReadiness(descriptor).ready, false);
   } finally {
