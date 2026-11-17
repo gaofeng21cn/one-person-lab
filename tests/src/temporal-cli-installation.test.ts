@@ -4,7 +4,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {execFileSync} from 'node:child_process';
-import {installTemporalCli} from '../../src/adapters/execution/managed-temporal-cli.mjs';
+import {installTemporalCli, managedTemporalCliPath} from '../../src/adapters/execution/managed-temporal-cli.mjs';
 
 // Every case pins the release it installs. Resolving `temporal-cli` from the
 // release index reaches api.github.com, which is rate limited for unauthenticated
@@ -47,3 +47,26 @@ test('a dangling user symlink blocks installation even when external reuse is di
  const home=fs.mkdtempSync(path.join(os.tmpdir(),'opl-temporal-link-noreuse-'));fs.mkdirSync(path.join(home,'.local/bin'),{recursive:true});const binary=path.join(home,'.local/bin/temporal');fs.symlinkSync('missing-owner',binary);
  try{assert.throws(()=>installTemporalCli({homeDir:home,platform:'linux',arch:'x64',searchPath:'',reuseExternal:false,target:PINNED_RELEASE as never,run:noNetwork}),/preserve/);assert.equal(fs.readlinkSync(binary),'missing-owner');}finally{fs.rmSync(home,{recursive:true,force:true})}
 });
+
+for (const reuseExternal of [true, false]) {
+ test(`an independent managed CLI remains ready with a broken user CLI (reuse=${reuseExternal})`,()=>{
+  const home=fs.mkdtempSync(path.join(os.tmpdir(),'opl-temporal-managed-owner-'));
+  const root=path.join(home,'managed-state');
+  const userBinary=path.join(home,'.local/bin/temporal');
+  const managed=managedTemporalCliPath(root);
+  fs.mkdirSync(path.dirname(userBinary),{recursive:true});
+  fs.symlinkSync('missing-owner',userBinary);
+  fs.mkdirSync(path.dirname(managed),{recursive:true});
+  fs.writeFileSync(managed,'managed bytes',{mode:0o755});
+  try {
+   const result=installTemporalCli({homeDir:home,root,platform:'linux',arch:'x64',searchPath:'',reuseExternal,
+    target:PINNED_RELEASE as never,
+    run:((command: string,args: readonly string[])=>{
+     assert.equal(command,managed);assert.deepEqual(args,['--version']);return Buffer.from('temporal version 1.2.3');
+    }) as typeof execFileSync});
+   assert.equal(result.status,'ready');assert.equal(result.path,managed);
+   assert.equal(fs.readFileSync(managed,'utf8'),'managed bytes');
+   assert.equal(fs.readlinkSync(userBinary),'missing-owner');
+  } finally {fs.rmSync(home,{recursive:true,force:true});}
+ });
+}

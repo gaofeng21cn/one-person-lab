@@ -55,11 +55,9 @@ export function installTemporalCli(options: {
   const homeDir = options.homeDir ?? os.homedir();
   const userTemporalPath = path.join(homeDir, '.local/bin/temporal');
   const destination = options.root ? managedTemporalCliPath(root) : userTemporalPath;
-  // Check the user-owned path unconditionally. It is both a reuse source and -
-  // when no managed root is configured - the destination itself, which the reuse
-  // scan skips. Leaving the check inside that loop made it unreachable exactly
-  // when it mattered, and the install then renamed over the owner's entry.
-  if (existsButCannotRun(userTemporalPath)) {
+  // Protect the user-owned entry when it is the installation destination.
+  // A broken optional reuse source must not block an independent managed CLI.
+  if (path.resolve(destination) === path.resolve(userTemporalPath) && existsButCannotRun(userTemporalPath)) {
     throw new Error('Existing user Temporal CLI is not executable; preserve it for its owner.');
   }
   // Existing user executables remain owner-controlled. Initial service bootstrap may reuse them.
