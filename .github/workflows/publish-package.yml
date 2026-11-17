@@ -200,6 +200,7 @@ jobs:
       - name: Verify source archive publication visibility
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           OWNER_REPO: ${{ steps.package-source.outputs.owner_repo }}
           PUBLIC_SOURCE_ARCHIVE_COMMIT: ${{ vars[steps.package-source.outputs.public_source_approval_var] }}
         run: |
@@ -211,6 +212,7 @@ jobs:
           response="$(mktemp)"
           trap 'rm -f "$response"' EXIT
           status="$(curl --silent --show-error --location --max-time 20 \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
             --output "$response" --write-out '%{http_code}' \
             "https://api.github.com/repos/${OWNER_REPO}")"
           if [ "$status" = 200 ]; then
