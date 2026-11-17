@@ -13,6 +13,7 @@
 - 平台原生 carrier 负责实际生命周期；Framework 只在已证实的平台缺口处提供薄 adapter，不复制 resolver、lock、payload、LKG 或平行 currentness。
 - 跨仓边界变更以相关 machine-readable contract 和真实 consumer 为依据。默认验证入口：`scripts/verify.sh`。
 - 第三方 PR 只是提案。合并前核对用户确认的原始意图、当前默认行为和权限边界；增加平台、模型或适配器不得静默放宽安全约束或缩小既有能力。修改 PR 内的 contract 和通过 CI 不能证明产品变更已获认可；默认行为变化必须有独立的必要性证据，扩展路径与原默认路径分别验证。
+- 贡献按[三档信任与准入政策](docs/policies/third-party-contribution-admission-policy.md)处理：本人/自用账号直接信任并合并；指定 repo 合作者以信任为主并核对最新 SSOT；其余第三方严格审查，除容易复现且明确恢复设计的 Debug 外，须由提交者用 Issue 与凭证证明必要性，缺失时说明后关闭并邀请补齐重提。按可信主线的账号 ID 和精确 repo 范围判身份，不能从写权限、历史合并或待审 PR 自改名单推导豁免；尤其识别以修复名义改变产品设计。
 - GitHub 上自己新建的对外文本用英文书写：commit subject/body、PR 标题与正文、Issue、comment、Release Notes。产品名、代码标识、路径、命令与原始引用除外。他人写的 Issue、PR 或 comment，无论对方用什么语言，回复沿用对方的语言；历史中已有的非英文 commit 保持原样，App 生成的公开正文会直接省略非英文条目。
 - 文档入口与职责见 `docs/README.md`；创建、改写和退役统一遵循 `docs/policies/docs-lifecycle-policy.md`。代码/合同变更同批更新实际主题 owner、引用和生成源，历史通过 Git 追溯。
 

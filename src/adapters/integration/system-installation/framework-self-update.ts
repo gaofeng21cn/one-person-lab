@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
+import { compareVersions, parseVersion } from '../install-companions-parts/tool-version.ts';
 import {
   MANAGED_UPDATE_OWNER_ACTIONS,
   managedUpdateCommand,
@@ -56,6 +57,15 @@ import {
 
 export type { OplFrameworkRollbackTargetResult, OplFrameworkUpdateTargetResult } from './framework-self-update-parts/source-resolution.ts';
 export { activatePendingOplFrameworkRuntime, resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfRollback };
+
+function channelIsOlderThanInstalled(targetRoot: string, channelVersion: string) {
+  try {
+    const metadata = readJsonPayloadFile(path.join(targetRoot, 'package.json'));
+    const installed = parseVersion(isRecord(metadata) && typeof metadata.version === 'string' ? metadata.version : null);
+    const channel = parseVersion(channelVersion);
+    return Boolean(installed && channel && compareVersions(installed, channel) > 0);
+  } catch { return false; }
+}
 
 export function runOplFrameworkSelfUpdate(
   input: FrameworkSelfUpdateInput,
@@ -185,6 +195,9 @@ export function runOplFrameworkSelfUpdate(
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-channel-artifact-'));
     try {
       const channelEntry = input.channelEntry ?? readFrameworkChannelEntry();
+      if (channelIsOlderThanInstalled(targetRoot, channelEntry.channel_version)) {
+        return buildResult('skipped', 'framework_installed_version_newer_than_channel');
+      }
       const pendingResult = pendingFrameworkArtifactResult(targetRoot, {
         sourceHeadSha: channelEntry.source_git_head_sha,
         sourceArchiveSha256: channelEntry.source_archive_sha256,
@@ -305,7 +318,7 @@ export function runOplFrameworkSelfUpdate(
 
 export function readOplFrameworkRuntimeUpdateStatus(
   defaultTargetRoot: string,
-  options: { allowChannelLookup?: boolean } = {},
+  options: { allowChannelLookup?: boolean; channelEntry?: ReturnType<typeof readFrameworkChannelEntry> } = {},
 ) {
   const targetRoot = resolveFrameworkUpdateTargetRoot(defaultTargetRoot);
   const sourceArchiveRaw = resolveFrameworkUpdateArchive();
@@ -316,7 +329,7 @@ export function readOplFrameworkRuntimeUpdateStatus(
   const channelLookupSkipped = options.allowChannelLookup === false && !sourceArchive && !sourceRoot;
   if (!sourceArchive && !sourceRoot && options.allowChannelLookup !== false) {
     try {
-      channelEntry = readFrameworkChannelEntry();
+      channelEntry = options.channelEntry ?? readFrameworkChannelEntry();
     } catch {
       channelEntry = null;
     }
@@ -334,6 +347,7 @@ export function readOplFrameworkRuntimeUpdateStatus(
     }
   } catch { /* No verified pending generation. */ }
   const channelArtifactAvailable = Boolean(channelEntry?.artifact);
+  const installedNewerThanChannel = Boolean(channelEntry && channelIsOlderThanInstalled(targetRoot, channelEntry.channel_version));
   const channelArtifactCurrent = Boolean(channelEntry && fs.existsSync(targetRoot) && frameworkSourceAlreadyCurrent(targetRoot, {
     sourceHeadSha: channelEntry.source_git_head_sha,
     sourceArchiveSha256: channelEntry.source_archive_sha256,
@@ -355,12 +369,13 @@ export function readOplFrameworkRuntimeUpdateStatus(
     channel_version: channelEntry?.channel_version ?? null,
     channel_artifact_digest: channelEntry?.artifact_digest ?? null,
     channel_artifact_current: channelArtifactCurrent,
+    installed_newer_than_channel: installedNewerThanChannel,
     channel_source_archive_sha256: channelEntry?.source_archive_sha256 ?? null,
     update_configured: Boolean(sourceArchive || sourceRoot || channelEntry),
     update_available: Boolean(
       (sourceArchive && fs.existsSync(sourceArchive) && fs.statSync(sourceArchive).isFile())
       || (sourceRoot && fs.existsSync(sourceRoot) && fs.statSync(sourceRoot).isDirectory())
-      || (channelArtifactAvailable && !channelArtifactCurrent),
+      || (channelArtifactAvailable && !channelArtifactCurrent && !installedNewerThanChannel),
     ),
     previous_root: previousRoot,
     previous_root_available: fs.existsSync(previousRoot) && fs.statSync(previousRoot).isDirectory() && isOplFrameworkRoot(previousRoot),

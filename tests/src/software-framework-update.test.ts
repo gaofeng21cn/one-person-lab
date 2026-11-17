@@ -9,7 +9,31 @@ import { executeSoftwareInstallationAction } from '../../src/adapters/integratio
 import { readInstalledSoftwareProducts } from '../../src/adapters/integration/software-sources-framework-installation.ts';
 import { refreshFrameworkSoftwareRelease } from '../../src/adapters/integration/software-sources-framework-release.ts';
 import { acquireManagedUpdateLock } from '../../src/adapters/integration/managed-update-lock.ts';
-import { activatePendingOplFrameworkRuntime } from '../../src/adapters/integration/system-installation/framework-self-update.ts';
+import { activatePendingOplFrameworkRuntime, readOplFrameworkRuntimeUpdateStatus, runOplFrameworkSelfUpdate } from '../../src/adapters/integration/system-installation/framework-self-update.ts';
+
+test('a newer installed Framework is not downgraded or reported as an available channel update', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-newer-framework-'));
+  const previous = process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT;
+  try {
+    fs.mkdirSync(path.join(root, 'bin'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'dist', 'entrypoints'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'bin', 'opl'), '#!/bin/sh\n');
+    fs.writeFileSync(path.join(root, 'dist', 'entrypoints', 'cli.js'), 'export {};\n');
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'opl-framework', version: '0.3.17' }));
+    const channelEntry = { channel_version: '0.3.16', artifact: 'ghcr.io/fixture/framework@sha256:' + 'a'.repeat(64),
+      artifact_digest: 'sha256:' + 'a'.repeat(64), source_archive_sha256: 'b'.repeat(64), source_git_head_sha: 'c'.repeat(40) };
+    process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT = root;
+    const status = readOplFrameworkRuntimeUpdateStatus(root, { channelEntry });
+    assert.equal(status.installed_newer_than_channel, true);
+    assert.equal(status.update_available, false);
+    assert.equal(runOplFrameworkSelfUpdate({ targetRoot: root, channelEntry }).reason, 'framework_installed_version_newer_than_channel');
+    assert.equal(fs.existsSync(root + '.pending'), false);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version, '0.3.17');
+  } finally {
+    if (previous === undefined) delete process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT; else process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT = previous;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('Framework updates its receipted Git installation, pins the release and preserves changes until restart', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-installation-'));
