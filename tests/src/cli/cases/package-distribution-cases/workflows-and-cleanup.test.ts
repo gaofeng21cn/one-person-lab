@@ -306,7 +306,7 @@ test('single-Package payload materialization binds exact physical archive proven
   }
 });
 
-test('public source publication requires approval while private publication retains private source', () => {
+test('source visibility authenticates metadata and retains public/private approval boundaries', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
   const stepScript = (name: string): string => workflow.split(`      - name: ${name}\n`)[1]!
     .split('\n      - name: ')[0]!.split('        run: |\n')[1]!
@@ -341,15 +341,22 @@ test('public source publication requires approval while private publication reta
     }
     assert.match(fs.readFileSync(path.join(root, 'env-private'), 'utf8'), /PACKAGE_REGISTRY_NAME=one-person-lab-private-packages\/example-agent/);
     fs.writeFileSync(path.join(root, 'curl'), `#!/bin/sh
+authenticated=false
 while [ "$#" -gt 0 ]; do
   if [ "$1" = --output ]; then shift; printf '%s' "$TEST_RESPONSE" > "$1"; fi
+  if [ "$1" = --header ]; then
+    shift
+    if [ "$1" = 'Authorization: Bearer visibility-probe-token' ]; then authenticated=true; fi
+  fi
   shift
 done
+if [ "$authenticated" != true ]; then printf '403'; exit 0; fi
 printf '%s' "$TEST_STATUS"
 exit "$TEST_EXIT"
 `, { mode: 0o755 });
     const cases = [
       { status: '200', approval: '', allowed: true },
+      { status: '200', approval: '', token: '', allowed: false },
       { status: '200', approval: '', private: true, allowed: false },
       { status: '200', approval: '', repo: 'example/another-agent', allowed: false },
       { status: '404', approval: '', allowed: false },
@@ -366,6 +373,7 @@ exit "$TEST_EXIT"
         cwd: root, encoding: 'utf8', env: {
           ...process.env, PATH: `${root}${path.delimiter}${process.env.PATH}`,
           OWNER_REPO: 'example/private-agent', EXPECTED_OWNER_SOURCE_COMMIT: sourceCommit,
+          GH_TOKEN: scenario.token ?? 'visibility-probe-token',
           PUBLIC_SOURCE_ARCHIVE_COMMIT: scenario.approval,
           PACKAGE_VISIBILITY: scenario.visibility ?? 'public',
           TEST_STATUS: scenario.status, TEST_EXIT: scenario.exit ?? '0',
@@ -373,7 +381,10 @@ exit "$TEST_EXIT"
         },
       });
       assert.equal(result.status === 0, scenario.allowed, JSON.stringify(scenario));
+      assert.doesNotMatch(result.stdout + result.stderr, /visibility-probe-token/);
     }
+    assert.match(workflow.split('      - name: Verify source archive publication visibility\n')[1]!,
+      /GH_TOKEN: \$\{\{ github\.token \}\}/);
     assert.ok(workflow.indexOf('- name: Verify source archive publication visibility')
       < workflow.indexOf('- name: Checkout exact Package owner source'));
   } finally {
