@@ -68,8 +68,18 @@ if __name__ == '__main__':
     unresolved = [row for row in outcomes if row['status'] == 'dispatch_unresolved']
     failures = report['blocked_packages'] + unresolved
     with open(os.getenv('GITHUB_STEP_SUMMARY', os.devnull), 'a') as stream:
-        stream.write(f"### Package dispatch\n\nProcessed: {len(outcomes)}. Blocked or unresolved: {len(failures)}.\n")
-        for row in failures:
-            stream.write(f"- {row['package_id']}: {row['reason']}\n")
+        stream.write(
+            f"### Package dispatch\n\nProcessed: {len(outcomes)}. "
+            f"Blocked before dispatch: {len(report['blocked_packages'])}. "
+            f"Unresolved dispatches: {len(unresolved)}.\n"
+        )
+        if report['blocked_packages']:
+            stream.write('\n#### Blocked packages (not dispatched)\n\n')
+            for row in report['blocked_packages']:
+                stream.write(f"- {row['package_id']}: {row['reason']}\n")
+        if unresolved:
+            stream.write('\n#### Unresolved dispatch operations\n\n')
+            for row in unresolved:
+                stream.write(f"- {row['package_id']}: {row['reason']}\n")
     if failures:
         raise SystemExit(1)

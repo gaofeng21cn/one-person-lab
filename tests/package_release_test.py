@@ -281,6 +281,23 @@ class PackageReleaseTests(unittest.TestCase):
         previous['conclusion'] = 'failure'
         self.assertEqual(dispatcher.matching_publications([previous], entry), [])
 
+    def test_dispatch_cli_preserves_blocked_failure_and_explains_its_source(self):
+        plan = self.root / 'plan.json'
+        summary = self.root / 'summary.md'
+        blocker = {'package_id': 'fixture', 'reason': 'Owner checks failed'}
+        write(plan, {'source_run_id': '123', 'packages': [], 'blocked_packages': [blocker]})
+        result = subprocess.run(
+            [sys.executable, str(ROOT / 'scripts/package-publication-dispatch.py'),
+             '--plan', str(plan), '--source-run-id', '123'],
+            capture_output=True, text=True,
+            env={**os.environ, 'GITHUB_STEP_SUMMARY': str(summary)},
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(json.loads(result.stdout)['blocked_packages'], [blocker])
+        self.assertIn('Blocked before dispatch: 1. Unresolved dispatches: 0.', summary.read_text())
+        self.assertIn('Blocked packages (not dispatched)', summary.read_text())
+        self.assertIn('Owner checks failed', summary.read_text())
+
     def test_legacy_private_publisher_titles_reuse_the_successful_same_version(self):
         entry = {'package_id': 'fixture', 'expected_package_version': '1.2.3', 'publication_request_id': 'daily-fixture-new'}
         legacy = {'display_title': 'FIXTURE 1.2.3 / original-private-publication',
