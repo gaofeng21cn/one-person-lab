@@ -44,7 +44,24 @@ Agent 声明 workspace requirement、locator、Stage/capability contracts 和 ru
 
 Hosted action 的重启原因码由 action catalog 的 `lifecycle_admission_contract.reactivation_reason_code` 声明。Framework 校验请求与该声明一致，持有重放、身份和物化安全边界；新合同的领域原因由 Agent 决定。
 
-Hosted Handler 是无网络、只读的确定性动作。macOS 沿用 Seatbelt；Linux 的 Python
+### 联网能力与 Hosted Handler
+
+标准智能体可以按任务需要联网检索资料、学习方法并辅助分析数据。AI Stage 使用当前
+executor 和工具提供的联网能力；MCP、CLI 和 Connect 的访问权限沿用各自的执行与授权
+边界。Hosted Handler 的禁网约束不构成 Agent、Stage 或工具的统一离线要求。
+
+Hosted Handler 执行已注册的 TypeScript/Python 函数，本身不运行模型或自主检索。
+它承担根据明确输入进行校验、计算和返回结构化结果的确定性动作；只读、禁网用于避免
+这类判断隐式依赖变化中的远端状态，或在 Host 的结果校验与物化之外产生远端副作用。
+这是这条执行路径的适用理由，不能从“代码原来禁网”推导出其他能力也应禁网。
+
+需要查资料或学习分析方法时，由 AI Stage 或联网工具完成检索，并将来源与所用结果
+交给后续处理；例如 Connect scientific search 由 Framework 发出 HTTP 请求，包内
+adapter 负责构造请求和解析响应。对确实需要直接联网的程序动作，应按其实际任务评估
+并实现相应的执行权限，不能仅因它是标准智能体的一部分就否决联网需求，也不能用不同
+平台碰巧缺少隔离来代替明确的能力设计。
+
+当前 Hosted Handler 实现保持无网络、只读。macOS 沿用 Seatbelt；Linux 的 Python
 使用 audit hook，TypeScript 使用 Node 原生 permission model，均不因平台扩展而允许联网。
 Linux TypeScript 需要支持网络权限控制的 Node（当前受支持的 Node 26 具备该能力）；
 旧运行时缺少这一保护时，在加载 handler 前返回
