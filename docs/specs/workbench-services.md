@@ -30,11 +30,17 @@
 用户任务使用现有 Temporal 服务与 namespace；插件不会安装服务或创建第二调度器。
 任务执行回调由 `opl-codex-native` 的当前 App Server 提供：createThread、startTask、
 readTask、interruptTask。启动 activity 不自动重试，防止含副作用的任务重复执行。
-权限必须明确为 `:read-only` 或 `:workspace`。任务超时尝试中断并保留 canonical thread
+权限必须明确为 `:read-only` 或 `:workspace`，只约束文件写入范围，均允许联网。
+任务超时尝试中断并保留 canonical thread
 引用；暂停或删除任务定义不会伪称已经取消正在执行的 turn。
 
-App 必须保持运行，最小化可继续；退出后不承诺执行。服务停机补偿窗口一分钟，App
-未运行造成启动排队超过五分钟时跳过。日历沿用 Temporal 的当地时钟匹配规则，夏令时
+用户可指定正整数分钟的超时，不施加固定两小时上限；客户端与 Host 只校验可表示的
+运行时长。单次任务的历史执行时间可以在修改标题、提示词等内容时保留；新建或改到
+另一个执行时刻时，该时刻仍须在未来。更新前读取 owner 当前定义并校验 revision。
+
+App worker 运行时执行任务，最小化可继续；退出后不承诺执行。服务停机补偿窗口一分钟，
+由 Temporal Schedule 执行补跑和重叠策略；已经创建的持久运行保留，不因等待 worker
+超过五分钟而再次跳过。日历沿用 Temporal 的当地时钟匹配规则，夏令时
 跳时可跳过，回拨可触发两次。只读 inventory 有深度及文件数上限，部分统计必须显示为
 partial，不能作为完整磁盘占用。
 

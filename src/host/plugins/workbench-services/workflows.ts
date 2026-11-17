@@ -10,7 +10,8 @@ export async function OplPersonalTaskWorkflow(task: TaskDefinition): Promise<Tas
   let state: TaskReadback = { threadId: '', turnId: '', status: 'starting' };
   setHandler(personalTaskState, () => state);
   try {
-    if (Date.now() - workflowInfo().startTime.getTime() > 300_000) return { threadId: '', turnId: '', status: 'skipped_late' };
+    // Temporal already admitted this durable run. Worker delay does not revoke
+    // it; catch-up and overlap decisions belong to the schedule, not this clock.
     const scheduledAt = workflowInfo().startTime.getTime();
     const thread = await activity.createThread(task, scheduledAt);
     if (thread.skipped) return { threadId: '', turnId: '', status: 'skipped_late' };

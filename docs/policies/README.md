@@ -3,6 +3,7 @@
 Policies 只定义跨实现长期生效的治理规则，不记录状态、计划或执行清单。
 
 - [文档生命周期](./docs-lifecycle-policy.md)
+- [工程限制的必要性与作用范围](./engineering-boundary-policy.md)
 - [Agent 原生应用开发标准](./agent-native-app-policy.md)
 - [Domain 私有功能面准入](./domain-private-functional-surface-policy.md)
 - [GitHub CI 自动化](./github-ci-automation-policy.md)

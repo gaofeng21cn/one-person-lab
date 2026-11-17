@@ -10,7 +10,7 @@ import { NativeConnection, Worker } from '@temporalio/worker';
 import { resolveTemporalAddressForPaths, resolveTemporalClientNamespace } from '../../../adapters/execution/index.ts';
 import type { TaskDefinition, WorkbenchTaskExecutor } from './types.ts';
 
-export async function validateTask(input: Record<string, unknown>): Promise<TaskDefinition> {
+export async function validateTask(input: Record<string, unknown>, previous?: TaskDefinition): Promise<TaskDefinition> {
   const task = structuredClone(input) as unknown as TaskDefinition;
   if (!/^[a-z0-9-]{1,64}$/.test(task.id ?? '')) throw Error('Invalid task ID.');
   if (typeof task.title !== 'string' || !task.title.trim() || task.title.length > 160) throw Error('Task title is required (maximum 160 characters).');
@@ -18,14 +18,18 @@ export async function validateTask(input: Record<string, unknown>): Promise<Task
   if (!path.isAbsolute(task.cwd ?? '') || !(await stat(task.cwd)).isDirectory()) throw Error('Select an existing absolute workspace directory.');
   task.cwd = await realpath(task.cwd);
   if (![':read-only', ':workspace'].includes(task.permissions)) throw Error('Scheduled tasks require read-only or workspace-write permissions.');
-  if (!Number.isInteger(task.timeoutMinutes) || task.timeoutMinutes < 1 || task.timeoutMinutes > 120) throw Error('Timeout must be 1–120 minutes.');
+  if (!Number.isSafeInteger(task.timeoutMinutes) || task.timeoutMinutes < 1
+    || !Number.isSafeInteger((task.timeoutMinutes + 10) * 60_000)) throw Error('Timeout must be a positive whole number of minutes within the runtime duration range.');
   if (task.model !== undefined && (typeof task.model !== 'string' || task.model.length > 200)) throw Error('Invalid model.');
   if (task.reasoningEffort !== undefined && !['low', 'medium', 'high', 'xhigh', 'max'].includes(task.reasoningEffort)) throw Error('Invalid reasoning effort.');
   if (!task.schedule || typeof task.schedule.timeZone !== 'string') throw Error('A time zone is required.');
   new Intl.DateTimeFormat('en', { timeZone: task.schedule.timeZone }).format();
   const s = task.schedule;
   if (s.kind === 'once') {
-    if (!s.at || !/(Z|[+-]\d\d:\d\d)$/.test(s.at) || !Number.isFinite(Date.parse(s.at)) || Date.parse(s.at) <= Date.now()) throw Error('Choose a future ISO timestamp including a UTC offset.');
+    const unchangedTime = previous?.id === task.id && previous.schedule.kind === 'once'
+      && Date.parse(previous.schedule.at!) === Date.parse(s.at!);
+    if (!s.at || !/(Z|[+-]\d\d:\d\d)$/.test(s.at) || !Number.isFinite(Date.parse(s.at))
+      || (!unchangedTime && Date.parse(s.at) <= Date.now())) throw Error('Choose a future ISO timestamp including a UTC offset.');
   } else if (s.kind === 'interval') {
     if (!Number.isInteger(s.minutes) || s.minutes! < 1 || s.minutes! > 525600) throw Error('Interval must be 1–525600 minutes.');
   } else if (s.kind === 'daily' || s.kind === 'weekly') {
@@ -130,7 +134,7 @@ export class PersonalTasks {
         items.push({ ...task, paused: description.state.paused, nextRuns: description.info.nextActionTimes, running: description.info.runningActions, skippedOverlap: description.info.numActionsSkippedOverlap });
         if (items.length >= 200) break;
       }
-      return { status: 'available', items, limit: 200, owner: 'Framework / Temporal', readAt: new Date().toISOString(), exitPolicy: 'App must remain running; late starts beyond five minutes are skipped.' };
+      return { status: 'available', items, limit: 200, owner: 'Framework / Temporal', readAt: new Date().toISOString(), exitPolicy: 'The App worker runs admitted Temporal executions; missed schedules follow Temporal catch-up and overlap policy.' };
     });
   }
   async history(id?: unknown) {
@@ -170,7 +174,7 @@ export class PersonalTasks {
   private async performAction(operation: string, input: Record<string, unknown>, dryRun: boolean) {
     const scheduleId = this.id(input.id);
     if (!['task_create', 'task_update', 'task_pause', 'task_resume', 'task_delete', 'task_run'].includes(operation)) throw Error('Unsupported task operation.');
-    const task = ['task_create', 'task_update'].includes(operation) ? await validateTask(input) : undefined;
+    let task = operation === 'task_create' ? await validateTask(input) : undefined;
     return this.use(async client => {
       const handle = client.schedule.getHandle(scheduleId);
       if (operation === 'task_create') {
@@ -194,6 +198,7 @@ export class PersonalTasks {
       const previous = defaultPayloadConverter.fromPayload(schedule.action!.startWorkflow!.input!.payloads![0]!) as TaskDefinition & { deleted?: boolean };
       if (previous.deleted) throw Error('Task was deleted. Refresh the task list.');
       if (previous.revision !== input.revision) throw Error('Task changed. Reload before applying an operation.');
+      if (operation === 'task_update') task = await validateTask(input, previous);
       if (dryRun) return { status: 'preview', effect: operation, task: task ?? previous, owner: 'Framework / Temporal', summary: `${operation}: ${(task ?? previous).title}; ${(task ?? previous).permissions}; ${(task ?? previous).schedule.kind} / ${(task ?? previous).schedule.timeZone}; workspace ${(task ?? previous).cwd}.`, runningPolicy: 'Pause/delete prevents future runs. An active run remains visible in history.' };
       if (operation === 'task_run') {
         await client.workflowService.patchSchedule({ namespace: client.options.namespace, scheduleId, identity: 'opl-workbench-services', requestId: String(input.requestId ?? randomUUID()), patch: { triggerImmediately: { overlapPolicy: 1 } } });
