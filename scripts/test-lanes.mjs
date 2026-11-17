@@ -299,7 +299,7 @@ const lanes = {
   ],
   artifact: [
     { kind: 'npm', args: ['run', 'build'] },
-    nodeTest(['tests/built/cli.test.mjs', 'tests/built/workbench-temporal.test.mjs'], { stripTypes: false }),
+    nodeTest(['tests/built/cli.test.mjs', 'tests/built/workbench-temporal.test.mjs', 'tests/built/workbench-task-workflow.test.mjs'], { stripTypes: false }),
   ],
   'fresh-install': [
     sourceTest(['fresh-install-smoke.test.ts']),
