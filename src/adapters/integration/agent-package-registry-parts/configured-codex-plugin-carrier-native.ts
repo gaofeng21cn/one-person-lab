@@ -272,8 +272,8 @@ export function ensureConfiguredCodexHomeForMutation(env: NodeJS.ProcessEnv) {
   const codexHome = configuredCodexHome(env);
   try {
     fs.mkdirSync(codexHome, { recursive: true, mode: 0o700 });
-    const stat = fs.lstatSync(codexHome);
-    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('not a real directory');
+    const stat = fs.statSync(codexHome);
+    if (!stat.isDirectory()) throw new Error('not a directory');
     fs.accessSync(codexHome, fs.constants.R_OK | fs.constants.W_OK | fs.constants.X_OK);
   } catch {
     localReadbackFailure(

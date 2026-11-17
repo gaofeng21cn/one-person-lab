@@ -591,6 +591,33 @@ test('configured Codex carrier initializes a missing home only before a native m
   }
 });
 
+test('configured Codex carrier preserves a user-selected home directory symlink', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configured-carrier-home-link-'));
+  const actualHome = path.join(root, 'actual-home');
+  const codexHome = path.join(root, 'home-link');
+  fs.mkdirSync(actualHome);
+  fs.symlinkSync(actualHome, codexHome, 'dir');
+  const calls: string[][] = [];
+  try {
+    runConfiguredCodexPluginCarrier({
+      descriptor: { ...descriptor, carrier: { ...descriptor.carrier, marketplaceSource: null } },
+      action: 'install',
+      env: { HOME: root, CODEX_HOME: codexHome },
+      runner: ({ args, env }) => {
+        assert.equal(env.CODEX_HOME, codexHome);
+        assert.equal(fs.lstatSync(codexHome).isSymbolicLink(), true);
+        calls.push(args);
+        return { status: 0, stdout: args.join(' ') === 'plugin list --json'
+          ? pluginList([]) : JSON.stringify({ status: 'ok' }), stderr: '', error: null };
+      },
+    });
+    assert.deepEqual(calls, [['plugin', 'add', pluginSelector, '--json'], ['plugin', 'list', '--json']]);
+    assert.equal(fs.readlinkSync(codexHome), actualHome);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('configured Codex carrier ensures a descriptor-owned marketplace before native add', () => {
   const calls: string[][] = [];
   let marketplaceConfigured = false;
