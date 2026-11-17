@@ -706,6 +706,27 @@ export function completeReviewerSnapshotTransportEnvelope(
   if (declaredArtifacts.refs.length !== declaredArtifacts.hashes.length) {
     throw reviewTransportError('reviewer_input_snapshot_artifact_identity_mismatch', 'Declared artifact refs and hashes must align.');
   }
+  // A producer may locate a member by its content identity alone rather than by a
+  // readable path: "sha256:<hex>", the Foundry "source-material:sha256:<hex>" ref, or an
+  // "opl-content://sha256/<hex>" ref. Those name bytes, not a locator, so the transport
+  // cannot open them and the Stage dies with source_unreadable before any reviewer starts.
+  // Authority already carries the exact file ref for the same bytes, so bind the identity
+  // to that ref instead of inventing a path. An unknown or ambiguous digest is left
+  // untouched so it still fails loudly rather than silently reviewing the wrong bytes.
+  const authorityRefs = [
+    ...authority.owner_authority_refs,
+    ...(authority.stage_run_input_authority_refs ?? []),
+  ];
+  const bindDigestOnlySourceRef = (sourceRef: string) => {
+    const digestOnly = /^(?:source-material:)?sha256:([a-f0-9]{64})$/i.exec(sourceRef)
+      ?? /^opl-content:\/\/sha256\/([a-f0-9]{64})$/i.exec(sourceRef);
+    if (!digestOnly) return sourceRef;
+    const digest = `sha256:${digestOnly[1]!.toLowerCase()}`;
+    const refs = [...new Set(authorityRefs
+      .filter((item) => item.sha256 === digest)
+      .map((item) => item.ref))];
+    return refs.length === 1 ? refs[0]! : sourceRef;
+  };
   const declaredRefs = declaredArtifacts.refs.map((ref, index) => {
     const sha256 = canonicalReviewTransportSha256(declaredArtifacts.hashes[index], 'declared_artifact.sha256');
     const matches = authority.owner_authority_refs.filter((item) => item.ref === ref && item.sha256 === sha256);
@@ -736,7 +757,10 @@ export function completeReviewerSnapshotTransportEnvelope(
     allowIncompleteMembers: true,
     rebindAuthorityIdentity: true,
   });
-  const members = [...request.members];
+  const members = request.members.map((member) => ({
+    ...member,
+    source_ref: bindDigestOnlySourceRef(member.source_ref),
+  }));
   for (const member of declaredRefs) {
     if (members.some((item) => item.sha256 === member.sha256 && item.size_bytes === member.size_bytes)) continue;
     // Finalized transport records supplement, but do not redefine, the domain review scope.

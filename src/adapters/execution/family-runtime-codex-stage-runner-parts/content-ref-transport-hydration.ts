@@ -180,6 +180,12 @@ export function hydrateContentRefTransport(input: {
     closeout_ref_metadata: [
       ...metadata,
       ...added.map((entry) => ({
+        // `kind` is the framework artifact kind and is required for the entry to
+        // survive exactRefsFromCloseoutMetadata, which drops any metadata entry
+        // without it. Without this the hydrated bytes travel in the packet but
+        // never become reviewer-snapshot authority, so a Review that declares the
+        // artifact fails with owner_authority_metadata_missing.
+        kind: 'stage_artifact',
         ref: entry.ref,
         sha256: entry.sha256,
         size_bytes: entry.sizeBytes,

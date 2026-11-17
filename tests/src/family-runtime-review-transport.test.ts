@@ -13,6 +13,7 @@ import {
   resolveReviewerInputSnapshotMaterialization,
   type ReviewerInputSnapshotMaterializationRequest,
 } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
+import { resolveContainedWorkspaceFile } from '../../src/adapters/execution/family-runtime-review-transport-store.ts';
 import {
   persistReviewEvidenceArtifactCandidate,
   readReviewEvidenceArtifactReceipt,
@@ -489,3 +490,22 @@ for (const replacement of ['directory', 'symlink'] as const) {
     });
   });
 }
+
+test('resolves a content-identity member to the stored Foundry source material', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-review-source-material-'));
+  const bytes = Buffer.from('foundry source material');
+  const digest = crypto.createHash('sha256').update(bytes).digest('hex');
+  fs.mkdirSync(path.join(workspaceRoot, 'provider-inputs'));
+  fs.writeFileSync(path.join(workspaceRoot, 'provider-inputs', `${digest}.blob`), bytes);
+  // A producer may locate a member by content identity; the transport has to bind it to
+  // the stored bytes instead of dying on an unsupported non-file URI.
+  for (const ref of [`source-material:sha256:${digest}`, `opl-content://sha256/${digest}`, `sha256:${digest}`]) {
+    const resolved = resolveContainedWorkspaceFile(workspaceRoot, ref);
+    assert.equal(resolved.source_path, fs.realpathSync.native(path.join(workspaceRoot, 'provider-inputs', `${digest}.blob`)));
+  }
+  // An identity with no stored artifact must still fail rather than bind other bytes.
+  assert.throws(
+    () => resolveContainedWorkspaceFile(workspaceRoot, `source-material:sha256:${'f'.repeat(64)}`),
+    /not a readable local file/,
+  );
+});

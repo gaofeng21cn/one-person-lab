@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { hydrateContentRefTransport } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/content-ref-transport-hydration.ts';
 import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
 import { qualityArtifactIdentity } from '../../src/adapters/execution/family-runtime-temporal-workflow-artifacts.ts';
+import { exactRefsFromCloseoutMetadata } from '../../src/adapters/execution/family-runtime-temporal-activity-identity.ts';
 
 function sha256(bytes: Buffer) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
@@ -183,4 +184,22 @@ test('a Stage report that merely quotes content refs is not treated as a bluepri
     workspaceRoot,
   });
   assert.deepEqual((hydrated as any).route_impact.stage_quality_cycle.artifact_refs, [ref]);
+});
+
+test('hydrated content metadata survives as reviewer snapshot authority', () => {
+  const { workspaceRoot, packet, transported } = fixture();
+  const hydrated = hydrateContentRefTransport({
+    closeoutPacket: packet,
+    attempt: { attempt_role: 'producer' },
+    workspaceRoot,
+  });
+  assert.ok(hydrated);
+  const digest = sha256(transported);
+  const authority = exactRefsFromCloseoutMetadata(hydrated.closeout_ref_metadata);
+  // exactRefsFromCloseoutMetadata drops any entry without a framework `kind`, so a
+  // hydrated entry missing it would carry bytes that Review can never bind. The
+  // declared artifact would then fail owner_authority_metadata_missing.
+  assert.ok(authority.some((entry) => (
+    entry.sha256 === `sha256:${digest}` && entry.ref.endsWith(`${digest}.md`)
+  )));
 });

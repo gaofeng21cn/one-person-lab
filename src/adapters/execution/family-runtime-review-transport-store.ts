@@ -433,7 +433,25 @@ export function resolveContainedWorkspaceFile(workspaceRootInput: unknown, refIn
   }
   let candidate: string;
   try {
-    if (ref.startsWith('file://')) {
+    // A member may be located by content identity instead of by path: the Foundry
+    // "source-material:sha256:<hex>" ref, an "opl-content://sha256/<hex>" ref, or a bare
+    // "sha256:<hex>". Those name bytes, not a file, so the transport cannot open them and
+    // the Stage died with source_unreadable before any reviewer started. Foundry already
+    // materializes those exact bytes into its own provider-inputs directory under the
+    // digest as the file name, so resolve the identity there and verify the bytes still
+    // hash to the same digest before handing the path on. An identity with no matching
+    // stored artifact keeps the original failure instead of silently binding other bytes.
+    const contentIdentity = /^(?:source-material:)?sha256:([a-f0-9]{64})$/i.exec(ref)
+      ?? /^opl-content:\/\/sha256\/([a-f0-9]{64})$/i.exec(ref);
+    if (contentIdentity) {
+      const digest = contentIdentity[1]!.toLowerCase();
+      const stored = path.join(workspaceRoot, 'provider-inputs', `${digest}.blob`);
+      const bytes = fs.readFileSync(fs.realpathSync.native(stored));
+      if (crypto.createHash('sha256').update(bytes).digest('hex') !== digest) {
+        throw new Error('stored source material does not match its declared digest');
+      }
+      candidate = fs.realpathSync.native(stored);
+    } else if (ref.startsWith('file://')) {
       candidate = fileURLToPath(ref);
     } else if (path.isAbsolute(ref)) {
       candidate = ref;
@@ -446,7 +464,10 @@ export function resolveContainedWorkspaceFile(workspaceRootInput: unknown, refIn
   } catch (error) {
     throw reviewTransportError(
       'reviewer_input_snapshot_source_unreadable',
-      'Reviewer input snapshot source ref is not a readable local file.',
+      // The ref belongs in the message: a Reviewer snapshot debt is only actionable if
+      // the operator can see which locator failed. The structured detail never reaches
+      // the StageRun quality-debt ref, which carries the message text alone.
+      `Reviewer input snapshot source ref is not a readable local file: ${ref}`,
       { source_ref: ref, read_error: error instanceof Error ? error.message : String(error) },
     );
   }
