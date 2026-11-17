@@ -173,6 +173,8 @@ concrete implementation gaps belong to [current gaps](./docs/active/current-stat
 
 Source development entry:
 
+Before proposing a contribution, read [CONTRIBUTING.md](./CONTRIBUTING.md) for the Issue and PR intake rules.
+
 ```bash
 git clone https://github.com/gaofeng21cn/one-person-lab.git
 cd one-person-lab

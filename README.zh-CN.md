@@ -166,6 +166,8 @@ Base/Framework，`one-person-lab-app` 维护 App 产品与发布体验，各 Pac
 
 本仓源码开发入口：
 
+提交贡献前请先阅读 [贡献指南](./CONTRIBUTING.md)，确认 Issue 与 PR 的准入要求。
+
 ```bash
 git clone https://github.com/gaofeng21cn/one-person-lab.git
 cd one-person-lab

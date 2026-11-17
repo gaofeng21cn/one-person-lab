@@ -1,0 +1,41 @@
+name: Feature or behavior change
+description: Propose a new capability or a change to existing user behavior
+title: "[Proposal] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for new functionality or an intentional change to existing behavior, defaults, permissions, compatibility, visibility, or lifecycle. Explain the need before proposing implementation; an Issue does not itself approve the proposal. Read the [contribution guide](https://github.com/gaofeng21cn/one-person-lab/blob/main/CONTRIBUTING.md). The principal maintainer account, `gaofeng21cn`, is exempt from this third-party intake requirement.
+  - type: textarea
+    id: user-task
+    attributes:
+      label: User task and necessity
+      description: What user task is blocked or missing, and why is changing the product necessary now?
+    validations:
+      required: true
+  - type: textarea
+    id: intent
+    attributes:
+      label: Current intent and SSOT
+      description: What does the current contract or product behavior say? Link the relevant contract or documentation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the default path, any explicit opt-in path, compatibility impact, and rollback or migration boundary.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Add logs, screenshots, tests, traces, caller paths, user reports, or other evidence that helps maintainers evaluate the proposal.
+    validations:
+      required: true
+  - type: input
+    id: related-pr
+    attributes:
+      label: Related pull request
+      description: Add the PR URL when implementation work already exists.

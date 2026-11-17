@@ -1,0 +1,34 @@
+name: Bug report
+description: Describe a bug, its reproduction steps, and the available evidence
+title: "[Debug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to report a bug. A directly submitted PR is welcome when maintainers can reproduce the bug. If they cannot reproduce it, an Issue with supporting evidence is required before the PR can be evaluated. Read the [contribution guide](https://github.com/gaofeng21cn/one-person-lab/blob/main/CONTRIBUTING.md). The principal maintainer account, `gaofeng21cn`, is exempt from this third-party intake requirement.
+  - type: textarea
+    id: symptom
+    attributes:
+      label: Symptom and expected behavior
+      description: Describe the observed result, expected result, and why it appears to be a bug rather than a requested behavior change.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and reproduction attempt
+      description: Include versions, platform, setup, exact reproduction steps and input, and frequency. If reproduction is unavailable, explain the attempts made and what is missing.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Available evidence
+      description: Add logs, screenshots, traces, reports, or a link to the affected workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: suspected-cause
+    attributes:
+      label: Suspected cause or additional context (optional)
+      description: Include a suspected breakpoint if known; a root-cause diagnosis is not required to report a bug.
