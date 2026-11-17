@@ -33,7 +33,9 @@
     },
     "available_consumers": "current package domain declarations and already-explicit grants; the UI cannot invent a consumer",
     "available_actions": "same owner action catalog used by App and CLI",
-    "forbidden": ["absolute_paths", "knowledge_bodies", "credential_material"]
+    "forbidden": ["absolute_paths", "knowledge_bodies", "credential_material"],
+    "source_name": "use saved label; unnamed legacy sources use context and registry ordinal, never source_id as a primary label"
+
   },
   "mutation_policy": {
     "confirmation_required": true,
@@ -47,7 +49,9 @@
     "disconnect": "remove only selected source from current workspace binding; retain registry, other workspace grants, required knowledge declarations and original bodies",
     "reconnect": "configure the same retained source identity with explicit domains/scopes and a fresh revision",
     "write_protocol": "existing registry writer lock, atomic private file writes, CAS, fresh owner projection",
-    "invalid_explicit_selection": "report configuration failure; never fall back to another personal profile"
+    "invalid_explicit_selection": "report configuration failure; never fall back to another personal profile",
+    "source_name": "optional label on configure renames the source against the exact revision; a label-only change preserves every grant, scope and connected/disconnected binding"
+
   },
   "read_policy": {
     "network": false,

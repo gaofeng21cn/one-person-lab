@@ -21,7 +21,7 @@ export function knowledgeSourceActionCatalog() {
       delegated_surface: `opl knowledge source-${operation}`,
       payload_fields: operation === 'list' ? [] : operation === 'check' ? ['resource_id'] : operation === 'connect'
         ? ['context_id', 'vault_path', 'registry_path', 'source_id', 'label', 'scope_ids', 'consumer_domain_ids', 'write_domain_ids', 'expected_revision']
-        : operation === 'configure' ? ['resource_id', 'scope_ids', 'consumer_domain_ids', 'write_domain_ids', 'expected_revision'] : ['resource_id', 'expected_revision'],
+        : operation === 'configure' ? ['resource_id', 'label', 'scope_ids', 'consumer_domain_ids', 'write_domain_ids', 'expected_revision'] : ['resource_id', 'expected_revision'],
       mutates: read ? 'none_read_only' : operation === 'disconnect' ? 'current_workspace_source_binding' : 'knowledge_source_registry_and_current_workspace_binding',
       dry_run_supported: read, confirmation_required: !read, danger_level: read ? 'none' as const : 'medium' as const,
       impact: read ? 'Read source access and accepted-version metadata without bodies or paths.' : 'Update the selected source binding and explicit access; preserve source bodies and other workspace grants.',
@@ -40,6 +40,11 @@ function requiredString(payload: Record<string, unknown>, key: string) {
 function identities(value: unknown, field: string, required = true) {
   if (!Array.isArray(value) || (required && value.length === 0) || value.length > 100 || value.some(id => typeof id !== 'string' || !/^[\w.:-]{1,160}$/.test(id))) reject('knowledge_source_payload_invalid', `${field} must contain explicit source identities.`);
   return [...new Set(value as string[])].sort();
+}
+function sourceLabel(payload: Record<string, unknown>) {
+  const value = requiredString(payload, 'label');
+  if (value.length > 160 || value.startsWith('/') || /[\r\n\0]/.test(value)) reject('knowledge_source_payload_invalid', 'Use a short source label.');
+  return value;
 }
 function selection(payload: Record<string, unknown>, deps: ManagementDependencies) {
   const scopes = identities(payload.scope_ids, 'scope_ids');
@@ -76,7 +81,7 @@ function contextReady(context: ManagementContext) {
   physicalDirectory(context.root);
 }
 function writePair(context: ManagementContext, registryFile: string, registry: KnowledgeSourceRegistry | null,
-  binding: ReturnType<typeof readManagementBindings>, expectedContextRevision: string, expectedRegistryBytes: Buffer | null) {
+  binding: ReturnType<typeof readManagementBindings>, expectedContextRevision: string, expectedRegistryBytes: Buffer | null, updateBinding = true) {
   fs.mkdirSync(path.dirname(binding.file), { recursive: true, mode: 0o700 });
   fs.mkdirSync(path.dirname(registryFile), { recursive: true, mode: 0o700 });
   const files = [binding.file, registryFile].sort();
@@ -86,7 +91,7 @@ function writePair(context: ManagementContext, registryFile: string, registry: K
     if ((currentRegistry?.toString('base64') ?? null) !== (expectedRegistryBytes?.toString('base64') ?? null)) reject('knowledge_source_changed', 'Knowledge source registry changed; refresh before applying.');
     if (registry) atomic(registryFile, encoded(registry), expectedRegistryBytes === null);
     // Registry grants alone do not create a binding. A failure remains recoverable by fresh readback.
-    atomic(binding.file, encoded(binding.value), binding.bytes === null);
+    if (updateBinding) atomic(binding.file, encoded(binding.value), binding.bytes === null);
   }));
 }
 function applyAccess(context: ManagementContext, registry: KnowledgeSourceRegistry, sourceId: string, access: ReturnType<typeof selection>) {
@@ -140,8 +145,7 @@ function runKnowledgeSourceAction(actionId: KnowledgeSourceActionId, rawPayload:
       sourceId = typeof payload.source_id === 'string' && payload.source_id.trim() ? payload.source_id.trim() : `notes.${crypto.randomUUID()}`;
       if (!/^[\w.:-]{1,160}$/.test(sourceId)) reject('knowledge_source_payload_invalid', 'source_id is invalid.');
       if (registry.sources.some(source => source.source_id === sourceId || fs.existsSync(source.root) && fs.realpathSync(source.root) === root)) reject('knowledge_source_already_connected', 'This notes folder already has a source; configure its existing entry.');
-      const label = typeof payload.label === 'string' && payload.label.trim() ? payload.label.trim() : '个人资料库';
-      if (label.length > 160 || label.startsWith('/') || /[\r\n\0]/.test(label)) reject('knowledge_source_payload_invalid', 'Use a short source label.');
+      const label = payload.label === undefined ? '个人资料库' : sourceLabel(payload);
       registry.sources.push({ source_id: sourceId, label, root: root!, status: 'active', writable: access.writes.length > 0, grants: [] });
     }
     applyAccess(context, registry, sourceId, access);
@@ -158,10 +162,15 @@ function runKnowledgeSourceAction(actionId: KnowledgeSourceActionId, rawPayload:
     for (const entry of binding.value.registries) if (sameWorkspace(entry.registry_ref, selected.registry.file)) entry.source_ids = entry.source_ids.filter(id => id !== selected.source.source_id);
     writePair(selected.context, selected.registry.file, null, binding, beforeContext, selected.registry.bytes);
   } else {
-    const access = selection(payload, deps);
-    applyAccess(selected.context, selected.registry.value, selected.source.source_id, access);
-    bindSource(binding, selected.registry.file, selected.source.source_id, access.scopes);
-    writePair(selected.context, selected.registry.file, selected.registry.value, binding, beforeContext, selected.registry.bytes);
+    const hasAccess = ['scope_ids', 'consumer_domain_ids', 'write_domain_ids'].some(field => field in payload);
+    if (!hasAccess && payload.label === undefined) reject('knowledge_source_payload_invalid', 'Choose a source name or explicit access settings.');
+    if (payload.label !== undefined) selected.source.label = sourceLabel(payload);
+    if (hasAccess) {
+      const access = selection(payload, deps);
+      applyAccess(selected.context, selected.registry.value, selected.source.source_id, access);
+      bindSource(binding, selected.registry.file, selected.source.source_id, access.scopes);
+    }
+    writePair(selected.context, selected.registry.file, selected.registry.value, binding, beforeContext, selected.registry.bytes, hasAccess);
   }
   return { knowledge_sources: listKnowledgeSourceManagement(deps), knowledge_source_operation: { action_id: actionId, status: 'applied', source_bodies_preserved: true, other_workspace_grants_preserved: true } };
 }

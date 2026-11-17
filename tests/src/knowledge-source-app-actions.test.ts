@@ -75,12 +75,17 @@ test('knowledge source CLI and App actions share scoped state without returning 
     })], env).app_action_execution.result;
     assertSafe(changed);
     assert.deepEqual(changed.knowledge_sources.items[0].write_domain_ids, [consumer]);
+    const renamed = runCli(['knowledge', 'source-configure', '--resource-id', item.resource_id,
+      '--label', 'Readable investment notes', '--expected-revision', changed.knowledge_sources.items[0].revision_identity], env);
+    assertSafe(renamed);
+    assert.equal(renamed.knowledge_sources.items[0].label, 'Readable investment notes');
+    assert.deepEqual(renamed.knowledge_sources.items[0].write_domain_ids, [consumer]);
     const stale = runCliFailure(['knowledge', 'source-disconnect', '--resource-id', item.resource_id,
       '--expected-revision', item.revision_identity], env).payload;
     assert.equal(stale.error.details.reason_code, 'knowledge_source_changed');
     assertSafe(stale);
     const disconnected = runCli(['knowledge', 'source-disconnect', '--resource-id', item.resource_id,
-      '--expected-revision', changed.knowledge_sources.items[0].revision_identity], env);
+      '--expected-revision', renamed.knowledge_sources.items[0].revision_identity], env);
     assertSafe(disconnected);
     assert.equal(disconnected.knowledge_sources.items[0].connected, false);
     assert.equal(fs.readFileSync(path.join(vault, 'note.md'), 'utf8'), noteBody);

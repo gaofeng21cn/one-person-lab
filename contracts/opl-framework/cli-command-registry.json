@@ -174,10 +174,17 @@
           "summary": "Exact configured knowledge resource identity."
         },
         {
+          "name": "label",
+          "flag": "--label",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Readable source name; label-only updates preserve grants and bindings."
+        },
+        {
           "name": "scope-id",
           "flag": "--scope-id",
           "value_kind": "string",
-          "required": true,
+          "required": false,
           "summary": "Explicit knowledge scope identity; repeat for multiple scopes.",
           "multiple": true
         },
@@ -185,7 +192,7 @@
           "name": "consumer-domain-id",
           "flag": "--consumer-domain-id",
           "value_kind": "string",
-          "required": true,
+          "required": false,
           "summary": "Explicit eligible consumer domain identity; repeat for multiple consumers.",
           "multiple": true
         },

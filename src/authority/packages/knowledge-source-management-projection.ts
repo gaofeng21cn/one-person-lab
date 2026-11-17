@@ -58,9 +58,13 @@ export function projectKnowledgeSource(context: ManagementContext, registry: Ret
   }
   const status = reason ? (connected ? 'attention' as const : 'unknown' as const) : 'ready' as const;
   const bounded = activeItems.length > 100;
+  const sourceName = source.label?.trim();
+  const displayName = sourceName && sourceName !== source.source_id
+    ? label(sourceName, '资料库')
+    : `${label(context.label, '工作区')} · 资料库 ${registry.value.sources.indexOf(source) + 1}`;
   return {
     resource_id: sourceResourceId(context, registry.file, source.source_id), source_id: safeId(source.source_id) ?? 'source',
-    label: label(source.label, safeId(source.source_id) ?? '知识来源'), context_id: context.context_id,
+    label: displayName, context_id: context.context_id,
     status, connected, access_editable: accessEditable, ...(!accessEditable ? { access_edit_reason: 'knowledge_source_granular_grants_require_owner' } : {}), scope_ids: scopes, consumer_domain_ids: domains, write_domain_ids: writeDomains,
     source_writable: source.writable, scope_expansion_allowed: !(binding?.source_ids.some(id => id !== source.source_id)),
     available_scope_ids: binding?.scope_ids.filter(scope => safeId(scope)) ?? [], consumer_package_ids: [...new Set(consumers.flatMap(consumer => consumer.package_id ? [consumer.package_id] : []))].sort(),
@@ -73,7 +77,7 @@ export function projectKnowledgeSource(context: ManagementContext, registry: Ret
       observed_at: (deps.now ?? new Date()).toISOString() },
     readiness: { status, ...(reason ? { reason } : {}) }, ...(reason ? { reason } : {}),
     owner_settings_route: 'resources',
-    action_ids: ['knowledge_source_check', ...(accessEditable ? ['knowledge_source_configure'] : []), ...(connected ? ['knowledge_source_disconnect'] : [])],
+    action_ids: ['knowledge_source_check', 'knowledge_source_configure', ...(connected ? ['knowledge_source_disconnect'] : [])],
   };
 }
 export function listKnowledgeSourceProjection(deps: ManagementDependencies = {}) {

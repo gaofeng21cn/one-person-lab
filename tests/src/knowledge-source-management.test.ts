@@ -195,3 +195,43 @@ test('a first library receives an owner scope default without changing existing 
     assert.equal(fs.existsSync(emptyProfile), false);
   } finally { f.cleanup(); }
 });
+
+test('rename-only configuration preserves granular grants, scopes, bodies and disconnected bindings', () => {
+  const f = setup();
+  try {
+    (f.registry as KnowledgeSourceRegistry).sources[0]!.grants.push({ workspace_root: f.workspace, domains: ['other'], scope_ids: ['research'], project_ids: ['research'] });
+    f.save();
+    const row = f.list().items[0]!;
+    executeKnowledgeSourceAction('knowledge_source_disconnect', { resource_id: row.resource_id, expected_revision: row.revision_identity }, f.deps);
+    const source = f.list().items[0]!;
+    fs.writeFileSync(f.bindingRef, JSON.stringify(JSON.parse(fs.readFileSync(f.bindingRef, "utf8"))));
+    const freshSource = f.list().items[0]!;
+    const binding = fs.readFileSync(f.bindingRef);
+    const grants = structuredClone(f.registry.sources[0]!.grants);
+    const payload = { resource_id: source.resource_id, expected_revision: freshSource.revision_identity, label: '财务与投资资料' };
+    executeKnowledgeSourceAction('knowledge_source_configure', payload, f.deps);
+    const after = f.list().items[0]!;
+    assert.equal(after.label, '财务与投资资料');
+    assert.equal(after.connected, false);
+    assert.equal(after.access_editable, false);
+    assert.ok(fs.readFileSync(f.bindingRef).equals(binding));
+    assert.deepEqual(JSON.parse(fs.readFileSync(f.registryRef, 'utf8')).sources[0].grants, grants);
+    assert.equal(fs.readFileSync(path.join(f.source, 'policy.md'), 'utf8'), f.body);
+    assert.throws(() => executeKnowledgeSourceAction('knowledge_source_configure', payload, f.deps), /changed/);
+  } finally { f.cleanup(); }
+});
+
+test('legacy source names use readable context without changing stable identities', () => {
+  const f = setup();
+  try {
+    const originalId = f.registry.sources[0]!.source_id;
+    (f.registry as KnowledgeSourceRegistry).sources[0]!.label = originalId; f.save();
+    const row = f.list().items[0]!;
+    assert.equal(row.source_id, originalId);
+    assert.equal(row.label, '个人资料 · 资料库 1');
+    assert.ok(!row.label.includes(originalId));
+    for (const label of ['', '/private/vault', 'bad\nlabel']) {
+      assert.throws(() => executeKnowledgeSourceAction('knowledge_source_configure', { resource_id: row.resource_id, expected_revision: row.revision_identity, label }, f.deps), /label/);
+    }
+  } finally { f.cleanup(); }
+});
