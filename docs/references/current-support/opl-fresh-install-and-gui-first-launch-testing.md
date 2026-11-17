@@ -40,6 +40,11 @@ SHASUMS 核对归档，解包后回读实际 Node 版本再切入原受管目录
 - 配置 provider/service/worker 的真实 status；
 - `opl app state --profile fast --json` 可读取。
 
+`opl system initialize` 的普通 JSON 与 `--events` 模式均跳过 Codex 最新版本查询，
+避免更新源的网络延迟阻塞 readiness 读取；版本发现仍由更新维护入口执行。
+App 验证应通过生成的随包 wrapper 读取相同状态：未设置 `OPL_TEMPORAL_NAMESPACE`
+时由 Framework 采用仍存活且地址匹配的 worker 命名空间，显式设置时保留操作者选择。
+
 ### 4. Package
 
 - native carrier可列出目标 Package；

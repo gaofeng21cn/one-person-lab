@@ -219,11 +219,16 @@ export function buildPublicSystemCommandSpecs(
     group: 'system',
     handler: async (args) => {
       if (args.length === 0) {
-        return buildPublicSystemInitializePayload(await buildOplInitialize(getContracts()));
+        // Readiness must not wait for an unrelated external latest-version
+        // lookup; version discovery belongs to update maintenance.
+        return buildPublicSystemInitializePayload(await buildOplInitialize(getContracts(), {
+          skipLatestLookup: true,
+        }));
       }
       if (args.length === 1 && args[0] === '--events') {
         let lastSequence = 0;
         const payload = buildPublicSystemInitializePayload(await buildOplInitialize(getContracts(), {
+          skipLatestLookup: true,
           onEvent: (event) => {
             lastSequence = event.sequence;
             writeJsonLine({

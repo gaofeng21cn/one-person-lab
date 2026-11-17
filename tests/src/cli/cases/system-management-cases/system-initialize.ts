@@ -58,7 +58,12 @@ exit 1
           total_modules_count: number;
         };
         core_engines: {
-          codex: { installed: boolean };
+          codex: {
+            installed: boolean;
+            latest_version: string | null;
+            latest_version_status: string;
+            diagnostics: string[];
+          };
         };
         native_helpers: {
           health_status: string;
@@ -162,6 +167,12 @@ exit 1
     assert.equal(output.system_initialize.setup_flow.progress.ready_full_readiness_count, 0);
     assert.equal(output.system_initialize.setup_flow.progress.total_full_readiness_count, 2);
     assert.equal(output.system_initialize.core_engines.codex.installed, true);
+    assert.equal(output.system_initialize.core_engines.codex.latest_version, null);
+    assert.equal(output.system_initialize.core_engines.codex.latest_version_status, 'unknown');
+    assert.equal(
+      output.system_initialize.core_engines.codex.diagnostics.includes('codex_cli_latest_lookup_skipped_fast_profile'),
+      true,
+    );
     assert.equal(Object.hasOwn(output.system_initialize.core_engines, 'hermes'), false);
     assert.equal(output.system_initialize.native_helpers.lifecycle.commands.repair, 'npm run native:repair');
     assert.equal(
@@ -341,6 +352,11 @@ exit 1
     assert.equal(finalEvent?.phase, 'summary');
     assert.equal(finalEvent?.payload.system_initialize.surface_id, 'opl_system_initialize');
     assert.equal(finalEvent?.payload.system_initialize.workspace_root.selected_path, workspaceRoot);
+    assert.equal(finalEvent?.payload.system_initialize.core_engines.codex.latest_version, null);
+    assert.equal(
+      finalEvent?.payload.system_initialize.core_engines.codex.diagnostics.includes('codex_cli_latest_lookup_skipped_fast_profile'),
+      true,
+    );
 
     const jsonOutput = runCli(
       ['system', 'initialize'],
