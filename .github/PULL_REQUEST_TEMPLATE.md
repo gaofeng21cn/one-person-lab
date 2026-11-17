@@ -1,4 +1,4 @@
-Read [CONTRIBUTING.md](https://github.com/gaofeng21cn/one-person-lab/blob/main/CONTRIBUTING.md) before submitting. The principal maintainer account, `gaofeng21cn`, is exempt from the third-party intake requirements below.
+Read [CONTRIBUTING.md](https://github.com/gaofeng21cn/one-person-lab/blob/main/CONTRIBUTING.md) before submitting. The canonical policy distinguishes owner-operated accounts, repository-scoped development partners, and third-party contributors; the Issue prerequisite below applies to the third-party tier.
 
 ## Contribution classification
 

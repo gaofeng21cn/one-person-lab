@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this form to report a bug. A directly submitted PR is welcome when maintainers can reproduce the bug. If they cannot reproduce it, an Issue with supporting evidence is required before the PR can be evaluated. Read the [contribution guide](https://github.com/gaofeng21cn/one-person-lab/blob/main/CONTRIBUTING.md). The principal maintainer account, `gaofeng21cn`, is exempt from this third-party intake requirement.
+        Use this form to report a bug. A direct third-party PR is welcome for an easily reproducible defect that restores intended behavior. Otherwise, provide an Issue and evidence. Read the [contribution guide](https://github.com/gaofeng21cn/one-person-lab/blob/main/CONTRIBUTING.md) for owner-operated and repository-scoped partner treatment. A product design preference is not itself a bug.
   - type: textarea
     id: symptom
     attributes:

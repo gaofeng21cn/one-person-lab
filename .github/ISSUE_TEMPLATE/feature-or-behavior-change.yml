@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this form for new functionality or an intentional change to existing behavior, defaults, permissions, compatibility, visibility, or lifecycle. Explain the need before proposing implementation; an Issue does not itself approve the proposal. Read the [contribution guide](https://github.com/gaofeng21cn/one-person-lab/blob/main/CONTRIBUTING.md). The principal maintainer account, `gaofeng21cn`, is exempt from this third-party intake requirement.
+        Third-party contributors must explain and substantiate the necessity of new functionality or changes to behavior, defaults, permissions, compatibility, visibility, or lifecycle. An Issue does not approve the proposal; maintainers assess it against current product intent. Read the [contribution guide](https://github.com/gaofeng21cn/one-person-lab/blob/main/CONTRIBUTING.md) for owner-operated and repository-scoped partner treatment.
   - type: textarea
     id: user-task
     attributes:
