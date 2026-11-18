@@ -18,7 +18,7 @@
     "runtime_source_checkout_required": false
   },
   "model_provider": "oplgateway",
-  "model": "gpt-6-astra",
+  "model": "gpt-6.2-astra",
   "model_reasoning_effort": "max",
   "provider_name": "OPL Gateway",
   "base_url": "https://gateway.medopl.com/v1",

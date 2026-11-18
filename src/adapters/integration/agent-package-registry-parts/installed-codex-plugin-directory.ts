@@ -122,7 +122,7 @@ export function discoverInstalledOwnerProfileDescriptors(input: {
   env?: NodeJS.ProcessEnv;
   runner?: CarrierDiscoveryInput['runner'];
 } = {}) {
-  return [...discoverInstalledPackageDescriptors(input).values()]
+  return [...discoverPackageDescriptors(input).values()]
     .filter((descriptor) => (
       descriptor.manifest.source === 'first_party'
       && descriptor.manifestPath === path.join(descriptor.sourcePath, 'opl-package.json')

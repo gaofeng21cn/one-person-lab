@@ -121,13 +121,18 @@ function writeOplFlowPackage(root: string) {
   };
 }
 
-function writeInstalledOwnerProfileFixture(root: string) {
+function writeInstalledOwnerProfileFixture(root: string, {
+  packageId = 'fixture.profile.owner',
+  selector = 'fixture-profile-owner@fixture-marketplace',
+  version = '1.2.3',
+} = {}) {
   const sourceRoot = path.join(root, 'installed-owner-profile');
   const profilePath = path.join(sourceRoot, 'profiles', 'default', 'AGENTS.md');
+  const pluginId = selector.split('@', 1)[0];
   const manifest = agentPackageManifest({
-    packageId: 'fixture.profile.owner',
-    agentId: 'fixture-profile-owner',
-    pluginId: 'fixture-profile-owner',
+    packageId,
+    agentId: pluginId,
+    pluginId,
     distributionPayload: null,
     profileSurface: {
       runtime_profile: { source_path: 'profiles/default/AGENTS.md', target_id: 'user_agents_profile' },
@@ -138,13 +143,14 @@ function writeInstalledOwnerProfileFixture(root: string) {
   });
   manifest.source = 'first_party';
   manifest.publisher = 'one-person-lab';
+  manifest.version = version;
   fs.mkdirSync(path.dirname(profilePath), { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, 'opl-package.json'), formatJsonPayload(manifest));
   fs.writeFileSync(profilePath, 'Descriptor-owned default instructions.\n');
   return {
     codexPath: writeFakeCodexPluginList(root, [{
-      pluginId: 'fixture-profile-owner@fixture-marketplace',
-      version: '1.2.3',
+      pluginId: selector,
+      version,
       installed: true,
       enabled: true,
       source: { source: 'local', path: sourceRoot },
@@ -181,14 +187,21 @@ if (args === 'app-server --stdio') {
   return codexPath;
 }
 
-test('Codex user instructions restore from one installed owner descriptor without lifecycle state', () => {
+test('Codex user instructions restore the installed owner profile even when its version matches the catalog', () => {
+  const projection = JSON.parse(fs.readFileSync(
+    new URL('../../contracts/opl-framework/packages/opl-flow.json', import.meta.url), 'utf8',
+  ));
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-owner-profile-'));
   const previousCodexHome = process.env.CODEX_HOME;
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousPluginBin = process.env.OPL_CODEX_PLUGIN_BIN;
   process.env.CODEX_HOME = path.join(root, 'codex-home');
   process.env.OPL_STATE_DIR = path.join(root, 'opl-state');
-  const fixture = writeInstalledOwnerProfileFixture(root);
+  const fixture = writeInstalledOwnerProfileFixture(root, {
+    packageId: projection.package_id,
+    selector: projection.codex_surface.configured_codex_plugin_carrier.plugin_selector,
+    version: projection.version,
+  });
   process.env.OPL_CODEX_PLUGIN_BIN = fixture.codexPath;
 
   try {
@@ -197,7 +210,7 @@ test('Codex user instructions restore from one installed owner descriptor withou
     assert.equal(defaultInstructions.source, 'installed_owner_descriptor');
     assert.equal(defaultInstructions.source_root, fs.realpathSync(fixture.sourceRoot));
     assert.equal(defaultInstructions.source_path, fs.realpathSync(fixture.profilePath));
-    assert.equal(defaultInstructions.package_version, '1.2.3');
+    assert.equal(defaultInstructions.package_version, projection.version);
     assert.equal(defaultInstructions.content, 'Descriptor-owned default instructions.\n');
     assert.equal(
       defaultInstructions.sha256,
