@@ -1,5 +1,6 @@
 import { nodeFixtureShebang } from './cli/helpers-parts/node-executable.ts';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -17,6 +18,26 @@ import { agentPackageManifest, formatJsonPayload } from './cli/cases/packages-ca
 
 function sha256(content: string) {
   return `sha256:${crypto.createHash('sha256').update(content).digest('hex')}`;
+}
+
+function flowProjectionSourceIsPublished() {
+  if (process.env.CI === 'true') return true;
+  try {
+    const manifest = JSON.parse(fs.readFileSync(
+      path.join(process.cwd(), 'contracts/opl-framework/packages/opl-flow.json'),
+      'utf8',
+    ));
+    const commit = manifest.codex_surface?.carrier_source_commit;
+    if (typeof commit !== 'string' || !/^[0-9a-f]{40}$/.test(commit)) return false;
+    const remote = execFileSync(
+      'git',
+      ['ls-remote', 'https://github.com/gaofeng21cn/opl-flow.git', 'refs/heads/main'],
+      { encoding: 'utf8', timeout: 15_000 },
+    ).trim();
+    return remote.split(/\s+/)[0] === commit;
+  } catch {
+    return false;
+  }
 }
 
 function writeOplFlowPackage(root: string) {
@@ -240,7 +261,11 @@ test('Codex user instructions reject a bare plugin manifest as a first-party pro
   }
 });
 
-test('Codex user instructions use SHA preconditions, backup, and atomic readback', () => {
+test('Codex user instructions use SHA preconditions, backup, and atomic readback', {
+  skip: flowProjectionSourceIsPublished()
+    ? false
+    : 'local Flow projection points to an unpublished source commit',
+}, () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-personalization-'));
   const previousCodexHome = process.env.CODEX_HOME;
   const previousStateDir = process.env.OPL_STATE_DIR;

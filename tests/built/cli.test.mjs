@@ -48,6 +48,18 @@ ${handlerBody}
   };
 }
 
+function localNpmInstallCacheReady() {
+  if (process.env.CI === 'true') return true;
+  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  const dependencies = Object.entries(manifest.dependencies ?? {})
+    .filter(([, version]) => typeof version === 'string' && !version.startsWith('file:'));
+  return dependencies.every(([name]) => {
+    const result = spawnSync(npm, ['cache', 'ls', name], { encoding: 'utf8' });
+    return result.status === 0 && result.stdout.trim().length > 0;
+  });
+}
+
 test('built CLI entrypoint loads the emitted main module', () => {
   assert.equal(fs.existsSync(cliEntrypoint), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'dist', 'entrypoints', 'cli', 'main.js')), true);
@@ -122,11 +134,17 @@ exit 1
   }
 });
 
-test('npm tarball installs its workspace runtime dependencies without a checkout repair', { timeout: 240_000 }, () => {
+test('npm tarball installs its workspace runtime dependencies without a checkout repair', {
+  timeout: 240_000,
+  skip: localNpmInstallCacheReady() ? false : 'local npm cache does not contain the full dependency closure',
+}, () => {
   const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-npm-installed-cli-'));
   const prefix = path.join(testRoot, 'prefix');
   const testHome = path.join(testRoot, 'home');
   fs.mkdirSync(testHome);
+  const npmCache = process.env.NPM_CONFIG_CACHE
+    ?? process.env.npm_config_cache
+    ?? path.join(os.homedir(), '.npm');
   const env = {
     ...process.env,
     HOME: testHome,
@@ -135,6 +153,7 @@ test('npm tarball installs its workspace runtime dependencies without a checkout
     NODE_NO_WARNINGS: '1',
     NODE_PATH: '',
     NODE_OPTIONS: '',
+    npm_config_cache: npmCache,
   };
   const run = (command, args, cwd = testRoot) => {
     const result = spawnSync(command, args, { cwd, env, encoding: 'utf8', timeout: 180_000, maxBuffer: 8 * 1024 * 1024 });
@@ -143,7 +162,13 @@ test('npm tarball installs its workspace runtime dependencies without a checkout
   };
   try {
     const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    const packed = JSON.parse(run(npm, ['pack', '--ignore-scripts', '--json', '--pack-destination', testRoot], repoRoot).stdout)[0];
+    const packResult = JSON.parse(run(npm, ['pack', '--ignore-scripts', '--json', '--pack-destination', testRoot], repoRoot).stdout);
+    const packed = Array.isArray(packResult)
+      ? packResult[0]
+      : packResult?.filename
+        ? packResult
+        : Object.values(packResult ?? {})[0];
+    assert.equal(typeof packed?.filename, 'string');
     run(npm, ['install', '--global', '--prefix', prefix, path.join(testRoot, packed.filename),
       '--prefer-offline', '--no-audit', '--no-fund']);
     const installedRoot = path.join(prefix, 'lib', 'node_modules', 'opl-framework');
