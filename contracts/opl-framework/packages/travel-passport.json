@@ -3,7 +3,7 @@
   "package_id": "travel-passport",
   "display_name": "Journey Atlas",
   "publisher": "gaofeng21cn",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/journey-atlas.git",
   "package_role": "capability_package",
@@ -52,8 +52,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/travel-passport-0.2.2.json",
-    "carrier_source_commit": "058b3828f76b8720fb7f72f8e49155394ba2453c"
+    "plugin_payload_manifest_url": "payloads/travel-passport-0.2.3.json",
+    "carrier_source_commit": "b8b6f822fcca25d9c433f7e7c9c50a8cf58006e3"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -91,14 +91,17 @@
         "view_id": "travel.passport.annual",
         "view_type": "artifact_view",
         "title_i18n": {
-          "zh-CN": "年度旅行回顾",
-          "en-US": "Annual travel review"
+          "zh-CN": "年度总结",
+          "en-US": "Year in review"
         },
         "data_ref": "travel.passport.v1#annual",
         "empty_state_i18n": {
-          "zh-CN": "尚未找到年度旅行卡",
-          "en-US": "No annual travel card is available"
-        }
+          "zh-CN": "选择年度、主题、风格与单卡或多卡，生成自己的年度总结",
+          "en-US": "Choose a year, theme, style and single card or story"
+        },
+        "command_ids": [
+          "travel.passport.annual.generate"
+        ]
       },
       {
         "view_id": "travel.passport.regions",
@@ -123,6 +126,15 @@
         },
         "action_ref": "travel.passport.v1#runtime.setup",
         "confirmation_required": true
+      },
+      {
+        "command_id": "travel.passport.annual.generate",
+        "label_i18n": {
+          "zh-CN": "制作年度总结",
+          "en-US": "Create year in review"
+        },
+        "action_ref": "travel.passport.v1#annual.generate",
+        "confirmation_required": false
       }
     ],
     "badges": [],
@@ -177,6 +189,10 @@
       "app-contribution-adapter.json",
       "app-contribution.mjs",
       "assets/branding/journey-atlas-logo.png",
+      "assets/fonts/dm-serif-display/DMSerifDisplay-Regular.ttf",
+      "assets/fonts/dm-serif-display/OFL.txt",
+      "assets/fonts/manrope/Manrope-Variable.ttf",
+      "assets/fonts/manrope/OFL.txt",
       "data/atlas-config.example.json",
       "data/china.geojson",
       "data/city-catalog.json",
@@ -198,6 +214,7 @@
       "data/usa.geojson",
       "docs/城市地图与数据规范.md",
       "docs/安装与共享基座.md",
+      "docs/年度总结.md",
       "docs/架构与数据边界.md",
       "docs/维护流程.md",
       "docs/输入目录约定.md",
@@ -265,6 +282,7 @@
       "scripts/render-all.mjs",
       "scripts/render-annual.mjs",
       "scripts/render-atlas.mjs",
+      "scripts/render-year-review.mjs",
       "scripts/render.mjs",
       "scripts/repair-formal-node-edges.mjs",
       "scripts/repair-journey-scope.mjs",
@@ -285,6 +303,8 @@
       "scripts/verify-all.mjs",
       "scripts/visit-evidence.mjs",
       "scripts/visit-instances.mjs",
+      "scripts/year-review-assets.mjs",
+      "scripts/year-review.mjs",
       "skills/travel-planning/SKILL.md",
       "src/annual.css",
       "src/annual.html",
@@ -311,9 +331,14 @@
       "src/site.css",
       "src/site.html",
       "src/transport-time.mjs",
-      "src/world-dots.js"
+      "src/world-dots.js",
+      "src/year-review-app.mjs",
+      "src/year-review-story.mjs",
+      "src/year-review.css",
+      "src/year-review.html",
+      "src/year-review.mjs"
     ],
-    "digest": "sha256:7c66c751edc5355a7e6c30106dcbcb60848f4758aceaecfa2af5cdbc50cf9e1d"
+    "digest": "sha256:5160b0e3221bd20773e21dd0c3a74e7a9165c01d7efe77652f87f000e9df2375"
   },
   "visibility": "public",
   "description": "Agent-native travel atlas using user-owned travel records and Obsidian sources.",
@@ -360,5 +385,5 @@
     "owner_package_manifest_ref": "plugins/travel-passport/opl-package.json",
     "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
   },
-  "source_commit": "058b3828f76b8720fb7f72f8e49155394ba2453c"
+  "source_commit": "b8b6f822fcca25d9c433f7e7c9c50a8cf58006e3"
 }
