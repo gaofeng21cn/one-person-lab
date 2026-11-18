@@ -148,6 +148,7 @@ test('provider-hosted attempt launch fails closed before queueing when its canon
   const previousCodexHome = process.env.CODEX_HOME;
   process.env.OPL_STATE_DIR = path.join(root, 'state');
   process.env.CODEX_HOME = path.join(root, 'codex-home');
+  fs.mkdirSync(process.env.CODEX_HOME, { recursive: true });
   const db = new DatabaseSync(':memory:');
   createFamilyRuntimeQueueTables(db);
   const now = new Date().toISOString();
