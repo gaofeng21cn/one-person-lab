@@ -36,6 +36,12 @@ export function executionSessionRefFromAttemptState(state: TemporalStageAttemptW
     if (typeof progress.thread_id === 'string' && progress.thread_id) {
       return `codex://threads/${progress.thread_id}`;
     }
+    // Runner progress heartbeats carry the session identity at the top level of the event
+    // (`recordActivityHeartbeat`), while the final receipt may report a null session. Read the
+    // event-level ref too, otherwise a completed Attempt looks session-less and the Stage dies.
+    if (typeof event.execution_session_ref === 'string' && event.execution_session_ref) {
+      return event.execution_session_ref;
+    }
   }
   return null;
 }
