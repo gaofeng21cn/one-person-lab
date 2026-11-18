@@ -59,9 +59,10 @@ export function ensureGatewayPrivateDir() {
   const paths = resolveOplStatePaths();
   const parent = path.dirname(paths.gateway_account_dir);
   fs.mkdirSync(parent, { recursive: true });
-  if (!lstatOrNull(paths.gateway_account_dir)) {
-    fs.mkdirSync(paths.gateway_account_dir, { mode: 0o700 });
-  }
+  // Multiple startup readers can initialize the same state root at once.
+  // Recursive creation makes the directory operation idempotent and leaves
+  // the existing ownership, symlink, type and permission checks authoritative.
+  fs.mkdirSync(paths.gateway_account_dir, { recursive: true, mode: 0o700 });
   assertPrivatePath(paths.gateway_account_dir, 'directory');
   return paths;
 }

@@ -5,6 +5,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { readLocalCodexAccessState } from '../../src/kernel/local-codex-defaults.ts';
@@ -29,6 +30,8 @@ import {
   selectOplGatewayManagedGroup,
   useOplGatewayForModelAccess,
 } from '../../src/adapters/integration/opl-gateway-account.ts';
+
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 function json(response: http.ServerResponse, value: unknown, status = 200) {
   response.writeHead(status, { 'content-type': 'application/json' });
@@ -440,6 +443,30 @@ test('gateway private store rejects broad permissions and symlink roots', () => 
   } finally {
     if (previous === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previous;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('gateway private store tolerates concurrent directory creators', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gateway-private-store-race-'));
+  const stateDir = path.join(root, 'state');
+  const privateStore = pathToFileURL(path.join(repositoryRoot, 'src/adapters/integration/opl-gateway-account-parts/private-store.ts')).href;
+  const script = `import { readOrCreateGatewayInstallation } from ${JSON.stringify(privateStore)}; readOrCreateGatewayInstallation();`;
+  const children = Array.from({ length: 8 }, () => spawn(process.execPath, [
+    '--experimental-strip-types', '--input-type=module', '-e', script,
+  ], {
+    cwd: repositoryRoot,
+    env: { ...process.env, OPL_STATE_DIR: stateDir },
+    stdio: ['ignore', 'ignore', 'pipe'],
+  }));
+  try {
+    await Promise.all(children.map((child) => new Promise<void>((resolve, reject) => {
+      let stderr = '';
+      child.stderr?.on('data', (chunk) => { stderr += chunk; });
+      child.once('error', reject);
+      child.once('close', (code) => code === 0 ? resolve() : reject(new Error(stderr || `child exited with ${code}`)));
+    })));
+  } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
