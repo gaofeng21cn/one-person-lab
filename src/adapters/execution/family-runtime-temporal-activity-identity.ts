@@ -130,10 +130,17 @@ export function requirePersistedAttemptStageRunIdentity(input: {
 export function exactRefsFromCloseoutMetadata(value: unknown) {
   const entries = Array.isArray(value) ? value.filter(isRecord) : [];
   return entries.flatMap((entry) => {
-    const kind = readString(entry.kind);
     const ref = readString(entry.ref) ?? readString(entry.uri);
     const digest = readString(entry.sha256)?.match(/^(?:sha256:)?([a-f0-9]{64})$/i);
     const sizeBytes = readNumber(entry.size_bytes);
+    const refKind = readString(entry.ref_kind);
+    // `kind` is the framework artifact kind and `ref_kind` is the domain role label, but an
+    // entry carrying exact ref, sha256 and size_bytes identifies one artifact either way.
+    // Framework-observed artifacts — the bytes OPL itself verified and attached an identity
+    // receipt to — are recorded with only `ref_kind`, so requiring `kind` discarded them and
+    // the reviewer-snapshot authority lost exactly the artifacts the producer had declared.
+    // Accept `ref_kind` as the label when `kind` is absent instead of dropping the entry.
+    const kind = readString(entry.kind) ?? refKind;
     if (
       !kind
       || !ref
@@ -148,7 +155,6 @@ export function exactRefsFromCloseoutMetadata(value: unknown) {
     // An entry whose ref, sha256 and size_bytes are exact denotes the same artifact
     // under either label, so a reviewer-snapshot authority that copies the other
     // label still binds this exact artifact rather than escaping it.
-    const refKind = readString(entry.ref_kind);
     return refKind && refKind !== kind ? [exactRef, { ...exactRef, kind: refKind }] : [exactRef];
   });
 }
