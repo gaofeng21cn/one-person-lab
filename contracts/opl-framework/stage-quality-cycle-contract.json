@@ -77,6 +77,11 @@
         "outcome"
       ]
     },
+    "role_optional_fields": {
+      "repairer": [
+        "repair_observations"
+      ]
+    },
     "review_outcome_dependent_fields": {
       "non_hard_stop_reviewer": [
         "findings"
@@ -485,6 +490,8 @@
       ],
       "finding_closure_review_hard_stop_re_review_result_sha256": null,
       "repair_map_must_equal_persisted_repairer_output": true,
+      "repair_map_contains_required_findings_only": true,
+      "repair_observations_excluded_from_repair_map_sha256": true,
       "finding_body_must_equal_repairer_and_re_reviewer_inputs": true,
       "id_only_synthetic_finding_or_repair_map_forbidden": true
     }
@@ -526,6 +533,29 @@
       "not_repaired",
       "blocked"
     ],
+    "repair_map_contains_required_findings_only": true,
+    "repair_observations": {
+      "authoritative": false,
+      "required": false,
+      "may_reference": "known_required_false_findings_only",
+      "rejects_required_finding_ids": true,
+      "rejects_unknown_finding_ids": true,
+      "rejects_duplicate_finding_ids": true,
+      "required_fields": [
+        "finding_id",
+        "repair_status",
+        "changed_artifact_refs",
+        "repair_evidence_refs"
+      ],
+      "optional_fields": [
+        "note"
+      ],
+      "closes_findings": false,
+      "substitutes_for_required_repair_map_coverage": false,
+      "changes_repair_route": false,
+      "enters_repair_map_sha256": false,
+      "visible_to_re_reviewer_as_non_authoritative_context": true
+    },
     "re_review_required_inputs": [
       "prior_findings",
       "repair_map",

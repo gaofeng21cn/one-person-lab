@@ -146,6 +146,14 @@ export type StageQualityRepairMapEntry = {
   repair_evidence_refs: string[];
 };
 
+export type StageQualityRepairObservation = {
+  finding_id: string;
+  repair_status: 'repaired' | 'not_repaired' | 'blocked';
+  changed_artifact_refs: string[];
+  repair_evidence_refs: string[];
+  note?: string;
+};
+
 export type StageQualityFindingClosure = {
   finding_id: string;
   status: 'closed' | 'partially_closed' | 'still_open';

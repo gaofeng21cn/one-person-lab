@@ -4,9 +4,11 @@ import {
   normalizeStageQualityArtifactIdentity,
   validateStageQualityFindings,
   validateStageQualityRepairMap,
+  validateStageQualityRepairObservations,
   type StageQualityFinding,
   type StageQualityFindingClosure,
   type StageQualityRepairMapEntry,
+  type StageQualityRepairObservation,
 } from '../../authority/stages/public/stage-quality-cycle.ts';
 import { asRecord, asRecordList, requiredRecordList } from './family-runtime-temporal-workflow-values.ts';
 
@@ -162,6 +164,26 @@ export function repairMapList(value: unknown, findings: StageQualityFinding[]) {
     findings,
     repairMap: asRecordList(value) as StageQualityRepairMapEntry[],
   });
+}
+
+export function repairObservationsList(value: unknown, findings: StageQualityFinding[]) {
+  return validateStageQualityRepairObservations({
+    findings,
+    repairObservations: (value === undefined ? [] : value) as StageQualityRepairObservation[],
+  });
+}
+
+/**
+ * Read the repairer's non-authoritative observations from the persisted closeout
+ * route impact for a fresh re-review. The strict repair_map remains the only
+ * closure/authority input; observations are context only.
+ */
+export function repairObservationsFromCloseoutRouteImpact(input: {
+  findings: StageQualityFinding[];
+  routeImpact: unknown;
+}) {
+  const qualityEnvelope = asRecord(asRecord(input.routeImpact).stage_quality_cycle);
+  return repairObservationsList(qualityEnvelope.repair_observations, input.findings);
 }
 
 export function findingClosureList(value: unknown) {
