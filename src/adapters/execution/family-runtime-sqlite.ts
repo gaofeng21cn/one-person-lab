@@ -60,3 +60,23 @@ export function withFamilyRuntimeTransaction<T>(
     throw error;
   }
 }
+
+export function withFamilyRuntimeSavepoint<T>(
+  db: DatabaseSync,
+  savepoint: string,
+  mutation: () => T,
+) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(savepoint)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'SQLite savepoint name is invalid.');
+  }
+  db.exec(`SAVEPOINT ${savepoint}`);
+  try {
+    const result = mutation();
+    db.exec(`RELEASE SAVEPOINT ${savepoint}`);
+    return result;
+  } catch (error) {
+    db.exec(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    db.exec(`RELEASE SAVEPOINT ${savepoint}`);
+    throw error;
+  }
+}

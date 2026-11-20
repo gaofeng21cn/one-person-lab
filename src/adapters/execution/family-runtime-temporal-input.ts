@@ -67,6 +67,7 @@ export type TemporalStageAttemptWorkflowInput = {
     findings?: StageQualityFinding[];
     repair_map?: StageQualityRepairMapEntry[];
     repair_observations?: StageQualityRepairObservation[];
+    repair_closeout_lineage?: Record<string, unknown>;
     context_manifest?: Record<string, unknown>;
   };
   stage_attempt_executor_policy?: Record<string, unknown> | null;

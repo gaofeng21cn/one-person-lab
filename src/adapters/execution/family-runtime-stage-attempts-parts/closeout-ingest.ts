@@ -21,6 +21,7 @@ import { stableId } from '../../../kernel/stable-id.ts';
 import {
   appendActivityEventToRow,
   nowIso,
+  parseStageAttemptCloseoutJson,
   stringifyStageAttemptCloseoutJson,
 } from './shared.ts';
 import { canonicalJsonText } from '../../../kernel/canonical-json.ts';
@@ -29,6 +30,10 @@ import {
   reconcileDomainRouteTerminalTaskForAttempt,
 } from '../family-runtime-domain-route-terminal-sync.ts';
 import { persistStageAttemptUsageObservation } from '../family-runtime-stage-attempt-usage-observation.ts';
+import {
+  requireCanonicalNormalizedStageQualityCloseout,
+} from '../family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
+import { withFamilyRuntimeSavepoint } from '../family-runtime-sqlite.ts';
 
 function normalizeRouteImpact(
   packet: TypedStageCloseoutPacket,
@@ -192,13 +197,14 @@ function syncAttemptRowFromCloseout(
   return inspectStageAttempt(db, input.stageAttemptId);
 }
 
-export function ingestStageAttemptCloseout(
+function ingestStageAttemptCloseoutInSavepoint(
   db: DatabaseSync,
   input: {
     stageAttemptId: string;
     packet: TypedStageCloseoutPacket | Record<string, unknown>;
     costSummary?: Record<string, unknown> | null;
   },
+  normalization: ReturnType<typeof requireCanonicalNormalizedStageQualityCloseout>,
   ) {
     const attempt = inspectStageAttempt(db, input.stageAttemptId);
     const normalizedPacket = normalizeTypedStageCloseoutPacket(input.packet);
@@ -217,7 +223,8 @@ export function ingestStageAttemptCloseout(
         },
       );
     }
-    const packet = admitted.closeoutPacket;
+  const packet = admitted.closeoutPacket;
+  const createdAt = nowIso();
   if (packet.domain_output && packet.domain_output.domain_id !== attempt.domain_id) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -232,13 +239,66 @@ export function ingestStageAttemptCloseout(
   // Validate role/outcome ABI before writing usage or closeout rows.
   normalizeRouteImpact(packet, attempt.route_impact, attempt);
   const costSummary = optionalRecord(input.costSummary);
-  const createdAt = nowIso();
   const closeoutId = packet.closeout_id
     ?? stableId('closeout', [input.stageAttemptId, packet.surface_kind, packet.closeout_refs]);
   const packetJson = stringifyStageAttemptCloseoutJson(packet);
   const existingCloseout = db.prepare(`
     SELECT * FROM stage_attempt_closeouts WHERE closeout_id = ?
   `).get(closeoutId) as StageAttemptCloseoutRow | undefined;
+  // Monotonicity guard: once any canonical normalized child exists for this
+  // Attempt, no different closeout — derived or not — may replace it. The guard
+  // must apply to incoming derived packets too: they are exactly the packets
+  // that could otherwise install a second canonical child.
+  const hasCanonicalDerivedChild = () => {
+    const rows = db.prepare(`
+      SELECT packet_json FROM stage_attempt_closeouts
+      WHERE stage_attempt_id = ?
+      ORDER BY created_at DESC, rowid DESC
+    `).all(input.stageAttemptId) as Pick<StageAttemptCloseoutRow, 'packet_json'>[];
+    return rows.some((row) =>
+      optionalRecord(optionalRecord(parseStageAttemptCloseoutJson(row.packet_json))?.closeout_normalization)
+        ?.status === 'normalized'
+    );
+  };
+  const persistOriginalAudit = () => {
+    if (!normalization) return;
+    const original = normalization.originalCloseout;
+    const originalCloseoutId = original.closeout_id!;
+    const originalPacketJson = stringifyStageAttemptCloseoutJson(original);
+    const existingOriginal = db.prepare('SELECT * FROM stage_attempt_closeouts WHERE closeout_id = ?')
+      .get(originalCloseoutId) as StageAttemptCloseoutRow | undefined;
+    if (existingOriginal
+      && (existingOriginal.stage_attempt_id !== input.stageAttemptId
+        || existingOriginal.packet_json !== originalPacketJson)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Original normalization closeout id conflicts with persisted bytes.',
+        {
+          failure_code: 'stage_closeout_normalization_original_conflict',
+          stage_attempt_id: input.stageAttemptId,
+          original_closeout_id: originalCloseoutId,
+        },
+      );
+    }
+    if (existingCloseout && !existingOriginal) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Derived closeout cannot be replayed without its original audit parent.',
+        {
+          failure_code: 'stage_closeout_normalization_parent_missing',
+          stage_attempt_id: input.stageAttemptId,
+          original_closeout_id: originalCloseoutId,
+          derived_closeout_id: closeoutId,
+        },
+      );
+    }
+    if (!existingOriginal) {
+      db.prepare(`
+        INSERT INTO stage_attempt_closeouts(closeout_id, stage_attempt_id, packet_json, created_at)
+        VALUES (?, ?, ?, ?)
+      `).run(originalCloseoutId, input.stageAttemptId, originalPacketJson, createdAt);
+    }
+  };
   if (existingCloseout) {
     if (existingCloseout.stage_attempt_id !== input.stageAttemptId || existingCloseout.packet_json !== packetJson) {
       const subject = buildFamilyConflictSubject({
@@ -269,6 +329,24 @@ export function ingestStageAttemptCloseout(
         },
       );
     }
+    if (hasCanonicalDerivedChild()) {
+      // A derived exact replay is a no-op, but the original audit parent
+      // invariant still applies: replaying a child without its persisted
+      // parent must fail closed rather than silently no-op.
+      persistOriginalAudit();
+      return {
+        attempt,
+        closeout: {
+          closeout_id: closeoutId,
+          stage_attempt_id: input.stageAttemptId,
+          packet,
+          created_at: existingCloseout.created_at,
+          persisted_count: 1,
+          idempotent_noop: true,
+        },
+      };
+    }
+    persistOriginalAudit();
     if (attempt.executor_kind === 'codex_cli') {
       persistStageAttemptUsageObservation(db, {
         stageAttemptId: input.stageAttemptId,
@@ -298,6 +376,19 @@ export function ingestStageAttemptCloseout(
       },
     };
   }
+  if (hasCanonicalDerivedChild()) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'A different closeout cannot replace an Attempt that already has a canonical normalized child.',
+      {
+        failure_code: 'stage_closeout_normalization_canonical_child_exists',
+        stage_attempt_id: input.stageAttemptId,
+        closeout_id: closeoutId,
+        incoming_closeout_kind: normalization ? 'derived' : 'non_derived',
+      },
+    );
+  }
+  persistOriginalAudit();
   if (attempt.executor_kind === 'codex_cli') {
     persistStageAttemptUsageObservation(db, {
       stageAttemptId: input.stageAttemptId,
@@ -333,4 +424,84 @@ export function ingestStageAttemptCloseout(
       idempotent_noop: false,
     },
   };
+}
+
+// The receipt list names OPL-owned transport identity. The runner canonicalizes
+// it from verified closeout_ref_metadata, so any persisted packet must either
+// omit/empty the claim (derivation or recovery fills it) or carry exactly the
+// verified list. A divergent or malformed non-empty declaration can only come
+// from a path that bypassed runner verification, so ingest fails closed before
+// any durable write. The embedded original inside closeout_normalization
+// lineage is audit data and is intentionally not re-validated here.
+function requireConsistentDeclaredArtifactIdentityReceiptRefs(
+  packet: TypedStageCloseoutPacket,
+  stageAttemptId: string,
+) {
+  const envelope = optionalRecord(optionalRecord(packet.route_impact)?.stage_quality_cycle);
+  if (!envelope) return;
+  const declared = envelope.artifact_identity_receipt_refs;
+  if (declared === undefined || (Array.isArray(declared) && declared.length === 0)) return;
+  const artifactRefs = Array.isArray(envelope.artifact_refs) ? envelope.artifact_refs : [];
+  const metadata = Array.isArray(packet.closeout_ref_metadata) ? packet.closeout_ref_metadata : [];
+  const expected = artifactRefs.map((artifactRef) => {
+    if (typeof artifactRef !== 'string') return null;
+    const entry = metadata.find((candidate) => candidate.ref === artifactRef || candidate.uri === artifactRef);
+    const receiptRef = entry?.artifact_identity_receipt_ref;
+    return typeof receiptRef === 'string' && receiptRef.length > 0 ? receiptRef : null;
+  });
+  const matches = !expected.some((ref) => ref === null)
+    && Array.isArray(declared)
+    && declared.length === expected.length
+    && declared.every((ref, index) => typeof ref === 'string' && ref.length > 0 && ref === expected[index]);
+  if (!matches) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Declared artifact identity receipt refs must equal the verified closeout metadata receipts.',
+      {
+        failure_code: 'stage_quality_cycle_attempt_artifact_identity_mismatch',
+        stage_attempt_id: stageAttemptId,
+      },
+    );
+  }
+}
+
+export function ingestStageAttemptCloseout(
+  db: DatabaseSync,
+  input: {
+    stageAttemptId: string;
+    packet: TypedStageCloseoutPacket | Record<string, unknown>;
+    costSummary?: Record<string, unknown> | null;
+  },
+) {
+  const attempt = inspectStageAttempt(db, input.stageAttemptId);
+  const packet = normalizeTypedStageCloseoutPacket(input.packet);
+  const admitted = validateCloseoutPacketForAttempt({ closeoutPacket: packet, attempt });
+  if (!admitted.closeoutPacket || admitted.rejection) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageAttempt closeout does not match the persisted execution identity.',
+      {
+        failure_code: 'stage_attempt_closeout_identity_rejected',
+        stage_attempt_id: input.stageAttemptId,
+        rejection: admitted.rejection,
+      },
+    );
+  }
+  requireConsistentDeclaredArtifactIdentityReceiptRefs(admitted.closeoutPacket, input.stageAttemptId);
+  const normalization = requireCanonicalNormalizedStageQualityCloseout({
+    closeoutPacket: admitted.closeoutPacket,
+    attempt,
+  });
+  if (admitted.closeoutPacket.closeout_normalization && !normalization) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Derived closeout does not match its canonical original-to-derived lineage.',
+      {
+        failure_code: 'stage_closeout_normalization_lineage_rejected',
+        stage_attempt_id: input.stageAttemptId,
+      },
+    );
+  }
+  return withFamilyRuntimeSavepoint(db, 'stage_attempt_closeout_ingest', () =>
+    ingestStageAttemptCloseoutInSavepoint(db, input, normalization));
 }

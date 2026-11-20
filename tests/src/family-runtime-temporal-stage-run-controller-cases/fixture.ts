@@ -24,6 +24,8 @@ import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environm
 import { queryTemporalStageRunWorkflow } from '../../../src/adapters/execution/family-runtime-temporal-provider-parts/attempt-control.ts';
 import { immutableArtifactRefsFromReviewReceipt } from '../../../src/adapters/execution/family-runtime-temporal-workflow-artifact-authority.ts';
 import { validateWorkflowStageRunInput } from '../../../src/adapters/execution/family-runtime-temporal-workflow-ingress.ts';
+import { deriveNormalizedStageQualityCloseout } from '../../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 const workflowsPath = path.join(repoRoot, 'src/adapters/execution/family-runtime-temporal-workflows.ts');
@@ -178,6 +180,7 @@ export async function runController(input: {
   validateRecoveryBeforeStart?: boolean;
   liveBytesStatus?: 'matches' | 'differs' | 'unknown';
   reviewInputSnapshotStatus?: 'materialized' | 'quality_debt';
+  normalizationScenario?: 'success' | 'failure';
   reviewInputSnapshotManifestMode?: 'complete' | 'duplicate' | 'hash_notation_mismatch';
 }) {
   const testEnv = await (controllerEnvironment ??= createTemporalTestWorkflowEnvironment());
@@ -189,6 +192,7 @@ export async function runController(input: {
   const routeInputs: any[] = [];
   const handoffObservations: any[] = [];
   const attemptSyncs: any[] = [];
+  const derivedRepairPackets = new Map<string, Record<string, any>>();
   let worker: Worker | null = null;
   try {
     const activities = {
@@ -300,6 +304,15 @@ export async function runController(input: {
             context_manifest: contextManifest,
             findings: materialization.findings ?? [],
             repair_map: materialization.repair_map ?? [],
+            ...(role === 're_reviewer' && input.normalizationScenario === 'success'
+              ? (() => {
+                  const derived = derivedRepairPackets.get(materialization.artifact_producer_attempt_ref ?? '');
+                  return {
+                    repair_observations: derived?.route_impact.stage_quality_cycle.repair_observations ?? [],
+                    repair_closeout_lineage: derived?.closeout_normalization ?? null,
+                  };
+                })()
+              : {}),
           },
         };
         workflowInputs.push(workflowInput);
@@ -596,6 +609,15 @@ export async function runController(input: {
           stageQualityCycle.findings = findingMode === 'none' ? []
             : [
                 { ...finding, ...(findingMode === 'optional' ? { severity: 'major', required: false } : {}) },
+                ...(input.normalizationScenario
+                  ? ['finding:editorial-2', 'finding:editorial-3', 'finding:editorial-4'].map((findingId) => ({
+                      finding_id: findingId,
+                      severity: 'minor',
+                      required: false,
+                      evidence_refs: [`evidence:${findingId}`],
+                      repair_expectation: 'Optional editorial observation.',
+                    }))
+                  : []),
               ];
         }
         if (role === 'repairer') {
@@ -606,7 +628,15 @@ export async function runController(input: {
             changed_artifact_refs: [`artifact:deck-v${artifactVersion}`],
             repair_evidence_refs: [`diff:deck-v${artifactVersion}`],
           };
-          stageQualityCycle.repair_map = [requiredRepairEntry];
+          const nonRequiredRepairEntries = input.normalizationScenario
+            ? ['finding:editorial-2', 'finding:editorial-3', 'finding:editorial-4'].map((findingId) => ({
+                finding_id: findingId,
+                repair_status: 'repaired',
+                changed_artifact_refs: [`artifact:deck-v${artifactVersion}`],
+                repair_evidence_refs: [`diff:${findingId}`],
+              }))
+            : [];
+          stageQualityCycle.repair_map = [requiredRepairEntry, ...nonRequiredRepairEntries];
         }
         if (role === 're_reviewer') {
           if (attemptOutcome !== 'blocked' && attemptOutcome !== 'human_gate') {
@@ -726,6 +756,18 @@ export async function runController(input: {
             ? { authority_boundary: { opl: 'raw_executor_output_progress_envelope_only' } }
             : {}),
         };
+        if (role === 'repairer' && input.normalizationScenario === 'success') {
+          const original = normalizeTypedStageCloseoutPacket({
+            ...closeout,
+            surface_kind: 'stage_attempt_closeout_packet',
+            stage_attempt_id: attempt.stage_attempt_id,
+            stage_run_id: attempt.stage_run_id,
+          });
+          const normalized = deriveNormalizedStageQualityCloseout({ closeoutPacket: original, attempt });
+          if (!normalized) throw new Error('expected eligible fixture repairer closeout');
+          derivedRepairPackets.set(`opl://stage_attempts/${attempt.stage_attempt_id}`, normalized.derivedCloseout);
+          return normalized.derivedCloseout;
+        }
         return closeout;
       },
     };

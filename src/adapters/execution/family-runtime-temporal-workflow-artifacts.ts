@@ -181,9 +181,13 @@ export function repairObservationsList(value: unknown, findings: StageQualityFin
 export function repairObservationsFromCloseoutRouteImpact(input: {
   findings: StageQualityFinding[];
   routeImpact: unknown;
+  preserveEntryShapes?: boolean;
 }) {
   const qualityEnvelope = asRecord(asRecord(input.routeImpact).stage_quality_cycle);
-  return repairObservationsList(qualityEnvelope.repair_observations, input.findings);
+  const normalized = repairObservationsList(qualityEnvelope.repair_observations, input.findings);
+  return input.preserveEntryShapes
+    ? (qualityEnvelope.repair_observations ?? []) as StageQualityRepairObservation[]
+    : normalized;
 }
 
 export function findingClosureList(value: unknown) {

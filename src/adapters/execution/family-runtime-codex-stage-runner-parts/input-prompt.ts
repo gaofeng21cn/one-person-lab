@@ -542,6 +542,7 @@ export function protocolCloseoutResumePrompt(attempt: JsonRecord, persistedOutpu
   ].join('\n');
 }
 
+
 export function eventSummary(event: CodexExecEvent): RunnerEventSummary {
   if (event.type === 'thread.started') {
     return { event_kind: event.type, value: event.threadId };

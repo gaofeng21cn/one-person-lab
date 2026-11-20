@@ -129,6 +129,17 @@ export function compactCloseoutPacketForTemporalResult(value: unknown) {
     return null;
   }
 
+  if (closeout.closeout_normalization) {
+    return {
+      ...closeout,
+      temporal_payload_policy: {
+        surface_kind: 'temporal_activity_canonical_closeout_packet',
+        full_closeout_body_omitted: false,
+        retained_fields: Object.keys(closeout),
+        omitted_body_fields: [],
+      },
+    };
+  }
   const routeImpact = closeoutRouteImpactForTemporalResult(closeout);
   return {
     surface_kind: closeout.surface_kind,

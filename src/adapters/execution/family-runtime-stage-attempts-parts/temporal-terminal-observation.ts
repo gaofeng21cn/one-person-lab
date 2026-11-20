@@ -379,6 +379,10 @@ function closeoutPacketFromTemporalCompletedObservation(
   const receiptRecord = typeof receipt === 'object' && receipt !== null && !Array.isArray(receipt)
     ? receipt
     : null;
+  const canonicalCloseout = recordOrNull(receiptRecord?.closeout_packet);
+  if (recordOrNull(canonicalCloseout?.closeout_normalization)) {
+    return normalizeTypedStageCloseoutPacket(canonicalCloseout);
+  }
   const surfaceKind = typeof receiptRecord?.closeout_packet_surface_kind === 'string'
     ? receiptRecord.closeout_packet_surface_kind
     : observedCloseoutRefs.length > 0

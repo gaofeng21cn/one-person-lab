@@ -310,7 +310,11 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
   };
   const correctedInput = {
     ...persistedPacket,
-    closeout_id: stableId('closeout-recovery', [input.stageAttemptId, identity.artifact_refs, identity.artifact_hashes]),
+    // A derived packet has one canonical identity across live ingest, replay and
+    // recovery. Renaming it here would invalidate its original/derived lineage.
+    closeout_id: record(persistedPacket.closeout_normalization).status === 'normalized'
+      ? requireString(persistedPacket.closeout_id, 'persisted derived closeout_id')
+      : stableId('closeout-recovery', [input.stageAttemptId, identity.artifact_refs, identity.artifact_hashes]),
     closeout_refs: [...new Set([
       ...(Array.isArray(persistedPacket.closeout_refs) ? persistedPacket.closeout_refs : []),
       ...identity.artifact_refs,
@@ -437,10 +441,13 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
         failure_code: 'stage_run_recovery_repair_map_missing',
       });
     }
-    recoveryState.repair_map = validateStageQualityRepairMap({
+    const strictRepairMap = validateStageQualityRepairMap({
       findings: recoveryState.findings,
       repairMap: verifiedQuality.repair_map as StageQualityRepairMapEntry[],
     });
+    recoveryState.repair_map = record(verified.closeout_normalization).status === 'normalized'
+      ? verifiedQuality.repair_map as StageQualityRepairMapEntry[]
+      : strictRepairMap;
   }
   const projected = projectTemporalStageRunQualityCycle(db, recoveryState);
   const projectionAttemptCount = Number((db.prepare('SELECT COUNT(*) AS count FROM stage_attempts WHERE stage_run_id = ?').get(input.stageRunId) as { count: number }).count);

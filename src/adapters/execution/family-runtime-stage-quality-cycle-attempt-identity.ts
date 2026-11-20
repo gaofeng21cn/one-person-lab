@@ -207,7 +207,7 @@ function persistedAttemptOutputArtifactIdentity(
   const closeoutRow = db.prepare(`
     SELECT packet_json FROM stage_attempt_closeouts
     WHERE stage_attempt_id = ?
-    ORDER BY created_at DESC, closeout_id DESC
+    ORDER BY created_at DESC, rowid DESC
     LIMIT 1
   `).get(stageAttemptId) as { packet_json?: unknown } | undefined;
   const packet = persistedJsonRecord(closeoutRow?.packet_json, {

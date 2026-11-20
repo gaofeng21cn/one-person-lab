@@ -9,6 +9,7 @@ import {
   createStageAttempt,
   createStageAttemptTable,
   findStageAttemptByIdempotencyBoundary,
+  listStageAttemptCloseouts,
 } from './family-runtime-stage-attempts.ts';
 import { getStageAttemptRow, stageAttemptToPayload } from './family-runtime-stage-attempt-ledger.ts';
 import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
@@ -196,10 +197,15 @@ export async function stageQualityAttemptMaterializeActivity(
         expectedExecutionScope: stageRun.execution_scope,
       });
     }
+    const producerCloseoutNormalization = input.attempt_role === 're_reviewer' && artifactProducerAttempt
+      ? listStageAttemptCloseouts(db, artifactProducerAttempt.stage_attempt_id).at(-1)?.packet
+        .closeout_normalization ?? null
+      : null;
     const producerRepairObservations = input.attempt_role === 're_reviewer' && artifactProducerAttempt
       ? repairObservationsFromCloseoutRouteImpact({
           findings: input.findings ?? [],
           routeImpact: artifactProducerAttempt.route_impact,
+          preserveEntryShapes: Boolean(producerCloseoutNormalization),
         })
       : [];
     const packageReadiness = await (
@@ -539,6 +545,9 @@ export async function stageQualityAttemptMaterializeActivity(
           repair_map: input.repair_map ?? [],
           ...(producerRepairObservations.length > 0
             ? { repair_observations: producerRepairObservations }
+            : {}),
+          ...(producerCloseoutNormalization
+            ? { repair_closeout_lineage: producerCloseoutNormalization }
             : {}),
           route_recommendations: input.route_recommendations ?? [],
           ...(revisionConsumptionContext ? { revision_consumption_context: revisionConsumptionContext } : {}),

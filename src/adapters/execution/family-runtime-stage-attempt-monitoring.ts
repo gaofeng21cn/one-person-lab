@@ -388,7 +388,7 @@ function latestCloseoutPacket(db: DatabaseSync, stageAttemptId: string) {
   const row = db.prepare(`
     SELECT packet_json FROM stage_attempt_closeouts
     WHERE stage_attempt_id = ?
-    ORDER BY created_at DESC
+    ORDER BY created_at DESC, rowid DESC
     LIMIT 1
   `).get(stageAttemptId) as { packet_json: string } | undefined;
   return row ? parseStageAttemptCloseoutJsonObject(row.packet_json) : null;

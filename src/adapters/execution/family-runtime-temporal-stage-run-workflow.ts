@@ -1402,7 +1402,11 @@ export async function StageRunWorkflow(
       setPendingRepairArtifactAuthority(repair, round, 'unreviewed_repair');
       let repairMap: StageQualityRepairMapEntry[];
       try {
-        repairMap = repairMapList(repair.envelope.repair_map, findings);
+        const strictRepairMap = repairMapList(repair.envelope.repair_map, findings);
+        const normalization = asRecord(asRecord(repair.result.closeout_packet).closeout_normalization);
+        repairMap = normalization.status === 'normalized'
+          ? repair.envelope.repair_map as StageQualityRepairMapEntry[]
+          : strictRepairMap;
       } catch (error) {
         updatePendingRepairDisposition('repair_map_invalid');
         state = {
