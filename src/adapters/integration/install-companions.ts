@@ -761,9 +761,13 @@ export function syncOplCompanionSkills(
   const ownerCliInstallNeeded = recommendedSkills.some((skill) =>
     skill.managed_dependency_mode === 'owner_cli'
       && !pickFirstExistingSkillSource(skill.expected_paths));
-  const ownerCliInstall = ownerCliInstallNeeded
-    && tools.some((tool) => tool.tool_id === 'agent-reach' && tool.status === 'ready')
-    ? installAgentReachSkill(home)
+  const agentReach = tools.find((tool) => tool.tool_id === 'agent-reach' && tool.status === 'ready');
+  const ownerCliInstall = ownerCliInstallNeeded && agentReach?.binary_path
+    ? installAgentReachSkill(
+      agentReach.binary_path,
+      codexSkillsDir,
+      agentReach.version?.startsWith('Agent Reach v') ? home : undefined,
+    )
     : null;
 
   for (const skill of recommendedSkills) {

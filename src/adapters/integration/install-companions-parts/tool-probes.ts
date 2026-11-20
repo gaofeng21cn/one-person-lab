@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+import { isRecord } from '../../../kernel/contract-validation.ts';
 import {
   binarySetSha256,
   binarySha256,
@@ -60,11 +61,13 @@ export function inspectToolBinary(
   toolId: OplCompanionToolId,
   binaryPath: string | null,
   versionArgs: string[],
+  readVersion: (output: string) => string | null = (output) => output,
 ): OplCompanionToolSyncItem | null {
   if (!binaryPath || !fs.existsSync(binaryPath) || !fs.statSync(binaryPath).isFile()) {
     return null;
   }
-  const version = runCommandForOutput(binaryPath, versionArgs);
+  const output = runCommandForOutput(binaryPath, versionArgs);
+  const version = output && readVersion(output);
   if (!version) {
     return null;
   }
@@ -156,66 +159,90 @@ export function inspectFfmpegPair(
   }, readLatestToolVersionReceipt('ffmpeg'));
 }
 
-export const AGENT_REACH_CORE_CHANNELS = ['web', 'youtube', 'rss', 'github', 'bilibili', 'v2ex'] as const;
+type AgentReachChannels = NonNullable<OplCompanionToolSyncItem['health_check']>['channels'];
 
-function verifyGitHubApiAccess(): boolean {
-  const gh = process.env.OPL_GH_BIN?.trim() || findExecutableInPath('gh');
-  if (!gh) return false;
-  // Doctor deliberately skips gh auth status because it can mutate local state.
-  // Verify the authenticated user with a bounded GET; never initiate a login.
-  const output = runCommandForOutput(gh, ['api', '--hostname', 'github.com', '--method', 'GET', 'user']);
+function parseAgentReachJson(output: string | null) {
+  if (!output) return null;
   try {
-    const user = output ? JSON.parse(output) : null;
-    return Number.isSafeInteger(user?.id) && user.id > 0
-      && typeof user.login === 'string' && user.login.trim().length > 0;
+    const document: unknown = JSON.parse(output);
+    return isRecord(document) ? document : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function agentReachResult(document: Record<string, unknown> | null, action: 'version' | 'doctor') {
+  if (document?.schema_version !== 1 || document.ok !== true || document.action !== action) return null;
+  return isRecord(document.result) ? document.result : null;
+}
+
+function agentReachDoctorChannels(value: unknown): AgentReachChannels | null {
+  if (!Array.isArray(value)) return null;
+  const channels: AgentReachChannels = [];
+  for (const channel of value) {
+    if (!isRecord(channel)
+      || typeof channel.channel !== 'string'
+      || typeof channel.level !== 'string'
+      || typeof channel.status !== 'string'
+      || !Array.isArray(channel.problems)
+      || !channel.problems.every((problem) => typeof problem === 'string')
+      || (channel.hint !== undefined && typeof channel.hint !== 'string')) return null;
+    channels.push({
+      channel: channel.channel,
+      level: channel.level,
+      status: channel.status,
+      problems: channel.problems as string[],
+      ...(typeof channel.hint === 'string' ? { hint: channel.hint } : {}),
+    });
+  }
+  return channels;
+}
+
+function legacyAgentReachDoctorChannels(document: Record<string, unknown> | null): AgentReachChannels | null {
+  if (!document) return null;
+  const channels: AgentReachChannels = [];
+  for (const [channel, entry] of Object.entries(document)) {
+    if (!isRecord(entry) || typeof entry.status !== 'string') return null;
+    channels.push({
+      channel,
+      status: entry.status,
+      problems: entry.status !== 'ok' && typeof entry.message === 'string' ? [entry.message] : [],
+    });
+  }
+  return channels.length > 0 ? channels : null;
 }
 
 function inspectAgentReachBinary(
   binaryPath: string | null,
   options: { includeHealthCheck?: boolean } = {},
 ): OplCompanionToolSyncItem | null {
-  const inspected = inspectToolBinary('agent-reach', binaryPath, ['--version']);
-  if (!inspected || !binaryPath) return null;
-  if (options.includeHealthCheck === false) return inspected;
-  const doctorOutput = runCommandForOutput(binaryPath, ['doctor', '--json'], 15_000);
-  let doctor: Record<string, unknown> | null = null;
-  try {
-    doctor = doctorOutput ? JSON.parse(doctorOutput) as Record<string, unknown> : null;
-  } catch {
-    doctor = null;
-  }
-  const readyChannels = doctor
-    ? AGENT_REACH_CORE_CHANNELS.filter((channel) => {
-        const entry = doctor?.[channel];
-        return Boolean(entry && typeof entry === 'object' && (entry as Record<string, unknown>).status === 'ok');
-      })
-    : [];
-  const github = doctor?.github;
-  const githubApiCheck = github && typeof github === 'object'
-    && (github as Record<string, unknown>).status === 'warn'
-    ? verifyGitHubApiAccess() ? 'ready' : 'failed'
-    : undefined;
-  if (githubApiCheck === 'ready') readyChannels.push('github');
-  const failedChannels = AGENT_REACH_CORE_CHANNELS.filter((channel) => !readyChannels.includes(channel));
-  const healthStatus = !doctor ? 'invalid' : failedChannels.length === 0 ? 'ready' : 'degraded';
+  const current = inspectToolBinary('agent-reach', binaryPath, ['version'], (output) => {
+    const version = agentReachResult(parseAgentReachJson(output), 'version')?.version;
+    return typeof version === 'string' ? version.trim() : null;
+  });
+  const inspected = current ?? inspectToolBinary('agent-reach', binaryPath, ['--version'], (output) =>
+    /^Agent Reach v\d+\.\d+\.\d+$/.test(output) ? output : null);
+  if (!inspected || !binaryPath || options.includeHealthCheck === false) return inspected;
+
+  const doctorArgs = current ? ['doctor'] : ['doctor', '--json'];
+  const doctorDocument = parseAgentReachJson(runCommandForOutput(binaryPath, doctorArgs, 15_000));
+  const doctorResult = agentReachResult(doctorDocument, 'doctor');
+  const doctorChannels = current
+    ? agentReachDoctorChannels(doctorResult?.channels)
+    : legacyAgentReachDoctorChannels(doctorDocument);
+  const doctorVersion = current ? doctorResult?.version : inspected.version;
+  const doctorIsValid = doctorChannels !== null
+    && typeof doctorVersion === 'string'
+    && doctorVersion.trim().length > 0;
   return {
     ...inspected,
-    status: healthStatus === 'ready' ? 'ready' : 'failed',
-    note: healthStatus === 'ready'
-      ? null
-      : healthStatus === 'invalid'
-        ? 'agent-reach doctor --json did not return a valid readiness document.'
-        : `Agent Reach core channels are unavailable: ${failedChannels.join(', ')}.`,
+    status: doctorIsValid ? 'ready' : 'failed',
+    note: doctorIsValid ? null : 'agent-reach doctor did not return a valid readiness document.',
     health_check: {
       adapter: 'agent_reach_doctor',
-      status: healthStatus,
-      required_channels: [...AGENT_REACH_CORE_CHANNELS],
-      ready_channels: readyChannels,
-      failed_channels: failedChannels,
-      ...(githubApiCheck ? { github_api_check: githubApiCheck } : {}),
+      status: doctorIsValid ? 'ready' : 'invalid',
+      version: doctorIsValid ? doctorVersion : null,
+      channels: doctorChannels ?? [],
     },
   };
 }

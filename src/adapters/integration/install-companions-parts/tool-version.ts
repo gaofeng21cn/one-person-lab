@@ -28,11 +28,15 @@ export type OplCompanionToolSyncItem = {
   entrypoint?: string[];
   health_check?: {
     adapter: 'agent_reach_doctor';
-    status: 'ready' | 'degraded' | 'invalid';
-    required_channels: string[];
-    ready_channels: string[];
-    failed_channels: string[];
-    github_api_check?: 'ready' | 'failed';
+    status: 'ready' | 'invalid';
+    version: string | null;
+    channels: Array<{
+      channel: string;
+      level?: string;
+      status: string;
+      problems: string[];
+      hint?: string;
+    }>;
   };
 };
 

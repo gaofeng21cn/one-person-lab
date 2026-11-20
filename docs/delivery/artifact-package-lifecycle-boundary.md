@@ -122,6 +122,10 @@ Flow managed policy 由安装的 owner descriptor 指定来源，Framework 只�
 原生 carrier 与各能力 owner 继续持有生命周期；旧策略必须通过 owner 更新，不能由
 Framework 在读取时推测或重建已退役语义。
 
+Agent Reach 由其 CLI 维护。Framework 读取 `version` 和 `doctor` 的结构化输出，并用
+`skill link <skills-dir>` 补齐缺失的 Skill。已有 1.5 版继续使用其旧 CLI 合同。
+包就绪检查验证 CLI 和诊断结果，具体渠道的验证和配置状态由 Agent Reach 返回。
+
 ## Publication
 
 独立publication只在真实外部consumer、不同release cadence或独立rollback需求存在时建立。source repo、workspace Package和published artifact是不同层。

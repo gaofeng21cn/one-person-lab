@@ -22,7 +22,6 @@ import {
   writeManagedToolReceipt,
 } from './tool-receipts.ts';
 import {
-  AGENT_REACH_CORE_CHANNELS,
   ensurePathEntry,
   findExecutableInPath,
   inspectGhStackEntrypoint,
@@ -98,18 +97,11 @@ export function resolveOplCompanionTool(
   return resolveFfmpegTool(home, options);
 }
 
-export function installAgentReachSkill(home: string) {
-  const tool = resolveAgentReachTool(home);
-  if (!tool?.binary_path) {
-    return { status: 'missing' as const, note: 'Agent Reach owner CLI is not installed.' };
-  }
-  const result = spawnSync(tool.binary_path, ['skill', '--install'], {
+export function installAgentReachSkill(binaryPath: string, skillsDir: string, legacyHome?: string) {
+  const args = legacyHome ? ['skill', '--install'] : ['skill', 'link', skillsDir];
+  const result = spawnSync(binaryPath, args, {
     encoding: 'utf8',
-    env: {
-      ...process.env,
-      HOME: home,
-      CODEX_HOME: process.env.CODEX_HOME?.trim() || path.join(home, '.codex'),
-    },
+    env: legacyHome ? { ...process.env, HOME: legacyHome } : undefined,
     stdio: 'pipe',
     timeout: 30_000,
   });
@@ -118,7 +110,7 @@ export function installAgentReachSkill(home: string) {
     : {
         status: 'failed' as const,
         note: [result.stderr, result.stdout].filter(Boolean).join('\n').trim()
-          || 'agent-reach skill --install failed.',
+          || `agent-reach ${args.slice(0, 2).join(' ')} failed.`,
       };
 }
 
@@ -391,9 +383,8 @@ export function ensureAgentReachTool(
     health_check: {
       adapter: 'agent_reach_doctor',
       status: 'invalid',
-      required_channels: [...AGENT_REACH_CORE_CHANNELS],
-      ready_channels: [],
-      failed_channels: [...AGENT_REACH_CORE_CHANNELS],
+      version: null,
+      channels: [],
     },
   };
 }

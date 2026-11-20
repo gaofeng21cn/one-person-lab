@@ -503,7 +503,7 @@ test('generic Flow-declared Git Skill projection preserves a user-managed global
   }
 });
 
-test('Agent Reach owner adapter installs its Skill and requires core doctor channels', () => {
+test('Agent Reach owner adapter links its Skill with unverified channels', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-reach-adapter-'));
   const home = path.join(root, 'home');
   const binary = path.join(root, 'agent-reach');
@@ -515,13 +515,16 @@ test('Agent Reach owner adapter installs its Skill and requires core doctor chan
     "const path = require('node:path');",
     `const calls = ${JSON.stringify(calls)};`,
     "fs.appendFileSync(calls, process.argv.slice(2).join(' ') + '\\n');",
-    "if (process.argv[2] === '--version') { console.log('Agent Reach v1.5.0'); process.exit(0); }",
-    "if (process.argv.slice(2).join(' ') === 'doctor --json') {",
-    "  console.log(JSON.stringify(Object.fromEntries(['web','youtube','rss','github','bilibili','v2ex'].map((id) => [id, { status: 'ok' }]))));",
+    "const args = process.argv.slice(2);",
+    "const respond = (action, result) => console.log(JSON.stringify({ schema_version: 1, ok: true, action, result }));",
+    "if (args.length === 1 && args[0] === 'version') { respond('version', { version: '1.6.1' }); process.exit(0); }",
+    "if (args.length === 1 && args[0] === 'doctor') {",
+    "  const channels = [{ channel: 'web', level: 'default', status: 'unverified', problems: [] }];",
+    "  respond('doctor', { version: '1.6.1', channels });",
     "  process.exit(0);",
     "}",
-    "if (process.argv.slice(2).join(' ') === 'skill --install') {",
-    "  const target = path.join(process.env.CODEX_HOME, 'skills', 'agent-reach');",
+    "if (args.length === 3 && args[0] === 'skill' && args[1] === 'link') {",
+    "  const target = path.join(args[2], 'agent-reach');",
     "  fs.mkdirSync(target, { recursive: true });",
     "  fs.writeFileSync(path.join(target, 'SKILL.md'), '---\\nname: agent-reach\\ndescription: Internet research owner adapter.\\ntriggers:\\n  - research\\nmetadata:\\n  owner: upstream\\n---\\n# Agent Reach\\n');",
     "  process.exit(0);",
@@ -534,6 +537,7 @@ test('Agent Reach owner adapter installs its Skill and requires core doctor chan
   process.env.OPL_AGENT_REACH_BIN = binary;
   process.env.CODEX_HOME = path.join(home, '.codex');
   process.env.OPL_STATE_DIR = path.join(root, 'state');
+  const skillLink = `skill link ${path.join(home, '.codex', 'skills')}`;
   try {
     const dependency = {
       id: 'agent-reach',
@@ -557,7 +561,7 @@ test('Agent Reach owner adapter installs its Skill and requires core doctor chan
     assert.equal(managed.tools[0]?.status, 'ready');
     assert.equal(managed.tools[0]?.health_check?.status, 'ready');
     const managedCalls = fs.readFileSync(calls, 'utf8').trim().split('\n');
-    assert.equal(managedCalls.filter((call) => call === 'skill --install').length, 1);
+    assert.equal(managedCalls.filter((call) => call === skillLink).length, 1);
 
     const repeated = syncOplCompanionSkills(home, {
       mode: 'managed',
@@ -568,7 +572,7 @@ test('Agent Reach owner adapter installs its Skill and requires core doctor chan
     });
     assert.equal(repeated.items[0]?.status, 'ready');
     const repeatedCalls = fs.readFileSync(calls, 'utf8').trim().split('\n');
-    assert.equal(repeatedCalls.filter((call) => call === 'skill --install').length, 1);
+    assert.equal(repeatedCalls.filter((call) => call === skillLink).length, 1);
 
     const observed = syncOplCompanionSkills(home, {
       mode: 'observe',
@@ -579,7 +583,7 @@ test('Agent Reach owner adapter installs its Skill and requires core doctor chan
     });
     assert.equal(observed.items[0]?.status, 'ready');
     const observedCalls = fs.readFileSync(calls, 'utf8').trim().split('\n');
-    assert.equal(observedCalls.filter((call) => call === 'skill --install').length, 1);
+    assert.equal(observedCalls.filter((call) => call === skillLink).length, 1);
 
     fs.writeFileSync(calls, '', 'utf8');
     const fastObserved = syncOplCompanionSkills(home, {
@@ -593,7 +597,7 @@ test('Agent Reach owner adapter installs its Skill and requires core doctor chan
     assert.equal(fastObserved.tools[0]?.status, 'ready');
     assert.equal(fastObserved.tools[0]?.health_check, undefined);
     const fastCalls = fs.readFileSync(calls, 'utf8').trim().split('\n').filter(Boolean);
-    assert.deepEqual(fastCalls, ['--version']);
+    assert.deepEqual(fastCalls, ['version']);
 
     fs.writeFileSync(calls, '', 'utf8');
     const fullObserved = syncOplCompanionSkills(home, {
@@ -606,7 +610,7 @@ test('Agent Reach owner adapter installs its Skill and requires core doctor chan
     });
     assert.equal(fullObserved.tools[0]?.health_check?.status, 'ready');
     const fullCalls = fs.readFileSync(calls, 'utf8').trim().split('\n').filter(Boolean);
-    assert.deepEqual(fullCalls, ['--version', 'doctor --json']);
+    assert.deepEqual(fullCalls, ['version', 'doctor']);
   } finally {
     if (previousBinary === undefined) delete process.env.OPL_AGENT_REACH_BIN;
     else process.env.OPL_AGENT_REACH_BIN = previousBinary;
@@ -614,5 +618,6 @@ test('Agent Reach owner adapter installs its Skill and requires core doctor chan
     else process.env.CODEX_HOME = previousCodexHome;
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
