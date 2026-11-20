@@ -84,6 +84,9 @@ for (const invalid of [null, 'human_gate', 'foreign_producer', 'later_attempt', 
         assert.deepEqual(workflow.recovery_resume.prior_attempt_summaries.map((entry: any) => entry.attempt_role), ['producer', 'reviewer']);
         assert.equal(workflow.recovery_resume.prior_attempt_summaries.at(-1).status, 'blocked');
         assert.equal(workflow.recovery_resume.prior_attempt_summaries[0].stage_attempt_id, producer.stage_attempt_id);
+        assert.equal(workflow.recovery_resume.artifact_identity_authority.status, 'producer_unreviewed');
+        assert.equal(workflow.recovery_resume.artifact_identity_authority.review_attempt_ref, null);
+        assert.equal(workflow.recovery_resume.artifact_identity_authority.pending_repair, null);
         return { ...temporalStartReceipt(workflow), stage_run_id: workflow.stage_run_id, recovery_id: workflow.recovery_resume.recovery_id,
           recovery_run_id: 'retry-run', quality_cycle_id: cycleId, producer_attempt_ref: producerRef };
       } };

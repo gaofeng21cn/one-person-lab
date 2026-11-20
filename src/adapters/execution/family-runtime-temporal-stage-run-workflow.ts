@@ -2,6 +2,9 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { executeChild, isCancellation, patched, setHandler, workflowInfo } from '@temporalio/workflow';
 import type {
   StageAttemptExecutionContentBinding,
+  StageArtifactIdentityAuthorityStatus,
+  StageArtifactPendingRepair,
+  StageArtifactLiveBytesStatus,
   TemporalStageRunRouteLaunchReceipt,
   TemporalStageRunWorkflowInput,
   TemporalStageRunWorkflowState,
@@ -49,6 +52,15 @@ import {
   validateWorkflowStageRunInput,
 } from './family-runtime-temporal-workflow-shared.ts';
 import {
+  artifactIdentityAuthorityFromReviewReceipt,
+  artifactIdentityAuthorityWithPendingRepair,
+  producerArtifactIdentityAuthority,
+  resolveRecoveryArtifactAuthority,
+  reviewPendingArtifactIdentityAuthority,
+  hasCompleteImmutableArtifactCoverage,
+  withLiveArtifactBytesStatus,
+} from './family-runtime-temporal-workflow-artifact-authority.ts';
+import {
   classifyStageQualityReReviewBudget,
   evaluateStageQualityFindingClosure,
   normalizeStageQualityArtifactIdentity,
@@ -74,7 +86,15 @@ import { StageAttemptWorkflow } from './family-runtime-temporal-stage-attempt-wo
 export async function StageRunWorkflow(
   input: TemporalStageRunWorkflowInput,
 ): Promise<TemporalStageRunWorkflowState> {
-  validateWorkflowStageRunInput(input);
+  const recoveryArtifactAuthorityEnabled = patched(
+    'opl-stage-run-recovery-artifact-authority-v1',
+  );
+  const terminalArtifactObservationEnabled = patched(
+    'opl-stage-run-terminal-artifact-observation-v1',
+  );
+  validateWorkflowStageRunInput(input, {
+    recoveryArtifactIdentityAuthorityRequired: recoveryArtifactAuthorityEnabled,
+  });
   const runtimeHumanGateClassificationEnabled = patched(
     'opl-stage-run-runtime-human-gate-classification-v1',
   );
@@ -107,11 +127,42 @@ export async function StageRunWorkflow(
   const recoveryArtifactProducerAttemptSummary = recoveryResume?.artifact_producer_attempt_summary
     ?? recoveryResume?.producer_attempt_summary
     ?? null;
+  const resolvedRecoveryArtifactAuthority = recoveryArtifactAuthorityEnabled
+    && recoveryResume
+    ? resolveRecoveryArtifactAuthority(recoveryResume, {
+        maxRepairRounds: input.quality_policy.formal_review.max_repair_rounds,
+      })
+    : null;
+  if (
+    recoveryArtifactAuthorityEnabled
+    && recoveryResume
+    && !resolvedRecoveryArtifactAuthority
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Recovery cannot uniquely reconstruct its canonical Attempt/review artifact lineage.',
+      { failure_code: 'stage_run_recovery_previous_reviewed_lineage_invalid' },
+    );
+  }
   const initialArtifactIdentity = normalizeStageQualityArtifactIdentity({
-    artifactRefs: recoveryResume?.artifact_refs ?? input.artifact_refs ?? [],
-    artifactHashes: recoveryResume?.artifact_hashes ?? input.artifact_hashes ?? [],
+    artifactRefs: resolvedRecoveryArtifactAuthority?.artifact_refs
+      ?? recoveryResume?.artifact_refs ?? input.artifact_refs ?? [],
+    artifactHashes: resolvedRecoveryArtifactAuthority?.artifact_hashes
+      ?? recoveryResume?.artifact_hashes ?? input.artifact_hashes ?? [],
     allowEmpty: true,
   });
+  // New executions always take the resolver's canonical authority. The raw
+  // input authority remains only as the pre-B2 (patched=false) replay fallback.
+  const initialArtifactIdentityAuthority = recoveryResume
+    ? resolvedRecoveryArtifactAuthority?.artifact_identity_authority
+      ?? recoveryResume.artifact_identity_authority
+      ?? (recoveryArtifactProducerAttemptRef
+        ? reviewPendingArtifactIdentityAuthority({
+            authoritativeAttemptRef: recoveryArtifactProducerAttemptRef,
+            qualityRoundIndex: recoveryResume.repair_rounds_used ?? 0,
+          })
+        : null)
+    : null;
   let state = {
     surface_kind: 'temporal_stage_run_query',
     provider_kind: 'temporal',
@@ -147,8 +198,10 @@ export async function StageRunWorkflow(
     review_receipts: recoveryResume?.review_receipts ?? [],
     artifact_refs: initialArtifactIdentity.artifact_refs,
     artifact_hashes: initialArtifactIdentity.artifact_hashes,
-    artifact_identity_receipt_refs: recoveryResume?.artifact_identity_receipt_refs
+    artifact_identity_receipt_refs: resolvedRecoveryArtifactAuthority?.artifact_identity_receipt_refs
+      ?? recoveryResume?.artifact_identity_receipt_refs
       ?? asStringList(input.artifact_identity_receipt_refs),
+    artifact_identity_authority: initialArtifactIdentityAuthority,
     quality_debt_refs: recoveryResume?.quality_debt_refs ?? [],
     route_quality_debt_refs: recoveryResume?.route_quality_debt_refs ?? [],
     decisive_attempt_role: null,
@@ -190,23 +243,94 @@ export async function StageRunWorkflow(
   }
   let decisiveExecutionContentBinding: StageAttemptExecutionContentBinding | null = null;
 
+  const observeAuthoritativeArtifactBytes = async (
+    candidate: TemporalStageRunWorkflowState,
+  ): Promise<StageArtifactLiveBytesStatus> => {
+    if (!candidate.artifact_identity_authority || candidate.artifact_refs.length === 0) {
+      return 'unknown';
+    }
+    try {
+      const observation = await stageQualityCycleProjectActivity({
+        stage_run: input,
+        state: candidate,
+        artifact_identity_observation_only: true,
+      });
+      const liveBytesStatus = asRecord(observation.artifact_identity_observation).live_bytes_status;
+      return liveBytesStatus === 'matches' || liveBytesStatus === 'differs'
+        ? liveBytesStatus
+        : 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  };
+
   const terminalize = async (nextState: TemporalStageRunWorkflowState) => {
-    const routeDecisionRequired = nextState.status === 'completed'
-      || nextState.status === 'completed_with_quality_debt';
-    state = routeDecisionRequired && !nextState.selected_stage_route
+    let candidate = nextState;
+    if (candidate.artifact_identity_authority) {
+      const liveBytesStatus = terminalArtifactObservationEnabled
+        ? await observeAuthoritativeArtifactBytes(candidate)
+        : 'unknown';
+      candidate = {
+        ...candidate,
+        artifact_identity_authority: withLiveArtifactBytesStatus(
+          candidate.artifact_identity_authority,
+          liveBytesStatus,
+        ),
+      };
+      if (
+        liveBytesStatus === 'differs'
+        && !hasCompleteImmutableArtifactCoverage(
+          candidate.artifact_identity_authority!,
+          candidate.artifact_hashes,
+        )
+        && (candidate.status === 'completed' || candidate.status === 'completed_with_quality_debt')
+      ) {
+        candidate = {
+          ...candidate,
+          status: 'blocked',
+          current_role: null,
+          blocked_reason: 'accepted_artifact_immutable_snapshot_missing',
+          hard_stop_class: 'stale_or_mismatched_stage_identity',
+          selected_stage_route: null,
+          next_stage_run_launch: null,
+          quality_debt_refs: [...new Set([
+            ...candidate.quality_debt_refs,
+            qualityFailureRef(input, 'stale_or_mismatched_stage_identity'),
+            qualityFailureRef(input, 'accepted_artifact_immutable_snapshot_missing'),
+          ])],
+          updated_at: nowIso(),
+        };
+      }
+    }
+    if (
+      candidate.artifact_identity_authority?.pending_repair
+      && !candidate.quality_debt_refs.some((ref) => ref.includes('/repair_artifact_unreviewed'))
+    ) {
+      candidate = {
+        ...candidate,
+        quality_debt_refs: [...new Set([
+          ...candidate.quality_debt_refs,
+          qualityFailureRef(input, 'repair_artifact_unreviewed'),
+        ])],
+      };
+    }
+    const routeDecisionRequired = candidate.status === 'completed'
+      || candidate.status === 'completed_with_quality_debt';
+    state = routeDecisionRequired && !candidate.selected_stage_route
       ? {
-          ...nextState,
+          ...candidate,
           route_quality_debt_refs: [...new Set([
-            ...nextState.route_quality_debt_refs,
+            ...candidate.route_quality_debt_refs,
             qualityFailureRef(input, 'decisive_attempt_route_decision_missing'),
           ])],
         }
-      : nextState;
+      : candidate;
     if (
       routeDecisionRequired
       && state.selected_stage_route
       && state.decisive_attempt_ref
       && decisiveExecutionContentBinding
+      && !state.artifact_identity_authority?.pending_repair
       && (!progressFirstHandoffEnabled || !state.next_stage_run_launch)
     ) {
       // A consumer must not see a terminal StageRun before its handoff is available.
@@ -491,11 +615,14 @@ export async function StageRunWorkflow(
         artifact_identity_receipt_refs: artifactIdentity.artifactIdentityReceiptRefs,
         total_tokens_observed: observedAttemptTotalTokens(result),
       }],
-      artifact_refs: attemptInput.role === 'repairer' ? state.artifact_refs : artifactIdentity.artifactRefs,
-      artifact_hashes: attemptInput.role === 'repairer' ? state.artifact_hashes : artifactIdentity.artifactHashes,
-      artifact_identity_receipt_refs: attemptInput.role === 'repairer'
-        ? state.artifact_identity_receipt_refs
-        : artifactIdentity.artifactIdentityReceiptRefs,
+      // A producer establishes the first candidate set. Repairer and review
+      // Attempts never switch StageRun authority by writing bytes: a repairer
+      // set stays pending until a fresh re-review accepts it.
+      artifact_refs: attemptInput.role === 'producer' ? artifactIdentity.artifactRefs : state.artifact_refs,
+      artifact_hashes: attemptInput.role === 'producer' ? artifactIdentity.artifactHashes : state.artifact_hashes,
+      artifact_identity_receipt_refs: attemptInput.role === 'producer'
+        ? artifactIdentity.artifactIdentityReceiptRefs
+        : state.artifact_identity_receipt_refs,
       route_quality_debt_refs: [
         ...new Set([
           ...state.route_quality_debt_refs,
@@ -568,6 +695,8 @@ export async function StageRunWorkflow(
         && (
           (attemptInput.role === 'producer' && executionPolicy.formalReviewRequired)
           || attemptInput.role === 'repairer'
+          || (attemptInput.role === 're_reviewer'
+            && Boolean(state.artifact_identity_authority?.pending_repair))
         );
       state = recoverableAttemptCanContinue
         ? {
@@ -618,6 +747,82 @@ export async function StageRunWorkflow(
     };
   };
 
+  const setProducerArtifactAuthority = (attemptRef: string, qualityRoundIndex = 0) => {
+    state = {
+      ...state,
+      artifact_identity_authority: producerArtifactIdentityAuthority({
+        attemptRef,
+        qualityRoundIndex,
+      }),
+    };
+  };
+
+  const setReviewPendingArtifactAuthority = (attemptRef: string, qualityRoundIndex = 0) => {
+    state = {
+      ...state,
+      artifact_identity_authority: reviewPendingArtifactIdentityAuthority({
+        authoritativeAttemptRef: attemptRef,
+        qualityRoundIndex,
+      }),
+    };
+  };
+
+  const commitReviewedArtifactAuthority = (
+    attempt: Awaited<ReturnType<typeof runAttempt>>,
+    receipt: StageReviewReceipt,
+    status: StageArtifactIdentityAuthorityStatus,
+    qualityRoundIndex: number,
+  ) => {
+    state = {
+      ...state,
+      artifact_refs: attempt.reviewedArtifactRefs,
+      artifact_hashes: attempt.reviewedArtifactHashes,
+      artifact_identity_receipt_refs: attempt.artifactIdentity.artifactIdentityReceiptRefs,
+      artifact_identity_authority: artifactIdentityAuthorityFromReviewReceipt({
+        receipt,
+        status,
+        qualityRoundIndex,
+      }),
+    };
+  };
+
+  const setPendingRepairArtifactAuthority = (
+    attempt: Awaited<ReturnType<typeof runAttempt>>,
+    qualityRoundIndex: number,
+    disposition: StageArtifactPendingRepair['disposition'],
+  ) => {
+    const pendingRepair: StageArtifactPendingRepair = {
+      attempt_ref: attempt.attemptRef,
+      quality_round_index: qualityRoundIndex,
+      artifact_refs: attempt.artifactIdentity.artifactRefs,
+      artifact_hashes: attempt.artifactIdentity.artifactHashes,
+      artifact_identity_receipt_refs: attempt.artifactIdentity.artifactIdentityReceiptRefs,
+      disposition,
+    };
+    state = {
+      ...state,
+      artifact_identity_authority: artifactIdentityAuthorityWithPendingRepair(
+        state.artifact_identity_authority,
+        pendingRepair,
+        state.source_attempt_ref,
+      ),
+    };
+  };
+
+  const updatePendingRepairDisposition = (
+    disposition: StageArtifactPendingRepair['disposition'],
+  ) => {
+    const authority = state.artifact_identity_authority;
+    if (!authority?.pending_repair) return;
+    state = {
+      ...state,
+      artifact_identity_authority: {
+        ...authority,
+        pending_repair: { ...authority.pending_repair, disposition },
+      },
+    };
+  };
+
   const revisionTransportFromReceipt = (receipt: StageReviewReceipt) => {
     const transport = asRecord(receipt.revision_transport);
     const revisionIntakeRef = asRecord(transport.opl_revision_intake_ref);
@@ -643,6 +848,18 @@ export async function StageRunWorkflow(
   };
 
   const commitTerminalRouteDecision = (attempt: Awaited<ReturnType<typeof runAttempt>>) => {
+    if (state.artifact_identity_authority?.pending_repair) {
+      // A repairer output, or a re-review that did not complete, cannot submit
+      // a route. The pending set is not selected/next-launch input.
+      state = {
+        ...state,
+        route_quality_debt_refs: [...new Set([
+          ...state.route_quality_debt_refs,
+          qualityFailureRef(input, 'route_decision_requires_reviewed_artifact_identity'),
+        ])],
+      };
+      return false;
+    }
     let decision = attempt.routeEvaluation.decision;
     let fallbackApplied = false;
     if (!decision && controllerMissingRouteFallbackEnabled) {
@@ -815,6 +1032,7 @@ export async function StageRunWorkflow(
         artifactHashes: state.artifact_hashes,
         artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
       });
+      setProducerArtifactAuthority(producer.attemptRef);
       parentAttemptRef = producer.attemptRef;
       currentArtifactProducerAttemptRef = producer.attemptRef;
       reviewInputSnapshotMaterializationRequest =
@@ -840,14 +1058,16 @@ export async function StageRunWorkflow(
     if (recoveryResume && recoveryResumeAfterRole === 'repairer') {
       const recoveredRepairAttemptRef = currentArtifactProducerAttemptRef!;
       const repairMap = repairMapList(recoveryResume.repair_map, state.findings);
+      const pendingRepairIdentity = state.artifact_identity_authority?.pending_repair;
       const reReview = await runAttempt({
         role: 're_reviewer',
         round: recoveryResume.repair_rounds_used!,
         parentAttemptRef,
         artifactProducerAttemptRef: recoveredRepairAttemptRef,
-        artifactRefs: state.artifact_refs,
-        artifactHashes: state.artifact_hashes,
-        artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
+        artifactRefs: pendingRepairIdentity?.artifact_refs ?? state.artifact_refs,
+        artifactHashes: pendingRepairIdentity?.artifact_hashes ?? state.artifact_hashes,
+        artifactIdentityReceiptRefs:
+          pendingRepairIdentity?.artifact_identity_receipt_refs ?? state.artifact_identity_receipt_refs,
         findings: state.findings,
         repairMap,
         reviewInputSnapshotMaterializationRequest,
@@ -855,7 +1075,6 @@ export async function StageRunWorkflow(
       });
       state = { ...state, repair_map: repairMap };
       if (stageRunStopped(state)) return terminalize(state);
-      if (progressFirstHandoffEnabled) commitTerminalRouteDecision(reReview);
       const reReviewOutcome = reReview.outcome;
       if (!reReviewOutcome) {
         throw new Error('Completed recovered Re-review Attempt did not expose a canonical quality outcome.');
@@ -882,6 +1101,12 @@ export async function StageRunWorkflow(
               : []),
           ])],
         };
+        commitReviewedArtifactAuthority(
+          reReview,
+          hardStopReceipt,
+          'hard_stopped',
+          recoveryResume.repair_rounds_used!,
+        );
         return terminalize(state);
       }
       const reReviewResult: StageQualityReReviewResult = {
@@ -916,6 +1141,16 @@ export async function StageRunWorkflow(
             : []),
         ])],
       };
+      commitReviewedArtifactAuthority(
+        reReview,
+        reReviewReceipt,
+        reReviewOutcome === 'pass'
+          ? 'accepted_by_re_review'
+          : reReviewOutcome === 'quality_debt'
+            ? 'reviewed_with_quality_debt'
+            : 'reviewed_with_open_findings',
+        recoveryResume.repair_rounds_used!,
+      );
       if (reReviewOutcome === 'pass') {
         commitTerminalRouteDecision(reReview);
         return terminalize({
@@ -953,6 +1188,7 @@ export async function StageRunWorkflow(
         repair_rounds_used: recoveryResume.repair_rounds_used!,
       };
       currentRevisionTransport = revisionTransportFromReceipt(reReviewReceipt);
+      if (progressFirstHandoffEnabled) commitTerminalRouteDecision(reReview);
       const reReviewBudgetTerminal = await terminalizeScopeBudgetIfNeeded({
         sourceAttemptRef: reReview.attemptRef,
         findings,
@@ -1011,6 +1247,7 @@ export async function StageRunWorkflow(
       if (budgetTerminal) return budgetTerminal;
     }
     if (!(recoveryResume && ['repairer', 'reviewer'].includes(recoveryResumeAfterRole))) {
+      setReviewPendingArtifactAuthority(producerAttemptRef, 0);
       const review = await runAttempt({
       role: 'reviewer',
       round: 0,
@@ -1050,6 +1287,7 @@ export async function StageRunWorkflow(
             : []),
         ])],
       };
+      commitReviewedArtifactAuthority(review, hardStopReceipt, 'hard_stopped', 0);
       return terminalize(state);
     }
     findings = validateInitialStageQualityReviewOutcome({
@@ -1062,6 +1300,16 @@ export async function StageRunWorkflow(
       rubric_refs: review.executionPolicy.rubricRefs,
       verdict: stageReviewVerdictForOutcome(initialOutcome),
     });
+    commitReviewedArtifactAuthority(
+      review,
+      initialReviewReceipt,
+      initialOutcome === 'pass'
+        ? 'accepted_by_initial_review'
+        : initialOutcome === 'quality_debt'
+          ? 'reviewed_with_quality_debt'
+          : 'reviewed_with_open_findings',
+      0,
+    );
     currentRevisionTransport = revisionTransportFromReceipt(initialReviewReceipt);
     state = {
       ...state,
@@ -1151,13 +1399,31 @@ export async function StageRunWorkflow(
         });
       }
       currentArtifactProducerAttemptRef = repair.attemptRef;
-      const repairMap = repairMapList(repair.envelope.repair_map, findings);
+      setPendingRepairArtifactAuthority(repair, round, 'unreviewed_repair');
+      let repairMap: StageQualityRepairMapEntry[];
+      try {
+        repairMap = repairMapList(repair.envelope.repair_map, findings);
+      } catch (error) {
+        updatePendingRepairDisposition('repair_map_invalid');
+        state = {
+          ...state,
+          status: 'completed_with_quality_debt',
+          current_role: null,
+          quality_debt_refs: [...new Set([
+            ...state.quality_debt_refs,
+            qualityFailureRef(input, 'repair_map_invalid'),
+            qualityFailureRef(input, 'repair_artifact_unreviewed'),
+            ...(error instanceof FrameworkContractError
+              ? [qualityFailureRef(input, `repair-map:${error.message}`)]
+              : []),
+          ])],
+          updated_at: nowIso(),
+        };
+        return terminalize(state);
+      }
       state = {
         ...state,
         repair_map: repairMap,
-        artifact_refs: repair.artifactIdentity.artifactRefs,
-        artifact_hashes: repair.artifactIdentity.artifactHashes,
-        artifact_identity_receipt_refs: repair.artifactIdentity.artifactIdentityReceiptRefs,
       };
       const repairBudgetTerminal = await terminalizeScopeBudgetIfNeeded({
         sourceAttemptRef: repair.attemptRef,
@@ -1165,14 +1431,16 @@ export async function StageRunWorkflow(
         includeAttemptLimit: false,
       });
       if (repairBudgetTerminal) return repairBudgetTerminal;
+      const pendingRepairIdentity = state.artifact_identity_authority?.pending_repair;
       const reReview = await runAttempt({
         role: 're_reviewer',
         round,
         parentAttemptRef,
         artifactProducerAttemptRef: currentArtifactProducerAttemptRef,
-        artifactRefs: state.artifact_refs,
-        artifactHashes: state.artifact_hashes,
-        artifactIdentityReceiptRefs: state.artifact_identity_receipt_refs,
+        artifactRefs: pendingRepairIdentity?.artifact_refs ?? state.artifact_refs,
+        artifactHashes: pendingRepairIdentity?.artifact_hashes ?? state.artifact_hashes,
+        artifactIdentityReceiptRefs:
+          pendingRepairIdentity?.artifact_identity_receipt_refs ?? state.artifact_identity_receipt_refs,
         findings,
         repairMap,
         reviewInputSnapshotMaterializationRequest:
@@ -1189,7 +1457,6 @@ export async function StageRunWorkflow(
         ),
       };
       if (stageRunStopped(state)) return terminalize(state);
-      if (progressFirstHandoffEnabled) commitTerminalRouteDecision(reReview);
       const reReviewOutcome = reReview.outcome;
       if (!reReviewOutcome) {
         throw new Error('Completed Re-review Attempt did not expose a canonical quality outcome.');
@@ -1216,6 +1483,7 @@ export async function StageRunWorkflow(
               : []),
           ])],
         };
+        commitReviewedArtifactAuthority(reReview, hardStopReceipt, 'hard_stopped', round);
         return terminalize(state);
       }
       const reReviewResult: StageQualityReReviewResult = {
@@ -1252,6 +1520,16 @@ export async function StageRunWorkflow(
             : []),
         ])],
       };
+      commitReviewedArtifactAuthority(
+        reReview,
+        reReviewReceipt,
+        reReviewOutcome === 'pass'
+          ? 'accepted_by_re_review'
+          : reReviewOutcome === 'quality_debt'
+            ? 'reviewed_with_quality_debt'
+            : 'reviewed_with_open_findings',
+        round,
+      );
       if (reReviewOutcome === 'pass') {
         commitTerminalRouteDecision(reReview);
         return terminalize({
@@ -1284,6 +1562,7 @@ export async function StageRunWorkflow(
         ...reReviewResult.critical_new_findings,
       ];
       state = { ...state, findings };
+      if (progressFirstHandoffEnabled) commitTerminalRouteDecision(reReview);
       const reReviewBudgetTerminal = await terminalizeScopeBudgetIfNeeded({
         sourceAttemptRef: reReview.attemptRef,
         findings,
@@ -1347,6 +1626,16 @@ export async function StageRunWorkflow(
   } catch (error) {
     if (cancellationPropagationEnabled && isCancellation(error)) throw error;
     if (stageRunStopped(state)) return terminalize(state);
+    if (state.artifact_identity_authority?.pending_repair) {
+      updatePendingRepairDisposition('re_review_did_not_run');
+      state = {
+        ...state,
+        quality_debt_refs: [...new Set([
+          ...state.quality_debt_refs,
+          qualityFailureRef(input, 're_review_not_run'),
+        ])],
+      };
+    }
     const hardStop = controllerHardStopFromError(error);
     const hardStopTerminates = hardStop
       && (

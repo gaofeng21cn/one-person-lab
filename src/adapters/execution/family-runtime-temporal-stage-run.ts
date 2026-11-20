@@ -101,11 +101,71 @@ export type TemporalStageRunRecoveryResume = {
   route_quality_debt_refs?: string[];
   route_recommendations?: StageQualityRouteRecommendationRecord[];
   review_input_snapshot_materialization_request?: unknown;
+  artifact_identity_authority?: StageArtifactIdentityAuthority | null;
 };
 
 export type StageRunRouteBudget = {
   max_route_back_rounds: number;
   route_back_rounds_used: number;
+};
+
+export type StageArtifactLiveBytesStatus = 'matches' | 'differs' | 'unknown';
+
+export type StageArtifactIdentityAuthorityStatus =
+  | 'producer_unreviewed'
+  | 'review_pending'
+  | 'accepted_by_initial_review'
+  | 'accepted_by_re_review'
+  | 'reviewed_with_quality_debt'
+  | 'reviewed_with_open_findings'
+  | 'hard_stopped';
+
+export type StageArtifactImmutableRef = {
+  sha256: string;
+  member_id: string;
+  size_bytes: number;
+  immutable_ref: {
+    kind: string;
+    ref: string;
+    size_bytes: number;
+    sha256: string;
+  };
+};
+
+export type StageArtifactPendingRepairDisposition =
+  | 'unreviewed_repair'
+  | 'repair_map_invalid'
+  | 're_review_did_not_run'
+  | 're_review_protocol_failure'
+  | 'correction_failed'
+  | 'budget_exhausted';
+
+export type StageArtifactPendingRepair = {
+  attempt_ref: string;
+  quality_round_index: number;
+  artifact_refs: string[];
+  artifact_hashes: string[];
+  artifact_identity_receipt_refs: string[];
+  disposition: StageArtifactPendingRepairDisposition;
+};
+
+/**
+ * Terminal explanation of the StageRun's authoritative artifact bytes.
+ *
+ * The top-level `artifact_refs` / `artifact_hashes` /
+ * `artifact_identity_receipt_refs` remain the single authoritative set consumed
+ * by projection, recovery and route launch. This record only states which
+ * review accepted that set and which repairer bytes are still unreviewed.
+ */
+export type StageArtifactIdentityAuthority = {
+  status: StageArtifactIdentityAuthorityStatus;
+  authoritative_attempt_ref: string | null;
+  review_attempt_ref: string | null;
+  quality_round_index: number;
+  immutable_artifact_refs: StageArtifactImmutableRef[];
+  live_bytes_status: StageArtifactLiveBytesStatus;
+  read_policy: 'use_immutable_ref_or_verify_sha256';
+  pending_repair: StageArtifactPendingRepair | null;
 };
 
 export type TemporalStageRunRouteLaunchInput = {
@@ -162,6 +222,17 @@ export type TemporalStageQualityAttemptMaterializationInput = {
 export type TemporalStageQualityCycleProjectionInput = {
   stage_run: TemporalStageRunWorkflowInput;
   state: TemporalStageRunWorkflowState;
+  artifact_identity_observation_only?: boolean;
+};
+
+export type TemporalStageArtifactIdentityObservation = {
+  live_bytes_status: StageArtifactLiveBytesStatus;
+  artifacts: Array<{
+    ref: string;
+    expected_sha256: string | null;
+    observed_sha256: string | null;
+    status: StageArtifactLiveBytesStatus;
+  }>;
 };
 
 export type TemporalStageQualityAttemptSyncInput = {
@@ -222,6 +293,7 @@ export type TemporalStageRunWorkflowState = {
   artifact_refs: string[];
   artifact_hashes: string[];
   artifact_identity_receipt_refs: string[];
+  artifact_identity_authority?: StageArtifactIdentityAuthority | null;
   quality_debt_refs: string[];
   route_quality_debt_refs: string[];
   decisive_attempt_role: StageQualityAttemptRole | null;

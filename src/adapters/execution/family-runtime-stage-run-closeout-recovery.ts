@@ -38,6 +38,12 @@ import {
 import {
   buildRecoveryWorkflowState,
 } from './family-runtime-stage-run-closeout-recovery-parts/workflow-state.ts';
+import {
+  artifactIdentityAuthorityFromReviewReceipt,
+  producerArtifactIdentityAuthority,
+  reconstructRepairerRecoveryArtifactAuthority,
+  resolveRecoveryArtifactAuthority,
+} from './family-runtime-temporal-workflow-artifact-authority.ts';
 
 export { parseRawOutputForCloseoutRecovery };
 import {
@@ -354,15 +360,50 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
   const currentState = record(cycle.state);
   const recoveryPriorAttemptSummaries = priorAttemptSummaries(db, currentState, recoveryAttempt, recoveryIdentity);
   const recoveryFindings = findingsFromPriorQualityLineage(db, currentState, recoveryAttempt);
+  const persistedReviewReceipts = Array.isArray(record(currentState.controller_readback).review_receipts)
+    ? record(currentState.controller_readback).review_receipts as StageReviewReceipt[]
+    : [];
+  const recoveringRepairer = recoveryAttempt.attempt_role === 'repairer';
+  const reconstructedRepairerRecovery = recoveringRepairer
+    ? reconstructRepairerRecoveryArtifactAuthority({
+        repairerSummary: recoverySummary,
+        priorAttemptSummaries: recoveryPriorAttemptSummaries,
+        reviewReceipts: persistedReviewReceipts,
+      })
+    : null;
+  if (recoveringRepairer && !reconstructedRepairerRecovery) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Repairer recovery cannot uniquely reconstruct the previous reviewed artifact lineage.',
+      {
+        failure_code: 'stage_run_recovery_previous_reviewed_lineage_invalid',
+        stage_run_id: input.stageRunId,
+        stage_attempt_id: input.stageAttemptId,
+      },
+    );
+  }
+  const recoveryArtifactIdentity = reconstructedRepairerRecovery ?? recoveryIdentity;
+  const recoveryArtifactIdentityAuthority = recoveringRepairer
+    ? reconstructedRepairerRecovery!.artifact_identity_authority
+    : acceptedReview
+      ? artifactIdentityAuthorityFromReviewReceipt({
+          receipt: acceptedReview,
+          status: 'reviewed_with_open_findings',
+          qualityRoundIndex: 0,
+        })
+      : producerArtifactIdentityAuthority({
+          attemptRef: `opl://stage_attempts/${artifactAttempt.stage_attempt_id}`,
+        });
   const recoveryState = buildRecoveryWorkflowState({
     attemptSummary: recoverySummary,
     launch: effectiveLaunch,
     cycle,
     priorAttemptSummaries: recoveryPriorAttemptSummaries,
     findings: recoveryFindings,
-    artifactRefs: identity.artifact_refs,
-    artifactHashes: identity.artifact_hashes,
-    artifactIdentityReceiptRefs: receiptRefs,
+    artifactRefs: recoveryArtifactIdentity.artifact_refs,
+    artifactHashes: recoveryArtifactIdentity.artifact_hashes,
+    artifactIdentityReceiptRefs: recoveryArtifactIdentity.artifact_identity_receipt_refs,
+    artifactIdentityAuthority: recoveryArtifactIdentityAuthority,
     routeRecommendation: acceptedReview ? record(record(attempt.route_impact).stage_route_recommendation)
       : record(verifiedRouteImpact.stage_route_recommendation).decision_kind
       ? record(verifiedRouteImpact.stage_route_recommendation)
@@ -423,7 +464,7 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
   const artifactProducerAttemptRef = `opl://stage_attempts/${artifactAttempt.stage_attempt_id}`;
   const reviewInputSnapshotMaterializationRequest = acceptedReview ? null :
     verifiedQuality.review_input_snapshot_materialization_request ?? null;
-  const recoveryResume = {
+  const recoveryResumeCandidate = {
     surface_kind: 'opl_stage_run_recovery_resume' as const,
     version: 'opl-stage-run-recovery-resume.v1' as const,
     recovery_id: recoveryId,
@@ -451,10 +492,11 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
           prior_attempt_summaries: recoveryState.attempts,
           findings,
           repair_map: repairMap,
-          review_receipts: priorReviewReceipts,
+          review_receipts: persistedReviewReceipts.length > 0 ? persistedReviewReceipts : priorReviewReceipts,
           repair_rounds_used: recoveredSummary.quality_round_index,
           quality_debt_refs: recoveryState.quality_debt_refs,
           route_quality_debt_refs: recoveryState.route_quality_debt_refs,
+          artifact_identity_authority: recoveryArtifactIdentityAuthority,
         }
       : {
           producer_attempt_ref: artifactProducerAttemptRef,
@@ -466,11 +508,31 @@ export async function recoverStageRunCloseoutProjection(db: DatabaseSync, input:
             route_quality_debt_refs: recoveryState.route_quality_debt_refs,
           } : {}),
         }),
-    artifact_refs: identity.artifact_refs,
-    artifact_hashes: identity.artifact_hashes,
-    artifact_identity_receipt_refs: receiptRefs,
+    artifact_refs: recoveryArtifactIdentity.artifact_refs,
+    artifact_hashes: recoveryArtifactIdentity.artifact_hashes,
+    artifact_identity_receipt_refs: recoveryArtifactIdentity.artifact_identity_receipt_refs,
+    artifact_identity_authority: recoveryArtifactIdentityAuthority,
     route_recommendations: recoveryState.route_recommendations,
     review_input_snapshot_materialization_request: reviewInputSnapshotMaterializationRequest,
+  };
+  const resolvedRecoveryArtifactAuthority = resolveRecoveryArtifactAuthority(recoveryResumeCandidate, {
+    maxRepairRounds: (effectiveLaunch.stage_run_input as TemporalStageRunWorkflowInput)
+      .quality_policy.formal_review.max_repair_rounds,
+  });
+  if (!resolvedRecoveryArtifactAuthority) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Closeout recovery cannot derive one canonical Attempt/review artifact authority.',
+      {
+        failure_code: 'stage_run_recovery_previous_reviewed_lineage_invalid',
+        stage_run_id: input.stageRunId,
+        stage_attempt_id: input.stageAttemptId,
+      },
+    );
+  }
+  const recoveryResume = {
+    ...recoveryResumeCandidate,
+    ...resolvedRecoveryArtifactAuthority,
   };
   const workflowInput: TemporalStageRunWorkflowInput = {
     ...(effectiveLaunch.stage_run_input as TemporalStageRunWorkflowInput),

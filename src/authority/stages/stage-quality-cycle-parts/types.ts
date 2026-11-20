@@ -120,6 +120,7 @@ export type StageQualityCycleState = {
   current_role: StageQualityAttemptRole | null;
   status: 'awaiting_producer' | 'awaiting_review' | 'awaiting_repair' | 'passed' | 'quality_debt' | 'hard_stopped';
   selected_artifact_refs: string[];
+  artifact_identity_authority?: Record<string, unknown> | null;
   quality_debt_refs: string[];
   quality_scope_budget?: StageQualityScopeBudget;
   quality_scope_budget_usage?: {
