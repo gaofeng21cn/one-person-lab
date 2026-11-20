@@ -22,6 +22,10 @@ import {
 } from '../../../src/authority/stages/stage-quality-cycle.ts';
 import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environment.ts';
 import { queryTemporalStageRunWorkflow } from '../../../src/adapters/execution/family-runtime-temporal-provider-parts/attempt-control.ts';
+import { immutableArtifactRefsFromReviewReceipt } from '../../../src/adapters/execution/family-runtime-temporal-workflow-artifact-authority.ts';
+import { validateWorkflowStageRunInput } from '../../../src/adapters/execution/family-runtime-temporal-workflow-ingress.ts';
+import { deriveNormalizedStageQualityCloseout } from '../../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 const workflowsPath = path.join(repoRoot, 'src/adapters/execution/family-runtime-temporal-workflows.ts');
@@ -168,8 +172,16 @@ export async function runController(input: {
   };
   recoveryResume?: boolean;
   blockedReviewerResume?: boolean;
+  completedReviewerResume?: boolean;
   acceptedReviewerResume?: boolean;
   acceptedRepairerResume?: boolean;
+  multiRoundRepairerResume?: boolean;
+  legacyRepairerResume?: boolean;
+  validateRecoveryBeforeStart?: boolean;
+  liveBytesStatus?: 'matches' | 'differs' | 'unknown';
+  reviewInputSnapshotStatus?: 'materialized' | 'quality_debt';
+  normalizationScenario?: 'success' | 'failure';
+  reviewInputSnapshotManifestMode?: 'complete' | 'duplicate' | 'hash_notation_mismatch';
 }) {
   const testEnv = await (controllerEnvironment ??= createTemporalTestWorkflowEnvironment());
   const workflowBundle = await (controllerWorkflowBundle ??= bundleWorkflowCode({ workflowsPath }));
@@ -180,6 +192,7 @@ export async function runController(input: {
   const routeInputs: any[] = [];
   const handoffObservations: any[] = [];
   const attemptSyncs: any[] = [];
+  const derivedRepairPackets = new Map<string, Record<string, any>>();
   let worker: Worker | null = null;
   try {
     const activities = {
@@ -291,6 +304,15 @@ export async function runController(input: {
             context_manifest: contextManifest,
             findings: materialization.findings ?? [],
             repair_map: materialization.repair_map ?? [],
+            ...(role === 're_reviewer' && input.normalizationScenario === 'success'
+              ? (() => {
+                  const derived = derivedRepairPackets.get(materialization.artifact_producer_attempt_ref ?? '');
+                  return {
+                    repair_observations: derived?.route_impact.stage_quality_cycle.repair_observations ?? [],
+                    repair_closeout_lineage: derived?.closeout_normalization ?? null,
+                  };
+                })()
+              : {}),
           },
         };
         workflowInputs.push(workflowInput);
@@ -299,7 +321,22 @@ export async function runController(input: {
           workflow_input: workflowInput,
         };
       },
-      async stageQualityCycleProjectActivity() {
+      async stageQualityCycleProjectActivity(projectionInput: any) {
+        if (projectionInput?.artifact_identity_observation_only === true) {
+          return {
+            artifact_identity_observation: {
+              live_bytes_status: input.liveBytesStatus ?? 'matches',
+              artifacts: (projectionInput.state?.artifact_refs ?? []).map((ref: string, index: number) => ({
+                ref,
+                expected_sha256: projectionInput.state?.artifact_hashes?.[index] ?? null,
+                observed_sha256: (input.liveBytesStatus ?? 'matches') === 'differs'
+                  ? `sha256:unreviewed-live-${index}`
+                  : projectionInput.state?.artifact_hashes?.[index] ?? null,
+                status: input.liveBytesStatus ?? 'matches',
+              })),
+            },
+          };
+        }
         return { projected: true };
       },
       async stageQualityAttemptSyncActivity(syncInput: { attempt_ref: string }) {
@@ -319,6 +356,55 @@ export async function runController(input: {
         if (reviewerRole === input.failReceiptForReviewerRole) {
           throw new Error(`contract_shape_invalid:simulated-${reviewerRole}-receipt-validation-failure`);
         }
+        const reviewerInput = workflowInputs.find((attempt) => (
+          `opl://stage_attempts/${attempt.stage_attempt_id}` === receiptInput.reviewer_attempt_ref
+        ));
+        const reviewedArtifactRefs = reviewerInput?.input_artifact_refs ?? ['artifact:deck-v1'];
+        const reviewedArtifactHashes = reviewerInput?.reviewed_artifact_hashes ?? ['sha256:deck-v1'];
+        const snapshotStatus = input.reviewInputSnapshotStatus ?? 'materialized';
+            const snapshotManifest = snapshotStatus === 'quality_debt'
+          ? null
+          : (() => {
+              const manifest = {
+              surface_kind: 'opl_reviewer_input_snapshot_manifest',
+              schema_version: 3,
+              owner_authority_ref: {
+                kind: 'opl_stage_attempt_owner_authority',
+                ref: 'fixture:owner-authority',
+                size_bytes: 1,
+                sha256: `sha256:${'b'.repeat(64)}`,
+              },
+              producer_attempt_ref: receiptInput.producer_attempt_ref,
+              execution_content_binding_sha256: `sha256:${'c'.repeat(64)}`,
+              members: reviewedArtifactHashes.map((hash: string, index: number) => {
+                const immutableRef = {
+                  kind: 'opl_reviewer_input_snapshot_member',
+                  ref: `file:///tmp/opl-controller-snapshot/${index}-${String(hash).replace(/[^a-z0-9]/gi, '_')}.bin`,
+                  size_bytes: 1,
+                  sha256: hash,
+                };
+                return {
+                  member_id: `artifact:${index}`,
+                  sha256: hash,
+                  size_bytes: 1,
+                  immutable_ref: immutableRef,
+                };
+              }),
+              };
+              if (input.reviewInputSnapshotManifestMode === 'duplicate') {
+                manifest.members = [...manifest.members, manifest.members[0]];
+              }
+              if (input.reviewInputSnapshotManifestMode === 'hash_notation_mismatch') {
+                manifest.members = manifest.members.map((member: any) => ({
+                  ...member,
+                  immutable_ref: {
+                    ...member.immutable_ref,
+                    sha256: String(member.immutable_ref.sha256).replace(/^sha256:/, ''),
+                  },
+                }));
+              }
+              return manifest;
+            })();
         return {
           surface_kind: 'opl_stage_review_receipt',
           version: 'stage-review-receipt.v1',
@@ -329,10 +415,45 @@ export async function runController(input: {
           producer_session_ref: `codex://threads/${receiptInput.producer_attempt_ref}`,
           reviewer_session_ref: `codex://threads/${receiptInput.reviewer_attempt_ref}`,
           no_context_inheritance: true,
-          reviewed_artifact_refs: ['artifact:deck-v1'],
-          reviewed_artifact_hashes: ['sha256:deck-v1'],
+          reviewed_artifact_refs: reviewedArtifactRefs,
+          reviewed_artifact_hashes: reviewedArtifactHashes,
           rubric_refs: receiptInput.rubric_refs,
           verdict: receiptInput.verdict,
+          review_input_snapshot_status: snapshotStatus,
+          review_input_snapshot_binding: snapshotManifest
+            ? {
+                surface_kind: 'opl_reviewer_input_snapshot_binding',
+                schema_version: 3,
+                snapshot_manifest_ref: {
+                  kind: 'opl_reviewer_input_snapshot_manifest',
+                  ref: 'fixture:snapshot-manifest',
+                  size_bytes: 1,
+                  sha256: `sha256:${'d'.repeat(64)}`,
+                },
+                owner_authority_ref: snapshotManifest.owner_authority_ref,
+                producer_attempt_ref: receiptInput.producer_attempt_ref,
+                execution_content_binding_sha256: snapshotManifest.execution_content_binding_sha256,
+              }
+            : null,
+          opl_reviewer_input_snapshot_manifest_ref: snapshotManifest
+            ? {
+                kind: 'opl_reviewer_input_snapshot_manifest',
+                ref: 'fixture:snapshot-manifest',
+                size_bytes: 1,
+                sha256: `sha256:${'d'.repeat(64)}`,
+              }
+            : null,
+          opl_reviewer_input_snapshot_manifest: snapshotManifest,
+          review_input_snapshot_quality_debt_receipt_ref: snapshotStatus === 'quality_debt'
+            ? 'fixture:snapshot-quality-debt'
+            : null,
+          review_input_snapshot_quality_debt_receipt: snapshotStatus === 'quality_debt'
+            ? {
+                surface_kind: 'opl_reviewer_input_snapshot_quality_debt_receipt',
+                stage_transition_allowed: true,
+                typed_blocker_ref: null,
+              }
+            : null,
           opl_review_evidence_artifact_receipt_ref: null,
           opl_review_evidence_artifact_receipt: null,
         };
@@ -486,15 +607,36 @@ export async function runController(input: {
           const findingMode = input.initialReviewerFindings
             ?? (['pass', 'quality_debt'].includes(attemptOutcome) ? 'none' : 'required');
           stageQualityCycle.findings = findingMode === 'none' ? []
-            : [{ ...finding, ...(findingMode === 'optional' ? { severity: 'major', required: false } : {}) }];
+            : [
+                { ...finding, ...(findingMode === 'optional' ? { severity: 'major', required: false } : {}) },
+                ...(input.normalizationScenario
+                  ? ['finding:editorial-2', 'finding:editorial-3', 'finding:editorial-4'].map((findingId) => ({
+                      finding_id: findingId,
+                      severity: 'minor',
+                      required: false,
+                      evidence_refs: [`evidence:${findingId}`],
+                      repair_expectation: 'Optional editorial observation.',
+                    }))
+                  : []),
+              ];
         }
         if (role === 'repairer') {
-          stageQualityCycle.repair_map = [{
+          stageQualityCycle.findings = attempt.quality_context?.findings ?? [];
+          const requiredRepairEntry = {
             finding_id: finding.finding_id,
             repair_status: 'repaired',
             changed_artifact_refs: [`artifact:deck-v${artifactVersion}`],
             repair_evidence_refs: [`diff:deck-v${artifactVersion}`],
-          }];
+          };
+          const nonRequiredRepairEntries = input.normalizationScenario
+            ? ['finding:editorial-2', 'finding:editorial-3', 'finding:editorial-4'].map((findingId) => ({
+                finding_id: findingId,
+                repair_status: 'repaired',
+                changed_artifact_refs: [`artifact:deck-v${artifactVersion}`],
+                repair_evidence_refs: [`diff:${findingId}`],
+              }))
+            : [];
+          stageQualityCycle.repair_map = [requiredRepairEntry, ...nonRequiredRepairEntries];
         }
         if (role === 're_reviewer') {
           if (attemptOutcome !== 'blocked' && attemptOutcome !== 'human_gate') {
@@ -589,7 +731,7 @@ export async function runController(input: {
             evidence_refs: [finding.finding_id],
           };
         }
-        return {
+        const closeout = {
           closeout_refs: [`closeout:${attempt.stage_attempt_id}`],
           closeout_ref_metadata: rawArtifactProgress
             ? [{
@@ -614,6 +756,19 @@ export async function runController(input: {
             ? { authority_boundary: { opl: 'raw_executor_output_progress_envelope_only' } }
             : {}),
         };
+        if (role === 'repairer' && input.normalizationScenario === 'success') {
+          const original = normalizeTypedStageCloseoutPacket({
+            ...closeout,
+            surface_kind: 'stage_attempt_closeout_packet',
+            stage_attempt_id: attempt.stage_attempt_id,
+            stage_run_id: attempt.stage_run_id,
+          });
+          const normalized = deriveNormalizedStageQualityCloseout({ closeoutPacket: original, attempt });
+          if (!normalized) throw new Error('expected eligible fixture repairer closeout');
+          derivedRepairPackets.set(`opl://stage_attempts/${attempt.stage_attempt_id}`, normalized.derivedCloseout);
+          return normalized.derivedCloseout;
+        }
+        return closeout;
       },
     };
     worker = await Worker.create({
@@ -635,7 +790,7 @@ export async function runController(input: {
               : { scope_budget: { max_tokens: input.maxTokens } }),
         },
       });
-      if (input.recoveryResume || input.blockedReviewerResume || input.acceptedReviewerResume || input.acceptedRepairerResume) {
+      if (input.recoveryResume || input.blockedReviewerResume || input.completedReviewerResume || input.acceptedReviewerResume || input.acceptedRepairerResume) {
         workflowInput.recovery_resume = {
           surface_kind: 'opl_stage_run_recovery_resume',
           version: 'opl-stage-run-recovery-resume.v1',
@@ -669,6 +824,33 @@ export async function runController(input: {
           }];
           recovery.repair_rounds_used = 0;
         }
+        if (input.completedReviewerResume) {
+          const recovery = workflowInput.recovery_resume;
+          const reviewer = {
+            ...recovery.producer_attempt_summary!,
+            attempt_role: 'reviewer' as const,
+            stage_attempt_id: `sat_${input.id}_completed-reviewer_0`,
+            workflow_id: `wf_${input.id}_completed-reviewer_0`,
+            execution_session_ref: `codex://threads/thread-${input.id}-completed-reviewer-0`,
+            artifact_producer_attempt_ref: recovery.producer_attempt_ref!,
+          };
+          const receipt = {
+            ...(await activities.stageQualityReviewReceiptActivity({
+              producer_attempt_ref: recovery.producer_attempt_ref,
+              reviewer_attempt_ref: `opl://stage_attempts/${reviewer.stage_attempt_id}`,
+              verdict: 'repair_required',
+              rubric_refs: ['rubric:visual'],
+            })),
+            revision_transport: {
+              surface_kind: 'opl_revision_transport',
+              opl_revision_intake_ref: { kind: 'opl_revision_intake', ref: 'intake:completed-review' },
+              opl_stage_review_receipt_ref: { kind: 'opl_stage_review_receipt', ref: 'receipt:completed-review' },
+            },
+          } as any;
+          recovery.prior_attempt_summaries = [recovery.producer_attempt_summary!, reviewer];
+          recovery.review_receipts = [receipt];
+          recovery.repair_rounds_used = 0;
+        }
         if (input.acceptedReviewerResume || input.acceptedRepairerResume) {
           const recovery = workflowInput.recovery_resume;
           const reviewer = {
@@ -677,14 +859,15 @@ export async function runController(input: {
             stage_attempt_id: `sat_${input.id}_reviewer_0`,
             workflow_id: `wf_${input.id}_reviewer_0`,
             execution_session_ref: `codex://threads/thread-${input.id}-reviewer-0`,
+            artifact_producer_attempt_ref: recovery.producer_attempt_ref!,
           };
           recovery.resume_after_role = 'reviewer';
           recovery.reviewer_attempt_ref = `opl://stage_attempts/${reviewer.stage_attempt_id}`;
           recovery.prior_attempt_summaries = [recovery.producer_attempt_summary!, reviewer];
-          recovery.repair_rounds_used = 1;
+          recovery.repair_rounds_used = 0;
           recovery.findings = [{ finding_id: 'finding:visual-clipping', severity: 'critical', required: true,
             evidence_refs: ['screenshot:v1'], repair_expectation: 'Remove clipping while preserving the approved claim.' }];
-          recovery.review_receipts = [{
+          const acceptedReviewReceipt = {
             ...(await activities.stageQualityReviewReceiptActivity({
               producer_attempt_ref: recovery.producer_attempt_ref,
               reviewer_attempt_ref: recovery.reviewer_attempt_ref,
@@ -695,22 +878,137 @@ export async function runController(input: {
               opl_revision_intake_ref: { kind: 'opl_revision_intake', ref: 'intake:accepted-review' },
               opl_stage_review_receipt_ref: { kind: 'opl_stage_review_receipt', ref: 'receipt:accepted-review' },
             },
-          } as any];
+          } as any;
+          recovery.review_receipts = [acceptedReviewReceipt];
           if (input.acceptedRepairerResume) {
             const repairer = {
               ...recovery.producer_attempt_summary!, attempt_role: 'repairer' as const,
               stage_attempt_id: `sat_${input.id}_repairer_1`, quality_round_index: 1,
               workflow_id: `wf_${input.id}_repairer_1`, execution_session_ref: `codex://threads/thread-${input.id}-repairer-1`,
+              artifact_producer_attempt_ref: recovery.producer_attempt_ref!,
+              artifact_refs: ['artifact:deck-v2'],
+              artifact_hashes: ['sha256:deck-v2'],
+              artifact_identity_receipt_refs: ['artifact-identity:deck-v2'],
             };
             recovery.resume_after_role = 'repairer';
+            recovery.repair_rounds_used = 1;
             delete recovery.reviewer_attempt_ref;
             recovery.artifact_producer_attempt_ref = `opl://stage_attempts/${repairer.stage_attempt_id}`;
             recovery.artifact_producer_attempt_summary = repairer;
             recovery.prior_attempt_summaries.push(repairer);
+            recovery.artifact_identity_authority = {
+              status: 'reviewed_with_open_findings',
+              authoritative_attempt_ref: recovery.producer_attempt_ref!,
+              review_attempt_ref: recovery.reviewer_attempt_ref ?? `opl://stage_attempts/sat_${input.id}_reviewer_0`,
+              quality_round_index: 0,
+              immutable_artifact_refs: immutableArtifactRefsFromReviewReceipt(acceptedReviewReceipt),
+              live_bytes_status: 'unknown',
+              read_policy: 'use_immutable_ref_or_verify_sha256',
+              pending_repair: {
+                attempt_ref: `opl://stage_attempts/${repairer.stage_attempt_id}`,
+                quality_round_index: 1,
+                artifact_refs: ['artifact:deck-v2'],
+                artifact_hashes: ['sha256:deck-v2'],
+                artifact_identity_receipt_refs: ['artifact-identity:deck-v2'],
+                disposition: 'unreviewed_repair',
+              },
+            };
             recovery.repair_map = [{ finding_id: 'finding:visual-clipping', repair_status: 'repaired',
-              changed_artifact_refs: ['artifact:deck-v1'], repair_evidence_refs: ['diff:deck-v1'] }];
+              changed_artifact_refs: ['artifact:deck-v2'], repair_evidence_refs: ['diff:deck-v2'] }];
+            if (input.legacyRepairerResume) {
+              recovery.artifact_refs = repairer.artifact_refs;
+              recovery.artifact_hashes = repairer.artifact_hashes;
+              recovery.artifact_identity_receipt_refs = repairer.artifact_identity_receipt_refs;
+              delete recovery.artifact_identity_authority;
+            }
+            if (input.multiRoundRepairerResume) {
+              const firstReReviewer = {
+                ...repairer,
+                attempt_role: 're_reviewer' as const,
+                stage_attempt_id: `sat_${input.id}_re_reviewer_1`,
+                workflow_id: `wf_${input.id}_re_reviewer_1`,
+                execution_session_ref: `codex://threads/thread-${input.id}-re-reviewer-1`,
+                artifact_producer_attempt_ref: `opl://stage_attempts/${repairer.stage_attempt_id}`,
+              };
+              const secondRepairer = {
+                ...repairer,
+                stage_attempt_id: `sat_${input.id}_repairer_2`,
+                quality_round_index: 2,
+                workflow_id: `wf_${input.id}_repairer_2`,
+                execution_session_ref: `codex://threads/thread-${input.id}-repairer-2`,
+                artifact_producer_attempt_ref: `opl://stage_attempts/${repairer.stage_attempt_id}`,
+                artifact_refs: ['artifact:deck-v3'],
+                artifact_hashes: ['sha256:deck-v3'],
+                artifact_identity_receipt_refs: ['artifact-identity:deck-v3'],
+              };
+              const firstReReviewReceipt = {
+                ...(await activities.stageQualityReviewReceiptActivity({
+                  producer_attempt_ref: `opl://stage_attempts/${repairer.stage_attempt_id}`,
+                  reviewer_attempt_ref: `opl://stage_attempts/${firstReReviewer.stage_attempt_id}`,
+                  verdict: 'repair_required',
+                  rubric_refs: ['rubric:visual'],
+                })),
+                revision_transport: {
+                  surface_kind: 'opl_revision_transport',
+                  opl_revision_intake_ref: { kind: 'opl_revision_intake', ref: 'intake:re-review-1' },
+                  opl_stage_review_receipt_ref: { kind: 'opl_stage_review_receipt', ref: 'receipt:re-review-1' },
+                },
+              } as any;
+              firstReReviewReceipt.reviewed_artifact_refs = repairer.artifact_refs;
+              firstReReviewReceipt.reviewed_artifact_hashes = repairer.artifact_hashes;
+              firstReReviewReceipt.opl_reviewer_input_snapshot_manifest.producer_attempt_ref =
+                `opl://stage_attempts/${repairer.stage_attempt_id}`;
+              firstReReviewReceipt.opl_reviewer_input_snapshot_manifest.members =
+                repairer.artifact_hashes.map((hash, index) => ({
+                  member_id: `artifact:${index}`,
+                  sha256: hash,
+                  size_bytes: 1,
+                  immutable_ref: {
+                    kind: 'opl_reviewer_input_snapshot_member',
+                    ref: `file:///tmp/opl-controller-snapshot/re-review-1-${index}.bin`,
+                    size_bytes: 1,
+                    sha256: hash,
+                  },
+                }));
+              recovery.prior_attempt_summaries.push(firstReReviewer, secondRepairer);
+              recovery.review_receipts.push(firstReReviewReceipt);
+              recovery.repair_rounds_used = 2;
+              recovery.artifact_producer_attempt_ref = `opl://stage_attempts/${secondRepairer.stage_attempt_id}`;
+              recovery.artifact_producer_attempt_summary = secondRepairer;
+              recovery.artifact_refs = repairer.artifact_refs;
+              recovery.artifact_hashes = repairer.artifact_hashes;
+              recovery.artifact_identity_receipt_refs = repairer.artifact_identity_receipt_refs;
+              recovery.artifact_identity_authority = {
+                status: 'reviewed_with_open_findings',
+                authoritative_attempt_ref: `opl://stage_attempts/${repairer.stage_attempt_id}`,
+                review_attempt_ref: `opl://stage_attempts/${firstReReviewer.stage_attempt_id}`,
+                quality_round_index: 1,
+                immutable_artifact_refs: immutableArtifactRefsFromReviewReceipt(firstReReviewReceipt),
+                live_bytes_status: 'unknown',
+                read_policy: 'use_immutable_ref_or_verify_sha256',
+                pending_repair: {
+                  attempt_ref: `opl://stage_attempts/${secondRepairer.stage_attempt_id}`,
+                  quality_round_index: 2,
+                  artifact_refs: secondRepairer.artifact_refs,
+                  artifact_hashes: secondRepairer.artifact_hashes,
+                  artifact_identity_receipt_refs: secondRepairer.artifact_identity_receipt_refs,
+                  disposition: 'unreviewed_repair',
+                },
+              };
+              recovery.repair_map = [{
+                finding_id: 'finding:visual-clipping',
+                repair_status: 'repaired',
+                changed_artifact_refs: secondRepairer.artifact_refs,
+                repair_evidence_refs: ['diff:deck-v3'],
+              }];
+            }
           }
         }
+      }
+      if (input.validateRecoveryBeforeStart) {
+        validateWorkflowStageRunInput(workflowInput, {
+          recoveryArtifactIdentityAuthorityRequired: true,
+        });
       }
       const handle = await testEnv.client.workflow.start(StageRunWorkflow, {
         args: [workflowInput],

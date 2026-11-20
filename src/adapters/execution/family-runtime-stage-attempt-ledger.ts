@@ -11,6 +11,7 @@ export {
   stageAttemptToPayload,
   stageAttemptSignalToPayload,
   parseStageAttemptJsonObject,
+  parseStageAttemptCloseoutJsonObject,
   parseStageAttemptJsonList,
 } from './family-runtime-stage-attempt-ledger-parts/payload.ts';
 

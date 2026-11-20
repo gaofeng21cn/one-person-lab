@@ -6,7 +6,7 @@ import {
   stageAttemptCloseoutToPayload,
   stageAttemptSignalToPayload,
   stageAttemptToPayload,
-  parseJsonObject,
+  parseStageAttemptCloseoutJsonObject,
 } from './payload.ts';
 import type {
   StageAttemptRow,
@@ -161,10 +161,10 @@ export function latestStageAttemptCloseoutPacketsByAttempt(db: DatabaseSync, sta
     SELECT stage_attempt_id, packet_json
     FROM stage_attempt_closeouts
     WHERE stage_attempt_id IN (${stageAttemptIds.map(() => '?').join(',')})
-    ORDER BY stage_attempt_id ASC, created_at ASC
+    ORDER BY stage_attempt_id ASC, created_at ASC, rowid ASC
   `).all(...stageAttemptIds) as Pick<StageAttemptCloseoutRow, 'stage_attempt_id' | 'packet_json'>[];
   for (const row of rows) {
-    byAttempt.set(row.stage_attempt_id, parseJsonObject(row.packet_json));
+    byAttempt.set(row.stage_attempt_id, parseStageAttemptCloseoutJsonObject(row.packet_json));
   }
   return byAttempt;
 }
@@ -201,6 +201,6 @@ export function listStageAttemptSignals(db: DatabaseSync, stageAttemptId: string
 
 export function listStageAttemptCloseouts(db: DatabaseSync, stageAttemptId: string) {
   return (db.prepare(`
-    SELECT * FROM stage_attempt_closeouts WHERE stage_attempt_id = ? ORDER BY created_at ASC
+    SELECT * FROM stage_attempt_closeouts WHERE stage_attempt_id = ? ORDER BY created_at ASC, rowid ASC
   `).all(stageAttemptId) as StageAttemptCloseoutRow[]).map(stageAttemptCloseoutToPayload);
 }

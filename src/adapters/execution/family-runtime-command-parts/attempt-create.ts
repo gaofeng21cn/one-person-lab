@@ -11,6 +11,7 @@ import {
   packageRuntimeSourceCheckoutPath,
 } from '../family-runtime-package-readiness.ts';
 import { resolveFamilyRuntimeProviderKind } from '../family-runtime-providers.ts';
+import { AGENT_EXECUTOR_KINDS } from '../agent-executor.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
 import {
   createStageAttempt,
@@ -44,6 +45,7 @@ import {
   stageRunReplayBusinessIdentity,
   stageRunReplayRequestBusinessIdentity,
   temporalProviderModule,
+  workspaceLocatorStageAttemptExecutorPolicy,
 } from './attempt-shared.ts';
 
 export type AttemptCreateCommandContext = FamilyRuntimeAttemptCommandContext & {
@@ -148,6 +150,41 @@ export async function runAttemptCreateCommand(
   });
   const existingStageRunLaunch = findStageRunLaunch(db, stageRunId);
   const requestedReviewLane = parsed.input.reviewLane?.trim() || null;
+  // A locator-declared executor policy is part of the durable StageRun identity,
+  // so the declared executor kind must reach the immutable spec exactly like an
+  // explicit CLI executor kind would.
+  const declaredExecutorPolicy = workspaceLocatorStageAttemptExecutorPolicy(
+    parsed.input.workspaceLocator,
+  );
+  const cliExecutorKind = parsed.input.executorKind?.trim()
+    ? parsed.input.executorKind.trim().replace(/-/g, '_')
+    : null;
+  if (cliExecutorKind
+    && !AGENT_EXECUTOR_KINDS.includes(cliExecutorKind as typeof AGENT_EXECUTOR_KINDS[number])) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'CLI executor kind is not supported.',
+      {
+        failure_code: 'stage_attempt_executor_policy_invalid',
+        source: 'cli',
+        executor_kind: parsed.input.executorKind,
+        allowed_executor_kinds: [...AGENT_EXECUTOR_KINDS],
+      },
+    );
+  }
+  const declaredExecutorKind = declaredExecutorPolicy.executor_kind ?? null;
+  if (cliExecutorKind && declaredExecutorKind && cliExecutorKind !== declaredExecutorKind) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'CLI executor kind conflicts with the workspace locator executor policy.',
+      {
+        failure_code: 'stage_attempt_executor_kind_conflict',
+        cli_executor_kind: cliExecutorKind,
+        locator_executor_kind: declaredExecutorKind,
+      },
+    );
+  }
+  const effectiveExecutorKind = cliExecutorKind || declaredExecutorKind || undefined;
   const explicitDomainPackRoot = typeof parsed.input.workspaceLocator.domain_pack_root === 'string'
     ? parsed.input.workspaceLocator.domain_pack_root.trim()
     : '';
@@ -190,6 +227,7 @@ export async function runAttemptCreateCommand(
         parsed.input, existingStageRunLaunch.stage_run_input.stage_packet_ref,
       ),
       reviewLane: replayReviewLane ?? undefined,
+      executorKind: effectiveExecutorKind,
     }))
   )) {
     throw new FrameworkContractError(
@@ -243,6 +281,14 @@ export async function runAttemptCreateCommand(
   const nativePackageClosure = isRecord(packageReadiness?.native_package_closure)
     ? packageReadiness.native_package_closure
     : null;
+  // One merged policy is the single durable identity: the StageRun spec and
+  // the mutable Attempt row must never disagree about executor kind or route.
+  const mergedStageAttemptExecutorPolicy = stageAttemptExecutorPolicyWithReviewLane({
+    ...declaredExecutorPolicy,
+    ...(parsed.input.executorBindingRef ? { executor_binding_ref: parsed.input.executorBindingRef } : {}),
+    ...(parsed.input.invocationMode ? { invocation_mode: parsed.input.invocationMode } : {}),
+    ...(parsed.input.boundedEditRef ? { bounded_edit_ref: parsed.input.boundedEditRef } : {}),
+  }, effectiveReviewLane) ?? {};
   const useBoundWorkspaceLocator = selectedPackageUseBinding
     ? {
         ...parsed.input.workspaceLocator,
@@ -309,7 +355,7 @@ export async function runAttemptCreateCommand(
     providerKind,
     workspaceLocator: parsed.input.workspaceLocator,
     sourceFingerprint,
-    executorKind: parsed.input.executorKind,
+    executorKind: effectiveExecutorKind,
     executorBindingRef: parsed.input.executorBindingRef,
     invocationMode: parsed.input.invocationMode,
     boundedEditRef: parsed.input.boundedEditRef,
@@ -347,12 +393,8 @@ export async function runAttemptCreateCommand(
         parentRouteDecisionRef: parsed.input.parentRouteDecisionRef,
         workspaceLocator: useBoundWorkspaceLocator,
         sourceFingerprint,
-        executorKind: parsed.input.executorKind,
-        stageAttemptExecutorPolicy: stageAttemptExecutorPolicyWithReviewLane({
-          ...(parsed.input.executorBindingRef ? { executor_binding_ref: parsed.input.executorBindingRef } : {}),
-          ...(parsed.input.invocationMode ? { invocation_mode: parsed.input.invocationMode } : {}),
-          ...(parsed.input.boundedEditRef ? { bounded_edit_ref: parsed.input.boundedEditRef } : {}),
-        }, effectiveReviewLane) ?? {},
+        executorKind: effectiveExecutorKind,
+        stageAttemptExecutorPolicy: mergedStageAttemptExecutorPolicy,
         checkpointRefs: stageRunCheckpointRefs(parsed.input,
           `${stageQualityBinding!.manifest_ref}@sha256:${stageQualityBinding!.manifest_sha256}`
           + `#stage=${encodeURIComponent(parsed.input.stageId)}`),
@@ -441,6 +483,8 @@ export async function runAttemptCreateCommand(
         ...scopedAttemptInput,
         workspaceLocator: useBoundWorkspaceLocator,
         idempotencyWorkspaceLocator: parsed.input.workspaceLocator,
+        executorKind: effectiveExecutorKind,
+        stageAttemptExecutorPolicy: mergedStageAttemptExecutorPolicy,
         blockedReason,
         routeImpact: defaultStageContextObservation.selected_action_id
           ? {

@@ -379,7 +379,8 @@ function qualityAttemptPromptLines(
       ...base,
       'This is a fresh repair Attempt. Repair only the declared required findings within the inherited Stage goal, scope, and authority.',
       'Required route_impact.stage_quality_cycle fields for repairer: repair_map, artifact_refs, artifact_hashes.',
-      'Return repair_map as an array, not an object keyed by finding id. Include exactly one entry for each required finding, with finding_id, repair_status (repaired|not_repaired|blocked), changed_artifact_refs, and repair_evidence_refs; bind exact changed artifact hashes in closeout_ref_metadata. repaired is the repairer claim only, not independent finding closure. The repairer cannot close findings.',
+      'Return repair_map as an array, not an object keyed by finding id. repair_map is required-only: include exactly one entry for each required finding and no entry for any non-required or unknown finding, with finding_id, repair_status (repaired|not_repaired|blocked), changed_artifact_refs, and repair_evidence_refs; bind exact changed artifact hashes in closeout_ref_metadata. repaired is the repairer claim only, not independent finding closure. The repairer cannot close findings.',
+      'If your domain role prompt leads you to substantiate or repair a known non-required finding, record that work in the optional non-authoritative repair_observations array instead of repair_map. Each entry must use a known required=false finding_id with repair_status, changed_artifact_refs, repair_evidence_refs, and an optional note. repair_observations cannot close a finding, replace or extend required repair_map coverage, or change the repair route.',
       'Do not make a terminal Stage transition decision. If the finding belongs elsewhere, return an evidence-backed stage_route_recommendation; the terminal reviewer decides after fresh re-review.',
       'Bind every returned artifact ref to the identical SHA value in typed closeout_ref_metadata. OPL transport verifies local bytes and adds its identity receipt; external artifacts require an independently readable domain identity receipt before re-review.',
     ];
@@ -423,6 +424,7 @@ function qualityAttemptPromptLines(
     ...(attemptRole === 're_reviewer'
       ? [
           'This is finding-closure re-review. Evaluate each prior required finding against the repair_map and exact new artifact.',
+          'Structured quality context may include repair_observations from the repairer closeout. They are non-authoritative context only: independently verify any issue before recording it, and they cannot close a required finding, replace or extend the required repair_map, or change the outcome or route.',
           'For a non-hard-stop re_reviewer outcome, required route_impact.stage_quality_cycle fields are outcome, finding_closures, repair_regressions, critical_new_findings, and optional_observations.',
           'Each finding_closures entry must contain finding_id for one prior required finding, status exactly closed|partially_closed|still_open, and evidence_refs as a non-empty array of non-empty string refs to evidence actually reviewed in the immutable snapshot. Cover each prior required finding exactly once; never invent evidence refs or omit them for partially_closed or still_open findings.',
           'For outcome=blocked or outcome=human_gate, return only outcome plus the required hard-stop evidence; do not fabricate a finding-closure result.',
@@ -539,6 +541,7 @@ export function protocolCloseoutResumePrompt(attempt: JsonRecord, persistedOutpu
     'Never output typed_closeout_ref_metadata or any renamed closeout field.',
   ].join('\n');
 }
+
 
 export function eventSummary(event: CodexExecEvent): RunnerEventSummary {
   if (event.type === 'thread.started') {

@@ -300,6 +300,16 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
       repair_map: [], finding_closures: [], review_receipts: [initialReviewReceipt],
       artifact_refs: ['artifact:deck-v4'], artifact_hashes: ['sha256:deck-v4'],
       artifact_identity_receipt_refs: ['receipt:deck-v4'],
+      artifact_identity_authority: {
+        status: 'reviewed_with_open_findings',
+        authoritative_attempt_ref: repairerRef,
+        review_attempt_ref: reReviewerRef,
+        quality_round_index: 1,
+        immutable_artifact_refs: [],
+        live_bytes_status: 'unknown',
+        read_policy: 'use_immutable_ref_or_verify_sha256',
+        pending_repair: null,
+      },
       quality_debt_refs: ['quality-debt:finding:visual-clipping'],
       route_quality_debt_refs: [],
       hard_stop_class: null,
@@ -332,6 +342,31 @@ test('Temporal StageRun terminal state idempotently refreshes the SQLite quality
     assert.deepEqual(second.state, first.state);
     assert.equal((second.state as any).controller_readback.controller_status, 'completed_with_quality_debt');
     assert.equal((second.state as any).controller_readback.attempts[0].attempt_role, 're_reviewer');
+    assert.equal(
+      (first.state as any).controller_readback.artifact_identity_authority.authoritative_attempt_ref,
+      repairerRef,
+    );
+    assert.equal((first.state as any).artifact_identity_authority.pending_repair, null);
+    const pendingProjectionState = structuredClone(state);
+    pendingProjectionState.next_stage_run_launch = null;
+    pendingProjectionState.selected_stage_route = null;
+    pendingProjectionState.artifact_identity_authority = {
+      ...state.artifact_identity_authority!,
+      pending_repair: {
+        attempt_ref: repairerRef,
+        quality_round_index: 1,
+        artifact_refs: ['artifact:deck-v4'],
+        artifact_hashes: ['sha256:deck-v4'],
+        artifact_identity_receipt_refs: ['receipt:deck-v4'],
+        disposition: 'unreviewed_repair',
+      },
+    };
+    const pendingProjected = projectTemporalStageRunQualityCycle(db, pendingProjectionState);
+    assert.deepEqual(pendingProjected.state.selected_artifact_refs, ['artifact:deck-v4']);
+    assert.equal(
+      (pendingProjected.state as any).controller_readback.artifact_identity_authority.pending_repair.attempt_ref,
+      repairerRef,
+    );
     db.prepare("UPDATE stage_attempts SET route_impact_json = '{}' WHERE stage_attempt_id = ?")
       .run(repairer.stage_attempt_id);
     db.prepare('UPDATE stage_attempt_closeouts SET packet_json = ? WHERE closeout_id = ?').run(JSON.stringify({

@@ -40,6 +40,7 @@ export type {
   StageQualityScopeBudgetStopReason,
 } from './stage-quality-scope-budget.ts';
 export {
+  analyzeStageQualityRepairMap,
   buildStageReviewContextManifest,
   evaluateStageQualityFindingClosure,
   initialStageQualityCycleState,
@@ -52,6 +53,7 @@ export {
   validateInitialStageQualityReviewOutcome,
   validateStageQualityFindings,
   validateStageQualityRepairMap,
+  validateStageQualityRepairObservations,
   validateStageQualityReReviewOutcome,
   validateStageQualityReviewHardStopOutcome,
 } from './stage-quality-cycle.ts';
@@ -62,7 +64,9 @@ export type {
   StageQualityFinding,
   StageQualityFindingClosure,
   StageQualityHardStopClass,
+  StageQualityRepairMapAnalysis,
   StageQualityRepairMapEntry,
+  StageQualityRepairObservation,
   StageQualityReReviewResult,
   StageReviewReceipt,
 } from './stage-quality-cycle.ts';

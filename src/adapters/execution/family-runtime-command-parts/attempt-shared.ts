@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
+import { AGENT_EXECUTOR_KINDS } from '../agent-executor.ts';
 import type {
   CordisPackStageBindingService,
   resolveStandardAgentStageQualityRuntimeBinding,
@@ -88,6 +89,71 @@ export function rawStageAttemptMutationAuthority(
   }
   requireRuntimeExecutionScopeMutationAllowed(db, row, operation);
   return row;
+}
+
+const WORKSPACE_LOCATOR_EXECUTOR_POLICY_FIELDS = [
+  'executor_kind',
+  'model',
+  'provider',
+  'reasoning_effort',
+] as const;
+
+/**
+ * Read the Stage executor policy a caller declared on the workspace locator.
+ *
+ * Explicit model routing is part of the durable StageRun identity: the CLI
+ * attempt-create path must persist exactly what the locator declared so a
+ * worker cannot silently fall back to its process default provider or model.
+ * The nested `stage_attempt_executor_policy` object is authoritative; the same
+ * fields may also be declared directly on the locator for older callers.
+ */
+export function workspaceLocatorStageAttemptExecutorPolicy(
+  workspaceLocator: Record<string, unknown> | null | undefined,
+) {
+  const locator = isRecord(workspaceLocator) ? workspaceLocator : {};
+  const nested = isRecord(locator.stage_attempt_executor_policy)
+    ? locator.stage_attempt_executor_policy
+    : {};
+  const declared: Record<string, string> = {};
+  for (const field of WORKSPACE_LOCATOR_EXECUTOR_POLICY_FIELDS) {
+    const nestedValue = typeof nested[field] === 'string' ? nested[field].trim() : '';
+    const topLevelValue = typeof locator[field] === 'string' ? locator[field].trim() : '';
+    const comparableNestedValue = field === 'executor_kind' ? nestedValue.replace(/-/g, '_') : nestedValue;
+    const comparableTopLevelValue = field === 'executor_kind' ? topLevelValue.replace(/-/g, '_') : topLevelValue;
+    if (nestedValue && topLevelValue && comparableNestedValue !== comparableTopLevelValue) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Workspace locator declares conflicting Stage executor policy values.',
+        {
+          failure_code: 'stage_attempt_executor_policy_conflict',
+          field,
+          stage_attempt_executor_policy_value: nestedValue,
+          workspace_locator_value: topLevelValue,
+        },
+      );
+    }
+    const value = nestedValue || topLevelValue;
+    if (!value) continue;
+    if (field === 'executor_kind') {
+      const normalized = value.replace(/-/g, '_');
+      if (!AGENT_EXECUTOR_KINDS.includes(normalized as typeof AGENT_EXECUTOR_KINDS[number])) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Workspace locator declares an unknown Stage executor kind.',
+          {
+            failure_code: 'stage_attempt_executor_policy_invalid',
+            field,
+            value,
+            allowed_executor_kinds: [...AGENT_EXECUTOR_KINDS],
+          },
+        );
+      }
+      declared[field] = normalized;
+      continue;
+    }
+    declared[field] = value;
+  }
+  return declared;
 }
 
 export function stageAttemptAllowsRuntimeRefresh(
@@ -257,6 +323,7 @@ export function stageRunReplayRequestBusinessIdentity(input: {
   const checkpointRefs = normalizedReplayStringList(input.checkpointRefs);
   const stagePacketRef = checkpointRefs[0] ?? null;
   const stageAttemptExecutorPolicy = {
+    ...workspaceLocatorStageAttemptExecutorPolicy(input.workspaceLocator),
     ...(input.executorBindingRef ? { executor_binding_ref: input.executorBindingRef } : {}),
     ...(input.invocationMode ? { invocation_mode: input.invocationMode } : {}),
     ...(input.boundedEditRef ? { bounded_edit_ref: input.boundedEditRef } : {}),

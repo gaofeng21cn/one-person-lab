@@ -449,9 +449,10 @@ function persistedReviewerOutcome(
   const findings = validateStageQualityFindings(
     persistedEnvelopeRecordList(qualityContext, 'findings') as StageQualityFinding[],
   );
+  const persistedRepairMap = persistedEnvelopeRecordList(qualityContext, 'repair_map');
   const repairMap = validateStageQualityRepairMap({
     findings,
-    repairMap: persistedEnvelopeRecordList(qualityContext, 'repair_map') as StageQualityRepairMapEntry[],
+    repairMap: persistedRepairMap as StageQualityRepairMapEntry[],
   });
   const priorFindingIds = persistedStringList(row.prior_finding_refs_json, 're_reviewer.prior_finding_refs');
   const repairMapFindingIds = persistedStringList(row.repair_map_refs_json, 're_reviewer.repair_map_refs')
@@ -497,7 +498,7 @@ function persistedReviewerOutcome(
       'Repairer and Re-reviewer must share the exact persisted finding bodies.',
     );
   }
-  if (!exactCanonicalValue(producerRepairMap, repairMap)) {
+  if (!exactCanonicalValue(producerRepairMap, persistedRepairMap)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Re-review repair_map must exactly match the persisted repairer output.',

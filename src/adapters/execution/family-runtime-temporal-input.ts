@@ -5,6 +5,7 @@ import type {
   StageQualityAttemptRole,
   StageQualityFinding,
   StageQualityRepairMapEntry,
+  StageQualityRepairObservation,
 } from '../../authority/stages/index.ts';
 import { normalizeStageQualityAttemptRole } from '../../authority/stages/index.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
@@ -65,6 +66,8 @@ export type TemporalStageAttemptWorkflowInput = {
   quality_context?: {
     findings?: StageQualityFinding[];
     repair_map?: StageQualityRepairMapEntry[];
+    repair_observations?: StageQualityRepairObservation[];
+    repair_closeout_lineage?: Record<string, unknown>;
     context_manifest?: Record<string, unknown>;
   };
   stage_attempt_executor_policy?: Record<string, unknown> | null;

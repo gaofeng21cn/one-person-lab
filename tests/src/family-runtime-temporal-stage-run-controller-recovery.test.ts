@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { runController } from './family-runtime-temporal-stage-run-controller-cases/fixture.ts';
 
 test('StageRun recovery resumes at reviewer without rerunning the durable producer', async () => {
@@ -26,10 +27,10 @@ test('StageRun recovery resumes at reviewer without rerunning the durable produc
 
 test('StageRun accepted reviewer recovery starts the next repair round without repeating producer or reviewer', async () => {
   const { state, attempts } = await runController({
-    id: 'accepted-reviewer-resume', closeFindingAfterRound: 2, acceptedReviewerResume: true,
+    id: 'accepted-reviewer-resume', closeFindingAfterRound: 1, acceptedReviewerResume: true,
   });
   assert.deepEqual(attempts.map(attempt => attempt.attempt_role), ['repairer', 're_reviewer']);
-  assert.equal(attempts[0]?.quality_round_index, 2);
+  assert.equal(attempts[0]?.quality_round_index, 1);
   assert.equal(attempts[0]?.parent_attempt_ref, 'opl://stage_attempts/sat_accepted-reviewer-resume_reviewer_0');
   assert.equal(attempts[0]?.findings?.[0]?.finding_id, 'finding:visual-clipping');
   assert.equal(state.status, 'completed');
@@ -43,6 +44,51 @@ test('StageRun accepted repairer recovery starts re-review without replaying acc
   assert.equal(attempts[0]?.quality_round_index, 1);
   assert.equal(attempts[0]?.parent_attempt_ref, 'opl://stage_attempts/sat_accepted-repairer-resume_repairer_1');
   assert.equal(state.status, 'completed');
+});
+
+test('StageRun multi-round repairer recovery preserves both review boundaries and starts only round-two re-review', async () => {
+  const { state, attempts, reviewReceiptInputs } = await runController({
+    id: 'accepted-multi-round-repairer-resume',
+    closeFindingAfterRound: 2,
+    acceptedRepairerResume: true,
+    multiRoundRepairerResume: true,
+    validateRecoveryBeforeStart: true,
+  });
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['re_reviewer']);
+  assert.equal(attempts[0]?.quality_round_index, 2);
+  assert.equal(
+    attempts[0]?.artifact_producer_attempt_ref,
+    'opl://stage_attempts/sat_accepted-multi-round-repairer-resume_repairer_2',
+  );
+  assert.deepEqual(state.attempts.map((attempt) => attempt.attempt_role), [
+    'producer', 'reviewer', 'repairer', 're_reviewer', 'repairer', 're_reviewer',
+  ]);
+  assert.equal(state.review_receipts.length, 3);
+  assert.equal(
+    reviewReceiptInputs.at(-1)?.producer_attempt_ref,
+    'opl://stage_attempts/sat_accepted-multi-round-repairer-resume_repairer_2',
+  );
+  assert.equal(state.artifact_identity_authority?.status, 'accepted_by_re_review');
+  assert.equal(state.status, 'completed');
+});
+
+test('StageRun rejects completed reviewer relabeled as producer before Temporal start', async () => {
+  await assert.rejects(runController({
+    id: 'completed-reviewer-as-producer-reject',
+    closeFindingAfterRound: null,
+    recoveryResume: true,
+    completedReviewerResume: true,
+    initialReviewerOutcome: 'pass',
+    initialReviewerFindings: 'none',
+    validateRecoveryBeforeStart: true,
+  }), (error: any) => {
+    assert.ok(error instanceof FrameworkContractError);
+    assert.equal(
+      error.details?.failure_code,
+      'stage_run_recovery_previous_reviewed_lineage_invalid',
+    );
+    return true;
+  });
 });
 
 test('StageRun controller materializes isolated producer-review-repair-re-review child workflows', async () => {

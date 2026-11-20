@@ -18,6 +18,26 @@ export type TypedStageCloseoutPacket = {
   stage_run_id?: string;
   idempotency_key?: string;
   closeout_id?: string;
+  closeout_normalization?: {
+    surface_kind: 'opl_stage_closeout_normalization_lineage';
+    version: 'opl-stage-closeout-normalization-lineage.v1';
+    status: 'normalized';
+    derivation_kind: 'deterministic_repair_map_partition';
+    reason: 'repair_map_non_required_over_coverage';
+    original_closeout_id: string;
+    original_closeout_ref: string;
+    original_closeout_sha256: string;
+    derived_closeout_id: string;
+    derived_closeout_ref: string;
+    derived_closeout_sha256: string;
+    original_repair_map_sha256: string;
+    derived_repair_map_sha256: string;
+    derived_repair_observations_sha256: string;
+    moved_finding_ids: string[];
+    original_closeout_packet: JsonRecord;
+    authority_status: 'pending_unreviewed';
+    review_requirement: 'fresh_re_review_required';
+  };
   scope_digest?: string;
   execution_scope?: WorkItemExecutionScopeSnapshot | string;
   closeout_refs: string[];
@@ -300,6 +320,9 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     ...(optionalString(value.stage_run_id) ? { stage_run_id: optionalString(value.stage_run_id)! } : {}),
     ...(optionalString(value.idempotency_key) ? { idempotency_key: optionalString(value.idempotency_key)! } : {}),
     ...(optionalString(value.closeout_id) ? { closeout_id: optionalString(value.closeout_id)! } : {}),
+    ...(isRecord(value.closeout_normalization)
+      ? { closeout_normalization: value.closeout_normalization as TypedStageCloseoutPacket['closeout_normalization'] }
+      : {}),
     ...(executionScope ? { execution_scope: executionScope } : {}),
     ...(executionScope || explicitScopeDigest
       ? { scope_digest: executionScope?.scope_digest ?? explicitScopeDigest! }

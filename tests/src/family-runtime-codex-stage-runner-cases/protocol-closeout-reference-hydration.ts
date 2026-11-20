@@ -185,11 +185,19 @@ exit 64
       sha256: sha256(closeoutBytes),
       size_bytes: closeoutBytes.length,
     });
+    const metadataReceiptRefs = routeImpact.stage_quality_cycle.artifact_refs.map(
+      (ref) => receipt.closeout_packet?.closeout_ref_metadata?.find(
+        (entry) => entry.ref === ref || entry.uri === ref,
+      )?.artifact_identity_receipt_ref,
+    );
+    assert.ok(metadataReceiptRefs.every((ref) => typeof ref === 'string'));
     const transportedStageQuality = {
       ...routeImpact.stage_quality_cycle,
       artifact_hashes: routeImpact.stage_quality_cycle.artifact_hashes.map(
         (digest) => digest.slice('sha256:'.length),
       ),
+      // Transport verification canonicalizes the OPL-owned receipt list.
+      artifact_identity_receipt_refs: metadataReceiptRefs,
     };
     assert.deepEqual(
       receipt.closeout_packet?.route_impact?.stage_quality_cycle,

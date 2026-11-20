@@ -13,6 +13,7 @@ import type {
   StageAttemptRow,
   StageAttemptSignalRow,
 } from './types.ts';
+import { parseStageAttemptCloseoutJson } from '../family-runtime-stage-attempts-parts/shared.ts';
 
 export function parseJsonObject(value: string) {
   return record(parseJsonText(value));
@@ -145,13 +146,17 @@ export function stageAttemptCloseoutToPayload(row: StageAttemptCloseoutRow) {
   return {
     closeout_id: row.closeout_id,
     stage_attempt_id: row.stage_attempt_id,
-    packet: parseJsonObject(row.packet_json),
+    packet: parseStageAttemptCloseoutJsonObject(row.packet_json),
     created_at: row.created_at,
   };
 }
 
 export function parseStageAttemptJsonObject(value: string) {
   return parseJsonObject(value);
+}
+
+export function parseStageAttemptCloseoutJsonObject(value: string) {
+  return record(parseStageAttemptCloseoutJson(value));
 }
 
 export function parseStageAttemptJsonList(value: string) {

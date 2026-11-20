@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { parseStageAttemptCloseoutJson } from './family-runtime-stage-attempts-parts/shared.ts';
 import {
   record,
   stringList,
@@ -242,10 +243,10 @@ function readLatestCloseoutPacket(db: DatabaseSync, stageAttemptId: string) {
     SELECT packet_json
     FROM stage_attempt_closeouts
     WHERE stage_attempt_id = ?
-    ORDER BY created_at DESC
+    ORDER BY created_at DESC, rowid DESC
     LIMIT 1
   `).get(stageAttemptId) as { packet_json: string } | undefined;
-  return row ? parseRecord(row.packet_json) : {};
+  return row ? parseRecord(parseStageAttemptCloseoutJson(row.packet_json)) : {};
 }
 
 function currentStageProgressLog(

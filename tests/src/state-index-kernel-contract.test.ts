@@ -164,6 +164,18 @@ test('OPL State Index Kernel bounds runtime history and persisted payloads', () 
     stage_attempt_workspace_locator_json_max_bytes: 64 * 1024,
     stage_attempt_activity_event_json_max_bytes: 16 * 1024,
     stage_attempt_closeout_packet_json_max_bytes: 64 * 1024,
+    stage_attempt_closeout_uncompressed_json_max_bytes: 1024 * 1024,
+  });
+  assert.deepEqual(policy.stage_attempt_closeout_compression, {
+    surface_kind: 'opl_stage_attempt_closeout_compressed_json',
+    version: 'stage-attempt-closeout-compressed-json.v1',
+    encoding: 'gzip_base64',
+    legacy_plain_json_passthrough: true,
+    compressed_sha256_required: true,
+    uncompressed_sha256_required: true,
+    declared_uncompressed_bytes_required: true,
+    decompression_limit: 'declared_exact_length_and_hard_uncompressed_limit',
+    metadata_scope: 'closeout protocol metadata only, never domain or artifact bodies',
   });
 });
 

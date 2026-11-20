@@ -451,6 +451,7 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
     domain_ready_verdict: closeout.domain_ready_verdict ?? 'domain_gate_pending',
     route_impact: closeout.route_impact ?? {},
     closeout_packet_surface_kind: closeout.surface_kind,
+    ...(closeout.closeout_normalization ? { closeout_packet: closeout } : {}),
     ...(closeout.closeout_ref_metadata
       ? { closeout_ref_metadata: closeout.closeout_ref_metadata }
       : {}),

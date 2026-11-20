@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { parseStageAttemptCloseoutJson } from './family-runtime-stage-attempts-parts/shared.ts';
 import type { TemporalStageRunWorkflowState } from './family-runtime-temporal.ts';
 import { stageAttemptIdFromRef } from './family-runtime-stage-quality-cycle-persistence.ts';
 
@@ -118,7 +119,9 @@ export function persistedJsonRecord(value: unknown, input: {
   if (typeof value !== 'string' || !value.trim()) return {};
   let parsed: unknown;
   try {
-    parsed = parseJsonText(value);
+    parsed = input.field === 'stage_attempt_closeouts.packet_json'
+      ? parseStageAttemptCloseoutJson(value)
+      : parseJsonText(value);
   } catch (error) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -204,7 +207,7 @@ function persistedAttemptOutputArtifactIdentity(
   const closeoutRow = db.prepare(`
     SELECT packet_json FROM stage_attempt_closeouts
     WHERE stage_attempt_id = ?
-    ORDER BY created_at DESC, closeout_id DESC
+    ORDER BY created_at DESC, rowid DESC
     LIMIT 1
   `).get(stageAttemptId) as { packet_json?: unknown } | undefined;
   const packet = persistedJsonRecord(closeoutRow?.packet_json, {
