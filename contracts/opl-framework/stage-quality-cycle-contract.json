@@ -77,6 +77,11 @@
         "outcome"
       ]
     },
+    "role_optional_fields": {
+      "repairer": [
+        "repair_observations"
+      ]
+    },
     "review_outcome_dependent_fields": {
       "non_hard_stop_reviewer": [
         "findings"
@@ -99,7 +104,8 @@
     "in_thread_refinement": "Non-authoritative self-check and revision inside one provider thread. It is not Stage Review and cannot create a review receipt.",
     "stage_review": "A new reviewer StageAttempt and provider thread under the same StageRun, consuming only declared refs and hashes.",
     "meta_review": "An independent top-level StageRun whose producer-role Attempt performs the cross-stage Meta Review from declared refs without inheriting upstream conversations.",
-    "protocol_closeout_resume": "Same-thread Codex resume used only to materialize a missing typed closeout. It is not review and consumes no quality budget."
+    "protocol_closeout_resume": "Same-thread Codex resume used only to materialize a missing typed closeout. It is not review and consumes no quality budget.",
+    "deterministic_closeout_normalization": "A controller-side mechanical partition of a verified repairer map by the review's required flags. Original bytes and closeout remain immutable; the derived packet is pending until fresh re-review and adds no provider turn, Attempt, quality budget, finding closure, artifact acceptance, or route."
   },
   "policy": {
     "surface_kind": "opl_stage_quality_cycle_policy",
@@ -133,6 +139,22 @@
     "provider_retry_consumes_quality_budget": false,
     "domain_helper_retry_consumes_quality_budget": false,
     "protocol_closeout_resume_consumes_quality_budget": false,
+    "deterministic_closeout_normalization_consumes_quality_budget": false,
+    "deterministic_closeout_normalization_creates_stage_attempt": false,
+    "deterministic_closeout_normalization_adds_provider_turn": false,
+    "deterministic_closeout_normalization_eligibility": "identity_and_artifact_verified_repairer_closeout_with_known_non_required_over_coverage_only_and_valid_role_outcome_abi",
+    "deterministic_closeout_normalization_requires_fresh_re_review": true,
+    "deterministic_closeout_normalization_may_close_findings_or_select_route": false,
+    "deterministic_closeout_normalization_preserves_original_raw_output_and_closeout": true,
+    "deterministic_closeout_normalization_persists_original_and_derived_atomically": true,
+    "deterministic_closeout_normalization_transport": "Canonical normalized packets retain the complete typed child, original parent snapshot and lineage through activity compaction and the domain dispatch receipt; terminal sync ingests that canonical payload rather than a field-whitelisted reconstruction.",
+    "deterministic_closeout_normalization_dispatch_receipt_field": "closeout_packet",
+    "deterministic_closeout_normalization_canonical_child_monotonic": true,
+    "deterministic_closeout_normalization_second_distinct_derived_child": "typed_reject_canonical_child_exists_exact_same_child_replay_idempotent_noop",
+    "deterministic_closeout_normalization_original_parent_replay": "exact_audit_noop_after_canonical_child",
+    "artifact_identity_receipt_refs_ownership": "The list names OPL-owned transport identity. Runner transport verification canonicalizes it from the verified closeout_ref_metadata in declared artifact_refs order and discards the model's declared echo entirely; ingest rejects any packet whose non-empty declared list is not exactly the verified list (typed stage_quality_cycle_attempt_artifact_identity_mismatch, before any durable write), so unverified receipt identity can never persist or route.",
+    "deterministic_closeout_normalization_receipt_ref_ownership": "Receipt refs name OPL-owned transport identity; declared envelope values are non-authoritative model echoes. Derivation deterministically populates a missing or explicitly empty derived-child artifact_identity_receipt_refs list from verified closeout_ref_metadata in artifact_refs order before derived content digesting. A declared non-empty list must equal the verified metadata list exactly; any divergent, malformed or unverifiable declared value makes derivation decline (fail closed to the legacy strict path), so no live success can persist receipt identity that recovery would later reject. The original typed parent remains unchanged and recovery preserves the derived list.",
+    "deterministic_closeout_normalization_whitespace_finding_id": "no_derivation_fail_closed_without_runner_contract_exception",
     "budget_exhaustion_with_consumable_artifact": "completed_with_quality_debt",
     "budget_exhaustion_without_consumable_artifact": "hard_stop",
     "repair_failure_with_prior_consumable_artifact": "completed_with_quality_debt",
@@ -485,6 +507,18 @@
       ],
       "finding_closure_review_hard_stop_re_review_result_sha256": null,
       "repair_map_must_equal_persisted_repairer_output": true,
+      "persisted_repairer_output_rule": "Use the verified derived closeout route impact when canonical closeout_normalization lineage exists; otherwise use the original closeout. Original over-covered maps never satisfy strict receipt materialization.",
+      "derived_repair_map_must_equal_original_required_entries_exactly": true,
+      "derived_repair_observations_must_equal_original_non_required_entries_exactly": true,
+      "repair_map_contains_required_findings_only": true,
+      "repair_observations_excluded_from_repair_map_sha256": true,
+      "derived_closeout_is_canonical_pending_repairer_output_before_re_review": true,
+      "derived_closeout_does_not_have_accepted_authority_before_re_review": true,
+      "original_closeout_retained_for_audit": true,
+      "original_derived_lineage_binds_ids_packet_map_and_observation_digests": true,
+      "recovery_preserves_derived_closeout_id_and_lineage": true,
+      "latest_closeout_ordering": "created_at_then_sqlite_rowid",
+      "latest_closeout_ordering_applies_to_all_consumers": true,
       "finding_body_must_equal_repairer_and_re_reviewer_inputs": true,
       "id_only_synthetic_finding_or_repair_map_forbidden": true
     }
@@ -526,6 +560,29 @@
       "not_repaired",
       "blocked"
     ],
+    "repair_map_contains_required_findings_only": true,
+    "repair_observations": {
+      "authoritative": false,
+      "required": false,
+      "may_reference": "known_required_false_findings_only",
+      "rejects_required_finding_ids": true,
+      "rejects_unknown_finding_ids": true,
+      "rejects_duplicate_finding_ids": true,
+      "required_fields": [
+        "finding_id",
+        "repair_status",
+        "changed_artifact_refs",
+        "repair_evidence_refs"
+      ],
+      "optional_fields": [
+        "note"
+      ],
+      "closes_findings": false,
+      "substitutes_for_required_repair_map_coverage": false,
+      "changes_repair_route": false,
+      "enters_repair_map_sha256": false,
+      "visible_to_re_reviewer_as_non_authoritative_context": true
+    },
     "re_review_required_inputs": [
       "prior_findings",
       "repair_map",

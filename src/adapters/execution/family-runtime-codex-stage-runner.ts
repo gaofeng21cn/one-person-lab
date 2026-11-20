@@ -109,6 +109,10 @@ import {
   packageSkillPromptPrefix,
   sandboxAttemptSkillRuntime,
 } from './family-runtime-attempt-skill-projection.ts';
+import {
+  deriveNormalizedStageQualityCloseout,
+  STAGE_CLOSEOUT_NORMALIZATION_REASON,
+} from './family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
 
 export {
   normalizeTypedStageCloseoutPacket,
@@ -528,6 +532,17 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       value: protocolCloseoutResumeStatus,
     });
   }
+  if (closeoutPacket?.closeout_normalization) {
+    closeoutPacket = buildProviderRuntimeCloseoutPacket({
+      attempt: input.attempt,
+      stagePacketRef: stagePacketTransportRef,
+      blockedReason: 'stage_closeout_normalization_lineage_untrusted',
+      routeImpact: {
+        next_stage_may_start: false,
+        runner_exit_code: result.exitCode,
+      },
+    });
+  }
   const providerErrorSummary = summarizeCodexProviderErrors(result.providerErrors);
   const providerUnavailable =
     result.timeoutReason === 'provider_unavailable'
@@ -679,6 +694,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       });
     }
   }
+  let deterministicCloseoutNormalizationObservation: JsonRecord | null = null;
   // A protocol closeout resume can recover a complete typed closeout after the primary
   // process was killed by the total budget. The recovered packet is the Attempt's real
   // result: the timeout stays visible in route_impact, but it must not fail the Attempt
@@ -707,6 +723,39 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     .join('\n');
   const costSummary = codexStageRunnerCostSummaryFrom(combinedStdout, runnerMode, sessionUsageRef);
   closeoutPacket = withCodexTokenAccounting(closeoutPacket, costSummary);
+  if (!identityBlockedReason) {
+    const normalization = deriveNormalizedStageQualityCloseout({
+      closeoutPacket,
+      attempt: input.attempt,
+    });
+    if (normalization) {
+      closeoutPacket = normalization.derivedCloseout;
+      deterministicCloseoutNormalizationObservation = {
+        status: 'normalized',
+        derivation_kind: 'deterministic_repair_map_partition',
+        original_closeout_id: normalization.originalCloseout.closeout_id,
+        derived_closeout_id: normalization.derivedCloseout.closeout_id,
+        original_closeout_sha256: normalization.originalCloseoutDigest,
+        derived_closeout_sha256: normalization.derivedCloseoutDigest,
+        original_repair_map_sha256: normalization.originalRepairMapDigest,
+        derived_repair_map_sha256: normalization.derivedRepairMapDigest,
+        derived_repair_observations_sha256: normalization.derivedRepairObservationsDigest,
+        moved_finding_ids: normalization.movedFindingIds,
+        reason: STAGE_CLOSEOUT_NORMALIZATION_REASON,
+        creates_stage_attempt: false,
+        counts_as_review: false,
+        consumes_quality_budget: false,
+        may_change_artifact_bytes: false,
+        provider_turns_added: 0,
+      };
+      const event = {
+        event_kind: 'stage_closeout_normalization.completed',
+        value: JSON.stringify(deterministicCloseoutNormalizationObservation),
+      };
+      runnerEvents.push(event);
+      input.onRunnerProgress?.(event);
+    }
+  }
   const progressCloseoutProjection = buildProgressCloseoutProjection({
     attempt: input.attempt,
     closeoutPacket,
@@ -849,6 +898,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
                 : {}),
             },
           }
+        : {}),
+      ...(deterministicCloseoutNormalizationObservation
+        ? { deterministic_closeout_normalization: deterministicCloseoutNormalizationObservation }
         : {}),
       ...(closeoutRejection
         ? {

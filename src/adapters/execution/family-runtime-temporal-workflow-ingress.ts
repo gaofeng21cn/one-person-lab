@@ -6,6 +6,9 @@ import type {
   TemporalStageRunWorkflowInput,
 } from './family-runtime-temporal.ts';
 import { asRecord, asStringList, stageRunQualityCycleId } from './family-runtime-temporal-workflow-values.ts';
+import {
+  resolveRecoveryArtifactAuthority,
+} from './family-runtime-temporal-workflow-artifact-authority.ts';
 
 type WorkflowScopeCarrier = {
   scope_kind?: unknown;
@@ -282,7 +285,10 @@ export function validateOperatorActionPayload(
     }
   }
 }
-export function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInput) {
+export function validateWorkflowStageRunInput(
+  input: TemporalStageRunWorkflowInput,
+  options: { recoveryArtifactIdentityAuthorityRequired?: boolean } = {},
+) {
   for (const [field, value] of Object.entries({
     stage_run_id: input.stage_run_id,
     quality_policy_ref: input.quality_policy_ref,
@@ -331,6 +337,11 @@ export function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInp
       artifact_hashes: artifactProducer?.artifact_hashes,
       artifact_identity_receipt_refs: artifactProducer?.artifact_identity_receipt_refs,
     });
+    const recoveryArtifactIdentityBound = options.recoveryArtifactIdentityAuthorityRequired === false
+      ? artifactIdentityMatches
+      : Boolean(resolveRecoveryArtifactAuthority(recovery, {
+          maxRepairRounds: input.quality_policy.formal_review.max_repair_rounds,
+        }));
     if (
       recovery.surface_kind !== 'opl_stage_run_recovery_resume'
       || recovery.version !== 'opl-stage-run-recovery-resume.v1'
@@ -347,8 +358,15 @@ export function validateWorkflowStageRunInput(input: TemporalStageRunWorkflowInp
       || recovery.artifact_refs.length === 0
       || recovery.artifact_refs.length !== recovery.artifact_hashes.length
       || recovery.artifact_refs.length !== recovery.artifact_identity_receipt_refs.length
-      || !artifactIdentityMatches
+      || !recoveryArtifactIdentityBound
     ) {
+      if (!recoveryArtifactIdentityBound && options.recoveryArtifactIdentityAuthorityRequired !== false) {
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Recovery cannot uniquely reconstruct its canonical Attempt/review artifact lineage.',
+          { failure_code: 'stage_run_recovery_previous_reviewed_lineage_invalid' },
+        );
+      }
       throw new Error('StageRun recovery resume must bind one completed artifact producer and its exact artifact identity.');
     }
   }

@@ -17,6 +17,7 @@ export type {
   StageQualityCycleState,
   StageQualityFinding,
   StageQualityRepairMapEntry,
+  StageQualityRepairObservation,
   StageQualityFindingClosure,
   StageQualityReReviewResult,
 } from './stage-quality-cycle-parts/types.ts';
@@ -36,12 +37,17 @@ export {
   validateIndependentStageReviewReceipt,
 } from './stage-quality-cycle-parts/review-receipts.ts';
 export {
+  analyzeStageQualityRepairMap,
   validateStageQualityFindings,
   validateInitialStageQualityReviewOutcome,
   validateStageQualityRepairMap,
+  validateStageQualityRepairObservations,
   evaluateStageQualityFindingClosure,
   validateStageQualityReReviewOutcome,
   classifyStageQualityReReviewBudget,
+} from './stage-quality-cycle-parts/findings.ts';
+export type {
+  StageQualityRepairMapAnalysis,
 } from './stage-quality-cycle-parts/findings.ts';
 export {
   normalizeStageQualityCyclePolicy,

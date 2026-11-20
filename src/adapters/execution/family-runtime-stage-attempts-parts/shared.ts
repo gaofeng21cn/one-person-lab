@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
+import { gunzipSync, gzipSync } from 'node:zlib';
 
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import type { StageAttemptRow } from '../family-runtime-stage-attempt-ledger.ts';
 import {
   parseStageAttemptJsonList,
@@ -9,6 +11,9 @@ import {
 export const MAX_STAGE_ATTEMPT_ACTIVITY_EVENTS = 256;
 export const MAX_STAGE_ATTEMPT_ACTIVITY_EVENT_BYTES = 16 * 1024;
 export const MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES = 64 * 1024;
+export const MAX_STAGE_ATTEMPT_CLOSEOUT_UNCOMPRESSED_JSON_BYTES = 1024 * 1024;
+export const STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_SURFACE = 'opl_stage_attempt_closeout_compressed_json';
+export const STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_VERSION = 'stage-attempt-closeout-compressed-json.v1';
 const ACTIVITY_COMPACTION_EVENT_KIND = 'stage_attempt_activity_history_compacted';
 const ACTIVITY_TRUNCATION_EVENT_KIND = 'stage_attempt_activity_event_truncated';
 
@@ -60,6 +65,135 @@ export function stringifyBoundedStageAttemptJson(
     );
   }
   return serialized;
+}
+
+function closeoutCompressionError(message: string, details: Record<string, unknown>): never {
+  throw new FrameworkContractError('contract_shape_invalid', message, {
+    failure_code: 'stage_attempt_closeout_compression_invalid',
+    ...details,
+  });
+}
+
+function uncompressedCloseoutDigest(serialized: string | Buffer) {
+  return `sha256:${crypto.createHash('sha256').update(serialized).digest('hex')}`;
+}
+
+export function stringifyStageAttemptCloseoutJson(value: unknown) {
+  const serialized = JSON.stringify(value);
+  const uncompressedBytes = Buffer.byteLength(serialized);
+  if (uncompressedBytes > MAX_STAGE_ATTEMPT_CLOSEOUT_UNCOMPRESSED_JSON_BYTES) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'stage_attempt_closeout.packet_json exceeds the uncompressed closeout JSON byte limit.',
+      {
+        failure_code: 'stage_attempt_persisted_json_too_large',
+        field: 'stage_attempt_closeout.packet_json',
+        max_json_bytes: MAX_STAGE_ATTEMPT_CLOSEOUT_UNCOMPRESSED_JSON_BYTES,
+        actual_json_bytes: uncompressedBytes,
+        sha256: uncompressedCloseoutDigest(serialized),
+      },
+    );
+  }
+  if (uncompressedBytes <= MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES) return serialized;
+
+  const compressed = gzipSync(serialized, { level: 9 });
+  const envelope = {
+    surface_kind: STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_SURFACE,
+    version: STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_VERSION,
+    compression: 'gzip',
+    encoding: 'base64',
+    compressed_sha256: `sha256:${crypto.createHash('sha256').update(compressed).digest('hex')}`,
+    uncompressed_sha256: uncompressedCloseoutDigest(serialized),
+    uncompressed_bytes: uncompressedBytes,
+    payload: compressed.toString('base64'),
+  };
+  const persisted = JSON.stringify(envelope);
+  const persistedBytes = Buffer.byteLength(persisted);
+  if (persistedBytes > MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'stage_attempt_closeout.packet_json exceeds the persisted StageAttempt JSON byte limit after compression.',
+      {
+        failure_code: 'stage_attempt_persisted_json_too_large',
+        field: 'stage_attempt_closeout.packet_json',
+        max_json_bytes: MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES,
+        actual_json_bytes: persistedBytes,
+        uncompressed_json_bytes: uncompressedBytes,
+        sha256: uncompressedCloseoutDigest(serialized),
+      },
+    );
+  }
+  return persisted;
+}
+
+export function parseStageAttemptCloseoutJson(value: string): unknown {
+  const parsed = parseJsonText(value);
+  if (!isRecord(parsed) || parsed.surface_kind !== STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_SURFACE) {
+    return parsed;
+  }
+  const expectedKeys = [
+    'compressed_sha256', 'compression', 'encoding', 'payload', 'surface_kind', 'uncompressed_bytes',
+    'uncompressed_sha256', 'version',
+  ];
+  const actualKeys = Object.keys(parsed).sort();
+  if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)) {
+    closeoutCompressionError('Compressed StageAttempt closeout envelope has an invalid field set.', {
+      field: 'stage_attempt_closeout.packet_json',
+      actual_keys: actualKeys,
+    });
+  }
+  if (
+    parsed.version !== STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_VERSION
+    || parsed.compression !== 'gzip'
+    || parsed.encoding !== 'base64'
+    || typeof parsed.compressed_sha256 !== 'string'
+    || !/^sha256:[a-f0-9]{64}$/.test(parsed.compressed_sha256)
+    || typeof parsed.uncompressed_sha256 !== 'string'
+    || !/^sha256:[a-f0-9]{64}$/.test(parsed.uncompressed_sha256)
+    || !Number.isSafeInteger(parsed.uncompressed_bytes)
+    || (parsed.uncompressed_bytes as number) <= MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES
+    || (parsed.uncompressed_bytes as number) > MAX_STAGE_ATTEMPT_CLOSEOUT_UNCOMPRESSED_JSON_BYTES
+    || typeof parsed.payload !== 'string'
+    || !parsed.payload
+  ) {
+    closeoutCompressionError('Compressed StageAttempt closeout envelope is invalid.', {
+      field: 'stage_attempt_closeout.packet_json',
+    });
+  }
+  const uncompressedBytes = parsed.uncompressed_bytes as number;
+  const compressed = Buffer.from(parsed.payload, 'base64');
+  if (compressed.toString('base64') !== parsed.payload) {
+    closeoutCompressionError('Compressed StageAttempt closeout payload is not canonical base64.', {
+      field: 'stage_attempt_closeout.packet_json',
+    });
+  }
+  if (`sha256:${crypto.createHash('sha256').update(compressed).digest('hex')}` !== parsed.compressed_sha256) {
+    closeoutCompressionError('Compressed StageAttempt closeout payload digest does not match its compressed declaration.', {
+      field: 'stage_attempt_closeout.packet_json',
+    });
+  }
+  let uncompressed: Buffer;
+  try {
+    uncompressed = gunzipSync(compressed, { maxOutputLength: uncompressedBytes });
+  } catch (error) {
+    closeoutCompressionError('Compressed StageAttempt closeout payload cannot be decompressed within its declared bound.', {
+      field: 'stage_attempt_closeout.packet_json',
+      cause: error instanceof Error ? error.message : String(error),
+    });
+  }
+  if (uncompressed.length !== uncompressedBytes) {
+    closeoutCompressionError('Compressed StageAttempt closeout payload length does not match its declaration.', {
+      field: 'stage_attempt_closeout.packet_json',
+      declared_uncompressed_bytes: uncompressedBytes,
+      actual_uncompressed_bytes: uncompressed.length,
+    });
+  }
+  if (uncompressedCloseoutDigest(uncompressed) !== parsed.uncompressed_sha256) {
+    closeoutCompressionError('Compressed StageAttempt closeout payload digest does not match its declaration.', {
+      field: 'stage_attempt_closeout.packet_json',
+    });
+  }
+  return parseJsonText(uncompressed.toString('utf8'));
 }
 
 function boundedActivityEvent(event: Record<string, unknown>) {

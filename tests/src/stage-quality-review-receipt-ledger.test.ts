@@ -20,8 +20,12 @@ import {
 import {
   createStageAttempt,
   createStageAttemptTable,
+  ingestStageAttemptCloseout,
+  inspectStageAttempt,
   materializePersistedStageReviewReceipt,
 } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
+import { deriveNormalizedStageQualityCloseout } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
 import { openQueueDb } from '../../src/adapters/execution/family-runtime-store.ts';
 import { stageQualityReviewReceiptActivity } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
 import {
@@ -755,6 +759,93 @@ test('ledger accepts only repairer(round n) -> re_reviewer(round n) for re-revie
     assert.deepEqual(receipt.reviewed_artifact_refs, ['artifact:document-v2']);
     assert.match(String(receipt.finding_lineage.repair_map_sha256), /^sha256:[a-f0-9]{64}$/);
     assert.match(String(receipt.finding_lineage.re_review_result_sha256), /^sha256:[a-f0-9]{64}$/);
+  } finally {
+    db.close();
+  }
+});
+
+test('ledger binds fresh re-review to the exact raw derived map, observations and original lineage', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const { repairer, reReviewer } = validReReviewPair(db);
+    const findings = [
+      {
+        finding_id: 'finding:required', severity: 'major', required: true,
+        evidence_refs: ['evidence:finding-required'], repair_expectation: 'Close the required finding.',
+      },
+      {
+        finding_id: 'finding:optional', severity: 'minor', required: false,
+        evidence_refs: ['evidence:finding-optional'], repair_expectation: 'Observe the optional finding.',
+      },
+    ];
+    const entry = (findingId: string) => ({
+      finding_id: findingId,
+      repair_status: 'repaired',
+      changed_artifact_refs: [{
+        kind: 'opl_reviewer_input_snapshot_member', ref: 'artifact:document-v2',
+        sha256: `sha256:${'a'.repeat(64)}`, size_bytes: 42,
+      }],
+      repair_evidence_refs: [`evidence:${findingId}:repair`],
+      note: `original:${findingId}`,
+    });
+    const original = normalizeTypedStageCloseoutPacket({
+      surface_kind: 'stage_attempt_closeout_packet',
+      stage_attempt_id: repairer.stage_attempt_id,
+      stage_run_id: repairer.stage_run_id,
+      scope_digest: repairer.execution_scope?.scope_digest,
+      closeout_refs: ['artifact:document-v2'],
+      route_impact: {
+        stage_quality_cycle: {
+          artifact_refs: ['artifact:document-v2'],
+          artifact_hashes: ['sha256:document-v2'],
+          findings,
+          repair_map: [entry('finding:required'), entry('finding:optional')],
+        },
+      },
+    });
+    const normalized = deriveNormalizedStageQualityCloseout({
+      closeoutPacket: original,
+      attempt: inspectStageAttempt(db, repairer.stage_attempt_id),
+    });
+    assert.ok(normalized);
+    ingestStageAttemptCloseout(db, {
+      stageAttemptId: repairer.stage_attempt_id,
+      packet: normalized.derivedCloseout,
+    });
+    const derivedQuality = normalized.derivedCloseout.route_impact!.stage_quality_cycle as Record<string, unknown>;
+    db.prepare('UPDATE stage_attempts SET quality_context_json = ? WHERE stage_attempt_id = ?')
+      .run(JSON.stringify({ findings, repair_map: [] }), repairer.stage_attempt_id);
+    db.prepare('UPDATE stage_attempts SET quality_context_json = ? WHERE stage_attempt_id = ?')
+      .run(JSON.stringify({
+        findings,
+        repair_map: derivedQuality.repair_map,
+        repair_observations: derivedQuality.repair_observations,
+        repair_closeout_lineage: normalized.derivedCloseout.closeout_normalization,
+      }), reReviewer.stage_attempt_id);
+    for (const attemptId of [repairer.stage_attempt_id, reReviewer.stage_attempt_id]) {
+      const row = db.prepare('SELECT context_manifest_json FROM stage_attempts WHERE stage_attempt_id = ?')
+        .get(attemptId) as { context_manifest_json: string };
+      const manifest = JSON.parse(row.context_manifest_json) as Record<string, unknown>;
+      manifest.prior_finding_refs = findings.map((finding) => finding.finding_id);
+      db.prepare(`UPDATE stage_attempts
+        SET prior_finding_refs_json = ?, context_manifest_json = ?, context_manifest_ref = ?
+        WHERE stage_attempt_id = ?`).run(
+        JSON.stringify(findings.map((finding) => finding.finding_id)),
+        JSON.stringify(manifest),
+        buildStageQualityContextManifestRef(manifest),
+        attemptId,
+      );
+    }
+    const receipt = materializePersistedStageReviewReceipt(db, {
+      producerAttemptId: repairer.stage_attempt_id,
+      reviewerAttemptId: reReviewer.stage_attempt_id,
+      rubricRefs,
+      verdict: 'quality_debt',
+    });
+    assert.equal(receipt.verdict, 'quality_debt');
+    assert.match(receipt.finding_lineage.repair_map_sha256 ?? '', /^sha256:/);
+    assert.deepEqual(derivedQuality.repair_map, [entry('finding:required')]);
+    assert.deepEqual(derivedQuality.repair_observations, [entry('finding:optional')]);
   } finally {
     db.close();
   }

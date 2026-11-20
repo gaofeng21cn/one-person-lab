@@ -510,6 +510,73 @@ test('local Stage artifact identity is bound to final bytes and a transport rece
   }
 });
 
+
+test('transport verification canonicalizes the OPL-owned artifact identity receipt list', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-receipt-canonicalize-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const artifactPath = path.join(root, 'artifact.txt');
+    const bytes = Buffer.from('exact final artifact bytes\n');
+    fs.writeFileSync(artifactPath, bytes);
+    const artifactRef = pathToFileURL(artifactPath).href;
+    const canonical = verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: producerCloseout({ artifactRef, artifactHash: sha256(bytes) }),
+      attempt,
+      workspaceRoot: root,
+    })!;
+    const verifiedRefs = (canonical.route_impact?.stage_quality_cycle as any).artifact_identity_receipt_refs;
+    assert.equal(verifiedRefs.length, 1);
+    assert.match(verifiedRefs[0], /^file:\/\//);
+    assert.equal(verifiedRefs[0], canonical.closeout_ref_metadata?.[0]?.artifact_identity_receipt_ref);
+
+    // Whatever the model declared is a non-authoritative echo and is always
+    // replaced by the verified list: divergent, malformed, garbage or empty.
+    for (const declared of [
+      ['receipt:declared-but-divergent'],
+      'receipt:garbage',
+      { nested: 'receipt:garbage' },
+      [123],
+      ['receipt:garbage', 7],
+      [],
+    ]) {
+      const packet = producerCloseout({ artifactRef, artifactHash: sha256(bytes) });
+      (packet.route_impact!.stage_quality_cycle as any).artifact_identity_receipt_refs = declared;
+      const verified = verifyStageQualityCloseoutArtifactIdentity({
+        closeoutPacket: packet,
+        attempt,
+        workspaceRoot: root,
+      })!;
+      assert.deepEqual(
+        (verified.route_impact?.stage_quality_cycle as any).artifact_identity_receipt_refs,
+        verifiedRefs,
+        `declared ${JSON.stringify(declared)} must be replaced by the verified list`,
+      );
+    }
+
+    // An explicit empty artifact list canonicalizes to an empty receipt list.
+    const noArtifact = producerCloseout({ artifactRef, artifactHash: sha256(bytes) });
+    (noArtifact.route_impact!.stage_quality_cycle as any).artifact_refs = [];
+    (noArtifact.route_impact!.stage_quality_cycle as any).artifact_hashes = [];
+    (noArtifact.route_impact!.stage_quality_cycle as any).artifact_identity_receipt_refs = ['receipt:garbage'];
+    noArtifact.closeout_refs = [];
+    noArtifact.closeout_ref_metadata = [];
+    const verifiedEmpty = verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: noArtifact,
+      attempt,
+      workspaceRoot: root,
+    })!;
+    assert.deepEqual(
+      (verifiedEmpty.route_impact?.stage_quality_cycle as any).artifact_identity_receipt_refs,
+      [],
+    );
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('a stale declared size_bytes is tolerated as metadata when the artifact hash matches', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-stale-size-'));
   const previousStateDir = process.env.OPL_STATE_DIR;

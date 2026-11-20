@@ -16,6 +16,9 @@ import {
   stageRunSpecSha256,
   validateStageRunImmutableSpecEnvelope,
 } from './family-runtime-stage-run-identity.ts';
+import {
+  resolveRecoveryArtifactAuthority,
+} from './family-runtime-temporal-workflow-artifact-authority.ts';
 
 function exactRecoveryStringList(value: unknown, field: string) {
   if (
@@ -62,6 +65,20 @@ export function requireTemporalStageRunRecoveryResume(
     ?? recovery.producer_attempt_summary;
   const artifactProducerAttemptRef = recovery.artifact_producer_attempt_ref
     ?? recovery.producer_attempt_ref;
+  const resolvedArtifactAuthority = resolveRecoveryArtifactAuthority(recovery, {
+    maxRepairRounds: input.quality_policy.formal_review.max_repair_rounds,
+  });
+  if (!resolvedArtifactAuthority) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Recovery cannot uniquely reconstruct its canonical Attempt/review artifact lineage.',
+      {
+        failure_code: 'stage_run_recovery_previous_reviewed_lineage_invalid',
+        recovery_id: recovery.recovery_id,
+        resume_after_role: resumeAfterRole,
+      },
+    );
+  }
   if (
     recovery.quality_cycle_id !== expectedQualityCycleId
     || !['producer', 'repairer', 'reviewer'].includes(resumeAfterRole)
@@ -98,7 +115,7 @@ export function requireTemporalStageRunRecoveryResume(
     artifactRefs.length !== artifactHashes.length
     || artifactRefs.length !== receiptRefs.length
     || artifactHashes.some((hash) => !/^sha256:[a-f0-9]{64}$/.test(hash))
-    || canonicalJsonText({
+    || (resumeAfterRole !== 'repairer' && canonicalJsonText({
       artifact_refs: artifactProducer.artifact_refs,
       artifact_hashes: artifactProducer.artifact_hashes,
       artifact_identity_receipt_refs: artifactProducer.artifact_identity_receipt_refs,
@@ -106,7 +123,7 @@ export function requireTemporalStageRunRecoveryResume(
       artifact_refs: artifactRefs,
       artifact_hashes: artifactHashes,
       artifact_identity_receipt_refs: receiptRefs,
-    })
+    }))
   ) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -146,6 +163,9 @@ export function requireTemporalStageRunRecoveryResume(
       || !Array.isArray(recovery.review_receipts)
       || recovery.review_receipts.length === 0
       || recovery.repair_rounds_used !== artifactProducer.quality_round_index
+      || !Number.isSafeInteger(artifactProducer.quality_round_index)
+      || artifactProducer.quality_round_index < 1
+      || artifactProducer.quality_round_index > input.quality_policy.formal_review.max_repair_rounds
     ) {
       throw new FrameworkContractError(
         'contract_shape_invalid',

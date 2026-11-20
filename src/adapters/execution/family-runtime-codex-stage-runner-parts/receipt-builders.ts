@@ -139,6 +139,7 @@ export type CodexStageRunnerProcessOutputSummary = {
     protocol_violation?: 'tool_or_command_event_observed';
     tool_event_kinds?: Array<'command_execution' | 'unsupported_function_call'>;
   };
+  deterministic_closeout_normalization?: JsonRecord;
   closeout_rejection_reason?:
     | 'stage_attempt_id_mismatch'
     | 'idempotency_key_mismatch'

@@ -1,4 +1,5 @@
 export {
+  analyzeStageQualityRepairMap,
   classifyStageQualityReReviewBudget,
   evaluateStageQualityFindingClosure,
   normalizeStageQualityArtifactIdentity,
@@ -12,6 +13,7 @@ export {
   validateInitialStageQualityReviewOutcome,
   validateStageQualityFindings,
   validateStageQualityRepairMap,
+  validateStageQualityRepairObservations,
   validateStageQualityReReviewOutcome,
   validateStageQualityReviewHardStopOutcome,
 } from '../stage-quality-cycle.ts';
@@ -22,8 +24,10 @@ export type {
   StageQualityFindingClosure,
   StageQualityHardStopClass,
   StageQualityOutcome,
+  StageQualityRepairMapAnalysis,
   StageQualityReviewAttemptRole,
   StageQualityRepairMapEntry,
+  StageQualityRepairObservation,
   StageQualityReReviewResult,
   StageReviewReceipt,
 } from '../stage-quality-cycle.ts';

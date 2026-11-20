@@ -131,6 +131,7 @@ export function reduceStageQualityCycleState(
 export function classifyCodexSessionContinuation(input: {
   attemptRole: StageQualityAttemptRole;
   resumedThreadId?: string | null;
+  continuationKind?: 'protocol_closeout_resume';
 }) {
   return input.resumedThreadId
     ? {

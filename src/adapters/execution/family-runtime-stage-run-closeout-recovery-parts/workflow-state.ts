@@ -5,6 +5,7 @@ import type {
   StageRouteRecommendation,
 } from '../../../authority/stages/index.ts';
 import type {
+  StageArtifactIdentityAuthority,
   TemporalStageRunAttemptSummary,
   TemporalStageRunWorkflowState,
 } from '../family-runtime-temporal-stage-run.ts';
@@ -33,6 +34,7 @@ export function buildRecoveryWorkflowState(input: {
   artifactRefs: string[];
   artifactHashes: string[];
   artifactIdentityReceiptRefs: string[];
+  artifactIdentityAuthority?: StageArtifactIdentityAuthority | null;
   routeRecommendation: JsonRecord | null;
 }) {
   const currentState = record(input.cycle.state);
@@ -72,6 +74,7 @@ export function buildRecoveryWorkflowState(input: {
     artifact_refs: input.artifactRefs,
     artifact_hashes: input.artifactHashes,
     artifact_identity_receipt_refs: input.artifactIdentityReceiptRefs,
+    artifact_identity_authority: input.artifactIdentityAuthority ?? null,
     quality_debt_refs: Array.isArray(currentState.quality_debt_refs) ? currentState.quality_debt_refs : [],
     route_quality_debt_refs: Array.isArray(currentState.route_quality_debt_refs) ? currentState.route_quality_debt_refs : [],
     decisive_attempt_role: null,

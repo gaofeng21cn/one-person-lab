@@ -378,18 +378,18 @@ test('protocol closeout resume preserves the initial quality route and verifies 
       receipt.closeout_packet?.route_impact?.stage_route_recommendation,
       initialRouteImpact.stage_route_recommendation,
     );
+    const metadataReceipt = receipt.closeout_packet?.closeout_ref_metadata?.[0]?.artifact_identity_receipt_ref;
+    assert.equal(typeof metadataReceipt, 'string');
     assert.deepEqual(
       receipt.closeout_packet?.route_impact?.stage_quality_cycle,
       {
         artifact_refs: [artifactRef],
         artifact_hashes: [artifactHash.slice('sha256:'.length)],
+        // Transport verification canonicalizes the OPL-owned receipt list.
+        artifact_identity_receipt_refs: [metadataReceipt],
       },
     );
     assert.deepEqual(receipt.closeout_packet?.closeout_refs, [artifactRef]);
-    assert.equal(
-      typeof receipt.closeout_packet?.closeout_ref_metadata?.[0]?.artifact_identity_receipt_ref,
-      'string',
-    );
   } finally {
     restoreEnv('OPL_CODEX_BIN', previousBin);
     restoreEnv('OPL_STATE_DIR', previousStateDir);

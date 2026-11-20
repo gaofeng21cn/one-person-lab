@@ -195,7 +195,7 @@ test('optional major review debt preserves exact artifact identity and launches 
   }
 });
 
-test('re-review artifact identity drift preserves the repaired artifact and rejects the route', async () => {
+test('re-review artifact identity drift keeps the reviewed set and records the repair as pending', async () => {
   const { state, routeInputs } = await runController({
     id: 're-reviewer-drift', closeFindingAfterRound: 1, reReviewerIdentityDrift: true,
   });
@@ -203,7 +203,10 @@ test('re-review artifact identity drift preserves the repaired artifact and reje
   assert.equal(state.blocked_reason, 'reviewed_artifact_identity_mismatch');
   assert.equal(state.hard_stop_class, 'stale_or_mismatched_stage_identity');
   assert.equal(state.source_attempt_ref, `opl://stage_attempts/${state.attempts[3].stage_attempt_id}`);
-  assert.deepEqual(state.artifact_refs, ['artifact:deck-v2']);
+  assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
+  assert.deepEqual(state.artifact_identity_authority?.pending_repair?.artifact_refs, ['artifact:deck-v2']);
+  assert.equal(state.artifact_identity_authority?.pending_repair?.attempt_ref,
+    `opl://stage_attempts/${state.attempts[2].stage_attempt_id}`);
   assert.equal(state.review_receipts.length, 1);
   assert.equal(routeInputs.length, 0);
 });

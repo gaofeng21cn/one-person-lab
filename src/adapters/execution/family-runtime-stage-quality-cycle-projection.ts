@@ -161,6 +161,58 @@ export function projectTemporalStageRunQualityCycle(
     for (const receipt of state.review_receipts) {
       requireProjectedReviewReceiptMatchesPersisted(db, receipt);
     }
+    const authority = state.artifact_identity_authority ?? null;
+    if (authority) {
+      for (const attemptRef of [
+        authority.authoritative_attempt_ref,
+        authority.review_attempt_ref,
+        authority.pending_repair?.attempt_ref ?? null,
+      ]) {
+        if (attemptRef && !attemptIds.has(stageAttemptIdFromRef(attemptRef))) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'StageRun artifact identity authority must bind persisted Attempts.',
+            {
+              failure_code: 'stage_quality_cycle_artifact_authority_attempt_missing',
+              attempt_ref: attemptRef,
+            },
+          );
+        }
+      }
+      if (authority.pending_repair) {
+        const pendingRole = attemptAuthorities.get(
+          stageAttemptIdFromRef(authority.pending_repair.attempt_ref),
+        )?.attempt_role;
+        if (pendingRole !== 'repairer') {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Pending repair artifact identity must bind a repairer Attempt.',
+            {
+              failure_code: 'stage_quality_cycle_pending_repair_role_invalid',
+              attempt_ref: authority.pending_repair.attempt_ref,
+              attempt_role: pendingRole ?? null,
+            },
+          );
+        }
+        if (
+          authority.status === 'accepted_by_initial_review'
+          || authority.status === 'accepted_by_re_review'
+        ) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Accepted artifact authority cannot retain an unreviewed pending repair.',
+            { failure_code: 'stage_quality_cycle_accepted_artifact_pending_repair' },
+          );
+        }
+        if (state.next_stage_run_launch) {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Pending repair artifact identity cannot become next StageRun input.',
+            { failure_code: 'stage_quality_cycle_pending_repair_route_launch' },
+          );
+        }
+      }
+    }
     const decisiveAttempt = state.decisive_attempt_ref
       ? attemptAuthorities.get(stageAttemptIdFromRef(state.decisive_attempt_ref))
       : null;
@@ -238,12 +290,14 @@ export function projectTemporalStageRunQualityCycle(
       status: projectedCycleStatus(state),
       selected_artifact_refs: [...state.artifact_refs],
       quality_debt_refs: [...state.quality_debt_refs],
+      artifact_identity_authority: (state.artifact_identity_authority as Record<string, unknown> | null | undefined) ?? null,
       controller_readback: {
         surface_kind: state.surface_kind,
         workflow_id: state.workflow_id,
         controller_status: state.status,
         artifact_hashes: [...state.artifact_hashes],
         artifact_identity_receipt_refs: [...state.artifact_identity_receipt_refs],
+        artifact_identity_authority: state.artifact_identity_authority ?? null,
         attempts: state.attempts.map((attempt) => ({
           attempt_role: attempt.attempt_role,
           quality_round_index: attempt.quality_round_index,

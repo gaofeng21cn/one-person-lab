@@ -47,7 +47,24 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
     : Array.isArray(qualityEnvelope.artifact_hashes)
       ? qualityEnvelope.artifact_hashes
       : [];
-  if (declaredRefs.length === 0 && declaredHashes.length === 0) return closeoutPacket;
+  if (declaredRefs.length === 0 && declaredHashes.length === 0) {
+    // The receipt list names OPL-owned transport identity. Even with no
+    // artifacts, an explicit (empty) artifact list means the canonical receipt
+    // list is empty too; a declared model echo is never trusted.
+    if (isRecord(routeImpact.stage_quality_cycle) && Array.isArray(qualityEnvelope.artifact_refs)) {
+      return {
+        ...closeoutPacket,
+        route_impact: {
+          ...routeImpact,
+          stage_quality_cycle: {
+            ...qualityEnvelope,
+            artifact_identity_receipt_refs: [],
+          },
+        },
+      };
+    }
+    return closeoutPacket;
+  }
   const pairs = exactArtifactPairs({ artifactRefs: declaredRefs, artifactHashes: declaredHashes });
   const domainId = optionalString(input.attempt.domain_id) ?? 'unknown-domain';
   const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
@@ -132,6 +149,22 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
     );
     metadata[metadataIndex] = nextMetadata[index];
   }
+  // Canonicalize the OPL-owned receipt list from the verified metadata, in
+  // declared artifact_refs order. Whatever the model declared is discarded:
+  // the only authoritative value is the one this verification just produced
+  // or validated. Live ingest, derivation, recovery and projection all read
+  // this canonical list and therefore converge by construction.
+  const canonicalReceiptRefs = pairs.map(({ artifactRef }, index) => {
+    const receiptRef = optionalString(nextMetadata[index]?.artifact_identity_receipt_ref);
+    if (!receiptRef) {
+      throw artifactIdentityError({
+        message: 'Transport verification must produce exactly one identity receipt per declared artifact.',
+        blockedReason: 'artifact_identity_receipt_missing_authority_violation',
+        artifactRef,
+      });
+    }
+    return receiptRef;
+  });
   return {
     ...closeoutPacket,
     closeout_ref_metadata: metadata,
@@ -143,6 +176,7 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
               ...qualityEnvelope,
               artifact_refs: pairs.map((pair) => pair.artifactRef),
               artifact_hashes: pairs.map((pair) => pair.artifactSha256),
+              artifact_identity_receipt_refs: canonicalReceiptRefs,
             },
           },
         }

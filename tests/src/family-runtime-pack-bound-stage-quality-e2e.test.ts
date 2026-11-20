@@ -438,6 +438,13 @@ Close findings using the latest package.
         ['producer', 'reviewer'],
       );
       assert.deepEqual(projected.controller_readback.review_receipts, state.review_receipts);
+      assert.equal(
+        projected.controller_readback.artifact_identity_authority.status,
+        'accepted_by_initial_review',
+      );
+      assert.equal(projected.controller_readback.artifact_identity_authority.pending_repair, null);
+      assert.equal(projected.controller_readback.artifact_identity_authority.live_bytes_status, 'matches');
+      assert.deepEqual(projected.controller_readback.artifact_identity_authority.immutable_artifact_refs, []);
 
       const launches = db.prepare(`
         SELECT stage_run_id, launch_status, terminal_status

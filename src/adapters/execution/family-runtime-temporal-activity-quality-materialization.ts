@@ -9,6 +9,7 @@ import {
   createStageAttempt,
   createStageAttemptTable,
   findStageAttemptByIdempotencyBoundary,
+  listStageAttemptCloseouts,
 } from './family-runtime-stage-attempts.ts';
 import { getStageAttemptRow, stageAttemptToPayload } from './family-runtime-stage-attempt-ledger.ts';
 import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
@@ -52,6 +53,9 @@ import { requirePersistedStageRunActivityIdentity } from './family-runtime-persi
 import { revisionTransportContext } from './family-runtime-revision-intake.ts';
 import type { StageRouteCompositionFactory } from './composition-factory-ports.ts';
 import { resolveStageRunDefaultProgression } from './family-runtime-stage-run-default-progression.ts';
+import {
+  repairObservationsFromCloseoutRouteImpact,
+} from './family-runtime-temporal-workflow-artifacts.ts';
 export async function stageQualityAttemptMaterializeActivity(
   input: TemporalStageQualityAttemptMaterializationInput,
   options: {
@@ -193,6 +197,17 @@ export async function stageQualityAttemptMaterializeActivity(
         expectedExecutionScope: stageRun.execution_scope,
       });
     }
+    const producerCloseoutNormalization = input.attempt_role === 're_reviewer' && artifactProducerAttempt
+      ? listStageAttemptCloseouts(db, artifactProducerAttempt.stage_attempt_id).at(-1)?.packet
+        .closeout_normalization ?? null
+      : null;
+    const producerRepairObservations = input.attempt_role === 're_reviewer' && artifactProducerAttempt
+      ? repairObservationsFromCloseoutRouteImpact({
+          findings: input.findings ?? [],
+          routeImpact: artifactProducerAttempt.route_impact,
+          preserveEntryShapes: Boolean(producerCloseoutNormalization),
+        })
+      : [];
     const packageReadiness = await (
       options.ensurePackageLaunchReady
       ?? ensureFamilyRuntimePackageLaunchReady
@@ -528,6 +543,12 @@ export async function stageQualityAttemptMaterializeActivity(
         qualityContext: {
           findings: input.findings ?? [],
           repair_map: input.repair_map ?? [],
+          ...(producerRepairObservations.length > 0
+            ? { repair_observations: producerRepairObservations }
+            : {}),
+          ...(producerCloseoutNormalization
+            ? { repair_closeout_lineage: producerCloseoutNormalization }
+            : {}),
           route_recommendations: input.route_recommendations ?? [],
           ...(revisionConsumptionContext ? { revision_consumption_context: revisionConsumptionContext } : {}),
           execution_content_binding: executionContentBinding,

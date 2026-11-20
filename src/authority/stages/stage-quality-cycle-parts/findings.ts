@@ -1,4 +1,10 @@
-import type { StageQualityFinding, StageQualityOutcome, StageQualityReReviewResult, StageQualityRepairMapEntry } from "./types.ts";
+import type {
+  StageQualityFinding,
+  StageQualityOutcome,
+  StageQualityReReviewResult,
+  StageQualityRepairMapEntry,
+  StageQualityRepairObservation,
+} from "./types.ts";
 import { FrameworkContractError } from "../../../kernel/contract-validation.ts";
 import { evidenceRefStrings, requiredText, uniqueIds } from "./primitives.ts";
 
@@ -103,6 +109,209 @@ export function validateStageQualityRepairMap(input: {
       missing_finding_ids: missing,
     });
   }
+  return normalized;
+}
+
+export type StageQualityRepairMapAnalysis = {
+  repair_map_is_array: boolean;
+  missing_required_ids: string[];
+  duplicate_ids: string[];
+  unknown_ids: string[];
+  non_required_ids: string[];
+  invalid_status_ids: string[];
+  malformed_entries: Array<{
+    entry_index: number;
+    finding_id: string | null;
+    reason: string;
+  }>;
+  correction_eligible: boolean;
+};
+
+/**
+ * Non-throwing repair_map analysis for controller-side contract repair.
+ *
+ * `validateStageQualityRepairMap` remains the strict authority gate: it still requires
+ * exactly one entry per required finding and keeps rejecting over-coverage. This analysis
+ * only reports the independent shape problems so deterministic closeout normalization can
+ * distinguish a pure known-non-required over-coverage from missing/invalid repair claims.
+ */
+export function analyzeStageQualityRepairMap(input: {
+  findings: StageQualityFinding[];
+  repairMap: unknown;
+}): StageQualityRepairMapAnalysis {
+  const findings = validateStageQualityFindings(input.findings);
+  const findingById = new Map(findings.map((finding) => [finding.finding_id, finding]));
+  const requiredIds = findings
+    .filter((finding) => finding.required)
+    .map((finding) => finding.finding_id);
+  const seenIds = new Set<string>();
+  const duplicateIds = new Set<string>();
+  const unknownIds = new Set<string>();
+  const nonRequiredIds = new Set<string>();
+  const invalidStatusIds = new Set<string>();
+  const malformedEntries: StageQualityRepairMapAnalysis['malformed_entries'] = [];
+
+  if (!Array.isArray(input.repairMap)) {
+    return {
+      repair_map_is_array: false,
+      missing_required_ids: requiredIds,
+      duplicate_ids: [],
+      unknown_ids: [],
+      non_required_ids: [],
+      invalid_status_ids: [],
+      malformed_entries: [{
+        entry_index: -1,
+        finding_id: null,
+        reason: 'repair_map must be an array.',
+      }],
+      correction_eligible: false,
+    };
+  }
+
+  input.repairMap.forEach((rawEntry, entryIndex) => {
+    if (!rawEntry || typeof rawEntry !== 'object' || Array.isArray(rawEntry)) {
+      malformedEntries.push({
+        entry_index: entryIndex,
+        finding_id: null,
+        reason: 'repair_map entry must be an object.',
+      });
+      return;
+    }
+    const entry = rawEntry as Record<string, unknown>;
+    const rawFindingId = typeof entry.finding_id === 'string' ? entry.finding_id.trim() : '';
+    const findingId = rawFindingId || null;
+    if (!findingId) {
+      malformedEntries.push({
+        entry_index: entryIndex,
+        finding_id: null,
+        reason: 'repair_map.finding_id must be a non-empty string.',
+      });
+    } else {
+      if (seenIds.has(findingId)) {
+        duplicateIds.add(findingId);
+      }
+      seenIds.add(findingId);
+      const finding = findingById.get(findingId);
+      if (!finding) {
+        unknownIds.add(findingId);
+      } else if (!finding.required) {
+        nonRequiredIds.add(findingId);
+      }
+    }
+
+    if (!['repaired', 'not_repaired', 'blocked'].includes(entry.repair_status as string)) {
+      if (findingId) {
+        invalidStatusIds.add(findingId);
+      } else {
+        malformedEntries.push({
+          entry_index: entryIndex,
+          finding_id: null,
+          reason: 'repair_map.repair_status is invalid.',
+        });
+      }
+    }
+
+    const fieldPrefix = `repair_map.${findingId ?? `[${entryIndex}]`}`;
+    try {
+      evidenceRefStrings(entry.changed_artifact_refs, `${fieldPrefix}.changed_artifact_refs`, true);
+    } catch (error) {
+      malformedEntries.push({
+        entry_index: entryIndex,
+        finding_id: findingId,
+        reason: error instanceof Error ? error.message : 'repair_map.changed_artifact_refs is invalid.',
+      });
+    }
+    try {
+      evidenceRefStrings(entry.repair_evidence_refs, `${fieldPrefix}.repair_evidence_refs`);
+    } catch (error) {
+      malformedEntries.push({
+        entry_index: entryIndex,
+        finding_id: findingId,
+        reason: error instanceof Error ? error.message : 'repair_map.repair_evidence_refs is invalid.',
+      });
+    }
+  });
+
+  const missingRequiredIds = requiredIds.filter((findingId) => !seenIds.has(findingId));
+  const correctionEligible = input.repairMap.length > 0
+    && missingRequiredIds.length === 0
+    && duplicateIds.size === 0
+    && unknownIds.size === 0
+    && nonRequiredIds.size > 0
+    && invalidStatusIds.size === 0
+    && malformedEntries.length === 0;
+  return {
+    repair_map_is_array: true,
+    missing_required_ids: missingRequiredIds,
+    duplicate_ids: [...duplicateIds],
+    unknown_ids: [...unknownIds],
+    non_required_ids: [...nonRequiredIds],
+    invalid_status_ids: [...invalidStatusIds],
+    malformed_entries: malformedEntries,
+    correction_eligible: correctionEligible,
+  };
+}
+
+/**
+ * `repair_observations` are non-authoritative repairer context. They may only cite
+ * findings the initial review marked required=false. They never close findings,
+ * substitute for repair_map coverage, or affect repair routing.
+ */
+export function validateStageQualityRepairObservations(input: {
+  findings: StageQualityFinding[];
+  repairObservations: StageQualityRepairObservation[];
+}) {
+  const findings = validateStageQualityFindings(input.findings);
+  if (!Array.isArray(input.repairObservations)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Stage repair_observations must be an array.');
+  }
+  const findingById = new Map(findings.map((finding) => [finding.finding_id, finding]));
+  const normalized = input.repairObservations.map((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'repair_observations entry must be an object.',
+      );
+    }
+    const findingId = requiredText(entry.finding_id, 'repair_observations.finding_id');
+    const finding = findingById.get(findingId);
+    if (!finding) {
+      throw new FrameworkContractError('contract_shape_invalid', 'repair_observations references an unknown finding.', {
+        finding_id: findingId,
+      });
+    }
+    if (finding.required) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'repair_observations must not reference a required finding.',
+        { finding_id: findingId },
+      );
+    }
+    if (!['repaired', 'not_repaired', 'blocked'].includes(entry.repair_status as string)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'repair_observations repair_status is invalid.', {
+        finding_id: findingId,
+        repair_status: entry.repair_status,
+      });
+    }
+    const note = entry.note === undefined
+      ? undefined
+      : requiredText(entry.note, `repair_observations.${findingId}.note`);
+    return {
+      ...entry,
+      finding_id: findingId,
+      changed_artifact_refs: evidenceRefStrings(
+        entry.changed_artifact_refs,
+        `repair_observations.${findingId}.changed_artifact_refs`,
+        true, // A not_repaired or blocked observation need not claim an artifact change.
+      ),
+      repair_evidence_refs: evidenceRefStrings(
+        entry.repair_evidence_refs,
+        `repair_observations.${findingId}.repair_evidence_refs`,
+      ),
+      ...(note === undefined ? {} : { note }),
+    };
+  });
+  uniqueIds(normalized.map((entry) => entry.finding_id), 'repair_observations');
   return normalized;
 }
 
