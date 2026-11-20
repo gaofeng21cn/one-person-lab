@@ -10,6 +10,7 @@ import {
 } from './family-runtime-stage-attempt-provider-readiness-currentness.ts';
 import {
   listStageAttemptRows,
+  parseStageAttemptCloseoutJsonObject,
   parseStageAttemptJsonObject,
   stageAttemptToPayload,
 } from './family-runtime-stage-attempt-ledger.ts';
@@ -390,7 +391,7 @@ function latestCloseoutPacket(db: DatabaseSync, stageAttemptId: string) {
     ORDER BY created_at DESC
     LIMIT 1
   `).get(stageAttemptId) as { packet_json: string } | undefined;
-  return row ? parseStageAttemptJsonObject(row.packet_json) : null;
+  return row ? parseStageAttemptCloseoutJsonObject(row.packet_json) : null;
 }
 
 function compactRefList(value: unknown) {

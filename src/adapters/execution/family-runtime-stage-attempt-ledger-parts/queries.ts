@@ -6,7 +6,7 @@ import {
   stageAttemptCloseoutToPayload,
   stageAttemptSignalToPayload,
   stageAttemptToPayload,
-  parseJsonObject,
+  parseStageAttemptCloseoutJsonObject,
 } from './payload.ts';
 import type {
   StageAttemptRow,
@@ -164,7 +164,7 @@ export function latestStageAttemptCloseoutPacketsByAttempt(db: DatabaseSync, sta
     ORDER BY stage_attempt_id ASC, created_at ASC
   `).all(...stageAttemptIds) as Pick<StageAttemptCloseoutRow, 'stage_attempt_id' | 'packet_json'>[];
   for (const row of rows) {
-    byAttempt.set(row.stage_attempt_id, parseJsonObject(row.packet_json));
+    byAttempt.set(row.stage_attempt_id, parseStageAttemptCloseoutJsonObject(row.packet_json));
   }
   return byAttempt;
 }

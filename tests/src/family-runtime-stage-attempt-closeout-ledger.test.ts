@@ -20,7 +20,11 @@ import { setStageAttemptArchived } from '../../src/adapters/execution/family-run
 import { buildTemporalStageAttemptWorkflowInput } from '../../src/adapters/execution/family-runtime-temporal.ts';
 import {
   MAX_STAGE_ATTEMPT_ACTIVITY_EVENT_BYTES,
+  MAX_STAGE_ATTEMPT_CLOSEOUT_UNCOMPRESSED_JSON_BYTES,
   MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES,
+  parseStageAttemptCloseoutJson,
+  STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_SURFACE,
+  stringifyStageAttemptCloseoutJson,
 } from '../../src/adapters/execution/family-runtime-stage-attempts-parts/shared.ts';
 
 function withAttempt(fn: (db: DatabaseSync, attemptId: string) => void) {
@@ -96,7 +100,7 @@ test('stage attempt storage rejects oversized identity and closeout payloads', (
     assert.throws(
       () => ingestStageAttemptCloseout(db, {
         stageAttemptId: attempt.stage_attempt_id,
-        packet: closeoutPacket(`receipt:${'x'.repeat(MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES)}`),
+        packet: closeoutPacket(`receipt:${'x'.repeat(MAX_STAGE_ATTEMPT_CLOSEOUT_UNCOMPRESSED_JSON_BYTES)}`),
       }),
       (error) => error instanceof FrameworkContractError
         && error.details?.failure_code === 'stage_attempt_persisted_json_too_large',
@@ -104,6 +108,68 @@ test('stage attempt storage rejects oversized identity and closeout payloads', (
     assert.deepEqual(listStageAttemptCloseouts(db, attempt.stage_attempt_id), []);
   } finally {
     db.close();
+  }
+});
+
+test('multi-artifact closeout packets round-trip through the bounded compressed envelope', () => {
+  withAttempt((db, attemptId) => {
+    const refs = Array.from({ length: 40 }, (_, index) => (
+      `file:///home/hyc/Library/Application%20Support/OPL/state/foundry/provider-runs/foundry-${'a'.repeat(64)}/artifacts/agent-blueprint-content/asset-${index}-${'x'.repeat(1024)}`
+    ));
+    const packet = {
+      ...closeoutPacket(),
+      closeout_refs: refs,
+      closeout_ref_metadata: refs.map((ref, index) => ({
+        ref_kind: 'file', kind: 'content_artifact', ref, sha256: `sha256:${String(index).padStart(64, '0')}`,
+      })),
+    };
+    const persisted = stringifyStageAttemptCloseoutJson(packet);
+    const envelope = JSON.parse(persisted);
+    assert.equal(envelope.surface_kind, STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_SURFACE);
+    assert.ok(Buffer.byteLength(persisted) <= MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES);
+    assert.deepEqual(parseStageAttemptCloseoutJson(persisted), packet);
+
+    const accepted = ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet });
+    const replay = ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet });
+    assert.equal(accepted.closeout.idempotent_noop, false);
+    assert.equal(replay.closeout.idempotent_noop, true);
+    for (const restored of [
+      listStageAttemptCloseouts(db, attemptId)[0].packet,
+      queryStageAttempt(db, attemptId).stage_attempt_query.closeouts[0].packet,
+    ]) {
+      assert.equal(restored.surface_kind, packet.surface_kind);
+      assert.deepEqual(restored.closeout_refs, packet.closeout_refs);
+      assert.deepEqual(restored.closeout_ref_metadata, packet.closeout_ref_metadata);
+    }
+  });
+});
+
+test('small closeout packets retain their legacy JSON representation and compressed envelopes fail closed on tampering', () => {
+  const packet = closeoutPacket();
+  const legacy = stringifyStageAttemptCloseoutJson(packet);
+  assert.equal(legacy, JSON.stringify(packet));
+  assert.deepEqual(parseStageAttemptCloseoutJson(legacy), packet);
+
+  const largePacket = {
+    ...packet,
+    closeout_refs: Array.from({ length: 40 }, (_, index) => `artifact:${index}:${'x'.repeat(2048)}`),
+  };
+  const envelope = JSON.parse(stringifyStageAttemptCloseoutJson(largePacket));
+  assert.equal(envelope.surface_kind, STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_SURFACE);
+  for (const mutate of [
+    (value: Record<string, unknown>) => { value.uncompressed_bytes = Number(value.uncompressed_bytes) + 1; },
+    (value: Record<string, unknown>) => { value.uncompressed_sha256 = `sha256:${'0'.repeat(64)}`; },
+    (value: Record<string, unknown>) => { value.payload = `${String(value.payload).slice(0, -4)}AAAA`; },
+    (value: Record<string, unknown>) => { value.uncompressed_bytes = MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES; },
+    (value: Record<string, unknown>) => { value.unexpected = true; },
+  ]) {
+    const tampered = { ...envelope };
+    mutate(tampered);
+    assert.throws(
+      () => parseStageAttemptCloseoutJson(JSON.stringify(tampered)),
+      (error) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'stage_attempt_closeout_compression_invalid',
+    );
   }
 });
 
