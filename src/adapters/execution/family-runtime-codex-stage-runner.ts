@@ -288,6 +288,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           },
           onStdoutEvent(event) {
             const summary = eventSummary(event);
+            if (summary.event_kind === 'thread.started' && summary.value) observedThreadId = summary.value;
             runnerEvents.push(summary);
             input.onRunnerProgress?.(summary);
           },
