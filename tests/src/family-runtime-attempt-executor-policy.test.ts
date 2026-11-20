@@ -301,6 +301,18 @@ test('the locator executor policy merges nested and top-level declarations', () 
   assert.deepEqual(workspaceLocatorStageAttemptExecutorPolicy({}), {});
 });
 
+test('equivalent nested and top-level executor aliases agree after normalization', () => {
+  for (const [nestedKind, topLevelKind] of [
+    ['hermes-agent', 'hermes_agent'],
+    ['hermes_agent', 'hermes-agent'],
+  ]) {
+    assert.deepEqual(workspaceLocatorStageAttemptExecutorPolicy({
+      executor_kind: topLevelKind,
+      stage_attempt_executor_policy: { executor_kind: nestedKind },
+    }), { executor_kind: 'hermes_agent' });
+  }
+});
+
 test('conflicting or unknown locator executor policies fail closed', () => {
   assert.throws(
     () => workspaceLocatorStageAttemptExecutorPolicy({

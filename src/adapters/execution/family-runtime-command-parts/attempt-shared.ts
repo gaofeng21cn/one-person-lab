@@ -118,7 +118,9 @@ export function workspaceLocatorStageAttemptExecutorPolicy(
   for (const field of WORKSPACE_LOCATOR_EXECUTOR_POLICY_FIELDS) {
     const nestedValue = typeof nested[field] === 'string' ? nested[field].trim() : '';
     const topLevelValue = typeof locator[field] === 'string' ? locator[field].trim() : '';
-    if (nestedValue && topLevelValue && nestedValue !== topLevelValue) {
+    const comparableNestedValue = field === 'executor_kind' ? nestedValue.replace(/-/g, '_') : nestedValue;
+    const comparableTopLevelValue = field === 'executor_kind' ? topLevelValue.replace(/-/g, '_') : topLevelValue;
+    if (nestedValue && topLevelValue && comparableNestedValue !== comparableTopLevelValue) {
       throw new FrameworkContractError(
         'contract_shape_invalid',
         'Workspace locator declares conflicting Stage executor policy values.',
