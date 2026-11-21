@@ -97,6 +97,67 @@ test('snapshot can freeze an exact bound external input but never an unbound ext
   }
 });
 
+test('snapshot materializes content refs through exact closeout uri bindings only', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-snapshot-content-uri-'));
+  const priorState = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = path.join(root, 'state');
+    const workspace = path.join(root, 'workspace');
+    fs.mkdirSync(workspace);
+    const bytes = '# exact content-ref bytes\n';
+    const contentPath = path.join(workspace, 'knowledge.md');
+    fs.writeFileSync(contentPath, bytes);
+    const contentRef = `opl-content://${sha(bytes).replace('sha256:', 'sha256/')}`;
+    const contentSha = sha(bytes);
+    const sourceRef = pathToFileURL(contentPath).href;
+    const owner = { kind: 'stage_attempt_artifact', ref: contentRef, sha256: contentSha, size_bytes: Buffer.byteLength(bytes) };
+    const request = {
+      surface_kind: 'opl_reviewer_input_snapshot_materialization_request', schema_version: 2,
+      producer_attempt_ref: attemptRef, execution_content_binding_sha256: bindingHash,
+      workspace_root: workspace, owner_authority_ref: owner,
+      members: [{ member_id: 'content', source_ref: contentRef, sha256: contentSha, size_bytes: owner.size_bytes }],
+    };
+    const authority = {
+      producer_attempt_ref: attemptRef,
+      execution_content_binding_sha256: bindingHash,
+      owner_authority_refs: [owner],
+      owner_content_source_workspace_root: workspace,
+      owner_content_source_refs: [{ ref: contentRef, source_ref: sourceRef, sha256: contentSha, size_bytes: owner.size_bytes }],
+      stage_run_input_authority_refs: [],
+    };
+    assert.throws(
+      () => materializeReviewerInputSnapshot(request, { ...authority, owner_content_source_refs: [] }),
+      /not a readable local file/,
+    );
+    const result = materializeReviewerInputSnapshot({ ...request, workspace_root: root }, authority);
+    assert.equal(result.manifest.members[0]!.sha256, contentSha);
+    assert.equal(fs.readFileSync(new URL(result.manifest.members[0]!.immutable_ref.ref), 'utf8'), bytes);
+    const outsidePath = path.join(root, 'outside.md');
+    fs.writeFileSync(outsidePath, bytes);
+    assert.throws(
+      () => materializeReviewerInputSnapshot(request, {
+        ...authority,
+        owner_content_source_refs: [
+          ...authority.owner_content_source_refs,
+          { ...authority.owner_content_source_refs[0]!, source_ref: pathToFileURL(path.join(workspace, 'other.md')).href },
+        ],
+      }),
+      /must name one verified source/,
+    );
+    assert.throws(
+      () => materializeReviewerInputSnapshot(request, {
+        ...authority,
+        owner_content_source_refs: [{ ...authority.owner_content_source_refs[0]!, source_ref: pathToFileURL(outsidePath).href }],
+      }),
+      /escapes the declared workspace root/,
+    );
+  } finally {
+    if (priorState === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = priorState;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 // A closeout entry labels one artifact twice: `kind` (framework artifact kind) and
 // `ref_kind` (domain role label). An author that copies the role label, or that returns
 // the prompt's field heading as a literal key, still names the same exact artifact and
