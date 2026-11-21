@@ -284,12 +284,13 @@ function parseWorkspaceSourceIngestArgs(
 function parseWorkspaceRegistryArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
+  scopeOption?: 'bind',
 ): WorkspaceRegistryCliInput {
   const parsed: WorkspaceRegistryCliInput = {};
   const values = parseCommandOptions(args, spec, {
     project: { type: 'string' },
     path: { type: 'string' },
-    'project-scope-id': { type: 'string' },
+    ...(scopeOption === 'bind' ? { 'project-scope-id': { type: 'string' as const } } : {}),
     label: { type: 'string' },
     'entry-command': { type: 'string' },
     'manifest-command': { type: 'string' },

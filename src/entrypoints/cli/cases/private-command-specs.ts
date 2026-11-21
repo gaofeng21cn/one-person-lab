@@ -619,7 +619,7 @@ resume: {
         'opl workspace bind --project medautogrant --path /Users/gaofeng/workspace/med-autogrant --input /Users/gaofeng/workspace/med-autogrant/examples/nsfc_workspace_p2c_critique.json',
       ],
       handler: async (args) => {
-        const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-bind']);
+        const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-bind'], 'bind');
         if (!parsed.projectId || !parsed.workspacePath) {
           throw buildUsageError(
             'workspace bind requires both --project and --path.',

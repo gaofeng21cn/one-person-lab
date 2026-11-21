@@ -56,39 +56,14 @@ function findBinding(
   ) ?? null;
 }
 
-export function bindWorkspace(
-  contracts: FrameworkContracts,
-  options: WorkspaceRegistryOptions,
+function assertRequestedWorkspaceProjectScope(
+  registry: ReturnType<typeof readWorkspaceRegistryFile>,
+  projectId: string,
+  absolutePath: string,
+  requestedProjectScopeId: string,
 ) {
-  const registry = readWorkspaceRegistryFile();
-  const project = findAllowedProject(contracts, options.projectId);
-  const absolutePath = normalizeWorkspacePath(options.workspacePath);
-  const requestedProjectScopeId = normalizeOptionalString(options.projectScopeId);
-  const existing = registry.bindings.find((binding) =>
-    binding.project_id === options.projectId && binding.workspace_path === absolutePath,
-  );
-  // A new path is independent by default. Reuse is an explicit same-Project
-  // or directory-move decision; an existing path retains its stable identity.
-  const inheritedProjectScopeId = requestedProjectScopeId ?? existing?.project_scope_id ?? null;
-  const conflictingScopeOwner = requestedProjectScopeId
-    ? registry.bindings.find((binding) =>
-      binding.project_scope_id === requestedProjectScopeId
-      && binding.project_id !== project.project_id
-    )
-    : null;
-  if (conflictingScopeOwner) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Workspace project scope is already owned by a different project surface.',
-      {
-        project_scope_id: requestedProjectScopeId,
-        requested_project_id: project.project_id,
-        existing_project_id: conflictingScopeOwner.project_id,
-        existing_binding_id: conflictingScopeOwner.binding_id,
-      },
-    );
-  }
-  if (existing && requestedProjectScopeId && existing.project_scope_id !== requestedProjectScopeId) {
+  const existing = findBinding(registry, projectId, absolutePath);
+  if (existing && existing.project_scope_id !== requestedProjectScopeId) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Workspace binding cannot be rebound to a different project scope.',
@@ -99,10 +74,61 @@ export function bindWorkspace(
       },
     );
   }
+
+  const scopeBindings = registry.bindings.filter((binding) =>
+    binding.project_scope_id === requestedProjectScopeId,
+  );
+  const conflictingScopeOwner = scopeBindings.find((binding) => binding.project_id !== projectId);
+  if (conflictingScopeOwner) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Workspace project scope is already owned by a different project surface.',
+      {
+        project_scope_id: requestedProjectScopeId,
+        requested_project_id: projectId,
+        existing_project_id: conflictingScopeOwner.project_id,
+        existing_binding_id: conflictingScopeOwner.binding_id,
+      },
+    );
+  }
+  if (scopeBindings.length === 0) {
+    throw new FrameworkContractError(
+      'surface_not_found',
+      'Workspace project scope is not registered.',
+      { project_id: projectId, project_scope_id: requestedProjectScopeId },
+    );
+  }
+}
+
+export function preflightWorkspaceProjectScope(
+  projectId: string,
+  workspacePath: string,
+  requestedProjectScopeId: string,
+) {
+  assertRequestedWorkspaceProjectScope(
+    readWorkspaceRegistryFile(),
+    projectId,
+    normalizeWorkspaceBindingPath(workspacePath),
+    requestedProjectScopeId,
+  );
+}
+
+export function bindWorkspace(
+  contracts: FrameworkContracts,
+  options: WorkspaceRegistryOptions,
+) {
+  const registry = readWorkspaceRegistryFile();
+  const project = findAllowedProject(contracts, options.projectId);
+  const absolutePath = normalizeWorkspacePath(options.workspacePath);
+  const requestedProjectScopeId = normalizeOptionalString(options.projectScopeId);
+  if (requestedProjectScopeId) {
+    assertRequestedWorkspaceProjectScope(registry, project.project_id, absolutePath, requestedProjectScopeId);
+  }
+  const existing = findBinding(registry, project.project_id, absolutePath);
   const timestamp = nowIso();
   const binding = existing ?? {
     binding_id: randomUUID(),
-    project_scope_id: inheritedProjectScopeId ?? createProjectScopeId(),
+    project_scope_id: requestedProjectScopeId ?? createProjectScopeId(),
     project_id: project.project_id,
     project: project.project,
     workspace_path: absolutePath,

@@ -5,6 +5,7 @@ import {
   os,
   path,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 
@@ -168,6 +169,13 @@ test('workspace-bind distinguishes independent paths and explicit same-project m
     assert.notEqual(independent.project_scope_id, second.project_scope_id);
     assert.equal(rebound.project_scope_id, first.project_scope_id);
     assert.equal(rebound.binding_id, first.binding_id);
+    for (const command of ['activate', 'archive']) {
+      const rejected = runCliFailure([
+        'workspace', command, '--project', 'medautoscience', '--path', firstWorkspacePath,
+        '--project-scope-id', first.project_scope_id,
+      ], env);
+      assert.equal(rejected.payload.error.code, 'cli_usage_error');
+    }
   } finally {
     fs.rmSync(locatorRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
