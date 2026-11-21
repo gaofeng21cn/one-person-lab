@@ -3,7 +3,7 @@
   "package_id": "opl-relay",
   "display_name": "OPL Relay",
   "publisher": "one-person-lab",
-  "version": "0.7.7",
+  "version": "0.7.8",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-relay.git",
@@ -80,7 +80,7 @@
       "skills/opl-relay/references/apple-mail.md",
       "runtime/codex_mail_workbench/_opl_profile_workspace.py"
     ],
-    "digest": "sha256:0b9a3b67e2535adfe76979941a7d05963fba2de7882ba9848ae1e2a44ca6becb"
+    "digest": "sha256:c20a6382b9295c29a539a52e37f6a76297cc775911db264d8d247e733cc8812b"
   },
   "codex_surface": {
     "plugin_id": "opl-relay",
@@ -105,8 +105,8 @@
       "request_schema": "opl-package-app-contribution-request.v1",
       "response_schema": "opl-package-app-contribution-response.v1"
     },
-    "plugin_payload_manifest_url": "payloads/opl-relay-0.7.7.json",
-    "carrier_source_commit": "81d1dec495da843b40e5608f59c3e2608d17af56"
+    "plugin_payload_manifest_url": "payloads/opl-relay-0.7.8.json",
+    "carrier_source_commit": "1d11a44e20f1ac42ae9de19686720be44015a5bf"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
