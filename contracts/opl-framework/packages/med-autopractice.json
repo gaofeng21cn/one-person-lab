@@ -2,14 +2,14 @@
   "surface_kind": "opl_capability_package_manifest.v2",
   "package_id": "med-autopractice",
   "display_name": "Med Auto Practice",
-  "description": "医生主导的临床资料整理、病历草拟与医嘱协作；当前提供规划及合成任务验证。",
+  "description": "医生主导的临床工作智能体，支持病历结构化、医嘱协作和医院系统适配。",
   "publisher": "gaofeng21cn",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/med-autopractice.git",
-  "visibility": "authorized_only",
-  "access_policy_ref": "github-package:gaofeng21cn/one-person-lab-private-packages/med-autopractice",
-  "credential_provider": "github_packages",
+  "visibility": "public",
+  "access_policy_ref": null,
+  "credential_provider": null,
   "package_role": "capability_package",
   "publication_channel_admission": "admitted",
   "presentation": {
@@ -18,8 +18,8 @@
       "en-US": "Med Auto Practice"
     },
     "description_i18n": {
-      "zh-CN": "医生主导的临床资料整理、病历草拟与医嘱协作；当前提供规划及合成任务验证。",
-      "en-US": "Clinician-directed records, notes, and order collaboration, with planning and synthetic task validation."
+      "zh-CN": "医生主导的临床工作智能体，支持病历结构化、医嘱协作和医院系统适配。",
+      "en-US": "A clinician-directed agent for structured records, order review and hospital system integration."
     },
     "session_routing_summary_i18n": {
       "zh-CN": "通过 MAP 主 Skill 查看能力、规划任务并运行合成验证；临床执行按部署资格开放。",
@@ -64,6 +64,15 @@
         "scripts/map_runtime.py"
       ],
       "scope": "synthetic_only"
+    },
+    {
+      "entrypoint_id": "med-autopractice.demo",
+      "kind": "cli",
+      "argv": [
+        "python3",
+        "scripts/map_demo.py"
+      ],
+      "scope": "synthetic_only"
     }
   ],
   "codex_surface": {
@@ -76,10 +85,10 @@
       "plugin_selector": "med-autopractice@med-autopractice",
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/med-autopractice",
-      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-private-packages/med-autopractice:latest-stable"
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/med-autopractice:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/med-autopractice-0.0.2.json",
-    "carrier_source_commit": "1c203c0e8e39b5f67b482c173a2dc105e215c820"
+    "plugin_payload_manifest_url": "payloads/med-autopractice-0.1.0.json",
+    "carrier_source_commit": "f98ce7888244719f75f9659962f69a0a2776c138"
   },
   "content_lock": {
     "algorithm": "sha256",
@@ -144,9 +153,33 @@
       "src/med_autopractice/workflows/catalog.py",
       "src/med_autopractice/workflows/site_plan.py",
       "src/med_autopractice/workflows/site_playbook.py",
-      "src/med_autopractice/workflows/site_survey.py"
+      "src/med_autopractice/workflows/site_survey.py",
+      ".github/workflows/ci.yml",
+      "CODE_OF_CONDUCT.md",
+      "CONTRIBUTING.md",
+      "LICENSE",
+      "SECURITY.md",
+      "docs/public-scope.md",
+      "scripts/public_release_check.py",
+      "NOTICE",
+      "AGENTS.md",
+      "assets/branding/generation-prompts.json",
+      "docs/adapter-development.md",
+      "docs/getting-started.md",
+      "examples/synthetic/custom_proposer.py",
+      "examples/synthetic/playbooks/open-overview.json",
+      "examples/synthetic/revise-orders.json",
+      "examples/synthetic/survey.json",
+      "scripts/map_demo.py",
+      "tests/fixtures/README.md",
+      "tests/fixtures/synthetic-history-collection.json",
+      "src/med_autopractice/adapters/ui.py",
+      "src/med_autopractice/adapters/fhir.py",
+      "examples/synthetic/fhir_read.py",
+      "examples/synthetic/configure_site.py",
+      "docs/hospital-adapters.md"
     ],
-    "digest": "sha256:ad1a5148d83a9ce9b6956fd224d14a35496300ab660da198b859820a47824eb0"
+    "digest": "sha256:b6f716ab1fe9c5e10acf9750360d6f87a81d93f0e40d5b819269bf287d53afdc"
   },
   "management_scope": "local_product",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
