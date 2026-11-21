@@ -19,6 +19,7 @@ export { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 export { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
 export { resolveTemporalAddressForPaths } from './family-runtime-temporal-service.ts';
 export { resolveTemporalClientNamespace } from './family-runtime-temporal-client.ts';
+export { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
 export { deriveCurrentControlStateForAttempt } from './family-runtime-current-control-state.ts';
 export { latestStageAttemptCloseoutPacketsByAttempt, listStageAttemptRows, stageAttemptSignalsByAttempt } from './family-runtime-stage-attempt-ledger.ts';
 export {

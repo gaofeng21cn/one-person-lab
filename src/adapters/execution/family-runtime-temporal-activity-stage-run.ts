@@ -30,6 +30,7 @@ import {
   stageAttemptIdFromRef,
 } from './family-runtime-temporal-activity-identity.ts';
 import type { StageRouteCompositionFactory } from './composition-factory-ports.ts';
+import type { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
 import {
   localPathForRef,
   observeStableFile,
@@ -99,7 +100,10 @@ function observeAuthoritativeArtifactBytes(input: TemporalStageQualityCycleProje
 }
 export async function stageRunRouteLaunchActivity(
   input: TemporalStageRunRouteLaunchInput,
-  options: { createStageRouteComposition?: StageRouteCompositionFactory } = {},
+  options: {
+    createStageRouteComposition?: StageRouteCompositionFactory;
+    ensurePackageLaunchReady?: typeof ensureFamilyRuntimePackageLaunchReady;
+  } = {},
 ): Promise<TemporalStageRunRouteLaunchReceipt> {
   const { db } = openQueueDb();
   try {
@@ -141,6 +145,7 @@ export async function stageRunRouteLaunchActivity(
   }
   return materializeStageRunRoute(input, {
     createStageRouteComposition: options.createStageRouteComposition,
+    ensurePackageLaunchReady: options.ensurePackageLaunchReady,
     findTargetStageRun: (stageRunId) => {
       const { db } = openQueueDb();
       try {
