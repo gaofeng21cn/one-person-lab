@@ -4,12 +4,10 @@
   "display_name": "Med Auto Practice",
   "description": "医生主导的临床工作智能体，支持病历结构化、医嘱协作和医院系统适配。",
   "publisher": "gaofeng21cn",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/med-autopractice.git",
   "visibility": "public",
-  "access_policy_ref": null,
-  "credential_provider": null,
   "package_role": "capability_package",
   "publication_channel_admission": "admitted",
   "presentation": {
@@ -87,8 +85,8 @@
       "marketplace_source": "gaofeng21cn/med-autopractice",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/med-autopractice:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/med-autopractice-0.1.0.json",
-    "carrier_source_commit": "f98ce7888244719f75f9659962f69a0a2776c138"
+    "plugin_payload_manifest_url": "payloads/med-autopractice-0.1.1.json",
+    "carrier_source_commit": "a76df5679ef34eaddbca94d72ab7af381adb9a05"
   },
   "content_lock": {
     "algorithm": "sha256",
@@ -179,7 +177,7 @@
       "examples/synthetic/configure_site.py",
       "docs/hospital-adapters.md"
     ],
-    "digest": "sha256:b6f716ab1fe9c5e10acf9750360d6f87a81d93f0e40d5b819269bf287d53afdc"
+    "digest": "sha256:a6e385d5ab91d5264febc852311d7bee61304c3e55d96d927fb1e233bca15920"
   },
   "management_scope": "local_product",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
