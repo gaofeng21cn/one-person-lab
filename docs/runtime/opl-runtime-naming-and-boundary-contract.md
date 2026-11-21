@@ -28,6 +28,10 @@
 
 材料、产物和项目绑定的位置。路径是 locator，不是任务 identity；Work Item/StageRun scope 才是执行身份。
 
+### Project scope 与独立 Workspace
+
+`project_scope_id` 是逻辑 Project 的稳定身份。同一个 `(project_id, workspace_path)` 重复绑定会保留原身份；新路径默认获得独立身份。搬迁目录或为同一 Project 登记另一个位置时，从旧 binding 的 JSON 输出读取 `project_scope_id`，再通过 `workspace bind --project-scope-id` 或初始化操作传入该值。现有 binding 保留原范围，旧记录沿用登记时的身份。
+
 ### Evidence
 
 可回读的 artifact、event、receipt、typed blocker 或 owner decision ref。Framework ledger保存 refs 和 lineage，不复制 artifact body 或专业结论。

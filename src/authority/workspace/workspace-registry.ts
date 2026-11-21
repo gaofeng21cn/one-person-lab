@@ -18,6 +18,7 @@ export {
   bindWorkspace,
   getActiveWorkspaceBinding,
   listWorkspaceBindings,
+  preflightWorkspaceProjectScope,
   resolveWorkspaceBinding,
 } from './workspace-registry-parts/lifecycle.ts';
 

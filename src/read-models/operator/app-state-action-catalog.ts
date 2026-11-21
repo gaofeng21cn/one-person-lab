@@ -50,6 +50,8 @@ function workspaceActionsFromNorm(contract: AgentWorkspaceNormContract): AppActi
     ...contract.default_workspace_precondition.required_inputs,
     ...payloadFieldsFromWorkspaceNorm(contract),
   ];
+  // Adoption changes topology metadata without binding a Workspace scope.
+  const adoptionPayloadFields = payloadFields.filter((field) => field !== 'project_scope_id');
   return [
     {
       action_id: contract.explicit_initialization.app_action_id,
@@ -92,7 +94,7 @@ function workspaceActionsFromNorm(contract: AgentWorkspaceNormContract): AppActi
       label: 'Plan existing workspace adoption',
       surface: 'opl app action execute',
       delegated_surface: 'opl workspace adopt --dry-run',
-      payload_fields: payloadFields,
+      payload_fields: adoptionPayloadFields,
       mutates: 'none_read_only',
       dry_run_supported: true,
     },
@@ -101,7 +103,7 @@ function workspaceActionsFromNorm(contract: AgentWorkspaceNormContract): AppActi
       label: 'Apply existing workspace adoption',
       surface: 'opl app action execute',
       delegated_surface: 'opl workspace adopt --apply',
-      payload_fields: payloadFields,
+      payload_fields: adoptionPayloadFields,
       mutates: 'opl_workspace_topology_projection',
       dry_run_supported: true,
     },

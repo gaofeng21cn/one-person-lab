@@ -91,7 +91,7 @@ export function buildWorkspaceInitializeInterfaces(contracts: FrameworkContracts
           report_command: 'opl workspace report',
           fleet_report_command: 'opl workspace fleet report',
           usage:
-            `opl workspace ensure --agent <${contracts.agentWorkspaceNorm.supported_agents.join('|')}> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>] [--mode auto|one_off|series|portfolio]`,
+            `opl workspace ensure --agent <${contracts.agentWorkspaceNorm.supported_agents.join('|')}> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>] [--project-scope-id <id>] [--mode auto|one_off|series|portfolio]`,
         },
         management_commands: {
           validate: {

@@ -33,10 +33,17 @@ test('workspace adopt indexes existing native project roots, preserves business 
     assert.equal(fs.readFileSync(businessFile, 'utf8'), original);
     assert.equal(fs.existsSync(path.join(workspace, 'projects/stable-one')), false);
     runCli([...args, '--project-id', 'stable-one', '--apply'], env);
-    const initialized = runCli(['workspace', 'init', '--agent', 'rca', '--workspace', workspace, '--project-id', 'stable-one'], env);
+    const initialized = runCli([
+      'workspace', 'init', '--agent', 'rca', '--workspace', workspace, '--project-id', 'stable-one',
+    ], env);
+    const projectScopeId = initialized.workspace_initialization.binding.project_scope_id;
     assert.equal(initialized.workspace_initialization.project_root, firstRoot);
-    const ensured = runCli(['workspace', 'ensure', '--agent', 'rca', '--project-id', 'stable-one', '--project-root', firstRoot], env);
+    const ensured = runCli([
+      'workspace', 'ensure', '--agent', 'rca', '--project-id', 'stable-one', '--project-root', firstRoot,
+      '--project-scope-id', projectScopeId,
+    ], env);
     assert.equal(ensured.workspace_initialization.project_root, firstRoot);
+    assert.equal(ensured.workspace_initialization.binding.project_scope_id, projectScopeId);
     assert.equal(readIndex().projects.length, 2);
     const before = fs.readFileSync(indexPath, 'utf8');
     for (const conflict of [
@@ -48,7 +55,34 @@ test('workspace adopt indexes existing native project roots, preserves business 
       assert.equal(runCliFailure(conflict, env).payload.error.code, 'cli_usage_error');
       assert.equal(fs.readFileSync(indexPath, 'utf8'), before);
     }
+    const scopeConflict = runCliFailure([
+      'workspace', 'ensure', '--agent', 'rca', '--project-id', 'stable-one', '--project-root', firstRoot,
+      '--project-scope-id', 'project:conflicting-active-scope',
+    ], env);
+    assert.equal(scopeConflict.payload.error.details.failure_code, 'workspace_project_scope_conflict');
+    assert.equal(fs.readFileSync(indexPath, 'utf8'), before);
+    const initConflict = runCliFailure([
+      'workspace', 'init', '--agent', 'rca', '--workspace', workspace, '--project-id', 'stable-one',
+      '--project-scope-id', 'project:conflicting-active-scope', '--title', 'Conflicting update',
+    ], env);
+    assert.equal(initConflict.payload.error.details.existing_project_scope_id, projectScopeId);
+    assert.equal(fs.readFileSync(indexPath, 'utf8'), before);
+    const ensuredAfterConflict = runCli([
+      'workspace', 'ensure', '--agent', 'rca', '--project-id', 'stable-one', '--project-root', firstRoot,
+    ], env);
+    assert.equal(ensuredAfterConflict.workspace_initialization.binding.project_scope_id, projectScopeId);
     runCli(['workspace', 'validate', '--workspace', workspace], env);
+    const other = runCli([
+      'workspace', 'init', '--agent', 'rca', '--workspace', path.join(fixture, 'other'),
+    ], env).workspace_initialization;
+    assert.notEqual(other.binding.project_scope_id, projectScopeId);
+    fs.renameSync(other.workspace_path, path.join(fixture, 'other-moved'));
+    const resumed = runCli([
+      'workspace', 'ensure', '--agent', 'rca', '--workspace-root', fixture, '--workspace-id', 'replacement',
+      '--project-scope-id', projectScopeId,
+    ], env).workspace_initialization;
+    assert.equal(resumed.binding.project_scope_id, projectScopeId);
+    assert.equal(resumed.workspace_path, path.join(fixture, 'replacement'));
   } finally {
     descriptors.cleanup();
     fs.rmSync(fixture, { recursive: true, force: true });

@@ -5,9 +5,9 @@ export function buildWorkspaceCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
 ): Record<string, CommandSpec> {
   const workspaceInitUsage = commandSpecs['workspace-init']?.usage
-    ?? 'opl workspace init --agent <mas|mag|rca|oma|obf> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>]';
+    ?? 'opl workspace init --agent <mas|mag|rca|oma|obf> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>] [--project-scope-id <id>]';
   const workspaceEnsureUsage = commandSpecs['workspace-ensure']?.usage
-    ?? 'opl workspace ensure --agent <mas|mag|rca|oma|obf> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>]';
+    ?? 'opl workspace ensure --agent <mas|mag|rca|oma|obf> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>] [--project-scope-id <id>]';
   const workspaceAdoptUsage = commandSpecs['workspace adopt']?.usage
     ?? 'opl workspace adopt --agent <mas|mag|rca|oma|obf> --workspace <path> [--project-id <id>] [--project-root <absolute-existing-path>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]';
   const workspaceCommandSpecs: Record<string, CommandSpec> = {
@@ -297,7 +297,7 @@ export function buildWorkspaceCommandSpecs(
     }),
     'workspace bind': cloneCommandSpec(commandSpecs['workspace-bind'], {
       usage:
-        'opl workspace bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
+        'opl workspace bind --project <project_id> --path <workspace_path> [--project-scope-id <id>] [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
       examples: [
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
         'opl workspace bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',

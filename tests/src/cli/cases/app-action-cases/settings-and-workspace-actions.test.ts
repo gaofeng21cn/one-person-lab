@@ -114,6 +114,14 @@ test('app action execute owns settings, release channel, workspace root, and pro
       'opl workspace ensure',
     );
 
+    const originalMagWorkspace = runCli([
+      'workspace', 'init', '--agent', 'mag', '--workspace', path.join(workspaceRoot, 'mag-original'),
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_FAMILY_WORKSPACE_ROOT: descriptorFixture.familyRoot,
+    }).workspace_initialization;
+    const projectScopeId = originalMagWorkspace.binding.project_scope_id;
     const magWorkspace = runCli([
       'app',
       'action',
@@ -125,6 +133,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
         agent_id: 'mag',
         workspace_id: 'nsfc-p2c',
         project_id: 'grant-001',
+        project_scope_id: projectScopeId,
       }),
     ], {
       HOME: homeRoot,
@@ -135,6 +144,10 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(magWorkspace.delegated_surface, 'opl workspace init');
     assert.equal(magWorkspace.result.workspace_initialization.dry_run, false);
     assert.equal(magWorkspace.result.workspace_initialization.binding.project_id, 'medautogrant');
+    assert.equal(
+      magWorkspace.result.workspace_initialization.binding.project_scope_id,
+      projectScopeId,
+    );
     assert.equal(
       fs.statSync(path.join(workspaceRoot, 'nsfc-p2c', 'projects', 'grant-001', 'artifacts', 'stage_outputs')).isDirectory(),
       true,
@@ -150,6 +163,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
       JSON.stringify({
         agent_id: 'mag',
         project_id: 'grant-001',
+        project_scope_id: projectScopeId,
       }),
     ], {
       HOME: homeRoot,

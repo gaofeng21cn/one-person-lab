@@ -54,7 +54,7 @@ import {
   findWorkspaceAgentProfile,
   type WorkspaceAgentProfile,
 } from './workspace-agent-defaults.ts';
-import { bindWorkspace, getActiveWorkspaceBinding } from './workspace-registry.ts';
+import { bindWorkspace, getActiveWorkspaceBinding, preflightWorkspaceProjectScope } from './workspace-registry.ts';
 import { buildInterfaceProjection } from './workspace-initializer-parts/interfaces.ts';
 import { initializeArtifactLifecycleProfile } from './workspace-artifact-lifecycle-profile.ts';
 import { profileFromIndex } from './workspace-index-normalization.ts';
@@ -67,6 +67,7 @@ export type WorkspaceInitializeOptions = {
   workspaceId?: string;
   projectId?: string;
   projectRoot?: string;
+  projectScopeId?: string;
   title?: string;
   mode?: WorkspaceModeInput;
   bind?: boolean;
@@ -576,6 +577,11 @@ export function initializeWorkspace(
   const mode = normalizeMode(options.mode);
   const profileId = selectWorkspaceProfileId(agent, mode);
   const workspacePath = resolveWorkspacePath(options, agent);
+  const shouldBind = options.bind !== false;
+  const requestedProjectScopeId = normalizeOptionalString(options.projectScopeId);
+  if (shouldBind && requestedProjectScopeId) {
+    preflightWorkspaceProjectScope(agent.project_id, workspacePath, requestedProjectScopeId);
+  }
   const workspaceIndexPath = path.join(workspacePath, 'workspace_index.json');
   const existingIndex = readExistingWorkspaceIndex(workspaceIndexPath);
   const profile = existingIndex && !options.adoptExistingTopology
@@ -699,10 +705,10 @@ export function initializeWorkspace(
     });
   }
 
-  const shouldBind = options.bind !== false;
   const bindingPayload = !options.dryRun && shouldBind
     ? bindWorkspace(contracts, {
         projectId: agent.project_id,
+        projectScopeId: requestedProjectScopeId ?? undefined,
         workspacePath,
         label: title ?? `${agent.label} ${workspaceId}`,
         workspaceRoot: agent.agent_id === 'rca' ? workspacePath : undefined,
@@ -810,6 +816,24 @@ export function ensureWorkspace(
   const indexedProject = activeWorkspaceIndexPath && fs.existsSync(activeWorkspaceIndexPath)
     ? loadIndexedProject(activeWorkspaceIndexPath, projectId)
     : null;
+  const requestedProjectScopeId = normalizeOptionalString(options.projectScopeId);
+  if (
+    activeBinding
+    && activeWorkspacePath
+    && requestedProjectScopeId
+    && activeBinding.project_scope_id !== requestedProjectScopeId
+  ) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'workspace ensure explicit Project scope conflicts with the active Workspace binding.',
+      {
+        failure_code: 'workspace_project_scope_conflict',
+        active_binding_id: activeBinding.binding_id,
+        active_project_scope_id: activeBinding.project_scope_id,
+        requested_project_scope_id: requestedProjectScopeId,
+      },
+    );
+  }
 
   if (activeWorkspacePath && activeWorkspaceIndexPath && indexedProject && !options.force) {
     const refreshedIndex = readExistingWorkspaceIndex(activeWorkspaceIndexPath);

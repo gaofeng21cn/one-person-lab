@@ -146,9 +146,14 @@ test('app action catalog exposes representative safe delegated action refs', () 
       'workspace_id',
       'project_id',
       'project_root',
+      'project_scope_id',
       'mode',
       'title',
     ]);
+    for (const actionId of ['workspace_adopt_dry_run', 'workspace_adopt_apply']) {
+      assert.equal(actions.get(actionId)?.payload_fields.includes('project_root'), true);
+      assert.equal(actions.get(actionId)?.payload_fields.includes('project_scope_id'), false);
+    }
     assert.equal(actions.get('workspace_validate')?.delegated_surface, 'opl workspace validate');
     assert.equal(actions.get('workspace_validate')?.mutates, 'none_read_only');
     assert.deepEqual(actions.get('workspace_validate')?.payload_fields, ['workspace_path']);
