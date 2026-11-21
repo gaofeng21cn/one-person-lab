@@ -118,7 +118,8 @@ test('protocol closeout resume hydrates one exact local packet and preserves rev
         size_bytes: requestBytes.length,
       },
     ],
-    route_impact: routeImpact,
+    stage_quality_cycle: routeImpact.stage_quality_cycle,
+    route_impact: { stage_route_recommendation: routeImpact.stage_route_recommendation },
     authority_boundary: {
       opl: 'closeout_transport_only',
       domain: 'truth_quality_artifact_gate_owner',
@@ -207,6 +208,9 @@ exit 64
       receipt.closeout_packet?.route_impact?.stage_route_recommendation,
       routeImpact.stage_route_recommendation,
     );
+    assert.deepEqual(receipt.closeout_packet?.route_impact?.normalization_findings, [
+      'stage_quality_cycle_folded_from_closeout_top_level',
+    ]);
     assert.ok(receipt.closeout_packet?.closeout_refs.includes(closeoutRef));
     const artifactMetadata = receipt.closeout_packet?.closeout_ref_metadata?.filter(
       (entry) => entry.ref === resultRef || entry.ref === requestRef,
@@ -223,6 +227,47 @@ exit 64
     restoreEnv('OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS', previousRecoveryTimeout);
     restoreEnv('OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS', previousRecoveryInterval);
     fs.rmSync(fixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('referenced top-level quality participates in explicit route compatibility', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-misplaced-closeout-cycle-'));
+  try {
+    const runAttempt = attempt(workspaceRoot);
+    const stageQualityCycle = { artifact_refs: ['artifact:one'], artifact_hashes: ['sha256:one'] };
+    const closeoutPath = path.join(workspaceRoot, 'closeout.json');
+    const bytes = writeJson(closeoutPath, {
+      surface_kind: 'stage_attempt_closeout_packet',
+      stage_attempt_id: runAttempt.stage_attempt_id,
+      stage_quality_cycle: stageQualityCycle,
+    });
+    const hydrate = (routeImpact: Record<string, unknown>) => {
+      const resumedCandidate = resumedReference({
+        attemptId: runAttempt.stage_attempt_id,
+        ref: pathToFileURL(closeoutPath).href,
+        sha256: sha256(bytes),
+        routeImpact,
+      });
+      return hydrateReferencedStageAttemptCloseout({
+        resumedCandidate,
+        resumedCloseout: normalizeTypedStageCloseoutPacket(resumedCandidate),
+        attempt: runAttempt,
+        workspaceRoot,
+      });
+    };
+    const hydrated = hydrate({ stage_quality_cycle: stageQualityCycle });
+    assert.equal(hydrated.status, 'hydrated');
+    assert.deepEqual(hydrated.closeoutPacket?.route_impact?.stage_quality_cycle, stageQualityCycle);
+    assert.deepEqual(hydrated.closeoutPacket?.route_impact?.normalization_findings, [
+      'stage_quality_cycle_folded_from_closeout_top_level',
+    ]);
+    assert.throws(
+      () => hydrate({ stage_quality_cycle: { ...stageQualityCycle, artifact_refs: ['artifact:other'] } }),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.details?.blocked_reason === 'referenced_closeout_packet_conflict',
+    );
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 
