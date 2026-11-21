@@ -801,8 +801,21 @@ test('content refs verify exact bytes through their local uri without changing l
     const receiptRef = String(metadata?.artifact_identity_receipt_ref);
     const receipt = JSON.parse(fs.readFileSync(new URL(receiptRef), 'utf8'));
     assert.equal(receipt.artifact_ref, artifactRef);
+    assert.equal(receipt.artifact_source_ref, sourceRef);
     assert.equal(receipt.sha256, digest);
     assert.equal(receipt.size_bytes, bytes.length);
+    const revalidate = () => verifyStageQualityArtifactIdentityAtAttemptBoundary({
+      artifactRefs: [artifactRef],
+      artifactHashes: [digest],
+      artifactIdentityReceiptRefs: [receiptRef],
+      domainId: attempt.domain_id,
+      workspaceRoot: root,
+      expectedProducingAttemptId: attempt.stage_attempt_id,
+      expectedProducingStageId: attempt.stage_id,
+    });
+    assert.deepEqual(revalidate().artifact_refs, [artifactRef]);
+    fs.writeFileSync(artifactPath, 'replacement content');
+    assert.throws(revalidate, /SHA does not match the current stable local file bytes/);
   } finally {
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;

@@ -108,6 +108,9 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
         work_item_scope_id: executionIdentity.executionScope?.work_item_scope_id ?? null,
         scope_digest: executionIdentity.executionScope?.scope_digest ?? null,
         artifact_ref: artifactRef,
+        ...(!rawProgress && 'sourceRef' in observed && observed.sourceRef
+          ? { artifact_source_ref: observed.sourceRef }
+          : {}),
         sha256: observed.sha256,
         size_bytes: observed.sizeBytes,
       };

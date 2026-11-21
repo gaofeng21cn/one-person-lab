@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { stringValue as optionalString } from '../../../../kernel/json-record.ts';
 import { ensureOplStateDir } from '../../../../kernel/runtime-state-paths.ts';
 import {
+  captureWorkItemRootIdentity,
   readStableWorkItemFile,
   type WorkItemRootIdentity,
   WorkItemFileBoundaryError,
@@ -291,14 +292,22 @@ export function verifyCurrentArtifactBytes(input: {
   // downstream authority receipts and content readers consume. A directly readable
   // artifact ref always remains the primary source, so an alias cannot redirect a
   // local file verification to different bytes.
-  const localPath = localPathForRef(input.artifactRef, input.workspaceRoot)
-    ?? (input.artifactSourceRef
-      ? localPathForRef(input.artifactSourceRef, input.workspaceRoot)
-      : null);
+  const directPath = localPathForRef(input.artifactRef, input.workspaceRoot);
+  const contentPath = !directPath
+    && input.artifactSourceRef
+    && input.artifactRef === `opl-content://sha256/${input.artifactSha256}`
+    ? localPathForRef(input.artifactSourceRef, input.workspaceRoot)
+    : null;
+  const localPath = directPath ?? contentPath;
   if (!localPath) return null;
+  const boundaryRoot = input.canonicalWorkItemRoot
+    ?? (contentPath ? path.resolve(input.workspaceRoot) : null);
+  const boundaryWorkspace = input.canonicalWorkItemRoot || !boundaryRoot
+    ? input.scopeWorkspaceRoot ?? input.workspaceRoot
+    : path.dirname(boundaryRoot);
   let observed: StableFileObservation;
-  if (input.canonicalWorkItemRoot) {
-    if (!input.canonicalWorkItemRootIdentity) {
+  if (boundaryRoot) {
+    if (input.canonicalWorkItemRoot && !input.canonicalWorkItemRootIdentity) {
       throw artifactIdentityError({
         message: 'Canonical work-item root is missing its frozen physical identity.',
         blockedReason: 'artifact_work_item_root_identity_drift_authority_violation',
@@ -309,9 +318,13 @@ export function verifyCurrentArtifactBytes(input: {
     }
     try {
       const scoped = readStableWorkItemFile({
-        workspaceRoot: input.scopeWorkspaceRoot ?? input.workspaceRoot,
-        canonicalWorkItemRoot: input.canonicalWorkItemRoot,
-        expectedRootIdentity: input.canonicalWorkItemRootIdentity,
+        workspaceRoot: boundaryWorkspace,
+        canonicalWorkItemRoot: boundaryRoot,
+        expectedRootIdentity: input.canonicalWorkItemRootIdentity ?? captureWorkItemRootIdentity({
+          workspaceRoot: boundaryWorkspace,
+          canonicalWorkItemRoot: boundaryRoot,
+          ref: input.artifactRef,
+        }),
         filePath: localPath,
         ref: input.artifactRef,
       });
@@ -391,5 +404,8 @@ export function verifyCurrentArtifactBytes(input: {
   // the transport identity receipt, so the stale value never propagates downstream.
   // Same contract family as the reviewer snapshot fix: stale declared sizes are
   // metadata, not tampering.
-  return observed;
+  return {
+    ...observed,
+    ...(contentPath ? { sourceRef: pathToFileURL(contentPath).href } : {}),
+  };
 }

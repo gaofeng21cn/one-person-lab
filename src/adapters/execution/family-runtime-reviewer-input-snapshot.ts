@@ -52,6 +52,7 @@ export type ReviewerInputSnapshotAuthorityBinding = {
   review_lane_binding?: string | null;
   owner_authority_refs: ReviewTransportExactRef[];
   owner_content_source_refs?: ReviewerInputSnapshotContentSourceRef[];
+  owner_content_source_workspace_root?: string;
   stage_run_input_authority_refs?: ReviewTransportExactRef[];
 };
 
@@ -133,6 +134,36 @@ function normalizeAuthorityBinding(
   if (value.stage_run_input_authority_refs !== undefined && !Array.isArray(value.stage_run_input_authority_refs)) {
     throw reviewTransportError('reviewer_input_snapshot_input_authority_invalid', 'StageRun input authority refs must be an array.');
   }
+  const contentSources = new Map<string, ReviewerInputSnapshotContentSourceRef>();
+  for (const [index, source] of (value.owner_content_source_refs ?? []).entries()) {
+    const field = `expected_authority.owner_content_source_refs[${index}]`;
+    const record = requireReviewTransportRecord(source, field);
+    requireExactReviewTransportKeys(record, ['ref', 'source_ref', 'sha256', 'size_bytes'], field);
+    const ref = requiredReviewTransportText(record.ref, `${field}.ref`);
+    const sha256 = canonicalReviewTransportSha256(record.sha256, `${field}.sha256`);
+    if (ref !== `opl-content://sha256/${sha256.slice('sha256:'.length)}`) {
+      throw reviewTransportError(
+        'reviewer_input_snapshot_content_source_binding_invalid',
+        'Reviewer content source binding must match its logical content ref and digest.',
+        { ref, sha256 },
+      );
+    }
+    const binding = {
+      ref,
+      source_ref: requiredReviewTransportText(record.source_ref, `${field}.source_ref`),
+      sha256,
+      size_bytes: reviewTransportSize(record.size_bytes, `${field}.size_bytes`),
+    };
+    const existing = contentSources.get(ref);
+    if (existing && (existing.source_ref !== binding.source_ref || existing.size_bytes !== binding.size_bytes)) {
+      throw reviewTransportError(
+        'reviewer_input_snapshot_content_source_binding_ambiguous',
+        'Reviewer content source binding must name one verified source for its logical content ref.',
+        { ref },
+      );
+    }
+    contentSources.set(ref, binding);
+  }
   return {
     producer_attempt_ref: normalizeAttemptRef(
       value.producer_attempt_ref,
@@ -151,26 +182,15 @@ function normalizeAuthorityBinding(
     owner_authority_refs: value.owner_authority_refs.map((ref, index) => (
       normalizeExactRef(ref, `expected_authority.owner_authority_refs[${index}]`)
     )),
-    owner_content_source_refs: (value.owner_content_source_refs ?? []).map((source, index) => {
-      const field = `expected_authority.owner_content_source_refs[${index}]`;
-      const record = requireReviewTransportRecord(source, field);
-      requireExactReviewTransportKeys(record, ['ref', 'source_ref', 'sha256', 'size_bytes'], field);
-      const ref = requiredReviewTransportText(record.ref, `${field}.ref`);
-      const sha256 = canonicalReviewTransportSha256(record.sha256, `${field}.sha256`);
-      if (ref !== `opl-content://${sha256.replace('sha256:', 'sha256/')}`) {
-        throw reviewTransportError(
-          'reviewer_input_snapshot_content_source_binding_invalid',
-          'Reviewer content source binding must match its logical content ref and digest.',
-          { ref, sha256 },
-        );
-      }
-      return {
-        ref,
-        source_ref: requiredReviewTransportText(record.source_ref, `${field}.source_ref`),
-        sha256,
-        size_bytes: reviewTransportSize(record.size_bytes, `${field}.size_bytes`),
-      };
-    }),
+    ...(contentSources.size > 0
+      ? {
+          owner_content_source_refs: [...contentSources.values()],
+          owner_content_source_workspace_root: requiredReviewTransportText(
+            value.owner_content_source_workspace_root,
+            'expected_authority.owner_content_source_workspace_root',
+          ),
+        }
+      : {}),
     stage_run_input_authority_refs: (value.stage_run_input_authority_refs ?? []).map((ref, index) => (
       normalizeExactRef(ref, `expected_authority.stage_run_input_authority_refs[${index}]`)
     )),
@@ -499,7 +519,7 @@ export function materializeReviewerInputSnapshot(
     const source = boundInput && (member.source_ref.startsWith('file://') || path.isAbsolute(member.source_ref))
       ? resolveExactBoundLocalFile(member.source_ref)
       : boundContent
-        ? resolveContainedWorkspaceFile(request.workspace_root, boundContent.source_ref)
+        ? resolveContainedWorkspaceFile(authority!.owner_content_source_workspace_root, boundContent.source_ref)
         : resolveContainedWorkspaceFile(request.workspace_root, member.source_ref);
     try {
       const existing = persistReviewerSnapshotObject({

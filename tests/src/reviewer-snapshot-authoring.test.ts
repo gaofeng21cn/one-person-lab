@@ -121,6 +121,7 @@ test('snapshot materializes content refs through exact closeout uri bindings onl
       producer_attempt_ref: attemptRef,
       execution_content_binding_sha256: bindingHash,
       owner_authority_refs: [owner],
+      owner_content_source_workspace_root: workspace,
       owner_content_source_refs: [{ ref: contentRef, source_ref: sourceRef, sha256: contentSha, size_bytes: owner.size_bytes }],
       stage_run_input_authority_refs: [],
     };
@@ -128,11 +129,21 @@ test('snapshot materializes content refs through exact closeout uri bindings onl
       () => materializeReviewerInputSnapshot(request, { ...authority, owner_content_source_refs: [] }),
       /not a readable local file/,
     );
-    const result = materializeReviewerInputSnapshot(request, authority);
+    const result = materializeReviewerInputSnapshot({ ...request, workspace_root: root }, authority);
     assert.equal(result.manifest.members[0]!.sha256, contentSha);
     assert.equal(fs.readFileSync(new URL(result.manifest.members[0]!.immutable_ref.ref), 'utf8'), bytes);
     const outsidePath = path.join(root, 'outside.md');
     fs.writeFileSync(outsidePath, bytes);
+    assert.throws(
+      () => materializeReviewerInputSnapshot(request, {
+        ...authority,
+        owner_content_source_refs: [
+          ...authority.owner_content_source_refs,
+          { ...authority.owner_content_source_refs[0]!, source_ref: pathToFileURL(path.join(workspace, 'other.md')).href },
+        ],
+      }),
+      /must name one verified source/,
+    );
     assert.throws(
       () => materializeReviewerInputSnapshot(request, {
         ...authority,
