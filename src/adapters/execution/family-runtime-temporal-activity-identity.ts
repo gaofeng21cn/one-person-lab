@@ -150,6 +150,24 @@ export function exactRefsFromCloseoutMetadata(value: unknown) {
   });
 }
 
+function contentSourceRefsFromCloseoutMetadata(value: unknown) {
+  const entries = Array.isArray(value) ? value.filter(isRecord) : [];
+  return entries.flatMap((entry) => {
+    const ref = readString(entry.ref);
+    const sourceRef = readString(entry.uri);
+    const digest = readString(entry.sha256)?.match(/^(?:sha256:)?([a-f0-9]{64})$/i);
+    const sizeBytes = readNumber(entry.size_bytes);
+    if (!ref?.startsWith('opl-content://sha256/') || !sourceRef || !digest
+      || sizeBytes === null || !Number.isSafeInteger(sizeBytes) || sizeBytes < 0) return [];
+    return [{
+      ref,
+      source_ref: sourceRef,
+      sha256: `sha256:${digest[1]!.toLowerCase()}`,
+      size_bytes: sizeBytes,
+    }];
+  });
+}
+
 export function reviewerSnapshotAuthorityBinding(
   db: ReturnType<typeof openQueueDb>['db'],
   artifactProducerAttemptRef: string,
@@ -212,6 +230,9 @@ export function reviewerSnapshotAuthorityBinding(
     producer.workspace_locator_json,
     'reviewer_input_snapshot_authority_issuer_locator_invalid',
   );
+  const ownerContentSourceRefs = contentSourceRefsFromCloseoutMetadata(
+    producerCloseout.closeout_ref_metadata,
+  );
   return {
     producer_attempt_ref: artifactProducerAttemptRef,
     execution_content_binding_sha256: bindingSha256,
@@ -223,6 +244,9 @@ export function reviewerSnapshotAuthorityBinding(
     owner_authority_refs: exactRefsFromCloseoutMetadata(
       producerCloseout.closeout_ref_metadata,
     ),
+    ...(ownerContentSourceRefs.length > 0
+      ? { owner_content_source_refs: ownerContentSourceRefs }
+      : {}),
     stage_run_input_authority_refs: reviewerSnapshotStageRunInputAuthority(stageRun.stage_run_spec),
   };
 }
