@@ -10,7 +10,10 @@ import { FrameworkContractError } from '../../src/kernel/contract-validation.ts'
 import type { StandardAgentStageQualityRuntimeBinding } from '../../src/authority/packages/index.ts';
 import { createWorkItemExecutionScopeSnapshot } from '../../src/authority/workspace/execution-scope.ts';
 import { buildPackBoundTemporalStageRunInput } from '../../src/adapters/execution/family-runtime-pack-bound-stage-run.ts';
-import { stageQualityAttemptMaterializeActivity } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
+import {
+  stageQualityAttemptMaterializeActivity,
+  stageQualityCycleProjectActivity,
+} from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
 import { createStageAttempt } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
 import { registerStageRunLaunch } from '../../src/adapters/execution/family-runtime-stage-run-launch-registry.ts';
 import { openQueueDb } from '../../src/adapters/execution/family-runtime-store.ts';
@@ -510,7 +513,6 @@ test('local Stage artifact identity is bound to final bytes and a transport rece
   }
 });
 
-
 test('transport verification canonicalizes the OPL-owned artifact identity receipt list', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-receipt-canonicalize-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -764,6 +766,79 @@ test('artifact identity preserves ref-hash pairs and permits equal hashes for di
     });
     assert.deepEqual(identity.artifact_refs, artifactRefs);
     assert.deepEqual(identity.artifact_hashes, [sha256(bytes), sha256(bytes)]);
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('content refs verify exact bytes through their local uri without changing logical identity', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-content-ref-uri-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const bytes = Buffer.from('# exact content bytes\n', 'utf8');
+    const artifactPath = path.join(root, 'knowledge.md');
+    fs.writeFileSync(artifactPath, bytes);
+    const digest = sha256(bytes);
+    const producer = { ...attempt, stage_run_id: 'sr-content-ref-source' };
+    const artifactRef = `opl-content://sha256/${digest}`;
+    const sourceRef = pathToFileURL(artifactPath).href;
+    const closeout = producerCloseout({ artifactRef, artifactHash: digest, sizeBytes: bytes.length });
+    closeout.closeout_ref_metadata = [{
+      kind: 'content_artifact',
+      ref: artifactRef,
+      uri: sourceRef,
+      sha256: digest,
+      size_bytes: bytes.length,
+    }];
+    const verified = verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: closeout,
+      attempt: producer,
+      workspaceRoot: root,
+    });
+    const metadata = verified?.closeout_ref_metadata?.[0];
+    assert.equal(metadata?.ref, artifactRef);
+    assert.equal(metadata?.uri, sourceRef);
+    assert.equal(metadata?.size_bytes, bytes.length);
+    const receiptRef = String(metadata?.artifact_identity_receipt_ref);
+    const receipt = JSON.parse(fs.readFileSync(new URL(receiptRef), 'utf8'));
+    assert.equal(receipt.artifact_ref, artifactRef);
+    assert.equal(receipt.artifact_source_ref, sourceRef);
+    assert.equal(receipt.sha256, digest);
+    assert.equal(receipt.size_bytes, bytes.length);
+    const revalidate = () => verifyStageQualityArtifactIdentityAtAttemptBoundary({
+      artifactRefs: [artifactRef],
+      artifactHashes: [digest],
+      artifactIdentityReceiptRefs: [receiptRef],
+      domainId: attempt.domain_id,
+      workspaceRoot: root,
+      expectedProducingAttemptId: producer.stage_attempt_id,
+      expectedProducingStageId: producer.stage_id,
+      expectedStageRunId: producer.stage_run_id,
+    });
+    const artifactIdentity = revalidate();
+    assert.deepEqual(artifactIdentity.artifact_refs, [artifactRef]);
+    const observe = () => stageQualityCycleProjectActivity({
+      artifact_identity_observation_only: true,
+      stage_run: {
+        stage_run_id: producer.stage_run_id,
+        domain_id: producer.domain_id,
+        scope_kind: 'domain',
+        workspace_locator: { workspace_root: root },
+      },
+      state: {
+        ...artifactIdentity,
+        artifact_identity_authority: {
+          authoritative_attempt_ref: `opl://stage_attempts/${producer.stage_attempt_id}`,
+        },
+      },
+    } as unknown as Parameters<typeof stageQualityCycleProjectActivity>[0]);
+    assert.equal((await observe()).artifact_identity_observation?.live_bytes_status, 'matches');
+    fs.writeFileSync(artifactPath, 'replacement content');
+    assert.throws(revalidate, /SHA does not match the current stable local file bytes/);
+    assert.equal((await observe()).artifact_identity_observation?.live_bytes_status, 'differs');
   } finally {
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;

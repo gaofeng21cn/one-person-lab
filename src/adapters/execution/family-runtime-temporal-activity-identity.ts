@@ -11,6 +11,9 @@ import {
   latestStageAttemptCloseoutPacketsByAttempt,
   stageAttemptToPayload,
 } from './family-runtime-stage-attempt-ledger.ts';
+import {
+  verifyIdentityReceipt,
+} from './family-runtime-codex-stage-runner-parts/artifact-identity-verification-parts/transport-receipts.ts';
 import { requireSameFamilyRuntimeExecutionIdentity } from './family-runtime-execution-scope.ts';
 import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
 import {
@@ -150,6 +153,41 @@ export function exactRefsFromCloseoutMetadata(value: unknown) {
   });
 }
 
+function verifiedContentSourceRefs(input: {
+  metadata: unknown;
+  workspaceRoot: string;
+  stageRun: ReturnType<typeof requireTemporalStageRunWorkflowInputLaunchable>;
+  producerAttemptId: string;
+}) {
+  const entries = Array.isArray(input.metadata) ? input.metadata.filter(isRecord) : [];
+  return entries.flatMap((entry) => {
+    const ref = readString(entry.ref);
+    const digest = readString(entry.sha256)?.match(/^(?:sha256:)?([a-f0-9]{64})$/i)?.[1]?.toLowerCase();
+    const receiptRef = readString(entry.artifact_identity_receipt_ref);
+    if (!digest || ref !== `opl-content://sha256/${digest}` || !receiptRef) return [];
+    // The receipt pins the physical locator as well as the producing Attempt.
+    // A persisted metadata row alone is not a verified source binding.
+    const receipt = verifyIdentityReceipt({
+      receiptRef,
+      workspaceRoot: input.workspaceRoot,
+      domainId: input.stageRun.domain_id,
+      expectedAttemptId: input.producerAttemptId,
+      expectedIdentity: {
+        stageRunId: input.stageRun.stage_run_id,
+        scopeKind: input.stageRun.scope_kind ?? (input.stageRun.execution_scope ? 'work_item' : 'domain'),
+        executionScope: input.stageRun.execution_scope ?? null,
+      },
+      artifactRef: ref,
+      artifactSha256: digest,
+    });
+    const sourceRef = readString(receipt.artifact_source_ref);
+    const sizeBytes = readNumber(receipt.size_bytes);
+    return receipt.surface_kind === 'opl_transport_artifact_identity_receipt' && sourceRef && sizeBytes !== null
+      ? [{ ref, source_ref: sourceRef, sha256: `sha256:${digest}`, size_bytes: sizeBytes }]
+      : [];
+  });
+}
+
 export function reviewerSnapshotAuthorityBinding(
   db: ReturnType<typeof openQueueDb>['db'],
   artifactProducerAttemptRef: string,
@@ -212,6 +250,16 @@ export function reviewerSnapshotAuthorityBinding(
     producer.workspace_locator_json,
     'reviewer_input_snapshot_authority_issuer_locator_invalid',
   );
+  const contentWorkspaceRoot = stageRun.execution_scope?.canonical_work_item_root
+    ?? readString(producerLocator.workspace_root)
+    ?? readString(producerLocator.repo_root)
+    ?? stageRun.domain_pack_root;
+  const ownerContentSourceRefs = verifiedContentSourceRefs({
+    metadata: producerCloseout.closeout_ref_metadata,
+    workspaceRoot: contentWorkspaceRoot,
+    stageRun,
+    producerAttemptId: producer.stage_attempt_id,
+  });
   return {
     producer_attempt_ref: artifactProducerAttemptRef,
     execution_content_binding_sha256: bindingSha256,
@@ -223,6 +271,12 @@ export function reviewerSnapshotAuthorityBinding(
     owner_authority_refs: exactRefsFromCloseoutMetadata(
       producerCloseout.closeout_ref_metadata,
     ),
+    ...(ownerContentSourceRefs.length > 0
+      ? {
+          owner_content_source_refs: ownerContentSourceRefs,
+          owner_content_source_workspace_root: contentWorkspaceRoot,
+        }
+      : {}),
     stage_run_input_authority_refs: reviewerSnapshotStageRunInputAuthority(stageRun.stage_run_spec),
   };
 }

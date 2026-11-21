@@ -154,6 +154,12 @@ function nextWorkflowId(state: JsonRecord) {
     : null;
 }
 
+function decisiveRouteDecisionKind(state: JsonRecord) {
+  if (!isRecord(state.selected_stage_route)) return null;
+  const kind = state.selected_stage_route.decision_kind;
+  return typeof kind === 'string' && kind.trim() ? kind.trim() : null;
+}
+
 function providerObservationContext(
   storageRoot: string,
   cursor: FoundryProviderOperationCursor,
@@ -410,7 +416,23 @@ export class StageRunFoundryProviderCoordinator {
     ];
     const next = nextWorkflowId(queried.state);
     if (queried.stageId === cursor.terminal_stage_ref) {
-      if (next) fail('Foundry provider terminal Stage launched an undeclared continuation.');
+      if (next) {
+        // A terminal Stage may still launch a bounded repair route_back: the
+        // StageRun quality cycle budgets route-backs (route_budget) and the
+        // hop bound below caps the route. The operation ends when the terminal
+        // Stage completes without a continuation. Any other continuation kind
+        // out of the terminal Stage stays fail-closed.
+        const decisionKind = decisiveRouteDecisionKind(queried.state);
+        if (decisionKind !== 'route_back') {
+          fail('Foundry provider terminal Stage launched an undeclared continuation.', {
+            stage_id: queried.stageId,
+            terminal_stage_ref: cursor.terminal_stage_ref,
+            decision_kind: decisionKind,
+            ...observationContext,
+          });
+        }
+        return this.followContinuation(cursor, visitedPath, next);
+      }
       const visitedStages = new Set(visitedPath.map((entry) => entry.stage_id));
       const missingStages = cursor.required_stage_refs.filter((stageId) => !visitedStages.has(stageId));
       if (missingStages.length > 0) {
@@ -435,6 +457,14 @@ export class StageRunFoundryProviderCoordinator {
         ...observationContext,
       });
     }
+    return this.followContinuation(cursor, visitedPath, next);
+  }
+
+  private followContinuation<T extends FoundryProviderOperationCursor>(
+    cursor: T,
+    visitedPath: T['visited_path'],
+    next: string,
+  ): T {
     if (
       visitedPath.length >= 32
       || next === cursor.current_workflow_id

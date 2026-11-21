@@ -115,6 +115,118 @@ test('StageRun provider coordinator persists a pending cursor and advances one c
   ]);
 });
 
+test('StageRun provider coordinator follows a bounded route_back continuation out of the terminal Stage', async (t) => {
+  const routeBackProvider: typeof provider = {
+    ...provider,
+    operations: {
+      ...provider.operations,
+      design: {
+        ...provider.operations.design,
+        required_stage_refs: ['mission-intake', 'agent-blueprint-authoring', 'evaluation-design'],
+      },
+    },
+  };
+  const gateway: FoundryProviderStageRunGateway = {
+    async launch() {
+      return { workflow_id: 'workflow:mission-intake' };
+    },
+    async query(workflowId) {
+      if (workflowId === 'workflow:mission-intake') {
+        return state({ stage: 'mission-intake', next: 'workflow:evaluation-design' });
+      }
+      if (workflowId === 'workflow:evaluation-design') {
+        // Terminal Stage reviewer sent the blueprint back for one bounded
+        // repair round instead of admitting it.
+        return state({
+          stage: 'evaluation-design',
+          next: 'workflow:agent-blueprint-authoring-repair',
+          routeDecision: 'route_back',
+        });
+      }
+      if (workflowId === 'workflow:agent-blueprint-authoring-repair') {
+        return state({ stage: 'agent-blueprint-authoring', next: 'workflow:evaluation-design-round-2' });
+      }
+      return state({
+        stage: 'evaluation-design',
+        refs: ['file:///terminal.json'],
+        hashes: [`sha256:${'a'.repeat(64)}`],
+      });
+    },
+    async cancel() {},
+  };
+  const coordinator = new StageRunFoundryProviderCoordinator({
+    gateway,
+    storage_root: scopedGatewayWorkspace(t),
+    artifact_reader: { readExact: () => Buffer.from('{}') },
+  });
+  const invocation = {
+    operation: 'design' as const,
+    provider: routeBackProvider,
+    checkout_root: '/managed/oma',
+    provider_source_digest: `sha256:${'a'.repeat(64)}`,
+    payload: { request: { marker: 'request' } as never },
+    activity,
+  };
+
+  let cursor = await coordinator.launch(invocation, 'operation:design');
+  cursor = await coordinator.observe(cursor, 'operation:design');
+  assert.equal(cursor.current_workflow_id, 'workflow:evaluation-design');
+
+  const routedBack = await coordinator.observe(cursor, 'operation:design');
+  assert.equal(routedBack.status, 'pending');
+  assert.equal(routedBack.current_workflow_id, 'workflow:agent-blueprint-authoring-repair');
+  assert.deepEqual(routedBack.continuation, {
+    from_workflow_id: 'workflow:evaluation-design',
+    target_workflow_id: 'workflow:agent-blueprint-authoring-repair',
+  });
+
+  const repaired = await coordinator.observe(routedBack, 'operation:design');
+  assert.equal(repaired.status, 'pending');
+  assert.equal(repaired.current_workflow_id, 'workflow:evaluation-design-round-2');
+
+  const terminal = await coordinator.observe(repaired, 'operation:design');
+  assert.equal(terminal.status, 'terminal');
+  assert.deepEqual(terminal.artifact_refs, ['file:///terminal.json']);
+  assert.deepEqual(
+    terminal.visited_path.map((entry) => entry.stage_id),
+    ['mission-intake', 'evaluation-design', 'agent-blueprint-authoring', 'evaluation-design'],
+  );
+});
+
+test('StageRun provider coordinator keeps non-route_back continuations out of the terminal Stage fail-closed', async (t) => {
+  const gateway: FoundryProviderStageRunGateway = {
+    async launch() {
+      return { workflow_id: 'workflow:evaluation-design' };
+    },
+    async query() {
+      return state({
+        stage: 'evaluation-design',
+        next: 'workflow:undeclared-advance',
+        routeDecision: 'advance',
+      });
+    },
+    async cancel() {},
+  };
+  const coordinator = new StageRunFoundryProviderCoordinator({
+    gateway,
+    storage_root: scopedGatewayWorkspace(t),
+    artifact_reader: { readExact: () => Buffer.from('{}') },
+  });
+  const cursor = await coordinator.launch({
+    operation: 'design' as const,
+    provider,
+    checkout_root: '/managed/oma',
+    provider_source_digest: `sha256:${'a'.repeat(64)}`,
+    payload: { request: { marker: 'request' } as never },
+    activity,
+  }, 'operation:design');
+
+  await assert.rejects(
+    coordinator.observe(cursor, 'operation:design'),
+    /terminal Stage launched an undeclared continuation/,
+  );
+});
+
 test('StageRun provider coordinator refuses terminal reads from a pending cursor and cancels its current StageRun', async (t) => {
   const cancelled: string[] = [];
   const gateway: FoundryProviderStageRunGateway = {
