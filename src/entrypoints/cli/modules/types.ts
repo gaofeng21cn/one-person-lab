@@ -130,6 +130,7 @@ type StartCliInput = {
 
 type WorkspaceRegistryCliInput = {
   projectId?: string;
+  projectScopeId?: string;
   workspacePath?: string;
   label?: string;
   entryCommand?: string;
@@ -147,6 +148,7 @@ type WorkspaceInitializeCliInput = {
   workspaceId?: string;
   projectId?: string;
   projectRoot?: string;
+  projectScopeId?: string;
   title?: string;
   mode?: 'auto' | 'one_off' | 'series' | 'portfolio';
   bind?: boolean;

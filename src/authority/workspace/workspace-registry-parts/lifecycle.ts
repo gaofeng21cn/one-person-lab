@@ -67,29 +67,9 @@ export function bindWorkspace(
   const existing = registry.bindings.find((binding) =>
     binding.project_id === options.projectId && binding.workspace_path === absolutePath,
   );
-  const activeProjectBinding = registry.bindings.find((binding) =>
-    binding.project_id === options.projectId && binding.status === 'active',
-  );
-  const nonArchivedProjectScopes = [
-    ...new Set(registry.bindings
-      .filter((binding) => binding.project_id === options.projectId && binding.status !== 'archived')
-      .map((binding) => binding.project_scope_id)),
-  ];
-  const inheritedProjectScopeId = requestedProjectScopeId
-    ?? existing?.project_scope_id
-    ?? activeProjectBinding?.project_scope_id
-    ?? (nonArchivedProjectScopes.length === 1 ? nonArchivedProjectScopes[0] : null);
-  if (!requestedProjectScopeId && !existing && !activeProjectBinding && nonArchivedProjectScopes.length > 1) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Workspace binding cannot infer a unique project scope from legacy bindings.',
-      {
-        failure_code: 'workspace_project_scope_ambiguous',
-        project_id: project.project_id,
-        project_scope_ids: nonArchivedProjectScopes.sort(),
-      },
-    );
-  }
+  // A new path is independent by default. Reuse is an explicit same-Project
+  // or directory-move decision; an existing path retains its stable identity.
+  const inheritedProjectScopeId = requestedProjectScopeId ?? existing?.project_scope_id ?? null;
   const conflictingScopeOwner = requestedProjectScopeId
     ? registry.bindings.find((binding) =>
       binding.project_scope_id === requestedProjectScopeId

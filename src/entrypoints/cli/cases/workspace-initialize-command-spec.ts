@@ -55,7 +55,7 @@ export function buildWorkspaceInitializeCommandSpecs(
     'workspace root reattest': buildWorkspaceRootReattestCommandSpec(),
     'workspace-init': {
       usage:
-        `opl workspace init --agent <${agentUsage}> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]`,
+        `opl workspace init --agent <${agentUsage}> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>] [--project-scope-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]`,
       summary:
         'Materialize the OPL standard workspace topology for a family agent and optionally activate it in the workspace registry.',
       examples: [
@@ -74,6 +74,7 @@ export function buildWorkspaceInitializeCommandSpecs(
           workspaceId: parsed.workspaceId,
           projectId: parsed.projectId,
           projectRoot: parsed.projectRoot,
+          projectScopeId: parsed.projectScopeId,
           title: parsed.title,
           mode: parsed.mode,
           bind: parsed.bind,
@@ -85,7 +86,7 @@ export function buildWorkspaceInitializeCommandSpecs(
     },
     'workspace-ensure': {
       usage:
-        `opl workspace ensure --agent <${agentUsage}> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]`,
+        `opl workspace ensure --agent <${agentUsage}> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>] [--project-root <absolute-existing-path>] [--project-scope-id <id>] [--mode auto|one_off|series|portfolio] [--title <title>] [--dry-run] [--no-bind] [--force]`,
       summary:
         'Ensure an OPL family agent has an active workspace binding, initializing the standard topology only when needed.',
       examples: [
@@ -103,6 +104,7 @@ export function buildWorkspaceInitializeCommandSpecs(
           workspaceId: parsed.workspaceId,
           projectId: parsed.projectId,
           projectRoot: parsed.projectRoot,
+          projectScopeId: parsed.projectScopeId,
           title: parsed.title,
           mode: parsed.mode,
           bind: parsed.bind,

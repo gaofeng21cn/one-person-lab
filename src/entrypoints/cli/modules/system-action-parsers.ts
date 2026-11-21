@@ -53,6 +53,7 @@ function parseWorkspaceInitializeArgs(
     'workspace-id': { type: 'string' },
     'project-id': { type: 'string' },
     'project-root': { type: 'string' },
+    'project-scope-id': { type: 'string' },
     'deliverable-id': { type: 'string' },
     'study-id': { type: 'string' },
     title: { type: 'string' },
@@ -78,6 +79,9 @@ function parseWorkspaceInitializeArgs(
     ...(values['workspace-id'] !== undefined ? { workspaceId: values['workspace-id'] as string } : {}),
     ...(projectId !== undefined ? { projectId } : {}),
     ...(values['project-root'] !== undefined ? { projectRoot: values['project-root'] as string } : {}),
+    ...(values['project-scope-id'] !== undefined
+      ? { projectScopeId: values['project-scope-id'] as string }
+      : {}),
     ...(values.title !== undefined ? { title: values.title as string } : {}),
     mode: (mode ?? 'auto') as WorkspaceInitializeCliInput['mode'],
     bind: values['no-bind'] !== true,
@@ -285,6 +289,7 @@ function parseWorkspaceRegistryArgs(
   const values = parseCommandOptions(args, spec, {
     project: { type: 'string' },
     path: { type: 'string' },
+    'project-scope-id': { type: 'string' },
     label: { type: 'string' },
     'entry-command': { type: 'string' },
     'manifest-command': { type: 'string' },
@@ -294,6 +299,9 @@ function parseWorkspaceRegistryArgs(
     input: { type: 'string' },
   });
   if (values.project !== undefined) parsed.projectId = values.project as string;
+  if (values['project-scope-id'] !== undefined) {
+    parsed.projectScopeId = values['project-scope-id'] as string;
+  }
   if (values.path !== undefined) parsed.workspacePath = values.path as string;
   if (values.label !== undefined) parsed.label = values.label as string;
   if (values['entry-command'] !== undefined) parsed.entryCommand = values['entry-command'] as string;

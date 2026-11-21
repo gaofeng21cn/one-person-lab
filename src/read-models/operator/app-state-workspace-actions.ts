@@ -61,6 +61,9 @@ function workspaceInitializePayload(payload: JsonRecord, actionId = 'workspace_i
       ?? stringPayloadField(payload, 'study_id')
       ?? undefined,
     projectRoot: stringPayloadField(payload, 'project_root') ?? stringPayloadField(payload, 'projectRoot') ?? undefined,
+    projectScopeId: stringPayloadField(payload, 'project_scope_id')
+      ?? stringPayloadField(payload, 'projectScopeId')
+      ?? undefined,
     title: stringPayloadField(payload, 'title') ?? undefined,
     mode: stringPayloadField(payload, 'mode') as 'auto' | 'one_off' | 'series' | 'portfolio' | undefined,
     bind: payload.bind === false ? false : undefined,

@@ -610,7 +610,7 @@ resume: {
     ...buildWorkspaceInitializeCommandSpecs(getContracts, { refreshWorkspaceSkills }),
     'workspace-bind': {
       usage:
-        'opl workspace bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
+        'opl workspace bind --project <project_id> --path <workspace_path> [--project-scope-id <id>] [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
       summary:
         'Bind and activate one workspace for an admitted project, optionally freezing or deriving its direct-entry locator.',
       examples: [
@@ -630,6 +630,7 @@ resume: {
 
         const workspaceBinding = bindWorkspace(getContracts(), {
           projectId: parsed.projectId,
+          projectScopeId: parsed.projectScopeId,
           workspacePath: parsed.workspacePath,
           label: parsed.label,
           entryCommand: parsed.entryCommand,

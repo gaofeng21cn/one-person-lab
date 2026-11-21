@@ -67,6 +67,7 @@ export type WorkspaceInitializeOptions = {
   workspaceId?: string;
   projectId?: string;
   projectRoot?: string;
+  projectScopeId?: string;
   title?: string;
   mode?: WorkspaceModeInput;
   bind?: boolean;
@@ -703,6 +704,7 @@ export function initializeWorkspace(
   const bindingPayload = !options.dryRun && shouldBind
     ? bindWorkspace(contracts, {
         projectId: agent.project_id,
+        projectScopeId: options.projectScopeId,
         workspacePath,
         label: title ?? `${agent.label} ${workspaceId}`,
         workspaceRoot: agent.agent_id === 'rca' ? workspacePath : undefined,
@@ -810,6 +812,23 @@ export function ensureWorkspace(
   const indexedProject = activeWorkspaceIndexPath && fs.existsSync(activeWorkspaceIndexPath)
     ? loadIndexedProject(activeWorkspaceIndexPath, projectId)
     : null;
+  const requestedProjectScopeId = normalizeOptionalString(options.projectScopeId);
+  if (
+    activeBinding
+    && requestedProjectScopeId
+    && activeBinding.project_scope_id !== requestedProjectScopeId
+  ) {
+    throw new FrameworkContractError(
+      'cli_usage_error',
+      'workspace ensure explicit Project scope conflicts with the active Workspace binding.',
+      {
+        failure_code: 'workspace_project_scope_conflict',
+        active_binding_id: activeBinding.binding_id,
+        active_project_scope_id: activeBinding.project_scope_id,
+        requested_project_scope_id: requestedProjectScopeId,
+      },
+    );
+  }
 
   if (activeWorkspacePath && activeWorkspaceIndexPath && indexedProject && !options.force) {
     const refreshedIndex = readExistingWorkspaceIndex(activeWorkspaceIndexPath);

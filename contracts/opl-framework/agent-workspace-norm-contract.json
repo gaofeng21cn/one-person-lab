@@ -21,6 +21,7 @@
       "workspace_id",
       "project_id",
       "project_root",
+      "project_scope_id",
       "mode",
       "title",
       "dry_run",
