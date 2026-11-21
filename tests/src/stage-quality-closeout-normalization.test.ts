@@ -92,6 +92,49 @@ function quality(packet: ReturnType<typeof originalPacket>) {
   return packet.route_impact!.stage_quality_cycle as Record<string, any>;
 }
 
+test('ingest preserves a misplaced Stage quality cycle and validates its artifact receipt binding', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const attempt = repairerAttempt(db);
+    const original = originalPacket(attempt.stage_attempt_id, attempt.stage_run_id);
+    const { stage_quality_cycle: _nestedCycle, ...routeImpact } = original.route_impact!;
+    const cycle = { ...quality(original), repair_map: [repairEntry('F1')] };
+    const misplaced = { ...original, route_impact: routeImpact, stage_quality_cycle: cycle };
+    assert.throws(() => ingestStageAttemptCloseout(db, {
+      stageAttemptId: attempt.stage_attempt_id,
+      packet: {
+        ...misplaced,
+        stage_quality_cycle: { ...cycle, artifact_identity_receipt_refs: ['receipt:mismatched'] },
+      },
+    }), (error: any) => error?.details?.failure_code === 'stage_quality_cycle_attempt_artifact_identity_mismatch');
+    assert.equal(listStageAttemptCloseouts(db, attempt.stage_attempt_id).length, 0);
+
+    const input = { stageAttemptId: attempt.stage_attempt_id, packet: misplaced };
+    const { attempt: persisted, closeout } = ingestStageAttemptCloseout(db, input);
+    assert.deepEqual(quality(closeout.packet), cycle);
+    assert.deepEqual(persisted.route_impact.normalization_findings, [
+      'stage_quality_cycle_folded_from_closeout_top_level',
+    ]);
+    assert.equal(ingestStageAttemptCloseout(db, input).closeout.idempotent_noop, true);
+    assert.equal(listStageAttemptCloseouts(db, attempt.stage_attempt_id).length, 1);
+  } finally {
+    db.close();
+  }
+});
+
+test('identical Stage quality cycle declarations keep the canonical packet and conflicts reject', () => {
+  const original = originalPacket();
+  const topLevelCycle = Object.fromEntries(Object.entries(quality(original)).reverse());
+  assert.deepEqual(
+    normalizeTypedStageCloseoutPacket({ ...original, stage_quality_cycle: topLevelCycle }),
+    original,
+  );
+  assert.throws(
+    () => normalizeTypedStageCloseoutPacket({ ...original, stage_quality_cycle: { ...topLevelCycle, findings: [] } }),
+    (error: any) => error?.details?.failure_code === 'typed_closeout_stage_quality_cycle_placement_conflict',
+  );
+});
+
 test('deterministic partition preserves exact required and moved entries with canonical two-way lineage', () => {
   const attempt = {
     stage_attempt_id: 'sat-repairer-normalization', stage_run_id: 'sr-normalization', attempt_role: 'repairer',
