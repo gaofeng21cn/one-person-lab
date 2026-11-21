@@ -27,3 +27,18 @@ test('captures the session on the streaming stdout path too', () => {
 test('falls back to the observed session when the parsed output has none', () => {
   assert.match(SOURCE, /threadId: parsed\.threadId \?\? observedThreadId,/);
 });
+
+test('declares the capture before the runner starts', () => {
+  // The streaming callback fires while the command runs, so a declaration placed after the
+  // call is read inside its temporal dead zone and crashes the worker with
+  // "Cannot access 'observedThreadId' before initialization".
+  const lines = SOURCE.split('\n');
+  const declarationLine = lines.findIndex((line) => line.includes('let observedThreadId:'));
+  const firstUseLine = lines.findIndex((line) => line.includes('observedThreadId = summary.value'));
+  assert.notEqual(declarationLine, -1, 'the capture must be declared');
+  assert.notEqual(firstUseLine, -1, 'the capture must be used');
+  assert.ok(
+    declarationLine < firstUseLine,
+    `declaration line ${declarationLine + 1} must precede the first use at line ${firstUseLine + 1}`,
+  );
+});

@@ -135,6 +135,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     };
   }
   const stagePacketTransportRef = stagePacketRef ?? 'unavailable';
+  // Declared before the runner starts: the streaming callback observes `thread.started`
+  // while the command is still running, so a declaration placed after the call would be
+  // read inside its temporal dead zone and crash the worker process.
+  let observedThreadId: string | null = null;
   if (!workspaceRoot) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
@@ -304,10 +308,6 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       : null);
   let closeoutPacket = parseCloseoutFromCodexMessages(parsed.messages)
     ?? capturedLastMessage.closeoutPacket;
-  // The CLI reports the session on its `thread.started` runner event even when the parsed
-  // stdout carries no thread id. Keep that observation so the final receipt can still name
-  // the execution session the Attempt actually used.
-  let observedThreadId: string | null = null;
   let recoveredSessionPath: string | null = null;
   let recoveredFinalMessageChars = 0;
   let sessionRecoveryAttempts = 0;
