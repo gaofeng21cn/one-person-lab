@@ -3,7 +3,7 @@
   "package_id": "rednote-steward",
   "display_name": "RedNote Steward",
   "publisher": "gaofeng21cn",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/rednote-steward.git",
   "package_role": "capability_package",
@@ -66,8 +66,8 @@
       "marketplace_source": "gaofeng21cn/rednote-steward",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/rednote-steward:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/rednote-steward-0.2.8.json",
-    "carrier_source_commit": "3d5646911e92bda3b4f1c86097a81e71cbabaab7"
+    "plugin_payload_manifest_url": "payloads/rednote-steward-0.2.9.json",
+    "carrier_source_commit": "a3316b502bb24dfde343602c333cfbfb8da8fdba"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -254,7 +254,7 @@
       "src/opencli-runner.mjs",
       "src/setup.mjs"
     ],
-    "digest": "sha256:98a870f30652bd10d1ba4759348599f11c164621c830e1524c5aae8bd043571e"
+    "digest": "sha256:18e57677fd68e6814a92e59123eb81d3dcdd427b850ce5c396f022ebb0cfc19d"
   },
   "description": "Prepare, review and manage Xiaohongshu publications through one local CLI and MCP service.",
   "presentation": {

@@ -3,7 +3,7 @@
   "package_id": "opl-persona",
   "display_name": "OPL Persona",
   "publisher": "one-person-lab",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-persona.git",
@@ -64,7 +64,7 @@
       "skills/opl-persona/agents/openai.yaml",
       "runtime/opl_persona/_opl_profile_workspace.py"
     ],
-    "digest": "sha256:2a4c2432bd65322a8ce3f6005da62844a80c78a12440699bb7dbb5ba5e812613"
+    "digest": "sha256:4596151b3b1ed006f30ace2919dcc21d6f56ca2b3caa84719ca98a5702a800c4"
   },
   "codex_surface": {
     "plugin_id": "opl-persona",
@@ -94,8 +94,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/opl-persona-0.5.1.json",
-    "carrier_source_commit": "81f7d65e4a20d268f29d2da2105a20ffb76b3518"
+    "plugin_payload_manifest_url": "payloads/opl-persona-0.5.2.json",
+    "carrier_source_commit": "9387af48ff1a1ba56ab008e3feebba5c8274c78e"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -292,6 +292,7 @@
           "persona.proposal.approve",
           "persona.proposal.reject",
           "persona.mail.triage",
+          "persona.mail.draft.feedback",
           "persona.inbox.capture",
           "persona.obsidian.note.propose",
           "persona.obsidian.note.authorize",
@@ -396,6 +397,14 @@
           "en-US": "Propose mail triage"
         },
         "action_ref": "communications.mail.v1#triage.propose"
+      },
+      {
+        "command_id": "persona.mail.draft.feedback",
+        "label_i18n": {
+          "zh-CN": "提出沟通偏好修订",
+          "en-US": "Propose a communication preference"
+        },
+        "action_ref": "communications.mail.v1#draft.feedback.propose"
       },
       {
         "command_id": "persona.inbox.capture",
