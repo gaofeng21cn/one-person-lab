@@ -109,6 +109,7 @@ export async function StageRunWorkflow(
   );
   const progressFirstHandoffEnabled = patched('opl-stage-run-progress-first-handoff-v1');
   const controllerMissingRouteFallbackEnabled = patched('opl-stage-run-controller-declared-default-progression-v1');
+  const typedCloseoutDefaultProgressionEnabled = patched('opl-stage-run-controller-typed-closeout-default-progression-v1');
   const reviewProtocolFailureEnabled = patched('opl-stage-run-review-protocol-failure-v1');
   const identityFailureSyncEnabled = patched('opl-stage-run-identity-failure-sync-v1');
   const reviewerIdentityHardStopEnabled = patched('opl-stage-run-reviewer-identity-hard-stop-v1');
@@ -453,6 +454,9 @@ export async function StageRunWorkflow(
       .review_input_snapshot_quality_debt_receipt_ref === 'string'
       ? childContextManifest.review_input_snapshot_quality_debt_receipt_ref
       : null;
+    const snapshotMemberDigestRepairs = asRecordList(childContextManifest.review_input_snapshot_member_digest_repairs);
+    const snapshotWorkspaceRootWidenings = asRecordList(childContextManifest.review_input_snapshot_workspace_root_widenings);
+    const snapshotMemberRefRebases = asRecordList(childContextManifest.review_input_snapshot_member_ref_rebases);
     const allowLegacyUnboundExecutionPolicy = !childInput.execution_content_binding
       && !patched('opl-stage-run-controller-attempt-content-binding-v1');
     const executionPolicy = allowLegacyUnboundExecutionPolicy
@@ -508,6 +512,20 @@ export async function StageRunWorkflow(
       observedSessions.add(executionSessionRef);
     }
     const envelope = qualityEnvelopeFromAttempt(result);
+    // Closeout normalization applies mechanical authority repairs when a
+    // model-authored mechanical field (stage_quality_cycle placement, runtime
+    // domain id, identity version token) has a uniquely determined
+    // framework-held value, and marks each repair in normalization_findings.
+    // The repairs are carried as visible quality debt instead of being
+    // silently absorbed.
+    const closeoutMechanicalRepairDebtRefs = asStringList(
+      asRecord(asRecord(result.closeout_packet).route_impact).normalization_findings,
+    ).filter((finding) => [
+      'stage_quality_cycle_folded_from_closeout_top_level',
+      'domain_output_domain_id_rebound_to_attempt_domain',
+      'execution_scope_root_identity_version_rebound_to_canonical_token',
+    ].includes(finding))
+      .map((finding) => qualityFailureRef(input, `closeout-mechanical-repair:${finding}`));
     const missingReviewOutcome = reviewProtocolFailureEnabled && reviewRole
       && result.status === 'completed' && !Object.hasOwn(envelope, 'verdict')
       && typeof envelope.outcome !== 'string';
@@ -629,8 +647,12 @@ export async function StageRunWorkflow(
           ...routeRejectionReasons.map((reason) => qualityFailureRef(input, `route-output:${reason}`)),
         ]),
       ],
-      quality_debt_refs: rawProgress
-        ? [...new Set([...state.quality_debt_refs, qualityFailureRef(input, 'raw-artifact-requires-domain-review')])]
+      quality_debt_refs: rawProgress || closeoutMechanicalRepairDebtRefs.length > 0
+        ? [...new Set([
+            ...state.quality_debt_refs,
+            ...(rawProgress ? [qualityFailureRef(input, 'raw-artifact-requires-domain-review')] : []),
+            ...closeoutMechanicalRepairDebtRefs,
+          ])]
         : state.quality_debt_refs,
       route_recommendations: routeEvaluation.recommendation
         ? [...state.route_recommendations, {
@@ -741,11 +763,40 @@ export async function StageRunWorkflow(
       executionPolicy,
       defaultProgression: asRecord(asRecord(childContextManifest.cross_stage_route_selection).controller_default_progression),
       reviewInputSnapshotQualityDebtRef,
+      snapshotMemberDigestRepairs,
+      snapshotWorkspaceRootWidenings,
+      snapshotMemberRefRebases,
       reviewedArtifactRefs: attemptInput.artifactRefs,
       reviewedArtifactHashes: attemptInput.artifactHashes,
       artifactIdentity,
     };
   };
+
+  const snapshotDigestRepairDebtRefs = (attempt: Awaited<ReturnType<typeof runAttempt>>) => (
+    attempt.snapshotMemberDigestRepairs.map((entry) => qualityFailureRef(
+      input,
+      `review-input-snapshot-member-digest-repaired:${typeof entry.member_id === 'string' && entry.member_id ? entry.member_id : 'unknown'}`,
+    ))
+  );
+
+  const snapshotWorkspaceRootWideningDebtRefs = (attempt: Awaited<ReturnType<typeof runAttempt>>) => (
+    attempt.snapshotWorkspaceRootWidenings.map((entry, index) => {
+      const escapedCount = Array.isArray(entry.escaped_member_source_refs)
+        ? entry.escaped_member_source_refs.length
+        : 0;
+      return qualityFailureRef(
+        input,
+        `review-input-snapshot-workspace-root-widened:${index + 1}-of-${escapedCount}-escaped-members`,
+      );
+    })
+  );
+
+  const snapshotMemberRefRebaseDebtRefs = (attempt: Awaited<ReturnType<typeof runAttempt>>) => (
+    attempt.snapshotMemberRefRebases.map((entry) => qualityFailureRef(
+      input,
+      `review-input-snapshot-member-ref-rebased:${typeof entry.member_id === 'string' && entry.member_id ? entry.member_id : 'unknown'}`,
+    ))
+  );
 
   const setProducerArtifactAuthority = (attemptRef: string, qualityRoundIndex = 0) => {
     state = {
@@ -869,33 +920,45 @@ export async function StageRunWorkflow(
       const declaredStageIds = attempt.executionPolicy.binding?.declared_stage_ids ?? [];
       const targetStageId = typeof progression.target_stage_id === 'string'
         ? progression.target_stage_id : null;
-      if (
+      const progressionSourceRef = typeof progression.source_ref === 'string'
+        ? progression.source_ref : null;
+      const sharedFallbackPreconditions = (
         attempt.attemptRole === 'producer'
         && !attempt.executionPolicy.formalReviewRequired
         && attempt.result.status === 'completed'
         && !providerRuntimeHardStop(attempt.result)
         && attempt.artifactProducedByAttempt
         && hasConsumableArtifact(state)
-        && asRecord(closeout.authority_boundary).opl === 'raw_executor_output_progress_envelope_only'
-        && routeImpact.framework_generated_envelope === true
-        && asStringList(routeImpact.normalization_findings)
-          .includes('typed_closeout_not_required_raw_artifact_advanced')
         && !Object.hasOwn(routeImpact, 'stage_route_decision')
         && !Object.hasOwn(routeImpact, 'stage_route_recommendation')
         && !Object.hasOwn(routeImpact, 'stage_route_contract')
         && attempt.routeEvaluation.decision_rejection_reasons.length === 0
         && attempt.routeEvaluation.recommendation_rejection_reasons.length === 0
-        && typeof progression.source_ref === 'string'
+        && progressionSourceRef !== null
         && /^sha256:[a-f0-9]{64}$/.test(String(progression.source_sha256))
         && (
           (progression.decision_kind === 'advance' && targetStageId && declaredStageIds.includes(targetStageId))
           || (progression.decision_kind === 'complete' && !targetStageId)
         )
-      ) {
+      );
+      const rawEnvelopeFallback = sharedFallbackPreconditions
+        && asRecord(closeout.authority_boundary).opl === 'raw_executor_output_progress_envelope_only'
+        && routeImpact.framework_generated_envelope === true
+        && asStringList(routeImpact.normalization_findings)
+          .includes('typed_closeout_not_required_raw_artifact_advanced');
+      // A typed producer closeout can omit the mechanical route fields while
+      // still delivering the reviewed artifact. When the Stage declares one
+      // default progression and the closeout carries no route signal at all,
+      // advance by that declared progression with the same audit debt instead
+      // of ending the operation on a transport-level omission.
+      const typedCloseoutFallback = sharedFallbackPreconditions
+        && typedCloseoutDefaultProgressionEnabled
+        && asRecord(closeout.authority_boundary).opl !== 'raw_executor_output_progress_envelope_only';
+      if (rawEnvelopeFallback || typedCloseoutFallback) {
         decision = {
           decision_kind: progression.decision_kind as 'advance' | 'complete',
           ...(targetStageId ? { target_stage_id: targetStageId } : {}),
-          evidence_refs: [...new Set([...state.artifact_refs, progression.source_ref])],
+          evidence_refs: [...new Set([...state.artifact_refs, progressionSourceRef])],
         };
         fallbackApplied = true;
       }
@@ -1099,6 +1162,9 @@ export async function StageRunWorkflow(
             ...(reReview.reviewInputSnapshotQualityDebtRef
               ? [reReview.reviewInputSnapshotQualityDebtRef]
               : []),
+            ...snapshotDigestRepairDebtRefs(reReview),
+            ...snapshotWorkspaceRootWideningDebtRefs(reReview),
+            ...snapshotMemberRefRebaseDebtRefs(reReview),
           ])],
         };
         commitReviewedArtifactAuthority(
@@ -1139,6 +1205,9 @@ export async function StageRunWorkflow(
           ...(reReview.reviewInputSnapshotQualityDebtRef
             ? [reReview.reviewInputSnapshotQualityDebtRef]
             : []),
+          ...snapshotDigestRepairDebtRefs(reReview),
+          ...snapshotWorkspaceRootWideningDebtRefs(reReview),
+          ...snapshotMemberRefRebaseDebtRefs(reReview),
         ])],
       };
       commitReviewedArtifactAuthority(
@@ -1320,6 +1389,9 @@ export async function StageRunWorkflow(
         ...(review.reviewInputSnapshotQualityDebtRef
           ? [review.reviewInputSnapshotQualityDebtRef]
           : []),
+        ...snapshotDigestRepairDebtRefs(review),
+        ...snapshotWorkspaceRootWideningDebtRefs(review),
+        ...snapshotMemberRefRebaseDebtRefs(review),
       ])],
     };
     if (isEarlyRepairRouteBack(review)) {
@@ -1485,6 +1557,9 @@ export async function StageRunWorkflow(
             ...(reReview.reviewInputSnapshotQualityDebtRef
               ? [reReview.reviewInputSnapshotQualityDebtRef]
               : []),
+            ...snapshotDigestRepairDebtRefs(reReview),
+            ...snapshotWorkspaceRootWideningDebtRefs(reReview),
+            ...snapshotMemberRefRebaseDebtRefs(reReview),
           ])],
         };
         commitReviewedArtifactAuthority(reReview, hardStopReceipt, 'hard_stopped', round);
@@ -1522,6 +1597,9 @@ export async function StageRunWorkflow(
           ...(reReview.reviewInputSnapshotQualityDebtRef
             ? [reReview.reviewInputSnapshotQualityDebtRef]
             : []),
+          ...snapshotDigestRepairDebtRefs(reReview),
+          ...snapshotWorkspaceRootWideningDebtRefs(reReview),
+          ...snapshotMemberRefRebaseDebtRefs(reReview),
         ])],
       };
       commitReviewedArtifactAuthority(

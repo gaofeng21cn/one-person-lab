@@ -165,6 +165,7 @@ export async function runController(input: {
   declaredDefaultProgression?: { decision_kind: 'advance' | 'complete'; target_stage_id?: string } | null;
   rawFrameworkMarker?: boolean;
   rawRouteDecision?: Record<string, unknown>;
+  omitTypedProducerRouteDecision?: boolean;
   repairRequiredRoute?: {
     role: 'reviewer' | 're_reviewer';
     decisionKind: 'advance' | 'route_back';
@@ -679,7 +680,7 @@ export async function runController(input: {
         const attemptMaxRepairRounds = typeof routeSelection?.max_repair_rounds === 'number'
           ? routeSelection.max_repair_rounds
           : 3;
-        if (role === 'producer' && !attemptFormalReviewRequired && !rawArtifactProgress) {
+        if (role === 'producer' && !attemptFormalReviewRequired && !rawArtifactProgress && !input.omitTypedProducerRouteDecision) {
           routeImpact.stage_route_decision = {
             decision_kind: 'advance',
             target_stage_id: input.terminalRouteTarget ?? 'review_and_revision',

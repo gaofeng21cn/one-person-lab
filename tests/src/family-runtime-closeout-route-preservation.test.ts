@@ -1,10 +1,21 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 import { parseCloseoutFromCodexMessages } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/session-closeout-recovery.ts';
+import { WorkItemFileBoundaryError } from '../../src/authority/workspace/index.ts';
 import {
   normalizeTypedStageCloseoutPacket,
+  STAGE_QUALITY_CYCLE_PLACEMENT_FOLD_FINDING,
   validateCloseoutPacketForAttempt,
 } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+import {
+  MECHANICAL_REPAIR_DOMAIN_OUTPUT_DOMAIN_ID,
+  MECHANICAL_REPAIR_ROOT_IDENTITY_VERSION,
+  repairDomainOutputDomainIdAgainstAttempt,
+} from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-mechanical-authority.ts';
+import { createWorkItemExecutionScopeSnapshot } from '../../src/authority/workspace/execution-scope.ts';
 import { buildRawArtifactProgressCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner.ts';
 
 const DECISION = {
@@ -171,4 +182,176 @@ test('closeout_ref_metadata still rejects unsupported domain fields', () => {
     })),
     /unsupported field/,
   );
+});
+
+// A model that places its stage_quality_cycle at the closeout top level wrote
+// the right content in the wrong position. The fold is a mechanical transport
+// repair: the cycle moves to route_impact.stage_quality_cycle and the finding
+// marker keeps the placement defect visible as auditable quality debt.
+test('a top-level stage_quality_cycle is folded into route_impact with a normalization finding', () => {
+  const cycle = { outcome: 'pass', findings: [] };
+  const packet = normalizeTypedStageCloseoutPacket(typedPacket({
+    stage_quality_cycle: cycle,
+  }));
+  const routeImpact = packet.route_impact as Record<string, unknown>;
+  assert.deepEqual(routeImpact.stage_quality_cycle, cycle);
+  assert.deepEqual(routeImpact.stage_route_decision, DECISION);
+  assert.deepEqual(routeImpact.normalization_findings, [STAGE_QUALITY_CYCLE_PLACEMENT_FOLD_FINDING]);
+  assert.equal('stage_quality_cycle' in packet, false);
+});
+
+test('the fold preserves prior normalization findings and creates route_impact when absent', () => {
+  const packet = normalizeTypedStageCloseoutPacket(typedPacket({
+    route_impact: undefined,
+    stage_quality_cycle: { outcome: 'repair_required', findings: [] },
+  }));
+  const routeImpact = packet.route_impact as Record<string, unknown>;
+  assert.deepEqual(
+    (routeImpact.stage_quality_cycle as Record<string, unknown>).outcome,
+    'repair_required',
+  );
+  assert.deepEqual(routeImpact.normalization_findings, [STAGE_QUALITY_CYCLE_PLACEMENT_FOLD_FINDING]);
+});
+
+test('an identical duplicate stage_quality_cycle is not a fold and records no finding', () => {
+  const cycle = { outcome: 'pass', findings: [{ finding_id: 'f1' }] };
+  const packet = normalizeTypedStageCloseoutPacket(typedPacket({
+    route_impact: { stage_quality_cycle: cycle },
+    stage_quality_cycle: { findings: [{ finding_id: 'f1' }], outcome: 'pass' },
+  }));
+  const routeImpact = packet.route_impact as Record<string, unknown>;
+  assert.deepEqual(routeImpact.stage_quality_cycle, cycle);
+  assert.equal(routeImpact.normalization_findings, undefined);
+});
+
+test('a conflicting duplicate stage_quality_cycle fails closed', () => {
+  assert.throws(
+    () => normalizeTypedStageCloseoutPacket(typedPacket({
+      route_impact: { stage_quality_cycle: { outcome: 'pass' } },
+      stage_quality_cycle: { outcome: 'repair_required' },
+    })),
+    /conflicting content/,
+  );
+});
+
+// Mechanical authority repairs (B layer). domain_output.domain_id is a
+// framework-owned identity whose only authority is the Attempt row: a
+// model-invented value is rebound, never negotiated.
+test('a model-invented domain_output.domain_id is rebound to the attempt domain with a finding', () => {
+  const packet = normalizeTypedStageCloseoutPacket(typedPacket({
+    closeout_refs: [
+      'opl://stage-attempts/sat_route_fixture/artifacts/decision.json',
+      'file:///tmp/domain-output.json',
+    ],
+    domain_output: {
+      surface_kind: 'domain_owned_stage_output_ref',
+      version: 'domain-owned-stage-output-ref.v1',
+      domain_id: 'software_development_orchestration',
+      output_ref: 'file:///tmp/domain-output.json',
+    },
+  }));
+  assert.equal(packet.domain_output?.domain_id, 'software_development_orchestration');
+  const repaired = repairDomainOutputDomainIdAgainstAttempt({
+    packet,
+    attemptDomainId: 'agent_engineering',
+  });
+  assert.equal(repaired.repaired, true);
+  assert.equal(repaired.packet.domain_output?.domain_id, 'agent_engineering');
+  assert.deepEqual(
+    (repaired.packet.route_impact as Record<string, unknown>).normalization_findings,
+    [MECHANICAL_REPAIR_DOMAIN_OUTPUT_DOMAIN_ID],
+  );
+  // An already-correct or absent domain_output is left untouched.
+  assert.equal(
+    repairDomainOutputDomainIdAgainstAttempt({
+      packet: repaired.packet,
+      attemptDomainId: 'agent_engineering',
+    }).repaired,
+    false,
+  );
+  assert.equal(
+    repairDomainOutputDomainIdAgainstAttempt({ packet: normalizeTypedStageCloseoutPacket(typedPacket()), attemptDomainId: 'agent_engineering' }).repaired,
+    false,
+  );
+});
+
+// A separator-mis-typed root-identity version token is uniquely determined by
+// the supported constants, and the retried validation re-verifies the frozen
+// scope_digest — the framework's own cryptographic identity arbitrates.
+test('a mis-typed root identity version token is repaired and digest-verified', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-f08f-scope-'));
+  const canonicalWorkItemRoot = path.join(workspaceRoot, 'work-items', 'study-a');
+  fs.mkdirSync(canonicalWorkItemRoot, { recursive: true });
+  try {
+    const scope = createWorkItemExecutionScopeSnapshot({
+      projectScopeId: 'project:f08f',
+      workspaceBindingId: 'binding:f08f',
+      domainId: 'agent_engineering',
+      workspaceRoot,
+      canonicalWorkItemRoot,
+      payload: { study_id: 'study-a' },
+      requirement: { kind: 'work_item', alias_fields: ['study_id'] },
+    });
+    const mistyped = structuredClone(scope) as Record<string, unknown>;
+    (mistyped.canonical_work_item_root_identity as Record<string, unknown>).version
+      = (scope.canonical_work_item_root_identity!.version as string).replace(/-/g, '_');
+    const packet = normalizeTypedStageCloseoutPacket(typedPacket({
+      execution_scope: mistyped,
+      scope_digest: scope.scope_digest,
+    }));
+    assert.equal(
+      (packet.execution_scope as Record<string, unknown>)
+        && ((packet.execution_scope as Record<string, unknown>).canonical_work_item_root_identity as Record<string, unknown>).version,
+      scope.canonical_work_item_root_identity!.version,
+    );
+    assert.deepEqual(
+      (packet.route_impact as Record<string, unknown>).normalization_findings,
+      [MECHANICAL_REPAIR_ROOT_IDENTITY_VERSION],
+    );
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('a version token outside the separator class, or a digest the frozen scope disproves, stays fail-closed', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-f08f-scope-'));
+  const canonicalWorkItemRoot = path.join(workspaceRoot, 'work-items', 'study-a');
+  fs.mkdirSync(canonicalWorkItemRoot, { recursive: true });
+  try {
+    const scope = createWorkItemExecutionScopeSnapshot({
+      projectScopeId: 'project:f08f',
+      workspaceBindingId: 'binding:f08f',
+      domainId: 'agent_engineering',
+      workspaceRoot,
+      canonicalWorkItemRoot,
+      payload: { study_id: 'study-a' },
+      requirement: { kind: 'work_item', alias_fields: ['study_id'] },
+    });
+    const wrongAlphabet = structuredClone(scope) as Record<string, unknown>;
+    (wrongAlphabet.canonical_work_item_root_identity as Record<string, unknown>).version = 'opl.work.item.root.identity.v1';
+    assert.throws(
+      () => normalizeTypedStageCloseoutPacket(typedPacket({
+        execution_scope: wrongAlphabet,
+        scope_digest: scope.scope_digest,
+      })),
+      (err: unknown) => err instanceof WorkItemFileBoundaryError
+        && err.failureCode === 'work_item_file_boundary_root_invalid',
+    );
+    // Separator class matches, but the declared digest was computed over the
+    // misspelled bytes: the frozen scope disproves the repair, original error.
+    const forgedDigest = structuredClone(scope) as Record<string, unknown>;
+    (forgedDigest.canonical_work_item_root_identity as Record<string, unknown>).version
+      = (scope.canonical_work_item_root_identity!.version as string).replace(/-/g, '_');
+    forgedDigest.scope_digest = `sha256:${'0'.repeat(64)}`;
+    assert.throws(
+      () => normalizeTypedStageCloseoutPacket(typedPacket({
+        execution_scope: forgedDigest,
+        scope_digest: `sha256:${'0'.repeat(64)}`,
+      })),
+      (err: unknown) => err instanceof WorkItemFileBoundaryError
+        && err.failureCode === 'work_item_file_boundary_root_invalid',
+    );
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
 });

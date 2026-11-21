@@ -83,12 +83,30 @@ export function buildStageReviewInputSnapshotContext(input: {
   resolution: ReturnType<typeof resolveReviewerInputSnapshotMaterialization>;
 }) {
   if (input.resolution.surface_kind === 'opl_reviewer_input_snapshot_materialization') {
+    const memberDigestRepairs = 'member_digest_repairs' in input.resolution
+      ? (input.resolution.member_digest_repairs as Array<Record<string, unknown>>)
+      : [];
+    const workspaceRootWidenings = 'workspace_root_widenings' in input.resolution
+      ? (input.resolution.workspace_root_widenings as Array<Record<string, unknown>>)
+      : [];
+    const memberRefRebases = 'member_ref_rebases' in input.resolution
+      ? (input.resolution.member_ref_rebases as Array<Record<string, unknown>>)
+      : [];
     return {
       review_input_snapshot_status: input.resolution.materialization_status,
       review_input_snapshot_binding: input.resolution.review_input_snapshot_binding,
       opl_reviewer_input_snapshot_manifest_ref: input.resolution.manifest_ref,
       opl_reviewer_input_snapshot_manifest: input.resolution.manifest,
       review_input_snapshot_read_policy: REVIEW_INPUT_SNAPSHOT_READ_POLICY,
+      ...(memberDigestRepairs.length > 0
+        ? { review_input_snapshot_member_digest_repairs: memberDigestRepairs }
+        : {}),
+      ...(workspaceRootWidenings.length > 0
+        ? { review_input_snapshot_workspace_root_widenings: workspaceRootWidenings }
+        : {}),
+      ...(memberRefRebases.length > 0
+        ? { review_input_snapshot_member_ref_rebases: memberRefRebases }
+        : {}),
       review_input_snapshot_quality_debt_receipt_ref: null,
       review_input_snapshot_quality_debt_receipt: null,
     } as const;
@@ -196,6 +214,68 @@ function validateStageReviewInputSnapshotContext(manifest: Record<string, unknow
       'Materialized reviewer input snapshot cannot also carry missing-snapshot debt.',
       { failure_code: 'review_input_snapshot_materialized_debt_invalid' },
     );
+  }
+  if (manifest.review_input_snapshot_member_digest_repairs !== undefined) {
+    const repairs = manifest.review_input_snapshot_member_digest_repairs;
+    if (
+      !Array.isArray(repairs)
+      || repairs.some((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return true;
+        const repair = entry as Record<string, unknown>;
+        return typeof repair.member_id !== 'string'
+          || typeof repair.source_ref !== 'string'
+          || !(typeof repair.authoritative_sha256 === 'string' && /^sha256:[a-f0-9]{64}$/.test(repair.authoritative_sha256))
+          || typeof repair.authoritative_size_bytes !== 'number';
+      })
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Reviewer input snapshot member digest repairs must bind authoritative identities.',
+        { failure_code: 'review_input_snapshot_member_digest_repairs_invalid' },
+      );
+    }
+  }
+  if (manifest.review_input_snapshot_workspace_root_widenings !== undefined) {
+    const widenings = manifest.review_input_snapshot_workspace_root_widenings;
+    if (
+      !Array.isArray(widenings)
+      || widenings.some((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return true;
+        const widening = entry as Record<string, unknown>;
+        return typeof widening.declared_workspace_root !== 'string'
+          || typeof widening.widened_workspace_root !== 'string'
+          || typeof widening.trusted_workspace_root !== 'string'
+          || !Array.isArray(widening.escaped_member_source_refs)
+          || widening.escaped_member_source_refs.length === 0
+          || widening.escaped_member_source_refs.some((ref) => typeof ref !== 'string');
+      })
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Reviewer input snapshot workspace root widenings must bind the declared, widened and trusted roots.',
+        { failure_code: 'review_input_snapshot_workspace_root_widenings_invalid' },
+      );
+    }
+  }
+  if (manifest.review_input_snapshot_member_ref_rebases !== undefined) {
+    const rebases = manifest.review_input_snapshot_member_ref_rebases;
+    if (
+      !Array.isArray(rebases)
+      || rebases.some((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return true;
+        const rebase = entry as Record<string, unknown>;
+        return typeof rebase.member_id !== 'string'
+          || typeof rebase.declared_source_ref !== 'string'
+          || typeof rebase.resolved_source_ref !== 'string'
+          || rebase.resolved_under !== 'trusted_workspace_root';
+      })
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Reviewer input snapshot member ref rebases must bind the declared and resolved refs.',
+        { failure_code: 'review_input_snapshot_member_ref_rebases_invalid' },
+      );
+    }
   }
   const readback = readReviewerInputSnapshotManifest(
     manifest.opl_reviewer_input_snapshot_manifest_ref,

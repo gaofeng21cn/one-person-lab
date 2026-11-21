@@ -209,7 +209,6 @@ test('derived ingest is atomic, idempotent and latest by rowid rather than lexic
 
 test('every derived-ingest rejection leaves no partial parent, child or Attempt mutation', () => {
   const cases = [
-    'domain',
     'forbidden-outcome',
     'forbidden-verdict',
     'derived-digest',
@@ -224,17 +223,6 @@ test('every derived-ingest rejection leaves no partial parent, child or Attempt 
     try {
       const attempt = repairerAttempt(db);
       let original = originalPacket(attempt.stage_attempt_id, attempt.stage_run_id);
-      if (failure === 'domain') {
-        original = normalizeTypedStageCloseoutPacket({
-          ...original,
-          closeout_refs: [...original.closeout_refs, 'domain:output'],
-          domain_output: {
-            surface_kind: 'domain_owned_stage_output_ref',
-            version: 'domain-owned-stage-output-ref.v1',
-            domain_id: 'other-domain', output_ref: 'domain:output',
-          },
-        });
-      }
       if (failure === 'forbidden-outcome' || failure === 'forbidden-verdict') {
         quality(original)[failure === 'forbidden-outcome' ? 'outcome' : 'verdict'] = 'pass';
         assert.equal(deriveNormalizedStageQualityCloseout({ closeoutPacket: original, attempt }), null);
@@ -280,6 +268,39 @@ test('every derived-ingest rejection leaves no partial parent, child or Attempt 
     } finally {
       db.close();
     }
+  }
+});
+
+// domain_output.domain_id is a framework-owned identity whose only authority
+// is the Attempt row (mechanical authority repair, B layer). A model-invented
+// value used to be an atomic rejection; it is now rebound to the attempt's
+// domain with an audit marker, and the ingest otherwise proceeds untouched.
+test('a model-invented domain_output.domain_id is rebound at ingest with an audit marker', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const attempt = repairerAttempt(db);
+    const original = normalizeTypedStageCloseoutPacket({
+      ...originalPacket(attempt.stage_attempt_id, attempt.stage_run_id),
+      closeout_refs: [...originalPacket(attempt.stage_attempt_id, attempt.stage_run_id).closeout_refs, 'domain:output'],
+      domain_output: {
+        surface_kind: 'domain_owned_stage_output_ref',
+        version: 'domain-owned-stage-output-ref.v1',
+        domain_id: 'other-domain', output_ref: 'domain:output',
+      },
+    });
+    const derived = deriveNormalizedStageQualityCloseout({ closeoutPacket: original, attempt })!.derivedCloseout;
+    ingestStageAttemptCloseout(db, { stageAttemptId: attempt.stage_attempt_id, packet: derived });
+    const rows = listStageAttemptCloseouts(db, attempt.stage_attempt_id);
+    assert.ok(rows.length > 0);
+    const stored = rows.at(-1)!.packet as Record<string, any>;
+    assert.equal(stored.domain_output?.domain_id, 'redcube');
+    const findings = stored.route_impact?.normalization_findings ?? [];
+    assert.ok(
+      findings.includes('domain_output_domain_id_rebound_to_attempt_domain'),
+      `expected rebound marker, got ${JSON.stringify(findings)}`,
+    );
+  } finally {
+    db.close();
   }
 });
 

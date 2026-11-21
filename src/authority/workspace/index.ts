@@ -52,6 +52,8 @@ export {
   readStableWorkItemFile,
   requireWorkItemRootIdentity,
   WorkItemFileBoundaryError,
+  VOLUME_ROOT_IDENTITY_VERSION,
+  WORK_ITEM_ROOT_IDENTITY_VERSION,
 } from './work-item-file-boundary.ts';
 export type {
   WorkItemRootIdentity,

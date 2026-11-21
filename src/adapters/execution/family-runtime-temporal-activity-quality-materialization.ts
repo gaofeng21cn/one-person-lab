@@ -425,6 +425,14 @@ export async function stageQualityAttemptMaterializeActivity(
             input.review_input_snapshot_materialization_request,
             snapshotAuthorityBinding!,
             { refs: inputArtifactIdentity.artifact_refs, hashes: inputArtifactIdentity.artifact_hashes },
+            // The only authority allowed to widen a too-narrow declared snapshot
+            // root: the Framework's own durable execution scope, never the model's
+            // request. Members outside this root stay fail-closed.
+            {
+              trusted_workspace_root: (isRecord(stageRun.execution_scope)
+                ? readString(stageRun.execution_scope.workspace_root)
+                : null) ?? undefined,
+            },
           ),
         })
       : null;

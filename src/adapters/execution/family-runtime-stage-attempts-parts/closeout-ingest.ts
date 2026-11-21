@@ -7,6 +7,9 @@ import {
   type TypedStageCloseoutPacket,
 } from '../family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
 import {
+  repairDomainOutputDomainIdAgainstAttempt,
+} from '../family-runtime-codex-stage-runner-parts/closeout-mechanical-authority.ts';
+import {
   buildFamilyConflictSubject,
   buildReceiptConflictEnvelope,
   normalizeStageQualityAttemptRole,
@@ -223,7 +226,14 @@ function ingestStageAttemptCloseoutInSavepoint(
         },
       );
     }
-  const packet = admitted.closeoutPacket;
+  // Mechanical authority repair (B layer): domain_output.domain_id is a
+  // framework-owned identity whose only authority is the Attempt row. A
+  // model-invented mismatch is rebound to the attempt's runtime domain with
+  // an audit marker instead of killing the closeout at the check below.
+  const packet = repairDomainOutputDomainIdAgainstAttempt({
+    packet: admitted.closeoutPacket,
+    attemptDomainId: attempt.domain_id,
+  }).packet;
   const createdAt = nowIso();
   if (packet.domain_output && packet.domain_output.domain_id !== attempt.domain_id) {
     throw new FrameworkContractError(

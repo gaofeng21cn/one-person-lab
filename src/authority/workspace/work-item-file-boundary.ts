@@ -57,7 +57,7 @@ export class WorkItemFileBoundaryError extends FrameworkContractError {
 
 export const WORK_ITEM_ROOT_IDENTITY_VERSION = 'opl-work-item-root-identity.v1' as const;
 
-const VOLUME_ROOT_IDENTITY_VERSION = 'opl-work-item-root-identity.v2' as const;
+export const VOLUME_ROOT_IDENTITY_VERSION = 'opl-work-item-root-identity.v2' as const;
 
 export type WorkItemRootIdentity = {
   surface_kind: 'opl_work_item_root_identity';

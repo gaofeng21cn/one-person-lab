@@ -296,6 +296,43 @@ test('a declared raw terminal progression completes without launching an undecla
   assert.equal(routeInputs[0]?.decision.target_stage_id, undefined);
 });
 
+test('a typed producer closeout that omits the mechanical route fields advances by the declared default progression with audit debt', async () => {
+  const { state, routeInputs } = await runController({
+    id: 'primary-typed-default-progression', closeFindingAfterRound: null,
+    formalReviewRequired: false,
+    omitTypedProducerRouteDecision: true,
+    declaredDefaultProgression: { decision_kind: 'advance', target_stage_id: 'review_and_revision' },
+  });
+  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.decisive_attempt_role, 'producer');
+  assert.equal(state.selected_stage_route?.decision_kind, 'advance');
+  assert.equal(state.selected_stage_route?.target_stage_id, 'review_and_revision');
+  assert.equal(routeInputs[0]?.decision.target_stage_id, 'review_and_revision');
+  assert.equal(
+    state.route_quality_debt_refs.some((ref) => ref.includes('controller_missing_route_fallback_applied')),
+    true,
+  );
+});
+
+test('a typed producer closeout that omits the mechanical route fields still fails closed without a declared default progression', async () => {
+  const { state, routeInputs } = await runController({
+    id: 'primary-typed-no-default-progression', closeFindingAfterRound: null,
+    formalReviewRequired: false,
+    omitTypedProducerRouteDecision: true,
+    declaredDefaultProgression: null,
+  });
+  assert.equal(state.selected_stage_route, null);
+  assert.equal(routeInputs.length, 0);
+  assert.equal(
+    state.route_quality_debt_refs.some((ref) => ref.includes('decisive_attempt_route_decision_missing')),
+    true,
+  );
+  assert.equal(
+    state.route_quality_debt_refs.some((ref) => ref.includes('controller_missing_route_fallback_applied')),
+    false,
+  );
+});
+
 test('a current formal-review policy keeps route ownership with the reviewer despite a raw producer default', async () => {
   const { state, attempts, routeInputs } = await runController({
     id: 'primary-raw-current-policy-review', closeFindingAfterRound: null,

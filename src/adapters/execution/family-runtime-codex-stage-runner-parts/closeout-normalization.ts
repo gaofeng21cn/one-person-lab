@@ -1,4 +1,5 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { canonicalJsonText } from '../../../kernel/canonical-json.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   requireWorkItemExecutionScopeSnapshot,
@@ -11,6 +12,10 @@ import {
   readRecordList,
   type JsonRecord,
 } from './shared.ts';
+import {
+  MECHANICAL_REPAIR_ROOT_IDENTITY_VERSION,
+  repairExecutionScopeRootIdentityVersionToken,
+} from './closeout-mechanical-authority.ts';
 
 export type TypedStageCloseoutPacket = {
   surface_kind: 'stage_attempt_closeout_packet' | 'stage_memory_closeout_packet' | 'domain_stage_closeout_packet';
@@ -127,6 +132,43 @@ export type StageCloseoutPacketRejection = {
   idempotency_key: string | null;
   scope_digest: string | null;
 };
+
+export const STAGE_QUALITY_CYCLE_PLACEMENT_FOLD_FINDING
+  = 'stage_quality_cycle_folded_from_closeout_top_level';
+
+// A model can hand its stage_quality_cycle back at the closeout top level
+// instead of the contractual route_impact.stage_quality_cycle position. The
+// content is unambiguous — only its placement is wrong — so this fold is a
+// mechanical transport repair, like the other closeout shape normalizations:
+// the contract position wins when present, an identical duplicate is ignored,
+// and a conflicting duplicate fails closed because two different values are a
+// semantic ambiguity the framework must not resolve. A performed fold is
+// recorded in route_impact.normalization_findings so the StageRun controller
+// can carry the placement defect as quality debt instead of hiding it.
+function foldMisplacedStageQualityCycle(value: JsonRecord) {
+  const topLevel = isRecord(value.stage_quality_cycle) ? value.stage_quality_cycle : null;
+  const routeImpact = isRecord(value.route_impact) ? { ...value.route_impact } : null;
+  if (!topLevel) return routeImpact;
+  const contractPosition = routeImpact?.stage_quality_cycle;
+  if (contractPosition !== undefined && contractPosition !== null) {
+    if (canonicalJsonText(contractPosition) === canonicalJsonText(topLevel)) {
+      return routeImpact;
+    }
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Typed stage closeout declares stage_quality_cycle both at the top level and under route_impact with conflicting content.',
+      { failure_code: 'typed_closeout_stage_quality_cycle_placement_conflict' },
+    );
+  }
+  const priorFindings = Array.isArray(routeImpact?.normalization_findings)
+    ? routeImpact.normalization_findings.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  return {
+    ...(routeImpact ?? {}),
+    stage_quality_cycle: topLevel,
+    normalization_findings: [...new Set([...priorFindings, STAGE_QUALITY_CYCLE_PLACEMENT_FOLD_FINDING])],
+  };
+}
 
 function isDomainRouteAttempt(attempt: JsonRecord) {
   const locator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
@@ -296,11 +338,32 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
   // attempt's authoritative execution scope at ingest. Only a non-object
   // non-string value remains a hard contract failure.
   const rawExecutionScope: unknown = value.execution_scope;
-  const executionScope = rawExecutionScope === undefined
-    || rawExecutionScope === null
-    || (typeof rawExecutionScope === 'string' && rawExecutionScope.trim().length > 0)
-    ? null
-    : requireWorkItemExecutionScopeSnapshot(rawExecutionScope);
+  let executionScope: WorkItemExecutionScopeSnapshot | null = null;
+  let rootIdentityVersionRepaired = false;
+  if (
+    rawExecutionScope !== undefined
+    && rawExecutionScope !== null
+    && !(typeof rawExecutionScope === 'string' && rawExecutionScope.trim().length > 0)
+  ) {
+    try {
+      executionScope = requireWorkItemExecutionScopeSnapshot(rawExecutionScope);
+    } catch (error) {
+      // Mechanical authority repair (B layer): a separator-mis-typed
+      // root-identity version token is uniquely determined by the supported
+      // constants, and the retried validation re-verifies the frozen
+      // scope_digest over the repaired snapshot — the framework's own
+      // cryptographic identity is the arbiter, not string similarity. Any
+      // other failure keeps the original rejection.
+      const repairedScope = repairExecutionScopeRootIdentityVersionToken(rawExecutionScope, error);
+      if (!repairedScope) throw error;
+      try {
+        executionScope = requireWorkItemExecutionScopeSnapshot(repairedScope);
+      } catch {
+        throw error;
+      }
+      rootIdentityVersionRepaired = true;
+    }
+  }
   const explicitScopeDigest = optionalString(value.scope_digest);
   if (executionScope && explicitScopeDigest && executionScope.scope_digest !== explicitScopeDigest) {
     throw new FrameworkContractError(
@@ -313,6 +376,20 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
       },
     );
   }
+  const foldedRouteImpact = foldMisplacedStageQualityCycle(value);
+  const routeImpact = rootIdentityVersionRepaired
+    ? {
+        ...(foldedRouteImpact ?? {}),
+        normalization_findings: [...new Set([
+          ...(Array.isArray(foldedRouteImpact?.normalization_findings)
+            ? foldedRouteImpact.normalization_findings.filter(
+                (entry): entry is string => typeof entry === 'string',
+              )
+            : []),
+          MECHANICAL_REPAIR_ROOT_IDENTITY_VERSION,
+        ])],
+      }
+    : foldedRouteImpact;
 
   return {
     surface_kind: surfaceKind,
@@ -352,7 +429,7 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     ...(isRecord(value.user_stage_log) ? { user_stage_log: value.user_stage_log } : {}),
     ...(isRecord(value.stage_log_summary) ? { stage_log_summary: value.stage_log_summary } : {}),
     ...(isRecord(value.human_stage_log) ? { human_stage_log: value.human_stage_log } : {}),
-    ...(isRecord(value.route_impact) ? { route_impact: value.route_impact } : {}),
+    ...(routeImpact ? { route_impact: routeImpact } : {}),
     authority_boundary: isRecord(value.authority_boundary)
       ? value.authority_boundary
       : {
