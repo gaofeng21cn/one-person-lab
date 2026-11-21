@@ -510,7 +510,6 @@ test('local Stage artifact identity is bound to final bytes and a transport rece
   }
 });
 
-
 test('transport verification canonicalizes the OPL-owned artifact identity receipt list', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-receipt-canonicalize-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -764,6 +763,46 @@ test('artifact identity preserves ref-hash pairs and permits equal hashes for di
     });
     assert.deepEqual(identity.artifact_refs, artifactRefs);
     assert.deepEqual(identity.artifact_hashes, [sha256(bytes), sha256(bytes)]);
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('content refs verify exact bytes through their local uri without changing logical identity', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-content-ref-uri-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const bytes = Buffer.from('# exact content bytes\n', 'utf8');
+    const artifactPath = path.join(root, 'knowledge.md');
+    fs.writeFileSync(artifactPath, bytes);
+    const digest = sha256(bytes);
+    const artifactRef = `opl-content://sha256/${digest}`;
+    const sourceRef = pathToFileURL(artifactPath).href;
+    const closeout = producerCloseout({ artifactRef, artifactHash: digest, sizeBytes: bytes.length });
+    closeout.closeout_ref_metadata = [{
+      kind: 'content_artifact',
+      ref: artifactRef,
+      uri: sourceRef,
+      sha256: digest,
+      size_bytes: bytes.length,
+    }];
+    const verified = verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: closeout,
+      attempt,
+      workspaceRoot: root,
+    });
+    const metadata = verified?.closeout_ref_metadata?.[0];
+    assert.equal(metadata?.ref, artifactRef);
+    assert.equal(metadata?.uri, sourceRef);
+    assert.equal(metadata?.size_bytes, bytes.length);
+    const receiptRef = String(metadata?.artifact_identity_receipt_ref);
+    const receipt = JSON.parse(fs.readFileSync(new URL(receiptRef), 'utf8'));
+    assert.equal(receipt.artifact_ref, artifactRef);
+    assert.equal(receipt.sha256, digest);
+    assert.equal(receipt.size_bytes, bytes.length);
   } finally {
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;
