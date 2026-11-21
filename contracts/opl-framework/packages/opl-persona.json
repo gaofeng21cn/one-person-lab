@@ -3,7 +3,7 @@
   "package_id": "opl-persona",
   "display_name": "OPL Persona",
   "publisher": "one-person-lab",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-persona.git",
@@ -50,21 +50,24 @@
       "app-contribution-adapter.json",
       "runtime/opl_persona/app_contributions.py",
       "runtime/opl_persona/bindings.py",
+      "runtime/opl_persona/browser_tools.py",
       "runtime/opl_persona/cli.py",
       "runtime/opl_persona/core.py",
       "runtime/opl_persona/inbox.py",
       "runtime/opl_persona/knowledge.py",
+      "runtime/opl_persona/local_tools.py",
       "runtime/opl_persona/obsidian.py",
       "runtime/opl_persona/obsidian_apply.py",
       "runtime/opl_persona/paths.py",
       "runtime/opl_persona/policy.py",
       "runtime/opl_persona/proposals.py",
+      "runtime/opl_persona/tasks.py",
       "runtime/opl_persona/workspace.py",
       "skills/opl-persona/SKILL.md",
       "skills/opl-persona/agents/openai.yaml",
       "runtime/opl_persona/_opl_profile_workspace.py"
     ],
-    "digest": "sha256:4596151b3b1ed006f30ace2919dcc21d6f56ca2b3caa84719ca98a5702a800c4"
+    "digest": "sha256:66478ba26e6f5d5e8f700a466731162c90f2bff8bdcb7e80dc4523f2613ae394"
   },
   "codex_surface": {
     "plugin_id": "opl-persona",
@@ -94,12 +97,21 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/opl-persona-0.5.2.json",
-    "carrier_source_commit": "9387af48ff1a1ba56ab008e3feebba5c8274c78e"
+    "plugin_payload_manifest_url": "payloads/opl-persona-0.5.3.json",
+    "carrier_source_commit": "3a4134b6ee2f5087e74259eb0c0a4cf6b70670a0"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
     "ui": [
+      {
+        "contribution_id": "persona.tasks.panel",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "view_id": "persona.tasks",
+        "sort_order": 215
+      },
       {
         "contribution_id": "persona.today.panel",
         "slot": "settings.section",
@@ -157,6 +169,15 @@
     ],
     "navigation": [
       {
+        "navigation_id": "persona.tasks",
+        "label_i18n": {
+          "zh-CN": "可恢复任务",
+          "en-US": "Resumable tasks"
+        },
+        "view_id": "persona.tasks",
+        "sort_order": 215
+      },
+      {
         "navigation_id": "persona.today",
         "label_i18n": {
           "zh-CN": "Persona",
@@ -212,6 +233,28 @@
       }
     ],
     "views": [
+      {
+        "view_id": "persona.tasks",
+        "view_type": "list_detail",
+        "title_i18n": {
+          "zh-CN": "可恢复任务",
+          "en-US": "Resumable tasks"
+        },
+        "data_ref": "personal.context.v1#tasks",
+        "command_ids": [
+          "persona.task.prepare",
+          "persona.task.inspect",
+          "persona.task.run",
+          "persona.task.check",
+          "persona.proposal.inspect",
+          "persona.proposal.approve",
+          "persona.proposal.reject"
+        ],
+        "empty_state_i18n": {
+          "zh-CN": "暂无任务",
+          "en-US": "No tasks"
+        }
+      },
       {
         "view_id": "persona.today",
         "view_type": "timeline",
@@ -305,6 +348,39 @@
       }
     ],
     "commands": [
+      {
+        "command_id": "persona.task.prepare",
+        "label_i18n": {
+          "zh-CN": "准备任务",
+          "en-US": "Prepare task"
+        },
+        "action_ref": "personal.context.v1#task.prepare"
+      },
+      {
+        "command_id": "persona.task.inspect",
+        "label_i18n": {
+          "zh-CN": "查看任务步骤",
+          "en-US": "Inspect task steps"
+        },
+        "action_ref": "personal.context.v1#task.inspect"
+      },
+      {
+        "command_id": "persona.task.run",
+        "label_i18n": {
+          "zh-CN": "在目标窗口执行",
+          "en-US": "Run in target window"
+        },
+        "action_ref": "personal.context.v1#task.run",
+        "confirmation_required": true
+      },
+      {
+        "command_id": "persona.task.check",
+        "label_i18n": {
+          "zh-CN": "核对当前步骤",
+          "en-US": "Check current step"
+        },
+        "action_ref": "personal.context.v1#task.check"
+      },
       {
         "command_id": "persona.context.select",
         "label_i18n": {
