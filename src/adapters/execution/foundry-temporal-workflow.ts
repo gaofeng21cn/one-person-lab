@@ -72,6 +72,31 @@ const advanceActivities = proxyActivities<FoundryTemporalActivities>({
   },
 });
 
+// Independent evaluation executes every public and protected case against the exact
+// candidate. Twenty-five real cases cannot share the 30-minute lifecycle advance
+// budget without turning a valid long run into an unknown outcome. Keep evaluation
+// and canary on a separate, still bounded 12-hour Activity window; design and other
+// lifecycle advances retain the existing budget.
+export const FOUNDRY_EVALUATION_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT = '13 hours';
+export const FOUNDRY_EVALUATION_ACTIVITY_START_TO_CLOSE_TIMEOUT = '12 hours';
+
+const evaluationAdvanceActivities = proxyActivities<FoundryTemporalActivities>({
+  scheduleToCloseTimeout: FOUNDRY_EVALUATION_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
+  startToCloseTimeout: FOUNDRY_EVALUATION_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+  cancellationType: ActivityCancellationType.TRY_CANCEL,
+  retry: {
+    maximumAttempts: 3,
+    initialInterval: '1 second',
+    maximumInterval: '10 seconds',
+    backoffCoefficient: 2,
+    nonRetryableErrorTypes: ['FrameworkContractError'],
+  },
+});
+
+export function foundryAdvanceOperationRequiresLongBudget(phase: string) {
+  return phase === 'evaluate' || phase === 'canary';
+}
+
 // Provider-operation activities include the launch path, which materializes the
 // provider operation (StageRun workflow + queue plan) and can legitimately take
 // 1-2 minutes of execution time. A 2-minute schedule-to-close budget left no
@@ -488,7 +513,9 @@ export async function FoundryRunWorkflow(
         ? { ...nextOperation, provider_operation_cursor: state.provider_operation_cursor }
         : nextOperation;
       adoptInspection(await scope.run(
-        () => advanceActivities.foundryAdvanceRunActivity.executeWithOptions(
+        () => (foundryAdvanceOperationRequiresLongBudget(nextOperation.phase)
+          ? evaluationAdvanceActivities
+          : advanceActivities).foundryAdvanceRunActivity.executeWithOptions(
           { activityId: nextOperation.operation_key },
           [advanceOperation],
         ),
