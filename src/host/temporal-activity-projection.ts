@@ -1,4 +1,5 @@
 import type { EvaluationExecutor } from '../authority/evolution/index.ts';
+import type { ensureFamilyRuntimePackageLaunchReady } from '../adapters/execution/index.ts';
 import {
   buildFoundryTemporalActivities,
   createFoundryLifecycleKernel,
@@ -31,6 +32,7 @@ import {
 export type CordisTemporalActivityOptions = {
   // Constructed by trusted Host code in this worker process, never a workflow payload.
   trusted_evaluation_runtime?: EvaluationExecutor;
+  ensure_package_launch_ready?: typeof ensureFamilyRuntimePackageLaunchReady;
 };
 
 export function buildCordisTemporalActivities(options: CordisTemporalActivityOptions = {}) {
@@ -62,13 +64,19 @@ export function buildCordisTemporalActivities(options: CordisTemporalActivityOpt
     schedulerTickActivity,
     stageQualityAttemptMaterializeActivity: (
       input: Parameters<typeof stageQualityAttemptMaterializeActivity>[0],
-    ) => stageQualityAttemptMaterializeActivity(input, { createStageRouteComposition }),
+    ) => stageQualityAttemptMaterializeActivity(input, {
+      createStageRouteComposition,
+      ensurePackageLaunchReady: options.ensure_package_launch_ready,
+    }),
     stageQualityAttemptSyncActivity,
     stageQualityCycleProjectActivity,
     stageQualityReviewReceiptActivity,
     stageRunRouteLaunchActivity: (
       input: Parameters<typeof stageRunRouteLaunchActivity>[0],
-    ) => stageRunRouteLaunchActivity(input, { createStageRouteComposition }),
+    ) => stageRunRouteLaunchActivity(input, {
+      createStageRouteComposition,
+      ensurePackageLaunchReady: options.ensure_package_launch_ready,
+    }),
   };
 }
 
