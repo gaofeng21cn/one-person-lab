@@ -34,6 +34,10 @@ import {
   localPathForRef,
   observeStableFile,
 } from './family-runtime-codex-stage-runner-parts/artifact-identity-verification-parts/file-observation.ts';
+import {
+  observeCurrentArtifactBytes,
+  verifyIdentityReceipt,
+} from './family-runtime-codex-stage-runner-parts/artifact-identity-verification-parts/transport-receipts.ts';
 
 function comparableArtifactHash(value: unknown) {
   if (typeof value !== 'string' || !value.trim()) return null;
@@ -46,6 +50,41 @@ function stageRunWorkspaceRoot(input: TemporalStageQualityCycleProjectionInput) 
   if (typeof scopeRoot === 'string' && scopeRoot.trim()) return scopeRoot.trim();
   const locatorRoot = input.stage_run.workspace_locator?.workspace_root;
   return typeof locatorRoot === 'string' && locatorRoot.trim() ? locatorRoot.trim() : null;
+}
+
+function observeContentArtifactBytes(
+  input: TemporalStageQualityCycleProjectionInput,
+  artifact: { ref: string; expected: string | null; workspaceRoot: string; index: number },
+) {
+  const { ref, expected, workspaceRoot, index } = artifact;
+  const producingAttemptRef = input.state.artifact_identity_authority?.authoritative_attempt_ref;
+  const receiptRef = input.state.artifact_identity_receipt_refs?.[index];
+  if (!producingAttemptRef || !receiptRef || !expected || ref !== `opl-content://sha256/${expected}`) return null;
+  const scope = input.stage_run.execution_scope ?? null;
+  const receipt = verifyIdentityReceipt({
+    receiptRef,
+    workspaceRoot,
+    domainId: input.stage_run.domain_id,
+    expectedAttemptId: stageAttemptIdFromRef(producingAttemptRef),
+    expectedIdentity: {
+      stageRunId: input.stage_run.stage_run_id,
+      scopeKind: input.stage_run.scope_kind ?? (scope ? 'work_item' : 'domain'),
+      executionScope: scope,
+    },
+    artifactRef: ref,
+    artifactSha256: expected,
+  });
+  if (receipt.surface_kind !== 'opl_transport_artifact_identity_receipt'
+    || typeof receipt.artifact_source_ref !== 'string') return null;
+  return observeCurrentArtifactBytes({
+    artifactRef: ref,
+    artifactSourceRef: receipt.artifact_source_ref,
+    artifactSha256: expected,
+    workspaceRoot,
+    canonicalWorkItemRoot: scope?.canonical_work_item_root,
+    canonicalWorkItemRootIdentity: scope?.canonical_work_item_root_identity,
+    scopeWorkspaceRoot: scope?.workspace_root,
+  });
 }
 
 /**
@@ -68,10 +107,12 @@ function observeAuthoritativeArtifactBytes(input: TemporalStageQualityCycleProje
     }
     try {
       const localPath = localPathForRef(ref, workspaceRoot);
-      if (!localPath) {
+      const observed = localPath
+        ? observeStableFile({ filePath: localPath, artifactRef: ref })
+        : observeContentArtifactBytes(input, { ref, expected, workspaceRoot, index });
+      if (!observed) {
         return { ref, expected_sha256: expected, observed_sha256: null, status: 'unknown' as const };
       }
-      const observed = observeStableFile({ filePath: localPath, artifactRef: ref });
       const observedHash = comparableArtifactHash(observed.sha256);
       return {
         ref,

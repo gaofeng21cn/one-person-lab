@@ -49,6 +49,8 @@ Closeout 恢复接受完整 JSON 对象及完整 JSON 代码块，记录无法�
 
 AgentBlueprint 的 content-ref 字节补全保持同一归一化传输形态：`closeout_refs` 只存字符串，摘要、长度及经过核验的 identity receipt 由 `closeout_ref_metadata` 唯一承载。Activity 返回后再做 StageAttempt 归一化，不会从内联对象重复派生一条缺少 receipt 的元数据，从而遮住已验证身份。
 
+若收尾包把 `stage_quality_cycle` 对象写在顶层，且 `route_impact` 中该字段缺失或为 `null`，Framework 会将对象移到约定位置并记录 `stage_quality_cycle_folded_from_closeout_top_level`。两处内容一致时保留约定字段。内容冲突时拒绝收尾包。归位后的对象仍须通过 Attempt 角色、审查结果和工件身份校验。
+
 Finding、repair、closure 与跨 Stage route 的证据引用接受非空 locator 字符串或带非空 `ref` 的对象，归一化结果仍是字符串列表；引用对象中的其他元数据不能替代 artifact identity receipt。证据列表及其成员不能为空白。`changed_artifact_refs` 可为空，使未修复或被阻断的 repair 能如实声明没有产物变化。
 
 恢复身份推进须先精确观察原 Temporal Run 已终止，再通过原注册表 CAS 留存先前回执。尚未开始审查的同一已接受 producer 可追加快照成员，旧成员和 artifact identity 必须保留；不能换 lane、workspace、binding 或替换已审证据。运行中的不同恢复身份仍拒绝，新的 Temporal Run 不代表新的业务 StageRun，也不改写原终态。

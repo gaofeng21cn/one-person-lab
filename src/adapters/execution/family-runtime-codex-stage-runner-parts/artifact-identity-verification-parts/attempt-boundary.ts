@@ -102,6 +102,9 @@ export function verifyStageQualityArtifactIdentityAtAttemptBoundary(input: {
     if (rawInput) return receiptRef;
     verifyCurrentArtifactBytes({
       artifactRef: pair.artifactRef,
+      artifactSourceRef: receipt.surface_kind === 'opl_transport_artifact_identity_receipt'
+        ? optionalString(receipt.artifact_source_ref)
+        : null,
       artifactSha256: pair.artifactSha256,
       workspaceRoot: input.workspaceRoot,
       declaredSizeBytes: typeof receipt.size_bytes === 'number' ? receipt.size_bytes : null,

@@ -19,6 +19,7 @@ export type OplTransportArtifactIdentityReceipt = {
   work_item_scope_id: string | null;
   scope_digest: string | null;
   artifact_ref: string;
+  artifact_source_ref?: string;
   sha256: string;
   size_bytes: number | null;
 };
