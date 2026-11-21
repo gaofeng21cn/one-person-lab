@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import './family-runtime-codex-stage-runner-cases/terminal-closeout-capture.ts';
 import './family-runtime-codex-stage-runner-cases/telemetry.ts';
@@ -16,6 +18,8 @@ import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-h
 import {
   buildCodexStageActivityInput,
 } from '../../src/adapters/execution/family-runtime-codex-stage-runner.ts';
+import { compactCloseoutPacketForTemporalResult } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
+import { exactRefsFromCloseoutMetadata } from '../../src/adapters/execution/family-runtime-temporal-activity-identity.ts';
 import { FrameworkContractError } from '../../src/authority/contracts/contracts.ts';
 
 test('Codex stage activity binds stage packet from checkpoint refs before provider execution', () => {
@@ -541,5 +545,125 @@ exit 64
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(capturePath, { force: true });
+  }
+});
+
+test('Codex stage runner preserves reviewer snapshot requests across verified artifact fallback', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture('exit 64');
+  const attemptId = 'sat_reviewer_snapshot_fallback_test';
+  const stageRunId = 'sr_reviewer_snapshot_fallback_test';
+  const artifactPath = path.join(fixtureRoot, 'artifacts', 'design-basis-admission.json');
+  const artifactBytes = Buffer.from('{"decision":"design_basis_admitted"}\n', 'utf8');
+  const artifactSha256 = crypto.createHash('sha256').update(artifactBytes).digest('hex');
+  const artifactRef = pathToFileURL(artifactPath).href;
+  const aliasRef = `stage-artifact:design-basis-admission:sha256:${artifactSha256}`;
+  const snapshotRequest = {
+    surface_kind: 'opl_reviewer_input_snapshot_materialization_request',
+    schema_version: 2,
+    owner_authority_ref: {
+      kind: 'oma_design_basis_admission',
+      ref: aliasRef,
+      size_bytes: artifactBytes.length,
+      sha256: `sha256:${artifactSha256}`,
+    },
+    producer_attempt_ref: `opl://stage_attempts/${attemptId}`,
+    execution_content_binding_sha256: `sha256:${'4'.repeat(64)}`,
+    workspace_root: fixtureRoot,
+    members: [{
+      member_id: 'design-basis-admission',
+      source_ref: artifactRef,
+      sha256: `sha256:${artifactSha256}`,
+      size_bytes: artifactBytes.length,
+    }],
+  };
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: attemptId,
+    stage_run_id: stageRunId,
+    closeout_refs: [aliasRef],
+    closeout_ref_metadata: [{
+      ref_kind: 'domain_output',
+      kind: 'oma_design_basis_admission',
+      ref: aliasRef,
+      // A logical alias without a local uri still requires the workspace fallback.
+      // Uri-backed aliases now verify directly and are covered by the content-ref test.
+      sha256: `sha256:${artifactSha256}`,
+      size_bytes: artifactBytes.length,
+    }],
+    route_impact: {
+      stage_quality_cycle: {
+        artifact_refs: [aliasRef],
+        artifact_hashes: [`sha256:${artifactSha256}`],
+        review_input_snapshot_materialization_request: snapshotRequest,
+      },
+    },
+    authority_boundary: {
+      opl: 'closeout_transport_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+  const finalEvent = JSON.stringify({
+    type: 'item.completed',
+    item: { type: 'agent_message', id: 'snapshot-fallback', text: JSON.stringify(closeout) },
+  });
+  fs.writeFileSync(codexPath, `#!/usr/bin/env bash
+set -euo pipefail
+if [ "$1" = "exec" ]; then
+  mkdir -p ${JSON.stringify(path.dirname(artifactPath))}
+  printf '%s\\n' ${JSON.stringify(artifactBytes.toString('utf8').trim())} > ${JSON.stringify(artifactPath)}
+  printf '{"type":"thread.started","thread_id":"thread-snapshot-fallback"}\\n'
+  printf '%s\\n' ${JSON.stringify(finalEvent)}
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+exit 64
+`, { mode: 0o755 });
+
+  const previousBin = process.env.OPL_CODEX_BIN;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.OPL_STATE_DIR = path.join(fixtureRoot, 'opl-state');
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: attemptId,
+        stage_run_id: stageRunId,
+        attempt_role: 'producer',
+        quality_round_index: 0,
+        stage_id: 'design-basis-admission',
+        domain_id: 'agent_engineering',
+        workspace_locator: { workspace_root: fixtureRoot },
+        checkpoint_refs: ['packet:design-basis'],
+      },
+      stagePacketRef: 'packet:design-basis',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
+    });
+
+    assert.equal(
+      receipt.closeout_packet?.authority_boundary.opl,
+      'framework_workspace_artifact_closeout',
+      'the test must exercise the verified workspace-artifact fallback',
+    );
+    const compacted = compactCloseoutPacketForTemporalResult(receipt.closeout_packet);
+    const compactedQualityCycle = compacted?.route_impact?.stage_quality_cycle as
+      | Record<string, unknown>
+      | undefined;
+    assert.deepEqual(
+      compactedQualityCycle?.review_input_snapshot_materialization_request,
+      snapshotRequest,
+    );
+    assert.equal(
+      exactRefsFromCloseoutMetadata(receipt.closeout_packet?.closeout_ref_metadata).length,
+      2,
+      'framework fallback metadata must retain both exact-ref labels for reviewer authority',
+    );
+  } finally {
+    if (previousBin === undefined) delete process.env.OPL_CODEX_BIN;
+    else process.env.OPL_CODEX_BIN = previousBin;
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
