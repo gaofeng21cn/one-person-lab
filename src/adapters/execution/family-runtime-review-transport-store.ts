@@ -5,7 +5,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { canonicalJsonBytes } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
-import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
+import { frameworkOwnedArtifactRoots, pathInsideRoots } from './framework-owned-artifact-roots.ts';
 
 const SHA256_PATTERN = /^(?:sha256:)?([a-f0-9]{64})$/i;
 const URI_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
@@ -222,21 +223,6 @@ function sameStableDirectoryChain(
 
 function digestHex(value: string) {
   return value.replace(/^sha256:/, '');
-}
-
-// Artifacts the framework itself produced live under the OPL state directory, not under the
-// domain workspace root: a producer that closes out with a raw artifact leaves its bytes in
-// <state_dir>/runtime-state/stage-attempt-artifacts/<attempt>/. The Reviewer snapshot has to
-// carry those bytes to the reviewer, and they are framework-owned rather than model-claimed,
-// so allow exactly that subtree in addition to the workspace root.
-function frameworkOwnedArtifactRoots() {
-  try {
-    const stateDir = resolveOplStatePaths().state_dir;
-    const artifacts = path.join(stateDir, 'runtime-state', 'stage-attempt-artifacts');
-    return fs.existsSync(artifacts) ? [fs.realpathSync.native(artifacts)] : [];
-  } catch {
-    return [];
-  }
 }
 
 function pathInside(candidateInput: string, rootInput: string) {
@@ -487,7 +473,7 @@ export function resolveContainedWorkspaceFile(workspaceRootInput: unknown, refIn
     );
   }
   const frameworkRoots = frameworkOwnedArtifactRoots();
-  if (!pathInside(candidate, workspaceRoot) && !frameworkRoots.some((root) => pathInside(candidate, root))) {
+  if (!pathInside(candidate, workspaceRoot) && !pathInsideRoots(candidate, frameworkRoots)) {
     throw reviewTransportError(
       'reviewer_input_snapshot_source_path_escape',
       'Reviewer input snapshot source ref escapes the declared workspace root.',

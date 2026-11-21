@@ -13,6 +13,7 @@ import {
   type TypedStageCloseoutPacket,
 } from './closeout-normalization.ts';
 import { isRecord, type JsonRecord } from './shared.ts';
+import { frameworkOwnedArtifactRoots, pathInsideRoots } from '../framework-owned-artifact-roots.ts';
 
 const SHA256_PATTERN = /^sha256:([a-f0-9]{64})$/;
 const URI_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
@@ -111,7 +112,9 @@ function observeReferencedCloseout(input: {
     });
   }
   const relative = path.relative(realWorkspaceRoot, realFilePath);
-  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+  const frameworkRoots = frameworkOwnedArtifactRoots();
+  const insideWorkspace = !(relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative));
+  if (!insideWorkspace && !pathInsideRoots(realFilePath, frameworkRoots)) {
     hydrationError({
       message: 'Referenced closeout file must remain inside the exact Attempt workspace.',
       blockedReason: 'referenced_closeout_ref_outside_workspace',
