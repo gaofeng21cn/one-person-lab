@@ -277,6 +277,7 @@ export function exactArtifactPairs(input: {
 
 export function verifyCurrentArtifactBytes(input: {
   artifactRef: string;
+  artifactSourceRef?: string | null;
   artifactSha256: string;
   workspaceRoot: string;
   declaredSizeBytes?: number | null;
@@ -284,7 +285,16 @@ export function verifyCurrentArtifactBytes(input: {
   canonicalWorkItemRootIdentity?: WorkItemRootIdentity | null;
   scopeWorkspaceRoot?: string | null;
 }) {
-  const localPath = localPathForRef(input.artifactRef, input.workspaceRoot);
+  // Content-bearing protocol refs such as opl-content://sha256/... are logical
+  // identities, not local paths. Their closeout metadata may bind the same exact
+  // bytes to a file URI; verify those bytes without rewriting the logical ref that
+  // downstream authority receipts and content readers consume. A directly readable
+  // artifact ref always remains the primary source, so an alias cannot redirect a
+  // local file verification to different bytes.
+  const localPath = localPathForRef(input.artifactRef, input.workspaceRoot)
+    ?? (input.artifactSourceRef
+      ? localPathForRef(input.artifactSourceRef, input.workspaceRoot)
+      : null);
   if (!localPath) return null;
   let observed: StableFileObservation;
   if (input.canonicalWorkItemRoot) {

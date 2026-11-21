@@ -124,6 +124,7 @@ export function buildWorkspaceArtifactCloseoutPacket(input: {
     ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
     closeout_refs: found.map((artifact) => ({
       ref: artifact.ref,
+      kind: 'stage_attempt_artifact',
       ref_kind: 'stage_artifact',
       sha256: artifact.sha256,
       size_bytes: artifact.sizeBytes,
