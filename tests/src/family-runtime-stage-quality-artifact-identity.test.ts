@@ -10,7 +10,10 @@ import { FrameworkContractError } from '../../src/kernel/contract-validation.ts'
 import type { StandardAgentStageQualityRuntimeBinding } from '../../src/authority/packages/index.ts';
 import { createWorkItemExecutionScopeSnapshot } from '../../src/authority/workspace/execution-scope.ts';
 import { buildPackBoundTemporalStageRunInput } from '../../src/adapters/execution/family-runtime-pack-bound-stage-run.ts';
-import { stageQualityAttemptMaterializeActivity } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
+import {
+  stageQualityAttemptMaterializeActivity,
+  stageQualityCycleProjectActivity,
+} from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
 import { createStageAttempt } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
 import { registerStageRunLaunch } from '../../src/adapters/execution/family-runtime-stage-run-launch-registry.ts';
 import { openQueueDb } from '../../src/adapters/execution/family-runtime-store.ts';
@@ -770,7 +773,7 @@ test('artifact identity preserves ref-hash pairs and permits equal hashes for di
   }
 });
 
-test('content refs verify exact bytes through their local uri without changing logical identity', () => {
+test('content refs verify exact bytes through their local uri without changing logical identity', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-content-ref-uri-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = path.join(root, 'state');
@@ -779,6 +782,7 @@ test('content refs verify exact bytes through their local uri without changing l
     const artifactPath = path.join(root, 'knowledge.md');
     fs.writeFileSync(artifactPath, bytes);
     const digest = sha256(bytes);
+    const producer = { ...attempt, stage_run_id: 'sr-content-ref-source' };
     const artifactRef = `opl-content://sha256/${digest}`;
     const sourceRef = pathToFileURL(artifactPath).href;
     const closeout = producerCloseout({ artifactRef, artifactHash: digest, sizeBytes: bytes.length });
@@ -791,7 +795,7 @@ test('content refs verify exact bytes through their local uri without changing l
     }];
     const verified = verifyStageQualityCloseoutArtifactIdentity({
       closeoutPacket: closeout,
-      attempt,
+      attempt: producer,
       workspaceRoot: root,
     });
     const metadata = verified?.closeout_ref_metadata?.[0];
@@ -810,12 +814,31 @@ test('content refs verify exact bytes through their local uri without changing l
       artifactIdentityReceiptRefs: [receiptRef],
       domainId: attempt.domain_id,
       workspaceRoot: root,
-      expectedProducingAttemptId: attempt.stage_attempt_id,
-      expectedProducingStageId: attempt.stage_id,
+      expectedProducingAttemptId: producer.stage_attempt_id,
+      expectedProducingStageId: producer.stage_id,
+      expectedStageRunId: producer.stage_run_id,
     });
-    assert.deepEqual(revalidate().artifact_refs, [artifactRef]);
+    const artifactIdentity = revalidate();
+    assert.deepEqual(artifactIdentity.artifact_refs, [artifactRef]);
+    const observe = () => stageQualityCycleProjectActivity({
+      artifact_identity_observation_only: true,
+      stage_run: {
+        stage_run_id: producer.stage_run_id,
+        domain_id: producer.domain_id,
+        scope_kind: 'domain',
+        workspace_locator: { workspace_root: root },
+      },
+      state: {
+        ...artifactIdentity,
+        artifact_identity_authority: {
+          authoritative_attempt_ref: `opl://stage_attempts/${producer.stage_attempt_id}`,
+        },
+      },
+    } as unknown as Parameters<typeof stageQualityCycleProjectActivity>[0]);
+    assert.equal((await observe()).artifact_identity_observation?.live_bytes_status, 'matches');
     fs.writeFileSync(artifactPath, 'replacement content');
     assert.throws(revalidate, /SHA does not match the current stable local file bytes/);
+    assert.equal((await observe()).artifact_identity_observation?.live_bytes_status, 'differs');
   } finally {
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;

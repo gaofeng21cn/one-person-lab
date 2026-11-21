@@ -276,7 +276,7 @@ export function exactArtifactPairs(input: {
   });
 }
 
-export function verifyCurrentArtifactBytes(input: {
+type CurrentArtifactBytesInput = {
   artifactRef: string;
   artifactSourceRef?: string | null;
   artifactSha256: string;
@@ -285,7 +285,9 @@ export function verifyCurrentArtifactBytes(input: {
   canonicalWorkItemRoot?: string | null;
   canonicalWorkItemRootIdentity?: WorkItemRootIdentity | null;
   scopeWorkspaceRoot?: string | null;
-}) {
+};
+
+export function observeCurrentArtifactBytes(input: CurrentArtifactBytesInput) {
   // Content-bearing protocol refs such as opl-content://sha256/... are logical
   // identities, not local paths. Their closeout metadata may bind the same exact
   // bytes to a file URI; verify those bytes without rewriting the logical ref that
@@ -388,6 +390,15 @@ export function verifyCurrentArtifactBytes(input: {
   } else {
     observed = observeStableFile({ filePath: localPath, artifactRef: input.artifactRef });
   }
+  return {
+    ...observed,
+    ...(contentPath ? { sourceRef: pathToFileURL(contentPath).href } : {}),
+  };
+}
+
+export function verifyCurrentArtifactBytes(input: CurrentArtifactBytesInput) {
+  const observed = observeCurrentArtifactBytes(input);
+  if (!observed) return null;
   if (observed.sha256 !== input.artifactSha256) {
     throw artifactIdentityError({
       message: 'Stage quality artifact SHA does not match the current stable local file bytes.',
@@ -404,8 +415,5 @@ export function verifyCurrentArtifactBytes(input: {
   // the transport identity receipt, so the stale value never propagates downstream.
   // Same contract family as the reviewer snapshot fix: stale declared sizes are
   // metadata, not tampering.
-  return {
-    ...observed,
-    ...(contentPath ? { sourceRef: pathToFileURL(contentPath).href } : {}),
-  };
+  return observed;
 }
