@@ -40,6 +40,8 @@
     "scripts/site_playbook.py",
     "scripts/site_survey.py",
     "scripts/structure_record.py",
+    "skills/map-site-adaptation/SKILL.md",
+    "skills/map-site-adaptation/agents/openai.yaml",
     "skills/med-autopractice/SKILL.md",
     "skills/med-autopractice/agents/openai.yaml",
     "src/med_autopractice/__init__.py",

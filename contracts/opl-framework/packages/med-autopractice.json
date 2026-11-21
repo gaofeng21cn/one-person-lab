@@ -4,7 +4,7 @@
   "display_name": "Med Auto Practice",
   "description": "医生主导的临床工作智能体，支持病历结构化、医嘱协作和医院系统适配。",
   "publisher": "gaofeng21cn",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/med-autopractice.git",
   "visibility": "public",
@@ -20,8 +20,8 @@
       "en-US": "A clinician-directed agent for structured records, order review and hospital system integration."
     },
     "session_routing_summary_i18n": {
-      "zh-CN": "通过 MAP 主 Skill 查看能力、规划任务并运行合成验证；临床执行按部署资格开放。",
-      "en-US": "Use the MAP skill to inspect capabilities, plan work, and validate synthetic tasks. Clinical execution follows site qualification."
+      "zh-CN": "告诉 MAP 想完成哪项临床工作。它可以整理已有病历、恢复待审任务，或检查本院配置并协助验证所需的系统操作。",
+      "en-US": "Tell MAP what you want to do. It can structure records you have, resume a task under review, or check your site configuration and help verify the operation you need."
     },
     "home_shortcuts": [],
     "software_type": "agent",
@@ -34,7 +34,8 @@
   },
   "exports": {
     "core_skill_ids": [
-      "med-autopractice"
+      "med-autopractice",
+      "map-site-adaptation"
     ],
     "core_module_ids": [
       "med-autopractice.runtime"
@@ -71,6 +72,16 @@
         "scripts/map_demo.py"
       ],
       "scope": "synthetic_only"
+    },
+    {
+      "entrypoint_id": "med-autopractice.inspect-site",
+      "kind": "cli",
+      "argv": [
+        "python3",
+        "scripts/site_plan.py",
+        "--inspect"
+      ],
+      "read_only": true
     }
   ],
   "codex_surface": {
@@ -85,8 +96,8 @@
       "marketplace_source": "gaofeng21cn/med-autopractice",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/med-autopractice:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/med-autopractice-0.1.1.json",
-    "carrier_source_commit": "a76df5679ef34eaddbca94d72ab7af381adb9a05"
+    "plugin_payload_manifest_url": "payloads/med-autopractice-0.1.2.json",
+    "carrier_source_commit": "49abf1e8c8d88376d39fa8dba2abe58204181dde"
   },
   "content_lock": {
     "algorithm": "sha256",
@@ -127,6 +138,8 @@
       "scripts/site_playbook.py",
       "scripts/site_survey.py",
       "scripts/structure_record.py",
+      "skills/map-site-adaptation/SKILL.md",
+      "skills/map-site-adaptation/agents/openai.yaml",
       "skills/med-autopractice/SKILL.md",
       "skills/med-autopractice/agents/openai.yaml",
       "src/med_autopractice/__init__.py",
@@ -177,7 +190,7 @@
       "examples/synthetic/configure_site.py",
       "docs/hospital-adapters.md"
     ],
-    "digest": "sha256:a6e385d5ab91d5264febc852311d7bee61304c3e55d96d927fb1e233bca15920"
+    "digest": "sha256:fce1424ea3e3530c68c170529d7749ba70610f719074185c3b7428bdcd7a99ad"
   },
   "management_scope": "local_product",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
