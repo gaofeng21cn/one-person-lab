@@ -1,4 +1,5 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { canonicalJsonText } from '../../../kernel/canonical-json.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   requireWorkItemExecutionScopeSnapshot,
@@ -231,6 +232,33 @@ function readCloseoutRefEntries(value: unknown) {
   };
 }
 
+function normalizeStageQualityCyclePlacement(value: JsonRecord) {
+  const routeImpact = isRecord(value.route_impact) ? value.route_impact : null;
+  const misplacedCycle = value.stage_quality_cycle;
+  if (!isRecord(misplacedCycle)) return routeImpact;
+
+  const declaredCycle = routeImpact?.stage_quality_cycle;
+  if (declaredCycle != null) {
+    if (canonicalJsonText(declaredCycle) === canonicalJsonText(misplacedCycle)) return routeImpact;
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Typed stage closeout has conflicting stage_quality_cycle declarations.',
+      { failure_code: 'typed_closeout_stage_quality_cycle_placement_conflict' },
+    );
+  }
+
+  const findings = Array.isArray(routeImpact?.normalization_findings)
+    ? routeImpact.normalization_findings
+    : [];
+  return {
+    ...routeImpact,
+    stage_quality_cycle: misplacedCycle,
+    normalization_findings: [
+      ...new Set([...findings, 'stage_quality_cycle_folded_from_closeout_top_level']),
+    ],
+  };
+}
+
 export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageCloseoutPacket {
   if (!isRecord(value)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Stage closeout packet must be a JSON object.', {
@@ -314,6 +342,7 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     );
   }
 
+  const routeImpact = normalizeStageQualityCyclePlacement(value);
   return {
     surface_kind: surfaceKind,
     ...(optionalString(value.stage_attempt_id) ? { stage_attempt_id: optionalString(value.stage_attempt_id)! } : {}),
@@ -352,7 +381,7 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     ...(isRecord(value.user_stage_log) ? { user_stage_log: value.user_stage_log } : {}),
     ...(isRecord(value.stage_log_summary) ? { stage_log_summary: value.stage_log_summary } : {}),
     ...(isRecord(value.human_stage_log) ? { human_stage_log: value.human_stage_log } : {}),
-    ...(isRecord(value.route_impact) ? { route_impact: value.route_impact } : {}),
+    ...(routeImpact ? { route_impact: routeImpact } : {}),
     authority_boundary: isRecord(value.authority_boundary)
       ? value.authority_boundary
       : {
