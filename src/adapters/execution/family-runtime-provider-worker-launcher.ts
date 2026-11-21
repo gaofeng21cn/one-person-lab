@@ -174,64 +174,83 @@ export async function runProviderWorkerLauncher(argv = process.argv.slice(2)) {
     if (!ready) return 0;
 
     const modulePath = workerModulePath();
-    child = spawn(nodeExecutable, [
-      ...buildTemporalProviderWorkerProcessArgs(modulePath),
-      '--temporal-worker-foreground',
-      '--family-runtime-root',
-      paths.root,
-    ], {
-      env: {
-        ...process.env,
-        OPL_TEMPORAL_ADDRESS: resolved.address,
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    child.stdout?.on('data', (chunk: Buffer) => appendBoundedLog(logs.stdout, chunk));
-    child.stderr?.on('data', (chunk: Buffer) => appendBoundedLog(logs.stderr, chunk));
+    // A worker that dies leaves every in-flight StageRun stranded: Temporal keeps the
+    // activity and workflow tasks queued and nothing picks them up until an operator
+    // restarts the stack. An uncaught exception inside a socket data handler kills the
+    // process outright, so respawn instead of exiting and let Temporal retry the tasks.
+    let respawnAttempt = 0;
+    for (;;) {
+      child = spawn(nodeExecutable, [
+        ...buildTemporalProviderWorkerProcessArgs(modulePath),
+        '--temporal-worker-foreground',
+        '--family-runtime-root',
+        paths.root,
+      ], {
+        env: {
+          ...process.env,
+          OPL_TEMPORAL_ADDRESS: resolved.address,
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      child.stdout?.on('data', (chunk: Buffer) => appendBoundedLog(logs.stdout, chunk));
+      child.stderr?.on('data', (chunk: Buffer) => appendBoundedLog(logs.stderr, chunk));
 
-    let consecutiveHealthFailures = 0;
-    let consecutiveMemoryFailures = 0;
-    const monitor = setInterval(() => {
-      void probeTemporalServer(resolved.address!, 2_000).then((reachable) => {
-        consecutiveHealthFailures = reachable ? 0 : consecutiveHealthFailures + 1;
-        if (consecutiveHealthFailures >= HEALTH_FAILURE_LIMIT && child?.pid) {
+      let consecutiveHealthFailures = 0;
+      let consecutiveMemoryFailures = 0;
+      const monitor = setInterval(() => {
+        void probeTemporalServer(resolved.address!, 2_000).then((reachable) => {
+          consecutiveHealthFailures = reachable ? 0 : consecutiveHealthFailures + 1;
+          if (consecutiveHealthFailures >= HEALTH_FAILURE_LIMIT && child?.pid) {
+            logJson(logs.stderr, {
+              event: 'temporal_dependency_unavailable',
+              address: resolved.address,
+              consecutive_failures: consecutiveHealthFailures,
+              action: 'respawn_worker',
+            });
+            child.kill('SIGTERM');
+          }
+        });
+        const rssBytes = child?.pid ? residentSetBytes(child.pid) : null;
+        consecutiveMemoryFailures = rssBytes !== null && rssBytes > MAX_RESIDENT_SET_BYTES
+          ? consecutiveMemoryFailures + 1
+          : 0;
+        if (consecutiveMemoryFailures >= MEMORY_FAILURE_LIMIT && child?.pid) {
           logJson(logs.stderr, {
-            event: 'temporal_dependency_unavailable',
-            address: resolved.address,
-            consecutive_failures: consecutiveHealthFailures,
-            action: 'restart_worker_through_launchd',
+            event: 'provider_worker_memory_ceiling_exceeded',
+            rss_bytes: rssBytes,
+            ceiling_bytes: MAX_RESIDENT_SET_BYTES,
+            consecutive_samples: consecutiveMemoryFailures,
+            action: 'respawn_worker',
           });
           child.kill('SIGTERM');
         }
-      });
-      const rssBytes = child?.pid ? residentSetBytes(child.pid) : null;
-      consecutiveMemoryFailures = rssBytes !== null && rssBytes > MAX_RESIDENT_SET_BYTES
-        ? consecutiveMemoryFailures + 1
-        : 0;
-      if (consecutiveMemoryFailures >= MEMORY_FAILURE_LIMIT && child?.pid) {
-        logJson(logs.stderr, {
-          event: 'provider_worker_memory_ceiling_exceeded',
-          rss_bytes: rssBytes,
-          ceiling_bytes: MAX_RESIDENT_SET_BYTES,
-          consecutive_samples: consecutiveMemoryFailures,
-          action: 'restart_worker_through_launchd',
-        });
-        child.kill('SIGTERM');
-      }
-    }, HEALTH_INTERVAL_MS);
-    monitor.unref();
+      }, HEALTH_INTERVAL_MS);
+      monitor.unref();
 
-    return await new Promise<number>((resolve, reject) => {
-      child!.once('error', reject);
-      child!.once('exit', (code, signal) => {
-        clearInterval(monitor);
-        if (shutdownRequested || signal === 'SIGTERM' || signal === 'SIGINT') {
-          resolve(0);
-          return;
-        }
-        resolve(code ?? 1);
+      const exitCode = await new Promise<number>((resolve, reject) => {
+        child!.once('error', reject);
+        child!.once('exit', (code, signal) => {
+          clearInterval(monitor);
+          if (shutdownRequested || signal === 'SIGTERM' || signal === 'SIGINT') {
+            resolve(0);
+            return;
+          }
+          resolve(code ?? 1);
+        });
       });
-    });
+      if (shutdownRequested || exitCode === 0) return exitCode;
+
+      respawnAttempt += 1;
+      const delayMs = Math.min(INITIAL_BACKOFF_MS * 2 ** Math.min(respawnAttempt - 1, 5), MAX_BACKOFF_MS);
+      logJson(logs.stderr, {
+        event: 'provider_worker_exited',
+        exit_code: exitCode,
+        respawn_attempt: respawnAttempt,
+        respawn_in_ms: delayMs,
+      });
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      if (shutdownRequested) return 0;
+    }
   } finally {
     process.off('SIGTERM', onSigterm);
     process.off('SIGINT', onSigint);
