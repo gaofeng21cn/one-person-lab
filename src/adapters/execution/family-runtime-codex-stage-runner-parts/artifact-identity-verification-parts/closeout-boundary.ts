@@ -88,6 +88,7 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
       ? rawProgress.observed
       : verifyCurrentArtifactBytes({
           artifactRef,
+          artifactSourceRef: optionalString(entry.uri),
           artifactSha256,
           workspaceRoot: input.workspaceRoot,
           declaredSizeBytes: typeof entry.size_bytes === 'number' ? entry.size_bytes : null,

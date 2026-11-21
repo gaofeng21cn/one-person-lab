@@ -183,6 +183,7 @@ export function hydrateContentRefTransport(input: {
         ref: entry.ref,
         sha256: entry.sha256,
         size_bytes: entry.sizeBytes,
+        kind: 'stage_attempt_artifact',
         ref_kind: 'stage_artifact',
       })),
     ],
