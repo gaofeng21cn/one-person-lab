@@ -73,6 +73,7 @@ export function state(input: {
   stage: string;
   status?: string;
   next?: string | null;
+  routeDecision?: string | null;
   refs?: string[];
   hashes?: string[];
   currentRole?: string | null;
@@ -90,6 +91,9 @@ export function state(input: {
     artifact_hashes: input.hashes ?? [],
     next_stage_run_launch: input.next
       ? { target_workflow_id: input.next }
+      : null,
+    selected_stage_route: input.routeDecision
+      ? { decision_kind: input.routeDecision }
       : null,
     current_role: input.currentRole ?? null,
     attempts: input.attempts ?? [],
