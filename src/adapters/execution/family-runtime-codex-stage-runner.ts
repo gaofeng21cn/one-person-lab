@@ -661,6 +661,17 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       ? (error as { details: JsonRecord }).details
       : {};
     const rejectionReason = optionalString(details.blocked_reason) ?? 'closeout_artifact_identity_unverified';
+    // A verified workspace-artifact fallback replaces the artifact transport, not the
+    // independently declared review scope. Preserve only the original snapshot request;
+    // the reviewer materializer still revalidates its authority and exact member bytes.
+    const originalRouteImpact = isRecord(closeoutPacket?.route_impact)
+      ? closeoutPacket.route_impact
+      : {};
+    const originalQualityCycle = isRecord(originalRouteImpact.stage_quality_cycle)
+      ? originalRouteImpact.stage_quality_cycle
+      : {};
+    const reviewInputSnapshotMaterializationRequest =
+      originalQualityCycle.review_input_snapshot_materialization_request;
     // The rejected packet is usually a resume that named another Attempt's artifact.
     // This Attempt's own Stage output is on disk, so try to verify and advance on that
     // instead of stopping the run over a transport error.
@@ -673,7 +684,27 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     });
     if (artifactCloseout) {
       try {
-        closeoutPacket = verifyPacket(artifactCloseout);
+        let recoveredPacket = verifyPacket(artifactCloseout);
+        if (recoveredPacket && reviewInputSnapshotMaterializationRequest != null) {
+          const recoveredRouteImpact = isRecord(recoveredPacket.route_impact)
+            ? recoveredPacket.route_impact
+            : {};
+          const recoveredQualityCycle = isRecord(recoveredRouteImpact.stage_quality_cycle)
+            ? recoveredRouteImpact.stage_quality_cycle
+            : {};
+          recoveredPacket = {
+            ...recoveredPacket,
+            route_impact: {
+              ...recoveredRouteImpact,
+              stage_quality_cycle: {
+                ...recoveredQualityCycle,
+                review_input_snapshot_materialization_request:
+                  reviewInputSnapshotMaterializationRequest,
+              },
+            },
+          };
+        }
+        closeoutPacket = recoveredPacket;
         recovered = true;
       } catch {
         recovered = false;

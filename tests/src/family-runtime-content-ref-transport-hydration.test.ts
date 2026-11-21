@@ -78,6 +78,9 @@ test('declares the content bytes a blueprint references so transport can carry t
   assert.ok((hydrated.closeout_ref_metadata ?? []).some((entry: Record<string, unknown>) => (
     entry.sha256 === digest
   )));
+  assert.ok((hydrated.closeout_ref_metadata ?? []).some((entry: Record<string, unknown>) => (
+    entry.sha256 === digest && entry.kind === 'stage_attempt_artifact'
+  )));
 });
 
 test('leaves the closeout untouched when the referenced bytes are not on disk', () => {
