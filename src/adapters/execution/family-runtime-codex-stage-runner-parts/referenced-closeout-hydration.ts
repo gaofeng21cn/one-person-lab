@@ -9,6 +9,7 @@ import { parseJsonText } from '../../../kernel/json-file.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   normalizeTypedStageCloseoutPacket,
+  normalizeStageQualityCyclePlacement,
   type TypedStageCloseoutPacket,
 } from './closeout-normalization.ts';
 import { isRecord, type JsonRecord } from './shared.ts';
@@ -236,6 +237,11 @@ function uniqueRecords(...lists: JsonRecord[][]) {
   const records = new Map<string, JsonRecord>();
   for (const entry of lists.flat()) records.set(canonicalJsonText(entry), entry);
   return [...records.values()];
+}
+
+function canonicalRouteImpactCandidate(candidate: JsonRecord) {
+  if (!isRecord(candidate.stage_quality_cycle)) return candidate;
+  return { ...candidate, route_impact: normalizeStageQualityCyclePlacement(candidate, { recordFinding: false }) };
 }
 
 function assertExplicitFieldCompatibility(input: {
@@ -480,14 +486,16 @@ export function hydrateReferencedStageAttemptCloseout(input: {
   if (input.resumedCandidate) {
     assertAttemptIdentity({ candidate: input.resumedCandidate, attempt: input.attempt, ref, source: 'resume_packet' });
   }
-  assertExplicitFieldCompatibility({ hydratedCandidate, resumedCandidate: input.resumedCandidate, ref });
+  const hydratedRouteCandidate = canonicalRouteImpactCandidate(hydratedCandidate);
+  const resumedRouteCandidate = input.resumedCandidate ? canonicalRouteImpactCandidate(input.resumedCandidate) : null;
+  assertExplicitFieldCompatibility({ hydratedCandidate: hydratedRouteCandidate, resumedCandidate: resumedRouteCandidate, ref });
   assertPreservedRouteCompatibility({
-    hydratedCandidate,
+    hydratedCandidate: hydratedRouteCandidate,
     preservedRouteImpact: input.preservedRouteImpact,
     ref,
   });
 
-  const routeImpact = Object.hasOwn(hydratedCandidate, 'route_impact')
+  const routeImpact = Object.hasOwn(hydratedRouteCandidate, 'route_impact')
     ? hydratedCloseout.route_impact
     : input.resumedCloseout.route_impact;
   const authorityBoundary = Object.hasOwn(hydratedCandidate, 'authority_boundary')

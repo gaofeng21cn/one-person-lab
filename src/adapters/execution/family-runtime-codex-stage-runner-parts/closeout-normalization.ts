@@ -232,7 +232,7 @@ function readCloseoutRefEntries(value: unknown) {
   };
 }
 
-function normalizeStageQualityCyclePlacement(value: JsonRecord) {
+export function normalizeStageQualityCyclePlacement(value: JsonRecord, { recordFinding = true } = {}) {
   const routeImpact = isRecord(value.route_impact) ? value.route_impact : null;
   const misplacedCycle = value.stage_quality_cycle;
   if (!isRecord(misplacedCycle)) return routeImpact;
@@ -247,6 +247,7 @@ function normalizeStageQualityCyclePlacement(value: JsonRecord) {
     );
   }
 
+  if (!recordFinding) return { ...routeImpact, stage_quality_cycle: misplacedCycle };
   const findings = Array.isArray(routeImpact?.normalization_findings)
     ? routeImpact.normalization_findings
     : [];
