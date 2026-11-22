@@ -33,6 +33,12 @@ DesignRequest
 - 同一 target Agent 同时只允许一个写入型 Run；重复 activity 按 run/generation/phase/input digest 幂等。
 - 瞬时平台失败最多重试三次，不消耗 evolution generation；永久失败不重试。
 
+评估通过后，Kernel 在 `evaluating` 的当前 revision 上争取登记资格。Owner 先成功取消时，
+Run 停在 `cancelled`，迟到的评估结果不会出现在合格版本列表中。若资格登记先取得该 revision，
+Run 进入 `qualifying`。此时可只读查询进度；Worker 重启后用同一份已保存的评估证据继续登记。
+版本目录返回实际版本 ID 后，Run 进入 `qualified`。此后 Owner 可按最新 revision 取消后续流程，
+已取得的资格保留。
+
 生命周期 Activity（start、fail、cancel 和 Owner decision）使用独立的持久化
 Kernel，不加载语义 provider。OMA 缺失、carrier 失效或 workspace 投影冲突时，
 失败收尾仍须追加终态事件并释放目标写保留；取消与 Owner decision 继续通过原有

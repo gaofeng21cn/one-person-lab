@@ -30,12 +30,15 @@ import {
   FixtureEvaluator,
   activateCreateRun,
 } from './shared.ts';
+import { createFoundryLifecycleKernel } from '../../../src/adapters/execution/foundry-lifecycle-runtime.ts';
+import { LedgerFoundryOperationResultJournal } from '../../../src/authority/evidence/foundry-persistent-adapters.ts';
 import { createCordisFoundryDevComposition } from '../../../src/host/composition-profiles.ts';
 import type {
   CandidateCompiler,
   DesignerPort,
   EvaluationExecutor,
   FoundryEventStore,
+  VersionRegistry,
   AgentBlueprint,
   DesignRequest,
   EvidenceBundle,
@@ -43,9 +46,7 @@ import type {
   resolveStandardAgentManagedCheckout,
 } from './shared.ts';
 
-test('file-backed Foundry truth survives restart and rebuilds its SQLite projection', async (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-persistent-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+function persistentKernelFixture(root: string) {
   const content = new FileFoundryContentStore(root);
   const promptV1 = content.put(Buffer.from('fixture prompt v1\n'));
   const promptV2 = content.put(Buffer.from('fixture prompt v2\n'));
@@ -103,26 +104,36 @@ test('file-backed Foundry truth survives restart and rebuilds its SQLite project
       });
     },
   };
-  const buildKernel = (options: {
+  return (options: {
     events?: FoundryEventStore;
+    versions?: VersionRegistry;
+    evaluator?: EvaluationExecutor;
+    activityMaxAttempts?: number;
     now?: string;
     propagateTransientActivityFailures?: boolean;
   } = {}) => {
-    const versions = new LedgerVersionRegistry(root);
+    const versions = options.versions ?? new LedgerVersionRegistry(root);
     return new FoundryKernel({
       designer: persistentDesigner,
-      evaluator: persistentEvaluator,
+      evaluator: options.evaluator ?? persistentEvaluator,
       compiler: new ContentAddressedCandidateCompiler(root),
       objects: new FileFoundryObjectStore(root),
       events: options.events ?? new LedgerFoundryEventStore(root),
       versions,
+      operationResults: new LedgerFoundryOperationResultJournal(root),
       activationRuntime: new InMemoryActivationRuntime(versions),
       ownerGate,
       clock: { now: () => options.now ?? '2026-07-16T00:00:00.000Z' },
+      activityMaxAttempts: options.activityMaxAttempts,
       propagateTransientActivityFailures: options.propagateTransientActivityFailures,
     });
   };
+}
 
+test('file-backed Foundry truth survives restart and rebuilds its SQLite projection', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-persistent-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const buildKernel = persistentKernelFixture(root);
   const firstKernel = buildKernel();
   const completed = await activateCreateRun(
     firstKernel,
@@ -630,3 +641,122 @@ test('the four Foundry protocol fixtures from the exact OMA checkout pass OPL au
   });
   assert.equal(conformance.version, 'opl-foundry-protocol-fixture-conformance.v1');
 });
+
+test('a passing evaluation returned after owner cancellation cannot publish a qualified version', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-cancel-evaluating-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const buildKernel = persistentKernelFixture(root);
+  let enterEvaluation!: () => void;
+  let releaseEvaluation!: () => void;
+  const entered = new Promise<void>((resolve) => { enterEvaluation = resolve; });
+  const released = new Promise<void>((resolve) => { releaseEvaluation = resolve; });
+  const evaluating = buildKernel({
+    evaluator: {
+      evaluator_id: 'evaluator:fixture',
+      async evaluate(input) {
+        enterEvaluation();
+        await released;
+        return evidence({
+          runId: input.run_id,
+          designRequest: input.request,
+          agentBlueprint: input.blueprint,
+          candidate: input.candidate,
+          baselineDigest: null,
+          qualified: true,
+        });
+      },
+      async canary() { throw new Error('Cancelled run reached canary.'); },
+    },
+  });
+  const runId = 'run:late-qualification-after-cancel';
+  await evaluating.startRun({ request: request(), run_id: runId });
+  const advancing = evaluating.advanceUntilPause(runId);
+  await entered;
+  try {
+    const lifecycle = buildKernel();
+    const inspection = await lifecycle.inspectRun(runId);
+    assert.equal(inspection.run.state, 'evaluating');
+    const cancelled = await lifecycle.cancelRun({
+      run_id: runId,
+      expected_revision: inspection.run.revision,
+      authority_receipt_ref: authorizeRunMutation({ inspection, action: 'cancel', decision: 'cancel' }),
+    });
+    assert.equal(cancelled.run.state, 'cancelled');
+  } finally {
+    releaseEvaluation();
+  }
+  await advancing;
+  const restarted = buildKernel();
+  const terminal = await restarted.inspectRun(runId);
+  assert.equal(terminal.run.state, 'cancelled');
+  assert.equal(terminal.terminal_readback.qualified_agent_version, null);
+  assert.equal(terminal.activation.active_version_digest, null);
+  const events = await new LedgerFoundryEventStore(root).read(runId);
+  assert.equal(events.some((event) => event.event_type === 'candidate_qualified'), false);
+  assert.deepEqual(await restarted.listVersions(terminal.run.target_agent_id, terminal.run.target_domain_id), []);
+});
+
+for (const crashPoint of ['before registration', 'after registration'] as const) {
+  test(`qualification survives restart ${crashPoint} and a later owner cancellation`, async (t) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-qualification-recovery-'));
+    t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    const buildKernel = persistentKernelFixture(root);
+    const versions = new LedgerVersionRegistry(root);
+    const persist = versions.register.bind(versions);
+    t.mock.method(versions, 'register', async (input: Parameters<VersionRegistry['register']>[0]) => {
+      if (crashPoint === 'after registration') await persist(input);
+      throw new FoundryTransientActivityError('worker exited during registration');
+    });
+    const evaluator = new FixtureEvaluator();
+    const evaluate = t.mock.method(evaluator, 'evaluate', async (input: Parameters<EvaluationExecutor['evaluate']>[0]) => (
+      evidence({
+        runId: input.run_id,
+        designRequest: input.request,
+        agentBlueprint: input.blueprint,
+        candidate: input.candidate,
+        baselineDigest: null,
+        qualified: true,
+      })
+    ));
+    const runId = `run:qualification-restart:${crashPoint.split(' ')[0]}`;
+    const interrupted = buildKernel({
+      versions, evaluator, activityMaxAttempts: 1, propagateTransientActivityFailures: true,
+    });
+    await interrupted.startRun({ request: request(), run_id: runId });
+    await assert.rejects(interrupted.advanceUntilPause(runId), /worker exited during registration/);
+
+    const events = new LedgerFoundryEventStore(root, { readOnly: true });
+    const readOnly = createFoundryLifecycleKernel(root, true);
+    const history = await events.read(runId);
+    const pending = await readOnly.inspectRun(runId);
+    assert.equal(pending.run.state, 'qualifying');
+    assert.equal(pending.terminal_readback.qualified_agent_version, null);
+    const listed = await readOnly.listVersions(pending.run.target_agent_id, pending.run.target_domain_id);
+    assert.equal(listed.length, crashPoint === 'before registration' ? 0 : 1);
+
+    const restarted = buildKernel({ evaluator });
+    await assert.rejects(restarted.cancelRun({
+      run_id: runId,
+      expected_revision: pending.run.revision,
+      authority_receipt_ref: authorizeRunMutation({ inspection: pending, action: 'cancel', decision: 'cancel' }),
+    }));
+    assert.deepEqual(await events.read(runId), history);
+    const qualified = await restarted.advanceUntilPause(runId);
+    assert.equal(qualified.run.state, 'awaiting_owner_canary');
+    const version = qualified.terminal_readback.qualified_agent_version;
+    assert.ok(version);
+    if (crashPoint === 'after registration') assert.deepEqual(listed, [version]);
+    assert.equal((await events.read(runId)).filter((event) => event.event_type === 'candidate_qualified').length, 1);
+    assert.equal(evaluate.mock.callCount(), 1);
+
+    const cancelled = await restarted.cancelRun({
+      run_id: runId,
+      expected_revision: qualified.run.revision,
+      authority_receipt_ref: authorizeRunMutation({ inspection: qualified, action: 'cancel', decision: 'cancel' }),
+    });
+    assert.equal(cancelled.run.state, 'cancelled');
+    assert.deepEqual((await readOnly.inspectRun(runId)).terminal_readback.qualified_agent_version, version);
+    assert.deepEqual(await readOnly.listVersions(pending.run.target_agent_id, pending.run.target_domain_id), [version]);
+    assert.equal(cancelled.activation.active_version_digest, null);
+  });
+}

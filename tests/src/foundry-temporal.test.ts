@@ -342,17 +342,17 @@ function passingKernel() {
   return { kernel: new FoundryKernel(dependencies), events: dependencies.events };
 }
 
-class FailOnceBeforeQualificationAppendStore implements FoundryEventStore {
+class UnavailableQualificationAppendStore implements FoundryEventStore {
   readonly #delegate = new InMemoryFoundryEventStore();
-  #failed = false;
+  failedAppends = 0;
 
   create(input: Parameters<FoundryEventStore['create']>[0]) {
     return this.#delegate.create(input);
   }
 
   append(input: Parameters<FoundryEventStore['append']>[0]) {
-    if (!this.#failed && input.event.event_type === 'candidate_qualified') {
-      this.#failed = true;
+    if (input.event.event_type === 'candidate_qualified' && this.failedAppends < 3) {
+      this.failedAppends += 1;
       throw new FoundryTransientActivityError('qualification append completion is unknown');
     }
     return this.#delegate.append(input);
@@ -1348,10 +1348,10 @@ test('Temporal retries a transient Foundry activity three times without Kernel r
   }
 });
 
-test('Temporal replays a journaled evaluation to repair qualification append without an orphan version', async () => {
+test('Temporal recovers qualification after all registration Activity attempts fail', async () => {
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-foundry-temporal-evaluation-unknown-${Date.now()}`;
-  const events = new FailOnceBeforeQualificationAppendStore();
+  const events = new UnavailableQualificationAppendStore();
   const versions = new InMemoryVersionRegistry();
   let evaluationCalls = 0;
   const operationKeys: string[] = [];
@@ -1380,14 +1380,18 @@ test('Temporal replays a journaled evaluation to repair qualification append wit
   const request = designRequest('temporal-evaluation-unknown-agent');
   request.delivery_policy = { ...request.delivery_policy, activation_mode: 'qualify_only' };
   try {
-    const { result, temporalHistory } = await worker.runUntil(async () => {
+    const { result, firstHistory, recoveryHistory } = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
         args: [workflowInput('run-temporal-evaluation-unknown', request)],
         taskQueue,
         workflowId: `wf-foundry-evaluation-unknown-${Date.now()}`,
       });
       const result = await handle.result() as FoundryRunWorkflowState;
-      return { result, temporalHistory: await handle.fetchHistory() };
+      const firstHistory = await testEnv.client.workflow.getHandle(handle.workflowId, handle.firstExecutionRunId).fetchHistory();
+      const successorId = firstHistory.events?.at(-1)?.workflowExecutionContinuedAsNewEventAttributes?.newExecutionRunId;
+      assert.ok(successorId, 'Registration recovery must continue the same Workflow after its Activity retries.');
+      const recoveryHistory = await testEnv.client.workflow.getHandle(handle.workflowId, successorId).fetchHistory();
+      return { result, firstHistory, recoveryHistory };
     });
 
     const foundryHistory = await events.read('run-temporal-evaluation-unknown');
@@ -1399,10 +1403,16 @@ test('Temporal replays a journaled evaluation to repair qualification append wit
     assert.equal(evaluationCalls, 1);
     assert.equal(operationKeys.length, 1);
     assert.match(operationKeys[0]!, /^opl-foundry-evaluation\.v1\/run-temporal-evaluation-unknown\/0\/evaluate\/sha256:/);
+    assert.equal(events.failedAppends, 3);
     assert.equal((await versions.list('temporal-evaluation-unknown-agent', 'temporal_fixture')).length, 1);
     assert.equal(foundryHistory.filter((event) => event.event_type === 'candidate_qualified').length, 1);
     assert.equal(foundryHistory.at(-1)?.event_type, 'qualification_completed');
-    const evaluateIds = advanceActivityIds(temporalHistory).filter((id) => id.includes('/evaluate/'));
+    const firstIds = advanceActivityIds(firstHistory);
+    const recoveryIds = advanceActivityIds(recoveryHistory);
+    const firstRegistration = firstIds.find((id) => id.includes('/register_version/'));
+    assert.ok(firstRegistration);
+    assert.equal(recoveryIds[0], firstRegistration);
+    const evaluateIds = [...firstIds, ...recoveryIds].filter((id) => id.includes('/evaluate/'));
     assert.equal(evaluateIds.length, 1);
     assert.match(evaluateIds[0]!, /^opl-foundry-step\.v1\/run-temporal-evaluation-unknown\/4\/evaluate\/sha256:/);
   } finally {
@@ -1592,6 +1602,76 @@ test('Temporal cancel bypasses a long design Activity and closes one authoritati
     });
   } finally {
     releaseDesign();
+    await testEnv.teardown();
+  }
+});
+
+test('Temporal cancellation wins over a late passing evaluation without publishing a version', async () => {
+  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const taskQueue = `opl-foundry-late-evaluation-${Date.now()}`;
+  const runId = 'run-temporal-late-evaluation';
+  let enter!: () => void;
+  let resume!: () => void;
+  let settle!: () => void;
+  const entered = new Promise<void>((resolve) => { enter = resolve; });
+  const released = new Promise<void>((resolve) => { resume = resolve; });
+  const settled = new Promise<void>((resolve) => { settle = resolve; });
+  const dependencies = passingKernelDependencies();
+  const kernel = new FoundryKernel({
+    ...dependencies,
+    evaluator: {
+      ...dependencies.evaluator,
+      async evaluate(input) {
+        enter();
+        await released;
+        return dependencies.evaluator.evaluate(input);
+      },
+    },
+  });
+  const activities = buildFoundryTemporalActivities(() => kernel);
+  const worker = await Worker.create({
+    connection: testEnv.nativeConnection,
+    namespace: testEnv.namespace,
+    taskQueue,
+    workflowsPath,
+    activities: {
+      ...registeredActivities,
+      ...activities,
+      async foundryAdvanceRunActivity(input) {
+        try {
+          return await activities.foundryAdvanceRunActivity(input);
+        } finally {
+          if (input.phase === 'evaluate') settle();
+        }
+      },
+    } satisfies typeof registeredActivities,
+  });
+  const request = designRequest('late-evaluation-agent');
+  const options = { addressOverride: testEnv.address, rpcTimeoutMs: 10_000 };
+  try {
+    await worker.runUntil(async () => {
+      try {
+        const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
+          args: [workflowInput(runId, request)], taskQueue, workflowId: foundryTemporalWorkflowId(runId),
+        });
+        await within(entered, 10_000, 'Evaluation Activity did not start.');
+        const { inspection } = await queryTemporalFoundryRunWorkflow(runId, options);
+        assert.equal(inspection?.run.state, 'evaluating');
+        const cancelled = await cancelTemporalFoundryRun({
+          run_id: runId,
+          expected_revision: inspection!.run.revision,
+          authority_receipt_ref: authorizeTemporalMutation({ inspection: inspection!, action: 'cancel', decision: 'cancel' }),
+        }, options);
+        assert.equal(cancelled.inspection?.run.state, 'cancelled');
+        resume();
+        await within(settled, 10_000, 'Late evaluation Activity did not settle.');
+        assert.equal((await handle.result() as FoundryRunWorkflowState).inspection?.run.state, 'cancelled');
+        assert.deepEqual(await kernel.listVersions(request.target_agent_id, request.target_domain_id), []);
+      } finally {
+        resume();
+      }
+    });
+  } finally {
     await testEnv.teardown();
   }
 });

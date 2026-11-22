@@ -125,6 +125,13 @@ export type OwnerDecision = {
   authority_receipt_ref: string;
 };
 
+function assertCancellableRun(state: FoundryRunState) {
+  if (FOUNDRY_TERMINAL_STATES.has(state)) fail('A terminal FoundryRun cannot be cancelled.', { state });
+  if (state === 'qualifying') {
+    fail('Qualification has already claimed this revision. Retry cancellation after registration.', { state });
+  }
+}
+
 function systemClock(): FoundryClock {
   return { now: () => new Date().toISOString() };
 }
@@ -135,6 +142,10 @@ function targetKey(request: Pick<DesignRequest, 'target_agent_id' | 'target_doma
 
 function isContractFailure(error: unknown) {
   return error instanceof FrameworkContractError;
+}
+
+function isDefinitiveContractFailure(error: unknown) {
+  return isContractFailure(error) && error.details?.failure_code !== 'foundry_storage_mutation_in_progress';
 }
 
 export class FoundryTransientActivityError extends Error {
@@ -375,9 +386,11 @@ export class FoundryKernel {
       await this.#advanceOne(inspection, options);
     } catch (error) {
       if (error instanceof FoundryOperationResultUnavailableError) throw error;
-      if (this.#propagateTransientActivityFailures && isTransientActivityFailure(error)) {
-        throw error;
+      if (inspection.run.state === 'qualifying' && !isDefinitiveContractFailure(error)) {
+        if (isTransientActivityFailure(error)) throw error;
+        throw new FoundryTransientActivityError('Qualification registration could not be confirmed.', { cause: error });
       }
+      if (this.#propagateTransientActivityFailures && isTransientActivityFailure(error)) throw error;
       await this.#terminateAfterFailure(inspection, error);
     }
     return this.inspectRun(runId);
@@ -463,9 +476,7 @@ export class FoundryKernel {
         actual_revision: inspection.run.revision,
       });
     }
-    if (FOUNDRY_TERMINAL_STATES.has(inspection.run.state)) {
-      fail('A terminal FoundryRun cannot be cancelled.', { state: inspection.run.state });
-    }
+    assertCancellableRun(inspection.run.state);
     const verification = await this.#verifyOwnerAuthority({
       authority_receipt_ref: authorityRef,
       action: 'cancel',
@@ -506,9 +517,7 @@ export class FoundryKernel {
         actual_revision: inspection.run.revision,
       });
     }
-    if (FOUNDRY_TERMINAL_STATES.has(inspection.run.state)) {
-      fail('A terminal FoundryRun cannot be cancelled.', { state: inspection.run.state });
-    }
+    assertCancellableRun(inspection.run.state);
     await this.#verifyOwnerAuthority({
       authority_receipt_ref: authorityRef,
       action: 'cancel',
@@ -528,7 +537,8 @@ export class FoundryKernel {
     failure_message: string;
   }): Promise<FoundryRunInspection> {
     const inspection = await this.inspectRun(input.run_id);
-    if (FOUNDRY_TERMINAL_STATES.has(inspection.run.state)) return inspection;
+    // An external timeout cannot determine whether the claimed version was published.
+    if (FOUNDRY_TERMINAL_STATES.has(inspection.run.state) || inspection.run.state === 'qualifying') return inspection;
     await this.#append(inspection, {
       eventType: 'foundry_run_failed',
       toState: 'failed',
@@ -657,6 +667,8 @@ export class FoundryKernel {
         });
       case 'diagnosing':
         return this.#diagnose(inspection);
+      case 'qualifying':
+        return this.#registerQualification(inspection);
       case 'qualified':
         return this.#afterQualification(inspection);
       case 'canary':
@@ -818,36 +830,15 @@ export class FoundryKernel {
       });
     }
     if (!canary && evidence.qualified) {
-      const registered = await this.#activity('register_version', async () => {
-        try {
-          return await this.#versions.register({
-            target_agent_id: inspection.request.target_agent_id,
-            target_domain_id: inspection.request.target_domain_id,
-            blueprint_digest: inspection.run.blueprint_digest!,
-            candidate,
-            evidence_digest: evidenceDigest,
-            risk_tier: inspection.run.risk_tier!,
-            qualified_at: result.completed_at,
-          });
-        } catch (error) {
-          if (isContractFailure(error) || isTransientActivityFailure(error)) throw error;
-          throw new FoundryTransientActivityError(
-            'Version registration completion is unknown after the durable evaluation result commit.',
-            { cause: error },
-          );
-        }
-      });
-      this.#assertRegisteredCandidate(inspection, candidate, registered);
       return this.#appendJournaledResult(inspection, result, {
-        eventType: 'candidate_qualified',
-        toState: 'qualified',
+        eventType: 'qualification_registration_started',
+        toState: 'qualifying',
         phase: 'evaluate',
         inputDigest: evidenceDigest,
         payload: {
           evidence_digest: evidenceDigest,
           frozen_test_plan_digest: evidence.frozen_test_plan_digest,
           gate_score: evidence.gate_score,
-          version_digest: registered.version.version_digest,
         },
       });
     }
@@ -874,6 +865,50 @@ export class FoundryKernel {
         } : {}),
       },
     });
+  }
+
+  async #registerQualification(inspection: FoundryRunInspection) {
+    const candidate = await this.#candidate(inspection);
+    this.#assertCandidate(inspection, candidate);
+    const evidenceDigest = requiredDigest(inspection.run.evidence_digest, 'qualification.evidence_digest');
+    const evidence = validateEvidenceBundle(await this.#object<EvidenceBundle>(evidenceDigest, 'qualified EvidenceBundle'));
+    if (!evidence.qualified || foundryContentDigest(evidence) !== evidenceDigest) {
+      fail('Qualification registration requires the exact passing evidence admitted by the Run.');
+    }
+    const registered = await this.#activity('register_version', async () => {
+      try {
+        return await this.#versions.register({
+          target_agent_id: inspection.request.target_agent_id,
+          target_domain_id: inspection.request.target_domain_id,
+          blueprint_digest: inspection.run.blueprint_digest!,
+          candidate,
+          evidence_digest: evidenceDigest,
+          risk_tier: inspection.run.risk_tier!,
+          qualified_at: evidence.provenance.evaluated_at,
+        });
+      } catch (error) {
+        if (isTransientActivityFailure(error) || isDefinitiveContractFailure(error)) throw error;
+        throw new FoundryTransientActivityError('Version registration completion is unknown.', { cause: error });
+      }
+    }, true);
+    this.#assertRegisteredCandidate(inspection, candidate, registered);
+    try {
+      return await this.#append(inspection, {
+        eventType: 'candidate_qualified',
+        toState: 'qualified',
+        phase: 'register_version',
+        inputDigest: evidenceDigest,
+        payload: {
+          evidence_digest: evidenceDigest,
+          frozen_test_plan_digest: evidence.frozen_test_plan_digest,
+          gate_score: evidence.gate_score,
+          version_digest: registered.version.version_digest,
+        },
+      });
+    } catch (error) {
+      // The registry has committed. Preserve this claim until its exact event can be read back.
+      throw new FoundryTransientActivityError('Qualification event append completion is unknown.', { cause: error });
+    }
   }
 
   async #diagnose(inspection: FoundryRunInspection) {
@@ -1043,7 +1078,7 @@ export class FoundryKernel {
     try {
       return await this.#append(inspection, input);
     } catch (error) {
-      if (isContractFailure(error) || isTransientActivityFailure(error)) throw error;
+      if (isTransientActivityFailure(error) || isDefinitiveContractFailure(error)) throw error;
       throw new FoundryTransientActivityError(
         `Foundry event append completion is unknown after durable operation ${result.operation_key}.`,
         { cause: error },
@@ -1081,7 +1116,7 @@ export class FoundryKernel {
 
   async #terminateAfterFailure(inspection: FoundryRunInspection, error: unknown) {
     const latest = await this.inspectRun(inspection.run.run_id);
-    if (FOUNDRY_TERMINAL_STATES.has(latest.run.state)) return;
+    if (latest.run.revision !== inspection.run.revision || FOUNDRY_TERMINAL_STATES.has(latest.run.state)) return;
     const quarantined = isContractFailure(error);
     await this.#append(latest, {
       eventType: quarantined ? 'foundry_output_quarantined' : 'foundry_run_failed',
@@ -1215,7 +1250,11 @@ export class FoundryKernel {
     };
   }
 
-  async #activity<T>(operation: string, run: () => Promise<T>): Promise<T> {
+  async #activity<T>(
+    operation: string,
+    run: () => Promise<T>,
+    preserveTransient = this.#propagateTransientActivityFailures,
+  ): Promise<T> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= this.#activityMaxAttempts; attempt += 1) {
       try {
@@ -1225,7 +1264,7 @@ export class FoundryKernel {
         lastError = error;
       }
     }
-    if (this.#propagateTransientActivityFailures && isTransientActivityFailure(lastError)) {
+    if (preserveTransient && isTransientActivityFailure(lastError)) {
       throw lastError;
     }
     const error = new Error(`Foundry ${operation} exhausted the transient infrastructure retry budget.`);
