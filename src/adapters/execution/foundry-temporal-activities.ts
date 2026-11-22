@@ -64,7 +64,9 @@ const ADVANCE_SUCCESSORS: Record<FoundryAdvanceRunActivityInput['phase'], Readon
   start_design: new Set(['designing', 'failed', 'quarantined']),
   design: new Set(['materializing', 'failed', 'quarantined']),
   materialize: new Set(['evaluating', 'failed', 'quarantined']),
-  evaluate: new Set(['qualified', 'evidence_ready', 'completed_unqualified', 'failed', 'quarantined']),
+  // Earlier histories recorded candidate_qualified directly after evaluate.
+  evaluate: new Set(['qualifying', 'qualified', 'evidence_ready', 'completed_unqualified', 'failed', 'quarantined']),
+  register_version: new Set(['qualified', 'failed', 'quarantined']),
   start_diagnosis: new Set(['diagnosing', 'failed', 'quarantined']),
   diagnose: new Set(['materializing', 'completed_unqualified', 'failed', 'quarantined']),
   qualification_route: new Set(['canary', 'awaiting_owner_canary', 'completed_qualified', 'failed', 'quarantined']),
@@ -77,6 +79,7 @@ const ADVANCE_STATE_BY_PHASE: Record<FoundryAdvanceRunActivityInput['phase'], Fo
   design: 'designing',
   materialize: 'materializing',
   evaluate: 'evaluating',
+  register_version: 'qualifying',
   start_diagnosis: 'evidence_ready',
   diagnose: 'diagnosing',
   qualification_route: 'qualified',
@@ -184,9 +187,9 @@ export function buildFoundryTemporalActivities(
     },
     async foundryAdvanceRunActivity(input: FoundryAdvanceRunActivityInput) {
       const info = validateOperationIdentity(input);
-      const kernel = await createKernel({
-        provider_operation_cursor: input.provider_operation_cursor ?? null,
-      });
+      const kernel = input.phase === 'register_version'
+        ? await createLifecycleKernel()
+        : await createKernel({ provider_operation_cursor: input.provider_operation_cursor ?? null });
       const before = await kernel.inspectRun(input.run_id);
       if (assertCurrentOperation(input, before) === 'recovered') return before;
       try {
