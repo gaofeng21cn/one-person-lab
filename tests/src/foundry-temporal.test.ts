@@ -1380,14 +1380,18 @@ test('Temporal recovers qualification after all registration Activity attempts f
   const request = designRequest('temporal-evaluation-unknown-agent');
   request.delivery_policy = { ...request.delivery_policy, activation_mode: 'qualify_only' };
   try {
-    const { result, temporalHistory } = await worker.runUntil(async () => {
+    const { result, firstHistory, recoveryHistory } = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
         args: [workflowInput('run-temporal-evaluation-unknown', request)],
         taskQueue,
         workflowId: `wf-foundry-evaluation-unknown-${Date.now()}`,
       });
       const result = await handle.result() as FoundryRunWorkflowState;
-      return { result, temporalHistory: await handle.fetchHistory() };
+      const firstHistory = await testEnv.client.workflow.getHandle(handle.workflowId, handle.firstExecutionRunId).fetchHistory();
+      const successorId = firstHistory.events?.at(-1)?.workflowExecutionContinuedAsNewEventAttributes?.newExecutionRunId;
+      assert.ok(successorId, 'Registration recovery must continue the same Workflow after its Activity retries.');
+      const recoveryHistory = await testEnv.client.workflow.getHandle(handle.workflowId, successorId).fetchHistory();
+      return { result, firstHistory, recoveryHistory };
     });
 
     const foundryHistory = await events.read('run-temporal-evaluation-unknown');
@@ -1403,7 +1407,12 @@ test('Temporal recovers qualification after all registration Activity attempts f
     assert.equal((await versions.list('temporal-evaluation-unknown-agent', 'temporal_fixture')).length, 1);
     assert.equal(foundryHistory.filter((event) => event.event_type === 'candidate_qualified').length, 1);
     assert.equal(foundryHistory.at(-1)?.event_type, 'qualification_completed');
-    const evaluateIds = advanceActivityIds(temporalHistory).filter((id) => id.includes('/evaluate/'));
+    const firstIds = advanceActivityIds(firstHistory);
+    const recoveryIds = advanceActivityIds(recoveryHistory);
+    const firstRegistration = firstIds.find((id) => id.includes('/register_version/'));
+    assert.ok(firstRegistration);
+    assert.equal(recoveryIds[0], firstRegistration);
+    const evaluateIds = [...firstIds, ...recoveryIds].filter((id) => id.includes('/evaluate/'));
     assert.equal(evaluateIds.length, 1);
     assert.match(evaluateIds[0]!, /^opl-foundry-step\.v1\/run-temporal-evaluation-unknown\/4\/evaluate\/sha256:/);
   } finally {
