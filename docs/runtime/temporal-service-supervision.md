@@ -86,6 +86,8 @@ plist/config 写入或 bootstrap 失败会恢复原始字节。新 job loaded �
 
 SDK、CLI 和 Server 的受管目标版本统一由 `contracts/opl-framework/temporal-stable-cohort.json` 指定。SDK 1.25 起会拒绝其他 SDK 生成的 workflow bundle；升级时必须重新生成 bundle，回退时必须恢复匹配的 SDK 和 bundle，并重放相同的历史集合。bundle 文件名按实际字节生成，因此只更新 SDK 也不会覆盖上一版本的 bundle。历史 JSON fixture 的旧空 message 编码仅在测试读取入口修正；原始 fixture 与其哈希保持不变，生产 replay 继续使用官方解析器。
 
+Framework Stage 和 Workbench Worker 显式保留 SDK 1.25 的固定轮询上限。SDK 1.26 的默认轮询和服务端自动伸缩策略由上游变更，现有 Worker 的轮询配置沿用此前行为。
+
 本地 ARM 测试使用 cohort 固定的 CLI release，x64 时间跳跃测试使用 SDK 的专用测试服务。两者都只证明隔离测试运行；更新目标合同不会直接替换已安装的 CLI、升级持久 Server 数据库或重启生产 Worker。
 
 ## 工作区文件权限

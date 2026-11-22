@@ -88,6 +88,9 @@ export function buildStageReviewInputSnapshotContext(input: {
       review_input_snapshot_binding: input.resolution.review_input_snapshot_binding,
       opl_reviewer_input_snapshot_manifest_ref: input.resolution.manifest_ref,
       opl_reviewer_input_snapshot_manifest: input.resolution.manifest,
+      ...(input.resolution.authoring_normalizations
+        ? { review_input_snapshot_authoring_normalizations: input.resolution.authoring_normalizations }
+        : {}),
       review_input_snapshot_read_policy: REVIEW_INPUT_SNAPSHOT_READ_POLICY,
       review_input_snapshot_quality_debt_receipt_ref: null,
       review_input_snapshot_quality_debt_receipt: null,

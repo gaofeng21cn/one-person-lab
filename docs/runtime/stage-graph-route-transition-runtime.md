@@ -51,6 +51,10 @@ AgentBlueprint 的 content-ref 字节补全保持同一归一化传输形态：`
 
 若收尾包把 `stage_quality_cycle` 对象写在顶层，且 `route_impact` 中该字段缺失或为 `null`，Framework 会将对象移到约定位置并记录 `stage_quality_cycle_folded_from_closeout_top_level`。两处内容一致时保留约定字段。内容冲突时拒绝收尾包。归位后的对象仍须通过 Attempt 角色、审查结果和工件身份校验。
 
+收尾包可用 `scope_digest` 引用持久化的工作项范围。Codex 提示使用该摘要，省去重复抄写范围快照。收到含内联快照的旧格式时，Framework 可修正 `opl_execution_scope_snapshot.v2` 和 `opl_work_item_root_identity.v1` 两种已知误拼，通过快照解析重新计算摘要，并在收尾记录保留归一化标记。运行入口仍按持久化的 Attempt、StageRun 和工作项范围验证收尾身份。
+
+已有 `route_impact.stage_quality_cycle` 对象时，Framework 可把上一层完整的 `artifact_refs` 与 `artifact_hashes` 移入该对象。内外层一致时保留规范位置，冲突时拒绝，成功归位时记录 `stage_quality_artifact_identity_folded_from_route_impact_level`。归位后继续验证收尾登记、产物字节与身份回执。
+
 Finding、repair、closure 与跨 Stage route 的证据引用接受非空 locator 字符串或带非空 `ref` 的对象，归一化结果仍是字符串列表；引用对象中的其他元数据不能替代 artifact identity receipt。证据列表及其成员不能为空白。`changed_artifact_refs` 可为空，使未修复或被阻断的 repair 能如实声明没有产物变化。
 
 恢复身份推进须先精确观察原 Temporal Run 已终止，再通过原注册表 CAS 留存先前回执。尚未开始审查的同一已接受 producer 可追加快照成员，旧成员和 artifact identity 必须保留；不能换 lane、workspace、binding 或替换已审证据。运行中的不同恢复身份仍拒绝，新的 Temporal Run 不代表新的业务 StageRun，也不改写原终态。
@@ -77,6 +81,8 @@ CLI 默认 invocation 是稳定幂等键；`--new-stage-run` 显式创建新 Run
 这些硬停保护执行安全与身份一致性，不评价内容质量，也不选择语义路线。
 
 reviewer / re_reviewer 的 `stage_quality_cycle.artifact_refs` 与 `artifact_hashes` 标识被审的 producer / repairer 产物；可同时省略以继承输入身份，或按原顺序原样回传。审查报告与 immutable snapshot 的读取地址不能替换该身份。身份不符时，新 controller 明确返回 `blocked`、`hard_stop_class=stale_or_mismatched_stage_identity`、`blocked_reason=reviewed_artifact_identity_mismatch` 和原 `source_attempt_ref`，不伪造 review receipt，也不将其降为缺少 route 的质量债。Attempt projection 失败仍单独留存，不能覆盖该身份拒绝原因。身份一致且没有 required findings 的 `quality_debt` 保留 reviewer 的终局 route 并物化后续 StageRun。
+
+物化 reviewer snapshot 时，Framework 可从同一 locator 唯一可核验的 producer 产物或冻结 StageRun 输入恢复模型误写的 SHA-256 和字节数，随后按该身份读回不可变快照。相对成员首先沿原请求根解析。只有未能找到的相对成员精确命中冻结输入的地址、摘要和大小时，才从 StageRun 绑定的 workspace 解析该成员。根字段使用本地 `file:///` 时，解码后必须与 producer Attempt 已持久化的工作根相同。原始请求保存在 producer closeout，成功归一化由 reviewer context manifest 记录。
 
 SHA-256 的 64 位十六进制值与 `sha256:` 前缀形式按同一字节摘要比较，大小写归一；
 原输入身份及 receipt 继续保留。文件引用及顺序、真实摘要差异和其他算法仍严格区分。

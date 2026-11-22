@@ -52,6 +52,8 @@ import {
 import type { FoundryRunEvent, FoundryRunSnapshot, FoundryRunState } from './state-machine.ts';
 import {
   assertBlueprintSatisfiesDesignRequest,
+  assertEvaluationGateMetricsComputable,
+  isQualificationGradeEvaluationRuntime,
 } from './evaluation-runtime.ts';
 import {
   foundryEvaluationOperationIdentity,
@@ -695,6 +697,7 @@ export class FoundryKernel {
       fail('Initial AgentBlueprint is stale or has the wrong generation.');
     }
     assertBlueprintSatisfiesDesignRequest(inspection.request, blueprint);
+    assertEvaluationGateMetricsComputable(blueprint.eval_spec);
     const stored = await this.#objects.put(blueprint);
     const previous = await this.#baselineBlueprint(inspection.request);
     const risk = recomputeBlueprintRisk(previous, blueprint);
@@ -782,6 +785,9 @@ export class FoundryKernel {
       this.#assertEvidence(inspection, blueprint, evidence, candidate, baseline);
     } else {
       if (options.replay_only) throw new FoundryOperationResultUnavailableError(operation.operation_key);
+      const candidatePack = isQualificationGradeEvaluationRuntime(this.#evaluator)
+        ? this.#compiler.verifyMaterializedCandidate?.(candidate)
+        : undefined;
       evidence = validateEvidenceBundle(canary
         ? await this.#activity('canary', () => this.#evaluator.canary({
             operation_identity: operation,
@@ -790,6 +796,7 @@ export class FoundryKernel {
             blueprint,
             blueprint_digest: inspection.run.blueprint_digest!,
             candidate,
+            ...(candidatePack ? { candidate_pack: candidatePack } : {}),
             version: qualifiedVersion!,
             baseline_version: baseline,
           }))
@@ -800,6 +807,7 @@ export class FoundryKernel {
             blueprint,
             blueprint_digest: inspection.run.blueprint_digest!,
             candidate,
+            ...(candidatePack ? { candidate_pack: candidatePack } : {}),
             baseline_version: baseline,
           })));
       this.#assertEvidence(inspection, blueprint, evidence, candidate, baseline);
@@ -938,6 +946,7 @@ export class FoundryKernel {
       fail('EvolutionProposal is stale.');
     }
     assertBlueprintSatisfiesDesignRequest(inspection.request, proposal.next_blueprint);
+    assertEvaluationGateMetricsComputable(proposal.next_blueprint.eval_spec);
     assertEvaluationPolicyNonWeakening(blueprint, proposal.next_blueprint);
     const previousPublicCases = new Set(blueprint.eval_spec.public_cases.map((entry) => entry.case_id));
     const addedPublicCases = proposal.next_blueprint.eval_spec.public_cases.filter((entry) =>

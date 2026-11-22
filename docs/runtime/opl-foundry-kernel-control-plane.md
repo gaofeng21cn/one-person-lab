@@ -66,6 +66,15 @@ Rollback 是独立 activation transaction，不倒放历史 Run，也不修改�
 - 删除既有测试、降低保护测试数量或放宽 gate 会被 quarantine。
 - canary 回归保留原 active pointer，并记录 `canary_regression_rolled_back` 事件。
 
+新建和修订的 Blueprint 在物化前检查 `EvalSpec.gates[].metric`。通用评估运行时
+从冻结用例和保护测试聚合计算 `score` 与 `protected_pass_rate`。业务专属判定应写入
+可执行用例，其结果参与现有计分和必须通过的用例检查。遇到无法计算的指标时，Run
+记录具体 gate、指标及支持值，设计方可据此修订 Blueprint。
+
+Temporal 为执行完整测试计划的 `evaluate` 与 `canary` 提供单次执行 240 分钟、
+含排队和重试共 270 分钟的上限。其余生命周期推进使用单次执行 30 分钟、
+含排队和重试共 35 分钟的上限。评估较长时，Owner 仍可按当前 Run revision 取消。
+
 ## Provider Boundary
 
 OMA provider manifest 只声明 `design` 和 `diagnose` 两个内部 operation。Foundry Kernel 通过 OPL StageRun 运行它们，并只接受一个确切 terminal protocol artifact：`AgentBlueprint` 或 `EvolutionProposal`。
@@ -157,6 +166,10 @@ function evaluationActivities(
 Temporal workflow 输入或 OMA 协议。Host 负责 worker 关闭及所注入端口持有资源的释放。
 
 `EvaluationCaseExecutor` 按冻结计划执行确切 candidate，必要时执行 baseline。
+使用 Foundry 文件存储时，Framework 在评估及灰度运行前核对候选的内容地址、索引、
+逐文件摘要、资源锁和候选记录中的清单摘要。可信 case executor 在候选
+`subject.candidate_pack` 中获得已验证的目录、清单摘要和资源锁摘要。该目录用于读取候选
+内容，执行适配仍须绑定实际启动所用的文件和依赖，并保留执行收据。
 目标领域 owner 提供真实 Agent 执行适配、保护用例内容及专业验收规则，Framework Host
 负责准入和组合。公开用例返回 case identity、status、score 和 evidence refs；保护执行
 只返回聚合结果、直接 receipt ref 和聚合结果的精确 digest。资源观察来自真实执行。

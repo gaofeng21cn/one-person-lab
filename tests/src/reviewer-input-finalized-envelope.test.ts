@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
-import { completeReviewerSnapshotTransportEnvelope } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
+import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test, { type TestContext } from 'node:test';
+import { pathToFileURL } from 'node:url';
+import {
+  completeReviewerSnapshotTransportEnvelope,
+  resolveReviewerInputSnapshotMaterialization,
+} from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
+import { buildStageReviewInputSnapshotContext } from '../../src/adapters/execution/family-runtime-stage-quality-context-manifest.ts';
 
 function fixture() {
   const source = { kind: 'artifact', ref: 'file:///workspace/source.json', sha256: `sha256:${'1'.repeat(64)}`, size_bytes: 12 };
@@ -126,4 +135,150 @@ test('an unknown extra key still fails closed', () => {
     () => completeReviewerSnapshotTransportEnvelope(withExtra, authority, artifacts),
     /must use the exact declared fields/,
   );
+});
+
+
+function localSnapshotFixture(t: TestContext) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-finalized-reviewer-snapshot-'));
+  const previousState = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  t.after(() => {
+    if (previousState === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousState;
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  const workspace = path.join(root, 'workspace');
+  const producer = path.join(workspace, 'work-items', '审阅 本轮');
+  const sibling = path.join(workspace, 'work-items', 'sibling');
+  fs.mkdirSync(producer, { recursive: true });
+  fs.mkdirSync(sibling, { recursive: true });
+  const file = (filename: string, bytes: string) => {
+    fs.writeFileSync(filename, bytes);
+    return {
+      kind: 'artifact',
+      ref: pathToFileURL(filename).href,
+      sha256: `sha256:${createHash('sha256').update(bytes).digest('hex')}`,
+      size_bytes: Buffer.byteLength(bytes),
+    };
+  };
+  const artifact = file(path.join(producer, 'state.json'), 'current bytes');
+  const request = {
+    ...fixture().request,
+    workspace_root: producer,
+    owner_authority_ref: artifact,
+    members: [{ member_id: 'artifact', source_ref: artifact.ref, sha256: artifact.sha256, size_bytes: artifact.size_bytes }],
+  };
+  const authority = {
+    ...fixture().authority,
+    owner_authority_refs: [artifact],
+    producer_workspace_root: producer,
+    stage_run_input_workspace_root: workspace,
+  };
+  return { artifact, authority, file, producer, request, sibling, workspace };
+}
+
+function materializedSnapshot(
+  ...args: Parameters<typeof resolveReviewerInputSnapshotMaterialization>
+) {
+  const result = resolveReviewerInputSnapshotMaterialization(...args);
+  assert.equal(result.surface_kind, 'opl_reviewer_input_snapshot_materialization');
+  return result;
+}
+
+function memberContents(result: ReturnType<typeof materializedSnapshot>, memberId: string) {
+  const member = result.manifest.members.find((item) => item.member_id === memberId);
+  assert.ok(member);
+  return fs.readFileSync(new URL(member.immutable_ref.ref), 'utf8');
+}
+
+test('finalized authoring restores a copied identity from one exact verified ref and records the observed binding', (t) => {
+  const { artifact, authority, file, producer, request } = localSnapshotFixture(t);
+  const originalMember = request.members[0]!;
+  const badMember = { ...originalMember, sha256: `sha256:${'2'.repeat(66)}`, size_bytes: 77 };
+  const authored = { ...request, members: [badMember] };
+  const declared = { refs: [artifact.ref], hashes: [artifact.sha256] };
+  const materialized = materializedSnapshot(authored, authority, declared);
+  assert.equal(memberContents(materialized, 'artifact'), 'current bytes');
+  assert.deepEqual(authored.members, [badMember]);
+  const normalizations = [{
+    finding: 'authority_member_identity_restored',
+    member_id: 'artifact',
+    sha256: artifact.sha256,
+    size_bytes: artifact.size_bytes,
+  }];
+  assert.deepEqual(materialized.authoring_normalizations, normalizations);
+  const context = buildStageReviewInputSnapshotContext({
+    stageRunId: 'stage-run', qualityCycleId: 'cycle', reviewerAttemptRole: 'reviewer',
+    resolution: materialized,
+  });
+  assert.ok('review_input_snapshot_authoring_normalizations' in context);
+  assert.deepEqual(context.review_input_snapshot_authoring_normalizations, normalizations);
+  assert.equal(materializedSnapshot(request, authority, declared).authoring_normalizations, undefined);
+  assert.throws(() => materializedSnapshot(authored, authority, { refs: [], hashes: [] }), /canonical SHA-256/);
+  const wrongSized = { ...artifact, size_bytes: 77 };
+  assert.throws(() => materializedSnapshot(
+    { ...authored, owner_authority_ref: wrongSized },
+    { ...authority, owner_authority_refs: [wrongSized] },
+    declared,
+  ), /bytes do not match the bound member identity/);
+  assert.throws(() => materializedSnapshot(
+    authored, { ...authority, stage_run_input_authority_refs: [{ ...artifact, size_bytes: 77 }] }, declared,
+  ), /one authoritative digest and byte size/);
+  const duplicate = file(path.join(producer, 'duplicate.json'), 'current bytes');
+  assert.throws(() => materializedSnapshot(
+    { ...authored, members: [{ ...badMember, source_ref: duplicate.ref }] }, authority, declared,
+  ), /canonical SHA-256/);
+});
+
+test('relative members retain the original root and only frozen siblings can resolve from the StageRun workspace', (t) => {
+  const { artifact, authority, file, producer, request, sibling, workspace } = localSnapshotFixture(t);
+  file(path.join(workspace, 'state.json'), 'wrong root bytes');
+  const siblingInput = file(path.join(sibling, 'state.json'), 'sibling input bytes');
+  const relative = {
+    member_id: 'sibling',
+    source_ref: 'work-items/sibling/state.json',
+    sha256: siblingInput.sha256,
+    size_bytes: siblingInput.size_bytes,
+  };
+  const authored = { ...request, members: [{ ...request.members[0]!, source_ref: 'state.json' }, relative] };
+  const frozen = { ...authority, stage_run_input_authority_refs: [siblingInput] };
+  const declared = { refs: [artifact.ref], hashes: [artifact.sha256] };
+  const materialized = materializedSnapshot(authored, frozen, declared);
+  assert.equal(memberContents(materialized, 'artifact'), 'current bytes');
+  assert.equal(memberContents(materialized, 'sibling'), 'sibling input bytes');
+  assert.deepEqual(materialized.authoring_normalizations, [{
+    finding: 'frozen_input_resolved_from_workspace',
+    member_id: 'sibling',
+    sha256: siblingInput.sha256,
+    size_bytes: siblingInput.size_bytes,
+  }]);
+  assert.throws(() => materializedSnapshot(authored, authority, declared), /source ref is not a readable local file/);
+  assert.throws(() => materializedSnapshot({
+    ...authored, members: [authored.members[0]!, { ...relative, size_bytes: 77 }],
+  }, frozen, declared), /source ref is not a readable local file/);
+  fs.mkdirSync(path.dirname(path.join(producer, relative.source_ref)), { recursive: true });
+  fs.writeFileSync(path.join(producer, relative.source_ref), 'existing producer-relative file');
+  process.env.OPL_STATE_DIR = path.join(workspace, 'fresh-state');
+  assert.throws(() => materializedSnapshot(authored, frozen, declared), /source bytes do not match/);
+});
+
+test('a local file URL is accepted only for the persisted producer root', (t) => {
+  const { artifact, authority, producer, request, sibling, workspace } = localSnapshotFixture(t);
+  const authored = {
+    ...request,
+    workspace_root: pathToFileURL(producer).href,
+    members: [{ ...request.members[0]!, source_ref: 'state.json' }],
+  };
+  const declared = { refs: [artifact.ref], hashes: [artifact.sha256] };
+  const materialized = materializedSnapshot(authored, authority, declared);
+  assert.equal(memberContents(materialized, 'artifact'), 'current bytes');
+  assert.deepEqual(materialized.authoring_normalizations, [{ finding: 'workspace_root_file_url_decoded' }]);
+  for (const otherRoot of [workspace, sibling]) {
+    assert.throws(() => materializedSnapshot(
+      { ...authored, workspace_root: pathToFileURL(otherRoot).href }, authority, declared,
+    ), /file URL must name the persisted producer workspace root/);
+  }
+  assert.throws(() => materializedSnapshot(
+    authored, { ...authority, producer_workspace_root: undefined }, declared,
+  ), /workspace root is not readable/);
 });

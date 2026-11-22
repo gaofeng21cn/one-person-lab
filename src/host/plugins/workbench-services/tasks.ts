@@ -91,7 +91,12 @@ export class PersonalTasks {
       this.worker = await Worker.create({
         connection: this.native, namespace, taskQueue: this.prefix,
         workflowsPath: fileURLToPath(new URL('./workflows.js', import.meta.url)),
-        activities: { ...this.executor, executeTaskMutation: (operation: string, input: Record<string, unknown>) => this.performAction(operation, input, false) }, maxConcurrentActivityTaskExecutions: 4,
+        activities: { ...this.executor, executeTaskMutation: (operation: string, input: Record<string, unknown>) => this.performAction(operation, input, false) },
+        maxConcurrentActivityTaskExecutions: 4,
+        // Keep the SDK 1.25 poller sizing, including the four-slot activity budget.
+        workflowTaskPollerBehavior: { type: 'simple-maximum', maximum: 10 },
+        activityTaskPollerBehavior: { type: 'simple-maximum', maximum: 4 },
+        nexusTaskPollerBehavior: { type: 'simple-maximum', maximum: 10 },
         shutdownGraceTime: '5 seconds', shutdownForceTime: '15 seconds',
       });
       this.workerRun = this.worker.run().catch(() => { this.status = 'unavailable'; this.reason = 'Task worker stopped. Refresh to reconnect; existing history is retained.'; });

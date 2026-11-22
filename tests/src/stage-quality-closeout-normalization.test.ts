@@ -135,6 +135,52 @@ test('identical Stage quality cycle declarations keep the canonical packet and c
   );
 });
 
+test('a complete quality artifact identity one level up uses the existing artifact receipt guard', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const attempt = repairerAttempt(db);
+    const original = originalPacket(attempt.stage_attempt_id, attempt.stage_run_id);
+    const { artifact_refs, artifact_hashes, ...remainingCycle } = quality(original);
+    const misplaced = {
+      ...original,
+      route_impact: { ...original.route_impact, artifact_refs, artifact_hashes, stage_quality_cycle: remainingCycle },
+    };
+    const input = { stageAttemptId: attempt.stage_attempt_id, packet: misplaced };
+    const mismatched = {
+      ...misplaced,
+      route_impact: {
+        ...misplaced.route_impact,
+        stage_quality_cycle: { ...remainingCycle, artifact_identity_receipt_refs: ['receipt:wrong'] },
+      },
+    };
+    assert.throws(
+      () => ingestStageAttemptCloseout(db, { ...input, packet: mismatched }),
+      (error: any) => error?.details?.failure_code === 'stage_quality_cycle_attempt_artifact_identity_mismatch',
+    );
+
+    const { attempt: persisted, closeout } = ingestStageAttemptCloseout(db, input);
+    assert.deepEqual(quality(closeout.packet), quality(original));
+    assert.deepEqual(persisted.route_impact.normalization_findings, [
+      'stage_quality_artifact_identity_folded_from_route_impact_level',
+    ]);
+    assert.equal(Object.hasOwn(closeout.packet.route_impact!, 'artifact_refs'), false);
+    assert.equal(ingestStageAttemptCloseout(db, input).closeout.idempotent_noop, true);
+
+    const duplicated = { ...original, route_impact: { ...original.route_impact, artifact_refs, artifact_hashes } };
+    assert.deepEqual(normalizeTypedStageCloseoutPacket(duplicated), original);
+    assert.throws(
+      () => normalizeTypedStageCloseoutPacket({
+        ...duplicated, route_impact: { ...duplicated.route_impact, artifact_refs: ['artifact:other'] },
+      }),
+      (error: any) => error?.details?.failure_code === 'typed_closeout_quality_artifact_identity_placement_conflict',
+    );
+    const noCycle = { artifact_refs, artifact_hashes };
+    assert.deepEqual(normalizeTypedStageCloseoutPacket({ ...original, route_impact: noCycle }).route_impact, noCycle);
+  } finally {
+    db.close();
+  }
+});
+
 test('deterministic partition preserves exact required and moved entries with canonical two-way lineage', () => {
   const attempt = {
     stage_attempt_id: 'sat-repairer-normalization', stage_run_id: 'sr-normalization', attempt_role: 'repairer',

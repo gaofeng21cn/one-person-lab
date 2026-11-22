@@ -176,6 +176,7 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
     },
   });
   let evaluatedCandidate: string | null = null;
+  let candidatePackRead = false;
   const runtime = new FrozenPlanEvaluationRuntime({
     evaluator_id: 'evaluator:worker-wiring',
     executor: {
@@ -185,6 +186,17 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
         assert.equal(input.subject.kind, 'candidate');
         if (input.subject.kind === 'candidate') {
           evaluatedCandidate = input.subject.candidate.candidate_digest;
+          const pack = input.subject.candidate_pack;
+          assert.ok(pack);
+          const expectedDirectory = path.join(
+            foundryStoragePaths(path.join(stateDir, 'foundry')).candidates,
+            evaluatedCandidate.slice('sha256:'.length),
+          );
+          assert.equal(pack.directory, fs.realpathSync.native(expectedDirectory));
+          assert.equal(pack.manifest_digest, input.subject.candidate.manifest_digest);
+          const manifestBytes = fs.readFileSync(path.join(pack.directory, 'agent/agent-pack.json'));
+          assert.equal(pack.manifest_digest, `sha256:${sha256(manifestBytes)}`);
+          candidatePackRead = true;
         }
         throw new Error('Fixture executor deliberately refuses domain qualification');
       },
@@ -199,12 +211,7 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
   const activities: FoundryTemporalActivities = buildCordisTemporalActivities({
     trusted_evaluation_runtime: runtime,
   });
-  type AdvanceActivity = FoundryTemporalActivities['foundryAdvanceRunActivity'];
-  const result = await environment.run<
-    Parameters<AdvanceActivity>,
-    Awaited<ReturnType<AdvanceActivity>>,
-    AdvanceActivity
-  >(
+  const result = await environment.run(
     activities.foundryAdvanceRunActivity,
     { ...advance, provider_operation_cursor: cursor },
   );
@@ -216,7 +223,7 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
     const nextEnvironment = new MockActivityEnvironment({
       activityType: 'foundryAdvanceRunActivity', activityId: next.operation_key,
     });
-    return nextEnvironment.run<Parameters<AdvanceActivity>, Awaited<ReturnType<AdvanceActivity>>, AdvanceActivity>(activities.foundryAdvanceRunActivity, {
+    return nextEnvironment.run(activities.foundryAdvanceRunActivity, {
       ...next, provider_operation_cursor: cursor,
     });
   }
@@ -224,6 +231,7 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
   assert.equal(materialized.run.state, 'evaluating');
   const evaluated = await advanceWithCursor(materialized);
   assert.equal(evaluatedCandidate, materialized.run.candidate_digest);
+  assert.equal(candidatePackRead, true);
   assert.equal(evaluated.run.state, 'failed');
   assert.equal(evaluated.run.evidence_digest, null);
   assert.equal(evaluated.run.version_digest, null);

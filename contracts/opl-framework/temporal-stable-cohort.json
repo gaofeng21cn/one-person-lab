@@ -3,7 +3,7 @@
   "contract_id": "opl_temporal_stable_cohort",
   "surface_kind": "opl_temporal_stable_cohort",
   "contract_ref": "contracts/opl-framework/temporal-stable-cohort.json",
-  "audited_at": "2026-11-09",
+  "audited_at": "2026-11-23",
   "stability_policy": {
     "release_channel": "stable",
     "draft_allowed": false,
@@ -38,20 +38,20 @@
     }
   },
   "sdk": {
-    "version": "1.25.0",
-    "release_tag": "v1.25.0",
-    "tag_commit": "efafd16ef4533da24029277bd72caf564c7aa007",
-    "published_at": "2026-10-27T18:32:22Z",
-    "release_url": "https://github.com/temporalio/sdk-typescript/releases/tag/v1.25.0",
+    "version": "1.26.0",
+    "release_tag": "v1.26.0",
+    "tag_commit": "f649d56a70f7e7eae5a921897b3b229970cd0b27",
+    "published_at": "2026-11-17T16:40:53Z",
+    "release_url": "https://github.com/temporalio/sdk-typescript/releases/tag/v1.26.0",
     "npm_dist_tag": "latest",
     "node_engine": ">=20.3.0",
     "packages": {
-      "@temporalio/activity": "1.25.0",
-      "@temporalio/client": "1.25.0",
-      "@temporalio/common": "1.25.0",
-      "@temporalio/testing": "1.25.0",
-      "@temporalio/worker": "1.25.0",
-      "@temporalio/workflow": "1.25.0"
+      "@temporalio/activity": "1.26.0",
+      "@temporalio/client": "1.26.0",
+      "@temporalio/common": "1.26.0",
+      "@temporalio/testing": "1.26.0",
+      "@temporalio/worker": "1.26.0",
+      "@temporalio/workflow": "1.26.0"
     }
   },
   "compatibility": {

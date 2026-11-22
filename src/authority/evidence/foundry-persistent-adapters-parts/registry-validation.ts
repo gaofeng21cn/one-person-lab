@@ -662,7 +662,10 @@ export function validateCandidateDirectory(paths: FoundryStoragePaths, version: 
       });
     }
   }
-  return validateCandidateResourceLock(realDirectory, version, files);
+  return {
+    directory: realDirectory,
+    ...validateCandidateResourceLock(realDirectory, version, files),
+  };
 }
 
 export function publishImmutableRegistryRecord(

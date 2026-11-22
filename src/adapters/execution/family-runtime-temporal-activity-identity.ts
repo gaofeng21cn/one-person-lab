@@ -250,10 +250,10 @@ export function reviewerSnapshotAuthorityBinding(
     producer.workspace_locator_json,
     'reviewer_input_snapshot_authority_issuer_locator_invalid',
   );
-  const contentWorkspaceRoot = stageRun.execution_scope?.canonical_work_item_root
+  const producerWorkspaceRoot = stageRun.execution_scope?.canonical_work_item_root
     ?? readString(producerLocator.workspace_root)
-    ?? readString(producerLocator.repo_root)
-    ?? stageRun.domain_pack_root;
+    ?? readString(producerLocator.repo_root);
+  const contentWorkspaceRoot = producerWorkspaceRoot ?? stageRun.domain_pack_root;
   const ownerContentSourceRefs = verifiedContentSourceRefs({
     metadata: producerCloseout.closeout_ref_metadata,
     workspaceRoot: contentWorkspaceRoot,
@@ -277,6 +277,8 @@ export function reviewerSnapshotAuthorityBinding(
           owner_content_source_workspace_root: contentWorkspaceRoot,
         }
       : {}),
+    producer_workspace_root: producerWorkspaceRoot ?? undefined,
+    stage_run_input_workspace_root: stageRun.execution_scope?.workspace_root,
     stage_run_input_authority_refs: reviewerSnapshotStageRunInputAuthority(stageRun.stage_run_spec),
   };
 }

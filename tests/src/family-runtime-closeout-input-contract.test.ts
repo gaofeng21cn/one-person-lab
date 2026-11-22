@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
 import { codexActivityEventForTemporalHistory } from '../../src/adapters/execution/family-runtime-temporal-history-summary.ts';
+import { canonicalJsonText } from '../../src/kernel/canonical-json.ts';
 import { createWorkItemExecutionScopeSnapshot } from '../../src/authority/workspace/execution-scope.ts';
 
 test('first Attempt prompt supplies typed closeout surface and exact Attempt identity', () => {
@@ -14,7 +16,7 @@ test('first Attempt prompt supplies typed closeout surface and exact Attempt ide
   assert.match(prompt,/stage_run_id "sr-contract" exactly/);
 });
 
-test('work-item reviewer prompt includes the exact execution scope required by closeout validation', () => {
+test('work-item reviewer prompt asks for the persisted scope digest', () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-review-scope-'));
   const canonicalWorkItemRoot = path.join(workspaceRoot, 'studies', 'study-1');
   fs.mkdirSync(canonicalWorkItemRoot, { recursive: true });
@@ -32,7 +34,8 @@ test('work-item reviewer prompt includes the exact execution scope required by c
     attempt_role: 'reviewer', execution_scope: scope,
     workspace_locator: { workspace_root: workspaceRoot, execution_scope: scope },
   } });
-  assert.ok(prompt.includes(`Exact execution_scope snapshot for typed closeout: ${JSON.stringify(scope)}`));
+  assert.ok(prompt.includes(`scope_digest "${scope.scope_digest}" exactly`));
+  assert.match(prompt, /omit execution_scope from the typed closeout/);
   fs.rmSync(workspaceRoot, { recursive: true, force: true });
 });
 
@@ -106,7 +109,8 @@ test('copying the supplied closeout identity survives ingress validation, includ
       const identity = JSON.parse(lines[marker + 1]);
       assert.equal(identity.idempotency_key, attempt.idempotency_key);
       assert.equal(identity.role, 'producer');
-      assert.deepEqual(identity.execution_scope, scope);
+      assert.equal(identity.scope_digest, scope.scope_digest);
+      assert.equal(Object.hasOwn(identity, 'execution_scope'), false);
       const packet = normalizeTypedStageCloseoutPacket({
         surface_kind: 'stage_attempt_closeout_packet',
         closeout_refs: ['file:///workspace/artifacts/mission.json'], ...identity,
@@ -121,6 +125,70 @@ test('copying the supplied closeout identity survives ingress validation, includ
   } finally {
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
+});
+
+test('legacy closeout token repair is digest-checked and stays bound to the exact Attempt', async (t) => {
+  const { normalizeTypedStageCloseoutPacket, validateCloseoutPacketForAttempt } = await import(
+    '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts'
+  );
+  const workspaceRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-closeout-scope-spelling-')));
+  t.after(() => fs.rmSync(workspaceRoot, { recursive: true, force: true }));
+  const canonicalWorkItemRoot = path.join(workspaceRoot, 'trial');
+  fs.mkdirSync(canonicalWorkItemRoot);
+  const nativeScope = createWorkItemExecutionScopeSnapshot({
+    projectScopeId: 'project:spelling', workspaceBindingId: 'binding:spelling',
+    domainId: 'agent_engineering', workspaceRoot, canonicalWorkItemRoot,
+    payload: { run_id: 'trial' }, requirement: { kind: 'work_item', alias_fields: ['run_id'] },
+  });
+  const {
+    surface_kind: surfaceKind, scope_digest: _nativeDigest, canonical_work_item_root_identity: nativeRoot, ...identity
+  } = nativeScope;
+  assert.ok(nativeRoot);
+  const { boot_uuid: _boot, workspace_volume_uuid: _workspace, work_item_volume_uuid: _item, ...physicalRoot } = nativeRoot;
+  const digestInput = {
+    ...identity,
+    canonical_work_item_root_identity: { ...physicalRoot, version: 'opl-work-item-root-identity.v1' },
+  };
+  const scope = {
+    surface_kind: surfaceKind,
+    ...digestInput,
+    scope_digest: `sha256:${createHash('sha256').update(canonicalJsonText(digestInput)).digest('hex')}`,
+  };
+  const attempt = {
+    stage_attempt_id: 'sat-spelling', stage_run_id: 'sr-spelling', domain_id: scope.domain_id,
+    scope_kind: 'work_item', execution_scope: scope, workspace_locator: { workspace_root: workspaceRoot, execution_scope: scope },
+  };
+  const legacyScope = {
+    ...scope,
+    version: 'opl_execution_scope_snapshot.v2',
+    canonical_work_item_root_identity: {
+      ...scope.canonical_work_item_root_identity, version: 'opl_work_item_root_identity.v1',
+    },
+  };
+  const raw = {
+    surface_kind: 'stage_attempt_closeout_packet', stage_attempt_id: attempt.stage_attempt_id,
+    stage_run_id: attempt.stage_run_id, scope_digest: scope.scope_digest,
+    closeout_refs: ['file:///workspace/report.json'], execution_scope: legacyScope,
+  };
+  const normalized = normalizeTypedStageCloseoutPacket(raw);
+  assert.deepEqual(normalized.execution_scope, scope);
+  assert.deepEqual(normalized.route_impact?.normalization_findings, ['typed_closeout_execution_scope_version_spelling_recovered']);
+  assert.equal(raw.execution_scope.version, 'opl_execution_scope_snapshot.v2');
+  assert.equal(validateCloseoutPacketForAttempt({ attempt, closeoutPacket: normalized }).rejection, null);
+  assert.equal(
+    validateCloseoutPacketForAttempt({ attempt: { ...attempt, stage_attempt_id: 'sat-other' }, closeoutPacket: normalized }).rejection?.reason,
+    'stage_attempt_id_mismatch',
+  );
+  assert.equal(
+    validateCloseoutPacketForAttempt({ attempt: { ...attempt, stage_run_id: 'sr-other' }, closeoutPacket: normalized }).rejection?.reason,
+    'execution_identity_mismatch',
+  );
+  assert.throws(() => normalizeTypedStageCloseoutPacket({
+    ...raw, execution_scope: { ...legacyScope, scope_digest: `sha256:${'0'.repeat(64)}` },
+  }), /digest does not match/);
+  assert.throws(() => normalizeTypedStageCloseoutPacket({
+    ...raw, execution_scope: { ...legacyScope, version: 'opl_execution_scope_snapshot.v3' },
+  }), /unsupported identity envelope/);
 });
 
 test('closeout identity omits optional fields not supplied by the current Attempt', () => {
