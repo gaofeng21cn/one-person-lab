@@ -37,7 +37,7 @@
     "icon_ref": "assets/branding/medautogrant-logo.png"
   },
   "publisher": "one-person-lab",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
@@ -81,8 +81,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/mag-0.4.1.json",
-    "carrier_source_commit": "356794cabd4ed17767c3dcbdf5987f34622587a8"
+    "plugin_payload_manifest_url": "payloads/mag-0.4.2.json",
+    "carrier_source_commit": "43665e327b14883a6fcd141ea37d905b1891cec7"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
