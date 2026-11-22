@@ -292,6 +292,7 @@ export function withMutationLock<T>(file: string, stagingRoot: string, operation
   }
   if (openError) {
     fail('Foundry storage mutation is already in progress.', {
+      ...((openError as NodeJS.ErrnoException).code === 'EEXIST' ? { failure_code: 'foundry_storage_mutation_in_progress' } : {}),
       lock_file: file,
       cause: openError instanceof Error ? openError.message : String(openError),
     });

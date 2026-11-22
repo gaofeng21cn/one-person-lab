@@ -9,6 +9,7 @@ export type FoundryRunState =
   | 'designing'
   | 'materializing'
   | 'evaluating'
+  | 'qualifying'
   | 'evidence_ready'
   | 'diagnosing'
   | 'qualified'
@@ -38,7 +39,8 @@ const ALLOWED_TRANSITIONS: Record<FoundryRunState, FoundryRunState[]> = {
   accepted: ['designing', 'rejected', 'cancelled', 'failed', 'quarantined'],
   designing: ['materializing', 'cancelled', 'failed', 'quarantined'],
   materializing: ['evaluating', 'cancelled', 'failed', 'quarantined'],
-  evaluating: ['qualified', 'evidence_ready', 'completed_unqualified', 'cancelled', 'failed', 'quarantined'],
+  evaluating: ['qualifying', 'qualified', 'evidence_ready', 'completed_unqualified', 'cancelled', 'failed', 'quarantined'],
+  qualifying: ['qualified', 'failed', 'quarantined'],
   evidence_ready: ['diagnosing', 'completed_unqualified', 'cancelled', 'failed', 'quarantined'],
   diagnosing: ['materializing', 'completed_unqualified', 'cancelled', 'failed', 'quarantined'],
   qualified: ['canary', 'awaiting_owner_canary', 'completed_qualified', 'cancelled', 'failed', 'quarantined'],
@@ -59,7 +61,10 @@ const EVENT_TYPES_BY_TRANSITION = new Map<string, ReadonlySet<string>>([
   ['accepted>designing', new Set(['design_started'])],
   ['designing>materializing', new Set(['blueprint_admitted'])],
   ['materializing>evaluating', new Set(['candidate_materialized'])],
+  ['evaluating>qualifying', new Set(['qualification_registration_started'])],
+  // Existing ledgers recorded registration and qualification in one transition.
   ['evaluating>qualified', new Set(['candidate_qualified'])],
+  ['qualifying>qualified', new Set(['candidate_qualified'])],
   ['evaluating>evidence_ready', new Set(['evaluation_failed'])],
   ['evaluating>completed_unqualified', new Set(['evolution_budget_exhausted'])],
   ['evidence_ready>diagnosing', new Set(['diagnosis_started'])],
