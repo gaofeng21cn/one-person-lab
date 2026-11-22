@@ -533,3 +533,33 @@ test('production composition selects OMA 0.4.0 by default without claiming a liv
   assert.equal(typeof kernel.startRun, 'function');
   assert.equal(readJson<FixtureLock>(path.join(fixtureRoot, 'source-lock.json')).live_model_proof, false);
 });
+
+// A Blueprint whose evaluation gates use metrics the generic Evaluation Runtime
+// cannot observe must be rejected when the Blueprint is admitted — not after
+// the evaluation has executed (production: run
+// dev-orchestrator-create-20261122-r18 executed all 25+4 cases before the
+// verdict-time gate check quarantined it).
+test('a Blueprint with uncomputable evaluation gate metrics is rejected at admission', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gate-metric-admission-'));
+  try {
+    const request = validateDesignRequest(readJson(path.join(protocolFixtureRoot, 'design-request.json')));
+    const resources = transportResources(root);
+    const blueprint = transportableBlueprint(request, resources);
+    // The supported vocabulary passes admission unchanged.
+    assertBlueprintSatisfiesDesignRequest(request, blueprint);
+    const uncomputable = structuredClone(blueprint);
+    uncomputable.eval_spec.gates = [{
+      gate_id: 'required-case-ratio',
+      metric: 'required_public_cases_passed / required_public_cases_total',
+      operator: 'eq',
+      threshold: 1,
+      required: true,
+    }];
+    assert.throws(
+      () => assertBlueprintSatisfiesDesignRequest(request, uncomputable),
+      /evaluation gates use metrics the generic Evaluation Runtime cannot compute/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

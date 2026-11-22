@@ -200,6 +200,11 @@ function weightedScore(spec: EvalSpec, resultById: Map<string, PublicCaseResult>
   }, 0) / totalWeight;
 }
 
+// The generic Evaluation Runtime can only observe these two metrics from an
+// EvidenceBundle. Any other gate metric is uncomputable and must be rejected
+// when the Blueprint is admitted — not after the evaluation has executed.
+const SUPPORTED_GENERIC_EVALUATION_GATE_METRICS = new Set(['score', 'protected_pass_rate']);
+
 function gateObserved(metric: string, score: number, protectedAggregates: ProtectedAggregate[]) {
   if (metric === 'score') return score;
   if (metric === 'protected_pass_rate') {
@@ -253,6 +258,15 @@ export function assertBlueprintSatisfiesDesignRequest(
       missing_permission_refs: missingPermissions,
       unexpected_permission_refs: unexpectedPermissions,
       missing_privacy_protected_requirements: missingPrivacyRequirements,
+    });
+  }
+  const unsupportedGateMetrics = blueprint.eval_spec.gates
+    .map((gate) => gate.metric)
+    .filter((metric) => !SUPPORTED_GENERIC_EVALUATION_GATE_METRICS.has(metric));
+  if (unsupportedGateMetrics.length > 0) {
+    fail('AgentBlueprint evaluation gates use metrics the generic Evaluation Runtime cannot compute.', {
+      unsupported_metrics: [...new Set(unsupportedGateMetrics)],
+      supported_metrics: [...SUPPORTED_GENERIC_EVALUATION_GATE_METRICS],
     });
   }
 }
