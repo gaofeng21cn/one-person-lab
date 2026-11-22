@@ -342,17 +342,17 @@ function passingKernel() {
   return { kernel: new FoundryKernel(dependencies), events: dependencies.events };
 }
 
-class FailOnceBeforeQualificationAppendStore implements FoundryEventStore {
+class UnavailableQualificationAppendStore implements FoundryEventStore {
   readonly #delegate = new InMemoryFoundryEventStore();
-  #failed = false;
+  failedAppends = 0;
 
   create(input: Parameters<FoundryEventStore['create']>[0]) {
     return this.#delegate.create(input);
   }
 
   append(input: Parameters<FoundryEventStore['append']>[0]) {
-    if (!this.#failed && input.event.event_type === 'candidate_qualified') {
-      this.#failed = true;
+    if (input.event.event_type === 'candidate_qualified' && this.failedAppends < 3) {
+      this.failedAppends += 1;
       throw new FoundryTransientActivityError('qualification append completion is unknown');
     }
     return this.#delegate.append(input);
@@ -1348,10 +1348,10 @@ test('Temporal retries a transient Foundry activity three times without Kernel r
   }
 });
 
-test('Temporal replays a journaled evaluation to repair qualification append without an orphan version', async () => {
+test('Temporal recovers qualification after all registration Activity attempts fail', async () => {
   const testEnv = await createTemporalTestWorkflowEnvironment();
   const taskQueue = `opl-foundry-temporal-evaluation-unknown-${Date.now()}`;
-  const events = new FailOnceBeforeQualificationAppendStore();
+  const events = new UnavailableQualificationAppendStore();
   const versions = new InMemoryVersionRegistry();
   let evaluationCalls = 0;
   const operationKeys: string[] = [];
@@ -1399,6 +1399,7 @@ test('Temporal replays a journaled evaluation to repair qualification append wit
     assert.equal(evaluationCalls, 1);
     assert.equal(operationKeys.length, 1);
     assert.match(operationKeys[0]!, /^opl-foundry-evaluation\.v1\/run-temporal-evaluation-unknown\/0\/evaluate\/sha256:/);
+    assert.equal(events.failedAppends, 3);
     assert.equal((await versions.list('temporal-evaluation-unknown-agent', 'temporal_fixture')).length, 1);
     assert.equal(foundryHistory.filter((event) => event.event_type === 'candidate_qualified').length, 1);
     assert.equal(foundryHistory.at(-1)?.event_type, 'qualification_completed');
