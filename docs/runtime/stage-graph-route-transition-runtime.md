@@ -57,6 +57,8 @@ AgentBlueprint 的 content-ref 字节补全保持同一归一化传输形态：`
 
 Finding、repair、closure 与跨 Stage route 的证据引用接受非空 locator 字符串或带非空 `ref` 的对象，归一化结果仍是字符串列表；引用对象中的其他元数据不能替代 artifact identity receipt。证据列表及其成员不能为空白。`changed_artifact_refs` 可为空，使未修复或被阻断的 repair 能如实声明没有产物变化。
 
+初审返回 `repair_required` 时，Attempt 在完成前校验 findings，要求至少一项 required finding，且每项都有证据引用和非空 `repair_expectation`。校验失败会以 `stage_quality_review_repair_findings_invalid` 阻断并保留来源 Attempt、收尾引用及字段诊断。StageRun 保留原产物，不提交无效评审的路由，也不消耗修补轮次。
+
 恢复身份推进须先精确观察原 Temporal Run 已终止，再通过原注册表 CAS 留存先前回执。尚未开始审查的同一已接受 producer 可追加快照成员，旧成员和 artifact identity 必须保留；不能换 lane、workspace、binding 或替换已审证据。运行中的不同恢复身份仍拒绝，新的 Temporal Run 不代表新的业务 StageRun，也不改写原终态。
 
 CLI 默认 invocation 是稳定幂等键；`--new-stage-run` 显式创建新 Run。Hosted action 用 action `run_id + action_run_ref` 建立 invocation。跨 Stage 路由用 parent StageRun、decisive Attempt ref、route decision digest 与 target Stage 建立 invocation，因此同一 route replay 复用目标 Run，后续新决定或 A → B → A route-back 会创建新 Run。
