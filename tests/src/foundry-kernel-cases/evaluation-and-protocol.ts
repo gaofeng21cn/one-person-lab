@@ -241,6 +241,41 @@ test('OMA self-improvement remains high risk and rolls canary regression back to
   assert.equal(rollbackEvent?.payload.rollback_to_version_digest, baseline.version_digest);
 });
 
+test('qualification preserves the version identity assigned by a custom registry', async () => {
+  const { kernel, versions } = harness();
+  const registered = new Map<string, Awaited<ReturnType<typeof versions.register>>['version']>();
+  const register = versions.register.bind(versions);
+  versions.register = async (input) => {
+    const original = await register(input);
+    const { qualification_digest: _oldQualificationDigest, ...qualificationFields } = original.qualification;
+    const qualificationBody = { ...qualificationFields, qualification_id: 'vendor:qualification:17' };
+    const qualification = { ...qualificationBody, qualification_digest: foundryContentDigest(qualificationBody) };
+    const { version_digest: _oldVersionDigest, ...versionFields } = original.version;
+    const versionBody = {
+      ...versionFields,
+      version_id: 'vendor:release:17',
+      qualification_digest: qualification.qualification_digest,
+    };
+    const version = { ...versionBody, version_digest: foundryContentDigest(versionBody) };
+    registered.set(version.version_digest, version);
+    return { qualification, version };
+  };
+  versions.list = async () => [...registered.values()];
+  versions.resolveVersion = async (ref) => ref ? registered.get(ref) ?? null : null;
+
+  const runId = 'run:custom-registry-identity';
+  await kernel.startRun({
+    run_id: runId,
+    request: request({ delivery_policy: { activation_mode: 'qualify_only', max_generations: 5 } }),
+  });
+  const completed = await kernel.advanceUntilPause(runId);
+  assert.equal(completed.run.state, 'completed_qualified');
+  const [version] = await kernel.listVersions('fixture-agent', 'fixture-domain');
+  assert.equal(version?.version_id, 'vendor:release:17');
+  assert.equal(completed.run.version_digest, version.version_digest);
+  assert.deepEqual((await kernel.inspectRun(runId)).terminal_readback.qualified_agent_version, version);
+});
+
 test('FoundryKernel rejects stale Owner decisions and locks one writer per target', async () => {
   const { kernel } = harness();
   await kernel.startRun({ request: request(), run_id: 'run:locked' });
