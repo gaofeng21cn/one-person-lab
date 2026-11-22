@@ -232,13 +232,17 @@ function mergeCloseoutMetadata(lists: JsonRecord[][], observation: ReferencedClo
   return [...merged.values()];
 }
 
-function uniqueStrings(...lists: string[][]) {
-  return [...new Set(lists.flat())];
+// Optional packet fields arrive as `undefined` whenever the cited file omits them, which is
+// the normal case: a producer rarely writes rejected_writes. `lists.flat()` then yielded
+// [undefined], and canonicalJsonText threw "Canonical JSON contains an unsupported value",
+// so every citation-based hydration of a packet without rejected_writes hard-failed.
+function uniqueStrings(...lists: (string[] | undefined)[]) {
+  return [...new Set(lists.flatMap((list) => list ?? []))];
 }
 
-function uniqueRecords(...lists: JsonRecord[][]) {
+function uniqueRecords(...lists: (JsonRecord[] | undefined)[]) {
   const records = new Map<string, JsonRecord>();
-  for (const entry of lists.flat()) records.set(canonicalJsonText(entry), entry);
+  for (const entry of lists.flatMap((list) => list ?? [])) records.set(canonicalJsonText(entry), entry);
   return [...records.values()];
 }
 
