@@ -199,12 +199,7 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
   const activities: FoundryTemporalActivities = buildCordisTemporalActivities({
     trusted_evaluation_runtime: runtime,
   });
-  type AdvanceActivity = FoundryTemporalActivities['foundryAdvanceRunActivity'];
-  const result = await environment.run<
-    Parameters<AdvanceActivity>,
-    Awaited<ReturnType<AdvanceActivity>>,
-    AdvanceActivity
-  >(
+  const result = await environment.run(
     activities.foundryAdvanceRunActivity,
     { ...advance, provider_operation_cursor: cursor },
   );
@@ -216,7 +211,7 @@ test('Cordis Foundry advance replays a frozen v2 provider result through the pro
     const nextEnvironment = new MockActivityEnvironment({
       activityType: 'foundryAdvanceRunActivity', activityId: next.operation_key,
     });
-    return nextEnvironment.run<Parameters<AdvanceActivity>, Awaited<ReturnType<AdvanceActivity>>, AdvanceActivity>(activities.foundryAdvanceRunActivity, {
+    return nextEnvironment.run(activities.foundryAdvanceRunActivity, {
       ...next, provider_operation_cursor: cursor,
     });
   }

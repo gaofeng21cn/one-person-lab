@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lt, valid } from 'semver';
 
 import {
   FrameworkContractError,
@@ -134,7 +135,9 @@ function literal<T extends string | boolean>(
 
 function stableVersion(value: unknown, field: string, source: string) {
   const parsed = string(value, field, source);
-  if (!STABLE_VERSION.test(parsed)) invalid(field, 'must be an exact stable x.y.z version', source);
+  if (!STABLE_VERSION.test(parsed) || !valid(parsed)) {
+    invalid(field, 'must be an exact stable x.y.z version', source);
+  }
   return parsed;
 }
 
@@ -259,12 +262,11 @@ export function validateTemporalStableCohort(
     source,
   );
   string(migration.protobufjs_required_range, 'migration.protobufjs_required_range', source);
-  literal(
-    migration.workflow_bundler_regression_fix_version,
-    sdkVersion,
-    'migration.workflow_bundler_regression_fix_version',
-    source,
-  );
+  const bundlerFixField = 'migration.workflow_bundler_regression_fix_version';
+  const bundlerFixVersion = stableVersion(migration.workflow_bundler_regression_fix_version, bundlerFixField, source);
+  if (lt(sdkVersion, bundlerFixVersion)) {
+    invalid(bundlerFixField, `must be included in SDK ${sdkVersion}`, source);
+  }
 
   const worker = record(payload.worker, 'worker', source);
   string(worker.bundle_api, 'worker.bundle_api', source);

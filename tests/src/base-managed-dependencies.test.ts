@@ -299,7 +299,7 @@ test('Temporal stable cohort reports exact installed SDK package drift against i
 
   assert.equal(cohort.server.version, '1.32.2');
   assert.equal(cohort.cli.version, '1.10.0');
-  assert.equal(cohort.sdk.version, '1.25.0');
+  assert.equal(cohort.sdk.version, '1.26.0');
   assert.deepEqual(Object.keys(cohort.sdk.packages).sort(), [...TEMPORAL_SDK_PACKAGE_NAMES].sort());
   assert.deepEqual(temporal.latest_version, expectedVersions);
   assert.equal(temporal.currentness, expectedCurrentness);
@@ -320,7 +320,7 @@ test('Temporal stable cohort reports exact installed SDK package drift against i
   }
 });
 
-test('Temporal stable cohort rejects prerelease versions and split SDK package versions', () => {
+test('Temporal stable cohort rejects prereleases, split packages, and SDKs without the bundler fix', () => {
   const prerelease = structuredClone(readTemporalStableCohort()) as any;
   prerelease.sdk.version = '1.20.4-rc.1';
   assert.throws(
@@ -332,7 +332,13 @@ test('Temporal stable cohort rejects prerelease versions and split SDK package v
   splitCohort.sdk.packages['@temporalio/worker'] = '1.20.2';
   assert.throws(
     () => validateTemporalStableCohort(splitCohort, 'fixture:split-sdk'),
-    /sdk\.packages\.@temporalio\/worker must equal "1\.25\.0"/,
+    /sdk\.packages\.@temporalio\/worker must equal "1\.26\.0"/,
+  );
+  const missingBundlerFix = structuredClone(readTemporalStableCohort());
+  missingBundlerFix.migration.workflow_bundler_regression_fix_version = '1.27.0';
+  assert.throws(
+    () => validateTemporalStableCohort(missingBundlerFix, 'fixture:sdk-before-fix'),
+    /workflow_bundler_regression_fix_version must be included in SDK 1\.26\.0/,
   );
 });
 

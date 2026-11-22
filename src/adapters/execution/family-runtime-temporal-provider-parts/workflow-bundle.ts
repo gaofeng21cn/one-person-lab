@@ -27,7 +27,10 @@ export type TemporalWorkflowBundleManifest = {
 };
 
 export type TemporalStageAttemptWorkerOptionsBuild = {
-  worker_options: Pick<WorkerOptions, 'namespace' | 'taskQueue' | 'activities' | 'workflowBundle'>;
+  worker_options: Pick<WorkerOptions,
+    'namespace' | 'taskQueue' | 'activities' | 'workflowBundle'
+    | 'workflowTaskPollerBehavior' | 'activityTaskPollerBehavior' | 'nexusTaskPollerBehavior'
+  >;
   workflow_bundle: TemporalWorkflowBundleManifest;
 };
 
@@ -101,6 +104,10 @@ export async function buildTemporalStageAttemptWorkerOptions(input: {
       namespace: resolveTemporalClientNamespace({ paths: input.paths }),
       taskQueue: workflowBundle.task_queue,
       activities: input.activities,
+      // Preserve the Framework worker's SDK 1.25 poller sizing during SDK updates.
+      workflowTaskPollerBehavior: { type: 'simple-maximum', maximum: 10 },
+      activityTaskPollerBehavior: { type: 'simple-maximum', maximum: 10 },
+      nexusTaskPollerBehavior: { type: 'simple-maximum', maximum: 10 },
       workflowBundle: {
         codePath: workflowBundle.code_path,
       },
