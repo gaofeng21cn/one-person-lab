@@ -234,7 +234,6 @@ function typedCloseoutScopeBindingLines(attempt: JsonRecord) {
   const role = optionalString(attempt.attempt_role);
   if (role) identity.role = role;
   if (scopeDigest) identity.scope_digest = scopeDigest;
-  if (scope) identity.execution_scope = scope;
   return [
         'Exact typed closeout identity JSON (copy only these supplied identity fields; omit absent fields instead of reconstructing them):',
         JSON.stringify(identity),
@@ -242,7 +241,7 @@ function typedCloseoutScopeBindingLines(attempt: JsonRecord) {
         ...(attemptId ? [`Any typed closeout packet must use stage_attempt_id "${attemptId}" exactly.`] : []),
         ...(stageRunId ? [`Any typed closeout packet must use stage_run_id "${stageRunId}" exactly.`] : []),
         ...(scopeDigest ? [`Any typed closeout packet must use scope_digest "${scopeDigest}" exactly.`] : []),
-        ...(scope ? [`Exact execution_scope snapshot for typed closeout: ${JSON.stringify(scope)}`] : []),
+        ...(scopeDigest ? ['Supply scope_digest from the closeout identity JSON and omit execution_scope from the typed closeout.'] : []),
       ];
 }
 

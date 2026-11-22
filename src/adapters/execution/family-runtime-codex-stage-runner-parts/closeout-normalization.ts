@@ -232,31 +232,72 @@ function readCloseoutRefEntries(value: unknown) {
   };
 }
 
-export function normalizeStageQualityCyclePlacement(value: JsonRecord, { recordFinding = true } = {}) {
-  const routeImpact = isRecord(value.route_impact) ? value.route_impact : null;
-  const misplacedCycle = value.stage_quality_cycle;
-  if (!isRecord(misplacedCycle)) return routeImpact;
-
-  const declaredCycle = routeImpact?.stage_quality_cycle;
-  if (declaredCycle != null) {
-    if (canonicalJsonText(declaredCycle) === canonicalJsonText(misplacedCycle)) return routeImpact;
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Typed stage closeout has conflicting stage_quality_cycle declarations.',
-      { failure_code: 'typed_closeout_stage_quality_cycle_placement_conflict' },
-    );
-  }
-
-  if (!recordFinding) return { ...routeImpact, stage_quality_cycle: misplacedCycle };
-  const findings = Array.isArray(routeImpact?.normalization_findings)
+function appendNormalizationFinding(routeImpact: JsonRecord, finding: string): JsonRecord {
+  const findings = Array.isArray(routeImpact.normalization_findings)
     ? routeImpact.normalization_findings
     : [];
+  return { ...routeImpact, normalization_findings: [...new Set([...findings, finding])] };
+}
+
+function normalizeQualityArtifactIdentityPlacement(routeImpact: JsonRecord, recordFinding: boolean): JsonRecord {
+  const cycle = routeImpact.stage_quality_cycle;
+  const { artifact_refs: refs, artifact_hashes: hashes, ...rest } = routeImpact;
+  if (
+    !isRecord(cycle) || !Array.isArray(refs) || !Array.isArray(hashes)
+    || refs.length === 0 || refs.length !== hashes.length
+  ) {
+    return routeImpact;
+  }
+  if (Object.hasOwn(cycle, 'artifact_refs') || Object.hasOwn(cycle, 'artifact_hashes')) {
+    if (canonicalJsonText([cycle.artifact_refs ?? null, cycle.artifact_hashes ?? null])
+        !== canonicalJsonText([refs, hashes])) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Typed stage closeout has conflicting Stage quality artifact identity declarations.',
+        { failure_code: 'typed_closeout_quality_artifact_identity_placement_conflict' },
+      );
+    }
+    return rest;
+  }
+  const folded = { ...rest, stage_quality_cycle: { ...cycle, artifact_refs: refs, artifact_hashes: hashes } };
+  return recordFinding
+    ? appendNormalizationFinding(folded, 'stage_quality_artifact_identity_folded_from_route_impact_level')
+    : folded;
+}
+
+export function normalizeStageQualityCyclePlacement(value: JsonRecord, { recordFinding = true } = {}) {
+  let routeImpact = isRecord(value.route_impact) ? value.route_impact : null;
+  const misplacedCycle = value.stage_quality_cycle;
+  if (isRecord(misplacedCycle)) {
+    const declaredCycle = routeImpact?.stage_quality_cycle;
+    if (declaredCycle == null) {
+      routeImpact = { ...routeImpact, stage_quality_cycle: misplacedCycle };
+      if (recordFinding) {
+        routeImpact = appendNormalizationFinding(routeImpact, 'stage_quality_cycle_folded_from_closeout_top_level');
+      }
+    } else if (canonicalJsonText(declaredCycle) !== canonicalJsonText(misplacedCycle)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Typed stage closeout has conflicting stage_quality_cycle declarations.',
+        { failure_code: 'typed_closeout_stage_quality_cycle_placement_conflict' },
+      );
+    }
+  }
+  return routeImpact ? normalizeQualityArtifactIdentityPlacement(routeImpact, recordFinding) : null;
+}
+
+function recoverScopeVersionSpelling(value: unknown): JsonRecord | null {
+  if (!isRecord(value)) return null;
+  const rootIdentity = value.canonical_work_item_root_identity;
+  const scopeVersionMisspelled = value.version === 'opl_execution_scope_snapshot.v2';
+  const rootVersionMisspelled = isRecord(rootIdentity) && rootIdentity.version === 'opl_work_item_root_identity.v1';
+  if (!scopeVersionMisspelled && !rootVersionMisspelled) return null;
   return {
-    ...routeImpact,
-    stage_quality_cycle: misplacedCycle,
-    normalization_findings: [
-      ...new Set([...findings, 'stage_quality_cycle_folded_from_closeout_top_level']),
-    ],
+    ...value,
+    ...(scopeVersionMisspelled ? { version: 'opl-execution-scope-snapshot.v2' } : {}),
+    ...(rootVersionMisspelled
+      ? { canonical_work_item_root_identity: { ...rootIdentity, version: 'opl-work-item-root-identity.v1' } }
+      : {}),
   };
 }
 
@@ -325,11 +366,12 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
   // attempt's authoritative execution scope at ingest. Only a non-object
   // non-string value remains a hard contract failure.
   const rawExecutionScope: unknown = value.execution_scope;
+  const scopeWithCanonicalVersions = recoverScopeVersionSpelling(rawExecutionScope);
   const executionScope = rawExecutionScope === undefined
     || rawExecutionScope === null
     || (typeof rawExecutionScope === 'string' && rawExecutionScope.trim().length > 0)
     ? null
-    : requireWorkItemExecutionScopeSnapshot(rawExecutionScope);
+    : requireWorkItemExecutionScopeSnapshot(scopeWithCanonicalVersions ?? rawExecutionScope);
   const explicitScopeDigest = optionalString(value.scope_digest);
   if (executionScope && explicitScopeDigest && executionScope.scope_digest !== explicitScopeDigest) {
     throw new FrameworkContractError(
@@ -343,7 +385,12 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     );
   }
 
-  const routeImpact = normalizeStageQualityCyclePlacement(value);
+  let routeImpact = normalizeStageQualityCyclePlacement(value);
+  if (scopeWithCanonicalVersions) {
+    // Scope parsing recomputes the digest. Runtime ingress also compares the
+    // parsed snapshot with the persisted Attempt and StageRun identity.
+    routeImpact = appendNormalizationFinding(routeImpact ?? {}, 'typed_closeout_execution_scope_version_spelling_recovered');
+  }
   return {
     surface_kind: surfaceKind,
     ...(optionalString(value.stage_attempt_id) ? { stage_attempt_id: optionalString(value.stage_attempt_id)! } : {}),
