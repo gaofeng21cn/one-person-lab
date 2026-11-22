@@ -51,6 +51,72 @@ import type {
   EvidenceBundle,
 } from './shared.ts';
 
+for (const phase of ['design', 'diagnose'] as const) {
+  test(`Foundry quarantines unsupported gate metrics during ${phase} before materializing that generation`, async () => {
+    const metric = 'required_public_cases_passed / required_public_cases_total';
+    const unsupportedGate = {
+      gate_id: 'gate:formula',
+      metric,
+      operator: 'eq' as const,
+      threshold: 1,
+      required: true,
+    };
+    const designRequest = request({ request_id: `request:gate-metric-${phase}` });
+    const fixtureDesigner = new FixtureDesigner();
+    const fixtureCompiler = new DeterministicInMemoryCandidateCompiler();
+    const fixtureEvaluator = new FixtureEvaluator();
+    const materialized: number[] = [];
+    const evaluated: number[] = [];
+    const events = new InMemoryFoundryEventStore();
+    const kernel = new FoundryKernel({
+      designer: {
+        producer_id: fixtureDesigner.producer_id,
+        async design(input) {
+          const initial = await fixtureDesigner.design(input);
+          if (phase === 'design') initial.eval_spec.gates.push(unsupportedGate);
+          return initial;
+        },
+        async diagnose(input) {
+          const proposal = await fixtureDesigner.diagnose(input);
+          proposal.next_blueprint.eval_spec.gates.push(unsupportedGate);
+          return proposal;
+        },
+      },
+      compiler: {
+        async materialize(input) {
+          materialized.push(input.blueprint.generation);
+          return fixtureCompiler.materialize(input);
+        },
+      },
+      evaluator: {
+        evaluator_id: fixtureEvaluator.evaluator_id,
+        async evaluate(input) {
+          evaluated.push(input.blueprint.generation);
+          return fixtureEvaluator.evaluate(input);
+        },
+        canary: (input) => fixtureEvaluator.canary(input),
+      },
+      objects: new InMemoryFoundryObjectStore(),
+      events,
+      versions: new InMemoryVersionRegistry(),
+    });
+
+    const runId = `run:gate-metric-${phase}`;
+    await kernel.startRun({ request: designRequest, run_id: runId });
+    const inspection = await kernel.advanceUntilPause(runId);
+    assert.equal(inspection.run.state, 'quarantined');
+    assert.deepEqual(materialized, phase === 'design' ? [] : [0]);
+    assert.deepEqual(evaluated, phase === 'design' ? [] : [0]);
+    const failure = (await events.read(runId)).at(-1);
+    assert.equal(failure?.from_state, phase === 'design' ? 'designing' : 'diagnosing');
+    assert.equal(failure?.payload.failure_code, 'contract_shape_invalid');
+    const message = String(failure?.payload.failure_message);
+    assert.ok(message.includes(unsupportedGate.gate_id));
+    assert.ok(message.includes(metric));
+    assert.ok(message.includes('Supported metrics are score, protected_pass_rate'));
+  });
+}
+
 test('Process evaluator transport excludes protected bodies and cannot self-report qualification', async (t) => {
   const designRequest = request({ request_id: 'request:external-process-evaluator' });
   const agentBlueprint = blueprint(designRequest, 0, 'prompt:v1');
@@ -620,6 +686,13 @@ test('baseline comparison rejects per-category protected regressions and incompl
     target_version_ref: `sha256:${'1'.repeat(64)}`,
   });
   const spec = blueprint(designRequest, 0, 'prompt:protected-baseline-regression').eval_spec;
+  spec.gates.push({
+    gate_id: 'gate:protected',
+    metric: 'protected_pass_rate',
+    operator: 'gte',
+    threshold: 1,
+    required: true,
+  });
   const common = {
     request: designRequest,
     spec,
@@ -659,6 +732,10 @@ test('baseline comparison rejects per-category protected regressions and incompl
     }],
   });
   assert.equal(regressed.baselinePublicPassed, true);
+  assert.deepEqual(regressed.gateResults, [
+    { gate_id: 'gate:required', passed: true, observed: 1 },
+    { gate_id: 'gate:protected', passed: false, observed: 0.5 },
+  ]);
   assert.equal(regressed.baselineProtectedPassed, false);
   assert.equal(regressed.baselinePassed, false);
   assert.equal(regressed.qualified, false);

@@ -200,14 +200,29 @@ function weightedScore(spec: EvalSpec, resultById: Map<string, PublicCaseResult>
   }, 0) / totalWeight;
 }
 
-function gateObserved(metric: string, score: number, protectedAggregates: ProtectedAggregate[]) {
-  if (metric === 'score') return score;
-  if (metric === 'protected_pass_rate') {
+type GateObserver = (score: number, protectedAggregates: ProtectedAggregate[]) => number;
+
+const evaluationGateObservers = new Map<string, GateObserver>([
+  ['score', (score) => score],
+  ['protected_pass_rate', (_score, protectedAggregates) => {
     const total = protectedAggregates.reduce((sum, entry) => sum + entry.total, 0);
     const passed = protectedAggregates.reduce((sum, entry) => sum + entry.passed, 0);
     return total === 0 ? 0 : passed / total;
-  }
-  fail('Evaluation gate metric is not supported by the generic Evaluation Runtime.', { metric });
+  }],
+]);
+
+function requireEvaluationGateObserver(gate: EvalSpec['gates'][number]): GateObserver {
+  const observe = evaluationGateObservers.get(gate.metric);
+  if (observe) return observe;
+  const supportedMetrics = [...evaluationGateObservers.keys()];
+  fail(
+    `Evaluation gate metric is not supported by the generic Evaluation Runtime. Gate ${JSON.stringify(gate.gate_id)} uses ${JSON.stringify(gate.metric)}. Supported metrics are ${supportedMetrics.join(', ')}.`,
+    { gate_id: gate.gate_id, metric: gate.metric, supported_metrics: supportedMetrics },
+  );
+}
+
+export function assertEvaluationGateMetricsComputable(spec: EvalSpec) {
+  for (const gate of spec.gates) requireEvaluationGateObserver(gate);
 }
 
 function gatePassed(gate: EvalSpec['gates'][number], observed: number) {
@@ -375,7 +390,8 @@ export function recomputeEvaluationQualification(input: {
   const gateScore = weightedScore(input.spec, publicById);
   const baselineScore = baselineById ? weightedScore(input.spec, baselineById) : null;
   const gateResults = input.spec.gates.map((gate) => {
-    const observed = gateObserved(gate.metric, gateScore, input.protected_aggregates);
+    const observe = requireEvaluationGateObserver(gate);
+    const observed = observe(gateScore, input.protected_aggregates);
     return { gate_id: gate.gate_id, passed: gatePassed(gate, observed), observed };
   });
   const requiredPublicPassed = input.spec.public_cases.every((testCase) =>
@@ -548,7 +564,8 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
     );
     const score = weightedScore(input.blueprint.eval_spec, publicById);
     const gateResults = input.blueprint.eval_spec.gates.map((gate) => {
-      const observed = gateObserved(gate.metric, score, protectedAggregates);
+      const observe = requireEvaluationGateObserver(gate);
+      const observed = observe(score, protectedAggregates);
       return { gate_id: gate.gate_id, passed: gatePassed(gate, observed), observed };
     });
     let baselinePublicResults: PublicCaseResult[] | null = null;

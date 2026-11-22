@@ -66,6 +66,15 @@ Rollback 是独立 activation transaction，不倒放历史 Run，也不修改�
 - 删除既有测试、降低保护测试数量或放宽 gate 会被 quarantine。
 - canary 回归保留原 active pointer，并记录 `canary_regression_rolled_back` 事件。
 
+新建和修订的 Blueprint 在物化前检查 `EvalSpec.gates[].metric`。通用评估运行时
+从冻结用例和保护测试聚合计算 `score` 与 `protected_pass_rate`。业务专属判定应写入
+可执行用例，其结果参与现有计分和必须通过的用例检查。遇到无法计算的指标时，Run
+记录具体 gate、指标及支持值，设计方可据此修订 Blueprint。
+
+Temporal 为执行完整测试计划的 `evaluate` 与 `canary` 提供单次执行 240 分钟、
+含排队和重试共 270 分钟的上限。其余生命周期推进使用单次执行 30 分钟、
+含排队和重试共 35 分钟的上限。评估较长时，Owner 仍可按当前 Run revision 取消。
+
 ## Provider Boundary
 
 OMA provider manifest 只声明 `design` 和 `diagnose` 两个内部 operation。Foundry Kernel 通过 OPL StageRun 运行它们，并只接受一个确切 terminal protocol artifact：`AgentBlueprint` 或 `EvolutionProposal`。

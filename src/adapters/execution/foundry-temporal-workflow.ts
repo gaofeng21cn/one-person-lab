@@ -74,6 +74,13 @@ const advanceActivities = proxyActivities<FoundryTemporalActivities>({
   },
 });
 
+// Evaluation and canary run the complete frozen case plan in one advance.
+// A measured 29-workload evaluation took 107 minutes with ten concurrent cases.
+const evaluationAdvanceTimeouts = {
+  startToCloseTimeout: '240 minutes',
+  scheduleToCloseTimeout: '270 minutes',
+} as const;
+
 // Provider-operation activities include the launch path, which materializes the
 // provider operation (StageRun workflow + queue plan) and can legitimately take
 // 1-2 minutes of execution time. A 2-minute schedule-to-close budget left no
@@ -511,9 +518,12 @@ export async function FoundryRunWorkflow(
         && state.provider_operation_cursor.operation_key === nextOperation.operation_key
         ? { ...nextOperation, provider_operation_cursor: state.provider_operation_cursor }
         : nextOperation;
+      const timeouts = nextOperation.phase === 'evaluate' || nextOperation.phase === 'canary'
+        ? evaluationAdvanceTimeouts
+        : {};
       adoptInspection(await scope.run(
         () => advanceActivities.foundryAdvanceRunActivity.executeWithOptions(
-          { activityId: nextOperation.operation_key },
+          { activityId: nextOperation.operation_key, ...timeouts },
           [advanceOperation],
         ),
       ));

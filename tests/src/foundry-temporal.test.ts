@@ -565,6 +565,28 @@ test('Temporal FoundryRun survives worker restart and applies query, Update, CAS
       }, options);
       const terminal = await waitForState('run-temporal-restart', 'terminal', testEnv.address);
       assert.equal(terminal.inspection?.run.state, 'completed_active');
+      const history = await testEnv.client.workflow.getHandle(
+        foundryTemporalWorkflowId('run-temporal-restart'),
+      ).fetchHistory();
+      const advances = (history.events ?? []).flatMap((event) => {
+        const activity = event.activityTaskScheduledEventAttributes;
+        return activity?.activityType?.name === 'foundryAdvanceRunActivity' ? [activity] : [];
+      });
+      for (const [phase, startMinutes, scheduleMinutes] of [
+        ['design', 30, 35],
+        ['materialize', 30, 35],
+        ['evaluate', 240, 270],
+        ['register_version', 30, 35],
+        ['canary', 240, 270],
+        ['activate', 30, 35],
+      ] as const) {
+        const activity = advances.find((entry) => entry.activityId?.includes(`/${phase}/`));
+        assert.ok(activity, `missing scheduled ${phase} advance`);
+        assert.equal(Number(activity.startToCloseTimeout?.seconds), startMinutes * 60, phase);
+        assert.equal(Number(activity.scheduleToCloseTimeout?.seconds), scheduleMinutes * 60, phase);
+        assert.equal(activity.retryPolicy?.maximumAttempts, 3);
+        assert.deepEqual(activity.retryPolicy?.nonRetryableErrorTypes, ['FrameworkContractError']);
+      }
 
       await startTemporalFoundryRunWorkflow({
         run_id: 'run-temporal-cancel',

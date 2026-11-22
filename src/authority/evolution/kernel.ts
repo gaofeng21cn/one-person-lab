@@ -52,6 +52,7 @@ import {
 import type { FoundryRunEvent, FoundryRunSnapshot, FoundryRunState } from './state-machine.ts';
 import {
   assertBlueprintSatisfiesDesignRequest,
+  assertEvaluationGateMetricsComputable,
 } from './evaluation-runtime.ts';
 import {
   foundryEvaluationOperationIdentity,
@@ -695,6 +696,7 @@ export class FoundryKernel {
       fail('Initial AgentBlueprint is stale or has the wrong generation.');
     }
     assertBlueprintSatisfiesDesignRequest(inspection.request, blueprint);
+    assertEvaluationGateMetricsComputable(blueprint.eval_spec);
     const stored = await this.#objects.put(blueprint);
     const previous = await this.#baselineBlueprint(inspection.request);
     const risk = recomputeBlueprintRisk(previous, blueprint);
@@ -938,6 +940,7 @@ export class FoundryKernel {
       fail('EvolutionProposal is stale.');
     }
     assertBlueprintSatisfiesDesignRequest(inspection.request, proposal.next_blueprint);
+    assertEvaluationGateMetricsComputable(proposal.next_blueprint.eval_spec);
     assertEvaluationPolicyNonWeakening(blueprint, proposal.next_blueprint);
     const previousPublicCases = new Set(blueprint.eval_spec.public_cases.map((entry) => entry.case_id));
     const addedPublicCases = proposal.next_blueprint.eval_spec.public_cases.filter((entry) =>
