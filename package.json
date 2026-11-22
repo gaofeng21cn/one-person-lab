@@ -127,7 +127,7 @@
     "@modelcontextprotocol/server": "^2.4.0",
     "@one-person-lab/cordis-abi": "file:packages/cordis-abi",
     "@one-person-lab/package-host": "file:packages/package-host",
-    "@playwright/mcp": "0.0.85",
+    "@playwright/mcp": "0.0.86",
     "@temporalio/activity": "1.25.0",
     "@temporalio/client": "1.25.0",
     "@temporalio/common": "1.25.0",
@@ -151,6 +151,6 @@
   },
   "license": "Apache-2.0",
   "optionalDependencies": {
-    "e2b": "^2.63.0"
+    "e2b": "^2.64.0"
   }
 }
