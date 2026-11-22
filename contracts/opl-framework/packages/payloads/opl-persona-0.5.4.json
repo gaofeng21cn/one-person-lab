@@ -1,0 +1,209 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "opl-persona",
+  "plugin_id": "opl-persona",
+  "package_version": "0.5.4",
+  "source_repo": "https://github.com/gaofeng21cn/opl-persona.git",
+  "source_commit": "9ce5ef492d50722056e0fab2bd574415534d4386",
+  "source_root": "plugins/opl-persona",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:9c13c7199a3ed4a3a7cae5ad5bcb6c3bf6dffe9b74ae8c1943f3412f68b189d1"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/.codex-plugin/plugin.json",
+      "sha256": "sha256:c99f5875419b7eec24a8d794337d3cd763813ae960b490138088aba4233fda7f"
+    },
+    {
+      "path": "assets/icon.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/assets/icon.png",
+      "sha256": "sha256:e42e4c8ecc0936b4c17f1dd41aeb98a09a83b1ee0eee6935defee9638fe1a4a4"
+    },
+    {
+      "path": "bin/opl-persona",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/bin/opl-persona",
+      "sha256": "sha256:855ad89eedfb0e7bada4de697c030b3353886fb6484fe6f856b26b11e715ff46"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/plugin.json",
+      "sha256": "sha256:25ab4cfb722f931efcebb70bbfbbe6e6223a4d29f96a754b31fe1b7795ac9b60"
+    },
+    {
+      "path": "runtime/opl_persona/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/__init__.py",
+      "sha256": "sha256:24052fc05242e3e2c78d85bacd00f7c9037a7e2829c3af28d292c0db43b371d1"
+    },
+    {
+      "path": "runtime/opl_persona/approvals.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/approvals.py",
+      "sha256": "sha256:2ea4ceda9cafbe6bfcce1b1ced0e39da71b71bf441ba10348a94d1035e7e07f4"
+    },
+    {
+      "path": "runtime/opl_persona/__main__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/__main__.py",
+      "sha256": "sha256:3d2438ae92f4746e9ffaa1f837b1fe803f6281091d1f31f8c95643716f257d9a"
+    },
+    {
+      "path": "app-contribution-adapter.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/app-contribution-adapter.json",
+      "sha256": "sha256:f19a5589608d472b5e1a2c7798d2f5d9dedea10de659e510c10d3a9140334632"
+    },
+    {
+      "path": "runtime/opl_persona/app_contributions.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/app_contributions.py",
+      "sha256": "sha256:243d40962ff42d8cc403093ce9d6f9c1c625d3eda070df2682a903f524a74914"
+    },
+    {
+      "path": "runtime/opl_persona/bindings.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/bindings.py",
+      "sha256": "sha256:78f250e71dbac56daaefe984c5cc0047769e383fcbfb9b1d52048be2c9c34138"
+    },
+    {
+      "path": "runtime/opl_persona/cli.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/cli.py",
+      "sha256": "sha256:c17e551aec231887879f2874d9ec7af7148888607813c5efc69a5ab481cef970"
+    },
+    {
+      "path": "runtime/opl_persona/core.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/core.py",
+      "sha256": "sha256:01416457c22f52f48ab718a5a3ba015a4e74bd626f1d5699b18726c2316d2b47"
+    },
+    {
+      "path": "runtime/opl_persona/inbox.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/inbox.py",
+      "sha256": "sha256:3c8a6ce069c6e5e7027fa7db24d4ab4586c4347659accd18858ce1eb32c6200f"
+    },
+    {
+      "path": "runtime/opl_persona/knowledge.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/knowledge.py",
+      "sha256": "sha256:2f81f200246bb1e652c22044b583cf3ea5bb58a8533ce9888070a475c73edf52"
+    },
+    {
+      "path": "runtime/opl_persona/obsidian.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/obsidian.py",
+      "sha256": "sha256:8c5071aca7d54e2cece307d2b57f73593fd42815bd5960e9ad8214b0c0f30c6b"
+    },
+    {
+      "path": "runtime/opl_persona/obsidian_apply.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/obsidian_apply.py",
+      "sha256": "sha256:13731d857ee13b794ddfbfc37a68f53e0306eb3705cfdbee7796ed1b421d1603"
+    },
+    {
+      "path": "runtime/opl_persona/paths.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/paths.py",
+      "sha256": "sha256:0eca49ee7a8c2d9f68f55e2f3cfe2754c6e23a2b3de46d87cddda1f6ef5345e8"
+    },
+    {
+      "path": "runtime/opl_persona/policy.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/policy.py",
+      "sha256": "sha256:cb79b2f4a0313bac9f85d0b57d5d2e8debaf91411c9310e6b69b8c84476b70e9"
+    },
+    {
+      "path": "runtime/opl_persona/primitives.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/primitives.py",
+      "sha256": "sha256:82b2de50b371ca20f8cf6c6df97b69afa9186c1e044f58f55c09128cefb9f0a5"
+    },
+    {
+      "path": "runtime/opl_persona/proposals.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/proposals.py",
+      "sha256": "sha256:5dc7eca97f992627481097f5eaeab46ea342e5ae6e72ed81329b77fb75d5b9e7"
+    },
+    {
+      "path": "runtime/opl_persona/tasks.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/tasks.py",
+      "sha256": "sha256:d9f8caaafb007fa61c5689a20c1226bb532c203b3967a753a45b384c4e3d8ed9"
+    },
+    {
+      "path": "runtime/opl_persona/tool_registry.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/tool_registry.py",
+      "sha256": "sha256:a8fd90223e744757b050dd401799814bbfa3600ae8ca0644dcc74fa408206a74"
+    },
+    {
+      "path": "runtime/opl_persona/tools/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/tools/__init__.py",
+      "sha256": "sha256:fa905fc53fed205b5b0ff6f14fdd74e4698097ab90a808fc6b74d93a3a678d10"
+    },
+    {
+      "path": "runtime/opl_persona/tools/contract.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/tools/contract.py",
+      "sha256": "sha256:afb5b45058ea4aab993166e2bd1edd06c8afe3bef480e756026168e673f618a4"
+    },
+    {
+      "path": "runtime/opl_persona/tools/browser.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/tools/browser.py",
+      "sha256": "sha256:6dea506be2ce1efd9615c4233c052dedf58b4041d423da56af26898cf85cb8f9"
+    },
+    {
+      "path": "runtime/opl_persona/tools/desktop.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/tools/desktop.py",
+      "sha256": "sha256:6b69625bc33f17e75fe3c8b519f6c29cdf37dd3d003d9a31999fab76caaeadee"
+    },
+    {
+      "path": "runtime/opl_persona/tools/github.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/tools/github.py",
+      "sha256": "sha256:8b7e60425d30e4df5114cd484eb41f82302673ae59214bf6eb929a6f2a9f4115"
+    },
+    {
+      "path": "runtime/opl_persona/tools/package.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/tools/package.py",
+      "sha256": "sha256:b64e5bf3eec036f6409534de747eefe7cee5e930d00b4f1273765622d8d05353"
+    },
+    {
+      "path": "runtime/opl_persona/workspace.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/workspace.py",
+      "sha256": "sha256:616a546a8657b480887bc782abeb7a577efaaacc21acef6dc0e09bda1faa6131"
+    },
+    {
+      "path": "skills/opl-persona/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/skills/opl-persona/SKILL.md",
+      "sha256": "sha256:cf7497e2e15bb3bab3404d22fd57ed084e453180a448a1d77c8ef46c649558b5"
+    },
+    {
+      "path": "skills/opl-persona/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/skills/opl-persona/agents/openai.yaml",
+      "sha256": "sha256:b3999e86f011c90891f2b806092e7f86229b7873910a523500af98c348045aa5"
+    },
+    {
+      "path": "runtime/opl_persona/_opl_profile_workspace.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-persona/9ce5ef492d50722056e0fab2bd574415534d4386/plugins/opl-persona/runtime/opl_persona/_opl_profile_workspace.py",
+      "sha256": "sha256:8e8a880a494db6b00f3c86e628abc7a853706be35f5b1bc01a467ea487201845"
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "package_id": "opl-persona",
   "display_name": "OPL Persona",
   "publisher": "one-person-lab",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-persona.git",
@@ -50,24 +50,30 @@
       "app-contribution-adapter.json",
       "runtime/opl_persona/app_contributions.py",
       "runtime/opl_persona/bindings.py",
-      "runtime/opl_persona/browser_tools.py",
       "runtime/opl_persona/cli.py",
       "runtime/opl_persona/core.py",
       "runtime/opl_persona/inbox.py",
       "runtime/opl_persona/knowledge.py",
-      "runtime/opl_persona/local_tools.py",
       "runtime/opl_persona/obsidian.py",
       "runtime/opl_persona/obsidian_apply.py",
       "runtime/opl_persona/paths.py",
       "runtime/opl_persona/policy.py",
+      "runtime/opl_persona/primitives.py",
       "runtime/opl_persona/proposals.py",
       "runtime/opl_persona/tasks.py",
+      "runtime/opl_persona/tool_registry.py",
+      "runtime/opl_persona/tools/__init__.py",
+      "runtime/opl_persona/tools/contract.py",
+      "runtime/opl_persona/tools/browser.py",
+      "runtime/opl_persona/tools/desktop.py",
+      "runtime/opl_persona/tools/github.py",
+      "runtime/opl_persona/tools/package.py",
       "runtime/opl_persona/workspace.py",
       "skills/opl-persona/SKILL.md",
       "skills/opl-persona/agents/openai.yaml",
       "runtime/opl_persona/_opl_profile_workspace.py"
     ],
-    "digest": "sha256:66478ba26e6f5d5e8f700a466731162c90f2bff8bdcb7e80dc4523f2613ae394"
+    "digest": "sha256:9c13c7199a3ed4a3a7cae5ad5bcb6c3bf6dffe9b74ae8c1943f3412f68b189d1"
   },
   "codex_surface": {
     "plugin_id": "opl-persona",
@@ -97,8 +103,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/opl-persona-0.5.3.json",
-    "carrier_source_commit": "3a4134b6ee2f5087e74259eb0c0a4cf6b70670a0"
+    "plugin_payload_manifest_url": "payloads/opl-persona-0.5.4.json",
+    "carrier_source_commit": "9ce5ef492d50722056e0fab2bd574415534d4386"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
