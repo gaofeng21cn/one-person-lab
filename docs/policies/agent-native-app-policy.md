@@ -16,6 +16,8 @@ MiniApp 所依托的共用基座是所有自有 Agent 和 Agent 原生 App 的�
 
 软件中心纳管的自有产品使用一个明确的用户产品名。根 README 第一屏依次提供同系列 Logo、语言切换、正式名称和简短定位，后续章节按领域说明能力、实际安装、使用和边界。中英文入口共用品牌名与 Logo，描述使用对应语言；已有语言文件路径继续有效。第三方软件沿用上游品牌，宿主内部组件按职责显示，不为每个组件强造独立 MiniApp。
 
+公开首页用领域工作说明智能体怎样推进、人在何时介入以及最后怎样核对结果。具体写法和可复用结构见 [OPL 智能体 README 写作指南](../mcp-apps/agent-readme.md)。
+
 家族 Logo 采用浅纸色圆角底板、浅蓝点阵、深色手绘轮廓、蓝色与青绿分段圆环和琥珀色点缀，中心使用可辨认的领域符号。新增或确需补齐时使用 imagegen 并保存提示词与参考来源；保留用户已选定的品牌原稿。README、原生插件 `interface.logo` / `composerIcon` 和 owner manifest 的 `presentation.icon_ref` 引用同一图稿。图片随 immutable payload 交付，纳入 content lock 和 payload allowlist；软件中心读取 Framework projection，不另存品牌数据库。
 
 产品显示名可改进，稳定 Package ID、仓库名、CLI、Skill、MCP server、resource URI 和安装选择器保持兼容。后端名与产品名不同的，在 README 说明对应关系。品牌修改应更新 owner、实际构建源及载体，再通过正式 Package 更新路径验证；源仓修改、已发布制品和本机已装状态分别回读。

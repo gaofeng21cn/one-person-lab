@@ -2,6 +2,8 @@
 
 本指南将[开发标准](../policies/agent-native-app-policy.md)变成可执行的接入步骤，适用于标准智能体、其他 Agent、个人工作流和 Agent 原生 App。先接入需要的共用基座，再选择是否提供 UI。使用现有 Package 和 owner 工程，不创建另一种 MiniApp 包。协议、贡献 ABI 和工具行为见 [SPEC](./SPEC.md)。
 
+写作或更新公开产品首页时，使用 [OPL 智能体 README 写作指南](agent-readme.md)。
+
 ## 从一条真实工作流开始
 
 先在现有产品 SPEC 或 OMA 蓝图中写清下面的设计事实，不增加第二份配置 manifest：
