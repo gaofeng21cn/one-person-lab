@@ -425,6 +425,9 @@ export async function stageQualityAttemptMaterializeActivity(
             input.review_input_snapshot_materialization_request,
             snapshotAuthorityBinding!,
             { refs: inputArtifactIdentity.artifact_refs, hashes: inputArtifactIdentity.artifact_hashes },
+            // The Framework's durable execution scope is the only authority that
+            // may rebase a member ref; without it no rebase is attempted.
+            { trusted_workspace_root: stageRun.execution_scope?.workspace_root },
           ),
         })
       : null;

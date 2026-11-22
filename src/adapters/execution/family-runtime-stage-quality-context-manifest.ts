@@ -8,6 +8,8 @@ import {
 import {
   readReviewerInputSnapshotManifest,
   type resolveReviewerInputSnapshotMaterialization,
+  type SnapshotMemberRefRebase,
+  type SnapshotWorkspaceRootWidening,
 } from './family-runtime-reviewer-input-snapshot.ts';
 import { revisionTransportContext } from './family-runtime-revision-intake.ts';
 
@@ -89,6 +91,12 @@ export function buildStageReviewInputSnapshotContext(input: {
       opl_reviewer_input_snapshot_manifest_ref: input.resolution.manifest_ref,
       opl_reviewer_input_snapshot_manifest: input.resolution.manifest,
       review_input_snapshot_read_policy: REVIEW_INPUT_SNAPSHOT_READ_POLICY,
+      review_input_snapshot_member_ref_rebases:
+        (input.resolution as { member_ref_rebases?: SnapshotMemberRefRebase[] })
+          .member_ref_rebases ?? [],
+      review_input_snapshot_workspace_root_widenings:
+        (input.resolution as { workspace_root_widenings?: SnapshotWorkspaceRootWidening[] })
+          .workspace_root_widenings ?? [],
       review_input_snapshot_quality_debt_receipt_ref: null,
       review_input_snapshot_quality_debt_receipt: null,
     } as const;
@@ -195,6 +203,36 @@ function validateStageReviewInputSnapshotContext(manifest: Record<string, unknow
       'contract_shape_invalid',
       'Materialized reviewer input snapshot cannot also carry missing-snapshot debt.',
       { failure_code: 'review_input_snapshot_materialized_debt_invalid' },
+    );
+  }
+  const memberRefRebases = manifest.review_input_snapshot_member_ref_rebases ?? [];
+  if (!Array.isArray(memberRefRebases) || memberRefRebases.some((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return true;
+    const rebase = entry as Record<string, unknown>;
+    return typeof rebase.member_id !== 'string'
+      || typeof rebase.declared_source_ref !== 'string'
+      || typeof rebase.resolved_source_ref !== 'string'
+      || rebase.resolved_under !== 'trusted_workspace_root';
+  })) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Review snapshot member ref rebases must record the declared and resolved refs for every rebased member.',
+      { failure_code: 'review_input_snapshot_member_ref_rebases_invalid' },
+    );
+  }
+  const workspaceRootWidenings = manifest.review_input_snapshot_workspace_root_widenings ?? [];
+  if (!Array.isArray(workspaceRootWidenings) || workspaceRootWidenings.some((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return true;
+    const widening = entry as Record<string, unknown>;
+    return typeof widening.declared_workspace_root !== 'string'
+      || typeof widening.widened_workspace_root !== 'string'
+      || typeof widening.trusted_workspace_root !== 'string'
+      || !Array.isArray(widening.escaped_member_source_refs);
+  })) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Review snapshot workspace root widenings must record the declared, widened, and trusted roots.',
+      { failure_code: 'review_input_snapshot_workspace_root_widenings_invalid' },
     );
   }
   const readback = readReviewerInputSnapshotManifest(

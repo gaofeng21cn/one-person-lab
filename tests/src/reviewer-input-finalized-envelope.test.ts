@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
-import { completeReviewerSnapshotTransportEnvelope } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
+import {
+  completeReviewerSnapshotTransportEnvelope,
+  resolveReviewerInputSnapshotMaterialization,
+} from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
 
 function fixture() {
   const source = { kind: 'artifact', ref: 'file:///workspace/source.json', sha256: `sha256:${'1'.repeat(64)}`, size_bytes: 12 };
@@ -126,4 +133,133 @@ test('an unknown extra key still fails closed', () => {
     () => completeReviewerSnapshotTransportEnvelope(withExtra, authority, artifacts),
     /must use the exact declared fields/,
   );
+});
+
+// A producer can copy a workspace-relative ref from its action payload into a
+// request whose declared root is the WorkItem root; the ref then resolves to a
+// doubled, nonexistent path (production: fixture revalidation of
+// same-revision-resume-and-unrelated-progress). When the ref exists uniquely
+// inside the Framework's trusted workspace root, rebasing it preserves the
+// member and its byte binding; the materialized snapshot still hash-pins the
+// verified bytes.
+function rebaseFixture() {
+  const workspace = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-f08d-rebase-')));
+  const workItemRoot = path.join(workspace, 'work-items', 'wi-alpha');
+  fs.mkdirSync(workItemRoot, { recursive: true });
+  fs.mkdirSync(path.join(workspace, 'work-items', 'wi-beta'), { recursive: true });
+  const sourceBytes = Buffer.from(JSON.stringify({ kind: 'source' }));
+  fs.writeFileSync(path.join(workItemRoot, 'source.json'), sourceBytes);
+  const digestOf = (bytes: Buffer) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+  const source = {
+    kind: 'artifact',
+    ref: `file://${workItemRoot}/source.json`,
+    sha256: digestOf(sourceBytes),
+    size_bytes: sourceBytes.length,
+  };
+  const authority = {
+    producer_attempt_ref: 'opl://stage_attempts/sat_f08d',
+    execution_content_binding_sha256: `sha256:${'3'.repeat(64)}`,
+    review_lane_binding: 'statistical',
+    owner_authority_refs: [source],
+  };
+  const request = {
+    surface_kind: 'opl_reviewer_input_snapshot_materialization_request', schema_version: 2,
+    owner_authority_ref: source, producer_attempt_ref: authority.producer_attempt_ref,
+    execution_content_binding_sha256: authority.execution_content_binding_sha256,
+    review_lane: 'statistical', workspace_root: workItemRoot,
+    members: [
+      { member_id: 'domain-source', source_ref: source.ref, sha256: source.sha256, size_bytes: source.size_bytes },
+    ],
+  };
+  return { workspace, workItemRoot, source, authority, request, digestOf };
+}
+
+test('a workspace-relative ref that misses the declared root is rebased to its trusted-root resolution', () => {
+  const { workspace, workItemRoot, source, authority, request, digestOf } = rebaseFixture();
+  try {
+    const siblingBytes = Buffer.from('{"state":1}');
+    const siblingPath = path.join(workspace, 'work-items', 'wi-beta', 'state.json');
+    fs.writeFileSync(siblingPath, siblingBytes);
+    const sibling = { sha256: digestOf(siblingBytes), size_bytes: siblingBytes.length };
+    const authorityWithSibling = { ...authority, owner_authority_refs: [source, { kind: 'artifact', ref: `file://${siblingPath}`, ...sibling }] };
+    const requestWithSibling = {
+      ...request,
+      members: [
+        ...request.members,
+        // Workspace-relative as copied from the payload: misses under the
+        // declared WorkItem root, exists under the trusted workspace root.
+        { member_id: 'sibling-state', source_ref: 'work-items/wi-beta/state.json', ...sibling },
+      ],
+    };
+    const resolution = resolveReviewerInputSnapshotMaterialization(
+      requestWithSibling,
+      authorityWithSibling,
+      { refs: [], hashes: [] },
+      { trusted_workspace_root: workspace },
+    );
+    assert.equal(resolution.surface_kind, 'opl_reviewer_input_snapshot_materialization');
+    const rebases = (resolution as { member_ref_rebases?: { member_id: string; declared_source_ref: string; resolved_source_ref: string; resolved_under: string }[] }).member_ref_rebases ?? [];
+    assert.deepEqual(rebases, [{
+      member_id: 'sibling-state',
+      declared_source_ref: 'work-items/wi-beta/state.json',
+      resolved_source_ref: siblingPath,
+      resolved_under: 'trusted_workspace_root',
+    }]);
+    // The materialized manifest binds the rebased member's verified bytes.
+    const manifest = (resolution as { manifest: { members: { member_id: string; sha256: string }[] } }).manifest;
+    assert.equal(manifest.members.find((entry) => entry.member_id === 'sibling-state')?.sha256, sibling.sha256);
+  } finally {
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+// A ref that resolves under the declared root keeps that deterministic
+// interpretation even when the same string also resolves under the trusted root.
+test('a ref that exists under the declared root is not rebased', () => {
+  const { workspace, workItemRoot, source, authority, request, digestOf } = rebaseFixture();
+  try {
+    const declaredBytes = Buffer.from('{"declared":true}');
+    fs.writeFileSync(path.join(workItemRoot, 'state.json'), declaredBytes);
+    fs.writeFileSync(path.join(workspace, 'state.json'), '{"trusted":true}');
+    const declared = { sha256: digestOf(declaredBytes), size_bytes: declaredBytes.length };
+    const requestWithDeclared = {
+      ...request,
+      members: [...request.members, { member_id: 'local-state', source_ref: 'state.json', ...declared }],
+    };
+    const resolution = resolveReviewerInputSnapshotMaterialization(
+      requestWithDeclared,
+      authority,
+      { refs: [], hashes: [] },
+      { trusted_workspace_root: workspace },
+    );
+    assert.equal(resolution.surface_kind, 'opl_reviewer_input_snapshot_materialization');
+    assert.equal((resolution as { member_ref_rebases?: unknown[] }).member_ref_rebases, undefined);
+  } finally {
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+// A ref that resolves nowhere stays fail-closed.
+test('a ref that resolves under neither root is not rebased and fails at materialization', () => {
+  const { workspace, source, authority, request } = rebaseFixture();
+  try {
+    const requestWithGhost = {
+      ...request,
+      members: [...request.members, { member_id: 'ghost', source_ref: 'work-items/wi-ghost/state.json', sha256: `sha256:${'5'.repeat(64)}`, size_bytes: 2 }],
+    };
+    assert.throws(() => resolveReviewerInputSnapshotMaterialization(
+      requestWithGhost,
+      authority,
+      { refs: [], hashes: [] },
+      { trusted_workspace_root: workspace },
+    ));
+    // And without a trusted root no rebase is ever attempted.
+    assert.throws(() => resolveReviewerInputSnapshotMaterialization(
+      { ...requestWithGhost, members: [...request.members, { member_id: 'ghost', source_ref: 'state.json', sha256: `sha256:${'5'.repeat(64)}`, size_bytes: 2 }] },
+      authority,
+      { refs: [], hashes: [] },
+    ));
+  } finally {
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
 });

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
@@ -651,10 +651,220 @@ export function completeReviewerSnapshotTransportEnvelope(
   return normalizeReviewerInputSnapshotRequest({ ...request, members }, expectedAuthority);
 }
 
+// A producer can hand-write a member ref in the wrong *encoding* rather than
+// the wrong place (observed in a live run: workspace-relative refs copied from
+// the action payload into a request whose declared root is the WorkItem root,
+// so the transport resolves them to a doubled, nonexistent path and kills the
+// review). When the ref resolves to nothing under the declared root but
+// resolves to exactly one existing file inside the Framework's trusted
+// workspace root, rebasing the ref to that verified absolute path preserves the
+// declared member and its byte binding — the member is still hash-pinned at
+// materialization, so a wrong rebase cannot bind wrong bytes. A ref that
+// resolves under the declared root keeps that deterministic interpretation; a
+// ref that resolves nowhere stays fail-closed.
+export type SnapshotMemberRefRebase = {
+  member_id: string;
+  declared_source_ref: string;
+  resolved_source_ref: string;
+  resolved_under: 'trusted_workspace_root';
+};
+
+// A producer also hand-writes the request's workspace_root, and it can declare
+// a root narrower than its own member list (observed in live runs: a
+// WorkItem-root request whose members named sibling WorkItem state files and
+// workspace-level knowledge registry entries). The transport then
+// deterministically kills the review before the reviewer starts. When the
+// Framework's own durable execution scope proves every member still lives
+// inside the real workspace, widening the declared root to the narrowest root
+// that contains it and every member preserves the exact member set and byte
+// bindings — each member is still revalidated and hash-pinned at
+// materialization. A member outside the trusted workspace root is a genuine
+// escape and stays fail-closed.
+export type SnapshotWorkspaceRootWidening = {
+  declared_workspace_root: string;
+  widened_workspace_root: string;
+  trusted_workspace_root: string;
+  escaped_member_source_refs: string[];
+  rebased_member_source_refs?: string[];
+  // Framework-bound members (immutable StageRun input bindings, owner content
+  // sources) are exempt from workspace containment: their authority is their
+  // exact ref+hash+size binding, not their location. They never constrain the
+  // widened root.
+  external_bound_member_source_refs?: string[];
+};
+
+function realpathOrResolved(candidate: string) {
+  try {
+    return fs.realpathSync.native(candidate);
+  } catch {
+    return path.resolve(candidate);
+  }
+}
+
+function resolvedInside(candidate: string, root: string) {
+  const relative = path.relative(root, candidate);
+  return relative === '' || (
+    relative !== '..'
+    && !relative.startsWith(`..${path.sep}`)
+    && !path.isAbsolute(relative)
+  );
+}
+
+function commonAncestorOf(paths: string[]) {
+  let ancestor = paths[0]!;
+  for (const candidate of paths.slice(1)) {
+    while (!resolvedInside(candidate, ancestor)) {
+      const parent = path.dirname(ancestor);
+      if (parent === ancestor) return ancestor;
+      ancestor = parent;
+    }
+  }
+  return ancestor;
+}
+
+function repairSnapshotRequestWorkspaceRootAgainstTrustedRoot(
+  value: unknown,
+  trustedWorkspaceRoot?: string,
+  externalBoundRefs?: ReadonlySet<string>,
+): { value: unknown; widenings: SnapshotWorkspaceRootWidening[]; rebases: SnapshotMemberRefRebase[] } {
+  if (!isRecord(value)
+    || typeof value.workspace_root !== 'string'
+    || !Array.isArray(value.members)
+    || value.members.length === 0
+    || typeof trustedWorkspaceRoot !== 'string'
+    || !trustedWorkspaceRoot.trim()) {
+    return { value, widenings: [], rebases: [] };
+  }
+  let declaredRoot: string;
+  let trustedRoot: string;
+  try {
+    declaredRoot = fs.realpathSync.native(path.resolve(value.workspace_root));
+    trustedRoot = fs.realpathSync.native(path.resolve(trustedWorkspaceRoot));
+  } catch {
+    // An unreadable declared or trusted root is the materializer's existing
+    // fail-closed path, not a repair decision.
+    return { value, widenings: [], rebases: [] };
+  }
+  if (!resolvedInside(declaredRoot, trustedRoot)) {
+    // The declared root itself escapes the Framework-recorded workspace: this is
+    // framework setup evidence, not a repairable model slip.
+    return { value, widenings: [], rebases: [] };
+  }
+  const rebases: SnapshotMemberRefRebase[] = [];
+  let anyRebase = false;
+  let undecidable = false;
+  const memberPaths: { source_ref: string; resolved: string; member_id: string; external_bound: boolean }[] = [];
+  const repairedMembers = value.members.map((member) => {
+    if (!isRecord(member) || typeof member.source_ref !== 'string') {
+      undecidable = true;
+      return member;
+    }
+    const ref = member.source_ref;
+    const memberId = typeof member.member_id === 'string' ? member.member_id : '';
+    // Immutable StageRun input bindings (and owner content sources) are
+    // framework-owned bindings, not containment subjects: they legitimately
+    // live outside the workspace (e.g. under the shared OPL state root) and
+    // are byte-pinned by the authority at materialization. Excluding them
+    // from the widening computation keeps a bound external input from
+    // poisoning the common ancestor of the members that do need containment.
+    const externalBound = externalBoundRefs?.has(ref) === true;
+    let candidate: string;
+    if (ref.startsWith('file://')) {
+      try {
+        candidate = fileURLToPath(ref);
+      } catch {
+        undecidable = true;
+        return member;
+      }
+    } else if (path.isAbsolute(ref)) {
+      candidate = ref;
+    } else if (!/^[a-z][a-z0-9+.-]*:/i.test(ref)) {
+      // Relative ref: the declared-root interpretation wins whenever it exists.
+      // Only when it resolves to nothing do we try the trusted workspace root —
+      // a unique, existing rebase target there is the ref the producer plainly
+      // meant (observed: payload-encoded workspace-relative refs).
+      const declaredCandidate = path.resolve(declaredRoot, ref);
+      let declaredReal: string | null = null;
+      try {
+        declaredReal = fs.realpathSync.native(declaredCandidate);
+      } catch {
+        declaredReal = null;
+      }
+      if (declaredReal !== null) {
+        memberPaths.push({ source_ref: ref, resolved: declaredReal, member_id: memberId, external_bound: externalBound });
+        return member;
+      }
+      const trustedCandidate = path.resolve(trustedRoot, ref);
+      let trustedReal: string | null = null;
+      try {
+        trustedReal = fs.realpathSync.native(trustedCandidate);
+      } catch {
+        trustedReal = null;
+      }
+      if (trustedReal !== null && resolvedInside(trustedReal, trustedRoot)) {
+        anyRebase = true;
+        rebases.push({
+          member_id: memberId,
+          declared_source_ref: ref,
+          resolved_source_ref: trustedReal,
+          resolved_under: 'trusted_workspace_root',
+        });
+        memberPaths.push({ source_ref: trustedReal, resolved: trustedReal, member_id: memberId, external_bound: externalBound });
+        return { ...member, source_ref: trustedReal };
+      }
+      memberPaths.push({ source_ref: ref, resolved: declaredCandidate, member_id: memberId, external_bound: externalBound });
+      return member;
+    } else {
+      // Non-file URIs are resolved by later stages; containment is not decidable here.
+      undecidable = true;
+      return member;
+    }
+    memberPaths.push({ source_ref: ref, resolved: realpathOrResolved(candidate), member_id: memberId, external_bound: externalBound });
+    return member;
+  });
+  if (undecidable) {
+    // Any member whose resolution we cannot decide keeps the whole request on
+    // the transport's fail-closed path, unmodified.
+    return { value, widenings: [], rebases: [] };
+  }
+  const externalBoundMembers = memberPaths.filter((member) => member.external_bound);
+  const containedMembers = memberPaths.filter((member) => !member.external_bound);
+  const escaped = containedMembers.filter((member) => !resolvedInside(member.resolved, declaredRoot));
+  const repairedValue = anyRebase ? { ...value, members: repairedMembers } : value;
+  if (escaped.length === 0) {
+    return { value: repairedValue, widenings: [], rebases };
+  }
+  const widenedRoot = commonAncestorOf([declaredRoot, ...containedMembers.map((member) => member.resolved)]);
+  if (!resolvedInside(widenedRoot, trustedRoot) || widenedRoot === declaredRoot) {
+    // The narrowest consistent root would leave the trusted workspace: genuine
+    // escape. Rebases already computed are not applied either: the request is
+    // left exactly as authored so the transport's fail-closed path reports the
+    // original bytes.
+    return { value, widenings: [], rebases: [] };
+  }
+  return {
+    value: { ...repairedValue, workspace_root: widenedRoot },
+    widenings: [{
+      declared_workspace_root: declaredRoot,
+      widened_workspace_root: widenedRoot,
+      trusted_workspace_root: trustedRoot,
+      escaped_member_source_refs: escaped.map((member) => member.source_ref),
+      ...(externalBoundMembers.length > 0
+        ? { external_bound_member_source_refs: externalBoundMembers.map((member) => member.source_ref) }
+        : {}),
+      ...(rebases.length > 0
+        ? { rebased_member_source_refs: rebases.map((rebase) => rebase.declared_source_ref) }
+        : {}),
+    }],
+    rebases,
+  };
+}
+
 export function resolveReviewerInputSnapshotMaterialization(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
   declaredArtifacts?: { refs: string[]; hashes: string[] },
+  options?: { trusted_workspace_root?: string },
 ) {
   if (value === null || value === undefined) {
     return snapshotQualityDebt(
@@ -662,8 +872,23 @@ export function resolveReviewerInputSnapshotMaterialization(
       'materialize the complete owner-provided review scope as an immutable OPL snapshot',
     );
   }
+  const authority = expectedAuthority ? normalizeAuthorityBinding(expectedAuthority) : null;
+  const externalBoundRefs = new Set([
+    ...(authority?.stage_run_input_authority_refs ?? []).map((ref) => ref.ref),
+    ...(authority?.owner_content_source_refs ?? []).map((ref) => ref.ref),
+  ]);
+  const repaired = repairSnapshotRequestWorkspaceRootAgainstTrustedRoot(
+    value,
+    options?.trusted_workspace_root,
+    externalBoundRefs,
+  );
   const envelope = declaredArtifacts && expectedAuthority
-    ? completeReviewerSnapshotTransportEnvelope(value, expectedAuthority, declaredArtifacts)
-    : value;
-  return materializeReviewerInputSnapshot(envelope, expectedAuthority);
+    ? completeReviewerSnapshotTransportEnvelope(repaired.value, expectedAuthority, declaredArtifacts)
+    : repaired.value;
+  const materialization = materializeReviewerInputSnapshot(envelope, expectedAuthority);
+  return {
+    ...materialization,
+    ...(repaired.widenings.length > 0 ? { workspace_root_widenings: repaired.widenings } : {}),
+    ...(repaired.rebases.length > 0 ? { member_ref_rebases: repaired.rebases } : {}),
+  };
 }

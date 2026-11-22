@@ -453,6 +453,30 @@ export async function StageRunWorkflow(
       .review_input_snapshot_quality_debt_receipt_ref === 'string'
       ? childContextManifest.review_input_snapshot_quality_debt_receipt_ref
       : null;
+    const reviewInputSnapshotWorkspaceRootWideningRefs = (
+      Array.isArray(childContextManifest.review_input_snapshot_workspace_root_widenings)
+        ? childContextManifest.review_input_snapshot_workspace_root_widenings
+        : []
+    ).map((entry, index) => {
+      const escaped = asRecord(entry).escaped_member_source_refs;
+      const escapedCount = Array.isArray(escaped) ? escaped.length : 0;
+      return qualityFailureRef(
+        input,
+        `review-input-snapshot-workspace-root-widened:${index + 1}-of-${escapedCount}-escaped-members`,
+      );
+    });
+    const reviewInputSnapshotMemberRefRebaseRefs = (
+      Array.isArray(childContextManifest.review_input_snapshot_member_ref_rebases)
+        ? childContextManifest.review_input_snapshot_member_ref_rebases
+        : []
+    ).map((entry) => qualityFailureRef(
+      input,
+      `review-input-snapshot-member-ref-rebased:${
+        typeof asRecord(entry).member_id === 'string' && asRecord(entry).member_id
+          ? (asRecord(entry).member_id as string)
+          : 'unknown'
+      }`,
+    ));
     const allowLegacyUnboundExecutionPolicy = !childInput.execution_content_binding
       && !patched('opl-stage-run-controller-attempt-content-binding-v1');
     const executionPolicy = allowLegacyUnboundExecutionPolicy
@@ -741,6 +765,8 @@ export async function StageRunWorkflow(
       executionPolicy,
       defaultProgression: asRecord(asRecord(childContextManifest.cross_stage_route_selection).controller_default_progression),
       reviewInputSnapshotQualityDebtRef,
+      reviewInputSnapshotWorkspaceRootWideningRefs,
+      reviewInputSnapshotMemberRefRebaseRefs,
       reviewedArtifactRefs: attemptInput.artifactRefs,
       reviewedArtifactHashes: attemptInput.artifactHashes,
       artifactIdentity,
@@ -1099,6 +1125,8 @@ export async function StageRunWorkflow(
             ...(reReview.reviewInputSnapshotQualityDebtRef
               ? [reReview.reviewInputSnapshotQualityDebtRef]
               : []),
+            ...reReview.reviewInputSnapshotWorkspaceRootWideningRefs,
+            ...reReview.reviewInputSnapshotMemberRefRebaseRefs,
           ])],
         };
         commitReviewedArtifactAuthority(
@@ -1139,6 +1167,8 @@ export async function StageRunWorkflow(
           ...(reReview.reviewInputSnapshotQualityDebtRef
             ? [reReview.reviewInputSnapshotQualityDebtRef]
             : []),
+          ...reReview.reviewInputSnapshotWorkspaceRootWideningRefs,
+          ...reReview.reviewInputSnapshotMemberRefRebaseRefs,
         ])],
       };
       commitReviewedArtifactAuthority(
@@ -1320,6 +1350,8 @@ export async function StageRunWorkflow(
         ...(review.reviewInputSnapshotQualityDebtRef
           ? [review.reviewInputSnapshotQualityDebtRef]
           : []),
+        ...review.reviewInputSnapshotWorkspaceRootWideningRefs,
+        ...review.reviewInputSnapshotMemberRefRebaseRefs,
       ])],
     };
     if (isEarlyRepairRouteBack(review)) {
@@ -1485,6 +1517,8 @@ export async function StageRunWorkflow(
             ...(reReview.reviewInputSnapshotQualityDebtRef
               ? [reReview.reviewInputSnapshotQualityDebtRef]
               : []),
+            ...reReview.reviewInputSnapshotWorkspaceRootWideningRefs,
+            ...reReview.reviewInputSnapshotMemberRefRebaseRefs,
           ])],
         };
         commitReviewedArtifactAuthority(reReview, hardStopReceipt, 'hard_stopped', round);
@@ -1522,6 +1556,8 @@ export async function StageRunWorkflow(
           ...(reReview.reviewInputSnapshotQualityDebtRef
             ? [reReview.reviewInputSnapshotQualityDebtRef]
             : []),
+          ...reReview.reviewInputSnapshotWorkspaceRootWideningRefs,
+          ...reReview.reviewInputSnapshotMemberRefRebaseRefs,
         ])],
       };
       commitReviewedArtifactAuthority(
