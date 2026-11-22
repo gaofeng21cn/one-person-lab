@@ -82,6 +82,8 @@ CLI 默认 invocation 是稳定幂等键；`--new-stage-run` 显式创建新 Run
 
 reviewer / re_reviewer 的 `stage_quality_cycle.artifact_refs` 与 `artifact_hashes` 标识被审的 producer / repairer 产物；可同时省略以继承输入身份，或按原顺序原样回传。审查报告与 immutable snapshot 的读取地址不能替换该身份。身份不符时，新 controller 明确返回 `blocked`、`hard_stop_class=stale_or_mismatched_stage_identity`、`blocked_reason=reviewed_artifact_identity_mismatch` 和原 `source_attempt_ref`，不伪造 review receipt，也不将其降为缺少 route 的质量债。Attempt projection 失败仍单独留存，不能覆盖该身份拒绝原因。身份一致且没有 required findings 的 `quality_debt` 保留 reviewer 的终局 route 并物化后续 StageRun。
 
+物化 reviewer snapshot 时，Framework 可从同一 locator 唯一可核验的 producer 产物或冻结 StageRun 输入恢复模型误写的 SHA-256 和字节数，随后按该身份读回不可变快照。相对成员首先沿原请求根解析。只有未能找到的相对成员精确命中冻结输入的地址、摘要和大小时，才从 StageRun 绑定的 workspace 解析该成员。根字段使用本地 `file:///` 时，解码后必须与 producer Attempt 已持久化的工作根相同。原始请求保存在 producer closeout，成功归一化由 reviewer context manifest 记录。
+
 SHA-256 的 64 位十六进制值与 `sha256:` 前缀形式按同一字节摘要比较，大小写归一；
 原输入身份及 receipt 继续保留。文件引用及顺序、真实摘要差异和其他算法仍严格区分。
 新行为通过 Temporal patch marker 进入，旧历史 replay 保留原决定；这只是传输表示

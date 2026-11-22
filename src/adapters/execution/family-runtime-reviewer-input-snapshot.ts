@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
-import { isRecord } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import {
   canonicalReviewTransportSha256,
   persistCanonicalReviewTransportJson,
@@ -54,6 +54,8 @@ export type ReviewerInputSnapshotAuthorityBinding = {
   owner_content_source_refs?: ReviewerInputSnapshotContentSourceRef[];
   owner_content_source_workspace_root?: string;
   stage_run_input_authority_refs?: ReviewTransportExactRef[];
+  producer_workspace_root?: string;
+  stage_run_input_workspace_root?: string;
 };
 
 export function reviewerSnapshotStageRunInputAuthority(specInput: unknown): ReviewTransportExactRef[] {
@@ -191,6 +193,8 @@ function normalizeAuthorityBinding(
           ),
         }
       : {}),
+    producer_workspace_root: value.producer_workspace_root,
+    stage_run_input_workspace_root: value.stage_run_input_workspace_root,
     stage_run_input_authority_refs: (value.stage_run_input_authority_refs ?? []).map((ref, index) => (
       normalizeExactRef(ref, `expected_authority.stage_run_input_authority_refs[${index}]`)
     )),
@@ -510,31 +514,74 @@ function encodedStageInputLocator(ref: string) {
   }
 }
 
+type SnapshotAuthoringNormalization =
+  | { finding: 'workspace_root_file_url_decoded' }
+  | {
+      finding: 'authority_member_identity_restored' | 'frozen_input_resolved_from_workspace';
+      member_id: string;
+      sha256: string;
+      size_bytes: number;
+    };
+
+function resolvedMemberSource(
+  member: ReviewerInputSnapshotMember,
+  requestRoot: string,
+  authority: ReviewerInputSnapshotAuthorityBinding | null,
+  normalizations: SnapshotAuthoringNormalization[],
+) {
+  const inputs = authority?.stage_run_input_authority_refs ?? [];
+  const memberLocator = encodedStageInputLocator(member.source_ref);
+  const sameBytes = (source: { sha256: string; size_bytes: number }) => (
+    source.sha256 === member.sha256 && source.size_bytes === member.size_bytes
+  );
+  const boundInput = inputs.find((ref) => sameBytes(ref) && encodedStageInputLocator(ref.ref) === memberLocator);
+  if (boundInput && (boundInput.ref.startsWith('file://') || path.isAbsolute(boundInput.ref))) {
+    return resolveExactBoundLocalFile(boundInput.ref);
+  }
+  const boundContent = authority?.owner_content_source_refs?.find((source) => (
+    source.ref === member.source_ref && sameBytes(source)
+  ));
+  if (boundContent) {
+    return resolveContainedWorkspaceFile(authority!.owner_content_source_workspace_root, boundContent.source_ref);
+  }
+  try {
+    return resolveContainedWorkspaceFile(requestRoot, member.source_ref);
+  } catch (error) {
+    const inputRoot = authority?.stage_run_input_workspace_root;
+    const relative = !path.isAbsolute(member.source_ref) && !/^[a-z][a-z0-9+.-]*:/i.test(member.source_ref);
+    if (!inputRoot || !relative || !(error instanceof FrameworkContractError)
+      || error.details?.failure_code !== 'reviewer_input_snapshot_source_unreadable') {
+      throw error;
+    }
+    const inputPath = path.resolve(inputRoot, member.source_ref);
+    const inputUrl = pathToFileURL(inputPath).href;
+    const frozenInput = boundInput ?? inputs.find((ref) => sameBytes(ref)
+      && (ref.ref === inputPath || encodedStageInputLocator(ref.ref) === inputUrl));
+    if (!frozenInput) throw error;
+    const source = resolveContainedWorkspaceFile(inputRoot, frozenInput.ref);
+    normalizations.push({
+      finding: 'frozen_input_resolved_from_workspace',
+      member_id: member.member_id,
+      sha256: frozenInput.sha256,
+      size_bytes: frozenInput.size_bytes,
+    });
+    return source;
+  }
+}
+
 export function materializeReviewerInputSnapshot(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
+  authoringNormalizations: SnapshotAuthoringNormalization[] = [],
 ) {
   const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority);
   const authority = expectedAuthority ? normalizeAuthorityBinding(expectedAuthority) : null;
-  const inputAuthority = authority?.stage_run_input_authority_refs ?? [];
-  const contentSources = authority?.owner_content_source_refs ?? [];
+  const normalizations = [...authoringNormalizations];
   let createdObjectCount = 0;
   const effectiveMembers: typeof request.members = [];
   const snapshotObjectRoot = reviewTransportRoots().reviewer_snapshot_object_root;
   for (const member of request.members) {
-    const memberLocator = encodedStageInputLocator(member.source_ref);
-    const boundInput = inputAuthority.find((ref) => (
-      ref.sha256 === member.sha256 && ref.size_bytes === member.size_bytes
-      && encodedStageInputLocator(ref.ref) === memberLocator
-    ));
-    const boundContent = contentSources.find((source) => (
-      source.ref === member.source_ref && source.sha256 === member.sha256 && source.size_bytes === member.size_bytes
-    ));
-    const source = boundInput && (boundInput.ref.startsWith('file://') || path.isAbsolute(boundInput.ref))
-      ? resolveExactBoundLocalFile(boundInput.ref)
-      : boundContent
-        ? resolveContainedWorkspaceFile(authority!.owner_content_source_workspace_root, boundContent.source_ref)
-        : resolveContainedWorkspaceFile(request.workspace_root, member.source_ref);
+    const source = resolvedMemberSource(member, request.workspace_root, authority, normalizations);
     try {
       const existing = persistReviewerSnapshotObject({
         expectedSha256: member.sha256,
@@ -561,6 +608,18 @@ export function materializeReviewerInputSnapshot(
     if (persisted.created) createdObjectCount += 1;
     effectiveMembers.push(memberWithObservedObjectSize(member, snapshotObjectRoot));
   }
+
+  for (const normalization of normalizations) {
+    if (normalization.finding === 'workspace_root_file_url_decoded') continue;
+    const effectiveMember = effectiveMembers.find((member) => member.member_id === normalization.member_id);
+    if (effectiveMember?.sha256 !== normalization.sha256 || effectiveMember.size_bytes !== normalization.size_bytes) {
+      throw reviewTransportError(
+        'reviewer_input_snapshot_member_identity_mismatch',
+        'Reviewer input snapshot bytes do not match the bound member identity.',
+        { member_id: normalization.member_id, expected_size_bytes: normalization.size_bytes, observed_size_bytes: effectiveMember?.size_bytes },
+      );
+    }
+  }
   const persistedManifest = persistCanonicalReviewTransportJson({
     root: reviewTransportRoots().reviewer_snapshot_manifest_root,
     kind: 'opl_reviewer_input_snapshot_manifest',
@@ -576,6 +635,7 @@ export function materializeReviewerInputSnapshot(
     manifest_ref: readback.manifest_ref,
     manifest: readback.manifest,
     review_input_snapshot_binding: readback.binding,
+    ...(normalizations.length > 0 ? { authoring_normalizations: normalizations } : {}),
   } as const;
 }
 
@@ -589,42 +649,101 @@ function snapshotQualityDebt(reasonCode: string, resumeCondition: string) {
   } as const;
 }
 
+function normalizeAuthoredWorkspaceRoot(value: unknown, producerRoot: string | undefined) {
+  if (!producerRoot || typeof value !== 'string' || !value.trim().toLowerCase().startsWith('file:')) return null;
+  const locator = value.trim();
+  try {
+    const url = new URL(locator);
+    if (locator.startsWith('file:///') && !url.search && !url.hash) {
+      const root = fs.realpathSync.native(fileURLToPath(url));
+      if (root === fs.realpathSync.native(producerRoot) && fs.statSync(root).isDirectory()) return root;
+    }
+  } catch {
+    // The authored root still has to name the persisted producer directory.
+  }
+  throw reviewTransportError(
+    'reviewer_input_snapshot_workspace_unreadable',
+    'Reviewer input snapshot file URL must name the persisted producer workspace root.',
+    { workspace_root: locator },
+  );
+}
+
+function restoreAuthoredMemberIdentity(
+  member: unknown,
+  exactRefs: readonly { ref: string; sha256: string; size_bytes: number }[],
+  normalizations: SnapshotAuthoringNormalization[],
+) {
+  if (!isRecord(member) || typeof member.member_id !== 'string' || typeof member.source_ref !== 'string'
+    || typeof member.sha256 !== 'string' || typeof member.size_bytes !== 'number') return member;
+  const matches = exactRefs.filter((entry) => entry.ref === member.source_ref);
+  const authoritative = matches[0];
+  if (!authoritative) return member;
+  const digest = member.sha256.trim().match(/^(?:sha256:)?([a-f0-9]{64})$/i)?.[1]?.toLowerCase();
+  if (matches.some((entry) => `sha256:${digest}` === entry.sha256 && member.size_bytes === entry.size_bytes)) return member;
+  if (matches.some((entry) => entry.sha256 !== authoritative.sha256 || entry.size_bytes !== authoritative.size_bytes)) {
+    throw reviewTransportError(
+      'reviewer_input_snapshot_member_authority_ambiguous',
+      'Reviewer input snapshot member needs one authoritative digest and byte size for its source ref.',
+      { member_id: member.member_id, source_ref: member.source_ref },
+    );
+  }
+  const identity = { sha256: authoritative.sha256, size_bytes: authoritative.size_bytes };
+  normalizations.push({
+    finding: 'authority_member_identity_restored',
+    member_id: member.member_id.trim(),
+    ...identity,
+  });
+  return { ...member, ...identity };
+}
+
 export function completeReviewerSnapshotTransportEnvelope(
   value: unknown,
   expectedAuthority: ReviewerInputSnapshotAuthorityBinding,
   declaredArtifacts: { refs: string[]; hashes: string[] },
+  normalizations: SnapshotAuthoringNormalization[] = [],
 ) {
-  const request = normalizeReviewerInputSnapshotRequest(value, expectedAuthority, {
-    allowIncompleteMembers: true,
-    rebindAuthorityIdentity: true,
-  });
   const authority = normalizeAuthorityBinding(expectedAuthority);
   if (declaredArtifacts.refs.length !== declaredArtifacts.hashes.length) {
     throw reviewTransportError('reviewer_input_snapshot_artifact_identity_mismatch', 'Declared artifact refs and hashes must align.');
   }
-  const members = [...request.members];
-  for (const [index, ref] of declaredArtifacts.refs.entries()) {
+  const declaredRefs = declaredArtifacts.refs.map((ref, index) => {
     const sha256 = canonicalReviewTransportSha256(declaredArtifacts.hashes[index], 'declared_artifact.sha256');
     const matches = authority.owner_authority_refs.filter((item) => item.ref === ref && item.sha256 === sha256);
     if (matches.length === 0) {
       throw reviewTransportError('reviewer_input_snapshot_owner_authority_metadata_missing', 'Declared artifact requires exact producer closeout metadata.', { artifact_ref: ref });
     }
-    // A closeout entry can label one artifact under both `kind` and `ref_kind`, and
-    // the authority expands that into alias exact refs binding the same bytes. Those
-    // aliases are the same artifact, not an ambiguity: they must agree on the byte
-    // size, and any one of them supplies it. A genuinely unknown artifact still has
-    // zero matches and is rejected above.
-    const memberSizes = new Set(matches.map((item) => item.size_bytes));
-    if (memberSizes.size !== 1) {
+    // The kind and ref_kind aliases for the same artifact must agree on size.
+    if (new Set(matches.map((item) => item.size_bytes)).size !== 1) {
       throw reviewTransportError('reviewer_input_snapshot_owner_authority_metadata_ambiguous', 'Declared artifact matches producer closeout metadata entries with conflicting byte sizes.', { artifact_ref: ref });
     }
-    const member = matches[0]!;
-    if (members.some((item) => item.sha256 === sha256 && item.size_bytes === member.size_bytes)) continue;
+    return matches[0]!;
+  });
+  const authored = foldSnapshotRequestHeading(value);
+  const decodedRoot = normalizeAuthoredWorkspaceRoot(authored.workspace_root, authority.producer_workspace_root);
+  if (decodedRoot) normalizations.push({ finding: 'workspace_root_file_url_decoded' });
+  const exactRefs = [
+    ...declaredRefs,
+    ...(authority.owner_content_source_refs ?? []),
+    ...authority.stage_run_input_authority_refs!,
+  ];
+  const request = normalizeReviewerInputSnapshotRequest({
+    ...authored,
+    ...(decodedRoot ? { workspace_root: decodedRoot } : {}),
+    ...(Array.isArray(authored.members) ? {
+      members: authored.members.map((member) => restoreAuthoredMemberIdentity(member, exactRefs, normalizations)),
+    } : {}),
+  }, expectedAuthority, {
+    allowIncompleteMembers: true,
+    rebindAuthorityIdentity: true,
+  });
+  const members = [...request.members];
+  for (const member of declaredRefs) {
+    if (members.some((item) => item.sha256 === member.sha256 && item.size_bytes === member.size_bytes)) continue;
     // Finalized transport records supplement, but do not redefine, the domain review scope.
     members.push({
-      member_id: `opl-finalized-artifact-${sha256.slice('sha256:'.length)}`,
-      source_ref: ref,
-      sha256,
+      member_id: `opl-finalized-artifact-${member.sha256.slice('sha256:'.length)}`,
+      source_ref: member.ref,
+      sha256: member.sha256,
       size_bytes: member.size_bytes,
     });
   }
@@ -662,8 +781,9 @@ export function resolveReviewerInputSnapshotMaterialization(
       'materialize the complete owner-provided review scope as an immutable OPL snapshot',
     );
   }
+  const normalizations: SnapshotAuthoringNormalization[] = [];
   const envelope = declaredArtifacts && expectedAuthority
-    ? completeReviewerSnapshotTransportEnvelope(value, expectedAuthority, declaredArtifacts)
+    ? completeReviewerSnapshotTransportEnvelope(value, expectedAuthority, declaredArtifacts, normalizations)
     : value;
-  return materializeReviewerInputSnapshot(envelope, expectedAuthority);
+  return materializeReviewerInputSnapshot(envelope, expectedAuthority, normalizations);
 }

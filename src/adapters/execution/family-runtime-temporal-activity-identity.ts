@@ -277,6 +277,8 @@ export function reviewerSnapshotAuthorityBinding(
           owner_content_source_workspace_root: contentWorkspaceRoot,
         }
       : {}),
+    producer_workspace_root: readString(producerLocator.workspace_root) ?? undefined,
+    stage_run_input_workspace_root: stageRun.execution_scope?.workspace_root,
     stage_run_input_authority_refs: reviewerSnapshotStageRunInputAuthority(stageRun.stage_run_spec),
   };
 }
