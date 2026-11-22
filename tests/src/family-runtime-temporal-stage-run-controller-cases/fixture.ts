@@ -150,6 +150,7 @@ export async function runController(input: {
   invalidReReviewClosure?: boolean;
   initialReviewerOutcome?: StageQualityOutcome;
   initialReviewerFindings?: 'required' | 'none' | 'optional';
+  initialReviewerRepairExpectation?: 'missing' | 'empty';
   reReviewerOutcome?: StageQualityOutcome;
   reReviewerOptionalObservation?: boolean;
   reReviewerHardStopClass?: string;
@@ -606,9 +607,15 @@ export async function runController(input: {
         if (role === 'reviewer') {
           const findingMode = input.initialReviewerFindings
             ?? (['pass', 'quality_debt'].includes(attemptOutcome) ? 'none' : 'required');
+          const { repair_expectation: _ordinaryRepairExpectation, ...findingWithoutExpectation } = finding;
+          const initialFinding = input.initialReviewerRepairExpectation === 'missing'
+            ? findingWithoutExpectation
+            : input.initialReviewerRepairExpectation === 'empty'
+              ? { ...finding, repair_expectation: '  ' }
+              : finding;
           stageQualityCycle.findings = findingMode === 'none' ? []
             : [
-                { ...finding, ...(findingMode === 'optional' ? { severity: 'major', required: false } : {}) },
+                { ...initialFinding, ...(findingMode === 'optional' ? { severity: 'major', required: false } : {}) },
                 ...(input.normalizationScenario
                   ? ['finding:editorial-2', 'finding:editorial-3', 'finding:editorial-4'].map((findingId) => ({
                       finding_id: findingId,

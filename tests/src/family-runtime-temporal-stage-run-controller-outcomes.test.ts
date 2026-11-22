@@ -47,11 +47,40 @@ test('initial repair_required outcome requires at least one required finding', a
     initialReviewerFindings: 'none',
   });
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
-  assert.equal(state.status, 'completed_with_quality_debt');
+  assert.equal(state.status, 'blocked');
+  assert.equal(state.blocked_reason, 'stage_quality_review_repair_findings_invalid');
   assert.equal(state.review_receipts.length, 0);
   assert.equal(state.selected_stage_route, null);
-  assert.ok(state.quality_debt_refs.some((ref) => ref.includes('repair_required')));
 });
+
+for (const expectation of ['missing', 'empty'] as const) {
+  test(`an initial repair-required review with repair expectation ${expectation} is rejected`, async () => {
+    const { state, attempts, attemptSyncs, routeInputs } = await runController({
+      id: `initial-repair-expectation-${expectation}`,
+      closeFindingAfterRound: null,
+      initialReviewerRepairExpectation: expectation,
+      repairRequiredRoute: { role: 'reviewer', decisionKind: 'advance', targetStageId: 'review_and_revision' },
+    });
+    assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
+    assert.equal(state.status, 'blocked');
+    assert.equal(state.blocked_reason, 'stage_quality_review_repair_findings_invalid');
+    assert.equal(state.source_attempt_ref, `opl://stage_attempts/${state.attempts[1].stage_attempt_id}`);
+    assert.equal(state.repair_rounds_used, 0);
+    assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
+    const observedReview = attemptSyncs.at(-1)?.workflow_state;
+    assert.equal(observedReview?.status, 'blocked');
+    assert.deepEqual(observedReview?.closeout_packet?.route_impact, {
+      review_protocol_rejection: {
+        field: 'findings.finding:visual-clipping.repair_expectation',
+        message: 'findings.finding:visual-clipping.repair_expectation must be a non-empty string.',
+      },
+    });
+    assert.ok(observedReview?.closeout_refs.length);
+    assert.equal(state.review_receipts.length, 0);
+    assert.equal(state.selected_stage_route, null);
+    assert.equal(routeInputs.length, 0);
+  });
+}
 
 test('open findings downgrade a pass claim without discarding the AI continuation', async () => {
   const { state, attempts } = await runController({

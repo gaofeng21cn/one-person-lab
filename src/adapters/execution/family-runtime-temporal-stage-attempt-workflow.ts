@@ -1,3 +1,4 @@
+import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { isCancellation, condition, patched, setHandler, upsertSearchAttributes } from '@temporalio/workflow';
 import type { TemporalStageAttemptWorkflowInput, TemporalStageAttemptWorkflowState, TemporalStageAttemptSignalPayload } from './family-runtime-temporal.ts';
 import {
@@ -16,18 +17,39 @@ import {
   closeoutPacketFromCodexResult,
   closeoutRefsFrom,
   nowIso,
+  requiredRecordList,
   upsertStageAttemptVisibility,
   validateCloseoutPacketForWorkflow,
   validateOperatorActionPayload,
 } from './family-runtime-temporal-workflow-shared.ts';
 import { codexActivityEventForTemporalHistory, providerBlockerFromCodexResult } from './family-runtime-temporal-history-summary.ts';
 import { isStageRunQualityAttempt, requireGenericResumeAllowed, requireStageQualityAttemptBoundary, requireStageRunAttemptContentBindingVersion } from './family-runtime-stage-quality-attempt-boundary.ts';
+import {
+  validateInitialStageQualityReviewOutcome,
+  type StageQualityFinding,
+} from '../../authority/stages/public/stage-quality-cycle.ts';
+
+function initialRepairFindingsError(routeImpact: Record<string, unknown>): FrameworkContractError | null {
+  const envelope = asRecord(routeImpact.stage_quality_cycle);
+  if (envelope.outcome !== 'repair_required') return null;
+  try {
+    validateInitialStageQualityReviewOutcome({
+      outcome: 'repair_required',
+      findings: requiredRecordList(envelope.findings, 'findings') as StageQualityFinding[],
+    });
+  } catch (error) {
+    if (!(error instanceof FrameworkContractError)) throw error;
+    return error;
+  }
+  return null;
+}
 
 export async function StageAttemptWorkflow(
   input: TemporalStageAttemptWorkflowInput,
 ): Promise<TemporalStageAttemptWorkflowState> {
   const allowLegacyUnboundContent = !patched('opl-stage-run-attempt-content-binding-v1');
   const cancellationPropagationEnabled = patched('opl-stage-run-child-cancellation-propagation-v1');
+  const initialRepairFindingsRequired = patched('opl-stage-attempt-initial-review-repair-findings-v1');
   const currentStageRunAttemptProtocol = !allowLegacyUnboundContent;
   const stageRunQualityAttempt = isStageRunQualityAttempt(input as unknown as Record<string, unknown>);
   let state: TemporalStageAttemptWorkflowState = {
@@ -272,13 +294,32 @@ export async function StageAttemptWorkflow(
     });
     const codexCloseoutPacket = codexCloseoutValidation.closeoutPacket;
     const providerBlocker = codexCloseoutValidation.providerBlocker ?? providerBlockerFromCodexResult(codexResult);
-    const dispatchResult = await domainHandlerDispatchActivity({
+    const dispatched = await domainHandlerDispatchActivity({
       ...input,
       closeout_packet: codexCloseoutPacket ?? input.closeout_packet ?? null,
       provider_blocker: providerBlocker,
     });
     requireNoForbiddenGenericResume();
-    const closeoutRefs = closeoutRefsFrom(dispatchResult);
+    const closeoutRefs = closeoutRefsFrom(dispatched);
+    const reviewError = initialRepairFindingsRequired && input.attempt_role === 'reviewer'
+      && !dispatched.blocked_reason && closeoutRefs.length > 0
+      ? initialRepairFindingsError(asRecord(dispatched.route_impact))
+      : null;
+    const dispatchResult = reviewError
+      ? {
+          ...dispatched,
+          activity_status: 'blocked',
+          blocked_reason: 'stage_quality_review_repair_findings_invalid',
+          next_owner: null,
+          domain_ready_verdict: null,
+          route_impact: {
+            review_protocol_rejection: {
+              message: reviewError.message,
+              ...(typeof reviewError.details?.field === 'string' ? { field: reviewError.details.field } : {}),
+            },
+          },
+        }
+      : dispatched;
     const routeImpact = asRecord(dispatchResult.route_impact);
     const dispatchBlockedReason = typeof dispatchResult.blocked_reason === 'string'
       ? dispatchResult.blocked_reason
