@@ -72,6 +72,34 @@ const advanceActivities = proxyActivities<FoundryTemporalActivities>({
   },
 });
 
+// Independent evaluation executes every public and protected case against the exact
+// candidate inside one advance. Measured on run dev-orchestrator-create-20261122-r18
+// (2026-11-22, 25 public cases + 4 protected aggregates, ten concurrent case
+// executions): the evaluating advance ran 107 minutes end to end — under the default
+// 30-minute budget the run would have been declared timed out while making healthy
+// progress. Keep evaluation and canary on a separate, still bounded 4-hour Activity
+// window (about 2.2x the measured duration); design and other lifecycle advances
+// retain the existing budget.
+export const FOUNDRY_EVALUATION_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT = '270 minutes';
+export const FOUNDRY_EVALUATION_ACTIVITY_START_TO_CLOSE_TIMEOUT = '240 minutes';
+
+const evaluationAdvanceActivities = proxyActivities<FoundryTemporalActivities>({
+  scheduleToCloseTimeout: FOUNDRY_EVALUATION_ACTIVITY_SCHEDULE_TO_CLOSE_TIMEOUT,
+  startToCloseTimeout: FOUNDRY_EVALUATION_ACTIVITY_START_TO_CLOSE_TIMEOUT,
+  cancellationType: ActivityCancellationType.TRY_CANCEL,
+  retry: {
+    maximumAttempts: 3,
+    initialInterval: '1 second',
+    maximumInterval: '10 seconds',
+    backoffCoefficient: 2,
+    nonRetryableErrorTypes: ['FrameworkContractError'],
+  },
+});
+
+export function foundryAdvanceOperationRequiresLongBudget(phase: string) {
+  return phase === 'evaluate' || phase === 'canary';
+}
+
 // Provider-operation activities include the launch path, which materializes the
 // provider operation (StageRun workflow + queue plan) and can legitimately take
 // 1-2 minutes of execution time. A 2-minute schedule-to-close budget left no
@@ -488,7 +516,9 @@ export async function FoundryRunWorkflow(
         ? { ...nextOperation, provider_operation_cursor: state.provider_operation_cursor }
         : nextOperation;
       adoptInspection(await scope.run(
-        () => advanceActivities.foundryAdvanceRunActivity.executeWithOptions(
+        () => (foundryAdvanceOperationRequiresLongBudget(nextOperation.phase)
+          ? evaluationAdvanceActivities
+          : advanceActivities).foundryAdvanceRunActivity.executeWithOptions(
           { activityId: nextOperation.operation_key },
           [advanceOperation],
         ),
