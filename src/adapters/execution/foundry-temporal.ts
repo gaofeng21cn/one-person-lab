@@ -19,6 +19,7 @@ export type FoundryRunStartInput = {
 
 export type FoundryRunWorkflowInput = FoundryRunStartInput & {
   request_digest: string;
+  resume_qualification_registration?: true;
   provider_operation_cursor?: FoundryProviderOperationCursor | null;
 };
 
@@ -53,6 +54,7 @@ export type FoundryAdvanceRunPhase =
   | 'design'
   | 'materialize'
   | 'evaluate'
+  | 'register_version'
   | 'start_diagnosis'
   | 'diagnose'
   | 'qualification_route'
@@ -78,6 +80,7 @@ const ADVANCE_PHASE_BY_STATE: Partial<Record<FoundryRunState, FoundryAdvanceRunP
   designing: 'design',
   materializing: 'materialize',
   evaluating: 'evaluate',
+  qualifying: 'register_version',
   evidence_ready: 'start_diagnosis',
   diagnosing: 'diagnose',
   qualified: 'qualification_route',

@@ -1,5 +1,6 @@
 import {
   ActivityCancellationType,
+  ActivityFailure,
   CancellationScope,
   ContinueAsNew,
   allHandlersFinished,
@@ -11,6 +12,7 @@ import {
   proxyActivities,
   setHandler,
   sleep,
+  workflowInfo,
 } from '@temporalio/workflow';
 
 import type { FoundryRunState } from '../../authority/evolution/index.ts';
@@ -333,15 +335,35 @@ export async function FoundryRunWorkflow(
     }
   });
 
-  if (providerGenerationV2Enabled) {
-    await serialize(async () => {
-      adoptInspection(await activities.foundryStartRunActivity(input));
-      const resumedCursor = state.provider_operation_cursor;
-      if (resumedCursor?.status === 'pending') {
-        const resumedOperation = foundryAdvanceOperationForInspection(state.inspection!);
-        adoptProviderCursor(resumedOperation, resumedCursor);
-      }
+  const continueRegistrationRecovery = async () => {
+    // A timed-out write can still complete. Preserve the claim and resume
+    // through the ledger after a durable delay, even if the store is offline.
+    await condition(workflowIsTerminal, '1 minute');
+    await condition(allHandlersFinished);
+    if (workflowIsTerminal()) return state;
+    return continueAsNew<typeof FoundryRunWorkflow>({
+      ...input,
+      provider_operation_cursor: null,
+      resume_qualification_registration: true,
     });
+  };
+  if (providerGenerationV2Enabled) {
+    try {
+      await serialize(async () => {
+        adoptInspection(await activities.foundryStartRunActivity(input));
+        const resumedCursor = state.provider_operation_cursor;
+        if (resumedCursor?.status === 'pending') {
+          const resumedOperation = foundryAdvanceOperationForInspection(state.inspection!);
+          adoptProviderCursor(resumedOperation, resumedCursor);
+        }
+      });
+    } catch (error) {
+      if (
+        !input.resume_qualification_registration || !workflowInfo().continuedFromExecutionRunId
+        || !(error instanceof ActivityFailure) || error.retryState === 'NON_RETRYABLE_FAILURE'
+      ) throw error;
+      return continueRegistrationRecovery();
+    }
   } else {
     adoptInspection(await serialize(() => activities.foundryStartRunActivity(input)));
   }
@@ -450,7 +472,9 @@ export async function FoundryRunWorkflow(
                 await condition(allHandlersFinished);
                 if (workflowIsTerminal()) break;
                 await continueAsNew<typeof FoundryRunWorkflow>({
-                  ...input,
+                  run_id: input.run_id,
+                  request: input.request,
+                  request_digest: input.request_digest,
                   provider_operation_cursor: cursor,
                 });
               }
@@ -505,6 +529,9 @@ export async function FoundryRunWorkflow(
         || !operationStillCurrent
       ) {
         continue;
+      }
+      if (operation?.phase === 'register_version') {
+        return continueRegistrationRecovery();
       }
       const message = foundryActivityFailureMessage(error);
       adoptInspection(await serialize(
