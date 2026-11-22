@@ -172,7 +172,17 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
   return {
     ...closeoutPacket,
     closeout_ref_metadata: metadata,
-    ...(isRecord(routeImpact.stage_quality_cycle)
+    // Bind the verified identity whenever this Attempt produced artifacts, not only when the
+    // domain already declared a stage_quality_cycle. A domain route_impact that carries its own
+    // shape (OMA emits consumable_artifact_refs and no stage_quality_cycle at all) left the
+    // envelope empty, and the review receipt then rejected a correct review with
+    // "Review receipt artifact refs and hashes must exactly match the persisted producer output".
+    // `pairs` are the refs and hashes already verified against the bytes above, so this records
+    // framework-observed identity rather than anything the Attempt claimed.
+    // A framework raw-progress envelope is not a semantic closeout: the Attempt reported no
+    // verdict and no domain artifact, so synthesizing a quality cycle here would turn an OPL
+    // progress observation into a domain claim.
+    ...(pairs.length > 0 && !rawProgress
       ? {
           route_impact: {
             ...routeImpact,
