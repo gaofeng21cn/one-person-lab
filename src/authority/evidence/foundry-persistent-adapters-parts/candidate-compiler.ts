@@ -95,6 +95,7 @@ import {
 } from './shared.ts';
 
 import { FileFoundryContentStore } from './object-content-stores.ts';
+import { validateCandidateDirectory } from './registry-validation.ts';
 
 function candidateConformance(input: Parameters<CandidateCompiler['materialize']>[0]) {
   const blueprint = input.blueprint;
@@ -715,5 +716,17 @@ export class ContentAddressedCandidateCompiler implements CandidateCompiler {
 
   candidateDirectory(candidateDigest: string) {
     return path.join(this.#candidateRoot, digestSegment(candidateDigest));
+  }
+
+  verifyMaterializedCandidate(candidate: MaterializedCandidate) {
+    const verified = validateCandidateDirectory(this.#paths, candidate);
+    if (verified.manifest_digest !== candidate.manifest_digest) {
+      fail('Foundry candidate manifest does not match the materialization record.', {
+        candidate_digest: candidate.candidate_digest,
+        expected_manifest_digest: candidate.manifest_digest,
+        actual_manifest_digest: verified.manifest_digest,
+      });
+    }
+    return verified;
   }
 }

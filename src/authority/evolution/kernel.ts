@@ -53,6 +53,7 @@ import type { FoundryRunEvent, FoundryRunSnapshot, FoundryRunState } from './sta
 import {
   assertBlueprintSatisfiesDesignRequest,
   assertEvaluationGateMetricsComputable,
+  isQualificationGradeEvaluationRuntime,
 } from './evaluation-runtime.ts';
 import {
   foundryEvaluationOperationIdentity,
@@ -784,6 +785,9 @@ export class FoundryKernel {
       this.#assertEvidence(inspection, blueprint, evidence, candidate, baseline);
     } else {
       if (options.replay_only) throw new FoundryOperationResultUnavailableError(operation.operation_key);
+      const candidatePack = isQualificationGradeEvaluationRuntime(this.#evaluator)
+        ? this.#compiler.verifyMaterializedCandidate?.(candidate)
+        : undefined;
       evidence = validateEvidenceBundle(canary
         ? await this.#activity('canary', () => this.#evaluator.canary({
             operation_identity: operation,
@@ -792,6 +796,7 @@ export class FoundryKernel {
             blueprint,
             blueprint_digest: inspection.run.blueprint_digest!,
             candidate,
+            ...(candidatePack ? { candidate_pack: candidatePack } : {}),
             version: qualifiedVersion!,
             baseline_version: baseline,
           }))
@@ -802,6 +807,7 @@ export class FoundryKernel {
             blueprint,
             blueprint_digest: inspection.run.blueprint_digest!,
             candidate,
+            ...(candidatePack ? { candidate_pack: candidatePack } : {}),
             baseline_version: baseline,
           })));
       this.#assertEvidence(inspection, blueprint, evidence, candidate, baseline);

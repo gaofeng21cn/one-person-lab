@@ -166,6 +166,10 @@ function evaluationActivities(
 Temporal workflow 输入或 OMA 协议。Host 负责 worker 关闭及所注入端口持有资源的释放。
 
 `EvaluationCaseExecutor` 按冻结计划执行确切 candidate，必要时执行 baseline。
+使用 Foundry 文件存储时，Framework 在评估及灰度运行前核对候选的内容地址、索引、
+逐文件摘要、资源锁和候选记录中的清单摘要。可信 case executor 在候选
+`subject.candidate_pack` 中获得已验证的目录、清单摘要和资源锁摘要。该目录用于读取候选
+内容，执行适配仍须绑定实际启动所用的文件和依赖，并保留执行收据。
 目标领域 owner 提供真实 Agent 执行适配、保护用例内容及专业验收规则，Framework Host
 负责准入和组合。公开用例返回 case identity、status、score 和 evidence refs；保护执行
 只返回聚合结果、直接 receipt ref 和聚合结果的精确 digest。资源观察来自真实执行。

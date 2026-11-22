@@ -6,6 +6,7 @@ import type {
   AgentVersion,
   EvaluationExecutor,
   MaterializedCandidate,
+  VerifiedEvaluationCandidatePack,
 } from './ports.ts';
 import type {
   AgentBlueprint,
@@ -16,7 +17,11 @@ import type {
 } from './protocol.ts';
 
 type EvaluationSubject =
-  | { kind: 'candidate'; candidate: MaterializedCandidate }
+  | {
+      kind: 'candidate';
+      candidate: MaterializedCandidate;
+      candidate_pack?: VerifiedEvaluationCandidatePack;
+    }
   | { kind: 'baseline'; version: AgentVersion };
 
 export type PublicCaseResult = EvidenceBundle['public_results'][number];
@@ -531,11 +536,16 @@ export class FrozenPlanEvaluationRuntime implements EvaluationExecutor {
       blueprint: AgentBlueprint;
       blueprint_digest: string;
       candidate: MaterializedCandidate;
+      candidate_pack?: VerifiedEvaluationCandidatePack;
       baseline_version: AgentVersion | null;
     },
     phase: 'evaluation' | 'canary',
   ): Promise<EvidenceBundle> {
-    const candidateSubject: EvaluationSubject = { kind: 'candidate', candidate: input.candidate };
+    const candidateSubject: EvaluationSubject = {
+      kind: 'candidate',
+      candidate: input.candidate,
+      ...(input.candidate_pack ? { candidate_pack: input.candidate_pack } : {}),
+    };
     const publicResults = await Promise.all(input.blueprint.eval_spec.public_cases.map((testCase) =>
       this.#executor.runPublicCase({
         run_id: input.run_id,

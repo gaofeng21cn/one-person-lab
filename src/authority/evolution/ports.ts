@@ -45,12 +45,19 @@ export interface EvaluationCandidatePackResolver {
   resolveDirectory(candidate: EvaluationCandidateIdentity): string;
 }
 
+export type VerifiedEvaluationCandidatePack = Readonly<{
+  directory: string;
+  manifest_digest: string;
+  resource_lock_digest: string;
+}>;
+
 export interface CandidateCompiler {
   materialize(input: {
     run_id: string;
     blueprint: AgentBlueprint;
     blueprint_digest: string;
   }): Promise<MaterializedCandidate>;
+  verifyMaterializedCandidate?(candidate: MaterializedCandidate): VerifiedEvaluationCandidatePack;
 }
 
 export type EvaluationQualificationCapability =
@@ -80,6 +87,7 @@ export interface EvaluationExecutor {
     blueprint: AgentBlueprint;
     blueprint_digest: string;
     candidate: MaterializedCandidate;
+    candidate_pack?: VerifiedEvaluationCandidatePack;
     baseline_version: AgentVersion | null;
   }): Promise<EvidenceBundle>;
   canary(input: {
@@ -89,6 +97,7 @@ export interface EvaluationExecutor {
     blueprint: AgentBlueprint;
     blueprint_digest: string;
     candidate: MaterializedCandidate;
+    candidate_pack?: VerifiedEvaluationCandidatePack;
     version: AgentVersion;
     baseline_version: AgentVersion | null;
   }): Promise<EvidenceBundle>;
