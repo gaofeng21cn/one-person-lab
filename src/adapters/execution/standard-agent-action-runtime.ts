@@ -35,9 +35,14 @@ import {
 import { runStageAction } from './standard-agent-action-runtime-parts/stage-action.ts';
 import { actionLedger } from './standard-agent-action-runtime-parts/action-persistence.ts';
 import {
+  canonicalDomainIds,
+  packageUseBinding,
+  reserveStandardAgentActionRunPlan,
+} from './standard-agent-action-runtime-parts/run-plan.ts';
+import {
   inspectStandardAgentActionRunCompletion,
   inspectStandardAgentActionRunState,
-  reserveStandardAgentActionRunBinding,
+  type StandardAgentActionRunBinding,
   type StandardAgentActionRunPlan,
 } from './standard-agent-action-run-state.ts';
 import { runStandardAgentHandlerSandbox } from './standard-agent-handler-sandbox.ts';
@@ -102,16 +107,6 @@ function standardAgentRuntimeResolver(
         )),
       }
     : defaultResolver;
-}
-
-function packageUseBinding(value: unknown) {
-  if (value === null || value === undefined) return null;
-  if (!isRecord(value)) fail('Hosted Agent package_use_binding must be an object or null.');
-  return value;
-}
-
-function canonicalDomainIds(values: readonly string[]) {
-  return [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort();
 }
 
 function assertRequestedDomainMatchesBinding(
@@ -240,6 +235,35 @@ async function executeActionContext(input: {
   };
 }
 
+function executeFrozenActionContext(
+  input: StandardAgentActionRuntimeInput,
+  runId: string,
+  binding: StandardAgentActionRunBinding,
+  plan: StandardAgentActionRunPlan,
+  frozen: ReturnType<typeof requestFromFrozenPlan>,
+  dependencies: RuntimeDependencies,
+) {
+  return executeActionContext({
+    runtimeInput: input,
+    runId,
+    workspaceRoot: plan.workspace_root,
+    domainId: plan.canonical_domain_id,
+    runtimeDomainId: plan.runtime_domain_id,
+    checkoutRoot: plan.checkout_root,
+    acceptedDomainIds: plan.accepted_domain_ids,
+    packageUseBinding: plan.package_use_binding,
+    runtimeBindingRef: binding.hosted_runtime_binding_ref,
+    runtimeBinding: binding.hosted_runtime_binding,
+    startedAt: plan.started_at,
+    timeoutMs: plan.timeout_ms,
+    requestPayloadSha256: plan.request_payload_sha256,
+    originalInvocationSha256: frozen.originalInvocationSha256,
+    requestBytes: frozen.requestBytes,
+    context: frozen.context,
+    dependencies,
+  });
+}
+
 export async function runStandardAgentAction(
   input: StandardAgentActionRuntimeInput,
   dependencies: RuntimeDependencies = {},
@@ -252,8 +276,8 @@ export async function runStandardAgentAction(
     workspaceRoot: input.workspaceRoot,
     runId,
   });
-  let frozenBinding = frozenState?.binding ?? null;
-  let frozenPlan = frozenState?.plan ?? null;
+  const frozenBinding = frozenState?.binding ?? null;
+  const frozenPlan = frozenState?.plan ?? null;
   const completion = frozenBinding
     ? inspectStandardAgentActionRunCompletion({
       workspaceRoot: input.workspaceRoot,
@@ -291,25 +315,7 @@ export async function runStandardAgentAction(
         applyDomainArtifactCas: dependencies.applyDomainArtifactCas,
       });
     }
-    return executeActionContext({
-      runtimeInput: input,
-      runId,
-      workspaceRoot: frozenPlan.workspace_root,
-      domainId: frozenPlan.canonical_domain_id,
-      runtimeDomainId: frozenPlan.runtime_domain_id,
-      checkoutRoot: frozenPlan.checkout_root,
-      acceptedDomainIds: frozenPlan.accepted_domain_ids,
-      packageUseBinding: frozenPlan.package_use_binding,
-      runtimeBindingRef: frozenBinding.hosted_runtime_binding_ref,
-      runtimeBinding: frozenBinding.hosted_runtime_binding,
-      startedAt: frozenPlan.started_at,
-      timeoutMs: frozenPlan.timeout_ms,
-      requestPayloadSha256: frozenPlan.request_payload_sha256,
-      originalInvocationSha256: frozen.originalInvocationSha256,
-      requestBytes: frozen.requestBytes,
-      context: frozen.context,
-      dependencies,
-    });
+    return executeFrozenActionContext(input, runId, frozenBinding, frozenPlan, frozen, dependencies);
   }
   if (frozenBinding && completion?.execution_kind === 'handler_ref' && completion.status === 'completed') {
     fail('Completed legacy Handler replay has unresolved execution scope identity.', {
@@ -390,83 +396,20 @@ export async function runStandardAgentAction(
   const liveRequestBytes = canonicalJsonBytes(liveContext.payload);
 
   if (!frozenBinding) {
-    const acceptedDomainIds = canonicalDomainIds([
-      input.domainId,
-      runtimeBinding.agent_id,
-      runtimeBinding.runtime_domain_id,
-      runtimeBinding.target_domain_id,
-      ...runtimeBinding.catalog_target_domain_ids,
-    ]);
-    const catalogTargetDomainIds = canonicalDomainIds(runtimeBinding.catalog_target_domain_ids);
-    const plan: StandardAgentActionRunPlan = {
-      surface_kind: 'opl_standard_agent_action_run_plan',
-      version: 'opl-standard-agent-action-run-plan.v2',
-      run_id: runId,
-      canonical_domain_id: runtimeBinding.agent_id,
-      accepted_domain_ids: acceptedDomainIds,
-      action_id: liveContext.action.action_id,
-      workspace_root: runtimeBinding.workspace_root,
-      checkout_root: runtimeBinding.checkout_root,
-      runtime_domain_id: runtimeBinding.runtime_domain_id,
-      target_domain_id: runtimeBinding.target_domain_id,
-      catalog_target_domain_ids: catalogTargetDomainIds,
-      package_use_binding: packageUseBinding(runtimeBinding.package_use_binding),
-      hosted_runtime_binding_ref: runtimeBinding.provenance_ref,
-      execution_kind: liveContext.action.execution_binding.kind,
-      execution_scope: liveContext.executionScope,
-      catalog: liveContext.catalog,
-      handler_registry: liveContext.registry,
-      foundry_provider_manifest: liveContext.foundryProvider as unknown as Record<string, unknown> | null,
-      request_payload_sha256: requestPayloadSha256,
-      original_invocation_sha256: invocationSha256,
-      effective_payload: liveContext.payload,
-      request_sha256: sha256(liveRequestBytes),
-      request_byte_size: liveRequestBytes.byteLength,
-      input_schema_validation: liveContext.inputValidation,
-      timeout_ms: timeoutMs,
-      started_at: observedAt,
-    };
-    const planBytes = canonicalJsonBytes(plan);
-    const reservation = reserveStandardAgentActionRunBinding({
-      workspaceRoot: runtimeBinding.workspace_root,
-      binding: {
-        surface_kind: 'opl_standard_agent_action_run_binding',
-        version: 'opl-standard-agent-action-run-binding.v2',
-        run_id: runId,
-        canonical_domain_id: runtimeBinding.agent_id,
-        action_id: liveContext.action.action_id,
-        hosted_runtime_binding_ref: runtimeBinding.provenance_ref,
-        hosted_runtime_binding: runtimeBinding.provenance,
-        plan_sha256: sha256(planBytes),
-        plan_byte_size: planBytes.byteLength,
-      },
-      plan,
-    });
-    if (!reservation.plan || reservation.binding.version !== 'opl-standard-agent-action-run-binding.v2') {
-      fail('Hosted Agent action run_id is already bound to an incompatible legacy run.', { run_id: runId });
-    }
-    frozenBinding = reservation.binding;
-    frozenPlan = reservation.plan;
-    const frozen = requestFromFrozenPlan({ runtimeInput: input, plan: frozenPlan });
-    return executeActionContext({
-      runtimeInput: input,
+    const { binding, plan } = reserveStandardAgentActionRunPlan({
+      requestedDomainId: input.domainId,
       runId,
-      workspaceRoot: frozenPlan.workspace_root,
-      domainId: frozenPlan.canonical_domain_id,
-      runtimeDomainId: frozenPlan.runtime_domain_id,
-      checkoutRoot: frozenPlan.checkout_root,
-      acceptedDomainIds: frozenPlan.accepted_domain_ids,
-      packageUseBinding: frozenPlan.package_use_binding,
-      runtimeBindingRef: frozenBinding.hosted_runtime_binding_ref,
-      runtimeBinding: frozenBinding.hosted_runtime_binding,
-      startedAt: frozenPlan.started_at,
-      timeoutMs: frozenPlan.timeout_ms,
-      requestPayloadSha256: frozenPlan.request_payload_sha256,
-      originalInvocationSha256: frozen.originalInvocationSha256,
-      requestBytes: frozen.requestBytes,
-      context: frozen.context,
-      dependencies,
+      runtimeBinding,
+      context: liveContext,
+      requestPayloadSha256,
+      invocationSha256,
+      requestBytes: liveRequestBytes,
+      timeoutMs,
+      startedAt: observedAt,
     });
+    return executeFrozenActionContext(
+      input, runId, binding, plan, requestFromFrozenPlan({ runtimeInput: input, plan }), dependencies,
+    );
   }
 
   return executeActionContext({
