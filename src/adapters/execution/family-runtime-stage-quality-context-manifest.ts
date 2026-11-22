@@ -8,6 +8,7 @@ import {
 import {
   readReviewerInputSnapshotManifest,
   type resolveReviewerInputSnapshotMaterialization,
+  type SnapshotMemberDigestRepair,
 } from './family-runtime-reviewer-input-snapshot.ts';
 import { revisionTransportContext } from './family-runtime-revision-intake.ts';
 
@@ -89,6 +90,9 @@ export function buildStageReviewInputSnapshotContext(input: {
       opl_reviewer_input_snapshot_manifest_ref: input.resolution.manifest_ref,
       opl_reviewer_input_snapshot_manifest: input.resolution.manifest,
       review_input_snapshot_read_policy: REVIEW_INPUT_SNAPSHOT_READ_POLICY,
+      review_input_snapshot_member_digest_repairs:
+        (input.resolution as { member_digest_repairs?: SnapshotMemberDigestRepair[] })
+          .member_digest_repairs ?? [],
       review_input_snapshot_quality_debt_receipt_ref: null,
       review_input_snapshot_quality_debt_receipt: null,
     } as const;
@@ -195,6 +199,21 @@ function validateStageReviewInputSnapshotContext(manifest: Record<string, unknow
       'contract_shape_invalid',
       'Materialized reviewer input snapshot cannot also carry missing-snapshot debt.',
       { failure_code: 'review_input_snapshot_materialized_debt_invalid' },
+    );
+  }
+  const memberDigestRepairs = manifest.review_input_snapshot_member_digest_repairs ?? [];
+  if (!Array.isArray(memberDigestRepairs) || memberDigestRepairs.some((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return true;
+    const repair = entry as Record<string, unknown>;
+    return typeof repair.member_id !== 'string'
+      || typeof repair.source_ref !== 'string'
+      || typeof repair.authoritative_sha256 !== 'string'
+      || !repair.authoritative_sha256.startsWith('sha256:');
+  })) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Stage Review snapshot member digest repairs must record the authoritative digest for every repaired member.',
+      { failure_code: 'review_input_snapshot_member_digest_repairs_invalid' },
     );
   }
   const readback = readReviewerInputSnapshotManifest(

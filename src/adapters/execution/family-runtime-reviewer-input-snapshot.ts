@@ -651,6 +651,78 @@ export function completeReviewerSnapshotTransportEnvelope(
   return normalizeReviewerInputSnapshotRequest({ ...request, members }, expectedAuthority);
 }
 
+// A producer hand-writes member digests when it authors its snapshot request,
+// and a hallucinated or malformed digest previously killed the review before
+// the supplement path could run — even when the Framework already holds the
+// verified digest for the same source_ref inside the producer's declared
+// artifact identity. Repairing from that authoritative identity preserves byte
+// binding (the snapshot still binds exactly the verified hash) while keeping
+// genuinely unbound or ambiguous members fail-closed.
+export type SnapshotMemberDigestRepair = {
+  member_id: string;
+  source_ref: string;
+  received_sha256: string | null;
+  authoritative_sha256: string;
+  received_size_bytes: number | null;
+  authoritative_size_bytes: number;
+};
+
+function canonicalReviewTransportSha256OrNull(value: string) {
+  try {
+    return canonicalReviewTransportSha256(value, 'member.sha256');
+  } catch {
+    return null;
+  }
+}
+
+function repairSnapshotRequestMembersAgainstAuthority(
+  value: unknown,
+  expectedAuthority: ReviewerInputSnapshotAuthorityBinding,
+): { value: unknown; repairs: SnapshotMemberDigestRepair[] } {
+  if (!isRecord(value) || !Array.isArray(value.members) || value.members.length === 0) {
+    return { value, repairs: [] };
+  }
+  const authority = normalizeAuthorityBinding(expectedAuthority);
+  const authoritativeByRef = new Map<string, { sha256: string; size_bytes: number }[]>();
+  for (const entry of [...authority.owner_authority_refs, ...(authority.stage_run_input_authority_refs ?? [])]) {
+    const bucket = authoritativeByRef.get(entry.ref) ?? [];
+    if (!bucket.some((item) => item.sha256 === entry.sha256 && item.size_bytes === entry.size_bytes)) {
+      bucket.push({ sha256: entry.sha256, size_bytes: entry.size_bytes });
+    }
+    authoritativeByRef.set(entry.ref, bucket);
+  }
+  const repairs: SnapshotMemberDigestRepair[] = [];
+  let changed = false;
+  const members = value.members.map((member) => {
+    if (!isRecord(member) || typeof member.source_ref !== 'string') return member;
+    const candidates = authoritativeByRef.get(member.source_ref) ?? [];
+    const distinctDigests = [...new Set(candidates.map((entry) => entry.sha256))];
+    if (distinctDigests.length !== 1) return member;
+    const authoritative = candidates.find((entry) => entry.sha256 === distinctDigests[0])!;
+    const receivedSha = typeof member.sha256 === 'string' ? member.sha256.trim() : null;
+    const canonicalReceived = receivedSha ? canonicalReviewTransportSha256OrNull(receivedSha) : null;
+    const receivedSize = Number.isSafeInteger(member.size_bytes) ? Number(member.size_bytes) : null;
+    const digestRepair = canonicalReceived !== authoritative.sha256;
+    const sizeRepair = receivedSize !== authoritative.size_bytes;
+    if (!digestRepair && !sizeRepair) return member;
+    changed = true;
+    repairs.push({
+      member_id: typeof member.member_id === 'string' ? member.member_id : '',
+      source_ref: member.source_ref,
+      received_sha256: receivedSha,
+      authoritative_sha256: authoritative.sha256,
+      received_size_bytes: receivedSize,
+      authoritative_size_bytes: authoritative.size_bytes,
+    });
+    return {
+      ...member,
+      sha256: authoritative.sha256,
+      size_bytes: authoritative.size_bytes,
+    };
+  });
+  return { value: changed ? { ...value, members } : value, repairs };
+}
+
 export function resolveReviewerInputSnapshotMaterialization(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
@@ -662,8 +734,18 @@ export function resolveReviewerInputSnapshotMaterialization(
       'materialize the complete owner-provided review scope as an immutable OPL snapshot',
     );
   }
-  const envelope = declaredArtifacts && expectedAuthority
-    ? completeReviewerSnapshotTransportEnvelope(value, expectedAuthority, declaredArtifacts)
-    : value;
-  return materializeReviewerInputSnapshot(envelope, expectedAuthority);
+  // Repair hand-written member digests against the authoritative artifact
+  // identity before completion normalizes the request, since normalization
+  // rejects a non-canonical digest before the repair could see it.
+  const repaired = expectedAuthority
+    ? repairSnapshotRequestMembersAgainstAuthority(value, expectedAuthority)
+    : { value, repairs: [] };
+  const completed = declaredArtifacts && expectedAuthority
+    ? completeReviewerSnapshotTransportEnvelope(repaired.value, expectedAuthority, declaredArtifacts)
+    : repaired.value;
+  const materialization = materializeReviewerInputSnapshot(completed, expectedAuthority);
+  return {
+    ...materialization,
+    ...(repaired.repairs.length > 0 ? { member_digest_repairs: repaired.repairs } : {}),
+  };
 }

@@ -453,6 +453,18 @@ export async function StageRunWorkflow(
       .review_input_snapshot_quality_debt_receipt_ref === 'string'
       ? childContextManifest.review_input_snapshot_quality_debt_receipt_ref
       : null;
+    const reviewInputSnapshotMemberDigestRepairRefs = (
+      Array.isArray(childContextManifest.review_input_snapshot_member_digest_repairs)
+        ? childContextManifest.review_input_snapshot_member_digest_repairs
+        : []
+    ).map((entry) => qualityFailureRef(
+      input,
+      `review-input-snapshot-member-digest-repaired:${
+        typeof asRecord(entry).member_id === 'string' && asRecord(entry).member_id
+          ? (asRecord(entry).member_id as string)
+          : 'unknown'
+      }`,
+    ));
     const allowLegacyUnboundExecutionPolicy = !childInput.execution_content_binding
       && !patched('opl-stage-run-controller-attempt-content-binding-v1');
     const executionPolicy = allowLegacyUnboundExecutionPolicy
@@ -741,6 +753,7 @@ export async function StageRunWorkflow(
       executionPolicy,
       defaultProgression: asRecord(asRecord(childContextManifest.cross_stage_route_selection).controller_default_progression),
       reviewInputSnapshotQualityDebtRef,
+      reviewInputSnapshotMemberDigestRepairRefs,
       reviewedArtifactRefs: attemptInput.artifactRefs,
       reviewedArtifactHashes: attemptInput.artifactHashes,
       artifactIdentity,
@@ -1099,6 +1112,7 @@ export async function StageRunWorkflow(
             ...(reReview.reviewInputSnapshotQualityDebtRef
               ? [reReview.reviewInputSnapshotQualityDebtRef]
               : []),
+            ...reReview.reviewInputSnapshotMemberDigestRepairRefs,
           ])],
         };
         commitReviewedArtifactAuthority(
@@ -1139,6 +1153,7 @@ export async function StageRunWorkflow(
           ...(reReview.reviewInputSnapshotQualityDebtRef
             ? [reReview.reviewInputSnapshotQualityDebtRef]
             : []),
+          ...reReview.reviewInputSnapshotMemberDigestRepairRefs,
         ])],
       };
       commitReviewedArtifactAuthority(
@@ -1320,6 +1335,7 @@ export async function StageRunWorkflow(
         ...(review.reviewInputSnapshotQualityDebtRef
           ? [review.reviewInputSnapshotQualityDebtRef]
           : []),
+        ...review.reviewInputSnapshotMemberDigestRepairRefs,
       ])],
     };
     if (isEarlyRepairRouteBack(review)) {
@@ -1485,6 +1501,7 @@ export async function StageRunWorkflow(
             ...(reReview.reviewInputSnapshotQualityDebtRef
               ? [reReview.reviewInputSnapshotQualityDebtRef]
               : []),
+            ...reReview.reviewInputSnapshotMemberDigestRepairRefs,
           ])],
         };
         commitReviewedArtifactAuthority(reReview, hardStopReceipt, 'hard_stopped', round);
@@ -1522,6 +1539,7 @@ export async function StageRunWorkflow(
           ...(reReview.reviewInputSnapshotQualityDebtRef
             ? [reReview.reviewInputSnapshotQualityDebtRef]
             : []),
+          ...reReview.reviewInputSnapshotMemberDigestRepairRefs,
         ])],
       };
       commitReviewedArtifactAuthority(

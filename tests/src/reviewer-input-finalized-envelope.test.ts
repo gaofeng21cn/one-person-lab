@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
-import { completeReviewerSnapshotTransportEnvelope } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
+import {
+  completeReviewerSnapshotTransportEnvelope,
+  resolveReviewerInputSnapshotMaterialization,
+} from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
 
 function fixture() {
   const source = { kind: 'artifact', ref: 'file:///workspace/source.json', sha256: `sha256:${'1'.repeat(64)}`, size_bytes: 12 };
@@ -126,4 +133,72 @@ test('an unknown extra key still fails closed', () => {
     () => completeReviewerSnapshotTransportEnvelope(withExtra, authority, artifacts),
     /must use the exact declared fields/,
   );
+});
+
+// A producer hand-writes its snapshot request digests and can hallucinate one
+// (production: run dev-orchestrator-create-20261121-r15 carried a 66-char
+// non-canonical member digest). When the declared artifact identity already
+// binds exactly one verified digest for the same source_ref, the repair rebinds
+// the member to that authority and the repaired bytes survive ordinary
+// materialization. Unbound or ambiguous members stay fail-closed.
+test('a hand-written member digest is repaired from the authoritative identity and survives materialization', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-f08a-repair-'));
+  try {
+    const sourceBytes = Buffer.from(JSON.stringify({ kind: 'source' }));
+    const producedBytes = Buffer.from(JSON.stringify({ kind: 'produced', n: 2 }));
+    fs.writeFileSync(path.join(root, 'source.json'), sourceBytes);
+    fs.writeFileSync(path.join(root, 'generation.json'), producedBytes);
+    const digestOf = (bytes: Buffer) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+    const source = { kind: 'artifact', ref: 'file:///source.json'.replace('file:///', `file://${root}/`), sha256: digestOf(sourceBytes), size_bytes: sourceBytes.length };
+    const finalized = { kind: 'artifact', ref: `file://${root}/generation.json`, sha256: digestOf(producedBytes), size_bytes: producedBytes.length };
+    const authority = {
+      producer_attempt_ref: 'opl://stage_attempts/sat_f08a',
+      execution_content_binding_sha256: `sha256:${'3'.repeat(64)}`,
+      review_lane_binding: 'statistical',
+      owner_authority_refs: [source, finalized],
+    };
+    const request = {
+      surface_kind: 'opl_reviewer_input_snapshot_materialization_request', schema_version: 2,
+      owner_authority_ref: source, producer_attempt_ref: authority.producer_attempt_ref,
+      execution_content_binding_sha256: authority.execution_content_binding_sha256,
+      review_lane: 'statistical', workspace_root: root,
+      members: [
+        { member_id: 'domain-source', source_ref: source.ref, sha256: source.sha256, size_bytes: source.size_bytes },
+        // The hand-written wrong digest (66 chars, as produced in the live run) and wrong size.
+        { member_id: 'produced-02', source_ref: finalized.ref, sha256: `sha256:${'2'.repeat(64)}ff`, size_bytes: 1 },
+      ],
+    };
+    const artifacts = { refs: [source.ref, finalized.ref], hashes: [source.sha256, finalized.sha256] };
+    const resolution = resolveReviewerInputSnapshotMaterialization(request, authority, artifacts);
+    assert.equal(resolution.surface_kind, 'opl_reviewer_input_snapshot_materialization');
+    const repairs = (resolution as { member_digest_repairs?: unknown[] }).member_digest_repairs ?? [];
+    assert.equal(repairs.length, 1);
+    assert.deepEqual(repairs[0], {
+      member_id: 'produced-02',
+      source_ref: finalized.ref,
+      received_sha256: `sha256:${'2'.repeat(64)}ff`,
+      authoritative_sha256: finalized.sha256,
+      received_size_bytes: 1,
+      authoritative_size_bytes: finalized.size_bytes,
+    });
+    // The materialized manifest binds the authoritative digest, not the fabricated one.
+    const manifest = (resolution as { manifest: { members: { member_id: string; sha256: string }[] } }).manifest;
+    const member = manifest.members.find((entry) => entry.member_id === 'produced-02');
+    assert.equal(member?.sha256, finalized.sha256);
+
+    // A member with no authoritative binding stays fail-closed.
+    const unbound = {
+      ...request,
+      members: [
+        { member_id: 'domain-source', source_ref: source.ref, sha256: source.sha256, size_bytes: source.size_bytes },
+        { member_id: 'ghost', source_ref: `file://${root}/not-declared.json`, sha256: 'not-a-digest', size_bytes: 1 },
+      ],
+    };
+    assert.throws(
+      () => resolveReviewerInputSnapshotMaterialization(unbound, authority, artifacts),
+      /canonical SHA-256 digest|not.*declared|fail/i,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
