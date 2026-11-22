@@ -556,14 +556,20 @@ export function persistReviewerSnapshotObject(input: {
   let source: number | null = null;
   let destination: number | null = null;
   try {
-    if (
-      !input.trustedWorkspaceRoot
-      || !pathInside(input.sourcePath, input.trustedWorkspaceRoot)
-    ) {
+    // The copy repeats the containment check, so it has to admit the same roots the resolver
+    // did: a framework-owned artifact would otherwise pass resolution and then fail here.
+    const allowedRoots = input.trustedWorkspaceRoot
+      ? [input.trustedWorkspaceRoot, ...frameworkOwnedArtifactRoots()]
+      : [];
+    if (allowedRoots.length === 0 || !pathInsideRoots(input.sourcePath, allowedRoots)) {
       throw reviewTransportError(
         'reviewer_input_snapshot_source_path_escape',
         'Reviewer input snapshot source escaped its declared workspace root before copy.',
-        { source_ref: input.sourceRef, workspace_root: input.trustedWorkspaceRoot ?? null },
+        {
+          source_ref: input.sourceRef,
+          workspace_root: input.trustedWorkspaceRoot ?? null,
+          framework_artifact_roots: frameworkOwnedArtifactRoots(),
+        },
       );
     }
     const pathBefore = fs.lstatSync(input.sourcePath, { bigint: true });
@@ -613,7 +619,7 @@ export function persistReviewerSnapshotObject(input: {
       || BigInt(sizeBytes) !== before.size
       || !sameStableFile(before, after)
       || !sameStableFile(after, pathAfter!)
-      || !pathInside(input.sourcePath, input.trustedWorkspaceRoot)
+      || !pathInsideRoots(input.sourcePath, allowedRoots)
     ) {
       throw reviewTransportError(
         'reviewer_input_snapshot_source_changed_during_copy',
