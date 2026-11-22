@@ -30,6 +30,7 @@ import {
   FixtureEvaluator,
   activateCreateRun,
 } from './shared.ts';
+import { LedgerFoundryOperationResultJournal } from '../../../src/authority/evidence/foundry-persistent-adapters.ts';
 import { createCordisFoundryDevComposition } from '../../../src/host/composition-profiles.ts';
 import type {
   CandidateCompiler,
@@ -43,9 +44,7 @@ import type {
   resolveStandardAgentManagedCheckout,
 } from './shared.ts';
 
-test('file-backed Foundry truth survives restart and rebuilds its SQLite projection', async (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-persistent-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+function persistentKernelFixture(root: string) {
   const content = new FileFoundryContentStore(root);
   const promptV1 = content.put(Buffer.from('fixture prompt v1\n'));
   const promptV2 = content.put(Buffer.from('fixture prompt v2\n'));
@@ -103,26 +102,33 @@ test('file-backed Foundry truth survives restart and rebuilds its SQLite project
       });
     },
   };
-  const buildKernel = (options: {
+  return (options: {
     events?: FoundryEventStore;
+    evaluator?: EvaluationExecutor;
     now?: string;
     propagateTransientActivityFailures?: boolean;
   } = {}) => {
     const versions = new LedgerVersionRegistry(root);
     return new FoundryKernel({
       designer: persistentDesigner,
-      evaluator: persistentEvaluator,
+      evaluator: options.evaluator ?? persistentEvaluator,
       compiler: new ContentAddressedCandidateCompiler(root),
       objects: new FileFoundryObjectStore(root),
       events: options.events ?? new LedgerFoundryEventStore(root),
       versions,
+      operationResults: new LedgerFoundryOperationResultJournal(root),
       activationRuntime: new InMemoryActivationRuntime(versions),
       ownerGate,
       clock: { now: () => options.now ?? '2026-07-16T00:00:00.000Z' },
       propagateTransientActivityFailures: options.propagateTransientActivityFailures,
     });
   };
+}
 
+test('file-backed Foundry truth survives restart and rebuilds its SQLite projection', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-persistent-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const buildKernel = persistentKernelFixture(root);
   const firstKernel = buildKernel();
   const completed = await activateCreateRun(
     firstKernel,
@@ -629,4 +635,58 @@ test('the four Foundry protocol fixtures from the exact OMA checkout pass OPL au
     evolution_proposal: fixtures.proposal,
   });
   assert.equal(conformance.version, 'opl-foundry-protocol-fixture-conformance.v1');
+});
+
+test('a passing evaluation returned after owner cancellation cannot publish a qualified version', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-cancel-evaluating-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const buildKernel = persistentKernelFixture(root);
+  let enterEvaluation!: () => void;
+  let releaseEvaluation!: () => void;
+  const entered = new Promise<void>((resolve) => { enterEvaluation = resolve; });
+  const released = new Promise<void>((resolve) => { releaseEvaluation = resolve; });
+  const evaluating = buildKernel({
+    evaluator: {
+      evaluator_id: 'evaluator:fixture',
+      async evaluate(input) {
+        enterEvaluation();
+        await released;
+        return evidence({
+          runId: input.run_id,
+          designRequest: input.request,
+          agentBlueprint: input.blueprint,
+          candidate: input.candidate,
+          baselineDigest: null,
+          qualified: true,
+        });
+      },
+      async canary() { throw new Error('Cancelled run reached canary.'); },
+    },
+  });
+  const runId = 'run:late-qualification-after-cancel';
+  await evaluating.startRun({ request: request(), run_id: runId });
+  const advancing = evaluating.advanceUntilPause(runId);
+  await entered;
+  try {
+    const lifecycle = buildKernel();
+    const inspection = await lifecycle.inspectRun(runId);
+    assert.equal(inspection.run.state, 'evaluating');
+    const cancelled = await lifecycle.cancelRun({
+      run_id: runId,
+      expected_revision: inspection.run.revision,
+      authority_receipt_ref: authorizeRunMutation({ inspection, action: 'cancel', decision: 'cancel' }),
+    });
+    assert.equal(cancelled.run.state, 'cancelled');
+  } finally {
+    releaseEvaluation();
+  }
+  await advancing;
+  const restarted = buildKernel();
+  const terminal = await restarted.inspectRun(runId);
+  assert.equal(terminal.run.state, 'cancelled');
+  assert.equal(terminal.terminal_readback.qualified_agent_version, null);
+  assert.equal(terminal.activation.active_version_digest, null);
+  const events = await new LedgerFoundryEventStore(root).read(runId);
+  assert.equal(events.some((event) => event.event_type === 'candidate_qualified'), false);
+  assert.deepEqual(await restarted.listVersions(terminal.run.target_agent_id, terminal.run.target_domain_id), []);
 });
