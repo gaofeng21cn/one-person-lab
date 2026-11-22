@@ -543,9 +543,15 @@ export async function StageRunWorkflow(
           canonicalArtifactSha256Enabled,
           )
         : {
-            artifactRefs: attemptInput.artifactRefs,
-            artifactHashes: attemptInput.artifactHashes,
-            artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
+            // An Attempt that neither completed nor returned an artifact identity produced
+            // nothing, so it owns no output identity. Projecting attemptInput's inherited
+            // refs here made a blocked producer look like it owned the previous Stage's
+            // artifacts; the durable side correctly has none, and the projection then failed
+            // with stage_quality_cycle_attempt_artifact_identity_mismatch, masking the real
+            // blocked reason (a transient codex_cli_provider_unavailable).
+            artifactRefs: [],
+            artifactHashes: [],
+            artifactIdentityReceiptRefs: [],
           };
     } catch (error) {
       if (!formalReviewDeclaredArtifactIdentityEnabled) throw error;
