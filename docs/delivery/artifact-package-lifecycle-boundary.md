@@ -155,6 +155,10 @@ workflow。共用准备器比较已发布源码与 main，只对交付变化分�
 各产品发布器。已冻结但未完成的 tag 复用原源码与发布 run，不移动旧 tag。
 DSH 的 `owner_schedule` 只回读既有每日任务，避免重复调度。
 
+Framework 产品版本准备和每日 Package 投影写入同一条 Framework 主线。
+两个任务使用同一 GitHub Actions 并发组，排到后再检出当时的 `main` 并执行验证。
+其他产品按各自仓库并行准备。
+
 `source_check_workflows` 可按 owner 声明源码验证 workflow 文件名。产品准备仅等待这些
 workflow 对准确源码提交的当前结果及 commit statuses；Package 派发器和产品发布器
 不充当源码门槛。已运行的源码检查失败仍阻止准备，合并前仍保留完整检查保护。
