@@ -498,6 +498,18 @@ function memberWithObservedObjectSize(
   return observedSize === member.size_bytes ? member : { ...member, size_bytes: observedSize };
 }
 
+// Compare the spelling of a local file URL without resolving paths or decoding
+// reserved characters. Reads always use the exact locator in the StageRun binding.
+function encodedStageInputLocator(ref: string) {
+  if (!ref.startsWith('file:///')) return ref;
+  try {
+    return ref.replace(/ |[^\p{ASCII}]+/gu, encodeURIComponent);
+  } catch {
+    // An unpaired surrogate has no UTF-8 spelling.
+    return ref;
+  }
+}
+
 export function materializeReviewerInputSnapshot(
   value: unknown,
   expectedAuthority?: ReviewerInputSnapshotAuthorityBinding,
@@ -510,14 +522,16 @@ export function materializeReviewerInputSnapshot(
   const effectiveMembers: typeof request.members = [];
   const snapshotObjectRoot = reviewTransportRoots().reviewer_snapshot_object_root;
   for (const member of request.members) {
-    const boundInput = inputAuthority.some((ref) => (
-      ref.ref === member.source_ref && ref.sha256 === member.sha256 && ref.size_bytes === member.size_bytes
+    const memberLocator = encodedStageInputLocator(member.source_ref);
+    const boundInput = inputAuthority.find((ref) => (
+      ref.sha256 === member.sha256 && ref.size_bytes === member.size_bytes
+      && encodedStageInputLocator(ref.ref) === memberLocator
     ));
     const boundContent = contentSources.find((source) => (
       source.ref === member.source_ref && source.sha256 === member.sha256 && source.size_bytes === member.size_bytes
     ));
-    const source = boundInput && (member.source_ref.startsWith('file://') || path.isAbsolute(member.source_ref))
-      ? resolveExactBoundLocalFile(member.source_ref)
+    const source = boundInput && (boundInput.ref.startsWith('file://') || path.isAbsolute(boundInput.ref))
+      ? resolveExactBoundLocalFile(boundInput.ref)
       : boundContent
         ? resolveContainedWorkspaceFile(authority!.owner_content_source_workspace_root, boundContent.source_ref)
         : resolveContainedWorkspaceFile(request.workspace_root, member.source_ref);

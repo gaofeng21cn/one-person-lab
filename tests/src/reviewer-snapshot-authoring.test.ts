@@ -6,7 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
-import { completeReviewerSnapshotTransportEnvelope, materializeReviewerInputSnapshot, reviewerSnapshotStageRunInputAuthority } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
+import { completeReviewerSnapshotTransportEnvelope, materializeReviewerInputSnapshot, resolveReviewerInputSnapshotMaterialization, reviewerSnapshotStageRunInputAuthority } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
 import { exactRefsFromCloseoutMetadata } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
 
 const sha = (bytes: string) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
@@ -93,6 +93,49 @@ test('snapshot can freeze an exact bound external input but never an unbound ext
     assert.equal(materializeReviewerInputSnapshot(relativeRequest, { ...authority, stage_run_input_authority_refs: [relative] }).manifest.members[0]!.sha256, relative.sha256);
   } finally {
     if (priorState === undefined) delete process.env.OPL_STATE_DIR; else process.env.OPL_STATE_DIR = priorState;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('snapshot materializes a selected external input through its frozen file URL encoding', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-snapshot-file-url-'));
+  const priorState = process.env.OPL_STATE_DIR;
+  try {
+    process.env.OPL_STATE_DIR = path.join(root, 'state');
+    const workspace = path.join(root, 'workspace');
+    fs.mkdirSync(workspace);
+    const bytes = 'frozen input';
+    const source = path.join(root, '审阅 文件.json');
+    fs.writeFileSync(source, bytes);
+    const exact = { kind: 'stage_run_input_artifact', ref: pathToFileURL(source).href, sha256: sha(bytes), size_bytes: Buffer.byteLength(bytes) };
+    const inputs = reviewerSnapshotStageRunInputAuthority({
+      input_artifacts: [{ ref: exact.ref, sha256: exact.sha256 }],
+      content_bindings: [{ purpose: 'input_artifact', ref: exact.ref, sha256: exact.sha256, byte_size: exact.size_bytes, verification_kind: 'workspace_file_bytes' }],
+    });
+    const owner = { kind: 'design_scope', ref: 'scope.json', sha256: sha('scope'), size_bytes: 5 };
+    const authority = { producer_attempt_ref: attemptRef, execution_content_binding_sha256: bindingHash, owner_authority_refs: [owner], stage_run_input_authority_refs: inputs };
+    const selected = { member_id: 'selected', source_ref: decodeURI(exact.ref), sha256: exact.sha256, size_bytes: exact.size_bytes };
+    const resolve = (member: typeof selected) => resolveReviewerInputSnapshotMaterialization({
+      surface_kind: 'opl_reviewer_input_snapshot_materialization_request', schema_version: 2,
+      producer_attempt_ref: attemptRef, execution_content_binding_sha256: bindingHash,
+      workspace_root: workspace, owner_authority_ref: owner, members: [member],
+    }, authority, { refs: [], hashes: [] });
+    const result = resolve(selected);
+    assert.ok('manifest' in result);
+    const member = result.manifest.members.find((item) => item.member_id === selected.member_id);
+    assert.ok(member);
+    assert.equal(fs.readFileSync(new URL(member.immutable_ref.ref), 'utf8'), bytes);
+    assert.throws(() => resolve({ ...selected, size_bytes: exact.size_bytes + 1 }), /escapes the declared workspace/);
+    assert.throws(() => resolve({ ...selected, sha256: sha('other bytes') }), /escapes the declared workspace/);
+    const other = path.join(root, '审阅%20文件.json');
+    fs.writeFileSync(other, bytes);
+    assert.throws(() => resolve({ ...selected, source_ref: pathToFileURL(other).href }), /escapes the declared workspace/);
+    process.env.OPL_STATE_DIR = path.join(root, 'fresh-state');
+    fs.writeFileSync(source, 'changed input');
+    assert.throws(() => resolve(selected), /source bytes do not match/);
+  } finally {
+    if (priorState === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = priorState;
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
