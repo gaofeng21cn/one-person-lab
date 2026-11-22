@@ -1595,3 +1595,73 @@ test('Temporal cancel bypasses a long design Activity and closes one authoritati
     await testEnv.teardown();
   }
 });
+
+test('Temporal cancellation wins over a late passing evaluation without publishing a version', async () => {
+  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const taskQueue = `opl-foundry-late-evaluation-${Date.now()}`;
+  const runId = 'run-temporal-late-evaluation';
+  let enter!: () => void;
+  let resume!: () => void;
+  let settle!: () => void;
+  const entered = new Promise<void>((resolve) => { enter = resolve; });
+  const released = new Promise<void>((resolve) => { resume = resolve; });
+  const settled = new Promise<void>((resolve) => { settle = resolve; });
+  const dependencies = passingKernelDependencies();
+  const kernel = new FoundryKernel({
+    ...dependencies,
+    evaluator: {
+      ...dependencies.evaluator,
+      async evaluate(input) {
+        enter();
+        await released;
+        return dependencies.evaluator.evaluate(input);
+      },
+    },
+  });
+  const activities = buildFoundryTemporalActivities(() => kernel);
+  const worker = await Worker.create({
+    connection: testEnv.nativeConnection,
+    namespace: testEnv.namespace,
+    taskQueue,
+    workflowsPath,
+    activities: {
+      ...registeredActivities,
+      ...activities,
+      async foundryAdvanceRunActivity(input) {
+        try {
+          return await activities.foundryAdvanceRunActivity(input);
+        } finally {
+          if (input.phase === 'evaluate') settle();
+        }
+      },
+    } satisfies typeof registeredActivities,
+  });
+  const request = designRequest('late-evaluation-agent');
+  const options = { addressOverride: testEnv.address, rpcTimeoutMs: 10_000 };
+  try {
+    await worker.runUntil(async () => {
+      try {
+        const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
+          args: [workflowInput(runId, request)], taskQueue, workflowId: foundryTemporalWorkflowId(runId),
+        });
+        await within(entered, 10_000, 'Evaluation Activity did not start.');
+        const { inspection } = await queryTemporalFoundryRunWorkflow(runId, options);
+        assert.equal(inspection?.run.state, 'evaluating');
+        const cancelled = await cancelTemporalFoundryRun({
+          run_id: runId,
+          expected_revision: inspection!.run.revision,
+          authority_receipt_ref: authorizeTemporalMutation({ inspection: inspection!, action: 'cancel', decision: 'cancel' }),
+        }, options);
+        assert.equal(cancelled.inspection?.run.state, 'cancelled');
+        resume();
+        await within(settled, 10_000, 'Late evaluation Activity did not settle.');
+        assert.equal((await handle.result() as FoundryRunWorkflowState).inspection?.run.state, 'cancelled');
+        assert.deepEqual(await kernel.listVersions(request.target_agent_id, request.target_domain_id), []);
+      } finally {
+        resume();
+      }
+    });
+  } finally {
+    await testEnv.teardown();
+  }
+});
