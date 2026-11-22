@@ -10,7 +10,18 @@ import {
 
 export const MAX_STAGE_ATTEMPT_ACTIVITY_EVENTS = 256;
 export const MAX_STAGE_ATTEMPT_ACTIVITY_EVENT_BYTES = 16 * 1024;
-export const MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES = 64 * 1024;
+// The closeout packet is transport metadata, but the framework itself enriches it before
+// persisting: a producer that cites a workspace packet (the supported path for a packet too
+// large to retype) gets the cited body hydrated in and the metadata lists merged, which
+// roughly doubles the bytes the Attempt authored. agent-blueprint-authoring legitimately
+// writes a 33 KB packet and the hydrated result was 68 884 bytes, so the old 64 KiB bound
+// rejected a correct blueprint Stage with stage_attempt_persisted_json_too_large. Keep the
+// bound well under Temporal's 2 MiB payload limit while leaving room for that enrichment.
+export const MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES = 512 * 1024;
+// Compression is a storage representation choice, not a rejection threshold: keep it tied to
+// the legacy inline budget so a packet that used to be compressed still is, while the
+// persisted bound above only decides how much uncompressed transport JSON is admissible.
+export const MAX_STAGE_ATTEMPT_INLINE_CLOSEOUT_JSON_BYTES = 64 * 1024;
 export const MAX_STAGE_ATTEMPT_CLOSEOUT_UNCOMPRESSED_JSON_BYTES = 1024 * 1024;
 export const STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_SURFACE = 'opl_stage_attempt_closeout_compressed_json';
 export const STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_VERSION = 'stage-attempt-closeout-compressed-json.v1';
@@ -94,7 +105,7 @@ export function stringifyStageAttemptCloseoutJson(value: unknown) {
       },
     );
   }
-  if (uncompressedBytes <= MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES) return serialized;
+  if (uncompressedBytes <= MAX_STAGE_ATTEMPT_INLINE_CLOSEOUT_JSON_BYTES) return serialized;
 
   const compressed = gzipSync(serialized, { level: 9 });
   const envelope = {
