@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { packageRuntimeSourceCheckoutPath } from '../../src/adapters/execution/family-runtime-package-readiness.ts';
 import {
   FOUNDRY_PROTOCOL_VERSION,
   foundryContentDigest,
@@ -19,6 +20,7 @@ import {
   compileStandardAgentStageManifest,
   resolveStandardAgentStageQualityRuntimeBinding,
 } from '../../src/authority/packages/standard-agent-stage-manifest.ts';
+import { readStandardAgentStagePromptFile } from '../../src/authority/packages/standard-agent-stage-prompt.ts';
 
 type StoredResource = ReturnType<FileFoundryContentStore['put']>;
 type ResourceSet = Record<'prompt' | 'skill' | 'knowledge' | 'helper' | 'model' | 'tool' | 'schema', StoredResource>;
@@ -297,4 +299,55 @@ test('candidate compiler rejects mutable refs and resource drift, while a new ex
     }),
     /content store bytes fail digest verification/,
   );
+});
+
+test('evaluation resolves the exact uninstalled pack and Stagecraft reads its bound prompt', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-evaluation-pack-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const store = new FileFoundryContentStore(root);
+  const compiler = new ContentAddressedCandidateCompiler(root);
+  const installedResources = resources(store);
+  const evaluationResources = {
+    ...installedResources,
+    prompt: store.put(Buffer.from('Exact evaluation candidate prompt\n')),
+  };
+  async function materialize(runId: string, packResources: ResourceSet) {
+    const packBlueprint = blueprint(packResources);
+    return compiler.materialize({
+      run_id: runId,
+      blueprint: packBlueprint,
+      blueprint_digest: foundryContentDigest(packBlueprint),
+    });
+  }
+  const installed = await materialize('run:evaluation:installed', installedResources);
+  const candidate = await materialize('run:evaluation:candidate', evaluationResources);
+  const installedDirectory = compiler.candidateDirectory(installed.candidate_digest);
+  const candidateDirectory = compiler.candidateDirectory(candidate.candidate_digest);
+  const installedCheckout = packageRuntimeSourceCheckoutPath({
+    installed_carrier_readback: { lifecycle_authority: 'carrier_owned', source_ref: installedDirectory },
+    installed_readiness: { installed: true, physical_status: 'available', callability: 'callable' },
+  });
+  assert.equal(installedCheckout, installedDirectory);
+  assert.notEqual(installedCheckout, candidateDirectory);
+  const readPack = () => compiler.verifyMaterializedCandidate(candidate);
+  const verified = readPack();
+  assert.equal(verified.directory, fs.realpathSync.native(candidateDirectory));
+  assert.equal(verified.manifest_digest, candidate.manifest_digest);
+  assert.notEqual(verified.directory, installedCheckout);
+  const binding = resolveStandardAgentStageQualityRuntimeBinding(verified.directory, 'deliver');
+  assert.ok(binding?.enabled);
+  const candidatePrompt = readStandardAgentStagePromptFile(verified.directory, binding.stage_prompt_ref);
+  assert.equal(`sha256:${candidatePrompt.sha256}`, evaluationResources.prompt.digest);
+  assert.notEqual(`sha256:${candidatePrompt.sha256}`, installedResources.prompt.digest);
+  const registry = new LedgerVersionRegistry(root, { readOnly: true });
+  assert.deepEqual(await registry.list(candidate.target_agent_id, candidate.target_domain_id), []);
+
+  const wrongManifest = { ...candidate, manifest_digest: installed.manifest_digest };
+  assert.notEqual(wrongManifest.manifest_digest, candidate.manifest_digest);
+  assert.throws(
+    () => compiler.verifyMaterializedCandidate(wrongManifest),
+    /candidate manifest does not match the materialization record/,
+  );
+  fs.writeFileSync(path.join(candidateDirectory, binding.stage_prompt_ref), 'Drifted evaluation candidate prompt\n');
+  assert.throws(readPack, /bytes do not match the immutable file index/);
 });
