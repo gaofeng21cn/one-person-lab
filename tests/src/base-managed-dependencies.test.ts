@@ -995,6 +995,9 @@ test('Framework runtime archive installs dependencies into the incoming generati
   const fakeBin = path.join(root, 'fake-bin');
   runtimeFrameworkFixture(targetRoot, 'old');
   runtimeFrameworkFixture(archiveRoot, 'new');
+  // Official OCI runtime archives include static src/mcp-app assets without TS sources.
+  fs.mkdirSync(path.join(archiveRoot, 'src', 'mcp-app'), { recursive: true });
+  fs.writeFileSync(path.join(archiveRoot, 'src', 'mcp-app', 'index.html'), '<!doctype html>\n', 'utf8');
   fs.mkdirSync(path.join(targetRoot, 'node_modules'), { recursive: true });
   fs.writeFileSync(path.join(targetRoot, 'node_modules', '.existing'), 'old generation\n', 'utf8');
   fs.mkdirSync(fakeBin, { recursive: true });
@@ -1002,6 +1005,7 @@ test('Framework runtime archive installs dependencies into the incoming generati
     '#!/bin/sh',
     'set -eu',
     'mkdir -p node_modules',
+    'printf "%s\\n" "$*" > node_modules/.npm-args',
     "printf 'incoming generation\\n' > node_modules/.installed",
     '',
   ].join('\n'), { mode: 0o755 });
@@ -1023,6 +1027,8 @@ test('Framework runtime archive installs dependencies into the incoming generati
     assert.equal(result.reason, 'framework_runtime_artifact_staged_for_restart');
     assert.equal(result.result?.dependency_install.required, true);
     assert.equal(result.result?.dependency_install.status, 'completed');
+    assert.deepEqual(result.result?.dependency_install.command_preview, ['npm', 'ci', '--omit=dev', '--include=optional', '--ignore-scripts=false']);
+    assert.equal(fs.readFileSync(path.join(`${targetRoot}.pending`, 'node_modules', '.npm-args'), 'utf8').trim(), 'ci --omit=dev --include=optional --ignore-scripts=false');
     assert.equal(fs.readFileSync(path.join(`${targetRoot}.pending`, 'node_modules', '.installed'), 'utf8'), 'incoming generation\n');
     assert.equal(fs.existsSync(path.join(`${targetRoot}.pending`, 'node_modules', '.existing')), false);
   } finally {

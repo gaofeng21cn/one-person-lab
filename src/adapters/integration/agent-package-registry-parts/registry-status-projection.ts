@@ -34,7 +34,7 @@ import { resolveAgentPackageEffectiveSourcePolicy } from './source-policy.ts';
 import { inspectOplModule } from '../system-installation/modules.ts';
 import type { AgentPackageInstallInput } from './types.ts';
 import { resolvePackageAccessDecision, type AgentPackageAccessDecision } from './package-access.ts';
-import { componentSeedAvailable, packageInstallSourceAvailable, packageDistributionChannel } from './package-install-source.ts';
+import { packageInstallSource, packageInstallSourceAvailable } from './package-install-source.ts';
 import { packageArtworkUrl } from './package-artwork.ts';
 import { miniAppPresentation } from './miniapp-presentation.ts';
 import { packageInstallationProjection } from './package-installation-projection.ts';
@@ -428,20 +428,21 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
   const codexVisible = installed
     && descriptor.enabled
     && manifest.codex_interaction_mode !== 'headless_internal';
-  const sourceAvailable = packageInstallSourceAvailable(descriptor);
-  const parentSeedAvailable = manifest.management_scope === 'local_component'
-    && sourceAvailable && componentSeedAvailable(descriptor);
+  const target = currentOwner ?? descriptor;
+  const installSource = packageInstallSource(target);
+  const independentlyInstallable = installSource === 'published' || installSource === 'public_payload';
+  const parentComponent = target.manifest.management_scope === 'local_component' && !independentlyInstallable;
   const installReason = !access.download_allowed
     ? access.reason ?? 'package_access_verification_required'
-    : !sourceAvailable ? 'package_install_source_unavailable' : null;
+    : !installSource ? 'package_install_source_unavailable' : null;
   const downloadable = installReason === null;
   const installation = packageInstallationProjection(descriptor, installed,
     access.discover_allowed ? currentOwner?.manifest.version ?? (installed ? null : manifest.version) : null,
     process.env, currentOwner ?? descriptor, hosted.source_root);
-  const actions = (manifest.management_scope === 'local_component' && !parentSeedAvailable ? [] : actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode))
+  const actions = (parentComponent && installSource !== 'parent_seed' ? [] : actionEntries(installed, manifest.package_id, manifest.codex_interaction_mode))
     .filter((action) => downloadable || !['agent_package_install', 'agent_package_update', 'agent_package_repair'].includes(action.action_id));
   if (downloadable) actions.push(...(installation.installation_actions ?? []) as typeof actions);
-  const recommendedAction = !downloadable || (manifest.management_scope === 'local_component' && !parentSeedAvailable)
+  const recommendedAction = !downloadable
     ? null
     : installed ? (ready ? null : 'agent_package_repair') : 'agent_package_install';
   return {
@@ -454,7 +455,7 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     package_role: manifest.package_role,
     management_scope: manifest.management_scope,
     deployment_target: manifest.deployment_target,
-    catalog_scope: manifest.management_scope === 'local_component' ? 'host_component' : descriptor.catalog_scope ?? currentOwner?.catalog_scope ?? 'software',
+    catalog_scope: parentComponent ? 'host_component' : target.catalog_scope ?? 'software',
     ...packageCatalogProvenance(currentOwner?.catalog_origin === 'opl'
       ? { ...descriptor, catalog_origin: currentOwner.catalog_origin, origin_basis: currentOwner.origin_basis }
       : descriptor),
@@ -504,7 +505,8 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     // No Package owner currently declares release maturity. Keep it unknown;
     // publication admission cannot establish either preview or stable quality.
     release_channel: 'unknown' as const,
-    distribution_channel: packageDistributionChannel(currentOwner ?? descriptor),
+    distribution_channel: independentlyInstallable ? 'release' as const
+      : target.manifest.publication_channel_admission === 'development_only' ? 'development' as const : 'unknown' as const,
     activated: ready,
     codex_visible: codexVisible,
     package_access: access,

@@ -188,8 +188,8 @@ test('deployment targets are absent and parent-owned components have no independ
   component.carrier.publicationRef = 'ghcr.io/example/packages/component:latest-stable';
   assert.doesNotThrow(() => assertPackageInstallSourceAvailable(component));
   const [publishedComponent] = directoryFrom(snapshot(component), 'fast').entries;
-  assert.deepEqual(publishedComponent.available_actions, []);
-  assert.equal(publishedComponent.recommended_action, null);
+  assert.equal(publishedComponent.catalog_scope, 'software');
+  assert.equal(publishedComponent.available_actions.length > 0, true);
 });
 
 test('admission alone cannot authorize an unpublished first-party install', () => {

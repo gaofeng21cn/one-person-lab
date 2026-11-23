@@ -5,6 +5,7 @@
   "publisher": "one-person-lab",
   "version": "0.2.0",
   "source": "first_party_owner_projection",
+  "visibility": "public",
   "source_repo": "https://github.com/gaofeng21cn/one-person-lab-app.git",
   "package_role": "capability_package",
   "integration_kind": "capability_provider",
@@ -141,6 +142,7 @@
     },
     "optional_install_policy": "all_exported_skills",
     "required_skill_ids": [],
+    "public_payload_delivery": "pinned_files",
     "plugin_payload_manifest_url": "payloads/opl-channel-weixin-0.2.0.json",
     "carrier_source_commit": "a93e027957d5c0654deff2e2aaaf61ce78cedfb4"
   },
@@ -174,7 +176,7 @@
   "owner_package_descriptor_ref": "opl-package.json",
   "presentation": {
     "display_name_i18n": {
-      "zh-CN": "OPL Channel Weixin",
+      "zh-CN": "微信远程",
       "en-US": "OPL Channel Weixin"
     },
     "description_i18n": {

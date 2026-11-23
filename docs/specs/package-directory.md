@@ -114,7 +114,7 @@ Homebrew 是 OPL 的一个 carrier，不是 Agent 目录。它适合分发宿主
 
 私有 tap 也可承载已声明 Homebrew 支持的内部 App/CLI。Tap 的 Git 读取权限与安装文件的下载权限分别验证。已有 OCI Package 的 Agent 直接复用 registry 权限和原 carrier 更新动作，不再生成一套 Formula 版本真相。
 
-用户在 OPL App 中看到的是 Package Directory 的语义：可发现、可安装、已安装版本、可用版本、更新状态、调用就绪和受影响的依赖。OPL 自有 Package 只走正式 OCI；原生 App/CLI 走声明的 Homebrew/native carrier；外部扩展回到其原生管理器。App 不把不同 carrier 拼成第二套目录，也不要求用户理解载体差异。
+用户在 OPL App 中看到的是 Package Directory 的语义：可发现、可安装、已安装版本、可用版本、更新状态、调用就绪和受影响的依赖。独立发布的 Package 使用正式 OCI。公开 App 插件可以由 Framework owner projection 显式声明 `codex_surface.public_payload_delivery=pinned_files`，从固定的 owner 提交读取已锁定的载荷。完整版可以用相同版本的离线载荷，版本与内容校验相同。原生 App/CLI 走声明的 Homebrew/native carrier；外部扩展回到其原生管理器。App 不把不同 carrier 拼成第二套目录，也不要求用户理解载体差异。
 
 因此：
 
