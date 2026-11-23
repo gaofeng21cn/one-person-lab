@@ -4,16 +4,22 @@ import path from 'node:path';
 
 // Existing domain fixtures own their plugin data and action logs. Adapt only
 // their test transport when the Framework asks the native installed-state API.
-const NATIVE_READBACK_FIXTURE = String.raw`#!/usr/bin/env node
-// OPL native readback fixture transport v1
+const FIXTURE_LAUNCHER = '#!/bin/sh\n# OPL native readback fixture transport\n';
+const NATIVE_READBACK_FIXTURE = String.raw`
 import fs from 'node:fs';
+import path from 'node:path';
 import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 const binary = __OPL_FIXTURE_BINARY__;
 const statePath = __OPL_FIXTURE_STATE__;
+const nodeBin = path.dirname(process.execPath);
 const args = process.argv.slice(2);
 const run = (argv) => spawnSync(binary, argv, {
-  env: { ...process.env, OPL_CODEX_PLUGIN_BIN: binary },
+  env: {
+    ...process.env,
+    PATH: [nodeBin, process.env.PATH].filter(Boolean).join(path.delimiter),
+    OPL_CODEX_PLUGIN_BIN: binary,
+  },
   encoding: 'utf8', timeout: 15000, maxBuffer: 16 * 1024 * 1024,
 });
 const relay = (result) => {
@@ -77,14 +83,18 @@ if (args[0] === 'app-server') {
 export function codexNativeReadbackFixture(directory: string, binary: string) {
   if (path.basename(binary).startsWith('codex-native-readback-fixture-')
     && fs.existsSync(binary)
-    && fs.readFileSync(binary, 'utf8').startsWith('#!/usr/bin/env node\n// OPL native readback fixture transport v1\n')) {
+    && fs.readFileSync(binary, 'utf8').startsWith(FIXTURE_LAUNCHER)) {
     return { OPL_CODEX_PLUGIN_BIN: binary };
   }
   const identity = crypto.randomUUID();
-  const wrapper = path.join(directory, `codex-native-readback-fixture-${identity}.mjs`);
+  const wrapper = path.join(directory, `codex-native-readback-fixture-${identity}`);
+  const script = `${wrapper}.mjs`;
   const statePath = path.join(directory, `native-marketplaces-${identity}.json`);
-  fs.writeFileSync(wrapper, NATIVE_READBACK_FIXTURE
+  fs.writeFileSync(script, NATIVE_READBACK_FIXTURE
     .replace('__OPL_FIXTURE_BINARY__', () => JSON.stringify(binary))
-    .replace('__OPL_FIXTURE_STATE__', () => JSON.stringify(statePath)), { mode: 0o755 });
+    .replace('__OPL_FIXTURE_STATE__', () => JSON.stringify(statePath)));
+  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+  // App read-model tests intentionally hide installed executables from the CLI.
+  fs.writeFileSync(wrapper, `${FIXTURE_LAUNCHER}exec ${quote(process.execPath)} ${quote(script)} "$@"\n`, { mode: 0o755 });
   return { OPL_CODEX_PLUGIN_BIN: wrapper };
 }
