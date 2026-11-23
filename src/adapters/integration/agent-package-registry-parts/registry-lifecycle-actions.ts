@@ -353,14 +353,15 @@ export async function runOplAgentPackageBulkUpdate(
   const targets: Record<string, unknown>[] = [];
   for (const descriptor of descriptors) {
     const packageId = descriptor.manifest.package_id;
-    const policy = packageBackgroundUpdatePolicy(descriptor, snapshot.access.get(packageId));
+    const currentOwner = snapshot.currentOwner?.get(packageId) ?? null;
+    const target = selectPackageMutationDescriptor(descriptor, currentOwner);
+    const policy = packageBackgroundUpdatePolicy(descriptor, snapshot.access.get(packageId), currentOwner);
     if (input.background && !policy.eligible) {
       targets.push({ target_type: 'package', target_id: packageId, status: 'skipped', reason: policy.reason, action });
       continue;
     }
     // Explicit bulk updates may visit disabled and user-managed installations,
     // but still require an admitted source for the selected owner version.
-    const target = selectPackageMutationDescriptor(descriptor, snapshot.currentOwner?.get(packageId) ?? null);
     if (!input.background && !packageInstallSourceAvailable(target)) {
       targets.push({
         target_type: 'package', target_id: packageId, status: 'skipped',
@@ -372,7 +373,7 @@ export async function runOplAgentPackageBulkUpdate(
     }
     try {
       const result = input.background
-        ? nativeLifecycleResult(action, { packageId, dryRun: input.dryRun }, descriptor)
+        ? nativeLifecycleResult(action, { packageId, dryRun: input.dryRun }, target, descriptor)
         : action === 'repair'
         ? await runOplAgentPackageRepair({ packageId, dryRun: input.dryRun })
         : await runOplAgentPackageUpdate({ packageId, dryRun: input.dryRun });

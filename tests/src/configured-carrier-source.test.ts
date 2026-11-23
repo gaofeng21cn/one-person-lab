@@ -7,7 +7,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import { installPayloadMarketplace } from '../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-payload.ts';
-import { hostedRuntimeReadiness } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
+import { hostedRuntimeReadiness, packageBackgroundUpdatePolicy } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
 import { gitMarketplaceRuntimeRoot } from '../../src/kernel/git-marketplace-runtime-root.ts';
 import { acquireHostedPackageSource } from '../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-source.ts';
 import { materializeStandardAgentFrameworkLink } from '../../src/adapters/integration/standard-agent-framework-link.ts';
@@ -325,6 +325,77 @@ test('public pinned-file component like opl-channel-weixin is independently inst
     if (previousRuntime === undefined) delete process.env.OPL_FULL_RUNTIME_HOME;
     else process.env.OPL_FULL_RUNTIME_HOME = previousRuntime;
   }
+});
+
+test('background update eligibility is origin-neutral while still protecting local checkouts and disabled packages', () => {
+  const access = {
+    visibility: 'public' as const,
+    status: 'public' as const,
+    discover_allowed: true,
+    download_allowed: true,
+    reason: null,
+  };
+  const externalDescriptor = {
+    pluginId: 'vendor-agent@vendor-marketplace',
+    marketplaceSource: 'https://github.com/vendor/agent-plugin.git',
+    enabled: true,
+    catalog_origin: 'external' as const,
+    manifest: {
+      package_id: 'vendor-agent',
+      source: 'third_party',
+      publication_channel_admission: 'public',
+      codex_interaction_mode: 'standard',
+    },
+    carrier: {
+      publicationRef: 'ghcr.io/vendor/agent-plugin:latest',
+      carrier: { marketplaceSource: 'vendor/agent-plugin' },
+    },
+    readiness: {
+      installed: true,
+      physical_status: 'available',
+      projection_callability: 'callable',
+      callability: 'callable',
+    },
+  } as any;
+  assert.deepEqual(packageBackgroundUpdatePolicy(externalDescriptor, access), { eligible: true, reason: null });
+
+  const disabledExternal = { ...externalDescriptor, enabled: false };
+  assert.deepEqual(packageBackgroundUpdatePolicy(disabledExternal, access), {
+    eligible: false,
+    reason: 'user_disabled_package',
+  });
+
+  const localCheckout = {
+    ...externalDescriptor,
+    marketplaceSource: '/tmp/developer/agent-plugin',
+  };
+  assert.deepEqual(packageBackgroundUpdatePolicy(localCheckout, access), {
+    eligible: false,
+    reason: 'local_or_user_managed_source',
+  });
+
+  const weixin = JSON.parse(fs.readFileSync(new URL('../../contracts/opl-framework/packages/opl-channel-weixin.json', import.meta.url), 'utf8'));
+  const weixinDescriptor = {
+    pluginId: 'opl-channel-weixin@one-person-lab-app',
+    marketplaceSource: '/tmp/local-seed/weixin',
+    enabled: true,
+    catalog_origin: 'opl' as const,
+    manifest: {
+      ...weixin,
+      carrier_source_commit: weixin.codex_surface.carrier_source_commit,
+    },
+    carrier: {
+      publicationRef: null,
+      carrier: { marketplaceSource: 'gaofeng21cn/one-person-lab-app' },
+    },
+    readiness: {
+      installed: true,
+      physical_status: 'available',
+      projection_callability: 'callable',
+      callability: 'callable',
+    },
+  } as any;
+  assert.deepEqual(packageBackgroundUpdatePolicy(weixinDescriptor, access), { eligible: true, reason: null });
 });
 
 function developerFixture() {

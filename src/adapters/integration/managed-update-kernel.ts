@@ -3,6 +3,7 @@ import type { FrameworkContracts } from '../../kernel/types.ts';
 import { resolveCodexVersion } from './system-installation/engine-helpers.ts';
 import { packageBackgroundUpdatePolicy } from './agent-package-registry-parts/registry-status-projection.ts';
 import {
+  discoverCurrentOwnerPackageDescriptors,
   discoverInstalledPackageDescriptors,
   installedDescriptorMatchesConfiguredCarrier,
   type InstalledPackageDescriptor,
@@ -68,7 +69,10 @@ function buildManagedUpdateRuntimeEnvironment(
   };
 }
 
-function packageProjection(descriptor: InstalledPackageDescriptor) {
+function packageProjection(
+  descriptor: InstalledPackageDescriptor,
+  currentOwner?: InstalledPackageDescriptor | null,
+) {
   const callable = descriptor.readiness.installed
     && descriptor.readiness.physical_status === 'available'
     && (descriptor.readiness.projection_callability ?? descriptor.readiness.callability) === 'callable';
@@ -76,7 +80,7 @@ function packageProjection(descriptor: InstalledPackageDescriptor) {
     package_id: descriptor.manifest.package_id,
     label: descriptor.manifest.display_name,
     state: callable ? 'currentness_not_checked' as const : 'failed_with_repair' as const,
-    background_update: packageBackgroundUpdatePolicy(descriptor),
+    background_update: packageBackgroundUpdatePolicy(descriptor, undefined, currentOwner),
     installed_owner_descriptor: {
       manifest_path: descriptor.manifestPath,
       manifest_sha256: descriptor.manifest_sha256,
@@ -94,10 +98,11 @@ function packageProjection(descriptor: InstalledPackageDescriptor) {
 
 function buildCapabilityPackagesComponent(
   descriptors: InstalledPackageDescriptor[],
+  currentOwners: Map<string, InstalledPackageDescriptor>,
   channel: string,
   operation: ManagedUpdateKernelInput['operation'],
 ): ManagedUpdateComponent {
-  const packageStates = descriptors.map(packageProjection);
+  const packageStates = descriptors.map((descriptor) => packageProjection(descriptor, currentOwners.get(descriptor.manifest.package_id) ?? null));
   const failedCount = packageStates.filter((entry) => entry.state === 'failed_with_repair').length;
   const eligibleCount = packageStates.filter((entry) => entry.background_update.eligible).length;
   const actionRequested = operation === 'apply' || operation === 'repair';
@@ -269,7 +274,8 @@ export async function buildManagedUpdateKernelProjection(
     const descriptors = [...discoverInstalledPackageDescriptors().values()]
       .filter((descriptor) => installedDescriptorMatchesConfiguredCarrier(descriptor)
         && descriptor.carrier_readback.kind !== 'project_local_owner_projection');
-    components.push(buildCapabilityPackagesComponent(descriptors, channel, input.operation));
+    const currentOwners = discoverCurrentOwnerPackageDescriptors();
+    components.push(buildCapabilityPackagesComponent(descriptors, currentOwners, channel, input.operation));
   }
   const selectedComponents = filterManagedUpdateComponents(
     components,

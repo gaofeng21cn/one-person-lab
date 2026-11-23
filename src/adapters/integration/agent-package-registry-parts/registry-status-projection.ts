@@ -8,7 +8,6 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { gitMarketplaceRuntimeRoot, runtimeRootContainsDescriptor } from '../../../kernel/git-marketplace-runtime-root.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
-import { isFirstPartyPackage } from '../agent-package-first-party.ts';
 import { packageCatalogProvenance } from './package-catalog-provenance.ts';
 import { githubMarketplaceSourceIdentity, sameMarketplaceSource } from './shared.ts';
 import { listAgentPackageSettingsActions } from '../agent-package-actions.ts';
@@ -103,27 +102,31 @@ export function isManagedPayloadCarrier(descriptor: InstalledPackageDescriptor) 
 export function packageBackgroundUpdatePolicy(
   descriptor: InstalledPackageDescriptor,
   packageAccess?: AgentPackageAccessDecision,
+  currentOwner?: InstalledPackageDescriptor | null,
 ) {
-  const declaredSource = descriptor.carrier.carrier.marketplaceSource;
+  const target = selectPackageMutationDescriptor(descriptor, currentOwner ?? null);
+  const installSource = packageInstallSource(target);
+  const declaredSource = target.carrier.carrier.marketplaceSource ?? descriptor.carrier.carrier.marketplaceSource;
   const managedPayloadSource = isManagedPayloadCarrier(descriptor);
-  const access = packageAccess ?? resolvePackageAccessDecision(descriptor.manifest, process.env, { verification: 'cached' });
+  const remoteManagedSource = installSource === 'public_payload'
+    || managedPayloadSource
+    || Boolean(declaredSource && (githubMarketplaceSourceIdentity(declaredSource) || /^https?:\/\//i.test(declaredSource))
+      && sameMarketplaceSource(descriptor.marketplaceSource, declaredSource));
+  const access = packageAccess ?? resolvePackageAccessDecision(target.manifest, process.env, { verification: 'cached' });
   const reason = !descriptor.readiness.installed
     ? 'package_not_installed'
     : !access.download_allowed
       ? access.reason ?? 'package_access_verification_required'
-    : !packageInstallSourceAvailable(descriptor)
+    : !installSource
       ? 'package_install_source_unavailable'
-    : !isFirstPartyPackage(descriptor.manifest.package_id)
-      ? 'external_package_explicit_update_only'
-      : !declaredSource || !githubMarketplaceSourceIdentity(declaredSource)
-        || (!managedPayloadSource && !sameMarketplaceSource(descriptor.marketplaceSource, declaredSource))
-        ? 'local_or_user_managed_source'
-        : !descriptor.enabled && descriptor.manifest.codex_interaction_mode !== 'headless_internal'
-          ? 'user_disabled_package'
-          : descriptor.readiness.physical_status !== 'available'
-            || (descriptor.readiness.projection_callability ?? descriptor.readiness.callability) !== 'callable'
-            ? 'native_carrier_attention_required'
-            : null;
+    : !remoteManagedSource
+      ? 'local_or_user_managed_source'
+      : !descriptor.enabled && descriptor.manifest.codex_interaction_mode !== 'headless_internal'
+        ? 'user_disabled_package'
+        : descriptor.readiness.physical_status !== 'available'
+          || (descriptor.readiness.projection_callability ?? descriptor.readiness.callability) !== 'callable'
+          ? 'native_carrier_attention_required'
+          : null;
   return { eligible: reason === null, reason };
 }
 
