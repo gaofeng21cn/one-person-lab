@@ -19,6 +19,14 @@ checks indexed file hashes and sizes, candidate/manifest digests, resource bytes
 and manifest conformance. Missing bytes, hash mismatch or wrong generation must
 not produce a materialization event.
 
+New candidates carry the Standard Agent capability map, primary Skill and a
+declared durable knowledge catalog in their immutable file index. The catalog
+starts empty. Blueprint knowledge refs identify Stage resources, and durable
+recall still requires declared, owner-authorized knowledge with the appropriate
+scope, kind and review status. Verify missing requirements with the Stage
+knowledge binder and verify the primary Skill through the Workspace Skill
+projection. Previously materialized versions retain their original bytes.
+
 The test stops before evaluation. It does not establish a terminal successful
 FoundryRun, qualification, version registration, activation or domain quality.
 Fixture packages are neither published nor installed; temporary artifacts are

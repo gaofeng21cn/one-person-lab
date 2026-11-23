@@ -115,6 +115,7 @@ export async function StageRunWorkflow(
   const reviewerIdentityHardStopEnabled = patched('opl-stage-run-reviewer-identity-hard-stop-v1');
   const canonicalArtifactSha256Enabled = patched('opl-stage-run-artifact-sha256-notation-v1');
   const cancellationPropagationEnabled = patched('opl-stage-run-child-cancellation-propagation-v1');
+  const blockedProducerArtifactIdentityEnabled = patched('opl-stage-run-blocked-producer-artifact-identity-v1');
   const qualityScopeBudget = normalizeStageQualityScopeBudget(
     input.quality_policy.formal_review.scope_budget,
     { legacyMaxRepairRounds: input.quality_policy.formal_review.max_repair_rounds },
@@ -542,11 +543,15 @@ export async function StageRunWorkflow(
           reviewerIdentityHardStopEnabled,
           canonicalArtifactSha256Enabled,
           )
-        : {
-            artifactRefs: attemptInput.artifactRefs,
-            artifactHashes: attemptInput.artifactHashes,
-            artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
-          };
+        : blockedProducerArtifactIdentityEnabled && !reviewRole
+          // With no output, a producer or repairer has no durable artifact identity.
+          // A Review still binds the producer evidence it was asked to inspect.
+          ? { artifactRefs: [], artifactHashes: [], artifactIdentityReceiptRefs: [] }
+          : {
+              artifactRefs: attemptInput.artifactRefs,
+              artifactHashes: attemptInput.artifactHashes,
+              artifactIdentityReceiptRefs: attemptInput.artifactIdentityReceiptRefs,
+            };
     } catch (error) {
       if (!formalReviewDeclaredArtifactIdentityEnabled) throw error;
       if (progressFirstHandoffEnabled && identityFailureSyncEnabled) {

@@ -1,4 +1,5 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { loadFrameworkCliCommandRegistry } from '../../authority/contracts/contracts.ts';
 import {
   buildCommandHelp,
   buildRootHelp,
@@ -14,6 +15,8 @@ import { buildUsageError } from './modules/cli-errors.ts';
 import { printJson, type CliOutputStream } from './modules/cli-output.ts';
 import { buildInternalCommandSpecs } from './cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from './cases/public-command-specs.ts';
+import { buildUpdateActivateCommandSpec } from './cases/public-command-specs-parts/update.ts';
+import { bindCommandRegistryMetadata, validateCommandRegistryCoverage } from './modules/support.ts';
 import {
   createManagedBrowserAutomationProvider,
   createManagedComputerUseProvider,
@@ -145,7 +148,10 @@ export type CliMainOptions = {
 export async function main(options: CliMainOptions = {}) {
   const stdout = options.stdout ?? process.stdout;
   const parsedInput = parseCliInput(options.argv ?? process.argv.slice(2));
-  const composition = parsedInput.command === 'app'
+  // Activation consumes existing local receipts before starting the runtime.
+  // Loading the full charter here would probe the installed Codex carrier.
+  const offlineActivation = parsedInput.command === 'update' && parsedInput.args[0] === 'activate';
+  const composition = offlineActivation ? null : parsedInput.command === 'app'
     ? await createCordisAppFullComposition({
         runtimeSnapshotProvider: async (contracts, snapshotOptions) => {
           const { buildRuntimeTraySnapshot } = await import(
@@ -159,17 +165,21 @@ export async function main(options: CliMainOptions = {}) {
   try {
     const shouldPrintHumanHelp = parsedInput.textOutput
       || ((options.stdoutIsTTY ?? process.stdout.isTTY) && !parsedInput.jsonOutput);
-    const contracts = composition.services.charter.load(parsedInput.loadOptions);
-    const internalCommandSpecs = buildInternalCommandSpecs(
-      parsedInput,
-      () => contracts,
-      composition,
-    );
-    const publicCommandSpecs = buildPublicCommandSpecs(
-      internalCommandSpecs,
-      () => contracts,
-      composition,
-    );
+    let publicCommandSpecs;
+    if (composition) {
+      const contracts = composition.services.charter.load(parsedInput.loadOptions);
+      const internalCommandSpecs = buildInternalCommandSpecs(parsedInput, () => contracts, composition);
+      publicCommandSpecs = buildPublicCommandSpecs(internalCommandSpecs, () => contracts, composition);
+    } else {
+      const registry = loadFrameworkCliCommandRegistry(parsedInput.loadOptions);
+      publicCommandSpecs = bindCommandRegistryMetadata(
+        { 'update activate': buildUpdateActivateCommandSpec() },
+        { update_activate: registry.commands.update_activate },
+      );
+      validateCommandRegistryCoverage(publicCommandSpecs, {
+        protectedCommandPrefixes: registry.protected_command_prefixes,
+      });
+    }
     const inputTokens = parsedInput.command ? [parsedInput.command, ...parsedInput.args] : [];
 
   if (inputTokens.length === 0) {
@@ -292,7 +302,7 @@ export async function main(options: CliMainOptions = {}) {
 
     printJson(result, stdout);
   } finally {
-    await composition.dispose();
+    await composition?.dispose();
   }
 }
 

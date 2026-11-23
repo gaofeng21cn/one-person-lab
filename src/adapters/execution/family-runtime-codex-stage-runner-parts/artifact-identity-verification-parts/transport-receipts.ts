@@ -285,6 +285,7 @@ type CurrentArtifactBytesInput = {
   canonicalWorkItemRoot?: string | null;
   canonicalWorkItemRootIdentity?: WorkItemRootIdentity | null;
   scopeWorkspaceRoot?: string | null;
+  containInWorkspace?: boolean;
 };
 
 export function observeCurrentArtifactBytes(input: CurrentArtifactBytesInput) {
@@ -303,7 +304,7 @@ export function observeCurrentArtifactBytes(input: CurrentArtifactBytesInput) {
   const localPath = directPath ?? contentPath;
   if (!localPath) return null;
   const boundaryRoot = input.canonicalWorkItemRoot
-    ?? (contentPath ? path.resolve(input.workspaceRoot) : null);
+    ?? (contentPath || input.containInWorkspace ? path.resolve(input.workspaceRoot) : null);
   const boundaryWorkspace = input.canonicalWorkItemRoot || !boundaryRoot
     ? input.scopeWorkspaceRoot ?? input.workspaceRoot
     : path.dirname(boundaryRoot);

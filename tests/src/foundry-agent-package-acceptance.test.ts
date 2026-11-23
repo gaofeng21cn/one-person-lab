@@ -8,6 +8,8 @@ import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { canonicalJsonBytes } from '../../src/kernel/canonical-json.ts';
+import capabilityMapSchema from '../../contracts/opl-framework/standard-agent-capability-map.schema.json' with { type: 'json' };
+import { assertJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import {
   FoundryKernel,
   ManifestFoundryDesignerAdapter,
@@ -27,6 +29,9 @@ import {
   StageRunFoundryProviderInvoker,
   type FoundryProviderStageRunGateway,
 } from '../../src/adapters/execution/foundry-provider-stage-run.ts';
+import { materializeAgentPackageWorkspaceSkillProjection } from '../../src/adapters/integration/agent-package-registry-parts/skill-projection.ts';
+import { bindStageKnowledgeContext } from '../../src/adapters/execution/family-runtime-knowledge-context.ts';
+import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { blueprint, request } from './foundry-kernel-cases/shared.ts';
 
 // The gateway supplies explicit test fixtures, not LLM output or a Temporal execution.
@@ -207,6 +212,32 @@ test('fixture provider builds distinct domain packages through Kernel admission 
       assert.equal(sha256(bytes), entry.sha256, entry.path);
       assert.equal(bytes.byteLength, entry.byte_size, entry.path);
     }
+    const map = JSON.parse(fs.readFileSync(path.join(directory, 'contracts/capability_map.json'), 'utf8'));
+    assertJsonSchemaPayload({ schemaId: capabilityMapSchema.$id, schema: capabilityMapSchema }, map);
+    for (const capability of map.capabilities) {
+      assert.ok(index.files.some((entry) => entry.path === capability.physical_source_ref.ref));
+    }
+    const skill = materializeAgentPackageWorkspaceSkillProjection({
+      rootPackageId: target.agent,
+      rootSkillIds: [target.agent],
+      rootSourceRoot: directory,
+      rootSourceRef: record.candidate_ref,
+    }).projection;
+    assert.ok(skill);
+    assert.deepEqual(skill.skill_ids, [target.agent]);
+    assert.deepEqual(
+      fs.readFileSync(path.join(skill.skills_root, target.agent, 'SKILL.md')),
+      fs.readFileSync(path.join(directory, 'agent/primary_skill/SKILL.md')),
+    );
+    assert.throws(
+      () => bindStageKnowledgeContext({ repoDir: directory, domainId: target.domain, stageId: target.stage }),
+      (failure: unknown) => {
+        assert.ok(failure instanceof FrameworkContractError);
+        assert.equal(failure.message, 'Required knowledge is unavailable.');
+        assert.deepEqual(failure.details?.missing_knowledge_ids, ['requirement:fixture.delivery-method']);
+        return true;
+      },
+    );
     const pack = JSON.parse(fs.readFileSync(path.join(directory, 'agent/agent-pack.json'), 'utf8'));
     assert.equal(foundryContentDigest(pack), record.manifest_digest);
     assert.equal(pack.actions[0].action_id, target.action);

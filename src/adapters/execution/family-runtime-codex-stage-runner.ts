@@ -292,6 +292,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         });
     }
   const parsed = parseCodexExecOutput(result.stdout);
+  const threadId = parsed.threadId
+    ?? runnerEvents.find((event) => event.event_kind === 'thread.started' && event.value)?.value
+    ?? null;
   const capturedLastMessage = runInSandbox
     ? { message: null, closeoutPacket: null }
     : parseCapturedCloseoutMessage(stageCloseoutCapture.outputLastMessagePath);
@@ -332,7 +335,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     && result.timeoutReason !== 'activity_cancelled'
   ) {
     const recovered = await recoverCloseoutFromCodexSessionWithRetry({
-      threadId: parsed.threadId,
+      threadId,
       timeoutMs: normalizeTimeoutMs(process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS, 5_000),
       intervalMs: normalizeTimeoutMs(process.env.OPL_CODEX_SESSION_RECOVERY_INTERVAL_MS, 100),
     });
@@ -351,7 +354,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     }
   }
   if (!runInSandbox && !sessionUsageRef) {
-    sessionUsageRef = extractCodexSessionUsageRef(recoverCodexExecOutputFromSession(parsed.threadId));
+    sessionUsageRef = extractCodexSessionUsageRef(recoverCodexExecOutputFromSession(threadId));
   }
   const rawStageArtifact = persistRawStageOutput({
     attempt: input.attempt,
@@ -371,7 +374,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   if (
     !runInSandbox
     && !closeoutPacket
-    && parsed.threadId
+    && threadId
     && ['producer', 'reviewer', 'repairer', 're_reviewer'].includes(attemptRole ?? '')
     && result.timeoutReason !== 'unsupported_tool_protocol'
     && result.timeoutReason !== 'activity_cancelled'
@@ -382,9 +385,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   ) {
     const resumeCapture = createCodexCloseoutCapture();
     protocolCloseoutResumeStatus = 'failed';
-    protocolCloseoutResumeThreadId = parsed.threadId;
-    runnerEvents.push({ event_kind: 'protocol_closeout_resume.started', value: parsed.threadId });
-    input.onRunnerProgress?.({ event_kind: 'protocol_closeout_resume.started', value: parsed.threadId });
+    protocolCloseoutResumeThreadId = threadId;
+    runnerEvents.push({ event_kind: 'protocol_closeout_resume.started', value: threadId });
+    input.onRunnerProgress?.({ event_kind: 'protocol_closeout_resume.started', value: threadId });
     try {
       protocolCloseoutResumeTimeoutMs = normalizeTimeoutMs(
         process.env.OPL_CODEX_PROTOCOL_CLOSEOUT_RESUME_TIMEOUT_MS,
@@ -393,7 +396,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       const resumePrompt = protocolCloseoutResumePrompt(input.attempt,
         attemptRole === 'reviewer' || attemptRole === 're_reviewer' ? rawStageArtifact : null);
       const resumeArgs = buildCodexExecResumeArgs(
-        parsed.threadId,
+        threadId,
         resumePrompt,
         {
           ...codexCloseoutCaptureExecOptions({
@@ -426,14 +429,14 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         },
       });
       const resumed = parseCodexExecOutput(protocolCloseoutResumeResult.stdout);
-      if (resumed.threadId && resumed.threadId !== parsed.threadId) {
+      if (resumed.threadId && resumed.threadId !== threadId) {
         throw new FrameworkContractError(
           'contract_shape_invalid',
           'Protocol closeout resume must remain in the original Attempt thread.',
           {
             hard_stop_class: 'stale_or_mismatched_stage_identity',
             blocked_reason: 'protocol_closeout_resume_session_identity_mismatch',
-            expected_thread_id: parsed.threadId,
+            expected_thread_id: threadId,
             actual_thread_id: resumed.threadId,
           },
         );
@@ -818,7 +821,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       stdoutBytes: Buffer.byteLength(combinedStdout, 'utf8'),
       stderrBytes: Buffer.byteLength(combinedStderr, 'utf8'),
       runnerEvents,
-      threadId: parsed.threadId,
+      threadId,
       timeoutMs,
       noOutputTimeoutMs,
     }),

@@ -35,9 +35,7 @@ function buildUpdateSpec(
   return spec;
 }
 
-export function buildUpdateCommandSpecs(
-  getContracts: () => FrameworkContracts,
-): Record<string, CommandSpec> {
+export function buildUpdateActivateCommandSpec(): CommandSpec {
   const activateSpec: CommandSpec = {
     usage: 'opl update activate',
     summary: 'Activate verified pending Codex and Framework generations offline before starting the App runtime.',
@@ -48,8 +46,14 @@ export function buildUpdateCommandSpecs(
       return activatePendingRuntimeGenerations();
     },
   };
+  return activateSpec;
+}
+
+export function buildUpdateCommandSpecs(
+  getContracts: () => FrameworkContracts,
+): Record<string, CommandSpec> {
   return {
-    'update activate': activateSpec,
+    'update activate': buildUpdateActivateCommandSpec(),
     'update status': buildUpdateSpec(
       'status',
       'opl update status',
