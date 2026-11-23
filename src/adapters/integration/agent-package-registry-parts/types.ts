@@ -52,6 +52,14 @@ export type AgentPackageHomeShortcutPreferencesSetInput = {
 
 export type AgentPackageLocalizedText = Record<string, string>;
 
+export type AgentPackageSettingsDestination =
+  | 'models'
+  | 'resources'
+  | 'workspace'
+  | 'capabilities'
+  | 'services'
+  | 'preferences';
+
 export type AgentPackageAppContributionViewType =
   | 'list_detail'
   | 'timeline'
@@ -61,7 +69,8 @@ export type AgentPackageAppContributionViewType =
   | 'activity_log'
   | 'service_status'
   | 'channel_access'
-  | 'remote_companion_access';
+  | 'remote_companion_access'
+  | 'settings_form';
 
 export type AgentPackageAppContributionUiSlot =
   | 'composer.palette'
@@ -91,6 +100,7 @@ export type AgentPackageAppContributions = {
   views: Array<{
     view_id: string;
     view_type: AgentPackageAppContributionViewType;
+    settings_destination?: AgentPackageSettingsDestination;
     title_i18n: AgentPackageLocalizedText;
     data_ref: string;
     command_ids: string[];

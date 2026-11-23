@@ -5,6 +5,7 @@ import type {
   AgentPackageAppContributions,
   AgentPackageAppContributionUiSlot,
   AgentPackageAppContributionViewType,
+  AgentPackageSettingsDestination,
 } from './types.ts';
 
 const LOCALE_ID_PATTERN = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/;
@@ -21,6 +22,15 @@ const APP_CONTRIBUTION_VIEW_TYPES = new Set<AgentPackageAppContributionViewType>
   'service_status',
   'channel_access',
   'remote_companion_access',
+  'settings_form',
+]);
+const APP_CONTRIBUTION_SETTINGS_DESTINATIONS = new Set<AgentPackageSettingsDestination>([
+  'models',
+  'resources',
+  'workspace',
+  'capabilities',
+  'services',
+  'preferences',
 ]);
 const APP_CONTRIBUTION_BADGE_TONES = new Set([
   'neutral',
@@ -247,6 +257,7 @@ export function normalizeAppContributions(
       [
         'view_id',
         'view_type',
+        'settings_destination',
         'title_i18n',
         'data_ref',
         'command_ids',
@@ -263,9 +274,38 @@ export function normalizeAppContributions(
         view_type: entry.view_type,
       });
     }
+    const rawSettingsDestination = entry.settings_destination;
+    const settingsDestination = rawSettingsDestination === undefined
+      ? undefined
+      : stringValue(rawSettingsDestination);
+    if (
+      rawSettingsDestination !== undefined
+      && (
+        !settingsDestination
+        || !APP_CONTRIBUTION_SETTINGS_DESTINATIONS.has(settingsDestination as AgentPackageSettingsDestination)
+      )
+    ) {
+      appContributionInvalid('App contribution settings_destination is unsupported.', manifestUrl, {
+        field: `${field}.settings_destination`,
+        settings_destination: entry.settings_destination,
+      });
+    }
+    if (viewType === 'settings_form' && settingsDestination === undefined) {
+      appContributionInvalid('App contribution settings_form view requires settings_destination.', manifestUrl, {
+        field: `${field}.settings_destination`,
+      });
+    }
+    if (viewType !== 'settings_form' && settingsDestination !== undefined) {
+      appContributionInvalid('App contribution settings_destination is only valid on settings_form views.', manifestUrl, {
+        field: `${field}.settings_destination`,
+      });
+    }
     return {
       view_id: normalizeContributionId(entry.view_id, `${field}.view_id`, manifestUrl),
       view_type: viewType as AgentPackageAppContributionViewType,
+      ...(settingsDestination === undefined
+        ? {}
+        : { settings_destination: settingsDestination as AgentPackageSettingsDestination }),
       title_i18n: normalizeContributionLocalizedText(entry.title_i18n, `${field}.title_i18n`, manifestUrl),
       data_ref: normalizeContributionRef(entry.data_ref, `${field}.data_ref`, manifestUrl),
       command_ids: contributionIdList(entry.command_ids, `${field}.command_ids`, manifestUrl),

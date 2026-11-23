@@ -150,8 +150,12 @@
             "activity_log",
             "service_status",
             "channel_access",
-            "remote_companion_access"
+            "remote_companion_access",
+            "settings_form"
           ]
+        },
+        "settings_destination": {
+          "enum": ["models", "resources", "workspace", "capabilities", "services", "preferences"]
         },
         "title_i18n": {
           "$ref": "#/$defs/localized_text"

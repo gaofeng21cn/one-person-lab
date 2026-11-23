@@ -1,5 +1,6 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../../helpers.ts';
 import { buildAppUiContributionsProjection } from '../../../../../src/read-models/operator/app-state-ui-contributions.ts';
+import { normalizeAppContributions } from '../../../../../src/adapters/integration/agent-package-registry-parts/app-contribution-normalizers.ts';
 
 function packageStatus(input: {
   installed?: boolean;
@@ -114,6 +115,62 @@ test('App package preference persists across CLI processes without changing nati
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('Framework normalizes declarative settings_form views only with a closed settings_destination', () => {
+  const validContributions = {
+    schema_version: 'opl-app-contributions.v1',
+    navigation: [],
+    views: [{
+      view_id: 'prefs',
+      view_type: 'settings_form',
+      settings_destination: 'capabilities',
+      title_i18n: { 'en-US': 'Extension Settings', 'zh-CN': '扩展参数' },
+      data_ref: 'example.settings.v1#read',
+    }],
+    commands: [],
+    badges: [],
+    ui: [{
+      contribution_id: 'settings',
+      slot: 'settings.section',
+      contribution_kind: 'view',
+      trust_tier: 'declarative',
+      scope: 'root',
+      sort_order: 10,
+      view_id: 'prefs',
+    }],
+  };
+
+  const normalized = normalizeAppContributions(validContributions, 'https://example.invalid/manifest.json');
+  assert.ok(normalized);
+  assert.equal((normalized.views[0] as any)?.view_type, 'settings_form');
+  assert.equal((normalized.views[0] as any)?.settings_destination, 'capabilities');
+
+  const missingDest = structuredClone(validContributions);
+  delete (missingDest.views[0] as any).settings_destination;
+  assert.throws(() => normalizeAppContributions(missingDest, 'https://example.invalid/manifest.json'), /settings_destination/);
+
+  const invalidDest = structuredClone(validContributions);
+  (invalidDest.views[0] as any).settings_destination = 'custom_tab';
+  assert.throws(() => normalizeAppContributions(invalidDest, 'https://example.invalid/manifest.json'), /settings_destination/);
+
+  const nonFormWithDest = structuredClone(validContributions);
+  nonFormWithDest.views[0].view_type = 'channel_access';
+  assert.throws(() => normalizeAppContributions(nonFormWithDest, 'https://example.invalid/manifest.json'), /settings_destination/);
+
+  const projection = buildAppUiContributionsProjection({
+    'valid-pkg': {
+      app_enabled: true,
+      presence: { installed: true },
+      capability_exposure: { status: 'visible' },
+      app_contributions: normalized,
+    } as any,
+  });
+
+  assert.equal(projection.contribution_count, 1);
+  assert.equal(projection.entries[0]?.package_id, 'valid-pkg');
+  assert.equal((projection.entries[0]?.view as any)?.view_type, 'settings_form');
+  assert.equal((projection.entries[0]?.view as any)?.settings_destination, 'capabilities');
 });
 
 test('Framework emits stable empty slots when no Package contributes UI', () => {

@@ -5,7 +5,7 @@ import type { AgentPackageManifest, AgentPackageMiniAppPresentation } from './ty
 export function workspaceContributionViews(manifest: Pick<AgentPackageManifest, 'app_contributions'>) {
   const contributions = manifest.app_contributions;
   return (contributions?.views ?? []).filter(view => {
-    if (['channel_access', 'remote_companion_access', 'service_status'].includes(view.view_type)) return false;
+    if (['channel_access', 'remote_companion_access', 'service_status', 'settings_form'].includes(view.view_type)) return false;
     if (view.view_type === 'activity_log') return contributions?.ui?.some(placement =>
       placement.view_id === view.view_id && placement.slot === 'runtime.detail');
     return ['list_detail', 'timeline', 'approval_diff', 'task_board', 'artifact_view'].includes(view.view_type);

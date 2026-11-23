@@ -327,11 +327,11 @@ test('shared task workbench binds revisions and scientific evidence to the selec
 
 
 test('software navigation and the MCP catalog share operational entries independently of legacy Settings placement', () => {
-  const viewTypes = ['service_status', 'channel_access', 'remote_companion_access', 'activity_log',
+  const viewTypes = ['service_status', 'channel_access', 'remote_companion_access', 'settings_form', 'activity_log',
     'list_detail', 'timeline', 'approval_diff', 'task_board', 'artifact_view'];
   const manifest = { package_id: 'arbitrary-component', display_name: 'Example',
     codex_surface: { app_contribution_abi: { command: ['unused'], request_schema: 'opl-package-app-contribution-request.v1', response_schema: 'opl-package-app-contribution-response.v1' } },
-    app_contributions: { views: viewTypes.map(view_type => ({view_id: view_type, view_type, title_i18n: {'en-US': view_type}, data_ref: `example#${view_type}`})),
+    app_contributions: { views: viewTypes.map(view_type => ({view_id: view_type, view_type, ...(view_type === 'settings_form' ? {settings_destination: 'capabilities'} : {}), title_i18n: {'en-US': view_type}, data_ref: `example#${view_type}`})),
       ui: viewTypes.map(view_id => ({view_id, slot: 'settings.section', scope: 'root', contribution_kind: 'view'})) } };
   const descriptor = { manifest, enabled: true, readiness: {installed: true, physical_status: 'available', callability: 'callable'} };
   const catalog = listOplMcpAppViews({ descriptorDiscovery: { discover: () => new Map([[manifest.package_id, descriptor as any]]) } });
@@ -341,12 +341,12 @@ test('software navigation and the MCP catalog share operational entries independ
   assert.equal(miniAppPresentation(manifest as any, 'product_entry').entry_view_id, 'list_detail');
   assert.equal(catalog.products[0]?.view_count, operational.length);
 
-  const settingsOnly = { ...manifest, app_contributions: {...manifest.app_contributions, views: manifest.app_contributions.views.slice(0, 4)} };
+  const settingsOnly = { ...manifest, app_contributions: {...manifest.app_contributions, views: manifest.app_contributions.views.slice(0, 5)} };
   assert.equal(miniAppPresentation(settingsOnly as any, 'product_entry').direct_entry, false);
   const settingsCatalog = listOplMcpAppViews({ descriptorDiscovery: { discover: () => new Map([[manifest.package_id, {...descriptor, manifest: settingsOnly} as any]]) } });
   assert.equal(settingsCatalog.products.length, 0);
 
-  const task = { ...manifest, app_contributions: {views: [manifest.app_contributions.views[3]], ui: [{view_id: 'activity_log', contribution_kind: 'view', slot: 'runtime.detail', scope: 'work_item'}]} };
+  const task = { ...manifest, app_contributions: {views: [manifest.app_contributions.views[4]], ui: [{view_id: 'activity_log', contribution_kind: 'view', slot: 'runtime.detail', scope: 'work_item'}]} };
   const taskCatalog = listOplMcpAppViews({ descriptorDiscovery: { discover: () => new Map([[manifest.package_id, {...descriptor, manifest: task} as any]]) } });
   assert.equal(taskCatalog.views.filter(view => view.package_id === manifest.package_id)[0]?.view_type, 'activity_log');
 });
