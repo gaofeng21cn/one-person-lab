@@ -371,6 +371,7 @@
       "artifact_refs_may_not_be_inferred_as_snapshot_members": true,
       "request_participates_in_reviewer_attempt_idempotency": true,
       "present_invalid_request_fails_closed_before_reviewer_attempt_creation": true,
+      "invalid_member_digest_after_authority_recovery": "block_and_identify_the_producer_or_repairer_attempt_and_member_field",
       "missing_request_hosted_action_launch_allowed": true,
       "missing_request_adds_quality_debt_without_overwriting_reviewer_outcome_findings_or_hard_stop": true,
       "live_artifact_and_source_refs_are_identity_only": true,

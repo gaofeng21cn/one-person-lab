@@ -1,3 +1,4 @@
+import { ActivityFailure, ApplicationFailure } from '@temporalio/common';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { executeChild, isCancellation, patched, setHandler, workflowInfo } from '@temporalio/workflow';
 import type {
@@ -1639,6 +1640,29 @@ export async function StageRunWorkflow(
           qualityFailureRef(input, 're_review_not_run'),
         ])],
       };
+    }
+    if (
+      error instanceof ActivityFailure
+      && error.cause instanceof ApplicationFailure
+      && error.cause.type === 'stage_quality_snapshot_member_digest_invalid'
+      && patched('opl-stage-run-snapshot-member-digest-block-v1')
+    ) {
+      const details = asRecord(error.cause.details?.[0]);
+      const sourceAttemptRef = typeof details.source_attempt_ref === 'string'
+        ? details.source_attempt_ref
+        : null;
+      const blockerRef = `opl://stage-runs/${encodeURIComponent(input.stage_run_id)}`
+        + `/runtime-blockers/stage_quality_snapshot_member_digest_invalid/${encodeURIComponent(String(details.field))}`;
+      return terminalize({
+        ...state,
+        status: 'blocked',
+        current_role: null,
+        blocked_reason: 'stage_quality_snapshot_member_digest_invalid',
+        hard_stop_class: 'authority_boundary_violation',
+        typed_blocker_refs: [blockerRef],
+        source_attempt_ref: sourceAttemptRef,
+        updated_at: nowIso(),
+      });
     }
     const hardStop = controllerHardStopFromError(error);
     const hardStopTerminates = hardStop
