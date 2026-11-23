@@ -67,6 +67,7 @@ Repair using the latest package.
 Close findings using the latest package.
 `,
   );
+  let malformedSnapshotRequest = false;
   let activePackRoot = packRoot;
   const updatedUseBinding = packageUseBinding(updatedPackRoot, '0.0.1-test');
   let activeUseBinding = useBinding;
@@ -149,7 +150,7 @@ Close findings using the latest package.
               stage_run_id: attempt.stage_run_id!,
               scope_digest: attempt.execution_scope?.scope_digest,
               closeout_refs: [artifactRef],
-              closeout_ref_metadata: [{ ref: artifactRef, sha256: artifactHash }],
+              closeout_ref_metadata: [{ kind: 'artifact', ref: artifactRef, sha256: artifactHash }],
               consumed_refs: [],
               consumed_memory_refs: [],
               writeback_receipt_refs: [],
@@ -211,6 +212,23 @@ Close findings using the latest package.
             artifact_refs: [artifactRef],
             artifact_hashes: [artifactHash],
             ...(role === 'reviewer' ? { outcome: 'pass', findings: [] } : {}),
+            ...(malformedSnapshotRequest && role === 'producer' ? {
+              review_input_snapshot_materialization_request: {
+                surface_kind: 'opl_reviewer_input_snapshot_materialization_request',
+                schema_version: 2,
+                workspace_root: workItemRoot,
+                owner_authority_ref: {
+                  kind: 'artifact', ref: artifactRef, sha256: artifactHash,
+                  size_bytes: artifactBytes.byteLength,
+                },
+                producer_attempt_ref: `opl://stage_attempts/${attempt.stage_attempt_id}`,
+                execution_content_binding_sha256: attempt.execution_content_binding?.binding_sha256,
+                members: [{
+                  member_id: 'bad-digest', source_ref: 'additional-evidence.txt',
+                  sha256: 'invalid-sha256', size_bytes: 1,
+                }],
+              },
+            } : {}),
           },
         },
         closeout_packet_surface_kind: 'domain_stage_closeout_packet',
@@ -281,11 +299,27 @@ Close findings using the latest package.
         const first = await executeNewStageRun(baseArgs);
         const replay = await runFamilyRuntime(baseArgs, runtimeOptions);
         const explicitNew = await executeNewStageRun([...baseArgs, '--new-stage-run']);
-        return { first, replay, explicitNew };
+        malformedSnapshotRequest = true;
+        const malformed = await executeNewStageRun([...baseArgs, '--new-stage-run']);
+        return { first, replay, explicitNew, malformed };
       } finally {
         await connection.close();
       }
     });
+
+    const malformed = execution.malformed.state;
+    assert.equal(malformed.sqlite_projection.status, 'synced');
+    assert.equal(malformed.status, 'blocked', JSON.stringify(malformed, null, 2));
+    assert.equal(malformed.blocked_reason, 'stage_quality_snapshot_member_digest_invalid');
+    assert.equal(malformed.hard_stop_class, 'authority_boundary_violation');
+    assert.deepEqual(malformed.attempts.map((attempt: { attempt_role: string }) => attempt.attempt_role), ['producer']);
+    assert.equal(malformed.source_attempt_ref, `opl://stage_attempts/${malformed.attempts[0].stage_attempt_id}`);
+    assert.deepEqual(malformed.artifact_refs, [artifactRef]);
+    assert.equal(malformed.repair_rounds_used, 0);
+    assert.equal(malformed.review_receipts.length, 0);
+    assert.equal(malformed.selected_stage_route, null);
+    assert.equal(malformed.next_stage_run_launch, null);
+    assert.match(decodeURIComponent(malformed.typed_blocker_refs[0]), /members\[0\]\.sha256/);
 
     const launch = execution.first.cli.family_runtime_stage_run as any;
     const stageRunInput = launch.stage_run_input;
@@ -451,12 +485,12 @@ Close findings using the latest package.
         FROM stage_run_launches
         ORDER BY created_at ASC
       `).all() as Array<Record<string, any>>;
-      assert.equal(launches.length, 2);
-      assert.equal(new Set(launches.map((entry) => entry.stage_run_id)).size, 2);
+      assert.equal(launches.length, 3);
+      assert.equal(new Set(launches.map((entry) => entry.stage_run_id)).size, 3);
       assert.equal(launches.every((entry) => entry.launch_status === 'closed'), true);
-      assert.equal(
-        launches.every((entry) => entry.terminal_status === 'completed_with_quality_debt'),
-        true,
+      assert.deepEqual(
+        launches.map((entry) => entry.terminal_status).sort(),
+        ['blocked', 'completed_with_quality_debt', 'completed_with_quality_debt'],
       );
     } finally {
       db.close();

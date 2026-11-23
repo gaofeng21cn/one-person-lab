@@ -1,3 +1,4 @@
+import { ApplicationFailure } from '@temporalio/common';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { withFamilyRuntimeTransaction } from './family-runtime-sqlite.ts';
 import {
@@ -416,18 +417,39 @@ export async function stageQualityAttemptMaterializeActivity(
             : null,
         )
       : null;
-    const reviewInputSnapshotContext = reviewAttemptRole
-      ? buildStageReviewInputSnapshotContext({
+    let reviewInputSnapshotContext = null;
+    if (reviewAttemptRole) {
+      try {
+        const resolution = resolveReviewerInputSnapshotMaterialization(
+          input.review_input_snapshot_materialization_request,
+          snapshotAuthorityBinding!,
+          { refs: inputArtifactIdentity.artifact_refs, hashes: inputArtifactIdentity.artifact_hashes },
+        );
+        reviewInputSnapshotContext = buildStageReviewInputSnapshotContext({
           stageRunId: stageRun.stage_run_id,
           qualityCycleId: input.quality_cycle_id,
           reviewerAttemptRole: reviewAttemptRole,
-          resolution: resolveReviewerInputSnapshotMaterialization(
-            input.review_input_snapshot_materialization_request,
-            snapshotAuthorityBinding!,
-            { refs: inputArtifactIdentity.artifact_refs, hashes: inputArtifactIdentity.artifact_hashes },
-          ),
-        })
-      : null;
+          resolution,
+        });
+      } catch (error) {
+        const field = error instanceof FrameworkContractError ? error.details?.field : null;
+        if (
+          error instanceof FrameworkContractError
+          && ['review_transport_digest_invalid', 'review_transport_field_missing'].includes(
+            String(error.details?.failure_code),
+          )
+          && typeof field === 'string'
+          && /^members\[\d+\]\.sha256$/.test(field)
+        ) {
+          throw ApplicationFailure.nonRetryable(
+            error.message,
+            'stage_quality_snapshot_member_digest_invalid',
+            { field, source_attempt_ref: artifactProducerAttemptRef },
+          );
+        }
+        throw error;
+      }
+    }
     const revisionConsumptionContext = (input.revision_intake_refs?.length ?? 0) > 0
       ? revisionTransportContext({
           revisionIntakeRefs: input.revision_intake_refs,
