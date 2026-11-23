@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
+import { setTimeout as wait } from 'node:timers/promises';
 
 import { Worker } from '@temporalio/worker';
 import { registerAgentPackageReadinessPort } from '../../src/kernel/agent-package-readiness-port.ts';
@@ -12,7 +13,7 @@ import { runOplAgentPackageStatus } from '../../src/adapters/integration/agent-p
 import { canonicalJsonBytes } from '../../src/kernel/canonical-json.ts';
 import { ContentAddressedCandidateCompiler } from '../../src/authority/evidence/index.ts';
 import { foundryContentDigest, type AgentBlueprint, type FoundryProviderManifest } from '../../src/authority/evolution/index.ts';
-import { FoundryKernel } from '../../src/authority/evolution/kernel.ts';
+import { FoundryKernel, FoundryTransientActivityError } from '../../src/authority/evolution/kernel.ts';
 import { InMemoryFoundryEventStore, InMemoryFoundryObjectStore, InMemoryOwnerGate, InMemoryVersionRegistry } from '../../src/authority/evolution/in-memory-adapters.ts';
 import { createCordisBaseHeadlessComposition } from '../../src/host/composition-profiles.ts';
 import { runFamilyRuntime } from '../../src/adapters/execution/family-runtime.ts';
@@ -201,10 +202,26 @@ test('five real StageRuns account for raw progress and materialize exact candida
             let cursor: FoundryProviderOperationCursor = await coordinator.launch({ operation: 'design', provider: actualProvider, checkout_root: packRoot,
               provider_source_digest: `sha256:${'a'.repeat(64)}`, payload: { request }, activity }, `operation:five-stage-${round}`);
             const deadline = Date.now() + 90_000;
-            while (cursor.status !== 'terminal') {
-              cursor = await coordinator.observe(cursor, cursor.operation_key);
-              assert.ok(Date.now() < deadline, `five-stage round ${round} timed out`);
-              if (cursor.status !== 'terminal') await new Promise((resolve) => setTimeout(resolve, 25));
+            let lastObservationError: FoundryTransientActivityError | undefined;
+            while (cursor.status !== 'terminal' && Date.now() < deadline) {
+              try {
+                cursor = await coordinator.observe(cursor, cursor.operation_key);
+                lastObservationError = undefined;
+              } catch (error) {
+                if (!(error instanceof FoundryTransientActivityError)) throw error;
+                // A slow read must not restart the current five-Stage operation.
+                lastObservationError = error;
+              }
+              if (cursor.status !== 'terminal') await wait(250);
+            }
+            if (cursor.status !== 'terminal') {
+              const context = coordinator.observationContext(cursor);
+              const cause = lastObservationError?.cause;
+              throw new Error(
+                `five-stage round ${round} timed out: ${JSON.stringify(context)}`
+                  + (cause instanceof Error ? ` (${cause.message})` : ''),
+                { cause: lastObservationError },
+              );
             }
             assert.deepEqual(cursor.visited_path.map((entry) => entry.stage_id), STAGES);
             const transported = await coordinator.readTerminal(cursor, cursor.operation_key) as AgentBlueprint;
