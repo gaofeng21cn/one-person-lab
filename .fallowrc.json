@@ -19,13 +19,11 @@
     "src/read-models/operator/product-entry-companions.ts",
     "scripts/*.mjs",
     "src/entrypoints/cli/main.ts",
-    "src/read-models/operator/aionui-acp-shell.ts",
     "src/adapters/execution/native-helper-doctor.ts",
     "src/adapters/execution/opl-session-runtime.ts",
     "src/read-models/operator/product-entry.ts",
     "src/read-models/operator/management/progress.ts",
     ".github/actions/quality-details/emit-quality-details.mjs",
-    "src/modules/index.ts",
     "src/read-models/operator/index.ts"
   ],
   "ignoreDependencies": [
