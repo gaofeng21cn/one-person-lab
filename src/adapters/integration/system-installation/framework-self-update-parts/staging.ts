@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { isRecord } from '../../../../kernel/contract-validation.ts';
 import { readJsonPayloadFile } from '../../../../kernel/json-file.ts';
+import { compareVersions, parseVersion } from '../../install-companions-parts/tool-version.ts';
 import {
   assertGitSuccess,
   runCommand,
@@ -77,7 +78,8 @@ export function copyTrackedFiles(sourceRoot: string, targetRoot: string, files: 
 export function runDependencyInstall(targetRoot: string): FrameworkDependencyInstall {
   const command = 'npm';
   const runtimePayload = fs.existsSync(path.join(targetRoot, 'dist', 'entrypoints', 'cli.js'))
-    && !fs.existsSync(path.join(targetRoot, 'src'));
+    && !fs.existsSync(path.join(targetRoot, 'src', 'entrypoints', 'cli.ts'))
+    && !fs.existsSync(path.join(targetRoot, 'src', 'cli.ts'));
   const args = runtimePayload
     ? ['ci', '--omit=dev', '--include=optional', '--ignore-scripts=false']
     : ['install', '--include=dev', '--include=optional', '--ignore-scripts=false'];
@@ -157,6 +159,20 @@ export function activatePendingOplFrameworkRuntime(targetRootInput: string) {
       surface_kind: 'opl_framework_generation_activation.v1', status: 'manual_required',
       reason: 'framework_pending_generation_verification_failed', target_root: targetRoot, pending_root: pendingRoot,
     };
+  }
+  if (fs.existsSync(targetRoot)) {
+    const installedPkg = readJsonPayloadFile(path.join(targetRoot, 'package.json'));
+    const pendingPkg = readJsonPayloadFile(path.join(pendingRoot, 'package.json'));
+    const installedVersion = parseVersion(isRecord(installedPkg) && typeof installedPkg.version === 'string' ? installedPkg.version : null);
+    const pendingVersion = parseVersion(isRecord(pendingPkg) && typeof pendingPkg.version === 'string' ? pendingPkg.version : null);
+    if (installedVersion && pendingVersion && compareVersions(pendingVersion, installedVersion) < 0) {
+      fs.rmSync(pendingRoot, { recursive: true, force: true });
+      fs.rmSync(pendingMetadataPath, { force: true });
+      return {
+        surface_kind: 'opl_framework_generation_activation.v1', status: 'no_pending_generation',
+        reason: 'framework_pending_generation_older_than_installed_discarded', target_root: targetRoot,
+      };
+    }
   }
   if (pending.staging_process_instance_id === currentProcessInstanceId()) {
     return {

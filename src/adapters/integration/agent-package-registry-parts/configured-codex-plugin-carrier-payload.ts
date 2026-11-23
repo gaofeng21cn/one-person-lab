@@ -315,6 +315,50 @@ function readProjectedPayload(projection: NonNullable<ReturnType<typeof packageP
   return { ...payload, files: payload.files };
 }
 
+function isPublicComponentPayload(
+  projection: NonNullable<ReturnType<typeof packagePayloadProjection>>,
+  payload: ReturnType<typeof readProjectedPayload>,
+): boolean {
+  const owner = projection.ownerManifest;
+  const surface = isRecord(owner.codex_surface) ? owner.codex_surface : null;
+  if (surface?.public_payload_delivery !== 'pinned_files'
+    || owner.source !== 'first_party_owner_projection'
+    || owner.surface_kind !== 'opl_capability_package_manifest.v2'
+    || owner.management_scope !== 'local_component' || owner.visibility !== 'public'
+    || (owner.publication_channel_admission ?? 'admitted') !== 'admitted') return false;
+
+  const repo = typeof owner.source_repo === 'string'
+    ? /^https:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\.git$/.exec(owner.source_repo)?.[1]
+    : undefined;
+  if (!repo || payload.source_repo !== owner.source_repo
+    || payload.source_root !== surface.plugin_source_path) return false;
+  const sourceRoot = payloadRelativePath(payload.source_root, 'source_root');
+  const paths = new Set<string>();
+  for (const file of payload.files) {
+    if (!isRecord(file) || !['100644', '100755'].includes(String(file.mode))) return false;
+    const relative = payloadRelativePath(file.path, 'path');
+    if (paths.has(relative)) return false;
+    paths.add(relative);
+    payloadSha256(file.sha256, 'sha256');
+    const ref = `${sourceRoot}/${relative}`.split('/').map(encodeURIComponent).join('/');
+    if (file.source_url !== `https://raw.githubusercontent.com/${repo}/${projection.sourceCommit}/${ref}`) return false;
+  }
+  const lock = isRecord(payload.content_lock) ? payload.content_lock : null;
+  payloadSha256(lock?.digest, 'content_lock.digest');
+  return Boolean(projection.contentLockPaths?.length && projection.contentLockPaths.every(ref => paths.has(ref))
+    && paths.has('opl-package.json'));
+}
+
+export function publicComponentPayloadAvailable(packageId: string, pluginId: string): boolean {
+  const projection = packagePayloadProjection(packageId);
+  if (!projection || projection.pluginId !== pluginBareName(pluginId)) return false;
+  try {
+    return isPublicComponentPayload(projection, readProjectedPayload(projection, packageId));
+  } catch {
+    return false;
+  }
+}
+
 /** Read only the same immutable payload identity consumed by installation. */
 export function configuredPackagePayloadAvailable(input: {
   packageId: string;
@@ -374,21 +418,30 @@ export function installPayloadMarketplace(input: {
     payload,
     env: input.env,
   });
-  if (projection.ownerManifest.management_scope === 'local_component' && !hostedSource) {
+  const publicPayload = !hostedSource && isPublicComponentPayload(projection, payload);
+  if (projection.ownerManifest.management_scope === 'local_component' && !hostedSource && !publicPayload) {
     return localReadbackFailure('package_install_source_unavailable',
-      'Local components require the matching parent-product Full seed.', { package_id: input.packageId });
+      'Local component requires a verified online payload or matching offline seed.', { package_id: input.packageId });
   }
   if (projection.ownerManifest.visibility === 'authorized_only' && !hostedSource) {
     return localReadbackFailure('private_package_transport_unavailable',
       'Private Packages require their declared authenticated source.', { package_id: input.packageId });
   }
-  const archive = hostedSource ?? materializeGithubArchive({
+  const archive = hostedSource ?? (publicPayload ? null : materializeGithubArchive({
     packageId: input.packageId,
     payloadFiles: payload.files.filter(isRecord),
     sourceCommit: projection.sourceCommit,
     env: input.env,
-  });
+  }));
   try {
+    if (publicPayload) {
+      fs.mkdirSync(stagingRoot, { recursive: true });
+      fs.writeFileSync(path.join(stagingRoot, '.codex-marketplace-install.json'), `${JSON.stringify({
+        source: projection.ownerManifest.source_repo,
+        source_type: 'pinned_public_payload',
+        source_commit: projection.sourceCommit,
+      }, null, 2)}\n`, { mode: 0o600 });
+    }
     if (hostedSource) {
       // Keep runtime contracts and the minimal plugin in the same native
       // marketplace lifetime and atomic replacement; no separate registry.

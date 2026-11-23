@@ -132,3 +132,71 @@ test('Framework updates its receipted Git installation, pins the release and pre
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('Full runtime installation takes precedence over legacy CLI install and discards older pending generations', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-full-precedence-'));
+  const legacyRoot = path.join(root, '.opl', 'one-person-lab');
+  const fullRuntimeHome = path.join(root, 'Library', 'Application Support', 'OPL', 'runtime', 'current');
+  const fullOplRoot = path.join(fullRuntimeHome, 'opl');
+  const stalePendingRoot = `${fullOplRoot}.pending`;
+  for (const [directory, version] of [[legacyRoot, '0.3.16'], [fullOplRoot, '0.3.20'], [stalePendingRoot, '0.3.18']]) {
+    fs.mkdirSync(path.join(directory, 'bin'), { recursive: true });
+    fs.mkdirSync(path.join(directory, 'dist', 'entrypoints'), { recursive: true });
+    fs.writeFileSync(path.join(directory, 'bin', 'opl'), '#!/bin/sh\n');
+    fs.writeFileSync(path.join(directory, 'dist', 'entrypoints', 'cli.js'), 'export {};\n');
+    fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify({ name: 'opl-framework', version }));
+  }
+  fs.writeFileSync(path.join(legacyRoot, '.opl-framework-installed-source-identity.json'), JSON.stringify({
+    schema: 'opl_framework_installed_source_identity.v1', framework_sha: 'a'.repeat(40), install_mode: 'archive', identity_source: 'install_ref',
+  }));
+  fs.mkdirSync(path.join(root, '.local', 'bin'), { recursive: true });
+  fs.symlinkSync(path.join(legacyRoot, 'bin', 'opl'), path.join(root, '.local', 'bin', 'opl'));
+  fs.writeFileSync(path.join(fullRuntimeHome, '.opl-full-runtime-installed.json'), JSON.stringify({
+    version: '26.11.20-r1', manifest_sha256: '1'.repeat(64), installed_at: new Date().toISOString(),
+  }));
+  const realFullOplRoot = fs.realpathSync(fullOplRoot);
+  const realPendingRoot = fs.realpathSync(stalePendingRoot);
+  const env = { HOME: root, OPL_STATE_DIR: path.join(root, 'state'), OPL_FULL_RUNTIME_HOME: fullRuntimeHome };
+  const previous = Object.fromEntries(Object.keys(env).map(key => [key, process.env[key]]));
+  Object.assign(process.env, env);
+  try {
+    refreshFrameworkSoftwareRelease(process.env, () => ({
+      channel_version: '0.3.22',
+      artifact: `ghcr.io/owner/one-person-lab-framework@sha256:${'d'.repeat(64)}`,
+      artifact_digest: `sha256:${'d'.repeat(64)}`,
+      source_archive_sha256: 'e'.repeat(64),
+      source_git_head_sha: 'f'.repeat(40),
+    }));
+    // Seed a valid but older pending generation on the Full runtime root.
+    const olderArchive = path.join(root, 'older.tar.gz');
+    execFileSync('tar', ['-czf', olderArchive, '-C', stalePendingRoot, '.']);
+    const olderSha = createHash('sha256').update(fs.readFileSync(olderArchive)).digest('hex');
+    fs.rmSync(stalePendingRoot, { recursive: true, force: true });
+    const staged = runOplFrameworkSelfUpdate({
+      targetRoot: realFullOplRoot,
+      sourceArchive: olderArchive,
+      sourceArchiveSha256: olderSha,
+      allowChannelArtifact: false,
+      skipDependencyInstall: true,
+    });
+    assert.equal(staged.status, 'completed');
+    assert.equal(fs.existsSync(`${realFullOplRoot}.pending.json`), true);
+    const product = readInstalledSoftwareProducts(process.env)[0];
+    assert.equal(product.location, realFullOplRoot);
+    assert.equal(product.installed_version, '0.3.20');
+    assert.equal(product.update_status, 'available');
+    assert.equal(product.pending_version, null);
+    assert.equal(product.available_actions.length, 1);
+    const activation = activatePendingOplFrameworkRuntime(realFullOplRoot);
+    assert.equal(activation.status, 'no_pending_generation');
+    assert.equal(activation.reason, 'framework_pending_generation_older_than_installed_discarded');
+    assert.equal(fs.existsSync(realPendingRoot), false);
+    assert.equal(fs.existsSync(`${realFullOplRoot}.pending.json`), false);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(realFullOplRoot, 'package.json'), 'utf8')).version, '0.3.20');
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

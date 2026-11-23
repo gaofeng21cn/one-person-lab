@@ -28,17 +28,18 @@ export function readFrameworkSoftwareInstallation(env: NodeJS.ProcessEnv = proce
   const userHome = env.HOME?.trim() || os.homedir();
   const installedCommand = real(path.join(userHome, '.local', 'bin', 'opl'));
   const linkedRoot = installedCommand ? path.dirname(path.dirname(installedCommand)) : null;
+  const fullRuntime = env.OPL_FULL_RUNTIME_HOME?.trim();
+  const fullRuntimeCandidate = fullRuntime ? path.join(fullRuntime, 'opl') : null;
   const candidates = [...new Set([
+    fullRuntimeCandidate,
     linkedRoot,
     path.join(userHome, '.opl', 'one-person-lab'),
-    env.OPL_FULL_RUNTIME_HOME?.trim() ? path.join(env.OPL_FULL_RUNTIME_HOME.trim(), 'opl') : null,
   ].filter((root): root is string => Boolean(root)))];
   for (const root of candidates) {
     const manifest = record(path.join(root, 'package.json'));
     const command = real(path.join(root, 'bin', 'opl'));
     if (manifest?.name !== 'opl-framework' || typeof manifest.version !== 'string' || !manifest.version.trim() || !command) continue;
     const linked = command === installedCommand;
-    const fullRuntime = env.OPL_FULL_RUNTIME_HOME?.trim();
     const fullRuntimeRoot = fullRuntime ? real(path.join(fullRuntime, 'opl')) : null;
     const bundled = fullRuntimeRoot !== null && fullRuntimeRoot === real(root)
       && [ '.opl-full-runtime-installed.json', '.opl-studio-full-runtime-installed.json' ].some(name => {
@@ -105,10 +106,15 @@ function frameworkInstallationUpdate(installation: NonNullable<ReturnType<typeof
   const release = readFrameworkSoftwareRelease(env).entry;
   const location = installation.location!;
   const pending = record(`${location}.pending.json`);
-  const pendingVersion = pending?.surface_kind === 'opl_framework_pending_generation.v1'
+  const rawPendingVersion = pending?.surface_kind === 'opl_framework_pending_generation.v1'
     && pending.target_root === location && pending.pending_root === `${location}.pending`
     && isOplFrameworkRoot(`${location}.pending`)
     ? record(path.join(`${location}.pending`, 'package.json'))?.version : null;
+  const pendingStale = typeof rawPendingVersion === 'string'
+    && valid(rawPendingVersion) !== null
+    && valid(installation.installed_version) !== null
+    && !gt(rawPendingVersion, installation.installed_version);
+  const pendingVersion = typeof rawPendingVersion === 'string' && !pendingStale ? rawPendingVersion : null;
   const managedGit = readManagedFrameworkGitInstallation(location, env);
   const managed = !isGitRepo(location) || managedGit !== null;
   const updateStatus = pendingVersion ? 'needs_restart' as const

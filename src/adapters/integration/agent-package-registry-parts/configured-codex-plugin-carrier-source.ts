@@ -225,17 +225,14 @@ export function acquireHostedPackageSource(input: {
   const surface = isRecord(owner.codex_surface) ? owner.codex_surface : null;
   const carrier = isRecord(surface?.configured_codex_plugin_carrier)
     ? surface.configured_codex_plugin_carrier : null;
-  // Full is the only offline source for a local component without an independent
-  // publication. It is checked against the owner commit and payload closure by
-  // acquirePackagedSource; an absent or mismatched seed remains fail-closed.
+  // Prefer the matching offline seed. The payload installer owns validation
+  // and any explicitly declared online file delivery.
   if (capability && carrier?.publication_ref == null && owner.management_scope === 'local_component') {
     return acquirePackagedSource(input);
   }
-  // Components are delivered by their parent product. Independent OPL software
-  // must use a published artifact; only an explicit developer override above
-  // may materialize a checkout. External carriers keep their native transport.
+  // External carriers keep their native transport.
   if (capability && carrier?.publication_ref == null
-    && (owner.management_scope === 'local_component' || owner.source === 'third_party')) return null;
+    && owner.source === 'third_party') return null;
   const publication = stringValue(carrier?.publication_ref);
   const source = stringValue(carrier?.marketplace_source);
   const version = stringValue(owner.version);

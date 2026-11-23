@@ -294,7 +294,7 @@ test('parent Full seed admits a local component and never falls back to online p
       fs.mkdirSync(bin);
       fs.writeFileSync(path.join(bin, 'curl'), '#!/bin/sh\nexit 99\n', { mode: 0o755 });
       const install = () => f.install({ OPL_FULL_RUNTIME_HOME: runtime, PATH: `${bin}:${process.env.PATH}` });
-      if (fault === 'commit') assert.throws(install, /matching parent-product Full seed/);
+      if (fault === 'commit') assert.throws(install, /verified online payload or matching offline seed/);
       else if (fault === 'bytes') assert.throws(install, /digest/);
       else {
         assert.equal(install(), f.marketplace);
@@ -307,6 +307,23 @@ test('parent Full seed admits a local component and never falls back to online p
       else process.env.OPL_FULL_RUNTIME_HOME = previousRuntime;
       fs.rmSync(f.root, { recursive: true, force: true });
     }
+  }
+});
+
+test('public pinned-file component like opl-channel-weixin is independently installable on Standard without a Full seed', () => {
+  const previousRuntime = process.env.OPL_FULL_RUNTIME_HOME;
+  delete process.env.OPL_FULL_RUNTIME_HOME;
+  try {
+    const weixin = JSON.parse(fs.readFileSync(new URL('../../contracts/opl-framework/packages/opl-channel-weixin.json', import.meta.url), 'utf8'));
+    const descriptor = {
+      manifest: { ...weixin, carrier_source_commit: weixin.codex_surface.carrier_source_commit },
+      pluginId: 'opl-channel-weixin@one-person-lab-app',
+      carrier: { publicationRef: null },
+    } as any;
+    assert.equal(packageInstallSourceAvailable(descriptor), true);
+  } finally {
+    if (previousRuntime === undefined) delete process.env.OPL_FULL_RUNTIME_HOME;
+    else process.env.OPL_FULL_RUNTIME_HOME = previousRuntime;
   }
 });
 

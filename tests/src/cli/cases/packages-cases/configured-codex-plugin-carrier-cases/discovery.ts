@@ -286,13 +286,14 @@ process.stdout.write(JSON.stringify({ installed: [], available: [] }));
       entries.filter((entry: any) => entry.installability.installable).length);
     for (const entry of entries) {
       assert.equal(entry.installed, false, entry.package_id);
-      assert.equal(entry.catalog_scope, entry.management_scope === 'local_component' ? 'host_component' : 'software', entry.package_id);
       assert.equal(entry.release_channel, 'unknown', entry.package_id);
-      if (entry.management_scope === 'local_component') {
+      if (entry.management_scope === 'local_component' && !entry.installability.installable) {
+        assert.equal(entry.catalog_scope, 'host_component', entry.package_id);
         assert.deepEqual(entry.available_actions, []);
         assert.equal(entry.recommended_action, null);
         continue;
       }
+      assert.equal(entry.catalog_scope, 'software', entry.package_id);
       if (entry.installability.installable) {
         assert.equal(entry.installability.status, 'installable', entry.package_id);
         assert.equal(entry.recommended_action, 'agent_package_install', entry.package_id);

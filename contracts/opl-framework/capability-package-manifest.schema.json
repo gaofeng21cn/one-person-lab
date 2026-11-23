@@ -178,6 +178,10 @@
       "properties": {
         "plugin_id": { "type": "string", "minLength": 1 },
         "plugin_source_path": { "type": "string", "minLength": 1 },
+        "public_payload_delivery": {
+          "description": "Explicit online delivery for a public first-party App component through its digest-locked files at the canonical owner commit.",
+          "const": "pinned_files"
+        },
         "plugin_payload_manifest_url": { "type": "string", "minLength": 1 },
         "carrier_source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "codex_default_exposure": { "const": false },
