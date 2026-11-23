@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from '../../src/authority/contracts/contracts.ts';
@@ -141,6 +142,21 @@ test('multi-artifact closeout packets round-trip through the bounded compressed 
       assert.deepEqual(restored.closeout_refs, packet.closeout_refs);
       assert.deepEqual(restored.closeout_ref_metadata, packet.closeout_ref_metadata);
     }
+  });
+});
+
+test('a hydrated closeout whose compressed envelope exceeds the inline budget still survives SQLite replay', () => {
+  withAttempt((db, attemptId) => {
+    const denseBytes = Buffer.concat(Array.from({ length: 1_620 }, (_, index) =>
+      createHash('sha256').update(String(index)).digest()));
+    const packet = closeoutPacket(`receipt:${denseBytes.toString('base64')}`);
+    const persisted = stringifyStageAttemptCloseoutJson(packet);
+    assert.equal(JSON.parse(persisted).surface_kind, STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_SURFACE);
+    assert.ok(Buffer.byteLength(persisted) > MAX_STAGE_ATTEMPT_PERSISTED_JSON_BYTES);
+
+    ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet });
+    assert.equal(ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet }).closeout.idempotent_noop, true);
+    assert.deepEqual(listStageAttemptCloseouts(db, attemptId)[0].packet.closeout_refs, packet.closeout_refs);
   });
 });
 

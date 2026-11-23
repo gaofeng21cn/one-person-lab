@@ -85,6 +85,8 @@ test('repair without new artifact bytes terminalizes quality debt before re-revi
   ]);
   assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
   assert.equal(state.review_receipts.length, 1);
+  assert.deepEqual(state.attempts[2]?.artifact_refs, []);
+  assert.deepEqual(state.attempts[2]?.artifact_identity_receipt_refs, []);
   assert.ok(state.quality_debt_refs.some((ref) => ref.includes(
     'repair-round-1-did-not-produce-new-artifact',
   )));
@@ -140,6 +142,7 @@ test('reviewer protocol failure blocks while retaining a consumable producer art
   assert.deepEqual(attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
   assert.deepEqual(state.attempts.map((attempt) => attempt.attempt_role), ['producer', 'reviewer']);
   assert.equal(state.attempts[1]?.status, 'failed');
+  assert.deepEqual(state.attempts[1]?.artifact_refs, ['artifact:deck-v1']);
   assert.deepEqual(state.artifact_refs, ['artifact:deck-v1']);
   assert.deepEqual(state.artifact_identity_receipt_refs, ['artifact-identity:deck-v1']);
   assert.equal(state.review_receipts.length, 0);
