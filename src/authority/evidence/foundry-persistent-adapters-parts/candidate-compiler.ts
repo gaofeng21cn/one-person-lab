@@ -96,6 +96,7 @@ import {
 
 import { FileFoundryContentStore } from './object-content-stores.ts';
 import { validateCandidateDirectory } from './registry-validation.ts';
+import { candidateLaunchMetadata } from './candidate-launch-metadata.ts';
 
 function candidateConformance(input: Parameters<CandidateCompiler['materialize']>[0]) {
   const blueprint = input.blueprint;
@@ -479,12 +480,14 @@ function buildCandidateRuntimePack(input: {
     path: candidateStagePolicyPath(index),
     bytes: Buffer.from(candidateStagePolicy(stage), 'utf8'),
   }));
+  const launchFiles = candidateLaunchMetadata(blueprint, input.contentBindings);
   const requiredPackPaths = [...new Set([
     CANDIDATE_STAGE_MANIFEST_PATH,
     CANDIDATE_QUALITY_POLICY_PATH,
     CANDIDATE_QUALITY_ROLE_PROMPT_PATH,
     CANDIDATE_QUALITY_RUBRIC_PATH,
     ...stagePolicyFiles.map((entry) => entry.path),
+    ...launchFiles.map((entry) => entry.path),
     ...input.contentBindings.map((entry) => entry.pack_path),
   ])].sort();
   const artifactContracts = blueprint.artifact_contracts.map((artifact) => ({
@@ -538,6 +541,7 @@ function buildCandidateRuntimePack(input: {
     ) },
     { path: 'contracts/artifact_contracts.json', bytes: canonicalJsonBytes(artifactContracts) },
     ...stagePolicyFiles,
+    ...launchFiles,
   ];
 }
 
