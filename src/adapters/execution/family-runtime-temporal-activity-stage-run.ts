@@ -30,6 +30,7 @@ import {
   stageAttemptIdFromRef,
 } from './family-runtime-temporal-activity-identity.ts';
 import type { StageRouteCompositionFactory } from './composition-factory-ports.ts';
+import { FOUNDRY_EVALUATION_STAGE_CANDIDATE, type FoundryEvaluationStageAdmission } from './foundry-evaluation-stage-candidate.ts';
 import {
   localPathForRef,
   observeStableFile,
@@ -140,9 +141,13 @@ function observeAuthoritativeArtifactBytes(input: TemporalStageQualityCycleProje
 }
 export async function stageRunRouteLaunchActivity(
   input: TemporalStageRunRouteLaunchInput,
-  options: { createStageRouteComposition?: StageRouteCompositionFactory } = {},
+  options: {
+    createStageRouteComposition?: StageRouteCompositionFactory;
+    admitEvaluationStage?: FoundryEvaluationStageAdmission;
+  } = {},
 ): Promise<TemporalStageRunRouteLaunchReceipt> {
   const { db } = openQueueDb();
+  let parentStageRunInput = input.parent_stage_run;
   try {
     requireRawStageRunMutationAuthority({
       db,
@@ -167,6 +172,12 @@ export async function stageRunRouteLaunchActivity(
       candidateIdentity: input.parent_stage_run as unknown as Record<string, unknown>,
       operation: 'temporal_stage_run_route_launch_activity:parent',
     });
+    if (
+      FOUNDRY_EVALUATION_STAGE_CANDIDATE in parentStageRun.stage_run_input.workspace_locator
+      || FOUNDRY_EVALUATION_STAGE_CANDIDATE in input.parent_stage_run.workspace_locator
+    ) {
+      parentStageRunInput = parentStageRun.stage_run_input;
+    }
     const decisiveAttempt = requireResolvedPersistedStageAttemptIdentity({
       db,
       stageAttemptId: decisiveAttemptId,
@@ -180,8 +191,9 @@ export async function stageRunRouteLaunchActivity(
   } finally {
     db.close();
   }
-  return materializeStageRunRoute(input, {
+  return materializeStageRunRoute({ ...input, parent_stage_run: parentStageRunInput }, {
     createStageRouteComposition: options.createStageRouteComposition,
+    admitEvaluationStage: options.admitEvaluationStage,
     findTargetStageRun: (stageRunId) => {
       const { db } = openQueueDb();
       try {

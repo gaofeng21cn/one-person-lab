@@ -11,6 +11,7 @@ import { hostedRuntimeReadiness, packageBackgroundUpdatePolicy } from '../../src
 import { gitMarketplaceRuntimeRoot } from '../../src/kernel/git-marketplace-runtime-root.ts';
 import { acquireHostedPackageSource } from '../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-source.ts';
 import { materializeStandardAgentFrameworkLink } from '../../src/adapters/integration/standard-agent-framework-link.ts';
+import type { AgentPackageAccessDecision } from '../../src/adapters/integration/agent-package-registry-parts/package-access.ts';
 import { packageInstallSourceAvailable } from '../../src/adapters/integration/agent-package-registry-parts/package-install-source.ts';
 
 const hash = (bytes: Buffer) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
@@ -328,9 +329,16 @@ test('public pinned-file component like opl-channel-weixin is independently inst
 });
 
 test('background update eligibility is origin-neutral while still protecting local checkouts and disabled packages', () => {
-  const access = {
-    visibility: 'public' as const,
-    status: 'public' as const,
+  const access: AgentPackageAccessDecision = {
+    visibility: 'public',
+    status: 'public',
+    provider_id: null,
+    credential_handle: null,
+    access_policy_ref: null,
+    source_ref: null,
+    verified_at: null,
+    expires_at: null,
+    security_revision: null,
     discover_allowed: true,
     download_allowed: true,
     reason: null,

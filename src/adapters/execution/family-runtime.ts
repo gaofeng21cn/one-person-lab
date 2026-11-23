@@ -35,6 +35,7 @@ import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-eviden
 import { runFamilyRuntimeStageArtifactCommand } from './family-runtime-stage-artifact-command.ts';
 import type { RuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
 import { ensureFamilyRuntimePackageLaunchReady } from './family-runtime-package-readiness.ts';
+import type { FoundryEvaluationStageAdmission, FoundryEvaluationStageCandidate } from './foundry-evaluation-stage-candidate.ts';
 import type {
   CordisPackStageBindingService,
   resolveStandardAgentStageQualityRuntimeBinding,
@@ -64,6 +65,8 @@ export async function runFamilyRuntime(
       dispose(): Promise<void>;
     }>;
     stageRunRuntime?: {
+      evaluationCandidate?: FoundryEvaluationStageCandidate;
+      admitEvaluationStage?: FoundryEvaluationStageAdmission;
       ensurePackageLaunchReady?: typeof ensureFamilyRuntimePackageLaunchReady;
       resolveStageBinding?: typeof resolveStandardAgentStageQualityRuntimeBinding;
       stageBindingService?: CordisPackStageBindingService;

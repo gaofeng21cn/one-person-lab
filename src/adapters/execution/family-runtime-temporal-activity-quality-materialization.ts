@@ -53,6 +53,11 @@ import {
 import { requirePersistedStageRunActivityIdentity } from './family-runtime-persisted-identity-admission.ts';
 import { revisionTransportContext } from './family-runtime-revision-intake.ts';
 import type { StageRouteCompositionFactory } from './composition-factory-ports.ts';
+import {
+  assertEvaluationStagePackAccess,
+  resolveEvaluationStageCandidate,
+  type FoundryEvaluationStageAdmission,
+} from './foundry-evaluation-stage-candidate.ts';
 import { resolveStageRunDefaultProgression } from './family-runtime-stage-run-default-progression.ts';
 import {
   repairObservationsFromCloseoutRouteImpact,
@@ -63,6 +68,7 @@ export async function stageQualityAttemptMaterializeActivity(
     ensurePackageLaunchReady?: typeof ensureFamilyRuntimePackageLaunchReady;
     resolveStageBinding?: typeof resolveStandardAgentStageQualityRuntimeBinding;
     createStageRouteComposition?: StageRouteCompositionFactory;
+    admitEvaluationStage?: FoundryEvaluationStageAdmission;
   } = {},
 ) {
   const stageRun = requireTemporalStageRunWorkflowInputLaunchable(input.stage_run, {
@@ -75,7 +81,7 @@ export async function stageQualityAttemptMaterializeActivity(
       stageRunId: stageRun.stage_run_id,
       operation: 'temporal_stage_quality_attempt_materialize_activity:raw_stage_run',
     });
-    requirePersistedStageRunActivityIdentity({
+    const persisted = requirePersistedStageRunActivityIdentity({
       db,
       candidateIdentity: stageRun as unknown as Record<string, unknown>,
       operation: 'temporal_stage_quality_attempt_materialize_activity',
@@ -98,6 +104,16 @@ export async function stageQualityAttemptMaterializeActivity(
       input.route_recommendations ?? [],
       input.review_input_snapshot_materialization_request ?? null,
     ]);
+    const evaluationPack = await resolveEvaluationStageCandidate({
+      domainId: persisted.stage_run_input.domain_id,
+      workspaceLocator: persisted.stage_run_input.workspace_locator,
+      useBoundaryId: requestedUseBoundaryId,
+      stageId: stageRun.stage_id,
+      actionId: stageRun.action_id ?? null,
+      scopeDigest: stageRun.execution_scope?.scope_digest ?? null,
+      admit: options.admitEvaluationStage,
+    });
+    if (evaluationPack) assertEvaluationStagePackAccess(evaluationPack, persisted.stage_run_input);
     const existingAttempt = findStageAttemptByIdempotencyBoundary(db, {
       domainId: stageRun.domain_id,
       stageId: stageRun.stage_id,
@@ -143,6 +159,9 @@ export async function stageQualityAttemptMaterializeActivity(
           policy: stageRun.quality_policy,
         });
         const currentExistingAttempt = stageAttemptToPayload(freshExistingRow);
+        if (evaluationPack) {
+          assertEvaluationStagePackAccess(evaluationPack, currentExistingAttempt);
+        }
         const receipt = persistedStageQualityAttemptMaterializationReceipt(stageRun, currentExistingAttempt);
         markStageQualityCycleCurrentAttempt(db, {
           qualityCycleId: input.quality_cycle_id,
@@ -209,7 +228,7 @@ export async function stageQualityAttemptMaterializeActivity(
           preserveEntryShapes: Boolean(producerCloseoutNormalization),
         })
       : [];
-    const packageReadiness = await (
+    const packageReadiness = evaluationPack ? null : await (
       options.ensurePackageLaunchReady
       ?? ensureFamilyRuntimePackageLaunchReady
     )({
@@ -217,11 +236,17 @@ export async function stageQualityAttemptMaterializeActivity(
       workspaceLocator: stageRun.workspace_locator,
       useBoundaryId: requestedUseBoundaryId,
     });
-    const executionDomainPackRoot = packageRuntimeSourceCheckoutPath(packageReadiness)
+    const executionDomainPackRoot = evaluationPack?.domainPackRoot
+      ?? packageRuntimeSourceCheckoutPath(packageReadiness)
       ?? readString(stageRun.workspace_locator.domain_pack_root)
       ?? stageRun.domain_pack_root;
     const executionWorkspaceLocator: Record<string, unknown> = {
       ...stageRun.workspace_locator,
+      ...(evaluationPack ? {
+        ...persisted.stage_run_input.workspace_locator,
+        package_use_binding: evaluationPack.packageUseBinding,
+        native_package_closure: evaluationPack.closure,
+      } : {}),
       domain_pack_root: executionDomainPackRoot,
       ...(packageReadiness?.package_use_binding
         ? { package_use_binding: packageReadiness.package_use_binding }
@@ -339,7 +364,8 @@ export async function stageQualityAttemptMaterializeActivity(
       routeBudget: stageRun.stage_run_spec.route_budget ?? stageRun.route_budget,
     });
     const executionContentSpecSha256 = stageRunSpecSha256(executionContentSpec);
-    const useBoundaryId = readString(packageReadiness?.package_use_binding?.use_boundary_id)
+    const useBoundaryId = evaluationPack?.packageUseBinding.use_boundary_id
+      ?? readString(packageReadiness?.package_use_binding?.use_boundary_id)
       ?? requestedUseBoundaryId;
     const executionDeclaredStageIds = canonicalStageAttemptDeclaredStageIds(
       executionStageBinding.declared_stage_ids,

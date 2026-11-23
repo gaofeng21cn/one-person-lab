@@ -37,6 +37,11 @@ import {
   stableId,
 } from '../family-runtime-store.ts';
 import { requireFamilyRuntimeExecutionScope } from '../family-runtime-execution-scope.ts';
+import {
+  assertEvaluationStagePackAccess,
+  requireEvaluationStageCandidateReference,
+  resolveEvaluationStageCandidate,
+} from '../foundry-evaluation-stage-candidate.ts';
 import type { FamilyRuntimeAttemptCommandContext } from './attempt-shared.ts';
 import {
   rawStageAttemptMutationAuthority,
@@ -78,6 +83,9 @@ export async function runAttemptCreateCommand(
     stageRunRuntime,
     getCordisPackStagecraft,
   } = context;
+  const candidateReference = requireEvaluationStageCandidateReference(
+    parsed.input.workspaceLocator, stageRunRuntime?.evaluationCandidate,
+  );
   const runtimeExecutionScope = requireFamilyRuntimeExecutionScope({
     scopeKind: parsed.input.scopeKind,
     executionScope: parsed.input.executionScope,
@@ -214,6 +222,21 @@ export async function runAttemptCreateCommand(
   const replayReviewLane = existingStageRunLaunch
     ? requestedReviewLane ?? persistedReviewLane
     : requestedReviewLane;
+  const useBoundaryId = stableId('package-use', [stageRunInvocationId]);
+  const evaluationPack = candidateReference
+    ? await resolveEvaluationStageCandidate({
+        domainId: parsed.input.domainId,
+        workspaceLocator: parsed.input.workspaceLocator,
+        useBoundaryId,
+        stageId: parsed.input.stageId,
+        actionId: parsed.input.actionId ?? null,
+        scopeDigest: runtimeExecutionScope.executionScope?.scope_digest ?? null,
+        admit: stageRunRuntime?.admitEvaluationStage,
+      })
+    : null;
+  if (evaluationPack && existingStageRunLaunch) {
+    assertEvaluationStagePackAccess(evaluationPack, existingStageRunLaunch.stage_run_input);
+  }
   if (existingStageRunLaunch && (
     // The persisted packet is omitted from child execution checkpoints. A
     // replay cannot reclassify it as a decision and silently lose that input.
@@ -223,6 +246,9 @@ export async function runAttemptCreateCommand(
       stageRunReplayBusinessIdentity(existingStageRunLaunch.stage_run_input),
     ) !== canonicalJsonText(stageRunReplayRequestBusinessIdentity({
       ...scopedAttemptInput,
+      workspaceLocator: evaluationPack
+        ? { ...parsed.input.workspaceLocator, foundry_evaluation_authority_ref: evaluationPack.authorityRef }
+        : parsed.input.workspaceLocator,
       checkpointRefs: stageRunCheckpointRefs(
         parsed.input, existingStageRunLaunch.stage_run_input.stage_packet_ref,
       ),
@@ -243,11 +269,10 @@ export async function runAttemptCreateCommand(
       },
     );
   }
-  const useBoundaryId = stableId('package-use', [stageRunInvocationId]);
   const pinnedUseBinding = isRecord(parsed.input.workspaceLocator.package_use_binding)
     ? parsed.input.workspaceLocator.package_use_binding
     : null;
-  const packageReadiness = existingStageRunLaunch
+  const packageReadiness = existingStageRunLaunch || evaluationPack
     ? null
     : await (
         stageRunRuntime?.ensurePackageLaunchReady
@@ -260,6 +285,7 @@ export async function runAttemptCreateCommand(
       });
   const managedDomainPackRoot = packageRuntimeSourceCheckoutPath(packageReadiness) ?? '';
   const domainPackRoot = persistedDomainPackRoot
+    || evaluationPack?.domainPackRoot
     || (pinnedUseBinding
       ? explicitDomainPackRoot || managedDomainPackRoot
       : managedDomainPackRoot || explicitDomainPackRoot)
@@ -276,11 +302,11 @@ export async function runAttemptCreateCommand(
     ? replayReviewLane
     : resolveStandardAgentStageReviewLane(stageQualityBinding?.review_lane_binding, requestedReviewLane);
   const selectedPackageUseBinding = parsed.input.start || stageQualityBinding?.enabled
-    ? pinnedUseBinding ?? packageReadiness?.package_use_binding
+    ? evaluationPack?.packageUseBinding ?? pinnedUseBinding ?? packageReadiness?.package_use_binding
     : null;
-  const nativePackageClosure = isRecord(packageReadiness?.native_package_closure)
+  const nativePackageClosure = evaluationPack?.closure ?? (isRecord(packageReadiness?.native_package_closure)
     ? packageReadiness.native_package_closure
-    : null;
+    : null);
   // One merged policy is the single durable identity: the StageRun spec and
   // the mutable Attempt row must never disagree about executor kind or route.
   const mergedStageAttemptExecutorPolicy = stageAttemptExecutorPolicyWithReviewLane({
@@ -292,6 +318,7 @@ export async function runAttemptCreateCommand(
   const useBoundWorkspaceLocator = selectedPackageUseBinding
     ? {
         ...parsed.input.workspaceLocator,
+        ...(evaluationPack ? { foundry_evaluation_authority_ref: evaluationPack.authorityRef } : {}),
         ...(domainPackRoot ? { domain_pack_root: domainPackRoot } : {}),
         ...(nativePackageClosure ? { native_package_closure: nativePackageClosure } : {}),
         package_use_binding: selectedPackageUseBinding,
@@ -386,6 +413,7 @@ export async function runAttemptCreateCommand(
     const stageRunInput = existingStageRunLaunch?.stage_run_input
       ?? buildPackBoundTemporalStageRunInput({
         binding: stageQualityBinding!,
+        knowledgeContext: evaluationPack?.knowledgeContext,
         domainPackRoot: domainPackRoot!,
         domainId: parsed.input.domainId,
         stageId: parsed.input.stageId,
