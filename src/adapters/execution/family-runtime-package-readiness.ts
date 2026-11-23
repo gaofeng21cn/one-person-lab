@@ -288,6 +288,7 @@ export async function ensureFamilyRuntimePackageLaunchReady(input: {
   workspaceLocator: Record<string, unknown>;
   useBoundaryId?: string;
   pinnedUseBinding?: any;
+  nativeCarrierOnly?: boolean;
 }) {
   const pinnedUseBinding = input.pinnedUseBinding === null || input.pinnedUseBinding === undefined
     ? null
@@ -359,7 +360,7 @@ export async function ensureFamilyRuntimePackageLaunchReady(input: {
   const effectiveRuntimeCheckout = policyRuntimeCheckout
     ?? fullRuntimeCheckout
     ?? localCarrierRuntimeCheckout(packageStatus);
-  const skillRefresh = await packageReadiness.refreshWorkspaceSkills?.({
+  const skillRefresh = input.nativeCarrierOnly ? null : await packageReadiness.refreshWorkspaceSkills?.({
     packageId,
     packageStatus: packageStatus.launch_allowed === false
       ? { ...packageStatus, launch_allowed: true, launch_blocked_reason: null }

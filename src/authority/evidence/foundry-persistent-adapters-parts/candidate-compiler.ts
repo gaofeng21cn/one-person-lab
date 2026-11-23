@@ -719,14 +719,21 @@ export class ContentAddressedCandidateCompiler implements CandidateCompiler {
   }
 
   verifyMaterializedCandidate(candidate: MaterializedCandidate) {
-    const verified = validateCandidateDirectory(this.#paths, candidate);
-    if (verified.manifest_digest !== candidate.manifest_digest) {
-      fail('Foundry candidate manifest does not match the materialization record.', {
-        candidate_digest: candidate.candidate_digest,
-        expected_manifest_digest: candidate.manifest_digest,
-        actual_manifest_digest: verified.manifest_digest,
-      });
-    }
-    return verified;
+    return verifyStoredFoundryMaterializedCandidate(candidate, this.#paths);
   }
+}
+
+export function verifyStoredFoundryMaterializedCandidate(
+  candidate: MaterializedCandidate,
+  paths = foundryStoragePaths(),
+) {
+  const verified = validateCandidateDirectory(paths, candidate);
+  if (verified.manifest_digest !== candidate.manifest_digest) {
+    fail('Foundry candidate manifest does not match the materialization record.', {
+      candidate_digest: candidate.candidate_digest,
+      expected_manifest_digest: candidate.manifest_digest,
+      actual_manifest_digest: verified.manifest_digest,
+    });
+  }
+  return verified;
 }

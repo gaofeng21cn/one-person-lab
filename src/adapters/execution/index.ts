@@ -121,3 +121,4 @@ export { runRuntimeOperatorActionExecute } from './runtime-operator-action-execu
 export { requireRuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
 export type { RuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
 export { buildSessionLedger, recordSessionLedgerEntry } from './session-ledger.ts';
+export { FOUNDRY_EVALUATION_STAGE_CANDIDATE, type FoundryEvaluationStageAdmission, type FoundryEvaluationStageCandidate } from './foundry-evaluation-stage-candidate.ts';

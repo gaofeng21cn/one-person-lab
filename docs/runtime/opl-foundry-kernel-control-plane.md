@@ -170,6 +170,21 @@ Temporal workflow 输入或 OMA 协议。Host 负责 worker 关闭及所注入�
 逐文件摘要、资源锁和候选记录中的清单摘要。可信 case executor 在候选
 `subject.candidate_pack` 中获得已验证的目录、清单摘要和资源锁摘要。该目录用于读取候选
 内容，执行适配仍须绑定实际启动所用的文件和依赖，并保留执行收据。
+需要运行 StageRun 的 case executor 可以调用
+[`launchFoundryCandidateStageRun`](../../src/host/foundry-evaluation-stage-run.ts)，
+传入该次 `runPublicCase` 或 `runProtectedRequirement` 的输入、独立 work item
+的执行范围、首个 Stage 和 action、稳定的调用 ID，以及用例所需的输入产物和摘要。
+同一次调用重放时复用该 StageRun。Framework 从活动 Foundry Run 中核对代次、
+评估阶段、冻结用例和候选目录，启动后用返回的 workflow ID 读取执行结果。
+保护用例正文由领域适配器保留在授权范围内，workflow 只携带用例摘要和产物引用。
+
+Host 在启动调用和 `buildCordisTemporalActivities` 的 `admitEvaluationStage`
+选项中提供同一准入实现。该实现根据冻结 Blueprint、用例、Stage、action 和
+work item 范围验证权限，返回稳定的回执引用、允许使用的就绪 provider 包 ID
+及适用的领域知识快照。可用 `bindStageKnowledgeContext` 从领域维护的 catalog
+生成快照。Framework 在流转、评审、修复和执行前重新验证候选、准入及绑定。
+常规任务继续使用已安装包解析路径。
+
 目标领域 owner 提供真实 Agent 执行适配、保护用例内容及专业验收规则，Framework Host
 负责准入和组合。公开用例返回 case identity、status、score 和 evidence refs；保护执行
 只返回聚合结果、直接 receipt ref 和聚合结果的精确 digest。资源观察来自真实执行。

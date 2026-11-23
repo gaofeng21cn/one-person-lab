@@ -53,6 +53,7 @@ export type {
 } from './developer-mode-closeout-ledger.ts';
 export {
   ContentAddressedCandidateCompiler,
+  verifyStoredFoundryMaterializedCandidate,
   FileFoundryContentStore,
   FileFoundryObjectStore,
   foundryStoragePaths,

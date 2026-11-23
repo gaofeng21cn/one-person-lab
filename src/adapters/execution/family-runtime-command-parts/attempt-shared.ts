@@ -20,6 +20,7 @@ import {
 import { readManagedProviderProjectionSummary } from '../family-runtime-managed-provider-projection.ts';
 import { requireRuntimeExecutionScopeMutationAllowed } from '../family-runtime-execution-scope-persistence.ts';
 import { ensureFamilyRuntimePackageLaunchReady } from '../family-runtime-package-readiness.ts';
+import type { FoundryEvaluationStageAdmission, FoundryEvaluationStageCandidate } from '../foundry-evaluation-stage-candidate.ts';
 import { launchRegisteredStageRun } from '../family-runtime-stage-run-launch.ts';
 import { canonicalStageRunSha256 } from '../family-runtime-stage-run-identity-parts/content-bindings.ts';
 import {
@@ -28,6 +29,8 @@ import {
 } from '../family-runtime-stage-run-identity.ts';
 
 type FamilyRuntimeAttemptStageRuntime = {
+  evaluationCandidate?: FoundryEvaluationStageCandidate;
+  admitEvaluationStage?: FoundryEvaluationStageAdmission;
   ensurePackageLaunchReady?: typeof ensureFamilyRuntimePackageLaunchReady;
   resolveStageBinding?: typeof resolveStandardAgentStageQualityRuntimeBinding;
   startWorkflow?: (

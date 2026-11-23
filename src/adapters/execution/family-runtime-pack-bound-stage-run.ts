@@ -1,4 +1,5 @@
 import type { StandardAgentStageQualityRuntimeBinding } from '../../authority/packages/index.ts';
+import type { StageKnowledgeContext } from './family-runtime-knowledge-context.ts';
 import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
 import type { TemporalStageRunWorkflowInput } from './family-runtime-temporal.ts';
 import {
@@ -31,6 +32,7 @@ export function buildPackBoundTemporalStageRunInput(input: {
   taskId?: string | null;
   scopeKind?: unknown;
   executionScope?: unknown;
+  knowledgeContext?: StageKnowledgeContext;
   checkoutCurrentnessAdmission?: Record<string, unknown> | null;
 }): TemporalStageRunWorkflowInput {
   const executionScope = requireFamilyRuntimeExecutionScope({
@@ -50,6 +52,7 @@ export function buildPackBoundTemporalStageRunInput(input: {
   const checkpointRefs = [stagePacketRef, ...(input.checkpointRefs ?? []).filter((ref) => ref !== stagePacketRef)];
   const stageRunSpec = buildStageRunImmutableSpec({
     binding: input.binding,
+    knowledgeContext: input.knowledgeContext,
     domainPackRoot: input.domainPackRoot,
     domainId: input.domainId,
     stageId: input.stageId,

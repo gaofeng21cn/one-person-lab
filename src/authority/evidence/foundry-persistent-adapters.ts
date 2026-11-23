@@ -12,6 +12,7 @@ export {
 } from './foundry-persistent-adapters-parts/event-store.ts';
 export {
   ContentAddressedCandidateCompiler,
+  verifyStoredFoundryMaterializedCandidate,
 } from './foundry-persistent-adapters-parts/candidate-compiler.ts';
 export {
   LedgerFoundryOperationResultJournal,

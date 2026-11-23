@@ -8,6 +8,7 @@ import {
   createProductionFoundryProviderOperationRuntime,
   domainHandlerDispatchActivity,
   schedulerTickActivity,
+  type FoundryEvaluationStageAdmission,
   stageQualityAttemptMaterializeActivity,
   stageQualityAttemptSyncActivity,
   stageQualityCycleProjectActivity,
@@ -31,6 +32,7 @@ import {
 export type CordisTemporalActivityOptions = {
   // Constructed by trusted Host code in this worker process, never a workflow payload.
   trusted_evaluation_runtime?: EvaluationExecutor;
+  admitEvaluationStage?: FoundryEvaluationStageAdmission;
 };
 
 export function buildCordisTemporalActivities(options: CordisTemporalActivityOptions = {}) {
@@ -53,6 +55,7 @@ export function buildCordisTemporalActivities(options: CordisTemporalActivityOpt
     ),
     codexStageActivity: (input: Parameters<typeof codexStageActivity>[0]) =>
       codexStageActivity(input, {
+        admitEvaluationStage: options.admitEvaluationStage,
         createAttemptComposition: ({ attemptRef }) => createCordisRunwayAttemptComposition({
           attemptRef,
           createAgentExecutorRequest: createCordisAgentExecutorRequest,
@@ -62,13 +65,17 @@ export function buildCordisTemporalActivities(options: CordisTemporalActivityOpt
     schedulerTickActivity,
     stageQualityAttemptMaterializeActivity: (
       input: Parameters<typeof stageQualityAttemptMaterializeActivity>[0],
-    ) => stageQualityAttemptMaterializeActivity(input, { createStageRouteComposition }),
+    ) => stageQualityAttemptMaterializeActivity(input, {
+      createStageRouteComposition, admitEvaluationStage: options.admitEvaluationStage,
+    }),
     stageQualityAttemptSyncActivity,
     stageQualityCycleProjectActivity,
     stageQualityReviewReceiptActivity,
     stageRunRouteLaunchActivity: (
       input: Parameters<typeof stageRunRouteLaunchActivity>[0],
-    ) => stageRunRouteLaunchActivity(input, { createStageRouteComposition }),
+    ) => stageRunRouteLaunchActivity(input, {
+      createStageRouteComposition, admitEvaluationStage: options.admitEvaluationStage,
+    }),
   };
 }
 

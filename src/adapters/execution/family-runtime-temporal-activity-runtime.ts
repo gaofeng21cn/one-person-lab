@@ -1,4 +1,5 @@
 import { Context, heartbeat } from '@temporalio/activity';
+import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { createTemporalStageActivitySessionObserverFromPort } from './public/temporal-stage-activity-session-observer-port.ts';
 import {
@@ -23,6 +24,12 @@ import {
 } from './family-runtime-temporal-activity-result-compaction.ts';
 import { normalizeTypedStageCloseoutPacket } from './family-runtime-codex-stage-runner.ts';
 import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-history-summary.ts';
+import {
+  assertEvaluationStagePackAccess,
+  FOUNDRY_EVALUATION_STAGE_CANDIDATE,
+  resolveEvaluationStageCandidate,
+  type FoundryEvaluationStageAdmission,
+} from './foundry-evaluation-stage-candidate.ts';
 import { resolveStageRunAttemptExecutorContent } from './family-runtime-stage-run-attempt-content.ts';
 import {
   isRuntimeHardStopReason,
@@ -145,9 +152,10 @@ export async function codexStageActivity(
   input: TemporalStageAttemptWorkflowInput,
   options: {
     createAttemptComposition?: RunwayAttemptCompositionFactory;
+    admitEvaluationStage?: FoundryEvaluationStageAdmission;
   } = {},
 ) {
-  requirePersistedAttemptActivityIdentity(input, 'temporal_codex_stage_activity');
+  const persisted = requirePersistedAttemptActivityIdentity(input, 'temporal_codex_stage_activity');
   const coordinationObserver = createTemporalStageActivitySessionObserverFromPort(input);
   const cancellationSignal = Context.current().cancellationSignal;
   const observedAt = new Date().toISOString();
@@ -179,6 +187,24 @@ export async function codexStageActivity(
   }, DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS);
   let attemptComposition: RunwayAttemptComposition | null = null;
   try {
+    const persistedLocator = isRecord(persisted.workspace_locator) ? persisted.workspace_locator : {};
+    if (FOUNDRY_EVALUATION_STAGE_CANDIDATE in persistedLocator
+      || FOUNDRY_EVALUATION_STAGE_CANDIDATE in input.workspace_locator) {
+      const candidate = await resolveEvaluationStageCandidate({
+        domainId: persisted.domain_id,
+        workspaceLocator: persistedLocator,
+        useBoundaryId: input.execution_content_binding?.use_boundary_id ?? '',
+        stageId: persisted.stage_id,
+        actionId: input.stage_run_spec?.action_id ?? null,
+        scopeDigest: input.execution_scope?.scope_digest ?? null,
+        admit: options.admitEvaluationStage,
+      });
+      if (!candidate || canonicalJsonText(input.workspace_locator[FOUNDRY_EVALUATION_STAGE_CANDIDATE])
+        !== canonicalJsonText(persistedLocator[FOUNDRY_EVALUATION_STAGE_CANDIDATE])) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Candidate Attempt does not match its persisted Foundry evaluation.');
+      }
+      assertEvaluationStagePackAccess(candidate, input);
+    }
     const executorContent = resolveStageRunAttemptExecutorContent(input);
     attemptComposition = options.createAttemptComposition
       ? await options.createAttemptComposition({

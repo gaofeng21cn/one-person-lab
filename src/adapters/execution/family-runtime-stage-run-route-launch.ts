@@ -35,6 +35,11 @@ import { stableId } from './family-runtime-store.ts';
 import { preflightDomainWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import { preflightFamilyRuntimeDomainLifecycleAdmission } from './family-runtime-domain-lifecycle-admission.ts';
 import type { StageRouteCompositionFactory } from './composition-factory-ports.ts';
+import {
+  assertEvaluationStagePackAccess,
+  resolveEvaluationStageCandidate,
+  type FoundryEvaluationStageAdmission,
+} from './foundry-evaluation-stage-candidate.ts';
 
 type PackageReadinessResult = Awaited<ReturnType<typeof ensureFamilyRuntimePackageLaunchReady>>;
 
@@ -54,6 +59,7 @@ export type StageRunRouteLaunchDependencies = {
     stageId: string,
   ) => StandardAgentStageQualityRuntimeBinding | null;
   createStageRouteComposition?: StageRouteCompositionFactory;
+  admitEvaluationStage?: FoundryEvaluationStageAdmission;
 };
 
 const authorityBoundary = {
@@ -457,7 +463,41 @@ export async function materializeStageRunRoute(
       targetPlan,
     };
   };
+  const useBoundaryId = stableId('package-use', [invocation.stage_run_invocation_id]);
+  const evaluationPack = await resolveEvaluationStageCandidate({
+    domainId: parentStageRun.domain_id,
+    workspaceLocator: parentStageRun.workspace_locator,
+    useBoundaryId,
+    stageId: parentStageRun.stage_id,
+    actionId: parentStageRun.action_id ?? null,
+    scopeDigest: parentStageRun.execution_scope?.scope_digest ?? null,
+    admit: dependencies.admitEvaluationStage,
+  });
+  if (evaluationPack) {
+    assertEvaluationStagePackAccess(evaluationPack, parentStageRun);
+    assertEvaluationStagePackAccess(evaluationPack, {
+      domain_pack_root: parentStageRun.domain_pack_root,
+      workspace_locator: {
+        ...decisiveBinding.spec.workspace_identity,
+        package_use_binding: decisiveBinding.spec.package_closure,
+      },
+      stage_run_spec: decisiveBinding.spec,
+    });
+  }
   const persistedTarget = await findPersistedTarget();
+  const targetCandidate = evaluationPack
+    ? await resolveEvaluationStageCandidate({
+        domainId: parentStageRun.domain_id,
+        workspaceLocator: parentStageRun.workspace_locator,
+        useBoundaryId,
+        stageId: targetStageId,
+        actionId: resolveRouteTargetActionId({
+          domainPackRoot: evaluationPack.domainPackRoot, targetStageId, parentActionId: parentStageRun.action_id,
+        }),
+        scopeDigest: parentStageRun.execution_scope?.scope_digest ?? null,
+        admit: dependencies.admitEvaluationStage,
+      })
+    : null;
   const launchReceipt = (
     targetStageRun: TemporalStageRunWorkflowInput,
     durableLaunch: Record<string, unknown>,
@@ -492,6 +532,7 @@ export async function materializeStageRunRoute(
     });
   };
   if (persistedTarget) {
+    if (targetCandidate) assertEvaluationStagePackAccess(targetCandidate, persistedTarget.target);
     preflightPersistedTarget(persistedTarget.target);
     return launchReceipt(
       persistedTarget.target,
@@ -503,12 +544,13 @@ export async function materializeStageRunRoute(
     : undefined;
   const ensurePackageLaunchReady = dependencies.ensurePackageLaunchReady
     ?? ensureFamilyRuntimePackageLaunchReady;
-  const packageReadiness = await ensurePackageLaunchReady({
+  const packageReadiness = evaluationPack ? null : await ensurePackageLaunchReady({
     domainId: parentStageRun.domain_id,
     workspaceLocator: parentStageRun.workspace_locator,
-    useBoundaryId: stableId('package-use', [invocation.stage_run_invocation_id]),
+    useBoundaryId,
   });
-  const domainPackRoot = packageRuntimeSourceCheckoutPath(packageReadiness)
+  const domainPackRoot = evaluationPack?.domainPackRoot
+    ?? packageRuntimeSourceCheckoutPath(packageReadiness)
     ?? parentStageRun.domain_pack_root;
   const targetPlan = resolveRouteTargetLaunchPlan({
     domainId: parentStageRun.domain_id,
@@ -518,12 +560,15 @@ export async function materializeStageRunRoute(
     parentStageAttemptExecutorPolicy: parentStageRun.stage_run_spec.stage_attempt_executor_policy,
     targetBinding: resolveStageBinding(domainPackRoot, targetStageId),
   });
-  const packageUseBinding = packageReadiness?.package_use_binding ?? pinnedUseBinding;
-  const nativePackageClosure = isRecord(packageReadiness?.native_package_closure)
+  const packageUseBinding = targetCandidate?.packageUseBinding
+    ?? packageReadiness?.package_use_binding
+    ?? pinnedUseBinding;
+  const nativePackageClosure = targetCandidate?.closure ?? (isRecord(packageReadiness?.native_package_closure)
     ? packageReadiness.native_package_closure
-    : null;
+    : null);
   const workspaceLocator = {
     ...parentStageRun.workspace_locator,
+    ...(targetCandidate ? { foundry_evaluation_authority_ref: targetCandidate.authorityRef } : {}),
     domain_pack_root: domainPackRoot,
     ...(packageUseBinding ? { package_use_binding: packageUseBinding } : {}),
     ...(nativePackageClosure ? { native_package_closure: nativePackageClosure } : {}),
@@ -541,6 +586,7 @@ export async function materializeStageRunRoute(
   });
   let targetStageRun = buildPackBoundTemporalStageRunInput({
     binding: targetPlan.targetBinding,
+    knowledgeContext: targetCandidate?.knowledgeContext,
     domainPackRoot,
     domainId: parentStageRun.domain_id,
     stageId: targetStageId,
@@ -570,6 +616,7 @@ export async function materializeStageRunRoute(
     if (!isStageRunInvocationSpecConflict(error)) throw error;
     const concurrentTarget = await findPersistedTarget();
     if (!concurrentTarget) throw error;
+    if (targetCandidate) assertEvaluationStagePackAccess(targetCandidate, concurrentTarget.target);
     targetStageRun = concurrentTarget.target;
     preflightPersistedTarget(concurrentTarget.target);
     durableLaunch = await dependencies.launchTargetStageRun(concurrentTarget.target);
