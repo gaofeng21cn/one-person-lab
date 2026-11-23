@@ -579,6 +579,58 @@ test('transport verification canonicalizes the OPL-owned artifact identity recei
   }
 });
 
+test('a producer closeout with consumable refs binds the exact artifact used by Review', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-consumable-closeout-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  try {
+    const artifactPath = path.join(root, 'decision.txt');
+    const bytes = Buffer.from('producer decision for Review\n');
+    fs.writeFileSync(artifactPath, bytes);
+    const artifactRef = pathToFileURL(artifactPath).href;
+    const artifactHash = sha256(bytes);
+    const packet = producerCloseout({ artifactRef, artifactHash, sizeBytes: bytes.length });
+    packet.route_impact = { consumable_artifact_refs: [artifactRef], transition_outcome: 'completed' };
+
+    const verified = verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: packet,
+      attempt,
+      workspaceRoot: root,
+    })!;
+    const cycle = verified.route_impact?.stage_quality_cycle as Record<string, unknown>;
+    const receiptRef = String(verified.closeout_ref_metadata?.[0]?.artifact_identity_receipt_ref);
+    assert.deepEqual(cycle, {
+      artifact_refs: [artifactRef],
+      artifact_hashes: [artifactHash],
+      artifact_identity_receipt_refs: [receiptRef],
+    });
+    assert.equal(verified.route_impact?.transition_outcome, 'completed');
+    assert.equal(verified.closeout_ref_metadata?.[0]?.kind, 'stage_attempt_artifact');
+    assert.equal(verified.closeout_ref_metadata?.[0]?.size_bytes, bytes.length);
+    assert.deepEqual(verifyStageQualityArtifactIdentityAtAttemptBoundary({
+      artifactRefs: [artifactRef],
+      artifactHashes: [artifactHash],
+      artifactIdentityReceiptRefs: [receiptRef],
+      domainId: attempt.domain_id,
+      workspaceRoot: root,
+      expectedProducingAttemptId: attempt.stage_attempt_id,
+      expectedProducingStageId: attempt.stage_id,
+    }).artifact_refs, [artifactRef]);
+
+    fs.writeFileSync(artifactPath, 'different bytes\n');
+    assert.throws(() => verifyStageQualityCloseoutArtifactIdentity({
+      closeoutPacket: packet,
+      attempt,
+      workspaceRoot: root,
+    }), (error) => error instanceof FrameworkContractError
+      && error.details?.blocked_reason === 'artifact_byte_identity_mismatch');
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('a stale declared size_bytes is tolerated as metadata when the artifact hash matches', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-stale-size-'));
   const previousStateDir = process.env.OPL_STATE_DIR;

@@ -1,7 +1,7 @@
 import { stringValue as optionalString } from '../../../../kernel/json-record.ts';
 import type { TypedStageCloseoutPacket } from '../closeout-normalization.ts';
 import { verifyFrameworkRawProgressEnvelope } from '../raw-artifact-identity-verification.ts';
-import { isRecord, type JsonRecord } from '../shared.ts';
+import { isRecord, readAgentRefList, type JsonRecord } from '../shared.ts';
 import {
   artifactExecutionIdentity,
   artifactIdentityError,
@@ -14,6 +14,10 @@ import {
   verifyCurrentArtifactBytes,
   verifyIdentityReceipt,
 } from './transport-receipts.ts';
+
+function artifactMetadata(metadata: JsonRecord[], ref: string) {
+  return metadata.find((entry) => (optionalString(entry.ref) ?? entry.uri) === ref);
+}
 
 export function verifyStageQualityCloseoutArtifactIdentity(input: {
   closeoutPacket: TypedStageCloseoutPacket | null;
@@ -37,16 +41,28 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
         closeoutMetadata: metadata,
       })
     : null;
+  // Producers already declare which outputs are consumable. When neither identity
+  // array was supplied, verify those same refs using their closeout byte metadata.
+  const consumableRefs = !rawProgress
+    && !Object.hasOwn(qualityEnvelope, 'artifact_refs')
+    && !Object.hasOwn(qualityEnvelope, 'artifact_hashes')
+    && Array.isArray(routeImpact.consumable_artifact_refs)
+    ? readAgentRefList(routeImpact.consumable_artifact_refs, 'consumable_artifact_refs')
+    : [];
+  const consumableHashes = consumableRefs.map((ref) => optionalString(artifactMetadata(metadata, ref)?.sha256));
+  const bindConsumableIdentity = consumableRefs.length > 0
+    && consumableRefs.every((ref) => closeoutPacket.closeout_refs.includes(ref))
+    && consumableHashes.every(Boolean);
   const declaredRefs = rawProgress
     ? [rawProgress.artifactRef]
     : Array.isArray(qualityEnvelope.artifact_refs)
       ? qualityEnvelope.artifact_refs
-      : [];
+      : bindConsumableIdentity ? consumableRefs : [];
   const declaredHashes = rawProgress
     ? [rawProgress.artifactSha256]
     : Array.isArray(qualityEnvelope.artifact_hashes)
       ? qualityEnvelope.artifact_hashes
-      : [];
+      : bindConsumableIdentity ? consumableHashes : [];
   if (declaredRefs.length === 0 && declaredHashes.length === 0) {
     // The receipt list names OPL-owned transport identity. Even with no
     // artifacts, an explicit (empty) artifact list means the canonical receipt
@@ -96,6 +112,7 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
           canonicalWorkItemRootIdentity:
             executionIdentity.executionScope?.canonical_work_item_root_identity ?? null,
           scopeWorkspaceRoot: executionIdentity.executionScope?.workspace_root ?? null,
+          containInWorkspace: bindConsumableIdentity,
         });
     if (observed) {
       const receiptInput: OplTransportArtifactIdentityReceipt = {
@@ -119,6 +136,7 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
         : prepareTransportIdentityReceipt(receiptInput).commit().receiptRef;
       return {
         ...entry,
+        ...(bindConsumableIdentity && !entry.kind ? { kind: 'stage_attempt_artifact' } : {}),
         ref: artifactRef,
         sha256: observed.sha256,
         size_bytes: observed.sizeBytes,
@@ -172,7 +190,7 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
   return {
     ...closeoutPacket,
     closeout_ref_metadata: metadata,
-    ...(isRecord(routeImpact.stage_quality_cycle)
+    ...(!rawProgress && (isRecord(routeImpact.stage_quality_cycle) || bindConsumableIdentity)
       ? {
           route_impact: {
             ...routeImpact,

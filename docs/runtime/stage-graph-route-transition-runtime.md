@@ -55,6 +55,8 @@ AgentBlueprint 的 content-ref 字节补全保持同一归一化传输形态：`
 
 已有 `route_impact.stage_quality_cycle` 对象时，Framework 可把上一层完整的 `artifact_refs` 与 `artifact_hashes` 移入该对象。内外层一致时保留规范位置，冲突时拒绝，成功归位时记录 `stage_quality_artifact_identity_folded_from_route_impact_level`。归位后继续验证收尾登记、产物字节与身份回执。
 
+Producer 或 repairer 只声明 `route_impact.consumable_artifact_refs` 时，Framework 可根据收尾登记的相同引用和 SHA-256 补齐工件身份。本地工件须通过当前 Attempt 工作区或工作项范围的字节核验，外部工件仍需独立领域回执。补齐内容只有引用、摘要和身份回执，不生成 Review 结论。原始执行进度保留独立的传输形态。
+
 Finding、repair、closure 与跨 Stage route 的证据引用接受非空 locator 字符串或带非空 `ref` 的对象，归一化结果仍是字符串列表；引用对象中的其他元数据不能替代 artifact identity receipt。证据列表及其成员不能为空白。`changed_artifact_refs` 可为空，使未修复或被阻断的 repair 能如实声明没有产物变化。
 
 初审返回 `repair_required` 时，Attempt 在完成前校验 findings，要求至少一项 required finding，且每项都有证据引用和非空 `repair_expectation`。校验失败会以 `stage_quality_review_repair_findings_invalid` 阻断并保留来源 Attempt、收尾引用及字段诊断。StageRun 保留原产物，不提交无效评审的路由，也不消耗修补轮次。
