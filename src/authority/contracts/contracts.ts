@@ -688,6 +688,23 @@ export function validateFrameworkContracts(
   };
 }
 
+function readCliCommandRegistry(contractsDir: string) {
+  const filePath = path.join(contractsDir, 'cli-command-registry.json');
+  return validateCliCommandRegistry(filePath, parseJsonFile(filePath));
+}
+
+export function loadFrameworkCliCommandRegistry(input?: FrameworkContractsLoadOptions) {
+  const location = resolveContractsLocation(input);
+  try {
+    return readCliCommandRegistry(location.contractsDir);
+  } catch (error) {
+    if (error instanceof FrameworkContractError && CONTRACT_LOAD_ERROR_CODES.has(error.code)) {
+      throw enrichContractLoadError(error, location);
+    }
+    throw error;
+  }
+}
+
 export function loadFrameworkContracts(
   input?: string | FrameworkContractsLoadOptions,
 ): FrameworkContracts {
@@ -746,10 +763,7 @@ export function loadFrameworkContracts(
         path.join(contractsDir, 'source-module-map.json'),
         parseJsonFile(path.join(contractsDir, 'source-module-map.json')),
       ),
-      cliCommandRegistry: validateCliCommandRegistry(
-        path.join(contractsDir, 'cli-command-registry.json'),
-        parseJsonFile(path.join(contractsDir, 'cli-command-registry.json')),
-      ),
+      cliCommandRegistry: readCliCommandRegistry(contractsDir),
       targetOperatingArchitecture: validateTargetOperatingArchitecture(
         path.join(contractsDir, 'target-operating-architecture-contract.json'),
         parseJsonFile(path.join(contractsDir, 'target-operating-architecture-contract.json')),

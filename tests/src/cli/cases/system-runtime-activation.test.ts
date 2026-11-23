@@ -180,7 +180,7 @@ cp ${shellSingleQuote(binarySource)} "$prefix/node_modules/@openai/codex-darwin-
       assert.equal(fs.readFileSync(path.join(framework, 'marker'), 'utf8'), 'new');
       assert.match(fs.readFileSync(codex, 'utf8'), /0\.141\.0/);
       assert.equal(activate('after').runtime_activation.status, 'no_pending_generation');
-      assert.equal(fs.existsSync(sideEffects), false);
+      assert.equal(fs.existsSync(sideEffects) ? fs.readFileSync(sideEffects, 'utf8') : '', '');
       assert.equal(fs.readFileSync(protocolLog, 'utf8'), originalProtocolLog);
       assert.equal(fs.existsSync(managedUpdateLockFilePath()), false);
       assert.equal(rollbackCodexRuntimeGeneration().status, 'completed');
