@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +13,7 @@ import {
 import { assertJsonSchemaPayload } from '../src/kernel/schema-registry.ts';
 import { parseJsonText, readJsonFile } from './script-json-boundary.mjs';
 import { packageContentDigest } from '../src/kernel/package-content-lock.ts';
+import { packageCarrierSourcePaths } from './package-carrier-source-paths.mjs';
 
 export const TEST_ONLY_PACKAGE_RELEASE_GATE = 'test_owner_sha_release_gate';
 
@@ -472,6 +474,24 @@ export function validatePackageSourceProjection({
     fail('payload_files_invalid', spec.package_id, 'payload must declare at least one source file');
   }
   const sourceRoot = safeRelativePath(payload.source_root, 'source_root', spec.package_id, true);
+  const allowlistPath = path.join(
+    path.dirname(path.dirname(manifestPath)),
+    'package-payload-allowlists',
+    `${spec.package_id}.json`,
+  );
+  const allowlist = fs.existsSync(allowlistPath) ? readJsonFile(allowlistPath) : null;
+  const projected = allowlist && packageCarrierSourcePaths({
+    allowlist,
+    sourceCommit: carrierSourceCommit,
+    readGit: (args) => gitBytes(ownerRepoPath, args),
+  });
+  if (projected && (allowlist.source_root !== sourceRoot
+    || allowlist.paths.length !== payload.files.length
+    || payload.files.some((entry, index) => (
+      entry.path !== allowlist.paths[index] || !projected.has(entry.path)
+    )) || projected.size !== payload.files.length)) {
+    fail('payload_files_invalid', spec.package_id, 'payload paths differ from the committed carrier projection');
+  }
   const coordinates = repoCoordinates(spec.repo_url, spec.package_id);
   const entriesByPath = new Map();
   for (const entry of payload.files) {
@@ -483,7 +503,8 @@ export function validatePackageSourceProjection({
   }
   const actualPayloadDigest = packageContentDigest([...entriesByPath.keys()], (relativePath) => {
     const entry = entriesByPath.get(relativePath);
-    const sourcePath = sourceTreePath(ownerRepoPath, sourceRoot, relativePath, spec.package_id);
+    const sourcePath = projected?.get(relativePath)
+      ?? sourceTreePath(ownerRepoPath, sourceRoot, relativePath, spec.package_id);
     const sourceEntry = readCommitRegularFile({
       packageId: spec.package_id,
       ownerRepoPath,

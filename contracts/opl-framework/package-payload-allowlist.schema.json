@@ -31,6 +31,10 @@
       "type": "string",
       "pattern": "^(?:\\.|(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^\\u0000-\\u001f\\u007f]+)$"
     },
+    "carrier_projection_ref": {
+      "const": "contracts/carrier_projection.json",
+      "description": "Use the owner's committed verbatim carrier file projection when present at the selected source commit."
+    },
     "paths": {
       "type": "array",
       "items": {

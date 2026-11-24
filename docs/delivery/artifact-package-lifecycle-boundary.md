@@ -109,6 +109,8 @@ Weixin 通道与 Fleet Agent 属宿主或内部能力，Scholar Skills 是 MAS/M
 
 源码中的 Package manifest 与 payload 仅保留当前入口和真实合同、测试直接引用的版本。历史版本通过 Git 与不可变发布产物追溯。测试验证当前 descriptor 与不可变 payload 的身份绑定、同版本写入拒绝和 seed 摘要匹配。
 
+薄载体可以在 Framework payload allowlist 中声明 `carrier_projection_ref`，由发布准备读取该提交的 owner 载体合同。载体的安装路径和提交中的文件路径可以不同。准备和校验均使用同一提交中的原始 Git blob，OCI 元数据记下这些文件在源码归档中的真实路径。
+
 Flow managed policy 由安装的 owner descriptor 指定来源，Framework 解释 `opl_flow_workflow_policy.v4` 的 required、experience baseline 和 optional 能力平面。
 
 Agent Reach 由其 CLI 维护，Framework 读取 `version` 和 `doctor` 的结构化输出并用 `skill link <skills-dir>` 补齐缺失 Skill；包就绪检查验证 CLI 和诊断结果，具体渠道状态由 Agent Reach 返回。
