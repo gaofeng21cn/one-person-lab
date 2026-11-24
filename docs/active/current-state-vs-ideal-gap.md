@@ -10,7 +10,7 @@ App、Cloud、Package 的部署验收与专业质量属于各 owner，本页未�
 
 ## 私有软件源的发行与安装验收
 
-共同访问与生命周期合同见 [Package Directory](../specs/package-directory.md#私有-package-的访问合同)。本机通过本地 carrier 运行私有 Agent，不能代替授权新用户从私有源安装的验收。
+共同访问与生命周期合同见 [Package Directory](../specs/package-directory.md#私有-package-的访问与生命周期)。本机通过本地 carrier 运行私有 Agent，不能代替授权新用户从私有源安装的验收。
 
 | owner | 当前具体断点 | 下一步与完成条件 |
 | --- | --- | --- |
