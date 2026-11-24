@@ -91,6 +91,7 @@
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.1.0",
+    "@modelcontextprotocol/client": "^2.4.0",
     "@modelcontextprotocol/ext-apps": "^2.0.4",
     "@modelcontextprotocol/server": "^2.4.0",
     "@playwright/mcp": "0.0.86",
@@ -114,7 +115,6 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "^2.4.0",
     "@temporalio/testing": "1.26.0",
     "@types/node": "^26.6.6"
   },
