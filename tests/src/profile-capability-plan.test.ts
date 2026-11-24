@@ -8,12 +8,10 @@ import test from 'node:test';
 
 import { buildProfileCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs/profiles.ts';
 import { parseJsonText, readJsonPayloadFile } from '../../src/kernel/json-file.ts';
-import {
-  buildProfileCapabilityPlan as buildProfileCapabilityPlanWithDependencies,
-  buildProfileCapabilityPlanInputProjection,
-} from '../../src/authority/packages/profile-capability-plan.ts';
+import { buildProfileCapabilityPlan as buildProfileCapabilityPlanWithDependencies, buildProfileCapabilityPlanInputProjection } from '../../src/authority/packages/profile-capability-plan.ts';
 import { buildCapabilityRegistryReadout } from '../../src/adapters/integration/index.ts';
 import { buildStandardDomainAgentScaffold } from '../../src/authority/packages/standard-domain-agent-scaffold.ts';
+import { runCliInProcess } from './cli/helpers.ts';
 
 const buildProfileCapabilityPlan = (
   input: Parameters<typeof buildProfileCapabilityPlanWithDependencies>[0],
@@ -626,7 +624,7 @@ test('profiles select real CLI accepts documented source and pattern aliases and
   );
 });
 
-test('profiles select real CLI accepts every source and pattern alias in --flag=value form', () => {
+test('profiles select real CLI accepts every source and pattern alias in --flag=value form', async () => {
   const cases = [
     ...[
       '--reference-source',
@@ -653,23 +651,16 @@ test('profiles select real CLI accepts every source and pattern alias in --flag=
   ];
 
   for (const fixture of cases) {
-    const result = spawnSync('./bin/opl', [
+    const payload = await runCliInProcess([
       'profiles',
       'select',
       '--intent=colorectal surgery risk decision support',
       `${fixture.option}=${fixture.value}`,
       '--json',
     ], {
-      cwd: process.cwd(),
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        OPL_SKIP_SKILL_SYNC: '1',
-      },
-    });
+      OPL_SKIP_SKILL_SYNC: '1',
+    }) as JsonRecord;
 
-    assert.equal(result.status, 0, `${fixture.option}: ${result.stderr}`);
-    const payload = parseJsonText(result.stdout) as JsonRecord;
     const receipt = payload.profile_selection_receipt as JsonRecord;
     const sourceReceipt = receipt.source_derived_design_receipt as JsonRecord;
     assert.deepEqual(sourceReceipt[fixture.receiptField], [fixture.value], fixture.option);

@@ -1,4 +1,4 @@
-import { assert, fs, os, parseJsonText, path, runCli, runCliFailureInCwd, runCliInCwd, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCliInProcess, runCliInProcessFailureInCwd, runCliInProcessInCwd, test } from '../helpers.ts';
 import { execFileSync } from 'node:child_process';
 import {
   fastLocalEnvDefaultFields,
@@ -54,7 +54,7 @@ function assertRuntimeReadinessGuards(readback: Projection) {
   });
 }
 
-test('ordinary opl env prepare supplies MAS display defaults without host fallback', () => {
+test('ordinary opl env prepare supplies MAS display defaults without host fallback', async () => {
   const scholarSkillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-default-scholarskills-'));
   execFileSync('git', ['init', '--quiet', scholarSkillsRoot]);
   const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-default-family-'));
@@ -87,14 +87,14 @@ test('ordinary opl env prepare supplies MAS display defaults without host fallba
   const paperRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-default-paper-'));
 
   try {
-    const readback = runCliInCwd([
+    const readback = (await runCliInProcessInCwd([
       'env',
       'prepare',
       '--domain',
       'mas',
       '--profile',
       'display',
-    ], paperRoot, env).runtime_environment;
+    ], paperRoot, env)).runtime_environment;
 
     assert.equal(readback.prepare.environment_tier, 'fast_local_env');
     assert.equal(readback.prepare.host_package_fallback_allowed, false);
@@ -111,7 +111,7 @@ test('ordinary opl env prepare supplies MAS display defaults without host fallba
   }
 });
 
-test('ordinary env prepare consumes arbitrary domain declarations and rejects escaped provider paths', () => {
+test('ordinary env prepare consumes arbitrary domain declarations and rejects escaped provider paths', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-domain-source-'));
   try {
     const domain = writeDomainRuntimeProfile(root, 'custom-runtime-domain', 'custom-agent');
@@ -124,7 +124,7 @@ test('ordinary env prepare consumes arbitrary domain declarations and rejects es
     }] }));
     const env = { ...stateEnv('custom-source-'), OPL_FAMILY_WORKSPACE_ROOT: root, OPL_MODULE_PATH_SCHOLARSKILLS: provider };
     const args = ['env', 'prepare', '--domain', 'custom-runtime-domain', '--profile', 'display'];
-    const readback = runCliInCwd(args, root, env).runtime_environment;
+    const readback = (await runCliInProcessInCwd(args, root, env)).runtime_environment;
     assert.equal(readback.prepare.requirement_profile_identity.requirement_profile_ref, fs.realpathSync(resource));
     for (const relativePath of ['../outside.json', '/outside.json', 'packs/custom/escape.json']) {
       fs.writeFileSync(path.join(root, 'outside.json'), '{}');
@@ -132,18 +132,18 @@ test('ordinary env prepare consumes arbitrary domain declarations and rejects es
       fs.writeFileSync(domain.profilePath, JSON.stringify({
         runtime_profile_sources: { display: { package_id: 'mas-scholar-skills', relative_path: relativePath } },
       }));
-      const failure = runCliFailureInCwd(args, root, env);
+      const failure = await runCliInProcessFailureInCwd(args, root, env);
       assert.match(JSON.stringify(failure), /escapes|repo-relative/, relativePath);
     }
     fs.writeFileSync(domain.profilePath, JSON.stringify({ runtime_profile_sources: { display: {} } }));
-    const failure = runCliFailureInCwd(args, root, env);
+    const failure = await runCliInProcessFailureInCwd(args, root, env);
     assert.match(JSON.stringify(failure), /provider is unavailable or invalid/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
-test('runtime env prepare records missing R packages and managed-library apply', () => {
+test('runtime env prepare records missing R packages and managed-library apply', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-managed-apply-'));
   const stateRoot = path.join(root, 'opl-state');
   const paperRoot = path.join(root, 'paper');
@@ -189,7 +189,7 @@ test('runtime env prepare records missing R packages and managed-library apply',
   };
 
   try {
-    const missing = runCli([
+    const missing = (await runCliInProcess([
       'runtime',
       'env',
       'prepare',
@@ -205,8 +205,8 @@ test('runtime env prepare records missing R packages and managed-library apply',
       'r_missing_fixture',
       '--artifact-root',
       paperRoot,
-    ], env).runtime_environment;
-    const prepared = runCli([
+    ], env)).runtime_environment;
+    const prepared = (await runCliInProcess([
       'runtime',
       'env',
       'prepare',
@@ -223,7 +223,7 @@ test('runtime env prepare records missing R packages and managed-library apply',
       '--artifact-root',
       paperRoot,
       '--apply',
-    ], env).runtime_environment;
+    ], env)).runtime_environment;
 
     assert.equal(missing.prepare.status, 'missing_language_package');
     assert.deepEqual(missing.prepare.missing_r_packages, ['jsonlite', 'ggplot2']);
@@ -246,8 +246,8 @@ test('runtime env prepare records missing R packages and managed-library apply',
   }
 });
 
-test('runtime env run-context preserves no-authority boundary', () => {
-  const runContext = runCli([
+test('runtime env run-context preserves no-authority boundary', async () => {
+  const runContext = (await runCliInProcess([
     'runtime',
     'env',
     'run-context',
@@ -255,7 +255,7 @@ test('runtime env run-context preserves no-authority boundary', () => {
     'bookforge',
     '--profile',
     'publication_proof',
-  ]).runtime_environment;
+  ])).runtime_environment;
 
   assert.equal(runContext.command, 'run-context');
   assert.equal(runContext.domain_id, 'bookforge');

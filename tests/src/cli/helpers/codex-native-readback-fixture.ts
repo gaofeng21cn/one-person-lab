@@ -81,10 +81,19 @@ if (args[0] === 'app-server') {
 `;
 
 export function codexNativeReadbackFixture(directory: string, binary: string) {
-  if (path.basename(binary).startsWith('codex-native-readback-fixture-')
-    && fs.existsSync(binary)
-    && fs.readFileSync(binary, 'utf8').startsWith(FIXTURE_LAUNCHER)) {
-    return { OPL_CODEX_PLUGIN_BIN: binary };
+  if (fs.existsSync(binary) && fs.statSync(binary).isFile()) {
+    const fd = fs.openSync(binary, 'r');
+    let header = '';
+    try {
+      const buffer = Buffer.alloc(256);
+      const bytesRead = fs.readSync(fd, buffer, 0, buffer.length, 0);
+      header = buffer.toString('utf8', 0, bytesRead);
+    } finally {
+      fs.closeSync(fd);
+    }
+    if (header.startsWith(FIXTURE_LAUNCHER) || header.includes('// OPL native codex plugin manager fixture')) {
+      return { OPL_CODEX_PLUGIN_BIN: binary };
+    }
   }
   const identity = crypto.randomUUID();
   const wrapper = path.join(directory, `codex-native-readback-fixture-${identity}`);
