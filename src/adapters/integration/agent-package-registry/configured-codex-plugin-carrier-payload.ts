@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { compare, valid } from 'semver';
 
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { resolveAgentPluginManifest } from '../../../kernel/agent-plugin-manifest.ts';
@@ -388,14 +389,58 @@ export function configuredPackagePayloadAvailable(input: {
   }
 }
 
+function installedMarketplacePackageVersion(
+  marketplaceRoot: string,
+  pluginId: string,
+  packageId: string,
+): string | null {
+  const manifestPath = path.join(marketplaceRoot, 'plugins', pluginId, 'opl-package.json');
+  try {
+    if (!fs.statSync(manifestPath).isFile()) return null;
+    const parsed = parseJsonText(fs.readFileSync(manifestPath, 'utf8'));
+    if (
+      isRecord(parsed)
+      && parsed.package_id === packageId
+      && typeof parsed.version === 'string'
+      && valid(parsed.version)
+    ) {
+      return parsed.version;
+    }
+  } catch {
+    // Missing or unreadable installed descriptor cannot establish a floor version.
+  }
+  return null;
+}
+
 export function installPayloadMarketplace(input: {
   packageId: string;
   pluginId: string;
   env: NodeJS.ProcessEnv;
   packageDirectory?: string;
+  minimumVersion?: string | null;
 }) {
   const projection = packagePayloadProjection(input.packageId, input.packageDirectory);
   if (!projection || projection.pluginId !== pluginBareName(input.pluginId)) return null;
+  const home = input.env.HOME?.trim() || os.homedir();
+  const stateDir = input.env.OPL_STATE_DIR?.trim()
+    ? path.resolve(input.env.OPL_STATE_DIR)
+    : path.join(home, 'Library', 'Application Support', 'OPL', 'state');
+  const marketplaceId = marketplaceName(input.pluginId);
+  const marketplaceRoot = path.join(stateDir, 'codex-plugin-marketplaces', marketplaceId);
+  const existingVersion = installedMarketplacePackageVersion(marketplaceRoot, projection.pluginId, input.packageId);
+  const minimumVersion = typeof input.minimumVersion === 'string' && valid(input.minimumVersion)
+    ? input.minimumVersion : null;
+  const floorVersion = existingVersion && minimumVersion
+    ? (compare(existingVersion, minimumVersion) >= 0 ? existingVersion : minimumVersion)
+    : (existingVersion ?? minimumVersion);
+  if (
+    floorVersion
+    && projection.packageVersion
+    && valid(projection.packageVersion)
+    && compare(projection.packageVersion, floorVersion) < 0
+  ) {
+    return existingVersion ? marketplaceRoot : null;
+  }
   if (projection?.ownerManifest.visibility === 'authorized_only') {
     assertPackageDownloadAllowed(packageAccessSubject(projection.ownerManifest), input.env);
   }
@@ -403,12 +448,6 @@ export function installPayloadMarketplace(input: {
   reportPackageOperation({ active_package_id: input.packageId, stage: 'preparing', can_cancel: true, downloaded_bytes: 0, total_bytes: undefined, bytes_per_second: 0, eta_seconds: null }, input.env);
   const payload = readProjectedPayload(projection, input.packageId);
 
-  const home = input.env.HOME?.trim() || os.homedir();
-  const stateDir = input.env.OPL_STATE_DIR?.trim()
-    ? path.resolve(input.env.OPL_STATE_DIR)
-    : path.join(home, 'Library', 'Application Support', 'OPL', 'state');
-  const marketplaceId = marketplaceName(input.pluginId);
-  const marketplaceRoot = path.join(stateDir, 'codex-plugin-marketplaces', marketplaceId);
   const stagingRoot = `${marketplaceRoot}.${process.pid}.${crypto.randomUUID()}.staging`;
   const pluginRoot = path.join(stagingRoot, 'plugins', projection.pluginId);
   const downloaded = new Map<string, string>();

@@ -796,3 +796,87 @@ test('OPL App remains manual_required when macOS owner metadata is unavailable',
     assert.equal(component.plan.action, 'manual_review');
   });
 });
+
+test('bulk update and background policy skip managed payload packages installed ahead of bundled owner projection', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ahead-package-skip-'));
+  const callsPath = path.join(root, 'calls');
+  const stateDir = path.join(root, 'state');
+  const env = { HOME: root, CODEX_HOME: path.join(root, 'codex-home'), OPL_STATE_DIR: stateDir };
+  const projection = listCurrentPackageProjections().find((entry) => entry.payload.package_id === 'opl-flow')!;
+  const manifest = normalizePackageManifest(projection.payload, projection.source_ref);
+  const carrier = manifest.configured_codex_plugin_carrier!;
+  const marketplaceRoot = path.join(stateDir, 'codex-plugin-marketplaces', 'opl-flow');
+  const sourcePath = path.join(marketplaceRoot, 'plugins', 'opl-flow');
+  writeFixtureFile(sourcePath, 'opl-package.json', JSON.stringify({ ...projection.payload, version: '99.0.0' }));
+  writeFixtureFile(sourcePath, '.codex-plugin/plugin.json', JSON.stringify({ name: 'opl-flow', version: '99.0.0', skills: './skills/' }));
+  for (const skill of carrier.executor.requiredSkillIds) writeFixtureFile(sourcePath, `skills/${skill}/SKILL.md`, `# ${skill}\n`);
+
+  const readback = {
+    installed: [{
+      pluginId: carrier.carrier.pluginId,
+      version: '99.0.0',
+      installed: true,
+      enabled: true,
+      source: { source: 'local', path: sourcePath },
+      marketplaceSource: { sourceType: 'local', source: marketplaceRoot },
+    }],
+    available: [],
+    marketplaces: [{ name: 'opl-flow', marketplaceSource: { sourceType: 'local', source: marketplaceRoot } }],
+  };
+  const binary = writeFixtureFile(root, 'codex.mjs', `#!/usr/bin/env node
+import fs from 'node:fs';
+import readline from 'node:readline';
+const args = process.argv.slice(2);
+const readback = ${JSON.stringify(readback)};
+fs.appendFileSync(${JSON.stringify(callsPath)}, args.join(' ') + '\\n');
+if (args.join(' ') === 'app-server --stdio') {
+  readline.createInterface({ input: process.stdin }).on('line', (line) => {
+    const frame = JSON.parse(line);
+    if (frame.method === 'initialize') {
+      process.stdout.write(JSON.stringify({ id: frame.id, result: {} }) + '\\n');
+    } else if (frame.method === 'plugin/list') {
+      process.stdout.write(JSON.stringify({ id: frame.id, result: {
+        marketplaces: [{
+          name: 'opl-flow',
+          plugins: [{
+            id: readback.installed[0].pluginId, localVersion: '99.0.0', installed: true,
+            enabled: true, source: { type: 'local', path: readback.installed[0].source.path },
+          }],
+        }],
+        marketplaceLoadErrors: [],
+      } }) + '\\n');
+    }
+  });
+} else if (args.join(' ') === 'plugin marketplace list --json') {
+  process.stdout.write(JSON.stringify({ marketplaces: readback.marketplaces }));
+} else {
+  throw new Error('Unexpected mutating codex command: ' + args.join(' '));
+}
+`);
+  fs.chmodSync(binary, 0o755);
+  const fullEnv = { ...env, OPL_CODEX_PLUGIN_BIN: binary };
+  const previous = new Map(Object.keys(fullEnv).map((key) => [key, process.env[key]]));
+  try {
+    Object.assign(process.env, fullEnv);
+    const installed = discoverInstalledPackageDescriptors().get('opl-flow')!;
+    const currentOwner = { ...installed, manifest: { ...installed.manifest, version: manifest.version } };
+    assert.deepEqual(
+      packageBackgroundUpdatePolicy(installed, undefined, currentOwner),
+      { eligible: false, reason: 'installed_version_ahead_of_owner_projection' },
+    );
+    for (const background of [true, false]) {
+      const bulk = await runOplAgentPackageBulkUpdate({ background });
+      assert.deepEqual(bulk.targets, [{
+        target_type: 'package',
+        target_id: 'opl-flow',
+        status: 'skipped',
+        reason: 'installed_version_ahead_of_owner_projection',
+        action: 'update',
+      }]);
+    }
+    assert.doesNotMatch(fs.readFileSync(callsPath, 'utf8'), /plugin (?:add|marketplace (?:add|upgrade))/);
+  } finally {
+    for (const [key, value] of previous) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

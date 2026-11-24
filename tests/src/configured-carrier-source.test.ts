@@ -485,3 +485,26 @@ test('developer source acquisition rejects an unavailable commit without falling
     assert.equal(fs.existsSync(f.marketplace), false);
   } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
 });
+
+test('installPayloadMarketplace refuses to downgrade an already installed higher version or higher minimumVersion', () => {
+  const f = fixture('digest');
+  try {
+    const pluginDir = path.join(f.marketplace, 'plugins/fixture');
+    fs.mkdirSync(pluginDir, { recursive: true });
+    fs.writeFileSync(path.join(pluginDir, 'opl-package.json'), json({ package_id: 'fixture', version: '9.9.9' }));
+    fs.writeFileSync(path.join(pluginDir, 'sentinel.txt'), 'keep-higher');
+    // Fixture has corrupt sourceLayer digest, so any download attempt would throw.
+    assert.equal(f.install(), f.marketplace);
+    assert.equal(fs.readFileSync(path.join(pluginDir, 'sentinel.txt'), 'utf8'), 'keep-higher');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(pluginDir, 'opl-package.json'), 'utf8')).version, '9.9.9');
+
+    fs.rmSync(f.marketplace, { recursive: true, force: true });
+    assert.equal(installPayloadMarketplace({
+      packageId: 'fixture',
+      pluginId: 'fixture@fixture',
+      packageDirectory: path.join(f.root, 'packages'),
+      env: { ...process.env, OPL_STATE_DIR: path.join(f.root, 'state') },
+      minimumVersion: '9.9.9',
+    }), null);
+  } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+});

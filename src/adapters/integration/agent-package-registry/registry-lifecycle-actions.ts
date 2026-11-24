@@ -20,6 +20,7 @@ import { normalizePackageManifest } from './manifest-normalizers.ts';
 import {
   packageSnapshot,
   packageBackgroundUpdatePolicy,
+  installedVersionAheadOfOwnerProjection,
   isManagedPayloadCarrier,
   requireDescriptor,
   requirePackageMutationDescriptors,
@@ -146,6 +147,7 @@ function nativeLifecycleResult(
     action,
     dryRun: input.dryRun,
     installedPayloadCarrier: isManagedPayloadCarrier(installedDescriptor),
+    installedVersion: installedDescriptor.manifest.version,
   });
   if (!input.dryRun && ['install', 'update', 'repair'].includes(action)
     && (configuredCarrier.status !== 'installed' || configuredCarrier.executor.status !== 'callable')) {
@@ -358,6 +360,23 @@ export async function runOplAgentPackageBulkUpdate(
     const policy = packageBackgroundUpdatePolicy(descriptor, snapshot.access.get(packageId), currentOwner);
     if (input.background && !policy.eligible) {
       targets.push({ target_type: 'package', target_id: packageId, status: 'skipped', reason: policy.reason, action });
+      continue;
+    }
+    if (
+      action === 'update'
+      && isManagedPayloadCarrier(descriptor)
+      && installedVersionAheadOfOwnerProjection(descriptor, currentOwner)
+      && descriptor.readiness.installed
+      && descriptor.readiness.physical_status === 'available'
+      && (descriptor.readiness.projection_callability ?? descriptor.readiness.callability) === 'callable'
+    ) {
+      targets.push({
+        target_type: 'package',
+        target_id: packageId,
+        status: 'skipped',
+        reason: 'installed_version_ahead_of_owner_projection',
+        action,
+      });
       continue;
     }
     // Explicit bulk updates may visit disabled and user-managed installations,

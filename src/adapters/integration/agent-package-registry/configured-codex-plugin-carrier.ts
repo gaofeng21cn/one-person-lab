@@ -215,6 +215,7 @@ export function runConfiguredCodexPluginCarrier(input: {
   beforeConfigReplace?: () => void;
   packageDirectory?: string;
   installedPayloadCarrier?: boolean;
+  installedVersion?: string | null;
 }): ConfiguredCodexPluginCarrierReadback {
   assertDescriptor(input.descriptor);
   if (input.action === 'enable' && input.descriptor.interactionMode === 'headless_internal') {
@@ -255,6 +256,7 @@ export function runConfiguredCodexPluginCarrier(input: {
         pluginId: input.descriptor.carrier.pluginId,
         env,
         packageDirectory: input.packageDirectory,
+        minimumVersion: input.installedVersion ?? null,
       }) ?? declaredMarketplaceSource
     : declaredMarketplaceSource;
   if (dispatchAction) reportPackageOperation({ stage: 'installing', can_cancel: false, active_package_id: input.descriptor.packageId }, env);

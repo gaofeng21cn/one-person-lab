@@ -3,7 +3,7 @@ import { deriveAgentPackageLaunchState } from '../../../kernel/agent-package-lau
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { refsOnlyAuthorityBoundary } from '../../../kernel/refs-only-authority-boundary.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
-import { compare } from 'semver';
+import { compare, valid } from 'semver';
 import path from 'node:path';
 import fs from 'node:fs';
 import { gitMarketplaceRuntimeRoot, runtimeRootContainsDescriptor } from '../../../kernel/git-marketplace-runtime-root.ts';
@@ -99,6 +99,18 @@ export function isManagedPayloadCarrier(descriptor: InstalledPackageDescriptor) 
     ));
 }
 
+export function installedVersionAheadOfOwnerProjection(
+  installed: InstalledPackageDescriptor,
+  currentOwner?: InstalledPackageDescriptor | null,
+): boolean {
+  if (!currentOwner) return false;
+  return Boolean(
+    valid(currentOwner.manifest.version)
+    && valid(installed.manifest.version)
+    && compare(currentOwner.manifest.version, installed.manifest.version) < 0,
+  );
+}
+
 export function packageBackgroundUpdatePolicy(
   descriptor: InstalledPackageDescriptor,
   packageAccess?: AgentPackageAccessDecision,
@@ -126,7 +138,9 @@ export function packageBackgroundUpdatePolicy(
         : descriptor.readiness.physical_status !== 'available'
           || (descriptor.readiness.projection_callability ?? descriptor.readiness.callability) !== 'callable'
           ? 'native_carrier_attention_required'
-          : null;
+          : managedPayloadSource && installedVersionAheadOfOwnerProjection(descriptor, currentOwner)
+            ? 'installed_version_ahead_of_owner_projection'
+            : null;
   return { eligible: reason === null, reason };
 }
 
