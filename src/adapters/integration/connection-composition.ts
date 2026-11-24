@@ -27,6 +27,7 @@ export type DefaultConnectionAuthorizationOptions = {
   cloudProvider?: OplConnectionProvider;
   cloudBinary?: string;
   cloudRunner?: CloudConnectCommandRunner;
+  extraProviders?: OplConnectionProvider[];
 };
 
 export function createDefaultConnectionAuthorizationService(
@@ -36,13 +37,17 @@ export function createDefaultConnectionAuthorizationService(
     descriptorDiscovery: options.descriptorDiscovery ?? {
       discover: () => discoverInstalledPackageDescriptors(),
     },
-    providers: [options.relayProvider ?? createOplRelayMailboxConnectionProvider({
-      binary: options.relayBinary,
-      runner: options.relayRunner,
-    }), options.cloudProvider ?? createOplCloudConnectionProvider({
-      binary: options.cloudBinary,
-      runner: options.cloudRunner,
-    })],
+    providers: [
+      options.relayProvider ?? createOplRelayMailboxConnectionProvider({
+        binary: options.relayBinary,
+        runner: options.relayRunner,
+      }),
+      options.cloudProvider ?? createOplCloudConnectionProvider({
+        binary: options.cloudBinary,
+        runner: options.cloudRunner,
+      }),
+      ...(options.extraProviders ?? []),
+    ],
   });
 }
 

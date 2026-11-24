@@ -1,5 +1,6 @@
 import {
   listOplAgentPackages,
+  locateInstalledPackage,
   buildManagedUpdateKernelProjection,
   runManagedUpdateKernelOperation,
   runOplAgentPackageExposureAction,
@@ -218,6 +219,38 @@ export function buildPackagesCommandSpecs(
       handler: (args) => runOplAgentPackageFrameworkLink(
         parseFrameworkLink(args, getCommandSpec('packages link-framework')),
       ),
+    },
+    'packages locate': {
+      usage: 'opl packages locate <package_id> [--asset <relpath>]',
+      summary: 'Locate an installed OPL Package root and verify an optional package-contained relative asset.',
+      examples: [
+        'opl packages locate mac-media-assets --json',
+        'opl packages locate mas-scholar-skills --asset contracts/opl_capability_package_manifest.json --json',
+      ],
+      group: 'packages',
+      help_surface: 'diagnostic_drilldown',
+      handler: (args) => {
+        const command = 'packages locate';
+        const spec = getCommandSpec(command);
+        const positional = takePositionalPackageId(args, command, spec);
+        const parsed = parseRegisteredCommandOptions(command, positional.args, spec);
+        const optionPackageId = readOptionalString(parsed['package-id']);
+        if (positional.packageId && optionPackageId) {
+          throw buildUsageError(`${command} accepts a positional package id or --package-id, not both.`, spec, {
+            conflicting: ['<package_id>', '--package-id'],
+          });
+        }
+        const packageId = positional.packageId ?? optionPackageId;
+        if (!packageId) {
+          throw buildUsageError(`${command} requires a positional package id or --package-id.`, spec, {
+            required: ['<package_id> or --package-id'],
+          });
+        }
+        return locateInstalledPackage({
+          packageId,
+          asset: readOptionalString(parsed.asset),
+        });
+      },
     },
     'packages install': {
       usage: 'opl packages install <package_id> [--dry-run] | --manifest-url <url> --trust-tier <tier> [--dry-run]',

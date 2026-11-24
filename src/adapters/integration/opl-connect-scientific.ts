@@ -47,11 +47,17 @@ type ScientificConnectorSearchResult = {
   provider_total: number | null;
 };
 
+type ScientificProviderRateLimit = {
+  min_interval_ms: number;
+  max_retries_on_429: number;
+};
+
 type ScientificConnectorProviderAdapter = {
   provider_id: ScientificConnectorProviderId;
   provider_owner: string;
   source_system: string;
   definition: ScientificSearchProviderDefinition;
+  rate_limit?: ScientificProviderRateLimit;
 };
 
 type ScientificSearchProviderDefinition = {
@@ -69,11 +75,8 @@ type ScientificSearchAdapterHandler = (request: unknown) => unknown;
 
 const SCIENTIFIC_SEARCH_ADAPTER_ABI = 'opl-connect-scientific-search-adapter.v1';
 const SCIENTIFIC_SEARCH_MODULE_KIND = 'opl_connect_scientific_search_adapter';
-const SCIENTIFIC_SEARCH_PACKAGE_ID = 'mas-scholar-skills';
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_REDIRECT_HOPS = 5;
-const PUBMED_REQUEST_INTERVAL_MS = 400;
-const MAX_PUBMED_RATE_LIMIT_RETRIES = 2;
 const REDIRECT_STATUS_CODES = new Set([301, 302, 303, 307, 308]);
 const scientificProviderRequestQueueTails = new Map<string, Promise<void>>();
 const scientificProviderLastRequestAt = new Map<string, number>();
@@ -142,7 +145,6 @@ function buildOwnershipBoundary(provider: ScientificConnectorProviderId) {
 
 function resolveScientificRuntime(options: InstalledPackageRuntimeDiscoveryOptions = {}) {
   return resolveInstalledPackageRuntimeModule({
-    packageId: SCIENTIFIC_SEARCH_PACKAGE_ID,
     moduleKind: SCIENTIFIC_SEARCH_MODULE_KIND,
     adapterAbi: SCIENTIFIC_SEARCH_ADAPTER_ABI,
     ...options,
@@ -170,7 +172,7 @@ function configuredEndpoint(
   } catch (error) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills scientific provider profile declares invalid allowed origins.',
+      'Scientific search provider profile declares invalid allowed origins.',
       {
         provider_id: providerId,
         reason_code: 'scientific_provider_endpoint_invalid',
@@ -181,7 +183,7 @@ function configuredEndpoint(
   if (!defaultBaseUrl || allowedOrigins.length === 0) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills scientific provider profile declares an invalid endpoint.',
+      'Scientific search provider profile declares an invalid endpoint.',
       { provider_id: providerId, reason_code: 'scientific_provider_endpoint_invalid' },
     );
   }
@@ -193,7 +195,7 @@ function configuredEndpoint(
   } catch (error) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills scientific provider profile declares an invalid default endpoint URL.',
+      'Scientific search provider profile declares an invalid default endpoint URL.',
       {
         provider_id: providerId,
         default_base_url: defaultBaseUrl,
@@ -244,6 +246,49 @@ function configuredEndpoint(
   };
 }
 
+function parseProviderRateLimit(
+  providerId: ScientificConnectorProviderId,
+  rawRateLimit: unknown,
+): ScientificProviderRateLimit | undefined {
+  if (rawRateLimit === undefined || rawRateLimit === null) return undefined;
+  if (typeof rawRateLimit !== 'object' || Array.isArray(rawRateLimit)) {
+    throw new FrameworkContractError(
+      'codex_command_failed',
+      'Scientific search provider profile declares an invalid rate_limit.',
+      { provider_id: providerId, reason_code: 'scientific_provider_profile_entry_invalid' },
+    );
+  }
+  const rateLimit = rawRateLimit as Record<string, unknown>;
+  const unknownKeys = Object.keys(rateLimit).filter((key) => key !== 'min_interval_ms' && key !== 'max_retries_on_429');
+  if (unknownKeys.length > 0) {
+    throw new FrameworkContractError(
+      'codex_command_failed',
+      'Scientific search provider profile declares unsupported rate_limit fields.',
+      { provider_id: providerId, unsupported_fields: unknownKeys, reason_code: 'scientific_provider_profile_entry_invalid' },
+    );
+  }
+  const minInterval = rateLimit.min_interval_ms === undefined ? 0 : rateLimit.min_interval_ms;
+  const maxRetries = rateLimit.max_retries_on_429 === undefined ? 0 : rateLimit.max_retries_on_429;
+  if (typeof minInterval !== 'number' || !Number.isInteger(minInterval) || minInterval < 0 || minInterval > 60_000) {
+    throw new FrameworkContractError(
+      'codex_command_failed',
+      'Scientific search provider profile declares an invalid rate_limit.min_interval_ms.',
+      { provider_id: providerId, min_interval_ms: minInterval, reason_code: 'scientific_provider_profile_entry_invalid' },
+    );
+  }
+  if (typeof maxRetries !== 'number' || !Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 5) {
+    throw new FrameworkContractError(
+      'codex_command_failed',
+      'Scientific search provider profile declares an invalid rate_limit.max_retries_on_429.',
+      { provider_id: providerId, max_retries_on_429: maxRetries, reason_code: 'scientific_provider_profile_entry_invalid' },
+    );
+  }
+  return {
+    min_interval_ms: minInterval,
+    max_retries_on_429: maxRetries,
+  };
+}
+
 function scientificConnectorProviderRegistry(
   runtime: InstalledPackageRuntimeModuleContext = resolveScientificRuntime(),
 ): ScientificConnectorProviderAdapter[] {
@@ -252,11 +297,11 @@ function scientificConnectorProviderRegistry(
   if (!Array.isArray(rawProviders) || rawProviders.length === 0) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills scientific provider profile must declare providers.',
+      'Scientific search provider profile must declare providers.',
       { profile_ref: runtime.binding.profile_ref, reason_code: 'scientific_provider_profile_empty' },
     );
   }
-  const providerOwner = asString(profile.registry_owner) ?? 'mas-scholar-skills.scientific-search-adapters';
+  const providerOwner = asString(profile.registry_owner) ?? runtime.binding.module_id;
   const providers = rawProviders.map((rawProvider) => {
     const entry = asRecord(rawProvider);
     const provider = stableString(entry.provider_id);
@@ -265,10 +310,11 @@ function scientificConnectorProviderRegistry(
     if (!provider || !adapterId || !sourceProvider) {
       throw new FrameworkContractError(
         'codex_command_failed',
-        'Scholar Skills scientific provider profile declares an invalid provider entry.',
+        'Scientific search provider profile declares an invalid provider entry.',
         { provider_id: provider, adapter_id: adapterId, reason_code: 'scientific_provider_profile_entry_invalid' },
       );
     }
+    const rateLimit = parseProviderRateLimit(provider, entry.rate_limit);
     return {
       provider_id: provider,
       provider_owner: providerOwner,
@@ -279,13 +325,14 @@ function scientificConnectorProviderRegistry(
         source_provider: sourceProvider,
         endpoint: configuredEndpoint(provider, entry.endpoint),
       },
+      ...(rateLimit ? { rate_limit: rateLimit } : {}),
     };
   });
   const providerIds = providers.map((provider) => provider.provider_id);
   if (new Set(providerIds).size !== providerIds.length) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills scientific provider profile declares duplicate provider ids.',
+      'Scientific search provider profile declares duplicate provider ids.',
       { provider_ids: providerIds, reason_code: 'scientific_provider_profile_duplicate_provider' },
     );
   }
@@ -344,9 +391,11 @@ async function waitForScientificProviderRequestTurn(
   timeout: number,
   deadline: number,
 ) {
-  if (provider.provider_id !== 'pubmed') return;
-
+  const minIntervalMs = provider.rate_limit?.min_interval_ms ?? 0;
   const queueKey = provider.provider_id;
+  const hasActiveCooldown = (scientificProviderCooldownUntil.get(queueKey) ?? 0) > Date.now();
+  if (minIntervalMs <= 0 && !hasActiveCooldown) return;
+
   const previous = scientificProviderRequestQueueTails.get(queueKey) ?? Promise.resolve();
   let releaseTurn!: () => void;
   const turn = new Promise<void>((resolve) => {
@@ -375,7 +424,7 @@ async function waitForScientificProviderRequestTurn(
     const cooldownUntil = scientificProviderCooldownUntil.get(queueKey) ?? 0;
     const waitMs = Math.max(
       0,
-      lastRequestAt + PUBMED_REQUEST_INTERVAL_MS - Date.now(),
+      minIntervalMs > 0 ? lastRequestAt + minIntervalMs - Date.now() : 0,
       cooldownUntil - Date.now(),
     );
     const availableTime = deadline - Date.now();
@@ -463,7 +512,8 @@ async function fetchScientificAdapterRequest(
         redirect: 'manual',
         signal: controller.signal,
       });
-      if (response.status === 429 && provider.provider_id === 'pubmed') {
+      const maxRateLimitRetries = provider.rate_limit?.max_retries_on_429 ?? 0;
+      if (response.status === 429 && maxRateLimitRetries > 0) {
         rateLimitRetryAfterMs = retryAfterDelayMs(response.headers.get('retry-after'));
         const fallbackDelayMs = Math.min(8_000, 1_000 * (2 ** rateLimitRetryAttempts));
         const cooldownUntil = Date.now() + (rateLimitRetryAfterMs ?? fallbackDelayMs);
@@ -471,7 +521,7 @@ async function fetchScientificAdapterRequest(
           provider.provider_id,
           Math.max(scientificProviderCooldownUntil.get(provider.provider_id) ?? 0, cooldownUntil),
         );
-        if (rateLimitRetryAttempts < MAX_PUBMED_RATE_LIMIT_RETRIES) {
+        if (rateLimitRetryAttempts < maxRateLimitRetries) {
           rateLimitRetryAttempts += 1;
           await response.body?.cancel().catch(() => undefined);
           continue;
@@ -753,7 +803,6 @@ function resolveProvider(
 
 export async function runOplConnectScientificSearch(input: ScientificConnectorSearchInput) {
   const runtime = await loadInstalledPackageRuntimeModule({
-    packageId: SCIENTIFIC_SEARCH_PACKAGE_ID,
     moduleKind: SCIENTIFIC_SEARCH_MODULE_KIND,
     adapterAbi: SCIENTIFIC_SEARCH_ADAPTER_ABI,
     ...(input.installedPackage ?? {}),

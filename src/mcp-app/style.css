@@ -234,16 +234,17 @@ h1 { text-wrap: balance; overflow-wrap: anywhere; margin: 0; font-size: var(--ds
 .stage-timeline [data-state="running"]::marker { color: var(--accent); }
 .source-list { padding-left: 18px; }
 .source-ref { background: transparent; border: 0; padding: 4px 0; color: var(--accent); text-align: left; overflow-wrap: anywhere; cursor: pointer; max-width: 100%; }
-.research-graph { display: block; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: var(--dsw-radius-md); }
-.research-node { cursor: pointer; }
-.research-node rect { fill: var(--panel-strong); stroke: var(--line); }
+.trajectory-graph, .research-graph { display: block; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: var(--dsw-radius-md); }
+.trajectory-node, .research-node { cursor: pointer; }
+.trajectory-node rect, .research-node rect { fill: var(--panel-strong); stroke: var(--line); }
+.trajectory-node[aria-pressed="true"] rect, .trajectory-node:focus rect,
 .research-node[aria-pressed="true"] rect, .research-node:focus rect { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
-.research-node text { fill: var(--text); font-size: var(--dsw-font-xs-13-font-size); }
-.research-node .node-status { fill: var(--muted); font-size: var(--dsw-font-xxs-12-font-size); }
-.research-edge { fill: none; stroke: var(--muted); stroke-width: 1.5; opacity: .7; }
+.trajectory-node text, .research-node text { fill: var(--text); font-size: var(--dsw-font-xs-13-font-size); }
+.trajectory-node .node-status, .research-node .node-status { fill: var(--muted); font-size: var(--dsw-font-xxs-12-font-size); }
+.trajectory-edge, .research-edge { fill: none; stroke: var(--muted); stroke-width: 1.5; opacity: .7; }
 #route-arrow { fill: var(--muted); }
-.research-edge[data-kind="does_not_support"] { stroke: var(--danger); stroke-dasharray: 4 3; }
-.research-relation { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+.trajectory-edge[data-kind="does_not_support"], .research-edge[data-kind="does_not_support"] { stroke: var(--danger); stroke-dasharray: 4 3; }
+.trajectory-relation, .research-relation { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
 .node-detail { scroll-margin: 16px; }
 
 ::selection { background: var(--accent-soft); color: var(--text); }

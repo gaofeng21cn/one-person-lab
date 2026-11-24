@@ -135,7 +135,10 @@ export function buildBrandCommandSpecs(
       },
     },
     ...brandModuleSurfaceSpecs,
-    ...buildBrandPackCommandSpecs(brandModuleSurfaceSpecs['pack inspect']),
+    ...buildBrandPackCommandSpecs(
+      brandModuleSurfaceSpecs['pack inspect'],
+      brandModuleSurfaceSpecs['pack doctor'],
+    ),
     ...ledgerBundleCommandSpecs,
     ...vaultAliasSpecs,
     'agents modules list': {

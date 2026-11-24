@@ -1,4 +1,5 @@
 import domainsContract from '../../../../contracts/opl-framework/domains.json' with { type: 'json' };
+import { resolveStandardAgent } from '../../../kernel/standard-agent-registry.ts';
 
 type DomainRegistryEntry = {
   domain_id?: unknown;
@@ -53,6 +54,13 @@ const DOMAIN_ALIASES = buildDomainAliasMap();
 
 export function familyRuntimeCommandDomainId(domainId: string | null, projectId: string | null): string | null {
   for (const value of [domainId, projectId]) {
+    if (typeof value !== 'string' || !value.trim()) {
+      continue;
+    }
+    const entry = resolveStandardAgent(value);
+    if (entry) {
+      return entry.domain_id.toLowerCase();
+    }
     const normalized = normalizedDomainAlias(value);
     if (!normalized) {
       continue;

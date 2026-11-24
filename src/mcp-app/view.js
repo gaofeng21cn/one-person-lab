@@ -1,4 +1,4 @@
-import { mountTaskWorkbench, parseContributionResearch } from './task-workbench.js';
+import { mountTaskWorkbench, parseContributionTrajectory } from './task-workbench.js';
 import { App, applyDocumentTheme, applyHostStyleVariables, applyHostFonts } from '@modelcontextprotocol/ext-apps';
 import { renderOwnerView, renderFields, rawRecord, escape, statusLabel, presentationUrl } from './presentation.js';
 import { renderInputFields, readInputFields } from './forms.js';
@@ -628,14 +628,14 @@ function renderResult() {
     });
   } else if (collection.root.trajectory) {
     try {
-      const snapshot = parseContributionResearch(collection.root, currentViewInput(view).work_item_identity);
+      const snapshot = parseContributionTrajectory(collection.root, currentViewInput(view).work_item_identity);
       disposeWorkbench = mountTaskWorkbench({ container: $('body'), snapshot, ownerDetails: collection.root,
         item: { identity: collection.root.identity, lifecycle: { primary_state_label: collection.root.phase?.business_status },
           stage_map: collection.root.phase?.stage_id ? [{ stage_id: collection.root.phase.stage_id, state: collection.root.phase.stage_status }] : [],
           source_refs: collection.root.source_refs },
         onContext: selection => { app.updateModelContext({ structuredContent: selection }).catch(() => {}); },
       });
-    } catch { $('body').innerHTML = '<p role="alert">研究路径不可用，请核对任务与数据格式。</p>'; }
+    } catch { $('body').innerHTML = '<p role="alert">任务路径视图不可用，请核对任务与数据格式。</p>'; }
   } else if (collection.items.length) {
     $('body').innerHTML = renderCollection(view, collection);
   } else if (collection.itemsPresent) {

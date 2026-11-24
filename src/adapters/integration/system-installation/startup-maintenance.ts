@@ -1,4 +1,5 @@
 import { readOplUpdateChannel, readOplWorkspaceRoot } from '../../../kernel/system-preferences.ts';
+import { listCurrentPackageProjections, resolveStandardAgent } from '../../../kernel/standard-agent-registry.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import {
   reconcileTemporalRuntimeStartupMaintenance,
@@ -25,6 +26,7 @@ import { runOplEngineAction } from './engine-actions.ts';
 import { activatePendingCodexRuntimeGeneration } from './engine-helpers.ts';
 import { activatePendingOplFrameworkRuntime, resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './framework-self-update.ts';
 import { buildOplModules, runOplModuleAction } from './modules.ts';
+import { buildDomainModuleSpecs } from './module-specs.ts';
 import { applyOplSeedManifest } from './seed-manifest.ts';
 import { resolveProjectRoot } from './shared.ts';
 import { reconcileInternalPackageCarriers } from '../agent-package-registry-parts/internal-package-carrier-migration.ts';
@@ -289,15 +291,37 @@ function readBoolean(value: unknown, key: string) {
   return typeof nested === 'boolean' ? nested : null;
 }
 
-function repoNameForModuleId(moduleId: string) {
-  const repoNames: Record<string, string> = {
-    medautoscience: 'med-autoscience',
-    medautogrant: 'med-autogrant',
-    redcube: 'redcube-ai',
-    oplmetaagent: 'opl-meta-agent',
-    oplbookforge: 'opl-bookforge',
-  };
-  return repoNames[moduleId] ?? null;
+export function repoNameForModuleId(moduleId: string): string | null {
+  const normalized = moduleId.trim();
+  if (!normalized) return null;
+  const spec = buildDomainModuleSpecs().find((entry) => entry.module_id === normalized);
+  if (spec?.repo_name) return spec.repo_name;
+  const agent = resolveStandardAgent(normalized);
+  const matched = listCurrentPackageProjections().find(({ payload }) => {
+    const runtimeCarrier = payload.runtime_source_carrier;
+    const carrierModuleId = runtimeCarrier && typeof runtimeCarrier === 'object' && !Array.isArray(runtimeCarrier)
+      ? (runtimeCarrier as Record<string, unknown>).module_id
+      : null;
+    const proj = payload.standard_agent_descriptor_projection;
+    const projDomainId = proj && typeof proj === 'object' && !Array.isArray(proj)
+      ? (proj as Record<string, unknown>).domain_id
+      : null;
+    if (agent) {
+      return payload.package_id === agent.agent_id
+        || payload.agent_id === agent.agent_id
+        || carrierModuleId === agent.module_id
+        || projDomainId === agent.target_domain_id;
+    }
+    return payload.package_id === normalized
+      || payload.agent_id === normalized
+      || carrierModuleId === normalized;
+  });
+  const sourceRepo = typeof matched?.payload.source_repo === 'string' ? matched.payload.source_repo : null;
+  if (sourceRepo) {
+    const repoName = sourceRepo.replace(/[\\/]+$/, '').replace(/\.git$/, '').split(/[\\/]/).at(-1);
+    if (repoName) return repoName;
+  }
+  return null;
 }
 
 function buildManagedReceiptInput(target: StartupMaintenanceModuleTarget) {

@@ -13,6 +13,21 @@ import { resolveCodexConfigPath } from '../agent-package-registry-parts/shared.t
 
 type HygieneReason = 'stale_temporary_marketplace' | 'global_mas_scholar_discovery';
 
+const LOCAL_ONLY_SKILL_MARKETPLACE_RULES: ReadonlyMap<string, HygieneReason> = new Map([
+  ['mas-scholar-skills-local', 'global_mas_scholar_discovery'],
+]);
+
+function resolveLocalOnlyMarketplaceReason(
+  id: string | null,
+  extraLocalOnlyIds?: ReadonlySet<string>,
+): HygieneReason | null {
+  if (!id) return null;
+  const mapped = LOCAL_ONLY_SKILL_MARKETPLACE_RULES.get(id);
+  if (mapped) return mapped;
+  if (extraLocalOnlyIds?.has(id)) return 'stale_temporary_marketplace';
+  return null;
+}
+
 type HygieneDelta = {
   header: string;
   content_sha256: string;
@@ -43,6 +58,7 @@ export type CodexConfigHygieneRuntime = {
   configPath?: string;
   stateDir?: string;
   beforeConfigReplace?: () => void;
+  localOnlyMarketplaceIds?: Iterable<string>;
 };
 
 function sha256Bytes(value: Buffer | string) {
@@ -118,7 +134,7 @@ function isMissingOplTemporaryMarketplace(table: TomlTableBlock) {
   return !fs.existsSync(path.resolve(source));
 }
 
-function classifyRemovals(tables: TomlTableBlock[]) {
+function classifyRemovals(tables: TomlTableBlock[], extraLocalOnlyIds?: ReadonlySet<string>) {
   const staleMarketplaceIds = new Set(
     tables.filter(isMissingOplTemporaryMarketplace)
       .map((table) => marketplaceId(table.header)!)
@@ -127,11 +143,11 @@ function classifyRemovals(tables: TomlTableBlock[]) {
   for (const table of tables) {
     const marketId = marketplaceId(table.header);
     const pluginMarketId = pluginMarketplaceId(table.header);
-    if (
-      marketId === 'mas-scholar-skills-local'
-      || pluginMarketId === 'mas-scholar-skills-local'
-    ) {
-      removeReason.set(table.header, 'global_mas_scholar_discovery');
+    const localOnlyReason =
+      resolveLocalOnlyMarketplaceReason(marketId, extraLocalOnlyIds)
+      ?? resolveLocalOnlyMarketplaceReason(pluginMarketId, extraLocalOnlyIds);
+    if (localOnlyReason) {
+      removeReason.set(table.header, localOnlyReason);
       continue;
     }
     if (
@@ -374,7 +390,10 @@ export function runCodexConfigHygiene(input: {
   const before = readOptionalFile(configPath);
   const beforeText = before?.toString('utf8') ?? '';
   const document = parseTomlDocument(beforeText);
-  const removeReason = classifyRemovals(document.tables);
+  const extraLocalOnlyIds = runtime.localOnlyMarketplaceIds
+    ? new Set(runtime.localOnlyMarketplaceIds)
+    : undefined;
+  const removeReason = classifyRemovals(document.tables, extraLocalOnlyIds);
   const removedTables = document.tables
     .filter((table) => removeReason.has(table.header))
     .map((table) => buildDelta(table, removeReason.get(table.header)!));

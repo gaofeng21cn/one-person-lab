@@ -6,6 +6,12 @@ import {
 import { runPackNativeHelperProbeCommand } from '../../../../authority/packages/native-helper-probe.ts';
 import { materializeArtifactProjectionRequestFile } from '../../../../authority/packages/artifact-projection-materialization.ts';
 import { provisionSubmissionResource } from '../../../../authority/packages/submission-resource-provisioning.ts';
+import {
+  buildProofDirectoryIndex,
+  projectCarrier,
+  runPackDoctor,
+  runPackProofIndex,
+} from '../../../../authority/packages/index.ts';
 import { runPackNativeHelperExecutionCommand } from '../../../../adapters/execution/index.ts';
 import {
   runGenericPackCheckCommand,
@@ -27,7 +33,10 @@ import {
 } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
-export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): Record<string, CommandSpec> {
+export function buildBrandPackCommandSpecs(
+  packInspectFallback?: CommandSpec,
+  packDoctorFallback?: CommandSpec,
+): Record<string, CommandSpec> {
   const specs: Record<string, CommandSpec> = {
     'pack inspect': {
       usage: 'opl pack inspect [--pack <path>]',
@@ -285,6 +294,74 @@ export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): R
       group: 'brand-pack',
       handler: runPackOsValidateCommand,
     },
+    'pack project-carrier': {
+      usage: 'opl pack project-carrier [--repo <dir>] [--projection <relpath>] [--check]',
+      summary: 'Project owner resources into the native plugin carrier using declarative contracts/carrier_projection.json.',
+      examples: [
+        'opl pack project-carrier --repo . --json',
+        'opl pack project-carrier --repo . --check --json',
+      ],
+      group: 'brand-pack',
+      handler: (args) => {
+        const command = 'pack project-carrier';
+        const parsed = parseRegisteredCommandOptions(command, args, specs[command]);
+        return projectCarrier({
+          repoRoot: typeof parsed.repo === 'string' ? parsed.repo : process.cwd(),
+          projectionRef: typeof parsed.projection === 'string' ? parsed.projection : undefined,
+          check: parsed.check === true,
+        });
+      },
+    },
+    'pack doctor': {
+      usage: 'opl pack doctor [--repo <dir>] [--config <relpath>]',
+      summary: 'Run OPL Pack health checks or probe declarative dependency checks from contracts/pack_doctor.json.',
+      examples: [
+        'opl pack doctor --json',
+        'opl pack doctor --repo . --json',
+        'opl pack doctor --repo . --config contracts/pack_doctor.json --json',
+      ],
+      group: 'brand-pack',
+      handler: (args) => {
+        if (!args.includes('--repo') && !args.includes('--config')) {
+          if (packDoctorFallback) {
+            return packDoctorFallback.handler(args);
+          }
+          assertNoArgs(args, specs['pack doctor']);
+          return buildCommandHelp('pack doctor', specs['pack doctor']);
+        }
+        const command = 'pack doctor';
+        const parsed = parseRegisteredCommandOptions(command, args, specs[command]);
+        return runPackDoctor({
+          repoRoot: typeof parsed.repo === 'string' ? parsed.repo : process.cwd(),
+          configRef: typeof parsed.config === 'string' ? parsed.config : undefined,
+        });
+      },
+    },
+    'pack proof-index': {
+      usage: 'opl pack proof-index --output-dir <dir> [--exclude <relpath>] [--write <path>]',
+      summary: 'Deterministically index files and SHA-256 digests under a developer proof output directory.',
+      examples: [
+        'opl pack proof-index --output-dir build/proof-out --json',
+        'opl pack proof-index --output-dir build/proof-out --exclude summary.json --write build/proof-out/directory-index.json --json',
+      ],
+      group: 'brand-pack',
+      handler: (args) => {
+        const command = 'pack proof-index';
+        const parsed = parseRegisteredCommandOptions(command, args, specs[command]);
+        const excludesRaw = parsed.exclude;
+        const excludePaths = Array.isArray(excludesRaw)
+          ? excludesRaw.filter((entry): entry is string => typeof entry === 'string')
+          : typeof excludesRaw === 'string'
+            ? [excludesRaw]
+            : [];
+        return runPackProofIndex({
+          outputDir: String(parsed['output-dir']),
+          excludePaths,
+          writePath: typeof parsed.write === 'string' ? parsed.write : undefined,
+        });
+      },
+    },
   };
+  void buildProofDirectoryIndex;
   return specs;
 }

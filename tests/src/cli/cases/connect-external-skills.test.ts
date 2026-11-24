@@ -39,7 +39,6 @@ type ExternalSkillTriggerPolicy = {
   policy_kind: string;
   registry_role: string;
   default_opl_domain_professional_pack_remains_primary: boolean;
-  default_mas_pack_remains_primary: boolean;
   external_specialist_requires_explicit_selection: boolean;
   external_skill_requires_explicit_selection: boolean;
   applies_when: string;
@@ -52,7 +51,6 @@ function assertExternalSkillTriggerPolicy(policy: ExternalSkillTriggerPolicy) {
   assert.equal(policy.policy_kind, 'opl_connect_external_specialist_registry_trigger_policy');
   assert.equal(policy.registry_role, 'external_specialist_source_registry');
   assert.equal(policy.default_opl_domain_professional_pack_remains_primary, true);
-  assert.equal(policy.default_mas_pack_remains_primary, true);
   assert.equal(policy.external_specialist_requires_explicit_selection, true);
   assert.equal(policy.external_skill_requires_explicit_selection, true);
   assert.equal(policy.applies_when, 'default_opl_or_domain_professional_pack_does_not_cover_specialist_task');
@@ -101,7 +99,6 @@ test('connect external-skills list exposes approved source and skill cards', () 
           default_install: boolean;
           can_install_all_skills_by_default: boolean;
           default_opl_domain_professional_pack_remains_primary: boolean;
-          default_mas_pack_remains_primary: boolean;
           external_specialist_requires_explicit_selection: boolean;
           external_skill_requires_explicit_selection: boolean;
           install_policy: string;
@@ -123,7 +120,6 @@ test('connect external-skills list exposes approved source and skill cards', () 
           selective_sync_only: boolean;
           can_install_all_skills_by_default: boolean;
           default_opl_domain_professional_pack_remains_primary: boolean;
-          default_mas_pack_remains_primary: boolean;
           external_specialist_requires_explicit_selection: boolean;
           external_skill_requires_explicit_selection: boolean;
           can_claim_runtime_readiness: boolean;
@@ -144,7 +140,6 @@ test('connect external-skills list exposes approved source and skill cards', () 
     assert.equal(output.opl_connect_external_skills.sources[0].default_install, false);
     assert.equal(output.opl_connect_external_skills.sources[0].can_install_all_skills_by_default, false);
     assert.equal(output.opl_connect_external_skills.sources[0].default_opl_domain_professional_pack_remains_primary, true);
-    assert.equal(output.opl_connect_external_skills.sources[0].default_mas_pack_remains_primary, true);
     assert.equal(output.opl_connect_external_skills.sources[0].external_specialist_requires_explicit_selection, true);
     assert.equal(output.opl_connect_external_skills.sources[0].external_skill_requires_explicit_selection, true);
     assert.equal(output.opl_connect_external_skills.sources[0].install_policy, 'selective_sync_only');
@@ -173,7 +168,6 @@ test('connect external-skills list exposes approved source and skill cards', () 
       can_claim_live_readiness: false,
       can_install_all_skills_by_default: false,
       default_opl_domain_professional_pack_remains_primary: true,
-      default_mas_pack_remains_primary: true,
       external_specialist_requires_explicit_selection: true,
       external_skill_requires_explicit_selection: true,
     });

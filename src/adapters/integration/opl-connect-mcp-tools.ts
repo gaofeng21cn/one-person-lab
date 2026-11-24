@@ -1,4 +1,4 @@
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import {
   runOplConnectReferenceVerification,
 } from './opl-connect-reference-verification.ts';
@@ -93,10 +93,6 @@ function toolCatalog() {
   ] as const;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function usageError(message: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('cli_usage_error', message, details);
 }
@@ -158,7 +154,7 @@ export function buildOplConnectMcpProtocolTools() {
     {
       name: OPL_CONNECT_MCP_META_TOOL_NAMES[0],
       title: 'Search OPL Connect tools',
-      description: 'Discover curated read-only scientific search and reference verification tools, including PubMed and Europe PMC.',
+      description: 'Discover installed read-only connector search and verification tools declared by active capability packages.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,

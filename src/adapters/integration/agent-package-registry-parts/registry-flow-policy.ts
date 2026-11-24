@@ -63,8 +63,28 @@ export function readOplFlowDefaultUserInstructions() {
   }
 }
 
+export function discoverInstalledManagedPolicyDescriptor(
+  descriptors = discoverInstalledPackageDescriptors(),
+) {
+  const candidates = [...descriptors.values()]
+    .filter((descriptor) => (
+      descriptor.manifest.source === 'first_party'
+      && Boolean(descriptor.manifest.managed_policy_surface)
+    ))
+    .sort((left, right) => {
+      if (left.manifest.package_id === 'opl-flow') return -1;
+      if (right.manifest.package_id === 'opl-flow') return 1;
+      return left.manifest.package_id.localeCompare(right.manifest.package_id);
+    });
+  if (candidates.length > 0) {
+    return candidates[0]!;
+  }
+  const fallback = descriptors.get('opl-flow');
+  return fallback?.manifest.managed_policy_surface ? fallback : null;
+}
+
 export function readOplFlowManagedPolicyDependencies(): AgentPackageManagedPolicyDependency[] {
-  const descriptor = discoverInstalledPackageDescriptors().get('opl-flow');
+  const descriptor = discoverInstalledManagedPolicyDescriptor();
   if (!descriptor?.manifest.managed_policy_surface) return [];
   try {
     return managedPolicyDependenciesFromDescriptor({

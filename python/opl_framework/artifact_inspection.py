@@ -8,7 +8,9 @@ from pathlib import Path
 import shutil
 import stat
 import subprocess
-from typing import Any
+import sys
+from typing import Any, Callable
+import xml.etree.ElementTree as ET
 
 from .artifact_bitmap import BitmapInspectionError, inspect_bitmap
 
@@ -328,13 +330,115 @@ def inspect_png_visual_metrics(
     return metrics
 
 
+
+def render_pdf_pages(
+    pdf_path: Path,
+    output_dir: Path,
+    *,
+    prefix: str = "page",
+    dpi: int = 150,
+    cwd: Path | None = None,
+    pdftoppm_bin: str | None = None,
+    runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    clean_existing: bool = True,
+) -> list[Path]:
+    """Render PDF pages to PNG images via pdftoppm without assigning publication quality."""
+    tool = pdftoppm_bin or shutil.which("pdftoppm")
+    if not tool:
+        raise FileNotFoundError("pdftoppm not found")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if clean_existing:
+        for old_page in output_dir.glob(f"{prefix}-*.png"):
+            old_page.unlink()
+    result = runner(
+        [tool, "-png", "-r", str(dpi), str(pdf_path), str(output_dir / prefix)],
+        cwd=cwd or output_dir,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "pdftoppm failed").strip()[-2000:]
+        raise RuntimeError(f"pdftoppm failed with exit code {result.returncode}: {detail}")
+    return sorted(output_dir.glob(f"{prefix}-*.png"))
+
+
+def extract_pdf_text(
+    pdf_path: Path,
+    *,
+    raw: bool = True,
+    cwd: Path | None = None,
+    pdftotext_bin: str | None = None,
+    runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+) -> str:
+    """Extract raw text stream from a PDF via pdftotext."""
+    tool = pdftotext_bin or shutil.which("pdftotext")
+    if not tool:
+        raise FileNotFoundError("pdftotext not found")
+    command = [tool, *(["-raw"] if raw else []), str(pdf_path), "-"]
+    result = runner(
+        command,
+        cwd=cwd or pdf_path.parent,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "pdftotext failed").strip()[-2000:]
+        raise RuntimeError(f"pdftotext failed with exit code {result.returncode}: {detail}")
+    return result.stdout
+
+
+def prepare_macos_fontconfig(
+    target_path: Path,
+    *,
+    explicit_config: Path | None = None,
+    cache_dir: Path | None = None,
+    platform: str = sys.platform,
+) -> Path | None:
+    """Copy an explicit fontconfig file or synthesize a macOS system/user fontconfig XML file."""
+    if explicit_config is not None:
+        if not explicit_config.is_file():
+            raise FileNotFoundError(f"Fontconfig file not found: {explicit_config}")
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_bytes(explicit_config.read_bytes())
+        return target_path
+    if platform != "darwin":
+        return None
+    font_dirs = [
+        Path("/System/Library/Fonts"),
+        Path("/Library/Fonts"),
+        Path.home() / "Library" / "Fonts",
+    ]
+    config = ET.Element("fontconfig")
+    for directory in font_dirs:
+        if directory.is_dir():
+            ET.SubElement(config, "dir").text = str(directory)
+    resolved_cache = cache_dir or (target_path.parent.parent / "font-cache")
+    resolved_cache.mkdir(parents=True, exist_ok=True)
+    ET.SubElement(config, "cachedir").text = str(resolved_cache)
+    ET.SubElement(config, "config")
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_text(
+        '<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">\n'
+        + ET.tostring(config, encoding="unicode")
+        + "\n",
+        encoding="utf-8",
+    )
+    return target_path
+
+
+
 __all__ = [
     "BitmapInspectionError",
     "ContainedFileReadError",
+    "extract_pdf_text",
     "fingerprint_contained_regular_file",
     "inspect_bitmap",
     "inspect_pdf_fonts",
     "inspect_png_visual_metrics",
+    "prepare_macos_fontconfig",
     "read_contained_regular_file",
+    "render_pdf_pages",
     "sha256_bytes",
 ]

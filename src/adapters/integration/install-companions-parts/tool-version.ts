@@ -75,15 +75,14 @@ export function maxVersion(values: string[]) {
     .at(-1)?.version ?? null;
 }
 
-export function configuredLatestVersion(toolId: OplCompanionToolId) {
+export function companionToolLatestVersionEnvKey(toolId: string) {
+  const normalized = toolId.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+  return `OPL_${normalized}_LATEST_VERSION`;
+}
+
+export function configuredLatestVersion(toolId: OplCompanionToolId | (string & {})) {
   if (!allowDependencyVersionOverride()) return null;
-  const key = {
-    officecli: 'OPL_OFFICECLI_LATEST_VERSION',
-    'mineru-open-api': 'OPL_MINERU_OPEN_API_LATEST_VERSION',
-    'agent-reach': 'OPL_AGENT_REACH_LATEST_VERSION',
-    'gh-stack': 'OPL_GH_STACK_LATEST_VERSION',
-    ffmpeg: 'OPL_FFMPEG_LATEST_VERSION',
-  }[toolId];
+  const key = companionToolLatestVersionEnvKey(toolId);
   const value = process.env[key]?.trim();
   return value ? parseVersion(value)?.version ?? value : null;
 }

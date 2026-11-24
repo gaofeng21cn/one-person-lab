@@ -21,7 +21,9 @@
     "runtime observability",
     "release",
     "pack provision-submission-resource",
+    "pack project-carrier",
     "packages",
+    "image generate",
     "system codex-config-hygiene",
     "workspace work-item readback",
     "workspace root reattest",
@@ -2040,6 +2042,195 @@
         "can_claim_production_ready": false,
         "owner": "OPL Pack",
         "surface": "domain_authorized_atomic_artifact_projection_transport"
+      }
+    },
+    "pack_project_carrier": {
+      "command_id": "pack project-carrier",
+      "owner": "OPL Pack",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "repo",
+          "flag": "--repo",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Repository root containing contracts/carrier_projection.json; defaults to cwd."
+        },
+        {
+          "name": "projection",
+          "flag": "--projection",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional relative path to a declarative carrier projection config; defaults to contracts/carrier_projection.json."
+        },
+        {
+          "name": "check",
+          "flag": "--check",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Verify projected carrier files and versions without writing files."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "pack_carrier_projection"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "pack_carrier_projection": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "schema_version",
+              "mode",
+              "status",
+              "repo_root",
+              "carrier_root",
+              "projection_config_ref",
+              "projected_file_count",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Pack",
+        "surface": "declarative_codex_plugin_carrier_projection"
+      }
+    },
+    "pack_doctor": {
+      "command_id": "pack doctor",
+      "owner": "OPL Pack",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "repo",
+          "flag": "--repo",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Repository root containing contracts/pack_doctor.json; defaults to cwd when --config is supplied."
+        },
+        {
+          "name": "config",
+          "flag": "--config",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional relative path to a declarative pack doctor spec; defaults to contracts/pack_doctor.json."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "pack_doctor"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "pack_doctor": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "schema_version",
+              "status",
+              "repo_root",
+              "config_ref",
+              "pack_id",
+              "owner",
+              "summary",
+              "checks",
+              "dependency_install",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Pack",
+        "surface": "declarative_pack_dependency_doctor"
+      }
+    },
+    "pack_proof_index": {
+      "command_id": "pack proof-index",
+      "owner": "OPL Pack",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "output-dir",
+          "flag": "--output-dir",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Proof output directory to walk and digest deterministically."
+        },
+        {
+          "name": "exclude",
+          "flag": "--exclude",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true,
+          "summary": "Relative POSIX file path inside output-dir to exclude from indexing."
+        },
+        {
+          "name": "write",
+          "flag": "--write",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional file path where the raw proof directory index JSON is written atomically."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "pack_proof_index"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "pack_proof_index": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "root_dir",
+              "entries",
+              "entry_count",
+              "excluded_paths",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Pack",
+        "surface": "deterministic_proof_directory_sha256_index"
       }
     },
     "connect_gateway_status": {
@@ -5384,6 +5575,62 @@
         "surface": "opl_packages_lifecycle"
       }
     },
+    "packages_locate": {
+      "command_id": "packages locate",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Installed OPL Package identifier (also accepted positionally)."
+        },
+        {
+          "name": "asset",
+          "flag": "--asset",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional package-relative asset path checked for containment and existence."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_package_location"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_package_location": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "package_id",
+              "found",
+              "enabled",
+              "package_root",
+              "asset_path",
+              "asset_exists"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_installed_package_locator"
+      }
+    },
     "packages_install": {
       "command_id": "packages install",
       "owner": "OPL Packages",
@@ -6019,6 +6266,166 @@
         "can_claim_production_ready": false,
         "owner": "OPL Base",
         "surface": "codex_config_hygiene"
+      }
+    },
+    "image_generate": {
+      "command_id": "image generate",
+      "owner": "OPL Image",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "prompt",
+          "flag": "--prompt",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Text prompt describing the image to generate or edit."
+        },
+        {
+          "name": "output",
+          "flag": "--output",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Destination PNG file path that must not already exist."
+        },
+        {
+          "name": "model",
+          "flag": "--model",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional image model identifier."
+        },
+        {
+          "name": "size",
+          "flag": "--size",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Image size such as 1024x1024 or auto."
+        },
+        {
+          "name": "quality",
+          "flag": "--quality",
+          "value_kind": "string",
+          "required": false,
+          "allowed_values": ["auto", "low", "medium", "high"],
+          "summary": "Image quality tier."
+        },
+        {
+          "name": "background",
+          "flag": "--background",
+          "value_kind": "string",
+          "required": false,
+          "allowed_values": ["auto", "opaque", "transparent"],
+          "summary": "Image background mode."
+        },
+        {
+          "name": "reference",
+          "flag": "--reference",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true,
+          "summary": "Optional reference PNG/JPEG/WEBP path for edit operations (repeatable)."
+        },
+        {
+          "name": "timeout-ms",
+          "flag": "--timeout-ms",
+          "value_kind": "integer",
+          "required": false,
+          "allowed_range": { "min": 1, "max": 600000 },
+          "summary": "Optional HTTP timeout in milliseconds."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "domain_image_generation"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "domain_image_generation": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "output_path",
+              "image_sha256",
+              "model",
+              "operation"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Image",
+        "surface": "codex_provider_image_generation"
+      }
+    },
+    "workspace_source_hygiene": {
+      "command_id": "workspace source-hygiene",
+      "owner": "OPL Workspace",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "source-root",
+          "flag": "--source-root",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Source repository root to inspect; defaults to cwd."
+        },
+        {
+          "name": "fix",
+          "flag": "--fix",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Remove only Git-ignored byproduct hits."
+        },
+        {
+          "name": "disclosure-check",
+          "flag": "--disclosure-check",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Scan tracked source files for secrets, private paths, personal workspace paths, and unreviewed binaries."
+        },
+        {
+          "name": "history",
+          "flag": "--history",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Include reachable Git history blobs when --disclosure-check is active."
+        },
+        {
+          "name": "disclosure-policy",
+          "flag": "--disclosure-policy",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Optional JSON policy file for reviewed binary paths and rule exclusions when --disclosure-check is active."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "surface_kind",
+          "status"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Workspace",
+        "surface": "repo_source_and_disclosure_hygiene"
       }
     }
   }

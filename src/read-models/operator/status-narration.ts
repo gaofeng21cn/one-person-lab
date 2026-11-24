@@ -1,4 +1,7 @@
-export function humanizeProgressCode(code: string | null) {
+export function humanizeProgressCode(
+  code: string | null,
+  extraLabels?: Readonly<Record<string, string>>,
+) {
   if (!code) {
     return null;
   }
@@ -19,8 +22,6 @@ export function humanizeProgressCode(code: string | null) {
     writing: '撰写中',
     reviewing: '审阅中',
     revising: '修改中',
-    publication_supervision: '论文可发表性监管',
-    bundle_stage_ready: '投稿打包就绪',
     managed_runtime_recovering: '托管运行恢复中',
     runtime_blocked: '运行阻塞',
     live: '在线推进',
@@ -29,5 +30,5 @@ export function humanizeProgressCode(code: string | null) {
     fresh: '进度新鲜',
   };
 
-  return labels[code] ?? code.replace(/_/g, ' ');
+  return extraLabels?.[code] ?? labels[code] ?? code.replace(/_/g, ' ');
 }

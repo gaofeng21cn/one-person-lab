@@ -20,14 +20,14 @@ export function buildWorkspaceCommandSpecs(
         'opl workspace projects',
         'opl workspace ensure --agent rca --project-id deck-001',
         'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
-        'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
-        'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
-        'opl workspace work-item readback --workspace /Users/gaofeng/workspace/dm-cvd --work-item DM003 --agent mas',
+        'opl workspace validate --workspace /path/to/workspace/visual-theme-a',
+        'opl workspace report --workspace /path/to/workspace/visual-theme-a',
+        'opl workspace work-item readback --workspace /path/to/workspace/dm-cvd --work-item DM003 --agent mas',
         'opl workspace fleet report',
-        'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
-        'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-bookforge',
-        'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
-        'opl workspace source ingest --workspace /Users/gaofeng/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
+        'opl workspace inspect --workspace /path/to/workspace/visual-theme-a',
+        'opl workspace source-hygiene --source-root /path/to/workspace/opl-bookforge',
+        'opl workspace artifact-lifecycle --workspace /path/to/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
+        'opl workspace source ingest --workspace /path/to/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
         'opl workspace interfaces',
       ],
       group: 'workspace',
@@ -74,8 +74,8 @@ export function buildWorkspaceCommandSpecs(
         },
         {
           command: 'workspace source-hygiene',
-          usage: 'opl workspace source-hygiene [--source-root <repo>] [--fix]',
-          summary: 'Inspect source byproducts or explicitly remove only ignored scan hits.',
+          usage: 'opl workspace source-hygiene [--source-root <repo>] [--fix] [--disclosure-check [--history] [--disclosure-policy <path>]]',
+          summary: 'Inspect source byproducts or optional disclosure risks, or explicitly remove only ignored byproduct hits.',
         },
         {
           command: 'workspace inspect',
@@ -135,7 +135,7 @@ export function buildWorkspaceCommandSpecs(
     }),
     'workspace root set': cloneCommandSpec(commandSpecs['workspace root set'], {
       usage: 'opl workspace root set --path <workspace_root>',
-      examples: ['opl workspace root set --path /Users/gaofeng/workspace'],
+      examples: ['opl workspace root set --path /path/to/workspace'],
       group: 'workspace',
     }),
     'workspace root doctor': cloneCommandSpec(commandSpecs['workspace root doctor'], {
@@ -148,10 +148,10 @@ export function buildWorkspaceCommandSpecs(
       usage: workspaceInitUsage,
       examples: [
         'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
-        'opl workspace init --agent rca --workspace-root /Users/gaofeng/workspace --workspace-id visual-theme-a --project-id deck-001',
-        'opl workspace init --agent mas --workspace-root /Users/gaofeng/workspace --workspace-id dm-cvd --project-id DM002',
-        'opl workspace init --agent oma --workspace /Users/gaofeng/workspace/agent-foundry --dry-run',
-        'opl workspace init --agent obf --workspace /Users/gaofeng/workspace/bookforge --dry-run',
+        'opl workspace init --agent rca --workspace-root /path/to/workspace --workspace-id visual-theme-a --project-id deck-001',
+        'opl workspace init --agent mas --workspace-root /path/to/workspace --workspace-id dm-cvd --project-id DM002',
+        'opl workspace init --agent oma --workspace /path/to/workspace/agent-foundry --dry-run',
+        'opl workspace init --agent obf --workspace /path/to/workspace/bookforge --dry-run',
       ],
       group: 'workspace',
     }),
@@ -160,7 +160,7 @@ export function buildWorkspaceCommandSpecs(
       examples: [
         'opl workspace ensure --agent rca --project-id deck-001',
         'opl workspace ensure --agent mas --workspace-id dm-cvd --project-id DM002',
-        'opl workspace ensure --agent mag --workspace-root /Users/gaofeng/workspace --workspace-id nsfc-p2c --project-id grant-001',
+        'opl workspace ensure --agent mag --workspace-root /path/to/workspace --workspace-id nsfc-p2c --project-id grant-001',
         'opl workspace ensure --agent bookforge --workspace-id bookforge-workspace --project-id book-001',
       ],
       group: 'workspace',
@@ -168,61 +168,62 @@ export function buildWorkspaceCommandSpecs(
     'workspace validate': cloneCommandSpec(commandSpecs['workspace validate'], {
       usage: 'opl workspace validate --workspace <path>',
       examples: [
-        'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace validate --workspace /path/to/workspace/visual-theme-a',
       ],
       group: 'workspace',
     }),
     'workspace doctor': cloneCommandSpec(commandSpecs['workspace doctor'], {
       usage: 'opl workspace doctor --workspace <path>',
       examples: [
-        'opl workspace doctor --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace doctor --workspace /path/to/workspace/visual-theme-a',
       ],
       group: 'workspace',
     }),
     'workspace source-hygiene': cloneCommandSpec(commandSpecs['workspace source-hygiene'], {
-      usage: 'opl workspace source-hygiene [--source-root <repo>] [--fix]',
+      usage: 'opl workspace source-hygiene [--source-root <repo>] [--fix] [--disclosure-check [--history] [--disclosure-policy <path>]]',
       examples: [
-        'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-bookforge',
-        'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-meta-agent --fix',
+        'opl workspace source-hygiene --source-root /path/to/workspace/opl-bookforge',
+        'opl workspace source-hygiene --source-root /path/to/workspace/opl-meta-agent --fix',
+        'opl workspace source-hygiene --source-root /path/to/workspace/med-autopractice --disclosure-check --history --disclosure-policy contracts/disclosure_policy.json',
       ],
       group: 'workspace',
     }),
     'workspace adopt': cloneCommandSpec(commandSpecs['workspace adopt'], {
       usage: workspaceAdoptUsage,
       examples: [
-        'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
+        'opl workspace adopt --agent rca --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --dry-run',
         'opl workspace adopt --agent rca --workspace /work/visuals --project-id deck-001 --project-root /work/visuals/productions/intro --apply',
-        'opl workspace adopt --agent bookforge --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
-        'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --apply',
+        'opl workspace adopt --agent bookforge --workspace /path/to/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
+        'opl workspace adopt --agent mas --workspace /path/to/workspace/dm-cvd --study-id DM002 --apply',
       ],
       group: 'workspace',
     }),
     'workspace upgrade': cloneCommandSpec(commandSpecs['workspace upgrade'], {
       usage: 'opl workspace upgrade --workspace <path> [--dry-run|--apply]',
       examples: [
-        'opl workspace upgrade --workspace /Users/gaofeng/workspace/visual-theme-a --apply',
+        'opl workspace upgrade --workspace /path/to/workspace/visual-theme-a --apply',
       ],
       group: 'workspace',
     }),
     'workspace artifact-lifecycle': cloneCommandSpec(commandSpecs['workspace artifact-lifecycle'], {
       usage: 'opl workspace artifact-lifecycle --workspace <path> [--project-id <id>] [--dry-run|--apply]',
       examples: [
-        'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --dry-run',
-        'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
+        'opl workspace artifact-lifecycle --workspace /path/to/workspace/Book --project-id ai-university-bookforge-20260619 --dry-run',
+        'opl workspace artifact-lifecycle --workspace /path/to/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
       ],
       group: 'workspace',
     }),
     'workspace source ingest': cloneCommandSpec(commandSpecs['workspace source ingest'], {
       usage: 'opl workspace source ingest --workspace <path> --file <path> [--project-id <id>] [--role <role>]',
       examples: [
-        'opl workspace source ingest --workspace /Users/gaofeng/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
+        'opl workspace source ingest --workspace /path/to/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
       ],
       group: 'workspace',
     }),
     'workspace project archive': cloneCommandSpec(commandSpecs['workspace project archive'], {
       usage: 'opl workspace project archive --workspace <path> --project-id <id> [--reason <text>] [--dry-run|--apply]',
       examples: [
-        'opl workspace project archive --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --apply',
+        'opl workspace project archive --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --apply',
       ],
       group: 'workspace',
     }),
@@ -230,15 +231,15 @@ export function buildWorkspaceCommandSpecs(
       usage:
         'opl workspace project lifecycle --workspace <path> --project-id <id> --status active|paused|locked|superseded|archived [--reason <text>] [--superseded-by-project-id <id>] [--dry-run|--apply]',
       examples: [
-        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status paused --apply',
-        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status active --apply',
+        'opl workspace project lifecycle --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --status paused --apply',
+        'opl workspace project lifecycle --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --status active --apply',
       ],
       group: 'workspace',
     }),
     'workspace project delete': cloneCommandSpec(commandSpecs['workspace project delete'], {
       usage: 'opl workspace project delete --workspace <path> --project-id <id> [--owner-receipt-ref <ref>] [--dry-run|--apply]',
       examples: [
-        'opl workspace project delete --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
+        'opl workspace project delete --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --dry-run',
       ],
       group: 'workspace',
     }),
@@ -250,43 +251,43 @@ export function buildWorkspaceCommandSpecs(
     'workspace export-map': cloneCommandSpec(commandSpecs['workspace export-map'], {
       usage: 'opl workspace export-map --workspace <path>',
       examples: [
-        'opl workspace export-map --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace export-map --workspace /path/to/workspace/visual-theme-a',
       ],
       group: 'workspace',
     }),
     'workspace health': cloneCommandSpec(commandSpecs['workspace health'], {
       usage: 'opl workspace health --workspace <path>',
       examples: [
-        'opl workspace health --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace health --workspace /path/to/workspace/visual-theme-a',
       ],
       group: 'workspace',
     }),
     'workspace inspect': cloneCommandSpec(commandSpecs['workspace inspect'], {
       usage: 'opl workspace inspect --workspace <path>',
       examples: [
-        'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace inspect --workspace /path/to/workspace/visual-theme-a',
       ],
       group: 'workspace',
     }),
     'workspace inventory': cloneCommandSpec(commandSpecs['workspace inventory'], {
       usage: 'opl workspace inventory --workspace <path>',
       examples: [
-        'opl workspace inventory --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace inventory --workspace /path/to/workspace/visual-theme-a',
       ],
       group: 'workspace',
     }),
     'workspace report': cloneCommandSpec(commandSpecs['workspace report'], {
       usage: 'opl workspace report --workspace <path>',
       examples: [
-        'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace report --workspace /path/to/workspace/visual-theme-a',
       ],
       group: 'workspace',
     }),
     'workspace work-item readback': cloneCommandSpec(commandSpecs['workspace work-item readback'], {
       usage: 'opl workspace work-item readback --workspace <absolute_path> --work-item <id> [--agent <agent_id>] [--source-manifest <absolute_path>] [--profile fast|full]',
       examples: [
-        'opl workspace work-item readback --workspace /Users/gaofeng/workspace/dm-cvd --work-item DM003 --agent mas --profile full',
-        'opl workspace work-item readback --workspace /Users/gaofeng/workspace/dm-cvd --work-item DM003 --agent mas --source-manifest /Users/gaofeng/workspace/dm-cvd/ops/medautoscience/hosted-readback-sources.json --json',
+        'opl workspace work-item readback --workspace /path/to/workspace/dm-cvd --work-item DM003 --agent mas --profile full',
+        'opl workspace work-item readback --workspace /path/to/workspace/dm-cvd --work-item DM003 --agent mas --source-manifest /path/to/workspace/dm-cvd/ops/medautoscience/hosted-readback-sources.json --json',
       ],
       group: 'workspace',
     }),
@@ -299,19 +300,19 @@ export function buildWorkspaceCommandSpecs(
       usage:
         'opl workspace bind --project <project_id> --path <workspace_path> [--project-scope-id <id>] [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
       examples: [
-        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
-        'opl workspace bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
+        'opl workspace bind --project redcube --path /path/to/workspace/redcube-ai',
+        'opl workspace bind --project medautoscience --path /path/to/workspace/med-autoscience --profile /path/to/workspace/med-autoscience/profiles/local.toml',
       ],
       group: 'workspace',
     }),
     'workspace activate': cloneCommandSpec(commandSpecs['workspace-activate'], {
       usage: 'opl workspace activate --project <project_id> --path <workspace_path>',
-      examples: ['opl workspace activate --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      examples: ['opl workspace activate --project redcube --path /path/to/workspace/redcube-ai'],
       group: 'workspace',
     }),
     'workspace archive': cloneCommandSpec(commandSpecs['workspace-archive'], {
       usage: 'opl workspace archive --project <project_id> --path <workspace_path>',
-      examples: ['opl workspace archive --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      examples: ['opl workspace archive --project redcube --path /path/to/workspace/redcube-ai'],
       group: 'workspace',
     }),
     'workspace maintenance prune': cloneCommandSpec(commandSpecs['workspace-maintenance-prune'], {

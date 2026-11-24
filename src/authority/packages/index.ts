@@ -89,6 +89,24 @@ export {
   OPL_PACK_PROVISION_SUBMISSION_RESOURCE_ACTION_ID,
   provisionSubmissionResource,
 } from './submission-resource-provisioning.ts';
+export {
+  projectCarrier,
+  type CarrierProjectionConfig,
+  type ProjectCarrierInput,
+} from './carrier-projection.ts';
+export {
+  runPackDoctor,
+  type PackDoctorCheckResult,
+  type PackDoctorSpec,
+  type RunPackDoctorInput,
+} from './pack-doctor.ts';
+export {
+  buildProofDirectoryIndex,
+  runPackProofIndex,
+  type ProofDirectoryIndexEntry,
+  type ProofDirectoryIndexOptions,
+  type RunPackProofIndexInput,
+} from './proof-directory-index.ts';
 export * from './agent-profile-spine.ts';
 export * from './agent-scaffold-materialization.ts';
 export * from './durable-knowledge-catalog.ts';

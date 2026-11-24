@@ -80,7 +80,7 @@ export function buildPrivateRuntimeCommandSpecs({
       summary: 'Inspect one workspace path for git/worktree state and file-surface visibility.',
       examples: [
         'opl status workspace',
-        'opl status workspace --path /Users/gaofeng/workspace/redcube-ai',
+        'opl status workspace --path /path/to/workspace/redcube-ai',
       ],
       handler: (args) => {
         const parsed = parseRegisteredCommandOptions('status workspace', args, getCommandSpecs()['status workspace']);

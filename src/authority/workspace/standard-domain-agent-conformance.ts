@@ -18,7 +18,10 @@ import {
   defaultFamilyRepoInputs,
   DEFAULT_FAMILY_REPOS,
 } from '../../kernel/standard-domain-agent-family-repos.ts';
-import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
+import {
+  FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP,
+  resolveStandardAgent,
+} from '../../kernel/standard-agent-registry.ts';
 import {
   buildStageArtifactKernelAdoptionChecks,
   buildStageRunCanaryEvidenceChecks,
@@ -71,11 +74,16 @@ function canonicalAgentIdForInput(input: RepoInput) {
 }
 
 function isFrameworkCapabilityPackageInput(input: RepoInput) {
-  if (canonicalAgentIdForInput(input) !== 'mas-scholar-skills') {
-    return false;
-  }
+  const entry = resolveStandardAgent(input.requested_agent_id ?? path.basename(input.repo_dir));
   const repoDir = path.resolve(input.repo_dir);
-  return fs.existsSync(path.join(repoDir, 'contracts', 'scholar-skills-capability-modules.json'));
+  if (entry?.series_membership !== FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP) {
+    const manifest = readJsonFile(repoDir, 'opl-package.json').payload;
+    if (!isRecord(manifest) || manifest.package_role !== 'capability_package') {
+      return false;
+    }
+  }
+  return fs.existsSync(path.join(repoDir, 'contracts', 'scholar-skills-capability-modules.json'))
+    || fs.existsSync(path.join(repoDir, 'contracts', 'capability-modules.json'));
 }
 
 function parseConformanceArgs(args: string[]): RepoInput[] {

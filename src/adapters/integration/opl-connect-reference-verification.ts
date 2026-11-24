@@ -10,7 +10,6 @@ import {
   providerDefinition,
   REFERENCE_PROVIDER_ADAPTER_ABI,
   REFERENCE_PROVIDER_MODULE_KIND,
-  REFERENCE_PROVIDER_PACKAGE_ID,
 } from './opl-connect-reference-verification-parts/provider-registry.ts';
 import type { ReferenceVerificationProviderId } from './opl-connect-reference-verification-parts/provider-registry.ts';
 import {
@@ -169,7 +168,6 @@ async function verifyProviderWithCache(
 
 export async function runOplConnectReferenceVerification(input: ReferenceVerificationInput) {
   const runtime = await loadInstalledPackageRuntimeModule({
-    packageId: REFERENCE_PROVIDER_PACKAGE_ID,
     moduleKind: REFERENCE_PROVIDER_MODULE_KIND,
     adapterAbi: REFERENCE_PROVIDER_ADAPTER_ABI,
     ...(input.installedPackage ?? {}),

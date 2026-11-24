@@ -103,13 +103,13 @@ function ownerRouteWorkOrderPolicy(lane: string) {
       verification_command: 'opl brand-modules l5-status --json',
     },
     app_release_user_path: {
-      owner_repo: '/Users/gaofeng/workspace/one-person-lab-app',
+      owner_repo: 'one-person-lab-app',
       closing_ref_source: 'one_person_lab_app_release_owner_receipt_install_evidence_owner_acceptance_or_same_cohort_release_evidence_ref',
       typed_blocker_source: 'one_person_lab_app_release_owner_typed_blocker_ref',
       verification_command: SOURCE_COMMANDS.app_operator_drilldown,
     },
     provider_long_soak: {
-      owner_repo: '/Users/gaofeng/workspace/one-person-lab',
+      owner_repo: 'one-person-lab',
       closing_ref_source: 'opl_runtime_owner_long_soak_recovery_dead_letter_or_provider_blocker_ref',
       typed_blocker_source: 'opl_runtime_owner_provider_typed_blocker_ref',
       verification_command: SOURCE_COMMANDS.app_operator_drilldown,

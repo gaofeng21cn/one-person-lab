@@ -20,7 +20,7 @@ export type InstalledPackageRuntimeDiscoveryOptions = {
 };
 
 export type InstalledPackageRuntimeModuleInput = InstalledPackageRuntimeDiscoveryOptions & {
-  packageId: string;
+  packageId?: string | null;
   moduleKind: string;
   adapterAbi: string;
 };
@@ -160,37 +160,95 @@ function contentLockDigest(descriptor: InstalledPackageDescriptor): string {
   return actualDigest;
 }
 
+function matchingRuntimeBindings(
+  descriptor: InstalledPackageDescriptor,
+  moduleKind: string,
+  adapterAbi: string,
+) {
+  return descriptor.manifest.runtime_module_bindings.filter((binding) => (
+    binding.module_kind === moduleKind
+    && binding.adapter_abi === adapterAbi
+  ));
+}
+
 function resolveBinding(input: InstalledPackageRuntimeModuleInput): InstalledPackageRuntimeModuleContext {
+  const requestedPackageId = typeof input.packageId === 'string' && input.packageId.trim()
+    ? input.packageId.trim()
+    : null;
   const descriptors = discoverInstalledPackageDescriptors({
-    packageId: input.packageId,
+    ...(requestedPackageId ? { packageId: requestedPackageId } : {}),
     binary: input.binary,
     env: input.env,
     runner: input.runner,
     failClosedOnCarrierError: true,
   });
-  const descriptor = descriptors.get(input.packageId);
-  if (!descriptor) {
-    throw new FrameworkContractError('codex_command_failed', 'Required installed Package descriptor is unavailable.', {
-      package_id: input.packageId,
-      reason_code: 'installed_package_descriptor_missing',
-    });
+  let descriptor: InstalledPackageDescriptor | undefined;
+  if (requestedPackageId) {
+    descriptor = descriptors.get(requestedPackageId);
+    if (!descriptor) {
+      throw new FrameworkContractError('codex_command_failed', 'Required installed Package descriptor is unavailable.', {
+        package_id: requestedPackageId,
+        reason_code: 'installed_package_descriptor_missing',
+      });
+    }
+    if (!installedDescriptorSupportsFrameworkCalls(descriptor)) {
+      throw new FrameworkContractError('codex_command_failed', 'Required installed Package descriptor is not callable.', {
+        package_id: requestedPackageId,
+        enabled: descriptor.enabled,
+        readiness: descriptor.readiness,
+        reason_code: 'installed_package_descriptor_not_callable',
+      });
+    }
+  } else {
+    const matchingDescriptors = [...descriptors.values()].filter((candidate) => (
+      matchingRuntimeBindings(candidate, input.moduleKind, input.adapterAbi).length > 0
+    ));
+    const callableMatches = matchingDescriptors.filter((candidate) => (
+      installedDescriptorSupportsFrameworkCalls(candidate)
+    ));
+    if (callableMatches.length === 0) {
+      if (matchingDescriptors.length === 1) {
+        const matched = matchingDescriptors[0]!;
+        throw new FrameworkContractError('codex_command_failed', 'Required installed Package descriptor is not callable.', {
+          package_id: matched.manifest.package_id,
+          enabled: matched.enabled,
+          readiness: matched.readiness,
+          reason_code: 'installed_package_descriptor_not_callable',
+        });
+      }
+      if (matchingDescriptors.length > 1) {
+        throw new FrameworkContractError('codex_command_failed', 'Multiple installed Packages provide the requested runtime module binding.', {
+          package_id: null,
+          candidate_package_ids: matchingDescriptors.map((candidate) => candidate.manifest.package_id),
+          module_kind: input.moduleKind,
+          adapter_abi: input.adapterAbi,
+          reason_code: 'installed_runtime_module_binding_ambiguous',
+        });
+      }
+      throw new FrameworkContractError('codex_command_failed', 'Required installed Package descriptor is unavailable.', {
+        package_id: null,
+        module_kind: input.moduleKind,
+        adapter_abi: input.adapterAbi,
+        reason_code: 'installed_package_descriptor_missing',
+      });
+    }
+    if (callableMatches.length > 1) {
+      throw new FrameworkContractError('codex_command_failed', 'Multiple installed Packages provide the requested runtime module binding.', {
+        package_id: null,
+        candidate_package_ids: callableMatches.map((candidate) => candidate.manifest.package_id),
+        module_kind: input.moduleKind,
+        adapter_abi: input.adapterAbi,
+        reason_code: 'installed_runtime_module_binding_ambiguous',
+      });
+    }
+    descriptor = callableMatches[0]!;
   }
-  if (!installedDescriptorSupportsFrameworkCalls(descriptor)) {
-    throw new FrameworkContractError('codex_command_failed', 'Required installed Package descriptor is not callable.', {
-      package_id: input.packageId,
-      enabled: descriptor.enabled,
-      readiness: descriptor.readiness,
-      reason_code: 'installed_package_descriptor_not_callable',
-    });
-  }
+  const resolvedPackageId = descriptor.manifest.package_id;
   const contentDigest = contentLockDigest(descriptor);
-  const matchingBindings = descriptor.manifest.runtime_module_bindings.filter((binding) => (
-    binding.module_kind === input.moduleKind
-    && binding.adapter_abi === input.adapterAbi
-  ));
+  const matchingBindings = matchingRuntimeBindings(descriptor, input.moduleKind, input.adapterAbi);
   if (matchingBindings.length !== 1) {
     throw new FrameworkContractError('codex_command_failed', 'Installed Package does not expose exactly one requested runtime module binding.', {
-      package_id: input.packageId,
+      package_id: resolvedPackageId,
       module_kind: input.moduleKind,
       adapter_abi: input.adapterAbi,
       matching_module_ids: matchingBindings.map((binding) => binding.module_id),
@@ -207,7 +265,7 @@ function resolveBinding(input: InstalledPackageRuntimeModuleInput): InstalledPac
   )))];
   if (unlockedPaths.length > 0) {
     throw new FrameworkContractError('codex_command_failed', 'Installed runtime module binding contains paths outside its content lock.', {
-      package_id: input.packageId,
+      package_id: resolvedPackageId,
       module_id: binding.module_id,
       unlocked_paths: unlockedPaths,
       reason_code: 'installed_runtime_module_path_unlocked',
@@ -223,7 +281,7 @@ function resolveBinding(input: InstalledPackageRuntimeModuleInput): InstalledPac
     } catch (error) {
       if (error instanceof FrameworkContractError) throw error;
       throw new FrameworkContractError('codex_command_failed', 'Installed Package runtime module reference is not valid JSON.', {
-        package_id: input.packageId,
+        package_id: resolvedPackageId,
         module_id: binding.module_id,
         relative_path: relativePath,
         reason_code: 'installed_runtime_module_reference_invalid',
@@ -244,10 +302,11 @@ export async function loadInstalledPackageRuntimeModule(
   input: InstalledPackageRuntimeModuleInput,
 ): Promise<LoadedInstalledPackageRuntimeModule> {
   const context = resolveBinding(input);
+  const resolvedPackageId = context.descriptor.manifest.package_id;
   const loadedDigest = loadedRuntimeModuleDigests.get(context.modulePath);
   if (loadedDigest && loadedDigest !== context.contentDigest) {
     throw new FrameworkContractError('codex_command_failed', 'Installed Package runtime module changed at an already loaded path.', {
-      package_id: input.packageId,
+      package_id: resolvedPackageId,
       module_id: context.binding.module_id,
       module_path: context.binding.handler.file,
       loaded_content_digest: loadedDigest,
@@ -264,7 +323,7 @@ export async function loadInstalledPackageRuntimeModule(
       loadedRuntimeModuleDigests.delete(context.modulePath);
     }
     throw new FrameworkContractError('codex_command_failed', 'Installed Package runtime module could not be loaded.', {
-      package_id: input.packageId,
+      package_id: resolvedPackageId,
       module_id: context.binding.module_id,
       module_path: context.binding.handler.file,
       handler_ref: `${context.binding.handler.file}#${context.binding.handler.export}`,
@@ -275,7 +334,7 @@ export async function loadInstalledPackageRuntimeModule(
   const handler = module[context.binding.handler.export];
   if (typeof handler !== 'function') {
     throw new FrameworkContractError('codex_command_failed', 'Installed Package runtime module handler export is missing.', {
-      package_id: input.packageId,
+      package_id: resolvedPackageId,
       module_id: context.binding.module_id,
       module_path: context.binding.handler.file,
       handler_export: context.binding.handler.export,
