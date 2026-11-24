@@ -6,7 +6,7 @@
 
 发布日期：2026-08-15
 
-最近修订：2026-11-09
+最近修订：2026-11-24
 
 适用对象：希望理解 OPL Framework 为什么这样设计、它如何支撑可靠的 AI 专业工作，以及这套架构为什么能够长期演进的用户、合作者和技术决策者。
 
@@ -71,7 +71,7 @@ OPL Framework 不把所有能力固化在同一条运行链里，而是让每项
 外部服务接入最容易出现的误区，是让每个 Agent 或 Mini App 自己保存一份 API Key 或 OAuth Token。
 OPL Connect 采用更清楚的三层边界：Relay、Gateway、OPL Link 等 provider owner 保存凭据、刷新和
 账号生命周期；Connect 只保存连接的 opaque 引用与安全修订号；已安装的 Package 再按 capability 请求
-逐项 grant。用户在 App 的“资源与连接”中批准或撤销 grant，Host 每次调用都重新核对 Package 身份、
+逐项 grant。用户在 App 的“资料与连接”中批准或撤销 grant，Host 每次调用都重新核对 Package 身份、
 连接修订和 capability，然后由 provider 在自己的边界内执行。
 
 因此，同一个 Relay 邮箱可以安全地被多个已安装能力复用，而每个能力拥有独立的授权范围。搜索、读取
@@ -119,9 +119,7 @@ OPL Framework 负责组织和运行能力，确保任务可以可靠启动、持
 两者采用一致的可组合设计，但承担不同责任：Framework 保证能力真实可用，App 保证用户看到的是
 一套稳定产品。运行底座和界面因此可以独立演进，同时共享同一份任务、状态和操作事实。
 
-Framework Host 负责通用运行、Package 能力图和 App 投影；Studio 的 DSH/Cordis Application Host
-负责自己的 profile、插件、原生 Codex 和交付 transport。两者通过公开合同协作，各自保留清楚范围。
-具体分工由 [Framework 架构](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#host-scope-boundary) 和 [App adapter contract](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-shell-adapter.json) 维护。
+Framework Host 负责通用运行、来源平权的 Package 能力发现与更新规划，以及面向 App 的统一状态、动作与受控声明式设置/界面投影；Studio 的 DSH/Cordis Application Host 负责自己的极薄底座、profile、插件、原生 Codex 和交付 transport。两者通过公开合同协作，各自保留清楚范围，使不同来源的能力都能沿统一目录、受控设置分区和独立错误隔离边界进入工作台，而不建立第二套插件 ABI 或状态副本。具体分工由 [Framework 架构](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#host-scope-boundary)、[App adapter contract](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-shell-adapter.json) 与 [OPL App 插件界面与设置标准](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/product/gui/plugin-ui-and-settings-standard.md) 维护。
 
 Mini App 延续这条边界：Framework 从已安装 Package 的能力声明中发现入口，提供当前任务上下文、进度与产物投影、共享视图及当前可用操作；Studio 提供宿主协议、主题与视口上下文；Package 的领域负责方提供业务数据、操作和质量结论。共享声明式视图、专用 MCP App 和专业应用复用同一工作身份与运行事实。视图按需调用已有操作，长任务继续使用现有阶段与执行链，业务状态和连接授权仍由原有负责方维护。
 
@@ -130,8 +128,8 @@ Mini App 延续这条边界：Framework 从已安装 Package 的能力声明中�
 One Person Lab App 对外提供一套统一的任务、能力、文件、状态和操作体验。界面设计可以持续改进，
 App 负责定义升级时的身份、数据保留、能力和更新路径，让用户能够从已有工作继续。
 
-正式版本发布、首次安装、旧版升级和 Preview 到 Stable 的终端 handoff 分别需要自己的证据。
-Framework source 与聚合状态不能替代这些验收；支持路径和当前证据由 [App 发布合同](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json)
+首次安装、存量升级、运行基座更新与兼容插件的独立演进分别需要自己的验收证据。
+Framework 源码与聚合状态不能替代安装后的运行验收；支持路径和当前证据由 [App 发布合同](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json)
 和 [App 当前状态](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/status.md) 维护。
 
 ## 自进化：围绕能力持续改进
@@ -186,6 +184,7 @@ OPL Framework 的目标，是成为一套结构清楚、持续进化的专业能
 了解更多：
 
 - [One Person Lab 家族白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html)
+- [OPL App 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.html)
 - [One Person Lab](https://github.com/gaofeng21cn/one-person-lab)
 - [One Person Lab App](https://github.com/gaofeng21cn/one-person-lab-app)
 - [OPL Cloud](https://github.com/gaofeng21cn/one-person-lab-cloud)

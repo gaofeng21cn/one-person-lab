@@ -20,7 +20,7 @@ One Person Lab 白皮书面向用户、合作者和技术决策者，呈现 OPL 
 
 ## One Person Lab App
 
-把目标、材料、进度、成果、审阅和下一步组织成一张连续工作台，并在持续演进中保持统一的产品体验。
+以极薄稳定底座承载来源平权的软件与插件生态，把目标、材料、进度、成果、审阅与下一步组织成一套持续演进的专业工作台。
 
 - [在线阅读](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.html)
 - [PDF](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.pdf)

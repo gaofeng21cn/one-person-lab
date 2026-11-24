@@ -6,7 +6,7 @@
 
 发布日期：2026-07-13
 
-最近修订：2026-11-08
+最近修订：2026-11-24
 
 适用对象：希望理解 One Person Lab 为什么这样设计，以及这种设计怎样让复杂知识工作更好用、更可信的用户、合作者、早期采用者和技术决策者。
 
@@ -65,7 +65,7 @@ One Person Lab 对用户呈现为一个连续产品，并用四个稳定对象�
 
 **OPL Base** 是由 OPL Framework 提供的运行底座。它负责启动、阶段推进、长期运行、恢复、工作空间、证据与交接，让复杂任务可以被启动、暂停、继续和收口。具体执行工具与能力实现可以变化，工作本身的阶段、成果与责任关系保持稳定。
 
-**OPL App** 是本地工作面和产品体验负责人，让用户选择任务、查看进度、打开文件、处理卡点和接收更新。界面可以持续演进，但产品定义和工作语言只有一份；正式发布始终提供统一的任务、能力、状态和操作体验。
+**OPL App** 是极薄稳定的本地工作台宿主与产品体验负责人，通过零认知负担的统一软件中心平等承载 OPL 专业能力与外部扩展，让用户从目的出发推进任务、浏览运行状态与资料空间、处理卡点并在后台静默接收兼容更新。界面与插件可以持续独立演进，产品定义和工作语言只有一份。
 
 **OPL Packages** 是可安装能力层。智能体、技能、工具和工作流都通过能力包进入生态；每个能力包可以按真实节奏独立安装、版本化和发布，Base 负责发现和运行，App 负责呈现，能力提供者继续负责自己的专业边界。
 
@@ -174,7 +174,7 @@ Framework 说明运行是否发生、文件和证据在哪里；App 说明用户
 强大的系统把内部复杂性留在内部。用户只需认识 OPL 的四个稳定产品对象：
 
 - **OPL Base**：Framework、执行环境和通用运行能力；
-- **OPL App**：桌面工作台与统一的产品体验；
+- **OPL App**：极薄稳定的本地工作台宿主、统一软件中心与一致产品体验；
 - **OPL Packages**：按工作需要安装的专业 Agent、技能、工具与工作流；
 - **OPL Cloud**：在线工作空间、账号治理、托管资源、协作与智能体服务。
 
@@ -182,13 +182,13 @@ Base 管共同底座，App 管本地体验，Packages 管专业能力，Cloud �
 
 OPL Cloud 扩展工作位置、资源与治理能力，让用户从本机进入在线工作空间、远端资源或团队协作时，继续沿用同一套专业工作模型。
 
-One Person Lab App 作为一个产品定义行为和正式发布体验，负责在界面演进时保留任务、能力包、状态和操作的连续性。安装、旧版升级与 Preview 到 Stable 的迁移分别需要验收，正式版本发布不能替代迁移路径的实际证据。支持路径与验收边界由 [App 发布合同](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json) 和 [App 当前状态](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/status.md) 维护。
+One Person Lab App 作为一个产品定义行为和正式发布体验，以极薄底座承载全来源平权的软件与插件生态，在界面与组件独立演进时保留任务、能力包、状态和操作的连续性。首次安装、存量升级、运行基座更新与兼容插件独立演进分别需要验收，正式版本发布不能替代实际升级与回读证据。支持路径与验收边界由 [App 发布合同](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json) 和 [App 当前状态](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/status.md) 维护。
 
 ### 一套工作模型，多种专业界面
 
-OPL App 的 Mini App 将 Agent 可调用的领域操作与人可查看的工作视图放在同一条工作线上。进度、可用成果、待决定事项与下一步沿用同一种表达，并关联同一工作区、任务和领域产物。简洁状态页适合共享声明式视图，邮件编辑等高密度交互使用专用 MCP App，持续创作、设备操作和监控则进入相应专业应用。任务上下文、宿主交互与通用组件可以复用，各领域保留适合自己的工作方式。
+OPL Agent Apps（OPL Agent 原生应用）与 OPL MiniApp 将 Agent 可调用的领域操作和人可查看的协作界面放在同一条工作线上。进度、可用成果、待决定事项与下一步沿用同一种表达，并关联同一工作区、任务和领域产物。所有接入 App 的扩展遵循一致的界面与设置秩序：轻量参数通过声明式配置落入既有设置分区、不私建顶层菜单；高频工作面通过共享原语与独立错误隔离边界融入工作台；邮件编辑、媒体审看等高密度交互使用沙箱 MCP App；持续创作、设备操作和监控则进入相应专业应用。
 
-专业 Agent 与 App 调用同一领域负责方的操作并读取其结果。外部服务的连接与授权由 OPL Connect 协调，凭证的保存和续期由服务提供方或原生载体管理。界面按当前授权展示连接与操作结果，让专业能力可以复用公共连接能力，同时保持专业判断、数据与账号事实的清楚归属。
+专业 Agent 与 App 通过同一领域负责方调用操作并回读真实结果。外部服务的连接与授权统一归口 OPL Connect，凭证保存和续期由服务提供方或原生载体负责；用户的长期知识可在 Obsidian 或普通目录中保留唯一可编辑正文，由任务按授权版本读取并在审阅后写回原处。专业能力由此得以复用共同的连接、界面与知识基座，同时保持专业判断、数据与账号事实的清楚归属。
 
 ## 信任如何由证据建立
 
@@ -218,3 +218,7 @@ OPL 相信，真正优秀的 AI 产品既能在用户提出问题时给出高质
 - [One Person Lab App](https://github.com/gaofeng21cn/one-person-lab-app)
 - [OPL Cloud](https://github.com/gaofeng21cn/one-person-lab-cloud)
 - [OPL Framework 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-framework-whitepaper.html)
+- [OPL App 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.html)
+- [OPL Cloud 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-cloud-whitepaper.html)
+- [OPL Flow 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-flow-whitepaper.html)
+- [Med Auto Science 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/mas-whitepaper.html)
