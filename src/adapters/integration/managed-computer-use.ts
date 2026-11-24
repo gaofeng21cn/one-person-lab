@@ -6,9 +6,11 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { coerce, gte } from 'semver';
 
+import { readMcpServerConfigFromToml } from '../../kernel/codex-toml-document.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { resolveDependencyReleaseSync } from './dependency-release-resolution-sync.ts';
 import { compareDependencyVersions, type ResolvedDependencyRelease } from './dependency-release-resolution.ts';
+import { probeStdioMcpServer } from './managed-mcp-probe.ts';
 import { registerOplManagedMcpServer } from './system-installation/codex-plugin-registry.ts';
 
 const LOCK_PATH = fileURLToPath(new URL('../../../contracts/opl-framework/managed-computer-use.json', import.meta.url));
@@ -371,31 +373,17 @@ function readMcpRegistration(lock: ManagedComputerUseLock, configPath: string) {
   } catch {
     return { registered: false, enabled: false };
   }
-  const headers = [
-    `[mcp_servers.${lock.mcp.server_id}]`,
-    `[mcp_servers."${lock.mcp.server_id}"]`,
-  ];
-  const header = headers.find((candidate) => text.includes(candidate));
-  if (!header) return { registered: false, enabled: false };
-  const start = text.indexOf(header);
-  if (start < 0) return { registered: false, enabled: false };
-  const next = text.slice(start + header.length).search(/\n\[/);
-  const body = text.slice(start, next < 0 ? undefined : start + header.length + next);
-  const command = body.match(/\ncommand\s*=\s*"([^"]+)"/)?.[1] ?? null;
-  const args = body.match(/\nargs\s*=\s*\[([^\]]*)\]/)?.[1]
-    ?.split(',')
-    .map((entry) => entry.trim().replace(/^"|"$/g, ''))
-    .filter(Boolean) ?? [];
+  const config = readMcpServerConfigFromToml(text, lock.mcp.server_id);
+  if (!config.present) return { registered: false, enabled: false };
   const expectedExecutable = process.env.OPL_KIMI_CU_EXECUTABLE_PATH?.trim()
     || path.join(resolveInstallPath(lock), 'Contents', 'MacOS', path.basename(lock.bundle.executable));
-  const enabledValue = body.match(/\nenabled\s*=\s*(true|false)/)?.[1];
   return {
-    registered: command === expectedExecutable && args.join('\0') === lock.mcp.args.join('\0'),
-    enabled: enabledValue ? enabledValue === 'true' : true,
+    registered: config.command === expectedExecutable && config.args.join('\0') === lock.mcp.args.join('\0'),
+    enabled: config.enabled,
   };
 }
 
-function observeMcpCapability(lock: ManagedComputerUseLock, executable: string) {
+async function observeMcpCapability(lock: ManagedComputerUseLock, executable: string) {
   const fixture = process.env.OPL_KIMI_CU_MCP_TOOLS?.trim();
   if (fixture) {
     const passed = process.env.OPL_KIMI_CU_MCP_FUNCTIONAL_PROBE === 'passed';
@@ -420,51 +408,32 @@ function observeMcpCapability(lock: ManagedComputerUseLock, executable: string) 
       },
     };
   }
-  const request = [
-    JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'opl-framework', version: '0.3.5' } } }),
-    JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized', params: {} }),
-    JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
-    JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'list_apps', arguments: {} } }),
-  ].join('\n') + '\n';
-  const result = spawnSync(executable, lock.mcp.args, { input: request, encoding: 'utf8', timeout: 5000 });
-  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
-  const tools: string[] = [];
-  let functionalResult: JsonRecord | null = null;
-  for (const line of output.split(/\r?\n/)) {
-    try {
-      const parsed = JSON.parse(line) as JsonRecord;
-      const resultValue = parsed.result as JsonRecord | undefined;
-      const list = resultValue?.tools;
-      if (Array.isArray(list)) {
-        for (const tool of list) {
-          if (tool && typeof tool === 'object' && typeof (tool as JsonRecord).name === 'string') {
-            tools.push((tool as JsonRecord).name as string);
-          }
-        }
-      }
-      if (parsed.id === 3 && resultValue) functionalResult = resultValue;
-    } catch {
-      // KimiCU may emit diagnostics beside JSON-RPC frames; ignore non-frames.
-    }
-  }
-  const content = functionalResult?.content;
-  const structuredContent = functionalResult?.structuredContent;
+  const probe = await probeStdioMcpServer({
+    command: executable,
+    args: lock.mcp.args,
+    protocolVersion: '2025-06-18',
+    timeoutMs: 5000,
+    callTool: { name: 'list_apps', arguments: {} },
+  });
+  const call = probe.tool_call;
+  const content = call?.content ?? null;
+  const structuredContent = call?.structuredContent ?? null;
   const functionalPassed = Boolean(
-    functionalResult
-    && functionalResult.isError !== true
-    && (Array.isArray(content) || (structuredContent && typeof structuredContent === 'object')),
+    call?.called
+    && !call.isError
+    && (Array.isArray(content) || structuredContent !== null),
   );
   return {
-    observedTools: [...new Set(tools)],
+    observedTools: probe.observed_tools,
     functionalProbe: {
       tool_name: 'list_apps' as const,
-      called: functionalResult !== null,
+      called: call?.called === true,
       passed: functionalPassed,
-      result_kind: functionalResult?.isError === true
+      result_kind: call?.isError === true
         ? 'error' as const
         : Array.isArray(content)
           ? (content.length > 0 ? 'content' as const : 'empty' as const)
-          : structuredContent && typeof structuredContent === 'object'
+          : structuredContent !== null
             ? 'structured_content' as const
             : 'error' as const,
     },
@@ -487,7 +456,7 @@ function parsePermissionStatus(
   return 'unknown';
 }
 
-export function inspectManagedComputerUse(options: { runExternalChecks?: boolean } = {}): ManagedComputerUseInspection {
+export async function inspectManagedComputerUse(options: { runExternalChecks?: boolean } = {}): Promise<ManagedComputerUseInspection> {
   const lock = readManagedComputerUseLock();
   const currentPlatform = resolveCurrentPlatform();
   const currentVersion = resolveMacosVersion(currentPlatform);
@@ -522,7 +491,7 @@ export function inspectManagedComputerUse(options: { runExternalChecks?: boolean
     observedTools: string[];
     functionalProbe: ManagedComputerUseInspection['mcp']['functional_probe'];
   } = shouldProbe && executableExists
-    ? observeMcpCapability(lock, executable)
+    ? await observeMcpCapability(lock, executable)
     : {
         observedTools: [],
         functionalProbe: {
@@ -757,10 +726,10 @@ function materializeArchive(lock: ManagedComputerUseLock, targetPath: string) {
   }
 }
 
-export function planManagedComputerUseUpdate(options: {
+export async function planManagedComputerUseUpdate(options: {
   resolveRelease?: () => ResolvedDependencyRelease;
 } = {}) {
-  const before = inspectManagedComputerUse({ runExternalChecks: false });
+  const before = await inspectManagedComputerUse({ runExternalChecks: false });
   if (!before.platform.supported) return { before, target: null, update_available: false };
   const target = options.resolveRelease?.() ?? resolveDependencyReleaseSync('kimi-cu', {
     platform: 'darwin', architecture: before.platform.current.split('-').at(-1), verifyArchive: false,
@@ -769,21 +738,21 @@ export function planManagedComputerUseUpdate(options: {
     || compareDependencyVersions(before.bundle.version ?? '', target.version) < 0 };
 }
 
-export function reconcileManagedComputerUse(actionId: ManagedComputerUseActionId, options: {
+export async function reconcileManagedComputerUse(actionId: ManagedComputerUseActionId, options: {
   target?: ResolvedDependencyRelease; refreshLatest?: boolean;
-} = {}): ManagedComputerUseInspection {
+} = {}): Promise<ManagedComputerUseInspection> {
   let lock = readManagedComputerUseLock();
-  if (actionId === 'settings_recheck_computer_use') return inspectManagedComputerUse();
+  if (actionId === 'settings_recheck_computer_use') return await inspectManagedComputerUse();
   const installPath = resolveInstallPath(lock);
   const executable = resolveExecutable(lock, installPath);
   if (actionId === 'settings_request_computer_use_permissions') {
-    if (!fs.existsSync(executable)) return inspectManagedComputerUse();
+    if (!fs.existsSync(executable)) return await inspectManagedComputerUse();
     runCommand(executable, ['request-permissions']);
-    return inspectManagedComputerUse();
+    return await inspectManagedComputerUse();
   }
-  const before = inspectManagedComputerUse({ runExternalChecks: false });
+  const before = await inspectManagedComputerUse({ runExternalChecks: false });
   const target = options.target ?? (options.refreshLatest || !before.installed
-    ? planManagedComputerUseUpdate().target : null);
+    ? (await planManagedComputerUseUpdate()).target : null);
   const newerInstalled = Boolean(before.installed && target
     && compareDependencyVersions(before.bundle.version ?? '', target.version) > 0);
   if (target) {
@@ -804,7 +773,7 @@ export function reconcileManagedComputerUse(actionId: ManagedComputerUseActionId
   }
   reconcileMcpRegistration(lock, executable);
   runCommand(executable, ['install']);
-  return inspectManagedComputerUse();
+  return await inspectManagedComputerUse();
 }
 
 /**
@@ -818,16 +787,16 @@ export function createManagedComputerUseProvider() {
     provider_id: lock.provider_id,
     automation_kind: 'computer_use' as const,
     buildActionCatalog: () => buildManagedComputerUseActionCatalog(),
-    inspect: (input?: { runExternalChecks?: boolean }) => inspectManagedComputerUse({
+    inspect: async (input?: { runExternalChecks?: boolean }) => await inspectManagedComputerUse({
       runExternalChecks: input?.runExternalChecks,
     }) as unknown as Record<string, unknown>,
-    reconcile: (input: { action_id: string }) => {
+    reconcile: async (input: { action_id: string }) => {
       if (!MANAGED_COMPUTER_USE_ACTION_IDS.includes(input.action_id as ManagedComputerUseActionId)) {
         throw new FrameworkContractError('cli_usage_error', `Unknown Computer Use action: ${input.action_id}.`, {
           action_id: input.action_id,
         });
       }
-      return reconcileManagedComputerUse(input.action_id as ManagedComputerUseActionId) as unknown as Record<string, unknown>;
+      return await reconcileManagedComputerUse(input.action_id as ManagedComputerUseActionId) as unknown as Record<string, unknown>;
     },
     dispose: () => undefined,
   });

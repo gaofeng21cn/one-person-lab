@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { readDurableKnowledgeCatalog } from './durable-knowledge-catalog.ts';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import {
+  parseMarkdownFrontmatter,
+  stringifyMarkdownFrontmatter,
+} from '../../kernel/frontmatter.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 
 type OkfJsonPrimitive = string | number | boolean | null;
@@ -184,60 +188,16 @@ function fileRole(relativePath: string): OkfFileRole {
   return 'concept';
 }
 
-function scalarToFrontmatter(value: OkfJsonValue): string {
-  if (Array.isArray(value)) return `[${value.map((entry) => scalarToFrontmatter(entry)).join(', ')}]`;
-  if (typeof value === 'string') {
-    if (!value.trim()) return '""';
-    if (/[:#[\]{},&*!|>'"%@`\s]/.test(value)) return JSON.stringify(value);
-    return value;
-  }
-  return JSON.stringify(value);
-}
-
 function stringifyFrontmatter(frontmatter: JsonRecord) {
-  return [
-    '---',
-    ...Object.entries(frontmatter).map(([key, value]) => `${key}: ${scalarToFrontmatter(value)}`),
-    '---',
-  ].join('\n');
-}
-
-function parseScalar(rawValue: string): OkfJsonValue {
-  const value = rawValue.trim();
-  if (!value) return '';
-  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-    return value.slice(1, -1);
-  }
-  if (value.startsWith('[') && value.endsWith(']')) {
-    const inner = value.slice(1, -1).trim();
-    return inner ? inner.split(',').map((entry) => String(parseScalar(entry))) : [];
-  }
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  if (value === 'null') return null;
-  const numberValue = Number(value);
-  if (Number.isFinite(numberValue) && /^-?\d+(?:\.\d+)?$/.test(value)) return numberValue;
-  return value;
+  return stringifyMarkdownFrontmatter(frontmatter);
 }
 
 function parseFrontmatter(content: string): ParsedOkfFrontmatter {
-  const normalized = content.replace(/\r\n/g, '\n');
-  if (!normalized.startsWith('---\n')) return { frontmatter: null, body: normalized, parseable: false };
-  const closingIndex = normalized.indexOf('\n---', 4);
-  if (closingIndex < 0) return { frontmatter: null, body: normalized, parseable: false };
-  const frontmatterText = normalized.slice(4, closingIndex);
-  const afterClosing = normalized.slice(closingIndex + 4).replace(/^\n/, '');
-  const frontmatter: JsonRecord = {};
-  for (const line of frontmatterText.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const separatorIndex = trimmed.indexOf(':');
-    if (separatorIndex < 0) return { frontmatter: null, body: afterClosing, parseable: false };
-    const key = trimmed.slice(0, separatorIndex).trim();
-    if (!key) return { frontmatter: null, body: afterClosing, parseable: false };
-    frontmatter[key] = parseScalar(trimmed.slice(separatorIndex + 1));
+  const parsed = parseMarkdownFrontmatter(content);
+  if (!parsed.hasFrontmatter || !parsed.parseable || !parsed.data) {
+    return { frontmatter: null, body: parsed.body, parseable: false };
   }
-  return { frontmatter, body: afterClosing, parseable: true };
+  return { frontmatter: parsed.data as JsonRecord, body: parsed.body, parseable: true };
 }
 
 function walkMarkdownFiles(root: string) {

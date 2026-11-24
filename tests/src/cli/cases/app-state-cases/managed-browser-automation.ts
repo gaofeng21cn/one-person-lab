@@ -43,14 +43,14 @@ const REQUIRED_TOOLS = [
   'browser_wait_for',
 ];
 
-function withEnv<T>(updates: Record<string, string | undefined>, run: () => T) {
+async function withEnv<T>(updates: Record<string, string | undefined>, run: () => T | Promise<T>): Promise<T> {
   const previous = Object.fromEntries(Object.keys(updates).map((key) => [key, process.env[key]]));
   for (const [key, value] of Object.entries(updates)) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
   try {
-    return run();
+    return await run();
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];
@@ -69,17 +69,24 @@ function createPlaywrightMcpFixture(root: string) {
     version: '0.0.79',
   }));
   fs.writeFileSync(entrypoint, `import fs from 'node:fs';
+import readline from 'node:readline';
 fs.appendFileSync(${JSON.stringify(invocationLog)}, 'invoked\\n');
-const frames = fs.readFileSync(0, 'utf8').trim().split(/\\r?\\n/).map((line) => JSON.parse(line));
-for (const frame of frames) {
-  if (frame.id === 1) console.log(JSON.stringify({ jsonrpc: '2.0', id: 1, result: {
-    protocolVersion: '2025-06-18', capabilities: { tools: {} },
-    serverInfo: { name: 'Playwright', version: '1.63.0-alpha-2026-08-05' },
-  }}));
-  if (frame.id === 2) console.log(JSON.stringify({ jsonrpc: '2.0', id: 2, result: {
-    tools: ${JSON.stringify(REQUIRED_TOOLS.map((name) => ({ name })))},
-  }}));
-}
+const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+rl.on('line', (line) => {
+  const trimmed = line.trim();
+  if (!trimmed) return;
+  const frame = JSON.parse(trimmed);
+  if (frame.method === 'initialize') {
+    process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: {
+      protocolVersion: '2025-06-18', capabilities: { tools: {} },
+      serverInfo: { name: 'Playwright', version: '1.63.0-alpha-2026-08-05' },
+    }}) + '\\n');
+  } else if (frame.method === 'tools/list') {
+    process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: frame.id, result: {
+      tools: ${JSON.stringify(REQUIRED_TOOLS.map((name) => ({ name, inputSchema: { type: 'object' } })))},
+    }}) + '\\n');
+  }
+});
 `);
   return { packageRoot, entrypoint, invocationLog };
 }
@@ -119,14 +126,14 @@ test('managed Browser Automation lock delegates version resolution while preserv
   assert.equal(lock.browser.desktop_visual_fallback_provider, 'kimi-cu');
 });
 
-test('repair preserves unrelated Codex MCP tables and registers exact Node, CLI, args, and enabled state', () => {
+test('repair preserves unrelated Codex MCP tables and registers exact Node, CLI, args, and enabled state', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-browser-automation-repair-'));
   const fixture = createPlaywrightMcpFixture(root);
   const env = browserEnv(root, fixture.packageRoot);
   const configPath = path.join(env.CODEX_HOME, 'config.toml');
   fs.writeFileSync(configPath, `[mcp_servers.keep]\ncommand = "keep"\n\n[mcp_servers."playwright"]\ncommand = "/tmp/stale"\nargs = ["--stale"]\nenabled = false\n`);
   try {
-    const projection = withEnv(env, () =>
+    const projection = await withEnv(env, () =>
       reconcileManagedBrowserAutomation('settings_repair_browser_automation'));
     const config = fs.readFileSync(configPath, 'utf8');
     const expectedArgs = [
@@ -161,7 +168,7 @@ test('repair preserves unrelated Codex MCP tables and registers exact Node, CLI,
   }
 });
 
-test('fast inspection reads package and registration without spawning Playwright MCP', () => {
+test('fast inspection reads package and registration without spawning Playwright MCP', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-browser-automation-fast-'));
   const fixture = createPlaywrightMcpFixture(root);
   const env = browserEnv(root, fixture.packageRoot);
@@ -178,7 +185,7 @@ test('fast inspection reads package and registration without spawning Playwright
   ];
   fs.writeFileSync(path.join(env.CODEX_HOME, 'config.toml'), `[mcp_servers.playwright]\ncommand = "${process.execPath}"\nargs = [${args.map((arg) => `"${arg}"`).join(', ')}]\nenabled = true\n`);
   try {
-    const projection = withEnv(env, () =>
+    const projection = await withEnv(env, () =>
       inspectManagedBrowserAutomation({ runExternalChecks: false }));
     assert.equal(projection.installed, true);
     assert.equal(projection.registered, true);
@@ -196,14 +203,14 @@ test('fast inspection reads package and registration without spawning Playwright
 
 test('macOS system Chrome repair retains the automation-only clone opt-out', {
   skip: process.platform !== 'darwin',
-}, () => {
+}, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-browser-clone-policy-'));
   try {
     const fixture = createPlaywrightMcpFixture(root);
     const env = browserEnv(root, fixture.packageRoot);
     const chrome = path.join(root, 'Google Chrome');
     fs.writeFileSync(chrome, 'fixture');
-    const projection = withEnv({ ...env, OPL_PLAYWRIGHT_MCP_BROWSER_PATH: chrome }, () =>
+    const projection = await withEnv({ ...env, OPL_PLAYWRIGHT_MCP_BROWSER_PATH: chrome }, () =>
       reconcileManagedBrowserAutomation('settings_repair_browser_automation'));
     const configIndex = projection.mcp.args.indexOf('--config');
     assert.notEqual(configIndex, -1);
@@ -217,11 +224,11 @@ test('macOS system Chrome repair retains the automation-only clone opt-out', {
   }
 });
 
-test('missing Playwright MCP dependency degrades only its non-blocking startup target', () => {
+test('missing Playwright MCP dependency degrades only its non-blocking startup target', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-browser-automation-missing-'));
   const env = browserEnv(root, path.join(root, 'missing-package'));
   try {
-    const target = withEnv(env, () => runManagedBrowserAutomationStartupMaintenance());
+    const target = await withEnv(env, () => runManagedBrowserAutomationStartupMaintenance());
     assert.equal(target.target_id, 'playwright-mcp');
     assert.equal(target.status, 'attention_required');
     assert.equal(target.reason, 'reconcile_incomplete');
@@ -233,7 +240,7 @@ test('missing Playwright MCP dependency degrades only its non-blocking startup t
   }
 });
 
-test('missing system Chrome keeps the pinned provider registered but not ready', () => {
+test('missing system Chrome keeps the pinned provider registered but not ready', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-browser-automation-missing-chrome-'));
   const fixture = createPlaywrightMcpFixture(root);
   const env = {
@@ -241,7 +248,7 @@ test('missing system Chrome keeps the pinned provider registered but not ready',
     OPL_PLAYWRIGHT_MCP_BROWSER_PATH: path.join(root, 'missing-chrome'),
   };
   try {
-    const projection = withEnv(env, () =>
+    const projection = await withEnv(env, () =>
       reconcileManagedBrowserAutomation('settings_repair_browser_automation'));
     assert.equal(projection.installed, true);
     assert.equal(projection.registered, true);
@@ -287,11 +294,11 @@ test('App action shell routes Browser Automation recheck through the Framework p
   }
 });
 
-test('installed official Playwright MCP completes a real initialize and tools/list handshake', () => {
+test('installed official Playwright MCP completes a real initialize and tools/list handshake', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-browser-automation-real-mcp-'));
   const env = browserEnv(root, path.dirname(require.resolve('@playwright/mcp/package.json')));
   try {
-    const projection = withEnv(env, () =>
+    const projection = await withEnv(env, () =>
       reconcileManagedBrowserAutomation('settings_repair_browser_automation'));
     assert.equal(projection.mcp.initialize_ok, true);
     assert.equal(projection.mcp.protocol_version, '2025-06-18');

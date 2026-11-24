@@ -462,13 +462,13 @@ export async function buildOplAppState(input: {
       automation_kind: 'computer_use',
       runExternalChecks: profile === 'full',
     })
-    : inspectManagedComputerUse({ runExternalChecks: profile === 'full' });
+    : await inspectManagedComputerUse({ runExternalChecks: profile === 'full' });
   const managedBrowserAutomation = input.automationProviderHost
     ? await input.automationProviderHost.inspect({
       automation_kind: 'browser_automation',
       runExternalChecks: profile === 'full',
     })
-    : inspectManagedBrowserAutomation({ runExternalChecks: profile === 'full' });
+    : await inspectManagedBrowserAutomation({ runExternalChecks: profile === 'full' });
   const rawActions = buildActionCatalog(contracts, {
     inspectExternalOwners: profile === 'full',
     descriptorDiscovery: input.descriptorDiscovery,

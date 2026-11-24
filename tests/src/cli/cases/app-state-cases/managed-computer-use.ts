@@ -25,14 +25,14 @@ const REQUIRED_TOOLS = [
   'drag',
 ];
 
-function withEnv<T>(updates: Record<string, string | undefined>, run: () => T) {
+async function withEnv<T>(updates: Record<string, string | undefined>, run: () => T | Promise<T>): Promise<T> {
   const previous = Object.fromEntries(Object.keys(updates).map((key) => [key, process.env[key]]));
   for (const [key, value] of Object.entries(updates)) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
   try {
-    return run();
+    return await run();
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];
@@ -56,7 +56,23 @@ case "$1" in
   service-status) echo 'SMAppService status=1 (1=enabled)' ;;
   xpc-ping) echo 'xpc-ping: ok' ;;
   doctor) printf '%s\\n' 'Accessibility: granted' 'Screen Recording: granted' ;;
-  mcp) printf '%s\\n' '{"jsonrpc":"2.0","id":2,"result":{"tools":${JSON.stringify(REQUIRED_TOOLS.map((name) => ({ name })))}}}' '{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"[]"}]}}' ;;
+  mcp) exec "${process.execPath}" -e '
+const readline = require("node:readline");
+const tools = ${JSON.stringify(REQUIRED_TOOLS.map((name) => ({ name, inputSchema: { type: "object" } })))};
+const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+rl.on("line", (line) => {
+  const trimmed = line.trim();
+  if (!trimmed) return;
+  const frame = JSON.parse(trimmed);
+  if (frame.method === "initialize") {
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: frame.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "kimi-cu", version: "0.5.4" } } }) + String.fromCharCode(10));
+  } else if (frame.method === "tools/list") {
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: frame.id, result: { tools } }) + String.fromCharCode(10));
+  } else if (frame.method === "tools/call") {
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: frame.id, result: { content: [{ type: "text", text: "[]" }] } }) + String.fromCharCode(10));
+  }
+});
+' ;;
   install)
     if grep -Fq 'args = ["mcp", "-s", "user"]' "$CODEX_HOME/config.toml"; then
       : > "\${OPL_KIMI_CU_INSTALL_ORDER_MARKER:-/dev/null}"
@@ -86,7 +102,7 @@ test('managed Computer Use lock stays bound to the App-owned KimiCU identity', (
   assert.deepEqual(lock.action_ids, buildManagedComputerUseActionCatalog().map((action) => action.action_id));
 });
 
-test('managed Computer Use reports ready only for exact bundle, service, permission, MCP registration, and tools', () => {
+test('managed Computer Use reports ready only for exact bundle, service, permission, MCP registration, and tools', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-computer-use-ready-'));
   const home = path.join(root, 'home');
   const fixture = createKimiFixture(root);
@@ -98,7 +114,7 @@ args = ["mcp", "-s", "user"]
 enabled = true
 `);
   try {
-    const projection = withEnv({
+    const projection = await withEnv({
       HOME: home,
       CODEX_HOME: codexHome,
       OPL_COMPUTER_USE_PLATFORM: 'darwin-arm64',
@@ -124,7 +140,7 @@ enabled = true
   }
 });
 
-test('an exact tools/list without a successful list_apps call is not ready', () => {
+test('an exact tools/list without a successful list_apps call is not ready', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-computer-use-functional-probe-'));
   const home = path.join(root, 'home');
   const fixture = createKimiFixture(root);
@@ -136,7 +152,7 @@ args = ["mcp", "-s", "user"]
 enabled = true
 `);
   try {
-    const projection = withEnv({
+    const projection = await withEnv({
       HOME: home,
       CODEX_HOME: codexHome,
       OPL_COMPUTER_USE_PLATFORM: 'darwin-arm64',
@@ -158,7 +174,7 @@ enabled = true
   }
 });
 
-test('the real MCP probe performs tools/call list_apps', () => {
+test('the real MCP probe performs tools/call list_apps', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-computer-use-real-probe-'));
   const home = path.join(root, 'home');
   const fixture = createKimiFixture(root);
@@ -170,7 +186,7 @@ args = ["mcp", "-s", "user"]
 enabled = true
 `);
   try {
-    const projection = withEnv({
+    const projection = await withEnv({
       HOME: home,
       CODEX_HOME: codexHome,
       OPL_COMPUTER_USE_PLATFORM: 'darwin-arm64',
@@ -196,7 +212,7 @@ enabled = true
   }
 });
 
-test('missing TCC permission remains installed and enabled but not ready', () => {
+test('missing TCC permission remains installed and enabled but not ready', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-computer-use-permission-'));
   const home = path.join(root, 'home');
   const fixture = createKimiFixture(root);
@@ -216,7 +232,7 @@ args = ["mcp", "-s", "user"]
 enabled = true
 `);
   try {
-    const projection = withEnv({
+    const projection = await withEnv({
       HOME: home,
       CODEX_HOME: codexHome,
       OPL_COMPUTER_USE_PLATFORM: 'darwin-arm64',
@@ -239,7 +255,7 @@ enabled = true
   }
 });
 
-test('MCP registration must preserve the exact command and args and accepts the quoted server table', () => {
+test('MCP registration must preserve the exact command and args and accepts the quoted server table', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-computer-use-registry-'));
   const home = path.join(root, 'home');
   const fixture = createKimiFixture(root);
@@ -264,27 +280,27 @@ command = "/tmp/not-kimi-cu"
 args = ["mcp"]
 enabled = true
 `);
-    assert.equal(inspect().registered, false);
+    assert.equal((await inspect()).registered, false);
 
     fs.writeFileSync(configPath, `[mcp_servers.kimi-cu]
 command = "${fixture.executable}"
 args = ["mcp"]
 enabled = true
 `);
-    assert.equal(inspect().registered, false);
+    assert.equal((await inspect()).registered, false);
 
     fs.writeFileSync(configPath, `[mcp_servers."kimi-cu"]
 command = "${fixture.executable}"
 args = ["mcp", "-s", "user"]
 enabled = true
 `);
-    assert.equal(inspect().registered, true);
+    assert.equal((await inspect()).registered, true);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
-test('repair uses the Codex registry writer without replacing unrelated config tables', () => {
+test('repair uses the Codex registry writer without replacing unrelated config tables', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-computer-use-repair-registry-'));
   const home = path.join(root, 'home');
   const fixture = createKimiFixture(root);
@@ -301,7 +317,7 @@ args = ["mcp", "--stale"]
 enabled = false
 `);
   try {
-    const projection = withEnv({
+    const projection = await withEnv({
       HOME: home,
       CODEX_HOME: codexHome,
       OPL_COMPUTER_USE_PLATFORM: 'darwin-arm64',
@@ -328,8 +344,8 @@ enabled = false
   }
 });
 
-test('unsupported hosts degrade only the managed companion', () => {
-  const projection = withEnv({ OPL_COMPUTER_USE_PLATFORM: 'linux-x64' }, () =>
+test('unsupported hosts degrade only the managed companion', async () => {
+  const projection = await withEnv({ OPL_COMPUTER_USE_PLATFORM: 'linux-x64' }, () =>
     inspectManagedComputerUse({ runExternalChecks: false }));
   assert.equal(projection.platform.supported, false);
   assert.equal(projection.status, 'unsupported_platform');
@@ -337,8 +353,8 @@ test('unsupported hosts degrade only the managed companion', () => {
   assert.equal(projection.ready, false);
 });
 
-test('macOS below the pinned minimum stays unsupported', () => {
-  const projection = withEnv({
+test('macOS below the pinned minimum stays unsupported', async () => {
+  const projection = await withEnv({
     OPL_COMPUTER_USE_PLATFORM: 'darwin-arm64',
     OPL_COMPUTER_USE_OS_VERSION: '13.6.9',
   }, () => inspectManagedComputerUse({ runExternalChecks: false }));
@@ -347,7 +363,7 @@ test('macOS below the pinned minimum stays unsupported', () => {
   assert.equal(projection.status, 'unsupported_platform');
 });
 
-test('startup maintenance keeps an installed permission-required companion idempotent and non-blocking', () => {
+test('startup maintenance keeps an installed permission-required companion idempotent and non-blocking', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-computer-use-startup-permission-'));
   const home = path.join(root, 'home');
   const fixture = createKimiFixture(root);
@@ -367,7 +383,7 @@ args = ["mcp", "-s", "user"]
 enabled = true
 `);
   try {
-    const target = withEnv({
+    const target = await withEnv({
       HOME: home,
       CODEX_HOME: codexHome,
       OPL_COMPUTER_USE_PLATFORM: 'darwin-arm64',
@@ -395,7 +411,7 @@ enabled = true
   }
 });
 
-test('startup maintenance records managed companion materialization failure without blocking OPL', () => {
+test('startup maintenance records managed companion materialization failure without blocking OPL', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-computer-use-startup-failure-'));
   const home = path.join(root, 'home');
   const archivePath = path.join(root, 'KimiCU.app.zip');
@@ -403,7 +419,7 @@ test('startup maintenance records managed companion materialization failure with
   fs.mkdirSync(home, { recursive: true });
   fs.writeFileSync(archivePath, 'not the pinned archive');
   try {
-    const target = withEnv({
+    const target = await withEnv({
       HOME: home,
       CODEX_HOME: path.join(home, '.codex'),
       OPL_COMPUTER_USE_PLATFORM: 'darwin-arm64',

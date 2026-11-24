@@ -227,7 +227,7 @@ test('observability readback projects current owner refs without storing payload
   assert.deepEqual(readback.signals.log_event.ref_fields, ['route_ref', 'receipt_ref', 'typed_blocker_ref']);
 });
 
-test('observability export seed groups trace metric and log signals without payload body or readiness claims', () => {
+test('observability export seed groups trace metric and log signals without payload body or readiness claims', async () => {
   const seed = buildObservabilitySemanticConventionExportSeed({
     current_owner_delta: {
       stage_run_id: 'stage-run:mas:review',
@@ -290,7 +290,7 @@ test('observability export seed groups trace metric and log signals without payl
   assert.equal(seed.signal_groups.logs[0].body_included, false);
   assert.equal(JSON.stringify(seed).includes('must-not-leak'), false);
 
-  const openmetrics = renderObservabilitySemanticConventionOpenMetrics(seed);
+  const openmetrics = await renderObservabilitySemanticConventionOpenMetrics(seed);
   assert.match(openmetrics, /# TYPE opl_queue_length gauge/);
   assert.match(openmetrics, /opl_queue_length\{[^}]*opl_domain_id="medautoscience"[^}]*\} 7/);
   assert.match(openmetrics, /opl_latency_ms\{[^}]*opl_task_queue_name="opl-family-runtime"[^}]*\} 1200/);

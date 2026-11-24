@@ -8,8 +8,14 @@ import {
 } from '../../../kernel/agent-plugin-manifest.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import {
+  parseTomlRecord,
+  renderTomlKeyValue,
+  renderTomlTableHeader,
+} from '../../../kernel/codex-toml-document.ts';
+import {
   parseTomlDocument,
   renderTomlDocument,
+  validateTomlDocument,
 } from './codex-config-document.ts';
 import {
   configuredCodexHome,
@@ -100,28 +106,28 @@ export function missingRequiredSkills(sourcePath: string | null, requiredSkillId
   );
 }
 
-function tomlTableValue(table: TomlTable, key: string, required: boolean) {
-  const matches = table.content.split('\n').slice(1).flatMap((line) => {
-    const match = line.match(new RegExp(`^\\s*${key}\\s*=\\s*(.+?)\\s*$`));
-    return match ? [match[1]] : [];
-  });
-  if (matches.length > 1 || (required && matches.length !== 1)) {
-    localReadbackFailure('configured_codex_plugin_carrier_local_config_invalid',
-      'Configured Codex local carrier table has a missing or duplicate required key.', {
-        table: table.header, key, value_count: matches.length,
-      });
+function parseValidatedTableEntries(table: TomlTable): Record<string, unknown> {
+  try {
+    let cursor: unknown = parseTomlRecord(table.content);
+    for (const segment of table.path) {
+      if (!isRecord(cursor)) throw new Error('missing table segment');
+      cursor = cursor[segment];
+    }
+    if (!isRecord(cursor)) throw new Error('table body is not an object');
+    return cursor;
+  } catch {
+    return localReadbackFailure(
+      'configured_codex_plugin_carrier_local_config_invalid',
+      'Configured Codex local carrier table is invalid or contains duplicate keys.',
+      { table: table.header },
+    );
   }
-  return matches[0] ?? null;
 }
 
 function tomlStringValue(table: TomlTable, key: string) {
-  const raw = tomlTableValue(table, key, true)!;
-  try {
-    const parsed = parseJsonText(raw);
-    if (typeof parsed === 'string' && parsed.trim()) return parsed;
-  } catch {
-    // The owner-generated local carrier uses TOML basic strings compatible with JSON string syntax.
-  }
+  const entries = parseValidatedTableEntries(table);
+  const value = entries[key];
+  if (typeof value === 'string' && value.trim()) return value;
   return localReadbackFailure(
     'configured_codex_plugin_carrier_local_config_invalid',
     'Configured Codex local carrier string is invalid.',
@@ -130,9 +136,10 @@ function tomlStringValue(table: TomlTable, key: string) {
 }
 
 function tomlEnabledValue(table: TomlTable) {
-  const raw = tomlTableValue(table, 'enabled', false);
-  if (raw === null || raw === 'true') return true;
-  if (raw === 'false') return false;
+  const entries = parseValidatedTableEntries(table);
+  const value = entries.enabled;
+  if (value === undefined || value === true) return true;
+  if (value === false) return false;
   return localReadbackFailure(
     'configured_codex_plugin_carrier_local_config_invalid',
     'Configured Codex local carrier enabled flag is invalid.',
@@ -376,7 +383,7 @@ function replacePluginEnabledTable(input: {
   const expectedHeader = `plugins.${input.pluginId}`;
   const document = parseTomlDocument(before);
   const target = document.tables.find((table) => table.header === expectedHeader) ?? null;
-  const enabledLine = `enabled = ${input.enabled ? 'true' : 'false'}`;
+  const enabledLine = renderTomlKeyValue('enabled', input.enabled);
   const tables = target
     ? document.tables.map((table) => {
       if (table !== target) return table;
@@ -395,13 +402,14 @@ function replacePluginEnabledTable(input: {
       }
       if (enabledIndexes.length === 1) lines[enabledIndexes[0]] = enabledLine;
       else lines.push(enabledLine);
-      return { content: `${lines.join('\n').trimEnd()}\n` };
+      return { ...table, content: `${lines.join('\n').trimEnd()}\n` };
     })
     : [
       ...document.tables,
-      { content: `[plugins."${input.pluginId}"]\n${enabledLine}\n` },
+      { content: `${renderTomlTableHeader(['plugins', input.pluginId])}\n${enabledLine}\n` },
     ];
   const after = renderTomlDocument(document.preamble, tables);
+  validateTomlDocument(after);
   if (after === before) return false;
   fs.mkdirSync(path.dirname(input.configPath), { recursive: true });
   const temporary = path.join(

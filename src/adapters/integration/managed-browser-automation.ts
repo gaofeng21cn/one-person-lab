@@ -8,8 +8,10 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { coerce, gte } from 'semver';
 
+import { readMcpServerConfigFromToml } from '../../kernel/codex-toml-document.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { probeStdioMcpServer } from './managed-mcp-probe.ts';
 import { registerOplManagedMcpServer } from './system-installation/codex-plugin-registry.ts';
 
 const LOCK_PATH = fileURLToPath(new URL(
@@ -321,25 +323,15 @@ function readMcpRegistration(input: {
   } catch {
     return { registered: false, enabled: false };
   }
-  const headers = [`[mcp_servers.${input.serverId}]`, `[mcp_servers."${input.serverId}"]`];
-  const header = headers.find((candidate) => text.includes(candidate));
-  if (!header) return { registered: false, enabled: false };
-  const start = text.indexOf(header);
-  const next = text.slice(start + header.length).search(/\n\[/);
-  const body = text.slice(start, next < 0 ? undefined : start + header.length + next);
-  const command = body.match(/\ncommand\s*=\s*"([^"]+)"/)?.[1] ?? null;
-  const args = body.match(/\nargs\s*=\s*\[([^\]]*)\]/)?.[1]
-    ?.split(',')
-    .map((entry) => entry.trim().replace(/^"|"$/g, ''))
-    .filter(Boolean) ?? [];
-  const enabledValue = body.match(/\nenabled\s*=\s*(true|false)/)?.[1];
+  const config = readMcpServerConfigFromToml(text, input.serverId);
+  if (!config.present) return { registered: false, enabled: false };
   return {
-    registered: command === input.command && args.join('\0') === input.args.join('\0'),
-    enabled: enabledValue ? enabledValue === 'true' : true,
+    registered: config.command === input.command && config.args.join('\0') === input.args.join('\0'),
+    enabled: config.enabled,
   };
 }
 
-function probeMcp(input: {
+async function probeMcp(input: {
   nodeExecutable: string;
   entrypoint: string;
   args: string[];
@@ -356,69 +348,27 @@ function probeMcp(input: {
       error: null,
     };
   }
-  const request = [
-    JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: input.protocolVersion,
-        capabilities: {},
-        clientInfo: { name: 'opl-framework', version: '0.3.5' },
-      },
-    }),
-    JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized', params: {} }),
-    JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
-  ].join('\n') + '\n';
-  const result = spawnSync(input.nodeExecutable, [input.entrypoint, ...input.args], {
-    input: request,
-    encoding: 'utf8',
-    timeout: 8000,
+  const probe = await probeStdioMcpServer({
+    command: input.nodeExecutable,
+    args: [input.entrypoint, ...input.args],
+    protocolVersion: input.protocolVersion,
+    timeoutMs: 8000,
   });
-  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
-  let initializeOk = false;
-  let protocolVersion: string | null = null;
-  let serverName: string | null = null;
-  let serverVersion: string | null = null;
-  const observedTools: string[] = [];
-  for (const line of output.split(/\r?\n/)) {
-    try {
-      const frame = JSON.parse(line) as JsonRecord;
-      const response = frame.result as JsonRecord | undefined;
-      if (frame.id === 1 && response) {
-        initializeOk = true;
-        protocolVersion = typeof response.protocolVersion === 'string' ? response.protocolVersion : null;
-        const serverInfo = response.serverInfo as JsonRecord | undefined;
-        serverName = typeof serverInfo?.name === 'string' ? serverInfo.name : null;
-        serverVersion = typeof serverInfo?.version === 'string' ? serverInfo.version : null;
-      }
-      if (frame.id === 2 && Array.isArray(response?.tools)) {
-        for (const tool of response.tools) {
-          if (tool && typeof tool === 'object' && typeof (tool as JsonRecord).name === 'string') {
-            observedTools.push((tool as JsonRecord).name as string);
-          }
-        }
-      }
-    } catch {
-      // The package can emit diagnostics beside JSON-RPC frames.
-    }
-  }
-  const spawnError = result.error instanceof Error ? result.error.message : null;
   return {
-    initialize_ok: initializeOk,
-    protocol_version: protocolVersion,
-    server_name: serverName,
-    server_version: serverVersion,
-    observed_tools: [...new Set(observedTools)],
-    error: initializeOk && observedTools.length > 0
+    initialize_ok: probe.initialize_ok,
+    protocol_version: probe.protocol_version,
+    server_name: probe.server_name,
+    server_version: probe.server_version,
+    observed_tools: probe.observed_tools,
+    error: probe.initialize_ok && probe.observed_tools.length > 0
       ? null
-      : spawnError || output.trim() || `Playwright MCP exited with status ${result.status ?? 'unknown'}.`,
+      : probe.error || 'Playwright MCP probe failed.',
   };
 }
 
-export function inspectManagedBrowserAutomation(
+export async function inspectManagedBrowserAutomation(
   options: { runExternalChecks?: boolean } = {},
-): ManagedBrowserAutomationInspection {
+): Promise<ManagedBrowserAutomationInspection> {
   const lock = readManagedBrowserAutomationLock();
   const nodeExecutable = resolveNodeExecutable();
   const nodeVersion = process.env.OPL_PLAYWRIGHT_MCP_NODE_VERSION?.trim() || process.versions.node;
@@ -445,7 +395,7 @@ export function inspectManagedBrowserAutomation(
   const registered = installed && registration.registered;
   const shouldProbe = options.runExternalChecks !== false;
   const health = shouldProbe && installed && entrypoint
-    ? probeMcp({
+    ? await probeMcp({
       nodeExecutable,
       entrypoint,
       args,
@@ -543,10 +493,10 @@ export function inspectManagedBrowserAutomation(
   };
 }
 
-export function planManagedBrowserAutomationUpdate(options: {
+export async function planManagedBrowserAutomationUpdate(options: {
   resolveRelease?: () => ResolvedDependencyRelease;
 } = {}) {
-  const before = inspectManagedBrowserAutomation({ runExternalChecks: false });
+  const before = await inspectManagedBrowserAutomation({ runExternalChecks: false });
   if (before.status === 'unsupported_runtime') return { before, target: null, update_available: false };
   // An explicit operator root is an external carrier and is never auto-replaced.
   if (process.env.OPL_PLAYWRIGHT_MCP_PACKAGE_ROOT?.trim()) return { before, target: null, update_available: false };
@@ -555,12 +505,12 @@ export function planManagedBrowserAutomationUpdate(options: {
     || compareDependencyVersions(before.runtime.package_version ?? '', target.version) < 0 };
 }
 
-export function reconcileManagedBrowserAutomation(actionId: ManagedBrowserAutomationActionId, options: {
+export async function reconcileManagedBrowserAutomation(actionId: ManagedBrowserAutomationActionId, options: {
   target?: ResolvedDependencyRelease; refreshLatest?: boolean;
-} = {}): ManagedBrowserAutomationInspection {
-  if (actionId === 'settings_recheck_browser_automation') return inspectManagedBrowserAutomation();
-  let before = inspectManagedBrowserAutomation({ runExternalChecks: false });
-  const target = options.target ?? (options.refreshLatest ? planManagedBrowserAutomationUpdate().target : null);
+} = {}): Promise<ManagedBrowserAutomationInspection> {
+  if (actionId === 'settings_recheck_browser_automation') return await inspectManagedBrowserAutomation();
+  let before = await inspectManagedBrowserAutomation({ runExternalChecks: false });
+  const target = options.target ?? (options.refreshLatest ? (await planManagedBrowserAutomationUpdate()).target : null);
   if (target && !process.env.OPL_PLAYWRIGHT_MCP_PACKAGE_ROOT?.trim()
     && (!before.installed || compareDependencyVersions(before.runtime.package_version ?? '', target.version) < 0)) {
     const prefix = path.join(resolveOplStatePaths().state_dir, 'managed-browser-automation', 'runtime');
@@ -569,7 +519,7 @@ export function reconcileManagedBrowserAutomation(actionId: ManagedBrowserAutoma
       encoding: 'utf8', stdio: 'pipe', timeout: 300_000,
     });
     if (installed.status !== 0) throw new Error(installed.stderr || 'Managed Playwright MCP installation failed.');
-    before = inspectManagedBrowserAutomation({ runExternalChecks: false });
+    before = await inspectManagedBrowserAutomation({ runExternalChecks: false });
     if (before.runtime.package_version !== target.version) throw new Error('Managed Playwright MCP version verification failed.');
   }
   if (!before.installed || !before.runtime.entrypoint) return before;
@@ -580,7 +530,7 @@ export function reconcileManagedBrowserAutomation(actionId: ManagedBrowserAutoma
     args: before.mcp.args,
     enabled: true,
   });
-  return inspectManagedBrowserAutomation();
+  return await inspectManagedBrowserAutomation();
 }
 
 /**
@@ -594,16 +544,16 @@ export function createManagedBrowserAutomationProvider() {
     provider_id: lock.provider_id,
     automation_kind: 'browser_automation' as const,
     buildActionCatalog: () => buildManagedBrowserAutomationActionCatalog(),
-    inspect: (input?: { runExternalChecks?: boolean }) => inspectManagedBrowserAutomation({
+    inspect: async (input?: { runExternalChecks?: boolean }) => await inspectManagedBrowserAutomation({
       runExternalChecks: input?.runExternalChecks,
     }) as unknown as Record<string, unknown>,
-    reconcile: (input: { action_id: string }) => {
+    reconcile: async (input: { action_id: string }) => {
       if (!MANAGED_BROWSER_AUTOMATION_ACTION_IDS.includes(input.action_id as ManagedBrowserAutomationActionId)) {
         throw new FrameworkContractError('cli_usage_error', `Unknown Browser Automation action: ${input.action_id}.`, {
           action_id: input.action_id,
         });
       }
-      return reconcileManagedBrowserAutomation(input.action_id as ManagedBrowserAutomationActionId) as unknown as Record<string, unknown>;
+      return await reconcileManagedBrowserAutomation(input.action_id as ManagedBrowserAutomationActionId) as unknown as Record<string, unknown>;
     },
     dispose: () => undefined,
   });

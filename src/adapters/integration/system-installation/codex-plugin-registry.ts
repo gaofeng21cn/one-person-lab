@@ -4,6 +4,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { resolveAgentPluginManifest } from '../../../kernel/agent-plugin-manifest.ts';
+import {
+  removeTomlTables,
+  sameTomlTablePath,
+  upsertTomlTable,
+} from '../../../kernel/codex-toml-document.ts';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import {
   FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP,
@@ -169,50 +174,7 @@ function resolveOplStateDir(home = resolveHomeDir()) {
     : path.join(home, 'Library', 'Application Support', 'OPL', 'state');
 }
 
-function escapeTomlString(value: string) {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
 
-function removeTomlTable(text: string, tableHeader: string) {
-  return removeTomlTables(text, (header) => header === tableHeader).text;
-}
-
-function removeTomlTables(
-  text: string,
-  shouldRemove: (tableHeader: string) => boolean,
-) {
-  const lines = text.split('\n');
-  const kept: string[] = [];
-  let skipping = false;
-  let removed = 0;
-
-  for (const line of lines) {
-    if (/^\[[^\]]+\]/.test(line.trim())) {
-      skipping = shouldRemove(line.trim());
-      if (skipping) {
-        removed += 1;
-      }
-    }
-    if (!skipping) {
-      kept.push(line);
-    }
-  }
-
-  return {
-    text: kept.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd(),
-    removed,
-  };
-}
-
-function upsertTomlTable(text: string, tableHeader: string, bodyLines: string[]) {
-  const withoutTable = removeTomlTable(text, tableHeader);
-  const table = [tableHeader, ...bodyLines].join('\n');
-  return `${withoutTable.trimEnd()}\n\n${table}\n`;
-}
-
-function quoteTomlTableSegment(value: string) {
-  return `"${escapeTomlString(value)}"`;
-}
 
 function resolveFamilyPluginSpec(packageId: string, pluginId: string) {
   const agent = resolveStandardAgent(packageId);
@@ -257,11 +219,10 @@ export function removeSupersededOplFamilyCodexConfigTables(
     };
   }
   const legacyMarketplaceIds = supersededMarketplaceIds(packageId, pluginId);
-  const retiredPlugins = removeTomlTables(text, (header) =>
+  const retiredPlugins = removeTomlTables(text, (table) =>
     legacyMarketplaceIds.some((marketplaceId) =>
-      header === `[marketplaces.${marketplaceId}]`
-      || header === `[marketplaces.${quoteTomlTableSegment(marketplaceId)}]`
-      || (header.startsWith('[plugins."') && header.endsWith(`@${marketplaceId}"]`))
+      sameTomlTablePath(table.path, ['marketplaces', marketplaceId])
+      || (table.path.length === 2 && table.path[0] === 'plugins' && table.path[1].endsWith(`@${marketplaceId}`)),
     )
   );
   return {
@@ -449,13 +410,13 @@ export function registerLocalCodexPlugin(
   let text = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
   const removal = removeTables?.(text) ?? { text, removed: 0 };
   text = removal.text;
-  text = upsertTomlTable(text, `[marketplaces.${spec.marketplace_id}]`, [
-    'source_type = "local"',
-    `source = "${escapeTomlString(marketplaceRoot)}"`,
-  ]);
-  text = upsertTomlTable(text, `[plugins."${spec.plugin_id}@${spec.marketplace_id}"]`, [
-    'enabled = true',
-  ]);
+  text = upsertTomlTable(text, ['marketplaces', spec.marketplace_id], {
+    source_type: 'local',
+    source: marketplaceRoot,
+  });
+  text = upsertTomlTable(text, ['plugins', `${spec.plugin_id}@${spec.marketplace_id}`], {
+    enabled: true,
+  });
   fs.writeFileSync(configPath, text, 'utf8');
   return removal.removed;
 }
@@ -469,25 +430,23 @@ export function unregisterLocalCodexPlugin(
     return;
   }
   let text = fs.readFileSync(configPath, 'utf8');
-  text = removeTomlTable(text, `[plugins."${escapeTomlString(`${pluginId}@${marketplaceId}`)}"]`);
-  text = removeTomlTable(text, `[marketplaces.${marketplaceId}]`);
-  fs.writeFileSync(configPath, `${text.trimEnd()}\n`, 'utf8');
+  text = removeTomlTables(text, (table) =>
+    sameTomlTablePath(table.path, ['plugins', `${pluginId}@${marketplaceId}`])
+    || sameTomlTablePath(table.path, ['marketplaces', marketplaceId]),
+  ).text;
+  fs.writeFileSync(configPath, text ? `${text.trimEnd()}\n` : '', 'utf8');
 }
 
 function registerOplConnectMcpServer(configPath: string): CodexPluginRegistryResult['unified_mcp_server'] {
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
   const current = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
-  const tableHeaders = [
-    `[mcp_servers.${OPL_CONNECT_MCP_SERVER_ID}]`,
-    `[mcp_servers.${quoteTomlTableSegment(OPL_CONNECT_MCP_SERVER_ID)}]`,
-  ];
-  const withoutStaleServer = removeTomlTables(current, (header) => tableHeaders.some(
-    (tableHeader) => header === tableHeader || header.startsWith(`${tableHeader.slice(0, -1)}.`),
-  ));
-  const text = upsertTomlTable(withoutStaleServer.text, tableHeaders[0], [
-    'command = "opl"',
-    'args = ["connect", "mcp-stdio"]',
-  ]);
+  const withoutStaleServer = removeTomlTables(current, (table) =>
+    table.path.length >= 2 && table.path[0] === 'mcp_servers' && table.path[1] === OPL_CONNECT_MCP_SERVER_ID,
+  );
+  const text = upsertTomlTable(withoutStaleServer.text, ['mcp_servers', OPL_CONNECT_MCP_SERVER_ID], {
+    command: 'opl',
+    args: ['connect', 'mcp-stdio'],
+  });
   fs.writeFileSync(configPath, text, 'utf8');
   return {
     server_id: OPL_CONNECT_MCP_SERVER_ID,
@@ -504,14 +463,13 @@ function registerOplConnectMcpServer(configPath: string): CodexPluginRegistryRes
 function registerOplAppsMcpServer(configPath: string) {
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
   const current = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
-  const tableHeader = '[mcp_servers.opl-apps]';
-  const withoutStaleServer = removeTomlTables(current, (header) => (
-    header === tableHeader || header.startsWith('[mcp_servers.opl-apps.')
-  ));
-  const text = upsertTomlTable(withoutStaleServer.text, tableHeader, [
-    'command = "opl"',
-    'args = ["connect", "mcp-app-stdio"]',
-  ]);
+  const withoutStaleServer = removeTomlTables(current, (table) =>
+    table.path.length >= 2 && table.path[0] === 'mcp_servers' && table.path[1] === 'opl-apps',
+  );
+  const text = upsertTomlTable(withoutStaleServer.text, ['mcp_servers', 'opl-apps'], {
+    command: 'opl',
+    args: ['connect', 'mcp-app-stdio'],
+  });
   fs.writeFileSync(configPath, text, 'utf8');
   return {
     server_id: 'opl-apps' as const,
@@ -534,18 +492,14 @@ export function registerOplManagedMcpServer(input: {
 }) {
   fs.mkdirSync(path.dirname(input.configPath), { recursive: true });
   const current = fs.existsSync(input.configPath) ? fs.readFileSync(input.configPath, 'utf8') : '';
-  const tableHeaders = [
-    `[mcp_servers.${input.serverId}]`,
-    `[mcp_servers.${quoteTomlTableSegment(input.serverId)}]`,
-  ];
-  const withoutStaleServer = removeTomlTables(current, (header) => tableHeaders.some(
-    (tableHeader) => header === tableHeader || header.startsWith(`${tableHeader.slice(0, -1)}.`),
-  ));
-  const text = upsertTomlTable(withoutStaleServer.text, tableHeaders[0], [
-    `command = "${escapeTomlString(input.command)}"`,
-    `args = [${input.args.map((arg) => `"${escapeTomlString(arg)}"`).join(', ')}]`,
-    `enabled = ${input.enabled !== false ? 'true' : 'false'}`,
-  ]);
+  const withoutStaleServer = removeTomlTables(current, (table) =>
+    table.path.length >= 2 && table.path[0] === 'mcp_servers' && table.path[1] === input.serverId,
+  );
+  const text = upsertTomlTable(withoutStaleServer.text, ['mcp_servers', input.serverId], {
+    command: input.command,
+    args: [...input.args],
+    enabled: input.enabled !== false,
+  });
   const temporaryPath = path.join(
     path.dirname(input.configPath),
     `.${path.basename(input.configPath)}.${process.pid}.${Date.now()}.tmp`,

@@ -47,12 +47,12 @@ export async function executeAutomationAppAction(
           surface_kind: 'opl_managed_computer_use_action_preflight',
           action_id: actionId,
           status: 'dry_run',
-          current: inspectManagedComputerUse({ runExternalChecks: false }),
+          current: await inspectManagedComputerUse({ runExternalChecks: false }),
         }
         : {
           surface_kind: 'opl_managed_computer_use_action_result',
           action_id: actionId,
-          current: reconcileManagedComputerUse(actionId),
+          current: await reconcileManagedComputerUse(actionId),
         },
     };
   }
@@ -89,12 +89,12 @@ export async function executeAutomationAppAction(
           surface_kind: 'opl_managed_browser_automation_action_preflight',
           action_id: actionId,
           status: 'dry_run',
-          current: inspectManagedBrowserAutomation({ runExternalChecks: false }),
+          current: await inspectManagedBrowserAutomation({ runExternalChecks: false }),
         }
         : {
           surface_kind: 'opl_managed_browser_automation_action_result',
           action_id: actionId,
-          current: reconcileManagedBrowserAutomation(actionId),
+          current: await reconcileManagedBrowserAutomation(actionId),
         },
     };
   }
