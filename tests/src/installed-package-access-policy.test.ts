@@ -4,13 +4,13 @@ import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
-import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
+import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 import {
   installedDescriptorSupportsFrameworkCalls,
   withCurrentOwnerProjection,
-} from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-descriptor.ts';
-import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
-import { packageAccessSubject, resolvePackageAccessDecision } from '../../src/adapters/integration/agent-package-registry-parts/package-access.ts';
+} from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-descriptor.ts';
+import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-types.ts';
+import { packageAccessSubject, resolvePackageAccessDecision } from '../../src/adapters/integration/agent-package-registry/package-access.ts';
 
 const publicationRef = 'ghcr.io/gaofeng21cn/one-person-lab-packages/occ:latest-stable';
 

@@ -9,9 +9,9 @@ import {
   agentPackageSkillProjectionFromUnknown,
   assertAgentPackageSkillProjection,
   projectionFiles,
-} from '../../src/adapters/integration/agent-package-registry-parts/skill-projection.ts';
-import { sha256Text } from '../../src/adapters/integration/agent-package-registry-parts/shared.ts';
-import type { AgentPackageSkillProjection } from '../../src/adapters/integration/agent-package-registry-parts/types.ts';
+} from '../../src/adapters/integration/agent-package-registry/skill-projection.ts';
+import { sha256Text } from '../../src/adapters/integration/agent-package-registry/shared.ts';
+import type { AgentPackageSkillProjection } from '../../src/adapters/integration/agent-package-registry/types.ts';
 import { hostAttemptSkillRuntime } from '../../src/adapters/execution/family-runtime-attempt-skill-projection.ts';
 
 function buildProjection(stateRoot: string): AgentPackageSkillProjection {

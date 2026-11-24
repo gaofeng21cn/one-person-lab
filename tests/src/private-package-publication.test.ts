@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import type { spawnSync } from 'node:child_process';
-import { verifyPrivatePackagePublication } from '../../src/adapters/integration/agent-package-registry-parts/private-package-publication.ts';
+import { verifyPrivatePackagePublication } from '../../src/adapters/integration/agent-package-registry/private-package-publication.ts';
 import { PACKAGE_PROJECTION_ROOT } from '../../src/kernel/standard-agent-registry.ts';
 
 const subject = `ghcr.io/example/one-person-lab-private-packages/private-agent@sha256:${'a'.repeat(64)}`;

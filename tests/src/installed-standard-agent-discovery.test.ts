@@ -8,7 +8,7 @@ import { readAgentPackageReadinessPort, registerAgentPackageReadinessPort } from
 import { listStandardAgentRegistry, resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
 import { readStandardAgentDescriptorInterface } from '../../src/kernel/standard-agent-interface.ts';
 import { listInstalledStandardAgentEntries } from '../../src/adapters/integration/installed-standard-agent-registry.ts';
-import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts';
+import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory.ts';
 import { findWorkspaceAgentProfile } from '../../src/authority/workspace/workspace-agent-defaults.ts';
 import { resolveFamilyRuntimeDomainId } from '../../src/adapters/execution/family-runtime-types.ts';
 import { resolveStandardAgentContractCheckout } from '../../src/adapters/integration/standard-agent-interface-discovery.ts';

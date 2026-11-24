@@ -20,7 +20,7 @@ import {
   renderTrajectory,
   renderProgress,
 } from '../../src/mcp-app/task-workbench.js';
-import { miniAppPresentation } from '../../src/adapters/integration/agent-package-registry-parts/miniapp-presentation.ts';
+import { miniAppPresentation } from '../../src/adapters/integration/agent-package-registry/miniapp-presentation.ts';
 import { listOplMcpAppViews, readFrameworkMcpAppTask } from '../../src/read-models/operator/app-mcp-app.ts';
 
 test('task details do not wait for global diagnostics and action inspection preserves the selected task', async () => {

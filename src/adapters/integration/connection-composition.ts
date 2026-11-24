@@ -1,4 +1,4 @@
-import { discoverInstalledPackageDescriptors } from './agent-package-registry-parts/installed-codex-plugin-directory.ts';
+import { discoverInstalledPackageDescriptors } from './agent-package-registry/installed-codex-plugin-directory.ts';
 import {
   createOplConnectionAuthorizationService,
 } from './connection-authorization.ts';

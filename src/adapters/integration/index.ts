@@ -1,14 +1,14 @@
 import { registerAgentPackageReadinessPort } from '../../kernel/agent-package-readiness-port.ts';
-export { miniAppPresentation, workspaceContributionViews } from './agent-package-registry-parts/miniapp-presentation.ts';
+export { miniAppPresentation, workspaceContributionViews } from './agent-package-registry/miniapp-presentation.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { runOplAgentPackageBulkUpdate, runOplAgentPackageStatus } from './agent-package-registry.ts';
 import {
   runManagedUpdateKernelOperation as runManagedUpdateKernelOperationWithOwners,
 } from './managed-update-kernel-runner.ts';
 import type { ManagedUpdateKernelInput } from './managed-update-owner-boundary.ts';
-import { resolveAgentPackageEffectiveSourcePolicy } from './agent-package-registry-parts/source-policy.ts';
-import { refreshInstalledAgentPackageWorkspaceSkills } from './agent-package-registry-parts/skill-projection.ts';
-import { discoverInstalledPackageDescriptors } from './agent-package-registry-parts/installed-codex-plugin-directory.ts';
+import { resolveAgentPackageEffectiveSourcePolicy } from './agent-package-registry/source-policy.ts';
+import { refreshInstalledAgentPackageWorkspaceSkills } from './agent-package-registry/skill-projection.ts';
+import { discoverInstalledPackageDescriptors } from './agent-package-registry/installed-codex-plugin-directory.ts';
 import { listInstalledStandardAgentEntries } from './installed-standard-agent-registry.ts';
 import {
   readInstalledStandardAgentDescriptorForPackage,
@@ -142,7 +142,7 @@ export type {
 } from './agent-package-registry.ts';
 export {
   refreshInstalledAgentPackageWorkspaceSkills,
-} from './agent-package-registry-parts/skill-projection.ts';
+} from './agent-package-registry/skill-projection.ts';
 export {
   readInstalledStandardAgentDescriptorForDomain,
   readStandardAgentDescriptorForDomain,
@@ -161,10 +161,10 @@ export {
   discoverInstalledPackageDescriptors,
   installedDescriptorHasExpectedCodexExposure,
   installedDescriptorSupportsFrameworkCalls,
-} from './agent-package-registry-parts/installed-codex-plugin-directory.ts';
+} from './agent-package-registry/installed-codex-plugin-directory.ts';
 export type {
   InstalledPackageDescriptor,
-} from './agent-package-registry-parts/installed-codex-plugin-directory.ts';
+} from './agent-package-registry/installed-codex-plugin-directory.ts';
 export type { LocalCodexDefaults } from '../../kernel/local-codex-defaults.ts';
 export { MANAGED_UPDATE_OWNER_ACTIONS, managedUpdateCommand } from './managed-update-owner-boundary.ts';
 export { buildManagedUpdateKernelProjection } from './managed-update-kernel.ts';
@@ -214,8 +214,8 @@ export {
   webuiHostActionRequired,
 } from './storage-owner-inventory-snapshot.ts';
 
-export { packageDownloadPlan } from './agent-package-registry-parts/package-download-plan.ts';
-export { cancelPackageOperation, packageOperationStatus, startPackageOperation, validatePackageOperationRequest, observePackageOperation, PACKAGE_BACKGROUND_ACTIONS } from './agent-package-registry-parts/package-operations.ts';
+export { packageDownloadPlan } from './agent-package-registry/package-download-plan.ts';
+export { cancelPackageOperation, packageOperationStatus, startPackageOperation, validatePackageOperationRequest, observePackageOperation, PACKAGE_BACKGROUND_ACTIONS } from './agent-package-registry/package-operations.ts';
 export {
   locateInstalledPackage,
   type LocateInstalledPackageInput,

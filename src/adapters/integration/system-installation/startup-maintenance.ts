@@ -29,7 +29,7 @@ import { buildOplModules, runOplModuleAction } from './modules.ts';
 import { buildDomainModuleSpecs } from './module-specs.ts';
 import { applyOplSeedManifest } from './seed-manifest.ts';
 import { resolveProjectRoot } from './shared.ts';
-import { reconcileInternalPackageCarriers } from '../agent-package-registry-parts/internal-package-carrier-migration.ts';
+import { reconcileInternalPackageCarriers } from '../agent-package-registry/internal-package-carrier-migration.ts';
 
 type ModuleStatus = ReturnType<typeof buildOplModules>['modules']['modules'][number];
 type OplSystemEnvironment = Awaited<ReturnType<typeof buildOplEnvironment>>['system_environment'];

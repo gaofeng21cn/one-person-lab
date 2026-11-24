@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import {
   installedDescriptorSupportsFrameworkCalls,
-} from './agent-package-registry-parts/installed-codex-plugin-directory-descriptor.ts';
-import type { InstalledPackageDescriptor } from './agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
+} from './agent-package-registry/installed-codex-plugin-directory-descriptor.ts';
+import type { InstalledPackageDescriptor } from './agent-package-registry/installed-codex-plugin-directory-types.ts';
 import {
   listOplConnections,
   withConnectionStateLock,

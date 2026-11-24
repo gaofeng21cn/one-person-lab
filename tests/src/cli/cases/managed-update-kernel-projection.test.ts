@@ -18,9 +18,9 @@ import { runManagedUpdateKernelOperation } from '../../../../src/adapters/integr
 import { selectedManagedUpdateComponentIds } from '../../../../src/adapters/integration/managed-update-owner-boundary.ts';
 import { agentPackageManifest } from './packages-cases/helpers.ts';
 import { listCurrentPackageProjections } from '../../../../src/kernel/standard-agent-registry.ts';
-import { normalizePackageManifest } from '../../../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
-import { packageBackgroundUpdatePolicy } from '../../../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
-import { discoverInstalledPackageDescriptors } from '../../../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts';
+import { normalizePackageManifest } from '../../../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
+import { packageBackgroundUpdatePolicy } from '../../../../src/adapters/integration/agent-package-registry/registry-status-projection.ts';
+import { discoverInstalledPackageDescriptors } from '../../../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory.ts';
 import { runOplAgentPackageBulkUpdate } from '../../../../src/adapters/integration/agent-package-registry.ts';
 
 function readManagedUpdateKernelContract() {

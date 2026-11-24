@@ -28,10 +28,10 @@ import {
 } from '../../src/adapters/integration/public/remote-companion-connector-entrypoints.ts';
 import type {
   InstalledPackageDescriptor,
-} from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts';
+} from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory.ts';
 import {
   normalizeCapabilityPackageManifest,
-} from '../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
+} from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { assertJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 

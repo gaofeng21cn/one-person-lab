@@ -22,10 +22,10 @@ import {
 } from '../../src/host/plugins/cordis-channel-provider-host.ts';
 import {
   normalizeCapabilityPackageManifest,
-} from '../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
+} from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 import type {
   InstalledPackageDescriptor,
-} from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts';
+} from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory.ts';
 import { loadInstalledChannelProviders } from '../../src/adapters/integration/public/channel-provider-entrypoints.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { assertJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
-import { readPackageInstallationReadback } from '../../src/adapters/integration/agent-package-registry-parts/package-installation-readback.ts';
+import { readPackageInstallationReadback } from '../../src/adapters/integration/agent-package-registry/package-installation-readback.ts';
 
 function fixture(run: (home: string, env: NodeJS.ProcessEnv) => void) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-installation-readback-'));

@@ -9,7 +9,7 @@ import {
   resolvePackageHostIntegration,
   type PackageHostManifest,
 } from '../../src/authority/packages/package-host-integration.ts';
-import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
+import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 import {
   getOplPackageSpecs,
   getPublicationAdmittedOplPackageSpecs,

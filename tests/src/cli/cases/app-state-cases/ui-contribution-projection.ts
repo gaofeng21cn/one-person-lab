@@ -1,6 +1,6 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../../helpers.ts';
-import { normalizeAppContributions } from '../../../../../src/adapters/integration/agent-package-registry-parts/app-contribution-normalizers.ts';
-import { miniAppPresentation } from '../../../../../src/adapters/integration/agent-package-registry-parts/miniapp-presentation.ts';
+import { normalizeAppContributions } from '../../../../../src/adapters/integration/agent-package-registry/app-contribution-normalizers.ts';
+import { miniAppPresentation } from '../../../../../src/adapters/integration/agent-package-registry/miniapp-presentation.ts';
 import { buildAppUiContributionsProjection } from '../../../../../src/read-models/operator/app-state-ui-contributions.ts';
 
 function packageStatus(input: {

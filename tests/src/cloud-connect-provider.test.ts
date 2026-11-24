@@ -11,7 +11,7 @@ import {
 import { createDefaultConnectionAuthorizationService } from '../../src/adapters/integration/connection-composition.ts';
 import { listOplConnections } from '../../src/adapters/integration/connection-registry.ts';
 import { OplConnectionProviderError } from '../../src/adapters/integration/connection-authorization.ts';
-import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
+import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-types.ts';
 
 const ref = 'cloud:00000000-0000-4000-8000-000000000001';
 const revision = 'rev:00000000-0000-4000-8000-000000000002';

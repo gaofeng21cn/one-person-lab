@@ -13,7 +13,7 @@ import {
   type InstalledPackageRuntimeDiscoveryOptions,
   type InstalledPackageRuntimeModuleContext,
   type LoadedInstalledPackageRuntimeModule,
-} from './agent-package-registry-parts/installed-runtime-module.ts';
+} from './agent-package-registry/installed-runtime-module.ts';
 
 export type ScientificConnectorProviderId = string;
 

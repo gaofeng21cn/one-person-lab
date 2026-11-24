@@ -3,7 +3,7 @@ import test from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { assertPackageDownloadAllowed, normalizePackageAccessFields, packageAccessSubject, resolvePackageAccessDecision } from '../../src/adapters/integration/agent-package-registry-parts/package-access.ts';
+import { assertPackageDownloadAllowed, normalizePackageAccessFields, packageAccessSubject, resolvePackageAccessDecision } from '../../src/adapters/integration/agent-package-registry/package-access.ts';
 
 const manifest = (patch: Record<string, unknown> = {}) => ({
   package_id: 'occ',
@@ -104,7 +104,7 @@ test('connected source check supports local fast discovery and disconnect invali
   writeSource();
   let calls = 0;
   const now = () => new Date('2026-11-10T00:00:00.000Z');
-  const verify = (input: import('../../src/adapters/integration/agent-package-registry-parts/package-registry-access-provider.ts').PackageRegistryAccessProviderInput) => {
+  const verify = (input: import('../../src/adapters/integration/agent-package-registry/package-registry-access-provider.ts').PackageRegistryAccessProviderInput) => {
     calls++;
     assert.equal(input.credentialHandle, 'provider:github_packages:gh-cli');
     return { package_id: 'occ', publication_ref: String(input.publicationRef), provider_id: 'github_packages',

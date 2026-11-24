@@ -5,7 +5,7 @@ import { validateJsonSchemaPayload } from '../../../kernel/schema-registry.ts';
 import type {
   InstalledPackageRuntimeModuleContext,
   LoadedInstalledPackageRuntimeModule,
-} from '../agent-package-registry-parts/installed-runtime-module.ts';
+} from '../agent-package-registry/installed-runtime-module.ts';
 import {
   providerDefinition,
   type ProviderId,

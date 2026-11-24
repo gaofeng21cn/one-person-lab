@@ -610,7 +610,7 @@
           ],
           "caller_refs": [
             "src/read-models/operator/app-contribution-broker.ts",
-            "src/adapters/integration/agent-package-registry-parts/skill-projection.ts"
+            "src/adapters/integration/agent-package-registry/skill-projection.ts"
           ],
           "scope": "process",
           "trust": "first_party_restricted",

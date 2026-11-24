@@ -14,7 +14,7 @@ import {
   runAppContribution,
 } from '../../../../../src/read-models/operator/app-contribution-broker.ts';
 import { buildAppUiContributionsProjection } from '../../../../../src/read-models/operator/app-state-ui-contributions.ts';
-import type { InstalledPackageDescriptor } from '../../../../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts';
+import type { InstalledPackageDescriptor } from '../../../../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory.ts';
 import { FrameworkContractError } from '../../../../../src/kernel/contract-validation.ts';
 import { formatJsonPayload } from '../../../../../src/kernel/json-file.ts';
 import { createFakeCodexFixture } from '../../helpers/fixtures.ts';

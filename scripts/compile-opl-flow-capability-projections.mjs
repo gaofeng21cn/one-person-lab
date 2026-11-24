@@ -6,7 +6,7 @@ import { parseArgs } from 'node:util';
 import {
   compileFlowCapabilityBuildLock,
   compileFlowCapabilityStrategyFromSourceRoot,
-} from '../src/adapters/integration/agent-package-registry-parts/flow-capability-compiler.ts';
+} from '../src/adapters/integration/agent-package-registry/flow-capability-compiler.ts';
 
 function writeJson(filePath, value) {
   const resolved = path.resolve(filePath);

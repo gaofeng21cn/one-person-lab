@@ -6,13 +6,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import test from 'node:test';
-import { installPayloadMarketplace } from '../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-payload.ts';
-import { hostedRuntimeReadiness, packageBackgroundUpdatePolicy } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
+import { installPayloadMarketplace } from '../../src/adapters/integration/agent-package-registry/configured-codex-plugin-carrier-payload.ts';
+import { hostedRuntimeReadiness, packageBackgroundUpdatePolicy } from '../../src/adapters/integration/agent-package-registry/registry-status-projection.ts';
 import { gitMarketplaceRuntimeRoot } from '../../src/kernel/git-marketplace-runtime-root.ts';
-import { acquireHostedPackageSource } from '../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-source.ts';
+import { acquireHostedPackageSource } from '../../src/adapters/integration/agent-package-registry/configured-codex-plugin-carrier-source.ts';
 import { materializeStandardAgentFrameworkLink } from '../../src/adapters/integration/standard-agent-framework-link.ts';
-import type { AgentPackageAccessDecision } from '../../src/adapters/integration/agent-package-registry-parts/package-access.ts';
-import { packageInstallSourceAvailable } from '../../src/adapters/integration/agent-package-registry-parts/package-install-source.ts';
+import type { AgentPackageAccessDecision } from '../../src/adapters/integration/agent-package-registry/package-access.ts';
+import { packageInstallSourceAvailable } from '../../src/adapters/integration/agent-package-registry/package-install-source.ts';
 
 const hash = (bytes: Buffer) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 const json = (value: unknown) => Buffer.from(`${JSON.stringify(value)}\n`);

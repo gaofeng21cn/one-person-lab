@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { readCodexLocalPluginList } from '../../src/adapters/integration/agent-package-registry-parts/codex-plugin-local-readback.ts';
-import { reconcileInternalPackageCarriers } from '../../src/adapters/integration/agent-package-registry-parts/internal-package-carrier-migration.ts';
+import { readCodexLocalPluginList } from '../../src/adapters/integration/agent-package-registry/codex-plugin-local-readback.ts';
+import { reconcileInternalPackageCarriers } from '../../src/adapters/integration/agent-package-registry/internal-package-carrier-migration.ts';
 
 function fixture(mode = 'normal') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-local-'));

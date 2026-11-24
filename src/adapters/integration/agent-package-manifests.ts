@@ -1,8 +1,8 @@
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { listCurrentPackageProjections } from '../../kernel/standard-agent-registry.ts';
 import { canonicalAgentPackageId } from './agent-package-identity.ts';
-import { normalizePackageManifest } from './agent-package-registry-parts/manifest-normalizers.ts';
-import type { AgentPackageCapabilityDependency, AgentPackagePresentation } from './agent-package-registry-parts/types.ts';
+import { normalizePackageManifest } from './agent-package-registry/manifest-normalizers.ts';
+import type { AgentPackageCapabilityDependency, AgentPackagePresentation } from './agent-package-registry/types.ts';
 import type { ModuleCapabilityDependency } from './system-installation/shared.ts';
 
 type CodexCarrierDistribution = 'repo_carrier_source' | 'generated_carrier_surface';

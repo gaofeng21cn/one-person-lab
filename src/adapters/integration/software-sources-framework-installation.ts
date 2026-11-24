@@ -10,8 +10,8 @@ import { acquireManagedUpdateLock } from './managed-update-lock.ts';
 import { runOplFrameworkSelfUpdate } from './system-installation/framework-self-update.ts';
 import { isGitRepo, isOplFrameworkRoot, readManagedFrameworkGitInstallation } from './system-installation/framework-self-update/source-resolution.ts';
 import { pendingFrameworkArtifactResult } from './system-installation/framework-self-update/staging.ts';
-import { softwareInstallationOperation } from './agent-package-registry-parts/software-installation-owner.ts';
-import type { SoftwareInstallation } from './agent-package-registry-parts/package-installation-projection.ts';
+import { softwareInstallationOperation } from './agent-package-registry/software-installation-owner.ts';
+import type { SoftwareInstallation } from './agent-package-registry/package-installation-projection.ts';
 
 function record(file: string) {
   try {

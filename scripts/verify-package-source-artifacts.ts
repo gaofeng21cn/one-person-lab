@@ -6,7 +6,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { listCurrentPackageProjections } from '../src/kernel/standard-agent-registry.ts';
-import { installPayloadMarketplace } from '../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-payload.ts';
+import { installPayloadMarketplace } from '../src/adapters/integration/agent-package-registry/configured-codex-plugin-carrier-payload.ts';
 
 /** Exercise the selected owner transport without invoking native carrier mutation. */
 export function verifyPackageSourceArtifacts(packageIds: string[], options: {

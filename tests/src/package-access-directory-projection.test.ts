@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
-import { directoryFrom, packageBackgroundUpdatePolicy, type PackageSnapshot } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
-import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts';
-import type { AgentPackageAccessDecision } from '../../src/adapters/integration/agent-package-registry-parts/package-access.ts';
+import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
+import { directoryFrom, packageBackgroundUpdatePolicy, type PackageSnapshot } from '../../src/adapters/integration/agent-package-registry/registry-status-projection.ts';
+import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory.ts';
+import type { AgentPackageAccessDecision } from '../../src/adapters/integration/agent-package-registry/package-access.ts';
 import { compactFastAgentPackageDirectory } from '../../src/read-models/operator/app-state-fast-projection.ts';
 import { configureOplSoftwareSource } from '../../src/adapters/integration/software-sources.ts';
 

@@ -1,13 +1,13 @@
 import { readOplUpdateChannel, readOplWorkspaceRoot } from '../../kernel/system-preferences.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { resolveCodexVersion } from './system-installation/engine-helpers.ts';
-import { packageBackgroundUpdatePolicy } from './agent-package-registry-parts/registry-status-projection.ts';
+import { packageBackgroundUpdatePolicy } from './agent-package-registry/registry-status-projection.ts';
 import {
   discoverCurrentOwnerPackageDescriptors,
   discoverInstalledPackageDescriptors,
   installedDescriptorMatchesConfiguredCarrier,
   type InstalledPackageDescriptor,
-} from './agent-package-registry-parts/installed-codex-plugin-directory.ts';
+} from './agent-package-registry/installed-codex-plugin-directory.ts';
 import {
   managedUpdateComponentReceiptLedgerFilePath,
 } from './managed-update-component-receipts.ts';
@@ -43,8 +43,8 @@ import {
   type ManagedUpdateReceiptStatusDetail,
   type ManagedUpdateReloadGuidance,
 } from './managed-update-owner-boundary.ts';
-import { buildInstallationCarrierComponent } from './managed-update-kernel-parts/installation-carrier.ts';
-import { buildRuntimeSubstrateComponent } from './managed-update-kernel-parts/runtime-substrate.ts';
+import { buildInstallationCarrierComponent } from './managed-update-kernel/installation-carrier.ts';
+import { buildRuntimeSubstrateComponent } from './managed-update-kernel/runtime-substrate.ts';
 
 function requestedComponentId(componentId: string | undefined) {
   const requested = componentId?.trim();

@@ -8,11 +8,11 @@ import {
 } from '../../../authority/packages/index.ts';
 import type {
   InstalledPackageDescriptor,
-} from '../agent-package-registry-parts/installed-codex-plugin-directory.ts';
-import { installedDescriptorSupportsFrameworkCalls } from '../agent-package-registry-parts/installed-codex-plugin-directory.ts';
+} from '../agent-package-registry/installed-codex-plugin-directory.ts';
+import { installedDescriptorSupportsFrameworkCalls } from '../agent-package-registry/installed-codex-plugin-directory.ts';
 import type {
   ChannelProviderPackageEntrypoint,
-} from '../agent-package-registry-parts/channel-provider-entrypoint-contract.ts';
+} from '../agent-package-registry/channel-provider-entrypoint-contract.ts';
 
 export type InstalledChannelProviderAttachment = Readonly<{
   descriptor: InstalledPackageDescriptor;

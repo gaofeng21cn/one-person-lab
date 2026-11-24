@@ -5,8 +5,8 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { FrameworkContractError } from '../../../src/kernel/contract-validation.ts';
-import { sha256Text } from '../../../src/adapters/integration/agent-package-registry-parts/shared.ts';
-import type { AgentPackageSkillProjection } from '../../../src/adapters/integration/agent-package-registry-parts/types.ts';
+import { sha256Text } from '../../../src/adapters/integration/agent-package-registry/shared.ts';
+import type { AgentPackageSkillProjection } from '../../../src/adapters/integration/agent-package-registry/types.ts';
 import {
   runCodexInE2bSandbox,
   setE2bSandboxFactoryForTest,

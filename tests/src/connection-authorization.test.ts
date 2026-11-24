@@ -16,7 +16,7 @@ import {
   listOplConnections,
   updateOplConnection,
 } from '../../src/adapters/integration/connection-registry.ts';
-import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
+import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-types.ts';
 
 async function withState(run: (root: string) => void | Promise<void>) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-connection-authorization-'));
