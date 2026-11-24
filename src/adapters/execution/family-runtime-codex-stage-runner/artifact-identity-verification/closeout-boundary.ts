@@ -15,8 +15,8 @@ import {
   verifyIdentityReceipt,
 } from './transport-receipts.ts';
 
-function artifactMetadata(metadata: JsonRecord[], ref: string) {
-  return metadata.find((entry) => (optionalString(entry.ref) ?? entry.uri) === ref);
+function artifactMetadataIndex(metadata: JsonRecord[], ref: string) {
+  return metadata.findIndex((entry) => entry.ref === ref || entry.uri === ref);
 }
 
 export function verifyStageQualityCloseoutArtifactIdentity(input: {
@@ -49,7 +49,8 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
     && Array.isArray(routeImpact.consumable_artifact_refs)
     ? readAgentRefList(routeImpact.consumable_artifact_refs, 'consumable_artifact_refs')
     : [];
-  const consumableHashes = consumableRefs.map((ref) => optionalString(artifactMetadata(metadata, ref)?.sha256));
+  const consumableHashes = consumableRefs.map((ref) =>
+    optionalString(metadata[artifactMetadataIndex(metadata, ref)]?.sha256));
   const bindConsumableIdentity = consumableRefs.length > 0
     && consumableRefs.every((ref) => closeoutPacket.closeout_refs.includes(ref))
     && consumableHashes.every(Boolean);
@@ -90,7 +91,7 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
   });
 
   const nextMetadata = pairs.map(({ artifactRef, artifactSha256 }) => {
-    const metadataIndex = metadata.findIndex((entry) => entry.ref === artifactRef || entry.uri === artifactRef);
+    const metadataIndex = artifactMetadataIndex(metadata, artifactRef);
     const entry = metadataIndex >= 0 ? metadata[metadataIndex] : null;
     if (!entry || canonicalSha256(entry.sha256, 'closeout_ref_metadata.sha256') !== artifactSha256) {
       throw artifactIdentityError({
@@ -166,9 +167,7 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
   });
 
   for (let index = 0; index < pairs.length; index += 1) {
-    const metadataIndex = metadata.findIndex(
-      (entry) => entry.ref === pairs[index].artifactRef || entry.uri === pairs[index].artifactRef,
-    );
+    const metadataIndex = artifactMetadataIndex(metadata, pairs[index].artifactRef);
     metadata[metadataIndex] = nextMetadata[index];
   }
   // Canonicalize the OPL-owned receipt list from the verified metadata, in
