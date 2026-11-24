@@ -10,9 +10,12 @@
     "README.en.md",
     "README.md",
     "agent/manifest.json",
+    "agent/knowledge/site-adaptation.md",
+    "agent/knowledge/clinical-record-review.md",
     "assets/branding/medautopractice-logo.png",
     "assets/branding/medautopractice-overview.png",
     "contracts/capabilities.json",
+    "contracts/durable_knowledge_catalog.json",
     "contracts/site-dependencies.json",
     "contracts/site-playbook.schema.json",
     "contracts/site-survey.schema.json",
@@ -91,6 +94,12 @@
     "examples/synthetic/fhir_read.py",
     "examples/synthetic/configure_site.py",
     "docs/hospital-adapters.md",
+    "src/med_autopractice/deployment.py",
+    "src/med_autopractice/medicine/proposals.py",
+    "src/med_autopractice/workflows/results.py",
+    "examples/synthetic/local_provider.py",
+    "examples/synthetic/local_deployment.py",
+    "docs/local-deployment.md",
     "opl-package.json"
   ]
 }

@@ -4,7 +4,7 @@
   "display_name": "Med Auto Practice",
   "description": "医生主导的临床工作智能体，支持病历结构化、医嘱协作和医院系统适配。",
   "publisher": "gaofeng21cn",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/med-autopractice.git",
   "visibility": "public",
@@ -65,6 +65,15 @@
       "scope": "synthetic_only"
     },
     {
+      "entrypoint_id": "med-autopractice.local-runtime",
+      "kind": "cli",
+      "argv": [
+        "python3",
+        "scripts/map_runtime.py"
+      ],
+      "scope": "explicit_site"
+    },
+    {
       "entrypoint_id": "med-autopractice.demo",
       "kind": "cli",
       "argv": [
@@ -96,8 +105,8 @@
       "marketplace_source": "gaofeng21cn/med-autopractice",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/med-autopractice:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/med-autopractice-0.1.4.json",
-    "carrier_source_commit": "40f53d945c973a4d02cf9144fba2d9e3cd8950a5"
+    "plugin_payload_manifest_url": "payloads/med-autopractice-0.1.5.json",
+    "carrier_source_commit": "0844db89b15839a4416d58f9b12df0c4d04db010"
   },
   "content_lock": {
     "algorithm": "sha256",
@@ -108,9 +117,12 @@
       "README.en.md",
       "README.md",
       "agent/manifest.json",
+      "agent/knowledge/site-adaptation.md",
+      "agent/knowledge/clinical-record-review.md",
       "assets/branding/medautopractice-logo.png",
       "assets/branding/medautopractice-overview.png",
       "contracts/capabilities.json",
+      "contracts/durable_knowledge_catalog.json",
       "contracts/site-dependencies.json",
       "contracts/site-playbook.schema.json",
       "contracts/site-survey.schema.json",
@@ -188,9 +200,15 @@
       "src/med_autopractice/adapters/fhir.py",
       "examples/synthetic/fhir_read.py",
       "examples/synthetic/configure_site.py",
-      "docs/hospital-adapters.md"
+      "docs/hospital-adapters.md",
+      "src/med_autopractice/deployment.py",
+      "src/med_autopractice/medicine/proposals.py",
+      "src/med_autopractice/workflows/results.py",
+      "examples/synthetic/local_provider.py",
+      "examples/synthetic/local_deployment.py",
+      "docs/local-deployment.md"
     ],
-    "digest": "sha256:9defe35a176361568c8a4758d39e371d32e91514fe5101f86d214382005975b9"
+    "digest": "sha256:cf8cab9c2f53fa6d7af1df887ad0775f79e67ad6637f6b85afad65d108f68135"
   },
   "management_scope": "local_product",
   "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
