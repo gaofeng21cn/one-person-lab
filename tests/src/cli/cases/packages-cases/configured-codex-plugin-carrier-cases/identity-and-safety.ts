@@ -47,6 +47,7 @@ import {
   unavailableCodexRunner,
 } from '../configured-codex-plugin-carrier-shared.ts';
 import type { CodexPluginCommandRunner } from '../configured-codex-plugin-carrier-shared.ts';
+import { ensureMarketplaceAvailable } from '../../../../../../src/adapters/integration/agent-package-registry/configured-codex-plugin-carrier-marketplace.ts';
 
 test('configured Codex carrier exposes exact identity and fails closed on duplicate source precedence', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configured-carrier-identity-'));
@@ -1048,4 +1049,108 @@ if (process.argv.slice(2).join(' ') === 'plugin list --json') {
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('git marketplace upgrade retries transient network failures and succeeds', () => {
+  const calls: string[] = [];
+  const waitDelays: number[] = [];
+  let upgradeAttempts = 0;
+  ensureMarketplaceAvailable({
+    packageId,
+    action: 'update',
+    pluginId: pluginSelector,
+    marketplaceSource: 'gaofeng21cn/example',
+    binary: 'codex',
+    env: process.env,
+    waitForRetry: (delayMs) => waitDelays.push(delayMs),
+    runner: ({ args }) => {
+      const joined = args.join(' ');
+      calls.push(joined);
+      if (joined === 'plugin marketplace list --json') {
+        return {
+          status: 0,
+          stdout: JSON.stringify({
+            marketplaces: [{
+              name: 'fixture-carrier',
+              marketplaceSource: {
+                sourceType: 'git',
+                source: 'https://github.com/gaofeng21cn/example.git',
+              },
+            }],
+          }),
+          stderr: '',
+          error: null,
+        };
+      }
+      if (joined === 'plugin marketplace upgrade fixture-carrier --json') {
+        upgradeAttempts += 1;
+        if (upgradeAttempts < 3) {
+          return {
+            status: 1,
+            stdout: '',
+            stderr: 'fatal: unable to access https://github.com/gaofeng21cn/example.git/: LibreSSL SSL_ERROR_SYSCALL',
+            error: null,
+          };
+        }
+        return { status: 0, stdout: JSON.stringify({ status: 'ok' }), stderr: '', error: null };
+      }
+      throw new Error(`Unexpected command: ${joined}`);
+    },
+  });
+  assert.equal(upgradeAttempts, 3);
+  assert.deepEqual(waitDelays, [250, 500]);
+  assert.deepEqual(calls, [
+    'plugin marketplace list --json',
+    'plugin marketplace upgrade fixture-carrier --json',
+    'plugin marketplace upgrade fixture-carrier --json',
+    'plugin marketplace upgrade fixture-carrier --json',
+  ]);
+});
+
+test('git marketplace upgrade fails closed without retrying deterministic configuration errors', () => {
+  let upgradeAttempts = 0;
+  const waitDelays: number[] = [];
+  assert.throws(
+    () => ensureMarketplaceAvailable({
+      packageId,
+      action: 'update',
+      pluginId: pluginSelector,
+      marketplaceSource: 'gaofeng21cn/example',
+      binary: 'codex',
+      env: process.env,
+      waitForRetry: (delayMs) => waitDelays.push(delayMs),
+      runner: ({ args }) => {
+        const joined = args.join(' ');
+        if (joined === 'plugin marketplace list --json') {
+          return {
+            status: 0,
+            stdout: JSON.stringify({
+              marketplaces: [{
+                name: 'fixture-carrier',
+                marketplaceSource: {
+                  sourceType: 'git',
+                  source: 'https://github.com/gaofeng21cn/example.git',
+                },
+              }],
+            }),
+            stderr: '',
+            error: null,
+          };
+        }
+        if (joined === 'plugin marketplace upgrade fixture-carrier --json') {
+          upgradeAttempts += 1;
+          return {
+            status: 1,
+            stdout: '',
+            stderr: 'Error: marketplace `fixture-carrier` is not configured as a Git marketplace',
+            error: null,
+          };
+        }
+        throw new Error(`Unexpected command: ${joined}`);
+      },
+    }),
+    (error: any) => error?.details?.failure_code === 'configured_codex_plugin_carrier_action_failed',
+  );
+  assert.equal(upgradeAttempts, 1);
+  assert.deepEqual(waitDelays, []);
 });

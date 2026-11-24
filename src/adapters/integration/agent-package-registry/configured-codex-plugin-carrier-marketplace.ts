@@ -8,9 +8,39 @@ import {
 import { sameMarketplaceSource } from './shared.ts';
 import type {
   ConfiguredCodexPluginCarrierAction,
+  CodexPluginCommandResult,
   CodexPluginCommandRunner,
   CodexPluginListEntry,
 } from './configured-codex-plugin-carrier-types.ts';
+
+const TRANSIENT_MARKETPLACE_SPAWN_CODES = new Set([
+  'EAI_AGAIN',
+  'ECONNABORTED',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ENETDOWN',
+  'ENETRESET',
+  'ENETUNREACH',
+  'ETIMEDOUT',
+]);
+const TRANSIENT_MARKETPLACE_STDERR_PATTERN = /SSL_ERROR_SYSCALL|HTTP2 framing|TLS|EOF|timed out|connection reset|unable to access|could not resolve host|RPC failed|curl:\s*\((?:5|6|7|16|18|28|35|52|55|56|92)\)/i;
+
+function waitForMarketplaceUpgradeRetry(delayMs: number) {
+  const sleeper = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+  Atomics.wait(sleeper, 0, 0, delayMs);
+}
+
+/** Return true only for transient transport/network errors so deterministic failures still fail fast. */
+export function isTransientMarketplaceUpgradeFailure(
+  result: Pick<CodexPluginCommandResult, 'status' | 'stderr' | 'error'>,
+): boolean {
+  if (result.status === 0 && !result.error) return false;
+  const errorCode = (result.error as NodeJS.ErrnoException | null)?.code;
+  if (typeof errorCode === 'string' && TRANSIENT_MARKETPLACE_SPAWN_CODES.has(errorCode)) {
+    return true;
+  }
+  return TRANSIENT_MARKETPLACE_STDERR_PATTERN.test(result.stderr || '');
+}
 
 function ensureMarketplaceArgs(source: string) {
   return ['plugin', 'marketplace', 'add', source, '--json'];
@@ -23,6 +53,7 @@ export function ensureMarketplaceAvailable(input: {
   binary: string;
   env: NodeJS.ProcessEnv;
   runner: CodexPluginCommandRunner;
+  waitForRetry?: (delayMs: number) => void;
 }) {
   const marketplaceListArgs = ['plugin', 'marketplace', 'list', '--json'];
   const marketplaceList = input.runner({
@@ -46,11 +77,22 @@ export function ensureMarketplaceAvailable(input: {
       configuredMarketplace.name ?? marketplaceName(input.pluginId),
       '--json',
     ];
-    const upgradeResult = input.runner({
+    const waitForRetry = input.waitForRetry ?? waitForMarketplaceUpgradeRetry;
+    let attemptCount = 1;
+    let upgradeResult = input.runner({
       binary: input.binary,
       args: upgradeArgs,
       env: input.env,
     });
+    while (attemptCount < 3 && isTransientMarketplaceUpgradeFailure(upgradeResult)) {
+      waitForRetry(250 * (2 ** (attemptCount - 1)));
+      attemptCount += 1;
+      upgradeResult = input.runner({
+        binary: input.binary,
+        args: upgradeArgs,
+        env: input.env,
+      });
+    }
     if (upgradeResult.status !== 0 || upgradeResult.error) {
       commandFailure({
         packageId: input.packageId,

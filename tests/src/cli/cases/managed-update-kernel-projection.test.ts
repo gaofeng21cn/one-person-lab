@@ -11,6 +11,7 @@ import {
   test,
 } from '../helpers.ts';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import { formatJsonPayload } from '../../../../src/kernel/json-file.ts';
 import { loadFrameworkContracts } from '../../../../src/authority/contracts/contracts.ts';
 import { buildManagedUpdateKernelProjection } from '../../../../src/adapters/integration/managed-update-kernel.ts';
@@ -877,6 +878,88 @@ if (args.join(' ') === 'app-server --stdio') {
     assert.doesNotMatch(fs.readFileSync(callsPath, 'utf8'), /plugin (?:add|marketplace (?:add|upgrade))/);
   } finally {
     for (const [key, value] of previous) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('apply projection enables Framework channel lookup and admits opl_base for generic apply', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-apply-framework-channel-'));
+  const stateDir = path.join(root, 'state');
+  const targetRoot = path.join(root, 'framework-target');
+  const fakeBin = path.join(root, 'fake-bin');
+  const archivePath = path.join(root, 'one-person-lab-framework-99.0.0.tar.gz');
+  const fakeCodex = writeFixtureFile(fakeBin, 'codex', '#!/usr/bin/env bash\necho "codex-cli 0.125.0"\n');
+  fs.chmodSync(fakeCodex, 0o755);
+  fs.mkdirSync(path.join(targetRoot, 'bin'), { recursive: true });
+  fs.mkdirSync(path.join(targetRoot, 'dist', 'entrypoints'), { recursive: true });
+  writeFixtureFile(targetRoot, 'package.json', JSON.stringify({ name: 'opl-framework', version: '0.3.21' }));
+  writeFixtureFile(targetRoot, 'bin/opl', '#!/usr/bin/env bash\n');
+  writeFixtureFile(targetRoot, 'dist/entrypoints/cli.js', 'export {};\n');
+  fs.writeFileSync(archivePath, 'framework-archive-99\n');
+  const archiveSha = crypto.createHash('sha256').update(fs.readFileSync(archivePath)).digest('hex');
+  const manifest = {
+    schemaVersion: 2,
+    mediaType: 'application/vnd.oci.image.manifest.v1+json',
+    artifactType: 'application/vnd.onepersonlab.framework.v1',
+    annotations: {
+      'org.opencontainers.image.version': '99.0.0',
+      'org.opencontainers.image.revision': 'f'.repeat(40),
+    },
+    layers: [{
+      mediaType: 'application/vnd.onepersonlab.framework.source.v1+gzip',
+      digest: `sha256:${archiveSha}`,
+      annotations: { 'org.opencontainers.image.title': 'dist/opl-packages/framework/one-person-lab-framework-99.0.0.tar.gz' },
+    }],
+  };
+  const fakeCurl = writeFixtureFile(fakeBin, 'curl', [
+    `#!${process.execPath}`,
+    "const fs = require('node:fs');",
+    "const args = process.argv.slice(2);",
+    "const url = args.find((arg) => arg.startsWith('http://') || arg.startsWith('https://')) || '';",
+    "if (url.includes('/token?')) { process.stdout.write(JSON.stringify({ token: 'fixture-token' })); process.exit(0); }",
+    `if (url.includes('/manifests/')) { process.stdout.write(${JSON.stringify(JSON.stringify(manifest))}); process.exit(0); }`,
+    "process.exit(22);",
+  ].join('\n'));
+  fs.chmodSync(fakeCurl, 0o755);
+
+  const envKeys = [
+    'HOME',
+    'OPL_STATE_DIR',
+    'OPL_CURL_BIN',
+    'OPL_CODEX_BIN',
+    'OPL_FRAMEWORK_ARTIFACT_REF',
+    'OPL_FRAMEWORK_UPDATE_TARGET_ROOT',
+    'OPL_FRAMEWORK_UPDATE_SOURCE',
+    'OPL_FRAMEWORK_UPDATE_ARCHIVE',
+  ];
+  const previous = new Map(envKeys.map((key) => [key, process.env[key]]));
+  try {
+    process.env.HOME = root;
+    process.env.OPL_STATE_DIR = stateDir;
+    process.env.OPL_CURL_BIN = fakeCurl;
+    process.env.OPL_CODEX_BIN = fakeCodex;
+    process.env.OPL_FRAMEWORK_ARTIFACT_REF = 'ghcr.io/owner/one-person-lab-framework:latest-stable';
+    process.env.OPL_FRAMEWORK_UPDATE_TARGET_ROOT = targetRoot;
+    delete process.env.OPL_FRAMEWORK_UPDATE_SOURCE;
+    delete process.env.OPL_FRAMEWORK_UPDATE_ARCHIVE;
+
+    const output = await withCodexLatestFixture(() => buildManagedUpdateKernelProjection(loadFrameworkContracts(), {
+      operation: 'apply',
+      componentId: 'opl_base',
+    })) as Record<string, any>;
+    const base = output.managed_update.components[0];
+    assert.equal(base.current.opl_framework_runtime.channel_lookup_skipped, false);
+    assert.equal(base.current.opl_framework_runtime.update_available, true);
+    assert.equal(base.state, 'update_available');
+    assert.equal(base.auto_apply.eligible, true);
+    assert.equal(base.auto_apply.app_background_safe, true);
+    assert.equal(base.auto_apply.command_ref, 'opl system startup-maintenance --json');
+    assert.deepEqual(selectedManagedUpdateComponentIds({ operation: 'apply' }, [base]), ['opl_base']);
+  } finally {
+    for (const [key, value] of previous) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

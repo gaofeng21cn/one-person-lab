@@ -264,7 +264,7 @@ export async function buildManagedUpdateKernelProjection(
       channel,
       {
         allowFrameworkChannelLookup: allowExternalProbes
-          && (input.operation === 'check' || input.operation === 'plan'),
+          && (input.operation === 'check' || input.operation === 'plan' || input.operation === 'apply'),
         refreshManagedDependencyLatest: allowExternalProbes && input.operation !== 'status',
         inspectExternalDependencyOwners: allowExternalProbes,
       },
