@@ -16,7 +16,11 @@ import {
 } from './transport-receipts.ts';
 
 function artifactMetadata(metadata: JsonRecord[], ref: string) {
-  return metadata.find((entry) => (optionalString(entry.ref) ?? entry.uri) === ref);
+  // A producer may locate the same file twice: the closeout-relative `ref` and
+  // the full `uri`. A consumable ref can equal either exact locator of this
+  // entry; the lookup never crosses entries, and the byte, containment, scope
+  // and receipt gates below still decide the identity.
+  return metadata.find((entry) => optionalString(entry.ref) === ref || optionalString(entry.uri) === ref);
 }
 
 export function verifyStageQualityCloseoutArtifactIdentity(input: {
@@ -43,12 +47,22 @@ export function verifyStageQualityCloseoutArtifactIdentity(input: {
     : null;
   // Producers already declare which outputs are consumable. When neither identity
   // array was supplied, verify those same refs using their closeout byte metadata.
-  const consumableRefs = !rawProgress
+  const rawConsumableRefs = !rawProgress
     && !Object.hasOwn(qualityEnvelope, 'artifact_refs')
     && !Object.hasOwn(qualityEnvelope, 'artifact_hashes')
     && Array.isArray(routeImpact.consumable_artifact_refs)
-    ? readAgentRefList(routeImpact.consumable_artifact_refs, 'consumable_artifact_refs')
+    ? routeImpact.consumable_artifact_refs
+    : null;
+  const consumableRefs = rawConsumableRefs
+    ? readAgentRefList(rawConsumableRefs, 'consumable_artifact_refs')
     : [];
+  if (rawConsumableRefs && rawConsumableRefs.length !== consumableRefs.length) {
+    throw artifactIdentityError({
+      message: 'Consumable artifact refs must not contain duplicates when deriving Review identity.',
+      blockedReason: 'artifact_byte_identity_mismatch',
+      artifactRef: consumableRefs[0] ?? 'missing',
+    });
+  }
   const consumableHashes = consumableRefs.map((ref) => optionalString(artifactMetadata(metadata, ref)?.sha256));
   const bindConsumableIdentity = consumableRefs.length > 0
     && consumableRefs.every((ref) => closeoutPacket.closeout_refs.includes(ref))
