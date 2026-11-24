@@ -15,6 +15,8 @@ import {
 } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
 import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts';
 import { deriveNormalizedStageQualityCloseout } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-derivation.ts';
+import { revalidateStageRunImmutableSpecContent } from '../../src/adapters/execution/family-runtime-stage-run-identity.ts';
+import { stageQualityCycleProjectActivity } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
 
 function digest(bytes: string) {
   return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
@@ -54,13 +56,16 @@ test('real re-review materialization reads derived map, exact observations and o
     }, options);
 
     const producedBytes = '{"revision":"producer"}\n';
-    const producedPath = path.join(scope.canonical_work_item_root!, 'artifacts/producer-output.json');
+    const producedRef = 'artifacts/producer-output.json';
+    const producedPath = path.join(scope.canonical_work_item_root!, producedRef);
     fs.writeFileSync(producedPath, producedBytes);
-    const producedRef = `file://${producedPath}`;
+    const transportCopy = path.join(scope.workspace_root, producedRef);
+    fs.mkdirSync(path.dirname(transportCopy), { recursive: true });
+    fs.writeFileSync(transportCopy, 'different transport workspace bytes');
     const producedHash = digest(producedBytes);
     const verifiedProducer = verifyStageQualityCloseoutArtifactIdentity({
       attempt: producer.workflow_input,
-      workspaceRoot: scope.workspace_root,
+      workspaceRoot: scope.canonical_work_item_root!,
       closeoutPacket: {
         surface_kind: 'stage_attempt_closeout_packet',
         stage_attempt_id: producer.workflow_input.stage_attempt_id,
@@ -103,6 +108,26 @@ test('real re-review materialization reads derived map, exact observations and o
       artifact_refs: [producedRef], artifact_hashes: [producedHash],
       artifact_identity_receipt_refs: producerReceiptRefs,
     }, options);
+    const reviewerSpec = reviewer.workflow_input.execution_content_binding?.spec;
+    assert.ok(reviewerSpec);
+    revalidateStageRunImmutableSpecContent({
+      spec: reviewerSpec,
+      domainPackRoot,
+      workspaceLocator: stageRun.workspace_locator,
+      scopeKind: 'work_item',
+      executionScope: scope,
+    });
+    const projection = await stageQualityCycleProjectActivity({
+      artifact_identity_observation_only: true,
+      stage_run: stageRun,
+      state: {
+        artifact_refs: [producedRef],
+        artifact_hashes: [producedHash],
+        artifact_identity_receipt_refs: producerReceiptRefs,
+      },
+    } as Parameters<typeof stageQualityCycleProjectActivity>[0]);
+    assert.equal(projection.artifact_identity_observation?.live_bytes_status, 'matches');
+
     ingest(reviewer.workflow_input.stage_attempt_id, {
       surface_kind: 'stage_attempt_closeout_packet',
       stage_attempt_id: reviewer.workflow_input.stage_attempt_id,

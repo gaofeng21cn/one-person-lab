@@ -107,7 +107,8 @@ function observeAuthoritativeArtifactBytes(input: TemporalStageQualityCycleProje
       return { ref, expected_sha256: expected, observed_sha256: null, status: 'unknown' as const };
     }
     try {
-      const localPath = localPathForRef(ref, workspaceRoot);
+      const artifactRoot = input.stage_run.execution_scope?.canonical_work_item_root ?? workspaceRoot;
+      const localPath = localPathForRef(ref, artifactRoot);
       const observed = localPath
         ? observeStableFile({ filePath: localPath, artifactRef: ref })
         : observeContentArtifactBytes(input, { ref, expected, workspaceRoot, index });

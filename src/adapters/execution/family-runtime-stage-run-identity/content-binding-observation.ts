@@ -361,6 +361,7 @@ export function verifyTrustedReceipt(input: {
   }
   return {
     byteSize,
+    surfaceKind,
     producingStageRunRef: `opl://stage-runs/${encodeURIComponent(producingStageRun)}`,
     producingAttemptRef: `opl://stage-attempts/${encodeURIComponent(producingAttempt)}`,
   };
@@ -487,7 +488,20 @@ export function bindArtifact(input: {
   scopeKind: FamilyRuntimeExecutionScopeKind;
   executionScope: WorkItemExecutionScopeSnapshot | null;
 }) {
-  const filePath = localFileForRef(input.artifact.ref, input.workspaceRoot);
+  const receipt = input.artifact.identity_receipt_ref
+    ? verifyTrustedReceipt({
+        receiptRef: input.artifact.identity_receipt_ref,
+        workspaceRoot: input.workspaceRoot,
+        domainId: input.domainId,
+        artifact: input.artifact,
+        scopeKind: input.scopeKind,
+        executionScope: input.executionScope,
+      })
+    : null;
+  const artifactRoot = receipt?.surfaceKind === 'opl_transport_artifact_identity_receipt'
+    ? input.executionScope?.canonical_work_item_root ?? input.workspaceRoot
+    : input.workspaceRoot;
+  const filePath = localFileForRef(input.artifact.ref, artifactRoot);
   const observed = filePath
     ? observeArtifactBytes({
         phase: 'bind',
@@ -504,15 +518,7 @@ export function bindArtifact(input: {
       observed_sha256: observed.sha256,
     });
   }
-  if (input.artifact.identity_receipt_ref) {
-    const receipt = verifyTrustedReceipt({
-      receiptRef: input.artifact.identity_receipt_ref,
-      workspaceRoot: input.workspaceRoot,
-      domainId: input.domainId,
-      artifact: input.artifact,
-      scopeKind: input.scopeKind,
-      executionScope: input.executionScope,
-    });
+  if (receipt) {
     if (observed && receipt.byteSize !== null && observed.byteSize !== receipt.byteSize) {
       fail('StageRun local artifact bytes do not match the trusted receipt size.', {
         failure_code: 'stage_run_artifact_identity_receipt_mismatch',
