@@ -8,7 +8,7 @@ CARRIER_ONLY=${OPL_CARRIER_ONLY:-0}
 ENSURE_NODE_ONLY=0
 INSTALL_SOURCE_MODE=${OPL_INSTALL_SOURCE_MODE:-auto}
 MANAGED_TOOLCHAIN_ROOT=${OPL_MANAGED_TOOLCHAIN_ROOT:-$HOME/.opl/toolchain}
-MANAGED_NODE_VERSION=${OPL_MANAGED_NODE_VERSION:-v26.13.0}
+MANAGED_NODE_VERSION=${OPL_MANAGED_NODE_VERSION:-v26.13.1}
 MANAGED_NODE_VERSION=v${MANAGED_NODE_VERSION#v}
 PREFILLED_NODE_MODULES_DIR=${OPL_PREFILLED_NODE_MODULES_DIR:-}
 INSTALL_SOURCE_MARKER=.opl-install-source
@@ -112,8 +112,8 @@ node_version_is_usable() {
   patch=$((10#${BASH_REMATCH[3]}))
   case "$major" in
     22) [ "$minor" -gt 23 ] || { [ "$minor" -eq 23 ] && [ "$patch" -ge 4 ]; } ;;
-    24) [ "$minor" -gt 22 ] || { [ "$minor" -eq 22 ] && [ "$patch" -ge 1 ]; } ;;
-    26) [ "$minor" -gt 12 ] || { [ "$minor" -eq 12 ] && [ "$patch" -ge 1 ]; } ;;
+    24) [ "$minor" -gt 22 ] || { [ "$minor" -eq 22 ] && [ "$patch" -ge 3 ]; } ;;
+    26) [ "$minor" -gt 13 ] || { [ "$minor" -eq 13 ] && [ "$patch" -ge 1 ]; } ;;
     *) [ "$major" -gt 26 ] ;;
   esac
 }
@@ -198,7 +198,7 @@ ensure_node_runtime() {
     return 0
   fi
 
-  printf 'A patched standalone Node.js runtime is required (22.23.4+, 24.22.1+, or 26.12.1+ on its active release line).\n' >&2
+  printf 'A patched standalone Node.js runtime is required (22.23.4+, 24.22.3+, or 26.13.1+ on its active release line).\n' >&2
   return 1
 }
 

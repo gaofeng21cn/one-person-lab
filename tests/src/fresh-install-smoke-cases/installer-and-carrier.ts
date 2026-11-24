@@ -98,10 +98,10 @@ export function registerInstallerAndCarrierTests({
     const source = fs.readFileSync(installScript, 'utf8');
     const bootstrap = source.slice(0, source.indexOf('\nensure_node_runtime\n'));
     for (const [version, accepted] of [
-      ['22.23.4', true], ['22.24.0', true], ['24.22.1', true], ['26.12.1', true], ['28.0.0', true],
-      ['20.20.0', false], ['22.21.1', false], ['22.23.3', false], ['24.22.0', false],
-      ['26.12.0', false], ['23.11.0', false], ['25.10.0', false],
-      ['22.23.4-next.1', false], ['electron:24.22.1', false], ['', false],
+      ['22.23.4', true], ['22.24.0', true], ['24.22.3', true], ['26.13.1', true], ['28.0.0', true],
+      ['20.20.0', false], ['22.21.1', false], ['22.23.3', false], ['24.22.2', false],
+      ['26.13.0', false], ['23.11.0', false], ['25.10.0', false],
+      ['22.23.4-next.1', false], ['electron:24.22.3', false], ['', false],
     ] as const) {
       const result = spawnSync('/bin/bash', ['-c', `${bootstrap}\nnode_version_is_usable "$OPL_TEST_NODE_VERSION"`], {
         encoding: 'utf8', env: { ...process.env, OPL_TEST_NODE_VERSION: version },
@@ -124,7 +124,7 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
       for (const [versions, accepted] of [
         [{ node: '22.23.4' }, true],
         [{ node: '22.23.3' }, false],
-        [{ node: '24.22.1', electron: '44.9.1' }, false],
+        [{ node: '24.22.3', electron: '44.9.1' }, false],
         [{ node: '26.10.0' }, false],
       ] as const) {
         const result = spawnSync('/bin/bash', ['-c', `${bootstrap}\nnode_is_usable`], {
@@ -178,7 +178,7 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
     const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
     const cliPrefix = path.join(homeRoot, 'opt', 'homebrew');
     const toolchainRoot = path.join(homeRoot, '.opl', 'toolchain');
-    const managedNodeBin = path.join(toolchainRoot, 'node-v26.13.0-darwin-arm64', 'bin');
+    const managedNodeBin = path.join(toolchainRoot, 'node-v26.13.1-darwin-arm64', 'bin');
     const legacyCarrier = path.join(cliPrefix, 'lib', 'node_modules', 'opl-framework-shared');
     const npmLog = path.join(homeRoot, 'npm.log');
     fs.mkdirSync(path.join(installDir, '.git'), { recursive: true });
@@ -626,7 +626,7 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
         'done',
         'mkdir -p "$(dirname "$out")"',
         'if [[ "$url" == */SHASUMS256.txt ]]; then',
-        `  printf '%s  node-v26.13.0-darwin-arm64.tar.gz\\n' '${createHash('sha256').update('fixture archive\n').digest('hex')}' > "$out"`,
+        `  printf '%s  node-v26.13.1-darwin-arm64.tar.gz\\n' '${createHash('sha256').update('fixture archive\n').digest('hex')}' > "$out"`,
         'else',
         '  printf "fixture archive\\n" > "$out"',
         'fi',
@@ -646,12 +646,12 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
         '    *) shift ;;',
         '  esac',
         'done',
-        'if [[ "$archive" == *"node-v26.13.0-darwin-arm64"* ]]; then',
-        '  node_dir="$dest/node-v26.13.0-darwin-arm64/bin"',
+        'if [[ "$archive" == *"node-v26.13.1-darwin-arm64"* ]]; then',
+        '  node_dir="$dest/node-v26.13.1-darwin-arm64/bin"',
         '  mkdir -p "$node_dir"',
         '  cat > "$node_dir/node" <<\\NODE',
         '#!/usr/bin/env bash',
-        'if [ "${1:-}" = "-p" ]; then printf "%s\\n" "${OPL_TEST_DOWNLOADED_NODE_VERSION:-26.13.0}"; fi',
+        'if [ "${1:-}" = "-p" ]; then printf "%s\\n" "${OPL_TEST_DOWNLOADED_NODE_VERSION:-26.13.1}"; fi',
         'exit "${OPL_TEST_DOWNLOADED_NODE_EXIT:-0}"',
         'NODE',
         '  cat > "$node_dir/npm" <<\\NPM',
@@ -688,14 +688,14 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
         });
         assert.notEqual(refused.status, 0);
         assert.match(refused.stderr, message);
-        assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v26.13.0-darwin-arm64')), false);
+        assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v26.13.1-darwin-arm64')), false);
         assert.equal(fs.existsSync(installDir), false);
       }
       const ensured = spawnSync('/bin/bash', [installScript, '--ensure-node'], {
         cwd: repoRoot, encoding: 'utf8', env: fixtureEnvironment,
       });
       assert.equal(ensured.status, 0, ensured.stderr || ensured.stdout);
-      assert.match(ensured.stdout, /Preparing One Person Lab managed Node\.js v26\.13\.0/);
+      assert.match(ensured.stdout, /Preparing One Person Lab managed Node\.js v26\.13\.1/);
       assert.equal(fs.existsSync(installDir), false);
       assert.equal(fs.readFileSync(path.join(fakeBin, 'node'), 'utf8'), userNode);
       assert.equal(fs.readFileSync(path.join(retainedNode, 'sentinel'), 'utf8'), 'preserved older managed runtime\n');
@@ -716,7 +716,7 @@ console.log(Function('process', 'return (' + process.argv[3] + ')')({ versions }
       assert.match(result.stdout, /OPL base carrier is ready/);
       assert.equal(result.stderr.includes('Homebrew'), false);
       assert.equal(result.stderr.includes('brew install'), false);
-      assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v26.13.0-darwin-arm64', 'bin', 'node')), true);
+      assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v26.13.1-darwin-arm64', 'bin', 'node')), true);
       assert.equal(fs.readFileSync(path.join(installDir, '.opl-install-source'), 'utf8').trim(), 'archive');
       assert.deepEqual(
         parseJsonText(fs.readFileSync(path.join(installDir, '.opl-framework-installed-source-identity.json'), 'utf8')),
