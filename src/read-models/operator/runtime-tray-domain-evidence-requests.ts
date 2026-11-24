@@ -14,7 +14,7 @@ import {
   stringValue,
 } from '../../kernel/json-record.ts';
 import type { JsonRecord } from './runtime-tray-snapshot-types.ts';
-import { uniqueRefs } from './runtime-tray-app-operator-drilldown-parts/value-utils.ts';
+import { uniqueRefs } from './runtime-tray-app-operator-drilldown/value-utils.ts';
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter((value) => value.trim().length > 0))];

@@ -511,7 +511,7 @@
             "src/host/plugins/cordis-framework-readiness.ts"
           ],
           "caller_refs": [
-            "src/entrypoints/cli/cases/public-command-specs-parts/cordis.ts",
+            "src/entrypoints/cli/cases/public-command-specs/cordis.ts",
             "src/read-models/operator/framework-readiness.ts"
           ],
           "scope": "session",
@@ -639,7 +639,7 @@
           ],
           "caller_refs": [
             "src/host/composition-profiles.ts",
-            "src/entrypoints/cli/cases/public-command-specs-parts/release.ts"
+            "src/entrypoints/cli/cases/public-command-specs/release.ts"
           ],
           "scope": "request",
           "trust": "first_party_privileged",
@@ -699,7 +699,7 @@
           "caller_refs": [
             "src/host/composition-profiles.ts",
             "src/read-models/operator/app-state.ts",
-            "src/read-models/operator/app-state-parts/action-execute.ts"
+            "src/read-models/operator/app-state/action-execute.ts"
           ],
           "scope": "composition",
           "trust": "first_party_restricted",

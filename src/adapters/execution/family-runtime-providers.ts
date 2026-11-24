@@ -24,7 +24,7 @@ import {
 } from './family-runtime-provider-worker-repair.ts';
 import {
   inspectTemporalSchedulerCadenceReadiness,
-} from './family-runtime-temporal-provider-parts/scheduler-cadence.ts';
+} from './family-runtime-temporal-provider/scheduler-cadence.ts';
 import {
   buildExternalSandboxProviderAdapterPlan,
   EXTERNAL_SANDBOX_IMPLEMENTED_SUBSTRATES,

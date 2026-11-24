@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 
-import { runCli } from './cli/helpers-parts/runner.ts';
+import { runCli } from './cli/helpers/runner.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import {
   createFamilyRuntimeQueueTables,

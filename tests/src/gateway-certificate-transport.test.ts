@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
-import { gatewayFetch } from '../../src/adapters/integration/opl-gateway-account-parts/certificate-transport.ts';
+import { gatewayFetch } from '../../src/adapters/integration/opl-gateway-account/certificate-transport.ts';
 
 const certificateFailure = async () => { throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'SELF_SIGNED_CERT_IN_CHAIN' } }); };
 test('Gateway TLS fallback keeps verification and confines credentials to the private stdin pipe', async () => {

@@ -1,4 +1,4 @@
-export { FOUNDRY_PROTOCOL_VERSION } from './protocol-parts/types.ts';
+export { FOUNDRY_PROTOCOL_VERSION } from './protocol/types.ts';
 export type {
   FoundryMode,
   FoundryRiskTier,
@@ -10,9 +10,9 @@ export type {
   AgentBlueprint,
   EvidenceBundle,
   EvolutionProposal,
-} from './protocol-parts/types.ts';
-export { assertFoundryProtocolPurity, foundryContentDigest, assertSameTarget } from './protocol-parts/semantic-boundary.ts';
-export { validateDesignRequest } from './protocol-parts/design-request.ts';
-export { validateKnowledgeRequirements, validateAgentBlueprint } from './protocol-parts/blueprint.ts';
-export { validateEvidenceBundle } from './protocol-parts/evidence.ts';
-export { validateEvolutionProposal } from './protocol-parts/evolution-proposal.ts';
+} from './protocol/types.ts';
+export { assertFoundryProtocolPurity, foundryContentDigest, assertSameTarget } from './protocol/semantic-boundary.ts';
+export { validateDesignRequest } from './protocol/design-request.ts';
+export { validateKnowledgeRequirements, validateAgentBlueprint } from './protocol/blueprint.ts';
+export { validateEvidenceBundle } from './protocol/evidence.ts';
+export { validateEvolutionProposal } from './protocol/evolution-proposal.ts';

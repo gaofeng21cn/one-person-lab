@@ -1,5 +1,5 @@
 import { buildSettingsControlCenter } from '../../../../../src/read-models/operator/app-state-settings-control-center.ts';
-import { buildDockerWebuiSettingsReadModel } from '../../../../../src/read-models/operator/app-state-settings-control-center-parts/docker-webui-read-model.ts';
+import { buildDockerWebuiSettingsReadModel } from '../../../../../src/read-models/operator/app-state-settings-control-center/docker-webui-read-model.ts';
 import { assert, createFakeCodexFixture, fs, os, path, repoRoot, runCli, test } from '../../helpers.ts';
 
 const ORDINARY_SETTINGS_SECTIONS = [

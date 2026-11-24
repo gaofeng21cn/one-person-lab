@@ -9,7 +9,7 @@ import {
   readOplFlowManagedDependencyIds,
 } from '../../src/adapters/integration/agent-package-registry.ts';
 import { agentPackageManifest, formatJsonPayload } from './cli/cases/packages-cases/helpers.ts';
-import { codexNativeReadbackFixture } from './cli/helpers-parts/codex-native-readback-fixture.ts';
+import { codexNativeReadbackFixture } from './cli/helpers/codex-native-readback-fixture.ts';
 
 function writeFakePluginList(root: string, sourceRoot: string) {
   const binary = path.join(root, 'fake-codex');

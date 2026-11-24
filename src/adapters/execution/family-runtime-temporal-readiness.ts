@@ -9,7 +9,7 @@ import {
 import {
   workerSourceVersionDiagnostic,
   workerSourceVersionsEquivalent,
-} from './family-runtime-temporal-provider-parts/worker-state.ts';
+} from './family-runtime-temporal-provider/worker-state.ts';
 import type {
   TemporalStageAttemptVisibilityReadiness,
 } from './family-runtime-temporal-visibility.ts';

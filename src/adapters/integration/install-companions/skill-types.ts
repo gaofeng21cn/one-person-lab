@@ -1,7 +1,7 @@
 import type {
   OplCompanionToolId,
   OplCompanionToolSyncItem,
-} from '../install-companions-parts/tools.ts';
+} from './tools.ts';
 
 export type OplCompanionSkillStatus = 'ready' | 'missing';
 export type OplCompanionSkillActionStatus = 'planned' | 'ready' | 'missing_source' | 'synced' | 'available' | 'installed' | 'failed';

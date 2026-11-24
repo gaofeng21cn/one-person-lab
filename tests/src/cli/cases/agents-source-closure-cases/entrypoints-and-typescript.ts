@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { NodeHandle } from 'typescript/unstable/sync';
 
 import { assert, fs, path, repoRoot, test } from '../../helpers.ts';
-import { buildTypescriptSourceGraph } from '../../../../../src/authority/workspace/standard-agent-source-closure-parts/typescript-graph.ts';
+import { buildTypescriptSourceGraph } from '../../../../../src/authority/workspace/standard-agent-source-closure/typescript-graph.ts';
 
 import {
   actionCatalogAction,

@@ -192,7 +192,7 @@ work item 范围验证权限，返回稳定的回执引用、允许使用的就�
 findings 和 evidence refs。OMA design/diagnose 不能兼任执行者或审核者；evaluator、
 executor 和 reviewer 三个身份必须互异。
 
-`protocol.ts` 保留公开类型与校验入口。`protocol-parts/` 将共享类型、校验值和语义边界
+`protocol.ts` 保留公开类型与校验入口。`protocol/` 将共享类型、校验值和语义边界
 置于下层，请求、蓝图、证据与演进提案按各自闭合对象维护；提案校验直接复用蓝图校验，
 内部模块不反向依赖公开入口。校验顺序、错误与内容 digest 规则由原协议继续定义。
 

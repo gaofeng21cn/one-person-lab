@@ -13,8 +13,8 @@ import {
   ingestStageAttemptCloseout,
   inspectStageAttempt,
 } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
-import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
-import { deriveNormalizedStageQualityCloseout } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts';
+import { deriveNormalizedStageQualityCloseout } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-derivation.ts';
 
 function digest(bytes: string) {
   return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;

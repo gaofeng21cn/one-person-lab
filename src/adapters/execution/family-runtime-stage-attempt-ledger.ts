@@ -3,9 +3,9 @@ export type {
   StageAttemptRow,
   StageAttemptSignalRow,
   StageAttemptStatus,
-} from './family-runtime-stage-attempt-ledger-parts/types.ts';
+} from './family-runtime-stage-attempt-ledger/types.ts';
 
-export { createStageAttemptTable } from './family-runtime-stage-attempt-ledger-parts/schema.ts';
+export { createStageAttemptTable } from './family-runtime-stage-attempt-ledger/schema.ts';
 
 export {
   stageAttemptToPayload,
@@ -13,19 +13,19 @@ export {
   parseStageAttemptJsonObject,
   parseStageAttemptCloseoutJsonObject,
   parseStageAttemptJsonList,
-} from './family-runtime-stage-attempt-ledger-parts/payload.ts';
+} from './family-runtime-stage-attempt-ledger/payload.ts';
 
 export {
   bindStageAttemptExecutionSession,
   getStageAttemptRow,
   inspectStageAttemptPayload,
-} from './family-runtime-stage-attempt-ledger-parts/persistence.ts';
+} from './family-runtime-stage-attempt-ledger/persistence.ts';
 
 export {
   reconcilePersistedStageReviewReceipt,
   materializePersistedStageReviewReceipt,
   validatePersistedStageReviewIsolation,
-} from './family-runtime-stage-attempt-ledger-parts/review-receipt.ts';
+} from './family-runtime-stage-attempt-ledger/review-receipt.ts';
 
 export {
   listStageAttempts,
@@ -36,4 +36,4 @@ export {
   listStageAttemptsForTask,
   listStageAttemptSignals,
   listStageAttemptCloseouts,
-} from './family-runtime-stage-attempt-ledger-parts/queries.ts';
+} from './family-runtime-stage-attempt-ledger/queries.ts';

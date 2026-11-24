@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
-import { parseStageAttemptCloseoutJson } from './family-runtime-stage-attempts-parts/shared.ts';
+import { parseStageAttemptCloseoutJson } from './family-runtime-stage-attempts/shared.ts';
 import type { TemporalStageRunWorkflowState } from './family-runtime-temporal.ts';
 import { stageAttemptIdFromRef } from './family-runtime-stage-quality-cycle-persistence.ts';
 

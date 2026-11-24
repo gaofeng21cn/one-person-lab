@@ -8,13 +8,13 @@ import { readTemporalHistoryFixture } from './temporal-history-fixture.ts';
 
 import { readTemporalStableCohort } from '../../src/adapters/integration/temporal-stable-cohort.ts';
 import { buildTemporalStageAttemptReplayGateForTest } from '../../src/adapters/execution/family-runtime-temporal-provider.ts';
-import { buildTemporalStageAttemptWorkerOptions } from '../../src/adapters/execution/family-runtime-temporal-provider-parts/workflow-bundle.ts';
+import { buildTemporalStageAttemptWorkerOptions } from '../../src/adapters/execution/family-runtime-temporal-provider/workflow-bundle.ts';
 import {
   syncTemporalProductionProbeAttemptProjection,
   temporalProductionProbeInput,
   temporalProductionTypedCloseoutPacket,
   temporalProductionWorkerRestartPlan,
-} from '../../src/adapters/execution/family-runtime-temporal-provider-parts/production-proof.ts';
+} from '../../src/adapters/execution/family-runtime-temporal-provider/production-proof.ts';
 import {
   createStageAttempt,
   recordStageAttemptActivityHeartbeat,

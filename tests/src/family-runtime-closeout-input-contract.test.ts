@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner/input-prompt.ts';
 import { codexActivityEventForTemporalHistory } from '../../src/adapters/execution/family-runtime-temporal-history-summary.ts';
 import { canonicalJsonText } from '../../src/kernel/canonical-json.ts';
 import { createWorkItemExecutionScopeSnapshot } from '../../src/authority/workspace/execution-scope.ts';
@@ -50,7 +50,7 @@ test('Temporal history preserves protocol resume failure separately from success
 
 test('closeout consumed/writeback ref lists accept the published exact ref shape and fail closed', async () => {
   const { normalizeTypedStageCloseoutPacket } = await import(
-    '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts'
+    '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts'
   );
   const exactRef = {
     kind: 'opl_reviewer_input_snapshot_member',
@@ -81,10 +81,10 @@ test('closeout consumed/writeback ref lists accept the published exact ref shape
 
 test('copying the supplied closeout identity survives ingress validation, including opaque idempotency', async () => {
   const { normalizeTypedStageCloseoutPacket, validateCloseoutPacketForAttempt } = await import(
-    '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts'
+    '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts'
   );
   const { protocolCloseoutResumePrompt } = await import(
-    '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts'
+    '../../src/adapters/execution/family-runtime-codex-stage-runner/input-prompt.ts'
   );
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-closeout-identity-'));
   try {
@@ -129,7 +129,7 @@ test('copying the supplied closeout identity survives ingress validation, includ
 
 test('legacy closeout token repair is digest-checked and stays bound to the exact Attempt', async (t) => {
   const { normalizeTypedStageCloseoutPacket, validateCloseoutPacketForAttempt } = await import(
-    '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts'
+    '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts'
   );
   const workspaceRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-closeout-scope-spelling-')));
   t.after(() => fs.rmSync(workspaceRoot, { recursive: true, force: true }));
@@ -200,7 +200,7 @@ test('closeout identity omits optional fields not supplied by the current Attemp
 
 test('producer closeout with a changed in-place artifact still passes the zero-new-artifact guard', async () => {
   const { verifyStageQualityCloseoutArtifactIdentity } = await import(
-    '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts'
+    '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts'
   );
   const artifactRef = 'file:///workspace/run/artifacts/repair.json';
   const inputHash = 'a'.repeat(64);

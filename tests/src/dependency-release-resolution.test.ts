@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { compareDependencyVersions, resolveDependencyRelease, resolveDependencyReleases, fetchDependencyArchive, dependencyArchiveCachePath } from '../../src/adapters/integration/dependency-release-resolution.ts';
-import { configuredLatestVersion } from '../../src/adapters/integration/install-companions-parts/tool-version.ts';
+import { configuredLatestVersion } from '../../src/adapters/integration/install-companions/tool-version.ts';
 
 test('verified archive cache reuses bytes across discovery and installation while metadata stays fresh', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dependency-cache-'));

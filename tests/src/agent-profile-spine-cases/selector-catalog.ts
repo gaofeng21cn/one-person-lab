@@ -6,7 +6,7 @@ import {
   buildAgentProfileInspect,
   buildAgentProfileSelection,
 } from '../../../src/authority/packages/agent-profile-spine.ts';
-import { buildProfileCommandSpecs } from '../../../src/entrypoints/cli/cases/public-command-specs-parts/profiles.ts';
+import { buildProfileCommandSpecs } from '../../../src/entrypoints/cli/cases/public-command-specs/profiles.ts';
 import { profileCatalogEntry } from './fixtures.ts';
 
 test('profile selector chooses explicitly signalled evidence-grounded profile', () => {

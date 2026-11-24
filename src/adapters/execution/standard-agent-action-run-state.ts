@@ -4,7 +4,7 @@ import path from 'node:path';
 import { canonicalJsonBytes, canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
-import { fail } from './standard-agent-action-run-state-parts/fields.ts';
+import { fail } from './standard-agent-action-run-state/fields.ts';
 import {
   ACTION_RUN_STATE_RELATIVE_ROOT,
   assertContained,
@@ -15,15 +15,15 @@ import {
   stateDirectory,
   workspaceRoot,
   writeExactFile,
-} from './standard-agent-action-run-state-parts/physical-files.ts';
-import { bindingRecord } from './standard-agent-action-run-state-parts/binding.ts';
-import { planRecord, assertPlanRuntimeIdentity } from './standard-agent-action-run-state-parts/plan.ts';
-import { completionRecord, assertCompletionMatchesRunState } from './standard-agent-action-run-state-parts/completion.ts';
+} from './standard-agent-action-run-state/physical-files.ts';
+import { bindingRecord } from './standard-agent-action-run-state/binding.ts';
+import { planRecord, assertPlanRuntimeIdentity } from './standard-agent-action-run-state/plan.ts';
+import { completionRecord, assertCompletionMatchesRunState } from './standard-agent-action-run-state/completion.ts';
 import type {
   StandardAgentActionRunBinding,
   StandardAgentActionRunPlan,
   StandardAgentActionRunCompletion,
-} from './standard-agent-action-run-state-parts/types.ts';
+} from './standard-agent-action-run-state/types.ts';
 
 export type {
   StandardAgentActionRunBindingV1,
@@ -32,7 +32,7 @@ export type {
   StandardAgentActionRunPlan,
   StandardAgentCompletedHandlerReplay,
   StandardAgentActionRunCompletion,
-} from './standard-agent-action-run-state-parts/types.ts';
+} from './standard-agent-action-run-state/types.ts';
 
 function readRunStateFromDirectory(root: string, directory: string, runId: string) {
   const stat = fs.lstatSync(directory);

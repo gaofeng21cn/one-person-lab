@@ -15,7 +15,7 @@ import {
 } from '../../../../../src/authority/packages/index.ts';
 import {
   discoverSourceClosureEntrypoints,
-} from '../../../../../src/authority/workspace/standard-agent-source-closure-parts/entrypoints.ts';
+} from '../../../../../src/authority/workspace/standard-agent-source-closure/entrypoints.ts';
 import {
   buildReadyAgentRepo,
   writeJson,

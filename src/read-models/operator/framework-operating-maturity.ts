@@ -12,11 +12,11 @@ import {
   recordList,
   stringValue,
 } from './framework-readiness-values.ts';
-import { currentOwnerDeltaBridge } from './framework-operating-maturity-parts/current-owner-delta-bridge.ts';
+import { currentOwnerDeltaBridge } from './framework-operating-maturity/current-owner-delta-bridge.ts';
 import {
   foundryAgentOsProductionEvidenceGate,
   nextOwnerActions,
-} from './framework-operating-maturity-parts/production-evidence-gate.ts';
+} from './framework-operating-maturity/production-evidence-gate.ts';
 import {
   appOperatorDrilldownMaturity,
   appReleaseUserPathExecutionRunbook,
@@ -24,7 +24,7 @@ import {
   providerLongSoakExecutionRunbook,
   stringListValue,
   unique,
-} from './framework-operating-maturity-parts/evidence-lanes.ts';
+} from './framework-operating-maturity/evidence-lanes.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../authority/workspace/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {

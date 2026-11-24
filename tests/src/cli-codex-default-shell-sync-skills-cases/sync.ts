@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { parseJsonText } from '../../../src/kernel/json-file.ts';
-import { listFamilySkillPackSpecs } from '../../../src/adapters/integration/opl-skills-parts/registry.ts';
+import { listFamilySkillPackSpecs } from '../../../src/adapters/integration/opl-skills/registry.ts';
 
 const STANDARD_AGENT_PACK_COUNT = listFamilySkillPackSpecs()
   .filter((spec) => spec.distribution_role === 'domain_agent_plugin_pack').length;

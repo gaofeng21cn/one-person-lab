@@ -7,7 +7,7 @@ import test from 'node:test';
 
 import { scopedGatewayWorkspace } from '../foundry-kernel-cases/scoped-workspace.ts';
 import { resolveFoundryExecutionScope } from '../../../src/adapters/execution/foundry-execution-scope.ts';
-import { buildStageRunImmutableContentBindings } from '../../../src/adapters/execution/family-runtime-stage-run-identity-parts/content-bindings.ts';
+import { buildStageRunImmutableContentBindings } from '../../../src/adapters/execution/family-runtime-stage-run-identity/content-bindings.ts';
 import { requireFamilyRuntimeExecutionScope } from '../../../src/adapters/execution/family-runtime-execution-scope.ts';
 import { FrameworkContractError } from '../../../src/kernel/contract-validation.ts';
 import { canonicalJsonBytes } from '../../../src/kernel/canonical-json.ts';

@@ -9,19 +9,19 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { readLocalCodexAccessState } from '../../src/kernel/local-codex-defaults.ts';
-import { bindGatewayKeyToCodex, restoreCodexBinding } from '../../src/adapters/integration/opl-gateway-account-parts/codex-binding.ts';
-import { inspectGatewayPublicSettings, loginGateway } from '../../src/adapters/integration/opl-gateway-account-parts/client.ts';
-import { buildGatewayInstallation, normalizeGatewayDeviceSlug } from '../../src/adapters/integration/opl-gateway-account-parts/identity.ts';
-import { reconcileGatewayManagedKey } from '../../src/adapters/integration/opl-gateway-account-parts/key-reconcile.ts';
+import { bindGatewayKeyToCodex, restoreCodexBinding } from '../../src/adapters/integration/opl-gateway-account/codex-binding.ts';
+import { inspectGatewayPublicSettings, loginGateway } from '../../src/adapters/integration/opl-gateway-account/client.ts';
+import { buildGatewayInstallation, normalizeGatewayDeviceSlug } from '../../src/adapters/integration/opl-gateway-account/identity.ts';
+import { reconcileGatewayManagedKey } from '../../src/adapters/integration/opl-gateway-account/key-reconcile.ts';
 import {
   readOrCreateGatewayInstallation,
   withGatewayAccountLock,
-} from '../../src/adapters/integration/opl-gateway-account-parts/private-store.ts';
+} from '../../src/adapters/integration/opl-gateway-account/private-store.ts';
 import { resolveOplStatePaths } from '../../src/kernel/runtime-state-paths.ts';
 import {
   OPL_GATEWAY_CONTROL_BASE_URL,
   OPL_GATEWAY_INFERENCE_BASE_URL,
-} from '../../src/adapters/integration/opl-gateway-account-parts/types.ts';
+} from '../../src/adapters/integration/opl-gateway-account/types.ts';
 import {
   disconnectOplGatewayAccount,
   loginOplGatewayAccount,
@@ -450,7 +450,7 @@ test('gateway private store rejects broad permissions and symlink roots', () => 
 test('gateway private store tolerates concurrent directory creators', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gateway-private-store-race-'));
   const stateDir = path.join(root, 'state');
-  const privateStore = pathToFileURL(path.join(repositoryRoot, 'src/adapters/integration/opl-gateway-account-parts/private-store.ts')).href;
+  const privateStore = pathToFileURL(path.join(repositoryRoot, 'src/adapters/integration/opl-gateway-account/private-store.ts')).href;
   const script = `import { readOrCreateGatewayInstallation } from ${JSON.stringify(privateStore)}; readOrCreateGatewayInstallation();`;
   const children = Array.from({ length: 8 }, () => spawn(process.execPath, [
     '--experimental-strip-types', '--input-type=module', '-e', script,

@@ -1,5 +1,5 @@
 import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../../helpers.ts';
-import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
+import { runGitFixtureCommand } from '../../helpers/family-fixtures.ts';
 import { domainModulePathEnvironment } from './shared.ts';
 
 test('system startup-maintenance refreshes Codex CLI before module maintenance when latest is newer', () => {

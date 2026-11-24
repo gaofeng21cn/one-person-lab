@@ -23,9 +23,9 @@ import { buildStageRunImmutableSpec } from '../../src/adapters/execution/family-
 import {
   verifyStageQualityArtifactIdentityAtAttemptBoundary,
   verifyStageQualityCloseoutArtifactIdentity,
-} from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
-import type { TypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
-import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
+} from '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts';
+import type { TypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
+import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner/stage-closeout-capture.ts';
 import { runWithWorkItemFileBoundaryInterlock } from './work-item-file-boundary-test-support.ts';
 
 function sha256(value: Buffer | string) {

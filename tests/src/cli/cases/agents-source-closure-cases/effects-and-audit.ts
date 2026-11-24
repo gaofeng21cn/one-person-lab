@@ -1,5 +1,5 @@
 import { assert, fs, os, path, test } from '../../helpers.ts';
-import { loadSourceClosureEffectContract } from '../../../../../src/authority/workspace/standard-agent-source-closure-parts/analysis.ts';
+import { loadSourceClosureEffectContract } from '../../../../../src/authority/workspace/standard-agent-source-closure/analysis.ts';
 
 import {
   buildRepo,

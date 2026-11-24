@@ -10,14 +10,14 @@ import {
   ingestStageAttemptCloseout,
   inspectStageAttempt,
 } from './family-runtime-stage-attempts.ts';
-import { syncStageAttemptFromTemporalTerminalObservation } from './family-runtime-stage-attempts-parts/temporal-terminal-observation.ts';
+import { syncStageAttemptFromTemporalTerminalObservation } from './family-runtime-stage-attempts/temporal-terminal-observation.ts';
 import {
   buildRawArtifactProgressCloseoutPacket,
 } from './family-runtime-codex-stage-runner.ts';
 import {
   recoverFrameworkRawArtifactForAttempt,
-} from './family-runtime-codex-stage-runner-parts/raw-artifact-identity-verification.ts';
-import { verifyStageQualityCloseoutArtifactIdentity } from './family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
+} from './family-runtime-codex-stage-runner/raw-artifact-identity-verification.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from './family-runtime-codex-stage-runner/artifact-identity-verification.ts';
 import { insertEvent, type familyRuntimePaths } from './family-runtime-store.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';

@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseCloseoutFromCodexMessages } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/session-closeout-recovery.ts';
+import { parseCloseoutFromCodexMessages } from '../../src/adapters/execution/family-runtime-codex-stage-runner/session-closeout-recovery.ts';
 import {
   normalizeTypedStageCloseoutPacket,
   validateCloseoutPacketForAttempt,
-} from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+} from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
 import { buildRawArtifactProgressCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner.ts';
 
 const DECISION = {

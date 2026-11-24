@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
-import { compareVersions, parseVersion } from '../install-companions-parts/tool-version.ts';
+import { compareVersions, parseVersion } from '../install-companions/tool-version.ts';
 import {
   MANAGED_UPDATE_OWNER_ACTIONS,
   managedUpdateCommand,
@@ -14,8 +14,8 @@ import { inspectGitRepo } from './module-git.ts';
 import {
   fetchFrameworkArtifactFromChannel,
   readFrameworkChannelEntry,
-} from './framework-self-update-parts/channel-artifact.ts';
-import { resolveDockerWebuiFrameworkCarrier } from './framework-self-update-parts/docker-webui-carrier.ts';
+} from './framework-self-update/channel-artifact.ts';
+import { resolveDockerWebuiFrameworkCarrier } from './framework-self-update/docker-webui-carrier.ts';
 import {
   FRAMEWORK_PENDING_METADATA_SUFFIX,
   FRAMEWORK_PENDING_ROOT_SUFFIX,
@@ -35,13 +35,13 @@ import {
   shouldDisableRemoteFrameworkArtifact,
   shouldSkipDependencyInstall,
   skippedDependencyInstall,
-} from './framework-self-update-parts/source-resolution.ts';
+} from './framework-self-update/source-resolution.ts';
 import type {
   FrameworkPendingMetadata,
   FrameworkSelfUpdateInput,
   OplFrameworkRollbackTargetResult,
   OplFrameworkUpdateTargetResult,
-} from './framework-self-update-parts/source-resolution.ts';
+} from './framework-self-update/source-resolution.ts';
 import {
   activatePendingOplFrameworkRuntime,
   applyFrameworkArchive,
@@ -49,13 +49,13 @@ import {
   listTrackedFiles,
   pendingFrameworkArtifactResult,
   runDependencyInstall,
-} from './framework-self-update-parts/staging.ts';
+} from './framework-self-update/staging.ts';
 import {
   runOplFrameworkSelfRollback,
   writeFrameworkSourceMetadata,
-} from './framework-self-update-parts/rollback.ts';
+} from './framework-self-update/rollback.ts';
 
-export type { OplFrameworkRollbackTargetResult, OplFrameworkUpdateTargetResult } from './framework-self-update-parts/source-resolution.ts';
+export type { OplFrameworkRollbackTargetResult, OplFrameworkUpdateTargetResult } from './framework-self-update/source-resolution.ts';
 export { activatePendingOplFrameworkRuntime, resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfRollback };
 
 function channelIsOlderThanInstalled(targetRoot: string, channelVersion: string) {

@@ -11,7 +11,7 @@ import {
   resolveOplCompanionTool,
   type OplCompanionToolId,
   type OplCompanionToolSyncItem,
-} from './install-companions-parts/tools.ts';
+} from './install-companions/tools.ts';
 import {
   inspectExternalCodexInstallation,
   inspectExternalTemporalInstallation,

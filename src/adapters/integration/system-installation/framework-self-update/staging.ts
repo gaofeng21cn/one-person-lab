@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { isRecord } from '../../../../kernel/contract-validation.ts';
 import { readJsonPayloadFile } from '../../../../kernel/json-file.ts';
-import { compareVersions, parseVersion } from '../../install-companions-parts/tool-version.ts';
+import { compareVersions, parseVersion } from '../../install-companions/tool-version.ts';
 import {
   assertGitSuccess,
   runCommand,

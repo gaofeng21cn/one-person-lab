@@ -4,7 +4,7 @@ import net from 'node:net';
 import { assert, fs, installRuntimePackageFixture, os, path, runCli, test } from '../../helpers.ts';
 import {
   resolveTemporalWorkerTaskQueue,
-} from '../../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+} from '../../../../../src/adapters/execution/family-runtime-temporal-provider/worker-task-queue.ts';
 
 test('family-runtime attempt inspect uses current readiness instead of its creation snapshot', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-attempt-current-provider-'));

@@ -13,8 +13,8 @@ import {
 } from '../../../src/adapters/integration/capability-registry-resolver.ts';
 import { sha256Fixture } from '../cli/cases/packages-cases/helpers.ts';
 import { writeManagedRuntimeSourceFixture } from '../cli/cases/packages-cases/managed-runtime-source-fixture.ts';
-import { createFakeCodexPluginManagerFixture } from '../cli/helpers-parts/fixtures.ts';
-import { removeFixtureTree } from '../cli/helpers-parts/filesystem.ts';
+import { createFakeCodexPluginManagerFixture } from '../cli/helpers/fixtures.ts';
+import { removeFixtureTree } from '../cli/helpers/filesystem.ts';
 import {
   DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
   ensureProviderHostedStageAttempt,

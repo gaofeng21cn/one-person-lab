@@ -11,7 +11,7 @@ import {
   parseRegistryArgs,
   resolvePackDescriptor,
   usage,
-} from './pack-os-parts/cli-args.ts';
+} from './pack-os/cli-args.ts';
 import {
   loadGenericPackDescriptor,
   loadGenericPackDescriptorFromRecord,
@@ -21,8 +21,8 @@ import {
   REQUIRED_AUTHORITY_FALSE_FLAGS,
   sha256File,
   shape,
-} from './pack-os-parts/descriptor.ts';
-import type { JsonRecord } from './pack-os-parts/descriptor.ts';
+} from './pack-os/descriptor.ts';
+import type { JsonRecord } from './pack-os/descriptor.ts';
 
 function writeJsonFile(outputPath: string, payload: unknown) {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
-import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner/input-prompt.ts';
 import { completeReviewerSnapshotTransportEnvelope, materializeReviewerInputSnapshot, resolveReviewerInputSnapshotMaterialization, reviewerSnapshotStageRunInputAuthority } from '../../src/adapters/execution/family-runtime-reviewer-input-snapshot.ts';
 import { exactRefsFromCloseoutMetadata } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
 

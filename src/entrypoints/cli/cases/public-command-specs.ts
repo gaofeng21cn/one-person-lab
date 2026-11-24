@@ -4,28 +4,28 @@ import { buildPublicSystemCommandSpecs } from './system-public-command-specs.ts'
 import { buildPublicRuntimeCommandSpecs } from './runtime-public-command-specs.ts';
 import { assertNoArgs, bindCommandRegistryMetadata, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, validateCommandRegistryCoverage } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
-import { buildContractCommandSpecs } from './public-command-specs-parts/contract.ts';
-import { buildDomainCommandSpecs } from './public-command-specs-parts/domain.ts';
-import { buildFrameworkCommandSpecs } from './public-command-specs-parts/framework.ts';
-import { buildInstallationCommandSpecs } from './public-command-specs-parts/engine.ts';
-import { buildSessionCommandSpecs } from './public-command-specs-parts/session.ts';
-import { buildBrandCommandSpecs } from './public-command-specs-parts/brand.ts';
-import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.ts';
-import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.ts';
-import { buildOkfCommandSpecs } from './public-command-specs-parts/okf.ts';
-import { buildKnowledgeCommandSpecs } from './public-command-specs-parts/knowledge.ts';
-import { buildSoftwareSourcesCommandSpecs } from './public-command-specs-parts/sources.ts';
-import { buildPackagesCommandSpecs } from './public-command-specs-parts/packages.ts';
-import { buildProfileCommandSpecs } from './public-command-specs-parts/profiles.ts';
-import { buildReleaseCommandSpecs } from './public-command-specs-parts/release.ts';
-import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
-import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
-import { buildWorkspaceCommandSpecs } from './public-command-specs-parts/workspace.ts';
-import { buildImageCommandSpecs } from './public-command-specs-parts/image.ts';
+import { buildContractCommandSpecs } from './public-command-specs/contract.ts';
+import { buildDomainCommandSpecs } from './public-command-specs/domain.ts';
+import { buildFrameworkCommandSpecs } from './public-command-specs/framework.ts';
+import { buildInstallationCommandSpecs } from './public-command-specs/engine.ts';
+import { buildSessionCommandSpecs } from './public-command-specs/session.ts';
+import { buildBrandCommandSpecs } from './public-command-specs/brand.ts';
+import { buildConnectCommandSpecs } from './public-command-specs/connect.ts';
+import { buildFoundryCommandSpecs } from './public-command-specs/foundry.ts';
+import { buildOkfCommandSpecs } from './public-command-specs/okf.ts';
+import { buildKnowledgeCommandSpecs } from './public-command-specs/knowledge.ts';
+import { buildSoftwareSourcesCommandSpecs } from './public-command-specs/sources.ts';
+import { buildPackagesCommandSpecs } from './public-command-specs/packages.ts';
+import { buildProfileCommandSpecs } from './public-command-specs/profiles.ts';
+import { buildReleaseCommandSpecs } from './public-command-specs/release.ts';
+import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs/stages.ts';
+import { buildUpdateCommandSpecs } from './public-command-specs/update.ts';
+import { buildWorkspaceCommandSpecs } from './public-command-specs/workspace.ts';
+import { buildImageCommandSpecs } from './public-command-specs/image.ts';
 import {
   buildCordisCommandSpecs,
   type CordisCliComposition,
-} from './public-command-specs-parts/cordis.ts';
+} from './public-command-specs/cordis.ts';
 import { buildPublicAppCommandSpecs } from './app-public-command-specs.ts';
 
 export function buildPublicCommandSpecs(

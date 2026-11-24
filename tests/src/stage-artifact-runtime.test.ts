@@ -19,7 +19,7 @@ import {
   workbenchStageArtifactRuntime,
 } from '../../src/authority/stages/stage-artifact-runtime.ts';
 import { FrameworkContractError } from '../../src/authority/contracts/contracts.ts';
-import { runCli } from './cli/helpers-parts/runner.ts';
+import { runCli } from './cli/helpers/runner.ts';
 
 function withTempState<T>(fn: (root: string) => T) {
   const previous = process.env.OPL_STATE_DIR;

@@ -7,7 +7,7 @@ import { stageAttemptSummary } from './family-runtime-stage-attempts.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import {
   runTemporalProductionResidencyProofForWorker,
-} from './family-runtime-temporal-provider-parts/production-proof.ts';
+} from './family-runtime-temporal-provider/production-proof.ts';
 import {
   inspectTemporalWorkerLifecycle,
 } from './family-runtime-temporal-worker-lifecycle.ts';

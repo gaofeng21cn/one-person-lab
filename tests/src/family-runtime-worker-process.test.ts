@@ -8,8 +8,8 @@ import {
   findTemporalForegroundWorkerPids,
   stopOrphanTemporalForegroundWorkers,
   temporalForegroundWorkerCommand,
-} from '../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-process.ts';
-import { resolveTemporalWorkerForegroundPathsFromArgv } from '../../src/adapters/execution/family-runtime-temporal-provider-parts/foreground-paths.ts';
+} from '../../src/adapters/execution/family-runtime-temporal-provider/worker-process.ts';
+import { resolveTemporalWorkerForegroundPathsFromArgv } from '../../src/adapters/execution/family-runtime-temporal-provider/foreground-paths.ts';
 
 const modulePath = '/fixture/family-runtime-temporal-provider.ts';
 

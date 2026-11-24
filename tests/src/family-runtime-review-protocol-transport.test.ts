@@ -8,9 +8,9 @@ import { domainHandlerDispatchActivity, stageQualityAttemptSyncActivity } from '
 import { openQueueDb } from '../../src/adapters/execution/family-runtime-store.ts';
 import { createPersistedTemporalStageAttemptInput } from './family-runtime-temporal-provider-cases/persisted-attempt.ts';
 import type { TemporalStageAttemptWorkflowState } from '../../src/adapters/execution/family-runtime-temporal.ts';
-import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
+import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner/stage-closeout-capture.ts';
 import { buildRawArtifactProgressCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner.ts';
-import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts';
 
 test('verified raw producer identity survives real dispatch without becoming a semantic verdict', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-raw-dispatch-'));

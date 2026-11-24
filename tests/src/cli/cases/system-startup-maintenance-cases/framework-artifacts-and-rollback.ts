@@ -6,7 +6,7 @@ import { createCurrentCodexFixture, currentCodexEnvironment, withCliTimeout } fr
 import {
   fetchFrameworkArtifactFromChannel,
   readFrameworkChannelEntry,
-} from '../../../../../src/adapters/integration/system-installation/framework-self-update-parts/channel-artifact.ts';
+} from '../../../../../src/adapters/integration/system-installation/framework-self-update/channel-artifact.ts';
 import { readOplFrameworkRuntimeUpdateStatus, runOplFrameworkSelfUpdate } from '../../../../../src/adapters/integration/system-installation/framework-self-update.ts';
 
 function writeMinimalFrameworkRoot(root: string, marker: string) {

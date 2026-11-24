@@ -9,7 +9,7 @@ import {
   runCliInCwd,
   test,
 } from '../helpers.ts';
-import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { runGitFixtureCommand } from '../helpers/family-fixtures.ts';
 import { DOMAIN_MODULE_SPECS } from '../../../../src/adapters/integration/system-installation/module-specs.ts';
 import { writeFakeOmaGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 import { parseGitStatusPorcelainV2 } from '../../../../src/adapters/integration/system-installation/module-git.ts';

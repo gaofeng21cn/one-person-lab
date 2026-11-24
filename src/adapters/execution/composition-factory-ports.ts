@@ -8,7 +8,7 @@ import type {
   AgentExecutionReceipt,
   AgentExecutionRequest,
 } from './agent-executor.ts';
-import type { CodexStageRunnerInput } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import type { CodexStageRunnerInput } from './family-runtime-codex-stage-runner/input-prompt.ts';
 import type { WorkspaceSkillProjectionRefresher } from '../../authority/workspace/index.ts';
 
 export type AgentExecutorService = {

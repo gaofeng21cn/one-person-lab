@@ -14,7 +14,7 @@ import {
   writeCapabilityProvider,
   writeMasConsumer,
 } from './packages-cases/capability-fixtures.ts';
-import { createFakeCodexPluginManagerFixture } from '../helpers-parts/fixtures.ts';
+import { createFakeCodexPluginManagerFixture } from '../helpers/fixtures.ts';
 import {
   ensureFamilyRuntimePackageLaunchReady,
   packageLaunchHardStopReason,

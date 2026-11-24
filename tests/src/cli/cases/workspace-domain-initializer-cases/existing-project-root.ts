@@ -1,6 +1,6 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../../helpers.ts';
 import { createRcaWorkspaceDescriptorFixture } from '../workspace-domain-test-helper.ts';
-import { resolveWorkspaceProjectRoot, assertWorkspaceInitializationPaths } from '../../../../../src/authority/workspace/workspace-initializer-parts/project-root.ts';
+import { resolveWorkspaceProjectRoot, assertWorkspaceInitializationPaths } from '../../../../../src/authority/workspace/workspace-initializer/project-root.ts';
 import { profileFromTopologyContract, workspaceProjectEntry } from '../../../../../src/authority/workspace/workspace-topology.ts';
 
 test('workspace adopt indexes existing native project roots, preserves business files and reuses stable identities', () => {

@@ -8,7 +8,7 @@ import { readFamilySkillPacks } from '../../src/adapters/integration/opl-skills.
 import {
   listFamilySkillPackSpecs,
   normalizeDomainSelection,
-} from '../../src/adapters/integration/opl-skills-parts/registry.ts';
+} from '../../src/adapters/integration/opl-skills/registry.ts';
 import { resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
 import { registerOplFamilyCodexPlugins } from '../../src/adapters/integration/system-installation/codex-plugin-registry.ts';
 import type { OplModuleId } from '../../src/adapters/integration/system-installation/shared.ts';

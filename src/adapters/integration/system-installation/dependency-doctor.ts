@@ -6,8 +6,8 @@ import path from 'node:path';
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { listFirstPartyAgentPackageDependencyProfiles } from '../agent-package-manifests.ts';
-import { listFamilySkillPackSpecs } from '../opl-skills-parts/registry.ts';
-import { resolveRepoRoot } from '../opl-skills-parts/paths.ts';
+import { listFamilySkillPackSpecs } from '../opl-skills/registry.ts';
+import { resolveRepoRoot } from '../opl-skills/paths.ts';
 
 type DependencyKind = 'executable' | 'latex_package';
 type DependencyRequiredLevel = 'required' | 'optional' | 'legacy_not_required';

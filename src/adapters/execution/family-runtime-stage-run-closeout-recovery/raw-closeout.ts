@@ -6,13 +6,13 @@ import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import {
   parseTerminalJsonRecordFromCodexMessages,
-} from '../family-runtime-codex-stage-runner-parts/session-closeout-recovery.ts';
+} from '../family-runtime-codex-stage-runner/session-closeout-recovery.ts';
 import {
   hydrateReferencedStageAttemptCloseout,
-} from '../family-runtime-codex-stage-runner-parts/referenced-closeout-hydration.ts';
+} from '../family-runtime-codex-stage-runner/referenced-closeout-hydration.ts';
 import {
   normalizeTypedStageCloseoutPacket,
-} from '../family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+} from '../family-runtime-codex-stage-runner/closeout-normalization.ts';
 
 type JsonRecord = Record<string, unknown>;
 

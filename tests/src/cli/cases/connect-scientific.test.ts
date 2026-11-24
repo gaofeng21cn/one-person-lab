@@ -15,7 +15,7 @@ import {
   runCliFailure,
   test,
 } from '../helpers.ts';
-import { createTestTlsServerFixture } from '../helpers-parts/tls-fixture.ts';
+import { createTestTlsServerFixture } from '../helpers/tls-fixture.ts';
 import {
   buildScientificConnectorProviderRegistryReadback,
   runOplConnectScientificSearch,

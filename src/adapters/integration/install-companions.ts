@@ -14,7 +14,7 @@ import {
   type OplCompanionToolId,
   type OplCompanionNetworkAccess,
   type OplCompanionToolSyncItem,
-} from './install-companions-parts/tools.ts';
+} from './install-companions/tools.ts';
 import type {
   OplCompanionSkillActionStatus,
   OplCompanionSkillApplyMode,
@@ -31,8 +31,8 @@ export type {
   OplCompanionToolId,
   OplCompanionNetworkAccess,
   OplCompanionToolSyncItem,
-} from './install-companions-parts/tools.ts';
-export { OPL_COMPANION_TOOL_IDS } from './install-companions-parts/tools.ts';
+} from './install-companions/tools.ts';
+export { OPL_COMPANION_TOOL_IDS } from './install-companions/tools.ts';
 export type {
   OplCompanionSkillActionStatus,
   OplCompanionSkillApplyMode,

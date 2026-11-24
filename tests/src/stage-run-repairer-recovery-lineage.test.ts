@@ -14,9 +14,9 @@ import {
   inspectStageAttempt,
 } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
 import { createStageQualityCycle } from '../../src/adapters/execution/family-runtime-stage-quality-cycle.ts';
-import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
-import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
-import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts';
+import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner/stage-closeout-capture.ts';
 import { requireTemporalStageRunRecoveryResume } from '../../src/adapters/execution/family-runtime-temporal.ts';
 import {
   createFamilyRuntimeQueueTables,

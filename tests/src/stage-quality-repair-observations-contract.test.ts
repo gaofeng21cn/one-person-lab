@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import contract from '../../contracts/opl-framework/stage-quality-cycle-contract.json' with { type: 'json' };
-import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner/input-prompt.ts';
 import {
   repairObservationsFromCloseoutRouteImpact,
 } from '../../src/adapters/execution/family-runtime-temporal-workflow-artifacts.ts';

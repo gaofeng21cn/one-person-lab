@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs-parts/knowledge.ts';
+import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs/knowledge.ts';
 import { bindDurableKnowledgeContext, recallDurableKnowledge } from '../../src/authority/packages/durable-knowledge-catalog.ts';
 import { bindStageKnowledgeContext, readStageKnowledgeContext, revalidateStageKnowledgeContext } from '../../src/adapters/execution/family-runtime-knowledge-context.ts';
 import { knowledgeItem, knowledgeSha, productCatalog, sourceFixture, writeKnowledgeFile } from './knowledge-source-fixture.ts';

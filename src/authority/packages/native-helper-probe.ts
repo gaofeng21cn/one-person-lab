@@ -7,7 +7,7 @@ import { parseJsonText } from '../../kernel/json-file.ts';
 import {
   shape,
   type JsonRecord,
-} from './pack-os-parts/descriptor.ts';
+} from './pack-os/descriptor.ts';
 
 export const PACK_NATIVE_HELPER_PROBE_CONTRACT_REF =
   'contracts/opl-framework/pack-native-helper-probe-contract.json';

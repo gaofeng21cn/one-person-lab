@@ -5,7 +5,7 @@ import {
   normalizeTypedStageCloseoutPacket,
   validateCloseoutPacketForAttempt,
   type TypedStageCloseoutPacket,
-} from '../family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+} from '../family-runtime-codex-stage-runner/closeout-normalization.ts';
 import {
   buildFamilyConflictSubject,
   buildReceiptConflictEnvelope,
@@ -32,7 +32,7 @@ import {
 import { persistStageAttemptUsageObservation } from '../family-runtime-stage-attempt-usage-observation.ts';
 import {
   requireCanonicalNormalizedStageQualityCloseout,
-} from '../family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
+} from '../family-runtime-codex-stage-runner/closeout-derivation.ts';
 import { withFamilyRuntimeSavepoint } from '../family-runtime-sqlite.ts';
 
 function normalizeRouteImpact(

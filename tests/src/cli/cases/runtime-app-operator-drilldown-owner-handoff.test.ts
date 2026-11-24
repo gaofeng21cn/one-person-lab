@@ -2,7 +2,7 @@ import {
   assert,
   test,
 } from '../helpers.ts';
-import { buildOwnerHandoffPacket } from '../../../../src/read-models/operator/runtime-tray-app-operator-drilldown-parts/owner-handoff-packet.ts';
+import { buildOwnerHandoffPacket } from '../../../../src/read-models/operator/runtime-tray-app-operator-drilldown/owner-handoff-packet.ts';
 import { assertOwnerPayloadWorkorderProjection } from './owner-payload-workorder-assertions.ts';
 
 test('runtime App drilldown projects bounded owner handoff packet without authority claims', () => {

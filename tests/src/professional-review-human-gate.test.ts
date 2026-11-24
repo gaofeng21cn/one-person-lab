@@ -5,7 +5,7 @@ import {
   stageQualityAttemptMaterializeActivity, resolveStageRunAttemptExecutorContent,
 } from './family-runtime-stage-run-launch-cases/shared.ts';
 import { createCordisBaseHeadlessComposition } from '../../src/host/composition-profiles.ts';
-import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts';
 
 test('StageRun retains human decisions through child Attempts and replay identity', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-review-gate-state-'));

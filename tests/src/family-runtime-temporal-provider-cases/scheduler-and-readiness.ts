@@ -11,7 +11,7 @@ import {
   buildTemporalSchedulerTickWorkflowArgs,
   inspectTemporalSchedulerCadenceReadiness,
   isTemporalSchedulerRunningActionLive,
-} from '../../../src/adapters/execution/family-runtime-temporal-provider-parts/scheduler-cadence.ts';
+} from '../../../src/adapters/execution/family-runtime-temporal-provider/scheduler-cadence.ts';
 import { runTemporalSchedulerCadenceCommand } from '../../../src/adapters/execution/family-runtime-scheduler.ts';
 import {
   createFamilyRuntimeQueueTables,

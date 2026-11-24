@@ -18,7 +18,7 @@ import {
   type HostedAgentRuntimeBindingResolver,
   type HostedAgentRuntimeBindingSnapshot,
 } from './hosted-agent-runtime-binding.ts';
-import { runFoundryAction } from './standard-agent-action-runtime-parts/foundry-action.ts';
+import { runFoundryAction } from './standard-agent-action-runtime/foundry-action.ts';
 import {
   actionDeclaresHostMaterialization,
   buildLiveActionContext,
@@ -27,18 +27,18 @@ import {
   originalInvocationSha256,
   requestFromFrozenPlan,
   type StandardAgentActionContext,
-} from './standard-agent-action-runtime-parts/action-context.ts';
+} from './standard-agent-action-runtime/action-context.ts';
 import {
   replayCompletedHandlerAction,
   runHandlerAction,
-} from './standard-agent-action-runtime-parts/handler-action.ts';
-import { runStageAction } from './standard-agent-action-runtime-parts/stage-action.ts';
-import { actionLedger } from './standard-agent-action-runtime-parts/action-persistence.ts';
+} from './standard-agent-action-runtime/handler-action.ts';
+import { runStageAction } from './standard-agent-action-runtime/stage-action.ts';
+import { actionLedger } from './standard-agent-action-runtime/action-persistence.ts';
 import {
   canonicalDomainIds,
   packageUseBinding,
   reserveStandardAgentActionRunPlan,
-} from './standard-agent-action-runtime-parts/run-plan.ts';
+} from './standard-agent-action-runtime/run-plan.ts';
 import {
   inspectStandardAgentActionRunCompletion,
   inspectStandardAgentActionRunState,
@@ -53,17 +53,17 @@ import {
 import {
   preflightStandardAgentDomainLifecycleAdmission,
 } from './standard-agent-domain-lifecycle-admission.ts';
-import { actionAuthorityBoundary, fail, sha256 } from './standard-agent-action-runtime-parts/shared.ts';
+import { actionAuthorityBoundary, fail, sha256 } from './standard-agent-action-runtime/shared.ts';
 import {
   assertStandardAgentActionInvocationSurface,
   INTERNAL_STANDARD_AGENT_ACTION_INVOCATION,
   qualificationProvisioningPayload,
   QUALIFICATION_PROVISIONING_ACTION_ID,
   QUALIFICATION_PROVISIONING_INVOCATION,
-} from './standard-agent-action-runtime-parts/qualification-provisioning.ts';
-import { type StandardAgentActionRuntimeInput } from './standard-agent-action-runtime-parts/types.ts';
+} from './standard-agent-action-runtime/qualification-provisioning.ts';
+import { type StandardAgentActionRuntimeInput } from './standard-agent-action-runtime/types.ts';
 
-export { QUALIFICATION_PROVISIONING_ACTION_ID } from './standard-agent-action-runtime-parts/qualification-provisioning.ts';
+export { QUALIFICATION_PROVISIONING_ACTION_ID } from './standard-agent-action-runtime/qualification-provisioning.ts';
 
 type RuntimeDependencies = {
   resolveManagedCheckout?: typeof resolveStandardAgentManagedCheckout;

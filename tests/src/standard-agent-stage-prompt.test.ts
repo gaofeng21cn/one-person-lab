@@ -8,7 +8,7 @@ import path from 'node:path';
 import {
   readStandardAgentQualityRolePromptFile,
 } from '../../src/authority/packages/standard-agent-stage-prompt.ts';
-import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner/input-prompt.ts';
 import contract from '../../contracts/opl-framework/stage-quality-cycle-contract.json' with { type: 'json' };
 
 function promptFixture(t: test.TestContext, content: string) {

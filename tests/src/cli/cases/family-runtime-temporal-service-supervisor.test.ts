@@ -3,7 +3,7 @@ import net from 'node:net';
 import { execFileSync } from 'node:child_process';
 
 import { assert, fs, os, path, test } from '../helpers.ts';
-import { parseRegisteredFamilyRuntimeCommand } from '../../../../src/adapters/execution/family-runtime-command-parts/registry.ts';
+import { parseRegisteredFamilyRuntimeCommand } from '../../../../src/adapters/execution/family-runtime-command/registry.ts';
 import { compactFastProviderState } from '../../../../src/read-models/operator/app-state.ts';
 import { createFamilyRuntimeQueueTables } from '../../../../src/adapters/execution/family-runtime-store.ts';
 import {
@@ -21,7 +21,7 @@ import {
 import type { TemporalServiceLauncher } from '../../../../src/adapters/execution/family-runtime-temporal-service.ts';
 import { inspectTemporalServiceLifecycle, resolveTemporalServiceLauncher } from '../../../../src/adapters/execution/family-runtime-temporal-service.ts';
 import { restartTemporalServiceLifecycle } from '../../../../src/adapters/execution/family-runtime-temporal-service-command.ts';
-import { inspectTemporalWorkerLifecycleFast } from '../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-lifecycle-fast.ts';
+import { inspectTemporalWorkerLifecycleFast } from '../../../../src/adapters/execution/family-runtime-temporal-provider/worker-lifecycle-fast.ts';
 
 function createFixture() {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-supervisor-'));

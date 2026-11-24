@@ -13,7 +13,7 @@ import { fail, sha256 } from './shared.ts';
 import {
   DOMAIN_ARTIFACT_CAS_CAPABILITY_ID,
 } from '../domain-artifact-cas-materialization.ts';
-import { containedTarget, readStableFile } from '../domain-artifact-cas-materialization-parts/shared.ts';
+import { containedTarget, readStableFile } from '../domain-artifact-cas-materialization/shared.ts';
 
 export const INTERNAL_STANDARD_AGENT_ACTION_INVOCATION = Symbol('internal_standard_agent_action_invocation');
 export const QUALIFICATION_PROVISIONING_INVOCATION = Symbol('qualification_provisioning_invocation');

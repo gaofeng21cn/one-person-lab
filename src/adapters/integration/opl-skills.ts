@@ -13,28 +13,28 @@ import {
 } from '../../authority/workspace/index.ts';
 import {
   writeOplMaterializedPluginCarrier,
-} from './opl-skills-parts/generated-plugin.ts';
+} from './opl-skills/generated-plugin.ts';
 import {
   normalizeOptionalString,
   resolveCodexHome,
-} from './opl-skills-parts/paths.ts';
+} from './opl-skills/paths.ts';
 import {
   listFamilySkillPackSpecs,
   normalizeDomainSelection,
   type SkillPackSyncScope,
   type SkillPackSpec,
   type SyncFamilySkillPack,
-} from './opl-skills-parts/registry.ts';
+} from './opl-skills/registry.ts';
 import {
   requireSkillSyncTargetRoot,
   resolveSkillSyncTargetRoot,
   runSkillPackInstaller,
   shouldSkipImplicitCapabilitySkillSync,
-} from './opl-skills-parts/sync.ts';
+} from './opl-skills/sync.ts';
 import {
   inspectFamilySkillPack,
   inspectFamilySkillPackAtRepoRoot,
-} from './opl-skills-parts/inspection.ts';
+} from './opl-skills/inspection.ts';
 import {
   STANDARD_AGENT_REGISTRY,
 } from '../../kernel/standard-agent-registry.ts';

@@ -5,11 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 import registry from '../../contracts/opl-framework/cli-command-registry.json' with { type: 'json' };
 import settingsContract from '../../contracts/opl-framework/settings-control-center-action-read-model-contract.json' with { type: 'json' };
-import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs-parts/knowledge.ts';
+import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs/knowledge.ts';
 import { bindCommandRegistryMetadata, parseRegisteredCommandOptions } from '../../src/entrypoints/cli/modules/command-registry.ts';
-import { executeKnowledgeSourceAppAction } from '../../src/read-models/operator/app-state-parts/action-execute-knowledge-sources.ts';
-import { SETTINGS_CONTROL_CENTER_ACTIONS } from '../../src/read-models/operator/app-state-settings-control-center-parts/action-catalog.ts';
-import { runCli, runCliFailure } from './cli/helpers-parts/runner.ts';
+import { executeKnowledgeSourceAppAction } from '../../src/read-models/operator/app-state/action-execute-knowledge-sources.ts';
+import { SETTINGS_CONTROL_CENTER_ACTIONS } from '../../src/read-models/operator/app-state-settings-control-center/action-catalog.ts';
+import { runCli, runCliFailure } from './cli/helpers/runner.ts';
 
 test('knowledge source CLI preserves scoped repeated fields and the exact revision', () => {
   const specs = buildKnowledgeCommandSpecs();

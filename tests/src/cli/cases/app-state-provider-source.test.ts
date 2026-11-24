@@ -3,9 +3,9 @@ import net from 'node:net';
 import { pathToFileURL } from 'node:url';
 
 import { assert, buildManifestCommand, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
-import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
-import { resolveTemporalWorkerTaskQueue } from '../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-task-queue.ts';
-import { currentWorkerSourceVersion } from '../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-state.ts';
+import { runGitFixtureCommand } from '../helpers/family-fixtures.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../src/adapters/execution/family-runtime-temporal-provider/worker-task-queue.ts';
+import { currentWorkerSourceVersion } from '../../../../src/adapters/execution/family-runtime-temporal-provider/worker-state.ts';
 
 function buildMasManifestWithManagedTemporalProjection(managedTemporal: Record<string, unknown>) {
   const fixtures = loadFamilyManifestFixtures();

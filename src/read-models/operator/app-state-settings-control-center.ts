@@ -1,10 +1,10 @@
 import { listKnowledgeSourceManagement } from '../../authority/packages/public/knowledge-source-management.ts';
 import { listWorkspaceBindings } from '../../authority/workspace/public/app-state.ts';
-import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
-import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';
+import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center/docker-webui-read-model.ts';
+import { resolveSettingsCodexAccess } from './app-state-settings-control-center/codex-access-read-model.ts';
 import { listOplConnections, readOplGatewayAccount } from '../../adapters/integration/public/app-state.ts';
 import { listOplConnectionAuthorization as listConnectionAuthorization } from '../../adapters/integration/public/app-state.ts';
-import { buildStorageOwnerReadModel } from './app-state-settings-control-center-parts/storage-owner-read-model.ts';
+import { buildStorageOwnerReadModel } from './app-state-settings-control-center/storage-owner-read-model.ts';
 import {
   actionCatalogEntry,
   buildCapabilityTaskAwarenessRefs,
@@ -13,7 +13,7 @@ import {
   groupState,
   sectionState,
   SETTINGS_CONFIGURATION_ACTION_IDS,
-} from './app-state-settings-control-center-parts/task-read-model.ts';
+} from './app-state-settings-control-center/task-read-model.ts';
 import {
   agentPackageFunctionalReadiness,
   asRecord,
@@ -22,7 +22,7 @@ import {
   settingsAuthorityFlags,
   statusTone,
   type BuildSettingsControlCenterInput,
-} from './app-state-settings-control-center-parts/shared.ts';
+} from './app-state-settings-control-center/shared.ts';
 import {
   SETTINGS_CONTROL_CENTER_ACTION_IDS,
   SETTINGS_CONTROL_CENTER_ACTION_SECTIONS,
@@ -31,10 +31,10 @@ import {
   SETTINGS_CONTROL_CENTER_GROUPS,
   SETTINGS_ISSUE_CATALOG,
   buildAppAionConsumerOnlyReadback,
-} from './app-state-settings-control-center-parts/catalog.ts';
+} from './app-state-settings-control-center/catalog.ts';
 
 export { SETTINGS_CONTROL_CENTER_ACTIONS };
-export type { BuildSettingsControlCenterInput } from './app-state-settings-control-center-parts/shared.ts';
+export type { BuildSettingsControlCenterInput } from './app-state-settings-control-center/shared.ts';
 
 const SETTINGS_ALLOWED_ACTION_IDS = [
   ...SETTINGS_CONTROL_CENTER_ACTION_IDS,

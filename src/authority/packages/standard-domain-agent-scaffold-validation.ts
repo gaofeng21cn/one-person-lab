@@ -27,10 +27,10 @@ import {
   requiresStagePackV2,
   validateStagePackV2,
 } from './standard-domain-agent-stage-pack-v2.ts';
-import { discoverPackFiles, validateAgentPackFiles } from './standard-domain-agent-scaffold-validation-parts/pack-files.ts';
-import { validateStageRefs } from './standard-domain-agent-scaffold-validation-parts/stage-refs.ts';
-import { validateUserStageLogContracts } from './standard-domain-agent-scaffold-validation-parts/user-stage-log.ts';
-import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaffold-validation-parts/foundry-contract.ts';
+import { discoverPackFiles, validateAgentPackFiles } from './standard-domain-agent-scaffold-validation/pack-files.ts';
+import { validateStageRefs } from './standard-domain-agent-scaffold-validation/stage-refs.ts';
+import { validateUserStageLogContracts } from './standard-domain-agent-scaffold-validation/user-stage-log.ts';
+import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaffold-validation/foundry-contract.ts';
 import { materializeStandardAgentCapabilityMap } from './standard-agent-capability-map.ts';
 import { resolveStandardAgentImplementationProfile } from './public/standard-agent-implementation-profile.ts';
 import { readStandardAgentInterface } from '../../kernel/standard-agent-interface.ts';

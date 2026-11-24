@@ -26,7 +26,7 @@ import {
   reconcileTemporalStageAttemptRuntimeObservations,
 } from '../../src/adapters/execution/family-runtime-temporal-runtime-observation-reconciliation.ts';
 import { temporalWorkerStatus } from './cli/cases/family-runtime-provider-slo-fixtures.ts';
-import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
+import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner/stage-closeout-capture.ts';
 
 function withDb(fn: (db: DatabaseSync) => Promise<void> | void) {
   const db = new DatabaseSync(':memory:');

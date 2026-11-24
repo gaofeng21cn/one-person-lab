@@ -22,7 +22,7 @@ import { requireRuntimeExecutionScopeMutationAllowed } from '../family-runtime-e
 import { ensureFamilyRuntimePackageLaunchReady } from '../family-runtime-package-readiness.ts';
 import type { FoundryEvaluationStageAdmission, FoundryEvaluationStageCandidate } from '../foundry-evaluation-stage-candidate.ts';
 import { launchRegisteredStageRun } from '../family-runtime-stage-run-launch.ts';
-import { canonicalStageRunSha256 } from '../family-runtime-stage-run-identity-parts/content-bindings.ts';
+import { canonicalStageRunSha256 } from '../family-runtime-stage-run-identity/content-bindings.ts';
 import {
   buildCliStageRunInvocationId,
   stageRunWorkspaceIdentity,

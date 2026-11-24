@@ -1,6 +1,6 @@
 import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
 import { buildRunwayRecoveryRepairProjection } from '../../../../../src/adapters/execution/family-runtime-control-loop.ts';
-import { parseRegisteredFamilyRuntimeCommand } from '../../../../../src/adapters/execution/family-runtime-command-parts/registry.ts';
+import { parseRegisteredFamilyRuntimeCommand } from '../../../../../src/adapters/execution/family-runtime-command/registry.ts';
 import { buildTemporalFirstRuntimeContract } from '../../../../../src/adapters/execution/family-runtime-temporal.ts';
 
 test('Runway control-loop surfaces stay refs-only and route through family-runtime', () => {

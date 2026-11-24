@@ -18,7 +18,7 @@ import {
 } from './family-runtime-scheduler.ts';
 import {
   inspectTemporalWorkerLifecycleFast,
-} from './family-runtime-temporal-provider-parts/worker-lifecycle-fast.ts';
+} from './family-runtime-temporal-provider/worker-lifecycle-fast.ts';
 import {
   resolveTemporalAddressProvenance,
 } from './family-runtime-temporal.ts';

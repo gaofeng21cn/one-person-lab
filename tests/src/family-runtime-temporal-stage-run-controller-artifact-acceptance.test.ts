@@ -5,7 +5,7 @@ import {
   hasCompleteImmutableArtifactCoverage,
   immutableArtifactRefsFromSnapshotManifest,
 } from '../../src/adapters/execution/family-runtime-temporal-workflow-artifact-authority.ts';
-import { buildRecoveryWorkflowState } from '../../src/adapters/execution/family-runtime-stage-run-closeout-recovery-parts/workflow-state.ts';
+import { buildRecoveryWorkflowState } from '../../src/adapters/execution/family-runtime-stage-run-closeout-recovery/workflow-state.ts';
 import { runController } from './family-runtime-temporal-stage-run-controller-cases/fixture.ts';
 
 const deckV1Hash = `sha256:${'1'.repeat(64)}`;

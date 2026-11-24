@@ -34,11 +34,11 @@ import { FOUNDRY_EVALUATION_STAGE_CANDIDATE, type FoundryEvaluationStageAdmissio
 import {
   localPathForRef,
   observeStableFile,
-} from './family-runtime-codex-stage-runner-parts/artifact-identity-verification-parts/file-observation.ts';
+} from './family-runtime-codex-stage-runner/artifact-identity-verification/file-observation.ts';
 import {
   observeCurrentArtifactBytes,
   verifyIdentityReceipt,
-} from './family-runtime-codex-stage-runner-parts/artifact-identity-verification-parts/transport-receipts.ts';
+} from './family-runtime-codex-stage-runner/artifact-identity-verification/transport-receipts.ts';
 
 function comparableArtifactHash(value: unknown) {
   if (typeof value !== 'string' || !value.trim()) return null;
@@ -210,10 +210,10 @@ export async function stageRunRouteLaunchActivity(
           stageRunInput,
           start: true,
           startWorkflow: async (workflowInput) => await (
-            await import('./family-runtime-temporal-provider-parts/attempt-control.ts')
+            await import('./family-runtime-temporal-provider/attempt-control.ts')
           ).startTemporalStageRunWorkflow(workflowInput, { paths }),
           describeWorkflow: async (workflowInput) => await (
-            await import('./family-runtime-temporal-provider-parts/attempt-control.ts')
+            await import('./family-runtime-temporal-provider/attempt-control.ts')
           ).describeTemporalStageRunWorkflow(workflowInput, { paths }),
         });
       } finally {

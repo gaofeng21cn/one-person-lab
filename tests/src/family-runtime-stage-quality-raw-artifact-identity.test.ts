@@ -8,10 +8,10 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { captureWorkItemRootIdentity, reattestWorkItemRootIdentity, type WorkItemRootIdentity } from '../../src/authority/workspace/work-item-file-boundary.ts';
-import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
-import type { TypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
-import { recoverFrameworkRawArtifactForAttempt } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/raw-artifact-identity-verification.ts';
-import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts';
+import type { TypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
+import { recoverFrameworkRawArtifactForAttempt } from '../../src/adapters/execution/family-runtime-codex-stage-runner/raw-artifact-identity-verification.ts';
+import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner/stage-closeout-capture.ts';
 import { runWithWorkItemFileBoundaryInterlock } from './work-item-file-boundary-test-support.ts';
 
 type RawArtifact = NonNullable<ReturnType<typeof persistRawStageOutput>>;

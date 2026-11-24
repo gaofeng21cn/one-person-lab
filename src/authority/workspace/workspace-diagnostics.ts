@@ -68,17 +68,17 @@ import {
   normalizeOptionalString,
   sameJson,
   workspaceDiagnosticPolicy,
-} from './workspace-diagnostics-parts/policy.ts';
-import type { WorkspaceDiagnosticFinding } from './workspace-diagnostics-parts/policy.ts';
-export type { WorkspaceDiagnosticFinding } from './workspace-diagnostics-parts/policy.ts';
+} from './workspace-diagnostics/policy.ts';
+import type { WorkspaceDiagnosticFinding } from './workspace-diagnostics/policy.ts';
+export type { WorkspaceDiagnosticFinding } from './workspace-diagnostics/policy.ts';
 export {
   DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY,
   materializeFindings,
-} from './workspace-diagnostics-parts/policy.ts';
+} from './workspace-diagnostics/policy.ts';
 export {
   adoptWorkspace,
   type WorkspaceAdoptOptions,
-} from './workspace-diagnostics-parts/adoption.ts';
+} from './workspace-diagnostics/adoption.ts';
 
 export type WorkspaceValidationOptions = {
   workspacePath?: string;

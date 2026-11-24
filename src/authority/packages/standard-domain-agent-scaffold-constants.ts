@@ -15,13 +15,13 @@ export {
   SCAFFOLD_MARKER,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
   STARTER_STAGE_ID,
-} from './standard-domain-agent-scaffold-constants-parts/identity-and-primitives.ts';
-export { STANDARD_AGENT_DEFAULT_RUNTIME_POLICY } from './standard-domain-agent-scaffold-constants-parts/runtime-policy.ts';
+} from './standard-domain-agent-scaffold-constants/identity-and-primitives.ts';
+export { STANDARD_AGENT_DEFAULT_RUNTIME_POLICY } from './standard-domain-agent-scaffold-constants/runtime-policy.ts';
 export {
   STAGE_ARTIFACT_KERNEL_ADOPTION_POLICY,
   STAGE_RUN_KERNEL_PROFILE,
-} from './standard-domain-agent-scaffold-constants-parts/stage-kernel.ts';
-export { STATE_INDEX_KERNEL_ADOPTION_POLICY } from './standard-domain-agent-scaffold-constants-parts/state-index-kernel.ts';
+} from './standard-domain-agent-scaffold-constants/stage-kernel.ts';
+export { STATE_INDEX_KERNEL_ADOPTION_POLICY } from './standard-domain-agent-scaffold-constants/state-index-kernel.ts';
 export {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_STAGE_COMPLETION_POLICY,
@@ -39,14 +39,14 @@ export {
   FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF,
   STANDARD_FOUNDRY_AGENT_SERIES_CONSUMER_CONTRACT,
   STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
-} from './standard-domain-agent-scaffold-constants-parts/foundry-series.ts';
+} from './standard-domain-agent-scaffold-constants/foundry-series.ts';
 export {
   FORBIDDEN_AGENT_PACK_TEXT,
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
   REQUIRED_AGENT_PACK_SECTIONS,
   REQUIRED_CONTRACT_SURFACES,
   REQUIRED_VERIFICATION,
-} from './standard-domain-agent-scaffold-constants-parts/required-surfaces.ts';
+} from './standard-domain-agent-scaffold-constants/required-surfaces.ts';
 export {
   AGENT_PACK_CONTRACT,
   GENERATED_SURFACE_CONTRACT,
@@ -54,4 +54,4 @@ export {
   PACK_COMPILER_CONTRACT,
   STANDARD_AGENT_PACK_ABI,
   STANDARD_AGENT_IMPLEMENTATION_PROFILE,
-} from './standard-domain-agent-scaffold-constants-parts/generated-surfaces.ts';
+} from './standard-domain-agent-scaffold-constants/generated-surfaces.ts';

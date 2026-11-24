@@ -22,7 +22,7 @@ import {
   requireRuntimeTraySnapshotProvider,
   type RuntimeTraySnapshotProvider,
 } from './runtime-tray-snapshot-provider.ts';
-export { runObservabilityCollectorSmoke } from './observability-export-parts/collector-smoke.ts';
+export { runObservabilityCollectorSmoke } from './observability-export/collector-smoke.ts';
 import {
   AUTHORITY_BOUNDARY,
   DEFAULT_METRICS_ENDPOINT_HOST,
@@ -41,7 +41,7 @@ import {
   type ObservabilityExportFormat,
   type ObservabilityMetricsEndpointHandle,
   type ObservabilityMetricsEndpointOptions,
-} from './observability-export-parts/shared.ts';
+} from './observability-export/shared.ts';
 
 export type {
   ObservabilityCollectorSmokeOptions,
@@ -50,7 +50,7 @@ export type {
   ObservabilityMetricsEndpointHandle,
   ObservabilityMetricsEndpointOptions,
   ObservabilityMetricsEndpointReadback,
-} from './observability-export-parts/shared.ts';
+} from './observability-export/shared.ts';
 
 function counterRecord(value: unknown) {
   const input = record(value);

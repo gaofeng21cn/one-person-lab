@@ -13,14 +13,14 @@ import {
   resolveLatestVersionStatus,
   resolveMinimumCodexCliVersion,
   resolveVersionStatus,
-} from './engine-helpers-parts/version.ts';
+} from './engine-helpers/version.ts';
 import {
   CODEX_RUNTIME_UPDATER_VERSION,
   makeRuntimeStageAttemptRoot,
   pruneRuntimeStageAttempts,
   readLatestPendingCodexGeneration,
   resolveOplRuntimeToolchainPaths,
-} from './engine-helpers-parts/runtime-generation.ts';
+} from './engine-helpers/runtime-generation.ts';
 import {
   applyStagedCodexRuntimePayload,
   buildCodexRuntimeNpmInstallArgs,
@@ -28,7 +28,7 @@ import {
   materializePreseededCodexPackage,
   resolveCodexPlatformPackageTarball,
   resolvePreseedTarballPath,
-} from './engine-helpers-parts/runtime-payload.ts';
+} from './engine-helpers/runtime-payload.ts';
 import {
   type OplEngineAction,
   type OplEngineId,
@@ -40,7 +40,7 @@ import {
   runShellCommand,
 } from './shared.ts';
 
-export { activatePendingCodexRuntimeGeneration, rollbackCodexRuntimeGeneration } from './engine-helpers-parts/runtime-generation.ts';
+export { activatePendingCodexRuntimeGeneration, rollbackCodexRuntimeGeneration } from './engine-helpers/runtime-generation.ts';
 
 function inspectRuntimeCodexToolchain(
   minimumVersion: string,

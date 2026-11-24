@@ -5,13 +5,13 @@ import {
   buildBrandExperienceProfile,
   buildDefaultReadSurfacePolicy,
   buildOrdinaryCockpit,
-} from './app-state-parts/view-model-operator-profiles.ts';
+} from './app-state/view-model-operator-profiles.ts';
 import {
   buildActionQueue,
   buildSummaryCards,
   foundryRunItems,
-} from './app-state-parts/view-model-queues-and-cards.ts';
-import { buildNavigation, buildSections } from './app-state-parts/view-model-sections.ts';
+} from './app-state/view-model-queues-and-cards.ts';
+import { buildNavigation, buildSections } from './app-state/view-model-sections.ts';
 
 type JsonRecord = Record<string, unknown>;
 

@@ -1,4 +1,4 @@
-import { nodeFixtureShebang } from './cli/helpers-parts/node-executable.ts';
+import { nodeFixtureShebang } from './cli/helpers/node-executable.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

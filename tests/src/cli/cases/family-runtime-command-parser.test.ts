@@ -1,8 +1,8 @@
 import { assert, test } from '../helpers.ts';
 import { FrameworkContractError } from '../../../../src/kernel/contract-validation.ts';
-import { parseRegisteredFamilyRuntimeCommand } from '../../../../src/adapters/execution/family-runtime-command-parts/registry.ts';
-import { parseSchedulerLifecycleArgs } from '../../../../src/adapters/execution/family-runtime-command-parts/scheduler.ts';
-import { buildTemporalSchedulerTickWorkflowArgs } from '../../../../src/adapters/execution/family-runtime-temporal-provider-parts/scheduler-cadence.ts';
+import { parseRegisteredFamilyRuntimeCommand } from '../../../../src/adapters/execution/family-runtime-command/registry.ts';
+import { parseSchedulerLifecycleArgs } from '../../../../src/adapters/execution/family-runtime-command/scheduler.ts';
+import { buildTemporalSchedulerTickWorkflowArgs } from '../../../../src/adapters/execution/family-runtime-temporal-provider/scheduler-cadence.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   resolveFamilyRuntimeDomainId,

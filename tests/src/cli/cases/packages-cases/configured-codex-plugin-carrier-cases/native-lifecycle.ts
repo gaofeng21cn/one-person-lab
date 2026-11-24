@@ -48,7 +48,7 @@ import {
   unavailableCodexRunner,
 } from '../configured-codex-plugin-carrier-shared.ts';
 import type { CodexPluginCommandRunner } from '../configured-codex-plugin-carrier-shared.ts';
-import { codexNativeReadbackFixture } from '../../../helpers-parts/codex-native-readback-fixture.ts';
+import { codexNativeReadbackFixture } from '../../../helpers/codex-native-readback-fixture.ts';
 
 test('Package mutations advance to a newer owner projection without allowing downgrade', () => {
   const installed = {

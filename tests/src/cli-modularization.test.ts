@@ -21,7 +21,7 @@ test('CLI modularization keeps stable entry files while extracting modules and c
 
 test('family-runtime command parser keeps a thin public entrypoint and semantic parser parts', () => {
   const entryPath = path.join(repoRoot, 'src', 'adapters', 'execution', 'family-runtime-command.ts');
-  const partsRoot = path.join(repoRoot, 'src', 'adapters', 'execution', 'family-runtime-command-parts');
+  const partsRoot = path.join(repoRoot, 'src', 'adapters', 'execution', 'family-runtime-command');
   const entryLines = fs.readFileSync(entryPath, 'utf8').trimEnd().split('\n').length;
   const expectedParserParts = [
     'attempt-create.ts',

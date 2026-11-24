@@ -8,7 +8,7 @@ import {
   initializeWorkspace,
   type WorkspaceSkillProjectionRefresher,
 } from '../workspace-initializer.ts';
-import { assertWorkspaceInitializationPaths, resolveWorkspaceProjectRoot } from '../workspace-initializer-parts/project-root.ts';
+import { assertWorkspaceInitializationPaths, resolveWorkspaceProjectRoot } from '../workspace-initializer/project-root.ts';
 import { normalizeWorkspaceProjectEntry } from '../workspace-artifacts.ts';
 import {
   buildCanonicalTopology,

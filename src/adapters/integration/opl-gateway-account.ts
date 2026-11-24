@@ -17,10 +17,10 @@ import {
   loginGateway,
   logoutGateway,
   refreshGatewaySession,
-} from './opl-gateway-account-parts/client.ts';
-import { bindGatewayKeyToCodex, gatewayKeyFingerprint, restoreCodexBinding } from './opl-gateway-account-parts/codex-binding.ts';
-import { exchangeCompanionCredentials, writeCompanionAuthorization } from './opl-gateway-account-parts/companion-authorization.ts';
-import { disableGatewayManagedKey, reconcileGatewayManagedKey } from './opl-gateway-account-parts/key-reconcile.ts';
+} from './opl-gateway-account/client.ts';
+import { bindGatewayKeyToCodex, gatewayKeyFingerprint, restoreCodexBinding } from './opl-gateway-account/codex-binding.ts';
+import { exchangeCompanionCredentials, writeCompanionAuthorization } from './opl-gateway-account/companion-authorization.ts';
+import { disableGatewayManagedKey, reconcileGatewayManagedKey } from './opl-gateway-account/key-reconcile.ts';
 import {
   readGatewayAccountState,
   readGatewayCredentials,
@@ -30,7 +30,7 @@ import {
   withGatewayAccountLock,
   writeGatewayAccountState,
   writeGatewayCredentials,
-} from './opl-gateway-account-parts/private-store.ts';
+} from './opl-gateway-account/private-store.ts';
 import {
   OPL_GATEWAY_CACHE_TTL_MS,
   OPL_GATEWAY_CONNECTION_ID,
@@ -40,7 +40,7 @@ import {
   type GatewayAccountState,
   type GatewayLoginCredentials,
   type GatewayManagedKey,
-} from './opl-gateway-account-parts/types.ts';
+} from './opl-gateway-account/types.ts';
 
 function gatewayError(code: string, message: string) {
   return new FrameworkContractError('launcher_failed', message, { reason_code: code });
