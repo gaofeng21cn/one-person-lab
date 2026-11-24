@@ -13,6 +13,7 @@ import {
   parseAppContributionArgs,
   runAppContribution,
 } from '../../../../../src/read-models/operator/app-contribution-broker.ts';
+import { buildAppUiContributionsProjection } from '../../../../../src/read-models/operator/app-state-ui-contributions.ts';
 import type { InstalledPackageDescriptor } from '../../../../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts';
 import { FrameworkContractError } from '../../../../../src/kernel/contract-validation.ts';
 import { formatJsonPayload } from '../../../../../src/kernel/json-file.ts';
@@ -589,4 +590,230 @@ test('contribution parser only accepts the Package-owned request shape', () => {
     ], 'read'),
     /Unknown app contribution read option/,
   );
+});
+
+test('E2E Tier 1 settings_form projects into settings.section and round-trips through a real CLI adapter', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-tier1-settings-e2e-'));
+  const binPath = path.join(root, 'bin', 'settings-contribution');
+  const statePath = path.join(root, 'settings-state.json');
+  fs.mkdirSync(path.dirname(binPath), { recursive: true });
+  fs.writeFileSync(statePath, JSON.stringify({
+    enabled: true,
+    endpoint: 'https://initial.example.invalid',
+    max_concurrency: 2,
+  }));
+  fs.writeFileSync(
+    binPath,
+    `#!/usr/bin/env node
+const fs = require('node:fs');
+const stateFile = ${JSON.stringify(statePath)};
+let raw = '';
+process.stdin.on('data', (c) => { raw += c; });
+process.stdin.on('end', () => {
+  const req = JSON.parse(raw);
+  const current = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  if (req.operation === 'read' && req.ref === 'example.settings.v1#form') {
+    process.stdout.write(JSON.stringify({
+      schema_version: '${responseSchema}',
+      ok: true,
+      ref: req.ref,
+      operation: 'read',
+      result: {
+        schema_version: 'opl-app-settings-form.v1',
+        status: 'ready',
+        submit_command_id: 'save-settings',
+        fields: [
+          { field_id: 'enabled', field_type: 'boolean', label_i18n: { 'zh-CN': '启用扩展', 'en-US': 'Enable' }, effect_timing: 'immediate' },
+          { field_id: 'endpoint', field_type: 'string', label_i18n: { 'zh-CN': '服务端点', 'en-US': 'Endpoint' }, effect_timing: 'restart_required', required: true },
+          { field_id: 'max_concurrency', field_type: 'number', label_i18n: { 'zh-CN': '并发上限', 'en-US': 'Max concurrency' }, effect_timing: 'immediate', min: 1, max: 32 },
+        ],
+        values: current,
+      },
+    }));
+    return;
+  }
+  if (req.operation === 'execute' && req.ref === 'example.settings.v1#save') {
+    const incoming = req.input && typeof req.input.values === 'object' && req.input.values ? req.input.values : req.input;
+    if (typeof incoming.endpoint === 'string' && !incoming.endpoint.startsWith('https://')) {
+      process.stdout.write(JSON.stringify({
+        schema_version: '${responseSchema}',
+        ok: false,
+        ref: req.ref,
+        operation: 'execute',
+        error: { code: 'invalid_endpoint', message: 'Service endpoint must use https://' },
+      }));
+      return;
+    }
+    const next = { ...current, ...incoming };
+    fs.writeFileSync(stateFile, JSON.stringify(next));
+    process.stdout.write(JSON.stringify({
+      schema_version: '${responseSchema}',
+      ok: true,
+      ref: req.ref,
+      operation: 'execute',
+      result: { saved: true, values: next },
+    }));
+    return;
+  }
+  process.stdout.write(JSON.stringify({
+    schema_version: '${responseSchema}',
+    ok: false,
+    ref: req.ref,
+    operation: req.operation,
+    error: { code: 'unsupported_ref', message: 'Unsupported contribution ref' },
+  }));
+});
+`,
+    { encoding: 'utf8', mode: 0o755 },
+  );
+
+  const manifest = {
+    surface_kind: 'opl_agent_package_manifest.v1',
+    package_id: 'pilot.tier1.settings',
+    agent_id: 'pilot-tier1-settings',
+    display_name: 'Pilot Tier 1 Settings',
+    publisher: 'pilot-owner',
+    version: '1.0.0',
+    source: 'third_party',
+    carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
+    codex_surface: {
+      plugin_id: 'pilot-tier1-settings',
+      required_skill_ids: ['pilot-tier1-settings'],
+      app_contribution_abi: {
+        schema_version: 'opl-package-app-contribution-cli.v1',
+        transport: 'stdin_json_stdout_json',
+        argv: ['./bin/settings-contribution'],
+        request_schema: requestSchema,
+        response_schema: responseSchema,
+      },
+    },
+    capability_dependencies: [],
+    skill_packs: [],
+    entrypoints: [],
+    health_check: {},
+    permissions: [],
+    update_channel: 'manifest_url',
+    rollback_ref: 'native-carrier-owned',
+    app_contributions: {
+      schema_version: 'opl-app-contributions.v1',
+      navigation: [],
+      views: [{
+        view_id: 'example-settings-view',
+        view_type: 'settings_form',
+        settings_destination: 'capabilities',
+        title_i18n: { 'zh-CN': '试点配置表单', 'en-US': 'Pilot Settings Form' },
+        data_ref: 'example.settings.v1#form',
+        command_ids: ['save-settings'],
+        badge_ids: [],
+      }],
+      commands: [{
+        command_id: 'save-settings',
+        label_i18n: { 'zh-CN': '保存配置', 'en-US': 'Save settings' },
+        action_ref: 'example.settings.v1#save',
+        confirmation_required: false,
+      }],
+      badges: [],
+      ui: [{
+        contribution_id: 'example-tier1-settings',
+        slot: 'settings.section',
+        contribution_kind: 'view',
+        trust_tier: 'declarative',
+        scope: 'root',
+        sort_order: 20,
+        view_id: 'example-settings-view',
+      }],
+    },
+  };
+  const descriptor = {
+    manifest,
+    manifestPath: path.join(root, 'opl-package.json'),
+    sourcePath: root,
+    pluginId: 'pilot-tier1-settings@pilot-marketplace',
+    marketplaceSource: root,
+    enabled: true,
+    carrier: {
+      packageId: manifest.package_id,
+      carrier: {
+        kind: 'codex_plugin_manager',
+        pluginId: 'pilot-tier1-settings@pilot-marketplace',
+        marketplaceSource: root,
+      },
+      executor: { route: 'codex_cli', requiredSkillIds: ['pilot-tier1-settings'] },
+      publicationRef: null,
+    },
+    carrier_readback: {
+      kind: 'local',
+      identity: 'pilot-tier1-settings@pilot-marketplace',
+      source_ref: root,
+      version: '1.0.0',
+      enabled: true,
+      lifecycle_authority: 'carrier_owned',
+    },
+    readiness: {
+      installed: true,
+      physical_status: 'available',
+      callability: 'callable',
+    },
+  } as unknown as InstalledPackageDescriptor;
+  const discover = { discover: () => new Map([[manifest.package_id, descriptor]]) };
+
+  try {
+    const projection = buildAppUiContributionsProjection({
+      [manifest.package_id]: {
+        app_enabled: true,
+        presence: { installed: true },
+        capability_exposure: { status: 'visible' },
+        app_contributions: manifest.app_contributions,
+      } as any,
+    });
+    assert.equal(projection.contribution_count, 1);
+    assert.equal((projection.slots['settings.section'][0]?.view as any)?.view_type, 'settings_form');
+    assert.equal((projection.slots['settings.section'][0]?.view as any)?.settings_destination, 'capabilities');
+
+    const initial = runAppContribution({
+      packageId: manifest.package_id,
+      ref: 'example.settings.v1#form',
+      operation: 'read',
+      input: {},
+      confirmed: false,
+    }, { descriptorDiscovery: discover }) as any;
+    assert.equal(initial.opl_app_contribution.response.result.values.endpoint, 'https://initial.example.invalid');
+
+    assert.throws(() => runAppContribution({
+      packageId: manifest.package_id,
+      ref: 'example.settings.v1#save',
+      operation: 'execute',
+      input: { values: { endpoint: 'http://insecure.invalid' } },
+      confirmed: false,
+    }, { descriptorDiscovery: discover }), (error: unknown) => {
+      assert.ok(error instanceof FrameworkContractError);
+      assert.equal(error.message, 'Service endpoint must use https://');
+      assert.equal(error.details?.failure_code, 'agent_package_app_contribution_owner_rejected');
+      return true;
+    });
+
+    const saved = runAppContribution({
+      packageId: manifest.package_id,
+      ref: 'example.settings.v1#save',
+      operation: 'execute',
+      input: { values: { enabled: false, endpoint: 'https://updated.example.invalid', max_concurrency: 8 } },
+      confirmed: false,
+    }, { descriptorDiscovery: discover }) as any;
+    assert.equal(saved.opl_app_contribution.response.result.saved, true);
+
+    const reloaded = runAppContribution({
+      packageId: manifest.package_id,
+      ref: 'example.settings.v1#form',
+      operation: 'read',
+      input: {},
+      confirmed: false,
+    }, { descriptorDiscovery: discover }) as any;
+    assert.deepEqual(reloaded.opl_app_contribution.response.result.values, {
+      enabled: false,
+      endpoint: 'https://updated.example.invalid',
+      max_concurrency: 8,
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
