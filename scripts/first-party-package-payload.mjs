@@ -8,6 +8,7 @@ import { parseArgs, TextDecoder } from 'node:util';
 
 import { packageContentDigest } from '../src/kernel/package-content-lock.ts';
 import { createAjv2020 } from '../src/kernel/schema-registry.ts';
+import { packageCarrierSourcePaths } from './package-carrier-source-paths.mjs';
 
 const FULL_GIT_SHA = /^[0-9a-f]{40}$/;
 const PACKAGE_ID = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
@@ -389,6 +390,7 @@ function loadAuthority(options) {
     githubRepository,
     sourceRoot,
     paths,
+    allowlist,
     contentLock,
     ownerPackageManifestRef,
     ownerPackageDescriptorRef,
@@ -579,12 +581,32 @@ function readSourceSnapshot(options, authority) {
   assertExactCommit(options.repo, authority.expectedCommit);
   assertRemoteReachability(options.repo, authority.expectedCommit, authority.remoteRef);
   assertSourceTree(options.repo, authority.expectedCommit, authority.sourceRoot);
-  const entries = allowlistedTreeEntries(
-    options.repo,
-    authority.expectedCommit,
-    authority.sourceRoot,
-    authority.paths,
-  );
+  const projected = packageCarrierSourcePaths({
+    allowlist: authority.allowlist,
+    sourceCommit: authority.expectedCommit,
+    readGit: (args) => gitBytes(options.repo, args, 'Cannot inspect exact owner carrier projection'),
+  });
+  let entries;
+  if (projected) {
+    if (authority.contentLock) {
+      throw new Error('The projected carrier does not support a separately declared content lock.');
+    }
+    const projectedPaths = [...projected.keys()].sort();
+    assertNoPortablePathCollisions(projectedPaths);
+    if (options.check && JSON.stringify(projectedPaths) !== JSON.stringify(authority.paths)) {
+      throw new Error('Tracked payload allowlist differs from the committed owner carrier projection.');
+    }
+    const files = new Map(allowlistedTreeEntries(
+      options.repo,
+      authority.expectedCommit,
+      '.',
+      [...new Set(projected.values())],
+    ).map((source) => [source.treePath, source]));
+    entries = projectedPaths.map((relativePath) => ({ ...files.get(projected.get(relativePath)), relativePath }));
+    authority.paths = projectedPaths;
+  } else {
+    entries = allowlistedTreeEntries(options.repo, authority.expectedCommit, authority.sourceRoot, authority.paths);
+  }
   const blobs = new Map(entries.map((entry) => [
     entry.relativePath,
     gitBytes(options.repo, ['cat-file', 'blob', entry.objectId], `Cannot read carrier blob ${entry.objectId}`),
@@ -651,7 +673,7 @@ function readSourceSnapshot(options, authority) {
       throw new Error('Committed owner package descriptor identity, version, or content_lock differs from Framework projection');
     }
   }
-  return { blobs, entries };
+  return { blobs, entries, projected };
 }
 
 function verifyDeclaredContentLock(authority, snapshot) {
@@ -879,6 +901,7 @@ function main() {
     source_root: authority.sourceRoot,
     file_count: payload.files.length,
     payload_sha256: result.payloadSha256,
+    ...(snapshot.projected && { projected_allowlist_paths: authority.paths }),
   }, null, 2)}\n`);
 }
 

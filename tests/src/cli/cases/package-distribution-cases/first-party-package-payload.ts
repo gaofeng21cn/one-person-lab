@@ -315,6 +315,41 @@ function sha256(content: string | Buffer) {
   return `sha256:${crypto.createHash('sha256').update(content).digest('hex')}`;
 }
 
+test('generator resolves an opted-in thin carrier using only its committed owner projection', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-thin-package-payload-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const source = createSourceRepo(root, { includeSkill: false });
+  const projectionRef = 'contracts/carrier_projection.json';
+  const sourcePath = 'agent/primary_skill/SKILL.md';
+  const installedPath = `skills/${pluginId}/SKILL.md`;
+  const committedSkill = '# Owner skill at the selected commit\n';
+  writeFile(source.repo, sourcePath, committedSkill);
+  writeFile(source.repo, projectionRef, JSON.stringify({
+    schema_version: 'opl_carrier_projection.v1',
+    carrier_root: source.sourceRoot,
+    resource_source_mode: 'git_tracked',
+    file_aliases: [{ from: sourcePath, to: installedPath }],
+  }));
+  source.sourceCommit = commitAll(source.repo, 'thin owner carrier');
+  git(source.repo, ['update-ref', 'refs/remotes/origin/main', source.sourceCommit]);
+  source.paths.push('retired.txt');
+  const authority = createAuthority(root, source);
+  editJson(authority.allowlist, (value) => { value.carrier_projection_ref = projectionRef; });
+  writeFile(source.repo, sourcePath, '# Uncommitted change\n');
+  const result = runGenerator({ authority, repo: source.repo, sourceCommit: source.sourceCommit });
+  assert.deepEqual(result.projected_allowlist_paths, [
+    '.codex-plugin/plugin.json', 'assets/icon.bin', 'plugin.json', installedPath,
+  ]);
+  const payload = JSON.parse(fs.readFileSync(authority.output, 'utf8'));
+  assert.deepEqual(payload.files.find((entry: Record<string, string>) => entry.path === installedPath), {
+    path: installedPath,
+    mode: '100644',
+    source_url: `https://raw.githubusercontent.com/example/example-agent/${source.sourceCommit}/${sourcePath}`,
+    sha256: sha256(committedSkill),
+  });
+  assert.equal(payload.files.some((entry: Record<string, string>) => entry.path === 'README.md'), false);
+});
+
 test('generator consumes manifest identity and an exact allowlist, emits the canonical schema, and is idempotent', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

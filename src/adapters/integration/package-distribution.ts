@@ -502,6 +502,28 @@ function packageRelativePath(value: string | null, field: string, allowRoot = fa
   return normalized;
 }
 
+function packageArchiveSourcePath(file: Record<string, unknown>, sourcePrefix: string, field: string) {
+  const source = stringValue(file.source_url);
+  if (!source) {
+    return packageRelativePath(stringValue(file.source_path), field);
+  }
+  if (!source.startsWith(sourcePrefix) || source.includes('?') || source.includes('#')) {
+    throw new Error(`${field} must identify a file in the exact Package owner repository and commit.`);
+  }
+  const segments = source.slice(sourcePrefix.length).split('/').map((segment) => {
+    try {
+      return decodeURIComponent(segment);
+    } catch {
+      throw new Error(`${field} contains invalid URL encoding.`);
+    }
+  });
+  if (segments.some((segment) => !segment || segment === '.' || segment === '..'
+    || /[\\/\u0000-\u001f\u007f]/.test(segment))) {
+    throw new Error(`${field} must identify a relative POSIX source path.`);
+  }
+  return segments.join('/');
+}
+
 export function materializeArchiveBackedPackagePayload(input: {
   payload: Record<string, unknown>;
   payloadRef: string;
@@ -529,21 +551,11 @@ export function materializeArchiveBackedPackagePayload(input: {
     input.archiveRoot,
     `${input.payloadRef}.package_source.archive_root`,
   );
-  const sourceRepo = stringValue(input.payload.source_repo);
-  let expectedArchiveRoot: string | null = null;
-  try {
-    const sourceUrl = sourceRepo ? new URL(sourceRepo) : null;
-    const components = sourceUrl?.pathname.replace(/^\//, '').replace(/\.git$/, '').split('/') ?? [];
-    if (sourceUrl?.protocol === 'https:' && sourceUrl.hostname === 'github.com' && components.length === 2) {
-      expectedArchiveRoot = components[1];
-    }
-  } catch {
-    expectedArchiveRoot = null;
-  }
-  if (!expectedArchiveRoot || archiveRoot !== expectedArchiveRoot) {
+  const sourceRepo = (input.payload.source_repo as string).slice('https://github.com/'.length, -'.git'.length);
+  if (archiveRoot !== sourceRepo.split('/')[1]) {
     throw new Error(`${input.payloadRef}.package_source.archive_root must match the Package owner repository.`);
   }
-  const payloadSourceRoot = packageRelativePath(
+  packageRelativePath(
     stringValue(input.payload.source_root),
     `${input.payloadRef}.source_root`,
     true,
@@ -557,6 +569,7 @@ export function materializeArchiveBackedPackagePayload(input: {
     throw new Error(`${input.payloadRef} identity must match the exact Package publication selection.`);
   }
   const seenPayloadPaths = new Set<string>();
+  const sourcePrefix = `https://raw.githubusercontent.com/${sourceRepo}/${input.ownerSourceCommit}/`;
   const materialized = {
     ...input.payload,
     package_id: input.packageId,
@@ -581,9 +594,7 @@ export function materializeArchiveBackedPackagePayload(input: {
         throw new Error(`${input.payloadRef}.files repeats package path ${payloadFilePath}.`);
       }
       seenPayloadPaths.add(payloadFilePath);
-      const sourcePath = payloadSourceRoot === '.'
-        ? payloadFilePath
-        : path.posix.join(payloadSourceRoot, payloadFilePath);
+      const sourcePath = packageArchiveSourcePath(file, sourcePrefix, `${input.payloadRef}.files[${index}] source`);
       const archiveFile = { ...file };
       delete archiveFile.content_utf8;
       delete archiveFile.content_base64;

@@ -205,6 +205,59 @@ function matchesExclusion(relativePosix: string, config: CarrierProjectionConfig
   return false;
 }
 
+function inTrackedRoots(relative: string, roots: string[]) {
+  return roots.some((root) => relative === root || relative.startsWith(`${root}/`));
+}
+
+export function trackedCarrierBlobPaths(input: {
+  projection: unknown;
+  projectionRef: string;
+  carrierRoot: string;
+  trackedPaths: ReadonlySet<string>;
+  carrierPaths: string[];
+}) {
+  const config = validateConfig(input.projection, input.projectionRef);
+  const carrierRoot = normalizeRelativeRef(config.carrier_root, 'carrier_root', true);
+  if (carrierRoot !== input.carrierRoot || config.resource_source_mode === 'filesystem'
+    || config.version_sync_checks?.update_bundled_required_skill_pack_version
+    || config.copy_presentation_icon || config.adapter_projection || config.plugin_manifests?.length
+    || (config.package_manifest_projection && (config.package_manifest_projection.mode !== 'none'
+      || config.package_manifest_projection.sync_root_opl_package))) {
+    throw shapeError('A published carrier must project unchanged Git blobs into its configured source root.', {
+      projection_ref: input.projectionRef,
+      carrier_root: carrierRoot,
+    });
+  }
+  const paths = new Map<string, string>();
+  for (const carrierPath of input.carrierPaths) {
+    const source = joinRel(carrierRoot, carrierPath);
+    if (input.trackedPaths.has(source)) paths.set(carrierPath, source);
+  }
+  const prefix = config.resource_target_prefix
+    ? normalizeRelativeRef(config.resource_target_prefix, 'resource_target_prefix', true)
+    : '';
+  const roots = (config.resource_roots ?? []).map((root) => normalizeRelativeRef(root, 'resource_roots', true));
+  for (const source of input.trackedPaths) {
+    if (inTrackedRoots(source, roots) && !matchesExclusion(source, config)) {
+      const relative = normalizeRelativeRef(source, 'tracked carrier resource');
+      paths.set(joinRel(prefix, relative), relative);
+    }
+  }
+  for (const extra of config.extra_files ?? []) {
+    const source = normalizeRelativeRef(extra, 'extra_files');
+    paths.set(joinRel(prefix, source), source);
+  }
+  for (const alias of config.file_aliases ?? []) {
+    const source = normalizeRelativeRef(alias.from, 'file_aliases.from');
+    if (alias.optional && !input.trackedPaths.has(source)) continue;
+    if (alias.executable) {
+      throw shapeError('A published carrier alias must preserve the committed file mode.', { source });
+    }
+    paths.set(normalizeRelativeRef(alias.to, 'file_aliases.to'), source);
+  }
+  return paths;
+}
+
 function listGitTrackedStageEntries(repoRoot: string): Map<string, number> {
   const result = spawnSync('git', ['-C', repoRoot, 'ls-files', '--stage', '-z'], {
     encoding: 'buffer',
@@ -535,10 +588,7 @@ export function projectCarrier(input: ProjectCarrierInput = {}) {
 
   if (sourceMode === 'git_tracked' && trackedEntries) {
     for (const [trackedPath, gitMode] of trackedEntries.entries()) {
-      const inSelectedRoot = normalizedRoots.some(
-        (root) => trackedPath === root || trackedPath.startsWith(`${root}/`),
-      );
-      if (!inSelectedRoot) continue;
+      if (!inTrackedRoots(trackedPath, normalizedRoots)) continue;
       if (gitMode === 0o120000) {
         throw shapeError(`Carrier owner resource must not be a symbolic link: ${trackedPath}.`, { path: trackedPath });
       }

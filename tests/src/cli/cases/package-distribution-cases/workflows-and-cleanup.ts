@@ -33,7 +33,10 @@ test('single-Package payload materialization binds exact physical archive proven
   const artifactRef = `ghcr.io/example/one-person-lab-packages/${packageId}:${packageVersion}`;
   const filePath = 'skills/example-plugin/SKILL.md';
   const descriptorPath = 'opl-package.json';
-  const sourceRoot = '.';
+  const sourceRoot = 'plugins/example-plugin';
+  const fileSourcePath = 'agent/primary skill #1.md';
+  const descriptorSourcePath = `${sourceRoot}/${descriptorPath}`;
+  const rawSource = `https://raw.githubusercontent.com/example/example-agent/${sourceCommit}/`;
   const fileBytes = Buffer.from('# Example\n', 'utf8');
   const descriptorBytes = Buffer.from('{"package_id":"example-agent"}\n', 'utf8');
   const fileSha256 = `sha256:${crypto.createHash('sha256').update(fileBytes).digest('hex')}`;
@@ -61,12 +64,12 @@ test('single-Package payload materialization binds exact physical archive proven
   const payloadFiles = [{
     path: filePath,
     mode: '100644',
-    source_url: `https://raw.githubusercontent.com/example/example-agent/${sourceCommit}/${filePath}`,
+    source_url: `${rawSource}agent/primary%20skill%20%231.md`,
     sha256: fileSha256,
   }, {
     path: descriptorPath,
     mode: '100644',
-    source_url: `https://raw.githubusercontent.com/example/example-agent/${sourceCommit}/${descriptorPath}`,
+    source_url: `${rawSource}${descriptorSourcePath}`,
     sha256: descriptorSha256,
   }];
   const payload = {
@@ -85,9 +88,10 @@ test('single-Package payload materialization binds exact physical archive proven
     },
     files: payloadFiles,
   };
-  fs.mkdirSync(path.join(stage, archiveRoot, path.dirname(filePath)), { recursive: true });
-  fs.writeFileSync(path.join(stage, archiveRoot, filePath), fileBytes);
-  fs.writeFileSync(path.join(stage, archiveRoot, descriptorPath), descriptorBytes);
+  fs.mkdirSync(path.join(stage, archiveRoot, path.dirname(fileSourcePath)), { recursive: true });
+  fs.mkdirSync(path.join(stage, archiveRoot, sourceRoot), { recursive: true });
+  fs.writeFileSync(path.join(stage, archiveRoot, fileSourcePath), fileBytes);
+  fs.writeFileSync(path.join(stage, archiveRoot, descriptorSourcePath), descriptorBytes);
   fs.writeFileSync(input, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   fs.writeFileSync(packageManifest, `${JSON.stringify({
     package_id: packageId,
@@ -149,15 +153,45 @@ test('single-Package payload materialization binds exact physical archive proven
       path: filePath,
       mode: '100644',
       sha256: fileSha256,
-      source_path: filePath,
+      source_path: fileSourcePath,
       source_artifact_ref: artifactRef,
     }, {
       path: descriptorPath,
       mode: '100644',
       sha256: descriptorSha256,
-      source_path: descriptorPath,
+      source_path: descriptorSourcePath,
       source_artifact_ref: artifactRef,
     }]);
+
+    const archiveInputArgs = [...baseArgs];
+    archiveInputArgs[archiveInputArgs.indexOf('--input') + 1] = path.join(root, 'materialized.json');
+    const again = run('materialized-again', archiveInputArgs);
+    assert.equal(again.status, 0, again.stderr);
+    assert.equal(
+      fs.readFileSync(path.join(root, 'materialized-again.json'), 'utf8'),
+      fs.readFileSync(path.join(root, 'materialized.json'), 'utf8'),
+    );
+
+    for (const [name, sourceUrl, error] of [
+      ['wrong-owner', payloadFiles[0].source_url.replace('/example/example-agent/', '/other/example-agent/'), /exact Package owner repository and commit/],
+      ['wrong-repo', payloadFiles[0].source_url.replace('/example-agent/', '/other-agent/'), /exact Package owner repository and commit/],
+      ['wrong-commit', payloadFiles[0].source_url.replace(sourceCommit, 'b'.repeat(40)), /exact Package owner repository and commit/],
+      ['query', `${payloadFiles[0].source_url}?raw=1`, /exact Package owner repository and commit/],
+      ['fragment', `${payloadFiles[0].source_url}#raw`, /exact Package owner repository and commit/],
+      ['encoded-separator', `${rawSource}agent%2FSKILL.md`, /relative POSIX source path/],
+      ['encoded-dot-segment', `${rawSource}agent/%2e%2e/SKILL.md`, /relative POSIX source path/],
+      ['invalid-url-encoding', `${rawSource}agent/%FF.md`, /invalid URL encoding/],
+    ] as const) {
+      const invalidInput = path.join(root, `${name}-input.json`);
+      fs.writeFileSync(invalidInput, JSON.stringify({
+        ...payload, files: [{ ...payloadFiles[0], source_url: sourceUrl }, payloadFiles[1]],
+      }));
+      const invalidArgs = [...baseArgs];
+      invalidArgs[invalidArgs.indexOf('--input') + 1] = invalidInput;
+      const result = run(name, invalidArgs);
+      assert.equal(result.status, 1, name);
+      assert.match(result.stderr, error, name);
+    }
 
     const standardInput = path.join(root, 'standard-payload.json');
     const standardPackageManifest = path.join(root, 'standard-package-manifest.json');
