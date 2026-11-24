@@ -8,7 +8,7 @@
 
 - 源码按 `authority`、`adapters`、`read-models`、`host`、`entrypoints` 和 `kernel` 六个根目录组织。
 - [`source-module-map.json`](../contracts/opl-framework/source-module-map.json) 定义责任 source unit 和依赖方向。
-- workspace Package 目前由 `packages/cordis-abi` 和 `packages/package-host` 承担各自独立 ABI（另有 [`package-host-integration.ts`](../src/authority/packages/package-host-integration.ts)）。
+- 通用 Cordis 与 Package Host ABI 已内联至 [`cordis-abi.ts`](../src/kernel/cordis-abi.ts)、[`remote-companion-abi.ts`](../src/authority/packages/remote-companion-abi.ts) 与 [`package-host-integration.ts`](../src/authority/packages/package-host-integration.ts)。
 
 ### Package 与 capability
 
