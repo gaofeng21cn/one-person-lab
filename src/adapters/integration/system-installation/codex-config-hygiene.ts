@@ -7,6 +7,7 @@ import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import {
   parseTomlDocument,
   renderTomlDocument,
+  validateTomlDocument,
   type TomlTableBlock,
 } from '../agent-package-registry/codex-config-document.ts';
 import { resolveCodexConfigPath } from '../agent-package-registry/shared.ts';
@@ -80,14 +81,9 @@ function writeJson(filePath: string, payload: unknown) {
   writeFileAtomic(filePath, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
-function unescapeTomlString(value: string) {
-  return value.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-}
-
 function tableStringValue(table: TomlTableBlock, key: string) {
-  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = table.content.match(new RegExp(`^\\s*${escapedKey}\\s*=\\s*"((?:\\\\.|[^"\\\\])*)"\\s*$`, 'm'));
-  return match ? unescapeTomlString(match[1]) : null;
+  const value = table.values[key];
+  return typeof value === 'string' ? value : null;
 }
 
 function marketplaceId(header: string) {
@@ -401,6 +397,9 @@ export function runCodexConfigHygiene(input: {
   const afterText = removedTables.length > 0
     ? renderTomlDocument(document.preamble, keptTables)
     : beforeText;
+  if (removedTables.length > 0) {
+    validateTomlDocument(afterText);
+  }
   const beforeSha256 = before ? sha256Bytes(before) : null;
   const afterSha256 = before ? sha256Bytes(afterText) : null;
   const receiptId = crypto.randomUUID();

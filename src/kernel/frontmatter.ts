@@ -1,60 +1,187 @@
-export type MarkdownFrontmatter = {
-  frontmatter: string;
-  lines: string[];
+import matter from 'gray-matter';
+import YAML from 'yaml';
+
+export type ParsedMarkdownFrontmatter = {
+  hasFrontmatter: boolean;
+  parseable: boolean;
+  data: Record<string, unknown> | null;
   body: string;
+  rawFrontmatter: string | null;
+  keys: string[];
+  duplicateKeys: boolean;
 };
 
-export function normalizeFrontmatterScalar(value: string | undefined): string {
-  const trimmed = value?.trim();
-  if (!trimmed) return '';
-  if (trimmed.length >= 2) {
-    const first = trimmed[0];
-    const last = trimmed[trimmed.length - 1];
-    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
-      return trimmed.slice(1, -1).trim();
+function formatFrontmatterFlowNodes(node: unknown): void {
+  if (YAML.isSeq(node)) {
+    node.flow = true;
+    for (const item of node.items) {
+      formatFrontmatterFlowNodes(item);
+    }
+    return;
+  }
+  if (YAML.isMap(node)) {
+    node.flow = true;
+    for (const pair of node.items) {
+      if (YAML.isScalar(pair.key)) {
+        pair.key.type = YAML.Scalar.QUOTE_DOUBLE;
+      }
+      formatFrontmatterFlowNodes(pair.value);
     }
   }
-  return trimmed;
 }
 
-export function extractMarkdownFrontmatter(markdown: string): MarkdownFrontmatter | null {
-  const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
-  if (!match) return null;
-  return {
-    frontmatter: match[1],
-    lines: match[1].split(/\r?\n/),
-    body: markdown.slice(match[0].length),
-  };
-}
+const YAML_FRONTMATTER_ENGINE = {
+  parse(raw: string) {
+    const parsed = YAML.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  },
+  stringify(data: object) {
+    const doc = new YAML.Document(data);
+    if (YAML.isMap(doc.contents)) {
+      for (const pair of doc.contents.items) {
+        formatFrontmatterFlowNodes(pair.value);
+      }
+    }
+    return doc.toString({
+      indent: 2,
+      indentSeq: true,
+      lineWidth: 0,
+    });
+  },
+};
 
-export function parseFrontmatterKeys(frontmatterLines: readonly string[]): string[] {
-  return frontmatterLines.flatMap((line) => {
-    const key = line.match(/^([A-Za-z0-9_-]+)\s*:/)?.[1];
-    return key ? [key] : [];
+export function stringifyYamlDocument(value: unknown) {
+  return YAML.stringify(value, {
+    indent: 2,
+    indentSeq: true,
+    lineWidth: 0,
   });
 }
 
-export function frontmatterFieldValue(frontmatterLines: readonly string[], key: string): string {
-  const index = frontmatterLines.findIndex((line) => line.match(/^([A-Za-z0-9_-]+)\s*:/)?.[1] === key);
-  if (index < 0) return '';
-  const inline = frontmatterLines[index].slice(frontmatterLines[index].indexOf(':') + 1).trim();
-  if (!/^[>|][+-]?$/.test(inline)) return normalizeFrontmatterScalar(inline);
-
-  const blockLines: string[] = [];
-  for (const line of frontmatterLines.slice(index + 1)) {
-    if (line.trim() === '') {
-      blockLines.push('');
-      continue;
-    }
-    if (!/^\s/.test(line)) break;
-    blockLines.push(line.replace(/^\s+/, ''));
-  }
-  const value = inline.startsWith('>')
-    ? blockLines.join(' ').replace(/\s+/g, ' ')
-    : blockLines.join('\n');
-  return value.trim();
+export function stringifyMarkdownFrontmatter(data: Record<string, unknown>) {
+  const rendered = matter.stringify('', data, {
+    engines: {
+      yaml: YAML_FRONTMATTER_ENGINE,
+    },
+  }).trimEnd();
+  return rendered;
 }
 
-export function firstFrontmatterValue(frontmatter: string, key: string): string {
-  return frontmatter ? frontmatterFieldValue(frontmatter.split(/\r?\n/), key) : '';
+export function parseMarkdownFrontmatter(markdown: string): ParsedMarkdownFrontmatter {
+  const normalized = markdown.replace(/\r\n/g, '\n');
+  const match = normalized.match(/^---\n(?:([\s\S]*?)\n)?---(?:\n|$)/);
+  if (!match) {
+    return {
+      hasFrontmatter: false,
+      parseable: false,
+      data: null,
+      body: normalized,
+      rawFrontmatter: null,
+      keys: [],
+      duplicateKeys: false,
+    };
+  }
+
+  const rawFrontmatter = match[1] ?? '';
+  const body = normalized.slice(match[0].length);
+
+  if (!rawFrontmatter.trim()) {
+    return {
+      hasFrontmatter: true,
+      parseable: true,
+      data: {},
+      body,
+      rawFrontmatter,
+      keys: [],
+      duplicateKeys: false,
+    };
+  }
+
+  const document = YAML.parseDocument(rawFrontmatter, { uniqueKeys: false });
+  if (document.errors.length > 0) {
+    return {
+      hasFrontmatter: true,
+      parseable: false,
+      data: null,
+      body,
+      rawFrontmatter,
+      keys: [],
+      duplicateKeys: false,
+    };
+  }
+
+  if (document.contents === null) {
+    return {
+      hasFrontmatter: true,
+      parseable: true,
+      data: {},
+      body,
+      rawFrontmatter,
+      keys: [],
+      duplicateKeys: false,
+    };
+  }
+
+  if (!YAML.isMap(document.contents)) {
+    return {
+      hasFrontmatter: true,
+      parseable: false,
+      data: null,
+      body,
+      rawFrontmatter,
+      keys: [],
+      duplicateKeys: false,
+    };
+  }
+
+  const keys: string[] = [];
+  const data: Record<string, unknown> = {};
+  for (const pair of document.contents.items) {
+    const keyNode = pair.key;
+    const key = YAML.isScalar(keyNode) && keyNode.value !== null && keyNode.value !== undefined
+      ? String(keyNode.value)
+      : null;
+    if (!key) {
+      return {
+        hasFrontmatter: true,
+        parseable: false,
+        data: null,
+        body,
+        rawFrontmatter,
+        keys: [],
+        duplicateKeys: false,
+      };
+    }
+    keys.push(key);
+    if (!(key in data)) {
+      data[key] = YAML.isNode(pair.value) ? pair.value.toJS(document) : null;
+    }
+  }
+
+  let parsedBody = body;
+  try {
+    const gm = matter(normalized, {
+      engines: {
+        yaml: {
+          parse: () => data,
+          stringify: YAML_FRONTMATTER_ENGINE.stringify,
+        },
+      },
+    });
+    parsedBody = gm.content;
+  } catch {
+    parsedBody = body;
+  }
+
+  return {
+    hasFrontmatter: true,
+    parseable: true,
+    data,
+    body: parsedBody,
+    rawFrontmatter,
+    keys,
+    duplicateKeys: new Set(keys).size !== keys.length,
+  };
 }

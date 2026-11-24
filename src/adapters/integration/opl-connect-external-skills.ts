@@ -6,12 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { extract as extractTar } from 'tar';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
-import {
-  extractMarkdownFrontmatter,
-  firstFrontmatterValue,
-  normalizeFrontmatterScalar,
-} from '../../kernel/frontmatter.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../../authority/workspace/index.ts';
+import { parseMarkdownFrontmatter } from '../../kernel/frontmatter.ts';
 import { parseJsonText, readJsonFileOrNull } from '../../kernel/json-file.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
@@ -423,41 +419,39 @@ function detectSourceLicense(sourceRoot: string) {
   return path.basename(licenseFile);
 }
 
-function extractStringList(frontmatter: string, key: string) {
-  const lineValue = firstFrontmatterValue(frontmatter, key);
-  if (!lineValue) return [];
-  if (lineValue.startsWith('[')) {
-    try {
-      const parsed = parseJsonText(lineValue);
-      return Array.isArray(parsed)
-        ? parsed.map((entry) => typeof entry === 'string' ? entry : null).filter((entry): entry is string => Boolean(entry))
-        : [];
-    } catch {
-      return [];
-    }
-  }
-  return [lineValue];
+function firstFrontmatterString(frontmatter: Record<string, unknown>, key: string) {
+  const value = frontmatter[key];
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return '';
 }
 
-function parseYamlListBlock(frontmatter: string, key: string) {
-  const match = frontmatter.match(new RegExp(`^${key}:\\s*\\n((?:\\s+-\\s+.*\\n?)+)`, 'm'));
-  if (!match) return [];
-  return match[1].split('\n')
-    .map((line) => normalizeFrontmatterScalar(line.trim().replace(/^-\s+/, '')))
-    .filter(Boolean);
+function extractFrontmatterData(markdown: string): Record<string, unknown> {
+  const parsed = parseMarkdownFrontmatter(markdown);
+  return parsed.parseable && parsed.data ? parsed.data : {};
 }
 
-function extractRequiredEnvironmentVariables(frontmatter: string) {
-  const lineValue = firstFrontmatterValue(frontmatter, 'required_environment_variables');
-  if (!lineValue.startsWith('[')) return [];
-  try {
-    const parsed = parseJsonText(lineValue) as Array<{ name?: unknown }>;
-    return Array.isArray(parsed)
-      ? parsed.map((entry) => typeof entry.name === 'string' ? entry.name : null).filter((entry): entry is string => Boolean(entry))
-      : [];
-  } catch {
-    return [];
+function extractStringList(frontmatter: Record<string, unknown>, key: string) {
+  const value = frontmatter[key];
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => typeof entry === 'string' ? entry.trim() : null)
+      .filter((entry): entry is string => Boolean(entry));
   }
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  return [];
+}
+
+function extractRequiredEnvironmentVariables(frontmatter: Record<string, unknown>) {
+  const value = frontmatter.required_environment_variables;
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => (entry && typeof entry === 'object' && typeof (entry as { name?: unknown }).name === 'string'
+      ? (entry as { name: string }).name
+      : null))
+    .filter((entry): entry is string => Boolean(entry));
 }
 
 function assertSafeSkillId(skill: string) {
@@ -515,12 +509,10 @@ function inferSkillCategory(skillId: string, name: string, description: string) 
   return categories.find(([, needles]) => needles.some((needle) => haystack.includes(needle)))?.[0] ?? 'general_external_specialist_skill';
 }
 
-function inferSkillKeywords(skillId: string, name: string, description: string, frontmatter: string) {
+function inferSkillKeywords(skillId: string, name: string, description: string, frontmatter: Record<string, unknown>) {
   const frontmatterKeywords = [
     ...extractStringList(frontmatter, 'keywords'),
-    ...parseYamlListBlock(frontmatter, 'keywords'),
     ...extractStringList(frontmatter, 'tags'),
-    ...parseYamlListBlock(frontmatter, 'tags'),
   ];
   const lexical = tokenize(`${skillId} ${name} ${description}`)
     .filter((token) => token.length >= 3)
@@ -555,12 +547,12 @@ function readSkillCard(sourceRoot: string, skillId: string): SkillCard | null {
   const skillPath = path.join(skillRoot, 'SKILL.md');
   if (!fs.existsSync(skillPath)) return null;
   const markdown = readTextIfPresent(skillPath);
-  const frontmatter = extractMarkdownFrontmatter(markdown)?.frontmatter ?? '';
-  const name = firstFrontmatterValue(frontmatter, 'name') || safeSkillId;
+  const frontmatter = extractFrontmatterData(markdown);
+  const name = firstFrontmatterString(frontmatter, 'name') || safeSkillId;
   const baseCard = {
     skill_id: safeSkillId,
     name,
-    description: firstFrontmatterValue(frontmatter, 'description'),
+    description: firstFrontmatterString(frontmatter, 'description'),
     source_path: skillRoot,
     source_license: detectSourceLicense(sourceRoot),
     content_sha256: digestDirectory(skillRoot),

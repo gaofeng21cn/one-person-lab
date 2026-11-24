@@ -338,7 +338,7 @@ export function buildPrivateRuntimeCommandSpecs({
           runtimeSnapshotProvider,
         });
         if (format === 'openmetrics') {
-          process.stdout.write(renderObservabilityOpenMetrics(exportPayload));
+          process.stdout.write(await renderObservabilityOpenMetrics(exportPayload));
           return { __handled: true as const };
         }
         if (format === 'collector-config-json') {

@@ -79,7 +79,7 @@ function configTableInventory(configPath: string) {
     const canonicalId = table.header.replaceAll('"', '');
     const [namespace, ...identityParts] = canonicalId.split('.');
     if (namespace === 'projects' || namespace === 'marketplaces') return [];
-    if (namespace === 'plugins' && !/^\s*enabled\s*=\s*true\s*(?:#.*)?$/m.test(table.content)) return [];
+    if (namespace === 'plugins' && table.values.enabled !== true) return [];
     const identity = identityParts.length > 0 ? identityParts.join('.') : canonicalId;
     return [{
       surfaceKind: 'config_table',

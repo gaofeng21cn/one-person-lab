@@ -1,10 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {
-  extractMarkdownFrontmatter,
-  firstFrontmatterValue,
-} from '../../../kernel/frontmatter.ts';
+import { parseMarkdownFrontmatter } from '../../../kernel/frontmatter.ts';
 import {
   FrameworkContractError,
   isRecord,
@@ -47,13 +44,16 @@ import {
 } from './contract.ts';
 
 function readSkillFrontmatter(content: string) {
-  const parsed = extractMarkdownFrontmatter(content);
-  const frontmatter = parsed?.frontmatter ?? '';
-  const body = parsed?.body ?? content;
+  const parsed = parseMarkdownFrontmatter(content);
+  const data = parsed.parseable && parsed.data ? parsed.data : {};
+  const scalar = (key: string) => {
+    const value = data[key];
+    return typeof value === 'string' ? value.trim() : '';
+  };
   return {
-    name: firstFrontmatterValue(frontmatter, 'name'),
-    description: firstFrontmatterValue(frontmatter, 'description'),
-    body,
+    name: scalar('name'),
+    description: scalar('description'),
+    body: parsed.body,
   };
 }
 

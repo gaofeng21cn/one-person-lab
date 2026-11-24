@@ -392,8 +392,8 @@ function summarizeCapabilityTargets(targets: StartupMaintenanceCapabilityTarget[
   };
 }
 
-export function runManagedComputerUseStartupMaintenance(): StartupMaintenanceManagedCompanionTarget {
-  const before = inspectManagedComputerUse();
+export async function runManagedComputerUseStartupMaintenance(): Promise<StartupMaintenanceManagedCompanionTarget> {
+  const before = await inspectManagedComputerUse();
   if (!before.platform.supported) {
     return {
       target_type: 'managed_companion',
@@ -406,7 +406,7 @@ export function runManagedComputerUseStartupMaintenance(): StartupMaintenanceMan
       blocking: false,
     };
   }
-  const plan = planManagedComputerUseUpdate();
+  const plan = await planManagedComputerUseUpdate();
   if ((before.status === 'ready' || before.status === 'permission_required') && !plan.update_available) {
     return {
       target_type: 'managed_companion',
@@ -421,7 +421,7 @@ export function runManagedComputerUseStartupMaintenance(): StartupMaintenanceMan
   }
 
   try {
-    const result = reconcileManagedComputerUse('settings_repair_computer_use', {
+    const result = await reconcileManagedComputerUse('settings_repair_computer_use', {
       target: plan.target ?? undefined,
       refreshLatest: true,
     });
@@ -443,15 +443,15 @@ export function runManagedComputerUseStartupMaintenance(): StartupMaintenanceMan
       status: 'attention_required',
       reason: 'reconcile_failed',
       action: 'repair',
-      result: inspectManagedComputerUse({ runExternalChecks: false }),
+      result: await inspectManagedComputerUse({ runExternalChecks: false }),
       error: normalizeError(error),
       blocking: false,
     };
   }
 }
 
-export function runManagedBrowserAutomationStartupMaintenance(): StartupMaintenanceManagedCompanionTarget {
-  const before = inspectManagedBrowserAutomation();
+export async function runManagedBrowserAutomationStartupMaintenance(): Promise<StartupMaintenanceManagedCompanionTarget> {
+  const before = await inspectManagedBrowserAutomation();
   if (before.status === 'unsupported_runtime') {
     return {
       target_type: 'managed_companion',
@@ -464,7 +464,7 @@ export function runManagedBrowserAutomationStartupMaintenance(): StartupMaintena
       blocking: false,
     };
   }
-  const plan = planManagedBrowserAutomationUpdate();
+  const plan = await planManagedBrowserAutomationUpdate();
   if (before.status === 'ready' && !plan.update_available) {
     return {
       target_type: 'managed_companion',
@@ -479,7 +479,7 @@ export function runManagedBrowserAutomationStartupMaintenance(): StartupMaintena
   }
 
   try {
-    const result = reconcileManagedBrowserAutomation('settings_repair_browser_automation', {
+    const result = await reconcileManagedBrowserAutomation('settings_repair_browser_automation', {
       target: plan.target ?? undefined,
       refreshLatest: true,
     });
@@ -500,7 +500,7 @@ export function runManagedBrowserAutomationStartupMaintenance(): StartupMaintena
       status: 'attention_required',
       reason: 'reconcile_failed',
       action: 'repair',
-      result: inspectManagedBrowserAutomation({ runExternalChecks: false }),
+      result: await inspectManagedBrowserAutomation({ runExternalChecks: false }),
       error: normalizeError(error),
       blocking: false,
     };
@@ -659,7 +659,7 @@ async function runStartupMaintenance(
     .filter((module) => module.scope === 'capability_package')
     .map((module) => runModuleStartupMaintenance(module));
   const managedCompanionTargets = !stageOnly && process.env.OPL_APP_HOST_KIND?.trim() === 'desktop'
-    ? [runManagedBrowserAutomationStartupMaintenance(), runManagedComputerUseStartupMaintenance()]
+    ? [await runManagedBrowserAutomationStartupMaintenance(), await runManagedComputerUseStartupMaintenance()]
     : [];
   const frameworkSummary = summarizeFrameworkTargets(frameworkTargets);
   const engineSummary = summarizeTargets(engineTargets);

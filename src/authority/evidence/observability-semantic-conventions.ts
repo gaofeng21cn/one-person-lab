@@ -1,3 +1,5 @@
+import { Gauge, Registry, type OpenMetricsContentType, type RegistryContentType } from 'prom-client';
+
 const FIELD_IDS = [
   'stage_run_id',
   'attempt_id',
@@ -325,19 +327,28 @@ function openMetricsLabelKey(value: string) {
   return value.replace(/[^a-zA-Z0-9_]/g, '_');
 }
 
-function openMetricsLabelValue(value: string | number) {
-  return String(value).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/"/g, '\\"');
-}
-
-function openMetricsLabels(attributes: Record<string, string | number>) {
-  const labels = Object.entries(attributes)
+function registerSemanticGauge(
+  registry: Registry<RegistryContentType>,
+  name: string,
+  help: string,
+  value: number,
+  attributes: Record<string, string | number> = {},
+) {
+  const entries = Object.entries(attributes)
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, value]) => `${openMetricsLabelKey(key)}="${openMetricsLabelValue(value)}"`);
-  return labels.length > 0 ? `{${labels.join(',')}}` : '';
-}
-
-function openMetricsLine(name: string, value: number, attributes: Record<string, string | number> = {}) {
-  return `${name}${openMetricsLabels(attributes)} ${value}`;
+    .map(([key, entryValue]) => [openMetricsLabelKey(key), String(entryValue)] as const);
+  const labelNames = entries.map(([key]) => key);
+  const gauge = new Gauge({
+    name,
+    help,
+    labelNames,
+    registers: [registry],
+  });
+  if (labelNames.length > 0) {
+    gauge.set(Object.fromEntries(entries), value);
+  } else {
+    gauge.set(value);
+  }
 }
 
 function appOperatorProjectionCommand(options: AppOperatorProjectionCommandOptions = {}) {
@@ -455,39 +466,51 @@ function buildObservabilitySemanticConventionExportSeed(input: ObservabilitySema
   };
 }
 
-function renderObservabilitySemanticConventionOpenMetrics(
+function registerObservabilitySemanticConventionMetrics(
+  registry: Registry<RegistryContentType>,
   exportSeed: ReturnType<typeof buildObservabilitySemanticConventionExportSeed>,
 ) {
   const collectorConfig = exportSeed.collector_consumption_config;
-  const lines = exportSeed.signal_groups.metrics
-    .filter((metric) => metric.value_observed && metric.value !== null)
-    .flatMap((metric) => [
-      `# HELP ${metric.openmetrics_name} OPL ${metric.instrument} readback seed from refs-only semantic conventions.`,
-      `# TYPE ${metric.openmetrics_name} gauge`,
-      openMetricsLine(metric.openmetrics_name, metric.value ?? 0, metric.attributes),
-    ]);
-
-  return `${[
-    ...lines,
-    '# HELP opl_observability_export_boundary Constant guard for refs-only, non-readiness observability seed.',
-    '# TYPE opl_observability_export_boundary gauge',
-    openMetricsLine('opl_observability_export_boundary', 1, {
+  for (const metric of exportSeed.signal_groups.metrics) {
+    if (!metric.value_observed || metric.value === null) continue;
+    registerSemanticGauge(
+      registry,
+      metric.openmetrics_name,
+      `OPL ${metric.instrument} readback seed from refs-only semantic conventions.`,
+      metric.value,
+      metric.attributes,
+    );
+  }
+  registerSemanticGauge(
+    registry,
+    'opl_observability_export_boundary',
+    'Constant guard for refs-only, non-readiness observability seed.',
+    1,
+    {
       refs_only: String(exportSeed.authority_boundary.ledger_refs_only),
       can_store_payload_body: String(exportSeed.authority_boundary.can_store_payload_body),
       can_claim_runtime_ready: String(exportSeed.authority_boundary.can_claim_runtime_ready),
       can_claim_domain_ready: String(exportSeed.authority_boundary.can_claim_domain_ready),
       can_claim_production_ready: String(exportSeed.authority_boundary.can_claim_production_ready),
-    }),
-    '# HELP opl_observability_exporter_signal_mapping Constant guard for OpenTelemetry-style trace metric log signal vocabulary.',
-    '# TYPE opl_observability_exporter_signal_mapping gauge',
-    openMetricsLine('opl_observability_exporter_signal_mapping', 1, {
+    },
+  );
+  registerSemanticGauge(
+    registry,
+    'opl_observability_exporter_signal_mapping',
+    'Constant guard for OpenTelemetry-style trace metric log signal vocabulary.',
+    1,
+    {
       traces: exportSeed.exporter_signal_mapping.traces.exporter_signal,
       metrics: exportSeed.exporter_signal_mapping.metrics.exporter_signal,
       logs: exportSeed.exporter_signal_mapping.logs.exporter_signal,
-    }),
-    '# HELP opl_observability_collector_export_boundary Constant guard showing this is an exporter seed without external collector or body export.',
-    '# TYPE opl_observability_collector_export_boundary gauge',
-    openMetricsLine('opl_observability_collector_export_boundary', 1, {
+    },
+  );
+  registerSemanticGauge(
+    registry,
+    'opl_observability_collector_export_boundary',
+    'Constant guard showing this is an exporter seed without external collector or body export.',
+    1,
+    {
       collector_kind: exportSeed.collector_export_boundary.collector_kind,
       external_collector_connected: String(exportSeed.collector_export_boundary.external_collector_connected),
       exporter_seed_only: String(exportSeed.collector_export_boundary.exporter_seed_only),
@@ -495,10 +518,14 @@ function renderObservabilitySemanticConventionOpenMetrics(
       runtime_ready_claim: exportSeed.collector_export_boundary.runtime_ready_claim,
       domain_ready_claim: exportSeed.collector_export_boundary.domain_ready_claim,
       production_ready_claim: exportSeed.collector_export_boundary.production_ready_claim,
-    }),
-    '# HELP opl_observability_collector_consumption_config Constant guard for the OpenTelemetry Collector config fragment that can consume this OpenMetrics export.',
-    '# TYPE opl_observability_collector_consumption_config gauge',
-    openMetricsLine('opl_observability_collector_consumption_config', 1, {
+    },
+  );
+  registerSemanticGauge(
+    registry,
+    'opl_observability_collector_consumption_config',
+    'Constant guard for the OpenTelemetry Collector config fragment that can consume this OpenMetrics export.',
+    1,
+    {
       collector_kind: collectorConfig.collector_kind,
       receiver: collectorConfig.receiver,
       receiver_input_format: collectorConfig.receiver_input_format,
@@ -510,9 +537,17 @@ function renderObservabilitySemanticConventionOpenMetrics(
       external_collector_connected: String(collectorConfig.external_collector_connected),
       payload_body_exported: String(collectorConfig.payload_body_exported),
       runtime_ready_claim: collectorConfig.runtime_ready_claim,
-    }),
-    '# EOF',
-  ].join('\n')}\n`;
+    },
+  );
+}
+
+async function renderObservabilitySemanticConventionOpenMetrics(
+  exportSeed: ReturnType<typeof buildObservabilitySemanticConventionExportSeed>,
+) {
+  const registry = new Registry<OpenMetricsContentType>();
+  registry.setContentType(Registry.OPENMETRICS_CONTENT_TYPE);
+  registerObservabilitySemanticConventionMetrics(registry, exportSeed);
+  return await registry.metrics();
 }
 
 export {
@@ -522,6 +557,7 @@ export {
   appOperatorProjectionTestRef,
   buildObservabilitySemanticConventionExportSeed,
   buildObservabilitySemanticConventionReadback,
+  registerObservabilitySemanticConventionMetrics,
   renderObservabilitySemanticConventionOpenMetrics,
 };
 export type { ObservabilityMetricInstrument, ObservabilitySemanticConventionInput };

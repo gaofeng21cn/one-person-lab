@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
+import { Gauge, Registry, type OpenMetricsContentType } from 'prom-client';
 
 import { record, recordList, stringValue } from '../../../kernel/json-record.ts';
 import {
@@ -220,23 +221,54 @@ function observedMetric(buffer: string) {
   return COLLECTOR_SMOKE_METRIC_NAMES.find((metricName) => buffer.includes(metricName)) ?? null;
 }
 
-function renderCollectorSmokeOpenMetrics(metricsPath: string) {
-  return [
-    '# HELP opl_provider_ready Collector smoke metric proving the Prometheus receiver consumed an OPL OpenMetrics endpoint.',
-    '# TYPE opl_provider_ready gauge',
-    'opl_provider_ready{provider_kind="collector_smoke"} 1',
-    '# HELP opl_queue_length Collector smoke queue gauge kept local to the smoke endpoint.',
-    '# TYPE opl_queue_length gauge',
-    'opl_queue_length 0',
-    '# HELP opl_observability_collector_consumption_config Collector smoke guard for the OPL Prometheus receiver config.',
-    '# TYPE opl_observability_collector_consumption_config gauge',
-    `opl_observability_collector_consumption_config{collector_kind="opentelemetry_collector",receiver="prometheus",config_consumable="true",metrics_path="${metricsPath}"} 1`,
-    '# HELP opl_authority_boundary Constant guard showing this smoke endpoint is read-only and non-authoritative.',
-    '# TYPE opl_authority_boundary gauge',
-    'opl_authority_boundary{can_execute_repair="false",can_write_domain_truth="false",can_authorize_quality_verdict="false",can_authorize_ready_verdict="false"} 1',
-    '# EOF',
-    '',
-  ].join('\n');
+async function renderCollectorSmokeOpenMetrics(metricsPath: string) {
+  const registry = new Registry<OpenMetricsContentType>();
+  registry.setContentType(Registry.OPENMETRICS_CONTENT_TYPE);
+  new Gauge({
+    name: 'opl_provider_ready',
+    help: 'Collector smoke metric proving the Prometheus receiver consumed an OPL OpenMetrics endpoint.',
+    labelNames: ['provider_kind'],
+    registers: [registry],
+  }).set({ provider_kind: 'collector_smoke' }, 1);
+  new Gauge({
+    name: 'opl_queue_length',
+    help: 'Collector smoke queue gauge kept local to the smoke endpoint.',
+    registers: [registry],
+  }).set(0);
+  new Gauge({
+    name: 'opl_observability_collector_consumption_config',
+    help: 'Collector smoke guard for the OPL Prometheus receiver config.',
+    labelNames: ['collector_kind', 'receiver', 'config_consumable', 'metrics_path'],
+    registers: [registry],
+  }).set(
+    {
+      collector_kind: 'opentelemetry_collector',
+      receiver: 'prometheus',
+      config_consumable: 'true',
+      metrics_path: metricsPath,
+    },
+    1,
+  );
+  new Gauge({
+    name: 'opl_authority_boundary',
+    help: 'Constant guard showing this smoke endpoint is read-only and non-authoritative.',
+    labelNames: [
+      'can_execute_repair',
+      'can_write_domain_truth',
+      'can_authorize_quality_verdict',
+      'can_authorize_ready_verdict',
+    ],
+    registers: [registry],
+  }).set(
+    {
+      can_execute_repair: 'false',
+      can_write_domain_truth: 'false',
+      can_authorize_quality_verdict: 'false',
+      can_authorize_ready_verdict: 'false',
+    },
+    1,
+  );
+  return await registry.metrics();
 }
 
 async function startCollectorSmokeMetricsEndpoint(
@@ -263,12 +295,22 @@ async function startCollectorSmokeMetricsEndpoint(
       return;
     }
 
-    response.writeHead(200, {
-      'content-type': 'application/openmetrics-text; version=1.0.0; charset=utf-8',
-      'cache-control': 'no-store',
-      'x-opl-authority-boundary': 'collector_smoke_read_only_non_authoritative',
-    });
-    response.end(renderCollectorSmokeOpenMetrics(metricsPath));
+    void (async () => {
+      try {
+        const body = await renderCollectorSmokeOpenMetrics(metricsPath);
+        response.writeHead(200, {
+          'content-type': 'application/openmetrics-text; version=1.0.0; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-opl-authority-boundary': 'collector_smoke_read_only_non_authoritative',
+        });
+        response.end(body);
+      } catch (error) {
+        writeJsonResponse(response, 500, {
+          error: 'collector_smoke_metrics_render_failed',
+          message: errorMessage(error),
+        });
+      }
+    })();
   });
 
   const closed = new Promise<void>((resolve) => {

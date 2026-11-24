@@ -2,7 +2,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parse as parseToml } from 'smol-toml';
+import {
+  parseTomlRecord,
+  parseTomlTablePath,
+  removeRootTomlKeys,
+  renderTomlKeyValue,
+  upsertTomlTableKeys,
+  validateTomlDocument,
+} from './codex-toml-document.ts';
 
 import { FrameworkContractError, isRecord } from './contract-validation.ts';
 import { parseJsonText, readJsonFileOrNull, readJsonPayloadFile } from './json-file.ts';
@@ -204,6 +211,10 @@ export function resolveLocalCodexAccessState(input: ResolveLocalCodexAccessState
   };
 }
 
+export {
+  parseTomlTablePath,
+} from './codex-toml-document.ts';
+
 export type BootstrapLocalCodexDefaultsInput = Partial<{
   model_provider: string;
   model: string;
@@ -250,118 +261,7 @@ function normalizeOptionalString(value: string | null | undefined) {
   return trimmed ? trimmed : null;
 }
 
-function stripTomlInlineComment(line: string) {
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
 
-  for (let index = 0; index < line.length; index += 1) {
-    const character = line[index];
-    const previous = index > 0 ? line[index - 1] : '';
-
-    if (character === "'" && !inDoubleQuote) {
-      inSingleQuote = !inSingleQuote;
-      continue;
-    }
-
-    if (character === '"' && !inSingleQuote && previous !== '\\') {
-      inDoubleQuote = !inDoubleQuote;
-      continue;
-    }
-
-    if (character === '#' && !inSingleQuote && !inDoubleQuote) {
-      return line.slice(0, index).trim();
-    }
-  }
-
-  return line.trim();
-}
-
-function parseTomlValue(rawValue: string) {
-  const trimmed = rawValue.trim();
-  if (!trimmed) {
-    return '';
-  }
-
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    try {
-      return parseJsonText(trimmed) as string;
-    } catch (error) {
-      throw new FrameworkContractError(
-        'contract_shape_invalid',
-        'Local Codex config contains an invalid quoted string literal.',
-        {
-          value: trimmed,
-          cause: error instanceof Error ? error.message : 'Unknown TOML string parse failure.',
-        },
-      );
-    }
-  }
-
-  if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
-    return trimmed.slice(1, -1);
-  }
-
-  return trimmed;
-}
-
-function parseTomlKeyPart(rawPart: string) {
-  const trimmed = rawPart.trim();
-  if (!trimmed) return null;
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"'))
-    || (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return parseTomlValue(trimmed);
-  }
-  return /^[A-Za-z0-9_-]+$/.test(trimmed) ? trimmed : null;
-}
-
-export function parseTomlTablePath(rawLine: string) {
-  const line = stripTomlInlineComment(rawLine);
-  if (line.startsWith('[[')) return null;
-  const match = /^\[([^\[\]]+)\]$/.exec(line);
-  if (!match) return null;
-
-  const rawParts: string[] = [];
-  let current = '';
-  let quote: '"' | "'" | null = null;
-  for (let index = 0; index < match[1].length; index += 1) {
-    const character = match[1][index];
-    if (quote) {
-      current += character;
-      if (quote === '"' && character === '\\' && index + 1 < match[1].length) {
-        current += match[1][index + 1];
-        index += 1;
-      } else if (character === quote) {
-        quote = null;
-      }
-      continue;
-    }
-    if (character === '"' || character === "'") {
-      quote = character;
-      current += character;
-      continue;
-    }
-    if (character === '.') {
-      rawParts.push(current);
-      current = '';
-      continue;
-    }
-    current += character;
-  }
-  if (quote) return null;
-  rawParts.push(current);
-  const parts = rawParts.map(parseTomlKeyPart);
-  return parts.every((part): part is string => part !== null) ? parts : null;
-}
-
-function renderTomlKey(value: string) {
-  return /^[A-Za-z0-9_-]+$/.test(value) ? value : quoteTomlString(value);
-}
-
-function sameTomlTablePath(left: string[] | null, right: string[] | null) {
-  return Boolean(left && right && left.length === right.length && left.every((part, index) => part === right[index]));
-}
 
 function resolveLocalCodexHome() {
   const explicitCodexHome = normalizeOptionalString(process.env.CODEX_HOME);
@@ -385,10 +285,6 @@ function isOplGatewayBaseUrl(value: string | null | undefined) {
   const normalized = normalizeBaseUrl(value);
   return normalized === normalizeBaseUrl(OPL_GATEWAY_BASE_URL)
     || OPL_GATEWAY_LEGACY_BASE_URLS.some((legacy) => normalized === normalizeBaseUrl(legacy));
-}
-
-function quoteTomlString(value: string) {
-  return JSON.stringify(value);
 }
 
 function resolveBundledCodexDefaultProfilePath() {
@@ -596,69 +492,6 @@ function readCompleteExistingCodexDefaultsForBootstrap(configPath: string): Loca
   }
 }
 
-function removeRootTomlKeys(text: string, keys: Set<string>) {
-  const kept: string[] = [];
-  let currentSection: string[] = [];
-
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = stripTomlInlineComment(rawLine);
-    const sectionPath = parseTomlTablePath(line);
-    if (sectionPath) {
-      currentSection = sectionPath;
-      kept.push(rawLine);
-      continue;
-    }
-
-    const separatorIndex = line.indexOf('=');
-    const key = separatorIndex > 0 ? line.slice(0, separatorIndex).trim() : null;
-    if (currentSection.length === 0 && key && keys.has(key)) {
-      continue;
-    }
-
-    kept.push(rawLine);
-  }
-
-  return kept.join('\n').trim();
-}
-
-function upsertTomlTableKeys(
-  text: string,
-  tableHeader: string,
-  replacements: Array<[key: string, renderedValue: string | null]>,
-) {
-  const kept: string[] = [];
-  const replacementKeys = new Set(replacements.map(([key]) => key));
-  const replacementLines = replacements
-    .filter(([, renderedValue]) => renderedValue !== null)
-    .map(([key, renderedValue]) => `${key} = ${renderedValue}`);
-  let foundTable = false;
-  let inTargetTable = false;
-  const targetPath = parseTomlTablePath(tableHeader);
-
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = stripTomlInlineComment(rawLine);
-    const sectionPath = parseTomlTablePath(line);
-    if (sectionPath) {
-      inTargetTable = sameTomlTablePath(sectionPath, targetPath);
-      if (inTargetTable) {
-        foundTable = true;
-        kept.push(rawLine, ...replacementLines);
-        continue;
-      }
-    }
-
-    const separatorIndex = line.indexOf('=');
-    const key = separatorIndex > 0 ? line.slice(0, separatorIndex).trim() : null;
-    if (inTargetTable && key && replacementKeys.has(key)) continue;
-    kept.push(rawLine);
-  }
-
-  if (!foundTable) {
-    kept.push('', tableHeader, ...replacementLines);
-  }
-  return kept.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-}
-
 function buildCodexConfigText(
   existingText: string,
   input: {
@@ -671,26 +504,27 @@ function buildCodexConfigText(
   },
 ) {
   const rootLines = [
-    `model_provider = ${quoteTomlString(input.providerId)}`,
-    `model = ${quoteTomlString(input.model)}`,
-    ...(input.reasoningEffort ? [`model_reasoning_effort = ${quoteTomlString(input.reasoningEffort)}`] : []),
+    renderTomlKeyValue('model_provider', input.providerId),
+    renderTomlKeyValue('model', input.model),
+    ...(input.reasoningEffort ? [renderTomlKeyValue('model_reasoning_effort', input.reasoningEffort)] : []),
   ];
-  const providerHeader = `[model_providers.${renderTomlKey(input.providerId)}]`;
   const preserved = upsertTomlTableKeys(
     removeRootTomlKeys(existingText, new Set(['model_provider', 'model', 'model_reasoning_effort'])),
-    providerHeader,
+    ['model_providers', input.providerId],
     [
-      ['name', quoteTomlString(input.providerName)],
-      ['base_url', quoteTomlString(input.providerBaseUrl)],
-      ['experimental_bearer_token', input.providerApiKey ? quoteTomlString(input.providerApiKey) : null],
+      ['name', input.providerName],
+      ['base_url', input.providerBaseUrl],
+      ['experimental_bearer_token', input.providerApiKey ?? null],
     ],
   );
 
-  return [
+  const rendered = [
     rootLines.join('\n'),
     preserved,
     '',
   ].filter((block) => block.length > 0).join('\n\n');
+  validateTomlDocument(rendered);
+  return rendered;
 }
 
 function buildCodexProviderOnlyConfigText(
@@ -702,19 +536,20 @@ function buildCodexProviderOnlyConfigText(
     providerApiKey: string | null;
   },
 ) {
-  const providerHeader = `[model_providers.${renderTomlKey(input.providerId)}]`;
   const preserved = upsertTomlTableKeys(
     existingText,
-    providerHeader,
+    ['model_providers', input.providerId],
     [
-      ['name', quoteTomlString(input.providerName)],
-      ['base_url', quoteTomlString(input.providerBaseUrl)],
-      ['experimental_bearer_token', input.providerApiKey ? quoteTomlString(input.providerApiKey) : null],
+      ['name', input.providerName],
+      ['base_url', input.providerBaseUrl],
+      ['experimental_bearer_token', input.providerApiKey ?? null],
     ],
   );
-  return [preserved, '']
+  const rendered = [preserved, '']
     .filter((block) => block.length > 0)
     .join('\n\n');
+  validateTomlDocument(rendered);
+  return rendered;
 }
 
 function providerRoute(baseUrl: string, active: boolean): CodexConfigManagementReceipt['provider_route'] {
@@ -984,7 +819,7 @@ function readLocalCodexConfigValues(configPath: string) {
 
   let parsed: Record<string, unknown>;
   try {
-    parsed = parseToml(fs.readFileSync(configPath, 'utf8'));
+    parsed = parseTomlRecord(fs.readFileSync(configPath, 'utf8'));
   } catch {
     // TOML parser diagnostics may quote credentials from the source line.
     throw new FrameworkContractError('contract_shape_invalid', 'Local Codex config is not valid TOML.');

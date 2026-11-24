@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { Counter, Gauge, Registry, type OpenMetricsContentType } from 'prom-client';
 
 import type { FrameworkContracts, JsonRecord } from '../../kernel/types.ts';
 import {
@@ -14,7 +15,7 @@ import {
   OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS,
   buildObservabilitySemanticConventionExportSeed,
   buildObservabilitySemanticConventionReadback,
-  renderObservabilitySemanticConventionOpenMetrics,
+  registerObservabilitySemanticConventionMetrics,
   type ObservabilityMetricInstrument,
   type ObservabilitySemanticConventionInput,
 } from '../../authority/evidence/index.ts';
@@ -407,95 +408,141 @@ export async function buildObservabilityExport(
   };
 }
 
-function labelValue(value: string) {
-  return value.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/"/g, '\\"');
-}
-
-function labels(values: Record<string, string | null>) {
-  const entries = Object.entries(values)
-    .filter(([, value]) => value !== null)
-    .map(([key, value]) => `${key}="${labelValue(value ?? '')}"`);
-  return entries.length > 0 ? `{${entries.join(',')}}` : '';
-}
-
-function metricLine(name: string, value: number, metricLabels: Record<string, string | null> = {}) {
-  return `${name}${labels(metricLabels)} ${value}`;
-}
-
-function linesForCounterRecord(
-  metricName: string,
-  values: Record<string, unknown>,
-  labelName: string,
+export async function renderObservabilityOpenMetrics(
+  exportPayload: Awaited<ReturnType<typeof buildObservabilityExport>>,
 ) {
-  return Object.entries(values)
-    .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
-    .map(([key, value]) => metricLine(metricName, Number(value), { [labelName]: key }));
-}
-
-function linesForDomainStatus(values: Record<string, Record<string, number>>) {
-  return Object.entries(values).flatMap(([domainId, byStatus]) =>
-    Object.entries(byStatus).map(([status, count]) =>
-      metricLine('opl_stage_attempts_total', count, { domain_id: domainId, status })
-    )
-  );
-}
-
-export function renderObservabilityOpenMetrics(exportPayload: Awaited<ReturnType<typeof buildObservabilityExport>>) {
+  const registry = new Registry<OpenMetricsContentType>();
+  registry.setContentType(Registry.OPENMETRICS_CONTENT_TYPE);
   const providerKind = exportPayload.provider.readiness.provider_kind ?? 'unknown';
   const providerReady = exportPayload.provider.readiness.provider_ready === true ? 1 : 0;
-  const semanticConventionLines = renderObservabilitySemanticConventionOpenMetrics(exportPayload.semantic_conventions)
-    .trimEnd()
-    .split('\n')
-    .filter((line) => line !== '# EOF');
-  const lines = [
-    '# HELP opl_provider_ready Current configured family runtime provider readiness from the OPL read model.',
-    '# TYPE opl_provider_ready gauge',
-    metricLine('opl_provider_ready', providerReady, { provider_kind: providerKind }),
-    '# HELP opl_provider_proofs_total Temporal/provider residency proof receipts observed in OPL runtime authority refs.',
-    '# TYPE opl_provider_proofs_total counter',
-    metricLine('opl_provider_proofs_total', exportPayload.provider.proof_counts.proof_event_count, {
-      provider_kind: providerKind,
-      proof_slo_status: exportPayload.provider.proof_counts.proof_slo_status,
-    }),
-    metricLine('opl_provider_proofs_proven_total', exportPayload.provider.proof_counts.proven_event_count, {
-      provider_kind: providerKind,
-      continuous_proof_status: exportPayload.provider.proof_counts.continuous_proof_status,
-    }),
-    '# HELP opl_stage_attempts_total Stage attempts grouped by domain and status.',
-    '# TYPE opl_stage_attempts_total gauge',
-    ...linesForDomainStatus(exportPayload.stage_attempts.by_domain_status),
-    ...linesForCounterRecord('opl_stage_attempts_by_status_total', exportPayload.stage_attempts.by_status, 'status'),
-    '# HELP opl_runtime_attention_totals Human gates, dead letters, and blockers from stage attempt projection.',
-    '# TYPE opl_runtime_attention_totals gauge',
-    metricLine('opl_human_gate_total', exportPayload.gates_and_blockers.human_gate_count),
-    metricLine('opl_dead_letter_total', exportPayload.gates_and_blockers.dead_letter_count),
-    metricLine('opl_blocker_total', exportPayload.gates_and_blockers.blocker_count),
-    '# HELP opl_memory_writeback_totals Memory writeback receipt and rejection counters without memory body access.',
-    '# TYPE opl_memory_writeback_totals gauge',
-    metricLine('opl_memory_writeback_receipts_total', exportPayload.memory_writeback.writeback_receipt_count),
-    metricLine('opl_memory_writeback_rejected_total', exportPayload.memory_writeback.rejected_write_count),
-    '# HELP opl_provider_slo_receipts_total Provider SLO execution receipts grouped by receipt status.',
-    '# TYPE opl_provider_slo_receipts_total counter',
-    metricLine('opl_provider_slo_receipts_total', exportPayload.slo_receipt_history.proven_count, {
-      receipt_status: 'proven',
-    }),
-    metricLine('opl_provider_slo_receipts_total', exportPayload.slo_receipt_history.blocked_count, {
-      receipt_status: 'blocked',
-    }),
-    metricLine('opl_provider_slo_receipts_executed_total', exportPayload.slo_receipt_history.executed_count),
-    metricLine('opl_provider_slo_receipts_skipped_total', exportPayload.slo_receipt_history.skipped_count),
-    ...semanticConventionLines,
-    '# HELP opl_authority_boundary Constant guard showing this export is read-only and non-authoritative.',
-    '# TYPE opl_authority_boundary gauge',
-    metricLine('opl_authority_boundary', 1, {
+
+  new Gauge({
+    name: 'opl_provider_ready',
+    help: 'Current configured family runtime provider readiness from the OPL read model.',
+    labelNames: ['provider_kind'],
+    registers: [registry],
+  }).set({ provider_kind: providerKind }, providerReady);
+
+  const proofSloStatus = exportPayload.provider.proof_counts.proof_slo_status;
+  new Counter({
+    name: 'opl_provider_proofs_total',
+    help: 'Temporal/provider residency proof receipts observed in OPL runtime authority refs.',
+    labelNames: proofSloStatus !== null ? ['provider_kind', 'proof_slo_status'] : ['provider_kind'],
+    registers: [registry],
+  }).inc(
+    proofSloStatus !== null
+      ? { provider_kind: providerKind, proof_slo_status: proofSloStatus }
+      : { provider_kind: providerKind },
+    Math.max(0, exportPayload.provider.proof_counts.proof_event_count),
+  );
+
+  const continuousProofStatus = exportPayload.provider.proof_counts.continuous_proof_status;
+  new Counter({
+    name: 'opl_provider_proofs_proven_total',
+    help: 'Proven Temporal/provider residency proof receipts observed in OPL runtime authority refs.',
+    labelNames: continuousProofStatus !== null ? ['provider_kind', 'continuous_proof_status'] : ['provider_kind'],
+    registers: [registry],
+  }).inc(
+    continuousProofStatus !== null
+      ? { provider_kind: providerKind, continuous_proof_status: continuousProofStatus }
+      : { provider_kind: providerKind },
+    Math.max(0, exportPayload.provider.proof_counts.proven_event_count),
+  );
+
+  const stageAttempts = new Gauge({
+    name: 'opl_stage_attempts_total',
+    help: 'Stage attempts grouped by domain and status.',
+    labelNames: ['domain_id', 'status'],
+    registers: [registry],
+  });
+  for (const [domainId, byStatus] of Object.entries(exportPayload.stage_attempts.by_domain_status)) {
+    for (const [status, count] of Object.entries(byStatus)) {
+      stageAttempts.set({ domain_id: domainId, status }, count);
+    }
+  }
+
+  const stageAttemptsByStatus = new Gauge({
+    name: 'opl_stage_attempts_by_status_total',
+    help: 'Stage attempts grouped by status.',
+    labelNames: ['status'],
+    registers: [registry],
+  });
+  for (const [status, value] of Object.entries(exportPayload.stage_attempts.by_status)) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      stageAttemptsByStatus.set({ status }, value);
+    }
+  }
+
+  new Gauge({
+    name: 'opl_human_gate_total',
+    help: 'Human gates from stage attempt projection.',
+    registers: [registry],
+  }).set(exportPayload.gates_and_blockers.human_gate_count);
+  new Gauge({
+    name: 'opl_dead_letter_total',
+    help: 'Dead letters from stage attempt projection.',
+    registers: [registry],
+  }).set(exportPayload.gates_and_blockers.dead_letter_count);
+  new Gauge({
+    name: 'opl_blocker_total',
+    help: 'Blockers from stage attempt projection.',
+    registers: [registry],
+  }).set(exportPayload.gates_and_blockers.blocker_count);
+
+  new Gauge({
+    name: 'opl_memory_writeback_receipts_total',
+    help: 'Memory writeback receipts without memory body access.',
+    registers: [registry],
+  }).set(exportPayload.memory_writeback.writeback_receipt_count);
+  new Gauge({
+    name: 'opl_memory_writeback_rejected_total',
+    help: 'Rejected memory writebacks without memory body access.',
+    registers: [registry],
+  }).set(exportPayload.memory_writeback.rejected_write_count);
+
+  const sloReceipts = new Counter({
+    name: 'opl_provider_slo_receipts_total',
+    help: 'Provider SLO execution receipts grouped by receipt status.',
+    labelNames: ['receipt_status'],
+    registers: [registry],
+  });
+  sloReceipts.inc({ receipt_status: 'proven' }, Math.max(0, exportPayload.slo_receipt_history.proven_count));
+  sloReceipts.inc({ receipt_status: 'blocked' }, Math.max(0, exportPayload.slo_receipt_history.blocked_count));
+
+  new Counter({
+    name: 'opl_provider_slo_receipts_executed_total',
+    help: 'Executed provider SLO receipts.',
+    registers: [registry],
+  }).inc(Math.max(0, exportPayload.slo_receipt_history.executed_count));
+  new Counter({
+    name: 'opl_provider_slo_receipts_skipped_total',
+    help: 'Skipped provider SLO receipts.',
+    registers: [registry],
+  }).inc(Math.max(0, exportPayload.slo_receipt_history.skipped_count));
+
+  registerObservabilitySemanticConventionMetrics(registry, exportPayload.semantic_conventions);
+
+  new Gauge({
+    name: 'opl_authority_boundary',
+    help: 'Constant guard showing this export is read-only and non-authoritative.',
+    labelNames: [
+      'can_execute_repair',
+      'can_write_domain_truth',
+      'can_authorize_quality_verdict',
+      'can_authorize_ready_verdict',
+    ],
+    registers: [registry],
+  }).set(
+    {
       can_execute_repair: String(exportPayload.authority_boundary.can_execute_repair),
       can_write_domain_truth: String(exportPayload.authority_boundary.can_write_domain_truth),
       can_authorize_quality_verdict: String(exportPayload.authority_boundary.can_authorize_quality_verdict),
       can_authorize_ready_verdict: String(exportPayload.authority_boundary.can_authorize_ready_verdict),
-    }),
-    '# EOF',
-  ];
-  return `${lines.join('\n')}\n`;
+    },
+    1,
+  );
+
+  return await registry.metrics();
 }
 
 export async function startObservabilityMetricsEndpoint(
@@ -535,7 +582,7 @@ export async function startObservabilityMetricsEndpoint(
           'cache-control': 'no-store',
           'x-opl-authority-boundary': 'read_only_non_authoritative',
         });
-        response.end(renderObservabilityOpenMetrics(exportPayload));
+        response.end(await renderObservabilityOpenMetrics(exportPayload));
       } catch (error) {
         writeJsonResponse(response, 500, {
           error: 'observability_export_failed',

@@ -3,14 +3,9 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-import {
-  extractMarkdownFrontmatter,
-  frontmatterFieldValue,
-  parseFrontmatterKeys,
-} from '../../kernel/frontmatter.ts';
-
 export { buildOplGuiShellSurface } from './install-companions/gui-shell.ts';
 export type { OplGuiShellSurface } from './install-companions/gui-shell.ts';
+import { parseMarkdownFrontmatter } from '../../kernel/frontmatter.ts';
 import { runGit } from './system-installation/shared.ts';
 import {
   ensureOplCompanionTool,
@@ -197,6 +192,13 @@ function skillPayloadSha256(skillRoot: string) {
   return digest.digest('hex');
 }
 
+function frontmatterScalarField(data: Record<string, unknown>, key: string) {
+  const value = data[key];
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return '';
+}
+
 function normalizedSkillIdentity(value: string) {
   return value.trim().toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -221,18 +223,19 @@ function validateSkillFrontmatter(
   expectedName: string,
   options: { allowUpstreamIdentity?: boolean; upstreamSlug?: string | null } = {},
 ) {
-  const parsed = extractMarkdownFrontmatter(content);
-  if (!parsed) return ['missing_or_invalid_frontmatter'];
-  const lines = parsed.lines;
-  const keys = parseFrontmatterKeys(lines);
+  const parsed = parseMarkdownFrontmatter(content);
+  if (!parsed.hasFrontmatter || !parsed.parseable || !parsed.data) {
+    return ['missing_or_invalid_frontmatter'];
+  }
+  const { keys, data } = parsed;
   const errors: string[] = [];
   const unexpected = [...new Set(keys.filter((key) => !SKILL_FRONTMATTER_FIELDS.has(key)))].sort();
   if (unexpected.length > 0) errors.push(`unexpected_frontmatter_fields:${unexpected.join(',')}`);
-  if (new Set(keys).size !== keys.length) errors.push('duplicate_frontmatter_fields');
+  if (parsed.duplicateKeys) errors.push('duplicate_frontmatter_fields');
   for (const required of ['name', 'description']) {
     if (!keys.includes(required)) errors.push(`missing_frontmatter_field:${required}`);
   }
-  const name = frontmatterFieldValue(lines, 'name');
+  const name = frontmatterScalarField(data, 'name');
   const upstreamIdentityMatches = options.allowUpstreamIdentity === true
     && (
       normalizedSkillIdentity(name) === expectedName
@@ -243,7 +246,7 @@ function validateSkillFrontmatter(
   } else if (name !== expectedName && !upstreamIdentityMatches) {
     errors.push(`frontmatter_name_mismatch:${name}`);
   }
-  const description = frontmatterFieldValue(lines, 'description');
+  const description = frontmatterScalarField(data, 'description');
   if (!description) errors.push('empty_frontmatter_description');
   if (SKILL_DESCRIPTION_UNSAFE_CONTROL.test(description)
     || description.length > SKILL_DESCRIPTION_MAX_LENGTH) {
