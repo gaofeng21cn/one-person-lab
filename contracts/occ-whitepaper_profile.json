@@ -1,0 +1,12 @@
+{
+  "sourceMarkdown": "docs/whitepapers/opl-capital-compass-whitepaper.md",
+  "outputName": "opl-capital-compass-whitepaper",
+  "status": "whitepaper_artifact_verified",
+  "owner": "One Person Lab",
+  "coverLine": "Product Mechanics / Shared Risks / Auditable Capital Allocation",
+  "headerTitle": "OPL Capital Compass 白皮书",
+  "minPdfPages": 6,
+  "maxPdfPages": 14,
+  "publicHtmlUrl": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-capital-compass-whitepaper.html",
+  "publicPdfUrl": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-capital-compass-whitepaper.pdf"
+}

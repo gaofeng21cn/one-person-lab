@@ -14,11 +14,24 @@ test('family whitepaper registry exposes separate family and Framework documents
   });
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout) as { whitepapers: Array<Record<string, unknown>> };
-  assert.deepEqual(output.whitepapers.map(({ id }) => id), ['opl-family', 'opl-framework', 'opl-app', 'opl-cloud', 'opl-flow', 'mas']);
+  assert.deepEqual(output.whitepapers.map(({ id }) => id), [
+    'opl-family',
+    'opl-framework',
+    'opl-app',
+    'opl-miniapp',
+    'opl-cloud',
+    'opl-flow',
+    'mas',
+    'occ',
+  ]);
   assert.equal(new Set(output.whitepapers.map(({ repo_root }) => repo_root)).size, 5);
   assert.equal(output.whitepapers[0]?.profile, 'contracts/whitepaper_profile.json');
   assert.equal(output.whitepapers[1]?.profile, 'contracts/framework-whitepaper_profile.json');
+  assert.equal(output.whitepapers[3]?.profile, 'contracts/miniapp-whitepaper_profile.json');
+  assert.equal(output.whitepapers[7]?.profile, 'contracts/occ-whitepaper_profile.json');
   assert.equal(output.whitepapers[0]?.repo_root, output.whitepapers[1]?.repo_root);
+  assert.equal(output.whitepapers[0]?.repo_root, output.whitepapers[3]?.repo_root);
+  assert.equal(output.whitepapers[0]?.repo_root, output.whitepapers[7]?.repo_root);
   assert.ok(output.whitepapers.every(({ public_html_url }) =>
     typeof public_html_url === 'string'
     && public_html_url.startsWith('https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/')));

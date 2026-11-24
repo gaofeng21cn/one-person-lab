@@ -50,6 +50,16 @@
       "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.pdf"
     },
     {
+      "id": "opl-miniapp",
+      "display_name": "OPL Agent Apps & MiniApp",
+      "repo_slug": "gaofeng21cn/one-person-lab",
+      "repo_env": "OPL_FRAMEWORK_REPO",
+      "default_repo_dir": "one-person-lab",
+      "profile": "contracts/miniapp-whitepaper_profile.json",
+      "public_html_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-miniapp-whitepaper.html",
+      "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-miniapp-whitepaper.pdf"
+    },
+    {
       "id": "opl-cloud",
       "display_name": "OPL Cloud",
       "repo_slug": "gaofeng21cn/one-person-lab-cloud",
@@ -78,6 +88,16 @@
       "profile": "contracts/whitepaper_profile.json",
       "public_html_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/mas-whitepaper.html",
       "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/mas-whitepaper.pdf"
+    },
+    {
+      "id": "occ",
+      "display_name": "OPL Capital Compass",
+      "repo_slug": "gaofeng21cn/one-person-lab",
+      "repo_env": "OPL_FRAMEWORK_REPO",
+      "default_repo_dir": "one-person-lab",
+      "profile": "contracts/occ-whitepaper_profile.json",
+      "public_html_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-capital-compass-whitepaper.html",
+      "public_pdf_url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-capital-compass-whitepaper.pdf"
     }
   ]
 }

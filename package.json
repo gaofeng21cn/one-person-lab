@@ -88,6 +88,8 @@
     "capability-map:audit": "node ./scripts/capability-map-audit.mjs",
     "docs:whitepaper": "node --experimental-strip-types ./scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/whitepaper_profile.json",
     "docs:whitepaper:framework": "node --experimental-strip-types ./scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/framework-whitepaper_profile.json",
+    "docs:whitepaper:miniapp": "node --experimental-strip-types ./scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/miniapp-whitepaper_profile.json",
+    "docs:whitepaper:occ": "node --experimental-strip-types ./scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/occ-whitepaper_profile.json",
     "docs:whitepapers:family": "node --experimental-strip-types ./scripts/build-opl-family-whitepapers.ts",
     "docs:whitepapers:family:stage": "node --experimental-strip-types ./scripts/stage-family-whitepaper-artifact.ts --manifest tmp/pdfs/opl-family-whitepaper-build.json --output tmp/pdfs/opl-family-whitepaper-artifact",
     "docs:whitepapers:family:release": "node --experimental-strip-types ./scripts/build-opl-family-whitepapers.ts --mode release",

@@ -219,6 +219,8 @@ OPL 相信，真正优秀的 AI 产品既能在用户提出问题时给出高质
 - [OPL Cloud](https://github.com/gaofeng21cn/one-person-lab-cloud)
 - [OPL Framework 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-framework-whitepaper.html)
 - [OPL App 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.html)
+- [OPL Agent Apps 与 MiniApp 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-miniapp-whitepaper.html)
 - [OPL Cloud 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-cloud-whitepaper.html)
 - [OPL Flow 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-flow-whitepaper.html)
 - [Med Auto Science 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/mas-whitepaper.html)
+- [OPL Capital Compass 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-capital-compass-whitepaper.html)

@@ -9,20 +9,19 @@ Source truth stays in `docs/whitepapers/` and
 `contracts/whitepaper_profile.json`. Artifact verification is generated beside
 the ignored HTML/PDF bundle; publication receipts are GitHub Actions artifacts.
 
-`npm run docs:whitepaper` generates the local OPL family source output;
-`npm run docs:whitepaper:framework` generates the local Framework source output.
-`npm run docs:whitepapers:family` builds all five registry entries and stages the
+`npm run docs:whitepaper`, `npm run docs:whitepaper:framework`,
+`npm run docs:whitepaper:miniapp`, and `npm run docs:whitepaper:occ` generate the
+local whitepaper outputs held in this repository.
+`npm run docs:whitepapers:family` builds all registry entries and stages the
 atomic publication candidate outside this directory. Build and publication
 evidence is documented in [`docs/delivery/whitepapers/README.md`](../delivery/whitepapers/README.md).
 
-Generated output:
+Generated output (this repository's local sources):
 
-- `docs/site/latest/whitepapers/opl-whitepaper.html`
-- `docs/site/latest/whitepapers/opl-whitepaper.pdf`
-- `docs/site/latest/whitepapers/opl-whitepaper.verification.json`
-- `docs/site/latest/whitepapers/opl-framework-whitepaper.html`
-- `docs/site/latest/whitepapers/opl-framework-whitepaper.pdf`
-- `docs/site/latest/whitepapers/opl-framework-whitepaper.verification.json`
+- `docs/site/latest/whitepapers/opl-whitepaper.{html,pdf,verification.json}`
+- `docs/site/latest/whitepapers/opl-framework-whitepaper.{html,pdf,verification.json}`
+- `docs/site/latest/whitepapers/opl-miniapp-whitepaper.{html,pdf,verification.json}`
+- `docs/site/latest/whitepapers/opl-capital-compass-whitepaper.{html,pdf,verification.json}`
 - `docs/site/latest/whitepapers/index.html`
 
 Do not commit `docs/site/latest/` on `main`. `npm run docs:latest` is the local
