@@ -74,7 +74,9 @@ export function buildAgentCatalog(input: {
   for (const packageId of Object.keys(input.packageStatusById ?? {}).sort()) {
     const packageStatus = input.packageStatusById?.[packageId];
     if (!projectedPresence(packageStatus)) continue;
-    const descriptor = input.descriptorByAgent?.get(packageId) ?? null;
+    const descriptor = input.descriptorByAgent?.get(packageId)
+      ?? input.descriptorByAgent?.get(packageId.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
+      ?? null;
     if (descriptor?.kind !== 'agent') continue;
     const agentId = descriptor.agent_id ?? packageId;
     const descriptorPackageId = descriptor.package_id ?? packageId;
