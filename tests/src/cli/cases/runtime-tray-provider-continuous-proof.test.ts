@@ -2,7 +2,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import net from 'node:net';
 
 import { assert, createFamilyContractsFixtureRoot, createRuntimeWorkspaceFixture, fs, installRuntimePackageFixture, os, path, repoRoot, runCli, test } from '../helpers.ts';
-import { resolveTemporalWorkerTaskQueue } from '../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../src/adapters/execution/family-runtime-temporal-provider/worker-task-queue.ts';
 
 type RuntimeEventRow = {
   eventId: string;

@@ -49,7 +49,7 @@ import {
 } from '../configured-codex-plugin-carrier-shared.ts';
 import { execFileSync } from 'node:child_process';
 import type { CodexPluginCommandRunner } from '../configured-codex-plugin-carrier-shared.ts';
-import { codexNativeReadbackFixture } from '../../../helpers-parts/codex-native-readback-fixture.ts';
+import { codexNativeReadbackFixture } from '../../../helpers/codex-native-readback-fixture.ts';
 
 test('GitHub archive payload reads the owner source path independently from its install path', () => {
   const commit = '1'.repeat(40);

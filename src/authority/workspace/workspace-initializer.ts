@@ -36,12 +36,12 @@ import {
   type WorkspaceAgentProfile,
 } from './workspace-agent-defaults.ts';
 import { bindWorkspace, getActiveWorkspaceBinding, preflightWorkspaceProjectScope } from './workspace-registry.ts';
-import { buildInterfaceProjection } from './workspace-initializer-parts/interfaces.ts';
-import { buildWorkspaceIndex } from './workspace-initializer-parts/workspace-index.ts';
-import { buildWorkspaceYaml } from './workspace-initializer-parts/workspace-yaml.ts';
+import { buildInterfaceProjection } from './workspace-initializer/interfaces.ts';
+import { buildWorkspaceIndex } from './workspace-initializer/workspace-index.ts';
+import { buildWorkspaceYaml } from './workspace-initializer/workspace-yaml.ts';
 import { initializeArtifactLifecycleProfile } from './workspace-artifact-lifecycle-profile.ts';
 import { profileFromIndex } from './workspace-index-normalization.ts';
-import { assertWorkspaceInitializationPaths, resolveWorkspaceProjectRoot } from './workspace-initializer-parts/project-root.ts';
+import { assertWorkspaceInitializationPaths, resolveWorkspaceProjectRoot } from './workspace-initializer/project-root.ts';
 
 export type WorkspaceInitializeOptions = {
   agentId?: string;
@@ -292,7 +292,7 @@ function mergeWorkspaceProjects(
   };
 }
 
-export { buildWorkspaceInitializeInterfaces } from './workspace-initializer-parts/interfaces.ts';
+export { buildWorkspaceInitializeInterfaces } from './workspace-initializer/interfaces.ts';
 export { buildWorkspaceIndex, buildWorkspaceYaml };
 
 export function initializeWorkspace(

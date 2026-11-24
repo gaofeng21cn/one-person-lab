@@ -31,7 +31,7 @@ import {
   withTemporalRpcDeadline,
 } from './family-runtime-temporal-client.ts';
 import { resolveTemporalTaskQueue } from './family-runtime-temporal.ts';
-import { resolveTemporalWorkerTaskQueue } from './family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { resolveTemporalWorkerTaskQueue } from './family-runtime-temporal-provider/worker-task-queue.ts';
 import { familyRuntimePaths } from './family-runtime-store.ts';
 
 export function foundryTemporalClientOptions(options: TemporalClientOptions = {}): TemporalClientOptions {

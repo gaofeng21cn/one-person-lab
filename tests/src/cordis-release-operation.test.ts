@@ -85,7 +85,7 @@ test('only base-headless exposes the release-operation child factory', async () 
 
 test('public release commands resolve the base-headless child service instead of direct Bundle calls', () => {
   const releaseSpecs = fs.readFileSync(
-    path.join(repoRoot, 'src/entrypoints/cli/cases/public-command-specs-parts/release.ts'),
+    path.join(repoRoot, 'src/entrypoints/cli/cases/public-command-specs/release.ts'),
     'utf8',
   );
   const publicSpecs = fs.readFileSync(

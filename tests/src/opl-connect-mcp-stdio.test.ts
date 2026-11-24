@@ -16,7 +16,7 @@ import {
   createInstalledPackageCarrierFixture,
   repoRoot,
 } from './cli/helpers.ts';
-import { createTestTlsServerFixture } from './cli/helpers-parts/tls-fixture.ts';
+import { createTestTlsServerFixture } from './cli/helpers/tls-fixture.ts';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../src/kernel/family-workspace-root.ts';
 
 const configuredScholarPackageRoot = process.env.OPL_SCHOLAR_SKILLS_E2E_ROOT?.trim() || null;

@@ -15,12 +15,12 @@ import {
   buildTemporalStageAttemptMemo,
   buildTemporalStageAttemptSearchAttributes,
 } from '../../src/adapters/execution/family-runtime-temporal-visibility.ts';
-import { codexStageAttemptEnv } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/provider-env.ts';
-import { __testing as domainPythonTesting } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/domain-python-env.ts';
+import { codexStageAttemptEnv } from '../../src/adapters/execution/family-runtime-codex-stage-runner/provider-env.ts';
+import { __testing as domainPythonTesting } from '../../src/adapters/execution/family-runtime-codex-stage-runner/domain-python-env.ts';
 import {
   normalizeTypedStageCloseoutPacket,
   validateCloseoutPacketForAttempt,
-} from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+} from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
 import type { TemporalStageAttemptWorkflowInput } from '../../src/adapters/execution/family-runtime-temporal.ts';
 
 function scope(workItemId = 'study-001') {

@@ -4,11 +4,11 @@ import test from 'node:test';
 import {
   companionToolLatestVersionEnvKey,
   configuredLatestVersion,
-} from '../../src/adapters/integration/install-companions-parts/tool-version.ts';
+} from '../../src/adapters/integration/install-companions/tool-version.ts';
 import { repoNameForModuleId } from '../../src/adapters/integration/system-installation/startup-maintenance.ts';
 import { resolveDefaultFoundrySemanticProviderAgentId } from '../../src/adapters/execution/foundry-production-runtime.ts';
 import { discoverInstalledManagedPolicyDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/registry-flow-policy.ts';
-import { familyRuntimeCommandDomainId } from '../../src/read-models/operator/runtime-tray-app-operator-drilldown-parts/stage-production-evidence-route-common.ts';
+import { familyRuntimeCommandDomainId } from '../../src/read-models/operator/runtime-tray-app-operator-drilldown/stage-production-evidence-route-common.ts';
 import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
 
 test('companionToolLatestVersionEnvKey derives env keys generically for built-in and new tools', () => {

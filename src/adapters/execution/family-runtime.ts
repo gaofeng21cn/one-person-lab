@@ -1,12 +1,12 @@
 import {
   runFamilyRuntimeProviderCommand,
   runFamilyRuntimeWorkerCommand,
-} from './family-runtime-command-parts/provider.ts';
-import { runFamilyRuntimeStageRunCommand } from './family-runtime-command-parts/stage-run.ts';
-import { runFamilyRuntimeAttemptCommand } from './family-runtime-command-parts/attempt.ts';
-import { runFamilyRuntimeEvidenceWorklist } from './family-runtime-command-parts/evidence-worklist.ts';
-import { runFamilyRuntimeLifecycleCommand } from './family-runtime-command-parts/lifecycle.ts';
-import { runFamilyRuntimeSchedulerCommand } from './family-runtime-command-parts/scheduler.ts';
+} from './family-runtime-command/provider.ts';
+import { runFamilyRuntimeStageRunCommand } from './family-runtime-command/stage-run.ts';
+import { runFamilyRuntimeAttemptCommand } from './family-runtime-command/attempt.ts';
+import { runFamilyRuntimeEvidenceWorklist } from './family-runtime-command/evidence-worklist.ts';
+import { runFamilyRuntimeLifecycleCommand } from './family-runtime-command/lifecycle.ts';
+import { runFamilyRuntimeSchedulerCommand } from './family-runtime-command/scheduler.ts';
 import { DatabaseSync } from 'node:sqlite';
 
 import { loadFrameworkContracts } from '../../authority/contracts/index.ts';

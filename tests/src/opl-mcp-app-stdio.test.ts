@@ -7,7 +7,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 import { createFakeCodexPluginManagerFixture, repoRoot } from './cli/helpers.ts';
-import { codexNativeReadbackFixture } from './cli/helpers-parts/codex-native-readback-fixture.ts';
+import { codexNativeReadbackFixture } from './cli/helpers/codex-native-readback-fixture.ts';
 import { formatJsonPayload } from '../../src/kernel/json-file.ts';
 import {
   acceptDomainRead,

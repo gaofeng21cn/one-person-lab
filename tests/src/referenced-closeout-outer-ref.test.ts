@@ -5,8 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
-import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
-import { hydrateReferencedStageAttemptCloseout } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/referenced-closeout-hydration.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
+import { hydrateReferencedStageAttemptCloseout } from '../../src/adapters/execution/family-runtime-codex-stage-runner/referenced-closeout-hydration.ts';
 
 test('verified outer closeout ref supplies omitted inner refs without replacing domain fields', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-outer-closeout-'));

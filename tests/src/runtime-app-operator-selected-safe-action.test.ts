@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   compareDefaultSelectedSafeActions,
   defaultSelectedSafeActionCandidates,
-} from '../../src/read-models/operator/runtime-tray-app-operator-drilldown-parts/selected-safe-action-candidates.ts';
+} from '../../src/read-models/operator/runtime-tray-app-operator-drilldown/selected-safe-action-candidates.ts';
 
 test('default selected safe action excludes unsupported domain-specific action kinds', () => {
   const appReleaseRecord = {

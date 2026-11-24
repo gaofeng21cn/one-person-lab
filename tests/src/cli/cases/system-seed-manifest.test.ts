@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
 import { assert, fs, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
-import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { runGitFixtureCommand } from '../helpers/family-fixtures.ts';
 import {
   createCurrentCodexFixture,
   currentCodexEnvironment,

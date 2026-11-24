@@ -2,16 +2,16 @@ import { EnvironmentOperation, EnvironmentInterruptedError } from './runtime-env
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import fs from 'node:fs';
 import path from 'node:path';
-import { acquirePreparationLock, preparedDependencyCache, recordDependencyInventory, requirementFileDigests } from './runtime-environment-substrate-parts/prepared-cache.ts';
+import { acquirePreparationLock, preparedDependencyCache, recordDependencyInventory, requirementFileDigests } from './runtime-environment-substrate/prepared-cache.ts';
 import { baseOrRecommendedRPackages, buildRunContextConsumerPreflight, installPythonPackagesIntoManagedEnv,
   installRPackagesIntoManagedLibrary, installedPythonPackages, installedRPackages, readPrepareProfile,
   requirementProfileIdentity, resolveBinary, runtimeEnvironmentConsumerBoundary, normalizePythonPackageName,
-  pythonExecutableInManagedEnv, unsatisfiedRRequirements } from './runtime-environment-substrate-parts/package-profile.ts';
+  pythonExecutableInManagedEnv, unsatisfiedRRequirements } from './runtime-environment-substrate/package-profile.ts';
 import { contentFingerprint, normalizeTarget, relativeArtifactBuildRef, requiredRuntimeArtifactRoot,
-  writeJsonFile, readJsonObject, writePreparedEnvironmentIndex } from './runtime-environment-substrate-parts/target-state.ts';
-import { profileLockHandoff, uniqueRefs } from './runtime-environment-substrate-parts/language-lock-handoff.ts';
-import { baseReadback } from './runtime-environment-substrate-parts/projection-cache.ts';
-import type { JsonRecord, RuntimeEnvironmentPrepareInput } from './runtime-environment-substrate-parts/contract.ts';
+  writeJsonFile, readJsonObject, writePreparedEnvironmentIndex } from './runtime-environment-substrate/target-state.ts';
+import { profileLockHandoff, uniqueRefs } from './runtime-environment-substrate/language-lock-handoff.ts';
+import { baseReadback } from './runtime-environment-substrate/projection-cache.ts';
+import type { JsonRecord, RuntimeEnvironmentPrepareInput } from './runtime-environment-substrate/contract.ts';
 
 export async function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironmentPrepareInput) {
   const operation = new EnvironmentOperation(input.prepareTimeoutMs ?? 600000);

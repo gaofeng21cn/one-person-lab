@@ -18,7 +18,7 @@ import {
   createStageQualityCycle,
   markStageQualityCycleCurrentAttempt,
 } from './family-runtime-stage-quality-cycle.ts';
-import { verifyStageQualityArtifactIdentityAtAttemptBoundary } from './family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
+import { verifyStageQualityArtifactIdentityAtAttemptBoundary } from './family-runtime-codex-stage-runner/artifact-identity-verification.ts';
 import {
   buildStageReviewContextManifest,
   normalizeStageQualityScopeBudget,

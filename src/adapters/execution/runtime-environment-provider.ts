@@ -7,8 +7,8 @@ import {
   runCodexInE2bSandbox,
   type E2bCodexStageExecutionResult,
 } from './e2b-codex-stage-execution.ts';
-import type { JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
-import type { RunnerEventSummary } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import type { JsonRecord } from './family-runtime-codex-stage-runner/shared.ts';
+import type { RunnerEventSummary } from './family-runtime-codex-stage-runner/input-prompt.ts';
 
 export const RUNTIME_ENVIRONMENT_PROVIDER_ABI_VERSION = '1.0.0' as const;
 export const RUNTIME_ENVIRONMENT_PROVIDER_IDS = ['e2b'] as const;

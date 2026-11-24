@@ -21,25 +21,25 @@ import {
   readTemporalWorkerState,
   temporalWorkerStatePath,
   workerSourceVersionsEquivalent,
-} from './family-runtime-temporal-provider-parts/worker-state.ts';
+} from './family-runtime-temporal-provider/worker-state.ts';
 import {
   findTemporalForegroundWorkerPids,
-} from './family-runtime-temporal-provider-parts/worker-process.ts';
+} from './family-runtime-temporal-provider/worker-process.ts';
 import {
   expectedWorkerSourceVersionForState,
-} from './family-runtime-temporal-provider-parts/worker-source-currentness.ts';
+} from './family-runtime-temporal-provider/worker-source-currentness.ts';
 import {
   inspectTemporalWorkerLifecycleFast,
-} from './family-runtime-temporal-provider-parts/worker-lifecycle-fast.ts';
+} from './family-runtime-temporal-provider/worker-lifecycle-fast.ts';
 import {
   inspectTemporalWorkerRuntimeDependencies,
-} from './family-runtime-temporal-provider-parts/worker-dependencies.ts';
+} from './family-runtime-temporal-provider/worker-dependencies.ts';
 import {
   buildTemporalWorkerMutationGuard,
-} from './family-runtime-temporal-provider-parts/worker-source-guard.ts';
+} from './family-runtime-temporal-provider/worker-source-guard.ts';
 import {
   resolveTemporalWorkerTaskQueue,
-} from './family-runtime-temporal-provider-parts/worker-task-queue.ts';
+} from './family-runtime-temporal-provider/worker-task-queue.ts';
 
 type TemporalLifecycleInspectionDetail = 'fast' | 'full';
 

@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
   buildWorklistOwnerDeltaActionProjection,
-} from '../../../../src/adapters/execution/family-runtime-evidence-worklist-parts/current-owner-delta-projection.ts';
+} from '../../../../src/adapters/execution/family-runtime-evidence-worklist/current-owner-delta-projection.ts';
 
 type ProjectionInput = Parameters<typeof buildWorklistOwnerDeltaActionProjection>[0];
 

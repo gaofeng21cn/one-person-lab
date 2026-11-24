@@ -21,11 +21,11 @@ import {
   type StageQualityOutcome,
 } from '../../../src/authority/stages/stage-quality-cycle.ts';
 import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environment.ts';
-import { queryTemporalStageRunWorkflow } from '../../../src/adapters/execution/family-runtime-temporal-provider-parts/attempt-control.ts';
+import { queryTemporalStageRunWorkflow } from '../../../src/adapters/execution/family-runtime-temporal-provider/attempt-control.ts';
 import { immutableArtifactRefsFromReviewReceipt } from '../../../src/adapters/execution/family-runtime-temporal-workflow-artifact-authority.ts';
 import { validateWorkflowStageRunInput } from '../../../src/adapters/execution/family-runtime-temporal-workflow-ingress.ts';
-import { deriveNormalizedStageQualityCloseout } from '../../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
-import { normalizeTypedStageCloseoutPacket } from '../../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+import { deriveNormalizedStageQualityCloseout } from '../../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-derivation.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 const workflowsPath = path.join(repoRoot, 'src/adapters/execution/family-runtime-temporal-workflows.ts');

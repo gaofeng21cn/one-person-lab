@@ -1,5 +1,5 @@
 import { assert, createFamilyContractsFixtureRoot, fs, os, path, runCli, test } from '../helpers.ts';
-import { applyAppOperatorDrilldownDetail } from '../../../../src/read-models/operator/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
+import { applyAppOperatorDrilldownDetail } from '../../../../src/read-models/operator/runtime-tray-app-operator-drilldown/detail-view.ts';
 import { buildCurrentOwnerDeltaTopline } from '../../../../src/authority/evidence/current-owner-delta-topline.ts';
 
 const ownerDeltaObserver = { observe: buildCurrentOwnerDeltaTopline };

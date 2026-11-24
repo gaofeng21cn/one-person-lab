@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { protocolCloseoutResumePrompt } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import { protocolCloseoutResumePrompt } from '../../src/adapters/execution/family-runtime-codex-stage-runner/input-prompt.ts';
 
 test('reviewer resume prompt requires the stage_quality_cycle outcome envelope', () => {
   const prompt = protocolCloseoutResumePrompt({

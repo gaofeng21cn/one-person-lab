@@ -1,6 +1,6 @@
 export {
   DOMAIN_LIFECYCLE_ADMISSION_CAPABILITY_ID,
-} from './standard-agent-domain-lifecycle-admission-parts/types.ts';
+} from './standard-agent-domain-lifecycle-admission/types.ts';
 export type {
   ParsedStandardAgentLifecycleAdmission,
   PreparedStandardAgentLifecycleInitialization,
@@ -9,24 +9,24 @@ export type {
   StandardAgentLifecycleInitializationBinding,
   StandardAgentLifecycleReactivationBinding,
   StandardAgentLifecycleReactivationRequest,
-} from './standard-agent-domain-lifecycle-admission-parts/types.ts';
+} from './standard-agent-domain-lifecycle-admission/types.ts';
 
 export {
   parseStandardAgentLifecycleAdmission,
   standardAgentLifecycleAdmissionContract,
-} from './standard-agent-domain-lifecycle-admission-parts/contract.ts';
+} from './standard-agent-domain-lifecycle-admission/contract.ts';
 export {
   bindStandardAgentLifecycleReactivation,
   materializedStandardAgentLifecycleAdmission,
   prepareStandardAgentLifecycleReactivation,
   standardAgentLifecycleReactivationHandlerRunId,
-} from './standard-agent-domain-lifecycle-admission-parts/reactivation.ts';
+} from './standard-agent-domain-lifecycle-admission/reactivation.ts';
 export {
   materializedStandardAgentLifecycleInitializationAdmission,
   prepareStandardAgentLifecycleInitialization,
   standardAgentLifecycleInitializationHandlerRunId,
-} from './standard-agent-domain-lifecycle-admission-parts/initialization.ts';
+} from './standard-agent-domain-lifecycle-admission/initialization.ts';
 export {
   preflightCanonicalActiveStandardAgentDomainLifecycle,
   preflightStandardAgentDomainLifecycleAdmission,
-} from './standard-agent-domain-lifecycle-admission-parts/preflight.ts';
+} from './standard-agent-domain-lifecycle-admission/preflight.ts';

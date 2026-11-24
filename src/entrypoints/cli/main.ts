@@ -15,7 +15,7 @@ import { buildUsageError } from './modules/cli-errors.ts';
 import { printJson, type CliOutputStream } from './modules/cli-output.ts';
 import { buildInternalCommandSpecs } from './cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from './cases/public-command-specs.ts';
-import { buildUpdateActivateCommandSpec } from './cases/public-command-specs-parts/update.ts';
+import { buildUpdateActivateCommandSpec } from './cases/public-command-specs/update.ts';
 import { bindCommandRegistryMetadata, validateCommandRegistryCoverage } from './modules/support.ts';
 import {
   createManagedBrowserAutomationProvider,

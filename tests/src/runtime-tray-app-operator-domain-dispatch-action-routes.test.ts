@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
   buildDomainDispatchEvidenceReceiptRoutes,
-} from '../../src/read-models/operator/runtime-tray-app-operator-drilldown-parts/domain-dispatch-action-routes.ts';
+} from '../../src/read-models/operator/runtime-tray-app-operator-drilldown/domain-dispatch-action-routes.ts';
 
 function readyTargetIdentity(stageAttemptId: string) {
   return {

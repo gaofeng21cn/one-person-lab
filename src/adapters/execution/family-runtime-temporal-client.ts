@@ -6,7 +6,7 @@ import { resolveTemporalAddressForPaths } from './family-runtime-temporal-servic
 import {
   processIsAlive,
   readTemporalWorkerState,
-} from './family-runtime-temporal-provider-parts/worker-state.ts';
+} from './family-runtime-temporal-provider/worker-state.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 
 export type TemporalWorkerPaths = Pick<ReturnType<typeof familyRuntimePaths>, 'root'>;

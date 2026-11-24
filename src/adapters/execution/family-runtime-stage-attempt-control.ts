@@ -10,7 +10,7 @@ import {
   stageAttemptToPayload,
 } from './family-runtime-stage-attempt-ledger.ts';
 import { nowIso } from './family-runtime-store.ts';
-import { appendActivityEventToRow } from './family-runtime-stage-attempts-parts/shared.ts';
+import { appendActivityEventToRow } from './family-runtime-stage-attempts/shared.ts';
 
 export function markStageAttemptOperatorHoldRequested(
   db: DatabaseSync,

@@ -24,8 +24,8 @@ import {
   inspectStageAttempt,
   materializePersistedStageReviewReceipt,
 } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
-import { deriveNormalizedStageQualityCloseout } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
-import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+import { deriveNormalizedStageQualityCloseout } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-derivation.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
 import { openQueueDb } from '../../src/adapters/execution/family-runtime-store.ts';
 import { stageQualityReviewReceiptActivity } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
 import {

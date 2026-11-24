@@ -13,7 +13,7 @@ import {
 } from './family-runtime-stage-attempt-ledger.ts';
 import {
   verifyIdentityReceipt,
-} from './family-runtime-codex-stage-runner-parts/artifact-identity-verification-parts/transport-receipts.ts';
+} from './family-runtime-codex-stage-runner/artifact-identity-verification/transport-receipts.ts';
 import { requireSameFamilyRuntimeExecutionIdentity } from './family-runtime-execution-scope.ts';
 import { requireRuntimeExecutionScopeMutationAllowed } from './family-runtime-execution-scope-persistence.ts';
 import {

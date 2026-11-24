@@ -1,5 +1,5 @@
 import { assert, test } from './helpers.ts';
-import { buildPackagesCommandSpecs } from '../../../../../src/entrypoints/cli/cases/public-command-specs-parts/packages.ts';
+import { buildPackagesCommandSpecs } from '../../../../../src/entrypoints/cli/cases/public-command-specs/packages.ts';
 import {
   buildRootHelp,
   type CommandSpec,

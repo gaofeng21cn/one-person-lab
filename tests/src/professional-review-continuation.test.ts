@@ -18,7 +18,7 @@ import { createCordisBaseHeadlessComposition } from '../../src/host/composition-
 import { resolveStageRunAttemptExecutorContent } from '../../src/adapters/execution/family-runtime-stage-run-attempt-content.ts';
 import { stageQualityAttemptMaterializeActivity, stageQualityAttemptSyncActivity,
   stageQualityCycleProjectActivity, stageQualityReviewReceiptActivity } from '../../src/adapters/execution/family-runtime-temporal-activities.ts';
-import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts';
 import type { TemporalStageAttemptWorkflowInput } from '../../src/adapters/execution/family-runtime-temporal.ts';
 
 const checkoutRoot = process.env.OPL_PROFESSIONAL_DOMAIN_ROOT;

@@ -17,22 +17,22 @@ import {
 } from '../../../../../src/adapters/execution/family-runtime-temporal-provider.ts';
 import {
   buildTemporalWorkerMutationGuard,
-} from '../../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-source-guard.ts';
+} from '../../../../../src/adapters/execution/family-runtime-temporal-provider/worker-source-guard.ts';
 import {
   resolveTemporalWorkerTaskQueue,
   resolveTemporalWorkerTaskQueueDetail,
-} from '../../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+} from '../../../../../src/adapters/execution/family-runtime-temporal-provider/worker-task-queue.ts';
 import {
   currentWorkerSourceVersion,
   workerSourceVersionDiagnostic,
   workerSourceVersionsEquivalent,
-} from '../../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-state.ts';
+} from '../../../../../src/adapters/execution/family-runtime-temporal-provider/worker-state.ts';
 
 test('Temporal worker source version ignores documentation-only git HEAD drift', () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-worker-runtime-source-version-'));
   const srcRoot = path.join(repoRoot, 'src');
   const modulePath = path.join(srcRoot, 'family-runtime-temporal-provider.ts');
-  const helperPath = path.join(srcRoot, 'family-runtime-temporal-provider-parts', 'worker-state.ts');
+  const helperPath = path.join(srcRoot, 'family-runtime-temporal-provider', 'worker-state.ts');
   const docsPath = path.join(repoRoot, 'docs', 'status.md');
   const headPath = path.join(repoRoot, '.git', 'refs', 'heads', 'main');
   const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
@@ -77,7 +77,7 @@ test('Temporal worker source version covers the executable source dependency clo
     srcRoot,
     'adapters',
     'execution',
-    'family-runtime-temporal-provider-parts',
+    'family-runtime-temporal-provider',
     'worker-state.ts',
   );
   const stagecraftPath = path.join(srcRoot, 'authority', 'stages', 'stage-quality-scope-budget.ts');
@@ -127,9 +127,9 @@ test('Temporal worker source version tracks executable dist runtime for built pr
   const srcRoot = path.join(repoRoot, 'src');
   const distRoot = path.join(repoRoot, 'dist');
   const srcModulePath = path.join(srcRoot, 'family-runtime-temporal-provider.ts');
-  const srcHelperPath = path.join(srcRoot, 'family-runtime-temporal-provider-parts', 'worker-state.ts');
+  const srcHelperPath = path.join(srcRoot, 'family-runtime-temporal-provider', 'worker-state.ts');
   const distModulePath = path.join(distRoot, 'family-runtime-temporal-provider.js');
-  const distHelperPath = path.join(distRoot, 'family-runtime-temporal-provider-parts', 'worker-state.js');
+  const distHelperPath = path.join(distRoot, 'family-runtime-temporal-provider', 'worker-state.js');
   const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
   try {
     delete process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;

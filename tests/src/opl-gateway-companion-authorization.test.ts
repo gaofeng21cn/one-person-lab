@@ -7,8 +7,8 @@ import test from 'node:test';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { authorizeOplLinkCompanion } from '../../src/adapters/integration/opl-gateway-account.ts';
-import { exchangeCompanionCredentials, OPL_LINK_RELAY_ORIGIN } from '../../src/adapters/integration/opl-gateway-account-parts/companion-authorization.ts';
-import { readGatewayCredentials, writeGatewayAccountState, writeGatewayCredentials } from '../../src/adapters/integration/opl-gateway-account-parts/private-store.ts';
+import { exchangeCompanionCredentials, OPL_LINK_RELAY_ORIGIN } from '../../src/adapters/integration/opl-gateway-account/companion-authorization.ts';
+import { readGatewayCredentials, writeGatewayAccountState, writeGatewayCredentials } from '../../src/adapters/integration/opl-gateway-account/private-store.ts';
 
 const device = {
   deviceId: '29bf60b4-c312-4567-890a-2c91656f458d', role: 'host' as const,

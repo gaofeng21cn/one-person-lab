@@ -29,15 +29,15 @@ import {
   artifactIdentity,
   canonicalCloseoutMetadata,
   parseRawOutputForCloseoutRecovery,
-} from './family-runtime-stage-run-closeout-recovery-parts/raw-closeout.ts';
+} from './family-runtime-stage-run-closeout-recovery/raw-closeout.ts';
 import {
   attemptSummaryFromPersisted,
   findingsFromPriorQualityLineage,
   priorAttemptSummaries,
-} from './family-runtime-stage-run-closeout-recovery-parts/lineage.ts';
+} from './family-runtime-stage-run-closeout-recovery/lineage.ts';
 import {
   buildRecoveryWorkflowState,
-} from './family-runtime-stage-run-closeout-recovery-parts/workflow-state.ts';
+} from './family-runtime-stage-run-closeout-recovery/workflow-state.ts';
 import {
   artifactIdentityAuthorityFromReviewReceipt,
   producerArtifactIdentityAuthority,
@@ -48,14 +48,14 @@ import {
 export { parseRawOutputForCloseoutRecovery };
 import {
   recoverFrameworkRawArtifactForAttempt,
-} from './family-runtime-codex-stage-runner-parts/raw-artifact-identity-verification.ts';
+} from './family-runtime-codex-stage-runner/raw-artifact-identity-verification.ts';
 import {
   normalizeCodexTransportCloseoutCandidate,
-} from './family-runtime-codex-stage-runner-parts/session-closeout-recovery.ts';
-import { normalizeTypedStageCloseoutPacket } from './family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+} from './family-runtime-codex-stage-runner/session-closeout-recovery.ts';
+import { normalizeTypedStageCloseoutPacket } from './family-runtime-codex-stage-runner/closeout-normalization.ts';
 import {
   verifyStageQualityCloseoutArtifactIdentity,
-} from './family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
+} from './family-runtime-codex-stage-runner/artifact-identity-verification.ts';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import {
   validateStageQualityFindings,

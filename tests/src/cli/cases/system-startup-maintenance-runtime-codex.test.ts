@@ -1,5 +1,5 @@
 import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
-import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { runGitFixtureCommand } from '../helpers/family-fixtures.ts';
 import {
   domainModulePathEnvironment,
   withCliTimeout,

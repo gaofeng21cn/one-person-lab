@@ -5,8 +5,8 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   deriveNormalizedStageQualityCloseout,
   stageCloseoutDigest,
-} from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
-import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+} from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-derivation.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
 import {
   createStageAttempt,
   createStageAttemptTable,

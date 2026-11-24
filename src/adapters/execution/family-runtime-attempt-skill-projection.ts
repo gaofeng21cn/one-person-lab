@@ -6,7 +6,7 @@ import {
   assertAgentPackageSkillProjection,
   type AgentPackageSkillProjection,
 } from '../../kernel/agent-package-skill-projection.ts';
-import { isRecord, type JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
+import { isRecord, type JsonRecord } from './family-runtime-codex-stage-runner/shared.ts';
 
 function projectionFromAttempt(attempt: JsonRecord) {
   const locator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};

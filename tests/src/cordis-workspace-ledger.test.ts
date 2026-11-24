@@ -13,7 +13,7 @@ import {
   createCordisOwnerDeltaObserverComposition,
 } from '../../src/host/plugins/cordis-owner-delta-observer.ts';
 import { buildCurrentOwnerDeltaTopline as buildDirectTopline } from '../../src/authority/evidence/current-owner-delta-topline.ts';
-import { buildAppOperatorOwnerDeltaTopline } from '../../src/read-models/operator/runtime-tray-app-operator-drilldown-parts/owner-delta-topline.ts';
+import { buildAppOperatorOwnerDeltaTopline } from '../../src/read-models/operator/runtime-tray-app-operator-drilldown/owner-delta-topline.ts';
 import { buildProductEntryHandoffBundleView } from '../../src/read-models/operator/product-entry-handoff-bundle.ts';
 import { CordisCompositionContractError, validateCordisCompositionSnapshot } from '../../src/authority/packages/index.ts';
 import { loadFrameworkContracts } from '../../src/authority/contracts/contracts.ts';

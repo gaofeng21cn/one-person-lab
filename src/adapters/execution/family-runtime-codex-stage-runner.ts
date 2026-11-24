@@ -1,4 +1,4 @@
-import { buildRawArtifactProgressCloseoutPacket } from './family-runtime-codex-stage-runner-parts/raw-progress-closeout.ts';
+import { buildRawArtifactProgressCloseoutPacket } from './family-runtime-codex-stage-runner/raw-progress-closeout.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   buildCodexExecArgs,
@@ -26,22 +26,22 @@ import {
   extractCodexSessionUsageRef,
   type CodexSessionUsageRef,
 } from './family-runtime-codex-session-usage.ts';
-import { codexStageAttemptEnv } from './family-runtime-codex-stage-runner-parts/provider-env.ts';
+import { codexStageAttemptEnv } from './family-runtime-codex-stage-runner/provider-env.ts';
 import {
   type TypedStageCloseoutPacket,
   validateCloseoutPacketForAttempt,
-} from './family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
-import { recoverDefaultExecutorDomainReceiptCloseout } from './family-runtime-codex-stage-runner-parts/default-executor-recovery.ts';
-import { hydrateContentRefTransport } from './family-runtime-codex-stage-runner-parts/content-ref-transport-hydration.ts';
+} from './family-runtime-codex-stage-runner/closeout-normalization.ts';
+import { recoverDefaultExecutorDomainReceiptCloseout } from './family-runtime-codex-stage-runner/default-executor-recovery.ts';
+import { hydrateContentRefTransport } from './family-runtime-codex-stage-runner/content-ref-transport-hydration.ts';
 import {
   attemptProducedWorkspaceArtifact,
   buildWorkspaceArtifactCloseoutPacket,
-} from './family-runtime-codex-stage-runner-parts/workspace-artifact-closeout.ts';
+} from './family-runtime-codex-stage-runner/workspace-artifact-closeout.ts';
 import {
   buildAgentStageRunnerReceipt,
   buildCodexStageRunnerReceipt,
   type CodexStageRunnerReceipt,
-} from './family-runtime-codex-stage-runner-parts/receipt-builders.ts';
+} from './family-runtime-codex-stage-runner/receipt-builders.ts';
 import {
   eventSummary,
   normalizeCodexStageRunnerMode,
@@ -53,7 +53,7 @@ import {
   checkpointRefsFromAttempt,
   type CodexStageRunnerInput,
   type RunnerEventSummary,
-} from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
+} from './family-runtime-codex-stage-runner/input-prompt.ts';
 import {
   codexCloseoutCaptureExecOptions,
   codexExecOptionsFromPolicy,
@@ -62,26 +62,26 @@ import {
   executorKindFromAttemptPolicy,
   executorPolicyFromAttempt,
   normalizeAgentExecutorStageMode,
-} from './family-runtime-codex-stage-runner-parts/executor-policy.ts';
+} from './family-runtime-codex-stage-runner/executor-policy.ts';
 import {
   buildProviderRuntimeCloseoutPacket,
   providerBlockedReasonFrom,
   summarizeCodexProviderErrors,
-} from './family-runtime-codex-stage-runner-parts/provider-result.ts';
-import { withCodexTokenAccounting } from './family-runtime-codex-stage-runner-parts/token-accounting.ts';
-export type { CodexStageRunnerInput } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
-import { verifyStageQualityCloseoutArtifactIdentity } from './family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
+} from './family-runtime-codex-stage-runner/provider-result.ts';
+import { withCodexTokenAccounting } from './family-runtime-codex-stage-runner/token-accounting.ts';
+export type { CodexStageRunnerInput } from './family-runtime-codex-stage-runner/input-prompt.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from './family-runtime-codex-stage-runner/artifact-identity-verification.ts';
 import {
   parseCloseoutFromCodexMessages,
   parseTerminalJsonRecordFromCodexMessages,
   recoverCloseoutFromCodexSessionWithRetry,
   normalizeCloseoutErrorMessage,
-} from './family-runtime-codex-stage-runner-parts/session-closeout-recovery.ts';
+} from './family-runtime-codex-stage-runner/session-closeout-recovery.ts';
 import {
   createCodexCloseoutCapture,
   parseCapturedCloseoutMessage,
   persistRawStageOutput,
-} from './family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
+} from './family-runtime-codex-stage-runner/stage-closeout-capture.ts';
 import {
   buildProgressCloseoutProjection,
 } from './progress-closeout-projection.ts';
@@ -98,11 +98,11 @@ import {
   isRecord,
   normalizeTimeoutMs,
   type JsonRecord,
-} from './family-runtime-codex-stage-runner-parts/shared.ts';
+} from './family-runtime-codex-stage-runner/shared.ts';
 import {
   hydrateReferencedStageAttemptCloseout,
   resolveProtocolCloseoutResumePacket,
-} from './family-runtime-codex-stage-runner-parts/referenced-closeout-hydration.ts';
+} from './family-runtime-codex-stage-runner/referenced-closeout-hydration.ts';
 import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import {
   hostAttemptSkillRuntime,
@@ -112,16 +112,16 @@ import {
 import {
   deriveNormalizedStageQualityCloseout,
   STAGE_CLOSEOUT_NORMALIZATION_REASON,
-} from './family-runtime-codex-stage-runner-parts/closeout-derivation.ts';
+} from './family-runtime-codex-stage-runner/closeout-derivation.ts';
 
 export {
   normalizeTypedStageCloseoutPacket,
   type TypedStageCloseoutPacket,
-} from './family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+} from './family-runtime-codex-stage-runner/closeout-normalization.ts';
 
 export {
   createCodexCloseoutCaptureForTest,
-} from './family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
+} from './family-runtime-codex-stage-runner/stage-closeout-capture.ts';
 
 async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexStageRunnerReceipt> {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
@@ -1012,5 +1012,5 @@ export async function runAgentStageRunner(
 }
 
 
-export { buildRawArtifactProgressCloseoutPacket } from './family-runtime-codex-stage-runner-parts/raw-progress-closeout.ts';
-export { buildCodexStageActivityInput } from './family-runtime-codex-stage-runner-parts/activity-input.ts';
+export { buildRawArtifactProgressCloseoutPacket } from './family-runtime-codex-stage-runner/raw-progress-closeout.ts';
+export { buildCodexStageActivityInput } from './family-runtime-codex-stage-runner/activity-input.ts';

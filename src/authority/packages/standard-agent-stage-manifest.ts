@@ -1,10 +1,10 @@
 import {
   resolveStandardAgentStageTargetBinding,
   resolveStandardAgentStageQualityRuntimeBinding as resolveStageQualityRuntimeBinding,
-} from './standard-agent-stage-manifest-parts/runtime-quality-binding.ts';
+} from './standard-agent-stage-manifest/runtime-quality-binding.ts';
 import type {
   StandardAgentStageQualityRuntimeBinding,
-} from './standard-agent-stage-manifest-parts/types.ts';
+} from './standard-agent-stage-manifest/types.ts';
 
 export { STANDARD_AGENT_STAGE_MANIFEST_REF } from './standard-agent-stage-prompt.ts';
 
@@ -12,7 +12,7 @@ export {
   compileStandardAgentStageManifest,
   OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE,
   STANDARD_AGENT_DESCRIPTOR_REF,
-} from './standard-agent-stage-manifest-parts/manifest-compiler.ts';
+} from './standard-agent-stage-manifest/manifest-compiler.ts';
 
 export { resolveStandardAgentStageTargetBinding };
 
@@ -26,7 +26,7 @@ export function resolveStandardAgentStageQualityRuntimeBinding(
 export {
   resolveStandardAgentStageReviewLane,
   stageAttemptExecutorPolicyWithReviewLane,
-} from './standard-agent-stage-manifest-parts/stage-quality-validation.ts';
+} from './standard-agent-stage-manifest/stage-quality-validation.ts';
 
 export type {
   StandardAgentHandoffReviewBoundary,
@@ -35,4 +35,4 @@ export type {
   StandardAgentStageQualityRuntimeBinding,
   StandardAgentStageTargetBinding,
   StandardAgentStageReviewLaneBinding,
-} from './standard-agent-stage-manifest-parts/types.ts';
+} from './standard-agent-stage-manifest/types.ts';

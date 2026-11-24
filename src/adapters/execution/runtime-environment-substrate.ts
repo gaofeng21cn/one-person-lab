@@ -4,13 +4,13 @@ import { parseJsonText } from '../../kernel/json-file.ts';
 import { RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT, authorityBoundary, baseReadback,
   buildRunContextConsumerPreflight, cacheInventoryProjection, normalizeTarget, runtimeArtifactRoot,
   relativeArtifactBuildRef, runtimeEnvironmentConsumerBoundary, runContextTargetMismatchFields, CONTRACT_PATH,
-} from './runtime-environment-substrate-parts/shared.ts';
-import type { JsonRecord, RuntimeEnvironmentTargetInput } from './runtime-environment-substrate-parts/shared.ts';
+} from './runtime-environment-substrate/shared.ts';
+import type { JsonRecord, RuntimeEnvironmentTargetInput } from './runtime-environment-substrate/shared.ts';
 export { buildRuntimeEnvironmentPrepareReadback } from './runtime-environment-prepare.ts';
-export { buildRuntimeEnvironmentDoctorReadback } from './runtime-environment-substrate-parts/doctor-readback.ts';
+export { buildRuntimeEnvironmentDoctorReadback } from './runtime-environment-substrate/doctor-readback.ts';
 export { RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT,
   type RuntimeEnvironmentCommand, type RuntimeEnvironmentPrepareInput, type RuntimeEnvironmentTargetInput,
-} from './runtime-environment-substrate-parts/shared.ts';
+} from './runtime-environment-substrate/shared.ts';
 
 export function buildRuntimeEnvironmentInspectReadback(input: RuntimeEnvironmentTargetInput) {
   return { ...baseReadback('inspect', input), ...buildRuntimeEnvironmentRunContextReadback(input), command: 'inspect' };

@@ -16,7 +16,7 @@ import {
 import type { InstalledPackageDescriptor } from '../../../../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts';
 import { FrameworkContractError } from '../../../../../src/kernel/contract-validation.ts';
 import { formatJsonPayload } from '../../../../../src/kernel/json-file.ts';
-import { createFakeCodexFixture } from '../../helpers-parts/fixtures.ts';
+import { createFakeCodexFixture } from '../../helpers/fixtures.ts';
 
 const requestSchema = 'opl-package-app-contribution-request.v1';
 const responseSchema = 'opl-package-app-contribution-response.v1';

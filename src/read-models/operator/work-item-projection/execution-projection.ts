@@ -4,8 +4,8 @@ import type {
   WorkItemProjectionItem,
   WorkItemUnresolvedExecution,
 } from './types.ts';
-import { attributeAttempts } from './execution-projection-parts/attempt-attribution.ts';
-import { projectWorkItemExecution } from './execution-projection-parts/review-actions.ts';
+import { attributeAttempts } from './execution-projection/attempt-attribution.ts';
+import { projectWorkItemExecution } from './execution-projection/review-actions.ts';
 
 export function joinAttemptsToWorkItems(input: {
   items: WorkItemProjectionItem[];

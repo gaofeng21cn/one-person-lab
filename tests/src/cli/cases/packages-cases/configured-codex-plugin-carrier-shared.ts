@@ -16,7 +16,7 @@ import {
 } from './helpers.ts';
 import { pathToFileURL } from 'node:url';
 import crypto from 'node:crypto';
-import { codexNativeReadbackFixture } from '../../helpers-parts/codex-native-readback-fixture.ts';
+import { codexNativeReadbackFixture } from '../../helpers/codex-native-readback-fixture.ts';
 import { validateJsonSchemaPayload } from '../../../../../src/kernel/schema-registry.ts';
 import {
   normalizeAgentPluginName,

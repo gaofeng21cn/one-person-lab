@@ -73,26 +73,26 @@ import {
   type BaselineAdoptionContentRefResolver,
   type BaselineAdoptionPreflightReceipt,
 } from './baseline-adoption.ts';
-import { commitFoundryActivation } from './kernel-parts/activation-transaction.ts';
+import { commitFoundryActivation } from './kernel/activation-transaction.ts';
 import {
   assertEvaluationEvidence,
   assertMaterializedCandidate,
   assertRegisteredCandidate,
-} from './kernel-parts/output-validation.ts';
+} from './kernel/output-validation.ts';
 import {
   buildFoundryRunTerminalReadback,
   latestOwnerAuthority,
-} from './kernel-parts/terminal-readback.ts';
+} from './kernel/terminal-readback.ts';
 import type {
   FoundryOwnerDecisionReadback,
   FoundryRunTerminalReadback,
-} from './kernel-parts/terminal-readback.ts';
+} from './kernel/terminal-readback.ts';
 import {
   expectedRevision,
   fail,
   requiredDigest,
   requiredRef,
-} from './kernel-parts/validation.ts';
+} from './kernel/validation.ts';
 
 type KernelDependencies = {
   designer: DesignerPort;
@@ -118,7 +118,7 @@ export type FoundryRunInspection = {
   terminal_readback: FoundryRunTerminalReadback;
 };
 
-export type { FoundryOwnerDecisionReadback, FoundryRunTerminalReadback } from './kernel-parts/terminal-readback.ts';
+export type { FoundryOwnerDecisionReadback, FoundryRunTerminalReadback } from './kernel/terminal-readback.ts';
 
 export type OwnerDecision = {
   run_id: string;

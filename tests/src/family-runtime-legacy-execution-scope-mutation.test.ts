@@ -24,8 +24,8 @@ import {
   recordTemporalStartOnAttempt,
 } from '../../src/adapters/execution/family-runtime-parts/stage-attempt-launch.ts';
 import { persistStageAttemptUsageObservation } from '../../src/adapters/execution/family-runtime-stage-attempt-usage-observation.ts';
-import { runStageAttemptFixtureActivity } from '../../src/adapters/execution/family-runtime-stage-attempts-parts/fixture-activity.ts';
-import { updateStageAttemptsForTask } from '../../src/adapters/execution/family-runtime-stage-attempts-parts/task-sync-summary.ts';
+import { runStageAttemptFixtureActivity } from '../../src/adapters/execution/family-runtime-stage-attempts/fixture-activity.ts';
+import { updateStageAttemptsForTask } from '../../src/adapters/execution/family-runtime-stage-attempts/task-sync-summary.ts';
 import {
   createStageQualityCycle,
   markStageQualityCycleCurrentAttempt,

@@ -39,7 +39,7 @@
       {
         "capability_id": "opl_app_action_execution",
         "schema_version": "1.0.0",
-        "source_ref": "src/read-models/operator/app-state-parts/action-execute.ts"
+        "source_ref": "src/read-models/operator/app-state/action-execute.ts"
       },
       {
         "capability_id": "opl_dynamic_package_directory",

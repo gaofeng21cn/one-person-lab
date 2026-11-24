@@ -59,7 +59,7 @@ import {
   waitForBarrierCount,
 } from './shared.ts';
 import { WorkItemFileBoundaryError } from '../../../src/authority/workspace/work-item-file-boundary.ts';
-import { failForWorkItemFileBoundary } from '../../../src/adapters/execution/family-runtime-stage-run-identity-parts/content-binding-observation.ts';
+import { failForWorkItemFileBoundary } from '../../../src/adapters/execution/family-runtime-stage-run-identity/content-binding-observation.ts';
 import { prevalidatedSourceTruthFingerprint } from '../../../src/adapters/execution/family-runtime-source-truth-refs.ts';
 test('work-item content bindings reject local root escape and cross-study receipts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-work-item-content-'));

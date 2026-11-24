@@ -16,7 +16,7 @@ import {
   requireStageRunImmutableContentBindings,
   revalidateStageRunImmutableContentBindings,
   type StageRunImmutableContentBinding,
-} from './family-runtime-stage-run-identity-parts/content-bindings.ts';
+} from './family-runtime-stage-run-identity/content-bindings.ts';
 import {
   readPrevalidatedSourceTruthRefs,
   requirePrevalidatedSourceTruthFingerprint,

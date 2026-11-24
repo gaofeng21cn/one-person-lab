@@ -7,8 +7,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { recoverStageRunCloseoutProjection } from '../../src/adapters/execution/family-runtime-stage-run-closeout-recovery.ts';
 import { createStageAttempt, ingestStageAttemptCloseout, inspectStageAttempt, syncStageAttemptFromTemporalTerminalObservation } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
 import { createStageQualityCycle } from '../../src/adapters/execution/family-runtime-stage-quality-cycle.ts';
-import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
-import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts';
 import { requireTemporalStageRunRecoveryResume } from '../../src/adapters/execution/family-runtime-temporal.ts';
 import { createFamilyRuntimeQueueTables, registerStageRunLaunch, recordStageRunTemporalStart, recordStageRunClosed, scopedStageRunInput, temporalStartReceipt } from './family-runtime-stage-run-launch-cases/shared.ts';
 

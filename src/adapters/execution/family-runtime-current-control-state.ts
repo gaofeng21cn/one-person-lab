@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import { parseJsonText } from '../../kernel/json-file.ts';
-import { parseStageAttemptCloseoutJson } from './family-runtime-stage-attempts-parts/shared.ts';
+import { parseStageAttemptCloseoutJson } from './family-runtime-stage-attempts/shared.ts';
 import {
   record,
   stringList,

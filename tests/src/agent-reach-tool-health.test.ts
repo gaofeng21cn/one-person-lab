@@ -1,11 +1,11 @@
-import { nodeFixtureShebang } from './cli/helpers-parts/node-executable.ts';
+import { nodeFixtureShebang } from './cli/helpers/node-executable.ts';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { installAgentReachSkill, resolveAgentReachTool } from '../../src/adapters/integration/install-companions-parts/tools.ts';
+import { installAgentReachSkill, resolveAgentReachTool } from '../../src/adapters/integration/install-companions/tools.ts';
 
 const channels = [
   { channel: 'web', level: 'default', status: 'unverified', problems: [] },

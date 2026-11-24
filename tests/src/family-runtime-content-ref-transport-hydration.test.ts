@@ -5,8 +5,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { hydrateContentRefTransport } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/content-ref-transport-hydration.ts';
-import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
+import { hydrateContentRefTransport } from '../../src/adapters/execution/family-runtime-codex-stage-runner/content-ref-transport-hydration.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../src/adapters/execution/family-runtime-codex-stage-runner/closeout-normalization.ts';
 import { qualityArtifactIdentity } from '../../src/adapters/execution/family-runtime-temporal-workflow-artifacts.ts';
 
 function sha256(bytes: Buffer) {

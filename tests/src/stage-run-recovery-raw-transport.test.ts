@@ -9,7 +9,7 @@ import { findStageRunLaunch } from '../../src/adapters/execution/family-runtime-
 import { parseRawOutputForCloseoutRecovery, recoverStageRunCloseoutProjection } from '../../src/adapters/execution/family-runtime-stage-run-closeout-recovery.ts';
 import { createStageAttempt, ingestStageAttemptCloseout, inspectStageAttempt } from '../../src/adapters/execution/family-runtime-stage-attempts.ts';
 import { createStageQualityCycle } from '../../src/adapters/execution/family-runtime-stage-quality-cycle.ts';
-import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
+import { persistRawStageOutput } from '../../src/adapters/execution/family-runtime-codex-stage-runner/stage-closeout-capture.ts';
 import { createFamilyRuntimeQueueTables, registerStageRunLaunch, recordStageRunTemporalStart, recordStageRunClosed, scopedStageRunInput, temporalStartReceipt } from './family-runtime-stage-run-launch-cases/shared.ts';
 
 for (const missingTerminalProjection of [false, true]) {

@@ -71,7 +71,7 @@ import {
   typedBlockerRefs,
   uniqueRefs,
   uniqueStrings,
-} from './runtime-tray-app-operator-drilldown-parts/index.ts';
+} from './runtime-tray-app-operator-drilldown/index.ts';
 import {
   buildEvidenceEnvelopeProjection,
 } from '../../authority/evidence/index.ts';

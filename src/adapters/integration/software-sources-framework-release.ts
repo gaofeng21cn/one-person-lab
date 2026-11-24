@@ -3,7 +3,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { softwareSourcesFile } from './software-sources-store.ts';
-import { readFrameworkChannelEntry } from './system-installation/framework-self-update-parts/channel-artifact.ts';
+import { readFrameworkChannelEntry } from './system-installation/framework-self-update/channel-artifact.ts';
 import { resolveFrameworkArtifactRef } from './system-installation/release-channel.ts';
 
 type ChannelEntry = ReturnType<typeof readFrameworkChannelEntry>;

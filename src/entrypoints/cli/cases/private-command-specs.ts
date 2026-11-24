@@ -23,8 +23,8 @@ import { explainDomainBoundary, selectDomainAgentEntry } from '../../../read-mod
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog, pruneWorkspaceRegistry } from '../../../authority/workspace/workspace-registry.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { buildWorkspaceInitializeCommandSpecs } from './workspace-initialize-command-spec.ts';
-import { buildPrivateAgentCommandSpecs } from './private-command-specs-parts/agents.ts';
-import { buildPrivateRuntimeCommandSpecs } from './private-command-specs-parts/runtime.ts';
+import { buildPrivateAgentCommandSpecs } from './private-command-specs/agents.ts';
+import { buildPrivateRuntimeCommandSpecs } from './private-command-specs/runtime.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseCommandOptions, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseProductEntryArgs, parseRegisteredCommandOptions, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 import type {

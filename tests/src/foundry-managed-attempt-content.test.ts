@@ -6,7 +6,7 @@ import {
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
 import type { TemporalStageAttemptWorkflowInput } from '../../src/adapters/execution/family-runtime-temporal.ts';
-import { runnerPromptForExecution } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import { runnerPromptForExecution } from '../../src/adapters/execution/family-runtime-codex-stage-runner/input-prompt.ts';
 import { readStandardAgentManagedTextFile } from '../../src/authority/packages/index.ts';
 
 function attempt(role: 'producer' | 'reviewer' | 'repairer' | 're_reviewer', parent = stageRunInput()): TemporalStageAttemptWorkflowInput {

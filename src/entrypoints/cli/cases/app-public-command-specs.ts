@@ -62,11 +62,11 @@ export function buildPublicAppCommandSpecs(
       group: 'app',
       handler: async (args) => {
         const { parseAppActionExecuteArgs } = await import(
-          '../../../read-models/operator/app-state-parts/action-execute-parser.ts'
+          '../../../read-models/operator/app-state/action-execute-parser.ts'
         );
         const options = parseAppActionExecuteArgs(args);
         const { runOplAppActionExecute } = await import(
-          '../../../read-models/operator/app-state-parts/action-execute.ts'
+          '../../../read-models/operator/app-state/action-execute.ts'
         );
         return runOplAppActionExecute(getContracts(), options, requireAppCordisServices());
       },

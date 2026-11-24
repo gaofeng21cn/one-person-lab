@@ -14,7 +14,7 @@ import type {
   FamilyRuntimeExecutionScopeKind,
   WorkItemExecutionScopeSnapshot,
 } from '../family-runtime-execution-scope.ts';
-import { verifyFrameworkRawStageArtifactRef } from '../family-runtime-codex-stage-runner-parts/raw-artifact-identity-verification.ts';
+import { verifyFrameworkRawStageArtifactRef } from '../family-runtime-codex-stage-runner/raw-artifact-identity-verification.ts';
 import {
   canonicalStageRunSha256,
   fail,

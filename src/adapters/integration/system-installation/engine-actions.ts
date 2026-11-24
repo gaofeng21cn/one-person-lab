@@ -6,7 +6,7 @@ import { parseJsonText } from '../../../kernel/json-file.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 
 import { resolveEngineActionSpec } from './engine-helpers.ts';
-import { resolvePreseedTarballPath } from './engine-helpers-parts/runtime-payload.ts';
+import { resolvePreseedTarballPath } from './engine-helpers/runtime-payload.ts';
 import { buildOplEnvironment } from './environment.ts';
 import type { OplEngineAction, OplEngineId } from './shared.ts';
 import { normalizeOutput } from './shared.ts';

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { parseCloseoutFromCodexMessages } from '../../../src/adapters/execution/family-runtime-codex-stage-runner-parts/session-closeout-recovery.ts';
+import { parseCloseoutFromCodexMessages } from '../../../src/adapters/execution/family-runtime-codex-stage-runner/session-closeout-recovery.ts';
 import { createFakeCodexFixture } from '../cli/helpers.ts';
 import { runPublicCodexStageRunner } from '../family-runtime-codex-stage-runner-helpers.ts';
 

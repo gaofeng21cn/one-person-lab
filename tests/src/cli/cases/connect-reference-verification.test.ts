@@ -15,7 +15,7 @@ import {
   runCliAsync,
   test,
 } from '../helpers.ts';
-import { createTestTlsServerFixture } from '../helpers-parts/tls-fixture.ts';
+import { createTestTlsServerFixture } from '../helpers/tls-fixture.ts';
 
 const configuredScholarPackageRoot = process.env.OPL_SCHOLAR_SKILLS_E2E_ROOT?.trim() || null;
 const familyScholarPackageRoot = path.join(resolveFamilyWorkspaceRootFromRepoRoot(repoRoot), 'mas-scholar-skills');

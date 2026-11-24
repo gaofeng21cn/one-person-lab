@@ -4,7 +4,7 @@ import { ServiceError } from '@temporalio/client';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import type { queryStageAttempt } from './family-runtime-stage-attempts.ts';
-import { queryTemporalStageAttemptWorkflow as defaultQueryTemporalStageAttemptWorkflow } from './family-runtime-temporal-provider-parts/attempt-query.ts';
+import { queryTemporalStageAttemptWorkflow as defaultQueryTemporalStageAttemptWorkflow } from './family-runtime-temporal-provider/attempt-query.ts';
 
 type QueryTemporalStageAttemptWorkflow = typeof defaultQueryTemporalStageAttemptWorkflow;
 

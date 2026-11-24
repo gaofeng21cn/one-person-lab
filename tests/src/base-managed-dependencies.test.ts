@@ -1,4 +1,4 @@
-import { nodeFixtureShebang } from './cli/helpers-parts/node-executable.ts';
+import { nodeFixtureShebang } from './cli/helpers/node-executable.ts';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -19,7 +19,7 @@ import {
   reconcileManagedCompanionTools,
   resolveFfmpegTool,
   resolveOfficeCliTool,
-} from '../../src/adapters/integration/install-companions-parts/tools.ts';
+} from '../../src/adapters/integration/install-companions/tools.ts';
 import {
   inspectExternalCodexInstallation,
   inspectExternalTemporalInstallation,

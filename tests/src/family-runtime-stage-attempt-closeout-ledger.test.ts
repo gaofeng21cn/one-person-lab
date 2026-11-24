@@ -26,7 +26,7 @@ import {
   parseStageAttemptCloseoutJson,
   STAGE_ATTEMPT_CLOSEOUT_COMPRESSED_JSON_SURFACE,
   stringifyStageAttemptCloseoutJson,
-} from '../../src/adapters/execution/family-runtime-stage-attempts-parts/shared.ts';
+} from '../../src/adapters/execution/family-runtime-stage-attempts/shared.ts';
 
 function withAttempt(fn: (db: DatabaseSync, attemptId: string) => void) {
   const db = new DatabaseSync(':memory:');

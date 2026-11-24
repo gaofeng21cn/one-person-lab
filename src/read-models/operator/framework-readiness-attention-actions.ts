@@ -1,8 +1,8 @@
 import {
   appReleaseUserPathEvidenceNextStep,
   frameworkAppReleaseUserPathNextSafeAction,
-} from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
-import { frameworkDeveloperModeLiveCloseoutNextSafeAction } from './runtime-tray-app-operator-drilldown-parts/developer-mode-live-closeout.ts';
+} from './runtime-tray-app-operator-drilldown/app-release-user-path.ts';
+import { frameworkDeveloperModeLiveCloseoutNextSafeAction } from './runtime-tray-app-operator-drilldown/developer-mode-live-closeout.ts';
 import {
   countValue as numberValue,
   type JsonRecord,

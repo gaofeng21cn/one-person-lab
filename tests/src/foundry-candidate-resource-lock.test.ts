@@ -9,9 +9,9 @@ import { Worker } from '@temporalio/worker';
 
 import { packageRuntimeSourceCheckoutPath } from '../../src/adapters/execution/family-runtime-package-readiness.ts';
 import { bindStageKnowledgeContext } from '../../src/adapters/execution/family-runtime-knowledge-context.ts';
-import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/artifact-identity-verification.ts';
+import { verifyStageQualityCloseoutArtifactIdentity } from '../../src/adapters/execution/family-runtime-codex-stage-runner/artifact-identity-verification.ts';
 import { FOUNDRY_EVALUATION_STAGE_CANDIDATE, type FoundryEvaluationStageAdmission } from '../../src/adapters/execution/foundry-evaluation-stage-candidate.ts';
-import { codexStageAttemptEnv } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/provider-env.ts';
+import { codexStageAttemptEnv } from '../../src/adapters/execution/family-runtime-codex-stage-runner/provider-env.ts';
 import { codexStageActivity, runFamilyRuntime } from '../../src/adapters/execution/index.ts';
 import type { TemporalStageAttemptWorkflowInput, TemporalStageRunWorkflowInput } from '../../src/adapters/execution/family-runtime-temporal.ts';
 import { createWorkItemExecutionScopeSnapshot } from '../../src/authority/workspace/index.ts';

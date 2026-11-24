@@ -5,7 +5,7 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { normalizeFamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { resolveStandardAgentRepoFile } from '../../authority/packages/index.ts';
-import { observeStableFile } from './family-runtime-stage-run-identity-parts/content-binding-observation.ts';
+import { observeStableFile } from './family-runtime-stage-run-identity/content-binding-observation.ts';
 
 export type StageRunDefaultProgression = {
   decision_kind: 'advance' | 'complete';

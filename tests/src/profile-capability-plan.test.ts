@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { buildProfileCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs-parts/profiles.ts';
+import { buildProfileCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs/profiles.ts';
 import { parseJsonText, readJsonPayloadFile } from '../../src/kernel/json-file.ts';
 import {
   buildProfileCapabilityPlan as buildProfileCapabilityPlanWithDependencies,

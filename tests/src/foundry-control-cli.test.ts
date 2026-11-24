@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { buildFoundryCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs-parts/foundry.ts';
+import { buildFoundryCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs/foundry.ts';
 import { createPersistentFoundryControl } from '../../src/entrypoints/cli/modules/foundry-control.ts';
 import { createFoundryLifecycleKernel } from '../../src/adapters/execution/foundry-lifecycle-runtime.ts';
 import { buildFoundryTemporalActivities } from '../../src/adapters/execution/foundry-temporal-activities.ts';

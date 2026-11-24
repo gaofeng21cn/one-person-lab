@@ -1,5 +1,5 @@
 import { createFakeCodexFixture, createGitModuleRemoteFixture, fs, path } from '../../helpers.ts';
-import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
+import { runGitFixtureCommand } from '../../helpers/family-fixtures.ts';
 import {
   writeFakeBookForgeGeneratedSurfacePack,
   writeFakeOmaGeneratedSurfacePack,

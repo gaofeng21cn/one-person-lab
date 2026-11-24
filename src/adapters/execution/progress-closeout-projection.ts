@@ -2,8 +2,8 @@ import { stringValue as optionalString } from '../../kernel/json-record.ts';
 import type {
   StageCloseoutPacketRejection,
   TypedStageCloseoutPacket,
-} from './family-runtime-codex-stage-runner-parts/closeout-normalization.ts';
-import type { JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
+} from './family-runtime-codex-stage-runner/closeout-normalization.ts';
+import type { JsonRecord } from './family-runtime-codex-stage-runner/shared.ts';
 
 export function buildProgressCloseoutProjection(input: {
   attempt: JsonRecord;

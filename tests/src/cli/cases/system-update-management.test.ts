@@ -1,5 +1,5 @@
 import { assert, createFakeCodexFixture, createGitModuleRemoteFixture, fs, os, path, runCli, test } from '../helpers.ts';
-import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
+import { runGitFixtureCommand } from '../helpers/family-fixtures.ts';
 
 function writeFrameworkFixtureRoot(root: string, marker: string) {
   fs.mkdirSync(path.join(root, 'src'), { recursive: true });

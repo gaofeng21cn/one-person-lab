@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
-import { resolveTemporalWorkerTaskQueue } from './family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { resolveTemporalWorkerTaskQueue } from './family-runtime-temporal-provider/worker-task-queue.ts';
 
 export const OPL_PACKAGED_LOCAL_TEMPORAL_ADDRESS = '127.0.0.1:7233';
 export const OPL_PACKAGED_LOCAL_TEMPORAL_ADDRESS_SOURCE = 'packaged_local_default';

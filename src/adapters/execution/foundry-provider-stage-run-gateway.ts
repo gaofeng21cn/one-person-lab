@@ -16,7 +16,7 @@ import {
   stringValue,
   type FoundryProviderStageRunLaunch,
 } from './foundry-provider-stage-run-contract.ts';
-import { cancelTemporalStageRunWorkflow } from './family-runtime-temporal-provider-parts/attempt-control.ts';
+import { cancelTemporalStageRunWorkflow } from './family-runtime-temporal-provider/attempt-control.ts';
 import {
   withDurableTemporalClient,
   withTemporalRpcDeadline,

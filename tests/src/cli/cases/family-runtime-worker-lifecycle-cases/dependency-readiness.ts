@@ -11,7 +11,7 @@ import {
 } from '../../../../../src/adapters/execution/family-runtime-temporal-provider.ts';
 import {
   inspectTemporalWorkerRuntimeDependencies,
-} from '../../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-dependencies.ts';
+} from '../../../../../src/adapters/execution/family-runtime-temporal-provider/worker-dependencies.ts';
 
 test('Temporal worker readiness blocks missing SWC native workflow bundler dependency', () => {
   const failingRequire = (() => {
@@ -54,8 +54,8 @@ test('Temporal dependency repair targets the package for source, dist and parts 
     for (const relativePath of [
       'src/adapters/execution/family-runtime-temporal-provider.ts',
       'dist/adapters/execution/family-runtime-temporal-provider.js',
-      'src/adapters/execution/family-runtime-temporal-provider-parts/worker-dependencies.ts',
-      'dist/adapters/execution/family-runtime-temporal-provider-parts/worker-dependencies.js',
+      'src/adapters/execution/family-runtime-temporal-provider/worker-dependencies.ts',
+      'dist/adapters/execution/family-runtime-temporal-provider/worker-dependencies.js',
     ]) {
       const health = inspectTemporalWorkerRuntimeDependencies({
         moduleUrl: pathToFileURL(path.join(root, relativePath)).href,

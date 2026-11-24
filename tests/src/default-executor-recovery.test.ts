@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { recoverDefaultExecutorDomainReceiptCloseout } from '../../src/adapters/execution/family-runtime-codex-stage-runner-parts/default-executor-recovery.ts';
+import { recoverDefaultExecutorDomainReceiptCloseout } from '../../src/adapters/execution/family-runtime-codex-stage-runner/default-executor-recovery.ts';
 
 function writeRecoveryFixture(options: { domainId?: string; stageOwner?: string }) {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-default-executor-recovery-'));

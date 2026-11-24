@@ -16,7 +16,7 @@ import {
   stageRunReplayBusinessIdentity,
   stageRunReplayRequestBusinessIdentity,
   workspaceLocatorStageAttemptExecutorPolicy,
-} from '../../src/adapters/execution/family-runtime-command-parts/attempt-shared.ts';
+} from '../../src/adapters/execution/family-runtime-command/attempt-shared.ts';
 
 // The command path must never read implicit shared OPL state. Every fixture
 // below lives under a temporary state/workspace root owned by this file.

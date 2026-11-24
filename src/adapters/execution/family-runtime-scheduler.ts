@@ -10,7 +10,7 @@ import {
   inspectTemporalSchedulerCadence,
   removeTemporalSchedulerCadence,
   triggerTemporalSchedulerCadence,
-} from './family-runtime-temporal-provider-parts/scheduler-cadence.ts';
+} from './family-runtime-temporal-provider/scheduler-cadence.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import {
   reconcileTemporalStageAttemptRuntimeObservations,
@@ -137,7 +137,7 @@ function buildRetiredQueueProjectionBridge(input: {
 }
 
 async function temporalProviderModule() {
-  return await import('./family-runtime-temporal-provider-parts/attempt-control.ts');
+  return await import('./family-runtime-temporal-provider/attempt-control.ts');
 }
 
 function deferredProviderSloTick(input: {

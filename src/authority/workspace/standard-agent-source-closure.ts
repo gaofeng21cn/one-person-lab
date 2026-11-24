@@ -7,17 +7,17 @@ import {
   loadSourceClosureEffectContract,
   reachableSymbolIds,
   resolveSourceClosureEntrypoints,
-} from './standard-agent-source-closure-parts/analysis.ts';
-import { discoverSourceClosureEntrypoints } from './standard-agent-source-closure-parts/entrypoints.ts';
-import { buildPythonSourceGraph } from './standard-agent-source-closure-parts/python-graph.ts';
+} from './standard-agent-source-closure/analysis.ts';
+import { discoverSourceClosureEntrypoints } from './standard-agent-source-closure/entrypoints.ts';
+import { buildPythonSourceGraph } from './standard-agent-source-closure/python-graph.ts';
 import {
   activeSourceFiles,
   parseSourceClosureArgs,
   readSourceClosureDomainId,
   repoFiles,
   type SourceClosureRepoInput,
-} from './standard-agent-source-closure-parts/repo-inputs.ts';
-import { buildTypescriptSourceGraph } from './standard-agent-source-closure-parts/typescript-graph.ts';
+} from './standard-agent-source-closure/repo-inputs.ts';
+import { buildTypescriptSourceGraph } from './standard-agent-source-closure/typescript-graph.ts';
 import type {
   SourceClosureAuditMismatch,
   SourceClosureCallEdge,
@@ -26,7 +26,7 @@ import type {
   SourceClosureRepoReport,
   SourceClosureSymbol,
   SourceClosureUnresolvedEdge,
-} from './standard-agent-source-closure-parts/types.ts';
+} from './standard-agent-source-closure/types.ts';
 
 function uniqueBy<T>(values: T[], key: (value: T) => string) {
   return [...new Map(values.map((value) => [key(value), value])).values()];

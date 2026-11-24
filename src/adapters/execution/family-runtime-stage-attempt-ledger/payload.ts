@@ -13,7 +13,7 @@ import type {
   StageAttemptRow,
   StageAttemptSignalRow,
 } from './types.ts';
-import { parseStageAttemptCloseoutJson } from '../family-runtime-stage-attempts-parts/shared.ts';
+import { parseStageAttemptCloseoutJson } from '../family-runtime-stage-attempts/shared.ts';
 
 export function parseJsonObject(value: string) {
   return record(parseJsonText(value));

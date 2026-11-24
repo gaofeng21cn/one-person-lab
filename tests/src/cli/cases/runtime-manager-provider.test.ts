@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import net from 'node:net';
 
 import { assert, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
-import { resolveTemporalWorkerTaskQueue } from '../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { resolveTemporalWorkerTaskQueue } from '../../../../src/adapters/execution/family-runtime-temporal-provider/worker-task-queue.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   runtimeDomainOwnerProfiles,

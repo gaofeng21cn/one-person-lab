@@ -8,8 +8,8 @@ import {
 } from './codex-exec-events.ts';
 import type { CodexCommandResult } from './codex.ts';
 import { stringValue as optionalString } from '../../kernel/json-record.ts';
-import { isRecord, normalizeTimeoutMs, type JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
-import type { RunnerEventSummary } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import { isRecord, normalizeTimeoutMs, type JsonRecord } from './family-runtime-codex-stage-runner/shared.ts';
+import type { RunnerEventSummary } from './family-runtime-codex-stage-runner/input-prompt.ts';
 import { sandboxAttemptSkillRuntime } from './family-runtime-attempt-skill-projection.ts';
 import { workspaceTransportDisplayUrl } from './workspace-transport-url.ts';
 import { resolveRuntimeEnvironmentProviderId } from './runtime-environment-provider.ts';

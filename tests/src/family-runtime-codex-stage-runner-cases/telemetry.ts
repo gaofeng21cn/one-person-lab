@@ -18,10 +18,10 @@ import {
   summarizeStageAttemptUsageProjections,
 } from '../../../src/adapters/execution/family-runtime-stage-attempt-usage.ts';
 import { createStageAttemptTable } from '../../../src/adapters/execution/family-runtime-stage-attempt-ledger.ts';
-import { createStageAttempt } from '../../../src/adapters/execution/family-runtime-stage-attempts-parts/create.ts';
-import { inspectStageAttempt } from '../../../src/adapters/execution/family-runtime-stage-attempts-parts/inspect.ts';
-import { recordStageAttemptActivityHeartbeat } from '../../../src/adapters/execution/family-runtime-stage-attempts-parts/signals-heartbeat.ts';
-import { MAX_STAGE_ATTEMPT_ACTIVITY_EVENTS } from '../../../src/adapters/execution/family-runtime-stage-attempts-parts/shared.ts';
+import { createStageAttempt } from '../../../src/adapters/execution/family-runtime-stage-attempts/create.ts';
+import { inspectStageAttempt } from '../../../src/adapters/execution/family-runtime-stage-attempts/inspect.ts';
+import { recordStageAttemptActivityHeartbeat } from '../../../src/adapters/execution/family-runtime-stage-attempts/signals-heartbeat.ts';
+import { MAX_STAGE_ATTEMPT_ACTIVITY_EVENTS } from '../../../src/adapters/execution/family-runtime-stage-attempts/shared.ts';
 import { createFakeCodexFixture } from '../cli/helpers.ts';
 import { runPublicCodexStageRunner } from '../family-runtime-codex-stage-runner-helpers.ts';
 

@@ -10,13 +10,13 @@ import {
   providerDefinition,
   REFERENCE_PROVIDER_ADAPTER_ABI,
   REFERENCE_PROVIDER_MODULE_KIND,
-} from './opl-connect-reference-verification-parts/provider-registry.ts';
-import type { ReferenceVerificationProviderId } from './opl-connect-reference-verification-parts/provider-registry.ts';
+} from './opl-connect-reference-verification/provider-registry.ts';
+import type { ReferenceVerificationProviderId } from './opl-connect-reference-verification/provider-registry.ts';
 import {
   resolveReferences,
   type ReferenceRecord,
   type ReferenceVerificationInput,
-} from './opl-connect-reference-verification-parts/reference-normalization.ts';
+} from './opl-connect-reference-verification/reference-normalization.ts';
 import {
   cacheRef,
   fetchReferenceAdapterRequest,
@@ -24,7 +24,7 @@ import {
   writeCache,
   type ReferenceAdapterHttpResponse,
   type RetryAttempt,
-} from './opl-connect-reference-verification-parts/transport.ts';
+} from './opl-connect-reference-verification/transport.ts';
 import {
   adapterContractFailure,
   adapterEvidenceToProviderEvidence,
@@ -37,14 +37,14 @@ import {
   withReceiptRef,
   type ProviderEvidence,
   type ProviderEvidenceDraft,
-} from './opl-connect-reference-verification-parts/receipt.ts';
+} from './opl-connect-reference-verification/receipt.ts';
 
-export type { ReferenceVerificationInput } from './opl-connect-reference-verification-parts/reference-normalization.ts';
-export type { ReferenceVerificationProviderId } from './opl-connect-reference-verification-parts/provider-registry.ts';
+export type { ReferenceVerificationInput } from './opl-connect-reference-verification/reference-normalization.ts';
+export type { ReferenceVerificationProviderId } from './opl-connect-reference-verification/provider-registry.ts';
 export {
   normalizeReferenceVerificationProviders,
   referenceVerificationProviderIds,
-} from './opl-connect-reference-verification-parts/provider-registry.ts';
+} from './opl-connect-reference-verification/provider-registry.ts';
 
 type ReferenceProviderAdapterHandler = (request: unknown) => unknown;
 

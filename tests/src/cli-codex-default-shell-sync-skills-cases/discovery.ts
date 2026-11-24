@@ -11,7 +11,7 @@ import {
   hasStandardDomainAgentSurface,
 } from '../../../src/kernel/standard-domain-agent-family-repos.ts';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../../src/adapters/integration/opl-skills.ts';
-import { listFamilySkillPackSpecs } from '../../../src/adapters/integration/opl-skills-parts/registry.ts';
+import { listFamilySkillPackSpecs } from '../../../src/adapters/integration/opl-skills/registry.ts';
 
 const STANDARD_AGENT_PACK_COUNT = listFamilySkillPackSpecs()
   .filter((spec) => spec.distribution_role === 'domain_agent_plugin_pack').length;

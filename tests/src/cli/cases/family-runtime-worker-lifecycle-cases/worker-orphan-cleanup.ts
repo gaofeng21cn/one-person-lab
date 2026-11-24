@@ -16,12 +16,12 @@ import {
 } from '../../../../../src/adapters/execution/family-runtime-temporal-provider.ts';
 import {
   currentWorkerSourceVersion,
-} from '../../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-state.ts';
+} from '../../../../../src/adapters/execution/family-runtime-temporal-provider/worker-state.ts';
 import {
   findTemporalForegroundWorkerPids,
   stopOrphanTemporalForegroundWorkers,
   temporalForegroundWorkerModulePathFromCommand,
-} from '../../../../../src/adapters/execution/family-runtime-temporal-provider-parts/worker-process.ts';
+} from '../../../../../src/adapters/execution/family-runtime-temporal-provider/worker-process.ts';
 import { createTemporalTestWorkflowEnvironment } from '../../../temporal-test-environment.ts';
 
 test('Temporal worker module path parser preserves unquoted macOS paths with spaces', () => {

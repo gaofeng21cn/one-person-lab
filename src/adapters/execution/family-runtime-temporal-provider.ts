@@ -51,36 +51,36 @@ import {
   removeTemporalWorkerState,
   temporalWorkerStatePath,
   writeTemporalWorkerState,
-} from './family-runtime-temporal-provider-parts/worker-state.ts';
+} from './family-runtime-temporal-provider/worker-state.ts';
 import {
   buildTemporalWorkerBaseState,
   runTemporalWorkerResidentLoop,
   writeTemporalWorkerFailedExit,
   writeTemporalWorkerStartingState,
-} from './family-runtime-temporal-provider-parts/worker-residency.ts';
+} from './family-runtime-temporal-provider/worker-residency.ts';
 import {
   stopOrphanTemporalForegroundWorkers,
   stopWorkerPid,
-} from './family-runtime-temporal-provider-parts/worker-process.ts';
+} from './family-runtime-temporal-provider/worker-process.ts';
 import {
   inspectTemporalWorkerRuntimeDependencies,
-} from './family-runtime-temporal-provider-parts/worker-dependencies.ts';
+} from './family-runtime-temporal-provider/worker-dependencies.ts';
 import {
   assertTemporalWorkerMutationAllowed,
-} from './family-runtime-temporal-provider-parts/worker-source-guard.ts';
+} from './family-runtime-temporal-provider/worker-source-guard.ts';
 import {
   resolveTemporalWorkerTaskQueue,
-} from './family-runtime-temporal-provider-parts/worker-task-queue.ts';
+} from './family-runtime-temporal-provider/worker-task-queue.ts';
 import {
   buildTemporalStageAttemptWorkerOptions,
   resolveTemporalWorkflowModulePath,
-} from './family-runtime-temporal-provider-parts/workflow-bundle.ts';
+} from './family-runtime-temporal-provider/workflow-bundle.ts';
 import {
   runTemporalStageAttemptReplayGate,
-} from './family-runtime-temporal-provider-parts/replay-gate.ts';
+} from './family-runtime-temporal-provider/replay-gate.ts';
 import {
   runTemporalProductionResidencyProofForWorker,
-} from './family-runtime-temporal-provider-parts/production-proof.ts';
+} from './family-runtime-temporal-provider/production-proof.ts';
 import {
   inspectTemporalWorkerLifecycle,
   inspectTemporalWorkerLifecycleWithDetail,
@@ -91,7 +91,7 @@ export {
 } from './family-runtime-temporal-worker-lifecycle.ts';
 export {
   queryTemporalStageAttemptWorkflow,
-} from './family-runtime-temporal-provider-parts/attempt-query.ts';
+} from './family-runtime-temporal-provider/attempt-query.ts';
 export {
   buildTemporalStageAttemptMissingWorkflowCancelReceipt,
   cancelTemporalStageAttemptWorkflow,
@@ -101,9 +101,9 @@ export {
   startTemporalStageRunWorkflow,
   queryTemporalStageRunWorkflow,
   startTemporalStageAttemptWorkflow,
-} from './family-runtime-temporal-provider-parts/attempt-control.ts';
-export { resolveTemporalWorkerForegroundPaths, resolveTemporalWorkerForegroundPathsFromArgv } from './family-runtime-temporal-provider-parts/foreground-paths.ts';
-import { resolveTemporalWorkerForegroundPathsFromArgv } from './family-runtime-temporal-provider-parts/foreground-paths.ts';
+} from './family-runtime-temporal-provider/attempt-control.ts';
+export { resolveTemporalWorkerForegroundPaths, resolveTemporalWorkerForegroundPathsFromArgv } from './family-runtime-temporal-provider/foreground-paths.ts';
+import { resolveTemporalWorkerForegroundPathsFromArgv } from './family-runtime-temporal-provider/foreground-paths.ts';
 
 function workerActivities() {
   return resolveTemporalActivityProjection() ?? activities;

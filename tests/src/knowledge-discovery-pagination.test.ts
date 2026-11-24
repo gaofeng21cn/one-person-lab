@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { discoverKnowledgeSources } from '../../src/authority/packages/durable-knowledge-sources.ts';
-import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs-parts/knowledge.ts';
+import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs/knowledge.ts';
 import { sourceFixture, writeKnowledgeFile } from './knowledge-source-fixture.ts';
 
 const refs = (result: ReturnType<typeof discoverKnowledgeSources>) => result.candidates.map(candidate => candidate.source_ref);

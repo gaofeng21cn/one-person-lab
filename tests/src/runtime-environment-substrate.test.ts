@@ -10,8 +10,8 @@ import {
   buildRuntimeEnvironmentPrepareReadback,
   buildRuntimeEnvironmentRunContextReadback,
 } from '../../src/adapters/execution/runtime-environment-substrate.ts';
-import { installRPackagesIntoManagedLibrary } from '../../src/adapters/execution/runtime-environment-substrate-parts/package-profile.ts';
-import { preparedDependencyCache } from '../../src/adapters/execution/runtime-environment-substrate-parts/prepared-cache.ts';
+import { installRPackagesIntoManagedLibrary } from '../../src/adapters/execution/runtime-environment-substrate/package-profile.ts';
+import { preparedDependencyCache } from '../../src/adapters/execution/runtime-environment-substrate/prepared-cache.ts';
 type Json = Record<string, unknown>;
 
 test('matching dependencies share a prepared environment across artifacts and domains; lock edits select a new one', async (t) => {
@@ -69,7 +69,7 @@ test('dependency declaration order does not split the cache but source and versi
 test('concurrent first preparations serialize and the second process reuses the completed environment', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-environment-lock-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const moduleUrl = new URL('../../src/adapters/execution/runtime-environment-substrate-parts/prepared-cache.ts', import.meta.url).href;
+  const moduleUrl = new URL('../../src/adapters/execution/runtime-environment-substrate/prepared-cache.ts', import.meta.url).href;
   const worker = `
     import fs from 'node:fs';
     import { acquirePreparationLock } from ${JSON.stringify(moduleUrl)};

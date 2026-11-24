@@ -1,6 +1,6 @@
 import { openQueueDb } from './family-runtime-store.ts';
 import { inspectDetachedTemporalServiceState, inspectTemporalServiceLifecycle, startTemporalServiceLifecycle } from './family-runtime-temporal-service.ts';
-import { inspectTemporalWorkerLifecycleFast } from './family-runtime-temporal-provider-parts/worker-lifecycle-fast.ts';
+import { inspectTemporalWorkerLifecycleFast } from './family-runtime-temporal-provider/worker-lifecycle-fast.ts';
 import { repairTemporalWorkerLifecycleForProvider } from './family-runtime-provider-worker-repair.ts';
 import { runTemporalSchedulerCadenceCommand } from './family-runtime-scheduler.ts';
 import type { TemporalStartupMaintenanceRuntime, TemporalStartupMaintenanceStep } from './family-runtime-temporal-startup-maintenance.ts';

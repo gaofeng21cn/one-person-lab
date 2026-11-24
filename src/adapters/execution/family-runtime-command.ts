@@ -1,6 +1,6 @@
 import {
   parseRegisteredFamilyRuntimeCommand,
-} from './family-runtime-command-parts/registry.ts';
+} from './family-runtime-command/registry.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   type FamilyRuntimeDomainId,

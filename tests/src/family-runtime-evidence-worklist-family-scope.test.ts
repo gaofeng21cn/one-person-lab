@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { familyDefaultCallerFallbackDomains } from '../../src/adapters/execution/family-runtime-evidence-worklist-parts/default-caller-family-scope.ts';
+import { familyDefaultCallerFallbackDomains } from '../../src/adapters/execution/family-runtime-evidence-worklist/default-caller-family-scope.ts';
 
 function familyReport() {
   return {
