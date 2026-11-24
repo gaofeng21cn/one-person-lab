@@ -18,6 +18,7 @@ import {
   inspectManagedBrowserAutomation,
   listOplAgentPackages,
   inspectManagedComputerUse,
+  readInstalledStandardAgentDescriptorForDomain,
   readOplFlowDefaultUserInstructions,
   readStorageOwnerInventorySnapshot,
   resolveCodexVersion,
@@ -25,7 +26,6 @@ import {
   runOplAgentPackageStatus,
   type CordisConnectDescriptorDiscoveryService,
 } from '../../adapters/integration/public/app-state.ts';
-import { readInstalledStandardAgentDescriptorForDomain } from '../../adapters/integration/public/standard-agent-interface.ts';
 import { listWorkspaceBindings } from '../../authority/workspace/public/app-state.ts';
 import { buildOplEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 import {

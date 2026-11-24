@@ -5,7 +5,7 @@ export {
   assertCordisPluginDescriptor,
   validateCordisCompositionSnapshot,
   validateCordisPluginDescriptor,
-} from '@one-person-lab/cordis-abi';
+} from '../../kernel/cordis-abi.ts';
 export type CordisPackStageBindingService = {
   resolve(
     repoDir: string,
@@ -16,7 +16,7 @@ export type {
   CordisCompositionSnapshot,
   CordisPluginDescriptor,
   CordisPluginDescriptorInput,
-} from '@one-person-lab/cordis-abi';
+} from '../../kernel/cordis-abi.ts';
 export * from './package-host-integration.ts';
 
 // Public cross-module surface generated from existing module consumers.

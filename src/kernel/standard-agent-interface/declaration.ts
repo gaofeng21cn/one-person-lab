@@ -1,7 +1,13 @@
 import { isRecord } from '../contract-validation.ts';
 import type { StandardAgentInterface } from '../standard-agent-interface-types.ts';
-import { STANDARD_AGENT_INTERFACE_VERSION } from './constants.ts';
-import { invalid, stringValue, workspaceRelativePath, stringArray, assertKnownKeys } from './validation-values.ts';
+import {
+  STANDARD_AGENT_INTERFACE_VERSION,
+  invalid,
+  stringValue,
+  workspaceRelativePath,
+  stringArray,
+  assertKnownKeys,
+} from './validation-values.ts';
 import { parseWorkspaceSharedResources, locatorFields } from './workspace-binding.ts';
 import { parseStandardAgentInventoryProjection, stageCatalog } from './inventory-and-stages.ts';
 import { domainDetailViews } from './task-views.ts';

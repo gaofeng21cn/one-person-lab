@@ -14,7 +14,7 @@ import { markStageAttemptCancelRequested } from '../family-runtime-stage-attempt
 import { setStageAttemptArchived } from '../family-runtime-stage-attempt-ledger.ts';
 import { queryTemporalStageAttemptReadModel } from '../family-runtime-temporal-query.ts';
 import { insertEvent, stableId } from '../family-runtime-store.ts';
-import { persistStageAttemptLaunchBinding, recordTemporalStartOnAttempt } from '../family-runtime-parts/stage-attempt-launch.ts';
+import { persistStageAttemptLaunchBinding, recordTemporalStartOnAttempt } from '../family-runtime.ts';
 import type { FamilyRuntimeAttemptCommandContext } from './attempt-shared.ts';
 import {
   rawStageAttemptMutationAuthority,

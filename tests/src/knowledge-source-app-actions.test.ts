@@ -7,7 +7,7 @@ import registry from '../../contracts/opl-framework/cli-command-registry.json' w
 import settingsContract from '../../contracts/opl-framework/settings-control-center-action-read-model-contract.json' with { type: 'json' };
 import { buildKnowledgeCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs/knowledge.ts';
 import { bindCommandRegistryMetadata, parseRegisteredCommandOptions } from '../../src/entrypoints/cli/modules/command-registry.ts';
-import { executeKnowledgeSourceAppAction } from '../../src/read-models/operator/app-state/action-execute-knowledge-sources.ts';
+import { executeKnowledgeSourceAppAction } from '../../src/read-models/operator/app-state/action-execute-direct.ts';
 import { SETTINGS_CONTROL_CENTER_ACTIONS } from '../../src/read-models/operator/app-state-settings-control-center/action-catalog.ts';
 import { runCli, runCliFailure } from './cli/helpers/runner.ts';
 

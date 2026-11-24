@@ -1,5 +1,5 @@
 import { Context } from '@deepseek-ai/cordis';
-import { CORDIS_FRAMEWORK_PACKAGE, CORDIS_FRAMEWORK_VERSION, CORDIS_FRAMEWORK_INTEGRITY } from '@one-person-lab/cordis-abi/framework';
+import { CORDIS_FRAMEWORK_PACKAGE, CORDIS_FRAMEWORK_VERSION, CORDIS_FRAMEWORK_INTEGRITY } from '../../kernel/cordis-abi.ts';
 
 import descriptorPayload from '../../../contracts/opl-framework/cordis-plugins/opl-console-readiness-projection.json' with { type: 'json' };
 import type { FrameworkContracts } from '../../kernel/types.ts';

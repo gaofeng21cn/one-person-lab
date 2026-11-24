@@ -3,20 +3,20 @@ import {
   fs,
   os,
   path,
-  runCli,
-  runCliFailure,
+  runCliInProcess,
+  runCliInProcessFailure,
   test,
 } from '../helpers.ts';
 import '../../connection-registry.test.ts';
-import './app-action-cases/dry-run-actions.test.ts';
-import './app-action-cases/connection-actions.test.ts';
-import './app-action-cases/settings-and-workspace-actions.test.ts';
-import './app-action-cases/work-item-control.test.ts';
+import './app-action-cases/dry-run-actions.ts';
+import './app-action-cases/connection-actions.ts';
+import './app-action-cases/settings-and-workspace-actions.ts';
+import './app-action-cases/work-item-control.ts';
 
-test('app action execute wraps runtime action dry-run as the App mutating boundary', () => {
+test('app action execute wraps runtime action dry-run as the App mutating boundary', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-state-'));
   try {
-    const output = runCli([
+    const output = await runCliInProcess([
       'app',
       'action',
       'execute',
@@ -54,11 +54,11 @@ test('app action execute wraps runtime action dry-run as the App mutating bounda
   }
 });
 
-test('app action catalog exposes representative safe delegated action refs', () => {
+test('app action catalog exposes representative safe delegated action refs', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-actions-home-'));
 
   try {
-    const output = runCli(['app', 'state', '--profile', 'fast'], {
+    const output = await runCliInProcess(['app', 'state', '--profile', 'fast'], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_MODULES_ROOT: path.join(homeRoot, 'opl-state', 'modules'),
@@ -259,7 +259,7 @@ test('app action catalog exposes representative safe delegated action refs', () 
   }
 });
 
-test('App action catalog registers only verified external owner updates and executes the confirmation route as dry-run', () => {
+test('App action catalog registers only verified external owner updates and executes the confirmation route as dry-run', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-external-owner-action-'));
   const brew = path.join(root, 'bin', 'brew');
   const codex = path.join(root, 'Cellar', 'codex', '0.1.0', 'bin', 'codex');
@@ -280,13 +280,13 @@ test('App action catalog registers only verified external owner updates and exec
     PATH: `${path.dirname(codex)}:/usr/bin:/bin`,
   };
   try {
-    const state = runCli(['app', 'state', '--profile', 'full'], env) as any;
+    const state = (await runCliInProcess(['app', 'state', '--profile', 'full'], env)) as any;
     const action = state.app_state.actions.find((entry: any) => entry.action_id === 'external_codex_update_homebrew');
     assert.equal(action.confirmation_required, true);
     assert.equal(action.delegated_surface, 'brew upgrade codex');
-    const execution = runCli([
+    const execution = (await runCliInProcess([
       'app', 'action', 'execute', '--action', 'external_codex_update_homebrew', '--dry-run',
-    ], env) as any;
+    ], env)) as any;
     assert.equal(execution.app_action_execution.delegated_surface, 'brew upgrade codex');
     assert.equal(execution.app_action_execution.result.external_dependency_update.status, 'dry_run');
     assert.equal(execution.app_action_execution.result.external_dependency_update.auto_apply_allowed, false);
@@ -295,7 +295,7 @@ test('App action catalog registers only verified external owner updates and exec
   }
 });
 
-test('retired App action aliases cannot execute through the generic action shell', () => {
+test('retired App action aliases cannot execute through the generic action shell', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-retired-scholarskills-'));
   try {
     for (const actionId of [
@@ -304,7 +304,7 @@ test('retired App action aliases cannot execute through the generic action shell
       'agent_package_install_from_manifest_url',
       'agent_package_activate',
     ]) {
-      const failure = runCliFailure([
+      const failure = await runCliInProcessFailure([
         'app', 'action', 'execute', '--action', actionId,
       ], {
         OPL_STATE_DIR: stateRoot,

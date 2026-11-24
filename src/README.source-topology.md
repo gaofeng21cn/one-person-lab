@@ -15,9 +15,5 @@ State: `active_support`
 | [entrypoints](./entrypoints/) | CLI、App 和 runtime 接线；CLI 从 [cli.ts](./entrypoints/cli.ts) 进入。 |
 | [kernel](./kernel/) | 共享 types、ports 和基础 primitive。 |
 
-workspace Package 的源码入口由各自 manifest 的 exports 定义：
-[cordis-abi](../packages/cordis-abi/package.json) 与 [package-host](../packages/package-host/package.json)。
-它们与 source unit、plugin contribution 的关系见 [package-topology.json](../contracts/opl-framework/package-topology.json)。
-
 结构与 owner 分工见[架构](../docs/architecture.md)；新增文件、调整 import 或切换 caller 的操作和验证见[源码模块边界](../docs/references/source-module-boundary.md)。
 Package 拆分与发布条件见[项目定位](../docs/project.md)，本文不记录分支、发布或安装状态。

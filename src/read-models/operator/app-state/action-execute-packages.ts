@@ -18,7 +18,7 @@ import {
   packageContributionExecutePayload,
 } from './action-execute-payloads.ts';
 import type { AppActionExecuteOptions } from './action-execute-parser.ts';
-import type { AppActionExecuteServices } from './action-execute-types.ts';
+import type { AppActionExecuteServices } from './action-execute-direct.ts';
 import {
   OPL_PACK_PROVISION_SUBMISSION_RESOURCE_ACTION_ID,
   provisionSubmissionResource,

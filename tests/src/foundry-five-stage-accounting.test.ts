@@ -14,7 +14,7 @@ import { canonicalJsonBytes } from '../../src/kernel/canonical-json.ts';
 import { ContentAddressedCandidateCompiler } from '../../src/authority/evidence/index.ts';
 import { foundryContentDigest, type AgentBlueprint, type FoundryProviderManifest } from '../../src/authority/evolution/index.ts';
 import { FoundryKernel, FoundryTransientActivityError } from '../../src/authority/evolution/kernel.ts';
-import { InMemoryFoundryEventStore, InMemoryFoundryObjectStore, InMemoryOwnerGate, InMemoryVersionRegistry } from '../../src/authority/evolution/in-memory-adapters.ts';
+import { InMemoryFoundryEventStore, InMemoryFoundryObjectStore, InMemoryOwnerGate, InMemoryVersionRegistry } from '../support/foundry-in-memory-adapters.ts';
 import { createCordisBaseHeadlessComposition } from '../../src/host/composition-profiles.ts';
 import { runFamilyRuntime } from '../../src/adapters/execution/family-runtime.ts';
 import { runAgentStageRunner } from '../../src/adapters/execution/family-runtime-codex-stage-runner.ts';

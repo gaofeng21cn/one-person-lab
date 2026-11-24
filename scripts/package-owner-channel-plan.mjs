@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import semver from 'semver';
 
 import { parseRequiredValueOptions } from './required-value-options.mjs';
 import { readJsonFile } from './script-json-boundary.mjs';
@@ -31,17 +32,6 @@ function parseOptions(argv) {
     throw new Error('Usage: package-owner-channel-plan.mjs --candidate-summary <path> --current-state <path> [--output <path>]');
   }
   return options;
-}
-
-function compareSemver(left, right) {
-  const leftParts = left.split('.').map(Number);
-  const rightParts = right.split('.').map(Number);
-  for (let index = 0; index < leftParts.length; index += 1) {
-    if (leftParts[index] !== rightParts[index]) {
-      return leftParts[index] - rightParts[index];
-    }
-  }
-  return 0;
 }
 
 function validateFingerprint(packageId, fingerprint, label) {
@@ -110,7 +100,7 @@ export function buildPlan(candidateSummary, currentState) {
       });
       continue;
     }
-    if (compareSemver(candidate.package_version, published.package_version) < 0) {
+    if (semver.compare(candidate.package_version, published.package_version) < 0) {
       violations.push({
         package_id: packageId,
         reason: 'version_regression',

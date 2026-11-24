@@ -10,7 +10,7 @@ import {
   type DomainManifestCatalog,
   type DomainManifestCatalogEntry,
 } from '../../kernel/domain-manifest-port.ts';
-import { buildPhysicalSkeletonFollowThroughGate } from './family-domain-agent-skeleton-parts/legacy-cleanup-evidence.ts';
+import { buildPhysicalSkeletonFollowThroughGate } from './family-domain-agent-skeleton-legacy-cleanup.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
   matchesStandardDomainAgentCatalogEntry,

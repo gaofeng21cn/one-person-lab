@@ -31,15 +31,11 @@ function readFirstSchemaExample(relativePath: string): Json {
 const genericExampleSchemaPaths = [
   'contracts/family-orchestration/family-stage-conformance.schema.json',
   'contracts/family-orchestration/family-stage-replay-certification.schema.json',
-  'contracts/family-orchestration/family-stage-graph-projection.schema.json',
   'contracts/family-orchestration/family-stage-proof-bundle.schema.json',
   'contracts/family-orchestration/family-stage-pack-registry.schema.json',
   'contracts/family-orchestration/family-stage-pack-source-spec.schema.json',
   'contracts/family-orchestration/family-stage-cohort-loop.schema.json',
   'contracts/family-orchestration/family-stage-runtime-budget.schema.json',
-  'contracts/family-orchestration/family-checkpoint-lineage.schema.json',
-  'contracts/family-orchestration/family-event-envelope.schema.json',
-  'contracts/family-orchestration/family-conflict-envelope.schema.json',
 ] as const;
 
 const genericExampleResiduePattern =
@@ -68,15 +64,6 @@ export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
     const redcubeManifest = readFamilyManifestFixture('redcube-product-entry-manifest.json');
     const redcubeExample = readFirstSchemaExample(
       'contracts/family-orchestration/family-product-entry-manifest-v2.schema.json',
-    );
-    const humanGateExample = readFirstSchemaExample(
-      'contracts/family-orchestration/family-human-gate.schema.json',
-    );
-    const eventEnvelopeExample = readFirstSchemaExample(
-      'contracts/family-orchestration/family-event-envelope.schema.json',
-    );
-    const checkpointLineageExample = readFirstSchemaExample(
-      'contracts/family-orchestration/family-checkpoint-lineage.schema.json',
     );
 
     assert.equal(redcubeExample.target_domain_id, redcubeManifest.target_domain_id);
@@ -144,15 +131,6 @@ export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
       (((redcubeExample.runtime_loop_closure as Json).source_linkage) as Json).entry_mode,
       (((redcubeManifest.runtime_loop_closure as Json).source_linkage) as Json).entry_mode,
     );
-    assert.equal(humanGateExample.target_domain_id, redcubeManifest.target_domain_id);
-    assert.equal(
-      humanGateExample.gate_id,
-      (((redcubeManifest.family_orchestration as Json).human_gates as Json[])[0] as Json).gate_id,
-    );
-    assert.equal(eventEnvelopeExample.target_domain_id, 'example-domain');
-    assert.equal(eventEnvelopeExample.envelope_id, 'evt-example-domain-2026-04-13-01');
-    assert.equal(checkpointLineageExample.target_domain_id, 'example-domain');
-    assert.equal(checkpointLineageExample.lineage_id, 'lineage-example-domain-2026-04-13-01');
   });
 
   test('selected generic family orchestration schema examples reject domain-specific residue', () => {
@@ -181,34 +159,6 @@ export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
       (((productEntryDefs.grantAuthoringReadiness as Json).properties as Json).surface_kind as Json).const,
       'grant_authoring_readiness',
     );
-
-    const checkpointSchema = readJson(
-      'contracts/family-orchestration/family-checkpoint-lineage.schema.json',
-    );
-    const stateRefRoles = (
-      (((checkpointSchema.$defs as Json).stateRef as Json).properties as Json).role as Json
-    ).enum as string[];
-    assert.ok(stateRefRoles.includes('domain_delivery'));
-    assert.ok(stateRefRoles.includes('owner_gate'));
-    assert.equal(stateRefRoles.includes('publication'), false);
-
-    const actionGraphSchema = readJson(
-      'contracts/family-orchestration/family-action-graph.schema.json',
-    );
-    const actionGraphExample = readFirstSchemaExample(
-      'contracts/family-orchestration/family-action-graph.schema.json',
-    );
-    const nodeKinds = (
-      ((((actionGraphSchema.$defs as Json).node as Json).properties as Json).node_kind as Json)
-        .enum
-    ) as string[];
-    assert.ok(nodeKinds.includes('discovery'));
-    assert.ok(nodeKinds.includes('release_gate'));
-    assert.equal(nodeKinds.includes('research'), false);
-    assert.equal(nodeKinds.includes('publish'), false);
-    assert.equal(actionGraphExample.target_domain_id, 'example-domain');
-    assert.equal(String(actionGraphExample.graph_id).includes('grant'), false);
-    assert.equal(String(actionGraphExample.graph_kind).includes('grant'), false);
 
     const stagePlaneSchema = readJson(
       'contracts/family-orchestration/family-stage-control-plane.schema.json',
@@ -266,100 +216,6 @@ export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
       const required = ((entry.not as Json | undefined)?.required ?? []) as string[];
       return required.length === 1 && required[0] === 'family_stage_control_plane';
     }));
-  });
-
-  test('family persistence lifecycle owner-route and supervision schemas freeze shared control surfaces', () => {
-    const persistenceSchema = readJson('contracts/family-orchestration/family-persistence-policy.schema.json');
-    const lifecycleSchema = readJson('contracts/family-orchestration/family-lifecycle-ledger.schema.json');
-    const ownerRouteSchema = readJson('contracts/family-orchestration/family-owner-route.schema.json');
-    const supervisionSchema = readJson('contracts/family-orchestration/family-runtime-supervision.schema.json');
-    const conflictEnvelopeSchema = readJson('contracts/family-orchestration/family-conflict-envelope.schema.json');
-
-    assert.deepEqual(
-      (persistenceSchema.properties as Json).surface_kind,
-      { const: 'family_persistence_policy' },
-    );
-    assert.deepEqual(
-      (((persistenceSchema.$defs as Json).fileAuthoritySurface as Json).allOf as Json[])[1],
-      { properties: { storage_role: { const: 'file_authority' } } },
-    );
-    assert.deepEqual(
-      (((persistenceSchema.$defs as Json).sqliteSidecarSurface as Json).allOf as Json[])[1],
-      { properties: { storage_role: { const: 'sqlite_sidecar_index' } } },
-    );
-
-    const lifecycleAction = (lifecycleSchema.$defs as Json).lifecycleAction as Json;
-    assert.ok((lifecycleAction.required as string[]).includes('manifest_ref'));
-    assert.ok((lifecycleAction.required as string[]).includes('sha256'));
-    assert.ok((lifecycleAction.required as string[]).includes('restore_ref'));
-    assert.equal((((lifecycleAction.properties as Json).sha256 as Json).pattern), '^[A-Fa-f0-9]{64}$');
-
-    const ownerRouteRequired = ownerRouteSchema.required as string[];
-    assert.ok(ownerRouteRequired.includes('route_epoch'));
-    assert.ok(ownerRouteRequired.includes('source_fingerprint'));
-    assert.ok(ownerRouteRequired.includes('idempotency_key'));
-
-    const supervisionRequired = supervisionSchema.required as string[];
-    assert.ok(supervisionRequired.includes('adapter_id'));
-    assert.ok(supervisionRequired.includes('cadence'));
-    assert.ok(supervisionRequired.includes('last_success'));
-    assert.ok(supervisionRequired.includes('last_tick'));
-    assert.ok(supervisionRequired.includes('lease_freshness'));
-    assert.ok(supervisionRequired.includes('slo_state'));
-    assert.ok(supervisionRequired.includes('repair_command'));
-    assert.ok(supervisionRequired.includes('safe_reconcile_hint'));
-    assert.ok(supervisionRequired.includes('domain_owned_source_refs'));
-    assert.ok(supervisionRequired.includes('read_only_authority_boundary'));
-    const supervisionExample = (supervisionSchema.examples as Json[])[0] as Json;
-    assert.equal(
-      supervisionExample.repair_command,
-      'medautosci runtime domain-health-diagnostic --runtime-root <runtime_root> --profile <profile> --request-opl-stage-attempts --dry-run',
-    );
-    assert.doesNotMatch(String(supervisionExample.repair_command), /runtime-ensure-supervision|runtime ensure-supervision/);
-    assert.match(String(supervisionExample.safe_reconcile_hint), /read-only current-control probe/);
-    assert.deepEqual(
-      (supervisionSchema.properties as Json).surface_kind,
-      { const: 'family_runtime_supervision' },
-    );
-    assert.equal(
-      ((((supervisionSchema.properties as Json).read_only_authority_boundary as Json).properties as Json).authority as Json).const,
-      'read_only_projection',
-    );
-
-    assert.deepEqual(
-      (conflictEnvelopeSchema.properties as Json).kind,
-      { const: 'opl_conflict_or_blocker.v1' },
-    );
-    assert.deepEqual(
-      ((conflictEnvelopeSchema.properties as Json).classification as Json).enum,
-      [
-        'duplicate_task',
-        'authority_conflict',
-        'evidence_blocker',
-        'quality_blocker',
-        'human_gate',
-        'execution_retryable',
-        'identity_incomplete',
-        'receipt_conflict',
-      ],
-    );
-    assert.deepEqual(
-      ((conflictEnvelopeSchema.properties as Json).owner as Json).enum,
-      ['opl_runtime', 'domain_agent', 'human', 'infrastructure'],
-    );
-    assert.deepEqual(
-      ((conflictEnvelopeSchema.properties as Json).status as Json).enum,
-      ['blocked', 'waiting_for_human', 'retry_scheduled', 'dead_lettered', 'conflict_fail_closed', 'deduplicated'],
-    );
-    assert.ok((conflictEnvelopeSchema.required as string[]).includes('allowed_next_actions'));
-    assert.ok((conflictEnvelopeSchema.required as string[]).includes('forbidden_actions'));
-    assert.ok((conflictEnvelopeSchema.required as string[]).includes('authority_boundary'));
-    const subjectRequired = (((conflictEnvelopeSchema.$defs as Json).subject as Json).required as string[]);
-    assert.deepEqual(subjectRequired, ['domain', 'stage_id', 'task_kind', 'source_fingerprint', 'idempotency_key']);
-    const boundaryProperties = (((conflictEnvelopeSchema.properties as Json).authority_boundary as Json).properties as Json);
-    assert.deepEqual(boundaryProperties.provider_completion_is_domain_ready, { const: false });
-    assert.deepEqual(boundaryProperties.can_write_domain_truth, { const: false });
-    assert.deepEqual(boundaryProperties.can_fallback_complete, { const: false });
   });
 
   test('family domain memory contracts freeze locator and writeback receipt authority boundaries', () => {

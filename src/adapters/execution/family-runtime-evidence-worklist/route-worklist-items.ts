@@ -12,7 +12,10 @@ import {
   DIAGNOSTIC_ONLY_STATUS,
   NOT_AUTHORIZED_CLAIMS,
   OPEN_WORKLIST_STATUS,
-} from './constants.ts';
+  freshnessRef,
+  readOnlyExpectedRefs,
+  worklistOwnerId,
+} from './shared.ts';
 import {
   record,
   recordList,
@@ -20,9 +23,7 @@ import {
   stringValue,
   type JsonRecord,
 } from '../../../kernel/json-record.ts';
-import { worklistOwnerId } from './owner-normalization.ts';
 import { payloadHandoffProjection } from './operator-route-handoff.ts';
-import { freshnessRef, readOnlyExpectedRefs } from './worklist-route-refs.ts';
 
 function worklistLaneFor(input: {
   claimScope: string;

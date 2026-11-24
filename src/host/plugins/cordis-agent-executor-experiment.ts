@@ -2,15 +2,13 @@ import { Context } from '@deepseek-ai/cordis';
 import {
   buildCordisCompositionSnapshot,
   buildCordisPluginDescriptor,
-  type CordisCompositionSnapshot,
-  type CordisPluginDescriptor,
-} from '@one-person-lab/cordis-abi';
-import { CORDIS_FIBER_STATE } from '@one-person-lab/cordis-abi/framework';
-import {
+  CORDIS_FIBER_STATE,
   CORDIS_FRAMEWORK_INTEGRITY,
   CORDIS_FRAMEWORK_PACKAGE,
   CORDIS_FRAMEWORK_VERSION,
-} from '@one-person-lab/cordis-abi/framework';
+  type CordisCompositionSnapshot,
+  type CordisPluginDescriptor,
+} from '../../kernel/cordis-abi.ts';
 
 import {
   CORDIS_PACK_STAGE_BINDING_PLUGIN_API_VERSION,

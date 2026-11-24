@@ -14,7 +14,7 @@ import {
   InMemoryFoundryObjectStore,
   InMemoryOwnerGate,
   InMemoryVersionRegistry,
-} from '../../../src/authority/evolution/in-memory-adapters.ts';
+} from '../../support/foundry-in-memory-adapters.ts';
 import {
   ContentAddressedCandidateCompiler,
   FileFoundryContentStore,
@@ -621,7 +621,7 @@ function harness(
 ) {
   const events = new InMemoryFoundryEventStore();
   const versions = new InMemoryVersionRegistry();
-  const runtime = activationRuntime?.(versions);
+  const runtime = (activationRuntime ?? ((registry) => new InMemoryActivationRuntime(registry)))(versions);
   const kernel = new FoundryKernel({
     designer: new FixtureDesigner(),
     compiler: new DeterministicInMemoryCandidateCompiler(),

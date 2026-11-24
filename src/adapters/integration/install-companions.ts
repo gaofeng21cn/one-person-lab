@@ -3,6 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+import {
+  extractMarkdownFrontmatter,
+  frontmatterFieldValue,
+  parseFrontmatterKeys,
+} from '../../kernel/frontmatter.ts';
+
 export { buildOplGuiShellSurface } from './install-companions/gui-shell.ts';
 export type { OplGuiShellSurface } from './install-companions/gui-shell.ts';
 import { runGit } from './system-installation/shared.ts';
@@ -191,39 +197,6 @@ function skillPayloadSha256(skillRoot: string) {
   return digest.digest('hex');
 }
 
-function normalizeFrontmatterScalar(value: string) {
-  const trimmed = value.trim();
-  if (trimmed.length >= 2) {
-    const first = trimmed[0];
-    const last = trimmed[trimmed.length - 1];
-    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
-      return trimmed.slice(1, -1).trim();
-    }
-  }
-  return trimmed;
-}
-
-function frontmatterFieldValue(frontmatterLines: string[], key: string) {
-  const index = frontmatterLines.findIndex((line) => line.match(/^([A-Za-z0-9_-]+)\s*:/)?.[1] === key);
-  if (index < 0) return '';
-  const inline = frontmatterLines[index].slice(frontmatterLines[index].indexOf(':') + 1).trim();
-  if (!/^[>|][+-]?$/.test(inline)) return normalizeFrontmatterScalar(inline);
-
-  const blockLines: string[] = [];
-  for (const line of frontmatterLines.slice(index + 1)) {
-    if (line.trim() === '') {
-      blockLines.push('');
-      continue;
-    }
-    if (!/^\s/.test(line)) break;
-    blockLines.push(line.replace(/^\s+/, ''));
-  }
-  const value = inline.startsWith('>')
-    ? blockLines.join(' ').replace(/\s+/g, ' ')
-    : blockLines.join('\n');
-  return value.trim();
-}
-
 function normalizedSkillIdentity(value: string) {
   return value.trim().toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -248,13 +221,10 @@ function validateSkillFrontmatter(
   expectedName: string,
   options: { allowUpstreamIdentity?: boolean; upstreamSlug?: string | null } = {},
 ) {
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
-  if (!match) return ['missing_or_invalid_frontmatter'];
-  const lines = match[1].split(/\r?\n/);
-  const keys = lines.flatMap((line) => {
-    const key = line.match(/^([A-Za-z0-9_-]+)\s*:/)?.[1];
-    return key ? [key] : [];
-  });
+  const parsed = extractMarkdownFrontmatter(content);
+  if (!parsed) return ['missing_or_invalid_frontmatter'];
+  const lines = parsed.lines;
+  const keys = parseFrontmatterKeys(lines);
   const errors: string[] = [];
   const unexpected = [...new Set(keys.filter((key) => !SKILL_FRONTMATTER_FIELDS.has(key)))].sort();
   if (unexpected.length > 0) errors.push(`unexpected_frontmatter_fields:${unexpected.join(',')}`);

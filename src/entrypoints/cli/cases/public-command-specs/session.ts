@@ -1,4 +1,4 @@
-import { runProductEntryResume } from '../../../../read-models/operator/product-entry-runtime.ts';
+import { runProductEntryResume } from '../../../../read-models/operator/product-entry.ts';
 import { parseResumeArgs, cloneCommandSpec } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 

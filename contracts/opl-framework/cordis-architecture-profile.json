@@ -130,7 +130,7 @@
         "authority_id": "foundry_versions_and_activation",
         "owner": "OPL Foundry Kernel",
         "owner_surface_refs": [
-          "src/authority/evolution/control.ts"
+          "src/authority/evolution/kernel.ts"
         ],
         "cordis_role": "Expose provider and evaluation adapters; never create versions, promote, activate, or rollback.",
         "cordis_can_write": false
@@ -589,7 +589,6 @@
         }
       ],
       "authority_continues_refs": [
-        "src/authority/evolution/control.ts",
         "contracts/opl-framework/foundry-agent-series-contract.json"
       ]
     },

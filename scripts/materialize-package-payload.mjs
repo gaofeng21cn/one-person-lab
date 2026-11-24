@@ -6,7 +6,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
-import { Ajv2020 } from 'ajv/dist/2020.js';
+import { createAjv2020 } from '../src/kernel/schema-registry.ts';
 
 import { parseJsonText } from './script-json-boundary.mjs';
 import { packageContentDigest } from '../src/kernel/package-content-lock.ts';
@@ -113,7 +113,7 @@ function parseJson(bytes, label) {
 function schemaValidator() {
   const schemaPath = path.join(FRAMEWORK_ROOT, PAYLOAD_SCHEMA_REF);
   const schema = parseJson(readPhysicalRegularFile(schemaPath, 'payload schema'), 'Payload schema');
-  return new Ajv2020({ allErrors: true, strict: false }).compile(schema);
+  return createAjv2020().compile(schema);
 }
 
 function assertSchema(validate, payload, label) {

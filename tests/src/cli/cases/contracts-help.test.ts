@@ -13,10 +13,10 @@ import {
   parseJsonText,
   path,
   repoRoot,
-  runCli,
-  runCliFailure,
-  runCliFailureInCwd,
-  runCliInCwd,
+  runCliInProcess,
+  runCliInProcessFailure,
+  runCliInProcessFailureInCwd,
+  runCliInProcessInCwd,
   runCliViaEntryPathInCwd,
   selectDomainAgentEntry,
   test,
@@ -25,7 +25,7 @@ import { writeCapabilityCatalog } from './packages-cases/capability-fixtures.ts'
 // Direct resolver calls need the same Package readiness adapter as the CLI Host.
 import '../../../../src/adapters/integration/index.ts';
 
-test('contract validate honors explicit contract-root provenance', () => {
+test('contract validate honors explicit contract-root provenance', async () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
 
   try {
@@ -41,7 +41,7 @@ test('contract validate honors explicit contract-root provenance', () => {
         source: 'cli_flag',
       },
     ]) {
-      const output = runCli(args, env);
+      const output = await runCliInProcess(args, env);
       assert.equal(output.validation.contracts_dir, fixtureContractsRoot);
       assert.equal(output.validation.contracts_root_source, source);
     }
@@ -50,11 +50,11 @@ test('contract validate honors explicit contract-root provenance', () => {
   }
 });
 
-test('contract validate falls back to the active CLI repo contracts when cwd has no contract root', () => {
+test('contract validate falls back to the active CLI repo contracts when cwd has no contract root', async () => {
   const unrelatedCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cli-entry-cwd-'));
 
   try {
-    const output = runCliInCwd(['contract', 'validate'], unrelatedCwd);
+    const output = await runCliInProcessInCwd(['contract', 'validate'], unrelatedCwd);
 
     assert.equal(output.validation.contracts_dir, contractsDir);
     assert.equal(output.validation.contracts_root_source, 'cli_entry');
@@ -63,7 +63,7 @@ test('contract validate falls back to the active CLI repo contracts when cwd has
   }
 });
 
-test('contract validate ignores domain package OPL contracts when they are not framework registries', () => {
+test('contract validate ignores domain package OPL contracts when they are not framework registries', async () => {
   const domainCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-package-cwd-'));
   const domainContractsDir = path.join(domainCwd, 'contracts', 'opl-framework');
 
@@ -77,7 +77,7 @@ test('contract validate ignores domain package OPL contracts when they are not f
       }, null, 2),
     );
 
-    const output = runCliInCwd(['contract', 'validate'], domainCwd);
+    const output = await runCliInProcessInCwd(['contract', 'validate'], domainCwd);
 
     assert.equal(output.validation.contracts_dir, contractsDir);
     assert.equal(output.validation.contracts_root_source, 'cli_entry');
@@ -103,13 +103,13 @@ test('contract validate resolves repo contracts through a symlinked CLI entry pa
   }
 });
 
-test('contract validate surfaces stable missing-file errors with cwd provenance', () => {
+test('contract validate surfaces stable missing-file errors with cwd provenance', async () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     fs.rmSync(path.join(contractsRoot, 'task-topology.json'));
   });
 
   try {
-    const { status, payload } = runCliFailureInCwd(['contract', 'validate'], fixtureRoot);
+    const { status, payload } = await runCliInProcessFailureInCwd(['contract', 'validate'], fixtureRoot);
 
     assert.equal(payload.version, 'g2');
     assert.equal(payload.error.code, 'contract_file_missing');
@@ -123,13 +123,13 @@ test('contract validate surfaces stable missing-file errors with cwd provenance'
   }
 });
 
-test('contract validate surfaces stable invalid-json errors', () => {
+test('contract validate surfaces stable invalid-json errors', async () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     fs.writeFileSync(path.join(contractsRoot, 'domains.json'), '{ invalid json\n');
   });
 
   try {
-    const { status, payload } = runCliFailure(['contract', 'validate'], {
+    const { status, payload } = await runCliInProcessFailure(['contract', 'validate'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
@@ -145,7 +145,7 @@ test('contract validate surfaces stable invalid-json errors', () => {
   }
 });
 
-test('contract validate surfaces stable shape-invalid errors with cli-flag provenance', () => {
+test('contract validate surfaces stable shape-invalid errors with cli-flag provenance', async () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
     const workstreams = parseJsonText(fs.readFileSync(workstreamsPath, 'utf8')) as {
@@ -156,7 +156,7 @@ test('contract validate surfaces stable shape-invalid errors with cli-flag prove
   });
 
   try {
-    const { status, payload } = runCliFailure([
+    const { status, payload } = await runCliInProcessFailure([
       '--contracts-dir',
       fixtureContractsRoot,
       'contract',
@@ -175,8 +175,8 @@ test('contract validate surfaces stable shape-invalid errors with cli-flag prove
   }
 });
 
-test('missing value for global --contracts-dir returns a usage error with exit code 2', () => {
-  const { status, payload } = runCliFailure(['--contracts-dir']);
+test('missing value for global --contracts-dir returns a usage error with exit code 2', async () => {
+  const { status, payload } = await runCliInProcessFailure(['--contracts-dir']);
 
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'cli_usage_error');
@@ -185,8 +185,8 @@ test('missing value for global --contracts-dir returns a usage error with exit c
   assert.match(payload.error.message, /contracts-dir/i);
 });
 
-test('global --contracts-dir expects an exact contract root', () => {
-  const { status, payload } = runCliFailure([
+test('global --contracts-dir expects an exact contract root', async () => {
+  const { status, payload } = await runCliInProcessFailure([
     '--contracts-dir',
     repoRoot,
     'contract',
@@ -199,14 +199,14 @@ test('global --contracts-dir expects an exact contract root', () => {
   assert.equal(status, 3);
 });
 
-test('contract list and detail commands expose sparse canonical readbacks', () => {
+test('contract list and detail commands expose sparse canonical readbacks', async () => {
   const outputs = {
-    workstreams: runCli(['contract', 'workstreams']),
-    workstream: runCli(['contract', 'workstream', 'presentation_ops']),
-    domains: runCli(['contract', 'domains']),
-    domain: runCli(['contract', 'domain', 'redcube']),
-    surfaces: runCli(['contract', 'surfaces']),
-    surface: runCli(['contract', 'surface', 'one_person_lab_app_workbench']),
+    workstreams: await runCliInProcess(['contract', 'workstreams']),
+    workstream: await runCliInProcess(['contract', 'workstream', 'presentation_ops']),
+    domains: await runCliInProcess(['contract', 'domains']),
+    domain: await runCliInProcess(['contract', 'domain', 'redcube']),
+    surfaces: await runCliInProcess(['contract', 'surfaces']),
+    surface: await runCliInProcess(['contract', 'surface', 'one_person_lab_app_workbench']),
   };
 
   for (const output of Object.values(outputs)) {
@@ -243,7 +243,7 @@ test('contract list and detail commands expose sparse canonical readbacks', () =
   assert.equal(outputs.surface.surface.truth_mode, 'projection_consumer');
 });
 
-test('domain selection routes representative admitted boundary and candidate-lane requests', () => {
+test('domain selection routes representative admitted boundary and candidate-lane requests', async () => {
   const contracts = loadFrameworkContracts(repoRoot);
   assert.deepEqual(
     [
@@ -289,7 +289,7 @@ test('domain selection routes representative admitted boundary and candidate-lan
       entry.goal,
     ];
     if (entry.preferred) args.push('--preferred-family', entry.preferred);
-    const output = runCli(args);
+    const output = await runCliInProcess(args);
     const workstream = output.resolution.workstream_id === null
       ? null
       : output.resolution.workstream_id ?? output.resolution.candidate_workstream_id;
@@ -301,7 +301,7 @@ test('domain selection routes representative admitted boundary and candidate-lan
   }
 });
 
-test('domain selection uses installed owner descriptor routing signals for natural-language goals', () => {
+test('domain selection uses installed owner descriptor routing signals for natural-language goals', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-atlas-package-lock-'));
   const domainRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-atlas-domain-'));
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-atlas-package-home-'));
@@ -426,7 +426,7 @@ test('domain selection uses installed owner descriptor routing signals for natur
       'enabled = true',
       '',
     ].join('\n'));
-    const status = runCli(['packages', 'status', '--package-id', 'rca'], packageEnv)
+    const status = (await runCliInProcess(['packages', 'status', '--package-id', 'rca'], packageEnv))
       .opl_agent_package_status;
     assert.equal(status.configured_carrier.status, 'installed');
     assert.equal(status.installed_readiness.callability, 'callable');
@@ -459,8 +459,8 @@ test('domain selection uses installed owner descriptor routing signals for natur
   }
 });
 
-test('selectDomainAgentEntry refuses to infer domain semantics from unstructured goal text', () => {
-  const output = runCli([
+test('selectDomainAgentEntry refuses to infer domain semantics from unstructured goal text', async () => {
+  const output = await runCliInProcess([
     'domain',
     'select-entry',
     '--intent',
@@ -502,8 +502,8 @@ test('explainDomainBoundary explains admitted presentation stage selection', () 
   assert.match(explanation.reason, /admitted workstream selected/i);
 });
 
-test('domain explain-boundary explains xiaohongshu non-equivalence', () => {
-  const output = runCli([
+test('domain explain-boundary explains xiaohongshu non-equivalence', async () => {
+  const output = await runCliInProcess([
     'domain',
     'explain-boundary',
     '--intent',
@@ -522,8 +522,8 @@ test('domain explain-boundary explains xiaohongshu non-equivalence', () => {
   assert.match(output.boundary_explanation.reason, /cannot infer one active workstream/i);
 });
 
-test('domain explain-boundary explains under-definition requests', () => {
-  const output = runCli([
+test('domain explain-boundary explains under-definition requests', async () => {
+  const output = await runCliInProcess([
     'domain',
     'explain-boundary',
     '--intent',
@@ -540,8 +540,8 @@ test('domain explain-boundary explains under-definition requests', () => {
   assert.match(output.boundary_explanation.reason, /no active admitted domain owner/i);
 });
 
-test('help returns machine-readable command discovery without retired entries', () => {
-  const output = runCli(['help']);
+test('help returns machine-readable command discovery without retired entries', async () => {
+  const output = await runCliInProcess(['help']);
 
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
@@ -571,25 +571,25 @@ test('help returns machine-readable command discovery without retired entries', 
   assert.doesNotMatch(commandText, /Compatibility alias/);
 });
 
-test('command help forms return stable machine-readable usage', () => {
-  assert.deepEqual(runCli(['--help']), runCli(['help']));
-  const output = runCli(['contract', 'domain', '--help']);
+test('command help forms return stable machine-readable usage', async () => {
+  assert.deepEqual(await runCliInProcess(['--help']), await runCliInProcess(['help']));
+  const output = await runCliInProcess(['contract', 'domain', '--help']);
 
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, 'contract domain');
   assert.equal(output.help.usage, 'opl contract domain <domain_id>');
-  assert.deepEqual(runCli(['help', 'contract', 'domain']), output);
-  assert.equal(runCli(['domain', 'explain-boundary', '--help']).help.command, 'domain explain-boundary');
+  assert.deepEqual(await runCliInProcess(['help', 'contract', 'domain']), output);
+  assert.equal((await runCliInProcess(['domain', 'explain-boundary', '--help'])).help.command, 'domain explain-boundary');
 });
 
-test('family-runtime nested --help returns command help without executing runtime subcommands', () => {
+test('family-runtime nested --help returns command help without executing runtime subcommands', async () => {
   for (const args of [
     ['family-runtime', 'provider-slo', 'tick', '--help'],
     ['family-runtime', 'scheduler', 'tick', '--help'],
     ['family-runtime', 'attempt', 'query', '--help'],
   ]) {
-    const output = runCli(args);
+    const output = await runCliInProcess(args);
 
     assertNoContractsProvenance(output);
     assert.equal(output.version, 'g2');
@@ -604,8 +604,8 @@ test('family-runtime nested --help returns command help without executing runtim
   }
 });
 
-test('command help literal returns a usage error instead of command-scoped help', () => {
-  const { status, payload } = runCliFailure(['contract', 'domain', 'help']);
+test('command help literal returns a usage error instead of command-scoped help', async () => {
+  const { status, payload } = await runCliInProcessFailure(['contract', 'domain', 'help']);
 
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'cli_usage_error');
@@ -614,8 +614,8 @@ test('command help literal returns a usage error instead of command-scoped help'
   assert.equal(payload.error.details.help_usage, 'opl contract domain --help');
 });
 
-test('CLI usage errors expose machine-readable usage guidance', () => {
-  const { status, payload } = runCliFailure(['contract', 'domain']);
+test('CLI usage errors expose machine-readable usage guidance', async () => {
+  const { status, payload } = await runCliInProcessFailure(['contract', 'domain']);
 
   assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
@@ -627,7 +627,7 @@ test('CLI usage errors expose machine-readable usage guidance', () => {
   assert.ok(payload.error.details.examples.includes('opl contract domain redcube'));
 });
 
-test('CLI returns stable JSON errors for unknown contract ids', () => {
+test('CLI returns stable JSON errors for unknown contract ids', async () => {
   for (const { args, code, details } of [
     {
       args: ['contract', 'domain', 'unknown'],
@@ -640,7 +640,7 @@ test('CLI returns stable JSON errors for unknown contract ids', () => {
       details: { surface_id: 'unknown_surface' },
     },
   ]) {
-    const { status, payload } = runCliFailure(args);
+    const { status, payload } = await runCliInProcessFailure(args);
     assert.equal(payload.version, 'g2');
     assert.equal(payload.error.code, code);
     assert.equal(payload.error.exit_code, 4);
@@ -649,8 +649,8 @@ test('CLI returns stable JSON errors for unknown contract ids', () => {
   }
 });
 
-test('CLI returns bounded machine-readable JSON errors for unknown commands', () => {
-  const { status, payload } = runCliFailure(['unknown-command']);
+test('CLI returns bounded machine-readable JSON errors for unknown commands', async () => {
+  const { status, payload } = await runCliInProcessFailure(['unknown-command']);
 
   assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');

@@ -3,8 +3,14 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { extract as extractTar } from 'tar';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import {
+  extractMarkdownFrontmatter,
+  firstFrontmatterValue,
+  normalizeFrontmatterScalar,
+} from '../../kernel/frontmatter.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../../authority/workspace/index.ts';
 import { parseJsonText, readJsonFileOrNull } from '../../kernel/json-file.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
@@ -240,7 +246,13 @@ function materializeTarballToCache(tarballUrl: string, cacheRoot: string, detail
   fs.mkdirSync(tempRoot, { recursive: true });
   fs.mkdirSync(path.dirname(cacheRoot), { recursive: true });
   runChecked('curl', ['-fsSL', tarballUrl, '-o', archivePath], details);
-  runChecked('tar', ['-xzf', archivePath, '-C', tempRoot, '--strip-components', '1'], details);
+  extractTar({
+    file: archivePath,
+    cwd: tempRoot,
+    strip: 1,
+    sync: true,
+    filter: (entryPath) => !path.posix.basename(entryPath).startsWith('._'),
+  });
   fs.rmSync(archivePath, { force: true });
   if (!hasSkillRoot(tempRoot)) {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -411,19 +423,8 @@ function detectSourceLicense(sourceRoot: string) {
   return path.basename(licenseFile);
 }
 
-function firstYamlString(frontmatter: string, key: string) {
-  const match = frontmatter.match(new RegExp(`^${key}:\\s*(.*)$`, 'm'));
-  if (!match) return '';
-  return match[1].trim().replace(/^["']|["']$/g, '');
-}
-
-function extractFrontmatter(markdown: string) {
-  const match = markdown.match(/^---\n([\s\S]*?)\n---/);
-  return match?.[1] ?? '';
-}
-
 function extractStringList(frontmatter: string, key: string) {
-  const lineValue = firstYamlString(frontmatter, key);
+  const lineValue = firstFrontmatterValue(frontmatter, key);
   if (!lineValue) return [];
   if (lineValue.startsWith('[')) {
     try {
@@ -442,12 +443,12 @@ function parseYamlListBlock(frontmatter: string, key: string) {
   const match = frontmatter.match(new RegExp(`^${key}:\\s*\\n((?:\\s+-\\s+.*\\n?)+)`, 'm'));
   if (!match) return [];
   return match[1].split('\n')
-    .map((line) => line.trim().replace(/^-\s+/, '').trim().replace(/^["']|["']$/g, ''))
+    .map((line) => normalizeFrontmatterScalar(line.trim().replace(/^-\s+/, '')))
     .filter(Boolean);
 }
 
 function extractRequiredEnvironmentVariables(frontmatter: string) {
-  const lineValue = firstYamlString(frontmatter, 'required_environment_variables');
+  const lineValue = firstFrontmatterValue(frontmatter, 'required_environment_variables');
   if (!lineValue.startsWith('[')) return [];
   try {
     const parsed = parseJsonText(lineValue) as Array<{ name?: unknown }>;
@@ -554,12 +555,12 @@ function readSkillCard(sourceRoot: string, skillId: string): SkillCard | null {
   const skillPath = path.join(skillRoot, 'SKILL.md');
   if (!fs.existsSync(skillPath)) return null;
   const markdown = readTextIfPresent(skillPath);
-  const frontmatter = extractFrontmatter(markdown);
-  const name = firstYamlString(frontmatter, 'name') || safeSkillId;
+  const frontmatter = extractMarkdownFrontmatter(markdown)?.frontmatter ?? '';
+  const name = firstFrontmatterValue(frontmatter, 'name') || safeSkillId;
   const baseCard = {
     skill_id: safeSkillId,
     name,
-    description: firstYamlString(frontmatter, 'description'),
+    description: firstFrontmatterValue(frontmatter, 'description'),
     source_path: skillRoot,
     source_license: detectSourceLicense(sourceRoot),
     content_sha256: digestDirectory(skillRoot),

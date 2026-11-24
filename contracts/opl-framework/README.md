@@ -16,7 +16,7 @@ Choose the topic first, then follow the contract's schema, source, and consumer 
 | --- | --- |
 | Which public surface owns an interface? | [Public surface index](./public-surface-index.json), [CLI command registry](./cli-command-registry.json) |
 | How do family capabilities relate to authority owners? | [Capability-domain registry](./family-capability-domain-registry.json), [target operating architecture](./target-operating-architecture-contract.json) |
-| Where do Framework and Application Host responsibilities meet? | [Cordis architecture profile](./cordis-architecture-profile.json), [source module map](./source-module-map.json), [Package topology](./package-topology.json) |
+| Where do Framework and Application Host responsibilities meet? | [Cordis architecture profile](./cordis-architecture-profile.json), [source module map](./source-module-map.json) |
 | How are installed Packages discovered and hosted? | [Package host contract](./capability-package-host-contract.json), [standard Agent admission](./standard-agent-admission-gates.json), [hosted action runtime](./standard-agent-hosted-action-runtime-contract.json) |
 | How does a domain pack produce callable interfaces? | [Domain pack compiler](./domain-pack-compiler-contract.json), [standard Agent interface](./standard-agent-interface.schema.json), [implementation profile](./standard-agent-implementation-profile.schema.json) |
 | How are Workspace and Work Item identities bound? | [Agent workspace norm](./agent-workspace-norm-contract.json), [workspace index](./workspace-index.schema.json), [execution scope snapshot](./execution-scope-snapshot.schema.json) |
@@ -27,10 +27,10 @@ Choose the topic first, then follow the contract's schema, source, and consumer 
 | How are Temporal namespaces, Search Attribute budgets, and migrations governed? | [Temporal resource governance](./temporal-resource-governance.json), [Temporal-first runtime](./family-runtime-temporal-first-contract.json) |
 | What does the App consume? | [App operator projection](./family-product-operator-projection.json), [bounded Work Item projection](./app-runtime-fast-work-item-projection-contract.json), [current owner delta](./current-owner-delta.schema.json) |
 | How are evidence and advisory context exchanged? | [Evidence ledger event](./evidence-ledger-event.schema.json), [observability conventions](./observability-semantic-conventions-contract.json), [advisory knowledge boundary](./advisory-knowledge-boundary-contract.json), [durable knowledge lifecycle](./durable-knowledge-lifecycle-contract.json), [knowledge item](./durable-knowledge-item.schema.json), [recall receipt](./durable-knowledge-recall-receipt.schema.json), [OKF context bundle](./okf-context-bundle-contract.json) |
-| Where are Foundry construction and evolution interfaces? | [Foundry Agent series](./foundry-agent-series-contract.json), [scaffold materialization](./agent-scaffold-materialization-contract.json), [evolution proposal](./foundry-evolution-proposal.schema.json) |
+| Where are Foundry construction and evolution interfaces? | [Foundry Agent series](./foundry-agent-series-contract.json), [evolution proposal](./foundry-evolution-proposal.schema.json) |
 | Where are reusable helper and source-material interfaces? | [Native helper execution](./pack-native-helper-execution-contract.json), [source material ingest](./source-material-ingest-contract.json), [submission resource request](./submission-resource-provision-request.schema.json) |
 | How are generated bundles and release consumers bound? | [Pack bundle](./pack-bundle-contract.json), [release operation event](./release-bundle-operation-event.schema.json), [release consumer envelope](./release-bundle-consumer-envelope.schema.json) |
-| Where do public whitepaper builds get their inputs? | [Whitepaper registry](./public-whitepaper-registry.json), [Profile schema](./public-whitepaper-profile.schema.json) |
+| Where do public whitepaper builds get their inputs? | [Whitepaper registry](./public-whitepaper-registry.json) |
 | How are managed dependency versions selected? | [Dependency release sources](./dependency-release-sources.json) |
 
 ## Consumer Reading

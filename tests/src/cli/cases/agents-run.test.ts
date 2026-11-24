@@ -1,5 +1,5 @@
 import { assert, fs, os, path, test } from '../helpers.ts';
-import { parseAgentsRunArgs } from '../../../../src/entrypoints/cli/cases/private-command-specs/agents-run.ts';
+import { parseAgentsRunArgs } from '../../../../src/entrypoints/cli/cases/private-command-specs/agents.ts';
 
 const spec = {
   usage: 'opl agents run --domain <agent> --action <action_id> --workspace <absolute_path>',

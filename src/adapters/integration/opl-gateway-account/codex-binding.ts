@@ -9,8 +9,8 @@ import {
   readBundledCodexDefaultProfile,
   readLocalCodexAccessState,
   readLocalCodexDefaultsIfAvailable,
+  writeCodexConfigAtomically,
 } from '../../../kernel/local-codex-defaults.ts';
-import { writeCodexConfigAtomically } from '../../../kernel/local-codex-defaults-parts/management-receipt.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import type { GatewayCodexBinding } from './types.ts';
 

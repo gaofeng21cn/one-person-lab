@@ -59,7 +59,7 @@
       "unit_id": "framework.authority.packages", "layer_id": "authority", "responsibility_kind": "packages",
       "physical_root": "src/authority/packages", "public_entrypoints": ["src/authority/packages/index.ts"],
       "source_globs": ["src/authority/packages/**/*.ts"], "capability_domain_ids": ["package-platform"],
-      "package_ids": ["opl-framework", "@one-person-lab/package-host"]
+      "package_ids": ["opl-framework"]
     },
     {
       "unit_id": "framework.authority.stages", "layer_id": "authority", "responsibility_kind": "stages",
@@ -104,7 +104,7 @@
       "unit_id": "framework.host", "layer_id": "host", "responsibility_kind": "composition",
       "physical_root": "src/host", "public_entrypoints": ["src/host/composition-profiles.ts", "src/host/plugins/*.ts"],
       "source_globs": ["src/host/**/*.ts"], "capability_domain_ids": [],
-      "package_ids": ["opl-framework", "@one-person-lab/cordis-abi"]
+      "package_ids": ["opl-framework"]
     },
     {
       "unit_id": "framework.entrypoints", "layer_id": "entrypoints", "responsibility_kind": "entrypoints",
@@ -115,7 +115,7 @@
       "unit_id": "framework.kernel", "layer_id": "kernel", "responsibility_kind": "kernel",
       "physical_root": "src/kernel", "public_entrypoints": ["src/kernel/*.ts"],
       "source_globs": ["src/kernel/**/*.ts"], "capability_domain_ids": [],
-      "package_ids": ["opl-framework", "@one-person-lab/cordis-abi"]
+      "package_ids": ["opl-framework"]
     }
   ]
 }

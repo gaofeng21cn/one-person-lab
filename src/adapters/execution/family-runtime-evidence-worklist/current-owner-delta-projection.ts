@@ -3,7 +3,7 @@ import {
   buildDefaultNextActionFromCurrentOwnerDelta,
 } from '../../../authority/evidence/index.ts';
 import { countValue, record, type JsonRecord } from '../../../kernel/json-record.ts';
-import { worklistOwnerId } from './owner-normalization.ts';
+import { worklistOwnerId } from './shared.ts';
 
 function normalizeWorklistDefaultNextActionOwner(action: JsonRecord): JsonRecord {
   return {

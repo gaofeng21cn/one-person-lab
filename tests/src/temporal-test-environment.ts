@@ -41,3 +41,15 @@ export async function createTemporalTestWorkflowEnvironment() {
   }
   return await startWithRetry(() => TestWorkflowEnvironment.createTimeSkipping());
 }
+
+export function createSharedTemporalTestWorkflowEnvironment() {
+  let pending: Promise<TestWorkflowEnvironment> | null = null;
+  return {
+    get: () => (pending ??= createTemporalTestWorkflowEnvironment()),
+    teardown: async () => {
+      const env = pending ? await pending.catch(() => null) : null;
+      pending = null;
+      await env?.teardown();
+    },
+  };
+}

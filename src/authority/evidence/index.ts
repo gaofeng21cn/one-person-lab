@@ -2,6 +2,17 @@ export { buildWorkItemControlResolver, setWorkItemControlState, setWorkItemVisib
 export type { WorkItemUserLifecycleState, WorkItemVisibilityState } from './work-item-control-ledger.ts';
 
 // Public cross-module surface generated from existing module consumers.
+export {
+  buildStandardAgentActionRunLedgerEntry,
+  buildStandardAgentActionRunLedgerEvent,
+} from './standard-agent-action-run-ledger.ts';
+export type {
+  StandardAgentActionRunBytesRef,
+  StandardAgentActionRunLedgerEntry,
+  StandardAgentActionRunLedgerEvent,
+  StandardAgentActionRunLedgerInput,
+  StandardAgentActionRunStatus,
+} from './standard-agent-action-run-ledger.ts';
 export { buildEvidenceGroundedLedgerSubstrate } from './evidence-grounded-substrate.ts';
 export { doctorArtifactProvenanceBundle, exportArtifactProvenanceBundle, inspectArtifactProvenanceBundle, recordArtifactProvenanceBundle, validateArtifactProvenanceBundle } from './artifact-provenance-bundle.ts';
 export { buildCurrentOwnerDeltaReadModel, buildDefaultNextActionFromCurrentOwnerDelta } from './current-owner-delta-projection.ts';

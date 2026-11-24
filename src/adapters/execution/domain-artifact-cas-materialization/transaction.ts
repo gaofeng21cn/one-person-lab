@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { canonicalJsonBytes } from '../../../kernel/canonical-json.ts';
+import { isProcessAlive, reclaimLockFileAtomically } from '../../../kernel/file-lock.ts';
 import { formatJsonPayload } from '../../../kernel/json-file.ts';
 import {
   assertAbsentPreconditions,
@@ -17,7 +18,6 @@ import {
   fsyncDirectory,
   lstatOrNull,
   operationIdentity,
-  processAlive,
   preparedAbsentPreconditions,
   readJsonRecord,
   replacementBytes,
@@ -110,23 +110,18 @@ export function acquireLock(lockPath: string, requestSha256: string) {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     }
-    const current = readJsonRecord(lockPath, 'CAS cooperative lock').value;
-    if (processAlive(current.pid)) fail('Another domain artifact CAS transaction is active.', { lock_path: lockPath });
-    if (current.request_sha256 !== requestSha256) {
-      fail('A stale CAS transaction for another request must be recovered by replaying that exact request.', {
-        lock_path: lockPath,
-        stale_request_sha256: current.request_sha256 ?? null,
-        request_sha256: requestSha256,
-      });
-    }
-    const stale = `${lockPath}.stale-${process.pid}-${crypto.randomUUID()}`;
-    try {
-      fs.renameSync(lockPath, stale);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
-      throw error;
-    }
-    fs.rmSync(stale, { force: true });
+    reclaimLockFileAtomically(lockPath, (guardPath) => {
+      const current = readJsonRecord(guardPath, 'CAS cooperative lock').value;
+      if (isProcessAlive(current.pid)) fail('Another domain artifact CAS transaction is active.', { lock_path: lockPath });
+      if (current.request_sha256 !== requestSha256) {
+        fail('A stale CAS transaction for another request must be recovered by replaying that exact request.', {
+          lock_path: lockPath,
+          stale_request_sha256: current.request_sha256 ?? null,
+          request_sha256: requestSha256,
+        });
+      }
+      return true;
+    });
   }
 }
 

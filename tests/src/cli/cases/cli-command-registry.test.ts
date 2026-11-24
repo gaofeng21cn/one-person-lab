@@ -1,4 +1,4 @@
-import { assert, fs, os, parseJsonText, path, repoRoot, runCli, runCliFailure, runCliReadOnly, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, repoRoot, runCliInProcess, runCliInProcessFailure, runCliReadOnly, test } from '../helpers.ts';
 import { FrameworkContractError } from '../../../../src/authority/contracts/contracts.ts';
 import type { CommandSpec } from '../../../../src/entrypoints/cli/modules/support.ts';
 import {
@@ -297,7 +297,7 @@ test('migrated registry entries own their authority metadata', () => {
   }
 });
 
-test('status command options are parsed through the registry adapter', () => {
+test('status command options are parsed through the registry adapter', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-status-registry-'));
 
   try {
@@ -316,11 +316,11 @@ test('status command options are parsed through the registry adapter', () => {
     fs.writeFileSync(path.join(stateRoot, 'session-ledger.json'), `${JSON.stringify({ version: 'g2', entries }, null, 2)}\n`);
     const env = { OPL_STATE_DIR: stateRoot };
 
-    assert.equal(runCli(['status', 'workspace', '--path', repoRoot], env).workspace.requested_path, repoRoot);
-    assert.equal(runCli(['status', 'runtime', '--limit', '1'], env).runtime_status.managed_session_ledger.entries.length, 1);
-    assert.equal(runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env).dashboard.workspace.requested_path, repoRoot);
+    assert.equal((await runCliInProcess(['status', 'workspace', '--path', repoRoot], env)).workspace.requested_path, repoRoot);
+    assert.equal((await runCliInProcess(['status', 'runtime', '--limit', '1'], env)).runtime_status.managed_session_ledger.entries.length, 1);
+    assert.equal((await runCliInProcess(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env)).dashboard.workspace.requested_path, repoRoot);
 
-    const invalid = runCliFailure(['status', 'runtime', '--limit', '0'], env);
+    const invalid = await runCliInProcessFailure(['status', 'runtime', '--limit', '0'], env);
     assert.equal(invalid.payload.error.code, 'cli_usage_error');
     assert.match(invalid.payload.error.message, /must be an integer from 1 to 500/);
   } finally {
@@ -328,35 +328,35 @@ test('status command options are parsed through the registry adapter', () => {
   }
 });
 
-test('runtime manager action parses one explicit mode and rejects conflicts', () => {
+test('runtime manager action parses one explicit mode and rejects conflicts', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-registry-'));
   try {
-    const action = runCli(['runtime', 'manager', 'action', '--dry-run'], {
+    const action = (await runCliInProcess(['runtime', 'manager', 'action', '--dry-run'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
-    }).runtime_manager_action;
+    })).runtime_manager_action;
     assert.equal(action.mode, 'dry_run');
     assert.equal(action.dry_run, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 
-  const invalid = runCliFailure(['runtime', 'manager', 'action', '--dry-run', '--apply']);
+  const invalid = await runCliInProcessFailure(['runtime', 'manager', 'action', '--dry-run', '--apply']);
   assert.equal(invalid.payload.error.code, 'cli_usage_error');
   assert.match(invalid.payload.error.message, /exactly one of --dry-run or --apply/);
 });
 
-test('stage commands reject options outside their registry entry', () => {
-  const invalid = runCliFailure(['stages', 'proof-bundle', '--domain', 'mas', '--unknown', 'value']);
+test('stage commands reject options outside their registry entry', async () => {
+  const invalid = await runCliInProcessFailure(['stages', 'proof-bundle', '--domain', 'mas', '--unknown', 'value']);
   assert.equal(invalid.payload.error.code, 'cli_usage_error');
   assert.match(invalid.payload.error.message, /Unknown option/);
 });
 
-test('update commands parse registered options and reject cross-command options', () => {
+test('update commands parse registered options and reject cross-command options', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-update-registry-'));
   try {
-    const status = runCli(['update', 'status'], {
+    const status = await runCliInProcess(['update', 'status'], {
       OPL_STATE_DIR: stateRoot,
       OPL_APP_CARRIER_PLATFORM: 'linux',
       OPL_CODEX_CLI_LATEST_VERSION: '0.0.0',
@@ -367,7 +367,7 @@ test('update commands parse registered options and reject cross-command options'
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 
-  const invalid = runCliFailure(['update', 'status', '--component', 'opl_base']);
+  const invalid = await runCliInProcessFailure(['update', 'status', '--component', 'opl_base']);
   assert.equal(invalid.payload.error.code, 'cli_usage_error');
   assert.match(invalid.payload.error.message, /Unknown option/);
 });

@@ -10,6 +10,7 @@ import {
   DeterministicInMemoryCandidateCompiler,
   InMemoryFoundryEventStore,
   InMemoryFoundryObjectStore,
+  InMemoryActivationRuntime,
   InMemoryVersionRegistry,
   FunctionFoundryDesignerAdapter,
   FoundryKernel,
@@ -259,6 +260,7 @@ test('OMA self-improvement remains high risk and rolls canary regression back to
     objects,
     events,
     versions,
+    activationRuntime: new InMemoryActivationRuntime(versions),
     ownerGate,
     clock: { now: () => '2026-07-16T00:00:00.000Z' },
   });

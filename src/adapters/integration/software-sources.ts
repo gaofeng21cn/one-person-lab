@@ -1,5 +1,5 @@
 import { readSoftwareSource, readSoftwareSources, softwareSourceFailure, writeSoftwareSource } from './software-sources-store.ts';
-import { assertCredentialHandleOnlyPayload } from './connection-registry-parts/credential-handle.ts';
+import { assertCredentialHandleOnlyPayload } from './connection-registry.ts';
 import { normalizeSoftwareSourceCredential } from './software-sources-store.ts';
 import { verifySoftwareSourceCredential } from './software-sources-verification.ts';
 import { readInstalledSoftwareProducts } from './software-sources-framework-installation.ts';

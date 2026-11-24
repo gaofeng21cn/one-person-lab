@@ -10,11 +10,12 @@ import { Worker } from '@temporalio/worker';
 
 import {
   DeterministicInMemoryCandidateCompiler,
+  InMemoryActivationRuntime,
   InMemoryFoundryEventStore,
   InMemoryFoundryObjectStore,
   InMemoryOwnerGate,
   InMemoryVersionRegistry,
-} from '../../src/authority/evolution/in-memory-adapters.ts';
+} from '../support/foundry-in-memory-adapters.ts';
 import {
   FoundryKernel,
   FoundryTransientActivityError,
@@ -48,11 +49,15 @@ import type {
   FoundryRunWorkflowState,
 } from '../../src/adapters/execution/foundry-temporal.ts';
 import type { FoundryProviderOperationCursor } from '../../src/adapters/execution/foundry-provider-stage-run.ts';
-import { createTemporalTestWorkflowEnvironment } from './temporal-test-environment.ts';
+import { createSharedTemporalTestWorkflowEnvironment } from './temporal-test-environment.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const workflowsPath = path.join(repoRoot, 'src/adapters/execution/family-runtime-temporal-workflows.ts');
 const ownerGate = new InMemoryOwnerGate(() => '2026-07-16T00:00:00.000Z');
+const sharedTestEnv = createSharedTemporalTestWorkflowEnvironment();
+test.after(async () => {
+  await sharedTestEnv.teardown();
+});
 const temporalProviderManifest: FoundryProviderManifest = {
   surface_kind: 'opl_foundry_provider',
   version: 'opl-foundry-provider.v1',
@@ -331,6 +336,7 @@ function passingKernelDependencies(input: {
     objects: new InMemoryFoundryObjectStore(),
     events,
     versions,
+    activationRuntime: new InMemoryActivationRuntime(versions),
     ownerGate,
     activityMaxAttempts: 1,
     propagateTransientActivityFailures: true,
@@ -488,7 +494,7 @@ test('current bundle replays pre-durable-provider Foundry cancellation history',
 });
 
 test('Temporal FoundryRun survives worker restart and applies query, Update, CAS, and cancel semantics', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-temporal-control-${Date.now()}`;
   const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
   process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
@@ -607,12 +613,11 @@ test('Temporal FoundryRun survives worker restart and applies query, Update, CAS
   } finally {
     if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
     else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
-    await testEnv.teardown();
   }
 });
 
 test('Temporal durably resumes a provider StageRun cursor after worker restart without relaunch', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-temporal-provider-resume-${Date.now()}`;
   const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
   process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
@@ -725,12 +730,11 @@ test('Temporal durably resumes a provider StageRun cursor after worker restart w
   } finally {
     if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
     else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
-    await testEnv.teardown();
   }
 });
 
 test('Temporal unlocks after provider cancellation failure and commits ledger cancellation only after provider stop', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-temporal-provider-cancel-${Date.now()}`;
   const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
   process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
@@ -862,12 +866,11 @@ test('Temporal unlocks after provider cancellation failure and commits ledger ca
     releaseLaunch();
     if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
     else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
-    await testEnv.teardown();
   }
 });
 
 test('Temporal terminalizes the FoundryRun when ledger cancellation fails after provider stop', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-temporal-cancel-commit-${Date.now()}`;
   const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
   process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
@@ -962,12 +965,11 @@ test('Temporal terminalizes the FoundryRun when ledger cancellation fails after 
   } finally {
     if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
     else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
-    await testEnv.teardown();
   }
 });
 
 test('Temporal does not advance a terminal provider result while cancellation is waiting', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-temporal-provider-read-cancel-${Date.now()}`;
   const previousTaskQueue = process.env.OPL_TEMPORAL_TASK_QUEUE;
   process.env.OPL_TEMPORAL_TASK_QUEUE = taskQueue;
@@ -1074,14 +1076,12 @@ test('Temporal does not advance a terminal provider result while cancellation is
     releaseProviderCancel();
     if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
     else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
-    await testEnv.teardown();
   }
 });
 
 test('Temporal completes an overlapping cancel Update before provider continue-as-new', async (t) => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   if (!testEnv.supportsTimeSkipping) {
-    await testEnv.teardown();
     t.skip('The continue-as-new Update race proof requires Temporal time skipping.');
     return;
   }
@@ -1186,14 +1186,12 @@ test('Temporal completes an overlapping cancel Update before provider continue-a
     releaseProviderCancel();
     if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
     else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
-    await testEnv.teardown();
   }
 });
 
 test('Temporal bounds provider observation history with continue-as-new and preserves query and cancel', async (t) => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   if (!testEnv.supportsTimeSkipping) {
-    await testEnv.teardown();
     t.skip('The bounded-history proof requires Temporal time skipping.');
     return;
   }
@@ -1309,12 +1307,11 @@ test('Temporal bounds provider observation history with continue-as-new and pres
     releaseResumedStart();
     if (previousTaskQueue === undefined) delete process.env.OPL_TEMPORAL_TASK_QUEUE;
     else process.env.OPL_TEMPORAL_TASK_QUEUE = previousTaskQueue;
-    await testEnv.teardown();
   }
 });
 
 test('Temporal retries a transient Foundry activity three times without Kernel retry or generation consumption', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-temporal-retry-${Date.now()}`;
   let designCalls = 0;
   const events = new InMemoryFoundryEventStore();
@@ -1346,32 +1343,28 @@ test('Temporal retries a transient Foundry activity three times without Kernel r
     workflowsPath,
     activities: { ...registeredActivities, ...buildFoundryTemporalActivities(() => kernel) },
   });
-  try {
-    const result = await worker.runUntil(async () => {
-      const request = designRequest('temporal-retry-agent');
-      const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
-        args: [workflowInput('run-temporal-retry', request)],
-        taskQueue,
-        workflowId: `wf-foundry-retry-${Date.now()}`,
-      });
-      return handle.result() as Promise<FoundryRunWorkflowState>;
+  const result = await worker.runUntil(async () => {
+    const request = designRequest('temporal-retry-agent');
+    const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
+      args: [workflowInput('run-temporal-retry', request)],
+      taskQueue,
+      workflowId: `wf-foundry-retry-${Date.now()}`,
     });
-    assert.equal(result.inspection?.run.state, 'failed');
-    assert.equal(result.inspection?.run.generation, 0);
-    assert.equal(designCalls, 3);
-    const history = await events.read('run-temporal-retry');
-    assert.deepEqual(history.map((event) => event.event_type), [
-      'foundry_run_accepted',
-      'design_started',
-      'foundry_run_failed',
-    ]);
-  } finally {
-    await testEnv.teardown();
-  }
+    return handle.result() as Promise<FoundryRunWorkflowState>;
+  });
+  assert.equal(result.inspection?.run.state, 'failed');
+  assert.equal(result.inspection?.run.generation, 0);
+  assert.equal(designCalls, 3);
+  const history = await events.read('run-temporal-retry');
+  assert.deepEqual(history.map((event) => event.event_type), [
+    'foundry_run_accepted',
+    'design_started',
+    'foundry_run_failed',
+  ]);
 });
 
 test('Temporal recovers qualification after all registration Activity attempts fail', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-temporal-evaluation-unknown-${Date.now()}`;
   const events = new UnavailableQualificationAppendStore();
   const versions = new InMemoryVersionRegistry();
@@ -1401,7 +1394,6 @@ test('Temporal recovers qualification after all registration Activity attempts f
   });
   const request = designRequest('temporal-evaluation-unknown-agent');
   request.delivery_policy = { ...request.delivery_policy, activation_mode: 'qualify_only' };
-  try {
     const { result, firstHistory, recoveryHistory } = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
         args: [workflowInput('run-temporal-evaluation-unknown', request)],
@@ -1437,13 +1429,10 @@ test('Temporal recovers qualification after all registration Activity attempts f
     const evaluateIds = [...firstIds, ...recoveryIds].filter((id) => id.includes('/evaluate/'));
     assert.equal(evaluateIds.length, 1);
     assert.match(evaluateIds[0]!, /^opl-foundry-step\.v1\/run-temporal-evaluation-unknown\/4\/evaluate\/sha256:/);
-  } finally {
-    await testEnv.teardown();
-  }
 });
 
 test('Temporal fails closed before registration when evaluator completion is unknown without a journal result', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-temporal-evaluation-unjournaled-${Date.now()}`;
   const events = new InMemoryFoundryEventStore();
   const versions = new InMemoryVersionRegistry();
@@ -1470,7 +1459,6 @@ test('Temporal fails closed before registration when evaluator completion is unk
     workflowsPath,
     activities: { ...registeredActivities, ...buildFoundryTemporalActivities(() => kernel) },
   });
-  try {
     const result = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
         args: [workflowInput(
@@ -1488,13 +1476,10 @@ test('Temporal fails closed before registration when evaluator completion is unk
     assert.equal(evaluationCalls, 1);
     assert.equal((await versions.list('temporal-evaluation-unjournaled-agent', 'temporal_fixture')).length, 0);
     assert.equal(foundryHistory.at(-1)?.payload.failure_code, 'foundry_activity_unknown_outcome');
-  } finally {
-    await testEnv.teardown();
-  }
 });
 
 test('Temporal recovers the ledger result when evaluation Activity completion is lost after append', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-temporal-evaluation-recovery-${Date.now()}`;
   const events = new InMemoryFoundryEventStore();
   const versions = new InMemoryVersionRegistry();
@@ -1524,7 +1509,6 @@ test('Temporal recovers the ledger result when evaluation Activity completion is
   });
   const request = designRequest('temporal-evaluation-recovery-agent');
   request.delivery_policy = { ...request.delivery_policy, activation_mode: 'qualify_only' };
-  try {
     const { result, temporalHistory } = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
         args: [workflowInput('run-temporal-evaluation-recovery', request)],
@@ -1548,13 +1532,10 @@ test('Temporal recovers the ledger result when evaluation Activity completion is
     const evaluateIds = advanceActivityIds(temporalHistory).filter((id) => id.includes('/evaluate/'));
     assert.equal(evaluateIds.length, 1);
     assert.match(evaluateIds[0]!, /^opl-foundry-step\.v1\/run-temporal-evaluation-recovery\/4\/evaluate\/sha256:/);
-  } finally {
-    await testEnv.teardown();
-  }
 });
 
 test('Temporal cancel bypasses a long design Activity and closes one authoritative event chain', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-temporal-cancel-race-${Date.now()}`;
   let enterDesign!: () => void;
   let releaseDesign!: () => void;
@@ -1624,12 +1605,11 @@ test('Temporal cancel bypasses a long design Activity and closes one authoritati
     });
   } finally {
     releaseDesign();
-    await testEnv.teardown();
   }
 });
 
 test('Temporal cancellation wins over a late passing evaluation without publishing a version', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTestEnv.get();
   const taskQueue = `opl-foundry-late-evaluation-${Date.now()}`;
   const runId = 'run-temporal-late-evaluation';
   let enter!: () => void;
@@ -1670,7 +1650,6 @@ test('Temporal cancellation wins over a late passing evaluation without publishi
   });
   const request = designRequest('late-evaluation-agent');
   const options = { addressOverride: testEnv.address, rpcTimeoutMs: 10_000 };
-  try {
     await worker.runUntil(async () => {
       try {
         const handle = await testEnv.client.workflow.start('FoundryRunWorkflow', {
@@ -1693,7 +1672,4 @@ test('Temporal cancellation wins over a late passing evaluation without publishi
         resume();
       }
     });
-  } finally {
-    await testEnv.teardown();
-  }
 });

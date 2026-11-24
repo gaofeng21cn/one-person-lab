@@ -1,8 +1,6 @@
-export type JsonRecord = Record<string, unknown>;
+import { isRecord } from './contract-validation.ts';
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
+export type JsonRecord = Record<string, unknown>;
 
 export function record(value: unknown): JsonRecord {
   return isRecord(value) ? value : {};

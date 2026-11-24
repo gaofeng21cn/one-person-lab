@@ -21,7 +21,7 @@ import {
   stageAttemptOperatorUpdate,
   resumeSignal,
 } from '../../../src/adapters/execution/family-runtime-temporal-workflows.ts';
-import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environment.ts';
+import { sharedTemporalProviderTestEnv } from './persisted-attempt.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -139,9 +139,8 @@ function upsertedSearchAttributeNames(history: { events?: Array<Record<string, a
 }
 
 test('Temporal StageAttemptWorkflow acks operator actions through Updates', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTemporalProviderTestEnv.get();
   const taskQueue = `opl-stage-attempt-update-test-${Date.now()}`;
-  try {
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
@@ -179,15 +178,11 @@ test('Temporal StageAttemptWorkflow acks operator actions through Updates', asyn
       upsertedSearchAttributeNames(result.history).filter((name) => name.startsWith('Opl')),
       [],
     );
-  } finally {
-    await testEnv.teardown();
-  }
 });
 
 test('Temporal StageAttemptWorkflow rejects invalid operator Updates before mutation', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTemporalProviderTestEnv.get();
   const taskQueue = `opl-stage-attempt-update-reject-test-${Date.now()}`;
-  try {
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
@@ -217,16 +212,12 @@ test('Temporal StageAttemptWorkflow rejects invalid operator Updates before muta
     assert.equal(result.queriedState.signals.length, 0);
     assert.equal(result.finalState.signals.length, 0);
     assert.deepEqual(result.finalState.human_gate_refs, []);
-  } finally {
-    await testEnv.teardown();
-  }
 });
 
 test('new quality Attempt without content binding version fails before executor activity', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTemporalProviderTestEnv.get();
   const taskQueue = `opl-stage-attempt-binding-reject-test-${Date.now()}`;
   let codexActivities = 0;
-  try {
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
@@ -253,9 +244,6 @@ test('new quality Attempt without content binding version fails before executor 
       assert.match(result.activity_events.at(-1)?.error as string, /immutable content binding version/);
     });
     assert.equal(codexActivities, 0);
-  } finally {
-    await testEnv.teardown();
-  }
 });
 
 test('quality Attempt rejects generic resume through public API, Update, and direct Signal', async () => {
@@ -269,7 +257,7 @@ test('quality Attempt rejects generic resume through public API, Update, and dir
     return true;
   });
 
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTemporalProviderTestEnv.get();
   const taskQueue = `opl-stage-attempt-quality-resume-test-${Date.now()}`;
   let releaseActivity!: () => void;
   let markActivityStarted!: () => void;
@@ -339,6 +327,5 @@ test('quality Attempt rejects generic resume through public API, Update, and dir
     assert.equal(dispatchActivities, 0);
   } finally {
     releaseActivity?.();
-    await testEnv.teardown();
   }
 });

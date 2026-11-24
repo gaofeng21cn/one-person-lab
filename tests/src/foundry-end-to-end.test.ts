@@ -7,7 +7,6 @@ import test from 'node:test';
 import {
   FOUNDRY_PROTOCOL_VERSION,
   FoundryKernel,
-  InMemoryOwnerGate,
   foundryContentDigest,
   foundryFrozenEvaluationPlanDigest,
   type AgentBlueprint,
@@ -21,6 +20,7 @@ import {
   type OwnerGateAction,
   type OwnerGateDecision,
 } from '../../src/authority/evolution/index.ts';
+import { InMemoryOwnerGate } from '../support/foundry-in-memory-adapters.ts';
 import {
   ContentAddressedCandidateCompiler,
   FileFoundryContentStore,

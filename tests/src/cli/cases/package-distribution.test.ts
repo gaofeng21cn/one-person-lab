@@ -1,11 +1,11 @@
-import './package-distribution-cases/manifest.test.ts';
-import './package-distribution-cases/package-source-projection-gate.test.ts';
-import './package-distribution-cases/archive-and-first-party.test.ts';
-import './package-distribution-cases/first-party-package-payload.test.ts';
-import './package-distribution-cases/workflows-and-cleanup.test.ts';
-import './package-distribution-cases/oci-publication-preflight.test.ts';
-import './package-distribution-cases/oci-publication-receipt-readback.test.ts';
+import './package-distribution-cases/manifest.ts';
+import './package-distribution-cases/package-source-projection-gate.ts';
+import './package-distribution-cases/archive-and-first-party.ts';
+import './package-distribution-cases/first-party-package-payload.ts';
+import './package-distribution-cases/workflows-and-cleanup.ts';
+import './package-distribution-cases/oci-publication-preflight.ts';
+import './package-distribution-cases/oci-publication-receipt-readback.ts';
 import './package-owner-channel-plan.test.ts';
-import './package-distribution-cases/private-package-registry-bootstrap.test.ts';
+import './package-distribution-cases/private-package-registry-bootstrap.ts';
 
 import './package-publication-authority.test.ts';

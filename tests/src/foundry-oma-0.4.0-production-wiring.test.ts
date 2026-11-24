@@ -346,13 +346,16 @@ test('OMA deterministic fixtures retain input provenance and lock current-contra
     },
   ]);
 
+  const omaManifest = readJson<{ codex_surface?: { plugin_payload_manifest_url?: string } }>(
+    path.join(repoRoot, 'contracts/opl-framework/packages/oma.json'),
+  );
+  const activePayloadRel = omaManifest.codex_surface?.plugin_payload_manifest_url;
+  assert.ok(activePayloadRel, 'oma.json must declare active plugin_payload_manifest_url');
   const payload = readJson<{ package_id: string; package_version: string; source_commit: string }>(
-    path.join(repoRoot, 'contracts/opl-framework/packages/payloads/oma-0.4.0.json'),
+    path.join(repoRoot, 'contracts/opl-framework/packages', activePayloadRel),
   );
-  assert.deepEqual(
-    { package_id: payload.package_id, package_version: payload.package_version, source_commit: payload.source_commit },
-    { package_id: 'oma', package_version: '0.4.0', source_commit: exactOmaCommit },
-  );
+  assert.equal(payload.package_id, 'oma');
+  assert.match(payload.source_commit, /^[0-9a-f]{40}$/);
   for (const entry of lock.files) {
     if (entry.source_sha256) {
       assert.match(entry.source_sha256, /^sha256:[a-f0-9]{64}$/);

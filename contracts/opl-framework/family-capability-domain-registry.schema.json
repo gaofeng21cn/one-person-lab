@@ -9,7 +9,7 @@
     "version": { "const": "family-capability-domain-registry.v2" },
     "portfolio": {
       "type": "object",
-      "required": ["portfolio_id", "owner", "purpose", "state", "display_model", "cardinality_policy", "framework_projection_ref", "framework_source_topology_ref", "framework_package_topology_ref"],
+      "required": ["portfolio_id", "owner", "purpose", "state", "display_model", "cardinality_policy", "framework_projection_ref", "framework_source_topology_ref"],
       "properties": {
         "portfolio_id": { "const": "opl-family-capability-portfolio" },
         "owner": { "type": "string", "minLength": 1 },
@@ -18,8 +18,7 @@
         "display_model": { "const": "journey_groups" },
         "cardinality_policy": { "const": "evidence_driven_not_fixed" },
         "framework_projection_ref": { "const": "contracts/opl-framework/brand-module-registry.json" },
-        "framework_source_topology_ref": { "const": "contracts/opl-framework/source-module-map.json" },
-        "framework_package_topology_ref": { "const": "contracts/opl-framework/package-topology.json" }
+        "framework_source_topology_ref": { "const": "contracts/opl-framework/source-module-map.json" }
       },
       "additionalProperties": false
     },

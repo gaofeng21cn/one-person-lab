@@ -20,15 +20,12 @@ State: `active_support`
 
 | 交换职责 | Schema 入口 |
 | --- | --- |
-| 可调用 action 与声明式拓扑 | [Action catalog](./family-action-catalog.schema.json)、[action graph](./family-action-graph.schema.json) |
+| 可调用 action | [Action catalog](./family-action-catalog.schema.json) |
 | Stage descriptor 与静态 conformance | [Stage control plane](./family-stage-control-plane.schema.json)、[conformance](./family-stage-conformance.schema.json) |
-| Stage pack 证据与 graph 投影 | [Proof bundle](./family-stage-proof-bundle.schema.json)、[graph projection](./family-stage-graph-projection.schema.json)、[integrity metadata](./family-stage-integrity-metadata.schema.json) |
+| Stage pack 证据 | [Proof bundle](./family-stage-proof-bundle.schema.json)、[integrity metadata](./family-stage-integrity-metadata.schema.json) |
 | Stage pack source 与生命周期引用 | [Pack registry](./family-stage-pack-registry.schema.json)、[source spec](./family-stage-pack-source-spec.schema.json)、[replay certification](./family-stage-replay-certification.schema.json) |
 | 建议性诊断 | [Assumption lifecycle](./family-stage-assumption-lifecycle.schema.json)、[cohort loop](./family-stage-cohort-loop.schema.json)、[runtime budget](./family-stage-runtime-budget.schema.json)、[candidate portfolio](./stage-candidate-portfolio.schema.json) |
-| event、checkpoint 与 StageRun 证据引用 | [Event envelope](./family-event-envelope.schema.json)、[checkpoint lineage](./family-checkpoint-lineage.schema.json)、[StageRun evidence pack](./stage-run-evidence-pack.schema.json) |
-| owner decision、human gate 与冲突交换 | [Owner route](./family-owner-route.schema.json)、[human gate](./family-human-gate.schema.json)、[conflict envelope](./family-conflict-envelope.schema.json) |
-| persistence 角色与 lifecycle receipt | [Persistence policy](./family-persistence-policy.schema.json)、[lifecycle ledger](./family-lifecycle-ledger.schema.json) |
-| 只读 runtime supervision | [Runtime supervision](./family-runtime-supervision.schema.json) |
+| StageRun 证据引用 | [StageRun evidence pack](./stage-run-evidence-pack.schema.json) |
 | domain memory 引用与 writeback 交换 | [Knowledge catalog](../opl-framework/durable-knowledge-catalog.schema.json)、[memory writeback](./family-domain-memory-writeback.schema.json) |
 
 ## 结合运行时 owner 阅读

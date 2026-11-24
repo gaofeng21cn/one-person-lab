@@ -6,6 +6,11 @@ import {
   FrameworkContractError,
   isRecord,
 } from '../../kernel/contract-validation.ts';
+import {
+  isProcessAlive as isPidAlive,
+  reclaimLockFileAtomically,
+  writeExclusiveFileSync,
+} from '../../kernel/file-lock.ts';
 import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import type { ManagedUpdateKernelInput } from './managed-update-owner-boundary.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
@@ -86,14 +91,8 @@ function processIdentity(pid: number): ProcessIdentity {
 
 function isProcessAlive(identity: unknown, pidFallback?: unknown) {
   const pid = isRecord(identity) ? identity.pid : pidFallback;
-  if (typeof pid !== 'number' || !Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-  } catch (error) {
-    // EPERM means the process exists but is not inspectable by this user.
-    if ((error as NodeJS.ErrnoException).code !== 'EPERM') return false;
-  }
-  const current = processIdentity(pid);
+  if (!isPidAlive(pid)) return false;
+  const current = processIdentity(pid as number);
   if (
     isRecord(identity)
     && typeof identity.proc_start_time_ticks === 'string'
@@ -118,44 +117,12 @@ function isReclaimableLockPayload(lock: Record<string, unknown> | null, file: st
   return isStaleLock(file);
 }
 
-function restoreGuardedLock(guard: string, file: string) {
-  try {
-    fs.linkSync(guard, file);
-    fs.rmSync(guard, { force: true });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-      fs.rmSync(guard, { force: true });
-      return;
-    }
-    throw error;
-  }
-}
-
 function reclaimLockAtomically(file: string) {
-  const guard = `${file}.reclaim-${process.pid}-${crypto.randomUUID()}`;
-  try {
-    fs.renameSync(file, guard);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
-    throw error;
-  }
-
-  const movedLock = readLockFile(guard);
-  if (!isReclaimableLockPayload(movedLock, guard)) {
-    restoreGuardedLock(guard, file);
-    return false;
-  }
-  fs.rmSync(guard, { force: true });
-  return true;
+  return reclaimLockFileAtomically(file, (guard) => isReclaimableLockPayload(readLockFile(guard), guard));
 }
 
 function createLockFile(file: string, receipt: ManagedUpdateLockReceipt) {
-  const handle = fs.openSync(file, 'wx');
-  try {
-    fs.writeFileSync(handle, `${JSON.stringify(receipt, null, 2)}\n`);
-  } finally {
-    fs.closeSync(handle);
-  }
+  writeExclusiveFileSync(file, `${JSON.stringify(receipt, null, 2)}\n`, 0o600);
 }
 
 export type ManagedUpdateLockHandle = {

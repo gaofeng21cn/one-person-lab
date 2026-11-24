@@ -55,19 +55,163 @@ import {
   buildWorkspaceIndex,
   buildWorkspaceYaml,
 } from './workspace-initializer.ts';
-import {
-  fleetStatusForDoctor,
-  unboundWorkspaceProjectFleetEntry,
-  workspaceFleetEntryAuthorityBoundary,
-  workspaceFleetReportAuthorityBoundary,
-  workspaceFleetReportStatus,
-  workspaceFleetReportSummary,
-} from './workspace-lifecycle-parts/fleet-report.ts';
-import {
-  diagnosticOnlyWorkspaceReport,
-  workspaceHealthContext,
-  workspaceRegistryContext,
-} from './workspace-lifecycle-parts/registry-health.ts';
+
+type WorkspaceFleetStatus =
+  | 'archived_binding'
+  | 'blocked'
+  | 'not_bound'
+  | 'ready'
+  | 'repairable'
+  | 'warning';
+
+type WorkspaceDoctorProjection = {
+  status: string;
+  checked_at: string;
+  finding_count: number;
+  hard_blocker_count: number;
+  repairable_finding_count: number;
+  advisory_warning_count: number;
+  findings: WorkspaceDiagnosticFinding[];
+  blockers: WorkspaceDiagnosticFinding[];
+  hard_blockers: WorkspaceDiagnosticFinding[];
+  repairable_findings: WorkspaceDiagnosticFinding[];
+  advisory_warnings: WorkspaceDiagnosticFinding[];
+};
+
+function fleetStatusForDoctor(doctor: {
+  blockers: WorkspaceDiagnosticFinding[];
+  repairable_findings: WorkspaceDiagnosticFinding[];
+  advisory_warnings: WorkspaceDiagnosticFinding[];
+}): Exclude<WorkspaceFleetStatus, 'archived_binding' | 'not_bound'> {
+  if (doctor.blockers.length > 0) return 'blocked';
+  if (doctor.repairable_findings.length > 0) return 'repairable';
+  if (doctor.advisory_warnings.length > 0) return 'warning';
+  return 'ready';
+}
+
+function workspaceFleetEntryAuthorityBoundary() {
+  return {
+    fleet_report_is_projection_only: true,
+    fleet_report_executes_direct_entry: false,
+    fleet_report_executes_manifest_command: false,
+    fleet_report_writes_domain_truth: false,
+  };
+}
+
+function workspaceFleetReportAuthorityBoundary() {
+  return {
+    ...workspaceFleetEntryAuthorityBoundary(),
+    fleet_report_claims_domain_ready: false,
+    fleet_report_claims_stage_complete: false,
+  };
+}
+
+function unboundWorkspaceProjectFleetEntry(project: { project_id: string; project: string }) {
+  return {
+    project_id: project.project_id,
+    project: project.project,
+    fleet_status: 'not_bound' as const,
+    workspace_path: null,
+    workspace_report_command: null,
+    workspace_report_ref: null,
+    registry_binding: null,
+    workspace_health: null,
+    blockers: [],
+  };
+}
+
+function workspaceFleetReportStatus(entries: Array<{ fleet_status: unknown }>) {
+  if (entries.some((entry) => entry.fleet_status === 'blocked')) return 'blocked';
+  if (entries.some((entry) => entry.fleet_status === 'repairable')) return 'repairable';
+  if (entries.some((entry) => entry.fleet_status === 'warning')) return 'warning';
+  return 'ok';
+}
+
+function workspaceFleetReportSummary(
+  entries: Array<{ fleet_status: unknown }>,
+  unboundProjects: unknown[],
+) {
+  return {
+    bindings_count: entries.length,
+    ready_bindings_count: entries.filter((entry) => entry.fleet_status === 'ready').length,
+    repairable_bindings_count: entries.filter((entry) => entry.fleet_status === 'repairable').length,
+    warning_bindings_count: entries.filter((entry) => entry.fleet_status === 'warning').length,
+    blocked_bindings_count: entries.filter((entry) => entry.fleet_status === 'blocked').length,
+    archived_bindings_count: entries.filter((entry) => entry.fleet_status === 'archived_binding').length,
+    unbound_projects_count: unboundProjects.length,
+  };
+}
+
+function workspaceRegistryContext(
+  contracts: FrameworkContracts,
+  workspacePath: string,
+) {
+  const catalog = buildWorkspaceCatalog(contracts).workspace_catalog;
+  const bindings = (catalog.bindings as WorkspaceBinding[])
+    .filter((binding) => path.resolve(binding.workspace_path) === workspacePath)
+    .map((binding) => ({
+      binding_id: binding.binding_id,
+      project_id: binding.project_id,
+      project: binding.project,
+      registry_status: binding.status,
+      is_default_context: binding.status === 'active',
+    }));
+  return {
+    catalog_status: bindings.length > 0 ? 'bound' : 'unbound',
+    bindings,
+    active_binding_ids: bindings
+      .filter((binding) => binding.is_default_context)
+      .map((binding) => binding.binding_id),
+  };
+}
+
+function workspaceHealthContext(doctor: WorkspaceDoctorProjection) {
+  return {
+    status: doctor.status,
+    checked_at: doctor.checked_at,
+    finding_count: doctor.finding_count,
+    hard_blocker_count: doctor.hard_blocker_count,
+    repairable_finding_count: doctor.repairable_finding_count,
+    advisory_warning_count: doctor.advisory_warning_count,
+    findings: doctor.findings,
+  };
+}
+
+function diagnosticOnlyWorkspaceReport(
+  workspacePath: string,
+  doctor: WorkspaceDoctorProjection,
+  registryContext: ReturnType<typeof workspaceRegistryContext>,
+) {
+  return {
+    surface_kind: 'opl_workspace_report',
+    version: 'workspace-report.v1',
+    report_status: 'diagnostic_only',
+    workspace_id: null,
+    title: path.basename(workspacePath),
+    workspace_path: workspacePath,
+    registry: registryContext,
+    workspace_health: workspaceHealthContext(doctor),
+    agent: null,
+    topology: null,
+    current_project: null,
+    projects: [],
+    shared_resources: [],
+    projection_refs: null,
+    finding_count: doctor.finding_count,
+    blockers: doctor.blockers,
+    hard_blockers: doctor.hard_blockers,
+    repairable_findings: doctor.repairable_findings,
+    advisory_warnings: doctor.advisory_warnings,
+    authority_boundary: {
+      report_is_projection_only: true,
+      report_can_claim_stage_complete: false,
+      report_can_replace_owner_receipt: false,
+      report_can_replace_typed_blocker: false,
+      opl_can_write_domain_truth: false,
+    },
+    updated_at: doctor.checked_at,
+  };
+}
 
 function normalizeOptionalString(value: string | undefined | null) {
   const trimmed = value?.trim();

@@ -1,4 +1,4 @@
-import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCliInProcess, test } from '../helpers.ts';
 import {
   buildStandardDomainAgentScaffold,
   validateStandardDomainAgentScaffold,
@@ -20,11 +20,11 @@ function writeJson(filePath: string, value: unknown) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-test('agents check aggregates existing standard Agent checks without creating a second verdict', () => {
+test('agents check aggregates existing standard Agent checks without creating a second verdict', async () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-'));
   try {
     buildStandardDomainAgentScaffold({ targetDir, domainId: 'sample-check' });
-    const output = runCli(['agents', 'check', '--repo', targetDir]);
+    const output = await runCliInProcess(['agents', 'check', '--repo', targetDir]);
     const check = output.standard_agent_check;
 
     assert.equal(check.status, 'passed');
@@ -39,13 +39,13 @@ test('agents check aggregates existing standard Agent checks without creating a 
   }
 });
 
-test('agents check returns one blocked report when an existing check rejects the repo', () => {
+test('agents check returns one blocked report when an existing check rejects the repo', async () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-blocked-'));
   try {
     buildStandardDomainAgentScaffold({ targetDir, domainId: 'sample-blocked' });
     fs.rmSync(path.join(targetDir, 'contracts', 'pack_compiler_input.json'));
 
-    const check = runCli(['agents', 'check', '--repo', targetDir]).standard_agent_check;
+    const check = (await runCliInProcess(['agents', 'check', '--repo', targetDir])).standard_agent_check;
     assert.equal(check.status, 'blocked');
     assert.equal(check.blocked_checks.includes('scaffold'), true);
     assert.equal(check.blocked_checks.includes('generated_interfaces'), true);
@@ -54,7 +54,7 @@ test('agents check returns one blocked report when an existing check rejects the
   }
 });
 
-test('agents check and link-framework share Python helper dependency discovery', () => {
+test('agents check and link-framework share Python helper dependency discovery', async () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-python-helper-'));
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -68,7 +68,7 @@ test('agents check and link-framework share Python helper dependency discovery',
       'from opl_framework.artifact_inspection import sha256_bytes\n',
     );
 
-    let compatibility = runCli(['agents', 'check', '--repo', targetDir])
+    let compatibility = (await runCliInProcess(['agents', 'check', '--repo', targetDir]))
       .standard_agent_check.checks.framework_compatibility;
     assert.equal(compatibility.status, 'blocked');
     assert.equal(compatibility.requires_python_framework, true);
@@ -79,7 +79,7 @@ test('agents check and link-framework share Python helper dependency discovery',
 
     const link = materializeStandardAgentFrameworkLink({ agentRoot: targetDir });
     assert.equal(link.status, 'linked');
-    compatibility = runCli(['agents', 'check', '--repo', targetDir])
+    compatibility = (await runCliInProcess(['agents', 'check', '--repo', targetDir]))
       .standard_agent_check.checks.framework_compatibility;
     assert.equal(compatibility.status, 'compatible');
     assert.equal(compatibility.managed_python_link, true);
@@ -91,7 +91,7 @@ test('agents check and link-framework share Python helper dependency discovery',
   }
 });
 
-test('agents check accepts an OPL-managed Python Framework link and rejects an arbitrary same-shaped directory', () => {
+test('agents check accepts an OPL-managed Python Framework link and rejects an arbitrary same-shaped directory', async () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-managed-python-'));
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agents-check-managed-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -111,7 +111,7 @@ test('agents check accepts an OPL-managed Python Framework link and rejects an a
       'opl_framework',
     );
     fs.symlinkSync(managedPythonTarget, linkPath, 'dir');
-    let compatibility = runCli(['agents', 'check', '--repo', targetDir])
+    let compatibility = (await runCliInProcess(['agents', 'check', '--repo', targetDir]))
       .standard_agent_check.checks.framework_compatibility;
     assert.equal(compatibility.status, 'compatible');
     assert.equal(compatibility.managed_python_link, true);
@@ -121,7 +121,7 @@ test('agents check accepts an OPL-managed Python Framework link and rejects an a
     fs.mkdirSync(fake, { recursive: true });
     fs.writeFileSync(path.join(fake, '__init__.py'), '');
     fs.symlinkSync(fake, linkPath, 'dir');
-    compatibility = runCli(['agents', 'check', '--repo', targetDir])
+    compatibility = (await runCliInProcess(['agents', 'check', '--repo', targetDir]))
       .standard_agent_check.checks.framework_compatibility;
     assert.equal(compatibility.status, 'blocked');
     assert.equal(compatibility.blockers.includes('opl_managed_framework_python_link_missing'), true);

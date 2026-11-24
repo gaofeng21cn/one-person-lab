@@ -1,4 +1,4 @@
-import { assert, runCli, runCliFailure, test } from '../../helpers.ts';
+import { assert, runCliInProcess, runCliInProcessFailure, test } from '../../helpers.ts';
 
 import { canonicalOwnerId } from '../../../../../src/kernel/owner-id.ts';
 import { listStandardDomainAgentIds } from '../../../../../src/kernel/standard-agent-registry.ts';
@@ -6,8 +6,8 @@ import { expectedModuleIds } from './shared.ts';
 
 const expectedStandardDomainAgentIds = listStandardDomainAgentIds();
 
-test('agent-owned internal modules expose the same branding spine without becoming OPL platform modules', () => {
-  const list = runCli(['agents', 'modules', 'list']).agent_internal_modules;
+test('agent-owned internal modules expose the same branding spine without becoming OPL platform modules', async () => {
+  const list = (await runCliInProcess(['agents', 'modules', 'list'])).agent_internal_modules;
 
   assert.equal(list.surface_kind, 'opl_agent_internal_brand_module_list');
   assert.deepEqual(list.domain_ids, expectedStandardDomainAgentIds);
@@ -19,7 +19,7 @@ test('agent-owned internal modules expose the same branding spine without becomi
   assert.equal(list.authority_boundary.can_write_domain_truth, false);
   assert.equal(list.authority_boundary.can_replace_domain_owner, false);
 
-  const inspect = runCli([
+  const inspect = (await runCliInProcess([
     'agents',
     'modules',
     'inspect',
@@ -27,7 +27,7 @@ test('agent-owned internal modules expose the same branding spine without becomi
     'oma',
     '--module',
     'agent-runway',
-  ]).agent_internal_module;
+  ])).agent_internal_module;
 
   assert.equal(inspect.surface_kind, 'opl_agent_internal_brand_module_inspect');
   assert.equal(inspect.domain_id, 'oma');
@@ -38,7 +38,7 @@ test('agent-owned internal modules expose the same branding spine without becomi
   assert.equal(inspect.authority_boundary.can_write_domain_truth, false);
   assert.equal(inspect.authority_boundary.can_claim_production_ready, false);
 
-  const aliasInspect = runCli([
+  const aliasInspect = (await runCliInProcess([
     'agents',
     'modules',
     'inspect',
@@ -46,29 +46,29 @@ test('agent-owned internal modules expose the same branding spine without becomi
     'medautoscience',
     '--module',
     'agent-runway',
-  ]).agent_internal_module;
+  ])).agent_internal_module;
   assert.equal(aliasInspect.domain_id, 'mas');
   assert.equal(aliasInspect.module_command_surface, 'opl agents modules inspect --domain mas --module agent-runway');
 
-  const interfaces = runCli(['agents', 'modules', 'interfaces']).agent_internal_module_interfaces;
+  const interfaces = (await runCliInProcess(['agents', 'modules', 'interfaces'])).agent_internal_module_interfaces;
   assert.equal(interfaces.surface_kind, 'opl_agent_internal_brand_module_interfaces');
   assert.equal(interfaces.cli.commands.includes('opl agents modules validate --json'), true);
   assert.equal(interfaces.descriptor.refs.includes('contracts/opl-framework/brand-cli-governance.json#agent_internal_modules'), true);
   assert.equal(interfaces.authority_boundary.can_write_domain_truth, false);
 
-  const validation = runCli(['agents', 'modules', 'validate']).agent_internal_module_validation;
+  const validation = (await runCliInProcess(['agents', 'modules', 'validate'])).agent_internal_module_validation;
   assert.equal(validation.surface_kind, 'opl_agent_internal_brand_module_validation');
   assert.equal(validation.status, 'valid');
   assert.deepEqual(validation.domain_ids, expectedStandardDomainAgentIds);
   assert.deepEqual(validation.missing_domain_module_sets, []);
 
-  const doctor = runCli(['agents', 'modules', 'doctor']).agent_internal_module_doctor;
+  const doctor = (await runCliInProcess(['agents', 'modules', 'doctor'])).agent_internal_module_doctor;
   assert.equal(doctor.surface_kind, 'opl_agent_internal_brand_module_doctor');
   assert.equal(doctor.status, 'pass');
 });
 
-test('Foundry exposes one bounded operator control surface without Agent-series command aliases', () => {
-  const help = runCli(['help', 'foundry']).help;
+test('Foundry exposes one bounded operator control surface without Agent-series command aliases', async () => {
+  const help = (await runCliInProcess(['help', 'foundry'])).help;
   assert.deepEqual(
     help.subcommands.map((entry: { command: string }) => entry.command),
     [
@@ -81,9 +81,9 @@ test('Foundry exposes one bounded operator control surface without Agent-series 
     ],
   );
 
-  const retiredSeries = runCliFailure(['agents', 'foundry', 'status']);
+  const retiredSeries = await runCliInProcessFailure(['agents', 'foundry', 'status']);
   assert.equal(retiredSeries.status, 2);
-  const retiredIndex = runCliFailure(['foundry', 'agents', 'list']);
+  const retiredIndex = await runCliInProcessFailure(['foundry', 'agents', 'list']);
   assert.equal(retiredIndex.status, 2);
 });
 

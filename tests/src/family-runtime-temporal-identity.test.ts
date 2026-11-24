@@ -296,14 +296,14 @@ test('Codex domain child imports both owners and preserves inherited Python path
   try {
     const source = path.join(pack, 'src');
     fs.mkdirSync(source);
-    fs.writeFileSync(path.join(source, 'domain_probe.py'), 'from opl_framework import family_runtime_client\n');
+    fs.writeFileSync(path.join(source, 'domain_probe.py'), 'from opl_framework import artifact_inspection\n');
     fs.writeFileSync(path.join(pack, 'pyproject.toml'), '[project]\nrequires-python = ">=3.12"\n');
     const record = { ...attempt(), domain_pack_root: pack };
     const inherited = path.join(pack, 'extra');
     const env = codexStageAttemptEnv({ attempt: record, workspaceRoot: pack,
       env: { PYTHONPATH: inherited, OPL_DOMAIN_PYTHON_COMMAND: '', OPL_MANAGED_PYTHON: '' } });
     assert.deepEqual(env.PYTHONPATH?.split(path.delimiter), [source, domainPythonTesting.FRAMEWORK_PYTHON_ROOT, inherited]);
-    const child = spawnSync('python3', ['-c', 'import domain_probe,json,sys; from opl_framework import family_runtime_client; print(json.dumps([domain_probe.__file__,family_runtime_client.__file__,list(sys.version_info[:2])]))'],
+    const child = spawnSync('python3', ['-c', 'import domain_probe,json,sys; from opl_framework import artifact_inspection; print(json.dumps([domain_probe.__file__,artifact_inspection.__file__,list(sys.version_info[:2])]))'],
       { env: { ...process.env, ...env }, encoding: 'utf8' });
     assert.equal(child.status, 0, child.stderr);
     const observed = JSON.parse(child.stdout);

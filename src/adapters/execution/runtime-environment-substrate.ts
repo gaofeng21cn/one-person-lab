@@ -1,16 +1,37 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseJsonText } from '../../kernel/json-file.ts';
-import { RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT, authorityBoundary, baseReadback,
-  buildRunContextConsumerPreflight, cacheInventoryProjection, normalizeTarget, runtimeArtifactRoot,
-  relativeArtifactBuildRef, runtimeEnvironmentConsumerBoundary, runContextTargetMismatchFields, CONTRACT_PATH,
-} from './runtime-environment-substrate/shared.ts';
-import type { JsonRecord, RuntimeEnvironmentTargetInput } from './runtime-environment-substrate/shared.ts';
+import {
+  CONTRACT_PATH,
+  RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT,
+  authorityBoundary,
+  type JsonRecord,
+  type RuntimeEnvironmentCommand,
+  type RuntimeEnvironmentPrepareInput,
+  type RuntimeEnvironmentTargetInput,
+} from './runtime-environment-substrate/contract.ts';
+import {
+  normalizeTarget,
+  relativeArtifactBuildRef,
+  runtimeArtifactRoot,
+} from './runtime-environment-substrate/target-state.ts';
+import {
+  buildRunContextConsumerPreflight,
+  runContextTargetMismatchFields,
+  runtimeEnvironmentConsumerBoundary,
+} from './runtime-environment-substrate/package-profile.ts';
+import {
+  baseReadback,
+  cacheInventoryProjection,
+} from './runtime-environment-substrate/readback-and-handoff.ts';
 export { buildRuntimeEnvironmentPrepareReadback } from './runtime-environment-prepare.ts';
-export { buildRuntimeEnvironmentDoctorReadback } from './runtime-environment-substrate/doctor-readback.ts';
-export { RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT,
-  type RuntimeEnvironmentCommand, type RuntimeEnvironmentPrepareInput, type RuntimeEnvironmentTargetInput,
-} from './runtime-environment-substrate/shared.ts';
+export { buildRuntimeEnvironmentDoctorReadback } from './runtime-environment-substrate/readback-and-handoff.ts';
+export {
+  RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT,
+  type RuntimeEnvironmentCommand,
+  type RuntimeEnvironmentPrepareInput,
+  type RuntimeEnvironmentTargetInput,
+};
 
 export function buildRuntimeEnvironmentInspectReadback(input: RuntimeEnvironmentTargetInput) {
   return { ...baseReadback('inspect', input), ...buildRuntimeEnvironmentRunContextReadback(input), command: 'inspect' };

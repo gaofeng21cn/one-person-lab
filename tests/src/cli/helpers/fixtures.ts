@@ -39,9 +39,10 @@ export function createFakeCodexPluginManagerFixture(
 ) {
   fs.mkdirSync(fixtureRoot, { recursive: true });
   const codexPath = path.join(fixtureRoot, 'codex');
+  const nodeShebang = !process.execPath.includes(' ') ? `#!${process.execPath}` : '#!/usr/bin/env node';
   fs.writeFileSync(
     codexPath,
-    `#!/usr/bin/env node
+    `${nodeShebang}
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';

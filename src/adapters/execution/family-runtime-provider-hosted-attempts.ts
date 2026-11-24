@@ -1,7 +1,14 @@
+import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 
 import { loadFrameworkContracts } from '../../authority/contracts/index.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import {
+  recordList,
+  stringList,
+  stringValue as optionalString,
+  uniqueStringList as uniqueStrings,
+} from '../../kernel/json-record.ts';
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import { insertEvent, stableId } from './family-runtime-store.ts';
 import {
@@ -30,55 +37,254 @@ import {
   attachCapabilityRegistryStageContext,
   capabilityRegistryStageContextInputFromPayload,
 } from './family-runtime-stage-context-observation.ts';
-import {
-  attachCheckoutCurrentnessToStageContext,
-  providerHostedCheckoutCurrentnessPreflight,
-} from './family-runtime-provider-hosted-attempts-parts/context-currentness.ts';
-import {
-  declaredProviderHostedTaskStageId,
-  legacyPersistedProviderHostedTaskStageId,
-} from './family-runtime-provider-hosted-attempts-parts/task-stage-binding.ts';
+import { preflightDomainWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
+import type { CheckoutCurrentnessPreflight } from './family-runtime-checkout-currentness-preflight.ts';
+import type { buildFamilyStageContextObservation } from '../../authority/stages/index.ts';
 import {
   ensureFamilyRuntimePackageLaunchReady,
   packageRuntimeSourceCheckoutPath,
 } from './family-runtime-package-readiness.ts';
 import { preflightFamilyRuntimeDomainLifecycleAdmission } from './family-runtime-domain-lifecycle-admission.ts';
 import type { StageRouteCompositionFactory } from './composition-factory-ports.ts';
-export {
-  DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
-  DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON,
-  isDefaultExecutorNextOwner,
-  isTransportOnlyDefaultExecutorCheckpoint,
-} from './family-runtime-provider-hosted-attempts-parts/default-executor-context.ts';
-import {
-  DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
-  DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON,
-  isDefaultExecutorNextOwner,
-} from './family-runtime-provider-hosted-attempts-parts/default-executor-context.ts';
-export {
-  defaultExecutorDispatchRef,
-  defaultExecutorSourceFingerprint,
-} from './family-runtime-provider-hosted-attempts-parts/source-identity.ts';
-import {
-  defaultExecutorDispatchIdentityRef,
-  defaultExecutorDispatchRef,
-  defaultExecutorSourceFingerprint,
-  defaultExecutorStageCheckpointRefs,
-  defaultExecutorStagePacketRefs,
-  hasDefaultExecutorDispatchIdentity,
-} from './family-runtime-provider-hosted-attempts-parts/source-identity.ts';
-import {
-  exportOwnerFingerprint,
-  isRecord,
-  defaultExecutorCurrentnessBasis,
-  optionalString,
-  recordList,
-  recordStringRefs,
-  sameOptionalStringField,
-  sameStringField,
-  stringList,
-  uniqueStrings,
-} from './family-runtime-provider-hosted-attempts-parts/values.ts';
+
+function exportOwnerFingerprint(payload: Record<string, unknown>) {
+  const context = isRecord(payload.opl_domain_export_context) ? payload.opl_domain_export_context : null;
+  return optionalString(context?.owner_fingerprint);
+}
+
+function nestedRecord(value: Record<string, unknown> | null, keys: string[]) {
+  let current: unknown = value;
+  for (const key of keys) {
+    if (!isRecord(current)) {
+      return null;
+    }
+    current = current[key];
+  }
+  return isRecord(current) ? current : null;
+}
+
+function defaultExecutorCurrentnessBasis(payload: Record<string, unknown>) {
+  return (isRecord(payload.owner_route_currentness_basis) ? payload.owner_route_currentness_basis : null)
+    ?? nestedRecord(payload, ['owner_route', 'currentness_contract', 'basis']);
+}
+
+function sameStringField(left: Record<string, unknown>, right: Record<string, unknown>, key: string) {
+  const leftValue = optionalString(left[key]);
+  const rightValue = optionalString(right[key]);
+  return Boolean(leftValue && rightValue && leftValue === rightValue);
+}
+
+function sameOptionalStringField(left: Record<string, unknown>, right: Record<string, unknown>, key: string) {
+  const leftValue = optionalString(left[key]);
+  const rightValue = optionalString(right[key]);
+  if (!leftValue || !rightValue) {
+    return !leftValue && !rightValue;
+  }
+  return leftValue === rightValue;
+}
+
+function workspaceRelativeRef(value: string | null, workspaceRoot: string | null) {
+  if (!value || !workspaceRoot || !path.isAbsolute(value)) {
+    return value;
+  }
+  const relative = path.relative(workspaceRoot, value);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    return value;
+  }
+  return relative.split(path.sep).join('/');
+}
+
+function relativeDispatchRefFromPath(payload: Record<string, unknown>) {
+  const dispatchPath = optionalString(payload.dispatch_path);
+  if (!dispatchPath) {
+    return null;
+  }
+  const workspaceRoot = optionalString(payload.workspace_root);
+  if (!workspaceRoot) {
+    return null;
+  }
+  return workspaceRelativeRef(dispatchPath, workspaceRoot);
+}
+
+function recordStringRefs(
+  value: Record<string, unknown> | null,
+  singularKeys: string[],
+  listKeys: string[],
+) {
+  if (!value) {
+    return [];
+  }
+  return uniqueStrings([
+    ...singularKeys.map((key) => optionalString(value[key])),
+    ...listKeys.flatMap((key) => stringList(value[key])),
+  ]);
+}
+
+function providerHostedCheckoutCurrentnessPreflight(
+  row: FamilyRuntimeTaskRow,
+  workspaceLocator: Record<string, unknown>,
+): CheckoutCurrentnessPreflight | null {
+  return preflightDomainWorkspaceCheckoutCurrentness({
+    domainId: row.domain_id,
+    workspaceLocator,
+  });
+}
+
+function attachCheckoutCurrentnessToStageContext(
+  observation: ReturnType<typeof buildFamilyStageContextObservation>,
+  checkoutCurrentnessPreflight: CheckoutCurrentnessPreflight | null,
+) {
+  if (!checkoutCurrentnessPreflight) {
+    return observation;
+  }
+  return {
+    ...observation,
+    checkout_currentness_preflight: checkoutCurrentnessPreflight,
+  };
+}
+
+type ProviderHostedTaskIdentity = Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>;
+
+function declaredProviderHostedTaskStageId(
+  row: ProviderHostedTaskIdentity,
+  payload: Record<string, unknown>,
+) {
+  const productEntryManifest = isRecord(payload.product_entry_manifest)
+    ? payload.product_entry_manifest
+    : null;
+  const contractCandidates = [
+    payload,
+    isRecord(payload.owner_receipt_contract) ? payload.owner_receipt_contract : null,
+    isRecord(payload.domain_owner_receipt_contract) ? payload.domain_owner_receipt_contract : null,
+    isRecord(productEntryManifest?.owner_receipt_contract)
+      ? productEntryManifest.owner_receipt_contract
+      : null,
+    isRecord(productEntryManifest?.domain_owner_receipt_contract)
+      ? productEntryManifest.domain_owner_receipt_contract
+      : null,
+  ];
+  for (const contract of contractCandidates) {
+    if (!contract) continue;
+    const bindings = isRecord(contract.provider_hosted_task_stage_bindings)
+      ? contract.provider_hosted_task_stage_bindings
+      : null;
+    const bindingCandidate = bindings?.[row.task_kind];
+    const binding = isRecord(bindingCandidate) ? bindingCandidate : null;
+    if (!binding || binding.provider_hosted_stage_attempt_required !== true) continue;
+    const runtimeDomainId = optionalString(binding.runtime_domain_id);
+    if (runtimeDomainId && runtimeDomainId !== row.domain_id) continue;
+    const stageId = optionalString(binding.stage_id);
+    if (stageId) return stageId;
+  }
+  return null;
+}
+
+function legacyPersistedProviderHostedTaskStageId(row: ProviderHostedTaskIdentity) {
+  // RCA tasks persisted before owner-receipt bindings were carried in payloads still need replay support.
+  return row.domain_id === 'redcube' && row.task_kind === 'emit_no_regression_evidence'
+    ? 'controlled_visual_stage_attempt'
+    : null;
+}
+
+export const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
+export const DEFAULT_EXECUTOR_TRANSPORT_ONLY_CHECKPOINT_SUPERSEDED_REASON =
+  'transport_only_checkpoint_checkpoint_superseded_by_provider_attempt_requeue';
+
+function isTransportOnlyAdmissionDispatchReceiptRef(value: unknown) {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  return value.includes('/runtime/artifacts/opl_family_domain_handler/dispatch_receipts/')
+    || value.startsWith('runtime/artifacts/opl_family_domain_handler/dispatch_receipts/')
+    || value.includes('/opl_family_domain_handler/dispatch_receipts/');
+}
+
+export function isTransportOnlyDefaultExecutorCheckpoint(
+  attempt: ReturnType<typeof listStageAttempts>[number],
+) {
+  if (
+    attempt.stage_id !== DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+    || attempt.executor_kind !== 'codex_cli'
+    || attempt.status !== 'checkpointed'
+  ) {
+    return false;
+  }
+  const closeoutRefs = Array.isArray(attempt.closeout_refs) ? attempt.closeout_refs : [];
+  return closeoutRefs.length > 0
+    && closeoutRefs.every(isTransportOnlyAdmissionDispatchReceiptRef);
+}
+
+export function isDefaultExecutorNextOwner(nextOwner: string | null) {
+  if (nextOwner === null) {
+    return false;
+  }
+  return nextOwner.trim().length > 0;
+}
+
+export function defaultExecutorDispatchRef(payload: Record<string, unknown>) {
+  return optionalString(payload.dispatch_ref)
+    ?? optionalString(payload.immutable_dispatch_ref)
+    ?? optionalString(payload.dispatch_packet_ref)
+    ?? optionalString(payload.dispatch_request_ref)
+    ?? relativeDispatchRefFromPath(payload);
+}
+
+function defaultExecutorStageRefs(payload: Record<string, unknown>) {
+  const workspaceRoot = optionalString(payload.workspace_root);
+  return uniqueStrings([
+    workspaceRelativeRef(optionalString(payload.stage_packet_ref), workspaceRoot),
+    ...stringList(payload.stage_packet_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
+    ...stringList(payload.checkpoint_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
+  ]);
+}
+
+function preservesCurrentControlStagePacketIdentity(payload: Record<string, unknown>) {
+  const basis = defaultExecutorCurrentnessBasis(payload);
+  return optionalString(payload.dispatch_authority) === 'opl_current_control_state_handoff'
+    || optionalString(payload.provider_attempt_schema_source) === 'action_queue'
+    || optionalString(basis?.surface) === 'opl_current_control_state_handoff';
+}
+
+function defaultExecutorStagePacketRefs(payload: Record<string, unknown>) {
+  return uniqueStrings([
+    ...defaultExecutorStageRefs(payload),
+    preservesCurrentControlStagePacketIdentity(payload) ? null : defaultExecutorDispatchRef(payload),
+  ]);
+}
+
+function defaultExecutorStageCheckpointRefs(payload: Record<string, unknown>) {
+  const stageRefs = defaultExecutorStageRefs(payload);
+  if (preservesCurrentControlStagePacketIdentity(payload)) {
+    return stageRefs.length > 0 ? stageRefs : uniqueStrings([defaultExecutorDispatchRef(payload)]);
+  }
+  return uniqueStrings([
+    ...stageRefs,
+    defaultExecutorDispatchRef(payload),
+  ]);
+}
+
+export function defaultExecutorSourceFingerprint(payload: Record<string, unknown>) {
+  const ownerRoute = isRecord(payload.owner_route) ? payload.owner_route : null;
+  const basis = defaultExecutorCurrentnessBasis(payload);
+  return optionalString(payload.source_fingerprint)
+    ?? optionalString(payload.action_fingerprint)
+    ?? optionalString(payload.repeat_suppression_key)
+    ?? optionalString(ownerRoute?.source_fingerprint)
+    ?? optionalString(ownerRoute?.action_fingerprint)
+    ?? optionalString(basis?.work_unit_fingerprint)
+    ?? optionalString(basis?.truth_epoch)
+    ?? optionalString(basis?.runtime_health_epoch);
+}
+
+function hasDefaultExecutorDispatchIdentity(payload: Record<string, unknown>) {
+  return defaultExecutorDispatchRef(payload) !== null
+    || defaultExecutorSourceFingerprint(payload) !== null;
+}
+
+function defaultExecutorDispatchIdentityRef(payload: Record<string, unknown>) {
+  return defaultExecutorDispatchRef(payload)
+    ?? defaultExecutorSourceFingerprint(payload);
+}
 
 function isSameDefaultExecutorDispatch(
   left: Record<string, unknown>,

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { compareVersions, parseVersion } from './install-companions/tool-version.ts';
 import { readTemporalStableCohort } from './temporal-stable-cohort.ts';
 
 export type ExternalDependencyCurrentness = 'current' | 'update_available' | 'unknown' | 'missing';
@@ -36,26 +37,8 @@ export type ExternalDependencyInstallation = {
   guidance: string;
 };
 
-type ParsedVersion = { version: string; parts: [number, number, number] };
 const OWNER_PROBE_TIMEOUT_MS = 3_000;
 let delegatedActionCache: { key: string; expiresAt: number; actions: ExternalDependencyUpdateAction[] } | null = null;
-
-function parseVersion(value: string | null | undefined): ParsedVersion | null {
-  const match = value?.match(/(?:^|[^0-9])(\d+)\.(\d+)\.(\d+)(?:[^0-9]|$)/);
-  if (!match) return null;
-  return {
-    version: `${Number(match[1])}.${Number(match[2])}.${Number(match[3])}`,
-    parts: [Number(match[1]), Number(match[2]), Number(match[3])],
-  };
-}
-
-function compareVersions(left: ParsedVersion, right: ParsedVersion) {
-  for (let index = 0; index < left.parts.length; index += 1) {
-    const difference = left.parts[index] - right.parts[index];
-    if (difference !== 0) return difference;
-  }
-  return 0;
-}
 
 function currentness(current: string | null, latest: string | null): ExternalDependencyCurrentness {
   const parsedCurrent = parseVersion(current);

@@ -6,620 +6,219 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const defaultStepTimeoutMs = 20 * 60 * 1000;
-const maxStepTimeoutMs = 60 * 60 * 1000;
-const stepTimeoutMs = parseStepTimeoutMs(process.env.OPL_TEST_LANE_STEP_TIMEOUT_MS);
-const ownsPythonCacheRoot = !process.env.OPL_REPO_TEMP_ROOT;
+const defaultStepTimeoutMs = 20 * 60 * 1000, maxStepTimeoutMs = 60 * 60 * 1000;
+const stepTimeoutMs = (() => {
+  const raw = process.env.OPL_TEST_LANE_STEP_TIMEOUT_MS;
+  if (!raw) return defaultStepTimeoutMs;
+  const n = Number(raw);
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(n) || n <= 0 || n > maxStepTimeoutMs) {
+    fail(`OPL_TEST_LANE_STEP_TIMEOUT_MS must be a positive integer <= ${maxStepTimeoutMs}; got ${raw}`);
+  }
+  return n;
+})();
 const pythonCacheRoot = process.env.OPL_REPO_TEMP_ROOT
   ? path.join(process.env.OPL_REPO_TEMP_ROOT, 'node-test-python-cache')
   : fs.mkdtempSync(path.join(os.tmpdir(), 'opl-node-test-python-cache-'));
-fs.mkdirSync(pythonCacheRoot, { recursive: true });
-const toolTempDir = path.join(pythonCacheRoot, 'tmp');
-fs.mkdirSync(toolTempDir, { recursive: true });
-let testLaneStateRoot = null;
-let testLaneHomeRoot = null;
-if (ownsPythonCacheRoot) {
-  process.on('exit', () => {
-    fs.rmSync(pythonCacheRoot, { recursive: true, force: true });
-  });
+fs.mkdirSync(path.join(pythonCacheRoot, 'tmp'), { recursive: true });
+if (!process.env.OPL_REPO_TEMP_ROOT) {
+  process.on('exit', () => fs.rmSync(pythonCacheRoot, { recursive: true, force: true }));
 }
+let testLaneStateRoot = null, testLaneHomeRoot = null;
 
-const nodeTest = (files, options = {}) => ({
-  kind: 'node-test',
-  files,
-  phase: options.phase ?? null,
-  stripTypes: options.stripTypes !== false,
-  batchSize: options.batchSize ?? null,
-  env: options.env ?? {},
-});
+const norm = (p) => p.split(path.sep).join('/');
+const fail = (msg) => { process.stderr.write(`${msg}\n`); process.exit(1); };
+const nodeTest = (files, o = {}) => ({ kind: 'node-test', files, phase: o.phase ?? null, stripTypes: o.stripTypes !== false, batchSize: o.batchSize ?? null, env: o.env ?? {} });
+const sourceTest = (patterns, o = {}) => nodeTest(expandTestFiles(patterns.map((p) => `tests/src/${p}`), o), o);
 
-const sourceTest = (patterns, options = {}) => nodeTest(
-  expandTestFiles(patterns.map((pattern) => `tests/src/${pattern}`), options),
-  options,
-);
-
-function expandTestFiles(patterns, options = {}) {
+function expandTestFiles(patterns, { exclude = [] } = {}) {
   const expanded = patterns.flatMap((pattern) => {
-    const matches = fs.globSync(pattern, { cwd: repoRoot }).map(normalizeRelativePath);
-    if (!matches.length) {
-      fail(`Test lane pattern matched no files: ${pattern}`);
-    }
+    const matches = fs.globSync(pattern, { cwd: repoRoot }).map(norm);
+    if (!matches.length) fail(`Test lane pattern matched no files: ${pattern}`);
     return matches;
   });
-  const excluded = options.exclude ?? [];
-  const staleExclusions = excluded.filter((file) => !expanded.includes(file));
-  if (staleExclusions.length) {
-    fail(`Test lane exclusions matched no expanded files: ${staleExclusions.join(', ')}`);
-  }
-  return expanded.filter((file) => !excluded.includes(file));
+  const stale = exclude.filter((f) => !expanded.includes(f));
+  if (stale.length) fail(`Test lane exclusions matched no expanded files: ${stale.join(', ')}`);
+  return expanded.filter((f) => !exclude.includes(f));
 }
 
-function selectTestRoots(patterns, options = {}) {
-  const matched = new Set(expandTestFiles(patterns, options));
-  return sourceTestRoots.filter((file) => matched.has(file));
+function readImportedTestFiles(file, available = null, sourceReader = (rel) => fs.readFileSync(path.join(repoRoot, rel), 'utf8')) {
+  const dir = path.dirname(file);
+  return [...sourceReader(file).matchAll(/import\s+(?:[^'"]+\s+from\s+)?['"](\.{1,2}\/[^'"]+)['"]/g)]
+    .map((m) => {
+      const base = norm(path.join(dir, m[1]));
+      const exists = available
+        ? (c) => available.has(c) || fs.existsSync(path.join(repoRoot, c))
+        : (c) => fs.existsSync(path.join(repoRoot, c));
+      return (path.extname(base) ? [base] : [base, `${base}.ts`, `${base}.mjs`]).find(exists) ?? null;
+    })
+    .filter((f) => f && /\.(?:test\.)?(?:ts|mjs)$/.test(f));
 }
 
-function testEntryDependencies(testFiles, sourceReader = readTestSource) {
-  const availableFiles = new Set(testFiles.map(normalizeRelativePath));
-  const dependencies = new Map();
-  const imports = new Map();
-  const readImports = (file) => {
-    if (!imports.has(file)) {
-      imports.set(file, collectImportedTestFiles(file, null, sourceReader)
-        .filter((imported) => imported.startsWith('tests/')));
+function testEntryDependencies(testFiles, sourceReader = (rel) => fs.readFileSync(path.join(repoRoot, rel), 'utf8')) {
+  const available = new Set(testFiles.map(norm)), deps = new Map(), cache = new Map();
+  const readImports = (file) => cache.get(file)
+    ?? cache.set(file, readImportedTestFiles(file, available, sourceReader).filter((f) => f.startsWith('tests/'))).get(file);
+  for (const rel of available) {
+    const imported = new Set(), visited = new Set([rel]), pending = [...readImports(rel)];
+    while (pending.length) {
+      const next = pending.pop();
+      if (visited.has(next)) continue;
+      visited.add(next);
+      if (available.has(next)) imported.add(next);
+      pending.push(...readImports(next));
     }
-    return imports.get(file);
-  };
-  for (const relativePath of availableFiles) {
-    const importedFiles = new Set();
-    const visited = new Set([relativePath]);
-    const pending = [...readImports(relativePath)];
-    while (pending.length > 0) {
-      const imported = pending.pop();
-      if (visited.has(imported)) continue;
-      visited.add(imported);
-      if (availableFiles.has(imported)) importedFiles.add(imported);
-      pending.push(...readImports(imported));
-    }
-    dependencies.set(relativePath, importedFiles);
+    deps.set(rel, imported);
   }
-  return dependencies;
+  return deps;
 }
 
-export function discoverTestRoots(testFiles, sourceReader = readTestSource) {
-  const dependencies = testEntryDependencies(testFiles, sourceReader);
-  const importedFiles = new Set([...dependencies.values()].flatMap((files) => [...files]));
-  return [...dependencies.keys()].filter((file) => !importedFiles.has(file)).sort();
+export function discoverTestRoots(testFiles, sourceReader) {
+  const deps = testEntryDependencies(testFiles, sourceReader);
+  const imported = new Set([...deps.values()].flatMap((s) => [...s]));
+  return [...deps.keys()].filter((f) => !imported.has(f)).sort();
 }
 
-const sourceTestPatterns = ['tests/src/**/*.test.{ts,mjs}'];
-const activeSourceTestFiles = expandTestFiles(sourceTestPatterns).sort();
-const sourceTestRoots = discoverTestRoots(activeSourceTestFiles);
+const sourceTestRoots = discoverTestRoots(expandTestFiles(['tests/src/**/*.test.{ts,mjs}']).sort());
+const selectTestRoots = (patterns, o = {}) => { const m = new Set(expandTestFiles(patterns, o)); return sourceTestRoots.filter((f) => m.has(f)); };
 
 const regressionCliTestFiles = expandTestFiles([
   'tests/src/cli/cases/{contracts-entry,runtime-manager-native,runtime-index-summary,system-surfaces,package-distribution,managed-update-kernel-projection,managed-update-kernel,framework-readiness-binding-cases,framework-locator,workspace-domain,contracts-help}.test.ts',
 ]);
-
 const readModelGateCliExclusions = [
   ...regressionCliTestFiles,
   ...expandTestFiles([
-    'tests/src/cli/cases/{agents-conformance-stage-pack-v2,agents-default-callers,agents-residue-decisions,domain-pack-compiler-canonical-targets,framework-readiness-cli-surface,system-dependency-doctor,web-runtime}.test.ts',
-    'tests/src/cli/cases/connect-*.test.ts',
-    'tests/src/cli/cases/pack-*.test.ts',
-    'tests/src/cli/cases/release-*.test.ts',
-  ]),
-  ...expandTestFiles([
-    'tests/src/cli/cases/{agents-run,artifact-provenance-bundle-ledger,brand-modules,capability-map-audit-script,cli-broken-pipe,cli-command-registry,family-manifest-fixtures,family-runtime-command-parser,framework-operating-maturity,okf-command-surface,opl-foundation-skills-plugin-surface,packages,read-only-cli-invocation,runtime-brand-module-l5-evidence-ledger,runtime-environment-substrate-command-surface,runtime-stage-candidate-portfolio-read-model,runtime-stage-run-evidence-pack-read-model,standard-agent-unified-public-surfaces}.test.ts',
+    'tests/src/cli/cases/{agents-conformance-stage-pack-v2,agents-default-callers,agents-residue-decisions,domain-pack-compiler-canonical-targets,framework-readiness-cli-surface,system-dependency-doctor,web-runtime,agents-run,artifact-provenance-bundle-ledger,brand-modules,capability-map-audit-script,cli-broken-pipe,cli-command-registry,family-manifest-fixtures,family-runtime-command-parser,framework-operating-maturity,okf-command-surface,opl-foundation-skills-plugin-surface,packages,read-only-cli-invocation,runtime-brand-module-l5-evidence-ledger,runtime-environment-substrate-command-surface,runtime-stage-candidate-portfolio-read-model,runtime-stage-run-evidence-pack-read-model,standard-agent-unified-public-surfaces}.test.ts',
+    'tests/src/cli/cases/{connect,pack,release}-*.test.ts',
   ]),
 ];
-
-const readModelGateTopLevelPatterns = [
-  'tests/src/domain-detail-view.test.ts',
-  'tests/src/work-item-*.test.ts',
-  'tests/src/app-state-view-model-runtime-scope.test.ts',
-  'tests/src/current-owner-delta-topline.test.ts',
-  'tests/src/framework-readiness-attention-actions.test.ts',
-  'tests/src/generic-substrate-projection.test.ts',
-  'tests/src/family-runtime-codex-stage-runner.test.ts',
-  'tests/src/family-runtime-stage-attempt-closeout-ledger.test.ts',
-  'tests/src/family-runtime-temporal-{provider,terminal-sync,runtime-observation-reconciliation}.test.ts',
-  'tests/src/family-runtime-agent-stage-runner.test.ts',
-  'tests/src/foundry-temporal.test.ts',
-  'tests/src/temporal-production-proof-fixture.test.ts',
-  'tests/src/default-executor-recovery.test.ts',
-  'tests/src/agent-executor.test.ts',
-  'tests/src/framework-readiness-owner-delta-handoff-summary.test.ts',
-  'tests/src/family-runtime-evidence-worklist-family-scope.test.ts',
-  'tests/src/runtime-app-operator-selected-safe-action.test.ts',
-];
-
 const readModelGateTestFiles = [
-  ...selectTestRoots(
-    ['tests/src/cli/cases/**/*.test.{ts,mjs}'],
-    { exclude: readModelGateCliExclusions },
-  ),
-  ...selectTestRoots(readModelGateTopLevelPatterns, {
-    exclude: [
-      'tests/src/work-item-file-boundary.test.ts',
-      'tests/src/work-item-inventory-binding.test.ts',
-    ],
-  }),
-  // These imported files belong to this focused lane even though their aggregate
-  // roots execute in fast or regression.
+  ...selectTestRoots(['tests/src/cli/cases/**/*.test.{ts,mjs}'], { exclude: readModelGateCliExclusions }),
+  ...selectTestRoots([
+    'tests/src/domain-detail-view.test.ts', 'tests/src/work-item-*.test.ts', 'tests/src/app-state-view-model-runtime-scope.test.ts',
+    'tests/src/current-owner-delta-topline.test.ts', 'tests/src/framework-readiness-attention-actions.test.ts',
+    'tests/src/generic-substrate-projection.test.ts', 'tests/src/family-runtime-codex-stage-runner.test.ts',
+    'tests/src/family-runtime-stage-attempt-closeout-ledger.test.ts',
+    'tests/src/family-runtime-temporal-{provider,terminal-sync,runtime-observation-reconciliation}.test.ts',
+    'tests/src/family-runtime-agent-stage-runner.test.ts', 'tests/src/foundry-temporal.test.ts',
+    'tests/src/temporal-production-proof-fixture.test.ts', 'tests/src/default-executor-recovery.test.ts',
+    'tests/src/agent-executor.test.ts', 'tests/src/framework-readiness-owner-delta-handoff-summary.test.ts',
+    'tests/src/family-runtime-evidence-worklist-family-scope.test.ts', 'tests/src/runtime-app-operator-selected-safe-action.test.ts',
+  ], { exclude: ['tests/src/work-item-file-boundary.test.ts', 'tests/src/work-item-inventory-binding.test.ts'] }),
   'tests/src/cli/cases/managed-update-kernel-projection.test.ts',
-  'tests/src/cli/cases/packages-cases/workflow-policy-transaction.test.ts',
+  'tests/src/cli/cases/packages-cases/workflow-policy-transaction.ts',
   'tests/src/cli/cases/framework-readiness-binding-cases.test.ts',
   'tests/src/cli/cases/workspace-domain.agent-skeleton.test.ts',
   'tests/src/cli/cases/workspace-domain.external-evidence.test.ts',
 ];
-
-const fastLaneExcludedTestFiles = new Set([...regressionCliTestFiles, ...expandTestFiles([
+const fastLaneExcluded = new Set([...regressionCliTestFiles, ...expandTestFiles([
   'tests/built/**/*.test.{ts,mjs}',
-  'tests/src/{agent-profile-spine,cli-acp-runtime,cli-codex-default-shell-sync-skills,cli-codex-default-shell,cli-install,cli,cli-modularization,domain-definition-contract,evidence-grounded-decision-agent-profile,family-domain-catalog,family-entry-contracts,family-executor-adapter-contract,family-orchestration,fresh-install-smoke,handoff-bundle,opl-skills-boundary,product-entry-agent-executor,product-entry-companions,product-entry-runtime,profile-capability-plan,refactor-patrol-state,runtime-state-paths,source-module-boundary,stage-run-mag-integration}.test.ts',
+  'tests/src/{agent-profile-spine,cli-acp-runtime,cli-codex-default-shell-sync-skills,cli-codex-default-shell,cli-install,cli,cli-modularization,domain-definition-contract,evidence-grounded-decision-agent-profile,family-domain-catalog,family-entry-contracts,family-executor-adapter-contract,family-orchestration,fresh-install-smoke,handoff-bundle,opl-skills-boundary,product-entry-agent-executor,product-entry-companions,product-entry-runtime,profile-capability-plan,runtime-state-paths,source-module-boundary,stage-run-mag-integration}.test.ts',
   'tests/src/cli/cases/{agents-conformance-stage-pack-v2,agents-default-callers,agents-residue-decisions,domain-pack-compiler-canonical-targets,framework-readiness-cli-surface,system-dependency-doctor,web-runtime}.test.ts',
 ])]);
-
-const fastReadModelSharedTestFiles = new Set([
-  'tests/src/cli/cases/domain-pack-compiler-active-caller-targets.test.ts',
-  'tests/src/cli/cases/domain-pack-compiler-generated-interfaces.test.ts',
-  'tests/src/cli/cases/domain-pack-compiler-standard-agent-contract-pack.test.ts',
-]);
-
-const readModelGateTestFileSet = new Set(readModelGateTestFiles);
-const fastTestFiles = sourceTestRoots.filter((file) => fastReadModelSharedTestFiles.has(file)
-  || (!readModelGateTestFileSet.has(file) && !fastLaneExcludedTestFiles.has(file)));
-
-const readModelGateTemporalHeavyTestFiles = [
-  'tests/src/family-runtime-temporal-provider.test.ts',
-  'tests/src/family-runtime-temporal-terminal-sync.test.ts',
-  'tests/src/cli/cases/family-runtime.test.ts',
-  'tests/src/cli/cases/family-runtime-provider-repair.test.ts',
-  'tests/src/cli/cases/family-runtime-worker.test.ts',
-  'tests/src/cli/cases/family-runtime-worker-lifecycle.test.ts',
-  'tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts',
-];
-
-const fastTemporalStageRunControllerTestFiles = [
-  'tests/src/family-runtime-temporal-stage-run-controller-recovery.test.ts',
-  'tests/src/family-runtime-temporal-stage-run-controller-routing.test.ts',
-  'tests/src/family-runtime-temporal-stage-run-controller-outcomes.test.ts',
-  'tests/src/family-runtime-temporal-stage-run-controller-transport.test.ts',
-];
-
-// Each of these starts its own Temporal test server. They run one file at a time
-// so the server's five second connect budget is not consumed by fifteen other
-// suites starting processes beside them.
-const fastIsolatedTemporalTestFiles = [
-  'tests/src/family-runtime-pack-bound-stage-quality-e2e.test.ts',
-  'tests/src/foundry-five-stage-accounting.test.ts',
-  'tests/src/family-runtime-temporal-stage-run-recovery-start.test.ts',
-];
-
-const fastIsolatedCliTestFiles = [
-  'tests/src/cli/cases/packages.test.ts',
-  'tests/src/cli/cases/cli-command-registry.test.ts',
-  'tests/src/cli/cases/release-bundle.test.ts',
-];
-
-const fastNonTemporalHeavyTestFiles = fastTestFiles.filter(
-  (file) => !fastIsolatedTemporalTestFiles.includes(file)
-    && !fastTemporalStageRunControllerTestFiles.includes(file),
-).filter(
-  (file) => !fastIsolatedCliTestFiles.includes(file),
-);
-
-// Batches inside one node-test step run one after another, so the batch size
-// decides how much of the file set can execute in parallel. Measured on the fast
-// lane's mixed file set: 20 files per batch spent 163s across 12 serial batches,
-// 54 spent 106s across 4, and a single batch spent 93s. 54 keeps the lane within
-// a few seconds of the theoretical floor while keeping the failure report narrow
-// enough to name the file set that broke.
-const fastNonTemporalHeavyBatchSize = 54;
-
-// These suites read ambient machine state - App carrier probes and startup
-// maintenance locks - through helpers with a one second process budget. Sharing
-// a batch with nineteen other suites can exhaust that budget on a loaded host, so
-// they run one file at a time.
-const readModelGateIsolatedHeavyTestFiles = [
-  'tests/src/cli/cases/system-seed-manifest.test.ts',
-  'tests/src/cli/cases/system-startup-maintenance.test.ts',
-  'tests/src/cli/cases/managed-update-kernel-projection.test.ts',
-];
-
-const readModelGateNonTemporalHeavyTestFiles = readModelGateTestFiles.filter(
-  (file) => !readModelGateTemporalHeavyTestFiles.includes(file)
-    && !readModelGateIsolatedHeavyTestFiles.includes(file),
-);
+const fastReadModelShared = new Set(['tests/src/cli/cases/{domain-pack-compiler-active-caller-targets,domain-pack-compiler-generated-interfaces,domain-pack-compiler-standard-agent-contract-pack}.test.ts'].flatMap((p) => expandTestFiles([p])));
+const readModelGateSet = new Set(readModelGateTestFiles);
+const fastTestFiles = sourceTestRoots.filter((f) => fastReadModelShared.has(f) || (!readModelGateSet.has(f) && !fastLaneExcluded.has(f)));
+const fastTemporalStageRun = ['recovery', 'routing', 'outcomes', 'transport'].map((n) => `tests/src/family-runtime-temporal-stage-run-controller-${n}.test.ts`);
+const fastIsolatedTemporal = ['tests/src/family-runtime-pack-bound-stage-quality-e2e.test.ts', 'tests/src/foundry-five-stage-accounting.test.ts', 'tests/src/family-runtime-temporal-stage-run-recovery-start.test.ts'];
+const fastIsolatedCli = ['tests/src/cli/cases/packages.test.ts', 'tests/src/cli/cases/cli-command-registry.test.ts', 'tests/src/cli/cases/release-bundle.test.ts'];
+const fastUnitFiles = fastTestFiles.filter((f) => !fastIsolatedTemporal.includes(f) && !fastTemporalStageRun.includes(f) && !fastIsolatedCli.includes(f));
+const readModelTemporal = ['tests/src/family-runtime-temporal-provider.test.ts', 'tests/src/family-runtime-temporal-terminal-sync.test.ts', 'tests/src/cli/cases/family-runtime.test.ts', 'tests/src/cli/cases/family-runtime-provider-repair.test.ts', 'tests/src/cli/cases/family-runtime-worker.test.ts', 'tests/src/cli/cases/family-runtime-worker-lifecycle.test.ts', 'tests/src/cli/cases/family-runtime-stage-attempts-temporal-provider.test.ts'];
+const readModelIsolated = ['tests/src/cli/cases/system-seed-manifest.test.ts', 'tests/src/cli/cases/system-startup-maintenance.test.ts', 'tests/src/cli/cases/managed-update-kernel-projection.test.ts'];
+const cliEnv90s = { OPL_CLI_TEST_TIMEOUT_MS: '90000' };
 
 const lanes = {
   smoke: [
     { kind: 'npm', args: ['run', 'source:modules', '--', '--strict-imports', '--strict-cycles'] },
-    sourceTest([
-      '{verification-command-surfaces,target-architecture-schema-contracts,evidence-grounded-decision-agent-profile,agent-profile-spine,profile-capability-plan,evidence-grounded-stagecraft-runway,evidence-grounded-substrate,cognitive-computation-kernel-contract,advisory-knowledge-boundary-contract,durable-knowledge-catalog,knowledge-context-direct,opl-flow-completion-audit-contract,test-lanes-state-isolation,source-module-boundary,cli-modularization,runtime-state-paths,runtime-environment-substrate,opl-session-runtime}.test.ts',
-      'cli/cases/runtime-environment-substrate-command-surface.test.ts',
-    ], { batchSize: 25 }),
+    sourceTest(['{verification-command-surfaces,target-architecture-schema-contracts,evidence-grounded-decision-agent-profile,agent-profile-spine,profile-capability-plan,evidence-grounded-stagecraft-runway,evidence-grounded-substrate,cognitive-computation-kernel-contract,advisory-knowledge-boundary-contract,durable-knowledge-catalog,knowledge-context-direct,opl-flow-completion-audit-contract,test-lanes-state-isolation,source-module-boundary,cli-modularization,runtime-state-paths,runtime-environment-substrate,opl-session-runtime}.test.ts', 'cli/cases/runtime-environment-substrate-command-surface.test.ts'], { batchSize: 25 }),
   ],
   fast: [
     { kind: 'command', phase: 'quality', command: process.execPath, args: ['scripts/test-lanes.mjs', 'assert-coverage'] },
     { kind: 'npm', phase: 'build', args: ['run', 'build'] },
     { kind: 'command', phase: 'quality', command: 'scripts/repo-hygiene.sh', args: [] },
-    nodeTest(fastIsolatedTemporalTestFiles, { phase: 'temporal', batchSize: 1 }),
-    nodeTest(fastNonTemporalHeavyTestFiles, { phase: 'unit', batchSize: fastNonTemporalHeavyBatchSize }),
-    nodeTest(fastIsolatedCliTestFiles, {
-      phase: 'cli',
-      batchSize: 1,
-      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
-    }),
-    nodeTest(fastTemporalStageRunControllerTestFiles, { phase: 'temporal', batchSize: 4 }),
+    nodeTest(fastIsolatedTemporal, { phase: 'temporal', batchSize: 1 }),
+    nodeTest(fastUnitFiles, { phase: 'unit', batchSize: 54, env: cliEnv90s }),
+    nodeTest(fastIsolatedCli, { phase: 'cli', batchSize: 1, env: cliEnv90s }),
+    nodeTest(fastTemporalStageRun, { phase: 'temporal', batchSize: 4 }),
   ],
   'read-model-gates': [
-    nodeTest(readModelGateNonTemporalHeavyTestFiles, {
-      batchSize: 20,
-      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
-    }),
-    nodeTest(readModelGateIsolatedHeavyTestFiles, {
-      batchSize: 1,
-      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
-    }),
-    nodeTest(readModelGateTemporalHeavyTestFiles, {
-      batchSize: 1,
-      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
-    }),
+    nodeTest(readModelGateTestFiles.filter((f) => !readModelTemporal.includes(f) && !readModelIsolated.includes(f)), { batchSize: 20, env: cliEnv90s }),
+    nodeTest(readModelIsolated, { batchSize: 1, env: cliEnv90s }),
+    nodeTest(readModelTemporal, { batchSize: 1, env: cliEnv90s }),
   ],
-  meta: [
-    sourceTest([
-      '{verification-command-surfaces,target-architecture-schema-contracts,cognitive-computation-kernel-contract,refactor-patrol-state,cli-modularization,runtime-state-paths,current-owner-delta-read-model-cache,family-product-operator-projection}.test.ts',
-      'framework-readiness-attention-actions.test.ts',
-      'cli/cases/{system-dependency-doctor,framework-readiness-binding-cases,framework-readiness,runtime-manifest-cache-timeout,framework-readiness-attention-semantics,framework-readiness-cli-surface,agents-conformance-stage-pack-v2,agents-source-closure,agents-default-callers,agents-residue-decisions,domain-pack-compiler-canonical-targets}.test.ts',
-    ], { batchSize: 10 }),
-  ],
+  meta: [sourceTest(['{verification-command-surfaces,target-architecture-schema-contracts,cognitive-computation-kernel-contract,cli-modularization,runtime-state-paths,current-owner-delta-read-model-cache,family-product-operator-projection,framework-readiness-attention-actions}.test.ts', 'cli/cases/{system-dependency-doctor,framework-readiness-binding-cases,framework-readiness,runtime-manifest-cache-timeout,framework-readiness-attention-semantics,framework-readiness-cli-surface,agents-conformance-stage-pack-v2,agents-source-closure,agents-default-callers,agents-residue-decisions,domain-pack-compiler-canonical-targets}.test.ts'], { batchSize: 10 })],
   regression: [
-    sourceTest([
-      '{base-managed-dependencies,cli-codex-default-shell,cli-codex-default-shell-sync-skills,runtime-state-paths,family-domain-catalog,family-entry-contracts,family-executor-adapter-contract,handoff-bundle,product-entry-companions,product-entry-runtime,product-entry-agent-executor,family-orchestration,agent-package-home-localization,opl-skills-boundary}.test.ts',
-    ], {
-      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
-    }),
-    // Each CLI case owns its process and timeout. Four concurrent roots retain
-    // every assertion without one synchronous aggregate exhausting the step.
-    nodeTest(regressionCliTestFiles, {
-      batchSize: 4,
-      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
-    }),
+    sourceTest(['{base-managed-dependencies,cli-codex-default-shell,cli-codex-default-shell-sync-skills,runtime-state-paths,family-domain-catalog,family-entry-contracts,family-executor-adapter-contract,handoff-bundle,product-entry-companions,product-entry-runtime,product-entry-agent-executor,family-orchestration,agent-package-home-localization,opl-skills-boundary}.test.ts'], { env: cliEnv90s }),
+    nodeTest(regressionCliTestFiles, { batchSize: 4, env: cliEnv90s }),
   ],
-  integration: [
-    sourceTest([
-      '{cli-acp-runtime,cli-install,domain-definition-contract}.test.ts',
-      'cli/cases/web-runtime.test.ts',
-    ], {
-      env: { OPL_CLI_TEST_TIMEOUT_MS: '90000' },
-    }),
-  ],
-  'stage-run-mag-integration': [
-    sourceTest(['stage-run-mag-integration.test.ts']),
-  ],
-  artifact: [
-    { kind: 'npm', args: ['run', 'build'] },
-    nodeTest(['tests/built/cli.test.mjs', 'tests/built/workbench-temporal.test.mjs', 'tests/built/workbench-task-workflow.test.mjs'], { stripTypes: false }),
-  ],
-  'fresh-install': [
-    sourceTest(['fresh-install-smoke.test.ts']),
-  ],
+  integration: [sourceTest(['{cli-acp-runtime,cli-install,domain-definition-contract}.test.ts', 'cli/cases/web-runtime.test.ts'], { env: cliEnv90s })],
+  'stage-run-mag-integration': [sourceTest(['stage-run-mag-integration.test.ts'])],
+  artifact: [{ kind: 'npm', args: ['run', 'build'] }, nodeTest(['tests/built/cli.test.mjs', 'tests/built/workbench-temporal.test.mjs', 'tests/built/workbench-task-workflow.test.mjs'], { stripTypes: false })],
+  'fresh-install': [sourceTest(['fresh-install-smoke.test.ts'])],
 };
 
-// `test:full` used to chain the focused lanes, so the 26 test files that several
-// lanes list executed once per lane. The aggregate lane derives its file set from
-// those same lanes and keeps the strictest batch/env configuration per file, so
-// every active test still runs, exactly once.
-const fullLaneConstituentLanes = [
-  'artifact',
-  'fast',
-  'fresh-install',
-  'read-model-gates',
-  'meta',
-  'regression',
-  'integration',
-];
-
-function stepConfiguration(step) {
-  return {
-    batchSize: step.batchSize ?? step.files.length,
-    stripTypes: step.stripTypes !== false,
-    env: step.env ?? {},
-  };
-}
-
-function fullLaneNodeTestSteps() {
-  const fileConfigurations = new Map();
-  for (const laneName of fullLaneConstituentLanes) {
-    for (const step of lanes[laneName] ?? []) {
-      if (step.kind !== 'node-test') {
-        continue;
-      }
-      for (const file of step.files) {
-        const candidate = stepConfiguration(step);
-        const existing = fileConfigurations.get(file);
-        fileConfigurations.set(file, existing
-          ? {
-            batchSize: Math.min(existing.batchSize, candidate.batchSize),
-            stripTypes: existing.stripTypes && candidate.stripTypes,
-            env: { ...existing.env, ...candidate.env },
-          }
-          : candidate);
-      }
-    }
-  }
-
-  const groups = new Map();
-  const dependencies = testEntryDependencies([...fileConfigurations.keys()]);
-  const importedFiles = new Set([...dependencies.values()].flatMap((files) => [...files]));
-  for (const [file, ownConfiguration] of fileConfigurations) {
-    if (importedFiles.has(file)) continue;
-    const configuration = [...dependencies.get(file)].reduce((strictest, imported) => {
-      const child = fileConfigurations.get(imported);
-      return child ? { batchSize: Math.min(strictest.batchSize, child.batchSize),
-        stripTypes: strictest.stripTypes && child.stripTypes, env: { ...strictest.env, ...child.env } } : strictest;
-    }, ownConfiguration);
-    const key = JSON.stringify([configuration.stripTypes, configuration.batchSize, configuration.env]);
-    if (!groups.has(key)) {
-      groups.set(key, { configuration, files: [] });
-    }
-    groups.get(key).files.push(file);
-  }
-  // Keep the order the owning lanes declared: batching decisions, and therefore
-  // per-batch process load, stay identical to running the focused lanes.
-  return [...groups.values()].map(({ configuration, files }) => nodeTest(files, configuration));
-}
-
-function dedupeLaneSteps(steps) {
-  const unique = [];
-  const seen = new Set();
-  for (const step of steps) {
-    const key = JSON.stringify([step.kind, step.command ?? null, step.args ?? null]);
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    unique.push(step);
-  }
-  return unique;
-}
-
-function sharedLaneSteps(laneNames) {
-  return dedupeLaneSteps(laneNames.flatMap((laneName) => (lanes[laneName] ?? [])
-    .filter((step) => step.kind !== 'node-test')));
-}
-
+const fullConstituents = ['artifact', 'fast', 'fresh-install', 'read-model-gates', 'meta', 'regression', 'integration'];
+const mergeCfg = (a, b) => ({ batchSize: Math.min(a.batchSize, b.batchSize), stripTypes: a.stripTypes && b.stripTypes, env: { ...a.env, ...b.env } });
+const dedupeSteps = (steps) => { const s = new Set(); return steps.filter((x) => { const k = JSON.stringify([x.kind, x.command ?? null, x.args ?? null]); return s.has(k) ? false : s.add(k); }); };
 lanes.full = [
-  ...dedupeLaneSteps([
-    { kind: 'command', command: process.execPath, args: ['scripts/test-lanes.mjs', 'assert-coverage'] },
-    ...sharedLaneSteps(fullLaneConstituentLanes),
-  ]),
-  ...fullLaneNodeTestSteps(),
-  { kind: 'npm', args: ['run', 'typecheck'] },
-  { kind: 'npm', args: ['run', 'lint'] },
-  { kind: 'command', command: 'scripts/verify.sh', args: ['structure'] },
-  { kind: 'command', command: 'scripts/verify.sh', args: ['native'] },
+  ...dedupeSteps([{ kind: 'command', command: process.execPath, args: ['scripts/test-lanes.mjs', 'assert-coverage'] }, ...fullConstituents.flatMap((n) => (lanes[n] ?? []).filter((s) => s.kind !== 'node-test'))]),
+  ...(() => {
+    const cfgs = new Map(), groups = new Map();
+    for (const n of fullConstituents) for (const s of lanes[n] ?? []) if (s.kind === 'node-test') {
+      const c = { batchSize: s.batchSize ?? s.files.length, stripTypes: s.stripTypes !== false, env: s.env ?? {} };
+      for (const f of s.files) cfgs.set(f, cfgs.has(f) ? mergeCfg(cfgs.get(f), c) : c);
+    }
+    const deps = testEntryDependencies([...cfgs.keys()]), imported = new Set([...deps.values()].flatMap((s) => [...s]));
+    for (const [f, own] of cfgs) {
+      if (imported.has(f)) continue;
+      const c = [...deps.get(f)].reduce((acc, child) => (cfgs.has(child) ? mergeCfg(acc, cfgs.get(child)) : acc), own);
+      const k = JSON.stringify([c.stripTypes, c.batchSize, c.env]);
+      if (!groups.has(k)) groups.set(k, { c, files: [] });
+      groups.get(k).files.push(f);
+    }
+    return [...groups.values()].map(({ c, files }) => nodeTest(files, c));
+  })(),
+  { kind: 'npm', args: ['run', 'typecheck'] }, { kind: 'npm', args: ['run', 'lint'] },
+  { kind: 'command', command: 'scripts/verify.sh', args: ['structure'] }, { kind: 'command', command: 'scripts/verify.sh', args: ['native'] },
 ];
 
-const argv = process.argv.slice(2);
-const command = argv[0] ?? 'help';
-const commandHandlers = {
-  list: printLaneList,
-  plan: () => process.stdout.write(`${JSON.stringify(laneTestPlan(argv[1], requestedLanePhase(), requestedLaneShard()), null, 2)}\n`),
-  run: () => runLane(argv[1]),
-  'assert-coverage': assertCoverage,
-  help: printHelp,
-  '--help': printHelp,
-  '-h': printHelp,
-};
-
-function runLane(laneName) {
-  const steps = laneTestPlan(laneName, requestedLanePhase(), requestedLaneShard());
-  const failures = [];
-  steps.forEach((step, index) => {
-    const result = runLaneStep(laneName, step, index);
-    if (result.status === 0) {
-      return;
-    }
-    if (!shouldContinueOnFailure()) {
-      exitOnFailure(result);
-    }
-    failures.push(...describeStepFailures(step, index, result));
-  });
-  if (failures.length > 0) {
-    reportLaneFailures(laneName, failures);
-    process.exit(1);
-  }
-}
-
-/** @param {string} laneName @param {string | null} phase @param {string | null} shard */
+/**
+ * @param {string} laneName
+ * @param {string | null} [phase]
+ * @param {string | null} [shard]
+ */
 export function laneTestPlan(laneName, phase = null, shard = null) {
-  const allSteps = requireLane(laneName);
-  const selected = phase === null ? allSteps : allSteps.filter((step) => step.phase === phase);
-  if (selected.length === 0) throw new Error(`Test lane ${laneName} has no steps for phase ${phase}`);
-  if (shard === null) return selected;
-  const match = /^([1-9]\d*)\/([1-9]\d*)$/.exec(shard);
-  if (!match || Number(match[1]) > Number(match[2]) || !Number.isSafeInteger(Number(match[2]))) {
-    throw new Error('--shard must be an index/count with 1 <= index <= count');
-  }
-  if (selected.some((step) => step.kind !== 'node-test')) throw new Error('--shard requires a test-only phase');
-  const index = Number(match[1]) - 1, count = Number(match[2]);
-  const steps = selected.map((step) => ({ ...step, files: step.files.filter((_, position) => position % count === index) }))
-    .filter((step) => step.files.length > 0);
-  if (steps.length === 0) throw new Error(`Shard ${shard} has no test files`);
-  return steps;
+  const all = lanes[laneName];
+  if (!all) fail(`Unknown test lane: ${laneName}`);
+  const sel = phase === null ? all : all.filter((s) => s.phase === phase);
+  if (!sel.length) throw new Error(`Test lane ${laneName} has no steps for phase ${phase}`);
+  if (shard === null) return sel;
+  const m = /^([1-9]\d*)\/([1-9]\d*)$/.exec(shard);
+  if (!m || Number(m[1]) > Number(m[2]) || !Number.isSafeInteger(Number(m[2]))) throw new Error('--shard must be an index/count with 1 <= index <= count');
+  if (sel.some((s) => s.kind !== 'node-test')) throw new Error('--shard requires a test-only phase');
+  const idx = Number(m[1]) - 1, cnt = Number(m[2]);
+  const out = sel.map((s) => ({ ...s, files: s.files.filter((_, i) => i % cnt === idx) })).filter((s) => s.files.length);
+  if (!out.length) throw new Error(`Shard ${shard} has no test files`);
+  return out;
 }
 
-function requestedLanePhase() {
-  const index = argv.indexOf('--phase');
-  if (index === -1) return null;
-  const phase = argv[index + 1];
-  if (!phase || phase.startsWith('--')) fail('--phase requires a non-empty phase name');
-  return phase;
-}
-
-function requestedLaneShard() {
-  const index = argv.indexOf('--shard');
-  if (index === -1) return null;
-  const shard = argv[index + 1];
-  if (!shard || shard.startsWith('--')) fail('--shard requires an index/count');
-  return shard;
-}
-
-function requireLane(laneName) {
-  const steps = lanes[laneName];
-  if (!steps) {
-    fail(`Unknown test lane: ${laneName}`);
-  }
-  return steps;
-}
-
-function runLaneStep(laneName, step, stepIndex) {
-  return runStep(step, { laneName, stepIndex });
-}
-
-function shouldContinueOnFailure() {
-  return process.env.OPL_TEST_LANE_CONTINUE === '1' || argv.slice(2).includes('--continue');
-}
-
-function describeStepFailures(step, stepIndex, result) {
-  if (result.failedBatches?.length) {
-    return result.failedBatches.map((batch) =>
-      `step ${stepIndex + 1} (${step.kind}) batch ${batch.batchIndex + 1}/${batch.batchCount}: ${batch.files.join(', ')}`);
-  }
-  return [
-    `step ${stepIndex + 1} (${step.kind})${step.files ? `: ${step.files.join(', ')}` : ''}`,
-  ];
-}
-
-function reportLaneFailures(laneName, failures) {
-  process.stderr.write(
-    `Test lane ${laneName} failed in ${failures.length} step${failures.length === 1 ? '' : 's'} (continued run):\n`,
-  );
-  failures.forEach((failure) => process.stderr.write(`- ${failure}\n`));
-}
-
-function runStep(step, context) {
-  const stepRunner = stepRunners[step.kind];
-  if (!stepRunner) {
-    fail(`Unsupported test lane step kind: ${step.kind}`);
-  }
-  return stepRunner(step, context);
-}
-
-const stepRunners = {
-  command: (step, context) => spawnStep(step.command, step.args, {
-    ...context,
-    stepKind: step.kind,
-  }, { env: createTestStepEnv(step.env) }),
-  npm: (step, context) => spawnStep(npmCommand(), step.args, {
-    ...context,
-    stepKind: step.kind,
-  }, { env: createTestStepEnv(step.env) }),
-  'node-test': runNodeTestStep,
-};
-
-export function runNodeTestStep(step, context) {
-  if (!Number.isInteger(step.batchSize) || step.batchSize <= 0 || step.files.length <= step.batchSize) {
-    return spawnStep(process.execPath, nodeTestArgs(step), {
-      ...context,
-      stepKind: step.kind,
-      batchFiles: step.files,
-    }, { env: createTestStepEnv(step.env) });
-  }
-  const chunks = chunkFiles(step.files, step.batchSize);
-  const failedBatches = [];
-  for (const [batchIndex, files] of chunks.entries()) {
-    const result = spawnStep(process.execPath, nodeTestArgs({ ...step, files }), {
-      ...context,
-      stepKind: step.kind,
-      batchIndex,
-      batchCount: chunks.length,
-      batchFiles: files,
-    }, { env: createTestStepEnv(step.env) });
-    if (result.status !== 0) {
-      failedBatches.push({ batchIndex, batchCount: chunks.length, files });
-      if (!shouldContinueOnFailure()) {
-        return { ...result, failedBatches };
-      }
-    }
-  }
-  return failedBatches.length === 0 ? { status: 0 } : { status: 1, failedBatches };
-}
-
-function createTestStepEnv(stepEnv = {}) {
+function stepEnv(extra = {}) {
   if (!testLaneStateRoot) {
     testLaneStateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-test-lane-state-'));
-    process.on('exit', () => {
-      fs.rmSync(testLaneStateRoot, { recursive: true, force: true });
-    });
-  }
-  const stateDir = fs.mkdtempSync(path.join(testLaneStateRoot, 'step-'));
-  const homeDir = createTestStepHome();
-  return {
-    ...stepEnv,
-    OPL_STATE_DIR: stateDir,
-    HOME: homeDir,
-    USERPROFILE: homeDir,
-    GIT_CONFIG_GLOBAL: path.join(homeDir, '.gitconfig'),
-  };
-}
-
-// A checkout-local HOME keeps lane steps hermetic: descriptor and carrier reads
-// must not consume the invoking user's installed state, and an empty home is
-// orders of magnitude cheaper than a populated one.
-function createTestStepHome() {
-  if (!testLaneHomeRoot) {
     testLaneHomeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-test-lane-home-'));
-    process.on('exit', () => {
-      fs.rmSync(testLaneHomeRoot, { recursive: true, force: true });
-    });
+    process.on('exit', () => { fs.rmSync(testLaneStateRoot, { recursive: true, force: true }); fs.rmSync(testLaneHomeRoot, { recursive: true, force: true }); });
   }
-  const homeDir = fs.mkdtempSync(path.join(testLaneHomeRoot, 'home-'));
-  fs.writeFileSync(path.join(homeDir, '.gitconfig'), gitConfigContents(), 'utf8');
-  return homeDir;
+  const home = fs.mkdtempSync(path.join(testLaneHomeRoot, 'home-'));
+  const gitVal = (k, d) => { const r = spawnSync('git', ['config', '--global', k], { encoding: 'utf8' }); return (r.status === 0 && r.stdout.trim()) || d; };
+  fs.writeFileSync(path.join(home, '.gitconfig'), `[user]\n\tname = ${gitVal('user.name', 'OPL Test Lane')}\n\temail = ${gitVal('user.email', 'opl-test-lane@example.invalid')}\n[init]\n\tdefaultBranch = main\n[commit]\n\tgpgsign = false\n[tag]\n\tgpgsign = false\n`);
+  return { ...extra, OPL_STATE_DIR: fs.mkdtempSync(path.join(testLaneStateRoot, 'step-')), HOME: home, USERPROFILE: home, GIT_CONFIG_GLOBAL: path.join(home, '.gitconfig') };
 }
 
-function gitConfigContents() {
-  const identity = (key, fallback) => {
-    const result = spawnSync('git', ['config', '--global', key], { encoding: 'utf8' });
-    const value = result.status === 0 ? result.stdout.trim() : '';
-    return value || fallback;
-  };
-  return [
-    '[user]',
-    `\tname = ${identity('user.name', 'OPL Test Lane')}`,
-    `\temail = ${identity('user.email', 'opl-test-lane@example.invalid')}`,
-    '[init]',
-    '\tdefaultBranch = main',
-    '[commit]',
-    '\tgpgsign = false',
-    '[tag]',
-    '\tgpgsign = false',
-    '',
-  ].join('\n');
-}
-
-function chunkFiles(files, size) {
-  const chunks = [];
-  for (let index = 0; index < files.length; index += size) {
-    chunks.push(files.slice(index, index + size));
-  }
-  return chunks;
-}
-
-function spawnStep(commandName, args, context, options = {}) {
-  const startedAt = performance.now();
-  const result = spawnSync(commandName, args, {
-    cwd: repoRoot,
-    stdio: 'inherit',
-    timeout: stepTimeoutMs,
-    detached: true,
-    killSignal: 'SIGTERM',
+function spawnStep(cmd, args, ctx, extraEnv = {}) {
+  const start = performance.now();
+  const res = spawnSync(cmd, args, {
+    cwd: repoRoot, stdio: 'inherit', timeout: stepTimeoutMs, detached: true, killSignal: 'SIGTERM',
     env: {
-      ...process.env,
-      NODE_NO_WARNINGS: '1',
-      TMPDIR: process.env.TMPDIR || toolTempDir + path.sep,
+      ...process.env, NODE_NO_WARNINGS: '1', TMPDIR: process.env.TMPDIR || path.join(pythonCacheRoot, 'tmp') + path.sep,
       NODE_COMPILE_CACHE: process.env.NODE_COMPILE_CACHE || path.join(pythonCacheRoot, 'node-compile-cache'),
       NPM_CONFIG_CACHE: process.env.NPM_CONFIG_CACHE || path.join(pythonCacheRoot, 'npm-cache'),
       npm_config_cache: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE || path.join(pythonCacheRoot, 'npm-cache'),
@@ -629,329 +228,70 @@ function spawnStep(commandName, args, context, options = {}) {
       XDG_CACHE_HOME: process.env.XDG_CACHE_HOME || path.join(pythonCacheRoot, 'xdg-cache'),
       PYTHONDONTWRITEBYTECODE: process.env.PYTHONDONTWRITEBYTECODE || '1',
       PYTHONPYCACHEPREFIX: process.env.PYTHONPYCACHEPREFIX || path.join(pythonCacheRoot, 'pycache'),
-      PYTEST_ADDOPTS: [
-        process.env.PYTEST_ADDOPTS || '',
-        '-p no:cacheprovider',
-        `-o cache_dir=${path.join(pythonCacheRoot, 'pytest-cache')}`,
-      ].filter(Boolean).join(' '),
-      ...(options.env ?? {}),
+      PYTEST_ADDOPTS: [process.env.PYTEST_ADDOPTS || '', '-p no:cacheprovider', `-o cache_dir=${path.join(pythonCacheRoot, 'pytest-cache')}`].filter(Boolean).join(' '),
+      ...extraEnv,
     },
   });
-  process.stdout.write(`Test lane timing: ${JSON.stringify({ lane: context.laneName, step: formatStepContext(context), duration_ms: Math.round(performance.now() - startedAt), status: result.status })}\n`);
-  if (isTimeoutResult(result)) {
-    cleanupProcessGroup(result);
-    reportStepTimeout(commandName, args, context);
-    return { ...result, status: 1 };
+  const stepLabel = [`${ctx.stepIndex + 1}:${ctx.stepKind}`, Number.isInteger(ctx.batchIndex) ? `batch=${ctx.batchIndex + 1}/${ctx.batchCount}` : null, ctx.batchFiles?.length ? `files=${ctx.batchFiles.join(',')}` : null].filter(Boolean).join(' ');
+  process.stdout.write(`Test lane timing: ${JSON.stringify({ lane: ctx.laneName, step: stepLabel, duration_ms: Math.round(performance.now() - start), status: res.status })}\n`);
+  if (res.error?.code === 'ETIMEDOUT' || res.status !== 0) {
+    if (res.pid) try { process.kill(-res.pid, 'SIGKILL'); } catch { try { process.kill(res.pid, 'SIGKILL'); } catch {} }
+    if (res.error?.code === 'ETIMEDOUT') { process.stderr.write(`Test lane step timed out. lane=${ctx.laneName} step=${stepLabel} command=${cmd} ${args.join(' ')} timeout_ms=${stepTimeoutMs}\n`); return { ...res, status: 1 }; }
   }
-  if (result.status !== 0) {
-    cleanupProcessGroup(result);
-  }
-  return result;
+  return res;
 }
 
-function nodeTestArgs(step) {
-  const args = ['--conditions=opl-source'];
-  if (step.stripTypes) args.push('--experimental-strip-types');
-  args.push('--test', ...step.files);
-  return args;
+export function runNodeTestStep(step, context) {
+  const argsFor = (files) => ['--conditions=opl-source', ...(step.stripTypes ? ['--experimental-strip-types'] : []), '--test', ...files];
+  if (!Number.isInteger(step.batchSize) || step.batchSize <= 0 || step.files.length <= step.batchSize) {
+    return spawnStep(process.execPath, argsFor(step.files), { ...context, stepKind: step.kind, batchFiles: step.files }, stepEnv(step.env));
+  }
+  const chunks = Array.from({ length: Math.ceil(step.files.length / step.batchSize) }, (_, i) => step.files.slice(i * step.batchSize, (i + 1) * step.batchSize));
+  const failedBatches = [];
+  for (const [batchIndex, files] of chunks.entries()) {
+    const res = spawnStep(process.execPath, argsFor(files), { ...context, stepKind: step.kind, batchIndex, batchCount: chunks.length, batchFiles: files }, stepEnv(step.env));
+    if (res.status !== 0) { failedBatches.push({ batchIndex, batchCount: chunks.length, files }); if (!continueOnFailure()) return { ...res, failedBatches }; }
+  }
+  return failedBatches.length ? { status: 1, failedBatches } : { status: 0 };
 }
+
+const argv = process.argv.slice(2);
+const continueOnFailure = () => process.env.OPL_TEST_LANE_CONTINUE === '1' || argv.slice(2).includes('--continue');
+const optValue = (flag, err) => { const i = argv.indexOf(flag); if (i === -1) return null; const v = argv[i + 1]; if (!v || v.startsWith('--')) fail(err); return v; };
 
 function assertCoverage() {
-  failOnDuplicateLaneEntryFiles(duplicateLaneEntryFiles());
-
-  const trackedTests = trackedTestFiles();
-  const covered = coveredTestFiles();
-  const uncovered = trackedTests.filter((file) => !covered.has(file));
-  failOnUncoveredTests(uncovered);
-
-  process.stdout.write(`All ${trackedTests.length} active test files are assigned to a test lane.\n`);
-}
-
-function failOnUncoveredTests(uncovered) {
-  if (uncovered.length === 0) {
-    return;
+  for (const [lane, steps] of Object.entries(lanes)) {
+    const seen = new Map();
+    steps.filter((s) => s.kind === 'node-test').flatMap((s) => s.files).forEach((f, i) => seen.set(norm(f), [...(seen.get(norm(f)) ?? []), i + 1]));
+    const dups = [...seen.entries()].filter(([, idxs]) => idxs.length > 1);
+    if (dups.length) fail(`Test lane files are listed more than once in the same lane:\n${dups.map(([f, idxs]) => `- ${lane}: ${f} (${idxs.join(', ')})`).join('\n')}`);
   }
-  process.stderr.write('Active test files are not assigned to a test lane:\n');
-  process.stderr.write(uncovered.map((file) => `- ${file}`).join('\n'));
-  process.stderr.write('\n');
-  process.exit(1);
-}
-
-function duplicateLaneEntryFiles() {
-  const duplicates = [];
-  for (const [laneName, steps] of Object.entries(lanes)) {
-    const occurrences = new Map();
-    laneNodeTestFiles(steps).forEach((file, index) => {
-      const normalized = normalizeRelativePath(file);
-      if (!occurrences.has(normalized)) {
-        occurrences.set(normalized, []);
-      }
-      occurrences.get(normalized).push(index + 1);
-    });
-    for (const [file, indexes] of occurrences.entries()) {
-      if (indexes.length > 1) {
-        duplicates.push({ laneName, file, indexes });
-      }
-    }
+  const ls = spawnSync('git', ['ls-files', 'tests/**/*.test.ts', 'tests/**/*.test.mjs'], { cwd: repoRoot, encoding: 'utf8' });
+  if (ls.status !== 0) fail(`${ls.stderr}git ls-files failed`);
+  const tracked = ls.stdout.split('\n').filter((f) => f && fs.existsSync(path.join(repoRoot, f)) && (f.startsWith('tests/src/') || f.startsWith('tests/built/'))).sort();
+  const covered = new Set(), stack = Object.values(lanes).flatMap((s) => s.filter((x) => x.kind === 'node-test').flatMap((x) => x.files)).map(norm);
+  while (stack.length) {
+    const rel = stack.pop();
+    if (covered.has(rel)) continue;
+    covered.add(rel);
+    if (fs.existsSync(path.join(repoRoot, rel))) stack.push(...readImportedTestFiles(rel));
   }
-  return duplicates;
-}
-
-function failOnDuplicateLaneEntryFiles(duplicates) {
-  if (duplicates.length === 0) {
-    return;
-  }
-  process.stderr.write('Test lane files are listed more than once in the same lane:\n');
-  process.stderr.write(
-    duplicates
-      .map(({ laneName, file, indexes }) => `- ${laneName}: ${file} (${indexes.join(', ')})`)
-      .join('\n'),
-  );
-  process.stderr.write('\n');
-  process.exit(1);
-}
-
-function coveredTestFiles() {
-  const covered = new Set();
-  laneEntryFiles().forEach((file) => addImportClosure(file, covered));
-  return covered;
-}
-
-function laneEntryFiles() {
-  return Object.values(lanes).flatMap(laneNodeTestFiles);
-}
-
-function laneNodeTestFiles(steps) {
-  return steps.filter(isNodeTestStep).flatMap(stepFiles);
-}
-
-function isNodeTestStep(step) {
-  return step.kind === 'node-test';
-}
-
-function stepFiles(step) {
-  return step.files;
-}
-
-function trackedTestFiles() {
-  const result = spawnSync('git', ['ls-files', 'tests/**/*.test.ts', 'tests/**/*.test.mjs'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-  });
-  assertSuccessfulGitLsFiles(result);
-  return result.stdout
-    .split('\n')
-    .filter(Boolean)
-    .filter(isActiveTrackedTestFile)
-    .sort();
-}
-
-function assertSuccessfulGitLsFiles(result) {
-  if (result.status === 0) {
-    return;
-  }
-  process.stderr.write(result.stderr);
-  process.stderr.write('git ls-files failed\n');
-  process.exit(1);
-}
-
-function isActiveTrackedTestFile(file) {
-  if (!fs.existsSync(path.join(repoRoot, file))) {
-    return false;
-  }
-  return file.startsWith('tests/src/') || file.startsWith('tests/built/');
-}
-
-function addImportClosure(relativePath, covered) {
-  const normalized = normalizeRelativePath(relativePath);
-  if (!shouldReadForClosure(normalized, covered)) {
-    return;
-  }
-
-  collectImportedTestFiles(normalized).forEach((imported) => addImportClosure(imported, covered));
-}
-
-function shouldReadForClosure(relativePath, covered) {
-  return markCovered(relativePath, covered) && trackedFileExists(relativePath);
-}
-
-function markCovered(relativePath, covered) {
-  if (covered.has(relativePath)) {
-    return false;
-  }
-  covered.add(relativePath);
-  return true;
-}
-
-function collectImportedTestFiles(relativePath, availableFiles = null, sourceReader = readTestSource) {
-  const source = sourceReader(relativePath);
-  const importPattern = /import\s+(?:[^'"]+\s+from\s+)?['"](\.{1,2}\/[^'"]+)['"]/g;
-  const sourceDir = path.dirname(relativePath);
-  return [...source.matchAll(importPattern)]
-    .map((match) => resolveImport(sourceDir, match[1], availableFiles))
-    .filter(isImportableTestFile);
-}
-
-function isImportableTestFile(file) {
-  return Boolean(file && /\.(?:test\.)?(?:ts|mjs)$/.test(file));
-}
-
-function resolveImport(sourceDir, specifier, availableFiles = null) {
-  const base = normalizeRelativePath(path.join(sourceDir, specifier));
-  const fileExists = availableFiles
-    ? (candidate) => availableFiles.has(candidate)
-    : trackedFileExists;
-  return importCandidates(base).find(fileExists) ?? null;
-}
-
-function importCandidates(base) {
-  return path.extname(base) ? [base] : [base, `${base}.ts`, `${base}.mjs`];
-}
-
-function trackedFileExists(relativePath) {
-  return fs.existsSync(path.join(repoRoot, relativePath));
-}
-
-function readTestSource(relativePath) {
-  return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
-}
-
-function printLaneList() {
-  Object.entries(lanes).forEach(printLane);
-}
-
-function printLane([laneName, steps]) {
-  process.stdout.write(`${laneName}\n`);
-  steps.forEach((step) => process.stdout.write(formatLaneStep(step)));
-}
-
-const laneStepFormatters = {
-  command: formatCommandStep,
-  npm: formatNpmStep,
-  'node-test': formatNodeTestStep,
-};
-
-function formatLaneStep(step) {
-  const formatter = laneStepFormatters[step.kind];
-  return formatter(step);
-}
-
-function formatNodeTestStep(step) {
-  return step.files.map((file) => `  ${file}\n`).join('');
-}
-
-function formatNpmStep(step) {
-  return `  npm ${step.args.join(' ')}\n`;
-}
-
-function formatCommandStep(step) {
-  return `  ${step.command} ${step.args.join(' ')}\n`.trimEnd() + '\n';
-}
-
-function printHelp() {
-  process.stdout.write(`Usage: scripts/test-lanes.mjs <command>\n\n`);
-  process.stdout.write('Commands:\n');
-  process.stdout.write('  list\n');
-  process.stdout.write('  plan <lane> [--phase <name>] [--shard <index/count>]\n');
-  process.stdout.write(`  run <${Object.keys(lanes).join('|')}>\n`);
-  process.stdout.write('  assert-coverage\n');
-  process.stdout.write('\nOptions:\n');
-  process.stdout.write('  --continue   Run every batch after a failure and print the full failure summary\n');
-  process.stdout.write('               (equivalent to OPL_TEST_LANE_CONTINUE=1)\n');
-  process.stdout.write('  --phase <name> Run one independent phase; omission runs the complete lane\n');
-  process.stdout.write('  --shard <index/count> Partition a test-only phase without repeating files\n');
-}
-
-function normalizeRelativePath(filePath) {
-  return filePath.split(path.sep).join('/');
-}
-
-function npmCommand() {
-  return process.platform === 'win32' ? 'npm.cmd' : 'npm';
-}
-
-function parseStepTimeoutMs(rawValue) {
-  if (!rawValue) {
-    return defaultStepTimeoutMs;
-  }
-  if (!/^\d+$/.test(rawValue)) {
-    fail(`OPL_TEST_LANE_STEP_TIMEOUT_MS must be a positive integer <= ${maxStepTimeoutMs}; got ${rawValue}`);
-  }
-  const parsed = Number(rawValue);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0 || parsed > maxStepTimeoutMs) {
-    fail(`OPL_TEST_LANE_STEP_TIMEOUT_MS must be a positive integer <= ${maxStepTimeoutMs}; got ${rawValue}`);
-  }
-  return parsed;
-}
-
-function isTimeoutResult(result) {
-  return result.error?.code === 'ETIMEDOUT';
-}
-
-function cleanupProcessGroup(result) {
-  if (!result.pid) {
-    return;
-  }
-  try {
-    process.kill(-result.pid, 'SIGKILL');
-  } catch {
-    try {
-      process.kill(result.pid, 'SIGKILL');
-    } catch {
-      // The child result is authoritative; cleanup is best-effort for its process group.
-    }
-  }
-}
-
-function reportStepTimeout(commandName, args, context) {
-  process.stderr.write([
-    'Test lane step timed out.',
-    `lane=${context.laneName}`,
-    `step=${formatStepContext(context)}`,
-    `command=${formatSpawnCommand(commandName, args)}`,
-    `timeout_ms=${stepTimeoutMs}`,
-  ].join(' ') + '\n');
-}
-
-function formatStepContext(context) {
-  const parts = [`${context.stepIndex + 1}:${context.stepKind}`];
-  if (Number.isInteger(context.batchIndex)) {
-    parts.push(`batch=${context.batchIndex + 1}/${context.batchCount}`);
-  }
-  if (context.batchFiles?.length) {
-    parts.push(`files=${context.batchFiles.join(',')}`);
-  }
-  return parts.join(' ');
-}
-
-function formatSpawnCommand(commandName, args) {
-  return [commandName, ...args].join(' ');
-}
-
-function exitOnFailure(result) {
-  if (result.status === 0) {
-    return;
-  }
-  process.exit(exitStatus(result));
-}
-
-function exitStatus(result) {
-  return result.status === null ? 1 : result.status;
-}
-
-function fail(message) {
-  process.stderr.write(`${message}\n`);
-  process.exit(1);
-}
-
-function main() {
-  const commandHandler = commandHandlers[command];
-  if (!commandHandler) {
-    fail(`Unknown command: ${command}`);
-  }
-  commandHandler();
+  const uncovered = tracked.filter((f) => !covered.has(f));
+  if (uncovered.length) fail(`Active test files are not assigned to a test lane:\n${uncovered.map((f) => `- ${f}`).join('\n')}`);
+  process.stdout.write(`All ${tracked.length} active test files are assigned to a test lane.\n`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main();
+  const cmd = argv[0] ?? 'help';
+  if (cmd === 'list') Object.entries(lanes).forEach(([n, s]) => process.stdout.write(`${n}\n${s.map((x) => x.kind === 'node-test' ? x.files.map((f) => `  ${f}\n`).join('') : `  ${x.kind === 'npm' ? 'npm' : x.command} ${x.args.join(' ')}\n`).join('')}`));
+  else if (cmd === 'plan') process.stdout.write(`${JSON.stringify(laneTestPlan(argv[1], optValue('--phase', '--phase requires a non-empty phase name'), optValue('--shard', '--shard requires an index/count')), null, 2)}\n`);
+  else if (cmd === 'assert-coverage') assertCoverage();
+  else if (cmd === 'run') {
+    const steps = laneTestPlan(argv[1], optValue('--phase', '--phase requires a non-empty phase name'), optValue('--shard', '--shard requires an index/count')), failures = [];
+    for (const [i, step] of steps.entries()) {
+      const r = step.kind === 'node-test' ? runNodeTestStep(step, { laneName: argv[1], stepIndex: i }) : spawnStep(step.kind === 'npm' ? (process.platform === 'win32' ? 'npm.cmd' : 'npm') : step.command, step.args, { laneName: argv[1], stepIndex: i }, stepEnv(step.env));
+      if (r.status !== 0) { if (!continueOnFailure()) process.exit(r.status ?? 1); failures.push(r.failedBatches?.length ? r.failedBatches.map((b) => `step ${i + 1} (${step.kind}) batch ${b.batchIndex + 1}/${b.batchCount}: ${b.files.join(', ')}`) : [`step ${i + 1} (${step.kind})`]).flat(); }
+    }
+    if (failures.length) fail(`Test lane ${argv[1]} failed in ${failures.length} step${failures.length === 1 ? '' : 's'} (continued run):\n${failures.map((f) => `- ${f}`).join('\n')}`);
+  } else process.stdout.write(`Usage: scripts/test-lanes.mjs <command>\n\nCommands:\n  list\n  plan <lane> [--phase <name>] [--shard <index/count>]\n  run <${Object.keys(lanes).join('|')}>\n  assert-coverage\n`);
 }

@@ -10,7 +10,7 @@ export type {
   StandardAgentTaskProvider,
 } from './standard-agent-interface-types.ts';
 
-export { STANDARD_AGENT_INTERFACE_VERSION, STANDARD_AGENT_DESCRIPTOR_RELATIVE_PATH } from './standard-agent-interface/constants.ts';
+export { STANDARD_AGENT_INTERFACE_VERSION, STANDARD_AGENT_DESCRIPTOR_RELATIVE_PATH } from './standard-agent-interface/validation-values.ts';
 export { parseStandardAgentInventoryProjection } from './standard-agent-interface/inventory-and-stages.ts';
 export { parseStandardAgentInterface } from './standard-agent-interface/declaration.ts';
 export { resolveStandardAgentSourceMaterialConsumerRoute } from './standard-agent-interface/source-material.ts';

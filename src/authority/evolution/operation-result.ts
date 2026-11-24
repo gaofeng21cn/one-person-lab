@@ -167,3 +167,25 @@ export function validateFoundryOperationResult(
   }
   return result;
 }
+
+export class InMemoryFoundryOperationResultJournal implements FoundryOperationResultJournal {
+  readonly #results = new Map<string, FoundryOperationResult>();
+
+  async read(identity: FoundryEvaluationOperationIdentity) {
+    const operation = validateFoundryEvaluationOperationIdentity(identity);
+    const result = this.#results.get(operation.operation_key);
+    return result ? structuredClone(validateFoundryOperationResult(result, operation)) : null;
+  }
+
+  async commit(input: Parameters<FoundryOperationResultJournal['commit']>[0]) {
+    const result = materializeFoundryOperationResult(input);
+    const existing = this.#results.get(result.operation_key);
+    if (existing && canonicalJsonText(existing) !== canonicalJsonText(result)) {
+      fail('Foundry operation key is already committed with a different result.', {
+        operation_key: result.operation_key,
+      });
+    }
+    if (!existing) this.#results.set(result.operation_key, structuredClone(result));
+    return structuredClone(existing ?? result);
+  }
+}

@@ -2,7 +2,8 @@ import crypto from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
-import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import type { WorkItemExecutionScopeSnapshot } from '../../authority/workspace/index.ts';
 import {
   assertRuntimeRowScopeMatchesWrite,
@@ -12,6 +13,8 @@ import {
   normalizeRuntimeExecutionScopeWrite,
   persistRuntimeExecutionScope,
   requireRuntimeExecutionScopeMutationAllowed,
+  type RuntimeExecutionIdentityState,
+  type RuntimeExecutionScopeKind,
   type RuntimeExecutionScopeWriteKind,
 } from './family-runtime-execution-scope-persistence.ts';
 import {
@@ -21,38 +24,418 @@ import {
 } from './family-runtime-schema-migrations.ts';
 import {
   requireTemporalStageRunWorkflowInputLaunchable,
+  temporalStageRunRecoveryResumeSha256,
   type TemporalStageRunWorkflowInput,
 } from './family-runtime-temporal.ts';
 import { requireNoActiveUnresolvedRuntimeIdentityConflict } from './family-runtime-legacy-identity-admission.ts';
-import {
-  activeRecoveryStartingLease,
-  activeStartingLease,
-  nowIso,
-  validLeaseMs,
-  writeRecoveryRuns,
-} from './family-runtime-stage-run-launch-registry-parts/lease-persistence.ts';
-import {
-  recoveryArtifactProducerAttemptRef,
-  recoveryEntryCanAdvanceToRepairerResume,
-  recoveryEntryCanAppendQualityDebtRefs,
-  recoveryEntryCanEnrichReviewerSnapshot,
-  recoveryEntryCanExtendAcceptedProducerSnapshot,
-  recoveryEntryCanRestoreOwnerRepairMap,
-  recoveryEntryIdentityMatches,
-  recoveryResumeChangedFields,
-  recoveryRuns,
-  requireRecoveryRegistryIdentity,
-  terminalTemporalRecoveryStatus,
-} from './family-runtime-stage-run-launch-registry-parts/recovery-identity.ts';
-import {
-  parseObject,
-  type StageRunLaunchRow,
-  type StageRunRecoveryRun,
-  type StageRunRecoveryTerminalRetry,
-} from './family-runtime-stage-run-launch-registry-parts/types.ts';
+import { getStageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
+import { normalizeReviewerInputSnapshotRequest } from './family-runtime-reviewer-input-snapshot.ts';
 
-export { DEFAULT_STAGE_RUN_START_LEASE_MS } from './family-runtime-stage-run-launch-registry-parts/types.ts';
-export type { StageRunLaunchStatus } from './family-runtime-stage-run-launch-registry-parts/types.ts';
+export type StageRunLaunchStatus = 'registered' | 'starting' | 'start_failed' | 'started' | 'closed';
+
+export const DEFAULT_STAGE_RUN_START_LEASE_MS = 30_000;
+
+type StageRunLaunchRow = {
+  stage_run_id: string;
+  stage_run_invocation_id: string;
+  stage_run_spec_sha256: string;
+  domain_id: string;
+  stage_id: string;
+  workflow_id: string;
+  parent_route_decision_ref: string | null;
+  scope_kind?: RuntimeExecutionScopeKind;
+  project_scope_id?: string | null;
+  work_item_scope_id?: string | null;
+  workspace_binding_id?: string | null;
+  binding_version_id?: string | null;
+  scope_digest?: string | null;
+  execution_scope_json?: string | null;
+  identity_state?: RuntimeExecutionIdentityState;
+  stage_run_input_json: string;
+  launch_status: StageRunLaunchStatus;
+  temporal_start_receipt_json: string | null;
+  terminal_status: string | null;
+  last_start_error: string | null;
+  start_claim_token: string | null;
+  start_claimed_at: string | null;
+  start_lease_expires_at: string | null;
+  start_attempt_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type StageRunRecoveryRun = {
+  surface_kind: 'opl_stage_run_recovery_run';
+  version: 'opl-stage-run-recovery-run.v1';
+  recovery_id: string;
+  recovery_resume_sha256: string;
+  quality_cycle_id: string;
+  producer_attempt_ref: string;
+  recovery_resume: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>;
+  start_status: 'starting' | 'started' | 'start_failed';
+  start_claim_token: string | null;
+  start_claimed_at: string | null;
+  start_lease_expires_at: string | null;
+  start_attempt_count: number;
+  temporal_start_receipt: Record<string, unknown> | null;
+  temporal_start_receipt_history?: Record<string, unknown>[];
+  last_start_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type StageRunRecoveryTerminalRetry = {
+  recoveryRunId: string;
+  workflowStatus: string;
+  observationReceipt?: Record<string, unknown>;
+};
+
+function parseObject(value: string | null) {
+  if (!value) return null;
+  const parsed = parseJsonText(value);
+  return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+    ? parsed as Record<string, unknown>
+    : null;
+}
+
+function nowIso(now?: Date) {
+  return (now ?? new Date()).toISOString();
+}
+
+function validLeaseMs(value: number | undefined) {
+  if (value === undefined) return DEFAULT_STAGE_RUN_START_LEASE_MS;
+  if (!Number.isSafeInteger(value) || value < 1 || value > 5 * 60_000) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun start claim lease must be an integer between 1 ms and 5 minutes.',
+      { lease_ms: value },
+    );
+  }
+  return value;
+}
+
+function activeStartingLease(row: StageRunLaunchRow, now: Date) {
+  if (row.launch_status !== 'starting' || !row.start_claim_token || !row.start_lease_expires_at) {
+    return false;
+  }
+  const expiresAt = Date.parse(row.start_lease_expires_at);
+  return Number.isFinite(expiresAt) && expiresAt > now.getTime();
+}
+
+function activeRecoveryStartingLease(entry: StageRunRecoveryRun, now: Date) {
+  if (entry.start_status !== 'starting' || !entry.start_claim_token || !entry.start_lease_expires_at) return false;
+  const expiresAt = Date.parse(entry.start_lease_expires_at);
+  return Number.isFinite(expiresAt) && expiresAt > now.getTime();
+}
+
+function writeRecoveryRuns(
+  db: DatabaseSync,
+  row: StageRunLaunchRow,
+  receipt: Record<string, unknown>,
+  runs: StageRunRecoveryRun[],
+  now: Date,
+) {
+  db.prepare(`
+    UPDATE stage_run_launches
+    SET temporal_start_receipt_json = ?, updated_at = ?
+    WHERE stage_run_id = ?
+  `).run(canonicalJsonText({ ...receipt, recovery_runs: runs }), nowIso(now), row.stage_run_id);
+}
+
+function recoveryRuns(receipt: Record<string, unknown>) {
+  const value = receipt.recovery_runs;
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.some((entry) => !entry || typeof entry !== 'object' || Array.isArray(entry))) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Persisted StageRun recovery receipts are invalid.',
+      { failure_code: 'stage_run_recovery_registry_invalid' },
+    );
+  }
+  return value as StageRunRecoveryRun[];
+}
+
+function stageRunInputWithoutRecovery(input: TemporalStageRunWorkflowInput) {
+  const { recovery_resume: _recoveryResume, ...baseInput } = input;
+  return baseInput;
+}
+
+function requireRecoveryRegistryIdentity(
+  row: StageRunLaunchRow,
+  workflowInput: TemporalStageRunWorkflowInput,
+) {
+  const launchInput = requireTemporalStageRunWorkflowInputLaunchable(workflowInput, {
+    revalidateContent: 'historical_evidence',
+  });
+  const recovery = launchInput.recovery_resume!;
+  const persistedInput = parseObject(row.stage_run_input_json);
+  if (
+    row.launch_status !== 'closed'
+    || !persistedInput
+    || canonicalJsonText(stageRunInputWithoutRecovery(launchInput)) !== canonicalJsonText(persistedInput)
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun recovery must reuse one closed registered StageRun and its immutable launch input.',
+      {
+        failure_code: 'stage_run_recovery_launch_identity_mismatch',
+        stage_run_id: row.stage_run_id,
+        launch_status: row.launch_status,
+      },
+    );
+  }
+  return {
+    recovery,
+    recoveryResumeSha256: temporalStageRunRecoveryResumeSha256(launchInput),
+  };
+}
+
+function recoveryArtifactProducerAttemptRef(
+  recovery: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+) {
+  const ref = recovery.artifact_producer_attempt_ref ?? recovery.producer_attempt_ref;
+  if (!ref) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'StageRun recovery registry requires the artifact-producing Attempt ref.',
+      { failure_code: 'stage_run_recovery_producer_identity_mismatch' },
+    );
+  }
+  return ref;
+}
+
+function recoveryEntryIdentityMatches(
+  entry: StageRunRecoveryRun,
+  recovery: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+  recoveryResumeSha256: string,
+) {
+  return entry.recovery_id === recovery.recovery_id
+    && entry.recovery_resume_sha256 === recoveryResumeSha256
+    && entry.quality_cycle_id === recovery.quality_cycle_id
+    && entry.producer_attempt_ref === recoveryArtifactProducerAttemptRef(recovery)
+    && canonicalJsonText(entry.recovery_resume) === canonicalJsonText(recovery);
+}
+
+function recoveryEntryCanAdvanceToRepairerResume(
+  entry: StageRunRecoveryRun,
+  recovery: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+  terminalRetry: StageRunRecoveryTerminalRetry,
+) {
+  const persistedRunId = typeof entry.temporal_start_receipt?.recovery_run_id === 'string'
+    ? entry.temporal_start_receipt.recovery_run_id
+    : null;
+  const priorAttempts = recovery.prior_attempt_summaries;
+  const priorProducerRef = entry.producer_attempt_ref;
+  const priorProducerPresent = Array.isArray(priorAttempts)
+    && priorAttempts.some((attempt) => `opl://stage_attempts/${attempt.stage_attempt_id}` === priorProducerRef);
+  const nextProducerRef = recoveryArtifactProducerAttemptRef(recovery);
+  const latestAttempt = Array.isArray(priorAttempts) ? priorAttempts.at(-1) : null;
+  return entry.start_status === 'started'
+    && persistedRunId === terminalRetry.recoveryRunId
+    && terminalTemporalRecoveryStatus(terminalRetry.workflowStatus)
+    && entry.quality_cycle_id === recovery.quality_cycle_id
+    && priorProducerPresent
+    && Array.isArray(recovery.findings)
+    && recovery.findings.length > 0
+    && Array.isArray(recovery.review_receipts)
+    && recovery.review_receipts.length > 0
+    && (
+      (recovery.resume_after_role === 'repairer'
+        && nextProducerRef !== priorProducerRef
+        && latestAttempt?.attempt_role === 'repairer'
+        && Array.isArray(recovery.repair_map)
+        && recovery.repair_map.length > 0
+        && recovery.repair_rounds_used === latestAttempt.quality_round_index)
+      || (recovery.resume_after_role === 'reviewer'
+        && nextProducerRef === priorProducerRef
+        && latestAttempt?.attempt_role === 'reviewer'
+        && recovery.reviewer_attempt_ref === `opl://stage_attempts/${latestAttempt.stage_attempt_id}`
+        && recovery.review_receipts.at(-1)?.reviewer_attempt_ref === recovery.reviewer_attempt_ref
+        && recovery.review_receipts.at(-1)?.producer_attempt_ref === priorProducerRef
+        && recovery.review_receipts.at(-1)?.verdict === 'repair_required'
+        && (recovery.repair_rounds_used ?? -1) >= (entry.recovery_resume.repair_rounds_used ?? 0)
+        && canonicalJsonText(recovery.artifact_refs) === canonicalJsonText(entry.recovery_resume.artifact_refs)
+        && canonicalJsonText(recovery.artifact_hashes) === canonicalJsonText(entry.recovery_resume.artifact_hashes)
+        && canonicalJsonText(recovery.artifact_identity_receipt_refs) === canonicalJsonText(entry.recovery_resume.artifact_identity_receipt_refs))
+    );
+}
+
+function recoveryResumeSnapshotEnrichmentIdentity(
+  recovery: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+) {
+  const {
+    review_input_snapshot_materialization_request: _reviewerSnapshot,
+    quality_debt_refs: _qualityDebtRefs,
+    ...identity
+  } = recovery;
+  return identity;
+}
+
+function recoveryQualityDebtRefsCanAdvance(
+  previous: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+  next: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+) {
+  const previousRefs = previous.quality_debt_refs ?? [];
+  const nextRefs = next.quality_debt_refs ?? [];
+  return previousRefs.length <= nextRefs.length
+    && previousRefs.every((ref, index) => nextRefs[index] === ref);
+}
+
+function recoveryResumeChangedFields(
+  previous: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+  next: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+) {
+  return [...new Set([...Object.keys(previous), ...Object.keys(next)])]
+    .sort()
+    .filter((field) => canonicalJsonText(previous[field as keyof typeof previous] ?? null)
+      !== canonicalJsonText(next[field as keyof typeof next] ?? null));
+}
+
+function recoveryEntryCanEnrichReviewerSnapshot(
+  row: StageRunLaunchRow,
+  entry: StageRunRecoveryRun,
+  recovery: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+  terminalRetry: StageRunRecoveryTerminalRetry,
+) {
+  const previousSnapshot = entry.recovery_resume.review_input_snapshot_materialization_request;
+  const nextSnapshot = recovery.review_input_snapshot_materialization_request;
+  const persistedRunId = typeof entry.temporal_start_receipt?.recovery_run_id === 'string'
+    ? entry.temporal_start_receipt.recovery_run_id
+    : null;
+  const observation = terminalRetry.observationReceipt;
+  const terminalObservationMatchesFailedStart = entry.start_status === 'start_failed'
+    && !persistedRunId
+    && observation?.workflow_found === true
+    && observation.stage_run_id === row.stage_run_id
+    && observation.workflow_id === row.workflow_id
+    && observation.recovery_id === entry.recovery_id
+    && observation.first_execution_run_id === terminalRetry.recoveryRunId
+    && observation.workflow_status === terminalRetry.workflowStatus;
+  const persistedStartMatchesTerminalObservation = entry.start_status === 'started'
+    && persistedRunId === terminalRetry.recoveryRunId;
+  return entry.recovery_id === recovery.recovery_id
+    && entry.quality_cycle_id === recovery.quality_cycle_id
+    && entry.producer_attempt_ref === recoveryArtifactProducerAttemptRef(recovery)
+    && (previousSnapshot === null || previousSnapshot === undefined)
+    && Boolean(nextSnapshot && typeof nextSnapshot === 'object' && !Array.isArray(nextSnapshot))
+    && canonicalJsonText(recoveryResumeSnapshotEnrichmentIdentity(entry.recovery_resume))
+      === canonicalJsonText(recoveryResumeSnapshotEnrichmentIdentity(recovery))
+    && recoveryQualityDebtRefsCanAdvance(entry.recovery_resume, recovery)
+    && terminalTemporalRecoveryStatus(terminalRetry.workflowStatus)
+    && (persistedStartMatchesTerminalObservation || terminalObservationMatchesFailedStart);
+}
+
+function recoveryEntryCanExtendAcceptedProducerSnapshot(
+  db: DatabaseSync,
+  row: StageRunLaunchRow,
+  entry: StageRunRecoveryRun,
+  recovery: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+  terminalRetry: StageRunRecoveryTerminalRetry,
+) {
+  const previous = entry.recovery_resume;
+  if (entry.start_status !== 'started'
+    || entry.temporal_start_receipt?.recovery_run_id !== terminalRetry.recoveryRunId
+    || !terminalTemporalRecoveryStatus(terminalRetry.workflowStatus)
+    || previous.resume_after_role || recovery.resume_after_role
+    || !previous.review_input_snapshot_materialization_request
+    || !recovery.review_input_snapshot_materialization_request
+    || entry.quality_cycle_id !== recovery.quality_cycle_id
+    || entry.producer_attempt_ref !== recovery.producer_attempt_ref) return false;
+  const before = normalizeReviewerInputSnapshotRequest(previous.review_input_snapshot_materialization_request);
+  const after = normalizeReviewerInputSnapshotRequest(recovery.review_input_snapshot_materialization_request);
+
+  const producer = getStageAttemptRow(db, entry.producer_attempt_ref.replace(/^opl:\/\/stage_attempts\//, ''));
+  if (!producer || producer.stage_run_id !== row.stage_run_id
+    || producer.attempt_role !== 'producer' || producer.status !== 'completed'
+    || producer.closeout_receipt_status !== 'accepted_typed_closeout') return false;
+  // Supplement only before review starts; never replace evidence already reviewed.
+  if (db.prepare('SELECT 1 FROM stage_attempts WHERE stage_run_id = ? AND stage_attempt_id != ? LIMIT 1')
+    .get(row.stage_run_id, producer.stage_attempt_id)) return false;
+  const impact = parseObject(producer.route_impact_json);
+  const quality = isRecord(impact?.stage_quality_cycle) ? impact.stage_quality_cycle : null;
+  const hashes = (value: unknown) => Array.isArray(value)
+    ? value.map((hash) => String(hash).replace(/^sha256:/, '')) : null;
+  if (!quality
+    || canonicalJsonText(quality.review_input_snapshot_materialization_request ?? null) !== canonicalJsonText(after)
+    || canonicalJsonText(quality.artifact_refs ?? null) !== canonicalJsonText(recovery.artifact_refs)
+    || canonicalJsonText(hashes(quality.artifact_hashes)) !== canonicalJsonText(hashes(recovery.artifact_hashes))
+    || canonicalJsonText(quality.artifact_identity_receipt_refs ?? null) !== canonicalJsonText(recovery.artifact_identity_receipt_refs)) return false;
+
+  const withoutArtifactLists = (value: Record<string, unknown>) => {
+    const { artifact_refs: _refs, artifact_hashes: _hashes, artifact_identity_receipt_refs: _receipts, ...rest } = value;
+    return rest;
+  };
+  const identity = (value: typeof recovery) => {
+    const { recovery_id: _id, review_input_snapshot_materialization_request: _snapshot,
+      producer_attempt_summary: summary, ...rest } = value;
+    return { ...withoutArtifactLists(rest), producer_attempt_summary: summary ? withoutArtifactLists(summary) : null };
+  };
+  const snapshotIdentity = (value: typeof before) => {
+    const { owner_authority_ref: _authority, members: _members, ...rest } = value;
+    return rest;
+  };
+  return canonicalJsonText(identity(previous)) === canonicalJsonText(identity(recovery))
+    && canonicalJsonText(snapshotIdentity(before)) === canonicalJsonText(snapshotIdentity(after))
+    && previous.artifact_refs.every((ref, index) => {
+      const nextIndex = recovery.artifact_refs.indexOf(ref);
+      return nextIndex >= 0 && previous.artifact_hashes[index] === recovery.artifact_hashes[nextIndex]
+        && previous.artifact_identity_receipt_refs[index] === recovery.artifact_identity_receipt_refs[nextIndex];
+    })
+    && before.members.every((member) => after.members.some((next) => next.source_ref === member.source_ref
+      && next.sha256 === member.sha256 && next.size_bytes === member.size_bytes));
+}
+
+function recoveryEntryCanRestoreOwnerRepairMap(
+  db: DatabaseSync,
+  row: StageRunLaunchRow,
+  entry: StageRunRecoveryRun,
+  recovery: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+  terminalRetry: StageRunRecoveryTerminalRetry,
+) {
+  if (entry.start_status !== 'started'
+    || entry.temporal_start_receipt?.recovery_run_id !== terminalRetry.recoveryRunId
+    || !terminalTemporalRecoveryStatus(terminalRetry.workflowStatus)
+    || recovery.resume_after_role !== 'repairer'
+    || canonicalJsonText(recoveryResumeChangedFields(entry.recovery_resume, recovery))
+      !== canonicalJsonText(['repair_map'])) return false;
+  const producerRef = recoveryArtifactProducerAttemptRef(recovery);
+  const producer = getStageAttemptRow(db, producerRef.replace(/^opl:\/\/stage_attempts\//, ''));
+  if (!producer || producer.stage_run_id !== row.stage_run_id
+    || producer.attempt_role !== 'repairer') return false;
+  const impact = parseObject(producer.route_impact_json);
+  const quality = isRecord(impact?.stage_quality_cycle) ? impact.stage_quality_cycle : null;
+  // A terminal recovery can correct only its derived map, never the owner's output.
+  return Array.isArray(quality?.repair_map) && quality.repair_map.length > 0
+    && canonicalJsonText(quality.repair_map) === canonicalJsonText(recovery.repair_map);
+}
+
+function recoveryEntryCanAppendQualityDebtRefs(
+  entry: StageRunRecoveryRun,
+  recovery: NonNullable<TemporalStageRunWorkflowInput['recovery_resume']>,
+  terminalRetry: StageRunRecoveryTerminalRetry,
+) {
+  return entry.start_status === 'started'
+    && entry.temporal_start_receipt?.recovery_run_id === terminalRetry.recoveryRunId
+    && terminalTemporalRecoveryStatus(terminalRetry.workflowStatus)
+    && entry.recovery_id === recovery.recovery_id
+    && entry.quality_cycle_id === recovery.quality_cycle_id
+    && entry.producer_attempt_ref === recoveryArtifactProducerAttemptRef(recovery)
+    && canonicalJsonText(recoveryResumeChangedFields(entry.recovery_resume, recovery))
+      === canonicalJsonText(['quality_debt_refs'])
+    && (recovery.quality_debt_refs?.length ?? 0) > (entry.recovery_resume.quality_debt_refs?.length ?? 0)
+    && recoveryQualityDebtRefsCanAdvance(entry.recovery_resume, recovery);
+}
+
+function terminalTemporalRecoveryStatus(value: string) {
+  return [
+    'COMPLETED',
+    'FAILED',
+    'CANCELED',
+    'CANCELLED',
+    'TERMINATED',
+    'TIMED_OUT',
+  ].includes(value.trim().toUpperCase());
+}
 
 function rowPayload(row: StageRunLaunchRow) {
   const scopeColumns = executionScopeColumnsFromRow(row);

@@ -1,6 +1,9 @@
 import path from 'node:path';
 import { FrameworkContractError } from '../contract-validation.ts';
 
+export const STANDARD_AGENT_INTERFACE_VERSION = 'opl_standard_agent_interface.v1' as const;
+export const STANDARD_AGENT_DESCRIPTOR_RELATIVE_PATH = 'contracts/domain_descriptor.json' as const;
+
 export function invalid(message: string, sourceRef: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, {
     source_ref: sourceRef,

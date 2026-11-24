@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { runPackDoctor } from '../../src/authority/packages/pack-doctor.ts';
-import { runCliReadOnly } from './cli/helpers.ts';
+import { runCliInProcess, runCliReadOnly } from './cli/helpers.ts';
 
 function writeJson(filePath: string, payload: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -104,7 +104,7 @@ test('CLI opl pack doctor preserves brand surface fallback and supports --repo d
     cli_checks: [{ name: 'node', required: true }],
   });
 
-  const cliResult = await runCliReadOnly(['pack', 'doctor', '--repo', repo]);
+  const cliResult = await runCliInProcess(['pack', 'doctor', '--repo', repo]);
   assert.equal(cliResult.version, 'g2');
   assert.equal(cliResult.pack_doctor.pack_id, 'cli-pack');
   assert.equal(cliResult.pack_doctor.status, 'ok');

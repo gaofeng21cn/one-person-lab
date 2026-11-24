@@ -13,7 +13,12 @@ export { buildProjectProgressBrief } from '../../../src/read-models/operator/man
 export { explainDomainBoundary, selectDomainAgentEntry, resolveRequestSurface } from '../../../src/read-models/catalog/resolver.ts';
 
 export { cliPath, contractsDir, familyManifestFixtureDir, repoRoot } from './helpers/constants.ts';
-export { runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliRawInCwd, runCliReadOnly, runCliReadOnlyFailure, runCliReadOnlyFailureInCwd, runCliReadOnlyInCwd, runCliViaEntryPathInCwd } from './helpers/runner.ts';
+export {
+  runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd,
+  runCliInProcess, runCliInProcessFailure, runCliInProcessFailureInCwd, runCliInProcessInCwd,
+  runCliRaw, runCliRawInCwd, runCliReadOnly, runCliReadOnlyFailure, runCliReadOnlyFailureInCwd, runCliReadOnlyInCwd,
+  runCliViaEntryPathInCwd,
+} from './helpers/runner.ts';
 export { buildManifestCommand, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeCodexPluginManagerFixture, createInstalledPackageCarrierFixture, createMasWorkspaceFixture, readJsonFixture, shellSingleQuote } from './helpers/fixtures.ts';
 export { assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createFamilyWorkspaceFixture, createGitModuleRemoteFixture, createRuntimeWorkspaceFixture, insertFamilyRuntimeTaskProjectionFixture, installRuntimePackageFixture, loadFamilyManifestFixtures, writeMasCleanRunnerFixture } from './helpers/family-fixtures.ts';
 export { startFakeOplApiServer } from './helpers/fake-api-server.ts';

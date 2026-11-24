@@ -13,7 +13,7 @@ import {
   foundryFrozenEvaluationPlanDigest,
 } from '../evaluation-runtime.ts';
 import type { FoundryRunSnapshot } from '../state-machine.ts';
-import { fail } from './validation.ts';
+import { fail } from './activation.ts';
 
 export function assertMaterializedCandidate(
   input: { request: DesignRequest; run: FoundryRunSnapshot },

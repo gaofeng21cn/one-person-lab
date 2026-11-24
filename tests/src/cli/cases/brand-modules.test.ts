@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { Ajv2020 } from 'ajv/dist/2020.js';
 
-import { assert, loadFrameworkContracts, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, loadFrameworkContracts, repoRoot, runCliInProcess, test } from '../helpers.ts';
 import './brand-modules-cases/agent-and-foundry-surfaces.ts';
 import './brand-modules-cases/l5-evidence-gate.ts';
 import './brand-modules-cases/module-command-surfaces.ts';
@@ -17,7 +17,6 @@ type FamilyCapabilityPortfolio = {
     cardinality_policy: string;
     framework_projection_ref: string;
     framework_source_topology_ref: string;
-    framework_package_topology_ref: string;
   };
   display_groups: Array<{ group_id: string; order: number }>;
   domains: Array<{
@@ -65,10 +64,6 @@ test('family capability portfolio is the schema-valid brand SSOT', () => {
   assert.equal(
     portfolio.portfolio.framework_source_topology_ref,
     'contracts/opl-framework/source-module-map.json',
-  );
-  assert.equal(
-    portfolio.portfolio.framework_package_topology_ref,
-    'contracts/opl-framework/package-topology.json',
   );
 
   const groupIds = new Set(portfolio.display_groups.map((group) => group.group_id));
@@ -124,10 +119,10 @@ test('Framework brand module registry is an exact surface projection of the fami
   }
 });
 
-test('brand module contracts and CLI expose the same current module set', () => {
+test('brand module contracts and CLI expose the same current module set', async () => {
   const contracts = loadFrameworkContracts(repoRoot);
-  const list = runCli(['brand-modules', 'list']).brand_modules;
-  const validation = runCli(['brand-modules', 'validate']).brand_module_validation;
+  const list = (await runCliInProcess(['brand-modules', 'list'])).brand_modules;
+  const validation = (await runCliInProcess(['brand-modules', 'validate'])).brand_module_validation;
 
   assert.deepEqual(contracts.brandModuleRegistry.modules.map((entry) => entry.module_id), expectedModuleIds);
   assert.deepEqual(list.modules.map((entry: { module_id: string }) => entry.module_id), expectedModuleIds);
@@ -135,8 +130,8 @@ test('brand module contracts and CLI expose the same current module set', () => 
   assert.deepEqual(validation.authority_boundary_violations, []);
 });
 
-test('brand module inspect keeps OPL as refs-only framework authority', () => {
-  const module = runCli(['brand-modules', 'inspect', '--module', 'workspace']).brand_module;
+test('brand module inspect keeps OPL as refs-only framework authority', async () => {
+  const module = (await runCliInProcess(['brand-modules', 'inspect', '--module', 'workspace'])).brand_module;
 
   assert.equal(module.module_id, 'workspace');
   assert.equal(module.maturity_level, 'L4_structural_baseline');

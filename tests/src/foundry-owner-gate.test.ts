@@ -3,13 +3,13 @@ import test from 'node:test';
 
 import {
   FailClosedOwnerGate,
-  InMemoryOwnerGate,
   materializeOwnerAuthorityReceipt,
   validateOwnerAuthorityReceipt,
   validateOwnerGateVerification,
   type OwnerAuthorityReceiptStatement,
   type OwnerGateVerificationContext,
 } from '../../src/authority/evolution/index.ts';
+import { InMemoryOwnerGate } from '../support/foundry-in-memory-adapters.ts';
 import { ProcessFoundryOwnerGate } from '../../src/adapters/execution/foundry-owner-gate.ts';
 
 const fixedNow = '2026-07-16T00:00:00.000Z';

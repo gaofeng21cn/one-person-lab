@@ -9,8 +9,7 @@ import { baseOrRecommendedRPackages, buildRunContextConsumerPreflight, installPy
   pythonExecutableInManagedEnv, unsatisfiedRRequirements } from './runtime-environment-substrate/package-profile.ts';
 import { contentFingerprint, normalizeTarget, relativeArtifactBuildRef, requiredRuntimeArtifactRoot,
   writeJsonFile, readJsonObject, writePreparedEnvironmentIndex } from './runtime-environment-substrate/target-state.ts';
-import { profileLockHandoff, uniqueRefs } from './runtime-environment-substrate/language-lock-handoff.ts';
-import { baseReadback } from './runtime-environment-substrate/projection-cache.ts';
+import { baseReadback, profileLockHandoff, uniqueRefs } from './runtime-environment-substrate/readback-and-handoff.ts';
 import type { JsonRecord, RuntimeEnvironmentPrepareInput } from './runtime-environment-substrate/contract.ts';
 
 export async function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironmentPrepareInput) {

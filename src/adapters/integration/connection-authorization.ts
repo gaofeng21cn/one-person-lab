@@ -6,9 +6,16 @@ import {
   installedDescriptorSupportsFrameworkCalls,
 } from './agent-package-registry-parts/installed-codex-plugin-directory-descriptor.ts';
 import type { InstalledPackageDescriptor } from './agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
-import { listOplConnections } from './connection-registry.ts';
-import type { OplConnection } from './connection-registry-parts/types.ts';
-import { connectionAuthorizationStorePath, withConnectionStateLock } from './connection-authorization-parts/state-lock.ts';
+import {
+  listOplConnections,
+  withConnectionStateLock,
+  type OplConnection,
+} from './connection-registry.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+
+function connectionAuthorizationStorePath() {
+  return `${resolveOplStatePaths().connection_registry_file}.authorization.json`;
+}
 
 const HISTORY_LIMIT = 256;
 const INPUT_LIMIT_BYTES = 64 * 1024;

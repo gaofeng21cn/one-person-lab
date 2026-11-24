@@ -6,8 +6,7 @@ import { normalizeFamilyActionCatalog } from '../family-action-catalog-contract.
 import { parseJsonText } from '../json-file.ts';
 import { resolveContainedRepoJsonFile } from '../repo-contained-json-file.ts';
 import type { StandardAgentSourceMaterialConsumerResolution } from '../standard-agent-interface-types.ts';
-import { STANDARD_AGENT_DESCRIPTOR_RELATIVE_PATH } from './constants.ts';
-import { invalid } from './validation-values.ts';
+import { STANDARD_AGENT_DESCRIPTOR_RELATIVE_PATH, invalid } from './validation-values.ts';
 
 function sourceMaterialConsumerUnavailable(): StandardAgentSourceMaterialConsumerResolution {
   return {

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
-import type { OplConnection } from './connection-registry-parts/types.ts';
+import type { OplConnection } from './connection-registry.ts';
 import {
   OplConnectionProviderError,
   type OplConnectionProvider,

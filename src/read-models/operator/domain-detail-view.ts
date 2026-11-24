@@ -8,7 +8,7 @@ import type {
   StandardAgentDescriptorInterface,
   StandardAgentDomainDetailViewDeclaration,
 } from '../../kernel/standard-agent-interface.ts';
-import { readStandardAgentDescriptorForDomain } from '../../adapters/integration/public/standard-agent-interface.ts';
+import { readStandardAgentDescriptorForDomain } from '../../adapters/integration/index.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';
 import type { WorkItemProjectionV2 } from './work-item-projection/types.ts';
 

@@ -8,7 +8,7 @@ import { record, recordList, stringValue, type JsonRecord } from '../../kernel/j
 import { readStandardAgentDescriptorInterface } from '../../kernel/standard-agent-interface.ts';
 import { listWorkspaceBindings } from '../../authority/workspace/public/app-state.ts';
 import { openFamilyRuntimeSqlite, queryStageAttempt } from '../../adapters/execution/public/app-state.ts';
-import { readInstalledStandardAgentDescriptorForDomain } from '../../adapters/integration/public/standard-agent-interface.ts';
+import { readInstalledStandardAgentDescriptorForDomain } from '../../adapters/integration/index.ts';
 import { canonicalWorkspacePath } from './work-item-projection/catalog.ts';
 import { joinAttemptsToWorkItems, readWorkItemStageAttempts } from './work-item-projection/execution.ts';
 import { buildWorkItemProjectionV2 } from './work-item-projection/projection.ts';

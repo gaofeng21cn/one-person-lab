@@ -6,7 +6,7 @@ import {
   createCurrentCodexFixture,
   currentCodexEnvironment,
 } from './system-startup-maintenance-cases/shared.ts';
-import './system-seed-manifest-cases/docker-webui-doctor.test.ts';
+import './system-seed-manifest-cases/docker-webui-doctor.ts';
 
 function writeDeveloperCheckout(root: string) {
   fs.mkdirSync(root, { recursive: true });

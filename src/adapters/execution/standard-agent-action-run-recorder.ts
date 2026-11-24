@@ -4,7 +4,7 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import {
   buildStandardAgentActionRunLedgerEvent,
   type StandardAgentActionRunLedgerInput,
-} from '../../authority/evidence/public/standard-agent-action-run-ledger.ts';
+} from '../../authority/evidence/index.ts';
 import { insertEvent } from './family-runtime-store.ts';
 
 export type StandardAgentActionRunEventInput = StandardAgentActionRunLedgerInput & {

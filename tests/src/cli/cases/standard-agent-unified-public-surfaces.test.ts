@@ -6,8 +6,8 @@ import {
   os,
   parseJsonText,
   path,
-  runCli,
-  runCliFailure,
+  runCliInProcess,
+  runCliInProcessFailure,
   test,
 } from '../helpers.ts';
 import {
@@ -57,7 +57,7 @@ function buildManagedAgentCheckout(targetDomainId: string, owner: string, action
   return repoDir;
 }
 
-test('standard Agent public surfaces derive OMA and OBF admission from the shared registry', () => {
+test('standard Agent public surfaces derive OMA and OBF admission from the shared registry', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-unified-agent-surfaces-state-'));
   const omaRepo = buildManagedAgentCheckout('agent_engineering', 'OPL Meta Agent', 'engineer-agent');
   const obfRepo = buildManagedAgentCheckout('opl-bookforge', 'OPL Book Forge', 'materialize-book');
@@ -75,9 +75,9 @@ test('standard Agent public surfaces derive OMA and OBF admission from the share
   const expectedStandardAgentDomains = expectedStandardAgents.map((entry) => entry.domain_id).sort();
 
   try {
-    const omaInterfaces = runCli([
+    const omaInterfaces = (await runCliInProcess([
       'agents', 'interfaces', '--domain', 'oma', '--format', 'cli',
-    ], env).generated_agent_interfaces;
+    ], env)).generated_agent_interfaces;
     assert.equal(omaInterfaces.status, 'ready');
     assert.equal(omaInterfaces.agent_id, 'oma');
     assert.equal(omaInterfaces.target_domain_id, 'agent_engineering');
@@ -85,30 +85,30 @@ test('standard Agent public surfaces derive OMA and OBF admission from the share
     assert.equal(omaInterfaces.cli.descriptors[0].action_id, 'engineer-agent');
     assert.equal(omaInterfaces.source_contract_consumption.repo_dir, canonicalOmaRepo);
 
-    const obfInterfaces = runCli([
+    const obfInterfaces = (await runCliInProcess([
       'agents', 'interfaces', '--domain', 'obf', '--format', 'cli',
-    ], env).generated_agent_interfaces;
+    ], env)).generated_agent_interfaces;
     assert.equal(obfInterfaces.status, 'ready');
     assert.equal(obfInterfaces.agent_id, 'obf');
     assert.equal(obfInterfaces.target_domain_id, 'opl-bookforge');
     assert.equal(obfInterfaces.standard_agent_contract_resolution.status, 'resolved');
     assert.equal(obfInterfaces.cli.descriptors[0].action_id, 'materialize-book');
 
-    const omaActions = runCli([
+    const omaActions = (await runCliInProcess([
       'actions', 'export', '--domain', 'oma', '--format', 'cli',
-    ], env).family_action_export;
+    ], env)).family_action_export;
     assert.equal(omaActions.project_id, 'agent_engineering');
     assert.equal(omaActions.catalog_source.checkout_path, canonicalOmaRepo);
     assert.equal(omaActions.descriptors[0].action_id, 'engineer-agent');
 
-    const obfActions = runCli([
+    const obfActions = (await runCliInProcess([
       'actions', 'export', '--domain', 'obf', '--format', 'cli',
-    ], env).family_action_export;
+    ], env)).family_action_export;
     assert.equal(obfActions.project_id, 'oplbookforge');
     assert.equal(obfActions.catalog_source.checkout_path, canonicalObfRepo);
     assert.equal(obfActions.descriptors[0].action_id, 'materialize-book');
 
-    const agentIndex = runCli(['agents', 'list'], env).family_agents;
+    const agentIndex = (await runCliInProcess(['agents', 'list'], env)).family_agents;
     assert.deepEqual(
       agentIndex.agents.map((entry: Record<string, any>) =>
         entry.standard_agent_identity.agent_id
@@ -124,24 +124,24 @@ test('standard Agent public surfaces derive OMA and OBF admission from the share
       'resolved',
     );
 
-    const omaAgent = runCli(['agents', 'inspect', '--domain', 'oma'], env).family_agent;
+    const omaAgent = (await runCliInProcess(['agents', 'inspect', '--domain', 'oma'], env)).family_agent;
     assert.equal(omaAgent.agent_id, 'oma');
     assert.equal(omaAgent.standard_agent_contract_resolution.status, 'resolved');
     assert.equal(omaAgent.skeleton_status, 'aligned');
 
-    const descriptorIndex = runCli(['agents', 'descriptors'], env).family_agent_descriptors;
+    const descriptorIndex = (await runCliInProcess(['agents', 'descriptors'], env)).family_agent_descriptors;
     assert.deepEqual(
       descriptorIndex.descriptors.map((entry: Record<string, any>) => entry.agent_id).sort(),
       expectedStandardAgentIds,
     );
-    const omaDescriptor = runCli([
+    const omaDescriptor = (await runCliInProcess([
       'agents', 'descriptor', '--domain', 'oma',
-    ], env).family_agent_descriptor;
+    ], env)).family_agent_descriptor;
     assert.equal(omaDescriptor.agent_id, 'oma');
     assert.deepEqual(omaDescriptor.family_action_catalog.action_ids, ['engineer-agent']);
     assert.equal(omaDescriptor.family_stage_control_plane.stage_count > 0, true);
 
-    const stageIndex = runCli(['stages', 'list'], env).family_stages;
+    const stageIndex = (await runCliInProcess(['stages', 'list'], env)).family_stages;
     assert.deepEqual(
       stageIndex.domains.map((entry: Record<string, any>) => entry.agent_id).sort(),
       expectedStandardAgentIds,
@@ -152,12 +152,12 @@ test('standard Agent public surfaces derive OMA and OBF admission from the share
       stageIndex.domains.find((entry: Record<string, any>) => entry.agent_id === 'oma').target_domain_id,
       'agent_engineering',
     );
-    const omaStageReadiness = runCli([
+    const omaStageReadiness = (await runCliInProcess([
       'stages', 'readiness', '--domain', 'oma',
-    ], env).family_stage_readiness;
+    ], env)).family_stage_readiness;
     assert.equal(omaStageReadiness.summary.stage_count > 0, true);
 
-    const actionIndex = runCli(['actions', 'list'], env).family_actions;
+    const actionIndex = (await runCliInProcess(['actions', 'list'], env)).family_actions;
     assert.deepEqual(
       actionIndex.domains.map((entry: { project_id: string }) => entry.project_id).sort(),
       expectedStandardAgentDomains,
@@ -172,7 +172,7 @@ test('standard Agent public surfaces derive OMA and OBF admission from the share
   }
 });
 
-test('registered standard Agents with unavailable checkouts return typed blockers instead of unknown-domain errors', () => {
+test('registered standard Agents with unavailable checkouts return typed blockers instead of unknown-domain errors', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-unified-agent-blocker-state-'));
   const env = {
     OPL_STATE_DIR: stateRoot,
@@ -181,7 +181,7 @@ test('registered standard Agents with unavailable checkouts return typed blocker
   };
 
   try {
-    const interfacesFailure = runCliFailure([
+    const interfacesFailure = await runCliInProcessFailure([
       'agents', 'interfaces', '--domain', 'oma', '--format', 'cli',
     ], env);
     assert.equal(interfacesFailure.payload.error.code, 'contract_file_missing');
@@ -191,7 +191,7 @@ test('registered standard Agents with unavailable checkouts return typed blocker
     );
     assert.doesNotMatch(interfacesFailure.payload.error.message, /unknown/i);
 
-    const actionsFailure = runCliFailure([
+    const actionsFailure = await runCliInProcessFailure([
       'actions', 'export', '--domain', 'oma', '--format', 'cli',
     ], env);
     assert.equal(actionsFailure.payload.error.code, 'missing_family_action_catalog');
@@ -201,7 +201,7 @@ test('registered standard Agents with unavailable checkouts return typed blocker
     );
     assert.doesNotMatch(actionsFailure.payload.error.message, /unknown/i);
 
-    const agentInspect = runCli(['agents', 'inspect', '--domain', 'oma'], env).family_agent;
+    const agentInspect = (await runCliInProcess(['agents', 'inspect', '--domain', 'oma'], env)).family_agent;
     assert.equal(agentInspect.agent_id, 'oma');
     assert.equal(agentInspect.manifest_status, 'managed_contract_unavailable');
     assert.equal(agentInspect.standard_agent_contract_resolution.status, 'blocked');
@@ -210,7 +210,7 @@ test('registered standard Agents with unavailable checkouts return typed blocker
       'standard_agent_managed_contract_checkout_unavailable',
     );
 
-    const descriptor = runCli(['agents', 'descriptor', '--domain', 'oma'], env).family_agent_descriptor;
+    const descriptor = (await runCliInProcess(['agents', 'descriptor', '--domain', 'oma'], env)).family_agent_descriptor;
     assert.equal(descriptor.agent_id, 'oma');
     assert.equal(descriptor.manifest_status, 'managed_contract_unavailable');
     assert.equal(
@@ -218,7 +218,7 @@ test('registered standard Agents with unavailable checkouts return typed blocker
       'standard_agent_managed_contract_checkout_unavailable',
     );
 
-    const stageFailure = runCliFailure([
+    const stageFailure = await runCliInProcessFailure([
       'stages', 'readiness', '--domain', 'oma',
     ], env);
     assert.equal(stageFailure.payload.error.code, 'missing_family_stage_control_plane');

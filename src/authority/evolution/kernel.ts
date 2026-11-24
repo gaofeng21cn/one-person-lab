@@ -57,15 +57,10 @@ import {
 } from './evaluation-runtime.ts';
 import {
   foundryEvaluationOperationIdentity,
+  InMemoryFoundryOperationResultJournal,
   type FoundryOperationResult,
   type FoundryOperationResultJournal,
 } from './operation-result.ts';
-import {
-  FailClosedActivationRuntime,
-  InMemoryActivationRuntime,
-  InMemoryFoundryOperationResultJournal,
-  InMemoryVersionRegistry,
-} from './in-memory-adapters.ts';
 import {
   assertBaselineAdoptionAdmitted,
   isBaselineAdoptionDesignRequest,
@@ -73,7 +68,7 @@ import {
   type BaselineAdoptionContentRefResolver,
   type BaselineAdoptionPreflightReceipt,
 } from './baseline-adoption.ts';
-import { commitFoundryActivation } from './kernel/activation-transaction.ts';
+import { commitFoundryActivation, FailClosedActivationRuntime } from './kernel/activation.ts';
 import {
   assertEvaluationEvidence,
   assertMaterializedCandidate,
@@ -92,7 +87,7 @@ import {
   fail,
   requiredDigest,
   requiredRef,
-} from './kernel/validation.ts';
+} from './kernel/activation.ts';
 
 type KernelDependencies = {
   designer: DesignerPort;
@@ -204,10 +199,7 @@ export class FoundryKernel {
     this.#objects = dependencies.objects;
     this.#events = dependencies.events;
     this.#versions = dependencies.versions;
-    this.#activationRuntime = dependencies.activationRuntime
-      ?? (dependencies.versions instanceof InMemoryVersionRegistry
-        ? new InMemoryActivationRuntime(dependencies.versions)
-        : new FailClosedActivationRuntime());
+    this.#activationRuntime = dependencies.activationRuntime ?? new FailClosedActivationRuntime();
     this.#operationResults = dependencies.operationResults ?? new InMemoryFoundryOperationResultJournal();
     this.#ownerGate = dependencies.ownerGate ?? new FailClosedOwnerGate();
     this.#baselineAdoptionContentRefs = dependencies.baselineAdoptionContentRefs;

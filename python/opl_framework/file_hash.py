@@ -6,9 +6,6 @@ from pathlib import Path
 
 
 def sha256_file(path: Path) -> str:
-    """Hash exact file bytes on Python 3.10 and later."""
-    digest = hashlib.sha256()
+    """Hash exact file bytes on Python 3.11 and later."""
     with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+        return hashlib.file_digest(handle, "sha256").hexdigest()

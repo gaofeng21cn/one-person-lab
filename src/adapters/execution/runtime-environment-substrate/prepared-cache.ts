@@ -4,6 +4,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { runEnvironmentProcess, type EnvironmentOperation } from '../runtime-environment-process.ts';
 
+import { isProcessAlive, writeExclusiveFileSync } from '../../../kernel/file-lock.ts';
 import { fileIdentity } from '../runtime-environment-execution.ts';
 import type { JsonRecord } from './contract.ts';
 import { sha256, shortDigest, runtimeEnvironmentStateRoot, writeJsonFile, readJsonObject } from './target-state.ts';
@@ -20,19 +21,16 @@ export async function acquirePreparationLock(root: string, operation?: Environme
     while (true) {
       operation?.check();
       try {
-        const descriptor = fs.openSync(lock, 'wx');
-        fs.writeFileSync(descriptor, String(process.pid));
-        fs.closeSync(descriptor);
+        writeExclusiveFileSync(lock, String(process.pid), 0o600);
         if (operation) { operation.lockWaitMs += performance.now() - started; operation.phase = previousPhase!; }
         return () => fs.rmSync(lock, { force: true });
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
         try {
           const owner = Number(fs.readFileSync(lock, 'utf8'));
-          if (owner > 0) {
-            try { process.kill(owner, 0); } catch (error) {
-              if ((error as NodeJS.ErrnoException).code === 'ESRCH') { fs.rmSync(lock, { force: true }); continue; }
-            }
+          if (owner > 0 && !isProcessAlive(owner)) {
+            fs.rmSync(lock, { force: true });
+            continue;
           }
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;

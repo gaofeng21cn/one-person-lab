@@ -3,6 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import {
+  extractMarkdownFrontmatter,
+  firstFrontmatterValue,
+} from '../../kernel/frontmatter.ts';
 import { parseJsonText, readJsonFileOrNull } from '../../kernel/json-file.ts';
 
 type FoundationSkillScope = 'project' | 'workspace' | 'quest';
@@ -85,17 +89,6 @@ function readTextIfPresent(filePath: string) {
   } catch {
     return '';
   }
-}
-
-function firstYamlString(frontmatter: string, key: string) {
-  const match = frontmatter.match(new RegExp(`^${key}:\\s*(.*)$`, 'm'));
-  if (!match) return '';
-  return match[1].trim().replace(/^["']|["']$/g, '');
-}
-
-function extractFrontmatter(markdown: string) {
-  const match = markdown.match(/^---\n([\s\S]*?)\n---/);
-  return match?.[1] ?? '';
 }
 
 function digestDirectory(root: string) {
@@ -279,11 +272,11 @@ function readSkillCard(skillId: string, exposureEntry?: FoundationSkillExposureE
     });
   }
   const markdown = readTextIfPresent(skillPath);
-  const frontmatter = extractFrontmatter(markdown);
+  const frontmatter = extractMarkdownFrontmatter(markdown)?.frontmatter ?? '';
   return {
     skill_id: safeSkillId,
-    name: firstYamlString(frontmatter, 'name') || safeSkillId,
-    description: firstYamlString(frontmatter, 'description'),
+    name: firstFrontmatterValue(frontmatter, 'name') || safeSkillId,
+    description: firstFrontmatterValue(frontmatter, 'description'),
     exposure_scope: exposureEntry?.exposure_scope ?? null,
     activation_gate: exposureEntry?.activation_gate ?? null,
     default_global_user: exposureEntry?.default_global_user ?? false,

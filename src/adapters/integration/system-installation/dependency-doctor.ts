@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { listFirstPartyAgentPackageDependencyProfiles } from '../agent-package-manifests.ts';
 import { listFamilySkillPackSpecs } from '../opl-skills/registry.ts';
@@ -185,10 +185,6 @@ function checkLatexPackage(
     blocker_when_missing: dependency.required_level === 'required',
     install_target: dependency.install_target,
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function asString(value: unknown) {

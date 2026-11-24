@@ -24,7 +24,7 @@ import {
   attachCheckoutCurrentnessToStageContext,
   persistStageAttemptLaunchBinding,
   recordTemporalStartOnAttempt,
-} from '../family-runtime-parts/stage-attempt-launch.ts';
+} from '../family-runtime.ts';
 import {
   buildCliStageRunInvocationId,
   deriveStageRunId,

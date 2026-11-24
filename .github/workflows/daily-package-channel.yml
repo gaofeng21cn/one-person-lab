@@ -44,9 +44,7 @@ jobs:
           node-version: '26'
           cache: npm
       - name: Install dependencies
-        run: |
-          npm ci --ignore-scripts
-          npm run build:packages
+        run: npm ci --ignore-scripts
       - name: Create scoped publication identity
         id: publisher-token
         if: vars.PACKAGE_RELEASE_APP_ID != ''

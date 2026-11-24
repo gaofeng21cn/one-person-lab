@@ -7,7 +7,7 @@ import { canonicalJsonBytes, canonicalJsonText } from '../../../kernel/canonical
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
-import { compileStandardAgentStageManifest } from '../../packages/public/standard-agent-action-runtime.ts';
+import { compileStandardAgentStageManifest } from '../../packages/index.ts';
 import {
   foundryContentDigest,
   materializeFoundryOperationResult,
