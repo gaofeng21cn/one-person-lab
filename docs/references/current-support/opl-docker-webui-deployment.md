@@ -18,7 +18,7 @@ credential使用部署平台secret或显式stdin配置，不写入image、Compos
 
 ## Framework 初始化
 
-设置投影中的历史字段 `one_click_install` / `settings_install_docker_webui` 仅初始化当前环境的 Framework，不部署网页服务器或容器。部署使用 Studio 的独立安装器或 `scripts/oci/manage.mjs`；桌面端模型密钥存在不能据此推断 WebUI 配置完成。普通状态为 `not_checked`，只有独立部署的运行与认证验收才能证明可访问。
+设置投影中的 `settings_install_docker_webui` 仅初始化当前环境的 Framework，不部署网页服务器或容器。容器/WebUI 部署由 App/Studio owner 的 Docker/OCI 发行与独立安装器持有；桌面端模型密钥存在不能据此推断 WebUI 配置完成。普通状态为 `not_checked`，只有独立部署的运行与认证验收才能证明可访问。
 
 容器包含 OPL CLI 时，可在独立初始化/维护步骤执行：
 

@@ -84,9 +84,7 @@ Shell 只向 Desktop OPL child command 注入私有 `OPL_APP_HOST_KIND=desktop` 
 
 plist/config 写入或 bootstrap 失败会恢复原始字节。新 job loaded 但未 ready 时，安装事务会先 bootout 并移除新 supervisor，再尝试恢复原 detached service。bootout 失败时保留当前文件和 job，不伪称 removed，也不会并发启动另一个端口冲突进程。
 
-SDK、CLI 和 Server 的受管目标版本统一由 `contracts/opl-framework/temporal-stable-cohort.json` 指定。SDK 1.25 起会拒绝其他 SDK 生成的 workflow bundle；升级时必须重新生成 bundle，回退时必须恢复匹配的 SDK 和 bundle，并重放相同的历史集合。bundle 文件名按实际字节生成，因此只更新 SDK 也不会覆盖上一版本的 bundle。历史 JSON fixture 的旧空 message 编码仅在测试读取入口修正；原始 fixture 与其哈希保持不变，生产 replay 继续使用官方解析器。
-
-Framework Stage 和 Workbench Worker 显式保留 SDK 1.25 的固定轮询上限。SDK 1.26 的默认轮询和服务端自动伸缩策略由上游变更，现有 Worker 的轮询配置沿用此前行为。
+SDK、CLI 和 Server 的受管目标版本统一由 `contracts/opl-framework/temporal-stable-cohort.json` 指定。Temporal workflow bundle 与对应 SDK 版本严格绑定；升级或回退时须重新生成或恢复匹配的 bundle。Framework Stage 和 Workbench Worker 沿用受控的固定轮询上限以保持预期吞吐与延迟表现。
 
 本地 ARM 测试使用 cohort 固定的 CLI release，x64 时间跳跃测试使用 SDK 的专用测试服务。两者都只证明隔离测试运行；更新目标合同不会直接替换已安装的 CLI、升级持久 Server 数据库或重启生产 Worker。
 
@@ -105,11 +103,6 @@ Windows Desktop 使用 `opl system startup-maintenance --scope runtime_recovery 
 恢复已配置的服务。此范围复用 Framework 管理的本地服务、worker 和 scheduler
 生命周期，不激活、下载或更新 Framework、Codex 和 Package。更新仍由 App 的
 managed updater 触发，所以关闭自动更新时后台服务仍可恢复。
-
-gh-stack 的能力检查使用原生 `gh stack --version` 调度，并校验扩展的版本签名。
-`gh extension exec` 即使只读取本地版本也会先要求登录；真正的 GitHub 操作在执行时
-仍遵循其认证要求。
-
 
 已安装的 Framework managed runtime 更新后，可以在既有 restart guard 检查通过时
 重启使用旧代码的 worker，不要求开启 Developer Mode。开发源码 checkout 仍须显式

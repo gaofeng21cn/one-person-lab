@@ -72,12 +72,12 @@ opl connect cloud import --cloud-ref cloud:<UUID> --json
 
 ## OPL Link 的现有账号授权桥
 
-桌面 Host 通过 `opl connect gateway authorize-companion --request-stdin --credential-file <new-private-file> --json` 复用 App 已登录的 OPL Gateway 账号，向固定的 `https://link.medopl.com` 注册公开电脑身份。请求只包含 `service: "opl_link"` 和上游 Host descriptor；不从界面接收服务器地址。未登录或会话失效时回到 App 原有账号入口，手机不输入账号密码。
+桌面 Host 通过 `opl connect gateway authorize-companion --request-stdin --credential-file <new-private-file> --json` 复用 App 已登录的 OPL Gateway 账号，向固定的 `https://link.medopl.com` 注册公开电脑身份。请求只包含 `service: "opl_link"` 和上游 Host descriptor；不从界面接收服务器地址。手机端可选择通过同 Gateway 账号登录（经受信任的账号交换接口发现已授权在线电脑）或继续使用扫码/粘贴配对建立连接。
 
 Framework 在现有账号锁内轮换会话并持久化 refresh token，再兑换 Relay 专用凭据。凭据只写入调用者拥有的 0700 目录中的全新 0600 文件；已有文件、符号链接和宽权限目录在联网前拒绝。Studio 导入后删除临时文件。标准输出仅含已写入状态、固定服务地址、scope 和电脑 ID；Gateway bearer、密码、模型 Key 与 Relay token 不进入 Renderer、CLI 输出或通用连接注册表。
 
-这次兑换仅授权传输。手机仍须通过电脑公钥固定的 Noise 通道兑换 120 秒单次业务配对码；会话、审批、工作区及设备撤销继续由 Studio 和已有 Codex owner 执行。产品和互联网合同由 [App](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-remote-companion-internet.json) 持有。
+这次兑换仅授权传输。手机仍须通过电脑公钥固定的 Noise 通道完成账号认领或兑换 120 秒单次配对码；会话、审批、工作区及设备撤销继续由 Studio 和已有 Codex owner 执行。产品和互联网合同由 [App](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-remote-companion-internet.json) 持有。
 
-本轮源码交付另有固定范围的 [GitHub 源码只读桥](../../.github/workflows/link-source-access.yml)，复用已有 GitHub App installation，仅为 Framework、Studio、Link 三仓请求 `contents/actions: read`。它核对私有源码和准确构建 run 的 artifact 可读后，才以 RSA-OAEP/AES-256-GCM 将短时 token 加密给本机临时公钥；密文绑定当前 workflow run、源码提交与接收公钥。调用方只在 mint 前开始的 50 分钟保守窗口内使用，GitHub installation token 的实际失效仍由 GitHub 持有。
+面向源码交付的固定范围 [GitHub 源码只读桥](../../.github/workflows/link-source-access.yml) 复用已有 GitHub App installation，仅为 Framework、Studio、Link 三仓请求 `contents/actions: read`。它核对私有源码和准确构建 run 的 artifact 可读后，以 RSA-OAEP/AES-256-GCM 将短时 token 加密给本机临时公钥；密文绑定当前 workflow run、源码提交与接收公钥，调用方仅在 50 分钟保守窗口内使用。
 
-此桥只承担本轮源码与构建产物读取，不请求 Packages 权限或核验镜像。GHCR 由 Instance 通过该包的独立 Actions Read 授权及自身 `GITHUB_TOKEN` 读取；GitHub App grant、App 私钥和个人 OAuth 沿用各自 owner。若 GitHub 拒绝现有只读请求，只终止当前 operation，由账号 owner 核对既有 App installation 授权；不会扩大 grant、添加替代凭据或自动重试。
+此桥只承担源码与构建产物只读获取，不请求 Packages 权限或核验镜像。GHCR 读取及个人 OAuth 沿用各自 owner；GitHub 拒绝请求时直接终止并由账号 owner 核对既有 App installation 授权，不扩大 grant 或自动重试。

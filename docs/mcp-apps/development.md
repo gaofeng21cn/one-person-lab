@@ -55,9 +55,11 @@
 产品入口与 MiniApp surface 采用两个层级：一个 Package 在 `catalog.products` 中只有一个产品入口，入口下面可以挂多个共享 internal view；只有 MCP catalog 中独立的 `server + resourceUri` 才计为一个 MiniApp。Package manifest 的 `presentation.miniapp` 声明入口形式和默认 view。产品卡不会自动启动独立 App，启动仍由 Studio 的 MiniApp 工作台显式执行。
 
 自有 MiniApp 直接复用 App 选定的官方 DSH 视觉来源。共享页的 `src/mcp-app/dsh-theme.css`
-由 App `scripts/sync-miniapp-dsh-styles.mjs` 从固定上游生成，与 Relay、MAC 的样式字节一致；
-构建嵌入主题、控件样式和 MIT 许可。只适配 CSS Module 选择器，不维护 Framework 自有调色板、
+复用选定的 DSH 官方语义视觉 token 与控件样式，与 Relay、MAC 保持一致，构建嵌入主题、
+控件样式和 MIT 许可。只适配 CSS Module 选择器，不维护 Framework 自有调色板、
 字号或控件尺度。领域 CSS 负责布局和官方语义 token 的角色映射，主题和字体仍走标准 MCP Apps context。
+
+产品与功能的设置项在 App 内有唯一功能归位：通道与伴侣连接归“连接与凭证”，服务状态与可选诊断归“运行与维护”；业务列表、时间线、审阅看板和产物继续归共享 OPL Apps、专用标准 MCP App 或上下文任务工作台，避免将业务视图混作通用设置表单。软件目录与 MCP catalog 从同一个 installed descriptor 派生操作入口，不新增第二个 UI 注册表或生命周期。
 
 选择逻辑按交互密度落地：进度、列表、产物和低频审阅留在共享声明式 renderer；邮件编辑、媒体时码审看、revision-bound feedback 等高密度交互使用专用标准 MCP App；持续创作、设备、地图和监测才保留专业应用。判断依据是交互状态、输入密度、时序/预览要求和 owner 现有 UI 能力，不是 Package 名称或是否属于 OPL。
 
@@ -113,14 +115,3 @@ owner 执行结果可附已有贡献引用形式的 `readback: { data_ref, input
 相同 invocation 的重开查询既有运行；改变决定、输入或目标必须使用新 invocation，旧摘要不能读取新字节。决定记录、阶段执行完成和领域质量接受分别回读；这条路径不解除 quality Attempt 的通用 resume 禁令，也不把人的批注当作专业质量批准。
 
 共用 SDK 的实际入口、第三方复用边界与软件中心管理范围见[Agent/MiniApp SDK](../architecture/agent-miniapp-sdk.md)。
-
-## Functional placement in OPL App
-
-Package repositories and carriers are delivery boundaries. User configuration remains on the
-App's functional Settings pages: channel and companion connections under Connections, service
-status and opt-in technical diagnostics under Service Status. Business lists, timelines, reviews,
-boards and artifacts use the existing shared OPL Apps or a dedicated standard MCP App; task-scoped
-views retain the contextual task workbench. Legacy `settings.section` placement does not make a
-business view a Settings form. The software directory and MCP catalog derive the same operational
-entry from the installed descriptor, so a leading service-status view cannot become a false work
-entry. No additional UI registry, loader or lifecycle is introduced.

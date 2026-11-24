@@ -33,7 +33,9 @@ Framework可以验证结构、投影和恢复；只有domain owner能promotion�
 
 Package owner持有descriptor、runtime bytes、version和publication。native carrier持有安装/启停/currentness。Framework只下载/验证/hand off owner bytes或调用carrier，并聚合installed/callable。
 
-`ordered_path_length_file_length_bytes` 的字节编码由 Framework 的 `src/kernel/package-content-lock.ts` 与 `python/opl_framework/package_content_lock.py` 持有，并以 UTF-8、二进制内容和路径顺序的同一向量验证一致性。Python 独立工具通过 `node scripts/materialize-python-support.mjs --module package_content_lock --target <consumer>/_opl_package_content_lock.py` 生成便携副本；加 `--check` 核对逐字一致。路径选择、identity 和 canonicalization 校验仍由实际调用方负责。
+`ordered_path_length_file_length_bytes` 的字节编码由 Framework 的 `src/kernel/package-content-lock.ts` 与 `python/opl_framework/package_content_lock.py` 持有，并以 UTF-8、二进制内容和路径顺序的同一向量验证一致性。具有独立分发载体的 Python 消费方通过 `opl pack project-carrier` 与自身 `carrier_projection.json` 保持内容一致；路径选择、identity 和 canonicalization 校验仍由实际调用方负责。
+
+依赖发布解析由 `scripts/resolve-dependency-releases.mjs` 消费 `contracts/opl-framework/dependency-release-sources.json`（需构建源码的依赖绑定 tag commit 或 npm `gitHead`）。`OPL_DEPENDENCY_ARCHIVE_CACHE_DIR` 仅缓存经精确 SHA-256/npm SRI 核验的工具原始归档；Hosted Package source 的归档解包基于 PAX/GNU 元数据校验成员路径与根目录包含性。
 
 私有 Package 从其私有 owner 仓库运行统一发布器，使用该工作流自身的 `GITHUB_TOKEN`
 读取精确源码并访问私有 registry。跨仓公开分发已获明确授权的私有源码时，可使用单仓
@@ -103,28 +105,17 @@ Homebrew 分别消费自己声明的 artifact。消费者可以在安装或运�
 Codex 原生插件管理器安装、更新和卸载；Framework 聚合两个作用域的真实安装状态，
 不维护第二套 registry、lock 或 currentness。内部作用域不复制用户认证、会话或 Profile。
 
-Weixin 通道、Link Desktop Connector 和 Fleet Agent 是内部模块；Scholar Skills 是
-MAS/MAG 按任务消费的能力包。它们保留 OPL 安装与调用能力，不注册为系统 Codex App
-的插件。Relay、Persona、Flow 和领域 Agent 等交互式入口继续使用用户 Codex 配置。
-已有全局安装迁移时，先验证内部作用域的安装与调用，再通过原生卸载入口移除全局条目。
-App 启动维护自动按当前 owner descriptor 识别并迁移旧的内部 Package，复用已安装文件，
-不依赖历史下载地址。复制、安装或 descriptor 回读失败时保留原安装并报告需要修复；
-没有旧条目时不写入。后台仅暂存更新的维护模式不执行迁移。
+Weixin 通道与 Fleet Agent 属宿主或内部能力，Scholar Skills 是 MAS/MAG 按任务消费的能力包，它们保留 OPL 安装与调用能力而不注册为系统 Codex App 插件；Relay、Persona、Flow 和领域 Agent 等交互式入口继续使用用户 Codex 配置。
 
-源码中的 Package manifest 与 payload 仅保留当前入口和真实合同、测试直接引用的版本。
-历史版本通过 Git 与不可变发布产物追溯。删除前须核对实际消费路径；发布所选 payload、
-carrier 内容锁与已安装版本的生命周期校验继续由现有 owner 执行。
-测试验证当前 descriptor 与不可变 payload 的身份绑定、同版本写入拒绝和 seed 摘要匹配，
-不为已退出消费链的 Full 历史版本永久保留固定字节断言。
+源码中的 Package manifest 与 payload 仅保留当前入口和真实合同、测试直接引用的版本。历史版本通过 Git 与不可变发布产物追溯。测试验证当前 descriptor 与不可变 payload 的身份绑定、同版本写入拒绝和 seed 摘要匹配。
 
-Flow managed policy 由安装的 owner descriptor 指定来源，Framework 只解释
-`opl_flow_workflow_policy.v4` 的 required、experience baseline 和 optional 能力平面。
-原生 carrier 与各能力 owner 继续持有生命周期；旧策略必须通过 owner 更新，不能由
-Framework 在读取时推测或重建已退役语义。
+Flow managed policy 由安装的 owner descriptor 指定来源，Framework 解释 `opl_flow_workflow_policy.v4` 的 required、experience baseline 和 optional 能力平面。
 
-Agent Reach 由其 CLI 维护。Framework 读取 `version` 和 `doctor` 的结构化输出，并用
-`skill link <skills-dir>` 补齐缺失的 Skill。已有 1.5 版继续使用其旧 CLI 合同。
-包就绪检查验证 CLI 和诊断结果，具体渠道的验证和配置状态由 Agent Reach 返回。
+Agent Reach 由其 CLI 维护，Framework 读取 `version` 和 `doctor` 的结构化输出并用 `skill link <skills-dir>` 补齐缺失 Skill；包就绪检查验证 CLI 和诊断结果，具体渠道状态由 Agent Reach 返回。
+
+### 媒体能力包
+
+包含媒体的独立 capability package 与标准 Agent 共用 OCI 源包获取、精确版本与载荷校验。源包允许最多 2 GiB，下载落盘并按流计算 SHA-256；JSON 与单个载荷文件继续使用 128 MiB 边界。发布校验只解包一次，安装时逐文件写入并从磁盘计算内容锁。只有标准 Agent 要求 domain descriptor，资产 capability 的入口与内容由自身 owner descriptor 与内容锁定义；安装更新使用 required closure。
 
 ## Publication
 
@@ -181,31 +172,9 @@ GitHub Release 页面及附件，也不建立 ZIP、wheel 等平行安装包发�
 annotated tag 仍用于绑定正式发布内容；版本说明直接使用仓库文档与源码变更记录，
 不构成第二个发布渠道。README 提供统一安装命令和 OCI 地址。
 
-私有 Package 由其私有 owner 仓库的薄 workflow 调用同一个 Framework
-`publish-package.yml`，调用时固定 Framework commit。GitHub Actions 首次创建
-Package 时继承调用方仓库的可见性，不能从公开 Framework 仓库直接发布私有源包。
-公共包仍由 Framework 调度；这只改变执行身份，不新增软件源或发布机制。
-Flow 的统一发布入口按可见性选择调用方。私有 wrapper 固定的 Framework 提交必须属于
-当前主线历史，且目标 Package 的版本、来源与载荷仍与所选目录一致；无关目录更新不要求
-重写全部 wrapper。私有回执从同一 OCI 制品读取，使用共享验证器绑定签名来源、发布请求
-和工作流运行；完整回执只向显式请求它的发布工具返回。
+私有 Package 从其私有 owner 仓库通过固定 Framework commit 的薄 workflow 调用同一个 `publish-package.yml`，使用自身 `GITHUB_TOKEN` 与受保护 `release-stable` 环境签名密钥（第一方优先使用随 Framework 交付的 `contracts/opl-framework/keys/private-packages/<package_id>.pub` 公钥验证，或回退已有 `private-package-signing.pub`）。新私有 namespace 先上传固定无敏感内容标记并经只读核验证明 `visibility=private` 与匿名访问拒绝后，再上传源码、manifest 与载荷。跨仓公开分发已获授权的私有源码可使用只读 Deploy Key（`OWNER_SOURCE_READ_KEY_<OWNER>_<REPO>`）或 `OWNER_SOURCE_READ_TOKEN` 检出，并通过 `PUBLIC_SOURCE_ARCHIVE_COMMIT_<OWNER>_<REPO>` 绑定精确源码 commit 授权。公开 `Daily OPL Package Channel` 仅处理 `visibility=public` 条目，私有包交由私有 owner 工作流接力。
 
-私有发布先验证调用方就是 manifest 的私有 owner；新 namespace 只允许先上传固定的
-无敏感内容标记。确认 registry 为 private 且匿名访问被拒绝后，才允许上传源码、manifest
-和 payload。归属由 canonical owner、经认证的精确私有 caller、源码 commit/tag、OCI
-source annotation 和签名 provenance 共同绑定。GitHub 的 `repository` 关联投影存在时
-必须匹配该私有 owner；缺失时记录 `association_metadata_unavailable`，不宣称关联已验证。
-上传前后复用同一个只读核验路径；namespace 缺失、变成公开或明确关联错误 owner 时均停止。
-未知上传结果先回读，不重复创建。签名密钥由 owner 的受保护
-`release-stable` 环境提供，并与 Framework 随附的公钥核对；不依赖个人访问令牌。
-
-该规则覆盖全部 package id，而不只是标准智能体。未进入 OCI 流程的内部模块由
-各自 owner descriptor 声明其 carrier 与安装入口。将来为某个 Package 增加新的
-分发形式前，先按上面的字段确认它是否已有 OCI 渠道：有则扩展 OCI 渠道，不再新增
-第二种机制。
-
-领域质量、资格、运行可用性与软件包发布分别据实记录。App 等有独立安装制品的产品
-不属于此规则的范围。
+该规则覆盖全部 package id。未进入 OCI 流程的内部模块由各自 owner descriptor 声明其 carrier 与安装入口。App 等独立安装产物的 Release Bundle 在写作模型不可用时支持 `prepared_notes.source=prepared_ai|prepared_mechanical`（Schema 为 `release-bundle-freeze-request.schema.json` 与 `release-bundle.schema.json`），Framework 仅校验与纳入摘要而不伪造说明。领域质量、资格和运行可用性与软件包发布分别据实记录。
 
 ## 每日稳定发布
 
@@ -272,11 +241,4 @@ App展示artifact和Package state，发起受控action，并持有App release tr
 
 ## 验证
 
-分别验证artifact integrity、owner receipt、Package publication、native carrier installed、effective entrypoint和App user path。任一层通过都不能外推其他层。
-
-
-## 媒体能力包
-
-包含媒体的独立 capability package 与标准 Agent 共用 OCI 源包获取、精确版本与载荷校验。源包允许最多 2 GiB，下载落盘并按流计算 SHA-256；JSON 与单个载荷文件继续使用 128 MiB 边界。发布校验只解包一次，再逐文件校验，安装时逐文件写入并从磁盘计算内容锁，避免为媒体库累计保存全部文件缓冲。
-
-所有包保留源身份、OCI layer 大小与 digest、归档成员路径和物理文件检查。只有标准 Agent 要求 domain descriptor；资产 capability 的入口与内容由它自己的 owner descriptor、导出项和内容锁定义。安装和更新都使用已有 required closure，更新先为选中的新版本补齐依赖，再更新消费方；媒体在工作台的选用与创作质量由 MAC 决定。
+分别验证 artifact integrity、owner receipt、Package publication、native carrier installed、effective entrypoint 和 App user path。任一层通过都不能外推其他层。

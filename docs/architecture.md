@@ -20,23 +20,9 @@ User
 
 ### 应用管理共享投影
 
-Framework 在公开 `app_state.application_management` 提供一个 refs-only 聚合视图，供 OPL App、Studio 和 Agent 共同呈现共享基座；Package Directory 则由 `app_state.agent_packages.directory.entries` 提供 Agent、Workflow 和 Capability 的可发现清单。前者聚合共享资源，后者聚合可安装 Package，两者都只投影 owner truth。
+Framework 在公开 `app_state.application_management` 提供一个 refs-only 聚合视图，供 OPL App、Studio 和 Agent 共同呈现共享基座；Package Directory 则由 `app_state.agent_packages.directory.entries` 提供 Agent、Workflow 和 Capability 的可发现清单。前者聚合共享资源，后者聚合可安装 Package，两者都只投影 owner truth，不引入第二个 Package registry、凭证库、知识正文库或 updater。
 
-软件条目必须具备稳定 identity、实际入口、来源、载体与状态回读，范围覆盖 OPL 标准及非标准智能体、独立 MCP App、桌面/Web/CLI 应用和独立能力包。Package 技术角色保留 `standard_agent`、`workflow_profile`、`capability_package`，但不限定产品类型；类型、核心/生态/第三方归属、交互方式、依赖关系和安装模式分别表达。内部组件跟随父产品管理，概念仓和开发库不因仓库存在而成为独立软件。云端、移动端、设备端和远端服务产品属于 `deployment_target`，由 OPL App 提供部署协助和状态入口，不冒充本机已安装软件。完整准入与计数规则由 [Package Directory](./specs/package-directory.md#管理范围与产品类型) 持有。
-
-应用管理 UI 是统一的一级入口，与主对话并列，展示目录总数、可安装、已安装、已安装/可用版本、更新和需处理状态。安装、启停、更新、修复和卸载继续由原 owner 的 `app action` 与 native carrier 执行；App 只 dispatch 并做 fresh readback。它不引入第二个 Package registry、凭证库、知识正文库或 updater。Homebrew 是系统依赖、CLI 和声明的原生 carrier，不能替代 OPL Agent Package Directory。
-
-公开与私有源共享这条 owner 链：软件源决定可发现的 metadata，registry 决定可下载的制品，native carrier 决定本机安装事实，Connect、知识和领域 owner 决定运行时权限。Framework 把当前身份获准的私有来源作为同一目录的补充输入；私有源码仓、已安装状态和运行 grant 均不能代替 registry 读取许可。凭证由 provider 或原生 credential helper 保管，目录与 UI 只呈现安全引用和访问状态。
-
-该目录与安装边界的完整人读说明见 [Package Directory 与统一安装管理](./specs/package-directory.md)。
-
-共享资源视图把已存在的 OPL Base 能力、连接授权、模型访问和知识 owner 已授权来源放在同一认知入口；知识 owner 从已选 Profile 和工作区来源绑定生成安全 projection，App 通过同一 owner action 配置、检查、授权和断开来源。未配置与配置失效分别呈现，不从路径或空列表推断已就绪。资源的安装、启停、授权、更新和修复仍由原 owner 的既有 `app action` 负责。它不引入第二个凭证库、知识正文库或 updater。
-
-资源行可带 owner 提供的授权、修订、安全版本、freshness 和 readiness 摘要；缺少明确 owner 字段时保持 `unknown`，不能从写入时间、工作区绑定或消费者存在性推断“当前”或“已就绪”。
-
-连接授权按消费者聚合：同一消费者已有 active `granted` 时，历史 `stale` 或 `revoked` 记录不覆盖当前授权；没有 active grant 的 stale/revoked 记录才进入 `attention`。
-
-字段与边界由 [`application-management-projection-contract.json`](../contracts/opl-framework/application-management-projection-contract.json) 持有。`fast` profile 只返回有界资源摘要，`full` profile 返回同一 owner projection 的完整安全行。知识来源没有明确授权绑定时必须保持 `unknown`，UI 和 Agent 不得从 workspace 路径自行推断“已就绪”。
+连接授权按消费者聚合：同一消费者已有 active `granted` 时，非 active 记录不覆盖当前授权；缺乏明确 owner 字段的资源行保持 `unknown`，禁止从路径或空列表推断已就绪。机器字段由 [`application-management-projection-contract.json`](../contracts/opl-framework/application-management-projection-contract.json) 持有，`fast` profile 返回有界摘要，`full` profile 返回完整安全行。软件条目类型、公开/私有访问、原生 carrier 发现和 UI 呈现规则均由 [Package Directory 与统一安装管理](./specs/package-directory.md) 持有。
 
 ## Agent 原生应用组合
 
@@ -86,10 +72,7 @@ Agent tool 与必要 UI 是同一领域能力的两个入口。Framework 的共�
 
 跨 unit 调用使用对方公开 entrypoint；源码身份和职责从责任图读取，entrypoint 只导出实际能力。entrypoint 不反向持有业务状态，adapter 不成为 authority，read model 不写 owner truth。
 
-通用 Python 文件能力归 `python/opl_framework`：Profile Workspace 根定位与无覆盖初始化、
-Package 内容锁字节编码和流式文件摘要由基座维护。已有 Framework 运行依赖的 consumer 直接导入；
-独立 carrier 通过 `scripts/materialize-python-support.mjs` 逐字生成私有模块，并在验证时用
-`--check` 核对同源。投影不引入注册表、版本状态或领域裁决，领域模板和业务状态仍归各自 owner。
+通用 Python 文件能力归 `python/opl_framework`：Profile Workspace 根定位与无覆盖初始化、Package 内容锁字节编码和流式文件摘要由基座维护。已有 Framework 运行依赖的 consumer 直接导入；独立 carrier 通过 `scripts/materialize-python-support.mjs` 生成与 `--check` 核对同源，领域模板和业务状态仍归各自 owner。
 
 ## Family capability portfolio
 
@@ -141,6 +124,7 @@ Studio Host 位于 `opl-studio` 仓，负责固定 DSH profile、插件生命周
 `opl-codex-native` 和 Electron/WebUI/OCI transport。它通过 App state/action、
 authentication 与 channel callback 公开合同消费 Framework，不加载或复制
 Framework registry、currentness、session、Package graph 或内部 service graph。
+DSH Host/Client 插件与 Framework Package 使用不同 ABI，同一个 Package 不会因通过 Codex Plugin 安装而进入 DSH profile，只有真实 owner 和生命周期相同才应合并。
 因此“Framework Host 在其 scope 内唯一”与“Studio 是独立 DSH Application Host”
 同时成立。
 

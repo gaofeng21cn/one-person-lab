@@ -97,8 +97,6 @@ OPL App 的显示版本与更新器机器版本遵循 [App 发布合同](https:/
 
 Framework 的可用版本和更新动作来自独立 OCI 发布频道。公开源 `source_check` 回读频道并缓存版本、源码提交和制品摘要；`catalog_refresh_required` 提示刷新，目录本身不触网。缓存只保存上游发布证据，安装、版本和待重启状态仍读取实际 owner。`software_installation_execute` 用 `package_id=opl-framework`、安装 ID、修订号和目标版本调用既有自更新器，共用更新锁；执行前重新检查频道，变化时拒绝旧请求。更新先暂存，显示 `needs_restart`；下一次启动沿既有验证和回滚流程激活，之前的“当前版本”保持不变。该动作不更新 Codex 或其他基座组件，不跳转通用 OPL Base 更新页；开发 checkout 不接受发布版覆盖。
 
-早期安装器交付的 Git 运行时仍属于发布安装。必须同时具有 installer 的 `install_mode=git` 身份收据、绑定到该目录的实际 `opl` 入口、独立 Git 根及匹配收据的干净 HEAD，才允许更新到正式制品。暂存后若出现本地修改，启动激活也会停止；原 Git 目录通过既有 `.previous` 路径保留用于回退。单独存在 `.git` 不决定安装模式，普通 checkout 和 worktree 不获得此权限。
-
 这个独立安装读面目前覆盖 Framework owner；其他原生应用仍通过已支持的软件源和 bundle 回读提供状态。它不表示已经发现所有平台、所有安装器或全部外部应用。
 
 来源层的 `installation_owner=homebrew` 表示配方操作归 Homebrew；条目层的安装 owner 可以不同。比如本机 Framework 已由 OPL 管理，Homebrew 配方仍没有收据；界面显示实际 Framework 版本，并从安装 owner 进入维护，不显示“本机未安装”。OPL App 的标准、完整和 Nightly 配方按 `product_id` 归并成产品，各安装选项在来源详情中分别显示收据与版本；发现一个 App bundle 不表示这些渠道都已安装。
@@ -119,28 +117,12 @@ Homebrew 动作执行前重新读取该来源，核对固定 OPL tap、当前版
 私有条目使用 `visibility=authorized_only`。发现、下载和运行是三条独立授权链：
 
 1. 软件源检查决定当前身份能否看到 metadata 和版本；
-2. registry/provider 决定能否读取 manifest、payload、source archive 和 digest；
+2. registry/provider 决定能否读取 manifest、payload、source archive 与 digest；
 3. Connect grant、知识来源 grant 和领域 owner 决定已安装 Agent 能否使用连接、Obsidian 知识或业务动作。
 
-安装、更新和需要远端读取的修复在执行前重新检查来源授权。私有制品安装时锁定不可变 digest；`latest-stable` 只用于发现候选版本。公开源的匿名回读与私有源的授权回读是不同验收条件，不能用本机 carrier 已安装替代新用户发行验收。
+安装、更新和需要远端读取的修复在执行前重新检查来源授权。私有制品安装时锁定不可变 digest，`latest-stable` 只用于发现候选版本。公开源匿名回读与私有源授权回读分别验收。私有签名密钥、受保护发布流与 OCI namespace 归属校验机制由 [Artifact 与 Package Delivery 边界](../delivery/artifact-package-lifecycle-boundary.md) 持有；界面及状态展示规范由 [Package Directory 与统一安装管理](./package-directory.md#名称说明与状态展示) 持有。
 
-第一方私有 Package 优先使用 Framework 随版本交付的 `contracts/opl-framework/keys/private-packages/<package_id>.pub`；已有 Package 沿用 `contracts/opl-framework/keys/private-package-signing.pub`。两者仅用于 `gaofeng21cn/one-person-lab-private-packages`。其他发布者由 Host 显式配置 `OPL_PACKAGE_SIGNING_PUBLIC_KEY` 绝对公钥路径；显式配置优先，配置错误不会回退到默认信任。公钥不从制品或用户覆盖的目录中取得。发布流程在上传前核对受保护私钥派生的公钥与随 Framework 交付的公钥一致。每个私有 owner 可以独立管理签名密钥，增加新包不需要取出其他仓库的秘密或轮换现有包的信任。私钥与密码保存在私有 owner 仓库的 `release-stable` 发布环境；该仓库通过固定 Framework commit 的正式 workflow 调用统一发布器，使用自身 `GITHUB_TOKEN` 读取精确源码和访问 registry。签名信任不能代替 registry 登录、Package read 权限或 Connect/知识授权；实际发行仍须完成授权回读及匿名拒绝验证。
-
-公开 Framework 仓库的 `Daily OPL Package Channel` 只比较并计划发布 `visibility=public` 的独立通道。已 admitted 的私有 Package 仍由同一动态 descriptor 清单发现，但检测工件和 dispatch plan 将其明确记录为 `delegated_to_private_owner`，不读取私有 registry、不生成中央发布请求，也不将其记为已验证、未发布或无需更新。其实际通道读回和发布仍由上述私有 owner workflow 完成；不向公开 caller 扩大私有制品权限。
-
-私有制品的归属由 canonical Package owner、经认证的精确私有 workflow caller、源码 commit/tag，以及 OCI source annotation 和签名 provenance 共同绑定。GitHub Package REST 返回的 `repository` 是可选关联投影：存在时必须与该私有 owner 一致；缺失时明确记录 `association_metadata_unavailable`，不得宣称关联已验证。发布器仍须实际读取目标私有 namespace，并在上传前后用同一只读核验路径证明 `visibility=private` 和匿名访问被拒绝；明确的公开状态或错误 owner 均拒绝发布。首次创建只允许先上传不含源码或凭据的固定访问标记，完成同样核验后才上传 Package 内容。
-
-## UI 展示规则
-
-OPL App 的“应用管理”页与主对话并列，软件源作为一级能力的来源筛选和状态详情。UI 应分别展示：
-
-- 来源：公开、账户已连接、需要登录、无读取权限、授权过期、访问已撤销、尚未检查。来源的 `authorized` 只表示账户身份检查成功；每个私有 Package 的可见性与下载权限仍逐项验证；
-- Package：产品类型 `software_type`、配置 carrier 的安装与版本、来源版本、更新状态、调用就绪、依赖影响和 owner action；另有 `local_installations` 时显示原安装器实例及安装/开发模式，操作继续归该实例 owner；
-- 计数：`entry_count` 只统计当前身份实际可见的条目；未获准的私有条目不泄露名称、数量或版本。Homebrew 来源的 `entry_count` 统计配方条目，主软件目录按产品 identity 去重，二者不可混用。Homebrew 清单尚未读取或读取失败时返回 `null`，UI 显示“尚未读取”或具体不可用原因；只有成功读取后的空清单才能显示零个条目。
-
-用户未安装的可选软件属于“可安装”，不计入“需处理”。已安装软件的缺少依赖、carrier 故障或访问撤权才进入处理队列。所有安装、更新、修复、停用和卸载动作完成后都重新读取 Framework/native carrier 状态；UI 不用按钮存在性或旧缓存宣称成功。
-
-Obsidian 等个人知识源在“共享资源 → 知识与记忆”管理，复用[知识来源接口](./knowledge-sources.md)的真实 Profile/Workspace projection 与接入、配置、检查、断开动作。正文保留在用户原资料库，Framework 管理来源 binding、接受版本、授权和运行快照。账号及模型连接在“共享资源 → 连接与凭证”按原 owner 管理；基础运行依赖在“软件目录 → 运行组件”显示实际安装位置、消费者和维护入口，软件源权限链接回同一“软件源”页面。读取失败或尚未返回时显示明确状态，只有 owner 成功回读的空列表才表示尚未配置。
+Obsidian 等个人知识源在“共享资源 → 知识与记忆”管理，账号及模型连接在“共享资源 → 连接与凭证”管理，基础运行依赖在“软件目录 → 运行组件”管理；具体接口与展示细节归各自主题 owner。
 
 ## 当前验收边界
 

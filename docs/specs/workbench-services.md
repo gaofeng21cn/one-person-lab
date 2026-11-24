@@ -44,17 +44,10 @@ App worker 运行时执行任务，最小化可继续；退出后不承诺执行
 跳时可跳过，回拨可触发两次。只读 inventory 有深度及文件数上限，部分统计必须显示为
 partial，不能作为完整磁盘占用。
 
-当前实现采用 Temporal 官方 SDK；DSH 官方 schedule 是 DSH root Agent/session 内提醒，
-不满足 canonical Codex 任务管理和历史要求，因而不挂载其执行端。Studio 仍优先复用
-官方 Settings 与 UI primitives，并独立检查旧 Framework 缺少此公开导出时的升级提示。
-
-验证采用隔离 Temporal、fake App Server 与临时资源目录；入口为
-`tests/src/workbench-resources.test.ts`、`tests/built/workbench-temporal.test.mjs` 和
-Studio `scripts/acceptance/workbench-services.mjs`。源码通过不等于已发布的 Framework
-包及 Studio 安装包具备此功能；分发时必须绑定两端实际字节并重新验收。
+当前实现采用 Temporal 官方 SDK，并复用官方 Settings 与 UI primitives。验证采用隔离 Temporal、fake App Server 与临时资源目录，入口为 `tests/src/workbench-resources.test.ts` 与 `tests/built/workbench-temporal.test.mjs`。源码通过不等于已发布的 Framework 包及 Studio 安装包具备此功能；分发时必须绑定两端实际字节并重新验收。
 
 部分 Temporal 服务接受但不执行 Schedule conflict token 校验。因此同一任务的管理操作使用固定 workflow ID，禁止活动执行重复启动；revision 在该执行内复核，不能仅依赖 token 宣称并发安全。
 
 ## 代码模块
 
-插件入口和预检查确认仍由 `index.ts` 聚合。`tasks.ts` 持有计划任务，`memory.ts` 持有只读记忆及纠错笔记，`storage.ts` 持有用量、清理预览和执行；路径校验与文件身份检查共用于 `resource-files.ts`。`resources.ts` 仅保留兼容调用门面，不复制实现或状态。对外仍是一个 Workbench Services 插件与原有 state/action 合同。
+插件入口和预检查确认由 `index.ts` 聚合。`tasks.ts` 持有计划任务，`memory.ts` 持有只读记忆及纠错笔记，`storage.ts` 持有用量、清理预览和执行；路径校验与文件身份检查共用于 `resource-files.ts`。对外统一呈现为一个 Workbench Services 插件与既定 state/action 合同。

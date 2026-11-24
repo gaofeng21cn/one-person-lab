@@ -55,6 +55,4 @@
 
 已完成计划、迁移记录、兼容说明和审计快照不保留在当前文档树。需要追溯时使用 Git commit、blame、tag 和 release artifact；不得从历史文本恢复已删除的模块、接口、测试或兼容面。
 
-
-
-插件与 Package 的组合边界见 [Framework Package 与 DSH 插件边界](plugin-composition-boundary.md)。
+Host 范围与插件组合边界见 [架构](./architecture.md#host-scope-boundary)。

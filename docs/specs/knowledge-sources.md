@@ -30,6 +30,8 @@ Persona 的 `data/persona/knowledge-inputs.json` 只按角色选择知识 ID；�
 
 App／Studio 的“设置 → 资料与连接 → 资料库”读取 `app_state.settings_control_center.app_settings_read_model.resource_sources`，同一摘要进入 `application_management.shared_resources`。来源 owner 从已选 Profile 和已有工作区绑定读取真实 registry；只返回来源身份、名称、权限、接受版本与检查结果，不返回资料库路径或正文。
 
+连接资料库时优先使用宿主原生目录选择器（网页端保留服务器目录输入），通过 `scope_options` 与 `default_scope_ids` 由用户明确选择绑定范围。软件中心展示可用性与缺失授权并携带焦点导航到该设置页。来源名称保存在原 registry 的 `source.label`，`source-configure --label` 以精确 revision 原处改名而不修改 scope 或绑定；没有名称时投影使用工作区名称和来源序号，保留稳定 `source_id`。
+
 用户在同一入口选择资料目录，或通过高级入口接入已有 registry，并明确选择使用范围与可使用的应用。首次接入复用 `<workspace>/data/knowledge-sources.json` 和既有 binding；它不自动登记、接受或复制库中的正文。`OPL_PROFILE_WORKSPACE` 的显式选择无效时直接报告错误，不换用默认个人目录。工作区以已有 registry 的不透明 ID 选择。
 
 `opl knowledge source-list`、`source-check`、`source-connect`、`source-configure`、`source-disconnect` 与 `knowledge_source_*` App actions 共用一个 owner。配置、授权修改和断开绑定要求确认及精确 revision，写后立即回读。断开只移除当前工作区对此来源的选择，保留原文、registry、其他工作区授权及必要知识声明；重新连接沿原来源身份完成。
@@ -201,9 +203,3 @@ Obsidian 调用方负责链接与文稿关系，不由通用 Framework 批量重
 来源版本检查和本机写入锁用于协调遵守同一协议的本机写者，不构成跨设备文件系统事务。云同步冲突或其他编辑器并发写入需要保留并核对版本；不以最后写入覆盖解决。
 
 提案、审阅与应用合同分别见[提案 schema](../../contracts/opl-framework/knowledge-writeback-proposal.schema.json)、[审阅 schema](../../contracts/opl-framework/knowledge-writeback-review.schema.json)和[回执 schema](../../contracts/opl-framework/knowledge-writeback-receipt.schema.json)。命令成功证明机械操作已完成，语义接受与业务结果仍由其 owner 的依据决定。
-
-## 软件中心接入
-
-连接资料库时优先使用宿主原生目录选择器，网页端保留服务器目录输入，不上传或复制整个资料库。Framework 在 context 投影中提供 `scope_options` 和 `default_scope_ids`：没有既有绑定时使用个人或项目范围，只有唯一选择时才默认选中；多范围由用户明确选择。来源配置与授权仅在“设置 → 资料与连接”提供；软件中心显示可用性与缺失授权，并携带所选软件和来源焦点导航到设置。旧共享资源路由兼容跳转，不重复渲染表单。提议、审阅、写回继续由原知识来源 owner 执行。
-
-来源名称保存在原 registry 的 `source.label`。`source-configure --label` 使用精确 revision 改名；只提交名称时不修改或重建任何 scope、grant 或连接绑定，复杂项目授权也可独立改名。旧来源没有可读名称时投影使用工作区名称和来源序号，保留稳定 `source_id` 供技术详情与动作定位。显示层按 owner Package 身份归组消费者，底层领域的读取和维护权限分别保留。

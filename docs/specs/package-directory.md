@@ -83,9 +83,9 @@ OPL 的公开 registry、授权私有源和 Homebrew tap 是同一个 OPL 软件
 
 公开仓内只放可公开的目录声明。需要隐藏名称、说明或版本的私有条目由受权限保护的软件源提供，Framework 对当前身份获准的条目做同样的 identity 合并；不能先把完整私有清单放入公开文件，再依赖 UI 隐藏。软件源配置和凭证不进入公共 Package metadata。
 
-## 私有 Package 的访问合同
+## 私有 Package 的访问与生命周期
 
-私有源沿用公开 Package 的安装与管理界面。访问规则分成独立的四个判断：
+私有源沿用公开 Package 的安装与管理界面，其软件源 CLI 与授权配置入口见 [软件源控制面](./software-sources.md)。访问规则分成独立的四个判断：
 
 | 判断 | 权威 owner | 含义 |
 | --- | --- | --- |
@@ -94,34 +94,11 @@ OPL 的公开 registry、授权私有源和 Homebrew tap 是同一个 OPL 软件
 | 本机安装与管理 | Package owner 与 native carrier | 已安装、启停、依赖、更新、修复和卸载事实，以及每个动作的当前可执行性 |
 | 运行时资源与业务动作 | Connect、知识 owner 与领域 owner | 已安装消费者能否访问知识、账号或业务能力；安装授权不授予券商操作或私人知识访问 |
 
-`visibility`、`access_policy_ref` 和 `credential_provider` 是来源声明。访问状态、授权修订和校验时间由可信安装器及 provider 回读产生，descriptor 自称 authorized 不构成授权。公开 projection 只带安全引用和状态，凭证继续由 provider、系统钥匙串或 credential helper 保管。安装前使用 Framework installer 的身份，不借用尚未安装 Package 的 Connect consumer grant；运行时连接规则见 [Connect 连接授权](./connection-authorization.md)。
-
-目录按当前身份和来源权限过滤后计数。尚未获准发现的私有条目不出现，也不暴露其数量；来源本身可以显示登录、授权过期或连接失败状态。已获准读取 metadata 但无制品下载权限的条目可以显示权限问题，安装和更新按钮保持不可用。凭证存在只能证明找到凭证来源，不能证明 registry 已接受它。
-
-安装、检查更新、下载更新和需要读取远端内容的修复均重新校验来源权限。凭证、authorization revision 或账号变更不能沿用其他身份的目录缓存或旧 access decision。卸载与禁用依据本地 carrier 和依赖关系执行，远端撤权不阻止用户管理已经安装的软件。
-
-私有仓库尚未进入正式发行时，可以保留 `visibility=authorized_only` 和 `publication_channel_admission=development_only` 作为开发诊断状态，但不得出现在软件中心的可安装列表。正式发行按同一流程准备 `publication_ref` 与 `admitted`，发布后由授权 registry 回读决定是否显示和允许安装；源码仓库访问成功不能替代制品回读。
-
-软件源配置仍使用 `opl sources configure --source-id github-packages:<owner> --provider-id github_packages --credential-handle provider:github_packages:gh-cli --json`；`opl sources check --source-id github-packages:<owner> --json` 刷新 OCI 包的读取权限。UI 只展示来源、访问状态与原因，不展示 credential handle 的值或令牌。仓库读取权限和 OCI pull 权限互不替代。
-
-快速 App state 保持只读缓存，不在启动投影内联网。包访问快照过期或缺失时，owner 在已连接私有软件源投影中给出 `access_refresh_required=true`；Studio 的正常刷新先执行该来源已有的 `source_check`，再读取快速状态后呈现。用户无需每分钟手动重新授权。未配置或禁用的源不自动检查，失败来源按 owner 的短重试间隔处理，过期快照不继续作为发现或下载授权。
-
-撤权后，尚未安装的私有条目从授权目录移除；已安装条目保留必要的本地名称、版本、载体和卸载入口，并显示访问失效。后续远端读取被拒绝，不自动删除本地文件。Registry 撤权不是运行许可证；运行时连接或知识权限的撤销仍由各自 owner 单独执行。
+`visibility`、`access_policy_ref` 和 `credential_provider` 是来源声明。访问状态、授权修订和校验时间由可信安装器及 provider 回读产生，descriptor 自称 authorized 不构成授权。目录按当前身份过滤后计数，未获准发现或已撤权的条目不进入可安装目录（已安装本地项保留管理事实与卸载入口，后续远端读取拒止）。快速 App state 保持只读缓存，缺少快照或过期时由 `access_refresh_required=true` 触发 `source_check` 刷新；运行时连接规则见 [Connect 连接授权](./connection-authorization.md)。
 
 ## Homebrew 的位置
 
-Homebrew 是 OPL 的一个 carrier，不是 Agent 目录。它适合分发宿主工具、CLI、原生运行依赖和已经声明 Homebrew 支持的 OPL App 载体；Formula/Cask 的版本与 digest 必须追随对应公开 artifact，并由各自 owner 回读。
-
-私有 tap 也可承载已声明 Homebrew 支持的内部 App/CLI。Tap 的 Git 读取权限与安装文件的下载权限分别验证。已有 OCI Package 的 Agent 直接复用 registry 权限和原 carrier 更新动作，不再生成一套 Formula 版本真相。
-
-用户在 OPL App 中看到的是 Package Directory 的语义：可发现、可安装、已安装版本、可用版本、更新状态、调用就绪和受影响的依赖。独立发布的 Package 使用正式 OCI。公开 App 插件可以由 Framework owner projection 显式声明 `codex_surface.public_payload_delivery=pinned_files`，从固定的 owner 提交读取已锁定的载荷。完整版可以用相同版本的离线载荷，版本与内容校验相同。原生 App/CLI 走声明的 Homebrew/native carrier；外部扩展回到其原生管理器。App 不把不同 carrier 拼成第二套目录，也不要求用户理解载体差异。
-
-因此：
-
-- Package Directory 决定“有哪些软件、由谁维护、可安装哪个版本”；
-- native carrier 决定“怎么装、怎么更新、怎么回读”；
-- Homebrew 只在它是声明的 carrier 时执行动作；
-- App/Studio 的统一管理页是用户认知入口，owner projection 是机器真相。
+Homebrew 是 OPL 的一个 carrier（负责宿主工具、CLI、原生运行依赖与已声明支持的 OPL App 载体），不是 Agent 目录。拥有 OCI 渠道的 Agent 复用 registry 权限与原 carrier 动作，不另生成 Formula 版本真相；公开 App 插件也可声明 `codex_surface.public_payload_delivery=pinned_files` 读取锁定载荷。具体 Homebrew 配置与命令行操作见 [软件源控制面](./software-sources.md#homebrew-原生软件)。
 
 ## 下载进度与后台安装
 
@@ -205,9 +182,11 @@ OPL App 的“应用管理”是一级能力，与主对话并列，统一呈现
 
 对 OCI carrier，channel tag 用于发现选定版本，digest 绑定本次下载的具体内容。不可变版本、manifest、payload、source archive 和 content lock 必须保持一致。公开发布用匿名回读证明可获取；私有发布用授权回读证明可获取，并确认匿名访问被拒绝。发布者声明私有时，流水线不能把包改成 public；源代码归档、签名材料和发布附件遵守相同可见性。安装与更新仍由原 carrier 负责，这些校验不另建版本解析器。
 
-第一方发布与下载按 `visibility` 固定选择 namespace：`public` 使用 `one-person-lab-packages`，`authorized_only` 使用 `one-person-lab-private-packages`。访问策略引用必须与私有制品路径一致。OCC 保持 `Package ID=occ`，其新授权分发入口为 `ghcr.io/gaofeng21cn/one-person-lab-private-packages/occ:latest-stable`；旧 `one-person-lab-packages/occ` 中已公开的历史版本保留只读，不作为私有安装回退源，自动清理也不删除这些历史制品。
+第一方发布与下载按 `visibility` 固定选择 namespace：`public` 使用 `one-person-lab-packages`，`authorized_only` 使用 `one-person-lab-private-packages`。访问策略引用必须与私有制品路径一致；私有包发布规则见 [Artifact 与 Package Delivery 边界](../delivery/artifact-package-lifecycle-boundary.md)。
 
-私有入口配置不代表已经发布。实际发行仍要求 owner 的 annotated version tag、Framework projection/payload 与精确 source commit 一致，发布账号具备 Package 写权限，安装账号具备 Package 读权限，并配置受保护签名密钥及 Host 可信公钥。凭证和签名配置不足时保留不可下载状态，不借用历史公开制品填补。
+## 软件图标
+
+`presentation.icon_ref` 指向 Package payload 内的真实图标文件。目录从同一 payload 的精确源码提交和文件声明产生 `icon_url`，支持嵌套 carrier 路径；不从软件名称猜路径，也不跟踪可变 `main`。私有来源不产生匿名图标 URL。缺少可读取图标时，宿主按正式名称和产品类型显示可区分的 fallback，不维护固定软件 ID 清单。
 
 ## 新项目接入顺序
 
@@ -216,9 +195,3 @@ OPL App 的“应用管理”是一级能力，与主对话并列，统一呈现
 3. 在 Framework projection 中登记版本、访问状态、就绪、依赖和 action refs；公开目录不写入本机路径，本地安装回读只展示代码位置，不包含秘密或资料正文。
 4. 用 `opl packages list --json` 和 `opl app state --profile fast --json` 回读，再在 OPL App 的目录页完成安装、更新、停用、修复和卸载验收。私有源同时验证无权限、过期、撤权、重新授权和账号切换。
 5. 用真实 carrier 的安装、更新和卸载回读验证管理能力；按运行依赖显示调用就绪状态。原型与已发行产品使用同一管理规则，开发 checkout 只作为显式开发覆盖，发行与领域业务资格仍由 owner 各自验收。
-
-
-
-## 软件图标
-
-`presentation.icon_ref` 指向 Package payload 内的真实图标文件。目录从同一 payload 的精确源码提交和文件声明产生 `icon_url`，支持嵌套 carrier 路径；不从软件名称猜路径，也不跟踪可变 `main`。私有来源不产生匿名图标 URL。缺少可读取图标时，宿主按正式名称和产品类型显示可区分的 fallback，不维护固定软件 ID 清单。

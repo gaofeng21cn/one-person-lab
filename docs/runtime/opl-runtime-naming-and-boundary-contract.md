@@ -78,10 +78,6 @@ domain/stage contract
 
 repair 成功表示运行通道恢复，不表示产物质量或任务完成。不可逆数据、权限、publication 和 owner decision 必须单独守门。
 
-## Python client
-
-跨语言 consumer 使用 [Family Runtime Python Client](./family-runtime-python-client.md) 中的稳定 API。Python adapter 不复制 runtime state machine。
-
 ## 验证
 
 ```bash

@@ -18,7 +18,7 @@
 
 只有同时出现独立职责、多个真实 caller 和稳定依赖边界时才拆 source unit。文件过长、品牌名称、未来复用或目录对称本身不构成拆分理由。
 
-若能力需要独立安装、跨仓 ownership 或独立发布，按 [Package 拓扑](../project.md#package-拓扑) 决定 workspace Package、独立 repo 与 publication；不要通过新增 source root 模拟 Package。 DSH Host/Client 插件与 Framework Package 的分层见 [插件组合边界](../plugin-composition-boundary.md)。载体是 Package 的安装实现，不会自动把 Package 变成 DSH plugin。
+若能力需要独立安装、跨仓 ownership 或独立发布，按 [Package 拓扑](../project.md#package-拓扑) 决定显式包边界、独立 repo 与 publication；不要通过新增 source root 模拟 Package。DSH Host/Client 插件与 Framework Package 的分层见 [Host scope boundary](../architecture.md#host-scope-boundary)。载体是 Package 的安装实现，不会自动把 Package 变成 DSH plugin。
 
 ## 变更步骤
 

@@ -19,9 +19,7 @@ OPL Framework 只持有 StageRun transport、attempt ledger、queue/provider、d
 
 Stage 角色、独立 Attempt、预算分支、hard stop、route 输出及 finding/repair/closure 协议由 Framework 在 provider prompt 中统一注入。领域角色片段只补充专业审查范围、质量标准、证据及修复 owner 判断；领域无需重复通用协议文本。Conformance 校验声明的机器策略和角色片段引用，不按提示词关键词判断语义。角色文件及 fragment 仍由既有内容绑定机制保留精确字节和摘要，已绑定的历史内容不会被新的领域文件覆盖。
 
-Stage runner 的公开入口继续保留。`raw-progress-closeout.ts` 维护原始输出的进展信封，
-`activity-input.ts` 维护 Activity 输入投影；二者直接依赖既有 packet、receipt 和 policy
-模块。执行、session recovery 与最终身份核对仍由 runner 按原顺序编排。
+Stage runner 入口由 [`family-runtime-codex-stage-runner.ts`](../../src/adapters/execution/family-runtime-codex-stage-runner.ts) 与 `src/adapters/execution/family-runtime-codex-stage-runner-parts/` 维护原始进展信封和 Activity 输入投影，并按原顺序编排执行、session recovery 与身份核对。
 
 ## Durable invocation 与物化
 
@@ -33,8 +31,7 @@ Stage runner 的公开入口继续保留。`raw-progress-closeout.ts` 维护原�
 
 `native_package_closure` 与 `package_use_binding` 都属于包观测，不进入稳定的
 workspace identity。包字节仍由 spec 的 `package_closure` 和每次 Attempt 的内容绑定
-独立校验。旧 spec 若曾将 native closure 带入 workspace identity，其原字节和 hash
-继续保留；父子身份及路由 replay 比较只投影稳定工作区字段，避免 Skill 更新被误判
+独立校验；父子身份及路由 replay 比较只投影稳定工作区字段，避免 Skill 更新被误判
 为更换任务。真实 workspace、source、executor 或包内容不匹配仍拒绝。
 
 Runway 在启动 Temporal 前，先把 exact StageRun input 写入 `${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_run_launches`。真正调用 provider 前再用带 lease 的 `BEGIN IMMEDIATE` compare-and-swap 收敛 `registered|start_failed|expired starting`；active `starting` caller 只获得幂等 readback。未知成功恢复允许按同一 deterministic workflow id 重投 RPC，所以 provider delivery 是 at-least-once；Temporal `USE_EXISTING + REJECT_DUPLICATE` 保证 execution exactly one。`started` 不得降级，`closed` 永久终局。同 invocation + 同 spec 的 running/closed Run 幂等返回；同 invocation + 不同 spec 以 `stage_run_invocation_spec_conflict` 失败。
@@ -43,25 +40,13 @@ Runway 在启动 Temporal 前，先把 exact StageRun input 写入 `${OPL_STATE_
 
 若初次 reviewer 因 `codex_cli_provider_unavailable` 阻断且没有已接受语义 closeout，在外部配额或权限恢复后，可对原 reviewer 执行 `opl family-runtime stage-run recover-closeout <stage_run_id> --attempt <reviewer_attempt_id> --retry-reviewer`。入口要求它仍是当前质量链最后一次 Attempt，并核验同 StageRun 已完成 producer 的 artifact 字节身份；现有恢复控制器创建新的 reviewer Attempt，保留原阻断记录与已用语义修复轮数，不重新运行 producer、不新建 ActionRun。领域 review 文件中的 `pass` 不会被 Framework 推定为已接受 verdict；实际通过与后续 route 仍须由新的正式 Review 给出。human gate、后续已推进的质量链、不同 scope 或已变化 artifact 不可走此入口。
 
-Closeout 恢复接受完整 JSON 对象及完整 JSON 代码块，记录无法归一化的原因。`domain_output` 先验证四字段身份与 `closeout_refs` 绑定，再丢弃额外正文、状态和 verdict；台账只保存 refs-only 身份。原始输出在 Attempt 物化时同时核对 producing Stage，身份或物理路径边界失败仍然终止。Review lane 由 Stage 声明决定：没有绑定时忽略请求中的 lane 提示，controller-required 目标缺少父 lane 时保留质量债并继续路由；已声明但不允许的父 lane 仍拒绝。长会话的同线程 closeout 补交默认预算为 900 秒，且仍受 Activity 总时限约束。
+Closeout 恢复接受完整 JSON 对象及完整 JSON 代码块，记录无法归一化的原因。`domain_output` 先验证四字段身份与 `closeout_refs` 绑定，台账仅保存 refs-only 身份；原始输出同步核对 producing Stage 与物理路径边界。Review lane 由 Stage 声明决定；长会话同线程 closeout 补交默认预算为 900 秒，且受 Activity 总时限约束。
 
-直接 closeout 与同线程 protocol-resume 均可以引用本 Attempt 工作区内已经写出的 closeout packet；直接 packet 缺失的 route_impact 从该已核验文件补全，显式字段冲突不被覆盖。该路径绑定稳定观测字节的 SHA-256 与长度，不要求 packet 声明自身的哈希；工作区包含性、文件稳定性、当前 Attempt 身份、packet 类型和显式字段冲突仍须核验。独立 recovery 路径继续严格核对已声明的 digest 和长度。两条路径都只恢复 transport 与原有语义输出，不把文件持久化当成领域验收。
+直接 closeout 与同线程 protocol-resume 可引用本 Attempt 工作区内通过字节与工作区包含性校验的 closeout packet 文件（`closeout_refs` 只存字符串，摘要、长度与 identity receipt 由 `closeout_ref_metadata` 唯一承载）。标准收尾结构将 `stage_quality_cycle`（含 `artifact_refs`、`artifact_hashes`）放在 `route_impact.stage_quality_cycle` 下，使用持久化工作项范围的 `scope_digest`；出现多处声明冲突时直接拒绝收尾包。producer 或 repairer 仅声明 `route_impact.consumable_artifact_refs` 时可从已校验文件补齐引用与摘要，不生成 Review 结论。
 
-AgentBlueprint 的 content-ref 字节补全保持同一归一化传输形态：`closeout_refs` 只存字符串，摘要、长度及经过核验的 identity receipt 由 `closeout_ref_metadata` 唯一承载。Activity 返回后再做 StageAttempt 归一化，不会从内联对象重复派生一条缺少 receipt 的元数据，从而遮住已验证身份。
+Finding、repair、closure 与跨 Stage route 证据引用归一化为非空字符串列表（`changed_artifact_refs` 可为空）；初审返回 `repair_required` 时必须至少包含一项附带证据引用和非空 `repair_expectation` 的 finding，否则以 `stage_quality_review_repair_findings_invalid` 阻断并保留原产物。
 
-若收尾包把 `stage_quality_cycle` 对象写在顶层，且 `route_impact` 中该字段缺失或为 `null`，Framework 会将对象移到约定位置并记录 `stage_quality_cycle_folded_from_closeout_top_level`。两处内容一致时保留约定字段。内容冲突时拒绝收尾包。归位后的对象仍须通过 Attempt 角色、审查结果和工件身份校验。
-
-收尾包可用 `scope_digest` 引用持久化的工作项范围。Codex 提示使用该摘要，省去重复抄写范围快照。收到含内联快照的旧格式时，Framework 可修正 `opl_execution_scope_snapshot.v2` 和 `opl_work_item_root_identity.v1` 两种已知误拼，通过快照解析重新计算摘要，并在收尾记录保留归一化标记。运行入口仍按持久化的 Attempt、StageRun 和工作项范围验证收尾身份。
-
-已有 `route_impact.stage_quality_cycle` 对象时，Framework 可把上一层完整的 `artifact_refs` 与 `artifact_hashes` 移入该对象。内外层一致时保留规范位置，冲突时拒绝，成功归位时记录 `stage_quality_artifact_identity_folded_from_route_impact_level`。归位后继续验证收尾登记、产物字节与身份回执。
-
-Producer 或 repairer 只声明 `route_impact.consumable_artifact_refs` 时，Framework 可根据收尾登记的相同引用和 SHA-256 补齐工件身份。本地工件须通过当前 Attempt 工作区或工作项范围的字节核验，外部工件仍需独立领域回执。补齐内容只有引用、摘要和身份回执，不生成 Review 结论。原始执行进度保留独立的传输形态。
-
-Finding、repair、closure 与跨 Stage route 的证据引用接受非空 locator 字符串或带非空 `ref` 的对象，归一化结果仍是字符串列表；引用对象中的其他元数据不能替代 artifact identity receipt。证据列表及其成员不能为空白。`changed_artifact_refs` 可为空，使未修复或被阻断的 repair 能如实声明没有产物变化。
-
-初审返回 `repair_required` 时，Attempt 在完成前校验 findings，要求至少一项 required finding，且每项都有证据引用和非空 `repair_expectation`。校验失败会以 `stage_quality_review_repair_findings_invalid` 阻断并保留来源 Attempt、收尾引用及字段诊断。StageRun 保留原产物，不提交无效评审的路由，也不消耗修补轮次。
-
-恢复身份推进须先精确观察原 Temporal Run 已终止，再通过原注册表 CAS 留存先前回执。尚未开始审查的同一已接受 producer 可追加快照成员，旧成员和 artifact identity 必须保留；不能换 lane、workspace、binding 或替换已审证据。运行中的不同恢复身份仍拒绝，新的 Temporal Run 不代表新的业务 StageRun，也不改写原终态。
+恢复身份推进须先观察原 Temporal Run 已终止，再通过注册表 CAS 留存先前回执。尚未开始审查的同一已接受 producer 允许在保留原成员和 artifact identity 的前提下追加快照成员，不允许更换 lane、workspace、binding 或替换已审证据。新的 Temporal Run 不改写原终态。
 
 CLI 默认 invocation 是稳定幂等键；`--new-stage-run` 显式创建新 Run。Hosted action 用 action `run_id + action_run_ref` 建立 invocation。跨 Stage 路由用 parent StageRun、decisive Attempt ref、route decision digest 与 target Stage 建立 invocation，因此同一 route replay 复用目标 Run，后续新决定或 A → B → A route-back 会创建新 Run。
 

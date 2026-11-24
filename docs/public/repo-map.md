@@ -15,10 +15,6 @@ GUI Shell 由 [App adapter contract](https://github.com/gaofeng21cn/one-person-l
 Application Host；产品与发布 truth 归 App，Framework runtime 与 Package projection
 归 Framework。两个 Host 的范围见 [Host scope boundary](../architecture.md#host-scope-boundary)。
 
-`opl-aion-shell` 只保留旧版升级来源、迁移基线、固定历史夹具与 Git provenance，不再作为生产构建来源。
-Preview 到 Stable 的终端 handoff 与旧版升级验收由 [App 发布合同](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json)
-和 [App 当前状态](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/status.md) 维护；Shell 选择和 Stable 发布不能单独证明这些迁移路径已验收。
-
 ## Foundry Package owner 示例
 
 - [`med-autoscience`](https://github.com/gaofeng21cn/med-autoscience)：医学研究与论文；

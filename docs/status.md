@@ -8,7 +8,7 @@
 
 - 源码按 `authority`、`adapters`、`read-models`、`host`、`entrypoints` 和 `kernel` 六个根目录组织。
 - [`source-module-map.json`](../contracts/opl-framework/source-module-map.json) 定义责任 source unit 和依赖方向。
-- workspace Package 目前由 `packages/cordis-abi` 和 `packages/package-host` 承担各自独立 ABI。
+- workspace Package 目前由 `packages/cordis-abi` 和 `packages/package-host` 承担各自独立 ABI（另有 [`package-host-integration.ts`](../src/authority/packages/package-host-integration.ts)）。
 
 ### Package 与 capability
 
@@ -41,17 +41,10 @@
 
 ### 长期知识与记忆
 
-- App state 现已从真实 Profile/Workspace registry 投影知识来源安全元数据；共享资源配置通过同一 owner 的五个 `knowledge_source_*` actions 与 CLI 完成，包含 revision 校验、显式消费者/范围、检查和保留原文的断开。细粒度多 grant 和共享 scope 扩大保留来源 owner 管理边界。具体接口见[知识来源管理合同](../contracts/opl-framework/knowledge-source-management-contract.json)。
-
-- 知识条目以 `scope` 区分产品、用户或团队、主题和项目，以 `content_kind` 独立描述机制、政策、时点状态和决策。正文为 Markdown；产品 catalog、私有来源 registry 与工作区 binding 保存身份、范围和版本。归属规则见[知识来源与记忆政策](./policies/knowledge-source-and-memory-policy.md)。
-- 已授权的个人库与工作目录内原文使用同一来源解析，不要求中间全文投影。工作区显式选择来源和 scope，来源 grant 分别授予读取与写回，并核对 domain、工作区与声明的项目限制；项目身份来自 workspace inventory，既有业务目录可通过 `--project-root` 原位登记。
-- 邮件领域证据、Persona 语义提案、Framework 共同生命周期与用户唯一正文分别归原 owner；已安装 Framework、Persona 和 Relay 的联合验收覆盖项目隔离、版本漂移、撤权、登记写回和邮件晋升回链。iPhone 与 MAP 的安装知识入口也已定向验证。Relay SQLite、Persona 派生状态、执行器记忆与运维状态的职责见[知识政策](./policies/knowledge-source-and-memory-policy.md)。App／Studio 只投影原 owner 数据与动作，不建立个人知识库。
-- StageRun 按领域、阶段、action、必要性、来源权限与有效性选择正文；同轮生产、评审和修复共享一份字节绑定快照。来源漂移、过期、撤权和派生依赖缺口参与可用性判断，公开 projection 只带引用与消费回执。
-- 直接 Skill 的 `knowledge prepare` / `read-context` 与托管 Stage 共用快照存储。快照读取重新核对来源访问；`knowledge revalidate --for-action` 提供关键知识的行动前复核，领域行动仍需自己的实时状态和授权。
-- `knowledge propose`、`review`、`apply` 提供接受写回的通用机械链；`inspect-source` 提供候选正文与哈希，`review-source` 接受与该审阅哈希一致的原处编辑，`verify-dependencies` 核对派生上下文的来源。语义接受由有权维护者提供，不由命令或结构检查产生。具体接口见[知识来源与运行上下文](./specs/knowledge-sources.md)。
-- 已登记正文需要移出工作流时，`knowledge retire` 与 `inspect-retirement` 以精确正文和 registry revision 为条件保存恢复证据，再将条目标为 `deprecated` 并条件删除原字节；稳定身份保留，恢复材料不重新成为候选正文。普通未登记文件继续使用原文件工具。
-- 已安装知识 CLI 已验证内部目录、外部个人库和混合来源的召回、权限与版本边界；实际工作区也已验证 OCC 阶段快照与来源一致、Persona 获授权来源可读及越权访问被拒。标准智能体的实际托管入口已验证知识正文进入角色上下文、项目隔离和运行依赖解析；安装身份与包内字节分别回读。
-- 上述证据覆盖知识来源和上下文交付，不包含模型或 provider 执行、金融判断及其他领域资格，也不构成新的 Stable 发布。源码、包内声明、安装状态、实际模型执行和业务结果分别验收。
+- App state 从真实 Profile/Workspace registry 投影知识来源安全元数据；共享资源配置通过同一 owner 的五个 `knowledge_source_*` actions 与 CLI 完成，包含 revision 校验、显式范围绑定与保留原文的断开（接口见 [知识来源管理合同](../contracts/opl-framework/knowledge-source-management-contract.json)）。
+- 知识以 `scope` 区分产品/用户/主题/项目、以 `content_kind` 表达性质，正文唯一可编辑源保留在用户资料库或工作目录；StageRun 与直接 Skill 共用快照存储和 `knowledge prepare` / `read-context` / `revalidate --for-action` 接口。
+- 接受写回、原处审阅与正文迁移通过 `propose/review/apply`、`inspect-source/review-source`、`relocate` 与 `retire` 机械链路执行；语义接受权与业务授权仍归原 owner。具体接口见 [知识来源与运行上下文](./specs/knowledge-sources.md)，规则见 [知识来源与记忆政策](./policies/knowledge-source-and-memory-policy.md)。
+- 源码、包内声明、本机安装与真实模型/业务结果分别验收，已验证知识来源交接不替代领域或发布资格。
 
 ## 动态真相入口
 
