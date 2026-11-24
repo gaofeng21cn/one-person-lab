@@ -39,6 +39,7 @@
     "plugin.json",
     "profile/manifest.json",
     "profile/modules/01-user-preferences.md",
+    "pyproject.toml",
     "scripts/fleet/__init__.py",
     "scripts/fleet/fleet_adapter.py",
     "scripts/fleet/fleet_attempts.py",
@@ -63,7 +64,9 @@
     "scripts/opl_execution.py",
     "scripts/opl_fleet.py",
     "scripts/opl_ledger.py",
+    "scripts/opl_runtime.py",
     "scripts/opl_service.py",
+    "scripts/opl_state_store.py",
     "scripts/opl_supervisor.py",
     "scripts/opl_task_owner.py",
     "scripts/opl_workflow.py",
@@ -136,6 +139,7 @@
     "templates/antigravity/GEMINI.md",
     "templates/antigravity/agy-fast-AGENTS.local.md",
     "templates/antigravity/baseline-manifest.json",
-    "templates/antigravity/swarm-code-worker-brief.md"
+    "templates/antigravity/swarm-code-worker-brief.md",
+    "uv.lock"
   ]
 }
