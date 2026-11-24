@@ -1,0 +1,176 @@
+{
+  "schema_version": "opl_whitepaper_artifact_verification.v2",
+  "status": "whitepaper_artifact_verified",
+  "generated_at": "2026-11-24T06:34:43.743Z",
+  "publication_date": "2026-11-09",
+  "claim_boundary": {
+    "artifact_render_verified": true,
+    "published_verified": false,
+    "product_ready": false,
+    "runtime_ready": false,
+    "domain_ready": false
+  },
+  "source_git": {
+    "commit": "62b385efe180adb53aa5fc5ed9d581d7ba81ef19",
+    "branch": "main",
+    "tracked_dirty": false
+  },
+  "source_profile": "contracts/miniapp-whitepaper_profile.json",
+  "source_profile_sha256": "78e7544394a82aa59f93d92d909b4f8e59e0d1d6dafd2a456b1b5f72f7173fde",
+  "source_profile_size": 567,
+  "source_markdown": "docs/whitepapers/opl-miniapp-whitepaper.md",
+  "source_markdown_sha256": "db8534c3bed07b62c26410cb637e5234bc7db9e46ea3215b957c5ee26af2afdc",
+  "source_markdown_size": 19271,
+  "generated_markdown": "docs/site/latest/whitepapers/opl-miniapp-whitepaper.md",
+  "generated_markdown_sha256": "db8534c3bed07b62c26410cb637e5234bc7db9e46ea3215b957c5ee26af2afdc",
+  "generated_markdown_size": 19271,
+  "generated_html": "docs/site/latest/whitepapers/opl-miniapp-whitepaper.html",
+  "generated_html_sha256": "f2a38400b5f6e1c7725e3578125a97f4bf3921a6425502f4da2e5cecae93978f",
+  "generated_html_size": 23045,
+  "generated_pdf": "docs/site/latest/whitepapers/opl-miniapp-whitepaper.pdf",
+  "generated_pdf_sha256": "7145ffc6362aa2982ea235980e27a9ae2d7e2f745af8de63c14029694230111f",
+  "generated_pdf_size": 163375,
+  "temp_markdown": "tmp/pdfs/opl-miniapp-whitepaper/opl-miniapp-whitepaper.pandoc.md",
+  "rendered_dir": "tmp/pdfs/opl-miniapp-whitepaper/rendered",
+  "rendered_pages": 6,
+  "rendered_page_hashes": [
+    {
+      "page": "page-1.png",
+      "sha256": "7d61da151d7216d95a653ac12f457a617e5ff4079a6c706f904bf1163f35e99e",
+      "size": 70983
+    },
+    {
+      "page": "page-2.png",
+      "sha256": "57b44ab4bbae63ff1bcdc7a3ceb083b6686affbe1baf8377339f8ade289ca113",
+      "size": 61739
+    },
+    {
+      "page": "page-3.png",
+      "sha256": "975478bdea7e51a64aff967eb3937e84becd0207b034b931a6cd8b8370e90304",
+      "size": 472804
+    },
+    {
+      "page": "page-4.png",
+      "sha256": "dfe6d4b4e1cfff227fd5821f68dd9d32b4de528753496f63c26925a081daba19",
+      "size": 608158
+    },
+    {
+      "page": "page-5.png",
+      "sha256": "c58b396f9369cec48b38f472920e45c1a65855d25e5a77ea638479ad2c9bd475",
+      "size": 523951
+    },
+    {
+      "page": "page-6.png",
+      "sha256": "5a3c010955e55569766621b5b1b702f3bcf70cb1bd84961ff74b3a45b90aa29d",
+      "size": 414931
+    }
+  ],
+  "pdf_pages": 6,
+  "pdf_page_size_pts": {
+    "width": 612,
+    "height": 792
+  },
+  "page_policy": {
+    "min": 4,
+    "max": 14
+  },
+  "style_profile": "opl-whitepaper-pandoc-xelatex-v2",
+  "renderer": {
+    "repo_commit": "62b385efe180adb53aa5fc5ed9d581d7ba81ef19",
+    "builder": {
+      "path": "scripts/opl-whitepaper-builder.ts",
+      "sha256": "1b9f93e4678d9f74a370d7ca6baf29dbca0636382c6fa443f60f0e6589b514aa",
+      "size": 17276
+    },
+    "style": {
+      "path": "scripts/whitepaper-style.css",
+      "sha256": "2019446149baf356d6a8ed2184c70d15275a85e8b4e8964a5360f1822ae32d9f",
+      "size": 1776
+    }
+  },
+  "public_urls": {
+    "html": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-miniapp-whitepaper.html",
+    "pdf": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-miniapp-whitepaper.pdf"
+  },
+  "additional_public_artifacts": [
+    {
+      "kind": "html",
+      "path": "docs/site/latest/whitepapers/index.html",
+      "sha256": "df7a3392b5e5d55c4942dd0f0785889ca912804bba3cfffa53f06ccb97b30fb8",
+      "size": 7802,
+      "url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/"
+    }
+  ],
+  "tools": {
+    "pandoc": {
+      "path": "/usr/bin/pandoc",
+      "version": "pandoc 3.7.0.2"
+    },
+    "xelatex": {
+      "path": "/usr/bin/xelatex",
+      "version": "XeTeX 3.141592653-2.6-0.999997 (TeX Live 2025/Debian)"
+    },
+    "pdfinfo": {
+      "path": "/usr/bin/pdfinfo",
+      "version": "pdfinfo version 26.01.0"
+    },
+    "pdftoppm": {
+      "path": "/usr/bin/pdftoppm",
+      "version": "pdftoppm version 26.01.0"
+    },
+    "pdftotext": {
+      "path": "/usr/bin/pdftotext",
+      "version": "pdftotext version 26.01.0"
+    }
+  },
+  "references": [
+    {
+      "label": "OPL App 插件界面与设置标准",
+      "url": "https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/product/gui/plugin-ui-and-settings-standard.md"
+    },
+    {
+      "label": "MiniMax Code MiniApps 官方项目",
+      "url": "https://github.com/MiniMax-AI/MiniMax-Code-MiniApps"
+    },
+    {
+      "label": "MCP Apps 官方文档",
+      "url": "https://modelcontextprotocol.io/docs/extensions/apps"
+    },
+    {
+      "label": "OPL Homebrew tap",
+      "url": "https://github.com/gaofeng21cn/homebrew-one-person-lab"
+    },
+    {
+      "label": "Package Directory 与统一安装管理",
+      "url": "https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/package-directory.md"
+    },
+    {
+      "label": "软件源接口",
+      "url": "https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/software-sources.md"
+    },
+    {
+      "label": "连接与授权说明",
+      "url": "https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/connection-authorization.md"
+    },
+    {
+      "label": "Agent/MiniApp SDK",
+      "url": "https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture/agent-miniapp-sdk.md"
+    },
+    {
+      "label": "共用基座的物理归属",
+      "url": "https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#共用基座的物理归属"
+    },
+    {
+      "label": "OPL Agent 原生应用标准",
+      "url": "https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/policies/agent-native-app-policy.md"
+    },
+    {
+      "label": "开发指南",
+      "url": "https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/mcp-apps/development.md"
+    },
+    {
+      "label": "One Person Lab App",
+      "url": "https://github.com/gaofeng21cn/one-person-lab-app"
+    }
+  ]
+}

@@ -125,7 +125,7 @@ font-size: 1.9rem;
 </blockquote>
 <!-- Owner: `OPL Framework`; Purpose: `public_framework_whitepaper_body_source`; State: `active_public_source`; Machine boundary: Human-readable design whitepaper. It explains product philosophy and architecture commitments; implementation currentness, runtime truth, release readiness, Package currentness, publication proof, and domain verdicts remain with their owning contracts, source, runtime readbacks, receipts, and evidence surfaces. -->
 <p>发布日期：2026-08-15</p>
-<p>最近修订：2026-09-07</p>
+<p>最近修订：2026-11-24</p>
 <p>适用对象：希望理解 OPL Framework 为什么这样设计、它如何支撑可靠的 AI
 专业工作，以及这套架构为什么能够长期演进的用户、合作者和技术决策者。</p>
 <p>核心判断：优秀的智能体底座应让每项能力都能被独立理解、验证、替换和组合，同时让事实与责任始终清楚可见。</p>
@@ -157,64 +157,64 @@ font-size: 1.9rem;
 <p>从建立工作边界到持续运营，品牌能力帮助读者理解一项专业工作的完整旅程。它们是能力地图，不是固定安装清单。</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>工作旅程</th>
 <th>品牌</th>
 <th>为用户解决的问题</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>准备</td>
 <td><strong>OPL Charter</strong></td>
 <td>明确目标、规则、权限和不可逾越的边界</td>
 </tr>
-<tr class="even">
+<tr>
 <td>准备</td>
 <td><strong>OPL Workspace</strong></td>
 <td>让材料、过程和成果始终处在正确位置</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>组建</td>
 <td><strong>OPL Atlas</strong></td>
 <td>找到当前工作真正可用的智能体与能力</td>
 </tr>
-<tr class="even">
+<tr>
 <td>组建</td>
 <td><strong>OPL Pack</strong></td>
 <td>让专业能力可以安装、升级和复用</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>组建</td>
 <td><strong>OPL Stagecraft</strong></td>
 <td>把复杂目标组织成可推进、可交接的专业阶段</td>
 </tr>
-<tr class="even">
+<tr>
 <td>推进</td>
 <td><strong>OPL Runway</strong></td>
 <td>让工作能够启动、持续、恢复并完成收口</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>推进</td>
 <td><strong>OPL Ledger</strong></td>
 <td>保存进展、证据和关键决定，支持复查与追溯</td>
 </tr>
-<tr class="even">
+<tr>
 <td>推进</td>
 <td><strong>OPL Connect</strong></td>
 <td>接入完成任务所需的数据、工具和外部服务</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>运营</td>
 <td><strong>OPL Console</strong></td>
 <td>看清当前状态、问题归属和下一步行动</td>
 </tr>
-<tr class="even">
+<tr>
 <td>运营</td>
 <td><strong>OPL Foundry</strong></td>
 <td>用真实效果持续评估和改进专业智能体</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>运营</td>
 <td><strong>OPL Fabric</strong></td>
 <td>为在线工作供给并治理计算、存储与托管资源</td>
@@ -224,6 +224,38 @@ font-size: 1.9rem;
 <p>这些能力共同服务于一条连续工作链。用户从目标出发，OPL
 负责在合适的位置
 提供所需能力；无论工作发生在本机还是云端，任务、文件、进度、证据和下一步都保持连贯。</p>
+<h2 id="opl-connect一次连接按能力授权">OPL
+Connect：一次连接，按能力授权</h2>
+<p>外部服务接入最容易出现的误区，是让每个 Agent 或 Mini App 自己保存一份
+API Key 或 OAuth Token。 OPL Connect
+采用更清楚的三层边界：Relay、Gateway、OPL Link 等 provider owner
+保存凭据、刷新和 账号生命周期；Connect 只保存连接的 opaque
+引用与安全修订号；已安装的 Package 再按 capability 请求 逐项
+grant。用户在 App 的“资料与连接”中批准或撤销 grant，Host
+每次调用都重新核对 Package 身份、 连接修订和 capability，然后由 provider
+在自己的边界内执行。</p>
+<p>因此，同一个 Relay
+邮箱可以安全地被多个已安装能力复用，而每个能力拥有独立的授权范围。搜索、读取
+和本地待审草稿可以作为低风险入口，邮件发送等外部写操作仍遵循 Relay
+自己的业务确认。调用记录只保留
+消费者、连接、能力、时间和派发结果，不保留参数、结果正文或密钥。OPL
+Connect 由此成为连接授权和
+调用路由层，而不是一个向插件暴露长期秘密的全局凭证库。</p>
+<p>这套边界也适用于 Mini App 的文件预览：绝对 artifact ref
+先在当前对话工作区做精确词法包含检查，再 交给既有 canonical byte API 做
+realpath 和 inode 校验；Studio 负责预览与读取，artifact 和 receipt 的
+写入权仍归 Framework 或领域
+owner。这样，连接身份、文件身份和业务内容都各自回到真实负责的
+owner。</p>
+<h2 id="知识随用户积累智能体按工作使用">知识随用户积累，智能体按工作使用</h2>
+<p>长期工作需要积累知识，也需要保护用户已经形成的资料体系。个人投资原则、病种研究经验和团队协作政策会跨越多个任务；这些知识的生命不应随某个智能体安装、某次运行结束或工作目录更换而重新开始。</p>
+<p>OPL
+因此把产品方法、用户与团队知识、长期主题知识、具体项目知识分别归给真正负责的人和业务对象。机制、约束、时点事实与决策经历是另一组属性，目录位置和访问权限也分别管理。一个财务主题可以同时支持多个账户和智能体；某个糖尿病课题仍拥有自己的研究设计、数据和分析产物。</p>
+<p>用户已有 Obsidian
+等资料库时，正文继续在原库维护；没有资料库时，普通业务工作目录承担相同职责。一个任务可以结合两种来源，无需先复制一套完整的个人知识。Framework
+在权限和版本范围内读取原文，为当次工作固定实际使用的内容，使生成、审阅和修复拥有共同依据。新的认识经负责方审阅后写回原处，知识继续随用户积累。</p>
+<p>来源、摘要与运行证据各有用途。正文是日常维护入口，摘要帮助选择相关上下文，快照解释当时用了什么。源文变化、过期或撤回后，派生摘要需要相应更新；已有快照也不能延续被撤回的权限。Framework
+提供一致的版本与运行机制，专业智能体和用户保留内容判断与接受权。具体规则由<a href="https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/policies/knowledge-source-and-memory-policy.md">知识来源与记忆政策</a>维护。</p>
 <h2 id="能力独立升级体验始终一致">能力独立升级，体验始终一致</h2>
 <p>动态装配的价值，不是让用户管理更多零件，而是让系统可以局部升级、准确定位问题并可靠回退。
 OPL Packages
@@ -250,19 +282,28 @@ Lab App
 <p>两者采用一致的可组合设计，但承担不同责任：Framework
 保证能力真实可用，App 保证用户看到的是
 一套稳定产品。运行底座和界面因此可以独立演进，同时共享同一份任务、状态和操作事实。</p>
-<p>Framework Host 负责通用运行、Package 能力图和 App 投影；Studio 的
-DSH/Cordis Application Host 负责自己的 profile、插件、原生 Codex 和交付
-transport。两者通过公开合同协作，各自保留清楚范围。 具体分工由 <a href="https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#host-scope-boundary">Framework
-架构</a> 和 <a href="https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-shell-adapter.json">App
-adapter contract</a> 维护。</p>
+<p>Framework Host 负责通用运行、来源平权的 Package
+能力发现与更新规划，以及面向 App
+的统一状态、动作与受控声明式设置/界面投影；Studio 的 DSH/Cordis
+Application Host 负责自己的极薄底座、profile、插件、原生 Codex 和交付
+transport。两者通过公开合同协作，各自保留清楚范围，使不同来源的能力都能沿统一目录、受控设置分区和独立错误隔离边界进入工作台，而不建立第二套插件
+ABI 或状态副本。具体分工由 <a href="https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#host-scope-boundary">Framework
+架构</a>、<a href="https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-shell-adapter.json">App
+adapter contract</a> 与 <a href="https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/product/gui/plugin-ui-and-settings-standard.md">OPL
+App 插件界面与设置标准</a> 维护。</p>
+<p>Mini App 延续这条边界：Framework 从已安装 Package
+的能力声明中发现入口，提供当前任务上下文、进度与产物投影、共享视图及当前可用操作；Studio
+提供宿主协议、主题与视口上下文；Package
+的领域负责方提供业务数据、操作和质量结论。共享声明式视图、专用 MCP App
+和专业应用复用同一工作身份与运行事实。视图按需调用已有操作，长任务继续使用现有阶段与执行链，业务状态和连接授权仍由原有负责方维护。</p>
 <h2 id="界面持续演进产品体验保持连续">界面持续演进，产品体验保持连续</h2>
 <p>One Person Lab App
 对外提供一套统一的任务、能力、文件、状态和操作体验。界面设计可以持续改进，
 App
 负责定义升级时的身份、数据保留、能力和更新路径，让用户能够从已有工作继续。</p>
-<p>正式版本发布、首次安装、旧版升级和 Preview 到 Stable 的终端 handoff
-分别需要自己的证据。 Framework source
-与聚合状态不能替代这些验收；支持路径和当前证据由 <a href="https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json">App
+<p>首次安装、存量升级、运行基座更新与兼容插件的独立演进分别需要自己的验收证据。
+Framework 源码与聚合状态不能替代安装后的运行验收；支持路径和当前证据由
+<a href="https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json">App
 发布合同</a> 和 <a href="https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/status.md">App
 当前状态</a> 维护。</p>
 <h2 id="自进化围绕能力持续改进">自进化：围绕能力持续改进</h2>
@@ -318,6 +359,8 @@ AI 专业平台。</p>
 <ul>
 <li><a href="https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html">One
 Person Lab 家族白皮书</a></li>
+<li><a href="https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.html">OPL
+App 白皮书</a></li>
 <li><a href="https://github.com/gaofeng21cn/one-person-lab">One Person
 Lab</a></li>
 <li><a href="https://github.com/gaofeng21cn/one-person-lab-app">One

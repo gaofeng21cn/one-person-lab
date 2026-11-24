@@ -1,0 +1,163 @@
+{
+  "schema_version": "opl_whitepaper_artifact_verification.v2",
+  "status": "whitepaper_artifact_verified",
+  "generated_at": "2026-11-24T06:35:50.239Z",
+  "publication_date": "2026-11-05",
+  "claim_boundary": {
+    "artifact_render_verified": true,
+    "published_verified": false,
+    "product_ready": false,
+    "runtime_ready": false,
+    "domain_ready": false
+  },
+  "source_git": {
+    "commit": "62b385efe180adb53aa5fc5ed9d581d7ba81ef19",
+    "branch": "main",
+    "tracked_dirty": false
+  },
+  "source_profile": "contracts/occ-whitepaper_profile.json",
+  "source_profile_sha256": "b344018d91f53fce02cacb842b726598cd6b728506bbc33814a8d72ff1bc6cef",
+  "source_profile_size": 615,
+  "source_markdown": "docs/whitepapers/opl-capital-compass-whitepaper.md",
+  "source_markdown_sha256": "d751d9a98d0a35beb20082e686f6eeb1140136e3718e5b63d7b6e1e5278183a3",
+  "source_markdown_size": 24166,
+  "generated_markdown": "docs/site/latest/whitepapers/opl-capital-compass-whitepaper.md",
+  "generated_markdown_sha256": "d751d9a98d0a35beb20082e686f6eeb1140136e3718e5b63d7b6e1e5278183a3",
+  "generated_markdown_size": 24166,
+  "generated_html": "docs/site/latest/whitepapers/opl-capital-compass-whitepaper.html",
+  "generated_html_sha256": "4ffa43e7f2ae16095302e5cc6bbbb230db746de3917570d2aff9603122c061c3",
+  "generated_html_size": 501954,
+  "generated_pdf": "docs/site/latest/whitepapers/opl-capital-compass-whitepaper.pdf",
+  "generated_pdf_sha256": "027ee1f2f3b2957c8e0887e026c7779c39ee7aa7c8c6a900a9e982327b3032ac",
+  "generated_pdf_size": 562292,
+  "temp_markdown": "tmp/pdfs/opl-capital-compass-whitepaper/opl-capital-compass-whitepaper.pandoc.md",
+  "rendered_dir": "tmp/pdfs/opl-capital-compass-whitepaper/rendered",
+  "rendered_pages": 9,
+  "rendered_page_hashes": [
+    {
+      "page": "page-1.png",
+      "sha256": "501fb930384c1ce71482c4f15595e1609dbf284a54b389852c486006d16e4e92",
+      "size": 76433
+    },
+    {
+      "page": "page-2.png",
+      "sha256": "4acb2f20daa075956e572ecad5d691ba0ebf594ad38a056cd4d4864d9c3791b7",
+      "size": 112513
+    },
+    {
+      "page": "page-3.png",
+      "sha256": "1fb30cd7940b1c74a041fadb847f4d3a76ab393293cfb0eb0818c1e37fc6c417",
+      "size": 468876
+    },
+    {
+      "page": "page-4.png",
+      "sha256": "9b111a86d1f2a7227e1e921f92580a493da16413ce266445199cf24c6e48ab8e",
+      "size": 652032
+    },
+    {
+      "page": "page-5.png",
+      "sha256": "66e027b5d1dbd1a6c05ab388cc57a5e3d2973d45906751b54b0247c687ade1c3",
+      "size": 474559
+    },
+    {
+      "page": "page-6.png",
+      "sha256": "0769b267c21aa53cfd178f4e01fdc34164b2d0620ebe4a39104fcb7cf440bf30",
+      "size": 419522
+    },
+    {
+      "page": "page-7.png",
+      "sha256": "7e1b38bacf4c723a9de8da098dd42f227c82694643692843b810c9a1e422edf0",
+      "size": 465951
+    },
+    {
+      "page": "page-8.png",
+      "sha256": "51edc24be20fee77fddb6589202a32ebd2bd4d8198b874742b24b819533b7722",
+      "size": 511829
+    },
+    {
+      "page": "page-9.png",
+      "sha256": "a568995f5aa2996fc44361e6c717ff30c60f2ee5592bcd7298712df93b77e4fc",
+      "size": 141935
+    }
+  ],
+  "pdf_pages": 9,
+  "pdf_page_size_pts": {
+    "width": 612,
+    "height": 792
+  },
+  "page_policy": {
+    "min": 6,
+    "max": 14
+  },
+  "style_profile": "opl-whitepaper-pandoc-xelatex-v2",
+  "renderer": {
+    "repo_commit": "62b385efe180adb53aa5fc5ed9d581d7ba81ef19",
+    "builder": {
+      "path": "scripts/opl-whitepaper-builder.ts",
+      "sha256": "1b9f93e4678d9f74a370d7ca6baf29dbca0636382c6fa443f60f0e6589b514aa",
+      "size": 17276
+    },
+    "style": {
+      "path": "scripts/whitepaper-style.css",
+      "sha256": "2019446149baf356d6a8ed2184c70d15275a85e8b4e8964a5360f1822ae32d9f",
+      "size": 1776
+    }
+  },
+  "public_urls": {
+    "html": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-capital-compass-whitepaper.html",
+    "pdf": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-capital-compass-whitepaper.pdf"
+  },
+  "additional_public_artifacts": [
+    {
+      "kind": "html",
+      "path": "docs/site/latest/whitepapers/index.html",
+      "sha256": "df7a3392b5e5d55c4942dd0f0785889ca912804bba3cfffa53f06ccb97b30fb8",
+      "size": 7802,
+      "url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/"
+    }
+  ],
+  "tools": {
+    "pandoc": {
+      "path": "/usr/bin/pandoc",
+      "version": "pandoc 3.7.0.2"
+    },
+    "xelatex": {
+      "path": "/usr/bin/xelatex",
+      "version": "XeTeX 3.141592653-2.6-0.999997 (TeX Live 2025/Debian)"
+    },
+    "pdfinfo": {
+      "path": "/usr/bin/pdfinfo",
+      "version": "pdfinfo version 26.01.0"
+    },
+    "pdftoppm": {
+      "path": "/usr/bin/pdftoppm",
+      "version": "pdftoppm version 26.01.0"
+    },
+    "pdftotext": {
+      "path": "/usr/bin/pdftotext",
+      "version": "pdftotext version 26.01.0"
+    }
+  },
+  "references": [
+    {
+      "label": "One Person Lab 白皮书",
+      "url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html"
+    },
+    {
+      "label": "OPL Framework 白皮书",
+      "url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-framework-whitepaper.html"
+    },
+    {
+      "label": "One Person Lab App 白皮书",
+      "url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.html"
+    },
+    {
+      "label": "OPL Agent Apps 与 MiniApp 白皮书",
+      "url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-miniapp-whitepaper.html"
+    },
+    {
+      "label": "Med Auto Science 白皮书",
+      "url": "https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/mas-whitepaper.html"
+    }
+  ]
+}

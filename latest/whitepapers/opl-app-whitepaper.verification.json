@@ -1,7 +1,7 @@
 {
   "schema_version": "opl_whitepaper_artifact_verification.v2",
   "status": "whitepaper_artifact_verified",
-  "generated_at": "2026-11-02T04:37:39.422Z",
+  "generated_at": "2026-11-24T06:34:36.275Z",
   "publication_date": "2026-07-13",
   "claim_boundary": {
     "artifact_render_verified": true,
@@ -11,61 +11,66 @@
     "domain_ready": false
   },
   "source_git": {
-    "commit": "1dff14cfb10e311edd8e2a71e3f588fbd8b1ab26",
+    "commit": "412482ac2211b0316a4f8b1b840ed0f0b48a0173",
     "branch": "main",
     "tracked_dirty": false
   },
   "source_profile": "contracts/whitepaper_profile.json",
-  "source_profile_sha256": "35713495a83f4cd052e2ea5cb7af3f55931f7ae0d11bbe3f5217fc6d9c90fa62",
-  "source_profile_size": 570,
+  "source_profile_sha256": "35ecc872713ee6b484d986bf2afcdfc384a1c7091486f78c72d915914dba51b8",
+  "source_profile_size": 597,
   "source_markdown": "docs/whitepapers/opl-app-whitepaper.md",
-  "source_markdown_sha256": "7166f8b3b8c056d54f1190c6b53e64c232ea4eb827d8a81f8d23d3ae2b283db8",
-  "source_markdown_size": 12129,
+  "source_markdown_sha256": "afdc337cbce06b10e08ec4822f628f43fd4213dfb36503bff2c843b8cca8e107",
+  "source_markdown_size": 18834,
   "generated_markdown": "docs/site/latest/whitepapers/opl-app-whitepaper.md",
-  "generated_markdown_sha256": "7166f8b3b8c056d54f1190c6b53e64c232ea4eb827d8a81f8d23d3ae2b283db8",
-  "generated_markdown_size": 12129,
+  "generated_markdown_sha256": "afdc337cbce06b10e08ec4822f628f43fd4213dfb36503bff2c843b8cca8e107",
+  "generated_markdown_size": 18834,
   "generated_html": "docs/site/latest/whitepapers/opl-app-whitepaper.html",
-  "generated_html_sha256": "960b2c3c76d64a0aaea77f7ebd6130b7b3cc83e59d9fb9e770d3b96cf052ba93",
-  "generated_html_size": 2642662,
+  "generated_html_sha256": "0f87995545d7492fb7774a71101d6fc4ff61d9135e6f456bed7a6f1cb86fc3bd",
+  "generated_html_size": 2649997,
   "generated_pdf": "docs/site/latest/whitepapers/opl-app-whitepaper.pdf",
-  "generated_pdf_sha256": "8b7e1f88d91a7ffaf99f097857824a72f608a70863905a0c24be07185e2f5786",
-  "generated_pdf_size": 1835767,
+  "generated_pdf_sha256": "fe9e72b037da8249cf07210bf6103c2c4c6b3eff773f4c68bb95b2b5bbb05a2c",
+  "generated_pdf_size": 1878294,
   "temp_markdown": "tmp/pdfs/opl-app-whitepaper/opl-app-whitepaper.pandoc.md",
   "rendered_dir": "tmp/pdfs/opl-app-whitepaper/rendered",
-  "rendered_pages": 6,
+  "rendered_pages": 7,
   "rendered_page_hashes": [
     {
       "page": "page-1.png",
-      "sha256": "d6d2f93957f50e89c0086daf3a11d686717da2d179d646cd90283a591828ff65",
-      "size": 72667
+      "sha256": "4d20c959849ba3fc61a662a6f8f4fd73699b98e6c06bac68723ff9c69aeddf56",
+      "size": 84670
     },
     {
       "page": "page-2.png",
-      "sha256": "8506477e1adb61077cbbe9b936212391eab496a131a5afda82721d100f99d617",
-      "size": 71053
+      "sha256": "5474f9360a1b5398d2230bc614fa0d21f2f0feec19c9cfe0885b79eef6182c5b",
+      "size": 105719
     },
     {
       "page": "page-3.png",
-      "sha256": "401d7b5d30bac309761d154b36f5575a347c6809ddba68cca9a068852a5ab9ce",
-      "size": 752666
+      "sha256": "97ea7dc563ee063f7c7e8ca2a4d33b9e2a463669eb5445cedc681ede1d49d3c5",
+      "size": 761122
     },
     {
       "page": "page-4.png",
-      "sha256": "88feda2289a0403e33fbbab0cb4b88862f3b83122eebe6dbfdd7016e252f7f02",
-      "size": 436254
+      "sha256": "e097e4beb263c02c0b11e1886a99237d93ced470edcbccd0347971de8b755d4c",
+      "size": 471249
     },
     {
       "page": "page-5.png",
-      "sha256": "1243545b354a534b1b1859263cb3f31a024518b62716f7447c47b4474b7ca11d",
-      "size": 448284
+      "sha256": "216c8a77797c4104bd7fdc95a898945ea7e27f364ddccba6c300c0399ad37976",
+      "size": 493712
     },
     {
       "page": "page-6.png",
-      "sha256": "7f6a5ae04eefa10788c79e760d94e994a63d0648a3e750f5365fa4652c01b65e",
-      "size": 240565
+      "sha256": "1c6214b4e8e042ebbf71387c4f127032d04c2e0fdd98c198a46518bc72ed5aba",
+      "size": 504674
+    },
+    {
+      "page": "page-7.png",
+      "sha256": "6e285c2883dcb1ae98b524e9dcfc737ab21fb3bc307f08f7844611e0986d3a28",
+      "size": 387222
     }
   ],
-  "pdf_pages": 6,
+  "pdf_pages": 7,
   "pdf_page_size_pts": {
     "width": 612,
     "height": 792
@@ -76,7 +81,7 @@
   },
   "style_profile": "opl-whitepaper-pandoc-xelatex-v2",
   "renderer": {
-    "repo_commit": "592d35556f4750d64efb5fee5ebf772d760cf3b0",
+    "repo_commit": "62b385efe180adb53aa5fc5ed9d581d7ba81ef19",
     "builder": {
       "path": "scripts/opl-whitepaper-builder.ts",
       "sha256": "1b9f93e4678d9f74a370d7ca6baf29dbca0636382c6fa443f60f0e6589b514aa",
@@ -96,24 +101,33 @@
   "tools": {
     "pandoc": {
       "path": "/usr/bin/pandoc",
-      "version": "pandoc 3.1.3"
+      "version": "pandoc 3.7.0.2"
     },
     "xelatex": {
       "path": "/usr/bin/xelatex",
-      "version": "XeTeX 3.141592653-2.6-0.999995 (TeX Live 2023/Debian)"
+      "version": "XeTeX 3.141592653-2.6-0.999997 (TeX Live 2025/Debian)"
     },
     "pdfinfo": {
       "path": "/usr/bin/pdfinfo",
-      "version": "pdfinfo version 24.02.0"
+      "version": "pdfinfo version 26.01.0"
     },
     "pdftoppm": {
       "path": "/usr/bin/pdftoppm",
-      "version": "pdftoppm version 24.02.0"
+      "version": "pdftoppm version 26.01.0"
     },
     "pdftotext": {
       "path": "/usr/bin/pdftotext",
-      "version": "pdftotext version 24.02.0"
+      "version": "pdftotext version 26.01.0"
     }
   },
-  "references": []
+  "references": [
+    {
+      "label": "OPL App 插件界面与设置标准",
+      "url": "https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/product/gui/plugin-ui-and-settings-standard.md"
+    },
+    {
+      "label": "OPL Agent 原生应用标准",
+      "url": "https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/policies/agent-native-app-policy.md"
+    }
+  ]
 }
