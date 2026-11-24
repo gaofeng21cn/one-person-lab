@@ -53,14 +53,14 @@ function stageRunWorkspaceRoot(input: TemporalStageQualityCycleProjectionInput) 
   return typeof locatorRoot === 'string' && locatorRoot.trim() ? locatorRoot.trim() : null;
 }
 
-function observeContentArtifactBytes(
+function observeTransportArtifactBytes(
   input: TemporalStageQualityCycleProjectionInput,
   artifact: { ref: string; expected: string | null; workspaceRoot: string; index: number },
 ) {
   const { ref, expected, workspaceRoot, index } = artifact;
   const producingAttemptRef = input.state.artifact_identity_authority?.authoritative_attempt_ref;
   const receiptRef = input.state.artifact_identity_receipt_refs?.[index];
-  if (!producingAttemptRef || !receiptRef || !expected || ref !== `opl-content://sha256/${expected}`) return null;
+  if (!producingAttemptRef || !receiptRef || !expected) return null;
   const scope = input.stage_run.execution_scope ?? null;
   const receipt = verifyIdentityReceipt({
     receiptRef,
@@ -75,11 +75,10 @@ function observeContentArtifactBytes(
     artifactRef: ref,
     artifactSha256: expected,
   });
-  if (receipt.surface_kind !== 'opl_transport_artifact_identity_receipt'
-    || typeof receipt.artifact_source_ref !== 'string') return null;
+  if (receipt.surface_kind !== 'opl_transport_artifact_identity_receipt') return null;
   return observeCurrentArtifactBytes({
     artifactRef: ref,
-    artifactSourceRef: receipt.artifact_source_ref,
+    artifactSourceRef: typeof receipt.artifact_source_ref === 'string' ? receipt.artifact_source_ref : null,
     artifactSha256: expected,
     workspaceRoot,
     canonicalWorkItemRoot: scope?.canonical_work_item_root,
@@ -108,9 +107,16 @@ function observeAuthoritativeArtifactBytes(input: TemporalStageQualityCycleProje
     }
     try {
       const localPath = localPathForRef(ref, workspaceRoot);
-      const observed = localPath
+      const workItemRoot = input.stage_run.execution_scope?.canonical_work_item_root;
+      const isWorkItemRelative = localPath && workItemRoot
+        && localPathForRef(ref, workItemRoot) !== localPath;
+      const isContentRef = !localPath && expected && ref === `opl-content://sha256/${expected}`;
+      const transportObservation = isWorkItemRelative || isContentRef
+        ? observeTransportArtifactBytes(input, { ref, expected, workspaceRoot, index })
+        : null;
+      const observed = transportObservation ?? (localPath
         ? observeStableFile({ filePath: localPath, artifactRef: ref })
-        : observeContentArtifactBytes(input, { ref, expected, workspaceRoot, index });
+        : null);
       if (!observed) {
         return { ref, expected_sha256: expected, observed_sha256: null, status: 'unknown' as const };
       }

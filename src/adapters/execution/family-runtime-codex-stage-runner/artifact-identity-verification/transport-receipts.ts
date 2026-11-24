@@ -295,7 +295,10 @@ export function observeCurrentArtifactBytes(input: CurrentArtifactBytesInput) {
   // downstream authority receipts and content readers consume. A directly readable
   // artifact ref always remains the primary source, so an alias cannot redirect a
   // local file verification to different bytes.
-  const directPath = localPathForRef(input.artifactRef, input.workspaceRoot);
+  // The producer executes in the canonical WorkItem root. Later roles can
+  // materialize in a different workspace without changing the artifact locator.
+  const artifactRoot = input.canonicalWorkItemRoot ?? input.workspaceRoot;
+  const directPath = localPathForRef(input.artifactRef, artifactRoot);
   const contentPath = !directPath
     && input.artifactSourceRef
     && input.artifactRef === `opl-content://sha256/${input.artifactSha256}`

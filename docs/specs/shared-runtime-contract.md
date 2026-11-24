@@ -33,7 +33,7 @@ Framework raw 产物恢复与正式验收共用 metadata 来源校验：精确�
 
 新 Attempt 可以从当前包获取此前未绑定的固定 review lane；父 spec 和已有显式 lane 保持原绑定。历史 Attempt 仅在请求明确携带 lane 且原 Stage manifest 的 ref/hash 精确匹配时恢复缺失投影，不猜测 controller-required lane。
 
-不可变 reviewer snapshot 保留领域原请求及成员，外层只补入 canonical artifact refs/hashes 与 producer exact metadata 共同绑定的最终文件。内容寻址的产物可以通过 Framework transport receipt 中绑定的本地文件读取。逻辑 ref 的摘要须与文件一致，文件位于生产 Attempt 的 workspace 或 canonical work-item root，后续 Attempt 和 snapshot 仍校验该文件的字节。恢复已验证的 workspace 产物时保留 producer 原有的 snapshot 请求，由 reviewer 入口继续核对其成员和权限。引用型 closeout 的外层 locator 通过精确 hash/size 校验后，可以补足内层未声明的自引用；显式空引用仍无效。复审 prompt 说明 closure 的 finding_id、status、非空 evidence_refs，以及 optional observation 的 observation_id、summary 和 evidence_refs，质量判断和证据有效性仍归既有校验与领域 owner。
+不可变 reviewer snapshot 保留领域原请求及成员，外层只补入 canonical artifact refs/hashes 与 producer exact metadata 共同绑定的最终文件。对于带 Framework transport receipt 的 WorkItem 产物，产出、评审输入绑定和终态字节观察都以冻结的 canonical work-item root 解析相对引用。内容寻址的产物可以通过 Framework transport receipt 中绑定的本地文件读取。逻辑 ref 的摘要须与文件一致，文件位于生产 Attempt 的 workspace 或 canonical work-item root，后续 Attempt 和 snapshot 仍校验该文件的字节。恢复已验证的 workspace 产物时保留 producer 原有的 snapshot 请求，由 reviewer 入口继续核对其成员和权限。引用型 closeout 的外层 locator 通过精确 hash/size 校验后，可以补足内层未声明的自引用；显式空引用仍无效。复审 prompt 说明 closure 的 finding_id、status、非空 evidence_refs，以及 optional observation 的 observation_id、summary 和 evidence_refs，质量判断和证据有效性仍归既有校验与领域 owner。
 
 原 reviewer 响应在同会话的只读协议补全之前持久化，并提供精确 ref/hash/size；该响应仍是传输证据，不自动成为领域 verdict。repairer 必须返回逐 finding 的 `repair_map` 数组，状态为 `repaired|not_repaired|blocked`，独立 closure 仍归 re_reviewer。
 

@@ -267,7 +267,10 @@ export function revalidateStageRunImmutableContentBindings(input: {
           actual_byte_size: receipt.byteSize,
         });
       }
-      const localFilePath = localFileForRef(binding.ref, input.workspaceRoot);
+      const artifactRoot = receipt.surfaceKind === 'opl_transport_artifact_identity_receipt'
+        ? input.executionScope?.canonical_work_item_root ?? input.workspaceRoot
+        : input.workspaceRoot;
+      const localFilePath = localFileForRef(binding.ref, artifactRoot);
       if (localFilePath) {
         const observed = observeArtifactBytes({
           phase: 'revalidate',
