@@ -1,6 +1,9 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
@@ -12,16 +15,26 @@ const RESPONSE_SCHEMA = 'opl-package-app-contribution-response.v1';
 const MANIFEST_NAME = 'app-contribution-adapter.json';
 const TEMPLATE = /\$\{(env|input)\.([A-Za-z0-9_.-]+)\}/g;
 const MAX_COMMAND_OUTPUT = 32 * 1024 * 1024;
+const DEFAULT_MAX_MARKDOWN_BYTES = 2 * 1024 * 1024;
+const DEFAULT_MAX_PREVIEW_CHARS = 24_000;
+const FEEDBACK_ID_PATTERN = /^[A-Za-z0-9_-]{1,100}$/;
+const FRAMEWORK_PYTHON_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../python',
+);
 
 type JsonRecord = Record<string, unknown>;
 
 type AdapterEntry = {
-  kind: 'json_file' | 'command';
-  transform?: 'json' | 'photo_status' | 'photo_pending_plan' | 'iphone_plan' | 'iphone_audit' | 'travel_status' | 'glkvm_status' | 'artifact_status' | 'mac_review_status' | 'runtime_detail' | 'capital_decision' | 'rca_artifacts' | 'grant_workspace' | 'fleet_status';
+  kind: 'json_file' | 'command' | 'markdown_review' | 'json_artifact_review';
+  transform?: string;
   passthrough?: boolean;
   input_schema?: JsonRecord;
   path?: string;
   root?: 'package' | 'profile';
+  feedback_path?: string;
+  max_bytes?: number;
+  max_preview_chars?: number;
   argv?: string[];
   cwd?: 'package' | 'profile';
   stdin?: 'input_json' | 'request_json';
@@ -32,6 +45,16 @@ type AdapterFile = {
   input_schema?: JsonRecord;
   path: string;
   root?: 'package' | 'profile';
+};
+
+type AdapterReviewFile = {
+  kind: 'markdown_review' | 'json_artifact_review';
+  input_schema?: JsonRecord;
+  path?: string;
+  root?: 'package' | 'profile';
+  feedback_path?: string;
+  max_bytes?: number;
+  max_preview_chars?: number;
 };
 
 type AdapterCommand = {
@@ -48,7 +71,7 @@ type AdapterRuntimeContext = {
   input_schema?: JsonRecord;
 };
 
-type AdapterItem = AdapterFile | AdapterCommand | AdapterRuntimeContext;
+type AdapterItem = AdapterFile | AdapterReviewFile | AdapterCommand | AdapterRuntimeContext;
 
 type AdapterManifest = {
   schema_version: typeof ADAPTER_SCHEMA;
@@ -82,6 +105,14 @@ function adapterManifest(packageRoot: string): AdapterManifest {
   return raw as AdapterManifest;
 }
 
+const SUPPORTED_ENTRY_KINDS = new Set([
+  'json_file',
+  'command',
+  'runtime_context',
+  'markdown_review',
+  'json_artifact_review',
+]);
+
 function entriesFor(manifest: AdapterManifest, operation: 'read' | 'execute', ref: string) {
   const entry = operation === 'read' ? manifest.reads[ref] : manifest.actions[ref];
   if (!isRecord(entry) && !Array.isArray(entry)) {
@@ -95,7 +126,7 @@ function entriesFor(manifest: AdapterManifest, operation: 'read' | 'execute', re
   for (const candidate of entries) {
     if (
       !isRecord(candidate)
-      || !['json_file', 'command', 'runtime_context'].includes(String(candidate.kind))
+      || !SUPPORTED_ENTRY_KINDS.has(String(candidate.kind))
       || (candidate.kind === 'runtime_context' && (
         operation !== 'read'
         || !['progress', 'artifacts'].includes(String(candidate.view))
@@ -198,13 +229,19 @@ function containedPath(root: string, relativeOrAbsolute: string) {
       failure_code: 'app_contribution_adapter_path_escape',
     });
   }
-  if (fs.existsSync(resolved)) {
-    const realRoot = fs.realpathSync(root);
-    const realPath = fs.realpathSync(resolved);
-    if (realPath !== realRoot && !realPath.startsWith(`${realRoot}${path.sep}`)) {
-      contractError('Adapter path escapes its declared root through a symbolic link.', {
-        failure_code: 'app_contribution_adapter_path_escape',
-      });
+  let ancestor = root;
+  const rel = path.relative(root, resolved);
+  for (const segment of rel.split(path.sep).filter(Boolean)) {
+    ancestor = path.join(ancestor, segment);
+    if (!fs.existsSync(ancestor)) continue;
+    if (fs.lstatSync(ancestor).isSymbolicLink()) {
+      const realRoot = fs.realpathSync(root);
+      const realAncestor = fs.realpathSync(ancestor);
+      if (realAncestor !== realRoot && !realAncestor.startsWith(`${realRoot}${path.sep}`)) {
+        contractError('Adapter path escapes its declared root through a symbolic link.', {
+          failure_code: 'app_contribution_adapter_path_escape',
+        });
+      }
     }
   }
   return resolved;
@@ -228,6 +265,217 @@ function commandPath(root: string, command: string) {
   return command;
 }
 
+function sha256Prefixed(bytes: Buffer) {
+  return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+}
+
+function extractMarkdownHeadings(markdownText: string) {
+  const headings: Array<{ level: number; title: string; line: number }> = [];
+  let fenced = false;
+  const lines = markdownText.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]!;
+    if (/^\s*(?:`{3,}|~{3,})/.test(line)) {
+      fenced = !fenced;
+      continue;
+    }
+    if (fenced) continue;
+    const match = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (match) {
+      headings.push({ level: match[1]!.length, title: match[2]!, line: index + 1 });
+    }
+  }
+  return headings;
+}
+
+function readReviewFeedbackNotes(
+  root: string,
+  feedbackPathTemplate: string | undefined,
+  input: JsonRecord,
+  revision: string,
+) {
+  if (!feedbackPathTemplate) return [];
+  const feedbackDir = containedPath(root, expand(feedbackPathTemplate, input, process.env));
+  if (!fs.existsSync(feedbackDir) || !fs.statSync(feedbackDir).isDirectory()) {
+    return [];
+  }
+  const notes: JsonRecord[] = [];
+  for (const name of fs.readdirSync(feedbackDir).sort()) {
+    if (!name.endsWith('.json')) continue;
+    const noteFile = containedPath(feedbackDir, name);
+    const stat = fs.lstatSync(noteFile);
+    if (stat.isSymbolicLink() || !stat.isFile()) continue;
+    const parsed = parseJsonText(fs.readFileSync(noteFile, 'utf8'));
+    if (!isRecord(parsed)) continue;
+    notes.push({
+      ...parsed,
+      artifact_ref: noteFile,
+      matches_current_revision: parsed.revision === revision,
+    });
+  }
+  return notes;
+}
+
+function writeReviewFeedbackAction(entry: AdapterReviewFile, packageRoot: string, input: JsonRecord) {
+  if (!entry.feedback_path) {
+    contractError('Declarative review execute action requires feedback_path.', {
+      failure_code: 'app_contribution_adapter_entry_invalid',
+    });
+  }
+  const root = rootFor(entry.root, packageRoot);
+  const feedbackDir = containedPath(root, expand(entry.feedback_path, input, process.env));
+  const note = input.note;
+  if (typeof note !== 'string' || !note.trim() || note.length > 20_000) {
+    contractError('Review note must be a string between 1 and 20000 characters.', {
+      failure_code: 'app_contribution_adapter_request_invalid',
+    });
+  }
+  const rawRequestId = typeof input.request_id === 'string' && input.request_id.trim()
+    ? input.request_id.trim()
+    : crypto.randomUUID();
+  if (!FEEDBACK_ID_PATTERN.test(rawRequestId)) {
+    contractError('Review feedback request_id contains unsupported characters.', {
+      failure_code: 'app_contribution_adapter_request_invalid',
+    });
+  }
+  fs.mkdirSync(feedbackDir, { recursive: true });
+  const targetFile = containedPath(feedbackDir, `${rawRequestId}.json`);
+  const revision = typeof input.revision === 'string' ? input.revision : '';
+  const payload: JsonRecord = {
+    schema: 'opl_review_feedback.v1',
+    request_id: rawRequestId,
+    revision,
+    note,
+    recorded_at: new Date().toISOString(),
+  };
+  if (fs.existsSync(targetFile)) {
+    const existing = parseJsonText(fs.readFileSync(targetFile, 'utf8'));
+    if (!isRecord(existing) || existing.note !== note || existing.revision !== revision) {
+      contractError('Review feedback request_id is already bound to a different note.', {
+        failure_code: 'app_contribution_adapter_feedback_conflict',
+      });
+    }
+    return {
+      state: 'ready',
+      result: { status: 'recorded', artifact_ref: targetFile, note: existing },
+    };
+  }
+  const tmpFile = path.join(feedbackDir, `.tmp-${rawRequestId}-${os.hostname()}-${process.pid}-${crypto.randomUUID()}.json`);
+  try {
+    fs.writeFileSync(tmpFile, `${JSON.stringify(payload, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
+    fs.linkSync(tmpFile, targetFile);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === 'EEXIST') {
+      const existing = parseJsonText(fs.readFileSync(targetFile, 'utf8'));
+      if (!isRecord(existing) || existing.note !== note || existing.revision !== revision) {
+        contractError('Review feedback request_id is already bound to a different note.', {
+          failure_code: 'app_contribution_adapter_feedback_conflict',
+        });
+      }
+      return {
+        state: 'ready',
+        result: { status: 'recorded', artifact_ref: targetFile, note: existing },
+      };
+    }
+    throw error;
+  } finally {
+    fs.rmSync(tmpFile, { force: true });
+  }
+  return {
+    state: 'ready',
+    result: { status: 'recorded', artifact_ref: targetFile, note: payload },
+  };
+}
+
+function runDeclarativeReviewEntry(
+  entry: AdapterReviewFile,
+  operation: 'read' | 'execute',
+  packageRoot: string,
+  input: JsonRecord,
+) {
+  if (operation === 'execute') {
+    return writeReviewFeedbackAction(entry, packageRoot, input);
+  }
+  if (!entry.path) {
+    contractError('Declarative review read entry is missing its path.', {
+      failure_code: 'app_contribution_adapter_entry_invalid',
+    });
+  }
+  const root = rootFor(entry.root, packageRoot);
+  const expanded = expand(entry.path, input, process.env);
+  const file = containedPath(root, expanded);
+  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
+    return { state: 'unavailable', reason: 'adapter_source_missing', source_ref: file };
+  }
+  const maxBytes = typeof entry.max_bytes === 'number' && entry.max_bytes > 0
+    ? entry.max_bytes
+    : DEFAULT_MAX_MARKDOWN_BYTES;
+  const rawBytes = fs.readFileSync(file);
+  if (rawBytes.length > maxBytes) {
+    contractError('Declarative review artifact exceeds maximum allowed byte size.', {
+      failure_code: 'app_contribution_adapter_artifact_too_large',
+      bytes: rawBytes.length,
+      max_bytes: maxBytes,
+    });
+  }
+  const revision = sha256Prefixed(rawBytes);
+  const artifactRef = path.relative(root, file).replaceAll(path.sep, '/');
+  const feedback = readReviewFeedbackNotes(root, entry.feedback_path, input, revision);
+
+  if (entry.kind === 'markdown_review') {
+    const maxPreview = typeof entry.max_preview_chars === 'number' && entry.max_preview_chars > 0
+      ? entry.max_preview_chars
+      : DEFAULT_MAX_PREVIEW_CHARS;
+    const text = rawBytes.toString('utf8');
+    const headings = extractMarkdownHeadings(text);
+    const preview = text.slice(0, maxPreview);
+    const truncated = text.length > maxPreview;
+    return {
+      state: 'ready',
+      data: {
+        items: [{
+          id: artifactRef,
+          title: path.basename(artifactRef),
+          summary: `${headings.length} headings`,
+          status: 'review_required',
+          artifact_ref: artifactRef,
+          path: file,
+          sha256: revision,
+          bytes: rawBytes.length,
+          headings,
+          preview,
+          preview_truncated: truncated,
+          feedback,
+        }],
+        revision,
+        feedback,
+      },
+    };
+  }
+
+  const payload = parseJsonText(rawBytes.toString('utf8'));
+  const recordPayload = isRecord(payload) ? payload : {};
+  return {
+    state: 'ready',
+    data: {
+      items: [{
+        ...recordPayload,
+        id: String(recordPayload.id ?? artifactRef),
+        title: String(recordPayload.title ?? recordPayload.name ?? path.basename(artifactRef)),
+        summary: String(recordPayload.summary ?? ''),
+        status: String(recordPayload.status ?? 'review_required'),
+        artifact_ref: artifactRef,
+        path: file,
+        artifact_revision: revision,
+        feedback,
+      }],
+      payload,
+      revision,
+      feedback,
+    },
+  };
+}
+
 function readJsonFile(entry: AdapterEntry, packageRoot: string, input: JsonRecord) {
   if (!entry.path) {
     contractError('Adapter JSON file entry is missing its path.', {
@@ -241,6 +489,17 @@ function readJsonFile(entry: AdapterEntry, packageRoot: string, input: JsonRecor
     return { state: 'unavailable', reason: 'adapter_source_missing', source_ref: file };
   }
   return transformResult(entry, parseJsonText(fs.readFileSync(file, 'utf8')));
+}
+
+function buildChildCommandEnv(): NodeJS.ProcessEnv {
+  const childEnv: NodeJS.ProcessEnv = { ...process.env };
+  if (fs.existsSync(FRAMEWORK_PYTHON_DIR) && fs.statSync(FRAMEWORK_PYTHON_DIR).isDirectory()) {
+    const existing = childEnv.PYTHONPATH?.trim();
+    childEnv.PYTHONPATH = existing
+      ? `${FRAMEWORK_PYTHON_DIR}${path.delimiter}${existing}`
+      : FRAMEWORK_PYTHON_DIR;
+  }
+  return childEnv;
 }
 
 function runCommand(
@@ -264,7 +523,7 @@ function runCommand(
       : entry.stdin === 'request_json'
         ? JSON.stringify(request)
         : undefined,
-    env: process.env,
+    env: buildChildCommandEnv(),
     timeout: 120_000,
     maxBuffer: MAX_COMMAND_OUTPUT,
   });
@@ -278,7 +537,8 @@ function runCommand(
   }
   try {
     return transformResult(entry, parseJsonText(result.stdout || ''));
-  } catch {
+  } catch (error) {
+    if (error instanceof FrameworkContractError) throw error;
     contractError('Adapter command did not return JSON.', {
       failure_code: 'app_contribution_adapter_response_invalid',
     });
@@ -287,346 +547,14 @@ function runCommand(
 
 function transformResult(entry: AdapterEntry, parsed: unknown) {
   if (entry.passthrough === true) return parsed;
-  if (entry.transform === 'photo_status') {
-    const status = isRecord(parsed) ? parsed : {};
-    const jobs = isRecord(status.jobs) ? status.jobs : {};
-    return {
-      state: 'ready',
-      result: {
-        scope: status.scope ?? null,
-        status_dir: status.status_dir ?? null,
-        jobs,
-        summary: Object.fromEntries(Object.entries(jobs).map(([name, job]) => [
-          name,
-          isRecord(job) ? {
-            status: job.status ?? null,
-            last_attempt_at: job.last_attempt_at ?? job.finished_at ?? null,
-            last_success_at: job.last_success_at ?? null,
-            consecutive_failures: job.consecutive_failures ?? 0,
-            pending_plan_dir: job.pending_plan_dir ?? null,
-            summary: job.summary ?? null,
-          } : job,
-        ])),
+  if (typeof entry.transform === 'string' && entry.transform !== 'json') {
+    contractError(
+      'Legacy domain transforms are retired; return standard contribution JSON or use declarative markdown_review/json_artifact_review.',
+      {
+        failure_code: 'app_contribution_adapter_transform_unsupported',
+        transform: entry.transform,
       },
-    };
-  }
-  if (entry.transform === 'photo_pending_plan' && parsed === null) {
-    return { state: 'empty', reason: 'no_plan_awaiting_review' };
-  }
-  if (entry.transform === 'photo_pending_plan') {
-    const pending = isRecord(parsed) ? parsed : {};
-    if (pending.state !== 'ready') return pending;
-    const plan = isRecord(pending.plan) ? pending.plan : {};
-    const planSummary = isRecord(plan.summary) ? plan.summary : {};
-    const items = Array.isArray(plan.items) ? plan.items : [];
-    return {
-      state: 'ready',
-      data: {
-        items: [{
-          id: String(plan.plan_id ?? pending.plan_dir ?? 'photo-plan'),
-          title: '照片镜像计划',
-          summary: `镜像 ${Number(planSummary.mirror_count ?? 0)}，隔离 ${Number(planSummary.delete_count ?? 0)}，未解决 ${Number(planSummary.unresolved_count ?? 0)}`,
-          status: Number(planSummary.unresolved_count ?? 0) > 0 ? 'blocked' : 'pending',
-          plan_dir: pending.plan_dir,
-          preview: {
-            target: pending.plan_dir,
-            before: null,
-            after: items.map((item) => isRecord(item) ? `${item.action_label}: ${item.relative_path}` : String(item)).join('\n'),
-          },
-          evidence_refs: [pending.plan_dir],
-          actions: [{
-            action_ref: 'photo.steward.v1#plan.apply',
-            input: { plan_dir: pending.plan_dir },
-            label_i18n: { 'zh-CN': '执行已审核计划', 'en-US': 'Apply reviewed plan' },
-          }],
-          plan,
-        }],
-      },
-    };
-  }
-  if (entry.transform === 'iphone_plan') {
-    const value = isRecord(parsed) ? parsed : {};
-    const plan = isRecord(value.plan) ? value.plan : {};
-    const removals = Array.isArray(plan.removals) ? plan.removals : [];
-    const layout = isRecord(plan.layout) ? plan.layout : null;
-    return {
-      state: 'ready',
-      data: {
-        items: [{
-          id: String(plan.planID ?? plan.plan_id ?? value.path ?? 'iphone-plan'),
-          title: plan.operation === 'layout' ? '主屏布局计划' : 'App 卸载计划',
-          summary: plan.operation === 'layout'
-            ? `候选布局 ${layout?.candidate_sha256 ?? layout?.candidateSHA256 ?? ''}`
-            : removals.map((item) => isRecord(item) ? `${item.name} (${item.bundleID})` : String(item)).join('、'),
-          status: 'pending',
-          plan_path: value.path,
-          preview: {
-            target: value.path,
-            before: null,
-            after: plan.operation === 'layout'
-              ? JSON.stringify(layout, null, 2)
-              : removals.map((item) => isRecord(item) ? `${item.name} (${item.bundleID})` : String(item)).join('\n'),
-          },
-          evidence_refs: [value.path],
-          actions: [{
-            action_ref: 'iphone.steward.v1#plan.apply',
-            input: { plan_dir: value.path, plan_id: plan.planID ?? plan.plan_id },
-            label_i18n: { 'zh-CN': '执行已审核计划', 'en-US': 'Apply reviewed plan' },
-          }],
-          plan,
-        }],
-      },
-    };
-  }
-  if (entry.transform === 'iphone_audit') {
-    const value = isRecord(parsed) ? parsed : {};
-    const audit = isRecord(value.audit) ? value.audit : value;
-    const apps = Array.isArray(audit.apps) ? audit.apps : [];
-    return {
-      state: 'ready',
-      data: {
-        items: apps.map((item, index) => {
-          const app = isRecord(item) ? item : {};
-          return {
-            id: String(app.bundleID ?? app.bundle_id ?? index),
-            title: String(app.name ?? app.bundleID ?? index),
-            summary: `${Number(app.minutes ?? 0).toFixed(1)} 分钟 · ${Number(app.sessions ?? 0)} 次 · ${app.location ?? ''}`,
-            status: app.evidence === 'no_usage_observed' ? 'none' : 'active',
-            evidence_refs: [value.outputDirectory ?? null].filter(Boolean),
-            minutes: app.minutes,
-            sessions: app.sessions,
-            active_days: app.activeDays ?? app.active_days,
-            location: app.location,
-            evidence: app.evidence,
-          };
-        }),
-        usage_evidence: audit.usageEvidence ?? null,
-        window: audit.window ?? null,
-      },
-    };
-  }
-  if (entry.transform === 'travel_status') {
-    const value = isRecord(parsed) ? parsed : {};
-    const build = isRecord(value.build) ? value.build : {};
-    const quality = isRecord(value.quality) ? value.quality : {};
-    return {
-      state: 'ready',
-      data: {
-        items: [{
-          id: 'travel-passport-status',
-          title: '旅行护照状态',
-          summary: `构建：${String(build.state ?? 'unknown')}；质量：${String(quality.state ?? 'unknown')}`,
-          status: quality.state === 'ready' ? 'ready' : 'attention',
-          source_refs: ['travel-passport://status'],
-        }],
-        status: value,
-      },
-    };
-  }
-  if (entry.transform === 'glkvm_status') {
-    const value = isRecord(parsed) ? parsed : {};
-    return {
-      state: 'ready',
-      data: {
-        items: [{
-          id: 'glkvm-device',
-          title: String(value.device ?? 'GLKVM device'),
-          summary: `连接：${value.connected === true ? '已连接' : '未连接'} · 控制：${String(value.control_mode ?? 'unknown')}`,
-          status: value.connected === true ? 'ready' : 'unavailable',
-          source_refs: ['glkvm://status'],
-        }],
-        status: value,
-      },
-    };
-  }
-  if (entry.transform === 'artifact_status') {
-    const value = isRecord(parsed) ? parsed : {};
-    if (!Array.isArray(value.artifacts) && !Array.isArray(value.items)) return parsed;
-    const artifacts = Array.isArray(value.artifacts)
-      ? value.artifacts
-      : Array.isArray(value.items)
-        ? value.items
-        : [];
-    return {
-      state: 'ready',
-      data: {
-        items: artifacts.filter(isRecord).map((artifact, index) => ({
-          id: String(artifact.id ?? artifact.artifact_id ?? artifact.path ?? index),
-          title: String(artifact.title ?? artifact.name ?? artifact.path ?? `Artifact ${index + 1}`),
-          summary: String(artifact.summary ?? artifact.status ?? ''),
-          status: String(artifact.status ?? 'unknown'),
-          artifact_ref: artifact.ref ?? artifact.path ?? artifact.artifact_ref ?? null,
-          evidence_refs: Array.isArray(artifact.evidence_refs) ? artifact.evidence_refs : [],
-        })),
-        status: value,
-      },
-    };
-  }
-  if (entry.transform === 'mac_review_status') {
-    const value = isRecord(parsed) ? parsed : {};
-    const layout = isRecord(value.workspace_layout) ? value.workspace_layout : {};
-    const errors = Array.isArray(value.errors) ? value.errors : [];
-    return {
-      state: 'ready',
-      data: {
-        items: [{
-          id: 'med-autocast-workbench',
-          title: 'Med Auto Cast 工作台',
-          summary: `校验：${String(value.status ?? 'unknown')}；工作区：${String(layout.state ?? 'unknown')}`,
-          status: value.status === 'passed' ? 'ready' : 'attention',
-          source_refs: [value.workbench].filter(Boolean),
-          errors,
-        }],
-        status: value,
-      },
-    };
-  }
-  if (entry.transform === 'runtime_detail') {
-    const value = isRecord(parsed) ? parsed : {};
-    const readback = isRecord(value.app_detail_view) ? value.app_detail_view : value;
-    if (typeof readback.availability !== 'string') return parsed;
-    const payload = isRecord(readback.payload) ? readback.payload : {};
-    const stages = Array.isArray(payload.stages) ? payload.stages : [];
-    const sections = Array.isArray(payload.sections) ? payload.sections : [];
-    return {
-      state: readback.availability === 'available' ? 'ready' : 'unavailable',
-      reason: readback.reason ?? null,
-      data: {
-        items: [{
-          id: String(readback.item_id ?? 'runtime-detail'),
-          title: String(readback.view_id ?? 'Runtime detail'),
-          summary: readback.reason ?? '',
-          status: readback.availability ?? 'unknown',
-          source_refs: [readback.digest].filter(Boolean),
-          stages,
-          sections,
-        }],
-        detail: readback,
-      },
-    };
-  }
-  if (entry.transform === 'grant_workspace') {
-    const value = isRecord(parsed) ? parsed : {};
-    const selection = isRecord(value.current_selection) ? value.current_selection : {};
-    const gates = isRecord(value.gates) ? value.gates : {};
-    const drafts = Array.isArray(value.application_drafts) ? value.application_drafts : [];
-    const activeDraftId = typeof selection.active_draft_id === 'string'
-      ? selection.active_draft_id
-      : null;
-    const activeDraft = drafts
-      .filter(isRecord)
-      .find((draft) => draft.draft_id === activeDraftId) ?? null;
-    const stage = typeof value.lifecycle_stage === 'string'
-      ? value.lifecycle_stage
-      : 'unknown';
-    return {
-      state: 'ready',
-      data: {
-        items: [{
-          id: String(value.workspace_id ?? 'grant-workspace'),
-          title: String(activeDraft?.project_title ?? value.workspace_id ?? 'Grant workspace'),
-          summary: [
-            `阶段：${stage}`,
-            `草稿：${String(activeDraft?.version_label ?? activeDraftId ?? '未选择')}`,
-            `预提交冻结：${gates.presubmission_frozen === true ? '是' : '否'}`,
-          ].join(' · '),
-          status: gates.presubmission_frozen === true ? 'completed' : 'active',
-          lifecycle_stage: stage,
-          grant_run_id: value.grant_run_id ?? null,
-          workspace_id: value.workspace_id ?? null,
-          active_draft_id: activeDraftId,
-          active_draft: activeDraft,
-          gates,
-          source_refs: ['owner_workspace_json'],
-        }],
-      },
-    };
-  }
-  if (entry.transform === 'capital_decision') {
-    const value = isRecord(parsed) ? parsed : {};
-    const packet = isRecord(value.decision_packet) ? value.decision_packet : value;
-    const decision = isRecord(packet.decision) ? packet.decision : packet;
-    const alternatives = Array.isArray(packet.alternatives) ? packet.alternatives : [];
-    const unknowns = Array.isArray(packet.unknowns)
-      ? packet.unknowns
-      : Array.isArray(packet.unresolved_quality_debt) ? packet.unresolved_quality_debt : [];
-    return {
-      state: 'ready',
-      data: {
-        items: [{
-          ...packet,
-          id: String(packet.decision_id ?? packet.id ?? 'capital-decision'),
-          title: String(packet.title ?? packet.decision_question ?? '配置决策'),
-          summary: String(decision.summary ?? decision.recommendation
-            ?? (typeof packet.decision === 'string' ? packet.decision : '')),
-          status: String(packet.plan_status ?? packet.status ?? decision.status ?? 'review_required'),
-          source_refs: Array.isArray(packet.evidence_refs) ? packet.evidence_refs : [],
-          alternatives,
-          unknowns,
-          execution_status: packet.execution_status ?? packet.execution_claim ?? null,
-        }],
-        decision: packet,
-      },
-    };
-  }
-  if (entry.transform === 'rca_artifacts') {
-    const value = isRecord(parsed) ? parsed : {};
-    if (!Array.isArray(value.artifacts)) return parsed;
-    const artifacts = Array.isArray(value.artifacts) ? value.artifacts : [];
-    return {
-      state: 'ready',
-      data: {
-        items: artifacts.filter(isRecord).map((artifact, index) => ({
-          id: String(artifact.artifact_id ?? artifact.id ?? artifact.artifact_ref ?? index),
-          title: String(artifact.title ?? artifact.artifact_kind ?? artifact.artifact_ref ?? `Artifact ${index + 1}`),
-          summary: String(artifact.summary ?? artifact.review_status ?? ''),
-          status: String(artifact.review_status ?? artifact.status ?? 'review_pending'),
-          artifact_ref: artifact.artifact_ref ?? null,
-          artifact_kind: artifact.artifact_kind ?? null,
-          evidence_refs: Array.isArray(artifact.evidence_refs) ? artifact.evidence_refs : [],
-        })),
-        review_export: value.review_export ?? null,
-        memory: value.memory ?? null,
-      },
-    };
-  }
-  if (entry.transform === 'fleet_status') {
-    const value = isRecord(parsed)
-      && isRecord(parsed.result)
-      && parsed.ok === true
-      ? parsed.result
-      : isRecord(parsed)
-        ? parsed
-        : {};
-    const freshness = isRecord(value.freshness) ? value.freshness : {};
-    const nativeCarrier = isRecord(value.native_carrier) ? value.native_carrier : {};
-    const payload = isRecord(value.payload) ? value.payload : {};
-    return {
-      state: 'ready',
-      data: {
-        items: [{
-          id: String(value.read_ref ?? 'fleet-status'),
-          title: String(value.read_ref ?? 'Fleet Agent status'),
-          summary: [
-            `采集：${String(freshness.state ?? 'unknown')}`,
-            `载体：${String(nativeCarrier.availability ?? 'unknown')}`,
-            value.node && isRecord(value.node)
-              ? `节点：${String(value.node.display_name ?? value.node.stable_node_id ?? 'unknown')}`
-              : '节点：未提供',
-          ].join(' · '),
-          status: freshness.state === 'unavailable'
-            ? 'unavailable'
-            : freshness.state === 'stale'
-              ? 'attention'
-              : 'ready',
-          observed_at: value.observed_at ?? null,
-          freshness,
-          native_carrier: nativeCarrier,
-          node: value.node ?? null,
-          payload,
-        }],
-      },
-    };
+    );
   }
   return parsed;
 }
@@ -682,18 +610,26 @@ export function executeDeclarativeAppContribution(input: {
   const entries = entriesFor(manifest, operation, ref);
   const ownerInput = operation === 'read' ? readInputDefaults(entries, request.input) : request.input;
   const required = inputRequired(entries, ownerInput);
-  const results = required ? [required] : entries.map((entry) => (
-    entry.kind === 'json_file'
-      ? readJsonFile(entry, packageRoot, ownerInput)
-      : entry.kind === 'runtime_context'
-        ? readAppContributionRuntimeContext({ packageRoot, view: entry.view, input: ownerInput })
-        : runCommand(entry, packageRoot, ownerInput, { ...request, input: ownerInput })
-  ));
+  const results = required ? [required] : entries.map((entry) => {
+    if (entry.kind === 'json_file') {
+      return readJsonFile(entry as AdapterEntry, packageRoot, ownerInput);
+    }
+    if (entry.kind === 'runtime_context') {
+      return readAppContributionRuntimeContext({ packageRoot, view: entry.view, input: ownerInput });
+    }
+    if (entry.kind === 'markdown_review' || entry.kind === 'json_artifact_review') {
+      return runDeclarativeReviewEntry(entry, operation, packageRoot, ownerInput);
+    }
+    return runCommand(entry as AdapterEntry, packageRoot, ownerInput, { ...request, input: ownerInput });
+  });
   const result = results.length === 1
     ? results[0]
-    : { state: 'ready', data: { items: results.map((entry, index) => (
-        isRecord(entry) ? { id: `${ref}:${index}`, source_ref: ref, value: entry } : { id: `${ref}:${index}`, source_ref: ref, value: entry }
-      )) } };
+    : {
+        state: 'ready',
+        data: {
+          items: results.map((entry, index) => ({ id: `${ref}:${index}`, source_ref: ref, value: entry })),
+        },
+      };
   const response = ownerResponse(ref, operation, result);
   const inputSchema = entries.find((entry) => isRecord(entry.input_schema))?.input_schema;
   return inputSchema ? { ...response, input_schema: inputSchema } : response;

@@ -1,14 +1,22 @@
-import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
-import { createOplConnection, listOplConnections, updateOplConnection } from './connection-registry.ts';
 import type { OplConnection } from './connection-registry-parts/types.ts';
 import {
   OplConnectionProviderError,
   type OplConnectionProvider,
   type OplConnectionProviderErrorDisposition,
 } from './connection-authorization.ts';
+import {
+  callExternalCliConnect,
+  decodeExternalCliCredentialHandle,
+  encodeExternalCliCredentialHandle,
+  runExternalCliConnectCommand,
+  upsertExternalCliConnection,
+  type ExternalCliConnectCommandResult,
+  type ExternalCliConnectCommandRunner,
+  type ExternalCliConnectRequest,
+} from './external-cli-connection-provider.ts';
 
 const PROVIDER_ID = 'opl-cloud';
 const HANDLE_PREFIX = 'provider:opl-cloud:';
@@ -23,15 +31,10 @@ const CAPABILITIES: Record<string, string> = {
   cloud_get_workspace_operation: 'Read the original Cloud Workspace operation',
 };
 
-export type CloudConnectRequest = Record<string, unknown> & {
+export type CloudConnectRequest = ExternalCliConnectRequest<'list' | 'inspect' | 'invoke'> & {
   schema_version: 'opl-cloud-connect.v1';
-  operation: 'list' | 'inspect' | 'invoke';
 };
-export type CloudConnectCommandRunner = (input: { binary: string; request: CloudConnectRequest }) => {
-  status: number | null;
-  stdout: string;
-  error_code?: string | null;
-};
+export type CloudConnectCommandRunner = ExternalCliConnectCommandRunner<CloudConnectRequest>;
 type Options = { binary?: string; runner?: CloudConnectCommandRunner };
 type Binding = { opaque: string; revision: string };
 type CloudMetadata = {
@@ -52,57 +55,37 @@ function fail(code: string, disposition: OplConnectionProviderErrorDisposition =
   throw new OplConnectionProviderError(code, disposition);
 }
 
-function runCommand({ binary, request }: Parameters<CloudConnectCommandRunner>[0]) {
-  const result = spawnSync(binary, ['connect'], {
-    input: JSON.stringify(request), encoding: 'utf8', env: process.env,
-    maxBuffer: 1024 * 1024, timeout: 35_000,
-  });
-  return {
-    status: result.status,
-    stdout: typeof result.stdout === 'string' ? result.stdout : '',
-    error_code: result.error && 'code' in result.error ? String(result.error.code) : null,
-  };
+function runCommand({ binary, request }: Parameters<CloudConnectCommandRunner>[0]): ExternalCliConnectCommandResult {
+  return runExternalCliConnectCommand({ binary, request, args: ['connect'], timeoutMs: 35_000 });
 }
 
 function call(options: Options, operation: CloudConnectRequest['operation'], fields: Record<string, unknown> = {}) {
-  let response: ReturnType<CloudConnectCommandRunner>;
-  try {
-    response = (options.runner ?? runCommand)({
-      binary: options.binary ?? process.env.OPL_CLOUD_CONNECT_BINARY ?? 'opl-cloud-connect',
-      request: { schema_version: 'opl-cloud-connect.v1', operation, ...fields },
-    });
-  } catch {
-    fail('cloud_helper_spawn_failed');
-  }
-  const unknown = operation === 'invoke' ? 'unknown_after_dispatch' : 'not_dispatched';
-  if (response.error_code) {
-    fail('cloud_helper_process_failed', ['ENOENT', 'EACCES', 'EPERM'].includes(response.error_code) ? 'not_dispatched' : unknown);
-  }
-  let value: unknown;
-  try { value = JSON.parse(response.stdout); } catch { fail('cloud_helper_response_invalid', unknown); }
-  if (!isRecord(value)) fail('cloud_helper_response_invalid', unknown);
-  if (value.ok !== true) {
-    const disposition = value.disposition === 'not_dispatched' || value.disposition === 'provider_reported'
-      ? value.disposition : unknown;
+  return callExternalCliConnect({
+    binary: options.binary ?? process.env.OPL_CLOUD_CONNECT_BINARY ?? 'opl-cloud-connect',
+    runner: options.runner ?? runCommand,
+    request: { schema_version: 'opl-cloud-connect.v1', operation, ...fields },
+    spawnFailedCode: 'cloud_helper_spawn_failed',
+    processFailedCode: 'cloud_helper_process_failed',
+    responseUnavailableCode: 'cloud_helper_response_invalid',
+    responseInvalidCode: 'cloud_helper_response_invalid',
+    defaultProviderErrorCode: 'cloud_provider_error',
+    allowProviderReportedDisposition: true,
+    checkStatusBeforeParse: false,
     // Never propagate a helper's diagnostic text, URLs or credential material.
-    const code = isRecord(value.error) && typeof value.error.code === 'string'
-      && /^[A-Z][A-Z0-9_]{0,63}$/.test(value.error.code) ? value.error.code : 'cloud_provider_error';
-    fail(code, disposition);
-  }
-  if (response.status !== 0 || value.disposition !== 'completed' || !isRecord(value.result)) {
-    fail('cloud_helper_response_invalid', unknown);
-  }
-  return value.result;
+    isAllowedProviderCode: (code) => /^[A-Z][A-Z0-9_]{0,63}$/.test(code),
+  });
 }
 
 function binding(connection: Readonly<OplConnection>): Binding {
-  if (connection.connection_type !== PROVIDER_ID || !connection.credential_handle.startsWith(HANDLE_PREFIX)) {
+  if (connection.connection_type !== PROVIDER_ID) {
     fail('cloud_connection_handle_invalid');
   }
-  let parsed: unknown;
-  try { parsed = JSON.parse(decodeURIComponent(connection.credential_handle.slice(HANDLE_PREFIX.length))); }
-  catch { fail('cloud_connection_handle_invalid'); }
-  if (!isRecord(parsed) || typeof parsed.opaque !== 'string' || !REF.test(parsed.opaque)
+  const parsed = decodeExternalCliCredentialHandle(
+    connection.credential_handle,
+    HANDLE_PREFIX,
+    'cloud_connection_handle_invalid',
+  );
+  if (typeof parsed.opaque !== 'string' || !REF.test(parsed.opaque)
     || typeof parsed.revision !== 'string' || !REVISION.test(parsed.revision)
     || Object.keys(parsed).some((key) => key !== 'opaque' && key !== 'revision')) {
     fail('cloud_connection_handle_invalid');
@@ -191,15 +174,15 @@ export function importOplCloudConnection(cloudRef: string, options: Options = {}
   const current = inspect(options, credential);
   if (current.status !== 'ready' || Date.parse(current.expires_at) <= Date.now()) fail('cloud_credential_expired');
   const connectionId = `cloud-${createHash('sha256').update(cloudRef).digest('hex')}`;
-  const existing = listOplConnections().connections.find((entry) => entry.connection_id === connectionId);
-  if (existing && (existing.connection_type !== PROVIDER_ID || !existing.credential_handle.startsWith(HANDLE_PREFIX))) fail('connection_id_conflict');
-  const values = {
-    name: current.label, connection_type: PROVIDER_ID,
-    account_label: current.tenant_id ?? 'Personal Cloud', endpoint: current.endpoint,
-    credential_handle: `${HANDLE_PREFIX}${encodeURIComponent(JSON.stringify(credential))}`, disabled: false,
-  };
-  const result = existing ? updateOplConnection(connectionId, values) : createOplConnection({ connection_id: connectionId, ...values });
-  const connection = result.connection_registry.connection!;
+  const connection = upsertExternalCliConnection({
+    connectionId,
+    providerId: PROVIDER_ID,
+    handlePrefix: HANDLE_PREFIX,
+    name: current.label,
+    accountLabel: current.tenant_id ?? 'Personal Cloud',
+    endpoint: current.endpoint,
+    credentialHandle: encodeExternalCliCredentialHandle(HANDLE_PREFIX, credential),
+  });
   return { connection: {
     connection_id: connection.connection_id, name: connection.name, connection_type: connection.connection_type,
     account_label: connection.account_label, security_revision: connection.security_revision, status: connection.status,

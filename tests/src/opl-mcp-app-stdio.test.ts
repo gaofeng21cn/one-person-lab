@@ -9,7 +9,17 @@ import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotoc
 import { createFakeCodexPluginManagerFixture, repoRoot } from './cli/helpers.ts';
 import { codexNativeReadbackFixture } from './cli/helpers-parts/codex-native-readback-fixture.ts';
 import { formatJsonPayload } from '../../src/kernel/json-file.ts';
-import { acceptDomainRead, parseResearchSnapshot, parseContributionResearch, renderResearch, renderProgress } from '../../src/mcp-app/task-workbench.js';
+import {
+  acceptDomainRead,
+  parseResearchSnapshot,
+  parseContributionResearch,
+  parseTrajectorySnapshot,
+  parseContributionTrajectory,
+  registerDomainViewRenderer,
+  renderResearch,
+  renderTrajectory,
+  renderProgress,
+} from '../../src/mcp-app/task-workbench.js';
 import { miniAppPresentation } from '../../src/adapters/integration/agent-package-registry-parts/miniapp-presentation.ts';
 import { listOplMcpAppViews, readFrameworkMcpAppTask } from '../../src/read-models/operator/app-mcp-app.ts';
 
@@ -323,6 +333,39 @@ test('shared task workbench binds revisions and scientific evidence to the selec
   assert.match(html, /review:1/);
   assert.match(html, /evidence:1/);
   assert.doesNotMatch(renderProgress({ stage_map: [{ state: 'completed', display_name: 'Analysis' }] }), /证据支持/);
+
+  registerDomainViewRenderer('custom-workflow', {
+    schema_compatibility: ['contracts/schemas/custom-workflow.schema.json'],
+    parse: (payload: any, workItemId: any) => parseTrajectorySnapshot(payload, workItemId),
+    component: (snap: any, id: any, section: any) => renderTrajectory(snap, id, section, { title: '工作流阶段' }),
+  });
+  const genericSnap = {
+    work_item_id: 'plan-7',
+    revision: 1,
+    summary: { headline: 'Ready' },
+    nodes: [node('step-1', 'decision')],
+    edges: [],
+  };
+  const customAccepted = acceptDomainRead(
+    {
+      schema_version: 'opl_domain_detail_view.v1',
+      surface_kind: 'opl_domain_detail_view',
+      item_id: 'item-7',
+      view_id: 'wf',
+      view_kind: 'custom-workflow',
+      availability: 'available',
+      revision: 1,
+      not_modified: false,
+      payload_schema_ref: 'contracts/schemas/custom-workflow.schema.json',
+      payload: genericSnap,
+    },
+    { item_id: 'item-7', identity: { domain_work_item_id: 'plan-7' } },
+    { view_id: 'wf', view_kind: 'custom-workflow' },
+    undefined,
+  );
+  assert.equal(customAccepted.snapshot, genericSnap);
+  assert.match(renderTrajectory(genericSnap, 'step-1', 'trajectory', { title: '自定义流程' }), /自定义流程/);
+  assert.equal(parseContributionTrajectory(owner, expected), snapshot);
 });
 
 

@@ -23,7 +23,6 @@ export type ReferenceProviderDefinition = {
 };
 
 export const REFERENCE_PROVIDER_MODULE_KIND = 'opl_connect_reference_provider_adapter';
-export const REFERENCE_PROVIDER_PACKAGE_ID = 'mas-scholar-skills';
 export const REFERENCE_PROVIDER_ADAPTER_ABI = 'opl-connect-reference-provider-adapter.v1';
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -40,7 +39,6 @@ function stableString(value: unknown): string | null {
 
 export function resolveReferenceRuntime(options: InstalledPackageRuntimeDiscoveryOptions = {}) {
   return resolveInstalledPackageRuntimeModule({
-    packageId: REFERENCE_PROVIDER_PACKAGE_ID,
     moduleKind: REFERENCE_PROVIDER_MODULE_KIND,
     adapterAbi: REFERENCE_PROVIDER_ADAPTER_ABI,
     ...options,
@@ -65,7 +63,7 @@ function configuredEndpoint(providerId: ProviderId, rawEndpoint: unknown): Refer
   } catch (error) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills reference provider profile declares invalid allowed origins.',
+      'Reference provider profile declares invalid allowed origins.',
       {
         provider_id: providerId,
         reason_code: 'reference_provider_endpoint_invalid',
@@ -76,7 +74,7 @@ function configuredEndpoint(providerId: ProviderId, rawEndpoint: unknown): Refer
   if (!defaultBaseUrl || allowedOrigins.length === 0) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills reference provider profile declares an invalid endpoint.',
+      'Reference provider profile declares an invalid endpoint.',
       { provider_id: providerId, reason_code: 'reference_provider_endpoint_invalid' },
     );
   }
@@ -88,7 +86,7 @@ function configuredEndpoint(providerId: ProviderId, rawEndpoint: unknown): Refer
   } catch (error) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills reference provider profile declares an invalid default endpoint URL.',
+      'Reference provider profile declares an invalid default endpoint URL.',
       {
         provider_id: providerId,
         default_base_url: defaultBaseUrl,
@@ -146,7 +144,7 @@ export function referenceProviderRegistry(
   if (!Array.isArray(profile.providers) || profile.providers.length === 0) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills reference provider profile must declare providers.',
+      'Reference provider profile must declare providers.',
       { profile_ref: runtime.binding.profile_ref, reason_code: 'reference_provider_profile_empty' },
     );
   }
@@ -161,7 +159,7 @@ export function referenceProviderRegistry(
     if (!providerId || !adapterId || !receiptProviderName) {
       throw new FrameworkContractError(
         'codex_command_failed',
-        'Scholar Skills reference provider profile declares an invalid provider entry.',
+        'Reference provider profile declares an invalid provider entry.',
         {
           provider_id: providerId,
           adapter_id: adapterId,
@@ -183,7 +181,7 @@ export function referenceProviderRegistry(
     if (Object.keys(providerIdSchema).length === 0 || !providerIdValidation.ok) {
       throw new FrameworkContractError(
         'codex_command_failed',
-        'Scholar Skills reference provider profile declares an unsafe provider id.',
+        'Reference provider profile declares an unsafe provider id.',
         {
           provider_id: providerId,
           profile_schema_ref: runtime.binding.profile_schema_ref,
@@ -205,7 +203,7 @@ export function referenceProviderRegistry(
   if (new Set(providerIds).size !== providerIds.length) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills reference provider profile declares duplicate provider ids.',
+      'Reference provider profile declares duplicate provider ids.',
       { provider_ids: providerIds, reason_code: 'reference_provider_profile_duplicate_provider' },
     );
   }
@@ -220,7 +218,7 @@ export function providerDefinition(
   if (!provider) {
     throw new FrameworkContractError(
       'codex_command_failed',
-      'Scholar Skills reference provider profile does not export the requested provider.',
+      'Reference provider profile does not export the requested provider.',
       { provider_id: providerId, reason_code: 'reference_provider_not_exported' },
     );
   }

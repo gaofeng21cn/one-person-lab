@@ -21,6 +21,7 @@ import { buildReleaseCommandSpecs } from './public-command-specs-parts/release.t
 import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
 import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
 import { buildWorkspaceCommandSpecs } from './public-command-specs-parts/workspace.ts';
+import { buildImageCommandSpecs } from './public-command-specs-parts/image.ts';
 import {
   buildCordisCommandSpecs,
   type CordisCliComposition,
@@ -144,6 +145,7 @@ export function buildPublicCommandSpecs(
     ...knowledgeCommandSpecs,
     ...buildCordisCommandSpecs(cordis),
     ...frameworkCommandSpecs,
+    ...buildImageCommandSpecs(),
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
     'connect mcp-stdio': {
@@ -204,7 +206,7 @@ export function buildPublicCommandSpecs(
         'opl quality details --root <repo_path> [--format <json|markdown>] [--limit <n>] [--focus <auto|depth|equality|modularity|redundancy|test_gaps|rules>] [--compare-ref <git_ref>]',
       summary: 'Emit deterministic code-quality details for agent triage beside Sentrux Free summaries.',
       examples: [
-        'opl quality details --root /Users/gaofeng/workspace/one-person-lab --format json',
+        'opl quality details --root /path/to/workspace/one-person-lab --format json',
         'opl quality details --root . --format markdown --limit 20 --focus auto',
         'opl quality details --root . --format markdown --compare-ref origin/main',
       ],
@@ -250,7 +252,7 @@ export function buildPublicCommandSpecs(
     }),
     'status workspace': cloneCommandSpec(commandSpecs['status workspace'], {
       usage: 'opl status workspace [--path <workspace_path>]',
-      examples: ['opl status workspace', 'opl status workspace --path /Users/gaofeng/workspace/redcube-ai'],
+      examples: ['opl status workspace', 'opl status workspace --path /path/to/workspace/redcube-ai'],
       group: 'status',
     }),
     'status runtime': cloneCommandSpec(commandSpecs['status runtime'], {
@@ -317,7 +319,7 @@ export function buildPublicCommandSpecs(
       usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',
       examples: [
         'opl status dashboard',
-        'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+        'opl status dashboard --path /path/to/workspace/one-person-lab --sessions-limit 5',
       ],
       group: 'status',
     }),

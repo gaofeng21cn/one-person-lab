@@ -408,8 +408,14 @@ function physicalContentLock(
   const localPaths = descriptor.manifest.content_lock_paths ?? [];
   if (!declaredDigest || localPaths.length === 0) return null;
   const projectedPaths = ownerProjection.manifest.content_lock_paths ?? [];
-  if (localPaths.length === projectedPaths.length
-    && localPaths.every((entry) => projectedPaths.includes(entry))) return null;
+  const samePathList = localPaths.length === projectedPaths.length
+    && localPaths.every((entry) => projectedPaths.includes(entry));
+  const isLocalMarketplaceCheckout = Boolean(
+    descriptor.marketplaceSource
+    && path.isAbsolute(descriptor.marketplaceSource)
+    && descriptor.carrier_readback.kind === 'local',
+  );
+  if (samePathList && !isLocalMarketplaceCheckout) return null;
   const packageRoot = path.resolve(descriptor.sourcePath);
   const complete = localPaths.every((relativePath) => {
     const candidate = path.resolve(packageRoot, relativePath);

@@ -114,25 +114,48 @@ function createGitModuleFixtures(modulesRoot) {
 }
 
 // The clean room needs a checkout for every registered standard Agent, plus the
-// ScholarSkills capability package this scenario installs. Deriving the Agent
-// repos from the Framework package contracts keeps a newly registered Agent
-// from silently turning the ready baseline into a modules-phase run.
+// declared capability dependency packages resolved from Framework package contracts.
 function defaultModuleRepoNames() {
   const packagesRoot = path.join(repoRoot, 'contracts', 'opl-framework', 'packages');
-  const agentRepoNames = fs.readdirSync(packagesRoot)
-    .filter((name) => name.endsWith('.json') && !/-\d+\.\d+/.test(name))
-    .flatMap((name) => {
-      try {
-        const payload = parseJsonText(fs.readFileSync(path.join(packagesRoot, name), 'utf8'));
-        if (!payload.standard_agent_descriptor_projection || typeof payload.source_repo !== 'string') {
-          return [];
-        }
-        return [payload.source_repo.replace(/\.git$/, '').split('/').at(-1)];
-      } catch {
-        return [];
+  const projectionsById = new Map();
+  const agentPayloads = [];
+
+  for (const name of fs.readdirSync(packagesRoot)) {
+    if (!name.endsWith('.json') || /-\d+\.\d+/.test(name)) continue;
+    try {
+      const payload = parseJsonText(fs.readFileSync(path.join(packagesRoot, name), 'utf8'));
+      if (typeof payload?.package_id === 'string') {
+        projectionsById.set(payload.package_id, payload);
       }
-    });
-  return [...new Set([...agentRepoNames, 'mas-scholar-skills'])];
+      if (payload?.standard_agent_descriptor_projection && typeof payload.source_repo === 'string') {
+        agentPayloads.push(payload);
+      }
+    } catch {
+      // Ignore unparseable entries during clean-room discovery.
+    }
+  }
+
+  const repoNames = new Set();
+  const repoBasename = (sourceRepo) =>
+    typeof sourceRepo === 'string' && sourceRepo.trim()
+      ? sourceRepo.trim().replace(/[\\/]+$/, '').replace(/\.git$/, '').split(/[\\/]/).at(-1)
+      : null;
+
+  for (const payload of agentPayloads) {
+    const agentRepo = repoBasename(payload.source_repo);
+    if (agentRepo) repoNames.add(agentRepo);
+    const deps = [
+      ...(Array.isArray(payload.capability_dependencies) ? payload.capability_dependencies : []),
+      ...(Array.isArray(payload.requires) ? payload.requires : []),
+    ];
+    for (const dep of deps) {
+      const depId = typeof dep?.package_id === 'string' ? dep.package_id : null;
+      const depRepo = depId ? repoBasename(projectionsById.get(depId)?.source_repo) : null;
+      if (depRepo) repoNames.add(depRepo);
+    }
+  }
+
+  return [...repoNames].sort((left, right) => left.localeCompare(right, 'en'));
 }
 
 function assertInitializeState(output, expected) {

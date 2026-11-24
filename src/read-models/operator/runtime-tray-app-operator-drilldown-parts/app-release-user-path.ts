@@ -130,7 +130,7 @@ export function buildAppReleaseUserPathEvidence(operatorProjection: JsonRecord) 
         ? 'release_owner_verdict_required'
         : 'waiting_for_same_cohort_user_path_evidence_or_typed_blocker',
       owner: 'one-person-lab-app release owner',
-      owner_repo: '/Users/gaofeng/workspace/one-person-lab-app',
+      owner_repo: 'one-person-lab-app',
       required_delta: productionUserPathReady
         ? 'release_owner_receipt_install_evidence_owner_acceptance_or_typed_blocker_ref'
         : 'same_cohort_release_user_path_refs_release_owner_acceptance_or_release_owner_typed_blocker_ref',

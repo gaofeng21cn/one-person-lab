@@ -45,7 +45,7 @@ export function buildFrameworkCommandSpecs(
       summary: 'Locate the OPL Framework runtime dependency for an OPL-compatible agent.',
       examples: [
         'opl framework locate',
-        'OPL_FRAMEWORK_ROOT=/Users/gaofeng/workspace/one-person-lab opl framework locate',
+        'OPL_FRAMEWORK_ROOT=/path/to/workspace/one-person-lab opl framework locate',
       ],
       group: 'framework',
       handler: (args) => {

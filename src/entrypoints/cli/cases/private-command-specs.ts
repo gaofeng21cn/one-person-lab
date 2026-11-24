@@ -286,7 +286,7 @@ export function buildInternalCommandSpecs(
       summary: 'Aggregate the current OPL product-runtime view across projects, workspace, and runtime.',
       examples: [
         'opl status dashboard',
-        'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+        'opl status dashboard --path /path/to/workspace/one-person-lab --sessions-limit 5',
       ],
       handler: (args) => {
         const parsed = parseRegisteredCommandOptions('status dashboard', args, commandSpecs['status dashboard']);
@@ -413,7 +413,7 @@ export function buildInternalCommandSpecs(
       examples: [
         'opl domain launch --project redcube --dry-run',
         'opl domain launch --project redcube --strategy open_url',
-        'opl domain launch --project med-autogrant --path /Users/gaofeng/workspace/med-autogrant --strategy spawn_command',
+        'opl domain launch --project med-autogrant --path /path/to/workspace/med-autogrant --strategy spawn_command',
       ],
       handler: async (args) => {
         const parsed = parseLaunchDomainArgs(args, commandSpecs['domain launch']);
@@ -489,8 +489,8 @@ export function buildInternalCommandSpecs(
         'Run an OPL agent executor. Codex CLI remains the default; non-default executors require explicit selection.',
       examples: [
         'opl exec "Plan a medical grant proposal revision loop."',
-        'opl exec --executor hermes_agent --cd /Users/gaofeng/workspace/med-autoscience "Run a receipt-gated research stage."',
-        'opl exec --executor claude_code --cd /Users/gaofeng/workspace/redcube-ai "Prepare a defense-ready slide deck for a thesis committee."',
+        'opl exec --executor hermes_agent --cd /path/to/workspace/med-autoscience "Run a receipt-gated research stage."',
+        'opl exec --executor claude_code --cd /path/to/workspace/redcube-ai "Prepare a defense-ready slide deck for a thesis committee."',
         'opl exec --executor antigravity_cli --model gemini-3.5-flash --reasoning-effort high "Build an RCA HTML route candidate."',
         'opl exec --model gpt-5.4 "Summarize current workspace status."',
       ],
@@ -584,7 +584,7 @@ resume: {
     'workspace root set': {
       usage: 'opl workspace root set --path <workspace_root>',
       summary: 'Persist the selected OPL workspace root for Initialize and GUI settings surfaces.',
-      examples: ['opl workspace root set --path /Users/gaofeng/workspace'],
+      examples: ['opl workspace root set --path /path/to/workspace'],
       handler: (args) => {
         const parsed = parseWorkspaceRootArgs(args, commandSpecs['workspace root set']);
         if (!parsed.path) {
@@ -614,9 +614,9 @@ resume: {
       summary:
         'Bind and activate one workspace for an admitted project, optionally freezing or deriving its direct-entry locator.',
       examples: [
-        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
-        'opl workspace bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
-        'opl workspace bind --project medautogrant --path /Users/gaofeng/workspace/med-autogrant --input /Users/gaofeng/workspace/med-autogrant/examples/nsfc_workspace_p2c_critique.json',
+        'opl workspace bind --project redcube --path /path/to/workspace/redcube-ai',
+        'opl workspace bind --project medautoscience --path /path/to/workspace/med-autoscience --profile /path/to/workspace/med-autoscience/profiles/local.toml',
+        'opl workspace bind --project medautogrant --path /path/to/workspace/med-autogrant --input /path/to/workspace/med-autogrant/examples/nsfc_workspace_p2c_critique.json',
       ],
       handler: async (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-bind'], 'bind');
@@ -646,7 +646,7 @@ resume: {
     'workspace-activate': {
       usage: 'opl workspace activate --project <project_id> --path <workspace_path>',
       summary: 'Switch the active workspace binding for an admitted project.',
-      examples: ['opl workspace activate --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      examples: ['opl workspace activate --project redcube --path /path/to/workspace/redcube-ai'],
       handler: async (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-activate']);
         if (!parsed.projectId || !parsed.workspacePath) {
@@ -695,7 +695,7 @@ resume: {
     'workspace-archive': {
       usage: 'opl workspace archive --project <project_id> --path <workspace_path>',
       summary: 'Archive one workspace binding so OPL no longer treats it as active or reusable.',
-      examples: ['opl workspace archive --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      examples: ['opl workspace archive --project redcube --path /path/to/workspace/redcube-ai'],
       handler: (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-archive']);
         if (!parsed.projectId || !parsed.workspacePath) {
@@ -785,7 +785,7 @@ resume: {
         'Build a machine-readable OPL family handoff bundle for the current request and active workspace bindings.',
       examples: [
         'opl contract handoff-envelope "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
-        'opl contract handoff-envelope "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
+        'opl contract handoff-envelope "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /path/to/workspace/redcube-ai',
       ],
       handler: (args) => {
         const composition = requireCordisComposition(cordis);

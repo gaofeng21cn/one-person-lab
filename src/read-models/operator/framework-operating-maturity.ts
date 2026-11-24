@@ -1,6 +1,7 @@
 import { buildAgentDefaultCallerReadinessReport } from '../../authority/workspace/index.ts';
 import { buildBrandModuleL5Status } from '../../authority/contracts/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
 import { OBSERVABILITY_EVIDENCE_LEDGER_FIELD } from '../../kernel/observability-projection-vocabulary.ts';
 import { buildFoundryAgentOsOwnerEvidenceIntake } from './foundry-agent-os-owner-evidence-intake.ts';
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
@@ -78,10 +79,9 @@ function evidenceRequiredStatus(openCounts: number[]) {
 function domainKey(value: unknown) {
   const raw = typeof value === 'string' ? value : '';
   const compact = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const aliases: Record<string, string> = {
-    redcubeai: 'redcube',
-  };
-  return aliases[compact] ?? compact;
+  if (!compact) return '';
+  const resolved = resolveStandardAgent(raw) ?? resolveStandardAgent(compact);
+  return resolved?.module_id.toLowerCase() ?? compact;
 }
 
 const DOMAIN_OWNER_CHAIN_FORBIDDEN_OPL_CLAIMS = [

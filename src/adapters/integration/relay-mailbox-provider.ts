@@ -1,18 +1,22 @@
-import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import {
-  createOplConnection,
-  listOplConnections,
-  updateOplConnection,
-} from './connection-registry.ts';
 import type { OplConnection } from './connection-registry-parts/types.ts';
 import {
   OplConnectionProviderError,
   type OplConnectionProvider,
   type OplConnectionProviderErrorDisposition,
 } from './connection-authorization.ts';
+import {
+  callExternalCliConnect,
+  decodeExternalCliCredentialHandle,
+  encodeExternalCliCredentialHandle,
+  runExternalCliConnectCommand,
+  upsertExternalCliConnection,
+  type ExternalCliConnectCommandResult,
+  type ExternalCliConnectCommandRunner,
+  type ExternalCliConnectRequest,
+} from './external-cli-connection-provider.ts';
 
 const RELAY_PROVIDER_ID = 'opl-relay';
 const RELAY_HANDLE_PREFIX = 'provider:opl-relay:';
@@ -39,32 +43,15 @@ const RELAY_ERROR_CODES = new Set([
   'CAPABILITY_UNAVAILABLE',
 ]);
 
-type RelayEnvelopeDisposition = 'completed' | OplConnectionProviderErrorDisposition;
-
-type RelayEnvelope = {
-  ok: boolean;
-  disposition: RelayEnvelopeDisposition;
-  result?: Record<string, unknown>;
-  error?: { code?: unknown };
-};
-
 type RelayBinding = { mailbox_ref: string; revision: string };
 
-export type RelayConnectRequest = Record<string, unknown> & {
+export type RelayConnectRequest = ExternalCliConnectRequest<'list' | 'inspect' | 'invoke'> & {
   schema_version: typeof RELAY_SCHEMA_VERSION;
-  operation: 'list' | 'inspect' | 'invoke';
 };
 
-export type RelayConnectCommandResult = {
-  status: number | null;
-  stdout: string;
-  error_code?: string | null;
-};
+export type RelayConnectCommandResult = ExternalCliConnectCommandResult;
 
-export type RelayConnectCommandRunner = (input: {
-  binary: string;
-  request: RelayConnectRequest;
-}) => RelayConnectCommandResult;
+export type RelayConnectCommandRunner = ExternalCliConnectCommandRunner<RelayConnectRequest>;
 
 function usageError(reasonCode: string): never {
   throw new FrameworkContractError('cli_usage_error', 'Relay mailbox connection is invalid.', {
@@ -76,26 +63,12 @@ function runRelayConnectCommand(input: {
   binary: string;
   request: RelayConnectRequest;
 }): RelayConnectCommandResult {
-  const result = spawnSync(input.binary, ['--json', 'connect'], {
-    encoding: 'utf8',
-    env: process.env,
-    input: JSON.stringify(input.request),
-    maxBuffer: 1024 * 1024,
-    timeout: input.request.operation === 'list' ? 1_500 : 15_000,
+  return runExternalCliConnectCommand({
+    binary: input.binary,
+    request: input.request,
+    args: ['--json', 'connect'],
+    timeoutMs: input.request.operation === 'list' ? 1_500 : 15_000,
   });
-  return {
-    status: result.status,
-    stdout: typeof result.stdout === 'string' ? result.stdout : '',
-    error_code: result.error && 'code' in result.error && typeof result.error.code === 'string'
-      ? result.error.code
-      : null,
-  };
-}
-
-function safeProviderCode(value: unknown) {
-  return typeof value === 'string' && RELAY_ERROR_CODES.has(value)
-    ? value
-    : 'relay_provider_error';
 }
 
 function relayFailure(
@@ -110,73 +83,27 @@ function callRelay(
   binary: string,
   request: RelayConnectRequest,
 ): Record<string, unknown> {
-  let processResult: RelayConnectCommandResult;
-  try {
-    processResult = runner({ binary, request });
-  } catch {
-    relayFailure('relay_spawn_failed', 'not_dispatched');
-  }
-  if (processResult.error_code) {
-    const disposition = ['ENOENT', 'EACCES', 'EPERM'].includes(processResult.error_code)
-      ? 'not_dispatched'
-      : 'unknown_after_dispatch';
-    relayFailure('relay_process_failed', disposition);
-  }
-  if (processResult.status !== 0) {
-    relayFailure(
-      'relay_process_failed',
-      request.operation === 'invoke' ? 'unknown_after_dispatch' : 'not_dispatched',
-    );
-  }
-
-  let value: unknown;
-  try {
-    value = JSON.parse(processResult.stdout);
-  } catch {
-    relayFailure(
-      'relay_response_unavailable',
-      request.operation === 'invoke' ? 'unknown_after_dispatch' : 'not_dispatched',
-    );
-  }
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    relayFailure(
-      'relay_response_invalid',
-      request.operation === 'invoke' ? 'unknown_after_dispatch' : 'not_dispatched',
-    );
-  }
-  const envelope = value as RelayEnvelope;
-  if (envelope.ok !== true) {
-    const disposition = envelope.disposition === 'not_dispatched'
-      ? 'not_dispatched'
-      : 'unknown_after_dispatch';
-    relayFailure(
-      safeProviderCode(envelope.error?.code),
-      disposition,
-    );
-  }
-  if (envelope.disposition !== 'completed' || !envelope.result
-    || typeof envelope.result !== 'object' || Array.isArray(envelope.result)) {
-    relayFailure(
-      'relay_response_invalid',
-      request.operation === 'invoke' ? 'unknown_after_dispatch' : 'not_dispatched',
-    );
-  }
-  return envelope.result;
+  return callExternalCliConnect({
+    binary,
+    runner,
+    request,
+    spawnFailedCode: 'relay_spawn_failed',
+    processFailedCode: 'relay_process_failed',
+    responseUnavailableCode: 'relay_response_unavailable',
+    responseInvalidCode: 'relay_response_invalid',
+    defaultProviderErrorCode: 'relay_provider_error',
+    allowProviderReportedDisposition: false,
+    checkStatusBeforeParse: true,
+    isAllowedProviderCode: (code) => RELAY_ERROR_CODES.has(code),
+  });
 }
 
 function bindingFromConnection(connection: Readonly<OplConnection>): RelayBinding {
-  const handle = connection.credential_handle;
-  if (!handle.startsWith(RELAY_HANDLE_PREFIX)) relayFailure('relay_connection_handle_invalid', 'not_dispatched');
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(decodeURIComponent(handle.slice(RELAY_HANDLE_PREFIX.length)));
-  } catch {
-    relayFailure('relay_connection_handle_invalid', 'not_dispatched');
-  }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    relayFailure('relay_connection_handle_invalid', 'not_dispatched');
-  }
-  const record = parsed as Record<string, unknown>;
+  const record = decodeExternalCliCredentialHandle(
+    connection.credential_handle,
+    RELAY_HANDLE_PREFIX,
+    'relay_connection_handle_invalid',
+  );
   if (typeof record.mailbox_ref !== 'string'
     || !/^relay-mailbox:\/\/[a-f0-9]{64}$/.test(record.mailbox_ref)
     || typeof record.revision !== 'string'
@@ -187,7 +114,7 @@ function bindingFromConnection(connection: Readonly<OplConnection>): RelayBindin
 }
 
 function makeCredentialHandle(binding: RelayBinding) {
-  return `${RELAY_HANDLE_PREFIX}${encodeURIComponent(JSON.stringify(binding))}`;
+  return encodeExternalCliCredentialHandle(RELAY_HANDLE_PREFIX, binding);
 }
 
 function publicImportedConnection(connection: OplConnection) {
@@ -347,29 +274,13 @@ export function importOplRelayMailboxConnection(
 
   const connectionId = `relay-mailbox-${createHash('sha256').update(mailboxRef).digest('hex')}`;
   const credentialHandle = makeCredentialHandle({ mailbox_ref: mailboxRef, revision: inspected.revision });
-  const existing = listOplConnections().connections.find((connection) => connection.connection_id === connectionId);
-  if (existing && (existing.connection_type !== RELAY_PROVIDER_ID
-    || !existing.credential_handle.startsWith(RELAY_HANDLE_PREFIX))) {
-    relayFailure('connection_id_conflict', 'not_dispatched');
-  }
-  if (existing) {
-    const result = updateOplConnection(connectionId, {
-      name: inspected.email,
-      connection_type: RELAY_PROVIDER_ID,
-      account_label: inspected.email,
-      endpoint: null,
-      credential_handle: credentialHandle,
-      disabled: false,
-    });
-    return publicImportedConnection(result.connection_registry.connection!);
-  }
-  const result = createOplConnection({
-    connection_id: connectionId,
+  return publicImportedConnection(upsertExternalCliConnection({
+    connectionId,
+    providerId: RELAY_PROVIDER_ID,
+    handlePrefix: RELAY_HANDLE_PREFIX,
     name: inspected.email,
-    connection_type: RELAY_PROVIDER_ID,
-    account_label: inspected.email,
+    accountLabel: inspected.email,
     endpoint: null,
-    credential_handle: credentialHandle,
-  });
-  return publicImportedConnection(result.connection_registry.connection!);
+    credentialHandle,
+  }));
 }

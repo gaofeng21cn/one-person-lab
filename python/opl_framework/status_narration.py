@@ -6,12 +6,6 @@ from typing import Any, Iterable, Mapping
 STATUS_NARRATION_SCHEMA_VERSION = 1
 STATUS_NARRATION_CONTRACT_KIND = "ai_status_narration"
 
-PAPER_MILESTONE_ANSWER_CHECKLIST = (
-    "milestone_status",
-    "review_readiness",
-    "submission_readiness",
-    "remaining_scope",
-)
 PROGRESS_ANSWER_CHECKLIST = (
     "current_stage",
     "current_blockers",
@@ -23,30 +17,13 @@ RUNTIME_ALERT_ANSWER_CHECKLIST = (
     "next_step",
 )
 _PROGRESS_CODE_LABELS = {
-    "study_completed": "研究已进入交付收尾",
     "manual_finishing": "人工收尾与兼容保护",
     "managed_runtime_recovering": "托管运行恢复中",
     "managed_runtime_degraded": "托管运行健康降级",
     "managed_runtime_escalated": "托管运行升级告警",
     "managed_runtime_supervision_gap": "托管运行监管缺口",
-    "waiting_physician_decision": "等待医生或 PI 判断",
-    "publication_supervision": "论文可发表性监管",
     "managed_runtime_active": "托管运行持续推进中",
     "runtime_blocked": "自动推进被阻断",
-    "runtime_preflight": "研究预检与准备阶段",
-    "scientific_anchor_missing": "科学锚点仍待补齐",
-    "write_stage_ready": "论文写作就绪",
-    "publishability_gate_blocked": "论文可发表性门控阻塞",
-    "bundle_stage_blocked": "投稿打包存在硬阻塞",
-    "bundle_stage_ready": "投稿打包就绪",
-    "missing_submission_minimal": "缺少最小投稿包导出。",
-    "medical_publication_surface_blocked": "论文叙事或方法/结果书写面仍有硬阻塞。",
-    "forbidden_manuscript_terminology": "当前稿件仍含不允许的术语表达，需要清理。",
-    "forbidden_manuscript_terms_present": "当前稿件仍含不允许的术语表达，需要清理。",
-    "submission_checklist_contains_unclassified_blocking_items": "投稿检查清单里仍有未归类的硬阻塞。",
-    "claim_evidence_map_missing_or_incomplete": "关键 claim-to-evidence 对照仍不完整。",
-    "figure_catalog_missing_or_incomplete": "关键图表目录仍不完整。",
-    "ama_pdf_defaults_missing": "AMA 稿件导出默认配置仍未补齐。",
 }
 
 
@@ -127,18 +104,40 @@ def _normalized_progress_label_key(value: object) -> str | None:
     return text.lower().replace("-", "_").replace(" ", "_")
 
 
-def _lookup_progress_label(value: object) -> str | None:
+def _lookup_progress_label(
+    value: object,
+    *,
+    code_labels: Mapping[str, str] | None = None,
+) -> str | None:
     text = _nonempty_text(value)
     if text is None:
         return None
-    return _PROGRESS_CODE_LABELS.get(text) or _PROGRESS_CODE_LABELS.get(_normalized_progress_label_key(text) or "")
+    normalized_key = _normalized_progress_label_key(text) or ""
+    if isinstance(code_labels, Mapping):
+        direct = _nonempty_text(code_labels.get(text))
+        if direct is not None:
+            return direct
+        if normalized_key:
+            normalized_match = _nonempty_text(code_labels.get(normalized_key))
+            if normalized_match is not None:
+                return normalized_match
+            for candidate_key, candidate_label in code_labels.items():
+                if _normalized_progress_label_key(candidate_key) == normalized_key:
+                    resolved = _nonempty_text(candidate_label)
+                    if resolved is not None:
+                        return resolved
+    return _PROGRESS_CODE_LABELS.get(text) or _PROGRESS_CODE_LABELS.get(normalized_key)
 
 
-def _humanize_progress_code(code: object) -> str | None:
+def _humanize_progress_code(
+    code: object,
+    *,
+    code_labels: Mapping[str, str] | None = None,
+) -> str | None:
     text = _nonempty_text(code)
     if text is None:
         return None
-    label = _lookup_progress_label(text)
+    label = _lookup_progress_label(text, code_labels=code_labels)
     if label:
         return label
     words = [item for item in text.replace("-", "_").split("_") if item]
@@ -154,6 +153,7 @@ def build_status_narration_human_view(
     fallback_latest_update: str | None = None,
     fallback_next_step: str | None = None,
     fallback_blockers: Iterable[object] | None = None,
+    code_labels: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     source = dict(value or {}) if isinstance(value, Mapping) else {}
     contract = _read_status_narration_contract(source)
@@ -167,8 +167,8 @@ def build_status_narration_human_view(
         _read_first_text(stage, "recommended_next_stage", "recommended_stage", "recommended_next_stage_id")
         or _read_first_text(source, "recommended_next_stage", "recommended_stage")
     )
-    current_stage_label = _humanize_progress_code(current_stage)
-    next_stage_label = _humanize_progress_code(recommended_next_stage)
+    current_stage_label = _humanize_progress_code(current_stage, code_labels=code_labels)
+    next_stage_label = _humanize_progress_code(recommended_next_stage, code_labels=code_labels)
     latest_update = (
         _nonempty_text((contract or {}).get("latest_update"))
         or _nonempty_text(fallback_latest_update)
@@ -184,7 +184,7 @@ def build_status_narration_human_view(
         current_blockers = _normalized_text_list(fallback_blockers)
     if not current_blockers:
         current_blockers = _normalized_text_list(source.get("current_blockers"))
-    current_blockers = [_lookup_progress_label(item) or item for item in current_blockers]
+    current_blockers = [_lookup_progress_label(item, code_labels=code_labels) or item for item in current_blockers]
 
     stage_parts: list[str] = []
     if current_stage_label:

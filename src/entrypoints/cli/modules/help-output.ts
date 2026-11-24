@@ -81,6 +81,7 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   session: '查看、恢复和审计会话。',
   runtime: '修复或检查底层 runtime 相关入口。',
   'family-runtime': '管理 Temporal-backed family runtime stage attempt、provider readback、notification 与事件。',
+  image: '通过当前配置的模型提供方执行无领域真相声称的图片生成与编辑命令。',
   index: '维护 OPL-owned SQLite sidecar indexes，不替代文件真相或 domain authority。',
 };
 
@@ -104,6 +105,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   'feedback',
   'foundry',
   'foundry-lab',
+  'image',
   'index',
   'module',
   'modules',

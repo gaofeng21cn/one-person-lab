@@ -87,14 +87,34 @@ function verificationRefsFor(capability, map) {
 
 function defaultRepos() {
   const workspace = path.resolve(process.cwd(), '..');
-  return [
-    'opl-meta-agent',
-    'med-autoscience',
-    'mas-scholar-skills',
-    'redcube-ai',
-    'med-autogrant',
-    'opl-bookforge',
-  ]
+  const packagesRoot = path.resolve(process.cwd(), 'contracts', 'opl-framework', 'packages');
+  const discovered = new Set();
+
+  if (fs.existsSync(packagesRoot)) {
+    for (const entry of fs.readdirSync(packagesRoot, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      try {
+        const payload = readJsonFile(path.join(packagesRoot, entry.name));
+        if (typeof payload?.source_repo === 'string' && payload.source_repo.trim()) {
+          const name = payload.source_repo.trim().replace(/[\\/]+$/, '').replace(/\.git$/, '').split(/[\\/]/).at(-1);
+          if (name) discovered.add(name);
+        }
+      } catch {
+        // Ignore malformed optional package projections during workspace discovery.
+      }
+    }
+  }
+
+  if (fs.existsSync(workspace)) {
+    for (const entry of fs.readdirSync(workspace, { withFileTypes: true })) {
+      if (entry.isDirectory() && fs.existsSync(path.join(workspace, entry.name, 'contracts', 'capability_map.json'))) {
+        discovered.add(entry.name);
+      }
+    }
+  }
+
+  return [...discovered]
+    .sort((left, right) => left.localeCompare(right, 'en'))
     .map((name) => path.join(workspace, name))
     .filter((repo) => fs.existsSync(path.join(repo, 'contracts', 'capability_map.json')));
 }

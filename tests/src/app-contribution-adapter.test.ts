@@ -96,27 +96,29 @@ test('declarative adapter rejects undeclared refs and path escape', () => {
   }
 });
 
-test('JSON reads apply the declared projection and preserve unavailable files', () => {
+test('declarative adapter rejects legacy domain transforms and supports passthrough JSON and unavailable files', () => {
   const root = fixture();
   try {
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app-contribution-adapter.json'), 'utf8'));
-    manifest.reads['fixture.v1#state'].transform = 'grant_workspace';
+    manifest.reads['fixture.v1#state'].transform = 'fleet_status';
     fs.writeFileSync(path.join(root, 'app-contribution-adapter.json'), JSON.stringify(manifest));
-    fs.writeFileSync(path.join(root, 'state.json'), JSON.stringify({
-      workspace_id: 'grant-7', lifecycle_stage: 'drafting',
-      current_selection: { active_draft_id: 'draft-3' },
-      application_drafts: [{ draft_id: 'draft-3', project_title: 'Selected grant', version_label: 'v3' }],
-      gates: { presubmission_frozen: false },
-    }));
     const request = {
       schema_version: 'opl-package-app-contribution-request.v1',
-      operation: 'read', ref: 'fixture.v1#state', input: {},
+      operation: 'read',
+      ref: 'fixture.v1#state',
+      input: {},
     };
-    const read = runDeclarativeAppContribution({ packageRoot: root, request }) as any;
-    assert.equal(read.ok, true);
-    assert.equal(read.result.state, 'ready');
-    assert.equal(read.result.data.items[0].title, 'Selected grant');
-    assert.equal(read.result.data.items[0].active_draft_id, 'draft-3');
+    const rejected = runDeclarativeAppContribution({ packageRoot: root, request }) as any;
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.error.details.failure_code, 'app_contribution_adapter_transform_unsupported');
+
+    delete manifest.reads['fixture.v1#state'].transform;
+    manifest.reads['fixture.v1#state'].passthrough = true;
+    fs.writeFileSync(path.join(root, 'app-contribution-adapter.json'), JSON.stringify(manifest));
+    const ready = runDeclarativeAppContribution({ packageRoot: root, request }) as any;
+    assert.equal(ready.ok, true);
+    assert.equal(ready.result.status, 'ready');
+
     fs.unlinkSync(path.join(root, 'state.json'));
     const missing = runDeclarativeAppContribution({ packageRoot: root, request }) as any;
     assert.equal(missing.result.state, 'unavailable');
@@ -126,44 +128,76 @@ test('JSON reads apply the declared projection and preserve unavailable files', 
   }
 });
 
-test('projections preserve stage records and full nested decision packets', () => {
+test('declarative markdown_review and json_artifact_review entries read artifacts and record feedback atomically', () => {
   const root = fixture();
   try {
+    fs.writeFileSync(path.join(root, 'draft.md'), '# Intro\n\n## Methods\nContent\n');
+    fs.writeFileSync(path.join(root, 'packet.json'), JSON.stringify({
+      id: 'pkt-1',
+      title: 'Review Packet',
+      summary: 'Ready for inspection',
+      status: 'pending',
+    }));
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app-contribution-adapter.json'), 'utf8'));
-    const read = (transform: string, value: unknown) => {
-      manifest.reads['fixture.v1#state'].transform = transform;
-      fs.writeFileSync(path.join(root, 'app-contribution-adapter.json'), JSON.stringify(manifest));
-      fs.writeFileSync(path.join(root, 'state.json'), JSON.stringify(value));
-      return (runDeclarativeAppContribution({
-        packageRoot: root,
-        request: {
-          schema_version: 'opl-package-app-contribution-request.v1',
-          operation: 'read', ref: 'fixture.v1#state', input: {},
-        },
-      }) as any).result;
+    manifest.reads['fixture.v1#md'] = {
+      kind: 'markdown_review',
+      root: 'package',
+      path: 'draft.md',
+      feedback_path: 'feedback',
     };
-    const pointer = { surface_kind: 'opl_current_stage_pointer', current_stage: null, empty_state: 'no_stage_opened_yet' };
-    assert.deepEqual(read('runtime_detail', pointer), pointer);
-    const stageManifest = { surface_kind: 'opl_stage_outputs_root_manifest', project_id: 'book-1' };
-    assert.deepEqual(read('artifact_status', stageManifest), stageManifest);
-    assert.deepEqual(read('rca_artifacts', stageManifest), stageManifest);
-    const packet = {
-      decision_question: 'Maintain reserve?', decision: { kind: 'no_change', summary: 'Hold' },
-      alternatives: [{ alternative_id: 'reduce', thesis: 'Alternative' }],
-      evidence_refs: ['synthetic:statement'], unresolved_quality_debt: ['refresh-needed'],
+    manifest.reads['fixture.v1#json_review'] = {
+      kind: 'json_artifact_review',
+      root: 'package',
+      path: 'packet.json',
+      feedback_path: 'feedback',
     };
-    const card = read('capital_decision', packet).data.items[0];
-    assert.equal(card.title, packet.decision_question);
-    assert.equal(card.summary, 'Hold');
-    assert.deepEqual(card.alternatives, packet.alternatives);
-    assert.deepEqual(card.source_refs, packet.evidence_refs);
-    assert.deepEqual(card.unknowns, packet.unresolved_quality_debt);
-    assert.equal(card.execution_status, null);
-    const plan = { plan_status: 'ready_for_owner_review', trades: [{ trade_id: 'trade-1' }], execution_claim: 'not_executed' };
-    const planCard = read('capital_decision', plan).data.items[0];
-    assert.deepEqual(planCard.trades, plan.trades);
-    assert.equal(planCard.status, plan.plan_status);
-    assert.equal(planCard.execution_status, 'not_executed');
+    manifest.actions['fixture.v1#md.note'] = {
+      kind: 'markdown_review',
+      root: 'package',
+      feedback_path: 'feedback',
+    };
+    fs.writeFileSync(path.join(root, 'app-contribution-adapter.json'), JSON.stringify(manifest));
+
+    const mdRead = runDeclarativeAppContribution({
+      packageRoot: root,
+      request: { schema_version: 'opl-package-app-contribution-request.v1', operation: 'read', ref: 'fixture.v1#md', input: {} },
+    }) as any;
+    assert.equal(mdRead.result.state, 'ready');
+    const mdItem = mdRead.result.data.items[0];
+    assert.deepEqual(mdItem.headings.map((h: any) => h.title), ['Intro', 'Methods']);
+
+    const action = runDeclarativeAppContribution({
+      packageRoot: root,
+      request: {
+        schema_version: 'opl-package-app-contribution-request.v1',
+        operation: 'execute',
+        ref: 'fixture.v1#md.note',
+        input: { request_id: 'note-1', revision: mdItem.revision, note: 'Check section 2' },
+      },
+    }) as any;
+    assert.equal(action.result.state, 'ready');
+    assert.equal(action.result.result.status, 'recorded');
+
+    // Conflicting note under same request_id fails closed.
+    const conflict = runDeclarativeAppContribution({
+      packageRoot: root,
+      request: {
+        schema_version: 'opl-package-app-contribution-request.v1',
+        operation: 'execute',
+        ref: 'fixture.v1#md.note',
+        input: { request_id: 'note-1', revision: mdItem.revision, note: 'Different note' },
+      },
+    }) as any;
+    assert.equal(conflict.ok, false);
+    assert.equal(conflict.error.details.failure_code, 'app_contribution_adapter_feedback_conflict');
+
+    const jsonRead = runDeclarativeAppContribution({
+      packageRoot: root,
+      request: { schema_version: 'opl-package-app-contribution-request.v1', operation: 'read', ref: 'fixture.v1#json_review', input: {} },
+    }) as any;
+    assert.equal(jsonRead.result.state, 'ready');
+    assert.equal(jsonRead.result.data.items[0].title, 'Review Packet');
+    assert.equal(jsonRead.result.data.feedback.length, 1);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -180,7 +214,9 @@ test('JSON reads reject symbolic links outside the declared root', () => {
       packageRoot: root,
       request: {
         schema_version: 'opl-package-app-contribution-request.v1',
-        operation: 'read', ref: 'fixture.v1#state', input: {},
+        operation: 'read',
+        ref: 'fixture.v1#state',
+        input: {},
       },
     }) as any;
     assert.equal(read.ok, false);
@@ -191,9 +227,28 @@ test('JSON reads reject symbolic links outside the declared root', () => {
   }
 });
 
-test('declarative adapter can preserve a Package-owned response envelope', () => {
+test('declarative adapter injects Framework PYTHONPATH into child commands and preserves owner envelopes', () => {
   const root = fixture();
+  const prevPythonPath = process.env.PYTHONPATH;
   try {
+    delete process.env.PYTHONPATH;
+    fs.writeFileSync(path.join(root, 'bin', 'py_check.py'), `import json, opl_framework.app_contribution as ac
+print(json.dumps(ac.ready_envelope({'loaded': True})))
+`);
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app-contribution-adapter.json'), 'utf8'));
+    manifest.reads['fixture.v1#py'] = {
+      kind: 'command',
+      cwd: 'package',
+      argv: ['python3', 'bin/py_check.py'],
+    };
+    fs.writeFileSync(path.join(root, 'app-contribution-adapter.json'), JSON.stringify(manifest));
+    const pyResp = runDeclarativeAppContribution({
+      packageRoot: root,
+      request: { schema_version: 'opl-package-app-contribution-request.v1', operation: 'read', ref: 'fixture.v1#py', input: {} },
+    }) as any;
+    assert.equal(pyResp.ok, true);
+    assert.deepEqual(pyResp.result, { state: 'ready', data: { loaded: true } });
+
     fs.writeFileSync(path.join(root, 'bin', 'owner'), `#!/usr/bin/env node
 let body = '';
 process.stdin.on('data', (chunk) => { body += chunk; });
@@ -212,7 +267,6 @@ process.stdin.on('end', () => {
   }));
 });
 `, { mode: 0o755 });
-    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app-contribution-adapter.json'), 'utf8'));
     manifest.reads['fixture.v1#owner'] = {
       kind: 'command',
       cwd: 'package',
@@ -234,6 +288,8 @@ process.stdin.on('end', () => {
     assert.equal(response.result.state, 'ready');
     assert.equal(response.input_schema.properties.query.type, 'string');
   } finally {
+    if (prevPythonPath === undefined) delete process.env.PYTHONPATH;
+    else process.env.PYTHONPATH = prevPythonPath;
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -271,52 +327,6 @@ process.stdout.write(JSON.stringify({ state: 'should_not_run' }));
     assert.equal(response.ok, true);
     assert.equal(response.result.state, 'input_required');
     assert.deepEqual(response.result.missing_fields, ['artifact_path']);
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test('declarative adapter unwraps a fleet response and creates a structured status item', () => {
-  const root = fixture();
-  try {
-    fs.writeFileSync(path.join(root, 'bin', 'fleet'), `#!/usr/bin/env node
-process.stdout.write(JSON.stringify({
-  schema_version: 'opl-package-app-contribution-response.v1',
-  ok: true,
-  ref: 'fleet.agent.telemetry.v1#local',
-  operation: 'read',
-  result: {
-    read_ref: 'fleet.agent.telemetry.v1#local',
-    observed_at: '2026-11-06T00:00:00.000Z',
-    freshness: { state: 'fresh' },
-    native_carrier: { availability: 'available' },
-    node: { display_name: 'node-a' },
-    payload: { collection_status: 'available' },
-  },
-}));
-`, { mode: 0o755 });
-    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app-contribution-adapter.json'), 'utf8'));
-    manifest.reads['fixture.v1#fleet'] = {
-      kind: 'command',
-      cwd: 'package',
-      argv: ['./bin/fleet'],
-      stdin: 'request_json',
-      transform: 'fleet_status',
-    };
-    fs.writeFileSync(path.join(root, 'app-contribution-adapter.json'), JSON.stringify(manifest));
-    const response = runDeclarativeAppContribution({
-      packageRoot: root,
-      request: {
-        schema_version: 'opl-package-app-contribution-request.v1',
-        operation: 'read',
-        ref: 'fixture.v1#fleet',
-        input: {},
-      },
-    }) as any;
-    assert.equal(response.result.state, 'ready');
-    assert.equal(response.result.data.items[0].status, 'ready');
-    assert.match(response.result.data.items[0].summary, /采集：fresh/);
-    assert.equal(response.result.data.items[0].node.display_name, 'node-a');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

@@ -12,6 +12,7 @@ import {
   type FoundryRunInspection,
 } from '../../authority/evolution/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { listCurrentPackageProjections } from '../../kernel/standard-agent-registry.ts';
 import {
   ContentAddressedCandidateCompiler,
   FileFoundryContentStore,
@@ -45,6 +46,24 @@ type ProductionFoundryRuntimeOptions = {
   create_stage_route_composition?: FoundryStageRouteCompositionFactory;
 };
 
+export function resolveDefaultFoundrySemanticProviderAgentId(): string {
+  const envConfigured = process.env.OPL_FOUNDRY_SEMANTIC_PROVIDER_AGENT_ID?.trim();
+  if (envConfigured) return envConfigured;
+  const projections = listCurrentPackageProjections();
+  const declaredProviders = projections.filter(({ payload }) => (
+    typeof payload.provider_manifest_ref === 'string' && payload.provider_manifest_ref.trim().length > 0
+  ));
+  if (declaredProviders.length === 1) {
+    const id = declaredProviders[0]!.payload.package_id;
+    if (typeof id === 'string' && id.trim()) return id.trim();
+  }
+  const preferred = declaredProviders.find(({ payload }) => payload.package_id === 'oma');
+  if (preferred && typeof preferred.payload.package_id === 'string') {
+    return preferred.payload.package_id;
+  }
+  return 'oma';
+}
+
 async function resolveProductionFoundryProviderBinding(input: ProductionFoundryRuntimeOptions) {
   const storage = foundryStoragePaths(input.root_override);
   fs.mkdirSync(storage.root, { recursive: true });
@@ -58,7 +77,7 @@ async function resolveProductionFoundryProviderBinding(input: ProductionFoundryR
   }
   try {
     const managed = await (input.resolve_managed_checkout ?? resolveStandardAgentManagedCheckout)({
-      domainId: input.semantic_provider_agent_id ?? 'oma',
+      domainId: input.semantic_provider_agent_id ?? resolveDefaultFoundrySemanticProviderAgentId(),
       workspaceRoot: storage.root,
       refreshWorkspaceSkills: foundryComposition.services.refreshWorkspaceSkills,
     });

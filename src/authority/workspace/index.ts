@@ -86,3 +86,9 @@ export * from './standard-agent-check.ts';
 export * from './standard-agent-source-closure.ts';
 export * from './standard-domain-agent-conformance.ts';
 export * from './standard-domain-agent-source-behavior.ts';
+export {
+  inspectRepoDisclosure,
+  loadDisclosurePolicy,
+  type DisclosureFinding,
+  type DisclosurePolicy,
+} from './repo-disclosure-guard.ts';

@@ -144,6 +144,7 @@ export {
   refreshInstalledAgentPackageWorkspaceSkills,
 } from './agent-package-registry-parts/skill-projection.ts';
 export {
+  readInstalledStandardAgentDescriptorForDomain,
   readStandardAgentDescriptorForDomain,
   resolveStandardAgentContractCheckout,
   standardAgentProgressDeltaKeySet,
@@ -215,3 +216,7 @@ export {
 
 export { packageDownloadPlan } from './agent-package-registry-parts/package-download-plan.ts';
 export { cancelPackageOperation, packageOperationStatus, startPackageOperation, validatePackageOperationRequest, observePackageOperation, PACKAGE_BACKGROUND_ACTIONS } from './agent-package-registry-parts/package-operations.ts';
+export {
+  locateInstalledPackage,
+  type LocateInstalledPackageInput,
+} from './package-locator.ts';

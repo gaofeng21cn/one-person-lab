@@ -27,11 +27,14 @@ import {
   assertRepoSourceByproductsClean,
   fixRepoSourceByproducts,
 } from '../../../authority/workspace/repo-source-byproduct-guard.ts';
+import { inspectRepoDisclosure } from '../../../authority/workspace/index.ts';
 import { buildBrandModuleSurfaceInspect } from '../../../authority/contracts/brand-module-surfaces.ts';
 import { buildHostedWorkItemReadback } from '../../../read-models/operator/work-item-hosted-readback.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import {
   assertNoArgs,
+  buildUsageError,
   parseWorkspaceAdoptArgs,
   parseWorkspaceArtifactLifecycleArgs,
   parseWorkspaceInitializeArgs,
@@ -60,10 +63,10 @@ export function buildWorkspaceInitializeCommandSpecs(
         'Materialize the OPL standard workspace topology for a family agent and optionally activate it in the workspace registry.',
       examples: [
         'opl workspace init --agent rca --workspace-id visual-theme-a --project-id deck-001',
-        'opl workspace init --agent rca --workspace-root /Users/gaofeng/workspace --workspace-id visual-theme-a --project-id deck-001',
-        'opl workspace init --agent mas --workspace-root /Users/gaofeng/workspace --workspace-id dm-cvd --project-id DM002',
-        'opl workspace init --agent oma --workspace /Users/gaofeng/workspace/agent-foundry --dry-run',
-        'opl workspace init --agent obf --workspace /Users/gaofeng/workspace/bookforge --dry-run',
+        'opl workspace init --agent rca --workspace-root /path/to/workspace --workspace-id visual-theme-a --project-id deck-001',
+        'opl workspace init --agent mas --workspace-root /path/to/workspace --workspace-id dm-cvd --project-id DM002',
+        'opl workspace init --agent oma --workspace /path/to/workspace/agent-foundry --dry-run',
+        'opl workspace init --agent obf --workspace /path/to/workspace/bookforge --dry-run',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceInitializeArgs(args, specs['workspace-init']);
@@ -92,7 +95,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       examples: [
         'opl workspace ensure --agent rca --project-id deck-001',
         'opl workspace ensure --agent mas --workspace-id dm-cvd --project-id DM002',
-        'opl workspace ensure --agent mag --workspace-root /Users/gaofeng/workspace --workspace-id nsfc-p2c --project-id grant-001',
+        'opl workspace ensure --agent mag --workspace-root /path/to/workspace --workspace-id nsfc-p2c --project-id grant-001',
         'opl workspace ensure --agent bookforge --workspace-id bookforge-workspace --project-id book-001',
       ],
       handler: (args) => {
@@ -119,7 +122,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Fail closed unless workspace_index.json, topology semantics, user inspection roots, and authority boundaries match the OPL workspace norm.',
       examples: [
-        'opl workspace validate --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace validate --workspace /path/to/workspace/visual-theme-a',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceValidationArgs(args, specs['workspace validate']);
@@ -133,7 +136,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Read an OPL workspace index and report topology, shared resources, indexed projects, and blockers without writing files.',
       examples: [
-        'opl workspace doctor --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace doctor --workspace /path/to/workspace/visual-theme-a',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceValidationArgs(args, specs['workspace doctor']);
@@ -143,22 +146,59 @@ export function buildWorkspaceInitializeCommandSpecs(
       },
     },
     'workspace source-hygiene': {
-      usage: 'opl workspace source-hygiene [--source-root <repo>] [--fix]',
+      usage: 'opl workspace source-hygiene [--source-root <repo>] [--fix] [--disclosure-check [--history] [--disclosure-policy <path>]]',
       summary:
-        'Fail closed when a source checkout contains cache or install byproducts; --fix removes only explicit scan hits that Git marks ignored.',
+        'Fail closed when a source checkout contains cache/install byproducts or optional disclosure risks; --fix removes only ignored byproduct hits.',
       examples: [
-        'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-bookforge',
-        'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-meta-agent --fix',
+        'opl workspace source-hygiene --source-root /path/to/workspace/opl-bookforge',
+        'opl workspace source-hygiene --source-root /path/to/workspace/opl-meta-agent --fix',
+        'opl workspace source-hygiene --source-root /path/to/workspace/med-autopractice --disclosure-check --history --disclosure-policy contracts/disclosure_policy.json',
       ],
       handler: (args) => {
-        const parsed = parseCommandOptions(args, specs['workspace source-hygiene'], {
+        const spec = specs['workspace source-hygiene'];
+        const parsed = parseCommandOptions(args, spec, {
           'source-root': { type: 'string' },
           fix: { type: 'boolean' },
-        }) as { 'source-root'?: string; fix?: boolean };
+          'disclosure-check': { type: 'boolean' },
+          history: { type: 'boolean' },
+          'disclosure-policy': { type: 'string' },
+        }) as {
+          'source-root'?: string;
+          fix?: boolean;
+          'disclosure-check'?: boolean;
+          history?: boolean;
+          'disclosure-policy'?: string;
+        };
+        if (parsed['disclosure-check'] !== true && (parsed.history === true || typeof parsed['disclosure-policy'] === 'string')) {
+          throw buildUsageError(
+            'workspace source-hygiene --history and --disclosure-policy require --disclosure-check.',
+            spec,
+            { required: ['--disclosure-check'] },
+          );
+        }
         const sourceRoot = parsed['source-root'] ?? process.cwd();
-        return parsed.fix === true
+        const byproductReport = parsed.fix === true
           ? fixRepoSourceByproducts(sourceRoot)
           : assertRepoSourceByproductsClean(sourceRoot);
+        if (parsed['disclosure-check'] !== true) {
+          return byproductReport;
+        }
+        const disclosureReport = inspectRepoDisclosure({
+          sourceRoot,
+          history: parsed.history === true,
+          policyPath: parsed['disclosure-policy'],
+        });
+        if (disclosureReport.status === 'blocked') {
+          throw new FrameworkContractError(
+            'contract_shape_invalid',
+            'Repository source contains disclosure risks.',
+            { report: disclosureReport, byproduct_report: byproductReport },
+          );
+        }
+        return {
+          ...byproductReport,
+          disclosure_hygiene: disclosureReport,
+        };
       },
     },
     'workspace adopt': {
@@ -167,9 +207,9 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Plan or apply OPL-owned workspace topology metadata and generated inspection refs for an existing directory without writing domain truth.',
       examples: [
-        'opl workspace adopt --agent rca --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
-        'opl workspace adopt --agent bookforge --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
-        'opl workspace adopt --agent mas --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --apply',
+        'opl workspace adopt --agent rca --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --dry-run',
+        'opl workspace adopt --agent bookforge --workspace /path/to/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
+        'opl workspace adopt --agent mas --workspace /path/to/workspace/dm-cvd --study-id DM002 --apply',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceAdoptArgs(args, specs['workspace adopt']);
@@ -193,8 +233,8 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Refresh OPL-owned workspace metadata, manifests, map, and health refs in place without moving project roots.',
       examples: [
-        'opl workspace upgrade --workspace /Users/gaofeng/workspace/visual-theme-a --dry-run',
-        'opl workspace upgrade --workspace /Users/gaofeng/workspace/visual-theme-a --apply',
+        'opl workspace upgrade --workspace /path/to/workspace/visual-theme-a --dry-run',
+        'opl workspace upgrade --workspace /path/to/workspace/visual-theme-a --apply',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceLifecycleArgs(args, specs['workspace upgrade']);
@@ -210,8 +250,8 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Mark one indexed workspace project or study archived in workspace_index.json and generated maps without deleting files or archiving registry bindings.',
       examples: [
-        'opl workspace project archive --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --apply',
-        'opl workspace project archive --workspace /Users/gaofeng/workspace/dm-cvd --study-id DM002 --reason superseded --dry-run',
+        'opl workspace project archive --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --apply',
+        'opl workspace project archive --workspace /path/to/workspace/dm-cvd --study-id DM002 --reason superseded --dry-run',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceLifecycleArgs(args, specs['workspace project archive']);
@@ -230,9 +270,9 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Apply one indexed workspace project lifecycle transition without deleting files, moving project roots, archiving registry bindings, or writing domain truth.',
       examples: [
-        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status paused --reason waiting-for-review --apply',
-        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status active --apply',
-        'opl workspace project lifecycle --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --status superseded --superseded-by-project-id deck-002 --dry-run',
+        'opl workspace project lifecycle --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --status paused --reason waiting-for-review --apply',
+        'opl workspace project lifecycle --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --status active --apply',
+        'opl workspace project lifecycle --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --status superseded --superseded-by-project-id deck-002 --dry-run',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceLifecycleArgs(args, specs['workspace project lifecycle']);
@@ -252,7 +292,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Return the safe-delete gate for an indexed workspace project; OPL never performs the physical delete or writes domain truth.',
       examples: [
-        'opl workspace project delete --workspace /Users/gaofeng/workspace/visual-theme-a --project-id deck-001 --dry-run',
+        'opl workspace project delete --workspace /path/to/workspace/visual-theme-a --project-id deck-001 --dry-run',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceLifecycleArgs(args, specs['workspace project delete']);
@@ -271,8 +311,8 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Materialize OPL-owned refs-only lifecycle projections for project inputs, sources, memory refs, outputs, current refs, and retention health without writing domain truth.',
       examples: [
-        'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --dry-run',
-        'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
+        'opl workspace artifact-lifecycle --workspace /path/to/workspace/Book --project-id ai-university-bookforge-20260619 --dry-run',
+        'opl workspace artifact-lifecycle --workspace /path/to/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceArtifactLifecycleArgs(args, specs['workspace artifact-lifecycle']);
@@ -290,7 +330,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Copy a user-supplied source file into workspace-owned source material storage and emit refs-only provenance without parsing domain truth.',
       examples: [
-        'opl workspace source ingest --workspace /Users/gaofeng/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
+        'opl workspace source ingest --workspace /path/to/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceSourceIngestArgs(args, specs['workspace source ingest']);
@@ -321,7 +361,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Export the machine-readable workspace map projection derived from workspace_index.json.',
       examples: [
-        'opl workspace export-map --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace export-map --workspace /path/to/workspace/visual-theme-a',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceValidationArgs(args, specs['workspace export-map']);
@@ -335,7 +375,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Return the structure-only workspace health projection derived from workspace doctor blockers.',
       examples: [
-        'opl workspace health --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace health --workspace /path/to/workspace/visual-theme-a',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceValidationArgs(args, specs['workspace health']);
@@ -349,7 +389,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Return the user-first workspace inspection projection with current project, Stage Native roots, and current pointer refs.',
       examples: [
-        'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace inspect --workspace /path/to/workspace/visual-theme-a',
       ],
       handler: (args) => {
         if (args.length === 0) {
@@ -366,7 +406,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Return the refs-only shared resource inventory projection for workspace sources, materials, memory, and style roots.',
       examples: [
-        'opl workspace inventory --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace inventory --workspace /path/to/workspace/visual-theme-a',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceValidationArgs(args, specs['workspace inventory']);
@@ -380,7 +420,7 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Return a user-first workspace report with current project, Stage Native refs, shared resources, lifecycle counts, and blockers.',
       examples: [
-        'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace report --workspace /path/to/workspace/visual-theme-a',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceValidationArgs(args, specs['workspace report']);
@@ -395,8 +435,8 @@ export function buildWorkspaceInitializeCommandSpecs(
       summary:
         'Read one hosted work item across business lifecycle, Stage/Attempt, token telemetry, next owner, and explicitly declared domain-owner package/publication refs without taking domain quality authority.',
       examples: [
-        'opl workspace work-item readback --workspace /Users/gaofeng/workspace/dm-cvd --work-item DM003 --agent mas --profile full',
-        'opl workspace work-item readback --workspace /Users/gaofeng/workspace/dm-cvd --work-item DM003 --agent mas --source-manifest /Users/gaofeng/workspace/dm-cvd/ops/medautoscience/hosted-readback-sources.json --json',
+        'opl workspace work-item readback --workspace /path/to/workspace/dm-cvd --work-item DM003 --agent mas --profile full',
+        'opl workspace work-item readback --workspace /path/to/workspace/dm-cvd --work-item DM003 --agent mas --source-manifest /path/to/workspace/dm-cvd/ops/medautoscience/hosted-readback-sources.json --json',
       ],
       handler: (args) => {
         const parsed = parseRegisteredCommandOptions(

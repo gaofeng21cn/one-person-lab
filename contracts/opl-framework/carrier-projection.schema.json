@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/carrier-projection.schema.json",
+  "title": "OPL Declarative Carrier Projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "carrier_root"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "opl_carrier_projection.v1"
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "machine_boundary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "carrier_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resource_target_prefix": {
+      "type": "string"
+    },
+    "resource_source_mode": {
+      "enum": ["git_tracked", "filesystem"]
+    },
+    "preserve_exec_mode": {
+      "type": "boolean"
+    },
+    "resource_roots": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "extra_files": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "exclude_prefixes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "exclude_path_segments": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "exclude_basename_prefixes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "exclude_basenames": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "include_extensions": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^\\.[A-Za-z0-9]+$" }
+    },
+    "preserve_carrier_files": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "prune_roots": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "file_aliases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string", "minLength": 1 },
+          "to": { "type": "string", "minLength": 1 },
+          "optional": { "type": "boolean" },
+          "executable": { "type": "boolean" }
+        }
+      }
+    },
+    "copy_presentation_icon": {
+      "type": "boolean"
+    },
+    "version_sync_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "manifest_path": { "type": "string", "minLength": 1 },
+        "pyproject_toml": { "type": "string", "minLength": 1 },
+        "uv_lock": { "type": "string", "minLength": 1 },
+        "update_bundled_required_skill_pack_version": { "type": "boolean" }
+      }
+    },
+    "package_manifest_projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "mode": {
+          "enum": [
+            "none",
+            "copy_root",
+            "clone_with_plugin_source_dot",
+            "strip_keys",
+            "pick_keys"
+          ]
+        },
+        "strip_keys": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "pick_keys": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "codex_surface_pick_keys": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "codex_surface_plugin_source_dot": {
+          "type": "boolean"
+        },
+        "override_fields": {
+          "type": "object"
+        },
+        "domain_id_from_domain_descriptor": {
+          "type": "boolean"
+        },
+        "task_provider_suffix_from_domain_descriptor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strip_entrypoint_carrier_prefix": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sync_root_opl_package": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source": { "type": "string", "minLength": 1 },
+            "target": { "type": "string", "minLength": 1 },
+            "strip_keys": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "plugin_manifests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sync_version": { "type": "boolean" },
+          "sync_name_from_plugin_id": { "type": "boolean" },
+          "set_fields": { "type": "object" },
+          "sync_interface": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["target_pointer"],
+            "properties": {
+              "target_pointer": {
+                "enum": ["interface", "extensions.com.openai.interface"]
+              },
+              "logo_prefix": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "adapter_projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "target"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "argv_rewrites": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to"],
+            "properties": {
+              "from": { "type": "string", "minLength": 1 },
+              "to": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

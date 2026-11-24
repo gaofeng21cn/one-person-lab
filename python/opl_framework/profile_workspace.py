@@ -12,7 +12,20 @@ from typing import Mapping
 WORKSPACE_SCHEMA = "opl_profile_workspace.v1"
 MARKER_NAME = ".opl-profile-workspace.json"
 PROFILE_WORKSPACE_ENV = "OPL_PROFILE_WORKSPACE"
-PROFILE_WORKSPACE_DIRS = ("profile", "policies", "context", "templates", "exports", "data/relay", "data/persona")
+PROFILE_WORKSPACE_DIRS = ("profile", "policies", "context", "templates", "exports")
+
+
+def _validate_extra_dir(root: Path, relative: str) -> Path:
+    if not isinstance(relative, str) or not relative.strip() or "\\" in relative:
+        raise ValueError(f"extra_dirs entries must be relative subpaths: {relative!r}")
+    candidate = Path(relative)
+    if candidate.is_absolute() or ".." in candidate.parts or not candidate.parts:
+        raise ValueError(f"extra_dirs entries must stay inside workspace root: {relative!r}")
+    resolved_root = root.resolve(strict=False)
+    resolved_target = (resolved_root / candidate).resolve(strict=False)
+    if not resolved_target.is_relative_to(resolved_root):
+        raise ValueError(f"extra_dirs entry escaped workspace root: {relative!r}")
+    return root / candidate
 
 
 def default_profile_workspace(environ: Mapping[str, str] | None = None) -> Path:
@@ -22,7 +35,12 @@ def default_profile_workspace(environ: Mapping[str, str] | None = None) -> Path:
     return Path(configured).expanduser() if configured else home / "OPL" / "profiles" / (home.name or "default")
 
 
-def initialize_profile_workspace(root: Path, templates: Mapping[str, str]) -> list[str]:
+def initialize_profile_workspace(
+    root: Path,
+    templates: Mapping[str, str],
+    *,
+    extra_dirs: tuple[str, ...] | list[str] = (),
+) -> list[str]:
     root.mkdir(parents=True, exist_ok=True)
     marker = root / MARKER_NAME
     expected = json.dumps({"schema": WORKSPACE_SCHEMA}, indent=2, sort_keys=True) + "\n"
@@ -30,6 +48,8 @@ def initialize_profile_workspace(root: Path, templates: Mapping[str, str]) -> li
         raise ValueError(f"workspace marker already exists with different content: {marker}")
     for relative in PROFILE_WORKSPACE_DIRS:
         (root / relative).mkdir(parents=True, exist_ok=True)
+    for relative in extra_dirs:
+        _validate_extra_dir(root, relative).mkdir(parents=True, exist_ok=True)
     marker.write_text(expected, encoding="utf-8")
     created = []
     for relative, content in templates.items():

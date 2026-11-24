@@ -42,6 +42,7 @@ test('package help surface keeps lifecycle commands ordinary and routes internal
   assert.deepEqual(diagnosticCommands, [
     'packages status',
     'packages link-framework',
+    'packages locate',
     'packages hide',
     'packages unhide',
     'packages preferences set',
