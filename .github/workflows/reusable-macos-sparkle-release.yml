@@ -49,7 +49,7 @@ on:
         required: true
         type: string
       preflight_command:
-        description: Optional lint and test command executed before configuring signing credentials
+        description: Optional lint and test command with RELEASE_TAG set, executed before configuring signing credentials
         required: false
         default: ""
         type: string
@@ -115,6 +115,7 @@ jobs:
         if: inputs.preflight_command != ''
         env:
           PREFLIGHT_COMMAND: ${{ inputs.preflight_command }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
           OPL_MACOS_SPARKLE_SCRIPTS_DIR: ${{ github.workspace }}/.opl-macos-sparkle-toolchain/scripts/macos-sparkle-release
         shell: bash
         run: |
