@@ -61,7 +61,8 @@ test('real re-review materialization reads derived map, exact observations and o
     fs.writeFileSync(producedPath, producedBytes);
     const transportCopy = path.join(scope.workspace_root, producedRef);
     fs.mkdirSync(path.dirname(transportCopy), { recursive: true });
-    fs.writeFileSync(transportCopy, 'different transport workspace bytes');
+    const transportBytes = 'different transport workspace bytes';
+    fs.writeFileSync(transportCopy, transportBytes);
     const producedHash = digest(producedBytes);
     const verifiedProducer = verifyStageQualityCloseoutArtifactIdentity({
       attempt: producer.workflow_input,
@@ -117,16 +118,20 @@ test('real re-review materialization reads derived map, exact observations and o
       scopeKind: 'work_item',
       executionScope: scope,
     });
-    const projection = await stageQualityCycleProjectActivity({
+    const observe = (artifactHash: string, receiptRefs: string[]) => stageQualityCycleProjectActivity({
       artifact_identity_observation_only: true,
       stage_run: stageRun,
       state: {
         artifact_refs: [producedRef],
-        artifact_hashes: [producedHash],
-        artifact_identity_receipt_refs: producerReceiptRefs,
+        artifact_hashes: [artifactHash],
+        artifact_identity_receipt_refs: receiptRefs,
+        artifact_identity_authority: { authoritative_attempt_ref: producer.attempt_ref },
       },
     } as Parameters<typeof stageQualityCycleProjectActivity>[0]);
-    assert.equal(projection.artifact_identity_observation?.live_bytes_status, 'matches');
+    assert.equal((await observe(producedHash, producerReceiptRefs))
+      .artifact_identity_observation?.live_bytes_status, 'matches');
+    assert.equal((await observe(digest(transportBytes), []))
+      .artifact_identity_observation?.live_bytes_status, 'matches');
 
     ingest(reviewer.workflow_input.stage_attempt_id, {
       surface_kind: 'stage_attempt_closeout_packet',
