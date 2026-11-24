@@ -14,7 +14,7 @@
 - 跨仓边界变更以相关 machine-readable contract 和真实 consumer 为依据。默认验证入口：`scripts/verify.sh`。
 - 所有新增或保留的执行限制遵循[必要性与作用范围政策](docs/policies/engineering-boundary-policy.md)：以具体可达故障证明必要性，优先缩小到受影响的操作；旧实现、合同或测试不能单独证明应收紧。开发验证、普通质量债与可选能力故障不得套用发布或不可逆操作的全局门禁。
 - 第三方 PR 只是提案。合并前核对用户确认的原始意图、当前默认行为和权限边界；增加平台、模型或适配器不得静默放宽安全约束或缩小既有能力。修改 PR 内的 contract 和通过 CI 不能证明产品变更已获认可；默认行为变化必须有独立的必要性证据，扩展路径与原默认路径分别验证。
-- 贡献按[三档信任与准入政策](docs/policies/third-party-contribution-admission-policy.md)处理：本人/自用账号直接信任并合并；指定 repo 合作者以信任为主并核对最新 SSOT；其余第三方严格审查，除容易复现且明确恢复设计的 Debug 外，须由提交者用 Issue 与凭证证明必要性，缺失时说明后关闭并邀请补齐重提。按可信主线的账号 ID 和精确 repo 范围判身份，不能从写权限、历史合并或待审 PR 自改名单推导豁免；尤其识别以修复名义改变产品设计。
+- 贡献按[三档信任与准入政策](docs/policies/third-party-contribution-admission-policy.md)处理：本人/自用账号直接信任并合并；指定 repo 合作者以信任为主并核对最新 SSOT；其余第三方以审慎质疑为起点，改行为或加功能前先读目标仓产品设计理念与非目标边界，区分“原 PR 是否可合”与“背后真实问题是否值得承接”，谨慎前提下以自主推进闭环为主、极少数重大设计/不可逆取舍才交人工决策，且每项判断均须沿用提出者语言公开回复并回读；身份仅按可信主线数字 ID 与精确 repo 判定，不得从写权限、历史合并或待审 PR 自改名单推导豁免。
 - GitHub 上自己新建的对外文本用英文书写：commit subject/body、PR 标题与正文、Issue、comment、Release Notes。产品名、代码标识、路径、命令与原始引用除外。他人写的 Issue、PR 或 comment，无论对方用什么语言，回复沿用对方的语言；历史中已有的非英文 commit 保持原样，App 生成的公开正文会直接省略非英文条目。
 - 文档入口与职责见 `docs/README.md`；创建、改写和退役统一遵循 `docs/policies/docs-lifecycle-policy.md`。代码/合同变更同批更新实际主题 owner、引用和生成源，历史通过 Git 追溯。
 
