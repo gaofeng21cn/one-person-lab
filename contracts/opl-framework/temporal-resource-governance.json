@@ -37,6 +37,22 @@
       ],
       "migration_policy": "new_workflows_only_after_external_cutover_receipt",
       "workflow_visibility_policy": "declared_indexed_schema"
+    },
+    {
+      "pool_id": "opl-stage-v2",
+      "namespace": "opl-stage-v2",
+      "allocation": "approved_dedicated",
+      "schema_version": "opl-stage-attempt-visibility-v1",
+      "automatic_mutation": "add_only_declared_schema",
+      "endpoint_bindings": [
+        {
+          "endpoint_id": "local-temporal-dev",
+          "cluster_identity": "active",
+          "address_patterns": ["127.0.0.1:7233", "localhost:7233"]
+        }
+      ],
+      "migration_policy": "new_workflows_only_after_external_cutover_receipt",
+      "workflow_visibility_policy": "declared_indexed_schema"
     }
   ],
   "search_attribute_schema": {
