@@ -22,8 +22,8 @@ import {
   standardAgentDescriptor,
   writeStandardAgentDescriptor,
 } from './descriptor-and-source-material.ts';
-import { hostedRuntimeReadiness } from '../../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
-import { resolveAgentPackageEffectiveSourcePolicy } from '../../../src/adapters/integration/agent-package-registry-parts/source-policy.ts';
+import { hostedRuntimeReadiness } from '../../../src/adapters/integration/agent-package-registry/registry-status-projection.ts';
+import { resolveAgentPackageEffectiveSourcePolicy } from '../../../src/adapters/integration/agent-package-registry/source-policy.ts';
 
 function initializeGitCheckout(repoDir: string) {
   execFileSync('git', ['init', '--quiet'], { cwd: repoDir });

@@ -5,9 +5,9 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { downloadPackageArchive } from '../../src/adapters/integration/agent-package-registry-parts/package-download-worker.ts';
-import { packageDownloadCache, packageOperationPath, readPackageOperation, writePackageOperation } from '../../src/adapters/integration/agent-package-registry-parts/package-operation-state.ts';
-import { cancelPackageOperation } from '../../src/adapters/integration/agent-package-registry-parts/package-operations.ts';
+import { downloadPackageArchive } from '../../src/adapters/integration/agent-package-registry/package-download-worker.ts';
+import { packageDownloadCache, packageOperationPath, readPackageOperation, writePackageOperation } from '../../src/adapters/integration/agent-package-registry/package-operation-state.ts';
+import { cancelPackageOperation } from '../../src/adapters/integration/agent-package-registry/package-operations.ts';
 
 async function fixture(mode: 'range' | 'no-range' | 'slow' | 'disconnect' | 'parallel' | 'parallel-slow' | 'bad-range' = 'range', size = 512 * 1024) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-download-test-')));

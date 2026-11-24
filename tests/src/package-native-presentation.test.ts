@@ -8,13 +8,13 @@ import {
   readInstalledPackageDescriptor,
   discoverCurrentOwnerPackageDescriptors,
   withCurrentOwnerProjection,
-} from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-descriptor.ts';
-import type { InstalledCarrierEntry } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
-import { normalizePresentation } from '../../src/adapters/integration/agent-package-registry-parts/presentation-normalizers.ts';
-import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
-import { directoryFrom } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
+} from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-descriptor.ts';
+import type { InstalledCarrierEntry } from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-types.ts';
+import { normalizePresentation } from '../../src/adapters/integration/agent-package-registry/presentation-normalizers.ts';
+import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
+import { directoryFrom } from '../../src/adapters/integration/agent-package-registry/registry-status-projection.ts';
 import { compactFastAgentPackageDirectory } from '../../src/read-models/operator/app-state-fast-projection.ts';
-import { packageArtworkUrl } from '../../src/adapters/integration/agent-package-registry-parts/package-artwork.ts';
+import { packageArtworkUrl } from '../../src/adapters/integration/agent-package-registry/package-artwork.ts';
 import { isFirstPartyPackage } from '../../src/adapters/integration/agent-package-first-party.ts';
 
 const ownerManifest = JSON.parse(fs.readFileSync(

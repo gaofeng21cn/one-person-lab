@@ -6,7 +6,7 @@ import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
-import { normalizePackageManifest } from '../../../../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
+import { normalizePackageManifest } from '../../../../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 
 test('all package manifest normalizers preserve typed Codex default exposure', () => {
   for (const [packageId, expected] of [

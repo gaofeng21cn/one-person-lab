@@ -9,7 +9,7 @@ import {
   compileFlowCapabilityBuildLock,
   compileFlowCapabilityStrategy,
   compileFlowCapabilityStrategyFromSourceRoot,
-} from '../../src/adapters/integration/agent-package-registry-parts/flow-capability-compiler.ts';
+} from '../../src/adapters/integration/agent-package-registry/flow-capability-compiler.ts';
 import {
   buildOplRecommendedSkills,
   syncOplCompanionSkills,
@@ -17,7 +17,7 @@ import {
 import type {
   AgentPackageFlowCapabilityBundle,
   AgentPackageManagedPolicyDependency,
-} from '../../src/adapters/integration/agent-package-registry-parts/types.ts';
+} from '../../src/adapters/integration/agent-package-registry/types.ts';
 
 function dependency(input: Partial<AgentPackageManagedPolicyDependency> & Pick<AgentPackageManagedPolicyDependency, 'id' | 'kind'>) {
   return {

@@ -5,8 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import test from 'node:test';
-import { cancelPackageOperation, startPackageOperation } from '../../src/adapters/integration/agent-package-registry-parts/package-operations.ts';
-import { packageOperationDirectory, readPackageOperation, reportPackageOperation, writePackageOperation } from '../../src/adapters/integration/agent-package-registry-parts/package-operation-state.ts';
+import { cancelPackageOperation, startPackageOperation } from '../../src/adapters/integration/agent-package-registry/package-operations.ts';
+import { packageOperationDirectory, readPackageOperation, reportPackageOperation, writePackageOperation } from '../../src/adapters/integration/agent-package-registry/package-operation-state.ts';
 
 test('background action survives its dispatch process and persists its real failure for a fresh reader', async () => {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-operation-test-')));

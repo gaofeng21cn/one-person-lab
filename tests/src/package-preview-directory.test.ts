@@ -3,11 +3,11 @@ import fs from 'node:fs';
 import test from 'node:test';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
-import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
-import { assertPackageInstallSourceAvailable } from '../../src/adapters/integration/agent-package-registry-parts/package-install-source.ts';
-import { directoryFrom, type PackageSnapshot } from '../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
-import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
-import type { AgentPackageAccessDecision } from '../../src/adapters/integration/agent-package-registry-parts/package-access.ts';
+import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
+import { assertPackageInstallSourceAvailable } from '../../src/adapters/integration/agent-package-registry/package-install-source.ts';
+import { directoryFrom, type PackageSnapshot } from '../../src/adapters/integration/agent-package-registry/registry-status-projection.ts';
+import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-types.ts';
+import type { AgentPackageAccessDecision } from '../../src/adapters/integration/agent-package-registry/package-access.ts';
 import { compactFastAgentPackageDirectory } from '../../src/read-models/operator/app-state-fast-projection.ts';
 
 const source = JSON.parse(fs.readFileSync(

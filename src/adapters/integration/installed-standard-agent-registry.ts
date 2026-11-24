@@ -11,7 +11,7 @@ import {
 import {
   discoverPackageDescriptors,
   type InstalledPackageDescriptor,
-} from './agent-package-registry-parts/installed-codex-plugin-directory.ts';
+} from './agent-package-registry/installed-codex-plugin-directory.ts';
 
 let turnDescriptors: Map<string, InstalledPackageDescriptor> | null = null;
 function discoverForCurrentTurn() {

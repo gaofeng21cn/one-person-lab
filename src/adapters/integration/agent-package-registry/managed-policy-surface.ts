@@ -23,10 +23,10 @@ import type {
 import {
   managedPolicyDependencySelection,
   SUPPORTED_COMPANION_TOOL_IDS,
-} from './managed-policy-surface-parts/dependency-selection.ts';
-import { inspectManagedPolicySurface } from './managed-policy-surface-parts/inventory.ts';
-import { loadManagedPolicySurface, sha256File } from './managed-policy-surface-parts/normalization.ts';
-import type { OplFlowPolicy } from './managed-policy-surface-parts/types.ts';
+} from './managed-policy-surface/dependency-selection.ts';
+import { inspectManagedPolicySurface } from './managed-policy-surface/inventory.ts';
+import { loadManagedPolicySurface, sha256File } from './managed-policy-surface/normalization.ts';
+import type { OplFlowPolicy } from './managed-policy-surface/types.ts';
 
 function codexModelPolicyProjection(
   policy: OplFlowPolicy['codex_model_policy'],

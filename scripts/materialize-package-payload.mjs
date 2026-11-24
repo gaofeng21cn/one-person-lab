@@ -12,7 +12,7 @@ import { parseJsonText } from './script-json-boundary.mjs';
 import { packageContentDigest } from '../src/kernel/package-content-lock.ts';
 import { materializeArchiveBackedPackagePayload, packageRegistryNamespace } from '../src/adapters/integration/package-distribution.ts';
 
-import { packageSourceArchiveDigest, readPackageSourceArchiveEntries, packageSourceArchiveMembersStayWithinRoot, extractPackageSourceArchive } from '../src/adapters/integration/agent-package-registry-parts/package-source-archive.ts';
+import { packageSourceArchiveDigest, readPackageSourceArchiveEntries, packageSourceArchiveMembersStayWithinRoot, extractPackageSourceArchive } from '../src/adapters/integration/agent-package-registry/package-source-archive.ts';
 
 const FRAMEWORK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PAYLOAD_SCHEMA_REF = 'contracts/opl-framework/package-payload-manifest-v2.schema.json';

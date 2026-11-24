@@ -88,7 +88,7 @@ export async function checkOplSoftwareSource(sourceId: string, deps: SoftwareSou
     return writeSoftwareSource({ ...source, status: inventory.inventory_status === 'available' ? 'public' : 'unknown', verified_at: nowIso(deps), verification_reason: inventory.inventory_reason ?? 'homebrew_native_inventory_verified' }, source.revision);
   }
   const credentialReader = deps.verify ? undefined : (deps.credentialReader
-    ?? (await import('./agent-package-registry-parts/package-registry-access-provider.ts')).credentialForGithubPackages);
+    ?? (await import('./agent-package-registry/package-registry-access-provider.ts')).credentialForGithubPackages);
   const result = deps.verify ? await deps.verify(source) : await verifySoftwareSourceCredential(source, deps.env ?? process.env, {
     credentialReader,
   });
@@ -97,7 +97,7 @@ export async function checkOplSoftwareSource(sourceId: string, deps: SoftwareSou
   if (source.provider_id === 'public_registry' && !deps.verify) refreshFrameworkSoftwareRelease(deps.env);
   if (stored.visibility === 'authorized_only' && stored.status === 'authorized') {
     const refresh = deps.refreshPackageAccess
-      ?? (await import('./agent-package-registry-parts/package-access.ts')).refreshGithubPackageSourceAccess;
+      ?? (await import('./agent-package-registry/package-access.ts')).refreshGithubPackageSourceAccess;
     await refresh(stored.source_id, deps.env ?? process.env);
   }
   return stored;

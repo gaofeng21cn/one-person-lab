@@ -18,7 +18,7 @@ import {
   normalizeCapabilityPackageManifest,
   normalizePackageManifest,
   normalizeWorkflowProfilePackageManifest,
-} from '../../../../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
+} from '../../../../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 import {
   getPublicationAdmittedOplPackageSpecs,
 } from '../../../../../src/adapters/integration/package-distribution.ts';

@@ -4,7 +4,7 @@ import {
   resolveInstalledPackageRuntimeModule,
   type InstalledPackageRuntimeDiscoveryOptions,
   type InstalledPackageRuntimeModuleContext,
-} from '../agent-package-registry-parts/installed-runtime-module.ts';
+} from '../agent-package-registry/installed-runtime-module.ts';
 
 export type ReferenceVerificationProviderId = string;
 export type ProviderId = ReferenceVerificationProviderId;

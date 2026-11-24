@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
-import type { InstalledPackageRuntimeDiscoveryOptions } from '../agent-package-registry-parts/installed-runtime-module.ts';
+import type { InstalledPackageRuntimeDiscoveryOptions } from '../agent-package-registry/installed-runtime-module.ts';
 
 export type ReferenceVerificationInput = {
   referencesFile?: string;

@@ -30,14 +30,14 @@ import {
   runConfiguredDownloadWithTransientRetry,
   runConfiguredCodexPluginCarrier,
   type CodexPluginCommandRunner,
-} from '../../../../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier.ts';
+} from '../../../../../src/adapters/integration/agent-package-registry/configured-codex-plugin-carrier.ts';
 import { listAgentPackageSettingsActions } from '../../../../../src/adapters/integration/agent-package-actions.ts';
 import {
   discoverAvailablePackageDescriptors,
   discoverInstalledPackageDescriptors,
-} from '../../../../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts';
+} from '../../../../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory.ts';
 import { listCurrentPackageProjections } from '../../../../../src/kernel/standard-agent-registry.ts';
-import { normalizePackageManifest } from '../../../../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
+import { normalizePackageManifest } from '../../../../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 import {
   createOplAgentPackageStatusReader,
   runOplAgentPackageBulkUpdate,
@@ -45,7 +45,7 @@ import {
 import {
   configuredCarrierFromDescriptor,
   selectPackageMutationDescriptor,
-} from '../../../../../src/adapters/integration/agent-package-registry-parts/registry-status-projection.ts';
+} from '../../../../../src/adapters/integration/agent-package-registry/registry-status-projection.ts';
 
 
 export {

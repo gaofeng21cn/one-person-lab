@@ -1,4 +1,4 @@
-import type { InstalledPackageDescriptor } from '../agent-package-registry-parts/installed-codex-plugin-directory.ts';
+import type { InstalledPackageDescriptor } from '../agent-package-registry/installed-codex-plugin-directory.ts';
 
 export type CordisConnectDescriptorDiscoveryService = {
   discover(input?: {

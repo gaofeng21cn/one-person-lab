@@ -98,7 +98,7 @@ test('external CLI credential handle encode/decode round-trips and rejects tampe
   );
 });
 
-import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
+import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-types.ts';
 
 test('createDefaultConnectionAuthorizationService accepts pluggable extraProviders', async () => {
   const prevStateDir = process.env.OPL_STATE_DIR;

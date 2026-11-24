@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { discoverInstalledPackageDescriptors } from './agent-package-registry-parts/installed-codex-plugin-directory.ts';
-import type { CodexPluginCommandRunner } from './agent-package-registry-parts/configured-codex-plugin-carrier.ts';
+import { discoverInstalledPackageDescriptors } from './agent-package-registry/installed-codex-plugin-directory.ts';
+import type { CodexPluginCommandRunner } from './agent-package-registry/configured-codex-plugin-carrier.ts';
 
 export type LocateInstalledPackageInput = {
   packageId: string;

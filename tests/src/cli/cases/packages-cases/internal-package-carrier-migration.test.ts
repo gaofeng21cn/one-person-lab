@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { reconcileInternalPackageCarriers } from '../../../../../src/adapters/integration/agent-package-registry-parts/internal-package-carrier-migration.ts';
-import type { CodexPluginCommandRunner } from '../../../../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-types.ts';
+import { reconcileInternalPackageCarriers } from '../../../../../src/adapters/integration/agent-package-registry/internal-package-carrier-migration.ts';
+import type { CodexPluginCommandRunner } from '../../../../../src/adapters/integration/agent-package-registry/configured-codex-plugin-carrier-types.ts';
 
 function fixture(failInternalInstall = false) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-internal-migration-'));

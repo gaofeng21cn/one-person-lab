@@ -4,7 +4,7 @@ import {
   packageSourceArchiveMembersStayWithinRoot,
   readPackageSourceArchiveEntries,
   extractPackageSourceArchive,
-} from '../../../../../src/adapters/integration/agent-package-registry-parts/package-source-archive.ts';
+} from '../../../../../src/adapters/integration/agent-package-registry/package-source-archive.ts';
 
 function buildArchive(root: string, entries: Record<string, 'file' | 'directory' | 'symlink'>, archivePath: string) {
   const sourceDir = fs.mkdtempSync(path.join(root, 'source-'));

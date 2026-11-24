@@ -1,9 +1,9 @@
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { execFileSync } from 'node:child_process';
 import { writeOplDeveloperSupervisorConfig } from '../../kernel/system-preferences.ts';
-import { executeSoftwareInstallationOwner, readSoftwareInstallationOwner, supplementalInstallationOwner } from './agent-package-registry-parts/software-installation-owner.ts';
-import { packageSnapshot, directoryFrom } from './agent-package-registry-parts/registry-status-projection.ts';
-import { runOplAgentPackageInstall, runOplAgentPackageUpdate, runOplAgentPackageUninstall } from './agent-package-registry-parts/registry-lifecycle-actions.ts';
+import { executeSoftwareInstallationOwner, readSoftwareInstallationOwner, supplementalInstallationOwner } from './agent-package-registry/software-installation-owner.ts';
+import { packageSnapshot, directoryFrom } from './agent-package-registry/registry-status-projection.ts';
+import { runOplAgentPackageInstall, runOplAgentPackageUpdate, runOplAgentPackageUninstall } from './agent-package-registry/registry-lifecycle-actions.ts';
 import { getOplPackageSpecs } from './package-distribution.ts';
 import { executeFrameworkSoftwareInstallation } from './software-sources-framework-installation.ts';
 

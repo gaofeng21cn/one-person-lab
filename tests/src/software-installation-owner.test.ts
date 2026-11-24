@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { readSoftwareInstallationOwner, executeSoftwareInstallationOwner } from '../../src/adapters/integration/agent-package-registry-parts/software-installation-owner.ts';
-import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
+import { readSoftwareInstallationOwner, executeSoftwareInstallationOwner } from '../../src/adapters/integration/agent-package-registry/software-installation-owner.ts';
+import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-types.ts';
 
 test('supplemental offline profile keeps one Package identity and rejects changed profile or review revision', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-offline-profile-'));

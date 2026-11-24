@@ -6,7 +6,7 @@ import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 import { resolvePackageHostIntegration } from '../../src/authority/packages/package-host-integration.ts';
-import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry-parts/manifest-normalizers.ts';
+import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';

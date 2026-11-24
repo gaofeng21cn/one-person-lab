@@ -48,8 +48,8 @@ import {
 } from '../configured-codex-plugin-carrier-shared.ts';
 import type { CodexPluginCommandRunner } from '../configured-codex-plugin-carrier-shared.ts';
 import { nodeFixtureShebang } from '../../../helpers/node-executable.ts';
-import { readInstalledCarrierEntries } from '../../../../../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-lifecycle.ts';
-import { CODEX_PLUGIN_LIST_TIMEOUT_MS } from '../../../../../../src/adapters/integration/agent-package-registry-parts/configured-codex-plugin-carrier-native.ts';
+import { readInstalledCarrierEntries } from '../../../../../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-lifecycle.ts';
+import { CODEX_PLUGIN_LIST_TIMEOUT_MS } from '../../../../../../src/adapters/integration/agent-package-registry/configured-codex-plugin-carrier-native.ts';
 
 test('installed carrier discovery terminates a hung native readback and rejects partial output', { timeout: 20_000 }, () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-carrier-discovery-timeout-'));

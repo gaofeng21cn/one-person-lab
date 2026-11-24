@@ -29,7 +29,7 @@ import {
   StageRunFoundryProviderInvoker,
   type FoundryProviderStageRunGateway,
 } from '../../src/adapters/execution/foundry-provider-stage-run.ts';
-import { materializeAgentPackageWorkspaceSkillProjection } from '../../src/adapters/integration/agent-package-registry-parts/skill-projection.ts';
+import { materializeAgentPackageWorkspaceSkillProjection } from '../../src/adapters/integration/agent-package-registry/skill-projection.ts';
 import { bindStageKnowledgeContext } from '../../src/adapters/execution/family-runtime-knowledge-context.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { blueprint, request } from './foundry-kernel-cases/shared.ts';

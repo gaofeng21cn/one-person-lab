@@ -668,7 +668,7 @@
       "surface_evidence": [
         {
           "symbol": "discoverInstalledPackageDescriptors",
-          "declaration_ref": "src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts",
+          "declaration_ref": "src/adapters/integration/agent-package-registry/installed-codex-plugin-directory.ts",
           "public_entrypoint_ref": "src/adapters/integration/index.ts",
           "caller_refs": [
             "src/host/plugins/cordis-connect-services.ts"
@@ -701,7 +701,7 @@
           "event_id": "opl/connect/descriptors/discovered",
           "mode": "emit",
           "payload_owner": "OPL Connect",
-          "payload_ref": "src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts",
+          "payload_ref": "src/adapters/integration/agent-package-registry/installed-codex-plugin-directory.ts",
           "durability": "in_process_only",
           "candidate_only": true
         }
@@ -712,7 +712,7 @@
           "owner": "OPL Connect, Package owners, and native carrier owners",
           "evidence_refs": [
             "contracts/opl-framework/agent-package-manifest.schema.json",
-            "src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory.ts"
+            "src/adapters/integration/agent-package-registry/installed-codex-plugin-directory.ts"
           ]
         }
       ],

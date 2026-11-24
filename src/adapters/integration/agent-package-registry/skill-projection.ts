@@ -6,9 +6,9 @@ export {
 
 export {
   materializeAgentPackageWorkspaceSkillProjection,
-} from './skill-projection-parts/materialization.ts';
+} from './skill-projection/materialization.ts';
 
 export {
   refreshInstalledAgentPackageWorkspaceSkills,
   syncAgentPackageSkillProjectionToWorkspace,
-} from './skill-projection-parts/readback.ts';
+} from './skill-projection/readback.ts';

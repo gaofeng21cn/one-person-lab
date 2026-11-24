@@ -4,7 +4,7 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   loadInstalledPackageRuntimeModule,
   type LoadedInstalledPackageRuntimeModule,
-} from './agent-package-registry-parts/installed-runtime-module.ts';
+} from './agent-package-registry/installed-runtime-module.ts';
 import {
   normalizeReferenceVerificationProviders,
   providerDefinition,

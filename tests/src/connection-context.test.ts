@@ -7,7 +7,7 @@ import test from 'node:test';
 import { activateInstalledPackageConnectionContext, createOplConnectionContextHost } from '../../src/host/connection-context.ts';
 import { createOplConnectionAuthorizationService } from '../../src/adapters/integration/connection-authorization.ts';
 import { createOplConnection } from '../../src/adapters/integration/connection-registry.ts';
-import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry-parts/installed-codex-plugin-directory-types.ts';
+import type { InstalledPackageDescriptor } from '../../src/adapters/integration/agent-package-registry/installed-codex-plugin-directory-types.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 
 function descriptor(packageId: string, sourcePath = `/fixture/${packageId}`): InstalledPackageDescriptor {

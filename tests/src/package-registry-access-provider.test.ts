@@ -6,7 +6,7 @@ import test from 'node:test';
 import {
   credentialForGithubPackages,
   verifyGithubPackagesAccess,
-} from '../../src/adapters/integration/agent-package-registry-parts/package-registry-access-provider.ts';
+} from '../../src/adapters/integration/agent-package-registry/package-registry-access-provider.ts';
 
 const input = {
   packageId: 'occ',

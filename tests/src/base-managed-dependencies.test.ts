@@ -25,7 +25,7 @@ import {
   inspectExternalTemporalInstallation,
   runExternalOwnerDelegatedUpdate,
 } from '../../src/adapters/integration/external-dependency-currentness.ts';
-import { buildRuntimeSubstrateComponent } from '../../src/adapters/integration/managed-update-kernel-parts/runtime-substrate.ts';
+import { buildRuntimeSubstrateComponent } from '../../src/adapters/integration/managed-update-kernel/runtime-substrate.ts';
 import {
   readTemporalStableCohort,
   TEMPORAL_SDK_PACKAGE_NAMES,

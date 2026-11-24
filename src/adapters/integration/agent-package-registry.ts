@@ -2,7 +2,7 @@ import {
   createOplAgentPackageStatusReader,
   listOplAgentPackages,
   runOplAgentPackageStatus,
-} from './agent-package-registry-parts/registry-status-projection.ts';
+} from './agent-package-registry/registry-status-projection.ts';
 import {
   runOplAgentPackageBulkUpdate,
   runOplAgentPackageExposureAction,
@@ -12,23 +12,23 @@ import {
   runOplAgentPackageRepair,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
-} from './agent-package-registry-parts/registry-lifecycle-actions.ts';
+} from './agent-package-registry/registry-lifecycle-actions.ts';
 import {
   readOplFlowDefaultUserInstructions,
   readOplFlowManagedDependencies,
   readOplFlowManagedDependencyIds,
   readOplFlowManagedPolicyDependencies,
-} from './agent-package-registry-parts/registry-flow-policy.ts';
+} from './agent-package-registry/registry-flow-policy.ts';
 
 export type {
   OplAgentPackageStatusInput,
-} from './agent-package-registry-parts/registry-status-projection.ts';
+} from './agent-package-registry/registry-status-projection.ts';
 export type {
   AgentPackageHomeShortcutPreferencesSetInput,
   AgentPackageInstallInput,
   AgentPackagePackageActionInput,
   AgentPackageRepairInput,
-} from './agent-package-registry-parts/types.ts';
+} from './agent-package-registry/types.ts';
 
 export {
   createOplAgentPackageStatusReader,
