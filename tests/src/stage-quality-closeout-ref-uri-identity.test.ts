@@ -19,7 +19,7 @@ import type {
 // metadata entry names one file with a relative `ref` plus the full `uri`,
 // while the producer's consumable refs use the full uri. The lookup must
 // consult either exact locator of the same entry; it must never borrow
-// another entry's SHA, and duplicate consumable refs stay fail-closed.
+// another entry's SHA, and repeated declarations still describe one artifact.
 
 const DOMAIN_ID = 'software_development_orchestration';
 const WORK_ITEM_ID = 'synthetic-work-item';
@@ -227,14 +227,16 @@ test('a matching entry whose declared sha belongs to a different file stays fail
   assertFailClosed(declared, workItemRoot, 'artifact_byte_identity_mismatch');
 });
 
-test('duplicate consumable refs are rejected instead of silently deduplicated', (t) => {
+test('repeated consumable refs derive one verified identity', (t) => {
   const { workItemRoot, artifacts } = workspaceWithArtifacts(t, [{ name: 'dup.md', bytes: 'dup\n' }]);
   const [dup] = artifacts;
   const declared = declaredPacket({
     metadata: [{ ref: dup.ref, uri: dup.uri, sha256: dup.sha256, size_bytes: dup.size_bytes }],
     consumableRefs: [dup.uri, dup.uri],
   });
-  assertFailClosed(declared, workItemRoot, 'artifact_byte_identity_mismatch');
+  const cycle = cycleOf(verify(declared, workItemRoot));
+  assert.deepEqual(cycle.artifact_refs, [dup.uri]);
+  assert.equal(cycle.artifact_identity_receipt_refs.length, 1);
 });
 
 test('a wrong declared sha stays fail-closed even when the uri matches', (t) => {
