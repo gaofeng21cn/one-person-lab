@@ -8,8 +8,7 @@
     "owner_repo": "gaofeng21cn/one-person-lab",
     "entrypoint": "scripts/run-domain-whitepaper.ts",
     "style_profile": "opl-whitepaper-pandoc-xelatex-v2",
-    "verification_schema": "opl_whitepaper_artifact_verification.v2",
-    "profile_schema": "contracts/opl-framework/public-whitepaper-profile.schema.json"
+    "verification_schema": "opl_whitepaper_artifact_verification.v2"
   },
   "publication": {
     "owner_repo": "gaofeng21cn/one-person-lab",

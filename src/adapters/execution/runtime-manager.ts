@@ -1,16 +1,16 @@
 import {
   inspectSelectedFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
-} from './public/runtime-manager-support.ts';
+} from './family-runtime-providers.ts';
 import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
+import { buildDomainRouteSupportProjection } from './family-runtime-domain-route.ts';
+import { readManagedProviderProjectionSummary } from './family-runtime-managed-provider-projection.ts';
+import { familyRuntimePaths } from './family-runtime-store.ts';
 import {
-  buildDomainRouteSupportProjection,
-  readManagedProviderProjectionSummary,
-  familyRuntimePaths,
   DEFAULT_NATIVE_HELPERS,
   buildNativeHelperProjection,
   runNativeHelperRepairAction,
-} from './public/runtime-manager-support.ts';
+} from './native-helper-runtime.ts';
 import {
   runtimeDomainOwnerProfiles,
   runtimeManagerDomainProfiles,

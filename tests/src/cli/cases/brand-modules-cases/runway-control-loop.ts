@@ -1,14 +1,14 @@
-import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
+import { assert, fs, os, path, runCliInProcess, test } from '../../helpers.ts';
 import { buildRunwayRecoveryRepairProjection } from '../../../../../src/adapters/execution/family-runtime-control-loop.ts';
 import { parseRegisteredFamilyRuntimeCommand } from '../../../../../src/adapters/execution/family-runtime-command/registry.ts';
 import { buildTemporalFirstRuntimeContract } from '../../../../../src/adapters/execution/family-runtime-temporal.ts';
 
-test('Runway control-loop surfaces stay refs-only and route through family-runtime', () => {
+test('Runway control-loop surfaces stay refs-only and route through family-runtime', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runway-control-loop-slim-'));
   try {
-    const status = runCli(['runway', 'status']).opl_runway_status;
-    const interfaces = runCli(['runway', 'interfaces']).opl_runway_interfaces;
-    const controlLoop = runCli([
+    const status = (await runCliInProcess(['runway', 'status'])).opl_runway_status;
+    const interfaces = (await runCliInProcess(['runway', 'interfaces'])).opl_runway_interfaces;
+    const controlLoop = (await runCliInProcess([
       'family-runtime',
       'control-loop',
       'status',
@@ -19,7 +19,7 @@ test('Runway control-loop surfaces stay refs-only and route through family-runti
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
       OPL_TEMPORAL_WORKER_STATUS: '',
-    }).family_runtime_control_loop;
+    })).family_runtime_control_loop;
 
     assert.equal(status.not_claims.includes('provider_completion_is_semantic_progress'), true);
     assert.equal(interfaces.cli.commands.includes('opl runway control-loop status --json'), true);

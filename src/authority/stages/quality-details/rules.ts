@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { parse as parseToml } from 'smol-toml';
 
+import { isRecord } from '../../../kernel/contract-validation.ts';
 import type { RulesFinding, SourceFileInfo } from './types.ts';
 
 type RulesConfig = {
@@ -21,135 +23,12 @@ type RulesConfig = {
   }>;
 };
 
-type RulesSection = 'constraints' | 'layer' | 'boundary';
-
-type RulesLine =
-  | { kind: 'section'; section: RulesSection }
-  | { kind: 'entry'; key: string; value: string };
-
-function stripInlineComment(line: string) {
-  let inString = false;
-  let quote = '';
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    if ((char === '"' || char === "'") && line[index - 1] !== '\\') {
-      if (!inString) {
-        inString = true;
-        quote = char;
-      } else if (quote === char) {
-        inString = false;
-      }
-    }
-    if (char === '#' && !inString) {
-      return line.slice(0, index).trim();
-    }
-  }
-  return line.trim();
+function stringField(record: Record<string, unknown>, key: string) {
+  return typeof record[key] === 'string' ? record[key] : '';
 }
 
-function parseString(raw: string) {
-  const trimmed = raw.trim();
-  const match = trimmed.match(/^["'](.*)["']$/);
-  return match ? match[1] : trimmed;
-}
-
-function parseStringList(raw: string) {
-  const trimmed = raw.trim();
-  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
-    return [];
-  }
-  const inner = trimmed.slice(1, -1).trim();
-  if (!inner) {
-    return [];
-  }
-  return inner
-    .split(',')
-    .map((entry) => parseString(entry.trim()))
-    .filter(Boolean);
-}
-
-function parseNumber(raw: string) {
-  const parsed = Number(raw.trim());
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function parseRulesLine(rawLine: string): RulesLine | null {
-  const line = stripInlineComment(rawLine);
-  if (!line) {
-    return null;
-  }
-  if (line === '[constraints]') {
-    return { kind: 'section', section: 'constraints' };
-  }
-  if (line === '[[layers]]') {
-    return { kind: 'section', section: 'layer' };
-  }
-  if (line === '[[boundaries]]') {
-    return { kind: 'section', section: 'boundary' };
-  }
-
-  const equalIndex = line.indexOf('=');
-  if (equalIndex === -1) {
-    return null;
-  }
-  return {
-    kind: 'entry',
-    key: line.slice(0, equalIndex).trim(),
-    value: line.slice(equalIndex + 1).trim(),
-  };
-}
-
-function startRulesSection(config: RulesConfig, section: RulesSection) {
-  if (section === 'layer') {
-    config.layers.push({ name: '', paths: [] });
-  } else if (section === 'boundary') {
-    config.boundaries.push({ from: '', to: '', reason: '' });
-  }
-  return section;
-}
-
-function applyConstraintEntry(config: RulesConfig, key: string, value: string) {
-  if (key === 'max_depth' || key === 'max_file_lines' || key === 'max_cycles') {
-    config.constraints[key] = parseNumber(value);
-  }
-}
-
-function applyLayerEntry(config: RulesConfig, key: string, value: string) {
-  const layer = config.layers[config.layers.length - 1];
-  if (!layer) {
-    return;
-  }
-  if (key === 'name') {
-    layer.name = parseString(value);
-  } else if (key === 'paths') {
-    layer.paths = parseStringList(value);
-  } else if (key === 'order') {
-    layer.order = parseNumber(value);
-  }
-}
-
-function applyBoundaryEntry(config: RulesConfig, key: string, value: string) {
-  const boundary = config.boundaries[config.boundaries.length - 1];
-  if (!boundary) {
-    return;
-  }
-  if (key === 'from') {
-    boundary.from = parseString(value);
-  } else if (key === 'to') {
-    boundary.to = parseString(value);
-  } else if (key === 'reason') {
-    boundary.reason = parseString(value);
-  }
-}
-
-function applyRulesEntry(config: RulesConfig, section: RulesSection | null, line: Extract<RulesLine, { kind: 'entry' }>) {
-  if (section === 'constraints') {
-    applyConstraintEntry(config, line.key, line.value);
-  } else if (section === 'layer') {
-    applyLayerEntry(config, line.key, line.value);
-  } else if (section === 'boundary') {
-    applyBoundaryEntry(config, line.key, line.value);
-  }
+function numberField(record: Record<string, unknown>, key: string) {
+  return typeof record[key] === 'number' && Number.isFinite(record[key]) ? record[key] : undefined;
 }
 
 function parseRulesToml(root: string): RulesConfig | null {
@@ -158,28 +37,43 @@ function parseRulesToml(root: string): RulesConfig | null {
     return null;
   }
 
-  const config: RulesConfig = {
-    constraints: {},
-    layers: [],
-    boundaries: [],
-  };
-  let section: 'constraints' | 'layer' | 'boundary' | null = null;
-
-  for (const rawLine of fs.readFileSync(rulesPath, 'utf8').split(/\r?\n/)) {
-    const line = parseRulesLine(rawLine);
-    if (!line) {
-      continue;
-    }
-    if (line.kind === 'section') {
-      section = startRulesSection(config, line.section);
-      continue;
-    }
-    applyRulesEntry(config, section, line);
+  let parsed: unknown;
+  try {
+    parsed = parseToml(fs.readFileSync(rulesPath, 'utf8'));
+  } catch {
+    return { constraints: {}, layers: [], boundaries: [] };
   }
-
-  config.layers = config.layers.filter((layer) => layer.name && layer.paths.length > 0);
-  config.boundaries = config.boundaries.filter((boundary) => boundary.from && boundary.to);
-  return config;
+  if (!isRecord(parsed)) {
+    return { constraints: {}, layers: [], boundaries: [] };
+  }
+  const rawConstraints = isRecord(parsed.constraints) ? parsed.constraints : {};
+  const rawLayers = Array.isArray(parsed.layers) ? parsed.layers : [];
+  const rawBoundaries = Array.isArray(parsed.boundaries) ? parsed.boundaries : [];
+  return {
+    constraints: {
+      max_depth: numberField(rawConstraints, 'max_depth'),
+      max_file_lines: numberField(rawConstraints, 'max_file_lines'),
+      max_cycles: numberField(rawConstraints, 'max_cycles'),
+    },
+    layers: rawLayers
+      .filter(isRecord)
+      .map((entry) => ({
+        name: stringField(entry, 'name'),
+        paths: Array.isArray(entry.paths)
+          ? entry.paths.filter((item): item is string => typeof item === 'string' && item.length > 0)
+          : [],
+        order: numberField(entry, 'order'),
+      }))
+      .filter((layer) => layer.name && layer.paths.length > 0),
+    boundaries: rawBoundaries
+      .filter(isRecord)
+      .map((entry) => ({
+        from: stringField(entry, 'from'),
+        to: stringField(entry, 'to'),
+        reason: stringField(entry, 'reason'),
+      }))
+      .filter((boundary) => boundary.from && boundary.to),
+  };
 }
 
 function matches(pattern: string, relativePath: string) {

@@ -9,8 +9,7 @@
     "display_model": "journey_groups",
     "cardinality_policy": "evidence_driven_not_fixed",
     "framework_projection_ref": "contracts/opl-framework/brand-module-registry.json",
-    "framework_source_topology_ref": "contracts/opl-framework/source-module-map.json",
-    "framework_package_topology_ref": "contracts/opl-framework/package-topology.json"
+    "framework_source_topology_ref": "contracts/opl-framework/source-module-map.json"
   },
   "display_groups": [
     {

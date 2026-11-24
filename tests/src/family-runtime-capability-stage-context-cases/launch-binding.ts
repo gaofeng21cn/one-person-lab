@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 
 import { createStageAttempt, createStageAttemptTable } from '../../../src/adapters/execution/family-runtime-stage-attempts.ts';
-import { persistStageAttemptLaunchBinding } from '../../../src/adapters/execution/family-runtime-parts/stage-attempt-launch.ts';
+import { persistStageAttemptLaunchBinding } from '../../../src/adapters/execution/family-runtime.ts';
 import { createFamilyRuntimeQueueTables } from '../../../src/adapters/execution/family-runtime-store.ts';
 
 export function registerLaunchBindingTest() {

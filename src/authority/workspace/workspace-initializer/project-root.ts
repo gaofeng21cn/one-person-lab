@@ -10,7 +10,7 @@ import {
   PROJECT_INDEX_BASENAME, WORKSPACE_HEALTH_REF, WORKSPACE_INSPECTION_REF,
   WORKSPACE_MAP_REF, WORKSPACE_REPORT_REF, WORKSPACE_RESOURCE_INVENTORY_REF,
   currentStagePointerRef, sharedResourceManifestRef, stageOutputsIndexRef,
-} from '../workspace-artifacts-parts/refs.ts';
+} from '../workspace-artifacts.ts';
 import { ARTIFACT_LIFECYCLE_PROFILE_REF } from '../workspace-artifact-lifecycle-profile.ts';
 
 function reject(message: string, details: Record<string, unknown>): never {

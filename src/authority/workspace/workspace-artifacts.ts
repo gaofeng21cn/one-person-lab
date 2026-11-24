@@ -21,12 +21,6 @@ import {
   WORKSPACE_PROJECT_LIFECYCLE_STATUSES,
   WORKSPACE_REPORT_REF,
   WORKSPACE_RESOURCE_INVENTORY_REF,
-  currentStagePointerRef,
-  sharedResourceManifestRef,
-  stageOutputsIndexRef,
-  stageOutputsManifestRef,
-} from './workspace-artifacts-parts/refs.ts';
-import {
   buildCurrentStagePointer,
   buildProjectIndex,
   buildProjectYaml,
@@ -38,10 +32,14 @@ import {
   buildWorkspaceMap,
   buildWorkspaceReport,
   buildWorkspaceResourceInventory,
+  currentStagePointerRef,
   readExistingSharedResourceRecords,
+  sharedResourceManifestRef,
+  stageOutputsIndexRef,
+  stageOutputsManifestRef,
   type SharedResourceRecord,
   type WorkspaceArtifactContext,
-} from './workspace-artifacts-parts/builders.ts';
+} from './workspace-artifacts-builders.ts';
 
 export {
   CURRENT_STAGE_POINTER_BASENAME,
@@ -64,12 +62,6 @@ export {
   WORKSPACE_PROJECT_LIFECYCLE_STATUSES,
   WORKSPACE_REPORT_REF,
   WORKSPACE_RESOURCE_INVENTORY_REF,
-  currentStagePointerRef,
-  sharedResourceManifestRef,
-  stageOutputsIndexRef,
-  stageOutputsManifestRef,
-} from './workspace-artifacts-parts/refs.ts';
-export {
   buildCurrentStagePointer,
   buildProjectIndex,
   buildProjectYaml,
@@ -82,12 +74,14 @@ export {
   buildWorkspaceMap,
   buildWorkspaceReport,
   buildWorkspaceResourceInventory,
+  currentStagePointerRef,
   readExistingSharedResourceRecords,
-} from './workspace-artifacts-parts/builders.ts';
-export type {
-  SharedResourceRecord,
-  WorkspaceLifecycleProjection,
-} from './workspace-artifacts-parts/builders.ts';
+  sharedResourceManifestRef,
+  stageOutputsIndexRef,
+  stageOutputsManifestRef,
+  type SharedResourceRecord,
+  type WorkspaceLifecycleProjection,
+} from './workspace-artifacts-builders.ts';
 
 export function ensureDirectory(dirPath: string, created: string[]) {
   if (fs.existsSync(dirPath)) {

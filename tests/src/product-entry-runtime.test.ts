@@ -5,11 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { loadFrameworkContracts, validateFrameworkContracts } from '../../src/authority/contracts/contracts.ts';
-import { buildProductEntryHandoffEnvelope } from '../../src/read-models/operator/product-entry-handoff-envelope.ts';
-import { buildProductEntrySessionPrompt } from '../../src/read-models/operator/product-entry-parts/builders.ts';
 import {
   buildProductEntryDoctor,
-} from '../../src/read-models/operator/product-entry-runtime.ts';
+  buildProductEntryHandoffEnvelope,
+  buildProductEntrySessionPrompt,
+} from '../../src/read-models/operator/product-entry.ts';
 import type { CordisWorkspaceLocatorService } from '../../src/host/plugins/cordis-workspace-locator.ts';
 
 const contractsDir = path.join(process.cwd(), 'contracts', 'opl-framework');

@@ -23,7 +23,7 @@ type InProcessCliResponse = {
   stderr: string;
 };
 
-let readOnlyInvocationQueue = Promise.resolve();
+let inProcessInvocationQueue = Promise.resolve();
 let isolatedStateDir: string | null = null;
 let isolatedCodexPluginBin: string | null = null;
 
@@ -149,19 +149,22 @@ export function runCli(args: string[], envOverrides: Record<string, string> = {}
   return runCliInCwd(args, repoRoot, envOverrides);
 }
 
-export async function runCliReadOnly(args: string[], envOverrides: Record<string, string> = {}) {
-  return runCliReadOnlyInCwd(args, repoRoot, envOverrides);
+export async function runCliInProcess(args: string[], envOverrides: Record<string, string> = {}) {
+  return runCliInProcessInCwd(args, repoRoot, envOverrides);
 }
 
-export async function runCliReadOnlyInCwd(
+export async function runCliInProcessInCwd(
   args: string[],
   cwd: string,
   envOverrides: Record<string, string> = {},
 ) {
-  const result = await runCliReadOnlyRequest(args, cwd, envOverrides);
+  const result = await runCliInProcessRequest(args, cwd, envOverrides);
   assert.equal(result.status, 0, cliFailureMessage(args, result));
   return parseJsonText(result.stdout) as any;
 }
+
+export const runCliReadOnly = runCliInProcess;
+export const runCliReadOnlyInCwd = runCliInProcessInCwd;
 
 export function runCliRaw(args: string[], envOverrides: Record<string, string> = {}) {
   return runCliRawInCwd(args, repoRoot, envOverrides);
@@ -219,22 +222,25 @@ export function runCliFailure(args: string[], envOverrides: Record<string, strin
   return runCliFailureInCwd(args, repoRoot, envOverrides);
 }
 
-export async function runCliReadOnlyFailure(args: string[], envOverrides: Record<string, string> = {}) {
-  return runCliReadOnlyFailureInCwd(args, repoRoot, envOverrides);
+export async function runCliInProcessFailure(args: string[], envOverrides: Record<string, string> = {}) {
+  return runCliInProcessFailureInCwd(args, repoRoot, envOverrides);
 }
 
-export async function runCliReadOnlyFailureInCwd(
+export async function runCliInProcessFailureInCwd(
   args: string[],
   cwd: string,
   envOverrides: Record<string, string> = {},
 ) {
-  const result = await runCliReadOnlyRequest(args, cwd, envOverrides);
+  const result = await runCliInProcessRequest(args, cwd, envOverrides);
   assert.notEqual(result.status, 0);
   return {
     status: result.status,
     payload: parseJsonText(result.stderr) as any,
   };
 }
+
+export const runCliReadOnlyFailure = runCliInProcessFailure;
+export const runCliReadOnlyFailureInCwd = runCliInProcessFailureInCwd;
 
 export function runCliFailureInCwd(
   args: string[],
@@ -297,23 +303,29 @@ export async function runCliAsync(args: string[], envOverrides: Record<string, s
   });
 }
 
-async function runCliReadOnlyRequest(
+async function runCliInProcessRequest(
   args: string[],
   cwd: string,
   envOverrides: Record<string, string>,
 ): Promise<InProcessCliResponse> {
-  const invocation = readOnlyInvocationQueue.then(async () => {
+  const invocation = inProcessInvocationQueue.then(async () => {
     const originalCwd = process.cwd();
+    const originalExitCode = process.exitCode;
     const originalEnv = new Map<string, string | undefined>();
     let stdout = '';
     let stderr = '';
     let status = 0;
 
     try {
+      process.exitCode = undefined;
       process.chdir(cwd);
       for (const [name, value] of Object.entries(cliTestEnvOverrides(envOverrides))) {
         originalEnv.set(name, process.env[name]);
-        process.env[name] = value;
+        if (value === undefined) {
+          delete process.env[name];
+        } else {
+          process.env[name] = value;
+        }
       }
       const { main } = await import('../../../../src/entrypoints/cli/main.ts');
       await main({
@@ -321,6 +333,9 @@ async function runCliReadOnlyRequest(
         stdout: { write: (chunk) => { stdout += String(chunk); return true; } },
         stdoutIsTTY: false,
       });
+      if (typeof process.exitCode === 'number') {
+        status = process.exitCode;
+      }
     } catch (error) {
       const { handleCliMainError } = await import('../../../../src/entrypoints/cli/main.ts');
       handleCliMainError(error, {
@@ -328,6 +343,7 @@ async function runCliReadOnlyRequest(
         setExitCode: (exitCode) => { status = exitCode; },
       });
     } finally {
+      process.exitCode = originalExitCode;
       for (const [name, value] of originalEnv) {
         if (value === undefined) {
           delete process.env[name];
@@ -340,6 +356,6 @@ async function runCliReadOnlyRequest(
 
     return { status, stdout, stderr };
   });
-  readOnlyInvocationQueue = invocation.then(() => undefined, () => undefined);
+  inProcessInvocationQueue = invocation.then(() => undefined, () => undefined);
   return await invocation;
 }

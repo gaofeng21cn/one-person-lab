@@ -44,10 +44,14 @@ import {
   TEMPORAL_KEYWORD_SEARCH_ATTRIBUTE_LIMIT,
 } from '../../src/adapters/execution/family-runtime-temporal-visibility.ts';
 import type { TemporalStageRunWorkflowInput } from '../../src/adapters/execution/family-runtime-temporal-stage-run.ts';
-import { createTemporalTestWorkflowEnvironment } from './temporal-test-environment.ts';
 import {
   createPersistedTemporalStageAttemptInput,
+  sharedTemporalProviderTestEnv,
 } from './family-runtime-temporal-provider-cases/persisted-attempt.ts';
+
+test.after(async () => {
+  await sharedTemporalProviderTestEnv.teardown();
+});
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -427,11 +431,10 @@ test('Cordis Temporal activity projection registers the complete StageRun and sc
 });
 
 test('Temporal StageAttemptWorkflow retries short idempotent activities without retrying Codex activity', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTemporalProviderTestEnv.get();
   const taskQueue = `opl-stage-attempt-short-retry-test-${Date.now()}`;
   let codexAttempts = 0;
   let dispatchAttempts = 0;
-  try {
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
@@ -489,15 +492,11 @@ test('Temporal StageAttemptWorkflow retries short idempotent activities without 
     assert.equal(codexAttempts, 1);
     assert.equal(dispatchAttempts, 2);
     assert.deepEqual(result.closeout_refs, ['receipt:retried-dispatch']);
-  } finally {
-    await testEnv.teardown();
-  }
 });
 
 test('Temporal StageAttemptWorkflow carries a no-output diagnostic forward when typed closeout is missing', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTemporalProviderTestEnv.get();
   const taskQueue = `opl-stage-attempt-blocked-test-${Date.now()}`;
-  try {
     const input = createPersistedTemporalStageAttemptInput({ fixtureId: 'no-output' });
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
@@ -531,15 +530,11 @@ test('Temporal StageAttemptWorkflow carries a no-output diagnostic forward when 
       (dispatchEvent?.route_impact as Record<string, unknown> | undefined)?.progression_effect,
       'next_stage_may_start',
     );
-  } finally {
-    await testEnv.teardown();
-  }
 });
 
 test('Temporal StageAttemptWorkflow carries Codex runner protocol diagnostics as quality debt', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTemporalProviderTestEnv.get();
   const taskQueue = `opl-stage-attempt-runner-blocker-test-${Date.now()}`;
-  try {
     const input = createPersistedTemporalStageAttemptInput({ fixtureId: 'runner-protocol-diagnostic' });
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
@@ -593,15 +588,11 @@ test('Temporal StageAttemptWorkflow carries Codex runner protocol diagnostics as
       `opl://stage-attempts/${input.stage_attempt_id}/quality-debt-diagnostics/codex_cli_unsupported_function_call`,
     ]);
     assert.equal(result.completion_boundary.provider_completion_is_domain_ready, false);
-  } finally {
-    await testEnv.teardown();
-  }
 });
 
 test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a different stage attempt', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTemporalProviderTestEnv.get();
   const taskQueue = `opl-stage-attempt-stale-closeout-test-${Date.now()}`;
-  try {
     const input = createPersistedTemporalStageAttemptInput({ fixtureId: 'stale-closeout' });
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
@@ -646,15 +637,11 @@ test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a differ
       (event) => event.activity_kind === 'domain_handler_dispatch_activity',
     );
     assert.equal(dispatchEvent?.blocked_reason, 'typed_closeout_stage_attempt_id_mismatch');
-  } finally {
-    await testEnv.teardown();
-  }
 });
 
 test('Temporal replay gate accepts production workflow history', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTemporalProviderTestEnv.get();
   const taskQueue = `opl-stage-attempt-replay-test-${Date.now()}`;
-  try {
     const worker = await Worker.create({
       connection: testEnv.nativeConnection, namespace: testEnv.namespace, taskQueue,
       workflowsPath: path.join(repoRoot, 'src', 'adapters', 'execution', 'family-runtime-temporal-workflows.ts'),
@@ -708,7 +695,4 @@ test('Temporal replay gate accepts production workflow history', async () => {
     assert.equal(gate.workflow_id, workflowId);
     assert.ok(gate.worker_options.workflowBundle && 'codePath' in gate.worker_options.workflowBundle);
     assert.equal('workflowsPath' in gate.worker_options, false);
-  } finally {
-    await testEnv.teardown();
-  }
 });

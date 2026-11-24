@@ -1,3 +1,5 @@
+import semver, { type SemVer } from 'semver';
+
 import { allowDependencyVersionOverride } from '../dependency-resolution-mode.ts';
 
 export type OplCompanionToolActionStatus = 'ready' | 'installed' | 'updated' | 'missing' | 'failed';
@@ -40,10 +42,7 @@ export type OplCompanionToolSyncItem = {
   };
 };
 
-export type ParsedVersion = {
-  version: string;
-  parts: [number, number, number];
-};
+export type ParsedVersion = SemVer;
 
 export type LatestToolVersion = {
   version: string | null;
@@ -51,20 +50,12 @@ export type LatestToolVersion = {
 };
 
 export function parseVersion(value: string | null | undefined): ParsedVersion | null {
-  const match = value?.match(/(?:^|[^0-9])(\d+)\.(\d+)\.(\d+)(?:[^0-9]|$)/);
-  if (!match) return null;
-  return {
-    version: `${Number(match[1])}.${Number(match[2])}.${Number(match[3])}`,
-    parts: [Number(match[1]), Number(match[2]), Number(match[3])],
-  };
+  const match = value?.match(/(?:^|[^0-9])(\d+\.\d+\.\d+)(?:[^0-9]|$)/);
+  return match ? semver.coerce(match[1]) : null;
 }
 
 export function compareVersions(left: ParsedVersion, right: ParsedVersion) {
-  for (let index = 0; index < left.parts.length; index += 1) {
-    const difference = left.parts[index] - right.parts[index];
-    if (difference !== 0) return difference;
-  }
-  return 0;
+  return semver.compare(left, right);
 }
 
 export function maxVersion(values: string[]) {

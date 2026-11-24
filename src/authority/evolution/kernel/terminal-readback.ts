@@ -18,7 +18,7 @@ import {
   type FoundryRunSnapshot,
   type FoundryRunState,
 } from '../state-machine.ts';
-import { fail, requiredDigest, requiredRef } from './validation.ts';
+import { fail, requiredDigest, requiredRef } from './activation.ts';
 
 export type FoundryOwnerDecisionReadback = {
   surface_kind: 'opl_foundry_owner_decision_readback';

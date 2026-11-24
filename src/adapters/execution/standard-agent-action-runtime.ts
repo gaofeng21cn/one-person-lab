@@ -6,7 +6,7 @@ import { validateDesignRequest } from '../../authority/evolution/index.ts';
 import {
   compileStandardAgentStageManifest,
   resolveStandardAgentStageTargetBinding,
-} from '../../authority/packages/public/standard-agent-action-runtime.ts';
+} from '../../authority/packages/index.ts';
 import {
   prepareStandardAgentActionRunRequest,
 } from '../../authority/workspace/public/standard-agent-action-runtime.ts';

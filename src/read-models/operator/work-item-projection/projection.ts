@@ -1,6 +1,6 @@
 import type { JsonRecord } from '../../../kernel/json-record.ts';
 import type { StandardAgentDescriptorInterface } from '../../../kernel/standard-agent-interface.ts';
-import { readInstalledStandardAgentDescriptorForDomain } from '../../../adapters/integration/public/standard-agent-interface.ts';
+import { readInstalledStandardAgentDescriptorForDomain } from '../../../adapters/integration/index.ts';
 import { buildWorkItemControlResolver } from '../../../authority/evidence/index.ts';
 import {
   observeDomainArtifactCasMaterialization,

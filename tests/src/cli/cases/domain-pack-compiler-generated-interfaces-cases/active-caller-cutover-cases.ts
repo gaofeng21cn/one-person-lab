@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, runCliFailure, test } from '../../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCliInProcess, test } from '../../helpers.ts';
 import { buildReadyAgentRepo, writeJson } from '../agents-conformance-fixtures.ts';
 import {
   attachManifestSurface,
@@ -9,7 +9,7 @@ import {
   withPackCompilerReadySurfaces,
 } from '../domain-pack-compiler-fixtures.ts';
 
-test('generated interfaces keep active caller cutover blocked while repo-local migration bridges remain', () => {
+test('generated interfaces keep active caller cutover blocked while repo-local migration bridges remain', async () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-bridge-blocked-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
@@ -63,7 +63,7 @@ test('generated interfaces keep active caller cutover blocked while repo-local m
   const repoDir = path.join(workspaceRoot, 'med-autoscience');
   writeManifestContractOverrides(repoDir, bridgeMas);
 
-  runCli([
+  await runCliInProcess([
     'workspace',
     'bind',
     '--project',
@@ -74,7 +74,7 @@ test('generated interfaces keep active caller cutover blocked while repo-local m
     buildManifestCommand(bridgeMas),
   ], env);
 
-  const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+  const bundle = (await runCliInProcess(['agents', 'interfaces', '--domain', 'mas'], env)).generated_agent_interfaces;
   assert.equal(bundle.standard_agent_contract_resolution.status, 'resolved');
   assert.equal(bundle.active_caller_cutover_proof.status, 'blocked');
   assert.equal(bundle.active_caller_cutover_proof.generated_blocks_ready, true);
@@ -87,7 +87,7 @@ test('generated interfaces keep active caller cutover blocked while repo-local m
   ).proof_status, 'blocked_active_caller_not_cut_over');
 });
 
-test('generated interfaces reject retired wrapper names as implicit canonical surface aliases', () => {
+test('generated interfaces reject retired wrapper names as implicit canonical surface aliases', async () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-no-wrapper-alias-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
@@ -141,7 +141,7 @@ test('generated interfaces reject retired wrapper names as implicit canonical su
   const repoDir = path.join(workspaceRoot, 'med-autoscience');
   writeManifestContractOverrides(repoDir, wrapperOnlyMas);
 
-  runCli([
+  await runCliInProcess([
     'workspace',
     'bind',
     '--project',
@@ -152,7 +152,7 @@ test('generated interfaces reject retired wrapper names as implicit canonical su
     buildManifestCommand(wrapperOnlyMas),
   ], env);
 
-  const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
+  const bundle = (await runCliInProcess(['agents', 'interfaces', '--domain', 'mas'], env)).generated_agent_interfaces;
   assert.equal(bundle.active_caller_target_proof.status, 'blocked');
   assert.equal(bundle.active_caller_cutover_proof.status, 'blocked');
   assert.equal(
@@ -173,7 +173,7 @@ test('generated interfaces reject retired wrapper names as implicit canonical su
   assert.equal(workbenchTarget.proof_status, 'blocked_missing_handoff_and_active_caller_proof');
 });
 
-test('generated interfaces expose active legacy caller deletion gate refs without authorizing delete', () => {
+test('generated interfaces expose active legacy caller deletion gate refs without authorizing delete', async () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-delete-gate-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
@@ -235,7 +235,7 @@ test('generated interfaces expose active legacy caller deletion gate refs withou
   const repoDir = path.join(workspaceRoot, 'med-autoscience');
   writeManifestContractOverrides(repoDir, bridgedMas);
 
-  runCli([
+  await runCliInProcess([
     'workspace',
     'bind',
     '--project',
@@ -246,7 +246,7 @@ test('generated interfaces expose active legacy caller deletion gate refs withou
     buildManifestCommand(bridgedMas),
   ], env);
 
-  const readout = runCli(['agents', 'interfaces', '--domain', 'mas'], env)
+  const readout = (await runCliInProcess(['agents', 'interfaces', '--domain', 'mas'], env))
     .generated_agent_interfaces.active_legacy_caller_deletion_gate_readout;
   const statusGate = readout.surfaces.find(
     (surface: { surface_id: string }) => surface.surface_id === 'product_status',

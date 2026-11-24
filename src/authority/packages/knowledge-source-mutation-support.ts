@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { canonicalJsonText } from '../../kernel/canonical-json.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { isProcessAlive } from '../../kernel/file-lock.ts';
 
 export function fail(message: string): never { throw new FrameworkContractError('contract_shape_invalid', message); }
 export function digest(bytes: Buffer | string) { return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`; }
@@ -21,10 +22,7 @@ export function withRegistryLock<T>(registry: string, run: () => T): T {
       let value: { host?: string; pid?: number };
       try { value = JSON.parse(previous.toString('utf8')); } catch { fail('Knowledge registry lock is malformed.'); }
       if (value!.host !== os.hostname() || !Number.isInteger(value!.pid) || value!.pid! < 1) fail('Knowledge registry has another host writer lock.');
-      try { process.kill(value!.pid!, 0); fail('Knowledge registry has an active writer lock.'); }
-      catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
-      }
+      if (isProcessAlive(value!.pid)) fail('Knowledge registry has an active writer lock.');
       if (!fs.readFileSync(lock).equals(previous)) fail('Knowledge writer lock changed during reconciliation.');
       fs.unlinkSync(lock);
       return fs.openSync(lock, 'wx', 0o600);

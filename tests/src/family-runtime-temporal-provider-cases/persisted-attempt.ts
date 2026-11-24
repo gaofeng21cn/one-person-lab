@@ -6,6 +6,9 @@ import {
   buildTemporalStageAttemptWorkflowInput,
   type TemporalStageAttemptWorkflowInput,
 } from '../../../src/adapters/execution/family-runtime-temporal.ts';
+import { createSharedTemporalTestWorkflowEnvironment } from '../temporal-test-environment.ts';
+
+export const sharedTemporalProviderTestEnv = createSharedTemporalTestWorkflowEnvironment();
 
 export function createPersistedTemporalStageAttemptInput(input: {
   fixtureId: string;

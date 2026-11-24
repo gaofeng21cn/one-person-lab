@@ -20,15 +20,12 @@ Each row identifies one exchange concern. Required fields, allowed values, and a
 
 | Exchange concern | Schema entry points |
 | --- | --- |
-| Callable actions and declared topology | [Action catalog](./family-action-catalog.schema.json), [action graph](./family-action-graph.schema.json) |
+| Callable actions | [Action catalog](./family-action-catalog.schema.json) |
 | Stage descriptors and static conformance | [Stage control plane](./family-stage-control-plane.schema.json), [conformance](./family-stage-conformance.schema.json) |
-| Stage pack evidence and graph projection | [Proof bundle](./family-stage-proof-bundle.schema.json), [graph projection](./family-stage-graph-projection.schema.json), [integrity metadata](./family-stage-integrity-metadata.schema.json) |
+| Stage pack evidence | [Proof bundle](./family-stage-proof-bundle.schema.json), [integrity metadata](./family-stage-integrity-metadata.schema.json) |
 | Stage pack source and lifecycle references | [Pack registry](./family-stage-pack-registry.schema.json), [source spec](./family-stage-pack-source-spec.schema.json), [replay certification](./family-stage-replay-certification.schema.json) |
 | Advisory diagnostics | [Assumption lifecycle](./family-stage-assumption-lifecycle.schema.json), [cohort loop](./family-stage-cohort-loop.schema.json), [runtime budget](./family-stage-runtime-budget.schema.json), [candidate portfolio](./stage-candidate-portfolio.schema.json) |
-| Event, checkpoint and StageRun evidence references | [Event envelope](./family-event-envelope.schema.json), [checkpoint lineage](./family-checkpoint-lineage.schema.json), [StageRun evidence pack](./stage-run-evidence-pack.schema.json) |
-| Owner decision, human gate and conflict exchange | [Owner route](./family-owner-route.schema.json), [human gate](./family-human-gate.schema.json), [conflict envelope](./family-conflict-envelope.schema.json) |
-| Persistence roles and lifecycle receipts | [Persistence policy](./family-persistence-policy.schema.json), [lifecycle ledger](./family-lifecycle-ledger.schema.json) |
-| Read-only runtime supervision | [Runtime supervision](./family-runtime-supervision.schema.json) |
+| StageRun evidence references | [StageRun evidence pack](./stage-run-evidence-pack.schema.json) |
 | Domain memory references and writeback exchange | [Knowledge catalog](../opl-framework/durable-knowledge-catalog.schema.json), [memory writeback](./family-domain-memory-writeback.schema.json) |
 
 ## Read Alongside The Runtime Owner

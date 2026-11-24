@@ -12,8 +12,10 @@ import { Worker } from '@temporalio/worker';
 import * as activities from '../../../src/adapters/execution/family-runtime-temporal-activities.ts';
 import { StageAttemptWorkflow } from '../../../src/adapters/execution/family-runtime-temporal-workflows.ts';
 import { buildCordisTemporalActivities } from '../../../src/host/temporal-activity-projection.ts';
-import { createTemporalTestWorkflowEnvironment } from '../temporal-test-environment.ts';
-import { createPersistedTemporalStageAttemptInput } from './persisted-attempt.ts';
+import {
+  createPersistedTemporalStageAttemptInput,
+  sharedTemporalProviderTestEnv,
+} from './persisted-attempt.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -28,9 +30,8 @@ function firstActivityResult(history: { events?: Array<Record<string, any>> | nu
 }
 
 test('Temporal history stores refs-only Codex activity results', async () => {
-  const testEnv = await createTemporalTestWorkflowEnvironment();
+  const testEnv = await sharedTemporalProviderTestEnv.get();
   const taskQueue = `opl-stage-attempt-history-test-${Date.now()}`;
-  try {
     const worker = await Worker.create({
       connection: testEnv.nativeConnection,
       namespace: testEnv.namespace,
@@ -102,7 +103,4 @@ test('Temporal history stores refs-only Codex activity results', async () => {
         'projection_only',
       ],
     );
-  } finally {
-    await testEnv.teardown();
-  }
 });

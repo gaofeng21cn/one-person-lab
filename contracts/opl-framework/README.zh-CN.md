@@ -16,7 +16,7 @@ State: `active_support`
 | --- | --- |
 | 哪个公开 surface 持有接口？ | [Public surface index](./public-surface-index.json)、[CLI command registry](./cli-command-registry.json) |
 | 家族能力与 authority owner 如何对应？ | [Capability-domain registry](./family-capability-domain-registry.json)、[目标运行架构](./target-operating-architecture-contract.json) |
-| Framework 与 Application Host 在哪里协作？ | [Cordis architecture profile](./cordis-architecture-profile.json)、[source module map](./source-module-map.json)、[Package topology](./package-topology.json) |
+| Framework 与 Application Host 在哪里协作？ | [Cordis architecture profile](./cordis-architecture-profile.json)、[source module map](./source-module-map.json) |
 | 已安装 Package 如何发现和托管？ | [Package host contract](./capability-package-host-contract.json)、[Standard Agent admission](./standard-agent-admission-gates.json)、[hosted action runtime](./standard-agent-hosted-action-runtime-contract.json) |
 | domain pack 如何生成可调用接口？ | [Domain pack compiler](./domain-pack-compiler-contract.json)、[Standard Agent interface](./standard-agent-interface.schema.json)、[implementation profile](./standard-agent-implementation-profile.schema.json) |
 | Workspace 与 Work Item identity 如何绑定？ | [Agent workspace norm](./agent-workspace-norm-contract.json)、[workspace index](./workspace-index.schema.json)、[execution scope snapshot](./execution-scope-snapshot.schema.json) |
@@ -27,10 +27,10 @@ State: `active_support`
 | Temporal namespace、Search Attribute 配额与迁移由谁治理？ | [Temporal 资源治理](./temporal-resource-governance.json)、[Temporal-first runtime](./family-runtime-temporal-first-contract.json) |
 | App 消费哪些投影？ | [App operator projection](./family-product-operator-projection.json)、[bounded Work Item projection](./app-runtime-fast-work-item-projection-contract.json)、[current owner delta](./current-owner-delta.schema.json) |
 | evidence 与参考上下文如何交换？ | [Evidence ledger event](./evidence-ledger-event.schema.json)、[observability conventions](./observability-semantic-conventions-contract.json)、[advisory knowledge boundary](./advisory-knowledge-boundary-contract.json)、[长期知识生命周期](./durable-knowledge-lifecycle-contract.json)、[knowledge item](./durable-knowledge-item.schema.json)、[recall receipt](./durable-knowledge-recall-receipt.schema.json)、[OKF context bundle](./okf-context-bundle-contract.json) |
-| Foundry 构建与演进接口在哪里？ | [Foundry Agent series](./foundry-agent-series-contract.json)、[scaffold materialization](./agent-scaffold-materialization-contract.json)、[evolution proposal](./foundry-evolution-proposal.schema.json) |
+| Foundry 构建与演进接口在哪里？ | [Foundry Agent series](./foundry-agent-series-contract.json)、[evolution proposal](./foundry-evolution-proposal.schema.json) |
 | 通用 helper 与 source material 接口在哪里？ | [Native helper execution](./pack-native-helper-execution-contract.json)、[source material ingest](./source-material-ingest-contract.json)、[submission resource request](./submission-resource-provision-request.schema.json) |
 | generated bundle 与 release consumer 如何绑定？ | [Pack bundle](./pack-bundle-contract.json)、[release operation event](./release-bundle-operation-event.schema.json)、[release consumer envelope](./release-bundle-consumer-envelope.schema.json) |
-| 公开白皮书从哪里取得构建输入？ | [Whitepaper registry](./public-whitepaper-registry.json)、[Profile schema](./public-whitepaper-profile.schema.json) |
+| 公开白皮书从哪里取得构建输入？ | [Whitepaper registry](./public-whitepaper-registry.json) |
 | 受管依赖如何选择版本？ | [Dependency release sources](./dependency-release-sources.json) |
 
 ## Consumer 读法

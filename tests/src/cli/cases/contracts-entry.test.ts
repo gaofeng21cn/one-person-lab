@@ -20,8 +20,8 @@ import {
   test,
   validateFrameworkContracts,
 } from '../helpers.ts';
-import './contracts-entry-cases/native-helper-doctor.test.ts';
-import './contracts-entry-cases/native-helper-lifecycle.test.ts';
+import './contracts-entry-cases/native-helper-doctor.ts';
+import './contracts-entry-cases/native-helper-lifecycle.ts';
 
 test('framework contracts load and validate the active registry set', () => {
   const contracts = loadFrameworkContracts(repoRoot);

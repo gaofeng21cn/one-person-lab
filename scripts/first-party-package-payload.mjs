@@ -6,8 +6,8 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseArgs, TextDecoder } from 'node:util';
 
-import { Ajv2020 } from 'ajv/dist/2020.js';
 import { packageContentDigest } from '../src/kernel/package-content-lock.ts';
+import { createAjv2020 } from '../src/kernel/schema-registry.ts';
 
 const FULL_GIT_SHA = /^[0-9a-f]{40}$/;
 const PACKAGE_ID = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
@@ -36,7 +36,7 @@ const PACKAGE_MANIFEST_SCHEMAS = new Map([
 ]);
 const FIRST_PARTY_SOURCES = new Set(['first_party', 'first_party_owner_projection']);
 const FRAMEWORK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const schemaCompiler = new Ajv2020({ allErrors: true, strict: false });
+const schemaCompiler = createAjv2020();
 const schemaValidators = new Map();
 
 function parseOptions(argv) {

@@ -22,7 +22,7 @@ import {
 import {
   persistStageAttemptLaunchBinding,
   recordTemporalStartOnAttempt,
-} from '../../src/adapters/execution/family-runtime-parts/stage-attempt-launch.ts';
+} from '../../src/adapters/execution/family-runtime.ts';
 import { persistStageAttemptUsageObservation } from '../../src/adapters/execution/family-runtime-stage-attempt-usage-observation.ts';
 import { runStageAttemptFixtureActivity } from '../../src/adapters/execution/family-runtime-stage-attempts/fixture-activity.ts';
 import { updateStageAttemptsForTask } from '../../src/adapters/execution/family-runtime-stage-attempts/task-sync-summary.ts';

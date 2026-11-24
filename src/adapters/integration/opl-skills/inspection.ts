@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+  extractMarkdownFrontmatter,
+  firstFrontmatterValue,
+} from '../../../kernel/frontmatter.ts';
+import {
   FrameworkContractError,
   isRecord,
 } from '../../../kernel/contract-validation.ts';
@@ -42,23 +46,15 @@ import {
   readFoundryAgentContractPolicy,
 } from './contract.ts';
 
-function normalizeFrontmatterScalar(value: string | undefined) {
-  const trimmed = value?.trim();
-  if (!trimmed) {
-    return '';
-  }
-
-  return trimmed.replace(/^['"]|['"]$/g, '').trim();
-}
-
 function readSkillFrontmatter(content: string) {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
-  const frontmatter = match?.[1] ?? '';
-  const body = match ? content.slice(match[0].length) : content;
-  const name = normalizeFrontmatterScalar(frontmatter.match(/^name:\s*(.+)$/m)?.[1]);
-  const description = normalizeFrontmatterScalar(frontmatter.match(/^description:\s*(.+)$/m)?.[1]);
-
-  return { name, description, body };
+  const parsed = extractMarkdownFrontmatter(content);
+  const frontmatter = parsed?.frontmatter ?? '';
+  const body = parsed?.body ?? content;
+  return {
+    name: firstFrontmatterValue(frontmatter, 'name'),
+    description: firstFrontmatterValue(frontmatter, 'description'),
+    body,
+  };
 }
 
 function validatePluginManifest(

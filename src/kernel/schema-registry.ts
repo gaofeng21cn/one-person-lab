@@ -43,11 +43,16 @@ if (typeof addFormatsModule.default !== 'function') {
 }
 const addFormats: (ajv: Ajv2020) => unknown = addFormatsModule.default;
 
-const ajv = new Ajv2020({
-  allErrors: true,
-  strict: false,
-});
-addFormats(ajv);
+export function createAjv2020() {
+  const compiler = new Ajv2020({
+    allErrors: true,
+    strict: false,
+  });
+  addFormats(compiler);
+  return compiler;
+}
+
+const ajv = createAjv2020();
 
 const compiledValidators = new Map<string, ValidateFunction>();
 
@@ -69,7 +74,7 @@ function schemaIdentity(schema: AnySchema, fallback: string) {
   return fallback;
 }
 
-function normalizeAjvErrors(errors: ErrorObject[] | null | undefined): JsonSchemaValidationIssue[] {
+export function normalizeAjvErrors(errors: ErrorObject[] | null | undefined): JsonSchemaValidationIssue[] {
   return (errors ?? []).map((error) => ({
     instance_path: error.instancePath,
     schema_path: error.schemaPath,
@@ -148,11 +153,7 @@ export function assertJsonSchemaCompiles(
   entry: JsonSchemaRegistryEntry,
   relatedSchemas: JsonSchemaRegistryEntry[] = [],
 ): void {
-  const compiler = new Ajv2020({
-    allErrors: true,
-    strict: false,
-  });
-  addFormats(compiler);
+  const compiler = createAjv2020();
   if (!compiler.validateSchema(entry.schema)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',

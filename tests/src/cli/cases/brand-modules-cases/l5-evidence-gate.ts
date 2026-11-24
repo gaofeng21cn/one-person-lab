@@ -1,8 +1,8 @@
-import { assert, loadFrameworkContracts, repoRoot, runCli, test } from '../../helpers.ts';
+import { assert, loadFrameworkContracts, repoRoot, runCliInProcess, test } from '../../helpers.ts';
 
-test('brand-module L5 gate remains non-closing without production evidence authority', () => {
+test('brand-module L5 gate remains non-closing without production evidence authority', async () => {
   const contracts = loadFrameworkContracts(repoRoot);
-  const maturity = runCli(['brand-modules', 'maturity']).brand_module_maturity;
+  const maturity = (await runCliInProcess(['brand-modules', 'maturity'])).brand_module_maturity;
   const evidence = contracts.brandModuleL5OperatingEvidence;
 
   assert.equal(maturity.l5_claimed_count, 0);

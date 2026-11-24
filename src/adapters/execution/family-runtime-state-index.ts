@@ -5,7 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { openFamilyRuntimeLifecycleIndexDb } from './family-runtime-lifecycle-store.ts';
 import { familyRuntimeSqliteSidecarPolicy, openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import { createFamilyRuntimeQueueTables, familyRuntimePaths } from './family-runtime-store.ts';
-import { rebuildStageArtifactSidecarProjection } from './family-runtime-state-index-parts/stage-artifact-projection.ts';
+import { rebuildStageArtifactSidecarProjection } from './family-runtime-state-index-stage-artifact-projection.ts';
 
 export type FamilyRuntimeStateIndexAction =
   | 'doctor'

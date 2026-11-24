@@ -4,30 +4,205 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseToml } from 'smol-toml';
 
-import { FrameworkContractError } from './contract-validation.ts';
-import { parseJsonText, readJsonPayloadFile } from './json-file.ts';
-import {
-  readCodexAuthState,
-  resolveLocalCodexAccessState,
-} from './local-codex-defaults-parts/access-state.ts';
-import type {
-  LocalCodexAccessState,
-  LocalCodexDefaults,
-  LocalCodexModelAccessSource,
-} from './local-codex-defaults-parts/types.ts';
-import {
-  backupCodexConfig,
-  readCodexConfigManagementReceipt,
-  writeCodexConfigAtomically,
-  writeCodexConfigManagementReceipt,
-  type CodexConfigManagementReceipt,
-} from './local-codex-defaults-parts/management-receipt.ts';
+import { FrameworkContractError, isRecord } from './contract-validation.ts';
+import { parseJsonText, readJsonFileOrNull, readJsonPayloadFile } from './json-file.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
-export type {
-  LocalCodexAccessState,
-  LocalCodexDefaults,
-  LocalCodexModelAccessSource,
-} from './local-codex-defaults-parts/types.ts';
+export type LocalCodexDefaults = {
+  config_path: string;
+  model_provider: string | null;
+  model: string;
+  reasoning_effort: string | null;
+  provider_name: string | null;
+  provider_base_url: string | null;
+  provider_api_key: string | null;
+  opl_gateway_configured: boolean;
+  selected_provider_api_key_present: boolean;
+};
+
+export type LocalCodexModelAccessSource =
+  | 'opl_gateway'
+  | 'codex_login'
+  | 'custom_provider'
+  | 'env_api_key'
+  | 'missing';
+
+export type LocalCodexAccessState = {
+  config_path: string;
+  auth_path: string;
+  config_found: boolean;
+  auth_found: boolean;
+  api_key_present: boolean;
+  opl_gateway_configured: boolean;
+  codex_login_present: boolean;
+  env_api_key_present: boolean;
+  model_access_ready: boolean;
+  model_access_source: LocalCodexModelAccessSource;
+  provider_base_url: string | null;
+  model: string | null;
+  reasoning_effort: string | null;
+};
+
+type LocalCodexAuthState = {
+  auth_found: boolean;
+  codex_login_present: boolean;
+  auth_api_key_present: boolean;
+};
+
+type ResolveLocalCodexAccessStateInput = {
+  configPath: string;
+  authPath: string;
+  defaults: LocalCodexDefaults | null;
+  auth: LocalCodexAuthState;
+  env: Record<string, string | undefined>;
+  isOplGatewayBaseUrl: (value: string | null | undefined) => boolean;
+};
+
+export type CodexConfigSelectionMode = 'auto' | 'local_override' | 'inactive_provider';
+
+export type CodexConfigManagementReceipt = {
+  surface_kind: 'opl_codex_config_management_receipt.v1';
+  config_path: string;
+  provider_id: string;
+  selection_mode: CodexConfigSelectionMode;
+  provider_route: 'direct_gateway' | 'opl_custom_route' | 'inactive_provider';
+  owned_keys: string[];
+  last_applied_values: {
+    model_provider: string | null;
+    model: string | null;
+    model_reasoning_effort: string | null;
+    provider_base_url: string;
+  };
+  backup_path: string | null;
+  updated_at: string;
+};
+
+function receiptPath() {
+  return path.join(ensureOplStateDir(resolveOplStatePaths()).state_dir, 'codex-config-management-receipt.json');
+}
+
+export function readCodexConfigManagementReceipt(): CodexConfigManagementReceipt | null {
+  const filePath = receiptPath();
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    const value = JSON.parse(fs.readFileSync(filePath, 'utf8')) as CodexConfigManagementReceipt;
+    if (
+      value.surface_kind !== 'opl_codex_config_management_receipt.v1'
+      || typeof value.config_path !== 'string'
+      || typeof value.provider_id !== 'string'
+      || !['auto', 'local_override', 'inactive_provider'].includes(value.selection_mode)
+      || !value.last_applied_values
+    ) {
+      throw new Error('receipt shape is invalid');
+    }
+    return value;
+  } catch (error) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'OPL Codex config management receipt is invalid; refusing to overwrite local Codex preferences.',
+      {
+        receipt_path: filePath,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
+  }
+}
+
+export function backupCodexConfig(configPath: string, timestamp = new Date()) {
+  if (!fs.existsSync(configPath) || !fs.statSync(configPath).isFile()) return null;
+  const suffix = timestamp.toISOString().replace(/[:.]/g, '-');
+  const backupPath = `${configPath}.opl-backup-${suffix}`;
+  fs.copyFileSync(configPath, backupPath);
+  fs.chmodSync(backupPath, 0o600);
+  return backupPath;
+}
+
+export function writeCodexConfigAtomically(configPath: string, contents: string) {
+  const tempPath = `${configPath}.opl-write-${process.pid}-${Date.now()}`;
+  try {
+    fs.writeFileSync(tempPath, contents, { mode: 0o600 });
+    fs.renameSync(tempPath, configPath);
+    fs.chmodSync(configPath, 0o600);
+  } finally {
+    fs.rmSync(tempPath, { force: true });
+  }
+}
+
+export function writeCodexConfigManagementReceipt(receipt: CodexConfigManagementReceipt) {
+  const filePath = receiptPath();
+  const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  try {
+    fs.writeFileSync(tempPath, `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o600 });
+    fs.renameSync(tempPath, filePath);
+    fs.chmodSync(filePath, 0o600);
+  } finally {
+    fs.rmSync(tempPath, { force: true });
+  }
+  return filePath;
+}
+
+export function readCodexAuthState(authPath: string): LocalCodexAuthState {
+  if (!fs.existsSync(authPath) || !fs.statSync(authPath).isFile()) {
+    return { auth_found: false, codex_login_present: false, auth_api_key_present: false };
+  }
+  try {
+    const parsed = readJsonFileOrNull(authPath);
+    const record = isRecord(parsed) ? parsed : {};
+    const authMode = normalizeOptionalString(typeof record.auth_mode === 'string' ? record.auth_mode : undefined);
+    const tokensPresent = record.tokens !== undefined && record.tokens !== null;
+    const authApiKeyPresent = Boolean(
+      normalizeOptionalString(typeof record.OPENAI_API_KEY === 'string' ? record.OPENAI_API_KEY : undefined),
+    );
+    return {
+      auth_found: true,
+      codex_login_present: authMode === 'chatgpt' && tokensPresent,
+      auth_api_key_present: authApiKeyPresent,
+    };
+  } catch {
+    return { auth_found: true, codex_login_present: false, auth_api_key_present: false };
+  }
+}
+
+function envApiKeyPresent(env: Record<string, string | undefined>) {
+  return Boolean(
+    normalizeOptionalString(env.OPL_CODEX_API_KEY)
+    ?? normalizeOptionalString(env.CODEX_API_KEY)
+    ?? normalizeOptionalString(env.OPENAI_API_KEY),
+  );
+}
+
+function resolveModelAccessSource(
+  input: ResolveLocalCodexAccessStateInput,
+  environmentApiKeyPresent: boolean,
+): LocalCodexModelAccessSource {
+  const selectedProviderHasBearerToken = Boolean(input.defaults?.selected_provider_api_key_present);
+  const selectedProviderUsesOplGateway = input.isOplGatewayBaseUrl(input.defaults?.provider_base_url);
+  if (selectedProviderHasBearerToken && selectedProviderUsesOplGateway) return 'opl_gateway';
+  if (input.auth.codex_login_present) return 'codex_login';
+  if ((selectedProviderHasBearerToken && !selectedProviderUsesOplGateway) || input.auth.auth_api_key_present) return 'custom_provider';
+  if (environmentApiKeyPresent) return 'env_api_key';
+  return 'missing';
+}
+
+export function resolveLocalCodexAccessState(input: ResolveLocalCodexAccessStateInput): LocalCodexAccessState {
+  const environmentApiKeyPresent = envApiKeyPresent(input.env);
+  const modelAccessSource = resolveModelAccessSource(input, environmentApiKeyPresent);
+  return {
+    config_path: input.configPath,
+    auth_path: input.authPath,
+    config_found: Boolean(input.defaults),
+    auth_found: input.auth.auth_found,
+    api_key_present: Boolean(input.defaults?.provider_api_key),
+    opl_gateway_configured: Boolean(input.defaults?.opl_gateway_configured),
+    codex_login_present: input.auth.codex_login_present,
+    env_api_key_present: environmentApiKeyPresent,
+    model_access_ready: modelAccessSource !== 'missing',
+    model_access_source: modelAccessSource,
+    provider_base_url: input.defaults?.provider_base_url ?? null,
+    model: input.defaults?.model ?? null,
+    reasoning_effort: input.defaults?.reasoning_effort ?? null,
+  };
+}
 
 export type BootstrapLocalCodexDefaultsInput = Partial<{
   model_provider: string;

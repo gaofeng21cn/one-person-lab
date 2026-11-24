@@ -5,8 +5,13 @@ import { isRecord } from '../contract-validation.ts';
 import { parseJsonText } from '../json-file.ts';
 import { resolveStandardAgent } from '../standard-agent-registry.ts';
 import type { StandardAgentDescriptorInterface, StandardAgentDispatchEvidenceProjection, StandardAgentInterface } from '../standard-agent-interface-types.ts';
-import { STANDARD_AGENT_DESCRIPTOR_RELATIVE_PATH } from './constants.ts';
-import { invalid, stringValue, stringArray, assertKnownKeys } from './validation-values.ts';
+import {
+  STANDARD_AGENT_DESCRIPTOR_RELATIVE_PATH,
+  invalid,
+  stringValue,
+  stringArray,
+  assertKnownKeys,
+} from './validation-values.ts';
 import { taskProvider } from './task-views.ts';
 import { parseStandardAgentInterface } from './declaration.ts';
 

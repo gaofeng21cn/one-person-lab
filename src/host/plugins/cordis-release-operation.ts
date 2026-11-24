@@ -11,7 +11,7 @@ import {
   CORDIS_FRAMEWORK_INTEGRITY,
   CORDIS_FRAMEWORK_PACKAGE,
   CORDIS_FRAMEWORK_VERSION,
-} from '@one-person-lab/cordis-abi/framework';
+} from '../../kernel/cordis-abi.ts';
 import {
   admitReleaseBundleOperation,
   buildReleaseBundle,

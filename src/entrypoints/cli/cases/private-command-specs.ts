@@ -1,7 +1,9 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateFrameworkContracts } from '../../../authority/contracts/contracts.ts';
 import { buildOplWorkspaceRootSurface, writeOplWorkspaceRootSurface } from '../../../adapters/integration/system-installation/workspace-root.ts';
-import { buildProductEntryHandoffEnvelope } from '../../../read-models/operator/product-entry-handoff-envelope.ts';
-import { buildProductEntryDoctor } from '../../../read-models/operator/product-entry-runtime.ts';
+import {
+  buildProductEntryDoctor,
+  buildProductEntryHandoffEnvelope,
+} from '../../../read-models/operator/product-entry.ts';
 import { buildRuntimeTraySnapshot } from '../../../read-models/operator/runtime-tray-snapshot.ts';
 import {
   readAgentExecutorRequestFile,

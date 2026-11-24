@@ -30,7 +30,10 @@ import {
   buildAgentPlatformSurfaceOwnershipForRepo,
   OPL_OWNED_GENERIC_SUBDOMAINS,
 } from './ownership-projection.ts';
-import type { RepoInput } from './types.ts';
+type RepoInput = {
+  requested_agent_id: string | null;
+  repo_dir: string;
+};
 
 export function parseRepoArgs(args: string[], commandName: string): RepoInput[] {
   const repos: RepoInput[] = [];

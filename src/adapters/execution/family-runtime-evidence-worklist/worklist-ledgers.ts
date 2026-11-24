@@ -1,13 +1,13 @@
 import type { buildProductionTailNextActionLedger } from '../../../authority/evidence/index.ts';
 import { EVIDENCE_REQUIREMENT_MODEL_VERSION } from '../../../authority/evidence/index.ts';
 import type { EvidenceRequirement } from '../../../authority/evidence/index.ts';
-import { defaultCallerDeletionEvidenceCounts } from './default-caller-deletion-counts.ts';
 import {
   DIAGNOSTIC_ONLY_STATUS,
   NOT_AUTHORIZED_CLAIMS,
   OPEN_SAFE_ACTION_PAYLOAD_REQUIREMENT_SEMANTICS,
   OPEN_WORKLIST_STATUS,
-} from './constants.ts';
+  defaultCallerDeletionEvidenceCounts,
+} from './shared.ts';
 import {
   record,
   stringValue,

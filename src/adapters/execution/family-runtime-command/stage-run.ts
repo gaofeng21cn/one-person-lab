@@ -1,7 +1,6 @@
-import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
-import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
-
 import { DatabaseSync } from 'node:sqlite';
+import { parseArgs } from 'node:util';
+import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import {
   projectRecoveredStageRunQuery,
 } from '../family-runtime-stage-run-query-projection.ts';
@@ -13,6 +12,7 @@ import {
   type StageRunObservation,
 } from '../family-runtime-stage-run-observation.ts';
 import { familyRuntimePaths, insertEvent } from '../family-runtime-store.ts';
+import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
 import type { TemporalStageRunWorkflowInput } from '../family-runtime-temporal.ts';
 
 export function parseStageRunArgs(rest: string[]): FamilyRuntimeCommandInput | null {
@@ -31,27 +31,44 @@ export function parseStageRunArgs(rest: string[]): FamilyRuntimeCommandInput | n
         usage: 'opl family-runtime stage-run watch <workflow_id> [--interval-ms <n>] [--timeout-ms <n>]',
       });
     }
-    let intervalMs = 250;
-    let timeoutMs = 30_000;
-    for (let index = 0; index < flags.length; index += 2) {
-      const flag = flags[index];
-      const rawValue = flags[index + 1];
-      if ((flag !== '--interval-ms' && flag !== '--timeout-ms') || !rawValue) {
+    let values: Record<string, unknown>;
+    try {
+      values = parseArgs({
+        args: flags,
+        options: {
+          'interval-ms': { type: 'string' },
+          'timeout-ms': { type: 'string' },
+        },
+        strict: true,
+        allowPositionals: false,
+      }).values;
+    } catch {
+      throw new FrameworkContractError('cli_usage_error', 'family-runtime stage-run watch has invalid options.', {
+        usage: 'opl family-runtime stage-run watch <workflow_id> [--interval-ms <n>] [--timeout-ms <n>]',
+      });
+    }
+    const readPositiveInt = (option: string, raw: unknown, fallback: number) => {
+      if (raw === undefined) return fallback;
+      if (typeof raw !== 'string' || raw.length === 0) {
         throw new FrameworkContractError('cli_usage_error', 'family-runtime stage-run watch has invalid options.', {
           usage: 'opl family-runtime stage-run watch <workflow_id> [--interval-ms <n>] [--timeout-ms <n>]',
         });
       }
-      const value = Number(rawValue);
-      if (!Number.isSafeInteger(value) || value < 1) {
+      const parsed = Number(raw);
+      if (!Number.isSafeInteger(parsed) || parsed < 1) {
         throw new FrameworkContractError('cli_usage_error', 'family-runtime stage-run watch intervals must be positive integers.', {
-          option: flag,
-          value: rawValue,
+          option,
+          value: raw,
         });
       }
-      if (flag === '--interval-ms') intervalMs = value;
-      else timeoutMs = value;
-    }
-    return { mode: 'stage_run_watch', workflowId: identityOrFlag, intervalMs, timeoutMs };
+      return parsed;
+    };
+    return {
+      mode: 'stage_run_watch',
+      workflowId: identityOrFlag,
+      intervalMs: readPositiveInt('--interval-ms', values['interval-ms'], 250),
+      timeoutMs: readPositiveInt('--timeout-ms', values['timeout-ms'], 30_000),
+    };
   }
   if (action === 'recover-closeout') {
     if (

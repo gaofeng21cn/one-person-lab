@@ -9,7 +9,7 @@ import {
   type ManagedComputerUseActionId,
 } from '../../../adapters/integration/index.ts';
 import type { AppActionExecuteOptions } from './action-execute-parser.ts';
-import type { AppActionExecuteServices } from './action-execute-types.ts';
+import type { AppActionExecuteServices } from './action-execute-direct.ts';
 
 export async function executeAutomationAppAction(
   options: AppActionExecuteOptions,

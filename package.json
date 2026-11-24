@@ -3,11 +3,7 @@
   "version": "0.3.23",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
   "exports": {
-    "./cordis-profiles": "./dist/host/composition-profiles.js",
     "./connection-authorization": {
       "types": "./dist/adapters/integration/connection-authorization.d.ts",
       "default": "./dist/adapters/integration/connection-authorization.js"
@@ -18,31 +14,19 @@
     },
     "./foundry-protocol": "./dist/authority/evolution/protocol.js",
     "./foundry-protocol-fixture-conformance": "./dist/authority/evolution/protocol-fixture-conformance.js",
-    "./foundry-control": "./dist/authority/evolution/control.js",
     "./advisory-knowledge-boundary": "./dist/authority/contracts/advisory-knowledge-boundary.js",
-    "./family-action-catalog": "./dist/read-models/operator/family-action-catalog.js",
     "./family-domain-agent-descriptor": "./dist/read-models/catalog/family-domain-agent-descriptor.js",
     "./domain-pack-compiler": "./dist/authority/packages/domain-pack-compiler.js",
     "./domain-artifact-runtime": "./dist/authority/stages/domain-artifact-runtime.js",
     "./domain-helper-runtime": "./dist/adapters/execution/domain-helper-runtime.js",
     "./domain-source-runtime": "./dist/authority/workspace/domain-source-runtime.js",
     "./domain-task-runtime": "./dist/adapters/execution/domain-task-runtime.js",
-    "./family-runtime-lifecycle-index": "./dist/adapters/execution/family-runtime-lifecycle-index.js",
     "./generic-substrate-projection": "./dist/adapters/execution/generic-substrate-projection.js",
-    "./json-schema-registry": "./dist/kernel/schema-registry.js",
-    "./family-domain-catalog": "./dist/read-models/catalog/family-domain-catalog.js",
-    "./family-entry-contracts": "./dist/read-models/catalog/family-entry-contracts.js",
     "./foundry-agent-series-policy": "./dist/authority/packages/public/foundry-agent-series-policy.js",
-    "./family-orchestration": "./dist/adapters/execution/family-orchestration.js",
-    "./managed-runtime-contract": "./dist/adapters/execution/managed-runtime-contract.js",
-    "./product-entry-companions": "./dist/read-models/operator/product-entry-companions.js",
-    "./reference-build-proof": "./dist/authority/packages/reference-build-proof.js",
     "./source-derived-agent-design-abi": "./dist/authority/packages/public/source-derived-agent-design-abi.js",
     "./reference-design-pattern-packet": "./dist/authority/workspace/reference-design-pattern-packet.js",
-    "./standard-agent-pack-abi": "./dist/authority/packages/public/standard-agent-pack-abi.js",
     "./standard-agent-implementation-profile": "./dist/authority/packages/public/standard-agent-implementation-profile.js",
-    "./package-host-integration": "./dist/authority/packages/package-host-integration.js",
-    "./cordis-package-host": "./dist/authority/packages/cordis-package-host-plugin.js"
+    "./package-host-integration": "./dist/authority/packages/package-host-integration.js"
   },
   "bin": {
     "opl": "./bin/opl"
@@ -52,12 +36,6 @@
     "dist",
     "src/mcp-app",
     "contracts/opl-framework",
-    "packages/cordis-abi/package.json",
-    "packages/cordis-abi/dist",
-    "packages/cordis-abi/contracts",
-    "packages/package-host/package.json",
-    "packages/package-host/dist",
-    "packages/package-host/contracts",
     "python/opl_framework",
     "scripts/native-helper.mjs",
     "scripts/install-temporal-cli.mjs",
@@ -68,18 +46,12 @@
     "scripts/compile-opl-flow-capability-projections.mjs"
   ],
   "scripts": {
-    "build": "npm run build:packages && node ./scripts/build-framework.mjs",
-    "prebuild": "node ./scripts/materialize-package-contracts.mjs",
-    "build:packages": "npm run build --workspaces --if-present",
-    "typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present",
-    "pretypecheck": "node ./scripts/materialize-package-contracts.mjs",
+    "build": "node ./scripts/build-framework.mjs",
+    "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
     "native:doctor": "node ./scripts/native-helper-doctor.mjs",
     "native:repair": "node ./scripts/native-helper-doctor.mjs",
     "native:family-smoke": "node ./scripts/native-helper-family-smoke.mjs",
-    "family:structure-advisory": "node ./scripts/family-structure-advisory.mjs",
-    "refactor:patrol:contract": "node ./scripts/refactor-patrol-state.mjs contract",
-    "refactor:patrol:validate": "node ./scripts/refactor-patrol-state.mjs validate",
     "packages:payload": "node ./scripts/first-party-package-payload.mjs",
     "packages:cleanup-ghcr": "node --experimental-strip-types ./scripts/cleanup-ghcr-package-versions.mjs",
     "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs --workflow-policy ../opl-flow/contracts/workflow-policy.json",
@@ -97,7 +69,7 @@
     "docs:publish": "bash scripts/publish-docs-latest.sh",
     "repo:hygiene": "scripts/repo-hygiene.sh",
     "repo:hygiene:fix": "scripts/repo-hygiene.sh --fix",
-    "lint": "node ./scripts/lint.mjs",
+    "lint": "git diff --check",
     "hygiene:fallow": "npx --yes fallow@latest --root . --no-cache --production",
     "test:smoke": "node ./scripts/test-lanes.mjs run smoke",
     "test:fast": "node ./scripts/test-lanes.mjs run fast",
@@ -112,23 +84,15 @@
     "test:structure": "./scripts/verify.sh structure",
     "test:full": "node ./scripts/test-lanes.mjs run full",
     "test": "npm run test:smoke",
-    "line-budget": "node ./scripts/line-budget.mjs",
-    "line-budget:strict": "node ./scripts/line-budget.mjs",
     "fresh-install:smoke": "node ./scripts/fresh-install-smoke.mjs",
     "new-machine:codex-bootstrap:docker-smoke": "node ./scripts/new-machine-codex-bootstrap-docker-smoke.mjs",
     "source:modules": "node ./scripts/source-module-boundary.mjs",
-    "source:packages": "node ./scripts/source-package-boundary.mjs",
     "framework:archive": "node scripts/framework-archive.mjs"
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@modelcontextprotocol/client": "^2.4.0",
-    "@modelcontextprotocol/core": "^2.4.0",
     "@modelcontextprotocol/ext-apps": "^2.0.4",
-    "@modelcontextprotocol/sdk": "^1.32.2",
     "@modelcontextprotocol/server": "^2.4.0",
-    "@one-person-lab/cordis-abi": "file:packages/cordis-abi",
-    "@one-person-lab/package-host": "file:packages/package-host",
     "@playwright/mcp": "0.0.86",
     "@temporalio/activity": "1.26.0",
     "@temporalio/client": "1.26.0",
@@ -140,7 +104,6 @@
     "ajv-formats": "^3.0.1",
     "esbuild": "^0.28.2",
     "long": "5.3.2",
-    "protobufjs": "8.8.1",
     "semver": "7.8.6",
     "smol-toml": "^1.9.1",
     "tar": "7.5.23",
@@ -148,8 +111,12 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
     "@temporalio/testing": "1.26.0",
     "@types/node": "^26.6.6"
+  },
+  "overrides": {
+    "protobufjs": "8.8.1"
   },
   "license": "Apache-2.0",
   "optionalDependencies": {

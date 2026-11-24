@@ -9,7 +9,7 @@ import {
   buildProofDirectoryIndex,
   runPackProofIndex,
 } from '../../src/authority/packages/proof-directory-index.ts';
-import { runCliReadOnly } from './cli/helpers.ts';
+import { runCliInProcess } from './cli/helpers.ts';
 
 test('buildProofDirectoryIndex sorts entries deterministically, hashes bytes, skips symlinks, and respects excludes', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-proof-index-'));
@@ -58,7 +58,7 @@ test('runPackProofIndex and CLI opl pack proof-index auto-exclude --write path i
   assert.equal(direct.pack_proof_index.entries[0].relative_path, 'a.txt');
   assert.equal(fs.existsSync(writePath), true);
 
-  const cliOutput = await runCliReadOnly([
+  const cliOutput = await runCliInProcess([
     'pack',
     'proof-index',
     '--output-dir',

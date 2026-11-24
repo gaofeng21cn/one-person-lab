@@ -4,7 +4,7 @@ import { compareDependencyVersions } from '../../dependency-release-resolution.t
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { extract as extractTar } from 'tar';
 
 import { isRecord } from '../../../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../../../kernel/json-file.ts';
@@ -209,16 +209,15 @@ function codexRuntimeNpmCacheArgs() {
 function extractTarballToDirectory(tarballPath: string, outputRoot: string) {
   fs.rmSync(outputRoot, { recursive: true, force: true });
   fs.mkdirSync(outputRoot, { recursive: true });
-  const result = spawnSync('tar', ['-xzf', tarballPath, '-C', outputRoot], {
-    encoding: 'utf8',
-  });
-  if (result.status !== 0) {
-    throw new Error([
-      `Failed to extract ${tarballPath}`,
-      result.stdout ? `stdout:\n${result.stdout}` : '',
-      result.stderr ? `stderr:\n${result.stderr}` : '',
-      result.error ? `error=${result.error.message}` : '',
-    ].filter(Boolean).join('\n'));
+  try {
+    extractTar({
+      file: tarballPath,
+      cwd: outputRoot,
+      sync: true,
+      filter: (entryPath) => !path.posix.basename(entryPath).startsWith('._'),
+    });
+  } catch (error) {
+    throw new Error(`Failed to extract ${tarballPath}: ${error instanceof Error ? error.message : String(error)}`);
   }
   const packageRoot = path.join(outputRoot, 'package');
   if (!fs.existsSync(packageRoot) || !fs.statSync(packageRoot).isDirectory()) {

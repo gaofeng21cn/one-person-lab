@@ -88,7 +88,7 @@ export {
   reconcileReleaseBundle,
   verifyReleaseBundle,
 } from './release-bundle/index.ts';
-export { assertCredentialHandleOnlyPayload } from './connection-registry-parts/credential-handle.ts';
+export { assertCredentialHandleOnlyPayload } from './connection-registry.ts';
 export {
   checkOplSoftwareSource,
   configureOplSoftwareSource,

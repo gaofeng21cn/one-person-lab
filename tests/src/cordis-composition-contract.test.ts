@@ -15,7 +15,7 @@ import {
   validateCordisPluginDescriptor,
   type CordisPluginDescriptor,
   type CordisPluginDescriptorInput,
-} from '../../src/host/plugins/cordis-composition-contract.ts';
+} from '../../src/kernel/cordis-abi.ts';
 import {
   buildCordisAgentExecutorCompositionSnapshot,
   CORDIS_AGENT_EXECUTOR_PLUGIN_DESCRIPTORS,

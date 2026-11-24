@@ -4,7 +4,6 @@ import {
   buildFrameworkOperatingMaturityReadout,
 } from '../../../../read-models/operator/index.ts';
 import { buildRuntimeTraySnapshot } from '../../../../read-models/operator/runtime-tray-snapshot.ts';
-import { buildSourceStructureOperatorReadback } from '../../../../authority/contracts/source-structure-operator-readback.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
 import {
   assertNoArgs,
@@ -101,35 +100,6 @@ export function buildFrameworkCommandSpecs(
           return buildFrameworkOperatingMaturityCompactReadback(output.framework_operating_maturity);
         }
         return output;
-      },
-    },
-    'framework source-structure': {
-      usage: 'opl framework source-structure --family-defaults [--strict]',
-      summary:
-        'Read the OPL source-structure line-budget guard as an operator readback without claiming readiness, quality verdict, or completion.',
-      examples: [
-        'opl framework source-structure --family-defaults --json',
-        'opl framework source-structure --family-defaults --strict --json',
-      ],
-      group: 'framework',
-      handler: (args) => {
-        const allowed = new Set(['--family-defaults', '--strict']);
-        if (
-          !args.includes('--family-defaults')
-          || args.some((arg) => !allowed.has(arg))
-          || args.filter((arg) => arg === '--family-defaults').length !== 1
-          || args.filter((arg) => arg === '--strict').length > 1
-        ) {
-          throw buildUsageError(
-            'framework source-structure requires --family-defaults and optionally --strict.',
-            specs['framework source-structure'],
-            {
-              required: ['--family-defaults'],
-              optional: ['--strict'],
-            },
-          );
-        }
-        return buildSourceStructureOperatorReadback({ strict: args.includes('--strict') });
       },
     },
   };

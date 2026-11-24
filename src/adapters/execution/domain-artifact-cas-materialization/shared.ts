@@ -4,6 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
+import { writeExclusiveFileSync } from '../../../kernel/file-lock.ts';
 import { formatJsonPayload, parseJsonText } from '../../../kernel/json-file.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 
@@ -258,13 +259,7 @@ export function fsyncDirectory(directory: string) {
 }
 
 export function durableExclusiveFile(file: string, bytes: Buffer) {
-  const descriptor = fs.openSync(file, 'wx', 0o600);
-  try {
-    fs.writeFileSync(descriptor, bytes);
-    fs.fsyncSync(descriptor);
-  } finally {
-    fs.closeSync(descriptor);
-  }
+  writeExclusiveFileSync(file, bytes, 0o600);
 }
 
 export function atomicJson(file: string, value: unknown) {
@@ -273,16 +268,6 @@ export function atomicJson(file: string, value: unknown) {
   durableExclusiveFile(temporary, Buffer.from(formatJsonPayload(value)));
   fs.renameSync(temporary, file);
   fsyncDirectory(path.dirname(file));
-}
-
-export function processAlive(value: unknown) {
-  if (!Number.isInteger(value) || Number(value) < 1) return false;
-  try {
-    process.kill(Number(value), 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'EPERM';
-  }
 }
 
 export function readJsonRecord(file: string, label = 'JSON file') {

@@ -2,12 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { Ajv2020 } from 'ajv/dist/2020.js';
-import type { AnySchema, ErrorObject } from 'ajv';
+import type { AnySchema } from 'ajv';
 
 import { FrameworkContractError, isRecord } from './contract-validation.ts';
 import { parseJsonText } from './json-file.ts';
 import { resolveContainedRepoJsonFile } from './repo-contained-json-file.ts';
+import { createAjv2020, normalizeAjvErrors } from './schema-registry.ts';
 
 function splitSchemaRef(schemaRef: string) {
   const hashIndex = schemaRef.indexOf('#');
@@ -43,16 +43,6 @@ function schemaDocument(filePath: string) {
   return parsed as AnySchema;
 }
 
-function normalizedErrors(errors: ErrorObject[] | null | undefined) {
-  return (errors ?? []).map((error) => ({
-    instance_path: error.instancePath,
-    schema_path: error.schemaPath,
-    keyword: error.keyword,
-    message: error.message ?? 'JSON Schema validation failed.',
-    params: error.params,
-  }));
-}
-
 export function assertRepoJsonSchemaPayload(input: {
   repoRoot: string;
   schemaRef: string;
@@ -74,7 +64,7 @@ export function assertRepoJsonSchemaPayload(input: {
   const targetSchemaId = typeof (targetSchema as Record<string, unknown>).$id === 'string'
     ? String((targetSchema as Record<string, unknown>).$id)
     : pathToFileURL(resolved.real_path).href;
-  const compiler = new Ajv2020({ allErrors: true, strict: false });
+  const compiler = createAjv2020();
   const ids = new Map<string, string>();
   const contractsRoot = path.join(fs.realpathSync.native(input.repoRoot), 'contracts');
   const candidates = [...new Set([
@@ -100,7 +90,7 @@ export function assertRepoJsonSchemaPayload(input: {
       throw new FrameworkContractError('contract_shape_invalid', `${input.label} failed JSON Schema validation.`, {
         schema_ref: input.schemaRef,
         schema_path: resolved.repo_relative_ref,
-        errors: normalizedErrors(validate.errors),
+        errors: normalizeAjvErrors(validate.errors),
       });
     }
   } catch (error) {

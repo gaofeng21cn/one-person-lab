@@ -3,6 +3,7 @@ import { allowDependencyVersionOverride } from '../../dependency-resolution-mode
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import semver, { type SemVer } from 'semver';
 
 import {
   normalizeOutput,
@@ -41,10 +42,7 @@ const CODEX_PLATFORM_TARGETS = {
   },
 } as const;
 
-type ParsedCliVersion = {
-  version: string;
-  parts: [number, number, number];
-};
+type ParsedCliVersion = SemVer;
 
 type CodexCandidateSnapshot = {
   path: string;
@@ -110,25 +108,12 @@ export function resolveCodexPlatformTarget(): CodexPlatformTarget {
 }
 
 export function parseCliVersion(output: string | null | undefined): ParsedCliVersion | null {
-  const match = normalizeOptionalString(output)?.match(/(\d+)\.(\d+)\.(\d+)/);
-  if (!match) {
-    return null;
-  }
-
-  return {
-    version: `${Number(match[1])}.${Number(match[2])}.${Number(match[3])}`,
-    parts: [Number(match[1]), Number(match[2]), Number(match[3])],
-  };
+  const match = normalizeOptionalString(output)?.match(/(\d+\.\d+\.\d+)/);
+  return match ? semver.coerce(match[1]) : null;
 }
 
 function compareCliVersions(left: ParsedCliVersion, right: ParsedCliVersion) {
-  for (let index = 0; index < left.parts.length; index += 1) {
-    const diff = left.parts[index] - right.parts[index];
-    if (diff !== 0) {
-      return diff;
-    }
-  }
-  return 0;
+  return semver.compare(left, right);
 }
 
 export function resolveLatestVersionStatus(

@@ -4,7 +4,7 @@ import {
 } from '../../../authority/evidence/index.ts';
 import {
   NOT_AUTHORIZED_CLAIMS,
-} from './constants.ts';
+} from './shared.ts';
 import {
   record,
   recordList,

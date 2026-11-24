@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { extract as extractTar } from 'tar';
 
 import { isRecord } from '../../../../kernel/contract-validation.ts';
 import { readJsonPayloadFile } from '../../../../kernel/json-file.ts';
@@ -222,11 +223,13 @@ function verifyArchiveSha256(archivePath: string, expectedSha256: string | null)
 function extractArchiveToStage(archivePath: string, stageRoot: string) {
   fs.rmSync(stageRoot, { recursive: true, force: true });
   fs.mkdirSync(stageRoot, { recursive: true });
-  const result = runCommand('tar', ['-xzf', archivePath, '-C', stageRoot]);
-  if (result.exitCode !== 0) {
-    throw new Error(`Failed to extract OPL Framework archive: ${result.stderr || result.stdout}`);
-  }
-  const entries = fs.readdirSync(stageRoot).filter((entry) => !entry.startsWith('__MACOSX'));
+  extractTar({
+    file: archivePath,
+    cwd: stageRoot,
+    sync: true,
+    filter: (entryPath) => !path.posix.basename(entryPath).startsWith('._'),
+  });
+  const entries = fs.readdirSync(stageRoot).filter((entry) => !entry.startsWith('__MACOSX') && !entry.startsWith('._'));
   if (entries.length === 1) {
     const candidate = path.join(stageRoot, entries[0]);
     if (fs.statSync(candidate).isDirectory() && isOplFrameworkRoot(candidate)) {

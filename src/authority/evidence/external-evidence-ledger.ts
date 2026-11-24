@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { withExclusiveFileLockSync } from '../../kernel/file-lock.ts';
 import { readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
 import { record, recordList } from '../../kernel/json-record.ts';
 import {
@@ -141,46 +142,16 @@ function ledgerPath() {
   return resolveOplStatePaths().external_evidence_ledger_file;
 }
 
-function waitForLock() {
-  const view = new Int32Array(new SharedArrayBuffer(4));
-  Atomics.wait(view, 0, 0, 25);
-}
-
 function withLedgerLock<T>(operation: () => T): T {
-  const file = ledgerPath();
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const lockFile = `${file}.lock`;
-  const startedAt = Date.now();
-  let lockFd: number | null = null;
-  while (lockFd === null) {
-    try {
-      lockFd = fs.openSync(lockFile, 'wx');
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== 'EEXIST') {
-        throw error;
-      }
-      if (Date.now() - startedAt > 10_000) {
-        throw new FrameworkContractError('runtime_state_lock_timeout', 'Timed out waiting for external evidence ledger lock.', {
-          lock_file: lockFile,
-        });
-      }
-      waitForLock();
-    }
-  }
-  try {
-    fs.writeFileSync(lockFd, `${process.pid}\n`);
-    return operation();
-  } finally {
-    fs.closeSync(lockFd);
-    try {
-      fs.unlinkSync(lockFile);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error;
-      }
-    }
-  }
+  const lockPath = `${ledgerPath()}.lock`;
+  return withExclusiveFileLockSync({
+    lockPath,
+    content: `${process.pid}\n`,
+    timeoutMs: 10_000,
+    onTimeout: () => new FrameworkContractError('runtime_state_lock_timeout', 'Timed out waiting for external evidence ledger lock.', {
+      lock_file: lockPath,
+    }),
+  }, operation);
 }
 
 function readLedger(): ExternalEvidenceLedger {

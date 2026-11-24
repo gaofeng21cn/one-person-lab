@@ -14,7 +14,7 @@ import {
   type BaselineAdoptionPreflightDependencies,
   type BaselineAdoptionPreflightReceipt,
 } from '../../src/authority/evolution/baseline-adoption.ts';
-import { InMemoryOwnerGate } from '../../src/authority/evolution/in-memory-adapters.ts';
+import { InMemoryOwnerGate } from '../support/foundry-in-memory-adapters.ts';
 import { FoundryKernel } from '../../src/authority/evolution/kernel.ts';
 import type {
   ActivationPointer,

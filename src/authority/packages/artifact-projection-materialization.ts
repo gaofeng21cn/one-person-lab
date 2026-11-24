@@ -7,6 +7,7 @@ import receiptSchema from
 import requestSchema from
   '../../../contracts/opl-framework/artifact-projection-materialization-request.schema.json' with { type: 'json' };
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { isProcessAlive, reclaimLockFileAtomically, writeExclusiveFileSync } from '../../kernel/file-lock.ts';
 import { formatJsonPayload, parseJsonText } from '../../kernel/json-file.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { assertJsonSchemaPayload } from '../../kernel/schema-registry.ts';
@@ -341,16 +342,6 @@ function recoverInterruptedTransaction(input: {
   return fs.existsSync(targetRoot) ? 'kept_existing_target' : 'none';
 }
 
-function processAlive(pid: unknown) {
-  if (!Number.isInteger(pid) || Number(pid) <= 0) return false;
-  try {
-    process.kill(Number(pid), 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'EPERM';
-  }
-}
-
 function readLock(file: string) {
   try {
     const payload = parseJsonText(fs.readFileSync(file, 'utf8'));
@@ -368,37 +359,23 @@ function acquireLock(input: {
   let recoveryAction: RecoveryAction = 'none';
   for (;;) {
     try {
-      const descriptor = fs.openSync(input.lockPath, 'wx');
-      try {
-        fs.writeFileSync(descriptor, formatJsonPayload(input.lockPayload));
-        fs.fsyncSync(descriptor);
-      } finally {
-        fs.closeSync(descriptor);
-      }
+      writeExclusiveFileSync(input.lockPath, formatJsonPayload(input.lockPayload), 0o600);
       return recoveryAction;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     }
 
-    const currentLock = readLock(input.lockPath);
-    if (processAlive(currentLock?.pid)) {
-      throw contractError('Another artifact projection transaction is active for this target.', {
-        lock_path: input.lockPath,
-        owner_pid: currentLock?.pid,
-      });
-    }
-    const recoveryLock = `${input.lockPath}.recovering-${process.pid}-${crypto.randomUUID()}`;
-    try {
-      fs.renameSync(input.lockPath, recoveryLock);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
-      throw error;
-    }
-    try {
+    reclaimLockFileAtomically(input.lockPath, (recoveryLock) => {
+      const currentLock = readLock(recoveryLock);
+      if (isProcessAlive(currentLock?.pid)) {
+        throw contractError('Another artifact projection transaction is active for this target.', {
+          lock_path: input.lockPath,
+          owner_pid: currentLock?.pid,
+        });
+      }
       recoveryAction = input.recover();
-    } finally {
-      fs.rmSync(recoveryLock, { force: true });
-    }
+      return true;
+    });
   }
 }
 

@@ -2,14 +2,10 @@
 
 import fs from 'node:fs';
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { Server, type ListToolsResult } from '@modelcontextprotocol/server';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
-import { FrameworkContractError } from '../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../kernel/contract-validation.ts';
 import {
   OPL_CONNECT_MCP_META_TOOL_NAMES,
   OPL_CONNECT_MCP_SERVER_ID,
@@ -18,10 +14,6 @@ import {
   executeOplConnectMcpTool,
   searchOplConnectMcpTools,
 } from '../adapters/integration/opl-connect-mcp-tools.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function packageVersion() {
   const manifest = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as unknown;
@@ -57,11 +49,11 @@ export async function runOplConnectMcpStdio() {
     { capabilities: { tools: {} } },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: buildOplConnectMcpProtocolTools(),
+  server.setRequestHandler('tools/list', async () => ({
+    tools: buildOplConnectMcpProtocolTools() as unknown as ListToolsResult['tools'],
   }));
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler('tools/call', async (request) => {
     const args = isRecord(request.params.arguments) ? request.params.arguments : {};
     try {
       switch (request.params.name) {

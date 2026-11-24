@@ -1,5 +1,48 @@
-import { FoundryControlService } from '../../../authority/evolution/index.ts';
+import type {
+  DesignRequest,
+  FoundryKernel,
+  OwnerDecision,
+} from '../../../authority/evolution/index.ts';
 import { createFoundryLifecycleKernel } from '../../../adapters/execution/index.ts';
+
+class FoundryControlService {
+  readonly #kernel: FoundryKernel;
+
+  constructor(kernel: FoundryKernel) {
+    this.#kernel = kernel;
+  }
+
+  async startRun(input: {
+    request: DesignRequest;
+    run_id?: string;
+    advance?: boolean;
+  }) {
+    const run = await this.#kernel.startRun({ request: input.request, run_id: input.run_id });
+    return input.advance === false
+      ? this.#kernel.inspectRun(run.run_id)
+      : this.#kernel.advanceUntilPause(run.run_id);
+  }
+
+  inspectRun(runId: string) {
+    return this.#kernel.inspectRun(runId);
+  }
+
+  submitOwnerDecision(input: OwnerDecision, options: { advance?: boolean } = {}) {
+    return this.#kernel.submitOwnerDecision(input, options);
+  }
+
+  cancelRun(input: Parameters<FoundryKernel['cancelRun']>[0]) {
+    return this.#kernel.cancelRun(input);
+  }
+
+  listVersions(targetAgentId: string, targetDomainId: string) {
+    return this.#kernel.listVersions(targetAgentId, targetDomainId);
+  }
+
+  rollbackActivation(input: Parameters<FoundryKernel['rollbackActivation']>[0]) {
+    return this.#kernel.rollbackActivation(input);
+  }
+}
 
 export function createPersistentFoundryControl(rootOverride?: string) {
   const readControl = new FoundryControlService(createFoundryLifecycleKernel(rootOverride, true));

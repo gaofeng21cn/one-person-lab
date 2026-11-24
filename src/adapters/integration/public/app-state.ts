@@ -25,6 +25,7 @@ export { resolveCodexVersion } from '../system-installation/engine-helpers.ts';
 export { buildOplModules } from '../system-installation/modules.ts';
 export { buildManagedUpdateKernelProjection } from '../managed-update-kernel.ts';
 export {
+  readInstalledStandardAgentDescriptorForDomain,
   readInstalledStandardAgentDescriptorForPackage,
   readStandardAgentDescriptorForDomain,
 } from '../standard-agent-interface-discovery.ts';

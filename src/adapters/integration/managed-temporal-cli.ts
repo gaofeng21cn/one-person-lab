@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { extract as extractTar } from 'tar';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { compareDependencyVersions, type ResolvedDependencyRelease } from './dependency-release-resolution.ts';
 import { resolveDependencyReleaseSync } from './dependency-release-resolution-sync.ts';
@@ -86,7 +87,7 @@ export function installTemporalCli(options: {
     run('curl', ['-q', '--fail', '--location', '--proto', '=https', '--proto-redir', '=https', '--connect-timeout', '30', '--max-time', '180', '--silent', '--show-error', '--output', archive, target.archive_url], { timeout: 190000, stdio: 'pipe' });
     const digest = crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
     if (digest !== target.archive_sha256) throw new Error('Temporal CLI archive digest mismatch');
-    run('tar', ['-xzf', archive, '-C', staging, 'temporal'], { timeout: 30000, stdio: 'pipe' });
+    extractTar({ file: archive, cwd: staging, sync: true }, ['temporal']);
     const executable = path.join(staging, 'temporal');
     if (!fs.lstatSync(executable).isFile()) throw new Error('Temporal CLI archive entry is not a regular file');
     fs.chmodSync(executable, 0o755);

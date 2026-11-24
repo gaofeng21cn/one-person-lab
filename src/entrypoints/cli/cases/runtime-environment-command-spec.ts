@@ -1,6 +1,7 @@
 import fs from 'node:fs';
-import { runEnvironmentCommand } from './runtime-environment-run-command.ts';
 import path from 'node:path';
+import { parseArgs, type ParseArgsOptionsConfig } from 'node:util';
+import { runEnvironmentCommand } from './runtime-environment-run-command.ts';
 
 import {
   buildRuntimeEnvironmentCacheInventoryReadback,
@@ -74,60 +75,48 @@ function assignRootArg(
   }
 }
 
-function visitRuntimeEnvOptions(
+function parseEnvCliArgs(
   args: string[],
-  visit: (token: string, value: string | undefined) => boolean,
-) {
-  for (let index = 0; index < args.length; index += 1) {
-    if (visit(args[index], args[index + 1])) {
-      index += 1;
-    }
-  }
-}
-
-function requireOptionValue(
-  token: string,
-  value: string | undefined,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
-  message: string,
+  options: ParseArgsOptionsConfig,
 ) {
-  if (!value) {
-    throw buildUsageError(message, spec, {
-      option: token,
+  try {
+    const { values } = parseArgs({
+      args: args.filter((arg) => arg !== '--json'),
+      options,
+      strict: true,
+      allowPositionals: false,
     });
+    for (const [name, value] of Object.entries(values)) {
+      if (value === '' || (Array.isArray(value) && value.includes(''))) {
+        throw new TypeError(`Option '--${name}' requires a non-empty value.`);
+      }
+    }
+    return values;
+  } catch (error) {
+    throw buildUsageError(
+      error instanceof Error ? error.message : 'Invalid runtime env options.',
+      spec,
+      { parser_adapter: 'node_util_parse_args' },
+    );
   }
-  return value;
 }
 
-function parseTargetOption(
-  parsed: RuntimeEnvironmentTargetInput,
-  token: string,
-  value: string | undefined,
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-  commandLabel: string,
-  options: { allowRoot?: boolean } = {},
-) {
-  if (token === '--domain') {
-    parsed.domainId = requireOptionValue(token, value, spec, `${commandLabel} requires --domain value.`);
-    return true;
+function parseBaseTargetValues(
+  values: Record<string, unknown>,
+  rawArgs: string[],
+): RuntimeEnvironmentTargetInput {
+  const parsed: RuntimeEnvironmentTargetInput = {};
+  if (typeof values.domain === 'string') parsed.domainId = values.domain;
+  if (typeof values.profile === 'string') parsed.profileId = values.profile;
+  if (typeof values.platform === 'string') parsed.platformId = values.platform;
+  const lastRootFlag = [...rawArgs].reverse().find((token) => token === '--artifact-root' || token === '--paper-root');
+  if (typeof values['paper-root'] === 'string' && lastRootFlag !== '--artifact-root') {
+    assignRootArg(parsed, '--paper-root', values['paper-root']);
+  } else if (typeof values['artifact-root'] === 'string') {
+    assignRootArg(parsed, '--artifact-root', values['artifact-root']);
   }
-  if (token === '--profile') {
-    parsed.profileId = requireOptionValue(token, value, spec, `${commandLabel} requires --profile value.`);
-    return true;
-  }
-  if (token === '--platform') {
-    parsed.platformId = requireOptionValue(token, value, spec, `${commandLabel} requires --platform value.`);
-    return true;
-  }
-  if (options.allowRoot && (token === '--artifact-root' || token === '--paper-root')) {
-    assignRootArg(
-      parsed,
-      token,
-      requireOptionValue(token, value, spec, `${commandLabel} requires ${token} value.`),
-    );
-    return true;
-  }
-  return false;
+  return parsed;
 }
 
 function parseTargetArgs(
@@ -135,18 +124,14 @@ function parseTargetArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
   options: { requirePlatform?: boolean } = {},
 ): RuntimeEnvironmentTargetInput {
-  const parsed: RuntimeEnvironmentTargetInput = {};
-  visitRuntimeEnvOptions(args, (token, value) => {
-    if (token === '--json') {
-      return false;
-    }
-    if (parseTargetOption(parsed, token, value, spec, 'runtime env command', { allowRoot: true })) {
-      return true;
-    }
-    throw buildUsageError(`Unknown option for runtime env command: ${token}.`, spec, {
-      option: token,
-    });
+  const values = parseEnvCliArgs(args, spec, {
+    domain: { type: 'string' },
+    profile: { type: 'string' },
+    platform: { type: 'string' },
+    'artifact-root': { type: 'string' },
+    'paper-root': { type: 'string' },
   });
+  const parsed = parseBaseTargetValues(values, args);
   if (!parsed.domainId) {
     throw buildUsageError('runtime env command requires --domain.', spec, {
       required: ['--domain'],
@@ -170,50 +155,35 @@ function parsePrepareArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
   options: { allowOrdinaryDefaults?: boolean } = {},
 ): RuntimeEnvironmentPrepareInput {
-  const parsed: Partial<RuntimeEnvironmentPrepareInput> = {};
-  visitRuntimeEnvOptions(args, (token, value) => {
-    if (token === '--json') {
-      return false;
-    }
-    if (token === '--prepare-timeout-ms') {
-      parsed.prepareTimeoutMs = Number(requireOptionValue(token, value, spec, 'prepare timeout requires a value'));
-      if (!Number.isFinite(parsed.prepareTimeoutMs) || parsed.prepareTimeoutMs <= 0) throw buildUsageError('prepare timeout must be positive', spec);
-      return true;
-    }
-    if (token === '--refresh') {
-      parsed.refresh = true;
-      return false;
-    }
-    if (token === '--apply') {
-      parsed.apply = true;
-      return false;
-    }
-    if (parseTargetOption(parsed, token, value, spec, 'runtime env prepare', { allowRoot: true })) {
-      return true;
-    }
-    if (token === '--requirement-profile') {
-      parsed.requirementProfilePath = requireOptionValue(
-        token,
-        value,
-        spec,
-        'runtime env prepare requires --requirement-profile value.',
-      );
-      return true;
-    }
-    if (token === '--requirement-profile-id') {
-      parsed.requirementProfileIds ??= [];
-      parsed.requirementProfileIds.push(requireOptionValue(
-        token,
-        value,
-        spec,
-        'runtime env prepare requires --requirement-profile-id value.',
-      ));
-      return true;
-    }
-    throw buildUsageError(`Unknown option for runtime env prepare: ${token}.`, spec, {
-      option: token,
-    });
+  const values = parseEnvCliArgs(args, spec, {
+    domain: { type: 'string' },
+    profile: { type: 'string' },
+    platform: { type: 'string' },
+    'artifact-root': { type: 'string' },
+    'paper-root': { type: 'string' },
+    'prepare-timeout-ms': { type: 'string' },
+    refresh: { type: 'boolean' },
+    apply: { type: 'boolean' },
+    'requirement-profile': { type: 'string' },
+    'requirement-profile-id': { type: 'string', multiple: true },
   });
+  const parsed: Partial<RuntimeEnvironmentPrepareInput> = {
+    ...parseBaseTargetValues(values, args),
+    ...(values.refresh ? { refresh: true } : {}),
+    ...(values.apply ? { apply: true } : {}),
+    ...(typeof values['requirement-profile'] === 'string'
+      ? { requirementProfilePath: values['requirement-profile'] }
+      : {}),
+    ...(Array.isArray(values['requirement-profile-id'])
+      ? { requirementProfileIds: values['requirement-profile-id'] as string[] }
+      : {}),
+  };
+  if (typeof values['prepare-timeout-ms'] === 'string') {
+    parsed.prepareTimeoutMs = Number(values['prepare-timeout-ms']);
+    if (!Number.isFinite(parsed.prepareTimeoutMs) || parsed.prepareTimeoutMs <= 0) {
+      throw buildUsageError('prepare timeout must be positive', spec);
+    }
+  }
   if (options.allowOrdinaryDefaults) {
     parsed.platformId ??= currentPlatformId();
     parsed.artifactRoot ??= process.cwd();

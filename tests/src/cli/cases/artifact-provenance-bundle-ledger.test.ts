@@ -1,4 +1,4 @@
-import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCliInProcess, test } from '../helpers.ts';
 
 const HASH_ZERO = '0'.repeat(64);
 const HASH_ONE = '1'.repeat(64);
@@ -48,36 +48,36 @@ function writeBundleFixture(root: string) {
   return bundlePath;
 }
 
-test('ledger artifact provenance bundle validates, inspects, records, exports, and doctors refs only', () => {
+test('ledger artifact provenance bundle validates, inspects, records, exports, and doctors refs only', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-artifact-provenance-bundle-'));
   const stateDir = path.join(root, 'state');
   const bundlePath = writeBundleFixture(root);
   const env = { OPL_STATE_DIR: stateDir };
 
-  const validation = runCli([
+  const validation = (await runCliInProcess([
     'ledger',
     'bundle',
     'validate',
     '--bundle',
     bundlePath,
-  ], env).artifact_provenance_bundle_validation;
+  ], env)).artifact_provenance_bundle_validation;
   assert.equal(validation.status, 'valid');
   assert.equal(validation.bundle_id, 'bundle:demo');
   assert.equal(validation.artifact_body_read, false);
   assert.deepEqual(validation.missing_required_fields, []);
 
-  const inspection = runCli([
+  const inspection = (await runCliInProcess([
     'ledger',
     'bundle',
     'inspect',
     '--bundle',
     bundlePath,
-  ], env).artifact_provenance_bundle_inspection;
+  ], env)).artifact_provenance_bundle_inspection;
   assert.equal(inspection.manifest.bundle_id, 'bundle:demo');
   assert.equal(inspection.manifest.refs.outputs[0], 'artifact://mas/demo-output');
   assert.equal(inspection.artifact_body_read, false);
 
-  const record = runCli([
+  const record = (await runCliInProcess([
     'ledger',
     'bundle',
     'record',
@@ -87,7 +87,7 @@ test('ledger artifact provenance bundle validates, inspects, records, exports, a
     'medautoscience',
     '--artifact',
     'artifact://mas/demo-output',
-  ], env).artifact_provenance_bundle_record;
+  ], env)).artifact_provenance_bundle_record;
   assert.equal(record.status, 'recorded');
   assert.equal(record.record.domain_id, 'medautoscience');
   assert.equal(record.record.artifact_ref, 'artifact://mas/demo-output');
@@ -107,18 +107,18 @@ test('ledger artifact provenance bundle validates, inspects, records, exports, a
     'artifact://mas/demo-output',
   );
 
-  const artifactInspection = runCli([
+  const artifactInspection = (await runCliInProcess([
     'ledger',
     'bundle',
     'inspect',
     '--artifact',
     'artifact://mas/demo-output',
-  ], env).artifact_provenance_bundle_inspection;
+  ], env)).artifact_provenance_bundle_inspection;
   assert.equal(artifactInspection.status, 'found');
   assert.equal(artifactInspection.record.bundle_id, 'bundle:demo');
   assert.equal(artifactInspection.artifact_body_read, false);
 
-  const exported = runCli([
+  const exported = (await runCliInProcess([
     'ledger',
     'bundle',
     'export',
@@ -126,27 +126,27 @@ test('ledger artifact provenance bundle validates, inspects, records, exports, a
     bundlePath,
     '--format',
     'ro-crate',
-  ], env).artifact_provenance_bundle_export;
+  ], env)).artifact_provenance_bundle_export;
   assert.equal(exported.format, 'ro-crate');
   assert.equal(exported.ro_crate_metadata['@graph'][0]['@id'], './');
   assert.equal(exported.ro_crate_metadata['@graph'][1]['@id'], 'artifact://mas/demo-output');
   assert.equal(exported.artifact_body_read, false);
   assert.equal(exported.ledger_event.event_kind, 'export');
 
-  const doctor = runCli([
+  const doctor = (await runCliInProcess([
     'ledger',
     'bundle',
     'doctor',
     '--bundle',
     bundlePath,
-  ], env).artifact_provenance_bundle_doctor;
+  ], env)).artifact_provenance_bundle_doctor;
   assert.equal(doctor.status, 'ok');
   assert.deepEqual(doctor.attention, []);
   assert.equal(doctor.artifact_body_read, false);
   assert.equal(doctor.ledger_event.event_kind, 'doctor');
 });
 
-test('ledger artifact provenance bundle preserves typed issues for recorded artifact lookup', () => {
+test('ledger artifact provenance bundle preserves typed issues for recorded artifact lookup', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-artifact-provenance-bundle-issues-'));
   const stateDir = path.join(root, 'state');
   const bundlePath = path.join(root, 'bundle.json');
@@ -192,13 +192,13 @@ test('ledger artifact provenance bundle preserves typed issues for recorded arti
   );
   const env = { OPL_STATE_DIR: stateDir };
 
-  const validation = runCli([
+  const validation = (await runCliInProcess([
     'ledger',
     'bundle',
     'validate',
     '--bundle',
     bundlePath,
-  ], env).artifact_provenance_bundle_validation;
+  ], env)).artifact_provenance_bundle_validation;
   assert.equal(validation.status, 'valid');
   assert.equal(validation.issue_count, 4);
   assert.equal(validation.issues.some((issue: BundleIssue) => issue.code === 'missing_replay_command'), true);
@@ -208,7 +208,7 @@ test('ledger artifact provenance bundle preserves typed issues for recorded arti
     'codex:thread/full-transcript',
   ]);
 
-  const record = runCli([
+  const record = (await runCliInProcess([
     'ledger',
     'bundle',
     'record',
@@ -218,20 +218,20 @@ test('ledger artifact provenance bundle preserves typed issues for recorded arti
     'medautoscience',
     '--artifact',
     'artifact://mas/needs-review',
-  ], env).artifact_provenance_bundle_record;
+  ], env)).artifact_provenance_bundle_record;
   assert.equal(record.record.issue_count, 4);
   assert.equal(
     record.record.sections.find((section: BundleSection) => section.section_key === 'inputs').restricted_refs[0],
     'workspace://restricted/input-body',
   );
 
-  const artifactInspection = runCli([
+  const artifactInspection = (await runCliInProcess([
     'ledger',
     'bundle',
     'inspect',
     '--artifact',
     'artifact://mas/needs-review',
-  ], env).artifact_provenance_bundle_inspection;
+  ], env)).artifact_provenance_bundle_inspection;
   assert.equal(artifactInspection.status, 'found');
   assert.equal(artifactInspection.issue_count, 4);
   assert.equal(
@@ -239,18 +239,18 @@ test('ledger artifact provenance bundle preserves typed issues for recorded arti
     true,
   );
 
-  const doctor = runCli([
+  const doctor = (await runCliInProcess([
     'ledger',
     'bundle',
     'doctor',
     '--bundle',
     bundlePath,
-  ], env).artifact_provenance_bundle_doctor;
+  ], env)).artifact_provenance_bundle_doctor;
   assert.equal(doctor.status, 'attention');
   assert.equal(doctor.issues.some((issue: BundleIssue) => issue.code === 'missing_ref'), true);
 });
 
-test('ledger artifact provenance bundle rejects body fields and non-contract shapes', () => {
+test('ledger artifact provenance bundle rejects body fields and non-contract shapes', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-artifact-provenance-bundle-invalid-'));
   const bundlePath = path.join(root, 'bundle.json');
   fs.writeFileSync(
@@ -276,13 +276,13 @@ test('ledger artifact provenance bundle rejects body fields and non-contract sha
     }, null, 2)}\n`,
   );
 
-  const validation = runCli([
+  const validation = (await runCliInProcess([
     'ledger',
     'bundle',
     'validate',
     '--bundle',
     bundlePath,
-  ]).artifact_provenance_bundle_validation;
+  ])).artifact_provenance_bundle_validation;
   assert.equal(validation.status, 'invalid');
   assert.equal(validation.artifact_body_read, false);
   assert.equal(validation.invalid_fields.includes('refs.outputs'), true);

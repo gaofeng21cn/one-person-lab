@@ -37,7 +37,6 @@ removed by the tests.
 From a checkout with repository dependencies installed:
 
 ```sh
-npm run build:packages
 scripts/run-with-repo-temp-env.sh node --experimental-strip-types --test \
   tests/src/foundry-agent-package-acceptance.test.ts \
   tests/src/foundry-provider-stage-run.test.ts \

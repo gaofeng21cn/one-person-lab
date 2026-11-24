@@ -1,4 +1,4 @@
-import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCliInProcess, test } from '../helpers.ts';
 import {
   STANDARD_AGENT_PACK_ABI,
   buildStandardDomainAgentScaffold,
@@ -18,7 +18,7 @@ function buildScaffoldRepo() {
   return targetDir;
 }
 
-test('agents conformance reports generated stage pack v2 obligations', () => {
+test('agents conformance reports generated stage pack v2 obligations', async () => {
   const repoDir = buildScaffoldRepo();
   const packCompilerInput = parseJsonText(fs.readFileSync(
     path.join(repoDir, 'contracts', 'pack_compiler_input.json'),
@@ -32,12 +32,12 @@ test('agents conformance reports generated stage pack v2 obligations', () => {
     authority_ref:
       'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/agent_pack_contract/standard_agent_pack_abi',
   });
-  const report = runCli([
+  const report = (await runCliInProcess([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   const repo = report.reports[0];
   assert.equal(repo.scaffold_validation.stage_pack_v2_validation.status, 'passed');
@@ -54,14 +54,14 @@ test('agents conformance reports generated stage pack v2 obligations', () => {
   assert.deepEqual(repo.scaffold_validation.stage_pack_v2_validation.advisory_findings, []);
 });
 
-test('agents conformance exposes the frozen Standard Agent Pack ABI baseline', () => {
+test('agents conformance exposes the frozen Standard Agent Pack ABI baseline', async () => {
   const repoDir = buildScaffoldRepo();
-  const report = runCli([
+  const report = (await runCliInProcess([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   const validation = report.reports[0].scaffold_validation.stage_pack_v2_validation;
   const abi = validation.standard_agent_pack_abi;
@@ -84,7 +84,7 @@ test('agents conformance exposes the frozen Standard Agent Pack ABI baseline', (
   assert.equal(stage.l5_entry_gate_status, 'declared');
 });
 
-test('agents conformance accepts a routed Codex CLI variant stage with explicit binding', () => {
+test('agents conformance accepts a routed Codex CLI variant stage with explicit binding', async () => {
   const repoDir = buildScaffoldRepo();
   const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
   const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as any;
@@ -99,12 +99,12 @@ test('agents conformance accepts a routed Codex CLI variant stage with explicit 
   actionCatalog.actions[0].stage_route.terminal_stage_refs.push('domain_review_variant');
   writeJson(actionCatalogPath, actionCatalog);
 
-  const report = runCli([
+  const report = (await runCliInProcess([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   const validation = report.reports[0].scaffold_validation.stage_pack_v2_validation;
   assert.equal(validation.status, 'passed');
@@ -113,7 +113,7 @@ test('agents conformance accepts a routed Codex CLI variant stage with explicit 
   assert.equal(validation.stage_statuses[1].executor_binding_ref, 'default_codex_cli');
 });
 
-test('agents conformance blocks generated scaffold repos missing stage pack v2 obligations', () => {
+test('agents conformance blocks generated scaffold repos missing stage pack v2 obligations', async () => {
   const repoDir = buildScaffoldRepo();
   const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
   const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as any;
@@ -126,12 +126,12 @@ test('agents conformance blocks generated scaffold repos missing stage pack v2 o
   );
   writeJson(packCompilerInputPath, packCompilerInput);
 
-  const report = runCli([
+  const report = (await runCliInProcess([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   const repo = report.reports[0];
   assert.equal(report.status, 'blocked');
@@ -145,7 +145,7 @@ test('agents conformance blocks generated scaffold repos missing stage pack v2 o
   assert.equal(repo.blockers.includes('stage_pack_v2_missing_tool_affordance_boundary:domain_intake'), true);
 });
 
-test('agents conformance blocks a non-canonical Standard Agent Pack ABI authority ref', () => {
+test('agents conformance blocks a non-canonical Standard Agent Pack ABI authority ref', async () => {
   const repoDir = buildScaffoldRepo();
   const packCompilerInputPath = path.join(repoDir, 'contracts/pack_compiler_input.json');
   const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerInputPath, 'utf8')) as any;
@@ -156,12 +156,12 @@ test('agents conformance blocks a non-canonical Standard Agent Pack ABI authorit
   delete packCompilerInput.source_refs.authority_functions_source_ref;
   writeJson(packCompilerInputPath, packCompilerInput);
 
-  const report = runCli([
+  const report = (await runCliInProcess([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   const repo = report.reports[0];
   assert.equal(report.status, 'blocked');
@@ -181,19 +181,19 @@ test('agents conformance blocks a non-canonical Standard Agent Pack ABI authorit
   );
 });
 
-test('agents conformance requires an implementation profile for repo-local standard Agents', () => {
+test('agents conformance requires an implementation profile for repo-local standard Agents', async () => {
   const repoDir = buildScaffoldRepo();
   const packCompilerInputPath = path.join(repoDir, 'contracts/pack_compiler_input.json');
   const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerInputPath, 'utf8')) as any;
   delete packCompilerInput.implementation_profile;
   writeJson(packCompilerInputPath, packCompilerInput);
 
-  const report = runCli([
+  const report = (await runCliInProcess([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   const repo = report.reports[0];
   assert.equal(report.status, 'blocked');
@@ -204,7 +204,7 @@ test('agents conformance requires an implementation profile for repo-local stand
   assert.equal(repo.scaffold_validation.stage_pack_v2_validation.status, 'passed');
 });
 
-test('agents conformance rejects a retired inline Standard Agent Pack ABI', () => {
+test('agents conformance rejects a retired inline Standard Agent Pack ABI', async () => {
   const repoDir = buildScaffoldRepo();
   const packCompilerInputPath = path.join(repoDir, 'contracts/pack_compiler_input.json');
   const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerInputPath, 'utf8')) as any;
@@ -212,12 +212,12 @@ test('agents conformance rejects a retired inline Standard Agent Pack ABI', () =
   packCompilerInput.standard_agent_pack_abi.l4_entry_gate.can_claim_l5 = true;
   writeJson(packCompilerInputPath, packCompilerInput);
 
-  const report = runCli([
+  const report = (await runCliInProcess([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   const repo = report.reports[0];
   assert.equal(repo.status, 'blocked');
@@ -229,16 +229,16 @@ test('agents conformance rejects a retired inline Standard Agent Pack ABI', () =
   );
 });
 
-test('agents conformance blocks generated scaffold repos missing Standard Agent Pack ABI physical layout', () => {
+test('agents conformance blocks generated scaffold repos missing Standard Agent Pack ABI physical layout', async () => {
   const repoDir = buildScaffoldRepo();
   fs.rmSync(path.join(repoDir, 'runtime/authority_functions'), { recursive: true, force: true });
 
-  const report = runCli([
+  const report = (await runCliInProcess([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
+  ])).standard_domain_agent_conformance;
 
   const repo = report.reports[0];
   assert.equal(report.status, 'blocked');

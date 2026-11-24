@@ -4,6 +4,7 @@ import {
   DeterministicInMemoryCandidateCompiler,
   InMemoryFoundryEventStore,
   InMemoryFoundryObjectStore,
+  InMemoryActivationRuntime,
   InMemoryVersionRegistry,
   FoundryKernel,
   assertBlueprintSatisfiesDesignRequest,
@@ -714,6 +715,7 @@ test('FoundryKernel recomputes required baseline regression from complete public
     objects,
     events,
     versions,
+    activationRuntime: new InMemoryActivationRuntime(versions),
     ownerGate,
   });
   await activateCreateRun(baselineKernel, 'run:baseline-regression-source');
@@ -727,6 +729,7 @@ test('FoundryKernel recomputes required baseline regression from complete public
     objects,
     events,
     versions,
+    activationRuntime: new InMemoryActivationRuntime(versions),
     ownerGate,
   });
   const takeover = request({

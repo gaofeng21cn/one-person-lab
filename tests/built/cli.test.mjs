@@ -174,7 +174,7 @@ test('npm tarball installs its workspace runtime dependencies without a checkout
     const installedRoot = path.join(prefix, 'lib', 'node_modules', 'opl-framework');
     assert.equal(fs.existsSync(path.join(installedRoot, 'src', 'entrypoints', 'cli.ts')), false);
     const resolvedPackages = JSON.parse(run(process.execPath, ['--eval',
-      'const resolve = require("node:module").createRequire(process.argv[1]).resolve; process.stdout.write(JSON.stringify(["@one-person-lab/cordis-abi", "@one-person-lab/package-host"].map(id => resolve(id))));',
+      'const resolve = require("node:module").createRequire(process.argv[1]).resolve; process.stdout.write(JSON.stringify(["opl-framework/package-host-integration"].map(id => resolve(id))));',
       path.join(installedRoot, 'package.json')]).stdout);
     for (const packagePath of resolvedPackages) {
       const resolved = fs.realpathSync(packagePath);
