@@ -3,14 +3,14 @@
   "package_id": "opl-flow",
   "display_name": "OPL Flow",
   "publisher": "one-person-lab",
-  "version": "0.1.79",
+  "version": "0.1.82",
   "source": "first_party",
   "source_repo": "https://github.com/gaofeng21cn/opl-flow.git",
   "package_role": "workflow_profile",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
     "plugin_id": "opl-flow",
-    "plugin_payload_manifest_url": "payloads/opl-flow-0.1.79.json",
+    "plugin_payload_manifest_url": "payloads/opl-flow-0.1.82.json",
     "configured_codex_plugin_carrier": {
       "kind": "codex_plugin_manager",
       "plugin_selector": "opl-flow@opl-flow",
@@ -23,7 +23,23 @@
       "software-development",
       "manage-codex-tasks"
     ],
-    "carrier_source_commit": "ad9d4113bbe77e7c4c9bb741a9d511d6a8a95d55"
+    "app_contribution_abi": {
+      "schema_version": "opl-package-app-contribution-cli.v1",
+      "transport": "stdin_json_stdout_json",
+      "argv": [
+        "opl",
+        "app",
+        "contribution",
+        "adapter",
+        "--stdin"
+      ],
+      "request_schema": "opl-package-app-contribution-request.v1",
+      "response_schema": "opl-package-app-contribution-response.v1"
+    },
+    "app_contribution_adapter": {
+      "manifest": "app-contribution-adapter.json"
+    },
+    "carrier_source_commit": "76ff770995e001c0b5b8001df58d17245a9039c1"
   },
   "profile_surface": {
     "runtime_profile": {
@@ -64,7 +80,78 @@
     },
     "home_shortcuts": [],
     "software_type": "capability",
-    "icon_ref": "assets/branding/opl-flow-logo.png"
+    "icon_ref": "assets/branding/opl-flow-logo.png",
+    "miniapp": {
+      "presentation_mode": "dedicated_app",
+      "entry_kind": "product_entry",
+      "direct_entry": true,
+      "entry_view_id": "opl-flow.decision.dashboard",
+      "dedicated_resource_uri": "ui://opl-flow/decision-dashboard.html"
+    }
+  },
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "views": [
+      {
+        "view_id": "opl-flow.decision.dashboard",
+        "view_type": "task_board",
+        "title_i18n": {
+          "zh-CN": "决策看板",
+          "en-US": "Decision Dashboard"
+        },
+        "data_ref": "opl-flow.decision.v1#dashboard",
+        "command_ids": [
+          "opl-flow.objective.send",
+          "opl-flow.objective.approve",
+          "opl-flow.router.tick"
+        ],
+        "empty_state_i18n": {
+          "zh-CN": "当前暂无需要拍板或运行中的目标",
+          "en-US": "No objectives currently require action or are active"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command_id": "opl-flow.objective.send",
+        "label_i18n": {
+          "zh-CN": "投递任务或回复",
+          "en-US": "Send task or reply"
+        },
+        "action_ref": "opl-flow.decision.v1#send",
+        "confirmation_required": true
+      },
+      {
+        "command_id": "opl-flow.objective.approve",
+        "label_i18n": {
+          "zh-CN": "批准归档",
+          "en-US": "Approve archive"
+        },
+        "action_ref": "opl-flow.decision.v1#approve",
+        "confirmation_required": true
+      },
+      {
+        "command_id": "opl-flow.router.tick",
+        "label_i18n": {
+          "zh-CN": "推进一轮调度",
+          "en-US": "Run router tick"
+        },
+        "action_ref": "opl-flow.decision.v1#tick",
+        "confirmation_required": true
+      }
+    ],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "opl-flow.decision.dashboard",
+        "slot": "runtime.detail",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 200,
+        "view_id": "opl-flow.decision.dashboard"
+      }
+    ]
   },
   "registry_entry": {
     "registry_kind": "first_party_package_registry_entry",
