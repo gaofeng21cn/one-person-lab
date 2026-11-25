@@ -454,6 +454,9 @@ export function runnerPromptFor(input: {
   const stageId = stageIdFromAttempt(input.attempt);
   const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
   const stagePacketRef = resolvedStagePacketRef(input);
+  // Stating the directory outright is what keeps an Attempt from spending its
+  // budget searching the filesystem for where its artifacts belong.
+  const workspaceRoot = input.providerWorkspaceRoot ?? workspaceRootFromAttempt(input.attempt) ?? 'unresolved';
   return [
     'You are running an OPL provider-backed stage attempt.',
     `Stage attempt id: ${attemptId}`,
@@ -483,6 +486,7 @@ export function runnerPromptFor(input: {
     'For a producer or repairer Attempt, closeout_refs must name at least one artifact this Attempt produced. Listing only a StageRun input artifact as the produced output is rejected as zero_new_artifact: write the Stage decision to a new file and reference that file. A reviewer Attempt is exempt because it must reference the artifact it reviewed.',
     'For a producer or repairer Attempt in a Stage that schedules formal Review, the typed closeout packet must be the entire final message. Ending with a prose summary leaves the packet missing; OPL then spends the remaining budget on a recovery turn, which can exhaust the Attempt and discard work that is already complete on disk.',
     'This applies whenever the final message is a typed closeout packet for a Stage that schedules formal Review: emit ONLY the raw JSON object as the entire final message — no leading sentence, no trailing explanation, and no ```json code fence. Prose or a fenced block makes the packet undiscoverable and silently discards the Attempt\'s review handoff, even when the referenced closeout file on disk is complete.',
+    `The Attempt workspace for this run is exactly ${workspaceRoot}. Write artifacts there and nowhere else: any closeout file you reference must resolve inside that directory, and OPL rejects a ref that resolves outside it. Do not search the filesystem for where to write.`,
     'A large packet does not have to be retyped. When the packet you built is longer than you can reproduce exactly, write the complete packet to a file inside this Attempt workspace and return a minimal packet instead: keep the exact identity fields, keep closeout_refs, omit route_impact entirely, and add exactly one closeout_ref_metadata entry with kind "stage_attempt_closeout_packet" whose ref points at that file and whose sha256 and size_bytes match its bytes. OPL reads the packet back from that file and takes route_impact from it, so the file — not the message — carries the full decision. Emitting a truncated or hand-assembled copy of a large packet is what leaves the Attempt with no usable closeout at all.',
     'Copy the supplied identity fields character-for-character from the exact typed closeout identity JSON above. Do not invent values for absent optional fields, search other Attempts for identities, or inspect runtime databases to reconstruct them. These fields identify only this Attempt; they do not grant semantic or quality authority.',
     'If closeout_ref_metadata is present, its objects may contain only ref_kind, kind, uri, sha256, ref, size_bytes, and artifact_identity_receipt_ref. Any other field makes the whole packet unusable, so keep domain semantics in the artifact body rather than in transport metadata.',

@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { executeKnowledgeSourceAction, listKnowledgeSourceManagement } from '../../src/authority/packages/knowledge-source-management.ts';
 import type { KnowledgeSourceRegistry } from '../../src/authority/packages/durable-knowledge-sources.ts';
-import { listKnowledgeSources, resolveKnowledgeSourceTarget } from '../../src/authority/packages/durable-knowledge-sources.ts';
+import { knowledgeProjectIdentity, listKnowledgeSources, resolveKnowledgeSourceTarget } from '../../src/authority/packages/durable-knowledge-sources.ts';
 import { recallDurableKnowledge } from '../../src/authority/packages/durable-knowledge-catalog.ts';
 import { sourceFixture } from './knowledge-source-fixture.ts';
 
@@ -244,4 +244,24 @@ test('knowledge target resolution reports an unbound workspace without creating 
     assert.deepEqual(result, { registered: false });
     assert.equal(fs.existsSync(f.bindingRef), false);
   } finally { f.cleanup(); }
+});
+
+test('an Agent-only execution scope resolves the single project that declares it', () => {
+  const fixture = sourceFixture();
+  const agentId = 'agent-declared-once';
+  const projectDir = path.join(fixture.workspace, 'projects', 'declared-project');
+  fs.mkdirSync(projectDir, { recursive: true });
+  fs.writeFileSync(path.join(projectDir, 'project_index.json'), JSON.stringify({ agent_id: agentId }));
+  const index = JSON.parse(fs.readFileSync(path.join(fixture.workspace, 'workspace_index.json'), 'utf8'));
+  index.projects = [
+    ...(Array.isArray(index.projects) ? index.projects : []),
+    { project_id: 'proj-declared', project_root: 'projects/declared-project' },
+  ];
+  fs.writeFileSync(path.join(fixture.workspace, 'workspace_index.json'), JSON.stringify(index));
+
+  // The declaration is the only admissible signal: no project root is supplied,
+  // so the Agent id has to select exactly one project on its own.
+  assert.equal(knowledgeProjectIdentity(fixture.workspace, null, agentId), 'proj-declared');
+  assert.equal(knowledgeProjectIdentity(fixture.workspace, null, 'agent-declared-nowhere'), null);
+  assert.equal(knowledgeProjectIdentity(fixture.workspace, null, null), null);
 });

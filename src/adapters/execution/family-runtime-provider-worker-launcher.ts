@@ -14,7 +14,11 @@ const LOG_BACKUP_COUNT = 4;
 const INITIAL_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 30_000;
 const HEALTH_INTERVAL_MS = 15_000;
-const HEALTH_FAILURE_LIMIT = 4;
+// A respawn cancels whatever activity the worker is running, so the probe must
+// outlast a busy host: a 2s gRPC probe fails spuriously under memory pressure and
+// turns a healthy-but-slow server into a mid-attempt worker restart.
+const HEALTH_PROBE_TIMEOUT_MS = 10_000;
+const HEALTH_FAILURE_LIMIT = 12;
 const MAX_RESIDENT_SET_BYTES = 1536 * 1024 * 1024;
 const MEMORY_FAILURE_LIMIT = 4;
 
@@ -198,7 +202,7 @@ export async function runProviderWorkerLauncher(argv = process.argv.slice(2)) {
       let consecutiveHealthFailures = 0;
       let consecutiveMemoryFailures = 0;
       const monitor = setInterval(() => {
-        void probeTemporalServer(resolved.address!, 2_000).then((reachable) => {
+        void probeTemporalServer(resolved.address!, HEALTH_PROBE_TIMEOUT_MS).then((reachable) => {
           consecutiveHealthFailures = reachable ? 0 : consecutiveHealthFailures + 1;
           if (consecutiveHealthFailures >= HEALTH_FAILURE_LIMIT && child?.pid) {
             logJson(logs.stderr, {

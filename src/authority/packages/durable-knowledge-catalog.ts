@@ -21,6 +21,10 @@ export const DURABLE_KNOWLEDGE_ITEM_VERSION = 'durable-knowledge-item.v2';
 type KnowledgeInput = {
   repoDir: string; domainId: string; stageId: string; taskIntent?: string | null;
   domainPackRoot?: string | null; workspaceRoot?: string | null; projectRoot?: string | null; now?: Date;
+  // The runtime keeps the CLI-facing domain id while the catalog keeps the
+  // declared one; both travel so a source binding can resolve either way.
+  runtimeDomainId?: string | null;
+  agentId?: string | null;
 };
 type Selection = {
   knowledge_id: string; scope: DurableKnowledgeScope; content_kind: DurableKnowledgeItem['content_kind'];
@@ -59,6 +63,21 @@ export function readDurableKnowledgeCatalog(repoDir: string, catalogRef = DURABL
   };
   return normalizeDurableKnowledgeCatalog(JSON.parse(fs.readFileSync(containedKnowledgeFile(repoDir, catalogRef), 'utf8')));
 }
+// A workspace project names the Agent it hosts. The pack states the same identity, but the
+// marketplace root keeps it one level down in the installed plugin, so both layouts are read.
+function readDeclaredAgentId(repoDir: string) {
+  const candidates = [path.join(repoDir, 'contracts/opl_agent_package_manifest.json')];
+  const plugins = path.join(repoDir, 'plugins');
+  if (fs.existsSync(plugins)) {
+    for (const entry of fs.readdirSync(plugins)) candidates.push(path.join(plugins, entry, 'contracts/opl_agent_package_manifest.json'));
+  }
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) continue;
+    const manifest = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+    if (typeof manifest?.agent_id === 'string') return manifest.agent_id;
+  }
+  return null;
+}
 export function resolveKnowledgeDomainId(repoDir: string, domainId: string) {
   const catalog = readDurableKnowledgeCatalog(repoDir);
   if (!catalog.domain_id || domainId === catalog.domain_id) return domainId;
@@ -70,19 +89,20 @@ export function resolveKnowledgeDomainId(repoDir: string, domainId: string) {
   knowledgeFailure('Knowledge domain is not owned by this declared Agent descriptor.', { domain_id: domainId });
 }
 export function collectDurableKnowledgeItems(input: {
-  repoDir: string; domainId?: string; workspaceRoot?: string | null; projectRoot?: string | null;
+  repoDir: string; domainId?: string; runtimeDomainId?: string | null; agentId?: string | null; workspaceRoot?: string | null; projectRoot?: string | null;
 }) {
   const catalog = readDurableKnowledgeCatalog(input.repoDir);
   if (catalog.status !== 'declared') knowledgeFailure('Agent durable knowledge catalog is required.');
   const sources = input.workspaceRoot ? readBoundKnowledgeSources({
     workspaceRoot: input.workspaceRoot, projectRoot: input.projectRoot, domainId: input.domainId ?? catalog.domain_id ?? '',
+    runtimeDomainId: input.runtimeDomainId, agentId: readDeclaredAgentId(input.repoDir),
   }) : { entries: [], qualityDebt: [], requiredIds: [] as string[], requirementBindings: [] };
   const items = [...catalog.items, ...sources.entries.map((entry) => entry.item)];
   if (new Set(items.map((item) => item.knowledge_id)).size !== items.length) knowledgeFailure('Effective knowledge ids must have one source owner.');
   return { catalog, items, qualityDebt: sources.qualityDebt, sourceEntries: sources.entries, requiredIds: sources.requiredIds, requirementBindings: sources.requirementBindings };
 }
 export function resolveDurableKnowledgeBody(input: {
-  item: DurableKnowledgeItem; domainId?: string; domainPackRoot?: string | null;
+  item: DurableKnowledgeItem; domainId?: string; domainPackRoot?: string | null; runtimeDomainId?: string | null; agentId?: string | null;
   workspaceRoot?: string | null; projectRoot?: string | null; now?: Date;
 }) {
   const { item } = input;
@@ -93,7 +113,7 @@ export function resolveDurableKnowledgeBody(input: {
   } else {
     if (!input.workspaceRoot || !input.domainId) knowledgeFailure('Private knowledge requires its authorized workspace and domain.');
     const resolved = resolveKnowledgeSourceItem({ workspaceRoot: input.workspaceRoot, projectRoot: input.projectRoot,
-      domainId: input.domainId, knowledgeId: item.knowledge_id, now: input.now });
+      domainId: input.domainId, runtimeDomainId: input.runtimeDomainId, agentId: input.agentId, knowledgeId: item.knowledge_id, now: input.now });
     if (resolved.item.body_ref.sha256 !== item.body_ref.sha256) knowledgeFailure('Knowledge source changed during selection.');
     bodyPath = resolved.bodyPath;
   }
@@ -111,7 +131,7 @@ function applicable(item: DurableKnowledgeItem, input: KnowledgeInput) {
 }
 function selectedBodies(input: KnowledgeInput) {
   const runtimeDomainId = input.domainId;
-  input = { ...input, domainId: resolveKnowledgeDomainId(input.repoDir, input.domainId) };
+  input = { ...input, domainId: resolveKnowledgeDomainId(input.repoDir, input.domainId), runtimeDomainId, agentId: readDeclaredAgentId(input.repoDir) };
   const effective = collectDurableKnowledgeItems(input);
   const qualityDebt = [...effective.qualityDebt];
   const bodies: Array<Selection & { content: string; size_bytes: number; dependencies?: DependencySnapshot[] }> = [];
@@ -135,6 +155,7 @@ function selectedBodies(input: KnowledgeInput) {
       });
     }
     return resolveDurableKnowledgeBody({ item, domainId: input.domainId, domainPackRoot: input.domainPackRoot ?? input.repoDir,
+      runtimeDomainId: input.runtimeDomainId, agentId: input.agentId,
       workspaceRoot: input.workspaceRoot, projectRoot: input.projectRoot, now: input.now });
   };
   for (const item of effective.items) {
@@ -211,11 +232,12 @@ export function recallDurableKnowledge(input: KnowledgeInput): DurableKnowledgeR
 export type DurableKnowledgeContext = {
   receipt: DurableKnowledgeRecallReceipt;
   bodies: Array<Selection & { content: string; size_bytes: number; dependencies?: DependencySnapshot[] }>;
-  access_context?: { workspace_root: string; project_root: string | null };
+  access_context?: { workspace_root: string; project_root: string | null; agent_id?: string | null };
 };
 export function bindDurableKnowledgeContext(input: KnowledgeInput): DurableKnowledgeContext {
   return { ...selectedBodies(input), ...(input.workspaceRoot ? { access_context: {
     workspace_root: fs.realpathSync(input.workspaceRoot), project_root: input.projectRoot ? fs.realpathSync(input.projectRoot) : null,
+    agent_id: readDeclaredAgentId(input.repoDir),
   } } : {}) };
 }
 export function validateDurableKnowledgeContext(value: unknown, domainId: string, stageId: string): DurableKnowledgeContext {
@@ -242,7 +264,7 @@ export function revalidateDurableKnowledgeContextAccess(context: DurableKnowledg
     || body.dependencies?.some((dependency) => dependency.scope.kind !== 'product'));
   if (hasPrivateKnowledge && !access) knowledgeFailure('Private snapshot lacks its current authorization binding.');
   if (!access) return { valid: true, checked_knowledge_ids: [] as string[] };
-  const input: SourceInput = { workspaceRoot: access.workspace_root, projectRoot: access.project_root, domainId: context.receipt.knowledge_domain_id ?? context.receipt.domain_id };
+  const input: SourceInput = { workspaceRoot: access.workspace_root, projectRoot: access.project_root, domainId: context.receipt.knowledge_domain_id ?? context.receipt.domain_id, agentId: access.agent_id ?? null };
   if (options.forAction) {
     const current = readBoundKnowledgeSources(input);
     const selected = new Set(context.bodies.map((body) => body.knowledge_id));

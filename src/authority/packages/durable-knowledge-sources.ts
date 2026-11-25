@@ -24,28 +24,53 @@ type SourceBindings = {
   registries: SourceBinding[]; required_knowledge_ids?: string[];
   requirement_bindings?: Array<{ requirement_id: string; semantic_owner_ref: string; owner_id: string; knowledge_ids: string[] }>;
 };
-export type SourceInput = { workspaceRoot: string; projectRoot?: string | null; domainId: string; now?: Date };
+export type SourceInput = {
+  workspaceRoot: string;
+  projectRoot?: string | null;
+  domainId: string;
+  runtimeDomainId?: string | null;
+  agentId?: string | null;
+  now?: Date;
+};
 export type BoundKnowledgeItem = {
   item: DurableKnowledgeItem; source: KnowledgeSource; registryRef: string;
   registry: KnowledgeSourceRegistry; issue: string | null;
 };
 
-export function knowledgeProjectIdentity(workspaceRoot: string, projectRoot?: string | null): string | null {
-  if (!projectRoot) return null;
-  const root = fs.realpathSync(workspaceRoot);
-  const project = fs.realpathSync(projectRoot);
-  if (project === root || !project.startsWith(`${root}${path.sep}`)) knowledgeFailure('Project knowledge root must be a distinct descendant of its workspace.');
-  const index = path.join(root, 'workspace_index.json');
-  if (!fs.existsSync(index)) return null;
+function containedWorkspaceProjects(root: string) {
   const parsed = JSON.parse(fs.readFileSync(containedKnowledgeFile(root, 'workspace_index.json'), 'utf8'));
   const projects: Array<{ project_id?: string; project_root?: string }> = Array.isArray(parsed.projects) ? parsed.projects : [];
-  const matches = projects.filter((candidate) => {
+  return projects.filter((candidate) => {
     if (typeof candidate.project_id !== 'string' || typeof candidate.project_root !== 'string') return false;
     const expected = path.resolve(root, candidate.project_root);
-    return expected.startsWith(`${root}${path.sep}`) && fs.existsSync(expected) && fs.realpathSync(expected) === project;
-  });
-  if (matches.length > 1) knowledgeFailure('Knowledge project identity is ambiguous.');
-  return matches[0]?.project_id ?? null;
+    return expected.startsWith(`${root}${path.sep}`) && fs.existsSync(expected);
+  }) as Array<{ project_id: string; project_root: string }>;
+}
+// A project declares the domain it serves. Read that declaration instead of inferring one,
+// so an unbound workspace still cannot borrow project-private memory.
+function declaredProjectAgent(root: string, projectRoot: string) {
+  const ref = `${path.relative(root, projectRoot).split(path.sep).join('/')}/project_index.json`;
+  if (!fs.existsSync(path.resolve(root, ref))) return null;
+  const parsed = JSON.parse(fs.readFileSync(containedKnowledgeFile(root, ref), 'utf8'));
+  return typeof parsed?.agent_id === 'string' ? parsed.agent_id : null;
+}
+export function knowledgeProjectIdentity(workspaceRoot: string, projectRoot?: string | null, agentId?: string | null): string | null {
+  const root = fs.realpathSync(workspaceRoot);
+  if (projectRoot) {
+    const project = fs.realpathSync(projectRoot);
+    if (project === root || !project.startsWith(`${root}${path.sep}`)) knowledgeFailure('Project knowledge root must be a distinct descendant of its workspace.');
+    if (!fs.existsSync(path.join(root, 'workspace_index.json'))) return null;
+    const matches = containedWorkspaceProjects(root).filter((candidate) => fs.realpathSync(path.resolve(root, candidate.project_root)) === project);
+    if (matches.length > 1) knowledgeFailure('Knowledge project identity is ambiguous.');
+    return matches[0]?.project_id ?? null;
+  }
+  // No execution scope: admit the project that declares this Agent as the one it hosts, and
+  // only when exactly one does. The declaration is the project's own; a workspace that names
+  // no project, or several, stays unresolved rather than guessed.
+  if (!agentId || !fs.existsSync(path.join(root, 'workspace_index.json'))) return null;
+  const declared = containedWorkspaceProjects(root).filter((candidate) => declaredProjectAgent(root, path.resolve(root, candidate.project_root)) === agentId);
+  if (declared.length > 1) knowledgeFailure('Knowledge project identity is ambiguous.');
+  return declared[0]?.project_id ?? null;
 }
 function matchingGrants(source: KnowledgeSource, item: DurableKnowledgeItem, input: SourceInput, projectId: string | null) {
   const workspace = fs.realpathSync(input.workspaceRoot);
@@ -71,7 +96,7 @@ export function readBoundKnowledgeSources(input: SourceInput) {
   assertJsonSchemaPayload({ schemaId: bindingsSchema.$id, schema: bindingsSchema }, value);
   const bindings = value as SourceBindings;
   if (new Set(bindings.requirement_bindings?.map((binding) => binding.requirement_id)).size !== (bindings.requirement_bindings?.length ?? 0)) knowledgeFailure('Knowledge requirement bindings must be unique.');
-  const projectId = knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot);
+  const projectId = knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot, input.agentId);
   const entries: BoundKnowledgeItem[] = [];
   const qualityDebt: string[] = [];
   const outsideCaller = new Set<string>();
@@ -109,7 +134,7 @@ export function resolveKnowledgeSourceAccess(input: SourceInput & { knowledgeId:
   if (!entry) knowledgeFailure(`knowledge_source_unavailable:${input.knowledgeId}`);
   if (entry.issue) knowledgeFailure(entry.issue);
   if (!sourcePathAllowed(entry.source, entry.item.body_ref.ref)) knowledgeFailure(`knowledge_source_path_unauthorized:${input.knowledgeId}`);
-  const canWrite = entry.source.writable && matchingGrants(entry.source, entry.item, input, knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot))
+  const canWrite = entry.source.writable && matchingGrants(entry.source, entry.item, input, knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot, input.agentId))
     .some((grant) => grant.write_domains?.includes(input.domainId));
   return { ...entry, canWrite: Boolean(canWrite) };
 }
@@ -170,7 +195,7 @@ export function resolveKnowledgeRegistrationSource(input: SourceInput & { regist
   const binding = bindings.registries.find((candidate) => containedKnowledgeFile(path.dirname(candidate.registry_ref), path.basename(candidate.registry_ref)) === registryRef);
   const item = normalizeKnowledgeItem(input.item);
   if (bound.entries.some((entry) => entry.item.knowledge_id === item.knowledge_id && entry.registryRef !== registryRef)) knowledgeFailure('Knowledge identity already belongs to another bound registry.');
-  const projectId = knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot);
+  const projectId = knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot, input.agentId);
   if (!binding || item.scope.kind === 'product' || !binding.source_ids.includes(item.body_ref.source_id!)
     || !binding.scope_ids.includes(item.scope.id) || !item.applicability.domains.includes(input.domainId)
     || (item.scope.kind === 'project' && item.scope.id !== projectId)) knowledgeFailure('Knowledge registration is outside the current source binding.', {
@@ -239,7 +264,7 @@ export function discoverKnowledgeSources(input: SourceInput & {
   }
   readBoundKnowledgeSources(input);
   const bindings = JSON.parse(fs.readFileSync(containedKnowledgeFile(input.workspaceRoot, KNOWLEDGE_BINDINGS_REF), 'utf8')) as SourceBindings;
-  const projectId = knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot);
+  const projectId = knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot, input.agentId);
   const workspace = fs.realpathSync(input.workspaceRoot);
   const registries = bindings.registries.map(binding => {
     const registryRef = containedKnowledgeFile(path.dirname(binding.registry_ref), path.basename(binding.registry_ref));
@@ -323,7 +348,7 @@ export function resolveKnowledgeSourceTarget(input: SourceInput & { bodyPath: st
   readBoundKnowledgeSources(input);
   const bindings = JSON.parse(fs.readFileSync(containedKnowledgeFile(input.workspaceRoot, KNOWLEDGE_BINDINGS_REF), 'utf8')) as SourceBindings;
   const matches: Array<{ item: DurableKnowledgeItem; source: KnowledgeSource; registrySha256: string; issue: string | null; disclosed: boolean }> = [];
-  const projectId = knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot);
+  const projectId = knowledgeProjectIdentity(input.workspaceRoot, input.projectRoot, input.agentId);
   for (const binding of bindings.registries) {
     const registryBytes = fs.readFileSync(binding.registry_ref);
     const registry = JSON.parse(registryBytes.toString('utf8')) as KnowledgeSourceRegistry;
