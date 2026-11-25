@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { buildRawArtifactProgressCloseoutPacket } from './family-runtime-codex-stage-runner-parts/raw-progress-closeout.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
@@ -54,6 +56,12 @@ import {
   type CodexStageRunnerInput,
   type RunnerEventSummary,
 } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
+import {
+  callContextPromptLines,
+  observedCapabilityCall,
+  writeCapabilityCallContext,
+  type ObservedCapabilityCall,
+} from './family-runtime-codex-stage-runner-parts/capability-call-context.ts';
 import {
   codexCloseoutCaptureExecOptions,
   codexExecOptionsFromPolicy,
@@ -134,6 +142,13 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const stagePacketRef = resolvedStagePacketRef(input);
   const workspaceRoot = workspaceRootFromAttempt(input.attempt);
+  // The capability owns its corpus binding and cannot return it through the operation's
+  // output schema, which admits one member and no others. Give it a directory to publish
+  // into instead; the runtime only ever names the file it finds there.
+  const corpusBindingDir = !workspaceRoot || workspaceRoot === 'unresolved'
+    ? null
+    : path.join(workspaceRoot, '.opl', 'capability-bindings');
+  const observedCapabilityCalls: ObservedCapabilityCall[] = [];
   const attemptStartedAtMs = Date.now();
   if (runnerMode !== 'codex_cli') {
     return {
@@ -225,7 +240,13 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     const skillRuntime = hostSkillRuntime ?? sandboxSkillRuntime;
     const stagePrompt = runnerPromptForExecution({ ...input, stagePacketRef }, executionAttempt);
     const skillPromptPrefix = packageSkillPromptPrefix(skillRuntime?.projection ?? null);
-    const promptText = skillPromptPrefix ? `${skillPromptPrefix}\n\n${stagePrompt}` : stagePrompt;
+    const stagePromptWithCallContext = [
+      stagePrompt,
+      ...callContextPromptLines(runInSandbox ? sandboxWorkspaceRoot : workspaceRoot),
+    ].join('\n');
+    const promptText = skillPromptPrefix
+      ? `${skillPromptPrefix}\n\n${stagePromptWithCallContext}`
+      : stagePromptWithCallContext;
     const promptViaStdin = !runInE2bSandbox && !runInLocalSandbox;
     const args = buildCodexExecArgs(
       promptText,
@@ -293,6 +314,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
             ...input.env,
             ...providerEnv,
             ...hostSkillRuntime?.env,
+            ...(corpusBindingDir ? { OPL_CAPABILITY_BINDING_DIR: corpusBindingDir } : {}),
           },
           stdin: promptText,
           timeoutMs,
@@ -305,11 +327,38 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           onStdoutEvent(event) {
             const summary = eventSummary(event);
             if (summary.event_kind === 'thread.started' && summary.value) observedThreadId = summary.value;
+            const capabilityCall = observedCapabilityCall(event);
+            if (capabilityCall) observedCapabilityCalls.push(capabilityCall);
             runnerEvents.push(summary);
             input.onRunnerProgress?.(summary);
           },
         });
     }
+  // Write the observed call down before anything reads it. A stage that declares the call
+  // as its dependency needs the runtime's own account of it, not a reconstruction from the
+  // transcript, so the context is published as soon as the provider returns.
+  if (observedCapabilityCalls.length > 0 && workspaceRoot && workspaceRoot !== 'unresolved') {
+    const lastCall = observedCapabilityCalls[observedCapabilityCalls.length - 1];
+    const callContext = writeCapabilityCallContext({
+      call: lastCall,
+      attemptRef: `opl://stage_attempts/${String(input.attempt.stage_attempt_id ?? 'unknown')}`,
+      workspaceRoot,
+      corpusBindingDir,
+    });
+    const callContextEvent = {
+      event_kind: 'capability_call_context.written',
+      value: JSON.stringify({
+        call_ref: lastCall.callId,
+        capability: [lastCall.server, lastCall.tool].filter(Boolean).join('/'),
+        call_count: observedCapabilityCalls.length,
+        corpus_binding_present: callContext.corpusBindingRef !== null,
+        context_ref: callContext.contextRef,
+      }),
+    };
+    runnerEvents.push(callContextEvent);
+    input.onRunnerProgress?.(callContextEvent);
+  }
+
   const parsed = parseCodexExecOutput(result.stdout);
   const capturedLastMessage = runInSandbox
     ? { message: null, closeoutPacket: null }

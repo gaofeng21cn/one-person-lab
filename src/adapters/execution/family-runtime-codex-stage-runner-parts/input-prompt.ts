@@ -584,5 +584,13 @@ export function eventSummary(event: CodexExecEvent): RunnerEventSummary {
   if (event.type === 'unsupported_function_call') {
     return { event_kind: event.type, value: event.name.slice(0, 240) };
   }
+  if (event.type === 'capability_call') {
+    // Names and outcome only. The arguments and the result are content, and the runner's
+    // event log is not a place content is allowed to land.
+    return {
+      event_kind: event.type,
+      value: [event.server, event.tool, event.status].filter(Boolean).join('/').slice(0, 240),
+    };
+  }
   return { event_kind: event.type, value: null };
 }

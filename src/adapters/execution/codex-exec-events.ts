@@ -30,6 +30,18 @@ export type CodexExecEvent =
       arguments: string | null;
     }
   | {
+      // A capability call the provider actually made, observed rather than inferred from
+      // model intent. OPL needs the real arguments and the real result to state which call
+      // a downstream artifact is about.
+      type: 'capability_call';
+      callId: string;
+      server: string | null;
+      tool: string;
+      argumentsJson: string | null;
+      resultJson: string | null;
+      status: string;
+    }
+  | {
       type: 'provider_error';
       message: string;
       statusCode: number | null;
@@ -180,6 +192,36 @@ export function parseCodexExecEventFromLine(
 
   if (eventType === 'response_item') {
     return parseCodexExecEventFromResponseItem(event, state);
+  }
+
+  if (eventType === 'item.completed' || eventType === 'item.started') {
+    const item = event.item;
+    const itemRecord = item && typeof item === 'object' && !Array.isArray(item)
+      ? item as Record<string, unknown>
+      : null;
+    if (normalizeInlineText(itemRecord?.type) === 'mcp_tool_call') {
+      const tool = normalizeInlineText(itemRecord?.tool);
+      const callId = normalizeInlineText(itemRecord?.id);
+      // An in-flight call is announced before it has a result, so it carries no call
+      // context yet; only a terminal call can be cited as one.
+      if (!tool || !callId || normalizeInlineText(itemRecord?.status) === 'in_progress') {
+        return null;
+      }
+      return {
+        type: 'capability_call',
+        callId,
+        server: normalizeInlineText(itemRecord?.server) ?? null,
+        tool,
+        argumentsJson: itemRecord?.arguments === undefined
+          ? null
+          : JSON.stringify(itemRecord.arguments),
+        resultJson: itemRecord?.result === undefined || itemRecord?.result === null
+          ? null
+          : JSON.stringify(itemRecord.result),
+        status: normalizeInlineText(itemRecord?.status) ?? 'unknown',
+      } satisfies CodexExecEvent;
+    }
+    return null;
   }
 
   if (eventType === 'thread.started') {
