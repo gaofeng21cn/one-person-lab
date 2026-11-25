@@ -222,29 +222,40 @@ export function buildWorkItemProjectionV2(
   const profile = options.profile ?? 'full';
   const generatedAt = options.generatedAt ?? nowIso();
   const descriptorCache = new Map<string, ReturnType<InventoryDescriptorResolver>>();
+  const descriptorByPackage = new Map<string, ReturnType<InventoryDescriptorResolver>>();
   const descriptorResolver = options.resolveDescriptor ?? readInstalledStandardAgentDescriptorForDomain;
+  const readDescriptor = (identity: string) => {
+    try {
+      return descriptorResolver(identity);
+    } catch {
+      return null;
+    }
+  };
   const resolveDescriptor = (agentId: string) => {
     const cacheKey = normalizedIdentity(agentId);
     if (!descriptorCache.has(cacheKey)) {
-      try {
-        const descriptor = descriptorResolver(agentId);
-        descriptorCache.set(cacheKey, descriptor);
-        descriptorCache.set(agentId, descriptor);
-        if (descriptor) {
-          for (const identity of descriptorIdentities(descriptor)) {
-            if (!descriptorCache.has(identity)) descriptorCache.set(identity, descriptor);
-          }
+      const descriptor = readDescriptor(agentId);
+      descriptorCache.set(cacheKey, descriptor);
+      if (descriptor) {
+        if (descriptor.package_id) descriptorByPackage.set(descriptor.package_id, descriptor);
+        for (const identity of descriptorIdentities(descriptor)) {
+          if (!descriptorCache.has(identity)) descriptorCache.set(identity, descriptor);
         }
-      } catch {
-        descriptorCache.set(cacheKey, null);
       }
     }
     return descriptorCache.get(cacheKey) ?? null;
   };
+  const loadPackageDescriptors = () => {
+    for (const packageId of Object.keys(options.packageStatusById ?? {})) {
+      if (descriptorByPackage.has(packageId)) continue;
+      const descriptor = readDescriptor(packageId);
+      descriptorByPackage.set(packageId, (descriptor?.package_id ?? packageId) === packageId ? descriptor : null);
+    }
+  };
   const bindings = options.bindings ?? listWorkspaceBindings();
   if (options.inventoryDetail === 'deferred') {
-    for (const packageId of Object.keys(options.packageStatusById ?? {})) resolveDescriptor(packageId);
-    const installedDescriptors = [...new Set(descriptorCache.values())]
+    loadPackageDescriptors();
+    const installedDescriptors = [...new Set(descriptorByPackage.values())]
       .filter((descriptor): descriptor is NonNullable<typeof descriptor> => descriptor?.kind === 'agent');
     const projectCatalog = buildProjectCatalog(bindings, installedDescriptors);
     const { agents, availability } = buildAgentCatalog({
@@ -252,7 +263,7 @@ export function buildWorkItemProjectionV2(
       checkedAt: generatedAt,
       packageItems: options.packageProjectionItems,
       packageStatusById: options.packageStatusById,
-      descriptorByAgent: descriptorCache,
+      descriptorByPackage,
     });
     return {
       surface_kind: 'opl_work_item_projection',
@@ -331,7 +342,7 @@ export function buildWorkItemProjectionV2(
   projectCatalog.projects.sort((left, right) =>
     left.agent_id.localeCompare(right.agent_id) || left.display_name.localeCompare(right.display_name)
   );
-  for (const packageId of Object.keys(options.packageStatusById ?? {})) resolveDescriptor(packageId);
+  loadPackageDescriptors();
   const controlled = applyWorkItemControlState({
     items: inventoryItems,
     findWorkItemControl: options.findWorkItemControl ?? buildWorkItemControlResolver(),
@@ -443,7 +454,7 @@ export function buildWorkItemProjectionV2(
     checkedAt: generatedAt,
     packageItems: options.packageProjectionItems,
     packageStatusById: options.packageStatusById,
-    descriptorByAgent: descriptorCache,
+    descriptorByPackage,
   });
   const visibleItems = items.filter((item) => item.visibility.state === 'visible');
   const archivedItemCount = items.length - visibleItems.length;

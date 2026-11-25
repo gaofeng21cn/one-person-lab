@@ -64,7 +64,7 @@ export function buildAgentCatalog(input: {
   checkedAt?: string;
   packageItems?: ReadonlyArray<JsonRecord>;
   packageStatusById?: Readonly<Record<string, JsonRecord>>;
-  descriptorByAgent?: ReadonlyMap<string, StandardAgentDescriptorInterface | null>;
+  descriptorByPackage?: ReadonlyMap<string, StandardAgentDescriptorInterface | null>;
 } = {}) {
   const profile = input.profile ?? 'full';
   const checkedAt = input.checkedAt ?? new Date().toISOString();
@@ -74,7 +74,7 @@ export function buildAgentCatalog(input: {
   for (const packageId of Object.keys(input.packageStatusById ?? {}).sort()) {
     const packageStatus = input.packageStatusById?.[packageId];
     if (!projectedPresence(packageStatus)) continue;
-    const descriptor = input.descriptorByAgent?.get(packageId) ?? null;
+    const descriptor = input.descriptorByPackage?.get(packageId) ?? null;
     if (descriptor?.kind !== 'agent') continue;
     const agentId = descriptor.agent_id ?? packageId;
     const descriptorPackageId = descriptor.package_id ?? packageId;
@@ -88,7 +88,7 @@ export function buildAgentCatalog(input: {
       scope_id: `agent:${agentId}`,
     });
     const packageItem = packageItemForAgent(packageId, packageItems);
-    const descriptorChecked = input.descriptorByAgent?.has(packageId) ?? false;
+    const descriptorChecked = input.descriptorByPackage?.has(packageId) ?? false;
     const descriptorStatus = descriptor
       ? 'readable'
       : descriptorChecked

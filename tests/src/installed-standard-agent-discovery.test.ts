@@ -63,6 +63,48 @@ test('an installed Agent joins workspace and runtime by descriptor, and removal 
   }
 });
 
+test('an installed Git payload resolves the declared owner at its observed local marketplace', () => {
+  const f = fixture();
+  try {
+    const marketplaceRoot = fs.realpathSync.native(f.root);
+    const pluginRoot = path.join(marketplaceRoot, 'plugins', 'novel-agent');
+    fs.mkdirSync(pluginRoot, { recursive: true });
+    const owner = 'owner/novel-agent';
+    const marker = path.join(marketplaceRoot, '.codex-marketplace-install.json');
+    const writeMarker = (repo: string) => fs.writeFileSync(marker, JSON.stringify({
+      source: `https://github.com/${repo}.git`,
+      source_type: 'developer_git_archive',
+    }));
+    writeMarker(owner);
+    f.installed.sourcePath = pluginRoot;
+    f.installed.marketplaceSource = marketplaceRoot;
+    f.installed.carrier = {
+      packageId: 'novel-agent',
+      carrier: { kind: 'codex_plugin_manager', pluginId: f.installed.pluginId, marketplaceSource: owner },
+      executor: { route: 'codex_cli', requiredSkillIds: [] },
+      publicationRef: null,
+    };
+    f.installed.carrier_readback = {
+      kind: 'local', identity: f.installed.pluginId, source_ref: pluginRoot, version: '1.0.0',
+      enabled: true, lifecycle_authority: 'carrier_owned',
+    };
+    assert.equal(listInstalledStandardAgentEntries(f.discover)[0]?.domain_id, 'novel-domain');
+
+    f.installed.marketplaceSource = path.dirname(marketplaceRoot);
+    assert.deepEqual(listInstalledStandardAgentEntries(f.discover), []);
+
+    f.installed.marketplaceSource = marketplaceRoot;
+    writeMarker('other/novel-agent');
+    assert.deepEqual(listInstalledStandardAgentEntries(f.discover), []);
+
+    writeMarker(owner);
+    f.installed.marketplaceSource = owner;
+    assert.equal(listInstalledStandardAgentEntries(f.discover)[0]?.domain_id, 'novel-domain');
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
 test('discovery rejects conflicting identities and cannot grant disabled carriers launch readiness', () => {
   const f = fixture();
   const original = readAgentPackageReadinessPort();

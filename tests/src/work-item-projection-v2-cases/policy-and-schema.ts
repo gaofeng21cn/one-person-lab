@@ -59,7 +59,7 @@ test('agent availability is package health only in fast and full profiles', () =
     package_lock_ref: `/locks/${package_id}.json`,
     lock_ref: `opl://legacy-lock/${package_id}`,
   }]));
-  const descriptorByAgent = new Map<string, StandardAgentDescriptorInterface | null>([
+  const descriptorByPackage = new Map<string, StandardAgentDescriptorInterface | null>([
     ['mas', masDescriptor()],
     ['mag', identityDescriptor('mag')],
     ['rca', identityDescriptor('rca')],
@@ -71,7 +71,7 @@ test('agent availability is package health only in fast and full profiles', () =
     checkedAt: '2026-07-13T08:00:00.000Z',
     packageItems,
     packageStatusById: fastStatuses,
-    descriptorByAgent,
+    descriptorByPackage,
   }).availability;
   assert.equal(fast.every((entry) => entry.availability === 'available'), true);
   assert.equal(fast.every((entry) => entry.last_checked_at === '2026-07-13T08:00:00.000Z'), true);
@@ -90,12 +90,38 @@ test('agent availability is package health only in fast and full profiles', () =
     checkedAt: '2026-07-13T09:00:00.000Z',
     packageItems,
     packageStatusById: fullStatuses,
-    descriptorByAgent,
+    descriptorByPackage,
   }).availability;
   assert.equal(full.find((entry) => entry.agent_id === 'mas')?.availability, 'available');
   assert.equal(full.find((entry) => entry.agent_id === 'mag')?.availability, 'attention_required');
   assert.equal(full.find((entry) => entry.agent_id === 'obf'), undefined);
   assert.equal(full.every((entry) => entry.source === 'package_status'), true);
+});
+
+test('agent catalog uses Package IDs even after the same Agent was resolved by a workspace alias', () => {
+  const input = fixture();
+  const packageId = 'dev-orchestrator';
+  const alias = 'devorchestrator';
+  const descriptor = identityDescriptor(packageId);
+  try {
+    const projection = buildWorkItemProjectionV2({
+      profile: 'full',
+      bindings: [{ ...input.bindings[0], project_id: alias, project: alias }],
+      attempts: [],
+      packageStatusById: {
+        [packageId]: { status: 'installed', launch_allowed: true },
+        [alias]: { status: 'installed', launch_allowed: false },
+      },
+      resolveDescriptor: (identity) => [alias, packageId].includes(identity) ? descriptor : null,
+    });
+    assert.deepEqual(projection.agent_catalog.map((entry) => entry.package_id), [packageId]);
+    assert.deepEqual(
+      projection.agent_availability.map((entry) => [entry.package_id, entry.availability]),
+      [[packageId, 'available']],
+    );
+  } finally {
+    fs.rmSync(input.root, { recursive: true, force: true });
+  }
 });
 
 test('deferred inventory resolves producer identity but isolates one descriptor failure', () => {

@@ -1,7 +1,9 @@
+import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { gitMarketplaceRuntimeRoot } from '../../kernel/git-marketplace-runtime-root.ts';
+import { githubMarketplaceSourceIdentity } from '../../kernel/marketplace-source-identity.ts';
 import { readStandardAgentDescriptorInterface } from '../../kernel/standard-agent-interface.ts';
 import {
   STANDARD_AGENT_REGISTRY,
@@ -29,6 +31,27 @@ function discoverForCurrentTurn() {
   return turnDescriptors;
 }
 
+function installedMarketplaceRuntimeRoot(installed: InstalledPackageDescriptor) {
+  const observed = installed.marketplaceSource;
+  if (!observed) return null;
+  const descriptorRef = 'contracts/domain_descriptor.json';
+  const observedRoot = gitMarketplaceRuntimeRoot(installed.sourcePath, observed, descriptorRef);
+  if (observedRoot || !path.isAbsolute(observed) || installed.carrier_readback.kind !== 'local') {
+    return observedRoot;
+  }
+
+  // An installed Git payload is registered with Codex by local path, while
+  // its archive marker identifies the declared Git owner.
+  const declared = installed.carrier.carrier.marketplaceSource;
+  if (!declared || !githubMarketplaceSourceIdentity(declared)) return null;
+  try {
+    const root = gitMarketplaceRuntimeRoot(fs.realpathSync.native(installed.sourcePath), declared, descriptorRef);
+    return root === fs.realpathSync.native(observed) ? root : null;
+  } catch {
+    return null;
+  }
+}
+
 export function listInstalledStandardAgentEntries(
   discover: () => Map<string, InstalledPackageDescriptor> = discoverForCurrentTurn,
 ): StandardDomainAgentRegistryEntry[] {
@@ -38,10 +61,7 @@ export function listInstalledStandardAgentEntries(
     // Published entries retain their compatibility aliases. Installed discovery
     // admits new identities without introducing another publication catalog.
     if (STANDARD_AGENT_REGISTRY.some((entry) => entry.agent_id === manifest.package_id)) return [];
-    const root = installed.marketplaceSource
-      ? gitMarketplaceRuntimeRoot(installed.sourcePath, installed.marketplaceSource, 'contracts/domain_descriptor.json')
-        ?? installed.sourcePath
-      : installed.sourcePath;
+    const root = installedMarketplaceRuntimeRoot(installed) ?? installed.sourcePath;
     const descriptor = readStandardAgentDescriptorInterface(root);
     if (!descriptor) return [];
     if (manifest.agent_id !== manifest.package_id

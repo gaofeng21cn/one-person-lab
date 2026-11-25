@@ -4,7 +4,18 @@
 
 ## Admission source
 
-唯一入口是配置 native carrier 返回的 installed owner descriptor。Framework 不通过 App profile、workspace manifest、README 或固定 registry决定成员资格。
+Framework 从已配置的原生 carrier 读回 Package owner 的 installed descriptor，以此确定成员资格。
+
+本地开发时，将 owner 的 `opl-package.json`、domain descriptor 和 capability map 随插件放入本地 Codex marketplace，并在 Package manifest 中声明实际的原生插件入口。使用 Framework 所选的同一 Codex CLI 和 `CODEX_HOME` 注册并安装插件。
+
+```sh
+codex plugin marketplace add /path/to/local-marketplace --json
+codex plugin add my-agent@local-marketplace --json
+opl packages status --package-id my-agent --json
+opl app state --profile fast --json
+```
+
+用 Package 状态核对 installed、enabled 和 launch readiness，再从 App 状态核对 Agent 目录中的 `package_id`。启动时为 `opl agents run` 传入 descriptor 声明的 domain、action 和工作区。公开软件源的 Package projection 用于分发，本地安装通过原生载体读回进入动态发现。
 
 ## Required descriptor
 
