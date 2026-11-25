@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { runnerPromptFor } from '../../src/adapters/execution/family-runtime-codex-stage-runner/input-prompt.ts';
+import { runnerPromptFor, runnerPromptForExecution } from '../../src/adapters/execution/family-runtime-codex-stage-runner/input-prompt.ts';
 import { codexActivityEventForTemporalHistory } from '../../src/adapters/execution/family-runtime-temporal-history-summary.ts';
 import { canonicalJsonText } from '../../src/kernel/canonical-json.ts';
 import { createWorkItemExecutionScopeSnapshot } from '../../src/authority/workspace/execution-scope.ts';
@@ -14,6 +14,29 @@ test('first Attempt prompt supplies typed closeout surface and exact Attempt ide
   assert.match(prompt,/surface_kind "stage_attempt_closeout_packet"/);
   assert.match(prompt,/stage_attempt_id "sat-contract" exactly/);
   assert.match(prompt,/stage_run_id "sr-contract" exactly/);
+});
+
+test('first Attempt prompt tells the provider where to write an exact referenced closeout', () => {
+  const attempt = {
+    stage_attempt_id: 'sat-closeout-file',
+    workspace_locator: { workspace_root: '/provider/workspace' },
+  };
+  const prompt = runnerPromptForExecution({ attempt }, attempt);
+  assert.match(prompt, /Attempt workspace in the executor is "\/provider\/workspace"\./);
+  assert.match(prompt, /closeout_ref_metadata entry of kind "stage_attempt_closeout_packet"/);
+  assert.match(prompt, /exact sha256 and size_bytes/);
+  assert.match(prompt, /Omit route_impact from the smaller packet/);
+
+  const clonePrompt = runnerPromptForExecution({ attempt }, {
+    ...attempt,
+    workspace_locator: {
+      workspace_root: '/sandbox/workspace',
+      host_workspace_root: '/provider/workspace',
+      workspace_transport: 'local_sandbox_git_clone',
+    },
+  });
+  assert.match(clonePrompt, /Attempt workspace in the executor is "\/sandbox\/workspace"\./);
+  assert.doesNotMatch(clonePrompt, /\/provider\/workspace|smaller typed closeout/);
 });
 
 test('work-item reviewer prompt asks for the persisted scope digest', () => {
