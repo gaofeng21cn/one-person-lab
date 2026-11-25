@@ -19,7 +19,7 @@ import {
   exactStringArray,
   persistedJsonRecord,
   requireProjectedAttemptArtifactIdentityMatchesPersisted,
-  requireProjectedAttemptSummaryMatchesPersisted,
+  reconcileProjectedAttemptSummary,
 } from './family-runtime-stage-quality-cycle-attempt-identity.ts';
 import {
   requireProjectedReviewReceiptMatchesPersisted,
@@ -146,11 +146,14 @@ export function projectTemporalStageRunQualityCycle(
       });
       attemptAuthorities.set(stageAttemptId, authority.attempt);
     }
-    for (const summary of state.attempts) {
-      requireProjectedAttemptSummaryMatchesPersisted(
-        summary,
-        attemptAuthorities.get(summary.stage_attempt_id)!,
-      );
+    // Project what the durable ledger actually supports, not the workflow's unverified view:
+    // an Attempt the ledger records as completed must not be written back as failed just
+    // because the workflow lost the activity result.
+    const reconciledAttempts = state.attempts.map((summary) => reconcileProjectedAttemptSummary(
+      summary,
+      attemptAuthorities.get(summary.stage_attempt_id)!,
+    ));
+    for (const summary of reconciledAttempts) {
       requireProjectedAttemptArtifactIdentityMatchesPersisted({
         db,
         summary,
@@ -298,7 +301,7 @@ export function projectTemporalStageRunQualityCycle(
         artifact_hashes: [...state.artifact_hashes],
         artifact_identity_receipt_refs: [...state.artifact_identity_receipt_refs],
         artifact_identity_authority: state.artifact_identity_authority ?? null,
-        attempts: state.attempts.map((attempt) => ({
+        attempts: reconciledAttempts.map((attempt) => ({
           attempt_role: attempt.attempt_role,
           quality_round_index: attempt.quality_round_index,
           stage_attempt_id: attempt.stage_attempt_id,

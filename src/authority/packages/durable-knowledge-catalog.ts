@@ -216,7 +216,17 @@ function selectedBodies(input: KnowledgeInput) {
     }
   }
   if (missing.length) knowledgeFailure('Required knowledge is unavailable.', { missing_knowledge_ids: missing, quality_debt: qualityDebt });
-  if (bodies.reduce((sum, body) => sum + body.size_bytes, 0) > 512 * 1024) knowledgeFailure('Stage knowledge exceeds its context budget; narrow applicability.');
+  const totalBytes = bodies.reduce((sum, body) => sum + body.size_bytes, 0);
+  if (totalBytes > 512 * 1024) knowledgeFailure('Stage knowledge exceeds its context budget; narrow applicability.');
+  // The hard budgets above only fire once the payload is already unusable. A single body
+  // that dominates the budget is the shape that actually burns a stage's context: it passes
+  // every limit, then crowds out the prompt and the tool results. Name it as debt so the
+  // package author sees which item to re-scope instead of discovering it in a token bill.
+  for (const body of bodies) {
+    if (totalBytes > 0 && body.size_bytes * 4 > totalBytes * 3) {
+      qualityDebt.push(`knowledge_body_dominates_stage_budget:${body.knowledge_id}:${body.size_bytes}/${totalBytes}`);
+    }
+  }
   const receipt: DurableKnowledgeRecallReceipt = {
     surface_kind: 'opl_durable_knowledge_recall_receipt', version: 'durable-knowledge-recall-receipt.v2',
     domain_id: runtimeDomainId, knowledge_domain_id: input.domainId, stage_id: input.stageId, task_intent: input.taskIntent ?? null,

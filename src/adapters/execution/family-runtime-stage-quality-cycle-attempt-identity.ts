@@ -67,8 +67,10 @@ function projectedAttemptStatusFromPersisted(status: unknown) {
   return null;
 }
 
-export function requireProjectedAttemptSummaryMatchesPersisted(
-  summary: TemporalStageRunWorkflowState['attempts'][number],
+type ProjectedAttemptSummary = TemporalStageRunWorkflowState['attempts'][number];
+
+function comparedAttemptFields(
+  summary: ProjectedAttemptSummary,
   attempt: Record<string, unknown>,
 ) {
   const persisted = {
@@ -92,7 +94,44 @@ export function requireProjectedAttemptSummaryMatchesPersisted(
     artifact_producer_attempt_ref: summary.artifact_producer_attempt_ref,
     status: summary.status,
   };
-  if (canonicalJsonText(persisted) !== canonicalJsonText(projected)) {
+  return { persisted, projected };
+}
+
+// A cancelled or timed-out codex activity never returns to the workflow, so the workflow
+// records the Attempt as `failed` while the runner had already finished and persisted a
+// `completed` Attempt carrying a real execution session. That is not a contradiction:
+// the durable row is strictly better informed, because it holds the evidence of the work.
+// Reconcile exactly that shape to the durable fact, and leave every other divergence an
+// error so a genuine mismatch still fails closed.
+function attemptOutranLostActivity(
+  persisted: ReturnType<typeof comparedAttemptFields>['persisted'],
+  projected: ReturnType<typeof comparedAttemptFields>['projected'],
+) {
+  if (persisted.status !== 'completed' || projected.status !== 'failed') return false;
+  if (typeof persisted.execution_session_ref !== 'string' || !persisted.execution_session_ref) {
+    return false;
+  }
+  if (projected.execution_session_ref !== null) return false;
+  const without = (value: Record<string, unknown>) =>
+    canonicalJsonText({ ...value, status: null, execution_session_ref: null });
+  return without(persisted) === without(projected);
+}
+
+/**
+ * Return the summary the durable Attempt actually supports.
+ *
+ * The workflow's view wins by default; it is the thing being projected. It loses only
+ * where it is provably less informed than the row it is about to overwrite — an Attempt
+ * the durable ledger records as completed with a real session, which the workflow reports
+ * as failed because it never received the activity result.
+ */
+export function reconcileProjectedAttemptSummary(
+  summary: ProjectedAttemptSummary,
+  attempt: Record<string, unknown>,
+): ProjectedAttemptSummary {
+  const { persisted, projected } = comparedAttemptFields(summary, attempt);
+  if (canonicalJsonText(persisted) === canonicalJsonText(projected)) return summary;
+  if (!attemptOutranLostActivity(persisted, projected)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
       'Temporal StageRun Attempt summary does not match its durable StageAttempt.',
@@ -104,6 +143,18 @@ export function requireProjectedAttemptSummaryMatchesPersisted(
       },
     );
   }
+  return {
+    ...summary,
+    status: 'completed',
+    execution_session_ref: persisted.execution_session_ref as string,
+  };
+}
+
+export function requireProjectedAttemptSummaryMatchesPersisted(
+  summary: ProjectedAttemptSummary,
+  attempt: Record<string, unknown>,
+) {
+  reconcileProjectedAttemptSummary(summary, attempt);
 }
 
 export function recordValue(value: unknown) {

@@ -396,3 +396,50 @@ test('private source escape and duplicate identities cannot create a second auth
     assert.throws(() => recallDurableKnowledge(f.input));
   } finally { f.cleanup(); }
 });
+
+test('a knowledge body that dominates the stage budget is reported as debt, not bound silently', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-knowledge-dominance-'));
+  const small = '# Small policy\n\nShort.\n';
+  const large = `# Evaluation specifications\n\n${'Detailed evaluation case. '.repeat(400)}\n`;
+  write(root, 'agent/knowledge/small.md', small);
+  write(root, 'agent/knowledge/large.md', large);
+  const entry = (id: string, body: string, content: string) => ({
+    surface_kind: 'opl_durable_knowledge_item',
+    version: 'durable-knowledge-item.v2',
+    knowledge_id: id,
+    title: id,
+    scope: { kind: 'product', id: 'dominance-domain' },
+    content_kind: 'policy',
+    owner: 'dominance-domain',
+    body_ref: { kind: 'repo_path', ref: body, sha256: sha256(content) },
+    applicability: { domains: ['dominance-domain'], stages: ['answer'] },
+    requirement: 'optional',
+    status: 'active',
+    reviewed_at: '2026-01-01T00:00:00Z',
+    next_review_at: '2099-01-01T00:00:00Z',
+    authority_boundary: {
+      semantic_body_owner: 'dominance-domain',
+      opl_role: 'catalog_recall_and_receipt_projection_only',
+    },
+  });
+  write(root, 'contracts/durable_knowledge_catalog.json', `${JSON.stringify({
+    surface_kind: 'opl_durable_knowledge_catalog',
+    version: 'durable-knowledge-catalog.v2',
+    owner: 'one-person-lab',
+    items: [
+      entry('dominance.small', 'agent/knowledge/small.md', small),
+      entry('dominance.large', 'agent/knowledge/large.md', large),
+    ],
+  }, null, 2)}\n`);
+
+  // Both bodies pass every hard budget, yet one of them is most of the payload. That is
+  // exactly the shape that burns a stage's context without tripping any limit.
+  const receipt = recallDurableKnowledge({
+    repoDir: root,
+    domainId: 'dominance-domain',
+    stageId: 'answer',
+  } as never);
+  const dominance = receipt.quality_debt.filter((entry) => entry.startsWith('knowledge_body_dominates_stage_budget:'));
+  assert.equal(dominance.length, 1);
+  assert.match(dominance[0]!, /^knowledge_body_dominates_stage_budget:dominance\.large:\d+\/\d+$/);
+});
