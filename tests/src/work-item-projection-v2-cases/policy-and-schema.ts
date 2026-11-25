@@ -98,6 +98,38 @@ test('agent availability is package health only in fast and full profiles', () =
   assert.equal(full.every((entry) => entry.source === 'package_status'), true);
 });
 
+test('agent catalog resolves descriptors for package ids with non-alphanumeric characters', () => {
+  // The caller (buildWorkItemProjectionV2.resolveDescriptor) caches descriptors under the
+  // normalized identity of every descriptor identity (agent_id, package_id, domain_id,
+  // runtime_domain_id, aliases) and under the raw resolver input (a domain/agent id) —
+  // never under the raw dashed package_id carried by packageStatusById. The catalog
+  // lookup must apply the same normalization or every dashed package id silently drops
+  // out of agent_catalog (observed: dev-orchestrator missing from `opl app state`).
+  const packageId = 'dev-orchestrator';
+  const packageItems = [{ package_id: packageId, source_path: `/packages/${packageId}` }];
+  const packageStatusById = {
+    [packageId]: {
+      status: 'installed',
+      codex_visible: true,
+      package_version: '0.1.0',
+      package_lock_ref: `/locks/${packageId}.json`,
+      lock_ref: `opl://legacy-lock/${packageId}`,
+    },
+  };
+  const descriptorByAgent = new Map<string, StandardAgentDescriptorInterface | null>([
+    ['devorchestrator', identityDescriptor(packageId)],
+  ]);
+  const { agents, availability } = buildAgentCatalog({
+    profile: 'fast',
+    checkedAt: '2026-07-13T08:00:00.000Z',
+    packageItems,
+    packageStatusById,
+    descriptorByAgent,
+  });
+  assert.equal(agents.find((entry) => entry.package_id === packageId)?.agent_id, packageId);
+  assert.equal(availability.find((entry) => entry.package_id === packageId)?.availability, 'available');
+});
+
 test('deferred inventory resolves producer identity but isolates one descriptor failure', () => {
   const input = fixture();
   let descriptorReadCount = 0;
