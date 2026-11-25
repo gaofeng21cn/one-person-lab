@@ -17,7 +17,6 @@ import {
   createOplAgentPackageStatusReader,
   inspectManagedBrowserAutomation,
   listOplAgentPackages,
-  inspectManagedComputerUse,
   readInstalledStandardAgentDescriptorForDomain,
   readOplFlowDefaultUserInstructions,
   readStorageOwnerInventorySnapshot,
@@ -457,12 +456,6 @@ export async function buildOplAppState(input: {
     { operation: 'status' },
     { allowExternalProbes: profile !== 'fast' },
   );
-  const managedComputerUse = input.automationProviderHost
-    ? await input.automationProviderHost.inspect({
-      automation_kind: 'computer_use',
-      runExternalChecks: profile === 'full',
-    })
-    : await inspectManagedComputerUse({ runExternalChecks: profile === 'full' });
   const managedBrowserAutomation = input.automationProviderHost
     ? await input.automationProviderHost.inspect({
       automation_kind: 'browser_automation',
@@ -697,7 +690,7 @@ export async function buildOplAppState(input: {
           }
         : agentPackagesProjection,
       ui_contributions: uiContributions,
-      managed_companions: [managedBrowserAutomation, managedComputerUse],
+      managed_companions: [managedBrowserAutomation],
       ...(profile === 'full'
         ? {
             opl_agent_packages: agentPackagesReadback,

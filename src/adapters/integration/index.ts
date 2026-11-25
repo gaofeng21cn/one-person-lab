@@ -175,16 +175,6 @@ export {
 export { buildManagedShellCommandEnv, prepareManagedShellCommandCwd } from '../../kernel/managed-shell-command-env.ts';
 export { buildOplDockerWebuiDoctor } from './system-installation/docker-webui-doctor.ts';
 export {
-  buildManagedComputerUseActionCatalog,
-  createManagedComputerUseProvider,
-  inspectManagedComputerUse,
-  MANAGED_COMPUTER_USE_ACTION_IDS,
-  reconcileManagedComputerUse,
-} from './managed-computer-use.ts';
-export type {
-  ManagedComputerUseActionId,
-} from './managed-computer-use.ts';
-export {
   buildManagedBrowserAutomationActionCatalog,
   createManagedBrowserAutomationProvider,
   inspectManagedBrowserAutomation,

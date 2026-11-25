@@ -13,12 +13,6 @@ import {
   reconcileManagedBrowserAutomation,
   type ManagedBrowserAutomationInspection,
 } from '../managed-browser-automation.ts';
-import {
-  inspectManagedComputerUse,
-  planManagedComputerUseUpdate,
-  reconcileManagedComputerUse,
-  type ManagedComputerUseInspection,
-} from '../managed-computer-use.ts';
 
 import { buildOplEnvironment } from './environment.ts';
 import { buildDockerWebuiStartupReadback } from './docker-webui-doctor.ts';
@@ -65,11 +59,11 @@ type StartupMaintenanceFrameworkTarget = ReturnType<typeof runOplFrameworkSelfUp
 type StartupMaintenanceCapabilityTarget = StartupMaintenanceModuleTarget;
 type StartupMaintenanceManagedCompanionTarget = {
   target_type: 'managed_companion';
-  target_id: 'kimi-cu' | 'playwright-mcp';
+  target_id: 'playwright-mcp';
   status: 'completed' | 'skipped' | 'attention_required';
   reason: string;
   action: 'repair' | null;
-  result: ManagedComputerUseInspection | ManagedBrowserAutomationInspection;
+  result: ManagedBrowserAutomationInspection;
   error: Record<string, unknown> | null;
   blocking: false;
 };
@@ -392,64 +386,6 @@ function summarizeCapabilityTargets(targets: StartupMaintenanceCapabilityTarget[
   };
 }
 
-export async function runManagedComputerUseStartupMaintenance(): Promise<StartupMaintenanceManagedCompanionTarget> {
-  const before = await inspectManagedComputerUse();
-  if (!before.platform.supported) {
-    return {
-      target_type: 'managed_companion',
-      target_id: 'kimi-cu',
-      status: 'skipped',
-      reason: 'unsupported_platform',
-      action: null,
-      result: before,
-      error: null,
-      blocking: false,
-    };
-  }
-  const plan = await planManagedComputerUseUpdate();
-  if ((before.status === 'ready' || before.status === 'permission_required') && !plan.update_available) {
-    return {
-      target_type: 'managed_companion',
-      target_id: 'kimi-cu',
-      status: 'skipped',
-      reason: before.status === 'ready' ? 'already_ready' : 'installed_permission_required',
-      action: null,
-      result: before,
-      error: null,
-      blocking: false,
-    };
-  }
-
-  try {
-    const result = await reconcileManagedComputerUse('settings_repair_computer_use', {
-      target: plan.target ?? undefined,
-      refreshLatest: true,
-    });
-    const materialized = result.status === 'ready' || result.status === 'permission_required';
-    return {
-      target_type: 'managed_companion',
-      target_id: 'kimi-cu',
-      status: materialized ? 'completed' : 'attention_required',
-      reason: materialized ? 'default_managed_companion_reconciled' : 'reconcile_incomplete',
-      action: 'repair',
-      result,
-      error: null,
-      blocking: false,
-    };
-  } catch (error) {
-    return {
-      target_type: 'managed_companion',
-      target_id: 'kimi-cu',
-      status: 'attention_required',
-      reason: 'reconcile_failed',
-      action: 'repair',
-      result: await inspectManagedComputerUse({ runExternalChecks: false }),
-      error: normalizeError(error),
-      blocking: false,
-    };
-  }
-}
-
 export async function runManagedBrowserAutomationStartupMaintenance(): Promise<StartupMaintenanceManagedCompanionTarget> {
   const before = await inspectManagedBrowserAutomation();
   if (before.status === 'unsupported_runtime') {
@@ -659,7 +595,7 @@ async function runStartupMaintenance(
     .filter((module) => module.scope === 'capability_package')
     .map((module) => runModuleStartupMaintenance(module));
   const managedCompanionTargets = !stageOnly && process.env.OPL_APP_HOST_KIND?.trim() === 'desktop'
-    ? [await runManagedBrowserAutomationStartupMaintenance(), await runManagedComputerUseStartupMaintenance()]
+    ? [await runManagedBrowserAutomationStartupMaintenance()]
     : [];
   const frameworkSummary = summarizeFrameworkTargets(frameworkTargets);
   const engineSummary = summarizeTargets(engineTargets);
@@ -775,7 +711,6 @@ async function runStartupMaintenance(
           'Startup maintenance refreshes the managed OPL Framework runtime only when an explicit framework update source is configured.',
           'Startup maintenance updates clean OPL-managed module checkouts and syncs repo-local plugin carriers.',
           'Startup maintenance installs or updates MAS Scholar Skills from the managed GHCR capability packages channel so App workspace/quest sync can materialize it into the active paper directory.',
-          'Desktop macOS startup materializes and registers the pinned KimiCU managed companion by default; missing TCC permission or companion repair failure never blocks the App or ordinary Codex use.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
           'MAS Scholar Skills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
           'Docker/WebUI startup records image seed, /data, and /projects boundaries in the OPL state install manifest without claiming runtime or domain readiness.',

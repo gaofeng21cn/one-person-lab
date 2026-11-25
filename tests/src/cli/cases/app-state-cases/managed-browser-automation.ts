@@ -123,7 +123,6 @@ test('managed Browser Automation lock delegates version resolution while preserv
   assert.equal(lock.browser.host_browser_required_for_ready, true);
   assert.deepEqual(lock.mcp.required_tools, REQUIRED_TOOLS);
   assert.deepEqual(lock.action_ids, buildManagedBrowserAutomationActionCatalog().map((action) => action.action_id));
-  assert.equal(lock.browser.desktop_visual_fallback_provider, 'kimi-cu');
 });
 
 test('repair preserves unrelated Codex MCP tables and registers exact Node, CLI, args, and enabled state', async () => {
@@ -258,7 +257,6 @@ test('missing system Chrome keeps the pinned provider registered but not ready',
     assert.equal(projection.ready, false);
     assert.equal(projection.status, 'attention_required');
     assert.equal(projection.authority_boundary.provider_failure_blocks_plain_codex, false);
-    assert.equal(projection.authority_boundary.provider_failure_blocks_kimi_cu, false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

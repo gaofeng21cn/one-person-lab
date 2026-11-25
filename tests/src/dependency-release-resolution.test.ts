@@ -97,10 +97,10 @@ test('runtime ignores fixed latest-version environment overrides', () => {
 });
 
 test('manifest resolution uses the official platform archive and digest', async () => {
-  const manifest = { version: '0.6.6', app: { url: 'https://cdn.kimi.com/kimi-computer-use/0.6.6/KimiCU.app.zip', sha256: '42cb1b1dcf591df766111e7cb6d075451f0caf0b94f0cad923505fd0d4bf3886', team_id: '2J9472RW75' } };
-  const policy = { schema_version: 'test', sources: { 'kimi-cu': { kind: 'json-manifest' as const, url: 'https://cdn.kimi.com/kimi-computer-use/latest/version.json', platforms: { 'darwin-arm64': 'app' } } } };
+  const manifest = { version: '0.6.6', app: { url: 'https://example.invalid/companion/0.6.6/Companion.app.zip', sha256: '42cb1b1dcf591df766111e7cb6d075451f0caf0b94f0cad923505fd0d4bf3886', team_id: '2J9472RW75' } };
+  const policy = { schema_version: 'test', sources: { 'sample-manifest-app': { kind: 'json-manifest' as const, url: 'https://example.invalid/companion/latest/version.json', platforms: { 'darwin-arm64': 'app' } } } };
   const fetch: typeof globalThis.fetch = async () => new Response(JSON.stringify(manifest), { headers: { 'content-type': 'application/json' } });
-  const resolved = await resolveDependencyRelease('kimi-cu', { policy, platform: 'darwin', architecture: 'arm64', fetch, verifyArchive: false });
+  const resolved = await resolveDependencyRelease('sample-manifest-app', { policy, platform: 'darwin', architecture: 'arm64', fetch, verifyArchive: false });
   assert.equal(resolved.version, '0.6.6');
   assert.equal(resolved.archive_sha256, manifest.app.sha256);
   assert.equal(resolved.archive_url, manifest.app.url);

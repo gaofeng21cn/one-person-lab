@@ -463,15 +463,11 @@ test('Settings treats runtime source carrier health as provenance and fresh pack
   assert.equal(noRunnableGeneration.settings_projection.sections.capabilities.items[0].state, 'attention_needed');
 });
 
-test('fast Settings state projects managed Computer Use without running full health commands', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-settings-computer-use-'));
+test('fast Settings state projects managed Browser Automation without running full health commands', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-settings-browser-automation-'));
   const home = path.join(root, 'home');
   const stateDir = path.join(root, 'state');
   const codexHome = path.join(home, '.codex');
-  const appPath = path.join(root, 'KimiCU.app');
-  const contents = path.join(appPath, 'Contents');
-  const executable = path.join(contents, 'MacOS', 'kimi-cu');
-  const invocationLog = path.join(root, 'kimi-invocations.log');
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
   echo "codex-cli 0.125.0"
@@ -479,24 +475,8 @@ if [[ "$1" == "--version" ]]; then
 fi
 exit 1
 `);
-  fs.mkdirSync(path.dirname(executable), { recursive: true });
   fs.mkdirSync(codexHome, { recursive: true });
   fs.mkdirSync(stateDir, { recursive: true });
-  fs.writeFileSync(path.join(contents, 'Info.plist'), `<?xml version="1.0" encoding="UTF-8"?>
-<plist version="1.0"><dict>
-<key>CFBundleIdentifier</key><string>ai.kimi.cu</string>
-<key>CFBundleShortVersionString</key><string>0.5.4</string>
-</dict></plist>\n`);
-  fs.writeFileSync(executable, `#!/bin/sh
-echo "$1" >> "${invocationLog}"
-exit 0
-`);
-  fs.chmodSync(executable, 0o755);
-  fs.writeFileSync(path.join(codexHome, 'config.toml'), `[mcp_servers.kimi-cu]
-command = "${executable}"
-args = ["mcp", "-s", "user"]
-enabled = true
-`);
 
   try {
     const output = runCli(['app', 'state', '--profile', 'fast'], {
@@ -506,32 +486,8 @@ enabled = true
       OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
       OPL_CODEX_CLI_LATEST_VERSION: '0.125.0',
       OPL_DEVELOPER_MODE_GH_BINARY: path.join(root, 'missing-gh'),
-      OPL_COMPUTER_USE_PLATFORM: 'darwin-arm64',
-      OPL_COMPUTER_USE_OS_VERSION: '14.0',
-      OPL_KIMI_CU_INSTALL_PATH: appPath,
-      OPL_KIMI_CU_EXECUTABLE_PATH: executable,
-      OPL_KIMI_CU_TEAM_ID: '2J9472RW75',
-      OPL_KIMI_CU_ARCHITECTURE: 'arm64',
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
     }) as any;
-    const computerUse = output.app_state.managed_companions.find(
-      (companion: any) => companion.provider_id === 'kimi-cu',
-    );
-    assert.equal(computerUse.installed, true);
-    assert.equal(computerUse.registered, true);
-    assert.equal(computerUse.enabled, true);
-    assert.equal(computerUse.ready, false);
-    assert.equal(computerUse.permission, 'unknown');
-    assert.equal(computerUse.status, 'health_not_checked');
-    assert.equal(computerUse.service.registered, null);
-    assert.equal(computerUse.service.xpc_ping, 'not_checked');
-    assert.deepEqual(computerUse.mcp.observed_tools, []);
-    assert.equal(computerUse.mcp.tools_exact, null);
-    assert.equal(computerUse.permissions.accessibility, 'unknown');
-    assert.equal(computerUse.permissions.screen_recording, 'unknown');
-    assert.equal(fs.existsSync(invocationLog), false);
-    assert.equal(output.app_state.operator.workbench.managed_companions.computer_use_ref,
-      'app_state.managed_companions[provider_id=kimi-cu]');
     const browserAutomation = output.app_state.managed_companions.find(
       (companion: any) => companion.provider_id === 'playwright-mcp',
     );
@@ -545,11 +501,8 @@ enabled = true
     assert.equal(browserAutomation.mcp.tools_exact, null);
     assert.equal(output.app_state.operator.workbench.managed_companions.browser_automation_ref,
       'app_state.managed_companions[provider_id=playwright-mcp]');
+    assert.equal(output.app_state.operator.workbench.managed_companions.computer_use_ref, undefined);
     for (const actionId of [
-      'settings_request_computer_use_permissions',
-      'settings_recheck_computer_use',
-      'settings_repair_computer_use',
-      'settings_reinstall_computer_use',
       'settings_recheck_browser_automation',
       'settings_repair_browser_automation',
     ]) {

@@ -59,13 +59,10 @@
     ],
     "output_owner": "opl_state",
     "existing_chrome_session_reuse": false,
-    "existing_chrome_session_followup": "kimi_webbridge_or_cdp_after_separate_validation",
-    "desktop_visual_fallback_provider": "kimi-cu"
+    "existing_chrome_session_followup": "kimi_webbridge_or_cdp_after_separate_validation"
   },
   "degradation": {
-    "provider_failure_blocks_plain_codex": false,
-    "provider_failure_blocks_kimi_cu": false,
-    "kimi_cu_failure_blocks_provider": false
+    "provider_failure_blocks_plain_codex": false
   },
   "authority_boundary": {
     "codex_mcp_registry_writer": "src/adapters/integration/system-installation/codex-plugin-registry.ts#registerOplManagedMcpServer",

@@ -19,7 +19,6 @@ import { buildUpdateActivateCommandSpec } from './cases/public-command-specs/upd
 import { bindCommandRegistryMetadata, validateCommandRegistryCoverage } from './modules/support.ts';
 import {
   createManagedBrowserAutomationProvider,
-  createManagedComputerUseProvider,
 } from '../../adapters/integration/index.ts';
 import {
   createCordisAppFullComposition,
@@ -30,7 +29,6 @@ import type { CordisAutomationProviderHostPluginConfig } from '../../host/plugin
 /** The app Host consumes the existing Framework-managed native providers. */
 function defaultAppAutomationProviderConfig() {
   const providers = [
-    createManagedComputerUseProvider(),
     createManagedBrowserAutomationProvider(),
   ] as const;
   return {

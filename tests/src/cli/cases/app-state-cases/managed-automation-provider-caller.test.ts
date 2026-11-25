@@ -13,9 +13,9 @@ import { runCli } from '../../helpers.ts';
 
 function throwingProvider(events: string[]): CordisAutomationProvider {
   return {
-    provider_id: 'kimi-cu',
-    automation_kind: 'computer_use',
-    buildActionCatalog: () => [{ action_id: 'settings_recheck_computer_use' }],
+    provider_id: 'playwright-mcp',
+    automation_kind: 'browser_automation',
+    buildActionCatalog: () => [{ action_id: 'settings_recheck_browser_automation' }],
     inspect: () => {
       events.push('inspect');
       throw new Error('automation provider inspection failed');
@@ -39,7 +39,6 @@ async function runAppMain(
     OPL_STATE_DIR: stateDir,
     CODEX_HOME: path.join(stateDir, 'codex-home'),
     OPL_DEVELOPER_MODE_GH_BINARY: path.join(stateDir, 'missing-gh'),
-    OPL_COMPUTER_USE_PLATFORM: 'test-unsupported',
   };
   const previous = new Map<string, string | undefined>();
   for (const [name, value] of Object.entries(env)) {
@@ -80,7 +79,7 @@ test('app-full CLI mounts native automation providers through managed_companions
   };
   assert.deepEqual(
     output.app_state.managed_companions.map((provider) => provider.provider_id),
-    ['playwright-mcp', 'kimi-cu'],
+    ['playwright-mcp'],
   );
   assert.equal(Object.hasOwn(output.app_state, 'automation_provider_host'), false);
   assert.equal(Object.hasOwn(output.app_state, 'automation_provider_registry'), false);
@@ -102,8 +101,8 @@ test('app-full CLI fails closed when the selected provider inspect throws', asyn
   const result = await runAppMain({
     providers: [throwingProvider(events)],
     selectedProviders: [{
-      provider_id: 'kimi-cu',
-      automation_kind: 'computer_use',
+      provider_id: 'playwright-mcp',
+      automation_kind: 'browser_automation',
     }],
   }, ['app', 'state', '--profile', 'fast']);
   assert.equal(result.stdout, '');

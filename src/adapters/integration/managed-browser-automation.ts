@@ -59,7 +59,6 @@ export type ManagedBrowserAutomationLock = {
     output_owner: string;
     existing_chrome_session_reuse: boolean;
     existing_chrome_session_followup: string;
-    desktop_visual_fallback_provider: string;
   };
   degradation: JsonRecord;
   authority_boundary: JsonRecord;
@@ -115,7 +114,6 @@ export type ManagedBrowserAutomationInspection = {
     host_browser_installed: boolean;
     host_browser_executable: string | null;
     existing_chrome_session_reuse: false;
-    desktop_visual_fallback_provider: string;
   };
   health_ref: string;
   authority_boundary: {
@@ -123,7 +121,6 @@ export type ManagedBrowserAutomationInspection = {
     registry_writer: 'existing_codex_mcp_registry_writer';
     read_does_not_mutate: true;
     provider_failure_blocks_plain_codex: false;
-    provider_failure_blocks_kimi_cu: false;
     can_claim_app_release_ready: false;
   };
 };
@@ -196,10 +193,6 @@ export function readManagedBrowserAutomationLock(): ManagedBrowserAutomationLock
       existing_chrome_session_followup: requireString(
         browser?.existing_chrome_session_followup,
         'browser.existing_chrome_session_followup',
-      ),
-      desktop_visual_fallback_provider: requireString(
-        browser?.desktop_visual_fallback_provider,
-        'browser.desktop_visual_fallback_provider',
       ),
     },
     degradation: raw.degradation && typeof raw.degradation === 'object'
@@ -479,7 +472,6 @@ export async function inspectManagedBrowserAutomation(
       host_browser_installed: hostBrowserInstalled,
       host_browser_executable: hostBrowserExecutable,
       existing_chrome_session_reuse: false,
-      desktop_visual_fallback_provider: lock.browser.desktop_visual_fallback_provider,
     },
     health_ref: `opl://managed-companions/${lock.provider_id}/health`,
     authority_boundary: {
@@ -487,7 +479,6 @@ export async function inspectManagedBrowserAutomation(
       registry_writer: 'existing_codex_mcp_registry_writer',
       read_does_not_mutate: true,
       provider_failure_blocks_plain_codex: false,
-      provider_failure_blocks_kimi_cu: false,
       can_claim_app_release_ready: false,
     },
   };

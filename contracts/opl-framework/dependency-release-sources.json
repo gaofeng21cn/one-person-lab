@@ -5,12 +5,6 @@
   "stale_fallback_allowed": false,
   "version_override_policy": "test_fixture_only",
   "sources": {
-    "kimi-cu": {
-      "kind": "json-manifest",
-      "url": "https://cdn.kimi.com/kimi-computer-use/latest/version.json",
-      "platforms": { "darwin-arm64": "app", "darwin-x64": "app_x86_64" },
-      "install_metadata": { "format": "app-zip", "bundle_id": "ai.kimi.cu", "bundle_name": "KimiCU.app" }
-    },
     "codex-cli": { "kind": "npm", "package": "@openai/codex", "dist_tag": "latest", "platform_optional_dependency": "@openai/codex-{platform}-{architecture}", "install_metadata": { "format": "npm", "binary": "codex" } },
     "mineru-open-api": { "kind": "npm", "package": "mineru-open-api", "repository": "opendatalab/MinerU-Ecosystem", "source_commit_required": true, "dist_tag": "latest", "install_metadata": { "format": "npm", "binary": "mineru-open-api" } },
     "playwright-mcp": { "kind": "npm", "package": "@playwright/mcp", "dist_tag": "latest", "install_metadata": { "format": "npm", "binary": "mcp-server-playwright" } },

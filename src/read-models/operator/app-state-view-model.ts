@@ -770,7 +770,6 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
         surface_kind: 'opl_managed_companions_workbench_ref.v1',
         source_ref: 'app_state.managed_companions',
         browser_automation_ref: 'app_state.managed_companions[provider_id=playwright-mcp]',
-        computer_use_ref: 'app_state.managed_companions[provider_id=kimi-cu]',
       },
       ...currentOwnerDeltaTopline,
       user_task_status_summary: userTaskStatusSummary,

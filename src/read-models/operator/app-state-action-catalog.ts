@@ -3,7 +3,6 @@ import { SETTINGS_CONTROL_CENTER_ACTIONS } from './app-state-settings-control-ce
 import { hasExecutableAppContribution } from './app-contribution-broker.ts';
 import {
   buildManagedBrowserAutomationActionCatalog,
-  buildManagedComputerUseActionCatalog,
   listExternalOwnerDelegatedUpdateActions,
   type CordisConnectDescriptorDiscoveryService,
 } from '../../adapters/integration/public/app-state.ts';
@@ -304,7 +303,6 @@ export function buildActionCatalog(
       impact: 'Delegates one update to the verified original package manager; never enters managed background apply.',
     })),
     ...moduleActions,
-    ...buildManagedComputerUseActionCatalog(),
     ...buildManagedBrowserAutomationActionCatalog(),
     ...(hasExecutableAppContribution({ descriptorDiscovery: options.descriptorDiscovery })
       ? [{
