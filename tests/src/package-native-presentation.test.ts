@@ -263,15 +263,17 @@ test('catalog artwork uses immutable payload paths and never sends private artwo
       files: [{ path: 'assets/branding/logo.png', sha256, source_url: sourceUrl }],
     }));
     return {
+      ...mas,
       manifestPath,
       manifest: {
+        ...mas.manifest,
         package_id: 'demo',
         version: '1.0.0',
         visibility: 'public' as const,
         source_repo: 'https://github.com/example/demo',
         carrier_source_commit: commit,
         plugin_payload_manifest_url: 'payloads/demo.json',
-        presentation: { home_shortcuts: [], icon_ref: 'assets/branding/logo.png' },
+        presentation: { ...mas.manifest.presentation!, home_shortcuts: [], icon_ref: 'assets/branding/logo.png' },
       },
     };
   };
