@@ -4,6 +4,7 @@
   "plugin_id": "occ",
   "source_repo": "https://github.com/gaofeng21cn/opl-capital-compass.git",
   "source_root": "plugins/occ",
+  "carrier_projection_ref": "contracts/carrier_projection.json",
   "paths": [
     ".codex-plugin/plugin.json",
     "agent/knowledge/README.md",

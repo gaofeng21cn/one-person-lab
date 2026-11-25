@@ -4,6 +4,7 @@
   "plugin_id": "redcube-ai",
   "source_repo": "https://github.com/gaofeng21cn/redcube-ai.git",
   "source_root": "plugins/redcube-ai",
+  "carrier_projection_ref": "contracts/carrier_projection.json",
   "paths": [
     ".codex-plugin/plugin.json",
     "LICENSE",

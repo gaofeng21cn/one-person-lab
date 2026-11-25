@@ -215,18 +215,51 @@ export function trackedCarrierBlobPaths(input: {
   carrierRoot: string;
   trackedPaths: ReadonlySet<string>;
   carrierPaths: string[];
+  ownerManifest?: unknown;
 }) {
   const config = validateConfig(input.projection, input.projectionRef);
   const carrierRoot = normalizeRelativeRef(config.carrier_root, 'carrier_root', true);
-  if (carrierRoot !== input.carrierRoot || config.resource_source_mode === 'filesystem'
-    || config.version_sync_checks?.update_bundled_required_skill_pack_version
-    || config.copy_presentation_icon || config.adapter_projection || config.plugin_manifests?.length
-    || (config.package_manifest_projection && (config.package_manifest_projection.mode !== 'none'
-      || config.package_manifest_projection.sync_root_opl_package))) {
+  if (carrierRoot !== input.carrierRoot) {
     throw shapeError('A published carrier must project unchanged Git blobs into its configured source root.', {
       projection_ref: input.projectionRef,
       carrier_root: carrierRoot,
     });
+  }
+  for (const rule of config.plugin_manifests ?? []) {
+    const manifestRel = normalizeRelativeRef(rule.path, 'plugin_manifests.path');
+    if (manifestRel === carrierRoot || manifestRel.startsWith(`${carrierRoot}/`)) {
+      if (!input.trackedPaths.has(manifestRel)) {
+        throw shapeError('A published carrier must commit its declared plugin manifest inside carrier_root.', {
+          projection_ref: input.projectionRef,
+          path: manifestRel,
+        });
+      }
+    }
+  }
+  if (config.package_manifest_projection && config.package_manifest_projection.mode !== 'none') {
+    const pkgTarget = normalizeRelativeRef(
+      config.package_manifest_projection.target ?? 'opl-package.json',
+      'package_manifest_projection.target',
+    );
+    const carrierPkgRel = joinRel(carrierRoot, pkgTarget);
+    if (!input.trackedPaths.has(carrierPkgRel)) {
+      throw shapeError('A published carrier must commit its projected opl-package.json inside carrier_root.', {
+        projection_ref: input.projectionRef,
+        path: carrierPkgRel,
+      });
+    }
+  }
+  if (config.adapter_projection) {
+    const adapterRel = joinRel(
+      carrierRoot,
+      normalizeRelativeRef(config.adapter_projection.target, 'adapter_projection.target'),
+    );
+    if (!input.trackedPaths.has(adapterRel)) {
+      throw shapeError('A published carrier must commit its projected adapter manifest inside carrier_root.', {
+        projection_ref: input.projectionRef,
+        path: adapterRel,
+      });
+    }
   }
   const paths = new Map<string, string>();
   for (const carrierPath of input.carrierPaths) {
@@ -246,6 +279,25 @@ export function trackedCarrierBlobPaths(input: {
   for (const extra of config.extra_files ?? []) {
     const source = normalizeRelativeRef(extra, 'extra_files');
     paths.set(joinRel(prefix, source), source);
+  }
+  if (config.copy_presentation_icon) {
+    if (input.ownerManifest === undefined) {
+      throw shapeError('A published carrier with copy_presentation_icon requires ownerManifest to map presentation.icon_ref.', {
+        projection_ref: input.projectionRef,
+      });
+    }
+    const manifest = isRecord(input.ownerManifest) ? input.ownerManifest : {};
+    const presentation = isRecord(manifest.presentation) ? manifest.presentation : {};
+    if (typeof presentation.icon_ref === 'string' && presentation.icon_ref.trim()) {
+      const iconRel = normalizeRelativeRef(presentation.icon_ref, 'presentation.icon_ref');
+      if (!input.trackedPaths.has(iconRel)) {
+        throw shapeError('A published carrier must commit its declared presentation.icon_ref.', {
+          projection_ref: input.projectionRef,
+          path: iconRel,
+        });
+      }
+      paths.set(iconRel, iconRel);
+    }
   }
   for (const alias of config.file_aliases ?? []) {
     const source = normalizeRelativeRef(alias.from, 'file_aliases.from');

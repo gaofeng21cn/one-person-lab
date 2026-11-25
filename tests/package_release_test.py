@@ -328,5 +328,46 @@ class PackageReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'Unregistered Package'):
                 detection.detect(args)
 
+    def test_thin_carrier_content_changed_resolves_canonical_blobs_without_mirrors_on_disk(self):
+        carrier_root = self.root / 'plugins/fixture'
+        write(self.root / 'opl-package.json', {'package_id': 'fixture', 'version': '1.2.3'})
+        write(carrier_root / 'opl-package.json', {'package_id': 'fixture', 'version': '1.2.3'})
+        write(carrier_root / '.codex-plugin/plugin.json', {'name': 'fixture', 'version': '1.2.3'})
+        write(carrier_root / 'plugin.json', {'name': 'fixture', 'version': '1.2.3'})
+        (carrier_root / 'agent').mkdir(parents=True, exist_ok=True)
+        (carrier_root / 'agent/guide.md').write_text('same bytes')
+        (self.root / 'agent').mkdir(exist_ok=True)
+        (self.root / 'agent/guide.md').write_text('same bytes')
+        self.git('add', '.')
+        self.git('commit', '-m', 'pre-thin full mirror')
+        previous = self.git('rev-parse', 'HEAD')
+
+        write(self.root / 'contracts/carrier_projection.json', {
+            'schema_version': 'opl_carrier_projection.v1',
+            'carrier_root': 'plugins/fixture',
+            'resource_source_mode': 'git_tracked',
+            'resource_roots': ['agent'],
+        })
+        (self.root / '.gitignore').write_text('plugins/fixture/agent/\n')
+        subprocess.run(['git', 'rm', '-rf', 'plugins/fixture/agent'], cwd=self.root, check=True, capture_output=True)
+        self.git('add', '.')
+        self.git('commit', '-m', 'adopt thin carrier')
+
+        allowlist = {
+            'source_root': 'plugins/fixture',
+            'carrier_projection_ref': 'contracts/carrier_projection.json',
+            'plugin_id': 'fixture',
+            'paths': ['.codex-plugin/plugin.json', 'plugin.json', 'opl-package.json', 'agent/guide.md'],
+        }
+        self.assertFalse(content_changed(self.root, previous, self.projection, allowlist))
+        (self.root / 'agent/guide.md').write_text('updated bytes')
+        self.assertTrue(content_changed(self.root, previous, self.projection, allowlist))
+        (self.root / 'agent/guide.md').write_text('same bytes')
+        self.assertFalse(content_changed(self.root, previous, self.projection, allowlist))
+        (self.root / 'agent/added.md').write_text('new file')
+        self.git('add', 'agent/added.md')
+        self.git('commit', '-m', 'add projected resource file')
+        self.assertTrue(content_changed(self.root, previous, self.projection, allowlist))
+
 if __name__ == '__main__':
     unittest.main()

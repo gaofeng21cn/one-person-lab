@@ -4,6 +4,7 @@
   "plugin_id": "med-autocast",
   "source_repo": "https://github.com/gaofeng21cn/med-autocast.git",
   "source_root": "plugins/med-autocast",
+  "carrier_projection_ref": "contracts/carrier_projection.json",
   "paths": [
     ".codex-plugin/plugin.json",
     "mcp.json",
