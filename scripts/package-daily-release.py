@@ -53,6 +53,9 @@ def prepare(args):
     unknown = set(args.package_id or []) - {s['package_id'] for s in specs}
     if unknown:
         raise ReleaseError('Unregistered Package selection: ' + ', '.join(sorted(unknown)))
+    if args.apply:
+        git(framework, 'config', 'user.name', 'OPL Package Publisher')
+        git(framework, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
     results = []
     with tempfile.TemporaryDirectory(prefix='opl-daily-owner-') as temporary:
         for spec in specs:
@@ -103,7 +106,26 @@ def prepare(args):
                         result['projection'] = json.loads(prepared.stdout)
                         run(['node', '--experimental-strip-types', 'scripts/package-source-projection-gate.mjs',
                              '--package-id', pid, '--owner-root', root, '--release-gate', 'tag'], cwd=framework)
+                        if args.apply:
+                            # Isolate each package's Framework projection PR so one failure never blocks healthy packages.
+                            stage_paths = [
+                                f'contracts/opl-framework/packages/{pid}.json',
+                                f'contracts/opl-framework/package-payload-allowlists/{pid}.json',
+                                *[str(p.relative_to(framework)) for p in projection_path.parent.glob(f'payloads/{pid}-*.json')],
+                            ]
+                            git(framework, 'add', '--', *stage_paths)
+                            if run(['git', 'diff', '--cached', '--quiet'], cwd=framework, check=False).returncode != 0:
+                                git(framework, 'commit', '-m', f'chore: refresh daily Package {pid} {result["version"]} projection')
+                                framework_commit = merge_release_changes(
+                                    framework,
+                                    'gaofeng21cn/one-person-lab',
+                                    framework_commit,
+                                    f'framework-projection-{pid}',
+                                    result['version'],
+                                )
             except Exception as exc:
+                if args.apply:
+                    run(['git', 'reset', '--hard', framework_commit], cwd=framework, check=False)
                 for path in projection_path.parent.glob(f'payloads/{pid}-*.json'):
                     if path not in before:
                         path.unlink()
@@ -112,15 +134,6 @@ def prepare(args):
                 result.update(status='blocked', reason=str(exc)[-3000:])
             results.append(result)
             print(f"{pid}: {result['status']}", file=sys.stderr, flush=True)
-    updated = [r for r in results if r['status'] == 'prepared']
-    if args.apply and updated:
-        # Projection files share a short fast-forward boundary; owner preparation stays independent.
-        git(framework, 'config', 'user.name', 'OPL Package Publisher')
-        git(framework, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
-        git(framework, 'add', 'contracts/opl-framework/packages', 'contracts/opl-framework/package-payload-allowlists')
-        git(framework, 'commit', '-m', 'chore: refresh daily Package release projections')
-        framework_commit = merge_release_changes(framework, 'gaofeng21cn/one-person-lab',
-            framework_commit, 'framework-projections', 'daily')
     report = {'surface_kind': 'opl_daily_package_preparation.v1',
               'framework_source_commit': framework_commit, 'applied': args.apply, 'packages': results}
     write(args.output, report)

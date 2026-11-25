@@ -13,6 +13,7 @@ import {
 import { assertJsonSchemaPayload } from '../src/kernel/schema-registry.ts';
 import { parseJsonText, readJsonFile } from './script-json-boundary.mjs';
 import { packageContentDigest } from '../src/kernel/package-content-lock.ts';
+import { packageArtworkUrl } from '../src/adapters/integration/agent-package-registry/package-artwork.ts';
 import { packageCarrierSourcePaths } from './package-carrier-source-paths.mjs';
 
 export const TEST_ONLY_PACKAGE_RELEASE_GATE = 'test_owner_sha_release_gate';
@@ -556,6 +557,21 @@ export function validatePackageSourceProjection({
     projectedManifest,
     payload,
   });
+  if (projectedManifest.presentation?.icon_ref && projectedManifest.visibility !== 'authorized_only') {
+    const artwork = packageArtworkUrl({
+      manifestPath,
+      manifest: {
+        ...projectedManifest,
+        carrier_source_commit: carrierSourceCommit,
+        plugin_payload_manifest_url: payloadRef,
+      },
+    });
+    if (!artwork) {
+      fail('payload_artwork_invalid', spec.package_id, 'public presentation icon_ref must resolve to an immutable payload artwork URL', {
+        icon_ref: projectedManifest.presentation.icon_ref,
+      });
+    }
+  }
   return {
     package_id: spec.package_id,
     package_version: owner.version,

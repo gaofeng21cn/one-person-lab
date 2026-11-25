@@ -230,12 +230,13 @@ test('complete current owner presentation takes precedence over native carrier m
 });
 
 
-test('catalog artwork uses immutable payload paths and never sends private artwork to an anonymous URL', () => {
+test('catalog artwork uses immutable payload paths and never sends private artwork to an anonymous URL', (t) => {
   const owners = discoverCurrentOwnerPackageDescriptors();
   const mas = owners.get('mas')!;
   assert.ok(mas);
   const url = packageArtworkUrl(mas);
-  assert.ok(url?.includes(`/med-autoscience/${mas.manifest.carrier_source_commit}/plugins/med-autoscience/${mas.manifest.presentation?.icon_ref}`));
+  assert.ok(url?.startsWith(`https://raw.githubusercontent.com/gaofeng21cn/med-autoscience/${mas.manifest.carrier_source_commit}/`));
+  assert.ok(url?.endsWith(`/${mas.manifest.presentation?.icon_ref}`));
   const before = mas.manifest.visibility;
   mas.manifest.visibility = 'authorized_only';
   assert.equal(packageArtworkUrl(mas), null);
@@ -244,6 +245,53 @@ test('catalog artwork uses immutable payload paths and never sends private artwo
   assert.equal(packageArtworkUrl(mas), null);
   for (const icon_ref of ['../secret.svg', 'https://example.com/logo.svg', '/logo.png']) {
     assert.throws(() => normalizePresentation({ home_shortcuts: [], icon_ref }, 'fixture'));
+  }
+
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-artwork-projection-'));
+  t.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+  const commit = 'a'.repeat(40);
+  const sha256 = `sha256:${'b'.repeat(64)}`;
+  const manifestPath = path.join(tempRoot, 'demo.json');
+  const payloadPath = path.join(tempRoot, 'payloads', 'demo.json');
+  fs.mkdirSync(path.dirname(payloadPath), { recursive: true });
+  const descriptor = (sourceUrl: string) => {
+    fs.writeFileSync(payloadPath, JSON.stringify({
+      package_id: 'demo',
+      package_version: '1.0.0',
+      source_commit: commit,
+      source_root: 'plugins/demo',
+      files: [{ path: 'assets/branding/logo.png', sha256, source_url: sourceUrl }],
+    }));
+    return {
+      manifestPath,
+      manifest: {
+        package_id: 'demo',
+        version: '1.0.0',
+        visibility: 'public' as const,
+        source_repo: 'https://github.com/example/demo',
+        carrier_source_commit: commit,
+        plugin_payload_manifest_url: 'payloads/demo.json',
+        presentation: { home_shortcuts: [], icon_ref: 'assets/branding/logo.png' },
+      },
+    };
+  };
+  assert.equal(
+    packageArtworkUrl(descriptor(`https://raw.githubusercontent.com/example/demo/${commit}/plugins/demo/assets/branding/logo.png`)),
+    `https://raw.githubusercontent.com/example/demo/${commit}/plugins/demo/assets/branding/logo.png`,
+  );
+  assert.equal(
+    packageArtworkUrl(descriptor(`https://raw.githubusercontent.com/example/demo/${commit}/assets/branding/logo.png`)),
+    `https://raw.githubusercontent.com/example/demo/${commit}/assets/branding/logo.png`,
+  );
+  for (const badUrl of [
+    `https://raw.githubusercontent.com/other/demo/${commit}/assets/branding/logo.png`,
+    `https://raw.githubusercontent.com/example/demo/${'c'.repeat(40)}/assets/branding/logo.png`,
+    `https://raw.githubusercontent.com/example/demo/${commit}/../assets/branding/logo.png`,
+    `https://raw.githubusercontent.com/example/demo/${commit}/assets/branding/logo.png?token=1`,
+    `https://raw.githubusercontent.com/example/demo/${commit}/assets/branding/logo.txt`,
+    `https://raw.githubusercontent.com/example/demo/${commit}/other/logo.png`,
+  ]) {
+    assert.equal(packageArtworkUrl(descriptor(badUrl)), null, badUrl);
   }
 });
 
