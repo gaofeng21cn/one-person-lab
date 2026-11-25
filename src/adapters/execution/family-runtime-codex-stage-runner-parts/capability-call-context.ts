@@ -143,9 +143,10 @@ export function writeCapabilityCallContext(input: CapabilityCallContextWrite): {
 export function callContextPromptLines(workspaceRoot: string): string[] {
   const contextPath = path.join(workspaceRoot, CALL_CONTEXT_DIRECTORY, 'current-call-context.json');
   return [
-    `If this stage depends on a capability call, the runtime observed that call and wrote ${contextPath}.`,
-    'That file names the exact call: its input reference and its output reference resolve to the arguments the call was made with and the result it returned.',
-    'When the capability published a corpus binding, the file also carries corpus_binding_ref pointing at the binding bytes. Cite that reference; do not describe the corpus from memory and do not synthesize a binding of your own.',
+    `Read ${contextPath} before you judge whether a capability call happened. The runtime writes it from the call the provider actually made, so it is the record of the call — not a restatement of it.`,
+    'Its input reference and output reference resolve to the exact arguments the call was made with and the exact result it returned.',
+    'If it carries corpus_binding_ref, read that file too: it is the capability\'s own account of which documents it served, and it lists them individually. Check the served documents against what this stage requires instead of assuming either way.',
+    'Cite these references. Do not describe the call or the corpus from memory, and do not synthesize a binding of your own.',
     'If the file is absent, no capability call completed, so no call context exists to cite.',
   ];
 }
