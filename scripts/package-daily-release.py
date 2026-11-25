@@ -39,6 +39,19 @@ def changed_owner_files(repo, previous, current):
     return [row['filename'] for row in difference.get('files', [])]
 
 
+def refresh_framework_base(framework, current_commit):
+    git(framework, 'fetch', 'origin', 'main', '--quiet')
+    remote_main = git(framework, 'rev-parse', 'origin/main')
+    if remote_main != current_commit and run(
+        ['git', 'merge-base', '--is-ancestor', remote_main, current_commit],
+        cwd=framework,
+        check=False,
+    ).returncode != 0:
+        git(framework, 'reset', '--hard', remote_main)
+        return remote_main
+    return current_commit
+
+
 def prepare(args):
     framework = args.framework_root.resolve()
     framework_commit = git(framework, 'rev-parse', 'HEAD')
@@ -62,6 +75,8 @@ def prepare(args):
             pid = spec['package_id']
             if args.package_id and pid not in args.package_id:
                 continue
+            if args.apply:
+                framework_commit = refresh_framework_base(framework, framework_commit)
             projection_path = framework / 'contracts/opl-framework/packages' / f'{pid}.json'
             projection = read(projection_path)
             allowlist = read(framework / 'contracts/opl-framework/package-payload-allowlists' / f'{pid}.json')
@@ -100,6 +115,14 @@ def prepare(args):
                         git(root, 'fetch', 'origin', payload['source_commit'], '--quiet')
                     result.update(prepare_owner(root, projection, allowlist, framework, repo, apply=args.apply))
                     if result['status'] == 'prepared':
+                        if args.apply:
+                            framework_commit = refresh_framework_base(framework, framework_commit)
+                            snapshot_paths = [
+                                projection_path,
+                                framework / 'contracts/opl-framework/package-payload-allowlists' / f'{pid}.json',
+                                *projection_path.parent.glob(f'payloads/{pid}-*.json'),
+                            ]
+                            before = {p: p.read_bytes() for p in snapshot_paths}
                         script = args.flow_root / 'skills/opl-flow/scripts/package_release.py'
                         prepared = run(['python3', script, 'prepare', '--package-id', pid,
                                         '--owner-root', root, '--framework-root', framework])
@@ -126,11 +149,19 @@ def prepare(args):
             except Exception as exc:
                 if args.apply:
                     run(['git', 'reset', '--hard', framework_commit], cwd=framework, check=False)
-                for path in projection_path.parent.glob(f'payloads/{pid}-*.json'):
-                    if path not in before:
-                        path.unlink()
-                for path, body in before.items():
-                    path.write_bytes(body)
+                    for path in projection_path.parent.glob(f'payloads/{pid}-*.json'):
+                        if path not in before:
+                            path.unlink()
+                    try:
+                        framework_commit = refresh_framework_base(framework, framework_commit)
+                    except Exception:
+                        pass
+                else:
+                    for path in projection_path.parent.glob(f'payloads/{pid}-*.json'):
+                        if path not in before:
+                            path.unlink()
+                    for path, body in before.items():
+                        path.write_bytes(body)
                 result.update(status='blocked', reason=str(exc)[-3000:])
             results.append(result)
             print(f"{pid}: {result['status']}", file=sys.stderr, flush=True)

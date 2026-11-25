@@ -448,5 +448,111 @@ class PackageReleaseTests(unittest.TestCase):
             self.assertTrue((framework / 'contracts/opl-framework/packages/payloads/beta-1.0.1.json').exists())
             self.assertNotEqual(report['framework_source_commit'], initial_commit)
 
+    def test_daily_release_recovers_baseline_when_main_advances_during_first_package(self):
+        actual_run = daily.run
+        actual_git = daily.git
+        with tempfile.TemporaryDirectory() as tmp:
+            temp = Path(tmp)
+            owner_remote = temp / 'owner-remote.git'
+            owner_work = temp / 'owner-work'
+            owner_work.mkdir()
+            subprocess.run(['git', 'init', '-b', 'main', str(owner_work)], check=True, capture_output=True)
+            subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=owner_work, check=True)
+            subprocess.run(['git', 'config', 'user.email', 'test@example.invalid'], cwd=owner_work, check=True)
+            (owner_work / 'photo.png').write_bytes(b'png')
+            subprocess.run(['git', 'add', '.'], cwd=owner_work, check=True)
+            subprocess.run(['git', 'commit', '-m', 'init'], cwd=owner_work, check=True, capture_output=True)
+            subprocess.run(['git', 'clone', '--bare', str(owner_work), str(owner_remote)], check=True, capture_output=True)
+
+            framework = temp / 'framework'
+            remote = temp / 'framework-remote.git'
+            peer = temp / 'framework-peer'
+            framework.mkdir()
+            subprocess.run(['git', 'init', '-b', 'main', str(framework)], check=True, capture_output=True)
+            subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=framework, check=True)
+            subprocess.run(['git', 'config', 'user.email', 'test@example.invalid'], cwd=framework, check=True)
+            for pid in ('alpha', 'beta'):
+                write(framework / f'contracts/opl-framework/packages/{pid}.json', {
+                    'package_id': pid,
+                    'version': '1.0.0',
+                    'source_repo': f'https://github.com/example/{pid}.git',
+                    'codex_surface': {'plugin_payload_manifest_url': f'payloads/{pid}-1.0.0.json'},
+                })
+                write(framework / f'contracts/opl-framework/packages/payloads/{pid}-1.0.0.json', {
+                    'source_commit': '0' * 40,
+                })
+                write(framework / f'contracts/opl-framework/package-payload-allowlists/{pid}.json', self.allowlist)
+            subprocess.run(['git', 'add', '.'], cwd=framework, check=True)
+            subprocess.run(['git', 'commit', '-m', 'init'], cwd=framework, check=True, capture_output=True)
+            subprocess.run(['git', 'clone', '--bare', str(framework), str(remote)], check=True, capture_output=True)
+            subprocess.run(['git', 'remote', 'add', 'origin', str(remote)], cwd=framework, check=True)
+            subprocess.run(['git', 'fetch', 'origin', 'main'], cwd=framework, check=True, capture_output=True)
+            alpha_before = (framework / 'contracts/opl-framework/packages/alpha.json').read_bytes()
+
+            subprocess.run(['git', 'clone', '--branch', 'main', str(remote), str(peer)], check=True, capture_output=True)
+            subprocess.run(['git', 'config', 'user.name', 'Peer'], cwd=peer, check=True)
+            subprocess.run(['git', 'config', 'user.email', 'peer@example.invalid'], cwd=peer, check=True)
+            concurrent_commit = None
+            beta_merge_bases = []
+
+            def fake_run(argv, **kwargs):
+                cmd = [str(x) for x in argv]
+                if cmd[:2] == ['git', 'clone']:
+                    cmd[-2] = str(owner_remote)
+                    return actual_run(cmd, **kwargs)
+                if len(cmd) > 2 and 'package_release.py' in cmd[1]:
+                    pid = cmd[cmd.index('--package-id') + 1]
+                    write(framework / f'contracts/opl-framework/packages/{pid}.json', {
+                        'package_id': pid, 'version': '1.0.1',
+                        'source_repo': f'https://github.com/example/{pid}.git',
+                        'codex_surface': {'plugin_payload_manifest_url': f'payloads/{pid}-1.0.1.json'},
+                    })
+                    write(framework / f'contracts/opl-framework/packages/payloads/{pid}-1.0.1.json', {'source_commit': self.base})
+                    return SimpleNamespace(stdout=json.dumps({'package_id': pid, 'version': '1.0.1'}), stderr='', returncode=0)
+                if len(cmd) > 2 and 'package-source-projection-gate.mjs' in cmd[2]:
+                    return SimpleNamespace(stdout='{"status":"validated"}', stderr='', returncode=0)
+                return actual_run(cmd, **kwargs)
+
+            def fake_merge(root, repo, base, package_id, version, **kwargs):
+                nonlocal concurrent_commit
+                if package_id == 'framework-projection-alpha':
+                    (peer / 'unrelated.txt').write_text('concurrent main update\n')
+                    subprocess.run(['git', 'add', 'unrelated.txt'], cwd=peer, check=True)
+                    subprocess.run(['git', 'commit', '-m', 'concurrent non-conflicting commit'], cwd=peer, check=True, capture_output=True)
+                    subprocess.run(['git', 'push', 'origin', 'main'], cwd=peer, check=True, capture_output=True)
+                    concurrent_commit = actual_git(peer, 'rev-parse', 'HEAD')
+                    raise ReleaseError('Owner main changed during release preparation; retry from the new source')
+                beta_merge_bases.append(base)
+                self.assertEqual(base, concurrent_commit)
+                actual_run(['git', 'push', 'origin', 'HEAD:refs/heads/main'], cwd=root)
+                return actual_git(root, 'rev-parse', 'HEAD')
+
+            def fake_gh(path):
+                if path.endswith('/commits/main'):
+                    return {'sha': self.base}
+                if path.endswith('/commits/' + '0' * 40) or path.endswith('/commits/' + self.base):
+                    return {'sha': path.rsplit('/', 1)[-1]}
+                if '/compare/' in path:
+                    return {'files': [{'filename': 'photo.png'}]}
+                return {'private': False}
+
+            args = SimpleNamespace(framework_root=framework, flow_root=framework, package_id=None,
+                                   apply=True, output=temp / 'out.json')
+            with patch.object(daily, 'package_specs', return_value=[{'package_id': 'alpha'}, {'package_id': 'beta'}]), \
+                 patch.object(daily, 'gh', side_effect=fake_gh), \
+                 patch.object(daily, 'run', side_effect=fake_run), \
+                 patch.object(daily, 'prepare_owner', return_value={'status': 'prepared', 'version': '1.0.1', 'owner_source_commit': self.base}), \
+                 patch.object(daily, 'merge_release_changes', side_effect=fake_merge):
+                report = daily.prepare(args)
+
+            statuses = {row['package_id']: row['status'] for row in report['packages']}
+            self.assertEqual(statuses, {'alpha': 'blocked', 'beta': 'prepared'})
+            self.assertEqual(beta_merge_bases, [concurrent_commit])
+            self.assertTrue((framework / 'unrelated.txt').exists())
+            self.assertEqual((framework / 'contracts/opl-framework/packages/alpha.json').read_bytes(), alpha_before)
+            self.assertFalse((framework / 'contracts/opl-framework/packages/payloads/alpha-1.0.1.json').exists())
+            self.assertTrue((framework / 'contracts/opl-framework/packages/payloads/beta-1.0.1.json').exists())
+            actual_run(['git', 'merge-base', '--is-ancestor', concurrent_commit, report['framework_source_commit']], cwd=framework)
+
 if __name__ == '__main__':
     unittest.main()
