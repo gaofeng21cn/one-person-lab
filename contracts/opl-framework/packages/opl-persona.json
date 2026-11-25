@@ -3,7 +3,7 @@
   "package_id": "opl-persona",
   "display_name": "OPL Persona",
   "publisher": "one-person-lab",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "source": "first_party_owner_projection",
   "package_role": "capability_package",
   "source_repo": "https://github.com/gaofeng21cn/opl-persona.git",
@@ -73,7 +73,7 @@
       "skills/opl-persona/agents/openai.yaml",
       "runtime/opl_persona/_opl_profile_workspace.py"
     ],
-    "digest": "sha256:9c13c7199a3ed4a3a7cae5ad5bcb6c3bf6dffe9b74ae8c1943f3412f68b189d1"
+    "digest": "sha256:c2fe8a0381f80cda6dd524804cb2b2cdbe95c2d5f4c3528a85e83e19229b73ae"
   },
   "codex_surface": {
     "plugin_id": "opl-persona",
@@ -103,8 +103,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/opl-persona-0.5.4.json",
-    "carrier_source_commit": "9ce5ef492d50722056e0fab2bd574415534d4386"
+    "plugin_payload_manifest_url": "payloads/opl-persona-0.5.5.json",
+    "carrier_source_commit": "58cfa842a8c53a396822b3d5e59fbb12def939f7"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",

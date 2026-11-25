@@ -3,7 +3,7 @@
   "package_id": "travel-passport",
   "display_name": "Journey Atlas",
   "publisher": "gaofeng21cn",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/journey-atlas.git",
   "package_role": "capability_package",
@@ -52,8 +52,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/travel-passport-0.2.3.json",
-    "carrier_source_commit": "b8b6f822fcca25d9c433f7e7c9c50a8cf58006e3"
+    "plugin_payload_manifest_url": "payloads/travel-passport-0.2.4.json",
+    "carrier_source_commit": "8c779888382d5e2145f1c6eaf71f4ace8ec58926"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -182,10 +182,6 @@
     "canonicalization": "ordered_path_length_file_length_bytes",
     "paths": [
       ".codex-plugin/plugin.json",
-      "LICENSE",
-      "NOTICE.md",
-      "README.en.md",
-      "README.md",
       "app-contribution-adapter.json",
       "app-contribution.mjs",
       "assets/branding/journey-atlas-logo.png",
@@ -212,12 +208,6 @@
       "data/switzerland.geojson",
       "data/us-states.topojson",
       "data/usa.geojson",
-      "docs/城市地图与数据规范.md",
-      "docs/安装与共享基座.md",
-      "docs/年度总结.md",
-      "docs/架构与数据边界.md",
-      "docs/维护流程.md",
-      "docs/输入目录约定.md",
       "examples/atlas-update.json",
       "examples/import-bundle.json",
       "examples/source-note.md",
@@ -313,6 +303,7 @@
       "src/city-gateways.mjs",
       "src/city-map.mjs",
       "src/city-passport-summary.mjs",
+      "src/geo.mjs",
       "src/geographic-fit.mjs",
       "src/japan.html",
       "src/map-background.mjs",
@@ -338,7 +329,7 @@
       "src/year-review.html",
       "src/year-review.mjs"
     ],
-    "digest": "sha256:5160b0e3221bd20773e21dd0c3a74e7a9165c01d7efe77652f87f000e9df2375"
+    "digest": "sha256:093bd1be22b0d7edf0205e1869ef6be5212be2d1d1700aea7bc00d9d369ef6fe"
   },
   "visibility": "public",
   "description": "Agent-native travel atlas using user-owned travel records and Obsidian sources.",
@@ -385,5 +376,5 @@
     "owner_package_manifest_ref": "plugins/travel-passport/opl-package.json",
     "owner_plugin_manifest_ref": ".codex-plugin/plugin.json"
   },
-  "source_commit": "b8b6f822fcca25d9c433f7e7c9c50a8cf58006e3"
+  "source_commit": "8c779888382d5e2145f1c6eaf71f4ace8ec58926"
 }

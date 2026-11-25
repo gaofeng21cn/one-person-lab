@@ -1,0 +1,827 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "med-autopractice",
+  "plugin_id": "med-autopractice",
+  "package_version": "0.1.6",
+  "source_repo": "https://github.com/gaofeng21cn/med-autopractice.git",
+  "source_commit": "e012a5400445f7dcf98b0a121258d6922198eecb",
+  "source_root": ".",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:7ba15c6af81b0ea885228366d59acfcd87e3186e897d7b63bd20744bc3371121"
+  },
+  "files": [
+    {
+      "path": ".agents/plugins/marketplace.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/.agents/plugins/marketplace.json",
+      "sha256": "sha256:644a486493cd6d69807e1a94ba12d72854d64bbb3184d861f6c06686ed8fcbee"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/.codex-plugin/plugin.json",
+      "sha256": "sha256:ae0028cc445295175e3fa7e36b25b88de5209369d72b23804f73201eca1606f7"
+    },
+    {
+      "path": "README.en.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/README.en.md",
+      "sha256": "sha256:645f1286c456fd61e2ba84df25d620315ef4b59334650f5aa3ad0ab46aabbc2c"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/README.md",
+      "sha256": "sha256:5802408ddc3649d9e175c85a67c702c121be948453ab319bfc44b32c18da0838"
+    },
+    {
+      "path": "agent/manifest.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/agent/manifest.json",
+      "sha256": "sha256:3d12775ed55b808fa525fc3798ece4414309784de3ab353b65fd574144850c4f"
+    },
+    {
+      "path": "agent/knowledge/site-adaptation.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/agent/knowledge/site-adaptation.md",
+      "sha256": "sha256:feed73031ea9eca71317816c395a1a5328b78abf876efc22cb3ba64e55d216c3"
+    },
+    {
+      "path": "agent/knowledge/clinical-record-review.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/agent/knowledge/clinical-record-review.md",
+      "sha256": "sha256:43f042a7e0fb9a04d4547bdeed3b6197fb0830f77b7f0ded487223b90885b442"
+    },
+    {
+      "path": "assets/branding/medautopractice-logo.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/assets/branding/medautopractice-logo.png",
+      "sha256": "sha256:ac93a52a715f41296dde2f6b9ffe8b89679a0f682ea55b582bd975ae25a35568"
+    },
+    {
+      "path": "assets/branding/medautopractice-overview.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/assets/branding/medautopractice-overview.png",
+      "sha256": "sha256:5a790cf1791ea9d92a4c38b4bfafb8cbee2040baaf5381810e56361800a35f2d"
+    },
+    {
+      "path": "contracts/capabilities.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/contracts/capabilities.json",
+      "sha256": "sha256:f9a47247fa54d605dc69a720b0c9c74d2ca6f4a38fb192b37814c5882dd1d54e"
+    },
+    {
+      "path": "contracts/durable_knowledge_catalog.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/contracts/durable_knowledge_catalog.json",
+      "sha256": "sha256:1d9307dee10793f0ceac51f92624aca4fea59b936ae5201b2839fc78a9e20380"
+    },
+    {
+      "path": "contracts/site-dependencies.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/contracts/site-dependencies.json",
+      "sha256": "sha256:7d809067b8771fe29283129c4b1a7bec821e42dc803b236580c22f408311edb1"
+    },
+    {
+      "path": "contracts/site-playbook.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/contracts/site-playbook.schema.json",
+      "sha256": "sha256:804480f79a0331615c84b670f4deb777eddc36ac0265accb3814b557feaf579e"
+    },
+    {
+      "path": "contracts/site-playbook.v2.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/contracts/site-playbook.v2.schema.json",
+      "sha256": "sha256:4082f807f226d7ec5b4091d6dc426b093939b16f903ff33868df7770f10c4b4b"
+    },
+    {
+      "path": "contracts/site-survey.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/contracts/site-survey.schema.json",
+      "sha256": "sha256:13246f8da831e8ef5501492cd60f492bbccfe96687c2323bd228722d5863380e"
+    },
+    {
+      "path": "contracts/structured-clinical-record.schema.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/contracts/structured-clinical-record.schema.json",
+      "sha256": "sha256:9b379be759948bc47513d61faded601010327e5ff516090c2279c1907bf40192"
+    },
+    {
+      "path": "docs/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/README.md",
+      "sha256": "sha256:68ebc0a18946120bdabcdcbf0c67395615a29faf4bce6d0e8b133dd1703d2e42"
+    },
+    {
+      "path": "docs/agent-contract.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/agent-contract.md",
+      "sha256": "sha256:abd93bf1c2cefa52918b7d368f9e2277a214e8a37410470f8df1ab5e671d810e"
+    },
+    {
+      "path": "docs/architecture.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/architecture.md",
+      "sha256": "sha256:d323d5cae919af4792d9a135f24f50d507e28029dfe364aa0ae133b8fa27618d"
+    },
+    {
+      "path": "docs/clinical-record.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/clinical-record.md",
+      "sha256": "sha256:d9fb2691f745f2ea8e757f8acd6f3e1a3f5ed47559f5677cb077b216ac6e94b7"
+    },
+    {
+      "path": "docs/product.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/product.md",
+      "sha256": "sha256:c5a3bf99849476a2a32567fe6e20982414e625fd06c6b72c2d175e06aa4421f0"
+    },
+    {
+      "path": "docs/research-dataset.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/research-dataset.md",
+      "sha256": "sha256:6ad5017305cede713cb412d4c38541c68267c21f4b066f2707d01b12d75d67ee"
+    },
+    {
+      "path": "docs/roadmap.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/roadmap.md",
+      "sha256": "sha256:d33fad74698eba9bb1e01b92e4aadb7b53ce4bfc8830058387ee772fa5a713d2"
+    },
+    {
+      "path": "docs/site-integration.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/site-integration.md",
+      "sha256": "sha256:32da4d9fb2f695e09ec36ab7c71d08a016dcf8c384a23de5942013e071262fdc"
+    },
+    {
+      "path": "docs/site-patterns/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/site-patterns/README.md",
+      "sha256": "sha256:d8b6d0a4d63d43692ab068dc00d41d691e9f6121b62fbfc4ff15f8920ade34e4"
+    },
+    {
+      "path": "docs/site-survey.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/site-survey.md",
+      "sha256": "sha256:726c5ed6e3fe28a7439569384a62563f4354712452b527211b53eb0dcb3b3afd"
+    },
+    {
+      "path": "docs/workflows.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/workflows.md",
+      "sha256": "sha256:f511ec823b22330c40eeccf4ae7eb5fed0e153df96d999cfb6b3c63ccaa5a714"
+    },
+    {
+      "path": "examples/patterns/legacy_web_portal_playbook.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/patterns/legacy_web_portal_playbook.json",
+      "sha256": "sha256:3e0e6d98349f785bd2fb71095485833c25bffcad7d6840a12012b71ecab3eaf1"
+    },
+    {
+      "path": "examples/patterns/modern_spa_his_playbook.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/patterns/modern_spa_his_playbook.json",
+      "sha256": "sha256:f0498da658a94b20b47815f59e924ce01f5ec43addf3cdb5fd7c4dbf95eb7e1d"
+    },
+    {
+      "path": "examples/patterns/win32_cs_playbook.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/patterns/win32_cs_playbook.json",
+      "sha256": "sha256:2fc2f4345cdac7ae8836c57a41aca6204c4a2b6c29e22f2a6b21ecca47ebc5a3"
+    },
+    {
+      "path": "examples/patterns/wpf_workstation_playbook.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/patterns/wpf_workstation_playbook.json",
+      "sha256": "sha256:4b2c25deeead5042b458e0ae3a9362f241a20d85f7392f8cb7e8853dc8725f36"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/plugin.json",
+      "sha256": "sha256:bbf0a462dab2ea6d723711ac2b811448325259fb4cf1b616c12fef472a054394"
+    },
+    {
+      "path": "pyproject.toml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/pyproject.toml",
+      "sha256": "sha256:a6f44bdc8e10aaf840f10faf7cd6b6913bf74557ad87025c5b1f4553f61d5ea6"
+    },
+    {
+      "path": "rules/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/rules/README.md",
+      "sha256": "sha256:77f8d8ea26768c4adc278cc314248848636e850aca0aa3a1a5c6de5562d0e00c"
+    },
+    {
+      "path": "scripts/build_offline_bundle.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/build_offline_bundle.py",
+      "sha256": "sha256:2c44567984f4f73b6f9504878a6b2c08d707be6bf9cdae6e845b85910637ee2f"
+    },
+    {
+      "path": "scripts/kvm_status.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/kvm_status.py",
+      "sha256": "sha256:a15aa4770b9672d410de582040f73463173a669a160df4b1028a2bae9e797d7d"
+    },
+    {
+      "path": "scripts/map_knowledge.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/map_knowledge.py",
+      "sha256": "sha256:c5199d997b6a05b8beebd859a2e2fa666cadf6bf3c0d1452a15c0fd9074a3295"
+    },
+    {
+      "path": "scripts/map_mcp.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/map_mcp.py",
+      "sha256": "sha256:bf08be63dea81123b5bc9a64d6a4608b00442753ed4b668173b6a709f5ab7d7e"
+    },
+    {
+      "path": "scripts/map_runtime.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/map_runtime.py",
+      "sha256": "sha256:a1bfa0647fe66dab84d392a7498547b560ec98f90db38ae519cd28bd0affe378"
+    },
+    {
+      "path": "scripts/package_metadata.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/package_metadata.py",
+      "sha256": "sha256:b581ac7d91f89e6b5be88e01286baa4273a1ae4ba3d6ff3f663ea67bb163b1aa"
+    },
+    {
+      "path": "scripts/project_status.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/project_status.py",
+      "sha256": "sha256:33da8dbae3ff79405b46f4ed64e6608ede495d62fa57f27410697022fccbd4dc"
+    },
+    {
+      "path": "scripts/site_metrics.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/site_metrics.py",
+      "sha256": "sha256:2357621b4c1a14b1ed5a76627353887a667f5e176efa8766558adebdc646293e"
+    },
+    {
+      "path": "scripts/site_plan.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/site_plan.py",
+      "sha256": "sha256:111d8f4e6792a6c6bc8267cfc15e5d8a3c1168c76dfe193109e1fbd8b4c8e212"
+    },
+    {
+      "path": "scripts/site_playbook.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/site_playbook.py",
+      "sha256": "sha256:fe8de3c3381bde51e243489f2572189cdd6b3f5984cec45f314bae332cb8142e"
+    },
+    {
+      "path": "scripts/site_qualify.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/site_qualify.py",
+      "sha256": "sha256:cf415b2581073565e402eb442af309ae20a9c5cd4b0413e80b38a41e3bf78353"
+    },
+    {
+      "path": "scripts/site_recorder.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/site_recorder.py",
+      "sha256": "sha256:9ff65d8dc8119ae5a48caef1e33b666d685519288eb81cb3d8932ba4bf8278ee"
+    },
+    {
+      "path": "scripts/site_survey.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/site_survey.py",
+      "sha256": "sha256:ac8a1ae9441e10871e6a8c0d89ef61f11ee8da7e0cb11a0b8cbe084929f8b8be"
+    },
+    {
+      "path": "scripts/site_sync.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/site_sync.py",
+      "sha256": "sha256:cb8a58601ee9b797df69c01860e9438de544201cd14b121cdc986903a07a13ab"
+    },
+    {
+      "path": "scripts/structure_record.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/structure_record.py",
+      "sha256": "sha256:a0b9e26cbb48e1c2e23f02d3b3b63a4231dcb62b6f40e5937184afbd07116753"
+    },
+    {
+      "path": "skills/map-site-adaptation/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/skills/map-site-adaptation/SKILL.md",
+      "sha256": "sha256:5578b9ffa2c530526b73659bd2a955182a4582ccc5d3defe54e56a5a8a169361"
+    },
+    {
+      "path": "skills/map-site-adaptation/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/skills/map-site-adaptation/agents/openai.yaml",
+      "sha256": "sha256:4f13877c76c04e8fb7373aea7fba3d3009dabdc056049b50bad38519f094fe94"
+    },
+    {
+      "path": "skills/med-autopractice/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/skills/med-autopractice/SKILL.md",
+      "sha256": "sha256:1f5d586a985fe1452f536ee517b66dc41b3ff6bb16da7249e710ba7197025478"
+    },
+    {
+      "path": "skills/med-autopractice/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/skills/med-autopractice/agents/openai.yaml",
+      "sha256": "sha256:2d9e75d1b57f3308668be63a6b833e54ee00d4072e1ddda9fad7a881763c0b5b"
+    },
+    {
+      "path": "src/med_autopractice/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/__init__.py",
+      "sha256": "sha256:c2b6e4cb20358307d8851d688fde16b64041dbd10b02671a085374a5437834e9"
+    },
+    {
+      "path": "src/med_autopractice/adapters/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/__init__.py",
+      "sha256": "sha256:cf6aef4a701ec9015243767199a2365311229f4f42ff61a0824d7bae930af7fd"
+    },
+    {
+      "path": "src/med_autopractice/adapters/composite.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/composite.py",
+      "sha256": "sha256:90783447fd2f4f22c620c63e8e00f7541862c0770fd71a686656e8b1aa9c911d"
+    },
+    {
+      "path": "src/med_autopractice/adapters/declarative_ui.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/declarative_ui.py",
+      "sha256": "sha256:baf682207fe74e12ac04b1f1f88ef8e29309b4edb526ee81f92f31286eea3901"
+    },
+    {
+      "path": "src/med_autopractice/adapters/drivers/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/drivers/__init__.py",
+      "sha256": "sha256:4cc2644c8f4adbf51761a4c9f0f3cf4b476b467414cb6de48609293026e08642"
+    },
+    {
+      "path": "src/med_autopractice/adapters/drivers/browser_cdp.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/drivers/browser_cdp.py",
+      "sha256": "sha256:beb7bbef92efb66cf5af87a8b83d6041c21d804dbba3e0872e04f01519aa462f"
+    },
+    {
+      "path": "src/med_autopractice/adapters/drivers/desktop_win.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/drivers/desktop_win.py",
+      "sha256": "sha256:7b3e6fbaf76ba8dcaf44196dac2f414056164c691720044394f227e2c1850629"
+    },
+    {
+      "path": "src/med_autopractice/adapters/drivers/kvm_driver.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/drivers/kvm_driver.py",
+      "sha256": "sha256:4e8ac0e3237d9f0fc625887fd2f0936ac756b4c957748c2c6fd2698c901cb0a2"
+    },
+    {
+      "path": "src/med_autopractice/adapters/drivers/ocr.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/drivers/ocr.py",
+      "sha256": "sha256:c986f7c13a51e058a7cdce009449964e1884fdc0b74ac2aaef05d7c82b79e238"
+    },
+    {
+      "path": "src/med_autopractice/adapters/drivers/text_entry.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/drivers/text_entry.py",
+      "sha256": "sha256:4107d2a8e57fbaec3b8cd78ea253034ab5a86ab859d30f6f7875264dc037a88a"
+    },
+    {
+      "path": "src/med_autopractice/adapters/kvm.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/kvm.py",
+      "sha256": "sha256:e9e4d91119c4c4a5cdfca97fe228fef20c55c65c399b485afbb37e770ec78bf0"
+    },
+    {
+      "path": "src/med_autopractice/adapters/hl7v2.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/hl7v2.py",
+      "sha256": "sha256:5175b41869976c4866c9956d93701494f1f125ac77438f18e0c8b8866fff9690"
+    },
+    {
+      "path": "src/med_autopractice/adapters/middleware_rest.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/middleware_rest.py",
+      "sha256": "sha256:b1e37ef029a70ddc6788d08cbb5a28ea559d689da825ae428677d0b859845a8d"
+    },
+    {
+      "path": "src/med_autopractice/adapters/playbook_runner.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/playbook_runner.py",
+      "sha256": "sha256:0c7a51d907caf89271e396722c340b595311036a2de1f97a64b184b275522632"
+    },
+    {
+      "path": "src/med_autopractice/adapters/ports.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/ports.py",
+      "sha256": "sha256:2a3408ee3c69a6b027ff7dfdbfd894901ced3c1feddc367ef461cd6e0a53f642"
+    },
+    {
+      "path": "src/med_autopractice/adapters/session_guard.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/session_guard.py",
+      "sha256": "sha256:7359f8182d3577554af70c65150ed0584e496f985cdd67c316274dbf460e3fb3"
+    },
+    {
+      "path": "src/med_autopractice/adapters/synthetic.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/synthetic.py",
+      "sha256": "sha256:1477d69b80f8519ba29d8274223ad55af9b48dd9805e7f3629cab21821b99d5f"
+    },
+    {
+      "path": "src/med_autopractice/agent/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/agent/__init__.py",
+      "sha256": "sha256:a067a0883739c37bb93b19668b9128df55121b87d5d82d8313055209c3733b1e"
+    },
+    {
+      "path": "src/med_autopractice/agent/task_engine.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/agent/task_engine.py",
+      "sha256": "sha256:8cf53b298e2ec24f0ebc7cfe5393abe3d5d3fe8d94e46a2349b2f5ce9a2542b9"
+    },
+    {
+      "path": "src/med_autopractice/agent/task_store.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/agent/task_store.py",
+      "sha256": "sha256:602be9e8827657af006f8c85e31db694133f7e5742fa2c14f06090e299a900bc"
+    },
+    {
+      "path": "src/med_autopractice/domain/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/domain/__init__.py",
+      "sha256": "sha256:c080e2df7e426edc2e5d2b335132e5017b566225515da10007f4c65718e7b920"
+    },
+    {
+      "path": "src/med_autopractice/domain/task.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/domain/task.py",
+      "sha256": "sha256:f8275f2161a463b922317f46ce24cfdb1a1ce7936c0f31f623dd910a0727bb7f"
+    },
+    {
+      "path": "src/med_autopractice/knowledge.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/knowledge.py",
+      "sha256": "sha256:618b99f4a8ad4e10e6fce04a9feec866f15fe271da7b658ba2e52228109c0689"
+    },
+    {
+      "path": "src/med_autopractice/mcp_server.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/mcp_server.py",
+      "sha256": "sha256:19dbbcb96f670e16b089c0addee7469322b747d3a1b22f56b9ffe30d73b016cd"
+    },
+    {
+      "path": "src/med_autopractice/medicine/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/medicine/__init__.py",
+      "sha256": "sha256:753fad497ff1a4f4be54e662a0338f111678bacbd3e92c926a8b35cf75643710"
+    },
+    {
+      "path": "src/med_autopractice/medicine/llm_proposer.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/medicine/llm_proposer.py",
+      "sha256": "sha256:5855fa4f329a5e0620bf541d681bae2aa112e85db42a0dd8dd7e137d92621883"
+    },
+    {
+      "path": "src/med_autopractice/medicine/phi_guard.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/medicine/phi_guard.py",
+      "sha256": "sha256:74ab7231af38ecde5a78e58c1164bc051ee50ed1ca30f66833ae178f3c3c7058"
+    },
+    {
+      "path": "src/med_autopractice/medicine/ports.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/medicine/ports.py",
+      "sha256": "sha256:ee052528d6e80937af4aa962831f3c60657c6adec83a732216ae2be3b4f2953d"
+    },
+    {
+      "path": "src/med_autopractice/medicine/router.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/medicine/router.py",
+      "sha256": "sha256:b430595e680834583b6eabc05db5f655d1a3b88e24b19e212547c92dbf8a2524"
+    },
+    {
+      "path": "src/med_autopractice/platform/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/platform/__init__.py",
+      "sha256": "sha256:7d3a3e47761addab819e59ae3c049b25f381c7c71fc1fb5195f68e32199b8e5c"
+    },
+    {
+      "path": "src/med_autopractice/platform/locking.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/platform/locking.py",
+      "sha256": "sha256:1f6192f311d584fd6abef333563ecea500ff3b4a39c7d14121634fd210720817"
+    },
+    {
+      "path": "src/med_autopractice/platform/security.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/platform/security.py",
+      "sha256": "sha256:405c7468ef14a5daa14f7c2f87c3047de699176d58eb3a204eb31aa1a2ba0276"
+    },
+    {
+      "path": "src/med_autopractice/records/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/records/__init__.py",
+      "sha256": "sha256:440fd4a81bc52fd748b13e366b30353c8b097d7263eac46e3c44c71ac3d0e606"
+    },
+    {
+      "path": "src/med_autopractice/records/clinical_record.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/records/clinical_record.py",
+      "sha256": "sha256:b7e119114c78af01e28a37dc79d5792c08ce071c432a5a25ac47f7e92d3be3ce"
+    },
+    {
+      "path": "src/med_autopractice/records/research_dataset.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/records/research_dataset.py",
+      "sha256": "sha256:55a006387da675383a498957da1b4881e355dad50920b5dd7b45540ca148c7d1"
+    },
+    {
+      "path": "src/med_autopractice/review_ui/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/review_ui/__init__.py",
+      "sha256": "sha256:168c0950934a18f371adff152edcf0340e6f799cc358a6e81861f13a1893ab5d"
+    },
+    {
+      "path": "src/med_autopractice/review_ui/assets/review_app.html",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/review_ui/assets/review_app.html",
+      "sha256": "sha256:ac26779232e7993acd4b285e4fab9ab51490deb97e981db3c672de8a71dd9903"
+    },
+    {
+      "path": "src/med_autopractice/review_ui/renderer.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/review_ui/renderer.py",
+      "sha256": "sha256:f817807456852f3813090865505a2f28997b6439a2ecb836928ff0ebe63c4a2e"
+    },
+    {
+      "path": "src/med_autopractice/review_ui/server.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/review_ui/server.py",
+      "sha256": "sha256:bceda305f7425061b09258bb5eeda1b01cacee4d59593a126e04226179d6cb4c"
+    },
+    {
+      "path": "src/med_autopractice/runtime.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/runtime.py",
+      "sha256": "sha256:afe8e56b358125cca03eb0bbb766bdfa894a53f6596a3357cfbdfde6e7eb3a25"
+    },
+    {
+      "path": "src/med_autopractice/storage/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/storage/__init__.py",
+      "sha256": "sha256:77f49d9c2d15973e85b55962c71d162962ce7f8cf5df11589a2015bfb3d0a871"
+    },
+    {
+      "path": "src/med_autopractice/storage/crypto.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/storage/crypto.py",
+      "sha256": "sha256:0d2862cb24008ca8898cc08f22fd5d4b2a87c170f0228c5b5cfd93e9e65e0921"
+    },
+    {
+      "path": "src/med_autopractice/storage/evidence_store.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/storage/evidence_store.py",
+      "sha256": "sha256:8ac18a707f24d983b4d23ed3355e587177493793ffe04f745d898c59ad73242e"
+    },
+    {
+      "path": "src/med_autopractice/storage/retention.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/storage/retention.py",
+      "sha256": "sha256:e5587735695815ed69f80a5027dd72bcc8e7f8065e59f43b7332b45e32882010"
+    },
+    {
+      "path": "src/med_autopractice/workflows/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/workflows/__init__.py",
+      "sha256": "sha256:ee8f266b891b165efc22e42a1ce24c191c4c2479ceb31b9092cef2d4550cc4e6"
+    },
+    {
+      "path": "src/med_autopractice/workflows/catalog.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/workflows/catalog.py",
+      "sha256": "sha256:3045433d9f6a5e359363a2829367cf2acb1b52b7234f9ac7da656248f48d7dcb"
+    },
+    {
+      "path": "src/med_autopractice/workflows/metrics.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/workflows/metrics.py",
+      "sha256": "sha256:ef57eb2864ffd8743b94ad49ca307b49c8b42401d934b13101a611bb773009cc"
+    },
+    {
+      "path": "src/med_autopractice/workflows/site_plan.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/workflows/site_plan.py",
+      "sha256": "sha256:ede0f5d7db1e77372940a919370dbf491bfa309025f2c2edd783fb6eba6640d1"
+    },
+    {
+      "path": "src/med_autopractice/workflows/site_playbook.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/workflows/site_playbook.py",
+      "sha256": "sha256:85f1153d32d1204e2b46bcae36386816c7fc82b6360d734a97607da74098e9ec"
+    },
+    {
+      "path": "src/med_autopractice/workflows/site_qualify.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/workflows/site_qualify.py",
+      "sha256": "sha256:576017699507cc82716ef535c46cb2c9b402a62a704e7d7ccb044f0c0e2d441f"
+    },
+    {
+      "path": "src/med_autopractice/workflows/site_recorder.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/workflows/site_recorder.py",
+      "sha256": "sha256:3de575e356b98bac10b6312a8e938af6737e7526b80f54df6410bd8acd1e59bd"
+    },
+    {
+      "path": "src/med_autopractice/workflows/site_survey.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/workflows/site_survey.py",
+      "sha256": "sha256:880a484f8f431aa927ef90a4dd6617499ecc4515d4053e068e4d0a9031c28c09"
+    },
+    {
+      "path": "src/med_autopractice/workflows/site_sync.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/workflows/site_sync.py",
+      "sha256": "sha256:ef1d4093ca823657b9e2779b2aa5d37bb16e2559ef1c37af52134ba59d8fdbb5"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/.github/workflows/ci.yml",
+      "sha256": "sha256:08c6e2e84ab8c9d6d21df0332605fd63f63bfe255c80b4455aef5a3be82bbb09"
+    },
+    {
+      "path": "CODE_OF_CONDUCT.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/CODE_OF_CONDUCT.md",
+      "sha256": "sha256:2ea4213b6c869ee2eb35a3f39768f29234a76fc1342ef1694eeb5247ff70a13f"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/CONTRIBUTING.md",
+      "sha256": "sha256:e3233dd588b1b15260995915a88ac3440fff0baa0246ca697090f56176b38fcd"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/LICENSE",
+      "sha256": "sha256:833ec30eb6223cb0ff2caab6a7c25ea305b0bb62a373f37c8c78193a0cc4d575"
+    },
+    {
+      "path": "SECURITY.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/SECURITY.md",
+      "sha256": "sha256:5fd346525e183172f209a16313d031a7bf436446bfe6cb71d596f049bdda24f0"
+    },
+    {
+      "path": "docs/public-scope.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/public-scope.md",
+      "sha256": "sha256:42be515537f71013bee9b9b7e45acec351128036d608c889b3e0ed1e90a2ba54"
+    },
+    {
+      "path": "scripts/public_release_check.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/public_release_check.py",
+      "sha256": "sha256:bfbc7cdb1b6d0c0739a1f254d927c8502520f9c7fdbb241b47c38925346081f8"
+    },
+    {
+      "path": "NOTICE",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/NOTICE",
+      "sha256": "sha256:69e8ccc0a74eb49feeec622ba565f188dfedc1012cec12f908c14d215abecdcb"
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/AGENTS.md",
+      "sha256": "sha256:6bc3b1d060c407c068ceefb7c4afec59913c028255151a41b97762c737c23168"
+    },
+    {
+      "path": "assets/branding/generation-prompts.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/assets/branding/generation-prompts.json",
+      "sha256": "sha256:dfbe8b9d5533434a62fba10ab6566773a85f555140d4d1326a060d3e87d6491e"
+    },
+    {
+      "path": "docs/getting-started.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/getting-started.md",
+      "sha256": "sha256:49d488e1af64b3b6ada14351c8f0ab0b75be90ed0933e2b9fe2534172f6090d3"
+    },
+    {
+      "path": "examples/synthetic/custom_proposer.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/synthetic/custom_proposer.py",
+      "sha256": "sha256:c5f72f58a74bb914170b410492c0e122c604b054d03e54cda4fa6e797744a41f"
+    },
+    {
+      "path": "examples/synthetic/playbooks/open-overview.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/synthetic/playbooks/open-overview.json",
+      "sha256": "sha256:bb806b0e902cc8b2c5d82ae4cdd73cef2b4a1b6fdaf61b5a1fc8ada90447be26"
+    },
+    {
+      "path": "examples/synthetic/revise-orders.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/synthetic/revise-orders.json",
+      "sha256": "sha256:b6165357a4ad62ed4803a92038cde3988b3e089e21dcaa54dea0cf72fbea2c9c"
+    },
+    {
+      "path": "examples/synthetic/survey.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/synthetic/survey.json",
+      "sha256": "sha256:6584ebe6328559e731c8256b7ca990bb08f7da8d203fc69bef84a77564aea8b6"
+    },
+    {
+      "path": "scripts/map_demo.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/scripts/map_demo.py",
+      "sha256": "sha256:6afbf677253cb1041516c7cebfaf7f204cd4ca7fa5cc5660ec14a430b78f293a"
+    },
+    {
+      "path": "tests/fixtures/README.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/tests/fixtures/README.md",
+      "sha256": "sha256:b07773aa7c684c74370633532d9a986bee02697032ad7932cb259c0a49e536cb"
+    },
+    {
+      "path": "tests/fixtures/synthetic-history-collection.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/tests/fixtures/synthetic-history-collection.json",
+      "sha256": "sha256:a6bd08816e38ff1d3a16b8ec7a6d1ff079a29ab039b0ed17917cb4d78aa35a6d"
+    },
+    {
+      "path": "src/med_autopractice/adapters/ui.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/ui.py",
+      "sha256": "sha256:6fa54d1539578002e7660ec7f0434772a173a4d28b870ea0f294e61ef2eb8301"
+    },
+    {
+      "path": "src/med_autopractice/adapters/fhir.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/adapters/fhir.py",
+      "sha256": "sha256:08967c4d36a3735cc6e2204073b6507146b158397483e95bd62588d1ff140513"
+    },
+    {
+      "path": "examples/synthetic/fhir_read.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/synthetic/fhir_read.py",
+      "sha256": "sha256:8052c89a14b784593734540784389898eb0766252d797b34db9b6e94c07b1597"
+    },
+    {
+      "path": "examples/synthetic/configure_site.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/synthetic/configure_site.py",
+      "sha256": "sha256:5cb14284ddb30cf5233129cfe23ab1ac7b77431f04d9cf0abd5cd2080eef7aaa"
+    },
+    {
+      "path": "docs/hospital-adapters.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/docs/hospital-adapters.md",
+      "sha256": "sha256:6aa4652ee341ed6b8331f750412954913ea9bc156efc5a721244c9541070737e"
+    },
+    {
+      "path": "src/med_autopractice/deployment.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/deployment.py",
+      "sha256": "sha256:08ca01024f605e20969f0ea7824c8e36849b16523dd673b61f10a31c1833ca96"
+    },
+    {
+      "path": "src/med_autopractice/medicine/proposals.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/medicine/proposals.py",
+      "sha256": "sha256:aa1c2f5c96c0d74886efb4c3731be74d3b41521d97743991866e467b727fa6e6"
+    },
+    {
+      "path": "src/med_autopractice/workflows/results.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/src/med_autopractice/workflows/results.py",
+      "sha256": "sha256:da4e48732eb23748504df0e63f25368e8815197993ca36760929549a8af0ffac"
+    },
+    {
+      "path": "examples/synthetic/local_provider.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/synthetic/local_provider.py",
+      "sha256": "sha256:76225d3ee72180a0c66a15f0773e06b14d9d8cf1b520af2eaf901228d8dd3fa2"
+    },
+    {
+      "path": "examples/synthetic/local_deployment.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/examples/synthetic/local_deployment.py",
+      "sha256": "sha256:1381f809ab68cba1ae84af302f3f221c72f16b9254379cec40c03b306f9b8163"
+    },
+    {
+      "path": "opl-package.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/med-autopractice/e012a5400445f7dcf98b0a121258d6922198eecb/opl-package.json",
+      "sha256": "sha256:48e6e33d194f74d3fa91541d46f5a0e2a90e6c13b1658275e62816a87763d12f"
+    }
+  ]
+}

@@ -1,0 +1,275 @@
+{
+  "surface_kind": "opl_package_payload_manifest.v2",
+  "schema_ref": "contracts/opl-framework/package-payload-manifest-v2.schema.json",
+  "package_id": "opl-relay",
+  "plugin_id": "opl-relay",
+  "package_version": "0.7.9",
+  "source_repo": "https://github.com/gaofeng21cn/opl-relay.git",
+  "source_commit": "8a4fd96ae255b240df35ef1a3270753e6bec00ef",
+  "source_root": "plugins/opl-relay",
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "digest": "sha256:f526b6375d18c3a9f1edeb13ce2913093fa16f14f9563c009a2ed9cdf9db8b46"
+  },
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/.codex-plugin/plugin.json",
+      "sha256": "sha256:3aebc65025a7cc2d055acfe5ae69349512de790440344b61184e8b7341ff5a00"
+    },
+    {
+      "path": "assets/icon.png",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/assets/icon.png",
+      "sha256": "sha256:2547dfbd2e5ea9e698010a89b26335c6ff72c74ff6ce1f1cc535a6845ed1876a"
+    },
+    {
+      "path": "bin/opl-relay",
+      "mode": "100755",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/bin/opl-relay",
+      "sha256": "sha256:73eb9d728cd37bc7e76beaf689d796e94009aa5b47c2d746217e7d6983890750"
+    },
+    {
+      "path": "mcp.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/mcp.json",
+      "sha256": "sha256:261a2d0a1d07c392e23414a2e0beb1c3cc84b3b6411220a64886582a84abadd4"
+    },
+    {
+      "path": "openclaw/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/openclaw/SKILL.md",
+      "sha256": "sha256:68ee51a91e17112271914d9a1fa218e84ca20e5b3b37f0443e093d965bc9650b"
+    },
+    {
+      "path": "plugin.json",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/plugin.json",
+      "sha256": "sha256:773f6a1fd32e4aa44a7c8492c26e08d11a4e9f9f15417e7283bee276117eed07"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/__init__.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/__init__.py",
+      "sha256": "sha256:0a774c62ae62f7776c46347aab90358f2cb077e4df992e7e446871f987273483"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/app_contributions.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/app_contributions.py",
+      "sha256": "sha256:fd88c71da257d0760cbe639843f269e89d748d30cd7f3c385b9f22ebbb89970c"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/apple_mail.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/apple_mail.py",
+      "sha256": "sha256:8428852d8e7d742b223a00c4f66b7acadcb5c690ee21a7e88dbf93063bfd4a9d"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/cli.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/cli.py",
+      "sha256": "sha256:99eee988f3c71d365cac67343b35e1f61f339d21494308044af3e2d72f0e37af"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/config.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/config.py",
+      "sha256": "sha256:15a1d5e51164b4241c0a8890ffb32551317e15c02623934631da2e2ebf77bbcb"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/context.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/context.py",
+      "sha256": "sha256:c4999bb471b420135e8f3397e74a7aae1323ed8fc25b37121cb0e0cdb32c567a"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/drafts.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/drafts.py",
+      "sha256": "sha256:f7f359583a6216afef7b6b02859445d9e35378463d8106069ee28163a9e0e49e"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/folders.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/folders.py",
+      "sha256": "sha256:7996ae0f2dce9871e5acc3ba300f8582b79480a59c17845c7ca33886ecd14758"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/graph.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/graph.py",
+      "sha256": "sha256:5857d769957dcbe2b70e4a4b8ad4dda5aed77f40f5e3e8e55ac5f3836379b57b"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/graph_drafts.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/graph_drafts.py",
+      "sha256": "sha256:11d78990e2807b330f551ae9af22fe996fe5f68213ca55faa1b9130b75145b3d"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/keychain.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/keychain.py",
+      "sha256": "sha256:c616ddd4f762891e182747fdf80eeb91dfbe26befc1e949c6a4f074bae82911a"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/knowledge.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/knowledge.py",
+      "sha256": "sha256:b1ff9a1b3d60f26928d6e1b847e8b77bdcd914ee26dd3f078df3abade642fd16"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/mailbox.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/mailbox.py",
+      "sha256": "sha256:b282df11e7300038808b12580b4ad03a535cebad961bafb84687851a8a7cd33e"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/memory.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/memory.py",
+      "sha256": "sha256:f4b227bc6076856d3c8bc07a51c3b15a12465bb814f00bdac867bed94f5a1685"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/memory_evidence.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/memory_evidence.py",
+      "sha256": "sha256:031ac0e6fda90a538d99ef31f991effb33247b95797e5a17b3f7a2ab92d1c849"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/message.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/message.py",
+      "sha256": "sha256:5c9172023fa08a7138802d178f20fd49abc418b9d040bd280d73952920058567"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/native.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/native.py",
+      "sha256": "sha256:106389730f4627454c3f22fc44e0519fd3879c5f70f2e7226c6849692c762a45"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/paths.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/paths.py",
+      "sha256": "sha256:87ea76aa7775ee4ebaa00786804b3cc6a5b5b2a2d1490875b99dc7350da52435"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/people.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/people.py",
+      "sha256": "sha256:847951a4b06182c1ec1a1bc5cb42a434314705aed06c13201b552bbc912c4419"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/persona.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/persona.py",
+      "sha256": "sha256:9b67755c638d56470f4b1468955e0d42d217d3fbc3ff5cec17a9b35ee0ab7ff9"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/reply_context.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/reply_context.py",
+      "sha256": "sha256:ab04932bd1f2dc1c29c796cf75c1f6eb39913b0bf485ec5e077bb42e23c35215"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/remote_search.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/remote_search.py",
+      "sha256": "sha256:0225e4d52a26bcc85649b1e9224e4a77f6fe1966d555e474c7e2d32ced7cd353"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/schema.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/schema.py",
+      "sha256": "sha256:b210e4b5f02cbcf697a3a7bf137c0eac05fd265bff3609c13c159ab0e253b7de"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/server_drafts.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/server_drafts.py",
+      "sha256": "sha256:255878f0eb0ac876ed30f6cb410574c3bc7e53040a68f9c2ec45aef5540fa9b2"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/server_send.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/server_send.py",
+      "sha256": "sha256:3e64c48ef240a96c2b303135bc03a5b5f1c55f8041593dc9f24a5b603cb9640e"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/store.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/store.py",
+      "sha256": "sha256:f404ff8feccddb6226f955d53c702efedc3d735ceb0e1f497385f1db942dcc35"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/sync.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/sync.py",
+      "sha256": "sha256:729ac6b7d799f54781882ec2a1e25d263797064b7ae68fe7e2604258cce2d691"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/triage.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/triage.py",
+      "sha256": "sha256:173c3379662459b9b118004194ce443e2a8956ac29c32f6b34dd12133ad66566"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/workspace.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/workspace.py",
+      "sha256": "sha256:20493b8d83c689091f7824b37db15dc0782209ea4d356eb70ca114cebf0ab6bb"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/workbench.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/workbench.py",
+      "sha256": "sha256:2326363e3b5a5eea4692e466b0a40f4c5dfa17990f5b561f29008c9caa2ccd59"
+    },
+    {
+      "path": "workbench/server.mjs",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/workbench/server.mjs",
+      "sha256": "sha256:f59507996365bb40f60d12833c13280fbb82d926945a1592f38f2c21f7c64cf0"
+    },
+    {
+      "path": "workbench/index.html",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/workbench/index.html",
+      "sha256": "sha256:c3ed1d6c68046cb61a310e8bcf135a35911a42c354557b80059ad7bfb4628312"
+    },
+    {
+      "path": "workbench/THIRD_PARTY_NOTICES.txt",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/workbench/THIRD_PARTY_NOTICES.txt",
+      "sha256": "sha256:67a6550df584b5774edabc5bacd8f54daeb3195a519b7295bd93dfebf301d599"
+    },
+    {
+      "path": "skills/opl-relay/SKILL.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/skills/opl-relay/SKILL.md",
+      "sha256": "sha256:68148f96212b12057cacad7b91ee44a30caa19d2693a832fb765d8c50025a83c"
+    },
+    {
+      "path": "skills/opl-relay/agents/openai.yaml",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/skills/opl-relay/agents/openai.yaml",
+      "sha256": "sha256:18b8eff75bc36add8207eee70e03ebab4698770708d7a988ec31ac2f5df5fd45"
+    },
+    {
+      "path": "skills/opl-relay/references/apple-mail.md",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/skills/opl-relay/references/apple-mail.md",
+      "sha256": "sha256:750748cee280a8d87b14b1eb893ad7dc774476b33ea7575a6819d6137c6b82d9"
+    },
+    {
+      "path": "runtime/codex_mail_workbench/_opl_profile_workspace.py",
+      "mode": "100644",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-relay/8a4fd96ae255b240df35ef1a3270753e6bec00ef/plugins/opl-relay/runtime/codex_mail_workbench/_opl_profile_workspace.py",
+      "sha256": "sha256:68b4a3965c4b3e5f6f9d292aabbf8c98d0edfd0fc20d02839281e821f06098b1"
+    }
+  ]
+}

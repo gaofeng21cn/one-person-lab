@@ -3,7 +3,7 @@
   "package_id": "agent-session-vault",
   "display_name": "OPL Session Vault",
   "publisher": "gaofeng21cn",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "source": "first_party_owner_projection",
   "source_repo": "https://github.com/gaofeng21cn/agent-session-vault.git",
   "package_role": "capability_package",
@@ -49,8 +49,8 @@
       "marketplace_source": "gaofeng21cn/agent-session-vault",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/agent-session-vault:latest-stable"
     },
-    "plugin_payload_manifest_url": "payloads/agent-session-vault-0.1.4.json",
-    "carrier_source_commit": "8afc8332cc3e1ebb2b321f93be98736aeb4c4348"
+    "plugin_payload_manifest_url": "payloads/agent-session-vault-0.1.5.json",
+    "carrier_source_commit": "807123defb8afe3ab696039bc5269deeac36b158"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
@@ -119,7 +119,6 @@
       "src/agent_session_vault/archive_backend.py",
       "src/agent_session_vault/archive_catalog.py",
       "src/agent_session_vault/archive_compact.py",
-      "src/agent_session_vault/archive_content.py",
       "src/agent_session_vault/archive_model.py",
       "src/agent_session_vault/archive_ops.py",
       "src/agent_session_vault/archive_prune.py",
@@ -133,8 +132,8 @@
       "src/agent_session_vault/local_codex.py",
       "src/agent_session_vault/openclaw.py",
       "src/agent_session_vault/projection.py",
+      "src/agent_session_vault/restic.py",
       "src/agent_session_vault/stable.py",
-      "src/agent_session_vault/stable_pack.py",
       "src/agent_session_vault/storage.py",
       "src/agent_session_vault/tokscale.py",
       "src/agent_session_vault/views.py",
@@ -145,7 +144,7 @@
       "scripts/run_detached.py",
       "config/codex-cold-decisions.example.json"
     ],
-    "digest": "sha256:534e4a85a24c69b26db032b6064e63dfd07bdef0b301dc34f1d8a618b66124e4"
+    "digest": "sha256:3bec68fbf6ee3ee98606ea90b5e00d8680a1bc6b7fa7dbd5c10a90e1be9f2ed0"
   },
   "presentation": {
     "display_name_i18n": {
