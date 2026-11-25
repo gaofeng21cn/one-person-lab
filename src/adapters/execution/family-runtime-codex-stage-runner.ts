@@ -1,4 +1,3 @@
-import os from 'node:os';
 import path from 'node:path';
 
 import { buildRawArtifactProgressCloseoutPacket } from './family-runtime-codex-stage-runner-parts/raw-progress-closeout.ts';
@@ -147,12 +146,11 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   // output schema, which admits one member and no others. Give it a directory to publish
   // into instead; the runtime only ever names the file it finds there.
   // The provider does not forward its environment to MCP servers, so the capability cannot
-  // be told where to publish. Both sides use this fixed location instead.
-  const corpusBindingDir = path.join(
-    process.env.OPL_STATE_DIR?.trim() || path.join(os.homedir(), 'Library', 'Application Support', 'OPL', 'state'),
-    'family-runtime',
-    'capability-bindings',
-  );
+  // be told where to publish. It runs with the Attempt workspace as its working directory,
+  // though, so both sides already agree on this location without anyone forwarding anything.
+  const corpusBindingDir = !workspaceRoot || workspaceRoot === 'unresolved'
+    ? null
+    : path.join(workspaceRoot, '.opl', 'capability-bindings');
   const observedCapabilityCalls: ObservedCapabilityCall[] = [];
   const attemptStartedAtMs = Date.now();
   if (runnerMode !== 'codex_cli') {
