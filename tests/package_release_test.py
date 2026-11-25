@@ -369,5 +369,84 @@ class PackageReleaseTests(unittest.TestCase):
         self.git('commit', '-m', 'add projected resource file')
         self.assertTrue(content_changed(self.root, previous, self.projection, allowlist))
 
+    def test_daily_release_isolates_failed_package_pr_from_healthy_packages(self):
+        from package_release.common import git as actual_git, run as actual_run
+        with tempfile.TemporaryDirectory() as temporary:
+            temp = Path(temporary)
+            framework = temp / 'framework'
+            remote = temp / 'remote.git'
+            owner_remote = temp / 'owner.git'
+            subprocess.run(['git', 'clone', '--bare', str(self.root), str(owner_remote)], check=True, capture_output=True)
+            framework.mkdir()
+            subprocess.run(['git', 'init', '-b', 'main', str(framework)], check=True, capture_output=True)
+            subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=framework, check=True)
+            subprocess.run(['git', 'config', 'user.email', 'test@example.invalid'], cwd=framework, check=True)
+            for pid in ('alpha', 'beta'):
+                write(framework / f'contracts/opl-framework/packages/{pid}.json', {
+                    'package_id': pid,
+                    'version': '1.0.0',
+                    'source_repo': f'https://github.com/example/{pid}.git',
+                    'codex_surface': {'plugin_payload_manifest_url': f'payloads/{pid}-1.0.0.json'},
+                })
+                write(framework / f'contracts/opl-framework/packages/payloads/{pid}-1.0.0.json', {
+                    'source_commit': '0' * 40,
+                })
+                write(framework / f'contracts/opl-framework/package-payload-allowlists/{pid}.json', self.allowlist)
+            subprocess.run(['git', 'add', '.'], cwd=framework, check=True)
+            subprocess.run(['git', 'commit', '-m', 'init'], cwd=framework, check=True, capture_output=True)
+            subprocess.run(['git', 'clone', '--bare', str(framework), str(remote)], check=True, capture_output=True)
+            subprocess.run(['git', 'remote', 'add', 'origin', str(remote)], cwd=framework, check=True)
+            subprocess.run(['git', 'fetch', 'origin', 'main'], cwd=framework, check=True, capture_output=True)
+            initial_commit = actual_git(framework, 'rev-parse', 'HEAD')
+            alpha_before = (framework / 'contracts/opl-framework/packages/alpha.json').read_bytes()
+
+            def fake_run(argv, **kwargs):
+                cmd = [str(x) for x in argv]
+                if cmd[:2] == ['git', 'clone']:
+                    cmd[-2] = str(owner_remote)
+                    return actual_run(cmd, **kwargs)
+                if len(cmd) > 2 and 'package_release.py' in cmd[1]:
+                    pid = cmd[cmd.index('--package-id') + 1]
+                    write(framework / f'contracts/opl-framework/packages/{pid}.json', {
+                        'package_id': pid, 'version': '1.0.1',
+                        'source_repo': f'https://github.com/example/{pid}.git',
+                        'codex_surface': {'plugin_payload_manifest_url': f'payloads/{pid}-1.0.1.json'},
+                    })
+                    write(framework / f'contracts/opl-framework/packages/payloads/{pid}-1.0.1.json', {'source_commit': self.base})
+                    return SimpleNamespace(stdout=json.dumps({'package_id': pid, 'version': '1.0.1'}), stderr='', returncode=0)
+                if len(cmd) > 2 and 'package-source-projection-gate.mjs' in cmd[2]:
+                    return SimpleNamespace(stdout='{"status":"validated"}', stderr='', returncode=0)
+                return actual_run(cmd, **kwargs)
+
+            def fake_merge(root, repo, base, package_id, version, **kwargs):
+                if package_id == 'framework-projection-alpha':
+                    raise ReleaseError('Simulated full-repo CI failure for alpha')
+                return actual_git(root, 'rev-parse', 'HEAD')
+
+            def fake_gh(path):
+                if path.endswith('/commits/main'):
+                    return {'sha': self.base}
+                if path.endswith('/commits/' + '0' * 40) or path.endswith('/commits/' + self.base):
+                    return {'sha': path.rsplit('/', 1)[-1]}
+                if '/compare/' in path:
+                    return {'files': [{'filename': 'photo.png'}]}
+                return {'private': False}
+
+            args = SimpleNamespace(framework_root=framework, flow_root=framework, package_id=None,
+                                   apply=True, output=temp / 'out.json')
+            with patch.object(daily, 'package_specs', return_value=[{'package_id': 'alpha'}, {'package_id': 'beta'}]), \
+                 patch.object(daily, 'gh', side_effect=fake_gh), \
+                 patch.object(daily, 'run', side_effect=fake_run), \
+                 patch.object(daily, 'prepare_owner', return_value={'status': 'prepared', 'version': '1.0.1', 'owner_source_commit': self.base}), \
+                 patch.object(daily, 'merge_release_changes', side_effect=fake_merge):
+                report = daily.prepare(args)
+
+            statuses = {row['package_id']: row['status'] for row in report['packages']}
+            self.assertEqual(statuses, {'alpha': 'blocked', 'beta': 'prepared'})
+            self.assertEqual((framework / 'contracts/opl-framework/packages/alpha.json').read_bytes(), alpha_before)
+            self.assertFalse((framework / 'contracts/opl-framework/packages/payloads/alpha-1.0.1.json').exists())
+            self.assertTrue((framework / 'contracts/opl-framework/packages/payloads/beta-1.0.1.json').exists())
+            self.assertNotEqual(report['framework_source_commit'], initial_commit)
+
 if __name__ == '__main__':
     unittest.main()

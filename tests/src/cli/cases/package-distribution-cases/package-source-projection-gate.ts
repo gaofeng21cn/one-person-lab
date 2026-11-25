@@ -708,3 +708,61 @@ test('package source projection gate binds one regular owner descriptor outside 
     (error: unknown) => (error as { code?: string }).code === 'payload_source_mode_mismatch',
   );
 });
+
+test('package source projection gate validates public presentation artwork', (t) => {
+  const fixture = standardFixture(t);
+  const manifest = JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8'));
+  const payload = JSON.parse(fs.readFileSync(fixture.payloadPath, 'utf8'));
+  const iconRel = 'assets/branding/logo.png';
+  const carrierIconAbs = path.join(fixture.ownerRoot, 'plugins/med-autoscience', iconRel);
+  fs.mkdirSync(path.dirname(carrierIconAbs), { recursive: true });
+  fs.writeFileSync(carrierIconAbs, 'png-bytes');
+  git(fixture.ownerRoot, ['add', path.join('plugins/med-autoscience', iconRel)]);
+  git(fixture.ownerRoot, ['commit', '-qm', 'add carrier icon']);
+  const nextCommit = git(fixture.ownerRoot, ['rev-parse', 'HEAD']);
+  git(fixture.ownerRoot, ['tag', '-f', '-a', `v${fixture.version}`, '-m', `v${fixture.version}`]);
+  const ownerManifestPath = path.join(fixture.ownerRoot, fixture.spec.owner_package_manifest_ref);
+  const ownerManifest = JSON.parse(fs.readFileSync(ownerManifestPath, 'utf8'));
+  ownerManifest.codex_surface = { carrier_source_commit: nextCommit };
+  writeJson(ownerManifestPath, ownerManifest);
+  git(fixture.ownerRoot, ['add', fixture.spec.owner_package_manifest_ref]);
+  git(fixture.ownerRoot, ['commit', '-qm', 'bind icon commit']);
+
+  const carrierIconUrl = `https://raw.githubusercontent.com/example/med-autoscience/${nextCommit}/plugins/med-autoscience/${iconRel}`;
+  const nextFiles = [
+    ...payload.files.map((entry: Record<string, string>) => ({
+      ...entry,
+      source_url: entry.source_url.replace(`/${fixture.carrierCommit}/`, `/${nextCommit}/`),
+    })),
+    { path: iconRel, mode: '100644', source_url: carrierIconUrl, sha256: digest(carrierIconAbs) },
+  ];
+  writeJson(fixture.manifestPath, {
+    ...manifest,
+    presentation: { home_shortcuts: [], software_type: 'agent', icon_ref: iconRel },
+    codex_surface: { ...manifest.codex_surface, carrier_source_commit: nextCommit },
+  });
+  writeJson(fixture.payloadPath, {
+    ...payload,
+    source_commit: nextCommit,
+    content_lock: {
+      ...payload.content_lock,
+      digest: lengthPrefixedFileDigest([
+        { path: '.codex-plugin/plugin.json', absolute: path.join(fixture.ownerRoot, 'plugins/med-autoscience/.codex-plugin/plugin.json') },
+        { path: 'skills/med-autoscience/SKILL.md', absolute: fixture.skillPath },
+        { path: iconRel, absolute: carrierIconAbs },
+      ]),
+    },
+    files: nextFiles,
+  });
+  assert.equal(validatePackageSourceProjection({ frameworkRoot: fixture.frameworkRoot, spec: fixture.spec, ownerRepoPath: fixture.ownerRoot }).status, 'validated');
+
+  writeJson(fixture.manifestPath, {
+    ...manifest,
+    presentation: { home_shortcuts: [], software_type: 'agent', icon_ref: 'assets/branding/missing.png' },
+    codex_surface: { ...manifest.codex_surface, carrier_source_commit: nextCommit },
+  });
+  assert.throws(
+    () => validatePackageSourceProjection({ frameworkRoot: fixture.frameworkRoot, spec: fixture.spec, ownerRepoPath: fixture.ownerRoot }),
+    (error: unknown) => (error as { code?: string }).code === 'payload_artwork_invalid',
+  );
+});

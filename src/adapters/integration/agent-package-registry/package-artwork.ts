@@ -24,7 +24,12 @@ export function packageArtworkUrl(descriptor: InstalledPackageDescriptor): strin
     const sourceRoot = payload.source_root === '.' ? '' : payload.source_root;
     if (typeof sourceRoot !== 'string' || sourceRoot.split('/').some(part => part === '..' || part === '.')) return null;
     const file = payload.files.find(file => isRecord(file) && file.path === icon);
-    const expected = `https://raw.githubusercontent.com${repo.pathname.replace(/\.git$/, '')}/${commit}/${sourceRoot ? `${sourceRoot}/` : ''}${icon}`;
-    return isRecord(file) && /^sha256:[0-9a-f]{64}$/.test(String(file.sha256)) && file.source_url === expected ? expected : null;
+    if (!isRecord(file) || !/^sha256:[0-9a-f]{64}$/.test(String(file.sha256)) || typeof file.source_url !== 'string') return null;
+    const repoPrefix = `https://raw.githubusercontent.com${repo.pathname.replace(/\.git$/, '')}/${commit}/`;
+    if (!file.source_url.startsWith(repoPrefix)) return null;
+    const sourceRelPath = file.source_url.slice(repoPrefix.length);
+    if (!/^(?!\/)(?!.*(?:^|\/)\.\.?(?:\/|$))[A-Za-z0-9._/-]+\.(?:svg|png|webp)$/.test(sourceRelPath)) return null;
+    const expectedCarrierPath = `${sourceRoot ? `${sourceRoot}/` : ''}${icon}`;
+    return sourceRelPath === expectedCarrierPath || sourceRelPath === icon ? file.source_url : null;
   } catch { return null; }
 }
