@@ -42,7 +42,7 @@ Runway 在启动 Temporal 前，先把 exact StageRun input 写入 `${OPL_STATE_
 
 Closeout 恢复接受完整 JSON 对象及完整 JSON 代码块，记录无法归一化的原因。`domain_output` 先验证四字段身份与 `closeout_refs` 绑定，台账仅保存 refs-only 身份；原始输出同步核对 producing Stage 与物理路径边界。Review lane 由 Stage 声明决定；长会话同线程 closeout 补交默认预算为 900 秒，且受 Activity 总时限约束。
 
-直接 closeout 与同线程 protocol-resume 可引用本 Attempt 工作区内通过字节与工作区包含性校验的 closeout packet 文件（`closeout_refs` 只存字符串，摘要、长度与 identity receipt 由 `closeout_ref_metadata` 唯一承载）。标准收尾结构将 `stage_quality_cycle`（含 `artifact_refs`、`artifact_hashes`）放在 `route_impact.stage_quality_cycle` 下，使用持久化工作项范围的 `scope_digest`；出现多处声明冲突时直接拒绝收尾包。producer 或 repairer 仅声明 `route_impact.consumable_artifact_refs` 时可从已校验文件补齐引用与摘要，不生成 Review 结论。
+直接 closeout 与同线程 protocol-resume 可引用本 Attempt 工作区内通过字节与工作区包含性校验的 closeout packet 文件（`closeout_refs` 只存字符串，摘要、长度与 identity receipt 由 `closeout_ref_metadata` 唯一承载）。初始提示提供执行器中的工作区路径。使用宿主工作区的 Attempt 可把较大的 packet 写入该目录。首次最终消息保留 Attempt 身份和 `closeout_refs`，通过一条带精确摘要和字节数的 `stage_attempt_closeout_packet` 元数据引用完整文件，再由运行时核验文件并读取其中的 `route_impact`。标准收尾结构将 `stage_quality_cycle`（含 `artifact_refs`、`artifact_hashes`）放在 `route_impact.stage_quality_cycle` 下，使用持久化工作项范围的 `scope_digest`。出现多处声明冲突时直接拒绝收尾包。producer 或 repairer 仅声明 `route_impact.consumable_artifact_refs` 时可从已校验文件补齐引用与摘要，不生成 Review 结论。
 
 Finding、repair、closure 与跨 Stage route 证据引用归一化为非空字符串列表（`changed_artifact_refs` 可为空）；初审返回 `repair_required` 时必须至少包含一项附带证据引用和非空 `repair_expectation` 的 finding，否则以 `stage_quality_review_repair_findings_invalid` 阻断并保留原产物。
 

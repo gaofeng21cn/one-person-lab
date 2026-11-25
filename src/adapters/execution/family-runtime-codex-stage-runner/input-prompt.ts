@@ -454,6 +454,10 @@ export function runnerPromptFor(input: {
   const stageId = stageIdFromAttempt(input.attempt);
   const attemptId = optionalString(input.attempt.stage_attempt_id) ?? 'unknown-attempt';
   const stagePacketRef = resolvedStagePacketRef(input);
+  const workspaceRoot = input.providerWorkspaceRoot ?? workspaceRootFromAttempt(input.attempt);
+  const workspaceTransport = workspaceLocatorFromAttempt(input.attempt).workspace_transport;
+  const hasSandboxClone = workspaceTransport === 'local_sandbox_git_clone'
+    || workspaceTransport === 'external_sandbox_git_clone';
   return [
     'You are running an OPL provider-backed stage attempt.',
     `Stage attempt id: ${attemptId}`,
@@ -481,8 +485,14 @@ export function runnerPromptFor(input: {
     'Your final message may be structured JSON or ordinary readable text. OPL persists it as a raw artifact and derives refs, hashes, lineage, and a minimal progress envelope.',
     'When this Attempt declares a cross-Stage route, make the final message exactly one JSON object with no surrounding prose and no code fence, using surface_kind "stage_attempt_closeout_packet" and a non-empty closeout_refs array for artifacts this Attempt actually produced.',
     'For a producer or repairer Attempt, closeout_refs must name at least one artifact this Attempt produced. Listing only a StageRun input artifact as the produced output is rejected as zero_new_artifact: write the Stage decision to a new file and reference that file. A reviewer Attempt is exempt because it must reference the artifact it reviewed.',
-    'For a producer or repairer Attempt in a Stage that schedules formal Review, the typed closeout packet must be the entire final message. Ending with a prose summary leaves the packet missing; OPL then spends the remaining budget on a recovery turn, which can exhaust the Attempt and discard work that is already complete on disk.',
-    'This applies whenever the final message is a typed closeout packet for a Stage that schedules formal Review: emit ONLY the raw JSON object as the entire final message — no leading sentence, no trailing explanation, and no ```json code fence. Prose or a fenced block makes the packet undiscoverable and silently discards the Attempt\'s review handoff, even when the referenced closeout file on disk is complete.',
+    'For a producer or repairer Attempt in a Stage that schedules formal Review, make the typed closeout packet the entire final message. Emit one raw JSON object with no prose or code fence so OPL can start the review handoff in this turn.',
+    ...(workspaceRoot ? [
+      `Attempt workspace in the executor is ${JSON.stringify(workspaceRoot)}.`,
+    ] : []),
+    ...(workspaceRoot && !hasSandboxClone ? [
+      'Write any referenced closeout packet file within the Attempt workspace.',
+      'For a large typed closeout, write the complete packet there. The final message may be a smaller typed closeout with the same Attempt identity, closeout_refs, and exactly one closeout_ref_metadata entry of kind "stage_attempt_closeout_packet" with the file ref and its exact sha256 and size_bytes. Omit route_impact from the smaller packet so OPL reads it from the verified file.',
+    ] : []),
     'Copy the supplied identity fields character-for-character from the exact typed closeout identity JSON above. Do not invent values for absent optional fields, search other Attempts for identities, or inspect runtime databases to reconstruct them. These fields identify only this Attempt; they do not grant semantic or quality authority.',
     'If closeout_ref_metadata is present, its objects may contain only ref_kind, kind, uri, sha256, ref, size_bytes, and artifact_identity_receipt_ref. Any other field makes the whole packet unusable, so keep domain semantics in the artifact body rather than in transport metadata.',
     'If the packet declares domain_output, it must contain exactly four fields: surface_kind "domain_owned_stage_output_ref", version "domain-owned-stage-output-ref.v1", domain_id, and output_ref (which must also appear in closeout_refs). The transport drops any other domain_output fields, so put supplementary refs, statuses, and prose in the artifact body instead.',
