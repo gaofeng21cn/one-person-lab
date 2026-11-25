@@ -35,6 +35,7 @@ export type CapabilityCallContextWrite = {
   attemptRef: string;
   workspaceRoot: string;
   corpusBindingDir: string | null;
+  notBeforeMs: number;
 };
 
 const CALL_CONTEXT_DIRECTORY = '.opl/call-context';
@@ -73,19 +74,31 @@ function writeJsonFile(filePath: string, value: unknown): string {
  * not read it, does not validate it and does not summarize it; it only names the file, so
  * that the reference in the call context resolves to the capability's own bytes.
  */
-function resolveCorpusBindingRef(directory: string | null): string | null {
+function resolveCorpusBindingRef(directory: string | null, notBeforeMs: number): string | null {
   if (!directory) {
     return null;
   }
-  const candidate = path.join(directory, 'corpus-binding.json');
+  let entries: string[];
   try {
-    if (!fs.statSync(candidate).isFile()) {
-      return null;
-    }
+    entries = fs.readdirSync(directory).filter((name) => name.startsWith('corpus-binding-') && name.endsWith('.json'));
   } catch {
     return null;
   }
-  return `file://${candidate}`;
+  // The binding must have been published by the call this context is about, so a file that
+  // predates the attempt is somebody else's binding. Newest wins among the rest.
+  const candidates = entries
+    .map((name) => {
+      const filePath = path.join(directory, name);
+      try {
+        return { filePath, mtimeMs: fs.statSync(filePath).mtimeMs };
+      } catch {
+        return null;
+      }
+    })
+    .filter((entry): entry is { filePath: string; mtimeMs: number } => entry !== null)
+    .filter((entry) => entry.mtimeMs >= notBeforeMs)
+    .sort((left, right) => right.mtimeMs - left.mtimeMs);
+  return candidates.length > 0 ? `file://${candidates[0].filePath}` : null;
 }
 
 export function writeCapabilityCallContext(input: CapabilityCallContextWrite): {
@@ -104,7 +117,7 @@ export function writeCapabilityCallContext(input: CapabilityCallContextWrite): {
     path.join(directory, `call-output-${stem}.json`),
     input.call.resultJson === null ? null : JSON.parse(input.call.resultJson),
   );
-  const corpusBindingRef = resolveCorpusBindingRef(input.corpusBindingDir);
+  const corpusBindingRef = resolveCorpusBindingRef(input.corpusBindingDir, input.notBeforeMs);
 
   const context: Record<string, string> = {
     action_execution_ref: input.attemptRef,
