@@ -123,6 +123,13 @@ export {
   createCodexCloseoutCaptureForTest,
 } from './family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
 
+// Default to an unpersisted session: the stage prompt and every tool result are request
+// content, and a rollout file is a persistent trace of them. OPL_CODEX_STAGE_EPHEMERAL_SESSION=0
+// restores the previous behaviour for operators who need the session on disk to debug.
+function stageSessionEphemeral() {
+  return process.env.OPL_CODEX_STAGE_EPHEMERAL_SESSION?.trim() !== '0';
+}
+
 async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexStageRunnerReceipt> {
   const runnerMode = normalizeCodexStageRunnerMode(input.runnerMode);
   const stagePacketRef = resolvedStagePacketRef(input);
@@ -225,6 +232,11 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       {
       cwd: runInSandbox ? sandboxWorkspaceRoot : workspaceRoot,
       json: true,
+      // Codex persists every session to ~/.codex/sessions/<date>/rollout-*.jsonl, which
+      // writes the whole request — prompt, tool results, reasoning, answer — to disk
+      // outside any retention boundary the caller agreed to. A stage Attempt is a
+      // request-scoped unit, so keep it in memory unless an operator explicitly opts in.
+      ephemeral: stageSessionEphemeral(),
       packageSkillBindings: skillRuntime?.packageSkillBindings,
       shellHome: hostSkillRuntime?.shellHome,
       ...(runInSandbox
@@ -378,6 +390,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   if (
     !runInSandbox
     && !closeoutPacket
+    // Resuming needs the rollout file this run deliberately did not write, so the
+    // recovery turn is unavailable in ephemeral mode rather than attempted and failed.
+    && !stageSessionEphemeral()
     && parsed.threadId
     && ['producer', 'reviewer', 'repairer', 're_reviewer'].includes(attemptRole ?? '')
     && result.timeoutReason !== 'unsupported_tool_protocol'
