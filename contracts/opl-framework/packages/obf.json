@@ -35,7 +35,7 @@
     "icon_ref": "assets/branding/opl-bookforge-logo.png"
   },
   "publisher": "one-person-lab",
-  "version": "0.4.1",
+  "version": "0.4.3",
   "domain_descriptor_ref": "contracts/domain_descriptor.json",
   "source": "first_party",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
@@ -72,8 +72,8 @@
     "app_contribution_adapter": {
       "manifest": "app-contribution-adapter.json"
     },
-    "plugin_payload_manifest_url": "payloads/obf-0.4.1.json",
-    "carrier_source_commit": "c6fbec201e4fc2bc74aca4ea266b97fb7e02127e"
+    "plugin_payload_manifest_url": "payloads/obf-0.4.3.json",
+    "carrier_source_commit": "7d5405b6fd6d913d228fc658aa6524ebb2295ef8"
   },
   "app_contributions": {
     "schema_version": "opl-app-contributions.v1",
