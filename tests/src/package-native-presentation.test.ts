@@ -295,6 +295,74 @@ test('catalog artwork uses immutable payload paths and never sends private artwo
   ]) {
     assert.equal(packageArtworkUrl(descriptor(badUrl)), null, badUrl);
   }
+
+  // Carrier file_aliases rename mapping (e.g. RCA assets/branding/redcube-ai-logo.png -> assets/icon.png).
+  const aliasIconDesc = (sourceUrl: string) => {
+    const base = descriptor(sourceUrl);
+    fs.writeFileSync(payloadPath, JSON.stringify({
+      package_id: 'demo',
+      package_version: '1.0.0',
+      source_commit: commit,
+      source_root: 'plugins/demo',
+      files: [
+        { path: 'assets/branding/redcube-ai-logo.png', sha256, source_url: sourceUrl },
+        { path: 'assets/icon.png', sha256, source_url: sourceUrl },
+      ],
+    }));
+    return {
+      ...base,
+      manifest: {
+        ...base.manifest,
+        presentation: { ...base.manifest.presentation!, icon_ref: 'assets/icon.png' },
+      },
+    };
+  };
+  const aliasedUrl = `https://raw.githubusercontent.com/example/demo/${commit}/assets/branding/redcube-ai-logo.png`;
+  assert.equal(
+    packageArtworkUrl(aliasIconDesc(aliasedUrl), { authorizedSourcePath: 'assets/branding/redcube-ai-logo.png' }),
+    aliasedUrl,
+  );
+  assert.equal(
+    packageArtworkUrl(aliasIconDesc(aliasedUrl), { authorizedSourcePath: 'plugins/demo/assets/icon.png' }),
+    null,
+  );
+  assert.equal(packageArtworkUrl(aliasIconDesc(aliasedUrl)), aliasedUrl);
+
+  // Carrier allowlist with carrier_projection_ref also authorizes aliased icon_ref when payload omits the extra source entry.
+  const allowlistDir = path.join(tempRoot, 'package-payload-allowlists');
+  const pkgDir = path.join(tempRoot, 'packages');
+  fs.mkdirSync(allowlistDir, { recursive: true });
+  fs.mkdirSync(path.join(pkgDir, 'payloads'), { recursive: true });
+  const rcaManifestPath = path.join(pkgDir, 'demo-alias.json');
+  const rcaPayloadPath = path.join(pkgDir, 'payloads', 'demo-alias.json');
+  fs.writeFileSync(rcaPayloadPath, JSON.stringify({
+    package_id: 'demo-alias',
+    package_version: '1.0.0',
+    source_commit: commit,
+    source_root: 'plugins/demo-alias',
+    files: [{ path: 'assets/icon.png', sha256, source_url: aliasedUrl }],
+  }));
+  fs.writeFileSync(path.join(allowlistDir, 'demo-alias.json'), JSON.stringify({
+    package_id: 'demo-alias',
+    source_root: 'plugins/demo-alias',
+    carrier_projection_ref: 'contracts/carrier_projection.json',
+    paths: ['assets/icon.png'],
+  }));
+  const rcaOnlyDescriptor = {
+    ...mas,
+    manifestPath: rcaManifestPath,
+    manifest: {
+      ...mas.manifest,
+      package_id: 'demo-alias',
+      version: '1.0.0',
+      visibility: 'public' as const,
+      source_repo: 'https://github.com/example/demo',
+      carrier_source_commit: commit,
+      plugin_payload_manifest_url: 'payloads/demo-alias.json',
+      presentation: { ...mas.manifest.presentation!, home_shortcuts: [], icon_ref: 'assets/icon.png' },
+    },
+  };
+  assert.equal(packageArtworkUrl(rcaOnlyDescriptor), aliasedUrl);
 });
 
 

@@ -317,11 +317,22 @@ def merge_release_changes(root, repo, base, package_id, version, *, delivery_kin
     wait_for_checks(repo, head)
     if gh(f'repos/{repo}/commits/main')['sha'] != base:
         raise ReleaseError('Owner main changed during release preparation; retry from the new source')
-    result = gh(f'repos/{repo}/pulls/{pull["number"]}/merge', method='PUT',
-                payload={'sha': head, 'merge_method': 'merge'})
-    if result.get('merged') is not True:
-        raise ReleaseError('Release PR was not merged')
-    git(root, 'fetch', 'origin', 'main', '--quiet')
+    merge_error = None
+    try:
+        result = gh(f'repos/{repo}/pulls/{pull["number"]}/merge', method='PUT',
+                    payload={'sha': head, 'merge_method': 'merge'})
+    except ReleaseError as exc:
+        result = None
+        merge_error = exc
+    if not result or result.get('merged') is not True:
+        # Recover if the merge API receipt was lost after GitHub already landed the PR on main.
+        git(root, 'fetch', 'origin', 'main', '--quiet')
+        if run(['git', 'merge-base', '--is-ancestor', head, 'origin/main'], cwd=root, check=False).returncode != 0:
+            if merge_error is not None:
+                raise merge_error
+            raise ReleaseError('Release PR was not merged')
+    else:
+        git(root, 'fetch', 'origin', 'main', '--quiet')
     git(root, 'reset', '--hard', 'origin/main')
     if git(root, 'rev-parse', 'HEAD^{tree}') != git(root, 'rev-parse', f'{head}^{{tree}}'):
         raise ReleaseError('Merged release source differs from the verified PR tree; retry from fresh main')

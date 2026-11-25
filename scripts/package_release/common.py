@@ -5,12 +5,19 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from .github_app_token import ensure_fresh_token, is_token_refresh_configured
 
 class ReleaseError(RuntimeError):
     pass
 
-def run(argv, *, cwd=None, check=True, timeout=900):
+def _child_env():
     env = dict(os.environ, GIT_TERMINAL_PROMPT='0', PYTHONDONTWRITEBYTECODE='1')
+    env.pop('PACKAGE_RELEASE_APP_PRIVATE_KEY', None)
+    return env
+
+def run(argv, *, cwd=None, check=True, timeout=900):
+    ensure_fresh_token()
+    env = _child_env()
     if env.get('GH_TOKEN'):
         env.update(GIT_CONFIG_COUNT='1', GIT_CONFIG_KEY_0='credential.helper',
                    GIT_CONFIG_VALUE_0='!gh auth git-credential')
@@ -22,15 +29,28 @@ def run(argv, *, cwd=None, check=True, timeout=900):
     return result
 
 def gh(endpoint, *, method='GET', payload=None):
-    argv = ['gh', 'api', '--method', method, endpoint]
-    if payload is not None:
-        result = subprocess.run(argv + ['--input', '-'], input=json.dumps(payload),
-                                text=True, capture_output=True, timeout=60)
-        if result.returncode:
-            raise ReleaseError(f'GitHub {method} {endpoint}: {result.stderr[-1000:]}')
-    else:
-        result = run(argv, timeout=60)
-    return json.loads(result.stdout) if result.stdout.strip() else None
+    for attempt in range(2):
+        ensure_fresh_token()
+        argv = ['gh', 'api', '--method', method, endpoint]
+        if payload is not None:
+            result = subprocess.run(argv + ['--input', '-'], input=json.dumps(payload),
+                                    env=_child_env(), text=True, capture_output=True, timeout=60)
+            if result.returncode:
+                detail = result.stderr[-1000:]
+                if attempt == 0 and ('HTTP 401' in detail or 'Bad credentials' in detail) and is_token_refresh_configured():
+                    ensure_fresh_token(force=True)
+                    continue
+                raise ReleaseError(f'GitHub {method} {endpoint}: {detail}')
+        else:
+            try:
+                result = run(argv, timeout=60)
+            except ReleaseError as exc:
+                detail = str(exc)
+                if attempt == 0 and ('HTTP 401' in detail or 'Bad credentials' in detail) and is_token_refresh_configured():
+                    ensure_fresh_token(force=True)
+                    continue
+                raise
+        return json.loads(result.stdout) if result.stdout.strip() else None
 
 def read(path):
     return json.loads(Path(path).read_text())

@@ -62,6 +62,9 @@ jobs:
       - name: Prepare changed owner versions
         env:
           GH_TOKEN: ${{ steps.publisher-token.outputs.token || github.token }}
+          PACKAGE_RELEASE_APP_ID: ${{ vars.PACKAGE_RELEASE_APP_ID }}
+          PACKAGE_RELEASE_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_RELEASE_APP_PRIVATE_KEY }}
+          PACKAGE_RELEASE_APP_OWNER: ${{ github.repository_owner }}
           SELECTED_PACKAGE: ${{ inputs.package_id }}
         run: |
           set -euo pipefail
@@ -72,10 +75,20 @@ jobs:
             --flow-root "$RUNNER_TEMP/opl-flow" \
             --output "$RUNNER_TEMP/opl-package-preparation.json" \
             --apply "${args[@]}"
+      - name: Refresh scoped publication identity for downstream steps
+        id: sync-publisher-token
+        if: vars.PACKAGE_RELEASE_APP_ID != ''
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        with:
+          app-id: ${{ vars.PACKAGE_RELEASE_APP_ID }}
+          private-key: ${{ secrets.PACKAGE_RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-contents: write
+          permission-workflows: write
       - name: Synchronize private owner publisher pins
-        if: steps.publisher-token.outputs.token != ''
+        if: steps.sync-publisher-token.outputs.token != ''
         env:
-          GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
+          GH_TOKEN: ${{ steps.sync-publisher-token.outputs.token }}
           SELECTED_PACKAGE: ${{ inputs.package_id }}
         run: |
           args=()
@@ -83,7 +96,7 @@ jobs:
           python3 scripts/sync-private-package-publishers.py "${args[@]}"
       - name: Compare independent Package fingerprints
         env:
-          GH_TOKEN: ${{ steps.publisher-token.outputs.token || github.token }}
+          GH_TOKEN: ${{ steps.sync-publisher-token.outputs.token || github.token }}
           SELECTED_PACKAGE: ${{ inputs.package_id }}
         run: |
           set -euo pipefail

@@ -16,7 +16,12 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from package_release.common import ReleaseError, read, write
-from package_release.owner import content_changed, update_versions, prepare_owner, reconcile_release_branch, wait_for_release_workflows
+from package_release.github_app_token import (
+    configure_token_refresh_from_env,
+    ensure_fresh_token,
+    reset_token_refresher,
+)
+from package_release.owner import content_changed, update_versions, prepare_owner, reconcile_release_branch, wait_for_release_workflows, merge_release_changes
 from package_release.channels import public_channel
 
 spec = importlib.util.spec_from_file_location('dispatcher', ROOT / 'scripts/package-publication-dispatch.py')
@@ -553,6 +558,179 @@ class PackageReleaseTests(unittest.TestCase):
             self.assertFalse((framework / 'contracts/opl-framework/packages/payloads/alpha-1.0.1.json').exists())
             self.assertTrue((framework / 'contracts/opl-framework/packages/payloads/beta-1.0.1.json').exists())
             actual_run(['git', 'merge-base', '--is-ancestor', concurrent_commit, report['framework_source_commit']], cwd=framework)
+
+    def test_daily_release_recovers_merged_package_when_merge_receipt_is_lost(self):
+        actual_run = daily.run
+        actual_git = daily.git
+        with tempfile.TemporaryDirectory() as tmp:
+            temp = Path(tmp)
+            owner_remote = temp / 'owner-remote.git'
+            subprocess.run(['git', 'clone', '--bare', str(self.root), str(owner_remote)], check=True, capture_output=True)
+            framework = temp / 'framework'
+            remote = temp / 'framework-remote.git'
+            peer = temp / 'framework-peer'
+            framework.mkdir()
+            subprocess.run(['git', 'init', '-b', 'main', str(framework)], check=True, capture_output=True)
+            subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=framework, check=True)
+            subprocess.run(['git', 'config', 'user.email', 'test@example.invalid'], cwd=framework, check=True)
+            for pid in ('alpha', 'beta'):
+                write(framework / f'contracts/opl-framework/packages/{pid}.json', {
+                    'package_id': pid,
+                    'version': '1.0.0',
+                    'source_repo': f'https://github.com/example/{pid}.git',
+                    'codex_surface': {'plugin_payload_manifest_url': f'payloads/{pid}-1.0.0.json'},
+                })
+                write(framework / f'contracts/opl-framework/packages/payloads/{pid}-1.0.0.json', {
+                    'source_commit': '0' * 40,
+                })
+                write(framework / f'contracts/opl-framework/package-payload-allowlists/{pid}.json', self.allowlist)
+            subprocess.run(['git', 'add', '.'], cwd=framework, check=True)
+            subprocess.run(['git', 'commit', '-m', 'init'], cwd=framework, check=True, capture_output=True)
+            subprocess.run(['git', 'clone', '--bare', str(framework), str(remote)], check=True, capture_output=True)
+            subprocess.run(['git', 'remote', 'add', 'origin', str(remote)], cwd=framework, check=True)
+            subprocess.run(['git', 'fetch', 'origin', 'main'], cwd=framework, check=True, capture_output=True)
+
+            subprocess.run(['git', 'clone', '--branch', 'main', str(remote), str(peer)], check=True, capture_output=True)
+            subprocess.run(['git', 'config', 'user.name', 'Peer'], cwd=peer, check=True)
+            subprocess.run(['git', 'config', 'user.email', 'peer@example.invalid'], cwd=peer, check=True)
+
+            def fake_run(argv, **kwargs):
+                cmd = [str(x) for x in argv]
+                if cmd[:2] == ['git', 'clone']:
+                    cmd[-2] = str(owner_remote)
+                    return actual_run(cmd, **kwargs)
+                if len(cmd) > 2 and 'package_release.py' in cmd[1]:
+                    pid = cmd[cmd.index('--package-id') + 1]
+                    write(framework / f'contracts/opl-framework/packages/{pid}.json', {
+                        'package_id': pid, 'version': '1.0.1',
+                        'source_repo': f'https://github.com/example/{pid}.git',
+                        'codex_surface': {'plugin_payload_manifest_url': f'payloads/{pid}-1.0.1.json'},
+                    })
+                    write(framework / f'contracts/opl-framework/packages/payloads/{pid}-1.0.1.json', {'source_commit': self.base})
+                    return SimpleNamespace(stdout=json.dumps({'package_id': pid, 'version': '1.0.1'}), stderr='', returncode=0)
+                if len(cmd) > 2 and 'package-source-projection-gate.mjs' in cmd[2]:
+                    return SimpleNamespace(stdout='{"status":"validated"}', stderr='', returncode=0)
+                return actual_run(cmd, **kwargs)
+
+            def fake_merge(root, repo, base, package_id, version, **kwargs):
+                if package_id == 'framework-projection-alpha':
+                    actual_run(['git', 'push', 'origin', 'HEAD:refs/heads/main'], cwd=root)
+                    actual_run(['git', 'pull', '--ff-only', 'origin', 'main'], cwd=peer)
+                    (peer / 'concurrent.txt').write_text('later main commit\n')
+                    actual_run(['git', 'add', 'concurrent.txt'], cwd=peer)
+                    actual_run(['git', 'commit', '-m', 'concurrent commit'], cwd=peer)
+                    actual_run(['git', 'push', 'origin', 'main'], cwd=peer)
+                    raise ReleaseError('GitHub PUT merge receipt lost (502)')
+                actual_run(['git', 'push', 'origin', 'HEAD:refs/heads/main'], cwd=root)
+                return actual_git(root, 'rev-parse', 'HEAD')
+
+            def fake_gh(path):
+                if path.endswith('/commits/main'):
+                    return {'sha': self.base}
+                if path.endswith('/commits/' + '0' * 40) or path.endswith('/commits/' + self.base):
+                    return {'sha': path.rsplit('/', 1)[-1]}
+                if '/compare/' in path:
+                    return {'files': [{'filename': 'photo.png'}]}
+                return {'private': False}
+
+            args = SimpleNamespace(framework_root=framework, flow_root=framework, package_id=None,
+                                   apply=True, output=temp / 'out.json')
+            with patch.object(daily, 'package_specs', return_value=[{'package_id': 'alpha'}, {'package_id': 'beta'}]), \
+                 patch.object(daily, 'gh', side_effect=fake_gh), \
+                 patch.object(daily, 'run', side_effect=fake_run), \
+                 patch.object(daily, 'prepare_owner', return_value={'status': 'prepared', 'version': '1.0.1', 'owner_source_commit': self.base}), \
+                 patch.object(daily, 'merge_release_changes', side_effect=fake_merge):
+                report = daily.prepare(args)
+
+            statuses = {row['package_id']: row['status'] for row in report['packages']}
+            self.assertEqual(statuses, {'alpha': 'prepared', 'beta': 'prepared'})
+            alpha_row = next(row for row in report['packages'] if row['package_id'] == 'alpha')
+            self.assertTrue(alpha_row.get('merge_recovered'))
+            self.assertTrue((framework / 'contracts/opl-framework/packages/payloads/alpha-1.0.1.json').exists())
+            self.assertTrue((framework / 'contracts/opl-framework/packages/payloads/beta-1.0.1.json').exists())
+            self.assertTrue((framework / 'concurrent.txt').exists())
+
+    def test_merge_release_changes_recovers_when_merge_api_drops_after_merge(self):
+        from package_release.common import git as actual_git, run as actual_run
+        with tempfile.TemporaryDirectory() as tmp:
+            temp = Path(tmp)
+            remote = temp / 'remote.git'
+            work = temp / 'work'
+            work.mkdir()
+            actual_run(['git', 'init', '-b', 'main', str(work)], check=True)
+            actual_run(['git', 'config', 'user.name', 'Test'], cwd=work)
+            actual_run(['git', 'config', 'user.email', 'test@example.invalid'], cwd=work)
+            (work / 'a.txt').write_text('v1\n')
+            actual_run(['git', 'add', '.'], cwd=work)
+            actual_run(['git', 'commit', '-m', 'init'], cwd=work)
+            actual_run(['git', 'clone', '--bare', str(work), str(remote)], check=True)
+            actual_run(['git', 'remote', 'add', 'origin', str(remote)], cwd=work)
+            actual_run(['git', 'fetch', 'origin', 'main'], cwd=work)
+            base = actual_git(work, 'rev-parse', 'HEAD')
+            (work / 'a.txt').write_text('v2\n')
+            actual_run(['git', 'add', 'a.txt'], cwd=work)
+            actual_run(['git', 'commit', '-m', 'prepare'], cwd=work)
+            head = actual_git(work, 'rev-parse', 'HEAD')
+
+            def fake_gh(endpoint, *, method='GET', payload=None):
+                if endpoint.endswith('/pulls?state=open&head=example:codex/daily-package-alpha-' + base[:12] + '&base=main'):
+                    return [{'number': 7}]
+                if endpoint.endswith('/commits/main'):
+                    return {'sha': base}
+                if method == 'PUT' and endpoint.endswith('/pulls/7/merge'):
+                    actual_run(['git', 'push', 'origin', f'{head}:refs/heads/main'], cwd=work)
+                    raise ReleaseError('GitHub PUT timeout after merge')
+                raise AssertionError(f'Unexpected gh call: {method} {endpoint}')
+
+            with patch('package_release.owner.gh', side_effect=fake_gh), \
+                 patch('package_release.owner.wait_for_checks'):
+                merged = merge_release_changes(work, 'example/repo', base, 'alpha', '1.0.1')
+            self.assertEqual(merged, head)
+
+    def test_github_app_token_refresh_strips_private_key_and_retries_401(self):
+        from package_release import common
+        reset_token_refresher()
+        self.addCleanup(reset_token_refresher)
+
+        minted = ['ghs_refreshed_1', 'ghs_refreshed_2']
+        with patch.dict(os.environ, {
+            'GH_TOKEN': 'ghs_initial',
+            'PACKAGE_RELEASE_APP_ID': '12345',
+            'PACKAGE_RELEASE_APP_PRIVATE_KEY': 'FAKE-KEY',
+            'PACKAGE_RELEASE_APP_OWNER': 'gaofeng21cn',
+        }, clear=False):
+            with patch('package_release.github_app_token.mint_installation_token', side_effect=lambda *_: minted.pop(0)):
+                self.assertTrue(configure_token_refresh_from_env(refresh_after_seconds=0))
+                self.assertNotIn('PACKAGE_RELEASE_APP_PRIVATE_KEY', os.environ)
+                token = ensure_fresh_token()
+                self.assertEqual(token, 'ghs_refreshed_1')
+                self.assertEqual(os.environ['GH_TOKEN'], 'ghs_refreshed_1')
+
+                from package_release import github_app_token
+                github_app_token._STATE['refresh_after_seconds'] = 2700
+                calls = []
+                def fake_run(argv, **kwargs):
+                    calls.append(kwargs['env']['GH_TOKEN'])
+                    self.assertNotIn('PACKAGE_RELEASE_APP_PRIVATE_KEY', kwargs['env'])
+                    if len(calls) == 1:
+                        return SimpleNamespace(returncode=1, stdout='', stderr='gh: Bad credentials (HTTP 401)')
+                    return SimpleNamespace(returncode=0, stdout='{"ok":true}', stderr='')
+
+                with patch('package_release.common.subprocess.run', side_effect=fake_run):
+                    res = common.gh('repos/gaofeng21cn/one-person-lab')
+                self.assertEqual(res, {'ok': True})
+                self.assertEqual(calls, ['ghs_refreshed_1', 'ghs_refreshed_2'])
+
+        workflow = (ROOT / '.github/workflows/daily-package-channel.yml').read_text()
+        self.assertIn('id: sync-publisher-token', workflow)
+        self.assertGreater(
+            workflow.index('id: sync-publisher-token'),
+            workflow.index('name: Prepare changed owner versions'),
+        )
+        self.assertGreater(
+            workflow.index('name: Synchronize private owner publisher pins'),
+            workflow.index('id: sync-publisher-token'),
+        )
 
 if __name__ == '__main__':
     unittest.main()

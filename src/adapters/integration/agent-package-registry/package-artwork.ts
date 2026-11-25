@@ -4,7 +4,10 @@ import { isRecord } from '../../../kernel/contract-validation.ts';
 import type { InstalledPackageDescriptor } from './installed-codex-plugin-directory-types.ts';
 
 /** Artwork uses the existing payload's immutable provenance, never a second asset catalog. */
-export function packageArtworkUrl(descriptor: InstalledPackageDescriptor): string | null {
+export function packageArtworkUrl(
+  descriptor: InstalledPackageDescriptor,
+  options?: { authorizedSourcePath?: string | null },
+): string | null {
   const { manifest } = descriptor;
   const icon = manifest.presentation?.icon_ref;
   const commit = manifest.carrier_source_commit;
@@ -29,7 +32,31 @@ export function packageArtworkUrl(descriptor: InstalledPackageDescriptor): strin
     if (!file.source_url.startsWith(repoPrefix)) return null;
     const sourceRelPath = file.source_url.slice(repoPrefix.length);
     if (!/^(?!\/)(?!.*(?:^|\/)\.\.?(?:\/|$))[A-Za-z0-9._/-]+\.(?:svg|png|webp)$/.test(sourceRelPath)) return null;
+    if (options && options.authorizedSourcePath !== undefined) {
+      return typeof options.authorizedSourcePath === 'string' && sourceRelPath === options.authorizedSourcePath
+        ? file.source_url
+        : null;
+    }
     const expectedCarrierPath = `${sourceRoot ? `${sourceRoot}/` : ''}${icon}`;
-    return sourceRelPath === expectedCarrierPath || sourceRelPath === icon ? file.source_url : null;
+    if (sourceRelPath === expectedCarrierPath || sourceRelPath === icon) return file.source_url;
+    const matchesAliasedEntry = payload.files.some(other => isRecord(other)
+      && other.sha256 === file.sha256
+      && other.source_url === file.source_url
+      && (other.path === sourceRelPath || `${sourceRoot ? `${sourceRoot}/` : ''}${String(other.path)}` === sourceRelPath));
+    if (matchesAliasedEntry) return file.source_url;
+    const allowlistRoot = path.resolve(root, '..', 'package-payload-allowlists');
+    const allowlistPath = path.resolve(allowlistRoot, `${manifest.package_id}.json`);
+    if (allowlistPath.startsWith(`${allowlistRoot}${path.sep}`) && fs.existsSync(allowlistPath)) {
+      const allowlist: unknown = JSON.parse(fs.readFileSync(allowlistPath, 'utf8'));
+      if (isRecord(allowlist)
+        && allowlist.package_id === manifest.package_id
+        && allowlist.source_root === payload.source_root
+        && allowlist.carrier_projection_ref === 'contracts/carrier_projection.json'
+        && Array.isArray(allowlist.paths)
+        && allowlist.paths.includes(icon)) {
+        return file.source_url;
+      }
+    }
+    return null;
   } catch { return null; }
 }

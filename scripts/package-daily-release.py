@@ -10,6 +10,7 @@ import sys
 import tempfile
 from pathlib import Path
 from package_release.common import ReleaseError, gh, git, read, run, slug, write
+from package_release.github_app_token import configure_token_refresh_from_env
 from package_release.owner import prepare_owner, merge_release_changes
 
 
@@ -67,6 +68,7 @@ def prepare(args):
     if unknown:
         raise ReleaseError('Unregistered Package selection: ' + ', '.join(sorted(unknown)))
     if args.apply:
+        configure_token_refresh_from_env()
         git(framework, 'config', 'user.name', 'OPL Package Publisher')
         git(framework, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
     results = []
@@ -86,6 +88,7 @@ def prepare(args):
                               *projection_path.parent.glob(f'payloads/{pid}-*.json')]
             before = {p: p.read_bytes() for p in snapshot_paths}
             print(f'Checking {pid}', file=sys.stderr, flush=True)
+            expected_projection_blobs = None
             try:
                 repository = gh(f'repos/{repo}')
                 if repository['private'] and projection.get('visibility', 'public') != 'authorized_only':
@@ -139,6 +142,11 @@ def prepare(args):
                             git(framework, 'add', '--', *stage_paths)
                             if run(['git', 'diff', '--cached', '--quiet'], cwd=framework, check=False).returncode != 0:
                                 git(framework, 'commit', '-m', f'chore: refresh daily Package {pid} {result["version"]} projection')
+                                expected_projection_blobs = {
+                                    rel: (framework / rel).read_bytes()
+                                    for rel in stage_paths
+                                    if (framework / rel).is_file()
+                                }
                                 framework_commit = merge_release_changes(
                                     framework,
                                     'gaofeng21cn/one-person-lab',
@@ -147,6 +155,7 @@ def prepare(args):
                                     result['version'],
                                 )
             except Exception as exc:
+                recovered = False
                 if args.apply:
                     run(['git', 'reset', '--hard', framework_commit], cwd=framework, check=False)
                     for path in projection_path.parent.glob(f'payloads/{pid}-*.json'):
@@ -154,6 +163,12 @@ def prepare(args):
                             path.unlink()
                     try:
                         framework_commit = refresh_framework_base(framework, framework_commit)
+                        if expected_projection_blobs and all(
+                            (framework / rel).is_file() and (framework / rel).read_bytes() == body
+                            for rel, body in expected_projection_blobs.items()
+                        ):
+                            result['merge_recovered'] = True
+                            recovered = True
                     except Exception:
                         pass
                 else:
@@ -162,7 +177,8 @@ def prepare(args):
                             path.unlink()
                     for path, body in before.items():
                         path.write_bytes(body)
-                result.update(status='blocked', reason=str(exc)[-3000:])
+                if not recovered:
+                    result.update(status='blocked', reason=str(exc)[-3000:])
             results.append(result)
             print(f"{pid}: {result['status']}", file=sys.stderr, flush=True)
     report = {'surface_kind': 'opl_daily_package_preparation.v1',

@@ -565,7 +565,7 @@ export function validatePackageSourceProjection({
         carrier_source_commit: carrierSourceCommit,
         plugin_payload_manifest_url: payloadRef,
       },
-    });
+    }, projected ? { authorizedSourcePath: projected.get(projectedManifest.presentation.icon_ref) ?? null } : undefined);
     if (!artwork) {
       fail('payload_artwork_invalid', spec.package_id, 'public presentation icon_ref must resolve to an immutable payload artwork URL', {
         icon_ref: projectedManifest.presentation.icon_ref,
