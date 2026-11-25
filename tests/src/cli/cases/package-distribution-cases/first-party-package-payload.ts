@@ -350,6 +350,70 @@ test('generator resolves an opted-in thin carrier using only its committed owner
   assert.equal(payload.files.some((entry: Record<string, string>) => entry.path === 'README.md'), false);
 });
 
+test('generator resolves thin carrier with copy_presentation_icon and adapter_projection and fails closed if descriptor missing', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-thin-bundle-payload-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const source = createSourceRepo(root, { includeSkill: false });
+  const projectionRef = 'contracts/carrier_projection.json';
+  const sourcePath = 'agent/primary_skill/SKILL.md';
+  const installedPath = `skills/${pluginId}/SKILL.md`;
+  const iconRel = 'assets/branding/logo.png';
+  const committedSkill = '# Thin bundle skill\n';
+  const committedIcon = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  writeFile(source.repo, sourcePath, committedSkill);
+  writeFile(source.repo, iconRel, committedIcon);
+  writeFile(source.repo, 'contracts/opl_agent_package_manifest.json', JSON.stringify({
+    surface_kind: 'opl_agent_package_manifest.v1',
+    package_id: packageId,
+    version: packageVersion,
+    presentation: { icon_ref: iconRel },
+  }));
+  writeFile(source.repo, rootedPath(source.sourceRoot, 'app-contribution-adapter.json'), '{"reads":{},"actions":{}}\n');
+  writeFile(source.repo, rootedPath(source.sourceRoot, 'opl-package.json'), JSON.stringify({
+    package_id: packageId,
+    version: packageVersion,
+    codex_surface: { plugin_id: pluginId, configured_codex_plugin_carrier: { plugin_selector: `${pluginId}@opl-test` } },
+  }));
+  writeFile(source.repo, projectionRef, JSON.stringify({
+    schema_version: 'opl_carrier_projection.v1',
+    carrier_root: source.sourceRoot,
+    resource_source_mode: 'filesystem',
+    copy_presentation_icon: true,
+    file_aliases: [{ from: sourcePath, to: installedPath }],
+    package_manifest_projection: { mode: 'clone_with_plugin_source_dot' },
+    plugin_manifests: [{ path: rootedPath(source.sourceRoot, '.codex-plugin/plugin.json'), sync_version: true }],
+    adapter_projection: { source: 'app-contribution-adapter.json', target: 'app-contribution-adapter.json' },
+  }));
+  source.sourceCommit = commitAll(source.repo, 'thin bundle carrier');
+  git(source.repo, ['update-ref', 'refs/remotes/origin/main', source.sourceCommit]);
+  const authority = createAuthority(root, source);
+  editJson(authority.allowlist, (value) => {
+    value.carrier_projection_ref = projectionRef;
+    value.paths.push('app-contribution-adapter.json', 'opl-package.json');
+  });
+  const result = runGenerator({ authority, repo: source.repo, sourceCommit: source.sourceCommit });
+  assert.deepEqual(result.projected_allowlist_paths, [
+    '.codex-plugin/plugin.json',
+    'app-contribution-adapter.json',
+    iconRel,
+    'assets/icon.bin',
+    'opl-package.json',
+    'plugin.json',
+    installedPath,
+  ]);
+
+  git(source.repo, ['rm', '-f', rootedPath(source.sourceRoot, 'app-contribution-adapter.json')]);
+  source.sourceCommit = commitAll(source.repo, 'drop committed adapter manifest');
+  git(source.repo, ['update-ref', 'refs/remotes/origin/main', source.sourceCommit]);
+  editJson(authority.manifest, (manifest) => {
+    manifest.source_commit = source.sourceCommit;
+    manifest.codex_surface.carrier_source_commit = source.sourceCommit;
+  });
+  const failed = runFailure({ authority, repo: source.repo, sourceCommit: source.sourceCommit });
+  assert.notEqual(failed.status, 0);
+  assert.match(failed.stderr, /projected adapter manifest/);
+});
+
 test('generator consumes manifest identity and an exact allowlist, emits the canonical schema, and is idempotent', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-payload-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

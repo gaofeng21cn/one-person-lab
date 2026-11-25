@@ -4,6 +4,7 @@
   "plugin_id": "opl-bookforge",
   "source_repo": "https://github.com/gaofeng21cn/opl-bookforge.git",
   "source_root": "plugins/opl-bookforge",
+  "carrier_projection_ref": "contracts/carrier_projection.json",
   "paths": [
     "plugin.json",
     ".codex-plugin/plugin.json",

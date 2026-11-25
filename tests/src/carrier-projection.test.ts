@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { projectCarrier } from '../../src/authority/packages/carrier-projection.ts';
+import { projectCarrier, trackedCarrierBlobPaths } from '../../src/authority/packages/carrier-projection.ts';
 
 function writeJson(filePath: string, payload: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -185,4 +185,83 @@ test('projectCarrier handles skill_bundle layout with argv rewrites and symlink 
   assert.equal(plugin.mcpServers, './mcp.json');
   assert.equal(plugin.interface.logo, './assets/branding/logo.png');
   assert.equal(projectCarrier({ repoRoot: root, check: true }).pack_carrier_projection.status, 'passed');
+});
+
+test('trackedCarrierBlobPaths accepts thin carriers with committed manifests and copy_presentation_icon and fails closed on missing shell manifests', () => {
+  const projection = {
+    schema_version: 'opl_carrier_projection.v1',
+    carrier_root: 'plugins/bundle-agent',
+    resource_target_prefix: 'skills/bundle-agent',
+    resource_source_mode: 'filesystem',
+    resource_roots: ['agent/', 'runtime/'],
+    exclude_path_segments: ['evidence'],
+    include_extensions: ['.md', '.py', '.json'],
+    file_aliases: [
+      { from: 'agent/primary_skill/SKILL.md', to: 'skills/bundle-agent/SKILL.md' },
+    ],
+    copy_presentation_icon: true,
+    package_manifest_projection: { mode: 'clone_with_plugin_source_dot' },
+    plugin_manifests: [
+      { path: 'plugins/bundle-agent/.codex-plugin/plugin.json', sync_version: true },
+    ],
+    adapter_projection: {
+      source: 'app-contribution-adapter.json',
+      target: 'app-contribution-adapter.json',
+      argv_rewrites: [{ from: 'runtime/app.py', to: 'skills/bundle-agent/runtime/app.py' }],
+    },
+  };
+  const ownerManifest = {
+    presentation: { icon_ref: 'assets/branding/logo.png' },
+  };
+  const trackedPaths = new Set([
+    'agent/primary_skill/SKILL.md',
+    'runtime/app.py',
+    'runtime/evidence/skip.json',
+    'assets/branding/logo.png',
+    'plugins/bundle-agent/.codex-plugin/plugin.json',
+    'plugins/bundle-agent/opl-package.json',
+    'plugins/bundle-agent/app-contribution-adapter.json',
+  ]);
+  const mapped = trackedCarrierBlobPaths({
+    projection,
+    projectionRef: 'contracts/carrier_projection.json',
+    carrierRoot: 'plugins/bundle-agent',
+    trackedPaths,
+    carrierPaths: ['.codex-plugin/plugin.json', 'opl-package.json', 'app-contribution-adapter.json'],
+    ownerManifest,
+  });
+  assert.equal(mapped.get('.codex-plugin/plugin.json'), 'plugins/bundle-agent/.codex-plugin/plugin.json');
+  assert.equal(mapped.get('opl-package.json'), 'plugins/bundle-agent/opl-package.json');
+  assert.equal(mapped.get('app-contribution-adapter.json'), 'plugins/bundle-agent/app-contribution-adapter.json');
+  assert.equal(mapped.get('assets/branding/logo.png'), 'assets/branding/logo.png');
+  assert.equal(mapped.get('skills/bundle-agent/runtime/app.py'), 'runtime/app.py');
+  assert.equal(mapped.has('skills/bundle-agent/runtime/evidence/skip.json'), false);
+
+  const missingAdapter = new Set(trackedPaths);
+  missingAdapter.delete('plugins/bundle-agent/app-contribution-adapter.json');
+  assert.throws(
+    () => trackedCarrierBlobPaths({
+      projection,
+      projectionRef: 'contracts/carrier_projection.json',
+      carrierRoot: 'plugins/bundle-agent',
+      trackedPaths: missingAdapter,
+      carrierPaths: ['.codex-plugin/plugin.json', 'opl-package.json'],
+      ownerManifest,
+    }),
+    /projected adapter manifest/,
+  );
+
+  const missingDescriptor = new Set(trackedPaths);
+  missingDescriptor.delete('plugins/bundle-agent/opl-package.json');
+  assert.throws(
+    () => trackedCarrierBlobPaths({
+      projection,
+      projectionRef: 'contracts/carrier_projection.json',
+      carrierRoot: 'plugins/bundle-agent',
+      trackedPaths: missingDescriptor,
+      carrierPaths: ['.codex-plugin/plugin.json', 'app-contribution-adapter.json'],
+      ownerManifest,
+    }),
+    /projected opl-package\.json/,
+  );
 });

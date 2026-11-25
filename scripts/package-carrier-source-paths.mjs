@@ -17,11 +17,22 @@ export function packageCarrierSourcePaths({ allowlist, sourceCommit, readGit }) 
   // Previously published commits can predate the opt-in contract.
   if (!trackedPaths.has(projectionRef)) return null;
   const projection = JSON.parse(readGit(['show', `${sourceCommit}:${projectionRef}`]).toString('utf8'));
+  let ownerManifest;
+  if (projection.copy_presentation_icon) {
+    const manifestRef = projection.version_sync_checks?.manifest_path
+      ?? (trackedPaths.has('contracts/opl_agent_package_manifest.json')
+        ? 'contracts/opl_agent_package_manifest.json'
+        : 'opl-package.json');
+    if (trackedPaths.has(manifestRef)) {
+      ownerManifest = JSON.parse(readGit(['show', `${sourceCommit}:${manifestRef}`]).toString('utf8'));
+    }
+  }
   return trackedCarrierBlobPaths({
     projection,
     projectionRef,
     carrierRoot: allowlist.source_root,
     trackedPaths,
     carrierPaths: allowlist.paths,
+    ownerManifest,
   });
 }
