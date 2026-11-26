@@ -1,6 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import type { CodexPluginCommandResult } from './configured-codex-plugin-carrier-types.ts';
+import {
+  captureCodexCarrierTmpSnapshot,
+  cleanupCodexCarrierTmpAfterRun,
+  resolveConfiguredCodexHome,
+  resolveInternalPackageCarrierHome,
+} from './carrier-temp-hygiene.ts';
 
 // Framework projects physical descriptors from native local marketplaces. Remote
 // catalog entries have no descriptor path and remain owned by the native carrier.
@@ -86,67 +92,82 @@ export function readCodexLocalPluginList(input: {
   timeoutMs?: number;
 }): CodexPluginCommandResult {
   const timeout = input.timeoutMs ?? 8_000;
-  const readback = spawnSync(process.execPath, ['-e', LOCAL_READBACK_BRIDGE, input.binary, String(timeout)], {
-    env: input.env, encoding: 'utf8', timeout: timeout + 2_000, maxBuffer: 8 * 1024 * 1024,
-  });
-  if (readback.status !== 0 || readback.error) {
-    let error: Error | null = readback.error ?? null;
-    if (!error) {
-      try {
-        const failure = JSON.parse(readback.stdout).error;
-        if (typeof failure?.code === 'string') error = Object.assign(new Error(failure.message), { code: failure.code });
-      } catch { /* Native protocol failures retain their exit status and diagnostic. */ }
-    }
-    return { status: readback.status, stdout: '', stderr: readback.stderr ?? '', error };
-  }
-  const marketplaces = spawnSync(input.binary, ['plugin', 'marketplace', 'list', '--json'], {
-    env: input.env, encoding: 'utf8', timeout, maxBuffer: 8 * 1024 * 1024,
-  });
-  if (marketplaces.status !== 0 || marketplaces.error) return {
-    status: marketplaces.status, stdout: marketplaces.stdout ?? '', stderr: marketplaces.stderr ?? '', error: marketplaces.error ?? null,
-  };
+  const codexHome = resolveConfiguredCodexHome(input.env);
+  const internalHome = resolveInternalPackageCarrierHome(input.env);
+  const snapshot = captureCodexCarrierTmpSnapshot(codexHome);
+  let failedOrTimedOut = false;
   try {
-    const native: unknown = JSON.parse(readback.stdout);
-    const sources: unknown = JSON.parse(marketplaces.stdout);
-    if (!isRecord(native)
-      || !isRecord(sources) || !Array.isArray(sources.marketplaces)) throw new Error('Invalid native local plugin inventory.');
-    const marketplaceSources = new Map(sources.marketplaces.flatMap((entry) => (
-      isRecord(entry) && typeof entry.name === 'string' && isRecord(entry.marketplaceSource)
-        ? [[entry.name, entry.marketplaceSource] as const] : []
-    )));
-    const entries = (inventory: unknown) => {
-      if (!isRecord(inventory) || !Array.isArray(inventory.marketplaces)
-        || !Array.isArray(inventory.marketplaceLoadErrors) || inventory.marketplaceLoadErrors.length > 0) {
-        throw new Error('Invalid native local plugin inventory.');
+    const readback = spawnSync(process.execPath, ['-e', LOCAL_READBACK_BRIDGE, input.binary, String(timeout)], {
+      env: input.env, encoding: 'utf8', timeout: timeout + 2_500, maxBuffer: 8 * 1024 * 1024,
+    });
+    if (readback.status !== 0 || readback.error) {
+      failedOrTimedOut = true;
+      let error: Error | null = readback.error ?? null;
+      if (!error) {
+        try {
+          const failure = JSON.parse(readback.stdout).error;
+          if (typeof failure?.code === 'string') error = Object.assign(new Error(failure.message), { code: failure.code });
+        } catch { /* Native protocol failures retain their exit status and diagnostic. */ }
       }
-      return inventory.marketplaces.flatMap((marketplace) => {
-        if (!isRecord(marketplace) || typeof marketplace.name !== 'string' || !Array.isArray(marketplace.plugins)) {
-          throw new Error('Invalid native marketplace inventory.');
+      return { status: readback.status, stdout: '', stderr: readback.stderr ?? '', error };
+    }
+    const marketplaces = spawnSync(input.binary, ['plugin', 'marketplace', 'list', '--json'], {
+      env: input.env, encoding: 'utf8', timeout, maxBuffer: 8 * 1024 * 1024,
+    });
+    if (marketplaces.status !== 0 || marketplaces.error) {
+      failedOrTimedOut = true;
+      return {
+        status: marketplaces.status, stdout: marketplaces.stdout ?? '', stderr: marketplaces.stderr ?? '', error: marketplaces.error ?? null,
+      };
+    }
+    try {
+      const native: unknown = JSON.parse(readback.stdout);
+      const sources: unknown = JSON.parse(marketplaces.stdout);
+      if (!isRecord(native)
+        || !isRecord(sources) || !Array.isArray(sources.marketplaces)) throw new Error('Invalid native local plugin inventory.');
+      const marketplaceSources = new Map(sources.marketplaces.flatMap((entry) => (
+        isRecord(entry) && typeof entry.name === 'string' && isRecord(entry.marketplaceSource)
+          ? [[entry.name, entry.marketplaceSource] as const] : []
+      )));
+      const entries = (inventory: unknown) => {
+        if (!isRecord(inventory) || !Array.isArray(inventory.marketplaces)
+          || !Array.isArray(inventory.marketplaceLoadErrors) || inventory.marketplaceLoadErrors.length > 0) {
+          throw new Error('Invalid native local plugin inventory.');
         }
-        const marketplaceSource = marketplaceSources.get(marketplace.name) ?? null;
-        return marketplace.plugins.map((plugin) => {
-          if (!isRecord(plugin) || typeof plugin.id !== 'string' || !isRecord(plugin.source)
-            || typeof plugin.source.type !== 'string'
-            || (plugin.source.type === 'local' && typeof plugin.source.path !== 'string')
-            || typeof plugin.installed !== 'boolean' || typeof plugin.enabled !== 'boolean') {
-            throw new Error('Invalid native local plugin.');
+        return inventory.marketplaces.flatMap((marketplace) => {
+          if (!isRecord(marketplace) || typeof marketplace.name !== 'string' || !Array.isArray(marketplace.plugins)) {
+            throw new Error('Invalid native marketplace inventory.');
           }
-          return {
-            pluginId: plugin.id, version: plugin.localVersion ?? plugin.version ?? null,
-            installed: plugin.installed, enabled: plugin.enabled,
-            source: { source: plugin.source.type, path: plugin.source.type === 'local' ? plugin.source.path : null },
-            marketplaceSource,
-          };
+          const marketplaceSource = marketplaceSources.get(marketplace.name) ?? null;
+          return marketplace.plugins.map((plugin) => {
+            if (!isRecord(plugin) || typeof plugin.id !== 'string' || !isRecord(plugin.source)
+              || typeof plugin.source.type !== 'string'
+              || (plugin.source.type === 'local' && typeof plugin.source.path !== 'string')
+              || typeof plugin.installed !== 'boolean' || typeof plugin.enabled !== 'boolean') {
+              throw new Error('Invalid native local plugin.');
+            }
+            return {
+              pluginId: plugin.id, version: plugin.localVersion ?? plugin.version ?? null,
+              installed: plugin.installed, enabled: plugin.enabled,
+              source: { source: plugin.source.type, path: plugin.source.type === 'local' ? plugin.source.path : null },
+              marketplaceSource,
+            };
+          });
         });
-      });
-    };
-    const plugins = entries(native);
-    const installed = plugins.filter((entry) => entry.installed);
-    const available = input.includeAvailable ? plugins.filter((entry) => !entry.installed) : [];
-    return { status: 0, stdout: JSON.stringify({ installed, available }), stderr: '', error: null };
-  } catch (error) {
-    return { status: 1, stdout: '', stderr: 'Codex local plugin inventory is invalid.',
-      error: Object.assign(error instanceof Error ? error : new Error(String(error)),
-        { code: 'OPL_CODEX_PLUGIN_READBACK_INVALID_SHAPE' }) };
+      };
+      const plugins = entries(native);
+      const installed = plugins.filter((entry) => entry.installed);
+      const available = input.includeAvailable ? plugins.filter((entry) => !entry.installed) : [];
+      return { status: 0, stdout: JSON.stringify({ installed, available }), stderr: '', error: null };
+    } catch (error) {
+      failedOrTimedOut = true;
+      return { status: 1, stdout: '', stderr: 'Codex local plugin inventory is invalid.',
+        error: Object.assign(error instanceof Error ? error : new Error(String(error)),
+          { code: 'OPL_CODEX_PLUGIN_READBACK_INVALID_SHAPE' }) };
+    }
+  } finally {
+    cleanupCodexCarrierTmpAfterRun(codexHome, snapshot, {
+      aggressiveStagingCleanup: codexHome === internalHome || failedOrTimedOut,
+    });
   }
 }

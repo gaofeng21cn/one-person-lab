@@ -186,56 +186,54 @@ function materializeGithubArchive(input: {
   }
   const archive = githubSources[0].archive;
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-archive-'));
-  const archivePath = path.join(temporaryRoot, 'source.tar.gz');
-  const download = runPayloadCurl({
-    url: archive.archiveUrl,
-    outputPath: archivePath,
-    maxTimeSeconds: 120,
-    maxBuffer: 8 * 1024 * 1024,
-    env: input.env,
-  });
-  if (download.status !== 0 || download.error) {
-    fs.rmSync(temporaryRoot, { recursive: true, force: true });
-    return localReadbackFailure(
-      'configured_codex_plugin_carrier_payload_download_failed',
-      'Configured Package payload archive download did not complete.',
-      {
-        package_id: input.packageId,
-        archive_url: archive.archiveUrl,
-        exit_status: download.status,
-        attempt_count: download.attemptCount,
-        error: download.error?.message || download.stderr.trim() || null,
-      },
-    );
-  }
-  const extractRoot = path.join(temporaryRoot, 'source');
-  fs.mkdirSync(extractRoot, { recursive: true });
-  const extract = spawnSync('/usr/bin/tar', ['-xzf', archivePath, '-C', extractRoot], {
-    encoding: 'utf8',
-    env: input.env,
-    maxBuffer: 8 * 1024 * 1024,
-  });
-  if (extract.status !== 0 || extract.error) {
-    fs.rmSync(temporaryRoot, { recursive: true, force: true });
-    return localReadbackFailure(
-      'configured_codex_plugin_carrier_payload_invalid',
-      'Configured Package payload archive could not be extracted.',
-      { package_id: input.packageId, error: extract.error?.message ?? extract.stderr.trim() ?? null },
-    );
-  }
-  const roots = fs.readdirSync(extractRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory());
-  if (roots.length !== 1) {
-    fs.rmSync(temporaryRoot, { recursive: true, force: true });
-    return localReadbackFailure(
-      'configured_codex_plugin_carrier_payload_invalid',
-      'Configured Package payload archive has an invalid root.',
-      { package_id: input.packageId },
-    );
-  }
-  const sourceRoot = path.join(extractRoot, roots[0].name);
-  return {
-    sourceRoot,
-    cleanup: () => fs.rmSync(temporaryRoot, { recursive: true, force: true }),
+  try {
+    const archivePath = path.join(temporaryRoot, 'source.tar.gz');
+    const download = runPayloadCurl({
+      url: archive.archiveUrl,
+      outputPath: archivePath,
+      maxTimeSeconds: 120,
+      maxBuffer: 8 * 1024 * 1024,
+      env: input.env,
+    });
+    if (download.status !== 0 || download.error) {
+      return localReadbackFailure(
+        'configured_codex_plugin_carrier_payload_download_failed',
+        'Configured Package payload archive download did not complete.',
+        {
+          package_id: input.packageId,
+          archive_url: archive.archiveUrl,
+          exit_status: download.status,
+          attempt_count: download.attemptCount,
+          error: download.error?.message || download.stderr.trim() || null,
+        },
+      );
+    }
+    const extractRoot = path.join(temporaryRoot, 'source');
+    fs.mkdirSync(extractRoot, { recursive: true });
+    const extract = spawnSync('/usr/bin/tar', ['-xzf', archivePath, '-C', extractRoot], {
+      encoding: 'utf8',
+      env: input.env,
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    if (extract.status !== 0 || extract.error) {
+      return localReadbackFailure(
+        'configured_codex_plugin_carrier_payload_invalid',
+        'Configured Package payload archive could not be extracted.',
+        { package_id: input.packageId, error: extract.error?.message ?? extract.stderr.trim() ?? null },
+      );
+    }
+    const roots = fs.readdirSync(extractRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+    if (roots.length !== 1) {
+      return localReadbackFailure(
+        'configured_codex_plugin_carrier_payload_invalid',
+        'Configured Package payload archive has an invalid root.',
+        { package_id: input.packageId },
+      );
+    }
+    const sourceRoot = path.join(extractRoot, roots[0].name);
+    return {
+      sourceRoot,
+      cleanup: () => fs.rmSync(temporaryRoot, { recursive: true, force: true }),
     pathFor: (source: URL) => {
       const fileSource = githubArchiveFileSource(source, input.sourceCommit);
       if (!fileSource || fileSource.key !== archive.key) {
@@ -265,6 +263,10 @@ function materializeGithubArchive(input: {
       return fs.readFileSync(candidate);
     },
   };
+  } catch (error) {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 function writePayloadMarketplaceManifest(input: {
@@ -449,28 +451,30 @@ export function installPayloadMarketplace(input: {
   const stagingRoot = `${marketplaceRoot}.${process.pid}.${crypto.randomUUID()}.staging`;
   const pluginRoot = path.join(stagingRoot, 'plugins', projection.pluginId);
   const downloaded = new Map<string, string>();
-  const hostedSource = acquireHostedPackageSource({
-    packageId: input.packageId,
-    ownerManifest: projection.ownerManifest,
-    payload,
-    env: input.env,
-  });
-  const publicPayload = !hostedSource && isPublicComponentPayload(projection, payload);
-  if (projection.ownerManifest.management_scope === 'local_component' && !hostedSource && !publicPayload) {
-    return localReadbackFailure('package_install_source_unavailable',
-      'Local component requires a verified online payload or matching offline seed.', { package_id: input.packageId });
-  }
-  if (projection.ownerManifest.visibility === 'authorized_only' && !hostedSource) {
-    return localReadbackFailure('private_package_transport_unavailable',
-      'Private Packages require their declared authenticated source.', { package_id: input.packageId });
-  }
-  const archive = hostedSource ?? (publicPayload ? null : materializeGithubArchive({
-    packageId: input.packageId,
-    payloadFiles: payload.files.filter(isRecord),
-    sourceCommit: projection.sourceCommit,
-    env: input.env,
-  }));
+  let hostedSource: ReturnType<typeof acquireHostedPackageSource> = null;
+  let archive: ReturnType<typeof acquireHostedPackageSource> | ReturnType<typeof materializeGithubArchive> = null;
   try {
+    hostedSource = acquireHostedPackageSource({
+      packageId: input.packageId,
+      ownerManifest: projection.ownerManifest,
+      payload,
+      env: input.env,
+    });
+    const publicPayload = !hostedSource && isPublicComponentPayload(projection, payload);
+    if (projection.ownerManifest.management_scope === 'local_component' && !hostedSource && !publicPayload) {
+      return localReadbackFailure('package_install_source_unavailable',
+        'Local component requires a verified online payload or matching offline seed.', { package_id: input.packageId });
+    }
+    if (projection.ownerManifest.visibility === 'authorized_only' && !hostedSource) {
+      return localReadbackFailure('private_package_transport_unavailable',
+        'Private Packages require their declared authenticated source.', { package_id: input.packageId });
+    }
+    archive = hostedSource ?? (publicPayload ? null : materializeGithubArchive({
+      packageId: input.packageId,
+      payloadFiles: payload.files.filter(isRecord),
+      sourceCommit: projection.sourceCommit,
+      env: input.env,
+    }));
     if (publicPayload) {
       fs.mkdirSync(stagingRoot, { recursive: true });
       fs.writeFileSync(path.join(stagingRoot, '.codex-marketplace-install.json'), `${JSON.stringify({
@@ -604,7 +608,8 @@ export function installPayloadMarketplace(input: {
     }
     return marketplaceRoot;
   } finally {
-    archive?.cleanup();
+    if (archive && archive !== hostedSource) archive.cleanup();
+    hostedSource?.cleanup();
     fs.rmSync(stagingRoot, { recursive: true, force: true });
   }
 }

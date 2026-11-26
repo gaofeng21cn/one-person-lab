@@ -28,8 +28,12 @@ export function writePackageOperation(value: PackageOperation, env: NodeJS.Proce
   const target = packageOperationPath(value.operation_id, env);
   fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
   const temporary = `${target}.${process.pid}.tmp`;
-  fs.writeFileSync(temporary, JSON.stringify(value), { mode: 0o600 });
-  fs.renameSync(temporary, target);
+  try {
+    fs.writeFileSync(temporary, JSON.stringify(value), { mode: 0o600 });
+    fs.renameSync(temporary, target);
+  } finally {
+    fs.rmSync(temporary, { force: true });
+  }
 }
 export function readPackageOperation(id: string, env: NodeJS.ProcessEnv = process.env): PackageOperation {
   const value = JSON.parse(fs.readFileSync(packageOperationPath(id, env), 'utf8')) as PackageOperation;
