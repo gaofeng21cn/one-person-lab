@@ -1,0 +1,31 @@
+{
+  "name": "@opl/daemon",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "opl-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "opl": "./bin/opl",
+    "opld": "./bin/opld"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "dependencies": {
+    "@opl/connect": "2.0.0",
+    "@opl/core": "2.0.0",
+    "@opl/ledger": "2.0.0",
+    "@opl/mcp-app-shared": "2.0.0",
+    "@opl/pack": "2.0.0",
+    "@opl/runway": "2.0.0",
+    "@opl/workspace": "2.0.0",
+    "zod": "^4.6.7"
+  }
+}

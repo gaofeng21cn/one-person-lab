@@ -1,0 +1,25 @@
+{
+  "name": "@opl/pack",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "opl-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@opl/connect": "2.0.0",
+    "@opl/core": "2.0.0",
+    "@opl/ledger": "2.0.0",
+    "semver": "7.8.6",
+    "tar": "7.5.23",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  }
+}

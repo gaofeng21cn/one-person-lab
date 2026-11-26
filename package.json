@@ -3,65 +3,32 @@
   "version": "0.3.26",
   "private": true,
   "type": "module",
-  "exports": {
-    "./cordis-profiles": {
-      "types": "./dist/host/composition-profiles.d.ts",
-      "default": "./dist/host/composition-profiles.js"
-    },
-    "./connection-authorization": {
-      "types": "./dist/adapters/integration/connection-authorization.d.ts",
-      "default": "./dist/adapters/integration/connection-authorization.js"
-    },
-    "./connection-authorization-host": {
-      "types": "./dist/host/connection-context.d.ts",
-      "default": "./dist/host/connection-context.js"
-    },
-    "./foundry-protocol": "./dist/authority/evolution/protocol.js",
-    "./foundry-protocol-fixture-conformance": "./dist/authority/evolution/protocol-fixture-conformance.js",
-    "./advisory-knowledge-boundary": "./dist/authority/contracts/advisory-knowledge-boundary.js",
-    "./family-domain-agent-descriptor": "./dist/read-models/catalog/family-domain-agent-descriptor.js",
-    "./domain-pack-compiler": "./dist/authority/packages/domain-pack-compiler.js",
-    "./domain-artifact-runtime": "./dist/authority/stages/domain-artifact-runtime.js",
-    "./domain-helper-runtime": "./dist/adapters/execution/domain-helper-runtime.js",
-    "./domain-source-runtime": "./dist/authority/workspace/domain-source-runtime.js",
-    "./domain-task-runtime": "./dist/adapters/execution/domain-task-runtime.js",
-    "./generic-substrate-projection": "./dist/adapters/execution/generic-substrate-projection.js",
-    "./foundry-agent-series-policy": "./dist/authority/packages/public/foundry-agent-series-policy.js",
-    "./source-derived-agent-design-abi": "./dist/authority/packages/public/source-derived-agent-design-abi.js",
-    "./reference-design-pattern-packet": "./dist/authority/workspace/reference-design-pattern-packet.js",
-    "./standard-agent-implementation-profile": "./dist/authority/packages/public/standard-agent-implementation-profile.js",
-    "./package-host-integration": "./dist/authority/packages/package-host-integration.js"
-  },
+  "workspaces": [
+    "packages/*"
+  ],
   "bin": {
-    "opl": "./bin/opl"
+    "opl": "./bin/opl",
+    "opld": "./packages/daemon/bin/opld"
   },
   "files": [
     "bin/opl",
-    "dist",
-    "src/mcp-app",
-    "contracts/opl-framework",
-    "python/opl_framework",
-    "scripts/native-helper.mjs",
-    "scripts/install-temporal-cli.mjs",
-    "scripts/resolve-dependency-releases.mjs",
-    "scripts/native-helper-doctor.mjs",
-    "scripts/native-helper-family-smoke.mjs",
-    "scripts/oci-publication-receipt-readback.mjs",
-    "scripts/compile-opl-flow-capability-projections.mjs"
+    "packages/*/package.json",
+    "packages/*/dist",
+    "packages/daemon/bin",
+    "packages/core/migrations",
+    "packages/mcp-app-shared/assets",
+    "extensions",
+    "sdks/python-client",
+    "contracts/opl-package.v2.schema.json"
   ],
   "scripts": {
     "build": "node ./scripts/build-framework.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b --noEmit tsconfig.packages.json",
+    "v2:build": "tsc -b tsconfig.packages.json",
+    "v2:typecheck": "tsc -b --noEmit tsconfig.packages.json",
+    "v2:guard": "node ./scripts/check-v2-import-guard.mjs --strict-m4",
+    "v2:test": "node --experimental-strip-types --test packages/core/tests/*.test.ts packages/ledger/tests/*.test.ts packages/workspace/tests/*.test.ts packages/mcp-app-shared/tests/*.test.ts packages/connect/tests/*.test.ts packages/pack/tests/*.test.ts packages/runway/tests/*.test.ts packages/daemon/tests/*.test.ts",
     "prepare": "npm run build",
-    "native:doctor": "node ./scripts/native-helper-doctor.mjs",
-    "native:repair": "node ./scripts/native-helper-doctor.mjs",
-    "native:family-smoke": "node ./scripts/native-helper-family-smoke.mjs",
-    "packages:payload": "node ./scripts/first-party-package-payload.mjs",
-    "packages:cleanup-ghcr": "node --experimental-strip-types ./scripts/cleanup-ghcr-package-versions.mjs",
-    "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs --workflow-policy ../opl-flow/contracts/workflow-policy.json",
-    "flow:capability:compile": "node --experimental-strip-types ./scripts/compile-opl-flow-capability-projections.mjs",
-    "runtime:token-telemetry:canary": "node --experimental-strip-types ./scripts/family-runtime-token-telemetry-canary.ts",
-    "capability-map:audit": "node ./scripts/capability-map-audit.mjs",
     "docs:whitepaper": "node --experimental-strip-types ./scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/whitepaper_profile.json",
     "docs:whitepaper:framework": "node --experimental-strip-types ./scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/framework-whitepaper_profile.json",
     "docs:whitepaper:miniapp": "node --experimental-strip-types ./scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/miniapp-whitepaper_profile.json",
@@ -77,56 +44,26 @@
     "hygiene:fallow": "npx --yes fallow@latest --root . --no-cache --production",
     "test:smoke": "node ./scripts/test-lanes.mjs run smoke",
     "test:fast": "node ./scripts/test-lanes.mjs run fast",
-    "test:meta": "node ./scripts/test-lanes.mjs run meta",
-    "test:read-model-gates": "node ./scripts/test-lanes.mjs run read-model-gates",
-    "test:regression": "node ./scripts/test-lanes.mjs run regression",
-    "test:integration": "node ./scripts/test-lanes.mjs run integration",
     "test:artifact": "node ./scripts/test-lanes.mjs run artifact",
-    "test:fresh-install": "node ./scripts/test-lanes.mjs run fresh-install",
-    "test:stage-run-mag-integration": "node ./scripts/test-lanes.mjs run stage-run-mag-integration",
-    "test:native": "./scripts/verify.sh native",
     "test:structure": "./scripts/verify.sh structure",
     "test:full": "node ./scripts/test-lanes.mjs run full",
+    "test:e2e": "node ./tests/e2e/run.mjs",
     "test": "npm run test:smoke",
-    "fresh-install:smoke": "node ./scripts/fresh-install-smoke.mjs",
-    "new-machine:codex-bootstrap:docker-smoke": "node ./scripts/new-machine-codex-bootstrap-docker-smoke.mjs",
-    "source:modules": "node ./scripts/source-module-boundary.mjs",
     "framework:archive": "node scripts/framework-archive.mjs"
   },
   "dependencies": {
-    "@deepseek-ai/cordis": "4.1.0",
-    "@modelcontextprotocol/client": "^2.4.0",
-    "@modelcontextprotocol/ext-apps": "^2.0.4",
-    "@modelcontextprotocol/server": "^2.4.0",
-    "@playwright/mcp": "0.0.86",
-    "@temporalio/activity": "1.26.0",
-    "@temporalio/client": "1.26.0",
-    "@temporalio/common": "1.26.0",
-    "@temporalio/worker": "1.26.0",
-    "@temporalio/workflow": "1.26.0",
     "@types/semver": "7.8.0",
-    "ajv": "^8.20.0",
-    "ajv-formats": "^3.0.1",
-    "esbuild": "^0.28.2",
-    "gray-matter": "^4.0.3",
-    "long": "5.3.2",
-    "prom-client": "^15.1.3",
     "semver": "7.8.6",
-    "smol-toml": "^1.9.1",
     "tar": "7.5.23",
     "typescript": "7.0.2",
     "yaml": "^2.9.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@temporalio/testing": "1.26.0",
     "@types/node": "^26.6.6"
   },
   "overrides": {
     "protobufjs": "8.8.1"
   },
-  "license": "Apache-2.0",
-  "optionalDependencies": {
-    "e2b": "^2.64.0"
-  }
+  "license": "Apache-2.0"
 }

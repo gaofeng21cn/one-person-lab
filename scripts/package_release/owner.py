@@ -1,5 +1,6 @@
 """Prepare owner bytes; Framework continues to generate and publish its projection."""
 from __future__ import annotations
+import hashlib
 import json
 import plistlib
 import re
@@ -134,9 +135,46 @@ def update_version_files(root, refs, version):
     return changed
 
 
+def _normalize_relative_posix_path(raw: str) -> str:
+    if (
+        not isinstance(raw, str)
+        or not raw
+        or '\0' in raw
+        or '\\' in raw
+        or re.match(r'^[A-Za-z]:', raw)
+        or raw.startswith('/')
+        or raw in {'.', '..'}
+    ):
+        raise ValueError(f'Unsafe relative package path: {raw!r}')
+    normalized = raw[2:] if raw.startswith('./') else raw
+    if not normalized or normalized.startswith('/'):
+        raise ValueError(f'Unsafe relative package path: {raw!r}')
+    if any(seg in {'', '.', '..'} for seg in normalized.split('/')):
+        raise ValueError(f'Unsafe relative package path: {raw!r}')
+    return normalized
+
+
+def _ordered_content_digest(paths, read_bytes):
+    seen = set()
+    normalized = []
+    for raw in paths:
+        clean = _normalize_relative_posix_path(raw)
+        if clean in seen:
+            raise ValueError(f'Duplicate path {clean!r} in content digest input')
+        seen.add(clean)
+        normalized.append(clean)
+    h = hashlib.sha256()
+    for relative in sorted(normalized, key=lambda item: item.encode('utf-16-be')):
+        rel_bytes = relative.encode('utf-8')
+        data = read_bytes(relative)
+        h.update(len(rel_bytes).to_bytes(8, 'big'))
+        h.update(rel_bytes)
+        h.update(len(data).to_bytes(8, 'big'))
+        h.update(data)
+    return f'sha256:{h.hexdigest()}'
+
+
 def refresh_locks(root, projection, allowlist, framework):
-    sys.path.insert(0, str(framework / 'python'))
-    from opl_framework.package_content_lock import content_digest
     for name in metadata_files(root, projection, allowlist):
         d = read(root / name)
         lock = d.get('content_lock')
@@ -145,7 +183,7 @@ def refresh_locks(root, projection, allowlist, framework):
             paths = lock['paths']
             if name in paths and carrier == root:
                 raise ReleaseError('A content lock cannot contain its own descriptor')
-            lock['digest'] = content_digest(paths, lambda relative: safe_path(carrier, relative).read_bytes())
+            lock['digest'] = _ordered_content_digest(paths, lambda relative: safe_path(carrier, relative).read_bytes())
             write(root / name, d)
 
 

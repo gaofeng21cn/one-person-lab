@@ -9,57 +9,46 @@ lane="${1:-smoke}"
 
 case "$lane" in
   smoke)
-    npm run test:smoke
+    npm run v2:build
+    npm run v2:typecheck
+    npm run v2:guard
+    npm run v2:test
+    npm run lint
+    ./scripts/repo-hygiene.sh
+    node --experimental-strip-types ./scripts/generate-v2-contracts.mjs --check
     ;;
   fast)
     npm run test:fast
     ;;
-  meta)
-    npm run test:meta
-    ;;
-  regression)
-    npm run test:regression
-    ;;
-  integration)
-    npm run test:integration
-    ;;
-  structure|structure:strict)
-    npm run source:modules -- --strict-imports --strict-cycles
-    ./scripts/run-structural-quality-gate.sh
-    ;;
-  family)
-    family_tmp_cleanup=0
-    if [ -n "${OPL_FAMILY_PYTHON_TMP_ROOT:-}" ]; then
-      family_tmp_root="${OPL_FAMILY_PYTHON_TMP_ROOT}"
-    else
-      family_tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/opl-family-python.XXXXXX")"
-      family_tmp_cleanup=1
-    fi
-    cleanup_family_tmp() {
-      if [ "${family_tmp_cleanup}" = "1" ]; then
-        rm -rf "${family_tmp_root}"
-      fi
-    }
-    trap cleanup_family_tmp EXIT
-    mkdir -p "${family_tmp_root}"
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-${family_tmp_root}/pycache}" \
-    PYTEST_ADDOPTS="${PYTEST_ADDOPTS:-} -p no:cacheprovider -o cache_dir=${family_tmp_root}/pytest-cache" \
-    PYTHONPATH=python pytest python/tests
-    ;;
-  fresh-install)
-    npm run test:fresh-install
-    ;;
   artifact)
     npm run test:artifact
     ;;
-  native)
-    npm run native:doctor
-    npm run native:family-smoke
-    npm run native:family-smoke -- --fixture --require-real-workspaces
+  structure|structure:strict)
+    npm run v2:guard
+    ./scripts/run-structural-quality-gate.sh
+    ;;
+  family)
+    node --test extensions/foundry/tests/*.test.mjs
+    for f in extensions/foundation-skills/skills/*/kernel.py; do
+      PYTHONDONTWRITEBYTECODE=1 python3 -B "$f"
+    done
+    PYTHONDONTWRITEBYTECODE=1 TMPDIR=/tmp PYTHONPATH=sdks/python-client/src python3 -B -m unittest discover -s sdks/python-client/tests -v
+    PYTHONDONTWRITEBYTECODE=1 TMPDIR=/tmp node sdks/python-client/tests/test_opld_e2e.mjs
+    node --test tests/macos-sparkle-release.test.mjs tests/release-note-writer.test.mjs
+    PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest tests/product_release_test.py -v
+    ;;
+  e2e)
+    node ./tests/e2e/run.mjs
     ;;
   full)
-    npm run test:full
+    "$0" smoke
+    "$0" artifact
+    "$0" structure
+    "$0" family
+    node --test tests/e2e/harness.self.test.mjs tests/e2e/stubs/stubs.self.test.mjs
+    if [ "${OPL_VERIFY_INCLUDE_E2E:-0}" = "1" ]; then
+      "$0" e2e
+    fi
     ;;
   lint)
     npm run lint
@@ -69,7 +58,7 @@ case "$lane" in
     ;;
   *)
     echo "Unknown lane: $lane" >&2
-    echo "Usage: scripts/verify.sh [smoke|fast|regression|integration|structure|family|meta|fresh-install|artifact|native|full|lint|typecheck]" >&2
+    echo "Usage: scripts/verify.sh [smoke|fast|artifact|structure|family|e2e|full|lint|typecheck]" >&2
     exit 1
     ;;
 esac

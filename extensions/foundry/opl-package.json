@@ -1,0 +1,90 @@
+{
+  "schema_version": "opl.package.v2",
+  "identity": {
+    "id": "opl-foundry",
+    "version": "2.0.0",
+    "intent": "extension",
+    "name": {
+      "zh-CN": "OPL Foundry 智能体工坊",
+      "en-US": "OPL Foundry"
+    },
+    "summary": {
+      "zh-CN": "提供 v2 包脚手架生成、结构合规校验、冻结评测、对比风险评估与 CAS 激活/回滚的官方动态扩展。",
+      "en-US": "Official dynamic extension for v2 package scaffolding, conformance validation, frozen evaluation, comparison risk policy, and CAS promotion/rollback."
+    },
+    "description": {
+      "zh-CN": "OPL Foundry 将包脚手架、opl.package.v2 结构校验、非弱化评测策略对比、哈希链运行账本及 Owner 门禁激活整合为独立零依赖动态扩展，通过 provides.cli_extensions 注册 opl foundry 命令面。",
+      "en-US": "OPL Foundry provides zero-dependency dynamic CLI capabilities (init, validate, eval, compare, promote, rollback) via provides.cli_extensions without coupling extension logic into OPL core."
+    },
+    "publisher": "one-person-lab",
+    "license": "Apache-2.0",
+    "maturity": "stable",
+    "keywords": [
+      "opl",
+      "foundry",
+      "scaffold",
+      "validation",
+      "evaluation"
+    ],
+    "default_prompts": [
+      "Use OPL Foundry to scaffold and validate a new opl.package.v2 agent package.",
+      "Use OPL Foundry to evaluate and compare candidate agent revisions under non-weakening gates."
+    ]
+  },
+  "dependencies": {
+    "opl_base": "^2.0.0",
+    "runtimes": [
+      {
+        "name": "node",
+        "version": ">=22.0.0",
+        "optional": false
+      }
+    ]
+  },
+  "permissions": {
+    "workspace": {
+      "access": "read_write",
+      "reason": {
+        "zh-CN": "用于初始化新包脚手架、读取目标包目录执行静态合规校验与只读评测",
+        "en-US": "Scaffold new package directories and inspect target packages for conformance validation and evaluation"
+      }
+    },
+    "network": "none",
+    "execution_mode": "local_subprocess"
+  },
+  "provides": {
+    "cli_extensions": [
+      {
+        "namespace": "foundry",
+        "entrypoint": {
+          "kind": "esm_module",
+          "module": "./src/cli.mjs",
+          "export": "registerFoundryCli"
+        }
+      }
+    ],
+    "skills": [
+      {
+        "id": "opl-foundry-builder",
+        "path": "./skills/opl-foundry-builder",
+        "exposure": "opt_in"
+      }
+    ]
+  },
+  "distribution": {
+    "oci": "ghcr.io/gaofeng21cn/one-person-lab-packages/opl-foundry",
+    "visibility": "public"
+  },
+  "host_hints": {
+    "codex": {
+      "sync_enabled": true,
+      "plugin_name": "opl-foundry",
+      "category": "Developer Tools",
+      "brand_color": "#1D4ED8",
+      "capabilities": [
+        "Read",
+        "Write"
+      ]
+    }
+  }
+}

@@ -1,22 +1,29 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "noEmit": true,
-    "allowJs": true,
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "types": [
-      "node"
-    ]
-  },
-  "include": [
-    "src/**/*.ts",
-    "tests/src/**/*.ts"
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/ledger"
+    },
+    {
+      "path": "./packages/workspace"
+    },
+    {
+      "path": "./packages/mcp-app-shared"
+    },
+    {
+      "path": "./packages/connect"
+    },
+    {
+      "path": "./packages/pack"
+    },
+    {
+      "path": "./packages/runway"
+    },
+    {
+      "path": "./packages/daemon"
+    }
   ]
 }

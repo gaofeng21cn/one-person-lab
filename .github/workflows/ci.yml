@@ -47,19 +47,30 @@ jobs:
       - name: Verify shared macOS Sparkle release workflow and scripts
         run: node --test tests/macos-sparkle-release.test.mjs
 
-      - name: Verify Linux worker discovery and handler read scope
-        run: node --experimental-strip-types --test tests/src/family-runtime-worker-process.test.ts tests/src/standard-agent-handler-sandbox-named-import.test.ts
-
-      - name: Validate source
+      - name: Validate v2 source, guards, and contracts
         run: |
-          npm run build
-          npm run typecheck
+          npm run v2:build
+          npm run v2:typecheck
+          npm run v2:guard
           npm run lint
-          npm test
+          ./scripts/repo-hygiene.sh
+          node --experimental-strip-types ./scripts/generate-v2-contracts.mjs --check
 
-      - name: Verify fast-lane coverage and repository hygiene
-        if: matrix.node == '26'
-        run: npm run test:fast -- --phase quality
+      - name: Run v2 unit & extension tests
+        run: |
+          npm run v2:test
+          node --test extensions/foundry/tests/*.test.mjs
+          for f in extensions/foundation-skills/skills/*/kernel.py; do
+            PYTHONDONTWRITEBYTECODE=1 python3 -B "$f"
+          done
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=sdks/python-client/src python3 -B -m unittest discover -s sdks/python-client/tests -v
+          PYTHONDONTWRITEBYTECODE=1 node sdks/python-client/tests/test_opld_e2e.mjs
+          PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest tests/product_release_test.py -v
+
+      - name: Run E2E harness self-tests & built CLI tests
+        run: |
+          node --test tests/built/cli.test.mjs
+          node --test tests/e2e/harness.self.test.mjs tests/e2e/stubs/stubs.self.test.mjs
 
   fast-lane:
     name: Framework fast lane (${{ matrix.label }})
@@ -69,18 +80,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { label: unit-1, phase: unit, shard: '1/3' }
-          - { label: unit-2, phase: unit, shard: '2/3' }
-          - { label: unit-3, phase: unit, shard: '3/3' }
-          - { label: cli, phase: cli, shard: '' }
-          - { label: temporal, phase: temporal, shard: '' }
+          - { label: unit, phase: unit, shard: '' }
+          - { label: extensions, phase: extensions, shard: '' }
+          - { label: quality, phase: quality, shard: '' }
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The lane asserts that plugin descriptors point at reachable Git
-          # bytes, which needs the real history rather than a depth-1 clone.
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -92,10 +99,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Source validation above stays a fast smoke gate; this job is the PR-layer
-      # owner of the batched source lanes so regressions cannot accumulate between
-      # weekly Verify runs. npm ci prepares each runner's local build once;
-      # source validation owns quality checks. Every fast test runs in one job.
       - name: Run the fast lane
         run: |
           args=(--phase "${{ matrix.phase }}")

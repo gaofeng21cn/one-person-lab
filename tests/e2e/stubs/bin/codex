@@ -1,0 +1,736 @@
+#!/usr/bin/env node
+import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import readline from "node:readline";
+import {
+  appendStubLog,
+  buildShortPreview,
+  installBrokenPipeGuards,
+  readStdinSync,
+  resolveCodexHome,
+  resolveStubConfig,
+  sleepMs,
+  writeArtifactFiles,
+  writeNdjson,
+  writeTextSafe,
+} from "../lib/stub-runtime.mjs";
+
+installBrokenPipeGuards();
+
+let sighupGuardInstalled = false;
+if (
+  process.env.OPL_STUB_CODEX_MODE === "complete_after_detach" ||
+  process.env.OPL_STUB_MODE === "complete_after_detach"
+) {
+  sighupGuardInstalled = true;
+  process.on("SIGHUP", () => {
+    appendStubLog({ event: "signal", tool: "codex", signal: "SIGHUP_IGNORED" });
+  });
+}
+
+const rawArgs = process.argv.slice(2);
+
+const GLOBAL_VALUE_FLAGS = new Set([
+  "-c",
+  "--config",
+  "--enable",
+  "--disable",
+  "-p",
+  "--profile",
+  "-C",
+  "--cd",
+  "-s",
+  "--sandbox",
+  "-m",
+  "--model",
+]);
+
+function inspectLeadingArgs(args) {
+  const leadingFlags = [];
+  let hasLeadingVersion = false;
+  let subcommandIdx = -1;
+
+  for (let i = 0; i < args.length; i++) {
+    const tok = args[i];
+    if (tok === "--") {
+      if (i + 1 < args.length) subcommandIdx = i + 1;
+      break;
+    }
+    if (tok !== "-" && tok.startsWith("-")) {
+      if (tok === "--version" || tok === "-V") {
+        hasLeadingVersion = true;
+      }
+      const eqIdx = tok.indexOf("=");
+      const flag = eqIdx !== -1 ? tok.slice(0, eqIdx) : tok;
+      leadingFlags.push(tok);
+      if (eqIdx === -1 && GLOBAL_VALUE_FLAGS.has(flag) && i + 1 < args.length) {
+        leadingFlags.push(args[++i]);
+      }
+      continue;
+    }
+    subcommandIdx = i;
+    break;
+  }
+
+  return { leadingFlags, hasLeadingVersion, subcommandIdx };
+}
+
+const leading = inspectLeadingArgs(rawArgs);
+
+function finishWithExit(code, extra = {}) {
+  appendStubLog({ event: "completion", tool: "codex", exit_code: code, signal: null, ...extra });
+  process.exit(code);
+}
+
+// 1. Version (scoped to pre-subcommand args)
+if (leading.hasLeadingVersion) {
+  const ver = process.env.OPL_STUB_CODEX_VERSION || "0.171.0";
+  appendStubLog({
+    event: "invocation",
+    tool: "codex",
+    cwd: process.cwd(),
+    argv: rawArgs,
+    subcommand: "version",
+    mode: "success",
+    stdin_preview: "",
+  });
+  writeTextSafe(`codex-cli ${ver}\n`);
+  finishWithExit(0, { subcommand: "version" });
+}
+
+function resolveMarketplacePaths() {
+  const candidates = [];
+  if (process.env.OPL_STUB_CODEX_MARKETPLACE_PATH?.trim()) {
+    candidates.push(process.env.OPL_STUB_CODEX_MARKETPLACE_PATH.trim());
+  }
+  if (process.env.OPL_HOME?.trim()) {
+    candidates.push(path.join(process.env.OPL_HOME.trim(), "carriers", "codex-marketplace", "marketplace.json"));
+  }
+  candidates.push(path.join(process.env.HOME || os.homedir(), ".opl", "carriers", "codex-marketplace", "marketplace.json"));
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      return { marketplacePath: p, marketplaceDir: path.dirname(p) };
+    }
+  }
+  const fallback = candidates[0];
+  return { marketplacePath: fallback, marketplaceDir: path.dirname(fallback) };
+}
+
+function loadMarketplaceEntries() {
+  const { marketplacePath, marketplaceDir } = resolveMarketplacePaths();
+  const marketplaces = [];
+  const marketplaceLoadErrors = [];
+
+  if (marketplacePath && fs.existsSync(marketplacePath)) {
+    const mpJson = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
+    const mpName = mpJson.name || "opl-local";
+    const plugins = [];
+    for (const entry of mpJson.plugins || []) {
+      const rawSource =
+        typeof entry.source === "string"
+          ? entry.source
+          : entry.source && typeof entry.source === "object"
+            ? entry.source.path
+            : null;
+      const sourcePath =
+        typeof rawSource === "string" && rawSource.trim()
+          ? rawSource.trim()
+          : `./plugins/${entry.name || entry.opl_package_id || "unknown"}`;
+      const pluginDir = path.resolve(marketplaceDir, sourcePath);
+      const pluginJsonPath = path.join(pluginDir, ".codex-plugin", "plugin.json");
+      let pluginJson = {};
+      if (fs.existsSync(pluginJsonPath)) {
+        try {
+          pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf8"));
+        } catch {
+          pluginJson = {};
+        }
+      }
+      const pluginName = entry.name || pluginJson.name || path.basename(pluginDir);
+      const version = pluginJson.version || entry.version || "0.0.0";
+      const pluginId = entry.id || `${pluginName}@${mpName}`;
+      plugins.push({
+        id: pluginId,
+        name: pluginName,
+        version,
+        localVersion: version,
+        source: { type: "local", path: pluginDir },
+        installed: entry.installed !== undefined ? Boolean(entry.installed) : true,
+        enabled: entry.enabled !== undefined ? Boolean(entry.enabled) : true,
+      });
+    }
+    marketplaces.push({
+      name: mpName,
+      marketplaceSource: { sourceType: "local", source: marketplaceDir },
+      plugins,
+    });
+  }
+
+  function mergeMarketplaceEntry(mpName, mpSource, plugins) {
+    const existing = marketplaces.find((m) => m.name === mpName);
+    if (existing) {
+      existing.plugins.push(...plugins);
+    } else {
+      marketplaces.push({
+        name: mpName,
+        marketplaceSource: mpSource,
+        plugins,
+      });
+    }
+  }
+
+  // External plugin injection
+  const extRaw = process.env.OPL_STUB_CODEX_EXTERNAL_PLUGINS_JSON?.trim();
+  if (extRaw) {
+    const extParsed = JSON.parse(extRaw);
+    if (Array.isArray(extParsed)) {
+      const hasMarketplaceShape = extParsed.some((item) => item && typeof item === "object" && Array.isArray(item.plugins));
+      if (hasMarketplaceShape) {
+        for (const mp of extParsed) {
+          const mpName = mp.name || "external-local";
+          const mpSource = mp.marketplaceSource || { sourceType: "local", source: mp.source || "/tmp/external-marketplace" };
+          const plugins = (mp.plugins || []).map((p) => ({
+            id: p.id || `${p.name}@${mpName}`,
+            name: p.name || p.id,
+            version: p.version || "0.0.0",
+            localVersion: p.localVersion || p.version || "0.0.0",
+            source: p.source || { type: "local", path: p.path || "/tmp/external-plugin" },
+            installed: p.installed !== undefined ? Boolean(p.installed) : true,
+            enabled: p.enabled !== undefined ? Boolean(p.enabled) : true,
+          }));
+          mergeMarketplaceEntry(mpName, mpSource, plugins);
+        }
+      } else {
+        const grouped = new Map();
+        for (const p of extParsed) {
+          const mpName = p.marketplace || "external-local";
+          if (!grouped.has(mpName)) grouped.set(mpName, []);
+          grouped.get(mpName).push({
+            id: p.id || `${p.name}@${mpName}`,
+            name: p.name || p.id,
+            version: p.version || "0.0.0",
+            localVersion: p.localVersion || p.version || "0.0.0",
+            source: p.source || { type: "local", path: p.path || "/tmp/external-plugin" },
+            installed: p.installed !== undefined ? Boolean(p.installed) : true,
+            enabled: p.enabled !== undefined ? Boolean(p.enabled) : true,
+          });
+        }
+        for (const [mpName, plugins] of grouped.entries()) {
+          mergeMarketplaceEntry(
+            mpName,
+            { sourceType: "local", source: plugins[0]?.source?.path || "/tmp/external-marketplace" },
+            plugins
+          );
+        }
+      }
+    }
+  }
+
+  const extMpRaw = process.env.OPL_STUB_CODEX_EXTERNAL_MARKETPLACES_JSON?.trim();
+  if (extMpRaw) {
+    const extMps = JSON.parse(extMpRaw);
+    if (Array.isArray(extMps)) {
+      for (const mp of extMps) {
+        marketplaces.push(mp);
+      }
+    }
+  }
+
+  return { marketplaces, marketplaceLoadErrors };
+}
+
+// Collect subcommand tokens starting from first non-flag positional
+function findSubcommandTokens(args) {
+  const positionals = [];
+  const valueFlags = GLOBAL_VALUE_FLAGS;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--") {
+      positionals.push(...args.slice(i + 1));
+      break;
+    }
+    if (valueFlags.has(a)) {
+      i++;
+      continue;
+    }
+    if (a.startsWith("-")) continue;
+    positionals.push(a);
+  }
+  return positionals;
+}
+
+const subTokens = leading.subcommandIdx !== -1 ? findSubcommandTokens(rawArgs.slice(leading.subcommandIdx)) : [];
+
+// 2. plugin marketplace list --json
+if (subTokens[0] === "plugin" && subTokens[1] === "marketplace" && subTokens[2] === "list") {
+  appendStubLog({
+    event: "invocation",
+    tool: "codex",
+    cwd: process.cwd(),
+    argv: rawArgs,
+    subcommand: "plugin_marketplace_list",
+    mode: "success",
+    stdin_preview: "",
+  });
+  const fault = process.env.OPL_STUB_CODEX_MARKETPLACE_FAULT || process.env.OPL_STUB_FAULT || "";
+  if (fault === "invalid_json") {
+    writeTextSafe("{invalid-json\n");
+    finishWithExit(0, { subcommand: "plugin_marketplace_list" });
+  }
+  if (fault === "exit_nonzero") {
+    process.stderr.write("Stubbed marketplace list error\n");
+    finishWithExit(1, { subcommand: "plugin_marketplace_list" });
+  }
+  const { marketplaces } = loadMarketplaceEntries();
+  const listOut = marketplaces.map((m) => ({
+    name: m.name,
+    marketplaceSource: m.marketplaceSource || { sourceType: "local", source: "" },
+  }));
+  writeTextSafe(JSON.stringify({ marketplaces: listOut }) + "\n");
+  finishWithExit(0, { subcommand: "plugin_marketplace_list" });
+}
+
+// 3. app-server --stdio
+if (subTokens[0] === "app-server") {
+  const cfg = resolveStubConfig({ tool: "codex", subcommand: "app_server" });
+  const fault = process.env.OPL_STUB_CODEX_APP_SERVER_FAULT || cfg.fault || (cfg.mode === "hang" ? "stall" : cfg.mode === "fail" ? "exit_nonzero" : "");
+
+  appendStubLog({
+    event: "invocation",
+    tool: "codex",
+    cwd: process.cwd(),
+    argv: rawArgs,
+    subcommand: "app_server",
+    mode: cfg.mode,
+    fault,
+    stdin_preview: "",
+  });
+
+  if (fault === "exit_nonzero") {
+    finishWithExit(cfg.exit_code ?? 7, { subcommand: "app_server" });
+  }
+
+  if (process.env.OPL_STUB_IGNORE_SIGTERM === "1") {
+    process.on("SIGTERM", () => {});
+  } else {
+    process.on("SIGTERM", () => {
+      appendStubLog({ event: "signal", tool: "codex", subcommand: "app_server", signal: "SIGTERM", exit_code: 143 });
+      process.exit(143);
+    });
+  }
+
+  let stalledInterval = null;
+  const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+  rl.on("line", (line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    let frame;
+    try {
+      frame = JSON.parse(trimmed);
+    } catch {
+      return;
+    }
+
+    if (frame.method === "initialized" && frame.id === undefined) {
+      return;
+    }
+
+    if (fault === "stall" || fault === "timeout") {
+      if (frame.method === "initialize") {
+        // Either stall immediately on plugin/list or on initialize depending on fault
+        writeNdjson({ id: frame.id, result: { userAgent: "codex-stub/0.171.0" } });
+        return;
+      }
+      if (!stalledInterval) {
+        stalledInterval = setInterval(() => {}, 60_000);
+      }
+      return;
+    }
+
+    if (fault === "invalid_json" && (frame.method === "plugin/list" || frame.method === "initialize")) {
+      writeTextSafe("{invalid-json\n");
+      return;
+    }
+
+    if (fault === "rpc_error") {
+      writeNdjson({ id: frame.id, error: { code: -32000, message: "Stubbed app-server error" } });
+      return;
+    }
+
+    if (fault === "bad_shape" && frame.method === "plugin/list") {
+      writeNdjson({ id: frame.id, result: { invalid: true } });
+      return;
+    }
+
+    if (frame.method === "initialize") {
+      writeNdjson({ id: frame.id, result: { userAgent: "codex-stub/0.171.0" } });
+      return;
+    }
+
+    if (frame.method === "plugin/list") {
+      const { marketplaces, marketplaceLoadErrors } = loadMarketplaceEntries();
+      if (fault === "load_error") {
+        marketplaceLoadErrors.push({ name: "broken-marketplace", message: "Stubbed marketplace load error" });
+      }
+      writeNdjson({
+        id: frame.id,
+        result: {
+          marketplaces: marketplaces.map((m) => ({ name: m.name, plugins: m.plugins })),
+          marketplaceLoadErrors,
+        },
+      });
+      return;
+    }
+
+    if (frame.id !== undefined) {
+      writeNdjson({ id: frame.id, error: { code: -32601, message: `Method not found: ${frame.method}` } });
+    }
+  });
+
+  rl.on("close", () => {
+    if (!stalledInterval) {
+      finishWithExit(0, { subcommand: "app_server" });
+    }
+  });
+} else if (subTokens[0] === "exec") {
+  // 4. codex exec [resume ...]
+  const execIdx = rawArgs.indexOf("exec", leading.subcommandIdx);
+  const afterExec = rawArgs.slice(execIdx + 1);
+  const isResume = afterExec[0] === "resume";
+  const afterExecFlags = isResume ? afterExec.slice(1) : afterExec;
+  const optionTokens = [...leading.leadingFlags, ...afterExecFlags];
+
+  const VALUE_FLAGS = new Set([
+    "-s", "--sandbox",
+    "-C", "--cd",
+    "-m", "--model",
+    "-c", "--config",
+    "-o", "--output-last-message",
+    "--output-schema",
+    "--add-dir",
+    "--enable",
+    "--disable",
+    "-p", "--profile",
+    "--local-provider",
+    "-i", "--image",
+    "--color",
+    "--remote",
+    "--remote-auth-token-env",
+    "--thread-source",
+    "--cyber-access-program",
+  ]);
+
+  const BOOL_FLAGS = new Set([
+    "--json",
+    "--ephemeral",
+    "--skip-git-repo-check",
+    "--last",
+    "--all",
+    "--oss",
+    "--trust",
+    "--ignore-user-config",
+    "--ignore-rules",
+    "--strict-config",
+    "--approve-for-me",
+    "--dangerously-bypass-approvals-and-sandbox",
+    "--dangerously-bypass-hook-trust",
+  ]);
+
+  const parsed = {
+    json: false,
+    ephemeral: false,
+    skipGitRepoCheck: false,
+    last: false,
+    cd: null,
+    model: null,
+    outputLastMessage: null,
+    outputSchema: null,
+    addDirs: [],
+    configs: [],
+    sandboxMode: "workspace-write",
+  };
+
+  const positionals = [];
+  let endOfFlags = false;
+  for (let i = 0; i < optionTokens.length; i++) {
+    const tok = optionTokens[i];
+    if (!endOfFlags && tok === "--") {
+      endOfFlags = true;
+      continue;
+    }
+    if (!endOfFlags && tok !== "-" && tok.startsWith("-")) {
+      const eqIdx = tok.indexOf("=");
+      const flag = eqIdx !== -1 ? tok.slice(0, eqIdx) : tok;
+      let val = eqIdx !== -1 ? tok.slice(eqIdx + 1) : null;
+
+      if (BOOL_FLAGS.has(flag)) {
+        if (flag === "--json") parsed.json = true;
+        else if (flag === "--ephemeral") parsed.ephemeral = true;
+        else if (flag === "--skip-git-repo-check") parsed.skipGitRepoCheck = true;
+        else if (flag === "--last") parsed.last = true;
+        else if (flag === "--dangerously-bypass-approvals-and-sandbox") parsed.sandboxMode = "danger-full-access";
+        continue;
+      }
+
+      if (VALUE_FLAGS.has(flag)) {
+        if (val === null) {
+          if (i + 1 >= optionTokens.length) {
+            process.stderr.write(`Missing value for ${flag}\n`);
+            finishWithExit(2, { subcommand: isResume ? "exec_resume" : "exec" });
+          }
+          val = optionTokens[++i];
+        }
+        if (flag === "-s" || flag === "--sandbox") {
+          parsed.sandboxMode = val;
+        } else if (flag === "-C" || flag === "--cd") {
+          parsed.cd = val;
+        } else if (flag === "-m" || flag === "--model") {
+          parsed.model = val;
+        } else if (flag === "-o" || flag === "--output-last-message") {
+          parsed.outputLastMessage = val;
+        } else if (flag === "--output-schema") {
+          parsed.outputSchema = val;
+        } else if (flag === "--add-dir") {
+          parsed.addDirs.push(val);
+        } else if (flag === "--enable" || flag === "--disable") {
+          // accepted
+        } else if (flag === "-c" || flag === "--config") {
+          parsed.configs.push(val);
+          const m = val.match(/^sandbox_mode\s*=\s*(.+)$/);
+          if (m) {
+            let v = m[1].trim();
+            if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+              v = v.slice(1, -1);
+            }
+            parsed.sandboxMode = v;
+          }
+        }
+        continue;
+      }
+
+      process.stderr.write(`Unknown option for codex exec: ${flag}\n`);
+      finishWithExit(2, { subcommand: isResume ? "exec_resume" : "exec" });
+    }
+    positionals.push(tok);
+  }
+
+  const VALID_SANDBOXES = new Set(["read-only", "workspace-write", "danger-full-access"]);
+  if (!VALID_SANDBOXES.has(parsed.sandboxMode)) {
+    process.stderr.write(`Invalid sandbox mode: ${parsed.sandboxMode}\n`);
+    finishWithExit(2, { subcommand: isResume ? "exec_resume" : "exec" });
+  }
+
+  let sessionRef = null;
+  let promptArg = undefined;
+  if (isResume) {
+    if (parsed.last) {
+      sessionRef = "codex-last-session";
+      promptArg = positionals[0];
+    } else {
+      sessionRef = positionals[0] || null;
+      promptArg = positionals[1];
+    }
+  } else {
+    promptArg = positionals[0];
+  }
+
+  let promptText = "";
+  let usedStdin = false;
+  if (promptArg === "-" || (promptArg === undefined && !process.stdin.isTTY)) {
+    promptText = readStdinSync();
+    usedStdin = true;
+  } else if (typeof promptArg === "string") {
+    promptText = promptArg;
+  }
+
+  const subcommand = isResume ? "exec_resume" : "exec";
+  const cfg = resolveStubConfig({
+    tool: "codex",
+    subcommand,
+    prompt: promptText,
+    model: parsed.model,
+    sandboxMode: parsed.sandboxMode,
+  });
+
+  const cdDir = parsed.cd ? path.resolve(parsed.cd) : process.cwd();
+  const threadId = sessionRef || cfg.session_id || `codex-thread-${crypto.randomUUID()}`;
+  const responseText = cfg.response_text ?? `Stubbed codex response for ${threadId}`;
+
+  appendStubLog({
+    event: "invocation",
+    tool: "codex",
+    cwd: process.cwd(),
+    argv: rawArgs,
+    subcommand,
+    mode: cfg.mode,
+    sandboxMode: parsed.sandboxMode,
+    threadId,
+    parsed,
+    usedStdin,
+    stdin_preview: buildShortPreview(usedStdin ? promptText : ""),
+  });
+
+  const codexHome = resolveCodexHome();
+  const now = new Date();
+  const yyyy = String(now.getUTCFullYear());
+  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(now.getUTCDate()).padStart(2, "0");
+  const hh = String(now.getUTCHours()).padStart(2, "0");
+  const min = String(now.getUTCMinutes()).padStart(2, "0");
+  const ss = String(now.getUTCSeconds()).padStart(2, "0");
+  const tsSafe = `${yyyy}-${mm}-${dd}T${hh}-${min}-${ss}`;
+  const sessionJsonlPath = path.join(codexHome, "sessions", yyyy, mm, dd, `rollout-${tsSafe}-${threadId}.jsonl`);
+  const shouldWriteSessionFile = !parsed.ephemeral || cfg.mode === "complete_after_detach";
+
+  function appendSessionLine(obj) {
+    if (!shouldWriteSessionFile) return;
+    fs.mkdirSync(path.dirname(sessionJsonlPath), { recursive: true });
+    fs.appendFileSync(sessionJsonlPath, JSON.stringify({ timestamp: new Date().toISOString(), ...obj }) + "\n", "utf8");
+  }
+
+  const USAGE = {
+    input_tokens: 1200,
+    cached_input_tokens: 200,
+    output_tokens: 450,
+    reasoning_output_tokens: 50,
+    total_tokens: 1650,
+  };
+
+  async function runExec() {
+    if (cfg.mode === "read_only_check") {
+      if (parsed.sandboxMode !== "read-only" || cfg.artifacts.length > 0) {
+        process.stderr.write("read_only_check failed: requires --sandbox read-only and zero artifact writes\n");
+        finishWithExit(2, { subcommand, mode: cfg.mode });
+      }
+      if (parsed.json) {
+        writeNdjson({ type: "thread.started", thread_id: threadId });
+        writeNdjson({ type: "turn.started" });
+        writeNdjson({ item: { id: "msg_1", type: "agent_message", text: responseText } });
+        writeNdjson({ type: "turn.completed", usage: USAGE });
+      } else {
+        writeTextSafe(responseText + "\n");
+      }
+      finishWithExit(0, { subcommand, mode: cfg.mode });
+    }
+
+    if (cfg.mode === "complete_after_detach" && !sighupGuardInstalled) {
+      sighupGuardInstalled = true;
+      process.on("SIGHUP", () => {
+        appendStubLog({ event: "signal", tool: "codex", subcommand, signal: "SIGHUP_IGNORED" });
+      });
+    }
+
+    if (parsed.json) {
+      writeNdjson({ type: "thread.started", thread_id: threadId });
+      writeNdjson({ type: "turn.started" });
+    }
+    appendSessionLine({ type: "session_meta", payload: { id: threadId, cwd: cdDir, originator: "codex_cli_rs" } });
+    appendSessionLine({ type: "event_msg", payload: { type: "turn_started" } });
+
+    if (cfg.mode === "hang") {
+      if (process.env.OPL_STUB_IGNORE_SIGTERM === "1") {
+        process.on("SIGTERM", () => {});
+      } else {
+        process.on("SIGTERM", () => {
+          appendStubLog({ event: "signal", tool: "codex", subcommand, signal: "SIGTERM", exit_code: 143 });
+          process.exit(143);
+        });
+      }
+      process.on("SIGINT", () => {
+        appendStubLog({ event: "signal", tool: "codex", subcommand, signal: "SIGINT", exit_code: 130 });
+        process.exit(130);
+      });
+      setInterval(() => {}, 60_000);
+      return;
+    }
+
+    if (cfg.delay_ms > 0) {
+      await sleepMs(cfg.delay_ms);
+    }
+
+    if (cfg.mode === "fail") {
+      if (cfg.fault === "unsupported_function_call") {
+        writeNdjson({
+          type: "response_item",
+          payload: { type: "function_call", name: "unsupported_tool", arguments: "{}" },
+        });
+      } else {
+        const msg = cfg.error_message || "status 503 Stubbed provider error";
+        if (parsed.json) {
+          writeNdjson({ type: "error", message: msg });
+        }
+        process.stderr.write(`${msg}\n`);
+      }
+      finishWithExit(cfg.exit_code ?? 1, { subcommand, mode: cfg.mode });
+    }
+
+    // success or complete_after_detach: write side effects BEFORE final stdout
+    if (parsed.sandboxMode !== "read-only") {
+      if (cfg.artifacts.length > 0) {
+        writeArtifactFiles(cdDir, cfg.artifacts);
+      } else if (process.env.OPL_STUB_DEFAULT_ARTIFACT !== "0") {
+        writeArtifactFiles(cdDir, [
+          {
+            path: ".opl-stub-output.json",
+            content: JSON.stringify({ tool: "codex", thread_id: threadId, mode: cfg.mode, prompt_preview: buildShortPreview(promptText, 120) }, null, 2),
+          },
+        ]);
+      }
+    }
+
+    if (parsed.outputLastMessage) {
+      const outMsgPath = path.resolve(cdDir, parsed.outputLastMessage);
+      fs.mkdirSync(path.dirname(outMsgPath), { recursive: true });
+      fs.writeFileSync(outMsgPath, responseText, "utf8");
+    }
+
+    appendSessionLine({ type: "event_msg", payload: { type: "agent_message", id: "msg_1", message: responseText } });
+    appendSessionLine({
+      type: "event_msg",
+      payload: {
+        type: "token_count",
+        info: { total_token_usage: USAGE, last_token_usage: USAGE },
+      },
+    });
+    appendSessionLine({ type: "event_msg", payload: { type: "task_complete", turn_id: "turn_1", last_agent_message: responseText } });
+    appendSessionLine({ type: "event_msg", payload: { type: "turn_completed" } });
+
+    if (parsed.json) {
+      writeNdjson({
+        item: {
+          id: "cmd_1",
+          type: "command_execution",
+          command: "stub-exec",
+          status: "completed",
+          aggregated_output: "ok",
+        },
+      });
+      writeNdjson({ item: { id: "msg_1", type: "agent_message", text: responseText } });
+      writeNdjson({ type: "turn.completed", usage: USAGE });
+    } else {
+      writeTextSafe(responseText + "\n");
+    }
+
+    finishWithExit(0, { subcommand, mode: cfg.mode });
+  }
+
+  runExec().catch((err) => {
+    process.stderr.write(`codex stub internal error: ${err?.stack || err}\n`);
+    finishWithExit(1, { subcommand });
+  });
+} else {
+  appendStubLog({
+    event: "invocation",
+    tool: "codex",
+    cwd: process.cwd(),
+    argv: rawArgs,
+    subcommand: subTokens[0] || "unknown",
+    mode: "error",
+    stdin_preview: "",
+  });
+  process.stderr.write(`Unsupported codex stub command: ${rawArgs.join(" ")}\n`);
+  finishWithExit(2);
+}

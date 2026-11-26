@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "tsconfig.tsbuildinfo"
+  },
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../ledger"
+    },
+    {
+      "path": "../connect"
+    }
+  ],
+  "include": [
+    "src/**/*.ts"
+  ]
+}

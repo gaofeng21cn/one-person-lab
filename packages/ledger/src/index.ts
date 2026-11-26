@@ -1,0 +1,61 @@
+export {
+  LEDGER_ENTRY_KINDS,
+  LedgerError,
+  type AppendLedgerEntryInput,
+  type ArtifactHashMismatch,
+  type ArtifactRefPayload,
+  type ArtifactsQuery,
+  type DebtsQuery,
+  type FailedPathNotePayload,
+  type HumanDecisionPayload,
+  type LedgerDb,
+  type LedgerEntry,
+  type LedgerEntryKind,
+  type LedgerErrorCode,
+  type LedgerPayloadByKind,
+  type LineageVerificationResult,
+  type OwnerReceiptPayload,
+  type QualityDebtPayload,
+  type QualityDebtRecord,
+  type ReceiptsQuery,
+  type RecordReviewInput,
+  type ReviewVerdictPayload,
+  type ReviewVerdictValue,
+  type TimelineQuery,
+  type TypedBlockerPayload,
+} from './types.ts';
+
+export {
+  MAX_LEDGER_NESTING_DEPTH,
+  MAX_LEDGER_PAYLOAD_BYTES,
+  MAX_LEDGER_REF_LENGTH,
+  MAX_LEDGER_STRING_LENGTH,
+  assertRefsOnlyPayload,
+  assertSafeRefPath,
+} from './refs-only.ts';
+
+export {
+  PAYLOAD_SCHEMAS_BY_KIND,
+  artifactRefPayloadSchema,
+  failedPathNotePayloadSchema,
+  humanDecisionPayloadSchema,
+  ownerReceiptPayloadSchema,
+  qualityDebtPayloadSchema,
+  reviewVerdictPayloadSchema,
+  typedBlockerPayloadSchema,
+  validateLedgerEntryInput,
+  type ValidatedLedgerEntry,
+} from './schemas.ts';
+
+export {
+  LedgerStore,
+  appendEntriesWithDb,
+  appendEntryWithDb,
+  queryArtifacts,
+  queryDebts,
+  queryReceipts,
+  queryTimeline,
+  recordReviewWithDb,
+  verifyTaskLineage,
+  type LedgerStoreOptions,
+} from './store.ts';

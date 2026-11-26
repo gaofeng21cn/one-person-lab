@@ -1,0 +1,99 @@
+{
+  "schema_version": "opl.package.v2",
+  "identity": {
+    "id": "opl-foundation-skills",
+    "version": "0.1.0",
+    "intent": "extension",
+    "name": {
+      "zh-CN": "OPL 基础技能集",
+      "en-US": "OPL Foundation Skills"
+    },
+    "summary": {
+      "zh-CN": "面向 OPL Framework 运维与智能体开发者的基础支撑技能集。",
+      "en-US": "AI-first support skills for OPL Framework operators and agent authors."
+    },
+    "description": {
+      "zh-CN": "为 Runway 诊断、运行环境恢复审计、Stagecraft 阶段设计与质量门禁审阅、Connect 路由与回执审计、Foundry 智能体改进、Workspace 交接、Ledger 证据整理、Pack 准入审查及外部专家技能路由提供只读支撑技能，不越权替代框架与领域真源。",
+      "en-US": "Provides source-only OPL support skills for Runway compute diagnosis, runtime/provider/environment soak and recovery audit, Stagecraft stage design and quality-gate critique, Connect source/skill routing and connector receipt audit, Foundry agent improvement, Workspace handoffs, Ledger evidence curation, Console/App operator guidance, Pack admission review, and specialist external skill routing without claiming runtime, owner, or readiness authority."
+    },
+    "publisher": "one-person-lab",
+    "license": "Apache-2.0",
+    "maturity": "stable",
+    "keywords": [
+      "opl",
+      "framework",
+      "foundation-skills",
+      "codex-skill"
+    ],
+    "default_prompts": [
+      "Use OPL Foundation Skills to review a Runway compute handoff.",
+      "Use OPL Foundation Skills to design a Stagecraft stage prompt.",
+      "Use OPL Foundation Skills to route sources, handoffs, evidence, packs, catalogs, authority, or agent improvements."
+    ]
+  },
+  "dependencies": {
+    "opl_base": "^2.0.0",
+    "runtimes": [
+      {
+        "name": "python",
+        "version": ">=3.11",
+        "optional": true
+      }
+    ]
+  },
+  "permissions": {
+    "workspace": {
+      "access": "read",
+      "reason": {
+        "zh-CN": "只读审阅代码仓、工作区证据、阶段清单与交接摘要",
+        "en-US": "Read-only inspection of repositories, workspace evidence, stage manifests, and handoff briefs"
+      }
+    },
+    "network": "none",
+    "execution_mode": "declarative_only"
+  },
+  "provides": {
+    "skills": [
+      { "id": "opl-agent-package-lifecycle-reviewer", "path": "./skills/opl-agent-package-lifecycle-reviewer", "exposure": "opt_in" },
+      { "id": "opl-atlas-capability-router", "path": "./skills/opl-atlas-capability-router", "exposure": "opt_in" },
+      { "id": "opl-charter-authority-reviewer", "path": "./skills/opl-charter-authority-reviewer", "exposure": "opt_in" },
+      { "id": "opl-code-quality-remediation-reviewer", "path": "./skills/opl-code-quality-remediation-reviewer", "exposure": "opt_in" },
+      { "id": "opl-completion-audit-writer", "path": "./skills/opl-completion-audit-writer", "exposure": "opt_in" },
+      { "id": "opl-connect-connector-receipt-auditor", "path": "./skills/opl-connect-connector-receipt-auditor", "exposure": "opt_in" },
+      { "id": "opl-connect-source-and-skill-router", "path": "./skills/opl-connect-source-and-skill-router", "exposure": "opt_in" },
+      { "id": "opl-console-operator-copilot", "path": "./skills/opl-console-operator-copilot", "exposure": "opt_in" },
+      { "id": "opl-eval-harness-designer", "path": "./skills/opl-eval-harness-designer", "exposure": "opt_in" },
+      { "id": "opl-external-specialist-skill-router", "path": "./skills/opl-external-specialist-skill-router", "exposure": "opt_in" },
+      { "id": "opl-foundry-agent-improver", "path": "./skills/opl-foundry-agent-improver", "exposure": "opt_in" },
+      { "id": "opl-incident-root-cause-triager", "path": "./skills/opl-incident-root-cause-triager", "exposure": "opt_in" },
+      { "id": "opl-ledger-evidence-curator", "path": "./skills/opl-ledger-evidence-curator", "exposure": "opt_in" },
+      { "id": "opl-memory-artifact-lifecycle-curator", "path": "./skills/opl-memory-artifact-lifecycle-curator", "exposure": "opt_in" },
+      { "id": "opl-owner-evidence-intake-reviewer", "path": "./skills/opl-owner-evidence-intake-reviewer", "exposure": "opt_in" },
+      { "id": "opl-pack-admission-reviewer", "path": "./skills/opl-pack-admission-reviewer", "exposure": "opt_in" },
+      { "id": "opl-runtime-soak-and-recovery-auditor", "path": "./skills/opl-runtime-soak-and-recovery-auditor", "exposure": "opt_in" },
+      { "id": "opl-runway-compute-operator", "path": "./skills/opl-runway-compute-operator", "exposure": "opt_in" },
+      { "id": "opl-source-module-boundary-reviewer", "path": "./skills/opl-source-module-boundary-reviewer", "exposure": "opt_in" },
+      { "id": "opl-stage-assumption-lifecycle-reviewer", "path": "./skills/opl-stage-assumption-lifecycle-reviewer", "exposure": "opt_in" },
+      { "id": "opl-stage-candidate-portfolio-reviewer", "path": "./skills/opl-stage-candidate-portfolio-reviewer", "exposure": "opt_in" },
+      { "id": "opl-stage-pack-source-replay-reviewer", "path": "./skills/opl-stage-pack-source-replay-reviewer", "exposure": "opt_in" },
+      { "id": "opl-stage-quality-gate-critic", "path": "./skills/opl-stage-quality-gate-critic", "exposure": "opt_in" },
+      { "id": "opl-stagecraft-stage-designer", "path": "./skills/opl-stagecraft-stage-designer", "exposure": "opt_in" },
+      { "id": "opl-workspace-handoff-writer", "path": "./skills/opl-workspace-handoff-writer", "exposure": "opt_in" }
+    ]
+  },
+  "distribution": {
+    "oci": "ghcr.io/gaofeng21cn/one-person-lab-packages/opl-foundation-skills",
+    "visibility": "public"
+  },
+  "host_hints": {
+    "codex": {
+      "sync_enabled": false,
+      "plugin_name": "opl-foundation-skills",
+      "category": "Developer Tools",
+      "brand_color": "#0F766E",
+      "capabilities": [
+        "Read"
+      ]
+    }
+  }
+}

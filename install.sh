@@ -537,7 +537,6 @@ if [ "$CARRIER_ONLY" = "1" ]; then
 fi
 
 log "Preparing the local background-service runtime"
-node scripts/install-temporal-cli.mjs
 export PATH="$HOME/.local/bin:$PATH"
 
 OPL_INSTALL_CLI=./bin/opl

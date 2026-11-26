@@ -1,0 +1,450 @@
+#!/usr/bin/env node
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import {
+  appendStubLog,
+  buildShortPreview,
+  installBrokenPipeGuards,
+  readStdinSync,
+  resolveStubConfig,
+  sleepMs,
+  writeArtifactFiles,
+  writeNdjson,
+  writeTextSafe,
+} from "../lib/stub-runtime.mjs";
+
+installBrokenPipeGuards();
+
+const rawArgs = process.argv.slice(2);
+
+function finishWithExit(code, extra = {}) {
+  appendStubLog({ event: "completion", tool: "agy", exit_code: code, signal: null, ...extra });
+  process.exit(code);
+}
+
+const MODELS_27 = [
+  ["gemini-4-neon-high", "Gemini 4 Neon (High)"],
+  ["gemini-4-neon-xhigh", "Gemini 4 Neon (XHigh)"],
+  ["gemini-4-neon-medium", "Gemini 4 Neon (Medium)"],
+  ["gemini-4-neon-low", "Gemini 4 Neon (Low)"],
+  ["gemini-4-carbon-medium", "Gemini 4 Carbon (Medium)"],
+  ["gemini-4-carbon-high", "Gemini 4 Carbon (High)"],
+  ["gemini-4-carbon-low", "Gemini 4 Carbon (Low)"],
+  ["gemini-4-argon-medium", "Gemini 4 Argon (Medium)"],
+  ["gemini-4-argon-high", "Gemini 4 Argon (High)"],
+  ["gemini-4-argon-low", "Gemini 4 Argon (Low)"],
+  ["gemini-4-hydrogen-high", "Gemini 4 Hydrogen (High)"],
+  ["gemini-4-hydrogen-xhigh", "Gemini 4 Hydrogen (XHigh)"],
+  ["gemini-4-hydrogen-medium", "Gemini 4 Hydrogen (Medium)"],
+  ["gemini-4-hydrogen-low", "Gemini 4 Hydrogen (Low)"],
+  ["gemini-pro-orchestrator-neon", "Orchestrator (Neon)"],
+  ["gemini-pro-orchestrator", "Orchestrator (Carbon)"],
+  ["gemini-pro-orchestrator-argon", "Orchestrator (Argon)"],
+  ["gemini-3.8-flash-high", "Gemini 3.8 Flash (High)"],
+  ["gemini-3.8-flash-medium", "Gemini 3.8 Flash (Medium)"],
+  ["gemini-3.8-flash-low", "Gemini 3.8 Flash (Low)"],
+  ["claude-opus-5-5-low", "Claude Opus 5.5 (Low)"],
+  ["claude-opus-5-5-medium", "Claude Opus 5.5 (Medium)"],
+  ["claude-opus-5-5-high", "Claude Opus 5.5 (High)"],
+  ["claude-sonnet-5-5-low", "Claude Sonnet 5.5 (Low)"],
+  ["claude-sonnet-5-5-medium", "Claude Sonnet 5.5 (Medium)"],
+  ["claude-sonnet-5-5-high", "Claude Sonnet 5.5 (High)"],
+  ["gpt-oss-120b-medium", "GPT-OSS 120B (Medium)"],
+];
+
+const BOOL_FLAGS = new Set([
+  "--print", "-p", "--prompt",
+  "--sandbox",
+  "--continue", "-c",
+  "--disable-slash-commands",
+  "--dangerously-skip-permissions",
+  "--new-project",
+  "--remote-control",
+]);
+
+const STRING_FLAGS = new Set([
+  "--output-format",
+  "--model",
+  "--effort",
+  "--mode",
+  "--conversation", "-r", "--resume",
+  "--json-schema",
+  "--settings",
+  "--print-timeout",
+  "--input-format",
+  "--agent",
+  "--project",
+  "--log-file",
+]);
+
+function hasLeadingVersionFlag(args) {
+  for (let i = 0; i < args.length; i++) {
+    const tok = args[i];
+    if (tok === "--") break;
+    if (tok === "--version" || tok === "-v" || tok === "-V") {
+      return true;
+    }
+    if (tok === "--print" || tok === "-p" || tok === "--prompt") {
+      break;
+    }
+    if (tok !== "-" && tok.startsWith("-")) {
+      const eqIdx = tok.indexOf("=");
+      const flag = eqIdx !== -1 ? tok.slice(0, eqIdx) : tok;
+      if (eqIdx === -1 && (flag === "--add-dir" || STRING_FLAGS.has(flag)) && i + 1 < args.length) {
+        i++;
+      }
+      continue;
+    }
+    // Positional argument (e.g. `models` or prompt) ends leading-flag scope
+    break;
+  }
+  return false;
+}
+
+// 1. Version (scoped to leading flags before --print / models / -- / positional)
+if (hasLeadingVersionFlag(rawArgs)) {
+  const ver = process.env.OPL_STUB_AGY_VERSION || "1.5.16";
+  appendStubLog({
+    event: "invocation",
+    tool: "agy",
+    cwd: process.cwd(),
+    argv: rawArgs,
+    subcommand: "version",
+    mode: "success",
+    stdin_preview: "",
+  });
+  writeTextSafe(`${ver}\n`);
+  finishWithExit(0, { subcommand: "version" });
+}
+
+// 2. Models
+if (rawArgs[0] === "models") {
+  const cfg = resolveStubConfig({ tool: "agy", subcommand: "models" });
+  appendStubLog({
+    event: "invocation",
+    tool: "agy",
+    cwd: process.cwd(),
+    argv: rawArgs,
+    subcommand: "models",
+    mode: cfg.mode,
+    stdin_preview: "",
+  });
+  if (cfg.mode === "fail") {
+    process.stderr.write("Stubbed agy models failure\n");
+    finishWithExit(cfg.exit_code ?? 1, { subcommand: "models" });
+  }
+  const lines = MODELS_27.map(([id, label]) => `${id.padEnd(31)}${label}`);
+  writeTextSafe(lines.join("\n") + "\n");
+  finishWithExit(0, { subcommand: "models" });
+}
+
+// 3. --print / -p / --prompt
+
+const parsed = {
+  print: false,
+  sandbox: false,
+  outputFormat: "text",
+  model: "gemini-4-neon-high",
+  effort: null,
+  mode: null,
+  conversation: null,
+  jsonSchema: null,
+  settings: null,
+  addDirs: [],
+};
+
+const positionals = [];
+let endOfFlags = false;
+for (let i = 0; i < rawArgs.length; i++) {
+  const tok = rawArgs[i];
+  if (!endOfFlags && tok === "--") {
+    endOfFlags = true;
+    continue;
+  }
+  if (!endOfFlags && tok !== "-" && tok.startsWith("-")) {
+    const eqIdx = tok.indexOf("=");
+    const flag = eqIdx !== -1 ? tok.slice(0, eqIdx) : tok;
+    let val = eqIdx !== -1 ? tok.slice(eqIdx + 1) : null;
+
+    if (BOOL_FLAGS.has(flag)) {
+      if (flag === "--print" || flag === "-p" || flag === "--prompt") parsed.print = true;
+      else if (flag === "--sandbox") parsed.sandbox = true;
+      continue;
+    }
+
+    if (flag === "--add-dir" || STRING_FLAGS.has(flag)) {
+      if (val === null) {
+        if (i + 1 >= rawArgs.length) {
+          process.stderr.write(`Missing value for ${flag}\n`);
+          finishWithExit(2, { subcommand: "print" });
+        }
+        val = rawArgs[++i];
+      }
+      if (flag === "--add-dir") parsed.addDirs.push(val);
+      else if (flag === "--output-format") parsed.outputFormat = val;
+      else if (flag === "--model") parsed.model = val;
+      else if (flag === "--effort") parsed.effort = val;
+      else if (flag === "--mode") parsed.mode = val;
+      else if (flag === "--conversation" || flag === "-r" || flag === "--resume") parsed.conversation = val;
+      else if (flag === "--json-schema") parsed.jsonSchema = val;
+      else if (flag === "--settings") parsed.settings = val;
+      continue;
+    }
+
+    process.stderr.write(`Unknown option for agy: ${flag}\n`);
+    finishWithExit(2, { subcommand: "print" });
+  }
+  positionals.push(tok);
+}
+
+if (!parsed.print) {
+  process.stderr.write("Unsupported agy invocation (expected --version, models, or --print)\n");
+  finishWithExit(2, { subcommand: "unknown" });
+}
+
+// Validate CLI option values
+if (!["text", "json", "stream-json"].includes(parsed.outputFormat)) {
+  process.stderr.write(`Invalid --output-format: ${parsed.outputFormat}\n`);
+  finishWithExit(2, { subcommand: "print" });
+}
+if (parsed.mode !== null && !["accept-edits", "plan", "auto"].includes(parsed.mode)) {
+  process.stderr.write(`Invalid --mode: ${parsed.mode}\n`);
+  finishWithExit(2, { subcommand: "print" });
+}
+if (parsed.effort !== null && !["low", "medium", "high", "xhigh", "max"].includes(parsed.effort)) {
+  process.stderr.write(`Invalid --effort: ${parsed.effort}\n`);
+  finishWithExit(2, { subcommand: "print" });
+}
+
+if (parsed.settings !== null) {
+  try {
+    if (parsed.settings.trim().startsWith("{")) {
+      JSON.parse(parsed.settings);
+    } else {
+      if (!fs.existsSync(parsed.settings)) {
+        throw new Error(`Settings file not found: ${parsed.settings}`);
+      }
+      JSON.parse(fs.readFileSync(parsed.settings, "utf8"));
+    }
+  } catch (err) {
+    process.stderr.write(`Invalid --settings: ${err.message}\n`);
+    finishWithExit(2, { subcommand: "print" });
+  }
+}
+
+let parsedJsonSchema = null;
+if (parsed.jsonSchema !== null) {
+  try {
+    if (parsed.jsonSchema.trim().startsWith("{")) {
+      parsedJsonSchema = JSON.parse(parsed.jsonSchema);
+    } else {
+      if (!fs.existsSync(parsed.jsonSchema)) {
+        throw new Error(`Schema file not found: ${parsed.jsonSchema}`);
+      }
+      parsedJsonSchema = JSON.parse(fs.readFileSync(parsed.jsonSchema, "utf8"));
+    }
+  } catch (err) {
+    process.stderr.write(`Invalid --json-schema: ${err.message}\n`);
+    finishWithExit(2, { subcommand: "print" });
+  }
+}
+
+const promptArg = positionals[0];
+let promptText = "";
+let usedStdin = false;
+if (promptArg === "-" || (promptArg === undefined && !process.stdin.isTTY)) {
+  promptText = readStdinSync();
+  usedStdin = true;
+} else if (typeof promptArg === "string") {
+  promptText = promptArg;
+}
+
+const effectiveSandboxMode = parsed.mode === "plan" ? "read-only" : parsed.sandbox ? "workspace-write" : "danger-full-access";
+const cfg = resolveStubConfig({
+  tool: "agy",
+  subcommand: "print",
+  prompt: promptText,
+  model: parsed.model,
+  sandboxMode: effectiveSandboxMode,
+});
+
+const convId = parsed.conversation || cfg.session_id || `ag-conv-${crypto.randomUUID()}`;
+const workspaceRoot = parsed.addDirs.length > 0 ? path.resolve(parsed.addDirs[0]) : process.cwd();
+const responseText = cfg.response_text ?? `Stubbed agy response for ${convId}`;
+
+appendStubLog({
+  event: "invocation",
+  tool: "agy",
+  cwd: process.cwd(),
+  argv: rawArgs,
+  subcommand: "print",
+  mode: cfg.mode,
+  parsed,
+  convId,
+  usedStdin,
+  stdin_preview: buildShortPreview(usedStdin ? promptText : ""),
+});
+
+const USAGE = {
+  input_tokens: 1800,
+  output_tokens: 650,
+  cache_read_input_tokens: 0,
+};
+
+function emitSystemInit() {
+  if (parsed.outputFormat === "stream-json") {
+    writeNdjson({
+      type: "system",
+      subtype: "init",
+      session_id: convId,
+      conversation_id: convId,
+      model: parsed.model,
+      mode: parsed.mode || "accept-edits",
+      sandbox: parsed.sandbox,
+    });
+  }
+}
+
+function emitResultError(errorText) {
+  const errObj = {
+    type: "result",
+    subtype: "error",
+    session_id: convId,
+    conversation_id: convId,
+    is_error: true,
+    num_turns: 1,
+    duration_ms: 10,
+    result: errorText,
+    error: "provider_error",
+    total_usd: 0.0,
+  };
+  if (parsed.outputFormat === "stream-json" || parsed.outputFormat === "json") {
+    writeNdjson(errObj);
+  }
+}
+
+async function runPrint() {
+  if (cfg.mode === "read_only_check") {
+    if (parsed.mode !== "plan" || parsed.sandbox !== true || cfg.artifacts.length > 0) {
+      const msg = "read_only_check failed: requires --mode plan --sandbox";
+      process.stderr.write(`${msg}\n`);
+      emitResultError(msg);
+      finishWithExit(2, { subcommand: "print", mode: cfg.mode });
+    }
+    emitSystemInit();
+    if (parsed.outputFormat === "stream-json") {
+      writeNdjson({
+        type: "assistant",
+        session_id: convId,
+        conversation_id: convId,
+        message: { role: "assistant", content: [{ type: "text", text: responseText }] },
+      });
+    }
+    const okResult = {
+      type: "result",
+      subtype: "success",
+      session_id: convId,
+      conversation_id: convId,
+      is_error: false,
+      num_turns: 1,
+      duration_ms: 15,
+      result: responseText,
+      usage: USAGE,
+      total_usd: 0.0,
+      ...(parsedJsonSchema ? { structured_output: { stub: true, schema_applied: true } } : {}),
+    };
+    if (parsed.outputFormat === "stream-json" || parsed.outputFormat === "json") {
+      writeNdjson(okResult);
+    } else {
+      writeTextSafe(responseText + "\n");
+    }
+    finishWithExit(0, { subcommand: "print", mode: cfg.mode });
+  }
+
+  emitSystemInit();
+
+  if (cfg.mode === "hang") {
+    if (process.env.OPL_STUB_IGNORE_SIGTERM === "1") {
+      process.on("SIGTERM", () => {});
+    } else {
+      process.on("SIGTERM", () => {
+        appendStubLog({ event: "signal", tool: "agy", subcommand: "print", signal: "SIGTERM", exit_code: 143 });
+        process.exit(143);
+      });
+    }
+    process.on("SIGINT", () => {
+      appendStubLog({ event: "signal", tool: "agy", subcommand: "print", signal: "SIGINT", exit_code: 130 });
+      process.exit(130);
+    });
+    setInterval(() => {}, 60_000);
+    return;
+  }
+
+  if (cfg.delay_ms > 0) {
+    await sleepMs(cfg.delay_ms);
+  }
+
+  if (cfg.mode === "fail") {
+    const errMsg = cfg.error_message || "Stub failure";
+    emitResultError(errMsg);
+    process.stderr.write(`${errMsg}\n`);
+    finishWithExit(cfg.exit_code ?? 1, { subcommand: "print", mode: cfg.mode });
+  }
+
+  // success mode
+  if (parsed.mode === "plan" && cfg.artifacts.length > 0) {
+    process.stderr.write("Refusing artifact write when --mode plan is active\n");
+    emitResultError("Refusing artifact write in plan mode");
+    finishWithExit(2, { subcommand: "print", mode: cfg.mode });
+  }
+
+  if (parsed.mode !== "plan") {
+    if (cfg.artifacts.length > 0) {
+      writeArtifactFiles(workspaceRoot, cfg.artifacts);
+    } else if (process.env.OPL_STUB_DEFAULT_ARTIFACT !== "0") {
+      writeArtifactFiles(workspaceRoot, [
+        {
+          path: ".opl-stub-agy-output.json",
+          content: JSON.stringify({ tool: "agy", conversation_id: convId, model: parsed.model, mode: cfg.mode, prompt_preview: buildShortPreview(promptText, 120) }, null, 2),
+        },
+      ]);
+    }
+  }
+
+  if (parsed.outputFormat === "stream-json") {
+    writeNdjson({
+      type: "assistant",
+      session_id: convId,
+      conversation_id: convId,
+      message: { role: "assistant", content: [{ type: "text", text: responseText }] },
+    });
+  }
+
+  const okResult = {
+    type: "result",
+    subtype: "success",
+    session_id: convId,
+    conversation_id: convId,
+    is_error: false,
+    num_turns: 1,
+    duration_ms: 25,
+    result: responseText,
+    usage: USAGE,
+    total_usd: 0.0,
+    ...(parsedJsonSchema ? { structured_output: { stub: true, schema_applied: true } } : {}),
+  };
+
+  if (parsed.outputFormat === "stream-json" || parsed.outputFormat === "json") {
+    writeNdjson(okResult);
+  } else {
+    writeTextSafe(responseText + "\n");
+  }
+
+  finishWithExit(0, { subcommand: "print", mode: cfg.mode });
+}
+
+runPrint().catch((err) => {
+  process.stderr.write(`agy stub internal error: ${err?.stack || err}\n`);
+  finishWithExit(1, { subcommand: "print" });
+});

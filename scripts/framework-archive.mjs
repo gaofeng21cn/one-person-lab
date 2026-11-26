@@ -32,14 +32,24 @@ function readGitValue(repoPath, args) {
   return run('git', args, { cwd: repoPath, capture: true }).stdout.trim();
 }
 
-function copyRuntimePayload(repoPath, payloadRoot, compiledDist) {
+function expandFilesAllowlist(repoPath, patterns) {
+  const matched = new Set(['package.json', 'package-lock.json']);
+  for (const pattern of patterns) {
+    for (const rel of fs.globSync(pattern, { cwd: repoPath })) {
+      matched.add(rel);
+    }
+  }
+  return [...matched].sort();
+}
+
+function copyRuntimePayload(repoPath, payloadRoot) {
   const packageJson = readJsonObject(path.join(repoPath, 'package.json'));
   if (!Array.isArray(packageJson.files)) {
-    throw new Error('OPL Base package.json files must define the runtime payload allowlist');
+    throw new Error('OPL Framework package.json files must define the runtime payload allowlist');
   }
-  const entries = ['package.json', 'package-lock.json', ...packageJson.files];
+  const entries = expandFilesAllowlist(repoPath, packageJson.files);
   for (const relativePath of entries) {
-    const sourcePath = relativePath === 'dist' ? compiledDist : path.join(repoPath, relativePath);
+    const sourcePath = path.join(repoPath, relativePath);
     if (!fs.existsSync(sourcePath)) continue;
     const targetPath = path.join(payloadRoot, relativePath);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
@@ -50,11 +60,19 @@ function copyRuntimePayload(repoPath, payloadRoot, compiledDist) {
     delete runtimePackageJson.scripts.prepare;
     delete runtimePackageJson.scripts.build;
     delete runtimePackageJson.scripts.typecheck;
+    delete runtimePackageJson.scripts['v2:build'];
+    delete runtimePackageJson.scripts['v2:typecheck'];
   }
   fs.writeFileSync(path.join(payloadRoot, 'package.json'), `${JSON.stringify(runtimePackageJson, null, 2)}\n`, 'utf8');
-  for (const requiredPath of ['package.json', 'package-lock.json', 'bin/opl', 'dist/entrypoints/cli.js', 'contracts/opl-framework']) {
+  for (const requiredPath of [
+    'package.json',
+    'package-lock.json',
+    'bin/opl',
+    'packages/daemon/dist/cli/bin-opl.js',
+    'contracts/opl-package.v2.schema.json',
+  ]) {
     if (!fs.existsSync(path.join(payloadRoot, requiredPath))) {
-      throw new Error(`OPL Base runtime payload is missing ${requiredPath}`);
+      throw new Error(`OPL Framework runtime payload is missing ${requiredPath}`);
     }
   }
 }
@@ -66,15 +84,14 @@ function archiveFramework(repoPath, frameworkOutDir, version) {
   fs.rmSync(archivePath, { force: true });
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-base-runtime-'));
   try {
-    const compiledDist = path.join(tempRoot, 'compiled');
-    run('npm', ['run', 'build', '--', '--outDir', compiledDist], { cwd: repoPath, capture: true });
+    run('npm', ['run', 'build'], { cwd: repoRoot, capture: true });
     const payloadRoot = path.join(tempRoot, 'payload');
-    copyRuntimePayload(repoPath, payloadRoot, compiledDist);
+    copyRuntimePayload(repoPath, payloadRoot);
     run('git', ['init', '--quiet'], { cwd: payloadRoot });
     run('git', ['config', 'user.name', 'OPL Release'], { cwd: payloadRoot });
     run('git', ['config', 'user.email', 'release@one-person-lab.invalid'], { cwd: payloadRoot });
     run('git', ['add', '--all'], { cwd: payloadRoot });
-    run('git', ['commit', '--quiet', '-m', 'OPL Base runtime payload'], {
+    run('git', ['commit', '--quiet', '-m', 'OPL Framework v2 runtime payload'], {
       cwd: payloadRoot,
       env: {
         GIT_AUTHOR_DATE: '2000-01-01T00:00:00Z',
